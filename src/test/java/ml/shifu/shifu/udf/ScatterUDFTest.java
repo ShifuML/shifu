@@ -17,12 +17,11 @@ package ml.shifu.shifu.udf;
 
 import java.io.IOException;
 
-import junit.framework.Assert;
-
 import ml.shifu.shifu.udf.ScatterUDF;
 
 import org.apache.pig.data.Tuple;
 import org.apache.pig.data.TupleFactory;
+import org.testng.Assert;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.Test;
 

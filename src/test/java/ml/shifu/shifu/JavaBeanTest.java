@@ -21,8 +21,6 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.HashMap;
 
-import junit.framework.Assert;
-
 import ml.shifu.shifu.container.BinningObject;
 import ml.shifu.shifu.container.CaseScoreResult;
 import ml.shifu.shifu.container.ColumnScoreObject;
@@ -73,6 +71,7 @@ import ml.shifu.shifu.message.TrainPartDataMessage;
 import ml.shifu.shifu.message.TrainResultMessage;
 
 import org.apache.commons.io.FileUtils;
+import org.testng.Assert;
 import org.testng.annotations.AfterClass;
 import org.testng.annotations.Test;
 

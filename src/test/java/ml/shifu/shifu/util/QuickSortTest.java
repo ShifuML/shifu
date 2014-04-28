@@ -23,10 +23,9 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Random;
 
-import junit.framework.Assert;
-
 import ml.shifu.shifu.util.QuickSort;
 
+import org.testng.Assert;
 import org.testng.annotations.Test;
 
 /**

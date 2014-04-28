@@ -20,8 +20,6 @@ import java.io.IOException;
 import java.util.List;
 import java.util.Scanner;
 
-import junit.framework.Assert;
-
 import ml.shifu.shifu.actor.AkkaExecStatus;
 import ml.shifu.shifu.actor.CalculateStatsActor;
 import ml.shifu.shifu.container.obj.ColumnConfig;
@@ -31,6 +29,7 @@ import ml.shifu.shifu.fs.ShifuFileUtils;
 import ml.shifu.shifu.message.AkkaActorInputMessage;
 import ml.shifu.shifu.util.CommonUtils;
 
+import org.testng.Assert;
 import org.testng.annotations.AfterClass;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.Test;

@@ -15,14 +15,13 @@
  */
 package ml.shifu.shifu.udf;
 
-import junit.framework.Assert;
-
 import ml.shifu.shifu.udf.ConvertToUnixTimeUDF;
 
 import org.apache.pig.backend.executionengine.ExecException;
 import org.apache.pig.data.Tuple;
 import org.apache.pig.data.TupleFactory;
 import org.apache.pig.impl.logicalLayer.schema.Schema;
+import org.testng.Assert;
 
 
 public class ConvertToUnixTimeUDFTest {

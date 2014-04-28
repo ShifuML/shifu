@@ -19,10 +19,9 @@ import java.text.DecimalFormat;
 import java.util.Arrays;
 import java.util.List;
 
-import junit.framework.Assert;
-
 import ml.shifu.shifu.core.KSIVCalculator;
 
+import org.testng.Assert;
 import org.testng.annotations.Test;
 
 

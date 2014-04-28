@@ -21,8 +21,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Scanner;
 
-import junit.framework.Assert;
-
 import ml.shifu.shifu.actor.AkkaExecStatus;
 import ml.shifu.shifu.actor.NormalizeDataActor;
 import ml.shifu.shifu.actor.TrainModelActor;
@@ -38,6 +36,7 @@ import ml.shifu.shifu.message.AkkaActorInputMessage;
 import ml.shifu.shifu.util.CommonUtils;
 
 import org.apache.commons.io.FileUtils;
+import org.testng.Assert;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.Test;
 

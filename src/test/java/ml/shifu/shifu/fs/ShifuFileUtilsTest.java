@@ -22,12 +22,11 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Scanner;
 
-import junit.framework.Assert;
-
 import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
 import ml.shifu.shifu.fs.ShifuFileUtils;
 
 import org.apache.commons.io.FileUtils;
+import org.testng.Assert;
 import org.testng.annotations.Test;
 
 

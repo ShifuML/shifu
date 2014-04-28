@@ -15,8 +15,6 @@
  */
 package ml.shifu.shifu.udf;
 
-import junit.framework.Assert;
-
 import ml.shifu.shifu.udf.ConcatLogUDF;
 
 import org.apache.pig.backend.executionengine.ExecException;
@@ -24,6 +22,7 @@ import org.apache.pig.data.BagFactory;
 import org.apache.pig.data.DataBag;
 import org.apache.pig.data.Tuple;
 import org.apache.pig.data.TupleFactory;
+import org.testng.Assert;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.Test;
 

@@ -19,11 +19,10 @@ import java.beans.IntrospectionException;
 import java.io.File;
 import java.io.IOException;
 
-import junit.framework.Assert;
-
 import ml.shifu.shifu.util.HDFSUtils;
 
 import org.apache.hadoop.fs.Path;
+import org.testng.Assert;
 import org.testng.annotations.Test;
 
 

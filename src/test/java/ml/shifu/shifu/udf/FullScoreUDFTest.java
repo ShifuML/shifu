@@ -18,13 +18,12 @@ package ml.shifu.shifu.udf;
 import java.io.File;
 import java.io.IOException;
 
-import junit.framework.Assert;
-
 import ml.shifu.shifu.udf.FullScoreUDF;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.pig.data.Tuple;
 import org.apache.pig.data.TupleFactory;
+import org.testng.Assert;
 import org.testng.annotations.AfterClass;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.Test;

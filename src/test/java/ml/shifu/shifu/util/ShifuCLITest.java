@@ -20,8 +20,6 @@ import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
 
-import junit.framework.Assert;
-
 import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
 import ml.shifu.shifu.fs.ShifuFileUtils;
 import ml.shifu.shifu.util.CommonUtils;
@@ -33,6 +31,7 @@ import org.apache.commons.io.FileUtils;
 import org.easymock.EasyMock;
 import org.powermock.api.easymock.PowerMock;
 import org.powermock.modules.testng.PowerMockObjectFactory;
+import org.testng.Assert;
 import org.testng.IObjectFactory;
 import org.testng.annotations.AfterTest;
 import org.testng.annotations.BeforeClass;

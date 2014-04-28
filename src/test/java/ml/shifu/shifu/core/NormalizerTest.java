@@ -17,12 +17,11 @@ package ml.shifu.shifu.core;
 
 import java.util.Arrays;
 
-import junit.framework.Assert;
-
 import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.container.obj.ColumnConfig.ColumnType;
 import ml.shifu.shifu.core.Normalizer;
 
+import org.testng.Assert;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.Test;
 
