@@ -1,0 +1,116 @@
+[ {
+  "columnNum" : 0,
+  "columnName" : "outlook",
+  "columnType" : "C",
+  "columnFlag" : null,
+  "finalSelect" : true,
+  "columnStats" : {
+    "max" : 0.6363636363636364,
+    "min" : 0.0,
+    "mean" : 0.3333333333333334,
+    "stdDev" : 0.2574643859602308,
+    "ks" : 45.45454545454545,
+    "iv" : 10.677343880863043
+  },
+  "columnBinning" : {
+    "length" : 3,
+    "binBoundary" : null,
+    "binCategory" : [ "overcast", "rain", "sunny" ],
+    "binCountNeg" : [ 10, 8, 4 ],
+    "binCountPos" : [ 0, 4, 7 ],
+    "binPosRate" : [ 0.0, 0.3333333333333333, 0.6363636363636364 ],
+    "binAvgScore" : null
+  }
+}, {
+  "columnNum" : 1,
+  "columnName" : "temperature",
+  "columnType" : "N",
+  "columnFlag" : null,
+  "finalSelect" : true,
+  "columnStats" : {
+    "max" : 85.0,
+    "min" : 64.0,
+    "mean" : 74.0909090909091,
+    "stdDev" : 6.496939841492842,
+    "ks" : 9.090909090909092,
+    "iv" : 0.17083131378692246
+  },
+  "columnBinning" : {
+    "length" : 5,
+    "binBoundary" : [ "-Infinity", 68.0, 72.0, 75.0, 81.0 ],
+    "binCategory" : null,
+    "binCountNeg" : [ 2, 7, 3, 5, 5 ],
+    "binCountPos" : [ 2, 2, 2, 2, 3 ],
+    "binPosRate" : [ 0.5, 0.2222222222222222, 0.4, 0.2857142857142857, 0.375 ],
+    "binAvgScore" : null
+  }
+}, {
+  "columnNum" : 2,
+  "columnName" : "humidity",
+  "columnType" : "N",
+  "columnFlag" : null,
+  "finalSelect" : true,
+  "columnStats" : {
+    "max" : 96.0,
+    "min" : 65.0,
+    "mean" : 81.03030303030303,
+    "stdDev" : 9.599755364672216,
+    "ks" : 31.818181818181824,
+    "iv" : 7.367390415656357
+  },
+  "columnBinning" : {
+    "length" : 6,
+    "binBoundary" : [ "-Infinity", 75.0, 82.0, 90.0, 95.0, 96.0 ],
+    "binCategory" : null,
+    "binCountNeg" : [ 7, 8, 1, 3, 0, 3 ],
+    "binCountPos" : [ 2, 2, 3, 2, 2, 0 ],
+    "binPosRate" : [ 0.2222222222222222, 0.2, 0.75, 0.4, 1.0, 0.0 ],
+    "binAvgScore" : null
+  }
+}, {
+  "columnNum" : 3,
+  "columnName" : "windy",
+  "columnType" : "C",
+  "columnFlag" : null,
+  "finalSelect" : true,
+  "columnStats" : {
+    "max" : 0.46153846153846156,
+    "min" : 0.25,
+    "mean" : 0.33333333333333337,
+    "stdDev" : 0.1049650392041475,
+    "ks" : 22.727272727272723,
+    "iv" : 0.2146503655992194
+  },
+  "columnBinning" : {
+    "length" : 2,
+    "binBoundary" : null,
+    "binCategory" : [ "false", "true" ],
+    "binCountNeg" : [ 15, 7 ],
+    "binCountPos" : [ 5, 6 ],
+    "binPosRate" : [ 0.25, 0.46153846153846156 ],
+    "binAvgScore" : null
+  }
+}, {
+  "columnNum" : 4,
+  "columnName" : "result",
+  "columnType" : null,
+  "columnFlag" : "Target",
+  "finalSelect" : false,
+  "columnStats" : {
+    "max" : null,
+    "min" : null,
+    "mean" : null,
+    "stdDev" : null,
+    "ks" : null,
+    "iv" : null
+  },
+  "columnBinning" : {
+    "length" : 0,
+    "binBoundary" : null,
+    "binCategory" : null,
+    "binCountNeg" : null,
+    "binCountPos" : null,
+    "binPosRate" : null,
+    "binAvgScore" : null
+  }
+} ]

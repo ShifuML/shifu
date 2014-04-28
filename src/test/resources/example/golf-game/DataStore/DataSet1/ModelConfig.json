@@ -1,0 +1,88 @@
+{
+  "basic" : {
+    "name" : "ModelQ",
+    "author" : "",
+    "description" : null,
+    "runMode" : "local",
+    "customPaths" : {
+      "hdfsModelSetPath" : null
+    }
+  },
+  "dataSet" : {
+    "source" : "LOCAL",
+    "dataPath" : "src/test/resources/example/golf-game/DataStore/DataSet1/golf.train",
+    "dataDelimiter" : ",",
+    "headerPath" : "src/test/resources/example/golf-game/DataStore/DataSet1/golf.names",
+    "headerDelimiter" : ",",
+    "filterExpressions" : null,
+    "weightColumnName" : null,
+    "targetColumnName" : "result",
+    "posTags" : [ "Don't Play" ],
+    "negTags" : [ "Play" ],
+    "metaColumnNameFile" : null,
+    "categoricalColumnNameFile" : "category.names"
+  },
+  "stats" : {
+    "maxNumBin" : 10,
+    "binningMethod" : "EqualPositive",
+    "sampleRate" : 0.8,
+    "sampleNegOnly" : false
+  },
+  "varSelect" : {
+    "forceEnable" : true,
+    "forceSelectColumnNameFile" : null,
+    "forceRemoveColumnNameFile" : null,
+    "filterEnable" : true,
+    "filterNum" : 200,
+    "filterBy" : "KS"
+  },
+  "normalize" : {
+    "stdDevCutOff" : 4.0,
+    "sampleRate" : 0.8,
+    "sampleNegOnly" : false
+  },
+  "train" : {
+    "baggingNum" : 5,
+    "baggingWithReplacement" : false,
+    "baggingSampleRate" : 0.8,
+    "validSetRate" : 0.2,
+    "numTrainEpochs" : 1000,
+    "trainOnDisk" : false,
+    "algorithm" : "NN",
+    "params" : {
+      "NumHiddenLayers" : 2,
+      "ActivationFunc" : [ "Sigmoid", "Sigmoid" ],
+      "NumHiddenNodes" : [ 45, 45 ],
+      "LearningRate" : 0.1,
+      "Propagation" : "Q"
+    },
+    "customPaths" : {
+      "selectedRawDataPath" : null,
+      "binAvgScorePath" : null,
+      "trainScoresPath" : null,
+      "normalizedDataPath" : null,
+      "preTrainStatsPath" : null
+    }
+  },
+  "evals" : [ {
+    "name" : "Eval1",
+    "dataSet" : {
+      "source" : "LOCAL",
+      "dataPath" : "src/test/resources/example/golf-game/DataStore/DataSet1/golf.test",
+      "dataDelimiter" : ",",
+      "headerPath" : "src/test/resources/example/golf-game/DataStore/DataSet1/golf.names",
+      "headerDelimiter" : ",",
+      "filterExpressions" : null,
+      "weightColumnName" : null
+    },
+    "performanceBucketNum" : 10,
+    "performanceScoreSelector" : "mean",
+    "scoreMetaColumnNameFile" : null,
+    "customPaths" : {
+      "confusionMatrixPath" : null,
+      "performancePath" : null,
+      "scorePath" : null,
+      "modelsPath" : null
+    }
+  } ]
+}

@@ -1,0 +1,20 @@
+# zookeeperServers is used for distributed training 
+zookeeperServers=
+
+# hadoopNumParallel is for parallelity for when using mapreduce mode
+hadoopNumParallel=40
+
+# hadoopJobQueue specifies the hadoop job queue
+hadoopJobQueue=default
+
+# localNumParallel is for parallelity for when using local mode
+localNumParallel=6
+
+# how many records per message
+recordCntPerMessage=100000
+
+# SHIFU_OPTS if for default Java Options
+JAVA_OPTS="-Xms1G -Xmx1G"
+
+# HADOOP_CONF_DIR is for HADOOP configuration directory
+HADOOP_CONF_DIR=""
