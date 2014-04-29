@@ -40,7 +40,7 @@
     "sampleNegOnly" : false
   },
   "train" : {
-    "baggingNum" : 2,
+    "baggingNum" : 1,
     "baggingWithReplacement" : false,
     "baggingSampleRate" : 0.8,
     "validSetRate" : 0.2,
