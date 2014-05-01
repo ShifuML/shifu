@@ -1,12 +1,12 @@
 /**
  * Copyright [2012-2014] eBay Software Foundation
- *  
+ *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
  *    http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -15,21 +15,19 @@
  */
 package ml.shifu.shifu.container.obj;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import ml.shifu.shifu.core.alg.LogisticRegressionTrainer;
+import ml.shifu.shifu.core.alg.NNTrainer;
+import ml.shifu.shifu.core.alg.SVMTrainer;
+
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import ml.shifu.shifu.core.alg.LogisticRegressionTrainer;
-import ml.shifu.shifu.core.alg.NNTrainer;
-import ml.shifu.shifu.core.alg.SVMTrainer;
-
-import com.fasterxml.jackson.annotation.JsonIgnore;
-import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
-
 /**
  * ModelTrainConf class
- * 
  */
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class ModelTrainConf {
@@ -37,7 +35,7 @@ public class ModelTrainConf {
     public static enum ALGORITHM {
         NN, LR, SVM, DT
     }
-    
+
     private Integer baggingNum = Integer.valueOf(5);
     // change it to false by default, as we often don't use this way.
     private Boolean baggingWithReplacement = Boolean.FALSE;
@@ -56,8 +54,8 @@ public class ModelTrainConf {
 
     public ModelTrainConf() {
         customPaths = new HashMap<String, String>(1);
-        
-        /** 
+
+        /**
          * Since most user won't use this function,
          * hidden the custom paths for creating new model.
          */   
@@ -67,7 +65,7 @@ public class ModelTrainConf {
         customPaths.put(Constants.KEY_TRAIN_SCORES_PATH, null);
         customPaths.put(Constants.KEY_BIN_AVG_SCORE_PATH, null);*/
     }
-    
+
     public Integer getBaggingNum() {
         return baggingNum;
     }
@@ -155,8 +153,8 @@ public class ModelTrainConf {
      */
     public static Map<String, Object> createParamsByAlg(ALGORITHM alg) {
         Map<String, Object> params = new HashMap<String, Object>();
-        
-        if ( ALGORITHM.NN.equals(alg) ) {
+
+        if (ALGORITHM.NN.equals(alg)) {
             params.put(NNTrainer.PROPAGATION, "Q");
             params.put(NNTrainer.LEARNING_RATE, 0.1);
             params.put(NNTrainer.NUM_HIDDEN_LAYERS, 2);
@@ -165,23 +163,23 @@ public class ModelTrainConf {
             nodes.add(30);
             nodes.add(20);
             params.put(NNTrainer.NUM_HIDDEN_NODES, nodes);
-            
+
             List<String> func = new ArrayList<String>();
             func.add("sigmoid");
             func.add("sigmoid");
             params.put(NNTrainer.ACTIVATION_FUNC, func);
-        } else if ( ALGORITHM.SVM.equals(alg) ) {
+        } else if (ALGORITHM.SVM.equals(alg)) {
             params.put(SVMTrainer.SVM_KERNEL, "linear");
             params.put(SVMTrainer.SVM_GAMMA, 1.0);
             params.put(SVMTrainer.SVM_CONST, 1.0);
-        } else if ( ALGORITHM.DT.equals(alg) ) {
+        } else if (ALGORITHM.DT.equals(alg)) {
             //To be decide
             //DecisionTreeTrainer
-        } else if ( ALGORITHM.LR.equals(alg) ) {
+        } else if (ALGORITHM.LR.equals(alg)) {
             params.put(LogisticRegressionTrainer.LEARNING_RATE, 0.1);
         }
-        
+
         return params;
     }
-    
+
 }

@@ -15,22 +15,14 @@
  */
 package ml.shifu.shifu.core;
 
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.TreeMap;
-
 import ml.shifu.shifu.container.ValueObject;
 import ml.shifu.shifu.container.ValueObject.ValueObjectComparator;
 import ml.shifu.shifu.container.obj.ModelStatsConf.BinningMethod;
 import ml.shifu.shifu.util.QuickSort;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.util.*;
 
 
 /**
@@ -393,9 +385,9 @@ public class Binning {
      */
     private void doEqualTotalBinning() {
 
-    	@SuppressWarnings("unused")
-		int cntTotal = 0;
-        int bin = 0; 
+        @SuppressWarnings("unused")
+        int cntTotal = 0;
+        int bin = 0;
         int cntValidValue = 0;
         int cntPos = 0;
         int cntNeg = 0;

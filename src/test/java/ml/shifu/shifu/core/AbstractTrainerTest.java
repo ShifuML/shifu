@@ -1,12 +1,12 @@
 /**
  * Copyright [2012-2014] eBay Software Foundation
- *  
+ *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
  *    http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -15,18 +15,10 @@
  */
 package ml.shifu.shifu.core;
 
-import java.io.File;
-import java.io.FilenameFilter;
-import java.io.IOException;
-import java.util.Date;
-import java.util.Random;
-
 import ml.shifu.shifu.container.obj.ModelConfig;
 import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
-import ml.shifu.shifu.core.AbstractTrainer;
 import ml.shifu.shifu.core.alg.NNTrainer;
 import ml.shifu.shifu.util.CommonUtils;
-
 import org.apache.commons.io.FileUtils;
 import org.encog.ml.data.MLDataPair;
 import org.encog.ml.data.MLDataSet;
@@ -38,9 +30,15 @@ import org.testng.annotations.AfterClass;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.Test;
 
+import java.io.File;
+import java.io.FilenameFilter;
+import java.io.IOException;
+import java.util.Date;
+import java.util.Random;
+
 
 public class AbstractTrainerTest {
-    
+
     private Random random;
 
     @BeforeClass
@@ -52,7 +50,7 @@ public class AbstractTrainerTest {
     public void testLoad1() throws IOException {
         MLDataSet set = new BasicMLDataSet();
         ModelConfig modelConfig = CommonUtils.loadModelConfig(
-        		"src/test/resources/example/cancer-judgement/ModelStore/ModelSet1/ModelConfig.json",
+                "src/test/resources/example/cancer-judgement/ModelStore/ModelSet1/ModelConfig.json",
                 SourceType.LOCAL);
 
         double[] input = new double[modelConfig.getVarSelectFilterNum()];
@@ -115,18 +113,18 @@ public class AbstractTrainerTest {
     @AfterClass
     public void delete() throws IOException {
         File json = new File(".");
-        for(File tmp : json.listFiles(filter)){
+        for (File tmp : json.listFiles(filter)) {
             tmp.delete();
         }
-        
+
         FileUtils.deleteDirectory(new File("tmp"));
     }
-    
+
     private FilenameFilter filter = new FilenameFilter() {
         @Override
         public boolean accept(File dir, String name) {
-            
-            return name.toLowerCase().startsWith("init") && name.toLowerCase().endsWith("json") ;
+
+            return name.toLowerCase().startsWith("init") && name.toLowerCase().endsWith("json");
         }
-     };
+    };
 }

@@ -1,12 +1,12 @@
 /**
  * Copyright [2012-2014] eBay Software Foundation
- *  
+ *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
  *    http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -15,19 +15,16 @@
  */
 package ml.shifu.shifu.container.obj;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+import ml.shifu.shifu.util.Constants;
+import org.apache.commons.lang.StringUtils;
+
 import java.util.HashMap;
 import java.util.Map;
 
-import ml.shifu.shifu.util.Constants;
-
-import org.apache.commons.lang.StringUtils;
-
-import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
-import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
-
 /**
  * ModelMetaConf class
- * 
  */
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class ModelBasicConf {
@@ -36,53 +33,53 @@ public class ModelBasicConf {
     public static enum RunMode {
         local, mapred
     }
-    
-	private String name;
-	
-	private String author;
-	
-	private String description;
-	
-	private String version = Constants.version;
-	
-	private RunMode runMode = RunMode.local;
-	
-	private Map<String, String> customPaths;
+
+    private String name;
+
+    private String author;
+
+    private String description;
+
+    private String version = Constants.version;
+
+    private RunMode runMode = RunMode.local;
+
+    private Map<String, String> customPaths;
 
     public ModelBasicConf() {
         customPaths = new HashMap<String, String>(1);
-        /** 
+        /**
          * Since most user won't use this function,
          * hidden the custom paths for creating new model.
          */
         // customPaths.put(Constants.KEY_HDFS_MODEL_SET_PATH, null);
     }
-	   
-	public String getName() {
-		return name;
-	}
 
-	public void setName(String name) {
-		this.name = name;
-	}
+    public String getName() {
+        return name;
+    }
 
-	public String getAuthor() {
-		return author;
-	}
+    public void setName(String name) {
+        this.name = name;
+    }
 
-	public void setAuthor(String author) {
-		this.author = author;
-	}
+    public String getAuthor() {
+        return author;
+    }
 
-	public String getDescription() {
-		return description;
-	}
+    public void setAuthor(String author) {
+        this.author = author;
+    }
 
-	public void setDescription(String description) {
-		this.description = description;
-	}
-	
-	public RunMode getRunMode() {
+    public String getDescription() {
+        return description;
+    }
+
+    public void setDescription(String description) {
+        this.description = description;
+    }
+
+    public RunMode getRunMode() {
         return runMode;
     }
 
@@ -99,33 +96,33 @@ public class ModelBasicConf {
     }
 
     @Override
-	public boolean equals(Object obj) {
-		if ( obj == null || !(obj instanceof ModelBasicConf) ) {
-			return false;
-		}
-		
-		if ( obj == this ) {
-			return true;
-		}
-		
-		ModelBasicConf basic = (ModelBasicConf) obj;
-		return StringUtils.equals(basic.getName(), name) 
-				&& StringUtils.equals(basic.getAuthor(), author)
-				&& StringUtils.equals(basic.getDescription(), description); 
-	}
+    public boolean equals(Object obj) {
+        if (obj == null || !(obj instanceof ModelBasicConf)) {
+            return false;
+        }
 
-	/**
-	 * @return the version
-	 */
-	public String getVersion() {
-		return version;
-	}
+        if (obj == this) {
+            return true;
+        }
 
-	/**
-	 * @param version the version to set
-	 */
-	public void setVersion(String version) {
-		this.version = version;
-	}
-	
+        ModelBasicConf basic = (ModelBasicConf) obj;
+        return StringUtils.equals(basic.getName(), name)
+                && StringUtils.equals(basic.getAuthor(), author)
+                && StringUtils.equals(basic.getDescription(), description);
+    }
+
+    /**
+     * @return the version
+     */
+    public String getVersion() {
+        return version;
+    }
+
+    /**
+     * @param version the version to set
+     */
+    public void setVersion(String version) {
+        this.version = version;
+    }
+
 }

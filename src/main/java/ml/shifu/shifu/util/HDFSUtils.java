@@ -1,12 +1,12 @@
 /**
  * Copyright [2012-2014] eBay Software Foundation
- *  
+ *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
  *    http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -15,21 +15,18 @@
  */
 package ml.shifu.shifu.util;
 
-import java.io.IOException;
-
 import ml.shifu.shifu.exception.ShifuErrorCode;
 import ml.shifu.shifu.exception.ShifuException;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.IOException;
+
 
 /**
- * 
  * {@link HDFSUtils} is a unified class to get HDFS FileSystem Object.
- * 
  */
 public final class HDFSUtils {
 
@@ -39,12 +36,12 @@ public final class HDFSUtils {
      * Conf object which is used to construct HDFS FileSystem.
      */
     private final static Configuration conf = new Configuration();
-    
+
     /**
      * HDFS FileSystem
      */
     private static volatile FileSystem hdfs;
-    
+
     /**
      * Local FileSystem
      */
@@ -58,9 +55,9 @@ public final class HDFSUtils {
      * Get HDFS FileSystem
      */
     public static FileSystem getFS() {
-        if(hdfs == null) {
-            synchronized(HDFSUtils.class) {
-                if(hdfs == null) {
+        if (hdfs == null) {
+            synchronized (HDFSUtils.class) {
+                if (hdfs == null) {
                     try {
                         // initialization
                         hdfs = FileSystem.get(conf);
@@ -77,14 +74,13 @@ public final class HDFSUtils {
 
     /**
      * Get local FileSystem
-     * 
-     * @throws IOException
-     *             if any IOException to retrieve local file system.
+     *
+     * @throws IOException if any IOException to retrieve local file system.
      */
     public static FileSystem getLocalFS() {
-        if(lfs == null) {
-            synchronized(HDFSUtils.class) {
-                if(lfs == null) {
+        if (lfs == null) {
+            synchronized (HDFSUtils.class) {
+                if (lfs == null) {
                     try {
                         // initialization
                         lfs = FileSystem.getLocal(conf).getRaw();

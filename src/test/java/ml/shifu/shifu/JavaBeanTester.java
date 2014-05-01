@@ -1,12 +1,12 @@
 /**
  * Copyright [2012-2014] eBay Software Foundation
- *  
+ *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
  *    http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -25,16 +25,7 @@ import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.net.URL;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.Enumeration;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 
@@ -46,15 +37,15 @@ public class JavaBeanTester {
     public static <T> void test(final Class<T> clazz, boolean skipValidation, final String... skipThese)
             throws IntrospectionException {
         T bean = newInstance(clazz);
-        if(bean == null) {
+        if (bean == null) {
             throw new RuntimeException("Cannot create a bean class:" + clazz.getName());
         }
         final PropertyDescriptor[] props = Introspector.getBeanInfo(clazz).getPropertyDescriptors();
         List<String> skipList = Arrays.asList(skipThese);
-        for(PropertyDescriptor prop: props) {
+        for (PropertyDescriptor prop : props) {
             // Check the list of properties that we don't want to test
 
-            if(skipList.contains(prop.getName())) {
+            if (skipList.contains(prop.getName())) {
                 continue;
             }
             final Method getter = prop.getReadMethod();
@@ -63,14 +54,14 @@ public class JavaBeanTester {
             Object actualValue = null;
             Object expectedValue = null;
             try {
-                if(getter != null) {
+                if (getter != null) {
                     actualValue = getter.invoke(bean);
                 }
 
-                if(setter != null) {
+                if (setter != null) {
                     final Class<?>[] params = setter.getParameterTypes();
 
-                    if(params.length == 1) {
+                    if (params.length == 1) {
                         // The set method has 1 argument, which is of the same type as the return type of the get
                         // method, so
                         // we can test this property
@@ -95,8 +86,8 @@ public class JavaBeanTester {
                 throw new RuntimeException(e);
             }
 
-            if(getter != null && setter != null && !skipValidation) {
-                if(!actualValue.equals(expectedValue)) {
+            if (getter != null && setter != null && !skipValidation) {
+                if (!actualValue.equals(expectedValue)) {
                     throw new RuntimeException("After setter, getter gets wrong result: expectedValue:" + expectedValue
                             + " actualValue:" + actualValue);
                 }
@@ -110,17 +101,17 @@ public class JavaBeanTester {
     }
 
     private static <T> Method findSetter(Method writeMethod, Method getter, Class<T> clazz) {
-        if(writeMethod != null) {
+        if (writeMethod != null) {
             return writeMethod;
         }
-        if(getter == null) {
+        if (getter == null) {
             return null;
         }
 
         String setterName = getter.getName().replaceAll("get", "set");
         Method[] methods = clazz.getMethods();
-        for(int i = 0; i < methods.length; i++) {
-            if(setterName.equals(methods[i].getName())) {
+        for (int i = 0; i < methods.length; i++) {
+            if (setterName.equals(methods[i].getName())) {
                 return methods[i];
             }
         }
@@ -142,8 +133,8 @@ public class JavaBeanTester {
 
             private int findPrimitiveParamsSize(Constructor<?> o1) {
                 int size = 0;
-                for(int i = 0; i < o1.getParameterTypes().length; i++) {
-                    if(o1.getParameterTypes()[i].isPrimitive() || o1.getParameterTypes()[i] == List.class
+                for (int i = 0; i < o1.getParameterTypes().length; i++) {
+                    if (o1.getParameterTypes()[i].isPrimitive() || o1.getParameterTypes()[i] == List.class
                             || o1.getParameterTypes()[i] == Map.class || o1.getParameterTypes()[i] == Set.class) {
                         size++;
                     }
@@ -152,16 +143,16 @@ public class JavaBeanTester {
             }
 
         });
-        for(Constructor<?> ctr: ctrs) {
+        for (Constructor<?> ctr : ctrs) {
             try {
                 ctr.setAccessible(true);
-                if(ctr.getParameterTypes().length == 0) {
+                if (ctr.getParameterTypes().length == 0) {
                     // The class has a no-arg constructor, so just call it
                     initialInstance = (T) ctr.newInstance();
                     return initialInstance;
                 } else {
                     Object[] params = new Object[ctr.getParameterTypes().length];
-                    for(int i = 0; i < ctr.getParameterTypes().length; i++) {
+                    for (int i = 0; i < ctr.getParameterTypes().length; i++) {
                         params[i] = buildValue(ctr.getParameterTypes()[i]);
                     }
                     return (T) ctr.newInstance(params);
@@ -186,41 +177,41 @@ public class JavaBeanTester {
             IllegalArgumentException, SecurityException, InvocationTargetException {
         // Next check for a no-arg constructor
         // Specific rules for common classes
-        if(clazz == String.class) {
+        if (clazz == String.class) {
             return "testvalue";
 
-        } else if(clazz.isArray()) {
+        } else if (clazz.isArray()) {
             return Array.newInstance(clazz.getComponentType(), 1);
 
-        } else if(clazz == boolean.class || clazz == Boolean.class) {
+        } else if (clazz == boolean.class || clazz == Boolean.class) {
             return true;
 
-        } else if(clazz == int.class || clazz == Integer.class) {
+        } else if (clazz == int.class || clazz == Integer.class) {
             return 1;
 
-        } else if(clazz == long.class || clazz == Long.class) {
+        } else if (clazz == long.class || clazz == Long.class) {
             return 1L;
 
-        } else if(clazz == double.class || clazz == Double.class) {
+        } else if (clazz == double.class || clazz == Double.class) {
             return 1.0D;
 
-        } else if(clazz == float.class || clazz == Float.class) {
+        } else if (clazz == float.class || clazz == Float.class) {
             return 1.0F;
 
-        } else if(clazz == char.class || clazz == Character.class) {
+        } else if (clazz == char.class || clazz == Character.class) {
             return 'Y';
-        } else if(clazz == List.class) {
+        } else if (clazz == List.class) {
             return new ArrayList();
-        } else if(clazz == Map.class) {
+        } else if (clazz == Map.class) {
             return new HashMap();
-        } else if(clazz == Set.class) {
+        } else if (clazz == Set.class) {
             return new HashSet();
-        } else if ( clazz.isEnum() ) {
-        	return clazz.getEnumConstants()[0];
+        } else if (clazz.isEnum()) {
+            return clazz.getEnumConstants()[0];
         }
 
         Class<?> newClazz = clazz;
-        if(clazz.isInterface()) {
+        if (clazz.isInterface()) {
             throw new RuntimeException("Cannot find implement class for interface:" + clazz.getName());
 //            List<Class<?>> allClassesByInterface = null;
 //            try {
@@ -237,7 +228,7 @@ public class JavaBeanTester {
         Object result = null;
         result = newInstance(newClazz);
 
-        if(result != null) {
+        if (result != null) {
             return result;
         } else {
             throw new RuntimeException("Cannot instance parameter with class:" + newClazz.getName());
@@ -247,22 +238,22 @@ public class JavaBeanTester {
     public static List<Class<?>> getAllClassesByInterface(Class<?> interfaceClass, boolean samePackage)
             throws IOException, ClassNotFoundException, IllegalStateException {
 
-        if(!interfaceClass.isInterface()) {
+        if (!interfaceClass.isInterface()) {
             throw new IllegalStateException("Class is not a interface.");
         }
 
         String packageName = samePackage ? interfaceClass.getPackage().getName() : "/";
         List<Class<?>> result = new ArrayList<Class<?>>();
         String[] classpaths = System.getProperty("java.class.path").split(";");
-        for(int i = 0; i < classpaths.length; i++) {
-            if(classpaths[i].endsWith("jar")) {
-                if(classpaths[i].endsWith(".jar") || classpaths[i].endsWith(".zip")) {
+        for (int i = 0; i < classpaths.length; i++) {
+            if (classpaths[i].endsWith("jar")) {
+                if (classpaths[i].endsWith(".jar") || classpaths[i].endsWith(".zip")) {
                     ZipFile zip = new ZipFile(classpaths[i]);
                     Enumeration<? extends ZipEntry> entries = zip.entries();
-                    while(entries.hasMoreElements()) {
+                    while (entries.hasMoreElements()) {
                         ZipEntry entry = (ZipEntry) entries.nextElement();
                         String thisClassName = getClassName(entry);
-                        if(thisClassName.endsWith(".class")) {
+                        if (thisClassName.endsWith(".class")) {
                             Class<?> tmpClazz = null;
                             try {
                                 Thread.currentThread().getContextClassLoader().loadClass(thisClassName);
@@ -271,7 +262,7 @@ public class JavaBeanTester {
                                 e.printStackTrace();
                                 continue;
                             }
-                            if(interfaceClass.isAssignableFrom(tmpClazz) && !interfaceClass.equals(tmpClazz)) {
+                            if (interfaceClass.isAssignableFrom(tmpClazz) && !interfaceClass.equals(tmpClazz)) {
                                 result.add(tmpClazz);
                             }
                         }
@@ -296,9 +287,9 @@ public class JavaBeanTester {
         List<Class<?>> allClasses = new ArrayList<Class<?>>();
         // while(tmpLoader != null) {
         String packagePath = packageName.replace(".", "/");
-        if(!packagePath.equals("/")) {
+        if (!packagePath.equals("/")) {
             Enumeration<URL> resources = tmpLoader.getResources(packagePath);
-            while(resources.hasMoreElements()) {
+            while (resources.hasMoreElements()) {
                 URL url = resources.nextElement();
                 allClasses.addAll(findResources(interfaceClass, new File(url.getFile()), packageName));
             }
@@ -316,26 +307,26 @@ public class JavaBeanTester {
             throws ClassNotFoundException {
 
         List<Class<?>> results = new ArrayList<Class<?>>();
-        if(!directory.exists())
+        if (!directory.exists())
             return Collections.EMPTY_LIST;
         File[] files = directory.listFiles();
-        for(File file: files) {
-            if(file.isDirectory()) {
-                if(!file.getName().contains(".")) {
-                    if(!packageName.equals("/")) {
+        for (File file : files) {
+            if (file.isDirectory()) {
+                if (!file.getName().contains(".")) {
+                    if (!packageName.equals("/")) {
                         results.addAll(findResources(interfaceClass, file, packageName + "." + file.getName()));
                     } else {
                         results.addAll(findResources(interfaceClass, file, file.getName()));
                     }
                 }
-            } else if(file.getName().endsWith(".class")) {
+            } else if (file.getName().endsWith(".class")) {
                 Class<?> clazz = null;
-                if(!packageName.equals("/")) {
+                if (!packageName.equals("/")) {
                     clazz = Class.forName(packageName + "." + file.getName().substring(0, file.getName().length() - 6));
                 } else {
                     clazz = Class.forName(file.getName().substring(0, file.getName().length() - 6));
                 }
-                if(interfaceClass.isAssignableFrom(clazz) && !interfaceClass.equals(clazz)) {
+                if (interfaceClass.isAssignableFrom(clazz) && !interfaceClass.equals(clazz)) {
                     results.add(clazz);
                 }
             }

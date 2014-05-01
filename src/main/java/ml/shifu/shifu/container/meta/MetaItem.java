@@ -1,12 +1,12 @@
 /**
  * Copyright [2012-2014] eBay Software Foundation
- *  
+ *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
  *    http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -15,144 +15,142 @@
  */
 package ml.shifu.shifu.container.meta;
 
-import java.util.ArrayList;
-import java.util.List;
-
-import org.apache.commons.collections.CollectionUtils;
-
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonInclude.Include;
+import org.apache.commons.collections.CollectionUtils;
+
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * ConfigMeta class
- * 
  */
 @JsonIgnoreProperties(ignoreUnknown = true)
 @JsonInclude(Include.NON_NULL)
 public class MetaItem {
-	
-	private String name;
-	
-	private String type;
-	
-	private Object defval;
-	
-	private String directive;
-	
-	private String description;
-	
-	private Integer maxLength;
-	
-	private Integer minLength;
-	
-	private List<ValueOption> options;
-	
-	private String elementType;
-	
-	private List<MetaItem> element;
 
-	public String getName() {
-		return name;
-	}
+    private String name;
 
-	public void setName(String name) {
-		this.name = name;
-	}
+    private String type;
 
-	public String getType() {
-		return type;
-	}
+    private Object defval;
 
-	public void setType(String type) {
-		this.type = type;
-	}
+    private String directive;
 
-	public Object getDefval() {
-		return defval;
-	}
+    private String description;
 
-	public void setDefval(Object defval) {
-		this.defval = defval;
-	}
+    private Integer maxLength;
 
-	public String getDirective() {
-		return directive;
-	}
+    private Integer minLength;
 
-	public void setDirective(String directive) {
-		this.directive = directive;
-	}
-	
-	public String getDescription() {
-		return description;
-	}
+    private List<ValueOption> options;
 
-	public void setDescription(String description) {
-		this.description = description;
-	}
+    private String elementType;
 
-	public Integer getMaxLength() {
-		return maxLength;
-	}
+    private List<MetaItem> element;
 
-	public void setMaxLength(Integer maxLength) {
-		this.maxLength = maxLength;
-	}
+    public String getName() {
+        return name;
+    }
 
-	public Integer getMinLength() {
-		return minLength;
-	}
+    public void setName(String name) {
+        this.name = name;
+    }
 
-	public void setMinLength(Integer minLength) {
-		this.minLength = minLength;
-	}
+    public String getType() {
+        return type;
+    }
 
-	public List<ValueOption> getOptions() {
-		return options;
-	}
+    public void setType(String type) {
+        this.type = type;
+    }
 
-	public void setOptions(List<ValueOption> options) {
-		this.options = options;
-	}
-	
-	public String getElementType() {
-		return elementType;
-	}
+    public Object getDefval() {
+        return defval;
+    }
 
-	public void setElementType(String elementType) {
-		this.elementType = elementType;
-	}
+    public void setDefval(Object defval) {
+        this.defval = defval;
+    }
 
-	public List<MetaItem> getElement() {
-		return element;
-	}
+    public String getDirective() {
+        return directive;
+    }
 
-	public void setElement(List<MetaItem> element) {
-		this.element = element;
-	}
+    public void setDirective(String directive) {
+        this.directive = directive;
+    }
 
-	@Override
-	public MetaItem clone() {
-		MetaItem copy = new MetaItem();
-		
-		copy.setName(name);
-		copy.setType(type);
-		copy.setDefval(defval);
-		copy.setMaxLength(maxLength);
-		copy.setMinLength(minLength);
-		copy.setOptions(options);
-		copy.setElementType(elementType);
-		
-		if ( CollectionUtils.isNotEmpty(element) ) {
-			List<MetaItem> elementList = new ArrayList<MetaItem>();
-			for (MetaItem meta : element) {
-				elementList.add(meta.clone());
-			}
-			
-			copy.setElement(elementList);
-		}
-		
-		return copy;
-	}
+    public String getDescription() {
+        return description;
+    }
+
+    public void setDescription(String description) {
+        this.description = description;
+    }
+
+    public Integer getMaxLength() {
+        return maxLength;
+    }
+
+    public void setMaxLength(Integer maxLength) {
+        this.maxLength = maxLength;
+    }
+
+    public Integer getMinLength() {
+        return minLength;
+    }
+
+    public void setMinLength(Integer minLength) {
+        this.minLength = minLength;
+    }
+
+    public List<ValueOption> getOptions() {
+        return options;
+    }
+
+    public void setOptions(List<ValueOption> options) {
+        this.options = options;
+    }
+
+    public String getElementType() {
+        return elementType;
+    }
+
+    public void setElementType(String elementType) {
+        this.elementType = elementType;
+    }
+
+    public List<MetaItem> getElement() {
+        return element;
+    }
+
+    public void setElement(List<MetaItem> element) {
+        this.element = element;
+    }
+
+    @Override
+    public MetaItem clone() {
+        MetaItem copy = new MetaItem();
+
+        copy.setName(name);
+        copy.setType(type);
+        copy.setDefval(defval);
+        copy.setMaxLength(maxLength);
+        copy.setMinLength(minLength);
+        copy.setOptions(options);
+        copy.setElementType(elementType);
+
+        if (CollectionUtils.isNotEmpty(element)) {
+            List<MetaItem> elementList = new ArrayList<MetaItem>();
+            for (MetaItem meta : element) {
+                elementList.add(meta.clone());
+            }
+
+            copy.setElement(elementList);
+        }
+
+        return copy;
+    }
 }

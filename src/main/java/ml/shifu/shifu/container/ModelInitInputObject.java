@@ -1,12 +1,12 @@
 /**
  * Copyright [2012-2014] eBay Software Foundation
- *  
+ *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
  *    http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -17,13 +17,12 @@ package ml.shifu.shifu.container;
 
 import java.util.ArrayList;
 import java.util.List;
+
 /**
- * 
- * Model initialization input  
- *
+ * Model initialization input
  */
 public class ModelInitInputObject {
-    
+
     private List<Double> weights;
     private int numWeights;
     private List<Integer> sampleIndex;
@@ -32,20 +31,20 @@ public class ModelInitInputObject {
     private int numTrainSet;
     private List<Integer> validSetIndex;
     private int numValidSet;
-    
-    public ModelInitInputObject(){
-        numWeights  = 0;
-        numSample   = 0;
+
+    public ModelInitInputObject() {
+        numWeights = 0;
+        numSample = 0;
         numTrainSet = 0;
         numValidSet = 0;
-        
-        weights       = new ArrayList<Double>();
-        sampleIndex   = new ArrayList<Integer>();
+
+        weights = new ArrayList<Double>();
+        sampleIndex = new ArrayList<Integer>();
         trainSetIndex = new ArrayList<Integer>();
         validSetIndex = new ArrayList<Integer>();
     }
-    
-    
+
+
     /**
      * @return the trainSetIndex
      */
@@ -108,30 +107,35 @@ public class ModelInitInputObject {
     public List<Double> getWeights() {
         return weights;
     }
+
     /**
      * @param weights the weights to set
      */
     public void setWeights(List<Double> weights) {
         this.weights = weights;
     }
+
     /**
      * @return the numWeights
      */
     public int getNumWeights() {
         return numWeights;
     }
+
     /**
      * @param numWeights the numWeights to set
      */
     public void setNumWeights(int numWeights) {
         this.numWeights = numWeights;
     }
+
     /**
      * @return the sampleIndex
      */
     public List<Integer> getSampleIndex() {
         return sampleIndex;
     }
+
     /**
      * @param sampleIndex the sampleIndex to set
      */

@@ -1,12 +1,12 @@
 /**
  * Copyright [2012-2014] eBay Software Foundation
- *  
+ *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
  *    http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -14,13 +14,6 @@
  * limitations under the License.
  */
 package ml.shifu.shifu.core.dtrain;
-
-import java.io.IOException;
-
-import ml.shifu.shifu.core.dtrain.Gradient;
-import ml.shifu.shifu.core.dtrain.NNParams;
-import ml.shifu.shifu.core.dtrain.NNUtils;
-import ml.shifu.shifu.core.dtrain.Weight;
 
 import org.encog.engine.network.activation.ActivationFunction;
 import org.encog.engine.network.activation.ActivationSigmoid;
@@ -44,406 +37,407 @@ import org.testng.Assert;
 import org.testng.annotations.BeforeTest;
 import org.testng.annotations.Test;
 
+import java.io.IOException;
+
 public class DTrainTest {
-	
-	public static final int INPUT_COUNT = 1000;
-	public static final int HIDDEN_COUNT = 20;
-	public static final int OUTPUT_COUNT = 1;
-	public static BasicNetwork network;
-	public static MLDataSet training;
-	
-	public static final int NUM_EPOCHS = 20;
-	
-	public double rate = 3;
 
-	public int numSplit = 24;
-	
-	public double[] weights;
-	
-	private final static Logger log = LoggerFactory.getLogger(DTrainTest.class);
-	
-	@BeforeTest
-	public void setup()
-	{
-		network = new BasicNetwork();
-		network.addLayer(new BasicLayer(DTrainTest.INPUT_COUNT));
-		network.addLayer(new BasicLayer(DTrainTest.HIDDEN_COUNT));
-		network.addLayer(new BasicLayer(DTrainTest.OUTPUT_COUNT));
-		network.getStructure().finalizeStructure();
-		network.reset();
-		
-		weights = network.getFlat().getWeights();
-		
-		training = RandomTrainingFactory.generate(1000,10000, INPUT_COUNT, OUTPUT_COUNT, -1, 1);
-	}
-	
-	public Gradient initGradient(MLDataSet training) {
-		
-		FlatNetwork flat = network.getFlat().clone();
+    public static final int INPUT_COUNT = 1000;
+    public static final int HIDDEN_COUNT = 20;
+    public static final int OUTPUT_COUNT = 1;
+    public static BasicNetwork network;
+    public static MLDataSet training;
 
-		//copy Propagation from encog
-		double[] flatSpot = new double[flat.getActivationFunctions().length];
-		for (int i = 0; i < flat.getActivationFunctions().length; i++) {
-			final ActivationFunction af = flat.getActivationFunctions()[i];
+    public static final int NUM_EPOCHS = 20;
 
-			if (af instanceof ActivationSigmoid) {
-				flatSpot[i] = 0.1;
-			} else {
-				flatSpot[i] = 0.0;
-			}
-		}
+    public double rate = 3;
 
-		return new Gradient(flat, training.openAdditional(), flatSpot, new LinearErrorFunction());		
-	}
-	
-	@Test
-	public void quickTest() throws IOException{
-		
-		double[] gradientError = new double[NUM_EPOCHS];
-		double[] ecogError     = new double[NUM_EPOCHS];
-		
-		network.reset();
-		weights = network.getFlat().getWeights();
+    public int numSplit = 24;
 
-		MLDataSet[] subsets = splitDataSet(training);
-		Gradient[]  workers = new Gradient[numSplit];
+    public double[] weights;
 
-		Weight weightCalculator = null;
-		
-		for(int i = 0 ; i < workers.length; i ++ ){
-			workers[i] = initGradient(subsets[i]);
-			workers[i].setWeights(weights);
-		}
+    private final static Logger log = LoggerFactory.getLogger(DTrainTest.class);
 
-		log.info("Running QuickPropagtaion testing! ");
-		NNParams globalParams = new NNParams();
-		globalParams.setWeights(weights);
+    @BeforeTest
+    public void setup() {
+        network = new BasicNetwork();
+        network.addLayer(new BasicLayer(DTrainTest.INPUT_COUNT));
+        network.addLayer(new BasicLayer(DTrainTest.HIDDEN_COUNT));
+        network.addLayer(new BasicLayer(DTrainTest.OUTPUT_COUNT));
+        network.getStructure().finalizeStructure();
+        network.reset();
 
-		for(int i = 0 ; i < NUM_EPOCHS; i ++) {
+        weights = network.getFlat().getWeights();
 
-			double error = 0.0;
-			
-			//each worker do the job
-			for(int j = 0; j < workers.length; j ++) {
-				workers[j].run();
-				error += workers[j].getError();
-			}
+        training = RandomTrainingFactory.generate(1000, 10000, INPUT_COUNT, OUTPUT_COUNT, -1, 1);
+    }
 
-			gradientError[i] = error/workers.length;
-			
-			log.info("The #" + i + " training error: " + gradientError[i]);
-			
-			//master 
-			globalParams.reset();
+    public Gradient initGradient(MLDataSet training) {
 
-			for(int j = 0 ; j < workers.length; j ++ ){
-				globalParams.accumulateGradients(workers[j].getGradients());
-				globalParams.accumulateTrainSize(subsets[j].getRecordCount());
-			}
+        FlatNetwork flat = network.getFlat().clone();
 
-			if(weightCalculator == null) {
-				weightCalculator = new Weight(globalParams.getGradients().length, globalParams.getTrainSize(), this.rate, NNUtils.QUICK_PROPAGATION);
-			}
+        //copy Propagation from encog
+        double[] flatSpot = new double[flat.getActivationFunctions().length];
+        for (int i = 0; i < flat.getActivationFunctions().length; i++) {
+            final ActivationFunction af = flat.getActivationFunctions()[i];
 
-			double[] interWeight = weightCalculator.calculateWeights(globalParams.getWeights(), globalParams.getGradients());
+            if (af instanceof ActivationSigmoid) {
+                flatSpot[i] = 0.1;
+            } else {
+                flatSpot[i] = 0.0;
+            }
+        }
 
-			globalParams.setWeights(interWeight);
+        return new Gradient(flat, training.openAdditional(), flatSpot, new LinearErrorFunction());
+    }
 
-			//set weights
-			for(int j = 0 ; j < workers.length; j ++) {
-				workers[j].setWeights(interWeight);
-			}
-		}
-		
-		//encog		
-		network.reset();
-		//NNUtils.randomize(numSplit, weights);
-		network.getFlat().setWeights(weights);
-				
-		Propagation p = null;
-		p = new QuickPropagation(network, training, rate);
-		//p = new ManhattanPropagation(network, training, rate);
-		p.setThreadCount(numSplit);
-		
-		for(int i = 0 ; i < NUM_EPOCHS ; i ++){
-			p.iteration(1);
-			//System.out.println("the #" + i  + " training error: " + p.getError());
-			ecogError[i] = p.getError();
-		}
-		
-		//assert
-		double diff = 0.0;
-		for(int i = 0 ; i < NUM_EPOCHS; i ++) {
-			diff += Math.abs(ecogError[i] - gradientError[i]);
-		}
-		
-		Assert.assertTrue(diff / NUM_EPOCHS < 0.1);
-		
-	}
-		
-	private MLDataSet[] splitDataSet(MLDataSet data) {
+    @Test
+    public void quickTest() throws IOException {
 
-		MLDataSet[] subsets = new MLDataSet[numSplit];
-		
-		for(int i = 0 ; i < subsets.length; i ++) {
-			subsets[i] = new BasicMLDataSet();
-		}
-		
-		for(int i = 0 ; i < data.getRecordCount(); i ++) {
-			MLDataPair pair = BasicMLDataPair.createPair(INPUT_COUNT, OUTPUT_COUNT);
-			data.getRecord(i, pair);
-			subsets[i%numSplit].add(pair);
-		}
-		
-		return subsets;
-	}
+        double[] gradientError = new double[NUM_EPOCHS];
+        double[] ecogError = new double[NUM_EPOCHS];
 
-	@Test
-	public void manhantTest() throws IOException{
-		double[] gradientError = new double[NUM_EPOCHS];
-		double[] ecogError     = new double[NUM_EPOCHS];
-		
-		network.reset();
-		weights = network.getFlat().getWeights();
+        network.reset();
+        weights = network.getFlat().getWeights();
 
-		MLDataSet[] subsets = splitDataSet(training);
-		Gradient[]  workers = new Gradient[numSplit];
+        MLDataSet[] subsets = splitDataSet(training);
+        Gradient[] workers = new Gradient[numSplit];
 
-		Weight weightCalculator = null;
-		
-		for(int i = 0 ; i < workers.length; i ++ ){
-			workers[i] = initGradient(subsets[i]);
-			workers[i].setWeights(weights);
-		}
+        Weight weightCalculator = null;
 
-		NNParams globalParams = new NNParams();
-		globalParams.setWeights(weights);
+        for (int i = 0; i < workers.length; i++) {
+            workers[i] = initGradient(subsets[i]);
+            workers[i].setWeights(weights);
+        }
 
-		log.info("Starting manhattan propagation testing!");
-		
-		for(int i = 0 ; i < NUM_EPOCHS; i ++) {
+        log.info("Running QuickPropagtaion testing! ");
+        NNParams globalParams = new NNParams();
+        globalParams.setWeights(weights);
 
-			double error = 0.0;
-			
-			//each worker do the job
-			for(int j = 0; j < workers.length; j ++) {
-				workers[j].run();
-				error += workers[j].getError();
-			}
+        for (int i = 0; i < NUM_EPOCHS; i++) {
 
-			gradientError[i] = error/workers.length;
-			
-			log.info("The #" + i + " training error: " + gradientError[i]);
-			
-			//master 
-			globalParams.reset();
+            double error = 0.0;
 
-			for(int j = 0 ; j < workers.length; j ++ ){
-				globalParams.accumulateGradients(workers[j].getGradients());
-				globalParams.accumulateTrainSize(subsets[j].getRecordCount());
-			}
+            //each worker do the job
+            for (int j = 0; j < workers.length; j++) {
+                workers[j].run();
+                error += workers[j].getError();
+            }
 
-			if(weightCalculator == null) {
-				weightCalculator = new Weight(globalParams.getGradients().length, globalParams.getTrainSize(), this.rate, NNUtils.MANHATTAN_PROPAGATION);
-			}
+            gradientError[i] = error / workers.length;
 
-			double[] interWeight = weightCalculator.calculateWeights(globalParams.getWeights(), globalParams.getGradients());
+            log.info("The #" + i + " training error: " + gradientError[i]);
 
-			globalParams.setWeights(interWeight);
+            //master
+            globalParams.reset();
 
-			//set weights
-			for(int j = 0 ; j < workers.length; j ++) {
-				workers[j].setWeights(interWeight);
-			}
-		}
-		
-		
-		//encog		
-		network.reset();
-		//NNUtils.randomize(numSplit, weights);
-		network.getFlat().setWeights(weights);
-				
-		Propagation p = null;
-		p = new ManhattanPropagation(network, training, rate);
-		p.setThreadCount(numSplit);
-		
-		for(int i = 0 ; i < NUM_EPOCHS ; i ++){
-			p.iteration(1);
-			//System.out.println("the #" + i  + " training error: " + p.getError());
-			ecogError[i] = p.getError();
-		}
-		
-		//assert
-		double diff = 0.0;
-		for(int i = 0 ; i < NUM_EPOCHS; i ++) {
-			diff += Math.abs(ecogError[i] - gradientError[i]);
-		}
-		
-		Assert.assertTrue(diff / NUM_EPOCHS < 0.3);
-	}
-	
-	@Test
-	public void Backtest(){
-		double[] gradientError = new double[NUM_EPOCHS];
-		double[] ecogError     = new double[NUM_EPOCHS];
+            for (int j = 0; j < workers.length; j++) {
+                globalParams.accumulateGradients(workers[j].getGradients());
+                globalParams.accumulateTrainSize(subsets[j].getRecordCount());
+            }
 
-		network.reset();
-		weights = network.getFlat().getWeights();
+            if (weightCalculator == null) {
+                weightCalculator = new Weight(globalParams.getGradients().length, globalParams.getTrainSize(), this.rate, NNUtils.QUICK_PROPAGATION);
+            }
 
-		MLDataSet[] subsets = splitDataSet(training);
-		Gradient[]  workers = new Gradient[numSplit];
+            double[] interWeight = weightCalculator.calculateWeights(globalParams.getWeights(), globalParams.getGradients());
 
-		Weight weightCalculator = null;
-		
-		for(int i = 0 ; i < workers.length; i ++ ){
-			workers[i] = initGradient(subsets[i]);
-			workers[i].setWeights(weights);
-		}
+            globalParams.setWeights(interWeight);
 
-		log.info("Starting back propagation testing!");
-		NNParams globalParams = new NNParams();
-		globalParams.setWeights(weights);
+            //set weights
+            for (int j = 0; j < workers.length; j++) {
+                workers[j].setWeights(interWeight);
+            }
+        }
 
-		for(int i = 0 ; i < NUM_EPOCHS; i ++) {
+        //encog
+        network.reset();
+        //NNUtils.randomize(numSplit, weights);
+        network.getFlat().setWeights(weights);
 
-			double error = 0.0;
-			
-			//each worker do the job
-			for(int j = 0; j < workers.length; j ++) {
-				workers[j].run();
-				error += workers[j].getError();
-			}
+        Propagation p = null;
+        p = new QuickPropagation(network, training, rate);
+        //p = new ManhattanPropagation(network, training, rate);
+        p.setThreadCount(numSplit);
 
-			gradientError[i] = error/workers.length;
-			
-			log.info("The #" + i + " training error: " + gradientError[i]);
-			
-			//master 
-			globalParams.reset();
+        for (int i = 0; i < NUM_EPOCHS; i++) {
+            p.iteration(1);
+            //System.out.println("the #" + i  + " training error: " + p.getError());
+            ecogError[i] = p.getError();
+        }
 
-			for(int j = 0 ; j < workers.length; j ++ ){
-				globalParams.accumulateGradients(workers[j].getGradients());
-				globalParams.accumulateTrainSize(subsets[j].getRecordCount());
-			}
+        //assert
+        double diff = 0.0;
+        for (int i = 0; i < NUM_EPOCHS; i++) {
+            diff += Math.abs(ecogError[i] - gradientError[i]);
+        }
 
-			if(weightCalculator == null) {
-				weightCalculator = new Weight(globalParams.getGradients().length, globalParams.getTrainSize(), this.rate, NNUtils.BACK_PROPAGATION);
-			}
+        Assert.assertTrue(diff / NUM_EPOCHS < 0.1);
 
-			double[] interWeight = weightCalculator.calculateWeights(globalParams.getWeights(), globalParams.getGradients());
+    }
 
-			globalParams.setWeights(interWeight);
+    private MLDataSet[] splitDataSet(MLDataSet data) {
 
-			//set weights
-			for(int j = 0 ; j < workers.length; j ++) {
-				workers[j].setWeights(interWeight);
-			}
-		}
-		
-		
-		//encog		
-		network.reset();
-		//NNUtils.randomize(numSplit, weights);
-		network.getFlat().setWeights(weights);
-				
-		Propagation p = null;
-		p = new Backpropagation(network, training, rate, 0);
-		p.setThreadCount(numSplit);
-		
-		for(int i = 0 ; i < NUM_EPOCHS ; i ++){
-			p.iteration(1);
-			//System.out.println("the #" + i  + " training error: " + p.getError());
-			ecogError[i] = p.getError();
-		}
-		
-		//assert
-		double diff = 0.0;
-		for(int i = 0 ; i < NUM_EPOCHS; i ++) {
-			diff += Math.abs(ecogError[i] - gradientError[i]);
-		}
-		
-		Assert.assertTrue(diff / NUM_EPOCHS < 0.3);
-	}
-	
-	@Test
-	public void resilientPropagationTest(){
-		double[] gradientError = new double[NUM_EPOCHS];
-		double[] ecogError     = new double[NUM_EPOCHS];
+        MLDataSet[] subsets = new MLDataSet[numSplit];
 
-		network.reset();
-		weights = network.getFlat().getWeights();
+        for (int i = 0; i < subsets.length; i++) {
+            subsets[i] = new BasicMLDataSet();
+        }
 
-		MLDataSet[] subsets = splitDataSet(training);
-		Gradient[]  workers = new Gradient[numSplit];
+        for (int i = 0; i < data.getRecordCount(); i++) {
+            MLDataPair pair = BasicMLDataPair.createPair(INPUT_COUNT, OUTPUT_COUNT);
+            data.getRecord(i, pair);
+            subsets[i % numSplit].add(pair);
+        }
 
-		Weight weightCalculator = null;
-		
-		for(int i = 0 ; i < workers.length; i ++ ){
-			workers[i] = initGradient(subsets[i]);
-			workers[i].setWeights(weights);
-		}
+        return subsets;
+    }
 
-		log.info("Starting resilient propagation testing!");
-		NNParams globalParams = new NNParams();
-		globalParams.setWeights(weights);
+    @Test
+    public void manhantTest() throws IOException {
+        double[] gradientError = new double[NUM_EPOCHS];
+        double[] ecogError = new double[NUM_EPOCHS];
 
-		for(int i = 0 ; i < NUM_EPOCHS; i ++) {
+        network.reset();
+        weights = network.getFlat().getWeights();
 
-			double error = 0.0;
-			
-			//each worker do the job
-			for(int j = 0; j < workers.length; j ++) {
-				workers[j].run();
-				error += workers[j].getError();
-			}
+        MLDataSet[] subsets = splitDataSet(training);
+        Gradient[] workers = new Gradient[numSplit];
 
-			gradientError[i] = error/workers.length;
-			
-			log.info("The #" + i + " training error: " + gradientError[i]);
-			
-			//master 
-			globalParams.reset();
+        Weight weightCalculator = null;
 
-			for(int j = 0 ; j < workers.length; j ++ ){
-				globalParams.accumulateGradients(workers[j].getGradients());
-				globalParams.accumulateTrainSize(subsets[j].getRecordCount());
-			}
+        for (int i = 0; i < workers.length; i++) {
+            workers[i] = initGradient(subsets[i]);
+            workers[i].setWeights(weights);
+        }
 
-			if(weightCalculator == null) {
-				weightCalculator = new Weight(globalParams.getGradients().length, globalParams.getTrainSize(), this.rate, NNUtils.RESILIENTPROPAGATION);
-			}
+        NNParams globalParams = new NNParams();
+        globalParams.setWeights(weights);
 
-			double[] interWeight = weightCalculator.calculateWeights(globalParams.getWeights(), globalParams.getGradients());
+        log.info("Starting manhattan propagation testing!");
 
-			globalParams.setWeights(interWeight);
+        for (int i = 0; i < NUM_EPOCHS; i++) {
 
-			//set weights
-			for(int j = 0 ; j < workers.length; j ++) {
-				workers[j].setWeights(interWeight);
-			}
-		}
-		
-		
-		//encog		
-		network.reset();
-		//NNUtils.randomize(numSplit, weights);
-		network.getFlat().setWeights(weights);
-				
-		Propagation p = null;
-		p = new ResilientPropagation(network, training);
-		p.setThreadCount(numSplit);
-		
-		for(int i = 0 ; i < NUM_EPOCHS ; i ++){
-			p.iteration(1);
-			ecogError[i] = p.getError();
-		}
-		
-		//assert
-		double diff = 0.0;
-		for(int i = 0 ; i < NUM_EPOCHS; i ++) {
-			diff += Math.abs(ecogError[i] - gradientError[i]);
-		}
-		
-		Assert.assertTrue(diff / NUM_EPOCHS < 0.5);
-	}
+            double error = 0.0;
+
+            //each worker do the job
+            for (int j = 0; j < workers.length; j++) {
+                workers[j].run();
+                error += workers[j].getError();
+            }
+
+            gradientError[i] = error / workers.length;
+
+            log.info("The #" + i + " training error: " + gradientError[i]);
+
+            //master
+            globalParams.reset();
+
+            for (int j = 0; j < workers.length; j++) {
+                globalParams.accumulateGradients(workers[j].getGradients());
+                globalParams.accumulateTrainSize(subsets[j].getRecordCount());
+            }
+
+            if (weightCalculator == null) {
+                weightCalculator = new Weight(globalParams.getGradients().length, globalParams.getTrainSize(), this.rate, NNUtils.MANHATTAN_PROPAGATION);
+            }
+
+            double[] interWeight = weightCalculator.calculateWeights(globalParams.getWeights(), globalParams.getGradients());
+
+            globalParams.setWeights(interWeight);
+
+            //set weights
+            for (int j = 0; j < workers.length; j++) {
+                workers[j].setWeights(interWeight);
+            }
+        }
+
+
+        //encog
+        network.reset();
+        //NNUtils.randomize(numSplit, weights);
+        network.getFlat().setWeights(weights);
+
+        Propagation p = null;
+        p = new ManhattanPropagation(network, training, rate);
+        p.setThreadCount(numSplit);
+
+        for (int i = 0; i < NUM_EPOCHS; i++) {
+            p.iteration(1);
+            //System.out.println("the #" + i  + " training error: " + p.getError());
+            ecogError[i] = p.getError();
+        }
+
+        //assert
+        double diff = 0.0;
+        for (int i = 0; i < NUM_EPOCHS; i++) {
+            diff += Math.abs(ecogError[i] - gradientError[i]);
+        }
+
+        Assert.assertTrue(diff / NUM_EPOCHS < 0.3);
+    }
+
+    @Test
+    public void Backtest() {
+        double[] gradientError = new double[NUM_EPOCHS];
+        double[] ecogError = new double[NUM_EPOCHS];
+
+        network.reset();
+        weights = network.getFlat().getWeights();
+
+        MLDataSet[] subsets = splitDataSet(training);
+        Gradient[] workers = new Gradient[numSplit];
+
+        Weight weightCalculator = null;
+
+        for (int i = 0; i < workers.length; i++) {
+            workers[i] = initGradient(subsets[i]);
+            workers[i].setWeights(weights);
+        }
+
+        log.info("Starting back propagation testing!");
+        NNParams globalParams = new NNParams();
+        globalParams.setWeights(weights);
+
+        for (int i = 0; i < NUM_EPOCHS; i++) {
+
+            double error = 0.0;
+
+            //each worker do the job
+            for (int j = 0; j < workers.length; j++) {
+                workers[j].run();
+                error += workers[j].getError();
+            }
+
+            gradientError[i] = error / workers.length;
+
+            log.info("The #" + i + " training error: " + gradientError[i]);
+
+            //master
+            globalParams.reset();
+
+            for (int j = 0; j < workers.length; j++) {
+                globalParams.accumulateGradients(workers[j].getGradients());
+                globalParams.accumulateTrainSize(subsets[j].getRecordCount());
+            }
+
+            if (weightCalculator == null) {
+                weightCalculator = new Weight(globalParams.getGradients().length, globalParams.getTrainSize(), this.rate, NNUtils.BACK_PROPAGATION);
+            }
+
+            double[] interWeight = weightCalculator.calculateWeights(globalParams.getWeights(), globalParams.getGradients());
+
+            globalParams.setWeights(interWeight);
+
+            //set weights
+            for (int j = 0; j < workers.length; j++) {
+                workers[j].setWeights(interWeight);
+            }
+        }
+
+
+        //encog
+        network.reset();
+        //NNUtils.randomize(numSplit, weights);
+        network.getFlat().setWeights(weights);
+
+        Propagation p = null;
+        p = new Backpropagation(network, training, rate, 0);
+        p.setThreadCount(numSplit);
+
+        for (int i = 0; i < NUM_EPOCHS; i++) {
+            p.iteration(1);
+            //System.out.println("the #" + i  + " training error: " + p.getError());
+            ecogError[i] = p.getError();
+        }
+
+        //assert
+        double diff = 0.0;
+        for (int i = 0; i < NUM_EPOCHS; i++) {
+            diff += Math.abs(ecogError[i] - gradientError[i]);
+        }
+
+        Assert.assertTrue(diff / NUM_EPOCHS < 0.3);
+    }
+
+    @Test
+    public void resilientPropagationTest() {
+        double[] gradientError = new double[NUM_EPOCHS];
+        double[] ecogError = new double[NUM_EPOCHS];
+
+        network.reset();
+        weights = network.getFlat().getWeights();
+
+        MLDataSet[] subsets = splitDataSet(training);
+        Gradient[] workers = new Gradient[numSplit];
+
+        Weight weightCalculator = null;
+
+        for (int i = 0; i < workers.length; i++) {
+            workers[i] = initGradient(subsets[i]);
+            workers[i].setWeights(weights);
+        }
+
+        log.info("Starting resilient propagation testing!");
+        NNParams globalParams = new NNParams();
+        globalParams.setWeights(weights);
+
+        for (int i = 0; i < NUM_EPOCHS; i++) {
+
+            double error = 0.0;
+
+            //each worker do the job
+            for (int j = 0; j < workers.length; j++) {
+                workers[j].run();
+                error += workers[j].getError();
+            }
+
+            gradientError[i] = error / workers.length;
+
+            log.info("The #" + i + " training error: " + gradientError[i]);
+
+            //master
+            globalParams.reset();
+
+            for (int j = 0; j < workers.length; j++) {
+                globalParams.accumulateGradients(workers[j].getGradients());
+                globalParams.accumulateTrainSize(subsets[j].getRecordCount());
+            }
+
+            if (weightCalculator == null) {
+                weightCalculator = new Weight(globalParams.getGradients().length, globalParams.getTrainSize(), this.rate, NNUtils.RESILIENTPROPAGATION);
+            }
+
+            double[] interWeight = weightCalculator.calculateWeights(globalParams.getWeights(), globalParams.getGradients());
+
+            globalParams.setWeights(interWeight);
+
+            //set weights
+            for (int j = 0; j < workers.length; j++) {
+                workers[j].setWeights(interWeight);
+            }
+        }
+
+
+        //encog
+        network.reset();
+        //NNUtils.randomize(numSplit, weights);
+        network.getFlat().setWeights(weights);
+
+        Propagation p = null;
+        p = new ResilientPropagation(network, training);
+        p.setThreadCount(numSplit);
+
+        for (int i = 0; i < NUM_EPOCHS; i++) {
+            p.iteration(1);
+            ecogError[i] = p.getError();
+        }
+
+        //assert
+        double diff = 0.0;
+        for (int i = 0; i < NUM_EPOCHS; i++) {
+            diff += Math.abs(ecogError[i] - gradientError[i]);
+        }
+
+        Assert.assertTrue(diff / NUM_EPOCHS < 0.5);
+    }
 }

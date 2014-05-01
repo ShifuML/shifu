@@ -17,16 +17,13 @@
  */
 package ml.shifu.shifu.util;
 
-import java.io.IOException;
-
-import ml.shifu.shifu.util.Environment;
-
 import org.testng.Assert;
 import org.testng.annotations.Test;
 
+import java.io.IOException;
+
 /**
  * EnvironmentTest class
- * 
  */
 public class EnvironmentTest {
 

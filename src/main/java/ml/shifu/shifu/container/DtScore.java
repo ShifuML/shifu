@@ -17,19 +17,13 @@
  */
 package ml.shifu.shifu.container;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.Map.Entry;
-
 import org.apache.commons.collections.CollectionUtils;
+
+import java.util.*;
+import java.util.Map.Entry;
 
 /**
  * DtScore class
- * 
  */
 public class DtScore {
 
@@ -38,22 +32,22 @@ public class DtScore {
     private int minScore = Integer.MAX_VALUE;
     private int meanScore = 0;
     private int medianScore = 0;
-    
+
     private Map<Object, Integer> modelTargetVoteMap;
-    
+
     public DtScore() {
         scoreList = new ArrayList<Integer>();
         modelTargetVoteMap = new HashMap<Object, Integer>();
     }
-    
+
     public void addDtScoreEntry(int score, Object target) {
         scoreList.add(score);
-        
+
         maxScore = Math.max(score, maxScore);
         minScore = Math.min(score, minScore);
-        
+
         int targetVoteCnt = 1;
-        if ( modelTargetVoteMap.containsKey(target) ) {
+        if (modelTargetVoteMap.containsKey(target)) {
             targetVoteCnt += modelTargetVoteMap.get(target);
         }
         modelTargetVoteMap.put(target, targetVoteCnt);
@@ -84,15 +78,15 @@ public class DtScore {
     }
 
     public int getMeanScore() {
-        if ( CollectionUtils.isNotEmpty(scoreList) ) {
+        if (CollectionUtils.isNotEmpty(scoreList)) {
             int totalScore = 0;
-            for (int i = 0; i < scoreList.size(); i ++) {
+            for (int i = 0; i < scoreList.size(); i++) {
                 totalScore += scoreList.get(i);
             }
-        
+
             meanScore = totalScore / scoreList.size();
         }
-        
+
         return meanScore;
     }
 
@@ -101,36 +95,36 @@ public class DtScore {
     }
 
     public int getMedianScore() {
-        if ( CollectionUtils.isNotEmpty(scoreList) ) {
+        if (CollectionUtils.isNotEmpty(scoreList)) {
             List<Integer> tmpScoreList = new ArrayList<Integer>(scoreList);
             Collections.sort(tmpScoreList);
             medianScore = tmpScoreList.get(tmpScoreList.size() / 2);
         }
-        
+
         return medianScore;
     }
 
     public void setMedianScore(int medianScore) {
         this.medianScore = medianScore;
     }
-    
+
     public Object getMostFavoriateModelTarget() {
-        if ( modelTargetVoteMap == null && modelTargetVoteMap.size() == 0 ) {
+        if (modelTargetVoteMap == null && modelTargetVoteMap.size() == 0) {
             return null;
         }
-        
+
         Object mostFavoriateTarget = null;
         int mostVoteCnt = Integer.MIN_VALUE;
-        
+
         Iterator<Entry<Object, Integer>> iterator = modelTargetVoteMap.entrySet().iterator();
-        while ( iterator.hasNext() ) {
+        while (iterator.hasNext()) {
             Entry<Object, Integer> entry = iterator.next();
-            if ( entry.getValue() > mostVoteCnt ) {
+            if (entry.getValue() > mostVoteCnt) {
                 mostVoteCnt = entry.getValue();
                 mostFavoriateTarget = entry.getKey();
             }
         }
-        
+
         return mostFavoriateTarget;
     }
 }

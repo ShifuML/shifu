@@ -17,10 +17,11 @@
  */
 package ml.shifu.shifu.actor;
 
-import java.io.IOException;
-import java.util.List;
-import java.util.Scanner;
-
+import akka.actor.ActorRef;
+import akka.actor.Props;
+import akka.actor.UntypedActor;
+import akka.actor.UntypedActorFactory;
+import akka.routing.RoundRobinRouter;
 import ml.shifu.shifu.actor.worker.DataLoadWorker;
 import ml.shifu.shifu.actor.worker.TrainDataPrepWorker;
 import ml.shifu.shifu.actor.worker.TrainModelWorker;
@@ -32,16 +33,13 @@ import ml.shifu.shifu.message.ExceptionMessage;
 import ml.shifu.shifu.message.ScanStatsRawDataMessage;
 import ml.shifu.shifu.message.TrainResultMessage;
 import ml.shifu.shifu.util.Environment;
-
 import org.encog.Encog;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import akka.actor.ActorRef;
-import akka.actor.Props;
-import akka.actor.UntypedActor;
-import akka.actor.UntypedActorFactory;
-import akka.routing.RoundRobinRouter;
+import java.io.IOException;
+import java.util.List;
+import java.util.Scanner;
 
 
 /**
@@ -50,49 +48,52 @@ import akka.routing.RoundRobinRouter;
 public class TrainDtModelActor extends AbstractActor {
 
     private static Logger log = LoggerFactory.getLogger(CalculateStatsActor.class);
-    
+
     private ActorRef dataLoadRef;
     private ActorRef trainDataPrepRef;
     private ActorRef trainModelRef;
-    
+
     private int trainerCnt;
     private int resultCnt;
-    
+
     /**
      * @param modelConfig
      * @param columnConfigList
      * @param akkaStatus
      */
     public TrainDtModelActor(final ModelConfig modelConfig,
-            final List<ColumnConfig> columnConfigList, AkkaExecStatus akkaStatus, final List<AbstractTrainer> trainers) {
+                             final List<ColumnConfig> columnConfigList, AkkaExecStatus akkaStatus, final List<AbstractTrainer> trainers) {
         super(modelConfig, columnConfigList, akkaStatus);
-        
+
         log.info("Creating Master Actor ...");
-        
+
         this.resultCnt = 0;
         this.trainerCnt = trainers.size();
-        
+
         final ActorRef parentActorRef = getSelf();
-        
+
         // actors to training models
         trainModelRef = this.getContext().actorOf(new Props(new UntypedActorFactory() {
             private static final long serialVersionUID = -5719806635080547488L;
+
             public UntypedActor create() {
                 return new TrainModelWorker(modelConfig, columnConfigList, parentActorRef, parentActorRef);
             }
         }).withRouter(new RoundRobinRouter(this.modelConfig.getBaggingNum())), "ModelTrainWorker");
-        
+
         // actors to aggregate all training data
         trainDataPrepRef = this.getContext().actorOf(new Props(new UntypedActorFactory() {
             private static final long serialVersionUID = -5719806635080547488L;
+
             public UntypedActor create() throws IOException {
                 return new TrainDataPrepWorker(modelConfig, columnConfigList, parentActorRef, trainModelRef, trainers);
             }
         }).withRouter(new RoundRobinRouter(1)), "DataPrepWorker");
-        
+
         // actors to load data
         dataLoadRef = this.getContext().actorOf(new Props(new UntypedActorFactory() {
             private static final long serialVersionUID = -6869659846227133318L;
+
             public UntypedActor create() {
                 return new DataLoadWorker(modelConfig, columnConfigList, parentActorRef, trainDataPrepRef);
             }
@@ -104,9 +105,9 @@ public class TrainDtModelActor extends AbstractActor {
      */
     @Override
     public void onReceive(Object message) throws Exception {
-        if ( message instanceof AkkaActorInputMessage ) {
+        if (message instanceof AkkaActorInputMessage) {
             resultCnt = 0;
-            
+
             AkkaActorInputMessage msg = (AkkaActorInputMessage) message;
             List<Scanner> scanners = msg.getScanners();
 
@@ -114,20 +115,20 @@ public class TrainDtModelActor extends AbstractActor {
 
             for (Scanner scanner : scanners) {
                 dataLoadRef.tell(
-                    new ScanStatsRawDataMessage(scanners.size(), scanner), getSelf());
+                        new ScanStatsRawDataMessage(scanners.size(), scanner), getSelf());
             }
-        } else if ( message instanceof TrainResultMessage ) {
-            resultCnt ++;
-            if ( resultCnt == trainerCnt ) {
+        } else if (message instanceof TrainResultMessage) {
+            resultCnt++;
+            if (resultCnt == trainerCnt) {
                 log.info("Received " + resultCnt + " finish message. Close System.");
                 Encog.getInstance().shutdown();
                 getContext().system().shutdown();
             }
-        } else if ( message instanceof ExceptionMessage ) {
+        } else if (message instanceof ExceptionMessage) {
             // since some children actors meet some exception, shutdown the system
             ExceptionMessage msg = (ExceptionMessage) message;
             getContext().system().shutdown();
-            
+
             // and wrapper the exception into Return status
             addExceptionIntoCondition(msg.getException());
         } else {

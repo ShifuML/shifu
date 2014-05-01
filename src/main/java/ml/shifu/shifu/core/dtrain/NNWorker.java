@@ -1,12 +1,12 @@
 /**
  * Copyright [2012-2014] eBay Software Foundation
- *  
+ *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
  *    http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -15,17 +15,18 @@
  */
 package ml.shifu.shifu.core.dtrain;
 
-import java.io.File;
-import java.io.IOException;
-import java.util.List;
-import java.util.Properties;
-
+import com.google.common.base.Splitter;
+import ml.shifu.guagua.io.GuaguaFileSplit;
+import ml.shifu.guagua.mapreduce.GuaguaLineRecordReader;
+import ml.shifu.guagua.mapreduce.GuaguaWritableAdapter;
+import ml.shifu.guagua.util.NumberFormatUtils;
+import ml.shifu.guagua.worker.AbstractWorkerComputable;
+import ml.shifu.guagua.worker.WorkerContext;
 import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.container.obj.ModelConfig;
 import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
 import ml.shifu.shifu.core.alg.NNTrainer;
 import ml.shifu.shifu.util.CommonUtils;
-
 import org.apache.commons.lang.math.RandomUtils;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.LongWritable;
@@ -40,27 +41,21 @@ import org.encog.ml.data.buffer.BufferedMLDataSet;
 import org.encog.neural.error.LinearErrorFunction;
 import org.encog.neural.flat.FlatNetwork;
 import org.encog.neural.networks.BasicNetwork;
-import ml.shifu.guagua.io.GuaguaFileSplit;
-import ml.shifu.guagua.mapreduce.GuaguaLineRecordReader;
-import ml.shifu.guagua.mapreduce.GuaguaWritableAdapter;
-import ml.shifu.guagua.util.NumberFormatUtils;
-import ml.shifu.guagua.worker.AbstractWorkerComputable;
-import ml.shifu.guagua.worker.WorkerContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.google.common.base.Splitter;
+import java.io.File;
+import java.io.IOException;
+import java.util.List;
+import java.util.Properties;
 
 /**
  * {@link NNWorker} is used to compute NN model according to splits assigned. The result will be sent to master for
  * accumulation.
- * 
- * <p>
+ * <p/>
+ * <p/>
  * Gradients in each worker will be sent to master to update weights of model in worker, which follows Encog's
  * multi-core implementation.
- * 
-
- * 
  */
 public class NNWorker extends
         AbstractWorkerComputable<NNParams, NNParams, GuaguaWritableAdapter<LongWritable>, GuaguaWritableAdapter<Text>> {
@@ -143,11 +138,9 @@ public class NNWorker extends
 
     /**
      * For disk data set , initialize it with parameters and other work about creating files.
-     * 
-     * @throws IOException
-     *             if any exception on local fs operations.
-     * @throws RuntimeException
-     *             if error on deleting testing or training file.
+     *
+     * @throws IOException      if any exception on local fs operations.
+     * @throws RuntimeException if error on deleting testing or training file.
      */
     private void initDiskDataSet() throws IOException {
         Path trainingFile = NNUtils.getTrainingFile();
@@ -174,7 +167,7 @@ public class NNWorker extends
         this.isDry = Boolean.TRUE.toString().equalsIgnoreCase(
                 workerContext.getProps().getProperty(NNConstants.NN_DRY_TRAIN));
 
-        if(isOnDisk()) {
+        if (isOnDisk()) {
             LOG.info("NNWorker is loading data into disk.");
             try {
                 initDiskDataSet();
@@ -197,11 +190,11 @@ public class NNWorker extends
         // For dry option, return empty result.
         // For first iteration, we don't do anything, just wait for master to update weights in next iteration. This
         // make sure all workers in the 1st iteration to get the same weights.
-        if(this.isDry || workerContext.getCurrentIteration() == 1) {
+        if (this.isDry || workerContext.getCurrentIteration() == 1) {
             return buildEmptyNNParams(workerContext);
         }
 
-        if(workerContext.getLastMasterResult() == null) {
+        if (workerContext.getLastMasterResult() == null) {
             // This may not happen since master will set initialization weights firstly.
             LOG.warn("Master result of last iteration is null.");
             return null;
@@ -209,13 +202,13 @@ public class NNWorker extends
         LOG.debug("Set current model with params {}", workerContext.getLastMasterResult());
 
         // initialize gradients if null
-        if(gradient == null) {
+        if (gradient == null) {
             initGradient(this.trainingData, workerContext.getLastMasterResult().getWeights());
         }
-        
+
         // using the weights from master to train model in current iteration
         this.gradient.setWeights(workerContext.getLastMasterResult().getWeights());
-        
+
         this.gradient.run();
 
         // get train errors and test errors
@@ -224,7 +217,7 @@ public class NNWorker extends
                 .calculateError(this.testingData)) : this.gradient.getError();
         // if the validation set is 0%, then the validation error should be "N/A"
         LOG.info("NNWorker compute iteration {} (train error {} validation error {})",
-                new Object[] { workerContext.getCurrentIteration(), trainError, (this.testingData.getRecordCount() > 0 ? testError : "N/A") });
+                new Object[]{workerContext.getCurrentIteration(), trainError, (this.testingData.getRecordCount() > 0 ? testError : "N/A")});
 
         NNParams params = new NNParams();
 
@@ -251,7 +244,7 @@ public class NNWorker extends
         FlatNetwork flat = network.getFlat();
         // copy Propagation from encog
         double[] flatSpot = new double[flat.getActivationFunctions().length];
-        for(int i = 0; i < flat.getActivationFunctions().length; i++) {
+        for (int i = 0; i < flat.getActivationFunctions().length; i++) {
             flatSpot[i] = flat.getActivationFunctions()[i] instanceof ActivationSigmoid ? 0.1 : 0.0;
         }
 
@@ -269,7 +262,7 @@ public class NNWorker extends
 
     @Override
     protected void postLoad(WorkerContext<NNParams, NNParams> workerContext) {
-        if(isOnDisk()) {
+        if (isOnDisk()) {
             ((BufferedMLDataSet) this.trainingData).endLoad();
             ((BufferedMLDataSet) this.testingData).endLoad();
         }
@@ -284,23 +277,23 @@ public class NNWorker extends
 
     @Override
     public void load(GuaguaWritableAdapter<LongWritable> currentKey, GuaguaWritableAdapter<Text> currentValue,
-            WorkerContext<NNParams, NNParams> workerContext) {
+                     WorkerContext<NNParams, NNParams> workerContext) {
         ++this.count;
-        if((this.count) % 100000 == 0) {
+        if ((this.count) % 100000 == 0) {
             LOG.info("Read {} records.", this.count);
         }
 
         double baggingSampleRate = this.modelConfig.getBaggingSampleRate();
         // if fixInitialInput = false, we only compare random value with baggingSampleRate to avoid parsing data.
         // if fixInitialInput = true, we should use hashcode after parsing.
-        if(!this.modelConfig.isFixInitialInput() && Double.valueOf(Math.random()).compareTo(baggingSampleRate) >= 0) {
+        if (!this.modelConfig.isFixInitialInput() && Double.valueOf(Math.random()).compareTo(baggingSampleRate) >= 0) {
             return;
         }
 
         double[] inputs = new double[this.inputNodeCount];
         double[] ideal = new double[this.outputNodeCount];
 
-        if(this.isDry) {
+        if (this.isDry) {
             // dry train, use empty data.
             addDataPairToDataSet(0, new BasicMLDataPair(new BasicMLData(inputs), new BasicMLData(ideal)));
             return;
@@ -313,17 +306,17 @@ public class NNWorker extends
         // use guava Splitter to iterate only once
         // use NNConstants.NN_DEFAULT_COLUMN_SEPARATOR to replace getModelConfig().getDataSetDelimiter(), this follows
         // the function in akka mode.
-        for(String input: Splitter.on(NNConstants.NN_DEFAULT_COLUMN_SEPARATOR).split(
+        for (String input : Splitter.on(NNConstants.NN_DEFAULT_COLUMN_SEPARATOR).split(
                 currentValue.getWritable().toString())) {
             double doubleValue = NumberFormatUtils.getDouble(input.trim(), 0.0d);
 
-            if(i < this.outputNodeCount) {
+            if (i < this.outputNodeCount) {
                 ideal[i++] = doubleValue;
             } else {
                 int inputsIndex = (i++) - this.outputNodeCount;
-                if(inputsIndex < this.inputNodeCount) {
+                if (inputsIndex < this.inputNodeCount) {
                     inputs[inputsIndex] = doubleValue;
-                } else if(inputsIndex == this.inputNodeCount) {
+                } else if (inputsIndex == this.inputNodeCount) {
                     significance = NumberFormatUtils.getDouble(input, NNConstants.DEFAULT_SIGNIFICANCE_VALUE);
                     isComeToLastWeightColumn = true;
                 } else {
@@ -333,21 +326,21 @@ public class NNWorker extends
 
             // only fixInitialInput=true, hashcode is effective. Remove Arrays.hashcode to avoid one iteration for the
             // input columns. Last weight column should be excluded.
-            if(!isComeToLastWeightColumn && this.modelConfig.isFixInitialInput()) {
+            if (!isComeToLastWeightColumn && this.modelConfig.isFixInitialInput()) {
                 hashcode = hashcode * 31 + Double.valueOf(doubleValue).hashCode();
             }
         }
 
         int expectedColumns = isComeToLastWeightColumn ? (this.inputNodeCount + this.outputNodeCount + 1)
                 : (this.inputNodeCount + this.outputNodeCount);
-        if(i < expectedColumns) {
+        if (i < expectedColumns) {
             throw new RuntimeException(String.format("Not enough data columns, input columns:%s, expected columns:%s",
                     i, expectedColumns));
         }
 
         // if fixInitialInput = true, we should use hashcode to sample.
         long longBaggingSampleRate = Double.valueOf(baggingSampleRate * 100).longValue();
-        if(this.modelConfig.isFixInitialInput() && hashcode % 100 >= longBaggingSampleRate) {
+        if (this.modelConfig.isFixInitialInput() && hashcode % 100 >= longBaggingSampleRate) {
             return;
         }
 
@@ -365,16 +358,16 @@ public class NNWorker extends
      */
     private void addDataPairToDataSet(long hashcode, MLDataPair pair) {
         double crossValidationRate = this.modelConfig.getCrossValidationRate();
-        if(this.modelConfig.isFixInitialInput()) {
+        if (this.modelConfig.isFixInitialInput()) {
             long longCrossValidation = Double.valueOf(crossValidationRate * 100).longValue();
-            if(hashcode % 100 < longCrossValidation) {
+            if (hashcode % 100 < longCrossValidation) {
                 this.testingData.add(pair);
             } else {
                 this.trainingData.add(pair);
             }
         } else {
             double random = Math.random();
-            if(isBaggingReplacementTrigged(random)) {
+            if (isBaggingReplacementTrigged(random)) {
                 mockRandomRepeatData(crossValidationRate, random);
             } else {
                 addDataPairToDataSet(pair, crossValidationRate, random);
@@ -409,13 +402,13 @@ public class NNWorker extends
         int next = RandomUtils.nextInt((int) size);
         MLDataPair dataPair = new BasicMLDataPair(new BasicMLData(new double[this.inputNodeCount]), new BasicMLData(
                 new double[this.outputNodeCount]));
-        if(next >= trainingSize) {
+        if (next >= trainingSize) {
             this.testingData.getRecord(next - trainingSize, dataPair);
         } else {
             this.trainingData.getRecord(next, dataPair);
         }
 
-        if(Double.valueOf(random).compareTo(Double.valueOf(crossValidationRate)) < 0) {
+        if (Double.valueOf(random).compareTo(Double.valueOf(crossValidationRate)) < 0) {
             this.testingData.add(dataPair);
         } else {
             this.trainingData.add(dataPair);
@@ -426,7 +419,7 @@ public class NNWorker extends
      * Add data pair to data set according to random number compare with crossValidationRate.
      */
     private void addDataPairToDataSet(MLDataPair pair, double crossValidationRate, double random) {
-        if(Double.valueOf(random).compareTo(Double.valueOf(crossValidationRate)) < 0) {
+        if (Double.valueOf(random).compareTo(Double.valueOf(crossValidationRate)) < 0) {
             this.testingData.add(pair);
         } else {
             this.trainingData.add(pair);

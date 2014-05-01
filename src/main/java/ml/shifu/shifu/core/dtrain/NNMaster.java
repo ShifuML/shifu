@@ -1,12 +1,12 @@
 /**
  * Copyright [2012-2014] eBay Software Foundation
- *  
+ *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
  *    http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -15,39 +15,35 @@
  */
 package ml.shifu.shifu.core.dtrain;
 
-import java.io.IOException;
-import java.util.List;
-import java.util.Properties;
-import java.util.concurrent.atomic.AtomicBoolean;
-
+import ml.shifu.guagua.master.MasterComputable;
+import ml.shifu.guagua.master.MasterContext;
 import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.container.obj.ModelConfig;
 import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
 import ml.shifu.shifu.core.alg.NNTrainer;
 import ml.shifu.shifu.util.CommonUtils;
-
 import org.encog.neural.networks.BasicNetwork;
-import ml.shifu.guagua.master.MasterComputable;
-import ml.shifu.guagua.master.MasterContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.IOException;
+import java.util.List;
+import java.util.Properties;
+import java.util.concurrent.atomic.AtomicBoolean;
+
 
 /**
- * 
  * {@link NNMaster} is used to accumulate all workers NN parameters.
- * 
- * <p>
+ * <p/>
+ * <p/>
  * We accumulate all gradients from workers to calculate model weights. And set weights to workers. Then workers use
  * weights to set their models and train for another iteration.
- * 
- * <p>
+ * <p/>
+ * <p/>
  * This logic follows Encog multi-core implementation.
- * 
- * <p>
+ * <p/>
+ * <p/>
  * Make sure workers and master use the same initialization weights.
- * 
- * 
  */
 public class NNMaster implements MasterComputable<NNParams, NNParams> {
 
@@ -83,7 +79,7 @@ public class NNMaster implements MasterComputable<NNParams, NNParams> {
 
         // For first step, we not only initialize whole context but also return weights to master to make sure all
         // workers and master are using the same weights.
-        if(this.isInitialized.compareAndSet(false, true)) {
+        if (this.isInitialized.compareAndSet(false, true)) {
             // initilize configuration
             init(context);
 
@@ -95,7 +91,7 @@ public class NNMaster implements MasterComputable<NNParams, NNParams> {
             return params;
         }
 
-        if(context.getWorkerResults() == null) {
+        if (context.getWorkerResults() == null) {
             throw new IllegalArgumentException("workers' results are null.");
         }
 
@@ -106,7 +102,7 @@ public class NNMaster implements MasterComputable<NNParams, NNParams> {
         // before accumulate, reset gradients and train size
         this.globalNNParams.reset();
 
-        for(NNParams nn: context.getWorkerResults()) {
+        for (NNParams nn : context.getWorkerResults()) {
             totalTestError += nn.getTestError();
             totalTrainError += nn.getTrainError();
             this.globalNNParams.accumulateGradients(nn.getGradients());
@@ -115,12 +111,12 @@ public class NNMaster implements MasterComputable<NNParams, NNParams> {
         }
 
         // worker result size is 0. throw exception because shouldn't happen
-        if(size == 0) {
+        if (size == 0) {
             throw new IllegalArgumentException("workers' results are empty.");
         }
 
         // initialize weightCalCulater.
-        if(this.weightCalculator == null) {
+        if (this.weightCalculator == null) {
             // get the propagation
             String propagation = (String) this.modelConfig.getParams().get(NNTrainer.PROPAGATION);
             // get the learning rate
@@ -139,8 +135,8 @@ public class NNMaster implements MasterComputable<NNParams, NNParams> {
         double currentTestError = totalTestError / size;
         double currentTrainError = totalTrainError / size;
 
-        LOG.info("NNMaster compute iteration {} ( avg train error {}, avg validation error {} )", new Object[] {
-                context.getCurrentIteration(), currentTrainError, currentTestError });
+        LOG.info("NNMaster compute iteration {} ( avg train error {}, avg validation error {} )", new Object[]{
+                context.getCurrentIteration(), currentTrainError, currentTestError});
 
         NNParams params = new NNParams();
         params.setTrainError(currentTrainError);
@@ -152,7 +148,7 @@ public class NNMaster implements MasterComputable<NNParams, NNParams> {
         return params;
     }
 
-    @SuppressWarnings({ "unchecked" })
+    @SuppressWarnings({"unchecked"})
     private NNParams initWeights() {
         NNParams params = new NNParams();
 

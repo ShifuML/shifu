@@ -1,12 +1,12 @@
 /**
  * Copyright [2012-2014] eBay Software Foundation
- *  
+ *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
  *    http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -15,17 +15,13 @@
  */
 package ml.shifu.shifu.core.dtrain;
 
-import java.io.IOException;
-import java.util.List;
-import java.util.Properties;
-import java.util.concurrent.atomic.AtomicBoolean;
-
+import ml.shifu.guagua.master.BasicMasterInterceptor;
+import ml.shifu.guagua.master.MasterContext;
 import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.container.obj.ModelConfig;
 import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
 import ml.shifu.shifu.core.alg.NNTrainer;
 import ml.shifu.shifu.util.CommonUtils;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
@@ -33,15 +29,17 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.IOUtils;
 import org.encog.neural.networks.BasicNetwork;
 import org.encog.persist.EncogDirectoryPersistence;
-import ml.shifu.guagua.master.BasicMasterInterceptor;
-import ml.shifu.guagua.master.MasterContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.io.IOException;
+import java.util.List;
+import java.util.Properties;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 
 /**
  * {@link NNOutput} is used to write the model output to file system.
- *  
  */
 public class NNOutput extends BasicMasterInterceptor<NNParams, NNParams> {
 
@@ -101,7 +99,7 @@ public class NNOutput extends BasicMasterInterceptor<NNParams, NNParams> {
 
     @Override
     public void postIteration(final MasterContext<NNParams, NNParams> context) {
-        if(this.isDry) {
+        if (this.isDry) {
             // for dry mode, we don't save models files.
             return;
         }
@@ -110,13 +108,13 @@ public class NNOutput extends BasicMasterInterceptor<NNParams, NNParams> {
                 .getTrainError() : context.getMasterResult().getTestError());
 
         // save the weights according the error decreasing
-        if(currentError < this.minTestError) {
+        if (currentError < this.minTestError) {
             this.minTestError = currentError;
             this.optimizeddWeights = context.getMasterResult().getWeights();
         }
 
         // save tmp to hdfs according to raw trainer logic
-        if(context.getCurrentIteration() % NNUtils.tmpModelFactor(context.getTotalIteration()) == 0) {
+        if (context.getCurrentIteration() % NNUtils.tmpModelFactor(context.getTotalIteration()) == 0) {
             Thread tmpNNThread = new Thread(new Runnable() {
                 @Override
                 public void run() {
@@ -132,7 +130,7 @@ public class NNOutput extends BasicMasterInterceptor<NNParams, NNParams> {
 
     private void updateProgressLog(final MasterContext<NNParams, NNParams> context) {
         int currentIteration = context.getCurrentIteration();
-        if(currentIteration == 1) {
+        if (currentIteration == 1) {
             // first iteration is used for training preparation
             return;
         }
@@ -154,11 +152,11 @@ public class NNOutput extends BasicMasterInterceptor<NNParams, NNParams> {
         IOUtils.closeStream(this.progressOutput);
 
         // for dry mode, we don't save models files.
-        if(this.isDry) {
+        if (this.isDry) {
             return;
         }
 
-        if(optimizeddWeights != null) {
+        if (optimizeddWeights != null) {
             Path out = new Path(context.getProps().getProperty(NNConstants.GUAGUA_NN_OUTPUT));
             writeModelWeightsToFileSystem(optimizeddWeights, out);
         }
@@ -175,10 +173,10 @@ public class NNOutput extends BasicMasterInterceptor<NNParams, NNParams> {
     private void init(MasterContext<NNParams, NNParams> context) {
         this.isDry = Boolean.TRUE.toString().equals(context.getProps().getProperty(NNConstants.NN_DRY_TRAIN));
 
-        if(this.isDry) {
+        if (this.isDry) {
             return;
         }
-        if(isInit.compareAndSet(false, true)) {
+        if (isInit.compareAndSet(false, true)) {
             loadConfigFiles(context.getProps());
             initNetwork();
             this.trainerId = context.getProps().getProperty(NNConstants.NN_TRAINER_ID);
@@ -229,7 +227,7 @@ public class NNOutput extends BasicMasterInterceptor<NNParams, NNParams> {
             fos = FileSystem.get(new Configuration()).create(out);
             LOG.info("Writing results to {}", out.toString());
             this.network.getFlat().setWeights(weights);
-            if(out != null) {
+            if (out != null) {
                 EncogDirectoryPersistence.saveObject(fos, this.network);
             }
         } catch (IOException e) {

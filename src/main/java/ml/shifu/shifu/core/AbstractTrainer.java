@@ -1,12 +1,12 @@
 /**
  * Copyright [2012-2014] eBay Software Foundation
- *  
+ *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
  *    http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -15,14 +15,6 @@
  */
 package ml.shifu.shifu.core;
 
-import java.io.BufferedReader;
-import java.io.File;
-import java.io.IOException;
-import java.text.DecimalFormat;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Random;
-
 import ml.shifu.shifu.container.ModelInitInputObject;
 import ml.shifu.shifu.container.obj.ModelConfig;
 import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
@@ -30,7 +22,6 @@ import ml.shifu.shifu.fs.PathFinder;
 import ml.shifu.shifu.fs.ShifuFileUtils;
 import ml.shifu.shifu.util.Constants;
 import ml.shifu.shifu.util.JSONUtils;
-
 import org.encog.ml.BasicML;
 import org.encog.ml.data.MLData;
 import org.encog.ml.data.MLDataPair;
@@ -42,6 +33,14 @@ import org.encog.ml.data.buffer.BufferedMLDataSet;
 import org.encog.neural.networks.BasicNetwork;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.IOException;
+import java.text.DecimalFormat;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Random;
 
 
 /**
@@ -115,7 +114,7 @@ public abstract class AbstractTrainer {
 
     /**
      * Constructor
-     * 
+     *
      * @param modelConfig
      * @param trainerID
      * @param dryRun
@@ -128,12 +127,12 @@ public abstract class AbstractTrainer {
         this.dryRun = dryRun;
 
         crossValidationRate = this.modelConfig.getCrossValidationRate();
-        if(crossValidationRate == null) {
+        if (crossValidationRate == null) {
             crossValidationRate = 0.2;
         }
 
         baggingSampleRate = this.modelConfig.getBaggingSampleRate();
-        if(baggingSampleRate == null) {
+        if (baggingSampleRate == null) {
             baggingSampleRate = 0.8;
         }
 
@@ -142,7 +141,7 @@ public abstract class AbstractTrainer {
 
     /**
      * Set up the training dataset and validation dataset
-     * 
+     *
      * @param masterDataSet
      * @throws IOException
      */
@@ -151,12 +150,12 @@ public abstract class AbstractTrainer {
 
         MLDataSet sampledDataSet;
 
-        if(this.trainingOption.equalsIgnoreCase("M")) {
+        if (this.trainingOption.equalsIgnoreCase("M")) {
             log.info("Loading to Memory ...");
             sampledDataSet = new BasicMLDataSet();
             this.trainSet = new BasicMLDataSet();
             this.validSet = new BasicMLDataSet();
-        } else if(this.trainingOption.equalsIgnoreCase("D")) {
+        } else if (this.trainingOption.equalsIgnoreCase("D")) {
             log.info("Loading to Disk ...");
             sampledDataSet = new BufferedMLDataSet(new File(Constants.TMP, "sampled.egb"));
             this.trainSet = new BufferedMLDataSet(new File(Constants.TMP, "train.egb"));
@@ -177,12 +176,12 @@ public abstract class AbstractTrainer {
         // Encog 3.0
         int masterSize = (int) masterDataSet.getRecordCount();
 
-        if(!modelConfig.isFixInitialInput()) {
+        if (!modelConfig.isFixInitialInput()) {
             // Bagging
-            if(modelConfig.isBaggingWithReplacement()) {
+            if (modelConfig.isBaggingWithReplacement()) {
                 // Bagging With Replacement
                 int sampledSize = (int) (masterSize * baggingSampleRate);
-                for(int i = 0; i < sampledSize; i++) {
+                for (int i = 0; i < sampledSize; i++) {
                     // Encog 3.1
                     // sampledDataSet.add(masterDataSet.get(random.nextInt(masterSize)));
 
@@ -196,8 +195,8 @@ public abstract class AbstractTrainer {
                 }
             } else {
                 // Bagging Without Replacement
-                for(MLDataPair pair: masterDataSet) {
-                    if(random.nextDouble() < baggingSampleRate) {
+                for (MLDataPair pair : masterDataSet) {
+                    if (random.nextDouble() < baggingSampleRate) {
                         sampledDataSet.add(pair);
                     }
                 }
@@ -205,7 +204,7 @@ public abstract class AbstractTrainer {
         } else {
             List<Integer> list = loadSampleInput((int) (masterSize * baggingSampleRate), masterSize,
                     modelConfig.isBaggingWithReplacement());
-            for(Integer i: list) {
+            for (Integer i : list) {
                 double[] input = new double[masterDataSet.getInputSize()];
                 double[] ideal = new double[1];
                 MLDataPair pair = new BasicMLDataPair(new BasicMLData(input), new BasicMLData(ideal));
@@ -214,15 +213,15 @@ public abstract class AbstractTrainer {
             }
         }
 
-        if(this.trainingOption.equalsIgnoreCase("D")) {
+        if (this.trainingOption.equalsIgnoreCase("D")) {
             ((BufferedMLDataSet) sampledDataSet).endLoad();
         }
         // Cross Validation
         log.info("Generating Training Set and Validation Set ...");
 
-        if(!modelConfig.isFixInitialInput()) {
+        if (!modelConfig.isFixInitialInput()) {
             // Encog 3.0
-            for(int i = 0; i < sampledDataSet.getRecordCount(); i++) {
+            for (int i = 0; i < sampledDataSet.getRecordCount(); i++) {
 
                 double[] input = new double[sampledDataSet.getInputSize()];
                 double[] ideal = new double[1];
@@ -230,7 +229,7 @@ public abstract class AbstractTrainer {
 
                 sampledDataSet.getRecord(i, pair);
 
-                if(random.nextDouble() > crossValidationRate) {
+                if (random.nextDouble() > crossValidationRate) {
                     trainSet.add(pair);
                 } else {
                     validSet.add(pair);
@@ -240,7 +239,7 @@ public abstract class AbstractTrainer {
             long sampleSize = sampledDataSet.getRecordCount();
             long trainSetSize = (long) (sampleSize * (1 - crossValidationRate));
             int i = 0;
-            for(; i < trainSetSize; i++) {
+            for (; i < trainSetSize; i++) {
                 double[] input = new double[sampledDataSet.getInputSize()];
                 double[] ideal = new double[1];
                 MLDataPair pair = new BasicMLDataPair(new BasicMLData(input), new BasicMLData(ideal));
@@ -249,7 +248,7 @@ public abstract class AbstractTrainer {
                 trainSet.add(pair);
             }
 
-            for(; i < sampleSize; i++) {
+            for (; i < sampleSize; i++) {
                 double[] input = new double[sampledDataSet.getInputSize()];
                 double[] ideal = new double[1];
                 MLDataPair pair = new BasicMLDataPair(new BasicMLData(input), new BasicMLData(ideal));
@@ -259,7 +258,7 @@ public abstract class AbstractTrainer {
             }
         }
 
-        if(this.trainingOption.equalsIgnoreCase("D")) {
+        if (this.trainingOption.equalsIgnoreCase("D")) {
             ((BufferedMLDataSet) trainSet).endLoad();
             ((BufferedMLDataSet) validSet).endLoad();
         }
@@ -276,7 +275,7 @@ public abstract class AbstractTrainer {
 
     /**
      * get the training data set size
-     * 
+     *
      * @return number of size
      */
     public int getTrainSetSize() {
@@ -289,7 +288,7 @@ public abstract class AbstractTrainer {
 
     /**
      * get the training dataset
-     * 
+     *
      * @return the trainSet
      */
     public MLDataSet getTrainSet() {
@@ -297,16 +296,14 @@ public abstract class AbstractTrainer {
     }
 
     /**
-     * @param trainSet
-     *            the trainSet to set
+     * @param trainSet the trainSet to set
      */
     public void setTrainSet(MLDataSet trainSet) {
         this.trainSet = trainSet;
     }
 
     /**
-     * @param validSet
-     *            the validSet to set
+     * @param validSet the validSet to set
      */
     public void setValidSet(MLDataSet validSet) {
         this.validSet = validSet;
@@ -314,7 +311,7 @@ public abstract class AbstractTrainer {
 
     /**
      * get the validation set size
-     * 
+     *
      * @return the validation set number
      */
     public int getValidSetSize() {
@@ -327,7 +324,7 @@ public abstract class AbstractTrainer {
 
     /**
      * set the training option, M/D
-     * 
+     *
      * @param trainingOption
      */
     public void setTrainingOption(String trainingOption) {
@@ -336,7 +333,7 @@ public abstract class AbstractTrainer {
 
     /**
      * get the validation dataset
-     * 
+     *
      * @return the validation dataset
      */
     public MLDataSet getValidSet() {
@@ -345,7 +342,7 @@ public abstract class AbstractTrainer {
 
     /**
      * load/save the sampling data from pre-initialization file
-     * 
+     *
      * @param sampleSize
      * @param masterSize
      * @param replaceable
@@ -356,7 +353,7 @@ public abstract class AbstractTrainer {
         List<Integer> list = null;
 
         File file = new File("./init" + trainerID + ".json");
-        if(!file.exists()) {
+        if (!file.exists()) {
             file.createNewFile();
 
             list = randomSetSampleIndex(sampleSize, masterSize, replaceable);
@@ -371,10 +368,10 @@ public abstract class AbstractTrainer {
             BufferedReader reader = ShifuFileUtils.getReader("./init" + trainerID + ".json", SourceType.LOCAL);
             ModelInitInputObject io = JSONUtils.readValue(reader, ModelInitInputObject.class);
 
-            if(io == null) {
+            if (io == null) {
                 io = new ModelInitInputObject();
             }
-            if(io.getNumSample() != sampleSize) {
+            if (io.getNumSample() != sampleSize) {
 
                 list = randomSetSampleIndex(sampleSize, masterSize, replaceable);
 
@@ -394,7 +391,7 @@ public abstract class AbstractTrainer {
 
     /**
      * randomizer the input data
-     * 
+     *
      * @param sampleSize
      * @param masterSize
      * @param replaceable
@@ -402,13 +399,13 @@ public abstract class AbstractTrainer {
      */
     private List<Integer> randomSetSampleIndex(int sampleSize, int masterSize, boolean replaceable) {
         List<Integer> list = new ArrayList<Integer>();
-        if(replaceable) {
-            for(int i = 0; i < sampleSize; i++) {
+        if (replaceable) {
+            for (int i = 0; i < sampleSize; i++) {
                 list.add(random.nextInt(masterSize));
             }
         } else {
-            for(int i = 0; i < masterSize; i++) {
-                if(random.nextDouble() < baggingSampleRate) {
+            for (int i = 0; i < masterSize; i++) {
+                if (random.nextDouble() < baggingSampleRate) {
                     list.add(i);
                 }
             }
@@ -418,14 +415,14 @@ public abstract class AbstractTrainer {
 
     /**
      * reset the weights in trainer
-     * 
+     *
      * @param classifier
      */
     public void resetParams(BasicML classifier) {
-        if(modelConfig.isFixInitialInput()) {
+        if (modelConfig.isFixInitialInput()) {
 
         } else {
-            if(modelConfig.getAlgorithm() == "NN" || modelConfig.getAlgorithm() == "LR") {
+            if (modelConfig.getAlgorithm() == "NN" || modelConfig.getAlgorithm() == "LR") {
                 ((BasicNetwork) classifier).reset();
             }
         }
@@ -433,7 +430,7 @@ public abstract class AbstractTrainer {
 
     /**
      * A training start function, and print the training error and validation errors
-     * 
+     *
      * @throws IOException
      */
     public abstract void train() throws IOException;
@@ -445,18 +442,18 @@ public abstract class AbstractTrainer {
 
     /**
      * this function update the error synchronously
-     * 
+     *
      * @param error
      */
     public final void report(double error) {
-        synchronized(this) {
+        synchronized (this) {
             this.totalError += error;
         }
     }
 
     /**
      * non-synchronously version update error
-     * 
+     *
      * @param network
      * @param dataSet
      * @return the standard error
@@ -465,7 +462,7 @@ public abstract class AbstractTrainer {
 
         double mse = 0;
         long numRecords = dataSet.getRecordCount();
-        for(int i = 0; i < numRecords; i++) {
+        for (int i = 0; i < numRecords; i++) {
 
             // Encog 3.1
             // MLDataPair pair = dataSet.get(i);

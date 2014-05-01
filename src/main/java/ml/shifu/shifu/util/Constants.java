@@ -1,12 +1,12 @@
 /**
  * Copyright [2012-2014] eBay Software Foundation
- *  
+ *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
  *    http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -16,13 +16,11 @@
 package ml.shifu.shifu.util;
 
 /**
- * 
  * Global constants class
- * 
  */
 public interface Constants {
-	
-	public static final String version = "0.2.0";
+
+    public static final String version = "0.2.0";
 
     public static final String MODELS = "models";
 
@@ -41,7 +39,7 @@ public interface Constants {
     public static final String DEFAULT_JOB_QUEUE = "default";
 
     public static final String JOB_QUEUE = "queue_name";
-    
+
     public static final String PATH_TRAIN_SCORE = "pathTrainScore";
     public static final String PATH_BIN_AVG_SCORE = "pathBinAvgScore";
     public static final String PATH_SELECTED_RAW_DATA = "pathSelectedRawData";
@@ -51,25 +49,25 @@ public interface Constants {
     public static final String PATH_NORMALIZED_DATA = "pathNormalizedData";
     public static final String PATH_RAW_DATA = "path_raw_data";
     public static final String PATH_JAR = "path_jar";
-    
+
     public static final String STATS_SAMPLE_RATE = "statsSampleRate";
     public static final String WITH_SCORE = "with_score";
     public static final String SOURCE_TYPE = "source_type";
     public static final String NUM_PARALLEL = "num_parallel";
-    
+
     public static final String DERIVED = "derived_";
-    
+
     public static final int DEFAULT_IDEAL_VALUE = -1;
-    
+
     public static final double DEFAULT_CUT_OFF = 6.0;
-    
+
     public static final String LR = "lr";
     public static final String SVM = "svm";
     public static final String NN = "nn";
-    
+
     public static final String BZ2_SUFFIX = ".bz2";
     public static final String GZ_SUFFIX = ".gz";
-    
+
     public static final String MAPREDUCE_OUTPUT_PREFIX = "part-";
     public static final String HIDDEN_FILES = ".";
     public static final String BACK_SLASH = "\\";
@@ -85,7 +83,7 @@ public interface Constants {
 
     public static final String DEFAULT_MODELS_TMP_FOLDER = "modelsTmp";
     public static final String BACKUPNAME = "backup_models";
-    
+
     public static final String CONTACT_MESSAGE = "Error! Please check the log file for more information.";
 
     public static final String EVAL_DIR = "evals";
@@ -93,7 +91,7 @@ public interface Constants {
     public static final String EVAL_SCORE = "EvalScore";
     public static final String EVAL_PERFORMANCE = "EvalPerformance.json";
     public static final String EVAL_MATRIX = "EvalConfusionMatrix";
-    
+
     public static final String KEY_HDFS_MODEL_SET_PATH = "hdfsModelSetPath";
     public static final String KEY_MODELS_PATH = "modelsPath";
     public static final String KEY_SCORE_PATH = "scorePath";
@@ -105,16 +103,16 @@ public interface Constants {
     public static final String NORMALIZED_DATA = "NormalizedData";
     public static final String TRAIN_SCORES = "TrainScores";
     public static final String BIN_AVG_SCORE = "BinAvgScore";
-    
+
     public static final String KEY_PRE_TRAIN_STATS_PATH = "preTrainStatsPath";
     public static final String KEY_SELECTED_RAW_DATA_PATH = "selectedRawDataPath";
     public static final String KEY_NORMALIZED_DATA_PATH = "normalizedDataPath";
     public static final String KEY_TRAIN_SCORES_PATH = "trainScoresPath";
     public static final String KEY_BIN_AVG_SCORE_PATH = "binAvgScorePath";
-    
-    public static final String DEFAULT_META_COLUMN_FILE = "meta.column.names"; 
-    public static final String DEFAULT_CATEGORICAL_COLUMN_FILE = "categorical.column.names"; 
-    public static final String DEFAULT_FORCESELECT_COLUMN_FILE = "forceselect.column.names"; 
-    public static final String DEFAULT_FORCEREMOVE_COLUMN_FILE = "forceremove.column.names"; 
-    public static final String DEFAULT_EVALSCORE_META_COLUMN_FILE = "score.meta.column.names"; 
+
+    public static final String DEFAULT_META_COLUMN_FILE = "meta.column.names";
+    public static final String DEFAULT_CATEGORICAL_COLUMN_FILE = "categorical.column.names";
+    public static final String DEFAULT_FORCESELECT_COLUMN_FILE = "forceselect.column.names";
+    public static final String DEFAULT_FORCEREMOVE_COLUMN_FILE = "forceremove.column.names";
+    public static final String DEFAULT_EVALSCORE_META_COLUMN_FILE = "score.meta.column.names";
 }

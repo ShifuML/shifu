@@ -1,12 +1,12 @@
 /**
  * Copyright [2012-2014] eBay Software Foundation
- *  
+ *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
  *    http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -15,114 +15,112 @@
  */
 package ml.shifu.shifu.core;
 
-import java.util.List;
-
 import ml.shifu.shifu.container.ValueObject;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.List;
+
 /**
- * 
- * Calculator, it helps to calculate the sum, max, min and standard deviation for value object list 
- *
+ * Calculator, it helps to calculate the sum, max, min and standard deviation for value object list
  */
 public class BasicStatsCalculator {
-	
-	/**
-	 * logger
-	 */
-	private static Logger log = LoggerFactory.getLogger(BasicStatsCalculator.class);
 
-	private List<ValueObject> voList;
+    /**
+     * logger
+     */
+    private static Logger log = LoggerFactory.getLogger(BasicStatsCalculator.class);
 
-	private Double sum;
-	private Double squaredSum;
-	private Double min = Double.MAX_VALUE;
-	private Double max = -Double.MAX_VALUE;
-	private Double mean = Double.NaN;
-	private Double stdDev = Double.NaN;
-	private Double median = Double.NaN;
+    private List<ValueObject> voList;
 
-	private Double threshold = 1e6;
-	private Double EPS = 1e-6;
+    private Double sum;
+    private Double squaredSum;
+    private Double min = Double.MAX_VALUE;
+    private Double max = -Double.MAX_VALUE;
+    private Double mean = Double.NaN;
+    private Double stdDev = Double.NaN;
+    private Double median = Double.NaN;
 
-	/**
-	 * Constructor
-	 * @param voList
-	 * @param threshold
-	 */
-	public BasicStatsCalculator(List<ValueObject> voList, Double threshold) {
-		this.voList = voList;
-		this.threshold = threshold;
-		calculateStats();
-	}
+    private Double threshold = 1e6;
+    private Double EPS = 1e-6;
 
-	/**
-	 * Calculator
-	 */
-	private void calculateStats() {
-		sum = 0.0;
-		squaredSum = 0.0;
+    /**
+     * Constructor
+     *
+     * @param voList
+     * @param threshold
+     */
+    public BasicStatsCalculator(List<ValueObject> voList, Double threshold) {
+        this.voList = voList;
+        this.threshold = threshold;
+        calculateStats();
+    }
 
-		if (voList.size() == 0) {
-			return;
-		}
+    /**
+     * Calculator
+     */
+    private void calculateStats() {
+        sum = 0.0;
+        squaredSum = 0.0;
 
-		int validSize = 0;
+        if (voList.size() == 0) {
+            return;
+        }
 
-		for (ValueObject vo : voList) {
-			Double value = vo.getValue();
+        int validSize = 0;
 
-			if (value.isInfinite() || value.isNaN() || Math.abs(value) > threshold) {
-				log.warn("Invalid value - " + value);
-				continue;
-			}
+        for (ValueObject vo : voList) {
+            Double value = vo.getValue();
 
-			validSize++;
+            if (value.isInfinite() || value.isNaN() || Math.abs(value) > threshold) {
+                log.warn("Invalid value - " + value);
+                continue;
+            }
 
-			max = Math.max(max, value);
-			min = Math.min(min, value);
+            validSize++;
 
-			sum += value;
-			squaredSum += value * value;
-		}
+            max = Math.max(max, value);
+            min = Math.min(min, value);
 
-		// mean and stdDev defaults to NaN
-		if (validSize <= 1 || sum.isInfinite() || squaredSum.isInfinite()) {
-			return;
-		}
+            sum += value;
+            squaredSum += value * value;
+        }
 
-		//it's ok while the voList is sorted;
-		setMedian(voList.get(voList.size() / 2).getValue());
-		
-		mean = sum / validSize;
-		stdDev = Math.sqrt((squaredSum - (sum * sum) / validSize + EPS)
-				/ (validSize - 1));
-	}
+        // mean and stdDev defaults to NaN
+        if (validSize <= 1 || sum.isInfinite() || squaredSum.isInfinite()) {
+            return;
+        }
 
-	public Double getMin() {
-		return min;
-	}
+        //it's ok while the voList is sorted;
+        setMedian(voList.get(voList.size() / 2).getValue());
 
-	public Double getMax() {
-		return max;
-	}
+        mean = sum / validSize;
+        stdDev = Math.sqrt((squaredSum - (sum * sum) / validSize + EPS)
+                / (validSize - 1));
+    }
 
-	public Double getMean() {
-		return mean;
-	}
+    public Double getMin() {
+        return min;
+    }
 
-	public Double getStdDev() {
-		return stdDev;
-	}
+    public Double getMax() {
+        return max;
+    }
 
-	public Double getMedian() {
-		return median;
-	}
+    public Double getMean() {
+        return mean;
+    }
 
-	public void setMedian(Double median) {
-		this.median = median;
-	}
-	
+    public Double getStdDev() {
+        return stdDev;
+    }
+
+    public Double getMedian() {
+        return median;
+    }
+
+    public void setMedian(Double median) {
+        this.median = median;
+    }
+
 }

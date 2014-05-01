@@ -1,12 +1,12 @@
 /**
  * Copyright [2012-2014] eBay Software Foundation
- *  
+ *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
  *    http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -15,18 +15,8 @@
  */
 package ml.shifu.shifu.util;
 
-import java.io.BufferedReader;
-import java.io.File;
-import java.io.FileReader;
-import java.io.IOException;
-
 import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
 import ml.shifu.shifu.fs.ShifuFileUtils;
-import ml.shifu.shifu.util.CommonUtils;
-import ml.shifu.shifu.util.Constants;
-import ml.shifu.shifu.util.Environment;
-import ml.shifu.shifu.util.ShifuCLI;
-
 import org.apache.commons.io.FileUtils;
 import org.easymock.EasyMock;
 import org.powermock.api.easymock.PowerMock;
@@ -38,10 +28,14 @@ import org.testng.annotations.BeforeClass;
 import org.testng.annotations.ObjectFactory;
 import org.testng.annotations.Test;
 
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileReader;
+import java.io.IOException;
+
 
 /**
  * ManagerTest class
- * 
  */
 public class ShifuCLITest {
 
@@ -71,7 +65,8 @@ public class ShifuCLITest {
                 .anyTimes();
         EasyMock.expect(
                 CommonUtils.getHeaders("./src/test/resources/data/DataStore/DataSet1/.pig_header", "|",
-                        SourceType.LOCAL)).andReturn(headers).anyTimes();
+                        SourceType.LOCAL)
+        ).andReturn(headers).anyTimes();
 
         PowerMock.replayAll(CommonUtils.class);
 
@@ -285,10 +280,10 @@ public class ShifuCLITest {
         FileUtils.deleteQuietly(tmpModel);
         FileUtils.deleteQuietly(new File("EvalC" + Constants.DEFAULT_EVALSCORE_META_COLUMN_FILE));
     }
-    
+
     @AfterTest
-    public void delete() throws IOException{
-    	FileUtils.deleteDirectory(new File("evals"));
+    public void delete() throws IOException {
+        FileUtils.deleteDirectory(new File("evals"));
     }
 
 }

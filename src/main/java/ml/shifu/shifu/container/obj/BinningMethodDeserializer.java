@@ -17,21 +17,20 @@
  */
 package ml.shifu.shifu.container.obj;
 
-import java.io.IOException;
-
-import ml.shifu.shifu.container.obj.ModelStatsConf.BinningMethod;
-
 import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.ObjectCodec;
 import com.fasterxml.jackson.databind.DeserializationContext;
 import com.fasterxml.jackson.databind.JsonDeserializer;
 import com.fasterxml.jackson.databind.JsonNode;
+import ml.shifu.shifu.container.obj.ModelStatsConf.BinningMethod;
+
+import java.io.IOException;
 
 /**
  * BinningMethodDeserializer class
- * @param <T>
  *
+ * @param <T>
  */
 public class BinningMethodDeserializer extends JsonDeserializer<BinningMethod> {
 
@@ -43,9 +42,9 @@ public class BinningMethodDeserializer extends JsonDeserializer<BinningMethod> {
             throws IOException, JsonProcessingException {
         ObjectCodec oc = jp.getCodec();
         JsonNode node = oc.readTree(jp);
-        
-        for ( BinningMethod value : BinningMethod.values() ) {
-            if ( value.name().equalsIgnoreCase(node.textValue())) {
+
+        for (BinningMethod value : BinningMethod.values()) {
+            if (value.name().equalsIgnoreCase(node.textValue())) {
                 return value;
             }
         }

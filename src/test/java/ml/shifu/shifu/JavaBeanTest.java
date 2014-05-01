@@ -1,12 +1,12 @@
 /**
  * Copyright [2012-2014] eBay Software Foundation
- *  
+ *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
  *    http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -15,23 +15,7 @@
  */
 package ml.shifu.shifu;
 
-import java.beans.IntrospectionException;
-import java.io.File;
-import java.io.IOException;
-import java.util.Arrays;
-import java.util.HashMap;
-
-import ml.shifu.shifu.container.BinningObject;
-import ml.shifu.shifu.container.CaseScoreResult;
-import ml.shifu.shifu.container.ColumnScoreObject;
-import ml.shifu.shifu.container.ModelInitInputObject;
-import ml.shifu.shifu.container.ModelResultObject;
-import ml.shifu.shifu.container.PerformanceObject;
-import ml.shifu.shifu.container.ReasonResultObject;
-import ml.shifu.shifu.container.ScoreObject;
-import ml.shifu.shifu.container.ValueObject;
-import ml.shifu.shifu.container.VariableStoreObject;
-import ml.shifu.shifu.container.WeightAmplifier;
+import ml.shifu.shifu.container.*;
 import ml.shifu.shifu.container.BinningObject.DataType;
 import ml.shifu.shifu.container.BinningObject.VariableObjectComparator;
 import ml.shifu.shifu.container.ModelResultObject.ModelResultObjectComparator;
@@ -40,40 +24,22 @@ import ml.shifu.shifu.container.meta.MetaGroup;
 import ml.shifu.shifu.container.meta.MetaItem;
 import ml.shifu.shifu.container.meta.ValidateResult;
 import ml.shifu.shifu.container.meta.ValueOption;
-import ml.shifu.shifu.container.obj.ColumnBinning;
-import ml.shifu.shifu.container.obj.ColumnConfig;
-import ml.shifu.shifu.container.obj.ColumnStats;
-import ml.shifu.shifu.container.obj.EvalConfig;
-import ml.shifu.shifu.container.obj.ModelBasicConf;
-import ml.shifu.shifu.container.obj.ModelConfig;
-import ml.shifu.shifu.container.obj.ModelNormalizeConf;
-import ml.shifu.shifu.container.obj.ModelSourceDataConf;
-import ml.shifu.shifu.container.obj.ModelStatsConf;
-import ml.shifu.shifu.container.obj.ModelTrainConf;
-import ml.shifu.shifu.container.obj.ModelVarSelectConf;
+import ml.shifu.shifu.container.obj.*;
 import ml.shifu.shifu.container.obj.ColumnConfig.ColumnConfigComparator;
 import ml.shifu.shifu.container.obj.ModelTrainConf.ALGORITHM;
 import ml.shifu.shifu.core.Binning.BinningDataType;
 import ml.shifu.shifu.fs.SourceFile;
-import ml.shifu.shifu.message.AkkaActorInputMessage;
-import ml.shifu.shifu.message.ColumnScoreMessage;
-import ml.shifu.shifu.message.EvalResultMessage;
-import ml.shifu.shifu.message.ExceptionMessage;
-import ml.shifu.shifu.message.NormDataPrepMessage;
-import ml.shifu.shifu.message.NormPartRawDataMessage;
-import ml.shifu.shifu.message.NormResultDataMessage;
-import ml.shifu.shifu.message.RunModelDataMessage;
-import ml.shifu.shifu.message.RunModelResultMessage;
-import ml.shifu.shifu.message.StatsPartRawDataMessage;
-import ml.shifu.shifu.message.StatsResultMessage;
-import ml.shifu.shifu.message.StatsValueObjectMessage;
-import ml.shifu.shifu.message.TrainPartDataMessage;
-import ml.shifu.shifu.message.TrainResultMessage;
-
+import ml.shifu.shifu.message.*;
 import org.apache.commons.io.FileUtils;
 import org.testng.Assert;
 import org.testng.annotations.AfterClass;
 import org.testng.annotations.Test;
+
+import java.beans.IntrospectionException;
+import java.io.File;
+import java.io.IOException;
+import java.util.Arrays;
+import java.util.HashMap;
 
 
 public class JavaBeanTest {
@@ -102,7 +68,7 @@ public class JavaBeanTest {
         JavaBeanTester.test(ColumnBinning.class);
         JavaBeanTester.test(ColumnStats.class);
         JavaBeanTester.test(ColumnConfig.class);
-        
+
         JavaBeanTester.test(ModelBasicConf.class);
         JavaBeanTester.test(ModelSourceDataConf.class);
         JavaBeanTester.test(ModelStatsConf.class);
@@ -110,12 +76,12 @@ public class JavaBeanTest {
         JavaBeanTester.test(ModelNormalizeConf.class);
         JavaBeanTester.test(ModelTrainConf.class);
         JavaBeanTester.test(ModelConfig.class);
-        
+
         JavaBeanTester.test(ValueOption.class);
         JavaBeanTester.test(ValidateResult.class);
         JavaBeanTester.test(MetaItem.class);
         JavaBeanTester.test(MetaGroup.class);
-        
+
         JavaBeanTester.test(CaseScoreResult.class);
         JavaBeanTester.test(ModelResultObject.class);
         JavaBeanTester.test(PerformanceObject.class);
@@ -128,7 +94,7 @@ public class JavaBeanTest {
         JavaBeanTester.test(WeightAmplifier.class);
         JavaBeanTester.test(ColumnScoreObject.class);
         JavaBeanTester.test(SourceFile.class);
-        
+
         ModelResultObjectComparator modelResultObjectComparator = new ModelResultObjectComparator();
         modelResultObjectComparator.compare(new ModelResultObject(1, "2", 3d), new ModelResultObject(1, "2", 3d));
 
@@ -213,56 +179,56 @@ public class JavaBeanTest {
         es.setException(new RuntimeException());
         es.getException();
     }
-    
+
     @Test(expectedExceptions = RuntimeException.class)
-    public void binningObjectGetData(){
+    public void binningObjectGetData() {
         BinningObject object = new BinningObject(DataType.Numerical);
         object.getCategoricalData();
     }
-    
+
     @Test(expectedExceptions = RuntimeException.class)
-    public void binningObjectSetData(){
+    public void binningObjectSetData() {
         BinningObject object = new BinningObject(DataType.Numerical);
         object.setCategoricalData("test");
     }
-    
+
     @Test
-    public void binningObjectComparator(){
+    public void binningObjectComparator() {
         BinningObject o1 = new BinningObject(DataType.Numerical);
         BinningObject o2 = new BinningObject(DataType.Numerical);
 
         o1.setNumericalData(0.1);
         o2.setNumericalData(0.2);
-        
+
         o1.setTag("0");
         o2.setTag("1");
-        
+
         VariableObjectComparator comp = new VariableObjectComparator();
-        
+
         Assert.assertEquals(comp.compare(o1, o2), -1);
-        
+
         o1 = new BinningObject(DataType.Categorical);
         o2 = new BinningObject(DataType.Categorical);
-        
+
         o1.setCategoricalData("test1");
         o2.setCategoricalData("test2");
         o1.setTag("0");
         o2.setTag("1");
-        
+
         Assert.assertEquals(comp.compare(o1, o2), -1);
-        
+
     }
-    
+
     @Test(expectedExceptions = RuntimeException.class)
-    public void binningObjectComparatorException(){
+    public void binningObjectComparatorException() {
         BinningObject o1 = new BinningObject(DataType.Numerical);
         BinningObject o2 = new BinningObject(DataType.Categorical);
-        
+
         VariableObjectComparator comp = new VariableObjectComparator();
-        
+
         comp.compare(o1, o2);
     }
-    
+
     @AfterClass
     public void tearDown() throws IOException {
         FileUtils.deleteDirectory(new File("c"));

@@ -17,20 +17,13 @@
  */
 package ml.shifu.shifu.util;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.List;
-import java.util.Random;
-
-import ml.shifu.shifu.util.QuickSort;
-
 import org.testng.Assert;
 import org.testng.annotations.Test;
 
+import java.util.*;
+
 /**
  * QuickSortTest class
- * 
  */
 public class QuickSortTest {
 
@@ -38,7 +31,7 @@ public class QuickSortTest {
     public void testQuickSortComparable() {
         List<Integer> objList = null;
         QuickSort.sort(objList);
-        
+
         List<Integer> dataList = new ArrayList<Integer>();
 
         QuickSort.sort(dataList);
@@ -123,31 +116,31 @@ public class QuickSortTest {
         });
         Assert.assertEquals("[c, g, k, m, z]", strList.toString());
     }
-    
+
     @Test
     public void testPerformance() {
-    	final int SIZE = 100000;
+        final int SIZE = 100000;
         Random rd = new Random(System.currentTimeMillis());
         List<Integer> dataListA = new ArrayList<Integer>(SIZE);
         List<Integer> dataListB = new ArrayList<Integer>(SIZE);
-        for ( int i = 0; i < SIZE ; i ++ ) {
+        for (int i = 0; i < SIZE; i++) {
             int seed = rd.nextInt(SIZE);
             dataListA.add(seed);
             dataListB.add(seed);
         }
-        
+
         long start = System.currentTimeMillis();
         Collections.sort(dataListA);
         long end = System.currentTimeMillis();
         long timeConsumptionA = (end - start);
-        
+
         start = System.currentTimeMillis();
         QuickSort.sort(dataListB);
         end = System.currentTimeMillis();
         long timeConsumptionB = (end - start);
-        
-        System.out.println(timeConsumptionA  + "  " + timeConsumptionB);
-        
+
+        System.out.println(timeConsumptionA + "  " + timeConsumptionB);
+
         Assert.assertTrue(timeConsumptionB < timeConsumptionA);
     }
 }

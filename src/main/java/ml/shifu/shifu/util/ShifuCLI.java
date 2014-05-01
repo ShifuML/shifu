@@ -1,12 +1,12 @@
 /**
  * Copyright [2012-2014] eBay Software Foundation
- *  
+ *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
  *    http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -15,44 +15,26 @@
  */
 package ml.shifu.shifu.util;
 
-import java.io.IOException;
-import java.util.jar.JarFile;
-import java.util.jar.Manifest;
-
 import ml.shifu.shifu.container.obj.ModelTrainConf.ALGORITHM;
-import ml.shifu.shifu.core.processor.BasicModelProcessor;
-import ml.shifu.shifu.core.processor.CreateModelProcessor;
-import ml.shifu.shifu.core.processor.EvalModelProcessor;
-import ml.shifu.shifu.core.processor.InitModelProcessor;
-import ml.shifu.shifu.core.processor.ManageModelProcessor;
-import ml.shifu.shifu.core.processor.NormalizeModelProcessor;
-import ml.shifu.shifu.core.processor.PostTrainModelProcessor;
-import ml.shifu.shifu.core.processor.StatsModelProcessor;
-import ml.shifu.shifu.core.processor.TrainModelProcessor;
-import ml.shifu.shifu.core.processor.VarSelectModelProcessor;
+import ml.shifu.shifu.core.processor.*;
 import ml.shifu.shifu.core.processor.EvalModelProcessor.EvalStep;
 import ml.shifu.shifu.core.processor.ManageModelProcessor.ModelAction;
 import ml.shifu.shifu.exception.ShifuException;
-
-import org.apache.commons.cli.CommandLine;
-import org.apache.commons.cli.CommandLineParser;
-import org.apache.commons.cli.GnuParser;
-import org.apache.commons.cli.Option;
-import org.apache.commons.cli.OptionBuilder;
-import org.apache.commons.cli.Options;
-import org.apache.commons.cli.ParseException;
+import org.apache.commons.cli.*;
 import org.apache.commons.lang.StringUtils;
 import org.apache.pig.impl.util.JarManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.IOException;
+import java.util.jar.JarFile;
+import java.util.jar.Manifest;
+
 
 /**
- * 
  * ShifuCLI class is the MAIN class for whole project
  * It will read and analysis the parameters from command line
  * and execute corresponding functions
- * 
  */
 public class ShifuCLI {
 
@@ -72,14 +54,14 @@ public class ShifuCLI {
     private static final String MODELSET_CMD_NEW = "new";
     private static final String MODELSET_CMD_TYPE = "t";
     private static final String NEW = "new";
-    
+
     // for evaluation
     private static final String LIST = "list";
     private static final String DELETE = "delete";
     private static final String SCORE = "score";
     private static final String CONFMAT = "confmat";
     private static final String PERF = "perf";
-    
+
     private static final String SAVE = "save";
     private static final String SWITCH = "switch";
     private static final String EVAL_MODEL = "model";
@@ -89,19 +71,18 @@ public class ShifuCLI {
 
     /**
      * Main entry for the whole framework.
-     * 
+     *
      * @throws IOException
-     * 
      */
     public static void main(String[] args) {
         // invalid input and help options
-        if(args.length < 1 || (isHelpOption(args[0]))) {
+        if (args.length < 1 || (isHelpOption(args[0]))) {
             printUsage();
             System.exit(args.length < 1 ? -1 : 0);
         }
 
         // process -v and -version conditions manually
-        if(isVersionOption(args[0])) {
+        if (isVersionOption(args[0])) {
             printVersionString();
             System.exit(0);
         }
@@ -117,95 +98,95 @@ public class ShifuCLI {
             printUsage();
             System.exit(1);
         }
-        
+
         try {
-            if(args[0].equals(NEW) && args.length >= 2 && StringUtils.isNotEmpty(args[1])) {
+            if (args[0].equals(NEW) && args.length >= 2 && StringUtils.isNotEmpty(args[1])) {
                 // modelset step
                 String modelName = args[1];
                 int status = createNewModel(modelName, cmd.getOptionValue(MODELSET_CMD_TYPE), cmd.getOptionValue(MODELSET_CMD_M));
-                if ( status == 0 ) {
-                	printModelSetCreatedSuccessfulLog(modelName);
+                if (status == 0) {
+                    printModelSetCreatedSuccessfulLog(modelName);
                 }
                 // copyModel(manager, cmd.getOptionValues(MODELSET_CMD_CP));
             } else {
-                if(args[0].equals(MODELSET_CMD_CP) && args.length >= 3 && StringUtils.isNotEmpty(args[1])
+                if (args[0].equals(MODELSET_CMD_CP) && args.length >= 3 && StringUtils.isNotEmpty(args[1])
                         && StringUtils.isNotEmpty(args[2])) {
                     String newModelSetName = args[2];
                     // modelset step
-                    copyModel(new String[] { args[1], newModelSetName });
+                    copyModel(new String[]{args[1], newModelSetName});
                     printModelSetCopiedSuccessfulLog(newModelSetName);
-                } else if(args[0].equals(INIT_CMD)) {
+                } else if (args[0].equals(INIT_CMD)) {
                     // init step
-                    if(cmd.getOptions() == null || cmd.getOptions().length == 0) {
+                    if (cmd.getOptions() == null || cmd.getOptions().length == 0) {
                         int status = initializeModel();
-                        if ( status == 0 ) {
+                        if (status == 0) {
                             log.info("ModelSet initilization is successful. Please continue next step by using 'shifu stats'.");
                         }
-                    } else if(cmd.hasOption(INIT_CMD_MODEL)) {
+                    } else if (cmd.hasOption(INIT_CMD_MODEL)) {
                         initializeModelParam();
                     } else {
                         log.error("Invalid command, please check help message.");
                         printUsage();
                     }
-                } else if(args[0].equals(STATS_CMD)) {
+                } else if (args[0].equals(STATS_CMD)) {
                     // stats step
                     calModelStats();
                     log.info("Do model set statistics successfully. Please continue next step by using 'shifu varselect'.");
-                } else if(args[0].equals(NORMALIZE_CMD)) {
+                } else if (args[0].equals(NORMALIZE_CMD)) {
                     // normalize step
                     normalizeTrainData();
                     log.info("Do model set normalization successfully. Please continue next step by using 'shifu train'.");
-                } else if(args[0].equals(VARSELECT_CMD)) {
+                } else if (args[0].equals(VARSELECT_CMD)) {
                     // variable selected step
                     selectModelVar();
                     log.info("Do model set variables selection successfully. Please continue next step by using 'shifu normalize'.");
-                } else if(args[0].equals(TRAIN_CMD)) {
+                } else if (args[0].equals(TRAIN_CMD)) {
                     // train step
                     trainModel(cmd.hasOption(TRAIN_CMD_DRY), cmd.hasOption(TRAIN_CMD_DEBUG));
                     log.info("Do model set training successfully. Please continue next step by using 'shifu posttrain' or if no need posttrain you can go through with 'shifu eval'.");
-                } else if(args[0].equals(POSTTRAIN_CMD)) {
+                } else if (args[0].equals(POSTTRAIN_CMD)) {
                     // post train step
                     postTrainModel();
                     log.info("Do model set post-training successfully. Please configurate your eval set in ModelConfig.json and continue next step by using 'shifu eval' or 'shifu eval -new <eval set>' to create a new eval set.");
-                } else if(args[0].equals(SAVE)) {
-                	String newModelSetName = args.length >= 2 ? args[1] : null;
-                	saveCurrentModel(newModelSetName);
-                } else if(args[0].equals(SWITCH)) {
-                	String newModelSetName = args[1];
-                	switchCurrentModel(newModelSetName);
-                } else if(args[0].equals(SHOW)) {
-                	ManageModelProcessor p = new ManageModelProcessor(ModelAction.SHOW, null);
-                	p.run();
-                } else if(args[0].equals(EVAL_CMD)) {
+                } else if (args[0].equals(SAVE)) {
+                    String newModelSetName = args.length >= 2 ? args[1] : null;
+                    saveCurrentModel(newModelSetName);
+                } else if (args[0].equals(SWITCH)) {
+                    String newModelSetName = args[1];
+                    switchCurrentModel(newModelSetName);
+                } else if (args[0].equals(SHOW)) {
+                    ManageModelProcessor p = new ManageModelProcessor(ModelAction.SHOW, null);
+                    p.run();
+                } else if (args[0].equals(EVAL_CMD)) {
                     // eval step
-                    if(args.length == 1) {
-                    	//run everything
+                    if (args.length == 1) {
+                        //run everything
                         runEvalSet(cmd.hasOption(TRAIN_CMD_DRY));
                         log.info("Run eval performance with all eval sets successfully.");
-                    } else if(cmd.getOptionValue(MODELSET_CMD_NEW) != null) {
-                    	//create new eval
+                    } else if (cmd.getOptionValue(MODELSET_CMD_NEW) != null) {
+                        //create new eval
                         createNewEvalSet(cmd.getOptionValue(MODELSET_CMD_NEW));
                         log.info("Create eval set successfully. You can configurate EvalConfig.json or directly run 'shifu eval -run <evalSetName>' to get performance info.");
-                    } else if(cmd.hasOption(EVAL_CMD_RUN)) {
+                    } else if (cmd.hasOption(EVAL_CMD_RUN)) {
                         runEvalSet(cmd.getOptionValue(EVAL_CMD_RUN), cmd.hasOption(TRAIN_CMD_DRY));
                         log.info("Finish run eval performance with eval set {}.",
                                 cmd.getOptionValue(EVAL_CMD_RUN));
-                    } else if(cmd.hasOption(SCORE)) {
-                    	
-                    	//run score
-                    	runEvalScore(cmd.getOptionValue(SCORE));
-                    	log.info("Finish run score with eval set {}.", cmd.getOptionValue(SCORE));
-                    } else if(cmd.hasOption(CONFMAT)) {
-                    	
-                    	//run confusion matrix
-                    	runEvalConfMat(cmd.getOptionValue(CONFMAT));
-                    	log.info("Finish run confusion matrix with eval set {}.", cmd.getOptionValue(CONFMAT));
+                    } else if (cmd.hasOption(SCORE)) {
 
-                    } else if(cmd.hasOption(PERF)) {
-                    	//run perfermance
-                    	runEvalPerf(cmd.getOptionValue(PERF));
-                    	log.info("Finish run performance maxtrix with eval set {}.",  cmd.getOptionValue(PERF));
-                    	
+                        //run score
+                        runEvalScore(cmd.getOptionValue(SCORE));
+                        log.info("Finish run score with eval set {}.", cmd.getOptionValue(SCORE));
+                    } else if (cmd.hasOption(CONFMAT)) {
+
+                        //run confusion matrix
+                        runEvalConfMat(cmd.getOptionValue(CONFMAT));
+                        log.info("Finish run confusion matrix with eval set {}.", cmd.getOptionValue(CONFMAT));
+
+                    } else if (cmd.hasOption(PERF)) {
+                        //run perfermance
+                        runEvalPerf(cmd.getOptionValue(PERF));
+                        log.info("Finish run performance maxtrix with eval set {}.", cmd.getOptionValue(PERF));
+
                     } else if (cmd.hasOption(LIST)) {
                         //list all evaluation sets
                         listEvalSet();
@@ -233,212 +214,216 @@ public class ShifuCLI {
 
     /**
      * switch model - switch the current model to</p>
-     * 
+     * <p/>
      * <li>master if it's not current model existing</li>
-     * <li><code>modelName</code> if you already save it with name <code>modelName</code></li> 
-     * 
+     * <li><code>modelName</code> if you already save it with name <code>modelName</code></li>
+     * <p/>
      * then create a new branch with naming <code>newModelSetName</code>
-     * @param newModelSetName
-     * @throws Exception 
-     */
-    private static void switchCurrentModel(String newModelSetName) throws Exception {
-    	ManageModelProcessor p = new ManageModelProcessor(ModelAction.SWITCH, newModelSetName);
-    	p.run();
-	}
-
-    /**
-     * save model - save current mode or save to a specially name <code>newModelSetName</code>
+     *
      * @param newModelSetName
      * @throws Exception
      */
-	private static void saveCurrentModel(String newModelSetName) throws Exception {
-    	ManageModelProcessor p = new ManageModelProcessor(ModelAction.SAVE, newModelSetName);
-    	p.run();
-	}
+    private static void switchCurrentModel(String newModelSetName) throws Exception {
+        ManageModelProcessor p = new ManageModelProcessor(ModelAction.SWITCH, newModelSetName);
+        p.run();
+    }
 
-	/**
+    /**
+     * save model - save current mode or save to a specially name <code>newModelSetName</code>
+     *
+     * @param newModelSetName
+     * @throws Exception
+     */
+    private static void saveCurrentModel(String newModelSetName) throws Exception {
+        ManageModelProcessor p = new ManageModelProcessor(ModelAction.SAVE, newModelSetName);
+        p.run();
+    }
+
+    /**
      * Create new model - create directory and ModelConfig for the model
-     * @throws Exception 
+     *
+     * @throws Exception
      */
     public static int createNewModel(String modelSetName, String modelType, String description) throws Exception {
         ALGORITHM modelAlg = null;
-        if ( modelType != null ) {
-            for ( ALGORITHM alg : ALGORITHM.values() ) {
-                if ( alg.name().equalsIgnoreCase(modelType.trim()) ) {
+        if (modelType != null) {
+            for (ALGORITHM alg : ALGORITHM.values()) {
+                if (alg.name().equalsIgnoreCase(modelType.trim())) {
                     modelAlg = alg;
                 }
             }
         } else {
             modelAlg = ALGORITHM.NN;
         }
-        
-        if ( modelAlg == null ) {
+
+        if (modelAlg == null) {
             log.error("Unsupported algirithm - {}", modelType);
             return 2;
         }
-        
-    	CreateModelProcessor p = new CreateModelProcessor(modelSetName, modelAlg, description);
-    	return p.run();
+
+        CreateModelProcessor p = new CreateModelProcessor(modelSetName, modelAlg, description);
+        return p.run();
     }
 
     /**
      * Load the column definition and do the training data purification
-     * 
-     * @throws Exception 
+     *
+     * @throws Exception
      */
     public static int initializeModel() throws Exception {
-    	InitModelProcessor processor = new InitModelProcessor();
-    	return processor.run();
+        InitModelProcessor processor = new InitModelProcessor();
+        return processor.run();
     }
 
     /**
      * Calculate variables stats for model - ks/iv/mean/max/min
      */
     public static void calModelStats() throws Exception {
-      	StatsModelProcessor p = new StatsModelProcessor();
-    	p.run();
+        StatsModelProcessor p = new StatsModelProcessor();
+        p.run();
     }
 
     /**
      * Select variables for model
-     * @throws Exception 
-     * 
+     *
+     * @throws Exception
      * @throws ShifuException
      */
     public static void selectModelVar() throws Exception {
-    	VarSelectModelProcessor p = new VarSelectModelProcessor();
-    	p.run();
+        VarSelectModelProcessor p = new VarSelectModelProcessor();
+        p.run();
     }
 
     /**
      * Normalize the training data
-     * @throws Exception 
+     *
+     * @throws Exception
      */
     public static void normalizeTrainData() throws Exception {
-    	NormalizeModelProcessor p = new NormalizeModelProcessor();
-    	p.run();
+        NormalizeModelProcessor p = new NormalizeModelProcessor();
+        p.run();
     }
 
     /**
      * Train model
-     * @throws Exception 
+     *
+     * @throws Exception
      */
     public static void trainModel(boolean isDryTrain, boolean isDebug) throws Exception {
-    	TrainModelProcessor p = new TrainModelProcessor(isDryTrain, isDebug);
-    	p.run();
+        TrainModelProcessor p = new TrainModelProcessor(isDryTrain, isDebug);
+        p.run();
     }
 
     /**
      * Run post-train step
      */
-    public static void postTrainModel() throws Exception {   	
-    	PostTrainModelProcessor p = new PostTrainModelProcessor();
-    	p.run();
+    public static void postTrainModel() throws Exception {
+        PostTrainModelProcessor p = new PostTrainModelProcessor();
+        p.run();
     }
 
     /**
      * Create new evalset
-     * @throws Exception 
+     *
+     * @throws Exception
      */
     public static void createNewEvalSet(String evalSetName) throws Exception {
-    	EvalModelProcessor p = new EvalModelProcessor(EvalStep.NEW, evalSetName);
-    	
-    	p.run();
+        EvalModelProcessor p = new EvalModelProcessor(EvalStep.NEW, evalSetName);
+
+        p.run();
     }
 
     /**
      * Run the evalset to test the model with isDry switch
      */
     public static void runEvalSet(boolean isDryRun) throws Exception {
-    	EvalModelProcessor p = new EvalModelProcessor(EvalStep.RUN);
-    	p.run();
+        EvalModelProcessor p = new EvalModelProcessor(EvalStep.RUN);
+        p.run();
     }
-    
+
     /**
-     * 
      * @param evalSetName
      * @param isDryRun
      * @throws Exception
      */
     public static void runEvalSet(String evalSetName, boolean isDryRun) throws Exception {
-    	//TODO dry run useful?
-    	EvalModelProcessor p = new EvalModelProcessor(EvalStep.RUN, evalSetName);
-    	p.run();
-    }    
+        //TODO dry run useful?
+        EvalModelProcessor p = new EvalModelProcessor(EvalStep.RUN, evalSetName);
+        p.run();
+    }
 
     /**
-     * 
      * @param evalSetNames
      * @throws Exception
      */
-	private static void runEvalScore(String evalSetNames) throws Exception {
-    	EvalModelProcessor p = new EvalModelProcessor(EvalStep.SCORE, evalSetNames);
-    	p.run();
-	}
-	
-
-	/**
-	 * 
-	 * @param evalSetNames
-	 * @throws Exception
-	 */
-	private static void runEvalConfMat(String evalSetNames) throws Exception {
-    	EvalModelProcessor p = new EvalModelProcessor(EvalStep.CONFMAT, evalSetNames);
-    	p.run();
-	}
-	
-	
-	/**
-	 * 
-	 * @param evalSetNames
-	 * @throws Exception
-	 */
-	private static void runEvalPerf(String evalSetNames) throws Exception {
-		EvalModelProcessor p = new EvalModelProcessor(EvalStep.PERF, evalSetNames);
-    	p.run();
-	}
+    private static void runEvalScore(String evalSetNames) throws Exception {
+        EvalModelProcessor p = new EvalModelProcessor(EvalStep.SCORE, evalSetNames);
+        p.run();
+    }
 
 
-	/**
-	 *  list all evaluation set
-	 * @throws Exception 
-	 */
+    /**
+     * @param evalSetNames
+     * @throws Exception
+     */
+    private static void runEvalConfMat(String evalSetNames) throws Exception {
+        EvalModelProcessor p = new EvalModelProcessor(EvalStep.CONFMAT, evalSetNames);
+        p.run();
+    }
+
+
+    /**
+     * @param evalSetNames
+     * @throws Exception
+     */
+    private static void runEvalPerf(String evalSetNames) throws Exception {
+        EvalModelProcessor p = new EvalModelProcessor(EvalStep.PERF, evalSetNames);
+        p.run();
+    }
+
+
+    /**
+     * list all evaluation set
+     *
+     * @throws Exception
+     */
     private static void listEvalSet() throws Exception {
         EvalModelProcessor p = new EvalModelProcessor(EvalStep.LIST);
         p.run();
     }
-    
-    
+
+
     /**
      * delete some evaluation set
+     *
      * @param optionValue
-     * @throws Exception 
+     * @throws Exception
      */
     private static void deleteEvalSet(String evalSetName) throws Exception {
         EvalModelProcessor p = new EvalModelProcessor(EvalStep.DELETE, evalSetName);
         p.run();
     }
 
-    
+
     /**
      * create a new model from existing model
-     * 
+     *
      * @throws ShifuException
-     * 
      */
-    private static void copyModel(String[] cmdArgs) throws IOException, ShifuException {    	
-    	BasicModelProcessor p = new BasicModelProcessor();
-    	
-    	p.copyModelFiles(cmdArgs[0], cmdArgs[1]);
+    private static void copyModel(String[] cmdArgs) throws IOException, ShifuException {
+        BasicModelProcessor p = new BasicModelProcessor();
+
+        p.copyModelFiles(cmdArgs[0], cmdArgs[1]);
     }
 
     /**
      * Load and test ModelConfig
-     * @throws Exception 
+     *
+     * @throws Exception
      */
     private static void initializeModelParam() throws Exception {
-    	InitModelProcessor p = new InitModelProcessor();
-    	p.checkAlgorithmParam();
+        InitModelProcessor p = new InitModelProcessor();
+        p.checkAlgorithmParam();
     }
 
     private static void printModelSetCopiedSuccessfulLog(String newModelSetName) {
@@ -471,7 +456,7 @@ public class ShifuCLI {
         Option opt_dry = OptionBuilder.hasArg(false).withDescription("Dry run the train").create(TRAIN_CMD_DRY);
         Option opt_debug = OptionBuilder.hasArg(false).withDescription("Save the log of train process").create(TRAIN_CMD_DEBUG);
         Option opt_model = OptionBuilder.hasArg(false).withDescription("Init model").create(INIT_CMD_MODEL);
-       
+
         Option opt_list = OptionBuilder.hasArg(false).create(LIST);
         Option opt_delete = OptionBuilder.hasArg().create(DELETE);
         Option opt_score = OptionBuilder.hasArg().create(SCORE);
@@ -490,15 +475,15 @@ public class ShifuCLI {
         opts.addOption(opt_dry);
         opts.addOption(opt_debug);
         opts.addOption(opt_model);
-        
+
         opts.addOption(opt_list);
         opts.addOption(opt_delete);
         opts.addOption(opt_score);
-        opts.addOption(opt_confmat);        
+        opts.addOption(opt_confmat);
         opts.addOption(opt_save);
         opts.addOption(opt_switch);
         opts.addOption(opt_eval_model);
-        
+
         return opts;
     }
 
@@ -531,7 +516,6 @@ public class ShifuCLI {
 
     /**
      * print version info for shifu
-     * 
      */
     private static void printVersionString() {
         String findContainingJar = JarManager.findContainingJar(ShifuCLI.class);
@@ -548,7 +532,7 @@ public class ShifuCLI {
         } catch (Exception e) {
             throw new RuntimeException("unable to read pigs manifest file", e);
         } finally {
-            if(jar != null) {
+            if (jar != null) {
                 try {
                     jar.close();
                 } catch (IOException e) {
@@ -560,37 +544,34 @@ public class ShifuCLI {
 
     /**
      * check the argument is for listing version or not
-     * 
-     * @param arg
-     *            input option
-     * @return
-     *         true - if arg is v/version/-v/-version, or return false
+     *
+     * @param arg input option
+     * @return true - if arg is v/version/-v/-version, or return false
      */
     private static boolean isVersionOption(String arg) {
-        return arg.equalsIgnoreCase("v") 
-        		|| arg.equalsIgnoreCase("version") 
-        		|| arg.equalsIgnoreCase("-version")
+        return arg.equalsIgnoreCase("v")
+                || arg.equalsIgnoreCase("version")
+                || arg.equalsIgnoreCase("-version")
                 || arg.equalsIgnoreCase("-v");
     }
 
     /**
      * check the argument is for listing help info or not
-     * 
+     *
      * @param arg
-     * @return
-     *         true - if arg is h/-h/help/-help, or return false
+     * @return true - if arg is h/-h/help/-help, or return false
      */
     private static boolean isHelpOption(String string) {
-        return "h".equalsIgnoreCase(string) 
-        		|| "-h".equalsIgnoreCase(string) 
-        		|| "help".equalsIgnoreCase(string)
+        return "h".equalsIgnoreCase(string)
+                || "-h".equalsIgnoreCase(string)
+                || "help".equalsIgnoreCase(string)
                 || "-help".equalsIgnoreCase(string);
     }
 
 
     /**
      * print exception and contact message, then quit program
-     * 
+     *
      * @param e
      */
     private static void exceptionExit(Exception e) {

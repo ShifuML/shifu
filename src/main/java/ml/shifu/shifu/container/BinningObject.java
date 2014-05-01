@@ -1,12 +1,12 @@
 /**
  * Copyright [2012-2014] eBay Software Foundation
- *  
+ *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
  *    http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -16,105 +16,106 @@
 package ml.shifu.shifu.container;
 
 import java.util.Comparator;
+
 /**
- * 
  * Binning object, data with its type
- *
  */
 public class BinningObject {
 
-	public static enum DataType {
-		Numerical, Categorical
-	};
+    public static enum DataType {
+        Numerical, Categorical
+    }
 
-	private DataType type;
-	private Double nData;
-	private String cData;
-	private Double score;
-	private String tag;
+    ;
 
-	public BinningObject(DataType type) {
-		this.type = type;
-	}
+    private DataType type;
+    private Double nData;
+    private String cData;
+    private Double score;
+    private String tag;
 
-	// Getters
-	public DataType getType() {
-		return this.type;
-	}
+    public BinningObject(DataType type) {
+        this.type = type;
+    }
 
-	public Double getNumericalData() {
-		return this.nData;
-	}
+    // Getters
+    public DataType getType() {
+        return this.type;
+    }
 
-	public String getCategoricalData() {
-		if (this.type.equals(DataType.Numerical)) {
-			throw new RuntimeException(
-					"Cannot get categorical data from a numerical variable.");
-		}
-		return this.cData;
-	}
+    public Double getNumericalData() {
+        return this.nData;
+    }
 
-	public Double getScore() {
-		return this.score;
-	}
+    public String getCategoricalData() {
+        if (this.type.equals(DataType.Numerical)) {
+            throw new RuntimeException(
+                    "Cannot get categorical data from a numerical variable.");
+        }
+        return this.cData;
+    }
 
-	public String getTag() {
-		return tag;
-	}
+    public Double getScore() {
+        return this.score;
+    }
 
-	// Setters
-	public void setNumericalData(Double data) {
-		this.nData = data;
-	}
+    public String getTag() {
+        return tag;
+    }
 
-	public void setCategoricalData(String data) {
-		if (this.type.equals(DataType.Numerical)) {
-			throw new RuntimeException(
-					"Cannot set categorical data to a numerical variable.");
-		}
-		this.cData = data;
-	}
+    // Setters
+    public void setNumericalData(Double data) {
+        this.nData = data;
+    }
 
-	public void setScore(Double score) {
-		this.score = score;
-	}
+    public void setCategoricalData(String data) {
+        if (this.type.equals(DataType.Numerical)) {
+            throw new RuntimeException(
+                    "Cannot set categorical data to a numerical variable.");
+        }
+        this.cData = data;
+    }
 
-	public void setTag(String tag) {
-		this.tag = tag;
-	}
+    public void setScore(Double score) {
+        this.score = score;
+    }
 
-	// Comparator
-	public static class VariableObjectComparator implements
-			Comparator<BinningObject> {
-		public int compare(BinningObject a, BinningObject b) {
-			if (a.type.equals(DataType.Categorical)
-					&& b.type.equals(DataType.Categorical)) {
-				int d = a.cData.compareTo(b.cData);
-				if (d == 0) {
-					return a.tag.compareTo(b.tag);
-				} else {
-					return d;
-				}
-			} else if (a.type.equals(DataType.Numerical)
-					&& b.type.equals(DataType.Numerical)) {
-				int d = a.nData.compareTo(b.nData);
-				if (d == 0) {
-					return a.tag.compareTo(b.tag);
-				} else {
-					return d;
-				}
-			} else {
-				throw new RuntimeException("Data should be in the same type");
-			}
-		}
-	}
+    public void setTag(String tag) {
+        this.tag = tag;
+    }
 
-	// Others
-	public String toString() {
-		if (this.type.equals(DataType.Categorical)) {
-			return "(" + this.cData + ", " + this.tag + ", " + this.score + ")";
-		} else {
-			return "(" + this.nData + ", " + this.tag + ", " + this.score + ")";
-		}
-	}
+    // Comparator
+    public static class VariableObjectComparator implements
+            Comparator<BinningObject> {
+        public int compare(BinningObject a, BinningObject b) {
+            if (a.type.equals(DataType.Categorical)
+                    && b.type.equals(DataType.Categorical)) {
+                int d = a.cData.compareTo(b.cData);
+                if (d == 0) {
+                    return a.tag.compareTo(b.tag);
+                } else {
+                    return d;
+                }
+            } else if (a.type.equals(DataType.Numerical)
+                    && b.type.equals(DataType.Numerical)) {
+                int d = a.nData.compareTo(b.nData);
+                if (d == 0) {
+                    return a.tag.compareTo(b.tag);
+                } else {
+                    return d;
+                }
+            } else {
+                throw new RuntimeException("Data should be in the same type");
+            }
+        }
+    }
+
+    // Others
+    public String toString() {
+        if (this.type.equals(DataType.Categorical)) {
+            return "(" + this.cData + ", " + this.tag + ", " + this.score + ")";
+        } else {
+            return "(" + this.nData + ", " + this.tag + ", " + this.score + ")";
+        }
+    }
 }

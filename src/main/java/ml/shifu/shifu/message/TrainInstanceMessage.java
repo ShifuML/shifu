@@ -1,12 +1,12 @@
 /**
  * Copyright [2012-2014] eBay Software Foundation
- *  
+ *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
  *    http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -18,20 +18,18 @@ package ml.shifu.shifu.message;
 import ml.shifu.shifu.core.AbstractTrainer;
 
 /**
- * 
  * TrainInstanceMessage class is message class that contains trainer
- * 
  */
 public class TrainInstanceMessage {
 
-	private AbstractTrainer trainer;
-	
-	public TrainInstanceMessage(AbstractTrainer trainer) {
-		this.trainer = trainer;
-	}
+    private AbstractTrainer trainer;
 
-	public AbstractTrainer getTrainer() {
-		return trainer;
-	}
-	
+    public TrainInstanceMessage(AbstractTrainer trainer) {
+        this.trainer = trainer;
+    }
+
+    public AbstractTrainer getTrainer() {
+        return trainer;
+    }
+
 }

@@ -1,12 +1,12 @@
 /**
  * Copyright [2012-2014] eBay Software Foundation
- *  
+ *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
  *    http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -24,72 +24,71 @@ import org.testng.annotations.Test;
 
 /**
  * JexlTest class
- * 
  */
 public class JexlTest {
 
-	@Test
-	public void testJavaExpressionNum() {
-		JexlEngine jexl = new JexlEngine();
-		String jexlExp = "bad_num == 2";
-		
-		Expression e = jexl.createExpression(jexlExp);
-		
-		JexlContext jc = new MapContext();
+    @Test
+    public void testJavaExpressionNum() {
+        JexlEngine jexl = new JexlEngine();
+        String jexlExp = "bad_num == 2";
+
+        Expression e = jexl.createExpression(jexlExp);
+
+        JexlContext jc = new MapContext();
         jc.set("bad_num", 2);
 
         // Now evaluate the expression, getting the result
-        Boolean isEqual = (Boolean)e.evaluate(jc);
+        Boolean isEqual = (Boolean) e.evaluate(jc);
         Assert.assertTrue(isEqual);
-        
+
         jc.set("bad_num", null);
-        isEqual = (Boolean)e.evaluate(jc);
+        isEqual = (Boolean) e.evaluate(jc);
         Assert.assertFalse(isEqual);
-        
+
         jc.set("bad_num", "2");
-        isEqual = (Boolean)e.evaluate(jc);
+        isEqual = (Boolean) e.evaluate(jc);
         Assert.assertTrue(isEqual);
-	}
-	
-	@Test
-	public void testJavaExpressionString() {
-		JexlEngine jexl = new JexlEngine();
-		String jexlExp = "name == \"user_a\"";
-		
-		Expression e = jexl.createExpression(jexlExp);
-		
-		JexlContext jc = new MapContext();
+    }
+
+    @Test
+    public void testJavaExpressionString() {
+        JexlEngine jexl = new JexlEngine();
+        String jexlExp = "name == \"user_a\"";
+
+        Expression e = jexl.createExpression(jexlExp);
+
+        JexlContext jc = new MapContext();
         jc.set("name", "user_a");
 
         // Now evaluate the expression, getting the result
-        Boolean isEqual = (Boolean)e.evaluate(jc);
+        Boolean isEqual = (Boolean) e.evaluate(jc);
         Assert.assertTrue(isEqual);
-        
+
         jc.set("name", "user_b");
-        isEqual = (Boolean)e.evaluate(jc);
+        isEqual = (Boolean) e.evaluate(jc);
         Assert.assertFalse(isEqual);
-	}
-	
-	@Test
-	public void testJavaDouble() {
-		JexlEngine jexl = new JexlEngine();
-		String jexlExp = "columnA + columnB";
-		
-		Expression e = jexl.createExpression(jexlExp);
-		
-		JexlContext jc = new MapContext();
-		// Now evaluate the expression, getting the result
-		Integer val = (Integer)e.evaluate(jc);
+    }
+
+    @Test
+    public void testJavaDouble() {
+        JexlEngine jexl = new JexlEngine();
+        String jexlExp = "columnA + columnB";
+
+        Expression e = jexl.createExpression(jexlExp);
+
+        JexlContext jc = new MapContext();
+        // Now evaluate the expression, getting the result
+        Integer val = (Integer) e.evaluate(jc);
         Assert.assertEquals(val, Integer.valueOf(0));
-        
+
         jc.set("columnA", "0.3");
-        double value = (Double)e.evaluate(jc);
+        double value = (Double) e.evaluate(jc);
         Assert.assertEquals(0.3, value);
-        
+
         jc.set("columnB", "0.7");
-        value = (Double)e.evaluate(jc);
+        value = (Double) e.evaluate(jc);
         Assert.assertEquals(value, 1.0);
-	}
+    }
 
     @Test
     public void testJavaNull() {
