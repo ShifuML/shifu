@@ -19,7 +19,6 @@
 		<developerConnection>scm:git:https://github.com/shifuml/shifu.git</developerConnection>
 		<connection>scm:git:https://github.com/shifuml/shifu.git</connection>
 		<url>https://github.com/shifuml/shifu.git</url>
-		<tag>shifu-0.2.0</tag>
 	</scm>
 
 	<dependencies>
@@ -234,6 +233,7 @@
 				</configuration>
 			</plugin>
 
+
 			<plugin>
 				<groupId>org.codehaus.mojo</groupId>
 				<artifactId>rpm-maven-plugin</artifactId>
@@ -411,6 +411,60 @@
 				</dependency>
 			</dependencies>
 		</profile>
+
+		<!-- Release and Sign -->
+		<profile>
+		    <id>release-sign-artifacts</id>
+		    <activation>
+		      <property>
+		        <name>performRelease</name>
+		        <value>true</value>
+		      </property>
+		    </activation>
+		    <build>
+		      <plugins>
+		        <plugin>
+		          <groupId>org.apache.maven.plugins</groupId>
+		          <artifactId>maven-gpg-plugin</artifactId>
+		          <version>1.1</version>
+		          <executions>
+		            <execution>
+		              <id>sign-artifacts</id>
+		              <phase>verify</phase>
+		              <goals>
+		                <goal>sign</goal>
+		              </goals>
+		            </execution>
+		          </executions>
+		        </plugin>
+		      </plugins>
+		    </build>
+		    <repositories>
+				<repository>
+					<id>Cloudera CDH</id>
+					<url>https://repository.cloudera.com/artifactory/cloudera-repos</url>
+				</repository>
+			</repositories>
+			<dependencies>
+				<dependency>
+					<groupId>org.apache.pig</groupId>
+					<artifactId>pig</artifactId>
+					<version>0.10.0</version>
+				</dependency>
+				<dependency>
+					<groupId>org.apache.hadoop</groupId>
+					<artifactId>hadoop-core</artifactId>
+					<version>0.20.2-cdh3u5</version>
+				</dependency>
+				<dependency>
+					<groupId>ml.shifu</groupId>
+					<artifactId>guagua-mapreduce</artifactId>
+					<version>0.4.0</version>
+					<classifier>hadoop1</classifier>
+				</dependency>
+			</dependencies>
+		  </profile>
+
 		<!-- For hadoop 2.2.0cluster -->
 		<profile>
 			<id>hdp-yarn</id>
