@@ -15,8 +15,8 @@
     </properties>
 
     <scm>
-        <developerConnection>scm:git:https://github.com/shifuml/shifu.git</developerConnection>
-        <connection>scm:git:https://github.com/shifuml/shifu.git</connection>
+        <developerConnection>scm:git:git@github.com:shifuml/shifu.git</developerConnection>
+        <connection>scm:git:git@github.com:shifuml/shifu.git</connection>
         <url>https://github.com/shifuml/shifu.git</url>
     <tag>HEAD</tag>
   </scm>
