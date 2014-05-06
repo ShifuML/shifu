@@ -15,10 +15,9 @@
     </properties>
 
     <scm>
-        <developerConnection>scm:git:git@github.com:shifuml/shifu.git</developerConnection>
-        <connection>scm:git:git@github.com:shifuml/shifu.git</connection>
+        <developerConnection>scm:git:https://github.com/shifuml/shifu.git</developerConnection>
+        <connection>scm:git:https://github.com/shifuml/shifu.git</connection>
         <url>https://github.com/shifuml/shifu.git</url>
-    <tag>HEAD</tag>
   </scm>
 
     <dependencies>
@@ -36,11 +35,6 @@
             <groupId>org.apache.pig</groupId>
             <artifactId>pig</artifactId>
             <version>0.10.0</version>
-        </dependency>
-        <dependency>
-            <groupId>org.apache.hadoop</groupId>
-            <artifactId>hadoop-core</artifactId>
-            <version>0.20.2-cdh3u5</version>
         </dependency>
         <!-- <dependency> <groupId>org.slf4j</groupId> <artifactId>slf4j-log4j12</artifactId> 
             <version>1.5.8</version> <exclusions> <exclusion> <groupId>org.slf4j</groupId> 
@@ -422,7 +416,7 @@
             <activation>
               <property>
                 <name>performRelease</name>
-                <value>true</value>
+                <value>false</value>
               </property>
             </activation>
             <build>
@@ -483,8 +477,12 @@
             </properties>
             <repositories>
                 <repository>
+                    <id>HortonWorks HDP Local</id>
+                    <url>http://repo.hortonworks.com/service/local/repositories/releases/content/</url>
+                </repository>
+                <repository>
                     <id>HortonWorks HDP</id>
-                    <url>http://repo.hortonworks.com/nexus/content/repositories/releases</url>
+                    <url>http://repo.hortonworks.com/nexus/content/repositories/releases</url>                                                                            
                 </repository>
             </repositories>
             <dependencies>
