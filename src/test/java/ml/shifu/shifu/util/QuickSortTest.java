@@ -117,7 +117,7 @@ public class QuickSortTest {
         Assert.assertEquals("[c, g, k, m, z]", strList.toString());
     }
 
-    @Test
+//    @Test
     public void testPerformance() {
         final int SIZE = 100000;
         Random rd = new Random(System.currentTimeMillis());
