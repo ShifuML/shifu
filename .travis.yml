@@ -1,7 +1,8 @@
 language: java
 
 before_script:
-  git clone https://github.com/ShifuML/guagua.git
-  cd guagua
-  mvn install
-  cd ..
+  # build and install guagua before building shifu
+  - git clone https://github.com/ShifuML/guagua.git
+  - cd guagua
+  - mvn install
+  - cd ..
