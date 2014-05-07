@@ -1,7 +1,11 @@
 <!-- [<img src="images/logo/shifu.png" alt="Shifu">](http://shifu.ml) -->
-## [<img src="images/logo/shifu.png" alt="Shifu">] (http://shifu.ml) [http://shifu.ml](http://shifu.ml)
+[<img src="images/logo/shifu.png" alt="Shifu">](http://shifu.ml)
 
 [![Build Status](https://travis-ci.org/ShifuML/shifu.svg?branch=master)](https://travis-ci.org/ShifuML/shifu)
+
+## Getting Started
+
+Please visit [shifu.ml](http://shifu.ml) for download infomation, installation instructions, and tutorials.
 
 ## What is Shifu?
 Shifu is an open-source, end-to-end machine learning and data mining framework built on top of Hadoop. Shifu is designed for data scientists, simplifying the life-cycle of building machine learning models. While originally built for fraud modeling, Shifu is generalized for many other modeling domains.
@@ -14,10 +18,6 @@ Shifu provides a simple command-line interface for each step of the model buildi
 * Post training analysis & model evaluation
 
 Shifu’s fast Hadoop-based, distributed neural network training can reduce model training time from days to hours on 500GB data sets. Shifu integrates with Pig workflows on Hadoop, and Shifu-trained models can be integrated into production code with a simple Java API. Shifu leverages Pig, Akka, Encog and other open source projects.
-
-## Getting Started
-
-Please visit [shifu.ml](http://shifu.ml) for download infomation, installation instructions, and tutorials.
 
 ## Contributors
 
