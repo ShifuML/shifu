@@ -1,5 +1,4 @@
-<!-- [<img src="images/logo/shifu.png" alt="Shifu">](http://shifu.ml) -->
-<span style="float: right">[![Build Status](https://travis-ci.org/ShifuML/shifu.svg?branch=master)](https://travis-ci.org/ShifuML/shifu)</span>[<img src="images/logo/shifu.png" alt="Shifu">](http://shifu.ml)
+[<img src="https://raw.githubusercontent.com/ShifuML/shifu/master/images/logo/shifu.png" alt="Shifu" align="left">](http://shifu.ml)<div align="right">[![Build Status](https://travis-ci.org/ShifuML/shifu.svg?branch=master)](https://travis-ci.org/ShifuML/shifu)</div>
 
 ## Getting Started
 
