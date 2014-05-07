@@ -1,6 +1,5 @@
-[<img src="images/logo/shifu.png" alt="Shifu">](http://shifu.ml)
-
-## [http://shifu.ml](http://shifu.ml)
+<!-- [<img src="images/logo/shifu.png" alt="Shifu">](http://shifu.ml) -->
+## [<img src="images/logo/shifu.png" alt="Shifu">] (http://shifu.ml) [http://shifu.ml](http://shifu.ml)
 
 [![Build Status](https://travis-ci.org/ShifuML/shifu.svg?branch=master)](https://travis-ci.org/ShifuML/shifu)
 
