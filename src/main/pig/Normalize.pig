@@ -20,14 +20,14 @@ SET mapred.job.queue.name $queue_name;
 SET job.name 'shifu normalize'
 
 DEFINE IsDataFilterOut  ml.shifu.shifu.udf.PurifyDataUDF('$source_type', '$path_model_config', '$path_column_config');
-DEFINE DataFilter	    ml.shifu.shifu.udf.DataFilterUDF('$source_type', '$path_model_config', '$path_column_config', '$sampleRate', '$sampleNegOnly');
 DEFINE Normalize 		ml.shifu.shifu.udf.NormalizeUDF('$source_type', '$path_model_config', '$path_column_config');
 
 raw = LOAD '$path_raw_data' USING PigStorage('$delimiter');
-raw = FILTER raw BY IsDataFilterOut(*);
+filtered = FILTER raw BY IsDataFilterOut(*);
 
-filtered = FOREACH raw GENERATE FLATTEN(DataFilter(*));
-filtered = FILTER filtered BY $0 IS NOT NULL;
+-- do samplization in NormalizeUDF
+-- filtered = FOREACH raw GENERATE FLATTEN(DataFilter(*));
+-- filtered = FILTER raw BY $0 IS NOT NULL;
 
 STORE filtered INTO '$pathSelectedRawData' USING PigStorage('$delimiter', '-schema');
 
