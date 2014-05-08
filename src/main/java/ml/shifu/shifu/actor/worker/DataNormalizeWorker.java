@@ -15,14 +15,19 @@
  */
 package ml.shifu.shifu.actor.worker;
 
-import akka.actor.ActorRef;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
 import ml.shifu.shifu.container.WeightAmplifier;
 import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.container.obj.ModelConfig;
 import ml.shifu.shifu.core.DataSampler;
 import ml.shifu.shifu.core.Normalizer;
-import ml.shifu.shifu.message.NormDataPrepMessage;
+import ml.shifu.shifu.message.NormPartRawDataMessage;
 import ml.shifu.shifu.message.NormResultDataMessage;
+import ml.shifu.shifu.util.CommonUtils;
 
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.jexl2.Expression;
@@ -33,10 +38,7 @@ import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import akka.actor.ActorRef;
 
 
 /**
@@ -63,13 +65,13 @@ public class DataNormalizeWorker extends AbstractWorkerActor {
      */
     @Override
     public void handleMsg(Object message) {
-        if (message instanceof NormDataPrepMessage) {
-            NormDataPrepMessage msg = (NormDataPrepMessage) message;
-            List<String[]> rfList = msg.getRfList();
+        if (message instanceof NormPartRawDataMessage) {
+            NormPartRawDataMessage msg = (NormPartRawDataMessage) message;
+            List<String> rawDataList = msg.getRawDataList();
             int targetMsgCnt = msg.getTotalMsgCnt();
 
-            List<List<Double>> normalizedDataList = normalizeData(rfList);
-            nextActorRef.tell(new NormResultDataMessage(targetMsgCnt, rfList, normalizedDataList), this.getSelf());
+            List<List<Double>> normalizedDataList = normalizeData(rawDataList);
+            nextActorRef.tell(new NormResultDataMessage(targetMsgCnt, rawDataList, normalizedDataList), this.getSelf());
         } else {
             unhandled(message);
         }
@@ -81,10 +83,11 @@ public class DataNormalizeWorker extends AbstractWorkerActor {
      * @param rfList
      * @return the data after normalization
      */
-    private List<List<Double>> normalizeData(List<String[]> rfList) {
+    private List<List<Double>> normalizeData(List<String> rawDataList) {
         List<List<Double>> normalizedDataList = new ArrayList<List<Double>>();
 
-        for (String[] rf : rfList) {
+        for (String rawInput : rawDataList) {
+            String[] rf = CommonUtils.split(rawInput, modelConfig.getDataSetDelimiter());
             List<Double> normRecord = normalizeRecord(rf);
             if (CollectionUtils.isNotEmpty(normRecord)) {
                 normalizedDataList.add(normRecord);

@@ -162,16 +162,9 @@ public class NormalizeDataActor extends AbstractActor {
      * @param selectDataList - the raw selected data
      * @throws IOException Exception when writing file
      */
-    private void writeSelectDataIntoFile(List<String[]> selectDataList) throws IOException {
-        for (String[] fields : selectDataList) {
-            for (int i = 0; i < fields.length; i++) {
-                selectDataWriter.append(fields[i]);
-                if (i != fields.length - 1) {
-                    selectDataWriter.append(modelConfig.getDataSetDelimiter());
-                }
-            }
-
-            selectDataWriter.append("\n");
+    private void writeSelectDataIntoFile(List<String> selectDataList) throws IOException {
+        for(String rawInput: selectDataList) {
+            selectDataWriter.append(rawInput + "\n");
         }
     }
 
