@@ -118,7 +118,7 @@ public class DataPurifier {
         jc.clear();
 
         for (int i = 0; i < input.size(); i++) {
-            jc.set(headers[i], ((input.get(i) == null) ? "" : input.get(i).toString()));
+            jc.set(headers[i], ((input.get(i) == null) ? null : input.get(i).toString()));
         }
 
         Boolean result = Boolean.FALSE;

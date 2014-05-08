@@ -94,14 +94,18 @@ public class JexlTest {
     public void testJavaNull() {
         JexlEngine jexl = new JexlEngine();
         String jexlExp = "is_bad_new != null";
+        String jexlExpEqual = "is_bad_new == null";
 
         Expression e = jexl.createExpression(jexlExp);
+        Expression exp = jexl.createExpression(jexlExpEqual);
 
         JexlContext jc = new MapContext();
         jc.set("is_bad_new", null);
         Assert.assertEquals(Boolean.FALSE, e.evaluate(jc));
+        Assert.assertEquals(Boolean.TRUE, exp.evaluate(jc));
 
         jc.set("is_bad_new", new Object());
         Assert.assertEquals(Boolean.TRUE, e.evaluate(jc));
+        Assert.assertEquals(Boolean.FALSE, exp.evaluate(jc));
     }
 }

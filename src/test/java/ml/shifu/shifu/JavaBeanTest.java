@@ -59,7 +59,6 @@ public class JavaBeanTest {
         JavaBeanTester.test(StatsValueObjectMessage.class);
         JavaBeanTester.test(TrainResultMessage.class);
         JavaBeanTester.test(TrainPartDataMessage.class);
-        JavaBeanTester.test(NormDataPrepMessage.class);
         JavaBeanTester.test(NormPartRawDataMessage.class);
         JavaBeanTester.test(NormResultDataMessage.class);
         JavaBeanTester.test(StatsResultMessage.class);

@@ -15,15 +15,15 @@
  */
 package ml.shifu.shifu.actor;
 
-import akka.actor.ActorRef;
-import akka.actor.Props;
-import akka.actor.UntypedActor;
-import akka.actor.UntypedActorFactory;
-import akka.routing.RoundRobinRouter;
+import java.io.BufferedWriter;
+import java.io.IOException;
+import java.text.DecimalFormat;
+import java.util.List;
+import java.util.Scanner;
+
 import ml.shifu.shifu.actor.worker.DataFilterWorker;
 import ml.shifu.shifu.actor.worker.DataLoadWorker;
 import ml.shifu.shifu.actor.worker.DataNormalizeWorker;
-import ml.shifu.shifu.actor.worker.DataPrepareWorker;
 import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.container.obj.ModelConfig;
 import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
@@ -34,14 +34,15 @@ import ml.shifu.shifu.message.ExceptionMessage;
 import ml.shifu.shifu.message.NormResultDataMessage;
 import ml.shifu.shifu.message.ScanNormInputDataMessage;
 import ml.shifu.shifu.util.Environment;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.BufferedWriter;
-import java.io.IOException;
-import java.text.DecimalFormat;
-import java.util.List;
-import java.util.Scanner;
+import akka.actor.ActorRef;
+import akka.actor.Props;
+import akka.actor.UntypedActor;
+import akka.actor.UntypedActorFactory;
+import akka.routing.RoundRobinRouter;
 
 
 /**
@@ -57,7 +58,6 @@ public class NormalizeDataActor extends AbstractActor {
 
     private ActorRef dataLoadRef;
     private ActorRef dataFilterRef;
-    private ActorRef dataPrepRef;
     private ActorRef dataNormalizeRef;
 
     private BufferedWriter normDataWriter;
@@ -83,21 +83,12 @@ public class NormalizeDataActor extends AbstractActor {
             }
         }).withRouter(new RoundRobinRouter(Environment.getInt(Environment.LOCAL_NUM_PARALLEL, 16))), "DataNormalizeWorker");
 
-        // actors to sample data
-        dataPrepRef = this.getContext().actorOf(new Props(new UntypedActorFactory() {
-            private static final long serialVersionUID = -743043605617906731L;
-
-            public UntypedActor create() throws IOException {
-                return new DataPrepareWorker(modelConfig, columnConfigList, parentActorRef, dataNormalizeRef);
-            }
-        }).withRouter(new RoundRobinRouter(Environment.getInt(Environment.LOCAL_NUM_PARALLEL, 16))), "DataPrepWorker");
-
         // actors to filter data
         dataFilterRef = this.getContext().actorOf(new Props(new UntypedActorFactory() {
             private static final long serialVersionUID = 7122505775141026832L;
 
             public UntypedActor create() throws IOException {
-                return new DataFilterWorker(modelConfig, columnConfigList, parentActorRef, dataPrepRef);
+                return new DataFilterWorker(modelConfig, columnConfigList, parentActorRef, dataNormalizeRef);
             }
         }).withRouter(new RoundRobinRouter(Environment.getInt(Environment.LOCAL_NUM_PARALLEL, 16))), "DataFilterWorker");
 
@@ -171,16 +162,9 @@ public class NormalizeDataActor extends AbstractActor {
      * @param selectDataList - the raw selected data
      * @throws IOException Exception when writing file
      */
-    private void writeSelectDataIntoFile(List<String[]> selectDataList) throws IOException {
-        for (String[] fields : selectDataList) {
-            for (int i = 0; i < fields.length; i++) {
-                selectDataWriter.append(fields[i]);
-                if (i != fields.length - 1) {
-                    selectDataWriter.append(modelConfig.getDataSetDelimiter());
-                }
-            }
-
-            selectDataWriter.append("\n");
+    private void writeSelectDataIntoFile(List<String> selectDataList) throws IOException {
+        for(String rawInput: selectDataList) {
+            selectDataWriter.append(rawInput + "\n");
         }
     }
 

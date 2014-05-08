@@ -19,6 +19,9 @@ import ml.shifu.shifu.container.obj.EvalConfig;
 import ml.shifu.shifu.container.obj.ModelConfig;
 import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
 import ml.shifu.shifu.util.CommonUtils;
+
+import org.apache.pig.data.Tuple;
+import org.apache.pig.data.TupleFactory;
 import org.testng.Assert;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.Test;
@@ -85,7 +88,7 @@ public class DataPurifierTest {
     }
 
     @Test
-    public void testFilterIsNull() throws IOException {
+    public void testFilterEqualNull() throws IOException {
         modelConfig.getDataSet().setFilterExpressions("diagnosis != \"NULL\" ");
         dataPurifier = new DataPurifier(modelConfig);
         Assert.assertFalse(dataPurifier
@@ -93,5 +96,47 @@ public class DataPurifierTest {
 
         Assert.assertTrue(dataPurifier
                 .isFilterOut("M|17.99|10.38|122.8|1001|0.1184|0.2776|0.3001|0.1471|0.2419|0.07871|1.095|0.9053|8.589|153.4|0.006399|0.04904|0.05373|0.01587|0.03003|0.006193|25.38|17.33|184.6|2019|0.1622|0.6656|0.7119|0.2654|0.4601|0.1189"));
+    }
+    
+    @Test
+    public void testFilterIsNull() throws IOException {
+        modelConfig.getDataSet().setFilterExpressions("diagnosis != null ");
+        dataPurifier = new DataPurifier(modelConfig);
+        
+        Tuple tuple = TupleFactory.getInstance().newTuple();
+        tuple.append(null);
+        String[] fields = "17.99|10.38|122.8|1001|0.1184|0.2776|0.3001|0.1471|0.2419|0.07871|1.095|0.9053|8.589|153.4|0.006399|0.04904|0.05373|0.01587|0.03003|0.006193|25.38|17.33|184.6|2019|0.1622|0.6656|0.7119|0.2654|0.4601|0.1189".split("\\|");
+        for ( String f : fields ) {
+            tuple.append(f);
+        }
+
+        Assert.assertFalse(dataPurifier.isFilterOut(tuple));
+        
+        tuple = TupleFactory.getInstance().newTuple();
+        tuple.append(new Object());
+        for ( String f : fields ) {
+            tuple.append(f);
+        }
+        
+        Assert.assertTrue(dataPurifier.isFilterOut(tuple));
+
+        modelConfig.getDataSet().setFilterExpressions("diagnosis == null ");
+        dataPurifier = new DataPurifier(modelConfig);
+        
+        tuple = TupleFactory.getInstance().newTuple();
+        tuple.append(null);
+        for ( String f : fields ) {
+            tuple.append(f);
+        }
+
+        Assert.assertTrue(dataPurifier.isFilterOut(tuple));
+        
+        tuple = TupleFactory.getInstance().newTuple();
+        tuple.append(new Object());
+        for ( String f : fields ) {
+            tuple.append(f);
+        }
+        
+        Assert.assertFalse(dataPurifier.isFilterOut(tuple));
     }
 }

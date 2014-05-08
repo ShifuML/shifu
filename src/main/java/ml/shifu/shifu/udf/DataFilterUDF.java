@@ -15,7 +15,7 @@
  */
 package ml.shifu.shifu.udf;
 
-import ml.shifu.shifu.core.DataFilter;
+import ml.shifu.shifu.core.DataSampler;
 import ml.shifu.shifu.exception.ShifuErrorCode;
 import ml.shifu.shifu.exception.ShifuException;
 import org.apache.pig.data.Tuple;
@@ -53,7 +53,7 @@ public class DataFilterUDF extends AbstractTrainerUDF<Tuple> {
             throw new ShifuException(ShifuErrorCode.ERROR_NO_EQUAL_COLCONFIG);
         }
 
-        List<Object> filteredData = DataFilter.filter(tagColumnNum, posTags, negTags, input.getAll(), sampleRate, sampleNegOnly);
+        List<Object> filteredData = DataSampler.filter(tagColumnNum, posTags, negTags, input.getAll(), sampleRate, sampleNegOnly);
 
         if (filteredData == null) {
             return null;

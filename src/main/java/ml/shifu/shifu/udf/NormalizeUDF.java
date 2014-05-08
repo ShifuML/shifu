@@ -15,9 +15,17 @@
  */
 package ml.shifu.shifu.udf;
 
+import java.io.IOException;
+import java.text.DecimalFormat;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
 import ml.shifu.shifu.container.WeightAmplifier;
 import ml.shifu.shifu.container.obj.ColumnConfig;
+import ml.shifu.shifu.core.DataSampler;
 import ml.shifu.shifu.core.Normalizer;
+
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.jexl2.Expression;
 import org.apache.commons.jexl2.JexlContext;
@@ -29,13 +37,6 @@ import org.apache.pig.data.TupleFactory;
 import org.apache.pig.impl.logicalLayer.schema.Schema;
 import org.apache.pig.impl.util.Utils;
 
-import java.io.IOException;
-import java.text.DecimalFormat;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Random;
-
 /**
  * NormalizeUDF class normalize the training data
  */
@@ -44,7 +45,6 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
     private List<String> negTags;
     private List<String> posTags;
     private Expression weightExpr;
-    private Random random = new Random(System.currentTimeMillis());
 
     public NormalizeUDF(String source, String pathModelConfig, String pathColumnConfig) throws Exception {
         super(source, pathModelConfig, pathColumnConfig);
@@ -78,17 +78,15 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
             return null;
         }
 
-        Double rate = modelConfig.getNormalizeSampleRate();
-        if (modelConfig.isNormalizeSampleNegOnly()) {
-            if (negTags.contains(tag) && random.nextDouble() > rate) {
-                return null;
-            }
-        } else {
-            if (random.nextDouble() > rate) {
-                return null;
-            }
+        boolean isNotSampled = DataSampler.isNotSampled(
+                modelConfig.getPosTags(), 
+                modelConfig.getNegTags(),
+                modelConfig.getNormalizeSampleRate(), 
+                modelConfig.isNormalizeSampleNegOnly(), tag);
+        if ( isNotSampled ) {
+            return null;
         }
-
+        
         if (negTags.contains(tag)) {
             tuple.append(0);
         } else {
