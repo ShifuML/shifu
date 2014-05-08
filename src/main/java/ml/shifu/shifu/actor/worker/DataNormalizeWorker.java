@@ -19,9 +19,11 @@ import akka.actor.ActorRef;
 import ml.shifu.shifu.container.WeightAmplifier;
 import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.container.obj.ModelConfig;
+import ml.shifu.shifu.core.DataSampler;
 import ml.shifu.shifu.core.Normalizer;
 import ml.shifu.shifu.message.NormDataPrepMessage;
 import ml.shifu.shifu.message.NormResultDataMessage;
+
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.jexl2.Expression;
 import org.apache.commons.jexl2.JexlContext;
@@ -101,12 +103,21 @@ public class DataNormalizeWorker extends AbstractWorkerActor {
     private List<Double> normalizeRecord(String[] rfs) {
         List<Double> retDouList = new ArrayList<Double>();
 
-        JexlContext jc = new MapContext();
         if (rfs == null || rfs.length == 0) {
             return null;
         }
 
         String tag = rfs[this.targetColumnNum];
+        
+        boolean isNotSampled = DataSampler.isNotSampled(
+                modelConfig.getPosTags(), 
+                modelConfig.getNegTags(),
+                modelConfig.getNormalizeSampleRate(), 
+                modelConfig.isNormalizeSampleNegOnly(), tag);
+        if ( isNotSampled ) {
+            return null;
+        }
+        
         if (modelConfig.getPosTags().contains(tag)) {
             retDouList.add(Double.valueOf(1));
         } else if (modelConfig.getNegTags().contains(tag)) {
@@ -115,6 +126,7 @@ public class DataNormalizeWorker extends AbstractWorkerActor {
             log.error("Invalid data! The target value is not listed - " + tag);
         }
 
+        JexlContext jc = new MapContext();
         Double cutoff = modelConfig.getNormalizeStdDevCutOff();
 
         for (int i = 0; i < rfs.length; i++) {
