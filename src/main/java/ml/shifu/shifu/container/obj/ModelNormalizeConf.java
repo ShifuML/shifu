@@ -24,7 +24,7 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 public class ModelNormalizeConf {
 
     private Double stdDevCutOff = Double.valueOf(4.0);
-    private Double sampleRate = Double.valueOf(0.8);
+    private Double sampleRate = Double.valueOf(1.0);
     private Boolean sampleNegOnly = Boolean.FALSE;
 
     // move to RawSourceData
