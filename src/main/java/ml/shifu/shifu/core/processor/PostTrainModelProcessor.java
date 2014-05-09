@@ -19,6 +19,8 @@ import ml.shifu.shifu.actor.AkkaSystemExecutor;
 import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
 import ml.shifu.shifu.core.validator.ModelInspector.ModelStep;
+import ml.shifu.shifu.exception.ShifuErrorCode;
+import ml.shifu.shifu.exception.ShifuException;
 import ml.shifu.shifu.fs.ShifuFileUtils;
 import ml.shifu.shifu.pig.PigExecutor;
 import ml.shifu.shifu.util.CommonUtils;
@@ -27,7 +29,6 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.util.*;
-
 
 /**
  * Post train processor, update the avg score
@@ -47,9 +48,9 @@ public class PostTrainModelProcessor extends BasicModelProcessor implements Proc
         setUp(ModelStep.POSTTRAIN);
         syncDataToHdfs(modelConfig.getDataSet().getSource());
 
-        if (modelConfig.isMapReduceRunMode()) {
+        if(modelConfig.isMapReduceRunMode()) {
             runPigPostTrain();
-        } else if (modelConfig.isLocalRunMode()) {
+        } else if(modelConfig.isLocalRunMode()) {
             runAkkaPostTrain();
         } else {
             log.error("Invalid RunMode Setting!");
@@ -61,7 +62,7 @@ public class PostTrainModelProcessor extends BasicModelProcessor implements Proc
 
     /**
      * run pig post train
-     *
+     * 
      * @throws IOException
      */
     private void runPigPostTrain() throws IOException {
@@ -76,9 +77,14 @@ public class PostTrainModelProcessor extends BasicModelProcessor implements Proc
         paramsMap.put("pathDelimiter", CommonUtils.escapePigString(modelConfig.getHeaderDelimiter()));
         paramsMap.put("delimiter", CommonUtils.escapePigString(modelConfig.getDataSetDelimiter()));
 
-        PigExecutor.getExecutor().submitJob(modelConfig,
-                pathFinder.getAbsolutePath("scripts/PostTrain.pig"),
-                paramsMap);
+        try {
+            PigExecutor.getExecutor().submitJob(modelConfig, pathFinder.getAbsolutePath("scripts/PostTrain.pig"),
+                    paramsMap);
+        } catch (IOException e) {
+            throw new ShifuException(ShifuErrorCode.ERROR_RUNNING_PIG_JOB, e);
+        } catch (Throwable e) {
+            throw new RuntimeException(e);
+        }
 
         // Sync Down
         columnConfigList = updateColumnConfigWithBinAvgScore(columnConfigList);
@@ -87,14 +93,13 @@ public class PostTrainModelProcessor extends BasicModelProcessor implements Proc
 
     /**
      * run akka post train
-     *
+     * 
      * @throws IOException
      */
     private void runAkkaPostTrain() throws IOException {
         SourceType sourceType = modelConfig.getDataSet().getSource();
 
-        List<Scanner> scanners = ShifuFileUtils.getDataScanners(
-                pathFinder.getSelectedRawDataPath(sourceType),
+        List<Scanner> scanners = ShifuFileUtils.getDataScanners(pathFinder.getSelectedRawDataPath(sourceType),
                 sourceType);
 
         log.info("Num of Scanners: " + scanners.size());
@@ -105,21 +110,23 @@ public class PostTrainModelProcessor extends BasicModelProcessor implements Proc
 
     /**
      * read the binary average score and update them into column list
-     *
+     * 
      * @param columnConfigList
      * @return
      * @throws IOException
      */
-    private List<ColumnConfig> updateColumnConfigWithBinAvgScore(List<ColumnConfig> columnConfigList) throws IOException {
-        List<Scanner> scanners = ShifuFileUtils.getDataScanners(pathFinder.getBinAvgScorePath(), modelConfig.getDataSet().getSource());
+    private List<ColumnConfig> updateColumnConfigWithBinAvgScore(List<ColumnConfig> columnConfigList)
+            throws IOException {
+        List<Scanner> scanners = ShifuFileUtils.getDataScanners(pathFinder.getBinAvgScorePath(), modelConfig
+                .getDataSet().getSource());
 
-        //CommonUtils.getDataScanners(pathFinder.getBinAvgScorePath(), modelConfig.getDataSet().getSource());
-        for (Scanner scanner : scanners) {
-            while (scanner.hasNextLine()) {
+        // CommonUtils.getDataScanners(pathFinder.getBinAvgScorePath(), modelConfig.getDataSet().getSource());
+        for(Scanner scanner: scanners) {
+            while(scanner.hasNextLine()) {
                 List<Integer> scores = new ArrayList<Integer>();
                 String[] raw = scanner.nextLine().split("\\|");
                 int columnNum = Integer.valueOf(raw[0]);
-                for (int i = 1; i < raw.length; i++) {
+                for(int i = 1; i < raw.length; i++) {
                     scores.add(Integer.valueOf(raw[i]));
                 }
                 ColumnConfig config = columnConfigList.get(columnNum);
