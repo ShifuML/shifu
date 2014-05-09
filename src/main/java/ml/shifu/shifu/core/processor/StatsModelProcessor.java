@@ -35,7 +35,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Scanner;
 
-
 /**
  * statistics, max/min/avg/std for each column dataset if it's numerical
  */
@@ -53,9 +52,9 @@ public class StatsModelProcessor extends BasicModelProcessor implements Processo
 
         syncDataToHdfs(modelConfig.getDataSet().getSource());
 
-        if (modelConfig.isMapReduceRunMode()) {
+        if(modelConfig.isMapReduceRunMode()) {
             runPigStats();
-        } else if (modelConfig.isLocalRunMode()) {
+        } else if(modelConfig.isLocalRunMode()) {
             runAkkaStats();
         } else {
             throw new ShifuException(ShifuErrorCode.ERROR_UNSUPPORT_MODE);
@@ -76,21 +75,19 @@ public class StatsModelProcessor extends BasicModelProcessor implements Processo
             SourceType sourceType = modelConfig.getDataSet().getSource();
             // the bug is caused when merging code? please take care
             scanners = ShifuFileUtils.getDataScanners(
-                    ShifuFileUtils.expandPath(modelConfig.getDataSetRawPath(), sourceType),
-                    sourceType);
+                    ShifuFileUtils.expandPath(modelConfig.getDataSetRawPath(), sourceType), sourceType);
         } catch (IOException e) {
             throw new ShifuException(ShifuErrorCode.ERROR_INPUT_NOT_FOUND, e);
         }
 
-        if (CollectionUtils.isEmpty(scanners)) {
+        if(CollectionUtils.isEmpty(scanners)) {
             throw new ShifuException(ShifuErrorCode.ERROR_INPUT_NOT_FOUND,
                     ", please check your data and start from init");
         }
 
         log.info("Num of Scanners: " + scanners.size());
 
-        AkkaSystemExecutor.getExecutor().submitStatsCalJob(modelConfig,
-                columnConfigList, scanners);
+        AkkaSystemExecutor.getExecutor().submitStatsCalJob(modelConfig, columnConfigList, scanners);
 
         // release
         closeScanners(scanners);
@@ -98,24 +95,24 @@ public class StatsModelProcessor extends BasicModelProcessor implements Processo
 
     /**
      * run pig stats
-     *
+     * 
      * @throws IOException
      */
     private void runPigStats() throws IOException {
         log.info("delete historical pre-train data");
 
-        ShifuFileUtils.deleteFile(pathFinder.getPreTrainingStatsPath(),
-                modelConfig.getDataSet().getSource());
+        ShifuFileUtils.deleteFile(pathFinder.getPreTrainingStatsPath(), modelConfig.getDataSet().getSource());
         Map<String, String> paramsMap = new HashMap<String, String>();
         paramsMap.put("delimiter", CommonUtils.escapePigString(modelConfig.getDataSetDelimiter()));
 
         // execute pig job
         try {
             PigExecutor.getExecutor().submitJob(modelConfig,
-                    pathFinder.getAbsolutePath("scripts/PreTrainingStats.pig"),
-                    paramsMap);
+                    pathFinder.getAbsolutePath("scripts/PreTrainingStats.pig"), paramsMap);
         } catch (IOException e) {
             throw new ShifuException(ShifuErrorCode.ERROR_RUNNING_PIG_JOB, e);
+        } catch (Throwable e) {
+            throw new RuntimeException(e);
         }
 
         // sync Down
@@ -128,13 +125,13 @@ public class StatsModelProcessor extends BasicModelProcessor implements Processo
 
     /**
      * update the max/min/mean/std/binning information from stats step
-     *
+     * 
      * @throws IOException
      */
     public void updateColumnConfigWithPreTrainingStats() throws IOException {
-        List<Scanner> scanners = ShifuFileUtils.getDataScanners(pathFinder.getPreTrainingStatsPath(),
-                modelConfig.getDataSet().getSource());
-        for (Scanner scanner : scanners) {
+        List<Scanner> scanners = ShifuFileUtils.getDataScanners(pathFinder.getPreTrainingStatsPath(), modelConfig
+                .getDataSet().getSource());
+        for(Scanner scanner: scanners) {
             scanStatsResult(scanner);
         }
 
@@ -144,14 +141,14 @@ public class StatsModelProcessor extends BasicModelProcessor implements Processo
 
     /**
      * Scan the stats result and save them into column configure
-     *
+     * 
      * @param scanner
      */
     private void scanStatsResult(Scanner scanner) {
-        while (scanner.hasNextLine()) {
+        while(scanner.hasNextLine()) {
             String[] raw = scanner.nextLine().trim().split("\\|");
 
-            if (raw.length == 1) {
+            if(raw.length == 1) {
                 continue;
             }
 
@@ -159,14 +156,14 @@ public class StatsModelProcessor extends BasicModelProcessor implements Processo
             try {
                 ColumnConfig config = this.columnConfigList.get(columnNum);
 
-                if (config.isCategorical()) {
+                if(config.isCategorical()) {
                     config.setBinCategory(CommonUtils.stringToStringList(raw[1]));
                 } else {
                     config.setBinBoundary(CommonUtils.stringToDoubleList(raw[1]));
                 }
                 config.setBinCountNeg(CommonUtils.stringToIntegerList(raw[2]));
                 config.setBinCountPos(CommonUtils.stringToIntegerList(raw[3]));
-                //config.setBinAvgScore(CommonUtils.stringToIntegerList(raw[4]));
+                // config.setBinAvgScore(CommonUtils.stringToIntegerList(raw[4]));
                 config.setBinPosCaseRate(CommonUtils.stringToDoubleList(raw[5]));
                 config.setBinLength(config.getBinCountNeg().size());
                 config.setKs(Double.valueOf(raw[6]));
@@ -176,13 +173,12 @@ public class StatsModelProcessor extends BasicModelProcessor implements Processo
                 config.setMean(Double.valueOf(raw[10]));
                 config.setStdDev(Double.valueOf(raw[11]));
 
-                //magic? 
-                if (raw[12].equals("N")) {
+                // magic?
+                if(raw[12].equals("N")) {
                     config.setColumnType(ColumnType.N);
                 } else {
                     config.setColumnType(ColumnType.C);
                 }
-
 
                 config.setMedian(Double.valueOf(raw[13]));
 
@@ -197,6 +193,5 @@ public class StatsModelProcessor extends BasicModelProcessor implements Processo
             }
         }
     }
-
 
 }
