@@ -24,7 +24,7 @@ import java.util.Random;
 
 import ml.shifu.shifu.container.CaseScoreResult;
 import ml.shifu.shifu.container.ColumnScoreObject;
-import ml.shifu.shifu.container.ValueObject;
+import ml.shifu.shifu.container.RawValueObject;
 import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.container.obj.ModelConfig;
 import ml.shifu.shifu.exception.ShifuErrorCode;

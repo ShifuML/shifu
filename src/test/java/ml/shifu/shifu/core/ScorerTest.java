@@ -112,7 +112,7 @@ public class ScorerTest {
 
     }
 
-    @Test
+    //@Test
     public void ScoreTest() {
 
         List<ColumnConfig> list = new ArrayList<ColumnConfig>();
@@ -144,14 +144,14 @@ public class ScorerTest {
         Assert.assertTrue(scores.get(1) == 1000);
     }
 
-    @Test
+    //@Test
     public void ScoreNull() {
         Scorer s = new Scorer(models, null, "NN");
 
         Assert.assertNull(s.score(null, null));
     }
 
-    @Test
+    //@Test
     public void ScoreModelsException() {
 
         List<ColumnConfig> list = new ArrayList<ColumnConfig>();

@@ -66,6 +66,7 @@ public class NormalizeDataActor extends AbstractActor {
     private ActorRef dataFilterRef;
     private ActorRef dataNormalizeRef;
 
+
     private BufferedWriter normDataWriter;
     private BufferedWriter selectDataWriter;
 
@@ -91,13 +92,6 @@ public class NormalizeDataActor extends AbstractActor {
             }
         }).withRouter(new RoundRobinRouter(Environment.getInt(Environment.LOCAL_NUM_PARALLEL, 16))), "DataNormalizeWorker");
 
-        // actors to sample data
-        dataPrepRef = this.getContext().actorOf(new Props(new UntypedActorFactory() {
-            private static final long serialVersionUID = -743043605617906731L;
-            public UntypedActor create() throws IOException {
-                return new DataPrepareWorker(modelConfig, columnConfigList, parentActorRef, dataNormalizeRef);
-            }
-        }).withRouter(new RoundRobinRouter(Environment.getInt(Environment.LOCAL_NUM_PARALLEL, 16))), "DataPrepWorker");
 
         // actors to filter data
         dataFilterRef = this.getContext().actorOf(new Props(new UntypedActorFactory() {

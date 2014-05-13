@@ -24,6 +24,7 @@ import java.util.Random;
 
 import com.google.inject.Guice;
 import com.google.inject.Injector;
+import ml.shifu.shifu.core.DataSampler;
 import ml.shifu.shifu.di.module.NormalizationModule;
 import ml.shifu.shifu.di.service.NormalizationService;
 
@@ -52,6 +53,7 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
     private List<String> negTags;
     private List<String> posTags;
     private Expression weightExpr;
+    private NormalizationService normalizationService;
 
     public NormalizeUDF(String source, String pathModelConfig, String pathColumnConfig) throws Exception {
         super(source, pathModelConfig, pathColumnConfig);
@@ -89,9 +91,9 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
         }
 
         boolean isNotSampled = DataSampler.isNotSampled(
-                modelConfig.getPosTags(), 
+                modelConfig.getPosTags(),
                 modelConfig.getNegTags(),
-                modelConfig.getNormalizeSampleRate(), 
+                modelConfig.getNormalizeSampleRate(),
                 modelConfig.isNormalizeSampleNegOnly(), tag);
         if ( isNotSampled ) {
             return null;

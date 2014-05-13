@@ -24,7 +24,8 @@ import ml.shifu.shifu.container.WeightAmplifier;
 import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.container.obj.ModelConfig;
 import ml.shifu.shifu.core.DataSampler;
-import ml.shifu.shifu.core.Normalizer;
+
+import ml.shifu.shifu.di.service.NormalizationService;
 import ml.shifu.shifu.message.NormPartRawDataMessage;
 import ml.shifu.shifu.message.NormResultDataMessage;
 import ml.shifu.shifu.util.CommonUtils;
@@ -40,12 +41,7 @@ import org.slf4j.LoggerFactory;
 
 import akka.actor.ActorRef;
 
-import ml.shifu.shifu.container.WeightAmplifier;
-import ml.shifu.shifu.container.obj.ColumnConfig;
-import ml.shifu.shifu.container.obj.ModelConfig;
-import ml.shifu.shifu.core.Normalizer;
-import ml.shifu.shifu.message.NormDataPrepMessage;
-import ml.shifu.shifu.message.NormResultDataMessage;
+
 
 /**
  *
@@ -91,7 +87,7 @@ public class DataNormalizeWorker extends AbstractWorkerActor {
 
     /**
      * Normalize the list training data from List<String> to List<Double>
-     * @param rfList
+     * @param rawDataList
      * @return the data after normalization
      */
     private List<List<Double>> normalizeData(List<String> rawDataList) {

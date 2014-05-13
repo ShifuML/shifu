@@ -162,7 +162,7 @@ public class StatsModelProcessor extends BasicModelProcessor implements Processo
      * 
      * @param scanner
      */
-    private void scanStatsResult(Scanner scanner) {
+    private void scanStatsResult(Scanner scanner) throws IOException {
         while(scanner.hasNextLine()) {
             String[] raw = scanner.nextLine().trim().split("\\|");
 
@@ -171,44 +171,12 @@ public class StatsModelProcessor extends BasicModelProcessor implements Processo
             }
 
             int columnNum = Integer.parseInt(raw[0]);
-            try {
-                ColumnConfig config = this.columnConfigList.get(columnNum);
 
-                if(config.isCategorical()) {
-                    config.setBinCategory(CommonUtils.stringToStringList(raw[1]));
-                } else {
-                    config.setBinBoundary(CommonUtils.stringToDoubleList(raw[1]));
-                }
-                config.setBinCountNeg(CommonUtils.stringToIntegerList(raw[2]));
-                config.setBinCountPos(CommonUtils.stringToIntegerList(raw[3]));
-                // config.setBinAvgScore(CommonUtils.stringToIntegerList(raw[4]));
-                config.setBinPosCaseRate(CommonUtils.stringToDoubleList(raw[5]));
-                config.setBinLength(config.getBinCountNeg().size());
-                config.setKs(Double.valueOf(raw[6]));
-                config.setIv(Double.valueOf(raw[7]));
-                config.setMax(Double.valueOf(raw[8]));
-                config.setMin(Double.valueOf(raw[9]));
-                config.setMean(Double.valueOf(raw[10]));
-                config.setStdDev(Double.valueOf(raw[11]));
+            ColumnConfig config = jsonMapper.readValue(raw[1], ColumnConfig.class);
 
-                // magic?
-                if(raw[12].equals("N")) {
-                    config.setColumnType(ColumnType.N);
-                } else {
-                    config.setColumnType(ColumnType.C);
-                }
+            columnConfigList.set(columnNum, config);
 
-                config.setMedian(Double.valueOf(raw[13]));
 
-                config.setMissingCnt(Long.valueOf(raw[14]));
-                config.setTotalCount(Long.valueOf(raw[15]));
-                config.setMissingPercentage(Double.valueOf(raw[16]));
-                config.setBinWeightedNeg(CommonUtils.stringToDoubleList(raw[17]));
-                config.setBinWeightedPos(CommonUtils.stringToDoubleList(raw[18]));
-
-            } catch (Exception e) {
-                continue;
-            }
         }
     }
 
