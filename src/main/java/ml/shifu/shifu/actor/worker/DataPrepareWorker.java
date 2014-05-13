@@ -15,23 +15,31 @@
  */
 package ml.shifu.shifu.actor.worker;
 
-import akka.actor.ActorRef;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Random;
+
 import ml.shifu.shifu.container.CaseScoreResult;
 import ml.shifu.shifu.container.ColumnScoreObject;
 import ml.shifu.shifu.container.ValueObject;
 import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.container.obj.ModelConfig;
-import ml.shifu.shifu.core.DataFilter;
 import ml.shifu.shifu.exception.ShifuErrorCode;
 import ml.shifu.shifu.exception.ShifuException;
-import ml.shifu.shifu.message.*;
+import ml.shifu.shifu.message.ColumnScoreMessage;
+import ml.shifu.shifu.message.RunModelResultMessage;
+import ml.shifu.shifu.message.StatsPartRawDataMessage;
+import ml.shifu.shifu.message.StatsValueObjectMessage;
 import ml.shifu.shifu.util.CommonUtils;
+
 import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.IOException;
-import java.util.*;
+import akka.actor.ActorRef;
 
 
 /**
@@ -120,16 +128,6 @@ public class DataPrepareWorker extends AbstractWorkerActor {
                 columnNumToActorMap.get(columnNum)
                         .tell(new ColumnScoreMessage(totalMsgCnt, columnNum, columnScoreListMap.get(columnNum)), getSelf());
             }
-        } else if (message instanceof NormPartRawDataMessage) {
-            NormPartRawDataMessage msg = (NormPartRawDataMessage) message;
-            List<String> rawDataList = msg.getRawDataList();
-            int totalMsgCnt = msg.getTotalMsgCnt();
-
-            List<String[]> pruneDataList = filterData(rawDataList);
-
-            log.info("According filter rule, " + (rawDataList.size() - pruneDataList.size()) + " records are filtered out.");
-
-            nextActorRef.tell(new NormDataPrepMessage(totalMsgCnt, pruneDataList), getSelf());
         } else {
             unhandled(message);
         }
@@ -350,30 +348,4 @@ public class DataPrepareWorker extends AbstractWorkerActor {
         }
     }
 
-
-    /**
-     * Filter the data for normalization
-     *
-     * @param rawDataList - total training data
-     * @return - data list after normalization
-     */
-    private List<String[]> filterData(List<String> rawDataList) {
-        List<String[]> retList = new ArrayList<String[]>();
-
-        for (String rawData : rawDataList) {
-            String[] fileds = CommonUtils.split(rawData, modelConfig.getDataSetDelimiter());
-            boolean isToFilter = DataFilter.filter(targetColumnNum,
-                    modelConfig.getPosTags(),
-                    modelConfig.getNegTags(),
-                    fileds,
-                    modelConfig.getNormalizeSampleRate(),
-                    modelConfig.isNormalizeSampleNegOnly());
-
-            if (!isToFilter) {
-                retList.add(fileds);
-            }
-        }
-
-        return retList;
-    }
 }
