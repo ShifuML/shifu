@@ -22,11 +22,11 @@ import java.util.List;
 import java.util.Random;
 
 /**
- * DataFilter class
+ * DataSampler class
  * - Output: column 0 is tag, following final select vars
  */
-public class DataFilter {
-    private static Logger log = LoggerFactory.getLogger(DataFilter.class);
+public class DataSampler {
+    private static Logger log = LoggerFactory.getLogger(DataSampler.class);
     private static Random rd = new Random(System.currentTimeMillis());
 
     /**
@@ -45,16 +45,15 @@ public class DataFilter {
      * @return null - if the data should be filtered out
      * data itself - if the data should not be filtered out
      */
-    public static List<Object> filter(Integer targetColumnNum,
-                                      List<String> posTags,
-                                      List<String> negTags,
-                                      List<Object> data,
-                                      Double sampleRate,
-                                      Boolean sampleNegOnly) {
-
+    public static List<Object> filter(Integer targetColumnNum, 
+            List<String> posTags, 
+            List<String> negTags,
+            List<Object> data, 
+            Double sampleRate, 
+            Boolean sampleNegOnly) {
         String tag = data.get(targetColumnNum).toString();
 
-        if (isToFilter(posTags, negTags, sampleRate, sampleNegOnly, tag)) {
+        if(isNotSampled(posTags, negTags, sampleRate, sampleNegOnly, tag)) {
             return null;
         }
 
@@ -77,17 +76,15 @@ public class DataFilter {
      * @return true - if the data should be filtered out
      * false - if the data should not be filtered out
      */
-    public static boolean filter(int targetColumnNum,
-                                 List<String> posTags,
-                                 List<String> negTags,
-                                 String[] fields,
-                                 double sampleRate,
-                                 boolean sampleNegOnly) {
-
+    public static boolean filter(int targetColumnNum, 
+            List<String> posTags, 
+            List<String> negTags, 
+            String[] fields,
+            double sampleRate, 
+            boolean sampleNegOnly) {
         String tag = fields[targetColumnNum];
-        return isToFilter(posTags, negTags, sampleRate, sampleNegOnly, tag);
+        return isNotSampled(posTags, negTags, sampleRate, sampleNegOnly, tag);
     }
-
 
     /**
      * to decide whether the data should be filtered out or not
@@ -100,12 +97,12 @@ public class DataFilter {
      * @return true - if the data should be filtered out
      * false - if the data should not be filtered out
      */
-    public static boolean isToFilter(List<String> posTags,
-                                     List<String> negTags,
-                                     double sampleRate,
-                                     boolean sampleNegOnly,
-                                     String tag) {
-
+    public static boolean isNotSampled(
+            List<String> posTags, 
+            List<String> negTags, 
+            double sampleRate,
+            boolean sampleNegOnly, 
+            String tag) {
         if (tag == null) {
             log.error("Tag is null.");
             return true;

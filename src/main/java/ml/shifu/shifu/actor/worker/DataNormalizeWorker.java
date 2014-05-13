@@ -20,7 +20,15 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import ml.shifu.shifu.di.service.NormalizationService;
+import ml.shifu.shifu.container.WeightAmplifier;
+import ml.shifu.shifu.container.obj.ColumnConfig;
+import ml.shifu.shifu.container.obj.ModelConfig;
+import ml.shifu.shifu.core.DataSampler;
+import ml.shifu.shifu.core.Normalizer;
+import ml.shifu.shifu.message.NormPartRawDataMessage;
+import ml.shifu.shifu.message.NormResultDataMessage;
+import ml.shifu.shifu.util.CommonUtils;
+
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.jexl2.Expression;
 import org.apache.commons.jexl2.JexlContext;
@@ -69,13 +77,13 @@ public class DataNormalizeWorker extends AbstractWorkerActor {
      */
     @Override
     public void handleMsg(Object message) {
-        if ( message instanceof NormDataPrepMessage ) {
-            NormDataPrepMessage msg = (NormDataPrepMessage) message;
-            List<String[]> rfList = msg.getRfList();
+        if (message instanceof NormPartRawDataMessage) {
+            NormPartRawDataMessage msg = (NormPartRawDataMessage) message;
+            List<String> rawDataList = msg.getRawDataList();
             int targetMsgCnt = msg.getTotalMsgCnt();
 
-            List<List<Double>> normalizedDataList = normalizeData(rfList);
-            nextActorRef.tell(new NormResultDataMessage(targetMsgCnt, rfList, normalizedDataList), this.getSelf());
+            List<List<Double>> normalizedDataList = normalizeData(rawDataList);
+            nextActorRef.tell(new NormResultDataMessage(targetMsgCnt, rawDataList, normalizedDataList), this.getSelf());
         } else {
             unhandled(message);
         }
@@ -86,10 +94,11 @@ public class DataNormalizeWorker extends AbstractWorkerActor {
      * @param rfList
      * @return the data after normalization
      */
-    private List<List<Double>> normalizeData(List<String[]> rfList) {
+    private List<List<Double>> normalizeData(List<String> rawDataList) {
         List<List<Double>> normalizedDataList = new ArrayList<List<Double>>();
 
-        for ( String[] rf : rfList ) {
+        for (String rawInput : rawDataList) {
+            String[] rf = CommonUtils.split(rawInput, modelConfig.getDataSetDelimiter());
             List<Double> normRecord = normalizeRecord(rf);
             if ( CollectionUtils.isNotEmpty(normRecord) ) {
                 normalizedDataList.add(normRecord);
@@ -107,13 +116,22 @@ public class DataNormalizeWorker extends AbstractWorkerActor {
     private List<Double> normalizeRecord(String[] rfs) {
         List<Double> retDouList = new ArrayList<Double>();
 
-        JexlContext jc = new MapContext();
-        if ( rfs == null || rfs.length == 0 ) {
+        if (rfs == null || rfs.length == 0) {
             return null;
         }
 
         String tag = rfs[this.targetColumnNum];
-        if ( modelConfig.getPosTags().contains(tag) ) {
+        
+        boolean isNotSampled = DataSampler.isNotSampled(
+                modelConfig.getPosTags(), 
+                modelConfig.getNegTags(),
+                modelConfig.getNormalizeSampleRate(), 
+                modelConfig.isNormalizeSampleNegOnly(), tag);
+        if ( isNotSampled ) {
+            return null;
+        }
+        
+        if (modelConfig.getPosTags().contains(tag)) {
             retDouList.add(Double.valueOf(1));
         } else if ( modelConfig.getNegTags().contains(tag) ) {
             retDouList.add(Double.valueOf(0));
@@ -121,6 +139,7 @@ public class DataNormalizeWorker extends AbstractWorkerActor {
             log.error("Invalid data! The target value is not listed - " + tag);
         }
 
+        JexlContext jc = new MapContext();
         Double cutoff = modelConfig.getNormalizeStdDevCutOff();
 
         for (int i = 0; i < rfs.length; i++) {

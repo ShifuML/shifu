@@ -52,7 +52,7 @@ public class ScorerTest {
 
         config.getTrain().getParams().put("Propagation", "B");
         config.getTrain().getParams().put("NumHiddenLayers", 2);
-        config.getTrain().getParams().put("LearningRate", 0.1);
+        config.getTrain().getParams().put("LearningRate", 0.5);
         List<Integer> nodes = new ArrayList<Integer>();
         nodes.add(3);
         nodes.add(4);
@@ -140,8 +140,8 @@ public class ScorerTest {
         ScoreObject o = s.score(pair, null);
         List<Integer> scores = o.getScores();
 
-    //    Assert.assertTrue(scores.get(0) > 400);
-    //    Assert.assertTrue(scores.get(1) == 1000);
+        Assert.assertTrue(scores.get(0) > 400);
+        Assert.assertTrue(scores.get(1) == 1000);
     }
 
     @Test
@@ -183,6 +183,8 @@ public class ScorerTest {
     public void delete() throws IOException {
         FileUtils.deleteDirectory(new File("tmp"));
 
+        FileUtils.deleteDirectory(new File("models"));
+        FileUtils.deleteDirectory(new File("test-output"));
         FileUtils.deleteQuietly(new File(Constants.DEFAULT_META_COLUMN_FILE));
         FileUtils.deleteQuietly(new File(Constants.DEFAULT_CATEGORICAL_COLUMN_FILE));
         FileUtils.deleteQuietly(new File(Constants.DEFAULT_FORCESELECT_COLUMN_FILE));

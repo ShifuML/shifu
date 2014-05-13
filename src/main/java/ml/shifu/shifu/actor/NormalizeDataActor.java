@@ -37,7 +37,6 @@ import akka.routing.RoundRobinRouter;
 import ml.shifu.shifu.actor.worker.DataFilterWorker;
 import ml.shifu.shifu.actor.worker.DataLoadWorker;
 import ml.shifu.shifu.actor.worker.DataNormalizeWorker;
-import ml.shifu.shifu.actor.worker.DataPrepareWorker;
 import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.container.obj.ModelConfig;
 import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
@@ -48,6 +47,7 @@ import ml.shifu.shifu.message.ExceptionMessage;
 import ml.shifu.shifu.message.NormResultDataMessage;
 import ml.shifu.shifu.message.ScanNormInputDataMessage;
 import ml.shifu.shifu.util.Environment;
+
 
 /**
  *
@@ -64,7 +64,6 @@ public class NormalizeDataActor extends AbstractActor {
 
     private ActorRef dataLoadRef;
     private ActorRef dataFilterRef;
-    private ActorRef dataPrepRef;
     private ActorRef dataNormalizeRef;
 
     private BufferedWriter normDataWriter;
@@ -104,7 +103,7 @@ public class NormalizeDataActor extends AbstractActor {
         dataFilterRef = this.getContext().actorOf(new Props(new UntypedActorFactory() {
             private static final long serialVersionUID = 7122505775141026832L;
             public UntypedActor create() throws IOException {
-                return new DataFilterWorker(modelConfig, columnConfigList, parentActorRef, dataPrepRef);
+                return new DataFilterWorker(modelConfig, columnConfigList, parentActorRef, dataNormalizeRef);
             }
         }).withRouter(new RoundRobinRouter(Environment.getInt(Environment.LOCAL_NUM_PARALLEL, 16))), "DataFilterWorker");
 
@@ -177,16 +176,9 @@ public class NormalizeDataActor extends AbstractActor {
      * @throws IOException
      * 		Exception when writing file
      */
-    private void writeSelectDataIntoFile(List<String[]> selectDataList) throws IOException {
-        for ( String[] fields : selectDataList ) {
-            for ( int i = 0; i < fields.length; i ++ ) {
-                selectDataWriter.append(fields[i]);
-                if ( i != fields.length - 1 ) {
-                    selectDataWriter.append(modelConfig.getDataSetDelimiter());
-                }
-            }
-
-            selectDataWriter.append("\n");
+    private void writeSelectDataIntoFile(List<String> selectDataList) throws IOException {
+        for(String rawInput: selectDataList) {
+            selectDataWriter.append(rawInput + "\n");
         }
     }
 

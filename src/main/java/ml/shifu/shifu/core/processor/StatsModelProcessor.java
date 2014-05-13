@@ -39,6 +39,15 @@ import ml.shifu.shifu.exception.ShifuException;
 import ml.shifu.shifu.fs.ShifuFileUtils;
 import ml.shifu.shifu.pig.PigExecutor;
 import ml.shifu.shifu.util.CommonUtils;
+import org.apache.commons.collections.CollectionUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.io.IOException;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Scanner;
 
 /**
  * statistics, max/min/avg/std for each column dataset if it's numerical
@@ -60,9 +69,9 @@ public class StatsModelProcessor extends BasicModelProcessor implements Processo
 
         syncDataToHdfs(modelConfig.getDataSet().getSource());
 
-        if (modelConfig.isMapReduceRunMode()) {
+        if(modelConfig.isMapReduceRunMode()) {
             runPigStats();
-        } else if (modelConfig.isLocalRunMode()){
+        } else if(modelConfig.isLocalRunMode()) {
             runAkkaStats();
         } else {
             throw new ShifuException(ShifuErrorCode.ERROR_UNSUPPORT_MODE);
@@ -84,21 +93,19 @@ public class StatsModelProcessor extends BasicModelProcessor implements Processo
             SourceType sourceType = modelConfig.getDataSet().getSource();
             // the bug is caused when merging code? please take care
             scanners = ShifuFileUtils.getDataScanners(
-                    ShifuFileUtils.expandPath(modelConfig.getDataSetRawPath(), sourceType),
-                    sourceType);
+                    ShifuFileUtils.expandPath(modelConfig.getDataSetRawPath(), sourceType), sourceType);
         } catch (IOException e) {
             throw new ShifuException(ShifuErrorCode.ERROR_INPUT_NOT_FOUND, e);
         }
 
-        if( CollectionUtils.isEmpty(scanners) ){
+        if(CollectionUtils.isEmpty(scanners)) {
             throw new ShifuException(ShifuErrorCode.ERROR_INPUT_NOT_FOUND,
                     ", please check your data and start from init");
         }
 
         log.info("Num of Scanners: " + scanners.size());
 
-        AkkaSystemExecutor.getExecutor().submitStatsCalJob(modelConfig,
-                columnConfigList, scanners);
+        AkkaSystemExecutor.getExecutor().submitStatsCalJob(modelConfig, columnConfigList, scanners);
 
         // release
         closeScanners(scanners);
@@ -106,24 +113,24 @@ public class StatsModelProcessor extends BasicModelProcessor implements Processo
 
     /**
      * run pig stats
-     *
+     * 
      * @throws IOException
      */
     private void runPigStats() throws IOException{
         log.info("delete historical pre-train data");
 
-        ShifuFileUtils.deleteFile(pathFinder.getPreTrainingStatsPath(),
-                modelConfig.getDataSet().getSource());
+        ShifuFileUtils.deleteFile(pathFinder.getPreTrainingStatsPath(), modelConfig.getDataSet().getSource());
         Map<String, String> paramsMap = new HashMap<String, String>();
         paramsMap.put("delimiter", CommonUtils.escapePigString(modelConfig.getDataSetDelimiter()));
 
         // execute pig job
         try {
             PigExecutor.getExecutor().submitJob(modelConfig,
-                    pathFinder.getAbsolutePath("scripts/PreTrainingStats.pig"),
-                    paramsMap);
+                    pathFinder.getAbsolutePath("scripts/PreTrainingStats.pig"), paramsMap);
         } catch (IOException e) {
             throw new ShifuException(ShifuErrorCode.ERROR_RUNNING_PIG_JOB, e);
+        } catch (Throwable e) {
+            throw new RuntimeException(e);
         }
 
         // sync Down
@@ -136,12 +143,12 @@ public class StatsModelProcessor extends BasicModelProcessor implements Processo
 
     /**
      * update the max/min/mean/std/binning information from stats step
-     *
+     * 
      * @throws IOException
      */
     public void updateColumnConfigWithPreTrainingStats() throws IOException {
-        List<Scanner> scanners = ShifuFileUtils.getDataScanners(pathFinder.getPreTrainingStatsPath(),
-                modelConfig.getDataSet().getSource());
+        List<Scanner> scanners = ShifuFileUtils.getDataScanners(pathFinder.getPreTrainingStatsPath(), modelConfig
+                .getDataSet().getSource());
         for(Scanner scanner: scanners) {
             scanStatsResult(scanner);
         }
@@ -152,10 +159,10 @@ public class StatsModelProcessor extends BasicModelProcessor implements Processo
 
     /**
      * Scan the stats result and save them into column configure
-     *
+     * 
      * @param scanner
      */
-    private void scanStatsResult(Scanner scanner) throws IOException {
+    private void scanStatsResult(Scanner scanner) {
         while(scanner.hasNextLine()) {
             String[] raw = scanner.nextLine().trim().split("\\|");
 
@@ -164,15 +171,45 @@ public class StatsModelProcessor extends BasicModelProcessor implements Processo
             }
 
             int columnNum = Integer.parseInt(raw[0]);
+            try {
+                ColumnConfig config = this.columnConfigList.get(columnNum);
 
-            ColumnConfig config = jsonMapper.readValue(raw[1], ColumnConfig.class);
+                if(config.isCategorical()) {
+                    config.setBinCategory(CommonUtils.stringToStringList(raw[1]));
+                } else {
+                    config.setBinBoundary(CommonUtils.stringToDoubleList(raw[1]));
+                }
+                config.setBinCountNeg(CommonUtils.stringToIntegerList(raw[2]));
+                config.setBinCountPos(CommonUtils.stringToIntegerList(raw[3]));
+                // config.setBinAvgScore(CommonUtils.stringToIntegerList(raw[4]));
+                config.setBinPosCaseRate(CommonUtils.stringToDoubleList(raw[5]));
+                config.setBinLength(config.getBinCountNeg().size());
+                config.setKs(Double.valueOf(raw[6]));
+                config.setIv(Double.valueOf(raw[7]));
+                config.setMax(Double.valueOf(raw[8]));
+                config.setMin(Double.valueOf(raw[9]));
+                config.setMean(Double.valueOf(raw[10]));
+                config.setStdDev(Double.valueOf(raw[11]));
 
-            columnConfigList.set(columnNum, config);
+                // magic?
+                if(raw[12].equals("N")) {
+                    config.setColumnType(ColumnType.N);
+                } else {
+                    config.setColumnType(ColumnType.C);
+                }
 
+                config.setMedian(Double.valueOf(raw[13]));
 
+                config.setMissingCnt(Long.valueOf(raw[14]));
+                config.setTotalCount(Long.valueOf(raw[15]));
+                config.setMissingPercentage(Double.valueOf(raw[16]));
+                config.setBinWeightedNeg(CommonUtils.stringToDoubleList(raw[17]));
+                config.setBinWeightedPos(CommonUtils.stringToDoubleList(raw[18]));
+
+            } catch (Exception e) {
+                continue;
+            }
         }
     }
-
-
 
 }

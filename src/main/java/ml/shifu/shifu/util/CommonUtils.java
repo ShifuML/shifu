@@ -443,6 +443,9 @@ public final class CommonUtils {
             try {
                 stream = fs.open(f.getPath());
                 models.add(BasicML.class.cast(EncogDirectoryPersistence.loadObject(stream)));
+            } catch (RuntimeException e) {
+                String msg = "the expecting model file is: " + f.getPath();
+                throw new ShifuException(ShifuErrorCode.ERROR_FAIL_TO_LOAD_MODEL_FILE, e, msg);
             } finally {
                 IOUtils.closeQuietly(stream);
             }

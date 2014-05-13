@@ -26,6 +26,8 @@ import com.google.inject.Guice;
 import com.google.inject.Injector;
 import ml.shifu.shifu.di.module.NormalizationModule;
 import ml.shifu.shifu.di.service.NormalizationService;
+
+
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.jexl2.Expression;
 import org.apache.commons.jexl2.JexlContext;
@@ -50,8 +52,6 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
     private List<String> negTags;
     private List<String> posTags;
     private Expression weightExpr;
-    private NormalizationService normalizationService;
-    private Random random = new Random(System.currentTimeMillis());
 
     public NormalizeUDF(String source, String pathModelConfig, String pathColumnConfig) throws Exception {
         super(source, pathModelConfig, pathColumnConfig);
@@ -88,18 +88,16 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
             return null;
         }
 
-        Double rate = modelConfig.getNormalizeSampleRate();
-        if ( modelConfig.isNormalizeSampleNegOnly() ) {
-            if (negTags.contains(tag) && random.nextDouble() > rate) {
-                return null;
-            }
-        } else {
-            if (random.nextDouble() > rate) {
-                return null;
-            }
+        boolean isNotSampled = DataSampler.isNotSampled(
+                modelConfig.getPosTags(), 
+                modelConfig.getNegTags(),
+                modelConfig.getNormalizeSampleRate(), 
+                modelConfig.isNormalizeSampleNegOnly(), tag);
+        if ( isNotSampled ) {
+            return null;
         }
-
-        if ( negTags.contains(tag) ) {
+        
+        if (negTags.contains(tag)) {
             tuple.append(0);
         } else {
             tuple.append(1);

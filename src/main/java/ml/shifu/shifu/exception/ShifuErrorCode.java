@@ -76,6 +76,7 @@ public enum ShifuErrorCode {
      * model validate 1201 - 1250
      */
     ERROR_MODEL_FILE_NOT_FOUND(1250, "The model file is not found!"),
+    ERROR_FAIL_TO_LOAD_MODEL_FILE(1251, "Fail to load the model file"),
 
     /*
      * model eval 1301 - 1350

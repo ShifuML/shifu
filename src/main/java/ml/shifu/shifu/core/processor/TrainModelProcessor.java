@@ -79,9 +79,11 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
 
     /**
      * Constructor
-     *
-     * @param isDryTrain dryTrain flag, if it's true, the trainer would start training
-     * @param isDebug    debug flag, if it's true, shifu will create log file to record each training status
+     * 
+     * @param isDryTrain
+     *            dryTrain flag, if it's true, the trainer would start training
+     * @param isDebug
+     *            debug flag, if it's true, shifu will create log file to record each training status
      */
     public TrainModelProcessor(boolean isDryTrain, boolean isDebug) {
         super();
@@ -99,15 +101,15 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
     public int run() throws Exception {
         setUp(ModelStep.TRAIN);
 
-        if (isDebug) {
+        if(isDebug) {
             File file = new File(LOGS);
-            if (!file.mkdir()) {
+            if(!file.exists() && !file.mkdir()) {
                 throw new RuntimeException("logs file is created failed.");
             }
         }
 
         RunMode runMode = super.modelConfig.getBasic().getRunMode();
-        switch (runMode) {
+        switch(runMode) {
             case mapred:
                 validatePigTrain();
                 syncDataToHdfs(super.modelConfig.getDataSet().getSource());
@@ -127,8 +129,9 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
 
     /**
      * run training process with number of bags
-     *
-     * @param numBags number of bags, it decide how much trainer will start training
+     * 
+     * @param numBags
+     *            number of bags, it decide how much trainer will start training
      * @throws IOException
      */
     private void runAkkaTrain(int numBags) throws IOException {
@@ -139,13 +142,13 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
 
         trainers.clear();
 
-        for (int i = 0; i < numBags; i++) {
+        for(int i = 0; i < numBags; i++) {
             AbstractTrainer trainer;
-            if (modelConfig.getAlgorithm().equalsIgnoreCase("NN")) {
+            if(modelConfig.getAlgorithm().equalsIgnoreCase("NN")) {
                 trainer = new NNTrainer(modelConfig, i + 1, isDryTrain);
-            } else if (modelConfig.getAlgorithm().equalsIgnoreCase("SVM")) {
+            } else if(modelConfig.getAlgorithm().equalsIgnoreCase("SVM")) {
                 trainer = new SVMTrainer(this.modelConfig, i, isDryTrain);
-            } else if (modelConfig.getAlgorithm().equalsIgnoreCase("LR")) {
+            } else if(modelConfig.getAlgorithm().equalsIgnoreCase("LR")) {
                 trainer = new LogisticRegressionTrainer(this.modelConfig, i, isDryTrain);
             } else {
                 throw new ShifuException(ShifuErrorCode.ERROR_UNSUPPORT_ALG);
@@ -155,7 +158,7 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
         }
 
         List<Scanner> scanners = null;
-        if (modelConfig.getAlgorithm().equalsIgnoreCase("DT")) {
+        if(modelConfig.getAlgorithm().equalsIgnoreCase("DT")) {
             LOG.info("Raw Data: " + pathFinder.getNormalizedDataPath());
             try {
                 scanners = ShifuFileUtils.getDataScanners(modelConfig.getDataSetRawPath(), modelConfig.getDataSet()
@@ -163,7 +166,7 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
             } catch (IOException e) {
                 throw new ShifuException(ShifuErrorCode.ERROR_INPUT_NOT_FOUND, e, pathFinder.getNormalizedDataPath());
             }
-            if (CollectionUtils.isNotEmpty(scanners)) {
+            if(CollectionUtils.isNotEmpty(scanners)) {
                 AkkaSystemExecutor.getExecutor().submitDecisionTreeTrainJob(modelConfig, columnConfigList, scanners,
                         trainers);
             }
@@ -175,7 +178,7 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
             } catch (IOException e) {
                 throw new ShifuException(ShifuErrorCode.ERROR_INPUT_NOT_FOUND, e, pathFinder.getNormalizedDataPath());
             }
-            if (CollectionUtils.isNotEmpty(scanners)) {
+            if(CollectionUtils.isNotEmpty(scanners)) {
                 AkkaSystemExecutor.getExecutor().submitModelTrainJob(modelConfig, columnConfigList, scanners, trainers);
             }
         }
@@ -186,7 +189,7 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
 
     /**
      * get the trainer list
-     *
+     * 
      * @return the trainer list
      */
     public List<AbstractTrainer> getTrainers() {
@@ -195,27 +198,28 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
 
     /**
      * get the trainer
-     *
-     * @param index the index of trainer
+     * 
+     * @param index
+     *            the index of trainer
      * @return the trainer
      */
     public AbstractTrainer getTrainer(int index) {
-        if (index >= trainers.size())
+        if(index >= trainers.size())
             throw new RuntimeException("Insufficient models training");
         return trainers.get(index);
     }
 
     // d-train part starts here
     private void validatePigTrain() {
-        if (!NNConstants.NN_ALG_NAME.equalsIgnoreCase(super.getModelConfig().getTrain().getAlgorithm())) {
+        if(!NNConstants.NN_ALG_NAME.equalsIgnoreCase(super.getModelConfig().getTrain().getAlgorithm())) {
             throw new IllegalArgumentException("Currently we only support NN distributed training.");
         }
 
-        if (super.getModelConfig().getDataSet().getSource() != SourceType.HDFS) {
+        if(super.getModelConfig().getDataSet().getSource() != SourceType.HDFS) {
             throw new IllegalArgumentException("Currently we only support distributed training on HDFS source type.");
         }
 
-        if (isDebug()) {
+        if(isDebug()) {
             LOG.warn("Currently we haven't debug logic. It's the same as you don't set it.");
         }
 
@@ -233,8 +237,7 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
         // add tmp models folder to config
         Path tmpModelsPath = ShifuFileUtils.getFileSystemBySourceType(sourceType).makeQualified(
                 new Path(super.getPathFinder().getPathBySourceType(
-                        new Path(Constants.TMP, Constants.DEFAULT_MODELS_TMP_FOLDER), sourceType))
-        );
+                        new Path(Constants.TMP, Constants.DEFAULT_MODELS_TMP_FOLDER), sourceType)));
         args.add(String.format(NNConstants.MAPREDUCE_PARAM_FORMAT, NNConstants.NN_TMP_MODELS_FOLDER,
                 tmpModelsPath.toString()));
         int baggingNum = super.getModelConfig().getBaggingNum();
@@ -245,7 +248,7 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
                 Environment.getProperty(SHIFU_DTRAIN_PARALLEL, SHIFU_DEFAULT_DTRAIN_PARALLEL)).booleanValue();
         GuaguaMapReduceClient guaguaClient = new GuaguaMapReduceClient();
         List<String> progressLogList = new ArrayList<String>(baggingNum);
-        for (int i = 0; i < baggingNum; i++) {
+        for(int i = 0; i < baggingNum; i++) {
             // set name for each bagging job.
             args.add("-n");
             args.add(String.format("Shifu Master-Workers NN Iteration: %s id:%s", super.getModelConfig()
@@ -260,23 +263,23 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
             final String progressLogFile = getProgressLogFile(i + 1);
             progressLogList.add(progressLogFile);
             args.add(String.format(NNConstants.MAPREDUCE_PARAM_FORMAT, NNConstants.NN_PROGRESS_FILE, progressLogFile));
-            if (isParallel) {
+            if(isParallel) {
                 guaguaClient.addJob(args.toArray(new String[0]));
             } else {
-                TailThread tailThread = startTailThread(new String[]{progressLogFile});
+                TailThread tailThread = startTailThread(new String[] { progressLogFile });
                 guaguaClient.creatJob(args.toArray(new String[0])).waitForCompletion(true);
                 stopTailThread(tailThread);
             }
         }
 
-        if (isParallel) {
+        if(isParallel) {
             TailThread tailThread = startTailThread(progressLogList.toArray(new String[0]));
             guaguaClient.run();
             stopTailThread(tailThread);
         }
 
         // copy model files at last.
-        for (int i = 0; i < baggingNum; i++) {
+        for(int i = 0; i < baggingNum; i++) {
             String modelName = getModelName(i + 1);
             Path modelPath = ShifuFileUtils.getFileSystemBySourceType(sourceType).makeQualified(
                     new Path(super.getPathFinder().getModelsPath(sourceType), modelName));
@@ -320,8 +323,8 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
 
     private void copyTmpModelsToLocal(final Path tmpModelsDir, final SourceType sourceType) throws IOException {
         // copy all tmp nn to local, these tmp nn are outputs from
-        if (!this.isDryTrain()) {
-            if (ShifuFileUtils.getFileSystemBySourceType(sourceType).exists(tmpModelsDir)) {
+        if(!this.isDryTrain()) {
+            if(ShifuFileUtils.getFileSystemBySourceType(sourceType).exists(tmpModelsDir)) {
                 Path localTmpModelsFolder = new Path(Constants.TMP);
                 HDFSUtils.getLocalFS().delete(localTmpModelsFolder, true);
                 HDFSUtils.getLocalFS().mkdirs(localTmpModelsFolder);
@@ -341,7 +344,7 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
 
         args.add("-z");
         String zkServers = Environment.getProperty(Environment.ZOO_KEEPER_SERVERS);
-        if (StringUtils.isEmpty(zkServers)) {
+        if(StringUtils.isEmpty(zkServers)) {
             throw new IllegalArgumentException(
                     "Zookeeper is used for distributed training coordination, please set 'zookeeperServers' firstly in '$SHIFU_HOME/conf/shifuconfig' file. The value is like 'server1:port1,server2:port2'.");
         }
@@ -374,14 +377,12 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
                 NNConstants.MAPREDUCE_PARAM_FORMAT,
                 NNConstants.SHIFU_NN_MODEL_CONFIG,
                 ShifuFileUtils.getFileSystemBySourceType(sourceType).makeQualified(
-                        new Path(super.getPathFinder().getModelConfigPath(sourceType)))
-        ));
+                        new Path(super.getPathFinder().getModelConfigPath(sourceType)))));
         args.add(String.format(
                 NNConstants.MAPREDUCE_PARAM_FORMAT,
                 NNConstants.SHIFU_NN_COLUMN_CONFIG,
                 ShifuFileUtils.getFileSystemBySourceType(sourceType).makeQualified(
-                        new Path(super.getPathFinder().getColumnConfigPath(sourceType)))
-        ));
+                        new Path(super.getPathFinder().getColumnConfigPath(sourceType)))));
         args.add(String.format(NNConstants.MAPREDUCE_PARAM_FORMAT, NNConstants.NN_MODELSET_SOURCE_TYPE, sourceType));
         args.add(String.format(NNConstants.MAPREDUCE_PARAM_FORMAT, NNConstants.NN_DRY_TRAIN, isDryTrain()));
         // hard code set computation threshold for 40s. TODO, set it in shifuconfig.
@@ -390,8 +391,8 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
         setHeapSizeAndSplitSize(args);
 
         // one can set guagua conf in shifuconfig
-        for (Map.Entry<Object, Object> entry : Environment.getProperties().entrySet()) {
-            if (entry.getKey().toString().startsWith("nn") || entry.getKey().toString().startsWith("guagua")
+        for(Map.Entry<Object, Object> entry: Environment.getProperties().entrySet()) {
+            if(entry.getKey().toString().startsWith("nn") || entry.getKey().toString().startsWith("guagua")
                     || entry.getKey().toString().startsWith("mapred")) {
                 args.add(String.format(NNConstants.MAPREDUCE_PARAM_FORMAT, entry.getKey().toString(), entry.getValue()
                         .toString()));
@@ -403,7 +404,7 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
     private void setHeapSizeAndSplitSize(final List<String> args) {
         // TODO tmp setting 1G heap for each worker, need to be set in ModelConfig, each split is set to 256M for heap
         // with 1G, should be set in ModelConfig also. Replace string as constants.
-        if (this.isDebug()) {
+        if(this.isDebug()) {
             args.add(String.format(NNConstants.MAPREDUCE_PARAM_FORMAT, GuaguaMapReduceConstants.MAPRED_CHILD_JAVA_OPTS,
                     "-Xmn128m -Xms1G -Xmx1G -verbose:gc -XX:+PrintGCDetails -XX:+PrintGCTimeStamps"));
         } else {
@@ -417,7 +418,7 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
     }
 
     private void copyModelToLocal(String modelName, Path modelPath, SourceType sourceType) throws IOException {
-        if (!this.isDryTrain()) {
+        if(!this.isDryTrain()) {
             ShifuFileUtils.getFileSystemBySourceType(sourceType).copyToLocalFile(modelPath,
                     new Path(Constants.MODELS, modelName));
         }
@@ -458,8 +459,9 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
 
     /**
      * Get NN model name
-     *
-     * @param i index for model name
+     * 
+     * @param i
+     *            index for model name
      */
     public static String getModelName(int i) {
         return String.format("model%s.nn", i);
@@ -493,7 +495,7 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
         public TailThread(String[] progressLogs) {
             this.progressLogs = progressLogs;
             this.offset = new long[this.progressLogs.length];
-            for (String progressLog : progressLogs) {
+            for(String progressLog: progressLogs) {
                 try {
                     // delete it firstly, it will be updated from master
                     HDFSUtils.getFS().delete(new Path(progressLog), true);
@@ -504,8 +506,8 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
         }
 
         public void run() {
-            while (!Thread.currentThread().isInterrupted()) {
-                for (int i = 0; i < this.progressLogs.length; i++) {
+            while(!Thread.currentThread().isInterrupted()) {
+                for(int i = 0; i < this.progressLogs.length; i++) {
                     try {
                         this.offset[i] = dumpFromOffset(new Path(this.progressLogs[i]), this.offset[i]);
                     } catch (FileNotFoundException e) {
@@ -537,14 +539,14 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
                 // use conf so the system configured io block size is used
                 IOUtils.copyBytes(in, out, HDFSUtils.getFS().getConf(), false);
                 String msgs = new String(out.toByteArray(), Charset.forName("UTF-8")).trim();
-                if (StringUtils.isNotEmpty(msgs)) {
-                    for (String msg : Splitter.on('\n').split(msgs)) {
+                if(StringUtils.isNotEmpty(msgs)) {
+                    for(String msg: Splitter.on('\n').split(msgs)) {
                         LOG.info(msg.trim());
                     }
                 }
                 offset = in.getPos();
             } catch (IOException e) {
-                if (e.getMessage().indexOf("Cannot seek after EOF") < 0) {
+                if(e.getMessage().indexOf("Cannot seek after EOF") < 0) {
                     throw e;
                 } else {
                     LOG.warn(e.getMessage());
@@ -557,7 +559,7 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
         }
 
         public void deleteProgressFiles() throws IOException {
-            for (String progressFile : this.progressLogs) {
+            for(String progressFile: this.progressLogs) {
                 HDFSUtils.getFS().delete(new Path(progressFile), true);
             }
         }
