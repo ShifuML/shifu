@@ -31,12 +31,13 @@ filtered = FILTER raw BY IsDataFilterOut(*);
 
 STORE filtered INTO '$pathSelectedRawData' USING PigStorage('$delimiter', '-schema');
 
-normalized = FOREACH filtered GENERATE FLATTEN(Normalize(*));
+normalized = FOREACH filtered GENERATE Normalize(*);
 normalized = FILTER normalized BY $0 IS NOT NULL;
+normalized = FOREACH normalized GENERATE FLATTEN($0);
 
 STORE normalized INTO '$pathNormalizedData' USING PigStorage('|', '-schema');
 
-tag = FOREACH normalized GENERATE $0;
-grouped = GROUP tag BY $0;
-tagcnt = FOREACH grouped GENERATE group, COUNT($1);
-DUMP tagcnt;
+--tag = FOREACH normalized GENERATE $0;
+--grouped = GROUP tag BY $0;
+--tagcnt = FOREACH grouped GENERATE group, COUNT($1);
+--DUMP tagcnt;
