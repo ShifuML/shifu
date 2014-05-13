@@ -28,6 +28,7 @@ import java.util.*;
 /**
  * Binning, it helps to put data input bins
  */
+@Deprecated
 public class Binning {
 
     /**

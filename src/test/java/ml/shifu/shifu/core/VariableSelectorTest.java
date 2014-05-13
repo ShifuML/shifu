@@ -43,12 +43,12 @@ public class VariableSelectorTest {
     @BeforeClass
     public void setup() throws IOException {
         modelConfig = CommonUtils.loadModelConfig(
-                "src/test/resources/example/cancer-judgement/ModelStore/ModelSet1/ModelConfig.json",
+                "src/test/resources/unittest/ModelSets/full/ModelConfig.json",
                 SourceType.LOCAL);
 
         modelConfig.getVarSelect().setFilterNum(20);
         columnConfigList = CommonUtils.loadColumnConfigList(
-                "src/test/resources/example/cancer-judgement/ModelStore/ModelSet1/ColumnConfig.json",
+                "src/test/resources/unittest/ModelSets/full/ColumnConfig.json",
                 SourceType.LOCAL);
     }
 

@@ -140,7 +140,7 @@ public class CommonUtilsTest {
         ModelConfig config = ModelConfig.createInitModelConfig(".", ALGORITHM.NN, "test");
         config.setModelSetName("shifu");
 
-        File file = new File("evals/EvalA");
+        File file = new File("evals/Eval1");
         if (!file.exists()) {
             file.mkdirs();
         }
@@ -359,16 +359,16 @@ public class CommonUtilsTest {
 
     @Test
     public void testFindModels() throws IOException {
-        ModelConfig modelConfig = CommonUtils.loadModelConfig("src/test/resources/example/cancer-judgement/ModelStore/ModelSet1/ModelConfig.json", SourceType.LOCAL);
+        ModelConfig modelConfig = CommonUtils.loadModelConfig("src/test/resources/unittest/ModelSets/full/ModelConfig.json", SourceType.LOCAL);
 
-        File srcModels = new File("src/test/resources/example/cancer-judgement/ModelStore/ModelSet1/models");
+        File srcModels = new File("src/test/resources/unittest/ModelSets/full/models");
         File dstModels = new File("models");
         FileUtils.copyDirectory(srcModels, dstModels);
 
         List<FileStatus> modelFiles = CommonUtils.findModels(modelConfig, null, SourceType.LOCAL);
         Assert.assertEquals(5, modelFiles.size());
 
-        EvalConfig evalConfig = modelConfig.getEvalConfigByName("EvalA");
+        EvalConfig evalConfig = modelConfig.getEvalConfigByName("Eval1");
         evalConfig.setCustomPaths(new HashMap<String, String>());
         evalConfig.getCustomPaths().put(Constants.KEY_MODELS_PATH, null);
         modelFiles = CommonUtils.findModels(modelConfig, evalConfig, SourceType.LOCAL);
@@ -380,11 +380,11 @@ public class CommonUtilsTest {
 
         FileUtils.deleteDirectory(dstModels);
 
-        evalConfig.getCustomPaths().put(Constants.KEY_MODELS_PATH, "./src/test/resources/example/cancer-judgement/ModelStore/ModelSet1/models");
+        evalConfig.getCustomPaths().put(Constants.KEY_MODELS_PATH, "./src/test/resources/unittest/ModelSets/full/models");
         modelFiles = CommonUtils.findModels(modelConfig, evalConfig, SourceType.LOCAL);
         Assert.assertEquals(5, modelFiles.size());
 
-        evalConfig.getCustomPaths().put(Constants.KEY_MODELS_PATH, "./src/test/resources/example/cancer-judgement/ModelStore/ModelSet1/models/model0.nn");
+        evalConfig.getCustomPaths().put(Constants.KEY_MODELS_PATH, "./src/test/resources/unittest/ModelSets/full/models/model1.nn");
         modelFiles = CommonUtils.findModels(modelConfig, evalConfig, SourceType.LOCAL);
         Assert.assertEquals(1, modelFiles.size());
 
@@ -392,7 +392,7 @@ public class CommonUtilsTest {
         modelFiles = CommonUtils.findModels(modelConfig, evalConfig, SourceType.LOCAL);
         Assert.assertEquals(0, modelFiles.size());
 
-        evalConfig.getCustomPaths().put(Constants.KEY_MODELS_PATH, "./src/test/resources/example/cancer-judgement/ModelStore/ModelSet1/models/*.nn");
+        evalConfig.getCustomPaths().put(Constants.KEY_MODELS_PATH, "./src/test/resources/unittest/ModelSets/full/models/*.nn");
         modelFiles = CommonUtils.findModels(modelConfig, evalConfig, SourceType.LOCAL);
         Assert.assertEquals(5, modelFiles.size());
 

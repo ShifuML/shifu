@@ -19,7 +19,7 @@
 | 
 |3. Past Usage:
 |   -- testing concept learning software, in particular
-|      an experimental method to learn two-tiered concept descriptions.
+|      an experimental normalizer to learn two-tiered concept descriptions.
 |      The data was used to learn the description of an acceptable
 |      and unacceptable contract.
 |      The unacceptable contracts were either obtained by interviewing

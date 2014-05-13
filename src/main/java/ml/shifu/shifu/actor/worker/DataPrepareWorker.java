@@ -1,5 +1,5 @@
 /**
- * Copyright [2012-2014] eBay Software Foundation
+ * Copyright [2012-2013] eBay Software Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,7 +15,20 @@
  */
 package ml.shifu.shifu.actor.worker;
 
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Random;
+
+import ml.shifu.shifu.container.RawValueObject;
+import org.apache.commons.lang.StringUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import akka.actor.ActorRef;
+
 import ml.shifu.shifu.container.CaseScoreResult;
 import ml.shifu.shifu.container.ColumnScoreObject;
 import ml.shifu.shifu.container.ValueObject;
@@ -24,21 +37,21 @@ import ml.shifu.shifu.container.obj.ModelConfig;
 import ml.shifu.shifu.core.DataFilter;
 import ml.shifu.shifu.exception.ShifuErrorCode;
 import ml.shifu.shifu.exception.ShifuException;
-import ml.shifu.shifu.message.*;
+import ml.shifu.shifu.message.ColumnScoreMessage;
+import ml.shifu.shifu.message.NormDataPrepMessage;
+import ml.shifu.shifu.message.NormPartRawDataMessage;
+import ml.shifu.shifu.message.RunModelResultMessage;
+import ml.shifu.shifu.message.StatsPartRawDataMessage;
+import ml.shifu.shifu.message.StatsValueObjectMessage;
 import ml.shifu.shifu.util.CommonUtils;
-import org.apache.commons.lang.StringUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import java.io.IOException;
-import java.util.*;
-
 
 /**
+ *
  * DataPrepareWorker class convert data into all kinds of format.
- * StatsPartRawDataMessage - convert row-based data into column-based training data for calculating stats
- * RunModelResultMessage - convert model-result from row-based to column-based
- * NormPartRawDataMessage - filter data for normalization
+ * 			StatsPartRawDataMessage - convert row-based data into column-based training data for calculating stats
+ * 			RunModelResultMessage - convert model-result from row-based to column-based
+ * 			NormPartRawDataMessage - filter data for normalization
+ *
  */
 public class DataPrepareWorker extends AbstractWorkerActor {
 
@@ -79,15 +92,15 @@ public class DataPrepareWorker extends AbstractWorkerActor {
             List<ColumnConfig> columnConfigList,
             ActorRef parentActorRef,
             Map<Integer, ActorRef> columnNumToActorMap) throws IOException {
-        this(modelConfig, columnConfigList, parentActorRef, (ActorRef) null);
+        this(modelConfig, columnConfigList, parentActorRef, (ActorRef)null);
         this.columnNumToActorMap = columnNumToActorMap;
 
-        if (!StringUtils.isEmpty(this.modelConfig.getDataSet().getWeightColumnName())) {
+        if(!StringUtils.isEmpty(this.modelConfig.getDataSet().getWeightColumnName())) {
             String weightColumnName = this.modelConfig.getDataSet().getWeightColumnName();
 
-            for (int i = 0; i < this.columnConfigList.size(); i++) {
+            for(int i = 0 ; i < this.columnConfigList.size(); i ++) {
                 ColumnConfig config = this.columnConfigList.get(i);
-                if (config.getColumnName().equals(weightColumnName)) {
+                if(config.getColumnName().equals(weightColumnName)){
                     this.weightedColumnNum = i;
                     break;
                 }
@@ -100,27 +113,27 @@ public class DataPrepareWorker extends AbstractWorkerActor {
      */
     @Override
     public void handleMsg(Object message) {
-        if (message instanceof StatsPartRawDataMessage) {
+        if ( message instanceof StatsPartRawDataMessage ) {
             StatsPartRawDataMessage partData = (StatsPartRawDataMessage) message;
-            Map<Integer, List<ValueObject>> columnVoListMap = buildColumnVoListMap(partData.getRawDataList().size());
+            Map<Integer, List<RawValueObject>> columnVoListMap = buildColumnVoListMap(partData.getRawDataList().size());
             DataPrepareStatsResult rt = convertRawDataIntoValueObject(partData.getRawDataList(), columnVoListMap);
             int totalMsgCnt = partData.getTotalMsgCnt();
 
-            for (Integer columnNum : columnVoListMap.keySet()) {
+            for ( Integer columnNum : columnVoListMap.keySet() ) {
                 columnNumToActorMap.get(columnNum)
                         .tell(new StatsValueObjectMessage(totalMsgCnt, columnNum, columnVoListMap.get(columnNum), rt.getMissingMap().containsKey(columnNum) ? rt.getMissingMap().get(columnNum) : 0, rt.getTotal()), getSelf());
             }
-        } else if (message instanceof RunModelResultMessage) {
+        } else if ( message instanceof RunModelResultMessage ) {
             RunModelResultMessage msg = (RunModelResultMessage) message;
             Map<Integer, List<ColumnScoreObject>> columnScoreListMap = buildColumnScoreListMap();
             convertModelResultIntoColScore(msg.getScoreResultList(), columnScoreListMap);
             int totalMsgCnt = msg.getTotalStreamCnt();
 
-            for (Integer columnNum : columnScoreListMap.keySet()) {
+            for ( Integer columnNum : columnScoreListMap.keySet() ) {
                 columnNumToActorMap.get(columnNum)
                         .tell(new ColumnScoreMessage(totalMsgCnt, columnNum, columnScoreListMap.get(columnNum)), getSelf());
             }
-        } else if (message instanceof NormPartRawDataMessage) {
+        } else if ( message instanceof NormPartRawDataMessage ) {
             NormPartRawDataMessage msg = (NormPartRawDataMessage) message;
             List<String> rawDataList = msg.getRawDataList();
             int totalMsgCnt = msg.getTotalMsgCnt();
@@ -141,13 +154,14 @@ public class DataPrepareWorker extends AbstractWorkerActor {
      * If the input message doesn't contain any data, the actor won't send message into next-actor who is waiting the message.
      * Under this situation, it will cause AKKA to wait infinitely.
      *
+     * This bug is report by Huang, Jianshi - https://github.paypal.com/xinzhong/shifu/issues/5
      * @return initialed map for final candidate columns
      */
-    private Map<Integer, List<ValueObject>> buildColumnVoListMap(int capacity) {
-        Map<Integer, List<ValueObject>> columnVoListMap = new HashMap<Integer, List<ValueObject>>();
-        for (ColumnConfig columnConfig : columnConfigList) {
-            if (columnConfig.isCandidate()) {
-                columnVoListMap.put(columnConfig.getColumnNum(), new ArrayList<ValueObject>(capacity));
+    private Map<Integer, List<RawValueObject>> buildColumnVoListMap(int capacity) {
+        Map<Integer, List<RawValueObject>> columnVoListMap = new HashMap<Integer, List<RawValueObject>>();
+        for ( ColumnConfig columnConfig: columnConfigList ) {
+            if ( columnConfig.isCandidate() ) {
+                columnVoListMap.put(columnConfig.getColumnNum(), new ArrayList<RawValueObject>(capacity));
             }
         }
         return columnVoListMap;
@@ -158,12 +172,13 @@ public class DataPrepareWorker extends AbstractWorkerActor {
      * If the input message doesn't contain any data, the actor won't send message into next-actor who is waiting the message.
      * Under this situation, it will cause AKKA to wait infinitely.
      *
+     * This bug is report by Huang, Jianshi - https://github.paypal.com/xinzhong/shifu/issues/5
      * @return initialed map for final select columns
      */
     private Map<Integer, List<ColumnScoreObject>> buildColumnScoreListMap() {
         Map<Integer, List<ColumnScoreObject>> columnScoreListMap = new HashMap<Integer, List<ColumnScoreObject>>();
-        for (ColumnConfig columnConfig : columnConfigList) {
-            if (columnConfig.isCandidate() && columnConfig.isFinalSelect()) {
+        for ( ColumnConfig columnConfig: columnConfigList ) {
+            if ( columnConfig.isCandidate() && columnConfig.isFinalSelect() ) {
                 columnScoreListMap.put(columnConfig.getColumnNum(), new ArrayList<ColumnScoreObject>());
             }
         }
@@ -172,21 +187,21 @@ public class DataPrepareWorker extends AbstractWorkerActor {
 
     /**
      * Convert raw data into @ValueObject for calculating stats
-     *
-     * @param rawDataList     - raw data for training
+     * @param rawDataList - raw data for training
      * @param columnVoListMap <column-id --> @ValueObject list>
-     * @throws ShifuException if the data field length is not equal header length
+     * @throws ShifuException
+     * 		if the data field length is not equal header length
      */
-    private DataPrepareStatsResult convertRawDataIntoValueObject(List<String> rawDataList, Map<Integer, List<ValueObject>> columnVoListMap) throws ShifuException {
+    private DataPrepareStatsResult convertRawDataIntoValueObject(List<String> rawDataList, Map<Integer, List<RawValueObject>> columnVoListMap) throws ShifuException {
         double sampleRate = modelConfig.getBinningSampleRate();
 
         long total = 0l;
         Map<Integer, Long> missingMap = new HashMap<Integer, Long>();
 
 
-        for (String line : rawDataList) {
+        for ( String line : rawDataList ) {
 
-            total++;
+            total ++;
 
             String[] raw = CommonUtils.split(line, modelConfig.getDataSetDelimiter());
 
@@ -197,7 +212,7 @@ public class DataPrepareWorker extends AbstractWorkerActor {
 
             String tag = raw[targetColumnNum];
 
-            if (modelConfig.isBinningSampleNegOnly()) {
+            if ( modelConfig.isBinningSampleNegOnly() ) {
                 if (modelConfig.getNegTags().contains(tag) && random.nextDouble() > sampleRate) {
                     continue;
                 }
@@ -213,64 +228,70 @@ public class DataPrepareWorker extends AbstractWorkerActor {
                     continue;
                 }
 
-                ValueObject vo = new ValueObject();
-                if (i >= columnConfigList.size()) {
+                //ValueObject vo = new ValueObject();
+
+
+                if(i >= columnConfigList.size()) {
                     log.error("The input size is longer than expected, need to check your data");
                     continue;
                 }
 
+                RawValueObject rvo = new RawValueObject();
+                rvo.setValue(raw[i].trim());
+
                 ColumnConfig config = columnConfigList.get(i);
-                if (config.isNumerical()) { // NUMERICAL
-                    try {
-                        vo.setValue(Double.valueOf(raw[i].trim()));
-                        vo.setRaw(null);
+                /*
+				if (config.isNumerical()) { // NUMERICAL
+					try {
+						vo.setValue(Double.valueOf(raw[i].trim()));
+						vo.setRaw(null);
+						
+					} catch (Exception e) {
+						log.debug("Column " + config.getColumnNum() + ": " + config.getColumnName() + " is expected to be NUMERICAL, however received: " + raw[i]);
+						incMap(i, missingMap);
+						continue;
+					}
+				} else if (config.isCategorical()) { // CATEGORICAL
+					if(StringUtils.isEmpty(raw[i])) {
+						incMap(i, missingMap);
+					}
+					vo.setRaw(raw[i].trim());
+					vo.setValue(null);
+				} else { // AUTO TYPE
+					try {
+						vo.setValue(Double.valueOf(raw[i]));
+						vo.setRaw(null);
+					} catch (Exception e) {
+						incMap(i, missingMap);
+						vo.setRaw(raw[i]);
+						vo.setValue(null);
+					}
+				}              */
 
-                    } catch (Exception e) {
-                        log.debug("Column " + config.getColumnNum() + ": " + config.getColumnName() + " is expected to be NUMERICAL, however received: " + raw[i]);
-                        incMap(i, missingMap);
-                        continue;
-                    }
-                } else if (config.isCategorical()) { // CATEGORICAL
-                    if (StringUtils.isEmpty(raw[i])) {
-                        incMap(i, missingMap);
-                    }
-                    vo.setRaw(raw[i].trim());
-                    vo.setValue(null);
-                } else { // AUTO TYPE
+                if(this.weightedColumnNum != -1) {
                     try {
-                        vo.setValue(Double.valueOf(raw[i]));
-                        vo.setRaw(null);
-                    } catch (Exception e) {
-                        incMap(i, missingMap);
-                        vo.setRaw(raw[i]);
-                        vo.setValue(null);
-                    }
-                }
-
-                if (this.weightedColumnNum != -1) {
-                    try {
-                        vo.setWeight(Double.valueOf(raw[weightedColumnNum]));
+                        rvo.setWeight(Double.valueOf(raw[weightedColumnNum]));
                     } catch (NumberFormatException e) {
-                        vo.setWeight(1.0);
+                        rvo.setWeight(1.0);
                     }
-
-                    if (i == weightedColumnNum) {
-                        //weight and its column, set to 1
-                        vo.setWeight(1.0);
-                    } else {
-                        vo.setWeight(1.0);
-                    }
+					/*
+					if( i == weightedColumnNum) {
+						//weight and its column, set to 1
+						rvo.setWeight(1.0);
+					} else {
+						rvo.setWeight(1.0);
+					}              */
                 }
 
-                vo.setTag(raw[targetColumnNum]);
+                rvo.setTag(raw[targetColumnNum]);
 
-                List<ValueObject> voList = columnVoListMap.get(i);
-                if (voList == null) {
-                    voList = new ArrayList<ValueObject>();
+                List<RawValueObject> voList = columnVoListMap.get(i);
+                if ( voList == null ) {
+                    voList = new ArrayList<RawValueObject>();
                     columnVoListMap.put(i, voList);
                 }
 
-                voList.add(vo);
+                voList.add(rvo);
             }
         }
 
@@ -282,14 +303,14 @@ public class DataPrepareWorker extends AbstractWorkerActor {
     private void incMap(int index, Map<Integer, Long> mapping) {
 
         Long count = mapping.get(index);
-        if (count == null) {
-            mapping.put(index, Long.valueOf(1));
+        if(count == null ){
+            mapping.put(index,Long.valueOf(1));
         } else {
             mapping.put(index, count + 1);
         }
     }
 
-    public class DataPrepareStatsResult {
+    public class DataPrepareStatsResult{
 
         public DataPrepareStatsResult(long total, Map<Integer, Long> missingMap) {
             this.total = total;
@@ -319,19 +340,17 @@ public class DataPrepareWorker extends AbstractWorkerActor {
 
     /**
      * Convert model result data into column-based
-     *
-     * @param evalDataList       evaluation result list
-     * @param columnScoreListMap (column-id, List<ColumnScoreObject>)
+
      */
     private void convertModelResultIntoColScore(List<CaseScoreResult> scoreResultList, Map<Integer, List<ColumnScoreObject>> columnScoreListMap) {
-        for (CaseScoreResult scoreResult : scoreResultList) {
+        for ( CaseScoreResult scoreResult : scoreResultList ) {
             Map<String, String> rawDataMap = CommonUtils.convertDataIntoMap(
                     scoreResult.getInputData(),
                     super.modelConfig.getDataSetDelimiter(),
                     this.trainDataHeader);
 
-            for (ColumnConfig config : columnConfigList) {
-                if (config.isFinalSelect()) {
+            for ( ColumnConfig config :  columnConfigList ) {
+                if ( config.isFinalSelect() ) {
                     ColumnScoreObject columnScore = new ColumnScoreObject(config.getColumnNum(), rawDataMap.get(config.getColumnName()));
                     columnScore.setScores(scoreResult.getScores());
                     columnScore.setMaxScore(scoreResult.getMaxScore());
@@ -353,14 +372,13 @@ public class DataPrepareWorker extends AbstractWorkerActor {
 
     /**
      * Filter the data for normalization
-     *
      * @param rawDataList - total training data
      * @return - data list after normalization
      */
     private List<String[]> filterData(List<String> rawDataList) {
         List<String[]> retList = new ArrayList<String[]>();
 
-        for (String rawData : rawDataList) {
+        for ( String rawData : rawDataList ) {
             String[] fileds = CommonUtils.split(rawData, modelConfig.getDataSetDelimiter());
             boolean isToFilter = DataFilter.filter(targetColumnNum,
                     modelConfig.getPosTags(),
@@ -369,7 +387,7 @@ public class DataPrepareWorker extends AbstractWorkerActor {
                     modelConfig.getNormalizeSampleRate(),
                     modelConfig.isNormalizeSampleNegOnly());
 
-            if (!isToFilter) {
+            if ( !isToFilter ) {
                 retList.add(fileds);
             }
         }

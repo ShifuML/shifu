@@ -27,6 +27,7 @@ import java.util.List;
  * for categorical variables @binBoundary will be null.
  * The @binLength will equal size of @binBoundary or size of @binCategory.
  */
+@Deprecated
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class ColumnBinning {
 

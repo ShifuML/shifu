@@ -15,7 +15,7 @@
  */
 package ml.shifu.shifu.message;
 
-import ml.shifu.shifu.container.ValueObject;
+import ml.shifu.shifu.container.RawValueObject;
 
 import java.util.List;
 
@@ -27,11 +27,11 @@ public class StatsValueObjectMessage {
 
     private int totalMsgCnt;
     private int columnNum;
-    private List<ValueObject> voList;
+    private List<RawValueObject> voList;
     private long missing;
     private long total;
 
-    public StatsValueObjectMessage(int totalMsgCnt, int columnNum, List<ValueObject> voList, long missing, long total) {
+    public StatsValueObjectMessage(int totalMsgCnt, int columnNum, List<RawValueObject> voList, long missing, long total) {
         this.totalMsgCnt = totalMsgCnt;
         this.columnNum = columnNum;
         this.voList = voList;
@@ -39,7 +39,7 @@ public class StatsValueObjectMessage {
         this.setTotal(total);
     }
 
-    public StatsValueObjectMessage(int totalMsgCnt, int columnNum, List<ValueObject> voList) {
+    public StatsValueObjectMessage(int totalMsgCnt, int columnNum, List<RawValueObject> voList) {
         this.totalMsgCnt = totalMsgCnt;
         this.columnNum = columnNum;
         this.voList = voList;
@@ -54,7 +54,7 @@ public class StatsValueObjectMessage {
         return columnNum;
     }
 
-    public List<ValueObject> getVoList() {
+    public List<RawValueObject> getVoList() {
         return voList;
     }
 

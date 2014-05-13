@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
  * <p/>
  * ks/iv will be used for variable selection
  */
+@Deprecated
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class ColumnStats {
 

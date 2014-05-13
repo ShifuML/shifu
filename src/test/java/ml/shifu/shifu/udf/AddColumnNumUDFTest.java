@@ -34,8 +34,8 @@ public class AddColumnNumUDFTest {
     @BeforeClass
     public void setUp() throws Exception {
         instance = new AddColumnNumUDF("LOCAL",
-                "src/test/resources/example/cancer-judgement/ModelStore/ModelSet1/ModelConfig.json",
-                "src/test/resources/example/cancer-judgement/ModelStore/ModelSet1/ColumnConfig.json",
+                "src/test/resources/unittest/ModelSets/full/ModelConfig.json",
+                "src/test/resources/unittest/ModelSets/full/ColumnConfig.json",
                 "false");
     }
 
@@ -60,15 +60,16 @@ public class AddColumnNumUDFTest {
 
     @Test
     public void testUDFEnoughInput() throws Exception {
-        Tuple tuple = TupleFactory.getInstance().newTuple(31);
+        Tuple tuple = TupleFactory.getInstance().newTuple(32);
 
-        for (int i = 0; i < 31; i++) {
+        for (int i = 0; i < 32; i++) {
             tuple.set(i, 0);
         }
-        tuple.set(0, "M");
+        tuple.set(0, "123456");
+        tuple.set(1, "M");
 
         DataBag dataBag = instance.exec(tuple);
-        Assert.assertEquals(30, dataBag.size());
+        Assert.assertEquals(dataBag.size(), 30);
 
         Assert.assertEquals(dataBag.iterator().next().size(), 4);
     }

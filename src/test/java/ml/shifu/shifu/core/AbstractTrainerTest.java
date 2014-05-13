@@ -50,7 +50,7 @@ public class AbstractTrainerTest {
     public void testLoad1() throws IOException {
         MLDataSet set = new BasicMLDataSet();
         ModelConfig modelConfig = CommonUtils.loadModelConfig(
-                "src/test/resources/example/cancer-judgement/ModelStore/ModelSet1/ModelConfig.json",
+                "src/test/resources/unittest/ModelSets/full/ModelConfig.json",
                 SourceType.LOCAL);
 
         double[] input = new double[modelConfig.getVarSelectFilterNum()];

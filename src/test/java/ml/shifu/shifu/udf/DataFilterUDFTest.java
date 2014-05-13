@@ -35,26 +35,26 @@ public class DataFilterUDFTest {
     @BeforeClass
     public void setUp() throws Exception {
         instanceA = new DataFilterUDF("LOCAL",
-                "src/test/resources/example/cancer-judgement/ModelStore/ModelSet1/ModelConfig.json",
-                "src/test/resources/example/cancer-judgement/ModelStore/ModelSet1/ColumnConfig.json",
+                "src/test/resources/unittest/ModelSets/full/ModelConfig.json",
+                "src/test/resources/unittest/ModelSets/full/ColumnConfig.json",
                 "0.0",
                 "false");
         instanceB = new DataFilterUDF("LOCAL",
-                "src/test/resources/example/cancer-judgement/ModelStore/ModelSet1/ModelConfig.json",
-                "src/test/resources/example/cancer-judgement/ModelStore/ModelSet1/ColumnConfig.json",
+                "src/test/resources/unittest/ModelSets/full/ModelConfig.json",
+                "src/test/resources/unittest/ModelSets/full/ColumnConfig.json",
                 "1.0",
                 "false");
     }
 
     @Test
     public void testExec() throws IOException {
-        Tuple input = TupleFactory.getInstance().newTuple(31);
-        for (int i = 0; i < 31; i++) {
+        Tuple input = TupleFactory.getInstance().newTuple(32);
+        for (int i = 0; i < 32; i++) {
             input.set(i, 1);
         }
-        input.set(0, "M");
+        input.set(1, "M");
 
         Assert.assertNull(instanceA.exec(input));
-        Assert.assertEquals(31, instanceB.exec(input).size());
+        Assert.assertEquals(32, instanceB.exec(input).size());
     }
 }

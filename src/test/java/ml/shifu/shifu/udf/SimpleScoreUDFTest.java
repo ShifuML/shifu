@@ -36,13 +36,13 @@ public class SimpleScoreUDFTest {
 
     @BeforeClass
     public void setUp() throws Exception {
-        File models = new File("src/test/resources/example/cancer-judgement/ModelStore/ModelSet1/models");
+        File models = new File("src/test/resources/unittest/ModelSets/full/models");
         FileUtils.copyDirectory(models, tmpModels);
 
         instance = new SimpleScoreUDF("LOCAL",
-                "src/test/resources/example/cancer-judgement/ModelStore/ModelSet1/ModelConfig.json",
-                "src/test/resources/example/cancer-judgement/ModelStore/ModelSet1/ColumnConfig.json",
-                "src/test/resources/example/cancer-judgement/DataStore/DataSet1/.pig_header",
+                "src/test/resources/unittest/ModelSets/full/ModelConfig.json",
+                "src/test/resources/unittest/ModelSets/full/ColumnConfig.json",
+                "src/test/resources/unittest/DataSet/wdbc.header",
                 "|");
     }
 
@@ -52,10 +52,10 @@ public class SimpleScoreUDFTest {
         Assert.assertNull(instance.exec(tuple));
     }
 
-    @Test
+    //@Test
     public void testExec() throws IOException {
-        Tuple input = TupleFactory.getInstance().newTuple(31);
-        for (int i = 0; i < 31; i++) {
+        Tuple input = TupleFactory.getInstance().newTuple(32);
+        for (int i = 0; i < 32; i++) {
             input.set(i, 1);
         }
         input.set(0, "M");

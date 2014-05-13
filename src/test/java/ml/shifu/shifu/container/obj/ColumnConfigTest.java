@@ -48,8 +48,8 @@ public class ColumnConfigTest {
 
         ColumnConfig config = new ColumnConfig();
         config.setColumnName("TestColumn");
-        config.setColumnStats(new ColumnStats());
-        config.setColumnBinning(new ColumnBinning());
+        //config.setColumnStats(new ColumnStats());
+        //config.setColumnBinning(new ColumnBinning());
 
         columnConfigList.add(config);
         columnConfigList.add(config);

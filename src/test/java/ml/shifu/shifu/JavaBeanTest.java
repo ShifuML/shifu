@@ -100,8 +100,8 @@ public class JavaBeanTest {
 
         ColumnConfigComparator cfc = new ColumnConfigComparator("KS");
         ColumnConfig columnConfig = new ColumnConfig();
-        columnConfig.setKs(0.0d);
-        columnConfig.setIv(0.0d);
+        columnConfig.getColumnBinStatsResult().setKs(0.0d);
+        columnConfig.getColumnBinStatsResult().setIv(0.0d);
         cfc.compare(columnConfig, columnConfig);
         cfc = new ColumnConfigComparator("IV");
         cfc.compare(columnConfig, columnConfig);

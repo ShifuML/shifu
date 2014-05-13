@@ -40,7 +40,7 @@ public class PigExecutorTest {
     public void test() throws IOException {
         PigExecutor exec = PigExecutor.getExecutor();
         ModelConfig modelConfig = CommonUtils.loadModelConfig(
-                "src/test/resources/example/cancer-judgement/ModelStore/ModelSet1/ModelConfig.json",
+                "src/test/resources/unittest/ModelSets/full/ModelConfig.json",
                 SourceType.LOCAL);
 
         Environment.setProperty(Environment.SHIFU_HOME, ".");

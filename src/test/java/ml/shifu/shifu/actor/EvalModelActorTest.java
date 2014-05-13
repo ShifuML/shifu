@@ -48,24 +48,24 @@ public class EvalModelActorTest {
 
     @BeforeClass
     public void setUp() throws IOException {
-        modelConfig = CommonUtils.loadModelConfig("src/test/resources/example/cancer-judgement/ModelStore/ModelSet1/ModelConfig.json", SourceType.LOCAL);
-        columnConfigList = CommonUtils.loadColumnConfigList("src/test/resources/example/cancer-judgement/ModelStore/ModelSet1/ColumnConfig.json", SourceType.LOCAL);
-        evalConfig = modelConfig.getEvalConfigByName("EvalA");
+        modelConfig = CommonUtils.loadModelConfig("src/test/resources/unittest/ModelSets/full/ModelConfig.json", SourceType.LOCAL);
+        columnConfigList = CommonUtils.loadColumnConfigList("src/test/resources/unittest/ModelSets/full/ColumnConfig.json", SourceType.LOCAL);
+        evalConfig = modelConfig.getEvalConfigByName("Eval1");
         actorSystem = ActorSystem.create("shifuActorSystem");
     }
 
-    @Test
+    //@Test
     public void testActor() throws IOException, InterruptedException {
         Environment.setProperty(Environment.SHIFU_HOME, ".");
 
         File tmpModels = new File("models");
         File tmpCommon = new File("common");
 
-        File models = new File("src/test/resources/example/cancer-judgement/ModelStore/ModelSet1/models");
+        File models = new File("src/test/resources/unittest/ModelSets/full/models");
         FileUtils.copyDirectory(models, tmpModels);
 
-        File tmpEvalA = new File("evals");
-        tmpEvalA.mkdir();
+        File tmpEval1 = new File("evals");
+        tmpEval1.mkdir();
 
         ActorRef modelEvalRef = actorSystem.actorOf(new Props(new UntypedActorFactory() {
             private static final long serialVersionUID = -1437127862571741369L;
@@ -75,7 +75,7 @@ public class EvalModelActorTest {
             }
         }), "model-evaluator");
 
-        List<Scanner> scanners = ShifuFileUtils.getDataScanners("src/test/resources/example/cancer-judgement/DataStore/EvalSet1", SourceType.LOCAL);
+        List<Scanner> scanners = ShifuFileUtils.getDataScanners("src/test/resources/unittest/DataSet/wdbc.eval", SourceType.LOCAL);
         modelEvalRef.tell(new AkkaActorInputMessage(scanners), modelEvalRef);
 
         while (!modelEvalRef.isTerminated()) {
@@ -83,12 +83,12 @@ public class EvalModelActorTest {
         }
 
 
-        File outputFile = new File("evals/EvalA/EvalScore");
+        File outputFile = new File("evals/Eval1/EvalScore");
         Assert.assertTrue(outputFile.exists());
 
         FileUtils.deleteDirectory(tmpModels);
         FileUtils.deleteDirectory(tmpCommon);
-        FileUtils.deleteDirectory(tmpEvalA);
+        FileUtils.deleteDirectory(tmpEval1);
     }
 
 }

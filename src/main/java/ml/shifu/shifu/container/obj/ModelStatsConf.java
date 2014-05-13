@@ -41,6 +41,26 @@ public class ModelStatsConf {
     private Integer binningAutoTypeThreshold = Integer.valueOf(5);
     private Boolean binningMergeEnable = Boolean.TRUE;
 
+    private String rawStatsCalculator = "ml.shifu.shifu.di.builtin.DefaultColumnRawStatsCalculator";
+    private String numBinningCalculator = "ml.shifu.shifu.di.builtin.TotalPercentileColumnNumBinningCalculator";
+    private String catBinningCalculator = "ml.shifu.shifu.di.builtin.SimpleColumnCatBinningCalculator";
+    private String numStatsCalculator = "ml.shifu.shifu.di.builtin.DefaultColumnNumStatsCalculator";
+    private String binStatsCalculator = "ml.shifu.shifu.di.builtin.DefaultColumnBinStatsCalculator";
+
+
+
+    private String statsProcessor = "ml.shifu.shifu.di.builtin.DefaultStatsProcessor";
+
+
+    public String getStatsProcessor() {
+        return statsProcessor;
+    }
+
+    public void setStatsProcessor(String statsProcessor) {
+        this.statsProcessor = statsProcessor;
+    }
+
+
     public Integer getMaxNumBin() {
         return maxNumBin;
     }
@@ -109,4 +129,44 @@ public class ModelStatsConf {
         this.sampleNegOnly = sampleNegOnly;
     }
 
+
+    public String getRawStatsCalculator() {
+        return rawStatsCalculator;
+    }
+
+    public void setRawStatsCalculator(String rawStatsCalculator) {
+        this.rawStatsCalculator = rawStatsCalculator;
+    }
+
+    public String getNumBinningCalculator() {
+        return numBinningCalculator;
+    }
+
+    public void setNumBinningCalculator(String numBinningCalculator) {
+        this.numBinningCalculator = numBinningCalculator;
+    }
+
+    public String getCatBinningCalculator() {
+        return catBinningCalculator;
+    }
+
+    public void setCatBinningCalculator(String catBinningCalculator) {
+        this.catBinningCalculator = catBinningCalculator;
+    }
+
+    public String getNumStatsCalculator() {
+        return numStatsCalculator;
+    }
+
+    public void setNumStatsCalculator(String numStatsCalculator) {
+        this.numStatsCalculator = numStatsCalculator;
+    }
+
+    public String getBinStatsCalculator() {
+        return binStatsCalculator;
+    }
+
+    public void setBinStatsCalculator(String binStatsCalculator) {
+        this.binStatsCalculator = binStatsCalculator;
+    }
 }

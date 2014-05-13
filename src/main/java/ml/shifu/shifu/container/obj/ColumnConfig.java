@@ -28,7 +28,7 @@ import java.util.List;
  * avoid to change it manually, unless understanding the meaning of the changes.
  */
 @JsonIgnoreProperties(ignoreUnknown = true)
-public class ColumnConfig {
+   public class ColumnConfig {
 
     public static enum ColumnFlag {
         ForceSelect, ForceRemove, Meta, Target
@@ -50,15 +50,32 @@ public class ColumnConfig {
     private ColumnFlag columnFlag = null;
     private Boolean finalSelect = Boolean.FALSE;
 
+
+
     // column detail
-    private ColumnStats columnStats = new ColumnStats();
-    private ColumnBinning columnBinning = new ColumnBinning();
+    private ColumnRawStatsResult columnRawStatsResult = new ColumnRawStatsResult();
+
+    private ColumnNumStatsResult columnNumStatsResult = new ColumnNumStatsResult();
+    private ColumnBinningResult columnBinningResult = new ColumnBinningResult();
+
+    public ColumnBinStatsResult getColumnBinStatsResult() {
+        return columnBinStatsResult;
+    }
+
+    public void setColumnBinStatsResult(ColumnBinStatsResult columnBinStatsResult) {
+        this.columnBinStatsResult = columnBinStatsResult;
+    }
+
+    private ColumnBinStatsResult columnBinStatsResult = new ColumnBinStatsResult();
+
+
+    private ColumnControl columnControl = new ColumnControl();
 
     /**
      * ---------------------------------------------------------------------------
-     * <p/>
-     * Auto-Gen methods
-     * <p/>
+     *
+     * 					Auto-Gen methods
+     *
      * ---------------------------------------------------------------------------
      */
 
@@ -102,22 +119,37 @@ public class ColumnConfig {
         this.columnName = columnName;
     }
 
-    public ColumnStats getColumnStats() {
-        return columnStats;
+    public ColumnRawStatsResult getColumnRawStatsResult() {
+        return columnRawStatsResult;
     }
 
-    public void setColumnStats(ColumnStats columnStats) {
-        this.columnStats = columnStats;
+    public void setColumnRawStatsResult(ColumnRawStatsResult columnRawStatsResult) {
+        this.columnRawStatsResult = columnRawStatsResult;
     }
 
-    public ColumnBinning getColumnBinning() {
-        return columnBinning;
+    public ColumnNumStatsResult getColumnNumStatsResult() {
+        return columnNumStatsResult;
     }
 
-    public void setColumnBinning(ColumnBinning columnBinning) {
-        this.columnBinning = columnBinning;
+    public void setColumnNumStatsResult(ColumnNumStatsResult columnNumStatsResult) {
+        this.columnNumStatsResult = columnNumStatsResult;
     }
 
+    public ColumnBinningResult getColumnBinningResult() {
+        return columnBinningResult;
+    }
+
+    public void setColumnBinningResult(ColumnBinningResult columnBinningResult) {
+        this.columnBinningResult = columnBinningResult;
+    }
+
+    public ColumnControl getColumnControl() {
+        return columnControl;
+    }
+
+    public void setColumnControl(ColumnControl columnControl) {
+        this.columnControl = columnControl;
+    }
 
     /**
      * ---------------------------------------------------------------------------
@@ -158,6 +190,9 @@ public class ColumnConfig {
      */
     @JsonIgnore
     public boolean isCategorical() {
+        if (columnType == null) {
+            return false;
+        }
         return columnType.equals(ColumnType.C);
     }
 
@@ -190,7 +225,7 @@ public class ColumnConfig {
      */
     @JsonIgnore
     public int getBinLength() {
-        return columnBinning.getLength();
+        return columnBinningResult.getLength();
     }
 
     /**
@@ -198,7 +233,7 @@ public class ColumnConfig {
      */
     @JsonIgnore
     public List<Double> getBinBoundary() {
-        return columnBinning.getBinBoundary();
+        return columnBinningResult.getBinBoundary();
     }
 
     /**
@@ -206,7 +241,7 @@ public class ColumnConfig {
      */
     @JsonIgnore
     public List<String> getBinCategory() {
-        return columnBinning.getBinCategory();
+        return columnBinningResult.getBinCategory();
     }
 
     /**
@@ -214,7 +249,7 @@ public class ColumnConfig {
      */
     @JsonIgnore
     public List<Integer> getBinCountNeg() {
-        return columnBinning.getBinCountNeg();
+        return columnBinningResult.getBinCountNeg();
     }
 
     /**
@@ -222,7 +257,7 @@ public class ColumnConfig {
      */
     @JsonIgnore
     public List<Integer> getBinCountPos() {
-        return columnBinning.getBinCountPos();
+        return columnBinningResult.getBinCountPos();
     }
 
     /**
@@ -230,7 +265,7 @@ public class ColumnConfig {
      */
     @JsonIgnore
     public List<Double> getBinPosRate() {
-        return columnBinning.getBinPosRate();
+        return columnBinningResult.getBinPosRate();
     }
 
     /**
@@ -238,30 +273,30 @@ public class ColumnConfig {
      */
     @JsonIgnore
     public List<Integer> getBinAvgScore() {
-        return columnBinning.getBinAvgScore();
+        return columnBinStatsResult.getBinAvgScore();
     }
 
     /**
      * @param length
      */
     public void setBinLength(int length) {
-        columnBinning.setLength(length);
+        columnBinningResult.setLength(length);
     }
 
     /**
      * @param binBoundary
      */
     public void setBinBoundary(List<Double> binBoundary) {
-        columnBinning.setBinBoundary(binBoundary);
-        columnBinning.setLength(binBoundary.size());
+        columnBinningResult.setBinBoundary(binBoundary);
+        columnBinningResult.setLength(binBoundary.size());
     }
 
     /**
      * @param binCategory
      */
     public void setBinCategory(List<String> binCategory) {
-        columnBinning.setBinCategory(binCategory);
-        columnBinning.setLength(binCategory.size());
+        columnBinningResult.setBinCategory(binCategory);
+        columnBinningResult.setLength(binCategory.size());
     }
 
 
@@ -269,44 +304,28 @@ public class ColumnConfig {
      * @param binCountNeg
      */
     public void setBinCountNeg(List<Integer> binCountNeg) {
-        columnBinning.setBinCountNeg(binCountNeg);
+        columnBinningResult.setBinCountNeg(binCountNeg);
     }
 
     /**
      * @param binCountPos
      */
     public void setBinCountPos(List<Integer> binCountPos) {
-        columnBinning.setBinCountPos(binCountPos);
+        columnBinningResult.setBinCountPos(binCountPos);
     }
 
     /**
-     * @param binPosCaseRate
+     * @param binPosRate
      */
     public void setBinPosCaseRate(List<Double> binPosRate) {
-        columnBinning.setBinPosRate(binPosRate);
+        columnBinningResult.setBinPosRate(binPosRate);
     }
 
     /**
      * @param binAvgScore
      */
     public void setBinAvgScore(List<Integer> binAvgScore) {
-        columnBinning.setBinAvgScore(binAvgScore);
-    }
-
-    /**
-     * @return
-     */
-    @JsonIgnore
-    public Double getKs() {
-        return columnStats.getKs();
-    }
-
-    /**
-     * @return
-     */
-    @JsonIgnore
-    public Double getIv() {
-        return columnStats.getIv();
+        columnBinStatsResult.setBinAvgScore(binAvgScore);
     }
 
     /**
@@ -314,7 +333,7 @@ public class ColumnConfig {
      */
     @JsonIgnore
     public Double getMean() {
-        return columnStats.getMean();
+        return columnNumStatsResult.getMean();
     }
 
     /**
@@ -322,110 +341,71 @@ public class ColumnConfig {
      */
     @JsonIgnore
     public Double getStdDev() {
-        return columnStats.getStdDev();
+        return columnNumStatsResult.getStdDev();
     }
 
     @JsonIgnore
-    public Double getMedian() {
-        return columnStats.getMedian();
+    public Double getMedian(){
+        return columnNumStatsResult.getMedian();
     }
 
-    @JsonIgnore
-    public Long getMissingCount() {
-        return columnStats.getMissingCount();
-    }
-
-    @JsonIgnore
-    public Long getTotalCount() {
-        return columnStats.getTotalCount();
-    }
-
-    @JsonIgnore
-    public Double getMissingPercentage() {
-        return columnStats.getMissingPercentage();
-    }
-
-    /**
-     * @param ks
-     */
-    public void setKs(double ks) {
-        columnStats.setKs(ks);
-    }
-
-    /**
-     * @param iv
-     */
-    public void setIv(double iv) {
-        columnStats.setIv(iv);
-    }
 
     /**
      * @param max
      */
     public void setMax(Double max) {
-        columnStats.setMax(max);
+        columnNumStatsResult.setMax(max);
     }
 
     /**
      * @param min
      */
     public void setMin(Double min) {
-        columnStats.setMin(min);
+        columnNumStatsResult.setMin(min);
     }
 
     /**
      * @param mean
      */
     public void setMean(Double mean) {
-        columnStats.setMean(mean);
+        columnNumStatsResult.setMean(mean);
     }
 
     /**
      * @param stdDev
      */
     public void setStdDev(Double stdDev) {
-        columnStats.setStdDev(stdDev);
+        columnNumStatsResult.setStdDev(stdDev);
     }
 
     @JsonIgnore
     public void setMedian(Double median) {
-        columnStats.setMedian(median);
+        columnNumStatsResult.setMedian(median);
+    }
+
+
+
+    @JsonIgnore
+    public List<Double> getBinWeightedNeg(){
+        return this.columnBinningResult.getBinWeightedNeg();
     }
 
     @JsonIgnore
-    public void setMissingCnt(Long cnt) {
-        columnStats.setMissingCount(cnt);
+    public List<Double> getBinWeightedPos(){
+        return this.columnBinningResult.getBinWeightedPos();
     }
 
     @JsonIgnore
-    public void setTotalCount(Long cnt) {
-        columnStats.setTotalCount(cnt);
+    public void setBinWeightedNeg(List<Double> binList){
+        this.columnBinningResult.setBinWeightedNeg(binList);
     }
 
     @JsonIgnore
-    public void setMissingPercentage(Double missingPercentage) {
-        columnStats.setMissingPercentage(missingPercentage);
+    public void setBinWeightedPos(List<Double> binList){
+        this.columnBinningResult.setBinWeightedPos(binList);
     }
 
-    @JsonIgnore
-    public List<Double> getBinWeightedNeg() {
-        return this.columnBinning.getBinWeightedNeg();
-    }
-
-    @JsonIgnore
-    public List<Double> getBinWeightedPos() {
-        return this.columnBinning.getBinWeightedPos();
-    }
-
-    @JsonIgnore
-    public void setBinWeightedNeg(List<Double> binList) {
-        this.columnBinning.setBinWeightedNeg(binList);
-    }
-
-    @JsonIgnore
-    public void setBinWeightedPos(List<Double> binList) {
-        this.columnBinning.setBinWeightedPos(binList);
-    }
+    //@JsonIgnore
 
     /**
      * @return the version
@@ -442,8 +422,11 @@ public class ColumnConfig {
     }
 
     /**
+     *
      * ColumnConfigComparator class
+     *
      */
+
     public static class ColumnConfigComparator implements Comparator<ColumnConfig> {
         private String key;
 
@@ -453,9 +436,9 @@ public class ColumnConfig {
 
         public int compare(ColumnConfig a, ColumnConfig b) {
             if (key.equalsIgnoreCase("KS")) {
-                return b.getKs().compareTo(a.getKs());
+                return b.getColumnBinStatsResult().getKs().compareTo(a.getColumnBinStatsResult().getKs());
             } else {
-                return b.getIv().compareTo(a.getIv());
+                return b.getColumnBinStatsResult().getIv().compareTo(a.getColumnBinStatsResult().getIv());
             }
         }
     }

@@ -83,7 +83,7 @@ public class VariableSelector {
                 }
             } else if (config.isMeta() || config.isTarget()) {
                 log.info("\t Skip meta or target column: " + config.getColumnName());
-            } else if (config.getKs() == null || config.getIv() == null) {
+            } else if (config.getColumnBinStatsResult().getKs() == null || config.getColumnBinStatsResult().getIv() == null) {
                 log.info("\t Incomplete info: " + config.getColumnName());
             } else if ((config.isCategorical() && !modelConfig.isCategoricalDisabled()) || config.isNumerical()) {
                 ksList.add(config);
@@ -118,14 +118,14 @@ public class VariableSelector {
                 config = ksList.get(ptrKs);
                 selectedColumnNumList.add(config.getColumnNum());
                 ptrKs++;
-                log.info("\t SelectedByKS=" + config.getKs() + "(Rank=" + ptrKs + "): " + config.getColumnName());
+                log.info("\t SelectedByKS=" + config.getColumnBinStatsResult().getKs() + "(Rank=" + ptrKs + "): " + config.getColumnName());
 
                 cntSelected++;
             } else if (key.equalsIgnoreCase("iv")) {
                 config = ivList.get(ptrIv);
                 selectedColumnNumList.add(config.getColumnNum());
                 ptrIv++;
-                log.info("\t SelectedByIV=" + config.getIv() + "(Rank=" + ptrIv + "): " + config.getColumnName());
+                log.info("\t SelectedByIV=" + config.getColumnBinStatsResult().getIv() + "(Rank=" + ptrIv + "): " + config.getColumnName());
 
                 cntSelected++;
             } else if (key.equalsIgnoreCase("mix")) {
@@ -136,7 +136,7 @@ public class VariableSelector {
                 } else {
                     selectedColumnNumList.add(config.getColumnNum());
                     ptrKs++;
-                    log.info("\t SelectedByKS=" + config.getKs() + "(Rank=" + ptrKs + "): " + config.getColumnName());
+                    log.info("\t SelectedByKS=" + config.getColumnBinStatsResult().getKs() + "(Rank=" + ptrKs + "): " + config.getColumnName());
                     cntSelected++;
                 }
 
@@ -151,7 +151,7 @@ public class VariableSelector {
                 } else {
                     selectedColumnNumList.add(config.getColumnNum());
                     ptrIv++;
-                    log.info("\t SelectedByIV=" + config.getIv() + "(Rank=" + ptrIv + "): " + config.getColumnName());
+                    log.info("\t SelectedByIV=" + config.getColumnBinStatsResult().getIv() + "(Rank=" + ptrIv + "): " + config.getColumnName());
                     cntSelected++;
                 }
             }

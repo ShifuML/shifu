@@ -1,5 +1,5 @@
 /**
- * Copyright [2012-2014] eBay Software Foundation
+ * Copyright [2012-2013] eBay Software Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,37 +15,69 @@
  */
 package ml.shifu.shifu.udf;
 
-import ml.shifu.shifu.container.ValueObject;
-import ml.shifu.shifu.core.BasicStatsCalculator;
-import ml.shifu.shifu.core.Binning;
-import ml.shifu.shifu.core.Binning.BinningDataType;
-import ml.shifu.shifu.core.KSIVCalculator;
-import org.apache.commons.lang.StringUtils;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.inject.Guice;
+import com.google.inject.Injector;
+import ml.shifu.shifu.container.CategoricalValueObject;
+import ml.shifu.shifu.container.NumericalValueObject;
+import ml.shifu.shifu.container.RawValueObject;
+import ml.shifu.shifu.container.obj.*;
+import ml.shifu.shifu.di.module.StatsModule;
+import ml.shifu.shifu.di.service.ColumnBinStatsService;
+import ml.shifu.shifu.di.service.ColumnNumStatsService;
+import ml.shifu.shifu.di.service.ColumnBinningService;
+import ml.shifu.shifu.di.service.ColumnRawStatsService;
+import ml.shifu.shifu.util.CommonUtils;
 import org.apache.pig.data.DataBag;
 import org.apache.pig.data.Tuple;
 import org.apache.pig.data.TupleFactory;
 
-import java.io.IOException;
-import java.text.DecimalFormat;
-import java.util.ArrayList;
-import java.util.Iterator;
-import java.util.List;
-
-
 /**
+ *
  * CalculateStatsUDF class is calculate the stats for each column
+ *
+ * Input: (columnNum, {(value, tag, weight), (value, tag, weight)...})
+ *
  */
 public class CalculateStatsUDF extends AbstractTrainerUDF<Tuple> {
 
+    private ColumnRawStatsService columnRawStatsService;
+    private ColumnBinningService columnBinningService;
+    private ColumnNumStatsService columnNumStatsService;
+    private ColumnBinStatsService columnBinStatsService;
+
     private Double valueThreshold = 1e6;
 
-    public CalculateStatsUDF(String source, String pathModelConfig, String pathColumnConfig, String withScoreStr) throws IOException {
+    private ObjectMapper jsonMapper;
+
+    public CalculateStatsUDF(String source, String pathModelConfig, String pathColumnConfig) throws IOException  {
         super(source, pathModelConfig, pathColumnConfig);
 
-        if (modelConfig.getNumericalValueThreshold() != null) {
+        if ( modelConfig.getNumericalValueThreshold() != null ) {
             valueThreshold = modelConfig.getNumericalValueThreshold();
         }
-        log.debug("Value Threshold: " + valueThreshold);
+
+        StatsModule statsModule = new StatsModule();
+        statsModule.setRawStatsCalculatorImplClass(modelConfig.getStats().getRawStatsCalculator());
+        statsModule.setNumBinningCalculatorImplClass(modelConfig.getStats().getNumBinningCalculator());
+        statsModule.setCatBinningCalculatorImplClass(modelConfig.getStats().getCatBinningCalculator());
+        statsModule.setNumStatsCalculatorImplClass(modelConfig.getStats().getNumStatsCalculator());
+        statsModule.setBinStatsCalculatorImplClass(modelConfig.getStats().getBinStatsCalculator());
+
+        Injector injector = Guice.createInjector(statsModule);
+
+        columnRawStatsService = injector.getInstance(ColumnRawStatsService.class);
+        columnBinningService = injector.getInstance(ColumnBinningService.class);
+        columnNumStatsService = injector.getInstance(ColumnNumStatsService.class);
+        columnBinStatsService = injector.getInstance(ColumnBinStatsService.class);
+
+        jsonMapper = new ObjectMapper();
+
+        //log.debug("Value Threshold: " + valueThreshold);
     }
 
     public Tuple exec(Tuple input) throws IOException {
@@ -58,131 +90,52 @@ public class CalculateStatsUDF extends AbstractTrainerUDF<Tuple> {
         Integer columnNum = (Integer) input.get(0);
         DataBag bag = (DataBag) input.get(1);
 
-        BinningDataType dataType;
-        if (modelConfig.isCategoricalDisabled()) {
-            dataType = BinningDataType.Numerical;
-        } else {
-            if (columnConfigList.get(columnNum).isCategorical()) {
-                dataType = BinningDataType.Categorical;
-            } else if (columnConfigList.get(columnNum).isNumerical()) {
-                dataType = BinningDataType.Numerical;
-            } else if (modelConfig.isBinningAutoTypeEnabled()) {
-                // if type is Auto, and the auto type enable is true
-                dataType = BinningDataType.Auto;
-            } else {
-                // if type is Auto, but the auto type enable is false
-                dataType = BinningDataType.Numerical;
-            }
-        }
+        ColumnConfig columnConfig = columnConfigList.get(columnNum);
 
-        List<ValueObject> voList = new ArrayList<ValueObject>();
-        Iterator<Tuple> iterator = bag.iterator();
+        List<RawValueObject> rvoList = new ArrayList<RawValueObject>();
+
         log.debug("****** The element count in bag is : " + bag.size());
 
-        long total = 0l;
-        long missing = 0l;
 
-        while (iterator.hasNext()) {
 
-            total++;
-
-            Tuple t = iterator.next();
-            if (t.get(1) == null) {
-                missing++;
-                continue;
-            }
-
-            ValueObject vo = new ValueObject();
-            String valueStr = ((t.get(0) == null) ? "" : t.get(0).toString());
-
-            if (dataType.equals(BinningDataType.Numerical)) {
-                Double value = null;
-                try {
-                    value = Double.valueOf(valueStr);
-                } catch (NumberFormatException e) {
-                    // if there are too many log, it will case ReduceTask - `java.lang.OutOfMemoryError: Java heap space`
-                    // log.warn("Incorrect data, not numerical - " + valueStr);
-                    missing++;
-                    continue;
-                }
-
-                if (value > valueThreshold) {
-                    log.warn("Exceed Threshold: " + value + " / " + valueThreshold);
-                    missing++;
-                    continue;
-                }
-
-                vo.setValue(value);
-            } else {
-                // Categorical or Auto
-                if (StringUtils.isEmpty(valueStr)) {
-                    missing++;
-                }
-                vo.setRaw(valueStr);
-            }
-            //do not need to catch exception, see AddColumnNumUDF which have already normalized the weight value
-            vo.setWeight(Double.valueOf(t.get(2).toString()));
-
-            vo.setTag(t.get(1).toString());
-            // vo.setScore(Double.valueOf(t.get(2).toString()));
-            voList.add(vo);
+        for (Tuple t : bag) {
+            RawValueObject rvo = new RawValueObject();
+            rvo.setValue(t.get(0));
+            rvo.setTag(t.get(1).toString());
+            rvo.setWeight(Double.valueOf(t.get(2).toString()));
+            rvoList.add(rvo);
         }
 
-        if (voList.size() < 10) {
-            return null;
+        ColumnRawStatsResult screeningResult = columnRawStatsService.getResult(rvoList, modelConfig.getPosTags(), modelConfig.getNegTags());
+        columnConfig.setColumnRawStatsResult(screeningResult);
+
+        //TODO: Let user choose if column should be treated as Numerical or Categorical if not predefined in ColumnConfig
+
+        ColumnBinningResult binningResult;
+        ColumnNumStatsResult basicStats;
+
+        if (columnConfig.isNumerical()) {
+            List<NumericalValueObject> nvoList = CommonUtils.convertListRaw2Numerical(rvoList, modelConfig.getPosTags(), modelConfig.getNegTags());
+            binningResult = columnBinningService.getNumericalResult(nvoList, modelConfig.getBinningExpectedNum());
+            basicStats = columnNumStatsService.getResult(nvoList);
+        } else {
+            List<CategoricalValueObject> cvoList = CommonUtils.convertListRaw2Categorical(rvoList, modelConfig.getPosTags(), modelConfig.getNegTags());
+            binningResult = columnBinningService.getCategoricalResult(cvoList);
+            basicStats = columnNumStatsService.getResult(CommonUtils.convertListCategorical2Numerical(cvoList, binningResult));
         }
+        columnConfig.setColumnBinningResult(binningResult);
+        columnConfig.setColumnNumStatsResult(basicStats);
 
-        // Calculate Binning
-        Binning binning = new Binning(modelConfig.getPosTags(), modelConfig.getNegTags(), dataType, voList);
-        binning.setMaxNumOfBins(modelConfig.getBinningExpectedNum());
-        binning.setBinningMethod(modelConfig.getBinningMethod());
-        binning.setAutoTypeThreshold(modelConfig.getBinningAutoTypeThreshold());
-        binning.setMergeEnabled(modelConfig.isBinningMergeEnabled());
-        binning.doBinning();
 
-        // Calculate Basic Stats
-        BasicStatsCalculator basicStatsCalculator = new BasicStatsCalculator(binning.getUpdatedVoList(), this.valueThreshold);
+        // Advanced Stats
 
-        // Calculate KSIV, based on Binning result
-        KSIVCalculator ksivCalculator = new KSIVCalculator();
-        ksivCalculator.calculateKSIV(binning.getBinCountNeg(), binning.getBinCountPos());
+        ColumnBinStatsResult advStats = columnBinStatsService.getResult(binningResult);
 
-        // Assemble the results
-        DecimalFormat df = new DecimalFormat("##.######");
+        columnConfig.setColumnBinStatsResult(advStats);
 
         Tuple tuple = tupleFactory.newTuple();
         tuple.append(columnNum);
-        if (binning.getUpdatedDataType().equals(BinningDataType.Categorical)) {
-            tuple.append(binning.getBinCategory().toString());
-        } else {
-            tuple.append(binning.getBinBoundary().toString());
-        }
-        tuple.append(binning.getBinCountNeg().toString());
-        tuple.append(binning.getBinCountPos().toString());
-        //tuple.append(null);
-        tuple.append(binning.getBinAvgScore().toString());
-        tuple.append(binning.getBinPosCaseRate().toString());
-        tuple.append(df.format(ksivCalculator.getKS()));
-        tuple.append(df.format(ksivCalculator.getIV()));
-
-        tuple.append(df.format(basicStatsCalculator.getMax()));
-        tuple.append(df.format(basicStatsCalculator.getMin()));
-        tuple.append(df.format(basicStatsCalculator.getMean()));
-        tuple.append(df.format(basicStatsCalculator.getStdDev()));
-
-        if (binning.getUpdatedDataType().equals(BinningDataType.Numerical)) {
-            tuple.append("N");
-        } else {
-            tuple.append("C");
-        }
-
-        tuple.append(df.format(basicStatsCalculator.getMedian()));
-        tuple.append(df.format(missing));
-        tuple.append(df.format(total));
-        tuple.append(df.format((double) missing / total));
-        tuple.append(binning.getBinWeightedNeg().toString());
-        tuple.append(binning.getBinWeightedPos().toString());
-
+        tuple.append(jsonMapper.writeValueAsString(columnConfig));
 
         return tuple;
 

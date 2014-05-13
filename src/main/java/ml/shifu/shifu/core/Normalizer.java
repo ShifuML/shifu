@@ -34,6 +34,7 @@ import org.slf4j.LoggerFactory;
  * </p>
  * and larger than mean - stdDevCutOff * stdev
  */
+@Deprecated
 public class Normalizer {
 
     private static Logger log = LoggerFactory.getLogger(Normalizer.class);
@@ -104,8 +105,6 @@ public class Normalizer {
         switch (method) {
             case ZScore:
                 return getZScore(config, raw, stdDevCutOff);
-            case MaxMin:
-                return getMaxMinScore(config, raw);
             default:
                 return 0.0;
         }
@@ -163,30 +162,13 @@ public class Normalizer {
         switch (method) {
             case ZScore:
                 return getZScore(config, raw, stdDevCutoff);
-            case MaxMin:
-                return getMaxMinScore(config, raw);
+
             default:
                 return 0.0;
         }
     }
 
-    /**
-     * Compute the normalized data for @NormalizeMethod.MaxMin
-     *
-     * @param config - @ColumnConfig info
-     * @param raw    - input column value
-     * @return - normalized value for MaxMin method
-     */
-    private static Double getMaxMinScore(ColumnConfig config, String raw) {
-        if (config.isCategorical()) {
-            //TODO, doesn't support
-        } else {
-            Double value = Double.parseDouble(raw);
-            return (value - config.getColumnStats().getMin()) /
-                    (config.getColumnStats().getMax() - config.getColumnStats().getMin());
-        }
-        return null;
-    }
+
 
     /**
      * Compute the normalized data for @NormalizeMethod.Zscore

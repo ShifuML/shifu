@@ -59,7 +59,7 @@ function run_shifu_func {
 	status_check_func $?
 	
 	# run performance on the eval set
-	shifu eval -run EvalA
+	shifu eval -run Eval1
 	status_check_func $?
 	
 	popd

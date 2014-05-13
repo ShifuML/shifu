@@ -79,7 +79,7 @@ public class ConfusionMatrixTest {
     @Test(expectedExceptions = {ShifuException.class, FileNotFoundException.class})
     public void testEvalScoreHeaderNotExists() throws IOException {
         Map<String, String> customPaths = new HashMap<String, String>();
-        customPaths.put(Constants.KEY_SCORE_PATH, "src/test/resources/data/dt/models");
+        customPaths.put(Constants.KEY_SCORE_PATH, "src/test/resources/unittest/dt/models");
         evalConfig.setCustomPaths(customPaths);
 
         evalConfig.setPerformanceScoreSelector(null);

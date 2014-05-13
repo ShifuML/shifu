@@ -1,5 +1,5 @@
 /**
- * Copyright [2012-2014] eBay Software Foundation
+ * Copyright [2012-2013] eBay Software Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,6 +15,20 @@
  */
 package ml.shifu.shifu.core.processor;
 
+import java.io.IOException;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Scanner;
+
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.core.JsonParseException;
+import com.fasterxml.jackson.databind.JsonMappingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import org.apache.commons.collections.CollectionUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import ml.shifu.shifu.actor.AkkaSystemExecutor;
 import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.container.obj.ColumnConfig.ColumnType;
@@ -25,24 +39,17 @@ import ml.shifu.shifu.exception.ShifuException;
 import ml.shifu.shifu.fs.ShifuFileUtils;
 import ml.shifu.shifu.pig.PigExecutor;
 import ml.shifu.shifu.util.CommonUtils;
-import org.apache.commons.collections.CollectionUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import java.io.IOException;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Scanner;
-
 
 /**
  * statistics, max/min/avg/std for each column dataset if it's numerical
+ * </p>
+ *
  */
-public class StatsModelProcessor extends BasicModelProcessor implements Processor {
+public class StatsModelProcessor extends BasicModelProcessor implements Processor{
 
     private final static Logger log = LoggerFactory.getLogger(StatsModelProcessor.class);
 
+    private static ObjectMapper jsonMapper = new ObjectMapper();
     /**
      * runner for statistics
      */
@@ -55,7 +62,7 @@ public class StatsModelProcessor extends BasicModelProcessor implements Processo
 
         if (modelConfig.isMapReduceRunMode()) {
             runPigStats();
-        } else if (modelConfig.isLocalRunMode()) {
+        } else if (modelConfig.isLocalRunMode()){
             runAkkaStats();
         } else {
             throw new ShifuException(ShifuErrorCode.ERROR_UNSUPPORT_MODE);
@@ -68,8 +75,9 @@ public class StatsModelProcessor extends BasicModelProcessor implements Processo
 
     /**
      * run akka stats
+     *
      */
-    private void runAkkaStats() {
+    private void runAkkaStats(){
         List<Scanner> scanners = null;
 
         try {
@@ -82,7 +90,7 @@ public class StatsModelProcessor extends BasicModelProcessor implements Processo
             throw new ShifuException(ShifuErrorCode.ERROR_INPUT_NOT_FOUND, e);
         }
 
-        if (CollectionUtils.isEmpty(scanners)) {
+        if( CollectionUtils.isEmpty(scanners) ){
             throw new ShifuException(ShifuErrorCode.ERROR_INPUT_NOT_FOUND,
                     ", please check your data and start from init");
         }
@@ -101,7 +109,7 @@ public class StatsModelProcessor extends BasicModelProcessor implements Processo
      *
      * @throws IOException
      */
-    private void runPigStats() throws IOException {
+    private void runPigStats() throws IOException{
         log.info("delete historical pre-train data");
 
         ShifuFileUtils.deleteFile(pathFinder.getPreTrainingStatsPath(),
@@ -134,7 +142,7 @@ public class StatsModelProcessor extends BasicModelProcessor implements Processo
     public void updateColumnConfigWithPreTrainingStats() throws IOException {
         List<Scanner> scanners = ShifuFileUtils.getDataScanners(pathFinder.getPreTrainingStatsPath(),
                 modelConfig.getDataSet().getSource());
-        for (Scanner scanner : scanners) {
+        for(Scanner scanner: scanners) {
             scanStatsResult(scanner);
         }
 
@@ -147,56 +155,24 @@ public class StatsModelProcessor extends BasicModelProcessor implements Processo
      *
      * @param scanner
      */
-    private void scanStatsResult(Scanner scanner) {
-        while (scanner.hasNextLine()) {
+    private void scanStatsResult(Scanner scanner) throws IOException {
+        while(scanner.hasNextLine()) {
             String[] raw = scanner.nextLine().trim().split("\\|");
 
-            if (raw.length == 1) {
+            if(raw.length == 1) {
                 continue;
             }
 
             int columnNum = Integer.parseInt(raw[0]);
-            try {
-                ColumnConfig config = this.columnConfigList.get(columnNum);
 
-                if (config.isCategorical()) {
-                    config.setBinCategory(CommonUtils.stringToStringList(raw[1]));
-                } else {
-                    config.setBinBoundary(CommonUtils.stringToDoubleList(raw[1]));
-                }
-                config.setBinCountNeg(CommonUtils.stringToIntegerList(raw[2]));
-                config.setBinCountPos(CommonUtils.stringToIntegerList(raw[3]));
-                //config.setBinAvgScore(CommonUtils.stringToIntegerList(raw[4]));
-                config.setBinPosCaseRate(CommonUtils.stringToDoubleList(raw[5]));
-                config.setBinLength(config.getBinCountNeg().size());
-                config.setKs(Double.valueOf(raw[6]));
-                config.setIv(Double.valueOf(raw[7]));
-                config.setMax(Double.valueOf(raw[8]));
-                config.setMin(Double.valueOf(raw[9]));
-                config.setMean(Double.valueOf(raw[10]));
-                config.setStdDev(Double.valueOf(raw[11]));
+            ColumnConfig config = jsonMapper.readValue(raw[1], ColumnConfig.class);
 
-                //magic? 
-                if (raw[12].equals("N")) {
-                    config.setColumnType(ColumnType.N);
-                } else {
-                    config.setColumnType(ColumnType.C);
-                }
+            columnConfigList.set(columnNum, config);
 
 
-                config.setMedian(Double.valueOf(raw[13]));
-
-                config.setMissingCnt(Long.valueOf(raw[14]));
-                config.setTotalCount(Long.valueOf(raw[15]));
-                config.setMissingPercentage(Double.valueOf(raw[16]));
-                config.setBinWeightedNeg(CommonUtils.stringToDoubleList(raw[17]));
-                config.setBinWeightedPos(CommonUtils.stringToDoubleList(raw[18]));
-
-            } catch (Exception e) {
-                continue;
-            }
         }
     }
+
 
 
 }

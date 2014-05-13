@@ -1,0 +1,1377 @@
+[ {
+  "columnNum" : 0,
+  "columnName" : "id",
+  "version" : "0.2.0",
+  "columnType" : "N",
+  "columnFlag" : null,
+  "finalSelect" : false,
+  "columnRawStatsResult" : {
+    "cntTotal" : 0,
+    "cntValidPositive" : 0,
+    "cntValidNegative" : 0,
+    "cntIgnoredByTag" : 0,
+    "cntIsNull" : 0,
+    "cntIsNaN" : 0,
+    "cntIsNumber" : 0,
+    "cntUniqueValues" : 0
+  },
+  "columnNumStatsResult" : {
+    "max" : null,
+    "min" : null,
+    "mean" : null,
+    "median" : null,
+    "stdDev" : null
+  },
+  "columnBinningResult" : {
+    "length" : 0,
+    "binBoundary" : null,
+    "binCategory" : null,
+    "binCountNeg" : null,
+    "binCountPos" : null,
+    "binPosRate" : null,
+    "binWeightedNeg" : null,
+    "binWeightedPos" : null
+  },
+  "columnBinStatsResult" : {
+    "ks" : null,
+    "iv" : null,
+    "binWoe" : null,
+    "binAvgScore" : null
+  },
+  "columnControl" : {
+    "stdDevCutOff" : 4.0
+  }
+}, {
+  "columnNum" : 1,
+  "columnName" : "diagnosis",
+  "version" : "0.2.0",
+  "columnType" : null,
+  "columnFlag" : "Target",
+  "finalSelect" : false,
+  "columnRawStatsResult" : {
+    "cntTotal" : 0,
+    "cntValidPositive" : 0,
+    "cntValidNegative" : 0,
+    "cntIgnoredByTag" : 0,
+    "cntIsNull" : 0,
+    "cntIsNaN" : 0,
+    "cntIsNumber" : 0,
+    "cntUniqueValues" : 0
+  },
+  "columnNumStatsResult" : {
+    "max" : null,
+    "min" : null,
+    "mean" : null,
+    "median" : null,
+    "stdDev" : null
+  },
+  "columnBinningResult" : {
+    "length" : 0,
+    "binBoundary" : null,
+    "binCategory" : null,
+    "binCountNeg" : null,
+    "binCountPos" : null,
+    "binPosRate" : null,
+    "binWeightedNeg" : null,
+    "binWeightedPos" : null
+  },
+  "columnBinStatsResult" : {
+    "ks" : null,
+    "iv" : null,
+    "binWoe" : null,
+    "binAvgScore" : null
+  },
+  "columnControl" : {
+    "stdDevCutOff" : 4.0
+  }
+}, {
+  "columnNum" : 2,
+  "columnName" : "mean_radius",
+  "version" : "0.2.0",
+  "columnType" : "N",
+  "columnFlag" : null,
+  "finalSelect" : false,
+  "columnRawStatsResult" : {
+    "cntTotal" : 0,
+    "cntValidPositive" : 0,
+    "cntValidNegative" : 0,
+    "cntIgnoredByTag" : 0,
+    "cntIsNull" : 0,
+    "cntIsNaN" : 0,
+    "cntIsNumber" : 0,
+    "cntUniqueValues" : 0
+  },
+  "columnNumStatsResult" : {
+    "max" : null,
+    "min" : null,
+    "mean" : null,
+    "median" : null,
+    "stdDev" : null
+  },
+  "columnBinningResult" : {
+    "length" : 0,
+    "binBoundary" : null,
+    "binCategory" : null,
+    "binCountNeg" : null,
+    "binCountPos" : null,
+    "binPosRate" : null,
+    "binWeightedNeg" : null,
+    "binWeightedPos" : null
+  },
+  "columnBinStatsResult" : {
+    "ks" : null,
+    "iv" : null,
+    "binWoe" : null,
+    "binAvgScore" : null
+  },
+  "columnControl" : {
+    "stdDevCutOff" : 4.0
+  }
+}, {
+  "columnNum" : 3,
+  "columnName" : "mean_texture",
+  "version" : "0.2.0",
+  "columnType" : "N",
+  "columnFlag" : null,
+  "finalSelect" : false,
+  "columnRawStatsResult" : {
+    "cntTotal" : 0,
+    "cntValidPositive" : 0,
+    "cntValidNegative" : 0,
+    "cntIgnoredByTag" : 0,
+    "cntIsNull" : 0,
+    "cntIsNaN" : 0,
+    "cntIsNumber" : 0,
+    "cntUniqueValues" : 0
+  },
+  "columnNumStatsResult" : {
+    "max" : null,
+    "min" : null,
+    "mean" : null,
+    "median" : null,
+    "stdDev" : null
+  },
+  "columnBinningResult" : {
+    "length" : 0,
+    "binBoundary" : null,
+    "binCategory" : null,
+    "binCountNeg" : null,
+    "binCountPos" : null,
+    "binPosRate" : null,
+    "binWeightedNeg" : null,
+    "binWeightedPos" : null
+  },
+  "columnBinStatsResult" : {
+    "ks" : null,
+    "iv" : null,
+    "binWoe" : null,
+    "binAvgScore" : null
+  },
+  "columnControl" : {
+    "stdDevCutOff" : 4.0
+  }
+}, {
+  "columnNum" : 4,
+  "columnName" : "mean_perimeter",
+  "version" : "0.2.0",
+  "columnType" : "N",
+  "columnFlag" : null,
+  "finalSelect" : false,
+  "columnRawStatsResult" : {
+    "cntTotal" : 0,
+    "cntValidPositive" : 0,
+    "cntValidNegative" : 0,
+    "cntIgnoredByTag" : 0,
+    "cntIsNull" : 0,
+    "cntIsNaN" : 0,
+    "cntIsNumber" : 0,
+    "cntUniqueValues" : 0
+  },
+  "columnNumStatsResult" : {
+    "max" : null,
+    "min" : null,
+    "mean" : null,
+    "median" : null,
+    "stdDev" : null
+  },
+  "columnBinningResult" : {
+    "length" : 0,
+    "binBoundary" : null,
+    "binCategory" : null,
+    "binCountNeg" : null,
+    "binCountPos" : null,
+    "binPosRate" : null,
+    "binWeightedNeg" : null,
+    "binWeightedPos" : null
+  },
+  "columnBinStatsResult" : {
+    "ks" : null,
+    "iv" : null,
+    "binWoe" : null,
+    "binAvgScore" : null
+  },
+  "columnControl" : {
+    "stdDevCutOff" : 4.0
+  }
+}, {
+  "columnNum" : 5,
+  "columnName" : "mean_area",
+  "version" : "0.2.0",
+  "columnType" : "N",
+  "columnFlag" : null,
+  "finalSelect" : false,
+  "columnRawStatsResult" : {
+    "cntTotal" : 0,
+    "cntValidPositive" : 0,
+    "cntValidNegative" : 0,
+    "cntIgnoredByTag" : 0,
+    "cntIsNull" : 0,
+    "cntIsNaN" : 0,
+    "cntIsNumber" : 0,
+    "cntUniqueValues" : 0
+  },
+  "columnNumStatsResult" : {
+    "max" : null,
+    "min" : null,
+    "mean" : null,
+    "median" : null,
+    "stdDev" : null
+  },
+  "columnBinningResult" : {
+    "length" : 0,
+    "binBoundary" : null,
+    "binCategory" : null,
+    "binCountNeg" : null,
+    "binCountPos" : null,
+    "binPosRate" : null,
+    "binWeightedNeg" : null,
+    "binWeightedPos" : null
+  },
+  "columnBinStatsResult" : {
+    "ks" : null,
+    "iv" : null,
+    "binWoe" : null,
+    "binAvgScore" : null
+  },
+  "columnControl" : {
+    "stdDevCutOff" : 4.0
+  }
+}, {
+  "columnNum" : 6,
+  "columnName" : "mean_smoothness",
+  "version" : "0.2.0",
+  "columnType" : "N",
+  "columnFlag" : null,
+  "finalSelect" : false,
+  "columnRawStatsResult" : {
+    "cntTotal" : 0,
+    "cntValidPositive" : 0,
+    "cntValidNegative" : 0,
+    "cntIgnoredByTag" : 0,
+    "cntIsNull" : 0,
+    "cntIsNaN" : 0,
+    "cntIsNumber" : 0,
+    "cntUniqueValues" : 0
+  },
+  "columnNumStatsResult" : {
+    "max" : null,
+    "min" : null,
+    "mean" : null,
+    "median" : null,
+    "stdDev" : null
+  },
+  "columnBinningResult" : {
+    "length" : 0,
+    "binBoundary" : null,
+    "binCategory" : null,
+    "binCountNeg" : null,
+    "binCountPos" : null,
+    "binPosRate" : null,
+    "binWeightedNeg" : null,
+    "binWeightedPos" : null
+  },
+  "columnBinStatsResult" : {
+    "ks" : null,
+    "iv" : null,
+    "binWoe" : null,
+    "binAvgScore" : null
+  },
+  "columnControl" : {
+    "stdDevCutOff" : 4.0
+  }
+}, {
+  "columnNum" : 7,
+  "columnName" : "mean_compactness",
+  "version" : "0.2.0",
+  "columnType" : "N",
+  "columnFlag" : null,
+  "finalSelect" : false,
+  "columnRawStatsResult" : {
+    "cntTotal" : 0,
+    "cntValidPositive" : 0,
+    "cntValidNegative" : 0,
+    "cntIgnoredByTag" : 0,
+    "cntIsNull" : 0,
+    "cntIsNaN" : 0,
+    "cntIsNumber" : 0,
+    "cntUniqueValues" : 0
+  },
+  "columnNumStatsResult" : {
+    "max" : null,
+    "min" : null,
+    "mean" : null,
+    "median" : null,
+    "stdDev" : null
+  },
+  "columnBinningResult" : {
+    "length" : 0,
+    "binBoundary" : null,
+    "binCategory" : null,
+    "binCountNeg" : null,
+    "binCountPos" : null,
+    "binPosRate" : null,
+    "binWeightedNeg" : null,
+    "binWeightedPos" : null
+  },
+  "columnBinStatsResult" : {
+    "ks" : null,
+    "iv" : null,
+    "binWoe" : null,
+    "binAvgScore" : null
+  },
+  "columnControl" : {
+    "stdDevCutOff" : 4.0
+  }
+}, {
+  "columnNum" : 8,
+  "columnName" : "mean_concavity",
+  "version" : "0.2.0",
+  "columnType" : "N",
+  "columnFlag" : null,
+  "finalSelect" : false,
+  "columnRawStatsResult" : {
+    "cntTotal" : 0,
+    "cntValidPositive" : 0,
+    "cntValidNegative" : 0,
+    "cntIgnoredByTag" : 0,
+    "cntIsNull" : 0,
+    "cntIsNaN" : 0,
+    "cntIsNumber" : 0,
+    "cntUniqueValues" : 0
+  },
+  "columnNumStatsResult" : {
+    "max" : null,
+    "min" : null,
+    "mean" : null,
+    "median" : null,
+    "stdDev" : null
+  },
+  "columnBinningResult" : {
+    "length" : 0,
+    "binBoundary" : null,
+    "binCategory" : null,
+    "binCountNeg" : null,
+    "binCountPos" : null,
+    "binPosRate" : null,
+    "binWeightedNeg" : null,
+    "binWeightedPos" : null
+  },
+  "columnBinStatsResult" : {
+    "ks" : null,
+    "iv" : null,
+    "binWoe" : null,
+    "binAvgScore" : null
+  },
+  "columnControl" : {
+    "stdDevCutOff" : 4.0
+  }
+}, {
+  "columnNum" : 9,
+  "columnName" : "mean_concave_points",
+  "version" : "0.2.0",
+  "columnType" : "N",
+  "columnFlag" : null,
+  "finalSelect" : false,
+  "columnRawStatsResult" : {
+    "cntTotal" : 0,
+    "cntValidPositive" : 0,
+    "cntValidNegative" : 0,
+    "cntIgnoredByTag" : 0,
+    "cntIsNull" : 0,
+    "cntIsNaN" : 0,
+    "cntIsNumber" : 0,
+    "cntUniqueValues" : 0
+  },
+  "columnNumStatsResult" : {
+    "max" : null,
+    "min" : null,
+    "mean" : null,
+    "median" : null,
+    "stdDev" : null
+  },
+  "columnBinningResult" : {
+    "length" : 0,
+    "binBoundary" : null,
+    "binCategory" : null,
+    "binCountNeg" : null,
+    "binCountPos" : null,
+    "binPosRate" : null,
+    "binWeightedNeg" : null,
+    "binWeightedPos" : null
+  },
+  "columnBinStatsResult" : {
+    "ks" : null,
+    "iv" : null,
+    "binWoe" : null,
+    "binAvgScore" : null
+  },
+  "columnControl" : {
+    "stdDevCutOff" : 4.0
+  }
+}, {
+  "columnNum" : 10,
+  "columnName" : "mean_symmetry",
+  "version" : "0.2.0",
+  "columnType" : "N",
+  "columnFlag" : null,
+  "finalSelect" : false,
+  "columnRawStatsResult" : {
+    "cntTotal" : 0,
+    "cntValidPositive" : 0,
+    "cntValidNegative" : 0,
+    "cntIgnoredByTag" : 0,
+    "cntIsNull" : 0,
+    "cntIsNaN" : 0,
+    "cntIsNumber" : 0,
+    "cntUniqueValues" : 0
+  },
+  "columnNumStatsResult" : {
+    "max" : null,
+    "min" : null,
+    "mean" : null,
+    "median" : null,
+    "stdDev" : null
+  },
+  "columnBinningResult" : {
+    "length" : 0,
+    "binBoundary" : null,
+    "binCategory" : null,
+    "binCountNeg" : null,
+    "binCountPos" : null,
+    "binPosRate" : null,
+    "binWeightedNeg" : null,
+    "binWeightedPos" : null
+  },
+  "columnBinStatsResult" : {
+    "ks" : null,
+    "iv" : null,
+    "binWoe" : null,
+    "binAvgScore" : null
+  },
+  "columnControl" : {
+    "stdDevCutOff" : 4.0
+  }
+}, {
+  "columnNum" : 11,
+  "columnName" : "mean_fractal_dimension",
+  "version" : "0.2.0",
+  "columnType" : "N",
+  "columnFlag" : null,
+  "finalSelect" : false,
+  "columnRawStatsResult" : {
+    "cntTotal" : 0,
+    "cntValidPositive" : 0,
+    "cntValidNegative" : 0,
+    "cntIgnoredByTag" : 0,
+    "cntIsNull" : 0,
+    "cntIsNaN" : 0,
+    "cntIsNumber" : 0,
+    "cntUniqueValues" : 0
+  },
+  "columnNumStatsResult" : {
+    "max" : null,
+    "min" : null,
+    "mean" : null,
+    "median" : null,
+    "stdDev" : null
+  },
+  "columnBinningResult" : {
+    "length" : 0,
+    "binBoundary" : null,
+    "binCategory" : null,
+    "binCountNeg" : null,
+    "binCountPos" : null,
+    "binPosRate" : null,
+    "binWeightedNeg" : null,
+    "binWeightedPos" : null
+  },
+  "columnBinStatsResult" : {
+    "ks" : null,
+    "iv" : null,
+    "binWoe" : null,
+    "binAvgScore" : null
+  },
+  "columnControl" : {
+    "stdDevCutOff" : 4.0
+  }
+}, {
+  "columnNum" : 12,
+  "columnName" : "std_radius",
+  "version" : "0.2.0",
+  "columnType" : "N",
+  "columnFlag" : null,
+  "finalSelect" : false,
+  "columnRawStatsResult" : {
+    "cntTotal" : 0,
+    "cntValidPositive" : 0,
+    "cntValidNegative" : 0,
+    "cntIgnoredByTag" : 0,
+    "cntIsNull" : 0,
+    "cntIsNaN" : 0,
+    "cntIsNumber" : 0,
+    "cntUniqueValues" : 0
+  },
+  "columnNumStatsResult" : {
+    "max" : null,
+    "min" : null,
+    "mean" : null,
+    "median" : null,
+    "stdDev" : null
+  },
+  "columnBinningResult" : {
+    "length" : 0,
+    "binBoundary" : null,
+    "binCategory" : null,
+    "binCountNeg" : null,
+    "binCountPos" : null,
+    "binPosRate" : null,
+    "binWeightedNeg" : null,
+    "binWeightedPos" : null
+  },
+  "columnBinStatsResult" : {
+    "ks" : null,
+    "iv" : null,
+    "binWoe" : null,
+    "binAvgScore" : null
+  },
+  "columnControl" : {
+    "stdDevCutOff" : 4.0
+  }
+}, {
+  "columnNum" : 13,
+  "columnName" : "std_texture",
+  "version" : "0.2.0",
+  "columnType" : "N",
+  "columnFlag" : null,
+  "finalSelect" : false,
+  "columnRawStatsResult" : {
+    "cntTotal" : 0,
+    "cntValidPositive" : 0,
+    "cntValidNegative" : 0,
+    "cntIgnoredByTag" : 0,
+    "cntIsNull" : 0,
+    "cntIsNaN" : 0,
+    "cntIsNumber" : 0,
+    "cntUniqueValues" : 0
+  },
+  "columnNumStatsResult" : {
+    "max" : null,
+    "min" : null,
+    "mean" : null,
+    "median" : null,
+    "stdDev" : null
+  },
+  "columnBinningResult" : {
+    "length" : 0,
+    "binBoundary" : null,
+    "binCategory" : null,
+    "binCountNeg" : null,
+    "binCountPos" : null,
+    "binPosRate" : null,
+    "binWeightedNeg" : null,
+    "binWeightedPos" : null
+  },
+  "columnBinStatsResult" : {
+    "ks" : null,
+    "iv" : null,
+    "binWoe" : null,
+    "binAvgScore" : null
+  },
+  "columnControl" : {
+    "stdDevCutOff" : 4.0
+  }
+}, {
+  "columnNum" : 14,
+  "columnName" : "std_perimeter",
+  "version" : "0.2.0",
+  "columnType" : "N",
+  "columnFlag" : null,
+  "finalSelect" : false,
+  "columnRawStatsResult" : {
+    "cntTotal" : 0,
+    "cntValidPositive" : 0,
+    "cntValidNegative" : 0,
+    "cntIgnoredByTag" : 0,
+    "cntIsNull" : 0,
+    "cntIsNaN" : 0,
+    "cntIsNumber" : 0,
+    "cntUniqueValues" : 0
+  },
+  "columnNumStatsResult" : {
+    "max" : null,
+    "min" : null,
+    "mean" : null,
+    "median" : null,
+    "stdDev" : null
+  },
+  "columnBinningResult" : {
+    "length" : 0,
+    "binBoundary" : null,
+    "binCategory" : null,
+    "binCountNeg" : null,
+    "binCountPos" : null,
+    "binPosRate" : null,
+    "binWeightedNeg" : null,
+    "binWeightedPos" : null
+  },
+  "columnBinStatsResult" : {
+    "ks" : null,
+    "iv" : null,
+    "binWoe" : null,
+    "binAvgScore" : null
+  },
+  "columnControl" : {
+    "stdDevCutOff" : 4.0
+  }
+}, {
+  "columnNum" : 15,
+  "columnName" : "std_area",
+  "version" : "0.2.0",
+  "columnType" : "N",
+  "columnFlag" : null,
+  "finalSelect" : false,
+  "columnRawStatsResult" : {
+    "cntTotal" : 0,
+    "cntValidPositive" : 0,
+    "cntValidNegative" : 0,
+    "cntIgnoredByTag" : 0,
+    "cntIsNull" : 0,
+    "cntIsNaN" : 0,
+    "cntIsNumber" : 0,
+    "cntUniqueValues" : 0
+  },
+  "columnNumStatsResult" : {
+    "max" : null,
+    "min" : null,
+    "mean" : null,
+    "median" : null,
+    "stdDev" : null
+  },
+  "columnBinningResult" : {
+    "length" : 0,
+    "binBoundary" : null,
+    "binCategory" : null,
+    "binCountNeg" : null,
+    "binCountPos" : null,
+    "binPosRate" : null,
+    "binWeightedNeg" : null,
+    "binWeightedPos" : null
+  },
+  "columnBinStatsResult" : {
+    "ks" : null,
+    "iv" : null,
+    "binWoe" : null,
+    "binAvgScore" : null
+  },
+  "columnControl" : {
+    "stdDevCutOff" : 4.0
+  }
+}, {
+  "columnNum" : 16,
+  "columnName" : "std_smoothness",
+  "version" : "0.2.0",
+  "columnType" : "N",
+  "columnFlag" : null,
+  "finalSelect" : false,
+  "columnRawStatsResult" : {
+    "cntTotal" : 0,
+    "cntValidPositive" : 0,
+    "cntValidNegative" : 0,
+    "cntIgnoredByTag" : 0,
+    "cntIsNull" : 0,
+    "cntIsNaN" : 0,
+    "cntIsNumber" : 0,
+    "cntUniqueValues" : 0
+  },
+  "columnNumStatsResult" : {
+    "max" : null,
+    "min" : null,
+    "mean" : null,
+    "median" : null,
+    "stdDev" : null
+  },
+  "columnBinningResult" : {
+    "length" : 0,
+    "binBoundary" : null,
+    "binCategory" : null,
+    "binCountNeg" : null,
+    "binCountPos" : null,
+    "binPosRate" : null,
+    "binWeightedNeg" : null,
+    "binWeightedPos" : null
+  },
+  "columnBinStatsResult" : {
+    "ks" : null,
+    "iv" : null,
+    "binWoe" : null,
+    "binAvgScore" : null
+  },
+  "columnControl" : {
+    "stdDevCutOff" : 4.0
+  }
+}, {
+  "columnNum" : 17,
+  "columnName" : "std_compactness",
+  "version" : "0.2.0",
+  "columnType" : "N",
+  "columnFlag" : null,
+  "finalSelect" : false,
+  "columnRawStatsResult" : {
+    "cntTotal" : 0,
+    "cntValidPositive" : 0,
+    "cntValidNegative" : 0,
+    "cntIgnoredByTag" : 0,
+    "cntIsNull" : 0,
+    "cntIsNaN" : 0,
+    "cntIsNumber" : 0,
+    "cntUniqueValues" : 0
+  },
+  "columnNumStatsResult" : {
+    "max" : null,
+    "min" : null,
+    "mean" : null,
+    "median" : null,
+    "stdDev" : null
+  },
+  "columnBinningResult" : {
+    "length" : 0,
+    "binBoundary" : null,
+    "binCategory" : null,
+    "binCountNeg" : null,
+    "binCountPos" : null,
+    "binPosRate" : null,
+    "binWeightedNeg" : null,
+    "binWeightedPos" : null
+  },
+  "columnBinStatsResult" : {
+    "ks" : null,
+    "iv" : null,
+    "binWoe" : null,
+    "binAvgScore" : null
+  },
+  "columnControl" : {
+    "stdDevCutOff" : 4.0
+  }
+}, {
+  "columnNum" : 18,
+  "columnName" : "std_concavity",
+  "version" : "0.2.0",
+  "columnType" : "N",
+  "columnFlag" : null,
+  "finalSelect" : false,
+  "columnRawStatsResult" : {
+    "cntTotal" : 0,
+    "cntValidPositive" : 0,
+    "cntValidNegative" : 0,
+    "cntIgnoredByTag" : 0,
+    "cntIsNull" : 0,
+    "cntIsNaN" : 0,
+    "cntIsNumber" : 0,
+    "cntUniqueValues" : 0
+  },
+  "columnNumStatsResult" : {
+    "max" : null,
+    "min" : null,
+    "mean" : null,
+    "median" : null,
+    "stdDev" : null
+  },
+  "columnBinningResult" : {
+    "length" : 0,
+    "binBoundary" : null,
+    "binCategory" : null,
+    "binCountNeg" : null,
+    "binCountPos" : null,
+    "binPosRate" : null,
+    "binWeightedNeg" : null,
+    "binWeightedPos" : null
+  },
+  "columnBinStatsResult" : {
+    "ks" : null,
+    "iv" : null,
+    "binWoe" : null,
+    "binAvgScore" : null
+  },
+  "columnControl" : {
+    "stdDevCutOff" : 4.0
+  }
+}, {
+  "columnNum" : 19,
+  "columnName" : "std_concave_points",
+  "version" : "0.2.0",
+  "columnType" : "N",
+  "columnFlag" : null,
+  "finalSelect" : false,
+  "columnRawStatsResult" : {
+    "cntTotal" : 0,
+    "cntValidPositive" : 0,
+    "cntValidNegative" : 0,
+    "cntIgnoredByTag" : 0,
+    "cntIsNull" : 0,
+    "cntIsNaN" : 0,
+    "cntIsNumber" : 0,
+    "cntUniqueValues" : 0
+  },
+  "columnNumStatsResult" : {
+    "max" : null,
+    "min" : null,
+    "mean" : null,
+    "median" : null,
+    "stdDev" : null
+  },
+  "columnBinningResult" : {
+    "length" : 0,
+    "binBoundary" : null,
+    "binCategory" : null,
+    "binCountNeg" : null,
+    "binCountPos" : null,
+    "binPosRate" : null,
+    "binWeightedNeg" : null,
+    "binWeightedPos" : null
+  },
+  "columnBinStatsResult" : {
+    "ks" : null,
+    "iv" : null,
+    "binWoe" : null,
+    "binAvgScore" : null
+  },
+  "columnControl" : {
+    "stdDevCutOff" : 4.0
+  }
+}, {
+  "columnNum" : 20,
+  "columnName" : "std_symmetry",
+  "version" : "0.2.0",
+  "columnType" : "N",
+  "columnFlag" : null,
+  "finalSelect" : false,
+  "columnRawStatsResult" : {
+    "cntTotal" : 0,
+    "cntValidPositive" : 0,
+    "cntValidNegative" : 0,
+    "cntIgnoredByTag" : 0,
+    "cntIsNull" : 0,
+    "cntIsNaN" : 0,
+    "cntIsNumber" : 0,
+    "cntUniqueValues" : 0
+  },
+  "columnNumStatsResult" : {
+    "max" : null,
+    "min" : null,
+    "mean" : null,
+    "median" : null,
+    "stdDev" : null
+  },
+  "columnBinningResult" : {
+    "length" : 0,
+    "binBoundary" : null,
+    "binCategory" : null,
+    "binCountNeg" : null,
+    "binCountPos" : null,
+    "binPosRate" : null,
+    "binWeightedNeg" : null,
+    "binWeightedPos" : null
+  },
+  "columnBinStatsResult" : {
+    "ks" : null,
+    "iv" : null,
+    "binWoe" : null,
+    "binAvgScore" : null
+  },
+  "columnControl" : {
+    "stdDevCutOff" : 4.0
+  }
+}, {
+  "columnNum" : 21,
+  "columnName" : "std_fractal_dimension",
+  "version" : "0.2.0",
+  "columnType" : "N",
+  "columnFlag" : null,
+  "finalSelect" : false,
+  "columnRawStatsResult" : {
+    "cntTotal" : 0,
+    "cntValidPositive" : 0,
+    "cntValidNegative" : 0,
+    "cntIgnoredByTag" : 0,
+    "cntIsNull" : 0,
+    "cntIsNaN" : 0,
+    "cntIsNumber" : 0,
+    "cntUniqueValues" : 0
+  },
+  "columnNumStatsResult" : {
+    "max" : null,
+    "min" : null,
+    "mean" : null,
+    "median" : null,
+    "stdDev" : null
+  },
+  "columnBinningResult" : {
+    "length" : 0,
+    "binBoundary" : null,
+    "binCategory" : null,
+    "binCountNeg" : null,
+    "binCountPos" : null,
+    "binPosRate" : null,
+    "binWeightedNeg" : null,
+    "binWeightedPos" : null
+  },
+  "columnBinStatsResult" : {
+    "ks" : null,
+    "iv" : null,
+    "binWoe" : null,
+    "binAvgScore" : null
+  },
+  "columnControl" : {
+    "stdDevCutOff" : 4.0
+  }
+}, {
+  "columnNum" : 22,
+  "columnName" : "worst_radius",
+  "version" : "0.2.0",
+  "columnType" : "N",
+  "columnFlag" : null,
+  "finalSelect" : false,
+  "columnRawStatsResult" : {
+    "cntTotal" : 0,
+    "cntValidPositive" : 0,
+    "cntValidNegative" : 0,
+    "cntIgnoredByTag" : 0,
+    "cntIsNull" : 0,
+    "cntIsNaN" : 0,
+    "cntIsNumber" : 0,
+    "cntUniqueValues" : 0
+  },
+  "columnNumStatsResult" : {
+    "max" : null,
+    "min" : null,
+    "mean" : null,
+    "median" : null,
+    "stdDev" : null
+  },
+  "columnBinningResult" : {
+    "length" : 0,
+    "binBoundary" : null,
+    "binCategory" : null,
+    "binCountNeg" : null,
+    "binCountPos" : null,
+    "binPosRate" : null,
+    "binWeightedNeg" : null,
+    "binWeightedPos" : null
+  },
+  "columnBinStatsResult" : {
+    "ks" : null,
+    "iv" : null,
+    "binWoe" : null,
+    "binAvgScore" : null
+  },
+  "columnControl" : {
+    "stdDevCutOff" : 4.0
+  }
+}, {
+  "columnNum" : 23,
+  "columnName" : "worst_texture",
+  "version" : "0.2.0",
+  "columnType" : "N",
+  "columnFlag" : null,
+  "finalSelect" : false,
+  "columnRawStatsResult" : {
+    "cntTotal" : 0,
+    "cntValidPositive" : 0,
+    "cntValidNegative" : 0,
+    "cntIgnoredByTag" : 0,
+    "cntIsNull" : 0,
+    "cntIsNaN" : 0,
+    "cntIsNumber" : 0,
+    "cntUniqueValues" : 0
+  },
+  "columnNumStatsResult" : {
+    "max" : null,
+    "min" : null,
+    "mean" : null,
+    "median" : null,
+    "stdDev" : null
+  },
+  "columnBinningResult" : {
+    "length" : 0,
+    "binBoundary" : null,
+    "binCategory" : null,
+    "binCountNeg" : null,
+    "binCountPos" : null,
+    "binPosRate" : null,
+    "binWeightedNeg" : null,
+    "binWeightedPos" : null
+  },
+  "columnBinStatsResult" : {
+    "ks" : null,
+    "iv" : null,
+    "binWoe" : null,
+    "binAvgScore" : null
+  },
+  "columnControl" : {
+    "stdDevCutOff" : 4.0
+  }
+}, {
+  "columnNum" : 24,
+  "columnName" : "worst_perimeter",
+  "version" : "0.2.0",
+  "columnType" : "N",
+  "columnFlag" : null,
+  "finalSelect" : false,
+  "columnRawStatsResult" : {
+    "cntTotal" : 0,
+    "cntValidPositive" : 0,
+    "cntValidNegative" : 0,
+    "cntIgnoredByTag" : 0,
+    "cntIsNull" : 0,
+    "cntIsNaN" : 0,
+    "cntIsNumber" : 0,
+    "cntUniqueValues" : 0
+  },
+  "columnNumStatsResult" : {
+    "max" : null,
+    "min" : null,
+    "mean" : null,
+    "median" : null,
+    "stdDev" : null
+  },
+  "columnBinningResult" : {
+    "length" : 0,
+    "binBoundary" : null,
+    "binCategory" : null,
+    "binCountNeg" : null,
+    "binCountPos" : null,
+    "binPosRate" : null,
+    "binWeightedNeg" : null,
+    "binWeightedPos" : null
+  },
+  "columnBinStatsResult" : {
+    "ks" : null,
+    "iv" : null,
+    "binWoe" : null,
+    "binAvgScore" : null
+  },
+  "columnControl" : {
+    "stdDevCutOff" : 4.0
+  }
+}, {
+  "columnNum" : 25,
+  "columnName" : "worst_area",
+  "version" : "0.2.0",
+  "columnType" : "N",
+  "columnFlag" : null,
+  "finalSelect" : false,
+  "columnRawStatsResult" : {
+    "cntTotal" : 0,
+    "cntValidPositive" : 0,
+    "cntValidNegative" : 0,
+    "cntIgnoredByTag" : 0,
+    "cntIsNull" : 0,
+    "cntIsNaN" : 0,
+    "cntIsNumber" : 0,
+    "cntUniqueValues" : 0
+  },
+  "columnNumStatsResult" : {
+    "max" : null,
+    "min" : null,
+    "mean" : null,
+    "median" : null,
+    "stdDev" : null
+  },
+  "columnBinningResult" : {
+    "length" : 0,
+    "binBoundary" : null,
+    "binCategory" : null,
+    "binCountNeg" : null,
+    "binCountPos" : null,
+    "binPosRate" : null,
+    "binWeightedNeg" : null,
+    "binWeightedPos" : null
+  },
+  "columnBinStatsResult" : {
+    "ks" : null,
+    "iv" : null,
+    "binWoe" : null,
+    "binAvgScore" : null
+  },
+  "columnControl" : {
+    "stdDevCutOff" : 4.0
+  }
+}, {
+  "columnNum" : 26,
+  "columnName" : "worst_smoothness",
+  "version" : "0.2.0",
+  "columnType" : "N",
+  "columnFlag" : null,
+  "finalSelect" : false,
+  "columnRawStatsResult" : {
+    "cntTotal" : 0,
+    "cntValidPositive" : 0,
+    "cntValidNegative" : 0,
+    "cntIgnoredByTag" : 0,
+    "cntIsNull" : 0,
+    "cntIsNaN" : 0,
+    "cntIsNumber" : 0,
+    "cntUniqueValues" : 0
+  },
+  "columnNumStatsResult" : {
+    "max" : null,
+    "min" : null,
+    "mean" : null,
+    "median" : null,
+    "stdDev" : null
+  },
+  "columnBinningResult" : {
+    "length" : 0,
+    "binBoundary" : null,
+    "binCategory" : null,
+    "binCountNeg" : null,
+    "binCountPos" : null,
+    "binPosRate" : null,
+    "binWeightedNeg" : null,
+    "binWeightedPos" : null
+  },
+  "columnBinStatsResult" : {
+    "ks" : null,
+    "iv" : null,
+    "binWoe" : null,
+    "binAvgScore" : null
+  },
+  "columnControl" : {
+    "stdDevCutOff" : 4.0
+  }
+}, {
+  "columnNum" : 27,
+  "columnName" : "worst_compactness",
+  "version" : "0.2.0",
+  "columnType" : "N",
+  "columnFlag" : null,
+  "finalSelect" : false,
+  "columnRawStatsResult" : {
+    "cntTotal" : 0,
+    "cntValidPositive" : 0,
+    "cntValidNegative" : 0,
+    "cntIgnoredByTag" : 0,
+    "cntIsNull" : 0,
+    "cntIsNaN" : 0,
+    "cntIsNumber" : 0,
+    "cntUniqueValues" : 0
+  },
+  "columnNumStatsResult" : {
+    "max" : null,
+    "min" : null,
+    "mean" : null,
+    "median" : null,
+    "stdDev" : null
+  },
+  "columnBinningResult" : {
+    "length" : 0,
+    "binBoundary" : null,
+    "binCategory" : null,
+    "binCountNeg" : null,
+    "binCountPos" : null,
+    "binPosRate" : null,
+    "binWeightedNeg" : null,
+    "binWeightedPos" : null
+  },
+  "columnBinStatsResult" : {
+    "ks" : null,
+    "iv" : null,
+    "binWoe" : null,
+    "binAvgScore" : null
+  },
+  "columnControl" : {
+    "stdDevCutOff" : 4.0
+  }
+}, {
+  "columnNum" : 28,
+  "columnName" : "worst_concavity",
+  "version" : "0.2.0",
+  "columnType" : "N",
+  "columnFlag" : null,
+  "finalSelect" : false,
+  "columnRawStatsResult" : {
+    "cntTotal" : 0,
+    "cntValidPositive" : 0,
+    "cntValidNegative" : 0,
+    "cntIgnoredByTag" : 0,
+    "cntIsNull" : 0,
+    "cntIsNaN" : 0,
+    "cntIsNumber" : 0,
+    "cntUniqueValues" : 0
+  },
+  "columnNumStatsResult" : {
+    "max" : null,
+    "min" : null,
+    "mean" : null,
+    "median" : null,
+    "stdDev" : null
+  },
+  "columnBinningResult" : {
+    "length" : 0,
+    "binBoundary" : null,
+    "binCategory" : null,
+    "binCountNeg" : null,
+    "binCountPos" : null,
+    "binPosRate" : null,
+    "binWeightedNeg" : null,
+    "binWeightedPos" : null
+  },
+  "columnBinStatsResult" : {
+    "ks" : null,
+    "iv" : null,
+    "binWoe" : null,
+    "binAvgScore" : null
+  },
+  "columnControl" : {
+    "stdDevCutOff" : 4.0
+  }
+}, {
+  "columnNum" : 29,
+  "columnName" : "worst_concave_points",
+  "version" : "0.2.0",
+  "columnType" : "N",
+  "columnFlag" : null,
+  "finalSelect" : false,
+  "columnRawStatsResult" : {
+    "cntTotal" : 0,
+    "cntValidPositive" : 0,
+    "cntValidNegative" : 0,
+    "cntIgnoredByTag" : 0,
+    "cntIsNull" : 0,
+    "cntIsNaN" : 0,
+    "cntIsNumber" : 0,
+    "cntUniqueValues" : 0
+  },
+  "columnNumStatsResult" : {
+    "max" : null,
+    "min" : null,
+    "mean" : null,
+    "median" : null,
+    "stdDev" : null
+  },
+  "columnBinningResult" : {
+    "length" : 0,
+    "binBoundary" : null,
+    "binCategory" : null,
+    "binCountNeg" : null,
+    "binCountPos" : null,
+    "binPosRate" : null,
+    "binWeightedNeg" : null,
+    "binWeightedPos" : null
+  },
+  "columnBinStatsResult" : {
+    "ks" : null,
+    "iv" : null,
+    "binWoe" : null,
+    "binAvgScore" : null
+  },
+  "columnControl" : {
+    "stdDevCutOff" : 4.0
+  }
+}, {
+  "columnNum" : 30,
+  "columnName" : "worst_symmetry",
+  "version" : "0.2.0",
+  "columnType" : "N",
+  "columnFlag" : null,
+  "finalSelect" : false,
+  "columnRawStatsResult" : {
+    "cntTotal" : 0,
+    "cntValidPositive" : 0,
+    "cntValidNegative" : 0,
+    "cntIgnoredByTag" : 0,
+    "cntIsNull" : 0,
+    "cntIsNaN" : 0,
+    "cntIsNumber" : 0,
+    "cntUniqueValues" : 0
+  },
+  "columnNumStatsResult" : {
+    "max" : null,
+    "min" : null,
+    "mean" : null,
+    "median" : null,
+    "stdDev" : null
+  },
+  "columnBinningResult" : {
+    "length" : 0,
+    "binBoundary" : null,
+    "binCategory" : null,
+    "binCountNeg" : null,
+    "binCountPos" : null,
+    "binPosRate" : null,
+    "binWeightedNeg" : null,
+    "binWeightedPos" : null
+  },
+  "columnBinStatsResult" : {
+    "ks" : null,
+    "iv" : null,
+    "binWoe" : null,
+    "binAvgScore" : null
+  },
+  "columnControl" : {
+    "stdDevCutOff" : 4.0
+  }
+}, {
+  "columnNum" : 31,
+  "columnName" : "worst_fractal_dimension",
+  "version" : "0.2.0",
+  "columnType" : "N",
+  "columnFlag" : null,
+  "finalSelect" : false,
+  "columnRawStatsResult" : {
+    "cntTotal" : 0,
+    "cntValidPositive" : 0,
+    "cntValidNegative" : 0,
+    "cntIgnoredByTag" : 0,
+    "cntIsNull" : 0,
+    "cntIsNaN" : 0,
+    "cntIsNumber" : 0,
+    "cntUniqueValues" : 0
+  },
+  "columnNumStatsResult" : {
+    "max" : null,
+    "min" : null,
+    "mean" : null,
+    "median" : null,
+    "stdDev" : null
+  },
+  "columnBinningResult" : {
+    "length" : 0,
+    "binBoundary" : null,
+    "binCategory" : null,
+    "binCountNeg" : null,
+    "binCountPos" : null,
+    "binPosRate" : null,
+    "binWeightedNeg" : null,
+    "binWeightedPos" : null
+  },
+  "columnBinStatsResult" : {
+    "ks" : null,
+    "iv" : null,
+    "binWoe" : null,
+    "binAvgScore" : null
+  },
+  "columnControl" : {
+    "stdDevCutOff" : 4.0
+  }
+} ]

@@ -64,7 +64,7 @@
     }
   },
   "evals" : [ {
-    "name" : "EvalA",
+    "name" : "Eval1",
     "dataSet" : {
       "source" : "LOCAL",
       "dataPath" : "labor-neg.test",

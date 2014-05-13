@@ -27,6 +27,15 @@ public class ModelNormalizeConf {
     private Double sampleRate = Double.valueOf(0.8);
     private Boolean sampleNegOnly = Boolean.FALSE;
 
+    private String normalizer = "ml.shifu.shifu.di.builtin.WOENormalizer";
+
+    public String getNormalizer() {
+        return normalizer;
+    }
+
+    public void setNormalizer(String normalizer) {
+        this.normalizer = normalizer;
+    }
     // move to RawSourceData
     // private String weightAmplifier;
     // private List<WeightAmplifier> weightAmplifier;

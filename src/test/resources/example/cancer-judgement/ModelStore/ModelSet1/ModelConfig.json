@@ -8,9 +8,9 @@
   },
   "dataSet" : {
     "source" : "LOCAL",
-    "dataPath" : "./src/test/resources/example/cancer-judgement/DataStore/DataSet1",
+    "dataPath" : "./src/test/resources/unittest/DataSet/wdbc.train",
     "dataDelimiter" : "|",
-    "headerPath" : "./src/test/resources/example/cancer-judgement/DataStore/DataSet1/.pig_header",
+    "headerPath" : "./src/test/resources/unittest/DataSet/wdbc.header",
     "headerDelimiter" : "|",
     "filterExpressions" : "",
     "weightColumnName" : null,
@@ -57,7 +57,7 @@
     "customPaths" : null
   },
   "evals" : [ {
-    "name" : "EvalA",
+    "name" : "Eval1",
     "dataSet" : {
       "source" : "LOCAL",
       "dataPath" : "./src/test/resources/example/cancer-judgement/DataStore/EvalSet1",

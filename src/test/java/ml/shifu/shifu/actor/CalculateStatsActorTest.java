@@ -44,8 +44,8 @@ public class CalculateStatsActorTest {
 
     @BeforeClass
     public void setUp() throws IOException {
-        modelConfig = CommonUtils.loadModelConfig("src/test/resources/example/cancer-judgement/ModelStore/ModelSet1/ModelConfig.json", SourceType.LOCAL);
-        columnConfigList = CommonUtils.loadColumnConfigList("src/test/resources/example/cancer-judgement/ModelStore/ModelSet1/ColumnConfig.json", SourceType.LOCAL);
+        modelConfig = CommonUtils.loadModelConfig("src/test/resources/unittest/ModelSets/full/ModelConfig.json", SourceType.LOCAL);
+        columnConfigList = CommonUtils.loadColumnConfigList("src/test/resources/unittest/ModelSets/full/ColumnConfig.json", SourceType.LOCAL);
         actorSystem = ActorSystem.create("shifuActorSystem");
     }
 
@@ -59,7 +59,7 @@ public class CalculateStatsActorTest {
             }
         }), "stats-calculator");
 
-        List<Scanner> scanners = ShifuFileUtils.getDataScanners("src/test/resources/example/cancer-judgement/DataStore/DataSet1", SourceType.LOCAL);
+        List<Scanner> scanners = ShifuFileUtils.getDataScanners("src/test/resources/unittest/DataSet/wdbc.train", SourceType.LOCAL);
         statsCalRef.tell(new AkkaActorInputMessage(scanners), statsCalRef);
 
         while (!statsCalRef.isTerminated()) {

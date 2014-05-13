@@ -136,19 +136,19 @@ public class ModelConfig {
         // build data set info
         ModelSourceDataConf dataSet = new ModelSourceDataConf();
         dataSet.setSource(SourceType.LOCAL);
-        dataSet.setDataDelimiter("|");
+        dataSet.setDataDelimiter(",");
         dataSet.setDataPath(new File(Environment.getProperty(Environment.SHIFU_HOME),
                 File.separator + "example"
-                        + File.separator + "cancer-judgement"
-                        + File.separator + "DataStore"
-                        + File.separator + "DataSet1"
+                        + File.separator + "wdbc"
+                        + File.separator + "wdbcDataSet"
+                        + File.separator + "wdbc.train"
+
         ).toString());
         dataSet.setHeaderPath(new File(Environment.getProperty(Environment.SHIFU_HOME),
                 File.separator + "example"
-                        + File.separator + "cancer-judgement"
-                        + File.separator + "DataStore"
-                        + File.separator + "DataSet1"
-                        + File.separator + ".pig_header"
+                        + File.separator + "wdbc"
+                        + File.separator + "wdbcDataSet"
+                        + File.separator + "wdbc.header"
         ).toString());
         dataSet.setTargetColumnName("diagnosis");
 
@@ -203,19 +203,18 @@ public class ModelConfig {
         evalConfig.setName("Eval1");
         RawSourceData evalSet = modelConfig.getDataSet().cloneRawSourceData();
         evalSet.setSource(SourceType.LOCAL);
-        evalSet.setDataDelimiter("|");
+        evalSet.setDataDelimiter(",");
         evalSet.setDataPath(new File(Environment.getProperty(Environment.SHIFU_HOME),
                 File.separator + "example"
-                        + File.separator + "cancer-judgement"
-                        + File.separator + "DataStore"
-                        + File.separator + "EvalSet1"
+                        + File.separator + "wdbc"
+                        + File.separator + "wdbcDataSet"
+                        + File.separator + "wdbc.eval"
         ).toString());
         evalSet.setHeaderPath(new File(Environment.getProperty(Environment.SHIFU_HOME),
                 File.separator + "example"
-                        + File.separator + "cancer-judgement"
-                        + File.separator + "DataStore"
-                        + File.separator + "EvalSet1"
-                        + File.separator + ".pig_header"
+                        + File.separator + "wdbc"
+                        + File.separator + "wdbcDataSet"
+                        + File.separator + "wdbc.header"
         ).toString());
         evalConfig.setDataSet(evalSet);
         // create empty <ModelName>/<EvalSetName>Score.meta.column.names

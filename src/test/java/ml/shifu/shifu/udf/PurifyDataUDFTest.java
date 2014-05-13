@@ -44,20 +44,20 @@ public class PurifyDataUDFTest {
     @BeforeClass
     public void setUp() throws Exception {
         instanceC = new PurifyDataUDF("LOCAL",
-                "src/test/resources/example/cancer-judgement/ModelStore/ModelSet1/ModelConfig.json",
-                "src/test/resources/example/cancer-judgement/ModelStore/ModelSet1/ColumnConfig.json",
-                "EvalA");
+                "src/test/resources/unittest/ModelSets/full/ModelConfig.json",
+                "src/test/resources/unittest/ModelSets/full/ColumnConfig.json",
+                "Eval1");
 
         instanceB = new PurifyDataUDF("LOCAL",
-                "src/test/resources/example/cancer-judgement/ModelStore/ModelSet1/ModelConfig.json",
-                "src/test/resources/example/cancer-judgement/ModelStore/ModelSet1/ColumnConfig.json");
+                "src/test/resources/unittest/ModelSets/full/ModelConfig.json",
+                "src/test/resources/unittest/ModelSets/full/ColumnConfig.json");
 
         ModelConfig modelConfig = CommonUtils.loadModelConfig(
-                "src/test/resources/example/cancer-judgement/ModelStore/ModelSet1/ModelConfig.json",
+                "src/test/resources/unittest/ModelSets/full/ModelConfig.json",
                 SourceType.LOCAL);
 
         modelConfig.getDataSet().setFilterExpressions("diagnosis == \"B\"");
-        modelConfig.getEvalConfigByName("EvalA").getDataSet().setFilterExpressions("column_11");
+        modelConfig.getEvalConfigByName("Eval1").getDataSet().setFilterExpressions("column_11");
 
         Writer writer = ShifuFileUtils.getWriter("ModelConfig.json", SourceType.LOCAL);
         JSONUtils.writeValue(writer, modelConfig);
@@ -65,14 +65,14 @@ public class PurifyDataUDFTest {
 
         instanceA = new PurifyDataUDF("LOCAL",
                 "ModelConfig.json",
-                "src/test/resources/example/cancer-judgement/ModelStore/ModelSet1/ColumnConfig.json");
+                "src/test/resources/unittest/ModelSets/full/ColumnConfig.json");
         instanceD = new PurifyDataUDF("LOCAL",
                 "ModelConfig.json",
-                "src/test/resources/example/cancer-judgement/ModelStore/ModelSet1/ColumnConfig.json",
-                "EvalA");
+                "src/test/resources/unittest/ModelSets/full/ColumnConfig.json",
+                "Eval1");
     }
 
-    @Test
+    //@Test
     public void testEval() throws IOException {
         Tuple input = TupleFactory.getInstance().newTuple(31);
         for (int i = 0; i < 31; i++) {

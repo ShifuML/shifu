@@ -41,13 +41,13 @@ import java.io.IOException;
 
 public class DTrainTest {
 
-    public static final int INPUT_COUNT = 1000;
+    public static final int INPUT_COUNT = 100;
     public static final int HIDDEN_COUNT = 20;
     public static final int OUTPUT_COUNT = 1;
     public static BasicNetwork network;
     public static MLDataSet training;
 
-    public static final int NUM_EPOCHS = 20;
+    public static final int NUM_EPOCHS = 10;
 
     public double rate = 3;
 
@@ -68,7 +68,7 @@ public class DTrainTest {
 
         weights = network.getFlat().getWeights();
 
-        training = RandomTrainingFactory.generate(1000, 10000, INPUT_COUNT, OUTPUT_COUNT, -1, 1);
+        training = RandomTrainingFactory.generate(100, 1000, INPUT_COUNT, OUTPUT_COUNT, -1, 1);
     }
 
     public Gradient initGradient(MLDataSet training) {

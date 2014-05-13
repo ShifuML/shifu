@@ -10,8 +10,7 @@
             }, {
                 "name": "author",
                 "type": "text",
-                "directive": "input",
-                "minLength": 0
+                "directive": "input"
             }, {
                 "name": "description",
                 "type": "text",
@@ -143,6 +142,30 @@
                     {"label": "Equal Interval", "value":"EqualInterval"}
                 ]
             }, {
+                "name": "rawStatsCalculator",
+                "type": "text"
+
+            }, {
+                 "name": "numBinningCalculator",
+                 "type": "text"
+
+            }, {
+                 "name": "catBinningCalculator",
+                 "type": "text"
+
+            }, {
+                 "name": "numStatsCalculator",
+                 "type": "text"
+
+            }, {
+                 "name": "binStatsCalculator",
+                 "type": "text"
+
+            }, {
+                 "name": "statsProcessor",
+                 "type": "text"
+
+            }, {
                 "name": "sampleRate",
                 "type": "number",
                 "directive": "input",
@@ -235,6 +258,13 @@
     {
         "group" : "normalize",
         "metaList" : [
+            {
+                "name": "normalizer",
+                "type": "text",
+                "directive": "input",
+                "defval": "ZScore"
+
+            },
             {
                 "name": "stdDevCutOff",
                 "type": "number",
@@ -470,34 +500,6 @@
                         "name": "weightColumnName",
                         "type": "text",
                         "directive": "input"
-                    }, {
-                        "name": "targetColumnName",
-                        "type": "text",
-                        "directive": "input"
-                    }, {
-                        "name": "posTags",
-                        "type" : "list",
-                        "directive": "input",
-                        "elementType" : "text",
-                        "element" : [ 
-                            {
-                                "name" : "dummy",
-                                "type" : "text",
-                                "directive": "input"       
-                            }
-                        ]
-                    }, {
-                        "name": "negTags",
-                        "type" : "list",
-                        "directive": "input",
-                        "elementType" : "text",
-                        "element" : [ 
-                            {
-                                "name" : "dummy",
-                                "type" : "text",
-                                "directive": "input"       
-                            }
-                        ]
                     }
                 ]
             }, {

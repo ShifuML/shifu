@@ -42,9 +42,9 @@ public class CalculateReasonCodeUDFTest {
 
         Environment.setProperty(Environment.SHIFU_HOME, ".");
         instance = new CalculateReasonCodeUDF("LOCAL",
-                "src/test/resources/example/cancer-judgement/ModelStore/ModelSet1/ModelConfig.json",
-                "src/test/resources/example/cancer-judgement/ModelStore/ModelSet1/ColumnConfig.json",
-                "EvalA");
+                "src/test/resources/unittest/ModelSets/full/ModelConfig.json",
+                "src/test/resources/unittest/ModelSets/full/ColumnConfig.json",
+                "Eval1");
     }
 
     //@Test

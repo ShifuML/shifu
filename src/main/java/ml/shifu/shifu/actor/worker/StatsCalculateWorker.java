@@ -1,5 +1,5 @@
 /**
- * Copyright [2012-2014] eBay Software Foundation
+ * Copyright [2012-2013] eBay Software Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,24 +15,22 @@
  */
 package ml.shifu.shifu.actor.worker;
 
-import akka.actor.ActorRef;
-import ml.shifu.shifu.container.ValueObject;
-import ml.shifu.shifu.container.obj.ColumnConfig;
-import ml.shifu.shifu.container.obj.ColumnConfig.ColumnType;
-import ml.shifu.shifu.container.obj.ModelConfig;
-import ml.shifu.shifu.core.BasicStatsCalculator;
-import ml.shifu.shifu.core.Binning;
-import ml.shifu.shifu.core.Binning.BinningDataType;
-import ml.shifu.shifu.core.KSIVCalculator;
-import ml.shifu.shifu.message.StatsResultMessage;
-import ml.shifu.shifu.message.StatsValueObjectMessage;
-import org.apache.commons.collections.CollectionUtils;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import com.google.inject.Injector;
+import ml.shifu.shifu.container.RawValueObject;
+import ml.shifu.shifu.container.obj.*;
+import ml.shifu.shifu.di.service.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.ArrayList;
-import java.util.List;
+import akka.actor.ActorRef;
 
+import ml.shifu.shifu.message.StatsResultMessage;
+import ml.shifu.shifu.message.StatsValueObjectMessage;
 
 /**
  * StatsCalculateWorker class calculates the stats for each column
@@ -41,21 +39,44 @@ import java.util.List;
 public class StatsCalculateWorker extends AbstractWorkerActor {
 
     private static Logger log = LoggerFactory.getLogger(StatsCalculateWorker.class);
-    private List<ValueObject> voList;
+    private List<RawValueObject> rvoList;
     private int receivedMsgCnt;
     private long missing;
     private long total;
+    //private Injector injector;
+    private ColumnRawStatsService columnRawStatsService;
+    private ColumnBinningService columnBinningService;
+    private ColumnNumStatsService columnNumStatsService;
+    private ColumnBinStatsService columnBinStatsService;
+    private StatsService statsService;
+
 
     public StatsCalculateWorker(
             ModelConfig modelConfig,
             List<ColumnConfig> columnConfigList,
+            Injector injector,
             ActorRef parentActorRef,
             ActorRef nextActorRef) {
         super(modelConfig, columnConfigList, parentActorRef, nextActorRef);
-        voList = new ArrayList<ValueObject>();
+        rvoList = new ArrayList<RawValueObject>();
         receivedMsgCnt = 0;
         missing = 0l;
         total = 0;
+        //this.injector = injector;
+
+        //columnRawStatsService = injector.getInstance(ColumnRawStatsService.class);
+        //columnBinningService = injector.getInstance(ColumnBinningService.class);
+        //columnNumStatsService = injector.getInstance(ColumnNumStatsService.class);
+        //columnBinStatsService = injector.getInstance(ColumnBinStatsService.class);
+
+        statsService = injector.getInstance(StatsService.class);
+
+        Map<String, Object> params = new HashMap<String, Object>();
+
+        params.put("numBins", modelConfig.getBinningExpectedNum());
+        params.put("posTags", modelConfig.getPosTags());
+        params.put("negTags", modelConfig.getNegTags());
+        statsService.setParams(params);
     }
 
     @Override
@@ -63,82 +84,19 @@ public class StatsCalculateWorker extends AbstractWorkerActor {
         if (message instanceof StatsValueObjectMessage) {
             log.debug("Received value object list for stats");
             StatsValueObjectMessage statsVoMessage = (StatsValueObjectMessage) message;
-            voList.addAll(statsVoMessage.getVoList());
-            this.missing += statsVoMessage.getMissing();
-            this.total += statsVoMessage.getTotal();
             receivedMsgCnt++;
+
+            rvoList.addAll(statsVoMessage.getVoList());
 
             if (receivedMsgCnt == statsVoMessage.getTotalMsgCnt()) {
                 log.debug("received " + receivedMsgCnt + ", start to work");
                 ColumnConfig columnConfig = columnConfigList.get(statsVoMessage.getColumnNum());
-                calculateColumnStats(columnConfig, voList);
-                columnConfig.setMissingCnt(this.missing);
-                columnConfig.setTotalCount(this.total);
-                columnConfig.setMissingPercentage((double) missing / total);
+                statsService.exec(columnConfig, rvoList);
                 parentActorRef.tell(new StatsResultMessage(columnConfig), this.getSelf());
             }
         } else {
             unhandled(message);
         }
 
-    }
-
-    /**
-     * Do the stats calculation
-     *
-     * @param columnConfig
-     * @param valueObjList
-     */
-    private void calculateColumnStats(ColumnConfig columnConfig, List<ValueObject> valueObjList) {
-        if (CollectionUtils.isEmpty(valueObjList)) {
-            log.error("No values for column : {}, please check!", columnConfig.getColumnName());
-            return;
-        }
-
-        BinningDataType dataType;
-        if (columnConfig.isNumerical()) {
-            dataType = BinningDataType.Numerical;
-        } else if (columnConfig.isCategorical()) {
-            dataType = BinningDataType.Categorical;
-        } else {
-            dataType = BinningDataType.Auto;
-        }
-
-        // Binning
-        Binning binning = new Binning(modelConfig.getPosTags(), modelConfig.getNegTags(), dataType, valueObjList);
-        binning.setMaxNumOfBins(modelConfig.getBinningExpectedNum());
-        binning.setBinningMethod(modelConfig.getBinningMethod());
-        binning.setAutoTypeThreshold(modelConfig.getAutoTypeThreshold());
-        binning.setMergeEnabled(Boolean.TRUE);
-        binning.doBinning();
-
-        // Calculate Basic Stats
-        BasicStatsCalculator basicStatsCalculator = new BasicStatsCalculator(binning.getUpdatedVoList(), modelConfig.getNumericalValueThreshold());
-        // Calculate KSIV, based on Binning result
-        KSIVCalculator ksivCalculator = new KSIVCalculator();
-        ksivCalculator.calculateKSIV(binning.getBinCountNeg(), binning.getBinCountPos());
-
-        dataType = binning.getUpdatedDataType();
-        if (dataType.equals(BinningDataType.Numerical)) {
-            columnConfig.setColumnType(ColumnType.N);
-            columnConfig.setBinBoundary(binning.getBinBoundary());
-        } else {
-            columnConfig.setColumnType(ColumnType.C);
-            columnConfig.setBinCategory(binning.getBinCategory());
-        }
-
-        columnConfig.setBinCountNeg(binning.getBinCountNeg());
-        columnConfig.setBinCountPos(binning.getBinCountPos());
-        columnConfig.setBinPosCaseRate(binning.getBinPosCaseRate());
-        columnConfig.setKs(ksivCalculator.getKS());
-        columnConfig.setIv(ksivCalculator.getIV());
-        columnConfig.setMax(basicStatsCalculator.getMax());
-        columnConfig.setMin(basicStatsCalculator.getMin());
-        columnConfig.setMean(basicStatsCalculator.getMean());
-        columnConfig.setStdDev(basicStatsCalculator.getStdDev());
-        columnConfig.setMedian(basicStatsCalculator.getMedian());
-        columnConfig.setBinWeightedNeg(binning.getBinWeightedNeg());
-        columnConfig.setBinWeightedPos(binning.getBinWeightedPos());
-        //columnConfig.setMissingCnt(cnt)
     }
 }

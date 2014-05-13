@@ -31,6 +31,9 @@ import ml.shifu.shifu.exception.ShifuErrorCode;
 import ml.shifu.shifu.exception.ShifuException;
 import ml.shifu.shifu.fs.PathFinder;
 import ml.shifu.shifu.fs.ShifuFileUtils;
+import ml.shifu.shifu.container.CategoricalValueObject;
+import ml.shifu.shifu.container.NumericalValueObject;
+import ml.shifu.shifu.container.RawValueObject;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.collections.Predicate;
 import org.apache.commons.io.IOUtils;
@@ -47,7 +50,7 @@ import org.encog.ml.data.basic.BasicMLDataPair;
 import org.encog.persist.EncogDirectoryPersistence;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
+import ml.shifu.shifu.container.obj.ColumnBinningResult;
 import java.io.*;
 import java.util.*;
 import java.util.Map.Entry;
@@ -301,8 +304,8 @@ public final class CommonUtils {
      * @throws IllegalArgumentException if input is null or empty.
      * @throws NumberFormatException    if columnVal does not contain a parsable number.
      */
-    public static int getBinNum(ColumnConfig columnConfig, String columnVal) {
-        if (StringUtils.isEmpty(columnVal) || columnConfig == null) {
+    public static int getBinNum(ColumnConfig columnConfig, Object columnVal) {
+        if (StringUtils.isEmpty(columnVal.toString()) || columnConfig == null) {
             throw new IllegalArgumentException(
                     String.format(
                             "columnVal should not be null or empty, columnConfig should not be null, columnVal:%s, columnConfig:%s",
@@ -319,7 +322,7 @@ public final class CommonUtils {
             }
             return 0;
         } else {
-            return getNumericBinNum(columnConfig.getBinBoundary(), Double.valueOf(columnVal));
+            return getNumericBinNum(columnConfig.getBinBoundary(), Double.valueOf(columnVal.toString()));
         }
     }
 
@@ -1026,5 +1029,112 @@ public final class CommonUtils {
         }
 
         return rawDataMap;
+    }
+
+    public static Class getClass(String name) {
+        try {
+            return Class.forName(name);
+
+        } catch (Exception e) {
+            throw new RuntimeException("No such implementation class: " + name);
+        }
+    }
+
+    public static boolean isValidNumber(Object raw) {
+
+        Double value;
+        try {
+            value = Double.parseDouble(raw.toString());
+        } catch (Exception e) {
+            return false;
+        }
+
+        if (Double.isNaN(value) || Double.isInfinite(value)) {
+            return false;
+        }
+
+        return true;
+    }
+
+    public static List<NumericalValueObject> convertListRaw2Numerical(List<RawValueObject> rvoList, List<String> posTags, List<String> negTags) {
+        List<NumericalValueObject> nvoList = new ArrayList<NumericalValueObject>();
+
+        for (RawValueObject rvo : rvoList) {
+            NumericalValueObject nvo = new NumericalValueObject();
+
+            // Set Value
+            if (!CommonUtils.isValidNumber(rvo.getValue().toString())) {
+                continue;
+            }
+            nvo.setValue(Double.valueOf(rvo.getValue().toString()));
+
+            // Set Tag
+            if (posTags.contains(rvo.getTag())) {
+                nvo.setIsPositive(true);
+            } else if (negTags.contains(rvo.getTag())) {
+                nvo.setIsPositive(false);
+            } else {
+                // ignore
+                continue;
+            }
+
+            // Set Weight
+            nvo.setWeight(rvo.getWeight());
+            nvoList.add(nvo);
+        }
+
+        return nvoList;
+    }
+
+    public static List<CategoricalValueObject> convertListRaw2Categorical(List<RawValueObject> rvoList, List<String> posTags, List<String> negTags) {
+
+        List<CategoricalValueObject> cvoList = new ArrayList<CategoricalValueObject>();
+
+        for (RawValueObject rvo : rvoList) {
+            CategoricalValueObject cvo = new CategoricalValueObject();
+
+            // Set Value
+            if (rvo.getValue() == null) {
+                continue;
+            }
+            cvo.setValue(rvo.getValue().toString());
+
+            // Set Tag
+            if (posTags.contains(rvo.getTag())) {
+                cvo.setIsPositive(true);
+            } else if (negTags.contains(rvo.getTag())) {
+                cvo.setIsPositive(false);
+            } else {
+                // ignore
+                continue;
+            }
+
+            // Set Weight
+            cvo.setWeight(rvo.getWeight());
+            cvoList.add(cvo);
+        }
+
+        return cvoList;
+    }
+
+    public static List<NumericalValueObject> convertListCategorical2Numerical(List<CategoricalValueObject> cvoList, ColumnBinningResult columnBinningResult) {
+
+        List<NumericalValueObject> nvoList = new ArrayList<NumericalValueObject>();
+
+        for (CategoricalValueObject cvo : cvoList) {
+
+            NumericalValueObject nvo = new NumericalValueObject();
+
+            int index = columnBinningResult.getBinCategory().indexOf(cvo.getValue());
+
+            nvo.setValue(columnBinningResult.getBinPosRate().get(index));
+            nvo.setIsPositive(cvo.getIsPositive());
+            nvo.setWeight(cvo.getWeight());
+
+            nvoList.add(nvo);
+        }
+
+        return nvoList;
+
     }
 }

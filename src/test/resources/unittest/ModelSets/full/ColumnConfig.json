@@ -1,0 +1,1377 @@
+[ {
+  "columnNum" : 0,
+  "columnName" : "id",
+  "version" : "0.2.0",
+  "columnType" : null,
+  "columnFlag" : "Meta",
+  "finalSelect" : false,
+  "columnRawStatsResult" : {
+    "cntTotal" : 0,
+    "cntValidPositive" : 0,
+    "cntValidNegative" : 0,
+    "cntIgnoredByTag" : 0,
+    "cntIsNull" : 0,
+    "cntIsNaN" : 0,
+    "cntIsNumber" : 0,
+    "cntUniqueValues" : 0
+  },
+  "columnNumStatsResult" : {
+    "max" : null,
+    "min" : null,
+    "mean" : null,
+    "median" : null,
+    "stdDev" : null
+  },
+  "columnBinningResult" : {
+    "length" : 0,
+    "binBoundary" : null,
+    "binCategory" : null,
+    "binCountNeg" : null,
+    "binCountPos" : null,
+    "binPosRate" : null,
+    "binWeightedNeg" : null,
+    "binWeightedPos" : null
+  },
+  "columnBinStatsResult" : {
+    "ks" : null,
+    "iv" : null,
+    "binWoe" : null,
+    "binAvgScore" : null
+  },
+  "columnControl" : {
+    "stdDevCutOff" : 4.0
+  }
+}, {
+  "columnNum" : 1,
+  "columnName" : "diagnosis",
+  "version" : "0.2.0",
+  "columnType" : null,
+  "columnFlag" : "Target",
+  "finalSelect" : false,
+  "columnRawStatsResult" : {
+    "cntTotal" : 0,
+    "cntValidPositive" : 0,
+    "cntValidNegative" : 0,
+    "cntIgnoredByTag" : 0,
+    "cntIsNull" : 0,
+    "cntIsNaN" : 0,
+    "cntIsNumber" : 0,
+    "cntUniqueValues" : 0
+  },
+  "columnNumStatsResult" : {
+    "max" : null,
+    "min" : null,
+    "mean" : null,
+    "median" : null,
+    "stdDev" : null
+  },
+  "columnBinningResult" : {
+    "length" : 0,
+    "binBoundary" : null,
+    "binCategory" : null,
+    "binCountNeg" : null,
+    "binCountPos" : null,
+    "binPosRate" : null,
+    "binWeightedNeg" : null,
+    "binWeightedPos" : null
+  },
+  "columnBinStatsResult" : {
+    "ks" : null,
+    "iv" : null,
+    "binWoe" : null,
+    "binAvgScore" : null
+  },
+  "columnControl" : {
+    "stdDevCutOff" : 4.0
+  }
+}, {
+  "columnNum" : 2,
+  "columnName" : "mean_radius",
+  "version" : "0.2.0",
+  "columnType" : "N",
+  "columnFlag" : null,
+  "finalSelect" : true,
+  "columnRawStatsResult" : {
+    "cntTotal" : 357,
+    "cntValidPositive" : 132,
+    "cntValidNegative" : 225,
+    "cntIgnoredByTag" : 0,
+    "cntIsNull" : 0,
+    "cntIsNaN" : 0,
+    "cntIsNumber" : 357,
+    "cntUniqueValues" : 311
+  },
+  "columnNumStatsResult" : {
+    "max" : 28.11,
+    "min" : 6.981,
+    "mean" : 14.016725490196075,
+    "median" : 13.43,
+    "stdDev" : 3.4638662728886245
+  },
+  "columnBinningResult" : {
+    "length" : 10,
+    "binBoundary" : [ "-Infinity", 10.26, 11.41, 12.05, 12.63, 13.44, 13.9, 14.92, 16.6, 19.45 ],
+    "binCategory" : null,
+    "binCountNeg" : [ 36, 35, 34, 33, 28, 26, 21, 10, 2, 0 ],
+    "binCountPos" : [ 0, 1, 2, 2, 8, 10, 14, 26, 34, 35 ],
+    "binPosRate" : [ 0.0, 0.027777777777777776, 0.05555555555555555, 0.05714285714285714, 0.2222222222222222, 0.2777777777777778, 0.4, 0.7222222222222222, 0.9444444444444444, 1.0 ],
+    "binWeightedNeg" : [ 36.0, 35.0, 34.0, 33.0, 28.0, 26.0, 21.0, 10.0, 2.0, 0.0 ],
+    "binWeightedPos" : [ 0.0, 1.0, 2.0, 2.0, 8.0, 10.0, 14.0, 26.0, 34.0, 35.0 ]
+  },
+  "columnBinStatsResult" : {
+    "ks" : 67.90909090909089,
+    "iv" : 11.331379321681904,
+    "binWoe" : [ -21.193269466817146, -3.0220495693142215, -2.2999148584999314, -2.270061895370304, -0.71946448803089, -0.42221296495477173, 0.12783337138131345, 1.4888099229031777, 3.366511812812501, 21.698397069220643 ],
+    "binAvgScore" : [ 105, 130, 156, 176, 234, 255, 443, 618, 789, 850 ]
+  },
+  "columnControl" : {
+    "stdDevCutOff" : 4.0
+  }
+}, {
+  "columnNum" : 3,
+  "columnName" : "mean_texture",
+  "version" : "0.2.0",
+  "columnType" : "N",
+  "columnFlag" : null,
+  "finalSelect" : true,
+  "columnRawStatsResult" : {
+    "cntTotal" : 357,
+    "cntValidPositive" : 132,
+    "cntValidNegative" : 225,
+    "cntIgnoredByTag" : 0,
+    "cntIsNull" : 0,
+    "cntIsNaN" : 0,
+    "cntIsNumber" : 357,
+    "cntUniqueValues" : 327
+  },
+  "columnNumStatsResult" : {
+    "max" : 39.28,
+    "min" : 9.71,
+    "mean" : 19.353025210084034,
+    "median" : 18.75,
+    "stdDev" : 4.407704800882468
+  },
+  "columnBinningResult" : {
+    "length" : 10,
+    "binBoundary" : [ "-Infinity", 14.4, 15.7, 16.85, 17.93, 18.77, 19.83, 21.25, 22.41, 25.12 ],
+    "binCategory" : null,
+    "binCountNeg" : [ 34, 34, 32, 24, 27, 21, 19, 12, 7, 15 ],
+    "binCountPos" : [ 2, 2, 4, 11, 9, 15, 16, 24, 29, 20 ],
+    "binPosRate" : [ 0.05555555555555555, 0.05555555555555555, 0.1111111111111111, 0.3142857142857143, 0.25, 0.4166666666666667, 0.45714285714285713, 0.6666666666666666, 0.8055555555555556, 0.5714285714285714 ],
+    "binWeightedNeg" : [ 34.0, 34.0, 32.0, 24.0, 27.0, 21.0, 19.0, 12.0, 7.0, 15.0 ],
+    "binWeightedPos" : [ 2.0, 2.0, 4.0, 11.0, 9.0, 15.0, 16.0, 24.0, 29.0, 20.0 ]
+  },
+  "columnBinStatsResult" : {
+    "ks" : 45.8989898989899,
+    "iv" : 1.4466378850554786,
+    "binWoe" : [ -2.2999148584999314, -2.2999148584999314, -1.5461430594649117, -0.24686007766902587, -0.5653138084167272, 0.19682624280540775, 0.36144822233217955, 1.2264456588529946, 1.9546841577900966, 0.8209805512298304 ],
+    "binAvgScore" : [ 195, 211, 226, 321, 276, 392, 489, 521, 595, 482 ]
+  },
+  "columnControl" : {
+    "stdDevCutOff" : 4.0
+  }
+}, {
+  "columnNum" : 4,
+  "columnName" : "mean_perimeter",
+  "version" : "0.2.0",
+  "columnType" : "N",
+  "columnFlag" : null,
+  "finalSelect" : true,
+  "columnRawStatsResult" : {
+    "cntTotal" : 357,
+    "cntValidPositive" : 132,
+    "cntValidNegative" : 225,
+    "cntIgnoredByTag" : 0,
+    "cntIsNull" : 0,
+    "cntIsNaN" : 0,
+    "cntIsNumber" : 357,
+    "cntUniqueValues" : 339
+  },
+  "columnNumStatsResult" : {
+    "max" : 188.5,
+    "min" : 43.79,
+    "mean" : 91.14453781512607,
+    "median" : 86.6,
+    "stdDev" : 23.78449785767941
+  },
+  "columnBinningResult" : {
+    "length" : 10,
+    "binBoundary" : [ "-Infinity", 65.75, 73.06, 77.79, 81.37, 86.87, 90.43, 97.4, 109.3, 127.2 ],
+    "binCategory" : null,
+    "binCountNeg" : [ 36, 35, 35, 34, 28, 29, 18, 9, 1, 0 ],
+    "binCountPos" : [ 0, 1, 1, 1, 8, 7, 17, 27, 35, 35 ],
+    "binPosRate" : [ 0.0, 0.027777777777777776, 0.027777777777777776, 0.02857142857142857, 0.2222222222222222, 0.19444444444444445, 0.4857142857142857, 0.75, 0.9722222222222222, 1.0 ],
+    "binWeightedNeg" : [ 36.0, 35.0, 35.0, 34.0, 28.0, 29.0, 18.0, 9.0, 1.0, 0.0 ],
+    "binWeightedPos" : [ 0.0, 1.0, 1.0, 1.0, 8.0, 7.0, 17.0, 27.0, 35.0, 35.0 ]
+  },
+  "columnBinStatsResult" : {
+    "ks" : 73.91919191919193,
+    "iv" : 11.939291669439424,
+    "binWoe" : [ -21.193269466817146, -3.0220495693142215, -3.0220495693142215, -2.993062032459877, -0.71946448803089, -0.8880872002032592, 0.47614006530457137, 1.631910766275048, 4.088646518984606, 21.698397069220643 ],
+    "binAvgScore" : [ 104, 108, 154, 152, 225, 253, 453, 652, 796, 849 ]
+  },
+  "columnControl" : {
+    "stdDevCutOff" : 4.0
+  }
+}, {
+  "columnNum" : 5,
+  "columnName" : "mean_area",
+  "version" : "0.2.0",
+  "columnType" : "N",
+  "columnFlag" : null,
+  "finalSelect" : true,
+  "columnRawStatsResult" : {
+    "cntTotal" : 357,
+    "cntValidPositive" : 132,
+    "cntValidNegative" : 225,
+    "cntIgnoredByTag" : 0,
+    "cntIsNull" : 0,
+    "cntIsNaN" : 0,
+    "cntIsNumber" : 357,
+    "cntUniqueValues" : 346
+  },
+  "columnNumStatsResult" : {
+    "max" : 2499.0,
+    "min" : 143.5,
+    "mean" : 643.9145658263303,
+    "median" : 552.4,
+    "stdDev" : 345.8566445093816
+  },
+  "columnBinningResult" : {
+    "length" : 10,
+    "binBoundary" : [ "-Infinity", 321.6, 398.0, 446.0, 489.9, 555.1, 599.5, 685.0, 858.1, 1169.0 ],
+    "binCategory" : null,
+    "binCountNeg" : [ 36, 34, 35, 33, 29, 25, 22, 9, 2, 0 ],
+    "binCountPos" : [ 0, 2, 1, 2, 7, 11, 13, 27, 34, 35 ],
+    "binPosRate" : [ 0.0, 0.05555555555555555, 0.027777777777777776, 0.05714285714285714, 0.19444444444444445, 0.3055555555555556, 0.37142857142857144, 0.75, 0.9444444444444444, 1.0 ],
+    "binWeightedNeg" : [ 36.0, 34.0, 35.0, 33.0, 29.0, 25.0, 22.0, 9.0, 2.0, 0.0 ],
+    "binWeightedPos" : [ 0.0, 2.0, 1.0, 2.0, 7.0, 11.0, 13.0, 27.0, 34.0, 35.0 ]
+  },
+  "columnBinStatsResult" : {
+    "ks" : 67.90909090909089,
+    "iv" : 11.38382737018058,
+    "binWoe" : [ -21.193269466817146, -2.2999148584999314, -3.0220495693142215, -2.270061895370304, -0.8880872002032592, -0.2876820721517809, 0.007205383713927401, 1.631910766275048, 3.366511812812501, 21.698397069220643 ],
+    "binAvgScore" : [ 105, 147, 140, 181, 215, 272, 443, 618, 789, 850 ]
+  },
+  "columnControl" : {
+    "stdDevCutOff" : 4.0
+  }
+}, {
+  "columnNum" : 6,
+  "columnName" : "mean_smoothness",
+  "version" : "0.2.0",
+  "columnType" : "N",
+  "columnFlag" : null,
+  "finalSelect" : true,
+  "columnRawStatsResult" : {
+    "cntTotal" : 357,
+    "cntValidPositive" : 132,
+    "cntValidNegative" : 225,
+    "cntIgnoredByTag" : 0,
+    "cntIsNull" : 0,
+    "cntIsNaN" : 0,
+    "cntIsNumber" : 357,
+    "cntUniqueValues" : 308
+  },
+  "columnNumStatsResult" : {
+    "max" : 0.1634,
+    "min" : 0.05263,
+    "mean" : 0.09684277310924366,
+    "median" : 0.09686,
+    "stdDev" : 0.013929102441160631
+  },
+  "columnBinningResult" : {
+    "length" : 10,
+    "binBoundary" : [ "-Infinity", 0.0806, 0.08472, 0.08865, 0.092, 0.09687, 0.1006, 0.1038, 0.1075, 0.1149 ],
+    "binCategory" : null,
+    "binCountNeg" : [ 35, 26, 31, 21, 24, 22, 17, 19, 16, 14 ],
+    "binCountPos" : [ 1, 10, 5, 14, 12, 14, 18, 17, 20, 21 ],
+    "binPosRate" : [ 0.027777777777777776, 0.2777777777777778, 0.1388888888888889, 0.4, 0.3333333333333333, 0.3888888888888889, 0.5142857142857142, 0.4722222222222222, 0.5555555555555556, 0.6 ],
+    "binWeightedNeg" : [ 35.0, 26.0, 31.0, 21.0, 24.0, 22.0, 17.0, 19.0, 16.0, 14.0 ],
+    "binWeightedPos" : [ 1.0, 10.0, 5.0, 14.0, 12.0, 14.0, 18.0, 17.0, 20.0, 21.0 ]
+  },
+  "columnBinStatsResult" : {
+    "ks" : 29.07070707070707,
+    "iv" : 0.8041979636279647,
+    "binWoe" : [ -3.0220495693142215, -0.42221296495477173, -1.291250810518803, 0.12783337138131345, -0.15984870077939614, 0.08131335579512197, 0.5904568928678019, 0.422072844100085, 0.7564420301860093, 0.9387635867476424 ],
+    "binAvgScore" : [ 149, 256, 210, 394, 321, 428, 445, 433, 565, 554 ]
+  },
+  "columnControl" : {
+    "stdDevCutOff" : 4.0
+  }
+}, {
+  "columnNum" : 7,
+  "columnName" : "mean_compactness",
+  "version" : "0.2.0",
+  "columnType" : "N",
+  "columnFlag" : null,
+  "finalSelect" : true,
+  "columnRawStatsResult" : {
+    "cntTotal" : 357,
+    "cntValidPositive" : 132,
+    "cntValidNegative" : 225,
+    "cntIgnoredByTag" : 0,
+    "cntIsNull" : 0,
+    "cntIsNaN" : 0,
+    "cntIsNumber" : 357,
+    "cntUniqueValues" : 344
+  },
+  "columnNumStatsResult" : {
+    "max" : 0.3454,
+    "min" : 0.02344,
+    "mean" : 0.1025132492997199,
+    "median" : 0.09218,
+    "stdDev" : 0.051046712800404695
+  },
+  "columnBinningResult" : {
+    "length" : 10,
+    "binBoundary" : [ "-Infinity", 0.04689, 0.05886, 0.07081, 0.0812, 0.09228, 0.1074, 0.1209, 0.1402, 0.17 ],
+    "binCategory" : null,
+    "binCountNeg" : [ 35, 36, 30, 31, 29, 23, 16, 14, 8, 3 ],
+    "binCountPos" : [ 1, 0, 6, 4, 7, 13, 19, 22, 28, 32 ],
+    "binPosRate" : [ 0.027777777777777776, 0.0, 0.16666666666666666, 0.11428571428571428, 0.19444444444444445, 0.3611111111111111, 0.5428571428571428, 0.6111111111111112, 0.7777777777777778, 0.9142857142857143 ],
+    "binWeightedNeg" : [ 35.0, 36.0, 30.0, 31.0, 29.0, 23.0, 16.0, 14.0, 8.0, 3.0 ],
+    "binWeightedPos" : [ 1.0, 0.0, 6.0, 4.0, 7.0, 13.0, 19.0, 22.0, 28.0, 32.0 ]
+  },
+  "columnBinStatsResult" : {
+    "ks" : 58.29292929292929,
+    "iv" : 5.2970422370261145,
+    "binWoe" : [ -3.0220495693142215, -21.193269466817146, -1.076139431366051, -1.5143943611730128, -0.8880872002032592, -0.03724637881244001, 0.7051487358331956, 0.9852836023539637, 1.7860614457723458, 2.900422086662166 ],
+    "binAvgScore" : [ 101, 104, 185, 211, 248, 379, 433, 607, 699, 765 ]
+  },
+  "columnControl" : {
+    "stdDevCutOff" : 4.0
+  }
+}, {
+  "columnNum" : 8,
+  "columnName" : "mean_concavity",
+  "version" : "0.2.0",
+  "columnType" : "N",
+  "columnFlag" : null,
+  "finalSelect" : true,
+  "columnRawStatsResult" : {
+    "cntTotal" : 357,
+    "cntValidPositive" : 132,
+    "cntValidNegative" : 225,
+    "cntIgnoredByTag" : 0,
+    "cntIsNull" : 0,
+    "cntIsNaN" : 0,
+    "cntIsNumber" : 357,
+    "cntUniqueValues" : 343
+  },
+  "columnNumStatsResult" : {
+    "max" : 0.4108,
+    "min" : 0.0,
+    "mean" : 0.08373801400560225,
+    "median" : 0.05892,
+    "stdDev" : 0.0754817188673971
+  },
+  "columnBinningResult" : {
+    "length" : 10,
+    "binBoundary" : [ "-Infinity", 0.01084, 0.02251, 0.03296, 0.04334, 0.05892, 0.08487, 0.1065, 0.145, 0.1921 ],
+    "binCategory" : null,
+    "binCountNeg" : [ 36, 36, 34, 34, 30, 30, 14, 6, 3, 2 ],
+    "binCountPos" : [ 0, 0, 2, 1, 6, 6, 21, 30, 33, 33 ],
+    "binPosRate" : [ 0.0, 0.0, 0.05555555555555555, 0.02857142857142857, 0.16666666666666666, 0.16666666666666666, 0.6, 0.8333333333333334, 0.9166666666666666, 0.9428571428571428 ],
+    "binWeightedNeg" : [ 36.0, 36.0, 34.0, 34.0, 30.0, 30.0, 14.0, 6.0, 3.0, 2.0 ],
+    "binWeightedPos" : [ 0.0, 0.0, 2.0, 1.0, 6.0, 6.0, 21.0, 30.0, 33.0, 33.0 ]
+  },
+  "columnBinStatsResult" : {
+    "ks" : 77.52525252525253,
+    "iv" : 9.732295676394195,
+    "binWoe" : [ -21.193269466817146, -21.193269466817146, -2.2999148584999314, -2.993062032459877, -1.076139431366051, -1.076139431366051, 0.9387635867476424, 2.1427363887421493, 2.9311937453164196, 3.3366588496745844 ],
+    "binAvgScore" : [ 86, 103, 127, 139, 248, 244, 499, 660, 765, 791 ]
+  },
+  "columnControl" : {
+    "stdDevCutOff" : 4.0
+  }
+}, {
+  "columnNum" : 9,
+  "columnName" : "mean_concave_points",
+  "version" : "0.2.0",
+  "columnType" : "N",
+  "columnFlag" : null,
+  "finalSelect" : true,
+  "columnRawStatsResult" : {
+    "cntTotal" : 357,
+    "cntValidPositive" : 132,
+    "cntValidNegative" : 225,
+    "cntIgnoredByTag" : 0,
+    "cntIsNull" : 0,
+    "cntIsNaN" : 0,
+    "cntIsNumber" : 357,
+    "cntUniqueValues" : 341
+  },
+  "columnNumStatsResult" : {
+    "max" : 0.1913,
+    "min" : 0.0,
+    "mean" : 0.04696622408963586,
+    "median" : 0.03326,
+    "stdDev" : 0.03672135094223353
+  },
+  "columnBinningResult" : {
+    "length" : 10,
+    "binBoundary" : [ "-Infinity", 0.009615, 0.01723, 0.0218, 0.02791, 0.03334, 0.04835, 0.06254, 0.08089, 0.09664 ],
+    "binCategory" : null,
+    "binCountNeg" : [ 36, 36, 35, 34, 32, 31, 13, 7, 1, 0 ],
+    "binCountPos" : [ 0, 0, 1, 1, 4, 5, 22, 29, 35, 35 ],
+    "binPosRate" : [ 0.0, 0.0, 0.027777777777777776, 0.02857142857142857, 0.1111111111111111, 0.1388888888888889, 0.6285714285714286, 0.8055555555555556, 0.9722222222222222, 1.0 ],
+    "binWeightedNeg" : [ 36.0, 36.0, 35.0, 34.0, 32.0, 31.0, 13.0, 7.0, 1.0, 0.0 ],
+    "binWeightedPos" : [ 0.0, 0.0, 1.0, 1.0, 4.0, 5.0, 22.0, 29.0, 35.0, 35.0 ]
+  },
+  "columnBinStatsResult" : {
+    "ks" : 82.33333333333334,
+    "iv" : 15.263980142577912,
+    "binWoe" : [ -21.193269466817146, -21.193269466817146, -3.0220495693142215, -2.993062032459877, -1.5461430594649117, -1.291250810518803, 1.0593915743840592, 1.9546841577900966, 4.088646518984606, 21.698397069220643 ],
+    "binAvgScore" : [ 85, 99, 118, 142, 210, 274, 463, 686, 797, 842 ]
+  },
+  "columnControl" : {
+    "stdDevCutOff" : 4.0
+  }
+}, {
+  "columnNum" : 10,
+  "columnName" : "mean_symmetry",
+  "version" : "0.2.0",
+  "columnType" : "N",
+  "columnFlag" : null,
+  "finalSelect" : true,
+  "columnRawStatsResult" : {
+    "cntTotal" : 357,
+    "cntValidPositive" : 132,
+    "cntValidNegative" : 225,
+    "cntIgnoredByTag" : 0,
+    "cntIsNull" : 0,
+    "cntIsNaN" : 0,
+    "cntIsNumber" : 357,
+    "cntUniqueValues" : 302
+  },
+  "columnNumStatsResult" : {
+    "max" : 0.2906,
+    "min" : 0.106,
+    "mean" : 0.18008739495798323,
+    "median" : 0.178,
+    "stdDev" : 0.026848042700471243
+  },
+  "columnBinningResult" : {
+    "length" : 10,
+    "binBoundary" : [ "-Infinity", 0.1489, 0.1587, 0.1645, 0.1714, 0.1781, 0.1853, 0.1925, 0.1993, 0.2163 ],
+    "binCategory" : null,
+    "binCountNeg" : [ 31, 27, 28, 30, 21, 21, 20, 17, 17, 13 ],
+    "binCountPos" : [ 5, 9, 8, 5, 15, 15, 15, 19, 19, 22 ],
+    "binPosRate" : [ 0.1388888888888889, 0.25, 0.2222222222222222, 0.14285714285714285, 0.4166666666666667, 0.4166666666666667, 0.42857142857142855, 0.5277777777777778, 0.5277777777777778, 0.6285714285714286 ],
+    "binWeightedNeg" : [ 31.0, 27.0, 28.0, 30.0, 21.0, 21.0, 20.0, 17.0, 17.0, 13.0 ],
+    "binWeightedPos" : [ 5.0, 9.0, 8.0, 5.0, 15.0, 15.0, 15.0, 19.0, 19.0, 22.0 ]
+  },
+  "columnBinStatsResult" : {
+    "ks" : 31.1010101010101,
+    "iv" : 0.5419202183971721,
+    "binWoe" : [ -1.291250810518803, -0.5653138084167272, -0.71946448803089, -1.2584609877200057, 0.19682624280540775, 0.19682624280540775, 0.24561640692126838, 0.6445241140994813, 0.6445241140994813, 1.0593915743840592 ],
+    "binAvgScore" : [ 188, 285, 210, 231, 421, 432, 342, 487, 503, 555 ]
+  },
+  "columnControl" : {
+    "stdDevCutOff" : 4.0
+  }
+}, {
+  "columnNum" : 11,
+  "columnName" : "mean_fractal_dimension",
+  "version" : "0.2.0",
+  "columnType" : "N",
+  "columnFlag" : null,
+  "finalSelect" : true,
+  "columnRawStatsResult" : {
+    "cntTotal" : 357,
+    "cntValidPositive" : 132,
+    "cntValidNegative" : 225,
+    "cntIgnoredByTag" : 0,
+    "cntIsNull" : 0,
+    "cntIsNaN" : 0,
+    "cntIsNumber" : 357,
+    "cntUniqueValues" : 333
+  },
+  "columnNumStatsResult" : {
+    "max" : 0.09744,
+    "min" : 0.05044,
+    "mean" : 0.06285635854341735,
+    "median" : 0.06181,
+    "stdDev" : 0.006846840669388054
+  },
+  "columnBinningResult" : {
+    "length" : 10,
+    "binBoundary" : [ "-Infinity", 0.05544, 0.05701, 0.05886, 0.06048, 0.06183, 0.06344, 0.06544, 0.06782, 0.07237 ],
+    "binCategory" : null,
+    "binCountNeg" : [ 15, 20, 30, 27, 24, 21, 25, 21, 25, 17 ],
+    "binCountPos" : [ 21, 16, 6, 8, 12, 15, 10, 15, 11, 18 ],
+    "binPosRate" : [ 0.5833333333333334, 0.4444444444444444, 0.16666666666666666, 0.22857142857142856, 0.3333333333333333, 0.4166666666666667, 0.2857142857142857, 0.4166666666666667, 0.3055555555555556, 0.5142857142857142 ],
+    "binWeightedNeg" : [ 15.0, 20.0, 30.0, 27.0, 24.0, 21.0, 25.0, 21.0, 25.0, 17.0 ],
+    "binWeightedPos" : [ 21.0, 16.0, 6.0, 8.0, 12.0, 15.0, 10.0, 15.0, 11.0, 18.0 ]
+  },
+  "columnBinStatsResult" : {
+    "ks" : 12.474747474747472,
+    "iv" : 0.2935017662059195,
+    "binWoe" : [ 0.8697707153678338, 0.31015492800383954, -1.076139431366051, -0.6830968438897771, -0.15984870077939614, 0.19682624280540775, -0.38299225183610575, 0.19682624280540775, -0.2876820721517809, 0.5904568928678019 ],
+    "binAvgScore" : [ 482, 351, 233, 294, 363, 404, 311, 389, 365, 491 ]
+  },
+  "columnControl" : {
+    "stdDevCutOff" : 4.0
+  }
+}, {
+  "columnNum" : 12,
+  "columnName" : "std_radius",
+  "version" : "0.2.0",
+  "columnType" : "N",
+  "columnFlag" : null,
+  "finalSelect" : true,
+  "columnRawStatsResult" : {
+    "cntTotal" : 357,
+    "cntValidPositive" : 132,
+    "cntValidNegative" : 225,
+    "cntIgnoredByTag" : 0,
+    "cntIsNull" : 0,
+    "cntIsNaN" : 0,
+    "cntIsNumber" : 357,
+    "cntUniqueValues" : 345
+  },
+  "columnNumStatsResult" : {
+    "max" : 2.873,
+    "min" : 0.1115,
+    "mean" : 0.3895464985994397,
+    "median" : 0.3141,
+    "stdDev" : 0.25738246563883066
+  },
+  "columnBinningResult" : {
+    "length" : 10,
+    "binBoundary" : [ "-Infinity", 0.1839, 0.2185, 0.2431, 0.2742, 0.3147, 0.3582, 0.4209, 0.524, 0.726 ],
+    "binCategory" : null,
+    "binCountNeg" : [ 36, 31, 31, 29, 22, 31, 24, 15, 3, 3 ],
+    "binCountPos" : [ 0, 5, 5, 6, 14, 5, 11, 21, 33, 32 ],
+    "binPosRate" : [ 0.0, 0.1388888888888889, 0.1388888888888889, 0.17142857142857143, 0.3888888888888889, 0.1388888888888889, 0.3142857142857143, 0.5833333333333334, 0.9166666666666666, 0.9142857142857143 ],
+    "binWeightedNeg" : [ 36.0, 31.0, 31.0, 29.0, 22.0, 31.0, 24.0, 15.0, 3.0, 3.0 ],
+    "binWeightedPos" : [ 0.0, 5.0, 5.0, 6.0, 14.0, 5.0, 11.0, 21.0, 33.0, 32.0 ]
+  },
+  "columnBinStatsResult" : {
+    "ks" : 55.81818181818182,
+    "iv" : 5.309863161050275,
+    "binWoe" : [ -21.193269466817146, -1.291250810518803, -1.291250810518803, -1.042237879716232, 0.08131335579512197, -1.291250810518803, -0.24686007766902587, 0.8697707153678338, 2.9311937453164196, 2.900422086662166 ],
+    "binAvgScore" : [ 120, 176, 196, 195, 321, 261, 302, 498, 751, 821 ]
+  },
+  "columnControl" : {
+    "stdDevCutOff" : 4.0
+  }
+}, {
+  "columnNum" : 13,
+  "columnName" : "std_texture",
+  "version" : "0.2.0",
+  "columnType" : "N",
+  "columnFlag" : null,
+  "finalSelect" : true,
+  "columnRawStatsResult" : {
+    "cntTotal" : 357,
+    "cntValidPositive" : 132,
+    "cntValidNegative" : 225,
+    "cntIgnoredByTag" : 0,
+    "cntIsNull" : 0,
+    "cntIsNaN" : 0,
+    "cntIsNumber" : 357,
+    "cntUniqueValues" : 335
+  },
+  "columnNumStatsResult" : {
+    "max" : 4.885,
+    "min" : 0.3602,
+    "mean" : 1.2062843137254897,
+    "median" : 1.093,
+    "stdDev" : 0.5612319766935617
+  },
+  "columnBinningResult" : {
+    "length" : 10,
+    "binBoundary" : [ "-Infinity", 0.6205, 0.7786, 0.8944, 0.9951, 1.095, 1.268, 1.391, 1.539, 1.885 ],
+    "binCategory" : null,
+    "binCountNeg" : [ 28, 25, 16, 23, 18, 22, 22, 22, 20, 29 ],
+    "binCountPos" : [ 8, 11, 20, 12, 18, 14, 13, 14, 16, 6 ],
+    "binPosRate" : [ 0.2222222222222222, 0.3055555555555556, 0.5555555555555556, 0.34285714285714286, 0.5, 0.3888888888888889, 0.37142857142857144, 0.3888888888888889, 0.4444444444444444, 0.17142857142857143 ],
+    "binWeightedNeg" : [ 28.0, 25.0, 16.0, 23.0, 18.0, 22.0, 22.0, 22.0, 20.0, 29.0 ],
+    "binWeightedPos" : [ 8.0, 11.0, 20.0, 12.0, 18.0, 14.0, 13.0, 14.0, 16.0, 6.0 ]
+  },
+  "columnBinStatsResult" : {
+    "ks" : 9.161616161616163,
+    "iv" : 0.24446290959233163,
+    "binWoe" : [ -0.71946448803089, -0.2876820721517809, 0.7564420301860093, -0.11728908640136096, 0.5332984791013827, 0.08131335579512197, 0.007205383713927401, 0.08131335579512197, 0.31015492800383954, -1.042237879716232 ],
+    "binAvgScore" : [ 235, 339, 464, 345, 524, 409, 363, 400, 377, 261 ]
+  },
+  "columnControl" : {
+    "stdDevCutOff" : 4.0
+  }
+}, {
+  "columnNum" : 14,
+  "columnName" : "std_perimeter",
+  "version" : "0.2.0",
+  "columnType" : "N",
+  "columnFlag" : null,
+  "finalSelect" : true,
+  "columnRawStatsResult" : {
+    "cntTotal" : 357,
+    "cntValidPositive" : 132,
+    "cntValidNegative" : 225,
+    "cntIgnoredByTag" : 0,
+    "cntIsNull" : 0,
+    "cntIsNaN" : 0,
+    "cntIsNumber" : 357,
+    "cntUniqueValues" : 347
+  },
+  "columnNumStatsResult" : {
+    "max" : 21.98,
+    "min" : 0.757,
+    "mean" : 2.7235787114845955,
+    "median" : 2.224,
+    "stdDev" : 1.8349859882193218
+  },
+  "columnBinningResult" : {
+    "length" : 10,
+    "binBoundary" : [ "-Infinity", 1.301, 1.497, 1.729, 1.973, 2.225, 2.537, 2.927, 3.705, 4.837 ],
+    "binCategory" : null,
+    "binCountNeg" : [ 36, 33, 33, 26, 27, 25, 22, 14, 7, 2 ],
+    "binCountPos" : [ 0, 3, 3, 9, 9, 11, 13, 22, 29, 33 ],
+    "binPosRate" : [ 0.0, 0.08333333333333333, 0.08333333333333333, 0.2571428571428571, 0.25, 0.3055555555555556, 0.37142857142857144, 0.6111111111111112, 0.8055555555555556, 0.9428571428571428 ],
+    "binWeightedNeg" : [ 36.0, 33.0, 33.0, 26.0, 27.0, 25.0, 22.0, 14.0, 7.0, 2.0 ],
+    "binWeightedPos" : [ 0.0, 3.0, 3.0, 9.0, 9.0, 11.0, 13.0, 22.0, 29.0, 33.0 ]
+  },
+  "columnBinStatsResult" : {
+    "ks" : 53.48484848484849,
+    "iv" : 5.191438742622609,
+    "binWoe" : [ -21.193269466817146, -1.8645967894621394, -1.8645967894621394, -0.5275734804659314, -0.5653138084167272, -0.2876820721517809, 0.007205383713927401, 0.9852836023539637, 1.9546841577900966, 3.3366588496745844 ],
+    "binAvgScore" : [ 107, 159, 159, 235, 278, 300, 335, 562, 678, 814 ]
+  },
+  "columnControl" : {
+    "stdDevCutOff" : 4.0
+  }
+}, {
+  "columnNum" : 15,
+  "columnName" : "std_area",
+  "version" : "0.2.0",
+  "columnType" : "N",
+  "columnFlag" : null,
+  "finalSelect" : true,
+  "columnRawStatsResult" : {
+    "cntTotal" : 357,
+    "cntValidPositive" : 132,
+    "cntValidNegative" : 225,
+    "cntIgnoredByTag" : 0,
+    "cntIsNull" : 0,
+    "cntIsNaN" : 0,
+    "cntIsNumber" : 357,
+    "cntUniqueValues" : 338
+  },
+  "columnNumStatsResult" : {
+    "max" : 525.6,
+    "min" : 7.228,
+    "mean" : 38.354095238095226,
+    "median" : 23.56,
+    "stdDev" : 41.99805283426982
+  },
+  "columnBinningResult" : {
+    "length" : 10,
+    "binBoundary" : [ "-Infinity", 12.98, 16.57, 19.08, 20.86, 23.81, 28.85, 34.84, 50.96, 87.17 ],
+    "binCategory" : null,
+    "binCountNeg" : [ 36, 35, 32, 31, 31, 25, 22, 11, 2, 0 ],
+    "binCountPos" : [ 0, 1, 4, 4, 5, 11, 13, 25, 34, 35 ],
+    "binPosRate" : [ 0.0, 0.027777777777777776, 0.1111111111111111, 0.11428571428571428, 0.1388888888888889, 0.3055555555555556, 0.37142857142857144, 0.6944444444444444, 0.9444444444444444, 1.0 ],
+    "binWeightedNeg" : [ 36.0, 35.0, 32.0, 31.0, 31.0, 25.0, 22.0, 11.0, 2.0, 0.0 ],
+    "binWeightedPos" : [ 0.0, 1.0, 4.0, 4.0, 5.0, 11.0, 13.0, 25.0, 34.0, 35.0 ]
+  },
+  "columnBinStatsResult" : {
+    "ks" : 65.5050505050505,
+    "iv" : 11.09177173177832,
+    "binWoe" : [ -21.193269466817146, -3.0220495693142215, -1.5461430594649117, -1.5143943611730128, -1.291250810518803, -0.2876820721517809, 0.007205383713927401, 1.3542790301704248, 3.366511812812501, 21.698397069220643 ],
+    "binAvgScore" : [ 112, 142, 142, 208, 204, 289, 365, 568, 791, 844 ]
+  },
+  "columnControl" : {
+    "stdDevCutOff" : 4.0
+  }
+}, {
+  "columnNum" : 16,
+  "columnName" : "std_smoothness",
+  "version" : "0.2.0",
+  "columnType" : "N",
+  "columnFlag" : null,
+  "finalSelect" : true,
+  "columnRawStatsResult" : {
+    "cntTotal" : 357,
+    "cntValidPositive" : 132,
+    "cntValidNegative" : 225,
+    "cntIgnoredByTag" : 0,
+    "cntIsNull" : 0,
+    "cntIsNaN" : 0,
+    "cntIsNumber" : 357,
+    "cntUniqueValues" : 352
+  },
+  "columnNumStatsResult" : {
+    "max" : 0.03113,
+    "min" : 0.001713,
+    "mean" : 0.007033266106442579,
+    "median" : 0.00647,
+    "stdDev" : 0.0030036243349128287
+  },
+  "columnBinningResult" : {
+    "length" : 10,
+    "binBoundary" : [ "-Infinity", 0.0042, 0.004796, 0.005367, 0.005851, 0.006471, 0.007138, 0.007807, 0.008824, 0.01052 ],
+    "binCategory" : null,
+    "binCountNeg" : [ 26, 20, 20, 19, 16, 22, 28, 21, 25, 28 ],
+    "binCountPos" : [ 10, 16, 16, 16, 20, 14, 7, 15, 11, 7 ],
+    "binPosRate" : [ 0.2777777777777778, 0.4444444444444444, 0.4444444444444444, 0.45714285714285713, 0.5555555555555556, 0.3888888888888889, 0.2, 0.4166666666666667, 0.3055555555555556, 0.2 ],
+    "binWeightedNeg" : [ 26.0, 20.0, 20.0, 19.0, 16.0, 22.0, 28.0, 21.0, 25.0, 28.0 ],
+    "binWeightedPos" : [ 10.0, 16.0, 16.0, 16.0, 20.0, 14.0, 7.0, 15.0, 11.0, 7.0 ]
+  },
+  "columnBinStatsResult" : {
+    "ks" : 15.030303030303038,
+    "iv" : 0.24545702886928222,
+    "binWoe" : [ -0.42221296495477173, 0.31015492800383954, 0.31015492800383954, 0.36144822233217955, 0.7564420301860093, 0.08131335579512197, -0.8529958804196984, 0.19682624280540775, -0.2876820721517809, -0.8529958804196984 ],
+    "binAvgScore" : [ 301, 433, 427, 410, 399, 377, 325, 390, 373, 273 ]
+  },
+  "columnControl" : {
+    "stdDevCutOff" : 4.0
+  }
+}, {
+  "columnNum" : 17,
+  "columnName" : "std_compactness",
+  "version" : "0.2.0",
+  "columnType" : "N",
+  "columnFlag" : null,
+  "finalSelect" : true,
+  "columnRawStatsResult" : {
+    "cntTotal" : 357,
+    "cntValidPositive" : 132,
+    "cntValidNegative" : 225,
+    "cntIgnoredByTag" : 0,
+    "cntIsNull" : 0,
+    "cntIsNaN" : 0,
+    "cntIsNumber" : 357,
+    "cntUniqueValues" : 352
+  },
+  "columnNumStatsResult" : {
+    "max" : 0.1354,
+    "min" : 0.003012,
+    "mean" : 0.024118792717086827,
+    "median" : 0.01911,
+    "stdDev" : 0.01718945601631095
+  },
+  "columnBinningResult" : {
+    "length" : 10,
+    "binBoundary" : [ "-Infinity", 0.008776, 0.01124, 0.0137, 0.01597, 0.01919, 0.02336, 0.02845, 0.03471, 0.04638 ],
+    "binCategory" : null,
+    "binCountNeg" : [ 36, 29, 31, 26, 24, 22, 14, 13, 16, 14 ],
+    "binCountPos" : [ 0, 7, 5, 9, 12, 14, 21, 23, 20, 21 ],
+    "binPosRate" : [ 0.0, 0.19444444444444445, 0.1388888888888889, 0.2571428571428571, 0.3333333333333333, 0.3888888888888889, 0.6, 0.6388888888888888, 0.5555555555555556, 0.6 ],
+    "binWeightedNeg" : [ 36.0, 29.0, 31.0, 26.0, 24.0, 22.0, 14.0, 13.0, 16.0, 14.0 ],
+    "binWeightedPos" : [ 0.0, 7.0, 5.0, 9.0, 12.0, 14.0, 21.0, 23.0, 20.0, 21.0 ]
+  },
+  "columnBinStatsResult" : {
+    "ks" : 39.888888888888886,
+    "iv" : 3.9867255769816534,
+    "binWoe" : [ -21.193269466817146, -0.8880872002032592, -1.291250810518803, -0.5275734804659314, -0.15984870077939614, 0.08131335579512197, 0.9387635867476424, 1.103843336928806, 0.7564420301860093, 0.9387635867476424 ],
+    "binAvgScore" : [ 110, 162, 219, 245, 361, 371, 584, 524, 530, 581 ]
+  },
+  "columnControl" : {
+    "stdDevCutOff" : 4.0
+  }
+}, {
+  "columnNum" : 18,
+  "columnName" : "std_concavity",
+  "version" : "0.2.0",
+  "columnType" : "N",
+  "columnFlag" : null,
+  "finalSelect" : true,
+  "columnRawStatsResult" : {
+    "cntTotal" : 357,
+    "cntValidPositive" : 132,
+    "cntValidNegative" : 225,
+    "cntIgnoredByTag" : 0,
+    "cntIsNull" : 0,
+    "cntIsNaN" : 0,
+    "cntIsNumber" : 357,
+    "cntUniqueValues" : 342
+  },
+  "columnNumStatsResult" : {
+    "max" : 0.396,
+    "min" : 0.0,
+    "mean" : 0.02986155434173668,
+    "median" : 0.0236,
+    "stdDev" : 0.02985086866934265
+  },
+  "columnBinningResult" : {
+    "length" : 10,
+    "binBoundary" : [ "-Infinity", 0.006493, 0.01163, 0.01603, 0.01949, 0.02375, 0.0288, 0.03476, 0.04401, 0.05553 ],
+    "binCategory" : null,
+    "binCountNeg" : [ 36, 35, 32, 28, 24, 16, 15, 14, 11, 14 ],
+    "binCountPos" : [ 0, 1, 4, 7, 12, 20, 20, 22, 25, 21 ],
+    "binPosRate" : [ 0.0, 0.027777777777777776, 0.1111111111111111, 0.2, 0.3333333333333333, 0.5555555555555556, 0.5714285714285714, 0.6111111111111112, 0.6944444444444444, 0.6 ],
+    "binWeightedNeg" : [ 36.0, 35.0, 32.0, 28.0, 24.0, 16.0, 15.0, 14.0, 11.0, 14.0 ],
+    "binWeightedPos" : [ 0.0, 1.0, 4.0, 7.0, 12.0, 20.0, 20.0, 22.0, 25.0, 21.0 ]
+  },
+  "columnBinStatsResult" : {
+    "ks" : 50.70707070707072,
+    "iv" : 4.589210467040636,
+    "binWoe" : [ -21.193269466817146, -3.0220495693142215, -1.5461430594649117, -0.8529958804196984, -0.15984870077939614, 0.7564420301860093, 0.8209805512298304, 0.9852836023539637, 1.3542790301704248, 0.9387635867476424 ],
+    "binAvgScore" : [ 90, 127, 146, 240, 361, 490, 492, 561, 628, 536 ]
+  },
+  "columnControl" : {
+    "stdDevCutOff" : 4.0
+  }
+}, {
+  "columnNum" : 19,
+  "columnName" : "std_concave_points",
+  "version" : "0.2.0",
+  "columnType" : "N",
+  "columnFlag" : null,
+  "finalSelect" : true,
+  "columnRawStatsResult" : {
+    "cntTotal" : 357,
+    "cntValidPositive" : 132,
+    "cntValidNegative" : 225,
+    "cntIgnoredByTag" : 0,
+    "cntIsNull" : 0,
+    "cntIsNaN" : 0,
+    "cntIsNumber" : 357,
+    "cntUniqueValues" : 330
+  },
+  "columnNumStatsResult" : {
+    "max" : 0.05279,
+    "min" : 0.0,
+    "mean" : 0.011212823529411761,
+    "median" : 0.01043,
+    "stdDev" : 0.005861890413405104
+  },
+  "columnBinningResult" : {
+    "length" : 10,
+    "binBoundary" : [ "-Infinity", 0.005161, 0.006719, 0.008193, 0.00928, 0.01043, 0.01186, 0.01352, 0.01567, 0.01816 ],
+    "binCategory" : null,
+    "binCountNeg" : [ 36, 35, 29, 26, 26, 21, 14, 14, 12, 12 ],
+    "binCountPos" : [ 0, 1, 7, 9, 10, 15, 21, 22, 24, 23 ],
+    "binPosRate" : [ 0.0, 0.027777777777777776, 0.19444444444444445, 0.2571428571428571, 0.2777777777777778, 0.4166666666666667, 0.6, 0.6111111111111112, 0.6666666666666666, 0.6571428571428571 ],
+    "binWeightedNeg" : [ 36.0, 35.0, 29.0, 26.0, 26.0, 21.0, 14.0, 14.0, 12.0, 12.0 ],
+    "binWeightedPos" : [ 0.0, 1.0, 7.0, 9.0, 10.0, 15.0, 21.0, 22.0, 24.0, 23.0 ]
+  },
+  "columnBinStatsResult" : {
+    "ks" : 47.101010101010104,
+    "iv" : 4.445853422724575,
+    "binWoe" : [ -21.193269466817146, -3.0220495693142215, -0.8880872002032592, -0.5275734804659314, -0.42221296495477173, 0.19682624280540775, 0.9387635867476424, 0.9852836023539637, 1.2264456588529946, 1.1838860444581119 ],
+    "binAvgScore" : [ 90, 120, 174, 232, 306, 372, 532, 573, 612, 637 ]
+  },
+  "columnControl" : {
+    "stdDevCutOff" : 4.0
+  }
+}, {
+  "columnNum" : 20,
+  "columnName" : "std_symmetry",
+  "version" : "0.2.0",
+  "columnType" : "N",
+  "columnFlag" : null,
+  "finalSelect" : true,
+  "columnRawStatsResult" : {
+    "cntTotal" : 357,
+    "cntValidPositive" : 132,
+    "cntValidNegative" : 225,
+    "cntIgnoredByTag" : 0,
+    "cntIsNull" : 0,
+    "cntIsNaN" : 0,
+    "cntIsNumber" : 357,
+    "cntUniqueValues" : 326
+  },
+  "columnNumStatsResult" : {
+    "max" : 0.07895,
+    "min" : 0.009539,
+    "mean" : 0.02023085714285715,
+    "median" : 0.01843,
+    "stdDev" : 0.008306329032006928
+  },
+  "columnBinningResult" : {
+    "length" : 10,
+    "binBoundary" : [ "-Infinity", 0.01291, 0.01428, 0.01536, 0.01695, 0.01843, 0.01998, 0.02165, 0.02475, 0.02951 ],
+    "binCategory" : null,
+    "binCountNeg" : [ 20, 17, 20, 22, 24, 26, 24, 20, 27, 25 ],
+    "binCountPos" : [ 16, 19, 16, 13, 12, 10, 11, 16, 9, 10 ],
+    "binPosRate" : [ 0.4444444444444444, 0.5277777777777778, 0.4444444444444444, 0.37142857142857144, 0.3333333333333333, 0.2777777777777778, 0.3142857142857143, 0.4444444444444444, 0.25, 0.2857142857142857 ],
+    "binWeightedNeg" : [ 20.0, 17.0, 20.0, 22.0, 24.0, 26.0, 24.0, 20.0, 27.0, 25.0 ],
+    "binWeightedPos" : [ 16.0, 19.0, 16.0, 13.0, 12.0, 10.0, 11.0, 16.0, 9.0, 10.0 ]
+  },
+  "columnBinStatsResult" : {
+    "ks" : 13.37373737373737,
+    "iv" : 0.14207154031623853,
+    "binWoe" : [ 0.31015492800383954, 0.6445241140994813, 0.31015492800383954, 0.007205383713927401, -0.15984870077939614, -0.42221296495477173, -0.24686007766902587, 0.31015492800383954, -0.5653138084167272, -0.38299225183610575 ],
+    "binAvgScore" : [ 420, 420, 401, 402, 371, 304, 387, 399, 301, 347 ]
+  },
+  "columnControl" : {
+    "stdDevCutOff" : 4.0
+  }
+}, {
+  "columnNum" : 21,
+  "columnName" : "std_fractal_dimension",
+  "version" : "0.2.0",
+  "columnType" : "N",
+  "columnFlag" : null,
+  "finalSelect" : true,
+  "columnRawStatsResult" : {
+    "cntTotal" : 357,
+    "cntValidPositive" : 132,
+    "cntValidNegative" : 225,
+    "cntIgnoredByTag" : 0,
+    "cntIsNull" : 0,
+    "cntIsNaN" : 0,
+    "cntIsNumber" : 357,
+    "cntUniqueValues" : 345
+  },
+  "columnNumStatsResult" : {
+    "max" : 0.02984,
+    "min" : 8.948E-4,
+    "mean" : 0.0036893725490196086,
+    "median" : 0.003107,
+    "stdDev" : 0.0025668690900879252
+  },
+  "columnBinningResult" : {
+    "length" : 10,
+    "binBoundary" : [ "-Infinity", 0.001698, 0.002001, 0.002379, 0.002751, 0.003114, 0.00357, 0.004142, 0.004841, 0.006111 ],
+    "binCategory" : null,
+    "binCountNeg" : [ 29, 26, 29, 24, 23, 22, 17, 19, 17, 19 ],
+    "binCountPos" : [ 7, 10, 7, 11, 13, 14, 18, 17, 19, 16 ],
+    "binPosRate" : [ 0.19444444444444445, 0.2777777777777778, 0.19444444444444445, 0.3142857142857143, 0.3611111111111111, 0.3888888888888889, 0.5142857142857142, 0.4722222222222222, 0.5277777777777778, 0.45714285714285713 ],
+    "binWeightedNeg" : [ 29.0, 26.0, 29.0, 24.0, 23.0, 22.0, 17.0, 19.0, 17.0, 19.0 ],
+    "binWeightedPos" : [ 7.0, 10.0, 7.0, 11.0, 13.0, 14.0, 18.0, 17.0, 19.0, 16.0 ]
+  },
+  "columnBinStatsResult" : {
+    "ks" : 21.858585858585855,
+    "iv" : 0.27009943214857546,
+    "binWoe" : [ -0.8880872002032592, -0.42221296495477173, -0.8880872002032592, -0.24686007766902587, -0.03724637881244001, 0.08131335579512197, 0.5904568928678019, 0.422072844100085, 0.6445241140994813, 0.36144822233217955 ],
+    "binAvgScore" : [ 214, 295, 225, 315, 324, 368, 501, 454, 534, 472 ]
+  },
+  "columnControl" : {
+    "stdDevCutOff" : 4.0
+  }
+}, {
+  "columnNum" : 22,
+  "columnName" : "worst_radius",
+  "version" : "0.2.0",
+  "columnType" : "N",
+  "columnFlag" : null,
+  "finalSelect" : true,
+  "columnRawStatsResult" : {
+    "cntTotal" : 357,
+    "cntValidPositive" : 132,
+    "cntValidNegative" : 225,
+    "cntIgnoredByTag" : 0,
+    "cntIsNull" : 0,
+    "cntIsNaN" : 0,
+    "cntIsNumber" : 357,
+    "cntUniqueValues" : 309
+  },
+  "columnNumStatsResult" : {
+    "max" : 33.13,
+    "min" : 7.93,
+    "mean" : 16.17299719887955,
+    "median" : 14.98,
+    "stdDev" : 4.807408178932668
+  },
+  "columnBinningResult" : {
+    "length" : 10,
+    "binBoundary" : [ "-Infinity", 11.15, 12.4, 13.32, 13.88, 14.98, 16.08, 17.27, 19.92, 23.68 ],
+    "binCategory" : null,
+    "binCountNeg" : [ 36, 36, 35, 35, 35, 24, 17, 7, 0, 0 ],
+    "binCountPos" : [ 0, 0, 1, 0, 1, 12, 18, 29, 36, 35 ],
+    "binPosRate" : [ 0.0, 0.0, 0.027777777777777776, 0.0, 0.027777777777777776, 0.3333333333333333, 0.5142857142857142, 0.8055555555555556, 1.0, 1.0 ],
+    "binWeightedNeg" : [ 36.0, 36.0, 35.0, 35.0, 35.0, 24.0, 17.0, 7.0, 0.0, 0.0 ],
+    "binWeightedPos" : [ 0.0, 0.0, 1.0, 0.0, 1.0, 12.0, 18.0, 29.0, 36.0, 35.0 ]
+  },
+  "columnBinStatsResult" : {
+    "ks" : 78.72727272727273,
+    "iv" : 23.054439117996807,
+    "binWoe" : [ -21.193269466817146, -21.193269466817146, -3.0220495693142215, -21.165098589868307, -3.0220495693142215, -0.15984870077939614, 0.5904568928678019, 1.9546841577900966, 21.726567946176864, 21.698397069220643 ],
+    "binAvgScore" : [ 110, 102, 136, 137, 170, 330, 460, 636, 816, 851 ]
+  },
+  "columnControl" : {
+    "stdDevCutOff" : 4.0
+  }
+}, {
+  "columnNum" : 23,
+  "columnName" : "worst_texture",
+  "version" : "0.2.0",
+  "columnType" : "N",
+  "columnFlag" : null,
+  "finalSelect" : true,
+  "columnRawStatsResult" : {
+    "cntTotal" : 357,
+    "cntValidPositive" : 132,
+    "cntValidNegative" : 225,
+    "cntIgnoredByTag" : 0,
+    "cntIsNull" : 0,
+    "cntIsNaN" : 0,
+    "cntIsNumber" : 357,
+    "cntUniqueValues" : 332
+  },
+  "columnNumStatsResult" : {
+    "max" : 49.54,
+    "min" : 12.02,
+    "mean" : 25.797955182072826,
+    "median" : 25.4,
+    "stdDev" : 6.442450465529019
+  },
+  "columnBinningResult" : {
+    "length" : 10,
+    "binBoundary" : [ "-Infinity", 18.16, 20.21, 21.95, 23.31, 25.44, 26.83, 28.45, 31.47, 34.85 ],
+    "binCategory" : null,
+    "binCountNeg" : [ 34, 33, 33, 29, 21, 23, 16, 15, 7, 14 ],
+    "binCountPos" : [ 2, 3, 3, 6, 15, 13, 19, 21, 29, 21 ],
+    "binPosRate" : [ 0.05555555555555555, 0.08333333333333333, 0.08333333333333333, 0.17142857142857143, 0.4166666666666667, 0.3611111111111111, 0.5428571428571428, 0.5833333333333334, 0.8055555555555556, 0.6 ],
+    "binWeightedNeg" : [ 34.0, 33.0, 33.0, 29.0, 21.0, 23.0, 16.0, 15.0, 7.0, 14.0 ],
+    "binWeightedPos" : [ 2.0, 3.0, 3.0, 6.0, 15.0, 13.0, 19.0, 21.0, 29.0, 21.0 ]
+  },
+  "columnBinStatsResult" : {
+    "ks" : 46.72727272727273,
+    "iv" : 1.4572885500736315,
+    "binWoe" : [ -2.2999148584999314, -1.8645967894621394, -1.8645967894621394, -1.042237879716232, 0.19682624280540775, -0.03724637881244001, 0.7051487358331956, 0.8697707153678338, 1.9546841577900966, 0.9387635867476424 ],
+    "binAvgScore" : [ 183, 257, 184, 284, 358, 381, 472, 501, 624, 450 ]
+  },
+  "columnControl" : {
+    "stdDevCutOff" : 4.0
+  }
+}, {
+  "columnNum" : 24,
+  "columnName" : "worst_perimeter",
+  "version" : "0.2.0",
+  "columnType" : "N",
+  "columnFlag" : null,
+  "finalSelect" : true,
+  "columnRawStatsResult" : {
+    "cntTotal" : 357,
+    "cntValidPositive" : 132,
+    "cntValidNegative" : 225,
+    "cntIgnoredByTag" : 0,
+    "cntIsNull" : 0,
+    "cntIsNaN" : 0,
+    "cntIsNumber" : 357,
+    "cntUniqueValues" : 329
+  },
+  "columnNumStatsResult" : {
+    "max" : 229.3,
+    "min" : 50.41,
+    "mean" : 106.36652661064423,
+    "median" : 97.82,
+    "stdDev" : 33.01572506227358
+  },
+  "columnBinningResult" : {
+    "length" : 10,
+    "binBoundary" : [ "-Infinity", 71.94, 80.78, 86.16, 91.36, 97.9, 105.9, 114.2, 130.7, 158.8 ],
+    "binCategory" : null,
+    "binCountNeg" : [ 36, 36, 36, 34, 35, 27, 15, 6, 0, 0 ],
+    "binCountPos" : [ 0, 0, 0, 1, 1, 9, 20, 30, 36, 35 ],
+    "binPosRate" : [ 0.0, 0.0, 0.0, 0.02857142857142857, 0.027777777777777776, 0.25, 0.5714285714285714, 0.8333333333333334, 1.0, 1.0 ],
+    "binWeightedNeg" : [ 36.0, 36.0, 36.0, 34.0, 35.0, 27.0, 15.0, 6.0, 0.0, 0.0 ],
+    "binWeightedPos" : [ 0.0, 0.0, 0.0, 1.0, 1.0, 9.0, 20.0, 30.0, 36.0, 35.0 ]
+  },
+  "columnBinStatsResult" : {
+    "ks" : 82.33333333333333,
+    "iv" : 23.257170722187915,
+    "binWoe" : [ -21.193269466817146, -21.193269466817146, -21.193269466817146, -2.993062032459877, -3.0220495693142215, -0.5653138084167272, 0.8209805512298304, 2.1427363887421493, 21.726567946176864, 21.698397069220643 ],
+    "binAvgScore" : [ 103, 108, 108, 141, 201, 277, 467, 663, 816, 852 ]
+  },
+  "columnControl" : {
+    "stdDevCutOff" : 4.0
+  }
+}, {
+  "columnNum" : 25,
+  "columnName" : "worst_area",
+  "version" : "0.2.0",
+  "columnType" : "N",
+  "columnFlag" : null,
+  "finalSelect" : true,
+  "columnRawStatsResult" : {
+    "cntTotal" : 357,
+    "cntValidPositive" : 132,
+    "cntValidNegative" : 225,
+    "cntIgnoredByTag" : 0,
+    "cntIsNull" : 0,
+    "cntIsNaN" : 0,
+    "cntIsNumber" : 357,
+    "cntUniqueValues" : 349
+  },
+  "columnNumStatsResult" : {
+    "max" : 3432.0,
+    "min" : 185.2,
+    "mean" : 870.7165266106442,
+    "median" : 686.5,
+    "stdDev" : 567.6312503583731
+  },
+  "columnBinningResult" : {
+    "length" : 10,
+    "binBoundary" : [ "-Infinity", 376.5, 472.9, 544.2, 591.2, 686.6, 784.7, 906.6, 1227.0, 1681.0 ],
+    "binCategory" : null,
+    "binCountNeg" : [ 36, 36, 35, 34, 36, 25, 16, 7, 0, 0 ],
+    "binCountPos" : [ 0, 0, 1, 1, 0, 11, 19, 29, 36, 35 ],
+    "binPosRate" : [ 0.0, 0.0, 0.027777777777777776, 0.02857142857142857, 0.0, 0.3055555555555556, 0.5428571428571428, 0.8055555555555556, 1.0, 1.0 ],
+    "binWeightedNeg" : [ 36.0, 36.0, 35.0, 34.0, 36.0, 25.0, 16.0, 7.0, 0.0, 0.0 ],
+    "binWeightedPos" : [ 0.0, 0.0, 1.0, 1.0, 0.0, 11.0, 19.0, 29.0, 36.0, 35.0 ]
+  },
+  "columnBinStatsResult" : {
+    "ks" : 79.92929292929293,
+    "iv" : 23.156344057155472,
+    "binWoe" : [ -21.193269466817146, -21.193269466817146, -3.0220495693142215, -2.993062032459877, -21.193269466817146, -0.2876820721517809, 0.7051487358331956, 1.9546841577900966, 21.726567946176864, 21.698397069220643 ],
+    "binAvgScore" : [ 110, 102, 142, 149, 165, 321, 471, 624, 816, 851 ]
+  },
+  "columnControl" : {
+    "stdDevCutOff" : 4.0
+  }
+}, {
+  "columnNum" : 26,
+  "columnName" : "worst_smoothness",
+  "version" : "0.2.0",
+  "columnType" : "N",
+  "columnFlag" : null,
+  "finalSelect" : true,
+  "columnRawStatsResult" : {
+    "cntTotal" : 357,
+    "cntValidPositive" : 132,
+    "cntValidNegative" : 225,
+    "cntIgnoredByTag" : 0,
+    "cntIsNull" : 0,
+    "cntIsNaN" : 0,
+    "cntIsNumber" : 357,
+    "cntUniqueValues" : 278
+  },
+  "columnNumStatsResult" : {
+    "max" : 0.2226,
+    "min" : 0.07117,
+    "mean" : 0.13343364145658262,
+    "median" : 0.1335,
+    "stdDev" : 0.0224674011954615
+  },
+  "columnBinningResult" : {
+    "length" : 10,
+    "binBoundary" : [ "-Infinity", 0.1054, 0.1142, 0.1216, 0.1276, 0.1338, 0.1389, 0.1431, 0.1512, 0.1637 ],
+    "binCategory" : null,
+    "binCountNeg" : [ 35, 30, 27, 23, 28, 25, 18, 17, 16, 6 ],
+    "binCountPos" : [ 1, 6, 9, 12, 8, 11, 17, 19, 20, 29 ],
+    "binPosRate" : [ 0.027777777777777776, 0.16666666666666666, 0.25, 0.34285714285714286, 0.2222222222222222, 0.3055555555555556, 0.4857142857142857, 0.5277777777777778, 0.5555555555555556, 0.8285714285714286 ],
+    "binWeightedNeg" : [ 35.0, 30.0, 27.0, 23.0, 28.0, 25.0, 18.0, 17.0, 16.0, 6.0 ],
+    "binWeightedPos" : [ 1.0, 6.0, 9.0, 12.0, 8.0, 11.0, 17.0, 19.0, 20.0, 29.0 ]
+  },
+  "columnBinStatsResult" : {
+    "ks" : 39.060606060606055,
+    "iv" : 1.1615080927761952,
+    "binWoe" : [ -3.0220495693142215, -1.076139431366051, -0.5653138084167272, -0.11728908640136096, -0.71946448803089, -0.2876820721517809, 0.47614006530457137, 0.6445241140994813, 0.7564420301860093, 2.1088348370816408 ],
+    "binAvgScore" : [ 167, 222, 314, 300, 312, 374, 450, 474, 532, 617 ]
+  },
+  "columnControl" : {
+    "stdDevCutOff" : 4.0
+  }
+}, {
+  "columnNum" : 27,
+  "columnName" : "worst_compactness",
+  "version" : "0.2.0",
+  "columnType" : "N",
+  "columnFlag" : null,
+  "finalSelect" : true,
+  "columnRawStatsResult" : {
+    "cntTotal" : 357,
+    "cntValidPositive" : 132,
+    "cntValidNegative" : 225,
+    "cntIgnoredByTag" : 0,
+    "cntIsNull" : 0,
+    "cntIsNaN" : 0,
+    "cntIsNumber" : 357,
+    "cntUniqueValues" : 340
+  },
+  "columnNumStatsResult" : {
+    "max" : 1.058,
+    "min" : 0.02729,
+    "mean" : 0.2520826890756302,
+    "median" : 0.2116,
+    "stdDev" : 0.1618474231797949
+  },
+  "columnBinningResult" : {
+    "length" : 10,
+    "binBoundary" : [ "-Infinity", 0.08368, 0.1212, 0.161, 0.1806, 0.2118, 0.251, 0.3055, 0.3625, 0.4665 ],
+    "binCategory" : null,
+    "binCountNeg" : [ 36, 35, 30, 33, 25, 24, 21, 12, 6, 3 ],
+    "binCountPos" : [ 0, 1, 6, 2, 11, 12, 14, 24, 30, 32 ],
+    "binPosRate" : [ 0.0, 0.027777777777777776, 0.16666666666666666, 0.05714285714285714, 0.3055555555555556, 0.3333333333333333, 0.4, 0.6666666666666666, 0.8333333333333334, 0.9142857142857143 ],
+    "binWeightedNeg" : [ 36.0, 35.0, 30.0, 33.0, 25.0, 24.0, 21.0, 12.0, 6.0, 3.0 ],
+    "binWeightedPos" : [ 0.0, 1.0, 6.0, 2.0, 11.0, 12.0, 14.0, 24.0, 30.0, 32.0 ]
+  },
+  "columnBinStatsResult" : {
+    "ks" : 57.0909090909091,
+    "iv" : 5.495265652338826,
+    "binWoe" : [ -21.193269466817146, -3.0220495693142215, -1.076139431366051, -2.270061895370304, -0.2876820721517809, -0.15984870077939614, 0.12783337138131345, 1.2264456588529946, 2.1427363887421493, 2.900422086662166 ],
+    "binAvgScore" : [ 92, 121, 190, 194, 319, 398, 429, 564, 684, 747 ]
+  },
+  "columnControl" : {
+    "stdDevCutOff" : 4.0
+  }
+}, {
+  "columnNum" : 28,
+  "columnName" : "worst_concavity",
+  "version" : "0.2.0",
+  "columnType" : "N",
+  "columnFlag" : null,
+  "finalSelect" : true,
+  "columnRawStatsResult" : {
+    "cntTotal" : 357,
+    "cntValidPositive" : 132,
+    "cntValidNegative" : 225,
+    "cntIgnoredByTag" : 0,
+    "cntIsNull" : 0,
+    "cntIsNaN" : 0,
+    "cntIsNumber" : 357,
+    "cntUniqueValues" : 343
+  },
+  "columnNumStatsResult" : {
+    "max" : 1.17,
+    "min" : 0.0,
+    "mean" : 0.265817400560224,
+    "median" : 0.222,
+    "stdDev" : 0.20941193255941493
+  },
+  "columnBinningResult" : {
+    "length" : 10,
+    "binBoundary" : [ "-Infinity", 0.03582, 0.08434, 0.1277, 0.1759, 0.2282, 0.2802, 0.3442, 0.4185, 0.5673 ],
+    "binCategory" : null,
+    "binCountNeg" : [ 36, 36, 35, 33, 34, 22, 13, 8, 4, 4 ],
+    "binCountPos" : [ 0, 0, 1, 2, 2, 14, 22, 28, 32, 31 ],
+    "binPosRate" : [ 0.0, 0.0, 0.027777777777777776, 0.05714285714285714, 0.05555555555555555, 0.3888888888888889, 0.6285714285714286, 0.7777777777777778, 0.8888888888888888, 0.8857142857142857 ],
+    "binWeightedNeg" : [ 36.0, 36.0, 35.0, 33.0, 34.0, 22.0, 13.0, 8.0, 4.0, 4.0 ],
+    "binWeightedPos" : [ 0.0, 0.0, 1.0, 2.0, 2.0, 14.0, 22.0, 28.0, 32.0, 31.0 ]
+  },
+  "columnBinStatsResult" : {
+    "ks" : 73.54545454545455,
+    "iv" : 9.418878548939224,
+    "binWoe" : [ -21.193269466817146, -21.193269466817146, -3.0220495693142215, -2.270061895370304, -2.2999148584999314, 0.08131335579512197, 1.0593915743840592, 1.7860614457723458, 2.612740016085385, 2.5809913177841115 ],
+    "binAvgScore" : [ 87, 108, 136, 163, 204, 414, 513, 623, 697, 759 ]
+  },
+  "columnControl" : {
+    "stdDevCutOff" : 4.0
+  }
+}, {
+  "columnNum" : 29,
+  "columnName" : "worst_concave_points",
+  "version" : "0.2.0",
+  "columnType" : "N",
+  "columnFlag" : null,
+  "finalSelect" : true,
+  "columnRawStatsResult" : {
+    "cntTotal" : 357,
+    "cntValidPositive" : 132,
+    "cntValidNegative" : 225,
+    "cntIgnoredByTag" : 0,
+    "cntIsNull" : 0,
+    "cntIsNaN" : 0,
+    "cntIsNumber" : 357,
+    "cntUniqueValues" : 315
+  },
+  "columnNumStatsResult" : {
+    "max" : 0.2903,
+    "min" : 0.0,
+    "mean" : 0.11214454341736695,
+    "median" : 0.09858,
+    "stdDev" : 0.06543203526283167
+  },
+  "columnBinningResult" : {
+    "length" : 10,
+    "binBoundary" : [ "-Infinity", 0.03333, 0.05741, 0.06961, 0.08288, 0.09861, 0.1226, 0.1492, 0.1732, 0.2066 ],
+    "binCategory" : null,
+    "binCountNeg" : [ 36, 36, 35, 34, 36, 26, 18, 4, 0, 0 ],
+    "binCountPos" : [ 0, 0, 1, 1, 0, 10, 17, 32, 36, 35 ],
+    "binPosRate" : [ 0.0, 0.0, 0.027777777777777776, 0.02857142857142857, 0.0, 0.2777777777777778, 0.4857142857142857, 0.8888888888888888, 1.0, 1.0 ],
+    "binWeightedNeg" : [ 36.0, 36.0, 35.0, 34.0, 36.0, 26.0, 18.0, 4.0, 0.0, 0.0 ],
+    "binWeightedPos" : [ 0.0, 0.0, 1.0, 1.0, 0.0, 10.0, 17.0, 32.0, 36.0, 35.0 ]
+  },
+  "columnBinStatsResult" : {
+    "ks" : 81.13131313131314,
+    "iv" : 23.35534822125008,
+    "binWoe" : [ -21.193269466817146, -21.193269466817146, -3.0220495693142215, -2.993062032459877, -21.193269466817146, -0.42221296495477173, 0.47614006530457137, 2.612740016085385, 21.726567946176864, 21.698397069220643 ],
+    "binAvgScore" : [ 85, 100, 122, 151, 174, 302, 485, 709, 781, 825 ]
+  },
+  "columnControl" : {
+    "stdDevCutOff" : 4.0
+  }
+}, {
+  "columnNum" : 30,
+  "columnName" : "worst_symmetry",
+  "version" : "0.2.0",
+  "columnType" : "N",
+  "columnFlag" : null,
+  "finalSelect" : true,
+  "columnRawStatsResult" : {
+    "cntTotal" : 357,
+    "cntValidPositive" : 132,
+    "cntValidNegative" : 225,
+    "cntIgnoredByTag" : 0,
+    "cntIsNull" : 0,
+    "cntIsNaN" : 0,
+    "cntIsNumber" : 357,
+    "cntUniqueValues" : 331
+  },
+  "columnNumStatsResult" : {
+    "max" : 0.6638,
+    "min" : 0.1566,
+    "mean" : 0.288836974789916,
+    "median" : 0.2812,
+    "stdDev" : 0.06129263826455072
+  },
+  "columnBinningResult" : {
+    "length" : 10,
+    "binBoundary" : [ "-Infinity", 0.2267, 0.2437, 0.2552, 0.2698, 0.2818, 0.2962, 0.3103, 0.3233, 0.3613 ],
+    "binCategory" : null,
+    "binCountNeg" : [ 31, 33, 26, 28, 22, 21, 23, 22, 18, 1 ],
+    "binCountPos" : [ 5, 3, 10, 7, 14, 15, 12, 14, 18, 34 ],
+    "binPosRate" : [ 0.1388888888888889, 0.08333333333333333, 0.2777777777777778, 0.2, 0.3888888888888889, 0.4166666666666667, 0.34285714285714286, 0.3888888888888889, 0.5, 0.9714285714285714 ],
+    "binWeightedNeg" : [ 31.0, 33.0, 26.0, 28.0, 22.0, 21.0, 23.0, 22.0, 18.0, 1.0 ],
+    "binWeightedPos" : [ 5.0, 3.0, 10.0, 7.0, 14.0, 15.0, 12.0, 14.0, 18.0, 34.0 ]
+  },
+  "columnBinStatsResult" : {
+    "ks" : 33.50505050505051,
+    "iv" : 1.5021663748778495,
+    "binWoe" : [ -1.291250810518803, -1.8645967894621394, -0.42221296495477173, -0.8529958804196984, 0.08131335579512197, 0.19682624280540775, -0.11728908640136096, 0.08131335579512197, 0.5332984791013827, 4.059658982122446 ],
+    "binAvgScore" : [ 254, 222, 297, 233, 308, 401, 379, 428, 481, 735 ]
+  },
+  "columnControl" : {
+    "stdDevCutOff" : 4.0
+  }
+}, {
+  "columnNum" : 31,
+  "columnName" : "worst_fractal_dimension",
+  "version" : "0.2.0",
+  "columnType" : "N",
+  "columnFlag" : null,
+  "finalSelect" : true,
+  "columnRawStatsResult" : {
+    "cntTotal" : 357,
+    "cntValidPositive" : 132,
+    "cntValidNegative" : 225,
+    "cntIgnoredByTag" : 0,
+    "cntIsNull" : 0,
+    "cntIsNaN" : 0,
+    "cntIsNumber" : 357,
+    "cntUniqueValues" : 347
+  },
+  "columnNumStatsResult" : {
+    "max" : 0.2075,
+    "min" : 0.05521,
+    "mean" : 0.08430560224089642,
+    "median" : 0.08024,
+    "stdDev" : 0.018701780258009188
+  },
+  "columnBinningResult" : {
+    "length" : 10,
+    "binBoundary" : [ "-Infinity", 0.06576, 0.07028, 0.07397, 0.07729, 0.08025, 0.08385, 0.08902, 0.09614, 0.1066 ],
+    "binCategory" : null,
+    "binCountNeg" : [ 28, 30, 31, 25, 23, 24, 26, 19, 11, 8 ],
+    "binCountPos" : [ 8, 6, 5, 10, 13, 12, 9, 17, 25, 27 ],
+    "binPosRate" : [ 0.2222222222222222, 0.16666666666666666, 0.1388888888888889, 0.2857142857142857, 0.3611111111111111, 0.3333333333333333, 0.2571428571428571, 0.4722222222222222, 0.6944444444444444, 0.7714285714285715 ],
+    "binWeightedNeg" : [ 28.0, 30.0, 31.0, 25.0, 23.0, 24.0, 26.0, 19.0, 11.0, 8.0 ],
+    "binWeightedPos" : [ 8.0, 6.0, 5.0, 10.0, 13.0, 12.0, 9.0, 17.0, 25.0, 27.0 ]
+  },
+  "columnBinStatsResult" : {
+    "ks" : 35.383838383838366,
+    "iv" : 0.8153650016950867,
+    "binWoe" : [ -0.71946448803089, -1.076139431366051, -1.291250810518803, -0.38299225183610575, -0.03724637881244001, -0.15984870077939614, -0.5275734804659314, 0.422072844100085, 1.3542790301704248, 1.7496938016189314 ],
+    "binAvgScore" : [ 291, 177, 219, 324, 311, 313, 428, 489, 585, 603 ]
+  },
+  "columnControl" : {
+    "stdDevCutOff" : 4.0
+  }
+} ]

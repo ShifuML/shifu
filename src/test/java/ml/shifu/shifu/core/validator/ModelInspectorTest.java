@@ -43,8 +43,8 @@ public class ModelInspectorTest {
 
     @BeforeClass
     public void setUp() throws IOException {
-        File originalModel = new File("src/test/resources/example/cancer-judgement/ModelStore/ModelSet1/ModelConfig.json");
-        File originalColumn = new File("src/test/resources/example/cancer-judgement/ModelStore/ModelSet1/ColumnConfig.json");
+        File originalModel = new File("src/test/resources/unittest/ModelSets/full/ModelConfig.json");
+        File originalColumn = new File("src/test/resources/unittest/ModelSets/full/ColumnConfig.json");
 
         modelFile = new File("ModelConfig.json");
         columnFile = new File("ColumnConfig.json");
