@@ -41,13 +41,7 @@ public class StatsCalculateWorker extends AbstractWorkerActor {
     private static Logger log = LoggerFactory.getLogger(StatsCalculateWorker.class);
     private List<RawValueObject> rvoList;
     private int receivedMsgCnt;
-    private long missing;
-    private long total;
-    //private Injector injector;
-    private ColumnRawStatsService columnRawStatsService;
-    private ColumnBinningService columnBinningService;
-    private ColumnNumStatsService columnNumStatsService;
-    private ColumnBinStatsService columnBinStatsService;
+
     private StatsService statsService;
 
 
@@ -60,14 +54,7 @@ public class StatsCalculateWorker extends AbstractWorkerActor {
         super(modelConfig, columnConfigList, parentActorRef, nextActorRef);
         rvoList = new ArrayList<RawValueObject>();
         receivedMsgCnt = 0;
-        missing = 0l;
-        total = 0;
-        //this.injector = injector;
 
-        //columnRawStatsService = injector.getInstance(ColumnRawStatsService.class);
-        //columnBinningService = injector.getInstance(ColumnBinningService.class);
-        //columnNumStatsService = injector.getInstance(ColumnNumStatsService.class);
-        //columnBinStatsService = injector.getInstance(ColumnBinStatsService.class);
 
         statsService = injector.getInstance(StatsService.class);
 

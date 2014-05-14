@@ -26,7 +26,7 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
  *
  */
 @JsonIgnoreProperties(ignoreUnknown = true)
-public class ColumnNumStatsResult {
+public class ColumnNumStatsResult extends ColumnDerivedResult {
 	
 	private Double max;
 	private Double min;

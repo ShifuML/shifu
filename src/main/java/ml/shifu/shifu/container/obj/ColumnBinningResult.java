@@ -29,7 +29,7 @@ import java.util.List;
  *
  */
 @JsonIgnoreProperties(ignoreUnknown = true)
-public class ColumnBinningResult {
+public class ColumnBinningResult extends ColumnDerivedResult {
 	
 	private Integer length = Integer.valueOf(0);
 	

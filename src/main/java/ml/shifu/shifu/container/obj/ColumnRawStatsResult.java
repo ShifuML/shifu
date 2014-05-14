@@ -1,6 +1,6 @@
 package ml.shifu.shifu.container.obj;
 
-public class ColumnRawStatsResult {
+public class ColumnRawStatsResult extends ColumnDerivedResult {
 
     private Integer cntTotal = 0;
     private Integer cntValidPositive = 0;

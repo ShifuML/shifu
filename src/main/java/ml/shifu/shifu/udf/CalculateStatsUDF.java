@@ -17,7 +17,9 @@ package ml.shifu.shifu.udf;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Guice;
@@ -27,10 +29,7 @@ import ml.shifu.shifu.container.NumericalValueObject;
 import ml.shifu.shifu.container.RawValueObject;
 import ml.shifu.shifu.container.obj.*;
 import ml.shifu.shifu.di.module.StatsModule;
-import ml.shifu.shifu.di.service.ColumnBinStatsService;
-import ml.shifu.shifu.di.service.ColumnNumStatsService;
-import ml.shifu.shifu.di.service.ColumnBinningService;
-import ml.shifu.shifu.di.service.ColumnRawStatsService;
+import ml.shifu.shifu.di.service.*;
 import ml.shifu.shifu.util.CommonUtils;
 import org.apache.pig.data.DataBag;
 import org.apache.pig.data.Tuple;
@@ -45,10 +44,7 @@ import org.apache.pig.data.TupleFactory;
  */
 public class CalculateStatsUDF extends AbstractTrainerUDF<Tuple> {
 
-    private ColumnRawStatsService columnRawStatsService;
-    private ColumnBinningService columnBinningService;
-    private ColumnNumStatsService columnNumStatsService;
-    private ColumnBinStatsService columnBinStatsService;
+    private StatsService statsService;
 
     private Double valueThreshold = 1e6;
 
@@ -70,10 +66,14 @@ public class CalculateStatsUDF extends AbstractTrainerUDF<Tuple> {
 
         Injector injector = Guice.createInjector(statsModule);
 
-        columnRawStatsService = injector.getInstance(ColumnRawStatsService.class);
-        columnBinningService = injector.getInstance(ColumnBinningService.class);
-        columnNumStatsService = injector.getInstance(ColumnNumStatsService.class);
-        columnBinStatsService = injector.getInstance(ColumnBinStatsService.class);
+        statsService = injector.getInstance(StatsService.class);
+
+        Map<String, Object> params = new HashMap<String, Object>();
+
+        params.put("numBins", modelConfig.getBinningExpectedNum());
+        params.put("posTags", modelConfig.getPosTags());
+        params.put("negTags", modelConfig.getNegTags());
+        statsService.setParams(params);
 
         jsonMapper = new ObjectMapper();
 
@@ -106,32 +106,7 @@ public class CalculateStatsUDF extends AbstractTrainerUDF<Tuple> {
             rvoList.add(rvo);
         }
 
-        ColumnRawStatsResult screeningResult = columnRawStatsService.getResult(rvoList, modelConfig.getPosTags(), modelConfig.getNegTags());
-        columnConfig.setColumnRawStatsResult(screeningResult);
-
-        //TODO: Let user choose if column should be treated as Numerical or Categorical if not predefined in ColumnConfig
-
-        ColumnBinningResult binningResult;
-        ColumnNumStatsResult basicStats;
-
-        if (columnConfig.isNumerical()) {
-            List<NumericalValueObject> nvoList = CommonUtils.convertListRaw2Numerical(rvoList, modelConfig.getPosTags(), modelConfig.getNegTags());
-            binningResult = columnBinningService.getNumericalResult(nvoList, modelConfig.getBinningExpectedNum());
-            basicStats = columnNumStatsService.getResult(nvoList);
-        } else {
-            List<CategoricalValueObject> cvoList = CommonUtils.convertListRaw2Categorical(rvoList, modelConfig.getPosTags(), modelConfig.getNegTags());
-            binningResult = columnBinningService.getCategoricalResult(cvoList);
-            basicStats = columnNumStatsService.getResult(CommonUtils.convertListCategorical2Numerical(cvoList, binningResult));
-        }
-        columnConfig.setColumnBinningResult(binningResult);
-        columnConfig.setColumnNumStatsResult(basicStats);
-
-
-        // Advanced Stats
-
-        ColumnBinStatsResult advStats = columnBinStatsService.getResult(binningResult);
-
-        columnConfig.setColumnBinStatsResult(advStats);
+        statsService.exec(columnConfig, rvoList);
 
         Tuple tuple = tupleFactory.newTuple();
         tuple.append(columnNum);

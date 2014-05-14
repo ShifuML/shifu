@@ -34,22 +34,27 @@ import java.util.List;
 public class ColumnConfigTest {
 
     private ObjectMapper jsonMapper;
+    private File file;
 
     @BeforeClass
     public void setUp() {
         jsonMapper = new ObjectMapper();
+        file = new File("ColumnConfig.json");
     }
 
     @Test
-    public void testSerial() throws JsonGenerationException, JsonMappingException, IOException {
-        File file = new File("Columnfig.json");
+    public void testSaveLoad() throws IOException {
+
+        if (file.exists()) {
+            file.delete();
+        }
 
         List<ColumnConfig> columnConfigList = new ArrayList<ColumnConfig>();
 
         ColumnConfig config = new ColumnConfig();
         config.setColumnName("TestColumn");
-        //config.setColumnStats(new ColumnStats());
-        //config.setColumnBinning(new ColumnBinning());
+
+        config.getColumnNumStatsResult().getUserDefined().put("secondLargest", 1.0);
 
         columnConfigList.add(config);
         columnConfigList.add(config);
@@ -57,9 +62,10 @@ public class ColumnConfigTest {
         jsonMapper.writerWithDefaultPrettyPrinter().writeValue(file, columnConfigList);
 
         List<ColumnConfig> ccList = Arrays.asList(jsonMapper.readValue(file, ColumnConfig[].class));
-        ;
+
         Assert.assertEquals(2, ccList.size());
         Assert.assertEquals("TestColumn", ccList.get(0).getColumnName());
+        Assert.assertEquals(ccList.get(0).getColumnNumStatsResult().getUserDefined().get("secondLargest"), 1.0);
 
         file.delete();
     }

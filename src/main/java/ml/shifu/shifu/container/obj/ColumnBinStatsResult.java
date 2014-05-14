@@ -28,7 +28,7 @@ import java.util.List;
  *
  */
 @JsonIgnoreProperties(ignoreUnknown = true)
-public class ColumnBinStatsResult {
+public class ColumnBinStatsResult extends ColumnDerivedResult {
 	
 
 	private Double ks;
