@@ -58,12 +58,14 @@ public class CalculateStatsUDF extends AbstractTrainerUDF<Tuple> {
         }
 
         StatsModule statsModule = new StatsModule();
-        statsModule.setStatsProcessorImplClass(modelConfig.getStats().getStatsProcessor());
-        statsModule.setRawStatsCalculatorImplClass(modelConfig.getStats().getRawStatsCalculator());
-        statsModule.setNumBinningCalculatorImplClass(modelConfig.getStats().getNumBinningCalculator());
-        statsModule.setCatBinningCalculatorImplClass(modelConfig.getStats().getCatBinningCalculator());
-        statsModule.setNumStatsCalculatorImplClass(modelConfig.getStats().getNumStatsCalculator());
-        statsModule.setBinStatsCalculatorImplClass(modelConfig.getStats().getBinStatsCalculator());
+        statsModule.setMethods(modelConfig.getStats().getMethods());
+
+        //statsModule.setStatsProcessorImplClass(modelConfig.getStats().getStatsProcessor());
+       // statsModule.setRawStatsCalculatorImplClass(modelConfig.getStats().getRawStatsCalculator());
+       // statsModule.setNumBinningCalculatorImplClass(modelConfig.getStats().getNumBinningCalculator());
+       // statsModule.setCatBinningCalculatorImplClass(modelConfig.getStats().getCatBinningCalculator());
+       // statsModule.setNumStatsCalculatorImplClass(modelConfig.getStats().getNumStatsCalculator());
+       // statsModule.setBinStatsCalculatorImplClass(modelConfig.getStats().getBinStatsCalculator());
 
         Injector injector = Guice.createInjector(statsModule);
 

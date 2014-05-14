@@ -16,8 +16,12 @@ public class StatsModuleTest {
     @Test
     public void testMockStatsProcessor() {
 
+        Map<String, String> methods = new HashMap<String, String>();
+        methods.put("ColumnRawStatsCalculator", "ml.shifu.shifu.di.builtin.DefaultColumnRawStatsCalculator");
+        methods.put("StatsProcessor", "ml.shifu.shifu.di.builtin.MockStatsProcessor");
+
         StatsModule statsModule = new StatsModule();
-        statsModule.setStatsProcessorImplClass(MockStatsProcessor.class);
+        statsModule.setMethods(methods);
 
         Injector injector = Guice.createInjector(statsModule);
         StatsService statsService = injector.getInstance(StatsService.class);

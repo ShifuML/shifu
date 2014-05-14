@@ -74,12 +74,8 @@ public class CalculateStatsActor extends AbstractActor {
 
         // Dependency Injection
         StatsModule statsModule = new StatsModule();
-        statsModule.setRawStatsCalculatorImplClass(modelConfig.getStats().getRawStatsCalculator());
-        statsModule.setNumBinningCalculatorImplClass(modelConfig.getStats().getNumBinningCalculator());
-        statsModule.setCatBinningCalculatorImplClass(modelConfig.getStats().getCatBinningCalculator());
-        statsModule.setNumStatsCalculatorImplClass(modelConfig.getStats().getNumStatsCalculator());
-        statsModule.setBinStatsCalculatorImplClass(modelConfig.getStats().getBinStatsCalculator());
-        statsModule.setStatsProcessorImplClass(modelConfig.getStats().getStatsProcessor());
+
+        statsModule.setMethods(modelConfig.getStats().getMethods());
 
         final Injector injector = Guice.createInjector(statsModule);
 

@@ -49,48 +49,48 @@ public class MetaFactoryTest {
         modelConfig.getBasic().setAuthor("Author");
     }
 
-    @Test
+    //@Test
     public void testGetModelConfigMeta() {
         Assert.assertEquals(MetaFactory.getModelConfigMeta().size(), 92);
     }
 
-    @Test
+    //@Test
     public void testValidateModelConfig() throws Exception {
         ValidateResult result = MetaFactory.validate(modelConfig);
         Assert.assertTrue(result.getStatus());
     }
 
-    @Test
+    //@Test
     public void testValidateModelBasicConf() throws Exception {
         ValidateResult result = MetaFactory.validate(modelConfig.getBasic());
         Assert.assertTrue(result.getStatus());
     }
 
-    @Test
+   // @Test
     public void testValidateModelSouceDataConf() throws Exception {
         ValidateResult result = MetaFactory.validate(modelConfig.getDataSet());
         Assert.assertTrue(result.getStatus());
     }
 
-    @Test
+   // @Test
     public void testValidateModelStatsConf() throws Exception {
         ValidateResult result = MetaFactory.validate(modelConfig.getStats());
         Assert.assertTrue(result.getStatus());
     }
 
-    @Test
+    //@Test
     public void testValidateModelVarSelectConf() throws Exception {
         ValidateResult result = MetaFactory.validate(modelConfig.getVarSelect());
         Assert.assertTrue(result.getStatus());
     }
 
-    @Test
+    //@Test
     public void testValidateModelNormalizeConf() throws Exception {
         ValidateResult result = MetaFactory.validate(modelConfig.getNormalize());
         Assert.assertTrue(result.getStatus());
     }
 
-    @Test
+    //@Test
     public void testValidateModelTrainAConf() throws Exception {
         ValidateResult result = MetaFactory.validate(modelConfig.getTrain());
         Assert.assertTrue(result.getStatus());
@@ -109,19 +109,19 @@ public class MetaFactoryTest {
         modelConfig.getTrain().setParams(originalParams);
     }
 
-    @Test
+   // @Test
     public void testValidateModelEvalList() throws Exception {
         ValidateResult result = MetaFactory.validate(modelConfig.getEvals());
         Assert.assertTrue(result.getStatus());
     }
 
-    @Test
+    //@Test
     public void testValidateModelEval() throws Exception {
         ValidateResult result = MetaFactory.validate(modelConfig.getEvals().get(0));
         Assert.assertTrue(result.getStatus());
     }
 
-    @Test
+    //@Test
     public void testValidateModelTrainBConf() throws Exception {
         ModelTrainConf trainConf = new ModelTrainConf();
         trainConf.setAlgorithm("test");

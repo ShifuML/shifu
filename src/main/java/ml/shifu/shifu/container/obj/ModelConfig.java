@@ -346,13 +346,6 @@ public class ModelConfig {
         return stats.getMaxNumBin();
     }
 
-    /**
-     * @return
-     */
-    @JsonIgnore
-    public BinningMethod getBinningMethod() {
-        return stats.getBinningMethod();
-    }
 
     /**
      * @return

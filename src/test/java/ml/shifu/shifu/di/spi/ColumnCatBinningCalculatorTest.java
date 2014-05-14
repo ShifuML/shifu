@@ -1,7 +1,7 @@
 package ml.shifu.shifu.di.spi;
 
 
-import ml.shifu.shifu.di.builtin.SimpleColumnCatBinningCalculator;
+import ml.shifu.shifu.di.builtin.DefaultColumnCatBinningCalculator;
 import ml.shifu.shifu.container.CategoricalValueObject;
 import ml.shifu.shifu.container.obj.ColumnBinningResult;
 import ml.shifu.shifu.container.obj.ModelConfig;
@@ -26,7 +26,7 @@ public class ColumnCatBinningCalculatorTest {
 
         ModelConfig modelConfig = generateModelConfig();
 
-        ColumnCatBinningCalculator binning = new SimpleColumnCatBinningCalculator();
+        ColumnCatBinningCalculator binning = new DefaultColumnCatBinningCalculator();
         ColumnBinningResult columnBinningResult = binning.calculate(voList);
 
         System.out.println(columnBinningResult.getBinCategory());

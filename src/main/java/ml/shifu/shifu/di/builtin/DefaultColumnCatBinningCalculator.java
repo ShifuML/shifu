@@ -22,7 +22,7 @@ import ml.shifu.shifu.container.obj.ColumnBinningResult;
 
 import java.util.*;
 
-public class SimpleColumnCatBinningCalculator implements ColumnCatBinningCalculator {
+public class DefaultColumnCatBinningCalculator implements ColumnCatBinningCalculator {
 
     public ColumnBinningResult calculate(List<CategoricalValueObject> voList) {
         ColumnBinningResult columnBinningResult = new ColumnBinningResult();

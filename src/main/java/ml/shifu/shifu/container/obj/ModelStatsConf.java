@@ -18,6 +18,10 @@ package ml.shifu.shifu.container.obj;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+import ml.shifu.shifu.di.spi.ColumnRawStatsCalculator;
+
+import java.util.Map;
+import java.util.HashMap;
 
 /**
  * ModelStatsConf class
@@ -31,7 +35,7 @@ public class ModelStatsConf {
     }
 
     private Integer maxNumBin = Integer.valueOf(10);
-    private BinningMethod binningMethod = BinningMethod.EqualPositive;
+    //private BinningMethod binningMethod = BinningMethod.EqualPositive;
     private Double sampleRate = Double.valueOf(0.8);
     private Boolean sampleNegOnly = Boolean.FALSE;
 
@@ -41,24 +45,25 @@ public class ModelStatsConf {
     private Integer binningAutoTypeThreshold = Integer.valueOf(5);
     private Boolean binningMergeEnable = Boolean.TRUE;
 
-    private String rawStatsCalculator = "ml.shifu.shifu.di.builtin.DefaultColumnRawStatsCalculator";
-    private String numBinningCalculator = "ml.shifu.shifu.di.builtin.TotalPercentileColumnNumBinningCalculator";
-    private String catBinningCalculator = "ml.shifu.shifu.di.builtin.SimpleColumnCatBinningCalculator";
-    private String numStatsCalculator = "ml.shifu.shifu.di.builtin.DefaultColumnNumStatsCalculator";
-    private String binStatsCalculator = "ml.shifu.shifu.di.builtin.DefaultColumnBinStatsCalculator";
-
-
-
-    private String statsProcessor = "ml.shifu.shifu.di.builtin.DefaultStatsProcessor";
-
-
-    public String getStatsProcessor() {
-        return statsProcessor;
+    public Map<String, String> getMethods() {
+        return methods;
     }
 
-    public void setStatsProcessor(String statsProcessor) {
-        this.statsProcessor = statsProcessor;
+    public void setMethods(Map<String, String> methods) {
+        this.methods = methods;
     }
+
+    private Map<String, String> methods = new HashMap<String, String>();
+
+
+
+
+
+
+
+
+
+
 
 
     public Integer getMaxNumBin() {
@@ -104,7 +109,7 @@ public class ModelStatsConf {
     public void setBinningMergeEnable(Boolean binningMergeEnable) {
         this.binningMergeEnable = binningMergeEnable;
     }
-
+  /*
     public BinningMethod getBinningMethod() {
         return binningMethod;
     }
@@ -112,7 +117,7 @@ public class ModelStatsConf {
     public void setBinningMethod(BinningMethod binningMethod) {
         this.binningMethod = binningMethod;
     }
-
+        */
     public Double getSampleRate() {
         return sampleRate;
     }
@@ -130,43 +135,15 @@ public class ModelStatsConf {
     }
 
 
-    public String getRawStatsCalculator() {
-        return rawStatsCalculator;
-    }
 
-    public void setRawStatsCalculator(String rawStatsCalculator) {
-        this.rawStatsCalculator = rawStatsCalculator;
-    }
 
-    public String getNumBinningCalculator() {
-        return numBinningCalculator;
-    }
-
-    public void setNumBinningCalculator(String numBinningCalculator) {
-        this.numBinningCalculator = numBinningCalculator;
-    }
-
-    public String getCatBinningCalculator() {
-        return catBinningCalculator;
-    }
-
-    public void setCatBinningCalculator(String catBinningCalculator) {
-        this.catBinningCalculator = catBinningCalculator;
-    }
-
-    public String getNumStatsCalculator() {
-        return numStatsCalculator;
-    }
-
-    public void setNumStatsCalculator(String numStatsCalculator) {
-        this.numStatsCalculator = numStatsCalculator;
-    }
-
-    public String getBinStatsCalculator() {
-        return binStatsCalculator;
-    }
-
-    public void setBinStatsCalculator(String binStatsCalculator) {
-        this.binStatsCalculator = binStatsCalculator;
+    public ModelStatsConf() {
+        methods.put("StatsProcessor", "ml.shifu.shifu.di.builtin.DefaultStatsProcessor");
+        methods.put("ColumnRawStatsCalculator", "ml.shifu.shifu.di.builtin.DefaultColumnRawStatsCalculator");
+        methods.put("ColumnNumBinningCalculator", "ml.shifu.shifu.di.builtin.TotalPercentileColumnNumBinningCalculator");
+        methods.put("ColumnCatBinningCalculator", "ml.shifu.shifu.di.builtin.DefaultColumnCatBinningCalculator");
+        methods.put("ColumnNumStatsCalculator", "ml.shifu.shifu.di.builtin.DefaultColumnNumStatsCalculator");
+        methods.put("ColumnBinStatsCalculator", "ml.shifu.shifu.di.builtin.DefaultColumnBinStatsCalculator");
     }
 }
+

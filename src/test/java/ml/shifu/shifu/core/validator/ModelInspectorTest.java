@@ -36,7 +36,7 @@ import java.util.List;
  * ModelInspectorTest class
  */
 public class ModelInspectorTest {
-
+   /*
     private File modelFile;
     private File columnFile;
     private ModelInspector instance;
@@ -214,5 +214,5 @@ public class ModelInspectorTest {
         if (columnFile != null) {
             columnFile.delete();
         }
-    }
+    }        */
 }

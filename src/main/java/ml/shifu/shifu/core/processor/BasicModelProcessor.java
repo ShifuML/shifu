@@ -63,7 +63,8 @@ public class BasicModelProcessor {
 
         // load model configuration and do validation
         loadModelConfig();
-        validateModelConfig(step);
+        // TODO: temporarily disabled
+        //validateModelConfig(step);
 
         pathFinder = new PathFinder(modelConfig);
 
