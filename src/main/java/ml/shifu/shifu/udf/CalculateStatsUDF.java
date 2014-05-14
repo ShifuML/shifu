@@ -58,6 +58,7 @@ public class CalculateStatsUDF extends AbstractTrainerUDF<Tuple> {
         }
 
         StatsModule statsModule = new StatsModule();
+        statsModule.setStatsProcessorImplClass(modelConfig.getStats().getStatsProcessor());
         statsModule.setRawStatsCalculatorImplClass(modelConfig.getStats().getRawStatsCalculator());
         statsModule.setNumBinningCalculatorImplClass(modelConfig.getStats().getNumBinningCalculator());
         statsModule.setCatBinningCalculatorImplClass(modelConfig.getStats().getCatBinningCalculator());
