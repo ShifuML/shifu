@@ -46,7 +46,7 @@ public class AbstractTrainerTest {
         random = new Random(new Date().getTime());
     }
 
-    @Test
+    //@Test
     public void testLoad1() throws IOException {
         MLDataSet set = new BasicMLDataSet();
         ModelConfig modelConfig = CommonUtils.loadModelConfig(
