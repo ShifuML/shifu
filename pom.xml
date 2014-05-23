@@ -1,4 +1,5 @@
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
     <groupId>ml.shifu</groupId>
     <artifactId>shifu</artifactId>
@@ -18,8 +19,8 @@
         <developerConnection>scm:git:https://github.com/shifuml/shifu.git</developerConnection>
         <connection>scm:git:https://github.com/shifuml/shifu.git</connection>
         <url>https://github.com/shifuml/shifu.git</url>
-    <tag>HEAD</tag>
-  </scm>
+        <tag>HEAD</tag>
+    </scm>
 
     <dependencies>
         <dependency>
@@ -53,13 +54,26 @@
         <dependency>
             <groupId>com.fasterxml.jackson.core</groupId>
             <artifactId>jackson-core</artifactId>
-            <version>2.1.2</version>
+            <version>2.3.2</version>
         </dependency>
         <dependency>
             <groupId>com.fasterxml.jackson.core</groupId>
             <artifactId>jackson-databind</artifactId>
-            <version>2.1.2</version>
+            <version>2.3.2</version>
         </dependency>
+
+        <dependency>
+            <groupId>com.fasterxml.jackson.dataformat</groupId>
+            <artifactId>jackson-dataformat-xml</artifactId>
+            <version>2.3.3</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.codehaus.woodstox</groupId>
+            <artifactId>woodstox-core-asl</artifactId>
+            <version>4.1.4</version>
+        </dependency>
+
         <dependency>
             <groupId>com.google.guava</groupId>
             <artifactId>guava</artifactId>
@@ -135,7 +149,7 @@
     <build>
         <plugins>
             <plugin>
-                <artifactId> maven-assembly-plugin </artifactId>
+                <artifactId>maven-assembly-plugin</artifactId>
                 <version>2.3</version>
                 <executions>
                     <execution>
@@ -279,7 +293,7 @@
                             <filemode>777</filemode>
                             <username>root</username>
                             <groupname>root</groupname>
-                            <dependency />
+                            <dependency/>
                             <sources>
                                 <source>
                                     <location>target</location>
@@ -421,28 +435,28 @@
         <profile>
             <id>release-sign-artifacts</id>
             <activation>
-              <property>
-                <name>performRelease</name>
-                <value>false</value>
-              </property>
+                <property>
+                    <name>performRelease</name>
+                    <value>false</value>
+                </property>
             </activation>
             <build>
-              <plugins>
-                <plugin>
-                  <groupId>org.apache.maven.plugins</groupId>
-                  <artifactId>maven-gpg-plugin</artifactId>
-                  <version>1.1</version>
-                  <executions>
-                    <execution>
-                      <id>sign-artifacts</id>
-                      <phase>verify</phase>
-                      <goals>
-                        <goal>sign</goal>
-                      </goals>
-                    </execution>
-                  </executions>
-                </plugin>
-              </plugins>
+                <plugins>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-gpg-plugin</artifactId>
+                        <version>1.1</version>
+                        <executions>
+                            <execution>
+                                <id>sign-artifacts</id>
+                                <phase>verify</phase>
+                                <goals>
+                                    <goal>sign</goal>
+                                </goals>
+                            </execution>
+                        </executions>
+                    </plugin>
+                </plugins>
             </build>
             <repositories>
                 <repository>
@@ -471,7 +485,7 @@
             <properties>
                 <maven.test.skip>true</maven.test.skip>
             </properties>
-          </profile>
+        </profile>
 
         <!-- For hadoop 2.2.0cluster -->
         <profile>
@@ -489,7 +503,7 @@
                 </repository>
                 <repository>
                     <id>HortonWorks HDP</id>
-                    <url>http://repo.hortonworks.com/nexus/content/repositories/releases</url>                                                                            
+                    <url>http://repo.hortonworks.com/nexus/content/repositories/releases</url>
                 </repository>
             </repositories>
             <dependencies>

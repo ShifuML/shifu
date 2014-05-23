@@ -26,26 +26,26 @@ import java.util.HashMap;
 
 public class StatsModule extends AbstractModule {
 
-    private Map<String, String> methods = new HashMap<String, String>();
+    private Map<String, String> injections = new HashMap<String, String>();
 
     public StatsModule() {}
 
 
-    public Map<String, String> getMethods() {
-        return methods;
+    public Map<String, String> getInjections() {
+        return injections;
     }
 
-    public void setMethods(Map<String, String> methods) {
-        this.methods = methods;
+    public void setInjections(Map<String, String> injections) {
+        this.injections = injections;
     }
 
 
     @Override
     protected void configure() {
 
-        for (String spiName : methods.keySet()) {
+        for (String spiName : injections.keySet()) {
             Class spi = CommonUtils.getClass("ml.shifu.shifu.di.spi." + spiName);
-            Class impl = CommonUtils.getClass(methods.get(spiName));
+            Class impl = CommonUtils.getClass(injections.get(spiName));
             bind(spi).to(impl);
         }
 

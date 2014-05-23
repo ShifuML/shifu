@@ -75,7 +75,7 @@ public class CalculateStatsActor extends AbstractActor {
         // Dependency Injection
         StatsModule statsModule = new StatsModule();
 
-        statsModule.setMethods(modelConfig.getStats().getMethods());
+        statsModule.setInjections(modelConfig.getStats().getInjections());
 
         final Injector injector = Guice.createInjector(statsModule);
 

@@ -24,13 +24,10 @@ import java.util.Map;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
-import ml.shifu.shifu.container.CategoricalValueObject;
-import ml.shifu.shifu.container.NumericalValueObject;
 import ml.shifu.shifu.container.RawValueObject;
 import ml.shifu.shifu.container.obj.*;
 import ml.shifu.shifu.di.module.StatsModule;
 import ml.shifu.shifu.di.service.*;
-import ml.shifu.shifu.util.CommonUtils;
 import org.apache.pig.data.DataBag;
 import org.apache.pig.data.Tuple;
 import org.apache.pig.data.TupleFactory;
@@ -58,7 +55,7 @@ public class CalculateStatsUDF extends AbstractTrainerUDF<Tuple> {
         }
 
         StatsModule statsModule = new StatsModule();
-        statsModule.setMethods(modelConfig.getStats().getMethods());
+        statsModule.setInjections(modelConfig.getStats().getInjections());
 
         //statsModule.setStatsProcessorImplClass(modelConfig.getStats().getStatsProcessor());
        // statsModule.setRawStatsCalculatorImplClass(modelConfig.getStats().getRawStatsCalculator());

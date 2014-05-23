@@ -4,7 +4,6 @@ import com.google.inject.Guice;
 import com.google.inject.Injector;
 import ml.shifu.shifu.container.RawValueObject;
 import ml.shifu.shifu.container.obj.ColumnConfig;
-import ml.shifu.shifu.di.builtin.*;
 import ml.shifu.shifu.di.service.StatsService;
 import org.testng.Assert;
 import org.testng.annotations.Test;
@@ -21,7 +20,7 @@ public class StatsModuleTest {
         methods.put("StatsProcessor", "ml.shifu.shifu.di.builtin.MockStatsProcessor");
 
         StatsModule statsModule = new StatsModule();
-        statsModule.setMethods(methods);
+        statsModule.setInjections(methods);
 
         Injector injector = Guice.createInjector(statsModule);
         StatsService statsService = injector.getInstance(StatsService.class);

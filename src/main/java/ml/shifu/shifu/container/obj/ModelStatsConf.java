@@ -18,7 +18,6 @@ package ml.shifu.shifu.container.obj;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
-import ml.shifu.shifu.di.spi.ColumnRawStatsCalculator;
 
 import java.util.Map;
 import java.util.HashMap;
@@ -45,15 +44,15 @@ public class ModelStatsConf {
     private Integer binningAutoTypeThreshold = Integer.valueOf(5);
     private Boolean binningMergeEnable = Boolean.TRUE;
 
-    public Map<String, String> getMethods() {
-        return methods;
+    public Map<String, String> getInjections() {
+        return injections;
     }
 
-    public void setMethods(Map<String, String> methods) {
-        this.methods = methods;
+    public void setInjections(Map<String, String> injections) {
+        this.injections = injections;
     }
 
-    private Map<String, String> methods = new HashMap<String, String>();
+    private Map<String, String> injections = new HashMap<String, String>();
 
 
 
@@ -138,12 +137,12 @@ public class ModelStatsConf {
 
 
     public ModelStatsConf() {
-        methods.put("StatsProcessor", "ml.shifu.shifu.di.builtin.DefaultStatsProcessor");
-        methods.put("ColumnRawStatsCalculator", "ml.shifu.shifu.di.builtin.DefaultColumnRawStatsCalculator");
-        methods.put("ColumnNumBinningCalculator", "ml.shifu.shifu.di.builtin.TotalPercentileColumnNumBinningCalculator");
-        methods.put("ColumnCatBinningCalculator", "ml.shifu.shifu.di.builtin.DefaultColumnCatBinningCalculator");
-        methods.put("ColumnNumStatsCalculator", "ml.shifu.shifu.di.builtin.DefaultColumnNumStatsCalculator");
-        methods.put("ColumnBinStatsCalculator", "ml.shifu.shifu.di.builtin.DefaultColumnBinStatsCalculator");
+        injections.put("StatsProcessor", "ml.shifu.shifu.di.builtin.DefaultStatsProcessor");
+        injections.put("ColumnRawStatsCalculator", "ml.shifu.shifu.di.builtin.DefaultColumnRawStatsCalculator");
+        injections.put("ColumnNumBinningCalculator", "ml.shifu.shifu.di.builtin.TotalPercentileColumnNumBinningCalculator");
+        injections.put("ColumnCatBinningCalculator", "ml.shifu.shifu.di.builtin.DefaultColumnCatBinningCalculator");
+        injections.put("ColumnNumStatsCalculator", "ml.shifu.shifu.di.builtin.DefaultColumnNumStatsCalculator");
+        injections.put("ColumnBinStatsCalculator", "ml.shifu.shifu.di.builtin.DefaultColumnBinStatsCalculator");
     }
 }
 
