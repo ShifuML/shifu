@@ -1,5 +1,6 @@
 package ml.shifu.shifu.di.builtin;
 
+import ml.shifu.shifu.di.spi.DataDictionaryInitializer;
 import ml.shifu.shifu.pmml.obj.DataDictionary;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -11,11 +12,11 @@ import java.util.List;
 import java.util.Map;
 import java.util.Scanner;
 
-public class CSVDataDictionaryInitializer {
+public class CSVDataDictionaryInitializer implements DataDictionaryInitializer {
 
     static Logger log = LoggerFactory.getLogger(CSVDataDictionaryInitializer.class);
 
-    DataDictionary init(Map<String, Object> params) {
+    public DataDictionary init(Map<String, Object> params) {
         DataDictionary dict = new DataDictionary();
 
         String filePath;
