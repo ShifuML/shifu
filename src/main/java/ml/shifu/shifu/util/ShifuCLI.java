@@ -100,7 +100,7 @@ public class ShifuCLI {
         }
 
         try {
-            if (args[0].equals(NEW) && args.length >= 2 && StringUtils.isNotEmpty(args[1])) {
+            if (args[0].equals(NEW) && args.length >= 2 && StringUtils.isNotEmpty(args[1]) && args[1].trim().matches("^[^-~].*")) {
                 // modelset step
                 String modelName = args[1];
                 int status = createNewModel(modelName, cmd.getOptionValue(MODELSET_CMD_TYPE), cmd.getOptionValue(MODELSET_CMD_M));
