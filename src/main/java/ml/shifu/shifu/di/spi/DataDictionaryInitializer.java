@@ -1,7 +1,9 @@
 package ml.shifu.shifu.di.spi;
 
+import org.dmg.pmml.DataDictionary;
+
 import java.util.Map;
-import ml.shifu.shifu.pmml.obj.DataDictionary;
+
 
 public interface DataDictionaryInitializer {
 
