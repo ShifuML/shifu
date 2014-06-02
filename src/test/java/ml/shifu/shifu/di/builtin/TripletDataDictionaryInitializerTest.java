@@ -26,6 +26,13 @@ public class TripletDataDictionaryInitializerTest {
         Assert.assertEquals(dict.getDataFields().get(4).getDataType().toString(), "STRING");
         Assert.assertEquals(dict.getDataFields().get(4).getOptype().toString(), "CATEGORICAL");
 
+        ModelStats stats = new ModelStats();
+        UnivariateStats univariateStats = new UnivariateStats();
+
+        ContStats contStats = new ContStats();
+
+
+        //stats.withUnivariateStats();
     }
 
 }
