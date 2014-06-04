@@ -1,10 +1,9 @@
-package ml.shifu.shifu.core;
+package ml.shifu.shifu.di.builtin;
 
 import ml.shifu.shifu.container.CategoricalValueObject;
 import ml.shifu.shifu.util.PMMLUtils;
 import org.apache.commons.lang.StringUtils;
 import org.dmg.pmml.Array;
-import org.dmg.pmml.DataField;
 import org.dmg.pmml.DiscrStats;
 import org.dmg.pmml.UnivariateStats;
 import org.slf4j.Logger;
@@ -12,8 +11,8 @@ import org.slf4j.LoggerFactory;
 
 import java.util.*;
 
-public class UnivariateStatsDiscrCalculator {
-    private static Logger log = LoggerFactory.getLogger(UnivariateStatsDiscrCalculator.class);
+public class BinomialUnivariateStatsDiscrCalculator {
+    private static Logger log = LoggerFactory.getLogger(BinomialUnivariateStatsDiscrCalculator.class);
 
     public static void calculate(UnivariateStats univariateStats, List<CategoricalValueObject> cvoList, Map<String, Object> params) {
 

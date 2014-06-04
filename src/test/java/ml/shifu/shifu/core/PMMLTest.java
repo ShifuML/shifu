@@ -2,14 +2,15 @@ package ml.shifu.shifu.core;
 
 import ml.shifu.shifu.container.CategoricalValueObject;
 import ml.shifu.shifu.container.NumericalValueObject;
-import ml.shifu.shifu.container.RawValueObject;
 import ml.shifu.shifu.di.builtin.BinomialUnivariateStatsCalculator;
-import ml.shifu.shifu.di.builtin.DefaultUnivariateStatsCalculator;
+import ml.shifu.shifu.di.builtin.BinomialUnivariateStatsDiscrCalculator;
+import ml.shifu.shifu.di.builtin.SimpleUnivariateStatsCalculator;
 import ml.shifu.shifu.di.builtin.TripletDataDictionaryInitializer;
 import ml.shifu.shifu.di.spi.SingleThreadFileLoader;
 import ml.shifu.shifu.di.spi.UnivariateStatsCalculator;
 import ml.shifu.shifu.util.CSVWithHeaderLocalSingleThreadFileLoader;
 import ml.shifu.shifu.util.LocalDataTransposer;
+import ml.shifu.shifu.util.Params;
 import org.dmg.pmml.*;
 import org.jpmml.model.JAXBUtil;
 import org.testng.Assert;
@@ -55,7 +56,7 @@ public class PMMLTest {
 
         UnivariateStats univariateStats = new UnivariateStats();
         //UnivariateStatsContCalculator.calculate(univariateStats, nvoList, 10);
-        UnivariateStatsDiscrCalculator.calculate(univariateStats, cvoList, null);
+        BinomialUnivariateStatsDiscrCalculator.calculate(univariateStats, cvoList, null);
 
         modelStats.withUnivariateStats(univariateStats);
         model.setModelStats(modelStats);
@@ -74,19 +75,7 @@ public class PMMLTest {
     @Test
     public void testLoadData() {
 
-        TripletDataDictionaryInitializer initializer = new TripletDataDictionaryInitializer();
-
-        Map<String, Object> params = new HashMap<String, Object>();
-
-        params.put("filePath", "src/test/resources/conf/IrisFields.txt");
-
-        DataDictionary dict = initializer.init(params);
-
-        SingleThreadFileLoader loader = new CSVWithHeaderLocalSingleThreadFileLoader();
-
-        List<List<String>> rows = loader.load("src/test/resources/unittest/DataSet/iris/iris.csv");
-
-        List<List<String>> columns = LocalDataTransposer.transpose(rows);
+        loadData();
 
 
         Assert.assertEquals((int)dict.getNumberOfFields(), columns.size());
@@ -112,8 +101,8 @@ public class PMMLTest {
 
             UnivariateStatsCalculator univariateStatsCalculator = new BinomialUnivariateStatsCalculator();
 
-            UnivariateStats univariateStats = univariateStatsCalculator.calculate(field, column, statsParams);
-            modelStats.withUnivariateStats(univariateStats);
+            //UnivariateStats univariateStats = univariateStatsCalculator.calculate(field, column, statsParams);
+            //modelStats.withUnivariateStats(univariateStats);
 
         }
 
@@ -133,6 +122,70 @@ public class PMMLTest {
         }
 
 
+
+
+    }
+
+    @Test
+    public void testSimpleUnivariateStats() {
+        loadData();
+
+        Params params = new Params();
+
+        PMML pmml = new PMML();
+        Model model = new NeuralNetwork();
+        ModelStats modelStats = new ModelStats();
+
+        int size = dict.getNumberOfFields();
+        for (int i = 0; i < size; i++) {
+
+            DataField field = dict.getDataFields().get(i);
+            List<String> column = columns.get(i);
+
+
+            UnivariateStatsCalculator univariateStatsCalculator = new SimpleUnivariateStatsCalculator();
+
+            UnivariateStats univariateStats = univariateStatsCalculator.calculate(field, column, params);
+            modelStats.withUnivariateStats(univariateStats);
+
+        }
+
+
+        OutputStream os = null;
+
+        model.setModelStats(modelStats);
+        pmml.withModels(model);
+
+        try {
+            os = new FileOutputStream("test2.xml");
+            StreamResult result = new StreamResult(os);
+            JAXBUtil.marshalPMML(pmml, result);
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+    }
+
+
+    private DataDictionary dict;
+    private List<List<String>> rows;
+    private List<List<String>> columns;
+
+    private void loadData() {
+        TripletDataDictionaryInitializer initializer = new TripletDataDictionaryInitializer();
+
+        Params params = new Params();
+
+
+        params.set("filePath", "src/test/resources/conf/IrisFields.txt");
+        dict = initializer.init(params);
+
+        SingleThreadFileLoader loader = new CSVWithHeaderLocalSingleThreadFileLoader();
+
+        rows = loader.load("src/test/resources/unittest/DataSet/iris/iris.csv");
+
+        columns = LocalDataTransposer.transpose(rows);
 
 
     }

@@ -1,6 +1,7 @@
-package ml.shifu.shifu.core;
+package ml.shifu.shifu.di.builtin;
 
 import ml.shifu.shifu.container.RawValueObject;
+import ml.shifu.shifu.util.Params;
 import org.dmg.pmml.Counts;
 import org.dmg.pmml.UnivariateStats;
 
@@ -8,9 +9,9 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
-public class UnivariateStatsCountsCalculator {
+public class SimpleUnivariateStatsCountsCalculator {
 
-    public static void calculate(UnivariateStats univariateStats, List<? extends Object> values) {
+    public void calculate(UnivariateStats univariateStats, List<? extends Object> values) {
         Counts counts = new Counts();
 
         double totalFreq = 0;
@@ -19,15 +20,7 @@ public class UnivariateStatsCountsCalculator {
 
         Set<Object> uniqueValues = new HashSet<Object>();
 
-        for (Object valueObject : values) {
-            Object value;
-            if (valueObject instanceof RawValueObject) {
-                value = ((RawValueObject) valueObject).getValue();
-            } else {
-                value = valueObject;
-            }
-
-
+        for (Object value : values) {
 
             if (value == null) {
                 missingFreq += 1.0;

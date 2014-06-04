@@ -1,11 +1,10 @@
 package ml.shifu.shifu.di.builtin;
 
 import ml.shifu.shifu.container.RawValueObject;
-import ml.shifu.shifu.core.UnivariateStatsContCalculator;
-import ml.shifu.shifu.core.UnivariateStatsCountsCalculator;
-import ml.shifu.shifu.core.UnivariateStatsDiscrCalculator;
+import ml.shifu.shifu.di.builtin.UnivariateStatsCountsCalculator;
 import ml.shifu.shifu.di.spi.UnivariateStatsCalculator;
 import ml.shifu.shifu.util.CommonUtils;
+import ml.shifu.shifu.util.Params;
 import org.dmg.pmml.DataField;
 import org.dmg.pmml.OpType;
 import org.dmg.pmml.UnivariateStats;
@@ -20,7 +19,7 @@ public class BinomialUnivariateStatsCalculator implements UnivariateStatsCalcula
     private Integer numBins;
     private List<String> tags;
 
-    public UnivariateStats calculate(DataField field, List<? extends Object> values, Map<String, Object> params) {
+    public UnivariateStats calculate(DataField field, List<? extends Object> values, Params params) {
         UnivariateStats stats = new UnivariateStats();
         stats.setField(field.getName());
 
@@ -44,12 +43,12 @@ public class BinomialUnivariateStatsCalculator implements UnivariateStatsCalcula
 
 
         if (field.getOptype().equals(OpType.CATEGORICAL)) {
-            UnivariateStatsDiscrCalculator.calculate(stats, CommonUtils.convertListRaw2Categorical(rvoList, posTags, negTags), null);
+            BinomialUnivariateStatsDiscrCalculator.calculate(stats, CommonUtils.convertListRaw2Categorical(rvoList, posTags, negTags), null);
 
 
         } else if (field.getOptype().equals(OpType.CONTINUOUS)) {
             //stats.setNumericInfo(UnivariateStatsNumericInfoCalculator.calculate(values));
-            UnivariateStatsContCalculator contCalculator = new UnivariateStatsContCalculator();
+            BinomialUnivariateStatsContCalculator contCalculator = new BinomialUnivariateStatsContCalculator();
             contCalculator.calculate(stats, CommonUtils.convertListRaw2Numerical(rvoList, posTags, negTags), numBins);
 
         }
@@ -58,30 +57,20 @@ public class BinomialUnivariateStatsCalculator implements UnivariateStatsCalcula
         return stats;
     }
 
-    private void setParams(Map<String, Object> params) {
-        if (params.containsKey("posTags")) {
+    private void setParams(Params params) {
+
             this.posTags = (List<String>) params.get("posTags");
-        } else {
-            throw new RuntimeException(this.getClass().getSimpleName() + " needs param: " + "posTags");
-        }
 
-        if (params.containsKey("negTags")) {
+
+
             this.negTags = (List<String>) params.get("negTags");
-        } else {
-            throw new RuntimeException(this.getClass().getSimpleName() + " needs param: " + "negTags");
-        }
 
-        if (params.containsKey("tags")) {
+
+
             this.tags = (List<String>) params.get("tags");
-        } else {
-            throw new RuntimeException(this.getClass().getSimpleName() + " needs param: " + "tags");
-        }
 
-        if (params.containsKey("numBins")) {
             this.numBins = (Integer) params.get("numBins");
-        } else {
-            throw new RuntimeException(this.getClass().getSimpleName() + " needs param: " + "numBins");
-        }
+
 
     }
 }

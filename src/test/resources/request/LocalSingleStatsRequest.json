@@ -1,0 +1,13 @@
+{
+  "action" : "stats",
+  "executionMode" : "LOCAL_SINGLE",
+  "bindings" : {
+    "UnivariateStatsCalculator" : "ml.shifu.shifu.di.builtin.SimpleUnivariateStatsCalculator"
+  },
+  "parameters" : {
+
+    "numBins" : 10,
+    "negTags" : [ "Iris-virginica" ],
+    "posTags" : [ "Iris-setosa", "Iris-versicolor" ]
+  }
+}

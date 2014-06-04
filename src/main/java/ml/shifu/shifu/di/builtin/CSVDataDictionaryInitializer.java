@@ -2,6 +2,7 @@ package ml.shifu.shifu.di.builtin;
 
 import ml.shifu.shifu.di.spi.DataDictionaryInitializer;
 
+import ml.shifu.shifu.util.Params;
 import org.dmg.pmml.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -14,13 +15,13 @@ public class CSVDataDictionaryInitializer implements DataDictionaryInitializer {
 
     static Logger log = LoggerFactory.getLogger(CSVDataDictionaryInitializer.class);
 
-    public DataDictionary init(Map<String, Object> params) {
+    public DataDictionary init(Params params) {
         DataDictionary dict = new DataDictionary();
 
         String csvFilePath;
         String delimiter = ",";
         String typeFilePath = null;
-
+         /*
         if (params.containsKey("csvFilePath")) {
             csvFilePath = (String) params.get("csvFilePath");
             log.info("csvFilePath: " + csvFilePath);
@@ -86,7 +87,7 @@ public class CSVDataDictionaryInitializer implements DataDictionaryInitializer {
                 scanner.close();
             }
         }
-
+                         */
         return dict;
 
     }

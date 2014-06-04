@@ -1,0 +1,13 @@
+{
+  "action" : "init",
+  "executionMode" : "LOCAL_SINGLE",
+  "bindings" : {
+    "DataDictionaryInitializer" : "ml.shifu.shifu.di.builtin.TripletDataDictionaryInitializer"
+  },
+  "parameters" : {
+    "filePath": "src/test/resources/conf/IrisFields.txt",
+    "numBins" : 10,
+    "negTags" : [ "Iris-virginica" ],
+    "posTags" : [ "Iris-setosa", "Iris-versicolor" ]
+  }
+}

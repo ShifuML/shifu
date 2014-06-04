@@ -1,23 +1,21 @@
-package ml.shifu.shifu.core;
+package ml.shifu.shifu.di.builtin;
 
 import ml.shifu.shifu.container.NumericalValueObject;
 import ml.shifu.shifu.container.obj.ColumnBinningResult;
-import ml.shifu.shifu.di.builtin.EqualPositiveColumnNumBinningCalculator;
-import ml.shifu.shifu.di.spi.ColumnNumBinningCalculator;
+import ml.shifu.shifu.core.QuantileCalculator;
 import ml.shifu.shifu.util.CommonUtils;
+import ml.shifu.shifu.util.PMMLUtils;
 import org.dmg.pmml.ContStats;
 import org.dmg.pmml.Interval;
 import org.dmg.pmml.NumericInfo;
 import org.dmg.pmml.UnivariateStats;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import sun.jvm.hotspot.jdi.IntegerValueImpl;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.util.*;
 
-public class UnivariateStatsContCalculator {
-    private Logger log = LoggerFactory.getLogger(UnivariateStatsContCalculator.class);
+public class BinomialUnivariateStatsContCalculator {
+    private Logger log = LoggerFactory.getLogger(BinomialUnivariateStatsContCalculator.class);
 
     private NumericInfo numericInfo = new NumericInfo();
     private ContStats contStats = new ContStats();
@@ -96,6 +94,14 @@ public class UnivariateStatsContCalculator {
         numericInfo.setMedian(median);
         numericInfo.setInterQuartileRange(interQuartileRange);
 
+        QuantileCalculator quantileCalculator = new QuantileCalculator();
+
+        Collections.sort(validValues);
+
+
+
+        numericInfo.withQuantiles(quantileCalculator.getEvenlySpacedQuantiles(validValues, 11));
+
         contStats.setTotalValuesSum(sum);
         contStats.setTotalSquaresSum(squaredSum);
 
@@ -124,6 +130,16 @@ public class UnivariateStatsContCalculator {
 
         }
         contStats.withIntervals(intervals);
+
+        Map<String, String> extensionMap = new HashMap<String, String>();
+
+        extensionMap.put("BinCountPos", result.getBinCountPos().toString());
+        extensionMap.put("BinCountNeg", result.getBinCountNeg().toString());
+        extensionMap.put("BinWeightedCountPos", result.getBinWeightedPos().toString());
+        extensionMap.put("BinWeightedCountNeg", result.getBinWeightedNeg().toString());
+        extensionMap.put("BinPosRate", result.getBinPosRate().toString());
+
+        contStats.withExtensions(PMMLUtils.createExtensions(extensionMap));
 
     }
 

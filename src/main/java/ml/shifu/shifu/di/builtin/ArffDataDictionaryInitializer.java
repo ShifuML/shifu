@@ -8,15 +8,17 @@ import org.slf4j.LoggerFactory;
 
 import java.io.BufferedReader;
 import java.io.FileReader;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Scanner;
 
-public class TripletDataDictionaryInitializer implements DataDictionaryInitializer {
+public class ArffDataDictionaryInitializer implements DataDictionaryInitializer {
 
-    static Logger log = LoggerFactory.getLogger(TripletDataDictionaryInitializer.class);
+    static Logger log = LoggerFactory.getLogger(ArffDataDictionaryInitializer.class);
 
     public DataDictionary init(Params params) {
 
-        log.info("Initializing DataDictionary: " + TripletDataDictionaryInitializer.class);
+        log.info("Initializing DataDictionary: " + ArffDataDictionaryInitializer.class);
 
         DataDictionary dict = new DataDictionary();
 
