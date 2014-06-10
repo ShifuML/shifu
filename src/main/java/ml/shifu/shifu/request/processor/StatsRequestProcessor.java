@@ -14,6 +14,7 @@ import ml.shifu.shifu.util.PMMLUtils;
 import org.dmg.pmml.*;
 
 import java.io.IOException;
+import java.util.Map;
 import java.util.List;
 
 public class StatsRequestProcessor {
@@ -24,10 +25,11 @@ public class StatsRequestProcessor {
     private String pathPMML;
 
     public void run(RequestObject req) throws Exception {
+        /*
         this.req = req;
         SimpleModule module = new SimpleModule();
 
-        module.setBindings(req.getBindings());
+        module.setBindings((Map<String, String>)req.getGlobalParams().get("bindings"));
         Injector injector = Guice.createInjector(module);
         univariateStatsService = injector.getInstance(UnivariateStatsService.class);
 
@@ -38,12 +40,12 @@ public class StatsRequestProcessor {
         if (req.getExecutionMode().equals(RequestObject.ExecutionMode.LOCAL_SINGLE)) {
             runLocalSingle();
         }
-
+                                   */
 
     }
 
     private void runLocalSingle() {
-
+        /*
         SingleThreadFileLoader loader = new CSVWithHeaderLocalSingleThreadFileLoader();
 
         List<List<String>> rows = loader.load("src/test/resources/unittest/DataSet/iris/iris.csv");
@@ -66,7 +68,7 @@ public class StatsRequestProcessor {
         pmml.withModels(model);
 
         PMMLUtils.savePMML(pmml, pathPMML);
-
+                    */
     }
 
 }

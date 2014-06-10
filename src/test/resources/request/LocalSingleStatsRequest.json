@@ -1,10 +1,10 @@
 {
-  "action" : "stats",
+  "requestType" : "stats",
   "executionMode" : "LOCAL_SINGLE",
   "bindings" : {
     "UnivariateStatsCalculator" : "ml.shifu.shifu.di.builtin.SimpleUnivariateStatsCalculator"
   },
-  "parameters" : {
+  "globalParameters" : {
 
     "numBins" : 10,
     "negTags" : [ "Iris-virginica" ],

@@ -1,6 +1,7 @@
-package ml.shifu.shifu.di.builtin;
+package ml.shifu.shifu.di.builtin.dataDictionary;
 
 import ml.shifu.shifu.di.spi.DataDictionaryInitializer;
+import ml.shifu.shifu.request.RequestObject;
 import ml.shifu.shifu.util.Params;
 import org.dmg.pmml.*;
 import org.slf4j.Logger;
@@ -8,19 +9,23 @@ import org.slf4j.LoggerFactory;
 
 import java.io.BufferedReader;
 import java.io.FileReader;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Scanner;
 
-public class TripletDataDictionaryInitializer implements DataDictionaryInitializer {
+public class FullListDataDictionaryInitializer implements DataDictionaryInitializer {
 
-    static Logger log = LoggerFactory.getLogger(TripletDataDictionaryInitializer.class);
+    static Logger log = LoggerFactory.getLogger(FullListDataDictionaryInitializer.class);
 
-    public DataDictionary init(Params params) {
+    public DataDictionary init(RequestObject req) {
 
-        log.info("Initializing DataDictionary: " + TripletDataDictionaryInitializer.class);
+        Params params = req.getGlobalParams();
+
+        log.info("Initializing DataDictionary: " + FullListDataDictionaryInitializer.class);
 
         DataDictionary dict = new DataDictionary();
 
-        String filePath = (String) params.get("filePath");
+        String filePath = (String) params.get("pathFields");
 
         Scanner scanner = null;
 
@@ -35,7 +40,15 @@ public class TripletDataDictionaryInitializer implements DataDictionaryInitializ
                 DataField field = new DataField();
                 field.setName(FieldName.create(parts[0].trim()));
                 field.setOptype(OpType.valueOf(parts[1].trim().toUpperCase()));
-                field.setDataType(DataType.valueOf(parts[2].trim().toUpperCase()));
+                if (parts.length >= 3) {
+                    field.setDataType(DataType.valueOf(parts[2].trim().toUpperCase()));
+                } else {
+                    if (field.getOptype().equals(OpType.CONTINUOUS)) {
+                        field.setDataType(DataType.DOUBLE);
+                    } else {
+                        field.setDataType(DataType.STRING);
+                    }
+                }
                 fields.add(field);
             }
 

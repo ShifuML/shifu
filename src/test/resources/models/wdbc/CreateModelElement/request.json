@@ -1,0 +1,25 @@
+{
+  "requestType" : "CreateModelElement",
+  "executionMode" : "LOCAL_SINGLE",
+  
+  "globalParams" : {
+    "bindings" : {
+      "TargetsElementCreator" : "ml.shifu.shifu.di.builtin.targets.BinaryTargetsElementCreator"
+
+    },
+    "modelType": "NeuralNetwork",
+    "pathPMML": "src/test/resources/models/wdbc/CreateModelElement/model.xml",
+    "pathPMMLOutput": "src/test/resources/models/wdbc/CreateModelElement/model_output.xml",
+    "targetFieldName": "diagnosis",
+    "posFieldValue": "M",
+    "posFieldDisplayValue": "Malignant",
+    "negFieldValue": "B",
+    "negFieldDisplayValue": "Benign"
+  },
+  "fieldParamsMap": {
+
+
+  }
+
+
+}

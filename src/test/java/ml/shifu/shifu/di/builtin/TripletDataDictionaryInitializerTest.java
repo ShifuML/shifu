@@ -1,24 +1,20 @@
 package ml.shifu.shifu.di.builtin;
 
-import ml.shifu.shifu.util.Params;
-import org.dmg.pmml.*;
-import org.testng.Assert;
 import org.testng.annotations.Test;
 
 
 import java.io.IOException;
-import java.util.Map;
-import java.util.HashMap;
 
 public class TripletDataDictionaryInitializerTest {
 
     @Test
     public void test() throws IOException {
+        /*
         TripletDataDictionaryInitializer initializer = new TripletDataDictionaryInitializer();
 
         Params params = new Params();
 
-        params.set("filePath", "src/test/resources/conf/IrisFields.txt");
+        params.put("filePath", "src/test/resources/conf/IrisFields.txt");
 
         DataDictionary dict = initializer.init(params);
         Assert.assertEquals((int)dict.getNumberOfFields(), 5);
@@ -33,7 +29,8 @@ public class TripletDataDictionaryInitializerTest {
         ContStats contStats = new ContStats();
 
 
-        //stats.withUnivariateStats();
+        //stats.withUnivariateStats();  */
+
     }
 
 }

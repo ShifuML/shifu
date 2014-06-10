@@ -1,13 +1,12 @@
 {
-  "action" : "init",
+  "requestType" : "CreateDataDictionary",
   "executionMode" : "LOCAL_SINGLE",
-  "bindings" : {
-    "DataDictionaryInitializer" : "ml.shifu.shifu.di.builtin.TripletDataDictionaryInitializer"
-  },
-  "parameters" : {
-    "filePath": "src/test/resources/conf/IrisFields.txt",
-    "numBins" : 10,
-    "negTags" : [ "Iris-virginica" ],
-    "posTags" : [ "Iris-setosa", "Iris-versicolor" ]
+  
+  "globalParams" : {
+    "bindings" : {
+      "DataDictionaryInitializer" : "ml.shifu.shifu.di.builtin.ByTupleDataDictionaryInitializer"
+    },
+    "pathFields": "src/test/resources/models/wdbc/FieldTuples.txt",
+    "pathPMML": "src/test/resources/models/wdbc/model.xml"
   }
 }

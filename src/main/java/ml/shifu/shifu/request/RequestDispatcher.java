@@ -1,15 +1,15 @@
 package ml.shifu.shifu.request;
 
 
-import ml.shifu.shifu.request.processor.InitRequestProcessor;
+import ml.shifu.shifu.request.processor.CreateDataDictionaryRequestProcessor;
 
 public class RequestDispatcher {
 
     public void dispatch(RequestObject req) {
-        String action = req.getAction();
+        String action = req.getRequestType();
 
         if (action.equalsIgnoreCase("init")) {
-            InitRequestProcessor processor = new InitRequestProcessor();
+            CreateDataDictionaryRequestProcessor processor = new CreateDataDictionaryRequestProcessor();
             processor.run(req);
         } else if (action.equalsIgnoreCase("stats")) {
 

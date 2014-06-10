@@ -1,0 +1,115 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<PMML xmlns="http://www.dmg.org/PMML-4_2" version="4.2">
+    <DataDictionary numberOfFields="5">
+        <DataField name="sepal_length" optype="continuous" dataType="double"/>
+        <DataField name="sepal_width" optype="continuous" dataType="double"/>
+        <DataField name="petal_length" optype="continuous" dataType="double"/>
+        <DataField name="petal_width" optype="continuous" dataType="double"/>
+        <DataField name="class" optype="categorical" dataType="string"/>
+    </DataDictionary>
+    <NeuralNetwork>
+        <ModelStats>
+            <UnivariateStats field="sepal_length">
+                <Counts totalFreq="150.0" missingFreq="0.0" invalidFreq="0.0" cardinality="35"/>
+                <NumericInfo minimum="4.3" maximum="7.9" mean="5.843333333333335" standardDeviation="0.8280661320303032" median="5.8" interQuartileRange="1.3000000000000007">
+                    <Quantile quantileLimit="0.0" quantileValue="4.3"/>
+                    <Quantile quantileLimit="10.0" quantileValue="4.8"/>
+                    <Quantile quantileLimit="20.0" quantileValue="5.0"/>
+                    <Quantile quantileLimit="30.0" quantileValue="5.2"/>
+                    <Quantile quantileLimit="40.0" quantileValue="5.6"/>
+                    <Quantile quantileLimit="50.0" quantileValue="5.8"/>
+                    <Quantile quantileLimit="60.0" quantileValue="6.1"/>
+                    <Quantile quantileLimit="70.0" quantileValue="6.3"/>
+                    <Quantile quantileLimit="80.0" quantileValue="6.5"/>
+                    <Quantile quantileLimit="90.0" quantileValue="6.9"/>
+                    <Quantile quantileLimit="100.0" quantileValue="7.9"/>
+                </NumericInfo>
+                <ContStats totalValuesSum="876.5000000000002" totalSquaresSum="5223.849999999998"/>
+            </UnivariateStats>
+            <UnivariateStats field="sepal_width">
+                <Counts totalFreq="150.0" missingFreq="0.0" invalidFreq="0.0" cardinality="23"/>
+                <NumericInfo minimum="2.0" maximum="4.4" mean="3.0540000000000007" standardDeviation="0.43359431910143253" median="3.0" interQuartileRange="0.5">
+                    <Quantile quantileLimit="0.0" quantileValue="2.0"/>
+                    <Quantile quantileLimit="10.0" quantileValue="2.5"/>
+                    <Quantile quantileLimit="20.0" quantileValue="2.7"/>
+                    <Quantile quantileLimit="30.0" quantileValue="2.8"/>
+                    <Quantile quantileLimit="40.0" quantileValue="3.0"/>
+                    <Quantile quantileLimit="50.0" quantileValue="3.0"/>
+                    <Quantile quantileLimit="60.0" quantileValue="3.1"/>
+                    <Quantile quantileLimit="70.0" quantileValue="3.2"/>
+                    <Quantile quantileLimit="80.0" quantileValue="3.4"/>
+                    <Quantile quantileLimit="90.0" quantileValue="3.6"/>
+                    <Quantile quantileLimit="100.0" quantileValue="4.4"/>
+                </NumericInfo>
+                <ContStats totalValuesSum="458.10000000000014" totalSquaresSum="1427.049999999999"/>
+            </UnivariateStats>
+            <UnivariateStats field="petal_length">
+                <Counts totalFreq="150.0" missingFreq="0.0" invalidFreq="0.0" cardinality="43"/>
+                <NumericInfo minimum="1.0" maximum="6.9" mean="3.7586666666666693" standardDeviation="1.7644204218541317" median="4.4" interQuartileRange="3.4999999999999996">
+                    <Quantile quantileLimit="0.0" quantileValue="1.0"/>
+                    <Quantile quantileLimit="10.0" quantileValue="1.4"/>
+                    <Quantile quantileLimit="20.0" quantileValue="1.5"/>
+                    <Quantile quantileLimit="30.0" quantileValue="1.7"/>
+                    <Quantile quantileLimit="40.0" quantileValue="3.9"/>
+                    <Quantile quantileLimit="50.0" quantileValue="4.3"/>
+                    <Quantile quantileLimit="60.0" quantileValue="4.6"/>
+                    <Quantile quantileLimit="70.0" quantileValue="5.0"/>
+                    <Quantile quantileLimit="80.0" quantileValue="5.3"/>
+                    <Quantile quantileLimit="90.0" quantileValue="5.8"/>
+                    <Quantile quantileLimit="100.0" quantileValue="6.9"/>
+                </NumericInfo>
+                <ContStats totalValuesSum="563.8000000000004" totalSquaresSum="2583.0000000000005"/>
+            </UnivariateStats>
+            <UnivariateStats field="petal_width">
+                <Counts totalFreq="150.0" missingFreq="0.0" invalidFreq="0.0" cardinality="22"/>
+                <NumericInfo minimum="0.1" maximum="2.5" mean="1.1986666666666672" standardDeviation="0.7631607460979547" median="1.3" interQuartileRange="1.5">
+                    <Quantile quantileLimit="0.0" quantileValue="0.1"/>
+                    <Quantile quantileLimit="10.0" quantileValue="0.2"/>
+                    <Quantile quantileLimit="20.0" quantileValue="0.2"/>
+                    <Quantile quantileLimit="30.0" quantileValue="0.4"/>
+                    <Quantile quantileLimit="40.0" quantileValue="1.1"/>
+                    <Quantile quantileLimit="50.0" quantileValue="1.3"/>
+                    <Quantile quantileLimit="60.0" quantileValue="1.5"/>
+                    <Quantile quantileLimit="70.0" quantileValue="1.8"/>
+                    <Quantile quantileLimit="80.0" quantileValue="1.9"/>
+                    <Quantile quantileLimit="90.0" quantileValue="2.2"/>
+                    <Quantile quantileLimit="100.0" quantileValue="2.5"/>
+                </NumericInfo>
+                <ContStats totalValuesSum="179.8000000000001" totalSquaresSum="302.3000000000001"/>
+            </UnivariateStats>
+            <UnivariateStats field="class">
+                <Counts totalFreq="150.0" missingFreq="0.0" invalidFreq="0.0" cardinality="3"/>
+                <DiscrStats>
+                    <Array n="3" type="int">50 50 50</Array>
+                    <Array n="3" type="string">Iris-virginica Iris-setosa Iris-versicolor</Array>
+                </DiscrStats>
+            </UnivariateStats>
+        </ModelStats>
+        <LocalTransformations>
+            <DerivedField name="sepal_length" optype="continuous" dataType="double">
+                <NormContinuous field="sepal_length">
+                    <LinearNorm orig="0.0" norm="-7.056602253501532"/>
+                    <LinearNorm orig="5.843333333333335" norm="0.0"/>
+                </NormContinuous>
+            </DerivedField>
+            <DerivedField name="sepal_width" optype="continuous" dataType="double">
+                <NormContinuous field="sepal_width">
+                    <LinearNorm orig="0.0" norm="-7.043450214774529"/>
+                    <LinearNorm orig="3.0540000000000007" norm="0.0"/>
+                </NormContinuous>
+            </DerivedField>
+            <DerivedField name="petal_length" optype="continuous" dataType="double">
+                <NormContinuous field="petal_length">
+                    <LinearNorm orig="0.0" norm="-2.1302557032959837"/>
+                    <LinearNorm orig="3.7586666666666693" norm="0.0"/>
+                </NormContinuous>
+            </DerivedField>
+            <DerivedField name="petal_width" optype="continuous" dataType="double">
+                <NormContinuous field="petal_width">
+                    <LinearNorm orig="0.0" norm="-1.570660798259681"/>
+                    <LinearNorm orig="1.1986666666666672" norm="0.0"/>
+                </NormContinuous>
+            </DerivedField>
+        </LocalTransformations>
+    </NeuralNetwork>
+</PMML>

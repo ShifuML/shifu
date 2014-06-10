@@ -1,7 +1,8 @@
 package ml.shifu.shifu.util;
 
-import org.dmg.pmml.Extension;
-import org.dmg.pmml.PMML;
+import ml.shifu.shifu.container.BinningObject;
+import org.apache.pig.Expression;
+import org.dmg.pmml.*;
 import org.jpmml.model.ImportFilter;
 import org.jpmml.model.JAXBUtil;
 import org.xml.sax.InputSource;
@@ -57,5 +58,36 @@ public class PMMLUtils {
             e.printStackTrace();
             throw e;
         }
+    }
+
+    public static DataType getDefaultDataTypeByOpType(OpType optype) {
+        if (optype.equals(OpType.CONTINUOUS)) {
+            return DataType.DOUBLE;
+        } else {
+            return DataType.STRING;
+        }
+    }
+
+    public static OpType getOpTypeFromParams(Params params) {
+        return OpType.valueOf(params.get("optype").toString().toUpperCase());
+    }
+
+
+    public static DataType getDataTypeFromParams(Params params) {
+
+        if (params.containsKey("dataType")) {
+            return DataType.valueOf(params.get("dataType").toString().toUpperCase());
+        } else {
+            return getDefaultDataTypeByOpType(getOpTypeFromParams(params));
+        }
+    }
+
+    public static Model getModelFromName(String name) {
+        if (name.equalsIgnoreCase("NeuralNetwork")) {
+            return new NeuralNetwork();
+        } else {
+            throw new RuntimeException("Model not supported: " + name);
+        }
+
     }
 }

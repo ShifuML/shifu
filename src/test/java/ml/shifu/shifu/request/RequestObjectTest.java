@@ -1,13 +1,12 @@
 package ml.shifu.shifu.request;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.testng.Assert;
+import ml.shifu.shifu.util.Params;
 import org.testng.annotations.Test;
 
 import java.io.File;
 import java.io.IOException;
 import java.util.Arrays;
-import java.util.List;
 import java.util.Map;
 import java.util.HashMap;
 
@@ -17,22 +16,32 @@ public class RequestObjectTest  {
     public void test() throws IOException {
         RequestObject req = new RequestObject();
 
-        req.setAction("test");
+        req.setRequestType("test");
         req.setExecutionMode(RequestObject.ExecutionMode.LOCAL_SINGLE);
-        Map<String, String> bindings = new HashMap<String, String>();
 
-        bindings.put("test_spi1", "test_impl1");
-        bindings.put("test_spi2", "test_impl2");
 
-        req.setBindings(bindings);
+        Params params = new Params();
 
-        Map<String, Object> parameters = new HashMap<String, Object>();
+        params.put("numBins", 10);
+        params.put("posTags", Arrays.asList("Iris-setosa", "Iris-versicolor"));
+        params.put("negTags", Arrays.asList("Iris-virginica"));
 
-        parameters.put("numBins", 10);
-        parameters.put("posTags", Arrays.asList("Iris-setosa", "Iris-versicolor"));
-        parameters.put("negTags", Arrays.asList("Iris-virginica"));
+        req.setGlobalParams(params);
 
-        req.setParameters(parameters);
+        Map<String, Params> fieldParamsMap = new HashMap<String, Params>();
+
+        for (int i = 0; i < 5; i++) {
+            Params p = new Params();
+            p.put("key", "value");
+            if (i == 0) {
+                fieldParamsMap.put("$$default", p);
+            } else {
+                fieldParamsMap.put("field" + i, p);
+            }
+        }
+
+        req.setFieldParamsMap(fieldParamsMap);
+
 
         ObjectMapper jsonMapper = new ObjectMapper();
 
@@ -41,7 +50,7 @@ public class RequestObjectTest  {
 
         RequestObject reqObj = jsonMapper.readValue(new File("request.json"), RequestObject.class);
 
-        Assert.assertEquals(((List<String>)reqObj.getParameters().get("posTags")).size(), 2);
+        //Assert.assertEquals(((List<String>)reqObj.getGlobalParameters().get("posTags")).size(), 2);
     }
 
 }

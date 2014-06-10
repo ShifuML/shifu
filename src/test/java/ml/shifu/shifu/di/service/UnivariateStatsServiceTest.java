@@ -3,13 +3,7 @@ package ml.shifu.shifu.di.service;
 
 import com.google.inject.Guice;
 import com.google.inject.Injector;
-import ml.shifu.shifu.di.builtin.SimpleUnivariateStatsCalculator;
-import ml.shifu.shifu.di.builtin.TripletDataDictionaryInitializer;
 import ml.shifu.shifu.di.module.SimpleModule;
-import ml.shifu.shifu.di.spi.SingleThreadFileLoader;
-import ml.shifu.shifu.di.spi.UnivariateStatsCalculator;
-import ml.shifu.shifu.util.CSVWithHeaderLocalSingleThreadFileLoader;
-import ml.shifu.shifu.util.LocalDataTransposer;
 import ml.shifu.shifu.util.Params;
 import org.dmg.pmml.*;
 import org.jpmml.model.JAXBUtil;
@@ -19,9 +13,7 @@ import javax.xml.transform.stream.StreamResult;
 import java.io.FileOutputStream;
 import java.io.OutputStream;
 import java.util.Arrays;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 public class UnivariateStatsServiceTest {
 
@@ -41,10 +33,10 @@ public class UnivariateStatsServiceTest {
 
         Params params = new Params();
 
-        params.set("tags", columns.get(4));
-        params.set("numBins", 10);
-        params.set("posTags", Arrays.asList("Iris-setosa", "Iris-versicolor"));
-        params.set("negTags", Arrays.asList("Iris-virginica"));
+        params.put("tags", columns.get(4));
+        params.put("numBins", 10);
+        params.put("posTags", Arrays.asList("Iris-setosa", "Iris-versicolor"));
+        params.put("negTags", Arrays.asList("Iris-virginica"));
 
         PMML pmml = new PMML();
         Model model = new NeuralNetwork();
@@ -84,12 +76,13 @@ public class UnivariateStatsServiceTest {
     private List<List<String>> columns;
 
     private void loadData() {
+        /*
         TripletDataDictionaryInitializer initializer = new TripletDataDictionaryInitializer();
 
         Params params = new Params();
 
 
-        params.set("filePath", "src/test/resources/conf/IrisFields.txt");
+        params.put("filePath", "src/test/resources/conf/IrisFields.txt");
 
         dict = initializer.init(params);
 
@@ -99,6 +92,6 @@ public class UnivariateStatsServiceTest {
 
         columns = LocalDataTransposer.transpose(rows);
 
-
+                                                      */
     }
 }

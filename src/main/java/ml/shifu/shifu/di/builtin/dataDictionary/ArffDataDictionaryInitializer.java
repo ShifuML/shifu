@@ -1,6 +1,7 @@
-package ml.shifu.shifu.di.builtin;
+package ml.shifu.shifu.di.builtin.dataDictionary;
 
 import ml.shifu.shifu.di.spi.DataDictionaryInitializer;
+import ml.shifu.shifu.request.RequestObject;
 import ml.shifu.shifu.util.Params;
 import org.dmg.pmml.*;
 import org.slf4j.Logger;
@@ -16,7 +17,9 @@ public class ArffDataDictionaryInitializer implements DataDictionaryInitializer 
 
     static Logger log = LoggerFactory.getLogger(ArffDataDictionaryInitializer.class);
 
-    public DataDictionary init(Params params) {
+    public DataDictionary init(RequestObject req) {
+
+        Params params = req.getGlobalParams();
 
         log.info("Initializing DataDictionary: " + ArffDataDictionaryInitializer.class);
 

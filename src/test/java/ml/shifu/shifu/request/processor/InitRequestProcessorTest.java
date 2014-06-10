@@ -15,9 +15,9 @@ public class InitRequestProcessorTest {
 
 
         ObjectMapper jsonMapper = new ObjectMapper();
-        RequestObject req = jsonMapper.readValue(new File("src/test/resources/request/InitRequest.json"), RequestObject.class);
+        RequestObject req = jsonMapper.readValue(new File("src/test/resources/models/wdbc/CSVDataDictionaryInitializer/request.json"), RequestObject.class);
 
-        InitRequestProcessor processor = new InitRequestProcessor();
+        CreateDataDictionaryRequestProcessor processor = new CreateDataDictionaryRequestProcessor();
         processor.run(req);
     }
 }

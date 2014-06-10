@@ -2,6 +2,8 @@ package ml.shifu.shifu.request.processor;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import ml.shifu.shifu.request.RequestObject;
+import org.dmg.pmml.MiningField;
+import org.dmg.pmml.MiningSchema;
 import org.testng.annotations.Test;
 
 import java.io.File;
@@ -18,5 +20,7 @@ public class StatsRequestProcessorTest {
 
         StatsRequestProcessor processor = new StatsRequestProcessor();
         processor.run(req);
+
+
     }
 }

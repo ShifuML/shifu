@@ -5,11 +5,7 @@ import ml.shifu.shifu.container.NumericalValueObject;
 import ml.shifu.shifu.di.builtin.BinomialUnivariateStatsCalculator;
 import ml.shifu.shifu.di.builtin.BinomialUnivariateStatsDiscrCalculator;
 import ml.shifu.shifu.di.builtin.SimpleUnivariateStatsCalculator;
-import ml.shifu.shifu.di.builtin.TripletDataDictionaryInitializer;
-import ml.shifu.shifu.di.spi.SingleThreadFileLoader;
 import ml.shifu.shifu.di.spi.UnivariateStatsCalculator;
-import ml.shifu.shifu.util.CSVWithHeaderLocalSingleThreadFileLoader;
-import ml.shifu.shifu.util.LocalDataTransposer;
 import ml.shifu.shifu.util.Params;
 import org.dmg.pmml.*;
 import org.jpmml.model.JAXBUtil;
@@ -173,12 +169,13 @@ public class PMMLTest {
     private List<List<String>> columns;
 
     private void loadData() {
+        /*
         TripletDataDictionaryInitializer initializer = new TripletDataDictionaryInitializer();
 
         Params params = new Params();
 
 
-        params.set("filePath", "src/test/resources/conf/IrisFields.txt");
+        params.put("filePath", "src/test/resources/conf/IrisFields.txt");
         dict = initializer.init(params);
 
         SingleThreadFileLoader loader = new CSVWithHeaderLocalSingleThreadFileLoader();
@@ -186,6 +183,7 @@ public class PMMLTest {
         rows = loader.load("src/test/resources/unittest/DataSet/iris/iris.csv");
 
         columns = LocalDataTransposer.transpose(rows);
+                          */
 
 
     }

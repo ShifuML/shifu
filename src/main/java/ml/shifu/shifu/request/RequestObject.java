@@ -1,5 +1,6 @@
 package ml.shifu.shifu.request;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import ml.shifu.shifu.util.Params;
 
 import java.util.Map;
@@ -11,26 +12,49 @@ public class RequestObject {
         LOCAL_SINGLE, LOCAL_CONCURRENT, HADOOP
     }
 
-    private String action;
+    private String requestType;
     private ExecutionMode executionMode;
-    private Map<String, String> bindings;
-    private Map<String, Object> parameters;
-    private Params params = null;
+    private Params globalParams = null;
 
-    public Params getParams() {
-        if (params == null) {
-            params = new Params();
-            params.setParamMap(parameters);
+
+
+    //private Params fieldParams = null;
+    private Map<String, Params> fieldParamsMap;
+
+    public Params getGlobalParams() {
+
+        return globalParams;
+    }
+
+    public void setGlobalParams(Params globalParams) {
+        this.globalParams = globalParams;
+    }
+
+    @JsonIgnore
+    public Params getFieldParams(String fieldName) {
+        if (fieldParamsMap.containsKey(fieldName)) {
+            return fieldParamsMap.get(fieldName);
+        } else if (fieldParamsMap.containsKey("$$default")) {
+            return fieldParamsMap.get("$$default");
+        } else {
+            throw new RuntimeException("No such field: [" + fieldName + "] and no default value specified");
         }
-        return params;
     }
 
-    public String getAction() {
-        return action;
+    public Map<String, Params> getFieldParamsMap() {
+        return fieldParamsMap;
     }
 
-    public void setAction(String action) {
-        this.action = action;
+    public void setFieldParamsMap(Map<String, Params> fieldParamsMap) {
+        this.fieldParamsMap = fieldParamsMap;
+    }
+
+    public String getRequestType() {
+        return requestType;
+    }
+
+    public void setRequestType(String requestType) {
+        this.requestType = requestType;
     }
 
     public ExecutionMode getExecutionMode() {
@@ -41,24 +65,5 @@ public class RequestObject {
         this.executionMode = executionMode;
     }
 
-    public Map<String, String> getBindings() {
-        return bindings;
-    }
-
-    public void setBindings(Map<String, String> bindings) {
-        this.bindings = bindings;
-    }
-
-    public Map<String, Object> getParameters() {
-        return parameters;
-    }
-
-   // public Params getParams() {
-
-   // }
-
-    public void setParameters(Map<String, Object> parameters) {
-        this.parameters = parameters;
-    }
 
 }

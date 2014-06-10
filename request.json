@@ -1,0 +1,27 @@
+{
+  "requestType" : "test",
+  "executionMode" : "LOCAL_SINGLE",
+  "globalParams" : {
+    "numBins" : 10,
+    "negTags" : [ "Iris-virginica" ],
+    "posTags" : [ "Iris-setosa", "Iris-versicolor" ]
+  },
+  "fieldParamsMap" : {
+    "field1" : {
+      "key" : "value"
+    },
+    "field4" : {
+      "key" : "value"
+    },
+    "field3" : {
+      "key" : "value"
+    },
+    "field2" : {
+      "key" : "value"
+    },
+    "$$default" : {
+      "key" : "value"
+    }
+    
+  }
+}
