@@ -1,0 +1,22 @@
+{
+    "version": "0.3.0-SNAPSHOT",
+    "requests": [
+        {
+            "requestType": "CreateLocalTransformations",
+            "executionMode": "LOCAL_SINGLE",
+            "globalParams": {
+                "modelName": "demoModel",
+                "pathPMML": "src/test/resources/models/wdbc/All/generated/model.xml"
+            },
+            "fieldParamsMap": {
+                "id": {},
+                "diagnosis": {},
+                "$$default": {
+                    "bindings": {
+                        "DerivedFieldCreator": "ml.shifu.shifu.di.builtin.ZScoreDerivedFieldCreator"
+                    }
+                }
+            }
+        }
+    ]
+}

@@ -2,7 +2,7 @@
   "requestType" : "stats",
   "executionMode" : "LOCAL_SINGLE",
   "bindings" : {
-    "UnivariateStatsCalculator" : "ml.shifu.shifu.di.builtin.SimpleUnivariateStatsCalculator"
+    "UnivariateStatsCalculator" : "ml.shifu.shifu.di.builtin.stats.SimpleUnivariateStatsCalculator"
   },
   "globalParameters" : {
 

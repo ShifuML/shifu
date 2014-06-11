@@ -12,15 +12,8 @@ import java.util.Map;
 public class PerFieldMiningSchemaCreator implements MiningSchemaCreator {
 
     public MiningSchema create(Model model, PMML pmml, RequestObject req) {
-       // Params params = req.getGlobalParams();
-
-
-
-
 
         DataDictionary dataDictionary = pmml.getDataDictionary();
-
-
 
         MiningSchema miningSchema = new MiningSchema();
 

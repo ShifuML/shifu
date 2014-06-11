@@ -1,7 +1,5 @@
-package ml.shifu.shifu.di.builtin;
+package ml.shifu.shifu.di.builtin.stats;
 
-import ml.shifu.shifu.container.CategoricalValueObject;
-import ml.shifu.shifu.util.PMMLUtils;
 import ml.shifu.shifu.util.Params;
 import org.apache.commons.lang.StringUtils;
 import org.dmg.pmml.Array;

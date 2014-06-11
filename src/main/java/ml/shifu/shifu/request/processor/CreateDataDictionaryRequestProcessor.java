@@ -14,7 +14,7 @@ import java.util.Map;
 
 public class CreateDataDictionaryRequestProcessor {
 
-    public void run(RequestObject req) {
+    public static void run(RequestObject req) {
 
         SimpleModule module = new SimpleModule();
         module.setBindings((Map<String, String>)req.getGlobalParams().get("bindings"));
@@ -25,17 +25,8 @@ public class CreateDataDictionaryRequestProcessor {
         DataDictionaryService dataDictionaryService= injector.getInstance(DataDictionaryService.class);
         DataDictionary dataDictionary = dataDictionaryService.getDataDictionary(req);
 
-
-
-        //MiningSchemaInitializer miningSchemaInitializer = new UseAllMiningSchemaInitializer();
-        //MiningSchema miningSchema = miningSchemaInitializer.init(dataDictionary, targets, params);
-
         PMML pmml = new PMML();
         pmml.setDataDictionary(dataDictionary);
-        //Model model = new NeuralNetwork();
-        //model.setTargets(targets);
-        //model.setMiningSchema(miningSchema);
-        //pmml.withModels(model);
 
         PMMLUtils.savePMML(pmml, (String) params.get("pathPMML"));
 

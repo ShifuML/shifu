@@ -11,6 +11,7 @@ import javax.xml.transform.sax.SAXSource;
 import javax.xml.transform.stream.StreamResult;
 import java.io.*;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -82,7 +83,7 @@ public class PMMLUtils {
         }
     }
 
-    public static Model getModelFromName(String name) {
+    public static Model createModelByType(String name) {
         if (name.equalsIgnoreCase("NeuralNetwork")) {
             return new NeuralNetwork();
         } else {
@@ -90,4 +91,49 @@ public class PMMLUtils {
         }
 
     }
+
+    public static Model getModelByName(PMML pmml, String name) {
+        for (Model model : pmml.getModels()) {
+            if (model.getModelName().equals(name)) {
+                return model;
+            }
+        }
+        throw new RuntimeException("No such model: " + name);
+
+    }
+
+    public static Integer getTargetFieldNumByName(DataDictionary dataDictionary, String name) {
+        int size = dataDictionary.getNumberOfFields();
+        for (int i = 0; i < size; i++) {
+            DataField dataField = dataDictionary.getDataFields().get(i);
+            if (dataField.getName().getValue().equals(name)) {
+                return i;
+            }
+        }
+        throw new RuntimeException("Target Field Not Found: " + name);
+
+    }
+
+    public static Map<FieldName, Integer> getFieldNumMap(DataDictionary dataDictionary) {
+        Map<FieldName, Integer> fieldNumMap = new HashMap<FieldName, Integer>();
+        int size = dataDictionary.getNumberOfFields();
+
+        for (int i = 0; i < size; i++) {
+            DataField dataField = dataDictionary.getDataFields().get(i);
+            fieldNumMap.put(dataField.getName(), i);
+        }
+        return fieldNumMap;
+    }
+
+    public static Map<FieldName, DerivedField> getDerivedFieldMap(LocalTransformations localTransformations) {
+
+        Map<FieldName, DerivedField> derivedFieldMap = new HashMap<FieldName, DerivedField>();
+
+        for (DerivedField derivedField : localTransformations.getDerivedFields()) {
+            derivedFieldMap.put(derivedField.getName(), derivedField);
+        }
+
+        return derivedFieldMap;
+    }
+
 }

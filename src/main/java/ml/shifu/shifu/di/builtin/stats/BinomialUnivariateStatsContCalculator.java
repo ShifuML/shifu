@@ -1,8 +1,9 @@
-package ml.shifu.shifu.di.builtin;
+package ml.shifu.shifu.di.builtin.stats;
 
 import ml.shifu.shifu.container.NumericalValueObject;
 import ml.shifu.shifu.container.obj.ColumnBinningResult;
 import ml.shifu.shifu.core.QuantileCalculator;
+import ml.shifu.shifu.di.builtin.EqualPositiveColumnNumBinningCalculator;
 import ml.shifu.shifu.util.CommonUtils;
 import ml.shifu.shifu.util.PMMLUtils;
 import org.dmg.pmml.ContStats;

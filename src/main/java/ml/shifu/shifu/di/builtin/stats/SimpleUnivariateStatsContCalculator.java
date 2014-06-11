@@ -1,14 +1,9 @@
-package ml.shifu.shifu.di.builtin;
+package ml.shifu.shifu.di.builtin.stats;
 
-import com.sun.xml.internal.rngom.digested.DDataPattern;
-import ml.shifu.shifu.container.NumericalValueObject;
-import ml.shifu.shifu.container.obj.ColumnBinningResult;
 import ml.shifu.shifu.core.QuantileCalculator;
 import ml.shifu.shifu.util.CommonUtils;
-import ml.shifu.shifu.util.PMMLUtils;
 import ml.shifu.shifu.util.Params;
 import org.dmg.pmml.ContStats;
-import org.dmg.pmml.Interval;
 import org.dmg.pmml.NumericInfo;
 import org.dmg.pmml.UnivariateStats;
 import org.slf4j.Logger;

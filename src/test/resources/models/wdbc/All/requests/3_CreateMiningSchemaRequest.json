@@ -1,0 +1,27 @@
+{
+    "version": "0.3.0-SNAPSHOT",
+    "requests": [
+        {
+            "requestType": "CreateMiningSchema",
+            "executionMode": "LOCAL_SINGLE",
+            "globalParams": {
+                "bindings": {
+                    "MiningSchemaCreator": "ml.shifu.shifu.di.builtin.miningSchema.PerFieldMiningSchemaCreator"
+                },
+                "modelName": "demoModel",
+                "pathPMML": "src/test/resources/models/wdbc/All/generated/model.xml"
+            },
+            "fieldParamsMap": {
+                "id": {
+                    "usageType": "supplementary"
+                },
+                "diagnosis": {
+                    "usageType": "target"
+                },
+                "$$default": {
+                    "usageType": "active"
+                }
+            }
+        }
+    ]
+}

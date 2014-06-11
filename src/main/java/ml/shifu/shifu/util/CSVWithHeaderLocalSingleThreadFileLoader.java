@@ -1,5 +1,6 @@
 package ml.shifu.shifu.util;
 
+import com.google.common.base.Splitter;
 import ml.shifu.shifu.di.spi.SingleThreadFileLoader;
 import org.apache.commons.lang.ArrayUtils;
 
@@ -14,9 +15,9 @@ public class CSVWithHeaderLocalSingleThreadFileLoader implements SingleThreadFil
 
     private String delimiter = ",";
 
-    public List<List<String>> load(String filePath) {
+    public List<List<Object>> load(String filePath) {
         Scanner scanner = null;
-        List<List<String>> rows = new ArrayList<List<String>>();
+        List<List<Object>> rows = new ArrayList<List<Object>>();
         try {
             scanner = new Scanner(new BufferedReader(new FileReader(filePath)));
 
@@ -30,7 +31,10 @@ public class CSVWithHeaderLocalSingleThreadFileLoader implements SingleThreadFil
                     continue;
                 }
 
-                List<String> fields = Arrays.asList(line.split(delimiter));
+                List<Object> fields = new ArrayList<Object>();
+                for (String s : Splitter.on(delimiter).split(line)) {
+                    fields.add(s);
+                }
                 rows.add(fields);
             }
         } catch (Exception e) {

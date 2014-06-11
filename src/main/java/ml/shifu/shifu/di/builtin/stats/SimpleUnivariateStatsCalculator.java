@@ -1,17 +1,12 @@
-package ml.shifu.shifu.di.builtin;
+package ml.shifu.shifu.di.builtin.stats;
 
-import ml.shifu.shifu.container.RawValueObject;
-import ml.shifu.shifu.di.builtin.UnivariateStatsCountsCalculator;
 import ml.shifu.shifu.di.spi.UnivariateStatsCalculator;
-import ml.shifu.shifu.util.CommonUtils;
 import ml.shifu.shifu.util.Params;
 import org.dmg.pmml.DataField;
 import org.dmg.pmml.OpType;
 import org.dmg.pmml.UnivariateStats;
 
-import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 
 public class SimpleUnivariateStatsCalculator implements UnivariateStatsCalculator {
     private Integer numBins;

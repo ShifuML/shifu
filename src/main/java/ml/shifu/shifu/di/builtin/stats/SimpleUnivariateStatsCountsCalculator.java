@@ -1,4 +1,4 @@
-package ml.shifu.shifu.di.builtin;
+package ml.shifu.shifu.di.builtin.stats;
 
 import ml.shifu.shifu.container.RawValueObject;
 import ml.shifu.shifu.util.Params;

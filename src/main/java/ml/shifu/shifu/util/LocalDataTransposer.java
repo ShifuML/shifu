@@ -6,17 +6,17 @@ import java.util.List;
 
 public class LocalDataTransposer {
 
-    public static List<List<String>> transpose(List<List<String>> rows) {
+    public static List<List<Object>> transpose(List<List<Object>> rows) {
 
-        List<List<String>> columns = new ArrayList<List<String>>();
+        List<List<Object>> columns = new ArrayList<List<Object>>();
 
         int size = rows.get(0).size();
 
         for (int i = 0; i < size; i++) {
-            columns.add(new ArrayList<String>());
+            columns.add(new ArrayList<Object>());
         }
 
-        for (List<String> row : rows) {
+        for (List<Object> row : rows) {
             for (int i = 0; i < size; i++) {
                 columns.get(i).add(row.get(i));
             }

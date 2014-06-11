@@ -2,10 +2,12 @@ package ml.shifu.shifu.core;
 
 import ml.shifu.shifu.container.CategoricalValueObject;
 import ml.shifu.shifu.container.NumericalValueObject;
-import ml.shifu.shifu.di.builtin.BinomialUnivariateStatsCalculator;
-import ml.shifu.shifu.di.builtin.BinomialUnivariateStatsDiscrCalculator;
-import ml.shifu.shifu.di.builtin.SimpleUnivariateStatsCalculator;
+import ml.shifu.shifu.di.builtin.stats.BinomialUnivariateStatsCalculator;
+import ml.shifu.shifu.di.builtin.stats.BinomialUnivariateStatsDiscrCalculator;
+import ml.shifu.shifu.di.builtin.stats.SimpleUnivariateStatsCalculator;
 import ml.shifu.shifu.di.spi.UnivariateStatsCalculator;
+import ml.shifu.shifu.util.JSONUtils;
+import ml.shifu.shifu.util.PMMLUtils;
 import ml.shifu.shifu.util.Params;
 import org.dmg.pmml.*;
 import org.jpmml.model.JAXBUtil;
@@ -13,6 +15,7 @@ import org.testng.Assert;
 import org.testng.annotations.Test;
 
 import javax.xml.transform.stream.StreamResult;
+import java.io.File;
 import java.io.FileOutputStream;
 import java.io.OutputStream;
 import java.util.*;
@@ -71,7 +74,7 @@ public class PMMLTest {
     @Test
     public void testLoadData() {
 
-        loadData();
+        //loadData();
 
 
         Assert.assertEquals((int)dict.getNumberOfFields(), columns.size());
@@ -124,7 +127,7 @@ public class PMMLTest {
 
     @Test
     public void testSimpleUnivariateStats() {
-        loadData();
+        /*loadData();
 
         Params params = new Params();
 
@@ -160,7 +163,7 @@ public class PMMLTest {
         } catch (Exception e) {
             e.printStackTrace();
         }
-
+                 */
     }
 
 
@@ -168,7 +171,17 @@ public class PMMLTest {
     private List<List<String>> rows;
     private List<List<String>> columns;
 
-    private void loadData() {
+    @Test
+    public void testOutputPMMLAsJSON() throws Exception {
+        PMML pmml = PMMLUtils.loadPMML("src/test/resources/models/wdbc/Transform/model.xml");
+
+        JSONUtils.writeValue(new File("test.json"), pmml);
+
+    }
+
+    private void loadData() throws Exception {
+
+
         /*
         TripletDataDictionaryInitializer initializer = new TripletDataDictionaryInitializer();
 

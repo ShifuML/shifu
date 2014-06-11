@@ -1,4 +1,4 @@
-package ml.shifu.shifu.di.builtin;
+package ml.shifu.shifu.di.builtin.stats;
 
 import ml.shifu.shifu.container.RawValueObject;
 import ml.shifu.shifu.di.builtin.UnivariateStatsCountsCalculator;
@@ -11,7 +11,6 @@ import org.dmg.pmml.UnivariateStats;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 
 public class BinomialUnivariateStatsCalculator implements UnivariateStatsCalculator {
     private List<String> posTags;
@@ -26,7 +25,9 @@ public class BinomialUnivariateStatsCalculator implements UnivariateStatsCalcula
         UnivariateStatsCountsCalculator.calculate(stats, values);
 
 
-        setParams(params);
+        setParams((Params)params.get("globalParams"));
+
+        this.tags = (List<String>) params.get("tags");
 
         List<RawValueObject> rvoList = new ArrayList<RawValueObject>();
 
@@ -47,7 +48,7 @@ public class BinomialUnivariateStatsCalculator implements UnivariateStatsCalcula
 
 
         } else if (field.getOptype().equals(OpType.CONTINUOUS)) {
-            //stats.setNumericInfo(UnivariateStatsNumericInfoCalculator.calculate(values));
+
             BinomialUnivariateStatsContCalculator contCalculator = new BinomialUnivariateStatsContCalculator();
             contCalculator.calculate(stats, CommonUtils.convertListRaw2Numerical(rvoList, posTags, negTags), numBins);
 
@@ -67,7 +68,7 @@ public class BinomialUnivariateStatsCalculator implements UnivariateStatsCalcula
 
 
 
-            this.tags = (List<String>) params.get("tags");
+
 
             this.numBins = (Integer) params.get("numBins");
 

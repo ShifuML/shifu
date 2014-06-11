@@ -5,6 +5,6 @@ import java.util.List;
 
 public interface SingleThreadFileLoader {
 
-    public List<List<String>> load(String filePath);
+    public List<List<Object>> load(String filePath);
 
 }

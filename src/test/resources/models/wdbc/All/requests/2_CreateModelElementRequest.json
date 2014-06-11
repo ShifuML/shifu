@@ -1,5 +1,7 @@
 {
-  "requestType" : "CreateModelElement",
+  "version": "0.3.0-SNAPSHOT",
+  "requests": [ {
+   "requestType" : "CreateModelElement",
   "executionMode" : "LOCAL_SINGLE",
   
   "globalParams" : {
@@ -8,17 +10,16 @@
 
     },
     "modelType": "NeuralNetwork",
+    "modelName": "demoModel",
     "pathPMML": "src/test/resources/models/wdbc/All/generated/model.xml",
     "targetFieldName": "diagnosis",
     "posFieldValue": "M",
     "posFieldDisplayValue": "Malignant",
     "negFieldValue": "B",
     "negFieldDisplayValue": "Benign"
-  },
-  "fieldParamsMap": {
-
-
-  }
-
-
+    },
+    "fieldParamsMap": {
+     
+    }
+  } ]
 }

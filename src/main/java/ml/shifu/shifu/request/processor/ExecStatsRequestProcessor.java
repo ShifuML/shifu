@@ -2,22 +2,20 @@ package ml.shifu.shifu.request.processor;
 
 import com.google.inject.Guice;
 import com.google.inject.Injector;
-import ml.shifu.shifu.di.builtin.SimpleUnivariateStatsCalculator;
 import ml.shifu.shifu.di.module.SimpleModule;
 import ml.shifu.shifu.di.service.UnivariateStatsService;
 import ml.shifu.shifu.di.spi.SingleThreadFileLoader;
-import ml.shifu.shifu.di.spi.UnivariateStatsCalculator;
 import ml.shifu.shifu.request.RequestObject;
 import ml.shifu.shifu.util.CSVWithHeaderLocalSingleThreadFileLoader;
 import ml.shifu.shifu.util.LocalDataTransposer;
 import ml.shifu.shifu.util.PMMLUtils;
+import ml.shifu.shifu.util.Params;
 import org.dmg.pmml.*;
 
-import java.io.IOException;
 import java.util.Map;
 import java.util.List;
 
-public class StatsRequestProcessor {
+public class ExecStatsRequestProcessor {
 
     private RequestObject req;
     private UnivariateStatsService univariateStatsService;
@@ -25,7 +23,7 @@ public class StatsRequestProcessor {
     private String pathPMML;
 
     public void run(RequestObject req) throws Exception {
-        /*
+
         this.req = req;
         SimpleModule module = new SimpleModule();
 
@@ -33,42 +31,57 @@ public class StatsRequestProcessor {
         Injector injector = Guice.createInjector(module);
         univariateStatsService = injector.getInstance(UnivariateStatsService.class);
 
-        pathPMML = (String)req.getParams().get("pathPMML", "model.xml");
+        pathPMML = (String)req.getGlobalParams().get("pathPMML", "model.xml");
 
         pmml = PMMLUtils.loadPMML(pathPMML);
 
         if (req.getExecutionMode().equals(RequestObject.ExecutionMode.LOCAL_SINGLE)) {
             runLocalSingle();
         }
-                                   */
+
 
     }
 
     private void runLocalSingle() {
-        /*
+
         SingleThreadFileLoader loader = new CSVWithHeaderLocalSingleThreadFileLoader();
 
-        List<List<String>> rows = loader.load("src/test/resources/unittest/DataSet/iris/iris.csv");
+        List<List<Object>> rows = loader.load((String) req.getGlobalParams().get("pathInputData"));
 
-        List<List<String>> columns = LocalDataTransposer.transpose(rows);
+        List<List<Object>> columns = LocalDataTransposer.transpose(rows);
 
         DataDictionary dict = pmml.getDataDictionary();
-        Model model = new NeuralNetwork();
+
+        Model model = PMMLUtils.getModelByName(pmml, (String) req.getGlobalParams().get("modelName"));
+
         ModelStats modelStats = new ModelStats();
         int size = dict.getNumberOfFields();
+
+        int targetFieldNum = PMMLUtils.getTargetFieldNumByName(pmml.getDataDictionary(), (String) req.getGlobalParams().get("targetFieldName"));
+
+        Params params = new Params();
+        params.put("globalParams", req.getGlobalParams());
+        params.put("fieldParams", null);
+        params.put("tags", columns.get(targetFieldNum));
+
+
+
+
+
+
         for (int i = 0; i < size; i++) {
 
             DataField field = dict.getDataFields().get(i);
-            List<String> column = columns.get(i);
+            List<Object> column = columns.get(i);
 
-            UnivariateStats univariateStats = univariateStatsService.getUnivariateStats(field, column, req.getParams());
+            UnivariateStats univariateStats = univariateStatsService.getUnivariateStats(field, column, params);
             modelStats.withUnivariateStats(univariateStats);
         }
         model.setModelStats(modelStats);
-        pmml.withModels(model);
 
-        PMMLUtils.savePMML(pmml, pathPMML);
-                    */
+
+        PMMLUtils.savePMML(pmml, (String)req.getGlobalParams().get("pathPMMLOutput", pathPMML));
+
     }
 
 }
