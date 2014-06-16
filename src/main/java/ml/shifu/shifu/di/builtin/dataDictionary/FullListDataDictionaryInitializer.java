@@ -19,7 +19,7 @@ public class FullListDataDictionaryInitializer implements DataDictionaryInitiali
 
     public DataDictionary init(RequestObject req) {
 
-        Params params = req.getGlobalParams();
+        Params params = req.getParams();
 
         log.info("Initializing DataDictionary: " + FullListDataDictionaryInitializer.class);
 

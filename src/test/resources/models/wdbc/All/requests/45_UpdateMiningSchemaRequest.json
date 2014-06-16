@@ -1,0 +1,19 @@
+{
+    "version": "0.3.0-SNAPSHOT",
+    "requests": [
+        {
+            "requestType": "UpdateMiningSchema",
+            "executionMode": "LOCAL_SINGLE",
+            "params": {
+                "bindings": {
+                    "MiningSchemaUpdater": "ml.shifu.shifu.di.builtin.miningSchema.IVVariableSelector"
+                },
+                "numSelected": 10,
+                "modelName": "demoModel",
+                "pathPMML": "src/test/resources/models/wdbc/All/generated/model.xml"
+               
+            }
+            
+        }
+    ]
+}

@@ -26,7 +26,8 @@ public class RequestObjectTest  {
         params.put("posTags", Arrays.asList("Iris-setosa", "Iris-versicolor"));
         params.put("negTags", Arrays.asList("Iris-virginica"));
 
-        req.setGlobalParams(params);
+
+        req.setParams(params);
 
         Map<String, Params> fieldParamsMap = new HashMap<String, Params>();
 
@@ -40,7 +41,7 @@ public class RequestObjectTest  {
             }
         }
 
-        req.setFieldParamsMap(fieldParamsMap);
+        params.put("fieldParamsMap", fieldParamsMap);
 
 
         ObjectMapper jsonMapper = new ObjectMapper();

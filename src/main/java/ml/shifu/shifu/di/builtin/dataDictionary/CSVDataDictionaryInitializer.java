@@ -23,7 +23,7 @@ public class CSVDataDictionaryInitializer implements DataDictionaryInitializer {
     public DataDictionary init(RequestObject req) {
         DataDictionary dict = new DataDictionary();
 
-        Params globalParams = req.getGlobalParams();
+        Params globalParams = req.getParams();
 
 
         String pathCSV = (String) globalParams.get("pathCSV");

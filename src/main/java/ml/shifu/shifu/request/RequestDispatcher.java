@@ -25,6 +25,9 @@ public class RequestDispatcher {
         } else if (requestType.equalsIgnoreCase("ExecStats")) {
             ExecStatsRequestProcessor processor = new ExecStatsRequestProcessor();
             processor.run(req);
+        } else if (requestType.equalsIgnoreCase("UpdateMiningSchema")) {
+            RequestProcessor processor = new UpdateMiningSchemaRequestProcessor();
+            processor.run(req);
         } else if (requestType.equalsIgnoreCase("CreateLocalTransformations")) {
             CreateLocalTransformationsRequestProcessor processor = new CreateLocalTransformationsRequestProcessor();
             processor.run(req);

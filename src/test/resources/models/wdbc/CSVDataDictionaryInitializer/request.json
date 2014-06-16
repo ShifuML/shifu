@@ -2,7 +2,7 @@
   "requestType" : "CreateDataDictionary",
   "executionMode" : "LOCAL_SINGLE",
   
-  "globalParams" : {
+  "params" : {
     "bindings" : {
       "DataDictionaryInitializer" : "ml.shifu.shifu.di.builtin.dataDictionary.CSVDataDictionaryInitializer"
     },

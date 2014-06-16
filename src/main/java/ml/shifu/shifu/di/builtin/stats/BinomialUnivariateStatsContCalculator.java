@@ -2,7 +2,9 @@ package ml.shifu.shifu.di.builtin.stats;
 
 import ml.shifu.shifu.container.NumericalValueObject;
 import ml.shifu.shifu.container.obj.ColumnBinningResult;
+import ml.shifu.shifu.core.KSIVCalculator;
 import ml.shifu.shifu.core.QuantileCalculator;
+import ml.shifu.shifu.core.WOECalculator;
 import ml.shifu.shifu.di.builtin.EqualPositiveColumnNumBinningCalculator;
 import ml.shifu.shifu.util.CommonUtils;
 import ml.shifu.shifu.util.PMMLUtils;
@@ -26,7 +28,6 @@ public class BinomialUnivariateStatsContCalculator {
 
 
         calculateBasicStats(nvoList);
-
         calculateBinning(nvoList, expectedBinNum);
 
         univariateStats.setNumericInfo(numericInfo);
@@ -139,6 +140,15 @@ public class BinomialUnivariateStatsContCalculator {
         extensionMap.put("BinWeightedCountPos", result.getBinWeightedPos().toString());
         extensionMap.put("BinWeightedCountNeg", result.getBinWeightedNeg().toString());
         extensionMap.put("BinPosRate", result.getBinPosRate().toString());
+
+        WOECalculator woeCalculator = new WOECalculator();
+        List<Double> woe = woeCalculator.calculate(result.getBinCountPos().toArray(), result.getBinCountNeg().toArray());
+        extensionMap.put("BinWOE", woe.toString());
+
+        KSIVCalculator ksivCalculator = new KSIVCalculator();
+        ksivCalculator.calculateKSIV(result.getBinCountNeg(), result.getBinCountPos());
+        extensionMap.put("KS", Double.valueOf(ksivCalculator.getKS()).toString());
+        extensionMap.put("IV", Double.valueOf(ksivCalculator.getIV()).toString());
 
         contStats.withExtensions(PMMLUtils.createExtensions(extensionMap));
 

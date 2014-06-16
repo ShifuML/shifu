@@ -4,7 +4,7 @@
         {
             "requestType": "ExecStats",
             "executionMode": "LOCAL_SINGLE",
-            "globalParams": {
+            "params": {
                 "bindings": {
                     "UnivariateStatsCalculator": "ml.shifu.shifu.di.builtin.stats.BinomialUnivariateStatsCalculator"
                 },
@@ -19,8 +19,7 @@
                 "posTags": [
                     "M"
                 ]
-            },
-            "fieldParamsMap": {}
+            }
         }
     ]
 }

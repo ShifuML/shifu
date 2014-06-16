@@ -33,6 +33,17 @@ public class PMMLUtils {
         return extensions;
     }
 
+    public static Extension getExtension(List<Extension> extensions, String key) {
+        for (Extension extension : extensions) {
+            if (key.equals(extension.getName())) {
+                return extension;
+            }
+        }
+
+        throw new RuntimeException("No such extension: " + key);
+    }
+
+
     public static void savePMML(PMML pmml, String path) {
         OutputStream os = null;
 
@@ -134,6 +145,16 @@ public class PMMLUtils {
         }
 
         return derivedFieldMap;
+    }
+
+    public static Map<FieldName, MiningField> getMiningFieldMap(MiningSchema miningSchema) {
+        Map<FieldName, MiningField> miningFieldMap = new HashMap<FieldName, MiningField>();
+
+        for (MiningField miningField : miningSchema.getMiningFields()) {
+            miningFieldMap.put(miningField.getName(), miningField);
+        }
+
+        return miningFieldMap;
     }
 
 }

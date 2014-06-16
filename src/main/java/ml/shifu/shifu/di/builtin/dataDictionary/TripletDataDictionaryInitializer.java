@@ -19,7 +19,7 @@ public class TripletDataDictionaryInitializer implements DataDictionaryInitializ
 
         log.info("Initializing DataDictionary: " + TripletDataDictionaryInitializer.class);
 
-        Params params = req.getGlobalParams();
+        Params params = req.getParams();
 
         DataDictionary dict = new DataDictionary();
 

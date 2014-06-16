@@ -1,7 +1,7 @@
 {
   "requestType" : "transform",
   "executionMode" : "LOCAL_SINGLE",
-   "globalParams" : {
+   "params" : {
       "modelName": "testModel",
       "pathPMML": "src/test/resources/models/wdbc/CreateLocalTransformations/model.xml",
       "pathPMMLOutput": "src/test/resources/models/wdbc/CreateLocalTransformations/model_output.xml",

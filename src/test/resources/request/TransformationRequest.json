@@ -1,7 +1,7 @@
 {
   "requestType" : "transform",
   "executionMode" : "LOCAL_SINGLE",
-   "globalParams" : {
+   "params" : {
 
       "targetFieldName" : "class",
       "inputDataFilePath": "src/test/resources/unittest/DataSet/iris/iris.csv",

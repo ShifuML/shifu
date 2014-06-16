@@ -19,7 +19,7 @@ public class ArffDataDictionaryInitializer implements DataDictionaryInitializer 
 
     public DataDictionary init(RequestObject req) {
 
-        Params params = req.getGlobalParams();
+        Params params = req.getParams();
 
         log.info("Initializing DataDictionary: " + ArffDataDictionaryInitializer.class);
 

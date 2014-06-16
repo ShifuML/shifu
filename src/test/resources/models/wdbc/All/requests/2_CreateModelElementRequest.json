@@ -1,25 +1,23 @@
 {
-  "version": "0.3.0-SNAPSHOT",
-  "requests": [ {
-   "requestType" : "CreateModelElement",
-  "executionMode" : "LOCAL_SINGLE",
-  
-  "globalParams" : {
-    "bindings" : {
-      "TargetsElementCreator" : "ml.shifu.shifu.di.builtin.targets.BinaryTargetsElementCreator"
-
-    },
-    "modelType": "NeuralNetwork",
-    "modelName": "demoModel",
-    "pathPMML": "src/test/resources/models/wdbc/All/generated/model.xml",
-    "targetFieldName": "diagnosis",
-    "posFieldValue": "M",
-    "posFieldDisplayValue": "Malignant",
-    "negFieldValue": "B",
-    "negFieldDisplayValue": "Benign"
-    },
-    "fieldParamsMap": {
-     
-    }
-  } ]
+    "version": "0.3.0-SNAPSHOT",
+    "requests": [
+        {
+            "requestType": "CreateModelElement",
+            "executionMode": "LOCAL_SINGLE",
+            "params": {
+                "bindings": {
+                    "TargetsElementCreator": "ml.shifu.shifu.di.builtin.targets.BinaryTargetsElementCreator"
+                },
+                "modelType": "NeuralNetwork",
+                "modelName": "demoModel",
+                "pathPMML": "src/test/resources/models/wdbc/All/generated/model.xml",
+                "targetFieldName": "diagnosis",
+                "posFieldValue": "M",
+                "posFieldDisplayValue": "Malignant",
+                "negFieldValue": "B",
+                "negFieldDisplayValue": "Benign"
+            }
+            
+        }
+    ]
 }

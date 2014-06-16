@@ -19,11 +19,11 @@ public class CreateModelElementRequestProcessor {
 
     public static void run(RequestObject req) throws Exception {
 
-        String pathPMML = (String)req.getGlobalParams().get("pathPMML", "model.xml");
+        String pathPMML = (String)req.getParams().get("pathPMML", "model.xml");
 
         PMML pmml = PMMLUtils.loadPMML(pathPMML);
 
-        Params globalParams = req.getGlobalParams();
+        Params globalParams = req.getParams();
 
 
         Model model = PMMLUtils.createModelByType(globalParams.get("modelType").toString());
