@@ -7,10 +7,10 @@ import org.testng.annotations.Test;
 import java.io.File;
 import java.io.IOException;
 import java.util.Arrays;
-import java.util.Map;
 import java.util.HashMap;
+import java.util.Map;
 
-public class RequestObjectTest  {
+public class RequestObjectTest {
 
     @Test
     public void test() throws IOException {
@@ -27,7 +27,7 @@ public class RequestObjectTest  {
         params.put("negTags", Arrays.asList("Iris-virginica"));
 
 
-        req.setParams(params);
+        req.setGlobalParams(params);
 
         Map<String, Params> fieldParamsMap = new HashMap<String, Params>();
 
@@ -41,7 +41,7 @@ public class RequestObjectTest  {
             }
         }
 
-        params.put("fieldParamsMap", fieldParamsMap);
+        params.setFieldParamsMap(fieldParamsMap);
 
 
         ObjectMapper jsonMapper = new ObjectMapper();

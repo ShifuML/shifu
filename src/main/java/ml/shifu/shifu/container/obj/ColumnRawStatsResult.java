@@ -22,7 +22,6 @@ public class ColumnRawStatsResult extends ColumnDerivedResult {
     }
 
 
-
     public Integer getCntValidNegative() {
         return cntValidNegative;
     }

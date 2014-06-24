@@ -17,9 +17,9 @@
 package ml.shifu.shifu.di.builtin;
 
 
-import ml.shifu.shifu.di.spi.ColumnNumBinningCalculator;
 import ml.shifu.shifu.container.NumericalValueObject;
 import ml.shifu.shifu.container.obj.ColumnBinningResult;
+import ml.shifu.shifu.di.spi.ColumnNumBinningCalculator;
 import ml.shifu.shifu.util.QuickSort;
 
 import java.util.ArrayList;

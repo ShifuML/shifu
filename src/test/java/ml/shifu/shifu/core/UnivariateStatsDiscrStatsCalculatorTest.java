@@ -2,8 +2,6 @@ package ml.shifu.shifu.core;
 
 
 import ml.shifu.shifu.container.CategoricalValueObject;
-import org.dmg.pmml.*;
-import org.testng.Assert;
 import org.testng.annotations.Test;
 
 import java.util.ArrayList;
@@ -16,10 +14,10 @@ public class UnivariateStatsDiscrStatsCalculatorTest {
 
         List<CategoricalValueObject> voList = new ArrayList<CategoricalValueObject>();
 
-        for (int i = 0 ; i < 100; i++) {
+        for (int i = 0; i < 100; i++) {
             CategoricalValueObject vo = new CategoricalValueObject();
-            vo.setValue(i%3==1?"Cat":"Dog");
-            vo.setIsPositive(i%2==1?true:false);
+            vo.setValue(i % 3 == 1 ? "Cat" : "Dog");
+            vo.setIsPositive(i % 2 == 1 ? true : false);
             voList.add(vo);
         }
 

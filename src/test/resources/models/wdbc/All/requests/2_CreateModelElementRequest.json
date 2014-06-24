@@ -4,7 +4,7 @@
         {
             "requestType": "CreateModelElement",
             "executionMode": "LOCAL_SINGLE",
-            "params": {
+            "globalParams": {
                 "bindings": {
                     "TargetsElementCreator": "ml.shifu.shifu.di.builtin.targets.BinaryTargetsElementCreator"
                 },

@@ -4,24 +4,24 @@
         {
             "requestType": "CreateDataDictionary",
             "executionMode": "LOCAL_SINGLE",
-            "params": {
+            "globalParams": {
                 "bindings": {
                     "DataDictionaryInitializer": "ml.shifu.shifu.di.builtin.dataDictionary.CSVDataDictionaryInitializer"
                 },
                 "delimiter": "|",
                 "pathCSV": "src/test/resources/models/wdbc/All/wdbc.header",
-                "pathPMML": "src/test/resources/models/wdbc/All/generated/model.xml",
-                "fieldParamsMap": {
-                    "id": {
-                        "optype": "ordinal"
-                    },
-                    "diagnosis": {
-                        "optype": "categorical",
-                        "dataType": "string"
-                    },
-                    "$$default": {
-                        "optype": "continuous"
-                    }
+                "pathPMML": "src/test/resources/models/wdbc/All/generated/model.xml"
+            },
+            "fieldParamsMap": {
+                "id": {
+                    "optype": "ordinal"
+                },
+                "diagnosis": {
+                    "optype": "categorical",
+                    "dataType": "string"
+                },
+                "$$default": {
+                    "optype": "continuous"
                 }
             }
             

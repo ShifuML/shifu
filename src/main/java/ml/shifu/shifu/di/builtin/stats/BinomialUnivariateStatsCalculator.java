@@ -25,7 +25,7 @@ public class BinomialUnivariateStatsCalculator implements UnivariateStatsCalcula
         UnivariateStatsCountsCalculator.calculate(stats, values);
 
 
-        setParams((Params)params.get("globalParams"));
+        setParams((Params) params.get("globalParams"));
 
         this.tags = (List<String>) params.get("tags");
 
@@ -40,7 +40,6 @@ public class BinomialUnivariateStatsCalculator implements UnivariateStatsCalcula
 
             rvoList.add(rvo);
         }
-
 
 
         if (field.getOptype().equals(OpType.CATEGORICAL)) {
@@ -60,17 +59,13 @@ public class BinomialUnivariateStatsCalculator implements UnivariateStatsCalcula
 
     private void setParams(Params params) {
 
-            this.posTags = (List<String>) params.get("posTags");
+        this.posTags = (List<String>) params.get("posTags");
 
 
-
-            this.negTags = (List<String>) params.get("negTags");
-
+        this.negTags = (List<String>) params.get("negTags");
 
 
-
-
-            this.numBins = (Integer) params.get("numBins");
+        this.numBins = (Integer) params.get("numBins");
 
 
     }

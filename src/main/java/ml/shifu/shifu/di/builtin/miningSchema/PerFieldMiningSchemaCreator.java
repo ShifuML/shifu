@@ -7,7 +7,6 @@ import org.dmg.pmml.*;
 
 import java.util.HashSet;
 import java.util.Set;
-import java.util.Map;
 
 public class PerFieldMiningSchemaCreator implements MiningSchemaCreator {
 

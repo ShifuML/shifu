@@ -61,7 +61,7 @@ public enum ShifuErrorCode {
     ERROR_UNSUPPORT_RUNMODE(1054, "Un-support running mode, make sure your ModelConfig.json -> runMode is pig or akka"),
 
 	/*
-	 * ColumnConfig validated 1101 - 1150
+     * ColumnConfig validated 1101 - 1150
 	 */
 
     /*

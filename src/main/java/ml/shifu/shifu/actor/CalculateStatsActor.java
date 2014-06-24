@@ -15,31 +15,20 @@
  */
 package ml.shifu.shifu.actor;
 
-import java.io.File;
-import java.io.IOException;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Scanner;
-
-import com.google.inject.Guice;
-import com.google.inject.Injector;
-import ml.shifu.shifu.di.module.StatsModule;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import akka.actor.ActorRef;
 import akka.actor.Props;
 import akka.actor.UntypedActor;
 import akka.actor.UntypedActorFactory;
 import akka.routing.RoundRobinRouter;
-
+import com.google.inject.Guice;
+import com.google.inject.Injector;
 import ml.shifu.shifu.actor.worker.DataFilterWorker;
 import ml.shifu.shifu.actor.worker.DataLoadWorker;
 import ml.shifu.shifu.actor.worker.DataPrepareWorker;
 import ml.shifu.shifu.actor.worker.StatsCalculateWorker;
 import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.container.obj.ModelConfig;
+import ml.shifu.shifu.di.module.StatsModule;
 import ml.shifu.shifu.fs.PathFinder;
 import ml.shifu.shifu.message.AkkaActorInputMessage;
 import ml.shifu.shifu.message.ExceptionMessage;
@@ -47,12 +36,19 @@ import ml.shifu.shifu.message.ScanStatsRawDataMessage;
 import ml.shifu.shifu.message.StatsResultMessage;
 import ml.shifu.shifu.util.Environment;
 import ml.shifu.shifu.util.JSONUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.io.File;
+import java.io.IOException;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Scanner;
 
 /**
- *
  * CalculateStatsActor class is used to calculate stats for each column.
  * Notice: Target Column or Meta data column won't calculate stats
- *
  */
 public class CalculateStatsActor extends AbstractActor {
 
@@ -80,13 +76,13 @@ public class CalculateStatsActor extends AbstractActor {
         final Injector injector = Guice.createInjector(statsModule);
 
 
-
         // actors for stats calculation
         columnNumToActorMap = new HashMap<Integer, ActorRef>();
         for (ColumnConfig config : columnConfigList) {
-            if ( config.isCandidate() ) {
+            if (config.isCandidate()) {
                 ActorRef actor = getContext().actorOf(new Props(new UntypedActorFactory() {
                     private static final long serialVersionUID = -6498732060654560116L;
+
                     public UntypedActor create() {
                         return new StatsCalculateWorker(modelConfig, columnConfigList, injector, parentActorRef, parentActorRef);
                     }
@@ -100,6 +96,7 @@ public class CalculateStatsActor extends AbstractActor {
         // actors that convert each row data into column-oriented data
         dataPrepRef = this.getContext().actorOf(new Props(new UntypedActorFactory() {
             private static final long serialVersionUID = -5719806635080547488L;
+
             public UntypedActor create() throws IOException {
                 return new DataPrepareWorker(modelConfig, columnConfigList, parentActorRef, columnNumToActorMap);
             }
@@ -108,6 +105,7 @@ public class CalculateStatsActor extends AbstractActor {
         // actors to filter data
         dataFilterRef = this.getContext().actorOf(new Props(new UntypedActorFactory() {
             private static final long serialVersionUID = -1653565847681119971L;
+
             public UntypedActor create() throws IOException {
                 return new DataFilterWorker(modelConfig, columnConfigList, parentActorRef, dataPrepRef);
             }
@@ -116,6 +114,7 @@ public class CalculateStatsActor extends AbstractActor {
         // actors to load data
         dataLoadRef = this.getContext().actorOf(new Props(new UntypedActorFactory() {
             private static final long serialVersionUID = -6869659846227133318L;
+
             public UntypedActor create() {
                 return new DataLoadWorker(modelConfig, columnConfigList, parentActorRef, dataFilterRef);
             }
@@ -127,7 +126,7 @@ public class CalculateStatsActor extends AbstractActor {
      */
     @Override
     public void onReceive(Object message) throws Exception {
-        if ( message instanceof AkkaActorInputMessage ) {
+        if (message instanceof AkkaActorInputMessage) {
             resultCnt = 0;
 
             AkkaActorInputMessage msg = (AkkaActorInputMessage) message;
@@ -139,19 +138,19 @@ public class CalculateStatsActor extends AbstractActor {
                 dataLoadRef.tell(
                         new ScanStatsRawDataMessage(scanners.size(), scanner), getSelf());
             }
-        } else if ( message instanceof StatsResultMessage ) {
+        } else if (message instanceof StatsResultMessage) {
             StatsResultMessage statsRstMsg = (StatsResultMessage) message;
             ColumnConfig columnConfig = statsRstMsg.getColumnConfig();
             columnConfigList.set(columnConfig.getColumnNum(), columnConfig);
 
-            resultCnt ++;
-            if ( resultCnt == columnNumToActorMap.size() ) {
+            resultCnt++;
+            if (resultCnt == columnNumToActorMap.size()) {
                 log.info("Received " + resultCnt + " messages. Finished Calculating Stats.");
                 PathFinder pathFinder = new PathFinder(modelConfig);
                 JSONUtils.writeValue(new File(pathFinder.getColumnConfigPath()), columnConfigList);
                 getContext().system().shutdown();
             }
-        } else if ( message instanceof ExceptionMessage ) {
+        } else if (message instanceof ExceptionMessage) {
             // since some children actors meet some exception, shutdown the system
             ExceptionMessage msg = (ExceptionMessage) message;
             getContext().system().shutdown();

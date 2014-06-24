@@ -4,7 +4,6 @@ package ml.shifu.shifu.di.service;
 import com.google.inject.Inject;
 import ml.shifu.shifu.di.spi.TargetsElementCreator;
 import ml.shifu.shifu.util.Params;
-import org.dmg.pmml.Model;
 import org.dmg.pmml.Targets;
 
 public class ModelElementService {

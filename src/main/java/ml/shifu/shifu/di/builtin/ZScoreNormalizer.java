@@ -17,8 +17,8 @@
 package ml.shifu.shifu.di.builtin;
 
 
-import ml.shifu.shifu.di.spi.Normalizer;
 import ml.shifu.shifu.container.obj.ColumnConfig;
+import ml.shifu.shifu.di.spi.Normalizer;
 
 public class ZScoreNormalizer implements Normalizer {
 

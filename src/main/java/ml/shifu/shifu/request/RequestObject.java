@@ -2,6 +2,7 @@ package ml.shifu.shifu.request;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import ml.shifu.shifu.util.Params;
+
 import java.util.Map;
 
 public class RequestObject {
@@ -11,29 +12,40 @@ public class RequestObject {
         LOCAL_SINGLE, LOCAL_CONCURRENT, HADOOP
     }
 
-
-
-    private String requestName;
     private String requestType;
     private ExecutionMode executionMode;
-    private Params params = null;
+    private Params globalParams = null;
 
 
-    public String getRequestName() {
-        return requestName;
+    //private Params fieldParams = null;
+    private Map<String, Params> fieldParamsMap;
+
+    public Params getGlobalParams() {
+
+        return globalParams;
     }
 
-    public void setRequestName(String requestName) {
-        this.requestName = requestName;
+    public void setGlobalParams(Params globalParams) {
+        this.globalParams = globalParams;
     }
 
-    public Params getParams() {
-
-        return params;
+    @JsonIgnore
+    public Params getFieldParams(String fieldName) {
+        if (fieldParamsMap.containsKey(fieldName)) {
+            return fieldParamsMap.get(fieldName);
+        } else if (fieldParamsMap.containsKey("$$default")) {
+            return fieldParamsMap.get("$$default");
+        } else {
+            throw new RuntimeException("No such field: [" + fieldName + "] and no default value specified");
+        }
     }
 
-    public void setParams(Params params) {
-        this.params = params;
+    public Map<String, Params> getFieldParamsMap() {
+        return fieldParamsMap;
+    }
+
+    public void setFieldParamsMap(Map<String, Params> fieldParamsMap) {
+        this.fieldParamsMap = fieldParamsMap;
     }
 
     public String getRequestType() {
@@ -52,9 +64,5 @@ public class RequestObject {
         this.executionMode = executionMode;
     }
 
-    @JsonIgnore
-    public Params getFieldParams(String fieldNameString) {
-        return ((Map<String, Params>)params.get("fieldParamsMap")).get(fieldNameString);
-    }
 
 }

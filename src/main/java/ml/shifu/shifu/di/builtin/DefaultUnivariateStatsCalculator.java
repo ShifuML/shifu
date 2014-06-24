@@ -2,7 +2,7 @@ package ml.shifu.shifu.di.builtin;
 
 import java.util.List;
 
-public class DefaultUnivariateStatsCalculator  {
+public class DefaultUnivariateStatsCalculator {
     private List<String> posTags;
     private List<String> negTags;
     private Integer numBins;
@@ -14,7 +14,7 @@ public class DefaultUnivariateStatsCalculator  {
         //stats.setCounts(UnivariateStatsCountsCalculator.calculate(rvoList));
 
 
-        setParams(params);
+        setGlobalParams(params);
 
         if (field.getOptype().equals(OpType.CATEGORICAL)) {
             UnivariateStatsContCalculator.calculate(stats, CommonUtils.convertListRaw2Numerical(values, posTags, negTags), numBins);
@@ -28,7 +28,7 @@ public class DefaultUnivariateStatsCalculator  {
         return stats;
     }
 
-    private void setParams(Map<String, Object> params) {
+    private void setGlobalParams(Map<String, Object> params) {
         if (params.containsKey("posTags")) {
             this.posTags = (List<String>) params.get("posTags");
         } else {

@@ -1,7 +1,7 @@
 {
   "requestType" : "transform",
   "executionMode" : "LOCAL_SINGLE",
-   "params" : {
+   "globalParams" : {
       "bindings": {
           "TransformationExecutor": "ml.shifu.shifu.di.builtin.LegacyTransformationExecutor"
         },
@@ -20,7 +20,7 @@
       },
     "$$default": {
         "bindings": {
-            "DerivedFieldCreator": "ml.shifu.shifu.di.builtin.ZScoreDerivedFieldCreator"
+            "DerivedFieldCreator": "ml.shifu.shifu.di.builtin.derivedField.ZScoreDerivedFieldCreator"
         }
     }
   }

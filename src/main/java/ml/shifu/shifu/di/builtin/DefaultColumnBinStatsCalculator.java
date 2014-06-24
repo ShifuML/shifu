@@ -17,11 +17,11 @@
 package ml.shifu.shifu.di.builtin;
 
 
-import ml.shifu.shifu.di.spi.ColumnBinStatsCalculator;
 import ml.shifu.shifu.container.obj.ColumnBinStatsResult;
 import ml.shifu.shifu.container.obj.ColumnBinningResult;
 import ml.shifu.shifu.core.KSIVCalculator;
 import ml.shifu.shifu.core.WOECalculator;
+import ml.shifu.shifu.di.spi.ColumnBinStatsCalculator;
 
 public class DefaultColumnBinStatsCalculator implements ColumnBinStatsCalculator {
 

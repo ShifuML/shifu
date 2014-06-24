@@ -27,5 +27,4 @@ public interface ColumnRawStatsCalculator {
     public ColumnRawStatsResult calculate(List<RawValueObject> rvoList, List<String> posTags, List<String> negTags);
 
 
-
 }

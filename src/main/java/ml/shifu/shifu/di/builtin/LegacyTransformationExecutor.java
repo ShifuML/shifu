@@ -10,7 +10,7 @@ import java.util.Map;
 
 public class LegacyTransformationExecutor implements TransformationExecutor {
 
-    public  Object transform(DerivedField derivedField, Object origin) {
+    public Object transform(DerivedField derivedField, Object origin) {
 
         Expression expression = derivedField.getExpression();
 
@@ -22,7 +22,7 @@ public class LegacyTransformationExecutor implements TransformationExecutor {
 
     }
 
-    public List<Object> transform(MiningSchema miningSchema, Map<FieldName, DerivedField> fieldNameToDerivedFieldMap, Map<FieldName, Integer> fieldNameToFieldNumberMap,  List<Object> raw) {
+    public List<Object> transform(MiningSchema miningSchema, Map<FieldName, DerivedField> fieldNameToDerivedFieldMap, Map<FieldName, Integer> fieldNameToFieldNumberMap, List<Object> raw) {
         List<Object> transformed = new ArrayList<Object>();
 
         for (MiningField miningField : miningSchema.getMiningFields()) {

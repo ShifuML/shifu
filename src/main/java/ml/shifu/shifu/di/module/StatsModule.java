@@ -20,15 +20,16 @@ package ml.shifu.shifu.di.module;
 import com.google.inject.AbstractModule;
 import ml.shifu.shifu.util.CommonUtils;
 
-import java.util.Map;
 import java.util.HashMap;
+import java.util.Map;
 
 
 public class StatsModule extends AbstractModule {
 
     private Map<String, String> injections = new HashMap<String, String>();
 
-    public StatsModule() {}
+    public StatsModule() {
+    }
 
 
     public Map<String, String> getInjections() {

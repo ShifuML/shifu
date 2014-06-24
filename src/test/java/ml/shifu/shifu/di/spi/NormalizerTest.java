@@ -3,9 +3,9 @@ package ml.shifu.shifu.di.spi;
 
 import com.google.inject.Guice;
 import com.google.inject.Injector;
+import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.di.builtin.WOENormalizer;
 import ml.shifu.shifu.di.builtin.ZScoreNormalizer;
-import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.di.module.NormalizationModule;
 import ml.shifu.shifu.di.service.NormalizationService;
 import org.testng.Assert;
@@ -39,7 +39,6 @@ public class NormalizerTest {
 
     @Test
     public void testZScoreNormalizer() {
-
 
 
         NormalizationService normalizationService = new NormalizationService(new ZScoreNormalizer());

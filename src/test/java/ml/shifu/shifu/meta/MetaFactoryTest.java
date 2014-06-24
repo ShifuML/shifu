@@ -25,7 +25,6 @@ import org.apache.commons.io.FileUtils;
 import org.testng.Assert;
 import org.testng.annotations.AfterClass;
 import org.testng.annotations.BeforeClass;
-import org.testng.annotations.Test;
 
 import java.io.File;
 import java.io.IOException;
@@ -66,13 +65,13 @@ public class MetaFactoryTest {
         Assert.assertTrue(result.getStatus());
     }
 
-   // @Test
+    // @Test
     public void testValidateModelSouceDataConf() throws Exception {
         ValidateResult result = MetaFactory.validate(modelConfig.getDataSet());
         Assert.assertTrue(result.getStatus());
     }
 
-   // @Test
+    // @Test
     public void testValidateModelStatsConf() throws Exception {
         ValidateResult result = MetaFactory.validate(modelConfig.getStats());
         Assert.assertTrue(result.getStatus());
@@ -109,7 +108,7 @@ public class MetaFactoryTest {
         modelConfig.getTrain().setParams(originalParams);
     }
 
-   // @Test
+    // @Test
     public void testValidateModelEvalList() throws Exception {
         ValidateResult result = MetaFactory.validate(modelConfig.getEvals());
         Assert.assertTrue(result.getStatus());

@@ -19,8 +19,8 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 
-import java.util.Map;
 import java.util.HashMap;
+import java.util.Map;
 
 /**
  * ModelStatsConf class
@@ -53,16 +53,6 @@ public class ModelStatsConf {
     }
 
     private Map<String, String> injections = new HashMap<String, String>();
-
-
-
-
-
-
-
-
-
-
 
 
     public Integer getMaxNumBin() {
@@ -108,15 +98,16 @@ public class ModelStatsConf {
     public void setBinningMergeEnable(Boolean binningMergeEnable) {
         this.binningMergeEnable = binningMergeEnable;
     }
-  /*
-    public BinningMethod getBinningMethod() {
-        return binningMethod;
-    }
 
-    public void setBinningMethod(BinningMethod binningMethod) {
-        this.binningMethod = binningMethod;
-    }
-        */
+    /*
+      public BinningMethod getBinningMethod() {
+          return binningMethod;
+      }
+
+      public void setBinningMethod(BinningMethod binningMethod) {
+          this.binningMethod = binningMethod;
+      }
+          */
     public Double getSampleRate() {
         return sampleRate;
     }
@@ -132,8 +123,6 @@ public class ModelStatsConf {
     public void setSampleNegOnly(Boolean sampleNegOnly) {
         this.sampleNegOnly = sampleNegOnly;
     }
-
-
 
 
     public ModelStatsConf() {

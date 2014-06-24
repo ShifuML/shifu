@@ -2,12 +2,10 @@ package ml.shifu.shifu.util;
 
 import com.google.common.base.Splitter;
 import ml.shifu.shifu.di.spi.SingleThreadFileLoader;
-import org.apache.commons.lang.ArrayUtils;
 
 import java.io.BufferedReader;
 import java.io.FileReader;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Scanner;
 

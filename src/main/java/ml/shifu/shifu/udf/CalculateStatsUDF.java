@@ -15,29 +15,27 @@
  */
 package ml.shifu.shifu.udf;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.inject.Guice;
+import com.google.inject.Injector;
+import ml.shifu.shifu.container.RawValueObject;
+import ml.shifu.shifu.container.obj.ColumnConfig;
+import ml.shifu.shifu.di.module.StatsModule;
+import ml.shifu.shifu.di.service.StatsService;
+import org.apache.pig.data.DataBag;
+import org.apache.pig.data.Tuple;
+import org.apache.pig.data.TupleFactory;
+
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.inject.Guice;
-import com.google.inject.Injector;
-import ml.shifu.shifu.container.RawValueObject;
-import ml.shifu.shifu.container.obj.*;
-import ml.shifu.shifu.di.module.StatsModule;
-import ml.shifu.shifu.di.service.*;
-import org.apache.pig.data.DataBag;
-import org.apache.pig.data.Tuple;
-import org.apache.pig.data.TupleFactory;
-
 /**
- *
  * CalculateStatsUDF class is calculate the stats for each column
- *
+ * <p/>
  * Input: (columnNum, {(value, tag, weight), (value, tag, weight)...})
- *
  */
 public class CalculateStatsUDF extends AbstractTrainerUDF<Tuple> {
 
@@ -47,10 +45,10 @@ public class CalculateStatsUDF extends AbstractTrainerUDF<Tuple> {
 
     private ObjectMapper jsonMapper;
 
-    public CalculateStatsUDF(String source, String pathModelConfig, String pathColumnConfig) throws IOException  {
+    public CalculateStatsUDF(String source, String pathModelConfig, String pathColumnConfig) throws IOException {
         super(source, pathModelConfig, pathColumnConfig);
 
-        if ( modelConfig.getNumericalValueThreshold() != null ) {
+        if (modelConfig.getNumericalValueThreshold() != null) {
             valueThreshold = modelConfig.getNumericalValueThreshold();
         }
 
@@ -58,11 +56,11 @@ public class CalculateStatsUDF extends AbstractTrainerUDF<Tuple> {
         statsModule.setInjections(modelConfig.getStats().getInjections());
 
         //statsModule.setStatsProcessorImplClass(modelConfig.getStats().getStatsProcessor());
-       // statsModule.setRawStatsCalculatorImplClass(modelConfig.getStats().getRawStatsCalculator());
-       // statsModule.setNumBinningCalculatorImplClass(modelConfig.getStats().getNumBinningCalculator());
-       // statsModule.setCatBinningCalculatorImplClass(modelConfig.getStats().getCatBinningCalculator());
-       // statsModule.setNumStatsCalculatorImplClass(modelConfig.getStats().getNumStatsCalculator());
-       // statsModule.setBinStatsCalculatorImplClass(modelConfig.getStats().getBinStatsCalculator());
+        // statsModule.setRawStatsCalculatorImplClass(modelConfig.getStats().getRawStatsCalculator());
+        // statsModule.setNumBinningCalculatorImplClass(modelConfig.getStats().getNumBinningCalculator());
+        // statsModule.setCatBinningCalculatorImplClass(modelConfig.getStats().getCatBinningCalculator());
+        // statsModule.setNumStatsCalculatorImplClass(modelConfig.getStats().getNumStatsCalculator());
+        // statsModule.setBinStatsCalculatorImplClass(modelConfig.getStats().getBinStatsCalculator());
 
         Injector injector = Guice.createInjector(statsModule);
 
@@ -95,7 +93,6 @@ public class CalculateStatsUDF extends AbstractTrainerUDF<Tuple> {
         List<RawValueObject> rvoList = new ArrayList<RawValueObject>();
 
         log.debug("****** The element count in bag is : " + bag.size());
-
 
 
         for (Tuple t : bag) {

@@ -9,7 +9,9 @@ import org.dmg.pmml.UnivariateStats;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 
 public class SimpleUnivariateStatsContCalculator {
     private Logger log = LoggerFactory.getLogger(SimpleUnivariateStatsContCalculator.class);
@@ -77,13 +79,13 @@ public class SimpleUnivariateStatsContCalculator {
         Collections.sort(validValues);
 
         //it's ok while the voList is sorted;
-        median = validValues.get(validSize/ 2);
+        median = validValues.get(validSize / 2);
 
         mean = sum / validSize;
         stdDev = Math.sqrt((squaredSum - (sum * sum) / validSize + EPS)
                 / (validSize - 1));
 
-        Double interQuartileRange = validValues.get((int)Math.floor(validSize * 0.75)) - validValues.get((int)Math.floor(validSize * 0.25));
+        Double interQuartileRange = validValues.get((int) Math.floor(validSize * 0.75)) - validValues.get((int) Math.floor(validSize * 0.25));
 
         numericInfo.setMean(mean);
         numericInfo.setStandardDeviation(stdDev);
@@ -91,9 +93,6 @@ public class SimpleUnivariateStatsContCalculator {
         numericInfo.setInterQuartileRange(interQuartileRange);
 
         QuantileCalculator quantileCalculator = new QuantileCalculator();
-
-
-
 
 
         numericInfo.withQuantiles(quantileCalculator.getEvenlySpacedQuantiles(validValues, 11));
@@ -104,7 +103,6 @@ public class SimpleUnivariateStatsContCalculator {
         return;
 
     }
-
 
 
 }

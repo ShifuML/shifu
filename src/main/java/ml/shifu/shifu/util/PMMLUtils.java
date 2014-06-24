@@ -1,7 +1,5 @@
 package ml.shifu.shifu.util;
 
-import ml.shifu.shifu.container.BinningObject;
-import org.apache.pig.Expression;
 import org.dmg.pmml.*;
 import org.jpmml.model.ImportFilter;
 import org.jpmml.model.JAXBUtil;
@@ -9,7 +7,10 @@ import org.xml.sax.InputSource;
 
 import javax.xml.transform.sax.SAXSource;
 import javax.xml.transform.stream.StreamResult;
-import java.io.*;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -43,6 +44,17 @@ public class PMMLUtils {
         throw new RuntimeException("No such extension: " + key);
     }
 
+    public static UnivariateStats getUnivariateStatsByFieldName(ModelStats modelStats, FieldName fieldName) {
+        for (UnivariateStats univariateStats : modelStats.getUnivariateStats()) {
+            if (univariateStats.getField().equals(fieldName)) {
+                return univariateStats;
+            }
+        }
+
+        throw new RuntimeException("No UnivariateStats for field: " + fieldName);
+
+    }
+
 
     public static void savePMML(PMML pmml, String path) {
         OutputStream os = null;
@@ -57,7 +69,7 @@ public class PMMLUtils {
         }
     }
 
-    public static PMML loadPMML(String path) throws Exception{
+    public static PMML loadPMML(String path) throws Exception {
         InputStream is = null;
 
         try {

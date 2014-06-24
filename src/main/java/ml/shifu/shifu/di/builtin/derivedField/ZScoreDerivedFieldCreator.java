@@ -1,4 +1,4 @@
-package ml.shifu.shifu.di.builtin;
+package ml.shifu.shifu.di.builtin.derivedField;
 
 import ml.shifu.shifu.di.spi.DerivedFieldCreator;
 import org.dmg.pmml.*;
@@ -30,7 +30,7 @@ public class ZScoreDerivedFieldCreator implements DerivedFieldCreator {
 
         LinearNorm linearNorm1 = new LinearNorm();
         linearNorm1.setOrig(0);
-        linearNorm1.setNorm(- numericInfo.getMean() / numericInfo.getStandardDeviation());
+        linearNorm1.setNorm(-numericInfo.getMean() / numericInfo.getStandardDeviation());
 
         LinearNorm linearNorm2 = new LinearNorm();
         linearNorm2.setOrig(numericInfo.getMean());

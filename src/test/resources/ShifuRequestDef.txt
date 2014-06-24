@@ -7,6 +7,6 @@ ShifuRequest: {
 RequestObject: {
     "requestType": ...
     "executionMode": ...
-    "params": <K,V>
+    "globalParams": <K,V>
     "fieldParams": <fieldPattern, <K,V>>
 }

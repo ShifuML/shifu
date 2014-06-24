@@ -17,9 +17,9 @@
 package ml.shifu.shifu.di.builtin;
 
 
-import ml.shifu.shifu.di.spi.ColumnNumBinningCalculator;
 import ml.shifu.shifu.container.NumericalValueObject;
 import ml.shifu.shifu.container.obj.ColumnBinningResult;
+import ml.shifu.shifu.di.spi.ColumnNumBinningCalculator;
 import ml.shifu.shifu.util.QuickSort;
 
 import java.util.ArrayList;
@@ -43,7 +43,6 @@ public class EqualPositiveColumnNumBinningCalculator implements ColumnNumBinning
         }
 
 
-
         int binSize = (int) Math.ceil((double) sumPositive / (double) maxNumBins);
         int currBin = 0;
 
@@ -53,7 +52,6 @@ public class EqualPositiveColumnNumBinningCalculator implements ColumnNumBinning
         Integer[] countPos = new Integer[maxNumBins];
         Double[] countWeightedNeg = new Double[maxNumBins];
         Double[] countWeightedPos = new Double[maxNumBins];
-
 
 
         countNeg[0] = 0;

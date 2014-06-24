@@ -1,18 +1,9 @@
 package ml.shifu.shifu.di.service;
 
 
-import com.google.inject.Guice;
-import com.google.inject.Injector;
-import ml.shifu.shifu.di.module.SimpleModule;
-import ml.shifu.shifu.util.Params;
-import org.dmg.pmml.*;
-import org.jpmml.model.JAXBUtil;
+import org.dmg.pmml.DataDictionary;
 import org.testng.annotations.Test;
 
-import javax.xml.transform.stream.StreamResult;
-import java.io.FileOutputStream;
-import java.io.OutputStream;
-import java.util.Arrays;
 import java.util.List;
 
 public class UnivariateStatsServiceTest {

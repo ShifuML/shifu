@@ -20,9 +20,7 @@ public class SimpleUnivariateStatsDiscrCalculator {
         Map<String, Integer> categoryCount = new HashMap<String, Integer>();
 
 
-
         Set<String> categorySet = new HashSet<String>();
-
 
 
         for (Object value : values) {

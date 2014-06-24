@@ -4,7 +4,7 @@
         {
             "requestType": "UpdateMiningSchema",
             "executionMode": "LOCAL_SINGLE",
-            "params": {
+            "globalParams": {
                 "bindings": {
                     "MiningSchemaUpdater": "ml.shifu.shifu.di.builtin.miningSchema.IVVariableSelector"
                 },

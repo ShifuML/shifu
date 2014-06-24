@@ -16,12 +16,8 @@ public class SimpleUnivariateStatsCalculator implements UnivariateStatsCalculato
         stats.setField(field.getName());
 
 
-
         SimpleUnivariateStatsCountsCalculator univariateStatsCountsCalculator = new SimpleUnivariateStatsCountsCalculator();
         univariateStatsCountsCalculator.calculate(stats, values);
-
-
-
 
 
         if (field.getOptype().equals(OpType.CATEGORICAL)) {

@@ -48,9 +48,9 @@ public class PostTrainModelProcessor extends BasicModelProcessor implements Proc
         setUp(ModelStep.POSTTRAIN);
         syncDataToHdfs(modelConfig.getDataSet().getSource());
 
-        if(modelConfig.isMapReduceRunMode()) {
+        if (modelConfig.isMapReduceRunMode()) {
             runPigPostTrain();
-        } else if(modelConfig.isLocalRunMode()) {
+        } else if (modelConfig.isLocalRunMode()) {
             runAkkaPostTrain();
         } else {
             log.error("Invalid RunMode Setting!");
@@ -62,7 +62,7 @@ public class PostTrainModelProcessor extends BasicModelProcessor implements Proc
 
     /**
      * run pig post train
-     * 
+     *
      * @throws IOException
      */
     private void runPigPostTrain() throws IOException {
@@ -93,7 +93,7 @@ public class PostTrainModelProcessor extends BasicModelProcessor implements Proc
 
     /**
      * run akka post train
-     * 
+     *
      * @throws IOException
      */
     private void runAkkaPostTrain() throws IOException {
@@ -110,7 +110,7 @@ public class PostTrainModelProcessor extends BasicModelProcessor implements Proc
 
     /**
      * read the binary average score and update them into column list
-     * 
+     *
      * @param columnConfigList
      * @return
      * @throws IOException
@@ -121,12 +121,12 @@ public class PostTrainModelProcessor extends BasicModelProcessor implements Proc
                 .getDataSet().getSource());
 
         // CommonUtils.getDataScanners(pathFinder.getBinAvgScorePath(), modelConfig.getDataSet().getSource());
-        for(Scanner scanner: scanners) {
-            while(scanner.hasNextLine()) {
+        for (Scanner scanner : scanners) {
+            while (scanner.hasNextLine()) {
                 List<Integer> scores = new ArrayList<Integer>();
                 String[] raw = scanner.nextLine().split("\\|");
                 int columnNum = Integer.valueOf(raw[0]);
-                for(int i = 1; i < raw.length; i++) {
+                for (int i = 1; i < raw.length; i++) {
                     scores.add(Integer.valueOf(raw[i]));
                 }
                 ColumnConfig config = columnConfigList.get(columnNum);

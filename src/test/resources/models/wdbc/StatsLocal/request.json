@@ -2,7 +2,7 @@
   "requestType" : "CreateMiningSchema",
   "executionMode" : "LOCAL_SINGLE",
   
-  "params" : {
+  "globalParams" : {
     "bindings" : {
       "UnivariateStatsCalculator" : "ml.shifu.shifu.di.builtin.stats.BinomialUnivariateStatsCalculator"
     },

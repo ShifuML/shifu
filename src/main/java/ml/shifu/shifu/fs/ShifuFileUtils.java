@@ -121,8 +121,8 @@ public class ShifuFileUtils {
      * !!! Warning: reader instance should be closed by caller.
      *
      * @param sourceFile - source file
-     * @throws IOException -  if any I/O exception in processing
      * @return buffered reader
+     * @throws IOException -  if any I/O exception in processing
      */
     public static BufferedReader getReader(SourceFile sourceFile) throws IOException {
         return getReader(sourceFile.getPath(), sourceFile.getSourceType());
@@ -135,8 +135,8 @@ public class ShifuFileUtils {
      *
      * @param path       - file path
      * @param sourceType - local/hdfs
-     * @throws IOException -  if any I/O exception in processing
      * @return buffered reader
+     * @throws IOException -  if any I/O exception in processing
      */
     public static BufferedReader getReader(String path, SourceType sourceType) throws IOException {
         return new BufferedReader(new InputStreamReader(getFileSystemBySourceType(sourceType).open(new Path(path))));

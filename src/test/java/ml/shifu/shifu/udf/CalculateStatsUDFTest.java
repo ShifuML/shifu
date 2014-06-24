@@ -40,7 +40,7 @@ public class CalculateStatsUDFTest {
         instance = new CalculateStatsUDF("LOCAL",
                 "src/test/resources/unittest/ModelSets/full/ModelConfig.json",
                 "src/test/resources/unittest/ModelSets/full/ColumnConfig.json"
-                );
+        );
     }
 
     @Test
@@ -57,10 +57,10 @@ public class CalculateStatsUDFTest {
         tuple.set(0, 5);
 
         DataBag dataBag = BagFactory.getInstance().newDefaultBag();
-        for ( int i = 0; i < 50; i ++ ) {
+        for (int i = 0; i < 50; i++) {
             Tuple scoreTuple = TupleFactory.getInstance().newTuple(3);
             scoreTuple.set(0, i % 5);
-            scoreTuple.set(1, i % 3 ==0 ? "B": "M");
+            scoreTuple.set(1, i % 3 == 0 ? "B" : "M");
             scoreTuple.set(2, 2);
 
             dataBag.add(scoreTuple);

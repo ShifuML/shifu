@@ -1,9 +1,9 @@
 package ml.shifu.shifu.di.spi;
 
-import ml.shifu.shifu.di.builtin.EqualPositiveColumnNumBinningCalculator;
-import ml.shifu.shifu.di.builtin.TotalPercentileColumnNumBinningCalculator;
 import ml.shifu.shifu.container.NumericalValueObject;
 import ml.shifu.shifu.container.obj.ColumnBinningResult;
+import ml.shifu.shifu.di.builtin.EqualPositiveColumnNumBinningCalculator;
+import ml.shifu.shifu.di.builtin.TotalPercentileColumnNumBinningCalculator;
 import org.testng.annotations.Test;
 
 import java.util.ArrayList;
@@ -11,7 +11,6 @@ import java.util.List;
 
 
 public class ColumnNumBinningCalculatorTest {
-
 
 
     @Test
@@ -41,7 +40,6 @@ public class ColumnNumBinningCalculatorTest {
         //System.out.println(columnBinningResult.getBinCountNeg());
 
 
-
     }
 
 
@@ -49,7 +47,7 @@ public class ColumnNumBinningCalculatorTest {
         List<NumericalValueObject> voList = new ArrayList<NumericalValueObject>();
         for (int i = 0; i < 100; i++) {
             NumericalValueObject vo = new NumericalValueObject();
-            vo.setValue((double)(i%20));
+            vo.setValue((double) (i % 20));
             vo.setIsPositive(i % 3 == 0 ? true : false);
             vo.setWeight(1.0);
             voList.add(vo);

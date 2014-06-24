@@ -1,7 +1,6 @@
 package ml.shifu.shifu.di.service;
 
 import com.google.inject.Inject;
-import ml.shifu.shifu.di.builtin.StandardTransformationExecutor;
 import ml.shifu.shifu.di.spi.TransformationExecutor;
 import org.dmg.pmml.DerivedField;
 import org.dmg.pmml.FieldName;

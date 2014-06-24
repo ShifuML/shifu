@@ -47,7 +47,7 @@ public class NormalizeModelProcessor extends BasicModelProcessor implements Proc
         setUp(ModelStep.NORMALIZE);
         syncDataToHdfs(modelConfig.getDataSet().getSource());
 
-        switch(modelConfig.getBasic().getRunMode()) {
+        switch (modelConfig.getBasic().getRunMode()) {
             case mapred:
                 runPigNormalize();
                 break;
@@ -64,7 +64,7 @@ public class NormalizeModelProcessor extends BasicModelProcessor implements Proc
 
     /**
      * running akka normalize process
-     * 
+     *
      * @throws IOException
      */
     private void runAkkaNormalize() throws IOException {
@@ -82,7 +82,7 @@ public class NormalizeModelProcessor extends BasicModelProcessor implements Proc
                     + modelConfig.getDataSetRawPath());
         }
 
-        if(scanners == null || scanners.size() == 0) {
+        if (scanners == null || scanners.size() == 0) {
             throw new ShifuException(ShifuErrorCode.ERROR_INPUT_NOT_FOUND, ", please check the data in "
                     + modelConfig.getDataSetRawPath() + " in " + sourceType);
         }
@@ -95,7 +95,7 @@ public class NormalizeModelProcessor extends BasicModelProcessor implements Proc
 
     /**
      * running pig normalize process
-     * 
+     *
      * @throws IOException
      */
     private void runPigNormalize() throws IOException {

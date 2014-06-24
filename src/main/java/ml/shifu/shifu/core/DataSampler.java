@@ -45,15 +45,15 @@ public class DataSampler {
      * @return null - if the data should be filtered out
      * data itself - if the data should not be filtered out
      */
-    public static List<Object> filter(Integer targetColumnNum, 
-            List<String> posTags, 
-            List<String> negTags,
-            List<Object> data, 
-            Double sampleRate, 
-            Boolean sampleNegOnly) {
+    public static List<Object> filter(Integer targetColumnNum,
+                                      List<String> posTags,
+                                      List<String> negTags,
+                                      List<Object> data,
+                                      Double sampleRate,
+                                      Boolean sampleNegOnly) {
         String tag = data.get(targetColumnNum).toString();
 
-        if(isNotSampled(posTags, negTags, sampleRate, sampleNegOnly, tag)) {
+        if (isNotSampled(posTags, negTags, sampleRate, sampleNegOnly, tag)) {
             return null;
         }
 
@@ -76,12 +76,12 @@ public class DataSampler {
      * @return true - if the data should be filtered out
      * false - if the data should not be filtered out
      */
-    public static boolean filter(int targetColumnNum, 
-            List<String> posTags, 
-            List<String> negTags, 
-            String[] fields,
-            double sampleRate, 
-            boolean sampleNegOnly) {
+    public static boolean filter(int targetColumnNum,
+                                 List<String> posTags,
+                                 List<String> negTags,
+                                 String[] fields,
+                                 double sampleRate,
+                                 boolean sampleNegOnly) {
         String tag = fields[targetColumnNum];
         return isNotSampled(posTags, negTags, sampleRate, sampleNegOnly, tag);
     }
@@ -98,10 +98,10 @@ public class DataSampler {
      * false - if the data should not be filtered out
      */
     public static boolean isNotSampled(
-            List<String> posTags, 
-            List<String> negTags, 
+            List<String> posTags,
+            List<String> negTags,
             double sampleRate,
-            boolean sampleNegOnly, 
+            boolean sampleNegOnly,
             String tag) {
         if (tag == null) {
             log.error("Tag is null.");

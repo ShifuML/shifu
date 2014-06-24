@@ -343,7 +343,7 @@
                     {"label": "Decision Tree", "value":"DT"}
                 ]
             }, {
-                "name": "params",
+                "name": "globalParams",
                 "type": "map",
                 "directive": "input",
                 "element": [

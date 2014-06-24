@@ -15,20 +15,13 @@
  */
 package ml.shifu.shifu.udf;
 
-import java.io.IOException;
-import java.text.DecimalFormat;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Random;
-
 import com.google.inject.Guice;
 import com.google.inject.Injector;
+import ml.shifu.shifu.container.WeightAmplifier;
+import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.core.DataSampler;
 import ml.shifu.shifu.di.module.NormalizationModule;
 import ml.shifu.shifu.di.service.NormalizationService;
-
-
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.jexl2.Expression;
 import org.apache.commons.jexl2.JexlContext;
@@ -40,13 +33,14 @@ import org.apache.pig.data.TupleFactory;
 import org.apache.pig.impl.logicalLayer.schema.Schema;
 import org.apache.pig.impl.util.Utils;
 
-import ml.shifu.shifu.container.WeightAmplifier;
-import ml.shifu.shifu.container.obj.ColumnConfig;
+import java.io.IOException;
+import java.text.DecimalFormat;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
 /**
- *
  * NormalizeUDF class normalize the training data
- *
- *
  */
 public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
 
@@ -95,10 +89,10 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
                 modelConfig.getNegTags(),
                 modelConfig.getNormalizeSampleRate(),
                 modelConfig.isNormalizeSampleNegOnly(), tag);
-        if ( isNotSampled ) {
+        if (isNotSampled) {
             return null;
         }
-        
+
         if (negTags.contains(tag)) {
             tuple.append(0);
         } else {
@@ -107,7 +101,7 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
 
         //Double cutoff = modelConfig.getNormalizeStdDevCutOff();
         /*
-		for (int i = 0; i < size; i++) {
+        for (int i = 0; i < size; i++) {
 			ColumnConfig config = columnConfigList.get(i);
 			if ( weightExpr != null ) {
 				jc.set(config.getColumnName(), ((input.get(i) == null) ? "" : input.get(i).toString()));
@@ -125,7 +119,7 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
 
         List<Double> normalized = normalizationService.normalize(columnConfigList, input.getAll());
 
-        if (normalized  == null) {
+        if (normalized == null) {
             return null;
         }
 
@@ -134,12 +128,12 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
         }
 
         double weight = 1.0d;
-        if ( weightExpr != null ) {
+        if (weightExpr != null) {
             Object result = weightExpr.evaluate(jc);
-            if ( result instanceof Integer ) {
-                weight = ((Integer)result).doubleValue();
-            } else if ( result instanceof Double ) {
-                weight = ((Double)result).doubleValue();
+            if (result instanceof Integer) {
+                weight = ((Integer) result).doubleValue();
+            } else if (result instanceof Double) {
+                weight = ((Double) result).doubleValue();
             }
         }
         tuple.append(weight);
@@ -151,7 +145,7 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
         try {
             StringBuilder schemaStr = new StringBuilder();
 
-            schemaStr.append("Normalized:Tuple(" +columnConfigList.get(tagColumnNum).getColumnName() + ":int");
+            schemaStr.append("Normalized:Tuple(" + columnConfigList.get(tagColumnNum).getColumnName() + ":int");
             for (ColumnConfig config : columnConfigList) {
                 if (config.isFinalSelect()) {
                     if (config.isNumerical()) {
@@ -172,13 +166,14 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
 
     /**
      * Create expressions for multi weight settings
+     *
      * @param weightExprList
      * @return weight expression map
      */
     protected Map<Expression, Double> createExpressionMap(List<WeightAmplifier> weightExprList) {
         Map<Expression, Double> ewMap = new HashMap<Expression, Double>();
 
-        if ( CollectionUtils.isNotEmpty(weightExprList) ) {
+        if (CollectionUtils.isNotEmpty(weightExprList)) {
             JexlEngine jexl = new JexlEngine();
 
             for (WeightAmplifier we : weightExprList) {
@@ -191,11 +186,12 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
 
     /**
      * Create the expression for weight setting
+     *
      * @param weightAmplifier
      * @return expression for weight amplifier
      */
     private Expression createExpression(String weightAmplifier) {
-        if ( StringUtils.isNotBlank(weightAmplifier) ) {
+        if (StringUtils.isNotBlank(weightAmplifier)) {
             JexlEngine jexl = new JexlEngine();
             return jexl.createExpression(weightAmplifier);
         }

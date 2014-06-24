@@ -18,7 +18,6 @@ package ml.shifu.shifu.container.obj;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import ml.shifu.shifu.container.obj.ModelBasicConf.RunMode;
-import ml.shifu.shifu.container.obj.ModelStatsConf.BinningMethod;
 import ml.shifu.shifu.container.obj.ModelTrainConf.ALGORITHM;
 import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
 import ml.shifu.shifu.fs.ShifuFileUtils;
@@ -142,7 +141,6 @@ public class ModelConfig {
                         + File.separator + "wdbc"
                         + File.separator + "wdbcDataSet"
                         + File.separator + "wdbc.train"
-
         ).toString());
         dataSet.setHeaderPath(new File(Environment.getProperty(Environment.SHIFU_HOME),
                 File.separator + "example"

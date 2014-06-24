@@ -15,13 +15,11 @@ public class IVVariableSelector implements MiningSchemaUpdater {
         }
 
 
-
         Map<FieldName, MiningField> miningFieldMap = PMMLUtils.getMiningFieldMap(model.getMiningSchema());
 
         List<UnivariateStats> statsList = new ArrayList<UnivariateStats>();
 
         MiningSchema updatedMiningSchema = new MiningSchema();
-
 
 
         for (UnivariateStats stats : model.getModelStats().getUnivariateStats()) {
@@ -30,7 +28,7 @@ public class IVVariableSelector implements MiningSchemaUpdater {
             }
         }
 
-        Integer numSelected = (Integer)params.get("numSelected");
+        Integer numSelected = (Integer) params.get("numSelected");
         if (numSelected > statsList.size()) {
             return;
         }
@@ -58,7 +56,6 @@ public class IVVariableSelector implements MiningSchemaUpdater {
         model.setMiningSchema(updatedMiningSchema);
 
     }
-
 
 
 }

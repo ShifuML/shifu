@@ -19,7 +19,7 @@ public class QuantileCalculator {
 
         for (int i = 0; i < num; i++) {
             Quantile quantile = new Quantile();
-            quantile.setQuantileLimit(((double)i / (num - 1)) * 100);
+            quantile.setQuantileLimit(((double) i / (num - 1)) * 100);
             quantile.setQuantileValue(values.get((size - 1) * i / (num - 1)));
             quantiles.add(quantile);
         }

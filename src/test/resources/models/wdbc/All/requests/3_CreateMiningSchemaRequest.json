@@ -4,22 +4,22 @@
         {
             "requestType": "CreateMiningSchema",
             "executionMode": "LOCAL_SINGLE",
-            "params": {
+            "globalParams": {
                 "bindings": {
                     "MiningSchemaCreator": "ml.shifu.shifu.di.builtin.miningSchema.PerFieldMiningSchemaCreator"
                 },
                 "modelName": "demoModel",
-                "pathPMML": "src/test/resources/models/wdbc/All/generated/model.xml",
-                "fieldParamsMap": {
-                    "id": {
-                        "usageType": "supplementary"
-                    },
-                    "diagnosis": {
-                        "usageType": "target"
-                    },
-                    "$$default": {
-                        "usageType": "active"
-                    }
+                "pathPMML": "src/test/resources/models/wdbc/All/generated/model.xml"
+            },
+            "fieldParamsMap": {
+                "id": {
+                    "usageType": "supplementary"
+                },
+                "diagnosis": {
+                    "usageType": "target"
+                },
+                "$$default": {
+                    "usageType": "active"
                 }
             }
             

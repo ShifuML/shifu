@@ -2,7 +2,6 @@ package ml.shifu.shifu.request.processor;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import ml.shifu.shifu.request.RequestObject;
-
 import org.testng.annotations.Test;
 
 import java.io.File;
@@ -11,7 +10,7 @@ import java.io.IOException;
 public class InitRequestProcessorTest {
 
     @Test
-    public void test() throws IOException{
+    public void test() throws IOException {
 
 
         ObjectMapper jsonMapper = new ObjectMapper();

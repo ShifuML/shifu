@@ -169,7 +169,6 @@ public class Normalizer {
     }
 
 
-
     /**
      * Compute the normalized data for @NormalizeMethod.Zscore
      *

@@ -1,12 +1,12 @@
 /**
  * Copyright [2012-2013] eBay Software Foundation
- *  
+ *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
  *    http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -19,13 +19,11 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * 
  * WOE calculator
- *
  */
 public class WOECalculator {
-	
-	private static final double EPS = 1e-10;
+
+    private static final double EPS = 1e-10;
 
     static public List<Double> calculate(Object[] pos, Object[] neg) {
         Double[] tmpPos = new Double[pos.length];
@@ -51,7 +49,7 @@ public class WOECalculator {
         return calculate(tmpPos, tmpNeg);
     }
 
-	static public List<Double> calculate(Double[] pos, Double[] neg) {
+    static public List<Double> calculate(Double[] pos, Double[] neg) {
 
         List<Double> woe = new ArrayList<Double>();
 
@@ -61,20 +59,20 @@ public class WOECalculator {
             throw new RuntimeException("Inconsistent Length: Positive=" + posSize + ", Negative=" + negSize);
         }
 
-		double sumPos = 0.0;
-		double sumNeg = 0.0;
+        double sumPos = 0.0;
+        double sumNeg = 0.0;
 
-		for (int i = 0; i < posSize; i++) {
-			sumPos += pos[i];
-			sumNeg += neg[i];
-		}
+        for (int i = 0; i < posSize; i++) {
+            sumPos += pos[i];
+            sumNeg += neg[i];
+        }
 
 
-		for (int i = 0; i < posSize; i++) {
-			woe.add(Math.log((pos[i] / sumPos + EPS) / (neg[i] / sumNeg + EPS)));
-		}
+        for (int i = 0; i < posSize; i++) {
+            woe.add(Math.log((pos[i] / sumPos + EPS) / (neg[i] / sumNeg + EPS)));
+        }
 
         return woe;
-	}
+    }
 
 }

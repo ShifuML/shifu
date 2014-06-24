@@ -4,11 +4,9 @@ import ml.shifu.shifu.container.CategoricalValueObject;
 import ml.shifu.shifu.container.NumericalValueObject;
 import ml.shifu.shifu.di.builtin.stats.BinomialUnivariateStatsCalculator;
 import ml.shifu.shifu.di.builtin.stats.BinomialUnivariateStatsDiscrCalculator;
-import ml.shifu.shifu.di.builtin.stats.SimpleUnivariateStatsCalculator;
 import ml.shifu.shifu.di.spi.UnivariateStatsCalculator;
 import ml.shifu.shifu.util.JSONUtils;
 import ml.shifu.shifu.util.PMMLUtils;
-import ml.shifu.shifu.util.Params;
 import org.dmg.pmml.*;
 import org.jpmml.model.JAXBUtil;
 import org.testng.Assert;
@@ -44,8 +42,6 @@ public class PMMLTest {
         }
 
 
-
-
         OutputStream os = null;
 
 
@@ -77,7 +73,7 @@ public class PMMLTest {
         //loadData();
 
 
-        Assert.assertEquals((int)dict.getNumberOfFields(), columns.size());
+        Assert.assertEquals((int) dict.getNumberOfFields(), columns.size());
 
 
         Map<String, Object> statsParams = new HashMap<String, Object>();
@@ -119,8 +115,6 @@ public class PMMLTest {
         } catch (Exception e) {
             e.printStackTrace();
         }
-
-
 
 
     }

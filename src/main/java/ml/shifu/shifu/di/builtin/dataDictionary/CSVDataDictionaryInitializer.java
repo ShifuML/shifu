@@ -2,11 +2,12 @@ package ml.shifu.shifu.di.builtin.dataDictionary;
 
 import com.google.common.base.Splitter;
 import ml.shifu.shifu.di.spi.DataDictionaryInitializer;
-
 import ml.shifu.shifu.request.RequestObject;
 import ml.shifu.shifu.util.PMMLUtils;
 import ml.shifu.shifu.util.Params;
-import org.dmg.pmml.*;
+import org.dmg.pmml.DataDictionary;
+import org.dmg.pmml.DataField;
+import org.dmg.pmml.FieldName;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -23,7 +24,7 @@ public class CSVDataDictionaryInitializer implements DataDictionaryInitializer {
     public DataDictionary init(RequestObject req) {
         DataDictionary dict = new DataDictionary();
 
-        Params globalParams = req.getParams();
+        Params globalParams = req.getGlobalParams();
 
 
         String pathCSV = (String) globalParams.get("pathCSV");

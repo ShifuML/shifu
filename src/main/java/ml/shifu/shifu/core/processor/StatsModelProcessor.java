@@ -15,23 +15,9 @@
  */
 package ml.shifu.shifu.core.processor;
 
-import java.io.IOException;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Scanner;
-
-import com.fasterxml.jackson.annotation.JsonIgnore;
-import com.fasterxml.jackson.core.JsonParseException;
-import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.apache.commons.collections.CollectionUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import ml.shifu.shifu.actor.AkkaSystemExecutor;
 import ml.shifu.shifu.container.obj.ColumnConfig;
-import ml.shifu.shifu.container.obj.ColumnConfig.ColumnType;
 import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
 import ml.shifu.shifu.core.validator.ModelInspector.ModelStep;
 import ml.shifu.shifu.exception.ShifuErrorCode;
@@ -52,13 +38,13 @@ import java.util.Scanner;
 /**
  * statistics, max/min/avg/std for each column dataset if it's numerical
  * </p>
- *
  */
-public class StatsModelProcessor extends BasicModelProcessor implements Processor{
+public class StatsModelProcessor extends BasicModelProcessor implements Processor {
 
     private final static Logger log = LoggerFactory.getLogger(StatsModelProcessor.class);
 
     private static ObjectMapper jsonMapper = new ObjectMapper();
+
     /**
      * runner for statistics
      */
@@ -69,9 +55,9 @@ public class StatsModelProcessor extends BasicModelProcessor implements Processo
 
         syncDataToHdfs(modelConfig.getDataSet().getSource());
 
-        if(modelConfig.isMapReduceRunMode()) {
+        if (modelConfig.isMapReduceRunMode()) {
             runPigStats();
-        } else if(modelConfig.isLocalRunMode()) {
+        } else if (modelConfig.isLocalRunMode()) {
             runAkkaStats();
         } else {
             throw new ShifuException(ShifuErrorCode.ERROR_UNSUPPORT_MODE);
@@ -84,9 +70,8 @@ public class StatsModelProcessor extends BasicModelProcessor implements Processo
 
     /**
      * run akka stats
-     *
      */
-    private void runAkkaStats(){
+    private void runAkkaStats() {
         List<Scanner> scanners = null;
 
         try {
@@ -98,7 +83,7 @@ public class StatsModelProcessor extends BasicModelProcessor implements Processo
             throw new ShifuException(ShifuErrorCode.ERROR_INPUT_NOT_FOUND, e);
         }
 
-        if(CollectionUtils.isEmpty(scanners)) {
+        if (CollectionUtils.isEmpty(scanners)) {
             throw new ShifuException(ShifuErrorCode.ERROR_INPUT_NOT_FOUND,
                     ", please check your data and start from init");
         }
@@ -113,10 +98,10 @@ public class StatsModelProcessor extends BasicModelProcessor implements Processo
 
     /**
      * run pig stats
-     * 
+     *
      * @throws IOException
      */
-    private void runPigStats() throws IOException{
+    private void runPigStats() throws IOException {
         log.info("delete historical pre-train data");
 
         ShifuFileUtils.deleteFile(pathFinder.getPreTrainingStatsPath(), modelConfig.getDataSet().getSource());
@@ -143,13 +128,13 @@ public class StatsModelProcessor extends BasicModelProcessor implements Processo
 
     /**
      * update the max/min/mean/std/binning information from stats step
-     * 
+     *
      * @throws IOException
      */
     public void updateColumnConfigWithPreTrainingStats() throws IOException {
         List<Scanner> scanners = ShifuFileUtils.getDataScanners(pathFinder.getPreTrainingStatsPath(), modelConfig
                 .getDataSet().getSource());
-        for(Scanner scanner: scanners) {
+        for (Scanner scanner : scanners) {
             scanStatsResult(scanner);
         }
 
@@ -159,14 +144,14 @@ public class StatsModelProcessor extends BasicModelProcessor implements Processo
 
     /**
      * Scan the stats result and save them into column configure
-     * 
+     *
      * @param scanner
      */
     private void scanStatsResult(Scanner scanner) throws IOException {
-        while(scanner.hasNextLine()) {
+        while (scanner.hasNextLine()) {
             String[] raw = scanner.nextLine().trim().split("\\|");
 
-            if(raw.length == 1) {
+            if (raw.length == 1) {
                 continue;
             }
 

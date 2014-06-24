@@ -9,7 +9,7 @@ import java.io.File;
 public class StatsRequestProcessorTest {
 
     @Test
-    public void test() throws Exception{
+    public void test() throws Exception {
 
 
         ObjectMapper jsonMapper = new ObjectMapper();

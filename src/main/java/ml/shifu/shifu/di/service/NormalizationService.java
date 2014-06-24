@@ -17,8 +17,8 @@
 package ml.shifu.shifu.di.service;
 
 import com.google.inject.Inject;
-import ml.shifu.shifu.di.spi.Normalizer;
 import ml.shifu.shifu.container.obj.ColumnConfig;
+import ml.shifu.shifu.di.spi.Normalizer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

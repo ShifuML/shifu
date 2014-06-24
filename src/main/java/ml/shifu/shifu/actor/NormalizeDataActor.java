@@ -15,31 +15,21 @@
  */
 package ml.shifu.shifu.actor;
 
-import java.io.BufferedWriter;
-import java.io.IOException;
-import java.text.DecimalFormat;
-import java.util.List;
-import java.util.Scanner;
-
-import com.google.inject.Guice;
-import com.google.inject.Injector;
-import ml.shifu.shifu.di.module.NormalizationModule;
-import ml.shifu.shifu.di.service.NormalizationService;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import akka.actor.ActorRef;
 import akka.actor.Props;
 import akka.actor.UntypedActor;
 import akka.actor.UntypedActorFactory;
 import akka.routing.RoundRobinRouter;
-
+import com.google.inject.Guice;
+import com.google.inject.Injector;
 import ml.shifu.shifu.actor.worker.DataFilterWorker;
 import ml.shifu.shifu.actor.worker.DataLoadWorker;
 import ml.shifu.shifu.actor.worker.DataNormalizeWorker;
 import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.container.obj.ModelConfig;
 import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
+import ml.shifu.shifu.di.module.NormalizationModule;
+import ml.shifu.shifu.di.service.NormalizationService;
 import ml.shifu.shifu.fs.PathFinder;
 import ml.shifu.shifu.fs.ShifuFileUtils;
 import ml.shifu.shifu.message.AkkaActorInputMessage;
@@ -47,16 +37,22 @@ import ml.shifu.shifu.message.ExceptionMessage;
 import ml.shifu.shifu.message.NormResultDataMessage;
 import ml.shifu.shifu.message.ScanNormInputDataMessage;
 import ml.shifu.shifu.util.Environment;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.io.BufferedWriter;
+import java.io.IOException;
+import java.text.DecimalFormat;
+import java.util.List;
+import java.util.Scanner;
 
 
 /**
- *
  * NormalizeDataActor class normalize the the training data.
  * Not all training data will be normalized. Actually there is an option - `baggingSampleRate`
  * in @ModelConfig, it will control how many percentage will be normalized.
- *
+ * <p/>
  * The raw data which is normalized, is also will be stored.
- *
  */
 public class NormalizeDataActor extends AbstractActor {
 
@@ -87,6 +83,7 @@ public class NormalizeDataActor extends AbstractActor {
         // actors to normalize data
         dataNormalizeRef = this.getContext().actorOf(new Props(new UntypedActorFactory() {
             private static final long serialVersionUID = -2417228112206743801L;
+
             public UntypedActor create() {
                 return new DataNormalizeWorker(modelConfig, columnConfigList, normalizationService, parentActorRef, parentActorRef);
             }
@@ -96,6 +93,7 @@ public class NormalizeDataActor extends AbstractActor {
         // actors to filter data
         dataFilterRef = this.getContext().actorOf(new Props(new UntypedActorFactory() {
             private static final long serialVersionUID = 7122505775141026832L;
+
             public UntypedActor create() throws IOException {
                 return new DataFilterWorker(modelConfig, columnConfigList, parentActorRef, dataNormalizeRef);
             }
@@ -104,6 +102,7 @@ public class NormalizeDataActor extends AbstractActor {
         // actors to load data
         dataLoadRef = this.getContext().actorOf(new Props(new UntypedActorFactory() {
             private static final long serialVersionUID = -7499072868479157207L;
+
             public UntypedActor create() {
                 return new DataLoadWorker(modelConfig, columnConfigList, parentActorRef, dataFilterRef);
             }
@@ -126,7 +125,7 @@ public class NormalizeDataActor extends AbstractActor {
      */
     @Override
     public void onReceive(Object message) throws Exception {
-        if ( message instanceof AkkaActorInputMessage ) {
+        if (message instanceof AkkaActorInputMessage) {
             resultCnt = 0;
 
             AkkaActorInputMessage msg = (AkkaActorInputMessage) message;
@@ -138,21 +137,21 @@ public class NormalizeDataActor extends AbstractActor {
                 dataLoadRef.tell(
                         new ScanNormInputDataMessage(scanners.size(), scanner), getSelf());
             }
-        } else if ( message instanceof NormResultDataMessage ) {
+        } else if (message instanceof NormResultDataMessage) {
             NormResultDataMessage msg = (NormResultDataMessage) message;
             int targetMsgCnt = msg.getTargetMsgCnt();
 
             writeDataIntoFile(msg.getNormalizedDataList());
             writeSelectDataIntoFile(msg.getSelectDataList());
 
-            resultCnt ++;
-            if ( resultCnt == targetMsgCnt ) {
+            resultCnt++;
+            if (resultCnt == targetMsgCnt) {
                 log.info("Received " + resultCnt + " messages. Finished normalizing train data.");
                 normDataWriter.close();
                 selectDataWriter.close();
                 getContext().system().shutdown();
             }
-        } else if ( message instanceof ExceptionMessage ) {
+        } else if (message instanceof ExceptionMessage) {
             // since some children actors meet some exception, shutdown the system
             ExceptionMessage msg = (ExceptionMessage) message;
             getContext().system().shutdown();
@@ -166,26 +165,26 @@ public class NormalizeDataActor extends AbstractActor {
 
     /**
      * Write the data which is selected to normalize, into file - tmp/SelectedRawData
+     *
      * @param selectDataList - the raw selected data
-     * @throws IOException
-     * 		Exception when writing file
+     * @throws IOException Exception when writing file
      */
     private void writeSelectDataIntoFile(List<String> selectDataList) throws IOException {
-        for(String rawInput: selectDataList) {
+        for (String rawInput : selectDataList) {
             selectDataWriter.append(rawInput + "\n");
         }
     }
 
     /**
      * Write the normalized data into file - tmp/NormalizedData
+     *
      * @param normalizedDataList - the normalized data
-     * @throws IOException
-     * 		Exception when writing file
+     * @throws IOException Exception when writing file
      */
     private void writeDataIntoFile(List<List<Double>> normalizedDataList) throws IOException {
-        for ( List<Double> normData : normalizedDataList ) {
-            for ( Double data : normData ) {
-                if ( data == null ) {
+        for (List<Double> normData : normalizedDataList) {
+            for (Double data : normData) {
+                if (data == null) {
                     normDataWriter.append("|");
                 } else {
                     normDataWriter.append(df.format(data) + "|");

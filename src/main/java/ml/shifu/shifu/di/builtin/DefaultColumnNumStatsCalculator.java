@@ -17,9 +17,9 @@
 package ml.shifu.shifu.di.builtin;
 
 
+import ml.shifu.shifu.container.NumericalValueObject;
 import ml.shifu.shifu.container.obj.ColumnNumStatsResult;
 import ml.shifu.shifu.di.spi.ColumnNumStatsCalculator;
-import ml.shifu.shifu.container.NumericalValueObject;
 import ml.shifu.shifu.util.QuickSort;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

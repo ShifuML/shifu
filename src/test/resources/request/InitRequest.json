@@ -2,7 +2,7 @@
   "requestType" : "CreateDataDictionary",
   "executionMode" : "LOCAL_SINGLE",
   
-  "params" : {
+  "globalParams" : {
     "bindings" : {
       "DataDictionaryInitializer" : "ml.shifu.shifu.di.builtin.ByTupleDataDictionaryInitializer"
     },

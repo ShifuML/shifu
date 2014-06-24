@@ -9,11 +9,14 @@ import ml.shifu.shifu.di.spi.SingleThreadFileLoader;
 import ml.shifu.shifu.request.RequestObject;
 import ml.shifu.shifu.util.CSVWithHeaderLocalSingleThreadFileLoader;
 import ml.shifu.shifu.util.PMMLUtils;
-import org.dmg.pmml.*;
+import org.dmg.pmml.DerivedField;
+import org.dmg.pmml.FieldName;
+import org.dmg.pmml.Model;
+import org.dmg.pmml.PMML;
 
 import java.io.PrintWriter;
-import java.util.Map;
 import java.util.List;
+import java.util.Map;
 
 public class ExecTransformRequestProcessor {
 
@@ -27,7 +30,7 @@ public class ExecTransformRequestProcessor {
         this.req = req;
 
 
-        String pathPMML = (String) req.getParams().get("pathPMML", "model.xml");
+        String pathPMML = (String) req.getGlobalParams().get("pathPMML", "model.xml");
 
         pmml = PMMLUtils.loadPMML(pathPMML);
 
@@ -42,11 +45,10 @@ public class ExecTransformRequestProcessor {
 
         SingleThreadFileLoader loader = new CSVWithHeaderLocalSingleThreadFileLoader();
 
-        List<List<Object>> rows = loader.load(req.getParams().get("pathInputData").toString());
+        List<List<Object>> rows = loader.load(req.getGlobalParams().get("pathInputData").toString());
 
 
-
-        Model model = PMMLUtils.getModelByName(pmml, req.getParams().get("modelName").toString());
+        Model model = PMMLUtils.getModelByName(pmml, req.getGlobalParams().get("modelName").toString());
 
 
         Map<FieldName, DerivedField> derivedFieldMap = PMMLUtils.getDerivedFieldMap(model.getLocalTransformations());
@@ -55,14 +57,14 @@ public class ExecTransformRequestProcessor {
         Map<FieldName, Integer> fieldNumMap = PMMLUtils.getFieldNumMap(pmml.getDataDictionary());
 
         SimpleModule module = new SimpleModule();
-        module.setBindings((Map<String, String>) req.getParams().get("bindings"));
+        module.setBindings((Map<String, String>) req.getGlobalParams().get("bindings"));
         Injector injector = Guice.createInjector(module);
 
         TransformationExecService service = injector.getInstance(TransformationExecService.class);
 
         PrintWriter writer = null;
         try {
-            writer = new PrintWriter(req.getParams().get("pathOutputData").toString(), "UTF-8");
+            writer = new PrintWriter(req.getGlobalParams().get("pathOutputData").toString(), "UTF-8");
 
             for (List<Object> row : rows) {
                 /*List<Object> transformedRow = new ArrayList<Object>();
@@ -81,7 +83,6 @@ public class ExecTransformRequestProcessor {
                 */
                 writer.println(Joiner.on(",").join(service.exec(model.getMiningSchema(), derivedFieldMap, fieldNumMap, row)));
             }
-
 
 
         } catch (Exception e) {

@@ -1,8 +1,8 @@
 package ml.shifu.shifu.di.spi;
 
+import ml.shifu.shifu.container.RawValueObject;
 import ml.shifu.shifu.container.obj.ColumnRawStatsResult;
 import ml.shifu.shifu.di.builtin.DefaultColumnRawStatsCalculator;
-import ml.shifu.shifu.container.RawValueObject;
 import org.testng.Assert;
 import org.testng.annotations.Test;
 
@@ -19,24 +19,23 @@ public class ColumnRawStatsCalculatorTest {
 
         ColumnRawStatsResult result1 = screener.calculate(genData1(), Arrays.asList("P"), new ArrayList<String>());
 
-        Assert.assertEquals((int)result1.getCntIsNumber(), 10);
-        Assert.assertEquals((int)result1.getCntValidPositive(), 10);
+        Assert.assertEquals((int) result1.getCntIsNumber(), 10);
+        Assert.assertEquals((int) result1.getCntValidPositive(), 10);
 
         ColumnRawStatsResult result2 = screener.calculate(genData2(), Arrays.asList("P"), Arrays.asList("N"));
 
-        Assert.assertEquals((int)result2.getCntTotal(), 10);
-        Assert.assertEquals((int)result2.getCntValidPositive(), 4);
-        Assert.assertEquals((int)result2.getCntValidNegative(), 3);
-        Assert.assertEquals((int)result2.getCntIgnoredByTag(), 3);
+        Assert.assertEquals((int) result2.getCntTotal(), 10);
+        Assert.assertEquals((int) result2.getCntValidPositive(), 4);
+        Assert.assertEquals((int) result2.getCntValidNegative(), 3);
+        Assert.assertEquals((int) result2.getCntIgnoredByTag(), 3);
 
         ColumnRawStatsResult result3 = screener.calculate(genData3(), Arrays.asList("P"), Arrays.asList("N"));
         System.out.println(Double.MAX_VALUE);
-        Assert.assertEquals((int)result3.getCntTotal(), 6);
-        Assert.assertEquals((int)result3.getCntUniqueValues(), 6);
-        Assert.assertEquals((int)result3.getCntIsNumber(), 2);
+        Assert.assertEquals((int) result3.getCntTotal(), 6);
+        Assert.assertEquals((int) result3.getCntUniqueValues(), 6);
+        Assert.assertEquals((int) result3.getCntIsNumber(), 2);
 
     }
-
 
 
     private List<RawValueObject> genData1() {
@@ -67,7 +66,7 @@ public class ColumnRawStatsCalculatorTest {
 
     private List<RawValueObject> genData3() {
 
-        List<Object> list = Arrays.asList((Object)"NaN", Double.valueOf(1.0), Double.MAX_VALUE, Double.NaN, "hello", null);
+        List<Object> list = Arrays.asList((Object) "NaN", Double.valueOf(1.0), Double.MAX_VALUE, Double.NaN, "hello", null);
 
         List<RawValueObject> rvoList = new ArrayList<RawValueObject>();
 

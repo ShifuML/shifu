@@ -4,7 +4,7 @@
         {
             "requestType": "ExecTransform",
             "executionMode": "LOCAL_SINGLE",
-            "params": {
+            "globalParams": {
                 "bindings": {
                     "TransformationExecutor": "ml.shifu.shifu.di.builtin.StandardTransformationExecutor"
                 },

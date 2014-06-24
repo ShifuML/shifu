@@ -83,13 +83,13 @@ public class BinomialUnivariateStatsContCalculator {
 
 
         //it's ok while the voList is sorted;
-        median = validValues.get(validSize/ 2);
+        median = validValues.get(validSize / 2);
 
         mean = sum / validSize;
         stdDev = Math.sqrt((squaredSum - (sum * sum) / validSize + EPS)
                 / (validSize - 1));
 
-        Double interQuartileRange = validValues.get((int)Math.floor(validSize * 0.75)) - validValues.get((int)Math.floor(validSize * 0.25));
+        Double interQuartileRange = validValues.get((int) Math.floor(validSize * 0.75)) - validValues.get((int) Math.floor(validSize * 0.25));
 
         numericInfo.setMean(mean);
         numericInfo.setStandardDeviation(stdDev);
@@ -99,7 +99,6 @@ public class BinomialUnivariateStatsContCalculator {
         QuantileCalculator quantileCalculator = new QuantileCalculator();
 
         Collections.sort(validValues);
-
 
 
         numericInfo.withQuantiles(quantileCalculator.getEvenlySpacedQuantiles(validValues, 11));
@@ -125,7 +124,7 @@ public class BinomialUnivariateStatsContCalculator {
             if (i == size - 1) {
                 interval.setRightMargin(Double.POSITIVE_INFINITY);
             } else {
-                interval.setRightMargin(result.getBinBoundary().get(i+1));
+                interval.setRightMargin(result.getBinBoundary().get(i + 1));
             }
 
             intervals.add(interval);

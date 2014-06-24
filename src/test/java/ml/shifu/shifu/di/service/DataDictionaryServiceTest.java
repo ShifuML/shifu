@@ -1,12 +1,5 @@
 package ml.shifu.shifu.di.service;
 
-import com.google.inject.Guice;
-import com.google.inject.Injector;
-import ml.shifu.shifu.di.module.SimpleModule;
-import ml.shifu.shifu.di.spi.DataDictionaryInitializer;
-import ml.shifu.shifu.util.Params;
-import org.dmg.pmml.DataDictionary;
-import org.testng.Assert;
 import org.testng.annotations.Test;
 
 public class DataDictionaryServiceTest {

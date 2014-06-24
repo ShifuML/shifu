@@ -1,39 +1,39 @@
 <assembly
-	xmlns="http://maven.apache.org/plugins/maven-assembly-plugin/assembly/1.1.0"
-	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-	xsi:schemaLocation="http://maven.apache.org/plugins/maven-assembly-plugin/assembly/1.1.0 http://maven.apache.org/xsd/assembly-1.1.0.xsd">
-	<id>${platform.version}</id>
-	<formats>
-		<format>tar.gz</format>
-	</formats>
+        xmlns="http://maven.apache.org/plugins/maven-assembly-plugin/assembly/1.1.0"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://maven.apache.org/plugins/maven-assembly-plugin/assembly/1.1.0 http://maven.apache.org/xsd/assembly-1.1.0.xsd">
+    <id>${platform.version}</id>
+    <formats>
+        <format>tar.gz</format>
+    </formats>
 
-	<fileSets>
-		<fileSet>
-			<directory>${project.basedir}</directory>
-			<outputDirectory>/</outputDirectory>
-			<includes>
-				<include>README*</include>
-				<include>LICENSE*</include>
-				<include>NOTICE*</include>
-			</includes>
-		</fileSet>
+    <fileSets>
+        <fileSet>
+            <directory>${project.basedir}</directory>
+            <outputDirectory>/</outputDirectory>
+            <includes>
+                <include>README*</include>
+                <include>LICENSE*</include>
+                <include>NOTICE*</include>
+            </includes>
+        </fileSet>
 
-		<fileSet>
-			<directory>${project.basedir}/src/main/pig</directory>
-			<outputDirectory>/scripts</outputDirectory>
-			<includes>
-				<include>*.pig</include>
-			</includes>
-		</fileSet>
+        <fileSet>
+            <directory>${project.basedir}/src/main/pig</directory>
+            <outputDirectory>/scripts</outputDirectory>
+            <includes>
+                <include>*.pig</include>
+            </includes>
+        </fileSet>
 
-		<fileSet>
-			<directory>${project.basedir}/src/main/resources/conf</directory>
-			<outputDirectory>/conf</outputDirectory>
-			<excludes>
-			    <exclude>log4j.*</exclude>
-			</excludes>
-		</fileSet>
-		
+        <fileSet>
+            <directory>${project.basedir}/src/main/resources/conf</directory>
+            <outputDirectory>/conf</outputDirectory>
+            <excludes>
+                <exclude>log4j.*</exclude>
+            </excludes>
+        </fileSet>
+
         <fileSet>
             <directory>${project.basedir}/src/main/resources/conf</directory>
             <outputDirectory>/</outputDirectory>
@@ -41,57 +41,57 @@
                 <include>log4j.*</include>
             </includes>
         </fileSet>
-        
 
-		<fileSet>
-			<directory>${project.basedir}/src/test/resources/example</directory>
-			<outputDirectory>/example</outputDirectory>
-		</fileSet>
 
-		<fileSet>
-			<directory>${project.basedir}/src/test/resources/common</directory>
-			<outputDirectory>/common</outputDirectory>
-		</fileSet>
+        <fileSet>
+            <directory>${project.basedir}/src/test/resources/example</directory>
+            <outputDirectory>/example</outputDirectory>
+        </fileSet>
 
-		<fileSet>
-			<directory>${project.basedir}/src/main/bash</directory>
-			<outputDirectory>/bin</outputDirectory>
-			<fileMode>755</fileMode>
-			<includes>
-				<include>*</include>
-			</includes>
-		</fileSet>
-		<fileSet>
-			<directory>${project.basedir}/src/test/bash</directory>
-			<outputDirectory>/bin</outputDirectory>
-			<fileMode>755</fileMode>
-			<includes>
-				<include>*</include>
-			</includes>
-		</fileSet>
+        <fileSet>
+            <directory>${project.basedir}/src/test/resources/common</directory>
+            <outputDirectory>/common</outputDirectory>
+        </fileSet>
 
-		<fileSet>
-			<directory>${project.basedir}/doc</directory>
-			<outputDirectory>/doc</outputDirectory>
-			<includes>
-				<include>*</include>
-			</includes>
-		</fileSet>
+        <fileSet>
+            <directory>${project.basedir}/src/main/bash</directory>
+            <outputDirectory>/bin</outputDirectory>
+            <fileMode>755</fileMode>
+            <includes>
+                <include>*</include>
+            </includes>
+        </fileSet>
+        <fileSet>
+            <directory>${project.basedir}/src/test/bash</directory>
+            <outputDirectory>/bin</outputDirectory>
+            <fileMode>755</fileMode>
+            <includes>
+                <include>*</include>
+            </includes>
+        </fileSet>
 
-		<fileSet>
-			<directory>${project.build.directory}</directory>
-			<outputDirectory>/lib</outputDirectory>
-			<includes>
-				<include>*.jar</include>
-			</includes>
-		</fileSet>
+        <fileSet>
+            <directory>${project.basedir}/doc</directory>
+            <outputDirectory>/doc</outputDirectory>
+            <includes>
+                <include>*</include>
+            </includes>
+        </fileSet>
 
-	</fileSets>
+        <fileSet>
+            <directory>${project.build.directory}</directory>
+            <outputDirectory>/lib</outputDirectory>
+            <includes>
+                <include>*.jar</include>
+            </includes>
+        </fileSet>
 
-	<dependencySets>
-		<dependencySet>
-			<outputDirectory>/lib</outputDirectory>
-			<includes>
+    </fileSets>
+
+    <dependencySets>
+        <dependencySet>
+            <outputDirectory>/lib</outputDirectory>
+            <includes>
                 <include>*:akka-actor*:*</include>
                 <include>*:antlr:*</include>
                 <include>*:antlr-runtime:*</include>
@@ -135,8 +135,10 @@
                 <include>*:zookeeper:*</include>
                 <include>*:joda-time:*</include>
                 <include>*:automaton:*</include>
-			</includes>
-		</dependencySet>
-	</dependencySets>
+                <include>org.jpmml:*:*</include>
+                <include>com.sun.xml.bind:*:*</include>
+            </includes>
+        </dependencySet>
+    </dependencySets>
 
 </assembly>

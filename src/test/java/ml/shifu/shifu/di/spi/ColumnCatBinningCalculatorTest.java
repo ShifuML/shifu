@@ -1,10 +1,10 @@
 package ml.shifu.shifu.di.spi;
 
 
-import ml.shifu.shifu.di.builtin.DefaultColumnCatBinningCalculator;
 import ml.shifu.shifu.container.CategoricalValueObject;
 import ml.shifu.shifu.container.obj.ColumnBinningResult;
 import ml.shifu.shifu.container.obj.ModelConfig;
+import ml.shifu.shifu.di.builtin.DefaultColumnCatBinningCalculator;
 import org.testng.annotations.Test;
 
 import java.util.ArrayList;
@@ -33,7 +33,6 @@ public class ColumnCatBinningCalculatorTest {
         System.out.println(columnBinningResult.getBinCountNeg());
         System.out.println(columnBinningResult.getBinCountPos());
         System.out.println(columnBinningResult.getBinPosRate());
-
 
 
     }

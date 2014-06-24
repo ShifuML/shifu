@@ -28,7 +28,7 @@ import java.util.List;
  * avoid to change it manually, unless understanding the meaning of the changes.
  */
 @JsonIgnoreProperties(ignoreUnknown = true)
-   public class ColumnConfig {
+public class ColumnConfig {
 
     public static enum ColumnFlag {
         ForceSelect, ForceRemove, Meta, Target
@@ -49,7 +49,6 @@ import java.util.List;
     private ColumnType columnType = ColumnType.N;
     private ColumnFlag columnFlag = null;
     private Boolean finalSelect = Boolean.FALSE;
-
 
 
     // column detail
@@ -73,9 +72,9 @@ import java.util.List;
 
     /**
      * ---------------------------------------------------------------------------
-     *
-     * 					Auto-Gen methods
-     *
+     * <p/>
+     * Auto-Gen methods
+     * <p/>
      * ---------------------------------------------------------------------------
      */
 
@@ -345,7 +344,7 @@ import java.util.List;
     }
 
     @JsonIgnore
-    public Double getMedian(){
+    public Double getMedian() {
         return columnNumStatsResult.getMedian();
     }
 
@@ -384,24 +383,23 @@ import java.util.List;
     }
 
 
-
     @JsonIgnore
-    public List<Double> getBinWeightedNeg(){
+    public List<Double> getBinWeightedNeg() {
         return this.columnBinningResult.getBinWeightedNeg();
     }
 
     @JsonIgnore
-    public List<Double> getBinWeightedPos(){
+    public List<Double> getBinWeightedPos() {
         return this.columnBinningResult.getBinWeightedPos();
     }
 
     @JsonIgnore
-    public void setBinWeightedNeg(List<Double> binList){
+    public void setBinWeightedNeg(List<Double> binList) {
         this.columnBinningResult.setBinWeightedNeg(binList);
     }
 
     @JsonIgnore
-    public void setBinWeightedPos(List<Double> binList){
+    public void setBinWeightedPos(List<Double> binList) {
         this.columnBinningResult.setBinWeightedPos(binList);
     }
 
@@ -422,9 +420,7 @@ import java.util.List;
     }
 
     /**
-     *
      * ColumnConfigComparator class
-     *
      */
 
     public static class ColumnConfigComparator implements Comparator<ColumnConfig> {

@@ -15,22 +15,21 @@
  */
 package ml.shifu.shifu.actor.worker;
 
+import akka.actor.ActorRef;
+import com.google.inject.Injector;
+import ml.shifu.shifu.container.RawValueObject;
+import ml.shifu.shifu.container.obj.ColumnConfig;
+import ml.shifu.shifu.container.obj.ModelConfig;
+import ml.shifu.shifu.di.service.StatsService;
+import ml.shifu.shifu.message.StatsResultMessage;
+import ml.shifu.shifu.message.StatsValueObjectMessage;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-
-import com.google.inject.Injector;
-import ml.shifu.shifu.container.RawValueObject;
-import ml.shifu.shifu.container.obj.*;
-import ml.shifu.shifu.di.service.*;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import akka.actor.ActorRef;
-
-import ml.shifu.shifu.message.StatsResultMessage;
-import ml.shifu.shifu.message.StatsValueObjectMessage;
 
 /**
  * StatsCalculateWorker class calculates the stats for each column

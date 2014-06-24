@@ -23,7 +23,6 @@ import java.util.Comparator;
 public class NumericalValueObject {
 
 
-
     private Boolean isPositive;
     private Double value;
     private Double weight;

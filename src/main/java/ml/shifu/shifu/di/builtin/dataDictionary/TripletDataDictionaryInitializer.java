@@ -9,7 +9,9 @@ import org.slf4j.LoggerFactory;
 
 import java.io.BufferedReader;
 import java.io.FileReader;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Scanner;
 
 public class TripletDataDictionaryInitializer implements DataDictionaryInitializer {
 
@@ -19,7 +21,7 @@ public class TripletDataDictionaryInitializer implements DataDictionaryInitializ
 
         log.info("Initializing DataDictionary: " + TripletDataDictionaryInitializer.class);
 
-        Params params = req.getParams();
+        Params params = req.getGlobalParams();
 
         DataDictionary dict = new DataDictionary();
 
@@ -33,7 +35,7 @@ public class TripletDataDictionaryInitializer implements DataDictionaryInitializ
 
             List<DataField> fields = new ArrayList<DataField>();
 
-            while(scanner.hasNextLine()) {
+            while (scanner.hasNextLine()) {
                 String[] parts = scanner.nextLine().split(",");
                 DataField field = new DataField();
                 field.setName(FieldName.create(parts[0].trim()));

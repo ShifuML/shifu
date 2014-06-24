@@ -28,7 +28,8 @@ public class SimpleModule extends AbstractModule {
 
     private Map<String, String> bindings = new HashMap<String, String>();
 
-    public SimpleModule() {}
+    public SimpleModule() {
+    }
 
 
     public Map<String, String> getBindings() {

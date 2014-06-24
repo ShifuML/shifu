@@ -55,7 +55,7 @@
     "fixInitInput" : false,
     "numTrainEpochs" : 800,
     "algorithm" : "NN",
-    "params" : {
+    "globalParams" : {
       "NumHiddenLayers" : 2,
       "ActivationFunc" : [ "Sigmoid", "Sigmoid" ],
       "NumHiddenNodes" : [ 16, 16 ],

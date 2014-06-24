@@ -1,7 +1,5 @@
 package ml.shifu.shifu.di.builtin.stats;
 
-import ml.shifu.shifu.container.RawValueObject;
-import ml.shifu.shifu.util.Params;
 import org.dmg.pmml.Counts;
 import org.dmg.pmml.UnivariateStats;
 

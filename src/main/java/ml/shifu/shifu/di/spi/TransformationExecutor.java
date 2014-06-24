@@ -1,7 +1,6 @@
 package ml.shifu.shifu.di.spi;
 
 
-import org.dmg.pmml.DataDictionary;
 import org.dmg.pmml.DerivedField;
 import org.dmg.pmml.FieldName;
 import org.dmg.pmml.MiningSchema;
@@ -13,5 +12,5 @@ public interface TransformationExecutor {
 
     public Object transform(DerivedField derivedField, Object origin);
 
-    public List<Object> transform(MiningSchema miningSchema, Map<FieldName, DerivedField> fieldNameToDerivedFieldMap, Map<FieldName, Integer> fieldNameToFieldNumberMap,  List<Object> raw);
+    public List<Object> transform(MiningSchema miningSchema, Map<FieldName, DerivedField> fieldNameToDerivedFieldMap, Map<FieldName, Integer> fieldNameToFieldNumberMap, List<Object> raw);
 }

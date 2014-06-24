@@ -54,7 +54,7 @@ public class AddColumnNumUDF extends AbstractTrainerUDF<DataBag> {
         super(source, pathModelConfig, pathColumnConfig);
 
 		/*if (withScoreStr.equalsIgnoreCase("true")) {
-			this.withScore = true;
+            this.withScore = true;
 		}*/
 
         if (!StringUtils.isEmpty(this.modelConfig.getDataSet().getWeightColumnName())) {

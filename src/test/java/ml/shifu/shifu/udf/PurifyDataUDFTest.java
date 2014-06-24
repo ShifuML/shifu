@@ -25,7 +25,6 @@ import org.apache.pig.data.TupleFactory;
 import org.testng.Assert;
 import org.testng.annotations.AfterClass;
 import org.testng.annotations.BeforeClass;
-import org.testng.annotations.Test;
 
 import java.io.IOException;
 import java.io.Writer;

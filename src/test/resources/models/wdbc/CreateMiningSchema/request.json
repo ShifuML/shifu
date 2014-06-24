@@ -2,7 +2,7 @@
   "requestType" : "CreateMiningSchema",
   "executionMode" : "LOCAL_SINGLE",
   
-  "params" : {
+  "globalParams" : {
     "bindings" : {
       "MiningSchemaCreator" : "ml.shifu.shifu.di.builtin.miningSchema.PerFieldMiningSchemaCreator"
     },

@@ -19,7 +19,7 @@ public class FullListDataDictionaryInitializer implements DataDictionaryInitiali
 
     public DataDictionary init(RequestObject req) {
 
-        Params params = req.getParams();
+        Params params = req.getGlobalParams();
 
         log.info("Initializing DataDictionary: " + FullListDataDictionaryInitializer.class);
 
@@ -35,7 +35,7 @@ public class FullListDataDictionaryInitializer implements DataDictionaryInitiali
 
             List<DataField> fields = new ArrayList<DataField>();
 
-            while(scanner.hasNextLine()) {
+            while (scanner.hasNextLine()) {
                 String[] parts = scanner.nextLine().split(",");
                 DataField field = new DataField();
                 field.setName(FieldName.create(parts[0].trim()));

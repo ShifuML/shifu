@@ -21,7 +21,9 @@ import com.google.inject.Inject;
 import ml.shifu.shifu.container.CategoricalValueObject;
 import ml.shifu.shifu.container.NumericalValueObject;
 import ml.shifu.shifu.container.RawValueObject;
-import ml.shifu.shifu.container.obj.*;
+import ml.shifu.shifu.container.obj.ColumnBinningResult;
+import ml.shifu.shifu.container.obj.ColumnConfig;
+import ml.shifu.shifu.container.obj.ColumnNumStatsResult;
 import ml.shifu.shifu.di.spi.*;
 import ml.shifu.shifu.util.CommonUtils;
 
@@ -35,7 +37,6 @@ public class DefaultStatsProcessor implements StatsProcessor {
     private ColumnCatBinningCalculator catBinningCalculator;
     private ColumnNumStatsCalculator numStatsCalculator;
     private ColumnBinStatsCalculator binStatsCalculator;
-
 
 
     private List<String> posTags;
@@ -55,7 +56,9 @@ public class DefaultStatsProcessor implements StatsProcessor {
         this.catBinningCalculator = catBinningCalculator;
         this.numStatsCalculator = numStatsCalculator;
         this.binStatsCalculator = binStatsCalculator;
-    };
+    }
+
+    ;
 
 
     public void process(ColumnConfig columnConfig, List<RawValueObject> rvoList) {

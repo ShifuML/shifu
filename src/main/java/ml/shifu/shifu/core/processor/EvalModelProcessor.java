@@ -60,9 +60,8 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
 
     /**
      * Constructor
-     * 
-     * @param step
-     *            the evaluation step
+     *
+     * @param step the evaluation step
      */
     public EvalModelProcessor(EvalStep step) {
         this.evalStep = step;
@@ -70,11 +69,9 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
 
     /**
      * Constructor
-     * 
-     * @param step
-     *            the evaluation step
-     * @param name
-     *            the evaluation name
+     *
+     * @param step the evaluation step
+     * @param name the evaluation name
      */
     public EvalModelProcessor(EvalStep step, String name) {
         this.evalName = name;
@@ -89,7 +86,7 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
 
         setUp(ModelStep.EVAL);
 
-        switch(evalStep) {
+        switch (evalStep) {
             case LIST:
                 listEvalSet();
                 break;
@@ -124,7 +121,7 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
      */
     private void deleteEvalSet(String evalSetName) {
         EvalConfig evalConfig = modelConfig.getEvalConfigByName(evalSetName);
-        if(evalConfig == null) {
+        if (evalConfig == null) {
             log.error("{} eval set doesn't exist.", evalSetName);
         } else {
             modelConfig.getEvals().remove(evalConfig);
@@ -142,9 +139,9 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
      */
     private void listEvalSet() {
         List<EvalConfig> evals = modelConfig.getEvals();
-        if(CollectionUtils.isNotEmpty(evals)) {
+        if (CollectionUtils.isNotEmpty(evals)) {
             log.info("There are {} eval sets.", evals.size());
-            for(EvalConfig evalConfig: evals) {
+            for (EvalConfig evalConfig : evals) {
                 log.info("\t - {}", evalConfig.getName());
             }
         }
@@ -153,11 +150,11 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
     private List<EvalConfig> getEvalConfigListFromInput() {
         List<EvalConfig> evalSetList = new ArrayList<EvalConfig>();
 
-        if(StringUtils.isNotBlank(evalName)) {
+        if (StringUtils.isNotBlank(evalName)) {
             String[] evalList = evalName.split(",");
-            for(String eval: evalList) {
+            for (String eval : evalList) {
                 EvalConfig evalConfig = modelConfig.getEvalConfigByName(eval);
-                if(evalConfig == null) {
+                if (evalConfig == null) {
                     log.error("The evalset - " + eval + " doesn't exist!");
                 } else {
                     evalSetList.add(evalConfig);
@@ -165,7 +162,7 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
             }
         } else {
             evalSetList = modelConfig.getEvals();
-            if(CollectionUtils.isEmpty(evalSetList)) {
+            if (CollectionUtils.isEmpty(evalSetList)) {
                 throw new ShifuException(ShifuErrorCode.ERROR_MODEL_EVALSET_DOESNT_EXIST);
             }
         }
@@ -175,19 +172,19 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
 
     /**
      * run score only
-     * 
+     *
      * @param evalName
      * @throws IOException
      */
     private void runScore(List<EvalConfig> evalSetList) throws IOException {
-        for(EvalConfig config: evalSetList) {
+        for (EvalConfig config : evalSetList) {
             runScore(config);
         }
     }
 
     /**
      * run score only
-     * 
+     *
      * @param config
      * @throws IOException
      */
@@ -195,7 +192,7 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
 
         syncDataToHdfs(config.getDataSet().getSource());
 
-        switch(modelConfig.getBasic().getRunMode()) {
+        switch (modelConfig.getBasic().getRunMode()) {
             case mapred:
                 runPigScore(config);
                 break;
@@ -209,7 +206,7 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
 
     /**
      * run pig mode scoring
-     * 
+     *
      * @param config
      * @throws IOException
      */
@@ -245,7 +242,7 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
 
     /**
      * run akka mode scoring
-     * 
+     *
      * @param config
      * @throws IOException
      */
@@ -262,14 +259,13 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
 
     /**
      * Create a evaluation with <code>name</code>
-     * 
-     * @param name
-     *            - the evaluation set name
+     *
+     * @param name - the evaluation set name
      * @throws IOException
      */
     private void createNewEval(String name) throws IOException {
         EvalConfig evalConfig = modelConfig.getEvalConfigByName(name);
-        if(evalConfig != null) {
+        if (evalConfig != null) {
             throw new ShifuException(ShifuErrorCode.ERROR_MODEL_EVALSET_ALREADY_EXIST, "EvalSet - " + name
                     + " already exists in ModelConfig. Please use another evalset name");
         }
@@ -296,12 +292,11 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
      * <p>
      * this function will switch to pig or akka evaluation depends on the modelConfig running mode
      * </p>
-     * 
-     * @throws IOException
-     *             any exception in running pig evaluation or akka evaluation
+     *
+     * @throws IOException any exception in running pig evaluation or akka evaluation
      */
     private void runEval(List<EvalConfig> evalSetList) throws IOException {
-        for(EvalConfig evalConfig: evalSetList) {
+        for (EvalConfig evalConfig : evalSetList) {
             runEval(evalConfig);
         }
         log.info("Step Finished: eval");
@@ -309,7 +304,7 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
 
     /**
      * Run evaluation by @EvalConfig
-     * 
+     *
      * @param evalConfig
      * @throws IOException
      */
@@ -321,7 +316,7 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
 
         syncDataToHdfs(evalConfig.getDataSet().getSource());
 
-        switch(modelConfig.getBasic().getRunMode()) {
+        switch (modelConfig.getBasic().getRunMode()) {
             case mapred:
                 runPigEval(evalConfig);
                 break;
@@ -335,11 +330,9 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
 
     /**
      * Use pig to run model evaluation
-     * 
-     * @param evalConfig
-     *            the evaluation instance
-     * @throws IOException
-     *             any exception in delete the old tmp files
+     *
+     * @param evalConfig the evaluation instance
+     * @throws IOException any exception in delete the old tmp files
      */
     private void runPigEval(EvalConfig evalConfig) throws IOException {
         runPigScore(evalConfig);
@@ -349,11 +342,9 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
 
     /**
      * Use akka to run model evaluation
-     * 
-     * @param evalConfig
-     *            the evaluation instance
-     * @throws IOException
-     *             the error while create data scanner for input data
+     *
+     * @param evalConfig the evaluation instance
+     * @throws IOException the error while create data scanner for input data
      */
     private void runAkkaEval(EvalConfig evalConfig) throws IOException {
         runAkkaScore(evalConfig);
@@ -363,24 +354,21 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
 
     /**
      * Running the performance matrices
-     * 
-     * @param evalSetName
-     *            the name for evaluation
-     * @param scoreColumn
-     *            the performance score target
+     *
+     * @param evalSetName the name for evaluation
+     * @param scoreColumn the performance score target
      * @throws IOException
      */
     private void runPerformance(List<EvalConfig> evalSetList) throws IOException {
-        for(EvalConfig evalConfig: evalSetList) {
+        for (EvalConfig evalConfig : evalSetList) {
             runPerformance(evalConfig);
         }
     }
 
     /**
      * Running the performance matrices
-     * 
-     * @param evalConfig
-     *            the name for evaluation
+     *
+     * @param evalConfig the name for evaluation
      * @throws IOException
      */
     private void runPerformance(EvalConfig evalConfig) throws IOException {
@@ -391,20 +379,19 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
 
     /**
      * run confusion matrix
-     * 
-     * @param evalSetList
-     *            a List of EvalConfig
+     *
+     * @param evalSetList a List of EvalConfig
      * @throws IOException
      */
     private void runConfusionMatrix(List<EvalConfig> evalSetList) throws IOException {
-        for(EvalConfig config: evalSetList) {
+        for (EvalConfig config : evalSetList) {
             runConfusionMatrix(config);
         }
     }
 
     /**
      * Run confusion matrix
-     * 
+     *
      * @param EvalConfig
      * @return List of ConfusionMatrixObject
      * @throws IOException

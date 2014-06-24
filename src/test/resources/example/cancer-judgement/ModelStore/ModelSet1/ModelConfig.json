@@ -47,7 +47,7 @@
     "trainOnDisk" : false,
     "numTrainEpochs" : 100,
     "algorithm" : "NN",
-    "params" : {
+    "globalParams" : {
       "NumHiddenLayers" : 2,
       "ActivationFunc" : [ "Sigmoid", "Sigmoid" ],
       "NumHiddenNodes" : [ 45, 45 ],

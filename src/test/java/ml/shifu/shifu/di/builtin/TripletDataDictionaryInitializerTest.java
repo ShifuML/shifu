@@ -2,7 +2,6 @@ package ml.shifu.shifu.di.builtin;
 
 import org.testng.annotations.Test;
 
-
 import java.io.IOException;
 
 public class TripletDataDictionaryInitializerTest {

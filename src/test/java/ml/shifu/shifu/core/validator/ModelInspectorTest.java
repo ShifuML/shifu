@@ -15,23 +15,6 @@
  */
 package ml.shifu.shifu.core.validator;
 
-import ml.shifu.shifu.container.meta.ValidateResult;
-import ml.shifu.shifu.container.obj.ModelConfig;
-import ml.shifu.shifu.core.alg.NNTrainer;
-import ml.shifu.shifu.core.validator.ModelInspector.ModelStep;
-import ml.shifu.shifu.util.CommonUtils;
-import org.apache.commons.io.FileUtils;
-import org.testng.Assert;
-import org.testng.annotations.AfterClass;
-import org.testng.annotations.BeforeClass;
-import org.testng.annotations.Test;
-
-import java.io.File;
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
-
-
 /**
  * ModelInspectorTest class
  */
@@ -162,20 +145,20 @@ public class ModelInspectorTest {
         ValidateResult result = instance.probe(config, ModelStep.TRAIN);
         Assert.assertTrue(result.getStatus());
 
-        config.getTrain().getParams().put(NNTrainer.NUM_HIDDEN_LAYERS, -1);
+        config.getTrain().getGlobalParams().put(NNTrainer.NUM_HIDDEN_LAYERS, -1);
         result = instance.probe(config, ModelStep.TRAIN);
         Assert.assertFalse(result.getStatus());
 
-        config.getTrain().getParams().put(NNTrainer.NUM_HIDDEN_LAYERS, 2);
+        config.getTrain().getGlobalParams().put(NNTrainer.NUM_HIDDEN_LAYERS, 2);
         List<Integer> hiddenNodes = new ArrayList<Integer>();
         hiddenNodes.add(10);
         hiddenNodes.add(10);
-        config.getTrain().getParams().put(NNTrainer.NUM_HIDDEN_NODES, hiddenNodes);
+        config.getTrain().getGlobalParams().put(NNTrainer.NUM_HIDDEN_NODES, hiddenNodes);
         List<String> activateFuncs = new ArrayList<String>();
         activateFuncs.add("tanh");
         activateFuncs.add("sigmod");
         activateFuncs.add("tanh");
-        config.getTrain().getParams().put(NNTrainer.ACTIVATION_FUNC, activateFuncs);
+        config.getTrain().getGlobalParams().put(NNTrainer.ACTIVATION_FUNC, activateFuncs);
         result = instance.probe(config, ModelStep.TRAIN);
         Assert.assertFalse(result.getStatus());
     }

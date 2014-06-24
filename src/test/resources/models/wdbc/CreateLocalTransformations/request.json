@@ -1,7 +1,7 @@
 {
   "requestType" : "transform",
   "executionMode" : "LOCAL_SINGLE",
-   "params" : {
+   "globalParams" : {
       "modelName": "testModel",
       "pathPMML": "src/test/resources/models/wdbc/CreateLocalTransformations/model.xml",
       "pathPMMLOutput": "src/test/resources/models/wdbc/CreateLocalTransformations/model_output.xml",
@@ -17,7 +17,7 @@
       },
     "$$default": {
         "bindings": {
-            "DerivedFieldCreator": "ml.shifu.shifu.di.builtin.ZScoreDerivedFieldCreator"
+            "DerivedFieldCreator": "ml.shifu.shifu.di.builtin.derivedField.ZScoreDerivedFieldCreator"
         }
     }
   }

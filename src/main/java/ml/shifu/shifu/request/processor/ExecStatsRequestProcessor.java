@@ -12,8 +12,8 @@ import ml.shifu.shifu.util.PMMLUtils;
 import ml.shifu.shifu.util.Params;
 import org.dmg.pmml.*;
 
-import java.util.Map;
 import java.util.List;
+import java.util.Map;
 
 public class ExecStatsRequestProcessor {
 
@@ -27,11 +27,11 @@ public class ExecStatsRequestProcessor {
         this.req = req;
         SimpleModule module = new SimpleModule();
 
-        module.setBindings((Map<String, String>)req.getParams().get("bindings"));
+        module.setBindings((Map<String, String>) req.getGlobalParams().get("bindings"));
         Injector injector = Guice.createInjector(module);
         univariateStatsService = injector.getInstance(UnivariateStatsService.class);
 
-        pathPMML = (String)req.getParams().get("pathPMML", "model.xml");
+        pathPMML = (String) req.getGlobalParams().get("pathPMML", "model.xml");
 
         pmml = PMMLUtils.loadPMML(pathPMML);
 
@@ -46,27 +46,23 @@ public class ExecStatsRequestProcessor {
 
         SingleThreadFileLoader loader = new CSVWithHeaderLocalSingleThreadFileLoader();
 
-        List<List<Object>> rows = loader.load((String) req.getParams().get("pathInputData"));
+        List<List<Object>> rows = loader.load((String) req.getGlobalParams().get("pathInputData"));
 
         List<List<Object>> columns = LocalDataTransposer.transpose(rows);
 
         DataDictionary dict = pmml.getDataDictionary();
 
-        Model model = PMMLUtils.getModelByName(pmml, (String) req.getParams().get("modelName"));
+        Model model = PMMLUtils.getModelByName(pmml, (String) req.getGlobalParams().get("modelName"));
 
         ModelStats modelStats = new ModelStats();
         int size = dict.getNumberOfFields();
 
-        int targetFieldNum = PMMLUtils.getTargetFieldNumByName(pmml.getDataDictionary(), (String) req.getParams().get("targetFieldName"));
+        int targetFieldNum = PMMLUtils.getTargetFieldNumByName(pmml.getDataDictionary(), (String) req.getGlobalParams().get("targetFieldName"));
 
         Params params = new Params();
-        params.put("globalParams", req.getParams());
+        params.put("globalParams", req.getGlobalParams());
         params.put("fieldParams", null);
         params.put("tags", columns.get(targetFieldNum));
-
-
-
-
 
 
         for (int i = 0; i < size; i++) {
@@ -80,7 +76,7 @@ public class ExecStatsRequestProcessor {
         model.setModelStats(modelStats);
 
 
-        PMMLUtils.savePMML(pmml, (String)req.getParams().get("pathPMMLOutput", pathPMML));
+        PMMLUtils.savePMML(pmml, (String) req.getGlobalParams().get("pathPMMLOutput", pathPMML));
 
     }
 

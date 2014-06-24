@@ -16,9 +16,9 @@
 
 package ml.shifu.shifu.di.builtin;
 
-import ml.shifu.shifu.di.spi.ColumnCatBinningCalculator;
 import ml.shifu.shifu.container.CategoricalValueObject;
 import ml.shifu.shifu.container.obj.ColumnBinningResult;
+import ml.shifu.shifu.di.spi.ColumnCatBinningCalculator;
 
 import java.util.*;
 

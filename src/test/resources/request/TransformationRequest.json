@@ -1,7 +1,7 @@
 {
   "requestType" : "transform",
   "executionMode" : "LOCAL_SINGLE",
-   "params" : {
+   "globalParams" : {
 
       "targetFieldName" : "class",
       "inputDataFilePath": "src/test/resources/unittest/DataSet/iris/iris.csv",
@@ -14,7 +14,7 @@
   "fieldParamsMap": {
     "$$default": {
         "bindings": {
-            "DerivedFieldCreator": "ml.shifu.shifu.di.builtin.ZScoreDerivedFieldCreator"
+            "DerivedFieldCreator": "ml.shifu.shifu.di.builtin.derivedField.ZScoreDerivedFieldCreator"
         }
     }
   }

@@ -1,8 +1,8 @@
 package ml.shifu.shifu.di.builtin;
 
 import ml.shifu.shifu.di.spi.TransformationExecutor;
-import ml.shifu.shifu.util.PMMLUtils;
 import org.dmg.pmml.*;
+import org.jpmml.evaluator.DiscretizationUtil;
 import org.jpmml.evaluator.NormalizationUtil;
 
 import java.util.ArrayList;
@@ -11,19 +11,22 @@ import java.util.Map;
 
 public class StandardTransformationExecutor implements TransformationExecutor {
 
-    public  Object transform(DerivedField derivedField, Object origin) {
+    public Object transform(DerivedField derivedField, Object origin) {
 
         Expression expression = derivedField.getExpression();
 
+        //TODO: finish the list
         if (expression instanceof NormContinuous) {
             return NormalizationUtil.normalize((NormContinuous) expression, Double.parseDouble(origin.toString()));
+        } else if (expression instanceof Discretize) {
+            return DiscretizationUtil.discretize((Discretize) expression, Double.parseDouble(origin.toString()));
         } else {
-            throw new RuntimeException("Invalid Expression");
+            throw new RuntimeException("Invalid Expression(Field: " + derivedField.getName().getValue() + ")");
         }
 
     }
 
-    public List<Object> transform(MiningSchema miningSchema, Map<FieldName, DerivedField> fieldNameToDerivedFieldMap, Map<FieldName, Integer> fieldNameToFieldNumberMap,  List<Object> raw) {
+    public List<Object> transform(MiningSchema miningSchema, Map<FieldName, DerivedField> fieldNameToDerivedFieldMap, Map<FieldName, Integer> fieldNameToFieldNumberMap, List<Object> raw) {
         List<Object> transformed = new ArrayList<Object>();
 
         for (MiningField miningField : miningSchema.getMiningFields()) {

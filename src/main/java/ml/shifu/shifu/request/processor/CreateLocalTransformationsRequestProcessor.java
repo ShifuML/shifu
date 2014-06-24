@@ -15,13 +15,13 @@ public class CreateLocalTransformationsRequestProcessor {
 
     public static void run(RequestObject req) throws Exception {
 
-        String pathPMML = (String)req.getParams().get("pathPMML", "model.xml");
+        String pathPMML = (String) req.getGlobalParams().get("pathPMML", "model.xml");
 
         PMML pmml = PMMLUtils.loadPMML(pathPMML);
 
         DataDictionary dataDictionary = pmml.getDataDictionary();
 
-        Model model = PMMLUtils.getModelByName(pmml, req.getParams().get("modelName").toString());
+        Model model = PMMLUtils.getModelByName(pmml, req.getGlobalParams().get("modelName").toString());
 
         LocalTransformations localTransformations = new LocalTransformations();
 
@@ -33,7 +33,7 @@ public class CreateLocalTransformationsRequestProcessor {
             String fieldNameString = dataField.getName().getValue();
             Params fieldParams = req.getFieldParams(fieldNameString);
             if (fieldParams.containsKey("bindings")) {
-                module.setBindings((Map<String, String>)fieldParams.get("bindings"));
+                module.setBindings((Map<String, String>) fieldParams.get("bindings"));
                 injector = Guice.createInjector(module);
                 DerivedFieldService derivedFieldService = injector.getInstance(DerivedFieldService.class);
                 DerivedField derivedField = derivedFieldService.exec(dataField, model.getModelStats());
@@ -45,7 +45,7 @@ public class CreateLocalTransformationsRequestProcessor {
 
         model.setLocalTransformations(localTransformations);
 
-        PMMLUtils.savePMML(pmml, (String)req.getParams().get("pathPMMLOutput", pathPMML));
+        PMMLUtils.savePMML(pmml, (String) req.getGlobalParams().get("pathPMMLOutput", pathPMML));
 
     }
 }

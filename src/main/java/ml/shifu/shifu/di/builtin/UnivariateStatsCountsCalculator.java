@@ -28,7 +28,6 @@ public class UnivariateStatsCountsCalculator {
             }
 
 
-
             if (value == null) {
                 missingFreq += 1.0;
             } else if (value.toString().equals("NaN")) {

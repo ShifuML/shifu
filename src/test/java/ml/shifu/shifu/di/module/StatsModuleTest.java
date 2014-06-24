@@ -51,8 +51,7 @@ public class StatsModuleTest {
         */
 
 
-        //statsService.setParams(params);
-
+        //statsService.setGlobalParams(params);
 
 
         //System.out.println(config.getBinBoundary());

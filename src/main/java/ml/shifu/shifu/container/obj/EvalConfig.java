@@ -51,7 +51,7 @@ public class EvalConfig {
          * hidden the custom paths for creating new model.
          */
         /*customPaths.put(Constants.KEY_MODELS_PATH, null);
-	    customPaths.put(Constants.KEY_SCORE_PATH, null);
+        customPaths.put(Constants.KEY_SCORE_PATH, null);
 	    customPaths.put(Constants.KEY_CONFUSION_MATRIX_PATH, null);
 	    customPaths.put(Constants.KEY_PERFORMANCE_PATH, null);*/
     }

@@ -17,12 +17,12 @@ public class CreateDataDictionaryRequestProcessor {
     public static void run(RequestObject req) {
 
         SimpleModule module = new SimpleModule();
-        module.setBindings((Map<String, String>)req.getParams().get("bindings"));
+        module.setBindings((Map<String, String>) req.getGlobalParams().get("bindings"));
         Injector injector = Guice.createInjector(module);
 
-        Params params = req.getParams();
+        Params params = req.getGlobalParams();
 
-        DataDictionaryService dataDictionaryService= injector.getInstance(DataDictionaryService.class);
+        DataDictionaryService dataDictionaryService = injector.getInstance(DataDictionaryService.class);
         DataDictionary dataDictionary = dataDictionaryService.getDataDictionary(req);
 
         PMML pmml = new PMML();
