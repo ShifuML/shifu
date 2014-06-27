@@ -3,13 +3,14 @@ package ml.shifu.shifu.di.builtin.derivedField;
 import ml.shifu.shifu.di.spi.DerivedFieldCreator;
 import ml.shifu.shifu.util.CommonUtils;
 import ml.shifu.shifu.util.PMMLUtils;
+import ml.shifu.shifu.util.Params;
 import org.dmg.pmml.*;
 
 import java.util.List;
 
 public class WOEDerivedFieldCreator implements DerivedFieldCreator {
 
-    public DerivedField create(DataField dataField, ModelStats modelStats) {
+    public DerivedField create(DataField dataField, ModelStats modelStats, Params params) {
 
 
         DerivedField derivedField = new DerivedField();

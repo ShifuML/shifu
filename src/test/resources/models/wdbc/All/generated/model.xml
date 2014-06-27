@@ -1152,6 +1152,15 @@
             </Target>
         </Targets>
         <LocalTransformations>
+            <DerivedField name="diagnosis" optype="categorical" dataType="string">
+                <MapValues outputColumn="1">
+                    <FieldColumnPair field="diagnosis" column="0"/>
+                    <InlineTable>
+                        <row>M 1</row>
+                        <row>B 0</row>
+                    </InlineTable>
+                </MapValues>
+            </DerivedField>
             <DerivedField name="mean_radius" optype="continuous" dataType="double">
                 <Discretize>
                     <DiscretizeBin binValue="-1.9805352059145958">

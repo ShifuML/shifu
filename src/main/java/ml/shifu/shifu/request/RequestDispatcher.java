@@ -34,6 +34,9 @@ public class RequestDispatcher {
         } else if (requestType.equalsIgnoreCase("ExecTransform")) {
             ExecTransformRequestProcessor processor = new ExecTransformRequestProcessor();
             processor.run(req);
+        } else if (requestType.equalsIgnoreCase("ExecTrain")) {
+            TrainingRequestProcessor processor = new TrainingRequestProcessor();
+            processor.run(req);
         } else {
             throw new RuntimeException("Not a valid RequestType: " + requestType);
         }

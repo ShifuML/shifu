@@ -10,7 +10,13 @@
             },
             "fieldParamsMap": {
                 "id": {},
-                "diagnosis": {},
+                "diagnosis": {
+                    "bindings": {
+                        "DerivedFieldCreator": "ml.shifu.shifu.di.builtin.derivedField.BinaryClassMapperCreator"
+                    },
+                    "posTags": ["M"],
+                    "negTags": ["B"]
+                },
                 "$$default": {
                     "bindings": {
                         "DerivedFieldCreator": "ml.shifu.shifu.di.builtin.derivedField.WOEDerivedFieldCreator"

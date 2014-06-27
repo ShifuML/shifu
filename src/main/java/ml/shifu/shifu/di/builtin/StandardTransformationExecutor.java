@@ -1,11 +1,13 @@
 package ml.shifu.shifu.di.builtin;
 
 import ml.shifu.shifu.di.spi.TransformationExecutor;
+import ml.shifu.shifu.util.CommonUtils;
 import org.dmg.pmml.*;
 import org.jpmml.evaluator.DiscretizationUtil;
 import org.jpmml.evaluator.NormalizationUtil;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -20,6 +22,8 @@ public class StandardTransformationExecutor implements TransformationExecutor {
             return NormalizationUtil.normalize((NormContinuous) expression, Double.parseDouble(origin.toString()));
         } else if (expression instanceof Discretize) {
             return DiscretizationUtil.discretize((Discretize) expression, Double.parseDouble(origin.toString()));
+        } else if (expression instanceof MapValues) {
+            return mapValue((MapValues) expression, origin.toString());
         } else {
             throw new RuntimeException("Invalid Expression(Field: " + derivedField.getName().getValue() + ")");
         }
@@ -33,7 +37,8 @@ public class StandardTransformationExecutor implements TransformationExecutor {
 
             int fieldNum = fieldNameToFieldNumberMap.get(miningField.getName());
 
-            if (miningField.getUsageType().equals(FieldUsageType.ACTIVE)) {
+            //if (miningField.getUsageType().equals(FieldUsageType.ACTIVE)) {
+            if (fieldNameToDerivedFieldMap.containsKey(miningField.getName())) {
                 DerivedField derivedField = fieldNameToDerivedFieldMap.get(miningField.getName());
                 transformed.add(transform(derivedField, raw.get(fieldNum)));
             } else {
@@ -41,6 +46,22 @@ public class StandardTransformationExecutor implements TransformationExecutor {
             }
         }
         return transformed;
+    }
+
+    private String mapValue(MapValues mapValues, String origin) {
+        InlineTable inlineTable = mapValues.getInlineTable();
+        List<Row> rows = inlineTable.getRows();
+
+        Map<String, String> valueMap = new HashMap<String, String>();
+        for (Row row : rows) {
+            String[] raw = CommonUtils.stringToStringList(row.getContent().toString()).get(0).split(" ");
+            if (raw[0].equals(origin)) {
+                return raw[1];
+            }
+        }
+
+        // TODO: deal with missing values
+        throw new RuntimeException("Unknown value: " + origin);
     }
 
 

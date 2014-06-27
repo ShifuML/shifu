@@ -169,4 +169,28 @@ public class PMMLUtils {
         return miningFieldMap;
     }
 
+    public static Integer getNumActiveMiningFields(MiningSchema miningSchema) {
+
+        Integer cnt = 0;
+        for (MiningField miningField : miningSchema.getMiningFields()) {
+            if (miningField.getUsageType().equals(FieldUsageType.ACTIVE)) {
+                cnt += 1;
+            }
+        }
+
+        return cnt;
+    }
+
+    public static Integer getNumTargetMiningFields(MiningSchema miningSchema) {
+
+        Integer cnt = 0;
+        for (MiningField miningField : miningSchema.getMiningFields()) {
+            if (miningField.getUsageType().equals(FieldUsageType.TARGET)) {
+                cnt += 1;
+            }
+        }
+
+        return cnt;
+    }
+
 }

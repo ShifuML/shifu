@@ -36,7 +36,7 @@ public class CreateLocalTransformationsRequestProcessor {
                 module.setBindings((Map<String, String>) fieldParams.get("bindings"));
                 injector = Guice.createInjector(module);
                 DerivedFieldService derivedFieldService = injector.getInstance(DerivedFieldService.class);
-                DerivedField derivedField = derivedFieldService.exec(dataField, model.getModelStats());
+                DerivedField derivedField = derivedFieldService.exec(dataField, model.getModelStats(), fieldParams);
 
                 localTransformations.withDerivedFields(derivedField);
             }

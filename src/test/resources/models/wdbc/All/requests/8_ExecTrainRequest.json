@@ -1,0 +1,29 @@
+{
+    "version": "0.3.0-SNAPSHOT",
+    "requests": [
+        {
+            "requestType": "ExecTrain",
+            "executionMode": "LOCAL_SINGLE",
+            "globalParams": {
+                "bindings": {
+                    "Trainer": "ml.shifu.shifu.di.builtin.trainer.EncogNNTrainer"
+                },
+                "modelName": "demoModel",
+                "pathPMML": "src/test/resources/models/wdbc/All/generated/model.xml",
+                "pathNormalizedData": "src/test/resources/models/wdbc/All/generated/normalized.txt",
+                "numEpochs": 20,
+                "trainerID": "test",
+                "pathOutput": "src/test/resources/models/wdbc/All/generated/models",
+                "splitRatio": 0.8,
+                "algorithm": "Q",
+                "hiddenLayers": [
+                    {
+                        "numHiddenNodes": 10,
+                        "activationFunction": "tanh"
+                    }
+                ]
+            }
+        
+        }
+    ]
+}

@@ -1,0 +1,12 @@
+{
+    "numEpochs": 20,
+    "trainerID": "test",
+    "pathOutput": "src/test/resources/models/wdbc/All/generated/models",
+    "splitRatio": 0.8,
+    "hiddenLayers": [
+        {
+            "numHiddenNodes": 10,
+            "activationFunction": "tanh"
+        }
+    ]
+}

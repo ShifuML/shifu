@@ -1,11 +1,12 @@
 package ml.shifu.shifu.di.builtin.derivedField;
 
 import ml.shifu.shifu.di.spi.DerivedFieldCreator;
+import ml.shifu.shifu.util.Params;
 import org.dmg.pmml.*;
 
 public class ZScoreDerivedFieldCreator implements DerivedFieldCreator {
 
-    public DerivedField create(DataField dataField, ModelStats modelStats) {
+    public DerivedField create(DataField dataField, ModelStats modelStats, Params params) {
         DerivedField derivedField = new DerivedField();
         derivedField.setName(dataField.getName());
         derivedField.setOptype(dataField.getOptype());
