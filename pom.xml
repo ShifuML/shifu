@@ -1,10 +1,8 @@
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
     <groupId>ml.shifu</groupId>
     <artifactId>shifu</artifactId>
-    <version>0.3.0-SNAPSHOT</version>
-    <packaging>pom</packaging>
+    <version>0.2.3</version>
 
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
@@ -20,11 +18,106 @@
         <developerConnection>scm:git:https://github.com/shifuml/shifu.git</developerConnection>
         <connection>scm:git:https://github.com/shifuml/shifu.git</connection>
         <url>https://github.com/shifuml/shifu.git</url>
-        <tag>HEAD</tag>
-    </scm>
+    <tag>shifu-0.2.3</tag>
+  </scm>
 
     <dependencies>
-
+        <dependency>
+            <groupId>jline</groupId>
+            <artifactId>jline</artifactId>
+            <version>0.9.9</version>
+        </dependency>
+        <dependency>
+            <groupId>org.antlr</groupId>
+            <artifactId>antlr-runtime</artifactId>
+            <version>3.4</version>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.pig</groupId>
+            <artifactId>pig</artifactId>
+            <version>0.10.0</version>
+        </dependency>
+        <!-- <dependency> <groupId>org.slf4j</groupId> <artifactId>slf4j-log4j12</artifactId> 
+            <version>1.5.8</version> <exclusions> <exclusion> <groupId>org.slf4j</groupId> 
+            <artifactId>slf4j-log4j12</artifactId> </exclusion> </exclusions> </dependency> -->
+        <dependency>
+            <groupId>org.codehaus.jackson</groupId>
+            <artifactId>jackson-mapper-asl</artifactId>
+            <version>1.9.9</version>
+        </dependency>
+        <dependency>
+            <groupId>org.codehaus.jackson</groupId>
+            <artifactId>jackson-core-asl</artifactId>
+            <version>1.9.9</version>
+        </dependency>
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-core</artifactId>
+            <version>2.1.2</version>
+        </dependency>
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-databind</artifactId>
+            <version>2.1.2</version>
+        </dependency>
+        <dependency>
+            <groupId>com.google.guava</groupId>
+            <artifactId>guava</artifactId>
+            <version>14.0.1</version>
+        </dependency>
+        <dependency>
+            <groupId>org.encog</groupId>
+            <artifactId>encog-core</artifactId>
+            <version>3.0.0</version>
+        </dependency>
+        <dependency>
+            <groupId>com.typesafe.akka</groupId>
+            <artifactId>akka-actor_2.10</artifactId>
+            <version>2.1.1</version>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.commons</groupId>
+            <artifactId>commons-compress</artifactId>
+            <version>1.5</version>
+        </dependency>
+        <dependency>
+            <groupId>de.bwaldvogel</groupId>
+            <artifactId>liblinear</artifactId>
+            <version>1.92</version>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.commons</groupId>
+            <artifactId>commons-jexl</artifactId>
+            <version>2.1.1</version>
+        </dependency>
+        <dependency>
+            <groupId>commons-collections</groupId>
+            <artifactId>commons-collections</artifactId>
+            <version>3.2.1</version>
+        </dependency>
+        <dependency>
+            <groupId>commons-lang</groupId>
+            <artifactId>commons-lang</artifactId>
+            <version>2.5</version>
+        </dependency>
+        <dependency>
+            <groupId>org.easymock</groupId>
+            <artifactId>easymock</artifactId>
+            <version>3.1</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.powermock</groupId>
+            <artifactId>powermock-module-testng</artifactId>
+            <version>${powermock.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.powermock</groupId>
+            <artifactId>powermock-api-easymock</artifactId>
+            <version>${powermock.version}</version>
+            <scope>test</scope>
+        </dependency>
         <dependency>
             <groupId>org.testng</groupId>
             <artifactId>testng</artifactId>
@@ -33,20 +126,10 @@
         </dependency>
     </dependencies>
 
-    <dependencyManagement>
-        <dependencies>
-            <dependency>
-                <groupId>ml.shifu</groupId>
-                <artifactId>shifu-core</artifactId>
-                <version>0.3.0-SNAPSHOT</version>
-            </dependency>
-        </dependencies>
-    </dependencyManagement>
-
     <build>
         <plugins>
             <plugin>
-                <artifactId>maven-assembly-plugin</artifactId>
+                <artifactId> maven-assembly-plugin </artifactId>
                 <version>2.3</version>
                 <executions>
                     <execution>
@@ -57,7 +140,7 @@
                         </goals>
                         <configuration>
                             <descriptors>
-                                <descriptor>./assembly.xml</descriptor>
+                                <descriptor>assembly.xml</descriptor>
                             </descriptors>
                         </configuration>
                     </execution>
@@ -72,7 +155,7 @@
                     <archive>
                         <index>true</index>
                         <manifest>
-                            <mainClass>ml.shifu.core.util.ShifuCLI</mainClass>
+                            <mainClass>ml.shifu.shifu.util.ShifuCLI</mainClass>
                         </manifest>
                         <manifestEntries>
                             <vendor>PayPal</vendor>
@@ -169,7 +252,7 @@
                     <group>Development/Tools</group>
                     <packager>Paypal</packager>
                     <prefix>/usr/local</prefix>
-                    <changelogFile>shifu-core/src/changelog</changelogFile>
+                    <changelogFile>src/changelog</changelogFile>
                     <defineStatements>
                         <defineStatement>_unpackaged_files_terminate_build 0</defineStatement>
                     </defineStatements>
@@ -190,7 +273,7 @@
                             <filemode>777</filemode>
                             <username>root</username>
                             <groupname>root</groupname>
-                            <dependency/>
+                            <dependency />
                             <sources>
                                 <source>
                                     <location>target</location>
@@ -275,6 +358,23 @@
         </plugins>
     </build>
 
+    <distributionManagement>
+        <repository>
+            <id>libs-releases</id>
+            <url>${releaseUrl}</url>
+        </repository>
+        <snapshotRepository>
+            <uniqueVersion>false</uniqueVersion>
+            <id>libs-snapshots</id>
+            <url>${snapshotUrl}</url>
+        </snapshotRepository>
+        <site>
+            <id>${project.artifactId}.site</id>
+            <name>${project.name} Website</name>
+            <url>${siteDeployUrl}</url>
+        </site>
+    </distributionManagement>
+
     <profiles>
         <!-- For hadoop 0.20.2 cloudera version -->
         <profile>
@@ -315,28 +415,28 @@
         <profile>
             <id>release-sign-artifacts</id>
             <activation>
-                <property>
-                    <name>performRelease</name>
-                    <value>false</value>
-                </property>
+              <property>
+                <name>performRelease</name>
+                <value>false</value>
+              </property>
             </activation>
             <build>
-                <plugins>
-                    <plugin>
-                        <groupId>org.apache.maven.plugins</groupId>
-                        <artifactId>maven-gpg-plugin</artifactId>
-                        <version>1.1</version>
-                        <executions>
-                            <execution>
-                                <id>sign-artifacts</id>
-                                <phase>verify</phase>
-                                <goals>
-                                    <goal>sign</goal>
-                                </goals>
-                            </execution>
-                        </executions>
-                    </plugin>
-                </plugins>
+              <plugins>
+                <plugin>
+                  <groupId>org.apache.maven.plugins</groupId>
+                  <artifactId>maven-gpg-plugin</artifactId>
+                  <version>1.1</version>
+                  <executions>
+                    <execution>
+                      <id>sign-artifacts</id>
+                      <phase>verify</phase>
+                      <goals>
+                        <goal>sign</goal>
+                      </goals>
+                    </execution>
+                  </executions>
+                </plugin>
+              </plugins>
             </build>
             <repositories>
                 <repository>
@@ -365,7 +465,7 @@
             <properties>
                 <maven.test.skip>true</maven.test.skip>
             </properties>
-        </profile>
+          </profile>
 
         <!-- For hadoop 2.2.0cluster -->
         <profile>
@@ -383,7 +483,7 @@
                 </repository>
                 <repository>
                     <id>HortonWorks HDP</id>
-                    <url>http://repo.hortonworks.com/nexus/content/repositories/releases</url>
+                    <url>http://repo.hortonworks.com/nexus/content/repositories/releases</url>                                                                            
                 </repository>
             </repositories>
             <dependencies>
@@ -426,11 +526,5 @@
             </dependencies>
         </profile>
     </profiles>
-
-    <modules>
-        <module>shifu-core</module>
-        <module>shifu-plugin-encog</module>
-
-    </modules>
 
 </project>

@@ -1,8 +1,0 @@
-#!/usr/bin/env bash
-
-CLASSPATH=`find ${SHIFU_HOME}/lib -name "*.jar" | xargs | sed 's/ /:/g'`
-CLASSPATH=".:${SHIFU_HOME}:${CLASSPATH}:${SHIFU_HOME}/conf"
-
-CLASS=ml.shifu.shifu.util.ShifuCLI2
-
-java -classpath ${CLASSPATH} ${CLASS} $1

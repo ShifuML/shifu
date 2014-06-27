@@ -1,5 +1,0 @@
-sepal_length, continuous, double
-sepal_width, continuous, double
-petal_length, continuous, double
-petal_width, continuous, double
-class, categorical, string
