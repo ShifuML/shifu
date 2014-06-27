@@ -19,7 +19,7 @@
         </fileSet>
 
         <fileSet>
-            <directory>${project.basedir}/src/main/pig</directory>
+            <directory>${project.basedir}/shifu-core/src/main/pig</directory>
             <outputDirectory>/scripts</outputDirectory>
             <includes>
                 <include>*.pig</include>
@@ -27,7 +27,7 @@
         </fileSet>
 
         <fileSet>
-            <directory>${project.basedir}/src/main/resources/conf</directory>
+            <directory>${project.basedir}/shifu-core/src/main/resources/conf</directory>
             <outputDirectory>/conf</outputDirectory>
             <excludes>
                 <exclude>log4j.*</exclude>
@@ -35,7 +35,7 @@
         </fileSet>
 
         <fileSet>
-            <directory>${project.basedir}/src/main/resources/conf</directory>
+            <directory>${project.basedir}/shifu-core/src/main/resources/conf</directory>
             <outputDirectory>/</outputDirectory>
             <includes>
                 <include>log4j.*</include>
@@ -44,17 +44,17 @@
 
 
         <fileSet>
-            <directory>${project.basedir}/src/test/resources/example</directory>
+            <directory>${project.basedir}/shifu-core/src/test/resources/example</directory>
             <outputDirectory>/example</outputDirectory>
         </fileSet>
 
         <fileSet>
-            <directory>${project.basedir}/src/test/resources/common</directory>
+            <directory>${project.basedir}/shifu-core/src/test/resources/common</directory>
             <outputDirectory>/common</outputDirectory>
         </fileSet>
 
         <fileSet>
-            <directory>${project.basedir}/src/main/bash</directory>
+            <directory>${project.basedir}/shifu-core/src/main/bash</directory>
             <outputDirectory>/bin</outputDirectory>
             <fileMode>755</fileMode>
             <includes>
@@ -62,7 +62,7 @@
             </includes>
         </fileSet>
         <fileSet>
-            <directory>${project.basedir}/src/test/bash</directory>
+            <directory>${project.basedir}/shifu-core/src/test/bash</directory>
             <outputDirectory>/bin</outputDirectory>
             <fileMode>755</fileMode>
             <includes>
@@ -71,7 +71,7 @@
         </fileSet>
 
         <fileSet>
-            <directory>${project.basedir}/doc</directory>
+            <directory>${project.basedir}/shifu-core/doc</directory>
             <outputDirectory>/doc</outputDirectory>
             <includes>
                 <include>*</include>
@@ -80,6 +80,14 @@
 
         <fileSet>
             <directory>${project.build.directory}</directory>
+            <outputDirectory>/lib</outputDirectory>
+            <includes>
+                <include>*.jar</include>
+            </includes>
+        </fileSet>
+
+        <fileSet>
+            <directory>${project.basedir}/shifu-core/target</directory>
             <outputDirectory>/lib</outputDirectory>
             <includes>
                 <include>*.jar</include>
@@ -126,7 +134,7 @@
                 <include>*:netty:*</include>
                 <include>*:pig:*</include>
                 <include>*:scala-library:*</include>
-                <include>*:shifu:*</include>
+                <include>ml.shifu:*:*</include>
                 <include>*:slf4j-api:*</include>
                 <include>*:slf4j-log4j12:*</include>
                 <include>*:stringtemplate:*</include>
