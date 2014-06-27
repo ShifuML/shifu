@@ -1,4 +1,4 @@
-package ml.shifu.core.di.builtin.trainer;
+package ml.shifu.plugin.encog.trainer;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import ml.shifu.core.container.HiddenLayer;
@@ -134,7 +134,7 @@ public class EncogNNTrainer implements Trainer {
             if (testError < minError) {
                 minError = testError;
 
-                String path = pathOutput + "/model_" + trainerID + "_" + i + 1;
+                String path = pathOutput + "/model_" + trainerID + "_" + (i + 1);
                 saveNN(path);
                 extra = " <-- NN saved: " + path;
             }

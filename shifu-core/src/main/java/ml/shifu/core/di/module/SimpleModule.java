@@ -49,7 +49,7 @@ public class SimpleModule extends AbstractModule {
     protected void configure() {
 
         for (String spiName : bindings.keySet()) {
-            Class spi = CommonUtils.getClass("ml.core.core.di.spi." + spiName);
+            Class spi = CommonUtils.getClass("ml.shifu.core.di.spi." + spiName);
             Class impl = CommonUtils.getClass(bindings.get(spiName));
             bind(spi).to(impl);
         }

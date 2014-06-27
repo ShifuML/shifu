@@ -9,7 +9,7 @@
                     "MiningSchemaCreator": "ml.shifu.core.di.builtin.miningSchema.PerFieldMiningSchemaCreator"
                 },
                 "modelName": "demoModel",
-                "pathPMML": "src/test/resources/models/wdbc/All/generated/model.xml"
+                "pathPMML": "shifu-core/src/test/resources/models/wdbc/All/generated/model.xml"
             },
             "fieldParamsMap": {
                 "id": {

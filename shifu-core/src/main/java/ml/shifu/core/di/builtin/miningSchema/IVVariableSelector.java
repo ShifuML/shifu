@@ -23,7 +23,7 @@ public class IVVariableSelector implements MiningSchemaUpdater {
 
 
         for (UnivariateStats stats : model.getModelStats().getUnivariateStats()) {
-            if (miningFieldMap.get(stats.getField()).getOptype().equals(OpType.CONTINUOUS)) {
+            if (miningFieldMap.containsKey(stats.getField()) && miningFieldMap.get(stats.getField()).getOptype().equals(OpType.CONTINUOUS)) {
                 statsList.add(stats);
             }
         }
