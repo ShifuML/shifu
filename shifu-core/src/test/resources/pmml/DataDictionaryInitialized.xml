@@ -1,0 +1,7 @@
+<DataDictionary numberOfFields="5">
+    <DataField name="sepal_length"/>
+    <DataField name="sepal_width"/>
+    <DataField name="petal_length"/>
+    <DataField name="petal_width"/>
+    <DataField name="class"/>
+</DataDictionary>

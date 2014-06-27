@@ -1,0 +1,25 @@
+{
+  "requestType" : "transform",
+  "executionMode" : "LOCAL_SINGLE",
+   "globalParams" : {
+      "modelName": "testModel",
+      "pathPMML": "src/test/resources/models/wdbc/CreateLocalTransformations/model.xml",
+      "pathPMMLOutput": "src/test/resources/models/wdbc/CreateLocalTransformations/model_output.xml",
+      "pathInputData": "src/test/resources/data/wdbc/wdbc.data",
+      "pathOutputData": "src/test/resources/models/wdbc/CreateLocalTransformations/output.txt" 
+    },
+  "fieldParamsMap": {
+    "id": {
+
+      },
+    "diagnosis": {
+
+      },
+    "$$default": {
+        "bindings": {
+            "DerivedFieldCreator": "ml.shifu.core.di.builtin.derivedField.ZScoreDerivedFieldCreator"
+        }
+    }
+  }
+
+}
