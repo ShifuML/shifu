@@ -1,0 +1,28 @@
+{
+  "requestType" : "CreateDataDictionary",
+  "executionMode" : "LOCAL_SINGLE",
+  
+  "globalParams" : {
+    "bindings" : {
+      "DataDictionaryInitializer" : "ml.shifu.core.di.builtin.dataDictionary.CSVDataDictionaryInitializer"
+    },
+    "delimiter": "|",
+    "pathCSV": "src/test/resources/models/wdbc/CSVDataDictionaryInitializer/wdbc.header",
+    "pathPMML": "src/test/resources/models/wdbc/CSVDataDictionaryInitializer/model.xml"
+  },
+  "fieldParamsMap": {
+    "id": {
+        "optype": "ordinal"
+    },
+    "diagnosis": {
+        "optype": "categorical",
+        "dataType": "string"
+    },
+    "$$default": {
+        "optype": "continuous"
+    }
+
+  }
+
+
+}

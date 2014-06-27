@@ -1,0 +1,22 @@
+{
+  "requestType" : "transform",
+  "executionMode" : "LOCAL_SINGLE",
+   "globalParams" : {
+
+      "targetFieldName" : "class",
+      "inputDataFilePath": "src/test/resources/unittest/DataSet/iris/iris.csv",
+      
+      "filePath": "src/test/resources/conf/IrisFields.txt",
+      "numBins" : 10,
+      "negTags" : [ "Iris-virginica" ],
+      "posTags" : [ "Iris-setosa", "Iris-versicolor" ]
+    },
+  "fieldParamsMap": {
+    "$$default": {
+        "bindings": {
+            "DerivedFieldCreator": "ml.shifu.core.di.builtin.derivedField.ZScoreDerivedFieldCreator"
+        }
+    }
+  }
+
+}
