@@ -1,8 +1,0 @@
-<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<PMML xmlns="http://www.dmg.org/PMML-4_2">
-    <DataDictionary numberOfFields="3">
-        <DataField name="id" optype="ordinal" dataType="string"/>
-        <DataField name="diagnosis" optype="categorical" dataType="string"/>
-        <DataField name="$$default" optype="continuous" dataType="double"/>
-    </DataDictionary>
-</PMML>

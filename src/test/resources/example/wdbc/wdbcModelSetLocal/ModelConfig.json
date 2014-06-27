@@ -1,0 +1,75 @@
+{
+  "basic" : {
+    "name" : "wdbcModel",
+    "author" : "shifu",
+    "description" : null,
+    "runMode" : "local",
+    "customPaths" : null
+  },
+  "dataSet" : {
+    "source" : "LOCAL",
+    "dataPath" : "../wdbcDataSet/wdbc.train",
+    "dataDelimiter" : ",",
+    "headerPath" : "../wdbcDataSet/wdbc.header",
+    "headerDelimiter" : "|",
+    "filterExpressions" : null,
+    "weightColumnName" : null,
+    "targetColumnName" : "diagnosis",
+    "posTags" : [ "M" ],
+    "negTags" : [ "B" ],
+    "metaColumnNameFile" : "./meta.names",
+    "categoricalColumnNameFile" : null
+  },
+  "stats" : {
+    "maxNumBin" : 10,
+    "binningMethod" : "EqualPositive",
+    "sampleRate" : 0.8,
+    "sampleNegOnly" : false
+  },
+  "varSelect" : {
+    "forceEnable" : true,
+    "forceSelectColumnNameFile" : null,
+    "forceRemoveColumnNameFile" : null,
+    "filterEnable" : true,
+    "filterNum" : 20,
+    "filterBy" : "KS"
+  },
+  "normalize" : {
+    "stdDevCutOff" : 4.0,
+    "sampleRate" : 0.8,
+    "sampleNegOnly" : false
+  },
+  "train" : {
+    "baggingNum" : 1,
+    "baggingWithReplacement" : false,
+    "baggingSampleRate" : 0.8,
+    "validSetRate" : 0.2,
+    "numTrainEpochs" : 100,
+    "trainOnDisk" : false,
+    "algorithm" : "NN",
+    "params" : {
+      "NumHiddenLayers" : 2,
+      "ActivationFunc" : [ "Sigmoid", "Sigmoid" ],
+      "NumHiddenNodes" : [ 45, 45 ],
+      "LearningRate" : 0.1,
+      "Propagation" : "Q"
+    },
+    "customPaths" : null
+  },
+  "evals" : [ {
+    "name" : "Eval1",
+    "dataSet" : {
+      "source" : "LOCAL",
+      "dataPath" : "../wdbcDataSet/wdbc.eval",
+      "dataDelimiter" : ",",
+      "headerPath" : "../wdbcDataSet/wdbc.header",
+      "headerDelimiter" : "|",
+      "filterExpressions" : null,
+      "weightColumnName" : null
+    },
+    "performanceBucketNum" : 10,
+    "performanceScoreSelector" : "mean",
+    "scoreMetaColumnNameFile" : null,
+    "customPaths" : null
+  } ]
+}
