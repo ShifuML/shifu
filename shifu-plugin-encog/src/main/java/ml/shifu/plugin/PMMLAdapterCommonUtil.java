@@ -25,7 +25,6 @@ import org.dmg.pmml.PMML;
 import org.dmg.pmml.RegressionModel;
 import org.dmg.pmml.RegressionNormalizationMethodType;
 import org.dmg.pmml.RegressionTable;
-import ml.shifu.plugin.Constants;
 
 
 public class PMMLAdapterCommonUtil {
