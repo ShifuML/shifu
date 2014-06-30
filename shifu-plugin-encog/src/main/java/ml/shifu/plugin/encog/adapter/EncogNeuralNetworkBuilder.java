@@ -1,4 +1,4 @@
-package pmmlAdapter.encog.mlBuilder;
+package ml.shifu.plugin.encog.adapter;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -18,7 +18,7 @@ import org.encog.engine.network.activation.ActivationTANH;
 import org.encog.neural.networks.BasicNetwork;
 import org.encog.neural.networks.layers.BasicLayer;
 
-import pmmlAdapter.GenericMLModelBuilder;
+import ml.shifu.plugin.GenericMLModelBuilder;
 
 public class EncogNeuralNetworkBuilder implements
         GenericMLModelBuilder<BasicNetwork, NeuralNetwork> {

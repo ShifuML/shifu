@@ -12,7 +12,7 @@ import org.encog.engine.network.activation.ActivationSigmoid;
 import org.encog.neural.networks.BasicNetwork;
 import org.encog.neural.networks.layers.BasicLayer;
 
-import pmmlAdapter.GenericMLModelBuilder;
+import ml.shifu.plugin.GenericMLModelBuilder;
 
 public class EncogLogisticRegressionBuilder implements
         GenericMLModelBuilder<BasicNetwork, RegressionModel> {
