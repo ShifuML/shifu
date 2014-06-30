@@ -53,7 +53,7 @@ public class TrainModelActorTest {
         columnConfigList = CommonUtils.loadColumnConfigList("src/test/resources/unittest/ModelSets/full/ColumnConfig.json", SourceType.LOCAL);
     }
 
-    @Test
+    //@Test
     public void testActor() throws IOException, InterruptedException {
         File tmpDir = new File("./tmp");
         tmpDir.mkdir();

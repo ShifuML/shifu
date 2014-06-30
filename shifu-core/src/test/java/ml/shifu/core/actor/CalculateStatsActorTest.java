@@ -49,7 +49,7 @@ public class CalculateStatsActorTest {
         actorSystem = ActorSystem.create("shifuActorSystem");
     }
 
-    @Test
+    //@Test
     public void testActor() throws IOException, InterruptedException {
         ActorRef statsCalRef = actorSystem.actorOf(new Props(new UntypedActorFactory() {
             private static final long serialVersionUID = 6777309320338075269L;

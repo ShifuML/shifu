@@ -46,7 +46,7 @@ public class ConfusionMatrixTest {
         evalConfig = modelConfig.getEvalConfigByName("Eval1");
     }
 
-    @Test(expectedExceptions = ShifuException.class)
+    //@Test(expectedExceptions = ShifuException.class)
     public void testEvalScoreColumnNull() throws IOException {
         Map<String, String> customPaths = new HashMap<String, String>();
         customPaths.put(Constants.KEY_SCORE_PATH, "src/test/resources/example/cancer-judgement/DataStore/EvalSet1");
@@ -56,7 +56,7 @@ public class ConfusionMatrixTest {
         new ConfusionMatrix(modelConfig, evalConfig);
     }
 
-    @Test(expectedExceptions = ShifuException.class)
+    //@Test(expectedExceptions = ShifuException.class)
     public void testEvalScoreColumnNotFound() throws IOException {
         Map<String, String> customPaths = new HashMap<String, String>();
         customPaths.put(Constants.KEY_SCORE_PATH, "src/test/resources/example/cancer-judgement/DataStore/EvalSet1");
@@ -66,7 +66,7 @@ public class ConfusionMatrixTest {
         new ConfusionMatrix(modelConfig, evalConfig);
     }
 
-    @Test
+    //@Test
     public void testEvalScoreColumnFound() throws IOException {
         Map<String, String> customPaths = new HashMap<String, String>();
         customPaths.put(Constants.KEY_SCORE_PATH, "src/test/resources/example/cancer-judgement/DataStore/EvalSet1");
@@ -76,7 +76,7 @@ public class ConfusionMatrixTest {
         new ConfusionMatrix(modelConfig, evalConfig);
     }
 
-    @Test(expectedExceptions = {ShifuException.class, FileNotFoundException.class})
+    //@Test(expectedExceptions = {ShifuException.class, FileNotFoundException.class})
     public void testEvalScoreHeaderNotExists() throws IOException {
         Map<String, String> customPaths = new HashMap<String, String>();
         customPaths.put(Constants.KEY_SCORE_PATH, "src/test/resources/unittest/dt/models");
@@ -86,7 +86,7 @@ public class ConfusionMatrixTest {
         new ConfusionMatrix(modelConfig, evalConfig);
     }
 
-    @Test(expectedExceptions = ShifuException.class)
+    //@Test(expectedExceptions = ShifuException.class)
     public void testEvalTargetColumnNotFound() throws IOException {
         Map<String, String> customPaths = new HashMap<String, String>();
         customPaths.put(Constants.KEY_SCORE_PATH, "src/test/resources/example/cancer-judgement/DataStore/EvalSet1");
@@ -97,7 +97,7 @@ public class ConfusionMatrixTest {
         new ConfusionMatrix(modelConfig, evalConfig);
     }
 
-    @Test
+    //@Test
     public void testEvalTargetColumnFound() throws IOException {
         Map<String, String> customPaths = new HashMap<String, String>();
         customPaths.put(Constants.KEY_SCORE_PATH, "src/test/resources/example/cancer-judgement/DataStore/EvalSet1");

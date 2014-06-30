@@ -85,7 +85,7 @@ public class ShifuCLITest {
         reader2.close();
     }
 
-    @Test
+    //@Test
     public void testCreateModel() throws Exception {
         Environment.setProperty(Environment.SHIFU_HOME, "src/test/resources");
         ShifuCLI.createNewModel("TestModel", null, "It's a model for Unittest");
@@ -95,7 +95,7 @@ public class ShifuCLITest {
         FileUtils.deleteDirectory(file);
     }
 
-    @Test
+    //@Test
     public void testInitializeModel() throws Exception {
         File originModel = new File("src/test/resources/unittest/ModelSets/full/ModelConfig.json");
         File tmpModel = new File("ModelConfig.json");
@@ -110,7 +110,7 @@ public class ShifuCLITest {
         FileUtils.deleteQuietly(tmpModel);
     }
 
-    @Test
+    //@Test
     public void testCalculateModelStats() throws Exception {
         File originModel = new File("src/test/resources/unittest/ModelSets/full/ModelConfig.json");
         File tmpModel = new File("ModelConfig.json");
@@ -131,7 +131,7 @@ public class ShifuCLITest {
         FileUtils.deleteQuietly(tmpColumn);
     }
 
-    @Test
+    //@Test
     public void testSelectModelVar() throws Exception {
         File originModel = new File("src/test/resources/unittest/ModelSets/full/ModelConfig.json");
         File tmpModel = new File("ModelConfig.json");
@@ -151,7 +151,7 @@ public class ShifuCLITest {
         FileUtils.deleteQuietly(tmpColumn);
     }
 
-    @Test
+    //@Test
     public void testNormalizeData() throws Exception {
         File originModel = new File("src/test/resources/unittest/ModelSets/full/ModelConfig.json");
         File tmpModel = new File("ModelConfig.json");
@@ -177,7 +177,7 @@ public class ShifuCLITest {
         FileUtils.deleteDirectory(new File("tmp"));
     }
 
-    @Test
+    //@Test
     public void testTrainModel() throws Exception {
         File originModel = new File("src/test/resources/unittest/ModelSets/full/ModelConfig.json");
         File tmpModel = new File("ModelConfig.json");
@@ -203,7 +203,7 @@ public class ShifuCLITest {
         FileUtils.deleteDirectory(new File("models"));
     }
 
-    @Test
+   // @Test
     public void testPostTrainModel() throws Exception {
         File originModel = new File("src/test/resources/unittest/ModelSets/full/ModelConfig.json");
         File tmpModel = new File("ModelConfig.json");
@@ -234,7 +234,7 @@ public class ShifuCLITest {
         FileUtils.deleteDirectory(new File("models"));
     }
 
-    @Test
+    //@Test
     public void testRunEvalAll() throws Exception {
         File originModel = new File("src/test/resources/unittest/ModelSets/full/ModelConfig.json");
         File tmpModel = new File("ModelConfig.json");
@@ -261,7 +261,7 @@ public class ShifuCLITest {
         FileUtils.deleteQuietly(new File("evals/EvalB/EvalConfusionMatrix"));
     }
 
-    @Test
+    //@Test
     public void testCreateEvalSet() throws Exception {
         File originModel = new File("src/test/resources/unittest/ModelSets/full/ModelConfig.json");
         File tmpModel = new File("ModelConfig.json");

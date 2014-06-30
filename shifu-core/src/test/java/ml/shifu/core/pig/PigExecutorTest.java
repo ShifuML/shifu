@@ -36,7 +36,7 @@ public class PigExecutorTest {
         return new PowerMockObjectFactory();
     }
 
-    @Test
+    //@Test
     public void test() throws IOException {
         PigExecutor exec = PigExecutor.getExecutor();
         ModelConfig modelConfig = CommonUtils.loadModelConfig(
