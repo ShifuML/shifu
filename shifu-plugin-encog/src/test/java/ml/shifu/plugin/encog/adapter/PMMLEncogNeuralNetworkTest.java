@@ -2,7 +2,6 @@ package ml.shifu.plugin.encog.adapter;
 
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
@@ -10,7 +9,6 @@ import org.dmg.pmml.FieldName;
 import org.dmg.pmml.NeuralNetwork;
 import org.dmg.pmml.PMML;
 import org.encog.ml.data.MLData;
-import org.encog.ml.data.MLDataPair;
 import org.encog.neural.networks.BasicNetwork;
 import org.encog.neural.networks.PersistBasicNetwork;
 import org.jpmml.evaluator.ModelEvaluationContext;
@@ -29,7 +27,6 @@ public class PMMLEncogNeuralNetworkTest extends PMMLModelTest<BasicNetwork> {
     PMML pmml;
     private static Logger log = LoggerFactory
             .getLogger(PMMLEncogNeuralNetworkTest.class);
-    // String[] headers;
     NeuralNetworkEvaluator evaluator;
     protected final double DELTA = Math.pow(10, -5);
     private String mlModelPath = "src/test/resources/encog/nn/EncogNN.nn";
@@ -74,36 +71,23 @@ public class PMMLEncogNeuralNetworkTest extends PMMLModelTest<BasicNetwork> {
         // evaluateInputs(evalInput);
     }
 
-    //
     @Test
     public void testEncogNN_2layer() {
         testSetUp();
-        // headers = getHeaders(pmml);
         writeToPMML();
         evaluatePMML();
     }
 
-    private double getNextEncogNNResult(Iterator<MLDataPair> mlResultIterator) {
-        MLData result = mlModel.compute(mlResultIterator.next().getInput());
-        return result.getData(0);
-    }
-
     private void evaluateInputs(EvalCSVUtil evalInput) {
-        // Iterator<MLDataPair> mlResultIterator = evalInput.getEncogMLDataSet()
-        // .iterator();
         List<Map<FieldName, String>> pmmlEvalResultList = evalInput
                 .getEvaluatorInput();
         log.info(" evaluate Encog NN adapter with " + pmmlEvalResultList.size()
                 + " inputs");
         for (Map<FieldName, String> map : pmmlEvalResultList) {
-            // while (mlResultIterator.hasNext()) {
-
             ModelEvaluationContext context = new ModelEvaluationContext(null,
                     evaluator);
             context.declareAll(map);
             MLData data = evalInput.normalizeData(context);
-            log.info(getPMMLEvaluatorResult(map) + ":"
-                    + mlModel.compute(data).getData(0));
             Assert.assertEquals(getPMMLEvaluatorResult(map),
                     mlModel.compute(data).getData(0), DELTA);
         }
