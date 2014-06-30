@@ -1,4 +1,4 @@
-package pmmlAdapter;
+package ml.shifu.plugin;
 
 import java.util.ArrayList;
 import java.util.List;
