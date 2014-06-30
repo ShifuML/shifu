@@ -30,7 +30,7 @@
 ```
     @Override
     protected void writeToPMML() {
-        String path = "src/test/resources/spark/lr/SparkLR.pmml";
+        String path = "src/test/resources/encog/nn/EncogNN_ouptput.pmml";
         try {
             // write PMML
             OutputStream os = new FileOutputStream(path);
@@ -61,7 +61,7 @@ public interface PMMLModelBuilder<T extends Model,S> {
 
 }
 ```
-2.Specific Model Convertor
+2.Specific Model Adapter
 
 ```
 public class PMMLEncogNeuralNetworkModel implements  PMMLModelBuilder<org.dmg.pmml.NeuralNetwork, BasicNetwork> {
