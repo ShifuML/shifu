@@ -165,16 +165,4 @@ public class EvalCSVUtil {
         }
         return getEncogMLDataSet(transformed);
     }
-    protected double getPMMLEvaluatorResult(ModelEvaluator evaluator,
-            Map<FieldName, String> inputData) {
-        if (evaluator == null)
-            return 0;
-        @SuppressWarnings("unchecked")
-        Map<FieldName, Double> evalMap = (Map<FieldName, Double>) evaluator
-                .evaluate(inputData);
-        for (Map.Entry<FieldName, Double> entry : evalMap.entrySet()) {
-            return entry.getValue();
-        }
-        return 0;
-    }
 }
