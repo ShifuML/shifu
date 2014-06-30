@@ -72,64 +72,21 @@ public class PMMLEncogNeuralNetworkModel implements  PMMLModelBuilder<org.dmg.pm
 ```
 
 
-
 ## Extend PMMLAdapter
 
-1.  Extend  ``` pmmlAdapter.PMMLModelGenerator``` for this new ML framework. ```PMMLModelGenerator``` contains APIs for all PMML models. 
-
-* Override the APIs in the ```PMMLModelGenerator``` for the corresponding PMML models you prefer to convert to. You can convert a machine learning model to a different type of PMML model. For instance, in Encog, Logistic Regression model is regarded as a special case of Neural Network. You can adapt a neural network from Encog, which has only input layer and output layer, to a Logistic Regression model in PMML.
-2. Extend ```PMMLModelBuilder<TargetPMMLModel, SourceMLModel>``` 
-
- 2.1 Initialize the ```TargetPMMLModel pmmlModel``` in the specific ```PMMLModelBuilder```   
- 
- 2.2 Extend the function ```protected  void adaptMLModelToPMML(SourceMLModel source);``` to finish the adaptation
-
-Here is an example of ```EncogPMMLModelGenerator```. 
-
-### Create a PMMLModelGenerator for the ML framework
-
-Suppose you want to convert Encog neural network model to PMML logistic regression model, you can create a ```EncogPMMLModelGenerator``` for the Encog ML framework.
-```
-public class EncogPMMLModelGenerator extends PMMLModelGenerator {
-@Override
-    public RegressionModel createRegressionModel(Object regressionModel) {
-        return new PMMLEncogLogisticRegressionModel()
-                .convertMLModelToPMML((BasicNetwork) regressionModel,utility);
-    }
-    ...
-}
-```
-#### Implmenet PMMLModelBuilder<TargetPMMLModel, SourceMLModel>
-
-You create a specific PMMLModelBuilder ```PMMLEncogLogisticRegressionModel``` which extends from ``` PMMLModelBuilder<pmml.RegressionModel, encog.BasicNetwork>```. 
-
-1. Initialize the object ```pmmlModel``` as the PMML model you prefer to get.
-2. Implement the adaptation method ```adaptMLModelToPMML(BasicNetwork bNetwork)``` which does the adaptation work.
+1. Implement a specific PMMLModelBuilder that implements PMMLModelBuilder<TargetPMMLModel,SourceMLModel> interface.
+  
+2. Implement the adaptation method ```adaptMLModelToPMML(SourceMLModel,PartialPMMLModel)``` that does the adaptation work.
 
 ```
-public class PMMLEncogLogisticRegressionModel extends 
-        PMMLModelBuilder<RegressionModel, BasicNetwork> {
-    private FlatNetwork network;
-    public PMMLEncogLogisticRegressionModel() {
-    //initialize PMML model
-        pmmlModel = new RegressionModel();
-    }
-    //implement the adaptation function
-    protected void adaptMLModelToPMML(BasicNetwork bNetwork) {
-        network = bNetwork.getFlat();
-        double[] weights = network.getWeights();
-        RegressionTable table = new RegressionTable()  ;
-        pmmlModel.withFunctionName(MiningFunctionType.REGRESSION)
-                .withNormalizationMethod(
-                        RegressionNormalizationMethodType.LOGIT);
-       ...
-        table.withNumericPredictors(new NumericPredictor(new FieldName(utility.getBIAS()),
-                weights[index++]));
-        pmmlModel.withRegressionTables(table);
-    }
-}
+public class PMMLEncogNeuralNetworkModel  implements  PMMLModelBuilder<org.dmg.pmml.NeuralNetwork, org.encog.neural.networks.BasicNetwork> {
+
+ public org.dmg.pmml.NeuralNetwork adaptMLModelToPMML(org.encog.neural.networks.BasicNetwork bNetwork,  org.dmg.pmml.NeuralNetwork pmmlModel) {
+             ...
+            return pmmlModel;
+            }
 ```
-* Notice that, the PMMLModelBuilder may require some supplementary data fields, which may not included in the Source ML model (eg, Column names). These information is stored in ```DataFieldRequestCoordinator``` that can be extended to meet different requirements for different ML frameworks.
+
 
 ## Test your PMMLAdapter
 
