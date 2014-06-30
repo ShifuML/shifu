@@ -16,16 +16,7 @@ import org.dmg.pmml.Model;
  */
 public interface PMMLModelBuilder<T extends Model,S> {
 
-    /**
-     * The function which converts the Machine Learning model to a PMML model.
-     * 
-     * @param model
-     *            The model from ML frameworks
-     * @param utility
-     *            DataFieldUtility that provides supplementary data field for
-     *            the model conversion
-     * @return The PMMLModel after conversion
-     */
+
    T adaptMLModelToPMML(S mlModel, T partialPMMLModel);
 
 }
