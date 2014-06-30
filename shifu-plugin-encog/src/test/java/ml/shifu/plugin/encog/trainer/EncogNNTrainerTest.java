@@ -11,7 +11,7 @@ public class EncogNNTrainerTest {
 
     @Test
     public void test8() throws Exception {
-        ShifuRequest req = JSONUtils.readValue(new File("shifu-plugin-encog/src/test/resources/trainer/ExecTrainRequest.json"), ShifuRequest.class);
+        ShifuRequest req = JSONUtils.readValue(new File("src/test/resources/trainer/ExecTrainRequest.json"), ShifuRequest.class);
         RequestDispatcher.dispatch(req);
 
     }

@@ -8,7 +8,7 @@ import java.io.File;
 
 public class CreateModelElementRequestProcessorTest {
 
-    @Test
+    //@Test
     public void test() throws Exception {
         RequestObject req = JSONUtils.readValue(new File("src/test/resources/models/wdbc/CreateModelElement/request.json"), RequestObject.class);
 

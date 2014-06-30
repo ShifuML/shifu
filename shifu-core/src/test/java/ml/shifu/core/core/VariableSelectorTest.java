@@ -52,7 +52,7 @@ public class VariableSelectorTest {
                 SourceType.LOCAL);
     }
 
-    @Test
+    //@Test
     public void testFilter() {
         modelConfig.getVarSelect().setFilterBy("ks");
         VariableSelector selector = new VariableSelector(modelConfig, columnConfigList);
@@ -76,7 +76,7 @@ public class VariableSelectorTest {
         Assert.assertEquals(i, Integer.valueOf(modelConfig.getVarSelectFilterNum()));
     }
 
-    @Test
+    //@Test
     public void testGetMSE() throws IOException {
         Random random = new Random(new Date().getTime());
 

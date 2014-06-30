@@ -21,7 +21,7 @@ import java.util.*;
 public class PMMLTest {
 
 
-    @Test
+    //@Test
     public void testOutputXML() {
         List<NumericalValueObject> nvoList = new ArrayList<NumericalValueObject>();
         for (int i = 0; i < 100; i++) {
@@ -67,7 +67,7 @@ public class PMMLTest {
         }
     }
 
-    @Test
+   // @Test
     public void testLoadData() {
 
         //loadData();
@@ -119,7 +119,7 @@ public class PMMLTest {
 
     }
 
-    @Test
+   // @Test
     public void testSimpleUnivariateStats() {
         /*loadData();
 
@@ -165,7 +165,7 @@ public class PMMLTest {
     private List<List<String>> rows;
     private List<List<String>> columns;
 
-    @Test
+    //@Test
     public void testOutputPMMLAsJSON() throws Exception {
         PMML pmml = PMMLUtils.loadPMML("src/test/resources/models/wdbc/Transform/model.xml");
 

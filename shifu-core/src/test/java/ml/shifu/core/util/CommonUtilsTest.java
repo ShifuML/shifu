@@ -357,7 +357,7 @@ public class CommonUtilsTest {
         FileUtils.deleteDirectory(new File("common-utils"));
     }
 
-    @Test
+    //@Test
     public void testFindModels() throws IOException {
         ModelConfig modelConfig = CommonUtils.loadModelConfig("src/test/resources/unittest/ModelSets/full/ModelConfig.json", SourceType.LOCAL);
 
