@@ -13,8 +13,9 @@
 * TBD: the framework has the corresponding ML model, while PMMLAdapter hasn't supported the conversion of this algorithm to PMML model.
 
 ## Get Started
+Here is [an example](https://github.com/lisahua/shifu/blob/develop/shifu-plugin-encog/src/test/java/ml/shifu/plugin/encog/adapter/PMMLEncogNeuralNetworkTest.java)  of how to use the [PMML Adapter](https://github.com/lisahua/shifu/blob/develop/shifu-plugin-encog/src/main/java/ml/shifu/plugin/encog/adapter/PMMLEncogNeuralNetworkModel.java).
 
-1.Adapt the [Encog BasicNetwork model](https://github.com/lisahua/shifu/blob/develop/shifu-plugin-encog/src/test/java/ml/shifu/plugin/encog/adapter/PMMLEncogNeuralNetworkTest.java) to PMML model, get the PMML model object
+1.Adapt the Encog BasicNetwork model to PMML model and return the PMML model object
 
 ```
     protected void adaptToPMML() {
