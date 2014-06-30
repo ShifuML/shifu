@@ -6,7 +6,7 @@
 |-------|--------|---------|-------|---------|
 |Encog| support| support| support| None|
 |Spark| None| support| TBD| TBD|
-|Mahout|None| TBD|TBD|TBD|
+|Mahout|Support| Support|TBD|TBD|
 |H2o|None| TBD| TBD| TBD|
 
 * None: the framework does not support the corresponding ML model
@@ -14,14 +14,14 @@
 
 ## Get Started
 
-1.Adapt the Encog BasicNetwork model to PMML model, get the PMML model object
+1.Adapt the [Encog BasicNetwork model](https://github.com/lisahua/shifu/blob/develop/shifu-plugin-encog/src/test/java/ml/shifu/plugin/encog/adapter/PMMLEncogNeuralNetworkTest.java) to PMML model, get the PMML model object
 
 ```
     protected void adaptToPMML() {
-        
-        pmmlModel = new PMMLEncogNeuralNetworkModel().adaptMLModelToPMML(
-                basicNetwork, pmmlModel);
-        
+        NeuralNetwork pmmlNN = (NeuralNetwork) pmml.getModels().get(0);
+        pmmlNN = new PMMLEncogNeuralNetworkModel().adaptMLModelToPMML(mlModel,
+                pmmlNN);
+        pmml.getModels().set(0, pmmlNN);
     }
 ```
 
