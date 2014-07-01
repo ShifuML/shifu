@@ -13,7 +13,7 @@
                 "pathNormalizedData": "src/test/resources/trainer/normalized.txt",
                 "numEpochs": 100,
                 "trainerID": "test",
-                "pathOutput": "src/test/resources/trainer/mahoutLR.pmml",
+                "pathOutput": "src/test/resources/trainer/mahoutLR",
                 "splitRatio": 0.8,
                 "algorithm": "Q",
                 "learningRate": 0.5,
