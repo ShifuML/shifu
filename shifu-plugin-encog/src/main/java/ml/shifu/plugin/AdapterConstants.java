@@ -19,7 +19,7 @@ package ml.shifu.plugin;
 /**
  * Global constants class
  */
-public class Constants {
+public class AdapterConstants {
 
     public static final String version = "0.1.0";
     public static final String PMML_ML_BINDING_JSON = "PMML_ML_Binding.json";

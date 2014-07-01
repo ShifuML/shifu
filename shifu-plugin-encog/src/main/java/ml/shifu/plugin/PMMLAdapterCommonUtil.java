@@ -46,10 +46,10 @@ public class PMMLAdapterCommonUtil {
                     .withNeuralInputs(new NeuralInput(field, "0," + (index++)));
         }
         DerivedField field = new DerivedField(OpType.CONTINUOUS,
-                DataType.DOUBLE).withName(new FieldName(Constants.biasValue))
+                DataType.DOUBLE).withName(new FieldName(AdapterConstants.biasValue))
                 .withExpression(
-                        new FieldRef(new FieldName(Constants.biasValue)));
-        pmmlModel.withNeuralInputs(new NeuralInput(field, Constants.biasValue));
+                        new FieldRef(new FieldName(AdapterConstants.biasValue)));
+        pmmlModel.withNeuralInputs(new NeuralInput(field, AdapterConstants.biasValue));
         return pmmlModel;
     }
 
@@ -57,9 +57,9 @@ public class PMMLAdapterCommonUtil {
             LocalTransformations lt) {
 
         DerivedField field = new DerivedField(OpType.CONTINUOUS,
-                DataType.DOUBLE).withName(new FieldName(Constants.biasValue));
+                DataType.DOUBLE).withName(new FieldName(AdapterConstants.biasValue));
         // field.withName(new FieldName(s));
-        field.withExpression(new Constant(String.valueOf(Constants.bias)));
+        field.withExpression(new Constant(String.valueOf(AdapterConstants.bias)));
         lt.withDerivedFields(field);
         return lt;
     }

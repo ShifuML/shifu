@@ -1,0 +1,30 @@
+{
+    "version": "0.3.0-SNAPSHOT",
+    "requests": [
+        {
+            "requestType": "ExecTrain",
+            "executionMode": "LOCAL_SINGLE",
+            "globalParams": {
+                "bindings": {
+                    "Trainer": "ml.shifu.plugin.mahout.trainer.MahoutNNTrainer"
+                },
+                "modelName": "demoModel",
+                "pathPMML": "src/test/resources/trainer/model.xml",
+                "pathNormalizedData": "src/test/resources/trainer/normalized.txt",
+                "numEpochs": 100,
+                "trainerID": "test",
+                "pathOutput": "src/test/resources/trainer/mahoutNN.pmml",
+                "splitRatio": 0.8,
+                "algorithm": "Q",
+                "learningRate": 0.5,
+                "hiddenLayers": [
+                    {
+                        "numHiddenNodes": 10,
+                        "activationFunction": "Sigmoid"
+                    }
+                ]
+            }
+        
+        }
+    ]
+}
