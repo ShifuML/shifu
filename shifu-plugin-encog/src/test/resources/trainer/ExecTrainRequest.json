@@ -16,10 +16,10 @@
                 "pathOutput": "tmp/generated/models",
                 "splitRatio": 0.8,
                 "algorithm": "Q",
-                "learningRate": 0.5,
+                "learningRate": 1.0,
                 "hiddenLayers": [
                     {
-                        "numHiddenNodes": 10,
+                        "numHiddenNodes": 20,
                         "activationFunction": "sigmoid"
                     }
                 ]

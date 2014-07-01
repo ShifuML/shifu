@@ -7,8 +7,10 @@ import ml.shifu.core.container.PMMLDataSet;
 import ml.shifu.core.di.spi.Trainer;
 import ml.shifu.core.util.PMMLUtils;
 import ml.shifu.core.util.Params;
+import ml.shifu.plugin.encog.adapter.EncogNeuralNetworkToPMMLAdapter;
 import org.dmg.pmml.FieldUsageType;
 import org.dmg.pmml.MiningField;
+import org.dmg.pmml.Model;
 import org.encog.engine.network.activation.*;
 import org.encog.ml.data.MLData;
 import org.encog.ml.data.MLDataPair;
@@ -77,7 +79,7 @@ public class EncogNNTrainer implements Trainer {
 
 
 
-    public void train(PMMLDataSet dataSet, Params rawParams) throws Exception {
+    public void train(Model pmmlModel, PMMLDataSet dataSet, Params rawParams) throws Exception {
 
 
 
@@ -125,6 +127,8 @@ public class EncogNNTrainer implements Trainer {
 
         minError = Double.MAX_VALUE;
 
+        EncogNeuralNetworkToPMMLAdapter adapter = new EncogNeuralNetworkToPMMLAdapter();
+
         for (int i = 0; i < epochs; i++) {
             mlTrain.iteration();
 
@@ -135,6 +139,7 @@ public class EncogNNTrainer implements Trainer {
                 minError = testError;
 
                 String path = pathOutput + "/model_" + trainerID + "_" + (i + 1);
+                adapter.exec(network, pmmlModel);
                 saveNN(path);
                 extra = " <-- NN saved: " + path;
             }
@@ -146,6 +151,11 @@ public class EncogNNTrainer implements Trainer {
         }
 
         mlTrain.finishTraining();
+
+        //Model model = adapter.exec(network, pmmlModel);
+
+
+
         log.info("Trainer #" + trainerID + " is Finished!");
     }
 

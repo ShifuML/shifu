@@ -39,9 +39,6 @@ public class PMMLEncogNeuralNetworkModel
      * 
      * @param bNetwork
      *            Encog NeuralNetwork
-     * @param utility
-     *            DataFieldUtility that provides supplementary data field for
-     *            the model conversion
      * @return The generated PMML NeuralNetwork Model
      */
     public org.dmg.pmml.NeuralNetwork adaptMLModelToPMML(

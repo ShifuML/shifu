@@ -4,6 +4,7 @@ import com.google.inject.Inject;
 import ml.shifu.core.container.PMMLDataSet;
 import ml.shifu.core.di.spi.Trainer;
 import ml.shifu.core.util.Params;
+import org.dmg.pmml.Model;
 
 public class TrainingService {
 
@@ -15,7 +16,7 @@ public class TrainingService {
     }
 
 
-    public void exec(PMMLDataSet dataSet, Params rawParams) throws Exception {
-        trainer.train(dataSet, rawParams);
+    public void exec(Model pmmlModel, PMMLDataSet dataSet, Params rawParams) throws Exception {
+        trainer.train(pmmlModel, dataSet, rawParams);
     }
 }

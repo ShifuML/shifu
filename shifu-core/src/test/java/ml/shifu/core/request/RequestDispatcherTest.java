@@ -51,5 +51,12 @@ public class RequestDispatcherTest {
 
     }
 
+    @Test
+    public void test9() throws Exception {
+        ShifuRequest req = JSONUtils.readValue(new File("shifu-core/src/test/resources/models/wdbc/All/requests/9_ExecModelRequest.json"), ShifuRequest.class);
+        RequestDispatcher.dispatch(req);
+
+    }
+
 
 }

@@ -37,7 +37,9 @@ public class TrainingRequestProcessor implements RequestProcessor {
 
         TrainingService trainingService = injector.getInstance(TrainingService.class);
 
-        trainingService.exec(pmmlDataSet, req.getGlobalParams());
+        trainingService.exec(model, pmmlDataSet, req.getGlobalParams());
+
+        PMMLUtils.savePMML(pmml, pathPMML);
 
     }
 }
