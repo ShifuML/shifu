@@ -29,6 +29,8 @@ import org.dmg.pmml.RegressionTable;
 
 public class PMMLAdapterCommonUtil {
 
+
+
     public static NeuralInputs getNeuralInputs(MiningSchema schema) {
         NeuralInputs pmmlModel = new NeuralInputs();
         int index = 0;

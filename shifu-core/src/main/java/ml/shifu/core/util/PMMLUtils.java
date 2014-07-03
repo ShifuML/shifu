@@ -1,6 +1,7 @@
 package ml.shifu.core.util;
 
 import org.dmg.pmml.*;
+import org.jpmml.evaluator.ExpressionUtil;
 import org.jpmml.model.ImportFilter;
 import org.jpmml.model.JAXBUtil;
 import org.xml.sax.InputSource;
@@ -11,10 +12,7 @@ import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 
 public class PMMLUtils {
@@ -190,7 +188,79 @@ public class PMMLUtils {
             }
         }
 
+
         return cnt;
     }
+
+    public static NeuralInputs createNeuralInputs(PMML pmml, NeuralNetwork model) {
+        Set<FieldName> activeFieldNameSet = new HashSet<FieldName>();
+
+        for (MiningField miningField : model.getMiningSchema().getMiningFields()) {
+            if (miningField.getUsageType().equals(FieldUsageType.ACTIVE)) {
+                activeFieldNameSet.add(miningField.getName());
+            }
+        }
+
+        NeuralInputs neuralInputs = new NeuralInputs();
+
+        int neuralInputIndex = 0;
+        for (DerivedField derivedField : model.getLocalTransformations().getDerivedFields()) {
+            NeuralInput neuralInput = new NeuralInput();
+            DerivedField neuralInputDerivedField = new DerivedField();
+
+            Expression expression = derivedField.getExpression();
+            if (expression instanceof NormContinuous) {
+                if (activeFieldNameSet.contains(((NormContinuous)expression).getField())){
+                    FieldRef fieldRef = new FieldRef();
+                    fieldRef.setField(derivedField.getName());
+                    neuralInputDerivedField.setExpression(fieldRef);
+                }
+
+            } else {
+                continue;
+            }
+            neuralInput.setId("0," + neuralInputIndex);
+            neuralInputIndex += 1;
+            neuralInput.setDerivedField(neuralInputDerivedField);
+            neuralInputs.withNeuralInputs(neuralInput);
+        }
+
+        //bias
+        NeuralInput biasNeuralInput = new NeuralInput();
+        biasNeuralInput.setId("bias");
+
+        DerivedField derivedField = new DerivedField();
+        derivedField.setExpression(new Constant("1.0"));
+        biasNeuralInput.setDerivedField(derivedField);
+        neuralInputs.withNeuralInputs(biasNeuralInput);
+        neuralInputs.setNumberOfInputs(neuralInputs.getNeuralInputs().size());
+        return neuralInputs;
+    }
+   /*
+    public static void getTransformationMap(PMML pmml, Model model) {
+
+
+
+        TransformationDictionary transformationDictionary = pmml.getTransformationDictionary();
+
+        MiningSchema miningSchema = model.getMiningSchema();
+
+        Set<FieldName> activeFieldNameSet = new HashSet<FieldName>();
+
+        for (MiningField miningField : miningSchema.getMiningFields()) {
+            if (miningField.getUsageType().equals(FieldUsageType.ACTIVE)) {
+                activeFieldNameSet.add(miningField.getName());
+            }
+        }
+
+        LocalTransformations localTransformations = model.getLocalTransformations();
+        for (DerivedField derivedField : localTransformations.getDerivedFields()) {
+            Expression expression = derivedField.getExpression();
+
+            if (expression instanceof NormContinuous) {
+                ((NormContinuous) expression).getField()
+            }
+        }
+    }      */
 
 }

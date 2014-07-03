@@ -117,6 +117,9 @@ public class EncogNNTrainer implements Trainer {
         log.info("    - Input Size: " + trainDataSet.getInputSize());
         log.info("    - Ideal Size: " + trainDataSet.getIdealSize());
 
+        log.info("    - TrainSet: " + trainDataSet.getRecordCount());
+        log.info("    - TestSet: " + testDataSet.getRecordCount());
+
 
         BasicNetwork network = createNetwork(params);
         Propagation mlTrain = getMLTrain(network, trainDataSet, params);
@@ -139,7 +142,7 @@ public class EncogNNTrainer implements Trainer {
                 minError = testError;
 
                 String path = pathOutput + "/model_" + trainerID + "_" + (i + 1);
-                adapter.exec(network, pmmlModel);
+
                 saveNN(path);
                 extra = " <-- NN saved: " + path;
             }
@@ -151,6 +154,8 @@ public class EncogNNTrainer implements Trainer {
         }
 
         mlTrain.finishTraining();
+
+        adapter.exec(network, pmmlModel);
 
         //Model model = adapter.exec(network, pmmlModel);
 
@@ -205,7 +210,7 @@ public class EncogNNTrainer implements Trainer {
         Random random = new Random();
 
         for (MLDataPair pair : fullDataSet) {
-            if (random.nextDouble() > splitRatio) {
+            if (random.nextDouble() <= splitRatio) {
                 trainDataSet.add(pair);
             } else {
                 testDataSet.add(pair);
@@ -258,6 +263,7 @@ public class EncogNNTrainer implements Trainer {
 
         network.addLayer(new BasicLayer(new ActivationSigmoid(), false, trainDataSet.getIdealSize()));
         network.getStructure().finalizeStructure();
+        network.reset();
         /*if (!modelConfig.isFixInitialInput()) {
             network.reset();
         } else {

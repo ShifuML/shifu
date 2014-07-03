@@ -2,6 +2,7 @@ package ml.shifu.core.request.processor;
 
 import com.google.inject.Guice;
 import com.google.inject.Injector;
+import ml.shifu.core.di.builtin.derivedField.PassThroughDerivedFieldCreator;
 import ml.shifu.core.di.module.SimpleModule;
 import ml.shifu.core.di.service.DerivedFieldService;
 import ml.shifu.core.request.RequestObject;
@@ -39,7 +40,12 @@ public class CreateLocalTransformationsRequestProcessor {
                 DerivedField derivedField = derivedFieldService.exec(dataField, model.getModelStats(), fieldParams);
 
                 localTransformations.withDerivedFields(derivedField);
+            } else {
+                PassThroughDerivedFieldCreator creator = new PassThroughDerivedFieldCreator();
+                DerivedField derivedField = creator.create(dataField, null, fieldParams);
+                localTransformations.withDerivedFields(derivedField);
             }
+
 
         }
 

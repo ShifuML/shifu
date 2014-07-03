@@ -7,9 +7,10 @@
             "globalParams": {
 
                 "modelName": "demoModel",
-                "pathPMML": "shifu-core/src/test/resources/pmml/trained.xml",
-                "pathData": "shifu-core/src/test/resources/example/wdbc/wdbcDataSet/wdbc.eval",
-                "pathHeader": "shifu-core/src/test/resources/example/wdbc/wdbcDataSet/wdbc.header"
+                "pathPMML": "../shifu-plugin-encog/tmp/generated/model.xml",
+                "pathData": "src/test/resources/example/wdbc/wdbcDataSet/wdbc.eval",
+                "pathHeader": "src/test/resources/example/wdbc/wdbcDataSet/wdbc.header",
+                "pathResult": "tmp/score.json"
 
             }
         

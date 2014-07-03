@@ -6,7 +6,7 @@
             "executionMode": "LOCAL_SINGLE",
             "globalParams": {
                 "modelName": "demoModel",
-                "pathPMML": "shifu-core/src/test/resources/models/wdbc/All/generated/model.xml"
+                "pathPMML": "src/test/resources/models/wdbc/All/generated/model.xml"
             },
             "fieldParamsMap": {
                 "id": {},

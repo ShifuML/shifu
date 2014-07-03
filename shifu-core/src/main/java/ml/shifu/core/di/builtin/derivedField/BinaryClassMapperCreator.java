@@ -3,7 +3,12 @@ package ml.shifu.core.di.builtin.derivedField;
 import ml.shifu.core.di.spi.DerivedFieldCreator;
 import ml.shifu.core.util.Params;
 import org.dmg.pmml.*;
+import org.w3c.dom.Document;
+import org.w3c.dom.Element;
 
+
+import javax.xml.parsers.DocumentBuilder;
+import javax.xml.parsers.DocumentBuilderFactory;
 import java.util.List;
 
 public class BinaryClassMapperCreator implements DerivedFieldCreator {
@@ -15,7 +20,7 @@ public class BinaryClassMapperCreator implements DerivedFieldCreator {
         List<String> negTags = (List<String>) params.get("negTags");
 
         DerivedField derivedField = new DerivedField();
-        derivedField.setName(dataField.getName());
+        derivedField.setName(new FieldName(dataField.getName().getValue() + "_LocalTransformed"));
         derivedField.setOptype(dataField.getOptype());
         derivedField.setDataType(dataField.getDataType());
 
@@ -23,25 +28,55 @@ public class BinaryClassMapperCreator implements DerivedFieldCreator {
 
         FieldColumnPair fieldColumnPair = new FieldColumnPair();
         fieldColumnPair.setField(dataField.getName());
-        fieldColumnPair.setColumn("0");
+        fieldColumnPair.setColumn("origin");
 
-        mapValues.setOutputColumn("1");
+        mapValues.setOutputColumn("transformed");
         mapValues.withFieldColumnPairs(fieldColumnPair);
 
         InlineTable inlineTable = new InlineTable();
 
+        DocumentBuilderFactory factory =
+                DocumentBuilderFactory.newInstance();
 
+        DocumentBuilder builder;
+
+        try {
+            builder = factory.newDocumentBuilder();
+        } catch (Exception e) {
+            e.printStackTrace();
+            return null;
+        }
+        Document doc = builder.newDocument();
 
         for (String posTag : posTags) {
             Row row = new Row();
-            row.withContent(posTag, "1");
+
+
+            Element origin = doc.createElement("origin");
+            origin.setTextContent(posTag);
+
+
+
+            Element transformed = doc.createElement("transformed");
+            transformed.setTextContent("1");
+
+            row.withContent(origin, transformed);
+
             inlineTable.withRows(row);
         }
 
         for (String negTag : negTags) {
             Row row = new Row();
 
-            row.withContent(negTag, "0");
+            Element origin = doc.createElement("origin");
+            origin.setTextContent(negTag);
+
+
+
+            Element transformed = doc.createElement("transformed");
+            transformed.setTextContent("0");
+
+            row.withContent(origin, transformed);
             inlineTable.withRows(row);
         }
 

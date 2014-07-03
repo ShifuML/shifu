@@ -5,6 +5,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 
+import ml.shifu.core.util.PMMLUtils;
 import ml.shifu.plugin.PMMLAdapterCommonUtil;
 import ml.shifu.plugin.PMMLModelBuilder;
 
@@ -21,7 +22,6 @@ import org.encog.neural.flat.FlatNetwork;
  * The class that converts an Encog NeuralNetwork to a PMML RegressionModel.
  * This class extends the abstract class
  * PMMLModelBuilder<pmml.RegressionModel,Encog.NeuralNetwork>.
- * 
  */
 public class PMMLEncogNeuralNetworkModel
         implements
@@ -30,15 +30,14 @@ public class PMMLEncogNeuralNetworkModel
     private FlatNetwork network;
 
     /**
-     * <p>
+     * <p/>
      * The function which converts an Encog NeuralNetwork to a PMML
      * NeuralNetwork Model.
-     * <p>
+     * <p/>
      * This function reads the weights from the Encog NeuralNetwork model and
      * assign them to the corresponding connections of Neurons in PMML model.
-     * 
-     * @param bNetwork
-     *            Encog NeuralNetwork
+     *
+     * @param bNetwork Encog NeuralNetwork
      * @return The generated PMML NeuralNetwork Model
      */
     public org.dmg.pmml.NeuralNetwork adaptMLModelToPMML(
@@ -46,12 +45,10 @@ public class PMMLEncogNeuralNetworkModel
             org.dmg.pmml.NeuralNetwork pmmlModel) {
         network = bNetwork.getFlat();
         MiningSchema schema = pmmlModel.getMiningSchema();
-        pmmlModel.withNeuralInputs(PMMLAdapterCommonUtil
-                .getNeuralInputs(schema));
-        pmmlModel
-                .withLocalTransformations(PMMLAdapterCommonUtil
-                        .getBiasLocalTransformation(pmmlModel
-                                .getLocalTransformations()));
+        //pmmlModel.withNeuralInputs(PMMLAdapterCommonUtil.getNeuralInputs(schema));
+        pmmlModel.withNeuralInputs(PMMLUtils.createNeuralInputs(null, pmmlModel));
+
+        pmmlModel.withLocalTransformations(PMMLAdapterCommonUtil.getBiasLocalTransformation(pmmlModel.getLocalTransformations()));
 
         int[] layerCount = network.getLayerCounts();
         int[] layerFeedCount = network.getLayerFeedCounts();
@@ -76,7 +73,8 @@ public class PMMLEncogNeuralNetworkModel
                 for (int k = 0; k < layerFeedCount[i + 1]; k++) {
                     neuron.withConnections(new Connection(String
                             .valueOf(layerID - 1 + "," + k),
-                            weights[weightID++]));
+                            weights[weightID++]
+                    ));
                 }// weights
                 int tmp = layerCount[i + 1] - layerFeedCount[i + 1];
                 // TODO set bias as constant, don't need to read from field
@@ -88,7 +86,7 @@ public class PMMLEncogNeuralNetworkModel
             }// finish build Neuron
             layerList.add(layer);
         }// finish build layer
-         // reserve the layer list to fit fot PMML format
+        // reserve the layer list to fit fot PMML format
         Collections.reverse(layerList);
         pmmlModel.withNeuralLayers(layerList);
         // set neural output based on target id
@@ -116,10 +114,11 @@ public class PMMLEncogNeuralNetworkModel
         }
         return functionType;
     }
-private org.dmg.pmml.NeuralNetwork deleteTargetDerivedFields(org.dmg.pmml.NeuralNetwork pmmlModel) {
-    pmmlModel.getLocalTransformations().getDerivedFields().remove(0);
-    
-    return pmmlModel;
-}
+
+    private org.dmg.pmml.NeuralNetwork deleteTargetDerivedFields(org.dmg.pmml.NeuralNetwork pmmlModel) {
+        pmmlModel.getLocalTransformations().getDerivedFields().remove(0);
+
+        return pmmlModel;
+    }
 
 }

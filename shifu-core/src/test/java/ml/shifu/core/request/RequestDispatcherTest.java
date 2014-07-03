@@ -38,9 +38,9 @@ public class RequestDispatcherTest {
         RequestDispatcher.dispatch(req);
     }
 
-    //@Test
+    @Test
     public void test5() throws Exception {
-        ShifuRequest req = JSONUtils.readValue(new File("shifu-core/src/test/resources/models/wdbc/All/requests/5_CreateLocalTransformationsRequest.json"), ShifuRequest.class);
+        ShifuRequest req = JSONUtils.readValue(new File("src/test/resources/models/wdbc/All/requests/5_CreateLocalTransformationsRequest.json"), ShifuRequest.class);
         RequestDispatcher.dispatch(req);
     }
 
@@ -53,7 +53,14 @@ public class RequestDispatcherTest {
 
     @Test
     public void test9() throws Exception {
-        ShifuRequest req = JSONUtils.readValue(new File("shifu-core/src/test/resources/models/wdbc/All/requests/9_ExecModelRequest.json"), ShifuRequest.class);
+        ShifuRequest req = JSONUtils.readValue(new File("src/test/resources/models/wdbc/All/requests/9_ExecModelRequest.json"), ShifuRequest.class);
+        RequestDispatcher.dispatch(req);
+
+    }
+
+    @Test
+    public void test10() throws Exception {
+        ShifuRequest req = JSONUtils.readValue(new File("src/test/resources/models/wdbc/All/requests/10_ModelEvaluationRequest.json"), ShifuRequest.class);
         RequestDispatcher.dispatch(req);
 
     }

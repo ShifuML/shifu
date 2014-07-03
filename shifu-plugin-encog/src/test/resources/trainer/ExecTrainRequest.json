@@ -10,6 +10,7 @@
                 },
                 "modelName": "demoModel",
                 "pathPMML": "src/test/resources/trainer/model.xml",
+                "pathPMMLOutput": "tmp/generated/model.xml",
                 "pathNormalizedData": "src/test/resources/trainer/normalized.txt",
                 "numEpochs": 100,
                 "trainerID": "test",

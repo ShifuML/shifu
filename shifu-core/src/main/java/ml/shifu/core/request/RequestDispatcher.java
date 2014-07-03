@@ -40,6 +40,9 @@ public class RequestDispatcher {
         } else if (requestType.equalsIgnoreCase("ExecModel")) {
             ModelExecutionProcessor processor = new ModelExecutionProcessor();
             processor.run(req);
+        } else if (requestType.equalsIgnoreCase("ModelEvaluation")) {
+            ModelEvaluationProcessor processor = new ModelEvaluationProcessor();
+            processor.run(req);
         } else {
             throw new RuntimeException("Not a valid RequestType: " + requestType);
         }

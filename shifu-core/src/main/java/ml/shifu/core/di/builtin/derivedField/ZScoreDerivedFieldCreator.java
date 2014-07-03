@@ -8,7 +8,7 @@ public class ZScoreDerivedFieldCreator implements DerivedFieldCreator {
 
     public DerivedField create(DataField dataField, ModelStats modelStats, Params params) {
         DerivedField derivedField = new DerivedField();
-        derivedField.setName(dataField.getName());
+        derivedField.setName(new FieldName(dataField.getName().getValue() + "_LocalTransformed"));
         derivedField.setOptype(dataField.getOptype());
         derivedField.setDataType(dataField.getDataType());
 

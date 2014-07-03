@@ -10,16 +10,21 @@ import ml.shifu.core.util.CSVWithHeaderLocalSingleThreadFileLoader;
 import ml.shifu.core.util.PMMLUtils;
 import org.dmg.pmml.Model;
 import org.dmg.pmml.PMML;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.List;
 import java.util.Map;
 
 public class TrainingRequestProcessor implements RequestProcessor {
+    private static Logger log = LoggerFactory.getLogger(TrainingRequestProcessor.class);
 
     public void run(RequestObject req) throws Exception {
+
         CSVWithHeaderLocalSingleThreadFileLoader loader = new CSVWithHeaderLocalSingleThreadFileLoader();
 
         String pathPMML = (String) req.getGlobalParams().get("pathPMML", "model.xml");
+        String pathPMMLOutput = (String) req.getGlobalParams().get("pathPMMLOutput", pathPMML);
         PMML pmml = PMMLUtils.loadPMML(pathPMML);
         Model model = PMMLUtils.getModelByName(pmml, req.getGlobalParams().get("modelName").toString());
 
@@ -39,7 +44,9 @@ public class TrainingRequestProcessor implements RequestProcessor {
 
         trainingService.exec(model, pmmlDataSet, req.getGlobalParams());
 
-        PMMLUtils.savePMML(pmml, pathPMML);
+
+        log.info("Writing PMML to: " + pathPMMLOutput);
+        PMMLUtils.savePMML(pmml, pathPMMLOutput);
 
     }
 }
