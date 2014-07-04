@@ -21,5 +21,21 @@
             <artifactId>encog-core</artifactId>
             <version>3.0.0</version>
         </dependency>
+         <dependency>
+			<groupId>org.apache.spark</groupId>
+			<artifactId>spark-core_2.10</artifactId>
+			<version>1.0.0</version>
+		</dependency>
+		<dependency>
+			<groupId>org.apache.spark</groupId>
+			<artifactId>spark-mllib_2.10</artifactId>
+			<version>1.0.0</version>
+		</dependency> 
+        <dependency>
+			<groupId>org.apache.mahout</groupId>
+			<artifactId>mahout-core</artifactId>
+			<version>0.9</version>
+		</dependency>
+        
     </dependencies>
 </project>

@@ -190,8 +190,6 @@ public class EncogNNTrainer implements Trainer {
 
     public void splitDataSet(MLDataSet fullDataSet, Double splitRatio, MLDataSet trainDataSet, MLDataSet testDataSet) {
 
-
-
         Random random = new Random();
 
         for (MLDataPair pair : fullDataSet) {

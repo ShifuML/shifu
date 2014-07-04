@@ -4,12 +4,13 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 
+import ml.shifu.plugin.GenericMLModelBuilder;
+
 import org.dmg.pmml.ActivationFunctionType;
 import org.dmg.pmml.Connection;
 import org.dmg.pmml.NeuralInput;
 import org.dmg.pmml.NeuralLayer;
 import org.dmg.pmml.NeuralNetwork;
-import org.dmg.pmml.NeuralOutput;
 import org.dmg.pmml.Neuron;
 import org.encog.engine.network.activation.ActivationFunction;
 import org.encog.engine.network.activation.ActivationLinear;
@@ -17,8 +18,6 @@ import org.encog.engine.network.activation.ActivationSigmoid;
 import org.encog.engine.network.activation.ActivationTANH;
 import org.encog.neural.networks.BasicNetwork;
 import org.encog.neural.networks.layers.BasicLayer;
-
-import ml.shifu.plugin.GenericMLModelBuilder;
 
 public class EncogNeuralNetworkBuilder implements
         GenericMLModelBuilder<BasicNetwork, NeuralNetwork> {

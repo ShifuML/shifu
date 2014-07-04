@@ -5,15 +5,25 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 
+import ml.shifu.plugin.AdapterConstants;
 import ml.shifu.plugin.PMMLAdapterCommonUtil;
 import ml.shifu.plugin.PMMLModelBuilder;
 
 import org.dmg.pmml.ActivationFunctionType;
 import org.dmg.pmml.Connection;
+import org.dmg.pmml.Constant;
+import org.dmg.pmml.DataType;
+import org.dmg.pmml.DerivedField;
+import org.dmg.pmml.FieldName;
+import org.dmg.pmml.FieldRef;
+import org.dmg.pmml.LocalTransformations;
 import org.dmg.pmml.MiningFunctionType;
 import org.dmg.pmml.MiningSchema;
+import org.dmg.pmml.NeuralInput;
+import org.dmg.pmml.NeuralInputs;
 import org.dmg.pmml.NeuralLayer;
 import org.dmg.pmml.Neuron;
+import org.dmg.pmml.OpType;
 import org.encog.engine.network.activation.ActivationFunction;
 import org.encog.neural.flat.FlatNetwork;
 
@@ -49,13 +59,14 @@ public class PMMLEncogNeuralNetworkModel
             org.dmg.pmml.NeuralNetwork pmmlModel) {
         network = bNetwork.getFlat();
         MiningSchema schema = pmmlModel.getMiningSchema();
-        pmmlModel.withNeuralInputs(PMMLAdapterCommonUtil
-                .getNeuralInputs(schema));
-        pmmlModel
-                .withLocalTransformations(PMMLAdapterCommonUtil
-                        .getBiasLocalTransformation(pmmlModel
-                                .getLocalTransformations()));
-
+//        pmmlModel.withNeuralInputs(PMMLAdapterCommonUtil
+//                .getNeuralInputs(schema));
+//        pmmlModel
+//                .withLocalTransformations(PMMLAdapterCommonUtil
+//                        .getBiasLocalTransformation(pmmlModel
+//                                .getLocalTransformations()));
+//         deleteTargetDerivedFields(pmmlModel);
+        renameDerivedFields(pmmlModel);
         int[] layerCount = network.getLayerCounts();
         int[] layerFeedCount = network.getLayerFeedCounts();
         double[] weights = network.getWeights();
@@ -95,8 +106,9 @@ public class PMMLEncogNeuralNetworkModel
         Collections.reverse(layerList);
         pmmlModel.withNeuralLayers(layerList);
         // set neural output based on target id
-        pmmlModel.withNeuralOutputs(PMMLAdapterCommonUtil.getOutputFields(schema, numLayers - 1));
-        deleteTargetDerivedFields(pmmlModel);
+        pmmlModel.withNeuralOutputs(PMMLAdapterCommonUtil.getOutputFields(
+                schema, numLayers - 1));
+        // deleteTargetDerivedFields(pmmlModel);
         return pmmlModel;
     }
 
@@ -119,10 +131,54 @@ public class PMMLEncogNeuralNetworkModel
         }
         return functionType;
     }
-private org.dmg.pmml.NeuralNetwork deleteTargetDerivedFields(org.dmg.pmml.NeuralNetwork pmmlModel) {
-    pmmlModel.getLocalTransformations().getDerivedFields().remove(0);
-    
-    return pmmlModel;
-}
 
+    private org.dmg.pmml.NeuralNetwork renameDerivedFields(
+            org.dmg.pmml.NeuralNetwork pmmlModel) {
+        // delete target
+        List<DerivedField> derivedFields = pmmlModel.getLocalTransformations()
+                .getDerivedFields();
+        derivedFields.remove(0);
+        // change name
+        for (DerivedField field : derivedFields) {
+            String name = field.getName().getValue();
+            field.setName(new FieldName(name + "_T"));
+        }
+        // add bias
+        DerivedField field = new DerivedField(OpType.CONTINUOUS,
+                DataType.DOUBLE).withName(new FieldName(
+                AdapterConstants.biasValue));
+        // field.withName(new FieldName(s));
+        field.withExpression(new Constant(String.valueOf(AdapterConstants.bias)));
+        derivedFields.add(field);
+        pmmlModel.setLocalTransformations(new LocalTransformations()
+                .withDerivedFields(derivedFields));
+        int index = 0;
+        NeuralInputs inputs = new NeuralInputs();
+        // add input
+        for (int i = 0; i < derivedFields.size() - 1; i++) {
+            String name = derivedFields.get(i).getName().getValue();
+            DerivedField inputF = new DerivedField(OpType.CONTINUOUS,
+                    DataType.DOUBLE).withName(new FieldName(name))
+                    .withExpression(new FieldRef(new FieldName(name)));
+            inputs.withNeuralInputs(new NeuralInput(inputF, "0," + (index++)));
+        }
+        DerivedField biasF = new DerivedField(OpType.CONTINUOUS,
+                DataType.DOUBLE).withName(
+                new FieldName(AdapterConstants.biasValue)).withExpression(
+                new FieldRef(new FieldName(AdapterConstants.biasValue)));
+        inputs.withNeuralInputs(new NeuralInput(biasF,
+                AdapterConstants.biasValue));
+
+        pmmlModel.setNeuralInputs(inputs);
+
+        return pmmlModel;
+    }
+
+    private org.dmg.pmml.NeuralNetwork deleteTargetDerivedFields(
+            org.dmg.pmml.NeuralNetwork pmmlModel) {
+        // delete target
+       pmmlModel.getLocalTransformations()
+                .getDerivedFields().remove(0);
+        return pmmlModel;
+    }
 }

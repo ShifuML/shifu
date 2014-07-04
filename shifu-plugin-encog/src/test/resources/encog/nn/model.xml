@@ -39,15 +39,35 @@
             <MiningField name="id" usageType="supplementary" optype="ordinal"/>
             <MiningField name="diagnosis" usageType="target" optype="categorical"/>
             <MiningField name="mean_radius" usageType="active" optype="continuous"/>
+            <MiningField name="mean_texture" usageType="active" optype="continuous"/>
             <MiningField name="mean_perimeter" usageType="active" optype="continuous"/>
             <MiningField name="mean_area" usageType="active" optype="continuous"/>
+            <MiningField name="mean_smoothness" usageType="active" optype="continuous"/>
+            <MiningField name="mean_compactness" usageType="active" optype="continuous"/>
             <MiningField name="mean_concavity" usageType="active" optype="continuous"/>
             <MiningField name="mean_concave_points" usageType="active" optype="continuous"/>
+            <MiningField name="mean_symmetry" usageType="active" optype="continuous"/>
+            <MiningField name="mean_fractal_dimension" usageType="active" optype="continuous"/>
+            <MiningField name="std_radius" usageType="active" optype="continuous"/>
+            <MiningField name="std_texture" usageType="active" optype="continuous"/>
+            <MiningField name="std_perimeter" usageType="active" optype="continuous"/>
             <MiningField name="std_area" usageType="active" optype="continuous"/>
+            <MiningField name="std_smoothness" usageType="active" optype="continuous"/>
+            <MiningField name="std_compactness" usageType="active" optype="continuous"/>
+            <MiningField name="std_concavity" usageType="active" optype="continuous"/>
+            <MiningField name="std_concave_points" usageType="active" optype="continuous"/>
+            <MiningField name="std_symmetry" usageType="active" optype="continuous"/>
+            <MiningField name="std_fractal_dimension" usageType="active" optype="continuous"/>
             <MiningField name="worst_radius" usageType="active" optype="continuous"/>
+            <MiningField name="worst_texture" usageType="active" optype="continuous"/>
             <MiningField name="worst_perimeter" usageType="active" optype="continuous"/>
             <MiningField name="worst_area" usageType="active" optype="continuous"/>
+            <MiningField name="worst_smoothness" usageType="active" optype="continuous"/>
+            <MiningField name="worst_compactness" usageType="active" optype="continuous"/>
+            <MiningField name="worst_concavity" usageType="active" optype="continuous"/>
             <MiningField name="worst_concave_points" usageType="active" optype="continuous"/>
+            <MiningField name="worst_symmetry" usageType="active" optype="continuous"/>
+            <MiningField name="worst_fractal_dimension" usageType="active" optype="continuous"/>
         </MiningSchema>
         <ModelStats>
             <UnivariateStats field="id">
@@ -1162,1024 +1182,184 @@
                 </MapValues>
             </DerivedField>
             <DerivedField name="mean_radius" optype="continuous" dataType="double">
-                <Discretize>
-                    <DiscretizeBin binValue="-1.9805352059145958">
-                        <Interval closure="openClosed" leftMargin="-INF" rightMargin="13.62"/>
-                    </DiscretizeBin>
-                    <DiscretizeBin binValue="-0.2951029035211669">
-                        <Interval closure="openClosed" leftMargin="13.62" rightMargin="14.74"/>
-                    </DiscretizeBin>
-                    <DiscretizeBin binValue="0.7837067564647631">
-                        <Interval closure="openClosed" leftMargin="14.74" rightMargin="15.5"/>
-                    </DiscretizeBin>
-                    <DiscretizeBin binValue="2.007482183046879">
-                        <Interval closure="openClosed" leftMargin="15.5" rightMargin="16.46"/>
-                    </DiscretizeBin>
-                    <DiscretizeBin binValue="2.923772904211034">
-                        <Interval closure="openClosed" leftMargin="16.46" rightMargin="17.57"/>
-                    </DiscretizeBin>
-                    <DiscretizeBin binValue="3.61692006692098">
-                        <Interval closure="openClosed" leftMargin="17.57" rightMargin="18.65"/>
-                    </DiscretizeBin>
-                    <DiscretizeBin binValue="20.765035250781796">
-                        <Interval closure="openClosed" leftMargin="18.65" rightMargin="19.55"/>
-                    </DiscretizeBin>
-                    <DiscretizeBin binValue="20.765035250781796">
-                        <Interval closure="openClosed" leftMargin="19.55" rightMargin="20.47"/>
-                    </DiscretizeBin>
-                    <DiscretizeBin binValue="20.765035250781796">
-                        <Interval closure="openClosed" leftMargin="20.47" rightMargin="23.09"/>
-                    </DiscretizeBin>
-                    <DiscretizeBin binValue="20.158899448010725">
-                        <Interval closure="openClosed" leftMargin="23.09" rightMargin="INF"/>
-                    </DiscretizeBin>
-                </Discretize>
+                <NormContinuous field="mean_radius">
+                    <LinearNorm orig="0.0" norm="-4.00761373022065"/>
+                    <LinearNorm orig="14.12049119718311" norm="0.0"/>
+                </NormContinuous>
             </DerivedField>
             <DerivedField name="mean_texture" optype="continuous" dataType="double">
-                <Discretize>
-                    <DiscretizeBin binValue="-1.5363714920831582">
-                        <Interval closure="openClosed" leftMargin="-INF" rightMargin="17.3"/>
-                    </DiscretizeBin>
-                    <DiscretizeBin binValue="-0.5574671678238885">
-                        <Interval closure="openClosed" leftMargin="17.3" rightMargin="18.83"/>
-                    </DiscretizeBin>
-                    <DiscretizeBin binValue="0.18293289698422027">
-                        <Interval closure="openClosed" leftMargin="18.83" rightMargin="19.86"/>
-                    </DiscretizeBin>
-                    <DiscretizeBin binValue="0.8443313781499479">
-                        <Interval closure="openClosed" leftMargin="19.86" rightMargin="20.68"/>
-                    </DiscretizeBin>
-                    <DiscretizeBin binValue="0.6724811215755914">
-                        <Interval closure="openClosed" leftMargin="20.68" rightMargin="21.57"/>
-                    </DiscretizeBin>
-                    <DiscretizeBin binValue="1.4196955213180933">
-                        <Interval closure="openClosed" leftMargin="21.57" rightMargin="22.22"/>
-                    </DiscretizeBin>
-                    <DiscretizeBin binValue="1.3143350060569334">
-                        <Interval closure="openClosed" leftMargin="22.22" rightMargin="23.33"/>
-                    </DiscretizeBin>
-                    <DiscretizeBin binValue="1.5374785564786433">
-                        <Interval closure="openClosed" leftMargin="23.33" rightMargin="24.89"/>
-                    </DiscretizeBin>
-                    <DiscretizeBin binValue="1.2190248265771542">
-                        <Interval closure="openClosed" leftMargin="24.89" rightMargin="27.54"/>
-                    </DiscretizeBin>
-                    <DiscretizeBin binValue="0.382776803905976">
-                        <Interval closure="openClosed" leftMargin="27.54" rightMargin="INF"/>
-                    </DiscretizeBin>
-                </Discretize>
+                <NormContinuous field="mean_texture">
+                    <LinearNorm orig="0.0" norm="-4.50164553444311"/>
+                    <LinearNorm orig="19.30533450704228" norm="0.0"/>
+                </NormContinuous>
             </DerivedField>
             <DerivedField name="mean_perimeter" optype="continuous" dataType="double">
-                <Discretize>
-                    <DiscretizeBin binValue="-2.063252506517931">
-                        <Interval closure="openClosed" leftMargin="-INF" rightMargin="88.44"/>
-                    </DiscretizeBin>
-                    <DiscretizeBin binValue="-0.18974238794267392">
-                        <Interval closure="openClosed" leftMargin="88.44" rightMargin="96.45"/>
-                    </DiscretizeBin>
-                    <DiscretizeBin binValue="1.1320134498579788">
-                        <Interval closure="openClosed" leftMargin="96.45" rightMargin="102.6"/>
-                    </DiscretizeBin>
-                    <DiscretizeBin binValue="1.8251606274429242">
-                        <Interval closure="openClosed" leftMargin="102.6" rightMargin="109.0"/>
-                    </DiscretizeBin>
-                    <DiscretizeBin binValue="3.61692006692098">
-                        <Interval closure="openClosed" leftMargin="109.0" rightMargin="115.1"/>
-                    </DiscretizeBin>
-                    <DiscretizeBin binValue="20.765035250781796">
-                        <Interval closure="openClosed" leftMargin="115.1" rightMargin="122.0"/>
-                    </DiscretizeBin>
-                    <DiscretizeBin binValue="20.80948701331093">
-                        <Interval closure="openClosed" leftMargin="122.0" rightMargin="129.5"/>
-                    </DiscretizeBin>
-                    <DiscretizeBin binValue="20.852046627691504">
-                        <Interval closure="openClosed" leftMargin="129.5" rightMargin="134.8"/>
-                    </DiscretizeBin>
-                    <DiscretizeBin binValue="20.765035250781796">
-                        <Interval closure="openClosed" leftMargin="134.8" rightMargin="153.5"/>
-                    </DiscretizeBin>
-                    <DiscretizeBin binValue="19.976577891568436">
-                        <Interval closure="openClosed" leftMargin="153.5" rightMargin="INF"/>
-                    </DiscretizeBin>
-                </Discretize>
+                <NormContinuous field="mean_perimeter">
+                    <LinearNorm orig="0.0" norm="-3.7847042946812364"/>
+                    <LinearNorm orig="91.91475352112678" norm="0.0"/>
+                </NormContinuous>
             </DerivedField>
             <DerivedField name="mean_area" optype="continuous" dataType="double">
-                <Discretize>
-                    <DiscretizeBin binValue="-2.0390717083236987">
-                        <Interval closure="openClosed" leftMargin="-INF" rightMargin="573.2"/>
-                    </DiscretizeBin>
-                    <DiscretizeBin binValue="-0.16726953210864562">
-                        <Interval closure="openClosed" leftMargin="573.2" rightMargin="664.9"/>
-                    </DiscretizeBin>
-                    <DiscretizeBin binValue="0.6724811215755914">
-                        <Interval closure="openClosed" leftMargin="664.9" rightMargin="744.9"/>
-                    </DiscretizeBin>
-                    <DiscretizeBin binValue="2.007482183046879">
-                        <Interval closure="openClosed" leftMargin="744.9" rightMargin="832.9"/>
-                    </DiscretizeBin>
-                    <DiscretizeBin binValue="2.923772904211034">
-                        <Interval closure="openClosed" leftMargin="832.9" rightMargin="955.1"/>
-                    </DiscretizeBin>
-                    <DiscretizeBin binValue="3.6613718294501143">
-                        <Interval closure="openClosed" leftMargin="955.1" rightMargin="1077.0"/>
-                    </DiscretizeBin>
-                    <DiscretizeBin binValue="20.765035250781796">
-                        <Interval closure="openClosed" leftMargin="1077.0" rightMargin="1192.0"/>
-                    </DiscretizeBin>
-                    <DiscretizeBin binValue="20.765035250781796">
-                        <Interval closure="openClosed" leftMargin="1192.0" rightMargin="1293.0"/>
-                    </DiscretizeBin>
-                    <DiscretizeBin binValue="20.765035250781796">
-                        <Interval closure="openClosed" leftMargin="1293.0" rightMargin="1670.0"/>
-                    </DiscretizeBin>
-                    <DiscretizeBin binValue="20.158899448010725">
-                        <Interval closure="openClosed" leftMargin="1670.0" rightMargin="INF"/>
-                    </DiscretizeBin>
-                </Discretize>
+                <NormContinuous field="mean_area">
+                    <LinearNorm orig="0.0" norm="-1.8591520219235536"/>
+                    <LinearNorm orig="654.2797535211271" norm="0.0"/>
+                </NormContinuous>
             </DerivedField>
             <DerivedField name="mean_smoothness" optype="continuous" dataType="double">
-                <Discretize>
-                    <DiscretizeBin binValue="-1.3666865193318776">
-                        <Interval closure="openClosed" leftMargin="-INF" rightMargin="0.08785"/>
-                    </DiscretizeBin>
-                    <DiscretizeBin binValue="-0.07195935238545703">
-                        <Interval closure="openClosed" leftMargin="0.08785" rightMargin="0.09215"/>
-                    </DiscretizeBin>
-                    <DiscretizeBin binValue="0.033401163173202526">
-                        <Interval closure="openClosed" leftMargin="0.09215" rightMargin="0.0961"/>
-                    </DiscretizeBin>
-                    <DiscretizeBin binValue="0.32108323529442806">
-                        <Interval closure="openClosed" leftMargin="0.0961" rightMargin="0.09906"/>
-                    </DiscretizeBin>
-                    <DiscretizeBin binValue="0.21572271976882382">
-                        <Interval closure="openClosed" leftMargin="0.09906" rightMargin="0.1027"/>
-                    </DiscretizeBin>
-                    <DiscretizeBin binValue="0.39804427632477857">
-                        <Interval closure="openClosed" leftMargin="0.1027" rightMargin="0.1063"/>
-                    </DiscretizeBin>
-                    <DiscretizeBin binValue="0.5723976631975563">
-                        <Interval closure="openClosed" leftMargin="0.1063" rightMargin="0.1099"/>
-                    </DiscretizeBin>
-                    <DiscretizeBin binValue="1.1320134498579788">
-                        <Interval closure="openClosed" leftMargin="0.1099" rightMargin="0.115"/>
-                    </DiscretizeBin>
-                    <DiscretizeBin binValue="1.3143350060569334">
-                        <Interval closure="openClosed" leftMargin="0.115" rightMargin="0.1218"/>
-                    </DiscretizeBin>
-                    <DiscretizeBin binValue="0.7882419108241404">
-                        <Interval closure="openClosed" leftMargin="0.1218" rightMargin="INF"/>
-                    </DiscretizeBin>
-                </Discretize>
+                <NormContinuous field="mean_smoothness">
+                    <LinearNorm orig="0.0" norm="-6.857538982975337"/>
+                    <LinearNorm orig="0.09632147887323936" norm="0.0"/>
+                </NormContinuous>
             </DerivedField>
             <DerivedField name="mean_compactness" optype="continuous" dataType="double">
-                <Discretize>
-                    <DiscretizeBin binValue="-1.8124255264900404">
-                        <Interval closure="openClosed" leftMargin="-INF" rightMargin="0.08468"/>
-                    </DiscretizeBin>
-                    <DiscretizeBin binValue="-0.37206394460440634">
-                        <Interval closure="openClosed" leftMargin="0.08468" rightMargin="0.1047"/>
-                    </DiscretizeBin>
-                    <DiscretizeBin binValue="0.43886627078553375">
-                        <Interval closure="openClosed" leftMargin="0.1047" rightMargin="0.1147"/>
-                    </DiscretizeBin>
-                    <DiscretizeBin binValue="0.7265483427414812">
-                        <Interval closure="openClosed" leftMargin="0.1147" rightMargin="0.128"/>
-                    </DiscretizeBin>
-                    <DiscretizeBin binValue="0.9778627704557206">
-                        <Interval closure="openClosed" leftMargin="0.128" rightMargin="0.1353"/>
-                    </DiscretizeBin>
-                    <DiscretizeBin binValue="1.4196955213180933">
-                        <Interval closure="openClosed" leftMargin="0.1353" rightMargin="0.1555"/>
-                    </DiscretizeBin>
-                    <DiscretizeBin binValue="2.2306257325760885">
-                        <Interval closure="openClosed" leftMargin="0.1555" rightMargin="0.1686"/>
-                    </DiscretizeBin>
-                    <DiscretizeBin binValue="2.923772904211034">
-                        <Interval closure="openClosed" leftMargin="0.1686" rightMargin="0.1954"/>
-                    </DiscretizeBin>
-                    <DiscretizeBin binValue="2.2306257325760885">
-                        <Interval closure="openClosed" leftMargin="0.1954" rightMargin="0.2364"/>
-                    </DiscretizeBin>
-                    <DiscretizeBin binValue="20.238942155549005">
-                        <Interval closure="openClosed" leftMargin="0.2364" rightMargin="INF"/>
-                    </DiscretizeBin>
-                </Discretize>
+                <NormContinuous field="mean_compactness">
+                    <LinearNorm orig="0.0" norm="-1.9871159390401176"/>
+                    <LinearNorm orig="0.1040359507042254" norm="0.0"/>
+                </NormContinuous>
             </DerivedField>
             <DerivedField name="mean_concavity" optype="continuous" dataType="double">
-                <Discretize>
-                    <DiscretizeBin binValue="-2.1099276450825046">
-                        <Interval closure="openClosed" leftMargin="-INF" rightMargin="0.08092"/>
-                    </DiscretizeBin>
-                    <DiscretizeBin binValue="0.5723976631975563">
-                        <Interval closure="openClosed" leftMargin="0.08092" rightMargin="0.09966"/>
-                    </DiscretizeBin>
-                    <DiscretizeBin binValue="0.9778627704557206">
-                        <Interval closure="openClosed" leftMargin="0.09966" rightMargin="0.1168"/>
-                    </DiscretizeBin>
-                    <DiscretizeBin binValue="2.007482183046879">
-                        <Interval closure="openClosed" leftMargin="0.1168" rightMargin="0.1362"/>
-                    </DiscretizeBin>
-                    <DiscretizeBin binValue="2.5183078020528695">
-                        <Interval closure="openClosed" leftMargin="0.1362" rightMargin="0.1527"/>
-                    </DiscretizeBin>
-                    <DiscretizeBin binValue="2.923772904211034">
-                        <Interval closure="openClosed" leftMargin="0.1527" rightMargin="0.1695"/>
-                    </DiscretizeBin>
-                    <DiscretizeBin binValue="20.765035250781796">
-                        <Interval closure="openClosed" leftMargin="0.1695" rightMargin="0.1974"/>
-                    </DiscretizeBin>
-                    <DiscretizeBin binValue="3.61692006692098">
-                        <Interval closure="openClosed" leftMargin="0.1974" rightMargin="0.2236"/>
-                    </DiscretizeBin>
-                    <DiscretizeBin binValue="3.61692006692098">
-                        <Interval closure="openClosed" leftMargin="0.2236" rightMargin="0.2914"/>
-                    </DiscretizeBin>
-                    <DiscretizeBin binValue="1.9922147068200766">
-                        <Interval closure="openClosed" leftMargin="0.2914" rightMargin="INF"/>
-                    </DiscretizeBin>
-                </Discretize>
+                <NormContinuous field="mean_concavity">
+                    <LinearNorm orig="0.0" norm="-1.1151795596563225"/>
+                    <LinearNorm orig="0.08842730757042255" norm="0.0"/>
+                </NormContinuous>
             </DerivedField>
             <DerivedField name="mean_concave_points" optype="continuous" dataType="double">
-                <Discretize>
-                    <DiscretizeBin binValue="-2.1791376482529032">
-                        <Interval closure="openClosed" leftMargin="-INF" rightMargin="0.05246"/>
-                    </DiscretizeBin>
-                    <DiscretizeBin binValue="1.0519707424132887">
-                        <Interval closure="openClosed" leftMargin="0.05246" rightMargin="0.06018"/>
-                    </DiscretizeBin>
-                    <DiscretizeBin binValue="1.5374785564786433">
-                        <Interval closure="openClosed" leftMargin="0.06018" rightMargin="0.06847"/>
-                    </DiscretizeBin>
-                    <DiscretizeBin binValue="1.8251606274429242">
-                        <Interval closure="openClosed" leftMargin="0.06847" rightMargin="0.07981"/>
-                    </DiscretizeBin>
-                    <DiscretizeBin binValue="3.61692006692098">
-                        <Interval closure="openClosed" leftMargin="0.07981" rightMargin="0.08683"/>
-                    </DiscretizeBin>
-                    <DiscretizeBin binValue="20.765035250781796">
-                        <Interval closure="openClosed" leftMargin="0.08683" rightMargin="0.09183"/>
-                    </DiscretizeBin>
-                    <DiscretizeBin binValue="20.765035250781796">
-                        <Interval closure="openClosed" leftMargin="0.09183" rightMargin="0.1003"/>
-                    </DiscretizeBin>
-                    <DiscretizeBin binValue="20.765035250781796">
-                        <Interval closure="openClosed" leftMargin="0.1003" rightMargin="0.1198"/>
-                    </DiscretizeBin>
-                    <DiscretizeBin binValue="20.765035250781796">
-                        <Interval closure="openClosed" leftMargin="0.1198" rightMargin="0.1501"/>
-                    </DiscretizeBin>
-                    <DiscretizeBin binValue="20.238942155549005">
-                        <Interval closure="openClosed" leftMargin="0.1501" rightMargin="INF"/>
-                    </DiscretizeBin>
-                </Discretize>
+                <NormContinuous field="mean_concave_points">
+                    <LinearNorm orig="0.0" norm="-1.262295217483865"/>
+                    <LinearNorm orig="0.04874629225352108" norm="0.0"/>
+                </NormContinuous>
             </DerivedField>
             <DerivedField name="mean_symmetry" optype="continuous" dataType="double">
-                <Discretize>
-                    <DiscretizeBin binValue="-0.9577908762504448">
-                        <Interval closure="openClosed" leftMargin="-INF" rightMargin="0.1592"/>
-                    </DiscretizeBin>
-                    <DiscretizeBin binValue="-0.804536253914815">
-                        <Interval closure="openClosed" leftMargin="0.1592" rightMargin="0.1721"/>
-                    </DiscretizeBin>
-                    <DiscretizeBin binValue="0.061572040111565716">
-                        <Interval closure="openClosed" leftMargin="0.1721" rightMargin="0.1794"/>
-                    </DiscretizeBin>
-                    <DiscretizeBin binValue="0.35882356322642034">
-                        <Interval closure="openClosed" leftMargin="0.1794" rightMargin="0.1848"/>
-                    </DiscretizeBin>
-                    <DiscretizeBin binValue="0.2847155911707754">
-                        <Interval closure="openClosed" leftMargin="0.1848" rightMargin="0.191"/>
-                    </DiscretizeBin>
-                    <DiscretizeBin binValue="0.2847155911707754">
-                        <Interval closure="openClosed" leftMargin="0.191" rightMargin="0.1967"/>
-                    </DiscretizeBin>
-                    <DiscretizeBin binValue="0.1511841987056277">
-                        <Interval closure="openClosed" leftMargin="0.1967" rightMargin="0.2092"/>
-                    </DiscretizeBin>
-                    <DiscretizeBin binValue="1.6710099484656658">
-                        <Interval closure="openClosed" leftMargin="0.2092" rightMargin="0.2163"/>
-                    </DiscretizeBin>
-                    <DiscretizeBin binValue="1.3143350060569334">
-                        <Interval closure="openClosed" leftMargin="0.2163" rightMargin="0.2397"/>
-                    </DiscretizeBin>
-                    <DiscretizeBin binValue="1.0648741456945927">
-                        <Interval closure="openClosed" leftMargin="0.2397" rightMargin="INF"/>
-                    </DiscretizeBin>
-                </Discretize>
+                <NormContinuous field="mean_symmetry">
+                    <LinearNorm orig="0.0" norm="-6.627327624957892"/>
+                    <LinearNorm orig="0.18105492957746488" norm="0.0"/>
+                </NormContinuous>
             </DerivedField>
             <DerivedField name="mean_fractal_dimension" optype="continuous" dataType="double">
-                <Discretize>
-                    <DiscretizeBin binValue="1.2190248265771542">
-                        <Interval closure="openClosed" leftMargin="-INF" rightMargin="0.05425"/>
-                    </DiscretizeBin>
-                    <DiscretizeBin binValue="0.525877647639936">
-                        <Interval closure="openClosed" leftMargin="0.05425" rightMargin="0.05593"/>
-                    </DiscretizeBin>
-                    <DiscretizeBin binValue="-0.21172129464420275">
-                        <Interval closure="openClosed" leftMargin="0.05593" rightMargin="0.05781"/>
-                    </DiscretizeBin>
-                    <DiscretizeBin binValue="-0.6171864024936715">
-                        <Interval closure="openClosed" leftMargin="0.05781" rightMargin="0.06053"/>
-                    </DiscretizeBin>
-                    <DiscretizeBin binValue="-0.046641544424051745">
-                        <Interval closure="openClosed" leftMargin="0.06053" rightMargin="0.06194"/>
-                    </DiscretizeBin>
-                    <DiscretizeBin binValue="0.24962427140347077">
-                        <Interval closure="openClosed" leftMargin="0.06194" rightMargin="0.06328"/>
-                    </DiscretizeBin>
-                    <DiscretizeBin binValue="-0.6171864024936715">
-                        <Interval closure="openClosed" leftMargin="0.06328" rightMargin="0.06672"/>
-                    </DiscretizeBin>
-                    <DiscretizeBin binValue="0.12041254007268082">
-                        <Interval closure="openClosed" leftMargin="0.06672" rightMargin="0.07029"/>
-                    </DiscretizeBin>
-                    <DiscretizeBin binValue="0.5723976631975563">
-                        <Interval closure="openClosed" leftMargin="0.07029" rightMargin="0.07542"/>
-                    </DiscretizeBin>
-                    <DiscretizeBin binValue="0.20045524750868818">
-                        <Interval closure="openClosed" leftMargin="0.07542" rightMargin="INF"/>
-                    </DiscretizeBin>
-                </Discretize>
+                <NormContinuous field="mean_fractal_dimension">
+                    <LinearNorm orig="0.0" norm="-8.92248853985651"/>
+                    <LinearNorm orig="0.06276959507042251" norm="0.0"/>
+                </NormContinuous>
             </DerivedField>
             <DerivedField name="std_radius" optype="continuous" dataType="double">
-                <Discretize>
-                    <DiscretizeBin binValue="-1.7011998913982371">
-                        <Interval closure="openClosed" leftMargin="-INF" rightMargin="0.2796"/>
-                    </DiscretizeBin>
-                    <DiscretizeBin binValue="-0.44352290854095744">
-                        <Interval closure="openClosed" leftMargin="0.2796" rightMargin="0.338"/>
-                    </DiscretizeBin>
-                    <DiscretizeBin binValue="-0.460617341889825">
-                        <Interval closure="openClosed" leftMargin="0.338" rightMargin="0.4209"/>
-                    </DiscretizeBin>
-                    <DiscretizeBin binValue="1.0519707424132887">
-                        <Interval closure="openClosed" leftMargin="0.4209" rightMargin="0.4727"/>
-                    </DiscretizeBin>
-                    <DiscretizeBin binValue="0.8443313781499479">
-                        <Interval closure="openClosed" leftMargin="0.4727" rightMargin="0.5558"/>
-                    </DiscretizeBin>
-                    <DiscretizeBin binValue="2.923772904211034">
-                        <Interval closure="openClosed" leftMargin="0.5558" rightMargin="0.6289"/>
-                    </DiscretizeBin>
-                    <DiscretizeBin binValue="2.5183078020528695">
-                        <Interval closure="openClosed" leftMargin="0.6289" rightMargin="0.7392"/>
-                    </DiscretizeBin>
-                    <DiscretizeBin binValue="3.61692006692098">
-                        <Interval closure="openClosed" leftMargin="0.7392" rightMargin="0.8601"/>
-                    </DiscretizeBin>
-                    <DiscretizeBin binValue="3.61692006692098">
-                        <Interval closure="openClosed" leftMargin="0.8601" rightMargin="1.167"/>
-                    </DiscretizeBin>
-                    <DiscretizeBin binValue="20.238942155549005">
-                        <Interval closure="openClosed" leftMargin="1.167" rightMargin="INF"/>
-                    </DiscretizeBin>
-                </Discretize>
+                <NormContinuous field="std_radius">
+                    <LinearNorm orig="0.0" norm="-1.4634103560937344"/>
+                    <LinearNorm orig="0.4039575704225356" norm="0.0"/>
+                </NormContinuous>
             </DerivedField>
             <DerivedField name="std_texture" optype="continuous" dataType="double">
-                <Discretize>
-                    <DiscretizeBin binValue="-0.5262146243372203">
-                        <Interval closure="openClosed" leftMargin="-INF" rightMargin="0.7096"/>
-                    </DiscretizeBin>
-                    <DiscretizeBin binValue="-0.020666058044880083">
-                        <Interval closure="openClosed" leftMargin="0.7096" rightMargin="0.8423"/>
-                    </DiscretizeBin>
-                    <DiscretizeBin binValue="0.21572271976882382">
-                        <Interval closure="openClosed" leftMargin="0.8423" rightMargin="0.9505"/>
-                    </DiscretizeBin>
-                    <DiscretizeBin binValue="0.525877647639936">
-                        <Interval closure="openClosed" leftMargin="0.9505" rightMargin="1.027"/>
-                    </DiscretizeBin>
-                    <DiscretizeBin binValue="0.033401163173202526">
-                        <Interval closure="openClosed" leftMargin="1.027" rightMargin="1.153"/>
-                    </DiscretizeBin>
-                    <DiscretizeBin binValue="0.21572271976882382">
-                        <Interval closure="openClosed" leftMargin="1.153" rightMargin="1.278"/>
-                    </DiscretizeBin>
-                    <DiscretizeBin binValue="0.21572271976882382">
-                        <Interval closure="openClosed" leftMargin="1.278" rightMargin="1.408"/>
-                    </DiscretizeBin>
-                    <DiscretizeBin binValue="0.061572040111565716">
-                        <Interval closure="openClosed" leftMargin="1.408" rightMargin="1.595"/>
-                    </DiscretizeBin>
-                    <DiscretizeBin binValue="-0.046641544424051745">
-                        <Interval closure="openClosed" leftMargin="1.595" rightMargin="1.962"/>
-                    </DiscretizeBin>
-                    <DiscretizeBin binValue="-0.4355335182779751">
-                        <Interval closure="openClosed" leftMargin="1.962" rightMargin="INF"/>
-                    </DiscretizeBin>
-                </Discretize>
+                <NormContinuous field="std_texture">
+                    <LinearNorm orig="0.0" norm="-2.205520915397837"/>
+                    <LinearNorm orig="1.2174019366197188" norm="0.0"/>
+                </NormContinuous>
             </DerivedField>
             <DerivedField name="std_perimeter" optype="continuous" dataType="double">
-                <Discretize>
-                    <DiscretizeBin binValue="-1.7443720632560515">
-                        <Interval closure="openClosed" leftMargin="-INF" rightMargin="2.066"/>
-                    </DiscretizeBin>
-                    <DiscretizeBin binValue="-0.49395376213757797">
-                        <Interval closure="openClosed" leftMargin="2.066" rightMargin="2.475"/>
-                    </DiscretizeBin>
-                    <DiscretizeBin binValue="-0.16726953210864562">
-                        <Interval closure="openClosed" leftMargin="2.475" rightMargin="2.927"/>
-                    </DiscretizeBin>
-                    <DiscretizeBin binValue="0.9778627704557206">
-                        <Interval closure="openClosed" leftMargin="2.927" rightMargin="3.271"/>
-                    </DiscretizeBin>
-                    <DiscretizeBin binValue="1.176465212387113">
-                        <Interval closure="openClosed" leftMargin="3.271" rightMargin="3.769"/>
-                    </DiscretizeBin>
-                    <DiscretizeBin binValue="1.5374785564786433">
-                        <Interval closure="openClosed" leftMargin="3.769" rightMargin="4.321"/>
-                    </DiscretizeBin>
-                    <DiscretizeBin binValue="2.2306257325760885">
-                        <Interval closure="openClosed" leftMargin="4.321" rightMargin="5.118"/>
-                    </DiscretizeBin>
-                    <DiscretizeBin binValue="3.61692006692098">
-                        <Interval closure="openClosed" leftMargin="5.118" rightMargin="6.311"/>
-                    </DiscretizeBin>
-                    <DiscretizeBin binValue="20.765035250781796">
-                        <Interval closure="openClosed" leftMargin="6.311" rightMargin="8.649"/>
-                    </DiscretizeBin>
-                    <DiscretizeBin binValue="20.158899448010725">
-                        <Interval closure="openClosed" leftMargin="8.649" rightMargin="INF"/>
-                    </DiscretizeBin>
-                </Discretize>
+                <NormContinuous field="std_perimeter">
+                    <LinearNorm orig="0.0" norm="-1.421390555527879"/>
+                    <LinearNorm orig="2.855983626760559" norm="0.0"/>
+                </NormContinuous>
             </DerivedField>
             <DerivedField name="std_area" optype="continuous" dataType="double">
-                <Discretize>
-                    <DiscretizeBin binValue="-1.9399079592163964">
-                        <Interval closure="openClosed" leftMargin="-INF" rightMargin="24.28"/>
-                    </DiscretizeBin>
-                    <DiscretizeBin binValue="-0.6171864024936715">
-                        <Interval closure="openClosed" leftMargin="24.28" rightMargin="33.12"/>
-                    </DiscretizeBin>
-                    <DiscretizeBin binValue="0.8443313781499479">
-                        <Interval closure="openClosed" leftMargin="33.12" rightMargin="41.18"/>
-                    </DiscretizeBin>
-                    <DiscretizeBin binValue="1.5374785564786433">
-                        <Interval closure="openClosed" leftMargin="41.18" rightMargin="49.11"/>
-                    </DiscretizeBin>
-                    <DiscretizeBin binValue="2.2306257325760885">
-                        <Interval closure="openClosed" leftMargin="49.11" rightMargin="60.41"/>
-                    </DiscretizeBin>
-                    <DiscretizeBin binValue="20.765035250781796">
-                        <Interval closure="openClosed" leftMargin="60.41" rightMargin="72.44"/>
-                    </DiscretizeBin>
-                    <DiscretizeBin binValue="3.61692006692098">
-                        <Interval closure="openClosed" leftMargin="72.44" rightMargin="90.94"/>
-                    </DiscretizeBin>
-                    <DiscretizeBin binValue="20.765035250781796">
-                        <Interval closure="openClosed" leftMargin="90.94" rightMargin="106.0"/>
-                    </DiscretizeBin>
-                    <DiscretizeBin binValue="20.765035250781796">
-                        <Interval closure="openClosed" leftMargin="106.0" rightMargin="153.1"/>
-                    </DiscretizeBin>
-                    <DiscretizeBin binValue="20.238942155549005">
-                        <Interval closure="openClosed" leftMargin="153.1" rightMargin="INF"/>
-                    </DiscretizeBin>
-                </Discretize>
+                <NormContinuous field="std_area">
+                    <LinearNorm orig="0.0" norm="-0.8863933700077381"/>
+                    <LinearNorm orig="40.13802464788737" norm="0.0"/>
+                </NormContinuous>
             </DerivedField>
             <DerivedField name="std_smoothness" optype="continuous" dataType="double">
-                <Discretize>
-                    <DiscretizeBin binValue="-0.3533718116047276">
-                        <Interval closure="openClosed" leftMargin="-INF" rightMargin="0.004444"/>
-                    </DiscretizeBin>
-                    <DiscretizeBin binValue="0.5723976631975563">
-                        <Interval closure="openClosed" leftMargin="0.004444" rightMargin="0.004928"/>
-                    </DiscretizeBin>
-                    <DiscretizeBin binValue="0.006002189011890015">
-                        <Interval closure="openClosed" leftMargin="0.004928" rightMargin="0.005463"/>
-                    </DiscretizeBin>
-                    <DiscretizeBin binValue="0.5723976631975563">
-                        <Interval closure="openClosed" leftMargin="0.005463" rightMargin="0.005783"/>
-                    </DiscretizeBin>
-                    <DiscretizeBin binValue="0.033401163173202526">
-                        <Interval closure="openClosed" leftMargin="0.005783" rightMargin="0.006294"/>
-                    </DiscretizeBin>
-                    <DiscretizeBin binValue="0.24962427140347077">
-                        <Interval closure="openClosed" leftMargin="0.006294" rightMargin="0.006773"/>
-                    </DiscretizeBin>
-                    <DiscretizeBin binValue="-0.2332274998486539">
-                        <Interval closure="openClosed" leftMargin="0.006773" rightMargin="0.007802"/>
-                    </DiscretizeBin>
-                    <DiscretizeBin binValue="0.1511841987056277">
-                        <Interval closure="openClosed" leftMargin="0.007802" rightMargin="0.008805"/>
-                    </DiscretizeBin>
-                    <DiscretizeBin binValue="-0.07195935238545703">
-                        <Interval closure="openClosed" leftMargin="0.008805" rightMargin="0.01056"/>
-                    </DiscretizeBin>
-                    <DiscretizeBin binValue="-0.6227450601868533">
-                        <Interval closure="openClosed" leftMargin="0.01056" rightMargin="INF"/>
-                    </DiscretizeBin>
-                </Discretize>
+                <NormContinuous field="std_smoothness">
+                    <LinearNorm orig="0.0" norm="-2.343201331121645"/>
+                    <LinearNorm orig="0.007042109154929578" norm="0.0"/>
+                </NormContinuous>
             </DerivedField>
             <DerivedField name="std_compactness" optype="continuous" dataType="double">
-                <Discretize>
-                    <DiscretizeBin binValue="-1.317553830766547">
-                        <Interval closure="openClosed" leftMargin="-INF" rightMargin="0.01386"/>
-                    </DiscretizeBin>
-                    <DiscretizeBin binValue="-0.673539339016453">
-                        <Interval closure="openClosed" leftMargin="0.01386" rightMargin="0.0187"/>
-                    </DiscretizeBin>
-                    <DiscretizeBin binValue="0.033401163173202526">
-                        <Interval closure="openClosed" leftMargin="0.0187" rightMargin="0.02251"/>
-                    </DiscretizeBin>
-                    <DiscretizeBin binValue="0.6724811215755914">
-                        <Interval closure="openClosed" leftMargin="0.02251" rightMargin="0.02569"/>
-                    </DiscretizeBin>
-                    <DiscretizeBin binValue="1.1320134498579788">
-                        <Interval closure="openClosed" leftMargin="0.02569" rightMargin="0.02899"/>
-                    </DiscretizeBin>
-                    <DiscretizeBin binValue="0.7265483427414812">
-                        <Interval closure="openClosed" leftMargin="0.02899" rightMargin="0.03255"/>
-                    </DiscretizeBin>
-                    <DiscretizeBin binValue="0.7837067564647631">
-                        <Interval closure="openClosed" leftMargin="0.03255" rightMargin="0.03799"/>
-                    </DiscretizeBin>
-                    <DiscretizeBin binValue="0.6724811215755914">
-                        <Interval closure="openClosed" leftMargin="0.03799" rightMargin="0.04732"/>
-                    </DiscretizeBin>
-                    <DiscretizeBin binValue="1.3143350060569334">
-                        <Interval closure="openClosed" leftMargin="0.04732" rightMargin="0.06213"/>
-                    </DiscretizeBin>
-                    <DiscretizeBin binValue="0.45176967522292766">
-                        <Interval closure="openClosed" leftMargin="0.06213" rightMargin="INF"/>
-                    </DiscretizeBin>
-                </Discretize>
+                <NormContinuous field="std_compactness">
+                    <LinearNorm orig="0.0" norm="-1.4213097399558947"/>
+                    <LinearNorm orig="0.02543665669014085" norm="0.0"/>
+                </NormContinuous>
             </DerivedField>
             <DerivedField name="std_concavity" optype="continuous" dataType="double">
-                <Discretize>
-                    <DiscretizeBin binValue="-1.7157986908168537">
-                        <Interval closure="openClosed" leftMargin="-INF" rightMargin="0.02059"/>
-                    </DiscretizeBin>
-                    <DiscretizeBin binValue="0.061572040111565716">
-                        <Interval closure="openClosed" leftMargin="0.02059" rightMargin="0.02602"/>
-                    </DiscretizeBin>
-                    <DiscretizeBin binValue="0.7837067564647631">
-                        <Interval closure="openClosed" leftMargin="0.02602" rightMargin="0.02913"/>
-                    </DiscretizeBin>
-                    <DiscretizeBin binValue="0.39804427632477857">
-                        <Interval closure="openClosed" leftMargin="0.02913" rightMargin="0.03407"/>
-                    </DiscretizeBin>
-                    <DiscretizeBin binValue="1.8251606274429242">
-                        <Interval closure="openClosed" leftMargin="0.03407" rightMargin="0.03829"/>
-                    </DiscretizeBin>
-                    <DiscretizeBin binValue="1.1320134498579788">
-                        <Interval closure="openClosed" leftMargin="0.03829" rightMargin="0.04305"/>
-                    </DiscretizeBin>
-                    <DiscretizeBin binValue="0.7837067564647631">
-                        <Interval closure="openClosed" leftMargin="0.04305" rightMargin="0.04912"/>
-                    </DiscretizeBin>
-                    <DiscretizeBin binValue="1.1320134498579788">
-                        <Interval closure="openClosed" leftMargin="0.04912" rightMargin="0.0573"/>
-                    </DiscretizeBin>
-                    <DiscretizeBin binValue="1.2190248265771542">
-                        <Interval closure="openClosed" leftMargin="0.0573" rightMargin="0.07927"/>
-                    </DiscretizeBin>
-                    <DiscretizeBin binValue="0.382776803905976">
-                        <Interval closure="openClosed" leftMargin="0.07927" rightMargin="INF"/>
-                    </DiscretizeBin>
-                </Discretize>
+                <NormContinuous field="std_concavity">
+                    <LinearNorm orig="0.0" norm="-1.0548539331491438"/>
+                    <LinearNorm orig="0.03185527218309857" norm="0.0"/>
+                </NormContinuous>
             </DerivedField>
             <DerivedField name="std_concave_points" optype="continuous" dataType="double">
-                <Discretize>
-                    <DiscretizeBin binValue="-1.6301039697274018">
-                        <Interval closure="openClosed" leftMargin="-INF" rightMargin="0.009233"/>
-                    </DiscretizeBin>
-                    <DiscretizeBin binValue="-0.27490019621821893">
-                        <Interval closure="openClosed" leftMargin="0.009233" rightMargin="0.01091"/>
-                    </DiscretizeBin>
-                    <DiscretizeBin binValue="0.1511841987056277">
-                        <Interval closure="openClosed" leftMargin="0.01091" rightMargin="0.01221"/>
-                    </DiscretizeBin>
-                    <DiscretizeBin binValue="0.6211878272819882">
-                        <Interval closure="openClosed" leftMargin="0.01221" rightMargin="0.01334"/>
-                    </DiscretizeBin>
-                    <DiscretizeBin binValue="0.908869899138769">
-                        <Interval closure="openClosed" leftMargin="0.01334" rightMargin="0.01435"/>
-                    </DiscretizeBin>
-                    <DiscretizeBin binValue="1.1320134498579788">
-                        <Interval closure="openClosed" leftMargin="0.01435" rightMargin="0.01569"/>
-                    </DiscretizeBin>
-                    <DiscretizeBin binValue="1.3143350060569334">
-                        <Interval closure="openClosed" leftMargin="0.01569" rightMargin="0.01721"/>
-                    </DiscretizeBin>
-                    <DiscretizeBin binValue="1.1320134498579788">
-                        <Interval closure="openClosed" leftMargin="0.01721" rightMargin="0.01911"/>
-                    </DiscretizeBin>
-                    <DiscretizeBin binValue="1.4196955213180933">
-                        <Interval closure="openClosed" leftMargin="0.01911" rightMargin="0.0248"/>
-                    </DiscretizeBin>
-                    <DiscretizeBin binValue="1.0113854612458502">
-                        <Interval closure="openClosed" leftMargin="0.0248" rightMargin="INF"/>
-                    </DiscretizeBin>
-                </Discretize>
+                <NormContinuous field="std_concave_points">
+                    <LinearNorm orig="0.0" norm="-1.909610331077918"/>
+                    <LinearNorm orig="0.011788964788732394" norm="0.0"/>
+                </NormContinuous>
             </DerivedField>
             <DerivedField name="std_symmetry" optype="continuous" dataType="double">
-                <Discretize>
-                    <DiscretizeBin binValue="0.35882356322642034">
-                        <Interval closure="openClosed" leftMargin="-INF" rightMargin="0.01266"/>
-                    </DiscretizeBin>
-                    <DiscretizeBin binValue="0.2847155911707754">
-                        <Interval closure="openClosed" leftMargin="0.01266" rightMargin="0.01411"/>
-                    </DiscretizeBin>
-                    <DiscretizeBin binValue="0.35882356322642034">
-                        <Interval closure="openClosed" leftMargin="0.01411" rightMargin="0.01522"/>
-                    </DiscretizeBin>
-                    <DiscretizeBin binValue="0.12041254007268082">
-                        <Interval closure="openClosed" leftMargin="0.01522" rightMargin="0.01647"/>
-                    </DiscretizeBin>
-                    <DiscretizeBin binValue="0.24962427140347077">
-                        <Interval closure="openClosed" leftMargin="0.01647" rightMargin="0.01798"/>
-                    </DiscretizeBin>
-                    <DiscretizeBin binValue="-0.32761218207527204">
-                        <Interval closure="openClosed" leftMargin="0.01798" rightMargin="0.01962"/>
-                    </DiscretizeBin>
-                    <DiscretizeBin binValue="-0.05220020242492583">
-                        <Interval closure="openClosed" leftMargin="0.01962" rightMargin="0.02183"/>
-                    </DiscretizeBin>
-                    <DiscretizeBin binValue="-0.39041308326058266">
-                        <Interval closure="openClosed" leftMargin="0.02183" rightMargin="0.02659"/>
-                    </DiscretizeBin>
-                    <DiscretizeBin binValue="-0.5419629812965052">
-                        <Interval closure="openClosed" leftMargin="0.02659" rightMargin="0.04499"/>
-                    </DiscretizeBin>
-                    <DiscretizeBin binValue="2.9237728873201254">
-                        <Interval closure="openClosed" leftMargin="0.04499" rightMargin="INF"/>
-                    </DiscretizeBin>
-                </Discretize>
+                <NormContinuous field="std_symmetry">
+                    <LinearNorm orig="0.0" norm="-2.483691655762281"/>
+                    <LinearNorm orig="0.02052559507042254" norm="0.0"/>
+                </NormContinuous>
             </DerivedField>
             <DerivedField name="std_fractal_dimension" optype="continuous" dataType="double">
-                <Discretize>
-                    <DiscretizeBin binValue="-0.6025876030801275">
-                        <Interval closure="openClosed" leftMargin="-INF" rightMargin="0.001941"/>
-                    </DiscretizeBin>
-                    <DiscretizeBin binValue="-0.7138132381350887">
-                        <Interval closure="openClosed" leftMargin="0.001941" rightMargin="0.002528"/>
-                    </DiscretizeBin>
-                    <DiscretizeBin binValue="-0.07195935238545703">
-                        <Interval closure="openClosed" leftMargin="0.002528" rightMargin="0.002887"/>
-                    </DiscretizeBin>
-                    <DiscretizeBin binValue="0.1511841987056277">
-                        <Interval closure="openClosed" leftMargin="0.002887" rightMargin="0.003339"/>
-                    </DiscretizeBin>
-                    <DiscretizeBin binValue="0.1648643026018151">
-                        <Interval closure="openClosed" leftMargin="0.003339" rightMargin="0.003761"/>
-                    </DiscretizeBin>
-                    <DiscretizeBin binValue="0.525877647639936">
-                        <Interval closure="openClosed" leftMargin="0.003761" rightMargin="0.004237"/>
-                    </DiscretizeBin>
-                    <DiscretizeBin binValue="0.908869899138769">
-                        <Interval closure="openClosed" leftMargin="0.004237" rightMargin="0.004638"/>
-                    </DiscretizeBin>
-                    <DiscretizeBin binValue="0.35882356322642034">
-                        <Interval closure="openClosed" leftMargin="0.004638" rightMargin="0.005701"/>
-                    </DiscretizeBin>
-                    <DiscretizeBin binValue="0.6724811215755914">
-                        <Interval closure="openClosed" leftMargin="0.005701" rightMargin="0.007358"/>
-                    </DiscretizeBin>
-                    <DiscretizeBin binValue="-0.24731223954465278">
-                        <Interval closure="openClosed" leftMargin="0.007358" rightMargin="INF"/>
-                    </DiscretizeBin>
-                </Discretize>
+                <NormContinuous field="std_fractal_dimension">
+                    <LinearNorm orig="0.0" norm="-1.4321658823263728"/>
+                    <LinearNorm orig="0.0037906818661971827" norm="0.0"/>
+                </NormContinuous>
             </DerivedField>
             <DerivedField name="worst_radius" optype="continuous" dataType="double">
-                <Discretize>
-                    <DiscretizeBin binValue="-2.1545210206202516">
-                        <Interval closure="openClosed" leftMargin="-INF" rightMargin="16.08"/>
-                    </DiscretizeBin>
-                    <DiscretizeBin binValue="0.24962427140347077">
-                        <Interval closure="openClosed" leftMargin="16.08" rightMargin="17.32"/>
-                    </DiscretizeBin>
-                    <DiscretizeBin binValue="1.8251606274429242">
-                        <Interval closure="openClosed" leftMargin="17.32" rightMargin="18.51"/>
-                    </DiscretizeBin>
-                    <DiscretizeBin binValue="3.6613718294501143">
-                        <Interval closure="openClosed" leftMargin="18.51" rightMargin="19.92"/>
-                    </DiscretizeBin>
-                    <DiscretizeBin binValue="20.765035250781796">
-                        <Interval closure="openClosed" leftMargin="19.92" rightMargin="20.96"/>
-                    </DiscretizeBin>
-                    <DiscretizeBin binValue="20.765035250781796">
-                        <Interval closure="openClosed" leftMargin="20.96" rightMargin="22.52"/>
-                    </DiscretizeBin>
-                    <DiscretizeBin binValue="20.765035250781796">
-                        <Interval closure="openClosed" leftMargin="22.52" rightMargin="23.69"/>
-                    </DiscretizeBin>
-                    <DiscretizeBin binValue="20.765035250781796">
-                        <Interval closure="openClosed" leftMargin="23.69" rightMargin="25.28"/>
-                    </DiscretizeBin>
-                    <DiscretizeBin binValue="20.765035250781796">
-                        <Interval closure="openClosed" leftMargin="25.28" rightMargin="28.4"/>
-                    </DiscretizeBin>
-                    <DiscretizeBin binValue="20.158899448010725">
-                        <Interval closure="openClosed" leftMargin="28.4" rightMargin="INF"/>
-                    </DiscretizeBin>
-                </Discretize>
+                <NormContinuous field="worst_radius">
+                    <LinearNorm orig="0.0" norm="-3.370400527357199"/>
+                    <LinearNorm orig="16.25314964788733" norm="0.0"/>
+                </NormContinuous>
             </DerivedField>
             <DerivedField name="worst_texture" optype="continuous" dataType="double">
-                <Discretize>
-                    <DiscretizeBin binValue="-1.6405752695927398">
-                        <Interval closure="openClosed" leftMargin="-INF" rightMargin="23.19"/>
-                    </DiscretizeBin>
-                    <DiscretizeBin binValue="-0.046641544424051745">
-                        <Interval closure="openClosed" leftMargin="23.19" rightMargin="25.21"/>
-                    </DiscretizeBin>
-                    <DiscretizeBin binValue="0.1511841987056277">
-                        <Interval closure="openClosed" leftMargin="25.21" rightMargin="26.4"/>
-                    </DiscretizeBin>
-                    <DiscretizeBin binValue="0.525877647639936">
-                        <Interval closure="openClosed" leftMargin="26.4" rightMargin="27.84"/>
-                    </DiscretizeBin>
-                    <DiscretizeBin binValue="0.35882356322642034">
-                        <Interval closure="openClosed" leftMargin="27.84" rightMargin="29.43"/>
-                    </DiscretizeBin>
-                    <DiscretizeBin binValue="1.6710099484656658">
-                        <Interval closure="openClosed" leftMargin="29.43" rightMargin="30.86"/>
-                    </DiscretizeBin>
-                    <DiscretizeBin binValue="0.9778627704557206">
-                        <Interval closure="openClosed" leftMargin="30.86" rightMargin="32.07"/>
-                    </DiscretizeBin>
-                    <DiscretizeBin binValue="1.6710099484656658">
-                        <Interval closure="openClosed" leftMargin="32.07" rightMargin="34.01"/>
-                    </DiscretizeBin>
-                    <DiscretizeBin binValue="1.2190248265771542">
-                        <Interval closure="openClosed" leftMargin="34.01" rightMargin="37.38"/>
-                    </DiscretizeBin>
-                    <DiscretizeBin binValue="1.1449168532328728">
-                        <Interval closure="openClosed" leftMargin="37.38" rightMargin="INF"/>
-                    </DiscretizeBin>
-                </Discretize>
+                <NormContinuous field="worst_texture">
+                    <LinearNorm orig="0.0" norm="-4.183219639034475"/>
+                    <LinearNorm orig="25.691919014084498" norm="0.0"/>
+                </NormContinuous>
             </DerivedField>
             <DerivedField name="worst_perimeter" optype="continuous" dataType="double">
-                <Discretize>
-                    <DiscretizeBin binValue="-2.1851982728639388">
-                        <Interval closure="openClosed" leftMargin="-INF" rightMargin="107.4"/>
-                    </DiscretizeBin>
-                    <DiscretizeBin binValue="0.525877647639936">
-                        <Interval closure="openClosed" leftMargin="107.4" rightMargin="115.9"/>
-                    </DiscretizeBin>
-                    <DiscretizeBin binValue="2.5183078020528695">
-                        <Interval closure="openClosed" leftMargin="115.9" rightMargin="124.3"/>
-                    </DiscretizeBin>
-                    <DiscretizeBin binValue="3.61692006692098">
-                        <Interval closure="openClosed" leftMargin="124.3" rightMargin="129.8"/>
-                    </DiscretizeBin>
-                    <DiscretizeBin binValue="20.765035250781796">
-                        <Interval closure="openClosed" leftMargin="129.8" rightMargin="139.9"/>
-                    </DiscretizeBin>
-                    <DiscretizeBin binValue="20.765035250781796">
-                        <Interval closure="openClosed" leftMargin="139.9" rightMargin="149.3"/>
-                    </DiscretizeBin>
-                    <DiscretizeBin binValue="20.765035250781796">
-                        <Interval closure="openClosed" leftMargin="149.3" rightMargin="157.6"/>
-                    </DiscretizeBin>
-                    <DiscretizeBin binValue="20.765035250781796">
-                        <Interval closure="openClosed" leftMargin="157.6" rightMargin="166.8"/>
-                    </DiscretizeBin>
-                    <DiscretizeBin binValue="20.765035250781796">
-                        <Interval closure="openClosed" leftMargin="166.8" rightMargin="195.0"/>
-                    </DiscretizeBin>
-                    <DiscretizeBin binValue="20.238942155549005">
-                        <Interval closure="openClosed" leftMargin="195.0" rightMargin="INF"/>
-                    </DiscretizeBin>
-                </Discretize>
+                <NormContinuous field="worst_perimeter">
+                    <LinearNorm orig="0.0" norm="-3.2001808533067124"/>
+                    <LinearNorm orig="107.12505281690146" norm="0.0"/>
+                </NormContinuous>
             </DerivedField>
             <DerivedField name="worst_area" optype="continuous" dataType="double">
-                <Discretize>
-                    <DiscretizeBin binValue="-2.1607322207122035">
-                        <Interval closure="openClosed" leftMargin="-INF" rightMargin="788.0"/>
-                    </DiscretizeBin>
-                    <DiscretizeBin binValue="0.32108323529442806">
-                        <Interval closure="openClosed" leftMargin="788.0" rightMargin="915.0"/>
-                    </DiscretizeBin>
-                    <DiscretizeBin binValue="2.007482183046879">
-                        <Interval closure="openClosed" leftMargin="915.0" rightMargin="1032.0"/>
-                    </DiscretizeBin>
-                    <DiscretizeBin binValue="2.923772904211034">
-                        <Interval closure="openClosed" leftMargin="1032.0" rightMargin="1227.0"/>
-                    </DiscretizeBin>
-                    <DiscretizeBin binValue="20.765035250781796">
-                        <Interval closure="openClosed" leftMargin="1227.0" rightMargin="1321.0"/>
-                    </DiscretizeBin>
-                    <DiscretizeBin binValue="20.765035250781796">
-                        <Interval closure="openClosed" leftMargin="1321.0" rightMargin="1540.0"/>
-                    </DiscretizeBin>
-                    <DiscretizeBin binValue="20.765035250781796">
-                        <Interval closure="openClosed" leftMargin="1540.0" rightMargin="1671.0"/>
-                    </DiscretizeBin>
-                    <DiscretizeBin binValue="20.765035250781796">
-                        <Interval closure="openClosed" leftMargin="1671.0" rightMargin="1933.0"/>
-                    </DiscretizeBin>
-                    <DiscretizeBin binValue="20.765035250781796">
-                        <Interval closure="openClosed" leftMargin="1933.0" rightMargin="2477.0"/>
-                    </DiscretizeBin>
-                    <DiscretizeBin binValue="20.238942155549005">
-                        <Interval closure="openClosed" leftMargin="2477.0" rightMargin="INF"/>
-                    </DiscretizeBin>
-                </Discretize>
+                <NormContinuous field="worst_area">
+                    <LinearNorm orig="0.0" norm="-1.5472125545287698"/>
+                    <LinearNorm orig="878.5788732394362" norm="0.0"/>
+                </NormContinuous>
             </DerivedField>
             <DerivedField name="worst_smoothness" optype="continuous" dataType="double">
-                <Discretize>
-                    <DiscretizeBin binValue="-1.2658818202358464">
-                        <Interval closure="openClosed" leftMargin="-INF" rightMargin="0.1183"/>
-                    </DiscretizeBin>
-                    <DiscretizeBin binValue="-0.33432361664698673">
-                        <Interval closure="openClosed" leftMargin="0.1183" rightMargin="0.1264"/>
-                    </DiscretizeBin>
-                    <DiscretizeBin binValue="-0.673539339016453">
-                        <Interval closure="openClosed" leftMargin="0.1264" rightMargin="0.1358"/>
-                    </DiscretizeBin>
-                    <DiscretizeBin binValue="0.525877647639936">
-                        <Interval closure="openClosed" leftMargin="0.1358" rightMargin="0.1402"/>
-                    </DiscretizeBin>
-                    <DiscretizeBin binValue="0.35882356322642034">
-                        <Interval closure="openClosed" leftMargin="0.1402" rightMargin="0.1444"/>
-                    </DiscretizeBin>
-                    <DiscretizeBin binValue="0.7265483427414812">
-                        <Interval closure="openClosed" leftMargin="0.1444" rightMargin="0.1502"/>
-                    </DiscretizeBin>
-                    <DiscretizeBin binValue="0.9778627704557206">
-                        <Interval closure="openClosed" leftMargin="0.1502" rightMargin="0.1551"/>
-                    </DiscretizeBin>
-                    <DiscretizeBin binValue="1.3143350060569334">
-                        <Interval closure="openClosed" leftMargin="0.1551" rightMargin="0.165"/>
-                    </DiscretizeBin>
-                    <DiscretizeBin binValue="1.6710099484656658">
-                        <Interval closure="openClosed" leftMargin="0.165" rightMargin="0.1794"/>
-                    </DiscretizeBin>
-                    <DiscretizeBin binValue="1.9922147068200766">
-                        <Interval closure="openClosed" leftMargin="0.1794" rightMargin="INF"/>
-                    </DiscretizeBin>
-                </Discretize>
+                <NormContinuous field="worst_smoothness">
+                    <LinearNorm orig="0.0" norm="-5.798716102882977"/>
+                    <LinearNorm orig="0.13231607394366207" norm="0.0"/>
+                </NormContinuous>
             </DerivedField>
             <DerivedField name="worst_compactness" optype="continuous" dataType="double">
-                <Discretize>
-                    <DiscretizeBin binValue="-1.7767074438936552">
-                        <Interval closure="openClosed" leftMargin="-INF" rightMargin="0.1928"/>
-                    </DiscretizeBin>
-                    <DiscretizeBin binValue="-0.2332274998486539">
-                        <Interval closure="openClosed" leftMargin="0.1928" rightMargin="0.2302"/>
-                    </DiscretizeBin>
-                    <DiscretizeBin binValue="-0.046641544424051745">
-                        <Interval closure="openClosed" leftMargin="0.2302" rightMargin="0.2772"/>
-                    </DiscretizeBin>
-                    <DiscretizeBin binValue="0.5723976631975563">
-                        <Interval closure="openClosed" leftMargin="0.2772" rightMargin="0.3206"/>
-                    </DiscretizeBin>
-                    <DiscretizeBin binValue="1.2190248265771542">
-                        <Interval closure="openClosed" leftMargin="0.3206" rightMargin="0.3593"/>
-                    </DiscretizeBin>
-                    <DiscretizeBin binValue="1.5374785564786433">
-                        <Interval closure="openClosed" leftMargin="0.3593" rightMargin="0.4002"/>
-                    </DiscretizeBin>
-                    <DiscretizeBin binValue="2.2306257325760885">
-                        <Interval closure="openClosed" leftMargin="0.4002" rightMargin="0.4257"/>
-                    </DiscretizeBin>
-                    <DiscretizeBin binValue="2.007482183046879">
-                        <Interval closure="openClosed" leftMargin="0.4257" rightMargin="0.5209"/>
-                    </DiscretizeBin>
-                    <DiscretizeBin binValue="2.923772904211034">
-                        <Interval closure="openClosed" leftMargin="0.5209" rightMargin="0.6643"/>
-                    </DiscretizeBin>
-                    <DiscretizeBin binValue="20.238942155549005">
-                        <Interval closure="openClosed" leftMargin="0.6643" rightMargin="INF"/>
-                    </DiscretizeBin>
-                </Discretize>
+                <NormContinuous field="worst_compactness">
+                    <LinearNorm orig="0.0" norm="-1.6198296859021801"/>
+                    <LinearNorm orig="0.25354086267605663" norm="0.0"/>
+                </NormContinuous>
             </DerivedField>
             <DerivedField name="worst_concavity" optype="continuous" dataType="double">
-                <Discretize>
-                    <DiscretizeBin binValue="-2.052960820482644">
-                        <Interval closure="openClosed" leftMargin="-INF" rightMargin="0.256"/>
-                    </DiscretizeBin>
-                    <DiscretizeBin binValue="0.24962427140347077">
-                        <Interval closure="openClosed" leftMargin="0.256" rightMargin="0.3157"/>
-                    </DiscretizeBin>
-                    <DiscretizeBin binValue="0.9778627704557206">
-                        <Interval closure="openClosed" leftMargin="0.3157" rightMargin="0.3533"/>
-                    </DiscretizeBin>
-                    <DiscretizeBin binValue="1.7154617109948">
-                        <Interval closure="openClosed" leftMargin="0.3533" rightMargin="0.3861"/>
-                    </DiscretizeBin>
-                    <DiscretizeBin binValue="2.5183078020528695">
-                        <Interval closure="openClosed" leftMargin="0.3861" rightMargin="0.4185"/>
-                    </DiscretizeBin>
-                    <DiscretizeBin binValue="2.5183078020528695">
-                        <Interval closure="openClosed" leftMargin="0.4185" rightMargin="0.4779"/>
-                    </DiscretizeBin>
-                    <DiscretizeBin binValue="2.5183078020528695">
-                        <Interval closure="openClosed" leftMargin="0.4779" rightMargin="0.5381"/>
-                    </DiscretizeBin>
-                    <DiscretizeBin binValue="2.923772904211034">
-                        <Interval closure="openClosed" leftMargin="0.5381" rightMargin="0.6305"/>
-                    </DiscretizeBin>
-                    <DiscretizeBin binValue="2.923772904211034">
-                        <Interval closure="openClosed" leftMargin="0.6305" rightMargin="0.7356"/>
-                    </DiscretizeBin>
-                    <DiscretizeBin binValue="1.6244899298050155">
-                        <Interval closure="openClosed" leftMargin="0.7356" rightMargin="INF"/>
-                    </DiscretizeBin>
-                </Discretize>
+                <NormContinuous field="worst_concavity">
+                    <LinearNorm orig="0.0" norm="-1.3049482081221482"/>
+                    <LinearNorm orig="0.271414343309859" norm="0.0"/>
+                </NormContinuous>
             </DerivedField>
             <DerivedField name="worst_concave_points" optype="continuous" dataType="double">
-                <Discretize>
-                    <DiscretizeBin binValue="-2.1607322207122035">
-                        <Interval closure="openClosed" leftMargin="-INF" rightMargin="0.1226"/>
-                    </DiscretizeBin>
-                    <DiscretizeBin binValue="0.35882356322642034">
-                        <Interval closure="openClosed" leftMargin="0.1226" rightMargin="0.1489"/>
-                    </DiscretizeBin>
-                    <DiscretizeBin binValue="2.007482183046879">
-                        <Interval closure="openClosed" leftMargin="0.1489" rightMargin="0.1595"/>
-                    </DiscretizeBin>
-                    <DiscretizeBin binValue="2.923772904211034">
-                        <Interval closure="openClosed" leftMargin="0.1595" rightMargin="0.1727"/>
-                    </DiscretizeBin>
-                    <DiscretizeBin binValue="3.6613718294501143">
-                        <Interval closure="openClosed" leftMargin="0.1727" rightMargin="0.1834"/>
-                    </DiscretizeBin>
-                    <DiscretizeBin binValue="20.765035250781796">
-                        <Interval closure="openClosed" leftMargin="0.1834" rightMargin="0.1977"/>
-                    </DiscretizeBin>
-                    <DiscretizeBin binValue="20.765035250781796">
-                        <Interval closure="openClosed" leftMargin="0.1977" rightMargin="0.2091"/>
-                    </DiscretizeBin>
-                    <DiscretizeBin binValue="20.765035250781796">
-                        <Interval closure="openClosed" leftMargin="0.2091" rightMargin="0.2255"/>
-                    </DiscretizeBin>
-                    <DiscretizeBin binValue="20.765035250781796">
-                        <Interval closure="openClosed" leftMargin="0.2255" rightMargin="0.2575"/>
-                    </DiscretizeBin>
-                    <DiscretizeBin binValue="20.158899448010725">
-                        <Interval closure="openClosed" leftMargin="0.2575" rightMargin="INF"/>
-                    </DiscretizeBin>
-                </Discretize>
+                <NormContinuous field="worst_concave_points">
+                    <LinearNorm orig="0.0" norm="-1.7460797133074155"/>
+                    <LinearNorm orig="0.11434074119718311" norm="0.0"/>
+                </NormContinuous>
             </DerivedField>
             <DerivedField name="worst_symmetry" optype="continuous" dataType="double">
-                <Discretize>
-                    <DiscretizeBin binValue="-1.1104677164072905">
-                        <Interval closure="openClosed" leftMargin="-INF" rightMargin="0.2478"/>
-                    </DiscretizeBin>
-                    <DiscretizeBin binValue="-0.6025876030801275">
-                        <Interval closure="openClosed" leftMargin="0.2478" rightMargin="0.2691"/>
-                    </DiscretizeBin>
-                    <DiscretizeBin binValue="-0.2542809090306617">
-                        <Interval closure="openClosed" leftMargin="0.2691" rightMargin="0.2841"/>
-                    </DiscretizeBin>
-                    <DiscretizeBin binValue="-0.14428001390281572">
-                        <Interval closure="openClosed" leftMargin="0.2841" rightMargin="0.301"/>
-                    </DiscretizeBin>
-                    <DiscretizeBin binValue="0.24962427140347077">
-                        <Interval closure="openClosed" leftMargin="0.301" rightMargin="0.3135"/>
-                    </DiscretizeBin>
-                    <DiscretizeBin binValue="0.43886627078553375">
-                        <Interval closure="openClosed" leftMargin="0.3135" rightMargin="0.3266"/>
-                    </DiscretizeBin>
-                    <DiscretizeBin binValue="0.48142588513965584">
-                        <Interval closure="openClosed" leftMargin="0.3266" rightMargin="0.3549"/>
-                    </DiscretizeBin>
-                    <DiscretizeBin binValue="1.8251606274429242">
-                        <Interval closure="openClosed" leftMargin="0.3549" rightMargin="0.3799"/>
-                    </DiscretizeBin>
-                    <DiscretizeBin binValue="2.5183078020528695">
-                        <Interval closure="openClosed" leftMargin="0.3799" rightMargin="0.467"/>
-                    </DiscretizeBin>
-                    <DiscretizeBin binValue="20.238942155549005">
-                        <Interval closure="openClosed" leftMargin="0.467" rightMargin="INF"/>
-                    </DiscretizeBin>
-                </Discretize>
+                <NormContinuous field="worst_symmetry">
+                    <LinearNorm orig="0.0" norm="-4.7111787591027054"/>
+                    <LinearNorm orig="0.2897762323943664" norm="0.0"/>
+                </NormContinuous>
             </DerivedField>
             <DerivedField name="worst_fractal_dimension" optype="continuous" dataType="double">
-                <Discretize>
-                    <DiscretizeBin binValue="-0.6457597749231531">
-                        <Interval closure="openClosed" leftMargin="-INF" rightMargin="0.06829"/>
-                    </DiscretizeBin>
-                    <DiscretizeBin binValue="-0.8019205056057392">
-                        <Interval closure="openClosed" leftMargin="0.06829" rightMargin="0.0757"/>
-                    </DiscretizeBin>
-                    <DiscretizeBin binValue="-0.3533718116047276">
-                        <Interval closure="openClosed" leftMargin="0.0757" rightMargin="0.0792"/>
-                    </DiscretizeBin>
-                    <DiscretizeBin binValue="-0.18974238794267392">
-                        <Interval closure="openClosed" leftMargin="0.0792" rightMargin="0.08317"/>
-                    </DiscretizeBin>
-                    <DiscretizeBin binValue="0.006002189011890015">
-                        <Interval closure="openClosed" leftMargin="0.08317" rightMargin="0.08911"/>
-                    </DiscretizeBin>
-                    <DiscretizeBin binValue="0.2847155911707754">
-                        <Interval closure="openClosed" leftMargin="0.08911" rightMargin="0.09479"/>
-                    </DiscretizeBin>
-                    <DiscretizeBin binValue="0.9778627704557206">
-                        <Interval closure="openClosed" leftMargin="0.09479" rightMargin="0.1016"/>
-                    </DiscretizeBin>
-                    <DiscretizeBin binValue="1.3143350060569334">
-                        <Interval closure="openClosed" leftMargin="0.1016" rightMargin="0.1072"/>
-                    </DiscretizeBin>
-                    <DiscretizeBin binValue="1.1320134498579788">
-                        <Interval closure="openClosed" leftMargin="0.1072" rightMargin="0.1259"/>
-                    </DiscretizeBin>
-                    <DiscretizeBin binValue="1.7045326373432956">
-                        <Interval closure="openClosed" leftMargin="0.1259" rightMargin="INF"/>
-                    </DiscretizeBin>
-                </Discretize>
+                <NormContinuous field="worst_fractal_dimension">
+                    <LinearNorm orig="0.0" norm="-4.655729030483473"/>
+                    <LinearNorm orig="0.08388427816901405" norm="0.0"/>
+                </NormContinuous>
             </DerivedField>
         </LocalTransformations>
     </NeuralNetwork>
