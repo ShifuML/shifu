@@ -18,10 +18,8 @@ import org.dmg.pmml.LocalTransformations;
 import org.dmg.pmml.NeuralNetwork;
 import org.dmg.pmml.OpType;
 import org.dmg.pmml.PMML;
-import org.encog.ml.data.MLData;
 import org.encog.neural.networks.BasicNetwork;
 import org.encog.neural.networks.PersistBasicNetwork;
-import org.jpmml.evaluator.ModelEvaluationContext;
 import org.jpmml.evaluator.NeuralNetworkEvaluator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -99,7 +97,7 @@ public class PMMLEncogNeuralNetworkTest extends PMMLModelTest<BasicNetwork> {
 //            context.declareAll(map);
 //            MLData data = evalInput.normalizeData(context);
             //log.info("," + mlModel.compute(data).getData(0));
-           System.out.println( getPMMLEvaluatorResult(map));
+//           System.out.println( getPMMLEvaluatorResult(map));
         }
 
     }

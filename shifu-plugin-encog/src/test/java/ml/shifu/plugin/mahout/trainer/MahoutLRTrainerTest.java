@@ -10,7 +10,7 @@ import java.io.File;
 public class MahoutLRTrainerTest {
 
     @Test
-    public void testMahoutNNTrainer() throws Exception {
+    public void testMahoutLRTrainer() throws Exception {
         ShifuRequest req = JSONUtils.readValue(new File("src/test/resources/trainer/MahoutLRExecTrainRequest.json"), ShifuRequest.class);
         RequestDispatcher.dispatch(req);
     }

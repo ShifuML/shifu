@@ -59,7 +59,7 @@ public class MahoutNNTrainer implements Trainer {
         }
         //save neural network
         String path = pathOutput + "/model_" + trainerID + "_" + 1;
-        saveNN(path);
+        saveMLModel(path);
         //evaluate and calculate errors
         String extra = " <-- NN saved: " + path;
         log.info("  Trainer-" + trainerID + "\n Train Error: "
@@ -67,7 +67,7 @@ public class MahoutNNTrainer implements Trainer {
         log.info("Trainer #" + trainerID + " is Finished!");
     }
 
-    public void convertDataSet(PMMLDataSet pmmlDataSet, int numActiveFields,
+    private void convertDataSet(PMMLDataSet pmmlDataSet, int numActiveFields,
             int numTargetFields) {
         List<MiningField> miningFields = pmmlDataSet.getMiningSchema()
                 .getMiningFields();
@@ -99,7 +99,7 @@ public class MahoutNNTrainer implements Trainer {
         }
     }
 
-    public void splitDataSet(Double splitRatio) {
+    private void splitDataSet(Double splitRatio) {
         Random random = new Random();
         for (MahoutDataPair pair : fullDataSet) {
             if (random.nextDouble() <= splitRatio) {
@@ -108,7 +108,7 @@ public class MahoutNNTrainer implements Trainer {
         }
     }
 
-    public Double calculateMSE(NeuralNetwork network) {
+    private Double calculateMSE(NeuralNetwork network) {
         double mseError = 0;
         long numRecords = fullDataSet.size();
         for (MahoutDataPair pair : fullDataSet) {
@@ -162,7 +162,7 @@ public class MahoutNNTrainer implements Trainer {
         // return calculateMSEParallel(this.network, this.validSet);
     }
 
-    private void saveNN(String path) throws IOException {
+    private void saveMLModel(String path) throws IOException {
 
 //        EncogDirectoryPersistence.saveObject(new File(path), network);
     }

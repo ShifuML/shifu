@@ -12,6 +12,7 @@
                 "pathPMML": "src/test/resources/trainer/model.xml",
                 "pathNormalizedData": "src/test/resources/trainer/normalized.txt",
                 "numEpochs": 100,
+                "PriorFunction": "L1",
                 "trainerID": "test",
                 "pathOutput": "src/test/resources/trainer/mahoutLR",
                 "splitRatio": 0.8,

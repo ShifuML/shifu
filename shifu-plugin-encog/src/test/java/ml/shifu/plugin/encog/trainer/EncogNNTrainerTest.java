@@ -10,7 +10,7 @@ import java.io.File;
 public class EncogNNTrainerTest {
 
     @Test
-    public void test8() throws Exception {
+    public void testEncogNNTrainer() throws Exception {
         ShifuRequest req = JSONUtils.readValue(new File("src/test/resources/trainer/ExecTrainRequest.json"), ShifuRequest.class);
         RequestDispatcher.dispatch(req);
 
