@@ -19,7 +19,6 @@ import org.encog.ml.data.MLData;
 import org.encog.ml.data.basic.BasicMLData;
 import org.jpmml.evaluator.DiscretizationUtil;
 import org.jpmml.evaluator.ModelEvaluationContext;
-import org.jpmml.evaluator.ModelEvaluator;
 import org.jpmml.evaluator.NormalizationUtil;
 
 import com.google.common.collect.Lists;
@@ -109,46 +108,33 @@ public class EvalCSVUtil {
      *         Encog framework.
      */
     public MLData getEncogMLDataSet(List<Double> data) {
-      int len = data.size();
-         double[] itemList = new double[len+1];
-         for (int i = 0; i < len ; i++)
-         itemList[i] = data.get(i);
-         itemList[len] = 1;
-     return  new BasicMLData(itemList);
-       
+        int len = data.size();
+        double[] itemList = new double[len + 1];
+        for (int i = 0; i < len; i++)
+            itemList[i] = data.get(i);
+        itemList[len] = 1;
+        return new BasicMLData(itemList);
+
     }
 
-    // public List<MahoutDataPair> getMahoutDataPair() {
-    // List<MahoutDataPair> dataPairList = new ArrayList<MahoutDataPair>();
-    // for (double[] fields : dataSet) {
-    // int len = fields.length;
-    // double[] itemList = new double[len-1];
-    // for (int i = 0; i < len - 1; i++)
-    // itemList[i] = fields[i + 1];
-    // dataPairList.add(new MahoutDataPair((int) fields[0], itemList));
-    // }
-    // return dataPairList;
-    // }
 
     private double transform(DerivedField derivedField, Object origin) {
 
         Expression expression = derivedField.getExpression();
-
         // TODO: finish the list
         if (expression instanceof NormContinuous) {
             return NormalizationUtil.normalize((NormContinuous) expression,
                     Double.parseDouble(origin.toString()));
         } else if (expression instanceof Discretize) {
-            return   Double.parseDouble(DiscretizationUtil.discretize((Discretize) expression,
+            return Double.parseDouble(DiscretizationUtil.discretize(
+                    (Discretize) expression,
                     Double.parseDouble(origin.toString())));
         } else {
             throw new RuntimeException("Invalid Expression(Field: "
                     + derivedField.getName().getValue() + ")");
         }
-
     }
 
-   
     public MLData normalizeData(ModelEvaluationContext context) {
         Model model = pmml.getModels().get(0);
 
@@ -160,21 +146,10 @@ public class EvalCSVUtil {
         List<Double> transformed = new ArrayList<Double>();
         for (DerivedField df : derivedFields) {
             if (selectedFields.contains(df.getName().getValue())) {
-                transformed.add(transform(df,context.getFields().get(df.getName()).getValue()));
+                transformed.add(transform(df,
+                        context.getFields().get(df.getName()).getValue()));
             }
         }
         return getEncogMLDataSet(transformed);
-    }
-    protected double getPMMLEvaluatorResult(ModelEvaluator evaluator,
-            Map<FieldName, String> inputData) {
-        if (evaluator == null)
-            return 0;
-        @SuppressWarnings("unchecked")
-        Map<FieldName, Double> evalMap = (Map<FieldName, Double>) evaluator
-                .evaluate(inputData);
-        for (Map.Entry<FieldName, Double> entry : evalMap.entrySet()) {
-            return entry.getValue();
-        }
-        return 0;
     }
 }
