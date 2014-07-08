@@ -5,9 +5,9 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 
-import ml.shifu.plugin.AdapterConstants;
-import ml.shifu.plugin.PMMLAdapterCommonUtil;
-import ml.shifu.plugin.PMMLModelBuilder;
+import ml.shifu.core.plugin.pmml.AdapterConstants;
+import ml.shifu.core.plugin.pmml.PMMLAdapterCommonUtil;
+import ml.shifu.core.plugin.pmml.PMMLModelBuilder;
 
 import org.dmg.pmml.ActivationFunctionType;
 import org.dmg.pmml.Connection;
@@ -174,6 +174,7 @@ public class PMMLEncogNeuralNetworkModel
         return pmmlModel;
     }
 
+    @SuppressWarnings("unused")
     private org.dmg.pmml.NeuralNetwork deleteTargetDerivedFields(
             org.dmg.pmml.NeuralNetwork pmmlModel) {
         // delete target

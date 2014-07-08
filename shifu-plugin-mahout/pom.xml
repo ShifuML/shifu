@@ -9,7 +9,7 @@
     </parent>
     <modelVersion>4.0.0</modelVersion>
 
-    <artifactId>shifu-plugin-encog</artifactId>
+    <artifactId>shifu-plugin-mahout</artifactId>
 
     <dependencies>
         <dependency>
@@ -17,10 +17,10 @@
             <artifactId>shifu-core</artifactId>
         </dependency>
         <dependency>
-            <groupId>org.encog</groupId>
-            <artifactId>encog-core</artifactId>
-            <version>3.0.0</version>
-        </dependency>
+			<groupId>org.apache.mahout</groupId>
+			<artifactId>mahout-core</artifactId>
+			<version>0.9</version>
+		</dependency>
         
     </dependencies>
 </project>
