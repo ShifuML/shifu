@@ -14,6 +14,14 @@
 		<dependency>
 			<groupId>ml.shifu</groupId>
 			<artifactId>shifu-core</artifactId>
+			<exclusions>
+				<exclusion>
+					<groupId>com.typesafe.akka</groupId>
+					<artifactId>akka-actor_2.10</artifactId>
+				</exclusion>
+			</exclusions>
+
+
 		</dependency>
 
 		<dependency>
