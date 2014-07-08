@@ -7,7 +7,6 @@ import java.util.Map;
 
 import ml.shifu.core.plugin.pmml.AdapterConstants;
 import ml.shifu.core.plugin.pmml.PMMLAdapterCommonUtil;
-import ml.shifu.core.plugin.pmml.PMMLModelTest;
 import ml.shifu.core.util.PMMLUtils;
 
 import org.dmg.pmml.Constant;
@@ -31,16 +30,16 @@ import org.testng.annotations.Test;
  * Test PMMLEncogNeuralNetworkModel that converts an Encog NeuralNetwork model
  * to a PMML NeuralNetwork Model.
  */
-public class PMMLEncogNeuralNetworkTest extends PMMLModelTest<BasicNetwork> {
+public class PMMLEncogNeuralNetworkTest {
 	BasicNetwork mlModel;
 	PMML pmml;
 	private static Logger log = LoggerFactory
 			.getLogger(PMMLEncogNeuralNetworkTest.class);
 	NeuralNetworkEvaluator evaluator;
 	protected final double DELTA = Math.pow(10, -5);
-	private String mlModelPath = "src/test/resources/encog/nn/EncogNN.nn";
-	private String initPmmlPath = "src/test/resources/encog/nn/model.xml";
-	private String outputPMMLPath = "src/test/resources/encog/nn/EncogNN_output.pmml";
+	private String mlModelPath = "src/test/resources/evaluator/EncogNN.nn";
+	private String initPmmlPath = "src/test/resources/evaluator/model.xml";
+	private String outputPMMLPath = "src/test/resources/evaluator/EncogNN_output.pmml";
 
 	protected void initMLModel() {
 		try {
@@ -87,7 +86,8 @@ public class PMMLEncogNeuralNetworkTest extends PMMLModelTest<BasicNetwork> {
 
 	@Test
 	public void testEncogNN_2layer() {
-		testSetUp();
+		initMLModel();
+		adaptToPMML();
 		writeToPMML();
 		evaluatePMML();
 	}

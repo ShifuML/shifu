@@ -5,7 +5,7 @@ import org.apache.spark.api.java.JavaSparkContext;
 
 public class SparkUtility {
     public static SparkConf sparkConf = new SparkConf().setMaster("local")
-            .setAppName("PMMLSparkLR").setSparkHome("localhost:4040");
+            .setAppName("PMMLSparkLR");
 
     public static JavaSparkContext sc = new JavaSparkContext(sparkConf);
 
