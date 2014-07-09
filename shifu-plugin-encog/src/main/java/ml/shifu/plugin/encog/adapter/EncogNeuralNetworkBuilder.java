@@ -4,7 +4,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 
-import ml.shifu.plugin.GenericMLModelBuilder;
+import ml.shifu.core.plugin.pmml.GenericMLModelBuilder;
 
 import org.dmg.pmml.ActivationFunctionType;
 import org.dmg.pmml.Connection;

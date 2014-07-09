@@ -6,7 +6,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
-import ml.shifu.plugin.PMMLAdapterCommonUtil;
+import ml.shifu.core.plugin.pmml.PMMLAdapterCommonUtil;
 
 import org.dmg.pmml.DerivedField;
 import org.dmg.pmml.Discretize;
@@ -88,6 +88,7 @@ public class EvalCSVUtil {
         return table;
     }
 
+    @SuppressWarnings("unused")
     private double[] convertToDouble(String[] tokens) {
         int len = tokens.length;
         double[] itemList = new double[len];

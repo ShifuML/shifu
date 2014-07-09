@@ -1,7 +1,9 @@
 package ml.shifu.plugin.encog.adapter;
 
-import ml.shifu.plugin.PMMLAdapterCommonUtil;
-import ml.shifu.plugin.PMMLModelBuilder;
+
+
+import ml.shifu.core.plugin.pmml.PMMLAdapterCommonUtil;
+import ml.shifu.core.plugin.pmml.PMMLModelBuilder;
 
 import org.encog.neural.flat.FlatNetwork;
 import org.encog.neural.networks.BasicNetwork;
