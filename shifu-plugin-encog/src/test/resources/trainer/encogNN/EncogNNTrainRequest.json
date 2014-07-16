@@ -13,13 +13,17 @@
                 "pathNormalizedData": "src/test/resources/trainer/normalized.txt",
                 "numEpochs": 100,
                 "trainerID": "test",
-                "pathOutput": "tmp/generated/models",
+                "pathOutput": "src/test/resources/trainer/encogNN/modelOutput.nn",
                 "splitRatio": 0.8,
                 "algorithm": "Q",
-                "learningRate": 0.5,
+                "learningRate": 0.1,
                 "hiddenLayers": [
                     {
-                        "numHiddenNodes": 10,
+                        "numHiddenNodes": 40,
+                        "activationFunction": "sigmoid"
+                    },
+                    {
+                        "numHiddenNodes": 45,
                         "activationFunction": "sigmoid"
                     }
                 ]

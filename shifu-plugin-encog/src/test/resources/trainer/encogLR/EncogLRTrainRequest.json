@@ -6,18 +6,20 @@
             "executionMode": "LOCAL_SINGLE",
             "globalParams": {
                 "bindings": {
-                    "Trainer": "ml.shifu.plugin.spark.trainer.SparkLRTrainer"
+                    "Trainer": "ml.shifu.plugin.encog.trainer.EncogLRTrainer"
                 },
-                "spark.master": "local",
-                "spark.app.name": "LogisticRegressionModel",
                 "modelName": "demoModel",
                 "pathPMML": "src/test/resources/trainer/model.xml",
                 "pathNormalizedData": "src/test/resources/trainer/normalized.txt",
+                "numEpochs": 100,
                 "trainerID": "test",
-                "pathOutput": "src/test/resources/trainer/sparkLR",
+                "pathOutput": "src/test/resources/trainer/encogLR/modelOutput.lr",
                 "splitRatio": 0.8,
-                "stepSize": 0.5
+                "algorithm": "Q",
+                "learningRate": 0.5
+               
             }
+        
         }
     ]
 }

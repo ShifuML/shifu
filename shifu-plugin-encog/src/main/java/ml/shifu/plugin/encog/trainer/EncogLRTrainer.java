@@ -19,19 +19,21 @@ package ml.shifu.plugin.encog.trainer;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
+import java.text.DecimalFormat;
 import java.util.HashMap;
+import java.util.Map;
 
-import ml.shifu.core.container.HiddenLayer;
 import ml.shifu.core.container.NNParams;
 import ml.shifu.core.container.PMMLDataSet;
 import ml.shifu.core.util.Params;
 
-import org.encog.engine.network.activation.ActivationFunction;
 import org.encog.engine.network.activation.ActivationLinear;
-import org.encog.engine.network.activation.ActivationSIN;
 import org.encog.engine.network.activation.ActivationSigmoid;
-import org.encog.engine.network.activation.ActivationTANH;
+import org.encog.ml.data.MLData;
+import org.encog.ml.data.MLDataPair;
 import org.encog.ml.data.MLDataSet;
+import org.encog.ml.data.basic.BasicMLData;
+import org.encog.ml.data.basic.BasicMLDataPair;
 import org.encog.ml.data.basic.BasicMLDataSet;
 import org.encog.neural.networks.BasicNetwork;
 import org.encog.neural.networks.PersistBasicNetwork;
@@ -47,36 +49,45 @@ import org.slf4j.LoggerFactory;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 
-public class EncogNNTrainer extends EncogAbstractTrainer {
+public class EncogLRTrainer extends EncogAbstractTrainer {
 
-	public static final String NUM_HIDDEN_LAYERS = "NumHiddenLayers";
 	public static final String ACTIVATION_FUNC = "ActivationFunc";
-	public static final String NUM_HIDDEN_NODES = "NumHiddenNodes";
+
 	public static final String PROPAGATION = "Propagation";
 
-	private static Logger log = LoggerFactory.getLogger(EncogNNTrainer.class);
+	private static Logger log = LoggerFactory.getLogger(EncogLRTrainer.class);
+
+	private static final Map<String, Double> defaultLearningRate;
+	private static final Map<String, String> learningAlgMap;
+
+	private static final DecimalFormat df = new DecimalFormat("0.000000");
+
 	private MLDataSet trainDataSet;
 	private MLDataSet testDataSet;
-	private double minError;
+
+	private Double minError;
+
 	private BasicNetwork network;
 
-	@SuppressWarnings("serial")
-	private static final HashMap<String, ActivationFunction> activationFuncMap = new HashMap<String, ActivationFunction>() {
-		{
-			put("linear", new ActivationLinear());
-			put("sigmoid", new ActivationSigmoid());
-			put("tanh", new ActivationTANH());
-			put("sin", new ActivationSIN());
-		}
-	};
+	static {
+		defaultLearningRate = new HashMap<String, Double>();
+		defaultLearningRate.put("S", 0.1);
+		defaultLearningRate.put("R", 0.1);
+		defaultLearningRate.put("Q", 2.0);
+		defaultLearningRate.put("B", 0.01);
+		defaultLearningRate.put("M", 0.00001);
+
+		learningAlgMap = new HashMap<String, String>();
+		learningAlgMap.put("S", "Scaled Conjugate Gradient");
+		learningAlgMap.put("R", "Resilient Propagation");
+		learningAlgMap.put("M", "Manhattan Propagation");
+		learningAlgMap.put("B", "Back Propagation");
+		learningAlgMap.put("Q", "Quick Propagation");
+	}
 
 	public Object train(PMMLDataSet dataSet, Params rawParams) throws Exception {
 
-		String trainerID = rawParams.get("trainerID").toString();
-		log.info("Using neural network algorithm...");
-		log.info("Start Training... Model #" + trainerID);
 		NNParams params = parseParams(rawParams);
-
 		MLDataSet fullDataSet = convertDataSet(dataSet);
 
 		trainDataSet = new BasicMLDataSet();
@@ -95,15 +106,15 @@ public class EncogNNTrainer extends EncogAbstractTrainer {
 		mlTrain.setThreadCount(0);
 
 		int epochs = params.getNumEpochs();
+		@SuppressWarnings("unused")
+		int factor = Math.max(epochs / 50, 10);
 
 		minError = Double.MAX_VALUE;
-
+		String trainerID = rawParams.get("trainerID").toString();
 		for (int i = 0; i < epochs; i++) {
 			mlTrain.iteration();
-
-			double testError = (testDataSet.getRecordCount() > 0) ? getTestSetError(
-					network, testDataSet) : mlTrain.getError();
-
+			double testError = (testDataSet.getRecordCount() > 0) ? getTestSetError()
+					: mlTrain.getError();
 			String extra = "";
 			if (testError < minError) {
 				minError = testError;
@@ -126,7 +137,7 @@ public class EncogNNTrainer extends EncogAbstractTrainer {
 		// save model
 		String output = rawParams.get(PATH_OUTPUT).toString();
 		saveEncogModel(output, network);
-		log.info("Save Encog NN model at " + output);
+		log.info("Save Encog LR model at " + output);
 		return network;
 	}
 
@@ -141,24 +152,9 @@ public class EncogNNTrainer extends EncogAbstractTrainer {
 
 		network.addLayer(new BasicLayer(new ActivationLinear(), true,
 				trainDataSet.getInputSize()));
-
-		@SuppressWarnings("unused")
-		int numLayers = params.getHiddenLayers().size();
-
-		for (HiddenLayer hiddenLayer : params.getHiddenLayers()) {
-
-			String activationFunction = hiddenLayer.getActivationFunction();
-			int numHiddenNodes = hiddenLayer.getNumHiddenNodes();
-			ActivationFunction aFunc = activationFuncMap
-					.get(activationFunction);
-			if (aFunc == null)
-				throw new RuntimeException("Unsupported ActivationFunction: "
-						+ activationFunction);
-			network.addLayer(new BasicLayer(aFunc, true, numHiddenNodes));
-		}
-
 		network.addLayer(new BasicLayer(new ActivationSigmoid(), false,
 				trainDataSet.getIdealSize()));
+
 		network.getStructure().finalizeStructure();
 
 		return network;
@@ -199,6 +195,34 @@ public class EncogNNTrainer extends EncogAbstractTrainer {
 		}
 	}
 
+	private double getTestSetError() {
+		return calculateMSE(this.network, testDataSet);
+		// return calculateMSEParallel(this.network, this.validSet);
+	}
+
+	private static Double calculateMSE(BasicNetwork network, MLDataSet dataSet) {
+
+		double mse = 0;
+		long numRecords = dataSet.getRecordCount();
+		for (int i = 0; i < numRecords; i++) {
+
+			double[] input = new double[dataSet.getInputSize()];
+			double[] ideal = new double[1];
+			MLDataPair pair = new BasicMLDataPair(new BasicMLData(input),
+					new BasicMLData(ideal));
+
+			dataSet.getRecord(i, pair);
+
+			MLData result = network.compute(pair.getInput());
+
+			double tmp = result.getData()[0] - pair.getIdeal().getData()[0];
+			mse += tmp * tmp;
+		}
+		mse = mse / numRecords;
+
+		return mse;
+	}
+
 	@Override
 	protected void saveEncogModel(String path, Object model) {
 		try {
@@ -210,4 +234,5 @@ public class EncogNNTrainer extends EncogAbstractTrainer {
 		}
 
 	}
+
 }

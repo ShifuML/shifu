@@ -1172,7 +1172,7 @@
             </Target>
         </Targets>
         <LocalTransformations>
-            <DerivedField name="diagnosis" optype="categorical" dataType="string">
+            <DerivedField name="diagnosisM" optype="categorical" dataType="string">
                 <MapValues outputColumn="1">
                     <FieldColumnPair field="diagnosis" column="0"/>
                     <InlineTable>
@@ -1181,181 +1181,181 @@
                     </InlineTable>
                 </MapValues>
             </DerivedField>
-            <DerivedField name="mean_radius" optype="continuous" dataType="double">
+            <DerivedField name="mean_radiusT" optype="continuous" dataType="double">
                 <NormContinuous field="mean_radius">
                     <LinearNorm orig="0.0" norm="-4.00761373022065"/>
                     <LinearNorm orig="14.12049119718311" norm="0.0"/>
                 </NormContinuous>
             </DerivedField>
-            <DerivedField name="mean_texture" optype="continuous" dataType="double">
+            <DerivedField name="mean_textureT" optype="continuous" dataType="double">
                 <NormContinuous field="mean_texture">
                     <LinearNorm orig="0.0" norm="-4.50164553444311"/>
                     <LinearNorm orig="19.30533450704228" norm="0.0"/>
                 </NormContinuous>
             </DerivedField>
-            <DerivedField name="mean_perimeter" optype="continuous" dataType="double">
+            <DerivedField name="mean_perimeterT" optype="continuous" dataType="double">
                 <NormContinuous field="mean_perimeter">
                     <LinearNorm orig="0.0" norm="-3.7847042946812364"/>
                     <LinearNorm orig="91.91475352112678" norm="0.0"/>
                 </NormContinuous>
             </DerivedField>
-            <DerivedField name="mean_area" optype="continuous" dataType="double">
+            <DerivedField name="mean_areaT" optype="continuous" dataType="double">
                 <NormContinuous field="mean_area">
                     <LinearNorm orig="0.0" norm="-1.8591520219235536"/>
                     <LinearNorm orig="654.2797535211271" norm="0.0"/>
                 </NormContinuous>
             </DerivedField>
-            <DerivedField name="mean_smoothness" optype="continuous" dataType="double">
+            <DerivedField name="mean_smoothnessT" optype="continuous" dataType="double">
                 <NormContinuous field="mean_smoothness">
                     <LinearNorm orig="0.0" norm="-6.857538982975337"/>
                     <LinearNorm orig="0.09632147887323936" norm="0.0"/>
                 </NormContinuous>
             </DerivedField>
-            <DerivedField name="mean_compactness" optype="continuous" dataType="double">
+            <DerivedField name="mean_compactnessT" optype="continuous" dataType="double">
                 <NormContinuous field="mean_compactness">
                     <LinearNorm orig="0.0" norm="-1.9871159390401176"/>
                     <LinearNorm orig="0.1040359507042254" norm="0.0"/>
                 </NormContinuous>
             </DerivedField>
-            <DerivedField name="mean_concavity" optype="continuous" dataType="double">
+            <DerivedField name="mean_concavityT" optype="continuous" dataType="double">
                 <NormContinuous field="mean_concavity">
                     <LinearNorm orig="0.0" norm="-1.1151795596563225"/>
                     <LinearNorm orig="0.08842730757042255" norm="0.0"/>
                 </NormContinuous>
             </DerivedField>
-            <DerivedField name="mean_concave_points" optype="continuous" dataType="double">
+            <DerivedField name="mean_concave_pointsT" optype="continuous" dataType="double">
                 <NormContinuous field="mean_concave_points">
                     <LinearNorm orig="0.0" norm="-1.262295217483865"/>
                     <LinearNorm orig="0.04874629225352108" norm="0.0"/>
                 </NormContinuous>
             </DerivedField>
-            <DerivedField name="mean_symmetry" optype="continuous" dataType="double">
+            <DerivedField name="mean_symmetryT" optype="continuous" dataType="double">
                 <NormContinuous field="mean_symmetry">
                     <LinearNorm orig="0.0" norm="-6.627327624957892"/>
                     <LinearNorm orig="0.18105492957746488" norm="0.0"/>
                 </NormContinuous>
             </DerivedField>
-            <DerivedField name="mean_fractal_dimension" optype="continuous" dataType="double">
+            <DerivedField name="mean_fractal_dimensionT" optype="continuous" dataType="double">
                 <NormContinuous field="mean_fractal_dimension">
                     <LinearNorm orig="0.0" norm="-8.92248853985651"/>
                     <LinearNorm orig="0.06276959507042251" norm="0.0"/>
                 </NormContinuous>
             </DerivedField>
-            <DerivedField name="std_radius" optype="continuous" dataType="double">
+            <DerivedField name="std_radiusT" optype="continuous" dataType="double">
                 <NormContinuous field="std_radius">
                     <LinearNorm orig="0.0" norm="-1.4634103560937344"/>
                     <LinearNorm orig="0.4039575704225356" norm="0.0"/>
                 </NormContinuous>
             </DerivedField>
-            <DerivedField name="std_texture" optype="continuous" dataType="double">
+            <DerivedField name="std_textureT" optype="continuous" dataType="double">
                 <NormContinuous field="std_texture">
                     <LinearNorm orig="0.0" norm="-2.205520915397837"/>
                     <LinearNorm orig="1.2174019366197188" norm="0.0"/>
                 </NormContinuous>
             </DerivedField>
-            <DerivedField name="std_perimeter" optype="continuous" dataType="double">
+            <DerivedField name="std_perimeterT" optype="continuous" dataType="double">
                 <NormContinuous field="std_perimeter">
                     <LinearNorm orig="0.0" norm="-1.421390555527879"/>
                     <LinearNorm orig="2.855983626760559" norm="0.0"/>
                 </NormContinuous>
             </DerivedField>
-            <DerivedField name="std_area" optype="continuous" dataType="double">
+            <DerivedField name="std_areaT" optype="continuous" dataType="double">
                 <NormContinuous field="std_area">
                     <LinearNorm orig="0.0" norm="-0.8863933700077381"/>
                     <LinearNorm orig="40.13802464788737" norm="0.0"/>
                 </NormContinuous>
             </DerivedField>
-            <DerivedField name="std_smoothness" optype="continuous" dataType="double">
+            <DerivedField name="std_smoothnessT" optype="continuous" dataType="double">
                 <NormContinuous field="std_smoothness">
                     <LinearNorm orig="0.0" norm="-2.343201331121645"/>
                     <LinearNorm orig="0.007042109154929578" norm="0.0"/>
                 </NormContinuous>
             </DerivedField>
-            <DerivedField name="std_compactness" optype="continuous" dataType="double">
+            <DerivedField name="std_compactnessT" optype="continuous" dataType="double">
                 <NormContinuous field="std_compactness">
                     <LinearNorm orig="0.0" norm="-1.4213097399558947"/>
                     <LinearNorm orig="0.02543665669014085" norm="0.0"/>
                 </NormContinuous>
             </DerivedField>
-            <DerivedField name="std_concavity" optype="continuous" dataType="double">
+            <DerivedField name="std_concavityT" optype="continuous" dataType="double">
                 <NormContinuous field="std_concavity">
                     <LinearNorm orig="0.0" norm="-1.0548539331491438"/>
                     <LinearNorm orig="0.03185527218309857" norm="0.0"/>
                 </NormContinuous>
             </DerivedField>
-            <DerivedField name="std_concave_points" optype="continuous" dataType="double">
+            <DerivedField name="std_concave_pointsT" optype="continuous" dataType="double">
                 <NormContinuous field="std_concave_points">
                     <LinearNorm orig="0.0" norm="-1.909610331077918"/>
                     <LinearNorm orig="0.011788964788732394" norm="0.0"/>
                 </NormContinuous>
             </DerivedField>
-            <DerivedField name="std_symmetry" optype="continuous" dataType="double">
+            <DerivedField name="std_symmetryT" optype="continuous" dataType="double">
                 <NormContinuous field="std_symmetry">
                     <LinearNorm orig="0.0" norm="-2.483691655762281"/>
                     <LinearNorm orig="0.02052559507042254" norm="0.0"/>
                 </NormContinuous>
             </DerivedField>
-            <DerivedField name="std_fractal_dimension" optype="continuous" dataType="double">
+            <DerivedField name="std_fractal_dimensionT" optype="continuous" dataType="double">
                 <NormContinuous field="std_fractal_dimension">
                     <LinearNorm orig="0.0" norm="-1.4321658823263728"/>
                     <LinearNorm orig="0.0037906818661971827" norm="0.0"/>
                 </NormContinuous>
             </DerivedField>
-            <DerivedField name="worst_radius" optype="continuous" dataType="double">
+            <DerivedField name="worst_radiusT" optype="continuous" dataType="double">
                 <NormContinuous field="worst_radius">
                     <LinearNorm orig="0.0" norm="-3.370400527357199"/>
                     <LinearNorm orig="16.25314964788733" norm="0.0"/>
                 </NormContinuous>
             </DerivedField>
-            <DerivedField name="worst_texture" optype="continuous" dataType="double">
+            <DerivedField name="worst_textureT" optype="continuous" dataType="double">
                 <NormContinuous field="worst_texture">
                     <LinearNorm orig="0.0" norm="-4.183219639034475"/>
                     <LinearNorm orig="25.691919014084498" norm="0.0"/>
                 </NormContinuous>
             </DerivedField>
-            <DerivedField name="worst_perimeter" optype="continuous" dataType="double">
+            <DerivedField name="worst_perimeterT" optype="continuous" dataType="double">
                 <NormContinuous field="worst_perimeter">
                     <LinearNorm orig="0.0" norm="-3.2001808533067124"/>
                     <LinearNorm orig="107.12505281690146" norm="0.0"/>
                 </NormContinuous>
             </DerivedField>
-            <DerivedField name="worst_area" optype="continuous" dataType="double">
+            <DerivedField name="worst_areaT" optype="continuous" dataType="double">
                 <NormContinuous field="worst_area">
                     <LinearNorm orig="0.0" norm="-1.5472125545287698"/>
                     <LinearNorm orig="878.5788732394362" norm="0.0"/>
                 </NormContinuous>
             </DerivedField>
-            <DerivedField name="worst_smoothness" optype="continuous" dataType="double">
+            <DerivedField name="worst_smoothnessT" optype="continuous" dataType="double">
                 <NormContinuous field="worst_smoothness">
                     <LinearNorm orig="0.0" norm="-5.798716102882977"/>
                     <LinearNorm orig="0.13231607394366207" norm="0.0"/>
                 </NormContinuous>
             </DerivedField>
-            <DerivedField name="worst_compactness" optype="continuous" dataType="double">
+            <DerivedField name="worst_compactnessT" optype="continuous" dataType="double">
                 <NormContinuous field="worst_compactness">
                     <LinearNorm orig="0.0" norm="-1.6198296859021801"/>
                     <LinearNorm orig="0.25354086267605663" norm="0.0"/>
                 </NormContinuous>
             </DerivedField>
-            <DerivedField name="worst_concavity" optype="continuous" dataType="double">
+            <DerivedField name="worst_concavityT" optype="continuous" dataType="double">
                 <NormContinuous field="worst_concavity">
                     <LinearNorm orig="0.0" norm="-1.3049482081221482"/>
                     <LinearNorm orig="0.271414343309859" norm="0.0"/>
                 </NormContinuous>
             </DerivedField>
-            <DerivedField name="worst_concave_points" optype="continuous" dataType="double">
+            <DerivedField name="worst_concave_pointsT" optype="continuous" dataType="double">
                 <NormContinuous field="worst_concave_points">
                     <LinearNorm orig="0.0" norm="-1.7460797133074155"/>
                     <LinearNorm orig="0.11434074119718311" norm="0.0"/>
                 </NormContinuous>
             </DerivedField>
-            <DerivedField name="worst_symmetry" optype="continuous" dataType="double">
+            <DerivedField name="worst_symmetryT" optype="continuous" dataType="double">
                 <NormContinuous field="worst_symmetry">
                     <LinearNorm orig="0.0" norm="-4.7111787591027054"/>
                     <LinearNorm orig="0.2897762323943664" norm="0.0"/>
                 </NormContinuous>
             </DerivedField>
-            <DerivedField name="worst_fractal_dimension" optype="continuous" dataType="double">
+            <DerivedField name="worst_fractal_dimensionT" optype="continuous" dataType="double">
                 <NormContinuous field="worst_fractal_dimension">
                     <LinearNorm orig="0.0" norm="-4.655729030483473"/>
                     <LinearNorm orig="0.08388427816901405" norm="0.0"/>

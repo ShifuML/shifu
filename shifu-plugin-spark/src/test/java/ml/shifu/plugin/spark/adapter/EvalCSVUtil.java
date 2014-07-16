@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package ml.shifu.plugin.encog.adapter;
+package ml.shifu.plugin.spark.adapter;
 
 import java.io.BufferedReader;
 import java.io.FileReader;
@@ -29,10 +29,6 @@ import org.dmg.pmml.FieldName;
 import org.dmg.pmml.Model;
 import org.dmg.pmml.NormContinuous;
 import org.dmg.pmml.PMML;
-import org.encog.ml.data.MLData;
-import org.encog.ml.data.MLDataSet;
-import org.encog.ml.data.basic.BasicMLData;
-import org.encog.ml.data.basic.BasicMLDataSet;
 import org.jpmml.evaluator.ModelEvaluationContext;
 import org.jpmml.evaluator.NormalizationUtil;
 
@@ -47,10 +43,7 @@ public class EvalCSVUtil {
 	 * for PMML evaluator
 	 */
 	private List<Map<FieldName, String>> table = Lists.newArrayList();
-	/**
-	 * for encog framework
-	 */
-	private List<double[]> dataSet = new ArrayList<double[]>();
+
 	private BufferedReader reader;
 
 	public EvalCSVUtil(String dataPath, PMML pmml) {
@@ -72,28 +65,38 @@ public class EvalCSVUtil {
 		return table;
 	}
 
-	/**
-	 * <p>
-	 * Construct the Encog MLDataSet from CSV files, as the input training set
-	 * for the Encog framework.
-	 * <p>
-	 * Notice that, the input of MLDataSet includes a bias, which is always set
-	 * to 1.
-	 * 
-	 * @return The MLDataSet that can be used as the input training data set for
-	 *         Encog framework.
-	 */
-	public MLDataSet getEncogMLDataSet() {
-		MLDataSet encogSet = new BasicMLDataSet();
-		for (double[] fields : dataSet) {
-			int len = fields.length;
-			double[] itemList = new double[len];
-			for (int i = 0; i < len - 1; i++)
-				itemList[i] = fields[i + 1];
-			itemList[len - 1] = 1;
-			encogSet.add(new BasicMLData(itemList));
-		}
-		return encogSet;
+	// /**
+	// * <p>
+	// * Construct the Encog MLDataSet from CSV files, as the input training set
+	// * for the Encog framework.
+	// * <p>
+	// * Notice that, the input of MLDataSet includes a bias, which is always
+	// set
+	// * to 1.
+	// *
+	// * @return The MLDataSet that can be used as the input training data set
+	// for
+	// * Encog framework.
+	// */
+	// public MLDataSet getEncogMLDataSet() {
+	// MLDataSet encogSet = new BasicMLDataSet();
+	// for (double[] fields : dataSet) {
+	// int len = fields.length;
+	// double[] itemList = new double[len];
+	// for (int i = 0; i < len - 1; i++)
+	// itemList[i] = fields[i + 1];
+	// itemList[len - 1] = 1;
+	// encogSet.add(new BasicMLData(itemList));
+	// }
+	// return encogSet;
+	// }
+
+	private double[] convertToDouble(String[] tokens) {
+		int len = tokens.length;
+		double[] itemList = new double[len];
+		for (int i = 0; i < len; i++)
+			itemList[i] = Double.parseDouble(tokens[i]);
+		return itemList;
 	}
 
 	private void parseCSV() {
@@ -121,27 +124,6 @@ public class EvalCSVUtil {
 	}
 
 	/**
-	 * <p>
-	 * Construct the Encog MLDataSet from CSV files, as the input training set
-	 * for the Encog framework.
-	 * <p>
-	 * Notice that, the input of MLDataSet includes a bias, which is always set
-	 * to 1.
-	 * 
-	 * @return The MLDataSet that can be used as the input training data set for
-	 *         Encog framework.
-	 */
-	private MLData getEncogMLDataSet(List<Double> data) {
-		int len = data.size();
-		double[] itemList = new double[len + 1];
-		for (int i = 0; i < len; i++)
-			itemList[i] = data.get(i);
-		itemList[len] = 1;
-		return new BasicMLData(itemList);
-
-	}
-
-	/**
 	 * normalize the input data based on the model evaluation context and
 	 * returns the normalized data
 	 * 
@@ -149,7 +131,7 @@ public class EvalCSVUtil {
 	 *            model evaluation context
 	 * @return the normalized data
 	 */
-	public MLData normalizeData(ModelEvaluationContext context) {
+	public double[] normalizeData(ModelEvaluationContext context) {
 		Model model = pmml.getModels().get(0);
 		List<DerivedField> derivedFields = model.getLocalTransformations()
 				.getDerivedFields();
@@ -163,6 +145,11 @@ public class EvalCSVUtil {
 						.getValue().toString()));
 			}
 		}
-		return getEncogMLDataSet(transformed);
+		int len = transformed.size();
+		double[] result = new double[len];
+		for (int i = 0; i < len; i++)
+			result[i] = transformed.get(i);
+
+		return result;
 	}
 }

@@ -13,7 +13,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package ml.shifu.plugin.mahout.trainer;
+
+package ml.shifu.plugin.encog.trainer;
 
 import ml.shifu.core.container.ShifuRequest;
 import ml.shifu.core.request.RequestDispatcher;
@@ -22,15 +23,14 @@ import org.testng.annotations.Test;
 
 import java.io.File;
 
-public class MahoutLRTrainerTest {
+public class EncogSVMTrainerTest {
 
 	@Test
-	public void testMahoutLRTrainer() throws Exception {
-		ShifuRequest req = JSONUtils
-				.readValue(
-						new File(
-								"src/test/resources/trainer/mahoutLR/MahoutLRExecTrainRequest.json"),
-						ShifuRequest.class);
+	public void testEncogSVMTrainer() throws Exception {
+		ShifuRequest req = JSONUtils.readValue(new File(
+				"src/test/resources/trainer/encogSVM/EncogSVMTrainRequest.json"),
+				ShifuRequest.class);
 		RequestDispatcher.dispatch(req);
+
 	}
 }

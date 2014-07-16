@@ -23,13 +23,14 @@ import java.util.Map;
 import ml.shifu.core.util.PMMLUtils;
 
 import org.dmg.pmml.FieldName;
-import org.dmg.pmml.NeuralNetwork;
+import org.dmg.pmml.Model;
 import org.dmg.pmml.PMML;
+import org.dmg.pmml.RegressionModel;
 import org.encog.ml.data.MLData;
 import org.encog.neural.networks.BasicNetwork;
 import org.encog.neural.networks.PersistBasicNetwork;
 import org.jpmml.evaluator.ModelEvaluationContext;
-import org.jpmml.evaluator.NeuralNetworkEvaluator;
+import org.jpmml.evaluator.RegressionModelEvaluator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.testng.Assert;
@@ -39,16 +40,15 @@ import org.testng.annotations.Test;
  * Test PMMLEncogNeuralNetworkModel that converts an Encog NeuralNetwork model
  * to a PMML NeuralNetwork Model.
  */
-public class PMMLEncogNeuralNetworkTest {
+public class PMMLEncogLRTest {
 	BasicNetwork mlModel;
 	PMML pmml;
-	private static Logger log = LoggerFactory
-			.getLogger(PMMLEncogNeuralNetworkTest.class);
-	NeuralNetworkEvaluator evaluator;
-	protected final double DELTA = Math.pow(10, -5);
-	private String mlModelPath = "src/test/resources/evaluator/encogNN/EncogNN.nn";
+	private static Logger log = LoggerFactory.getLogger(PMMLEncogLRTest.class);
+	RegressionModelEvaluator evaluator;
+	protected final double DELTA = Math.pow(10, -1)*2;
+	private String mlModelPath = "src/test/resources/evaluator/encogLR/EncogLR.lr";
 	private String initPmmlPath = "src/test/resources/evaluator/model.xml";
-	private String outputPMMLPath = "src/test/resources/evaluator/encogNN/EncogNN_output.pmml";
+	private String outputPMMLPath = "src/test/resources/evaluator/encogLR/EncogLR_output.pmml";
 	private String evalFilePath = "src/test/resources/evaluator/wdbc.train";
 
 	protected void initMLModel() {
@@ -69,10 +69,16 @@ public class PMMLEncogNeuralNetworkTest {
 	}
 
 	protected void adaptToPMML() {
-		NeuralNetwork pmmlNN = (NeuralNetwork) pmml.getModels().get(0);
-		pmmlNN = new PMMLEncogNeuralNetworkModel().adaptMLModelToPMML(mlModel,
-				pmmlNN);
-		pmml.getModels().set(0, pmmlNN);
+		Model pmmlNN = pmml.getModels().get(0);
+		RegressionModel pmmlLR = new RegressionModel()
+				.withMiningSchema(pmmlNN.getMiningSchema())
+				.withTargets(pmmlNN.getTargets())
+				.withModelStats(pmmlNN.getModelStats())
+				.withLocalTransformations(pmmlNN.getLocalTransformations());
+
+		pmmlNN = new PMMLEncogLogisticRegressionModel().adaptMLModelToPMML(
+				mlModel, pmmlLR);
+		pmml.getModels().set(0, pmmlLR);
 	}
 
 	protected void writeToPMML() {
@@ -83,19 +89,11 @@ public class PMMLEncogNeuralNetworkTest {
 	}
 
 	protected void evaluatePMML() {
-		evaluator = new NeuralNetworkEvaluator(pmml);
+		evaluator = new RegressionModelEvaluator(pmml);
 
 		EvalCSVUtil evalInput = new EvalCSVUtil(evalFilePath, pmml);
 		evaluateInputs(evalInput);
 
-	}
-
-	@Test
-	public void testEncogNN_2layer() {
-		initMLModel();
-		adaptToPMML();
-		writeToPMML();
-		evaluatePMML();
 	}
 
 	private void evaluateInputs(EvalCSVUtil evalInput) {
@@ -113,59 +111,8 @@ public class PMMLEncogNeuralNetworkTest {
 		}
 	}
 
-
 	
-
-	//
-	// private void evaluateNormalizedData() throws Exception {
-	//
-	// PMML pmmlNoStats = PMMLUtils.loadPMML(outputPMMLPath);
-	// NeuralNetwork pmmlNN = (NeuralNetwork) pmmlNoStats.getModels().get(0);
-	// List<String> activeFields = PMMLAdapterCommonUtil
-	// .getSchemaActiveFields(pmmlNN.getMiningSchema());
-	// DataDictionary dictionary = new DataDictionary();
-	// for (String field : activeFields) {
-	// DataField targetField = new DataField(new FieldName(field),
-	// OpType.CONTINUOUS, DataType.DOUBLE);
-	// // targetField.withValues(new Value("1")).withValues(new
-	// // Value("0"));
-	// dictionary.withDataFields(targetField);
-	// }
-	// pmmlNoStats.setDataDictionary(dictionary);
-	// pmmlNN.setModelStats(null);
-	//
-	// DerivedField field = new DerivedField(OpType.CONTINUOUS,
-	// DataType.DOUBLE).withName(new FieldName(
-	// AdapterConstants.biasValue));
-	// // field.withName(new FieldName(s));
-	// field.withExpression(new
-	// Constant(String.valueOf(AdapterConstants.bias)));
-	// pmmlNN.setLocalTransformations(new LocalTransformations()
-	// .withDerivedFields(field));
-	// pmmlNoStats.withModels(pmmlNN);
-	// // rebuild data dictionary
-	// // copy mining schema
-	// PMMLUtils.savePMML(pmmlNoStats,
-	// "src/test/resources/encog/nn/EncogNN_noStats.pmml");
-	// NeuralNetworkEvaluator evaluator = new NeuralNetworkEvaluator(
-	// pmmlNoStats);
-	// String evalFilePath = "src/test/resources/encog/nn/normalizedData";
-	// EvalCSVUtil evalInput = new EvalCSVUtil(evalFilePath, pmmlNoStats);
-	// List<Map<FieldName, String>> pmmlEvalResultList = evalInput
-	// .getEvaluatorInput();
-	// for (Map<FieldName, String> map : pmmlEvalResultList) {
-	// @SuppressWarnings("unchecked")
-	// Map<FieldName, Double> evalMap = (Map<FieldName, Double>) evaluator
-	// .evaluate(map);
-	// for (Map.Entry<FieldName, Double> entry : evalMap.entrySet()) {
-	// System.out.println(entry.getValue());
-	// }
-	// }
-	// }
-
-	protected double getPMMLEvaluatorResult(Map<FieldName, String> inputData) {
-		if (evaluator == null)
-			return 0;
+	private double getPMMLEvaluatorResult(Map<FieldName, String> inputData) {
 		@SuppressWarnings("unchecked")
 		Map<FieldName, Double> evalMap = (Map<FieldName, Double>) evaluator
 				.evaluate(inputData);
@@ -174,4 +121,13 @@ public class PMMLEncogNeuralNetworkTest {
 		}
 		return 0;
 	}
+
+	@Test
+	public void testEncogLR() {
+		initMLModel();
+		adaptToPMML();
+		writeToPMML();
+		evaluatePMML();
+	}
+	
 }
