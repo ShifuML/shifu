@@ -9,8 +9,8 @@
                     "Trainer": "ml.shifu.plugin.encog.trainer.EncogNNTrainer"
                 },
                 "modelName": "demoModel",
-                "pathPMML": "src/test/resources/trainer/model.xml",
-                "pathNormalizedData": "src/test/resources/trainer/normalized.txt",
+                "pathPMML": "src/test/resources/data/wdbc/model.xml",
+                "pathNormalizedData": "src/test/resources/data/wdbc/inputTrainData",
                 "numEpochs": 100,
                 "trainerID": "test",
                 "pathOutput": "src/test/resources/trainer/encogNN/modelOutput.nn",

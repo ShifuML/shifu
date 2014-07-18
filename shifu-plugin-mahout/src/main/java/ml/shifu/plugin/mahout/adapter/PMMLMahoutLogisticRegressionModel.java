@@ -30,8 +30,8 @@ public class PMMLMahoutLogisticRegressionModel implements
 			RegressionModel pmmlModel) {
 		Matrix matrix = lrModel.getBeta();
 		int[] count = matrix.getNumNondefaultElements();
-		double[] weights = new double[count[0]];
-		for (int i = 0; i < count[0]; i++)
+		double[] weights = new double[count[1]];
+		for (int i = 0; i < count[1]; i++)
 			weights[i] = matrix.get(0, i);
 
 		return PMMLAdapterCommonUtil.getRegressionTable(weights, 0, pmmlModel);

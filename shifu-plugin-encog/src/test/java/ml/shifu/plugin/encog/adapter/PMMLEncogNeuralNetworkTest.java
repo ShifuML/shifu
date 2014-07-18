@@ -46,10 +46,10 @@ public class PMMLEncogNeuralNetworkTest {
 			.getLogger(PMMLEncogNeuralNetworkTest.class);
 	NeuralNetworkEvaluator evaluator;
 	protected final double DELTA = Math.pow(10, -5);
-	private String mlModelPath = "src/test/resources/evaluator/encogNN/EncogNN.nn";
-	private String initPmmlPath = "src/test/resources/evaluator/model.xml";
-	private String outputPMMLPath = "src/test/resources/evaluator/encogNN/EncogNN_output.pmml";
-	private String evalFilePath = "src/test/resources/evaluator/wdbc.train";
+	private String mlModelPath = "src/test/resources/adapter/encogNN/EncogNN.nn";
+	private String initPmmlPath = "src/test/resources/data/wdbc/model.xml";
+	private String outputPMMLPath = "src/test/resources/adapter/encogNN/EncogNN_output.pmml";
+	private String evalFilePath = "src/test/resources/data/wdbc/evalData";
 
 	protected void initMLModel() {
 		try {
@@ -85,7 +85,7 @@ public class PMMLEncogNeuralNetworkTest {
 	protected void evaluatePMML() {
 		evaluator = new NeuralNetworkEvaluator(pmml);
 
-		EvalCSVUtil evalInput = new EvalCSVUtil(evalFilePath, pmml);
+		CommonUtil evalInput = new CommonUtil(evalFilePath, pmml);
 		evaluateInputs(evalInput);
 
 	}
@@ -98,7 +98,7 @@ public class PMMLEncogNeuralNetworkTest {
 		evaluatePMML();
 	}
 
-	private void evaluateInputs(EvalCSVUtil evalInput) {
+	private void evaluateInputs(CommonUtil evalInput) {
 		log.info(" evaluate Encog LR adapter with " + evalInput.getEvaluatorInput().size()
 				+ " inputs");
 		 for (Map<FieldName, String> map : evalInput.getEvaluatorInput()) {

@@ -39,7 +39,7 @@ import org.jpmml.evaluator.NormalizationUtil;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 
-public class EvalCSVUtil {
+public class CommonUtil {
 	private PMML pmml;
 	private String[] headers;
 	private String path;
@@ -53,7 +53,7 @@ public class EvalCSVUtil {
 	private List<double[]> dataSet = new ArrayList<double[]>();
 	private BufferedReader reader;
 
-	public EvalCSVUtil(String dataPath, PMML pmml) {
+	public CommonUtil(String dataPath, PMML pmml) {
 		this.path = dataPath;
 		this.pmml = pmml;
 		headers = PMMLAdapterCommonUtil.getDataDicHeaders(pmml);

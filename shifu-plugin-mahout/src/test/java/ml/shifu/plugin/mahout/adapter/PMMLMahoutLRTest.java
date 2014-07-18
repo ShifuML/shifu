@@ -14,21 +14,20 @@
  * limitations under the License.
  */
 
-package ml.shifu.plugin.encog.adapter;
+package ml.shifu.plugin.mahout.adapter;
 
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
+import java.util.List;
 import java.util.Map;
 
 import ml.shifu.core.util.PMMLUtils;
 
+import org.apache.mahout.classifier.sgd.L1;
+import org.apache.mahout.classifier.sgd.OnlineLogisticRegression;
+import org.apache.mahout.math.DenseVector;
 import org.dmg.pmml.FieldName;
 import org.dmg.pmml.Model;
 import org.dmg.pmml.PMML;
 import org.dmg.pmml.RegressionModel;
-import org.encog.ml.data.MLData;
-import org.encog.neural.networks.BasicNetwork;
-import org.encog.neural.networks.PersistBasicNetwork;
 import org.jpmml.evaluator.ModelEvaluationContext;
 import org.jpmml.evaluator.RegressionModelEvaluator;
 import org.slf4j.Logger;
@@ -40,30 +39,28 @@ import org.testng.annotations.Test;
  * Test PMMLEncogNeuralNetworkModel that converts an Encog NeuralNetwork model
  * to a PMML NeuralNetwork Model.
  */
-public class PMMLEncogLRTest {
-	BasicNetwork mlModel;
+public class PMMLMahoutLRTest {
+	OnlineLogisticRegression lrModel;
 	PMML pmml;
-	private static Logger log = LoggerFactory.getLogger(PMMLEncogLRTest.class);
+	private static Logger log = LoggerFactory.getLogger(PMMLMahoutLRTest.class);
 	RegressionModelEvaluator evaluator;
-	protected final double DELTA = Math.pow(10, -1)*2;
-	private String mlModelPath = "src/test/resources/adapter/encogLR/EncogLR.lr";
+	protected final double DELTA = Math.pow(10, -5);
+	private String inputData = "src/test/resources/data/wdbc/inputTrainData";
 	private String initPmmlPath = "src/test/resources/data/wdbc/model.xml";
-	private String outputPMMLPath = "src/test/resources/adapter/encogLR/EncogLR_output.pmml";
+	private String outputPMMLPath = "src/test/resources/adapter/mahoutLR/MahoutLR.pmml";
 	private String evalFilePath = "src/test/resources/data/wdbc/evalData";
 
 	protected void initMLModel() {
 		try {
 			pmml = PMMLUtils.loadPMML(initPmmlPath);
 		} catch (Exception e1) {
-			// TODO Auto-generated catch block
 			e1.printStackTrace();
 		}
-		PersistBasicNetwork networkReader = new PersistBasicNetwork();
-		try {
-			mlModel = (BasicNetwork) networkReader.read(new FileInputStream(
-					mlModelPath));
-		} catch (FileNotFoundException e) {
-			e.printStackTrace();
+		List<MahoutDataPair> inputDataSet = new CommonUtil(inputData, pmml)
+				.getMahoutDataPair();
+		lrModel = new OnlineLogisticRegression(2, 30, new L1());
+		for (MahoutDataPair pair : inputDataSet) {
+			lrModel.train(pair.getActual(), pair.getVector());
 		}
 
 	}
@@ -76,15 +73,15 @@ public class PMMLEncogLRTest {
 				.withModelStats(pmmlNN.getModelStats())
 				.withLocalTransformations(pmmlNN.getLocalTransformations());
 
-		pmmlNN = new PMMLEncogLogisticRegressionModel().adaptMLModelToPMML(
-				mlModel, pmmlLR);
+		pmmlNN = new PMMLMahoutLogisticRegressionModel().adaptMLModelToPMML(
+				lrModel, pmmlLR);
 		pmml.getModels().set(0, pmmlLR);
 	}
 
 	protected void writeToPMML() {
 
 		PMMLUtils.savePMML(pmml, outputPMMLPath);
-		log.info(" - write PMML NeuralNetwork model to " + outputPMMLPath
+		log.info(" - write PMML LogisticRegression model to " + outputPMMLPath
 				+ "\n - the number of nodes in each layer ...");
 	}
 
@@ -97,21 +94,19 @@ public class PMMLEncogLRTest {
 	}
 
 	private void evaluateInputs(CommonUtil evalInput) {
-		log.info(" evaluate Encog LR adapter with " + evalInput.getEvaluatorInput().size()
-				+ " inputs");
-		 for (Map<FieldName, String> map : evalInput.getEvaluatorInput()) {
-				 ModelEvaluationContext context = new ModelEvaluationContext(null,
-				 evaluator);
-				 context.declareAll(map);
-				 MLData data = evalInput.normalizeData(context);
-//				 System.out.println("pmml "+getPMMLEvaluatorResult(map)+" mlModel "+mlModel.compute(data).getData(0));
-			Assert.assertEquals(
-					getPMMLEvaluatorResult(map),
-					mlModel.compute(data).getData(0), DELTA);
+		log.info(" evaluate Mahout LR adapter with "
+				+ evalInput.getEvaluatorInput().size() + " inputs");
+		for (Map<FieldName, String> map : evalInput.getEvaluatorInput()) {
+			ModelEvaluationContext context = new ModelEvaluationContext(null,
+					evaluator);
+			context.declareAll(map);
+			double[] data = evalInput.normalizeData(context);
+//			 System.out.println("pmml "+getPMMLEvaluatorResult(map)+" mlModel "+lrModel.classifyScalar(new DenseVector(data)));
+			Assert.assertEquals(getPMMLEvaluatorResult(map),
+					lrModel.classifyScalar(new DenseVector(data)), DELTA);
 		}
 	}
 
-	
 	private double getPMMLEvaluatorResult(Map<FieldName, String> inputData) {
 		@SuppressWarnings("unchecked")
 		Map<FieldName, Double> evalMap = (Map<FieldName, Double>) evaluator
@@ -123,11 +118,11 @@ public class PMMLEncogLRTest {
 	}
 
 	@Test
-	public void testEncogLR() {
+	public void testMahoutLR() {
 		initMLModel();
 		adaptToPMML();
 		writeToPMML();
 		evaluatePMML();
 	}
-	
+
 }

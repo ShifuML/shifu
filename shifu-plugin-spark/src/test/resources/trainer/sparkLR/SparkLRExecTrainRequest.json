@@ -11,10 +11,10 @@
                 "spark.master": "local",
                 "spark.app.name": "LogisticRegressionModel",
                 "modelName": "demoModel",
-                "pathPMML": "src/test/resources/trainer/model.xml",
-                "pathNormalizedData": "src/test/resources/trainer/normalized.txt",
+                "pathPMML": "src/test/resources/data/wdbc/model.xml",
+                "pathNormalizedData": "src/test/resources/data/wdbc/inputTrainData",
                 "trainerID": "test",
-                "pathOutput": "src/test/resources/trainer/sparkLR",
+                "pathOutput": "src/test/resources/trainer/sparkLR/modelOutput.lr",
                 "splitRatio": 0.8,
                 "stepSize": 0.5
             }

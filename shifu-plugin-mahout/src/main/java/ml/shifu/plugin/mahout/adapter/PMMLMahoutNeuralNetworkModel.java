@@ -16,6 +16,8 @@
 
 package ml.shifu.plugin.mahout.adapter;
 
+import java.util.List;
+
 import ml.shifu.core.plugin.pmml.AdapterConstants;
 import ml.shifu.core.plugin.pmml.PMMLAdapterCommonUtil;
 import ml.shifu.core.plugin.pmml.PMMLModelBuilder;
@@ -24,10 +26,19 @@ import org.apache.mahout.classifier.mlp.NeuralNetwork;
 import org.apache.mahout.math.Matrix;
 import org.dmg.pmml.ActivationFunctionType;
 import org.dmg.pmml.Connection;
+import org.dmg.pmml.Constant;
+import org.dmg.pmml.DataType;
+import org.dmg.pmml.DerivedField;
+import org.dmg.pmml.FieldName;
+import org.dmg.pmml.FieldRef;
+import org.dmg.pmml.LocalTransformations;
 import org.dmg.pmml.MiningFunctionType;
 import org.dmg.pmml.MiningSchema;
+import org.dmg.pmml.NeuralInput;
+import org.dmg.pmml.NeuralInputs;
 import org.dmg.pmml.NeuralLayer;
 import org.dmg.pmml.Neuron;
+import org.dmg.pmml.OpType;
 
 public class PMMLMahoutNeuralNetworkModel implements
 		PMMLModelBuilder<org.dmg.pmml.NeuralNetwork, NeuralNetwork> {
@@ -37,6 +48,7 @@ public class PMMLMahoutNeuralNetworkModel implements
 		Matrix[] matrixList = nnModel.getWeightMatrices();
 		MiningSchema schema = pmmlModel.getMiningSchema();
 		pmmlModel.withFunctionName(MiningFunctionType.REGRESSION);
+		renameDerivedFields(pmmlModel);
 		for (int layerIndex = 0; layerIndex < matrixList.length; layerIndex++) {
 			NeuralLayer layer = new NeuralLayer();
 			Matrix matrix = matrixList[layerIndex];
@@ -69,24 +81,53 @@ public class PMMLMahoutNeuralNetworkModel implements
 		return pmmlModel;
 	}
 
-	// private ActivationFunctionType[] transformActivationFunction(
-	// ActivationFunction[] functions) {
-	// int funLen = functions.length;
-	// ActivationFunctionType[] functionType = new
-	// ActivationFunctionType[funLen];
-	// HashMap<String, ActivationFunctionType> functionMap = new HashMap<String,
-	// ActivationFunctionType>() {
-	// {
-	// put("Sigmoid", ActivationFunctionType.LOGISTIC);
-	// put("Identity", ActivationFunctionType.IDENTITY);
-	// }
-	// };
-	// for (int i = 0; i < funLen; i++) {
-	// String trimS = functions[i].getClass().getName();
-	// String[] functionS = trimS.split("\\.");
-	// functionType[i] = functionMap.get(functionS[functionS.length - 1]);
-	// }
-	// return functionType;
-	// }
+	private org.dmg.pmml.NeuralNetwork renameDerivedFields(
+			org.dmg.pmml.NeuralNetwork pmmlModel) {
+		// delete target
+		List<DerivedField> derivedFields = pmmlModel.getLocalTransformations()
+				.getDerivedFields();
+		derivedFields.remove(0);
+		// change name
+//		for (DerivedField field : derivedFields) {
+//			String name = field.getName().getValue();
+//			field.setName(new FieldName(name + "_T"));
+//		}
+		// add bias
+		DerivedField field = new DerivedField(OpType.CONTINUOUS,
+				DataType.DOUBLE).withName(new FieldName(
+				AdapterConstants.biasValue));
+		// field.withName(new FieldName(s));
+		field.withExpression(new Constant(String.valueOf(AdapterConstants.bias)));
+		derivedFields.add(field);
+		pmmlModel.setLocalTransformations(new LocalTransformations()
+				.withDerivedFields(derivedFields));
+		int index = 0;
+		NeuralInputs inputs = new NeuralInputs();
+		// add input
+		for (int i = 0; i < derivedFields.size() - 1; i++) {
+			String name = derivedFields.get(i).getName().getValue();
+			DerivedField inputF = new DerivedField(OpType.CONTINUOUS,
+					DataType.DOUBLE).withName(new FieldName(name))
+					.withExpression(new FieldRef(new FieldName(name)));
+			inputs.withNeuralInputs(new NeuralInput(inputF, "0," + (index++)));
+		}
+		DerivedField biasF = new DerivedField(OpType.CONTINUOUS,
+				DataType.DOUBLE).withName(
+				new FieldName(AdapterConstants.biasValue)).withExpression(
+				new FieldRef(new FieldName(AdapterConstants.biasValue)));
+		inputs.withNeuralInputs(new NeuralInput(biasF,
+				AdapterConstants.biasValue));
 
+		pmmlModel.setNeuralInputs(inputs);
+
+		return pmmlModel;
+	}
+
+	@SuppressWarnings("unused")
+	private org.dmg.pmml.NeuralNetwork deleteTargetDerivedFields(
+			org.dmg.pmml.NeuralNetwork pmmlModel) {
+		// delete target
+		pmmlModel.getLocalTransformations().getDerivedFields().remove(0);
+		return pmmlModel;
+	}
 }

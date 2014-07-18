@@ -34,7 +34,7 @@
         <DataField name="worst_symmetry" optype="continuous" dataType="double"/>
         <DataField name="worst_fractal_dimension" optype="continuous" dataType="double"/>
     </DataDictionary>
-    <NeuralNetwork modelName="demoModel" functionName="regression">
+    <NeuralNetwork modelName="demoModel">
         <MiningSchema>
             <MiningField name="id" usageType="supplementary" optype="ordinal"/>
             <MiningField name="diagnosis" usageType="target" optype="categorical"/>
@@ -1172,700 +1172,195 @@
             </Target>
         </Targets>
         <LocalTransformations>
-            <DerivedField name="mean_radiusT_T" optype="continuous" dataType="double">
+            <DerivedField name="diagnosis" optype="categorical" dataType="string">
+                <MapValues outputColumn="1">
+                    <FieldColumnPair field="diagnosis" column="0"/>
+                    <InlineTable>
+                        <row>M 1</row>
+                        <row>B 0</row>
+                    </InlineTable>
+                </MapValues>
+            </DerivedField>
+            <DerivedField name="mean_radiusT" optype="continuous" dataType="double">
                 <NormContinuous field="mean_radius">
                     <LinearNorm orig="0.0" norm="-4.00761373022065"/>
                     <LinearNorm orig="14.12049119718311" norm="0.0"/>
                 </NormContinuous>
             </DerivedField>
-            <DerivedField name="mean_textureT_T" optype="continuous" dataType="double">
+            <DerivedField name="mean_textureT" optype="continuous" dataType="double">
                 <NormContinuous field="mean_texture">
                     <LinearNorm orig="0.0" norm="-4.50164553444311"/>
                     <LinearNorm orig="19.30533450704228" norm="0.0"/>
                 </NormContinuous>
             </DerivedField>
-            <DerivedField name="mean_perimeterT_T" optype="continuous" dataType="double">
+            <DerivedField name="mean_perimeterT" optype="continuous" dataType="double">
                 <NormContinuous field="mean_perimeter">
                     <LinearNorm orig="0.0" norm="-3.7847042946812364"/>
                     <LinearNorm orig="91.91475352112678" norm="0.0"/>
                 </NormContinuous>
             </DerivedField>
-            <DerivedField name="mean_areaT_T" optype="continuous" dataType="double">
+            <DerivedField name="mean_areaT" optype="continuous" dataType="double">
                 <NormContinuous field="mean_area">
                     <LinearNorm orig="0.0" norm="-1.8591520219235536"/>
                     <LinearNorm orig="654.2797535211271" norm="0.0"/>
                 </NormContinuous>
             </DerivedField>
-            <DerivedField name="mean_smoothnessT_T" optype="continuous" dataType="double">
+            <DerivedField name="mean_smoothnessT" optype="continuous" dataType="double">
                 <NormContinuous field="mean_smoothness">
                     <LinearNorm orig="0.0" norm="-6.857538982975337"/>
                     <LinearNorm orig="0.09632147887323936" norm="0.0"/>
                 </NormContinuous>
             </DerivedField>
-            <DerivedField name="mean_compactnessT_T" optype="continuous" dataType="double">
+            <DerivedField name="mean_compactnessT" optype="continuous" dataType="double">
                 <NormContinuous field="mean_compactness">
                     <LinearNorm orig="0.0" norm="-1.9871159390401176"/>
                     <LinearNorm orig="0.1040359507042254" norm="0.0"/>
                 </NormContinuous>
             </DerivedField>
-            <DerivedField name="mean_concavityT_T" optype="continuous" dataType="double">
+            <DerivedField name="mean_concavityT" optype="continuous" dataType="double">
                 <NormContinuous field="mean_concavity">
                     <LinearNorm orig="0.0" norm="-1.1151795596563225"/>
                     <LinearNorm orig="0.08842730757042255" norm="0.0"/>
                 </NormContinuous>
             </DerivedField>
-            <DerivedField name="mean_concave_pointsT_T" optype="continuous" dataType="double">
+            <DerivedField name="mean_concave_pointsT" optype="continuous" dataType="double">
                 <NormContinuous field="mean_concave_points">
                     <LinearNorm orig="0.0" norm="-1.262295217483865"/>
                     <LinearNorm orig="0.04874629225352108" norm="0.0"/>
                 </NormContinuous>
             </DerivedField>
-            <DerivedField name="mean_symmetryT_T" optype="continuous" dataType="double">
+            <DerivedField name="mean_symmetryT" optype="continuous" dataType="double">
                 <NormContinuous field="mean_symmetry">
                     <LinearNorm orig="0.0" norm="-6.627327624957892"/>
                     <LinearNorm orig="0.18105492957746488" norm="0.0"/>
                 </NormContinuous>
             </DerivedField>
-            <DerivedField name="mean_fractal_dimensionT_T" optype="continuous" dataType="double">
+            <DerivedField name="mean_fractal_dimensionT" optype="continuous" dataType="double">
                 <NormContinuous field="mean_fractal_dimension">
                     <LinearNorm orig="0.0" norm="-8.92248853985651"/>
                     <LinearNorm orig="0.06276959507042251" norm="0.0"/>
                 </NormContinuous>
             </DerivedField>
-            <DerivedField name="std_radiusT_T" optype="continuous" dataType="double">
+            <DerivedField name="std_radiusT" optype="continuous" dataType="double">
                 <NormContinuous field="std_radius">
                     <LinearNorm orig="0.0" norm="-1.4634103560937344"/>
                     <LinearNorm orig="0.4039575704225356" norm="0.0"/>
                 </NormContinuous>
             </DerivedField>
-            <DerivedField name="std_textureT_T" optype="continuous" dataType="double">
+            <DerivedField name="std_textureT" optype="continuous" dataType="double">
                 <NormContinuous field="std_texture">
                     <LinearNorm orig="0.0" norm="-2.205520915397837"/>
                     <LinearNorm orig="1.2174019366197188" norm="0.0"/>
                 </NormContinuous>
             </DerivedField>
-            <DerivedField name="std_perimeterT_T" optype="continuous" dataType="double">
+            <DerivedField name="std_perimeterT" optype="continuous" dataType="double">
                 <NormContinuous field="std_perimeter">
                     <LinearNorm orig="0.0" norm="-1.421390555527879"/>
                     <LinearNorm orig="2.855983626760559" norm="0.0"/>
                 </NormContinuous>
             </DerivedField>
-            <DerivedField name="std_areaT_T" optype="continuous" dataType="double">
+            <DerivedField name="std_areaT" optype="continuous" dataType="double">
                 <NormContinuous field="std_area">
                     <LinearNorm orig="0.0" norm="-0.8863933700077381"/>
                     <LinearNorm orig="40.13802464788737" norm="0.0"/>
                 </NormContinuous>
             </DerivedField>
-            <DerivedField name="std_smoothnessT_T" optype="continuous" dataType="double">
+            <DerivedField name="std_smoothnessT" optype="continuous" dataType="double">
                 <NormContinuous field="std_smoothness">
                     <LinearNorm orig="0.0" norm="-2.343201331121645"/>
                     <LinearNorm orig="0.007042109154929578" norm="0.0"/>
                 </NormContinuous>
             </DerivedField>
-            <DerivedField name="std_compactnessT_T" optype="continuous" dataType="double">
+            <DerivedField name="std_compactnessT" optype="continuous" dataType="double">
                 <NormContinuous field="std_compactness">
                     <LinearNorm orig="0.0" norm="-1.4213097399558947"/>
                     <LinearNorm orig="0.02543665669014085" norm="0.0"/>
                 </NormContinuous>
             </DerivedField>
-            <DerivedField name="std_concavityT_T" optype="continuous" dataType="double">
+            <DerivedField name="std_concavityT" optype="continuous" dataType="double">
                 <NormContinuous field="std_concavity">
                     <LinearNorm orig="0.0" norm="-1.0548539331491438"/>
                     <LinearNorm orig="0.03185527218309857" norm="0.0"/>
                 </NormContinuous>
             </DerivedField>
-            <DerivedField name="std_concave_pointsT_T" optype="continuous" dataType="double">
+            <DerivedField name="std_concave_pointsT" optype="continuous" dataType="double">
                 <NormContinuous field="std_concave_points">
                     <LinearNorm orig="0.0" norm="-1.909610331077918"/>
                     <LinearNorm orig="0.011788964788732394" norm="0.0"/>
                 </NormContinuous>
             </DerivedField>
-            <DerivedField name="std_symmetryT_T" optype="continuous" dataType="double">
+            <DerivedField name="std_symmetryT" optype="continuous" dataType="double">
                 <NormContinuous field="std_symmetry">
                     <LinearNorm orig="0.0" norm="-2.483691655762281"/>
                     <LinearNorm orig="0.02052559507042254" norm="0.0"/>
                 </NormContinuous>
             </DerivedField>
-            <DerivedField name="std_fractal_dimensionT_T" optype="continuous" dataType="double">
+            <DerivedField name="std_fractal_dimensionT" optype="continuous" dataType="double">
                 <NormContinuous field="std_fractal_dimension">
                     <LinearNorm orig="0.0" norm="-1.4321658823263728"/>
                     <LinearNorm orig="0.0037906818661971827" norm="0.0"/>
                 </NormContinuous>
             </DerivedField>
-            <DerivedField name="worst_radiusT_T" optype="continuous" dataType="double">
+            <DerivedField name="worst_radiusT" optype="continuous" dataType="double">
                 <NormContinuous field="worst_radius">
                     <LinearNorm orig="0.0" norm="-3.370400527357199"/>
                     <LinearNorm orig="16.25314964788733" norm="0.0"/>
                 </NormContinuous>
             </DerivedField>
-            <DerivedField name="worst_textureT_T" optype="continuous" dataType="double">
+            <DerivedField name="worst_textureT" optype="continuous" dataType="double">
                 <NormContinuous field="worst_texture">
                     <LinearNorm orig="0.0" norm="-4.183219639034475"/>
                     <LinearNorm orig="25.691919014084498" norm="0.0"/>
                 </NormContinuous>
             </DerivedField>
-            <DerivedField name="worst_perimeterT_T" optype="continuous" dataType="double">
+            <DerivedField name="worst_perimeterT" optype="continuous" dataType="double">
                 <NormContinuous field="worst_perimeter">
                     <LinearNorm orig="0.0" norm="-3.2001808533067124"/>
                     <LinearNorm orig="107.12505281690146" norm="0.0"/>
                 </NormContinuous>
             </DerivedField>
-            <DerivedField name="worst_areaT_T" optype="continuous" dataType="double">
+            <DerivedField name="worst_areaT" optype="continuous" dataType="double">
                 <NormContinuous field="worst_area">
                     <LinearNorm orig="0.0" norm="-1.5472125545287698"/>
                     <LinearNorm orig="878.5788732394362" norm="0.0"/>
                 </NormContinuous>
             </DerivedField>
-            <DerivedField name="worst_smoothnessT_T" optype="continuous" dataType="double">
+            <DerivedField name="worst_smoothnessT" optype="continuous" dataType="double">
                 <NormContinuous field="worst_smoothness">
                     <LinearNorm orig="0.0" norm="-5.798716102882977"/>
                     <LinearNorm orig="0.13231607394366207" norm="0.0"/>
                 </NormContinuous>
             </DerivedField>
-            <DerivedField name="worst_compactnessT_T" optype="continuous" dataType="double">
+            <DerivedField name="worst_compactnessT" optype="continuous" dataType="double">
                 <NormContinuous field="worst_compactness">
                     <LinearNorm orig="0.0" norm="-1.6198296859021801"/>
                     <LinearNorm orig="0.25354086267605663" norm="0.0"/>
                 </NormContinuous>
             </DerivedField>
-            <DerivedField name="worst_concavityT_T" optype="continuous" dataType="double">
+            <DerivedField name="worst_concavityT" optype="continuous" dataType="double">
                 <NormContinuous field="worst_concavity">
                     <LinearNorm orig="0.0" norm="-1.3049482081221482"/>
                     <LinearNorm orig="0.271414343309859" norm="0.0"/>
                 </NormContinuous>
             </DerivedField>
-            <DerivedField name="worst_concave_pointsT_T" optype="continuous" dataType="double">
+            <DerivedField name="worst_concave_pointsT" optype="continuous" dataType="double">
                 <NormContinuous field="worst_concave_points">
                     <LinearNorm orig="0.0" norm="-1.7460797133074155"/>
                     <LinearNorm orig="0.11434074119718311" norm="0.0"/>
                 </NormContinuous>
             </DerivedField>
-            <DerivedField name="worst_symmetryT_T" optype="continuous" dataType="double">
+            <DerivedField name="worst_symmetryT" optype="continuous" dataType="double">
                 <NormContinuous field="worst_symmetry">
                     <LinearNorm orig="0.0" norm="-4.7111787591027054"/>
                     <LinearNorm orig="0.2897762323943664" norm="0.0"/>
                 </NormContinuous>
             </DerivedField>
-            <DerivedField name="worst_fractal_dimensionT_T" optype="continuous" dataType="double">
+            <DerivedField name="worst_fractal_dimensionT" optype="continuous" dataType="double">
                 <NormContinuous field="worst_fractal_dimension">
                     <LinearNorm orig="0.0" norm="-4.655729030483473"/>
                     <LinearNorm orig="0.08388427816901405" norm="0.0"/>
                 </NormContinuous>
             </DerivedField>
-            <DerivedField name="bias" optype="continuous" dataType="double">
-                <Constant>1</Constant>
-            </DerivedField>
         </LocalTransformations>
-        <NeuralInputs>
-            <NeuralInput id="0,0">
-                <DerivedField name="mean_radiusT_T" optype="continuous" dataType="double">
-                    <FieldRef field="mean_radiusT_T"/>
-                </DerivedField>
-            </NeuralInput>
-            <NeuralInput id="0,1">
-                <DerivedField name="mean_textureT_T" optype="continuous" dataType="double">
-                    <FieldRef field="mean_textureT_T"/>
-                </DerivedField>
-            </NeuralInput>
-            <NeuralInput id="0,2">
-                <DerivedField name="mean_perimeterT_T" optype="continuous" dataType="double">
-                    <FieldRef field="mean_perimeterT_T"/>
-                </DerivedField>
-            </NeuralInput>
-            <NeuralInput id="0,3">
-                <DerivedField name="mean_areaT_T" optype="continuous" dataType="double">
-                    <FieldRef field="mean_areaT_T"/>
-                </DerivedField>
-            </NeuralInput>
-            <NeuralInput id="0,4">
-                <DerivedField name="mean_smoothnessT_T" optype="continuous" dataType="double">
-                    <FieldRef field="mean_smoothnessT_T"/>
-                </DerivedField>
-            </NeuralInput>
-            <NeuralInput id="0,5">
-                <DerivedField name="mean_compactnessT_T" optype="continuous" dataType="double">
-                    <FieldRef field="mean_compactnessT_T"/>
-                </DerivedField>
-            </NeuralInput>
-            <NeuralInput id="0,6">
-                <DerivedField name="mean_concavityT_T" optype="continuous" dataType="double">
-                    <FieldRef field="mean_concavityT_T"/>
-                </DerivedField>
-            </NeuralInput>
-            <NeuralInput id="0,7">
-                <DerivedField name="mean_concave_pointsT_T" optype="continuous" dataType="double">
-                    <FieldRef field="mean_concave_pointsT_T"/>
-                </DerivedField>
-            </NeuralInput>
-            <NeuralInput id="0,8">
-                <DerivedField name="mean_symmetryT_T" optype="continuous" dataType="double">
-                    <FieldRef field="mean_symmetryT_T"/>
-                </DerivedField>
-            </NeuralInput>
-            <NeuralInput id="0,9">
-                <DerivedField name="mean_fractal_dimensionT_T" optype="continuous" dataType="double">
-                    <FieldRef field="mean_fractal_dimensionT_T"/>
-                </DerivedField>
-            </NeuralInput>
-            <NeuralInput id="0,10">
-                <DerivedField name="std_radiusT_T" optype="continuous" dataType="double">
-                    <FieldRef field="std_radiusT_T"/>
-                </DerivedField>
-            </NeuralInput>
-            <NeuralInput id="0,11">
-                <DerivedField name="std_textureT_T" optype="continuous" dataType="double">
-                    <FieldRef field="std_textureT_T"/>
-                </DerivedField>
-            </NeuralInput>
-            <NeuralInput id="0,12">
-                <DerivedField name="std_perimeterT_T" optype="continuous" dataType="double">
-                    <FieldRef field="std_perimeterT_T"/>
-                </DerivedField>
-            </NeuralInput>
-            <NeuralInput id="0,13">
-                <DerivedField name="std_areaT_T" optype="continuous" dataType="double">
-                    <FieldRef field="std_areaT_T"/>
-                </DerivedField>
-            </NeuralInput>
-            <NeuralInput id="0,14">
-                <DerivedField name="std_smoothnessT_T" optype="continuous" dataType="double">
-                    <FieldRef field="std_smoothnessT_T"/>
-                </DerivedField>
-            </NeuralInput>
-            <NeuralInput id="0,15">
-                <DerivedField name="std_compactnessT_T" optype="continuous" dataType="double">
-                    <FieldRef field="std_compactnessT_T"/>
-                </DerivedField>
-            </NeuralInput>
-            <NeuralInput id="0,16">
-                <DerivedField name="std_concavityT_T" optype="continuous" dataType="double">
-                    <FieldRef field="std_concavityT_T"/>
-                </DerivedField>
-            </NeuralInput>
-            <NeuralInput id="0,17">
-                <DerivedField name="std_concave_pointsT_T" optype="continuous" dataType="double">
-                    <FieldRef field="std_concave_pointsT_T"/>
-                </DerivedField>
-            </NeuralInput>
-            <NeuralInput id="0,18">
-                <DerivedField name="std_symmetryT_T" optype="continuous" dataType="double">
-                    <FieldRef field="std_symmetryT_T"/>
-                </DerivedField>
-            </NeuralInput>
-            <NeuralInput id="0,19">
-                <DerivedField name="std_fractal_dimensionT_T" optype="continuous" dataType="double">
-                    <FieldRef field="std_fractal_dimensionT_T"/>
-                </DerivedField>
-            </NeuralInput>
-            <NeuralInput id="0,20">
-                <DerivedField name="worst_radiusT_T" optype="continuous" dataType="double">
-                    <FieldRef field="worst_radiusT_T"/>
-                </DerivedField>
-            </NeuralInput>
-            <NeuralInput id="0,21">
-                <DerivedField name="worst_textureT_T" optype="continuous" dataType="double">
-                    <FieldRef field="worst_textureT_T"/>
-                </DerivedField>
-            </NeuralInput>
-            <NeuralInput id="0,22">
-                <DerivedField name="worst_perimeterT_T" optype="continuous" dataType="double">
-                    <FieldRef field="worst_perimeterT_T"/>
-                </DerivedField>
-            </NeuralInput>
-            <NeuralInput id="0,23">
-                <DerivedField name="worst_areaT_T" optype="continuous" dataType="double">
-                    <FieldRef field="worst_areaT_T"/>
-                </DerivedField>
-            </NeuralInput>
-            <NeuralInput id="0,24">
-                <DerivedField name="worst_smoothnessT_T" optype="continuous" dataType="double">
-                    <FieldRef field="worst_smoothnessT_T"/>
-                </DerivedField>
-            </NeuralInput>
-            <NeuralInput id="0,25">
-                <DerivedField name="worst_compactnessT_T" optype="continuous" dataType="double">
-                    <FieldRef field="worst_compactnessT_T"/>
-                </DerivedField>
-            </NeuralInput>
-            <NeuralInput id="0,26">
-                <DerivedField name="worst_concavityT_T" optype="continuous" dataType="double">
-                    <FieldRef field="worst_concavityT_T"/>
-                </DerivedField>
-            </NeuralInput>
-            <NeuralInput id="0,27">
-                <DerivedField name="worst_concave_pointsT_T" optype="continuous" dataType="double">
-                    <FieldRef field="worst_concave_pointsT_T"/>
-                </DerivedField>
-            </NeuralInput>
-            <NeuralInput id="0,28">
-                <DerivedField name="worst_symmetryT_T" optype="continuous" dataType="double">
-                    <FieldRef field="worst_symmetryT_T"/>
-                </DerivedField>
-            </NeuralInput>
-            <NeuralInput id="0,29">
-                <DerivedField name="worst_fractal_dimensionT_T" optype="continuous" dataType="double">
-                    <FieldRef field="worst_fractal_dimensionT_T"/>
-                </DerivedField>
-            </NeuralInput>
-            <NeuralInput id="bias">
-                <DerivedField name="bias" optype="continuous" dataType="double">
-                    <FieldRef field="bias"/>
-                </DerivedField>
-            </NeuralInput>
-        </NeuralInputs>
-        <NeuralLayer numberOfNeurons="10" activationFunction="logistic">
-            <Neuron id="1,0" bias="0.0">
-                <Con from="0,0" weight="-0.224389923211362"/>
-                <Con from="0,1" weight="-0.16290463869255983"/>
-                <Con from="0,2" weight="-0.22557425271039402"/>
-                <Con from="0,3" weight="-0.21438667157054875"/>
-                <Con from="0,4" weight="-0.13760123121861267"/>
-                <Con from="0,5" weight="-0.1404818251276059"/>
-                <Con from="0,6" weight="-0.2031021597155273"/>
-                <Con from="0,7" weight="-0.2389579691821496"/>
-                <Con from="0,8" weight="-0.07361361155664986"/>
-                <Con from="0,9" weight="0.028378574606751465"/>
-                <Con from="0,10" weight="-0.17948353113319915"/>
-                <Con from="0,11" weight="8.976851065877607E-4"/>
-                <Con from="0,12" weight="-0.15251180233549672"/>
-                <Con from="0,13" weight="-0.15782924208324395"/>
-                <Con from="0,14" weight="-0.009077379347353216"/>
-                <Con from="0,15" weight="-0.02699793035741896"/>
-                <Con from="0,16" weight="-0.06621406544802723"/>
-                <Con from="0,17" weight="-0.0943016889027024"/>
-                <Con from="0,18" weight="-0.005048338601397696"/>
-                <Con from="0,19" weight="0.005637463093442036"/>
-                <Con from="0,20" weight="-0.24588800766237012"/>
-                <Con from="0,21" weight="-0.1800715090720886"/>
-                <Con from="0,22" weight="-0.23965337318115684"/>
-                <Con from="0,23" weight="-0.22795084056142711"/>
-                <Con from="0,24" weight="-0.18022551377159549"/>
-                <Con from="0,25" weight="-0.10583628000529932"/>
-                <Con from="0,26" weight="-0.18180675208453645"/>
-                <Con from="0,27" weight="-0.22073836588962492"/>
-                <Con from="0,28" weight="-0.09631182319702343"/>
-                <Con from="0,29" weight="-0.04612951212303476"/>
-                <Con from="bias" weight="-0.07704039055034871"/>
-            </Neuron>
-            <Neuron id="1,1" bias="0.0">
-                <Con from="0,0" weight="-0.224389923211362"/>
-                <Con from="0,1" weight="-0.16290463869255983"/>
-                <Con from="0,2" weight="-0.22557425271039402"/>
-                <Con from="0,3" weight="-0.21438667157054875"/>
-                <Con from="0,4" weight="-0.13760123121861267"/>
-                <Con from="0,5" weight="-0.1404818251276059"/>
-                <Con from="0,6" weight="-0.2031021597155273"/>
-                <Con from="0,7" weight="-0.2389579691821496"/>
-                <Con from="0,8" weight="-0.07361361155664986"/>
-                <Con from="0,9" weight="0.028378574606751465"/>
-                <Con from="0,10" weight="-0.17948353113319915"/>
-                <Con from="0,11" weight="8.976851065877607E-4"/>
-                <Con from="0,12" weight="-0.15251180233549672"/>
-                <Con from="0,13" weight="-0.15782924208324395"/>
-                <Con from="0,14" weight="-0.009077379347353216"/>
-                <Con from="0,15" weight="-0.02699793035741896"/>
-                <Con from="0,16" weight="-0.06621406544802723"/>
-                <Con from="0,17" weight="-0.0943016889027024"/>
-                <Con from="0,18" weight="-0.005048338601397696"/>
-                <Con from="0,19" weight="0.005637463093442036"/>
-                <Con from="0,20" weight="-0.24588800766237012"/>
-                <Con from="0,21" weight="-0.1800715090720886"/>
-                <Con from="0,22" weight="-0.23965337318115684"/>
-                <Con from="0,23" weight="-0.22795084056142711"/>
-                <Con from="0,24" weight="-0.18022551377159549"/>
-                <Con from="0,25" weight="-0.10583628000529932"/>
-                <Con from="0,26" weight="-0.18180675208453645"/>
-                <Con from="0,27" weight="-0.22073836588962492"/>
-                <Con from="0,28" weight="-0.09631182319702343"/>
-                <Con from="0,29" weight="-0.04612951212303476"/>
-                <Con from="bias" weight="-0.07704039055034871"/>
-            </Neuron>
-            <Neuron id="1,2" bias="0.0">
-                <Con from="0,0" weight="-0.224389923211362"/>
-                <Con from="0,1" weight="-0.16290463869255983"/>
-                <Con from="0,2" weight="-0.22557425271039402"/>
-                <Con from="0,3" weight="-0.21438667157054875"/>
-                <Con from="0,4" weight="-0.13760123121861267"/>
-                <Con from="0,5" weight="-0.1404818251276059"/>
-                <Con from="0,6" weight="-0.2031021597155273"/>
-                <Con from="0,7" weight="-0.2389579691821496"/>
-                <Con from="0,8" weight="-0.07361361155664986"/>
-                <Con from="0,9" weight="0.028378574606751465"/>
-                <Con from="0,10" weight="-0.17948353113319915"/>
-                <Con from="0,11" weight="8.976851065877607E-4"/>
-                <Con from="0,12" weight="-0.15251180233549672"/>
-                <Con from="0,13" weight="-0.15782924208324395"/>
-                <Con from="0,14" weight="-0.009077379347353216"/>
-                <Con from="0,15" weight="-0.02699793035741896"/>
-                <Con from="0,16" weight="-0.06621406544802723"/>
-                <Con from="0,17" weight="-0.0943016889027024"/>
-                <Con from="0,18" weight="-0.005048338601397696"/>
-                <Con from="0,19" weight="0.005637463093442036"/>
-                <Con from="0,20" weight="-0.24588800766237012"/>
-                <Con from="0,21" weight="-0.1800715090720886"/>
-                <Con from="0,22" weight="-0.23965337318115684"/>
-                <Con from="0,23" weight="-0.22795084056142711"/>
-                <Con from="0,24" weight="-0.18022551377159549"/>
-                <Con from="0,25" weight="-0.10583628000529932"/>
-                <Con from="0,26" weight="-0.18180675208453645"/>
-                <Con from="0,27" weight="-0.22073836588962492"/>
-                <Con from="0,28" weight="-0.09631182319702343"/>
-                <Con from="0,29" weight="-0.04612951212303476"/>
-                <Con from="bias" weight="-0.07704039055034871"/>
-            </Neuron>
-            <Neuron id="1,3" bias="0.0">
-                <Con from="0,0" weight="-0.224389923211362"/>
-                <Con from="0,1" weight="-0.16290463869255983"/>
-                <Con from="0,2" weight="-0.22557425271039402"/>
-                <Con from="0,3" weight="-0.21438667157054875"/>
-                <Con from="0,4" weight="-0.13760123121861267"/>
-                <Con from="0,5" weight="-0.1404818251276059"/>
-                <Con from="0,6" weight="-0.2031021597155273"/>
-                <Con from="0,7" weight="-0.2389579691821496"/>
-                <Con from="0,8" weight="-0.07361361155664986"/>
-                <Con from="0,9" weight="0.028378574606751465"/>
-                <Con from="0,10" weight="-0.17948353113319915"/>
-                <Con from="0,11" weight="8.976851065877607E-4"/>
-                <Con from="0,12" weight="-0.15251180233549672"/>
-                <Con from="0,13" weight="-0.15782924208324395"/>
-                <Con from="0,14" weight="-0.009077379347353216"/>
-                <Con from="0,15" weight="-0.02699793035741896"/>
-                <Con from="0,16" weight="-0.06621406544802723"/>
-                <Con from="0,17" weight="-0.0943016889027024"/>
-                <Con from="0,18" weight="-0.005048338601397696"/>
-                <Con from="0,19" weight="0.005637463093442036"/>
-                <Con from="0,20" weight="-0.24588800766237012"/>
-                <Con from="0,21" weight="-0.1800715090720886"/>
-                <Con from="0,22" weight="-0.23965337318115684"/>
-                <Con from="0,23" weight="-0.22795084056142711"/>
-                <Con from="0,24" weight="-0.18022551377159549"/>
-                <Con from="0,25" weight="-0.10583628000529932"/>
-                <Con from="0,26" weight="-0.18180675208453645"/>
-                <Con from="0,27" weight="-0.22073836588962492"/>
-                <Con from="0,28" weight="-0.09631182319702343"/>
-                <Con from="0,29" weight="-0.04612951212303476"/>
-                <Con from="bias" weight="-0.07704039055034871"/>
-            </Neuron>
-            <Neuron id="1,4" bias="0.0">
-                <Con from="0,0" weight="-0.224389923211362"/>
-                <Con from="0,1" weight="-0.16290463869255983"/>
-                <Con from="0,2" weight="-0.22557425271039402"/>
-                <Con from="0,3" weight="-0.21438667157054875"/>
-                <Con from="0,4" weight="-0.13760123121861267"/>
-                <Con from="0,5" weight="-0.1404818251276059"/>
-                <Con from="0,6" weight="-0.2031021597155273"/>
-                <Con from="0,7" weight="-0.2389579691821496"/>
-                <Con from="0,8" weight="-0.07361361155664986"/>
-                <Con from="0,9" weight="0.028378574606751465"/>
-                <Con from="0,10" weight="-0.17948353113319915"/>
-                <Con from="0,11" weight="8.976851065877607E-4"/>
-                <Con from="0,12" weight="-0.15251180233549672"/>
-                <Con from="0,13" weight="-0.15782924208324395"/>
-                <Con from="0,14" weight="-0.009077379347353216"/>
-                <Con from="0,15" weight="-0.02699793035741896"/>
-                <Con from="0,16" weight="-0.06621406544802723"/>
-                <Con from="0,17" weight="-0.0943016889027024"/>
-                <Con from="0,18" weight="-0.005048338601397696"/>
-                <Con from="0,19" weight="0.005637463093442036"/>
-                <Con from="0,20" weight="-0.24588800766237012"/>
-                <Con from="0,21" weight="-0.1800715090720886"/>
-                <Con from="0,22" weight="-0.23965337318115684"/>
-                <Con from="0,23" weight="-0.22795084056142711"/>
-                <Con from="0,24" weight="-0.18022551377159549"/>
-                <Con from="0,25" weight="-0.10583628000529932"/>
-                <Con from="0,26" weight="-0.18180675208453645"/>
-                <Con from="0,27" weight="-0.22073836588962492"/>
-                <Con from="0,28" weight="-0.09631182319702343"/>
-                <Con from="0,29" weight="-0.04612951212303476"/>
-                <Con from="bias" weight="-0.07704039055034871"/>
-            </Neuron>
-            <Neuron id="1,5" bias="0.0">
-                <Con from="0,0" weight="-0.224389923211362"/>
-                <Con from="0,1" weight="-0.16290463869255983"/>
-                <Con from="0,2" weight="-0.22557425271039402"/>
-                <Con from="0,3" weight="-0.21438667157054875"/>
-                <Con from="0,4" weight="-0.13760123121861267"/>
-                <Con from="0,5" weight="-0.1404818251276059"/>
-                <Con from="0,6" weight="-0.2031021597155273"/>
-                <Con from="0,7" weight="-0.2389579691821496"/>
-                <Con from="0,8" weight="-0.07361361155664986"/>
-                <Con from="0,9" weight="0.028378574606751465"/>
-                <Con from="0,10" weight="-0.17948353113319915"/>
-                <Con from="0,11" weight="8.976851065877607E-4"/>
-                <Con from="0,12" weight="-0.15251180233549672"/>
-                <Con from="0,13" weight="-0.15782924208324395"/>
-                <Con from="0,14" weight="-0.009077379347353216"/>
-                <Con from="0,15" weight="-0.02699793035741896"/>
-                <Con from="0,16" weight="-0.06621406544802723"/>
-                <Con from="0,17" weight="-0.0943016889027024"/>
-                <Con from="0,18" weight="-0.005048338601397696"/>
-                <Con from="0,19" weight="0.005637463093442036"/>
-                <Con from="0,20" weight="-0.24588800766237012"/>
-                <Con from="0,21" weight="-0.1800715090720886"/>
-                <Con from="0,22" weight="-0.23965337318115684"/>
-                <Con from="0,23" weight="-0.22795084056142711"/>
-                <Con from="0,24" weight="-0.18022551377159549"/>
-                <Con from="0,25" weight="-0.10583628000529932"/>
-                <Con from="0,26" weight="-0.18180675208453645"/>
-                <Con from="0,27" weight="-0.22073836588962492"/>
-                <Con from="0,28" weight="-0.09631182319702343"/>
-                <Con from="0,29" weight="-0.04612951212303476"/>
-                <Con from="bias" weight="-0.07704039055034871"/>
-            </Neuron>
-            <Neuron id="1,6" bias="0.0">
-                <Con from="0,0" weight="-0.224389923211362"/>
-                <Con from="0,1" weight="-0.16290463869255983"/>
-                <Con from="0,2" weight="-0.22557425271039402"/>
-                <Con from="0,3" weight="-0.21438667157054875"/>
-                <Con from="0,4" weight="-0.13760123121861267"/>
-                <Con from="0,5" weight="-0.1404818251276059"/>
-                <Con from="0,6" weight="-0.2031021597155273"/>
-                <Con from="0,7" weight="-0.2389579691821496"/>
-                <Con from="0,8" weight="-0.07361361155664986"/>
-                <Con from="0,9" weight="0.028378574606751465"/>
-                <Con from="0,10" weight="-0.17948353113319915"/>
-                <Con from="0,11" weight="8.976851065877607E-4"/>
-                <Con from="0,12" weight="-0.15251180233549672"/>
-                <Con from="0,13" weight="-0.15782924208324395"/>
-                <Con from="0,14" weight="-0.009077379347353216"/>
-                <Con from="0,15" weight="-0.02699793035741896"/>
-                <Con from="0,16" weight="-0.06621406544802723"/>
-                <Con from="0,17" weight="-0.0943016889027024"/>
-                <Con from="0,18" weight="-0.005048338601397696"/>
-                <Con from="0,19" weight="0.005637463093442036"/>
-                <Con from="0,20" weight="-0.24588800766237012"/>
-                <Con from="0,21" weight="-0.1800715090720886"/>
-                <Con from="0,22" weight="-0.23965337318115684"/>
-                <Con from="0,23" weight="-0.22795084056142711"/>
-                <Con from="0,24" weight="-0.18022551377159549"/>
-                <Con from="0,25" weight="-0.10583628000529932"/>
-                <Con from="0,26" weight="-0.18180675208453645"/>
-                <Con from="0,27" weight="-0.22073836588962492"/>
-                <Con from="0,28" weight="-0.09631182319702343"/>
-                <Con from="0,29" weight="-0.04612951212303476"/>
-                <Con from="bias" weight="-0.07704039055034871"/>
-            </Neuron>
-            <Neuron id="1,7" bias="0.0">
-                <Con from="0,0" weight="-0.224389923211362"/>
-                <Con from="0,1" weight="-0.16290463869255983"/>
-                <Con from="0,2" weight="-0.22557425271039402"/>
-                <Con from="0,3" weight="-0.21438667157054875"/>
-                <Con from="0,4" weight="-0.13760123121861267"/>
-                <Con from="0,5" weight="-0.1404818251276059"/>
-                <Con from="0,6" weight="-0.2031021597155273"/>
-                <Con from="0,7" weight="-0.2389579691821496"/>
-                <Con from="0,8" weight="-0.07361361155664986"/>
-                <Con from="0,9" weight="0.028378574606751465"/>
-                <Con from="0,10" weight="-0.17948353113319915"/>
-                <Con from="0,11" weight="8.976851065877607E-4"/>
-                <Con from="0,12" weight="-0.15251180233549672"/>
-                <Con from="0,13" weight="-0.15782924208324395"/>
-                <Con from="0,14" weight="-0.009077379347353216"/>
-                <Con from="0,15" weight="-0.02699793035741896"/>
-                <Con from="0,16" weight="-0.06621406544802723"/>
-                <Con from="0,17" weight="-0.0943016889027024"/>
-                <Con from="0,18" weight="-0.005048338601397696"/>
-                <Con from="0,19" weight="0.005637463093442036"/>
-                <Con from="0,20" weight="-0.24588800766237012"/>
-                <Con from="0,21" weight="-0.1800715090720886"/>
-                <Con from="0,22" weight="-0.23965337318115684"/>
-                <Con from="0,23" weight="-0.22795084056142711"/>
-                <Con from="0,24" weight="-0.18022551377159549"/>
-                <Con from="0,25" weight="-0.10583628000529932"/>
-                <Con from="0,26" weight="-0.18180675208453645"/>
-                <Con from="0,27" weight="-0.22073836588962492"/>
-                <Con from="0,28" weight="-0.09631182319702343"/>
-                <Con from="0,29" weight="-0.04612951212303476"/>
-                <Con from="bias" weight="-0.07704039055034871"/>
-            </Neuron>
-            <Neuron id="1,8" bias="0.0">
-                <Con from="0,0" weight="-0.224389923211362"/>
-                <Con from="0,1" weight="-0.16290463869255983"/>
-                <Con from="0,2" weight="-0.22557425271039402"/>
-                <Con from="0,3" weight="-0.21438667157054875"/>
-                <Con from="0,4" weight="-0.13760123121861267"/>
-                <Con from="0,5" weight="-0.1404818251276059"/>
-                <Con from="0,6" weight="-0.2031021597155273"/>
-                <Con from="0,7" weight="-0.2389579691821496"/>
-                <Con from="0,8" weight="-0.07361361155664986"/>
-                <Con from="0,9" weight="0.028378574606751465"/>
-                <Con from="0,10" weight="-0.17948353113319915"/>
-                <Con from="0,11" weight="8.976851065877607E-4"/>
-                <Con from="0,12" weight="-0.15251180233549672"/>
-                <Con from="0,13" weight="-0.15782924208324395"/>
-                <Con from="0,14" weight="-0.009077379347353216"/>
-                <Con from="0,15" weight="-0.02699793035741896"/>
-                <Con from="0,16" weight="-0.06621406544802723"/>
-                <Con from="0,17" weight="-0.0943016889027024"/>
-                <Con from="0,18" weight="-0.005048338601397696"/>
-                <Con from="0,19" weight="0.005637463093442036"/>
-                <Con from="0,20" weight="-0.24588800766237012"/>
-                <Con from="0,21" weight="-0.1800715090720886"/>
-                <Con from="0,22" weight="-0.23965337318115684"/>
-                <Con from="0,23" weight="-0.22795084056142711"/>
-                <Con from="0,24" weight="-0.18022551377159549"/>
-                <Con from="0,25" weight="-0.10583628000529932"/>
-                <Con from="0,26" weight="-0.18180675208453645"/>
-                <Con from="0,27" weight="-0.22073836588962492"/>
-                <Con from="0,28" weight="-0.09631182319702343"/>
-                <Con from="0,29" weight="-0.04612951212303476"/>
-                <Con from="bias" weight="-0.07704039055034871"/>
-            </Neuron>
-            <Neuron id="1,9" bias="0.0">
-                <Con from="0,0" weight="-0.224389923211362"/>
-                <Con from="0,1" weight="-0.16290463869255983"/>
-                <Con from="0,2" weight="-0.22557425271039402"/>
-                <Con from="0,3" weight="-0.21438667157054875"/>
-                <Con from="0,4" weight="-0.13760123121861267"/>
-                <Con from="0,5" weight="-0.1404818251276059"/>
-                <Con from="0,6" weight="-0.2031021597155273"/>
-                <Con from="0,7" weight="-0.2389579691821496"/>
-                <Con from="0,8" weight="-0.07361361155664986"/>
-                <Con from="0,9" weight="0.028378574606751465"/>
-                <Con from="0,10" weight="-0.17948353113319915"/>
-                <Con from="0,11" weight="8.976851065877607E-4"/>
-                <Con from="0,12" weight="-0.15251180233549672"/>
-                <Con from="0,13" weight="-0.15782924208324395"/>
-                <Con from="0,14" weight="-0.009077379347353216"/>
-                <Con from="0,15" weight="-0.02699793035741896"/>
-                <Con from="0,16" weight="-0.06621406544802723"/>
-                <Con from="0,17" weight="-0.0943016889027024"/>
-                <Con from="0,18" weight="-0.005048338601397696"/>
-                <Con from="0,19" weight="0.005637463093442036"/>
-                <Con from="0,20" weight="-0.24588800766237012"/>
-                <Con from="0,21" weight="-0.1800715090720886"/>
-                <Con from="0,22" weight="-0.23965337318115684"/>
-                <Con from="0,23" weight="-0.22795084056142711"/>
-                <Con from="0,24" weight="-0.18022551377159549"/>
-                <Con from="0,25" weight="-0.10583628000529932"/>
-                <Con from="0,26" weight="-0.18180675208453645"/>
-                <Con from="0,27" weight="-0.22073836588962492"/>
-                <Con from="0,28" weight="-0.09631182319702343"/>
-                <Con from="0,29" weight="-0.04612951212303476"/>
-                <Con from="bias" weight="-0.07704039055034871"/>
-            </Neuron>
-        </NeuralLayer>
-        <NeuralLayer numberOfNeurons="1" activationFunction="logistic">
-            <Neuron id="2,0" bias="0.0">
-                <Con from="1,0" weight="-0.4611601167235462"/>
-                <Con from="1,1" weight="-0.4611601167235462"/>
-                <Con from="1,2" weight="-0.4611601167235462"/>
-                <Con from="1,3" weight="-0.4611601167235462"/>
-                <Con from="1,4" weight="-0.4611601167235462"/>
-                <Con from="1,5" weight="-0.4611601167235462"/>
-                <Con from="1,6" weight="-0.4611601167235462"/>
-                <Con from="1,7" weight="-0.4611601167235462"/>
-                <Con from="1,8" weight="-0.4611601167235462"/>
-                <Con from="1,9" weight="-0.4611601167235462"/>
-                <Con from="bias" weight="1.3242669368903464"/>
-            </Neuron>
-        </NeuralLayer>
-        <NeuralOutputs numberOfOutputs="1">
-            <NeuralOutput outputNeuron="2,0">
-                <DerivedField optype="continuous" dataType="double">
-                    <FieldRef field="diagnosis"/>
-                </DerivedField>
-            </NeuralOutput>
-        </NeuralOutputs>
     </NeuralNetwork>
 </PMML>

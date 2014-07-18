@@ -49,10 +49,10 @@ import org.testng.annotations.Test;
 public class PMMLSparkLogisticRegressionModelTest {
 	org.apache.spark.mllib.classification.LogisticRegressionModel mlModel;
 	PMML pmml;
-	private String initPmmlPath = "src/test/resources/adapter/model.xml";
-	private String inputData = "src/test/resources/adapter/normalized.txt";
-	private String outputPMMLPath = "src/test/resources/adapter/SparkLR_output.pmml";
-	private String evalFilePath = "src/test/resources/adapter/evalData.txt";
+	private String initPmmlPath = "src/test/resources/data/wdbc/model.xml";
+	private String inputData = "src/test/resources/data/wdbc/inputTrainData";
+	private String outputPMMLPath = "src/test/resources/adapter/sparkLR/SparkLR_output.pmml";
+	private String evalFilePath = "src/test/resources/data/wdbc/evalData.txt";
 	private static Logger log = LoggerFactory
 			.getLogger(PMMLSparkLogisticRegressionModelTest.class);
 	private RegressionModelEvaluator evaluator;

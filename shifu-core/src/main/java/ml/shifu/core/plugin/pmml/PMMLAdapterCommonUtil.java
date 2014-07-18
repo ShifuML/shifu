@@ -1,6 +1,7 @@
 package ml.shifu.core.plugin.pmml;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 
 import org.dmg.pmml.Constant;
@@ -27,6 +28,8 @@ import org.dmg.pmml.PMML;
 import org.dmg.pmml.RegressionModel;
 import org.dmg.pmml.RegressionNormalizationMethodType;
 import org.dmg.pmml.RegressionTable;
+
+import com.google.common.primitives.Ints;
 
 public class PMMLAdapterCommonUtil {
 
@@ -153,5 +156,28 @@ public class PMMLAdapterCommonUtil {
 			headers[i] = fields.get(i).getName().getValue();
 		}
 		return headers;
+	}
+
+	public static int[] getActiveID(PMML pmml) {
+		return getDicFieldIDViaType(pmml, FieldUsageType.ACTIVE);
+	}
+
+	public static int[] getTargetID(PMML pmml) {
+		return getDicFieldIDViaType(pmml, FieldUsageType.TARGET);
+	}
+
+	public static int[] getDicFieldIDViaType(PMML pmml, FieldUsageType type) {
+		List<Integer> activeFields = new ArrayList<Integer>();
+		HashMap<String, Integer> dMap = new HashMap<String, Integer>();
+		int index = 0;
+		for (DataField dField : pmml.getDataDictionary().getDataFields())
+			dMap.put(dField.getName().getValue(), index++);
+		for (MiningField mField : pmml.getModels().get(0).getMiningSchema()
+				.getMiningFields()) {
+			if (mField.getUsageType() == type)
+				activeFields.add(dMap.get(mField.getName().getValue()));
+		}
+
+		return Ints.toArray(activeFields);
 	}
 }

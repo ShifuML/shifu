@@ -155,10 +155,10 @@ public class PMMLEncogNeuralNetworkModel
 				.getDerivedFields();
 		derivedFields.remove(0);
 		// change name
-		for (DerivedField field : derivedFields) {
-			String name = field.getName().getValue();
-			field.setName(new FieldName(name + "_T"));
-		}
+//		for (DerivedField field : derivedFields) {
+//			String name = field.getName().getValue();
+//			field.setName(new FieldName(name + "_T"));
+//		}
 		// add bias
 		DerivedField field = new DerivedField(OpType.CONTINUOUS,
 				DataType.DOUBLE).withName(new FieldName(

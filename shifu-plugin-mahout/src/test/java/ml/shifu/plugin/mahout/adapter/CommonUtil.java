@@ -35,7 +35,7 @@ import org.jpmml.evaluator.NormalizationUtil;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 
-public class EvalCSVUtil {
+public class CommonUtil {
 	private PMML pmml;
 	private String[] headers;
 	private String path;
@@ -45,11 +45,10 @@ public class EvalCSVUtil {
 	private List<Map<FieldName, String>> table = Lists.newArrayList();
 	private BufferedReader reader;
 
-	public EvalCSVUtil(String dataPath, PMML pmml) {
+	public CommonUtil(String dataPath, PMML pmml) {
 		this.path = dataPath;
 		this.pmml = pmml;
 		headers = PMMLAdapterCommonUtil.getDataDicHeaders(pmml);
-		parseCSV();
 
 	}
 
@@ -61,36 +60,6 @@ public class EvalCSVUtil {
 	 *          PMML evaluator.
 	 */
 	public List<Map<FieldName, String>> getEvaluatorInput() {
-		return table;
-	}
-
-	/**
-	 * normalize the input data based on the model evaluation context and returns the normalized data
-	 * @param context model evaluation context
-	 * @return the normalized data
-	 */
-		public double[] normalizeData(ModelEvaluationContext context) {
-			Model model = pmml.getModels().get(0);
-			List<DerivedField> derivedFields = model.getLocalTransformations()
-					.getDerivedFields();
-	
-			List<Double> transformed = new ArrayList<Double>();
-			for (DerivedField df : derivedFields) {
-				if (df.getExpression() instanceof NormContinuous) {
-					NormContinuous norm = (NormContinuous) df.getExpression();
-					transformed.add(Double.parseDouble(NormalizationUtil.normalize(
-							norm, context.getField(norm.getField())).getValue().toString()));
-				}
-			}
-			int len = transformed.size();
-			double[] result = new double[len];
-			for (int i=0;i<len;i++)
-				result[i] = transformed.get(i);
-			
-			return result;
-		}
-
-	private void parseCSV() {
 		try {
 			reader = new BufferedReader(new FileReader(path));
 			String bodyLine;
@@ -111,6 +80,66 @@ public class EvalCSVUtil {
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
-
+		return table;
 	}
+
+	/**
+	 * normalize the input data based on the model evaluation context and
+	 * returns the normalized data
+	 * 
+	 * @param context
+	 *            model evaluation context
+	 * @return the normalized data
+	 */
+	public double[] normalizeData(ModelEvaluationContext context) {
+		Model model = pmml.getModels().get(0);
+		List<DerivedField> derivedFields = model.getLocalTransformations()
+				.getDerivedFields();
+
+		List<Double> transformed = new ArrayList<Double>();
+		for (DerivedField df : derivedFields) {
+			if (df.getExpression() instanceof NormContinuous) {
+				NormContinuous norm = (NormContinuous) df.getExpression();
+				transformed.add(Double.parseDouble(NormalizationUtil
+						.normalize(norm, context.getField(norm.getField()))
+						.getValue().toString()));
+			}
+		}
+		int len = transformed.size();
+		double[] result = new double[len];
+		for (int i = 0; i < len; i++)
+			result[i] = transformed.get(i);
+
+		return result;
+	}
+
+	public List<MahoutDataPair> getMahoutDataPair() {
+		int[] activeField = PMMLAdapterCommonUtil.getActiveID(pmml);
+		int targetID = PMMLAdapterCommonUtil.getTargetID(pmml)[0];
+		List<MahoutDataPair> mahoutDataPairs = new ArrayList<MahoutDataPair>();
+		try {
+			reader = new BufferedReader(new FileReader(path));
+			String bodyLine;
+			while ((bodyLine = reader.readLine()) != null) {
+				String[] bodyCells = bodyLine.split(",");
+
+				if (bodyCells.length != headers.length) {
+					throw new RuntimeException();
+				}
+				int activeLen  = activeField.length;
+				double[] featureField = new double[activeLen];
+				for (int i = 0; i < activeLen; i++) {
+					featureField[i] = Double.parseDouble(bodyCells[activeField[i]]);
+				}
+				int targetValue = Integer.parseInt(bodyCells[targetID]);
+				mahoutDataPairs.add(new MahoutDataPair(targetValue,featureField));
+			}
+
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+
+		return mahoutDataPairs;
+	}
+
 }
