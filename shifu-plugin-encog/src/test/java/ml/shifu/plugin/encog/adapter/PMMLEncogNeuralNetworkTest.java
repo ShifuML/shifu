@@ -85,7 +85,7 @@ public class PMMLEncogNeuralNetworkTest {
 	protected void evaluatePMML() {
 		evaluator = new NeuralNetworkEvaluator(pmml);
 
-		CommonUtil evalInput = new CommonUtil(evalFilePath, pmml);
+		EncogTestDataGenerator evalInput = new EncogTestDataGenerator(evalFilePath, pmml);
 		evaluateInputs(evalInput);
 
 	}
@@ -98,7 +98,7 @@ public class PMMLEncogNeuralNetworkTest {
 		evaluatePMML();
 	}
 
-	private void evaluateInputs(CommonUtil evalInput) {
+	private void evaluateInputs(EncogTestDataGenerator evalInput) {
 		log.info(" evaluate Encog LR adapter with " + evalInput.getEvaluatorInput().size()
 				+ " inputs");
 		 for (Map<FieldName, String> map : evalInput.getEvaluatorInput()) {
@@ -107,8 +107,7 @@ public class PMMLEncogNeuralNetworkTest {
 				 context.declareAll(map);
 				 MLData data = evalInput.normalizeData(context);
 //				 System.out.println("pmml "+getPMMLEvaluatorResult(map)+" mlModel "+mlModel.compute(data).getData(0));
-			Assert.assertEquals(
-					getPMMLEvaluatorResult(map),
+			Assert.assertEquals(getPMMLEvaluatorResult(map),
 					mlModel.compute(data).getData(0), DELTA);
 		}
 	}

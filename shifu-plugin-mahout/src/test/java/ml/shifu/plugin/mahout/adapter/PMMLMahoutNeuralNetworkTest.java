@@ -56,7 +56,7 @@ public class PMMLMahoutNeuralNetworkTest {
 		} catch (Exception e1) {
 			e1.printStackTrace();
 		}
-		List<MahoutDataPair> inputDataSet = new CommonUtil(inputData, pmml)
+		List<MahoutDataPair> inputDataSet = new MahoutTestDataGenerator(inputData, pmml)
 				.getMahoutDataPair();
 		// create Mahout NeuralNetwork model
 		mlModel = new MultilayerPerceptron();
@@ -87,7 +87,7 @@ public class PMMLMahoutNeuralNetworkTest {
 	protected void evaluatePMML() {
 		evaluator = new NeuralNetworkEvaluator(pmml);
 
-		CommonUtil evalInput = new CommonUtil(evalFilePath, pmml);
+		MahoutTestDataGenerator evalInput = new MahoutTestDataGenerator(evalFilePath, pmml);
 		evaluateInputs(evalInput);
 
 	}
@@ -100,7 +100,7 @@ public class PMMLMahoutNeuralNetworkTest {
 		evaluatePMML();
 	}
 
-	private void evaluateInputs(CommonUtil evalInput) {
+	private void evaluateInputs(MahoutTestDataGenerator evalInput) {
 		log.info(" evaluate  mahout neural network adapter with "
 				+ evalInput.getEvaluatorInput().size() + " inputs");
 		for (Map<FieldName, String> map : evalInput.getEvaluatorInput()) {

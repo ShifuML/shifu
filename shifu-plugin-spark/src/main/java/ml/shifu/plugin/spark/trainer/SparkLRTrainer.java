@@ -51,6 +51,7 @@ public class SparkLRTrainer extends SparkAbstractTrainer {
 	private int[] activeFields;
 
 	public Object train(PMMLDataSet dataSet, Params rawParams) throws Exception {
+		initSparkConfiguration(rawParams);
 		activeFields = SparkCommonUtil.getActiveFields(dataSet
 				.getMiningSchema());
 		targetID = SparkCommonUtil.getFieldIDViaUsageType(
@@ -125,5 +126,19 @@ public class SparkLRTrainer extends SparkAbstractTrainer {
 	protected void saveSparkModel(String path, Object model) {
 		// TODO Auto-generated method stub
 
+	}
+
+	private SparkConfiguration initSparkConfiguration(Params rawParams) {
+		ObjectMapper jsonMapper = new ObjectMapper();
+		String jsonString;
+		try {
+			jsonString = jsonMapper.writeValueAsString(rawParams);
+			SparkConfiguration sConf = jsonMapper.readValue(jsonString,
+					SparkConfiguration.class);
+			SparkUtility.initSparkContext(sConf);
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+		return null;
 	}
 }

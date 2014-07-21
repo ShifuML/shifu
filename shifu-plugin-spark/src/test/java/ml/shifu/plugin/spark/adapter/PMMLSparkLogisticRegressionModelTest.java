@@ -20,10 +20,10 @@ import java.util.Map;
 
 import ml.shifu.core.util.PMMLUtils;
 import ml.shifu.plugin.spark.trainer.SparkCommonUtil;
-import ml.shifu.plugin.spark.trainer.SparkUtility;
 import ml.shifu.plugin.spark.trainer.StaticFunctions.ParsePoint;
 
 import org.apache.spark.api.java.JavaRDD;
+import org.apache.spark.api.java.JavaSparkContext;
 import org.apache.spark.mllib.classification.LogisticRegressionWithSGD;
 import org.apache.spark.mllib.linalg.DenseVector;
 import org.apache.spark.mllib.linalg.Vector;
@@ -65,7 +65,7 @@ public class PMMLSparkLogisticRegressionModelTest {
 			double stepSize = 10.0;
 			int iterations = 2;
 			// training
-			JavaRDD<String> distData = SparkUtility.getSc().textFile(inputData);
+			JavaRDD<String> distData = new JavaSparkContext("local","SparkLRAdapter").textFile(inputData);
 			ParsePoint parseFunc = new ParsePoint(SparkCommonUtil
 					.getFieldIDViaUsageType(model.getMiningSchema(),
 							FieldUsageType.TARGET).get(0),
@@ -99,7 +99,7 @@ public class PMMLSparkLogisticRegressionModelTest {
 
 	protected void evaluatePMML() {
 		evaluator = new RegressionModelEvaluator(pmml);
-		EvalCSVUtil evalInput = new EvalCSVUtil(evalFilePath, pmml);
+		SparkTestDataGenerator evalInput = new SparkTestDataGenerator(evalFilePath, pmml);
 		evaluateInputs(evalInput);
 
 	}
@@ -112,7 +112,7 @@ public class PMMLSparkLogisticRegressionModelTest {
 		evaluatePMML();
 	}
 
-	private void evaluateInputs(EvalCSVUtil evalInput) {
+	private void evaluateInputs(SparkTestDataGenerator evalInput) {
 
 		for (Map<FieldName, String> map : evalInput.getEvaluatorInput()) {
 			ModelEvaluationContext context = new ModelEvaluationContext(null,

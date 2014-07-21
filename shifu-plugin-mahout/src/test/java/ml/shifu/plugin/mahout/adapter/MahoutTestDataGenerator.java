@@ -35,7 +35,11 @@ import org.jpmml.evaluator.NormalizationUtil;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 
-public class CommonUtil {
+/**
+ * This class loads the test data and maps these data as the input of the
+ * machine learning models.
+ */
+public class MahoutTestDataGenerator {
 	private PMML pmml;
 	private String[] headers;
 	private String path;
@@ -45,7 +49,7 @@ public class CommonUtil {
 	private List<Map<FieldName, String>> table = Lists.newArrayList();
 	private BufferedReader reader;
 
-	public CommonUtil(String dataPath, PMML pmml) {
+	public MahoutTestDataGenerator(String dataPath, PMML pmml) {
 		this.path = dataPath;
 		this.pmml = pmml;
 		headers = PMMLAdapterCommonUtil.getDataDicHeaders(pmml);
@@ -126,13 +130,15 @@ public class CommonUtil {
 				if (bodyCells.length != headers.length) {
 					throw new RuntimeException();
 				}
-				int activeLen  = activeField.length;
+				int activeLen = activeField.length;
 				double[] featureField = new double[activeLen];
 				for (int i = 0; i < activeLen; i++) {
-					featureField[i] = Double.parseDouble(bodyCells[activeField[i]]);
+					featureField[i] = Double
+							.parseDouble(bodyCells[activeField[i]]);
 				}
 				int targetValue = Integer.parseInt(bodyCells[targetID]);
-				mahoutDataPairs.add(new MahoutDataPair(targetValue,featureField));
+				mahoutDataPairs.add(new MahoutDataPair(targetValue,
+						featureField));
 			}
 
 		} catch (Exception e) {

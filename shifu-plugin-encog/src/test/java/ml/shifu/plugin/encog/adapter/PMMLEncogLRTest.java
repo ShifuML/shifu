@@ -91,12 +91,12 @@ public class PMMLEncogLRTest {
 	protected void evaluatePMML() {
 		evaluator = new RegressionModelEvaluator(pmml);
 
-		CommonUtil evalInput = new CommonUtil(evalFilePath, pmml);
+		EncogTestDataGenerator evalInput = new EncogTestDataGenerator(evalFilePath, pmml);
 		evaluateInputs(evalInput);
 
 	}
 
-	private void evaluateInputs(CommonUtil evalInput) {
+	private void evaluateInputs(EncogTestDataGenerator evalInput) {
 		log.info(" evaluate Encog LR adapter with " + evalInput.getEvaluatorInput().size()
 				+ " inputs");
 		 for (Map<FieldName, String> map : evalInput.getEvaluatorInput()) {

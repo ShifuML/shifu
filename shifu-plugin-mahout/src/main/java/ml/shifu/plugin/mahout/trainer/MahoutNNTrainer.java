@@ -18,36 +18,24 @@ package ml.shifu.plugin.mahout.trainer;
 
 import java.io.File;
 import java.io.IOException;
-import java.text.DecimalFormat;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Random;
 
 import ml.shifu.core.container.HiddenLayer;
 import ml.shifu.core.container.NNParams;
 import ml.shifu.core.container.PMMLDataSet;
-import ml.shifu.core.di.spi.Trainer;
 import ml.shifu.core.util.PMMLUtils;
 import ml.shifu.core.util.Params;
 
 import org.apache.mahout.classifier.mlp.MultilayerPerceptron;
 import org.apache.mahout.classifier.mlp.NeuralNetwork;
 import org.apache.mahout.math.Vector;
-import org.dmg.pmml.FieldUsageType;
-import org.dmg.pmml.MiningField;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 
-public class MahoutNNTrainer implements Trainer {
+public class MahoutNNTrainer extends MahoutAbstractTrainer {
 
-	public static final String NUM_HIDDEN_LAYERS = "NumHiddenLayers";
-	public static final String ACTIVATION_FUNC = "ActivationFunc";
-	public static final String NUM_HIDDEN_NODES = "NumHiddenNodes";
 	private static Logger log = LoggerFactory.getLogger(MahoutNNTrainer.class);
-	private static final DecimalFormat df = new DecimalFormat("0.000000");
-	private List<MahoutDataPair> fullDataSet = new ArrayList<MahoutDataPair>();
 	private NeuralNetwork network;
 
 	public Object train(PMMLDataSet dataSet, Params rawParams) throws Exception {
@@ -74,7 +62,7 @@ public class MahoutNNTrainer implements Trainer {
 				network.trainOnline(input.getMahoutInputVector());
 		}
 		// save neural network
-		String path = pathOutput + "/model_" + trainerID + "_" + 1;
+		String path = pathOutput;
 		saveMLModel(path);
 		// evaluate and calculate errors
 		String extra = " <-- NN saved: " + path;
@@ -82,69 +70,6 @@ public class MahoutNNTrainer implements Trainer {
 				+ df.format(getTestSetError()) + "\n" + extra);
 		log.info("Trainer #" + trainerID + " is Finished!");
 		return network;
-	}
-
-	private void convertDataSet(PMMLDataSet pmmlDataSet, int numActiveFields,
-			int numTargetFields) {
-		List<MiningField> miningFields = pmmlDataSet.getMiningSchema()
-				.getMiningFields();
-		Integer numFields = miningFields.size();
-		for (List<Object> row : pmmlDataSet.getRows()) {
-			if (numFields != row.size()) {
-				throw new RuntimeException(
-						"MiningSchema does not match data: Number of MiningFields = "
-								+ numFields + ", Number of data fields = "
-								+ row.size());
-			}
-			double[] input = new double[numActiveFields];
-			double[] ideal = new double[numTargetFields];
-
-			int inputPtr = 0;
-			int idealPtr = 0;
-			for (int i = 0; i < numFields; i++) {
-				if (miningFields.get(i).getUsageType()
-						.equals(FieldUsageType.ACTIVE)) {
-					input[inputPtr] = Double.valueOf(row.get(i).toString());
-					inputPtr += 1;
-				} else if (miningFields.get(i).getUsageType()
-						.equals(FieldUsageType.TARGET)) {
-					ideal[idealPtr] = Double.valueOf(row.get(i).toString());
-					idealPtr += 1;
-				}
-			}
-			fullDataSet.add(new MahoutDataPair(input, ideal));
-		}
-	}
-
-	private void splitDataSet(Double splitRatio) {
-		Random random = new Random();
-		for (MahoutDataPair pair : fullDataSet) {
-			if (random.nextDouble() <= splitRatio) {
-				pair.setEvalData(true);
-			}
-		}
-	}
-
-	private Double calculateMSE(NeuralNetwork network) {
-		double mseError = 0;
-		long numRecords = fullDataSet.size();
-		for (MahoutDataPair pair : fullDataSet) {
-			if (!pair.isEvalData)
-				continue;
-			Vector predict = network.getOutput(pair.getMahoutEvalVector());
-			int len = predict.getNumNondefaultElements();
-			double[] idealData = pair.getIdealData();
-			if (idealData.length != len)
-				throw new RuntimeException(
-						"input evaluation data fields does not match with the evaluation data field of the model");
-
-			double[] variants = new double[idealData.length];
-			for (int i = 0; i < len; i++) {
-				variants[i] = idealData[i] - predict.get(i);
-			}
-			mseError += Math.pow(variants[0], 2.0);
-		}
-		return mseError / numRecords;
 	}
 
 	private NNParams parseParams(Params rawParams) throws Exception {
@@ -176,14 +101,34 @@ public class MahoutNNTrainer implements Trainer {
 		return network;
 	}
 
-	private double getTestSetError() {
-		return calculateMSE(this.network);
-		// return calculateMSEParallel(this.network, this.validSet);
-	}
-
 	private void saveMLModel(String path) throws IOException {
 
 		// EncogDirectoryPersistence.saveObject(new File(path), network);
 	}
 
+	private Double calculateMSE() {
+		double mseError = 0;
+		long numRecords = fullDataSet.size();
+		for (MahoutDataPair pair : fullDataSet) {
+			if (!pair.isEvalData)
+				continue;
+			Vector predict = network.getOutput(pair.getMahoutEvalVector());
+			int len = predict.getNumNondefaultElements();
+			double[] idealData = pair.getIdealData();
+			if (idealData.length != len)
+				throw new RuntimeException(
+						"input evaluation data fields does not match with the evaluation data field of the model");
+
+			double[] variants = new double[idealData.length];
+			for (int i = 0; i < len; i++) {
+				variants[i] = idealData[i] - predict.get(i);
+			}
+			mseError += Math.pow(variants[0], 2.0);
+		}
+		return mseError / numRecords;
+	}
+
+	public double getTestSetError() {
+		return calculateMSE();
+	}
 }

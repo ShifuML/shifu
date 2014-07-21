@@ -17,9 +17,9 @@ package ml.shifu.core.plugin.pmml;
 
 
 /**
- * Global constants class
+ * Global constants class for Shifu-Plugin-*
  */
-public class AdapterConstants {
+public class PluginConstants {
 
     public static final String biasValue = "bias";
     public static final int bias = 1;

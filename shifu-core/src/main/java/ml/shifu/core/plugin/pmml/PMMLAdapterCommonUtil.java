@@ -1,10 +1,25 @@
+/**
+ * Copyright [2012-2014] eBay Software Foundation
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package ml.shifu.core.plugin.pmml;
 
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 
-import org.dmg.pmml.Constant;
 import org.dmg.pmml.DataDictionary;
 import org.dmg.pmml.DataField;
 import org.dmg.pmml.DataType;
@@ -13,12 +28,9 @@ import org.dmg.pmml.Expression;
 import org.dmg.pmml.FieldName;
 import org.dmg.pmml.FieldRef;
 import org.dmg.pmml.FieldUsageType;
-import org.dmg.pmml.LocalTransformations;
 import org.dmg.pmml.MiningField;
 import org.dmg.pmml.MiningFunctionType;
 import org.dmg.pmml.MiningSchema;
-import org.dmg.pmml.NeuralInput;
-import org.dmg.pmml.NeuralInputs;
 import org.dmg.pmml.NeuralOutput;
 import org.dmg.pmml.NeuralOutputs;
 import org.dmg.pmml.NormContinuous;
@@ -31,45 +43,15 @@ import org.dmg.pmml.RegressionTable;
 
 import com.google.common.primitives.Ints;
 
+/**
+ * 
+ * This class contains common utilities that will be used in the shifu plugins.
+ * 
+ */
 public class PMMLAdapterCommonUtil {
 
-	public static NeuralInputs getNeuralInputs(MiningSchema schema) {
-		NeuralInputs pmmlModel = new NeuralInputs();
-		int index = 0;
-		List<String> activeFields = getSchemaFieldViaUsageType(schema,
-				FieldUsageType.ACTIVE);
-		for (int i = 0; i < activeFields.size(); i++) {
-
-			DerivedField field = new DerivedField(OpType.CONTINUOUS,
-					DataType.DOUBLE).withName(
-					new FieldName(activeFields.get(i))).withExpression(
-					new FieldRef(new FieldName(activeFields.get(i))));
-			pmmlModel
-					.withNeuralInputs(new NeuralInput(field, "0," + (index++)));
-		}
-		DerivedField field = new DerivedField(OpType.CONTINUOUS,
-				DataType.DOUBLE).withName(
-				new FieldName(AdapterConstants.biasValue)).withExpression(
-				new FieldRef(new FieldName(AdapterConstants.biasValue)));
-		pmmlModel.withNeuralInputs(new NeuralInput(field,
-				AdapterConstants.biasValue));
-		return pmmlModel;
-	}
-
-	public static LocalTransformations getBiasLocalTransformation(
-			LocalTransformations lt) {
-
-		DerivedField field = new DerivedField(OpType.CONTINUOUS,
-				DataType.DOUBLE).withName(new FieldName(
-				AdapterConstants.biasValue));
-		// field.withName(new FieldName(s));
-		field.withExpression(new Constant(String.valueOf(AdapterConstants.bias)));
-		lt.withDerivedFields(field);
-		return lt;
-	}
-
-	private static List<String> getSchemaFieldViaUsageType(MiningSchema schema,
-			FieldUsageType type) {
+	private static List<String> getSchemaFieldViaUsageType(
+			final MiningSchema schema, final FieldUsageType type) {
 		List<String> targetFields = new ArrayList<String>();
 
 		for (MiningField f : schema.getMiningFields()) {
@@ -80,15 +62,36 @@ public class PMMLAdapterCommonUtil {
 		return targetFields;
 	}
 
-	public static List<String> getSchemaTargetFields(MiningSchema schema) {
+	/**
+	 * This function returns the target field names based on the given mining
+	 * schema
+	 * 
+	 * @param schema
+	 * @return target field names
+	 */
+	public static List<String> getSchemaTargetFields(final MiningSchema schema) {
 		return getSchemaFieldViaUsageType(schema, FieldUsageType.TARGET);
 	}
 
-	public static List<String> getSchemaActiveFields(MiningSchema schema) {
+	/**
+	 * This function returns the active field names based on the given mining
+	 * schema
+	 * 
+	 * @param schema
+	 * @return active field names
+	 */
+	public static List<String> getSchemaActiveFields(final MiningSchema schema) {
 		return getSchemaFieldViaUsageType(schema, FieldUsageType.ACTIVE);
 	}
 
-	public static List<String> getSchemaSelectedFields(MiningSchema schema) {
+	/**
+	 * This function returns all used field names based on the given mining
+	 * schema
+	 * 
+	 * @param schema
+	 * @return field names
+	 */
+	public static List<String> getSchemaSelectedFields(final MiningSchema schema) {
 		List<String> targetFields = new ArrayList<String>();
 		for (MiningField f : schema.getMiningFields()) {
 			FieldUsageType uType = f.getUsageType();
@@ -99,7 +102,16 @@ public class PMMLAdapterCommonUtil {
 		return targetFields;
 	}
 
-	public static NeuralOutputs getOutputFields(MiningSchema schema, int layerID) {
+	/**
+	 * Create PMML neural output for the neural network models
+	 * 
+	 * @param schema
+	 * @param layerID
+	 *            which layer the output neuron lies
+	 * @return
+	 */
+	public static NeuralOutputs getOutputFields(final MiningSchema schema,
+			final int layerID) {
 		List<String> outputID = getSchemaFieldViaUsageType(schema,
 				FieldUsageType.TARGET);
 		NeuralOutputs outputs = new NeuralOutputs();
@@ -115,8 +127,19 @@ public class PMMLAdapterCommonUtil {
 		return outputs;
 	}
 
-	public static RegressionModel getRegressionTable(double[] weights,
-			double intercept, RegressionModel pmmlModel) {
+	/**
+	 * Generate Regression Table based on the weight list, intercept and partial
+	 * PMML model
+	 * 
+	 * @param weights
+	 *            weight list for the Regression Table
+	 * @param intercept
+	 * @param pmmlModel
+	 *            partial PMMl model
+	 * @return
+	 */
+	public static RegressionModel getRegressionTable(final double[] weights,
+			final double intercept, RegressionModel pmmlModel) {
 		RegressionTable table = new RegressionTable();
 		MiningSchema schema = pmmlModel.getMiningSchema();
 		// TODO may not need target field in LRModel
@@ -147,7 +170,13 @@ public class PMMLAdapterCommonUtil {
 		return pmmlModel;
 	}
 
-	public static String[] getDataDicHeaders(PMML pmml) {
+	/**
+	 * get the header names from the PMML data dictionary
+	 * 
+	 * @param pmml
+	 * @return
+	 */
+	public static String[] getDataDicHeaders(final PMML pmml) {
 		DataDictionary dictionary = pmml.getDataDictionary();
 		List<DataField> fields = dictionary.getDataFields();
 		int len = fields.size();
@@ -158,14 +187,33 @@ public class PMMLAdapterCommonUtil {
 		return headers;
 	}
 
+	/**
+	 * get the column indexes for all active fields in the input data set
+	 * 
+	 * @param pmml
+	 * @return
+	 */
 	public static int[] getActiveID(PMML pmml) {
 		return getDicFieldIDViaType(pmml, FieldUsageType.ACTIVE);
 	}
 
+	/**
+	 * get the column index for the target fields in the input data set
+	 * 
+	 * @param pmml
+	 * @return
+	 */
 	public static int[] getTargetID(PMML pmml) {
 		return getDicFieldIDViaType(pmml, FieldUsageType.TARGET);
 	}
 
+	/**
+	 * Based on the usage type, get the column indexes for corresponding fields
+	 * in the input data set
+	 * 
+	 * @param pmml
+	 * @return
+	 */
 	public static int[] getDicFieldIDViaType(PMML pmml, FieldUsageType type) {
 		List<Integer> activeFields = new ArrayList<Integer>();
 		HashMap<String, Integer> dMap = new HashMap<String, Integer>();
@@ -180,4 +228,5 @@ public class PMMLAdapterCommonUtil {
 
 		return Ints.toArray(activeFields);
 	}
+
 }

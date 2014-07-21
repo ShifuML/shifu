@@ -15,12 +15,13 @@
  */
 package ml.shifu.plugin.mahout.trainer;
 
+import java.io.File;
+
 import ml.shifu.core.container.ShifuRequest;
 import ml.shifu.core.request.RequestDispatcher;
 import ml.shifu.core.util.JSONUtils;
-import org.testng.annotations.Test;
 
-import java.io.File;
+import org.testng.annotations.Test;
 
 public class MahoutNNTrainerTest {
 

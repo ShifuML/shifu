@@ -56,7 +56,7 @@ public class PMMLMahoutLRTest {
 		} catch (Exception e1) {
 			e1.printStackTrace();
 		}
-		List<MahoutDataPair> inputDataSet = new CommonUtil(inputData, pmml)
+		List<MahoutDataPair> inputDataSet = new MahoutTestDataGenerator(inputData, pmml)
 				.getMahoutDataPair();
 		lrModel = new OnlineLogisticRegression(2, 30, new L1());
 		for (MahoutDataPair pair : inputDataSet) {
@@ -88,12 +88,12 @@ public class PMMLMahoutLRTest {
 	protected void evaluatePMML() {
 		evaluator = new RegressionModelEvaluator(pmml);
 
-		CommonUtil evalInput = new CommonUtil(evalFilePath, pmml);
+		MahoutTestDataGenerator evalInput = new MahoutTestDataGenerator(evalFilePath, pmml);
 		evaluateInputs(evalInput);
 
 	}
 
-	private void evaluateInputs(CommonUtil evalInput) {
+	private void evaluateInputs(MahoutTestDataGenerator evalInput) {
 		log.info(" evaluate Mahout LR adapter with "
 				+ evalInput.getEvaluatorInput().size() + " inputs");
 		for (Map<FieldName, String> map : evalInput.getEvaluatorInput()) {

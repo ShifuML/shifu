@@ -39,7 +39,11 @@ import org.jpmml.evaluator.NormalizationUtil;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 
-public class CommonUtil {
+/**
+ * This class loads the test data and maps these data as the input of the
+ * machine learning models.
+ */
+public class EncogTestDataGenerator {
 	private PMML pmml;
 	private String[] headers;
 	private String path;
@@ -53,7 +57,7 @@ public class CommonUtil {
 	private List<double[]> dataSet = new ArrayList<double[]>();
 	private BufferedReader reader;
 
-	public CommonUtil(String dataPath, PMML pmml) {
+	public EncogTestDataGenerator(String dataPath, PMML pmml) {
 		this.path = dataPath;
 		this.pmml = pmml;
 		headers = PMMLAdapterCommonUtil.getDataDicHeaders(pmml);

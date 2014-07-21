@@ -30,6 +30,10 @@ import org.encog.engine.network.activation.ActivationSigmoid;
 import org.encog.neural.networks.BasicNetwork;
 import org.encog.neural.networks.layers.BasicLayer;
 
+/**
+ * EncogLOgisticRegressionBuilder creates an Encog LR model based on the given
+ * PMML Regression Model.
+ */
 public class EncogLogisticRegressionBuilder implements
 		GenericMLModelBuilder<BasicNetwork, RegressionModel> {
 	BasicNetwork mlModel = new BasicNetwork();

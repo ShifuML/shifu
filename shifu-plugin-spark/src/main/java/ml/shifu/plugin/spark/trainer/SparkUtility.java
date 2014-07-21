@@ -20,17 +20,29 @@ import org.apache.spark.api.java.JavaSparkContext;
 
 public class SparkUtility {
 
-	private static SparkConf sparkConf = new SparkConf().setMaster("local")
-			.setAppName("PMMLSparkLR");
+	private static SparkConf sparkConf;
 
-	private static JavaSparkContext sc = new JavaSparkContext(sparkConf);
+	private static JavaSparkContext sc;
+
+	public static void initSparkContext(SparkConfiguration sConf) {
+		sparkConf = new SparkConf().setMaster(sConf.get("spark.master"))
+				.setAppName(sConf.get("spark.app.name"));
+		sc = new JavaSparkContext(sparkConf);
+	}
 
 	public static SparkConf getSparkConf() {
+		if (sparkConf == null)
+			throw new RuntimeException(
+					"Load spark configuration before initializing SparkContext");
+
 		return sparkConf;
 	}
 
 	public static JavaSparkContext getSc() {
+		if (sc == null)
+			throw new RuntimeException(
+					"Load spark configuration before initializing SparkContext");
+
 		return sc;
 	}
-
 }

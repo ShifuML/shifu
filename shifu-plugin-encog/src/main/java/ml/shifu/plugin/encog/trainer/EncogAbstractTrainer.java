@@ -35,6 +35,11 @@ import org.encog.ml.data.basic.BasicMLDataPair;
 import org.encog.ml.data.basic.BasicMLDataSet;
 import org.encog.neural.networks.BasicNetwork;
 
+/**
+ * The Encog abstract Trainer that inherited from Trainer. 
+ * @author jihua
+ *
+ */
 public abstract class EncogAbstractTrainer implements Trainer {
 	protected static final String LEARNING_RATE = "LearningRate";
 	protected static final String PATH_OUTPUT = "pathOutput";
@@ -92,7 +97,13 @@ public abstract class EncogAbstractTrainer implements Trainer {
 
 		return mse;
 	}
-
+/**
+ * Split the train dataset to train dataset and test data set based on the split ratio
+ * @param fullDataSet
+ * @param splitRatio
+ * @param trainDataSet
+ * @param testDataSet
+ */
 	protected void splitDataSet(MLDataSet fullDataSet, Double splitRatio,
 			MLDataSet trainDataSet, MLDataSet testDataSet) {
 
@@ -106,7 +117,11 @@ public abstract class EncogAbstractTrainer implements Trainer {
 			}
 		}
 	}
-
+/**
+ * prepare the input dataset for the encog model
+ * @param pmmlDataSet
+ * @return
+ */
 	protected MLDataSet convertDataSet(PMMLDataSet pmmlDataSet) {
 		MLDataSet convertedDataSet = new BasicMLDataSet();
 
@@ -153,6 +168,10 @@ public abstract class EncogAbstractTrainer implements Trainer {
 
 		return convertedDataSet;
 	}
-
+/**
+ * save the Encog model 
+ * @param path
+ * @param model
+ */
 	protected abstract void saveEncogModel(String path, Object model);
 }

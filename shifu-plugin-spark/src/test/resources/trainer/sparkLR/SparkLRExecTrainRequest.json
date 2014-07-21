@@ -8,8 +8,10 @@
                 "bindings": {
                     "Trainer": "ml.shifu.plugin.spark.trainer.SparkLRTrainer"
                 },
-                "spark.master": "local",
-                "spark.app.name": "LogisticRegressionModel",
+                "sparkConf": {
+                     "spark.master": "local",
+                	 "spark.app.name": "LogisticRegressionModel"
+                },
                 "modelName": "demoModel",
                 "pathPMML": "src/test/resources/data/wdbc/model.xml",
                 "pathNormalizedData": "src/test/resources/data/wdbc/inputTrainData",

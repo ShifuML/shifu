@@ -1172,7 +1172,7 @@
             </Target>
         </Targets>
         <LocalTransformations>
-            <DerivedField name="diagnosis" optype="categorical" dataType="string">
+            <DerivedField name="diagnosisM" optype="categorical" dataType="string">
                 <MapValues outputColumn="1">
                     <FieldColumnPair field="diagnosis" column="0"/>
                     <InlineTable>
