@@ -1,120 +1,77 @@
-## PMMLAdapter
+### Spark Overview
+* a fast and general-purpose cluster computing system
+* supports a set of higher-level tools including MLlib for machine learning
+* resilient distributed dataset (RDD) is a collection of elements partitioned across cluster nodes 
+** can be operated on in parallel
+** provides fault tolerance
+* MLlib: LogisticRegression, linear SVM, Decision Tree
 
-* convert multiple Machine Learning Framework to PMML format.
+### Dependency
+1. Spark.core_2.10 version 1.0.0
+2. Spark.mllib_2.10 version 1.0.0
+3. guava version version 17.0 (note: shifu-core guava 14.0.0)
+4. exclude akka 2.1.1 which is inherited from shift-core
 
-| ML Framework | Neural Network | Logistic Regression |Support Vector Machine |  Decision Tree|
-|-------|--------|---------|-------|---------|
-|Encog| support| support| support| None|
-|Spark| None| support| TBD| TBD|
-|Mahout|Support| Support|TBD|TBD|
-|H2o|None| TBD| TBD| TBD|
+### Get started
+1. Initialize Spark
 
-* None: the framework does not support the corresponding ML model
-* TBD: the framework has the corresponding ML model, while PMMLAdapter hasn't supported the conversion of this algorithm to PMML model.
+        SparkConf conf = new SparkConf().setAppName(appName).setMaster(master);
+        JavaSparkContext sc = new JavaSparkContxt(conf);`
 
-## Get Started
-Here is [an example](https://github.com/lisahua/shifu/blob/develop/shifu-plugin-encog/src/test/java/ml/shifu/plugin/encog/adapter/PMMLEncogNeuralNetworkTest.java)  of how to use the [PMML Adapter](https://github.com/lisahua/shifu/blob/develop/shifu-plugin-encog/src/main/java/ml/shifu/plugin/encog/adapter/PMMLEncogNeuralNetworkModel.java).
+2. Prepare Dataset
 
-1.Adapt the Encog BasicNetwork model to PMML model and return the PMML model object
+ From Parallelized Collections
 
-```
-    protected void adaptToPMML() {
-        NeuralNetwork pmmlNN = (NeuralNetwork) pmml.getModels().get(0);
-        pmmlNN = new PMMLEncogNeuralNetworkModel().adaptMLModelToPMML(mlModel,
-                pmmlNN);
-        pmml.getModels().set(0, pmmlNN);
-    }
-```
+        List<Integer> data = Arrays.asList(1, 2, 3, 4, 5);
+        JavaRDD<Integer> distData = sc.parallelize(data);
 
-2.Write PMML model to the file
+ From External DataSets
 
-```
-    @Override
-    protected void writeToPMML() {
-        String path = "src/test/resources/encog/nn/EncogNN_ouptput.pmml";
-        try {
-            // write PMML
-            OutputStream os = new FileOutputStream(path);
-            StreamResult result = new StreamResult(os);
-            JAXBUtil.marshalPMML(pmml, result);
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-    }
+        JavaRDD<String> distFile = sc.textFile("data.txt");   
+  OR
 
+         JavaRDD<String> distFile = sc.textFile("hdfs://data.txt");
 
-```
+3. Passing Functions to Spark
 
-## Implementation 
-1.Model Convertor Interface
+        class ParseLabeledPoint implements Function<String, LabeledPoint> {
+  	         public LabeledPoint call(String s) {...
+                   	for (int i = 0; i < len; i++) {
+                             x[i] = Double.parseDouble(tokens[i]);
+                  }
+              return new LabeledPoint(y, Vectors.dense(x));
+               }
+          }
+         RDD<LabeledPoint> data = distData.map(new ParseLabeledPoint().cache().rdd();
+4.  Train LogisticRegressionModel
 
-```
-/**
- * The abstract class that converts the Machine Learing model to a PMML model
- * 
- * @param <T>            The target PMML model type
- * @param <S>           The source ML model from specific Machine Learning framework such
- *            as Encog, Machout, and Spark.
- */
-public interface PMMLModelBuilder<T extends Model,S> {
+            /*
+            * @param input RDD of (label, array of features) pairs.
+            * @param numIterations Number of iterations of gradient descent to run.
+            * @param stepSize Step size to be used for each iteration of gradient descent.
+            * @param miniBatchFraction Fraction of data to be used per iteration.
+            */
+            LogisticRegressionModel lrModel = LogisticRegressionWithSGD.train(data, iterations,stepSize,miniBatchFraction);
 
-   T adaptMLModelToPMML(S mlModel, T partialPMMLModel);
+**Notice that the train errors are printed out via log for the the last 10 iterations only. **
 
-}
-```
-2.Specific Model Adapter
+5. Calculate Evaluation Score
 
-```
-public class PMMLEncogNeuralNetworkModel implements  PMMLModelBuilder<org.dmg.pmml.NeuralNetwork, BasicNetwork> {
+ Prepare DataSet and calculate score
 
-    public org.dmg.pmml.NeuralNetwork adaptMLModelToPMML(org.encog.neural.networks.BasicNetwork bNetwork,
-            org.dmg.pmml.NeuralNetwork pmmlModel) {
-       ...
-```
+            JavaRDD<Vector> evalVectors = lines.map(new ParseVector().cache();
+            List<Double> evalList = lrModel.predict(evalVectors).cache().collect();
 
+ Calculate Evaluation Metrics
 
-## Extend PMMLAdapter
+            val scoreAndLabels = test.map { point => val score = model.predict(point.features)(score, point.label)}
+            // Get evaluation metrics.
+            val metrics = new BinaryClassificationMetrics(scoreAndLabels)
+            val auROC = metrics.areaUnderROC()
 
-1. Implement a specific PMMLModelBuilder that implements PMMLModelBuilder<TargetPMMLModel,SourceMLModel> interface.
-  
-2. Implement the adaptation method ```adaptMLModelToPMML(SourceMLModel,PartialPMMLModel)``` that does the adaptation work.
+   precision, recall, F-measure, precision-recall curve 
+ `pr(),  precisionByThreshold(),recallByThreshold()..`
 
-```
-public class PMMLEncogNeuralNetworkModel  implements  PMMLModelBuilder<org.dmg.pmml.NeuralNetwork, org.encog.neural.networks.BasicNetwork> {
+   area under the curves (AUC) - `areaUnderPR()`
 
- public org.dmg.pmml.NeuralNetwork adaptMLModelToPMML(org.encog.neural.networks.BasicNetwork bNetwork,  org.dmg.pmml.NeuralNetwork pmmlModel) {
-             ...
-            return pmmlModel;
-            }
-```
-
-
-## Test your PMMLAdapter
-
-1. Store the input data and evaluation data in corresponding folders in ```test/resources/```
-2. Extends from ```PMMLModelTest<SourceMLModel>```
-3. Implment the functions below:
-
- 3.1 ```initMLModel()``` that generates the source machine learning model.
- 
- 3.2  ```adaptToPMML()``` that invokes the PMMLAdapter to convert the ML model to PMML model. To make sure the ML model is initiazed before being adapted to PMML model, there is a ```testSetUp()``` function in the parent test class ```PMMLModelTest``` that defines the basic testing work flow.
- 
- 3.3  optional: ```writeToPMML()``` that writes the PMMLModel to the file.
- 
- 3.4  optional: ```evaluatePMML()``` that invokes ```PMMLEvaluator``` to compare the score calcaulated via the PMML file against the evalution score from the ML framework.
-
-4. Create specific test functions which invokes the functions you want to test. 
-```
-    @Test
-    public void testEncogLR() {
-        testSetUp();
-        writeToPMML();
-    }
-```
-
-
-
-
-
-
-
+    receiver operating characteristic (ROC) - `areaUnderROC(), roc()`
