@@ -17,7 +17,7 @@
                 "pathOutput": "src/test/resources/trainer/mahoutLR/modelOutput.lr",
                 "splitRatio": 0.8,
                 "algorithm": "Q",
-                "learningRate": 0.5,
+                "learningRate": 0.6,
                 "tPrior": 0.3
             }
         

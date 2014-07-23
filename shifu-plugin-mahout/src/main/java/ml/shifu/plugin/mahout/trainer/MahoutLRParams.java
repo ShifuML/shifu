@@ -23,6 +23,15 @@ public class MahoutLRParams {
 	private String priorFunction;
 	private String tPrior;
 	private double splitRatio;
+	private int numEpochs;
+
+	public int getNumEpochs() {
+		return numEpochs;
+	}
+
+	public void setNumEpochs(int numEpochs) {
+		this.numEpochs = numEpochs;
+	}
 
 	public double getSplitRatio() {
 		return splitRatio;

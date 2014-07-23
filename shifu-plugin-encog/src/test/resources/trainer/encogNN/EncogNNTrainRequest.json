@@ -16,12 +16,8 @@
                 "pathOutput": "src/test/resources/trainer/encogNN/modelOutput.nn",
                 "splitRatio": 0.8,
                 "algorithm": "Q",
-                "learningRate": 0.1,
+                "learningRate": 0.9,
                 "hiddenLayers": [
-                    {
-                        "numHiddenNodes": 40,
-                        "activationFunction": "sigmoid"
-                    },
                     {
                         "numHiddenNodes": 45,
                         "activationFunction": "sigmoid"

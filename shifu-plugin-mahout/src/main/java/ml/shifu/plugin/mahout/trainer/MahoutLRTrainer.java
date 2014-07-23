@@ -18,12 +18,9 @@ package ml.shifu.plugin.mahout.trainer;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
-import ml.shifu.core.container.NNParams;
 import ml.shifu.core.container.PMMLDataSet;
 import ml.shifu.core.util.PMMLUtils;
 import ml.shifu.core.util.Params;
@@ -41,13 +38,8 @@ import org.slf4j.LoggerFactory;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 public class MahoutLRTrainer extends MahoutAbstractTrainer {
-
-	// private static final String PRIORFUNCTION = "PriorFunction";
-	// private static final String DECISIONFOREST = "DecisionForest";
-	// private static final String NUM_HIDDEN_NODES = "NumHiddenNodes";
 	private static Logger log = LoggerFactory.getLogger(MahoutLRTrainer.class);
-	private List<MahoutDataPair> fullDataSet = new ArrayList<MahoutDataPair>();
-	private OnlineLogisticRegression lrModel;
+	
 	@SuppressWarnings("serial")
 	private static Map<String, PriorFunction> priorFunctionMap = new HashMap<String, PriorFunction>() {
 		{
@@ -60,7 +52,7 @@ public class MahoutLRTrainer extends MahoutAbstractTrainer {
 
 	public Object train(PMMLDataSet dataSet, Params rawParams) throws Exception {
 		MahoutLRParams params = parseParams(rawParams);
-		String trainerID = rawParams.get("trainerID").toString();
+		
 		String pathOutput = rawParams.get("pathOutput").toString();
 		File outputFolder = new File(pathOutput);
 		if (!outputFolder.exists()) {
@@ -74,37 +66,66 @@ public class MahoutLRTrainer extends MahoutAbstractTrainer {
 		convertDataSet(dataSet, numActiveFields, numTargetFields);
 		splitDataSet(params.getSplitRatio());
 		// create neural network
-		OnlineLogisticRegression network = createLRModel(params,
+		OnlineLogisticRegression lrModel = createLRModel(params,
 				numActiveFields);
-		// train the data
-		for (MahoutDataPair input : fullDataSet) {
-			if (!input.isEvalData)
-				network.train((int) input.getIdealData()[0],
-						input.getMahoutEvalVector());
-		}
+		lrModel = trainModel(lrModel, params);
 		// save neural network
 		String path = pathOutput;
 		saveMLModel(path);
 		// evaluate and calculate errors
-		String extra = " <-- NN saved: " + path;
-		log.info("  Trainer-" + trainerID + "\n Train Error: "
-				+ df.format(getTestSetError()) + "\n" + extra);
-		log.info("Trainer #" + trainerID + " is Finished!");
+		// String extra = " <-- NN saved: " + path;
+		
 		return lrModel;
 	}
 
-	private Double calculateMSE(OnlineLogisticRegression network) {
+	private OnlineLogisticRegression trainModel(
+			OnlineLogisticRegression network, MahoutLRParams params) {
+		
+		int epochs = params.getNumEpochs();
+		// train the data
+		 for (int i = 0; i < epochs; i++) {
+		long evalNum = 0;
+		long trainNum = 0;
 		double mseError = 0;
-		long numRecords = fullDataSet.size();
-		for (MahoutDataPair pair : fullDataSet) {
-			if (!pair.isEvalData)
-				continue;
-			double predict = network.classifyScalar(pair.getMahoutEvalVector());
-			double idealData = pair.getIdealData()[0];
-			mseError += Math.pow(idealData - predict, 2.0);
+		double trainError = 0;
+		for (MahoutDataPair input : fullDataSet) {
+			if (!input.isEvalData) {
+				network.train((int) input.getIdealData()[0],
+						input.getMahoutEvalVector());
+				double predict = network.classifyScalar(input
+						.getMahoutEvalVector());
+				double idealData = input.getIdealData()[0];
+				trainError += Math.pow(idealData - predict, 2.0);
+				trainNum++;
+			} else {
+				double predict = network.classifyScalar(input
+						.getMahoutEvalVector());
+				double idealData = input.getIdealData()[0];
+				mseError += Math.pow(idealData - predict, 2.0);
+				evalNum++;
+			}
+
 		}
-		return mseError / numRecords;
+		log.info(" Train Error: "
+				+ df.format(trainError / trainNum) + " Test Error: "
+				+ df.format(mseError / evalNum));
+		 }
+		return network;
 	}
+//
+//	private Double calculateMSE(OnlineLogisticRegression network) {
+//		double mseError = 0;
+//		int evalNum = 0;
+//		for (MahoutDataPair pair : fullDataSet) {
+//			if (!pair.isEvalData)
+//				continue;
+//			double predict = network.classifyScalar(pair.getMahoutEvalVector());
+//			double idealData = pair.getIdealData()[0];
+//			mseError += Math.pow(idealData - predict, 2.0);
+//			evalNum++;
+//		}
+//		return mseError / evalNum;
+//	}
 
 	private MahoutLRParams parseParams(Params rawParams) throws Exception {
 		ObjectMapper jsonMapper = new ObjectMapper();
@@ -114,6 +135,7 @@ public class MahoutLRTrainer extends MahoutAbstractTrainer {
 
 	private OnlineLogisticRegression createLRModel(MahoutLRParams params,
 			int inputSize) {
+		OnlineLogisticRegression lrModel;
 		String priorFunction = params.getPriorFunction();
 		for (Map.Entry<String, PriorFunction> entry : priorFunctionMap
 				.entrySet()) {
@@ -132,14 +154,12 @@ public class MahoutLRTrainer extends MahoutAbstractTrainer {
 		return lrModel;
 	}
 
-	private double getTestSetError() {
-		return calculateMSE(this.lrModel);
-		// return calculateMSEParallel(this.network, this.validSet);
-	}
+//	private double getTestSetError() {
+//		return calculateMSE(this.lrModel);
+//		// return calculateMSEParallel(this.network, this.validSet);
+//	}
 
 	private void saveMLModel(String path) throws IOException {
 
-		// EncogDirectoryPersistence.saveObject(new File(path), network);
 	}
-
 }

@@ -20,6 +20,7 @@ import java.util.regex.Pattern;
 
 import org.apache.spark.api.java.function.Function;
 import org.apache.spark.mllib.classification.LogisticRegressionModel;
+import org.apache.spark.mllib.linalg.Vector;
 import org.apache.spark.mllib.linalg.Vectors;
 import org.apache.spark.mllib.regression.LabeledPoint;
 
@@ -75,29 +76,25 @@ public class StaticFunctions {
 		}
 	}
 
-//	@SuppressWarnings("serial")
-//	public static class ParseVector implements Function<String, Vector> {
-//		private int targetID;
-//		private int[] activeField;
-//		private Pattern COMMA;
-//
-//		public ParseVector(int targetID, int[] activeField, String splitter) {
-//			this.activeField = activeField;
-//			this.targetID = targetID;
-//			COMMA = Pattern.compile("\\" + splitter);
-//		}
-//
-//		@Override
-//		public Vector call(String line) {
-//			String[] parts = COMMA.split(line);
-//			int len = activeField.length;
-//			double[] x = new double[len];
-//			for (int i = 0; i < len; i++) {
-//				x[i] = Double.parseDouble(parts[activeField[i]]);
-//			}
-//			return Vectors.dense(x);
-//		}
-//	}
+	@SuppressWarnings("serial")
+	public static class ParseVector implements Function<List<Object>, Vector> {
+		private int[] activeField;
+		
+		public ParseVector( int[] activeField) {
+			this.activeField = activeField;
+		}
+
+		@Override
+		public Vector call(List<Object> line) {
+			
+			int len = activeField.length;
+			double[] x = new double[len];
+			for (int i = 0; i < len; i++) {
+				x[i] = Double.parseDouble(line.get(activeField[i]).toString());
+			}
+			return Vectors.dense(x);
+		}
+	}
 
 	@SuppressWarnings("serial")
 	public static class EvalMetricsCalculator implements
@@ -131,4 +128,18 @@ public class StaticFunctions {
 			return Math.pow(lrModel.predict(line.features()) - line.label(), 2);
 		}
 	}
+
+	@SuppressWarnings("serial")
+	public static class MetrixStringConvertor implements
+			Function<Tuple2<Object, Object>, String> {
+
+		@Override
+		public String call(Tuple2<Object, Object> v1) throws Exception {
+
+			return Double.parseDouble(v1._1.toString()) + ","
+					+ Double.parseDouble(v1._2.toString());
+		}
+
+	}
+
 }

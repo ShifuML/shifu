@@ -41,11 +41,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
  * Implementation of AbstractTrainer for support vector machine classification
  */
 public class EncogSVMTrainer extends EncogAbstractTrainer {
-
-	public static final String SVM_KERNEL = "Kernel";
-	public static final String SVM_GAMMA = "Gamma";
-	public static final String SVM_CONST = "Const";
-	public static final String SVM_SPLITRATIO = "splitRatio";
 	private static final String TRAINERID = "trainerID";
 	private SVM svm;
 	private static Map<String, KernelType> kernel = new HashMap<String, KernelType>();
@@ -116,30 +111,13 @@ public class EncogSVMTrainer extends EncogAbstractTrainer {
 		SVMTrain trainer = new SVMTrain(svm, trainDataSet);
 		trainer.setC(params.getConstant());
 		trainer.setGamma(params.getGamma());
+		trainer.setFold(1);
 
-		SVMRunner runner = new SVMRunner(trainer);
-		Thread thread = new Thread(runner);
-		thread.start();
-
-		long second = 1000;
-
-		while (!runner.isFinish()) {
-			try {
-				Thread.sleep(second);
-				log.info("Trainer #" + this.trainerID + " is running");
-			} catch (InterruptedException e) {
-				throw new RuntimeException("Within system interrupted");
-			}
-		}
-
-		log.info("Trainer #" + this.trainerID + " finish training");
-
-		trainer = runner.trainer;
-
+		trainer.iteration();
 		log.info("Train #" + this.trainerID + " Error: "
-				+ df.format(trainer.getError()) + " Validation Error:"
+				+ df.format(trainer.getError()) + "Test Error:"
 				+ df.format(getValidSetError()));
-
+		log.info("Trainer #" + this.trainerID + " finish training");
 	}
 
 	public double getValidSetError() {
@@ -148,34 +126,6 @@ public class EncogSVMTrainer extends EncogAbstractTrainer {
 
 	public SVM getSVM() {
 		return svm;
-	}
-
-	/**
-	 * SVMtrainer worker
-	 */
-	private class SVMRunner implements Runnable {
-
-		private SVMTrain trainer;
-		private boolean isFinish;
-
-		public SVMRunner(SVMTrain trainer) {
-			this.trainer = trainer;
-			this.isFinish = false;
-		}
-
-		@Override
-		public void run() {
-
-			trainer.setFold(1);
-
-			trainer.iteration();
-
-			isFinish = true;
-		}
-
-		public boolean isFinish() {
-			return isFinish;
-		}
 	}
 
 	@Override

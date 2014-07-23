@@ -113,55 +113,6 @@ public class PMMLEncogNeuralNetworkTest {
 	}
 
 
-	
-
-	//
-	// private void evaluateNormalizedData() throws Exception {
-	//
-	// PMML pmmlNoStats = PMMLUtils.loadPMML(outputPMMLPath);
-	// NeuralNetwork pmmlNN = (NeuralNetwork) pmmlNoStats.getModels().get(0);
-	// List<String> activeFields = PMMLAdapterCommonUtil
-	// .getSchemaActiveFields(pmmlNN.getMiningSchema());
-	// DataDictionary dictionary = new DataDictionary();
-	// for (String field : activeFields) {
-	// DataField targetField = new DataField(new FieldName(field),
-	// OpType.CONTINUOUS, DataType.DOUBLE);
-	// // targetField.withValues(new Value("1")).withValues(new
-	// // Value("0"));
-	// dictionary.withDataFields(targetField);
-	// }
-	// pmmlNoStats.setDataDictionary(dictionary);
-	// pmmlNN.setModelStats(null);
-	//
-	// DerivedField field = new DerivedField(OpType.CONTINUOUS,
-	// DataType.DOUBLE).withName(new FieldName(
-	// AdapterConstants.biasValue));
-	// // field.withName(new FieldName(s));
-	// field.withExpression(new
-	// Constant(String.valueOf(AdapterConstants.bias)));
-	// pmmlNN.setLocalTransformations(new LocalTransformations()
-	// .withDerivedFields(field));
-	// pmmlNoStats.withModels(pmmlNN);
-	// // rebuild data dictionary
-	// // copy mining schema
-	// PMMLUtils.savePMML(pmmlNoStats,
-	// "src/test/resources/encog/nn/EncogNN_noStats.pmml");
-	// NeuralNetworkEvaluator evaluator = new NeuralNetworkEvaluator(
-	// pmmlNoStats);
-	// String evalFilePath = "src/test/resources/encog/nn/normalizedData";
-	// EvalCSVUtil evalInput = new EvalCSVUtil(evalFilePath, pmmlNoStats);
-	// List<Map<FieldName, String>> pmmlEvalResultList = evalInput
-	// .getEvaluatorInput();
-	// for (Map<FieldName, String> map : pmmlEvalResultList) {
-	// @SuppressWarnings("unchecked")
-	// Map<FieldName, Double> evalMap = (Map<FieldName, Double>) evaluator
-	// .evaluate(map);
-	// for (Map.Entry<FieldName, Double> entry : evalMap.entrySet()) {
-	// System.out.println(entry.getValue());
-	// }
-	// }
-	// }
-
 	protected double getPMMLEvaluatorResult(Map<FieldName, String> inputData) {
 		if (evaluator == null)
 			return 0;

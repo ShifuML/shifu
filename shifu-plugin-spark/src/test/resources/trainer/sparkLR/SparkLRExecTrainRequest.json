@@ -18,7 +18,8 @@
                 "trainerID": "test",
                 "pathOutput": "src/test/resources/trainer/sparkLR/modelOutput.lr",
                 "splitRatio": 0.8,
-                "stepSize": 0.5
+                "stepSize": 0.6,
+                "iterations":100
             }
         }
     ]

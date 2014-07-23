@@ -23,12 +23,14 @@ import ml.shifu.core.container.PMMLDataSet;
 import ml.shifu.core.util.Params;
 import ml.shifu.plugin.spark.trainer.StaticFunctions.EvalMetricsCalculator;
 import ml.shifu.plugin.spark.trainer.StaticFunctions.ObjectParsePoint;
+import ml.shifu.plugin.spark.trainer.StaticFunctions.ParseVector;
 import ml.shifu.plugin.spark.trainer.StaticFunctions.SumMSECalculator;
 
 import org.apache.spark.api.java.JavaRDD;
 import org.apache.spark.mllib.classification.LogisticRegressionModel;
 import org.apache.spark.mllib.classification.LogisticRegressionWithSGD;
 import org.apache.spark.mllib.evaluation.BinaryClassificationMetrics;
+import org.apache.spark.mllib.linalg.Vector;
 import org.apache.spark.mllib.regression.LabeledPoint;
 import org.apache.spark.rdd.RDD;
 import org.dmg.pmml.FieldUsageType;
@@ -44,7 +46,7 @@ public class SparkLRTrainer extends SparkAbstractTrainer {
 
 	private static Logger log = LoggerFactory.getLogger(SparkLRTrainer.class);
 	private static final DecimalFormat df = new DecimalFormat("0.000000");
-	private LogisticRegressionModel lrModel;
+//	private LogisticRegressionModel lrModel;
 	private List<List<Object>> trainDataSet = new ArrayList<List<Object>>();
 	private List<List<Object>> testDataSet = new ArrayList<List<Object>>();
 	private int targetID;
@@ -61,7 +63,7 @@ public class SparkLRTrainer extends SparkAbstractTrainer {
 		List<List<Object>> data = dataSet.getRows();
 		splitDataSet(data, lrParams.getSplitRatio(), trainDataSet, testDataSet);
 
-		trainModel(trainDataSet, lrParams);
+		LogisticRegressionModel  lrModel = trainModel(trainDataSet, lrParams);
 
 		// evaluate and calculate errors
 		String trainerID = rawParams.get(TRAINERID).toString();
@@ -72,7 +74,7 @@ public class SparkLRTrainer extends SparkAbstractTrainer {
 		return lrModel;
 	}
 
-	private void trainModel(List<List<Object>> trainDataSet,
+	private LogisticRegressionModel  trainModel(List<List<Object>> trainDataSet,
 			SparkLRParams lrParams) {
 		JavaRDD<List<Object>> distData = SparkUtility.getSc().parallelize(
 				trainDataSet);
@@ -82,11 +84,11 @@ public class SparkLRTrainer extends SparkAbstractTrainer {
 		// train model
 
 		// for (int i = 0; i < lrParams.getIterations(); i++) {
-		lrModel = LogisticRegressionWithSGD.train(datas,
+		LogisticRegressionModel  lrModel = LogisticRegressionWithSGD.train(datas,
 				lrParams.getIterations(), lrParams.getStepSize(),
 				lrParams.getSplitRatio()).clearThreshold();
-		log.info(calculateTestError(testDataSet));
-		// }
+		log.info(calculateTestError(lrModel,testDataSet));
+		return lrModel;
 	}
 
 	private SparkLRParams parseModelParams(Params rawParams) {
@@ -101,7 +103,7 @@ public class SparkLRTrainer extends SparkAbstractTrainer {
 		return null;
 	}
 
-	private String calculateTestError(List<List<Object>> testDataSet) {
+	private String calculateTestError(LogisticRegressionModel  lrModel,List<List<Object>> testDataSet) {
 		JavaRDD<List<Object>> distData = SparkUtility.getSc().parallelize(
 				testDataSet);
 		JavaRDD<LabeledPoint> datas = distData.map(new ObjectParsePoint(
@@ -110,15 +112,22 @@ public class SparkLRTrainer extends SparkAbstractTrainer {
 				.map(new EvalMetricsCalculator(lrModel)).cache().rdd();
 		BinaryClassificationMetrics bcMetrics = new BinaryClassificationMetrics(
 				matrixInput);
+		RDD<Tuple2<Object,Object>> prCurve =bcMetrics.pr();
+		
+		JavaRDD<Vector> evalData = distData.map(new ParseVector(activeFields));
+		List<Double> evalResult = lrModel.predict(evalData).collect();
+		double testError =  DoubleMath.mean(evalResult);
 		StringBuilder sb = new StringBuilder();
 		// EncogDirectoryPersistence.saveObject(new File(path), network);
+		sb.append("Test Error: " + df.format(testError) + "\n");
 		sb.append("AUC: " + df.format(bcMetrics.areaUnderPR()) + "\n");
 		sb.append("ROC: " + df.format(bcMetrics.areaUnderROC()) + "\n");
 
 		List<Double> results = datas.map(new SumMSECalculator(lrModel))
 				.collect();
 		sb.append("MSE: " + df.format(DoubleMath.mean(results)) + "\n");
-
+	
+		 
 		return sb.toString();
 	}
 
