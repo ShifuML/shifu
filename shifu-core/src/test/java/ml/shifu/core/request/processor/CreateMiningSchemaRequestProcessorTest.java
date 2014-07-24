@@ -1,6 +1,7 @@
 package ml.shifu.core.request.processor;
 
 import ml.shifu.core.request.RequestObject;
+import ml.shifu.core.request.processor.deprecated.CreateMiningSchemaRequestProcessor;
 import ml.shifu.core.util.JSONUtils;
 import org.testng.annotations.Test;
 

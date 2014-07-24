@@ -1,0 +1,10 @@
+{
+  "requestType" : "test",
+  "executionMode" : "LOCAL_SINGLE",
+  "globalParams" : {
+    "numBins" : 10,
+    "posTags" : [ "Iris-setosa", "Iris-versicolor" ],
+    "negTags" : [ "Iris-virginica" ]
+  },
+  "fieldParamsMap" : null
+}

@@ -1,0 +1,36 @@
+{
+    "name": "CSVDataDictionaryInitializer",
+    "displayName": "CSVDataDictionaryInitializer",
+    "class": "ml.shifu.core.di.builtin.datadictionary.CSVDataDictionaryInitializer",
+    "properties": [
+        {
+            "name": "requestType",
+            "type": "string",
+            "default": "CreateDataDictionaryRequest"
+        }, {
+            "name": "executionMode",
+            "type": "string",
+            "default": "LOCAL"            
+        }, {
+            "name": "globalParams",
+            "type": "object",
+            "properties": [
+                {
+                    "name": "bindings",
+                    "type": "object",
+                    "properties": [
+                        {
+                            "name": "DataDictionaryInitializer",
+                            "type": "string",
+                            "default": "ml.shifu.core.di.builtin.datadictionary.CSVDataDictionaryInitializer"
+                        }
+                    ]
+                }, {
+                    "name": "pathPMML",
+                    "type": "string",
+                    "default": "./model.xml"
+                }                
+            ]
+        }
+    ]
+}

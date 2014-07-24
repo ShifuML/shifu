@@ -4,7 +4,7 @@
   
   "globalParams" : {
     "bindings" : {
-      "MiningSchemaCreator" : "ml.shifu.core.di.builtin.miningSchema.PerFieldMiningSchemaCreator"
+      "MiningSchemaCreator" : "ml.shifu.core.di.builtin.miningschema.PerFieldMiningSchemaCreator"
     },
     "modelName": "testModel",
     "pathPMML": "src/test/resources/models/wdbc/CreateMiningSchema/model.xml",

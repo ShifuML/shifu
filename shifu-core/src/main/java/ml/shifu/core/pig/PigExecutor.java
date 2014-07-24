@@ -39,9 +39,9 @@ public class PigExecutor {
     }
 
     /**
-     * Get the pig executor handler
+     * Get the pig processor handler
      *
-     * @return - executor handler
+     * @return - processor handler
      */
     public static PigExecutor getExecutor() {
         return instance;

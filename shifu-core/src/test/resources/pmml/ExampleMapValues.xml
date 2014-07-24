@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<PMML xmlns="http://www.dmg.org/PMML-4_2">
+    <TransformationDictionary>
+        <DerivedField dataType="double" optype="continuous">
+    <MapValues outputColumn="out" dataType="integer">
+        <FieldColumnPair field="BAND" column="band"/>
+        <FieldColumnPair field="STATE" column="state"/>
+        <InlineTable>
+            <row>
+                <band>1</band>
+                <state>MN</state>
+                <out>10000</out>
+            </row>
+            <row>
+                <band>1</band>
+                <state>IL</state>
+                <out>12000</out>
+            </row>
+            <row>
+                <band>1</band>
+                <state>NY</state>
+                <out>20000</out>
+            </row>
+            <row>
+                <band>2</band>
+                <state>MN</state>
+                <out>20000</out>
+            </row>
+            <row>
+                <band>2</band>
+                <state>IL</state>
+                <out>23000</out>
+            </row>
+            <row>
+                <band>2</band>
+                <state>NY</state>
+                <out>30000</out>
+            </row>
+        </InlineTable>
+    </MapValues>
+</DerivedField>
+    </TransformationDictionary>
+</PMML>

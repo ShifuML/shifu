@@ -14,7 +14,7 @@
   "fieldParamsMap": {
     "$$default": {
         "bindings": {
-            "DerivedFieldCreator": "ml.shifu.core.di.builtin.derivedField.ZScoreDerivedFieldCreator"
+            "DerivedFieldCreator": "ml.shifu.core.di.builtin.derivedfield.ZScoreDerivedFieldCreator"
         }
     }
   }

@@ -14,6 +14,16 @@ public class PMMLDataSet {
         this.miningSchema = miningSchema;
     }
 
+    public List<String> getHeader() {
+        return header;
+    }
+
+    public void setHeader(List<String> header) {
+        this.header = header;
+    }
+
+    private List<String> header;
+
     public List<List<Object>> getRows() {
         return rows;
     }

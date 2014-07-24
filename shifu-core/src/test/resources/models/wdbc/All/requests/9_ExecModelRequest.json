@@ -1,0 +1,19 @@
+{
+    "version": "0.3.0-SNAPSHOT",
+    "requests": [
+        {
+            "requestType": "ExecModel",
+            "executionMode": "LOCAL_SINGLE",
+            "globalParams": {
+
+                "modelName": "demoModel",
+                "pathPMML": "src/test/resources/model/wdbc/new/generated/model_output.xml",
+                "pathData": "src/test/resources/example/wdbc/wdbcDataSet/wdbc.eval",
+                "pathHeader": "src/test/resources/example/wdbc/wdbcDataSet/wdbc.header",
+                "pathResult": "tmp/score.json"
+
+            }
+        
+        }
+    ]
+}

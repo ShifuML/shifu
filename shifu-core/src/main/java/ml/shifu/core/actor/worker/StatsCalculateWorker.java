@@ -20,7 +20,7 @@ import com.google.inject.Injector;
 import ml.shifu.core.container.RawValueObject;
 import ml.shifu.core.container.obj.ColumnConfig;
 import ml.shifu.core.container.obj.ModelConfig;
-import ml.shifu.core.di.service.StatsService;
+import ml.shifu.core.di.service.CalcStatsService;
 import ml.shifu.core.message.StatsResultMessage;
 import ml.shifu.core.message.StatsValueObjectMessage;
 import org.slf4j.Logger;
@@ -41,7 +41,7 @@ public class StatsCalculateWorker extends AbstractWorkerActor {
     private List<RawValueObject> rvoList;
     private int receivedMsgCnt;
 
-    private StatsService statsService;
+    private CalcStatsService calcStatsService;
 
 
     public StatsCalculateWorker(
@@ -55,14 +55,14 @@ public class StatsCalculateWorker extends AbstractWorkerActor {
         receivedMsgCnt = 0;
 
 
-        statsService = injector.getInstance(StatsService.class);
+        calcStatsService = injector.getInstance(CalcStatsService.class);
 
         Map<String, Object> params = new HashMap<String, Object>();
 
         params.put("numBins", modelConfig.getBinningExpectedNum());
         params.put("posTags", modelConfig.getPosTags());
         params.put("negTags", modelConfig.getNegTags());
-        statsService.setParams(params);
+        calcStatsService.setParams(params);
     }
 
     @Override
@@ -77,7 +77,7 @@ public class StatsCalculateWorker extends AbstractWorkerActor {
             if (receivedMsgCnt == statsVoMessage.getTotalMsgCnt()) {
                 log.debug("received " + receivedMsgCnt + ", start to work");
                 ColumnConfig columnConfig = columnConfigList.get(statsVoMessage.getColumnNum());
-                statsService.exec(columnConfig, rvoList);
+                calcStatsService.exec(columnConfig, rvoList);
                 parentActorRef.tell(new StatsResultMessage(columnConfig), this.getSelf());
             }
         } else {

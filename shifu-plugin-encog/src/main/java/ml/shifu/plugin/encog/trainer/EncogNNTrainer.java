@@ -7,8 +7,10 @@ import ml.shifu.core.container.PMMLDataSet;
 import ml.shifu.core.di.spi.Trainer;
 import ml.shifu.core.util.PMMLUtils;
 import ml.shifu.core.util.Params;
+import ml.shifu.plugin.encog.adapter.EncogNeuralNetworkToPMMLAdapter;
 import org.dmg.pmml.FieldUsageType;
 import org.dmg.pmml.MiningField;
+import org.dmg.pmml.Model;
 import org.encog.engine.network.activation.*;
 import org.encog.ml.data.MLData;
 import org.encog.ml.data.MLDataPair;
@@ -78,7 +80,7 @@ public class EncogNNTrainer implements Trainer {
 
 
 
-    public void train(PMMLDataSet dataSet, Params rawParams) throws Exception {
+    public void train(Model pmmlModel, PMMLDataSet dataSet, Params rawParams) throws Exception {
 
 
 
@@ -116,6 +118,9 @@ public class EncogNNTrainer implements Trainer {
         log.info("    - Input Size: " + trainDataSet.getInputSize());
         log.info("    - Ideal Size: " + trainDataSet.getIdealSize());
 
+        log.info("    - TrainSet: " + trainDataSet.getRecordCount());
+        log.info("    - TestSet: " + testDataSet.getRecordCount());
+
 
         BasicNetwork network = createNetwork(params);
         Propagation mlTrain = getMLTrain(network, trainDataSet, params);
@@ -127,6 +132,8 @@ public class EncogNNTrainer implements Trainer {
 
         minError = Double.MAX_VALUE;
 
+        EncogNeuralNetworkToPMMLAdapter adapter = new EncogNeuralNetworkToPMMLAdapter();
+
         for (int i = 0; i < epochs; i++) {
             mlTrain.iteration();
 
@@ -137,6 +144,7 @@ public class EncogNNTrainer implements Trainer {
                 minError = testError;
 
                 String path = pathOutput + "/model_" + trainerID + "_" + (i + 1);
+
                 saveNN(path);
                 extra = " <-- NN saved: " + path;
             }
@@ -148,6 +156,13 @@ public class EncogNNTrainer implements Trainer {
         }
 
         mlTrain.finishTraining();
+
+        adapter.exec(network, pmmlModel);
+
+        //Model model = adapter.exec(network, pmmlModel);
+
+
+
         log.info("Trainer #" + trainerID + " is Finished!");
     }
 
@@ -155,10 +170,21 @@ public class EncogNNTrainer implements Trainer {
     public MLDataSet convertDataSet(PMMLDataSet pmmlDataSet) {
         MLDataSet convertedDataSet = new BasicMLDataSet();
 
-        List<MiningField> miningFields = pmmlDataSet.getMiningSchema().getMiningFields();
-        Integer numFields = miningFields.size();
-        Integer numActiveFields = PMMLUtils.getNumActiveMiningFields(pmmlDataSet.getMiningSchema());
-        Integer numTargetFields = PMMLUtils.getNumTargetMiningFields(pmmlDataSet.getMiningSchema());
+        List<String> header = pmmlDataSet.getHeader();
+
+        int cntActive = 0;
+        int cntTarget = 0;
+        for (String s : header) {
+            if (s.startsWith("ACTIVE")) {
+                cntActive += 1;
+            } else if (s.startsWith("TARGET")) {
+                cntTarget += 1;
+            }
+        }
+        //List<MiningField> miningFields = pmmlDataSet.getMiningSchema().getMiningFields();
+        Integer numFields = header.size();
+        //Integer numActiveFields = PMMLUtils.getNumActiveMiningFields(pmmlDataSet.getMiningSchema());
+        //Integer numTargetFields = PMMLUtils.getNumTargetMiningFields(pmmlDataSet.getMiningSchema());
 
         for (List<Object> row : pmmlDataSet.getRows()) {
 
@@ -166,20 +192,19 @@ public class EncogNNTrainer implements Trainer {
                 throw new RuntimeException("MiningSchema does not match data: Number of MiningFields = " + numFields + ", Number of data fields = " + row.size());
             }
 
-            double[] input = new double[numActiveFields];
-            double[] ideal = new double[numTargetFields];
+            double[] input = new double[cntActive];
+            double[] ideal = new double[cntTarget];
 
             int inputPtr = 0;
             int idealPtr = 0;
 
-            for (int i = 0; i < numFields; i++) {
-                if (miningFields.get(i).getUsageType().equals(FieldUsageType.ACTIVE)) {
-                    input[inputPtr] = Double.valueOf(row.get(i).toString());
-                    inputPtr += 1;
-                } else if (miningFields.get(i).getUsageType().equals(FieldUsageType.TARGET)) {
-                    ideal[idealPtr] = Double.valueOf(row.get(i).toString());
-                    idealPtr += 1;
-                }
+            for (int i = 0; i < cntTarget; i++) {
+                ideal[i] = Double.valueOf(row.get(i).toString());
+            }
+
+            for (int i = 0; i < cntActive; i++) {
+                input[i] = Double.valueOf(row.get(i+cntTarget).toString());
+
             }
 
             MLDataPair pair = new BasicMLDataPair(new BasicMLData(input), new BasicMLData(ideal));
@@ -195,7 +220,7 @@ public class EncogNNTrainer implements Trainer {
         Random random = new Random();
 
         for (MLDataPair pair : fullDataSet) {
-            if (random.nextDouble() > splitRatio) {
+            if (random.nextDouble() <= splitRatio) {
                 trainDataSet.add(pair);
             } else {
                 testDataSet.add(pair);
@@ -249,6 +274,7 @@ public class EncogNNTrainer implements Trainer {
 
         network.addLayer(new BasicLayer(new ActivationSigmoid(), false, trainDataSet.getIdealSize()));
         network.getStructure().finalizeStructure();
+        network.reset();
         /*if (!modelConfig.isFixInitialInput()) {
             network.reset();
         } else {

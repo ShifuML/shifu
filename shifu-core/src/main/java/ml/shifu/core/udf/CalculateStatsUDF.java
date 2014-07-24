@@ -21,7 +21,7 @@ import com.google.inject.Injector;
 import ml.shifu.core.container.RawValueObject;
 import ml.shifu.core.container.obj.ColumnConfig;
 import ml.shifu.core.di.module.StatsModule;
-import ml.shifu.core.di.service.StatsService;
+import ml.shifu.core.di.service.CalcStatsService;
 import org.apache.pig.data.DataBag;
 import org.apache.pig.data.Tuple;
 import org.apache.pig.data.TupleFactory;
@@ -39,7 +39,7 @@ import java.util.Map;
  */
 public class CalculateStatsUDF extends AbstractTrainerUDF<Tuple> {
 
-    private StatsService statsService;
+    private CalcStatsService calcStatsService;
 
     private Double valueThreshold = 1e6;
 
@@ -64,14 +64,14 @@ public class CalculateStatsUDF extends AbstractTrainerUDF<Tuple> {
 
         Injector injector = Guice.createInjector(statsModule);
 
-        statsService = injector.getInstance(StatsService.class);
+        calcStatsService = injector.getInstance(CalcStatsService.class);
 
         Map<String, Object> params = new HashMap<String, Object>();
 
         params.put("numBins", modelConfig.getBinningExpectedNum());
         params.put("posTags", modelConfig.getPosTags());
         params.put("negTags", modelConfig.getNegTags());
-        statsService.setParams(params);
+        calcStatsService.setParams(params);
 
         jsonMapper = new ObjectMapper();
 
@@ -103,7 +103,7 @@ public class CalculateStatsUDF extends AbstractTrainerUDF<Tuple> {
             rvoList.add(rvo);
         }
 
-        statsService.exec(columnConfig, rvoList);
+        calcStatsService.exec(columnConfig, rvoList);
 
         Tuple tuple = tupleFactory.newTuple();
         tuple.append(columnNum);

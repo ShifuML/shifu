@@ -39,6 +39,7 @@ import java.util.Scanner;
 /**
  * Confusion matrix, hold the confusion matrix computing
  */
+@Deprecated
 public class ConfusionMatrix {
     public static Random rd = new Random(System.currentTimeMillis());
 

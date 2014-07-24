@@ -7,6 +7,18 @@
         <format>tar.gz</format>
     </formats>
 
+    <moduleSets>
+        <moduleSet>
+            <useAllReactorProjects>true</useAllReactorProjects>
+            <binaries>
+                <outputDirectory>modules/${artifactId}</outputDirectory>
+            </binaries>
+        </moduleSet>
+    </moduleSets>
+
+
+
+
     <fileSets>
         <fileSet>
             <directory>${project.basedir}</directory>

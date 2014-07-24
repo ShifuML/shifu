@@ -25,7 +25,7 @@ public class BinomialUnivariateStatsCalculator implements UnivariateStatsCalcula
         UnivariateStatsCountsCalculator.calculate(stats, values);
 
 
-        setParams((Params) params.get("globalParams"));
+        setParams(params);
 
         this.tags = (List<String>) params.get("tags");
 

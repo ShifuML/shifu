@@ -6,7 +6,7 @@
             "executionMode": "LOCAL_SINGLE",
             "globalParams": {
                 "bindings": {
-                    "MiningSchemaCreator": "ml.shifu.core.di.builtin.miningSchema.PerFieldMiningSchemaCreator"
+                    "MiningSchemaCreator": "ml.shifu.core.di.builtin.miningschema.PerFieldMiningSchemaCreator"
                 },
                 "modelName": "demoModel",
                 "pathPMML": "shifu-core/src/test/resources/models/wdbc/All/generated/model.xml"

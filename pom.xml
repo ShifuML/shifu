@@ -33,36 +33,24 @@
 		</dependency>
 	</dependencies>
 
-	<dependencyManagement>
-		<dependencies>
-			<dependency>
-				<groupId>ml.shifu</groupId>
-				<artifactId>shifu-core</artifactId>
-				<version>0.3.0-SNAPSHOT</version>
-			</dependency>
-		</dependencies>
-	</dependencyManagement>
+    <dependencyManagement>
+        <dependencies>
+            <dependency>
+                <groupId>ml.shifu</groupId>
+                <artifactId>shifu-core</artifactId>
+                <version>0.3.0-SNAPSHOT</version>
+            </dependency>
+            <dependency>
+                        <groupId>com.fasterxml.jackson.core</groupId>
+                                    <artifactId>jackson-databind</artifactId>
+                                                <version>2.3.2</version>
+                                                        </dependency>
+        </dependencies>
+    </dependencyManagement>
 
-	<build>
-		<plugins>
-			<plugin>
-				<artifactId>maven-assembly-plugin</artifactId>
-				<version>2.3</version>
-				<executions>
-					<execution>
-						<id>make-assembly</id>
-						<phase>package</phase>
-						<goals>
-							<goal>single</goal>
-						</goals>
-						<configuration>
-							<descriptors>
-								<descriptor>./assembly.xml</descriptor>
-							</descriptors>
-						</configuration>
-					</execution>
-				</executions>
-			</plugin>
+    <build>
+        <plugins>
+            
 
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
@@ -140,140 +128,160 @@
 				</executions>
 			</plugin>
 
-			<plugin>
-				<artifactId>maven-compiler-plugin</artifactId>
-				<version>3.1</version>
-				<configuration>
-					<source>1.6</source>
-					<target>1.6</target>
-				</configuration>
-			</plugin>
 
+            <plugin>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <version>3.1</version>
+                <configuration>
+                    <source>1.6</source>
+                    <target>1.6</target>
+                </configuration>
+            </plugin>
+<!--
+            <plugin>
+                <artifactId>maven-assembly-plugin</artifactId>
+                <version>2.4</version>
+                <executions>
+                    <execution>
+                        <id>make-assembly</id>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>single</goal>
+                        </goals>
+                        <configuration>
+                            <descriptors>
+                                <descriptor>./assembly.xml</descriptor>
+                            </descriptors>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+-->
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>rpm-maven-plugin</artifactId>
+                <version>2.1-alpha-3</version>
+                <executions>
+                    <execution>
+                        <id>attach-rpm</id>
+                        <goals>
+                            <goal>attached-rpm</goal>
+                        </goals>
+                    </execution>
+                </executions>
+                <configuration>
+                    <disabled>${rpmDisabled}</disabled>
+                    <copyright>2014 PayPal</copyright>
+                    <distribution>PayPal 2014</distribution>
+                    <group>Development/Tools</group>
+                    <packager>Paypal</packager>
+                    <prefix>/usr/local</prefix>
+                    <changelogFile>shifu-core/src/changelog</changelogFile>
+                    <defineStatements>
+                        <defineStatement>_unpackaged_files_terminate_build 0</defineStatement>
+                    </defineStatements>
+                    <mappings>
+                        <mapping>
+                            <directory>/usr/local/bin/shifu/bin</directory>
+                            <filemode>777</filemode>
+                            <username>root</username>
+                            <groupname>root</groupname>
+                            <sources>
+                                <source>
+                                    <location>src/main/bash</location>
+                                </source>
+                            </sources>
+                        </mapping>
+                        <mapping>
+                            <directory>/usr/local/bin/shifu/lib</directory>
+                            <filemode>777</filemode>
+                            <username>root</username>
+                            <groupname>root</groupname>
+                            <dependency/>
+                            <sources>
+                                <source>
+                                    <location>target</location>
+                                    <includes>
+                                        <include>*.jar</include>
+                                    </includes>
+                                </source>
+                            </sources>
+                        </mapping>
+                        <mapping>
+                            <directory>/usr/local/bin/shifu/scripts</directory>
+                            <filemode>777</filemode>
+                            <username>root</username>
+                            <groupname>root</groupname>
+                            <sources>
+                                <source>
+                                    <location>src/main/pig</location>
+                                </source>
+                            </sources>
+                        </mapping>
+                        <mapping>
+                            <directory>/usr/local/bin/shifu/common</directory>
+                            <filemode>777</filemode>
+                            <username>root</username>
+                            <groupname>root</groupname>
+                            <sources>
+                                <source>
+                                    <location>src/test/resources/common</location>
+                                </source>
+                            </sources>
+                        </mapping>
+                        <mapping>
+                            <directory>/usr/local/bin/shifu/example</directory>
+                            <filemode>777</filemode>
+                            <username>root</username>
+                            <groupname>root</groupname>
+                            <sources>
+                                <source>
+                                    <location>src/test/resources/example</location>
+                                </source>
+                            </sources>
+                        </mapping>
+                        <mapping>
+                            <directory>/usr/local/bin/shifu/conf</directory>
+                            <configuration>true</configuration>
+                            <filemode>777</filemode>
+                            <username>root</username>
+                            <groupname>root</groupname>
+                            <sources>
+                                <source>
+                                    <location>src/main/resources/conf</location>
+                                </source>
+                            </sources>
+                        </mapping>
+                        <mapping>
+                            <directory>/usr/local/log/shifu</directory>
+                            <filemode>777</filemode>
+                            <username>root</username>
+                            <groupname>root</groupname>
+                        </mapping>
+                        <mapping>
+                            <directory>/usr/local/bin</directory>
+                            <filemode>777</filemode>
+                            <username>root</username>
+                            <groupname>root</groupname>
+                            <sources>
+                                <softlinkSource>
+                                    <location>/usr/local/bin/shifu/bin/shifu</location>
+                                    <destination>shifu</destination>
+                                </softlinkSource>
+                            </sources>
+                        </mapping>
+                    </mappings>
+                    <preinstallScriptlet>
+                        <script>echo "shifu installing now"</script>
+                    </preinstallScriptlet>
+                    <postinstallScriptlet>
+                        <script>echo "shifu installed"</script>
+                    </postinstallScriptlet>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
 
-			<plugin>
-				<groupId>org.codehaus.mojo</groupId>
-				<artifactId>rpm-maven-plugin</artifactId>
-				<version>2.1-alpha-3</version>
-				<executions>
-					<execution>
-						<id>attach-rpm</id>
-						<goals>
-							<goal>attached-rpm</goal>
-						</goals>
-					</execution>
-				</executions>
-				<configuration>
-					<disabled>${rpmDisabled}</disabled>
-					<copyright>2014 PayPal</copyright>
-					<distribution>PayPal 2014</distribution>
-					<group>Development/Tools</group>
-					<packager>Paypal</packager>
-					<prefix>/usr/local</prefix>
-					<changelogFile>shifu-core/src/changelog</changelogFile>
-					<defineStatements>
-						<defineStatement>_unpackaged_files_terminate_build 0</defineStatement>
-					</defineStatements>
-					<mappings>
-						<mapping>
-							<directory>/usr/local/bin/shifu/bin</directory>
-							<filemode>777</filemode>
-							<username>root</username>
-							<groupname>root</groupname>
-							<sources>
-								<source>
-									<location>src/main/bash</location>
-								</source>
-							</sources>
-						</mapping>
-						<mapping>
-							<directory>/usr/local/bin/shifu/lib</directory>
-							<filemode>777</filemode>
-							<username>root</username>
-							<groupname>root</groupname>
-							<dependency />
-							<sources>
-								<source>
-									<location>target</location>
-									<includes>
-										<include>*.jar</include>
-									</includes>
-								</source>
-							</sources>
-						</mapping>
-						<mapping>
-							<directory>/usr/local/bin/shifu/scripts</directory>
-							<filemode>777</filemode>
-							<username>root</username>
-							<groupname>root</groupname>
-							<sources>
-								<source>
-									<location>src/main/pig</location>
-								</source>
-							</sources>
-						</mapping>
-						<mapping>
-							<directory>/usr/local/bin/shifu/common</directory>
-							<filemode>777</filemode>
-							<username>root</username>
-							<groupname>root</groupname>
-							<sources>
-								<source>
-									<location>src/test/resources/common</location>
-								</source>
-							</sources>
-						</mapping>
-						<mapping>
-							<directory>/usr/local/bin/shifu/example</directory>
-							<filemode>777</filemode>
-							<username>root</username>
-							<groupname>root</groupname>
-							<sources>
-								<source>
-									<location>src/test/resources/example</location>
-								</source>
-							</sources>
-						</mapping>
-						<mapping>
-							<directory>/usr/local/bin/shifu/conf</directory>
-							<configuration>true</configuration>
-							<filemode>777</filemode>
-							<username>root</username>
-							<groupname>root</groupname>
-							<sources>
-								<source>
-									<location>src/main/resources/conf</location>
-								</source>
-							</sources>
-						</mapping>
-						<mapping>
-							<directory>/usr/local/log/shifu</directory>
-							<filemode>777</filemode>
-							<username>root</username>
-							<groupname>root</groupname>
-						</mapping>
-						<mapping>
-							<directory>/usr/local/bin</directory>
-							<filemode>777</filemode>
-							<username>root</username>
-							<groupname>root</groupname>
-							<sources>
-								<softlinkSource>
-									<location>/usr/local/bin/shifu/bin/shifu</location>
-									<destination>shifu</destination>
-								</softlinkSource>
-							</sources>
-						</mapping>
-					</mappings>
-					<preinstallScriptlet>
-						<script>echo "shifu installing now"</script>
-					</preinstallScriptlet>
-					<postinstallScriptlet>
-						<script>echo "shifu installed"</script>
-					</postinstallScriptlet>
-				</configuration>
-			</plugin>
-		</plugins>
-	</build>
 
 	<profiles>
 		<!-- For hadoop 0.20.2 cloudera version -->
@@ -430,9 +438,9 @@
 	<modules>
 		<module>shifu-core</module>
 		<module>shifu-plugin-encog</module>
-		<module>shifu-plugin-mahout</module>
+<!--		<module>shifu-plugin-mahout</module>
 		<module>shifu-plugin-spark</module>
-		<module>shifu-dtrain</module>
+	-->	<module>shifu-dtrain</module>
 	</modules>
 
 </project>

@@ -1,13 +1,13 @@
-package ml.shifu.core.di.builtin.miningSchema;
+package ml.shifu.core.di.builtin.miningschema;
 
-import ml.shifu.core.di.spi.MiningSchemaUpdater;
+import ml.shifu.core.di.spi.PMMLMiningSchemaUpdater;
 import ml.shifu.core.util.PMMLUtils;
 import ml.shifu.core.util.Params;
 import org.dmg.pmml.*;
 
 import java.util.*;
 
-public class IVVariableSelector implements MiningSchemaUpdater {
+public class IVVariableSelector implements PMMLMiningSchemaUpdater {
 
     public void update(Model model, Params params) {
         if (model.getMiningSchema() == null) {

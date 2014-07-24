@@ -1,10 +1,10 @@
 {
-  "requestName" : "miningschema",
+  "name" : "miningschema",
   "executionMode" : "LOCAL_SINGLE",
    "globalParams" : {
       "pathPMML": "model.xml",
       "bindings" : {
-        "MiningSchemaCreator": "ml.shifu.core.di.builtin.miningSchema.UseAllMiningSchemaCreator"
+        "MiningSchemaCreator": "ml.shifu.core.di.builtin.miningschema.UseAllMiningSchemaCreator"
       }
     },
   "fieldParamsMap": {

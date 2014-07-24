@@ -1,0 +1,42 @@
+{
+    "version": "0.3.0-SNAPSHOT",
+    "requests": [
+        {
+            "requestType": "CreateDataDictionary",
+            "executionMode": "LOCAL_SINGLE",
+            "params": {
+                "pathPMML": "src/test/resources/models/wdbc/All/generated/model.xml",
+            },
+            "bindings": [
+                {
+                    "interface": "DataDictionaryInitializer",
+                    "impl": "ml.shifu.core.di.builtin.datadictionary.CSVDataDictionaryInitializer",
+                    "params": {
+                        "delimiter": "|",
+                        "pathCSV": "src/test/resources/models/wdbc/All/wdbc.header",
+                        
+                        "fields": [
+                            {
+                                "namePattern": "id",
+                                "params": {
+                                   "optype": "ordinal" 
+                                }
+                            }, {
+                                "namePattern": "diagnosis",
+                                "params": {
+                                   "optype": "categorical",
+                                    "dataType": "string"
+                                }
+                            }, {
+                                "namePattern": "$default",
+                                "params": {
+                                   "optype": "continuous"
+                                }
+                            }
+                        ] 
+                    },
+                }
+            ]
+        }         
+    ]
+}

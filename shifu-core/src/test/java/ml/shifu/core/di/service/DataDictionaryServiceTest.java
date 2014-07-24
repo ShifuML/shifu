@@ -12,15 +12,15 @@ public class DataDictionaryServiceTest {
 
 
         SimpleModule module = new SimpleModule();
-        module.set("DataDictionaryInitializer", "ml.core.core.di.builtin.dataDictionary.TripletDataDictionaryInitializer");
+        module.set("DataDictionaryInitializer", "ml.core.core.di.builtin.datadictionary.TripletDataDictionaryInitializer");
         Injector injector = Guice.createInjector(module);
 
         DataDictionaryService service = injector.getInstance(DataDictionaryService.class);
-        DataDictionary dataDictionary = service.getDataDictionary(params);
-        Assert.assertEquals((int)dataDictionary.getNumberOfFields(), 5);
+        DataDictionary datadictionary = service.getDataDictionary(params);
+        Assert.assertEquals((int)datadictionary.getNumberOfFields(), 5);
 
 
-        module.set("DataDictionaryInitializer", "ml.core.core.di.builtin.dataDictionary.ArffDataDictionaryInitializer");
+        module.set("DataDictionaryInitializer", "ml.core.core.di.builtin.datadictionary.ArffDataDictionaryInitializer");
         injector = Guice.createInjector(module);
 
         DataDictionaryService service2 = injector.getInstance(DataDictionaryService.class);

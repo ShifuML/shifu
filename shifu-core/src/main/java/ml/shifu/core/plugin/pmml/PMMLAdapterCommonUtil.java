@@ -1,7 +1,5 @@
 package ml.shifu.core.plugin.pmml;
 
-
-
 import java.util.ArrayList;
 import java.util.List;
 
@@ -30,6 +28,8 @@ import org.dmg.pmml.RegressionTable;
 
 
 public class PMMLAdapterCommonUtil {
+
+
 
     public static NeuralInputs getNeuralInputs(MiningSchema schema) {
         NeuralInputs pmmlModel = new NeuralInputs();

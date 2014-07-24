@@ -33,7 +33,7 @@ import java.util.Scanner;
 
 /**
  * AkkaSystemExecutor class
- * The executor for AKKA system. It's singleton.
+ * The processor for AKKA system. It's singleton.
  */
 public class AkkaSystemExecutor {
 
@@ -47,9 +47,9 @@ public class AkkaSystemExecutor {
     }
 
     /**
-     * Get executor for AKKA System
+     * Get processor for AKKA System
      *
-     * @return - executor
+     * @return - processor
      */
     public static AkkaSystemExecutor getExecutor() {
         return instance;

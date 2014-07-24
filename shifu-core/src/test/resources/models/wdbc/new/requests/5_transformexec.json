@@ -1,0 +1,21 @@
+{
+    "name": "ExecLocalTransformations",
+    "description": "step 5, execute transformations",
+    "processor": {
+        "spi": "RequestProcessor",
+        "impl": "ml.shifu.core.di.builtin.processor.LocalModeTransformRequestProcessor",
+        "params": {
+            "modelName": "demoModel",
+            "pathPMML": "src/test/resources/models/wdbc/new/generated/model.xml",
+            "pathInputData": "src/test/resources/data/wdbc/wdbc.data",
+            "pathOutputData": "src/test/resources/models/wdbc/new/generated/normalized.txt",
+            "pathOutputActiveHeader": "src/test/resources/models/wdbc/new/generated/active_header.txt"
+        }
+    },
+    "bindings": [
+        {
+            "spi": "TransformationExecutor",
+            "impl": "ml.shifu.core.di.builtin.transform.DefaultTransformationExecutor"
+        }
+    ]
+}
