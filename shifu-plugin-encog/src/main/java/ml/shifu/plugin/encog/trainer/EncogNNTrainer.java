@@ -44,6 +44,7 @@ public class EncogNNTrainer implements Trainer {
     public static final String PROPAGATION = "Propagation";
 
     private static Logger log = LoggerFactory.getLogger(EncogNNTrainer.class);
+    @SuppressWarnings("unused")
     private final static double Epsilon = 1.0;  // set the weight range in [-INIT_EPSILON INIT_EPSILON];
 
     private static final Map<String, Double> defaultLearningRate;
@@ -126,6 +127,7 @@ public class EncogNNTrainer implements Trainer {
         mlTrain.setThreadCount(0);
 
         int epochs = params.getNumEpochs();
+        @SuppressWarnings("unused")
         int factor = Math.max(epochs / 50, 10);
 
         minError = Double.MAX_VALUE;
@@ -215,8 +217,6 @@ public class EncogNNTrainer implements Trainer {
 
     public void splitDataSet(MLDataSet fullDataSet, Double splitRatio, MLDataSet trainDataSet, MLDataSet testDataSet) {
 
-
-
         Random random = new Random();
 
         for (MLDataPair pair : fullDataSet) {
@@ -240,6 +240,7 @@ public class EncogNNTrainer implements Trainer {
 
         network.addLayer(new BasicLayer(new ActivationLinear(), true, trainDataSet.getInputSize()));
 
+        @SuppressWarnings("unused")
         int numLayers = params.getHiddenLayers().size();
         //List<String> actFunc = (List<String>) params.get(ACTIVATION_FUNC);
         //List<Integer> hiddenNodeList = (List<Integer>) params.get(NUM_HIDDEN_NODES);

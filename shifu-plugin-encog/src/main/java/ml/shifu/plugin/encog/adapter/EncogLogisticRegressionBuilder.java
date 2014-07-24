@@ -3,6 +3,8 @@ package ml.shifu.plugin.encog.adapter;
 import java.util.HashMap;
 import java.util.List;
 
+import ml.shifu.core.plugin.pmml.GenericMLModelBuilder;
+
 import org.dmg.pmml.NumericPredictor;
 import org.dmg.pmml.RegressionModel;
 import org.dmg.pmml.RegressionNormalizationMethodType;
@@ -11,8 +13,6 @@ import org.encog.engine.network.activation.ActivationLinear;
 import org.encog.engine.network.activation.ActivationSigmoid;
 import org.encog.neural.networks.BasicNetwork;
 import org.encog.neural.networks.layers.BasicLayer;
-
-import ml.shifu.plugin.GenericMLModelBuilder;
 
 public class EncogLogisticRegressionBuilder implements
         GenericMLModelBuilder<BasicNetwork, RegressionModel> {

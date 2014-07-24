@@ -1,0 +1,1 @@
+diagnosis,mean_radius,mean_texture,mean_perimeter,mean_area,mean_compactness,mean_concavity,mean_concave_points,std_radius,std_perimeter,std_area,std_concavity,std_concave_points,worst_radius,worst_texture,worst_perimeter,worst_area,worst_smoothness,worst_compactness,worst_concavity,worst_concave_points
