@@ -8,18 +8,19 @@
                 "bindings": {
                     "Trainer": "ml.shifu.plugin.spark.trainer.SparkLRTrainer"
                 },
+                "sparkConf": {
+                     "spark.master": "local",
+                	 "spark.app.name": "LogisticRegressionModel"
+                },
                 "modelName": "demoModel",
-                "pathPMML": "src/test/resources/trainer/model.xml",
-                "pathNormalizedData": "src/test/resources/trainer/normalized.txt",
+                "pathPMML": "src/test/resources/data/wdbc/model.xml",
+                "pathNormalizedData": "src/test/resources/data/wdbc/inputTrainData",
                 "trainerID": "test",
-                "pathOutput": "src/test/resources/trainer/sparkLR",
-                "evalDataSet": "src/test/resources/trainer/evalData.txt",
-                "splitter":",",
-                "iterations":10,
-                "stepSize":0.1
-              
+                "pathOutput": "src/test/resources/trainer/sparkLR/modelOutput.lr",
+                "splitRatio": 0.8,
+                "stepSize": 0.6,
+                "iterations":100
             }
-        
         }
     ]
 }

@@ -1,0 +1,27 @@
+{
+    "version": "0.3.0-SNAPSHOT",
+    "requests": [
+        {
+            "requestType": "ExecTrain",
+            "executionMode": "LOCAL_SINGLE",
+            "globalParams": {
+                "bindings": {
+                    "Trainer": "ml.shifu.plugin.encog.trainer.EncogSVMTrainer"
+                },
+                "modelName": "demoModel",
+                "pathPMML": "src/test/resources/data/wdbc/model.xml",
+                "pathNormalizedData": "src/test/resources/data/wdbc/inputTrainData",
+                "numEpochs": 100,
+                "trainerID": "test",
+                "pathOutput": "src/test/resources/trainer/encogSVM/modelOutput.svm",
+                "splitRatio": 0.8,
+                "algorithm": "Q",
+                "learningRate": 0.5,
+                "kernel": "rbf",
+                "constant": 1.1,
+                "gamma": 0.95
+            }
+        
+        }
+    ]
+}
