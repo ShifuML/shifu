@@ -9,7 +9,7 @@ public class RequestObject {
 
 
     public static enum ExecutionMode {
-        LOCAL_SINGLE, LOCAL_CONCURRENT, HADOOP
+        LOCAL, LOCAL_SINGLE, LOCAL_CONCURRENT, HADOOP
     }
 
     private String requestType;

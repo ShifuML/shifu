@@ -1,0 +1,146 @@
+<assembly
+        xmlns="http://maven.apache.org/plugins/maven-assembly-plugin/assembly/1.1.0"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://maven.apache.org/plugins/maven-assembly-plugin/assembly/1.1.0 http://maven.apache.org/xsd/assembly-1.1.0.xsd">
+    <id>${platform.version}</id>
+    <formats>
+        <format>tar.gz</format>
+    </formats>
+
+    <fileSets>
+        <fileSet>
+            <directory>${project.basedir}</directory>
+            <outputDirectory>/</outputDirectory>
+            <includes>
+                <include>README*</include>
+                <include>LICENSE*</include>
+                <include>NOTICE*</include>
+            </includes>
+        </fileSet>
+
+        <fileSet>
+            <directory>${project.basedir}/src/main/pig</directory>
+            <outputDirectory>/scripts</outputDirectory>
+            <includes>
+                <include>*.pig</include>
+            </includes>
+        </fileSet>
+
+        <fileSet>
+            <directory>${project.basedir}/src/main/resources/conf</directory>
+            <outputDirectory>/conf</outputDirectory>
+            <excludes>
+                <exclude>log4j.*</exclude>
+            </excludes>
+        </fileSet>
+
+        <fileSet>
+            <directory>${project.basedir}/src/main/resources/conf</directory>
+            <outputDirectory>/</outputDirectory>
+            <includes>
+                <include>log4j.*</include>
+            </includes>
+        </fileSet>
+
+
+        <fileSet>
+            <directory>${project.basedir}/src/test/resources/example</directory>
+            <outputDirectory>/example</outputDirectory>
+        </fileSet>
+
+        <fileSet>
+            <directory>${project.basedir}/src/test/resources/common</directory>
+            <outputDirectory>/common</outputDirectory>
+        </fileSet>
+
+        <fileSet>
+            <directory>${project.basedir}/src/main/bash</directory>
+            <outputDirectory>/bin</outputDirectory>
+            <fileMode>755</fileMode>
+            <includes>
+                <include>*</include>
+            </includes>
+        </fileSet>
+        <fileSet>
+            <directory>${project.basedir}/src/test/bash</directory>
+            <outputDirectory>/bin</outputDirectory>
+            <fileMode>755</fileMode>
+            <includes>
+                <include>*</include>
+            </includes>
+        </fileSet>
+
+        <fileSet>
+            <directory>${project.basedir}/doc</directory>
+            <outputDirectory>/doc</outputDirectory>
+            <includes>
+                <include>*</include>
+            </includes>
+        </fileSet>
+
+        <fileSet>
+            <directory>${project.build.directory}</directory>
+            <outputDirectory>/lib</outputDirectory>
+            <includes>
+                <include>*.jar</include>
+            </includes>
+        </fileSet>
+
+
+
+    </fileSets>
+
+    <dependencySets>
+        <dependencySet>
+            <outputDirectory>/lib</outputDirectory>
+            <includes>
+                <include>*:akka-actor*:*</include>
+                <include>*:antlr:*</include>
+                <include>*:antlr-runtime:*</include>
+                <include>*:aopalliance:*</include>
+                <include>*:commons-cli:*</include>
+                <include>*:commons-codec:*</include>
+                <include>*:commons-collections:*</include>
+                <include>*:commons-compress:*</include>
+                <include>*:commons-httpclient:*</include>
+                <include>*:commons-io:*</include>
+                <include>*:commons-jexl:*</include>
+                <include>*:commons-lang:*</include>
+                <include>*:commons-lang3:*</include>
+                <include>*:commons-logging:*</include>
+                <include>*:commons-net:*</include>
+                <include>*:config:*</include>
+                <include>*:encog-core:*</include>
+                <include>*:guagua-core:*</include>
+                <include>*:guagua-mapreduce:*</include>
+                <include>*:guava:*</include>
+                <include>*:guice:*</include>
+                <include>*:hadoop-core*:jar</include>
+                <include>*:jackson-annotations:*</include>
+                <include>*:jackson-core:*</include>
+                <include>*:jackson-core-asl:*</include>
+                <include>*:jackson-databind:*</include>
+                <include>*:jackson-mapper-asl:*</include>
+                <include>*:javax.inject:*</include>
+                <include>*:jline:*</include>
+                <include>*:liblinear:*</include>
+                <include>*:log4j:*</include>
+                <include>*:netty:*</include>
+                <include>*:pig:*</include>
+                <include>*:scala-library:*</include>
+                <include>ml.shifu:*:*</include>
+                <include>*:slf4j-api:*</include>
+                <include>*:slf4j-log4j12:*</include>
+                <include>*:stringtemplate:*</include>
+                <include>*:xmlenc:*</include>
+                <include>*:xz:*</include>
+                <include>*:zookeeper:*</include>
+                <include>*:joda-time:*</include>
+                <include>*:automaton:*</include>
+                <include>org.jpmml:*:*</include>
+                <include>com.sun.xml.bind:*:*</include>
+            </includes>
+        </dependencySet>
+    </dependencySets>
+
+</assembly>

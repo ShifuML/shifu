@@ -4,7 +4,7 @@
   
   "globalParams" : {
     "bindings" : {
-      "DataDictionaryInitializer" : "ml.shifu.core.di.builtin.dataDictionary.CSVDataDictionaryInitializer"
+      "DataDictionaryInitializer" : "ml.shifu.core.di.builtin.datadictionary.CSVDataDictionaryInitializer"
     },
     "delimiter": "|",
     "pathCSV": "src/test/resources/models/wdbc/CSVDataDictionaryInitializer/wdbc.header",

@@ -168,10 +168,21 @@ public class EncogNNTrainer implements Trainer {
     public MLDataSet convertDataSet(PMMLDataSet pmmlDataSet) {
         MLDataSet convertedDataSet = new BasicMLDataSet();
 
-        List<MiningField> miningFields = pmmlDataSet.getMiningSchema().getMiningFields();
-        Integer numFields = miningFields.size();
-        Integer numActiveFields = PMMLUtils.getNumActiveMiningFields(pmmlDataSet.getMiningSchema());
-        Integer numTargetFields = PMMLUtils.getNumTargetMiningFields(pmmlDataSet.getMiningSchema());
+        List<String> header = pmmlDataSet.getHeader();
+
+        int cntActive = 0;
+        int cntTarget = 0;
+        for (String s : header) {
+            if (s.startsWith("ACTIVE")) {
+                cntActive += 1;
+            } else if (s.startsWith("TARGET")) {
+                cntTarget += 1;
+            }
+        }
+        //List<MiningField> miningFields = pmmlDataSet.getMiningSchema().getMiningFields();
+        Integer numFields = header.size();
+        //Integer numActiveFields = PMMLUtils.getNumActiveMiningFields(pmmlDataSet.getMiningSchema());
+        //Integer numTargetFields = PMMLUtils.getNumTargetMiningFields(pmmlDataSet.getMiningSchema());
 
         for (List<Object> row : pmmlDataSet.getRows()) {
 
@@ -179,20 +190,19 @@ public class EncogNNTrainer implements Trainer {
                 throw new RuntimeException("MiningSchema does not match data: Number of MiningFields = " + numFields + ", Number of data fields = " + row.size());
             }
 
-            double[] input = new double[numActiveFields];
-            double[] ideal = new double[numTargetFields];
+            double[] input = new double[cntActive];
+            double[] ideal = new double[cntTarget];
 
             int inputPtr = 0;
             int idealPtr = 0;
 
-            for (int i = 0; i < numFields; i++) {
-                if (miningFields.get(i).getUsageType().equals(FieldUsageType.ACTIVE)) {
-                    input[inputPtr] = Double.valueOf(row.get(i).toString());
-                    inputPtr += 1;
-                } else if (miningFields.get(i).getUsageType().equals(FieldUsageType.TARGET)) {
-                    ideal[idealPtr] = Double.valueOf(row.get(i).toString());
-                    idealPtr += 1;
-                }
+            for (int i = 0; i < cntTarget; i++) {
+                ideal[i] = Double.valueOf(row.get(i).toString());
+            }
+
+            for (int i = 0; i < cntActive; i++) {
+                input[i] = Double.valueOf(row.get(i+cntTarget).toString());
+
             }
 
             MLDataPair pair = new BasicMLDataPair(new BasicMLData(input), new BasicMLData(ideal));

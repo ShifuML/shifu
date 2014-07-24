@@ -1,8 +1,12 @@
 package ml.shifu.core.util;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import ml.shifu.core.request.FieldConf;
 
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 
 public class Params extends LinkedHashMap<String, Object> {
@@ -27,17 +31,70 @@ public class Params extends LinkedHashMap<String, Object> {
         return fieldParamsMap;
     }
 
+
+
+    private List<FieldConf> fieldConfs = null;
+
     public void setFieldParamsMap(Map<String, Params> fieldParamsMap) {
         this.fieldParamsMap = fieldParamsMap;
     }
 
     @JsonIgnore
-    public Params getFieldParams(String fieldNameString) {
+    public FieldConf getFieldConfig(String fieldNameString) throws Exception{
+
+        if (this.fieldConfs == null) {
+            fieldConfs = new ArrayList<FieldConf>();
+            ObjectMapper jsonMapper = new ObjectMapper();
+
+            for (Object field : (List<Object>)this.get("fields")) {
+                FieldConf fieldConf = jsonMapper.readValue(jsonMapper.writeValueAsString(field), FieldConf.class);
+                fieldConfs.add(fieldConf);
+            }
+
+        }
+
+        FieldConf defaultFieldConf = null;
+
+        for (FieldConf fieldConf : fieldConfs) {
+            if (fieldConf.getNamePattern().equals("$default")) {
+                defaultFieldConf = fieldConf;
+            }
+
+            if (fieldConf.getNamePattern().equals(fieldNameString)) {
+                return fieldConf;
+            }
+
+
+        }
+
+        if (defaultFieldConf != null) {
+            return defaultFieldConf;
+        } else {
+            throw new RuntimeException("No such field: " + fieldNameString + ", and no default params provided");
+        }
+    }
+
+    @JsonIgnore
+    public Params getFieldParams(String fieldNameString) throws Exception{
+
+        if (this.fieldParamsMap == null) {
+            fieldParamsMap = new LinkedHashMap<String, Params>();
+            ObjectMapper jsonMapper = new ObjectMapper();
+
+            for (Object field : (List<Object>)this.get("fields")) {
+                FieldConf fieldConf = jsonMapper.readValue(jsonMapper.writeValueAsString(field), FieldConf.class);
+                fieldParamsMap.put(fieldConf.getNamePattern(), fieldConf.getParams());
+            }
+
+        }
+
+
+
         //TODO: add pattern matching
         if (fieldParamsMap.containsKey(fieldNameString)) {
             return fieldParamsMap.get(fieldNameString);
-        } else if (fieldNameString.contains("$$default")) {
-            return fieldParamsMap.get("$$default");
+        } else if (fieldParamsMap.containsKey("$default")) {
+            return fieldParamsMap.get("$default");
         } else {
             throw new RuntimeException("No such field: " + fieldNameString + ", and no default params provided");
         }

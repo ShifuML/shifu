@@ -71,7 +71,7 @@ public class PMMLEncogNeuralNetworkTest extends PMMLModelTest<BasicNetwork> {
         // evaluateInputs(evalInput);
     }
 
-    @Test
+    //@Test
     public void testEncogNN_2layer() {
         testSetUp();
         writeToPMML();

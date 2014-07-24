@@ -1,6 +1,6 @@
-package ml.shifu.core.di.builtin.derivedField;
+package ml.shifu.core.di.builtin.derivedfield;
 
-import ml.shifu.core.di.spi.DerivedFieldCreator;
+import ml.shifu.core.di.spi.PMMLDerivedFieldCreator;
 import ml.shifu.core.util.Params;
 import org.dmg.pmml.*;
 import org.w3c.dom.Document;
@@ -11,7 +11,7 @@ import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import java.util.List;
 
-public class BinaryClassMapperCreator implements DerivedFieldCreator {
+public class BinaryClassMapperCreator implements PMMLDerivedFieldCreator {
 
     public DerivedField create(DataField dataField, ModelStats modelStats, Params params) {
 

@@ -18,6 +18,8 @@ package ml.shifu.core.di.module;
 
 
 import com.google.inject.AbstractModule;
+import ml.shifu.core.request.Binding;
+import ml.shifu.core.request.Request;
 import ml.shifu.core.util.CommonUtils;
 
 import java.util.HashMap;
@@ -44,6 +46,30 @@ public class SimpleModule extends AbstractModule {
         bindings.put(spi, impl);
     }
 
+    public void set(Binding binding) {
+        if (binding != null) {
+            bindings.put(binding.getSpi(), binding.getImpl());
+        }
+    }
+
+    public void set(Request req) {
+
+
+        this.set(req.getProcessor());
+
+        for (Binding binding : req.getBindings()) {
+            this.set(binding);
+        }
+    }
+
+    public Boolean has(String spi) {
+        if (bindings.containsKey(spi) && bindings.get(spi) != null) {
+            return true;
+        } else {
+            return false;
+        }
+
+    }
 
     @Override
     protected void configure() {

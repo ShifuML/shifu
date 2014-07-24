@@ -2176,60 +2176,10 @@
                 <Constant>1</Constant>
             </DerivedField>
         </LocalTransformations>
-        <NeuralInputs>
-            <NeuralInput id="0,0">
-                <DerivedField name="mean_radius" optype="continuous" dataType="double">
-                    <FieldRef field="mean_radius"/>
-                </DerivedField>
-            </NeuralInput>
-            <NeuralInput id="0,1">
-                <DerivedField name="mean_perimeter" optype="continuous" dataType="double">
-                    <FieldRef field="mean_perimeter"/>
-                </DerivedField>
-            </NeuralInput>
-            <NeuralInput id="0,2">
-                <DerivedField name="mean_area" optype="continuous" dataType="double">
-                    <FieldRef field="mean_area"/>
-                </DerivedField>
-            </NeuralInput>
-            <NeuralInput id="0,3">
-                <DerivedField name="mean_concavity" optype="continuous" dataType="double">
-                    <FieldRef field="mean_concavity"/>
-                </DerivedField>
-            </NeuralInput>
-            <NeuralInput id="0,4">
-                <DerivedField name="mean_concave_points" optype="continuous" dataType="double">
-                    <FieldRef field="mean_concave_points"/>
-                </DerivedField>
-            </NeuralInput>
-            <NeuralInput id="0,5">
-                <DerivedField name="std_area" optype="continuous" dataType="double">
-                    <FieldRef field="std_area"/>
-                </DerivedField>
-            </NeuralInput>
-            <NeuralInput id="0,6">
-                <DerivedField name="worst_radius" optype="continuous" dataType="double">
-                    <FieldRef field="worst_radius"/>
-                </DerivedField>
-            </NeuralInput>
-            <NeuralInput id="0,7">
-                <DerivedField name="worst_perimeter" optype="continuous" dataType="double">
-                    <FieldRef field="worst_perimeter"/>
-                </DerivedField>
-            </NeuralInput>
-            <NeuralInput id="0,8">
-                <DerivedField name="worst_area" optype="continuous" dataType="double">
-                    <FieldRef field="worst_area"/>
-                </DerivedField>
-            </NeuralInput>
-            <NeuralInput id="0,9">
-                <DerivedField name="worst_concave_points" optype="continuous" dataType="double">
-                    <FieldRef field="worst_concave_points"/>
-                </DerivedField>
-            </NeuralInput>
+        <NeuralInputs numberOfInputs="1">
             <NeuralInput id="bias">
-                <DerivedField name="bias" optype="continuous" dataType="double">
-                    <FieldRef field="bias"/>
+                <DerivedField>
+                    <Constant>1.0</Constant>
                 </DerivedField>
             </NeuralInput>
         </NeuralInputs>

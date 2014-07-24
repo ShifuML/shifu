@@ -151,10 +151,133 @@ public class PMMLUtils {
         Map<FieldName, DerivedField> derivedFieldMap = new HashMap<FieldName, DerivedField>();
 
         for (DerivedField derivedField : localTransformations.getDerivedFields()) {
+
+            Expression expression = derivedField.getExpression();
+            // TODO:finish the list
+            if (expression instanceof NormContinuous) {
+                FieldName rawFieldName = ((NormContinuous) expression).getField();
+                derivedFieldMap.put(rawFieldName, derivedField);
+            }
+
+            //derivedFieldMap.put(derivedField.getName(), derivedField);
+        }
+
+        return derivedFieldMap;
+    }
+ /*
+    public static Map<FieldName, DerivedField> getDerivedFieldMap(LocalTransformations localTransformations) {
+
+        Map<FieldName, DerivedField> derivedFieldMap = new HashMap<FieldName, DerivedField>();
+
+        for (DerivedField derivedField : localTransformations.getDerivedFields()) {
             derivedFieldMap.put(derivedField.getName(), derivedField);
         }
 
         return derivedFieldMap;
+    }
+        */
+
+
+
+    //public static List<DerivedField> getAvailableDerivedFields(PMML pmml, String modelName) {
+    //    Model model = PMMLUtils.getModelByName(pmml, modelName);
+    //    return getAvailableDerivedFields(pmml, model);
+    //}
+
+    public static Map<FieldUsageType, List<DerivedField>> getDerivedFieldsByUsageType(PMML pmml, Model model) {
+
+        Map<FieldUsageType, List<DerivedField>> result = new LinkedHashMap<FieldUsageType, List<DerivedField>>();
+
+        List<DerivedField> activeFields = new ArrayList<DerivedField>();
+        List<DerivedField> targetFields = new ArrayList<DerivedField>();
+
+        for (DerivedField derivedField : model.getLocalTransformations().getDerivedFields()) {
+            Expression expression = derivedField.getExpression();
+
+            List<MiningField> miningFields = model.getMiningSchema().getMiningFields();
+
+            if (expression instanceof NormContinuous) {
+                for (MiningField miningField : miningFields) {
+                    if (miningField.getName().equals(((NormContinuous) expression).getField())) {
+
+                        if (PMMLUtils.isActive(miningField)) {
+                            activeFields.add(derivedField);
+                        } else if (PMMLUtils.isTarget(miningField)) {
+                            targetFields.add(derivedField);
+                        }
+
+                    }
+                }
+            } else if (expression instanceof MapValues) {
+                int active = 0;
+                int target = 0;
+                List<FieldColumnPair> pairs = ((MapValues) expression).getFieldColumnPairs();
+                for (FieldColumnPair pair : pairs) {
+                    MiningField miningField = PMMLUtils.getMiningFieldByName(miningFields, pair.getField());
+                    if (miningField != null) {
+                        if (PMMLUtils.isActive(miningField)) {
+                            active += 1;
+                        } else if (PMMLUtils.isTarget(miningField)) {
+                            target += 1;
+                        }
+                    }
+                }
+                if (active == pairs.size()) {
+                    activeFields.add(derivedField);
+                } else if (target == pairs.size()) {
+                    targetFields.add(derivedField);
+                }
+
+            } else if (expression instanceof FieldRef) {
+                MiningField miningField = PMMLUtils.getMiningFieldByName(miningFields, ((FieldRef) expression).getField());
+                if (miningField != null) {
+                    if (PMMLUtils.isActive(miningField)) {
+                        activeFields.add(derivedField);
+                    } else if (PMMLUtils.isTarget(miningField)) {
+                        targetFields.add(derivedField);
+                    }
+                }
+            }
+        }
+
+        result.put(FieldUsageType.ACTIVE, activeFields);
+        result.put(FieldUsageType.TARGET, targetFields);
+
+        return result;
+    }
+
+    public static Boolean isActive(MiningField miningField) {
+        return miningField.getUsageType().equals(FieldUsageType.ACTIVE);
+    }
+
+    public static Boolean isTarget(MiningField miningField) {
+        return miningField.getUsageType().equals(FieldUsageType.TARGET);
+    }
+
+    public static Boolean containsField(List<MiningField> fields, FieldName fieldName) {
+        for (MiningField miningField : fields) {
+            if (miningField.getName().equals(fieldName)) {
+                return true;
+            }
+        }
+        return false;
+    }
+    public static Boolean containsField(List<MiningField> fields, FieldName fieldName, FieldUsageType usageType) {
+        for (MiningField miningField : fields) {
+            if (miningField.getName().equals(fieldName) && (miningField.getUsageType().equals(usageType))) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    public static MiningField getMiningFieldByName(List<MiningField> fields, FieldName fieldName) {
+        for (MiningField miningField : fields) {
+            if (miningField.getName().equals(fieldName)) {
+                return miningField;
+            }
+        }
+        return null;
     }
 
     public static Map<FieldName, MiningField> getMiningFieldMap(MiningSchema miningSchema) {
@@ -193,32 +316,32 @@ public class PMMLUtils {
     }
 
     public static NeuralInputs createNeuralInputs(PMML pmml, NeuralNetwork model) {
+
+        Map<FieldUsageType, List<DerivedField>> fieldsMap = PMMLUtils.getDerivedFieldsByUsageType(pmml, model);
+
+        List<DerivedField> activeFields = fieldsMap.get(FieldUsageType.ACTIVE);
+        List<DerivedField> targetFields = fieldsMap.get(FieldUsageType.TARGET);
+        /*
         Set<FieldName> activeFieldNameSet = new HashSet<FieldName>();
 
         for (MiningField miningField : model.getMiningSchema().getMiningFields()) {
             if (miningField.getUsageType().equals(FieldUsageType.ACTIVE)) {
                 activeFieldNameSet.add(miningField.getName());
             }
-        }
+        } */
 
         NeuralInputs neuralInputs = new NeuralInputs();
 
         int neuralInputIndex = 0;
-        for (DerivedField derivedField : model.getLocalTransformations().getDerivedFields()) {
+        for (DerivedField derivedField : activeFields) {
             NeuralInput neuralInput = new NeuralInput();
             DerivedField neuralInputDerivedField = new DerivedField();
 
-            Expression expression = derivedField.getExpression();
-            if (expression instanceof NormContinuous) {
-                if (activeFieldNameSet.contains(((NormContinuous)expression).getField())){
-                    FieldRef fieldRef = new FieldRef();
-                    fieldRef.setField(derivedField.getName());
-                    neuralInputDerivedField.setExpression(fieldRef);
-                }
 
-            } else {
-                continue;
-            }
+            FieldRef fieldRef = new FieldRef();
+            fieldRef.setField(derivedField.getName());
+            neuralInputDerivedField.setExpression(fieldRef);
+
             neuralInput.setId("0," + neuralInputIndex);
             neuralInputIndex += 1;
             neuralInput.setDerivedField(neuralInputDerivedField);
@@ -243,19 +366,19 @@ public class PMMLUtils {
 
         TransformationDictionary transformationDictionary = pmml.getTransformationDictionary();
 
-        MiningSchema miningSchema = model.getMiningSchema();
+        MiningSchema miningschema = model.getMiningSchema();
 
         Set<FieldName> activeFieldNameSet = new HashSet<FieldName>();
 
-        for (MiningField miningField : miningSchema.getMiningFields()) {
+        for (MiningField miningField : miningschema.getMiningFields()) {
             if (miningField.getUsageType().equals(FieldUsageType.ACTIVE)) {
                 activeFieldNameSet.add(miningField.getName());
             }
         }
 
         LocalTransformations localTransformations = model.getLocalTransformations();
-        for (DerivedField derivedField : localTransformations.getDerivedFields()) {
-            Expression expression = derivedField.getExpression();
+        for (DerivedField derivedfield : localTransformations.getDerivedFields()) {
+            Expression expression = derivedfield.getExpression();
 
             if (expression instanceof NormContinuous) {
                 ((NormContinuous) expression).getField()
