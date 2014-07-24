@@ -1,19 +1,3 @@
-/**
- * Copyright [2012-2014] eBay Software Foundation
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *    http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
 package ml.shifu.plugin.encog.adapter;
 
 import java.util.ArrayList;
@@ -35,86 +19,82 @@ import org.encog.engine.network.activation.ActivationTANH;
 import org.encog.neural.networks.BasicNetwork;
 import org.encog.neural.networks.layers.BasicLayer;
 
-/**
- * EncogNeuralNetworkBuilder creates an Encog Neural Network model based on the
- * PMML Neural Network model
- */
 public class EncogNeuralNetworkBuilder implements
-		GenericMLModelBuilder<BasicNetwork, NeuralNetwork> {
-	BasicNetwork mlModel = new BasicNetwork();
-	private NeuralNetwork pmmlModel;
-	private List<HashMap<String, Integer>> neuronMap = new ArrayList<HashMap<String, Integer>>();
-	@SuppressWarnings("serial")
-	HashMap<ActivationFunctionType, ActivationFunction> functionMap = new HashMap<ActivationFunctionType, ActivationFunction>() {
-		{
-			put(ActivationFunctionType.LOGISTIC, new ActivationSigmoid());
-			put(ActivationFunctionType.IDENTITY, new ActivationLinear());
-			put(ActivationFunctionType.TANH, new ActivationTANH());
-		}
-	};
+        GenericMLModelBuilder<BasicNetwork, NeuralNetwork> {
+    BasicNetwork mlModel = new BasicNetwork();
+    private NeuralNetwork pmmlModel;
+    private List<HashMap<String, Integer>> neuronMap = new ArrayList<HashMap<String, Integer>>();
+    @SuppressWarnings("serial")
+    HashMap<ActivationFunctionType, ActivationFunction> functionMap = new HashMap<ActivationFunctionType, ActivationFunction>() {
+        {
+            put(ActivationFunctionType.LOGISTIC, new ActivationSigmoid());
+            put(ActivationFunctionType.IDENTITY, new ActivationLinear());
+            put(ActivationFunctionType.TANH, new ActivationTANH());
+        }
+    };
 
-	@Override
-	public BasicNetwork createMLModelFromPMML(NeuralNetwork pmmlModel) {
-		this.pmmlModel = pmmlModel;
-		readNeuronInputLayer();
-		initNNLayer();
-		setWeight();
-		return mlModel;
-	}
+    @Override
+    public BasicNetwork createMLModelFromPMML(NeuralNetwork pmmlModel) {
+        this.pmmlModel = pmmlModel;
+        readNeuronInputLayer();
+        initNNLayer();
+        setWeight();
+        return mlModel;
+    }
 
-	private ActivationFunction transformActivationFunction(
-			ActivationFunctionType pmmlActivationFuncType) {
-		return functionMap.get(pmmlActivationFuncType);
-	}
+    private ActivationFunction transformActivationFunction(
+            ActivationFunctionType pmmlActivationFuncType) {
+        return functionMap.get(pmmlActivationFuncType);
+    }
 
-	private void initNNLayer() {
-		List<NeuralLayer> layerList = pmmlModel.getNeuralLayers();
-		for (NeuralLayer layer : layerList) {
-			mlModel.addLayer(new BasicLayer(transformActivationFunction(layer
-					.getActivationFunction()), true, layer.getNeurons().size()));
-		}
-		mlModel.getStructure().finalizeStructure();
-	}
+    private void initNNLayer() {
+        List<NeuralLayer> layerList = pmmlModel.getNeuralLayers();
+        for (NeuralLayer layer : layerList) {
+            mlModel.addLayer(new BasicLayer(transformActivationFunction(layer
+                    .getActivationFunction()), true, layer.getNeurons().size()));
+        }
+        mlModel.getStructure().finalizeStructure();
+    }
 
-	private void setWeight() {
-		List<NeuralLayer> layerList = pmmlModel.getNeuralLayers();
-		HashMap<String, Integer> prevNameLocMap;
-		int lenLayer = layerList.size();
-		// get each layer
-		for (int layerID = 0; layerID < lenLayer; layerID++) {
-			NeuralLayer layer = layerList.get(layerID);
-			prevNameLocMap = neuronMap.get(layerID);
-			// create new nameLocMap
-			HashMap<String, Integer> nameLocMap = new HashMap<String, Integer>();
-			int neuronNum = layer.getNeurons().size();
+    private void setWeight() {
+        List<NeuralLayer> layerList = pmmlModel.getNeuralLayers();
+        HashMap<String, Integer> prevNameLocMap;
+        int lenLayer = layerList.size();
+        // get each layer
+        for (int layerID = 0; layerID < lenLayer; layerID++) {
+            NeuralLayer layer = layerList.get(layerID);
+            prevNameLocMap = neuronMap.get(layerID);
+            // create new nameLocMap
+            HashMap<String, Integer> nameLocMap = new HashMap<String, Integer>();
+            int neuronNum = layer.getNeurons().size();
+ 
+            for (int nID = 0; nID < neuronNum; nID++) {
+                Neuron neuron = layer.getNeurons().get(nID);
+                // add to nameLocMap
+                nameLocMap.put(neuron.getId(), nID);
+                for (Connection con : neuron.getConnections()) {
+                    if (!prevNameLocMap.containsKey(con.getFrom()))
+                        System.out.println(con.getFrom());
+                    mlModel.setWeight(layerID,
+                            prevNameLocMap.get(con.getFrom()), nID,
+                            con.getWeight());
+                }
+            }// end of each neuron
+            nameLocMap.put("bias", neuronNum);
+            neuronMap.add(nameLocMap);
+        }// end of a neural layer
+    }
 
-			for (int nID = 0; nID < neuronNum; nID++) {
-				Neuron neuron = layer.getNeurons().get(nID);
-				// add to nameLocMap
-				nameLocMap.put(neuron.getId(), nID);
-				for (Connection con : neuron.getConnections()) {
-					if (!prevNameLocMap.containsKey(con.getFrom()))
-						System.out.println(con.getFrom());
-					mlModel.setWeight(layerID,
-							prevNameLocMap.get(con.getFrom()), nID,
-							con.getWeight());
-				}
-			}// end of each neuron
-			nameLocMap.put("bias", neuronNum);
-			neuronMap.add(nameLocMap);
-		}// end of a neural layer
-	}
-
-	private void readNeuronInputLayer() {
-		// get input
-		HashMap<String, Integer> nameLocMap = new HashMap<String, Integer>();
-		List<NeuralInput> inputs = pmmlModel.getNeuralInputs()
-				.getNeuralInputs();
-		for (int i = 0; i < inputs.size(); i++) {
-			nameLocMap.put(inputs.get(i).getId(), i);
-		}
-		mlModel.addLayer(new BasicLayer(new ActivationLinear(), true, inputs
-				.size()));
-		neuronMap.add(nameLocMap);
-	}
+    private void readNeuronInputLayer() {
+        // get input
+        HashMap<String, Integer> nameLocMap = new HashMap<String, Integer>();
+        List<NeuralInput> inputs = pmmlModel.getNeuralInputs()
+                .getNeuralInputs();
+        for (int i = 0; i < inputs.size(); i++) {
+            nameLocMap.put(inputs.get(i).getId(), i);
+        }
+        mlModel.addLayer(new BasicLayer(new ActivationLinear(), true, inputs
+                .size()));
+        neuronMap.add(nameLocMap);
+    }
 }

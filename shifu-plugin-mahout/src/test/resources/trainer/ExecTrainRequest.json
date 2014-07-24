@@ -6,18 +6,23 @@
             "executionMode": "LOCAL_SINGLE",
             "globalParams": {
                 "bindings": {
-                    "Trainer": "ml.shifu.plugin.spark.trainer.SparkLRTrainer"
+                    "Trainer": "ml.shifu.plugin.encog.trainer.EncogNNTrainer"
                 },
                 "modelName": "demoModel",
                 "pathPMML": "src/test/resources/trainer/model.xml",
                 "pathNormalizedData": "src/test/resources/trainer/normalized.txt",
+                "numEpochs": 100,
                 "trainerID": "test",
-                "pathOutput": "src/test/resources/trainer/sparkLR",
-                "evalDataSet": "src/test/resources/trainer/evalData.txt",
-                "splitter":",",
-                "iterations":10,
-                "stepSize":0.1
-              
+                "pathOutput": "tmp/generated/models",
+                "splitRatio": 0.8,
+                "algorithm": "Q",
+                "learningRate": 0.5,
+                "hiddenLayers": [
+                    {
+                        "numHiddenNodes": 10,
+                        "activationFunction": "sigmoid"
+                    }
+                ]
             }
         
         }

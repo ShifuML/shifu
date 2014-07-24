@@ -1,157 +1,170 @@
-/**
- * Copyright [2012-2014] eBay Software Foundation
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *    http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
 package ml.shifu.plugin.mahout.trainer;
 
 import java.io.File;
 import java.io.IOException;
+import java.text.DecimalFormat;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Random;
 
 import ml.shifu.core.container.HiddenLayer;
 import ml.shifu.core.container.NNParams;
 import ml.shifu.core.container.PMMLDataSet;
+import ml.shifu.core.di.spi.Trainer;
 import ml.shifu.core.util.PMMLUtils;
 import ml.shifu.core.util.Params;
 
 import org.apache.mahout.classifier.mlp.MultilayerPerceptron;
 import org.apache.mahout.classifier.mlp.NeuralNetwork;
+import org.apache.mahout.math.Vector;
+import org.dmg.pmml.FieldUsageType;
+import org.dmg.pmml.MiningField;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 
-public class MahoutNNTrainer extends MahoutAbstractTrainer {
+public class MahoutNNTrainer implements Trainer {
 
-	private static Logger log = LoggerFactory.getLogger(MahoutNNTrainer.class);
+    public static final String NUM_HIDDEN_LAYERS = "NumHiddenLayers";
+    public static final String ACTIVATION_FUNC = "ActivationFunc";
+    public static final String NUM_HIDDEN_NODES = "NumHiddenNodes";
+    private static Logger log = LoggerFactory.getLogger(MahoutNNTrainer.class);
+    private static final DecimalFormat df = new DecimalFormat("0.000000");
+    private List<MahoutDataPair> fullDataSet = new ArrayList<MahoutDataPair>();
+    private NeuralNetwork network;
 
-	public Object train(PMMLDataSet dataSet, Params rawParams) throws Exception {
-		NNParams params = parseParams(rawParams);
-		String pathOutput = rawParams.get("pathOutput").toString();
-		File outputFolder = new File(pathOutput);
-		if (!outputFolder.exists()) {
-			outputFolder.mkdirs();
-		}
-		Integer numActiveFields = PMMLUtils.getNumActiveMiningFields(dataSet
-				.getMiningSchema());
-		Integer numTargetFields = PMMLUtils.getNumTargetMiningFields(dataSet
-				.getMiningSchema());
-		// prepare data set
-		convertDataSet(dataSet, numActiveFields, numTargetFields);
-		splitDataSet(params.getSplitRatio());
-		// create neural network
-		NeuralNetwork network = createNetwork(params, numActiveFields,
-				numTargetFields);
-		// train the data
-		network = trainModel(network, params);
+    public void train(PMMLDataSet dataSet, Params rawParams) throws Exception {
+        NNParams params = parseParams(rawParams);
+        String trainerID = rawParams.get("trainerID").toString();
+        String pathOutput = rawParams.get("pathOutput").toString();
+        File outputFolder = new File(pathOutput);
+        if (!outputFolder.exists()) {
+            outputFolder.mkdirs();
+        }
+        Integer numActiveFields = PMMLUtils.getNumActiveMiningFields(dataSet
+                .getMiningSchema());
+        Integer numTargetFields = PMMLUtils.getNumTargetMiningFields(dataSet
+                .getMiningSchema());
+        //prepare data set
+        convertDataSet(dataSet, numActiveFields, numTargetFields);
+        splitDataSet(params.getSplitRatio());
+        //create neural network
+        NeuralNetwork network = createNetwork(params, numActiveFields,
+                numTargetFields);
+        //train the data
+        for (MahoutDataPair input : fullDataSet) {
+            if (!input.isEvalData)
+                network.trainOnline(input.getMahoutInputVector());
+        }
+        //save neural network
+        String path = pathOutput + "/model_" + trainerID + "_" + 1;
+        saveMLModel(path);
+        //evaluate and calculate errors
+        String extra = " <-- NN saved: " + path;
+        log.info("  Trainer-" + trainerID + "\n Train Error: "
+                + df.format(getTestSetError()) + "\n" + extra);
+        log.info("Trainer #" + trainerID + " is Finished!");
+    }
 
-		// save neural network
-		String path = pathOutput;
-		saveMLModel(network, path);
-		// evaluate and calculate errors
+    private void convertDataSet(PMMLDataSet pmmlDataSet, int numActiveFields,
+            int numTargetFields) {
+        List<MiningField> miningFields = pmmlDataSet.getMiningSchema()
+                .getMiningFields();
+        Integer numFields = miningFields.size();
+        for (List<Object> row : pmmlDataSet.getRows()) {
+            if (numFields != row.size()) {
+                throw new RuntimeException(
+                        "MiningSchema does not match data: Number of MiningFields = "
+                                + numFields + ", Number of data fields = "
+                                + row.size());
+            }
+            double[] input = new double[numActiveFields];
+            double[] ideal = new double[numTargetFields];
 
-		return network;
-	}
+            int inputPtr = 0;
+            int idealPtr = 0;
+            for (int i = 0; i < numFields; i++) {
+                if (miningFields.get(i).getUsageType()
+                        .equals(FieldUsageType.ACTIVE)) {
+                    input[inputPtr] = Double.valueOf(row.get(i).toString());
+                    inputPtr += 1;
+                } else if (miningFields.get(i).getUsageType()
+                        .equals(FieldUsageType.TARGET)) {
+                    ideal[idealPtr] = Double.valueOf(row.get(i).toString());
+                    idealPtr += 1;
+                }
+            }
+            fullDataSet.add(new MahoutDataPair(input, ideal));
+        }
+    }
 
-	private NeuralNetwork trainModel(NeuralNetwork network, NNParams params) {
+    private void splitDataSet(Double splitRatio) {
+        Random random = new Random();
+        for (MahoutDataPair pair : fullDataSet) {
+            if (random.nextDouble() <= splitRatio) {
+                pair.setEvalData(true);
+            }
+        }
+    }
 
-		int epochs = params.getNumEpochs();
-		// train the data
-		for (int i = 0; i < epochs; i++) {
-			long evalNum = 0;
-			long trainNum = 0;
-			double mseError = 0;
-			double trainError = 0;
-			for (MahoutDataPair input : fullDataSet) {
-				if (!input.isEvalData) {
-					network.trainOnline(input.getMahoutInputVector());
-					double predict = network.getOutput(
-							input.getMahoutEvalVector()).get(0);
-					double idealData = input.getIdealData()[0];
-					trainError += Math.pow(idealData - predict, 2.0);
-					trainNum++;
-				} else {
-					double predict = network.getOutput(
-							input.getMahoutEvalVector()).get(0);
-					double idealData = input.getIdealData()[0];
-					mseError += Math.pow(idealData - predict, 2.0);
-					evalNum++;
-				}
+    private Double calculateMSE(NeuralNetwork network) {
+        double mseError = 0;
+        long numRecords = fullDataSet.size();
+        for (MahoutDataPair pair : fullDataSet) {
+            Vector predict = network.getOutput(pair.getMahoutEvalVector());
+            int len = predict.getNumNondefaultElements();
+            double[] idealData = pair.getIdealData();
+            if (idealData.length != len)
+                throw new RuntimeException(
+                        "input evaluation data fields does not match with the evaluation data field of the model");
+    
+            double[] variants = new double[idealData.length];
+            for (int i = 0; i < len; i++) {
+                variants[i] = idealData[i] - predict.get(i);
+            }
+            mseError += Math.pow(variants[0], 2.0);
+        }
+        return mseError / numRecords;
+    }
 
-			}
-			log.info(" Train Error: " + df.format(trainError / trainNum)
-					+ " Test Error: " + df.format(mseError / evalNum));
-		}
-		return network;
-	}
+    private NNParams parseParams(Params rawParams) throws Exception {
+        ObjectMapper jsonMapper = new ObjectMapper();
+        String jsonString = jsonMapper.writeValueAsString(rawParams);
+        return jsonMapper.readValue(jsonString, NNParams.class);
+    }
 
-	private NNParams parseParams(Params rawParams) throws Exception {
-		ObjectMapper jsonMapper = new ObjectMapper();
-		String jsonString = jsonMapper.writeValueAsString(rawParams);
-		return jsonMapper.readValue(jsonString, NNParams.class);
-	}
+    private NeuralNetwork createNetwork(NNParams params, int inputSize,
+            int outputSize) {
+        network = new MultilayerPerceptron();
+        network.addLayer(inputSize, false, "Identity");
 
-	private NeuralNetwork createNetwork(NNParams params, int inputSize,
-			int outputSize) {
-		NeuralNetwork network = new MultilayerPerceptron();
-		network.addLayer(inputSize, false, "Identity");
+        for (HiddenLayer hiddenLayer : params.getHiddenLayers()) {
 
-		for (HiddenLayer hiddenLayer : params.getHiddenLayers()) {
+            String activationFunction = hiddenLayer.getActivationFunction();
+            int numHiddenNodes = hiddenLayer.getNumHiddenNodes();
+            if (activationFunction.equalsIgnoreCase("Identity")) {
+                network.addLayer(numHiddenNodes, false, "Identity");
+            } else if (activationFunction.equalsIgnoreCase("Sigmoid")) {
+                network.addLayer(numHiddenNodes, false, "Sigmoid");
+            } else {
+                throw new RuntimeException("Unsupported ActivationFunction: "
+                        + activationFunction);
+            }
+        }
+        network.addLayer(outputSize, true, "Sigmoid");
 
-			String activationFunction = hiddenLayer.getActivationFunction();
-			int numHiddenNodes = hiddenLayer.getNumHiddenNodes();
-			if (activationFunction.equalsIgnoreCase("Identity")) {
-				network.addLayer(numHiddenNodes, false, "Identity");
-			} else if (activationFunction.equalsIgnoreCase("Sigmoid")) {
-				network.addLayer(numHiddenNodes, false, "Sigmoid");
-			} else {
-				throw new RuntimeException("Unsupported ActivationFunction: "
-						+ activationFunction);
-			}
-		}
-		network.addLayer(outputSize, true, "Sigmoid");
+        return network;
+    }
 
-		return network;
-	}
+    private double getTestSetError() {
+        return calculateMSE(this.network);
+        // return calculateMSEParallel(this.network, this.validSet);
+    }
 
-	private void saveMLModel(NeuralNetwork network, String path)
-			throws IOException {
-		// network.setModelPath(path);
-		// network.writeModelToFile();
-		// EncogDirectoryPersistence.saveObject(new File(path), network);
-	}
+    private void saveMLModel(String path) throws IOException {
 
-	// private Double calculateMSE(NeuralNetwork network) {
-	// double mseError = 0;
-	// long numRecords = fullDataSet.size();
-	// for (MahoutDataPair pair : fullDataSet) {
-	// if (!pair.isEvalData)
-	// continue;
-	// Vector predict = network.getOutput(pair.getMahoutEvalVector());
-	// int len = predict.getNumNondefaultElements();
-	// double[] idealData = pair.getIdealData();
-	// if (idealData.length != len)
-	// throw new RuntimeException(
-	// "input evaluation data fields does not match with the evaluation data field of the model");
-	//
-	// double[] variants = new double[idealData.length];
-	// for (int i = 0; i < len; i++) {
-	// variants[i] = idealData[i] - predict.get(i);
-	// }
-	// mseError += Math.pow(variants[0], 2.0);
-	// }
-	// return mseError / numRecords;
-	// }
+//        EncogDirectoryPersistence.saveObject(new File(path), network);
+    }
 
 }
