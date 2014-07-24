@@ -5,6 +5,6 @@ import ml.shifu.core.util.Params;
 
 public interface Trainer {
 
-    public Object train(PMMLDataSet pmmlDataSet, Params params) throws Exception;
+    public void train(PMMLDataSet pmmlDataSet, Params params) throws Exception;
 
 }

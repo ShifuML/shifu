@@ -1,38 +1,29 @@
-/**
- * Copyright [2012-2014] eBay Software Foundation
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *    http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
 package ml.shifu.plugin.encog.adapter;
 
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
+import java.util.List;
 import java.util.Map;
 
+import ml.shifu.core.plugin.pmml.AdapterConstants;
+import ml.shifu.core.plugin.pmml.PMMLAdapterCommonUtil;
 import ml.shifu.core.util.PMMLUtils;
 
+import org.dmg.pmml.Constant;
+import org.dmg.pmml.DataDictionary;
+import org.dmg.pmml.DataField;
+import org.dmg.pmml.DataType;
+import org.dmg.pmml.DerivedField;
 import org.dmg.pmml.FieldName;
+import org.dmg.pmml.LocalTransformations;
 import org.dmg.pmml.NeuralNetwork;
+import org.dmg.pmml.OpType;
 import org.dmg.pmml.PMML;
-import org.encog.ml.data.MLData;
 import org.encog.neural.networks.BasicNetwork;
 import org.encog.neural.networks.PersistBasicNetwork;
-import org.jpmml.evaluator.ModelEvaluationContext;
 import org.jpmml.evaluator.NeuralNetworkEvaluator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.testng.Assert;
 import org.testng.annotations.Test;
 
 /**
@@ -46,10 +37,9 @@ public class PMMLEncogNeuralNetworkTest {
 			.getLogger(PMMLEncogNeuralNetworkTest.class);
 	NeuralNetworkEvaluator evaluator;
 	protected final double DELTA = Math.pow(10, -5);
-	private String mlModelPath = "src/test/resources/adapter/encogNN/EncogNN.nn";
-	private String initPmmlPath = "src/test/resources/data/wdbc/model.xml";
-	private String outputPMMLPath = "src/test/resources/adapter/encogNN/EncogNN_output.pmml";
-	private String evalFilePath = "src/test/resources/data/wdbc/evalData";
+	private String mlModelPath = "src/test/resources/evaluator/EncogNN.nn";
+	private String initPmmlPath = "src/test/resources/evaluator/model.xml";
+	private String outputPMMLPath = "src/test/resources/evaluator/EncogNN_output.pmml";
 
 	protected void initMLModel() {
 		try {
@@ -84,10 +74,14 @@ public class PMMLEncogNeuralNetworkTest {
 
 	protected void evaluatePMML() {
 		evaluator = new NeuralNetworkEvaluator(pmml);
-
-		EncogTestDataGenerator evalInput = new EncogTestDataGenerator(evalFilePath, pmml);
+		String evalFilePath = "src/test/resources/encog/nn/wdbc.train";
+		EvalCSVUtil evalInput = new EvalCSVUtil(evalFilePath, pmml);
 		evaluateInputs(evalInput);
 
+		// evalFilePath =
+		// "src/test/resources/data/wdbc/inputField20/evalData560.csv";
+		// evalInput = new EvalCSVUtil(evalFilePath, headers);
+		// evaluateInputs(evalInput);
 	}
 
 	@Test
@@ -98,20 +92,69 @@ public class PMMLEncogNeuralNetworkTest {
 		evaluatePMML();
 	}
 
-	private void evaluateInputs(EncogTestDataGenerator evalInput) {
-		log.info(" evaluate Encog LR adapter with " + evalInput.getEvaluatorInput().size()
-				+ " inputs");
-		 for (Map<FieldName, String> map : evalInput.getEvaluatorInput()) {
-				 ModelEvaluationContext context = new ModelEvaluationContext(null,
-				 evaluator);
-				 context.declareAll(map);
-				 MLData data = evalInput.normalizeData(context);
-//				 System.out.println("pmml "+getPMMLEvaluatorResult(map)+" mlModel "+mlModel.compute(data).getData(0));
-			Assert.assertEquals(getPMMLEvaluatorResult(map),
-					mlModel.compute(data).getData(0), DELTA);
-		}
+	private void evaluateInputs(EvalCSVUtil evalInput) {
+		// List<Map<FieldName, String>> pmmlEvalResultList = evalInput
+		// .getEvaluatorInput();
+		// evaluateNormalizedData();
+		// log.info(" evaluate Encog NN adapter with " +
+		// pmmlEvalResultList.size()
+		// + " inputs");
+		// for (Map<FieldName, String> map : pmmlEvalResultList) {
+		// ModelEvaluationContext context = new ModelEvaluationContext(null,
+		// evaluator);
+		// context.declareAll(map);
+		// MLData data = evalInput.normalizeData(context);
+		// log.info("," + mlModel.compute(data).getData(0));
+		// System.out.println( getPMMLEvaluatorResult(map));
+		// }
+
 	}
 
+	@SuppressWarnings("unused")
+	private void evaluateNormalizedData() throws Exception {
+
+		PMML pmmlNoStats = PMMLUtils.loadPMML(outputPMMLPath);
+		NeuralNetwork pmmlNN = (NeuralNetwork) pmmlNoStats.getModels().get(0);
+		List<String> activeFields = PMMLAdapterCommonUtil
+				.getSchemaActiveFields(pmmlNN.getMiningSchema());
+		DataDictionary dictionary = new DataDictionary();
+		for (String field : activeFields) {
+			DataField targetField = new DataField(new FieldName(field),
+					OpType.CONTINUOUS, DataType.DOUBLE);
+			// targetField.withValues(new Value("1")).withValues(new
+			// Value("0"));
+			dictionary.withDataFields(targetField);
+		}
+		pmmlNoStats.setDataDictionary(dictionary);
+		pmmlNN.setModelStats(null);
+
+		DerivedField field = new DerivedField(OpType.CONTINUOUS,
+				DataType.DOUBLE).withName(new FieldName(
+				AdapterConstants.biasValue));
+		// field.withName(new FieldName(s));
+		field.withExpression(new Constant(String.valueOf(AdapterConstants.bias)));
+		pmmlNN.setLocalTransformations(new LocalTransformations()
+				.withDerivedFields(field));
+		pmmlNoStats.withModels(pmmlNN);
+		// rebuild data dictionary
+		// copy mining schema
+		PMMLUtils.savePMML(pmmlNoStats,
+				"src/test/resources/encog/nn/EncogNN_noStats.pmml");
+		NeuralNetworkEvaluator evaluator = new NeuralNetworkEvaluator(
+				pmmlNoStats);
+		String evalFilePath = "src/test/resources/encog/nn/normalizedData";
+		EvalCSVUtil evalInput = new EvalCSVUtil(evalFilePath, pmmlNoStats);
+		List<Map<FieldName, String>> pmmlEvalResultList = evalInput
+				.getEvaluatorInput();
+		for (Map<FieldName, String> map : pmmlEvalResultList) {
+			@SuppressWarnings("unchecked")
+			Map<FieldName, Double> evalMap = (Map<FieldName, Double>) evaluator
+					.evaluate(map);
+			for (Map.Entry<FieldName, Double> entry : evalMap.entrySet()) {
+				System.out.println(entry.getValue());
+			}
+		}
+	}
 
 	protected double getPMMLEvaluatorResult(Map<FieldName, String> inputData) {
 		if (evaluator == null)

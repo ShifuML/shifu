@@ -1,18 +1,3 @@
-/**
- * Copyright [2012-2014] eBay Software Foundation
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *    http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
 package ml.shifu.plugin.spark.trainer;
 
 import java.text.DecimalFormat;
@@ -20,134 +5,122 @@ import java.util.ArrayList;
 import java.util.List;
 
 import ml.shifu.core.container.PMMLDataSet;
+import ml.shifu.core.di.spi.Trainer;
 import ml.shifu.core.util.Params;
-import ml.shifu.plugin.spark.trainer.StaticFunctions.EvalMetricsCalculator;
-import ml.shifu.plugin.spark.trainer.StaticFunctions.ObjectParsePoint;
+import ml.shifu.plugin.spark.trainer.StaticFunctions.ParsePoint;
 import ml.shifu.plugin.spark.trainer.StaticFunctions.ParseVector;
-import ml.shifu.plugin.spark.trainer.StaticFunctions.SumMSECalculator;
+import ml.shifu.plugin.spark.trainer.StaticFunctions.TargetVector;
 
 import org.apache.spark.api.java.JavaRDD;
 import org.apache.spark.mllib.classification.LogisticRegressionModel;
 import org.apache.spark.mllib.classification.LogisticRegressionWithSGD;
-import org.apache.spark.mllib.evaluation.BinaryClassificationMetrics;
 import org.apache.spark.mllib.linalg.Vector;
 import org.apache.spark.mllib.regression.LabeledPoint;
 import org.apache.spark.rdd.RDD;
 import org.dmg.pmml.FieldUsageType;
+import org.dmg.pmml.MiningField;
+import org.dmg.pmml.MiningSchema;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import scala.Tuple2;
-
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.math.DoubleMath;
+import com.google.common.primitives.Ints;
 
-public class SparkLRTrainer extends SparkAbstractTrainer {
 
-	private static Logger log = LoggerFactory.getLogger(SparkLRTrainer.class);
-	private static final DecimalFormat df = new DecimalFormat("0.000000");
-//	private LogisticRegressionModel lrModel;
-	private List<List<Object>> trainDataSet = new ArrayList<List<Object>>();
-	private List<List<Object>> testDataSet = new ArrayList<List<Object>>();
-	private int targetID;
-	private int[] activeFields;
+public class SparkLRTrainer implements Trainer {
 
-	public Object train(PMMLDataSet dataSet, Params rawParams) throws Exception {
-		initSparkConfiguration(rawParams);
-		activeFields = SparkCommonUtil.getActiveFields(dataSet
-				.getMiningSchema());
-		targetID = SparkCommonUtil.getFieldIDViaUsageType(
-				dataSet.getMiningSchema(), FieldUsageType.TARGET).get(0);
-		SparkLRParams lrParams = parseModelParams(rawParams);
-		// prepare data set
-		List<List<Object>> data = dataSet.getRows();
-		splitDataSet(data, lrParams.getSplitRatio(), trainDataSet, testDataSet);
+    private static final String INPUTDATASET = "pathNormalizedData";
+    private static final String EVALDATASET = "evalDataSet";
+    private static final String SPLITTER = "splitter";
+    private static final String TRAINERID = "trainerID";
+    private static Logger log = LoggerFactory.getLogger(SparkLRTrainer.class);
+    private static final DecimalFormat df = new DecimalFormat("0.000000");
+    private LogisticRegressionModel lrModel;
+    private Params rawParams;
+    private MiningSchema schema;
 
-		LogisticRegressionModel  lrModel = trainModel(trainDataSet, lrParams);
+    public void train(PMMLDataSet dataSet, Params rawParams) throws Exception {
+        train(dataSet.getMiningSchema(), rawParams);
+    }
 
-		// evaluate and calculate errors
-		String trainerID = rawParams.get(TRAINERID).toString();
-		// log.info("  Trainer-" + trainerID + "\n Train Error: "
-		// + df.format(getTestSetError()));
-		// calculateEvaluationScore();
-		log.info("Trainer #" + trainerID + " is Finished!");
-		return lrModel;
-	}
+    public void train(MiningSchema schema, Params rawParams) throws Exception {
+        this.rawParams = rawParams;
+        this.schema = schema;
+        SparkLRParams lrParams = parseModelParams(rawParams);
+        String trainerID = rawParams.get(TRAINERID).toString();
+        // prepare data set
+        RDD<LabeledPoint> points = convertRDDData(getTargetFieldID(), getActiveFieldID());
+        // train the data
+        lrModel = LogisticRegressionWithSGD.train(points,
+                lrParams.getIterations(), lrParams.getStepSize());
+        lrModel.clearThreshold();
+        // evaluate and calculate errors
+        log.info("  Trainer-" + trainerID + "\n Train Error: "
+                + df.format(getTestSetError()) );
+        log.info("Trainer #" + trainerID + " is Finished!");
+    }
 
-	private LogisticRegressionModel  trainModel(List<List<Object>> trainDataSet,
-			SparkLRParams lrParams) {
-		JavaRDD<List<Object>> distData = SparkUtility.getSc().parallelize(
-				trainDataSet);
-		RDD<LabeledPoint> datas = distData
-				.map(new ObjectParsePoint(targetID, activeFields)).cache()
-				.rdd();
-		// train model
+    private List<Integer> getFieldIDViaUsageType(FieldUsageType usageType) {
+        List<MiningField> miningFields = schema.getMiningFields();
+        List<Integer> idList = new ArrayList<Integer>();
+        for (int i = 0; i < miningFields.size(); i++) {
+            if (miningFields.get(i).getUsageType().equals(usageType))
+                idList.add(i);
+        }
+        return idList;
+    }
 
-		// for (int i = 0; i < lrParams.getIterations(); i++) {
-		LogisticRegressionModel  lrModel = LogisticRegressionWithSGD.train(datas,
-				lrParams.getIterations(), lrParams.getStepSize(),
-				lrParams.getSplitRatio()).clearThreshold();
-		log.info(calculateTestError(lrModel,testDataSet));
-		return lrModel;
-	}
+    private int[] getActiveFieldID() {
+        return Ints.toArray(getFieldIDViaUsageType(FieldUsageType.ACTIVE));
+    }
 
-	private SparkLRParams parseModelParams(Params rawParams) {
-		ObjectMapper jsonMapper = new ObjectMapper();
-		String jsonString;
-		try {
-			jsonString = jsonMapper.writeValueAsString(rawParams);
-			return jsonMapper.readValue(jsonString, SparkLRParams.class);
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
-		return null;
-	}
+    private int getTargetFieldID() {
+        List<Integer> targetID = getFieldIDViaUsageType(FieldUsageType.TARGET);
+        return targetID.get(0);
+    }
 
-	private String calculateTestError(LogisticRegressionModel  lrModel,List<List<Object>> testDataSet) {
-		JavaRDD<List<Object>> distData = SparkUtility.getSc().parallelize(
-				testDataSet);
-		JavaRDD<LabeledPoint> datas = distData.map(new ObjectParsePoint(
-				targetID, activeFields));
-		RDD<Tuple2<Object, Object>> matrixInput = datas
-				.map(new EvalMetricsCalculator(lrModel)).cache().rdd();
-		BinaryClassificationMetrics bcMetrics = new BinaryClassificationMetrics(
-				matrixInput);
-		RDD<Tuple2<Object,Object>> prCurve =bcMetrics.pr();
-		
-		JavaRDD<Vector> evalData = distData.map(new ParseVector(activeFields));
-		List<Double> evalResult = lrModel.predict(evalData).collect();
-		double testError =  DoubleMath.mean(evalResult);
-		StringBuilder sb = new StringBuilder();
-		// EncogDirectoryPersistence.saveObject(new File(path), network);
-		sb.append("Test Error: " + df.format(testError) + "\n");
-		sb.append("AUC: " + df.format(bcMetrics.areaUnderPR()) + "\n");
-		sb.append("ROC: " + df.format(bcMetrics.areaUnderROC()) + "\n");
+    private RDD<LabeledPoint> convertRDDData(int targetID, int[] activeIndexSet) {
+        JavaRDD<String> lines = SparkUtility.getSc().textFile(
+                rawParams.get(INPUTDATASET).toString());
+        RDD<LabeledPoint> datas = lines
+                .map(new ParsePoint(targetID, activeIndexSet, rawParams.get(
+                        SPLITTER).toString())).cache().rdd();
+        return datas;
+    }
 
-		List<Double> results = datas.map(new SumMSECalculator(lrModel))
-				.collect();
-		sb.append("MSE: " + df.format(DoubleMath.mean(results)) + "\n");
-	
-		 
-		return sb.toString();
-	}
+    private Double calculateMSE() {
+        final int[] activeIndexSet = getActiveFieldID();
+        JavaRDD<String> lines = SparkUtility.getSc().textFile(
+                rawParams.get(EVALDATASET).toString());
+        JavaRDD<Vector> evalVectors = lines.map(
+                new ParseVector(activeIndexSet, rawParams.get(SPLITTER)
+                        .toString())).cache();
+        List<Double> idealDatas = lines
+                .map(new TargetVector(getTargetFieldID(), rawParams.get(
+                        SPLITTER).toString())).cache().collect();
+      //TODO migrate to Spark Function
+        double mseError = 0;
+        int numRecords = idealDatas.size();
+        List<Double> evalList = lrModel.predict(evalVectors).cache().collect();
+        for (int i = 0; i < numRecords; i++)
+            mseError += Math.pow(evalList.get(i) - idealDatas.get(i), 2.0);
 
-	@Override
-	protected void saveSparkModel(String path, Object model) {
-		// TODO Auto-generated method stub
+        return mseError / numRecords;
+    }
 
-	}
+    private SparkLRParams parseModelParams(Params rawParams) throws Exception {
+        ObjectMapper jsonMapper = new ObjectMapper();
+        String jsonString = jsonMapper.writeValueAsString(rawParams);
+        return jsonMapper.readValue(jsonString, SparkLRParams.class);
+    }
+   
+    private double getTestSetError() {
+        return calculateMSE();
+    }
 
-	private SparkConfiguration initSparkConfiguration(Params rawParams) {
-		ObjectMapper jsonMapper = new ObjectMapper();
-		String jsonString;
-		try {
-			jsonString = jsonMapper.writeValueAsString(rawParams);
-			SparkConfiguration sConf = jsonMapper.readValue(jsonString,
-					SparkConfiguration.class);
-			SparkUtility.initSparkContext(sConf);
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
-		return null;
-	}
+//    private void saveLR(String path) throws IOException {
+//
+//        // EncogDirectoryPersistence.saveObject(new File(path), network);
+//    }
+
 }

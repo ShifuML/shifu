@@ -9,17 +9,17 @@
                     "Trainer": "ml.shifu.plugin.mahout.trainer.MahoutNNTrainer"
                 },
                 "modelName": "demoModel",
-                "pathPMML": "src/test/resources/data/wdbc/model.xml",
-                "pathNormalizedData": "src/test/resources/data/wdbc/inputTrainData",
+                "pathPMML": "src/test/resources/trainer/model.xml",
+                "pathNormalizedData": "src/test/resources/trainer/normalized.txt",
                 "numEpochs": 100,
                 "trainerID": "test",
-                "pathOutput": "src/test/resources/trainer/mahoutNN/modelOutput.nn",
+                "pathOutput": "src/test/resources/trainer/mahoutNN",
                 "splitRatio": 0.8,
                 "algorithm": "Q",
-                "learningRate": 0.9,
+                "learningRate": 0.5,
                 "hiddenLayers": [
                     {
-                        "numHiddenNodes": 45,
+                        "numHiddenNodes": 10,
                         "activationFunction": "Sigmoid"
                     }
                 ]
