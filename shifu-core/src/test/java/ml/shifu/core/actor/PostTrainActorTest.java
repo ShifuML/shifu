@@ -42,14 +42,14 @@ public class PostTrainActorTest {
     private List<ColumnConfig> columnConfigList;
     private ActorSystem actorSystem;
 
-    @BeforeClass
+    //@BeforeClass
     public void setUp() throws IOException {
         modelConfig = CommonUtils.loadModelConfig("src/test/resources/unittest/ModelSets/full/ModelConfig.json", SourceType.LOCAL);
         columnConfigList = CommonUtils.loadColumnConfigList("src/test/resources/unittest/ModelSets/full/ColumnConfig.json", SourceType.LOCAL);
         actorSystem = ActorSystem.create("shifuActorSystem");
     }
 
-    @Test
+    //@Test
     public void testActor() throws IOException, InterruptedException {
         File tmpModels = new File("models");
         File tmpCommon = new File("common");

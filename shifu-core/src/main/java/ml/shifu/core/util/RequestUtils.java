@@ -11,7 +11,7 @@ import java.util.List;
 public class RequestUtils {
 
     public static Binding getUniqueBinding(Request req, String spi) {
-        return  getUniqueBinding(req, spi, false);
+        return getUniqueBinding(req, spi, false);
     }
 
 

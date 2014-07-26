@@ -16,7 +16,6 @@ public class NNParams {
     private Integer numEpochs = 100;
 
 
-
     public Integer getNumEpochs() {
         return numEpochs;
     }
@@ -24,7 +23,6 @@ public class NNParams {
     public void setNumEpochs(Integer numEpochs) {
         this.numEpochs = numEpochs;
     }
-
 
 
     public Double getLearningRate() {
@@ -36,7 +34,6 @@ public class NNParams {
     }
 
 
-
     public String getAlgorithm() {
         return algorithm;
     }
@@ -44,7 +41,6 @@ public class NNParams {
     public void setAlgorithm(String algorithm) {
         this.algorithm = algorithm;
     }
-
 
 
     public Double getSplitRatio() {

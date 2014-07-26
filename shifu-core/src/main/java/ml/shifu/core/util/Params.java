@@ -32,7 +32,6 @@ public class Params extends LinkedHashMap<String, Object> {
     }
 
 
-
     private List<FieldConf> fieldConfs = null;
 
     public void setFieldParamsMap(Map<String, Params> fieldParamsMap) {
@@ -40,13 +39,13 @@ public class Params extends LinkedHashMap<String, Object> {
     }
 
     @JsonIgnore
-    public FieldConf getFieldConfig(String fieldNameString) throws Exception{
+    public FieldConf getFieldConfig(String fieldNameString) throws Exception {
 
         if (this.fieldConfs == null) {
             fieldConfs = new ArrayList<FieldConf>();
             ObjectMapper jsonMapper = new ObjectMapper();
 
-            for (Object field : (List<Object>)this.get("fields")) {
+            for (Object field : (List<Object>) this.get("fields")) {
                 FieldConf fieldConf = jsonMapper.readValue(jsonMapper.writeValueAsString(field), FieldConf.class);
                 fieldConfs.add(fieldConf);
             }
@@ -75,19 +74,18 @@ public class Params extends LinkedHashMap<String, Object> {
     }
 
     @JsonIgnore
-    public Params getFieldParams(String fieldNameString) throws Exception{
+    public Params getFieldParams(String fieldNameString) throws Exception {
 
         if (this.fieldParamsMap == null) {
             fieldParamsMap = new LinkedHashMap<String, Params>();
             ObjectMapper jsonMapper = new ObjectMapper();
 
-            for (Object field : (List<Object>)this.get("fields")) {
+            for (Object field : (List<Object>) this.get("fields")) {
                 FieldConf fieldConf = jsonMapper.readValue(jsonMapper.writeValueAsString(field), FieldConf.class);
                 fieldParamsMap.put(fieldConf.getNamePattern(), fieldConf.getParams());
             }
 
         }
-
 
 
         //TODO: add pattern matching

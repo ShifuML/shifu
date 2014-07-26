@@ -5,7 +5,6 @@ import com.google.inject.Injector;
 import ml.shifu.core.container.PMMLDataSet;
 import ml.shifu.core.di.module.SimpleModule;
 import ml.shifu.core.di.service.TrainingService;
-import ml.shifu.core.di.service.UpdateMiningSchemaService;
 import ml.shifu.core.di.spi.RequestProcessor;
 import ml.shifu.core.request.Request;
 import ml.shifu.core.util.*;
@@ -15,7 +14,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.List;
-import java.util.Map;
 
 public class TrainRequestProcessor implements RequestProcessor {
 

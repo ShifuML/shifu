@@ -12,7 +12,9 @@ public class RequestDispatchService {
 
     public void dispatch(Request req) throws Exception {
         dispatcher.dispatch(req);
-    };
+    }
+
+    ;
 
 
 }

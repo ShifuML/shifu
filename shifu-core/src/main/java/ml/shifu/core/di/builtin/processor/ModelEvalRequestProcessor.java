@@ -3,20 +3,15 @@ package ml.shifu.core.di.builtin.processor;
 import ml.shifu.core.container.BinaryConfusionMatrix;
 import ml.shifu.core.container.ClassificationResult;
 import ml.shifu.core.di.builtin.BinaryConfusionMatrixCalculator;
-import ml.shifu.core.di.builtin.executor.PMMLModelExecutor;
 import ml.shifu.core.di.spi.RequestProcessor;
 import ml.shifu.core.request.Request;
 import ml.shifu.core.util.JSONUtils;
-import ml.shifu.core.util.LocalDataUtils;
-import ml.shifu.core.util.PMMLUtils;
 import ml.shifu.core.util.Params;
-import org.dmg.pmml.FieldUsageType;
-import org.dmg.pmml.MiningField;
-import org.dmg.pmml.Model;
-import org.dmg.pmml.PMML;
 
 import java.io.File;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 
 public class ModelEvalRequestProcessor implements RequestProcessor {
 
@@ -41,7 +36,7 @@ public class ModelEvalRequestProcessor implements RequestProcessor {
 
         List<BinaryConfusionMatrix> sampledList = new ArrayList<BinaryConfusionMatrix>();
         for (Double samplePoint : samplePoints) {
-            int index =   (int)Math.round(samplePoint * (size - 1));
+            int index = (int) Math.round(samplePoint * (size - 1));
             sampledList.add(confusionMatrixList.get(index));
         }
 

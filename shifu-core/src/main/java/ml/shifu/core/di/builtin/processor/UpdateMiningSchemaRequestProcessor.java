@@ -12,8 +12,6 @@ import ml.shifu.core.util.RequestUtils;
 import org.dmg.pmml.Model;
 import org.dmg.pmml.PMML;
 
-import java.util.Map;
-
 public class UpdateMiningSchemaRequestProcessor implements RequestProcessor {
 
     public void exec(Request req) throws Exception {

@@ -9,7 +9,7 @@ public class RequestProcessService {
     @Inject
     private RequestProcessor processor;
 
-    public void exec(Request req) throws Exception{
+    public void exec(Request req) throws Exception {
         processor.exec(req);
     }
 

@@ -76,7 +76,8 @@ public class AkkaSystemExecutor {
             private static final long serialVersionUID = -1437127862571741369L;
 
             public UntypedActor create() {
-                return new CalculateStatsActor(modelConfig, columnConfigList, akkaStatus);
+                //return new CalculateStatsActor(modelConfig, columnConfigList, akkaStatus);
+                return null;
             }
         }), "stats-calculator");
 
@@ -104,7 +105,8 @@ public class AkkaSystemExecutor {
             private static final long serialVersionUID = -2123098236012879296L;
 
             public UntypedActor create() throws IOException {
-                return new NormalizeDataActor(modelConfig, columnConfigList, akkaStatus);
+                //return new NormalizeDataActor(modelConfig, columnConfigList, akkaStatus);
+                return null;
             }
         }), "data-normalizer");
 

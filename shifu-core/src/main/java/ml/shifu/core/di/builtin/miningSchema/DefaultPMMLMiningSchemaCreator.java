@@ -10,7 +10,7 @@ import java.util.Set;
 
 public class DefaultPMMLMiningSchemaCreator implements PMMLMiningSchemaCreator {
 
-    public MiningSchema create(PMML pmml, Params params) throws Exception{
+    public MiningSchema create(PMML pmml, Params params) throws Exception {
 
         Model model = PMMLUtils.getModelByName(pmml, params.get("modelName").toString());
 
@@ -25,7 +25,6 @@ public class DefaultPMMLMiningSchemaCreator implements PMMLMiningSchemaCreator {
 
         for (DataField dataField : pmml.getDataDictionary().getDataFields()) {
             Params fieldParams = params.getFieldConfig(dataField.getName().getValue()).getParams();
-
 
 
             MiningField miningField = new MiningField();

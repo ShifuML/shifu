@@ -51,9 +51,6 @@ public class BinaryConfusionMatrix {
     }
 
 
-
-
-
     public Double getWeightedPrecision() {
         return weightedPrecision;
     }
@@ -87,8 +84,6 @@ public class BinaryConfusionMatrix {
     }
 
 
-
-
     public Double getRecall() {
         return recall;
     }
@@ -120,7 +115,6 @@ public class BinaryConfusionMatrix {
     public void setPrecision(Double precision) {
         this.precision = precision;
     }
-
 
 
     public Double getWeightedFn() {

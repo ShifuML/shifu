@@ -10,7 +10,6 @@ import ml.shifu.core.util.PMMLUtils;
 import org.dmg.pmml.*;
 import org.jpmml.model.JAXBUtil;
 import org.testng.Assert;
-import org.testng.annotations.Test;
 
 import javax.xml.transform.stream.StreamResult;
 import java.io.File;
@@ -67,7 +66,7 @@ public class PMMLTest {
         }
     }
 
-   // @Test
+    // @Test
     public void testLoadData() {
 
         //loadData();
@@ -119,7 +118,7 @@ public class PMMLTest {
 
     }
 
-   // @Test
+    // @Test
     public void testSimpleUnivariateStats() {
         /*loadData();
 

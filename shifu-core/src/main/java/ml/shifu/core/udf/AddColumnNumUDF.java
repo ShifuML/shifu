@@ -106,7 +106,7 @@ public class AddColumnNumUDF extends AbstractTrainerUDF<DataBag> {
         }
 
         int varSize = size;
-		/*if (this.withScore == true) {
+        /*if (this.withScore == true) {
 			varSize = size - 2;
 			scoreColumnNum = size - 1;
 		}*/

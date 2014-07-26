@@ -1,14 +1,8 @@
 package ml.shifu.core.util;
 
 
-import com.google.inject.Guice;
-import com.google.inject.Injector;
-import ml.shifu.core.container.ShifuRequest;
-import ml.shifu.core.di.module.SimpleModule;
-import ml.shifu.core.di.service.RequestDispatchService;
 import ml.shifu.core.request.Request;
 import ml.shifu.core.request.RequestDispatcher;
-
 
 import java.io.File;
 

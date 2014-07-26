@@ -4,6 +4,7 @@ public class RawTarget {
 
 
     private String rawTarget;
+
     public RawTarget(String rawTarget) {
         this.rawTarget = rawTarget;
     }

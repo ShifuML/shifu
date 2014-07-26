@@ -26,7 +26,6 @@ import org.testng.IObjectFactory;
 import org.testng.annotations.AfterTest;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.ObjectFactory;
-import org.testng.annotations.Test;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -203,7 +202,7 @@ public class ShifuCLITest {
         FileUtils.deleteDirectory(new File("models"));
     }
 
-   // @Test
+    // @Test
     public void testPostTrainModel() throws Exception {
         File originModel = new File("src/test/resources/unittest/ModelSets/full/ModelConfig.json");
         File tmpModel = new File("ModelConfig.json");

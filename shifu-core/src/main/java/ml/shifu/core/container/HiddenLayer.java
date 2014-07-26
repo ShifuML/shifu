@@ -15,7 +15,6 @@ public class HiddenLayer {
     }
 
 
-
     public Integer getNumHiddenNodes() {
         return numHiddenNodes;
     }

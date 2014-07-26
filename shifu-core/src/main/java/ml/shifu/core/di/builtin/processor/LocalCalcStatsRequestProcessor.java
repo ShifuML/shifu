@@ -19,7 +19,7 @@ public class LocalCalcStatsRequestProcessor implements RequestProcessor {
 
     private static Logger log = LoggerFactory.getLogger(LocalCalcStatsRequestProcessor.class);
 
-    public void exec(Request req) throws Exception{
+    public void exec(Request req) throws Exception {
         SimpleModule module = new SimpleModule();
 
         Binding dataDictionaryCreatorBinding = RequestUtils.getUniqueBinding(req, "UnivariateStatsCalculator");
@@ -34,39 +34,39 @@ public class LocalCalcStatsRequestProcessor implements RequestProcessor {
 
 
         PMML pmml = PMMLUtils.loadPMML(pathPMML);
-            Params bindingParams = dataDictionaryCreatorBinding.getParams();
+        Params bindingParams = dataDictionaryCreatorBinding.getParams();
 
-            SingleThreadFileLoader loader = new CSVWithHeaderLocalSingleThreadFileLoader();
+        SingleThreadFileLoader loader = new CSVWithHeaderLocalSingleThreadFileLoader();
 
-            List<List<Object>> rows = loader.load((String) bindingParams.get("pathInputData"));
+        List<List<Object>> rows = loader.load((String) bindingParams.get("pathInputData"));
 
-            List<List<Object>> columns = LocalDataTransposer.transpose(rows);
+        List<List<Object>> columns = LocalDataTransposer.transpose(rows);
 
-            DataDictionary dict = pmml.getDataDictionary();
+        DataDictionary dict = pmml.getDataDictionary();
 
-            Model model = PMMLUtils.getModelByName(pmml, (String) bindingParams.get("modelName"));
+        Model model = PMMLUtils.getModelByName(pmml, (String) bindingParams.get("modelName"));
 
-            ModelStats modelStats = new ModelStats();
-            int size = dict.getNumberOfFields();
+        ModelStats modelStats = new ModelStats();
+        int size = dict.getNumberOfFields();
 
-            int targetFieldNum = PMMLUtils.getTargetFieldNumByName(pmml.getDataDictionary(), (String) bindingParams.get("targetFieldName"));
-
-
-            bindingParams.put("tags", columns.get(targetFieldNum));
+        int targetFieldNum = PMMLUtils.getTargetFieldNumByName(pmml.getDataDictionary(), (String) bindingParams.get("targetFieldName"));
 
 
-            for (int i = 0; i < size; i++) {
-
-                DataField field = dict.getDataFields().get(i);
-                List<Object> values = columns.get(i);
-
-                UnivariateStats univariateStats = univariateStatsService.getUnivariateStats(field, values, bindingParams);
-                modelStats.withUnivariateStats(univariateStats);
-            }
-            model.setModelStats(modelStats);
+        bindingParams.put("tags", columns.get(targetFieldNum));
 
 
-            PMMLUtils.savePMML(pmml, pathPMML);
+        for (int i = 0; i < size; i++) {
+
+            DataField field = dict.getDataFields().get(i);
+            List<Object> values = columns.get(i);
+
+            UnivariateStats univariateStats = univariateStatsService.getUnivariateStats(field, values, bindingParams);
+            modelStats.withUnivariateStats(univariateStats);
+        }
+        model.setModelStats(modelStats);
+
+
+        PMMLUtils.savePMML(pmml, pathPMML);
 
     }
 

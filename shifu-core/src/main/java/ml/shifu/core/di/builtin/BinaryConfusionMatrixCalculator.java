@@ -2,7 +2,6 @@ package ml.shifu.core.di.builtin;
 
 import ml.shifu.core.container.BinaryConfusionMatrix;
 import ml.shifu.core.container.ClassificationResult;
-import org.dmg.pmml.ConfusionMatrix;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -35,7 +34,6 @@ public class BinaryConfusionMatrixCalculator {
         }
 
 
-
         Double tp = 0.0;
         Double fp = 0.0;
         Double weightedTp = 0.0;
@@ -59,7 +57,7 @@ public class BinaryConfusionMatrixCalculator {
             if (posTags.contains(classificationResult.getTrueClass())) {
                 tp += posScaleFactor;
                 weightedTp += posScaleFactor * classificationResult.getWeight();
-            }  else {
+            } else {
                 // how to deal with unseen tags?
                 fp += negScaleFactor;
                 weightedFp += negScaleFactor * classificationResult.getWeight();

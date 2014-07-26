@@ -1,38 +1,37 @@
 package ml.shifu.core.di.builtin.transform;
 
-import ml.shifu.core.di.spi.TransformationExecutor;
-import ml.shifu.core.util.CommonUtils;
 import org.dmg.pmml.*;
-
-import org.jpmml.evaluator.*;
+import org.jpmml.evaluator.DiscretizationUtil;
 import org.jpmml.evaluator.FieldValue;
-import org.w3c.dom.Element;
+import org.jpmml.evaluator.FieldValueUtil;
+import org.jpmml.evaluator.NormalizationUtil;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
 
-public class DefaultTransformationExecutor  {
-  /*
-    public Object transform(DerivedField derivedField, Object origin) {
+public class DefaultTransformationExecutor {
+    /*
+      public Object transform(DerivedField derivedField, Object origin) {
 
-        Expression expression = derivedField.getExpression();
+          Expression expression = derivedField.getExpression();
 
-        //TODO: finish the list
-        if (expression instanceof NormContinuous) {
-            return NormalizationUtil.normalize((NormContinuous) expression, Double.parseDouble(origin.toString()));
-        } else if (expression instanceof Discretize) {
-            return DiscretizationUtil.discretize((Discretize) expression, Double.parseDouble(origin.toString()));
-        } else if (expression instanceof MapValues) {
-            //return ExpressionUtil.evaluate(expression, );
-            return mapValue((MapValues) expression, origin.toString());
-        } else {
-            throw new RuntimeException("Invalid Expression(Field: " + derivedField.getName().getValue() + ")");
-        }
+          //TODO: finish the list
+          if (expression instanceof NormContinuous) {
+              return NormalizationUtil.normalize((NormContinuous) expression, Double.parseDouble(origin.toString()));
+          } else if (expression instanceof Discretize) {
+              return DiscretizationUtil.discretize((Discretize) expression, Double.parseDouble(origin.toString()));
+          } else if (expression instanceof MapValues) {
+              //return ExpressionUtil.evaluate(expression, );
+              return mapValue((MapValues) expression, origin.toString());
+          } else {
+              throw new RuntimeException("Invalid Expression(Field: " + derivedField.getName().getValue() + ")");
+          }
 
-    }
-           */
+      }
+             */
     public List<Object> transform(List<DerivedField> derivedFields, Map<String, Object> rawDataMap) {
-
-
 
 
         List<Object> result = new ArrayList<Object>();
@@ -62,7 +61,7 @@ public class DefaultTransformationExecutor  {
             //return ExpressionUtil.evaluate(expression, );
             return mapValue(mapValues, rawDataMap);
         } else if (expression instanceof FieldRef) {
-            return rawDataMap.get(((FieldRef)expression).getField().getValue());
+            return rawDataMap.get(((FieldRef) expression).getField().getValue());
         } else {
             throw new RuntimeException("Invalid Expression(Field: " + derivedField.getName().getValue() + ")");
         }
@@ -92,7 +91,7 @@ public class DefaultTransformationExecutor  {
         Map<String, FieldValue> values = new LinkedHashMap<String, FieldValue>();
 
         List<FieldColumnPair> fieldColumnPairs = mapValues.getFieldColumnPairs();
-        for(FieldColumnPair fieldColumnPair : fieldColumnPairs){
+        for (FieldColumnPair fieldColumnPair : fieldColumnPairs) {
             FieldValue value = FieldValueUtil.create(mapValues.getDataType(), null, rawDataMap.get(fieldColumnPair.getField().getValue()));
 
             //if(value == null){

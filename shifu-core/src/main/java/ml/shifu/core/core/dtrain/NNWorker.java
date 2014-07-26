@@ -16,17 +16,17 @@
 package ml.shifu.core.core.dtrain;
 
 import com.google.common.base.Splitter;
+import ml.shifu.core.container.obj.ColumnConfig;
+import ml.shifu.core.container.obj.ModelConfig;
+import ml.shifu.core.container.obj.RawSourceData.SourceType;
+import ml.shifu.core.core.alg.NNTrainer;
+import ml.shifu.core.util.CommonUtils;
 import ml.shifu.guagua.io.GuaguaFileSplit;
 import ml.shifu.guagua.mapreduce.GuaguaLineRecordReader;
 import ml.shifu.guagua.mapreduce.GuaguaWritableAdapter;
 import ml.shifu.guagua.util.NumberFormatUtils;
 import ml.shifu.guagua.worker.AbstractWorkerComputable;
 import ml.shifu.guagua.worker.WorkerContext;
-import ml.shifu.core.container.obj.ColumnConfig;
-import ml.shifu.core.container.obj.ModelConfig;
-import ml.shifu.core.container.obj.RawSourceData.SourceType;
-import ml.shifu.core.core.alg.NNTrainer;
-import ml.shifu.core.util.CommonUtils;
 import org.apache.commons.lang.math.RandomUtils;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.LongWritable;

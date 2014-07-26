@@ -30,13 +30,13 @@ public class ScatterUDFTest {
 
     private ScatterUDF instance;
 
-    @BeforeClass
+    //@BeforeClass
     public void setUp() throws Exception {
         instance = new ScatterUDF("LOCAL",
                 "src/test/resources/unittest/ModelSets/full/ColumnConfig.json");
     }
 
-    @Test
+    //@Test
     public void testUDFNull() throws Exception {
         Assert.assertNull(instance.exec(null));
         Tuple tuple = TupleFactory.getInstance().newTuple(0);

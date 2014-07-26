@@ -13,7 +13,6 @@ import ml.shifu.core.util.RequestUtils;
 import org.dmg.pmml.*;
 
 import java.util.List;
-import java.util.Map;
 
 
 public class DefaultLocalTransformationsCreator implements PMMLLocalTransformationsCreator {
@@ -36,7 +35,7 @@ public class DefaultLocalTransformationsCreator implements PMMLLocalTransformati
             String fieldNameString = dataField.getName().getValue();
             FieldConf fieldConf = RequestUtils.getFieldConfByName(fieldConfs, fieldNameString);
 
-           // Params fieldParams = fieldConf.getParams();
+            // Params fieldParams = fieldConf.getParams();
 
             if (fieldConf.getBinding() != null) {
                 module.set(fieldConf.getBinding());

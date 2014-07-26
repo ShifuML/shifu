@@ -1,7 +1,6 @@
 package ml.shifu.core.util;
 
 import com.google.common.base.Splitter;
-import ml.shifu.core.di.spi.SingleThreadFileLoader;
 
 import java.io.BufferedReader;
 import java.io.FileReader;
@@ -42,7 +41,7 @@ public class HeaderFileLoader {
                 scanner.close();
             }
         }
-          return header;
+        return header;
     }
 
     public void setDelimiter(String delimiter) {

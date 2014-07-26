@@ -47,7 +47,7 @@ import java.util.Scanner;
  */
 public class TrainDtModelActor extends AbstractActor {
 
-    private static Logger log = LoggerFactory.getLogger(CalculateStatsActor.class);
+    private static Logger log = LoggerFactory.getLogger(TrainDtModelActor.class);
 
     private ActorRef dataLoadRef;
     private ActorRef trainDataPrepRef;

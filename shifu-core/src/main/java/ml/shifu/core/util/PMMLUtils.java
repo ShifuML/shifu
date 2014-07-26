@@ -1,7 +1,6 @@
 package ml.shifu.core.util;
 
 import org.dmg.pmml.*;
-import org.jpmml.evaluator.ExpressionUtil;
 import org.jpmml.model.ImportFilter;
 import org.jpmml.model.JAXBUtil;
 import org.xml.sax.InputSource;
@@ -178,7 +177,6 @@ public class PMMLUtils {
         */
 
 
-
     //public static List<DerivedField> getAvailableDerivedFields(PMML pmml, String modelName) {
     //    Model model = PMMLUtils.getModelByName(pmml, modelName);
     //    return getAvailableDerivedFields(pmml, model);
@@ -262,6 +260,7 @@ public class PMMLUtils {
         }
         return false;
     }
+
     public static Boolean containsField(List<MiningField> fields, FieldName fieldName, FieldUsageType usageType) {
         for (MiningField miningField : fields) {
             if (miningField.getName().equals(fieldName) && (miningField.getUsageType().equals(usageType))) {

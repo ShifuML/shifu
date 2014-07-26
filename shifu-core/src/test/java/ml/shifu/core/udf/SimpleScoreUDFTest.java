@@ -34,7 +34,7 @@ public class SimpleScoreUDFTest {
     private SimpleScoreUDF instance;
     private File tmpModels = new File("models");
 
-    @BeforeClass
+    //@BeforeClass
     public void setUp() throws Exception {
         File models = new File("src/test/resources/unittest/ModelSets/full/models");
         FileUtils.copyDirectory(models, tmpModels);
@@ -46,7 +46,7 @@ public class SimpleScoreUDFTest {
                 "|");
     }
 
-    @Test
+    //@Test
     public void testUDFNull() throws Exception {
         Tuple tuple = TupleFactory.getInstance().newTuple(0);
         Assert.assertNull(instance.exec(tuple));
@@ -63,7 +63,7 @@ public class SimpleScoreUDFTest {
         Assert.assertEquals(43, instance.exec(input).intValue());
     }
 
-    @AfterClass
+    //@AfterClass
     public void clearUp() throws IOException {
         FileUtils.deleteDirectory(tmpModels);
     }

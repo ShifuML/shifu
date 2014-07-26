@@ -4,12 +4,14 @@ import ml.shifu.core.container.ClassificationResult;
 import ml.shifu.core.di.builtin.executor.PMMLModelExecutor;
 import ml.shifu.core.di.spi.RequestProcessor;
 import ml.shifu.core.request.Request;
-import ml.shifu.core.request.RequestObject;
 import ml.shifu.core.util.JSONUtils;
 import ml.shifu.core.util.LocalDataUtils;
 import ml.shifu.core.util.PMMLUtils;
 import ml.shifu.core.util.Params;
-import org.dmg.pmml.*;
+import org.dmg.pmml.FieldUsageType;
+import org.dmg.pmml.MiningField;
+import org.dmg.pmml.Model;
+import org.dmg.pmml.PMML;
 
 import java.io.File;
 import java.util.*;
@@ -54,7 +56,6 @@ public class ModelExecRequestProcessor implements RequestProcessor {
                     classificationResult.setWeight(Double.valueOf(rawDataMap.get(miningField.getName().getValue()).toString()));
                 }
             }
-
 
 
             classificationResultList.add(classificationResult);
