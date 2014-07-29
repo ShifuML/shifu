@@ -1,0 +1,26 @@
+{
+    "schemaName": "CreatePMMLElementRequestProcessorParamsSchema",
+    "properties": [
+        {
+            "name": "name",
+            "type": "string",
+            "default": "CreatePMMLElement"
+        },
+        {
+            "name": "description",
+            "type": "string",
+            "default": ""
+        },
+        {
+            "name": "processor",
+            "type": "object",
+            "properties": [
+                {
+                    "name": "spi",
+                    "type": "string",
+                    "default": "RequestProcessor"
+                }
+            ]
+        }              
+    ]
+}

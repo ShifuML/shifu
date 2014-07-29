@@ -255,7 +255,7 @@ public class DataPrepareWorker extends AbstractWorkerActor {
                     } catch (NumberFormatException e) {
                         rvo.setWeight(1.0);
                     }
-					/*
+                    /*
 					if( i == weightedColumnNum) {
 						//weight and its column, set to 1
 						rvo.setWeight(1.0);

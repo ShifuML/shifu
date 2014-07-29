@@ -18,8 +18,6 @@ public class FieldConf {
     }
 
 
-
-
     public String getNamePattern() {
         return namePattern;
     }
@@ -35,7 +33,6 @@ public class FieldConf {
     public void setParams(Params params) {
         this.params = params;
     }
-
 
 
 }

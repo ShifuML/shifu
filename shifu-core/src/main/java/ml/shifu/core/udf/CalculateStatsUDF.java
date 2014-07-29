@@ -20,7 +20,6 @@ import com.google.inject.Guice;
 import com.google.inject.Injector;
 import ml.shifu.core.container.RawValueObject;
 import ml.shifu.core.container.obj.ColumnConfig;
-import ml.shifu.core.di.module.StatsModule;
 import ml.shifu.core.di.service.CalcStatsService;
 import org.apache.pig.data.DataBag;
 import org.apache.pig.data.Tuple;
@@ -37,6 +36,7 @@ import java.util.Map;
  * <p/>
  * Input: (columnNum, {(value, tag, weight), (value, tag, weight)...})
  */
+/*
 public class CalculateStatsUDF extends AbstractTrainerUDF<Tuple> {
 
     private CalcStatsService calcStatsService;
@@ -114,3 +114,4 @@ public class CalculateStatsUDF extends AbstractTrainerUDF<Tuple> {
     }
 
 }
+  */

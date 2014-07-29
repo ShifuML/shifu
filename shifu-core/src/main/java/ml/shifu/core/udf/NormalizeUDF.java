@@ -20,7 +20,7 @@ import com.google.inject.Injector;
 import ml.shifu.core.container.WeightAmplifier;
 import ml.shifu.core.container.obj.ColumnConfig;
 import ml.shifu.core.core.DataSampler;
-import ml.shifu.core.di.module.NormalizationModule;
+
 import ml.shifu.core.di.service.NormalizationService;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.jexl2.Expression;
@@ -42,6 +42,7 @@ import java.util.Map;
 /**
  * NormalizeUDF class normalize the training data
  */
+/*
 public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
 
     private List<String> negTags;
@@ -116,7 +117,7 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
 			}
 		}
 		*/
-
+           /*
         List<Double> normalized = normalizationService.normalize(columnConfigList, input.getAll());
 
         if (normalized == null) {
@@ -169,7 +170,7 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
      *
      * @param weightExprList
      * @return weight expression map
-     */
+     */         /*
     protected Map<Expression, Double> createExpressionMap(List<WeightAmplifier> weightExprList) {
         Map<Expression, Double> ewMap = new HashMap<Expression, Double>();
 
@@ -189,7 +190,7 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
      *
      * @param weightAmplifier
      * @return expression for weight amplifier
-     */
+     */   /*
     private Expression createExpression(String weightAmplifier) {
         if (StringUtils.isNotBlank(weightAmplifier)) {
             JexlEngine jexl = new JexlEngine();
@@ -198,3 +199,4 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
         return null;
     }
 }
+  */

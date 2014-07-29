@@ -31,7 +31,6 @@ public class ClassificationResult {
     }
 
 
-
     @JsonIgnore
     public void putScore(String modelName, Double score) {
         if (scoreMap == null) {
@@ -67,9 +66,6 @@ public class ClassificationResult {
     }
 
 
-
-
-
     public String getTrueClass() {
         return trueClass;
     }
@@ -85,7 +81,6 @@ public class ClassificationResult {
     public void setScoreMap(Map<String, Double> scoreMap) {
         this.scoreMap = scoreMap;
     }
-
 
 
 }

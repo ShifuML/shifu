@@ -1,7 +1,6 @@
 package ml.shifu.core.request;
 
 
-
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
 import java.util.List;

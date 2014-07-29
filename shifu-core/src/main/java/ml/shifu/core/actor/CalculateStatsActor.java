@@ -28,7 +28,6 @@ import ml.shifu.core.actor.worker.DataPrepareWorker;
 import ml.shifu.core.actor.worker.StatsCalculateWorker;
 import ml.shifu.core.container.obj.ColumnConfig;
 import ml.shifu.core.container.obj.ModelConfig;
-import ml.shifu.core.di.module.StatsModule;
 import ml.shifu.core.fs.PathFinder;
 import ml.shifu.core.message.AkkaActorInputMessage;
 import ml.shifu.core.message.ExceptionMessage;
@@ -50,6 +49,7 @@ import java.util.Scanner;
  * CalculateStatsActor class is used to calculate stats for each column.
  * Notice: Target Column or Meta data column won't calculate stats
  */
+/*
 public class CalculateStatsActor extends AbstractActor {
 
     private static Logger log = LoggerFactory.getLogger(CalculateStatsActor.class);
@@ -123,7 +123,7 @@ public class CalculateStatsActor extends AbstractActor {
 
     /* (non-Javadoc)
      * @see akka.actor.UntypedActor#onReceive(java.lang.Object)
-     */
+     */  /*
     @Override
     public void onReceive(Object message) throws Exception {
         if (message instanceof AkkaActorInputMessage) {
@@ -162,4 +162,4 @@ public class CalculateStatsActor extends AbstractActor {
         }
     }
 
-}
+}                    */

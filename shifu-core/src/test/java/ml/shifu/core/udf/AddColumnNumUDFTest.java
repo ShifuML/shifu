@@ -15,13 +15,11 @@
  */
 package ml.shifu.core.udf;
 
-import ml.shifu.core.exception.ShifuException;
 import org.apache.pig.data.DataBag;
 import org.apache.pig.data.Tuple;
 import org.apache.pig.data.TupleFactory;
 import org.testng.Assert;
 import org.testng.annotations.BeforeClass;
-import org.testng.annotations.Test;
 
 
 /**
@@ -39,7 +37,7 @@ public class AddColumnNumUDFTest {
                 "false");
     }
 
-   // @Test
+    // @Test
     public void testUDFNull() throws Exception {
         Assert.assertNull(instance.exec(null));
     }
@@ -58,7 +56,7 @@ public class AddColumnNumUDFTest {
         Assert.assertEquals(19, dataBag.size());
     }
 
-   // @Test
+    // @Test
     public void testUDFEnoughInput() throws Exception {
         Tuple tuple = TupleFactory.getInstance().newTuple(32);
 

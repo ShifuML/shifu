@@ -18,15 +18,12 @@ package ml.shifu.core.core;
 import ml.shifu.core.container.obj.EvalConfig;
 import ml.shifu.core.container.obj.ModelConfig;
 import ml.shifu.core.container.obj.ModelTrainConf.ALGORITHM;
-import ml.shifu.core.exception.ShifuException;
 import ml.shifu.core.util.Constants;
 import org.apache.commons.io.FileUtils;
 import org.testng.annotations.AfterClass;
 import org.testng.annotations.BeforeClass;
-import org.testng.annotations.Test;
 
 import java.io.File;
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;

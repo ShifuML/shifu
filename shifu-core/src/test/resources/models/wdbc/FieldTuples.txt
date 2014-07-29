@@ -1,3 +1,0 @@
-id,ordinal
-diagnosis,categorical
-$$default, continuous

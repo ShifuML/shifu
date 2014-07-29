@@ -156,7 +156,7 @@ public class CommonUtilsTest {
 
     }
 
-    @Test
+    //@Test
     public void loadModelConfigTest() throws JsonGenerationException,
             JsonMappingException, IOException {
         ModelConfig config = ModelConfig.createInitModelConfig(".", ALGORITHM.NN, "test");
@@ -172,7 +172,7 @@ public class CommonUtilsTest {
         FileUtils.deleteQuietly(new File("ModelConfig.json"));
     }
 
-    @Test
+    //@Test
     public void getFinalSelectColumnConfigListTest() {
         Collection<ColumnConfig> configList = new ArrayList<ColumnConfig>();
 
@@ -341,7 +341,7 @@ public class CommonUtilsTest {
         Assert.assertEquals(output.get(0), "derived_c");
     }
 
-    @Test
+    //@Test
     public void testLoadModelConfig() throws IOException {
         ModelConfig config = CommonUtils.loadModelConfig("src/test/resources/example/wdbc/wdbcModelSetLocal/ModelConfig.json", SourceType.LOCAL);
         Assert.assertEquals(config.getDataSet().getNegTags().get(0), "B");

@@ -1,6 +1,5 @@
 package ml.shifu.plugin.encog.trainer;
 
-import ml.shifu.core.container.ShifuRequest;
 import ml.shifu.core.request.Request;
 import ml.shifu.core.request.RequestDispatcher;
 import ml.shifu.core.util.JSONUtils;

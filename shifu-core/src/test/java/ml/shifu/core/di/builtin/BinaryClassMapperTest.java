@@ -7,7 +7,6 @@ import ml.shifu.core.util.PMMLUtils;
 import ml.shifu.core.util.Params;
 import org.dmg.pmml.*;
 import org.testng.Assert;
-import org.testng.annotations.Test;
 
 import java.io.File;
 

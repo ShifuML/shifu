@@ -1,7 +1,6 @@
 package ml.shifu.core.di.builtin;
 
 import ml.shifu.core.di.spi.PMMLCreator;
-import ml.shifu.core.util.PMMLUtils;
 import ml.shifu.core.util.Params;
 import org.dmg.pmml.PMML;
 
@@ -15,7 +14,6 @@ public class ShifuPMMLCreator implements PMMLCreator {
 
 
         //TODO: add Shifu info to Header
-
 
 
         return pmml;

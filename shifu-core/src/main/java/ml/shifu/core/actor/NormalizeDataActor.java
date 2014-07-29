@@ -28,7 +28,6 @@ import ml.shifu.core.actor.worker.DataNormalizeWorker;
 import ml.shifu.core.container.obj.ColumnConfig;
 import ml.shifu.core.container.obj.ModelConfig;
 import ml.shifu.core.container.obj.RawSourceData.SourceType;
-import ml.shifu.core.di.module.NormalizationModule;
 import ml.shifu.core.di.service.NormalizationService;
 import ml.shifu.core.fs.PathFinder;
 import ml.shifu.core.fs.ShifuFileUtils;
@@ -53,7 +52,7 @@ import java.util.Scanner;
  * in @ModelConfig, it will control how many percentage will be normalized.
  * <p/>
  * The raw data which is normalized, is also will be stored.
- */
+ */         /*
 public class NormalizeDataActor extends AbstractActor {
 
     private static Logger log = LoggerFactory.getLogger(NormalizeDataActor.class);
@@ -122,7 +121,7 @@ public class NormalizeDataActor extends AbstractActor {
 
     /* (non-Javadoc)
      * @see akka.actor.UntypedActor#onReceive(java.lang.Object)
-     */
+     */            /*
     @Override
     public void onReceive(Object message) throws Exception {
         if (message instanceof AkkaActorInputMessage) {
@@ -168,7 +167,7 @@ public class NormalizeDataActor extends AbstractActor {
      *
      * @param selectDataList - the raw selected data
      * @throws IOException Exception when writing file
-     */
+     */       /*
     private void writeSelectDataIntoFile(List<String> selectDataList) throws IOException {
         for (String rawInput : selectDataList) {
             selectDataWriter.append(rawInput + "\n");
@@ -180,7 +179,7 @@ public class NormalizeDataActor extends AbstractActor {
      *
      * @param normalizedDataList - the normalized data
      * @throws IOException Exception when writing file
-     */
+     */        /*
     private void writeDataIntoFile(List<List<Double>> normalizedDataList) throws IOException {
         for (List<Double> normData : normalizedDataList) {
             for (Double data : normData) {
@@ -196,3 +195,4 @@ public class NormalizeDataActor extends AbstractActor {
     }
 
 }
+       */

@@ -23,7 +23,6 @@ import org.apache.commons.io.FileUtils;
 import org.powermock.modules.testng.PowerMockObjectFactory;
 import org.testng.IObjectFactory;
 import org.testng.annotations.ObjectFactory;
-import org.testng.annotations.Test;
 
 import java.io.File;
 import java.io.IOException;

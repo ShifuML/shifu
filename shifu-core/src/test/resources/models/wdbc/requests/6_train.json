@@ -1,0 +1,35 @@
+{
+    "name": "ExecLocalTransformations",
+    "description": "step 5, execute transformations",
+    "processor": {
+        "spi": "RequestProcessor",
+        "impl": "ml.shifu.core.di.builtin.processor.LocalModeTransformRequestProcessor",
+        "params": {
+            "modelName": "demoModel",
+            "pathPMML": "src/test/resources/models/wdbc/new/generated/model.xml",
+            "pathNormalizedData": "shifu-core/src/test/resources/models/wdbc/new/generated/normalized.txt",
+            "pathOutput": "shifu-core/src/test/resources/models/wdbc/new/generated/models",
+        }
+    },
+    "bindings": [
+        {
+            "spi": "TransformationExecutor",
+            "impl": "ml.shifu.core.di.builtin.transform.DefaultTransformationExecutor",
+            "params": {
+                "numEpochs": 100,
+                "trainerID": "test",
+
+                "splitRatio": 0.8,
+                "algorithm": "Q",
+                "learningRate": 0.5,
+                "hiddenLayers": [
+                    {
+                        "numHiddenNodes": 10,
+                        "activationFunction": "sigmoid"
+                    }
+                ]
+            }
+
+        }
+    ]
+}

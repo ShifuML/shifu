@@ -8,15 +8,15 @@ import java.io.File;
 public class RequestDispatcherTest {
 
 
-    @Test
+    //@Test
     public void test1() throws Exception {
-        Request req = JSONUtils.readValue(new File("src/test/resources/models/wdbc/new/requests/1_create.json"), Request.class);
+        Request req = JSONUtils.readValue(new File("src/test/resources/models/wdbc/requests/1_create.json"), Request.class);
         RequestDispatcher.dispatch(req);
     }
 
-    @Test
+    //@Test
     public void test2() throws Exception {
-        Request req = JSONUtils.readValue(new File("src/test/resources/models/wdbc/new/requests/2_stats.json"), Request.class);
+        Request req = JSONUtils.readValue(new File("src/test/resources/models/wdbc/requests/2_stats.json"), Request.class);
         RequestDispatcher.dispatch(req);
     }
 

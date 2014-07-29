@@ -6,7 +6,6 @@ import org.dmg.pmml.*;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 
-
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import java.util.List;
@@ -56,7 +55,6 @@ public class BinaryClassMapperCreator implements PMMLDerivedFieldCreator {
             origin.setTextContent(posTag);
 
 
-
             Element transformed = doc.createElement("transformed");
             transformed.setTextContent("1");
 
@@ -72,14 +70,12 @@ public class BinaryClassMapperCreator implements PMMLDerivedFieldCreator {
             origin.setTextContent(negTag);
 
 
-
             Element transformed = doc.createElement("transformed");
             transformed.setTextContent("0");
 
             row.withContent(origin, transformed);
             inlineTable.withRows(row);
         }
-
 
 
         mapValues.withInlineTable(inlineTable);

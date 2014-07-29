@@ -1,34 +1,12 @@
 package ml.shifu.core.plugin.pmml;
 
+import org.dmg.pmml.*;
+
 import java.util.ArrayList;
 import java.util.List;
 
-import org.dmg.pmml.Constant;
-import org.dmg.pmml.DataDictionary;
-import org.dmg.pmml.DataField;
-import org.dmg.pmml.DataType;
-import org.dmg.pmml.DerivedField;
-import org.dmg.pmml.FieldName;
-import org.dmg.pmml.FieldRef;
-import org.dmg.pmml.FieldUsageType;
-import org.dmg.pmml.LocalTransformations;
-import org.dmg.pmml.MiningField;
-import org.dmg.pmml.MiningFunctionType;
-import org.dmg.pmml.MiningSchema;
-import org.dmg.pmml.NeuralInput;
-import org.dmg.pmml.NeuralInputs;
-import org.dmg.pmml.NeuralOutput;
-import org.dmg.pmml.NeuralOutputs;
-import org.dmg.pmml.NumericPredictor;
-import org.dmg.pmml.OpType;
-import org.dmg.pmml.PMML;
-import org.dmg.pmml.RegressionModel;
-import org.dmg.pmml.RegressionNormalizationMethodType;
-import org.dmg.pmml.RegressionTable;
-
 
 public class PMMLAdapterCommonUtil {
-
 
 
     public static NeuralInputs getNeuralInputs(MiningSchema schema) {
@@ -65,7 +43,7 @@ public class PMMLAdapterCommonUtil {
     }
 
     private static List<String> getSchemaFieldViaUsageType(MiningSchema schema,
-            FieldUsageType type) {
+                                                           FieldUsageType type) {
         List<String> targetFields = new ArrayList<String>();
 
         for (MiningField f : schema.getMiningFields()) {
@@ -75,13 +53,16 @@ public class PMMLAdapterCommonUtil {
         }
         return targetFields;
     }
-    public static List<String> getSchemaTargetFields(MiningSchema schema ) {
-        return getSchemaFieldViaUsageType(schema,FieldUsageType.TARGET);
+
+    public static List<String> getSchemaTargetFields(MiningSchema schema) {
+        return getSchemaFieldViaUsageType(schema, FieldUsageType.TARGET);
     }
-    public static List<String> getSchemaActiveFields(MiningSchema schema ) {
-        return getSchemaFieldViaUsageType(schema,FieldUsageType.ACTIVE);
+
+    public static List<String> getSchemaActiveFields(MiningSchema schema) {
+        return getSchemaFieldViaUsageType(schema, FieldUsageType.ACTIVE);
     }
-    public static List<String> getSchemaSelectedFields(MiningSchema schema ) {
+
+    public static List<String> getSchemaSelectedFields(MiningSchema schema) {
         List<String> targetFields = new ArrayList<String>();
         for (MiningField f : schema.getMiningFields()) {
             FieldUsageType uType = f.getUsageType();
@@ -90,6 +71,7 @@ public class PMMLAdapterCommonUtil {
         }
         return targetFields;
     }
+
     public static NeuralOutputs getOutputFields(MiningSchema schema, int layerID) {
         List<String> outputID = getSchemaFieldViaUsageType(schema,
                 FieldUsageType.TARGET);
@@ -107,7 +89,7 @@ public class PMMLAdapterCommonUtil {
     }
 
     public static RegressionModel getRegressionTable(double[] weights,
-            double intercept, RegressionModel pmmlModel) {
+                                                     double intercept, RegressionModel pmmlModel) {
         RegressionTable table = new RegressionTable();
         MiningSchema schema = pmmlModel.getMiningSchema();
         // TODO may not need target field in LRModel
@@ -127,7 +109,7 @@ public class PMMLAdapterCommonUtil {
         }
         return pmmlModel;
     }
-    
+
 
     public static String[] getDataDicHeaders(PMML pmml) {
         DataDictionary dictionary = pmml.getDataDictionary();

@@ -2,16 +2,10 @@ package ml.shifu.core.di.builtin.processor;
 
 
 import com.google.common.base.Joiner;
-import com.google.inject.Guice;
-import com.google.inject.Injector;
-import ml.shifu.core.di.builtin.transform.AllInclusiveTransformationExecutor;
 import ml.shifu.core.di.builtin.transform.DefaultTransformationExecutor;
-import ml.shifu.core.di.module.SimpleModule;
-import ml.shifu.core.di.service.TransformationExecService;
 import ml.shifu.core.di.spi.RequestProcessor;
 import ml.shifu.core.di.spi.SingleThreadFileLoader;
 import ml.shifu.core.request.Request;
-import ml.shifu.core.request.RequestObject;
 import ml.shifu.core.util.CSVWithHeaderLocalSingleThreadFileLoader;
 import ml.shifu.core.util.PMMLUtils;
 import ml.shifu.core.util.Params;
@@ -40,8 +34,6 @@ public class LocalModeTransformRequestProcessor implements RequestProcessor {
         SingleThreadFileLoader loader = new CSVWithHeaderLocalSingleThreadFileLoader();
 
         List<List<Object>> rows = loader.load(params.get("pathInputData").toString());
-
-
 
 
         Model model = PMMLUtils.getModelByName(pmml, params.get("modelName").toString());
@@ -87,7 +79,7 @@ public class LocalModeTransformRequestProcessor implements RequestProcessor {
             for (List<Object> row : rows) {
 
                 for (int i = 0; i < size; i++) {
-                    rawDataMap.put( dataFields.get(i).getName().getValue(), row.get(i));
+                    rawDataMap.put(dataFields.get(i).getName().getValue(), row.get(i));
                 }
                 List<Object> result = executor.transform(targetFields, rawDataMap);
                 result.addAll(executor.transform(activeFields, rawDataMap));

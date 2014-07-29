@@ -15,13 +15,13 @@
  */
 package ml.shifu.core.core.dtrain;
 
-import ml.shifu.guagua.master.BasicMasterInterceptor;
-import ml.shifu.guagua.master.MasterContext;
 import ml.shifu.core.container.obj.ColumnConfig;
 import ml.shifu.core.container.obj.ModelConfig;
 import ml.shifu.core.container.obj.RawSourceData.SourceType;
 import ml.shifu.core.core.alg.NNTrainer;
 import ml.shifu.core.util.CommonUtils;
+import ml.shifu.guagua.master.BasicMasterInterceptor;
+import ml.shifu.guagua.master.MasterContext;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;

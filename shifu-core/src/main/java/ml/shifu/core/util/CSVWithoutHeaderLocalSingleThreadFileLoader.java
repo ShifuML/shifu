@@ -20,7 +20,6 @@ public class CSVWithoutHeaderLocalSingleThreadFileLoader implements SingleThread
             scanner = new Scanner(new BufferedReader(new FileReader(filePath)));
 
 
-
             while (scanner.hasNextLine()) {
                 String line = scanner.nextLine();
 
