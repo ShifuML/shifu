@@ -1,0 +1,28 @@
+
+{
+    "schemaName": "RequestSchema",
+    "properties": [
+        {
+            "name": "name",
+            "type": "string",
+            "default": "MyRequest"
+        },
+        {
+            "name": "description",
+            "type": "string",
+            "default": ""
+        }, {
+            "name": "processor",
+            "type": "ref",
+            "$ref": "BindingSchema"
+        }, {
+            "name": "bindings",
+            "type": "list",
+            "item": {
+                "name": "binding",
+                "type": "ref",
+                "$ref": "BindingSchema"
+            }
+        }
+    ]
+}

@@ -42,6 +42,10 @@
             </includes>
         </fileSet>
 
+        <fileSet>
+            <directory>${project.basedir}/src/main/resources/plugin</directory>
+            <outputDirectory>/plugin</outputDirectory>
+        </fileSet>
 
         <fileSet>
             <directory>${project.basedir}/src/test/resources/example</directory>

@@ -1,0 +1,15 @@
+{
+    "schemaName": "BindingSchema",
+    "properties": [
+        {
+            "name": "spi",
+            "type": "string"
+        }, {
+            "name": "impl",
+            "type": "string"
+        }, {
+            "name": "params",
+            "type": "ref"
+        }
+    ]
+}

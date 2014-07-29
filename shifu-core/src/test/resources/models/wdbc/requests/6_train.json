@@ -14,7 +14,7 @@
     "bindings": [
         {
             "spi": "TransformationExecutor",
-            "impl": "ml.shifu.core.di.builtin.transform.DefaultTransformationExecutor"
+            "impl": "ml.shifu.core.di.builtin.transform.DefaultTransformationExecutor",
             "params": {
                 "numEpochs": 100,
                 "trainerID": "test",
