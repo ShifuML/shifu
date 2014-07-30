@@ -49,6 +49,7 @@ public class LocalCalcStatsRequestProcessor implements RequestProcessor {
         ModelStats modelStats = new ModelStats();
         int size = dict.getNumberOfFields();
 
+        // TODO: this is wrong, the requestprocessor should not know anything about binding params
         int targetFieldNum = PMMLUtils.getTargetFieldNumByName(pmml.getDataDictionary(), (String) bindingParams.get("targetFieldName"));
 
 

@@ -1,0 +1,19 @@
+{
+    "name": "PigModelExec",
+    "description": "",
+    "processor": {
+        "spi": "RequestProcessor",
+        "impl": "ml.shifu.plugin.pig.PigModelExecRequestProcessor",
+        "params": {
+            "modelName": "demoModel",
+            "localMode": true,
+            "pathPMML": "src/test/resources/pmml/model.xml",
+            "pathData": "src/test/resources/data/wdbc/wdbc.eval",
+            "delimiter": ",",
+            "pathHeader": "src/test/resources/data/wdbc/wdbc.header",
+            "headerDelimiter": "|",
+            "pathResult": "src/test/resources/generated"
+        }
+    },
+    "bindings": []
+}
