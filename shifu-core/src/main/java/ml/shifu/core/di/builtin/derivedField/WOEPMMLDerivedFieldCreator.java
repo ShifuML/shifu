@@ -14,7 +14,7 @@ public class WOEPMMLDerivedFieldCreator implements PMMLDerivedFieldCreator {
 
 
         DerivedField derivedField = new DerivedField();
-        derivedField.setName(dataField.getName());
+        derivedField.setName(new FieldName(dataField.getName().getValue() + "_transformed"));
         derivedField.setOptype(dataField.getOptype());
         derivedField.setDataType(dataField.getDataType());
 
@@ -26,7 +26,7 @@ public class WOEPMMLDerivedFieldCreator implements PMMLDerivedFieldCreator {
 
 
         Discretize discretize = new Discretize();
-
+        discretize.setField(dataField.getName());
 
         int size = univariateStats.getContStats().getIntervals().size();
         for (int i = 0; i < size; i++) {

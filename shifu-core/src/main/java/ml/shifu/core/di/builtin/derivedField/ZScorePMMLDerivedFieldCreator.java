@@ -8,7 +8,7 @@ public class ZScorePMMLDerivedFieldCreator implements PMMLDerivedFieldCreator {
 
     public DerivedField create(DataField dataField, ModelStats modelStats, Params params) {
         DerivedField derivedField = new DerivedField();
-        derivedField.setName(new FieldName(dataField.getName().getValue() + "_LocalTransformed"));
+        derivedField.setName(new FieldName(dataField.getName().getValue() + "_transformed"));
         derivedField.setOptype(dataField.getOptype());
         derivedField.setDataType(dataField.getDataType());
 
