@@ -1,37 +1,37 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
-	<modelVersion>4.0.0</modelVersion>
-	<groupId>ml.shifu</groupId>
-	<artifactId>shifu</artifactId>
-	<version>0.3.0-SNAPSHOT</version>
-	<packaging>pom</packaging>
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <groupId>ml.shifu</groupId>
+    <artifactId>shifu</artifactId>
+    <version>0.3.0-SNAPSHOT</version>
+    <packaging>pom</packaging>
 
-	<properties>
-		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-		<version.platform>2.0.0</version.platform>
-		<siteRoot>site</siteRoot>
-		<siteDeployUrl>siteAssets</siteDeployUrl>
-		<rpmDisabled>true</rpmDisabled>
-		<maven.build.timestamp.format>yyyy-MM-dd HH:mm:ss</maven.build.timestamp.format>
-		<powermock.version>1.5.1</powermock.version>
-	</properties>
+    <properties>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <version.platform>2.0.0</version.platform>
+        <siteRoot>site</siteRoot>
+        <siteDeployUrl>siteAssets</siteDeployUrl>
+        <rpmDisabled>true</rpmDisabled>
+        <maven.build.timestamp.format>yyyy-MM-dd HH:mm:ss</maven.build.timestamp.format>
+        <powermock.version>1.5.1</powermock.version>
+    </properties>
 
-	<scm>
-		<developerConnection>scm:git:https://github.com/shifuml/shifu.git</developerConnection>
-		<connection>scm:git:https://github.com/shifuml/shifu.git</connection>
-		<url>https://github.com/shifuml/shifu.git</url>
-		<tag>HEAD</tag>
-	</scm>
+    <scm>
+        <developerConnection>scm:git:https://github.com/shifuml/shifu.git</developerConnection>
+        <connection>scm:git:https://github.com/shifuml/shifu.git</connection>
+        <url>https://github.com/shifuml/shifu.git</url>
+        <tag>HEAD</tag>
+    </scm>
 
-	<dependencies>
+    <dependencies>
 
-		<dependency>
-			<groupId>org.testng</groupId>
-			<artifactId>testng</artifactId>
-			<version>6.8</version>
-			<scope>test</scope>
-		</dependency>
-	</dependencies>
+        <dependency>
+            <groupId>org.testng</groupId>
+            <artifactId>testng</artifactId>
+            <version>6.8</version>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
 
     <dependencyManagement>
         <dependencies>
@@ -41,92 +41,92 @@
                 <version>0.3.0-SNAPSHOT</version>
             </dependency>
             <dependency>
-                        <groupId>com.fasterxml.jackson.core</groupId>
-                                    <artifactId>jackson-databind</artifactId>
-                                                <version>2.3.2</version>
-                                                        </dependency>
+                <groupId>com.fasterxml.jackson.core</groupId>
+                <artifactId>jackson-databind</artifactId>
+                <version>2.3.2</version>
+            </dependency>
         </dependencies>
     </dependencyManagement>
 
     <build>
         <plugins>
-            
 
-			<plugin>
-				<groupId>org.apache.maven.plugins</groupId>
-				<artifactId>maven-jar-plugin</artifactId>
-				<version>2.4</version>
-				<configuration>
-					<archive>
-						<index>true</index>
-						<manifest>
-							<mainClass>ml.shifu.core.util.ShifuCLI</mainClass>
-						</manifest>
-						<manifestEntries>
-							<vendor>PayPal</vendor>
-							<title>Shifu</title>
-							<version>${project.version}</version>
-							<timestamp>${maven.build.timestamp}</timestamp>
-						</manifestEntries>
-					</archive>
-				</configuration>
-			</plugin>
 
-			<plugin>
-				<groupId>org.apache.maven.plugins</groupId>
-				<artifactId>maven-release-plugin</artifactId>
-				<configuration>
-					<releaseProfiles>release-sign-artifacts</releaseProfiles>
-				</configuration>
-				<version>2.5</version>
-			</plugin>
-			<plugin>
-				<groupId>org.apache.maven.plugins</groupId>
-				<artifactId>maven-javadoc-plugin</artifactId>
-				<version>2.9.1</version>
-				<configuration>
-					<show>protected</show>
-					<locale>en_US</locale>
-					<docencoding>UTF-8</docencoding>
-				</configuration>
-				<executions>
-					<execution>
-						<id>attach-javadocs</id>
-						<phase>site</phase>
-						<goals>
-							<goal>jar</goal>
-						</goals>
-					</execution>
-				</executions>
-			</plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-jar-plugin</artifactId>
+                <version>2.4</version>
+                <configuration>
+                    <archive>
+                        <index>true</index>
+                        <manifest>
+                            <mainClass>ml.shifu.core.util.ShifuCLI</mainClass>
+                        </manifest>
+                        <manifestEntries>
+                            <vendor>PayPal</vendor>
+                            <title>Shifu</title>
+                            <version>${project.version}</version>
+                            <timestamp>${maven.build.timestamp}</timestamp>
+                        </manifestEntries>
+                    </archive>
+                </configuration>
+            </plugin>
 
-			<plugin>
-				<artifactId>maven-deploy-plugin</artifactId>
-				<version>2.7</version>
-				<executions>
-					<execution>
-						<id>default-deploy</id>
-						<phase>deploy</phase>
-						<goals>
-							<goal>deploy</goal>
-						</goals>
-					</execution>
-				</executions>
-			</plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-release-plugin</artifactId>
+                <configuration>
+                    <releaseProfiles>release-sign-artifacts</releaseProfiles>
+                </configuration>
+                <version>2.5</version>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-javadoc-plugin</artifactId>
+                <version>2.9.1</version>
+                <configuration>
+                    <show>protected</show>
+                    <locale>en_US</locale>
+                    <docencoding>UTF-8</docencoding>
+                </configuration>
+                <executions>
+                    <execution>
+                        <id>attach-javadocs</id>
+                        <phase>site</phase>
+                        <goals>
+                            <goal>jar</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
 
-			<plugin>
-				<groupId>org.apache.maven.plugins</groupId>
-				<artifactId>maven-source-plugin</artifactId>
-				<version>2.2.1</version>
-				<executions>
-					<execution>
-						<id>attach-sources</id>
-						<goals>
-							<goal>jar</goal>
-						</goals>
-					</execution>
-				</executions>
-			</plugin>
+            <plugin>
+                <artifactId>maven-deploy-plugin</artifactId>
+                <version>2.7</version>
+                <executions>
+                    <execution>
+                        <id>default-deploy</id>
+                        <phase>deploy</phase>
+                        <goals>
+                            <goal>deploy</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-source-plugin</artifactId>
+                <version>2.2.1</version>
+                <executions>
+                    <execution>
+                        <id>attach-sources</id>
+                        <goals>
+                            <goal>jar</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
 
 
             <plugin>
@@ -137,26 +137,7 @@
                     <target>1.6</target>
                 </configuration>
             </plugin>
-<!--
-            <plugin>
-                <artifactId>maven-assembly-plugin</artifactId>
-                <version>2.4</version>
-                <executions>
-                    <execution>
-                        <id>make-assembly</id>
-                        <phase>package</phase>
-                        <goals>
-                            <goal>single</goal>
-                        </goals>
-                        <configuration>
-                            <descriptors>
-                                <descriptor>./assembly.xml</descriptor>
-                            </descriptors>
-                        </configuration>
-                    </execution>
-                </executions>
-            </plugin>
--->
+
             <plugin>
                 <groupId>org.codehaus.mojo</groupId>
                 <artifactId>rpm-maven-plugin</artifactId>
@@ -283,164 +264,163 @@
     </build>
 
 
-	<profiles>
-		<!-- For hadoop 0.20.2 cloudera version -->
-		<profile>
-			<id>cdh-20</id>
-			<activation>
-				<activeByDefault>true</activeByDefault>
-			</activation>
-			<properties>
-				<platform.version>cdh-20</platform.version>
-			</properties>
-			<repositories>
-				<repository>
-					<id>Cloudera CDH</id>
-					<url>https://repository.cloudera.com/artifactory/cloudera-repos</url>
-				</repository>
-			</repositories>
-			<dependencies>
-				<dependency>
-					<groupId>org.apache.pig</groupId>
-					<artifactId>pig</artifactId>
-					<version>0.10.0</version>
-				</dependency>
-				<dependency>
-					<groupId>org.apache.hadoop</groupId>
-					<artifactId>hadoop-core</artifactId>
-					<version>0.20.2-cdh3u5</version>
-				</dependency>
-				<dependency>
-					<groupId>ml.shifu</groupId>
-					<artifactId>guagua-mapreduce</artifactId>
-					<version>0.4.0</version>
-					<classifier>hadoop1</classifier>
-				</dependency>
-			</dependencies>
-		</profile>
+    <!-- The profiles should be moved to shifu-plugin-pig -->
+    <profiles>
+        <!-- For hadoop 0.20.2 cloudera version -->
+        <profile>
+            <id>cdh-20</id>
+            <activation>
+                <activeByDefault>true</activeByDefault>
+            </activation>
+            <properties>
+                <platform.version>cdh-20</platform.version>
+            </properties>
+            <repositories>
+                <repository>
+                    <id>Cloudera CDH</id>
+                    <url>https://repository.cloudera.com/artifactory/cloudera-repos</url>
+                </repository>
+            </repositories>
+            <dependencies>
+                <dependency>
+                    <groupId>org.apache.pig</groupId>
+                    <artifactId>pig</artifactId>
+                    <version>0.10.0</version>
+                </dependency>
+                <dependency>
+                    <groupId>org.apache.hadoop</groupId>
+                    <artifactId>hadoop-core</artifactId>
+                    <version>0.20.2-cdh3u5</version>
+                </dependency>
+                <dependency>
+                    <groupId>ml.shifu</groupId>
+                    <artifactId>guagua-mapreduce</artifactId>
+                    <version>0.4.0</version>
+                    <classifier>hadoop1</classifier>
+                </dependency>
+            </dependencies>
+        </profile>
 
-		<!-- Release and Sign -->
-		<profile>
-			<id>release-sign-artifacts</id>
-			<activation>
-				<property>
-					<name>performRelease</name>
-					<value>false</value>
-				</property>
-			</activation>
-			<build>
-				<plugins>
-					<plugin>
-						<groupId>org.apache.maven.plugins</groupId>
-						<artifactId>maven-gpg-plugin</artifactId>
-						<version>1.1</version>
-						<executions>
-							<execution>
-								<id>sign-artifacts</id>
-								<phase>verify</phase>
-								<goals>
-									<goal>sign</goal>
-								</goals>
-							</execution>
-						</executions>
-					</plugin>
-				</plugins>
-			</build>
-			<repositories>
-				<repository>
-					<id>Cloudera CDH</id>
-					<url>https://repository.cloudera.com/artifactory/cloudera-repos</url>
-				</repository>
-			</repositories>
-			<dependencies>
-				<dependency>
-					<groupId>org.apache.pig</groupId>
-					<artifactId>pig</artifactId>
-					<version>0.10.0</version>
-				</dependency>
-				<dependency>
-					<groupId>org.apache.hadoop</groupId>
-					<artifactId>hadoop-core</artifactId>
-					<version>0.20.2-cdh3u5</version>
-				</dependency>
-				<dependency>
-					<groupId>ml.shifu</groupId>
-					<artifactId>guagua-mapreduce</artifactId>
-					<version>0.4.0</version>
-					<classifier>hadoop1</classifier>
-				</dependency>
-			</dependencies>
-			<properties>
-				<maven.test.skip>true</maven.test.skip>
-			</properties>
-		</profile>
+        <!-- Release and Sign -->
+        <profile>
+            <id>release-sign-artifacts</id>
+            <activation>
+                <property>
+                    <name>performRelease</name>
+                    <value>false</value>
+                </property>
+            </activation>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-gpg-plugin</artifactId>
+                        <version>1.1</version>
+                        <executions>
+                            <execution>
+                                <id>sign-artifacts</id>
+                                <phase>verify</phase>
+                                <goals>
+                                    <goal>sign</goal>
+                                </goals>
+                            </execution>
+                        </executions>
+                    </plugin>
+                </plugins>
+            </build>
+            <repositories>
+                <repository>
+                    <id>Cloudera CDH</id>
+                    <url>https://repository.cloudera.com/artifactory/cloudera-repos</url>
+                </repository>
+            </repositories>
+            <dependencies>
+                <dependency>
+                    <groupId>org.apache.pig</groupId>
+                    <artifactId>pig</artifactId>
+                    <version>0.10.0</version>
+                </dependency>
+                <dependency>
+                    <groupId>org.apache.hadoop</groupId>
+                    <artifactId>hadoop-core</artifactId>
+                    <version>0.20.2-cdh3u5</version>
+                </dependency>
+                <dependency>
+                    <groupId>ml.shifu</groupId>
+                    <artifactId>guagua-mapreduce</artifactId>
+                    <version>0.4.0</version>
+                    <classifier>hadoop1</classifier>
+                </dependency>
+            </dependencies>
+            <properties>
+                <maven.test.skip>true</maven.test.skip>
+            </properties>
+        </profile>
 
-		<!-- For hadoop 2.2.0cluster -->
-		<profile>
-			<id>hdp-yarn</id>
-			<activation>
-				<activeByDefault>false</activeByDefault>
-			</activation>
-			<properties>
-				<platform.version>hdp-yarn</platform.version>
-			</properties>
-			<repositories>
-				<repository>
-					<id>HortonWorks HDP Local</id>
-					<url>http://repo.hortonworks.com/service/local/repositories/releases/content/</url>
-				</repository>
-				<repository>
-					<id>HortonWorks HDP</id>
-					<url>http://repo.hortonworks.com/nexus/content/repositories/releases</url>
-				</repository>
-			</repositories>
-			<dependencies>
-				<dependency>
-					<groupId>org.apache.hadoop</groupId>
-					<artifactId>hadoop-hdfs</artifactId>
-					<version>2.2.0.2.0.6.0-102</version>
-				</dependency>
-				<dependency>
-					<groupId>org.apache.hadoop</groupId>
-					<artifactId>hadoop-common</artifactId>
-					<version>2.2.0.2.0.6.0-102</version>
-				</dependency>
-				<dependency>
-					<groupId>org.apache.hadoop</groupId>
-					<artifactId>hadoop-mapreduce-client-core</artifactId>
-					<version>2.2.0.2.0.6.0-102</version>
-				</dependency>
-				<dependency>
-					<groupId>org.apache.pig</groupId>
-					<artifactId>pig</artifactId>
-					<version>0.12.0.2.0.6.1-102</version>
-				</dependency>
-				<dependency>
-					<groupId>joda-time</groupId>
-					<artifactId>joda-time</artifactId>
-					<version>2.3</version>
-				</dependency>
-				<dependency>
-					<groupId>dk.brics.automaton</groupId>
-					<artifactId>automaton</artifactId>
-					<version>1.11-8</version>
-				</dependency>
-				<dependency>
-					<groupId>ml.shifu</groupId>
-					<artifactId>guagua-mapreduce</artifactId>
-					<version>0.4.0</version>
-					<classifier>hadoop2</classifier>
-				</dependency>
-			</dependencies>
-		</profile>
-	</profiles>
+        <!-- For hadoop 2.2.0cluster -->
+        <profile>
+            <id>hdp-yarn</id>
+            <activation>
+                <activeByDefault>false</activeByDefault>
+            </activation>
+            <properties>
+                <platform.version>hdp-yarn</platform.version>
+            </properties>
+            <repositories>
+                <repository>
+                    <id>HortonWorks HDP Local</id>
+                    <url>http://repo.hortonworks.com/service/local/repositories/releases/content/</url>
+                </repository>
+                <repository>
+                    <id>HortonWorks HDP</id>
+                    <url>http://repo.hortonworks.com/nexus/content/repositories/releases</url>
+                </repository>
+            </repositories>
+            <dependencies>
+                <dependency>
+                    <groupId>org.apache.hadoop</groupId>
+                    <artifactId>hadoop-hdfs</artifactId>
+                    <version>2.2.0.2.0.6.0-102</version>
+                </dependency>
+                <dependency>
+                    <groupId>org.apache.hadoop</groupId>
+                    <artifactId>hadoop-common</artifactId>
+                    <version>2.2.0.2.0.6.0-102</version>
+                </dependency>
+                <dependency>
+                    <groupId>org.apache.hadoop</groupId>
+                    <artifactId>hadoop-mapreduce-client-core</artifactId>
+                    <version>2.2.0.2.0.6.0-102</version>
+                </dependency>
+                <dependency>
+                    <groupId>org.apache.pig</groupId>
+                    <artifactId>pig</artifactId>
+                    <version>0.12.0.2.0.6.1-102</version>
+                </dependency>
+                <dependency>
+                    <groupId>joda-time</groupId>
+                    <artifactId>joda-time</artifactId>
+                    <version>2.3</version>
+                </dependency>
+                <dependency>
+                    <groupId>dk.brics.automaton</groupId>
+                    <artifactId>automaton</artifactId>
+                    <version>1.11-8</version>
+                </dependency>
+                <dependency>
+                    <groupId>ml.shifu</groupId>
+                    <artifactId>guagua-mapreduce</artifactId>
+                    <version>0.4.0</version>
+                    <classifier>hadoop2</classifier>
+                </dependency>
+            </dependencies>
+        </profile>
+    </profiles>
 
-	<modules>
-		<module>shifu-core</module>
-		<module>shifu-plugin-encog</module>
-<!--		<module>shifu-plugin-mahout</module>
-		<module>shifu-plugin-spark</module>
-	-->	<module>shifu-dtrain</module>
-	</modules>
+    <modules>
+        <module>shifu-core</module>
+        <module>shifu-plugin-encog</module>
+        <module>shifu-dtrain</module>
+    </modules>
 
 </project>
