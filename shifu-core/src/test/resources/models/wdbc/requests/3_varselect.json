@@ -11,7 +11,7 @@
     "bindings": [
         {
             "spi": "PMMLMiningSchemaUpdater",
-            "impl": "ml.shifu.core.di.builtin.miningschema.IVVariableSelector",
+            "impl": "ml.shifu.core.di.builtin.miningschema2.IVVariableSelector",
             "params": {
                 "numSelected": 10,
                 "modelName": "demoModel"

@@ -23,7 +23,7 @@
 
                         "binding": {
                             "spi": "PMMLDerivedFieldCreator",
-                            "impl": "ml.shifu.core.di.builtin.derivedfield.BinaryClassMapperCreator",
+                            "impl": "ml.shifu.core.di.builtin.derivedfield2.BinaryClassMapperCreator",
                             "params": {
                                 "posTags": [
                                     "M"
@@ -38,7 +38,7 @@
                         "namePattern": "$default",
                         "binding": {
                             "spi": "PMMLDerivedFieldCreator",
-                            "impl": "ml.shifu.core.di.builtin.derivedfield.ZScorePMMLDerivedFieldCreator"
+                            "impl": "ml.shifu.core.di.builtin.derivedfield2.ZScorePMMLDerivedFieldCreator"
                         }
 
                     }

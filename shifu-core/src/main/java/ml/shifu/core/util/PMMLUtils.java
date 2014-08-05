@@ -368,19 +368,19 @@ public class PMMLUtils {
 
         TransformationDictionary transformationDictionary = pmml.getTransformationDictionary();
 
-        MiningSchema miningschema = model.getMiningSchema();
+        MiningSchema miningschema2 = model.getMiningSchema();
 
         Set<FieldName> activeFieldNameSet = new HashSet<FieldName>();
 
-        for (MiningField miningField : miningschema.getMiningFields()) {
+        for (MiningField miningField : miningschema2.getMiningFields()) {
             if (miningField.getUsageType().equals(FieldUsageType.ACTIVE)) {
                 activeFieldNameSet.add(miningField.getName());
             }
         }
 
         LocalTransformations localTransformations = model.getLocalTransformations();
-        for (DerivedField derivedfield : localTransformations.getDerivedFields()) {
-            Expression expression = derivedfield.getExpression();
+        for (DerivedField derivedfield2 : localTransformations.getDerivedFields()) {
+            Expression expression = derivedfield2.getExpression();
 
             if (expression instanceof NormContinuous) {
                 ((NormContinuous) expression).getField()
