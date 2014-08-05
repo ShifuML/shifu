@@ -60,7 +60,7 @@
     },
     {
       "spi": "PMMLMiningSchemaCreator",
-      "impl": "ml.shifu.core.di.builtin.miningschema2.DefaultPMMLMiningSchemaCreator",
+      "impl": "ml.shifu.core.di.builtin.miningschema.DefaultPMMLMiningSchemaCreator",
       "params": {
         "modelName": "demoModel",
         "fields": [

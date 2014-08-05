@@ -1,4 +1,4 @@
-package ml.shifu.core.di.builtin.miningschema2;
+package ml.shifu.core.di.builtin.miningschema;
 
 import ml.shifu.core.di.spi.PMMLMiningSchemaCreator;
 import ml.shifu.core.util.PMMLUtils;

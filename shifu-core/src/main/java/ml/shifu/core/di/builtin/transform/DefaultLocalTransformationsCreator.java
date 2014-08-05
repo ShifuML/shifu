@@ -2,7 +2,7 @@ package ml.shifu.core.di.builtin.transform;
 
 import com.google.inject.Guice;
 import com.google.inject.Injector;
-import ml.shifu.core.di.builtin.derivedfield2.PassThroughPMMLDerivedFieldCreator;
+import ml.shifu.core.di.builtin.derivedfield.PassThroughPMMLDerivedFieldCreator;
 import ml.shifu.core.di.module.SimpleModule;
 import ml.shifu.core.di.service.PMMLDerivedFieldService;
 import ml.shifu.core.di.spi.PMMLLocalTransformationsCreator;

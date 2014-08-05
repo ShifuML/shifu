@@ -1,7 +1,7 @@
 package ml.shifu.core.di.builtin;
 
 
-import ml.shifu.core.di.builtin.derivedfield2.BinaryClassMapperCreator;
+import ml.shifu.core.di.builtin.derivedfield.BinaryClassMapperCreator;
 import ml.shifu.core.util.JSONUtils;
 import ml.shifu.core.util.PMMLUtils;
 import ml.shifu.core.util.Params;

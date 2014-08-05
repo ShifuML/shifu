@@ -1,4 +1,4 @@
-package ml.shifu.core.di.builtin.derivedfield2;
+package ml.shifu.core.di.builtin.derivedfield;
 
 import ml.shifu.core.di.spi.PMMLDerivedFieldCreator;
 import ml.shifu.core.util.CommonUtils;
