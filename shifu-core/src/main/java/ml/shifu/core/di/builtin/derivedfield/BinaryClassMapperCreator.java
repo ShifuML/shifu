@@ -28,7 +28,7 @@ public class BinaryClassMapperCreator implements PMMLDerivedFieldCreator {
         FieldColumnPair fieldColumnPair = new FieldColumnPair();
         fieldColumnPair.setField(dataField.getName());
         fieldColumnPair.setColumn("origin");
-
+        mapValues.setDataType(derivedField.getDataType());
         mapValues.setOutputColumn("transformed");
         mapValues.withFieldColumnPairs(fieldColumnPair);
 
