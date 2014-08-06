@@ -60,22 +60,7 @@ public class DataSampler {
         return data;
     }
 
-    /**
-     * check whether the fields should be filtered out or not
-     * the data will be filtered out if
-     * - the target value is invalid
-     * - or target tag is not in positive tag list or negative tag list
-     * - or not be sampled
-     *
-     * @param targetColumnNum
-     * @param posTags
-     * @param negTags
-     * @param fields
-     * @param normalizeSampleRate
-     * @param normalizeSampleNegOnly
-     * @return true - if the data should be filtered out
-     * false - if the data should not be filtered out
-     */
+
     public static boolean filter(int targetColumnNum,
                                  List<String> posTags,
                                  List<String> negTags,
