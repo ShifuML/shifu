@@ -6,14 +6,19 @@ import ml.shifu.core.di.spi.RequestProcessor;
 import ml.shifu.core.request.Request;
 import ml.shifu.core.util.LocalDataUtils;
 import ml.shifu.core.util.Params;
+
+import org.apache.commons.io.FileUtils;
 import org.apache.pig.ExecType;
 import org.apache.pig.PigServer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.File;
+import java.nio.file.Files;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Scanner;
 
 public class PigModelExecRequestProcessor implements RequestProcessor {
 
@@ -41,6 +46,18 @@ public class PigModelExecRequestProcessor implements RequestProcessor {
             pigParams.put(key, params.get(key).toString());
             log.info(key + " : " + params.get(key).toString());
         }
+
+        File folderExisting = new File((String)params.get("pathResult"));  
+        if (folderExisting.exists()){  
+        	//System.out.print("Overwrite pathResult ("+ folderExisting.getPath() + ")? (Y/n): ");
+        	// Scanner in = new Scanner(System.in);
+            //String answer = in.next();
+            //if(!answer.toLowerCase().contains("n"))
+            FileUtils.deleteDirectory(folderExisting);
+            //in.close();
+         	log.info("Deleting: "+folderExisting.getPath());
+       }
+        else log.info("Nothing to delete");
 
         String pathHeader = params.get("pathHeader").toString();
         String headerDelimiter = params.get("headerDelimiter").toString();
