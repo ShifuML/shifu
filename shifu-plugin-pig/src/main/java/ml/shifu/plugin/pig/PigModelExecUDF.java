@@ -45,14 +45,20 @@ public class PigModelExecUDF extends EvalFunc<Tuple> {
         tuple.append(Double.valueOf(result.toString()));
 
         Set<String> supplementaryFields = new HashSet<String>();
+        String targetColumnName = "";
         for (Model model : pmml.getModels()) {
             for (MiningField miningField : model.getMiningSchema().getMiningFields()) {
                 if (miningField.getUsageType().equals(FieldUsageType.SUPPLEMENTARY)) {
                     supplementaryFields.add(miningField.getName().getValue());
                 }
+                if(miningField.getUsageType().equals(FieldUsageType.TARGET)){
+                	targetColumnName = miningField.getName().getValue();
+                }
             }
         }
 
+        tuple.append(rawDataMap.get(targetColumnName));
+        
         for (String fieldName : supplementaryFields) {
             tuple.append(rawDataMap.get(fieldName));
         }

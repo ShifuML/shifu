@@ -12,7 +12,7 @@
             "delimiter": ",",
             "pathHeader": "src/test/resources/data/wdbc/wdbc.header",
             "headerDelimiter": "|",
-            "pathResult": "src/test/resources/generated"
+            "pathResult": "src/test/resources/generated/"
         }
     },
     "bindings": []

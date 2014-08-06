@@ -21,5 +21,6 @@ raw = LOAD '$pathData' USING PigStorage('$delimiter');
 
 result = FOREACH raw GENERATE FLATTEN(ModelExec(*));
 
-DUMP result;
+result = ORDER result BY $0 DESC;
 
+STORE result INTO '$pathResult' USING PigStorage('|', '-schema');

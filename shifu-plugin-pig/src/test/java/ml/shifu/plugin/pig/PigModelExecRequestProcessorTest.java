@@ -11,7 +11,7 @@ import java.io.File;
 public class PigModelExecRequestProcessorTest {
 
     @Test
-    public void test() throws Exception {
+    public void test1() throws Exception {
         RequestDispatcher.dispatch(JSONUtils.readValue(new File("src/test/resources/request/pigmodelexec.json"), Request.class));
     }
 
