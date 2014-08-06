@@ -15,8 +15,6 @@
  */
 package ml.shifu.core.util;
 
-import ml.shifu.core.exception.ShifuErrorCode;
-import ml.shifu.core.exception.ShifuException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -60,7 +58,7 @@ public class Environment {
         try {
             loadShifuConfig();
         } catch (IOException e) {
-            throw new ShifuException(ShifuErrorCode.ERROR_SHIFU_CONFIG, e);
+           // throw new ShifuException(ShifuErrorCode.ERROR_SHIFU_CONFIG, e);
         }
 
         if (properties.size() == 1) {
@@ -126,13 +124,6 @@ public class Environment {
         return (propertyValue == null) ? defValue : propertyValue;
     }
 
-    /**
-     * Get property as Integer value
-     *
-     * @param propertyName
-     * @param defValue
-     * @return
-     */
     public static Integer getInt(String propertyName) {
         String propertyValue = getProperty(propertyName);
         return (propertyValue == null) ? null : Integer.valueOf(propertyValue);
