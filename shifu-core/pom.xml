@@ -33,11 +33,6 @@
             <artifactId>antlr-runtime</artifactId>
             <version>3.4</version>
         </dependency>
-        <!--   <dependency>
-               <groupId>org.apache.pig</groupId>
-               <artifactId>pig</artifactId>
-               <version>0.10.0</version>
-           </dependency>                   -->
         <dependency>
             <groupId>org.slf4j</groupId>
             <artifactId>slf4j-log4j12</artifactId>

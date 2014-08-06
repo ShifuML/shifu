@@ -35,10 +35,11 @@ public class PigModelExecRequestProcessor implements RequestProcessor {
 
         Map<String, String> pigParams = new HashMap<String, String>();
 
-        String[] keys = {"delimiter", "pathData", "pathPMML"};
+        String[] keys = {"delimiter", "pathData", "pathPMML", "pathResult"};
 
         for (String key : keys) {
             pigParams.put(key, params.get(key).toString());
+            log.info(key + " : " + params.get(key).toString());
         }
 
         String pathHeader = params.get("pathHeader").toString();
