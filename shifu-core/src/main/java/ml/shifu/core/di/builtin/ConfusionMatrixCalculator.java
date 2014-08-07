@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package ml.shifu.core.core;
+package ml.shifu.core.di.builtin;
 
 import ml.shifu.core.container.ConfusionMatrixObject;
 import ml.shifu.core.container.ModelResultObject;

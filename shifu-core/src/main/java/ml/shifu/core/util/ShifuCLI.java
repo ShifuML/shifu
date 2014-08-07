@@ -6,7 +6,7 @@ import ml.shifu.core.request.RequestDispatcher;
 
 import java.io.File;
 
-public class ShifuCLI2 {
+public class ShifuCLI {
 
     public static void main(String[] args) throws Exception {
         if (args.length < 1) {

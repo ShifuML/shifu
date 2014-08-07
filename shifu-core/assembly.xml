@@ -2,11 +2,10 @@
         xmlns="http://maven.apache.org/plugins/maven-assembly-plugin/assembly/1.1.0"
         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
         xsi:schemaLocation="http://maven.apache.org/plugins/maven-assembly-plugin/assembly/1.1.0 http://maven.apache.org/xsd/assembly-1.1.0.xsd">
-    <id>${platform.version}</id>
     <formats>
         <format>tar.gz</format>
     </formats>
-
+    <id>released</id>
     <fileSets>
         <fileSet>
             <directory>${project.basedir}</directory>
@@ -113,12 +112,8 @@
                 <include>*:commons-logging:*</include>
                 <include>*:commons-net:*</include>
                 <include>*:config:*</include>
-                <include>*:encog-core:*</include>
-                <include>*:guagua-core:*</include>
-                <include>*:guagua-mapreduce:*</include>
                 <include>*:guava:*</include>
                 <include>*:guice:*</include>
-                <include>*:hadoop-core*:jar</include>
                 <include>*:jackson-annotations:*</include>
                 <include>*:jackson-core:*</include>
                 <include>*:jackson-core-asl:*</include>
@@ -129,7 +124,6 @@
                 <include>*:liblinear:*</include>
                 <include>*:log4j:*</include>
                 <include>*:netty:*</include>
-                <include>*:pig:*</include>
                 <include>*:scala-library:*</include>
                 <include>ml.shifu:*:*</include>
                 <include>*:slf4j-api:*</include>
@@ -137,7 +131,6 @@
                 <include>*:stringtemplate:*</include>
                 <include>*:xmlenc:*</include>
                 <include>*:xz:*</include>
-                <include>*:zookeeper:*</include>
                 <include>*:joda-time:*</include>
                 <include>*:automaton:*</include>
                 <include>org.jpmml:*:*</include>

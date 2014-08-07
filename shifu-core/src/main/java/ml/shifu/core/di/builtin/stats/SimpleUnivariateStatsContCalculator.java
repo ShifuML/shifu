@@ -1,6 +1,6 @@
 package ml.shifu.core.di.builtin.stats;
 
-import ml.shifu.core.core.QuantileCalculator;
+import ml.shifu.core.di.builtin.QuantileCalculator;
 import ml.shifu.core.util.CommonUtils;
 import ml.shifu.core.util.Params;
 import org.dmg.pmml.ContStats;

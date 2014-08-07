@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package ml.shifu.core.core;
+package ml.shifu.core.di.builtin;
 
 import java.util.ArrayList;
 import java.util.List;
