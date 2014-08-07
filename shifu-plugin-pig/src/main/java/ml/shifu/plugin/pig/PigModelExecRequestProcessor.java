@@ -65,6 +65,16 @@ public class PigModelExecRequestProcessor implements RequestProcessor {
 
         pigParams.put("headerString", Joiner.on(',').join(header));
 
-        pigServer.registerScript("src/main/pig/modelexec.pig", pigParams);
+        String pigScriptLocation = "src/main/pig/modelexec.pig"; 
+        File pigScript = new File(pigScriptLocation);
+        if(!pigScript.exists()) { 
+        	pigScriptLocation = System.getenv().get("SHIFU_HOME")+"/plugin/modelexec.pig";
+        	pigScript = new File(pigScriptLocation);
+        	if(!pigScript.exists())
+        		throw new Exception("Could not load modelexec.pig");
+        }
+        log.info("Loading pig script from: "+pigScriptLocation);
+        pigServer.registerScript(pigScriptLocation, pigParams);
+        
     }
 }

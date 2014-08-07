@@ -25,9 +25,9 @@
 		<profile>
 			<id>cdh-20</id>
 			<activation>
-			    <file>
-			        <missing>/etc/hadoop/conf/yarn-site.xml</missing>
-			    </file>
+				<file>
+					<missing>/etc/hadoop/conf/yarn-site.xml</missing>
+				</file>
 			</activation>
 			<properties>
 				<platform.version>cdh-20</platform.version>
@@ -49,12 +49,6 @@
 					<artifactId>hadoop-core</artifactId>
 					<version>0.20.2-cdh3u4a</version>
 				</dependency>
-				<dependency>
-					<groupId>ml.shifu</groupId>
-					<artifactId>guagua-mapreduce</artifactId>
-					<version>0.4.0</version>
-					<classifier>hadoop1</classifier>
-				</dependency>
 			</dependencies>
 		</profile>
 
@@ -62,9 +56,9 @@
 		<profile>
 			<id>hdp-yarn</id>
 			<activation>
-			    <file>
-			        <exists>/etc/hadoop/conf/yarn-site.xml</exists>
-			    </file>
+				<file>
+					<exists>/etc/hadoop/conf/yarn-site.xml</exists>
+				</file>
 			</activation>
 			<properties>
 				<platform.version>hdp-yarn</platform.version>
@@ -110,13 +104,62 @@
 					<artifactId>automaton</artifactId>
 					<version>1.11-8</version>
 				</dependency>
-				<dependency>
-					<groupId>ml.shifu</groupId>
-					<artifactId>guagua-mapreduce</artifactId>
-					<version>0.4.0</version>
-					<classifier>hadoop2</classifier>
-				</dependency>
 			</dependencies>
 		</profile>
 	</profiles>
+	<build>
+		<plugins>
+			<plugin>
+				<artifactId>maven-resources-plugin</artifactId>
+				<version>2.6</version>
+				<executions>
+					<execution>
+						<id>copy-resources</id>
+						<phase>validate</phase>
+						<goals>
+							<goal>copy-resources</goal>
+						</goals>
+
+						<configuration>
+							<outputDirectory>${basedir}/target/classes</outputDirectory>
+							<includeEmptyDirs>true</includeEmptyDirs>
+							<resources>
+								<resource>
+									<directory>${basedir}/src/main/pig</directory>
+									<filtering>false</filtering>
+								</resource>
+							</resources>
+						</configuration>
+
+					</execution>
+				</executions>
+			</plugin>
+						<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-assembly-plugin</artifactId>
+				<version>2.4.1</version>
+				<configuration>
+					<descriptors>
+						<descriptor>./assembly.xml</descriptor>
+					</descriptors>
+				</configuration>
+				<executions>
+					<execution>
+						<id>make-assembly</id>
+						<phase>package</phase>
+						<goals>
+							<goal>single</goal>
+						</goals>
+					</execution>
+				</executions>
+			</plugin>
+			
+			<!-- <plugin> <artifactId>maven-assembly-plugin</artifactId> <version>2.4</version> 
+				<executions> <execution> <id>make-assembly</id> <phase>package</phase> <goals> 
+				<goal>single</goal> </goals> <configuration> <descriptors> <descriptor>./assembly.xml</descriptor> 
+				</descriptors> </configuration> </execution> </executions> </plugin> -->
+		</plugins>
+	</build>
+
+
 </project>
