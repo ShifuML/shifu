@@ -19,8 +19,6 @@ package ml.shifu.core.di.builtin;
 
 import ml.shifu.core.container.obj.ColumnBinStatsResult;
 import ml.shifu.core.container.obj.ColumnBinningResult;
-import ml.shifu.core.core.KSIVCalculator;
-import ml.shifu.core.core.WOECalculator;
 import ml.shifu.core.di.spi.ColumnBinStatsCalculator;
 
 public class DefaultColumnBinStatsCalculator implements ColumnBinStatsCalculator {

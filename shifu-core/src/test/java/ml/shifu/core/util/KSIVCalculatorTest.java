@@ -15,7 +15,7 @@
  */
 package ml.shifu.core.util;
 
-import ml.shifu.core.core.KSIVCalculator;
+import ml.shifu.core.di.builtin.KSIVCalculator;
 import org.testng.Assert;
 import org.testng.annotations.Test;
 

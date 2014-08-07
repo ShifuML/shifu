@@ -1,4 +1,4 @@
-package ml.shifu.core.core;
+package ml.shifu.core.di.builtin;
 
 
 import org.dmg.pmml.Quantile;
