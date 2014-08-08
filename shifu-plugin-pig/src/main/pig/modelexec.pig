@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 
+REGISTER $pig_jars;
 
 DEFINE ModelExec    ml.shifu.plugin.pig.PigModelExecUDF('$pathPMML', '$headerString');
 

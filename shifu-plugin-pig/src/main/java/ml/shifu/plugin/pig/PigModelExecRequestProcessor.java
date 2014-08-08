@@ -52,6 +52,8 @@ public class PigModelExecRequestProcessor implements RequestProcessor {
 			pigParams = execHDFS(req);
 		}
 		
+		pigParams.put("pig_jars", System.getenv("SHIFU_HOME")+"/plugin/*/*.jar");
+		
 		String pigScriptLocation = "src/main/pig/modelexec.pig";
 		File pigScript = new File(pigScriptLocation);
 		if (!pigScript.exists()) {
@@ -115,7 +117,7 @@ public class PigModelExecRequestProcessor implements RequestProcessor {
 			log.info(key + " : " + params.get(key).toString());
 		}
 
-		Path pathResults = new Path((String) params.get("pathResults"));
+		Path pathResults = new Path((String) params.get("pathResult"));
 		if (!fs.exists(pathResults)) {
 			log.info("Deleting: " + pathResults.getName());
 			fs.delete(pathResults, true);
