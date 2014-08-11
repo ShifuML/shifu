@@ -19,13 +19,8 @@
 			<artifactId>shifu-core</artifactId>
 			<version>0.3.0-SNAPSHOT</version>
 		</dependency>
-		<dependency>
-			<groupId>org.slf4j</groupId>
-			<artifactId>slf4j-log4j12</artifactId>
-			<version>1.7.7</version>
-			<optional>true</optional>
-		</dependency>
 	</dependencies>
+
 	<profiles>
 		<!-- For hadoop 0.20.2 cloudera version -->
 		<profile>
@@ -55,6 +50,13 @@
 					<artifactId>hadoop-core</artifactId>
 					<version>0.20.2-cdh3u4a</version>
 				</dependency>
+				<dependency>
+					<groupId>org.slf4j</groupId>
+					<artifactId>slf4j-log4j12</artifactId>
+					<version>1.5.8</version>
+					<optional>true</optional>
+				</dependency>
+
 			</dependencies>
 		</profile>
 
@@ -110,6 +112,13 @@
 					<artifactId>automaton</artifactId>
 					<version>1.11-8</version>
 				</dependency>
+				<dependency>
+					<groupId>org.slf4j</groupId>
+					<artifactId>slf4j-log4j12</artifactId>
+					<version>1.7.7</version>
+					<optional>true</optional>
+				</dependency>
+
 			</dependencies>
 		</profile>
 	</profiles>
