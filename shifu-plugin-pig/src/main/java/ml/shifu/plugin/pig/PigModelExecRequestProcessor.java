@@ -53,7 +53,7 @@ public class PigModelExecRequestProcessor implements RequestProcessor {
 		}
 		
 		if(System.getenv("SHIFU_HOME") == null) {
-			pigParams.put("pig_jars", "target/*/plugin/*/*.jar");
+			pigParams.put("pig_jars", "*.jar");
 		}
 		else {
 			pigParams.put("pig_jars", System.getenv("SHIFU_HOME")+"/plugin/*/*.jar");
