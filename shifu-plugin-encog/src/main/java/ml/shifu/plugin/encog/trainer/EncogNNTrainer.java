@@ -1,15 +1,13 @@
 package ml.shifu.plugin.encog.trainer;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import ml.shifu.core.container.HiddenLayer;
-import ml.shifu.core.container.NNParams;
+
 import ml.shifu.core.container.PMMLDataSet;
 import ml.shifu.core.di.spi.Trainer;
-import ml.shifu.core.util.PMMLUtils;
+
 import ml.shifu.core.util.Params;
 import ml.shifu.plugin.encog.adapter.EncogNeuralNetworkToPMMLAdapter;
-import org.dmg.pmml.FieldUsageType;
-import org.dmg.pmml.MiningField;
+
 import org.dmg.pmml.Model;
 import org.encog.engine.network.activation.*;
 import org.encog.ml.data.MLData;
