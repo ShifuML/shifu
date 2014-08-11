@@ -54,13 +54,12 @@ public class PigModelExecRequestProcessor implements RequestProcessor {
 		
 		log.info("Directory: " + System.getProperty("user.dir"));
 		
-		String pluginJarFile = System.getenv("SHIFU_HOME")+"/plugin/*/*.jar";
+		String pluginJarFile = "target/shifu-plugin-pig-1.0-SNAPSHOT.jar";
 		File pigPlugin = new File(pluginJarFile);
 		if(!pigPlugin.exists()) {
-			pluginJarFile = "target/shifu-plugin-pig-1.0-SNAPSHOT.jar";
-			pigPlugin = new File(pluginJarFile);
-			if(!pigPlugin.exists()) 
-				throw new Exception("Could not load the pig jar file");
+			pluginJarFile = System.getenv("SHIFU_HOME")+"/plugin/*/*.jar";
+			if(System.getenv("SHIFU_HOME")==null) 
+				throw new Exception("SHIFU_HOME not set or pig jar file is missing.");
 		}
 		
 		pigParams.put("pig_jars", pluginJarFile);
@@ -130,11 +129,11 @@ public class PigModelExecRequestProcessor implements RequestProcessor {
 		}
 
 		Path pathResults = new Path((String) params.get("pathResult"));
-		if (!fs.exists(pathResults)) {
+		if (fs.exists(pathResults)) {
 			log.info("Deleting: " + pathResults.getName());
 			fs.delete(pathResults, true);
 		} else
-			log.info("pathResults does not already exist.");
+			log.info((String) params.get("pathResult")+" does not already exist.");
 
 		
 		String headerDelimiter = params.get("headerDelimiter").toString();
