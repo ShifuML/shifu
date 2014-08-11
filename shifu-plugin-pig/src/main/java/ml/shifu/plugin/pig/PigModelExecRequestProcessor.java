@@ -54,12 +54,17 @@ public class PigModelExecRequestProcessor implements RequestProcessor {
 		
 		log.info("Directory: " + System.getProperty("user.dir"));
 		
-		if(System.getenv("SHIFU_HOME") != null) {
-			pigParams.put("pig_jars", System.getenv("SHIFU_HOME")+"/plugin/*/*.jar");
+		String pluginJarFile = System.getenv("SHIFU_HOME")+"/plugin/*/*.jar";
+		File pigPlugin = new File(pluginJarFile);
+		if(!pigPlugin.exists()) {
+			pluginJarFile = "target/shifu-plugin-pig-1.0-SNAPSHOT.jar";
+			pigPlugin = new File(pluginJarFile);
+			if(!pigPlugin.exists()) 
+				throw new Exception("Could not load the pig jar file");
 		}
-		else {
-			pigParams.put("pig_jars", "target/shifu-plugin-pig-1.0-SNAPSHOT.jar");
-		}
+		
+		pigParams.put("pig_jars", pluginJarFile);
+
 		
 		String pigScriptLocation = "src/main/pig/modelexec.pig";
 		File pigScript = new File(pigScriptLocation);
