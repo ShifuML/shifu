@@ -17,8 +17,8 @@
 package ml.shifu.core.di.spi;
 
 
-import ml.shifu.core.container.obj.ColumnBinStatsResult;
-import ml.shifu.core.container.obj.ColumnBinningResult;
+import ml.shifu.core.container.ColumnBinStatsResult;
+import ml.shifu.core.container.ColumnBinningResult;
 
 public interface ColumnBinStatsCalculator {
 

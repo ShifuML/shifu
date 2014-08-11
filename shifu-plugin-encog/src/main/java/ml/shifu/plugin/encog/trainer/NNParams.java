@@ -1,5 +1,4 @@
-package ml.shifu.core.container;
-
+package ml.shifu.plugin.encog.trainer;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
 import java.util.List;

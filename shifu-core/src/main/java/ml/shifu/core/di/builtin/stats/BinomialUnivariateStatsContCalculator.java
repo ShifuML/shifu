@@ -1,7 +1,7 @@
 package ml.shifu.core.di.builtin.stats;
 
 import ml.shifu.core.container.NumericalValueObject;
-import ml.shifu.core.container.obj.ColumnBinningResult;
+import ml.shifu.core.container.ColumnBinningResult;
 import ml.shifu.core.di.builtin.KSIVCalculator;
 import ml.shifu.core.di.builtin.QuantileCalculator;
 import ml.shifu.core.di.builtin.WOECalculator;

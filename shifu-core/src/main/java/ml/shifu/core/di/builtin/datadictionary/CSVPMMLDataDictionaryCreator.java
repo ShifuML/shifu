@@ -18,7 +18,7 @@ import java.util.Scanner;
 
 public class CSVPMMLDataDictionaryCreator implements PMMLDataDictionaryCreator {
 
-    static Logger log = LoggerFactory.getLogger(CSVPMMLDataDictionaryCreator.class);
+    private static Logger log = LoggerFactory.getLogger(CSVPMMLDataDictionaryCreator.class);
 
     public DataDictionary create(Params params) {
         DataDictionary dict = new DataDictionary();
@@ -50,7 +50,7 @@ public class CSVPMMLDataDictionaryCreator implements PMMLDataDictionaryCreator {
             dict.withDataFields(fields);
             dict.setNumberOfFields(fields.size());
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error(e.toString());
             throw new RuntimeException("Cannot load file.");
         } finally {
             if (scanner != null) {

@@ -3,6 +3,8 @@ package ml.shifu.core.di.builtin.derivedfield;
 import ml.shifu.core.di.spi.PMMLDerivedFieldCreator;
 import ml.shifu.core.util.Params;
 import org.dmg.pmml.*;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 
@@ -11,6 +13,8 @@ import javax.xml.parsers.DocumentBuilderFactory;
 import java.util.List;
 
 public class BinaryClassMapperCreator implements PMMLDerivedFieldCreator {
+
+    private static Logger log = LoggerFactory.getLogger(BinaryClassMapperCreator.class);
 
     public DerivedField create(DataField dataField, ModelStats modelStats, Params params) {
 
@@ -42,7 +46,7 @@ public class BinaryClassMapperCreator implements PMMLDerivedFieldCreator {
         try {
             builder = factory.newDocumentBuilder();
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error(e.toString());
             return null;
         }
         Document doc = builder.newDocument();

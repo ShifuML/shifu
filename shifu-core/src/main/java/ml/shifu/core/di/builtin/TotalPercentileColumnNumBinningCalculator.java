@@ -18,7 +18,7 @@ package ml.shifu.core.di.builtin;
 
 
 import ml.shifu.core.container.NumericalValueObject;
-import ml.shifu.core.container.obj.ColumnBinningResult;
+import ml.shifu.core.container.ColumnBinningResult;
 import ml.shifu.core.di.spi.ColumnNumBinningCalculator;
 import ml.shifu.core.util.QuickSort;
 
