@@ -22,18 +22,13 @@ import java.util.Comparator;
  */
 public class BinningObject {
 
-    public static enum DataType {
-        Numerical, Categorical
-    }
+    private DataType type;
 
     ;
-
-    private DataType type;
     private Double nData;
     private String cData;
     private Double score;
     private String tag;
-
     public BinningObject(DataType type) {
         this.type = type;
     }
@@ -47,25 +42,17 @@ public class BinningObject {
         return this.nData;
     }
 
+    // Setters
+    public void setNumericalData(Double data) {
+        this.nData = data;
+    }
+
     public String getCategoricalData() {
         if (this.type.equals(DataType.Numerical)) {
             throw new RuntimeException(
                     "Cannot get categorical data from a numerical variable.");
         }
         return this.cData;
-    }
-
-    public Double getScore() {
-        return this.score;
-    }
-
-    public String getTag() {
-        return tag;
-    }
-
-    // Setters
-    public void setNumericalData(Double data) {
-        this.nData = data;
     }
 
     public void setCategoricalData(String data) {
@@ -76,12 +63,33 @@ public class BinningObject {
         this.cData = data;
     }
 
+    public Double getScore() {
+        return this.score;
+    }
+
     public void setScore(Double score) {
         this.score = score;
     }
 
+    public String getTag() {
+        return tag;
+    }
+
     public void setTag(String tag) {
         this.tag = tag;
+    }
+
+    // Others
+    public String toString() {
+        if (this.type.equals(DataType.Categorical)) {
+            return "(" + this.cData + ", " + this.tag + ", " + this.score + ")";
+        } else {
+            return "(" + this.nData + ", " + this.tag + ", " + this.score + ")";
+        }
+    }
+
+    public static enum DataType {
+        Numerical, Categorical
     }
 
     // Comparator
@@ -107,15 +115,6 @@ public class BinningObject {
             } else {
                 throw new RuntimeException("Data should be in the same type");
             }
-        }
-    }
-
-    // Others
-    public String toString() {
-        if (this.type.equals(DataType.Categorical)) {
-            return "(" + this.cData + ", " + this.tag + ", " + this.score + ")";
-        } else {
-            return "(" + this.nData + ", " + this.tag + ", " + this.score + ")";
         }
     }
 }

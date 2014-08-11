@@ -33,18 +33,14 @@ import java.util.List;
 public class ConfusionMatrixCalculator {
 
     private static Logger log = LoggerFactory.getLogger(ConfusionMatrixCalculator.class);
-
+    private static String fmt = "%s|%s|%s|%s|%s|%s|%s|%s|%s\n";
     // input
     private List<ModelResultObject> moList;
     private List<String> posTags;
-
     @SuppressWarnings("unused")
     private List<String> negTags;
-
     private Double negScaleFactor = 1.0;
     private Double posScaleFactor = 1.0;
-
-    private static String fmt = "%s|%s|%s|%s|%s|%s|%s|%s|%s\n";
 
     public ConfusionMatrixCalculator(List<String> posTags, List<String> negTags, List<ModelResultObject> moList) {
         this.moList = moList;

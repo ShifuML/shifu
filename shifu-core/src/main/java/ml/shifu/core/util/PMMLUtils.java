@@ -19,12 +19,11 @@ import java.util.*;
 
 public class PMMLUtils {
 
+    private static Logger log = LoggerFactory.getLogger(PMMLUtils.class);
+
     private PMMLUtils() {
 
     }
-
-    private static Logger log = LoggerFactory.getLogger(PMMLUtils.class);
-
 
     public static List<Extension> createExtensions(Map<String, String> extensionMap) {
 

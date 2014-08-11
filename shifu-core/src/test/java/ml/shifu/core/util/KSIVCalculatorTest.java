@@ -29,8 +29,8 @@ import java.util.List;
  */
 public class KSIVCalculatorTest {
 
-    private KSIVCalculator calc = new KSIVCalculator();
     private static final DecimalFormat df = new DecimalFormat("0.00");
+    private KSIVCalculator calc = new KSIVCalculator();
 
     @Test
     public void test() {

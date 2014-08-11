@@ -13,9 +13,8 @@ import java.util.Scanner;
 
 public class CSVWithHeaderLocalSingleThreadFileLoader implements SingleThreadFileLoader {
 
-    private String delimiter = ",";
-
     private static Logger log = LoggerFactory.getLogger(CSVWithHeaderLocalSingleThreadFileLoader.class);
+    private String delimiter = ",";
 
     public List<List<Object>> load(String filePath) {
         Scanner scanner = null;

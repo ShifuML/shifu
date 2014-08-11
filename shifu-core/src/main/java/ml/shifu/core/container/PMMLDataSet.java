@@ -6,6 +6,10 @@ import java.util.List;
 
 public class PMMLDataSet {
 
+    private List<String> header;
+    private MiningSchema miningSchema;
+    private List<List<Object>> rows;
+
     public MiningSchema getMiningSchema() {
         return miningSchema;
     }
@@ -22,8 +26,6 @@ public class PMMLDataSet {
         this.header = header;
     }
 
-    private List<String> header;
-
     public List<List<Object>> getRows() {
         return rows;
     }
@@ -31,8 +33,5 @@ public class PMMLDataSet {
     public void setRows(List<List<Object>> rows) {
         this.rows = rows;
     }
-
-    private MiningSchema miningSchema;
-    private List<List<Object>> rows;
 
 }

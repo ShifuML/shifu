@@ -2,6 +2,9 @@ package ml.shifu.core.container;
 
 public class ConfusionMatrixObject {
 
+    private double tp, fp, tn, fn, weightedTp, weightedFp, weightedTn, weightedFn;
+    private double score;
+
     public ConfusionMatrixObject() {
         this.tp = 0.0;
         this.fn = 0.0;
@@ -23,10 +26,6 @@ public class ConfusionMatrixObject {
         this.weightedTn = cmo.weightedTn;
         this.weightedTp = cmo.weightedTp;
     }
-
-    private double tp, fp, tn, fn, weightedTp, weightedFp, weightedTn, weightedFn;
-
-    private double score;
 
     public double getTp() {
         return tp;

@@ -31,18 +31,6 @@ public class NumericalValueObject {
         this.weight = 1.0;
     }
 
-    public static class NumericalValueObjectComparator implements Comparator<NumericalValueObject> {
-
-        public int compare(NumericalValueObject a, NumericalValueObject b) {
-            int d = a.value.compareTo(b.value);
-            if (d == 0) {
-                return a.isPositive.compareTo(b.isPositive);
-            } else {
-                return d;
-            }
-        }
-    }
-
     public Boolean getIsPositive() {
         return isPositive;
     }
@@ -65,6 +53,18 @@ public class NumericalValueObject {
 
     public void setWeight(Double weight) {
         this.weight = weight;
+    }
+
+    public static class NumericalValueObjectComparator implements Comparator<NumericalValueObject> {
+
+        public int compare(NumericalValueObject a, NumericalValueObject b) {
+            int d = a.value.compareTo(b.value);
+            if (d == 0) {
+                return a.isPositive.compareTo(b.isPositive);
+            } else {
+                return d;
+            }
+        }
     }
 
 }

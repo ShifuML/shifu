@@ -8,6 +8,10 @@ import java.util.List;
 
 public class UnivariateCalcStatsServiceTest {
 
+    private DataDictionary dict;
+    private List<List<String>> rows;
+    private List<List<String>> columns;
+
     @Test
     public void test() {
         /*
@@ -62,10 +66,6 @@ public class UnivariateCalcStatsServiceTest {
         }                                   */
 
     }
-
-    private DataDictionary dict;
-    private List<List<String>> rows;
-    private List<List<String>> columns;
 
     private void loadData() {
         /*

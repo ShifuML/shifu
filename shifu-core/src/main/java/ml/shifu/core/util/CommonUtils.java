@@ -36,14 +36,13 @@ import java.util.Map.Entry;
  */
 public final class CommonUtils {
 
+    private static final Logger log = LoggerFactory.getLogger(CommonUtils.class);
+
     /**
      * Avoid using new for our utility class.
      */
     private CommonUtils() {
     }
-
-    private static final Logger log = LoggerFactory.getLogger(CommonUtils.class);
-
 
     /**
      * Return final selected column collection.

@@ -22,6 +22,13 @@ import java.util.Comparator;
  */
 public class CategoricalValueObject {
 
+    private Boolean isPositive;
+    private String value;
+    private Double weight;
+    public CategoricalValueObject() {
+        this.weight = 1.0;
+    }
+
     public Boolean getIsPositive() {
         return isPositive;
     }
@@ -29,27 +36,6 @@ public class CategoricalValueObject {
     public void setIsPositive(Boolean isPositive) {
         this.isPositive = isPositive;
     }
-
-    private Boolean isPositive;
-    private String value;
-    private Double weight;
-
-    public CategoricalValueObject() {
-        this.weight = 1.0;
-    }
-
-    public static class CategoricalValueObjectComparator implements Comparator<CategoricalValueObject> {
-
-        public int compare(CategoricalValueObject a, CategoricalValueObject b) {
-            int d = a.value.compareTo(b.value);
-            if (d == 0) {
-                return a.getIsPositive().compareTo(b.getIsPositive());
-            } else {
-                return d;
-            }
-        }
-    }
-
 
     public String getValue() {
         return value;
@@ -65,6 +51,18 @@ public class CategoricalValueObject {
 
     public void setWeight(Double weight) {
         this.weight = weight;
+    }
+
+    public static class CategoricalValueObjectComparator implements Comparator<CategoricalValueObject> {
+
+        public int compare(CategoricalValueObject a, CategoricalValueObject b) {
+            int d = a.value.compareTo(b.value);
+            if (d == 0) {
+                return a.getIsPositive().compareTo(b.getIsPositive());
+            } else {
+                return d;
+            }
+        }
     }
 
 }
