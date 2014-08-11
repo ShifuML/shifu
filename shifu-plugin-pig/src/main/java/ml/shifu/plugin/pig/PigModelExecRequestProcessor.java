@@ -52,11 +52,13 @@ public class PigModelExecRequestProcessor implements RequestProcessor {
 			pigParams = execHDFS(req);
 		}
 		
+		log.info("Directory: " + System.getProperty("user.dir"));
+		
 		if(System.getenv("SHIFU_HOME") != null) {
 			pigParams.put("pig_jars", System.getenv("SHIFU_HOME")+"/plugin/*/*.jar");
 		}
 		else {
-			pigParams.put("pig_jars", "target/shifu-core-0.3.0-SNAPSHOT/plugin/*/*.jar");
+			pigParams.put("pig_jars", "shifu-core/target/shifu-core-0.3.0-SNAPSHOT/plugin/*/*.jar");
 		}
 		
 		String pigScriptLocation = "src/main/pig/modelexec.pig";
