@@ -5,7 +5,7 @@
     <formats>
         <format>tar.gz</format>
     </formats>
-    <id>released</id>
+    <id>release</id>
     <fileSets>
         <fileSet>
             <directory>${project.basedir}</directory>

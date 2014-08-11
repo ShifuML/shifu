@@ -22,8 +22,8 @@ import com.google.common.collect.Lists;
 import ml.shifu.core.container.CategoricalValueObject;
 import ml.shifu.core.container.NumericalValueObject;
 import ml.shifu.core.container.RawValueObject;
-import ml.shifu.core.container.obj.ColumnBinningResult;
-import ml.shifu.core.container.obj.ColumnConfig;
+import ml.shifu.core.container.ColumnBinningResult;
+import ml.shifu.core.container.ColumnConfig;
 
 
 import org.apache.commons.collections.CollectionUtils;

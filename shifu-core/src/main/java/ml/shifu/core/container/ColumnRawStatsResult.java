@@ -1,4 +1,4 @@
-package ml.shifu.core.container.obj;
+package ml.shifu.core.container;
 
 public class ColumnRawStatsResult extends ColumnDerivedResult {
 

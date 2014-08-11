@@ -1,7 +1,7 @@
 package ml.shifu.core.di.spi;
 
 import ml.shifu.core.container.RawValueObject;
-import ml.shifu.core.container.obj.ColumnRawStatsResult;
+import ml.shifu.core.container.ColumnRawStatsResult;
 import ml.shifu.core.di.builtin.DefaultColumnRawStatsCalculator;
 import org.testng.Assert;
 import org.testng.annotations.Test;

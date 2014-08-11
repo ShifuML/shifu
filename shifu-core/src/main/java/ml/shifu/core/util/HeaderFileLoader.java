@@ -1,6 +1,8 @@
 package ml.shifu.core.util;
 
 import com.google.common.base.Splitter;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.BufferedReader;
 import java.io.FileReader;
@@ -10,6 +12,7 @@ import java.util.Scanner;
 
 public class HeaderFileLoader {
 
+    private static Logger log = LoggerFactory.getLogger(HeaderFileLoader.class);
     private String delimiter = ",";
 
     public List<String> load(String filePath) {
@@ -27,12 +30,10 @@ public class HeaderFileLoader {
             }
 
 
-        } catch (
-                Exception e
-                )
+        } catch (Exception e)
 
         {
-            e.printStackTrace();
+            log.error(e.toString());;
             throw new RuntimeException("Cannot load file");
         } finally
 

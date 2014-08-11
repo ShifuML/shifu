@@ -1,6 +1,8 @@
 package ml.shifu.core.util;
 
 import com.google.common.base.Splitter;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.BufferedReader;
 import java.io.FileReader;
@@ -9,6 +11,8 @@ import java.util.List;
 import java.util.Scanner;
 
 public class LocalDataUtils {
+
+    private static Logger log = LoggerFactory.getLogger(LocalDataUtils.class);
 
     public static List<String> loadHeader(String path, String delimiter) {
         Scanner scanner = null;
@@ -21,7 +25,7 @@ public class LocalDataUtils {
                 header.add(s);
             }
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error(e.toString());
             throw new RuntimeException("Cannot load file");
         } finally {
             if (scanner == null) {
@@ -51,7 +55,7 @@ public class LocalDataUtils {
                 rows.add(fields);
             }
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error(e.toString());
             throw new RuntimeException("Cannot load file");
         } finally {
             if (scanner == null) {

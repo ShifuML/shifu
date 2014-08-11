@@ -2,6 +2,8 @@ package ml.shifu.core.util;
 
 import com.google.common.base.Splitter;
 import ml.shifu.core.di.spi.SingleThreadFileLoader;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.BufferedReader;
 import java.io.FileReader;
@@ -12,6 +14,8 @@ import java.util.Scanner;
 public class CSVWithHeaderLocalSingleThreadFileLoader implements SingleThreadFileLoader {
 
     private String delimiter = ",";
+
+    private static Logger log = LoggerFactory.getLogger(CSVWithHeaderLocalSingleThreadFileLoader.class);
 
     public List<List<Object>> load(String filePath) {
         Scanner scanner = null;
@@ -36,7 +40,7 @@ public class CSVWithHeaderLocalSingleThreadFileLoader implements SingleThreadFil
                 rows.add(fields);
             }
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error(e.toString());
             throw new RuntimeException("Cannot load file");
         } finally {
             if (scanner == null) {
