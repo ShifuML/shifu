@@ -33,7 +33,8 @@ public class HeaderFileLoader {
         } catch (Exception e)
 
         {
-            log.error(e.toString());;
+            log.error(e.toString());
+            ;
             throw new RuntimeException("Cannot load file");
         } finally
 

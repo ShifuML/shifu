@@ -58,7 +58,7 @@ public class Environment {
         try {
             loadShifuConfig();
         } catch (IOException e) {
-           // throw new ShifuException(ShifuErrorCode.ERROR_SHIFU_CONFIG, e);
+            // throw new ShifuException(ShifuErrorCode.ERROR_SHIFU_CONFIG, e);
         }
 
         if (properties.size() == 1) {

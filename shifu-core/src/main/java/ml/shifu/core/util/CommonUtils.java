@@ -19,23 +19,15 @@ import com.google.common.base.Function;
 import com.google.common.base.Splitter;
 import com.google.common.collect.Collections2;
 import com.google.common.collect.Lists;
-import ml.shifu.core.container.CategoricalValueObject;
-import ml.shifu.core.container.NumericalValueObject;
-import ml.shifu.core.container.RawValueObject;
-import ml.shifu.core.container.ColumnBinningResult;
-import ml.shifu.core.container.ColumnConfig;
-
-
+import ml.shifu.core.container.*;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.collections.Predicate;
-
 import org.apache.commons.lang.ArrayUtils;
 import org.apache.commons.lang.StringUtils;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.*;
+import java.io.File;
 import java.util.*;
 import java.util.Map.Entry;
 
@@ -51,7 +43,6 @@ public final class CommonUtils {
     }
 
     private static final Logger log = LoggerFactory.getLogger(CommonUtils.class);
-
 
 
     /**
@@ -176,8 +167,6 @@ public final class CommonUtils {
     }
 
 
-
-
     /**
      * Return one HashMap Object contains keys in the first parameter, values in the second parameter. Before calling
      * this method, you should be aware that headers should be unique.
@@ -197,7 +186,6 @@ public final class CommonUtils {
         }
         return rawDataMap;
     }
-
 
 
     /**
@@ -275,7 +263,6 @@ public final class CommonUtils {
 
         return entries;
     }
-
 
 
     /**
@@ -384,7 +371,6 @@ public final class CommonUtils {
 
         return buf.toString();
     }
-
 
 
     /**

@@ -10,7 +10,8 @@ import org.slf4j.LoggerFactory;
 public class RequestDispatcher {
     private static final Logger log = LoggerFactory.getLogger(RequestDispatcher.class);
 
-    private RequestDispatcher() {}
+    private RequestDispatcher() {
+    }
 
     public static void dispatch(Request req) throws Exception {
 

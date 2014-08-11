@@ -16,8 +16,8 @@
 
 package ml.shifu.core.di.spi;
 
-import ml.shifu.core.container.NumericalValueObject;
 import ml.shifu.core.container.ColumnBinningResult;
+import ml.shifu.core.container.NumericalValueObject;
 
 import java.util.List;
 
