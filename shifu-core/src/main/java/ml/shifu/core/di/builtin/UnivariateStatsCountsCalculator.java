@@ -10,7 +10,7 @@ import java.util.Set;
 
 public class UnivariateStatsCountsCalculator {
 
-    public static void calculate(UnivariateStats univariateStats, List<? extends Object> values) {
+    public static void calculate(UnivariateStats univariateStats, List<?> values) {
         Counts counts = new Counts();
 
         double totalFreq = 0;

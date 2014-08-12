@@ -34,7 +34,7 @@ public class HeaderFileLoader {
 
         {
             log.error(e.toString());
-            ;
+
             throw new RuntimeException("Cannot load file");
         } finally
 

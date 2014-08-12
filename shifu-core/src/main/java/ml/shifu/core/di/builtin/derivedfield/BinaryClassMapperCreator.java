@@ -14,7 +14,7 @@ import java.util.List;
 
 public class BinaryClassMapperCreator implements PMMLDerivedFieldCreator {
 
-    private static Logger log = LoggerFactory.getLogger(BinaryClassMapperCreator.class);
+    private static final Logger log = LoggerFactory.getLogger(BinaryClassMapperCreator.class);
 
     public DerivedField create(DataField dataField, ModelStats modelStats, Params params) {
 

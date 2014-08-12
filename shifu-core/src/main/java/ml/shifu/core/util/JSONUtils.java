@@ -45,7 +45,7 @@ public class JSONUtils {
     /*
      * @see ObjectMapper#readValue(Reader, Class);
      */
-    public static <T> T readValue(Reader src, Class<T> valueType) throws JsonParseException, JsonMappingException,
+    public static <T> T readValue(Reader src, Class<T> valueType) throws
             IOException {
         return getObjectMapperInstance().readValue(src, valueType);
     }
@@ -53,7 +53,7 @@ public class JSONUtils {
     /*
      * @see ObjectMapper#readValue(File, Class);
      */
-    public static <T> T readValue(File src, Class<T> valueType) throws JsonParseException, JsonMappingException,
+    public static <T> T readValue(File src, Class<T> valueType) throws
             IOException {
         return getObjectMapperInstance().readValue(src, valueType);
     }
@@ -61,7 +61,7 @@ public class JSONUtils {
     /*
      * @see ObjectMapper#readValue(InputStream, Class);
      */
-    public static <T> T readValue(InputStream src, Class<T> valueType) throws JsonParseException, JsonMappingException,
+    public static <T> T readValue(InputStream src, Class<T> valueType) throws
             IOException {
         return getObjectMapperInstance().readValue(src, valueType);
     }
@@ -69,7 +69,7 @@ public class JSONUtils {
     /*
      * @see ObjectMapper#readValue(src, Class);
      */
-    public static <T> T readValue(String src, Class<T> valueType) throws JsonParseException, JsonMappingException,
+    public static <T> T readValue(String src, Class<T> valueType) throws
             IOException {
         return getObjectMapperInstance().readValue(src, valueType);
     }
@@ -77,7 +77,7 @@ public class JSONUtils {
     /*
      * @see ObjectWriter#writeValue(Writer, Object);
      */
-    public static void writeValue(Writer w, Object value) throws JsonGenerationException, JsonMappingException,
+    public static void writeValue(Writer w, Object value) throws
             IOException {
         getObjectMapperInstance().writerWithDefaultPrettyPrinter().writeValue(w, value);
     }
@@ -85,7 +85,7 @@ public class JSONUtils {
     /*
      * @see ObjectWriter#writeValue(File, Object);
      */
-    public static void writeValue(File src, Object value) throws JsonGenerationException, JsonMappingException,
+    public static void writeValue(File src, Object value) throws
             IOException {
         getObjectMapperInstance().writerWithDefaultPrettyPrinter().writeValue(src, value);
     }

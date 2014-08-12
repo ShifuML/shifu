@@ -25,7 +25,7 @@ public class WOECalculator {
 
     private static final double EPS = 1e-10;
 
-    static public List<Double> calculate(Object[] pos, Object[] neg) {
+    public static List<Double> calculate(Object[] pos, Object[] neg) {
         Double[] tmpPos = new Double[pos.length];
         Double[] tmpNeg = new Double[neg.length];
 
@@ -37,7 +37,7 @@ public class WOECalculator {
         return calculate(tmpPos, tmpNeg);
     }
 
-    static public List<Double> calculate(Integer[] pos, Integer[] neg) {
+    public static List<Double> calculate(Integer[] pos, Integer[] neg) {
         Double[] tmpPos = new Double[pos.length];
         Double[] tmpNeg = new Double[neg.length];
 
@@ -49,7 +49,7 @@ public class WOECalculator {
         return calculate(tmpPos, tmpNeg);
     }
 
-    static public List<Double> calculate(Double[] pos, Double[] neg) {
+    public static List<Double> calculate(Double[] pos, Double[] neg) {
 
         List<Double> woe = new ArrayList<Double>();
 

@@ -22,9 +22,8 @@ import java.util.Comparator;
  */
 public class BinningObject {
 
-    private DataType type;
+    private final DataType type;
 
-    ;
     private Double nData;
     private String cData;
     private Double score;

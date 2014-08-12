@@ -74,7 +74,7 @@ public class QuickSort {
                 j--;
             }
 
-            // Wowo, we found those two elements, exchange them
+            //  we found those two elements, exchange them
             if (i <= j) {
                 exchange(values, i, j);
                 i++;
@@ -115,7 +115,7 @@ public class QuickSort {
                 j--;
             }
 
-            // Wowo, we found those two elements, exchange them
+            //  we found those two elements, exchange them
             if (i <= j) {
                 exchange(values, i, j);
                 i++;

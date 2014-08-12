@@ -33,7 +33,7 @@ import java.util.List;
 public class ConfusionMatrixCalculator {
 
     private static Logger log = LoggerFactory.getLogger(ConfusionMatrixCalculator.class);
-    private static String fmt = "%s|%s|%s|%s|%s|%s|%s|%s|%s\n";
+    private static final String fmt = "%s|%s|%s|%s|%s|%s|%s|%s|%s\n";
     // input
     private List<ModelResultObject> moList;
     private List<String> posTags;
@@ -60,7 +60,7 @@ public class ConfusionMatrixCalculator {
                 // Positive
                 sumPos += posScaleFactor;
                 sumWeightedPos += mo.getWeight() * posScaleFactor;
-            } else {
+            } else if (negTags.contains(mo.getTag())) {
                 // Negative
                 sumNeg += negScaleFactor;
                 sumWeightedNeg += mo.getWeight() * negScaleFactor;
@@ -142,7 +142,7 @@ public class ConfusionMatrixCalculator {
         prevCmo.setWeightedTn(sumWeightedNeg);
         prevCmo.setScore(1000);
 
-        saveConfusionMaxtrixWithWriter(writer, prevCmo);
+        saveConfusionMatrixWithWriter(writer, prevCmo);
 
         for (ModelResultObject mo : moList) {
             ConfusionMatrixObject cmo = new ConfusionMatrixObject(prevCmo);
@@ -162,13 +162,13 @@ public class ConfusionMatrixCalculator {
             }
 
             cmo.setScore(mo.getScore());
-            saveConfusionMaxtrixWithWriter(writer, cmo);
+            saveConfusionMatrixWithWriter(writer, cmo);
             prevCmo = cmo;
         }
 
     }
 
-    private void saveConfusionMaxtrixWithWriter(BufferedWriter writer, ConfusionMatrixObject cmo) {
+    private void saveConfusionMatrixWithWriter(BufferedWriter writer, ConfusionMatrixObject cmo) {
         try {
             writer.write(String.format(fmt, cmo.getTp(),
                     cmo.getFp(),

@@ -122,7 +122,8 @@ public final class CommonUtils {
      * @throws IllegalArgumentException {@code raw} and {@code delimiter} is null or empty.
      */
     public static String[] split(String raw, String delimiter) {
-        return splitAndReturnList(raw, delimiter).toArray(new String[0]);
+        List<String> split = splitAndReturnList(raw, delimiter);
+        return split.toArray(new String[split.size()]);
     }
 
     /**
@@ -133,7 +134,7 @@ public final class CommonUtils {
     public static List<String> splitAndReturnList(String raw, String delimiter) {
         if (StringUtils.isEmpty(raw) || StringUtils.isEmpty(delimiter)) {
             throw new IllegalArgumentException(String.format(
-                    "raw and delimeter should not be null or empty, raw:%s, delimeter:%s", raw, delimiter));
+                    "raw and delimiter should not be null or empty, raw:%s, delimiter:%s", raw, delimiter));
         }
         List<String> headerList = new ArrayList<String>();
         for (String str : Splitter.on(delimiter).split(raw)) {
@@ -152,7 +153,7 @@ public final class CommonUtils {
         if (CollectionUtils.isEmpty(columnConfigList)) {
             throw new IllegalArgumentException("columnConfigList should not be null or empty.");
         }
-        // I need cast operation because of common-collections dosen't support generic.
+        // I need cast operation because of common-collections doesn't support generic.
         ColumnConfig cc = (ColumnConfig) CollectionUtils.find(columnConfigList, new Predicate() {
             @Override
             public boolean evaluate(Object object) {
@@ -293,7 +294,7 @@ public final class CommonUtils {
      * @return "/" - if the OS is Linux
      * "\\\\" - if the OS is Windows
      */
-    public static String getPathSeparatorRegx() {
+    public static String getPathSeparatorRegex() {
         if (File.separator.equals(Constants.SLASH)) {
             return File.separator;
         } else {
@@ -307,13 +308,13 @@ public final class CommonUtils {
      *
      * @return true - if the columns contains targetColumn, or false
      */
-    public static boolean isColumnExists(String[] columns, String targetColunm) {
-        if (ArrayUtils.isEmpty(columns) || StringUtils.isBlank(targetColunm)) {
+    public static boolean isColumnExists(String[] columns, String targetColumn) {
+        if (ArrayUtils.isEmpty(columns) || StringUtils.isBlank(targetColumn)) {
             return false;
         }
 
         for (int i = 0; i < columns.length; i++) {
-            if (columns[i] != null && columns[i].equalsIgnoreCase(targetColunm)) {
+            if (columns[i] != null && columns[i].equalsIgnoreCase(targetColumn)) {
                 return true;
             }
         }
@@ -354,7 +355,7 @@ public final class CommonUtils {
      * @return the delimiter after escape
      */
     public static String escapePigString(String delimiter) {
-        StringBuffer buf = new StringBuffer();
+        StringBuilder buf = new StringBuilder();
 
         for (int i = 0; i < delimiter.length(); i++) {
             char c = delimiter.charAt(i);
@@ -464,11 +465,8 @@ public final class CommonUtils {
             return false;
         }
 
-        if (Double.isNaN(value) || Double.isInfinite(value)) {
-            return false;
-        }
+        return !(Double.isNaN(value) || Double.isInfinite(value));
 
-        return true;
     }
 
     public static List<NumericalValueObject> convertListRaw2Numerical(List<RawValueObject> rvoList, List<String> posTags, List<String> negTags) {

@@ -32,8 +32,8 @@ public class PMMLModelExecutor {
 
         Map<FieldName, ?> results = evaluator.evaluate(arguments);
         FieldName targetName = evaluator.getTargetField();
-        Object targetValue = results.get(targetName);
-        return targetValue;
+
+        return results.get(targetName);
     }
 
 }

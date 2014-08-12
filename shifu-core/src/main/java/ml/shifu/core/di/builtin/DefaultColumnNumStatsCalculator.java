@@ -31,16 +31,15 @@ public class DefaultColumnNumStatsCalculator implements ColumnNumStatsCalculator
     private static Logger log = LoggerFactory.getLogger(DefaultColumnNumStatsCalculator.class);
 
 
-    private Double sum = 0.0;
-    private Double squaredSum = 0.0;
-    private Double min = Double.MAX_VALUE;
-    private Double max = -Double.MAX_VALUE;
-    private Double mean = Double.NaN;
-    private Double stdDev = Double.NaN;
-    private Double median = Double.NaN;
-    private Double EPS = 1e-6;
+
 
     public ColumnNumStatsResult calculate(List<NumericalValueObject> nvoList) {
+
+        Double sum = 0.0;
+        Double squaredSum = 0.0;
+        Double min = Double.MAX_VALUE;
+        Double max = -Double.MAX_VALUE;
+        Double EPS = 1e-6;
 
         if (nvoList.size() == 0) {
             throw new IllegalArgumentException("Empty List");
@@ -71,10 +70,10 @@ public class DefaultColumnNumStatsCalculator implements ColumnNumStatsCalculator
         }
 
         //it's ok while the voList is sorted;
-        median = nvoList.get(nvoList.size() / 2).getValue();
+        Double median = nvoList.get(nvoList.size() / 2).getValue();
 
-        mean = sum / validSize;
-        stdDev = Math.sqrt((squaredSum - (sum * sum) / validSize + EPS)
+        Double mean = sum / validSize;
+        Double stdDev = Math.sqrt((squaredSum - (sum * sum) / validSize + EPS)
                 / (validSize - 1));
 
 

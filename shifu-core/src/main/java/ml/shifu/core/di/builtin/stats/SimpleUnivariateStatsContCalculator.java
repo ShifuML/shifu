@@ -20,7 +20,7 @@ public class SimpleUnivariateStatsContCalculator {
     private ContStats contStats = new ContStats();
 
 
-    public void calculate(UnivariateStats univariateStats, List<? extends Object> values, Params params) {
+    public void calculate(UnivariateStats univariateStats, List<?> values, Params params) {
 
 
         calculateBasicStats(values);
@@ -29,10 +29,9 @@ public class SimpleUnivariateStatsContCalculator {
         univariateStats.setNumericInfo(numericInfo);
         univariateStats.setContStats(contStats);
 
-        return;
     }
 
-    private void calculateBasicStats(List<? extends Object> values) {
+    private void calculateBasicStats(List<?> values) {
 
         Double sum;
         Double squaredSum;
@@ -99,8 +98,6 @@ public class SimpleUnivariateStatsContCalculator {
 
         contStats.setTotalValuesSum(sum);
         contStats.setTotalSquaresSum(squaredSum);
-
-        return;
 
     }
 

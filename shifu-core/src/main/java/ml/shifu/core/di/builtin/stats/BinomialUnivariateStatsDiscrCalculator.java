@@ -42,7 +42,7 @@ public class BinomialUnivariateStatsDiscrCalculator {
             CategoricalValueObject vo = cvoList.get(i);
 
 
-            String category = vo.getValue().toString();
+            String category = vo.getValue();
             categorySet.add(category);
 
             if (vo.getIsPositive()) {

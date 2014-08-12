@@ -155,7 +155,7 @@ public class ColumnConfig {
     /**
      * ---------------------------------------------------------------------------
      *
-     * 					Capsulated methods for easy usage
+     * 					Encapsulated methods for easy usage
      *
      * ---------------------------------------------------------------------------
      */

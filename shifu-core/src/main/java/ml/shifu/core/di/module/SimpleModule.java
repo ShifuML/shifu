@@ -63,11 +63,7 @@ public class SimpleModule extends AbstractModule {
     }
 
     public Boolean has(String spi) {
-        if (bindings.containsKey(spi) && bindings.get(spi) != null) {
-            return true;
-        } else {
-            return false;
-        }
+        return bindings.containsKey(spi) && bindings.get(spi) != null;
 
     }
 

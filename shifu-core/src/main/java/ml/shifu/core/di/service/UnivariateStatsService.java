@@ -18,11 +18,11 @@ public class UnivariateStatsService {
         this.univariateStatsCalculator = univariateStatsCalculator;
     }
 
-    public UnivariateStats getUnivariateStats(DataField dataField, List<? extends Object> values, Params params) {
+    public UnivariateStats getUnivariateStats(DataField dataField, List<?> values, Params params) {
 
-        UnivariateStats univariateStats = univariateStatsCalculator.calculate(dataField, values, params);
 
-        return univariateStats;
+
+        return univariateStatsCalculator.calculate(dataField, values, params);
 
     }
 

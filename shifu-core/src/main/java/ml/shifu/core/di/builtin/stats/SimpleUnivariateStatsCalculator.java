@@ -11,7 +11,7 @@ import java.util.List;
 public class SimpleUnivariateStatsCalculator implements UnivariateStatsCalculator {
     private Integer numBins;
 
-    public UnivariateStats calculate(DataField field, List<? extends Object> values, Params params) {
+    public UnivariateStats calculate(DataField field, List<?> values, Params params) {
         UnivariateStats stats = new UnivariateStats();
         stats.setField(field.getName());
 

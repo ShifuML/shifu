@@ -16,9 +16,9 @@ public class BinomialUnivariateStatsCalculator implements UnivariateStatsCalcula
     private List<String> posTags;
     private List<String> negTags;
     private Integer numBins;
-    private List<String> tags;
 
-    public UnivariateStats calculate(DataField field, List<? extends Object> values, Params params) {
+
+    public UnivariateStats calculate(DataField field, List<?> values, Params params) {
         UnivariateStats stats = new UnivariateStats();
         stats.setField(field.getName());
 
@@ -26,8 +26,7 @@ public class BinomialUnivariateStatsCalculator implements UnivariateStatsCalcula
 
 
         setParams(params);
-
-        this.tags = (List<String>) params.get("tags");
+        List<String> tags = (List<String>) params.get("tags");
 
         List<RawValueObject> rvoList = new ArrayList<RawValueObject>();
 

@@ -53,9 +53,6 @@ public class DefaultStatsProcessor implements StatsProcessor {
         this.binStatsCalculator = binStatsCalculator;
     }
 
-    ;
-
-
     public void process(ColumnConfig columnConfig, List<RawValueObject> rvoList) {
 
 
