@@ -4,6 +4,8 @@ import org.apache.commons.io.IOUtils;
 import org.dmg.pmml.*;
 import org.jpmml.model.ImportFilter;
 import org.jpmml.model.JAXBUtil;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.xml.sax.InputSource;
 
 import javax.xml.transform.sax.SAXSource;
@@ -17,6 +19,12 @@ import java.util.*;
 
 
 public class PMMLUtils {
+
+    private PMMLUtils() {
+
+    }
+
+    private static Logger log = LoggerFactory.getLogger(PMMLUtils.class);
 
 
     public static List<Extension> createExtensions(Map<String, String> extensionMap) {
@@ -63,7 +71,7 @@ public class PMMLUtils {
             StreamResult result = new StreamResult(os);
             JAXBUtil.marshalPMML(pmml, result);
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error(e.toString());
         } finally {
             IOUtils.closeQuietly(os);
         }
@@ -79,7 +87,7 @@ public class PMMLUtils {
             return JAXBUtil.unmarshalPMML(transformedSource);
 
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error(e.toString());
             throw e;
         }
     }
@@ -161,29 +169,12 @@ public class PMMLUtils {
                 derivedFieldMap.put(rawFieldName, derivedField);
             }
 
-            //derivedFieldMap.put(derivedField.getName(), derivedField);
+
         }
 
         return derivedFieldMap;
     }
- /*
-    public static Map<FieldName, DerivedField> getDerivedFieldMap(LocalTransformations localTransformations) {
 
-        Map<FieldName, DerivedField> derivedFieldMap = new HashMap<FieldName, DerivedField>();
-
-        for (DerivedField derivedField : localTransformations.getDerivedFields()) {
-            derivedFieldMap.put(derivedField.getName(), derivedField);
-        }
-
-        return derivedFieldMap;
-    }
-        */
-
-
-    //public static List<DerivedField> getAvailableDerivedFields(PMML pmml, String modelName) {
-    //    Model model = PMMLUtils.getModelByName(pmml, modelName);
-    //    return getAvailableDerivedFields(pmml, model);
-    //}
 
     public static Map<FieldUsageType, List<DerivedField>> getDerivedFieldsByUsageType(PMML pmml, Model model) {
 
@@ -323,14 +314,7 @@ public class PMMLUtils {
 
         List<DerivedField> activeFields = fieldsMap.get(FieldUsageType.ACTIVE);
         List<DerivedField> targetFields = fieldsMap.get(FieldUsageType.TARGET);
-        /*
-        Set<FieldName> activeFieldNameSet = new HashSet<FieldName>();
 
-        for (MiningField miningField : model.getMiningSchema().getMiningFields()) {
-            if (miningField.getUsageType().equals(FieldUsageType.ACTIVE)) {
-                activeFieldNameSet.add(miningField.getName());
-            }
-        } */
 
         NeuralInputs neuralInputs = new NeuralInputs();
 
@@ -361,31 +345,6 @@ public class PMMLUtils {
         neuralInputs.setNumberOfInputs(neuralInputs.getNeuralInputs().size());
         return neuralInputs;
     }
-   /*
-    public static void getTransformationMap(PMML pmml, Model model) {
 
-
-
-        TransformationDictionary transformationDictionary = pmml.getTransformationDictionary();
-
-        MiningSchema miningschema = model.getMiningSchema();
-
-        Set<FieldName> activeFieldNameSet = new HashSet<FieldName>();
-
-        for (MiningField miningField : miningschema.getMiningFields()) {
-            if (miningField.getUsageType().equals(FieldUsageType.ACTIVE)) {
-                activeFieldNameSet.add(miningField.getName());
-            }
-        }
-
-        LocalTransformations localTransformations = model.getLocalTransformations();
-        for (DerivedField derivedfield : localTransformations.getDerivedFields()) {
-            Expression expression = derivedfield.getExpression();
-
-            if (expression instanceof NormContinuous) {
-                ((NormContinuous) expression).getField()
-            }
-        }
-    }      */
 
 }

@@ -13,9 +13,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package ml.shifu.core.container.obj;
+package ml.shifu.core.container;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+
+import java.util.List;
 
 /**
  * ColumnNumStatsResult class is stats collection for Column
@@ -24,53 +26,45 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
  * ks/iv will be used for variable selection
  */
 @JsonIgnoreProperties(ignoreUnknown = true)
-public class ColumnNumStatsResult extends ColumnDerivedResult {
-
-    private Double max;
-    private Double min;
-    private Double mean;
-    private Double median;
-    private Double stdDev;
+public class ColumnBinStatsResult extends ColumnDerivedResult {
 
 
-    public Double getMax() {
-        return max;
+    private Double ks;
+    private Double iv;
+    private List<Double> binWoe;
+    private List<Integer> binAvgScore;
+
+    public List<Integer> getBinAvgScore() {
+        return binAvgScore;
     }
 
-    public void setMax(Double max) {
-        this.max = max;
+    public void setBinAvgScore(List<Integer> binAvgScore) {
+        this.binAvgScore = binAvgScore;
     }
 
-    public Double getMin() {
-        return min;
+    public List<Double> getBinWoe() {
+        return binWoe;
     }
 
-    public void setMin(Double min) {
-        this.min = min;
+    public void setBinWoe(List<Double> binWoe) {
+        this.binWoe = binWoe;
     }
 
-    public Double getMean() {
-        return mean;
+    public Double getKs() {
+        return ks;
     }
 
-    public void setMean(Double mean) {
-        this.mean = mean;
+    public void setKs(Double ks) {
+        this.ks = ks;
     }
 
-    public Double getStdDev() {
-        return stdDev;
+    public Double getIv() {
+        return iv;
     }
 
-    public void setStdDev(Double stdDev) {
-        this.stdDev = stdDev;
+    public void setIv(Double iv) {
+        this.iv = iv;
     }
 
 
-    public Double getMedian() {
-        return median;
-    }
-
-    public void setMedian(Double median) {
-        this.median = median;
-    }
 }

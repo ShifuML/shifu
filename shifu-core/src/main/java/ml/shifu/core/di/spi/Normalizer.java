@@ -16,7 +16,7 @@
 
 package ml.shifu.core.di.spi;
 
-import ml.shifu.core.container.obj.ColumnConfig;
+import ml.shifu.core.container.ColumnConfig;
 
 public interface Normalizer {
 

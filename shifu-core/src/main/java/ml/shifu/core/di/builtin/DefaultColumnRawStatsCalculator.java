@@ -18,7 +18,7 @@ package ml.shifu.core.di.builtin;
 
 
 import ml.shifu.core.container.RawValueObject;
-import ml.shifu.core.container.obj.ColumnRawStatsResult;
+import ml.shifu.core.container.ColumnRawStatsResult;
 import ml.shifu.core.di.spi.ColumnRawStatsCalculator;
 import ml.shifu.core.util.CommonUtils;
 

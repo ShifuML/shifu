@@ -17,7 +17,7 @@
 package ml.shifu.core.di.spi;
 
 import ml.shifu.core.container.CategoricalValueObject;
-import ml.shifu.core.container.obj.ColumnBinningResult;
+import ml.shifu.core.container.ColumnBinningResult;
 
 import java.util.List;
 

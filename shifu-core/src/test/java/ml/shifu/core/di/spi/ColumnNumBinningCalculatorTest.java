@@ -1,7 +1,7 @@
 package ml.shifu.core.di.spi;
 
 import ml.shifu.core.container.NumericalValueObject;
-import ml.shifu.core.container.obj.ColumnBinningResult;
+import ml.shifu.core.container.ColumnBinningResult;
 import ml.shifu.core.di.builtin.EqualPositiveColumnNumBinningCalculator;
 import ml.shifu.core.di.builtin.TotalPercentileColumnNumBinningCalculator;
 import org.testng.annotations.Test;

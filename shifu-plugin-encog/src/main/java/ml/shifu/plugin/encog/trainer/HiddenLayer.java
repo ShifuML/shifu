@@ -1,4 +1,4 @@
-package ml.shifu.core.container;
+package ml.shifu.plugin.encog.trainer;
 
 public class HiddenLayer {
 

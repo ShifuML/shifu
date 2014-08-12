@@ -88,7 +88,7 @@ public class LocalModeTransformRequestProcessor implements RequestProcessor {
 
 
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error(e.toString());
         } finally {
             if (writer != null) {
                 writer.close();
