@@ -14,12 +14,12 @@ public class PMMLAdapterCommonUtil {
         int index = 0;
         List<String> activeFields = getSchemaFieldViaUsageType(schema,
                 FieldUsageType.ACTIVE);
-        for (int i = 0; i < activeFields.size(); i++) {
+        for (String activeField : activeFields) {
 
             DerivedField field = new DerivedField(OpType.CONTINUOUS,
                     DataType.DOUBLE).withName(
-                    new FieldName(activeFields.get(i))).withExpression(
-                    new FieldRef(new FieldName(activeFields.get(i))));
+                    new FieldName(activeField)).withExpression(
+                    new FieldRef(new FieldName(activeField)));
             pmmlModel
                     .withNeuralInputs(new NeuralInput(field, "0," + (index++)));
         }

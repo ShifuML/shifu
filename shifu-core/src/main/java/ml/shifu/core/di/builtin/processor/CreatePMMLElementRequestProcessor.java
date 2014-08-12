@@ -96,7 +96,7 @@ public class CreatePMMLElementRequestProcessor implements RequestProcessor {
         if (module.has("PMMLLocalTransformationsCreator")) {
             PMMLLocalTransformationsService service = injector.getInstance(PMMLLocalTransformationsService.class);
 
-            service.createLocalTransformations(pmml, localTransformationsBinding.getParams());
+            service.createLocalTransformations(pmml, localTransformationsBinding != null ? localTransformationsBinding.getParams() : null);
 
         }
 

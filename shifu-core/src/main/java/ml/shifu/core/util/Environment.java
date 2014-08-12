@@ -145,7 +145,7 @@ public class Environment {
      * @return true if it is windows, or return false
      */
     private static boolean isWindows(String osName) {
-        return (osName.indexOf(WIN_PREFIX) >= 0);
+        return (osName.contains(WIN_PREFIX));
     }
 
     /**
@@ -155,7 +155,7 @@ public class Environment {
      * @return true if it is windows, or return false
      */
     private static boolean isUnix(String osName) {
-        return (osName.indexOf(UNIX_SUFFIX_1) >= 0 || osName.indexOf(UNIX_SUFFIX_2) >= 0 || osName
+        return (osName.contains(UNIX_SUFFIX_1) || osName.contains(UNIX_SUFFIX_2) || osName
                 .indexOf(UNIX_SUFFIX_3) > 0);
     }
 

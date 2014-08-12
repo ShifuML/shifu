@@ -37,10 +37,7 @@ public class BinomialUnivariateStatsDiscrCalculator {
 
         int voSize = cvoList.size();
 
-        for (int i = 0; i < voSize; i++) {
-
-            CategoricalValueObject vo = cvoList.get(i);
-
+        for (CategoricalValueObject vo : cvoList) {
 
             String category = vo.getValue();
             categorySet.add(category);

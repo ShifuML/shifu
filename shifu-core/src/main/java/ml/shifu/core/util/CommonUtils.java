@@ -313,8 +313,8 @@ public final class CommonUtils {
             return false;
         }
 
-        for (int i = 0; i < columns.length; i++) {
-            if (columns[i] != null && columns[i].equalsIgnoreCase(targetColumn)) {
+        for (String column : columns) {
+            if (column != null && column.equalsIgnoreCase(targetColumn)) {
                 return true;
             }
         }
@@ -337,9 +337,7 @@ public final class CommonUtils {
             return null;
         }
 
-        Iterator<T> iterator = leftCol.iterator();
-        while (iterator.hasNext()) {
-            T element = iterator.next();
+        for (T element : leftCol) {
             if (rightCol.contains(element)) {
                 return element;
             }

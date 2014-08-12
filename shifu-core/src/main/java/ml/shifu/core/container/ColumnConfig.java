@@ -173,10 +173,7 @@ public class ColumnConfig {
      */
     @JsonIgnore
     public boolean isCategorical() {
-        if (columnType == null) {
-            return false;
-        }
-        return columnType.equals(ColumnType.C);
+        return columnType != null && columnType.equals(ColumnType.C);
     }
 
     /**

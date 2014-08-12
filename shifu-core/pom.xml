@@ -278,7 +278,7 @@
                 <version>0.7.1.201405082137</version>
                 <executions>
                     <execution>
-                        <id>default-prepare-agent</id>
+                        <id>jacoco-prepare-agent</id>
                         <goals>
                             <goal>prepare-agent</goal>
                         </goals>
