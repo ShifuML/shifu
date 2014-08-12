@@ -7,4 +7,5 @@ target
 .project
 .settings
 test-output
+*~
 .sonar
