@@ -12,7 +12,7 @@ import org.slf4j.LoggerFactory;
 import java.util.*;
 
 public class BinomialUnivariateStatsDiscrCalculator {
-    private static Logger log = LoggerFactory.getLogger(BinomialUnivariateStatsDiscrCalculator.class);
+    private static final Logger log = LoggerFactory.getLogger(BinomialUnivariateStatsDiscrCalculator.class);
 
     public static void calculate(UnivariateStats univariateStats, List<CategoricalValueObject> cvoList, Map<String, Object> params) {
 

@@ -40,7 +40,7 @@ public class CSVWithoutHeaderLocalSingleThreadFileLoader implements SingleThread
             log.error(e.toString());
             throw new RuntimeException("Cannot load file");
         } finally {
-            if (scanner == null) {
+            if (scanner != null) {
                 scanner.close();
             }
         }

@@ -39,7 +39,7 @@ public class HeaderFileLoader {
         } finally
 
         {
-            if (scanner == null) {
+            if (scanner != null) {
                 scanner.close();
             }
         }
