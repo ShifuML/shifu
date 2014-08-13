@@ -2,7 +2,12 @@
 
 CLASSPATH=`find ${SHIFU_HOME}/lib -name "*.jar" | xargs | sed 's/ /:/g'`
 CLASSPATH_PLUGIN=`find ${SHIFU_HOME}/plugin | xargs | sed 's/ /:/g'`
-CLASSPATH=".:${SHIFU_HOME}:${CLASSPATH}:${CLASSPATH_PLUGIN}:${SHIFU_HOME}/conf":`hadoop classpath`
+CLASSPATH=".:${SHIFU_HOME}:${CLASSPATH}:${CLASSPATH_PLUGIN}:${SHIFU_HOME}/conf"
+
+command -v hadoop > /dev/null && {
+    HADOOP_CLASSPATH=`hadoop classpath`
+    CLASSPATH=$HADOOP_CLASSPATH:$CLASSPATH
+}
 
 CLASS=ml.shifu.core.util.ShifuCLI
 
