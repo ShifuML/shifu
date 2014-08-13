@@ -12,12 +12,9 @@ import java.util.Map;
 public class Params extends LinkedHashMap<String, Object> {
 
 
-    //public void set(String key, Object value) {
-    //    super.put(key, value);
-    //}
-
     private Map<String, Params> fieldParamsMap = null;
     private Map<String, String> bindings = null;
+    private List<FieldConf> fieldConfs = null;
 
     public Map<String, String> getBindings() {
         return bindings;
@@ -30,9 +27,6 @@ public class Params extends LinkedHashMap<String, Object> {
     public Map<String, Params> getFieldParamsMap() {
         return fieldParamsMap;
     }
-
-
-    private List<FieldConf> fieldConfs = null;
 
     public void setFieldParamsMap(Map<String, Params> fieldParamsMap) {
         this.fieldParamsMap = fieldParamsMap;
@@ -120,15 +114,6 @@ public class Params extends LinkedHashMap<String, Object> {
         super.put(key, value);
     }
 
-   /*
-    public Map<String, Object> getParamMap() {
-        return paramMap;
-    }
-
-    public void setParamMap(Map<String, Object> paramMap) {
-        this.paramMap = paramMap;
-    }
-       */
 
 
 }

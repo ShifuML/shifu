@@ -8,6 +8,6 @@ import java.util.List;
 
 public interface UnivariateStatsCalculator {
 
-    public UnivariateStats calculate(DataField field, List<? extends Object> values, Params params);
+    public UnivariateStats calculate(DataField field, List<?> values, Params params);
 
 }

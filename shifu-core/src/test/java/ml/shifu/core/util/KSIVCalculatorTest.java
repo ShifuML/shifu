@@ -29,13 +29,13 @@ import java.util.List;
  */
 public class KSIVCalculatorTest {
 
-    private KSIVCalculator calc = new KSIVCalculator();
     private static final DecimalFormat df = new DecimalFormat("0.00");
+    private KSIVCalculator calc = new KSIVCalculator();
 
     @Test
     public void test() {
-        List<Integer> a = Arrays.asList(new Integer[]{1, 2, 3, 4, 5, 6});
-        List<Integer> b = Arrays.asList(new Integer[]{2, 2, 5, 5, 5, 5});
+        List<Integer> a = Arrays.asList(1, 2, 3, 4, 5, 6);
+        List<Integer> b = Arrays.asList(2, 2, 5, 5, 5, 5);
 
         calc.calculateKSIV(a, b);
 

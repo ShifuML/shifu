@@ -24,6 +24,33 @@ public class ZScoreNormalizer implements Normalizer {
 
     private Double stdDevCutOff = 4.0;
 
+    /**
+     * Compute the zscore, by original value, mean, standard deviation and standard deviation cutoff
+     *
+     * @param var          - original value
+     * @param mean         - mean value
+     * @param stdDev       - standard deviation
+     * @param stdDevCutOff - standard deviation cutoff
+     * @return zscore
+     */
+    public static double computeZScore(double var, double mean, double stdDev, double stdDevCutOff) {
+        double maxCutOff = mean + stdDevCutOff * stdDev;
+        if (var > maxCutOff) {
+            var = maxCutOff;
+        }
+
+        double minCutOff = mean - stdDevCutOff * stdDev;
+        if (var < minCutOff) {
+            var = minCutOff;
+        }
+
+        if (stdDev > 0.00001) {
+            return (var - mean) / stdDev;
+        } else {
+            return 0.0;
+        }
+    }
+
     @Override
     public Double normalize(ColumnConfig config, Object raw) {
 
@@ -50,33 +77,6 @@ public class ZScoreNormalizer implements Normalizer {
             }
 
             return computeZScore(value, config.getMean(), config.getStdDev(), stdDevCutOff);
-        }
-    }
-
-    /**
-     * Compute the zscore, by original value, mean, standard deviation and standard deviation cutoff
-     *
-     * @param var          - original value
-     * @param mean         - mean value
-     * @param stdDev       - standard deviation
-     * @param stdDevCutOff - standard deviation cutoff
-     * @return zscore
-     */
-    public static double computeZScore(double var, double mean, double stdDev, double stdDevCutOff) {
-        double maxCutOff = mean + stdDevCutOff * stdDev;
-        if (var > maxCutOff) {
-            var = maxCutOff;
-        }
-
-        double minCutOff = mean - stdDevCutOff * stdDev;
-        if (var < minCutOff) {
-            var = minCutOff;
-        }
-
-        if (stdDev > 0.00001) {
-            return (var - mean) / stdDev;
-        } else {
-            return 0.0;
         }
     }
 }

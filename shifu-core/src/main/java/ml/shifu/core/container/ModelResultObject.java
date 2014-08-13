@@ -45,16 +45,16 @@ public class ModelResultObject {
         return tag;
     }
 
+    // Others
+    public String toString() {
+        return "(" + this.score + ", " + this.tag + ", " + this.weight + ")";
+    }
+
     // Comparator, descends
     public static class ModelResultObjectComparator implements Comparator<ModelResultObject> {
         public int compare(ModelResultObject a, ModelResultObject b) {
             return Double.compare(b.score, a.score);
         }
-    }
-
-    // Others
-    public String toString() {
-        return "(" + this.score + ", " + this.tag + ", " + this.weight + ")";
     }
 
 }

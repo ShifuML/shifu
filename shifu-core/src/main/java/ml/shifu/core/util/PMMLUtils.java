@@ -10,7 +10,6 @@ import org.xml.sax.InputSource;
 
 import javax.xml.transform.sax.SAXSource;
 import javax.xml.transform.stream.StreamResult;
-
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.InputStream;
@@ -20,12 +19,11 @@ import java.util.*;
 
 public class PMMLUtils {
 
+    private static Logger log = LoggerFactory.getLogger(PMMLUtils.class);
+
     private PMMLUtils() {
 
     }
-
-    private static Logger log = LoggerFactory.getLogger(PMMLUtils.class);
-
 
     public static List<Extension> createExtensions(Map<String, String> extensionMap) {
 

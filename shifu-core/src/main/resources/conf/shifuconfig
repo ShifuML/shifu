@@ -1,13 +1,11 @@
 # zookeeperServers is used for distributed training 
 zookeeperServers=
 
-# hadoopNumParallel is for parallelity for when using mapreduce mode
 hadoopNumParallel=40
 
 # hadoopJobQueue specifies the hadoop job queue
 hadoopJobQueue=default
 
-# localNumParallel is for parallelity for when using local mode
 localNumParallel=6
 
 # how many records per message

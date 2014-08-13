@@ -5,10 +5,10 @@ package ml.shifu.core.plugin.pmml;
 
 
 /**
- * The abstract class that converts the Machine Learing model to a PMML model
+ * The abstract class that converts the Machine Learning model to a PMML model
  *
  * @param <T> The target Machine Learning model from specific Machine Learning framework such
- *            as Encog, Machout, and Spark.
+ *            as Encog, Mahout, and Spark.
  * @param <S> The source PMML model
  */
 public interface GenericMLModelBuilder<T, S> {

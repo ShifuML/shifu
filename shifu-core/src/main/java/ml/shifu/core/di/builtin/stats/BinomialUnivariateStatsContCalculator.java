@@ -1,11 +1,11 @@
 package ml.shifu.core.di.builtin.stats;
 
-import ml.shifu.core.container.NumericalValueObject;
 import ml.shifu.core.container.ColumnBinningResult;
+import ml.shifu.core.container.NumericalValueObject;
+import ml.shifu.core.di.builtin.EqualPositiveColumnNumBinningCalculator;
 import ml.shifu.core.di.builtin.KSIVCalculator;
 import ml.shifu.core.di.builtin.QuantileCalculator;
 import ml.shifu.core.di.builtin.WOECalculator;
-import ml.shifu.core.di.builtin.EqualPositiveColumnNumBinningCalculator;
 import ml.shifu.core.util.CommonUtils;
 import ml.shifu.core.util.PMMLUtils;
 import org.dmg.pmml.ContStats;
@@ -33,7 +33,7 @@ public class BinomialUnivariateStatsContCalculator {
         univariateStats.setNumericInfo(numericInfo);
         univariateStats.setContStats(contStats);
 
-        return;
+
     }
 
     private void calculateBasicStats(List<NumericalValueObject> nvoList) {
@@ -42,9 +42,7 @@ public class BinomialUnivariateStatsContCalculator {
         Double squaredSum;
         Double min = Double.MAX_VALUE;
         Double max = -Double.MAX_VALUE;
-        Double mean = Double.NaN;
-        Double stdDev = Double.NaN;
-        Double median = Double.NaN;
+
 
         Double EPS = 1e-6;
 
@@ -83,10 +81,10 @@ public class BinomialUnivariateStatsContCalculator {
 
 
         //it's ok while the voList is sorted;
-        median = validValues.get(validSize / 2);
+        Double median = validValues.get(validSize / 2);
 
-        mean = sum / validSize;
-        stdDev = Math.sqrt((squaredSum - (sum * sum) / validSize + EPS)
+        Double mean = sum / validSize;
+        Double stdDev = Math.sqrt((squaredSum - (sum * sum) / validSize + EPS)
                 / (validSize - 1));
 
         Double interQuartileRange = validValues.get((int) Math.floor(validSize * 0.75)) - validValues.get((int) Math.floor(validSize * 0.25));
@@ -106,7 +104,6 @@ public class BinomialUnivariateStatsContCalculator {
         contStats.setTotalValuesSum(sum);
         contStats.setTotalSquaresSum(squaredSum);
 
-        return;
 
     }
 
@@ -140,8 +137,8 @@ public class BinomialUnivariateStatsContCalculator {
         extensionMap.put("BinWeightedCountNeg", result.getBinWeightedNeg().toString());
         extensionMap.put("BinPosRate", result.getBinPosRate().toString());
 
-        WOECalculator woeCalculator = new WOECalculator();
-        List<Double> woe = woeCalculator.calculate(result.getBinCountPos().toArray(), result.getBinCountNeg().toArray());
+
+        List<Double> woe = WOECalculator.calculate(result.getBinCountPos().toArray(), result.getBinCountNeg().toArray());
         extensionMap.put("BinWOE", woe.toString());
 
         KSIVCalculator ksivCalculator = new KSIVCalculator();

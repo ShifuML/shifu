@@ -8,11 +8,12 @@ import java.util.List;
 
 public class BinaryConfusionMatrixCalculator {
 
-    private Double posScaleFactor = 1.0;
-    private Double negScaleFactor = 1.0;
+
 
     public List<BinaryConfusionMatrix> calculate(List<ClassificationResult> classificationResults, List<String> posTags, List<String> negTags) {
 
+        Double posScaleFactor = 1.0;
+        Double negScaleFactor = 1.0;
         List<BinaryConfusionMatrix> confusionMatrixList = new ArrayList<BinaryConfusionMatrix>();
 
         Double sumPos = 0.0;

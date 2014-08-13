@@ -30,7 +30,7 @@ import java.util.List;
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class ColumnBinningResult extends ColumnDerivedResult {
 
-    private Integer length = Integer.valueOf(0);
+    private Integer length = 0;
 
     private List<Double> binBoundary;
     private List<String> binCategory;

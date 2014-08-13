@@ -1,7 +1,6 @@
 package ml.shifu.core.request;
 
 import ml.shifu.core.util.JSONUtils;
-import org.testng.annotations.Test;
 
 import java.io.File;
 

@@ -54,7 +54,7 @@ fi
 LATEST_JAVA_OPTS=${JAVA_OPTS}
 LATEST_HADOOP_CONF_DIR=${HADOOP_CONF_DIR}
 
-for SHIFU_CONFIG_FILE in `echo ${SHIFU_HOME}/conf/shifuconfig /etc/shifconfig ~/.shifuconfig`; do
+for SHIFU_CONFIG_FILE in `echo ${SHIFU_HOME}/conf/shifuconfig /etc/shifuconfig ~/.shifuconfig`; do
     if [ -f ${SHIFU_CONFIG_FILE} ]; then
         . ${SHIFU_CONFIG_FILE}
     fi

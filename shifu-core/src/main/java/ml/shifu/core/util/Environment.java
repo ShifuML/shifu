@@ -30,6 +30,13 @@ import java.util.Properties;
  */
 public class Environment {
 
+    public static final String SHIFU_HOME = "SHIFU_HOME";
+    public static final String SYSTEM_USER = "SYSTEM_USER";
+    public static final String ZOO_KEEPER_SERVERS = "zookeeperServers";
+    public static final String HADOOP_NUM_PARALLEL = "hadoopNumParallel";
+    public static final String LOCAL_NUM_PARALLEL = "localNumParallel";
+    public static final String RECORD_CNT_PER_MESSAGE = "recordCntPerMessage";
+    public static final String HADOOP_JOB_QUEUE = "hadoopJobQueue";
     private static final String OS_NAME = "os.name";
     private static final String UNIX_SUFFIX_1 = "nix";
     private static final String UNIX_SUFFIX_2 = "nux";
@@ -37,16 +44,6 @@ public class Environment {
     private static final String WIN_PREFIX = "win";
     private static final String USER_NAME = "user.name";
     private static final String USER = "USER";
-
-    public static final String SHIFU_HOME = "SHIFU_HOME";
-    public static final String SYSTEM_USER = "SYSTEM_USER";
-
-    public static final String ZOO_KEEPER_SERVERS = "zookeeperServers";
-    public static final String HADOOP_NUM_PARALLEL = "hadoopNumParallel";
-    public static final String LOCAL_NUM_PARALLEL = "localNumParallel";
-    public static final String RECORD_CNT_PER_MESSAGE = "recordCntPerMessage";
-    public static final String HADOOP_JOB_QUEUE = "hadoopJobQueue";
-
     private static Logger logger = LoggerFactory.getLogger(Environment.class);
     private static Properties properties = new Properties();
 
@@ -58,7 +55,7 @@ public class Environment {
         try {
             loadShifuConfig();
         } catch (IOException e) {
-           // throw new ShifuException(ShifuErrorCode.ERROR_SHIFU_CONFIG, e);
+            // throw new ShifuException(ShifuErrorCode.ERROR_SHIFU_CONFIG, e);
         }
 
         if (properties.size() == 1) {
@@ -75,9 +72,9 @@ public class Environment {
 
     /**
      * Load properties from
-     * ${SHIFU_HOME}/conf/shifconfig
-     * /etc/shifconfig
-     * ~/.shifconfig
+     * ${SHIFU_HOME}/conf/shifuconfig
+     * /etc/shifuconfig
+     * ~/.shifuconfig
      * Provide function to reload
      *
      * @throws IOException
@@ -148,7 +145,7 @@ public class Environment {
      * @return true if it is windows, or return false
      */
     private static boolean isWindows(String osName) {
-        return (osName.indexOf(WIN_PREFIX) >= 0);
+        return (osName.contains(WIN_PREFIX));
     }
 
     /**
@@ -158,7 +155,7 @@ public class Environment {
      * @return true if it is windows, or return false
      */
     private static boolean isUnix(String osName) {
-        return (osName.indexOf(UNIX_SUFFIX_1) >= 0 || osName.indexOf(UNIX_SUFFIX_2) >= 0 || osName
+        return (osName.contains(UNIX_SUFFIX_1) || osName.contains(UNIX_SUFFIX_2) || osName
                 .indexOf(UNIX_SUFFIX_3) > 0);
     }
 

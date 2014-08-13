@@ -18,12 +18,7 @@ package ml.shifu.core.di.builtin;
 
 
 import com.google.inject.Inject;
-import ml.shifu.core.container.CategoricalValueObject;
-import ml.shifu.core.container.NumericalValueObject;
-import ml.shifu.core.container.RawValueObject;
-import ml.shifu.core.container.ColumnBinningResult;
-import ml.shifu.core.container.ColumnConfig;
-import ml.shifu.core.container.ColumnNumStatsResult;
+import ml.shifu.core.container.*;
 import ml.shifu.core.di.spi.*;
 import ml.shifu.core.util.CommonUtils;
 
@@ -57,9 +52,6 @@ public class DefaultStatsProcessor implements StatsProcessor {
         this.numStatsCalculator = numStatsCalculator;
         this.binStatsCalculator = binStatsCalculator;
     }
-
-    ;
-
 
     public void process(ColumnConfig columnConfig, List<RawValueObject> rvoList) {
 

@@ -12,25 +12,7 @@ import java.util.List;
 import java.util.Map;
 
 public class DefaultTransformationExecutor {
-    /*
-      public Object transform(DerivedField derivedField, Object origin) {
 
-          Expression expression = derivedField.getExpression();
-
-          //TODO: finish the list
-          if (expression instanceof NormContinuous) {
-              return NormalizationUtil.normalize((NormContinuous) expression, Double.parseDouble(origin.toString()));
-          } else if (expression instanceof Discretize) {
-              return DiscretizationUtil.discretize((Discretize) expression, Double.parseDouble(origin.toString()));
-          } else if (expression instanceof MapValues) {
-              //return ExpressionUtil.evaluate(expression, );
-              return mapValue((MapValues) expression, origin.toString());
-          } else {
-              throw new RuntimeException("Invalid Expression(Field: " + derivedField.getName().getValue() + ")");
-          }
-
-      }
-             */
     public List<Object> transform(List<DerivedField> derivedFields, Map<String, Object> rawDataMap) {
 
 

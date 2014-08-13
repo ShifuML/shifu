@@ -66,7 +66,7 @@ public class NormalizationService {
     }
 
     // Normalize a rawDataMap
-    public List<Double> normalize(List<ColumnConfig> columnConfigList, Map<String, ? extends Object> rawDataMap) {
+    public List<Double> normalize(List<ColumnConfig> columnConfigList, Map<String, ?> rawDataMap) {
         List<Double> result = new ArrayList<Double>();
         for (ColumnConfig config : columnConfigList) {
             String key = config.getColumnName();

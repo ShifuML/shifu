@@ -12,7 +12,7 @@ import org.slf4j.LoggerFactory;
 import java.util.*;
 
 public class BinomialUnivariateStatsDiscrCalculator {
-    private static Logger log = LoggerFactory.getLogger(BinomialUnivariateStatsDiscrCalculator.class);
+    private static final Logger log = LoggerFactory.getLogger(BinomialUnivariateStatsDiscrCalculator.class);
 
     public static void calculate(UnivariateStats univariateStats, List<CategoricalValueObject> cvoList, Map<String, Object> params) {
 
@@ -37,12 +37,9 @@ public class BinomialUnivariateStatsDiscrCalculator {
 
         int voSize = cvoList.size();
 
-        for (int i = 0; i < voSize; i++) {
+        for (CategoricalValueObject vo : cvoList) {
 
-            CategoricalValueObject vo = cvoList.get(i);
-
-
-            String category = vo.getValue().toString();
+            String category = vo.getValue();
             categorySet.add(category);
 
             if (vo.getIsPositive()) {

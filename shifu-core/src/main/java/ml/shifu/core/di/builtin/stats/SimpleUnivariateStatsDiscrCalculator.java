@@ -13,7 +13,7 @@ import java.util.*;
 public class SimpleUnivariateStatsDiscrCalculator {
     private Logger log = LoggerFactory.getLogger(SimpleUnivariateStatsDiscrCalculator.class);
 
-    public void calculate(UnivariateStats univariateStats, List<? extends Object> values, Params params) {
+    public void calculate(UnivariateStats univariateStats, List<?> values, Params params) {
 
         DiscrStats discrStats = new DiscrStats();
 

@@ -22,8 +22,6 @@ import java.util.List;
  */
 public class KSIVCalculator {
 
-    private final double EPS = 1e-10;
-
     private double ks;
     private double iv;
 
@@ -66,6 +64,7 @@ public class KSIVCalculator {
             //}
             double p = cnt1 / sum1;
             double q = cnt0 / sum0;
+            double EPS = 1e-10;
             double woe = Math.log((p + EPS) / (q + EPS));
             iv += (p - q) * woe;
             cumP += p;

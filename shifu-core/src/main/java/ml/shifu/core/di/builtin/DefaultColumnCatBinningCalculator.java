@@ -44,10 +44,7 @@ public class DefaultColumnCatBinningCalculator implements ColumnCatBinningCalcul
 
         int voSize = voList.size();
 
-        for (int i = 0; i < voSize; i++) {
-
-            CategoricalValueObject vo = voList.get(i);
-
+        for (CategoricalValueObject vo : voList) {
 
             String category = vo.getValue();
             categorySet.add(category);

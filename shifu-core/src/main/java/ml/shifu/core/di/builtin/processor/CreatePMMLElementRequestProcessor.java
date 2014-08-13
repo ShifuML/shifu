@@ -89,14 +89,14 @@ public class CreatePMMLElementRequestProcessor implements RequestProcessor {
 
         if (module.has("PMMLMiningSchemaCreator")) {
             PMMLMiningSchemaService service = injector.getInstance(PMMLMiningSchemaService.class);
-            service.createMiningSchema(pmml, miningSchemaBinding.getParams());
+            service.createMiningSchema(pmml, miningSchemaBinding != null ? miningSchemaBinding.getParams() : null);
         }
-        //model.setTargets(targets);
-        //pmml.withModels(model);
+
 
         if (module.has("PMMLLocalTransformationsCreator")) {
             PMMLLocalTransformationsService service = injector.getInstance(PMMLLocalTransformationsService.class);
-            service.createLocalTransformations(pmml, localTransformationsBinding.getParams());
+
+            service.createLocalTransformations(pmml, localTransformationsBinding != null ? localTransformationsBinding.getParams() : null);
 
         }
 

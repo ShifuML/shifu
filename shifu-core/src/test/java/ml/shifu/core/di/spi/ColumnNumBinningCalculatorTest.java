@@ -1,7 +1,7 @@
 package ml.shifu.core.di.spi;
 
-import ml.shifu.core.container.NumericalValueObject;
 import ml.shifu.core.container.ColumnBinningResult;
+import ml.shifu.core.container.NumericalValueObject;
 import ml.shifu.core.di.builtin.EqualPositiveColumnNumBinningCalculator;
 import ml.shifu.core.di.builtin.TotalPercentileColumnNumBinningCalculator;
 import org.testng.annotations.Test;
@@ -35,11 +35,6 @@ public class ColumnNumBinningCalculatorTest {
         ColumnNumBinningCalculator binning = new TotalPercentileColumnNumBinningCalculator();
         ColumnBinningResult columnBinningResult = binning.calculate(voList, 10);
 
-        //System.out.println(columnBinningResult.getBinBoundary());
-        //System.out.println(columnBinningResult.getBinCountPos());
-        //System.out.println(columnBinningResult.getBinCountNeg());
-
-
     }
 
 
@@ -48,7 +43,7 @@ public class ColumnNumBinningCalculatorTest {
         for (int i = 0; i < 100; i++) {
             NumericalValueObject vo = new NumericalValueObject();
             vo.setValue((double) (i % 20));
-            vo.setIsPositive(i % 3 == 0 ? true : false);
+            vo.setIsPositive(i % 3 == 0);
             vo.setWeight(1.0);
             voList.add(vo);
         }
@@ -60,7 +55,7 @@ public class ColumnNumBinningCalculatorTest {
         for (int i = 0; i < 100; i++) {
             NumericalValueObject vo = new NumericalValueObject();
             vo.setValue(1.0);
-            vo.setIsPositive(i % 3 == 0 ? true : false);
+            vo.setIsPositive(i % 3 == 0);
             vo.setWeight(1.0);
             voList.add(vo);
         }

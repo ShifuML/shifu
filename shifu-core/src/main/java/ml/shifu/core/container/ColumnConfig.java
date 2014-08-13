@@ -30,32 +30,21 @@ import java.util.List;
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class ColumnConfig {
 
-    public static enum ColumnFlag {
-        ForceSelect, ForceRemove, Meta, Target
-    }
-
-    public static enum ColumnType {
-        A, N, C
-    }
-
     // basic info
     private Integer columnNum;
     private String columnName;
-
     // version
     private String version = Constants.version;
-
     // column type
     private ColumnType columnType = ColumnType.N;
     private ColumnFlag columnFlag = null;
     private Boolean finalSelect = Boolean.FALSE;
-
-
     // column detail
     private ColumnRawStatsResult columnRawStatsResult = new ColumnRawStatsResult();
-
     private ColumnNumStatsResult columnNumStatsResult = new ColumnNumStatsResult();
     private ColumnBinningResult columnBinningResult = new ColumnBinningResult();
+    private ColumnBinStatsResult columnBinStatsResult = new ColumnBinStatsResult();
+    private ColumnControl columnControl = new ColumnControl();
 
     public ColumnBinStatsResult getColumnBinStatsResult() {
         return columnBinStatsResult;
@@ -64,11 +53,6 @@ public class ColumnConfig {
     public void setColumnBinStatsResult(ColumnBinStatsResult columnBinStatsResult) {
         this.columnBinStatsResult = columnBinStatsResult;
     }
-
-    private ColumnBinStatsResult columnBinStatsResult = new ColumnBinStatsResult();
-
-
-    private ColumnControl columnControl = new ColumnControl();
 
     /**
      * ---------------------------------------------------------------------------
@@ -88,6 +72,10 @@ public class ColumnConfig {
 
     public String getColumnName() {
         return columnName;
+    }
+
+    public void setColumnName(String columnName) {
+        this.columnName = columnName;
     }
 
     public ColumnType getColumnType() {
@@ -112,10 +100,6 @@ public class ColumnConfig {
 
     public void setFinalSelect(Boolean finalSelect) {
         this.finalSelect = finalSelect;
-    }
-
-    public void setColumnName(String columnName) {
-        this.columnName = columnName;
     }
 
     public ColumnRawStatsResult getColumnRawStatsResult() {
@@ -151,14 +135,6 @@ public class ColumnConfig {
     }
 
     /**
-     * ---------------------------------------------------------------------------
-     *
-     * 					Capsulated methods for easy usage
-     *
-     * ---------------------------------------------------------------------------
-     */
-
-    /**
      * @return
      */
     @JsonIgnore
@@ -177,6 +153,14 @@ public class ColumnConfig {
     }
 
     /**
+     * ---------------------------------------------------------------------------
+     *
+     * 					Encapsulated methods for easy usage
+     *
+     * ---------------------------------------------------------------------------
+     */
+
+    /**
      * @return
      */
     @JsonIgnore
@@ -189,10 +173,7 @@ public class ColumnConfig {
      */
     @JsonIgnore
     public boolean isCategorical() {
-        if (columnType == null) {
-            return false;
-        }
-        return columnType.equals(ColumnType.C);
+        return columnType != null && columnType.equals(ColumnType.C);
     }
 
     /**
@@ -228,11 +209,26 @@ public class ColumnConfig {
     }
 
     /**
+     * @param length
+     */
+    public void setBinLength(int length) {
+        columnBinningResult.setLength(length);
+    }
+
+    /**
      * @return
      */
     @JsonIgnore
     public List<Double> getBinBoundary() {
         return columnBinningResult.getBinBoundary();
+    }
+
+    /**
+     * @param binBoundary
+     */
+    public void setBinBoundary(List<Double> binBoundary) {
+        columnBinningResult.setBinBoundary(binBoundary);
+        columnBinningResult.setLength(binBoundary.size());
     }
 
     /**
@@ -244,6 +240,14 @@ public class ColumnConfig {
     }
 
     /**
+     * @param binCategory
+     */
+    public void setBinCategory(List<String> binCategory) {
+        columnBinningResult.setBinCategory(binCategory);
+        columnBinningResult.setLength(binCategory.size());
+    }
+
+    /**
      * @return
      */
     @JsonIgnore
@@ -252,11 +256,25 @@ public class ColumnConfig {
     }
 
     /**
+     * @param binCountNeg
+     */
+    public void setBinCountNeg(List<Integer> binCountNeg) {
+        columnBinningResult.setBinCountNeg(binCountNeg);
+    }
+
+    /**
      * @return
      */
     @JsonIgnore
     public List<Integer> getBinCountPos() {
         return columnBinningResult.getBinCountPos();
+    }
+
+    /**
+     * @param binCountPos
+     */
+    public void setBinCountPos(List<Integer> binCountPos) {
+        columnBinningResult.setBinCountPos(binCountPos);
     }
 
     /**
@@ -276,41 +294,10 @@ public class ColumnConfig {
     }
 
     /**
-     * @param length
+     * @param binAvgScore
      */
-    public void setBinLength(int length) {
-        columnBinningResult.setLength(length);
-    }
-
-    /**
-     * @param binBoundary
-     */
-    public void setBinBoundary(List<Double> binBoundary) {
-        columnBinningResult.setBinBoundary(binBoundary);
-        columnBinningResult.setLength(binBoundary.size());
-    }
-
-    /**
-     * @param binCategory
-     */
-    public void setBinCategory(List<String> binCategory) {
-        columnBinningResult.setBinCategory(binCategory);
-        columnBinningResult.setLength(binCategory.size());
-    }
-
-
-    /**
-     * @param binCountNeg
-     */
-    public void setBinCountNeg(List<Integer> binCountNeg) {
-        columnBinningResult.setBinCountNeg(binCountNeg);
-    }
-
-    /**
-     * @param binCountPos
-     */
-    public void setBinCountPos(List<Integer> binCountPos) {
-        columnBinningResult.setBinCountPos(binCountPos);
+    public void setBinAvgScore(List<Integer> binAvgScore) {
+        columnBinStatsResult.setBinAvgScore(binAvgScore);
     }
 
     /**
@@ -318,13 +305,6 @@ public class ColumnConfig {
      */
     public void setBinPosCaseRate(List<Double> binPosRate) {
         columnBinningResult.setBinPosRate(binPosRate);
-    }
-
-    /**
-     * @param binAvgScore
-     */
-    public void setBinAvgScore(List<Integer> binAvgScore) {
-        columnBinStatsResult.setBinAvgScore(binAvgScore);
     }
 
     /**
@@ -336,6 +316,13 @@ public class ColumnConfig {
     }
 
     /**
+     * @param mean
+     */
+    public void setMean(Double mean) {
+        columnNumStatsResult.setMean(mean);
+    }
+
+    /**
      * @return
      */
     @JsonIgnore
@@ -343,11 +330,22 @@ public class ColumnConfig {
         return columnNumStatsResult.getStdDev();
     }
 
+    /**
+     * @param stdDev
+     */
+    public void setStdDev(Double stdDev) {
+        columnNumStatsResult.setStdDev(stdDev);
+    }
+
     @JsonIgnore
     public Double getMedian() {
         return columnNumStatsResult.getMedian();
     }
 
+    @JsonIgnore
+    public void setMedian(Double median) {
+        columnNumStatsResult.setMedian(median);
+    }
 
     /**
      * @param max
@@ -363,34 +361,9 @@ public class ColumnConfig {
         columnNumStatsResult.setMin(min);
     }
 
-    /**
-     * @param mean
-     */
-    public void setMean(Double mean) {
-        columnNumStatsResult.setMean(mean);
-    }
-
-    /**
-     * @param stdDev
-     */
-    public void setStdDev(Double stdDev) {
-        columnNumStatsResult.setStdDev(stdDev);
-    }
-
-    @JsonIgnore
-    public void setMedian(Double median) {
-        columnNumStatsResult.setMedian(median);
-    }
-
-
     @JsonIgnore
     public List<Double> getBinWeightedNeg() {
         return this.columnBinningResult.getBinWeightedNeg();
-    }
-
-    @JsonIgnore
-    public List<Double> getBinWeightedPos() {
-        return this.columnBinningResult.getBinWeightedPos();
     }
 
     @JsonIgnore
@@ -399,11 +372,14 @@ public class ColumnConfig {
     }
 
     @JsonIgnore
+    public List<Double> getBinWeightedPos() {
+        return this.columnBinningResult.getBinWeightedPos();
+    }
+
+    @JsonIgnore
     public void setBinWeightedPos(List<Double> binList) {
         this.columnBinningResult.setBinWeightedPos(binList);
     }
-
-    //@JsonIgnore
 
     /**
      * @return the version
@@ -417,6 +393,16 @@ public class ColumnConfig {
      */
     public void setVersion(String version) {
         this.version = version;
+    }
+
+    //@JsonIgnore
+
+    public static enum ColumnFlag {
+        ForceSelect, ForceRemove, Meta, Target
+    }
+
+    public static enum ColumnType {
+        A, N, C
     }
 
     /**

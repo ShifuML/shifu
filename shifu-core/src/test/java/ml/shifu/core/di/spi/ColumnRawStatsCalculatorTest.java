@@ -1,7 +1,7 @@
 package ml.shifu.core.di.spi;
 
-import ml.shifu.core.container.RawValueObject;
 import ml.shifu.core.container.ColumnRawStatsResult;
+import ml.shifu.core.container.RawValueObject;
 import ml.shifu.core.di.builtin.DefaultColumnRawStatsCalculator;
 import org.testng.Assert;
 import org.testng.annotations.Test;
@@ -66,7 +66,7 @@ public class ColumnRawStatsCalculatorTest {
 
     private List<RawValueObject> genData3() {
 
-        List<Object> list = Arrays.asList((Object) "NaN", Double.valueOf(1.0), Double.MAX_VALUE, Double.NaN, "hello", null);
+        List<Object> list = Arrays.asList((Object) "NaN", 1.0, Double.MAX_VALUE, Double.NaN, "hello", null);
 
         List<RawValueObject> rvoList = new ArrayList<RawValueObject>();
 

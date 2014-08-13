@@ -17,8 +17,8 @@
 package ml.shifu.core.di.spi;
 
 
-import ml.shifu.core.container.RawValueObject;
 import ml.shifu.core.container.ColumnRawStatsResult;
+import ml.shifu.core.container.RawValueObject;
 
 import java.util.List;
 
