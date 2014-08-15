@@ -269,6 +269,7 @@
         <module>shifu-core</module>
         <module>shifu-plugin-encog</module>
         <module>shifu-plugin-pig</module>
+        <module>shifu-plugin-spark</module>
     </modules>
 
 </project>

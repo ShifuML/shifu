@@ -1,0 +1,29 @@
+{
+    "name": "ExecLocalTransformations",
+    "description": "step 5, execute transformations",
+    "processor": {
+        "spi": "RequestProcessor",
+        "impl": "ml.shifu.plugin.spark.norm.SparkModelTransformRequestProcessor",
+        "params": {
+            "modelName": "demoModel",
+            "pathPMML": "./src/test/resources/model.xml",
+            "pathInputData": "./src/test/resources/data/wdbc.train",
+            "pathOutputData": "./src/test/resources/generated/normalized.txt",
+            "pathHDFSTmp":"ml/shifu/norm/tmp",
+            "pathHadoopConf":"/usr/local/hadoop/etc/hadoop",
+            "pathOutputActiveHeader": "./src/test/resources/generated/normalized_header.txt",
+            "pathToJar": "./target/spark-norm-0.3.0-SNAPSHOT-jar-with-dependencies.jar",
+            "pathRequest": "./src/test/resources/5_transformexec.json",
+            "SparkHome": "/Users/apalnitkar/installations/spark-1.0.1-bin-hadoop2",
+            "precision":"3",
+            "sparkMode": "local"
+        }
+    },
+
+    "bindings": [
+        {
+            "spi": "TransformationExecutor",
+            "impl": "ml.shifu.core.di.builtin.transform.DefaultTransformationExecutor"
+        }
+    ]
+}
