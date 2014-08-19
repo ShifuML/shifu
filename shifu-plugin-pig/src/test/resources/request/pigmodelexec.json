@@ -3,7 +3,7 @@
     "description": "",
     "processor": {
         "spi": "RequestProcessor",
-        "impl": "ml.shifu.plugin.pig.PigModelExecRequestProcessor",
+        "impl": "ml.shifu.plugin.pig.score.PigModelExecRequestProcessor",
         "params": {
             "modelName": "demoModel",
             "localMode": true,
