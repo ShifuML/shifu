@@ -60,11 +60,6 @@ public class PigCalculateStatsUDF extends EvalFunc<Tuple> {
 
     public PigCalculateStatsUDF(String request) throws Exception {
 
-        /*
-         * if (modelConfig.getNumericalValueThreshold() != null) {
-         * 
-         * valueThreshold = modelConfig.getNumericalValueThreshold(); }
-         */
 
         ObjectMapper jsonMapper = new ObjectMapper();
         Request req = jsonMapper.readValue(request, Request.class);
@@ -160,9 +155,7 @@ public class PigCalculateStatsUDF extends EvalFunc<Tuple> {
 
         Tuple tuple = tupleFactory.newTuple();
         tuple.append(columnNum);
-        ObjectMapper jsonMapper = new ObjectMapper();
         tuple.append(savePMML(pmml2));
-        // tuple.append(jsonMapper.writeValueAsString(stats));
 
         return tuple;
 
@@ -181,6 +174,7 @@ public class PigCalculateStatsUDF extends EvalFunc<Tuple> {
             IOUtils.closeQuietly(os);
         }
 
-        return os.toString();
+       String ret = os.toString().replaceAll("\n", "").replaceAll("\\s+", " ");
+        return ret;
     }
 }

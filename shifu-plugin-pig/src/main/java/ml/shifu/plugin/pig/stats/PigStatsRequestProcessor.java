@@ -1,11 +1,7 @@
 package ml.shifu.plugin.pig.stats;
 
-import com.google.common.base.Joiner;
-import com.google.common.base.Splitter;
-
 import ml.shifu.core.di.spi.RequestProcessor;
 import ml.shifu.core.request.Request;
-import ml.shifu.core.util.LocalDataUtils;
 import ml.shifu.core.util.PMMLUtils;
 import ml.shifu.core.util.Params;
 
@@ -20,7 +16,6 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathFilter;
 import org.apache.pig.ExecType;
 import org.apache.pig.PigServer;
-import org.codehaus.jackson.JsonNode;
 import org.codehaus.jackson.map.ObjectMapper;
 import org.dmg.pmml.Model;
 import org.dmg.pmml.ModelStats;
@@ -33,13 +28,10 @@ import org.slf4j.LoggerFactory;
 import org.xml.sax.InputSource;
 
 import java.io.BufferedInputStream;
-import java.io.BufferedReader;
 import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -98,10 +90,11 @@ public class PigStatsRequestProcessor implements RequestProcessor {
 
         // log.info("Directory: " + System.getProperty("user.dir"));
 
+        //look into pigUnitTest or removing @test from unit test
         String pluginJarFile = "target/shifu-plugin-pig-1.0-SNAPSHOT.jar";
         File pigPlugin = new File(pluginJarFile);
         if (!pigPlugin.exists()) {
-            pluginJarFile = System.getenv("SHIFU_HOME") + "/plugin/*/*.jar";
+            pluginJarFile = System.getenv("SHIFU_HOME") + "/plugin/shifu-plugin-pig-1.0-SNAPSHOT.jar";
             if (System.getenv("SHIFU_HOME") == null)
                 throw new Exception(
                         "SHIFU_HOME not set or pig jar file is missing.");
@@ -134,17 +127,9 @@ public class PigStatsRequestProcessor implements RequestProcessor {
             String[] raw;
             while (s.hasNextLine()) {
                 raw = s.nextLine().trim().split("\\|");
-                while (s.hasNextLine()) {
-                    String line = s.nextLine().trim();
-                    if (line.length() < 1)
-                        break;
-                    raw[1] += line;
-                }
                 if (req.getBindings().get(0).getSpi()
                         .equalsIgnoreCase("UnivariateStatsCalculator")) {
                     UnivariateStats univariateStats = loadStatsFromPMML(raw[1]);
-                    // UnivariateStats univariateStats =
-                    // jsonMapper.readValue(raw[1], UnivariateStats.class);
                     log.info("UnivaraiteStats:  " + univariateStats);
                     modelStats.getUnivariateStats().add(univariateStats);
                 }
@@ -215,20 +200,7 @@ public class PigStatsRequestProcessor implements RequestProcessor {
 
     private void pmmlUpdateLocal(Request req) throws Exception {
 
-        // PMML pmml = loadPMML((String) req.getProcessor().getParams()
-        // .get("pathPMML"));
-
         Params params = req.getProcessor().getParams();
-
-        // Map<String, String> pigParams = new HashMap<String, String>();
-
-        // String[] keys = { "delimiter", "pathData", "pathPMML", "pathResult"
-        // };
-
-        // for (String key : keys) {
-        // pigParams.put(key, params.get(key).toString());
-        // log.info(key + " : " + params.get(key).toString());
-        // }
 
         File folderExisting = new File(
                 (String) params.get("pathPreTrainingStats"));
@@ -237,13 +209,6 @@ public class PigStatsRequestProcessor implements RequestProcessor {
             log.info("Deleting: " + folderExisting.getPath());
         } else
             log.info("pathPreTrainingStats does not already exist.");
-
-        // String pathHeader = params.get("pathHeader").toString();
-        // String headerDelimiter = params.get("headerDelimiter").toString();
-        // List<String> header = LocalDataUtils.loadHeader(pathHeader,
-        // headerDelimiter);
-
-        // pigParams.put("headerString", Joiner.on(',').join(header));
 
     }
 
@@ -254,16 +219,6 @@ public class PigStatsRequestProcessor implements RequestProcessor {
         conf = new Configuration();
         fs = FileSystem.get(conf);
 
-        // Map<String, String> pigParams = new HashMap<String, String>();
-
-        // String[] keys = { "delimiter", "pathData", "pathPMML", "pathResult"
-        // };
-
-        // for (String key : keys) {
-        // pigParams.put(key, params.get(key).toString());
-        // log.info(key + " : " + params.get(key).toString());
-        // }
-
         Path pathResults = new Path((String) params.get("pathPreTrainingStats"));
         if (fs.exists(pathResults)) {
             log.info("Deleting: " + pathResults.getName());
@@ -272,33 +227,8 @@ public class PigStatsRequestProcessor implements RequestProcessor {
             log.info((String) params.get("pathPreTrainingStats")
                     + " does not already exist.");
 
-        // String headerDelimiter = params.get("headerDelimiter").toString();
-        // Path headerFile = new Path((String) params.get("pathHeader"));
-
-        // List<String> header = readHDFSHeader(headerFile, headerDelimiter);
-
-        // pigParams.put("headerString", Joiner.on(',').join(header));
-
     }
 
-    private List<String> readHDFSHeader(Path headerFile, String delimiter)
-            throws Exception {
-
-        List<String> headerList = new ArrayList<String>();
-
-        FSDataInputStream in = fs.open(headerFile);
-        Scanner scanner = new Scanner(new BufferedReader(new InputStreamReader(
-                in)));
-        while (scanner.hasNextLine()) {
-            String line = scanner.nextLine();
-            for (String s : Splitter.on(delimiter).split(line)) {
-                headerList.add(s);
-            }
-        }
-        in.close();
-        scanner.close();
-        return headerList;
-    }
 
     /**
      * Get the data scanners for some specified path if the file is directory,
