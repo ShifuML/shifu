@@ -1,0 +1,36 @@
+{
+    "name": "Train",
+    "description": "step 6, train",
+    "processor": {
+        "spi": "RequestProcessor",
+        "impl": "ml.shifu.plugin.encog.trainer.EncogTrainRequestProcessor",
+        "params": {
+            "modelName": "demoModel",
+            "pathPMML": "./model.xml",
+            "pathPMMLOutput": "./model_output.xml",
+            "pathNormalizedData": "./generated/normalized.txt",
+            "pathNormalizedHeader": "./generated/normalized_header.txt"
+        }
+    },
+    "bindings": [
+        {
+            "spi": "Trainer",
+            "impl": "ml.shifu.plugin.encog.trainer.EncogNNTrainer",
+            "params": {
+                "pathOutput": "./generated/models",
+                "numEpochs": 100,
+                "trainerID": "test",
+                "splitRatio": 0.8,
+                "algorithm": "Q",
+                "learningRate": 0.5,
+                "hiddenLayers": [
+                    {
+                        "numHiddenNodes": 10,
+                        "activationFunction": "sigmoid"
+                    }
+                ]
+            }
+
+        }
+    ]
+}
