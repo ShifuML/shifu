@@ -167,7 +167,7 @@
     </dependencies>
 
     <build>
-        <pluginManagement>
+
             <plugins>
                 <plugin>
                     <artifactId>maven-assembly-plugin</artifactId>
@@ -295,7 +295,6 @@
 
 
             </plugins>
-        </pluginManagement>
     </build>
 
 

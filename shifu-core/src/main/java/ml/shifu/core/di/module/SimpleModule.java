@@ -29,10 +29,13 @@ import java.util.Map;
 public class SimpleModule extends AbstractModule {
 
     private Map<String, String> bindings = new HashMap<String, String>();
-
+    private String defaultPackage= "ml.shifu.core.di.spi";
     public SimpleModule() {
     }
-
+    
+    public SimpleModule(String packageName) {
+        this.defaultPackage= packageName;
+    }
 
     public Map<String, String> getBindings() {
         return bindings;
@@ -71,7 +74,11 @@ public class SimpleModule extends AbstractModule {
     protected void configure() {
 
         for (String spiName : bindings.keySet()) {
-            Class spi = CommonUtils.getClass("ml.shifu.core.di.spi." + spiName);
+            Class spi= null;
+            if(spiName.contains(".")) 
+                spi= CommonUtils.getClass(spiName);
+            else 
+                spi = CommonUtils.getClass(defaultPackage + "." + spiName);
             Class impl = CommonUtils.getClass(bindings.get(spiName));
             bind(spi).to(impl);
         }
