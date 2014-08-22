@@ -1,0 +1,90 @@
+/**
+ * Copyright [2012-2014] eBay Software Foundation
+ *  
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *  
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+ 
+Shifu Change Log
+
+Changes for Shifu-0.2.0
+    * Make Shifu to support Hadoop-2.0 (add -Phdp-yarn when building)
+    * Show mapper progress in JobTracker and show progress in CLI when using distribute training 
+    * Validation rate = 0% is permit. In that case, save when train error goes down
+    * Generate better default ModelConfig, and create empty files for some configuration
+    * Refactor integration API - add static Normalizer.normalize(), simplify constructor of ModelRunner, and allow load models by path
+    * [Test] add support for decision-tree
+    * Enhance shifu script to make it support Hadoop1 and Hadoop2 smoothly
+    * Add new info for ColumnConfig: missing, total, missingPercentage, binWeightedPos and binWeightedNeg
+    * Update the layout of EvalPerformance.json
+    * Add version number in ModelConfig, ColumnConfig and EvalPerformance
+
+Changes for Shifu-0.1.1
+    * Use gradient aggregation to improve distributed training model performance
+    * Fix the bug when sorting the model results
+    * Fix the bug - The sourceMetaColumnFile couldn't be read when using mapred + HDFS to run evaluation
+    * Hidden custom path in ModelConfig, since most users won't change them
+    * Add meta column names in file header, when using `mapred` to run evaluation
+    
+Changes for Shifu-0.1.0
+    * Refactor the item names in ModelConfig to make it follow http://10.9.187.2/project/agreement/
+    * Move zookeeperServers, hadoopNumParallel, hadoopJobQueue, localNumParallel into ${SHIFU_HOME}/conf/shifuconfig
+    * Enable customized path for ModelSet and modelsPath,scorePath,performancePath,confusionMatrixPath in Eval
+    * Comment out storing normalized data when using MapReduce to run evaluation
+    
+Changes for Shifu-0.0.4
+    * Add distributed nn implementation based on hadoop mapreduce job.
+        a). To trigger distributed nn, set 'runMode' to 'pig';
+        b). For distributed nn, please provide your own 'zkServers' of 'train' group.
+        c). You can set 'epochsPerIteration' which means in each iteration how many iterations will be executed. 
+    * Eval refactor.
+        a). Add -score -confmat -perf options for eval command
+        b). Add "scoreColumn" option in ModelConfig.json to get the target score
+        c). Add "modelsPath" "scorePath" "confusionMatrixPath" "performancePath" options in ModelConfig.json
+        d). Change "metricColumnName" to "weightedColumn"
+    * TA457512 - Fix the bug: the delimiter of evaluation data doesn't take effect in AKKA mode
+    * TA458788 - Fix the bug: Meta validation fails to report error when - "NumHiddenNodes" : [ "a", 45 ]
+    * TA459375 - Write in-place QuickSort to replace Collections.sort() for memory consumption
+	
+
+Changes for Shifu-0.0.3
+    * TA446629 - Fix the bug: when there is am empty file, shifu in akka mode will be stucked
+    * TA446631 - Fix the bug: user can't use \t to split data in pig mode
+    * TA446678 - Fix the bug: when user create a new model and the model already exists, the log still shows the model is created successfully
+    * TA447772 - Fix the bug: when sync data from local to HDFS, the evaluation directory are in wrong place
+    * TA449606 - Fix the bug: the filter expression logic is opposite just as design
+    * TA449907 - Fix the bug: ignore those records whose value is not numerical while columnType is N in `shifu stats`
+    * TA449910 - Fix the bug: the fixInitInput doesn't work in model training
+    * TA451113 - Fix the bug: the calculating stats step consume more memory than before
+    * TA455487 - Fix the bug: Shifu doesn't support /data/output/{04,05}/*/part* in Akka mode
+    * TA457214 - Fix the bug: if the user put target column into Force.Remove and Force.Select, Shifu won't detect
+    * TA457490 - Fix the bug: evaluation data couldn't use different delimiter in AKKA mode
+    * DE30848 - hdfs + akka mode, 4g memory for 200m data but got OOM at stats step
+    * DE30836 - Non-existing target column might be better to be validated at init step
+    * DE30915 - disable the forceSelected option but still got the validation error
+    * DE30916 - Add forceRemove file at varselect step leads to Target column be covered by ForceRemove flag
+    * DE30922 - LearningRate cannot cast int to double
+    * DE30467 - The old model files should be cleaned up before training.
+    
+Changes for Shifu-0.0.2
+    * DE29230 - Fix the bugs if the training data path is HDFS globe path
+    * DE29231 - User only need put the configuration in local file system
+    * US201443 - PathFinder refactor, split Manager class into several processes
+	* US207747 - Add option in ModelConfig for job queue name
+	* US177973 - Update code license and test data license 
+    * Don't copy data and purify data when run `shifu init`
+    * Add more comments
+    
+Changes for Shifu-0.0.1
+    * US152414 - Refactor ModelConfig
+    * US195914 - Refactor ColumnConifg
+    * US193995 - shutdown thread if errors occurred in akka mode
