@@ -16,7 +16,7 @@
 
 REGISTER $pig_jars;
 
-DEFINE ModelExec    ml.shifu.plugin.pig.PigModelExecUDF('$pathPMML', '$headerString');
+DEFINE ModelExec    ml.shifu.plugin.pig.score.PigModelExecUDF('$pathPMML', '$headerString');
 
 raw = LOAD '$pathData' USING PigStorage('$delimiter');
 

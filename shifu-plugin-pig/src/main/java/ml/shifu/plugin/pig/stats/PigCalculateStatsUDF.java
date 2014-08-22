@@ -1,14 +1,10 @@
 package ml.shifu.plugin.pig.stats;
 
 import java.io.ByteArrayOutputStream;
-import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
-
 import javax.xml.transform.sax.SAXSource;
 import javax.xml.transform.stream.StreamResult;
 
@@ -38,7 +34,6 @@ import org.jpmml.model.JAXBUtil;
 import org.xml.sax.InputSource;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.inject.AbstractModule;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
 
@@ -49,8 +44,6 @@ import com.google.inject.Injector;
  */
 
 public class PigCalculateStatsUDF extends EvalFunc<Tuple> {
-
-    private Double valueThreshold = 1e6;
 
     //private PigStatsService pigStatsService;
     
