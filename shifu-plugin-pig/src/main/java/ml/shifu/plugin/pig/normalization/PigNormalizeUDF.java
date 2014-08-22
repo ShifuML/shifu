@@ -88,8 +88,6 @@ public class PigNormalizeUDF extends EvalFunc<Tuple> {
         Tuple tuple = TupleFactory.getInstance().newTuple();
         Map<String, Object> rawDataMap = new HashMap<String, Object>();
         List<DataField> dataFields = pmml.getDataDictionary().getDataFields();
-
-        log.info("Model: "+ model.getLocalTransformations().toString());
         
         Map<FieldUsageType, List<DerivedField>> fieldsMap = getDerivedFieldsByUsageType(pmml, model);
 

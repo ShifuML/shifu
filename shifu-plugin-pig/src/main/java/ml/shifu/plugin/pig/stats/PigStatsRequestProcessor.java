@@ -90,11 +90,12 @@ public class PigStatsRequestProcessor implements RequestProcessor {
 
         // log.info("Directory: " + System.getProperty("user.dir"));
 
-        //look into pigUnitTest or removing @test from unit test
+        // look into pigUnitTest or removing @test from unit test
         String pluginJarFile = "target/shifu-plugin-pig-1.0-SNAPSHOT.jar";
         File pigPlugin = new File(pluginJarFile);
         if (!pigPlugin.exists()) {
-            pluginJarFile = System.getenv("SHIFU_HOME") + "/plugin/shifu-plugin-pig-1.0-SNAPSHOT.jar";
+            pluginJarFile = System.getenv("SHIFU_HOME")
+                    + "/plugin/shifu-plugin-pig-1.0-SNAPSHOT.jar";
             if (System.getenv("SHIFU_HOME") == null)
                 throw new Exception(
                         "SHIFU_HOME not set or pig jar file is missing.");
@@ -130,7 +131,6 @@ public class PigStatsRequestProcessor implements RequestProcessor {
                 if (req.getBindings().get(0).getSpi()
                         .equalsIgnoreCase("UnivariateStatsCalculator")) {
                     UnivariateStats univariateStats = loadStatsFromPMML(raw[1]);
-                    log.info("UnivaraiteStats:  " + univariateStats);
                     modelStats.getUnivariateStats().add(univariateStats);
                 }
             }
@@ -183,7 +183,7 @@ public class PigStatsRequestProcessor implements RequestProcessor {
     public static UnivariateStats loadStatsFromPMML(String data)
             throws Exception {
 
-        log.info("The PMML: " + data);
+        //log.info("The PMML: " + data);
         ByteArrayInputStream in = new ByteArrayInputStream(data.getBytes());
         try {
             InputSource source = new InputSource(in);
@@ -228,7 +228,6 @@ public class PigStatsRequestProcessor implements RequestProcessor {
                     + " does not already exist.");
 
     }
-
 
     /**
      * Get the data scanners for some specified path if the file is directory,

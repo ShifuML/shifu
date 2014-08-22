@@ -107,11 +107,6 @@ public class PigAddColumnNumUDF extends EvalFunc<DataBag> {
 
     }
 
-    private Params parseParams(Params rawParams) throws Exception {
-        ObjectMapper jsonMapper = new ObjectMapper();
-        String jsonString = jsonMapper.writeValueAsString(rawParams);
-        return jsonMapper.readValue(jsonString, Params.class);
-    }
 
     private static PMML loadPMML(String path) throws Exception {
 

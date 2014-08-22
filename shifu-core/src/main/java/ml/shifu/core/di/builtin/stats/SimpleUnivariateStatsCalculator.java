@@ -1,11 +1,13 @@
 package ml.shifu.core.di.builtin.stats;
 
+import ml.shifu.core.container.RawValueObject;
 import ml.shifu.core.di.spi.UnivariateStatsCalculator;
 import ml.shifu.core.util.Params;
 import org.dmg.pmml.DataField;
 import org.dmg.pmml.OpType;
 import org.dmg.pmml.UnivariateStats;
 
+import java.util.ArrayList;
 import java.util.List;
 
 public class SimpleUnivariateStatsCalculator implements UnivariateStatsCalculator {
@@ -21,7 +23,7 @@ public class SimpleUnivariateStatsCalculator implements UnivariateStatsCalculato
 
 
         if (field.getOptype().equals(OpType.CATEGORICAL)) {
-            //UnivariateStatsDiscrCalculator.calculate(stats, CommonUtils.convertListRaw2Categorical(rvoList, posTags, negTags), null);
+
             SimpleUnivariateStatsDiscrCalculator discrCalculator = new SimpleUnivariateStatsDiscrCalculator();
             discrCalculator.calculate(stats, values, params);
 
@@ -34,6 +36,15 @@ public class SimpleUnivariateStatsCalculator implements UnivariateStatsCalculato
 
 
         return stats;
+    }
+
+    @Override
+    public UnivariateStats calculateRVO(DataField field, List<?> values, Params params) {
+        List<Object> data = new ArrayList<Object>();
+        for(Object v : values) {
+            data.add(((RawValueObject)v).getValue());
+        }
+        return calculate(field,data,params);
     }
 
 

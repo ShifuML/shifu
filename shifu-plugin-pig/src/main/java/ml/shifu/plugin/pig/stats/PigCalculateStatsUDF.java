@@ -13,6 +13,8 @@ import javax.xml.transform.sax.SAXSource;
 import javax.xml.transform.stream.StreamResult;
 
 import ml.shifu.core.container.RawValueObject;
+import ml.shifu.core.di.module.SimpleModule;
+import ml.shifu.core.di.service.UnivariateStatsService;
 import ml.shifu.core.request.Request;
 import ml.shifu.core.util.Params;
 
@@ -50,7 +52,9 @@ public class PigCalculateStatsUDF extends EvalFunc<Tuple> {
 
     private Double valueThreshold = 1e6;
 
-    private PigStatsService pigStatsService;
+    //private PigStatsService pigStatsService;
+    
+    private UnivariateStatsService univariateStatsService;
 
     private Params params;
 
@@ -63,7 +67,7 @@ public class PigCalculateStatsUDF extends EvalFunc<Tuple> {
 
         ObjectMapper jsonMapper = new ObjectMapper();
         Request req = jsonMapper.readValue(request, Request.class);
-
+        /*
         AbstractModule pigStatsInjector = new PigSimpleUnivariateStatsInjector();
 
         if (!req.getBindings().get(0).getSpi()
@@ -76,12 +80,18 @@ public class PigCalculateStatsUDF extends EvalFunc<Tuple> {
             pigStatsInjector = new PigBinomialUnivariateStatsInjector();
         }
 
-        Injector injector = Guice.createInjector(pigStatsInjector);
-
-        pigStatsService = injector.getInstance(PigStatsService.class);
+        
+*/
+        SimpleModule module = new SimpleModule();
+        module.set(req.getBindings().get(0));
+        Injector injector = Guice.createInjector(module);
+        
+        univariateStatsService = injector.getInstance(UnivariateStatsService.class);
+        
+        //pigStatsService = injector.getInstance(PigStatsService.class);
 
         params = req.getBindings().get(0).getParams();
-
+              
         spi = req.getBindings().get(0).getSpi();
 
         pmml = loadPMML((String) req.getProcessor().getParams().get("pathPMML"));
@@ -119,13 +129,14 @@ public class PigCalculateStatsUDF extends EvalFunc<Tuple> {
         List<RawValueObject> rvoList = new ArrayList<RawValueObject>();
 
         log.debug("****** The element count in bag is : " + bag.size());
-
+        List<Object> tagData = new ArrayList<Object>();
         for (Tuple t : bag) {
             RawValueObject rvo = new RawValueObject();
-            rvo.setValue(t.get(0));
+            rvo.setValue(t.get(0).toString());
             rvo.setTag(t.get(1).toString());
             rvo.setWeight(Double.valueOf(t.get(2).toString()));
             rvoList.add(rvo);
+            tagData.add(t.get(2).toString());
         }
 
         DataField field = pmml.getDataDictionary().getDataFields()
@@ -133,8 +144,12 @@ public class PigCalculateStatsUDF extends EvalFunc<Tuple> {
 
         UnivariateStats stats = new UnivariateStats();
 
+        
+        
+        params.put("tags", tagData);
+  
         if (spi.equalsIgnoreCase("UnivariateStatsCalculator")) {
-            stats = pigStatsService.calculate(field, rvoList, params);
+            stats = univariateStatsService.getUnivariateStats(field, rvoList, params);
             stats.setField(field.getName());
 
             for (Model model : pmml.getModels()) {

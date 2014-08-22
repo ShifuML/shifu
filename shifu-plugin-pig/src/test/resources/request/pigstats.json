@@ -19,7 +19,7 @@
     "bindings": [
         {
             "spi": "UnivariateStatsCalculator",
-            "impl": "ml.shifu.plugin.pig.stats.PigSimpleUnivariateStatsCalculator",
+            "impl": "ml.shifu.core.di.builtin.stats.BinomialUnivariateStatsCalculator",
             "params": {
                "modelName": "demoModel",
                 "targetFieldName": "diagnosis",
