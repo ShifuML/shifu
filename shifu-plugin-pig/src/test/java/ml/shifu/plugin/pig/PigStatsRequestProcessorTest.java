@@ -9,7 +9,7 @@ import java.io.File;
 
 public class PigStatsRequestProcessorTest {
 
-    @Test
+    //@Test
     public void test1() throws Exception {
         RequestDispatcher.dispatch(JSONUtils.readValue(new File(
                 "src/test/resources/request/pigstats.json"), Request.class));
