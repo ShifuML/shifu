@@ -148,6 +148,9 @@ public class PigCalculateStatsUDF extends EvalFunc<Tuple> {
             for (Model model : pmml.getModels()) {
                 if (model.getModelName().equalsIgnoreCase(
                         (String) params.get("modelName"))) {
+                    if(model.getModelStats()==null) {
+                        model.setModelStats(new ModelStats());
+                    }
                     model.getModelStats().getUnivariateStats().add(stats);
                 }
             }
