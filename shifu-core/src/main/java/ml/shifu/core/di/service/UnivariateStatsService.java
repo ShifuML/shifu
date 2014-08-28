@@ -1,6 +1,9 @@
 package ml.shifu.core.di.service;
 
 import com.google.inject.Inject;
+
+import ml.shifu.core.container.NumericalValueObject;
+import ml.shifu.core.container.RawValueObject;
 import ml.shifu.core.di.spi.UnivariateStatsCalculator;
 import ml.shifu.core.util.Params;
 import org.dmg.pmml.DataField;
@@ -21,8 +24,12 @@ public class UnivariateStatsService {
     public UnivariateStats getUnivariateStats(DataField dataField, List<?> values, Params params) {
 
 
-
-        return univariateStatsCalculator.calculate(dataField, values, params);
+        if(values.get(0) instanceof NumericalValueObject )
+            return univariateStatsCalculator.calculate(dataField, values, params);
+        else if(values.get(0) instanceof RawValueObject) {
+            return univariateStatsCalculator.calculateRVO(dataField, values, params);
+        }
+        return null;
 
     }
 

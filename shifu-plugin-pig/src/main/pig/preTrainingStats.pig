@@ -13,15 +13,28 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+REGISTER '$pig_jars'
 
-REGISTER $pig_jars;
 
-DEFINE ModelExec    ml.shifu.plugin.pig.score.PigModelExecUDF('$pathPMML', '$headerString');
+DEFINE AddColumnNum     ml.shifu.plugin.pig.stats.PigAddColumnNumUDF('$request');
+DEFINE CalculateStats   ml.shifu.plugin.pig.stats.PigCalculateStatsUDF('$request');
 
-raw = LOAD '$pathData' USING PigStorage('$delimiter');
 
-result = FOREACH raw GENERATE FLATTEN(ModelExec(*));
+d = LOAD '$pathData' USING PigStorage('$delimiter');
 
-result = ORDER result BY $0 DESC;
+d = FOREACH d GENERATE AddColumnNum(*);
 
-STORE result INTO '$pathResult' USING PigStorage('|', '-schema');
+d = FOREACH d GENERATE FLATTEN($0);
+d = FILTER d BY $0 IS NOT NULL;
+d = GROUP d BY $0;
+
+
+d = FOREACH d {
+        t = FOREACH $1 GENERATE $1, $2, $3;
+        GENERATE group, t;
+}
+
+
+
+ d = FOREACH d GENERATE FLATTEN(CalculateStats(*));
+STORE d INTO '$pathPreTrainingStats' USING PigStorage('|', '-schema');

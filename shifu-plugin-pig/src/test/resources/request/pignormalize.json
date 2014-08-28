@@ -1,0 +1,23 @@
+{
+    "name": "ExecLocalTransformations",
+    "description": "step 5, execute transformations",
+    "processor": {
+        "spi": "RequestProcessor",
+        "impl": "ml.shifu.plugin.pig.normalization.PigTransformationRequestProcessor",
+        "params": {
+            "modelName": "demoModel",
+            "pathPMML": "src/test/resources/pmml/model.xml",
+            "pathInputData": "src/test/resources/data/wdbc/wdbc.train",
+            "delimiter": ",",
+            "pathOutputData": "src/test/resources/generated/normalized",
+            "pathOutputActiveHeader": "src/test/resources/data/generated/normalized_header.txt",
+            "localMode":"true"
+        }
+    },
+    "bindings": [
+        {
+            "spi": "TransformationExecutor",
+            "impl": "ml.shifu.core.di.builtin.transform.DefaultTransformationExecutor"
+        }
+    ]
+}

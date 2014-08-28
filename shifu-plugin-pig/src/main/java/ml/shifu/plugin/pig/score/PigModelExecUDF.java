@@ -1,4 +1,4 @@
-package ml.shifu.plugin.pig;
+package ml.shifu.plugin.pig.score;
 
 import ml.shifu.core.di.builtin.executor.PMMLModelExecutor;
 
@@ -17,15 +17,10 @@ import org.jpmml.model.ImportFilter;
 import org.jpmml.model.JAXBUtil;
 import org.xml.sax.InputSource;
 
-import java.io.BufferedReader;
-import java.io.FileInputStream;
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
-import java.util.Scanner;
 import java.util.Set;
 
 import javax.xml.transform.sax.SAXSource;
@@ -36,20 +31,20 @@ public class PigModelExecUDF extends EvalFunc<Tuple> {
     private PMMLModelExecutor modelExecutor;
     private String[] header;
 
-    public PigModelExecUDF(String pathPMML, String headerString) throws Exception {
-    	
+    public PigModelExecUDF(String pathPMML, String headerString)
+            throws Exception {
+
         this.pmml = loadPMML(pathPMML);
         this.modelExecutor = new PMMLModelExecutor(pmml);
         this.header = headerString.split(",");
     }
 
- 
     public static PMML loadPMML(String path) throws Exception {
-    	
+
         Configuration conf = new Configuration();
         FileSystem fs = FileSystem.get(conf);
         Path pmmlFilePath = new Path(path);
-		FSDataInputStream in = fs.open(pmmlFilePath);
+        FSDataInputStream in = fs.open(pmmlFilePath);
 
         try {
             InputSource source = new InputSource(in);
@@ -66,7 +61,8 @@ public class PigModelExecUDF extends EvalFunc<Tuple> {
         Tuple tuple = TupleFactory.getInstance().newTuple();
 
         if (header.length != input.size()) {
-            throw new RuntimeException("Data Mismatch: header fields = " + header.length + ", data fields: " + input.size());
+            throw new RuntimeException("Data Mismatch: header fields = "
+                    + header.length + ", data fields: " + input.size());
         }
 
         Map<String, Object> rawDataMap = new HashMap<String, Object>();
@@ -81,18 +77,20 @@ public class PigModelExecUDF extends EvalFunc<Tuple> {
         Set<String> supplementaryFields = new HashSet<String>();
         String targetColumnName = "";
         for (Model model : pmml.getModels()) {
-            for (MiningField miningField : model.getMiningSchema().getMiningFields()) {
-                if (miningField.getUsageType().equals(FieldUsageType.SUPPLEMENTARY)) {
+            for (MiningField miningField : model.getMiningSchema()
+                    .getMiningFields()) {
+                if (miningField.getUsageType().equals(
+                        FieldUsageType.SUPPLEMENTARY)) {
                     supplementaryFields.add(miningField.getName().getValue());
                 }
-                if(miningField.getUsageType().equals(FieldUsageType.TARGET)){
-                	targetColumnName = miningField.getName().getValue();
+                if (miningField.getUsageType().equals(FieldUsageType.TARGET)) {
+                    targetColumnName = miningField.getName().getValue();
                 }
             }
         }
 
         tuple.append(rawDataMap.get(targetColumnName));
-        
+
         for (String fieldName : supplementaryFields) {
             tuple.append(rawDataMap.get(fieldName));
         }

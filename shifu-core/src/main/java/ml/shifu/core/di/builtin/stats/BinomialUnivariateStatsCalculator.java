@@ -56,6 +56,38 @@ public class BinomialUnivariateStatsCalculator implements UnivariateStatsCalcula
         return stats;
     }
 
+
+    @Override
+    public UnivariateStats calculateRVO(DataField field, List<?> values, Params params) {
+        UnivariateStats stats = new UnivariateStats();
+        stats.setField(field.getName());
+     
+        List<Object> data = new ArrayList<Object>();
+        for(Object obj : values) {
+            data.add(((RawValueObject)obj).getValue());
+        }
+
+        UnivariateStatsCountsCalculator.calculate(stats, data);
+      
+        setParams(params);
+        List<String> tags = (List<String>) params.get("tags");
+
+
+        if (field.getOptype().equals(OpType.CATEGORICAL)) {
+            BinomialUnivariateStatsDiscrCalculator.calculate(stats, CommonUtils.convertListRaw2Categorical((List<RawValueObject>)values, posTags, negTags), null);
+
+
+        } else if (field.getOptype().equals(OpType.CONTINUOUS)) {
+
+            BinomialUnivariateStatsContCalculator contCalculator = new BinomialUnivariateStatsContCalculator();
+            contCalculator.calculate(stats, CommonUtils.convertListRaw2Numerical((List<RawValueObject>)values, posTags, negTags), numBins);
+
+        }
+
+
+        return stats;
+    }
+    
     private void setParams(Params params) {
 
         this.posTags = (List<String>) params.get("posTags");
@@ -68,4 +100,5 @@ public class BinomialUnivariateStatsCalculator implements UnivariateStatsCalcula
 
 
     }
+
 }

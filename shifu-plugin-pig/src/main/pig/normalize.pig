@@ -13,15 +13,16 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+REGISTER '$path_jar'
 
-REGISTER $pig_jars;
 
-DEFINE ModelExec    ml.shifu.plugin.pig.score.PigModelExecUDF('$pathPMML', '$headerString');
+DEFINE Normalize        ml.shifu.plugin.pig.normalization.PigNormalizeUDF('$pathPMML','$modelName');
 
-raw = LOAD '$pathData' USING PigStorage('$delimiter');
+raw = LOAD '$pathInputData' USING PigStorage('$delimiter');
 
-result = FOREACH raw GENERATE FLATTEN(ModelExec(*));
+normalized = FOREACH raw GENERATE Normalize(*);
+normalized = FILTER normalized BY $0 IS NOT NULL;
+normalized = FOREACH normalized GENERATE FLATTEN($0);
 
-result = ORDER result BY $0 DESC;
+STORE normalized INTO '$pathOutputData' USING PigStorage('|', '-schema');
 
-STORE result INTO '$pathResult' USING PigStorage('|', '-schema');

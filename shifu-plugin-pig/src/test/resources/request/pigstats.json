@@ -1,0 +1,39 @@
+{
+    "name": "PigStatsRequest",
+    "description": "step 2, calculate stats",
+    "processor": {
+        "spi": "RequestProcessor",
+        "impl": "ml.shifu.plugin.pig.stats.PigStatsRequestProcessor",
+        "params": {
+            "pathPMML": "src/test/resources/pmml/model.xml",
+            "pathData": "src/test/resources/data/wdbc/wdbc.train",
+            "delimiter": ",",
+            "pathHeader": "src/test/resources/data/wdbc/wdbc.header",
+            "headerDelimiter": "|",
+            "pathPreTrainingStats": "src/test/resources/data/wdbc/tmp",
+            "binningSampleNegOnly": true,
+            "isCategoricalDisabled": true,
+            "localMode": true
+        }
+    },    
+    "bindings": [
+        {
+            "spi": "UnivariateStatsCalculator",
+            "impl": "ml.shifu.core.di.builtin.stats.BinomialUnivariateStatsCalculator",
+            "params": {
+               "modelName": "demoModel",
+                "targetFieldName": "diagnosis",
+                "pathInputData": "src/test/resources/data/wdbc/wdbc.train",
+                "numBins": 10,
+                "negTags": [
+                    "B"
+                ],
+                "posTags": [
+                    "M"
+                ] 
+                    
+            }            
+        }
+
+    ]
+}
