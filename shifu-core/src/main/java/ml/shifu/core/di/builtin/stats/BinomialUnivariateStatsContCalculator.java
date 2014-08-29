@@ -26,13 +26,11 @@ public class BinomialUnivariateStatsContCalculator {
 
     public void calculate(UnivariateStats univariateStats, List<NumericalValueObject> nvoList, int expectedBinNum) {
 
-
         calculateBasicStats(nvoList);
         calculateBinning(nvoList, expectedBinNum);
 
         univariateStats.setNumericInfo(numericInfo);
         univariateStats.setContStats(contStats);
-
 
     }
 
@@ -89,8 +87,8 @@ public class BinomialUnivariateStatsContCalculator {
 
         Double interQuartileRange = validValues.get((int) Math.floor(validSize * 0.75)) - validValues.get((int) Math.floor(validSize * 0.25));
 
-        numericInfo.setMean(mean);
         numericInfo.setStandardDeviation(stdDev);
+        numericInfo.setMean(mean);
         numericInfo.setMedian(median);
         numericInfo.setInterQuartileRange(interQuartileRange);
 

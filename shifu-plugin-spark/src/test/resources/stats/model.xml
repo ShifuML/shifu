@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<PMML xmlns="http://www.dmg.org/PMML-4_2">
+    <DataDictionary numberOfFields="32">
+        <DataField name="id" optype="ordinal" dataType="string"/>
+        <DataField name="diagnosis" optype="categorical" dataType="string"/>
+        <DataField name="mean_radius" optype="continuous" dataType="double"/>
+        <DataField name="mean_texture" optype="continuous" dataType="double"/>
+        <DataField name="mean_perimeter" optype="continuous" dataType="double"/>
+        <DataField name="mean_area" optype="continuous" dataType="double"/>
+        <DataField name="mean_smoothness" optype="continuous" dataType="double"/>
+        <DataField name="mean_compactness" optype="continuous" dataType="double"/>
+        <DataField name="mean_concavity" optype="continuous" dataType="double"/>
+        <DataField name="mean_concave_points" optype="continuous" dataType="double"/>
+        <DataField name="mean_symmetry" optype="continuous" dataType="double"/>
+        <DataField name="mean_fractal_dimension" optype="continuous" dataType="double"/>
+        <DataField name="std_radius" optype="continuous" dataType="double"/>
+        <DataField name="std_texture" optype="continuous" dataType="double"/>
+        <DataField name="std_perimeter" optype="continuous" dataType="double"/>
+        <DataField name="std_area" optype="continuous" dataType="double"/>
+        <DataField name="std_smoothness" optype="continuous" dataType="double"/>
+        <DataField name="std_compactness" optype="continuous" dataType="double"/>
+        <DataField name="std_concavity" optype="continuous" dataType="double"/>
+        <DataField name="std_concave_points" optype="continuous" dataType="double"/>
+        <DataField name="std_symmetry" optype="continuous" dataType="double"/>
+        <DataField name="std_fractal_dimension" optype="continuous" dataType="double"/>
+        <DataField name="worst_radius" optype="continuous" dataType="double"/>
+        <DataField name="worst_texture" optype="continuous" dataType="double"/>
+        <DataField name="worst_perimeter" optype="continuous" dataType="double"/>
+        <DataField name="worst_area" optype="continuous" dataType="double"/>
+        <DataField name="worst_smoothness" optype="continuous" dataType="double"/>
+        <DataField name="worst_compactness" optype="continuous" dataType="double"/>
+        <DataField name="worst_concavity" optype="continuous" dataType="double"/>
+        <DataField name="worst_concave_points" optype="continuous" dataType="double"/>
+        <DataField name="worst_symmetry" optype="continuous" dataType="double"/>
+        <DataField name="worst_fractal_dimension" optype="continuous" dataType="double"/>
+    </DataDictionary>
+    <NeuralNetwork modelName="demoModel">
+        <MiningSchema>
+            <MiningField name="id" usageType="supplementary" optype="ordinal"/>
+            <MiningField name="diagnosis" usageType="target" optype="categorical"/>
+            <MiningField name="mean_radius" usageType="active" optype="continuous"/>
+            <MiningField name="mean_texture" usageType="active" optype="continuous"/>
+            <MiningField name="mean_perimeter" usageType="active" optype="continuous"/>
+            <MiningField name="mean_area" usageType="active" optype="continuous"/>
+            <MiningField name="mean_smoothness" usageType="active" optype="continuous"/>
+            <MiningField name="mean_compactness" usageType="active" optype="continuous"/>
+            <MiningField name="mean_concavity" usageType="active" optype="continuous"/>
+            <MiningField name="mean_concave_points" usageType="active" optype="continuous"/>
+            <MiningField name="mean_symmetry" usageType="active" optype="continuous"/>
+            <MiningField name="mean_fractal_dimension" usageType="active" optype="continuous"/>
+            <MiningField name="std_radius" usageType="active" optype="continuous"/>
+            <MiningField name="std_texture" usageType="active" optype="continuous"/>
+            <MiningField name="std_perimeter" usageType="active" optype="continuous"/>
+            <MiningField name="std_area" usageType="active" optype="continuous"/>
+            <MiningField name="std_smoothness" usageType="active" optype="continuous"/>
+            <MiningField name="std_compactness" usageType="active" optype="continuous"/>
+            <MiningField name="std_concavity" usageType="active" optype="continuous"/>
+            <MiningField name="std_concave_points" usageType="active" optype="continuous"/>
+            <MiningField name="std_symmetry" usageType="active" optype="continuous"/>
+            <MiningField name="std_fractal_dimension" usageType="active" optype="continuous"/>
+            <MiningField name="worst_radius" usageType="active" optype="continuous"/>
+            <MiningField name="worst_texture" usageType="active" optype="continuous"/>
+            <MiningField name="worst_perimeter" usageType="active" optype="continuous"/>
+            <MiningField name="worst_area" usageType="active" optype="continuous"/>
+            <MiningField name="worst_smoothness" usageType="active" optype="continuous"/>
+            <MiningField name="worst_compactness" usageType="active" optype="continuous"/>
+            <MiningField name="worst_concavity" usageType="active" optype="continuous"/>
+            <MiningField name="worst_concave_points" usageType="active" optype="continuous"/>
+            <MiningField name="worst_symmetry" usageType="active" optype="continuous"/>
+            <MiningField name="worst_fractal_dimension" usageType="active" optype="continuous"/>
+        </MiningSchema>
+        <Targets>
+            <Target field="diagnosis" optype="categorical">
+                <TargetValue value="M" displayValue="Malignant"/>
+                <TargetValue value="B" displayValue="Benign"/>
+            </Target>
+        </Targets>
+    </NeuralNetwork>
+</PMML>

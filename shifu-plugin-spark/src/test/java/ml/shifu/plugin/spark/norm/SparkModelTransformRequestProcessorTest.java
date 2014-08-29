@@ -14,7 +14,7 @@ public class SparkModelTransformRequestProcessorTest {
     @Test
     public void test() throws Exception {
         SparkModelTransformRequestProcessor strp= new SparkModelTransformRequestProcessor();
-        Request req=  JSONUtils.readValue(new File("src/test/resources/5_transformexec.json"), Request.class); 
+        Request req=  JSONUtils.readValue(new File("src/test/resources/norm/5_transformexec.json"), Request.class); 
         strp.exec(req);
     }
 }
