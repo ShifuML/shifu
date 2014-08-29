@@ -12,9 +12,3 @@ localNumParallel=6
 
 # how many records per message
 recordCntPerMessage=100000
-
-# SHIFU_OPTS if for default Java Options
-JAVA_OPTS="-Xms1G -Xmx1G"
-
-# HADOOP_CONF_DIR is for HADOOP configuration directory
-HADOOP_CONF_DIR=""

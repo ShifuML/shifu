@@ -50,19 +50,7 @@ if [ "${SHIFU_HOME}" == "" ]; then
     echo "SHIFU_HOME is not set. Using ${BIN_DIR}/.. as SHIFU_HOME"
 fi
 
-
-LATEST_JAVA_OPTS=${JAVA_OPTS}
-LATEST_HADOOP_CONF_DIR=${HADOOP_CONF_DIR}
-
-for SHIFU_CONFIG_FILE in `echo ${SHIFU_HOME}/conf/shifuconfig /etc/shifconfig ~/.shifuconfig`; do
-    if [ -f ${SHIFU_CONFIG_FILE} ]; then
-        . ${SHIFU_CONFIG_FILE}
-    fi
-done
-
-SHIFU_OPTS=${LATEST_JAVA_OPTS:=${SHIFU_OPTS}}
-SHIFU_OPTS=${SHIFU_OPTS:=${JAVA_OPTS}}
-HADOOP_CONF_DIR=${LATEST_HADOOP_CONF_DIR:=${HADOOP_CONF_DIR}}
+SHIFU_OPTS=${JAVA_OPTS:=${SHIFU_OPTS}}
 
 cygwin=false
 case "`uname`" in
