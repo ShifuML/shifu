@@ -1,0 +1,5 @@
+target/**
+*.swp
+*.swo
+src/test/resources/generated/**
+/target/
