@@ -1,0 +1,38 @@
+{
+    "name": "CalcStatsRequest",
+    "description": "step 2, calculate stats",
+    "processor": {
+        "spi": "RequestProcessor",
+        "impl": "ml.shifu.plugin.spark.stats.SparkCalcStatsRequestProcessor",
+        "params": {
+            "pathPMML": "./src/test/resources/stats/model.xml",
+            "pathPMMLOutput": "./src/test/resources/stats/generated/model.xml",
+            "pathRequest": "./src/test/resources/stats/spark_stats.json",
+            "pathInputData": "./src/test/resources/stats/data/wdbc.data",
+            "pathHDFSTmp": "ml/shifu/spark/stats/tmp",
+            "pathHDFSConf": "/usr/local/hadoop/etc/hadoop/",
+            "sparkHome": "/usr/local/spark",
+            "pathToJar": "./target/shifu-plugin-spark-0.3.0-SNAPSHOT-jar-with-dependencies.jar",
+            "sparkMode": "local"
+        }
+    },    
+    "bindings": [
+        {
+            "spi": "ml.shifu.plugin.spark.stats.interfaces.SparkStatsCalculator",
+            "impl": "ml.shifu.plugin.spark.stats.UnivariateStatsCalculator",
+            "params": {
+                "modelName": "demoModel",
+                "targetFieldName": "diagnosis",
+                "numBins": 10,
+                "negTags": [
+                    "B"
+                ],
+                "posTags": [
+                    "M"
+                ] 
+                    
+            }            
+        }
+
+    ]
+}

@@ -1,21 +1,21 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
 xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
-    
+    <!--
     <parent>
-    	<artifactId>shifu</artifactId>
-    	<groupId>ml.shifu</groupId>
-    	<version>0.3.0-SNAPSHOT</version>
+    <artifactId>shifu</artifactId>
+    <groupId>ml.shifu</groupId>
+    <version>0.3.0-SNAPSHOT</version>
     </parent>
-    
+    -->
 
     <modelVersion>4.0.0</modelVersion>
 
     <groupId>ml.shifu</groupId>
-    <artifactId>spark-norm</artifactId>
+	<artifactId>shifu-plugin-spark</artifactId>
     <version>0.3.0-SNAPSHOT</version>
     <packaging>jar</packaging>
 
-    <name>spark-norm</name>
+    <name>shifu-plugin-spark</name>
     <url>http://maven.apache.org</url>
 
     <properties>
@@ -63,16 +63,6 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xs
             <groupId>ml.shifu</groupId>
             <artifactId>shifu-core</artifactId>
             <version>0.3.0-SNAPSHOT</version>
-            <exclusions>
-                <exclusion>
-                    <groupId>com.typesafe.akka</groupId>
-                    <artifactId>akka-actor_2.10</artifactId>
-                </exclusion>
-                <exclusion>
-                    <groupId>org.slf4j</groupId>
-                    <artifactId>slf4j-log4j12</artifactId>
-                </exclusion>
-            </exclusions>
         </dependency>
 
         <dependency>

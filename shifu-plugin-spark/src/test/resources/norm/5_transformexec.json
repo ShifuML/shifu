@@ -6,15 +6,15 @@
         "impl": "ml.shifu.plugin.spark.norm.SparkModelTransformRequestProcessor",
         "params": {
             "modelName": "demoModel",
-            "pathPMML": "./src/test/resources/model.xml",
-            "pathInputData": "./src/test/resources/data/wdbc.train",
-            "pathOutputData": "./src/test/resources/generated/normalized.txt",
+            "pathPMML": "./src/test/resources/norm/model.xml",
+            "pathInputData": "./src/test/resources/norm/data/wdbc.train",
+            "pathOutputData": "./src/test/resources/norm/generated/normalized.txt",
             "pathHDFSTmp":"ml/shifu/norm/tmp",
             "pathHadoopConf":"/usr/local/hadoop/etc/hadoop",
-            "pathOutputActiveHeader": "./src/test/resources/generated/normalized_header.txt",
-            "pathToJar": "./target/spark-norm-0.3.0-SNAPSHOT-jar-with-dependencies.jar",
-            "pathRequest": "./src/test/resources/5_transformexec.json",
-            "SparkHome": "/Users/apalnitkar/installations/spark-1.0.1-bin-hadoop2",
+            "pathOutputActiveHeader": "./src/test/resources/norm/generated/normalized_header.txt",
+            "pathToJar": "./target/shifu-plugin-spark-0.3.0-SNAPSHOT-jar-with-dependencies.jar",
+            "pathRequest": "./src/test/resources/norm/5_transformexec.json",
+            "SparkHome": "/usr/local/spark",
             "precision":"3",
             "sparkMode": "local"
         }
