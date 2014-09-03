@@ -1,0 +1,2 @@
+## columnName,{string|double|etc...},{categorical|ordinal|continuous}
+diagnosis,string,categorical
