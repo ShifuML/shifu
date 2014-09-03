@@ -5,7 +5,7 @@
     </Header>
     <DataDictionary numberOfFields="32">
         <DataField name="id" optype="continuous" dataType="string"/>
-        <DataField name="diagnosis" optype="categorical" dataType="double"/>
+        <DataField name="diagnosis" optype="categorical" dataType="string"/>
         <DataField name="mean_radius" optype="continuous" dataType="string"/>
         <DataField name="mean_texture" optype="continuous" dataType="string"/>
         <DataField name="mean_perimeter" optype="continuous" dataType="string"/>

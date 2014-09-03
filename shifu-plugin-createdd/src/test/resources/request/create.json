@@ -16,7 +16,7 @@
             "csvDelimiter": "|",
             "pathCSV": "src/test/resources/data/wdbc/wdbc.header",
             "nameFileDelimiter": ",",
-            "columnNameFile" : "src/test/resources/data/wdbc/columns.txt",
+            "columnNameFile" : "src/test/resources/data/wdbc/columns.txt"
          }
       },
     {
