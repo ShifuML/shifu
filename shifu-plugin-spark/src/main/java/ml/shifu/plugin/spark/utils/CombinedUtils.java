@@ -1,7 +1,17 @@
-/* 
- * Contains all utils functions used by spark normalizer.
- * TODO: These must be integrated into utils of shifu-core.
- * 
+/**
+ * Copyright [2012-2014] eBay Software Foundation
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package ml.shifu.plugin.spark.utils;
 
@@ -34,10 +44,17 @@ import org.xml.sax.InputSource;
 import com.google.common.base.Joiner;
 import com.google.common.base.Splitter;
 
+/** 
+ * Contains all utils functions used by shifu-spark-plugin.
+ */
 public class CombinedUtils {
 
-    // take PMML object and modelname (from params) and create list of active
-    // fields
+	/**
+	 * Creates a list of active fields
+	 * @param pmml A PMML object
+	 * @param params Params object which contains the modelname
+	 * @return activeFields
+	 */
     public static List<DerivedField> getActiveFields(PMML pmml, Params params) {
         Model model = PMMLUtils.getModelByName(pmml, params.get("modelName")
                 .toString());
@@ -47,8 +64,12 @@ public class CombinedUtils {
         return activeFields;
     }
 
-    // take PMML object and modelname (from params) and create list of target
-    // fields
+    /**
+     * Creates list of target fields
+     * @param pmml PMML object
+     * @param params Params object which contains modelname
+     * @return targetFields
+     */
     public static List<DerivedField> getTargetFields(PMML pmml, Params params) {
         Model model = PMMLUtils.getModelByName(pmml, params.get("modelName")
                 .toString());
@@ -58,8 +79,12 @@ public class CombinedUtils {
         return targetFields;
     }
 
-    // TODO: include functionality for having HDFS pathOutputActiveHeaders
-    // write output file header to local FS
+    /**
+     * Writes the transformed header 
+     * @param pathOutputActiveHeader
+     * @param activeFields
+     * @param targetFields
+     */
     public static void writeTransformationHeader(String pathOutputActiveHeader,
             List<DerivedField> activeFields, List<DerivedField> targetFields) {
         PrintWriter headerWriter = null;
@@ -81,8 +106,13 @@ public class CombinedUtils {
         }
     }
 
-    // Should go into PMMLUtils
-    // load PMML from any filesystem given the path string and filesystem
+    /**
+     * Loads a PMML file given the path and the filesystem
+     * @param pathPMML String path
+     * @param fs FileSystem object
+     * @return pmml PMML object
+     * @throws IOException
+     */
     public static PMML loadPMML(String pathPMML, FileSystem fs)
             throws IOException {
         // load PMML from any fs- local or hdfs
@@ -102,6 +132,13 @@ public class CombinedUtils {
         return pmml;
     }
 
+    /**
+     * Saves a PMML to a given filesystem
+     * @param pmml PMML object
+     * @param pathPMML String path to output file
+     * @param fs FileSystem object
+     * @throws IOException
+     */
     public static void savePMML(PMML pmml, String pathPMML, FileSystem fs) throws IOException {
         
         OutputStream pmmlOutputStream= null;
@@ -119,9 +156,12 @@ public class CombinedUtils {
     }
     
     
-    // create data map from list of datafields and objects, suitable to be
-    // passed
-    // as input to TransformExecutor.transform()
+    /**
+     * Creates a map from dataFields and parsedInput containing datafield name to value mapping
+     * @param dataFields List of DataField
+     * @param parsedInput List containing parsed input
+     * @return rawDataMap
+     */
     public static Map<String, Object> createDataMap(List<DataField> dataFields,
             List<Object> parsedInput) {
         Map<String, Object> rawDataMap = new HashMap<String, Object>();
@@ -132,7 +172,12 @@ public class CombinedUtils {
         return rawDataMap;
     }
 
-    // take string and delimiter and parse into list of objects
+    /**
+     * Parses input into list of objects using delimiter
+     * @param input input string
+     * @param delimiter delimiter String
+     * @return parsedInput List of Objects
+     */
     public static List<Object> getParsedObjects(String input, String delimiter) {
         List<Object> parsedInput = new ArrayList<Object>();
 
@@ -143,6 +188,13 @@ public class CombinedUtils {
         return parsedInput;
     }
 
+    /**
+     * Parses input string using delimiter, and creates datamap containing datafield name to value mapping
+     * @param dataFields List of DataField
+     * @param input input String
+     * @param delimiter delimiter String
+     * @return rawDataMap
+     */
     public static Map<String, Object> createDataMap(List<DataField> dataFields,
             String input, String delimiter) {
         Map<String, Object> rawDataMap = new HashMap<String, Object>();

@@ -1,4 +1,37 @@
-/*
+/**
+ * Copyright [2012-2014] eBay Software Foundation
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package ml.shifu.plugin.spark.norm;
+
+
+import ml.shifu.core.di.spi.RequestProcessor;
+import ml.shifu.core.request.Request;
+import ml.shifu.core.util.PMMLUtils;
+import ml.shifu.core.util.Params;
+import ml.shifu.plugin.spark.utils.CombinedUtils;
+import ml.shifu.plugin.spark.utils.HDFSFileUtils;
+
+import java.util.List;
+import java.lang.ProcessBuilder;
+import java.lang.ProcessBuilder.Redirect;
+import java.lang.Process;
+
+import org.dmg.pmml.DerivedField;
+import org.dmg.pmml.PMML;
+
+/**
  * This is the main entry point for the spark normalization plugin. The exec method
  * when called with the Request object will:
  * 	1. Unpack paths and other parameters from request object
@@ -35,25 +68,6 @@
  *	 		5 will be assumed to be HDFS path. "file:" scheme is invalid for this path.
  *			6, 7, 8 are currently only supported as local paths.
  */
-
-package ml.shifu.plugin.spark.norm;
-
-
-import ml.shifu.core.di.spi.RequestProcessor;
-import ml.shifu.core.request.Request;
-import ml.shifu.core.util.PMMLUtils;
-import ml.shifu.core.util.Params;
-import ml.shifu.plugin.spark.utils.CombinedUtils;
-import ml.shifu.plugin.spark.utils.HDFSFileUtils;
-
-import java.util.List;
-import java.lang.ProcessBuilder;
-import java.lang.ProcessBuilder.Redirect;
-import java.lang.Process;
-
-import org.dmg.pmml.DerivedField;
-import org.dmg.pmml.PMML;
-
 
 public class SparkModelTransformRequestProcessor implements RequestProcessor {
 
