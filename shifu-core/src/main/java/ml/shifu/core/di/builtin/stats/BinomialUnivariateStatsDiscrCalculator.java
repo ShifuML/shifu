@@ -110,6 +110,7 @@ public class BinomialUnivariateStatsDiscrCalculator {
         discrStats.withExtensions(PMMLUtils.createExtensions(extensionMap));
 
         univariateStats.setDiscrStats(discrStats);
+                
     }
 
 

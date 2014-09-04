@@ -1,16 +1,18 @@
-/*
- * This is the class that is called by spark-submit. Hence, it requires a main method.
- * The three arguments required for this class are the paths to the PMML XML model file and the request JSON file.
- * In the main method, 
- * 	1. The paths and other parameters are unpacked from the request object
- * 	2. SparkConf and JavaSparkContext objects are created 
- * 	3. Broadcast variables are populated
- * 	4. JavaRDD is created from the input file
- * 	5. Map operation is done on the RDD using the Normalize class
- * 	6. resulting JavaRDD is stored as a text file in the input
- * 
+/**
+ * Copyright [2012-2014] eBay Software Foundation
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
-
 package ml.shifu.plugin.spark.norm;
 
 import org.apache.hadoop.fs.FileSystem;
@@ -39,6 +41,18 @@ import org.apache.spark.broadcast.Broadcast;
 
 import com.google.inject.Guice;
 import com.google.inject.Injector;
+/**
+ * This is the class that is called by spark-submit. Hence, it requires a main method.
+ * The three arguments required for this class are the paths to the PMML XML model file and the request JSON file.
+ * In the main method, 
+ * 	1. The paths and other parameters are unpacked from the request object
+ * 	2. SparkConf and JavaSparkContext objects are created 
+ * 	3. Broadcast variables are populated
+ * 	4. JavaRDD is created from the input file
+ * 	5. Map operation is done on the RDD using the Normalize class
+ * 	6. resulting JavaRDD is stored as a text file in the input
+ * 
+ */
 
 public class SparkNormalizer {
     public static void main(String[] args) throws Exception {

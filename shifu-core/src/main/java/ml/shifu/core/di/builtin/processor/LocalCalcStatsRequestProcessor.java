@@ -54,8 +54,7 @@ public class LocalCalcStatsRequestProcessor implements RequestProcessor {
 
 
         bindingParams.put("tags", columns.get(targetFieldNum));
-
-
+        
         for (int i = 0; i < size; i++) {
 
             DataField field = dict.getDataFields().get(i);
