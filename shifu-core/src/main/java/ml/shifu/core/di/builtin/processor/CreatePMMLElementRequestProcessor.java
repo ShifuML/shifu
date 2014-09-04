@@ -79,6 +79,10 @@ public class CreatePMMLElementRequestProcessor implements RequestProcessor {
         if (module.has("PMMLModelElementCreator")) {
             PMMLModelElementService service = injector.getInstance(PMMLModelElementService.class);
             Model model = service.getModelElement(modelElementCreatorBinding.getParams());
+            for(Model m : pmml.getModels()) {
+                if(m.getModelName().equalsIgnoreCase((String)modelElementCreatorBinding.getParams().get("modelName")))
+                    throw new RuntimeException("ModelName already exists: " + model.getModelName() );
+            }
             pmml.withModels(model);
         }
 
