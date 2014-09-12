@@ -18,10 +18,8 @@ package ml.shifu.plugin.spark.stats;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.util.Map;
 
 import ml.shifu.core.di.module.SimpleModule;
-import ml.shifu.core.di.service.UnivariateStatsService;
 import ml.shifu.core.request.Binding;
 import ml.shifu.core.request.Request;
 import ml.shifu.core.util.JSONUtils;
@@ -70,7 +68,6 @@ public class SparkStatsDriver {
 
         Params params = req.getProcessor().getParams();
 
-        // TODO: Convert pathHDFSTmp to full hdfs path
         String pathHDFSTmp = (String) params.get("pathHDFSTmp",
                 "hdfs://ml/shifu/plugin/spark/tmp");
         

@@ -31,7 +31,8 @@ public abstract class ColumnStateArray implements java.io.Serializable {
     private static final long serialVersionUID = 1L;
     protected List<ColumnState> states;
     protected String delimiter;
-        
+    
+    
     abstract public ColumnStateArray getNewBlank() throws Exception;
     
     public ColumnStateArray merge(ColumnStateArray stateArray2) throws Exception {

@@ -22,6 +22,7 @@ import org.dmg.pmml.UnivariateStats;
 
 import ml.shifu.core.util.CommonUtils;
 import ml.shifu.core.util.Params;
+import ml.shifu.plugin.spark.stats.SerializedNumericalValueObject;
 import ml.shifu.plugin.spark.stats.interfaces.UnitState;
 
 public class BasicNumericInfoUnitState implements UnitState {
@@ -61,6 +62,10 @@ public class BasicNumericInfoUnitState implements UnitState {
             addData((Double)value);
             return;
         }
+        // This unit state is used by Binomial stats code too. To support it:
+        else if(value instanceof SerializedNumericalValueObject) {
+        	addData(((SerializedNumericalValueObject) value).getValue());
+        }
         if(CommonUtils.isValidNumber(value)) {
             Double dVal= Double.valueOf(value.toString());
             addData(dVal);
@@ -93,7 +98,6 @@ public class BasicNumericInfoUnitState implements UnitState {
     public Double getMax() {
         return this.max;
     }
-    
     
     public void populateUnivariateStats(UnivariateStats univariateStats, Params params) {
         ContStats contStats= univariateStats.getContStats();

@@ -27,7 +27,7 @@ import org.testng.annotations.Test;
 
 public class BinomialRSampleUnitStateTest {
 
-    BinomialRSampleUnitState state= new BinomialRSampleUnitState(100, 10);
+    BinomialRSampleUnitState state= new BinomialRSampleUnitState(100);
     List<SerializedNumericalValueObject> nvoList;
     @BeforeClass
     public void addData() {

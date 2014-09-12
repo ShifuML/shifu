@@ -44,15 +44,13 @@ import ml.shifu.plugin.spark.stats.interfaces.UnitState;
 public class BinomialRSampleUnitState extends RSampleUnitState<SerializedNumericalValueObject> implements UnitState {
     
     private static final long serialVersionUID = 1L;
-    int numBins;
     
-    public BinomialRSampleUnitState(int maximumSize, int numberBins) {
+    public BinomialRSampleUnitState(int maximumSize) {
         super(maximumSize);
-        numBins= numberBins;
     }
     
     public UnitState getNewBlank() {
-        return new BinomialRSampleUnitState(maxSize, numBins);
+        return new BinomialRSampleUnitState(maxSize);
     }
 
     public void merge(UnitState state) throws Exception {
@@ -85,6 +83,7 @@ public class BinomialRSampleUnitState extends RSampleUnitState<SerializedNumeric
             nvoList.add(nvo);
         }
         
+        int numBins= Integer.parseInt(params.get("numBins", "11").toString());
         ColumnBinningResult result = calculator.calculate(nvoList, numBins);
 
         int size = result.getLength();

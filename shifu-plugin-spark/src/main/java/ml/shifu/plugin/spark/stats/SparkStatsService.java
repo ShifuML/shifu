@@ -30,6 +30,7 @@ import ml.shifu.plugin.spark.stats.interfaces.SparkStatsCalculator;
  * Class used exclusively for performing DI on SparkStatsCalculator
  * HAS A SparkStatsCalculator: Can be either a Univariate or Binomial StatsCalculator
  */
+
 public class SparkStatsService {
     private SparkStatsCalculator statsCalculator;
     @Inject

@@ -15,38 +15,59 @@
  */
 package ml.shifu.plugin.spark.stats.interfaces;
 
+import java.util.ArrayList;
 import java.util.List;
 
 import ml.shifu.core.util.Params;
+import ml.shifu.plugin.spark.utils.ColType;
 
 import org.dmg.pmml.FieldName;
 import org.dmg.pmml.UnivariateStats;
 
 /**
  * This class holds a collection of unit states to be maintained for a particular column in the table.
- * ColumnState has instantiations which should define the UnitStates they need in the constructor.
  * 
  */
 
-public abstract class ColumnState implements java.io.Serializable {
+public class ColumnState implements java.io.Serializable {
 
     private static final long serialVersionUID = 1L;
     protected List<UnitState> states;
     protected Params params;
     protected String fieldName;
+    protected ColType colType;
 
-    abstract public ColumnState getNewBlank();
+    protected ColumnState(String name, Params parameters, ColType colType) {
+    	this.fieldName= name;
+    	this.params= parameters;
+    	this.colType= colType;
+    	this.states= new ArrayList<UnitState>();
+    }
+    
+    public ColumnState(String name, Params parameters, ColType colType, List<UnitState> states) {
+    	this.fieldName= name;
+    	this.params= parameters;
+    	this.colType= colType;
+    	this.states= states;
+    }
+    
+    public ColumnState getNewBlank() {
+    	// create a new list of states
+    	List<UnitState> newStates= new ArrayList<UnitState>();
+    	for(UnitState state: states) {
+    		newStates.add(state.getNewBlank());
+    	}
+    	return new ColumnState(fieldName, params, colType, states);
+    }
     
     public void merge(ColumnState colState) throws Exception {
-        checkClass(colState);
+        //checkClass(colState);
         int index= 0;
         for(UnitState state: colState.getStates()) {
             this.states.get(index).merge(state);
             index++;
         }
     }
-        
-    abstract public void checkClass(ColumnState colState) throws Exception;
     
     public void addData(Object value) {
         try {
@@ -70,4 +91,7 @@ public abstract class ColumnState implements java.io.Serializable {
         return univariateStats;
     }
     
+    public ColType getColType() {
+    	return this.colType;
+    }
 }

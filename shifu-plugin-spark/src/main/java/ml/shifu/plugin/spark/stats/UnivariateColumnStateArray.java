@@ -18,50 +18,58 @@ package ml.shifu.plugin.spark.stats;
 import java.util.ArrayList;
 import java.util.List;
 
-import ml.shifu.core.util.Params;
-import ml.shifu.plugin.spark.stats.columnstates.SimpleUnivariateContState;
-import ml.shifu.plugin.spark.stats.columnstates.SimpleUnivariateDiscrState;
-import ml.shifu.plugin.spark.stats.columnstates.SimpleUnivariateOrdinalState;
+import com.google.common.base.Splitter;
+
+import ml.shifu.core.util.CommonUtils;
 import ml.shifu.plugin.spark.stats.interfaces.ColumnState;
 import ml.shifu.plugin.spark.stats.interfaces.ColumnStateArray;
+import ml.shifu.plugin.spark.utils.ColType;
 
-import org.dmg.pmml.DataField;
-import org.dmg.pmml.OpType;
 /**
  * Implementation of ColumnStateArray for Univariate stats.
  */
 public class UnivariateColumnStateArray extends ColumnStateArray {
     
-    public UnivariateColumnStateArray(UnivariateColumnStateArray initValue) {
-        // creates a blank copy of stateArray
-        states= new ArrayList<ColumnState>();
-        for(ColumnState s: initValue.getStateArray()) {
-            states.add(s.getNewBlank());
-        }
-        delimiter= initValue.delimiter;
-    }
-    
-    public UnivariateColumnStateArray(List<DataField> dataFields, Params params) {
-        states= new ArrayList<ColumnState>();
-        for(DataField field: dataFields) {
-            if(field.getOptype().equals(OpType.CATEGORICAL))
-                states.add(new SimpleUnivariateDiscrState(field.getName().getValue(), params));
-            else if(field.getOptype().equals(OpType.CONTINUOUS))
-                states.add(new SimpleUnivariateContState(field.getName().getValue(), params));
-            else if(field.getOptype().equals(OpType.ORDINAL))
-                states.add(new SimpleUnivariateOrdinalState(field.getName().getValue(), params));
-        }
-        delimiter= params.get("delimiter", ",").toString();
+	private static final long serialVersionUID = 1L;
+	
+    public UnivariateColumnStateArray(String delimiter, List<ColumnState> states) {
+        this.delimiter= delimiter;
+        this.states= states;
     }
 
+	    
     public void checkClass(ColumnStateArray stateArray) throws Exception {
         if(!(stateArray instanceof UnivariateColumnStateArray))
             throw new Exception("Expected SimpleUnivariateColumnStateArray, got " + stateArray.getClass().toString());
 
     }
-    
+
+    @Override
+    public void addData(String line) {
+        int index= 0;
+        ColumnState state;
+        for(String strValue: Splitter.on(delimiter).split(line)) {
+        	state= states.get(index);
+        	// if colType is continuous, optimize by sending in parsed Double. If Double is not valid send string for frequency count.
+        	if(state.getColType()== ColType.CONTINUOUS) {
+    			if(CommonUtils.isValidNumber(strValue))
+    				state.addData(Double.valueOf(strValue));
+    			else
+    				state.addData(strValue);
+        	}
+        	else
+        		state.addData(strValue);
+            index++;
+        }
+        return;
+    }
+
     @Override
     public ColumnStateArray getNewBlank() throws Exception {
-        return new UnivariateColumnStateArray(this);
+    	// copy states
+    	List<ColumnState> newStates= new ArrayList<ColumnState>();
+    	for(ColumnState state: states)
+    		newStates.add(state.getNewBlank());
+    	return new UnivariateColumnStateArray(delimiter, newStates);
     }
 }

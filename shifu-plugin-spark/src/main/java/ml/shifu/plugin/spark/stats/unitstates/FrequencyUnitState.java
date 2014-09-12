@@ -19,6 +19,8 @@ import org.dmg.pmml.Counts;
 import org.dmg.pmml.UnivariateStats;
 
 import ml.shifu.core.util.Params;
+import ml.shifu.plugin.spark.stats.SerializedCategoricalValueObject;
+import ml.shifu.plugin.spark.stats.SerializedNumericalValueObject;
 import ml.shifu.plugin.spark.stats.interfaces.UnitState;
 
 public class FrequencyUnitState implements UnitState {
@@ -50,7 +52,7 @@ public class FrequencyUnitState implements UnitState {
     public void addData(Object objValue) {
         this.totalFreq++;
         // check if double, for optimization 
-        if(objValue instanceof Double)
+        if(objValue instanceof Double || objValue instanceof SerializedNumericalValueObject || objValue instanceof SerializedCategoricalValueObject)
             return;
         
         if(objValue==null || objValue.toString().length()==0)

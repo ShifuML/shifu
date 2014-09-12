@@ -18,6 +18,7 @@ package ml.shifu.plugin.spark.stats;
 import java.util.List;
 
 import ml.shifu.core.util.Params;
+import ml.shifu.plugin.spark.stats.factory.ColumnStateArrayFactory;
 import ml.shifu.plugin.spark.stats.interfaces.ColumnStateArray;
 import ml.shifu.plugin.spark.stats.interfaces.SparkStatsCalculator;
 
@@ -39,7 +40,8 @@ public class UnivariateStatsCalculator implements
 
     public ModelStats calculate(JavaSparkContext jsc, JavaRDD<String> data, PMML pmml, Params bindingParams) {
         List<DataField> dataFields= pmml.getDataDictionary().getDataFields();
-        Accumulable<ColumnStateArray, String> accum= jsc.accumulable(new UnivariateColumnStateArray(dataFields, bindingParams), new SparkAccumulableWrapper());
+        //Accumulable<ColumnStateArray, String> accum= jsc.accumulable(new UnivariateColumnStateArray(dataFields, bindingParams), new SparkAccumulableWrapper());
+        Accumulable<ColumnStateArray, String> accum= jsc.accumulable(ColumnStateArrayFactory.getUnivariateColumnStates(dataFields, bindingParams), new SparkAccumulableWrapper());
         data.foreach(new AccumulatorApplicator(accum));
         ColumnStateArray colStateArray= accum.value();
         return  colStateArray.getModelStats();
