@@ -24,7 +24,9 @@ import ml.shifu.shifu.exception.ShifuErrorCode;
 import ml.shifu.shifu.exception.ShifuException;
 import ml.shifu.shifu.fs.ShifuFileUtils;
 import ml.shifu.shifu.pig.PigExecutor;
+import ml.shifu.shifu.udf.CalculateStatsUDF;
 import ml.shifu.shifu.util.CommonUtils;
+
 import org.apache.commons.collections.CollectionUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -157,7 +159,7 @@ public class StatsModelProcessor extends BasicModelProcessor implements Processo
                 ColumnConfig config = this.columnConfigList.get(columnNum);
 
                 if(config.isCategorical()) {
-                    config.setBinCategory(CommonUtils.stringToStringList(raw[1]));
+                    config.setBinCategory(CommonUtils.stringToStringList(raw[1], CalculateStatsUDF.CATEGORY_VAL_SEPARATOR));
                 } else {
                     config.setBinBoundary(CommonUtils.stringToDoubleList(raw[1]));
                 }

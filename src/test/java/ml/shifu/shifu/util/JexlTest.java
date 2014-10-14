@@ -19,6 +19,7 @@ import org.apache.commons.jexl2.Expression;
 import org.apache.commons.jexl2.JexlContext;
 import org.apache.commons.jexl2.JexlEngine;
 import org.apache.commons.jexl2.MapContext;
+import org.apache.commons.lang.math.NumberUtils;
 import org.testng.Assert;
 import org.testng.annotations.Test;
 
@@ -108,4 +109,61 @@ public class JexlTest {
         Assert.assertEquals(Boolean.TRUE, e.evaluate(jc));
         Assert.assertEquals(Boolean.FALSE, exp.evaluate(jc));
     }
+    
+    @Test
+    public void testJavaMode() {
+        JexlEngine jexl = new JexlEngine();
+        String jexlExp = "txn_id % 2 == 0 ";
+
+        Expression e = jexl.createExpression(jexlExp);
+
+        JexlContext jc = new MapContext();
+        jc.set("txn_id", "1");
+        Assert.assertEquals(Boolean.FALSE, e.evaluate(jc));
+
+        jc.set("txn_id", "2");
+        Assert.assertEquals(Boolean.TRUE, e.evaluate(jc));
+        
+    }    
+    
+    @Test
+    public void testJavaSubString() {
+        JexlEngine jexl = new JexlEngine();
+        String jexlExp = "str.substring(0, 1) == \"a\" ";
+
+        Expression e = jexl.createExpression(jexlExp);
+
+        JexlContext jc = new MapContext();
+        jc.set("str", "a1");
+        Assert.assertEquals(Boolean.TRUE, e.evaluate(jc));
+    } 
+    
+    @Test
+    public void testMathMethod() {
+        JexlEngine jexl = new JexlEngine();
+        String jexlExp = "NumberUtils.max(a, b, c)";
+
+        Expression e = jexl.createExpression(jexlExp);
+
+        JexlContext jc = new MapContext();
+        jc.set("NumberUtils", new NumberUtils());
+        jc.set("a", 7);
+        jc.set("b", 5);
+        jc.set("c", 9);
+        Assert.assertEquals(9, e.evaluate(jc));
+    } 
+    
+    @Test
+    public void testDerived() {
+        JexlEngine jexl = new JexlEngine();
+        String jexlExp = "(0.00472217*vbase_t1_model_V2R1 + 0.00341543*vbase_t1_model_V2BM)/0.00813760";
+
+        Expression e = jexl.createExpression(jexlExp);
+
+        JexlContext jc = new MapContext();
+        jc.set("NumberUtils", new NumberUtils());
+        jc.set("vbase_t1_model_V2R1", 238);
+        jc.set("vbase_t1_model_V2BM", 289);
+        Assert.assertEquals(259.40519686394026, e.evaluate(jc));
+    } 
 }

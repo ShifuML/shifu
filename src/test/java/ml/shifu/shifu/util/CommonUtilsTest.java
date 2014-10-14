@@ -18,6 +18,7 @@ package ml.shifu.shifu.util;
 import com.fasterxml.jackson.core.JsonGenerationException;
 import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+
 import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.container.obj.ColumnConfig.ColumnFlag;
 import ml.shifu.shifu.container.obj.ColumnConfig.ColumnType;
@@ -25,7 +26,10 @@ import ml.shifu.shifu.container.obj.EvalConfig;
 import ml.shifu.shifu.container.obj.ModelConfig;
 import ml.shifu.shifu.container.obj.ModelTrainConf.ALGORITHM;
 import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
+import ml.shifu.shifu.udf.CalculateStatsUDF;
+
 import org.apache.commons.io.FileUtils;
+import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.fs.FileStatus;
 import org.encog.ml.data.MLDataPair;
 import org.testng.Assert;
@@ -401,6 +405,19 @@ public class CommonUtilsTest {
         Assert.assertEquals(5, modelFiles.size());
     }
 
+    @Test
+    public void testCategoryVauleSepartor() {
+        List<String> strList = new ArrayList<String>();
+        strList.add("[Hello, Testing");
+        strList.add("Haha, It's a testing]");
+        
+        String joinStr = StringUtils.join(strList, CalculateStatsUDF.CATEGORY_VAL_SEPARATOR);
+        List<String> recoverList = CommonUtils.stringToStringList(joinStr, CalculateStatsUDF.CATEGORY_VAL_SEPARATOR);
+        Assert.assertEquals(2, recoverList.size());
+        Assert.assertEquals(strList.get(0).substring(1), recoverList.get(0));
+        Assert.assertEquals(strList.get(1).substring(0, strList.get(1).length() - 1), recoverList.get(1));
+    }
+    
     @AfterClass
     public void tearDown() {
         FileUtils.deleteQuietly(new File(Constants.DEFAULT_META_COLUMN_FILE));

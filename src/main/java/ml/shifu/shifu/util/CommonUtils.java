@@ -610,6 +610,11 @@ public final class CommonUtils {
         return Arrays.asList(str.trim().substring(1, str.length() - 1).split(Constants.COMMA));
     }
 
+    private static List<String> checkAndReturnSplitCollections(String str, char separator) {
+        checkListStr(str);
+        return Arrays.asList(StringUtils.split(str.trim().substring(1, str.length() - 1), separator));
+    }
+    
     private static void checkListStr(String str) {
         if (StringUtils.isEmpty(str)) {
             throw new IllegalArgumentException("str should not be null or empty");
@@ -649,6 +654,21 @@ public final class CommonUtils {
         });
     }
 
+    /**
+     * Change list str to List object with string type.
+     * 
+     * @throws IllegalArgumentException if str is not a valid list str.
+     */
+    public static List<String> stringToStringList(String str, char separator) {
+        List<String> list = checkAndReturnSplitCollections(str, separator);
+        return Lists.transform(list, new Function<String, String>() {
+            @Override
+            public String apply(String input) {
+                return input.trim();
+            }
+        });
+    }
+    
     /**
      * Return map entries sorted by value.
      */
