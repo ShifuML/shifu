@@ -187,6 +187,7 @@ public class StatsModelProcessor extends BasicModelProcessor implements Processo
                 config.setMissingCnt(Long.valueOf(raw[14]));
                 config.setTotalCount(Long.valueOf(raw[15]));
                 config.setMissingPercentage(Double.valueOf(raw[16]));
+                
                 config.setBinWeightedNeg(CommonUtils.stringToDoubleList(raw[17]));
                 config.setBinWeightedPos(CommonUtils.stringToDoubleList(raw[18]));
 

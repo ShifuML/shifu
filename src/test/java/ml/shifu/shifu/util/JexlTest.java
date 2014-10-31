@@ -166,4 +166,11 @@ public class JexlTest {
         jc.set("vbase_t1_model_V2BM", 289);
         Assert.assertEquals(259.40519686394026, e.evaluate(jc));
     } 
+    
+    @Test
+    public void testDouble() {
+        Double a = Double.NaN;
+        Double b = Double.valueOf(a.toString());
+        Assert.assertEquals(a, b);
+    }
 }

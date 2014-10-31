@@ -21,26 +21,27 @@ SET mapred.task.timeout 1200000;
 SET job.name 'shifu statistic'
 
 DEFINE IsDataFilterOut  ml.shifu.shifu.udf.PurifyDataUDF('$source_type', '$path_model_config', '$path_column_config');
+DEFINE IsToBinningData  ml.shifu.shifu.udf.FilterBinningDataUDF('$source_type', '$path_model_config', '$path_column_config');
+DEFINE BinningData      ml.shifu.shifu.udf.BinningDataUDF('$source_type', '$path_model_config', '$path_column_config');
 DEFINE AddColumnNum     ml.shifu.shifu.udf.AddColumnNumUDF('$source_type', '$path_model_config', '$path_column_config', 'false');
-DEFINE CalculateStats   ml.shifu.shifu.udf.CalculateStatsUDF('$source_type', '$path_model_config', '$path_column_config', 'false');
+DEFINE CalculateStats   ml.shifu.shifu.udf.CalculateNewStatsUDF('$source_type', '$path_model_config', '$path_column_config');
 
+-- load and purify data
+data = LOAD '$path_raw_data' USING PigStorage('$delimiter');
+data = FILTER data BY IsDataFilterOut(*);
 
-d = LOAD '$path_raw_data' USING PigStorage('$delimiter');
-d = FILTER d BY IsDataFilterOut(*);
+-- convert data into column based
+data_cols = FOREACH data GENERATE AddColumnNum(*);
+data_cols = FOREACH data_cols GENERATE FLATTEN($0);
 
-d = FOREACH d GENERATE AddColumnNum(*);
+-- prepare data and do binning
+data_binning = FILTER data_cols BY IsToBinningData(*);
+data_binning_grp = GROUP data_binning BY $0;
+binning_info = FOREACH data_binning_grp GENERATE FLATTEN(BinningData(*));
 
-d = FOREACH d GENERATE FLATTEN($0);
-d = FILTER d BY $0 IS NOT NULL;
-d = GROUP d BY $0;
+-- do stats
+data_stats = Join data_cols BY $0, binning_info BY columnId USING 'replicated';
+data_stats_binning = GROUP data_stats BY $0;
 
-
-d = FOREACH d {
-        t = FOREACH $1 GENERATE $1, $2, $3;
-        GENERATE group, t;
-}
-
-
-
-d = FOREACH d GENERATE FLATTEN(CalculateStats(*));
-STORE d INTO '$path_pre_training_stats' USING PigStorage('|', '-schema');
+stats_info = FOREACH data_stats_binning GENERATE FLATTEN(CalculateStats(*));
+STORE stats_info INTO '$path_pre_training_stats' USING PigStorage('|', '-schema');
