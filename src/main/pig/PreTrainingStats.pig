@@ -40,8 +40,8 @@ data_binning_grp = GROUP data_binning BY $0;
 binning_info = FOREACH data_binning_grp GENERATE FLATTEN(BinningData(*));
 
 -- do stats
-data_stats = Join data_cols BY $0, binning_info BY columnId USING 'replicated';
-data_stats_binning = GROUP data_stats BY $0;
+data_stats = GROUP data_cols BY $0;
+data_stats = Join data_stats BY $0, binning_info BY columnId USING 'replicated';
 
-stats_info = FOREACH data_stats_binning GENERATE FLATTEN(CalculateStats(*));
+stats_info = FOREACH data_stats GENERATE FLATTEN(CalculateStats(*));
 STORE stats_info INTO '$path_pre_training_stats' USING PigStorage('|', '-schema');

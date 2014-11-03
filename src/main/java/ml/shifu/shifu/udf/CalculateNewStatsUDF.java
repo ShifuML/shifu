@@ -68,21 +68,21 @@ public class CalculateNewStatsUDF extends AbstractTrainerUDF<Tuple> {
         DataBag databag = (DataBag) input.get(1);
         String binningDataInfo = (String) input.get(3);
         
-        System.out.println("column 2 - " + input.get(2).toString());
-        System.out.println("column id - " + columnId + ", " + binningDataInfo);
+        log.info("column 2 - " + input.get(2).toString());
+        log.info("column id - " + columnId + ", " + binningDataInfo);
         
         ColumnConfig columnConfig = super.columnConfigList.get(columnId);
         
-        // String[] binningDataArr = StringUtils.split(binningDataInfo, CalculateStatsUDF.CATEGORY_VAL_SEPARATOR);
+        String[] binningDataArr = StringUtils.split(binningDataInfo, CalculateStatsUDF.CATEGORY_VAL_SEPARATOR);
         if ( columnConfig.isCategorical() ) {
-            // columnConfig.setBinCategory(Arrays.asList(binningDataArr));
+            columnConfig.setBinCategory(Arrays.asList(binningDataArr));
             statsCategoricalColumnInfo(databag, columnConfig);
         } else {
-            // List<Double> binBoundary = new ArrayList<Double>();
-            // for ( String binningInfo : binningDataArr ) {
-            //     binBoundary.add(Double.valueOf(binningInfo));
-            //}
-            //columnConfig.setBinBoundary(binBoundary);
+            List<Double> binBoundary = new ArrayList<Double>();
+            for ( String binningInfo : binningDataArr ) {
+                 binBoundary.add(Double.valueOf(binningInfo));
+            }
+            columnConfig.setBinBoundary(binBoundary);
             statsNumericalColumnInfo(databag, columnConfig);
         }
         
@@ -137,8 +137,6 @@ public class CalculateNewStatsUDF extends AbstractTrainerUDF<Tuple> {
      * @throws ExecException 
      */
     private void statsCategoricalColumnInfo(DataBag databag, ColumnConfig columnConfig) throws ExecException {
-        boolean isBoundaryFeatched = false;
-        
         Integer[] binCountPos = new Integer[columnConfig.getBinCategory().size()];
         Integer[] binCountNeg = new Integer[columnConfig.getBinCategory().size()];
         initializeZeroArr(binCountPos);
@@ -148,15 +146,8 @@ public class CalculateNewStatsUDF extends AbstractTrainerUDF<Tuple> {
         while ( iterator.hasNext() ) {
             Tuple element = iterator.next();
             
-            if ( element.size() != 6 ) {
+            if ( element.size() != 4 ) {
                 continue;
-            }
-            
-            if ( !isBoundaryFeatched ) {
-                String binningDataInfo = (String) element.get(5);
-                String[] binningDataArr = StringUtils.split(binningDataInfo, CalculateStatsUDF.CATEGORY_VAL_SEPARATOR);
-                columnConfig.setBinCategory(Arrays.asList(binningDataArr));
-                isBoundaryFeatched = true;
             }
             
             Object value = element.get(1);
@@ -193,24 +184,6 @@ public class CalculateNewStatsUDF extends AbstractTrainerUDF<Tuple> {
                 streamStatsCalculator.addData(columnConfig.getBinPosRate().get(i));
             }
         }
-/*        iterator = databag.iterator();
-        while ( iterator.hasNext() ) {
-            Tuple element = iterator.next();
-            
-            if ( element.size() != 6 ) {
-                continue;
-            }
-            
-            Object value = element.get(1);
-            String str = StringUtils.trim(value.toString());
-            
-            int binNum = columnConfig.getBinCategory().indexOf(str);
-            if ( binNum < 0 ) {
-                streamStatsCalculator.addData(0.0);
-            } else {
-                streamStatsCalculator.addData(columnConfig.getBinPosRate().get(binNum));
-            }
-        }*/
         
         columnConfig.setMax(streamStatsCalculator.getMax());
         columnConfig.setMean(streamStatsCalculator.getMean());
@@ -225,8 +198,6 @@ public class CalculateNewStatsUDF extends AbstractTrainerUDF<Tuple> {
      * @throws ExecException 
      */
     private void statsNumericalColumnInfo(DataBag databag, ColumnConfig columnConfig) throws ExecException {     
-        boolean isBoundaryFeatched = false;
-        
         Integer[] binCountPos = new Integer[columnConfig.getBinBoundary().size()];
         Integer[] binCountNeg = new Integer[columnConfig.getBinBoundary().size()];
         initializeZeroArr(binCountPos);
@@ -238,23 +209,12 @@ public class CalculateNewStatsUDF extends AbstractTrainerUDF<Tuple> {
         while ( iterator.hasNext() ) {
             Tuple element = iterator.next();
             
-            if ( element.size() != 6 ) {
+            if ( element.size() != 4 ) {
                 continue;
             }
             
             Object value = element.get(1);
             String tag = (String) element.get(2);
-            
-            if ( !isBoundaryFeatched ) {
-                String binningDataInfo = (String) element.get(5);
-                String[] binningDataArr = StringUtils.split(binningDataInfo, CalculateStatsUDF.CATEGORY_VAL_SEPARATOR);
-                List<Double> binBoundary = new ArrayList<Double>();
-                for ( String binningInfo : binningDataArr ) {
-                     binBoundary.add(Double.valueOf(binningInfo));
-                }
-                columnConfig.setBinBoundary(binBoundary);
-                isBoundaryFeatched = true;
-            }
             
             if ( value == null || StringUtils.isBlank(value.toString()) ) {
                 continue;
