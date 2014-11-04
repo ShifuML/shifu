@@ -20,11 +20,13 @@ package ml.shifu.shifu.udf.stats;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.apache.pig.backend.executionengine.ExecException;
-import org.apache.pig.data.DataBag;
-
 import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.container.obj.ModelConfig;
+import ml.shifu.shifu.core.StreamStatsCalculator;
+import ml.shifu.shifu.core.binning.EqualPopulationBinning;
+
+import org.apache.pig.backend.executionengine.ExecException;
+import org.apache.pig.data.DataBag;
 
 /**
  * AbstractVarStats class
@@ -38,11 +40,20 @@ public abstract class AbstractVarStats {
     protected ModelConfig modelConfig;
     protected ColumnConfig columnConfig;
     protected Double valueThreshold;
+    protected StreamStatsCalculator streamStatsCalculator;
+    protected EqualPopulationBinning binning;
+    
+    protected long missingValueCnt = 0;
+    protected long invalidValueCnt = 0;
+    protected long totalValueCnt = 0;
     
     public AbstractVarStats(ModelConfig modelConfig, ColumnConfig columnConfig, Double valueThreshold) {
         this.modelConfig = modelConfig;
         this.columnConfig = columnConfig;
         this.valueThreshold = valueThreshold;
+        
+        this.streamStatsCalculator = new StreamStatsCalculator(valueThreshold);
+        this.binning = new EqualPopulationBinning(modelConfig.getStats().getMaxNumBin());
     }
     
     /**
@@ -77,6 +88,22 @@ public abstract class AbstractVarStats {
         
         binCountArr[binNum] = cnt;
     }
+    
+    /**
+     * @param binCountArr
+     * @param binNum
+     */
+    protected void increaseInstCnt(Double[] binWeightCountArr, int binNum, double weight) {
+        Double weightCount = binWeightCountArr[binNum];
+        if ( weightCount == null ) {
+            weightCount = Double.valueOf(weight);
+        } else {
+            weightCount = Double.valueOf(weightCount.doubleValue() + weight);
+        }
+        
+        binWeightCountArr[binNum] = weightCount;
+    }
+    
     
     /**
      * @param columnConfig

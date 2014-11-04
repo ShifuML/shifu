@@ -22,16 +22,17 @@ import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
 
+import ml.shifu.shifu.container.obj.ColumnConfig;
+import ml.shifu.shifu.container.obj.ModelConfig;
+import ml.shifu.shifu.udf.CalculateStatsUDF;
+import ml.shifu.shifu.util.CommonUtils;
+
 import org.apache.commons.lang.StringUtils;
 import org.apache.pig.backend.executionengine.ExecException;
 import org.apache.pig.data.DataBag;
 import org.apache.pig.data.Tuple;
-
-import ml.shifu.shifu.container.obj.ColumnConfig;
-import ml.shifu.shifu.container.obj.ModelConfig;
-import ml.shifu.shifu.core.StreamStatsCalculator;
-import ml.shifu.shifu.udf.CalculateStatsUDF;
-import ml.shifu.shifu.util.CommonUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * NumericalVarStats class
@@ -42,6 +43,8 @@ import ml.shifu.shifu.util.CommonUtils;
  */
 public class NumericalVarStats extends AbstractVarStats {
 
+    private static Logger log = LoggerFactory.getLogger(NumericalVarStats.class);
+    
     /**
      * @param modelConfig
      * @param columnConfig
@@ -58,6 +61,8 @@ public class NumericalVarStats extends AbstractVarStats {
     public void runVarStats(String binningInfo, DataBag databag) throws ExecException {
         String[] binningDataArr = StringUtils.split(binningInfo, CalculateStatsUDF.CATEGORY_VAL_SEPARATOR);
 
+        log.info("Column Name - " + this.columnConfig.getColumnName() + ", Column Bin Length - " + binningDataArr.length);
+        
         List<Double> binBoundary = new ArrayList<Double>();
         for(String binningElement: binningDataArr) {
             binBoundary.add(Double.valueOf(binningElement));
@@ -75,10 +80,13 @@ public class NumericalVarStats extends AbstractVarStats {
     private void statsNumericalColumnInfo(DataBag databag, ColumnConfig columnConfig) throws ExecException {     
         Integer[] binCountPos = new Integer[columnConfig.getBinBoundary().size()];
         Integer[] binCountNeg = new Integer[columnConfig.getBinBoundary().size()];
+        Double[] binWeightCountPos = new Double[columnConfig.getBinBoundary().size()];
+        Double[] binWeightCountNeg = new Double[columnConfig.getBinBoundary().size()];
+        
         initializeZeroArr(binCountPos);
         initializeZeroArr(binCountNeg);
-        
-        StreamStatsCalculator streamStatsCalculator = new StreamStatsCalculator(valueThreshold);
+        initializeZeroArr(binWeightCountPos);
+        initializeZeroArr(binWeightCountNeg);
         
         Iterator<Tuple> iterator = databag.iterator();
         while ( iterator.hasNext() ) {
@@ -90,8 +98,11 @@ public class NumericalVarStats extends AbstractVarStats {
             
             Object value = element.get(1);
             String tag = (String) element.get(2);
+            Double weight = (Double) element.get(3);
             
             if ( value == null || StringUtils.isBlank(value.toString()) ) {
+                //TODO check missing value list in ModelConfig??
+                missingValueCnt ++;
                 continue;
             }
             String str = StringUtils.trim(value.toString());
@@ -100,28 +111,43 @@ public class NumericalVarStats extends AbstractVarStats {
             try {
                 colVal = Double.parseDouble(str);
             } catch ( Exception e ) {
+                invalidValueCnt ++;
                 continue;
             }
             
             streamStatsCalculator.addData(colVal);
+            // binning.addData(colVal);
             
             int binNum = CommonUtils.getBinNum(columnConfig, str);
             
             if ( modelConfig.getPosTags().contains(tag) ) {
                 increaseInstCnt(binCountPos, binNum);
+                increaseInstCnt(binWeightCountPos, binNum, weight);
             } else if ( modelConfig.getNegTags().contains(tag) ) {
                 increaseInstCnt(binCountNeg, binNum);
+                increaseInstCnt(binWeightCountNeg, binNum, weight);
             }
         }
         
         columnConfig.setBinCountPos(Arrays.asList(binCountPos));
         columnConfig.setBinCountNeg(Arrays.asList(binCountNeg));
+        columnConfig.setBinWeightedPos(Arrays.asList(binWeightCountPos));
+        columnConfig.setBinWeightedNeg(Arrays.asList(binWeightCountNeg));
         
         columnConfig.setMax(streamStatsCalculator.getMax());
         columnConfig.setMean(streamStatsCalculator.getMean());
         columnConfig.setMin(streamStatsCalculator.getMin());
-        columnConfig.setMedian(Double.NaN);
+        //if ( binning.getMedian() == null ) {
+            columnConfig.setMedian(streamStatsCalculator.getMean());
+        //} else {
+        //    columnConfig.setMedian(binning.getMedian());
+        //}
         columnConfig.setStdDev(streamStatsCalculator.getStdDev());
+        
+        // Currently, invalid value will be regarded as missing
+        columnConfig.setMissingCnt(missingValueCnt + invalidValueCnt);
+        columnConfig.setTotalCount(databag.size());
+        columnConfig.setMissingPercentage(((double)columnConfig.getMissingCount()) / columnConfig.getTotalCount());
         
         calculateBinPosRateAndAvgScore();
     }

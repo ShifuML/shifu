@@ -77,11 +77,28 @@ public class EqualPopulationBinning extends AbstractBinning<Double> {
         
     }
 
+    public void addData(double val) {
+        process(val);
+    }
+    
     /* (non-Javadoc)
      * @see ml.shifu.shifu.core.binning.AbstractBinning#getDataBin()
      */
     @Override
     public List<Double> getDataBin() {
+        return getDataBin(super.expectedBinningNum);
+    }
+
+    public Double getMedian() {
+        List<Double> dataBinning = getDataBin(2);
+        if ( dataBinning.size() > 1 ) {
+            return dataBinning.get(1);
+        } else {
+            return null;
+        }
+    }
+    
+    private List<Double> getDataBin(int toBinningNum) {
         int totalCnt = 0;
         for ( HistogramUnit hu: this.histogram ) {
             totalCnt += hu.getHcnt();
@@ -90,8 +107,8 @@ public class EqualPopulationBinning extends AbstractBinning<Double> {
         List<Double> binBorders = new ArrayList<Double>();
         binBorders.add(Double.NEGATIVE_INFINITY);
         
-        for (int j = 1; j < super.expectedBinningNum; j ++) {
-            double s = (double)(j * totalCnt) / super.expectedBinningNum;
+        for (int j = 1; j < toBinningNum; j ++) {
+            double s = (double)(j * totalCnt) / toBinningNum;
             int pos = locateHistogram(s);
             if ( pos < 0 ) {
                 break;
@@ -121,7 +138,7 @@ public class EqualPopulationBinning extends AbstractBinning<Double> {
         // binBorders.add(Double.POSITIVE_INFINITY);
         return binBorders;
     }
-
+    
     /**
      * @param s
      * @return
