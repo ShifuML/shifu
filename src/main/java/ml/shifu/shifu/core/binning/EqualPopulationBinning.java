@@ -70,7 +70,7 @@ public class EqualPopulationBinning extends AbstractBinning<Double> {
                 return;
             }
 
-            process(dval);
+            process(dval, 1);
         } else {
             super.incMissingValCnt();
         }
@@ -78,7 +78,11 @@ public class EqualPopulationBinning extends AbstractBinning<Double> {
     }
 
     public void addData(double val) {
-        process(val);
+        process(val, 1);
+    }
+    
+    public void addData(double val, int frequency) {
+        process(val, frequency);
     }
     
     /* (non-Javadoc)
@@ -98,41 +102,57 @@ public class EqualPopulationBinning extends AbstractBinning<Double> {
         }
     }
     
-    private List<Double> getDataBin(int toBinningNum) {
+    private List<Double> getDataBin(int toBinningNum) {        
+        List<Double> binBorders = new ArrayList<Double>();
+        binBorders.add(Double.NEGATIVE_INFINITY);
+        
+        if ( histogram.size() <= toBinningNum ) {
+            for ( int i = 0; i < histogram.size() - 1; i ++ ) {
+                HistogramUnit chu = histogram.get(i);
+                HistogramUnit nhu = histogram.get(i + 1);
+                
+                binBorders.add((chu.getHval() + nhu.getHval()) / 2);
+            }
+            
+            return binBorders;
+        }
+        
         int totalCnt = 0;
         for ( HistogramUnit hu: this.histogram ) {
             totalCnt += hu.getHcnt();
         }
         
-        List<Double> binBorders = new ArrayList<Double>();
-        binBorders.add(Double.NEGATIVE_INFINITY);
+        int currentPos = 0;
         
-        for (int j = 1; j < toBinningNum; j ++) {
-            double s = (double)(j * totalCnt) / toBinningNum;
-            int pos = locateHistogram(s);
-            if ( pos < 0 ) {
-                break;
-            }
-            
-            // System.out.println(s);
-            HistogramUnit chu = histogram.get(pos);
-            HistogramUnit nhu = histogram.get(pos + 1);
-            
-            double d = s - sum(histogram.get(pos).getHval());
-            
-            double a = nhu.getHcnt() - chu.getHcnt();
-            double b = 2 * chu.getHcnt();
-            double c = -2 * d;
-            
-            double z = 0.0;
-            if ( Double.compare(a, 0) == 0 ) {
-                z = -1 * c / b;
+        for(int j = 1; j < toBinningNum; j++) {
+            double s = (double) (j * totalCnt) / toBinningNum;
+            int pos = locateHistogram(s, currentPos);
+
+            if ( pos < 0 || pos == currentPos ) {
+                continue;
             } else {
-                z = (-1 * b + Math.sqrt(b * b - 4 * a * c)) /  ( 2 * a);
+                // System.out.println(s);
+                HistogramUnit chu = histogram.get(pos);
+                HistogramUnit nhu = histogram.get(pos + 1);
+
+                double d = s - sum(histogram.get(pos).getHval());
+
+                double a = nhu.getHcnt() - chu.getHcnt();
+                double b = 2 * chu.getHcnt();
+                double c = -2 * d;
+
+                double z = 0.0;
+                if(Double.compare(a, 0) == 0) {
+                    z = -1 * c / b;
+                } else {
+                    z = (-1 * b + Math.sqrt(b * b - 4 * a * c)) / (2 * a);
+                }
+
+                double u = chu.getHval() + (nhu.getHval() - chu.getHval()) * z;
+                binBorders.add(u);
+
+                currentPos = pos;
             }
-            
-            double u = chu.getHval() + (nhu.getHval() - chu.getHval()) * z;
-            binBorders.add(u);
         }
             
         // binBorders.add(Double.POSITIVE_INFINITY);
@@ -143,8 +163,8 @@ public class EqualPopulationBinning extends AbstractBinning<Double> {
      * @param s
      * @return
      */
-    private int locateHistogram(double s) {
-        for ( int i = 0; i < histogram.size() - 1 ; i ++ ) {
+    private int locateHistogram(double s, int startPos) {
+        for ( int i = startPos; i < histogram.size() - 1 ; i ++ ) {
             HistogramUnit chu = histogram.get(i);
             HistogramUnit nhu = histogram.get(i + 1);
             
@@ -194,12 +214,12 @@ public class EqualPopulationBinning extends AbstractBinning<Double> {
     /**
      * @param dval
      */
-    private void process(double dval) {
+    private void process(double dval, int frequency) {
         HistogramUnit hu = getHistogramUnitIndex(dval);
         if ( hu != null ) {
-            hu.setHcnt(hu.getHcnt() + 1);
+            hu.setHcnt(hu.getHcnt() + frequency);
         } else {
-            hu = new HistogramUnit(dval, 1);
+            hu = new HistogramUnit(dval, frequency);
             histogram.add(hu);
             
             Collections.sort(histogram);

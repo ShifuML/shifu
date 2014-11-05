@@ -69,6 +69,27 @@ public class StreamStatsCalculator {
         squaredSum += data * data;
     }
     
+    public void addData(double data, int frequency) {
+        if ( frequency <= 0 ) {
+            log.warn("Invalid frequency - " + frequency);
+            return;
+        }
+        
+        if ( Double.isInfinite(data) || Double.isNaN(data) || Math.abs(data) > threshold) {
+            log.warn("Invalid value - " + data);
+            return;
+        }
+        
+        validElementCnt += frequency;
+        
+        max = Math.max(max, data);
+        min = Math.min(min, data);
+
+        sum += data * frequency;
+        squaredSum += data * data * frequency;
+    }
+    
+    
     public double getMin() {
         return min;
     }

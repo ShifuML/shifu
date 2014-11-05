@@ -18,12 +18,13 @@
 package ml.shifu.shifu.udf.stats;
 
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.Iterator;
+import java.util.Map;
 
 import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.container.obj.ModelConfig;
 import ml.shifu.shifu.udf.CalculateStatsUDF;
-import ml.shifu.shifu.util.CommonUtils;
 
 import org.apache.commons.lang.StringUtils;
 import org.apache.pig.backend.executionengine.ExecException;
@@ -42,6 +43,7 @@ import org.slf4j.LoggerFactory;
 public class CategoricalVarStats extends AbstractVarStats {
     
     private static Logger log = LoggerFactory.getLogger(CategoricalVarStats.class);
+    private Map<String, Integer> categoricalBinMap;
     
     /**
      * @param modelConfig
@@ -62,6 +64,11 @@ public class CategoricalVarStats extends AbstractVarStats {
         log.info("Column Name - " + this.columnConfig.getColumnName() + ", Column Bin Length - " + binningDataArr.length);
         
         columnConfig.setBinCategory(Arrays.asList(binningDataArr));
+        categoricalBinMap = new HashMap<String, Integer>(columnConfig.getBinCategory().size());
+        for ( int i = 0; i < columnConfig.getBinCategory().size(); i ++ ) {
+            categoricalBinMap.put(columnConfig.getBinCategory().get(i), Integer.valueOf(i));
+        }
+        
         statsCategoricalColumnInfo(databag, columnConfig);
     }
     
@@ -100,7 +107,12 @@ public class CategoricalVarStats extends AbstractVarStats {
             }
             String str = StringUtils.trim(value.toString());
             
-            int binNum = CommonUtils.getBinNum(columnConfig, str);
+            // int binNum = CommonUtils.getBinNum(columnConfig, str);
+            int binNum = quickLocateCategorialBin(str);
+            if ( binNum < 0 ) {
+                continue;
+            }
+            
             if ( modelConfig.getPosTags().contains(tag) ) {
                 increaseInstCnt(binCountPos, binNum);
                 increaseInstCnt(binWeightCountPos, binNum, weight);
@@ -121,31 +133,36 @@ public class CategoricalVarStats extends AbstractVarStats {
             int posCount = columnConfig.getBinCountPos().get(i);
             int negCount = columnConfig.getBinCountNeg().get(i);
             
-            for ( int j = 0; j < posCount ; j ++ ) {
-                streamStatsCalculator.addData(columnConfig.getBinPosRate().get(i));
-                //binning.addData(columnConfig.getBinPosRate().get(i));
-            }
+            binning.addData(columnConfig.getBinPosRate().get(i), posCount);
+            binning.addData(columnConfig.getBinPosRate().get(i), negCount);
             
-            for ( int j = 0; j < negCount ; j ++ ) {
-                streamStatsCalculator.addData(columnConfig.getBinPosRate().get(i));
-                //binning.addData(columnConfig.getBinPosRate().get(i));
-            }
+            streamStatsCalculator.addData(columnConfig.getBinPosRate().get(i), posCount);
+            streamStatsCalculator.addData(columnConfig.getBinPosRate().get(i), negCount);
         }
         
         columnConfig.setMax(streamStatsCalculator.getMax());
         columnConfig.setMean(streamStatsCalculator.getMean());
         columnConfig.setMin(streamStatsCalculator.getMin());
-        //if ( binning.getMedian() == null ) {
+        if ( binning.getMedian() == null ) {
             columnConfig.setMedian(streamStatsCalculator.getMean());
-        //} else {
-        //    columnConfig.setMedian(binning.getMedian());
-        //}
+        } else {
+            columnConfig.setMedian(binning.getMedian());
+        }
         columnConfig.setStdDev(streamStatsCalculator.getStdDev());
         
         // Currently, invalid value will be regarded as missing
         columnConfig.setMissingCnt(missingValueCnt + invalidValueCnt);
         columnConfig.setTotalCount(databag.size());
         columnConfig.setMissingPercentage(((double)columnConfig.getMissingCount()) / columnConfig.getTotalCount());
+    }
+
+    /**
+     * @param val
+     * @return
+     */
+    private int quickLocateCategorialBin(String val) {
+        Integer binNum = categoricalBinMap.get(val);
+        return ((binNum == null) ? -1 : binNum);
     }
 
 }
