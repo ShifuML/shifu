@@ -108,7 +108,7 @@ public class StatsModelProcessor extends BasicModelProcessor implements Processo
         // execute pig job
         try {
             PigExecutor.getExecutor().submitJob(modelConfig,
-                    pathFinder.getAbsolutePath("scripts/PreTrainingStats.pig"), paramsMap);
+                    pathFinder.getAbsolutePath("scripts/Stats.pig"), paramsMap);
         } catch (IOException e) {
             throw new ShifuException(ShifuErrorCode.ERROR_RUNNING_PIG_JOB, e);
         } catch (Throwable e) {
