@@ -27,20 +27,20 @@ DEFINE Calculator       ml.shifu.shifu.udf.StreamingCalculateStatesUDF('$source_
 
 --data = load '$data_input' using PigStorage($delimiter);
 
-d = LOAD '$path_raw_data' USING PigStorage('$delimiter');
-d = FILTER d BY IsDataFilterOut(*);
+data = LOAD '$path_raw_data' USING PigStorage('$delimiter');
+data = FILTER data BY IsDataFilterOut(*);
 
-d = FOREACH d GENERATE AddColumnNum(*);
+data = FOREACH data GENERATE AddColumnNum(*);
 
-d = FOREACH d GENERATE FLATTEN($0);
-d = FILTER d BY $0 IS NOT NULL;
+data = FOREACH data GENERATE FLATTEN($0);
+data = FILTER data BY $0 IS NOT NULL;
 
 --step 1, process the binning
-d = foreach (group data by $0) generate group as col,
+s = foreach (group data by $0) generate group as col,
                                         BINNING(data) as binning;
 
 --step 2, based on the binning, process other metrics
-d = foreach (group d by col, data by $0) generate group as col,
+d = foreach (group s by col, data by $0) generate group as col,
                                                   FLATTEN(d.binning) as binning,
                                                   FLATTEN(Calculator(d.binning, data));
 

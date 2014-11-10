@@ -277,7 +277,7 @@ public class BasicModelProcessor {
             throw new ShifuException(ShifuErrorCode.ERROR_UNSUPPORT_ALG);
         }
 
-        log.info("Finished: check the algorithm parameter");
+        //log.info("Finished: check the algorithm parameter");
     }
 
     /**

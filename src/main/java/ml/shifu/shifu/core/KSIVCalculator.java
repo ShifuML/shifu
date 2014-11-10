@@ -20,7 +20,7 @@ import java.util.List;
 /**
  * KV/IS calculator
  */
-public class KSIVCalculator<T> {
+public class KSIVCalculator {
 
     private final double EPS = 1e-10;
 
