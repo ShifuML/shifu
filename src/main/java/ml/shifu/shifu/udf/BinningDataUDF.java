@@ -28,6 +28,8 @@ import ml.shifu.shifu.core.binning.EqualIntervalBinning;
 import ml.shifu.shifu.core.binning.EqualPopulationBinning;
 
 import org.apache.commons.lang.StringUtils;
+import org.apache.pig.Accumulator;
+import org.apache.pig.backend.executionengine.ExecException;
 import org.apache.pig.data.DataBag;
 import org.apache.pig.data.Tuple;
 import org.apache.pig.data.TupleFactory;
@@ -42,8 +44,75 @@ import org.apache.pig.parser.ParserException;
  * @Oct 27, 2014
  *
  */
-public class BinningDataUDF extends AbstractTrainerUDF<Tuple> {
+public class BinningDataUDF extends AbstractTrainerUDF<Tuple> implements Accumulator<Tuple> {
 
+    private int columnId = -1;
+    private AbstractBinning<?> binning = null;
+    
+    /* (non-Javadoc)
+     * @see org.apache.pig.Accumulator#accumulate(org.apache.pig.data.Tuple)
+     */
+    @Override
+    public void accumulate(Tuple input) throws IOException {
+        if ( input == null || input.size() != 2 ) {
+            return;
+        }
+        
+        columnId = (Integer) input.get(0);
+        DataBag databag = (DataBag) input.get(1);
+        
+        ColumnConfig columnConfig = super.columnConfigList.get(columnId);
+        if ( binning == null ) {
+            if ( columnConfig.isCategorical() ) {
+                binning = new CategoricalBinning(-1);
+            } else {
+                if ( super.modelConfig.getBinningMethod().equals(BinningMethod.EqualInterval) ) {
+                    binning = new EqualIntervalBinning(modelConfig.getStats().getMaxNumBin());
+                } else {
+                    binning = new EqualPopulationBinning(modelConfig.getStats().getMaxNumBin());
+                }
+            }
+        }
+        
+        Iterator<Tuple> iterator = databag.iterator();
+        while ( iterator.hasNext() ) {
+            Tuple element = iterator.next();
+            if ( element == null || element.size() != 4) {
+                continue;
+            }
+            
+            Object value = element.get(1);
+            if ( value != null ) {
+                binning.addData(value.toString());
+            }
+        }
+    }
+
+    /* (non-Javadoc)
+     * @see org.apache.pig.Accumulator#getValue()
+     */
+    @Override
+    public Tuple getValue() {
+        Tuple output = TupleFactory.getInstance().newTuple(2);
+        try {
+            output.set(0, columnId);
+            output.set(1, StringUtils.join(binning.getDataBin(), CalculateStatsUDF.CATEGORY_VAL_SEPARATOR));
+        } catch ( ExecException e ) {
+            log.error("Fail to generate output for columnId - " + columnId);
+        }
+        
+        return output;
+    }
+
+    /* (non-Javadoc)
+     * @see org.apache.pig.Accumulator#cleanup()
+     */
+    @Override
+    public void cleanup() {
+        this.columnId = -1;
+        this.binning = null;
+    }
+    
     /**
      * @param source
      * @param pathModelConfig
@@ -108,4 +177,5 @@ public class BinningDataUDF extends AbstractTrainerUDF<Tuple> {
             return null;
         }
     }
+
 }

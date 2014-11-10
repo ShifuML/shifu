@@ -49,7 +49,7 @@ public class PathFinderTest {
     @Test
     public void testGetModelConfigPath() {
         Assert.assertEquals(pathFinder.getModelConfigPath(SourceType.LOCAL), "ModelConfig.json");
-        Assert.assertEquals(pathFinder.getModelConfigPath(SourceType.HDFS), "ModelSets/ModelK/ModelConfig.json");
+        Assert.assertEquals(pathFinder.getModelConfigPath(SourceType.HDFS), "ModelSets/cancer-judgement/ModelConfig.json");
     }
 
     @Test(expectedExceptions = NotImplementedException.class)
@@ -60,7 +60,7 @@ public class PathFinderTest {
     @Test
     public void testGetColumnConfigPath() {
         Assert.assertEquals(pathFinder.getColumnConfigPath(SourceType.LOCAL), "ColumnConfig.json");
-        Assert.assertEquals(pathFinder.getColumnConfigPath(SourceType.HDFS), "ModelSets/ModelK/ColumnConfig.json");
+        Assert.assertEquals(pathFinder.getColumnConfigPath(SourceType.HDFS), "ModelSets/cancer-judgement/ColumnConfig.json");
     }
 
     @Test
@@ -81,7 +81,7 @@ public class PathFinderTest {
 //	public void testGetReasonCodeMapPath() {
 //		Environment.setProperty(Environment.SHIFU_HOME, ".");
 //		Assert.assertEquals(pathFinder.getReasonCodeMapPath(SourceType.LOCAL), "common/ReasonCodeMapV3.json");
-//		Assert.assertEquals(pathFinder.getReasonCodeMapPath(SourceType.HDFS), "ModelSets/ModelK/ReasonCodeMap.json");
+//		Assert.assertEquals(pathFinder.getReasonCodeMapPath(SourceType.HDFS), "ModelSets/cancer-judgement/ReasonCodeMap.json");
 //	}
 //	
 //	@Test(expectedExceptions = NotImplementedException.class)
@@ -99,46 +99,46 @@ public class PathFinderTest {
     @Test
     public void testGetNormalizedPath() {
         Assert.assertEquals(pathFinder.getEvalNormalizedPath(modelConfig.getEvalConfigByName("EvalA"), SourceType.LOCAL), "evals/EvalA/EvalNormalized");
-        Assert.assertEquals(pathFinder.getEvalNormalizedPath(modelConfig.getEvalConfigByName("EvalA"), SourceType.HDFS), "ModelSets/ModelK/evals/EvalA/EvalNormalized");
+        Assert.assertEquals(pathFinder.getEvalNormalizedPath(modelConfig.getEvalConfigByName("EvalA"), SourceType.HDFS), "ModelSets/cancer-judgement/evals/EvalA/EvalNormalized");
     }
 
     @Test
     public void testGetEvalPath() {
         Assert.assertEquals(pathFinder.getEvalFilePath("EvalA", "EvalTester", SourceType.LOCAL), "evals/EvalA/EvalTester");
-        Assert.assertEquals(pathFinder.getEvalFilePath("EvalA", "EvalTester", SourceType.HDFS), "ModelSets/ModelK/evals/EvalA/EvalTester");
+        Assert.assertEquals(pathFinder.getEvalFilePath("EvalA", "EvalTester", SourceType.HDFS), "ModelSets/cancer-judgement/evals/EvalA/EvalTester");
     }
 
     @Test
     public void testGetEvalSetPath() {
         Assert.assertEquals(pathFinder.getEvalSetPath(modelConfig.getEvalConfigByName("EvalA"), SourceType.LOCAL), "evals/EvalA");
-        Assert.assertEquals(pathFinder.getEvalSetPath(modelConfig.getEvalConfigByName("EvalA"), SourceType.HDFS), "ModelSets/ModelK/evals/EvalA");
+        Assert.assertEquals(pathFinder.getEvalSetPath(modelConfig.getEvalConfigByName("EvalA"), SourceType.HDFS), "ModelSets/cancer-judgement/evals/EvalA");
 
         Assert.assertEquals(pathFinder.getEvalSetPath("EvalA", SourceType.LOCAL), "evals/EvalA");
-        Assert.assertEquals(pathFinder.getEvalSetPath("EvalA", SourceType.HDFS), "ModelSets/ModelK/evals/EvalA");
+        Assert.assertEquals(pathFinder.getEvalSetPath("EvalA", SourceType.HDFS), "ModelSets/cancer-judgement/evals/EvalA");
     }
 
     @Test
     public void testGetEvalScorePath() {
         Assert.assertEquals(pathFinder.getEvalScorePath(modelConfig.getEvalConfigByName("EvalA"), SourceType.LOCAL), "evals/EvalA/EvalScore");
-        Assert.assertEquals(pathFinder.getEvalScorePath(modelConfig.getEvalConfigByName("EvalA"), SourceType.HDFS), "ModelSets/ModelK/evals/EvalA/EvalScore");
+        Assert.assertEquals(pathFinder.getEvalScorePath(modelConfig.getEvalConfigByName("EvalA"), SourceType.HDFS), "ModelSets/cancer-judgement/evals/EvalA/EvalScore");
     }
 
     @Test
     public void testGetEvalPerformancePath() {
         Assert.assertEquals(pathFinder.getEvalPerformancePath(modelConfig.getEvalConfigByName("EvalA"), SourceType.LOCAL), "evals/EvalA/EvalPerformance.json");
-        Assert.assertEquals(pathFinder.getEvalPerformancePath(modelConfig.getEvalConfigByName("EvalA"), SourceType.HDFS), "ModelSets/ModelK/evals/EvalA/EvalPerformance.json");
+        Assert.assertEquals(pathFinder.getEvalPerformancePath(modelConfig.getEvalConfigByName("EvalA"), SourceType.HDFS), "ModelSets/cancer-judgement/evals/EvalA/EvalPerformance.json");
     }
 //	
 //	@Test
 //	public void testGetNetworksPath() {
 //		Assert.assertEquals(pathFinder.getNetworksPath(SourceType.LOCAL), "models");
-//		Assert.assertEquals(pathFinder.getNetworksPath(SourceType.HDFS), "ModelSets/ModelK/models");
+//		Assert.assertEquals(pathFinder.getNetworksPath(SourceType.HDFS), "ModelSets/cancer-judgement/models");
 //	}
 
     @Test
     public void testGetNormalizedDataPath() {
         Assert.assertEquals(pathFinder.getNormalizedDataPath(SourceType.LOCAL), "tmp/NormalizedData");
-        Assert.assertEquals(pathFinder.getNormalizedDataPath(SourceType.HDFS), "ModelSets/ModelK/tmp/NormalizedData");
+        Assert.assertEquals(pathFinder.getNormalizedDataPath(SourceType.HDFS), "ModelSets/cancer-judgement/tmp/NormalizedData");
     }
 
     @Test(expectedExceptions = NotImplementedException.class)
@@ -149,24 +149,24 @@ public class PathFinderTest {
     @Test
     public void testGetPreTrainingStatsPath() {
         Assert.assertEquals(pathFinder.getPreTrainingStatsPath(SourceType.LOCAL), "tmp/PreTrainingStats");
-        Assert.assertEquals(pathFinder.getPreTrainingStatsPath(SourceType.HDFS), "ModelSets/ModelK/tmp/PreTrainingStats");
+        Assert.assertEquals(pathFinder.getPreTrainingStatsPath(SourceType.HDFS), "ModelSets/cancer-judgement/tmp/PreTrainingStats");
     }
 
     @Test
     public void testGetSelectedRawDataPath() {
         Assert.assertEquals(pathFinder.getSelectedRawDataPath(SourceType.LOCAL), "tmp/SelectedRawData");
-        Assert.assertEquals(pathFinder.getSelectedRawDataPath(SourceType.HDFS), "ModelSets/ModelK/tmp/SelectedRawData");
+        Assert.assertEquals(pathFinder.getSelectedRawDataPath(SourceType.HDFS), "ModelSets/cancer-judgement/tmp/SelectedRawData");
     }
 
     @Test
     public void testGetTrainScoresPath() {
         Assert.assertEquals(pathFinder.getTrainScoresPath(SourceType.LOCAL), "tmp/TrainScores");
-        Assert.assertEquals(pathFinder.getTrainScoresPath(SourceType.HDFS), "ModelSets/ModelK/tmp/TrainScores");
+        Assert.assertEquals(pathFinder.getTrainScoresPath(SourceType.HDFS), "ModelSets/cancer-judgement/tmp/TrainScores");
     }
 
     @Test
     public void testGetBinAvgScorePath() {
         Assert.assertEquals(pathFinder.getBinAvgScorePath(SourceType.LOCAL), "tmp/BinAvgScore");
-        Assert.assertEquals(pathFinder.getBinAvgScorePath(SourceType.HDFS), "ModelSets/ModelK/tmp/BinAvgScore");
+        Assert.assertEquals(pathFinder.getBinAvgScorePath(SourceType.HDFS), "ModelSets/cancer-judgement/tmp/BinAvgScore");
     }
 }

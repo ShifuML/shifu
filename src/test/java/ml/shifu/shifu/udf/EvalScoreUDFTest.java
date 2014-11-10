@@ -64,7 +64,7 @@ public class EvalScoreUDFTest {
         }
         input.set(0, "M");
 
-        Assert.assertEquals("(M,1.0,43,74,6,36,36,32,74,69,6)", instance.exec(input).toString());
+        Assert.assertEquals("(M,1.0,42,74,5,36,36,31,74,66,5)", instance.exec(input).toString());
     }
 
     @Test
@@ -77,7 +77,7 @@ public class EvalScoreUDFTest {
             input.set(i, fields[i]);
         }
 
-        Assert.assertEquals("(B,1.0,9,13,4,10,8,10,13,4,10)", instance.exec(input).toString());
+        Assert.assertEquals("(B,1.0,7,11,4,8,7,8,11,4,8)", instance.exec(input).toString());
     }
 
     @Test

@@ -145,7 +145,7 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
         for(int i = 0; i < numBags; i++) {
             AbstractTrainer trainer;
             if(modelConfig.getAlgorithm().equalsIgnoreCase("NN")) {
-                trainer = new NNTrainer(modelConfig, i + 1, isDryTrain);
+                trainer = new NNTrainer(modelConfig, i, isDryTrain);
             } else if(modelConfig.getAlgorithm().equalsIgnoreCase("SVM")) {
                 trainer = new SVMTrainer(this.modelConfig, i, isDryTrain);
             } else if(modelConfig.getAlgorithm().equalsIgnoreCase("LR")) {

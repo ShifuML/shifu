@@ -60,7 +60,7 @@ public class SimpleScoreUDFTest {
         }
         input.set(0, "M");
 
-        Assert.assertEquals(43, instance.exec(input).intValue());
+        Assert.assertEquals(42, instance.exec(input).intValue());
     }
 
     @AfterClass
