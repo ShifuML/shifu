@@ -26,7 +26,6 @@ import org.apache.commons.lang.StringUtils;
 /**
  * EqualPopulationBinning class
  * 
- * @author zhanhu
  * @Oct 22, 2014
  *
  */

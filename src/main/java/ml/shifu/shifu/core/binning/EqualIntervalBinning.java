@@ -25,7 +25,6 @@ import org.apache.commons.lang.StringUtils;
 /**
  * EqualIntervalBinning class
  * 
- * @author zhanhu
  * @Oct 20, 2014
  *
  */

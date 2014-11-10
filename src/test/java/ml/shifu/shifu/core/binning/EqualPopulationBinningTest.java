@@ -24,7 +24,6 @@ import org.testng.annotations.Test;
 /**
  * EqualPopulationBinningTest class
  * 
- * @author zhanhu
  * @Oct 22, 2014
  *
  */

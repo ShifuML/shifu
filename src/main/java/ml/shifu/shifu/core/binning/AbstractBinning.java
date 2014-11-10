@@ -27,7 +27,6 @@ import org.apache.commons.lang.StringUtils;
 /**
  * AbstractBinning class
  * 
- * @author zhanhu
  * @Oct 20, 2014
  *
  */

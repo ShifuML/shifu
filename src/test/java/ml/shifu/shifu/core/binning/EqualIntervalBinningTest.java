@@ -24,7 +24,6 @@ import org.testng.annotations.Test;
 /**
  * EqualIntervalBinningTest class
  * 
- * @author zhanhu
  * @Oct 27, 2014
  *
  */

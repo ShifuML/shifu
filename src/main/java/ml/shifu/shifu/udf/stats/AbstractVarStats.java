@@ -31,7 +31,6 @@ import org.apache.pig.data.DataBag;
 /**
  * AbstractVarStats class
  * 
- * @author zhanhu
  * @Nov 3, 2014
  *
  */

@@ -1,6 +1,6 @@
 {
   "basic" : {
-    "name" : "ModelK",
+    "name" : "cancer-judgement",
     "author" : "",
     "description" : null,
     "runMode" : "local",

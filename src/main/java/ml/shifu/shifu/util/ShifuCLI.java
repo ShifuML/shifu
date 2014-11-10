@@ -20,6 +20,7 @@ import ml.shifu.shifu.core.processor.*;
 import ml.shifu.shifu.core.processor.EvalModelProcessor.EvalStep;
 import ml.shifu.shifu.core.processor.ManageModelProcessor.ModelAction;
 import ml.shifu.shifu.exception.ShifuException;
+
 import org.apache.commons.cli.*;
 import org.apache.commons.lang.StringUtils;
 import org.apache.pig.impl.util.JarManager;
@@ -55,6 +56,8 @@ public class ShifuCLI {
     private static final String MODELSET_CMD_TYPE = "t";
     private static final String NEW = "new";
 
+    private static final String CMD_EXPORT = "export";
+    
     // for evaluation
     private static final String LIST = "list";
     private static final String DELETE = "delete";
@@ -197,6 +200,8 @@ public class ShifuCLI {
                         log.error("Invalid command, please check help message.");
                         printUsage();
                     }
+                } else if (args[0].equals(CMD_EXPORT) ) {
+                    exportModel(cmd.getOptionValue(MODELSET_CMD_TYPE));
                 } else {
                     log.error("Invalid command, please check help message.");
                     printUsage();
@@ -210,7 +215,6 @@ public class ShifuCLI {
             exceptionExit(e);
         }
     }
-
 
     /**
      * switch model - switch the current model to</p>
@@ -416,6 +420,19 @@ public class ShifuCLI {
         p.copyModelFiles(cmdArgs[0], cmdArgs[1]);
     }
 
+
+
+    /**
+     * export Shifu model into other format, i.e. PMML
+     * 
+     * @param optionValue
+     * @throws Exception 
+     */
+    public static void exportModel(String type) throws Exception {
+        ExportModelProcessor p = new ExportModelProcessor(type);
+        p.run();
+    }
+    
     /**
      * Load and test ModelConfig
      *

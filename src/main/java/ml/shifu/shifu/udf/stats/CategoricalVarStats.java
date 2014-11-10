@@ -36,7 +36,6 @@ import org.slf4j.LoggerFactory;
 /**
  * CategoricalVarStats class
  * 
- * @author zhanhu
  * @Nov 3, 2014
  *
  */
