@@ -54,7 +54,7 @@ public class CalculateNewStatsUDF extends AbstractTrainerUDF<Tuple> {
      */
     @Override
     public Tuple exec(Tuple input) throws IOException {
-        if (input == null || input.size() != 4) {
+        if (input == null ) {
             return null;
         }
         

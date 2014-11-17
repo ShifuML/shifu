@@ -106,7 +106,8 @@ public class StatsModelProcessor extends BasicModelProcessor implements Processo
         ShifuFileUtils.deleteFile(pathFinder.getPreTrainingStatsPath(), modelConfig.getDataSet().getSource());
         Map<String, String> paramsMap = new HashMap<String, String>();
         paramsMap.put("delimiter", CommonUtils.escapePigString(modelConfig.getDataSetDelimiter()));
-
+        paramsMap.put("column_parallel", Integer.toString(columnConfigList.size() / 3));
+        
         // execute pig job
         try {
             PigExecutor.getExecutor().submitJob(modelConfig,

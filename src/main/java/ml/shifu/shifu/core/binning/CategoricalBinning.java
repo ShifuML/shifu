@@ -23,6 +23,8 @@ import java.util.List;
 import java.util.Set;
 
 import org.apache.commons.lang.StringUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * CategoricalBinning class
@@ -31,8 +33,12 @@ import org.apache.commons.lang.StringUtils;
  *
  */
 public class CategoricalBinning extends AbstractBinning<String> {
-
+    
+    private final static Logger log = LoggerFactory.getLogger(CategoricalBinning.class);
+    
     private Set<String> categoricalVals;
+    
+    public CategoricalBinning(){}
     
     /**
      * @param binningNum
@@ -71,6 +77,49 @@ public class CategoricalBinning extends AbstractBinning<String> {
         List<String> binningVals = new ArrayList<String>();
         binningVals.addAll(categoricalVals);
         return binningVals;
+    }
+
+    /* (non-Javadoc)
+     * @see ml.shifu.shifu.core.binning.AbstractBinning#mergeBin(ml.shifu.shifu.core.binning.AbstractBinning)
+     */
+    @Override
+    public void mergeBin(AbstractBinning<?> another) {
+       CategoricalBinning binning = (CategoricalBinning) another;
+       this.categoricalVals.addAll(binning.categoricalVals);
+    }
+    
+    /**
+     * convert @CategoricalBinning to String
+     * @return
+     */
+    protected void stringToObj(String objValStr) {
+        super.stringToObj(objValStr);
+
+        if ( categoricalVals == null ) {
+            categoricalVals = new HashSet<String>();
+        } else {
+            categoricalVals.clear();
+        }
+        
+        String[] objStrArr = objValStr.split(Character.toString(FIELD_SEPARATOR), -1);        
+        if ( objStrArr.length > 4 && StringUtils.isNotBlank(objStrArr[4]) ) {
+            String[] elements = objStrArr[4].split(Character.toString(SETLIST_SEPARATOR), -1);
+            for ( String element : elements ) {
+                categoricalVals.add(element);
+            }
+        } else {
+            log.warn("Empty categorical bin - " + objValStr);
+        }
+    }
+    
+    /**
+     * convert @CategoricalBinning to String
+     * @return
+     */
+    public String objToString() {
+        return super.objToString() 
+                + Character.toString(FIELD_SEPARATOR) 
+                + StringUtils.join(categoricalVals, SETLIST_SEPARATOR);
     }
 
 }

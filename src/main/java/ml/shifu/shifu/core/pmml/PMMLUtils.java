@@ -1,5 +1,6 @@
 package ml.shifu.shifu.core.pmml;
 
+import org.apache.commons.io.IOUtils;
 import org.dmg.pmml.*;
 import org.jpmml.model.ImportFilter;
 import org.jpmml.model.JAXBUtil;
@@ -7,6 +8,7 @@ import org.xml.sax.InputSource;
 
 import javax.xml.transform.sax.SAXSource;
 import javax.xml.transform.stream.StreamResult;
+
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.InputStream;
@@ -58,14 +60,14 @@ public class PMMLUtils {
 
     public static void savePMML(PMML pmml, String path) {
         OutputStream os = null;
-
         try {
             os = new FileOutputStream(path);
             StreamResult result = new StreamResult(os);
             JAXBUtil.marshalPMML(pmml, result);
-
         } catch (Exception e) {
             e.printStackTrace();
+        } finally {
+            IOUtils.closeQuietly(os);
         }
     }
 
