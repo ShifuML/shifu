@@ -18,6 +18,8 @@ package ml.shifu.shifu.container.obj;
 import com.fasterxml.jackson.core.JsonGenerationException;
 import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+
+import org.apache.commons.io.FileUtils;
 import org.testng.Assert;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.Test;
@@ -57,11 +59,39 @@ public class ColumnConfigTest {
         jsonMapper.writerWithDefaultPrettyPrinter().writeValue(file, columnConfigList);
 
         List<ColumnConfig> ccList = Arrays.asList(jsonMapper.readValue(file, ColumnConfig[].class));
-        ;
+        
         Assert.assertEquals(2, ccList.size());
         Assert.assertEquals("TestColumn", ccList.get(0).getColumnName());
 
         file.delete();
     }
 
+    @Test
+    public void testEmptyCategory() throws IOException {
+        List<ColumnConfig> columnConfigList = new ArrayList<ColumnConfig>();
+        ColumnConfig columnConfig = new ColumnConfig();
+        
+        columnConfig.setColumnNum(1);
+        columnConfig.setColumnName("TestColumn");
+        columnConfig.setColumnStats(new ColumnStats());
+        columnConfig.setColumnBinning(new ColumnBinning());
+        
+        List<String> binCategoryList = new ArrayList<String>();
+        
+        binCategoryList.add("");
+        binCategoryList.add("Hello\nWorld");
+        binCategoryList.add("For\tTest");
+        binCategoryList.add(";");
+        binCategoryList.add(null);
+        
+        columnConfig.setBinCategory(binCategoryList);
+        
+        columnConfigList.add(columnConfig);
+        
+        File columnConfigFile = new File("ColumnConfig.json");
+        jsonMapper.writerWithDefaultPrettyPrinter().writeValue(columnConfigFile, columnConfigList);
+        Assert.assertTrue(columnConfigFile.exists());
+        
+        FileUtils.deleteQuietly(columnConfigFile);
+    }
 }

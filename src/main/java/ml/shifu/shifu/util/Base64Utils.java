@@ -38,7 +38,7 @@ public class Base64Utils {
             return null;
         }
         
-        Base64 encoder = new Base64(80);
+        Base64 encoder = new Base64(-1);
         return new String(encoder.encode(text.getBytes(Charset.forName("UTF-8"))));
     }
     
@@ -47,7 +47,7 @@ public class Base64Utils {
             return null;
         }
         
-        Base64 decoder = new Base64(80);
+        Base64 decoder = new Base64(-1);
         return new String(decoder.decode(text.getBytes()), Charset.forName("UTF-8"));
     }
 }

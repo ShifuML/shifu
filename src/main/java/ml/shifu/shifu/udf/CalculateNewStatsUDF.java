@@ -80,9 +80,17 @@ public class CalculateNewStatsUDF extends AbstractTrainerUDF<Tuple> {
         Tuple tuple = TupleFactory.getInstance().newTuple();
         tuple.append(columnId);
         if ( columnConfig.isCategorical() ) {
+            if ( columnConfig.getBinCategory().size() == 0 ) {
+                return null;
+            }
+            
             String binCategory = "[" + StringUtils.join(columnConfig.getBinCategory(), CalculateStatsUDF.CATEGORY_VAL_SEPARATOR) + "]";
             tuple.append(Base64Utils.base64Encode(binCategory));
         } else {
+            if ( columnConfig.getBinBoundary().size() == 1 ) {
+                return null;
+            }
+            
             tuple.append(columnConfig.getBinBoundary().toString());
         }
         
