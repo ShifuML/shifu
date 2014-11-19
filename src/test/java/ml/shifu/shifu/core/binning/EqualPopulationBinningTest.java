@@ -42,10 +42,12 @@ public class EqualPopulationBinningTest {
         Random rd = new Random(System.currentTimeMillis());
         
         EqualPopulationBinning binning = new EqualPopulationBinning(10);
-        for ( int i = 0; i < 10000; i ++ ) {
+        long start = System.currentTimeMillis();
+        for ( int i = 0; i < 100000; i ++ ) {
             binning.addData(Integer.toString(rd.nextInt() % 1000));
         }
-        
+        long end = System.currentTimeMillis();
+        System.out.println("Spend " + (end - start) + " milli-seconds to create data.");
         System.out.println(binning.getDataBin());
         
         String binStr = binning.objToString();
@@ -123,7 +125,7 @@ public class EqualPopulationBinningTest {
         Random rd = new Random(System.currentTimeMillis());
         
         EqualPopulationBinning binning = new EqualPopulationBinning(20);
-        for ( int i = 0; i < 18000; i ++ ) {
+        for ( int i = 0; i < 180000; i ++ ) {
             binning.addData(Double.toString(rd.nextDouble() % 1000));
         }
         
