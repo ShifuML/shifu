@@ -15,6 +15,12 @@
  */
 package ml.shifu.shifu.core.processor;
 
+import java.io.IOException;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Scanner;
+
 import ml.shifu.shifu.actor.AkkaSystemExecutor;
 import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.container.obj.ColumnConfig.ColumnType;
@@ -25,17 +31,12 @@ import ml.shifu.shifu.exception.ShifuException;
 import ml.shifu.shifu.fs.ShifuFileUtils;
 import ml.shifu.shifu.pig.PigExecutor;
 import ml.shifu.shifu.udf.CalculateStatsUDF;
+import ml.shifu.shifu.util.Base64Utils;
 import ml.shifu.shifu.util.CommonUtils;
 
 import org.apache.commons.collections.CollectionUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import java.io.IOException;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Scanner;
 
 /**
  * statistics, max/min/avg/std for each column dataset if it's numerical
@@ -106,7 +107,8 @@ public class StatsModelProcessor extends BasicModelProcessor implements Processo
         ShifuFileUtils.deleteFile(pathFinder.getPreTrainingStatsPath(), modelConfig.getDataSet().getSource());
         Map<String, String> paramsMap = new HashMap<String, String>();
         paramsMap.put("delimiter", CommonUtils.escapePigString(modelConfig.getDataSetDelimiter()));
-
+        paramsMap.put("column_parallel", Integer.toString(columnConfigList.size() / 3));
+        
         // execute pig job
         try {
             PigExecutor.getExecutor().submitJob(modelConfig,
@@ -154,12 +156,18 @@ public class StatsModelProcessor extends BasicModelProcessor implements Processo
                 continue;
             }
 
+            if ( raw.length != 19 ) {
+                log.info("The stats data has " + raw.length + " fields.");
+                log.info("The stats data is - " + raw);
+            }
+            
             int columnNum = Integer.parseInt(raw[0]);
             try {
                 ColumnConfig config = this.columnConfigList.get(columnNum);
 
                 if(config.isCategorical()) {
-                    config.setBinCategory(CommonUtils.stringToStringList(raw[1], CalculateStatsUDF.CATEGORY_VAL_SEPARATOR));
+                    String binCategory = Base64Utils.base64Decode(raw[1]);
+                    config.setBinCategory(CommonUtils.stringToStringList(binCategory, CalculateStatsUDF.CATEGORY_VAL_SEPARATOR));
                 } else {
                     config.setBinBoundary(CommonUtils.stringToDoubleList(raw[1]));
                 }

@@ -75,7 +75,7 @@ public class StreamStatsCalculator {
             return;
         }
         
-        if ( Double.isInfinite(data) || Double.isNaN(data) || Math.abs(data) > threshold) {
+        if (Double.isInfinite(data) || Double.isNaN(data) || Math.abs(data) > threshold) {
             log.warn("Invalid value - " + data);
             return;
         }

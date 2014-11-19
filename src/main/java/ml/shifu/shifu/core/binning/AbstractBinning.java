@@ -17,9 +17,14 @@
  */
 package ml.shifu.shifu.core.binning;
 
+import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+
+import ml.shifu.shifu.container.obj.ColumnConfig;
+import ml.shifu.shifu.container.obj.ModelConfig;
+import ml.shifu.shifu.container.obj.ModelStatsConf.BinningMethod;
 
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang.StringUtils;
@@ -32,11 +37,17 @@ import org.apache.commons.lang.StringUtils;
  */
 public abstract class AbstractBinning<T> {
     
+    public static final char FIELD_SEPARATOR = '\u0001';
+    public static final char SETLIST_SEPARATOR = '\u0002';
+    public static final char PAIR_SEPARATOR = '\u0003';
+    
     protected int missingValCnt = 0;
     protected int invalidValCnt = 0;
     
     protected int expectedBinningNum;
     protected Set<String> missingValSet;
+    
+    public AbstractBinning(){}
     
     public AbstractBinning(int binningNum) {
         this(binningNum, null);
@@ -64,7 +75,8 @@ public abstract class AbstractBinning<T> {
     
     public abstract void addData(String val);
     public abstract List<T> getDataBin();
-
+    public abstract void mergeBin(AbstractBinning<?> another);
+    
     protected Set<String> getMissingValSet() {
         return missingValSet;
     }
@@ -79,5 +91,71 @@ public abstract class AbstractBinning<T> {
     
     protected void incInvalidValCnt() {
         invalidValCnt ++;
+    }
+    
+    /**
+     * convert @AbstractBinning to String
+     * @return
+     */
+    protected void stringToObj(String objValStr) {
+        String[] objStrArr = objValStr.split(Character.toString(FIELD_SEPARATOR), -1);
+        if ( objStrArr.length < 4 ) {
+            throw new IllegalArgumentException("The size of argument is incorrect");
+        }
+        
+        missingValCnt = Integer.parseInt(StringUtils.trim(objStrArr[0]));
+        invalidValCnt = Integer.parseInt(StringUtils.trim(objStrArr[1]));
+        expectedBinningNum = Integer.parseInt(StringUtils.trim(objStrArr[2]));
+        
+        if ( missingValSet == null ) {
+            missingValSet = new HashSet<String>();
+        } else {
+            missingValSet.clear();
+        }
+        
+        String[] elements = objStrArr[3].split(Character.toString(SETLIST_SEPARATOR), -1);
+        for ( String element : elements ) {
+            missingValSet.add(element);
+        }
+    }
+    
+    /**
+     * convert @AbstractBinning to String
+     * @return
+     */
+    public String objToString() {
+        List<String> strList = new ArrayList<String>();
+        
+        strList.add(Integer.toString(missingValCnt));
+        strList.add(Integer.toString(invalidValCnt));
+        strList.add(Integer.toString(expectedBinningNum));
+        
+        String missingValStr = StringUtils.join(missingValSet, SETLIST_SEPARATOR);
+        strList.add(missingValStr);
+        
+        return StringUtils.join(strList, FIELD_SEPARATOR);
+    }
+
+    /**
+     * Construct Binning class object from String
+     * @param objValStr
+     * @return
+     */
+    public static AbstractBinning<?> constructBinningFromStr(ModelConfig modelConfig, ColumnConfig columnConfig, String objValStr) {
+        AbstractBinning<?> binning = null;
+        
+        if ( columnConfig.isCategorical() ) {
+            binning = new CategoricalBinning();
+        } else {
+            if ( modelConfig.getBinningMethod().equals(BinningMethod.EqualInterval) ) {
+                binning = new EqualIntervalBinning();
+            } else {
+                binning = new EqualPopulationBinning();
+            }
+        }
+        
+        binning.stringToObj(objValStr);
+        
+        return binning;
     }
 }

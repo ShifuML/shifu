@@ -23,6 +23,7 @@ import java.text.DecimalFormat;
 import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.core.KSIVCalculator;
 import ml.shifu.shifu.udf.stats.AbstractVarStats;
+import ml.shifu.shifu.util.Base64Utils;
 
 import org.apache.commons.lang.StringUtils;
 import org.apache.pig.data.DataBag;
@@ -54,7 +55,7 @@ public class CalculateNewStatsUDF extends AbstractTrainerUDF<Tuple> {
      */
     @Override
     public Tuple exec(Tuple input) throws IOException {
-        if (input == null || input.size() != 4) {
+        if (input == null ) {
             return null;
         }
         
@@ -79,8 +80,17 @@ public class CalculateNewStatsUDF extends AbstractTrainerUDF<Tuple> {
         Tuple tuple = TupleFactory.getInstance().newTuple();
         tuple.append(columnId);
         if ( columnConfig.isCategorical() ) {
-            tuple.append("[" + StringUtils.join(columnConfig.getBinCategory(), CalculateStatsUDF.CATEGORY_VAL_SEPARATOR) + "]");
+            if ( columnConfig.getBinCategory().size() == 0 ) {
+                return null;
+            }
+            
+            String binCategory = "[" + StringUtils.join(columnConfig.getBinCategory(), CalculateStatsUDF.CATEGORY_VAL_SEPARATOR) + "]";
+            tuple.append(Base64Utils.base64Encode(binCategory));
         } else {
+            if ( columnConfig.getBinBoundary().size() == 1 ) {
+                return null;
+            }
+            
             tuple.append(columnConfig.getBinBoundary().toString());
         }
         

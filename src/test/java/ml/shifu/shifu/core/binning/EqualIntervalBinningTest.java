@@ -19,6 +19,8 @@ package ml.shifu.shifu.core.binning;
 
 import java.util.Random;
 
+import junit.framework.Assert;
+
 import org.testng.annotations.Test;
 
 /**
@@ -54,4 +56,11 @@ public class EqualIntervalBinningTest {
         System.out.println(binning.getDataBin());
     }
     
+    @Test
+    public void testSerialObject() {
+        EqualIntervalBinning binning = new EqualIntervalBinning();
+        String binStr = binning.objToString();
+        String[] fieldArr = binStr.split(Character.toString(AbstractBinning.FIELD_SEPARATOR));
+        Assert.assertTrue(fieldArr.length == 6);
+    }
 }

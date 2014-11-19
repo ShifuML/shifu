@@ -91,7 +91,7 @@ public class NumericalVarStats extends AbstractVarStats {
         while ( iterator.hasNext() ) {
             Tuple element = iterator.next();
             
-            if ( element.size() != 4 ) {
+            if ( element.size() < 4 ) {
                 continue;
             }
             

@@ -15,14 +15,17 @@
  */
 REGISTER '$path_jar'
 
-SET default_parallel $num_parallel
+SET default_parallel $num_parallel;
+SET mapred.map.tasks.speculative.execution true;
+SET mapred.reduce.tasks.speculative.execution true;
 SET mapred.job.queue.name $queue_name;
 SET mapred.task.timeout 1200000;
-SET job.name 'shifu statistic'
+SET job.name 'shifu statistic';
 
 DEFINE IsDataFilterOut  ml.shifu.shifu.udf.PurifyDataUDF('$source_type', '$path_model_config', '$path_column_config');
 DEFINE IsToBinningData  ml.shifu.shifu.udf.FilterBinningDataUDF('$source_type', '$path_model_config', '$path_column_config');
-DEFINE BinningData      ml.shifu.shifu.udf.BinningDataUDF('$source_type', '$path_model_config', '$path_column_config');
+DEFINE GenBinningData   ml.shifu.shifu.udf.BinningPartialDataUDF('$source_type', '$path_model_config', '$path_column_config');
+DEFINE MergeBinningData ml.shifu.shifu.udf.BinningDataMergeUDF('$source_type', '$path_model_config', '$path_column_config');
 DEFINE AddColumnNum     ml.shifu.shifu.udf.AddColumnNumUDF('$source_type', '$path_model_config', '$path_column_config', 'false');
 DEFINE CalculateStats   ml.shifu.shifu.udf.CalculateNewStatsUDF('$source_type', '$path_model_config', '$path_column_config');
 
@@ -36,8 +39,11 @@ data_cols = FOREACH data_cols GENERATE FLATTEN($0);
 
 -- prepare data and do binning
 data_binning = FILTER data_cols BY IsToBinningData(*);
-data_binning_grp = GROUP data_binning BY $0;
-binning_info = FOREACH data_binning_grp GENERATE FLATTEN(BinningData(*));
+data_binning_grp = GROUP data_binning BY ($0, $4) PARALLEL $column_parallel;
+binning_info_partial = FOREACH data_binning_grp GENERATE group.$0, GenBinningData(data_binning);
+binning_info_partial = FILTER binning_info_partial BY $1 IS NOT NULL;
+binning_info_grp = GROUP binning_info_partial BY $0;
+binning_info = FOREACH binning_info_grp GENERATE FLATTEN(MergeBinningData(*));
 
 -- do stats
 data_stats = GROUP data_cols BY $0;

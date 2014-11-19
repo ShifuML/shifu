@@ -126,7 +126,7 @@ public class AddColumnNumUDF extends AbstractTrainerUDF<DataBag> {
 
             ColumnConfig config = columnConfigList.get(i);
             if (config.isCandidate()) {
-                Tuple tuple = tupleFactory.newTuple(4);
+                Tuple tuple = tupleFactory.newTuple(5);
                 tuple.set(0, i);
 
                 // Set Data
@@ -158,6 +158,9 @@ public class AddColumnNumUDF extends AbstractTrainerUDF<DataBag> {
                     tuple.set(3, 1.0);
                 }
 
+                // add random seed for distribution
+                tuple.set(4, Math.abs(random.nextInt() % 300));
+                
                 bag.add(tuple);
             }
         }

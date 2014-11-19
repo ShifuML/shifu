@@ -18,10 +18,13 @@
 package ml.shifu.shifu.core.binning;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 
+import ml.shifu.shifu.util.QuickSort;
+
 import org.apache.commons.lang.StringUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * EqualPopulationBinning class
@@ -31,10 +34,13 @@ import org.apache.commons.lang.StringUtils;
  */
 public class EqualPopulationBinning extends AbstractBinning<Double> {
     
+    private final static Logger log = LoggerFactory.getLogger(EqualPopulationBinning.class);
     public static final int HIST_SCALE = 100;
     
     private int maxHistogramUnitCnt;
     private List<HistogramUnit> histogram;
+    
+    public EqualPopulationBinning() {}
     
     /**
      * @param binningNum
@@ -49,7 +55,7 @@ public class EqualPopulationBinning extends AbstractBinning<Double> {
     public EqualPopulationBinning(int binningNum, List<String> missingValList) {
         super(binningNum);
         this.maxHistogramUnitCnt = super.expectedBinningNum * HIST_SCALE;
-        this.histogram = new ArrayList<HistogramUnit>();
+        this.histogram = new ArrayList<HistogramUnit>(this.maxHistogramUnitCnt + 1);
     }
 
     /* (non-Javadoc)
@@ -221,8 +227,8 @@ public class EqualPopulationBinning extends AbstractBinning<Double> {
             hu = new HistogramUnit(dval, frequency);
             histogram.add(hu);
             
-            Collections.sort(histogram);
             if ( histogram.size() > this.maxHistogramUnitCnt ) {
+                QuickSort.sort(histogram);
                 mergeHistogram();
             }
         }
@@ -242,7 +248,7 @@ public class EqualPopulationBinning extends AbstractBinning<Double> {
             }
         } 
         
-        if ( pos > 0  ) {
+        if ( pos >= 0  ) {
             HistogramUnit chu = histogram.get(pos);
             HistogramUnit nhu = histogram.get(pos + 1);
             
@@ -266,6 +272,66 @@ public class EqualPopulationBinning extends AbstractBinning<Double> {
         return null;
     }
 
+
+    /* (non-Javadoc)
+     * @see ml.shifu.shifu.core.binning.AbstractBinning#mergeBin(ml.shifu.shifu.core.binning.AbstractBinning)
+     */
+    @Override
+    public void mergeBin(AbstractBinning<?> another) {
+        EqualPopulationBinning binning = (EqualPopulationBinning) another;
+        this.histogram.addAll(binning.histogram);
+        QuickSort.sort(histogram);
+        
+        int size = this.histogram.size();
+        while ( size > this.maxHistogramUnitCnt ) {
+            this.mergeHistogram();
+            size = this.histogram.size();
+        }
+    }
+    
+    /**
+     * convert @EqualIntervalBinning to String
+     * @return
+     */
+    protected void stringToObj(String objValStr) {
+        super.stringToObj(objValStr);
+
+        if ( histogram == null ) {
+            histogram = new ArrayList<HistogramUnit>();
+        } else {
+            histogram.clear();
+        }
+        
+        String[] objStrArr = objValStr.split(Character.toString(FIELD_SEPARATOR), -1);
+        maxHistogramUnitCnt = Integer.parseInt(objStrArr[4]);
+        
+        if ( objStrArr.length > 5 &&  StringUtils.isNotBlank(objStrArr[5]) ) {
+            String[] histogramStrArr = objStrArr[5].split(Character.toString(SETLIST_SEPARATOR), -1);
+            for ( String histogramStr : histogramStrArr ) {
+                histogram.add(HistogramUnit.stringToObj(histogramStr));
+            }
+        } else {
+            log.warn("Empty categorical bin - " + objValStr);
+        }
+    }
+    
+    /**
+     * convert @EqualIntervalBinning to String
+     * @return
+     */
+    public String objToString() {
+        List<String> histogramStrList = new ArrayList<String>();
+        for (HistogramUnit hu : this.histogram ) {
+            histogramStrList.add(hu.objToString());
+        }
+        
+        return super.objToString() 
+                + Character.toString(FIELD_SEPARATOR) 
+                + Integer.toString(maxHistogramUnitCnt)
+                + Character.toString(FIELD_SEPARATOR) 
+                + StringUtils.join(histogramStrList, SETLIST_SEPARATOR);
+    }
+    
     public static class HistogramUnit implements Comparable<HistogramUnit> {
         private double hval;
         private int hcnt;
@@ -303,6 +369,25 @@ public class EqualPopulationBinning extends AbstractBinning<Double> {
         public String toString() {
             return "[" + hval + ", " + hcnt + "]";
         }
+        
+        /**
+         * convert @HistogramUnit object to String
+         * @return
+         */
+        public String objToString() {
+            return Double.toString(hval) + Character.toString(PAIR_SEPARATOR) + Integer.toString(hcnt);
+        }
+        
+        /**
+         * Constructor @HistogramUnit from String
+         * @param histogramStr
+         * @return
+         */
+        public static HistogramUnit stringToObj(String histogramStr) {
+            String[] fields = StringUtils.split(histogramStr, PAIR_SEPARATOR);
+            return new HistogramUnit(Double.parseDouble(fields[0]), Integer.parseInt(fields[1]));
+        }
+
     }
     
 }

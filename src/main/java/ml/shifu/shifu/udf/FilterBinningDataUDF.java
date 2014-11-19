@@ -49,7 +49,7 @@ public class FilterBinningDataUDF extends AbstractTrainerUDF<Boolean> {
      */
     @Override
     public Boolean exec(Tuple input) throws IOException {
-        if ( input == null || input.size() != 4 ) {
+        if ( input == null ) {
             return false;
         }
         
@@ -57,12 +57,14 @@ public class FilterBinningDataUDF extends AbstractTrainerUDF<Boolean> {
         String tag = (String) input.get(2);
         ColumnConfig columnConfig = columnConfigList.get(columnNum);
         
-        if(columnConfig != null
-                && (columnConfig.isCategorical()
+        if( columnConfig != null
+                && tag != null
+                && (modelConfig.getPosTags().contains(tag) || modelConfig.getNegTags().contains(tag))
+                && ( columnConfig.isCategorical()
                         || modelConfig.getBinningMethod().equals(BinningMethod.EqualTotal)
                         || modelConfig.getBinningMethod().equals(BinningMethod.EqualInterval) 
-                        || (modelConfig.getBinningMethod().equals(BinningMethod.EqualPositive) 
-                                && tag != null && modelConfig.getPosTags().contains(tag)))) {
+                        || ( modelConfig.getBinningMethod().equals(BinningMethod.EqualPositive) 
+                                && modelConfig.getPosTags().contains(tag) ))) {
             return true;
         }
 

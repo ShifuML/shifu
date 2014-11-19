@@ -35,6 +35,8 @@ public class EqualIntervalBinning extends AbstractBinning<Double> {
 
     // private Set<Double> diffValSet;
 
+    public EqualIntervalBinning() {}
+    
     /**
      * @param binningNum
      */
@@ -117,4 +119,38 @@ public class EqualIntervalBinning extends AbstractBinning<Double> {
         // }
     }
     
+
+    /* (non-Javadoc)
+     * @see ml.shifu.shifu.core.binning.AbstractBinning#mergeBin(ml.shifu.shifu.core.binning.AbstractBinning)
+     */
+    @Override
+    public void mergeBin(AbstractBinning<?> another) {
+        EqualIntervalBinning binning = (EqualIntervalBinning) another;
+        process(binning.minVal);
+        process(binning.maxVal);
+    }
+    
+    /**
+     * convert @EqualIntervalBinning to String
+     * @return
+     */
+    protected void stringToObj(String objValStr) {
+        super.stringToObj(objValStr);
+
+        String[] objStrArr = objValStr.split(Character.toString(FIELD_SEPARATOR), -1);
+        maxVal = Double.parseDouble(objStrArr[4]);
+        minVal = Double.parseDouble(objStrArr[5]);
+    }
+    
+    /**
+     * convert @EqualIntervalBinning to String
+     * @return
+     */
+    public String objToString() {
+        return super.objToString() 
+                + Character.toString(FIELD_SEPARATOR) 
+                + Double.toString(maxVal)
+                + Character.toString(FIELD_SEPARATOR) 
+                + Double.toString(minVal);
+    }
 }

@@ -521,7 +521,7 @@ public class ShifuCLITest {
         
         FileUtils.deleteQuietly(tmpModel);
         FileUtils.deleteQuietly(tmpColumn);
-        // FileUtils.deleteQuietly(pmml);
+        FileUtils.deleteQuietly(pmml);
         FileUtils.deleteDirectory(tmpModelsDir);
     }
     
