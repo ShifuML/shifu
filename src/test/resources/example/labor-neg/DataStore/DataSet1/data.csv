@@ -1,0 +1,18 @@
+duration,wage increase first year,wage increase second year,wage increase third year,cost of living adjustment,working hours,pension,standby pay,shift differential,education allowance,statutory holidays,vacation,longterm disability assistance,contribution to dental plan,bereavement assistance,contribution to health plan,result
+1,4,,,none,,none,,,yes,11,average,no,none,no,none,bad
+2,2,3,,none,38,empl_contr,,,yes,12,generous,yes,none,yes,full,bad
+2,2.5,2.5,,tc,39,empl_contr,,,?,12,average,?,?,yes,?,bad
+2,2.5,3,,tcf,40,none,,,?,11,below average,?,?,yes,?,bad
+2,4,4,,none,40,none,,3,?,10,below average,no,none,?,none,bad
+2,4.5,4,,?,40,?,,2,no,10,below average,no,half,?,half,bad
+2,4.5,4,,none,40,?,,5,?,11,average,?,full,yes,full,good
+2,4.6,4.6,,tcf,38,?,,,?,,?,yes,half,?,half,good
+2,5,4.5,,none,38,?,14,5,?,11,below average,yes,?,?,full,good
+2,5.7,4.5,,none,40,ret_allw,,,?,11,average,yes,full,yes,full,good
+2,7,5.3,,?,,?,,,?,11,?,yes,full,?,?,good
+3,2,3,,tcf,,empl_contr,,,yes,,?,yes,half,yes,?,good
+3,3.5,4,4.5,tcf,35,?,,,?,13,generous,?,?,yes,full,good
+3,4,3.5,,none,40,empl_contr,,6,?,11,average,yes,full,?,full,good
+3,5,4.4,,none,38,empl_contr,10,6,?,11,generous,yes,?,?,full,good
+3,5,5,5,?,40,?,,,?,12,average,?,half,yes,half,good
+3,6,6,4,?,35,?,,14,?,9,generous,yes,full,yes,full,good

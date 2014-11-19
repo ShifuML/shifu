@@ -6,16 +6,16 @@
   },
   "dataSet" : {
     "source" : "LOCAL",
-    "dataPath" : "labor-neg.train",
+    "dataPath" : "src/test/resources/example/labor-neg/DataStore/DataSet1/labor-neg.train",
     "dataDelimiter" : ",",
-    "headerPath" : "labor-neg.names",
+    "headerPath" : "src/test/resources/example/labor-neg/DataStore/DataSet1/labor-neg.names",
     "headerDelimiter" : ",",
     "filterExpressions" : null,
-    "targetColunmName" : "result",
+    "targetColumnName" : "result",
     "posTags" : [ "good" ],
     "negTags" : [ "bad" ],
-    "metaColumnConf" : null,
-    "categoricalColumnConf" : "category.names"
+    "metaColumnNameFile" : null,
+    "categoricalColumnNameFile" : "src/test/resources/example/labor-neg/DataStore/DataSet1/category.names"
   },
   "runConf" : {
     "runMode" : "akka",
@@ -25,7 +25,7 @@
   },
   "stats" : {
     "maxNumBin" : 10,
-    "binningMethod" : "EB",
+    "binningMethod" : "EqualPositive",
     "sampleRate" : 1.0,
     "sampleNegOnly" : false
   },
@@ -67,9 +67,9 @@
     "name" : "EvalA",
     "dataSet" : {
       "source" : "LOCAL",
-      "dataPath" : "labor-neg.test",
+      "dataPath" : "src/test/resources/example/labor-neg/DataStore/DataSet1/labor-neg.test",
       "dataDelimiter" : ",",
-      "headerPath" : "labor-neg.names",
+      "headerPath" : "src/test/resources/example/labor-neg/DataStore/DataSet1/labor-neg.names",
       "headerDelimiter" : ",",
       "filterExpressions" : null
     },

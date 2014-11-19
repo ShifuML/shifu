@@ -719,6 +719,9 @@ public final class CommonUtils {
                 // ideal[0] = Double.valueOf(rawDataMap.get(key).toString());
                 continue;
             } else if (config.isFinalSelect()) {
+                // add log for debug purpose
+                //log.info("key: " + key + ", raw_value " + rawDataMap.get(key).toString() + ", zscl_value: " +
+                //        Normalizer.normalize(config, rawDataMap.get(key).toString()));
                 inputList.add(Normalizer.normalize(config, rawDataMap.get(key).toString(), cutoff));
             }
         }

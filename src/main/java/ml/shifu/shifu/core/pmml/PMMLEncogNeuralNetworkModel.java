@@ -88,9 +88,11 @@ public class PMMLEncogNeuralNetworkModel
 				}// weights
 				int tmp = layerCount[i + 1] - layerFeedCount[i + 1];
 				// TODO set bias as constant, don't need to read from field
+                // DONE: change bias in setBias function
 				for (int k = 0; k < tmp; k++) {
-					neuron.withConnections(new Connection(biasValue,
-							weights[weightID++]));
+					//neuron.withConnections(new Connection(biasValue,
+					//		weights[weightID++]));
+                    neuron.setBias(weights[weightID++]);
 				}// bias neuron for each layer, set to bias=1
 				layer.withNeurons(neuron);
 			}// finish build Neuron

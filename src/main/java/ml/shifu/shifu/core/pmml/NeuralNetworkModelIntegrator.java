@@ -30,6 +30,7 @@ import org.dmg.pmml.NeuralInput;
 import org.dmg.pmml.NeuralInputs;
 import org.dmg.pmml.NeuralNetwork;
 import org.dmg.pmml.NormContinuous;
+import org.dmg.pmml.MapValues;
 import org.dmg.pmml.OpType;
 
 /**
@@ -56,11 +57,18 @@ public class NeuralNetworkModelIntegrator {
 		HashMap<FieldName, FieldName> miningTransformMap = new HashMap<FieldName, FieldName>();
 		for (DerivedField dField : model.getLocalTransformations()
 				.getDerivedFields()) {
-			if (dField.getExpression() instanceof NormContinuous) {
+            // Apply z-scale normalization on numerical variables
+			if (dField.getExpression() instanceof NormContinuous ) {
 				miningTransformMap.put(
 						((NormContinuous) dField.getExpression()).getField(),
 						dField.getName());
 			}
+            // Apply bin map on categorical variables
+            else if (dField.getExpression() instanceof MapValues) {
+                miningTransformMap.put(
+                        ((MapValues) dField.getExpression()).getFieldColumnPairs().get(0).getField(),
+                        dField.getName());
+            }
 		}
 		List<MiningField> miningList = model.getMiningSchema()
 				.getMiningFields();

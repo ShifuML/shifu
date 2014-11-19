@@ -33,40 +33,17 @@ import ml.shifu.shifu.util.CommonUtils;
 import ml.shifu.shifu.core.Normalizer;
 
 import org.apache.commons.lang.StringUtils;
-import org.dmg.pmml.Array;
-import org.dmg.pmml.ContStats;
-import org.dmg.pmml.DataDictionary;
-import org.dmg.pmml.DataField;
-import org.dmg.pmml.DataType;
-import org.dmg.pmml.DerivedField;
-import org.dmg.pmml.DiscrStats;
-import org.dmg.pmml.Extension;
-import org.dmg.pmml.FieldColumnPair;
-import org.dmg.pmml.FieldName;
-import org.dmg.pmml.FieldUsageType;
-import org.dmg.pmml.InlineTable;
-import org.dmg.pmml.Interval;
-import org.dmg.pmml.LinearNorm;
-import org.dmg.pmml.LocalTransformations;
-import org.dmg.pmml.MapValues;
-import org.dmg.pmml.MiningField;
-import org.dmg.pmml.MiningSchema;
-import org.dmg.pmml.Model;
-import org.dmg.pmml.ModelStats;
-import org.dmg.pmml.NeuralNetwork;
-import org.dmg.pmml.NormContinuous;
-import org.dmg.pmml.NumericInfo;
-import org.dmg.pmml.OpType;
-import org.dmg.pmml.PMML;
-import org.dmg.pmml.Row;
-import org.dmg.pmml.Target;
-import org.dmg.pmml.TargetValue;
-import org.dmg.pmml.Targets;
-import org.dmg.pmml.UnivariateStats;
+import org.dmg.pmml.*;
+import org.w3c.dom.Element;
 import org.encog.ml.BasicML;
 import org.encog.neural.networks.BasicNetwork;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.w3c.dom.Document;
+import org.w3c.dom.Element;
+
+import javax.xml.parsers.DocumentBuilderFactory;
+import javax.xml.parsers.ParserConfigurationException;
 
 /**
  * ExportModelProcessor class
@@ -79,6 +56,10 @@ public class ExportModelProcessor extends BasicModelProcessor implements Process
     
     public static final String PMML = "pmml";
     public static final double EPS = 1e-10;
+
+    private static final String NAMESPACEURI = "http://www.dmg.org/PMML-4_2";
+    private static final String ELEMENTOUT = "out";
+    private static final String ELEMENTORIGIN = "origin";
     
     /**
      * log object
@@ -132,7 +113,7 @@ public class ExportModelProcessor extends BasicModelProcessor implements Process
         
         // create variable transform 
         for ( Model model : pmml.getModels() ) {
-            model.setLocalTransformations(createLocalTransformations(columnConfigList));
+            model.setLocalTransformations(createLocalTransformations(columnConfigList, modelConfig.getNormalizeStdDevCutOff()));
         }
         
         // create specification
@@ -185,9 +166,7 @@ public class ExportModelProcessor extends BasicModelProcessor implements Process
         } else {
             throw new RuntimeException("Model not supported: " + modelConfig.getTrain().getAlgorithm());
         }
-        
         model.setTargets(createTargets(modelConfig));
-        
         return model;
     }
     
@@ -254,97 +233,67 @@ public class ExportModelProcessor extends BasicModelProcessor implements Process
      * @param columnConfigList
      * @return
      */
-    private LocalTransformations createLocalTransformations(List<ColumnConfig> columnConfigList) {
+    private LocalTransformations createLocalTransformations(List<ColumnConfig> columnConfigList, double cutoff) {
+
         LocalTransformations localTransformations = new LocalTransformations();
-        
-        for ( ColumnConfig columnConfig : columnConfigList ) {
-            if ( columnConfig.isFinalSelect() ) {
-                
-                DerivedField derivedField = null;
-                
-                if ( columnConfig.isCategorical() ) { 
-                    derivedField = createCategoricalDerivedField(columnConfig);
-                } else {
-                    derivedField = createNumericalDerivedField(columnConfig);
-                }
-                
-                localTransformations.withDerivedFields(derivedField);
+        for ( ColumnConfig config : columnConfigList ) {
+            if ( config.isFinalSelect() ) {
+                localTransformations.withDerivedFields(
+                        config.isCategorical() ? createCategoricalDerivedField(config, cutoff) : createNumericalDerivedField(config, cutoff)
+                );
             }
         }
-        
         return localTransformations;
-    }
-    
-    /**
-     * @param columnConfig
-     * @return
-     */
-    private DerivedField createCategoricalDerivedField(ColumnConfig columnConfig) {
-        DerivedField derivedField = new DerivedField();
-        
-        derivedField.setName(FieldName.create(columnConfig.getColumnName()));
-        derivedField.setOptype(OpType.CONTINUOUS);
-        derivedField.setDataType(DataType.DOUBLE);
-        
-        MapValues mapValues = new MapValues();
-        mapValues.setDataType(DataType.DOUBLE);
-        //TODO. What to use?
-        mapValues.setMapMissingTo("");
-        mapValues.setOutputColumn("out");
-        
-        FieldColumnPair fieldColumnPair = new FieldColumnPair();
-        fieldColumnPair.setField(FieldName.create(columnConfig.getColumnName()));
-        fieldColumnPair.setColumn("origin");
-        
-        mapValues.withFieldColumnPairs(fieldColumnPair);
-        
-        InlineTable inlineTable = new InlineTable();
-        for ( int i = 0; i < columnConfig.getBinCategory().size(); i ++ ) {
-            String cval = columnConfig.getBinCategory().get(i);
-            double dval = Normalizer.normalize(columnConfig, cval);
-            
-            Row row = new Row();
-            row.withContent(cval);
-            row.withContent(dval);
-            
-            inlineTable.withRows(row);
-        }
-        
-        mapValues.withInlineTable(inlineTable);
-        
-        derivedField.setExpression(mapValues);
-        
-        return derivedField;
-        
     }
 
     /**
-     * @param columnConfig
+     * @param config
      * @return
      */
-    private DerivedField createNumericalDerivedField(ColumnConfig columnConfig) {
-        DerivedField derivedField = new DerivedField();
-        
-        derivedField.setName(FieldName.create(columnConfig.getColumnName()));
-        derivedField.setOptype(OpType.CONTINUOUS);
-        derivedField.setDataType(DataType.DOUBLE);
-        
-        NormContinuous normContinuous = new NormContinuous();
-        normContinuous.setField(FieldName.create(columnConfig.getColumnName()));
-        
-        LinearNorm fromNorm = new LinearNorm();
-        fromNorm.setOrig(0);
-        fromNorm.setNorm(-1 * columnConfig.getMean() / columnConfig.getStdDev());
-        
-        LinearNorm toNorm = new LinearNorm();
-        toNorm.setOrig(columnConfig.getMean());
-        toNorm.setNorm(0);
-        
-        normContinuous.withLinearNorms(fromNorm, toNorm);
-        
-        derivedField.setExpression(normContinuous);
-        
-        return derivedField;
+    private DerivedField createCategoricalDerivedField(ColumnConfig config, double cutoff) {
+
+        InlineTable inlineTable = new InlineTable();
+        for ( int i = 0; i < config.getBinCategory().size(); i ++ ) {
+            String cval = config.getBinCategory().get(i);
+            String dval = Normalizer.normalize(config, cval, cutoff).toString();
+            Document document = null;
+            try {
+                document = DocumentBuilderFactory.newInstance().newDocumentBuilder().newDocument();
+
+            } catch (ParserConfigurationException e) {
+                e.printStackTrace();
+            }
+            Element out = document.createElementNS(NAMESPACEURI, ELEMENTOUT);
+            out.setTextContent(dval);
+            Element origin = document.createElementNS(NAMESPACEURI, ELEMENTORIGIN);
+            origin.setTextContent(cval);
+            inlineTable.withRows(new Row().withContent(origin).withContent(out));
+        }
+
+        MapValues mapValues = new MapValues("out").withDataType(DataType.DOUBLE).withDefaultValue("0.0").
+                withFieldColumnPairs(new FieldColumnPair(new FieldName(config.getColumnName()), "origin")).
+                withInlineTable(inlineTable);
+        mapValues.setMapMissingTo("0.0");
+
+        return new DerivedField(OpType.CONTINUOUS, DataType.DOUBLE).
+                withName(FieldName.create(config.getColumnName() + "_zscl")).withExpression(mapValues);
+    }
+
+    /**
+     * @param config
+     * @return derivedField
+     */
+    private DerivedField createNumericalDerivedField(ColumnConfig config, double cutoff) {
+
+        //added capping logic to linearNorm
+        LinearNorm from = new LinearNorm().withOrig(config.getMean() - config.getStdDev() * cutoff).withNorm(-cutoff);
+        LinearNorm to = new LinearNorm().withOrig(config.getMean() + config.getStdDev() * cutoff).withNorm(cutoff);
+        NormContinuous normContinuous = new NormContinuous(FieldName.create(config.getColumnName())).
+                withLinearNorms(from, to).withMapMissingTo(0.0).withOutliers(OutlierTreatmentMethodType.AS_EXTREME_VALUES);
+
+        //derived field name is consisted of FieldName and "_zscl"
+        return new DerivedField(OpType.CONTINUOUS, DataType.DOUBLE).
+                withName(FieldName.create(config.getColumnName()+"_zscl")).withExpression(normContinuous);
     }
 
     /**
@@ -377,12 +326,9 @@ public class ExportModelProcessor extends BasicModelProcessor implements Process
         extensionMap.put("BinWeightedCountPos", columnConfig.getBinWeightedPos().toString());
         extensionMap.put("BinWeightedCountNeg", columnConfig.getBinWeightedNeg().toString());
         extensionMap.put("BinPosRate", columnConfig.getBinPosRate().toString());
-        
         extensionMap.put("BinWOE", calculateWoe(columnConfig.getBinCountPos(), columnConfig.getBinCountNeg()).toString());
-        
         extensionMap.put("KS", Double.toString(columnConfig.getKs()));
         extensionMap.put("IV", Double.toString(columnConfig.getIv()));
-        
         conStats.withExtensions(createExtensions(extensionMap));
         
         return conStats;
@@ -424,17 +370,6 @@ public class ExportModelProcessor extends BasicModelProcessor implements Process
         numericInfo.setMedian(columnConfig.getMedian());
         numericInfo.setStandardDeviation(columnConfig.getStdDev());
 
-        // numericInfo.setInterQuartileRange(value);
-        // sort value for small to large, interQuartileRange = value(75%) - value(25%) 
-        
-        // numericInfo.withQuantiles(values);
-        //        for (int i = 0; i < num; i++) {
-        //            Quantile quantile = new Quantile();
-        //            quantile.setQuantileLimit(((double) i / (num - 1)) * 100);
-        //            quantile.setQuantileValue(values.get((size - 1) * i / (num - 1)));
-        //            quantiles.add(quantile);
-        //        }
-        
         return numericInfo;
     }
 

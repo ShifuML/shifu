@@ -1,0 +1,511 @@
+[ {
+  "columnNum" : 0,
+  "columnName" : "duration",
+  "version" : "0.2.0",
+  "columnType" : "N",
+  "columnFlag" : null,
+  "finalSelect" : true,
+  "columnStats" : {
+    "max" : 3.0,
+    "min" : 1.0,
+    "mean" : 2.1025641025641026,
+    "median" : 2.0,
+    "totalCount" : 80,
+    "missingCount" : 2,
+    "stdDev" : 0.7488474969976021,
+    "missingPercentage" : 0.025,
+    "ks" : 8.57142857142857,
+    "iv" : 0.0709737199388362
+  },
+  "columnBinning" : {
+    "length" : 3,
+    "binBoundary" : [ "-Infinity", 2.0, 3.0 ],
+    "binCategory" : null,
+    "binCountNeg" : [ 8, 10, 10 ],
+    "binCountPos" : [ 10, 24, 16 ],
+    "binPosRate" : [ 0.5555555555555556, 0.7058823529411765, 0.6153846153846154 ],
+    "binAvgScore" : null,
+    "binWeightedNeg" : [ 8.0, 10.0, 10.0 ],
+    "binWeightedPos" : [ 10.0, 24.0, 16.0 ]
+  }
+}, {
+  "columnNum" : 1,
+  "columnName" : "wage increase first year",
+  "version" : "0.2.0",
+  "columnType" : "N",
+  "columnFlag" : null,
+  "finalSelect" : true,
+  "columnStats" : {
+    "max" : 6.9,
+    "min" : 2.0,
+    "mean" : 3.6205128205128196,
+    "median" : 3.5,
+    "totalCount" : 80,
+    "missingCount" : 2,
+    "stdDev" : 1.3227636382553951,
+    "missingPercentage" : 0.025,
+    "ks" : 65.71428571428571,
+    "iv" : 13.027723022810518
+  },
+  "columnBinning" : {
+    "length" : 6,
+    "binBoundary" : [ "-Infinity", 3.5, 3.7, 4.3, 5.0, 6.0 ],
+    "binCategory" : null,
+    "binCountNeg" : [ 24, 2, 2, 0, 0, 0 ],
+    "binCountPos" : [ 10, 6, 6, 16, 6, 6 ],
+    "binPosRate" : [ 0.29411764705882354, 0.75, 0.75, 1.0, 1.0, 1.0 ],
+    "binAvgScore" : null,
+    "binWeightedNeg" : [ 24.0, 2.0, 2.0, 0.0, 0.0, 0.0 ],
+    "binWeightedPos" : [ 10.0, 6.0, 6.0, 16.0, 6.0, 6.0 ]
+  }
+}, {
+  "columnNum" : 2,
+  "columnName" : "wage increase second year",
+  "version" : "0.2.0",
+  "columnType" : "N",
+  "columnFlag" : null,
+  "finalSelect" : true,
+  "columnStats" : {
+    "max" : 7.0,
+    "min" : 2.0,
+    "mean" : 3.9133333333333344,
+    "median" : 4.0,
+    "totalCount" : 80,
+    "missingCount" : 20,
+    "stdDev" : 1.2699214865183184,
+    "missingPercentage" : 0.25,
+    "ks" : 70.0,
+    "iv" : 9.24888576237833
+  },
+  "columnBinning" : {
+    "length" : 6,
+    "binBoundary" : [ "-Infinity", 4.0, 4.4, 4.8, 5.8, 7.0 ],
+    "binCategory" : null,
+    "binCountNeg" : [ 16, 2, 0, 2, 0, 0 ],
+    "binCountPos" : [ 4, 16, 8, 6, 4, 2 ],
+    "binPosRate" : [ 0.2, 0.8888888888888888, 1.0, 0.75, 1.0, 1.0 ],
+    "binAvgScore" : null,
+    "binWeightedNeg" : [ 16.0, 2.0, 0.0, 2.0, 0.0, 0.0 ],
+    "binWeightedPos" : [ 4.0, 16.0, 8.0, 6.0, 4.0, 2.0 ]
+  }
+}, {
+  "columnNum" : 3,
+  "columnName" : "wage increase third year",
+  "version" : "0.2.0",
+  "columnType" : "N",
+  "columnFlag" : null,
+  "finalSelect" : true,
+  "columnStats" : {
+    "max" : 5.1,
+    "min" : 2.0,
+    "mean" : 3.766666666666666,
+    "median" : 4.6,
+    "totalCount" : 80,
+    "missingCount" : 56,
+    "stdDev" : 1.3839661709445217,
+    "missingPercentage" : 0.7,
+    "ks" : 62.5,
+    "iv" : 14.9045027162737
+  },
+  "columnBinning" : {
+    "length" : 4,
+    "binBoundary" : [ "-Infinity", 2.5, 5.0, 5.1 ],
+    "binCategory" : null,
+    "binCountNeg" : [ 6, 2, 0, 0 ],
+    "binCountPos" : [ 2, 4, 8, 2 ],
+    "binPosRate" : [ 0.25, 0.6666666666666666, 1.0, 1.0 ],
+    "binAvgScore" : null,
+    "binWeightedNeg" : [ 6.0, 2.0, 0.0, 0.0 ],
+    "binWeightedPos" : [ 2.0, 4.0, 8.0, 2.0 ]
+  }
+}, {
+  "columnNum" : 4,
+  "columnName" : "cost of living adjustment",
+  "version" : "0.2.0",
+  "columnType" : "C",
+  "columnFlag" : null,
+  "finalSelect" : true,
+  "columnStats" : {
+    "max" : 1.0,
+    "min" : 0.3333333333333333,
+    "mean" : 0.6499999999999999,
+    "median" : 0.75,
+    "totalCount" : 80,
+    "missingCount" : 0,
+    "stdDev" : 0.18405390914285286,
+    "missingPercentage" : 0.0,
+    "ks" : 32.96703296703296,
+    "iv" : 3.6528167219835024
+  },
+  "columnBinning" : {
+    "length" : 4,
+    "binBoundary" : null,
+    "binCategory" : [ "tc", "none", "?", "tcf" ],
+    "binCountNeg" : [ 8, 12, 8, 0 ],
+    "binCountPos" : [ 4, 16, 24, 8 ],
+    "binPosRate" : [ 0.3333333333333333, 0.5714285714285714, 0.75, 1.0 ],
+    "binAvgScore" : null,
+    "binWeightedNeg" : [ 8.0, 12.0, 8.0, 0.0 ],
+    "binWeightedPos" : [ 4.0, 16.0, 24.0, 8.0 ]
+  }
+}, {
+  "columnNum" : 5,
+  "columnName" : "working hours",
+  "version" : "0.2.0",
+  "columnType" : "N",
+  "columnFlag" : null,
+  "finalSelect" : true,
+  "columnStats" : {
+    "max" : 40.0,
+    "min" : 27.0,
+    "mean" : 37.810810810810814,
+    "median" : 38.0,
+    "totalCount" : 80,
+    "missingCount" : 6,
+    "stdDev" : 2.697922468983973,
+    "missingPercentage" : 0.075,
+    "ks" : 33.850931677018636,
+    "iv" : 0.6610093406479403
+  },
+  "columnBinning" : {
+    "length" : 4,
+    "binBoundary" : [ "-Infinity", 36.0, 38.0, 40.0 ],
+    "binCategory" : null,
+    "binCountNeg" : [ 2, 2, 6, 18 ],
+    "binCountPos" : [ 12, 10, 10, 14 ],
+    "binPosRate" : [ 0.8571428571428571, 0.8333333333333334, 0.625, 0.4375 ],
+    "binAvgScore" : null,
+    "binWeightedNeg" : [ 2.0, 2.0, 6.0, 18.0 ],
+    "binWeightedPos" : [ 12.0, 10.0, 10.0, 14.0 ]
+  }
+}, {
+  "columnNum" : 6,
+  "columnName" : "pension",
+  "version" : "0.2.0",
+  "columnType" : "C",
+  "columnFlag" : null,
+  "finalSelect" : true,
+  "columnStats" : {
+    "max" : 0.9545454545454546,
+    "min" : 0.0,
+    "mean" : 0.6499999999999996,
+    "median" : 0.9545454545454546,
+    "totalCount" : 80,
+    "missingCount" : 0,
+    "stdDev" : 0.3820167225613448,
+    "missingPercentage" : 0.0,
+    "ks" : 73.62637362637362,
+    "iv" : 14.78065756698878
+  },
+  "columnBinning" : {
+    "length" : 4,
+    "binBoundary" : null,
+    "binCategory" : [ "none", "ret_allw", "empl_contr", "?" ],
+    "binCountNeg" : [ 16, 4, 6, 2 ],
+    "binCountPos" : [ 0, 2, 8, 42 ],
+    "binPosRate" : [ 0.0, 0.3333333333333333, 0.5714285714285714, 0.9545454545454546 ],
+    "binAvgScore" : null,
+    "binWeightedNeg" : [ 16.0, 4.0, 6.0, 2.0 ],
+    "binWeightedPos" : [ 0.0, 2.0, 8.0, 42.0 ]
+  }
+}, {
+  "columnNum" : 7,
+  "columnName" : "standby pay",
+  "version" : "0.2.0",
+  "columnType" : "N",
+  "columnFlag" : null,
+  "finalSelect" : true,
+  "columnStats" : {
+    "max" : 13.0,
+    "min" : 2.0,
+    "mean" : 6.142857142857143,
+    "median" : 4.0,
+    "totalCount" : 80,
+    "missingCount" : 66,
+    "stdDev" : 4.65514014260073,
+    "missingPercentage" : 0.825,
+    "ks" : 66.66666666666667,
+    "iv" : 15.350567286693638
+  },
+  "columnBinning" : {
+    "length" : 3,
+    "binBoundary" : [ "-Infinity", 12.0, 13.0 ],
+    "binCategory" : null,
+    "binCountNeg" : [ 8, 0, 0 ],
+    "binCountPos" : [ 2, 2, 2 ],
+    "binPosRate" : [ 0.2, 1.0, 1.0 ],
+    "binAvgScore" : null,
+    "binWeightedNeg" : [ 8.0, 0.0, 0.0 ],
+    "binWeightedPos" : [ 2.0, 2.0, 2.0 ]
+  }
+}, {
+  "columnNum" : 8,
+  "columnName" : "shift differential",
+  "version" : "0.2.0",
+  "columnType" : "N",
+  "columnFlag" : null,
+  "finalSelect" : true,
+  "columnStats" : {
+    "max" : 25.0,
+    "min" : 0.0,
+    "mean" : 4.583333333333333,
+    "median" : 4.0,
+    "totalCount" : 80,
+    "missingCount" : 32,
+    "stdDev" : 4.703250726589337,
+    "missingPercentage" : 0.4,
+    "ks" : 56.30252100840336,
+    "iv" : 12.036898198220218
+  },
+  "columnBinning" : {
+    "length" : 6,
+    "binBoundary" : [ "-Infinity", 3.0, 4.0, 5.0, 6.0, 25.0 ],
+    "binCategory" : null,
+    "binCountNeg" : [ 6, 6, 0, 2, 0, 0 ],
+    "binCountPos" : [ 4, 6, 12, 6, 4, 2 ],
+    "binPosRate" : [ 0.4, 0.5, 1.0, 0.75, 1.0, 1.0 ],
+    "binAvgScore" : null,
+    "binWeightedNeg" : [ 6.0, 6.0, 0.0, 2.0, 0.0, 0.0 ],
+    "binWeightedPos" : [ 4.0, 6.0, 12.0, 6.0, 4.0, 2.0 ]
+  }
+}, {
+  "columnNum" : 9,
+  "columnName" : "education allowance",
+  "version" : "0.2.0",
+  "columnType" : "C",
+  "columnFlag" : null,
+  "finalSelect" : true,
+  "columnStats" : {
+    "max" : 0.8571428571428571,
+    "min" : 0.2727272727272727,
+    "mean" : 0.6500000000000004,
+    "median" : 0.7727272727272727,
+    "totalCount" : 80,
+    "missingCount" : 0,
+    "stdDev" : 0.23586109929806276,
+    "missingPercentage" : 0.0,
+    "ks" : 45.6043956043956,
+    "iv" : 1.0958995924333972
+  },
+  "columnBinning" : {
+    "length" : 3,
+    "binBoundary" : null,
+    "binCategory" : [ "no", "?", "yes" ],
+    "binCountNeg" : [ 16, 10, 2 ],
+    "binCountPos" : [ 6, 34, 12 ],
+    "binPosRate" : [ 0.2727272727272727, 0.7727272727272727, 0.8571428571428571 ],
+    "binAvgScore" : null,
+    "binWeightedNeg" : [ 16.0, 10.0, 2.0 ],
+    "binWeightedPos" : [ 6.0, 34.0, 12.0 ]
+  }
+}, {
+  "columnNum" : 10,
+  "columnName" : "statutory holidays",
+  "version" : "0.2.0",
+  "columnType" : "N",
+  "columnFlag" : null,
+  "finalSelect" : true,
+  "columnStats" : {
+    "max" : 15.0,
+    "min" : 9.0,
+    "mean" : 11.105263157894736,
+    "median" : 11.0,
+    "totalCount" : 80,
+    "missingCount" : 4,
+    "stdDev" : 1.3621448564027818,
+    "missingPercentage" : 0.05,
+    "ks" : 58.92857142857143,
+    "iv" : 11.89948149828135
+  },
+  "columnBinning" : {
+    "length" : 4,
+    "binBoundary" : [ "-Infinity", 11.0, 12.0, 13.0 ],
+    "binCategory" : null,
+    "binCountNeg" : [ 20, 8, 0, 0 ],
+    "binCountPos" : [ 6, 18, 16, 8 ],
+    "binPosRate" : [ 0.23076923076923078, 0.6923076923076923, 1.0, 1.0 ],
+    "binAvgScore" : null,
+    "binWeightedNeg" : [ 20.0, 8.0, 0.0, 0.0 ],
+    "binWeightedPos" : [ 6.0, 18.0, 16.0, 8.0 ]
+  }
+}, {
+  "columnNum" : 11,
+  "columnName" : "vacation",
+  "version" : "0.2.0",
+  "columnType" : "C",
+  "columnFlag" : null,
+  "finalSelect" : true,
+  "columnStats" : {
+    "max" : 1.0,
+    "min" : 0.42857142857142855,
+    "mean" : 0.6500000000000001,
+    "median" : 0.5454545454545454,
+    "totalCount" : 80,
+    "missingCount" : 0,
+    "stdDev" : 0.22655871776354772,
+    "missingPercentage" : 0.0,
+    "ks" : 46.7032967032967,
+    "iv" : 3.397262163394992
+  },
+  "columnBinning" : {
+    "length" : 4,
+    "binBoundary" : null,
+    "binCategory" : [ "below average", "average", "generous", "?" ],
+    "binCountNeg" : [ 16, 10, 2, 0 ],
+    "binCountPos" : [ 12, 12, 22, 6 ],
+    "binPosRate" : [ 0.42857142857142855, 0.5454545454545454, 0.9166666666666666, 1.0 ],
+    "binAvgScore" : null,
+    "binWeightedNeg" : [ 16.0, 10.0, 2.0, 0.0 ],
+    "binWeightedPos" : [ 12.0, 12.0, 22.0, 6.0 ]
+  }
+}, {
+  "columnNum" : 12,
+  "columnName" : "longterm disability assistance",
+  "version" : "0.2.0",
+  "columnType" : "C",
+  "columnFlag" : null,
+  "finalSelect" : true,
+  "columnStats" : {
+    "max" : 0.7916666666666666,
+    "min" : 0.0,
+    "mean" : 0.6499999999999992,
+    "median" : 0.7916666666666666,
+    "totalCount" : 80,
+    "missingCount" : 0,
+    "stdDev" : 0.2563725839531976,
+    "missingPercentage" : 0.0,
+    "ks" : 37.36263736263736,
+    "iv" : 8.12427870860079
+  },
+  "columnBinning" : {
+    "length" : 3,
+    "binBoundary" : null,
+    "binCategory" : [ "no", "yes", "?" ],
+    "binCountNeg" : [ 10, 8, 10 ],
+    "binCountPos" : [ 0, 14, 38 ],
+    "binPosRate" : [ 0.0, 0.6363636363636364, 0.7916666666666666 ],
+    "binAvgScore" : null,
+    "binWeightedNeg" : [ 10.0, 8.0, 10.0 ],
+    "binWeightedPos" : [ 0.0, 14.0, 38.0 ]
+  }
+}, {
+  "columnNum" : 13,
+  "columnName" : "contribution to dental plan",
+  "version" : "0.2.0",
+  "columnType" : "C",
+  "columnFlag" : null,
+  "finalSelect" : true,
+  "columnStats" : {
+    "max" : 1.0,
+    "min" : 0.3333333333333333,
+    "mean" : 0.65,
+    "median" : 0.7333333333333333,
+    "totalCount" : 80,
+    "missingCount" : 0,
+    "stdDev" : 0.23090691346315015,
+    "missingPercentage" : 0.0,
+    "ks" : 44.50549450549449,
+    "iv" : 7.239442914915354
+  },
+  "columnBinning" : {
+    "length" : 4,
+    "binBoundary" : null,
+    "binCategory" : [ "none", "half", "?", "full" ],
+    "binCountNeg" : [ 8, 12, 8, 0 ],
+    "binCountPos" : [ 4, 10, 22, 16 ],
+    "binPosRate" : [ 0.3333333333333333, 0.45454545454545453, 0.7333333333333333, 1.0 ],
+    "binAvgScore" : null,
+    "binWeightedNeg" : [ 8.0, 12.0, 8.0, 0.0 ],
+    "binWeightedPos" : [ 4.0, 10.0, 22.0, 16.0 ]
+  }
+}, {
+  "columnNum" : 14,
+  "columnName" : "bereavement assistance",
+  "version" : "0.2.0",
+  "columnType" : "C",
+  "columnFlag" : null,
+  "finalSelect" : true,
+  "columnStats" : {
+    "max" : 0.7,
+    "min" : 0.0,
+    "mean" : 0.6500000000000002,
+    "median" : 0.6666666666666666,
+    "totalCount" : 80,
+    "missingCount" : 0,
+    "stdDev" : 0.1509464235575298,
+    "missingPercentage" : 0.0,
+    "ks" : 14.285714285714285,
+    "iv" : 3.038946599959908
+  },
+  "columnBinning" : {
+    "length" : 3,
+    "binBoundary" : null,
+    "binCategory" : [ "no", "yes", "?" ],
+    "binCountNeg" : [ 4, 12, 12 ],
+    "binCountPos" : [ 0, 24, 28 ],
+    "binPosRate" : [ 0.0, 0.6666666666666666, 0.7 ],
+    "binAvgScore" : null,
+    "binWeightedNeg" : [ 4.0, 12.0, 12.0 ],
+    "binWeightedPos" : [ 0.0, 24.0, 28.0 ]
+  }
+}, {
+  "columnNum" : 15,
+  "columnName" : "contribution to health plan",
+  "version" : "0.2.0",
+  "columnType" : "C",
+  "columnFlag" : null,
+  "finalSelect" : true,
+  "columnStats" : {
+    "max" : 0.875,
+    "min" : 0.0,
+    "mean" : 0.6500000000000001,
+    "median" : 0.875,
+    "totalCount" : 80,
+    "missingCount" : 0,
+    "stdDev" : 0.30189278422075083,
+    "missingPercentage" : 0.0,
+    "ks" : 51.64835164835164,
+    "iv" : 10.174569726095662
+  },
+  "columnBinning" : {
+    "length" : 4,
+    "binBoundary" : null,
+    "binCategory" : [ "none", "full", "half", "?" ],
+    "binCountNeg" : [ 12, 10, 2, 4 ],
+    "binCountPos" : [ 0, 14, 10, 28 ],
+    "binPosRate" : [ 0.0, 0.5833333333333334, 0.8333333333333334, 0.875 ],
+    "binAvgScore" : null,
+    "binWeightedNeg" : [ 12.0, 10.0, 2.0, 4.0 ],
+    "binWeightedPos" : [ 0.0, 14.0, 10.0, 28.0 ]
+  }
+}, {
+  "columnNum" : 16,
+  "columnName" : "result",
+  "version" : "0.2.0",
+  "columnType" : null,
+  "columnFlag" : "Target",
+  "finalSelect" : false,
+  "columnStats" : {
+    "max" : null,
+    "min" : null,
+    "mean" : null,
+    "median" : null,
+    "totalCount" : null,
+    "missingCount" : null,
+    "stdDev" : null,
+    "missingPercentage" : null,
+    "ks" : null,
+    "iv" : null
+  },
+  "columnBinning" : {
+    "length" : 0,
+    "binBoundary" : null,
+    "binCategory" : null,
+    "binCountNeg" : null,
+    "binCountPos" : null,
+    "binPosRate" : null,
+    "binAvgScore" : null,
+    "binWeightedNeg" : null,
+    "binWeightedPos" : null
+  }
+} ]
