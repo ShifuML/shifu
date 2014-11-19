@@ -65,7 +65,7 @@ public class ShifuCLITest {
         BufferedReader reader2 = new BufferedReader(new FileReader(new File(
                 "src/test/resources/common/VariableStore.json")));
         String[] headers = "id|diagnosis|column_3|column_4|column_5|column_6|column_7|column_8|column_9|column_10|column_11|column_12|column_13|column_14|column_15|column_16|column_17|column_18|column_19|column_20|column_21|column_22|column_23|column_24|column_25|column_26|column_27|column_28|column_29|column_30|column_31|column_32|result"
-                .split("/|");
+                .split("\\|");
 
         PowerMock.mockStaticPartial(CommonUtils.class, "getReader", "getHeaders");
 
@@ -188,11 +188,11 @@ public class ShifuCLITest {
 
     @Test
     public void testTrainModel() throws Exception {
-        File originModel = new File("src/test/resources/example/cancer-judgement_simple/ModelStore/ModelSet1/ModelConfig.json");
+        File originModel = new File("src/test/resources/example/cancer-judgement/ModelStore/ModelSet1/ModelConfig.json");
         File tmpModel = new File("ModelConfig.json");
 
         File originColumn = new File(
-                "src/test/resources/example/cancer-judgement_simple/ModelStore/ModelSet1/ColumnConfig.json");
+                "src/test/resources/example/cancer-judgement/ModelStore/ModelSet1/ColumnConfig.json");
         File tmpColumn = new File("ColumnConfig.json");
 
         FileUtils.copyFile(originModel, tmpModel);
@@ -206,10 +206,11 @@ public class ShifuCLITest {
         File modelFile = new File("models/model0.nn");
         Assert.assertTrue(modelFile.exists());
 
-        //FileUtils.deleteQuietly(tmpModel);
-        //FileUtils.deleteQuietly(tmpColumn);
-        //FileUtils.deleteDirectory(new File("tmp"));
-        //FileUtils.deleteDirectory(new File("models"));
+        FileUtils.deleteQuietly(tmpModel);
+        FileUtils.deleteQuietly(tmpColumn);
+        FileUtils.deleteDirectory(new File("tmp"));
+        FileUtils.deleteDirectory(new File("models"));
+
     }
 
 
@@ -247,14 +248,14 @@ public class ShifuCLITest {
 
     @Test
     public void testRunEvalAll() throws Exception {
-        File originModel = new File("src/test/resources/example/cancer-judgement_simple/ModelStore/ModelSet1/ModelConfig.json");
+        File originModel = new File("src/test/resources/example/cancer-judgement/ModelStore/ModelSet1/ModelConfig.json");
         File tmpModel = new File("ModelConfig.json");
 
         File originColumn = new File(
-                "src/test/resources/example/cancer-judgement_simple/ModelStore/ModelSet1/ColumnConfig.json");
+                "src/test/resources/example/cancer-judgement/ModelStore/ModelSet1/ColumnConfig.json");
         File tmpColumn = new File("ColumnConfig.json");
 
-        File modelsDir = new File("src/test/resources/example/cancer-judgement_simple/ModelStore/ModelSet1/models");
+        File modelsDir = new File("src/test/resources/example/cancer-judgement/ModelStore/ModelSet1/models");
         File tmpModelsDir = new File("models");
 
         FileUtils.copyFile(originModel, tmpModel);
@@ -308,6 +309,8 @@ public class ShifuCLITest {
         FileUtils.deleteQuietly(tmpModel);
         FileUtils.deleteQuietly(tmpColumn);
         FileUtils.deleteDirectory(tmpModelsDir);
+        FileUtils.deleteQuietly(new File(PMMLFILEPATH));
+        FileUtils.deleteQuietly(new File(OutPath));
     }
 
 
@@ -393,6 +396,8 @@ public class ShifuCLITest {
         FileUtils.deleteQuietly(tmpModel);
         FileUtils.deleteQuietly(tmpColumn);
         FileUtils.deleteDirectory(tmpModelsDir);
+        FileUtils.deleteQuietly(new File(PMMLFILEPATH));
+        FileUtils.deleteQuietly(new File(OutPath));
     }
 
     public void compare_score(File test, File control, String scoreName, String sep, Double error_range) throws Exception {
@@ -506,7 +511,7 @@ public class ShifuCLITest {
 
         File tmpColumn = new File("ColumnConfig.json");
 
-        File modelsDir = new File("src/test/resources/example/cancer-judgement_simple/ModelStore/ModelSet1/models");
+        File modelsDir = new File("src/test/resources/example/cancer-judgement/ModelStore/ModelSet1/models");
         File tmpModelsDir = new File("models");
 
         FileUtils.copyFile(originModel, tmpModel);
@@ -527,7 +532,7 @@ public class ShifuCLITest {
     
     @AfterTest
     public void delete() throws IOException {
-//        FileUtils.deleteDirectory(new File("evals"));
+        FileUtils.deleteDirectory(new File("evals"));
     }
 
 }
