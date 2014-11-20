@@ -21,8 +21,8 @@ import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.container.obj.ModelConfig;
 import ml.shifu.shifu.container.obj.ModelTrainConf.ALGORITHM;
 import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
+import ml.shifu.shifu.core.pmml.PMMLTranslator;
 import ml.shifu.shifu.core.pmml.PMMLUtils;
-import ml.shifu.shifu.core.pmml.PmmlTranslator;
 import ml.shifu.shifu.fs.PathFinder;
 import ml.shifu.shifu.util.CommonUtils;
 import org.apache.commons.lang.StringUtils;
@@ -83,7 +83,7 @@ public class ExportModelProcessor extends BasicModelProcessor implements Process
         List<BasicML> models = CommonUtils.loadBasicModels(pathFinder.getModelsPath(SourceType.LOCAL), ALGORITHM.NN);
 
         for (int index = 0; index < models.size(); index++) {
-            org.dmg.pmml.PMML pmml = new PmmlTranslator(modelConfig, columnConfigList, models).translate(index);
+            org.dmg.pmml.PMML pmml = new PMMLTranslator(modelConfig, columnConfigList, models).translate(index);
             PMMLUtils.savePMML(pmml, "./pmmls/" + modelConfig.getModelSetName() + (new Integer(index)).toString() + ".pmml");
         }
 
