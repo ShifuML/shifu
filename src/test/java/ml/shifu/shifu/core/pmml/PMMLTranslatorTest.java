@@ -113,14 +113,8 @@ public class PMMLTranslatorTest {
         ShifuCLI.calModelStats();
         // Shifu var selection
         ShifuCLI.selectModelVar();
-        Assert.assertTrue(tmpColumn.lastModified() > timestamp);
-
         // run normalization
         ShifuCLI.normalizeTrainData();
-        File normalizedData = new File("tmp/NormalizedData");
-        File selectedData = new File("tmp/SelectedRawData");
-        Assert.assertTrue(normalizedData.exists());
-        Assert.assertTrue(selectedData.exists());
 
         // run train
         ShifuCLI.trainModel(false, false);
