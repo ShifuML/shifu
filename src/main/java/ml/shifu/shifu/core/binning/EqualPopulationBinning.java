@@ -371,9 +371,14 @@ public class EqualPopulationBinning extends AbstractBinning<Double> {
         
         // insert node into linked list
         if ( insertOpsUnit == null ) { // insert as the first node
-            this.header.setPrev(node);
+            if ( this.header != null ) {
+                this.header.setPrev(node);
+            }
             node.setNext(this.header);
             this.header = node;
+            if ( this.tail == null ) {
+                this.tail = node;
+            }
         } else if ( insertOpsUnit == this.tail ) { // insert as the last node
             node.setPrev(insertOpsUnit);
             insertOpsUnit.setNext(node);
