@@ -86,7 +86,7 @@ public class PMMLTranslatorTest {
             String num = new Integer(index).toString();
             String pmmlPath = "pmmls/cancer-judgement" + num + ".pmml";
             evalPmml(pmmlPath, DataPath, OutPath, "\\|", "model" + num);
-            compareScore(evalScore, new File(OutPath), "model" + num, "\\|", 1.0);
+            compareScore(evalScore, new File(OutPath), "model" + num, "\\|", 1.01);
         }
 
         FileUtils.deleteQuietly(tmpModel);
@@ -172,7 +172,7 @@ public class PMMLTranslatorTest {
         evalPmml(pmmlPath, DataPath, OutPath, ",", "model0");
 
         // Step 3. Compare the SHIFU Eval score and PMML score
-        compareScore(evalScore, new File(OutPath), "model0", "\\|", 1.0);
+        compareScore(evalScore, new File(OutPath), "model0", "\\|", 1.01);
 
         FileUtils.deleteQuietly(tmpModel);
         FileUtils.deleteQuietly(tmpColumn);
@@ -208,7 +208,7 @@ public class PMMLTranslatorTest {
             try {
                 assert (controlScore - testScore < error_range && controlScore - testScore > -error_range);
             } catch (AssertionError e) {
-                System.err.println(row + ": " + controlScore + "   " + testScore);
+                System.err.println(scoreName + " " + row + ": " + controlScore + "   " + testScore);
                 e.printStackTrace();
                 System.exit(-1);
             }
