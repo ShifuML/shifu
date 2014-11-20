@@ -49,7 +49,7 @@ public class FilterBinningDataUDF extends AbstractTrainerUDF<Boolean> {
      */
     @Override
     public Boolean exec(Tuple input) throws IOException {
-        if ( input == null ) {
+        if ( input == null || input.size() < 4 ) {
             return false;
         }
         
