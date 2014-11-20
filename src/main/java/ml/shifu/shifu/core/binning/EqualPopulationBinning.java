@@ -316,6 +316,12 @@ public class EqualPopulationBinning extends AbstractBinning<Double> {
         }
     }
     
+    /**
+     * Insert one @HistogramUnit node into the histogram.
+     * Meanwhile it will try to keep the histogram as most @maxHistogramUnitCnt
+     * So when inserting one node in, the method will try to find the place to insert as well as minimum interval
+     * @param node
+     */
     private void insertWithTrim(LinkNode<HistogramUnit> node) {
         LinkNode<HistogramUnit> insertOpsUnit = null;
         LinkNode<HistogramUnit> minIntervalOpsUnit = null;
