@@ -35,24 +35,23 @@ import java.util.List;
 
 /**
  * ExportModelProcessor class
- * 
+ *
  * @author zhanhu
  * @Nov 6, 2014
- *
  */
 public class ExportModelProcessor extends BasicModelProcessor implements Processor {
-    
+
     public static final String PMML = "pmml";
 
-    
+
     /**
      * log object
      */
     private final static Logger log = LoggerFactory.getLogger(ExportModelProcessor.class);
-    
-    
+
+
     private String type;
-    
+
     public ExportModelProcessor(String type) {
         this.type = type;
     }
@@ -67,15 +66,15 @@ public class ExportModelProcessor extends BasicModelProcessor implements Process
         pmmls.delete();
         pmmls.mkdir();
 
-        if ( StringUtils.isBlank(type) ) {
+        if (StringUtils.isBlank(type)) {
             type = PMML;
         }
-        
-        if ( !type.equalsIgnoreCase(PMML) ) {
+
+        if (!type.equalsIgnoreCase(PMML)) {
             log.error("Unsupported output format - " + type);
             return -1;
         }
-        
+
         ModelConfig modelConfig = CommonUtils.loadModelConfig();
         List<ColumnConfig> columnConfigList = CommonUtils.loadColumnConfigList();
         PathFinder pathFinder = new PathFinder(modelConfig);
