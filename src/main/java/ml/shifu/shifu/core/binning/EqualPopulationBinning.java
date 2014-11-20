@@ -324,25 +324,31 @@ public class EqualPopulationBinning extends AbstractBinning<Double> {
         LinkNode<HistogramUnit> tmp = this.tail;
         while ( tmp != null ) {
             if ( insertOpsUnit == null ) {
-                // find the right insert position to insert
-                if ( tmp.data().getHval() <= node.data().getHval() ) {
+                int res = Double.compare(tmp.data().getHval(), node.data().getHval());
+                if ( res > 0 ) {
+                    // do nothing
+                } else if ( res == 0 ) {
+                    tmp.data().setHcnt(tmp.data().getHcnt() + node.data().getHcnt());
+                    return;
+                } else if ( res < 0 ) {
+                    // find the right insert position to insert
                     insertOpsUnit = tmp;
-                }
-                
-                // find the minimum interval 
-                double interval = Math.abs(node.data().getHval() - tmp.data().getHval());
-                if ( interval < minInterval ) {
-                    if ( Double.compare(interval, 0.0) == 0 ) {
-                        tmp.data().setHcnt(tmp.data().getHcnt() + node.data().getHcnt());
-                        return;
+                    
+                    double interval = node.data().getHval() - tmp.data().getHval();
+                    if ( interval < minInterval ) {
+                        minInterval = interval;
+                        minIntervalOpsUnit = tmp;
                     }
                     
-                    minInterval = interval;
-                    minIntervalOpsUnit = (node.data().getHval() - tmp.data().getHval() >= 0) ? tmp : node;
+                    if ( tmp.next() != null ) {
+                        interval = tmp.next().data().getHval() - node.data().getHval();
+                        if ( interval < minInterval ) {
+                            minInterval = interval;
+                            minIntervalOpsUnit = node;
+                        }
+                    }
                 }
-                
             }
-            
             
             if ( tmp.next()  != null ) {
                 LinkNode<HistogramUnit> next = tmp.next();
@@ -374,11 +380,10 @@ public class EqualPopulationBinning extends AbstractBinning<Double> {
         }
         
         // merge info into next node
-        LinkNode<HistogramUnit> nextNode = minIntervalOpsUnit.next();
-        HistogramUnit chu = minIntervalOpsUnit.data();
-        HistogramUnit nhu = nextNode.data();
-
         if(this.currentHistogramUnitCnt == this.maxHistogramUnitCnt) {
+            LinkNode<HistogramUnit> nextNode = minIntervalOpsUnit.next();
+            HistogramUnit chu = minIntervalOpsUnit.data();
+            HistogramUnit nhu = nextNode.data();
             nhu.setHval((chu.getHval() * chu.getHcnt() + nhu.getHval() * nhu.getHcnt()) / (chu.getHcnt() + nhu.getHcnt()));
             nhu.setHcnt(chu.getHcnt() + nhu.getHcnt());
             removeCurrentNode(minIntervalOpsUnit, nextNode);
