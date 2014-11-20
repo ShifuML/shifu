@@ -86,14 +86,14 @@ public class PMMLTranslatorTest {
             String num = new Integer(index).toString();
             String pmmlPath = "pmmls/cancer-judgement" + num + ".pmml";
             evalPmml(pmmlPath, DataPath, OutPath, "\\|", "model" + num);
-            compareScore(evalScore, new File(OutPath), "model" + num, "\\|", 1.01);
+            compareScore(evalScore, new File(OutPath), "model" + num, "\\|", 1.0);
+            FileUtils.deleteQuietly(new File(OutPath));
         }
 
         FileUtils.deleteQuietly(tmpModel);
         FileUtils.deleteQuietly(tmpColumn);
         FileUtils.deleteDirectory(tmpModelsDir);
         FileUtils.deleteQuietly(new File("./pmmls"));
-        FileUtils.deleteQuietly(new File(OutPath));
     }
 
 
@@ -108,14 +108,10 @@ public class PMMLTranslatorTest {
         ShifuCLI.initializeModel();
         File tmpColumn = new File("ColumnConfig.json");
 
-
-        // shifu cal model stats
         long timestamp = tmpColumn.lastModified();
+        // shifu cal model stats
         ShifuCLI.calModelStats();
-        //Assert.assertTrue(tmpColumn.lastModified() > timestamp);
-
         // Shifu var selection
-        //timestamp = tmpColumn.lastModified();
         ShifuCLI.selectModelVar();
         Assert.assertTrue(tmpColumn.lastModified() > timestamp);
 
