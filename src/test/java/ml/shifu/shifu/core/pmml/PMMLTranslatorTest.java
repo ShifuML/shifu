@@ -162,7 +162,7 @@ public class PMMLTranslatorTest {
         evalPmml(pmmlPath, DataPath, OutPath, ",", "model0");
 
         // Step 3. Compare the SHIFU Eval score and PMML score
-        compareScore(evalScore, new File(OutPath), "model0", "\\|", 1.01);
+        compareScore(evalScore, new File(OutPath), "model0", "\\|", 1.0);
 
         FileUtils.deleteQuietly(tmpModel);
         FileUtils.deleteQuietly(tmpColumn);
@@ -196,7 +196,7 @@ public class PMMLTranslatorTest {
 
 
             try {
-                assert (controlScore - testScore < error_range && controlScore - testScore > -error_range);
+                Assert.assertEquals(controlScore, testScore, error_range);
             } catch (AssertionError e) {
                 System.err.println(scoreName + " " + row + ": " + controlScore + "   " + testScore);
                 e.printStackTrace();
@@ -236,7 +236,6 @@ public class PMMLTranslatorTest {
                 case REGRESSION:
                     Map<FieldName, Double> regressionTerm = (Map<FieldName, Double>) evaluator.evaluate(maps);
                     for (Double value : regressionTerm.values()) {
-                        System.out.println(value * 1000);
                         writer.println((int) Math.round(value * 1000));
                     }
                     break;
