@@ -204,13 +204,13 @@ public abstract class AbstractBinning<T> {
 
     /**
      * Construct Binning class object from String
-     * @param modelConfig
-     * @param columnConfig
-     * @param objValStr
-     * @return
+     * @param modelConfig - the @ModelConfig to use
+     * @param columnConfig - the @ColumnConfig to create bin
+     * @param objValStr - the string present of object
+     * @return the Binning object for the ColumnConfig
      */
     public static AbstractBinning<?> constructBinningFromStr(ModelConfig modelConfig, ColumnConfig columnConfig, String objValStr) {
-        AbstractBinning<?> binning = null;
+        AbstractBinning<?> binning;
         
         if ( columnConfig.isCategorical() ) {
             binning = new CategoricalBinning();
