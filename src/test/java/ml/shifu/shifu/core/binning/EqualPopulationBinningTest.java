@@ -125,7 +125,7 @@ public class EqualPopulationBinningTest {
         Random rd = new Random(System.currentTimeMillis());
         
         EqualPopulationBinning binning = new EqualPopulationBinning(20);
-        for ( int i = 0; i < 180000; i ++ ) {
+        for ( int i = 0; i < 18000; i ++ ) {
             binning.addData(Double.toString(rd.nextDouble() % 1000));
         }
         

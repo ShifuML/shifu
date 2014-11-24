@@ -13,7 +13,7 @@
     "headerPath" : "./src/test/resources/example/cancer-judgement/DataStore/DataSet1/.pig_header",
     "headerDelimiter" : "|",
     "filterExpressions" : "",
-    "weightColumnName" : null,
+    "weightColumnName" : "column_3",
     "targetColumnName" : "diagnosis",
     "posTags" : [ "M" ],
     "negTags" : [ "B" ],

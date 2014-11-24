@@ -117,6 +117,13 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
                 weight = ((Integer) result).doubleValue();
             } else if (result instanceof Double) {
                 weight = ((Double) result).doubleValue();
+            } else if ( result instanceof String ) {
+                try {
+                    weight = Double.parseDouble((String) result);
+                } catch ( NumberFormatException e ) {
+                    // Not a number, use default
+                    weight = 1.0d;
+                }
             }
         }
         tuple.append(weight);

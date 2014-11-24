@@ -59,8 +59,8 @@ public class NNTrainer extends AbstractTrainer {
     private static Logger log = LoggerFactory.getLogger(NNTrainer.class);
     private final static double Epsilon = 1.0;  // set the weight range in [-INIT_EPSILON INIT_EPSILON];
 
-    private static final Map<String, Double> defaultLearningRate;
-    private static final Map<String, String> learningAlgMap;
+    public static final Map<String, Double> defaultLearningRate;
+    public static final Map<String, String> learningAlgMap;
 
     private BasicNetwork network;
 
