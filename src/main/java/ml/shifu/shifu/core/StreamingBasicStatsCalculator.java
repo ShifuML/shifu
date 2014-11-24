@@ -9,7 +9,7 @@ public class StreamingBasicStatsCalculator {
     private Double sum;
     private Double squaredSum;
     private Double min = Double.MAX_VALUE;
-    private Double max = -Double.MAX_VALUE;
+    private Double max = Double.MIN_VALUE;
     private Double mean = Double.NaN;
     private Double stdDev = Double.NaN;
     private Double median = Double.NaN;
@@ -18,12 +18,16 @@ public class StreamingBasicStatsCalculator {
     private Double threshold = 1e6;
     private Double EPS = 1e-6;
 
-    private Estimator<Double> estimator;
+    private Estimator<Double> medianEstimator;
 
     public StreamingBasicStatsCalculator() {
         this.sum        = 0.0;
         this.squaredSum = 0.0;
-        this.estimator = new Estimator<Double>(2);
+        this.min        = Double.MAX_VALUE;
+        this.max        = Double.MIN_VALUE;
+        
+        //min, median, max
+        this.medianEstimator = new Estimator<Double>(3);
     }
 
     public void aggregate(Double value) {
@@ -36,7 +40,7 @@ public class StreamingBasicStatsCalculator {
         this.min = Math.min(min, value);
         this.varSize ++;
 
-        this.estimator.add(value);
+        this.medianEstimator.add(value);
 
     }
 
@@ -45,7 +49,7 @@ public class StreamingBasicStatsCalculator {
         stdDev = Math.sqrt((squaredSum - (sum * sum) / varSize + EPS)
                 / (varSize - 1));
 
-        this.median = estimator.getBin().get(0);
+        median = medianEstimator.getBin().get(1);
     }
 
     public Double getMin() {

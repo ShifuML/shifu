@@ -400,6 +400,25 @@ public class CommonUtilsTest {
         modelFiles = CommonUtils.findModels(modelConfig, evalConfig, SourceType.LOCAL);
         Assert.assertEquals(5, modelFiles.size());
     }
+    
+    @Test
+    public void testStringToArray(){
+    	String input = "[-37.075125208681136, 0.5043788517677587, 1.2588712402838798, 2.543219666931007, 4.896511355654414, 8.986345381526105, 17.06859410430839, 33.557046979865774, 73.27777777777777, 231.63698630136986, 100000.0]";
+    	
+    	List<Double> output = CommonUtils.stringToDoubleList(input);
+    	
+    	Assert.assertEquals(output, Arrays.asList(new Double[]{-37.075125208681136, 
+    														   0.5043788517677587, 
+    														   1.2588712402838798, 
+    														   2.543219666931007, 
+    														   4.896511355654414, 
+    														   8.986345381526105, 
+    														   17.06859410430839, 
+    														   33.557046979865774, 
+    														   73.27777777777777, 
+    														   231.63698630136986, 
+    														   100000.0}));
+    }
 
     @AfterClass
     public void tearDown() {

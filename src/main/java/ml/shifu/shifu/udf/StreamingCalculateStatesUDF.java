@@ -3,7 +3,6 @@ package ml.shifu.shifu.udf;
 import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.core.KSIVCalculator;
 import ml.shifu.shifu.core.StreamingBasicStatsCalculator;
-import ml.shifu.shifu.util.CommonUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.pig.Accumulator;
 import org.apache.pig.data.DataBag;
@@ -16,15 +15,15 @@ import java.io.IOException;
 import java.util.*;
 
 
-public class StreamingCalculateStatesUDF extends AbstractTrainerUDF<Tuple> implements Accumulator<Tuple>{
+public class StreamingCalculateStatesUDF extends AbstractTrainerUDF<Tuple> /*implements Accumulator<Tuple>*/ {
 
     private final static Logger log = LoggerFactory.getLogger(StreamingCalculateStatesUDF.class);
 
     //for numerical
-    private List<Double> binningNum = null;
+    private List<Double> numericalBins = null;
 
     //for categorical
-    private List<String> binningStr = null;
+    private List<String> categoricalBins = null;
 
     //count
     private List<Integer> countNeg;
@@ -34,7 +33,7 @@ public class StreamingCalculateStatesUDF extends AbstractTrainerUDF<Tuple> imple
 
     //row count
     private Long rowCount = 0l;
-    private Long missing  = 0l;
+    private Long missing = 0l;
 
     private final static TupleFactory tf = TupleFactory.getInstance();
 
@@ -60,19 +59,46 @@ public class StreamingCalculateStatesUDF extends AbstractTrainerUDF<Tuple> imple
         log.debug("Value Threshold: " + valueThreshold);
     }
 
-    @Override
+    private List<Double> stringToList(String input) {
+        List<Double> doubleList = new ArrayList<Double>();
+
+        String[] binArray = StringUtils.split(input, StreamingBinningUDF.CATEGORY_VAL_SEPARATOR);
+
+        for (String bin : binArray) {
+            try {
+                doubleList.add(Double.valueOf(bin));
+            } catch (NumberFormatException e) {
+                //do nothing first
+                e.printStackTrace();
+
+                log.warn("Fail to convert string into double in CalculateStatsUDF from {}", bin);
+            }
+        }
+
+        return doubleList;
+    }
+    
+    private List<String> stringToListString(String input) {
+    	List<String> stringList = new ArrayList<String>();
+
+        String[] binArray = StringUtils.split(input, StreamingBinningUDF.CATEGORY_VAL_SEPARATOR);
+
+        for (String bin : binArray) {
+            	stringList.add(bin);
+        }
+        return stringList;
+    }
+
+    //@Override
     public void accumulate(Tuple b) throws IOException {
-        if (b == null || b.size() != 2) return;
+        if (b == null) return;
 
-        DataBag binningBag = (DataBag) b.get(0);
-        Iterator<Tuple> iter = binningBag.iterator();
-        Tuple binningTuple = iter.next();
+        String binning = (String) b.get(0);
+        DataBag databag = (DataBag) b.get(1);
 
-        DataBag dataBag = (DataBag) b.get(1);
+        for (Tuple t : databag) {
 
-        for (Tuple t : dataBag) {
-
-            this.rowCount ++;
+            this.rowCount++;
 
             if (t.size() != 4) continue;
 
@@ -93,29 +119,29 @@ public class StreamingCalculateStatesUDF extends AbstractTrainerUDF<Tuple> imple
 
             String weightValue = t.get(3).toString();
 
-            switch (thisColumn.getColumnType()){
-                case N :
-                    if (binningNum == null) {
-                        binningNum = CommonUtils.stringToDoubleList((String) binningTuple.get(0));
-                        log.info("the binning numbers is {}", binningNum.toString());
+            switch (thisColumn.getColumnType()) {
+                case N:
+                    if (numericalBins == null) {
+                        numericalBins = this.stringToList(binning); //CommonUtils.stringToDoubleList(binning);
+                        log.info("the binning numbers is {}", numericalBins.toString());
                     }
 
                     if (countNeg == null) {
-                        countNeg = new ArrayList<Integer>(binningNum.size());
+                        countNeg = new ArrayList<Integer>(Collections.nCopies(numericalBins.size(), 0));
                     }
 
                     if (countPos == null) {
-                        countPos = new ArrayList<Integer>(binningNum.size());
+                        countPos = new ArrayList<Integer>(Collections.nCopies(numericalBins.size(), 0));
                     }
 
                     try {
                         Double value = Double.valueOf(rawValue);
 
-                        for (int i = 0; i < binningNum.size() - 1; i++ ){
-                            if (value >= binningNum.get(i) && value <= binningNum.get(i + 1)) {
-                                if(this.positiveSet.contains(target)) {
+                        for (int i = 0; i < numericalBins.size() - 1; i++) {
+                            if (value >= numericalBins.get(i) && value <= numericalBins.get(i + 1)) {
+                                if (positiveSet.contains(target)) {
                                     countPos.set(i, countPos.get(i) + 1);
-                                } else if (this.negativeSet.contains(target)) {
+                                } else if (negativeSet.contains(target)) {
                                     countNeg.set(i, countNeg.get(i) + 1);
                                 } else {
                                     log.warn("the {} is not presented in positive set or negative set, column name is {}",
@@ -128,27 +154,27 @@ public class StreamingCalculateStatesUDF extends AbstractTrainerUDF<Tuple> imple
 
                         basicStatsCalculator.aggregate(value);
                     } catch (NumberFormatException e) {
-                        log.error("error in pasting string: {} to double",  rawValue);
+                        log.error("error in pasting string: {} to double", rawValue);
                     }
                     break;
-                case C :
-                    if (binningStr == null) {
-                        binningStr = CommonUtils.stringToStringList((String) binningTuple.get(0));
+                case C:
+                    if (categoricalBins == null) {
+                        categoricalBins = stringToListString(binning);
                     }
 
                     if (countNeg == null) {
-                        countNeg = new ArrayList<Integer>(binningStr.size());
+                        countNeg = new ArrayList<Integer>(Collections.nCopies(categoricalBins.size(), 0));
                     }
 
                     if (countPos == null) {
-                        countPos = new ArrayList<Integer>(binningStr.size());
+                        countPos = new ArrayList<Integer>(Collections.nCopies(categoricalBins.size(), 0));
                     }
 
-                    for (int i = 0 ; i < binningStr.size(); i ++) {
-                        if (rawValue.equals(binningStr.get(i))) {
-                            if(this.positiveSet.contains(target)) {
+                    for (int i = 0; i < categoricalBins.size(); i++) {
+                        if (rawValue.equals(categoricalBins.get(i))) {
+                            if (positiveSet.contains(target)) {
                                 countPos.set(i, countPos.get(i) + 1);
-                            } else if (this.negativeSet.contains(target)) {
+                            } else if (negativeSet.contains(target)) {
                                 countNeg.set(i, countNeg.get(i) + 1);
                             } else {
                                 log.warn("the {} is not presented in positive set or negative set, column name is {}",
@@ -160,7 +186,7 @@ public class StreamingCalculateStatesUDF extends AbstractTrainerUDF<Tuple> imple
                     }
 
                     break;
-                default :
+                default:
                     break;
             }
         }
@@ -168,29 +194,29 @@ public class StreamingCalculateStatesUDF extends AbstractTrainerUDF<Tuple> imple
 
     public List<Double> assemblyPositiveRate(List<Integer> countPos, List<Integer> countNeg) {
 
-        if(countPos.size() != countNeg.size()) {
+        if (countPos.size() != countNeg.size()) {
             throw new RuntimeException("The positive count is not equal to negative count");
         }
 
         List<Double> posRate = new ArrayList<Double>();
 
-        for ( int i = 0 ; i < countPos.size(); i ++){
-            posRate.add((double)(countPos.get(i)) / (double)(countNeg.get(i) + countPos.get(i)));
+        for (int i = 0; i < countPos.size(); i++) {
+            posRate.add((double) (countPos.get(i)) / (double) (countNeg.get(i) + countPos.get(i)));
         }
 
         return posRate;
     }
 
-    @Override
+    //@Override
     public Tuple getValue() {
 
         Tuple t = tf.newTuple();
 
-        if (thisColumn != null ){
+        if (thisColumn != null) {
             if (thisColumn.getColumnType().equals(ColumnConfig.ColumnType.N))
-                t.append(this.binningNum.toString());
+                t.append(this.numericalBins.toString());
             else
-                t.append(this.binningStr.toString());
+                t.append(this.categoricalBins.toString());
         }
 
         t.append(countNeg.toString());
@@ -223,13 +249,14 @@ public class StreamingCalculateStatesUDF extends AbstractTrainerUDF<Tuple> imple
         return t;
     }
 
-    @Override
+    //@Override
     public void cleanup() {
         basicStatsCalculator = new StreamingBasicStatsCalculator();
         ksivCalculator = new KSIVCalculator();
+        thisColumn = null;
 
         rowCount = 0l;
-        missing  = 0l;
+        missing = 0l;
     }
 
     @Override

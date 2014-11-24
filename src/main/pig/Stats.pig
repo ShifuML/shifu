@@ -13,38 +13,45 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-REGISTER '$path_jar'
+register '$path_jar'
 
-SET default_parallel $num_parallel
-SET mapred.job.queue.name $queue_name;
-SET mapred.task.timeout 1200000;
-SET job.name 'shifu statistic'
+set default_parallel $num_parallel
+set mapred.job.queue.name $queue_name;
+set mapred.task.timeout 1200000;
+set io.sort.mb 500;
 
-DEFINE IsDataFilterOut  ml.shifu.shifu.udf.PurifyDataUDF('$source_type', '$path_model_config', '$path_column_config');
-DEFINE AddColumnNum     ml.shifu.shifu.udf.AddColumnNumUDF('$source_type', '$path_model_config', '$path_column_config');
-DEFINE BINNING          ml.shifu.shifu.udf.StreamingBinningUDF('$source_type', '$path_model_config', '$path_column_config');
-DEFINE Calculator       ml.shifu.shifu.udf.StreamingCalculateStatesUDF('$source_type', '$path_model_config', '$path_column_config');
+set job.name 'shifu statistic'
+
+define IsDataFilterOut  ml.shifu.shifu.udf.PurifyDataUDF('$source_type', '$path_model_config', '$path_column_config');
+define AddColumnNum     ml.shifu.shifu.udf.AddColumnNumUDF('$source_type', '$path_model_config', '$path_column_config');
+define BINNING          ml.shifu.shifu.udf.StreamingBinningUDF('$source_type', '$path_model_config', '$path_column_config');
+define Calculator       ml.shifu.shifu.udf.StreamingCalculateStatesUDF('$source_type', '$path_model_config', '$path_column_config');
 
 --data = load '$data_input' using PigStorage($delimiter);
 
-data = LOAD '$path_raw_data' USING PigStorage('$delimiter');
-data = FILTER data BY IsDataFilterOut(*);
+data = load '$path_raw_data' using PigStorage('$delimiter');
+data = filter data by IsDataFilterOut(*);
 
-data = FOREACH data GENERATE AddColumnNum(*);
+data = foreach data generate AddColumnNum(*);
 
-data = FOREACH data GENERATE FLATTEN($0);
-data = FILTER data BY $0 IS NOT NULL;
+data = foreach data generate FLATTEN($0);
+data = filter data by $0 is not null and $1 is not null;
 
 --step 1, process the binning
-s = foreach (group data by $0) generate group as col,
-                                        BINNING(data) as binning;
+bins = foreach (group data by $0) generate group as col,
+                                           BINNING(data) as binning;
 
 --step 2, based on the binning, process other metrics
-d = foreach (group s by col, data by $0) generate group as col,
-                                                  FLATTEN(d.binning) as binning,
-                                                  FLATTEN(Calculator(d.binning, data));
+group_data = group data by $0;
+join_data = join group_data by group, bins by col using 'replicated';
 
-store d into 'result' using PigStorage('|');
+-- $0:group, $1:data, $2:col, $3:binning
+d = foreach join_data generate col,
+                               FLATTEN(Calculator($3, $1));
+
+
+
+store d into '$path_pre_training_stats' using PigStorage('|');
 
 
 
