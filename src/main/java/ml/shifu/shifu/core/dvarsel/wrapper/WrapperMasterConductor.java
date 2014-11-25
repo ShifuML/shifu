@@ -67,7 +67,9 @@ public class WrapperMasterConductor extends AbstractMasterConductor {
         int[] voteStats = new int[columnConfigList.size() + 1];
 
         for (VarSelWorkerResult workerResult : workerResults ) {
-            voteStats[workerResult.getColumnId() + 1] ++;
+            for ( Integer columnId : workerResult.getColumnIdList() ) {
+                voteStats[columnId + 1]++;
+            }
         }
 
         // get max voted column id

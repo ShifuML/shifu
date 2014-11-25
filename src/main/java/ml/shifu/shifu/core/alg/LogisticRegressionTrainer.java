@@ -62,7 +62,7 @@ public class LogisticRegressionTrainer extends AbstractTrainer {
      * @throws IOException e
      */
     @Override
-    public void train() throws IOException {
+    public double train() throws IOException {
         log.info("Using logistic regression algorithm...");
 
         log.info("Input Size: " + trainSet.getInputSize());
@@ -78,24 +78,26 @@ public class LogisticRegressionTrainer extends AbstractTrainer {
         classifier.reset();
 
         //Propagation mlTrain = getMLTrain();
-        Propagation propagtion = new QuickPropagation(classifier, trainSet, (Double) modelConfig.getParams().get("LearningRate"));
+        Propagation propagation = new QuickPropagation(classifier, trainSet, (Double) modelConfig.getParams().get("LearningRate"));
         int epochs = modelConfig.getNumTrainEpochs();
 
         log.info("Using " + (Double) modelConfig.getParams().get("LearningRate") + " training rate");
 
         for (int i = 0; i < epochs; i++) {
 
-            propagtion.iteration();
-            double trainError = propagtion.getError();
+            propagation.iteration();
+            double trainError = propagation.getError();
             double validError = classifier.calculateError(this.validSet);
 
             log.info("Epoch #" + (i + 1) + " Train Error:" + df.format(trainError) + " Validation Error:" + df.format(validError));
         }
-        propagtion.finishTraining();
+        propagation.finishTraining();
 
         log.info("#" + this.trainerID + " finish training");
 
         saveLR();
+
+        return 0.0d;
     }
 
     private void saveLR() throws IOException {

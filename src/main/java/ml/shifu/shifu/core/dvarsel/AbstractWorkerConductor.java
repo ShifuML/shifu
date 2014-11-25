@@ -40,6 +40,7 @@ public abstract class AbstractWorkerConductor {
 
     public abstract void consumeMasterResult(VarSelMasterResult masterResult);
     public abstract VarSelWorkerResult generateVarSelResult();
+    public abstract VarSelWorkerResult getDefaultWorkerResult();
 
     public boolean isInitialized() {
         return isInitialized;

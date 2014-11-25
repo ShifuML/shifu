@@ -63,6 +63,7 @@ public class NNTrainer extends AbstractTrainer {
     public static final Map<String, String> learningAlgMap;
 
     private BasicNetwork network;
+    private volatile boolean toPersistentModel = true;
 
     static {
         defaultLearningRate = new HashMap<String, Double>();
@@ -136,10 +137,10 @@ public class NNTrainer extends AbstractTrainer {
     }
 
     @Override
-    public void train() throws IOException {
+    public double train() throws IOException {
         log.info("Using neural network algorithm...");
 
-        if (this.dryRun == true) {
+        if ( this.dryRun ) {
             log.info("Start Training(Dry Run)... Model #" + this.trainerID);
         } else {
             log.info("Start Training... Model #" + this.trainerID);
@@ -154,8 +155,8 @@ public class NNTrainer extends AbstractTrainer {
         Propagation mlTrain = getMLTrain();
         mlTrain.setThreadCount(0);
 
-        if (this.dryRun == true) {
-            return;
+        if ( this.dryRun ) {
+            return 0.0;
         }
 
         int epochs = this.modelConfig.getNumTrainEpochs();
@@ -187,12 +188,20 @@ public class NNTrainer extends AbstractTrainer {
 
         mlTrain.finishTraining();
         log.info("Trainer #" + this.trainerID + " is Finished!");
+        return getBaseMSE();
     }
 
     public BasicNetwork getNetwork() {
         return network;
     }
 
+    public void enableModelPersistence() {
+        this.toPersistentModel = true;
+    }
+
+    public void disableModelPersistence() {
+        this.toPersistentModel = false;
+    }
 
     /**
      * @param network the network to set
@@ -205,19 +214,19 @@ public class NNTrainer extends AbstractTrainer {
         //String alg = this.modelConfig.getLearningAlgorithm();
         String alg = (String) modelConfig.getParams().get(PROPAGATION);
         if (!(defaultLearningRate.containsKey(alg))) {
-            throw new RuntimeException("Leanring Algorithm is not valid: " + alg);
+            throw new RuntimeException("Learning algorithm is invalid: " + alg);
         }
 
         //Double rate = this.modelConfig.getLearningRate();
-        Double rate = defaultLearningRate.get(alg);
+        double rate = defaultLearningRate.get(alg);
         Object rateObj = modelConfig.getParams().get(LEARNING_RATE);
         if (rateObj instanceof Double) {
             rate = (Double) rateObj;
         } else if (rateObj instanceof Integer) {
             // change like this, because user may set it as integer
-            rate = Double.valueOf(((Integer) rateObj).doubleValue());
+            rate = ((Integer) rateObj).doubleValue();
         } else if (rateObj instanceof Float) {
-            rate = Double.valueOf(((Float) rateObj).doubleValue());
+            rate = ((Float) rateObj).doubleValue();
         }
 
         log.info("    - Learning Algorithm: " + learningAlgMap.get(alg));
@@ -246,7 +255,6 @@ public class NNTrainer extends AbstractTrainer {
     }
 
     public double calculateMSEParallel(BasicNetwork network, MLDataSet dataSet) {
-
         totalError = 0;
 
         int numRecords = (int) dataSet.getRecordCount();
@@ -273,12 +281,14 @@ public class NNTrainer extends AbstractTrainer {
 
         group.waitForComplete();
 
-        double mse = totalError / numRecords;
-
-        return mse;
+        return totalError / numRecords;
     }
 
     private void saveNN() throws IOException {
+        if ( !toPersistentModel ) {
+            return;
+        }
+
         File folder = new File(pathFinder.getModelsPath(SourceType.LOCAL));
         if (!folder.exists()) {
             folder.mkdirs();
@@ -287,6 +297,10 @@ public class NNTrainer extends AbstractTrainer {
     }
 
     private void saveTmpNN(int epoch) throws IOException {
+        if ( !toPersistentModel ) {
+            return;
+        }
+
         File tmpFolder = new File(pathFinder.getTmpModelsPath(SourceType.LOCAL));
         if (!tmpFolder.exists()) {
             tmpFolder.mkdirs();

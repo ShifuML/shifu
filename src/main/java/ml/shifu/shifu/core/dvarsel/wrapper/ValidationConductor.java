@@ -19,11 +19,12 @@ package ml.shifu.shifu.core.dvarsel.wrapper;
 
 import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.container.obj.ModelConfig;
+import ml.shifu.shifu.core.alg.NNTrainer;
 import ml.shifu.shifu.core.dvarsel.dataset.TrainingDataSet;
-import ml.shifu.shifu.core.dvarsel.util.NNValidator;
 import org.encog.ml.data.MLDataSet;
 import org.encog.ml.data.basic.BasicMLDataSet;
 
+import java.io.IOException;
 import java.util.List;
 import java.util.Set;
 
@@ -47,7 +48,6 @@ public class ValidationConductor {
         this.trainingDataSet = trainingDataSet;
     }
 
-
     public double runValidate() {
         //1. prepare training data
         MLDataSet trainingData = new BasicMLDataSet();
@@ -58,11 +58,21 @@ public class ValidationConductor {
                 trainingData,
                 testingData);
 
-        //2. build validator
-        NNValidator validator = new NNValidator(modelConfig, columnConfigList, workingColumnSet, trainingData, testingData);
+        //2. build NNTrainer
+        NNTrainer trainer = new NNTrainer(this.modelConfig, 1, false);
+        trainer.setTrainSet(trainingData);
+        trainer.setValidSet(testingData);
+        trainer.disableModelPersistence();
 
         //3. train and get validation error
-        return validator.validate();
+        double validateError = Double.MAX_VALUE;
+        try {
+            validateError = trainer.train();
+        } catch ( IOException e ) {
+            // Ignore the exception when nn files
+            validateError = trainer.getBaseMSE();
+        }
+        return validateError;
     }
 
 }

@@ -115,7 +115,7 @@ public class VarSelWorker extends AbstractWorkerComputable<VarSelMasterResult, V
         VarSelMasterResult masterResult = workerContext.getLastMasterResult();
         if (masterResult == null) {
             // no working set, wait master to send the working set
-            return new VarSelWorkerResult(-1);
+            return workerConductor.getDefaultWorkerResult();
         }
 
         if ( masterResult.isHalt() ) {

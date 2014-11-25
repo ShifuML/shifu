@@ -75,6 +75,17 @@ public class WrapperWorkerConductor extends AbstractWorkerConductor {
             }
         }
 
-        return ((bestCandidate == null) ? new VarSelWorkerResult(-1) : new VarSelWorkerResult(bestCandidate.getColumnNum()));
+        return ((bestCandidate == null) ? getDefaultWorkerResult() : getWorkerResult(bestCandidate.getColumnNum()));
+    }
+
+    @Override
+    public VarSelWorkerResult getDefaultWorkerResult() {
+        return getWorkerResult(-1);
+    }
+
+    private VarSelWorkerResult getWorkerResult(int columnId) {
+        List<Integer> columnIdList = new ArrayList<Integer>();
+        columnIdList.add(columnId);
+        return new VarSelWorkerResult(columnIdList);
     }
 }

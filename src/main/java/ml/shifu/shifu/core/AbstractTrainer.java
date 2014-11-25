@@ -430,10 +430,10 @@ public abstract class AbstractTrainer {
 
     /**
      * A training start function, and print the training error and validation errors
-     *
+     * @return
      * @throws IOException
      */
-    public abstract void train() throws IOException;
+    public abstract double train() throws IOException;
 
     /**
      * the error for each validation

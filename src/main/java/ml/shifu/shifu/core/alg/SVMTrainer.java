@@ -74,11 +74,12 @@ public class SVMTrainer extends AbstractTrainer {
     }
 
     @Override
-    public void train() throws IOException {
+    public double train() throws IOException {
         if (this.trainerID == 0) {
             log.info("Trainer #" + (this.trainerID + 1) + " Using SVM algorithm...");
         }
         encogTrain();
+        return 0.0d;
     }
 
     /**

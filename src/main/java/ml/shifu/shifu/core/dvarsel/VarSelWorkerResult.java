@@ -22,16 +22,17 @@ import ml.shifu.guagua.io.HaltBytable;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
+import java.util.List;
 
 /**
  * Created on 11/24/2014.
  */
 public class VarSelWorkerResult extends HaltBytable {
 
-    private int columnId;
+    private List<Integer> columnIdList;
 
-    public VarSelWorkerResult(int columnId) {
-        this.columnId = columnId;
+    public VarSelWorkerResult(List<Integer> columnIdList) {
+        this.columnIdList = columnIdList;
     }
 
     @Override
@@ -44,7 +45,7 @@ public class VarSelWorkerResult extends HaltBytable {
 
     }
 
-    public int getColumnId() {
-        return this.columnId;
+    public List<Integer> getColumnIdList() {
+        return this.columnIdList;
     }
 }
