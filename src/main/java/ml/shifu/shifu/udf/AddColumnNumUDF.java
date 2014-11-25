@@ -27,7 +27,6 @@ import org.apache.pig.data.DataType;
 import org.apache.pig.data.Tuple;
 import org.apache.pig.data.TupleFactory;
 import org.apache.pig.impl.logicalLayer.schema.Schema;
-import org.apache.pig.impl.logicalLayer.schema.Schema.FieldSchema;
 
 /**
  * <pre>
@@ -39,11 +38,11 @@ import org.apache.pig.impl.logicalLayer.schema.Schema.FieldSchema;
  * 		...
  *  }
  */
-public class AddColumnNumUDF extends AbstractTrainerUDF<DataBag>{
-
+public class AddColumnNumUDF extends AbstractTrainerUDF<DataBag> {
+	
+	private static final TupleFactory tupleFactory = TupleFactory.getInstance();
     private int weightedColumnNum = -1;
     private DataBag bag;
-    private static final TupleFactory tupleFactory = TupleFactory.getInstance();
     
     public AddColumnNumUDF(String source, String pathModelConfig, String pathColumnConfig) throws Exception {
         super(source, pathModelConfig, pathColumnConfig);
@@ -59,37 +58,32 @@ public class AddColumnNumUDF extends AbstractTrainerUDF<DataBag>{
                 }
             }
         }
-
     }
 
-    @Override
-    public DataBag exec(Tuple input) throws IOException {
+    public DataBag exec(Tuple b) throws IOException {
 
-        if (bag != null) {
-            bag.clear();
-        }
-        bag = BagFactory.getInstance().newDefaultBag();
+    	DataBag bag = BagFactory.getInstance().newDefaultBag();
 
-        if (input == null) return null;
+    	if (b == null) return bag;
 
-        int columnSize = input.size();
+    	int columnSize = b.size();
 
         if(columnSize == 0 || columnSize != columnConfigList.size()) {
             throw new RuntimeException("the input records length is not equal to the column config file");
         }
 
-        if(input.get(tagColumnNum) == null) {
+        if(b.get(tagColumnNum) == null) {
             log.warn("the target column is null");
-            return null;
+            return bag;
         }
 
-        String tag = input.get(tagColumnNum).toString();
+        String tag = b.get(tagColumnNum).toString();
 
         for(int i = 0; i < columnSize; i ++){
 
             if (modelConfig.isCategoricalDisabled()) {
                 try {
-                    Double.valueOf(input.get(i).toString());
+                    Double.valueOf(b.get(i).toString());
                 } catch (Exception e) {
                     continue;
                 }
@@ -102,12 +96,12 @@ public class AddColumnNumUDF extends AbstractTrainerUDF<DataBag>{
                 Tuple tuple = tupleFactory.newTuple(4);
 
                 tuple.set(0, i);
-                tuple.set(1, input.get(i));
+                tuple.set(1, b.get(i));
                 tuple.set(2, tag);
 
                 if (weightedColumnNum != -1) {
                     try {
-                        tuple.set(3, Double.valueOf(input.get(weightedColumnNum).toString()));
+                        tuple.set(3, Double.valueOf(b.get(weightedColumnNum).toString()));
                     } catch (NumberFormatException e) {
                         tuple.set(3, 1.0);
                     }
@@ -123,29 +117,12 @@ public class AddColumnNumUDF extends AbstractTrainerUDF<DataBag>{
                 bag.add(tuple);
             }
         }
-
+        
         return bag;
     }
 
     @Override
     public Schema outputSchema(Schema input) {
-    	/*try {
-            Schema tupleSchema = new Schema();
-            
-
-            tupleSchema.add(new FieldSchema("col", DataType.INTEGER));
-            tupleSchema.add(new FieldSchema("value", DataType.CHARARRAY));
-            tupleSchema.add(new FieldSchema("target", DataType.CHARARRAY));
-            tupleSchema.add(new FieldSchema("weight", DataType.DOUBLE));
-            
-            Schema bagSchema = new Schema(new Schema.FieldSchema("shifu_col", tupleSchema, DataType.TUPLE));
-            
-            return new Schema(new Schema.FieldSchema(null, bagSchema, DataType.BAG));
-
-        } catch (Exception e) {
-            e.printStackTrace();
-        */    return null;
-        //}
+    	return null;
     }
-
 }

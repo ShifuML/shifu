@@ -17,6 +17,8 @@ package ml.shifu.shifu.udf;
 
 import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.util.CommonUtils;
+
+import org.apache.commons.lang.StringUtils;
 import org.apache.pig.data.DataBag;
 import org.apache.pig.data.Tuple;
 import org.apache.pig.data.TupleFactory;
@@ -53,6 +55,10 @@ public class CalculateBinAvgScoreUDF extends AbstractTrainerUDF<Tuple> {
         }
 
         for (Tuple t : bag) {
+            if ( t.get(1) == null || StringUtils.isBlank(t.get(1).toString()) ) {
+                continue;
+            }
+            
             int binNum = CommonUtils.getBinNum(config, t.get(1).toString());
             // int binNum = CommonUtils.getBinNum(config.getBinBoundary(), Double.valueOf(t.get(1).toString()));
             Object scoreStr = t.get(2);
