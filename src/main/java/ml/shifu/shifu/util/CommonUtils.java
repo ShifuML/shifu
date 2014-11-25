@@ -336,7 +336,7 @@ public final class CommonUtils {
         }
 
         int n = binBoundary.size() - 1;
-        while (n > 0 && value < binBoundary.get(n)) {
+        while (n > 0 && value <= binBoundary.get(n)) {
             n--;
         }
         return n;
