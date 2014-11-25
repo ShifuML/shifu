@@ -28,11 +28,10 @@ import org.encog.neural.networks.layers.BasicLayer;
 import java.io.IOException;
 import java.util.List;
 
-
 /**
  * Helper class for NN distributed training.
  */
-final class NNUtils {
+public final class NNUtils {
 
     public static final String RESILIENTPROPAGATION = "R";
     public static final String SCALEDCONJUGATEGRADIENT = "S";
@@ -68,7 +67,6 @@ final class NNUtils {
      * The maximum amount a delta can reach.
      */
 
-
     private NNUtils() {
     }
 
@@ -78,8 +76,8 @@ final class NNUtils {
     private static Path getTmpDir() throws IOException {
         // If the Constants.TMP is absolute folder, there may be some conflicts for two jobs.
         Path path = new Path(Constants.TMP);
-        if (!HDFSUtils.getLocalFS().exists(path)) {
-            if (!HDFSUtils.getLocalFS().mkdirs(path)) {
+        if(!HDFSUtils.getLocalFS().exists(path)) {
+            if(!HDFSUtils.getLocalFS().mkdirs(path)) {
                 throw new RuntimeException("Error in creating tmp folder.");
             }
         }
@@ -88,14 +86,16 @@ final class NNUtils {
 
     /**
      * Return testing file to store training data, if exists, delete it firstly.
-     *
-     * @throws IOException      if any exception on local fs operations.
-     * @throws RuntimeException if error on deleting testing file.
+     * 
+     * @throws IOException
+     *             if any exception on local fs operations.
+     * @throws RuntimeException
+     *             if error on deleting testing file.
      */
     public static Path getTestingFile() throws IOException {
         Path testingFile = new Path(getTmpDir(), NNConstants.TESTING_EGB);
-        if (HDFSUtils.getLocalFS().exists(testingFile)) {
-            if (!HDFSUtils.getLocalFS().delete(testingFile, true)) {
+        if(HDFSUtils.getLocalFS().exists(testingFile)) {
+            if(!HDFSUtils.getLocalFS().delete(testingFile, true)) {
                 throw new RuntimeException("error in deleting testing file");
             }
         }
@@ -105,14 +105,16 @@ final class NNUtils {
 
     /**
      * Return training file to store training data, if exists, delete it firstly.
-     *
-     * @throws IOException      if any exception on local fs operations.
-     * @throws RuntimeException if error on deleting training file.
+     * 
+     * @throws IOException
+     *             if any exception on local fs operations.
+     * @throws RuntimeException
+     *             if error on deleting training file.
      */
     public static Path getTrainingFile() throws IOException {
         Path trainingFile = new Path(getTmpDir(), NNConstants.TRAINING_EGB);
-        if (HDFSUtils.getLocalFS().exists(trainingFile)) {
-            if (!HDFSUtils.getLocalFS().delete(trainingFile, true)) {
+        if(HDFSUtils.getLocalFS().exists(trainingFile)) {
+            if(!HDFSUtils.getLocalFS().delete(trainingFile, true)) {
                 throw new RuntimeException("error in deleting traing file");
             }
         }
@@ -120,22 +122,30 @@ final class NNUtils {
     }
 
     /**
-     * Get input nodes number and output nodes number from column config.
-     *
-     * @throws NullPointerException if columnConfigList or ColumnConfig object in columnConfigList is null.
+     * Get input nodes number (final select) and output nodes number from column config, and candidate input node
+     * number.
+     * 
+     * <p>
+     * If number of column in final-select is 0, which means to select all non meta and non target columns. So the input
+     * number is set to all candidates.
+     * 
+     * @throws NullPointerException
+     *             if columnConfigList or ColumnConfig object in columnConfigList is null.
      */
-    static int[] getInputAndOutputCounts(List<ColumnConfig> columnConfigList) {
-        int input = 0;
-        int output = 0;
-        for (ColumnConfig config : columnConfigList) {
-            if (config.isFinalSelect()) {
+    public static int[] getInputOutputCandidateCounts(List<ColumnConfig> columnConfigList) {
+        int input = 0, output = 0, candidate = 0;
+        for(ColumnConfig config: columnConfigList) {
+            if(!config.isTarget() && !config.isMeta()) {
+                candidate++;
+            }
+            if(config.isFinalSelect()) {
                 input++;
             }
-            if (config.isTarget()) {
+            if(config.isTarget()) {
                 output++;
             }
         }
-        return new int[]{input, output};
+        return new int[] { input, output, candidate };
     }
 
     public static String getTmpNNModelName(String tmpModelsFolder, String trainerId, int iteration) {
@@ -151,26 +161,26 @@ final class NNUtils {
      * Generate basic NN network object
      */
     public static BasicNetwork generateNetwork(int in, int out, int numLayers, List<String> actFunc,
-                                               List<Integer> hiddenNodeList) {
+            List<Integer> hiddenNodeList) {
 
         final BasicNetwork network = new BasicNetwork();
 
         network.addLayer(new BasicLayer(new ActivationLinear(), true, in));
 
-        //int hiddenNodes = 0;
-        for (int i = 0; i < numLayers; i++) {
+        // int hiddenNodes = 0;
+        for(int i = 0; i < numLayers; i++) {
             String func = actFunc.get(i);
             Integer numHiddenNode = hiddenNodeList.get(i);
-            //hiddenNodes += numHiddenNode;
-            if (func.equalsIgnoreCase(NNConstants.NN_LINEAR)) {
+            // hiddenNodes += numHiddenNode;
+            if(func.equalsIgnoreCase(NNConstants.NN_LINEAR)) {
                 network.addLayer(new BasicLayer(new ActivationLinear(), true, numHiddenNode));
-            } else if (func.equalsIgnoreCase(NNConstants.NN_SIGMOID)) {
+            } else if(func.equalsIgnoreCase(NNConstants.NN_SIGMOID)) {
                 network.addLayer(new BasicLayer(new ActivationSigmoid(), true, numHiddenNode));
-            } else if (func.equalsIgnoreCase(NNConstants.NN_TANH)) {
+            } else if(func.equalsIgnoreCase(NNConstants.NN_TANH)) {
                 network.addLayer(new BasicLayer(new ActivationTANH(), true, numHiddenNode));
-            } else if (func.equalsIgnoreCase(NNConstants.NN_LOG)) {
+            } else if(func.equalsIgnoreCase(NNConstants.NN_LOG)) {
                 network.addLayer(new BasicLayer(new ActivationLOG(), true, numHiddenNode));
-            } else if (func.equalsIgnoreCase(NNConstants.NN_SIN)) {
+            } else if(func.equalsIgnoreCase(NNConstants.NN_SIN)) {
                 network.addLayer(new BasicLayer(new ActivationSIN(), true, numHiddenNode));
             } else {
                 network.addLayer(new BasicLayer(new ActivationSigmoid(), true, numHiddenNode));
@@ -187,14 +197,15 @@ final class NNUtils {
 
     /**
      * Determine the sign of the value.
-     *
-     * @param value The value to check.
+     * 
+     * @param value
+     *            The value to check.
      * @return -1 if less than zero, 1 if greater, or 0 if zero.
      */
     public static int sign(final double value) {
-        if (Math.abs(value) < Encog.DEFAULT_DOUBLE_EQUAL) {
+        if(Math.abs(value) < Encog.DEFAULT_DOUBLE_EQUAL) {
             return 0;
-        } else if (value > 0) {
+        } else if(value > 0) {
             return 1;
         } else {
             return -1;
@@ -202,7 +213,7 @@ final class NNUtils {
     }
 
     public static void randomize(int seed, double[] weights) {
-        //ConsistentRandomizer randomizer = new ConsistentRandomizer(-1, 1, seed);
+        // ConsistentRandomizer randomizer = new ConsistentRandomizer(-1, 1, seed);
         NguyenWidrowRandomizer randomizer = new NguyenWidrowRandomizer(-1, 1);
         randomizer.randomize(weights);
     }

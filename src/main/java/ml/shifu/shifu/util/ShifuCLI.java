@@ -131,15 +131,15 @@ public class ShifuCLI {
                 } else if (args[0].equals(STATS_CMD)) {
                     // stats step
                     calModelStats();
-                    log.info("Do model set statistics successfully. Please continue next step by using 'shifu varselect'.");
+                    log.info("Do model set statistics successfully. Please continue next step by using 'shifu normalize'.");
                 } else if (args[0].equals(NORMALIZE_CMD)) {
                     // normalize step
                     normalizeTrainData();
-                    log.info("Do model set normalization successfully. Please continue next step by using 'shifu train'.");
+                    log.info("Do model set normalization successfully. Please continue next step by using 'shifu varselect'.");
                 } else if (args[0].equals(VARSELECT_CMD)) {
                     // variable selected step
                     selectModelVar();
-                    log.info("Do model set variables selection successfully. Please continue next step by using 'shifu normalize'.");
+                    log.info("Do model set variables selection successfully. Please continue next step by using 'shifu train'.");
                 } else if (args[0].equals(TRAIN_CMD)) {
                     // train step
                     trainModel(cmd.hasOption(TRAIN_CMD_DRY), cmd.hasOption(TRAIN_CMD_DEBUG));

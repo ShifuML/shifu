@@ -31,7 +31,6 @@ import java.util.List;
 import java.util.Properties;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-
 /**
  * {@link NNMaster} is used to accumulate all workers NN parameters.
  * <p/>
@@ -79,7 +78,7 @@ public class NNMaster implements MasterComputable<NNParams, NNParams> {
 
         // For first step, we not only initialize whole context but also return weights to master to make sure all
         // workers and master are using the same weights.
-        if (this.isInitialized.compareAndSet(false, true)) {
+        if(this.isInitialized.compareAndSet(false, true)) {
             // initilize configuration
             init(context);
 
@@ -91,7 +90,7 @@ public class NNMaster implements MasterComputable<NNParams, NNParams> {
             return params;
         }
 
-        if (context.getWorkerResults() == null) {
+        if(context.getWorkerResults() == null) {
             throw new IllegalArgumentException("workers' results are null.");
         }
 
@@ -102,7 +101,7 @@ public class NNMaster implements MasterComputable<NNParams, NNParams> {
         // before accumulate, reset gradients and train size
         this.globalNNParams.reset();
 
-        for (NNParams nn : context.getWorkerResults()) {
+        for(NNParams nn: context.getWorkerResults()) {
             totalTestError += nn.getTestError();
             totalTrainError += nn.getTrainError();
             this.globalNNParams.accumulateGradients(nn.getGradients());
@@ -111,12 +110,12 @@ public class NNMaster implements MasterComputable<NNParams, NNParams> {
         }
 
         // worker result size is 0. throw exception because shouldn't happen
-        if (size == 0) {
+        if(size == 0) {
             throw new IllegalArgumentException("workers' results are empty.");
         }
 
         // initialize weightCalCulater.
-        if (this.weightCalculator == null) {
+        if(this.weightCalculator == null) {
             // get the propagation
             String propagation = (String) this.modelConfig.getParams().get(NNTrainer.PROPAGATION);
             // get the learning rate
@@ -135,8 +134,8 @@ public class NNMaster implements MasterComputable<NNParams, NNParams> {
         double currentTestError = totalTestError / size;
         double currentTrainError = totalTrainError / size;
 
-        LOG.info("NNMaster compute iteration {} ( avg train error {}, avg validation error {} )", new Object[]{
-                context.getCurrentIteration(), currentTrainError, currentTestError});
+        LOG.info("NNMaster compute iteration {} ( avg train error {}, avg validation error {} )", new Object[] {
+                context.getCurrentIteration(), currentTrainError, currentTestError });
 
         NNParams params = new NNParams();
         params.setTrainError(currentTrainError);
@@ -148,12 +147,12 @@ public class NNMaster implements MasterComputable<NNParams, NNParams> {
         return params;
     }
 
-    @SuppressWarnings({"unchecked"})
+    @SuppressWarnings({ "unchecked" })
     private NNParams initWeights() {
         NNParams params = new NNParams();
 
-        int[] inputAndOutput = NNUtils.getInputAndOutputCounts(this.columnConfigList);
-        int inputNodeCount = inputAndOutput[0];
+        int[] inputAndOutput = NNUtils.getInputOutputCandidateCounts(this.columnConfigList);
+        int inputNodeCount = inputAndOutput[0] == 0 ? inputAndOutput[2] : inputAndOutput[0];
         int outputNodeCount = inputAndOutput[1];
 
         int numLayers = (Integer) this.modelConfig.getParams().get(NNTrainer.NUM_HIDDEN_LAYERS);

@@ -40,7 +40,6 @@ import org.slf4j.LoggerFactory;
 
 import akka.actor.ActorRef;
 
-
 /**
  * DataNormalizeWorker class is to normalize the train data
  * Notice, the last field of normalized data is the weight of the training data.
@@ -51,21 +50,20 @@ public class DataNormalizeWorker extends AbstractWorkerActor {
     private static Logger log = LoggerFactory.getLogger(DataNormalizeWorker.class);
     private Expression weightExpr;
 
-    public DataNormalizeWorker(
-            ModelConfig modelConfig,
-            List<ColumnConfig> columnConfigList,
-            ActorRef parentActorRef,
+    public DataNormalizeWorker(ModelConfig modelConfig, List<ColumnConfig> columnConfigList, ActorRef parentActorRef,
             ActorRef nextActorRef) {
         super(modelConfig, columnConfigList, parentActorRef, nextActorRef);
         weightExpr = createExpression(modelConfig.getWeightColumnName());
     }
 
-    /* (non-Javadoc)
+    /*
+     * (non-Javadoc)
+     * 
      * @see akka.actor.UntypedActor#onReceive(java.lang.Object)
      */
     @Override
     public void handleMsg(Object message) {
-        if (message instanceof NormPartRawDataMessage) {
+        if(message instanceof NormPartRawDataMessage) {
             NormPartRawDataMessage msg = (NormPartRawDataMessage) message;
             List<String> rawDataList = msg.getRawDataList();
             int targetMsgCnt = msg.getTotalMsgCnt();
@@ -79,17 +77,17 @@ public class DataNormalizeWorker extends AbstractWorkerActor {
 
     /**
      * Normalize the list training data from List<String> to List<Double>
-     *
+     * 
      * @param rfList
      * @return the data after normalization
      */
     private List<List<Double>> normalizeData(List<String> rawDataList) {
         List<List<Double>> normalizedDataList = new ArrayList<List<Double>>();
 
-        for (String rawInput : rawDataList) {
+        for(String rawInput: rawDataList) {
             String[] rf = CommonUtils.split(rawInput, modelConfig.getDataSetDelimiter());
             List<Double> normRecord = normalizeRecord(rf);
-            if (CollectionUtils.isNotEmpty(normRecord)) {
+            if(CollectionUtils.isNotEmpty(normRecord)) {
                 normalizedDataList.add(normRecord);
             }
         }
@@ -99,46 +97,47 @@ public class DataNormalizeWorker extends AbstractWorkerActor {
 
     /**
      * Normalize the training data record
-     *
-     * @param rfs - record fields
+     * 
+     * @param rfs
+     *            - record fields
      * @return the data after normalization
      */
     private List<Double> normalizeRecord(String[] rfs) {
         List<Double> retDouList = new ArrayList<Double>();
 
-        if (rfs == null || rfs.length == 0) {
+        if(rfs == null || rfs.length == 0) {
             return null;
         }
 
         String tag = rfs[this.targetColumnNum];
-        
-        boolean isNotSampled = DataSampler.isNotSampled(
-                modelConfig.getPosTags(), 
-                modelConfig.getNegTags(),
-                modelConfig.getNormalizeSampleRate(), 
-                modelConfig.isNormalizeSampleNegOnly(), tag);
-        if ( isNotSampled ) {
+
+        boolean isNotSampled = DataSampler.isNotSampled(modelConfig.getPosTags(), modelConfig.getNegTags(),
+                modelConfig.getNormalizeSampleRate(), modelConfig.isNormalizeSampleNegOnly(), tag);
+        if(isNotSampled) {
             return null;
-        }
-        
-        if (modelConfig.getPosTags().contains(tag)) {
-            retDouList.add(Double.valueOf(1));
-        } else if (modelConfig.getNegTags().contains(tag)) {
-            retDouList.add(Double.valueOf(0));
-        } else {
-            log.error("Invalid data! The target value is not listed - " + tag);
         }
 
         JexlContext jc = new MapContext();
         Double cutoff = modelConfig.getNormalizeStdDevCutOff();
 
-        for (int i = 0; i < rfs.length; i++) {
+        for(int i = 0; i < rfs.length; i++) {
             ColumnConfig config = columnConfigList.get(i);
-            if (weightExpr != null) {
+            if(weightExpr != null) {
                 jc.set(config.getColumnName(), rfs[i]);
             }
-
-            if (config.isFinalSelect()) {
+            if(this.targetColumnNum == i) {
+                if(modelConfig.getPosTags().contains(tag)) {
+                    retDouList.add(Double.valueOf(1));
+                } else if(modelConfig.getNegTags().contains(tag)) {
+                    retDouList.add(Double.valueOf(0));
+                } else {
+                    log.error("Invalid data! The target value is not listed - " + tag);
+                    // Return null to skip such record.
+                    return null;
+                }
+            } else if(config.isMeta()) {
+                retDouList.add(null);
+            } else {
                 String val = (rfs[i] == null) ? "" : rfs[i];
                 Double z = Normalizer.normalize(config, val, cutoff);
                 retDouList.add(z);
@@ -146,11 +145,11 @@ public class DataNormalizeWorker extends AbstractWorkerActor {
         }
 
         double weight = 1.0d;
-        if (weightExpr != null) {
+        if(weightExpr != null) {
             Object result = weightExpr.evaluate(jc);
-            if (result instanceof Integer) {
+            if(result instanceof Integer) {
                 weight = ((Integer) result).doubleValue();
-            } else if (result instanceof Double) {
+            } else if(result instanceof Double) {
                 weight = ((Double) result).doubleValue();
             }
         }
@@ -161,17 +160,17 @@ public class DataNormalizeWorker extends AbstractWorkerActor {
 
     /**
      * Create expressions for multi weight settings
-     *
+     * 
      * @param weightExprList
      * @return weight expression map
      */
     protected Map<Expression, Double> createExpressionMap(List<WeightAmplifier> weightExprList) {
         Map<Expression, Double> ewMap = new HashMap<Expression, Double>();
 
-        if (CollectionUtils.isNotEmpty(weightExprList)) {
+        if(CollectionUtils.isNotEmpty(weightExprList)) {
             JexlEngine jexl = new JexlEngine();
 
-            for (WeightAmplifier we : weightExprList) {
+            for(WeightAmplifier we: weightExprList) {
                 ewMap.put(jexl.createExpression(we.getTargetExpression()), Double.valueOf(we.getTargetWeight()));
             }
         }
@@ -181,12 +180,12 @@ public class DataNormalizeWorker extends AbstractWorkerActor {
 
     /**
      * Create the expression for weight setting
-     *
+     * 
      * @param weightAmplifier
      * @return expression for weight amplifier
      */
     private Expression createExpression(String weightAmplifier) {
-        if (StringUtils.isNotBlank(weightAmplifier)) {
+        if(StringUtils.isNotBlank(weightAmplifier)) {
             JexlEngine jexl = new JexlEngine();
             return jexl.createExpression(weightAmplifier);
         }

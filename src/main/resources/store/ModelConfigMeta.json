@@ -227,7 +227,8 @@
                 "options": [
                     {"label": "Simple Sorting", "value":"S"},
                     {"label": "Adding", "value":"A"},
-                    {"label": "Removing", "value":"R"}
+                    {"label": "Removing", "value":"R"},
+                    {"label": "Sensitivity", "value":"SE"}
                 ]   
             }
         ]

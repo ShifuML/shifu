@@ -37,7 +37,6 @@ import java.util.List;
 import java.util.Properties;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-
 /**
  * {@link NNOutput} is used to write the model output to file system.
  */
@@ -99,7 +98,7 @@ public class NNOutput extends BasicMasterInterceptor<NNParams, NNParams> {
 
     @Override
     public void postIteration(final MasterContext<NNParams, NNParams> context) {
-        if (this.isDry) {
+        if(this.isDry) {
             // for dry mode, we don't save models files.
             return;
         }
@@ -108,13 +107,13 @@ public class NNOutput extends BasicMasterInterceptor<NNParams, NNParams> {
                 .getTrainError() : context.getMasterResult().getTestError());
 
         // save the weights according the error decreasing
-        if (currentError < this.minTestError) {
+        if(currentError < this.minTestError) {
             this.minTestError = currentError;
             this.optimizeddWeights = context.getMasterResult().getWeights();
         }
 
         // save tmp to hdfs according to raw trainer logic
-        if (context.getCurrentIteration() % NNUtils.tmpModelFactor(context.getTotalIteration()) == 0) {
+        if(context.getCurrentIteration() % NNUtils.tmpModelFactor(context.getTotalIteration()) == 0) {
             Thread tmpNNThread = new Thread(new Runnable() {
                 @Override
                 public void run() {
@@ -130,7 +129,7 @@ public class NNOutput extends BasicMasterInterceptor<NNParams, NNParams> {
 
     private void updateProgressLog(final MasterContext<NNParams, NNParams> context) {
         int currentIteration = context.getCurrentIteration();
-        if (currentIteration == 1) {
+        if(currentIteration == 1) {
             // first iteration is used for training preparation
             return;
         }
@@ -152,11 +151,11 @@ public class NNOutput extends BasicMasterInterceptor<NNParams, NNParams> {
         IOUtils.closeStream(this.progressOutput);
 
         // for dry mode, we don't save models files.
-        if (this.isDry) {
+        if(this.isDry) {
             return;
         }
 
-        if (optimizeddWeights != null) {
+        if(optimizeddWeights != null) {
             Path out = new Path(context.getProps().getProperty(NNConstants.GUAGUA_NN_OUTPUT));
             writeModelWeightsToFileSystem(optimizeddWeights, out);
         }
@@ -173,10 +172,10 @@ public class NNOutput extends BasicMasterInterceptor<NNParams, NNParams> {
     private void init(MasterContext<NNParams, NNParams> context) {
         this.isDry = Boolean.TRUE.toString().equals(context.getProps().getProperty(NNConstants.NN_DRY_TRAIN));
 
-        if (this.isDry) {
+        if(this.isDry) {
             return;
         }
-        if (isInit.compareAndSet(false, true)) {
+        if(isInit.compareAndSet(false, true)) {
             loadConfigFiles(context.getProps());
             initNetwork();
             this.trainerId = context.getProps().getProperty(NNConstants.NN_TRAINER_ID);
@@ -210,9 +209,9 @@ public class NNOutput extends BasicMasterInterceptor<NNParams, NNParams> {
 
     @SuppressWarnings("unchecked")
     private void initNetwork() {
-        int[] inputAndOutput = NNUtils.getInputAndOutputCounts(this.columnConfigList);
-        int inputNodeCount = inputAndOutput[0];
-        int outputNodeCount = inputAndOutput[1];
+        int[] inputOutputIndex = NNUtils.getInputOutputCandidateCounts(this.columnConfigList);
+        int inputNodeCount = inputOutputIndex[0] == 0 ? inputOutputIndex[2] : inputOutputIndex[0];
+        int outputNodeCount = inputOutputIndex[1];
 
         int numLayers = (Integer) getModelConfig().getParams().get(NNTrainer.NUM_HIDDEN_LAYERS);
         List<String> actFunc = (List<String>) getModelConfig().getParams().get(NNTrainer.ACTIVATION_FUNC);
@@ -227,7 +226,7 @@ public class NNOutput extends BasicMasterInterceptor<NNParams, NNParams> {
             fos = FileSystem.get(new Configuration()).create(out);
             LOG.info("Writing results to {}", out.toString());
             this.network.getFlat().setWeights(weights);
-            if (out != null) {
+            if(out != null) {
                 EncogDirectoryPersistence.saveObject(fos, this.network);
             }
         } catch (IOException e) {

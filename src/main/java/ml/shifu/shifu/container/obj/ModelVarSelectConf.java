@@ -88,7 +88,6 @@ public class ModelVarSelectConf {
         this.filterBy = filterBy;
     }
 
-    @JsonIgnore
     public Boolean getWrapperEnabled() {
         return wrapperEnabled;
     }
@@ -97,7 +96,6 @@ public class ModelVarSelectConf {
         this.wrapperEnabled = wrapperEnabled;
     }
 
-    @JsonIgnore
     public Integer getWrapperNum() {
         return wrapperNum;
     }
@@ -106,7 +104,6 @@ public class ModelVarSelectConf {
         this.wrapperNum = wrapperNum;
     }
 
-    @JsonIgnore
     public String getWrapperBy() {
         return wrapperBy;
     }

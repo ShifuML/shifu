@@ -44,7 +44,6 @@ import akka.actor.UntypedActor;
 import akka.actor.UntypedActorFactory;
 import akka.routing.RoundRobinRouter;
 
-
 /**
  * NormalizeDataActor class normalize the the training data.
  * Not all training data will be normalized. Actually there is an option - `baggingSampleRate`
@@ -66,7 +65,8 @@ public class NormalizeDataActor extends AbstractActor {
     private DecimalFormat df;
     private int resultCnt;
 
-    public NormalizeDataActor(final ModelConfig modelConfig, final List<ColumnConfig> columnConfigList, final AkkaExecStatus akkaStatus) throws IOException {
+    public NormalizeDataActor(final ModelConfig modelConfig, final List<ColumnConfig> columnConfigList,
+            final AkkaExecStatus akkaStatus) throws IOException {
         super(modelConfig, columnConfigList, akkaStatus);
         log.info("Creating Master Actor ...");
         log.info("AvailableProcessors: " + Runtime.getRuntime().availableProcessors());
@@ -81,44 +81,47 @@ public class NormalizeDataActor extends AbstractActor {
             public UntypedActor create() {
                 return new DataNormalizeWorker(modelConfig, columnConfigList, parentActorRef, parentActorRef);
             }
-        }).withRouter(new RoundRobinRouter(Environment.getInt(Environment.LOCAL_NUM_PARALLEL, 16))), "DataNormalizeWorker");
+        }).withRouter(new RoundRobinRouter(Environment.getInt(Environment.LOCAL_NUM_PARALLEL, 16))),
+                "DataNormalizeWorker");
 
         // actors to filter data
-        dataFilterRef = this.getContext().actorOf(new Props(new UntypedActorFactory() {
-            private static final long serialVersionUID = 7122505775141026832L;
+        dataFilterRef = this.getContext()
+                .actorOf(new Props(new UntypedActorFactory() {
+                    private static final long serialVersionUID = 7122505775141026832L;
 
-            public UntypedActor create() throws IOException {
-                return new DataFilterWorker(modelConfig, columnConfigList, parentActorRef, dataNormalizeRef);
-            }
-        }).withRouter(new RoundRobinRouter(Environment.getInt(Environment.LOCAL_NUM_PARALLEL, 16))), "DataFilterWorker");
+                    public UntypedActor create() throws IOException {
+                        return new DataFilterWorker(modelConfig, columnConfigList, parentActorRef, dataNormalizeRef);
+                    }
+                }).withRouter(new RoundRobinRouter(Environment.getInt(Environment.LOCAL_NUM_PARALLEL, 16))),
+                        "DataFilterWorker");
 
         // actors to load data
-        dataLoadRef = this.getContext().actorOf(new Props(new UntypedActorFactory() {
-            private static final long serialVersionUID = -7499072868479157207L;
+        dataLoadRef = this.getContext()
+                .actorOf(new Props(new UntypedActorFactory() {
+                    private static final long serialVersionUID = -7499072868479157207L;
 
-            public UntypedActor create() {
-                return new DataLoadWorker(modelConfig, columnConfigList, parentActorRef, dataFilterRef);
-            }
-        }).withRouter(new RoundRobinRouter(Environment.getInt(Environment.LOCAL_NUM_PARALLEL, 16))), "DataLoaderWorker");
+                    public UntypedActor create() {
+                        return new DataLoadWorker(modelConfig, columnConfigList, parentActorRef, dataFilterRef);
+                    }
+                }).withRouter(new RoundRobinRouter(Environment.getInt(Environment.LOCAL_NUM_PARALLEL, 16))),
+                        "DataLoaderWorker");
 
         PathFinder pathFinder = new PathFinder(modelConfig);
         SourceType sourceType = modelConfig.getDataSet().getSource();
-        normDataWriter = ShifuFileUtils.getWriter(
-                pathFinder.getNormalizedDataPath(sourceType),
-                sourceType);
-        selectDataWriter = ShifuFileUtils.getWriter(
-                pathFinder.getSelectedRawDataPath(sourceType),
-                sourceType);
+        normDataWriter = ShifuFileUtils.getWriter(pathFinder.getNormalizedDataPath(sourceType), sourceType);
+        selectDataWriter = ShifuFileUtils.getWriter(pathFinder.getSelectedRawDataPath(sourceType), sourceType);
 
         df = new DecimalFormat("#.######");
     }
 
-    /* (non-Javadoc)
+    /*
+     * (non-Javadoc)
+     * 
      * @see akka.actor.UntypedActor#onReceive(java.lang.Object)
      */
     @Override
     public void onReceive(Object message) throws Exception {
-        if (message instanceof AkkaActorInputMessage) {
+        if(message instanceof AkkaActorInputMessage) {
             resultCnt = 0;
 
             AkkaActorInputMessage msg = (AkkaActorInputMessage) message;
@@ -126,11 +129,10 @@ public class NormalizeDataActor extends AbstractActor {
 
             log.debug("Num of Scanners: " + scanners.size());
 
-            for (Scanner scanner : scanners) {
-                dataLoadRef.tell(
-                        new ScanNormInputDataMessage(scanners.size(), scanner), getSelf());
+            for(Scanner scanner: scanners) {
+                dataLoadRef.tell(new ScanNormInputDataMessage(scanners.size(), scanner), getSelf());
             }
-        } else if (message instanceof NormResultDataMessage) {
+        } else if(message instanceof NormResultDataMessage) {
             NormResultDataMessage msg = (NormResultDataMessage) message;
             int targetMsgCnt = msg.getTargetMsgCnt();
 
@@ -138,13 +140,13 @@ public class NormalizeDataActor extends AbstractActor {
             writeSelectDataIntoFile(msg.getSelectDataList());
 
             resultCnt++;
-            if (resultCnt == targetMsgCnt) {
+            if(resultCnt == targetMsgCnt) {
                 log.info("Received " + resultCnt + " messages. Finished normalizing train data.");
                 normDataWriter.close();
                 selectDataWriter.close();
                 getContext().system().shutdown();
             }
-        } else if (message instanceof ExceptionMessage) {
+        } else if(message instanceof ExceptionMessage) {
             // since some children actors meet some exception, shutdown the system
             ExceptionMessage msg = (ExceptionMessage) message;
             getContext().system().shutdown();
@@ -158,9 +160,11 @@ public class NormalizeDataActor extends AbstractActor {
 
     /**
      * Write the data which is selected to normalize, into file - tmp/SelectedRawData
-     *
-     * @param selectDataList - the raw selected data
-     * @throws IOException Exception when writing file
+     * 
+     * @param selectDataList
+     *            - the raw selected data
+     * @throws IOException
+     *             Exception when writing file
      */
     private void writeSelectDataIntoFile(List<String> selectDataList) throws IOException {
         for(String rawInput: selectDataList) {
@@ -170,14 +174,16 @@ public class NormalizeDataActor extends AbstractActor {
 
     /**
      * Write the normalized data into file - tmp/NormalizedData
-     *
-     * @param normalizedDataList - the normalized data
-     * @throws IOException Exception when writing file
+     * 
+     * @param normalizedDataList
+     *            - the normalized data
+     * @throws IOException
+     *             Exception when writing file
      */
     private void writeDataIntoFile(List<List<Double>> normalizedDataList) throws IOException {
-        for (List<Double> normData : normalizedDataList) {
-            for (Double data : normData) {
-                if (data == null) {
+        for(List<Double> normData: normalizedDataList) {
+            for(Double data: normData) {
+                if(data == null) {
                     normDataWriter.append("|");
                 } else {
                     normDataWriter.append(df.format(data) + "|");

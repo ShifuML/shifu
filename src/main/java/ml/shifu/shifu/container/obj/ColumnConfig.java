@@ -118,12 +118,11 @@ public class ColumnConfig {
         this.columnBinning = columnBinning;
     }
 
-
     /**
      * ---------------------------------------------------------------------------
-     *
-     * 					Capsulated methods for easy usage
-     *
+     * 
+     * Capsulated methods for easy usage
+     * 
      * ---------------------------------------------------------------------------
      */
 
@@ -140,8 +139,7 @@ public class ColumnConfig {
      */
     @JsonIgnore
     public boolean isCandidate() {
-        return !ColumnFlag.ForceRemove.equals(columnFlag)
-                && !ColumnFlag.Meta.equals(columnFlag)
+        return !ColumnFlag.ForceRemove.equals(columnFlag) && !ColumnFlag.Meta.equals(columnFlag)
                 && !ColumnFlag.Target.equals(columnFlag);
     }
 
@@ -150,7 +148,7 @@ public class ColumnConfig {
      */
     @JsonIgnore
     public boolean isNumerical() {
-        return columnType.equals(ColumnType.N);
+        return columnType == ColumnType.N;
     }
 
     /**
@@ -158,7 +156,7 @@ public class ColumnConfig {
      */
     @JsonIgnore
     public boolean isCategorical() {
-        return columnType.equals(ColumnType.C);
+        return columnType == ColumnType.C;
     }
 
     /**
@@ -166,7 +164,7 @@ public class ColumnConfig {
      */
     @JsonIgnore
     public boolean isMeta() {
-        return ColumnFlag.Meta.equals(columnFlag);
+        return ColumnFlag.Meta == (columnFlag);
     }
 
     /**
@@ -174,7 +172,7 @@ public class ColumnConfig {
      */
     @JsonIgnore
     public boolean isForceRemove() {
-        return ColumnFlag.ForceRemove.equals(columnFlag);
+        return ColumnFlag.ForceRemove == (columnFlag);
     }
 
     /**
@@ -182,7 +180,7 @@ public class ColumnConfig {
      */
     @JsonIgnore
     public boolean isForceSelect() {
-        return ColumnFlag.ForceSelect.equals(columnFlag);
+        return ColumnFlag.ForceSelect == (columnFlag);
     }
 
     /**
@@ -263,7 +261,6 @@ public class ColumnConfig {
         columnBinning.setBinCategory(binCategory);
         columnBinning.setLength(binCategory.size());
     }
-
 
     /**
      * @param binCountNeg
@@ -435,7 +432,8 @@ public class ColumnConfig {
     }
 
     /**
-     * @param version the version to set
+     * @param version
+     *            the version to set
      */
     public void setVersion(String version) {
         this.version = version;
@@ -452,7 +450,7 @@ public class ColumnConfig {
         }
 
         public int compare(ColumnConfig a, ColumnConfig b) {
-            if (key.equalsIgnoreCase("KS")) {
+            if(key.equalsIgnoreCase("KS")) {
                 return b.getKs().compareTo(a.getKs());
             } else {
                 return b.getIv().compareTo(a.getIv());

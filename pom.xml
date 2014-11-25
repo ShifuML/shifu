@@ -2,7 +2,7 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>ml.shifu</groupId>
     <artifactId>shifu</artifactId>
-    <version>0.2.3</version>
+    <version>0.2.4-SNAPSHOT</version>
 
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
@@ -405,7 +405,7 @@
                 <dependency>
                     <groupId>ml.shifu</groupId>
                     <artifactId>guagua-mapreduce</artifactId>
-                    <version>0.4.0</version>
+                    <version>0.5.0</version>
                     <classifier>hadoop1</classifier>
                 </dependency>
             </dependencies>
@@ -458,7 +458,7 @@
                 <dependency>
                     <groupId>ml.shifu</groupId>
                     <artifactId>guagua-mapreduce</artifactId>
-                    <version>0.4.0</version>
+                    <version>0.5.0</version>
                     <classifier>hadoop1</classifier>
                 </dependency>
             </dependencies>
@@ -520,7 +520,7 @@
                 <dependency>
                     <groupId>ml.shifu</groupId>
                     <artifactId>guagua-mapreduce</artifactId>
-                    <version>0.4.0</version>
+                    <version>0.5.0</version>
                     <classifier>hadoop2</classifier>
                 </dependency>
             </dependencies>

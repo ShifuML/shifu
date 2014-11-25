@@ -74,6 +74,11 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
 
     private static final String LOGS = "./logs";
 
+    /**
+     * If for variable selection, only using bagging number 1 to train only one model.
+     */
+    private boolean isForVarSelect;
+
     public TrainModelProcessor() {
     }
 
@@ -83,7 +88,8 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
      * @param isDryTrain
      *            dryTrain flag, if it's true, the trainer would start training
      * @param isDebug
-     *            debug flag, if it's true, shifu will create log file to record each training status
+     *            debug flag, if it's true, shifu will create log file to record
+     *            each training status
      */
     public TrainModelProcessor(boolean isDryTrain, boolean isDebug) {
         super();
@@ -111,13 +117,13 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
         RunMode runMode = super.modelConfig.getBasic().getRunMode();
         switch(runMode) {
             case mapred:
-                validatePigTrain();
+                validateDistributedTrain();
                 syncDataToHdfs(super.modelConfig.getDataSet().getSource());
                 runDistributedTrain();
                 break;
             case local:
             default:
-                runAkkaTrain(modelConfig.getBaggingNum());
+                runAkkaTrain(isForVarSelect ? 1 : modelConfig.getBaggingNum());
                 break;
         }
 
@@ -209,8 +215,7 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
         return trainers.get(index);
     }
 
-    // d-train part starts here
-    private void validatePigTrain() {
+    private void validateDistributedTrain() {
         if(!NNConstants.NN_ALG_NAME.equalsIgnoreCase(super.getModelConfig().getTrain().getAlgorithm())) {
             throw new IllegalArgumentException("Currently we only support NN distributed training.");
         }
@@ -240,7 +245,7 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
                         new Path(Constants.TMP, Constants.DEFAULT_MODELS_TMP_FOLDER), sourceType)));
         args.add(String.format(NNConstants.MAPREDUCE_PARAM_FORMAT, NNConstants.NN_TMP_MODELS_FOLDER,
                 tmpModelsPath.toString()));
-        int baggingNum = super.getModelConfig().getBaggingNum();
+        int baggingNum = isForVarSelect ? 1 : super.getModelConfig().getBaggingNum();
 
         long start = System.currentTimeMillis();
         LOG.info("Distributed trainning with baggingNum: {}", baggingNum);
@@ -342,14 +347,13 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
         args.add(ShifuFileUtils.getFileSystemBySourceType(sourceType)
                 .makeQualified(new Path(super.getPathFinder().getNormalizedDataPath())).toString());
 
-        args.add("-z");
         String zkServers = Environment.getProperty(Environment.ZOO_KEEPER_SERVERS);
         if(StringUtils.isEmpty(zkServers)) {
-            throw new IllegalArgumentException(
-                    "Zookeeper is used for distributed training coordination, please set 'zookeeperServers' firstly in '$SHIFU_HOME/conf/shifuconfig' file. The value is like 'server1:port1,server2:port2'.");
+            LOG.warn("No specified zookeeper settings from zookeeperServers in shifuConfig file, Guagua will set embeded zookeeper server in client process. For big data applications, specified zookeeper servers are strongly recommended.");
+        } else {
+            args.add("-z");
+            args.add(zkServers);
         }
-
-        args.add(zkServers);
 
         args.add("-w");
         args.add(NNWorker.class.getName());
@@ -358,7 +362,8 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
         args.add(NNMaster.class.getName());
 
         args.add("-c");
-        // the reason to add 1 is that the first iteration in D-NN implementation is used for training preparation.
+        // the reason to add 1 is that the first iteration in D-NN
+        // implementation is used for training preparation.
         int numTrainEpochs = super.getModelConfig().getTrain().getNumTrainEpochs() + 1;
 
         args.add(String.valueOf(numTrainEpochs));
@@ -385,7 +390,8 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
                         new Path(super.getPathFinder().getColumnConfigPath(sourceType)))));
         args.add(String.format(NNConstants.MAPREDUCE_PARAM_FORMAT, NNConstants.NN_MODELSET_SOURCE_TYPE, sourceType));
         args.add(String.format(NNConstants.MAPREDUCE_PARAM_FORMAT, NNConstants.NN_DRY_TRAIN, isDryTrain()));
-        // hard code set computation threshold for 40s. TODO, set it in shifuconfig.
+        // hard code set computation threshold for 40s. TODO, set it in
+        // shifuconfig.
         args.add(String.format(NNConstants.MAPREDUCE_PARAM_FORMAT, GuaguaConstants.GUAGUA_COMPUTATION_TIME_THRESHOLD,
                 40 * 1000l));
         setHeapSizeAndSplitSize(args);
@@ -402,8 +408,10 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
     }
 
     private void setHeapSizeAndSplitSize(final List<String> args) {
-        // TODO tmp setting 1G heap for each worker, need to be set in ModelConfig, each split is set to 256M for heap
-        // with 1G, should be set in ModelConfig also. Replace string as constants.
+        // TODO tmp setting 1G heap for each worker, need to be set in
+        // ModelConfig, each split is set to 256M for heap
+        // with 1G, should be set in ModelConfig also. Replace string as
+        // constants.
         if(this.isDebug()) {
             args.add(String.format(NNConstants.MAPREDUCE_PARAM_FORMAT, GuaguaMapReduceConstants.MAPRED_CHILD_JAVA_OPTS,
                     "-Xmn128m -Xms1G -Xmx1G -verbose:gc -XX:+PrintGCDetails -XX:+PrintGCTimeStamps"));
@@ -483,6 +491,21 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
 
     public void setDebug(boolean isDebug) {
         this.isDebug = isDebug;
+    }
+
+    /**
+     * @return the isForVarSelect
+     */
+    public boolean isForVarSelect() {
+        return isForVarSelect;
+    }
+
+    /**
+     * @param isForVarSelect
+     *            the isForVarSelect to set
+     */
+    public void setForVarSelect(boolean isForVarSelect) {
+        this.isForVarSelect = isForVarSelect;
     }
 
     /**

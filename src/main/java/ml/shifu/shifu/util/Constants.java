@@ -107,6 +107,7 @@ public interface Constants {
     public static final String KEY_PRE_TRAIN_STATS_PATH = "preTrainStatsPath";
     public static final String KEY_SELECTED_RAW_DATA_PATH = "selectedRawDataPath";
     public static final String KEY_NORMALIZED_DATA_PATH = "normalizedDataPath";
+    public static final String KEY_VARSLECT_STATS_PATH = "varSelectStatsPath";
     public static final String KEY_TRAIN_SCORES_PATH = "trainScoresPath";
     public static final String KEY_BIN_AVG_SCORE_PATH = "binAvgScorePath";
 
