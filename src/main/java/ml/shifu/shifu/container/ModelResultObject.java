@@ -20,7 +20,7 @@ import java.util.Comparator;
 /**
  * Model score result object
  */
-public class ModelResultObject {
+public class ModelResultObject implements Comparable<ModelResultObject>{
 
     private double score;
     private String tag;
@@ -56,5 +56,10 @@ public class ModelResultObject {
     public String toString() {
         return "(" + this.score + ", " + this.tag + ", " + this.weight + ")";
     }
+
+	@Override
+	public int compareTo(ModelResultObject o) {
+		return Double.compare(score, o.score);
+	}
 
 }

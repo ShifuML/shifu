@@ -101,7 +101,7 @@ public class CalculateNewStatsUDF extends AbstractTrainerUDF<Tuple> {
         } else {
             tuple.append("N");
         }
-        tuple.append(df.format(columnConfig.getColumnStats().getMedian()));
+        tuple.append((columnConfig.getColumnStats().getMedian()));
         
         tuple.append(columnConfig.getMissingCount());
         tuple.append(columnConfig.getTotalCount());

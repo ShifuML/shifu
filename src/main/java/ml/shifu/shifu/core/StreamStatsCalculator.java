@@ -17,6 +17,8 @@
  */
 package ml.shifu.shifu.core;
 
+import java.util.List;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -41,6 +43,8 @@ public class StreamStatsCalculator {
 
     private Double threshold = 1e6;
     private Double EPS = 1e-6;
+    
+    private MunroPatEstimator<Double> estimator;
 
     private int validElementCnt = 0;
     
@@ -52,6 +56,7 @@ public class StreamStatsCalculator {
      */
     public StreamStatsCalculator(Double threshold) {
         this.threshold = threshold;
+        estimator = new MunroPatEstimator<Double>(3);
     }
 
     public void addData(double data) {
@@ -67,6 +72,8 @@ public class StreamStatsCalculator {
 
         sum += data;
         squaredSum += data * data;
+        
+        estimator.add(data);
     }
     
     public void addData(double data, int frequency) {
@@ -116,7 +123,10 @@ public class StreamStatsCalculator {
     }
 
     public double getMedian() {
-        return median;
+    	List<Double> list = estimator.getQuantiles();	
+    	if (list.size() == 0) return median;
+    	
+    	else return list.get(1);
     }
     
 }

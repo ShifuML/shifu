@@ -26,6 +26,7 @@ import ml.shifu.shifu.core.binning.AbstractBinning;
 import ml.shifu.shifu.core.binning.CategoricalBinning;
 import ml.shifu.shifu.core.binning.EqualIntervalBinning;
 import ml.shifu.shifu.core.binning.EqualPopulationBinning;
+import ml.shifu.shifu.core.binning.MunroPatBinning;
 
 import org.apache.commons.lang.StringUtils;
 import org.apache.pig.data.DataBag;
@@ -76,6 +77,7 @@ public class BinningDataUDF extends AbstractTrainerUDF<Tuple> {
                 binning = new EqualIntervalBinning(modelConfig.getStats().getMaxNumBin());
             } else {
                 binning = new EqualPopulationBinning(modelConfig.getStats().getMaxNumBin());
+            	//binning = new MunroPatBinning(modelConfig.getStats().getMaxNumBin());
             }
         }
         
