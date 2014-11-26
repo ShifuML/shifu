@@ -76,8 +76,8 @@ public class BinningDataUDF extends AbstractTrainerUDF<Tuple> {
             if ( super.modelConfig.getBinningMethod().equals(BinningMethod.EqualInterval) ) {
                 binning = new EqualIntervalBinning(modelConfig.getStats().getMaxNumBin());
             } else {
-                binning = new EqualPopulationBinning(modelConfig.getStats().getMaxNumBin());
-            	//binning = new MunroPatBinning(modelConfig.getStats().getMaxNumBin());
+                //binning = new EqualPopulationBinning(modelConfig.getStats().getMaxNumBin());
+            	binning = new MunroPatBinning(modelConfig.getStats().getMaxNumBin());
             }
         }
         
