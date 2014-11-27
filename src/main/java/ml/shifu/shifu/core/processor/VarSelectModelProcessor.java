@@ -29,10 +29,7 @@ import ml.shifu.shifu.core.VariableSelector;
 import ml.shifu.shifu.core.alg.NNTrainer;
 import ml.shifu.shifu.core.dtrain.NNConstants;
 import ml.shifu.shifu.core.dtrain.NNOutput;
-import ml.shifu.shifu.core.dvarsel.VarSelMaster;
-import ml.shifu.shifu.core.dvarsel.VarSelMasterResult;
-import ml.shifu.shifu.core.dvarsel.VarSelWorker;
-import ml.shifu.shifu.core.dvarsel.VarSelWorkerResult;
+import ml.shifu.shifu.core.dvarsel.*;
 import ml.shifu.shifu.core.dvarsel.wrapper.WrapperMasterConductor;
 import ml.shifu.shifu.core.dvarsel.wrapper.WrapperWorkerConductor;
 import ml.shifu.shifu.core.validator.ModelInspector.ModelStep;
@@ -121,6 +118,9 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
         final List<String> args = new ArrayList<String>();
         //prepare parameter
         prepareVarSelParams(args, sourceType);
+
+        Path columnIdsPath = getVotedSelectionPath(sourceType);
+        args.add(String.format(NNConstants.MAPREDUCE_PARAM_FORMAT, Constants.VAR_SEL_COLUMN_IDS_OUPUT, columnIdsPath.toString()));
     	
     	long start = System.currentTimeMillis();
     	
@@ -129,10 +129,18 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
         guaguaClient.creatJob(args.toArray(new String[0])).waitForCompletion(true);
         
         log.info("Voted variables selection finished in {}ms.", System.currentTimeMillis() - start);
+
+        //persistence the coloums
+
     	
         return 0;
     }
-    
+
+    private Path getVotedSelectionPath(SourceType sourceType) {
+
+        return ShifuFileUtils.getFileSystemBySourceType(sourceType).makeQualified(new Path(getPathFinder().getVarSelsPath(sourceType), "VarSels"));
+    }
+
     private void prepareVarSelParams(final List<String> args, final SourceType sourceType) {
     	args.add("-libjars");
     	
@@ -151,6 +159,7 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
 
         args.add(zkServers);
 
+        //setting the class
         args.add("-w");
         args.add(VarSelWorker.class.getName());
 
@@ -168,17 +177,22 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
 
         args.add("-wr");
         args.add(VarSelWorkerResult.class.getName());
-        
+
+        //setting conductor
         args.add(String.format(NNConstants.MAPREDUCE_PARAM_FORMAT, Constants.VAR_SEL_MASTER_CONDUCTOR, 
         		 Environment.getProperty(Environment.VAR_SEL_MASTER_CONDUCTOR, WrapperMasterConductor.class.getName())));
         
         args.add(String.format(NNConstants.MAPREDUCE_PARAM_FORMAT, Constants.VAR_SEL_WORKER_CONDUCTOR, 
        		 Environment.getProperty(Environment.VAR_SEL_MASTER_CONDUCTOR, WrapperWorkerConductor.class.getName())));
 
+        //setting queue
         args.add(String.format(NNConstants.MAPREDUCE_PARAM_FORMAT, NNConstants.MAPRED_JOB_QUEUE_NAME,
                 Environment.getProperty(Environment.HADOOP_JOB_QUEUE, Constants.DEFAULT_JOB_QUEUE)));
+
         args.add(String.format(NNConstants.MAPREDUCE_PARAM_FORMAT, GuaguaConstants.GUAGUA_MASTER_INTERCEPTERS,
-                NNOutput.class.getName()));
+                VarSelOutput.class.getName()));
+
+        //setting model config column config
         args.add(String.format(
                 NNConstants.MAPREDUCE_PARAM_FORMAT,
                 NNConstants.SHIFU_NN_MODEL_CONFIG,
@@ -189,9 +203,11 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
                 NNConstants.SHIFU_NN_COLUMN_CONFIG,
                 ShifuFileUtils.getFileSystemBySourceType(sourceType).makeQualified(
                         new Path(super.getPathFinder().getColumnConfigPath(sourceType)))));
+
+        //source type
         args.add(String.format(NNConstants.MAPREDUCE_PARAM_FORMAT, NNConstants.NN_MODELSET_SOURCE_TYPE, sourceType));
-        //args.add(String.format(NNConstants.MAPREDUCE_PARAM_FORMAT, NNConstants.NN_DRY_TRAIN, isDryTrain()));
-        // hard code set computation threshold for 40s. TODO, set it in shifuconfig.
+
+        //computation time
         args.add(String.format(NNConstants.MAPREDUCE_PARAM_FORMAT, GuaguaConstants.GUAGUA_COMPUTATION_TIME_THRESHOLD,
                 40 * 1000l));
         setHeapSizeAndSplitSize(args);

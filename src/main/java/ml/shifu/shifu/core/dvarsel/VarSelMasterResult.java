@@ -22,6 +22,7 @@ import ml.shifu.guagua.io.HaltBytable;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -41,12 +42,20 @@ public class VarSelMasterResult extends HaltBytable {
 
     @Override
     public void doWrite(DataOutput out) throws IOException {
-
+        out.write(columnIdList.size());
+        for ( Integer columnId : columnIdList ){
+            out.write(columnId);
+        }
     }
 
     @Override
     public void doReadFields(DataInput in) throws IOException {
+        Integer size = in.readInt();
+        columnIdList = new ArrayList<Integer>(size);
 
+        for ( int i = 0 ; i < size; i++) {
+            columnIdList.add(in.readInt());
+        }
     }
 
     public List<Integer> getColumnIdList() {

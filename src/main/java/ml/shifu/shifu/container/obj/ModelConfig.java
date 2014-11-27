@@ -177,11 +177,12 @@ public class ModelConfig {
 
         // build varselect info
         ModelVarSelectConf varselect = new ModelVarSelectConf();
+        varselect.setVotedVariablesSelection(Boolean.FALSE);
         // create empty <ModelName>/forceselect.column.names
         ShifuFileUtils.createFileIfNotExists(new Path(modelName,
                 Constants.DEFAULT_FORCESELECT_COLUMN_FILE).toString(), SourceType.LOCAL);
         varselect.setForceSelectColumnNameFile(Constants.DEFAULT_FORCESELECT_COLUMN_FILE);
-        varselect.setVotedVariablesSelection(false);
+
 
         // create empty <ModelName>/forceremove.column.names
         ShifuFileUtils.createFileIfNotExists(new Path(modelName,
@@ -609,9 +610,15 @@ public class ModelConfig {
     	return varSelect.getVotedVariablesSelection();
     }
 
-    /**
-     * @return
-     */
+    @JsonIgnore
+    public void setVotedVariablesSelection(boolean votedVariablesSelection){
+        this.varSelect.setVotedVariablesSelection(votedVariablesSelection);
+    }
+
+
+        /**
+         * @return
+         */
     @JsonIgnore
     public int getNumTrainEpochs() {
         return train.getNumTrainEpochs();

@@ -24,6 +24,8 @@ public interface Constants {
 
     public static final String MODELS = "models";
 
+    public static final String VarSels = "varsels";
+
     public static final String COLUMN_CONFIG_JSON_FILE_NAME = "ColumnConfig.json";
 
     public static final String MODEL_CONFIG_JSON_FILE_NAME = "ModelConfig.json";
@@ -118,6 +120,7 @@ public interface Constants {
     
     public static final String VAR_SEL_MASTER_CONDUCTOR = "dvarsel.master.conductor.cls";
     public static final String VAR_SEL_WORKER_CONDUCTOR = "dvarsel.worker.conductor.cls";
+    public static final String VAR_SEL_COLUMN_IDS_OUPUT = "dvarsle.column.ids.output";
 
 
 }

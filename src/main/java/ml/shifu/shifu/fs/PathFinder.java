@@ -247,6 +247,11 @@ public class PathFinder {
         return getPathBySourceType(new Path(Constants.TMP, Constants.DEFAULT_MODELS_TMP_FOLDER), sourceType);
     }
 
+    public String getVarSelsPath(SourceType sourceType){
+
+        return getPathBySourceType(new Path(Constants.VarSels), sourceType);
+    }
+
     /**
      * @param sourceType
      * @return
