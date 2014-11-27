@@ -181,6 +181,7 @@ public class ModelConfig {
         ShifuFileUtils.createFileIfNotExists(new Path(modelName,
                 Constants.DEFAULT_FORCESELECT_COLUMN_FILE).toString(), SourceType.LOCAL);
         varselect.setForceSelectColumnNameFile(Constants.DEFAULT_FORCESELECT_COLUMN_FILE);
+        varselect.setVotedVariablesSelection(false);
 
         // create empty <ModelName>/forceremove.column.names
         ShifuFileUtils.createFileIfNotExists(new Path(modelName,
@@ -602,6 +603,11 @@ public class ModelConfig {
     public int getVarSelectWrapperNum() {
         return varSelect.getWrapperNum();
     }
+    
+    @JsonIgnore
+    public boolean getVotedVariablesSelection(){
+    	return varSelect.getVotedVariablesSelection();
+    }
 
     /**
      * @return
@@ -729,5 +735,7 @@ public class ModelConfig {
         ModelConfig mc = (ModelConfig) obj;
         return mc.getBasic().equals(basic);
     }
+    
+    
 
 }

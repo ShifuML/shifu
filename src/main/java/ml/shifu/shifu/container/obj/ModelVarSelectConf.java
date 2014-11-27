@@ -33,6 +33,8 @@ public class ModelVarSelectConf {
     private Boolean filterEnable = Boolean.TRUE;
     private Integer filterNum = Integer.valueOf(200);
     private String filterBy = "KS";
+    
+    private Boolean votedVariablesSelection = Boolean.FALSE;
 
     // wrapper method for variable selection
     // don't open those options to user
@@ -114,5 +116,13 @@ public class ModelVarSelectConf {
     public void setWrapperBy(String wrapperBy) {
         this.wrapperBy = wrapperBy;
     }
+
+	public Boolean getVotedVariablesSelection() {
+		return votedVariablesSelection;
+	}
+
+	public void setVotedVariablesSelection(Boolean votedVariablesSelection) {
+		this.votedVariablesSelection = votedVariablesSelection;
+	}
 
 }

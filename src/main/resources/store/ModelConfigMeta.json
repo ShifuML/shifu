@@ -210,6 +210,11 @@
                     {"label": "Mixed KS and IV", "value":"mix"}
                 ]
             }, {
+            	"name": "votedVariablesSelection",
+            	"type": "boolean",
+            	"directive": "checkbox",
+            	"defval": false
+            }, {
                 "name": "wrapperEnabled",
                 "type": "boolean",
                 "directive": "checkbox",

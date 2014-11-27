@@ -18,6 +18,7 @@ package ml.shifu.shifu.core.dvarsel;
  */
 
 import com.google.common.base.Splitter;
+
 import ml.shifu.guagua.io.GuaguaFileSplit;
 import ml.shifu.guagua.mapreduce.GuaguaLineRecordReader;
 import ml.shifu.guagua.mapreduce.GuaguaWritableAdapter;
@@ -31,6 +32,8 @@ import ml.shifu.shifu.core.dtrain.NNConstants;
 import ml.shifu.shifu.core.dvarsel.dataset.TrainingDataSet;
 import ml.shifu.shifu.core.dvarsel.dataset.TrainingRecord;
 import ml.shifu.shifu.util.CommonUtils;
+import ml.shifu.shifu.util.Constants;
+
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Text;
 import org.slf4j.Logger;
@@ -79,7 +82,7 @@ public class VarSelWorker extends AbstractWorkerComputable<VarSelMasterResult, V
 
             this.columnConfigList = CommonUtils.loadColumnConfigList(NNConstants.SHIFU_NN_COLUMN_CONFIG, sourceType);
 
-            String conductorClsName = props.getProperty("dvarsel.worker.conductor.cls");
+            String conductorClsName = props.getProperty(Constants.VAR_SEL_WORKER_CONDUCTOR);
 
             this.workerConductor = (AbstractWorkerConductor) Class.forName(conductorClsName)
                     .getDeclaredConstructor(ModelConfig.class, List.class)

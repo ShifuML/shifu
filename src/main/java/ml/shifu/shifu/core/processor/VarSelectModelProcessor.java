@@ -15,15 +15,48 @@
  */
 package ml.shifu.shifu.core.processor;
 
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+
+import ml.shifu.guagua.GuaguaConstants;
+import ml.shifu.guagua.mapreduce.GuaguaMapReduceClient;
+import ml.shifu.guagua.mapreduce.GuaguaMapReduceConstants;
+import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
 import ml.shifu.shifu.core.AbstractTrainer;
 import ml.shifu.shifu.core.VariableSelector;
 import ml.shifu.shifu.core.alg.NNTrainer;
+import ml.shifu.shifu.core.dtrain.NNConstants;
+import ml.shifu.shifu.core.dtrain.NNOutput;
+import ml.shifu.shifu.core.dvarsel.VarSelMaster;
+import ml.shifu.shifu.core.dvarsel.VarSelMasterResult;
+import ml.shifu.shifu.core.dvarsel.VarSelWorker;
+import ml.shifu.shifu.core.dvarsel.VarSelWorkerResult;
+import ml.shifu.shifu.core.dvarsel.wrapper.WrapperMasterConductor;
+import ml.shifu.shifu.core.dvarsel.wrapper.WrapperWorkerConductor;
 import ml.shifu.shifu.core.validator.ModelInspector.ModelStep;
 import ml.shifu.shifu.exception.ShifuErrorCode;
 import ml.shifu.shifu.exception.ShifuException;
+import ml.shifu.shifu.fs.ShifuFileUtils;
 import ml.shifu.shifu.util.CommonUtils;
+import ml.shifu.shifu.util.Constants;
+import ml.shifu.shifu.util.Environment;
+
+import org.apache.commons.collections.ListUtils;
+import org.apache.commons.compress.compressors.bzip2.BZip2CompressorInputStream;
+import org.apache.commons.lang.StringUtils;
+import org.apache.hadoop.fs.Path;
+import org.apache.pig.impl.util.JarManager;
+import org.apache.zookeeper.ZooKeeper;
+import org.encog.ml.data.MLDataSet;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.core.JsonParser;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.base.Splitter;
 
 
 /**
@@ -34,6 +67,10 @@ import org.slf4j.LoggerFactory;
 public class VarSelectModelProcessor extends BasicModelProcessor implements Processor {
 
     private final static Logger log = LoggerFactory.getLogger(VarSelectModelProcessor.class);
+    
+    private static final String SHIFU_DTRAIN_PARALLEL = "shifu.dtrain.parallel";
+    public static final String SHIFU_DEFAULT_DTRAIN_PARALLEL = "true";
+    private static boolean isDebug = false;
 
     /**
      * run for the variable selection
@@ -42,14 +79,26 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
     public int run() throws Exception {
         setUp(ModelStep.VARSELECT);
 
-        CommonUtils.updateColumnConfigFlags(modelConfig, columnConfigList);
+        if (modelConfig.getVotedVariablesSelection()) {
+        	votedVariablesSelection();
+        } else{
+        	nativeVarialeSelection();
+        }
+
+        clearUp(ModelStep.VARSELECT);
+        return 0;
+    }
+    
+    private int nativeVarialeSelection() throws Exception{
+    	
+    	CommonUtils.updateColumnConfigFlags(modelConfig, columnConfigList);
 
         VariableSelector selector = new VariableSelector(this.modelConfig, this.columnConfigList);
 
         // Filter
         this.columnConfigList = selector.selectByFilter();
         try {
-            this.saveColumnConfigList();
+            saveColumnConfigList();
         } catch (ShifuException e) {
             throw new ShifuException(ShifuErrorCode.ERROR_WRITE_COLCONFIG, e);
         }
@@ -59,9 +108,153 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
             wrapper(selector);
         }
         log.info("Step Finished: varselect");
+        
+        return 0 ;
+    }
+    
+    private int votedVariablesSelection() throws ClassNotFoundException, IOException, InterruptedException{
+    	
+    	log.info("Start voted variables selection ");
+    	
+    	SourceType sourceType = super.getModelConfig().getDataSet().getSource();
 
-        clearUp(ModelStep.VARSELECT);
+        final List<String> args = new ArrayList<String>();
+        //prepare parameter
+        prepareVarSelParams(args, sourceType);
+    	
+    	long start = System.currentTimeMillis();
+    	
+    	GuaguaMapReduceClient guaguaClient = new GuaguaMapReduceClient();
+    	
+        guaguaClient.creatJob(args.toArray(new String[0])).waitForCompletion(true);
+        
+        log.info("Voted variables selection finished in {}ms.", System.currentTimeMillis() - start);
+    	
         return 0;
+    }
+    
+    private void prepareVarSelParams(final List<String> args, final SourceType sourceType) {
+    	args.add("-libjars");
+    	
+        addRuntimeJars(args);
+
+        args.add("-i");
+        args.add(ShifuFileUtils.getFileSystemBySourceType(sourceType)
+                .makeQualified(new Path(modelConfig.getDataSetRawPath())).toString());
+
+        args.add("-z");
+        String zkServers = Environment.getProperty(Environment.ZOO_KEEPER_SERVERS);
+        if(StringUtils.isEmpty(zkServers)) {
+            throw new IllegalArgumentException(
+                    "Zookeeper is used for distributed training coordination, please set 'zookeeperServers' firstly in '$SHIFU_HOME/conf/shifuconfig' file. The value is like 'server1:port1,server2:port2'.");
+        }
+
+        args.add(zkServers);
+
+        args.add("-w");
+        args.add(VarSelWorker.class.getName());
+
+        args.add("-m");
+        args.add(VarSelMaster.class.getName());
+
+        args.add("-c");
+        // the reason to add 1 is that the first iteration in D-NN implementation is used for training preparation.
+        int numTrainEpochs = super.getModelConfig().getTrain().getNumTrainEpochs() + 1;
+
+        args.add(String.valueOf(numTrainEpochs));
+
+        args.add("-mr");
+        args.add(VarSelMasterResult.class.getName());
+
+        args.add("-wr");
+        args.add(VarSelWorkerResult.class.getName());
+        
+        args.add(String.format(NNConstants.MAPREDUCE_PARAM_FORMAT, Constants.VAR_SEL_MASTER_CONDUCTOR, 
+        		 Environment.getProperty(Environment.VAR_SEL_MASTER_CONDUCTOR, WrapperMasterConductor.class.getName())));
+        
+        args.add(String.format(NNConstants.MAPREDUCE_PARAM_FORMAT, Constants.VAR_SEL_WORKER_CONDUCTOR, 
+       		 Environment.getProperty(Environment.VAR_SEL_MASTER_CONDUCTOR, WrapperWorkerConductor.class.getName())));
+
+        args.add(String.format(NNConstants.MAPREDUCE_PARAM_FORMAT, NNConstants.MAPRED_JOB_QUEUE_NAME,
+                Environment.getProperty(Environment.HADOOP_JOB_QUEUE, Constants.DEFAULT_JOB_QUEUE)));
+        args.add(String.format(NNConstants.MAPREDUCE_PARAM_FORMAT, GuaguaConstants.GUAGUA_MASTER_INTERCEPTERS,
+                NNOutput.class.getName()));
+        args.add(String.format(
+                NNConstants.MAPREDUCE_PARAM_FORMAT,
+                NNConstants.SHIFU_NN_MODEL_CONFIG,
+                ShifuFileUtils.getFileSystemBySourceType(sourceType).makeQualified(
+                        new Path(super.getPathFinder().getModelConfigPath(sourceType)))));
+        args.add(String.format(
+                NNConstants.MAPREDUCE_PARAM_FORMAT,
+                NNConstants.SHIFU_NN_COLUMN_CONFIG,
+                ShifuFileUtils.getFileSystemBySourceType(sourceType).makeQualified(
+                        new Path(super.getPathFinder().getColumnConfigPath(sourceType)))));
+        args.add(String.format(NNConstants.MAPREDUCE_PARAM_FORMAT, NNConstants.NN_MODELSET_SOURCE_TYPE, sourceType));
+        //args.add(String.format(NNConstants.MAPREDUCE_PARAM_FORMAT, NNConstants.NN_DRY_TRAIN, isDryTrain()));
+        // hard code set computation threshold for 40s. TODO, set it in shifuconfig.
+        args.add(String.format(NNConstants.MAPREDUCE_PARAM_FORMAT, GuaguaConstants.GUAGUA_COMPUTATION_TIME_THRESHOLD,
+                40 * 1000l));
+        setHeapSizeAndSplitSize(args);
+
+        // one can set guagua conf in shifuconfig
+        for(Map.Entry<Object, Object> entry: Environment.getProperties().entrySet()) {
+            if(entry.getKey().toString().startsWith("nn") || entry.getKey().toString().startsWith("guagua")
+                    || entry.getKey().toString().startsWith("mapred")) {
+                args.add(String.format(NNConstants.MAPREDUCE_PARAM_FORMAT, entry.getKey().toString(), entry.getValue()
+                        .toString()));
+            }
+        }
+    }
+    
+ // GuaguaOptionsParser doesn't to support *.jar currently.
+    private void addRuntimeJars(final List<String> args) {
+        List<String> jars = new ArrayList<String>(16);
+        // jackson-databind-*.jar
+        jars.add(JarManager.findContainingJar(ObjectMapper.class));
+        // jackson-core-*.jar
+        jars.add(JarManager.findContainingJar(JsonParser.class));
+        // jackson-annotations-*.jar
+        jars.add(JarManager.findContainingJar(JsonIgnore.class));
+        // commons-compress-*.jar
+        jars.add(JarManager.findContainingJar(BZip2CompressorInputStream.class));
+        // commons-lang-*.jar
+        jars.add(JarManager.findContainingJar(StringUtils.class));
+        // commons-collections-*.jar
+        jars.add(JarManager.findContainingJar(ListUtils.class));
+        // common-io-*.jar
+        jars.add(JarManager.findContainingJar(org.apache.commons.io.IOUtils.class));
+        // guava-*.jar
+        jars.add(JarManager.findContainingJar(Splitter.class));
+        // encog-core-*.jar
+        jars.add(JarManager.findContainingJar(MLDataSet.class));
+        // shifu-*.jar
+        jars.add(JarManager.findContainingJar(getClass()));
+        // guagua-core-*.jar
+        jars.add(JarManager.findContainingJar(GuaguaConstants.class));
+        // guagua-mapreduce-*.jar
+        jars.add(JarManager.findContainingJar(GuaguaMapReduceConstants.class));
+        // zookeeper-*.jar
+        jars.add(JarManager.findContainingJar(ZooKeeper.class));
+
+        args.add(StringUtils.join(jars, NNConstants.LIB_JAR_SEPARATOR));
+    }
+    
+    private void setHeapSizeAndSplitSize(final List<String> args) {
+        // TODO tmp setting 1G heap for each worker, need to be set in ModelConfig, each split is set to 256M for heap
+        // with 1G, should be set in ModelConfig also. Replace string as constants.
+        if(isDebug == true) {
+            args.add(String.format(NNConstants.MAPREDUCE_PARAM_FORMAT, GuaguaMapReduceConstants.MAPRED_CHILD_JAVA_OPTS,
+                    "-Xmn128m -Xms1G -Xmx1G -verbose:gc -XX:+PrintGCDetails -XX:+PrintGCTimeStamps"));
+        } else {
+            args.add(String.format(NNConstants.MAPREDUCE_PARAM_FORMAT, GuaguaMapReduceConstants.MAPRED_CHILD_JAVA_OPTS,
+                    "-Xmn128m -Xms1G -Xmx1G"));
+        }
+        args.add(String.format(NNConstants.MAPREDUCE_PARAM_FORMAT, 
+                GuaguaConstants.GUAGUA_SPLIT_COMBINABLE,
+                Environment.getProperty(GuaguaConstants.GUAGUA_SPLIT_COMBINABLE, SHIFU_DEFAULT_DTRAIN_PARALLEL)));
+        args.add(String.format(NNConstants.MAPREDUCE_PARAM_FORMAT,
+                GuaguaConstants.GUAGUA_SPLIT_MAX_COMBINED_SPLIT_SIZE,
+                Environment.getProperty(GuaguaConstants.GUAGUA_SPLIT_MAX_COMBINED_SPLIT_SIZE, "268435456")));
     }
 
     /**

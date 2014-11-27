@@ -24,6 +24,8 @@ import ml.shifu.shifu.container.obj.ModelConfig;
 import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
 import ml.shifu.shifu.core.dtrain.NNConstants;
 import ml.shifu.shifu.util.CommonUtils;
+import ml.shifu.shifu.util.Constants;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -84,7 +86,7 @@ public class VarSelMaster implements MasterComputable<VarSelMasterResult, VarSel
 
             this.columnConfigList = CommonUtils.loadColumnConfigList(NNConstants.SHIFU_NN_COLUMN_CONFIG, sourceType);
 
-            String conductorClsName = props.getProperty("dvarsel.master.conductor.cls");
+            String conductorClsName = props.getProperty(Constants.VAR_SEL_MASTER_CONDUCTOR);
 
             this.masterConductor = (AbstractMasterConductor) Class.forName(conductorClsName)
                     .getDeclaredConstructor(ModelConfig.class, List.class)
