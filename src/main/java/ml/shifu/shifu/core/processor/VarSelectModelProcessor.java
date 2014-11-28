@@ -218,12 +218,12 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
             if(columnConfig.isForceSelect()) {
                 forceSelectCount++;
             }
-            if(columnConfig.isCandidate()) {
+            if( CommonUtils.isGoodCandidate(columnConfig) ) {
                 candidateCount++;
             }
         }
 
-        args.add(String.valueOf(Math.min(expectVarCount, candidateCount) - forceSelectCount));
+        args.add(String.valueOf(Math.min(expectVarCount, candidateCount) - forceSelectCount + 1));
 
         args.add("-mr");
         args.add(VarSelMasterResult.class.getName());
