@@ -115,7 +115,9 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
 
     private void votedVariablesSelection() throws ClassNotFoundException, IOException, InterruptedException {
         log.info("Start voted variables selection ");
-
+        //sync data back to hdfs
+        super.syncDataToHdfs(modelConfig.getDataSet().getSource());
+        
         SourceType sourceType = super.getModelConfig().getDataSet().getSource();
 
         final List<String> args = new ArrayList<String>();
