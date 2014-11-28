@@ -28,22 +28,22 @@ import org.encog.util.concurrency.EngineTask;
 public class MSEWorker implements EngineTask {
 
     private final BasicNetwork network;
-    private final AbstractTrainer owner;
     private final MLDataSet dataSet;
     private final int low;
     private final int high;
     private final MLDataPair pair;
 
+    private double totalError;
+
     public MSEWorker(BasicNetwork network,
-                     AbstractTrainer owner,
                      MLDataSet dataSet,
                      int low, int high) {
         this.network = network;
-        this.owner = owner;
         this.dataSet = dataSet;
         this.low = low;
         this.high = high;
         this.pair = BasicMLDataPair.createPair(network.getInputCount(), network.getOutputCount());
+        this.totalError = 0.0;
     }
 
     public void run() {
@@ -54,8 +54,12 @@ public class MSEWorker implements EngineTask {
             double tmp = result.getData()[0] - this.pair.getIdeal().getData()[0];
             double mse = tmp * tmp;
 
-            owner.report(mse);
+            this.totalError += mse;
         }
+    }
+
+    public double getTotalError() {
+        return this.totalError;
     }
 }
 

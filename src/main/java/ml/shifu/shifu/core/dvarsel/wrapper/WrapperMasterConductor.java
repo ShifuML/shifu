@@ -21,6 +21,8 @@ import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.container.obj.ModelConfig;
 import ml.shifu.shifu.core.dvarsel.AbstractMasterConductor;
 import ml.shifu.shifu.core.dvarsel.VarSelWorkerResult;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -31,6 +33,8 @@ import java.util.Set;
  * Created on 11/24/2014.
  */
 public class WrapperMasterConductor extends AbstractMasterConductor {
+
+    private static final Logger LOG = LoggerFactory.getLogger(WrapperMasterConductor.class);
 
     private int expectVarCount;
     private Set<Integer> workingSet;
@@ -45,6 +49,8 @@ public class WrapperMasterConductor extends AbstractMasterConductor {
                 workingSet.add(columnConfig.getColumnNum());
             }
         }
+
+        LOG.info("Expected variable count is - {}, base working set size is - {}", expectVarCount, workingSet.size());
     }
 
     @Override
@@ -82,6 +88,7 @@ public class WrapperMasterConductor extends AbstractMasterConductor {
             }
         }
 
+        LOG.info("Column - {} get most votes - {}", maxVotedColumnId, maxVoteCount);
         // no voted columnId found
         if ( maxVotedColumnId > 0 ) {
             workingSet.add(maxVotedColumnId - 1);

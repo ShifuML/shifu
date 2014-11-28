@@ -31,7 +31,7 @@ import java.util.List;
  */
 public class VarSelWorkerResult extends HaltBytable {
 
-    private List<Integer> columnIdList;
+    private List<Integer> columnIdList = new ArrayList<Integer>(0);
 
     public VarSelWorkerResult() {
         // default constructor, for serialization

@@ -52,12 +52,12 @@ public class TrainingDataSet {
         for ( TrainingRecord trainingRecord : trainingRecords ) {
             MLDataPair pair = trainingRecord.toMLDataPair(dataColumnIdList, workingColumnIdSet);
 
-            double seed = rd.nextDouble();
-            if (seed > validationRate) {
+            //double seed = rd.nextDouble();
+            //if (seed > validationRate) {
                 trainingData.add(pair);
-            } else {
-                testingData.add(pair);
-            }
+            //} else {
+            //    testingData.add(pair);
+            //}
         }
     }
 

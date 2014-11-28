@@ -17,6 +17,7 @@ package ml.shifu.shifu.core.dvarsel.wrapper;
  * limitations under the License.
  */
 
+import junit.framework.Assert;
 import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.container.obj.ModelConfig;
 import ml.shifu.shifu.container.obj.RawSourceData;
@@ -56,7 +57,7 @@ public class WrapperWorkerConductorTest {
         wrapper.retainData(trainingDataSet);
 
         List<Integer> workingList = new ArrayList<Integer>();
-        while ( workingList.size() < trainingDataSet.getDataColumnIdList().size() ) {
+        while ( workingList.size() < 5 ) {
             wrapper.consumeMasterResult(new VarSelMasterResult(workingList));
             VarSelWorkerResult result = wrapper.generateVarSelResult();
             if ( result.getColumnIdList().get(0) != -1  ) {
@@ -65,6 +66,7 @@ public class WrapperWorkerConductorTest {
         }
 
         System.out.println(workingList.toString());
+        Assert.assertEquals(5, workingList.size());
     }
 
     public TrainingDataSet genTrainingDataSet(ModelConfig modelConfig, List<ColumnConfig> columnConfigList) throws IOException {
