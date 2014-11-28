@@ -42,9 +42,9 @@ public class VarSelMasterResult extends HaltBytable {
 
     @Override
     public void doWrite(DataOutput out) throws IOException {
-        out.write(columnIdList.size());
+        out.writeInt(columnIdList.size());
         for ( Integer columnId : columnIdList ){
-            out.write(columnId);
+            out.writeInt(columnId);
         }
     }
 
