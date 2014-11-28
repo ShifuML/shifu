@@ -67,6 +67,8 @@ public class VarSelWorker
     private int weightColumnId = -1;
 
     private TrainingDataSet trainingDataSet;
+    private long posRecordCount = 0;
+    private long totalRecordCount = 0;
 
     @Override
     public void initRecordReader(GuaguaFileSplit fileSplit) throws IOException {
@@ -132,6 +134,7 @@ public class VarSelWorker
     @Override
     public VarSelWorkerResult doCompute(WorkerContext<VarSelMasterResult, VarSelWorkerResult> workerContext) {
         if(!workerConductor.isInitialized()) {
+            LOG.info("There are {} records in current worker, with {} positive records.", totalRecordCount, posRecordCount);
             workerConductor.retainData(trainingDataSet);
         }
 
@@ -163,13 +166,10 @@ public class VarSelWorker
         int targetColumnId = CommonUtils.getTargetColumnNum(columnConfigList);
         String tag = StringUtils.trim(fields[targetColumnId]);
 
-        long posRecordCount = 0;
-        long totalRecordCount = 0;
-
         if(this.dataPurifier.isFilterOut(record) && isPosOrNegTag(modelConfig, tag)) {
-            totalRecordCount ++;
-            if ( modelConfig.getPosTags().contains(tag) ) {
-                posRecordCount ++;
+            this.totalRecordCount ++;
+            if ( this.modelConfig.getPosTags().contains(tag) ) {
+                this.posRecordCount ++;
             }
 
             double[] inputs = new double[this.inputNodeCount];
@@ -193,8 +193,6 @@ public class VarSelWorker
 
             trainingDataSet.addTrainingRecord(new TrainingRecord(inputs, ideal, significance));
         }
-
-        LOG.info("There are {} records in current worker, with {} positive records.", totalRecordCount, posRecordCount);
     }
 
     private boolean isPosOrNegTag(ModelConfig config, String tag) {
@@ -204,18 +202,12 @@ public class VarSelWorker
     private List<Integer> getNormalizedColumnIdList() {
         List<Integer> normalizedColumnIdList = new ArrayList<Integer>();
         for(ColumnConfig config: columnConfigList) {
-            if(config.isCandidate() && isGoodVarSelCandidate(config)) {
+            if( CommonUtils.isGoodCandidate(config)) {
                 normalizedColumnIdList.add(config.getColumnNum());
             }
         }
 
         return normalizedColumnIdList;
-    }
-
-    private boolean isGoodVarSelCandidate(ColumnConfig config) {
-        return (config.getKs() != null && config.getKs() > 0 && config.getIv() != null && config.getIv() > 0 && ((config
-                .isCategorical() && config.getBinCategory() != null && config.getBinCategory().size() > 1) || (config
-                .isNumerical() && config.getBinBoundary() != null && config.getBinBoundary().size() > 1)));
     }
 
     private int getTargetColumnCount() {

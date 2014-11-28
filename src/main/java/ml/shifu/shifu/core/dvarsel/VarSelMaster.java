@@ -63,14 +63,12 @@ public class VarSelMaster implements MasterComputable<VarSelMasterResult, VarSel
         masterConductor.consumeWorkerResults(context.getWorkerResults());
         LOG.info("Get results from workers ... ");
 
-        VarSelMasterResult masterResult = null;
+        VarSelMasterResult masterResult = new VarSelMasterResult(masterConductor.getNextWorkingSet());
         if(masterConductor.isToStop()) {
             LOG.info("Variables are selected. Send halt to workers ... ");
-            masterResult = new VarSelMasterResult();
             masterResult.setHalt(true);
         } else {
             LOG.info("Send next working set to slaves ... ");
-            masterResult = new VarSelMasterResult(masterConductor.getNextWorkingSet());
         }
 
         return masterResult;

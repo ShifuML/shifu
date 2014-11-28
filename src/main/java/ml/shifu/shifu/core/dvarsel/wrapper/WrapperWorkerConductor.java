@@ -22,6 +22,7 @@ import ml.shifu.shifu.container.obj.ModelConfig;
 import ml.shifu.shifu.core.dvarsel.AbstractWorkerConductor;
 import ml.shifu.shifu.core.dvarsel.VarSelMasterResult;
 import ml.shifu.shifu.core.dvarsel.VarSelWorkerResult;
+import ml.shifu.shifu.util.CommonUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -45,7 +46,7 @@ public class WrapperWorkerConductor extends AbstractWorkerConductor {
 
         this.candidates = new ArrayList<ColumnConfig>();
         for ( ColumnConfig columnConfig : columnConfigList ) {
-            if ( columnConfig.isCandidate() && !columnConfig.isForceSelect() ) {
+            if ( CommonUtils.isGoodCandidate(columnConfig) && !columnConfig.isForceSelect() ) {
                 candidates.add(columnConfig);
             }
         }
