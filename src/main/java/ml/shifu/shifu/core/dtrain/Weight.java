@@ -40,7 +40,7 @@ public class Weight {
     private double shrink = 0.0;
 
     // for back propagation
-    private double momentum = 0.0;
+    private double momentum = 0.5;
 
     // for resilient propagation
     private double[] updateValues = null;
