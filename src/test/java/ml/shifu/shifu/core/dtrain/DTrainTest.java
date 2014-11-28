@@ -49,7 +49,7 @@ public class DTrainTest {
 
     public static final int NUM_EPOCHS = 20;
 
-    public double rate = 3;
+    public double rate = 0.5;
 
     public int numSplit = 24;
 
@@ -277,7 +277,7 @@ public class DTrainTest {
     }
 
     @Test
-    public void Backtest() {
+    public void backTest() {
         double[] gradientError = new double[NUM_EPOCHS];
         double[] ecogError = new double[NUM_EPOCHS];
 
@@ -341,7 +341,7 @@ public class DTrainTest {
         network.getFlat().setWeights(weights);
 
         Propagation p = null;
-        p = new Backpropagation(network, training, rate, 0);
+        p = new Backpropagation(network, training, rate, 0.5);
         p.setThreadCount(numSplit);
 
         for (int i = 0; i < NUM_EPOCHS; i++) {
@@ -356,7 +356,7 @@ public class DTrainTest {
             diff += Math.abs(ecogError[i] - gradientError[i]);
         }
 
-        Assert.assertTrue(diff / NUM_EPOCHS < 0.3);
+        Assert.assertTrue(diff / NUM_EPOCHS < 0.2);
     }
 
     @Test
@@ -438,6 +438,6 @@ public class DTrainTest {
             diff += Math.abs(ecogError[i] - gradientError[i]);
         }
 
-        Assert.assertTrue(diff / NUM_EPOCHS < 0.5);
+        Assert.assertTrue(diff / NUM_EPOCHS < 0.2);
     }
 }

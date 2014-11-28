@@ -19,6 +19,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Scanner;
 
 import ml.shifu.guagua.GuaguaConstants;
 import ml.shifu.guagua.mapreduce.GuaguaMapReduceClient;
@@ -28,7 +29,6 @@ import ml.shifu.shifu.core.AbstractTrainer;
 import ml.shifu.shifu.core.VariableSelector;
 import ml.shifu.shifu.core.alg.NNTrainer;
 import ml.shifu.shifu.core.dtrain.NNConstants;
-import ml.shifu.shifu.core.dtrain.NNOutput;
 import ml.shifu.shifu.core.dvarsel.*;
 import ml.shifu.shifu.core.dvarsel.wrapper.WrapperMasterConductor;
 import ml.shifu.shifu.core.dvarsel.wrapper.WrapperWorkerConductor;
@@ -130,13 +130,43 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
         
         log.info("Voted variables selection finished in {}ms.", System.currentTimeMillis() - start);
 
-        //persistence the coloums
-
-    	
-        return 0;
+        return persistColumnIds(columnIdsPath);
     }
 
-    private Path getVotedSelectionPath(SourceType sourceType) {
+    private int persistColumnIds(Path path) {
+    	try {
+	    	List<Scanner> scanners = ShifuFileUtils.getDataScanners(path.toString(), modelConfig.getDataSet().getSource());
+	    	
+	    	List<Integer> ids = null;
+	        for(Scanner scanner: scanners) {
+	        	while(scanner.hasNextLine()) {
+	        		String[] raw = scanner.nextLine().trim().split("\\|");
+	        		
+	        		int idSize = Integer.valueOf(raw[0]);
+	        		
+	        		ids = CommonUtils.stringToIntegerList(raw[1]);
+	        		
+	        	}
+	        }
+	        
+	        for (Integer id : ids) {
+	        	this.columnConfigList.get(id).setFinalSelect(Boolean.TRUE);
+	        }
+	        
+	        super.saveColumnConfigList();
+	        
+        } catch (IOException e) {
+        	e.printStackTrace();
+        	return -1;
+        } catch (IllegalArgumentException e) {
+        	e.printStackTrace();
+        	return -1;
+        }
+    	
+    	return 0;
+	}
+
+	private Path getVotedSelectionPath(SourceType sourceType) {
 
         return ShifuFileUtils.getFileSystemBySourceType(sourceType).makeQualified(new Path(getPathFinder().getVarSelsPath(sourceType), "VarSels"));
     }

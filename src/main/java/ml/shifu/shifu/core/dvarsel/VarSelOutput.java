@@ -17,28 +17,26 @@ package ml.shifu.shifu.core.dvarsel;
  * limitations under the License.
  */
 
-import ml.shifu.guagua.master.BasicMasterInterceptor;
-import ml.shifu.guagua.master.MasterContext;
-import ml.shifu.shifu.container.obj.ColumnConfig;
-import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
-import ml.shifu.shifu.container.obj.ModelConfig;
-import ml.shifu.shifu.container.obj.RawSourceData;
-import ml.shifu.shifu.core.dtrain.NNConstants;
-import ml.shifu.shifu.core.dtrain.NNParams;
-import ml.shifu.shifu.util.CommonUtils;
-import ml.shifu.shifu.util.Constants;
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FSDataOutputStream;
-import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.io.IOUtils;
-import org.encog.persist.EncogDirectoryPersistence;
-
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.List;
 import java.util.Properties;
 import java.util.concurrent.atomic.AtomicBoolean;
+
+import ml.shifu.guagua.master.BasicMasterInterceptor;
+import ml.shifu.guagua.master.MasterContext;
+import ml.shifu.shifu.container.obj.ColumnConfig;
+import ml.shifu.shifu.container.obj.ModelConfig;
+import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
+import ml.shifu.shifu.core.dtrain.NNConstants;
+import ml.shifu.shifu.util.CommonUtils;
+import ml.shifu.shifu.util.Constants;
+
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FSDataOutputStream;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.io.IOUtils;
 
 /**
  * Created on 11/24/2014.
@@ -95,7 +93,8 @@ public class VarSelOutput extends BasicMasterInterceptor<VarSelMasterResult, Var
             pw.println(Integer.toString(columnIds.size()) + "|" + columnIds.toString());
 
         } catch (IOException e) {
-
+        	e.printStackTrace();
+        	
         } finally {
             IOUtils.closeStream(fos);
         }
