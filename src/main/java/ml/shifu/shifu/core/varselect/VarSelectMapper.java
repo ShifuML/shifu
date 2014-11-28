@@ -243,8 +243,8 @@ public class VarSelectMapper extends Mapper<LongWritable, Text, LongWritable, Do
 
     @Override
     protected void map(LongWritable key, Text value, Context context) throws IOException, InterruptedException {
+        long start = System.nanoTime();
         int index = 0, inputsIndex = 0, outputsIndex = 0;
-        LOG.debug("Value is:" + value.toString());
         for(String input: DEFAULT_SPLITTER.split(value.toString())) {
             double doubleValue = NumberFormatUtils.getDouble(input.trim(), 0.0d);
             if(index == this.columnConfigList.size()) {
@@ -275,22 +275,16 @@ public class VarSelectMapper extends Mapper<LongWritable, Text, LongWritable, Do
 
         double oldValue = 0.0d;
 
-        LOG.debug("inputs:" + Arrays.toString(inputs));
-
         this.inputsMLData.setData(this.inputs);
-        LOG.debug("inputs:" + Arrays.toString(inputs));
 
         double candidateModelScore = this.model.compute(new BasicMLData(inputs)).getData()[0];
-        LOG.debug("candidateModelScore:" + candidateModelScore);
 
         for(int i = 0; i < this.inputs.length; i++) {
             oldValue = this.inputs[i];
 
             this.inputs[i] = 0d;
             this.inputsMLData.setData(this.inputs);
-            LOG.debug("i: " + i + "inputs:" + Arrays.toString(inputs));
             double currentModelScore = this.model.compute(new BasicMLData(inputs)).getData()[0];
-            LOG.debug("currentModelScore:" + currentModelScore);
             Double MSESum = this.results.get(this.columnIndexes[i]);
 
             double diff = 0d;
@@ -307,6 +301,10 @@ public class VarSelectMapper extends Mapper<LongWritable, Text, LongWritable, Do
             }
             this.results.put(this.columnIndexes[i], MSESum);
             this.inputs[i] = oldValue;
+        }
+
+        if(System.currentTimeMillis() % 20 == 0) {
+            LOG.info("Timer: {} ms", (System.nanoTime() - start) / 1000000L);
         }
     }
 

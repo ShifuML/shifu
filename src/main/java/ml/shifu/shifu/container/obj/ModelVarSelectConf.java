@@ -38,6 +38,7 @@ public class ModelVarSelectConf {
     // don't open those options to user
     private Boolean wrapperEnabled = Boolean.FALSE;
     private Integer wrapperNum = Integer.valueOf(50);
+    private Float wrapperRatio = Float.valueOf(0.05f);
     private String wrapperBy = "S";
 
     public Boolean getForceEnable() {
@@ -96,6 +97,7 @@ public class ModelVarSelectConf {
         this.wrapperEnabled = wrapperEnabled;
     }
 
+    @JsonIgnore
     public Integer getWrapperNum() {
         return wrapperNum;
     }
@@ -110,6 +112,20 @@ public class ModelVarSelectConf {
 
     public void setWrapperBy(String wrapperBy) {
         this.wrapperBy = wrapperBy;
+    }
+
+    /**
+     * @return the wrapperRatio
+     */
+    public Float getWrapperRatio() {
+        return wrapperRatio;
+    }
+
+    /**
+     * @param wrapperRatio the wrapperRatio to set
+     */
+    public void setWrapperRatio(Float wrapperRatio) {
+        this.wrapperRatio = wrapperRatio;
     }
 
 }

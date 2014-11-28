@@ -29,8 +29,6 @@ import org.apache.hadoop.io.DoubleWritable;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.NullWritable;
 import org.apache.hadoop.mapreduce.Reducer;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * {@link VarSelectReducer} is used to accumulate all mapper column-MSE values together.
@@ -42,7 +40,7 @@ import org.slf4j.LoggerFactory;
  */
 public class VarSelectReducer extends Reducer<LongWritable, DoubleWritable, LongWritable, NullWritable> {
 
-    private final static Logger LOG = LoggerFactory.getLogger(VarSelectReducer.class);
+    // private final static Logger LOG = LoggerFactory.getLogger(VarSelectReducer.class);
 
     /**
      * Final results list, this list is loaded in memory for sum, and will be written by context in cleanup.
@@ -60,10 +58,11 @@ public class VarSelectReducer extends Reducer<LongWritable, DoubleWritable, Long
     private int inputNodeCount;
 
     /**
-     * Wrapper number setting from ModelConfig, for sensitivity, this number is used to filter number of variables out
-     * each time.
+     * To set as a ratio instead an absolute number, each time it is
+     * a ratio. For example, 100 variables, using ratio 0.05, first time select 95 variables, next as candidates are
+     * decreasing, next time it is still 0.05, but only 4 variables are removed.
      */
-    private int wrapperNum;
+    private float wrapperRatio;
 
     /**
      * Prevent too many new objects for output key.
@@ -97,11 +96,8 @@ public class VarSelectReducer extends Reducer<LongWritable, DoubleWritable, Long
         loadConfigFiles(context);
         int[] inputOutputIndex = getInputOutputCandidateCounts(this.columnConfigList);
         this.inputNodeCount = inputOutputIndex[0] == 0 ? inputOutputIndex[2] : inputOutputIndex[0];
-        this.wrapperNum = context.getConfiguration().getInt(Constants.SHIFU_VARSELECT_WRAPPER_NUM, 5);
+        this.wrapperRatio = context.getConfiguration().getFloat(Constants.SHIFU_VARSELECT_WRAPPER_RATIO, 0.05f);
         this.outputKey = new LongWritable();
-        if(this.wrapperNum >= this.inputNodeCount) {
-            throw new IllegalArgumentException("Wrapper number should not larger than input node count.");
-        }
 
         this.wrapperBy = context.getConfiguration().get(Constants.SHIFU_VARSELECT_WRAPPER_TYPE, "SE");
     }
@@ -113,13 +109,11 @@ public class VarSelectReducer extends Reducer<LongWritable, DoubleWritable, Long
         for(DoubleWritable value: values) {
             MSE += value.get();
         }
-        LOG.debug("Pair is " + new Pair(key.get(), MSE));
         results.add(new Pair(key.get(), MSE));
     }
 
     @Override
     protected void cleanup(Context context) throws IOException, InterruptedException {
-        LOG.debug("Pairs is " + results);
         Collections.sort(this.results, new Comparator<Pair>() {
             @Override
             public int compare(Pair o1, Pair o2) {
@@ -129,13 +123,10 @@ public class VarSelectReducer extends Reducer<LongWritable, DoubleWritable, Long
 
         int candidates = 0;
         if("R".equalsIgnoreCase(this.wrapperBy) || "SE".equalsIgnoreCase(this.wrapperBy)) {
-            candidates = (int) (this.inputNodeCount - this.wrapperNum);
+            candidates = (int) (this.inputNodeCount * (1.0f - this.wrapperRatio));
         } else {
             // wrapper by A
-            candidates = (int) (this.wrapperNum);
-        }
-        if(candidates >= this.inputNodeCount) {
-            throw new IllegalStateException("candidates after removing should be less than input node count.");
+            candidates = (int) (this.inputNodeCount * (this.wrapperRatio));
         }
 
         for(int i = 0; i < candidates; i++) {

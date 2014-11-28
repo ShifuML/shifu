@@ -32,7 +32,7 @@ public final class Constants {
 
     public static final String SHIFU_MODELSET_SOURCE_TYPE = "shifu.modelset.source.type";
 
-    public static final String SHIFU_VARSELECT_REMOVE_RATIO = "shifu.varselect.remove.ratio";
+    public static final String SHIFU_VARSELECT_WRAPPER_RATIO = "shifu.varselect.wrapper.ratio";
 
     public static final String SHIFU_VARSELECT_WRAPPER_NUM = "shifu.varselect.wrapper.num";
 

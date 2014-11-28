@@ -220,6 +220,11 @@
                 "directive": "input",
                 "defval" : 50
             }, {
+                "name": "wrapperRatio",
+                "type": "number",
+                "directive": "input",
+                "defval" : 0.05
+            }, {
                 "name": "wrapperBy",
                 "type": "text",
                 "directive": "select",

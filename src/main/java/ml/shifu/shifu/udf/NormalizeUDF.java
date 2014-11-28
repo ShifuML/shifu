@@ -131,7 +131,7 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
     public Schema outputSchema(Schema input) {
         try {
             StringBuilder schemaStr = new StringBuilder();
-            schemaStr.append("(");
+            schemaStr.append("Normalized:Tuple(");
             for(ColumnConfig config: columnConfigList) {
                 if(!config.isMeta() && config.isNumerical()) {
                     schemaStr.append(config.getColumnName() + ":float" + ",");

@@ -22,6 +22,7 @@ import java.util.List;
 import ml.shifu.guagua.GuaguaConstants;
 import ml.shifu.guagua.mapreduce.GuaguaMapReduceConstants;
 import ml.shifu.shifu.container.obj.ColumnConfig;
+import ml.shifu.shifu.container.obj.ModelBasicConf.RunMode;
 import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
 import ml.shifu.shifu.core.AbstractTrainer;
 import ml.shifu.shifu.core.VariableSelector;
@@ -93,9 +94,14 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
             }
         } else {
             // SE means sensitivity
-            validateWrapperVarSelect();
-            syncDataToHdfs(super.modelConfig.getDataSet().getSource());
-            wrapperBySensitivity(selector);
+            if(super.getModelConfig().getDataSet().getSource() == SourceType.HDFS
+                    && super.getModelConfig().getBasic().getRunMode() == RunMode.mapred) {
+                validateDistributedWrapperVarSelect();
+                syncDataToHdfs(super.modelConfig.getDataSet().getSource());
+                distributedWrapperBy(selector);
+            } else {
+                wrapper(selector);
+            }
         }
         log.info("Step Finished: varselect");
 
@@ -103,14 +109,26 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
         return 0;
     }
 
-    private void validateWrapperVarSelect() {
+    private void validateDistributedWrapperVarSelect() {
+        if(!("R".equalsIgnoreCase(this.modelConfig.getVarSelectWrapperBy()) || "SE".equalsIgnoreCase(this.modelConfig
+                .getVarSelectWrapperBy()))) {
+            throw new IllegalArgumentException(
+                    "Only R and SE wrapperBy methods are supported so far in distributed variable selection.");
+        }
+
         if(!NNConstants.NN_ALG_NAME.equalsIgnoreCase(super.getModelConfig().getTrain().getAlgorithm())) {
             throw new IllegalArgumentException(
-                    "Currently we only support NN distributed training to do sensitivity analyzing variable selection.");
+                    "Currently we only support NN distributed training to do wrapper by analyzing variable selection.");
         }
 
         if(super.getModelConfig().getDataSet().getSource() != SourceType.HDFS) {
-            throw new IllegalArgumentException("Currently we only support sensitivity analyzing on HDFS source type.");
+            throw new IllegalArgumentException(
+                    "Currently we only support distributed wrapper by analyzing on HDFS source type.");
+        }
+
+        if(super.getModelConfig().getBasic().getRunMode() != RunMode.mapred) {
+            throw new IllegalArgumentException(
+                    "Currently we only support distributed wrapper by analyzing on HDFS source type.");
         }
     }
 
@@ -148,9 +166,8 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
 
     /**
      * Wrapper through {@link TrainModelProcessor} and a MapReduce job to analyze biggest sensitivity MSE.
-     * TODO Extend to other wrapper methods.
      */
-    private void wrapperBySensitivity(VariableSelector selector) throws Exception {
+    private void distributedWrapperBy(VariableSelector selector) throws Exception {
         // 1. Train a model using current selected variables, if no variables selected, use all candidate variables.
         TrainModelProcessor trainModelProcessor = new TrainModelProcessor();
         trainModelProcessor.setForVarSelect(true);
@@ -174,16 +191,19 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
                         .makeQualified(new Path(super.getPathFinder().getColumnConfigPath(source))).toString());
         conf.set("mapred.job.queue.name", Environment.getProperty(Environment.HADOOP_JOB_QUEUE, "default"));
         conf.set(Constants.SHIFU_MODELSET_SOURCE_TYPE, source.toString());
-        conf.set(Constants.SHIFU_VARSELECT_WRAPPER_NUM, this.modelConfig.getVarSelectWrapperBy());
 
-        Integer wrapperNum = this.modelConfig.getVarSelect().getWrapperNum();
-        if(wrapperNum == null) {
-            log.warn("WrapperNumber in var select is not set. Using default value 5.");
-            wrapperNum = 5;
+        Float wrapperRatio = this.modelConfig.getVarSelect().getWrapperRatio();
+        if(wrapperRatio == null) {
+            log.warn("wrapperRatio in var select is not set. Using default value 0.05.");
+            wrapperRatio = 0.05f;
         }
-        conf.setInt(Constants.SHIFU_VARSELECT_WRAPPER_NUM, wrapperNum);
 
-        Job job = new Job(conf, "Shifu: Variable Selection Sensitivity Job");
+        if(wrapperRatio.compareTo(Float.valueOf(1.0f)) >= 0) {
+            throw new IllegalArgumentException("WrapperRatio should be in (0, 1).");
+        }
+        conf.setFloat(Constants.SHIFU_VARSELECT_WRAPPER_RATIO, wrapperRatio);
+
+        Job job = new Job(conf, "Shifu: Variable Selection Wrapper Job : " + this.modelConfig.getModelSetName());
         job.setJarByClass(getClass());
         job.setMapperClass(VarSelectMapper.class);
         job.setMapOutputKeyClass(LongWritable.class);
@@ -246,7 +266,6 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
      * @param selector
      * @throws Exception
      */
-    @SuppressWarnings("unused")
     private void wrapper(VariableSelector selector) throws Exception {
 
         NormalizeModelProcessor n = new NormalizeModelProcessor();
