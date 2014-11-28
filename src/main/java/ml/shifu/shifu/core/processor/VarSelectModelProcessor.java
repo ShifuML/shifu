@@ -156,7 +156,9 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
 	        
 	        //prevent multiply running setting
 	        for(ColumnConfig config : columnConfigList) {
-	        	config.setFinalSelect(Boolean.FALSE);
+	        	if (!config.isForceSelect()){
+	        		config.setFinalSelect(Boolean.FALSE);
+	        	}
 	        }
 	        
 	        for (Integer id : ids) {
