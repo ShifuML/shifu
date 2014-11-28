@@ -18,6 +18,7 @@ package ml.shifu.shifu.core.dvarsel;
  */
 
 import ml.shifu.guagua.io.HaltBytable;
+import org.apache.commons.collections.CollectionUtils;
 
 import java.io.DataInput;
 import java.io.DataOutput;
@@ -30,7 +31,7 @@ import java.util.List;
  */
 public class VarSelMasterResult extends HaltBytable {
 
-    private List<Integer> columnIdList;
+    private List<Integer> columnIdList = new ArrayList<Integer>(0);
 
     public VarSelMasterResult() {
         // default constructor, it is used to send halt

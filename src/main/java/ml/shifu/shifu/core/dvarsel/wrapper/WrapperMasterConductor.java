@@ -49,6 +49,8 @@ public class WrapperMasterConductor extends AbstractMasterConductor {
                 workingSet.add(columnConfig.getColumnNum());
             }
         }
+
+        LOG.info("Expected variable count is - {}, base working set size is - {}", expectVarCount, workingSet.size());
     }
 
     @Override

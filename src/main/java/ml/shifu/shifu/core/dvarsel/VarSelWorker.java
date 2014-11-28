@@ -153,17 +153,25 @@ public class VarSelWorker
     @Override
     public void load(GuaguaWritableAdapter<LongWritable> currentKey, GuaguaWritableAdapter<Text> currentValue,
             WorkerContext<VarSelMasterResult, VarSelWorkerResult> workerContext) {
-        if((++this.count) % 100000 == 0) {
+        if((++this.count) % 100000 == 0)
+        {
             LOG.info("Read {} records.", this.count);
         }
-
         String record = currentValue.getWritable().toString();
         String[] fields = CommonUtils.split(record, modelConfig.getDataSetDelimiter());
 
         int targetColumnId = CommonUtils.getTargetColumnNum(columnConfigList);
         String tag = StringUtils.trim(fields[targetColumnId]);
 
+        long posRecordCount = 0;
+        long totalRecordCount = 0;
+
         if(this.dataPurifier.isFilterOut(record) && isPosOrNegTag(modelConfig, tag)) {
+            totalRecordCount ++;
+            if ( modelConfig.getPosTags().contains(tag) ) {
+                posRecordCount ++;
+            }
+
             double[] inputs = new double[this.inputNodeCount];
             double[] ideal = new double[this.outputNodeCount];
 
@@ -185,6 +193,8 @@ public class VarSelWorker
 
             trainingDataSet.addTrainingRecord(new TrainingRecord(inputs, ideal, significance));
         }
+
+        LOG.info("There are {} records in current worker, with {} positive records.", totalRecordCount, posRecordCount);
     }
 
     private boolean isPosOrNegTag(ModelConfig config, String tag) {
