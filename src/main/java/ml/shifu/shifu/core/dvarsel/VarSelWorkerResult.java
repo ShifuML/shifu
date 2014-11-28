@@ -1,4 +1,5 @@
 package ml.shifu.shifu.core.dvarsel;
+
 /*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -32,15 +33,19 @@ public class VarSelWorkerResult extends HaltBytable {
 
     private List<Integer> columnIdList;
 
+    public VarSelWorkerResult() {
+        // default constructor, for serialization
+    }
+
     public VarSelWorkerResult(List<Integer> columnIdList) {
         this.columnIdList = columnIdList;
     }
 
     @Override
     public void doWrite(DataOutput out) throws IOException {
-        out.write(columnIdList.size());
-        for ( Integer columnId : columnIdList ){
-            out.write(columnId);
+        out.writeInt(columnIdList.size());
+        for(Integer columnId: columnIdList) {
+            out.writeInt(columnId);
         }
     }
 
@@ -49,7 +54,7 @@ public class VarSelWorkerResult extends HaltBytable {
         Integer size = in.readInt();
         columnIdList = new ArrayList<Integer>(size);
 
-        for ( int i = 0 ; i < size; i++) {
+        for(int i = 0; i < size; i++) {
             columnIdList.add(in.readInt());
         }
     }

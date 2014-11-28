@@ -1,4 +1,5 @@
 package ml.shifu.shifu.core.dvarsel;
+
 /*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -47,7 +48,9 @@ import java.util.Properties;
 /**
  * Created on 11/24/2014.
  */
-public class VarSelWorker extends AbstractWorkerComputable<VarSelMasterResult, VarSelWorkerResult, GuaguaWritableAdapter<LongWritable>, GuaguaWritableAdapter<Text>> {
+public class VarSelWorker
+        extends
+        AbstractWorkerComputable<VarSelMasterResult, VarSelWorkerResult, GuaguaWritableAdapter<LongWritable>, GuaguaWritableAdapter<Text>> {
 
     private static final Logger LOG = LoggerFactory.getLogger(VarSelWorker.class);
 
@@ -76,13 +79,14 @@ public class VarSelWorker extends AbstractWorkerComputable<VarSelMasterResult, V
         Properties props = workerContext.getProps();
 
         try {
-            RawSourceData.SourceType sourceType = RawSourceData.SourceType.valueOf(
-                    props.getProperty(NNConstants.NN_MODELSET_SOURCE_TYPE, RawSourceData.SourceType.HDFS.toString()));
+            RawSourceData.SourceType sourceType = RawSourceData.SourceType.valueOf(props.getProperty(
+                    NNConstants.NN_MODELSET_SOURCE_TYPE, RawSourceData.SourceType.HDFS.toString()));
 
             this.modelConfig = CommonUtils.loadModelConfig(props.getProperty(NNConstants.SHIFU_NN_MODEL_CONFIG),
                     sourceType);
 
-            this.columnConfigList = CommonUtils.loadColumnConfigList(NNConstants.SHIFU_NN_COLUMN_CONFIG, sourceType);
+            this.columnConfigList = CommonUtils.loadColumnConfigList(
+                    props.getProperty(NNConstants.SHIFU_NN_COLUMN_CONFIG), sourceType);
 
             String conductorClsName = props.getProperty(Constants.VAR_SEL_WORKER_CONDUCTOR);
 
@@ -90,7 +94,7 @@ public class VarSelWorker extends AbstractWorkerComputable<VarSelMasterResult, V
                     .getDeclaredConstructor(ModelConfig.class, List.class)
                     .newInstance(this.modelConfig, this.columnConfigList);
 
-        } catch ( IOException e ) {
+        } catch (IOException e) {
             throw new RuntimeException("Fail to load ModelConfig or List<ColumnConfig>", e);
         } catch (ClassNotFoundException e) {
             throw new RuntimeException("Invalid Master Conductor class", e);
@@ -115,9 +119,9 @@ public class VarSelWorker extends AbstractWorkerComputable<VarSelMasterResult, V
             throw new RuntimeException("Fail to create DataPurifier", e);
         }
 
-        if ( StringUtils.isNotBlank(modelConfig.getWeightColumnName()) ) {
-            for ( ColumnConfig columnConfig : columnConfigList ) {
-                if ( columnConfig.getColumnName().equalsIgnoreCase(modelConfig.getWeightColumnName().trim())) {
+        if(StringUtils.isNotBlank(modelConfig.getWeightColumnName())) {
+            for(ColumnConfig columnConfig: columnConfigList) {
+                if(columnConfig.getColumnName().equalsIgnoreCase(modelConfig.getWeightColumnName().trim())) {
                     this.weightColumnId = columnConfig.getColumnNum();
                     break;
                 }
@@ -127,17 +131,17 @@ public class VarSelWorker extends AbstractWorkerComputable<VarSelMasterResult, V
 
     @Override
     public VarSelWorkerResult doCompute(WorkerContext<VarSelMasterResult, VarSelWorkerResult> workerContext) {
-        if ( !workerConductor.isInitialized() ) {
+        if(!workerConductor.isInitialized()) {
             workerConductor.retainData(trainingDataSet);
         }
 
         VarSelMasterResult masterResult = workerContext.getLastMasterResult();
-        if (masterResult == null) {
+        if(masterResult == null) {
             // no working set, wait master to send the working set
             return workerConductor.getDefaultWorkerResult();
         }
 
-        if ( masterResult.isHalt() ) {
+        if(masterResult.isHalt()) {
             // finish variable selection, stop working
             return null;
         }
@@ -147,10 +151,9 @@ public class VarSelWorker extends AbstractWorkerComputable<VarSelMasterResult, V
     }
 
     @Override
-    public void load(GuaguaWritableAdapter<LongWritable> currentKey,
-                     GuaguaWritableAdapter<Text> currentValue,
-                     WorkerContext<VarSelMasterResult, VarSelWorkerResult> workerContext) {
-        if ( (++this.count) % 100000 == 0 ) {
+    public void load(GuaguaWritableAdapter<LongWritable> currentKey, GuaguaWritableAdapter<Text> currentValue,
+            WorkerContext<VarSelMasterResult, VarSelWorkerResult> workerContext) {
+        if((++this.count) % 100000 == 0) {
             LOG.info("Read {} records.", this.count);
         }
 
@@ -160,12 +163,12 @@ public class VarSelWorker extends AbstractWorkerComputable<VarSelMasterResult, V
         int targetColumnId = CommonUtils.getTargetColumnNum(columnConfigList);
         String tag = StringUtils.trim(fields[targetColumnId]);
 
-        if ( this.dataPurifier.isFilterOut(record) && isPosOrNegTag(modelConfig, tag) ) {
+        if(this.dataPurifier.isFilterOut(record) && isPosOrNegTag(modelConfig, tag)) {
             double[] inputs = new double[this.inputNodeCount];
             double[] ideal = new double[this.outputNodeCount];
 
             double significance = NNConstants.DEFAULT_SIGNIFICANCE_VALUE;
-            if ( this.weightColumnId >= 0 ) {
+            if(this.weightColumnId >= 0) {
                 try {
                     significance = Double.parseDouble(fields[this.weightColumnId]);
                 } catch (Exception e) {
@@ -176,7 +179,7 @@ public class VarSelWorker extends AbstractWorkerComputable<VarSelMasterResult, V
             ideal[0] = (this.modelConfig.getPosTags().contains(tag) ? 1.0d : 0.0d);
 
             int i = 0;
-            for ( Integer columnId : this.trainingDataSet.getDataColumnIdList() ) {
+            for(Integer columnId: this.trainingDataSet.getDataColumnIdList()) {
                 inputs[i++] = Normalizer.normalize(columnConfigList.get(columnId), fields[columnId]);
             }
 
@@ -190,8 +193,8 @@ public class VarSelWorker extends AbstractWorkerComputable<VarSelMasterResult, V
 
     private List<Integer> getNormalizedColumnIdList() {
         List<Integer> normalizedColumnIdList = new ArrayList<Integer>();
-        for (ColumnConfig config : columnConfigList) {
-            if ( config.isCandidate() && isGoodVarSelCandidate(config) ) {
+        for(ColumnConfig config: columnConfigList) {
+            if(config.isCandidate() && isGoodVarSelCandidate(config)) {
                 normalizedColumnIdList.add(config.getColumnNum());
             }
         }
@@ -200,19 +203,16 @@ public class VarSelWorker extends AbstractWorkerComputable<VarSelMasterResult, V
     }
 
     private boolean isGoodVarSelCandidate(ColumnConfig config) {
-        return ( config.getKs() != null
-                && config.getKs() > 0
-                && config.getIv() != null
-                && config.getIv() > 0
-                && ( (config.isCategorical() && config.getBinCategory() != null && config.getBinCategory().size() > 1)
-                    || (config.isNumerical() && config.getBinBoundary() != null && config.getBinBoundary().size() > 1) ));
+        return (config.getKs() != null && config.getKs() > 0 && config.getIv() != null && config.getIv() > 0 && ((config
+                .isCategorical() && config.getBinCategory() != null && config.getBinCategory().size() > 1) || (config
+                .isNumerical() && config.getBinBoundary() != null && config.getBinBoundary().size() > 1)));
     }
 
     private int getTargetColumnCount() {
         int targetCount = 0;
 
-        for (ColumnConfig config : columnConfigList) {
-            if (config.isTarget()) {
+        for(ColumnConfig config: columnConfigList) {
+            if(config.isTarget()) {
                 targetCount++;
             }
         }
