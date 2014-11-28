@@ -24,6 +24,7 @@ import java.util.Scanner;
 import ml.shifu.guagua.GuaguaConstants;
 import ml.shifu.guagua.mapreduce.GuaguaMapReduceClient;
 import ml.shifu.guagua.mapreduce.GuaguaMapReduceConstants;
+import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
 import ml.shifu.shifu.core.AbstractTrainer;
 import ml.shifu.shifu.core.VariableSelector;
@@ -150,6 +151,11 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
 	        		ids = CommonUtils.stringToIntegerList(raw[1]);
 	        		
 	        	}
+	        }
+	        
+	        //prevent multiply running setting
+	        for(ColumnConfig config : columnConfigList) {
+	        	config.setFinalSelect(Boolean.FALSE);
 	        }
 	        
 	        for (Integer id : ids) {
