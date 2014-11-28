@@ -139,28 +139,32 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
     }
 
     private int persistColumnIds(Path path) {
-        try {
-            List<Scanner> scanners = ShifuFileUtils.getDataScanners(path.toString(), modelConfig.getDataSet()
-                    .getSource());
-
-            List<Integer> ids = null;
-            for(Scanner scanner: scanners) {
-                while(scanner.hasNextLine()) {
-                    String[] raw = scanner.nextLine().trim().split("\\|");
-
-                    int idSize = Integer.valueOf(raw[0]);
-
-                    ids = CommonUtils.stringToIntegerList(raw[1]);
-
-                }
-            }
-
-            for(Integer id: ids) {
-                this.columnConfigList.get(id).setFinalSelect(Boolean.TRUE);
-            }
-
-            super.saveColumnConfigList();
-
+    	try {
+	    	List<Scanner> scanners = ShifuFileUtils.getDataScanners(path.toString(), modelConfig.getDataSet().getSource());
+	    	
+	    	List<Integer> ids = null;
+	        for(Scanner scanner: scanners) {
+	        	while(scanner.hasNextLine()) {
+	        		String[] raw = scanner.nextLine().trim().split("\\|");
+	        		
+	        		int idSize = Integer.valueOf(raw[0]);
+	        		
+	        		ids = CommonUtils.stringToIntegerList(raw[1]);
+	        		
+	        	}
+	        }
+	        
+	        //prevent multiply running setting
+	        for(ColumnConfig config : columnConfigList) {
+	        	config.setFinalSelect(Boolean.FALSE);
+	        }
+	        
+	        for (Integer id : ids) {
+	        	this.columnConfigList.get(id).setFinalSelect(Boolean.TRUE);
+	        }
+	        
+	        super.saveColumnConfigList();
+	        
         } catch (IOException e) {
             e.printStackTrace();
             return -1;

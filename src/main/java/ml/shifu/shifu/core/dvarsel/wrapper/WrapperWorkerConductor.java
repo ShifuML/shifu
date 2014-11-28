@@ -24,6 +24,8 @@ import ml.shifu.shifu.core.dvarsel.AbstractWorkerConductor;
 import ml.shifu.shifu.core.dvarsel.VarSelMasterResult;
 import ml.shifu.shifu.core.dvarsel.VarSelWorker;
 import ml.shifu.shifu.core.dvarsel.VarSelWorkerResult;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -38,7 +40,7 @@ import org.slf4j.LoggerFactory;
  */
 public class WrapperWorkerConductor extends AbstractWorkerConductor {
 
-    private static final Logger LOG = LoggerFactory.getLogger(VarSelWorker.class);
+    private static final Logger LOG = LoggerFactory.getLogger(WrapperWorkerConductor.class);
 
     private List<ColumnConfig> candidates;
     private Set<Integer> baseColumnSet;
@@ -83,8 +85,7 @@ public class WrapperWorkerConductor extends AbstractWorkerConductor {
             }
         }
 
-        System.out.println("find best variable - " + bestCandidate.getColumnName() + ", with validation error - "
-                + minValidateError);
+        LOG.info("find best variable - " + bestCandidate.getColumnName() + ", with error - " + minValidateError);
 
         return ((bestCandidate == null) ? getDefaultWorkerResult() : getWorkerResult(bestCandidate.getColumnNum()));
     }

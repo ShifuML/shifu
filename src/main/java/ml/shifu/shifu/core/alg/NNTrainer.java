@@ -269,22 +269,19 @@ public class NNTrainer extends AbstractTrainer {
     }
 
     public double calculateMSEParallel(BasicNetwork network, MLDataSet dataSet) {
-        totalError = 0;
-
         int numRecords = (int) dataSet.getRecordCount();
-
         assert numRecords > 0;
+
         // setup workers
         final DetermineWorkload determine = new DetermineWorkload(0, numRecords);
-
-        // nice little workaround 
+        // nice little workaround
         MSEWorker[] workers = new MSEWorker[determine.getThreadCount()];
 
         int index = 0;
         TaskGroup group = EngineConcurrency.getInstance().createTaskGroup();
         for (final IntRange r : determine.calculateWorkers()) {
             workers[index++] = new MSEWorker((BasicNetwork)
-                    network.clone(), this,
+                    network.clone(),
                     dataSet.openAdditional(), r.getLow(), r.getHigh()
             );
         }
@@ -292,9 +289,12 @@ public class NNTrainer extends AbstractTrainer {
         for (final MSEWorker worker : workers) {
             EngineConcurrency.getInstance().processTask(worker, group);
         }
-
         group.waitForComplete();
 
+        double totalError = 0;
+        for (final MSEWorker worker : workers ) {
+            totalError += worker.getTotalError();
+        }
         return totalError / numRecords;
     }
 
