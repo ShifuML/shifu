@@ -139,34 +139,35 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
     }
 
     private int persistColumnIds(Path path) {
-    	try {
-	    	List<Scanner> scanners = ShifuFileUtils.getDataScanners(path.toString(), modelConfig.getDataSet().getSource());
-	    	
-	    	List<Integer> ids = null;
-	        for(Scanner scanner: scanners) {
-	        	while(scanner.hasNextLine()) {
-	        		String[] raw = scanner.nextLine().trim().split("\\|");
-	        		
-	        		int idSize = Integer.valueOf(raw[0]);
-	        		
-	        		ids = CommonUtils.stringToIntegerList(raw[1]);
-	        		
-	        	}
-	        }
-	        
-	        //prevent multiply running setting
-	        for(ColumnConfig config : columnConfigList) {
-	        	if (!config.isForceSelect()){
-	        		config.setFinalSelect(Boolean.FALSE);
-	        	}
-	        }
-	        
-	        for (Integer id : ids) {
-	        	this.columnConfigList.get(id).setFinalSelect(Boolean.TRUE);
-	        }
-	        
-	        super.saveColumnConfigList();
-	        
+        try {
+            List<Scanner> scanners = ShifuFileUtils.getDataScanners(path.toString(), modelConfig.getDataSet()
+                    .getSource());
+
+            List<Integer> ids = null;
+            for(Scanner scanner: scanners) {
+                while(scanner.hasNextLine()) {
+                    String[] raw = scanner.nextLine().trim().split("\\|");
+
+                    int idSize = Integer.valueOf(raw[0]);
+
+                    ids = CommonUtils.stringToIntegerList(raw[1]);
+
+                }
+            }
+
+            // prevent multiply running setting
+            for(ColumnConfig config: columnConfigList) {
+                if(!config.isForceSelect()) {
+                    config.setFinalSelect(Boolean.FALSE);
+                }
+            }
+
+            for(Integer id: ids) {
+                this.columnConfigList.get(id).setFinalSelect(Boolean.TRUE);
+            }
+
+            super.saveColumnConfigList();
+
         } catch (IOException e) {
             e.printStackTrace();
             return -1;
@@ -218,7 +219,7 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
             if(columnConfig.isForceSelect()) {
                 forceSelectCount++;
             }
-            if( CommonUtils.isGoodCandidate(columnConfig) ) {
+            if(CommonUtils.isGoodCandidate(columnConfig)) {
                 candidateCount++;
             }
         }
@@ -262,7 +263,7 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
 
         // computation time
         args.add(String.format(NNConstants.MAPREDUCE_PARAM_FORMAT, GuaguaConstants.GUAGUA_COMPUTATION_TIME_THRESHOLD,
-                60 * 1000l));
+                60 * 60 * 1000l));
         setHeapSizeAndSplitSize(args);
 
         // one can set guagua conf in shifuconfig
