@@ -63,6 +63,7 @@ public class ValidationConductor {
         trainer.setTrainSet(trainingData);
         trainer.setValidSet(testingData);
         trainer.disableModelPersistence();
+        trainer.disableLogging();
 
         //3. train and get validation error
         double validateError = Double.MAX_VALUE;

@@ -17,23 +17,22 @@ package ml.shifu.shifu.core.dvarsel;
  * limitations under the License.
  */
 
-import com.google.common.base.Splitter;
-
 import ml.shifu.guagua.io.GuaguaFileSplit;
 import ml.shifu.guagua.mapreduce.GuaguaLineRecordReader;
 import ml.shifu.guagua.mapreduce.GuaguaWritableAdapter;
-import ml.shifu.guagua.util.NumberFormatUtils;
 import ml.shifu.guagua.worker.AbstractWorkerComputable;
 import ml.shifu.guagua.worker.WorkerContext;
 import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.container.obj.ModelConfig;
 import ml.shifu.shifu.container.obj.RawSourceData;
+import ml.shifu.shifu.core.DataPurifier;
+import ml.shifu.shifu.core.Normalizer;
 import ml.shifu.shifu.core.dtrain.NNConstants;
 import ml.shifu.shifu.core.dvarsel.dataset.TrainingDataSet;
 import ml.shifu.shifu.core.dvarsel.dataset.TrainingRecord;
 import ml.shifu.shifu.util.CommonUtils;
 import ml.shifu.shifu.util.Constants;
-
+import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Text;
 import org.slf4j.Logger;
@@ -60,6 +59,9 @@ public class VarSelWorker extends AbstractWorkerComputable<VarSelMasterResult, V
     private long count = 0;
     private int inputNodeCount;
     private int outputNodeCount;
+
+    private DataPurifier dataPurifier;
+    private int weightColumnId = -1;
 
     private TrainingDataSet trainingDataSet;
 
@@ -107,6 +109,20 @@ public class VarSelWorker extends AbstractWorkerComputable<VarSelMasterResult, V
         this.outputNodeCount = this.getTargetColumnCount();
 
         trainingDataSet = new TrainingDataSet(normalizedColumnIdList);
+        try {
+            dataPurifier = new DataPurifier(modelConfig);
+        } catch (IOException e) {
+            throw new RuntimeException("Fail to create DataPurifier", e);
+        }
+
+        if ( StringUtils.isNotBlank(modelConfig.getWeightColumnName()) ) {
+            for ( ColumnConfig columnConfig : columnConfigList ) {
+                if ( columnConfig.getColumnName().equalsIgnoreCase(modelConfig.getWeightColumnName().trim())) {
+                    this.weightColumnId = columnConfig.getColumnNum();
+                    break;
+                }
+            }
+        }
     }
 
     @Override
@@ -138,47 +154,58 @@ public class VarSelWorker extends AbstractWorkerComputable<VarSelMasterResult, V
             LOG.info("Read {} records.", this.count);
         }
 
-        double[] inputs = new double[this.inputNodeCount];
-        double[] ideal = new double[this.outputNodeCount];
-        double significance = NNConstants.DEFAULT_SIGNIFICANCE_VALUE;
+        String record = currentValue.getWritable().toString();
+        String[] fields = CommonUtils.split(record, modelConfig.getDataSetDelimiter());
 
-        int elementCnt = 0;
-        for (String input : Splitter.on(NNConstants.NN_DEFAULT_COLUMN_SEPARATOR)
-                .split(currentValue.getWritable().toString())) {
-            double dval = NumberFormatUtils.getDouble(input.trim(), 0.0d);
+        int targetColumnId = CommonUtils.getTargetColumnNum(columnConfigList);
+        String tag = StringUtils.trim(fields[targetColumnId]);
 
-            if ( elementCnt < this.outputNodeCount ) {
-                ideal[elementCnt ++] = dval;
-            } else {
-                int inputsIndex = (elementCnt ++) - this.outputNodeCount;
-                if ( inputsIndex < this.inputNodeCount ) {
-                    inputs[inputsIndex] = dval;
-                } else if ( inputsIndex == this.inputNodeCount ) {
-                    significance = dval;
-                } else {
-                    break;
+        if ( this.dataPurifier.isFilterOut(record) && isPosOrNegTag(modelConfig, tag) ) {
+            double[] inputs = new double[this.inputNodeCount];
+            double[] ideal = new double[this.outputNodeCount];
+
+            double significance = NNConstants.DEFAULT_SIGNIFICANCE_VALUE;
+            if ( this.weightColumnId >= 0 ) {
+                try {
+                    significance = Double.parseDouble(fields[this.weightColumnId]);
+                } catch (Exception e) {
+                    // user may set wrong field, just used default.
                 }
             }
-        }
 
-        if ( elementCnt != this.inputNodeCount + this.outputNodeCount + 1 ) {
-            // not enough data
-            LOG.warn("Incomplete data... expected field count - {}, but actual - {}",
-                    (this.inputNodeCount + this.outputNodeCount + 1), elementCnt);
-        } else {
+            ideal[0] = (this.modelConfig.getPosTags().contains(tag) ? 1.0d : 0.0d);
+
+            int i = 0;
+            for ( Integer columnId : this.trainingDataSet.getDataColumnIdList() ) {
+                inputs[i++] = Normalizer.normalize(columnConfigList.get(columnId), fields[columnId]);
+            }
+
             trainingDataSet.addTrainingRecord(new TrainingRecord(inputs, ideal, significance));
         }
+    }
+
+    private boolean isPosOrNegTag(ModelConfig config, String tag) {
+        return config.getPosTags().contains(tag) || config.getNegTags().contains(tag);
     }
 
     private List<Integer> getNormalizedColumnIdList() {
         List<Integer> normalizedColumnIdList = new ArrayList<Integer>();
         for (ColumnConfig config : columnConfigList) {
-            if (config.isCandidate()) {
+            if ( config.isCandidate() && isGoodVarSelCandidate(config) ) {
                 normalizedColumnIdList.add(config.getColumnNum());
             }
         }
 
         return normalizedColumnIdList;
+    }
+
+    private boolean isGoodVarSelCandidate(ColumnConfig config) {
+        return ( config.getKs() != null
+                && config.getKs() > 0
+                && config.getIv() != null
+                && config.getIv() > 0
+                && ( (config.isCategorical() && config.getBinCategory() != null && config.getBinCategory().size() > 1)
+                    || (config.isNumerical() && config.getBinBoundary() != null && config.getBinBoundary().size() > 1) ));
     }
 
     private int getTargetColumnCount() {

@@ -41,7 +41,7 @@ public class WrapperWorkerConductor extends AbstractWorkerConductor {
 
         this.candidates = new ArrayList<ColumnConfig>();
         for ( ColumnConfig columnConfig : columnConfigList ) {
-            if ( columnConfig.isCandidate() && !columnConfig.isFinalSelect() ) {
+            if ( columnConfig.isCandidate() && !columnConfig.isForceSelect() ) {
                 candidates.add(columnConfig);
             }
         }
@@ -74,6 +74,8 @@ public class WrapperWorkerConductor extends AbstractWorkerConductor {
                 }
             }
         }
+
+        System.out.println("find best variable - " + bestCandidate.getColumnName() + ", with validation error - " + minValidateError);
 
         return ((bestCandidate == null) ? getDefaultWorkerResult() : getWorkerResult(bestCandidate.getColumnNum()));
     }

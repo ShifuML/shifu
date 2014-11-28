@@ -60,4 +60,8 @@ public class TrainingDataSet {
             }
         }
     }
+
+    public List<Integer> getDataColumnIdList() {
+        return this.dataColumnIdList;
+    }
 }

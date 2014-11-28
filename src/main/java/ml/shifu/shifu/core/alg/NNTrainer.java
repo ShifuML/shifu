@@ -64,6 +64,7 @@ public class NNTrainer extends AbstractTrainer {
 
     private BasicNetwork network;
     private volatile boolean toPersistentModel = true;
+    private volatile boolean toLoggingProcess = true;
 
     static {
         defaultLearningRate = new HashMap<String, Double>();
@@ -99,8 +100,8 @@ public class NNTrainer extends AbstractTrainer {
         if (numLayers != 0 && (numLayers != actFunc.size() || numLayers != hiddenNodeList.size())) {
             throw new RuntimeException("the number of layer do not equal to the number of activation function or the function list and node list empty");
         }
-
-        log.info("    - total " + numLayers + " layers, each layers are: " + Arrays.toString(hiddenNodeList.toArray()) + " the activation function are: " + Arrays.toString(actFunc.toArray()));
+        if ( toLoggingProcess )
+            log.info("    - total " + numLayers + " layers, each layers are: " + Arrays.toString(hiddenNodeList.toArray()) + " the activation function are: " + Arrays.toString(actFunc.toArray()));
 
         for (int i = 0; i < numLayers; i++) {
             String func = actFunc.get(i);
@@ -138,16 +139,19 @@ public class NNTrainer extends AbstractTrainer {
 
     @Override
     public double train() throws IOException {
+        if ( toLoggingProcess )
         log.info("Using neural network algorithm...");
 
-        if ( this.dryRun ) {
-            log.info("Start Training(Dry Run)... Model #" + this.trainerID);
-        } else {
-            log.info("Start Training... Model #" + this.trainerID);
-        }
+        if ( toLoggingProcess ) {
+            if (this.dryRun) {
+                log.info("Start Training(Dry Run)... Model #" + this.trainerID);
+            } else {
+                log.info("Start Training... Model #" + this.trainerID);
+            }
 
-        log.info("    - Input Size: " + trainSet.getInputSize());
-        log.info("    - Ideal Size: " + trainSet.getIdealSize());
+            log.info("    - Input Size: " + trainSet.getInputSize());
+            log.info("    - Ideal Size: " + trainSet.getIdealSize());
+        }
 
         //set up the model
         buildNetwork();
@@ -179,15 +183,16 @@ public class NNTrainer extends AbstractTrainer {
                 saveNN();
                 extra = " <-- NN saved: ./models/model" + this.trainerID + ".nn";
             }
-
-            log.info("  Trainer-" + trainerID + "> Epoch #" + (i + 1)
+            if ( toLoggingProcess )
+                log.info("  Trainer-" + trainerID + "> Epoch #" + (i + 1)
                     + " Train Error: " + df.format(mlTrain.getError())
                     + " Validation Error: " + ((this.validSet.getRecordCount() > 0) ? df.format(validMSE) : "N/A") + " " + extra);
 
         }
 
         mlTrain.finishTraining();
-        log.info("Trainer #" + this.trainerID + " is Finished!");
+        if ( toLoggingProcess )
+            log.info("Trainer #" + this.trainerID + " is Finished!");
         return getBaseMSE();
     }
 
@@ -203,6 +208,13 @@ public class NNTrainer extends AbstractTrainer {
         this.toPersistentModel = false;
     }
 
+    public void enableLogging() {
+        this.toLoggingProcess = true;
+    }
+
+    public void disableLogging() {
+        this.toLoggingProcess = false;
+    }
     /**
      * @param network the network to set
      */
@@ -229,9 +241,11 @@ public class NNTrainer extends AbstractTrainer {
             rate = ((Float) rateObj).doubleValue();
         }
 
-        log.info("    - Learning Algorithm: " + learningAlgMap.get(alg));
+        if ( toLoggingProcess )
+            log.info("    - Learning Algorithm: " + learningAlgMap.get(alg));
         if (alg.equals("Q") || alg.equals("B") || alg.equals("M")) {
-            log.info("    - Learning Rate: " + rate);
+            if ( toLoggingProcess )
+                log.info("    - Learning Rate: " + rate);
         }
 
         if (alg.equals("B")) {

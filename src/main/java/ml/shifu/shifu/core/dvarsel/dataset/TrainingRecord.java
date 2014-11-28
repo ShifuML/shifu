@@ -17,7 +17,11 @@ package ml.shifu.shifu.core.dvarsel.dataset;
  * limitations under the License.
  */
 
+import org.encog.ml.data.MLData;
 import org.encog.ml.data.MLDataPair;
+import org.encog.ml.data.basic.BasicMLData;
+import org.encog.ml.data.basic.BasicMLDataPair;
+import scala.Int;
 
 import java.util.Set;
 import java.util.List;
@@ -49,7 +53,16 @@ public class TrainingRecord {
     }
 
     public MLDataPair toMLDataPair(List<Integer> dataColumnIdList, Set<Integer> workingColumnSet) {
-        return null;
+        double[] params = new double[workingColumnSet.size()];
+
+        int pos = 0;
+        for (int i = 0; i < dataColumnIdList.size(); i ++) {
+            if ( workingColumnSet.contains(dataColumnIdList.get(i)) ) {
+                params[pos++] = inputs[i];
+            }
+        }
+
+        return new BasicMLDataPair(new BasicMLData(params), new BasicMLData(this.ideal));
     }
 
 }
