@@ -17,14 +17,12 @@ package ml.shifu.shifu.core.dvarsel.dataset;
  * limitations under the License.
  */
 
-import org.encog.ml.data.MLData;
+import java.util.List;
+import java.util.Set;
+
 import org.encog.ml.data.MLDataPair;
 import org.encog.ml.data.basic.BasicMLData;
 import org.encog.ml.data.basic.BasicMLDataPair;
-import scala.Int;
-
-import java.util.Set;
-import java.util.List;
 
 /**
  * Created on 11/24/2014.

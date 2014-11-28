@@ -436,22 +436,6 @@ public abstract class AbstractTrainer {
     public abstract double train() throws IOException;
 
     /**
-     * the error for each validation
-     */
-    protected double totalError = 0;
-
-    /**
-     * this function update the error synchronously
-     *
-     * @param error
-     */
-    public final void report(double error) {
-        synchronized (this) {
-            this.totalError += error;
-        }
-    }
-
-    /**
      * non-synchronously version update error
      *
      * @param network
