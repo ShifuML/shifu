@@ -28,8 +28,11 @@ import ml.shifu.shifu.core.AbstractTrainer;
 import ml.shifu.shifu.core.VariableSelector;
 import ml.shifu.shifu.core.alg.NNTrainer;
 import ml.shifu.shifu.core.dtrain.NNConstants;
-import ml.shifu.shifu.core.dtrain.NNOutput;
-import ml.shifu.shifu.core.dvarsel.*;
+import ml.shifu.shifu.core.dvarsel.VarSelMaster;
+import ml.shifu.shifu.core.dvarsel.VarSelMasterResult;
+import ml.shifu.shifu.core.dvarsel.VarSelOutput;
+import ml.shifu.shifu.core.dvarsel.VarSelWorker;
+import ml.shifu.shifu.core.dvarsel.VarSelWorkerResult;
 import ml.shifu.shifu.core.dvarsel.wrapper.WrapperMasterConductor;
 import ml.shifu.shifu.core.dvarsel.wrapper.WrapperWorkerConductor;
 import ml.shifu.shifu.core.validator.ModelInspector.ModelStep;
@@ -42,6 +45,7 @@ import ml.shifu.shifu.util.Environment;
 
 import org.apache.commons.collections.ListUtils;
 import org.apache.commons.compress.compressors.bzip2.BZip2CompressorInputStream;
+import org.apache.commons.jexl2.JexlException;
 import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.fs.Path;
 import org.apache.pig.impl.util.JarManager;
@@ -55,19 +59,17 @@ import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Splitter;
 
-
 /**
  * Variable selection processor, select the variable based on KS/IV value, or </p>
  * <p/>
- * Selection variable based on the wrapper training processor. </p>
+ * Selection variable based on the wrapper training processor.
+ * </p>
  */
 public class VarSelectModelProcessor extends BasicModelProcessor implements Processor {
 
     private final static Logger log = LoggerFactory.getLogger(VarSelectModelProcessor.class);
-    
-    private static final String SHIFU_DTRAIN_PARALLEL = "shifu.dtrain.parallel";
+
     public static final String SHIFU_DEFAULT_DTRAIN_PARALLEL = "true";
-    private static boolean isDebug = false;
 
     /**
      * run for the variable selection
@@ -76,19 +78,19 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
     public int run() throws Exception {
         setUp(ModelStep.VARSELECT);
 
-        if (modelConfig.getVotedVariablesSelection()) {
-        	votedVariablesSelection();
-        } else{
-        	nativeVarialeSelection();
+        if(modelConfig.getVotedVariablesSelection()) {
+            votedVariablesSelection();
+        } else {
+            nativeVarialeSelection();
         }
 
         clearUp(ModelStep.VARSELECT);
         return 0;
     }
-    
-    private int nativeVarialeSelection() throws Exception{
-    	
-    	CommonUtils.updateColumnConfigFlags(modelConfig, columnConfigList);
+
+    private int nativeVarialeSelection() throws Exception {
+
+        CommonUtils.updateColumnConfigFlags(modelConfig, columnConfigList);
 
         VariableSelector selector = new VariableSelector(this.modelConfig, this.columnConfigList);
 
@@ -101,65 +103,60 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
         }
 
         // Wrapper, only if enabled
-        if (modelConfig.getVarSelectWrapperEnabled()) {
+        if(modelConfig.getVarSelectWrapperEnabled()) {
             wrapper(selector);
         }
         log.info("Step Finished: varselect");
-        
-        return 0 ;
+
+        return 0;
     }
-    
-    private int votedVariablesSelection() throws ClassNotFoundException, IOException, InterruptedException{
-    	
-    	log.info("Start voted variables selection ");
-    	
-    	SourceType sourceType = super.getModelConfig().getDataSet().getSource();
+
+    private void votedVariablesSelection() throws ClassNotFoundException, IOException, InterruptedException {
+        log.info("Start voted variables selection ");
+
+        SourceType sourceType = super.getModelConfig().getDataSet().getSource();
 
         final List<String> args = new ArrayList<String>();
-        //prepare parameter
+        // prepare parameter
         prepareVarSelParams(args, sourceType);
 
         Path columnIdsPath = getVotedSelectionPath(sourceType);
-        args.add(String.format(NNConstants.MAPREDUCE_PARAM_FORMAT, Constants.VAR_SEL_COLUMN_IDS_OUPUT, columnIdsPath.toString()));
-    	
-    	long start = System.currentTimeMillis();
-    	
-    	GuaguaMapReduceClient guaguaClient = new GuaguaMapReduceClient();
-    	
+        args.add(String.format(NNConstants.MAPREDUCE_PARAM_FORMAT, Constants.VAR_SEL_COLUMN_IDS_OUPUT,
+                columnIdsPath.toString()));
+        System.out.println(args);
+        long start = System.currentTimeMillis();
+
+        GuaguaMapReduceClient guaguaClient = new GuaguaMapReduceClient();
+
         guaguaClient.creatJob(args.toArray(new String[0])).waitForCompletion(true);
-        
+
         log.info("Voted variables selection finished in {}ms.", System.currentTimeMillis() - start);
-
-        //persistence the coloums
-
-    	
-        return 0;
     }
 
     private Path getVotedSelectionPath(SourceType sourceType) {
 
-        return ShifuFileUtils.getFileSystemBySourceType(sourceType).makeQualified(new Path(getPathFinder().getVarSelsPath(sourceType), "VarSels"));
+        return ShifuFileUtils.getFileSystemBySourceType(sourceType).makeQualified(
+                new Path(getPathFinder().getVarSelsPath(sourceType), "VarSels"));
     }
 
     private void prepareVarSelParams(final List<String> args, final SourceType sourceType) {
-    	args.add("-libjars");
-    	
+        args.add("-libjars");
+
         addRuntimeJars(args);
 
         args.add("-i");
         args.add(ShifuFileUtils.getFileSystemBySourceType(sourceType)
                 .makeQualified(new Path(modelConfig.getDataSetRawPath())).toString());
 
-        args.add("-z");
         String zkServers = Environment.getProperty(Environment.ZOO_KEEPER_SERVERS);
         if(StringUtils.isEmpty(zkServers)) {
-            throw new IllegalArgumentException(
-                    "Zookeeper is used for distributed training coordination, please set 'zookeeperServers' firstly in '$SHIFU_HOME/conf/shifuconfig' file. The value is like 'server1:port1,server2:port2'.");
+            log.warn("No specified zookeeper settings from zookeeperServers in shifuConfig file, Guagua will set embeded zookeeper server in client process. For big data applications, specified zookeeper servers are strongly recommended.");
+        } else {
+            args.add("-z");
+            args.add(zkServers);
         }
 
-        args.add(zkServers);
-
-        //setting the class
+        // setting the class
         args.add("-w");
         args.add(VarSelWorker.class.getName());
 
@@ -168,8 +165,8 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
 
         args.add("-c");
         // the reason to add 1 is that the first iteration in D-NN implementation is used for training preparation.
+        // FIXME, how to set iteration number
         int numTrainEpochs = super.getModelConfig().getTrain().getNumTrainEpochs() + 1;
-
         args.add(String.valueOf(numTrainEpochs));
 
         args.add("-mr");
@@ -178,21 +175,21 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
         args.add("-wr");
         args.add(VarSelWorkerResult.class.getName());
 
-        //setting conductor
-        args.add(String.format(NNConstants.MAPREDUCE_PARAM_FORMAT, Constants.VAR_SEL_MASTER_CONDUCTOR, 
-        		 Environment.getProperty(Environment.VAR_SEL_MASTER_CONDUCTOR, WrapperMasterConductor.class.getName())));
-        
-        args.add(String.format(NNConstants.MAPREDUCE_PARAM_FORMAT, Constants.VAR_SEL_WORKER_CONDUCTOR, 
-       		 Environment.getProperty(Environment.VAR_SEL_MASTER_CONDUCTOR, WrapperWorkerConductor.class.getName())));
+        // setting conductor
+        args.add(String.format(NNConstants.MAPREDUCE_PARAM_FORMAT, Constants.VAR_SEL_MASTER_CONDUCTOR,
+                Environment.getProperty(Environment.VAR_SEL_MASTER_CONDUCTOR, WrapperMasterConductor.class.getName())));
 
-        //setting queue
+        args.add(String.format(NNConstants.MAPREDUCE_PARAM_FORMAT, Constants.VAR_SEL_WORKER_CONDUCTOR,
+                Environment.getProperty(Environment.VAR_SEL_MASTER_CONDUCTOR, WrapperWorkerConductor.class.getName())));
+
+        // setting queue
         args.add(String.format(NNConstants.MAPREDUCE_PARAM_FORMAT, NNConstants.MAPRED_JOB_QUEUE_NAME,
                 Environment.getProperty(Environment.HADOOP_JOB_QUEUE, Constants.DEFAULT_JOB_QUEUE)));
 
         args.add(String.format(NNConstants.MAPREDUCE_PARAM_FORMAT, GuaguaConstants.GUAGUA_MASTER_INTERCEPTERS,
                 VarSelOutput.class.getName()));
 
-        //setting model config column config
+        // setting model config column config
         args.add(String.format(
                 NNConstants.MAPREDUCE_PARAM_FORMAT,
                 NNConstants.SHIFU_NN_MODEL_CONFIG,
@@ -204,12 +201,12 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
                 ShifuFileUtils.getFileSystemBySourceType(sourceType).makeQualified(
                         new Path(super.getPathFinder().getColumnConfigPath(sourceType)))));
 
-        //source type
+        // source type
         args.add(String.format(NNConstants.MAPREDUCE_PARAM_FORMAT, NNConstants.NN_MODELSET_SOURCE_TYPE, sourceType));
 
-        //computation time
+        // computation time
         args.add(String.format(NNConstants.MAPREDUCE_PARAM_FORMAT, GuaguaConstants.GUAGUA_COMPUTATION_TIME_THRESHOLD,
-                40 * 1000l));
+                60 * 1000l));
         setHeapSizeAndSplitSize(args);
 
         // one can set guagua conf in shifuconfig
@@ -221,8 +218,8 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
             }
         }
     }
-    
- // GuaguaOptionsParser doesn't to support *.jar currently.
+
+    // GuaguaOptionsParser doesn't to support *.jar currently.
     private void addRuntimeJars(final List<String> args) {
         List<String> jars = new ArrayList<String>(16);
         // jackson-databind-*.jar
@@ -251,22 +248,18 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
         jars.add(JarManager.findContainingJar(GuaguaMapReduceConstants.class));
         // zookeeper-*.jar
         jars.add(JarManager.findContainingJar(ZooKeeper.class));
+        
+        jars.add(JarManager.findContainingJar(JexlException.class));
 
         args.add(StringUtils.join(jars, NNConstants.LIB_JAR_SEPARATOR));
     }
-    
+
     private void setHeapSizeAndSplitSize(final List<String> args) {
-        // TODO tmp setting 1G heap for each worker, need to be set in ModelConfig, each split is set to 256M for heap
-        // with 1G, should be set in ModelConfig also. Replace string as constants.
-        if(isDebug == true) {
-            args.add(String.format(NNConstants.MAPREDUCE_PARAM_FORMAT, GuaguaMapReduceConstants.MAPRED_CHILD_JAVA_OPTS,
-                    "-Xmn128m -Xms1G -Xmx1G -verbose:gc -XX:+PrintGCDetails -XX:+PrintGCTimeStamps"));
-        } else {
-            args.add(String.format(NNConstants.MAPREDUCE_PARAM_FORMAT, GuaguaMapReduceConstants.MAPRED_CHILD_JAVA_OPTS,
-                    "-Xmn128m -Xms1G -Xmx1G"));
-        }
-        args.add(String.format(NNConstants.MAPREDUCE_PARAM_FORMAT, 
-                GuaguaConstants.GUAGUA_SPLIT_COMBINABLE,
+        // args.add(String.format(NNConstants.MAPREDUCE_PARAM_FORMAT, GuaguaMapReduceConstants.MAPRED_CHILD_JAVA_OPTS,
+        // "-Xmn128m -Xms1G -Xmx1G -verbose:gc -XX:+PrintGCDetails -XX:+PrintGCTimeStamps"));
+        args.add(String.format(NNConstants.MAPREDUCE_PARAM_FORMAT, GuaguaMapReduceConstants.MAPRED_CHILD_JAVA_OPTS,
+                "-Xmn128m -Xms1G -Xmx1G"));
+        args.add(String.format(NNConstants.MAPREDUCE_PARAM_FORMAT, GuaguaConstants.GUAGUA_SPLIT_COMBINABLE,
                 Environment.getProperty(GuaguaConstants.GUAGUA_SPLIT_COMBINABLE, SHIFU_DEFAULT_DTRAIN_PARALLEL)));
         args.add(String.format(NNConstants.MAPREDUCE_PARAM_FORMAT,
                 GuaguaConstants.GUAGUA_SPLIT_MAX_COMBINED_SPLIT_SIZE,
@@ -275,7 +268,7 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
 
     /**
      * user wrapper to select variable
-     *
+     * 
      * @param selector
      * @throws Exception
      */
@@ -283,7 +276,7 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
 
         NormalizeModelProcessor n = new NormalizeModelProcessor();
 
-        //runNormalize();
+        // runNormalize();
         n.run();
 
         TrainModelProcessor t = new TrainModelProcessor(false, false);
@@ -291,7 +284,7 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
 
         AbstractTrainer trainer = t.getTrainer(0);
 
-        if (trainer instanceof NNTrainer) {
+        if(trainer instanceof NNTrainer) {
             selector.selectByWrapper((NNTrainer) trainer);
             try {
                 this.saveColumnConfigList();

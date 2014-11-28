@@ -1,4 +1,5 @@
 package ml.shifu.shifu.core.dvarsel;
+
 /*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -33,6 +34,8 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.IOUtils;
 import org.encog.persist.EncogDirectoryPersistence;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.io.PrintWriter;
@@ -44,6 +47,8 @@ import java.util.concurrent.atomic.AtomicBoolean;
  * Created on 11/24/2014.
  */
 public class VarSelOutput extends BasicMasterInterceptor<VarSelMasterResult, VarSelWorkerResult> {
+
+    private static final Logger LOG = LoggerFactory.getLogger(VarSelOutput.class);
 
     /**
      * Model Config read from HDFS
@@ -66,9 +71,12 @@ public class VarSelOutput extends BasicMasterInterceptor<VarSelMasterResult, Var
         final Properties props = context.getProps();
 
         try {
-            SourceType sourceType = SourceType.valueOf(props.getProperty(NNConstants.NN_MODELSET_SOURCE_TYPE, SourceType.HDFS.toString()));
-            this.modelConfig = CommonUtils.loadModelConfig(props.getProperty(NNConstants.SHIFU_NN_MODEL_CONFIG),sourceType);
-            this.columnConfigList = CommonUtils.loadColumnConfigList(props.getProperty(NNConstants.SHIFU_NN_COLUMN_CONFIG), sourceType);
+            SourceType sourceType = SourceType.valueOf(props.getProperty(NNConstants.NN_MODELSET_SOURCE_TYPE,
+                    SourceType.HDFS.toString()));
+            this.modelConfig = CommonUtils.loadModelConfig(props.getProperty(NNConstants.SHIFU_NN_MODEL_CONFIG),
+                    sourceType);
+            this.columnConfigList = CommonUtils.loadColumnConfigList(
+                    props.getProperty(NNConstants.SHIFU_NN_COLUMN_CONFIG), sourceType);
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
@@ -81,26 +89,25 @@ public class VarSelOutput extends BasicMasterInterceptor<VarSelMasterResult, Var
 
         List<Integer> results = varSelMasterResult.getColumnIdList();
 
+        LOG.info("Results:" + results);
+
         Path out = new Path(context.getProps().getProperty(Constants.VAR_SEL_COLUMN_IDS_OUPUT));
 
         writeColumnIdsIntoHDFS(out, results);
     }
 
-    private void writeColumnIdsIntoHDFS(Path path, List<Integer> columnIds){
-
-        FSDataOutputStream fos = null;
+    private void writeColumnIdsIntoHDFS(Path path, List<Integer> columnIds) {
+        PrintWriter pw = null;
         try {
-            fos = FileSystem.get(new Configuration()).create(path);
-            final PrintWriter pw = new PrintWriter(fos);
+            FSDataOutputStream fos = FileSystem.get(new Configuration()).create(path);
+            pw = new PrintWriter(fos);
             pw.println(Integer.toString(columnIds.size()) + "|" + columnIds.toString());
-
+            pw.flush();
         } catch (IOException e) {
-
+            LOG.error("Error in writing output.", e);
         } finally {
-            IOUtils.closeStream(fos);
+            IOUtils.closeStream(pw);
         }
     }
-
-
 
 }
