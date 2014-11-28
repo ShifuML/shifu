@@ -24,6 +24,7 @@ import java.util.Scanner;
 import ml.shifu.guagua.GuaguaConstants;
 import ml.shifu.guagua.mapreduce.GuaguaMapReduceClient;
 import ml.shifu.guagua.mapreduce.GuaguaMapReduceConstants;
+import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
 import ml.shifu.shifu.core.AbstractTrainer;
 import ml.shifu.shifu.core.VariableSelector;
@@ -124,7 +125,7 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
         Path columnIdsPath = getVotedSelectionPath(sourceType);
         args.add(String.format(NNConstants.MAPREDUCE_PARAM_FORMAT, Constants.VAR_SEL_COLUMN_IDS_OUPUT,
                 columnIdsPath.toString()));
-        System.out.println(args);
+
         long start = System.currentTimeMillis();
 
         GuaguaMapReduceClient guaguaClient = new GuaguaMapReduceClient();
@@ -134,42 +135,44 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
         log.info("Voted variables selection finished in {}ms.", System.currentTimeMillis() - start);
 
         persistColumnIds(columnIdsPath);
+        super.syncDataToHdfs(sourceType);
     }
 
     private int persistColumnIds(Path path) {
-    	try {
-	    	List<Scanner> scanners = ShifuFileUtils.getDataScanners(path.toString(), modelConfig.getDataSet().getSource());
-	    	
-	    	List<Integer> ids = null;
-	        for(Scanner scanner: scanners) {
-	        	while(scanner.hasNextLine()) {
-	        		String[] raw = scanner.nextLine().trim().split("\\|");
-	        		
-	        		int idSize = Integer.valueOf(raw[0]);
-	        		
-	        		ids = CommonUtils.stringToIntegerList(raw[1]);
-	        		
-	        	}
-	        }
-	        
-	        for (Integer id : ids) {
-	        	this.columnConfigList.get(id).setFinalSelect(Boolean.TRUE);
-	        }
-	        
-	        super.saveColumnConfigList();
-	        
-        } catch (IOException e) {
-        	e.printStackTrace();
-        	return -1;
-        } catch (IllegalArgumentException e) {
-        	e.printStackTrace();
-        	return -1;
-        }
-    	
-    	return 0;
-	}
+        try {
+            List<Scanner> scanners = ShifuFileUtils.getDataScanners(path.toString(), modelConfig.getDataSet()
+                    .getSource());
 
-	private Path getVotedSelectionPath(SourceType sourceType) {
+            List<Integer> ids = null;
+            for(Scanner scanner: scanners) {
+                while(scanner.hasNextLine()) {
+                    String[] raw = scanner.nextLine().trim().split("\\|");
+
+                    int idSize = Integer.valueOf(raw[0]);
+
+                    ids = CommonUtils.stringToIntegerList(raw[1]);
+
+                }
+            }
+
+            for(Integer id: ids) {
+                this.columnConfigList.get(id).setFinalSelect(Boolean.TRUE);
+            }
+
+            super.saveColumnConfigList();
+
+        } catch (IOException e) {
+            e.printStackTrace();
+            return -1;
+        } catch (IllegalArgumentException e) {
+            e.printStackTrace();
+            return -1;
+        }
+
+        return 0;
+    }
+
+    private Path getVotedSelectionPath(SourceType sourceType) {
 
         return ShifuFileUtils.getFileSystemBySourceType(sourceType).makeQualified(
                 new Path(getPathFinder().getVarSelsPath(sourceType), "VarSels"));
@@ -202,8 +205,19 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
         args.add("-c");
         // the reason to add 1 is that the first iteration in D-NN implementation is used for training preparation.
         // FIXME, how to set iteration number
-        int numTrainEpochs = super.getModelConfig().getTrain().getNumTrainEpochs() + 1;
-        args.add(String.valueOf(numTrainEpochs));
+        int expectVarCount = this.modelConfig.getVarSelectFilterNum();
+        int forceSelectCount = 0;
+        int candidateCount = 0;
+        for(ColumnConfig columnConfig: columnConfigList) {
+            if(columnConfig.isForceSelect()) {
+                forceSelectCount++;
+            }
+            if(columnConfig.isCandidate()) {
+                candidateCount++;
+            }
+        }
+
+        args.add(String.valueOf(Math.min(expectVarCount, candidateCount) - forceSelectCount));
 
         args.add("-mr");
         args.add(VarSelMasterResult.class.getName());
@@ -284,7 +298,7 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
         jars.add(JarManager.findContainingJar(GuaguaMapReduceConstants.class));
         // zookeeper-*.jar
         jars.add(JarManager.findContainingJar(ZooKeeper.class));
-        
+
         jars.add(JarManager.findContainingJar(JexlException.class));
 
         args.add(StringUtils.join(jars, NNConstants.LIB_JAR_SEPARATOR));
