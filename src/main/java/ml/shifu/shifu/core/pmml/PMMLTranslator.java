@@ -44,7 +44,7 @@ public class PMMLTranslator {
     private static final String NAMESPACEURI = "http://www.dmg.org/PMML-4_2";
     private static final String ELEMENTOUT = "out";
     private static final String ELEMENTORIGIN = "origin";
-    public static final double EPS = 1e-10;
+    private static final double EPS = 1e-10;
 
 
     public PMMLTranslator(ModelConfig modelConfig, List<ColumnConfig> columnConfigList, List<BasicML> models) {
@@ -53,11 +53,15 @@ public class PMMLTranslator {
         this.models = models;
     }
 
-    public PMML translate() {
-        return this.translate(0);
+    public List<PMML> translate() {
+        List<PMML> pmmls = new ArrayList<PMML>(models.size());
+        for(int index = 0; index < models.size(); index++)
+            pmmls.add(translate(index));
+        return pmmls;
     }
 
     public PMML translate(int index) {
+
         PMML pmml = new PMML();
 
         // create and set data dictionary
@@ -111,7 +115,6 @@ public class PMMLTranslator {
 
         dict.withDataFields(fields);
         dict.withNumberOfFields(fields.size());
-
         return dict;
     }
 
