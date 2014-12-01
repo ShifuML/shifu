@@ -149,6 +149,8 @@ public class VarSelWorker
             return null;
         }
 
+        LOG.info("Get result from master, the base set is - {}", masterResult.getColumnIdList().toString());
+
         workerConductor.consumeMasterResult(masterResult);
         return workerConductor.generateVarSelResult();
     }

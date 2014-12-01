@@ -22,7 +22,6 @@ import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.container.obj.ModelConfig;
 import ml.shifu.shifu.core.dvarsel.AbstractWorkerConductor;
 import ml.shifu.shifu.core.dvarsel.VarSelMasterResult;
-import ml.shifu.shifu.core.dvarsel.VarSelWorker;
 import ml.shifu.shifu.core.dvarsel.VarSelWorkerResult;
 import ml.shifu.shifu.util.CommonUtils;
 import org.slf4j.Logger;
@@ -32,9 +31,6 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * Created on 11/24/2014.
@@ -72,6 +68,8 @@ public class WrapperWorkerConductor extends AbstractWorkerConductor {
 
         for(ColumnConfig columnConfig: candidates) {
             if(!baseColumnSet.contains(columnConfig.getColumnNum())) {
+                LOG.info("Start to test column [{}, {}]", columnConfig.getColumnNum(), columnConfig.getColumnName());
+
                 workingColumnSet.clear();
                 workingColumnSet.addAll(baseColumnSet);
                 workingColumnSet.add(columnConfig.getColumnNum());
@@ -83,10 +81,12 @@ public class WrapperWorkerConductor extends AbstractWorkerConductor {
                     minValidateError = validateError;
                     bestCandidate = columnConfig;
                 }
+
+                LOG.info("Finish test column [{}, {}], it's error is - {}", columnConfig.getColumnNum(), columnConfig.getColumnName(), validateError);
             }
         }
 
-        LOG.info("find best variable - " + bestCandidate.getColumnName() + ", with error - " + minValidateError);
+        LOG.info("find best variable - {} , with error - {} ", (bestCandidate == null ? "" : bestCandidate.getColumnName()), minValidateError);
 
         return ((bestCandidate == null) ? getDefaultWorkerResult() : getWorkerResult(bestCandidate.getColumnNum()));
     }
@@ -101,4 +101,5 @@ public class WrapperWorkerConductor extends AbstractWorkerConductor {
         columnIdList.add(columnId);
         return new VarSelWorkerResult(columnIdList);
     }
+
 }
