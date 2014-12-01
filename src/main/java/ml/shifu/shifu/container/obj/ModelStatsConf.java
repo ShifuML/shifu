@@ -29,6 +29,12 @@ public class ModelStatsConf {
     public static enum BinningMethod {
         EqualPositive, EqualTotal, EqualInterval
     }
+    
+    public static enum BinningAlgorithm {
+    	Native,               //sorting way
+    	SPDT,				  //paper reference: www.jmlr.org/papers/volume11/ben-haim10a/ben-haim10a.pdf
+    	MunroPat			  //paper reference: www.cs.ucsb.edu/~suri/cs290/MunroPat.pdf
+    }
 
     private Integer maxNumBin = Integer.valueOf(10);
     private BinningMethod binningMethod = BinningMethod.EqualPositive;
@@ -40,6 +46,8 @@ public class ModelStatsConf {
     private Boolean binningAutoTypeEnable = Boolean.FALSE;
     private Integer binningAutoTypeThreshold = Integer.valueOf(5);
     private Boolean binningMergeEnable = Boolean.TRUE;
+    
+    private BinningAlgorithm binningAlgorithm = BinningAlgorithm.SPDT;
 
     public Integer getMaxNumBin() {
         return maxNumBin;
@@ -108,5 +116,13 @@ public class ModelStatsConf {
     public void setSampleNegOnly(Boolean sampleNegOnly) {
         this.sampleNegOnly = sampleNegOnly;
     }
+
+	public BinningAlgorithm getBinningAlgorithm() {
+		return binningAlgorithm;
+	}
+
+	public void setBinningAlgorithm(BinningAlgorithm binningAlgorithm) {
+		this.binningAlgorithm = binningAlgorithm;
+	}
 
 }

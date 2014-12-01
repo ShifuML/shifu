@@ -1,6 +1,7 @@
 package ml.shifu.shifu.core.binning;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 import org.apache.commons.lang.StringUtils;
@@ -23,19 +24,18 @@ public class MunroPatBinning extends AbstractBinning<Double> {
 	@Override
 	public void addData(String val) {
 		String fval = StringUtils.trimToEmpty(val);
-		
-		Double dval = Double.valueOf(0.0);
-        
-        try {
+		try {
+        	Double dval = Double.valueOf(0.0);
             dval = Double.parseDouble(fval);
             estimator.add(dval);
+            
         } catch (NumberFormatException e) {
             super.incInvalidValCnt();
         }
 	}
 	
 	/**
-	 * add negative infinity and positive infinity, merge same bins
+	 * set min/max, merge same bins
 	 * 
 	 * @param bins
 	 * @return
@@ -48,7 +48,6 @@ public class MunroPatBinning extends AbstractBinning<Double> {
 			return bins;
 		}
 		
-		newBins.add(Double.NEGATIVE_INFINITY);
 		Double cur = bins.get(0);
 		newBins.add(cur);
 		
@@ -59,9 +58,19 @@ public class MunroPatBinning extends AbstractBinning<Double> {
 			}
 			cur = bins.get(i);
 			i ++;
-		}		
+		}
 		
-		newBins.add(Double.POSITIVE_INFINITY);
+		if (newBins.size() == 1) {
+			//special case since there is only 1 candidate in the bins
+			double val = newBins.get(0);
+			newBins = Arrays.asList(new Double[] {Double.NEGATIVE_INFINITY, val});
+		} else if (newBins.size() == 2) {
+			newBins.set(0, Double.NEGATIVE_INFINITY);
+		} else {
+			newBins.set(0, Double.NEGATIVE_INFINITY);
+			//remove the max, and became open interval
+			newBins.remove(newBins.size() - 1);
+		}
 		return newBins;		
 	}
 

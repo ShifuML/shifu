@@ -94,6 +94,10 @@ public class StreamStatsCalculator {
 
         sum += data * frequency;
         squaredSum += data * data * frequency;
+        
+        for(int i = 0 ; i < frequency; i ++) {
+        	estimator.add(data);
+        }
     }
     
     

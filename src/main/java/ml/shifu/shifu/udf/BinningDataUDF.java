@@ -27,6 +27,7 @@ import ml.shifu.shifu.core.binning.CategoricalBinning;
 import ml.shifu.shifu.core.binning.EqualIntervalBinning;
 import ml.shifu.shifu.core.binning.EqualPopulationBinning;
 import ml.shifu.shifu.core.binning.MunroPatBinning;
+import ml.shifu.shifu.core.binning.NativeBinning;
 
 import org.apache.commons.lang.StringUtils;
 import org.apache.pig.data.DataBag;
@@ -76,8 +77,21 @@ public class BinningDataUDF extends AbstractTrainerUDF<Tuple> {
             if ( super.modelConfig.getBinningMethod().equals(BinningMethod.EqualInterval) ) {
                 binning = new EqualIntervalBinning(modelConfig.getStats().getMaxNumBin());
             } else {
-                //binning = new EqualPopulationBinning(modelConfig.getStats().getMaxNumBin());
-            	binning = new MunroPatBinning(modelConfig.getStats().getMaxNumBin());
+            	switch (this.modelConfig.getBinningAlgorithm()) {
+            	case Native:
+            		log.info("Invoke Native binning method, memory cosuming!!");
+            		//always merge bins
+            		binning = new NativeBinning(modelConfig.getStats().getMaxNumBin(), true);
+            		break;
+            	case SPDT:
+            		log.info("Invoke SPDT(Streaming Parallel Decision Tree) binning method, ");
+            		binning = new EqualPopulationBinning(modelConfig.getStats().getMaxNumBin());
+            		break;
+            	case MunroPat:
+            		log.info("Invoke Munro & Paterson selecting algorithm");
+            		binning = new MunroPatBinning(modelConfig.getStats().getMaxNumBin());
+            		break;
+            	}
             }
         }
         
