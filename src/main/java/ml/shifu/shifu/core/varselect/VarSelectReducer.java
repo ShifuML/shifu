@@ -29,6 +29,8 @@ import org.apache.hadoop.io.DoubleWritable;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.NullWritable;
 import org.apache.hadoop.mapreduce.Reducer;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * {@link VarSelectReducer} is used to accumulate all mapper column-MSE values together.
@@ -40,7 +42,7 @@ import org.apache.hadoop.mapreduce.Reducer;
  */
 public class VarSelectReducer extends Reducer<LongWritable, DoubleWritable, LongWritable, NullWritable> {
 
-    // private final static Logger LOG = LoggerFactory.getLogger(VarSelectReducer.class);
+    private final static Logger LOG = LoggerFactory.getLogger(VarSelectReducer.class);
 
     /**
      * Final results list, this list is loaded in memory for sum, and will be written by context in cleanup.
@@ -120,6 +122,8 @@ public class VarSelectReducer extends Reducer<LongWritable, DoubleWritable, Long
                 return Double.valueOf(o2.value).compareTo(Double.valueOf(o1.value));
             }
         });
+
+        LOG.debug("Final Results:{}", this.results);
 
         int candidates = 0;
         if("R".equalsIgnoreCase(this.wrapperBy) || "SE".equalsIgnoreCase(this.wrapperBy)) {

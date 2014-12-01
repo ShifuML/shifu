@@ -50,6 +50,7 @@ import org.apache.hadoop.io.NullWritable;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
 import org.apache.hadoop.mapreduce.lib.input.TextInputFormat;
+import org.apache.hadoop.mapreduce.lib.map.MultithreadedMapper;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.mapreduce.lib.output.TextOutputFormat;
 import org.apache.hadoop.util.GenericOptionsParser;
@@ -98,7 +99,7 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
                     && super.getModelConfig().getBasic().getRunMode() == RunMode.mapred) {
                 validateDistributedWrapperVarSelect();
                 syncDataToHdfs(super.modelConfig.getDataSet().getSource());
-                distributedWrapperBy(selector);
+                distributedWrapper(selector);
             } else {
                 wrapper(selector);
             }
@@ -113,7 +114,7 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
         if(!("R".equalsIgnoreCase(this.modelConfig.getVarSelectWrapperBy()) || "SE".equalsIgnoreCase(this.modelConfig
                 .getVarSelectWrapperBy()))) {
             throw new IllegalArgumentException(
-                    "Only R and SE wrapperBy methods are supported so far in distributed variable selection.");
+                    "Only R(Remove) and SE(Sensitivity Selection) wrapperBy methods are supported so far in distributed variable selection.");
         }
 
         if(!NNConstants.NN_ALG_NAME.equalsIgnoreCase(super.getModelConfig().getTrain().getAlgorithm())) {
@@ -167,7 +168,7 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
     /**
      * Wrapper through {@link TrainModelProcessor} and a MapReduce job to analyze biggest sensitivity MSE.
      */
-    private void distributedWrapperBy(VariableSelector selector) throws Exception {
+    private void distributedWrapper(VariableSelector selector) throws Exception {
         // 1. Train a model using current selected variables, if no variables selected, use all candidate variables.
         TrainModelProcessor trainModelProcessor = new TrainModelProcessor();
         trainModelProcessor.setForVarSelect(true);
@@ -205,7 +206,15 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
 
         Job job = new Job(conf, "Shifu: Variable Selection Wrapper Job : " + this.modelConfig.getModelSetName());
         job.setJarByClass(getClass());
-        job.setMapperClass(VarSelectMapper.class);
+        boolean isSEVarSelMulti = "true".equalsIgnoreCase(Environment.getProperty("shifu.varsel.se.multi", "false"));
+        if(isSEVarSelMulti) {
+            job.setMapperClass(MultithreadedMapper.class);
+            MultithreadedMapper.setMapperClass(job, VarSelectMapper.class);
+            MultithreadedMapper.setNumberOfThreads(job, 6);
+        } else {
+            job.setMapperClass(VarSelectMapper.class);
+        }
+
         job.setMapOutputKeyClass(LongWritable.class);
         job.setMapOutputValueClass(DoubleWritable.class);
         job.setInputFormatClass(TextInputFormat.class);
