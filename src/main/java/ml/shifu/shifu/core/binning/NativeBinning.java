@@ -74,7 +74,7 @@ public class NativeBinning extends AbstractBinning<Double>{
 			prevData = currData;
 		}
 		
-		binBoundary.set(binBoundary.size() - 1, Double.POSITIVE_INFINITY);
+		//binBoundary.set(binBoundary.size() - 1, Double.POSITIVE_INFINITY);
 		return binBoundary;
 	}	
 
