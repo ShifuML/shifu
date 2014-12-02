@@ -116,6 +116,9 @@
 				<include>*:jackson-core-asl:*</include>
 				<include>*:jackson-databind:*</include>
 				<include>*:jackson-mapper-asl:*</include>
+                <include>*:pmml-model:*</include>
+                <include>*:pmml-schema:*</include>
+                <include>*:pmml-evaluator:*</include>
 				<include>*:jline:*</include>
 				<include>*:liblinear:*</include>
 				<include>*:log4j:*</include>

@@ -29,6 +29,7 @@ import org.apache.commons.lang.StringUtils;
 import org.encog.ml.BasicML;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.dmg.pmml.PMML;
 
 import java.io.File;
 import java.util.List;
@@ -82,7 +83,7 @@ public class ExportModelProcessor extends BasicModelProcessor implements Process
         List<BasicML> models = CommonUtils.loadBasicModels(pathFinder.getModelsPath(SourceType.LOCAL), ALGORITHM.NN);
 
         for (int index = 0; index < models.size(); index++) {
-            org.dmg.pmml.PMML pmml = new PMMLTranslator(modelConfig, columnConfigList, models).translate(index);
+            PMML pmml = new PMMLTranslator(modelConfig, columnConfigList, models).translate(index);
             PMMLUtils.savePMML(pmml, "./pmmls/" + modelConfig.getModelSetName() + (new Integer(index)).toString() + ".pmml");
         }
 
