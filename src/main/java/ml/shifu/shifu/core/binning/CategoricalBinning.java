@@ -38,9 +38,14 @@ public class CategoricalBinning extends AbstractBinning<String> {
     
     private Set<String> categoricalVals;
     
-    public CategoricalBinning(){}
+    /**
+     * Empty constructor : it is just for bin merging
+     */
+    protected CategoricalBinning(){}
     
     /**
+     * Constructor with expected bin number. 
+     * For categorical variable, the binningNum won't be used
      * @param binningNum
      */
     public CategoricalBinning(int binningNum) {
@@ -48,6 +53,8 @@ public class CategoricalBinning extends AbstractBinning<String> {
     }
 
     /**
+     * Constructor with expected bin number and missing value list
+     * For categorical variable, the binningNum won't be used
      * @param binningNum
      * @param missingValList
      */
@@ -57,6 +64,9 @@ public class CategoricalBinning extends AbstractBinning<String> {
     }
 
     /* (non-Javadoc)
+      * Add the string into value set
+     * First of all the input string will be trimmed and check whether it is missing value or not
+     * If it is missing value, the missing value count will +1
      * @see ml.shifu.shifu.core.binning.AbstractBinning#addData(java.lang.Object)
      */
     @Override
@@ -85,6 +95,8 @@ public class CategoricalBinning extends AbstractBinning<String> {
     @Override
     public void mergeBin(AbstractBinning<?> another) {
        CategoricalBinning binning = (CategoricalBinning) another;
+       super.mergeBin(another);
+       
        this.categoricalVals.addAll(binning.categoricalVals);
     }
     

@@ -37,60 +37,126 @@ import org.apache.commons.lang.StringUtils;
  */
 public abstract class AbstractBinning<T> {
     
+    /**
+     * Special characters for object serialization
+     */
     public static final char FIELD_SEPARATOR = '\u0001';
     public static final char SETLIST_SEPARATOR = '\u0002';
     public static final char PAIR_SEPARATOR = '\u0003';
     
+    /**
+     * Missing data count && invalid data count
+     */
     protected int missingValCnt = 0;
     protected int invalidValCnt = 0;
     
-    protected int expectedBinningNum;
+    /**
+     * Expected missing value set. The default missing value set only contain empty string ""
+     */
     protected Set<String> missingValSet;
     
-    public AbstractBinning(){}
+    /**
+     * The expect bin number
+     */
+    protected int expectedBinningNum;
     
+    /**
+     * Empty constructor : it is just for bin merging bin
+     */
+    protected AbstractBinning(){}
+    
+    /**
+     * Constructor with expected bin number
+     * @param binningNum
+     */
     public AbstractBinning(int binningNum) {
         this(binningNum, null);
     }
     
+    /**
+     * Constructor with expected bin number and expected missing values
+     * @param binningNum
+     * @param missingValList
+     */
     public AbstractBinning(int binningNum, List<String> missingValList) {
         this.expectedBinningNum = binningNum;
-        if ( CollectionUtils.isEmpty(missingValList) ) {
-            this.missingValSet = new HashSet<String>();
-            this.missingValSet.add("");
-        } else {
+        this.missingValSet = new HashSet<String>();
+        this.missingValSet.add("");
+
+        if ( CollectionUtils.isNotEmpty(missingValList) ) {
             for ( String missingVal : missingValList ) {
                 missingValSet.add( StringUtils.trimToEmpty(missingVal) );
             }
         }
     }
     
+    /**
+     * Get value missing count
+     * @return
+     */
     public int getMissingValCnt() {
         return missingValCnt;
     }
 
+    /**
+     * Get invalid value count
+     * @return
+     */
     public int getInvalidValCnt() {
         return invalidValCnt;
     }
     
+    /**
+     * Add data into bin generator
+     * @param val
+     */
     public abstract void addData(String val);
+    /**
+     * Generate the bin boundary or bin category
+     * @return
+     */
     public abstract List<T> getDataBin();
-    public abstract void mergeBin(AbstractBinning<?> another);
     
-    protected Set<String> getMissingValSet() {
-        return missingValSet;
-    }
-    
+
+    /**
+     * Check some value is missing value or not
+     * @param val
+     * @return
+     */
     protected boolean isMissingVal(String val) {
         return missingValSet.contains(val);
     }
     
+    /**
+     * Increase the missing value count
+     */
     protected void incMissingValCnt() {
         missingValCnt ++;
     }
     
+    /**
+     * Increase the invalid value count
+     */
     protected void incInvalidValCnt() {
         invalidValCnt ++;
+    }
+    
+    /**
+     * Merge another binning info to this. Currently for the expected bin number, the max value will be used.
+     * @param another
+     */
+    public void mergeBin(AbstractBinning<?> another) {
+        this.expectedBinningNum = Math.max(this.expectedBinningNum, another.expectedBinningNum);
+        
+        this.missingValCnt += another.missingValCnt;
+        this.invalidValCnt += another.invalidValCnt;
+        
+        if ( missingValSet == null ) {
+            missingValSet = new HashSet<String>();
+            missingValSet.add("");
+        }
+        
+        missingValSet.addAll(another.missingValSet);
     }
     
     /**
@@ -138,11 +204,13 @@ public abstract class AbstractBinning<T> {
 
     /**
      * Construct Binning class object from String
-     * @param objValStr
-     * @return
+     * @param modelConfig - the @ModelConfig to use
+     * @param columnConfig - the @ColumnConfig to create bin
+     * @param objValStr - the string present of object
+     * @return the Binning object for the ColumnConfig
      */
     public static AbstractBinning<?> constructBinningFromStr(ModelConfig modelConfig, ColumnConfig columnConfig, String objValStr) {
-        AbstractBinning<?> binning = null;
+        AbstractBinning<?> binning;
         
         if ( columnConfig.isCategorical() ) {
             binning = new CategoricalBinning();

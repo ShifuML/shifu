@@ -33,12 +33,16 @@ import org.apache.pig.data.TupleFactory;
 /**
  * CalculateNewStatsUDF class
  * 
- * @author zhanhu
  * @Oct 27, 2014
  *
  */
 public class CalculateNewStatsUDF extends AbstractTrainerUDF<Tuple> {
 
+    /**
+     * Experience value from modeler
+     */
+    public static final int MAX_CATEGORICAL_BINC_COUNT = 4000;
+    
     private Double valueThreshold = 1e6;
 
     public CalculateNewStatsUDF(String source, String pathModelConfig, String pathColumnConfig) throws IOException {
@@ -80,7 +84,7 @@ public class CalculateNewStatsUDF extends AbstractTrainerUDF<Tuple> {
         Tuple tuple = TupleFactory.getInstance().newTuple();
         tuple.append(columnId);
         if ( columnConfig.isCategorical() ) {
-            if ( columnConfig.getBinCategory().size() == 0 ) {
+            if ( columnConfig.getBinCategory().size() == 0 || columnConfig.getBinCategory().size() > MAX_CATEGORICAL_BINC_COUNT) {
                 return null;
             }
             

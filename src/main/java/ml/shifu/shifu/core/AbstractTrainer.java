@@ -430,26 +430,10 @@ public abstract class AbstractTrainer {
 
     /**
      * A training start function, and print the training error and validation errors
-     *
+     * @return
      * @throws IOException
      */
-    public abstract void train() throws IOException;
-
-    /**
-     * the error for each validation
-     */
-    protected double totalError = 0;
-
-    /**
-     * this function update the error synchronously
-     *
-     * @param error
-     */
-    public final void report(double error) {
-        synchronized (this) {
-            this.totalError += error;
-        }
-    }
+    public abstract double train() throws IOException;
 
     /**
      * non-synchronously version update error

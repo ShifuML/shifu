@@ -33,11 +33,13 @@ public class EqualIntervalBinning extends AbstractBinning<Double> {
     private double maxVal = -Double.MAX_VALUE;
     private double minVal = Double.MAX_VALUE;
 
-    // private Set<Double> diffValSet;
-
-    public EqualIntervalBinning() {}
+    /**
+     * Empty constructor : it is just for bin merging
+     */
+    protected EqualIntervalBinning() {}
     
     /**
+     * Constructor with expected bin number
      * @param binningNum
      */
     public EqualIntervalBinning(int binningNum) {
@@ -45,14 +47,18 @@ public class EqualIntervalBinning extends AbstractBinning<Double> {
     }
     
     /**
+     * Constructor with expected bin number and missing value list
      * @param binningNum
      */
     public EqualIntervalBinning(int binningNum, List<String> missingValList) {
         super(binningNum);
-        // diffValSet = new HashSet<Double>();
     }
 
-    /* (non-Javadoc)
+    /* 
+     * Add the value (in format of text) into histogram with frequency 1. 
+     * First of all the input string will be trimmed and check whether it is missing value or not
+     * If it is missing value, the missing value count will +1
+     * After that, the input string will be parsed into double. If it is not a double, invalid value count will +1 
      * @see ml.shifu.shifu.core.binning.AbstractBinning#addData(java.lang.Object)
      */
     @Override
@@ -103,6 +109,7 @@ public class EqualIntervalBinning extends AbstractBinning<Double> {
     }
 
     /**
+     * Process the new incoming data
      * @param dval
      */
     private void process(double dval) {
@@ -113,10 +120,6 @@ public class EqualIntervalBinning extends AbstractBinning<Double> {
         if ( dval > this.maxVal ) {
             this.maxVal = dval;
         }
-        
-        // if ( diffValSet.size() < expectedBinningNum && !diffValSet.contains(dval) ) {
-        //     diffValSet.add(dval);
-        // }
     }
     
 
@@ -126,6 +129,9 @@ public class EqualIntervalBinning extends AbstractBinning<Double> {
     @Override
     public void mergeBin(AbstractBinning<?> another) {
         EqualIntervalBinning binning = (EqualIntervalBinning) another;
+        
+        super.mergeBin(another);
+        
         process(binning.minVal);
         process(binning.maxVal);
     }

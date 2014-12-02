@@ -47,7 +47,6 @@ public class StreamStatsCalculator {
     /**
      * Constructor
      *
-     * @param voList
      * @param threshold
      */
     public StreamStatsCalculator(Double threshold) {

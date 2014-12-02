@@ -48,6 +48,9 @@ public class Environment {
     public static final String LOCAL_NUM_PARALLEL = "localNumParallel";
     public static final String RECORD_CNT_PER_MESSAGE = "recordCntPerMessage";
     public static final String HADOOP_JOB_QUEUE = "hadoopJobQueue";
+    
+    public static final String VAR_SEL_MASTER_CONDUCTOR = "varselectMasterConductor";
+    public static final String VAR_SEL_WORKER_CONDUCTOR = "varselectWorkerConductor";
 
     private static Logger logger = LoggerFactory.getLogger(Environment.class);
     private static Properties properties = new Properties();

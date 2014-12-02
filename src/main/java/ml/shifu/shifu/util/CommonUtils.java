@@ -1053,4 +1053,22 @@ public final class CommonUtils {
 
         return rawDataMap;
     }
+
+    public static boolean isGoodCandidate(ColumnConfig columnConfig) {
+        if ( columnConfig == null ) {
+            return false;
+        }
+
+        return columnConfig.isCandidate() &&
+                ( columnConfig.getKs() != null
+                        && columnConfig.getKs() > 0
+                        && columnConfig.getIv() != null
+                        && columnConfig.getIv() > 0
+                        && ( (columnConfig.isCategorical()
+                                && columnConfig.getBinCategory() != null
+                                && columnConfig.getBinCategory().size() > 1)
+                            || ( columnConfig.isNumerical()
+                                && columnConfig.getBinBoundary() != null
+                                && columnConfig.getBinBoundary().size() > 1)));
+    }
 }

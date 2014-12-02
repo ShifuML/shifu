@@ -2,7 +2,7 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>ml.shifu</groupId>
     <artifactId>shifu</artifactId>
-    <version>0.2.3</version>
+    <version>0.2.4-SNAPSHOT</version>
 
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
@@ -32,14 +32,6 @@
             <artifactId>antlr-runtime</artifactId>
             <version>3.4</version>
         </dependency>
-        <dependency>
-            <groupId>org.apache.pig</groupId>
-            <artifactId>pig</artifactId>
-            <version>0.10.0</version>
-        </dependency>
-        <!-- <dependency> <groupId>org.slf4j</groupId> <artifactId>slf4j-log4j12</artifactId> 
-            <version>1.5.8</version> <exclusions> <exclusion> <groupId>org.slf4j</groupId> 
-            <artifactId>slf4j-log4j12</artifactId> </exclusion> </exclusions> </dependency> -->
         <dependency>
             <groupId>org.codehaus.jackson</groupId>
             <artifactId>jackson-mapper-asl</artifactId>
@@ -432,7 +424,7 @@
                 <dependency>
                     <groupId>ml.shifu</groupId>
                     <artifactId>guagua-mapreduce</artifactId>
-                    <version>0.4.0</version>
+                    <version>0.5.0</version>
                     <classifier>hadoop1</classifier>
                 </dependency>
             </dependencies>
@@ -485,7 +477,7 @@
                 <dependency>
                     <groupId>ml.shifu</groupId>
                     <artifactId>guagua-mapreduce</artifactId>
-                    <version>0.4.0</version>
+                    <version>0.5.0</version>
                     <classifier>hadoop1</classifier>
                 </dependency>
             </dependencies>
@@ -547,7 +539,7 @@
                 <dependency>
                     <groupId>ml.shifu</groupId>
                     <artifactId>guagua-mapreduce</artifactId>
-                    <version>0.4.0</version>
+                    <version>0.5.0</version>
                     <classifier>hadoop2</classifier>
                 </dependency>
             </dependencies>

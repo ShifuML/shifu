@@ -173,4 +173,20 @@ public class JexlTest {
         Double b = Double.valueOf(a.toString());
         Assert.assertEquals(a, b);
     }
+
+    @Test
+    public void testEvaluator() {
+        String weightColumnName = "cg_dol_wgt";
+
+        JexlEngine jexl = new JexlEngine();
+        Expression e = jexl.createExpression(weightColumnName);
+
+        JexlContext jc = new MapContext();
+        jc.set("cg_dol_wgt", "1083.22500000");
+
+        Object result = e.evaluate(jc);
+        System.out.println((result instanceof Integer));
+        System.out.println((result instanceof Double));
+        System.out.println(result.toString());
+    }
 }
