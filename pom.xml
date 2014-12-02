@@ -146,6 +146,11 @@
             <artifactId>pmml-evaluator</artifactId>
             <version>1.1.4</version>
         </dependency>
+        <dependency>
+            <groupId>com.sun.xml.bind</groupId>
+            <artifactId>jaxb-impl</artifactId>
+            <version>2.2.6</version>
+        </dependency>
     </dependencies>
 
     <build>
