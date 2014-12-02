@@ -98,10 +98,12 @@ public class VarSelectReducer extends Reducer<LongWritable, DoubleWritable, Long
         loadConfigFiles(context);
         int[] inputOutputIndex = getInputOutputCandidateCounts(this.columnConfigList);
         this.inputNodeCount = inputOutputIndex[0] == 0 ? inputOutputIndex[2] : inputOutputIndex[0];
-        this.wrapperRatio = context.getConfiguration().getFloat(Constants.SHIFU_VARSELECT_WRAPPER_RATIO, 0.05f);
+        this.wrapperRatio = context.getConfiguration().getFloat(Constants.SHIFU_VARSELECT_WRAPPER_RATIO,
+                Constants.SHIFU_DEFAULT_VARSELECT_WRAPPER_RATIO);
         this.outputKey = new LongWritable();
 
-        this.wrapperBy = context.getConfiguration().get(Constants.SHIFU_VARSELECT_WRAPPER_TYPE, "SE");
+        this.wrapperBy = context.getConfiguration()
+                .get(Constants.SHIFU_VARSELECT_WRAPPER_TYPE, Constants.WRAPPER_BY_SE);
     }
 
     @Override
@@ -126,7 +128,8 @@ public class VarSelectReducer extends Reducer<LongWritable, DoubleWritable, Long
         LOG.debug("Final Results:{}", this.results);
 
         int candidates = 0;
-        if("R".equalsIgnoreCase(this.wrapperBy) || "SE".equalsIgnoreCase(this.wrapperBy)) {
+        if(Constants.WRAPPER_BY_REMOVE.equalsIgnoreCase(this.wrapperBy)
+                || Constants.WRAPPER_BY_SE.equalsIgnoreCase(this.wrapperBy)) {
             candidates = (int) (this.inputNodeCount * (1.0f - this.wrapperRatio));
         } else {
             // wrapper by A

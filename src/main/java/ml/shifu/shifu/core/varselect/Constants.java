@@ -38,4 +38,16 @@ public final class Constants {
 
     public static final String SHIFU_VARSELECT_WRAPPER_TYPE = "shifu.varselect.wrapper.type";
 
+    public static final String SHIFU_DEFAULT_VARSEL_SE_MULTI = "false";
+
+    public static final String SHIFU_VARSEL_SE_MULTI = "shifu.varsel.se.multi";
+
+    public static final String WRAPPER_BY_REMOVE = "R";
+
+    public static final String WRAPPER_BY_ADD = "A";
+
+    public static final String WRAPPER_BY_SE = "SE";
+    
+    public static final float SHIFU_DEFAULT_VARSELECT_WRAPPER_RATIO = 0.05f;
+
 }

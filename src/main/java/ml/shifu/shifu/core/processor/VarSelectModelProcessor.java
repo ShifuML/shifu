@@ -111,8 +111,8 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
     }
 
     private void validateDistributedWrapperVarSelect() {
-        if(!("R".equalsIgnoreCase(this.modelConfig.getVarSelectWrapperBy()) || "SE".equalsIgnoreCase(this.modelConfig
-                .getVarSelectWrapperBy()))) {
+        if(!(Constants.WRAPPER_BY_REMOVE.equalsIgnoreCase(this.modelConfig.getVarSelectWrapperBy()) || Constants.WRAPPER_BY_SE
+                .equalsIgnoreCase(this.modelConfig.getVarSelectWrapperBy()))) {
             throw new IllegalArgumentException(
                     "Only R(Remove) and SE(Sensitivity Selection) wrapperBy methods are supported so far in distributed variable selection.");
         }
@@ -180,8 +180,8 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
         // add jars to hadoop mapper and reducer
         new GenericOptionsParser(conf, new String[] { "-libjars", addRuntimeJars() });
 
-        conf.setBoolean("mapred.map.tasks.speculative.execution", true);
-        conf.setBoolean("mapred.reduce.tasks.speculative.execution", true);
+        conf.setBoolean(GuaguaMapReduceConstants.MAPRED_MAP_TASKS_SPECULATIVE_EXECUTION, true);
+        conf.setBoolean(GuaguaMapReduceConstants.MAPRED_REDUCE_TASKS_SPECULATIVE_EXECUTION, true);
         conf.set(
                 Constants.SHIFU_MODEL_CONFIG,
                 ShifuFileUtils.getFileSystemBySourceType(source)
@@ -190,7 +190,7 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
                 Constants.SHIFU_COLUMN_CONFIG,
                 ShifuFileUtils.getFileSystemBySourceType(source)
                         .makeQualified(new Path(super.getPathFinder().getColumnConfigPath(source))).toString());
-        conf.set("mapred.job.queue.name", Environment.getProperty(Environment.HADOOP_JOB_QUEUE, "default"));
+        conf.set(NNConstants.MAPRED_JOB_QUEUE_NAME, Environment.getProperty(Environment.HADOOP_JOB_QUEUE, "default"));
         conf.set(Constants.SHIFU_MODELSET_SOURCE_TYPE, source.toString());
 
         Float wrapperRatio = this.modelConfig.getVarSelect().getWrapperRatio();
@@ -206,7 +206,8 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
 
         Job job = new Job(conf, "Shifu: Variable Selection Wrapper Job : " + this.modelConfig.getModelSetName());
         job.setJarByClass(getClass());
-        boolean isSEVarSelMulti = "true".equalsIgnoreCase(Environment.getProperty("shifu.varsel.se.multi", "false"));
+        boolean isSEVarSelMulti = Boolean.TRUE.toString().equalsIgnoreCase(
+                Environment.getProperty(Constants.SHIFU_VARSEL_SE_MULTI, Constants.SHIFU_DEFAULT_VARSEL_SE_MULTI));
         if(isSEVarSelMulti) {
             job.setMapperClass(MultithreadedMapper.class);
             MultithreadedMapper.setMapperClass(job, VarSelectMapper.class);
