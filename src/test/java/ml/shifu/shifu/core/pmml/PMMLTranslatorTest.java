@@ -194,14 +194,7 @@ public class PMMLTranslatorTest {
             Double controlScore = Double.valueOf((String) controlCtx.get(scoreName));
             Double testScore = Double.valueOf((String) ctx.get(scoreName));
 
-
-            try {
-                Assert.assertEquals(controlScore, testScore, error_range);
-            } catch (AssertionError e) {
-                System.err.println(scoreName + " " + row + ": " + controlScore + "   " + testScore);
-                e.printStackTrace();
-                System.exit(-1);
-            }
+            Assert.assertEquals(controlScore, testScore, error_range);
         }
     }
 
