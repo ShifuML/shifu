@@ -105,12 +105,13 @@ public class PMMLTranslator {
         List<DataField> fields = new ArrayList<DataField>();
 
         for (ColumnConfig columnConfig : columnConfigList) {
-            DataField field = new DataField();
-            field.setName(FieldName.create(columnConfig.getColumnName()));
-            field.setOptype(getOptype(columnConfig));
-            field.setDataType(getDataType(field.getOptype()));
-
-            fields.add(field);
+            if (columnConfig.isFinalSelect() || columnConfig.isTarget()) {
+                DataField field = new DataField();
+                field.setName(FieldName.create(columnConfig.getColumnName()));
+                field.setOptype(getOptype(columnConfig));
+                field.setDataType(getDataType(field.getOptype()));
+                fields.add(field);
+            }
         }
 
         dict.withDataFields(fields);
@@ -159,18 +160,19 @@ public class PMMLTranslator {
         MiningSchema miningSchema = new MiningSchema();
 
         for (ColumnConfig columnConfig : columnConfigList) {
-            MiningField miningField = new MiningField();
+            if(columnConfig.isFinalSelect() || columnConfig.isTarget()) {
+                MiningField miningField = new MiningField();
+                miningField.setName(FieldName.create(columnConfig.getColumnName()));
+                miningField.setOptype(getOptype(columnConfig));
 
-            miningField.setName(FieldName.create(columnConfig.getColumnName()));
-            miningField.setOptype(getOptype(columnConfig));
+                if (columnConfig.isFinalSelect()) {
+                    miningField.setUsageType(FieldUsageType.ACTIVE);
+                } else if (columnConfig.isTarget()) {
+                    miningField.setUsageType(FieldUsageType.TARGET);
+                }
 
-            if (columnConfig.isForceSelect()) {
-                miningField.setUsageType(FieldUsageType.ACTIVE);
-            } else if (columnConfig.isTarget()) {
-                miningField.setUsageType(FieldUsageType.TARGET);
+                miningSchema.withMiningFields(miningField);
             }
-
-            miningSchema.withMiningFields(miningField);
         }
 
         return miningSchema;
@@ -184,7 +186,7 @@ public class PMMLTranslator {
         ModelStats modelStats = new ModelStats();
 
         for (ColumnConfig columnConfig : columnConfigList) {
-            if (columnConfig.isFinalSelect()) {
+            if (columnConfig.isFinalSelect() ) {
                 UnivariateStats univariateStats = new UnivariateStats();
                 univariateStats.setField(FieldName.create(columnConfig.getColumnName()));
 
