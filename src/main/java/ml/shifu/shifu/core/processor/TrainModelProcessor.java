@@ -254,25 +254,30 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
         GuaguaMapReduceClient guaguaClient = new GuaguaMapReduceClient();
         List<String> progressLogList = new ArrayList<String>(baggingNum);
         for(int i = 0; i < baggingNum; i++) {
+            List<String> localArgs = new ArrayList<String>(args);
+
             // set name for each bagging job.
-            args.add("-n");
-            args.add(String.format("Shifu Master-Workers NN Iteration: %s id:%s", super.getModelConfig()
+            localArgs.add("-n");
+            localArgs.add(String.format("Shifu Master-Workers NN Iteration: %s id:%s", super.getModelConfig()
                     .getModelSetName(), i + 1));
             LOG.info("Start trainer with id: {}", (i + 1));
             String modelName = getModelName(i + 1);
             Path modelPath = ShifuFileUtils.getFileSystemBySourceType(sourceType).makeQualified(
                     new Path(super.getPathFinder().getModelsPath(sourceType), modelName));
-            args.add(String.format(NNConstants.MAPREDUCE_PARAM_FORMAT, NNConstants.GUAGUA_NN_OUTPUT,
+            localArgs.add(String.format(NNConstants.MAPREDUCE_PARAM_FORMAT, NNConstants.GUAGUA_NN_OUTPUT,
                     modelPath.toString()));
-            args.add(String.format(NNConstants.MAPREDUCE_PARAM_FORMAT, NNConstants.NN_TRAINER_ID, String.valueOf(i + 1)));
+            localArgs.add(String.format(NNConstants.MAPREDUCE_PARAM_FORMAT, NNConstants.NN_TRAINER_ID,
+                    String.valueOf(i + 1)));
             final String progressLogFile = getProgressLogFile(i + 1);
             progressLogList.add(progressLogFile);
-            args.add(String.format(NNConstants.MAPREDUCE_PARAM_FORMAT, NNConstants.NN_PROGRESS_FILE, progressLogFile));
+            localArgs.add(String.format(NNConstants.MAPREDUCE_PARAM_FORMAT, NNConstants.NN_PROGRESS_FILE,
+                    progressLogFile));
+
             if(isParallel) {
-                guaguaClient.addJob(args.toArray(new String[0]));
+                guaguaClient.addJob(localArgs.toArray(new String[0]));
             } else {
                 TailThread tailThread = startTailThread(new String[] { progressLogFile });
-                guaguaClient.creatJob(args.toArray(new String[0])).waitForCompletion(true);
+                guaguaClient.creatJob(localArgs.toArray(new String[0])).waitForCompletion(true);
                 stopTailThread(tailThread);
             }
         }
