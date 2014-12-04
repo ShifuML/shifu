@@ -37,15 +37,16 @@ import java.util.Map;
 
 public class PMMLTranslator {
 
+    private static final String NAME_SPACE_URI = "http://www.dmg.org/PMML-4_2";
+    private static final String ELEMENT_OUT = "out";
+    private static final String ELEMENT_ORIGIN = "origin";
+    private static final String ZSCORE_POSTFIX = "_zscl";
+
+    private static final double EPS = 1e-10;
+
     private ModelConfig modelConfig;
     private List<ColumnConfig> columnConfigList;
     private List<BasicML> models;
-
-    private static final String NAMESPACEURI = "http://www.dmg.org/PMML-4_2";
-    private static final String ELEMENTOUT = "out";
-    private static final String ELEMENTORIGIN = "origin";
-    private static final double EPS = 1e-10;
-
 
     public PMMLTranslator(ModelConfig modelConfig, List<ColumnConfig> columnConfigList, List<BasicML> models) {
         this.modelConfig = modelConfig;
@@ -53,14 +54,31 @@ public class PMMLTranslator {
         this.models = models;
     }
 
+    /**
+     * Convert all models into multi pmml format
+     * @return - pmmls for models
+     */
     public List<PMML> translate() {
         List<PMML> pmmls = new ArrayList<PMML>(models.size());
-        for(int index = 0; index < models.size(); index++)
+
+        for(int index = 0; index < models.size(); index++) {
             pmmls.add(translate(index));
+        }
+
         return pmmls;
     }
 
+    /**
+     * Convert some model into pmml format
+     * @param index - which model to pmml format
+     * @return  pmml for model
+     *          Notice, if the index is out of bound, return null
+     */
     public PMML translate(int index) {
+        if ( index > models.size() ) {
+            // out-of-bound. return null or throw exception, which is better
+            return null;
+        }
 
         PMML pmml = new PMML();
 
@@ -68,36 +86,36 @@ public class PMMLTranslator {
         pmml.setDataDictionary(createDataDictionary(columnConfigList));
 
         // create model element
-        pmml.withModels(createModel(modelConfig));
+        Model model = createModel(modelConfig);
 
         // create mining schema
-        for (Model model : pmml.getModels()) {
-            model.setMiningSchema(createModelMiningSchema(columnConfigList));
-        }
+        model.setMiningSchema(createModelMiningSchema(columnConfigList));
 
         // create variable statistical info
-        for (Model model : pmml.getModels()) {
-            model.setModelStats(createModelMiningStats(columnConfigList));
-        }
+        model.setModelStats(createModelMiningStats(columnConfigList));
 
         // create variable transform
-        for (Model model : pmml.getModels()) {
-            model.setLocalTransformations(createLocalTransformations(columnConfigList, modelConfig.getNormalizeStdDevCutOff()));
-        }
+        model.setLocalTransformations(createLocalTransformations(columnConfigList, modelConfig.getNormalizeStdDevCutOff()));
 
         // create specification
-        for (Model model : pmml.getModels()) {
+        if ( model instanceof  NeuralNetwork ) {
             NeuralNetwork nnPmmlModel = (NeuralNetwork) model;
-            nnPmmlModel = new PMMLEncogNeuralNetworkModel().adaptMLModelToPMML((BasicNetwork) models.get(index), nnPmmlModel);
-            pmml.getModels().set(0, nnPmmlModel);
+            new PMMLEncogNeuralNetworkModel().adaptMLModelToPMML((BasicNetwork) models.get(index), nnPmmlModel);
+        } else {
+            // something wrong
+            throw new RuntimeException("Not support model type.");
         }
+
+        pmml.withModels(model);
+
         return pmml;
     }
 
 
     /**
-     * @param columnConfigList
-     * @return
+     * Convert the list of @ColumnConfig into data dictionary
+     * @param columnConfigList - ColumnConfig list from Shifu
+     * @return @DataDictionary that represent ColumnConfig list
      */
     private DataDictionary createDataDictionary(List<ColumnConfig> columnConfigList) {
         DataDictionary dict = new DataDictionary();
@@ -121,8 +139,9 @@ public class PMMLTranslator {
 
 
     /**
-     * @param modelConfig
-     * @return
+     * Create a @Model according @ModelConfig. Currently we only support NeuralNetwork
+     * @param modelConfig @ModelConfig from Shifu
+     * @return a model with targets
      */
     private Model createModel(ModelConfig modelConfig) {
         Model model = null;
@@ -136,36 +155,22 @@ public class PMMLTranslator {
     }
 
     /**
-     * @param modelConfig
-     * @return
-     */
-    private List<Model> createModels(ModelConfig modelConfig, int size) {
-        List<Model> models = new ArrayList<Model>(size);
-        if (ModelTrainConf.ALGORITHM.NN.name().equalsIgnoreCase(modelConfig.getTrain().getAlgorithm())) {
-            for (int i = 0; i < size; i++) {
-                models.add(new NeuralNetwork());
-                models.get(i).setTargets(createTargets(modelConfig));
-            }
-        } else {
-            throw new RuntimeException("Model not supported: " + modelConfig.getTrain().getAlgorithm());
-        }
-        return models;
-    }
-
-    /**
-     * @param columnConfigList
-     * @return
+     * Create model mining schema from ColumnConfig list.
+     * Only final select and target column will be added into MiningSchema
+     * @param columnConfigList List of @ColumnConfig from Shifu
+     * @return MiningSchema for model
      */
     private MiningSchema createModelMiningSchema(List<ColumnConfig> columnConfigList) {
         MiningSchema miningSchema = new MiningSchema();
 
         for (ColumnConfig columnConfig : columnConfigList) {
-            if(columnConfig.isFinalSelect() || columnConfig.isTarget()) {
+            if ( columnConfig.isFinalSelect() || columnConfig.isTarget() ) {
                 MiningField miningField = new MiningField();
+
                 miningField.setName(FieldName.create(columnConfig.getColumnName()));
                 miningField.setOptype(getOptype(columnConfig));
 
-                if (columnConfig.isFinalSelect()) {
+                if ( columnConfig.isFinalSelect() ) {
                     miningField.setUsageType(FieldUsageType.ACTIVE);
                 } else if (columnConfig.isTarget()) {
                     miningField.setUsageType(FieldUsageType.TARGET);
@@ -179,8 +184,10 @@ public class PMMLTranslator {
     }
 
     /**
-     * @param columnConfigList
-     * @return
+     * Create ModelStats for model. The needed info are all from ColumnConfig list
+     * Only final select column will be added into ModelStats
+     * @param columnConfigList List of @ColumnConfig from Shifu
+     * @return ModelStats for model
      */
     private ModelStats createModelMiningStats(List<ColumnConfig> columnConfigList) {
         ModelStats modelStats = new ModelStats();
@@ -213,11 +220,12 @@ public class PMMLTranslator {
     }
 
     /**
-     * @param columnConfigList
-     * @return
+     * Create LocalTransformations for model. The needed info are all from ColumnConfig list
+     * Only final select column will be added into LocalTransformations
+     * @param columnConfigList List of @ColumnConfig from Shifu
+     * @return LocalTransformations for model
      */
     private LocalTransformations createLocalTransformations(List<ColumnConfig> columnConfigList, double cutoff) {
-
         LocalTransformations localTransformations = new LocalTransformations();
         for (ColumnConfig config : columnConfigList) {
             if (config.isFinalSelect()) {
@@ -230,11 +238,12 @@ public class PMMLTranslator {
     }
 
     /**
-     * @param config
-     * @return
+     * Create @DerivedField for categorical variable
+     * @param config - ColumnConfig for categorical variable
+     * @param cutoff - cutoff for normalization
+     * @return DerivedField for variable
      */
     private DerivedField createCategoricalDerivedField(ColumnConfig config, double cutoff) {
-
         InlineTable inlineTable = new InlineTable();
         for (int i = 0; i < config.getBinCategory().size(); i++) {
             String cval = config.getBinCategory().get(i);
@@ -246,9 +255,9 @@ public class PMMLTranslator {
             } catch (ParserConfigurationException e) {
                 e.printStackTrace();
             }
-            Element out = document.createElementNS(NAMESPACEURI, ELEMENTOUT);
+            Element out = document.createElementNS(NAME_SPACE_URI, ELEMENT_OUT);
             out.setTextContent(dval);
-            Element origin = document.createElementNS(NAMESPACEURI, ELEMENTORIGIN);
+            Element origin = document.createElementNS(NAME_SPACE_URI, ELEMENT_ORIGIN);
             origin.setTextContent(cval);
             inlineTable.withRows(new Row().withContent(origin).withContent(out));
         }
@@ -259,12 +268,14 @@ public class PMMLTranslator {
         mapValues.setMapMissingTo("0.0");
 
         return new DerivedField(OpType.CONTINUOUS, DataType.DOUBLE).
-                withName(FieldName.create(config.getColumnName() + "_zscl")).withExpression(mapValues);
+                withName(FieldName.create(config.getColumnName() + ZSCORE_POSTFIX)).withExpression(mapValues);
     }
 
     /**
-     * @param config
-     * @return derivedField
+     * Create @DerivedField for numerical variable
+     * @param config - ColumnConfig for numerical variable
+     * @param cutoff - cutoff of normalization
+     * @return DerivedField for variable
      */
     private DerivedField createNumericalDerivedField(ColumnConfig config, double cutoff) {
 
@@ -276,12 +287,13 @@ public class PMMLTranslator {
 
         //derived field name is consisted of FieldName and "_zscl"
         return new DerivedField(OpType.CONTINUOUS, DataType.DOUBLE).
-                withName(FieldName.create(config.getColumnName() + "_zscl")).withExpression(normContinuous);
+                withName(FieldName.create(config.getColumnName() + ZSCORE_POSTFIX)).withExpression(normContinuous);
     }
 
     /**
-     * @param columnConfig
-     * @return
+     * Create @ConStats for numerical variable
+     * @param columnConfig - ColumnConfig to generate ConStats
+     * @return ConStats for variable
      */
     private ContStats createConStats(ColumnConfig columnConfig) {
         ContStats conStats = new ContStats();
@@ -318,9 +330,10 @@ public class PMMLTranslator {
     }
 
     /**
-     * @param binCountPos
-     * @param binCountNeg
-     * @return
+     * Generate Woe data from positive and negative counts
+     * @param binCountPos - positive count list
+     * @param binCountNeg - negative count list
+     * @return Woe value list
      */
     private List<Double> calculateWoe(List<Integer> binCountPos, List<Integer> binCountNeg) {
         List<Double> woe = new ArrayList<Double>();
@@ -341,8 +354,9 @@ public class PMMLTranslator {
     }
 
     /**
-     * @param columnConfig
-     * @return
+     * Create @NumericInfo for numerical variable
+     * @param columnConfig - ColumnConfig for numerical variable
+     * @return NumericInfo for variable
      */
     private NumericInfo createNumericInfo(ColumnConfig columnConfig) {
         NumericInfo numericInfo = new NumericInfo();
@@ -357,8 +371,9 @@ public class PMMLTranslator {
     }
 
     /**
-     * @param columnConfig
-     * @return
+     * Create common extension list from ColumnConfig
+     * @param columnConfig - ColumnConfig to create extension
+     * @return extension list
      */
     private List<Extension> createExtensions(ColumnConfig columnConfig) {
         Map<String, String> extensionMap = new HashMap<String, String>();
@@ -373,8 +388,9 @@ public class PMMLTranslator {
     }
 
     /**
-     * @param extensionMap
-     * @return
+     * Create extension list from HashMap
+     * @param extensionMap the <String,String> map to create extension list
+     * @return extension list
      */
     private List<Extension> createExtensions(Map<String, String> extensionMap) {
         List<Extension> extensions = new ArrayList<Extension>();
@@ -391,8 +407,9 @@ public class PMMLTranslator {
     }
 
     /**
-     * @param columnConfig
-     * @return
+     * Create @Array for numerical variable
+     * @param columnConfig - ColumnConfig for numerical variable
+     * @return Array for numerical variable ( positive count + negative count )
      */
     private Array createCountArray(ColumnConfig columnConfig) {
         Array countAllArray = new Array();
@@ -410,8 +427,13 @@ public class PMMLTranslator {
     }
 
     /**
-     * @param columnConfig
-     * @return
+     * Get @OpType from ColumnConfig
+     *      Meta Column -> ORDINAL
+     *      Target Column -> CATEGORICAL
+     *      Categorical Column -> CATEGORICAL
+     *      Numerical Column -> CONTINUOUS
+     * @param columnConfig - ColumnConfig for variable
+     * @return OpType
      */
     private OpType getOptype(ColumnConfig columnConfig) {
         if (columnConfig.isMeta()) {
@@ -424,18 +446,20 @@ public class PMMLTranslator {
     }
 
     /**
-     * @param optype
-     * @return
+     * Get DataType from OpType
+     *      CONTINUOUS -> DOUBLE
+     *      Other -> STRING
+     * @param optype OpType
+     * @return DataType
      */
     private DataType getDataType(OpType optype) {
         return (optype.equals(OpType.CONTINUOUS) ? DataType.DOUBLE : DataType.STRING);
     }
 
     /**
-     * Create target from @ModelConfig
-     *
-     * @param modelConfig
-     * @return
+     * Create @Targets from @ModelConfig
+     * @param modelConfig - ModelConfig from Shifu
+     * @return Targets that includes positive tags and negative tags
      */
     public Targets createTargets(ModelConfig modelConfig) {
         Targets targets = new Targets();
@@ -460,7 +484,7 @@ public class PMMLTranslator {
             neg.setValue(negTagValue);
             neg.setDisplayValue("Negative");
 
-            target.withTargetValues(neg);
+            targetValueList.add(neg);
         }
 
         target.withTargetValues(targetValueList);

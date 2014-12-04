@@ -44,8 +44,8 @@ public class PMMLEncogNeuralNetworkModel
      * This function reads the weights from the Encog NeuralNetwork model and
      * assign them to the corresponding connections of Neurons in PMML model.
      *
-     * @param bNetwork Encog NeuralNetwork
-     * @param utility  DataFieldUtility that provides supplementary data field for
+     * @param bNetwork   Encog NeuralNetwork
+     * @param pmmlModel  DataFieldUtility that provides supplementary data field for
      *                 the model conversion
      * @return The generated PMML NeuralNetwork Model
      */
