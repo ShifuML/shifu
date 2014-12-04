@@ -135,6 +135,7 @@
 				<include>*:zookeeper:*</include>
 				<include>*:joda-time:*</include>
 				<include>*:automaton:*</include>
+				<include>*:jpmml:*</include>
 			</includes>
 		</dependencySet>
 	</dependencySets>

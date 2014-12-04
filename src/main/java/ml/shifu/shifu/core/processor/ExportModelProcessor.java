@@ -44,7 +44,6 @@ public class ExportModelProcessor extends BasicModelProcessor implements Process
 
     public static final String PMML = "pmml";
 
-
     /**
      * log object
      */
@@ -62,30 +61,33 @@ public class ExportModelProcessor extends BasicModelProcessor implements Process
      */
     @Override
     public int run() throws Exception {
-
         File pmmls = new File("pmmls");
-        pmmls.delete();
-        pmmls.mkdir();
+        pmmls.mkdirs();
 
         if (StringUtils.isBlank(type)) {
             type = PMML;
         }
 
         if (!type.equalsIgnoreCase(PMML)) {
-            log.error("Unsupported output format - " + type);
+            log.error("Unsupported output format - {}", type);
             return -1;
         }
 
+        log.info("Convert models into {} format", type);
+
         ModelConfig modelConfig = CommonUtils.loadModelConfig();
         List<ColumnConfig> columnConfigList = CommonUtils.loadColumnConfigList();
-        PathFinder pathFinder = new PathFinder(modelConfig);
 
+        PathFinder pathFinder = new PathFinder(modelConfig);
         List<BasicML> models = CommonUtils.loadBasicModels(pathFinder.getModelsPath(SourceType.LOCAL), ALGORITHM.NN);
 
         for (int index = 0; index < models.size(); index++) {
+            log.info("\t start to generate " + "pmmls" + File.separator + modelConfig.getModelSetName() + Integer.toString(index) + ".pmml");
             PMML pmml = new PMMLTranslator(modelConfig, columnConfigList, models).translate(index);
-            PMMLUtils.savePMML(pmml, "./pmmls/" + modelConfig.getModelSetName() + (new Integer(index)).toString() + ".pmml");
+            PMMLUtils.savePMML(pmml, "pmmls" + File.separator + modelConfig.getModelSetName() + Integer.toString(index) + ".pmml");
         }
+
+        log.info("Done.");
 
         return 0;
     }

@@ -360,7 +360,7 @@ public class ShifuCLI {
      * @param evalSetNames
      * @throws Exception
      */
-    private static void runEvalScore(String evalSetNames) throws Exception {
+    public static void runEvalScore(String evalSetNames) throws Exception {
         EvalModelProcessor p = new EvalModelProcessor(EvalStep.SCORE, evalSetNames);
         p.run();
     }

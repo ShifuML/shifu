@@ -18,21 +18,17 @@ package ml.shifu.shifu.core.pmml;
 import ml.shifu.shifu.util.Environment;
 import ml.shifu.shifu.util.ShifuCLI;
 import org.apache.commons.io.FileUtils;
+import org.apache.commons.io.IOUtils;
 import org.dmg.pmml.FieldName;
 import org.dmg.pmml.PMML;
 import org.jpmml.evaluator.ClassificationMap;
 import org.jpmml.evaluator.FieldValue;
 import org.jpmml.evaluator.NeuralNetworkEvaluator;
-import org.powermock.modules.testng.PowerMockObjectFactory;
 import org.testng.Assert;
-import org.testng.IObjectFactory;
-import org.testng.annotations.AfterTest;
 import org.testng.annotations.BeforeClass;
-import org.testng.annotations.ObjectFactory;
 import org.testng.annotations.Test;
 
 import java.io.File;
-import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.HashMap;
 import java.util.List;
@@ -40,14 +36,9 @@ import java.util.Map;
 
 
 /**
- * ManagerTest class
+ * PMMLTranslatorTest class
  */
 public class PMMLTranslatorTest {
-
-    @ObjectFactory
-    public IObjectFactory setObjectFactory() {
-        return new PowerMockObjectFactory();
-    }
 
     @BeforeClass
     public void setUp() {
@@ -56,16 +47,17 @@ public class PMMLTranslatorTest {
 
     @Test
     public void testAllNumericVariablePmmlCase() throws Exception {
-
         // Step 1. Eval the scores using SHIFU
-        File originModel = new File("src/test/resources/example/cancer-judgement/ModelStore/ModelSet1/ModelConfig.json");
+        File originModel = new File(
+                "src/test/resources/example/cancer-judgement/ModelStore/ModelSet1/ModelConfig.json");
         File tmpModel = new File("ModelConfig.json");
 
         File originColumn = new File(
                 "src/test/resources/example/cancer-judgement/ModelStore/ModelSet1/ColumnConfig.json");
         File tmpColumn = new File("ColumnConfig.json");
 
-        File modelsDir = new File("src/test/resources/example/cancer-judgement/ModelStore/ModelSet1/models");
+        File modelsDir = new File(
+                "src/test/resources/example/cancer-judgement/ModelStore/ModelSet1/models");
         File tmpModelsDir = new File("models");
 
         FileUtils.copyFile(originModel, tmpModel);
@@ -73,17 +65,17 @@ public class PMMLTranslatorTest {
         FileUtils.copyDirectory(modelsDir, tmpModelsDir);
 
         // run evaluation set
-        ShifuCLI.runEvalSet(false);
+        ShifuCLI.runEvalScore("EvalA");
         File evalScore = new File("evals/EvalA/EvalScore");
 
-        exportPmml(originModel, originColumn, modelsDir);
+        ShifuCLI.exportModel(null);
 
         // Step 2. Eval the scores using PMML and compare it with SHIFU output
 
         String DataPath = "./src/test/resources/example/cancer-judgement/DataStore/Full_data/data.dat";
         String OutPath = "./pmml_out.dat";
         for (int index = 0; index < 5; index++) {
-            String num = new Integer(index).toString();
+            String num = Integer.toString(index);
             String pmmlPath = "pmmls/cancer-judgement" + num + ".pmml";
             evalPmml(pmmlPath, DataPath, OutPath, "\\|", "model" + num);
             compareScore(evalScore, new File(OutPath), "model" + num, "\\|", 1.0);
@@ -93,48 +85,13 @@ public class PMMLTranslatorTest {
         FileUtils.deleteQuietly(tmpModel);
         FileUtils.deleteQuietly(tmpColumn);
         FileUtils.deleteDirectory(tmpModelsDir);
+
         FileUtils.deleteQuietly(new File("./pmmls"));
+        FileUtils.deleteQuietly(new File("evals"));
     }
-
-
-    @Test
-    public void trainLaborNegModel() throws Exception {
-        File originModel = new File("src/test/resources/example/labor-neg/DataStore/DataSet1/ModelConfig.json");
-        File tmpModel = new File("ModelConfig.json");
-        File originColumn = new File("src/test/resources/example/labor-neg/DataStore/DataSet1/ColumnConfig.json");
-        FileUtils.copyFile(originModel, tmpModel);
-
-        // shifu init
-        ShifuCLI.initializeModel();
-        File tmpColumn = new File("ColumnConfig.json");
-
-        long timestamp = tmpColumn.lastModified();
-        // shifu cal model stats
-        ShifuCLI.calModelStats();
-        // Shifu var selection
-        ShifuCLI.selectModelVar();
-        // run normalization
-        ShifuCLI.normalizeTrainData();
-
-        // run train
-        ShifuCLI.trainModel(false, false);
-        File tmpmodelFile = new File("models/model0.nn");
-        Assert.assertTrue(tmpmodelFile.exists());
-        FileUtils.copyFile(tmpColumn, originColumn);
-        File modelFile = new File("src/test/resources/example/labor-neg/DataStore/DataSet1/models/model0.nn");
-        FileUtils.copyFile(tmpmodelFile, modelFile);
-
-        FileUtils.deleteQuietly(tmpModel);
-        FileUtils.deleteQuietly(tmpColumn);
-        FileUtils.deleteDirectory(new File("tmp"));
-        FileUtils.deleteDirectory(new File("models"));
-        FileUtils.deleteDirectory(new File("evals"));
-    }
-
 
     @Test
     public void testMixTypeVariablePmmlCase() throws Exception {
-
         // Step 1. Eval the scores using SHIFU
         File originModel = new File("src/test/resources/example/labor-neg/DataStore/DataSet1/ModelConfig.json");
         File tmpModel = new File("ModelConfig.json");
@@ -150,10 +107,10 @@ public class PMMLTranslatorTest {
         FileUtils.copyDirectory(modelsDir, tmpModelsDir);
 
         // run evaluation set
-        ShifuCLI.runEvalSet(false);
+        ShifuCLI.runEvalScore("EvalA");
         File evalScore = new File("evals/EvalA/EvalScore");
 
-        exportPmml(originModel, originColumn, modelsDir);
+        ShifuCLI.exportModel(null);
 
         // Step 2. Eval the scores using PMML
         String pmmlPath = "pmmls/ModelK0.pmml";
@@ -163,16 +120,17 @@ public class PMMLTranslatorTest {
 
         // Step 3. Compare the SHIFU Eval score and PMML score
         compareScore(evalScore, new File(OutPath), "model0", "\\|", 1.0);
+        FileUtils.deleteQuietly(new File(OutPath));
 
         FileUtils.deleteQuietly(tmpModel);
         FileUtils.deleteQuietly(tmpColumn);
         FileUtils.deleteDirectory(tmpModelsDir);
+
         FileUtils.deleteQuietly(new File("./pmmls"));
-        FileUtils.deleteQuietly(new File(OutPath));
-        FileUtils.deleteQuietly(evalScore);
+        FileUtils.deleteQuietly(new File("evals"));
     }
 
-    public void compareScore(File test, File control, String scoreName, String sep, Double error_range) throws Exception {
+    private void compareScore(File test, File control, String scoreName, String sep, Double errorRange) throws Exception {
         List<String> testData = FileUtils.readLines(test);
         List<String> controlData = FileUtils.readLines(control);
         String[] testSchema = testData.get(0).trim().split(sep);
@@ -194,29 +152,11 @@ public class PMMLTranslatorTest {
             Double controlScore = Double.valueOf((String) controlCtx.get(scoreName));
             Double testScore = Double.valueOf((String) ctx.get(scoreName));
 
-            Assert.assertEquals(controlScore, testScore, error_range);
+            Assert.assertEquals(controlScore, testScore, errorRange);
         }
     }
 
-
-    public void exportPmml(File originModel, File originColumn, File modelsDir) throws Exception {
-
-        File tmpModel = new File("ModelConfig.json");
-        File tmpColumn = new File("ColumnConfig.json");
-
-
-        File tmpModelsDir = new File("models");
-
-        FileUtils.copyFile(originModel, tmpModel);
-        FileUtils.copyFile(originColumn, tmpColumn);
-        FileUtils.copyDirectory(modelsDir, tmpModelsDir);
-
-        // run evaluation set
-        ShifuCLI.exportModel(null);
-    }
-
-    public void evalPmml(String pmmlPath, String DataPath, String OutPath, String sep, String scoreName) throws Exception {
-
+    private void evalPmml(String pmmlPath, String DataPath, String OutPath, String sep, String scoreName) throws Exception {
         PMML pmml = PMMLUtils.loadPMML(pmmlPath);
         NeuralNetworkEvaluator evaluator = new NeuralNetworkEvaluator(pmml);
 
@@ -241,11 +181,7 @@ public class PMMLTranslatorTest {
                     break;
             }
         }
-        writer.close();
-    }
 
-    @AfterTest
-    public void delete() throws IOException {
-        FileUtils.deleteQuietly(new File("evals"));
+        IOUtils.closeQuietly(writer);
     }
 }
