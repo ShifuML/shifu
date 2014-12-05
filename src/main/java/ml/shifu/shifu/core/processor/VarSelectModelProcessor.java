@@ -16,6 +16,7 @@
 package ml.shifu.shifu.core.processor;
 
 import java.io.BufferedReader;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -34,6 +35,7 @@ import ml.shifu.shifu.core.varselect.VarSelectMapper;
 import ml.shifu.shifu.core.varselect.VarSelectReducer;
 import ml.shifu.shifu.exception.ShifuErrorCode;
 import ml.shifu.shifu.exception.ShifuException;
+import ml.shifu.shifu.fs.PathFinder;
 import ml.shifu.shifu.fs.ShifuFileUtils;
 import ml.shifu.shifu.util.CommonUtils;
 import ml.shifu.shifu.util.Environment;
@@ -82,6 +84,8 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
     public int run() throws Exception {
         setUp(ModelStep.VARSELECT);
 
+        validateNormalize();
+
         CommonUtils.updateColumnConfigFlags(modelConfig, columnConfigList);
 
         VariableSelector selector = new VariableSelector(this.modelConfig, this.columnConfigList);
@@ -108,6 +112,14 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
 
         clearUp(ModelStep.VARSELECT);
         return 0;
+    }
+
+    private void validateNormalize() throws IOException {
+        if(!ShifuFileUtils.isFileExists(
+                new PathFinder(modelConfig).getNormalizedDataPath(this.modelConfig.getDataSet().getSource()),
+                this.modelConfig.getDataSet().getSource())) {
+            throw new IllegalStateException("Cannot find normalized data, please do 'Shifu normalize' firstly.");
+        }
     }
 
     private void validateDistributedWrapperVarSelect() {

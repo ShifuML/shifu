@@ -231,7 +231,8 @@ public class DataLoadWorker extends AbstractWorkerActor {
                     } else {
                         if(this.inputNodeCount == this.candidateCount) {
                             // all variables are not set final-select
-                            if(columnConfig != null && !columnConfig.isMeta() && !columnConfig.isTarget()) {
+                            // TODO Using Zhanghao's isCandidate in CommonUtils(including KV, IS info)
+                            if(columnConfig != null && columnConfig.isCandidate()) {
                                 inputs[inputsIndex++] = doubleValue;
                             }
                         } else {
