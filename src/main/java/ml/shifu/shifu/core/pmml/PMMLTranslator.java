@@ -244,28 +244,33 @@ public class PMMLTranslator {
      * @return DerivedField for variable
      */
     private DerivedField createCategoricalDerivedField(ColumnConfig config, double cutoff) {
+        Document document = null;
+        try {
+            document = DocumentBuilderFactory.newInstance().newDocumentBuilder().newDocument();
+
+        } catch (ParserConfigurationException e) {
+            e.printStackTrace();
+        }
+        String default_value = "0.0";
+        String missing_value = "0.0";
         InlineTable inlineTable = new InlineTable();
         for (int i = 0; i < config.getBinCategory().size(); i++) {
             String cval = config.getBinCategory().get(i);
             String dval = Normalizer.normalize(config, cval, cutoff).toString();
-            Document document = null;
-            try {
-                document = DocumentBuilderFactory.newInstance().newDocumentBuilder().newDocument();
-
-            } catch (ParserConfigurationException e) {
-                e.printStackTrace();
-            }
             Element out = document.createElementNS(NAME_SPACE_URI, ELEMENT_OUT);
             out.setTextContent(dval);
             Element origin = document.createElementNS(NAME_SPACE_URI, ELEMENT_ORIGIN);
             origin.setTextContent(cval);
             inlineTable.withRows(new Row().withContent(origin).withContent(out));
+            if(cval == ""){
+                default_value = dval;
+                missing_value = dval;
+            }
         }
 
-        MapValues mapValues = new MapValues("out").withDataType(DataType.DOUBLE).withDefaultValue("0.0").
+        MapValues mapValues = new MapValues("out").withDataType(DataType.DOUBLE).withDefaultValue(default_value).
                 withFieldColumnPairs(new FieldColumnPair(new FieldName(config.getColumnName()), "origin")).
-                withInlineTable(inlineTable);
-        mapValues.setMapMissingTo("0.0");
+                withInlineTable(inlineTable).withMapMissingTo(missing_value);
 
         return new DerivedField(OpType.CONTINUOUS, DataType.DOUBLE).
                 withName(FieldName.create(config.getColumnName() + ZSCORE_POSTFIX)).withExpression(mapValues);
