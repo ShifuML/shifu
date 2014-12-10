@@ -146,7 +146,7 @@ public class ConfusionMatrixCalculator {
         prevCmo.setWeightedTn(sumWeightedNeg);
         prevCmo.setScore(1000);
 
-        saveConfusionMaxtrixWithWriter(writer, prevCmo);
+        SaveConfusionMaxtrixWithWriter(writer, prevCmo);
 
         for (ModelResultObject mo : moList) {
             ConfusionMatrixObject cmo = new ConfusionMatrixObject(prevCmo);
@@ -166,13 +166,13 @@ public class ConfusionMatrixCalculator {
             }
 
             cmo.setScore(mo.getScore());
-            saveConfusionMaxtrixWithWriter(writer, cmo);
+            SaveConfusionMaxtrixWithWriter(writer, cmo);
             prevCmo = cmo;
         }
 
     }
 
-    private void saveConfusionMaxtrixWithWriter(BufferedWriter writer, ConfusionMatrixObject cmo) {
+    public static void SaveConfusionMaxtrixWithWriter(BufferedWriter writer, ConfusionMatrixObject cmo) {
         try {
             writer.write(String.format(fmt, cmo.getTp(),
                     cmo.getFp(),

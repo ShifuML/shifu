@@ -91,6 +91,10 @@ public class BinningDataUDF extends AbstractTrainerUDF<Tuple> {
             		log.info("Invoke Munro & Paterson selecting algorithm");
             		binning = new MunroPatBinning(modelConfig.getStats().getMaxNumBin());
             		break;
+                default:
+                    log.info("default: Invoke SPDT(Streaming Parallel Decision Tree) binning method");
+                    binning = new MunroPatBinning(modelConfig.getStats().getMaxNumBin());
+                    break;
             	}
             }
         }

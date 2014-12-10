@@ -100,6 +100,10 @@ public class MunroPatEstimator<T extends Comparable<T>> {
 		totalElements = 0;
 	}
 
+    public int getTotalElements() {
+        return totalElements;
+    }
+
 	public List<T> getQuantiles(){
 		
 		List<T>  quantiles= new ArrayList<T>();		

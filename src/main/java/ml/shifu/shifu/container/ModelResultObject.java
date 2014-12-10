@@ -59,7 +59,7 @@ public class ModelResultObject implements Comparable<ModelResultObject>{
 
 	@Override
 	public int compareTo(ModelResultObject o) {
-		return Double.compare(score, o.score);
+		return Double.compare(o.score, score);
 	}
 
 }

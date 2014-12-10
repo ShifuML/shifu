@@ -237,6 +237,7 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
         paramsMap.put("pathEvalPerformance", pathFinder.getEvalPerformancePath(evalConfig));
         paramsMap.put("eval_set_name", evalConfig.getName());
         paramsMap.put("delimiter", evalConfig.getDataSet().getDataDelimiter());
+        paramsMap.put("columnIndex", evalConfig.getPerformanceScoreSelector().trim());
 
         try {
             PigExecutor.getExecutor().submitJob(modelConfig, pathFinder.getAbsolutePath("scripts/Eval.pig"), paramsMap,
@@ -416,7 +417,15 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
      */
     private void runConfusionMatrix(EvalConfig config) throws IOException {
         ConfusionMatrix worker = new ConfusionMatrix(modelConfig, config);
-        worker.computeConfusionMatrix();
+        //worker.computeConfusionMatrix();
+        switch (modelConfig.getBasic().getRunMode()){
+            case mapred:
+                worker.bufferedComputeConfusionMatrix();
+                break;
+            default:
+                worker.computeConfusionMatrix();
+                break;
+        }
     }
 
 }

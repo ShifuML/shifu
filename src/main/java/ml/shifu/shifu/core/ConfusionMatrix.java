@@ -15,6 +15,7 @@
  */
 package ml.shifu.shifu.core;
 
+import ml.shifu.shifu.container.ConfusionMatrixObject;
 import ml.shifu.shifu.container.ModelResultObject;
 import ml.shifu.shifu.container.obj.EvalConfig;
 import ml.shifu.shifu.container.obj.ModelConfig;
@@ -104,6 +105,156 @@ public class ConfusionMatrix {
         }
 
         return CommonUtils.getHeaders(pathHeader, "|", sourceType);
+    }
+
+    public void bufferedComputeConfusionMatrix() throws IOException{
+
+        PathFinder pathFinder = new PathFinder(modelConfig);
+
+        SourceType sourceType = evalConfig.getDataSet().getSource();
+
+        List<Scanner> scanners = ShifuFileUtils.getDataScanners(pathFinder.getEvalScorePath(evalConfig, sourceType), sourceType);
+
+        boolean isDir = ShifuFileUtils.isDir(pathFinder.getEvalScorePath(evalConfig, sourceType), sourceType);
+
+        log.info("The size of scanner is {}", scanners.size());
+
+        int cnt = 0;
+        Double sumPos = 0.0, sumNeg = 0.0, sumWeightedPos = 0.0, sumWeightedNeg = 0.0;
+
+        List<String> posTags = modelConfig.getPosTags(evalConfig);
+        List<String> negTags = modelConfig.getNegTags(evalConfig);
+
+        for (Scanner scanner : scanners) {
+            while(scanner.hasNext()) {
+                String[] raw = scanner.nextLine().split("\\|");
+                if ((!isDir) && cnt == 1) {
+                    // if the evaluation score file is the local file, skip the
+                    // first line since we add
+                    continue;
+                }
+
+                String tag = raw[targetColumnIndex].trim();
+
+                double weight = 1.0d;
+
+                if (this.weightColumnIndex > 0) {
+                    try {
+                        weight = Double.parseDouble(raw[1]);
+                    } catch (NumberFormatException e) {
+                        // Do nothing
+                    }
+                }
+
+                //TODO enable the scale factor
+                if (posTags.contains(tag)) {
+                    // Positive
+                    sumPos += 1;
+                    sumWeightedPos += weight * 1.0;
+                } else if (negTags.contains(tag)){
+                    // Negative
+                    sumNeg += 1;
+                    sumWeightedNeg += weight * 1.0;
+                }
+            }
+            scanner.close();
+        }
+
+        cnt = 0;
+        //2-way pass the score files
+        scanners = ShifuFileUtils.getDataScanners(pathFinder.getEvalScorePath(evalConfig, sourceType), sourceType);
+
+        BufferedWriter confMatWriter = ShifuFileUtils.getWriter(
+                pathFinder.getEvalMatrixPath(evalConfig, evalConfig.getDataSet().getSource()),
+                evalConfig.getDataSet().getSource());
+
+        ConfusionMatrixObject prevCmo = new ConfusionMatrixObject();
+        prevCmo.setTp(0.0);
+        prevCmo.setFp(0.0);
+        prevCmo.setFn(sumPos);
+        prevCmo.setTn(sumNeg);
+        prevCmo.setWeightedTp(0.0);
+        prevCmo.setWeightedFp(0.0);
+        prevCmo.setWeightedFn(sumWeightedPos);
+        prevCmo.setWeightedTn(sumWeightedNeg);
+        prevCmo.setScore(1000);
+
+        ConfusionMatrixCalculator.SaveConfusionMaxtrixWithWriter(confMatWriter, prevCmo);
+
+        for (Scanner scanner : scanners) {
+            while(scanner.hasNext()) {
+                if ((++cnt) % 10000 == 0) {
+                    log.info("Loaded " + cnt + " records.");
+                }
+
+                String[] raw = scanner.nextLine().split("\\|");
+
+                if ((!isDir) && cnt == 1) {
+                    // if the evaluation score file is the local file, skip the
+                    // first line since we add
+                    continue;
+                }
+
+                String tag = raw[targetColumnIndex];
+                if (StringUtils.isBlank(tag)) {
+                    if (rd.nextDouble() < 0.01) {
+                        log.warn("Empty target value!!");
+                    }
+
+                    continue;
+                }
+
+                double weight = 1.0d;
+                if (this.weightColumnIndex > 0) {
+                    try {
+                        weight = Double.parseDouble(raw[1]);
+                    } catch (NumberFormatException e) {
+                        // Do nothing
+                    }
+                }
+
+                double score = 0;
+                try {
+                    score = Double.parseDouble(raw[scoreColumnIndex]);
+                } catch (NumberFormatException e) {
+                    // user set the score column wrong ?
+                    if (rd.nextDouble() < 0.05) {
+                        log.warn("The score column - {} is not integer. Is score column set correctly?", raw[scoreColumnIndex]);
+                    }
+                    continue;
+                }
+
+                ConfusionMatrixObject cmo = new ConfusionMatrixObject(prevCmo);
+
+                if (posTags.contains(tag)) {
+                    // Positive Instance
+                    cmo.setTp(cmo.getTp() + 1);
+                    cmo.setFn(cmo.getFn() - 1);
+                    cmo.setWeightedTp(cmo.getWeightedTp() + weight * 1.0);
+                    cmo.setWeightedFn(cmo.getWeightedFn() - weight * 1.0);
+                } else {
+                    // Negative Instance
+                    cmo.setFp(cmo.getFp() + 1);
+                    cmo.setTn(cmo.getTn() - 1);
+                    cmo.setWeightedFp(cmo.getWeightedFp() + weight * 1.0);
+                    cmo.setWeightedTn(cmo.getWeightedTn() - weight * 1.0);
+                }
+
+                cmo.setScore(score);
+                ConfusionMatrixCalculator.SaveConfusionMaxtrixWithWriter(confMatWriter, cmo);
+                prevCmo = cmo;
+            }
+            scanner.close();
+        }
+
+        log.info("Totally loaded " + cnt + " records.");
+
+        if (cnt == 0) {
+            log.error("No score read, the EvalScore did not genernate or is null file");
+            throw new ShifuException(ShifuErrorCode.ERROR_EVALSCORE);
+        }
+
+        confMatWriter.close();
     }
 
 
