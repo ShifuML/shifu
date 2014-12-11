@@ -263,7 +263,6 @@ public class PMMLTranslator {
             origin.setTextContent(cval);
             inlineTable.withRows(new Row().withContent(origin).withContent(out));
             if(cval == ""){
-                default_value = dval;
                 missing_value = dval;
             }
         }
