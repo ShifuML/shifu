@@ -111,7 +111,7 @@ public class EqualPopulationBinningTest {
             start = System.currentTimeMillis();
             binning.mergeBin(another);
             end = System.currentTimeMillis();
-            Assert.assertTrue((end - start) < 150);
+            Assert.assertTrue((end - start) < 1000);
         }
         
         System.out.println(binning.getDataBin().toString());

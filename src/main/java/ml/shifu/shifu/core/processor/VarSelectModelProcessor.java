@@ -99,6 +99,8 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
 
         validateNormalize();
 
+        syncDataToHdfs(super.modelConfig.getDataSet().getSource());
+
         VariableSelector selector = new VariableSelector(this.modelConfig, this.columnConfigList);
 
         if(!modelConfig.getVarSelectWrapperEnabled()) {

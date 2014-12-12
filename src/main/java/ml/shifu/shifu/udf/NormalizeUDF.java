@@ -75,7 +75,10 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
 
         String tag = input.get(tagColumnNum).toString();
         if(!(posTags.contains(tag) || negTags.contains(tag))) {
-            log.warn("Invalid target column value - " + tag);
+            // avoid too many logs
+            if(System.currentTimeMillis() % 100 == 0) {
+                log.warn("Invalid target column value - " + tag);
+            }
             return null;
         }
 
@@ -121,10 +124,10 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
                 weight = ((Integer) result).doubleValue();
             } else if(result instanceof Double) {
                 weight = ((Double) result).doubleValue();
-            } else if ( result instanceof String ) {
+            } else if(result instanceof String) {
                 try {
                     weight = Double.parseDouble((String) result);
-                } catch ( NumberFormatException e ) {
+                } catch (NumberFormatException e) {
                     // Not a number, use default
                     weight = 1.0d;
                 }
