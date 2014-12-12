@@ -32,5 +32,7 @@ raw = FILTER raw BY IsDataFilterOut(*);
 
 evalScore = FOREACH raw GENERATE FLATTEN(EvalScore(*));
 evalScore = FILTER evalScore BY $0 IS NOT NULL;
+-- leverage hadoop sorting
+evalScore = order evalScore by shifu::$columnIndex asc;
 
 STORE evalScore INTO '$pathEvalScore' USING PigStorage('|', '-schema');

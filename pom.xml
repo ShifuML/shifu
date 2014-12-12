@@ -18,8 +18,8 @@
         <developerConnection>scm:git:https://github.com/shifuml/shifu.git</developerConnection>
         <connection>scm:git:https://github.com/shifuml/shifu.git</connection>
         <url>https://github.com/shifuml/shifu.git</url>
-    <tag>shifu-0.2.3</tag>
-  </scm>
+    	<tag>shifu-0.2.4-SNAPSHOT</tag>
+  	</scm>
 
     <dependencies>
         <dependency>
@@ -31,6 +31,11 @@
             <groupId>org.antlr</groupId>
             <artifactId>antlr-runtime</artifactId>
             <version>3.4</version>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.pig</groupId>
+            <artifactId>pig</artifactId>
+            <version>0.10.0</version>
         </dependency>
         <dependency>
             <groupId>org.codehaus.jackson</groupId>
@@ -91,7 +96,7 @@
 			<groupId>commons-codec</groupId>
 			<artifactId>commons-codec</artifactId>
 			<version>1.6</version>
-		</dependency>
+        </dependency>
         <dependency>
             <groupId>commons-lang</groupId>
             <artifactId>commons-lang</artifactId>

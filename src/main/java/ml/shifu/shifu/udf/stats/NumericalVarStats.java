@@ -136,11 +136,7 @@ public class NumericalVarStats extends AbstractVarStats {
         columnConfig.setMax(streamStatsCalculator.getMax());
         columnConfig.setMean(streamStatsCalculator.getMean());
         columnConfig.setMin(streamStatsCalculator.getMin());
-        //if ( binning.getMedian() == null ) {
-            columnConfig.setMedian(streamStatsCalculator.getMean());
-        //} else {
-        //    columnConfig.setMedian(binning.getMedian());
-        //}
+        columnConfig.setMedian(streamStatsCalculator.getMedian());
         columnConfig.setStdDev(streamStatsCalculator.getStdDev());
         
         // Currently, invalid value will be regarded as missing

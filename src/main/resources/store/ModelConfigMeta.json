@@ -172,7 +172,16 @@
                 "type": "boolean",
                 "directive": "checkbox",
                 "defval" : true
-            } 
+            }, {
+            	"name": "binningAlgorithm",
+            	"type": "text",
+            	"directive": "select",
+            	"options": [
+            		{"label": "Native", "value":"Native"},
+            		{"label": "SPDT", "value": "SPDT"},
+            		{"label": "MunroPat", "value": "MunroPat"}
+            	]
+            }
         ]
     },
     {

@@ -17,7 +17,9 @@ package ml.shifu.shifu.container.obj;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+
 import ml.shifu.shifu.container.obj.ModelBasicConf.RunMode;
+import ml.shifu.shifu.container.obj.ModelStatsConf.BinningAlgorithm;
 import ml.shifu.shifu.container.obj.ModelStatsConf.BinningMethod;
 import ml.shifu.shifu.container.obj.ModelTrainConf.ALGORITHM;
 import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
@@ -25,6 +27,7 @@ import ml.shifu.shifu.fs.ShifuFileUtils;
 import ml.shifu.shifu.util.CommonUtils;
 import ml.shifu.shifu.util.Constants;
 import ml.shifu.shifu.util.Environment;
+
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.fs.Path;
@@ -174,6 +177,7 @@ public class ModelConfig {
 
         // build stats info
         modelConfig.setStats(new ModelStatsConf());
+        modelConfig.setBinningAlgorithm(BinningAlgorithm.SPDT);
 
         // build varselect info
         ModelVarSelectConf varselect = new ModelVarSelectConf();
@@ -711,6 +715,16 @@ public class ModelConfig {
     public String getHeaderDelimiter() {
         return dataSet.getHeaderDelimiter();
     }
+    
+    @JsonIgnore
+    public BinningAlgorithm getBinningAlgorithm() {
+		return this.stats.getBinningAlgorithm();
+	}
+
+    @JsonIgnore
+	public void setBinningAlgorithm(BinningAlgorithm binningAlgorithm) {
+		this.stats.setBinningAlgorithm(binningAlgorithm);
+	} 
 
     /**
      * @param evalSetName

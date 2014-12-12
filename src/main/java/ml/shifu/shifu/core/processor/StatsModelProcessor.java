@@ -200,7 +200,9 @@ public class StatsModelProcessor extends BasicModelProcessor implements Processo
                 config.setBinWeightedPos(CommonUtils.stringToDoubleList(raw[18]));
 
             } catch (Exception e) {
-                continue;
+            	log.error("Fail to process following column : {} name: {}", columnNum, this.columnConfigList.get(columnNum).getColumnName());
+                
+            	continue;
             }
         }
     }
