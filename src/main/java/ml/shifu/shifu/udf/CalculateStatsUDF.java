@@ -37,6 +37,8 @@ import java.util.List;
  */
 public class CalculateStatsUDF extends AbstractTrainerUDF<Tuple> {
 
+    public static final char CATEGORY_VAL_SEPARATOR = '\u0001';
+            
     private Double valueThreshold = 1e6;
 
     public CalculateStatsUDF(String source, String pathModelConfig, String pathColumnConfig, String withScoreStr) throws IOException {
@@ -153,7 +155,7 @@ public class CalculateStatsUDF extends AbstractTrainerUDF<Tuple> {
         Tuple tuple = tupleFactory.newTuple();
         tuple.append(columnNum);
         if (binning.getUpdatedDataType().equals(BinningDataType.Categorical)) {
-            tuple.append(binning.getBinCategory().toString());
+            tuple.append("[" + StringUtils.join(binning.getBinCategory(), CATEGORY_VAL_SEPARATOR) + "]");
         } else {
             tuple.append(binning.getBinBoundary().toString());
         }

@@ -201,6 +201,7 @@ public class ShifuCLITest {
         FileUtils.deleteQuietly(tmpColumn);
         FileUtils.deleteDirectory(new File("tmp"));
         FileUtils.deleteDirectory(new File("models"));
+
     }
 
     @Test
@@ -281,6 +282,35 @@ public class ShifuCLITest {
         FileUtils.deleteQuietly(new File("EvalC" + Constants.DEFAULT_EVALSCORE_META_COLUMN_FILE));
     }
 
+    @Test
+    public void testRunExport() throws Exception {
+        File originModel = new File("src/test/resources/example/cancer-judgement/ModelStore/ModelSet1/ModelConfig.json");
+        File tmpModel = new File("ModelConfig.json");
+
+        File originColumn = new File(
+                "src/test/resources/example/cancer-judgement/ModelStore/ModelSet1/ColumnConfig.json");
+
+        File tmpColumn = new File("ColumnConfig.json");
+
+        File modelsDir = new File("src/test/resources/example/cancer-judgement/ModelStore/ModelSet1/models");
+        File tmpModelsDir = new File("models");
+
+        FileUtils.copyFile(originModel, tmpModel);
+        FileUtils.copyFile(originColumn, tmpColumn);
+        FileUtils.copyDirectory(modelsDir, tmpModelsDir);
+
+        // run evaluation set
+        ShifuCLI.exportModel(null);
+
+        File pmml = new File("./pmmls/cancer-judgement0.pmml");
+        Assert.assertTrue(pmml.exists());
+        
+        FileUtils.deleteQuietly(tmpModel);
+        FileUtils.deleteQuietly(tmpColumn);
+        FileUtils.deleteQuietly(new File("./pmmls"));
+        FileUtils.deleteDirectory(tmpModelsDir);
+    }
+    
     @AfterTest
     public void delete() throws IOException {
         FileUtils.deleteDirectory(new File("evals"));

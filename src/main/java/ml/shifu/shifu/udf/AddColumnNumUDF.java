@@ -74,7 +74,6 @@ public class AddColumnNumUDF extends AbstractTrainerUDF<DataBag> {
     }
 
     public DataBag exec(Tuple input) throws IOException {
-        int size;
 
         DataBag bag = BagFactory.getInstance().newDefaultBag();
         TupleFactory tupleFactory = TupleFactory.getInstance();
@@ -83,7 +82,9 @@ public class AddColumnNumUDF extends AbstractTrainerUDF<DataBag> {
             return null;
         }
 
-        if ((size = input.size()) == 0 || input.size() < this.columnConfigList.size()) {
+        int size = input.size();
+
+        if (size == 0 || input.size() < this.columnConfigList.size()) {
             log.info("the input size - " + input.size() + ", while column size - " + columnConfigList.size());
             throw new ShifuException(ShifuErrorCode.ERROR_NO_EQUAL_COLCONFIG);
         }
@@ -105,16 +106,7 @@ public class AddColumnNumUDF extends AbstractTrainerUDF<DataBag> {
             }
         }
 
-        int varSize = size;
-		/*if (this.withScore == true) {
-			varSize = size - 2;
-			scoreColumnNum = size - 1;
-		}*/
-
-        for (int i = 0; i < varSize; i++) {
-            //if (input.get(tagColumnNum) == null) {
-            //	continue;
-            //}
+        for (int i = 0; i < size; i++) {
 
             if (modelConfig.isCategoricalDisabled()) {
                 try {
@@ -126,7 +118,7 @@ public class AddColumnNumUDF extends AbstractTrainerUDF<DataBag> {
 
             ColumnConfig config = columnConfigList.get(i);
             if (config.isCandidate()) {
-                Tuple tuple = tupleFactory.newTuple(4);
+                Tuple tuple = tupleFactory.newTuple(5);
                 tuple.set(0, i);
 
                 // Set Data
@@ -134,13 +126,6 @@ public class AddColumnNumUDF extends AbstractTrainerUDF<DataBag> {
 
                 // Set Tag
                 tuple.set(2, tag);
-
-                // Set Score
-				/*if (this.withScore == true) {
-					tuple.set(3, input.get(scoreColumnNum));
-				} else {
-					tuple.set(3, 0);
-				}*/
 
                 //set weights
                 if (weightedColumnNum != -1) {
@@ -158,6 +143,9 @@ public class AddColumnNumUDF extends AbstractTrainerUDF<DataBag> {
                     tuple.set(3, 1.0);
                 }
 
+                // add random seed for distribution
+                tuple.set(4, Math.abs(random.nextInt() % 300));
+                
                 bag.add(tuple);
             }
         }

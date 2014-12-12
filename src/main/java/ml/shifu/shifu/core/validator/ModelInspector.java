@@ -79,9 +79,9 @@ public class ModelInspector {
         if(modelConfig.getDataSet().getSource() == SourceType.LOCAL
                 && modelConfig.getBasic().getRunMode() == RunMode.mapred) {
             ValidateResult tmpResult = new ValidateResult(true);
-            tmpResult.setStatus(false);
-            tmpResult.getCauses().add(
-                    "'LOCAL' data set (dataSet.source) cannot be run with 'mapred' run mode(basic.runMode)");
+            // tmpResult.setStatus(false);
+            // tmpResult.getCauses().add(
+            //        "'LOCAL' data set (dataSet.source) cannot be run with 'mapred' run mode(basic.runMode)");
             result = ValidateResult.mergeResult(result, tmpResult);
         }
 

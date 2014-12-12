@@ -59,10 +59,12 @@ public class NNTrainer extends AbstractTrainer {
     private static Logger log = LoggerFactory.getLogger(NNTrainer.class);
     private final static double Epsilon = 1.0;  // set the weight range in [-INIT_EPSILON INIT_EPSILON];
 
-    private static final Map<String, Double> defaultLearningRate;
-    private static final Map<String, String> learningAlgMap;
+    public static final Map<String, Double> defaultLearningRate;
+    public static final Map<String, String> learningAlgMap;
 
     private BasicNetwork network;
+    private volatile boolean toPersistentModel = true;
+    private volatile boolean toLoggingProcess = true;
 
     static {
         defaultLearningRate = new HashMap<String, Double>();
@@ -98,8 +100,8 @@ public class NNTrainer extends AbstractTrainer {
         if (numLayers != 0 && (numLayers != actFunc.size() || numLayers != hiddenNodeList.size())) {
             throw new RuntimeException("the number of layer do not equal to the number of activation function or the function list and node list empty");
         }
-
-        log.info("    - total " + numLayers + " layers, each layers are: " + Arrays.toString(hiddenNodeList.toArray()) + " the activation function are: " + Arrays.toString(actFunc.toArray()));
+        if ( toLoggingProcess )
+            log.info("    - total " + numLayers + " layers, each layers are: " + Arrays.toString(hiddenNodeList.toArray()) + " the activation function are: " + Arrays.toString(actFunc.toArray()));
 
         for (int i = 0; i < numLayers; i++) {
             String func = actFunc.get(i);
@@ -136,17 +138,20 @@ public class NNTrainer extends AbstractTrainer {
     }
 
     @Override
-    public void train() throws IOException {
+    public double train() throws IOException {
+        if ( toLoggingProcess )
         log.info("Using neural network algorithm...");
 
-        if (this.dryRun == true) {
-            log.info("Start Training(Dry Run)... Model #" + this.trainerID);
-        } else {
-            log.info("Start Training... Model #" + this.trainerID);
-        }
+        if ( toLoggingProcess ) {
+            if (this.dryRun) {
+                log.info("Start Training(Dry Run)... Model #" + this.trainerID);
+            } else {
+                log.info("Start Training... Model #" + this.trainerID);
+            }
 
-        log.info("    - Input Size: " + trainSet.getInputSize());
-        log.info("    - Ideal Size: " + trainSet.getIdealSize());
+            log.info("    - Input Size: " + trainSet.getInputSize());
+            log.info("    - Ideal Size: " + trainSet.getIdealSize());
+        }
 
         //set up the model
         buildNetwork();
@@ -154,8 +159,8 @@ public class NNTrainer extends AbstractTrainer {
         Propagation mlTrain = getMLTrain();
         mlTrain.setThreadCount(0);
 
-        if (this.dryRun == true) {
-            return;
+        if ( this.dryRun ) {
+            return 0.0;
         }
 
         int epochs = this.modelConfig.getNumTrainEpochs();
@@ -178,22 +183,38 @@ public class NNTrainer extends AbstractTrainer {
                 saveNN();
                 extra = " <-- NN saved: ./models/model" + this.trainerID + ".nn";
             }
-
-            log.info("  Trainer-" + trainerID + "> Epoch #" + (i + 1)
+            if ( toLoggingProcess )
+                log.info("  Trainer-" + trainerID + "> Epoch #" + (i + 1)
                     + " Train Error: " + df.format(mlTrain.getError())
                     + " Validation Error: " + ((this.validSet.getRecordCount() > 0) ? df.format(validMSE) : "N/A") + " " + extra);
 
         }
 
         mlTrain.finishTraining();
-        log.info("Trainer #" + this.trainerID + " is Finished!");
+        if ( toLoggingProcess )
+            log.info("Trainer #" + this.trainerID + " is Finished!");
+        return getBaseMSE();
     }
 
     public BasicNetwork getNetwork() {
         return network;
     }
 
+    public void enableModelPersistence() {
+        this.toPersistentModel = true;
+    }
 
+    public void disableModelPersistence() {
+        this.toPersistentModel = false;
+    }
+
+    public void enableLogging() {
+        this.toLoggingProcess = true;
+    }
+
+    public void disableLogging() {
+        this.toLoggingProcess = false;
+    }
     /**
      * @param network the network to set
      */
@@ -205,24 +226,26 @@ public class NNTrainer extends AbstractTrainer {
         //String alg = this.modelConfig.getLearningAlgorithm();
         String alg = (String) modelConfig.getParams().get(PROPAGATION);
         if (!(defaultLearningRate.containsKey(alg))) {
-            throw new RuntimeException("Leanring Algorithm is not valid: " + alg);
+            throw new RuntimeException("Learning algorithm is invalid: " + alg);
         }
 
         //Double rate = this.modelConfig.getLearningRate();
-        Double rate = defaultLearningRate.get(alg);
+        double rate = defaultLearningRate.get(alg);
         Object rateObj = modelConfig.getParams().get(LEARNING_RATE);
         if (rateObj instanceof Double) {
             rate = (Double) rateObj;
         } else if (rateObj instanceof Integer) {
             // change like this, because user may set it as integer
-            rate = Double.valueOf(((Integer) rateObj).doubleValue());
+            rate = ((Integer) rateObj).doubleValue();
         } else if (rateObj instanceof Float) {
-            rate = Double.valueOf(((Float) rateObj).doubleValue());
+            rate = ((Float) rateObj).doubleValue();
         }
 
-        log.info("    - Learning Algorithm: " + learningAlgMap.get(alg));
+        if ( toLoggingProcess )
+            log.info("    - Learning Algorithm: " + learningAlgMap.get(alg));
         if (alg.equals("Q") || alg.equals("B") || alg.equals("M")) {
-            log.info("    - Learning Rate: " + rate);
+            if ( toLoggingProcess )
+                log.info("    - Learning Rate: " + rate);
         }
 
         if (alg.equals("B")) {
@@ -246,23 +269,19 @@ public class NNTrainer extends AbstractTrainer {
     }
 
     public double calculateMSEParallel(BasicNetwork network, MLDataSet dataSet) {
-
-        totalError = 0;
-
         int numRecords = (int) dataSet.getRecordCount();
-
         assert numRecords > 0;
+
         // setup workers
         final DetermineWorkload determine = new DetermineWorkload(0, numRecords);
-
-        // nice little workaround 
+        // nice little workaround
         MSEWorker[] workers = new MSEWorker[determine.getThreadCount()];
 
         int index = 0;
         TaskGroup group = EngineConcurrency.getInstance().createTaskGroup();
         for (final IntRange r : determine.calculateWorkers()) {
             workers[index++] = new MSEWorker((BasicNetwork)
-                    network.clone(), this,
+                    network.clone(),
                     dataSet.openAdditional(), r.getLow(), r.getHigh()
             );
         }
@@ -270,15 +289,20 @@ public class NNTrainer extends AbstractTrainer {
         for (final MSEWorker worker : workers) {
             EngineConcurrency.getInstance().processTask(worker, group);
         }
-
         group.waitForComplete();
 
-        double mse = totalError / numRecords;
-
-        return mse;
+        double totalError = 0;
+        for (final MSEWorker worker : workers ) {
+            totalError += worker.getTotalError();
+        }
+        return totalError / numRecords;
     }
 
     private void saveNN() throws IOException {
+        if ( !toPersistentModel ) {
+            return;
+        }
+
         File folder = new File(pathFinder.getModelsPath(SourceType.LOCAL));
         if (!folder.exists()) {
             folder.mkdirs();
@@ -287,6 +311,10 @@ public class NNTrainer extends AbstractTrainer {
     }
 
     private void saveTmpNN(int epoch) throws IOException {
+        if ( !toPersistentModel ) {
+            return;
+        }
+
         File tmpFolder = new File(pathFinder.getTmpModelsPath(SourceType.LOCAL));
         if (!tmpFolder.exists()) {
             tmpFolder.mkdirs();

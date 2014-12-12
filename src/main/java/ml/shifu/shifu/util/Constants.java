@@ -24,6 +24,8 @@ public interface Constants {
 
     public static final String MODELS = "models";
 
+    public static final String VarSels = "varsels";
+
     public static final String COLUMN_CONFIG_JSON_FILE_NAME = "ColumnConfig.json";
 
     public static final String MODEL_CONFIG_JSON_FILE_NAME = "ModelConfig.json";
@@ -116,4 +118,35 @@ public interface Constants {
     public static final String DEFAULT_FORCESELECT_COLUMN_FILE = "forceselect.column.names";
     public static final String DEFAULT_FORCEREMOVE_COLUMN_FILE = "forceremove.column.names";
     public static final String DEFAULT_EVALSCORE_META_COLUMN_FILE = "score.meta.column.names";
+
+    public static final String VAR_SEL_MASTER_CONDUCTOR = "dvarsel.master.conductor.cls";
+    public static final String VAR_SEL_WORKER_CONDUCTOR = "dvarsel.worker.conductor.cls";
+    public static final String VAR_SEL_COLUMN_IDS_OUPUT = "dvarsle.column.ids.output";
+
+    public static final String SHIFU_COLUMN_CONFIG = "shifu.column.config";
+
+    public static final String SHIFU_MODEL_CONFIG = "shifu.model.config";
+
+    public static final String SHIFU_MODELSET_SOURCE_TYPE = "shifu.modelset.source.type";
+
+    public static final String SHIFU_VARSELECT_WRAPPER_RATIO = "shifu.varselect.wrapper.ratio";
+
+    public static final String SHIFU_VARSELECT_WRAPPER_NUM = "shifu.varselect.wrapper.num";
+
+    public static final String SHIFU_VARSELECT_WRAPPER_TYPE = "shifu.varselect.wrapper.type";
+
+    public static final String SHIFU_DEFAULT_VARSEL_SE_MULTI = "false";
+
+    public static final String SHIFU_VARSEL_SE_MULTI = "shifu.varsel.se.multi";
+
+    public static final String WRAPPER_BY_REMOVE = "R";
+
+    public static final String WRAPPER_BY_ADD = "A";
+
+    public static final String WRAPPER_BY_SE = "SE";
+
+    public static final String WRAPPER_BY_VOTED = "V";
+
+    public static final float SHIFU_DEFAULT_VARSELECT_WRAPPER_RATIO = 0.05f;
+
 }
