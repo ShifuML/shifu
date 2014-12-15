@@ -15,6 +15,13 @@
  */
 package ml.shifu.shifu.core;
 
+import java.io.BufferedWriter;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Random;
+import java.util.Scanner;
+
 import ml.shifu.shifu.container.ConfusionMatrixObject;
 import ml.shifu.shifu.container.ModelResultObject;
 import ml.shifu.shifu.container.obj.EvalConfig;
@@ -25,17 +32,11 @@ import ml.shifu.shifu.exception.ShifuException;
 import ml.shifu.shifu.fs.PathFinder;
 import ml.shifu.shifu.fs.ShifuFileUtils;
 import ml.shifu.shifu.util.CommonUtils;
+
 import org.apache.commons.lang.ArrayUtils;
 import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import java.io.BufferedWriter;
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Random;
-import java.util.Scanner;
 
 /**
  * Confusion matrix, hold the confusion matrix computing
@@ -124,7 +125,7 @@ public class ConfusionMatrix {
 
         List<String> posTags = modelConfig.getPosTags(evalConfig);
         List<String> negTags = modelConfig.getNegTags(evalConfig);
-
+        
         for (Scanner scanner : scanners) {
             while(scanner.hasNext()) {
                 String[] raw = scanner.nextLine().split("\\|");
@@ -226,6 +227,7 @@ public class ConfusionMatrix {
 
                 ConfusionMatrixObject cmo = new ConfusionMatrixObject(prevCmo);
 
+                //TODO enable scaling factor
                 if (posTags.contains(tag)) {
                     // Positive Instance
                     cmo.setTp(cmo.getTp() + 1);
