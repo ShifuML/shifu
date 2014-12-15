@@ -129,6 +129,10 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
                     weight = Double.parseDouble((String) result);
                 } catch (NumberFormatException e) {
                     // Not a number, use default
+                    if(System.currentTimeMillis() % 100 == 0) {
+                        log.warn("Weight column type is String and value cannot be parsed with " + result
+                                + ", use default 1.0d");
+                    }
                     weight = 1.0d;
                 }
             }

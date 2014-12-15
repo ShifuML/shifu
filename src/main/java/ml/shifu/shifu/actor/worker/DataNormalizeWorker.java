@@ -151,6 +151,18 @@ public class DataNormalizeWorker extends AbstractWorkerActor {
                 weight = ((Integer) result).doubleValue();
             } else if(result instanceof Double) {
                 weight = ((Double) result).doubleValue();
+            } else if(result instanceof String) {
+                // add to parse String data
+                try {
+                    weight = Double.parseDouble((String) result);
+                } catch (NumberFormatException e) {
+                    // Not a number, use default
+                    if(System.currentTimeMillis() % 100 == 0) {
+                        log.warn("Weight column type is String and value cannot be parsed with {}, use default 1.0d.",
+                                result);
+                    }
+                    weight = 1.0d;
+                }
             }
         }
         retDouList.add(weight);
