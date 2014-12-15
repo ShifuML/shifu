@@ -16,6 +16,7 @@ public class NativeBinning extends AbstractBinning<Double>{
 	public NativeBinning(int binningNum, boolean mergeEnabled) {
 		super(binningNum);
 		this.mergeEnabled = mergeEnabled;
+        this.array = new ArrayList<Double>();
 	}
 
 	@Override
