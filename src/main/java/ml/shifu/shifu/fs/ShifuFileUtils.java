@@ -21,6 +21,7 @@ import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
 import ml.shifu.shifu.util.CommonUtils;
 import ml.shifu.shifu.util.Constants;
 import ml.shifu.shifu.util.HDFSUtils;
+
 import org.apache.commons.compress.compressors.bzip2.BZip2CompressorInputStream;
 import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.conf.Configuration;
@@ -31,6 +32,8 @@ import org.slf4j.LoggerFactory;
 
 import java.io.*;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Scanner;
 import java.util.zip.GZIPInputStream;
@@ -192,6 +195,17 @@ public class ShifuFileUtils {
             });
         } else {
             listStatus = new FileStatus[]{fs.getFileStatus(p)};
+        }
+        
+        if ( listStatus.length > 1) {
+            Arrays.sort(listStatus, new Comparator<FileStatus>() {
+
+                @Override
+                public int compare(FileStatus f1, FileStatus f2) {
+                return f1.getPath().getName().compareTo(f2.getPath().getName());
+                }
+
+            });
         }
 
         List<Scanner> scanners = new ArrayList<Scanner>();
