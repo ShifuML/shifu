@@ -306,7 +306,6 @@ public class VarSelectMapper extends Mapper<LongWritable, Text, LongWritable, Do
             this.results.put(this.columnIndexes[i], MSESum);
             this.inputs[i] = oldValue;
         }
-
     }
 
     /**
