@@ -20,19 +20,15 @@ SET mapred.job.queue.name $queue_name;
 SET job.name 'shifu evaluation'
 
 DEFINE IsDataFilterOut          ml.shifu.shifu.udf.PurifyDataUDF('$source_type', '$path_model_config', '$path_column_config', '$eval_set_name');
-DEFINE EvalScore 		        ml.shifu.shifu.udf.EvalScoreUDF('$source_type', '$path_model_config', '$path_column_config', '$eval_set_name');
-DEFINE Normalize 		        ml.shifu.shifu.udf.NormalizeUDF('$source_type', '$path_model_config', '$path_column_config');
+DEFINE EvalScore                ml.shifu.shifu.udf.EvalScoreUDF('$source_type', '$path_model_config', '$path_column_config', '$eval_set_name');
+DEFINE Normalize                ml.shifu.shifu.udf.NormalizeUDF('$source_type', '$path_model_config', '$path_column_config');
 
 raw = LOAD '$pathEvalRawData' USING PigStorage('$delimiter');
 raw = FILTER raw BY IsDataFilterOut(*);
 
--- evalNormalized = FOREACH raw GENERATE FLATTEN(Normalize(*));
--- evalNormalized = FILTER evalNormalized BY $0 IS NOT NULL;
--- STORE evalNormalized INTO '$pathEvalNormalized' USING PigStorage('|', '-schema');
-
 evalScore = FOREACH raw GENERATE FLATTEN(EvalScore(*));
 evalScore = FILTER evalScore BY $0 IS NOT NULL;
--- leverage hadoop sorting
-evalScore = order evalScore by shifu::$columnIndex asc;
+-- leverage hadoop sorting, TODO how to set parallel number here
+evalScore = ORDER evalScore BY shifu::$columnIndex ASC;
 
 STORE evalScore INTO '$pathEvalScore' USING PigStorage('|', '-schema');
