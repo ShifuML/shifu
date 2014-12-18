@@ -48,8 +48,7 @@ public class BasicModelProcessor {
     protected ModelConfig modelConfig;
     protected List<ColumnConfig> columnConfigList;
     protected PathFinder pathFinder;
-
-
+    
     /**
      * initialize the config file, pathFinder and other input
      *

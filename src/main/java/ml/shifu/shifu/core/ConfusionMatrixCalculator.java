@@ -26,7 +26,6 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
-
 /**
  * Confusion matrix calculator
  */
@@ -59,8 +58,8 @@ public class ConfusionMatrixCalculator {
 
         // Calculate the sum
         Double sumPos = 0.0, sumNeg = 0.0, sumWeightedPos = 0.0, sumWeightedNeg = 0.0;
-        for (ModelResultObject mo : moList) {
-            if (posTags.contains(mo.getTag())) {
+        for(ModelResultObject mo: moList) {
+            if(posTags.contains(mo.getTag())) {
                 // Positive
                 sumPos += posScaleFactor;
                 sumWeightedPos += mo.getWeight() * posScaleFactor;
@@ -86,10 +85,10 @@ public class ConfusionMatrixCalculator {
 
         // Calculate the rest
         ConfusionMatrixObject prevCmo = initCmo;
-        for (ModelResultObject mo : moList) {
+        for(ModelResultObject mo: moList) {
             ConfusionMatrixObject cmo = new ConfusionMatrixObject(prevCmo);
 
-            if (posTags.contains(mo.getTag())) {
+            if(posTags.contains(mo.getTag())) {
                 // Positive Instance
                 cmo.setTp(cmo.getTp() + posScaleFactor);
                 cmo.setFn(cmo.getFn() - posScaleFactor);
@@ -122,8 +121,8 @@ public class ConfusionMatrixCalculator {
     public void calculate(BufferedWriter writer) {
 
         Double sumPos = 0.0, sumNeg = 0.0, sumWeightedPos = 0.0, sumWeightedNeg = 0.0;
-        for (ModelResultObject mo : moList) {
-            if (posTags.contains(mo.getTag())) {
+        for(ModelResultObject mo: moList) {
+            if(posTags.contains(mo.getTag())) {
                 // Positive
                 sumPos += posScaleFactor;
                 sumWeightedPos += mo.getWeight() * posScaleFactor;
@@ -146,12 +145,12 @@ public class ConfusionMatrixCalculator {
         prevCmo.setWeightedTn(sumWeightedNeg);
         prevCmo.setScore(1000);
 
-        SaveConfusionMaxtrixWithWriter(writer, prevCmo);
+        saveConfusionMaxtrixWithWriter(writer, prevCmo);
 
-        for (ModelResultObject mo : moList) {
+        for(ModelResultObject mo: moList) {
             ConfusionMatrixObject cmo = new ConfusionMatrixObject(prevCmo);
 
-            if (posTags.contains(mo.getTag())) {
+            if(posTags.contains(mo.getTag())) {
                 // Positive Instance
                 cmo.setTp(cmo.getTp() + posScaleFactor);
                 cmo.setFn(cmo.getFn() - posScaleFactor);
@@ -166,23 +165,16 @@ public class ConfusionMatrixCalculator {
             }
 
             cmo.setScore(mo.getScore());
-            SaveConfusionMaxtrixWithWriter(writer, cmo);
+            saveConfusionMaxtrixWithWriter(writer, cmo);
             prevCmo = cmo;
         }
 
     }
 
-    public static void SaveConfusionMaxtrixWithWriter(BufferedWriter writer, ConfusionMatrixObject cmo) {
+    public static void saveConfusionMaxtrixWithWriter(BufferedWriter writer, ConfusionMatrixObject cmo) {
         try {
-            writer.write(String.format(fmt, cmo.getTp(),
-                    cmo.getFp(),
-                    cmo.getFn(),
-                    cmo.getTn(),
-                    cmo.getWeightedTp(),
-                    cmo.getWeightedFp(),
-                    cmo.getWeightedFn(),
-                    cmo.getWeightedTn(),
-                    cmo.getScore()));
+            writer.write(String.format(fmt, cmo.getTp(), cmo.getFp(), cmo.getFn(), cmo.getTn(), cmo.getWeightedTp(),
+                    cmo.getWeightedFp(), cmo.getWeightedFn(), cmo.getWeightedTn(), cmo.getScore()));
         } catch (IOException e) {
             try {
                 writer.close();
@@ -196,4 +188,3 @@ public class ConfusionMatrixCalculator {
     }
 
 }
-
