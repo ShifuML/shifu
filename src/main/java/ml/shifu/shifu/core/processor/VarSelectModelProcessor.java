@@ -414,6 +414,7 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
         boolean isSEVarSelMulti = Boolean.TRUE.toString().equalsIgnoreCase(
                 Environment.getProperty(Constants.SHIFU_VARSEL_SE_MULTI, Constants.SHIFU_DEFAULT_VARSEL_SE_MULTI));
         if(isSEVarSelMulti) {
+            // TODO validate MultithreadedMapper results, change thread number to configuration
             job.setMapperClass(MultithreadedMapper.class);
             MultithreadedMapper.setMapperClass(job, VarSelectMapper.class);
             MultithreadedMapper.setNumberOfThreads(job, 6);
