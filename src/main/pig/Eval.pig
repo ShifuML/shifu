@@ -29,6 +29,6 @@ raw = FILTER raw BY IsDataFilterOut(*);
 evalScore = FOREACH raw GENERATE FLATTEN(EvalScore(*));
 evalScore = FILTER evalScore BY $0 IS NOT NULL;
 -- leverage hadoop sorting, TODO how to set parallel number here
-evalScore = ORDER evalScore BY shifu::$columnIndex ASC;
+evalScore = ORDER evalScore BY shifu::$columnIndex DESC;
 
 STORE evalScore INTO '$pathEvalScore' USING PigStorage('|', '-schema');
