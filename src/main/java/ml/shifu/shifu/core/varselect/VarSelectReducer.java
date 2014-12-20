@@ -39,6 +39,9 @@ import org.slf4j.LoggerFactory;
  * <p>
  * This is a global accumulation, reducer number in current MapReduce job should be set to 1.
  * 
+ * <p>
+ * Input type is <ColumnId, Iterable<MSE>> from all mapper tasks.
+ * 
  * @author Zhang David (pengzhang@paypal.com)
  */
 public class VarSelectReducer extends Reducer<LongWritable, DoubleWritable, LongWritable, NullWritable> {
@@ -141,7 +144,6 @@ public class VarSelectReducer extends Reducer<LongWritable, DoubleWritable, Long
             this.outputKey.set(this.results.get(i).key);
             context.write(this.outputKey, NullWritable.get());
         }
-
     }
 
     /**

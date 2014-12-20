@@ -424,9 +424,8 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
             args.add(String.format(NNConstants.MAPREDUCE_PARAM_FORMAT, GuaguaMapReduceConstants.MAPRED_CHILD_JAVA_OPTS,
                     "-Xmn128m -Xms1G -Xmx1G"));
         }
-        args.add(String.format(NNConstants.MAPREDUCE_PARAM_FORMAT, 
-                GuaguaConstants.GUAGUA_SPLIT_COMBINABLE,
-                Environment.getProperty(GuaguaConstants.GUAGUA_SPLIT_COMBINABLE, SHIFU_DEFAULT_DTRAIN_PARALLEL)));
+        args.add(String.format(NNConstants.MAPREDUCE_PARAM_FORMAT, GuaguaConstants.GUAGUA_SPLIT_COMBINABLE,
+                Environment.getProperty(GuaguaConstants.GUAGUA_SPLIT_COMBINABLE, "true")));
         args.add(String.format(NNConstants.MAPREDUCE_PARAM_FORMAT,
                 GuaguaConstants.GUAGUA_SPLIT_MAX_COMBINED_SPLIT_SIZE,
                 Environment.getProperty(GuaguaConstants.GUAGUA_SPLIT_MAX_COMBINED_SPLIT_SIZE, "268435456")));

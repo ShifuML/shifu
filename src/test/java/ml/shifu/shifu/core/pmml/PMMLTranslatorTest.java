@@ -156,6 +156,7 @@ public class PMMLTranslatorTest {
         }
     }
 
+    @SuppressWarnings("unchecked")
     private void evalPmml(String pmmlPath, String DataPath, String OutPath, String sep, String scoreName) throws Exception {
         PMML pmml = PMMLUtils.loadPMML(pmmlPath);
         NeuralNetworkEvaluator evaluator = new NeuralNetworkEvaluator(pmml);
