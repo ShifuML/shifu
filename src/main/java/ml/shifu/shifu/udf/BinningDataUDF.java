@@ -144,55 +144,6 @@ public class BinningDataUDF extends AbstractTrainerUDF<Tuple> implements Accumul
      */
     @Override
     public Tuple exec(Tuple input) throws IOException {
-        /*if ( input == null || input.size() != 1 ) {
-            return null;
-        }
-        
-        DataBag databag = (DataBag) input.get(0);
-        Iterator<Tuple> iterator = databag.iterator();
-        while ( iterator.hasNext() ) {
-            Tuple element = iterator.next();
-            if ( element == null || element.size() != 4) {
-                continue;
-            }
-            
-            if ( columnId < 0 ) {
-                columnId = (Integer) element.get(0);
-                ColumnConfig columnConfig = super.columnConfigList.get(columnId);
-                if ( columnConfig.isCategorical() ) {
-                    binning = new CategoricalBinning(-1);
-                } else {
-                    if ( super.modelConfig.getBinningMethod().equals(BinningMethod.EqualInterval) ) {
-                        binning = new EqualIntervalBinning(modelConfig.getStats().getMaxNumBin());
-                    } else {
-                        //binning = new EqualPopulationBinning(modelConfig.getStats().getMaxNumBin());
-                        switch (this.modelConfig.getBinningAlgorithm()) {
-                            case  Native:
-                                log.info("Invoke Native binning method, memory cosuming!!");
-                                //always merge bins
-                                binning = new NativeBinning(modelConfig.getStats().getMaxNumBin(), true);
-                                break;
-                            case SPDT:
-                                log.info("Invoke SPDT(Streaming Parallel Decision Tree) binning method, ");
-                                binning = new EqualPopulationBinning(modelConfig.getStats().getMaxNumBin());
-                                break;
-                            case MunroPat:
-                                log.info("Invoke Munro & Paterson selecting algorithm");
-                                binning = new MunroPatBinning(modelConfig.getStats().getMaxNumBin());
-                                break;
-                            default:
-                                log.info("default: Invoke SPDT(Streaming Parallel Decision Tree) binning method");
-                                binning = new MunroPatBinning(modelConfig.getStats().getMaxNumBin());
-                                break;
-                    }
-                }
-            }
-            
-            Object value = element.get(1);
-            if ( value != null ) {
-                binning.addData(value.toString());
-            }
-        }*/
 
         this.accumulate(input);
         
