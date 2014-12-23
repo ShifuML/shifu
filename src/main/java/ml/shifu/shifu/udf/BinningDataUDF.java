@@ -144,7 +144,7 @@ public class BinningDataUDF extends AbstractTrainerUDF<Tuple> implements Accumul
      */
     @Override
     public Tuple exec(Tuple input) throws IOException {
-        if ( input == null || input.size() != 1 ) {
+        /*if ( input == null || input.size() != 1 ) {
             return null;
         }
         
@@ -165,7 +165,25 @@ public class BinningDataUDF extends AbstractTrainerUDF<Tuple> implements Accumul
                     if ( super.modelConfig.getBinningMethod().equals(BinningMethod.EqualInterval) ) {
                         binning = new EqualIntervalBinning(modelConfig.getStats().getMaxNumBin());
                     } else {
-                        binning = new EqualPopulationBinning(modelConfig.getStats().getMaxNumBin());
+                        //binning = new EqualPopulationBinning(modelConfig.getStats().getMaxNumBin());
+                        switch (this.modelConfig.getBinningAlgorithm()) {
+                            case  Native:
+                                log.info("Invoke Native binning method, memory cosuming!!");
+                                //always merge bins
+                                binning = new NativeBinning(modelConfig.getStats().getMaxNumBin(), true);
+                                break;
+                            case SPDT:
+                                log.info("Invoke SPDT(Streaming Parallel Decision Tree) binning method, ");
+                                binning = new EqualPopulationBinning(modelConfig.getStats().getMaxNumBin());
+                                break;
+                            case MunroPat:
+                                log.info("Invoke Munro & Paterson selecting algorithm");
+                                binning = new MunroPatBinning(modelConfig.getStats().getMaxNumBin());
+                                break;
+                            default:
+                                log.info("default: Invoke SPDT(Streaming Parallel Decision Tree) binning method");
+                                binning = new MunroPatBinning(modelConfig.getStats().getMaxNumBin());
+                                break;
                     }
                 }
             }
@@ -174,7 +192,9 @@ public class BinningDataUDF extends AbstractTrainerUDF<Tuple> implements Accumul
             if ( value != null ) {
                 binning.addData(value.toString());
             }
-        }
+        }*/
+
+        this.accumulate(input);
         
         Tuple output = TupleFactory.getInstance().newTuple(2);
         output.set(0, columnId);

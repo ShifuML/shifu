@@ -182,6 +182,8 @@ public class ConfusionMatrix {
 
         ConfusionMatrixCalculator.SaveConfusionMaxtrixWithWriter(confMatWriter, prevCmo);
 
+        double modelScore = Double.MIN_VALUE;
+
         for (Scanner scanner : scanners) {
             while(scanner.hasNext()) {
                 if ((++cnt) % 10000 == 0) {
@@ -214,7 +216,7 @@ public class ConfusionMatrix {
                     }
                 }
 
-                double score = 0;
+                double score = 0.0;
                 try {
                     score = Double.parseDouble(raw[scoreColumnIndex]);
                 } catch (NumberFormatException e) {
@@ -224,6 +226,10 @@ public class ConfusionMatrix {
                     }
                     continue;
                 }
+
+                assert modelScore <= score;
+
+                modelScore = score;
 
                 ConfusionMatrixObject cmo = new ConfusionMatrixObject(prevCmo);
 
