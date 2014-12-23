@@ -15,6 +15,15 @@
  */
 package ml.shifu.shifu.core.processor;
 
+import java.io.File;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.Scanner;
+
 import ml.shifu.shifu.actor.AkkaSystemExecutor;
 import ml.shifu.shifu.container.obj.EvalConfig;
 import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
@@ -31,17 +40,20 @@ import ml.shifu.shifu.util.Constants;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.fs.Path;
+import org.apache.pig.tools.pigstats.JobStats;
+import org.apache.pig.tools.pigstats.PigStats;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import java.io.File;
-import java.io.IOException;
-import java.util.*;
 
 /**
  * EvalModelProcessor class
  */
 public class EvalModelProcessor extends BasicModelProcessor implements Processor {
+
+    /**
+     * log object
+     */
+    private final static Logger log = LoggerFactory.getLogger(EvalModelProcessor.class);
 
     /**
      * Step for evaluation
@@ -50,14 +62,19 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
         LIST, NEW, DELETE, RUN, PERF, SCORE, CONFMAT;
     }
 
-    /**
-     * log object
-     */
-    private final static Logger log = LoggerFactory.getLogger(EvalModelProcessor.class);
-
     private String evalName = null;
 
     private EvalStep evalStep;
+
+    private long pigPosTags = 0l;
+
+    private long pigNegTags = 0l;
+
+    private double pigPosWeightTags = 0d;
+
+    private double pigNegWeightTags = 0d;
+
+    private long evalRecords = 0l;
 
     /**
      * Constructor
@@ -197,7 +214,7 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
         PathFinder pathFinder = new PathFinder(modelConfig);
         String evalSetPath = pathFinder.getEvalSetPath(config, SourceType.LOCAL);
         (new File(evalSetPath)).mkdirs();
-        
+
         syncDataToHdfs(config.getDataSet().getSource());
 
         switch(modelConfig.getBasic().getRunMode()) {
@@ -247,6 +264,24 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
         } catch (Throwable e) {
             throw new RuntimeException(e);
         }
+
+        Iterator<JobStats> iter = PigStats.get().getJobGraph().iterator();
+
+        if(iter.hasNext()) {
+            JobStats jobStats = iter.next();
+            this.pigPosTags = jobStats.getHadoopCounters().getGroup(Constants.SHIFU_GROUP_COUNTER)
+                    .getCounter(Constants.COUNTER_POSTAGS);
+            this.pigNegTags = jobStats.getHadoopCounters().getGroup(Constants.SHIFU_GROUP_COUNTER)
+                    .getCounter(Constants.COUNTER_NEGTAGS);
+            this.pigPosWeightTags = jobStats.getHadoopCounters().getGroup(Constants.SHIFU_GROUP_COUNTER)
+                    .getCounter(Constants.COUNTER_WPOSTAGS) / 1000d;
+            this.pigNegWeightTags = jobStats.getHadoopCounters().getGroup(Constants.SHIFU_GROUP_COUNTER)
+                    .getCounter(Constants.COUNTER_WNEGTAGS) / 1000d;
+            // TODO test hadoop 1.x and 2.x
+            this.evalRecords = jobStats.getHadoopCounters().getGroup(Constants.SHIFU_GROUP_COUNTER)
+                    .getCounter(Constants.COUNTER_RECORDS);
+            log.info("evalRecords:" + evalRecords);
+        }
     }
 
     /**
@@ -263,6 +298,8 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
         AkkaSystemExecutor.getExecutor().submitModelEvalJob(modelConfig,
                 ShifuFileUtils.searchColumnConfig(config, this.columnConfigList), config, scanners);
 
+        // TODO A bug here in local mode
+        // this.evalRecords = ...;
         closeScanners(scanners);
     }
 
@@ -349,6 +386,8 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
      */
     private void runPigEval(EvalConfig evalConfig) throws IOException {
         runPigScore(evalConfig);
+        // TODO runConfusionMatrix write and runPerformance read, merge together
+        // TODO code refacter because of several magic numbers and not good name functions ...
         runConfusionMatrix(evalConfig);
         runPerformance(evalConfig);
     }
@@ -391,8 +430,15 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
      */
     private void runPerformance(EvalConfig evalConfig) throws IOException {
         PerformanceEvaluator perfEval = new PerformanceEvaluator(modelConfig, evalConfig);
-
-        perfEval.review();
+        switch(modelConfig.getBasic().getRunMode()) {
+            case mapred:
+                perfEval.review(this.evalRecords);
+                break;
+            case local:
+            default:
+                perfEval.review();
+                break;
+        }
     }
 
     /**
@@ -417,10 +463,11 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
      */
     private void runConfusionMatrix(EvalConfig config) throws IOException {
         ConfusionMatrix worker = new ConfusionMatrix(modelConfig, config);
-        //worker.computeConfusionMatrix();
-        switch (modelConfig.getBasic().getRunMode()){
+        // worker.computeConfusionMatrix();
+        switch(modelConfig.getBasic().getRunMode()) {
             case mapred:
-                worker.bufferedComputeConfusionMatrix();
+                worker.bufferedComputeConfusionMatrix(this.pigPosTags, this.pigNegTags, this.pigPosWeightTags,
+                        this.pigNegWeightTags);
                 break;
             default:
                 worker.computeConfusionMatrix();

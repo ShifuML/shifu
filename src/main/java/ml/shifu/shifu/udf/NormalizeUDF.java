@@ -108,7 +108,7 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
                 continue;
             }
 
-            if(config.isMeta()) {
+            if(!config.isCandidate()) {
                 tuple.append(null);
             } else {
                 String val = ((input.get(i) == null) ? "" : input.get(i).toString());

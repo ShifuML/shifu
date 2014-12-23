@@ -1,14 +1,11 @@
-package ml.shifu.shifu.core.dvarsel.wrapper;
-/*
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
+/**
+ * Copyright [2012-2014] eBay Software Foundation
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -16,6 +13,7 @@ package ml.shifu.shifu.core.dvarsel.wrapper;
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package ml.shifu.shifu.core.dvarsel.wrapper;
 
 import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.container.obj.ModelConfig;
@@ -34,6 +32,7 @@ import java.util.Set;
 public class ValidationConductor {
 
     private ModelConfig modelConfig;
+    @SuppressWarnings("unused")
     private List<ColumnConfig> columnConfigList;
     private Set<Integer>  workingColumnSet;
     private TrainingDataSet trainingDataSet;

@@ -15,11 +15,17 @@
  */
 package ml.shifu.shifu.udf;
 
+import java.io.IOException;
+import java.util.List;
+import java.util.Map;
+
 import ml.shifu.shifu.container.CaseScoreResult;
 import ml.shifu.shifu.container.obj.EvalConfig;
 import ml.shifu.shifu.core.ModelRunner;
 import ml.shifu.shifu.fs.ShifuFileUtils;
 import ml.shifu.shifu.util.CommonUtils;
+import ml.shifu.shifu.util.Constants;
+
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.pig.data.DataType;
@@ -27,12 +33,8 @@ import org.apache.pig.data.Tuple;
 import org.apache.pig.data.TupleFactory;
 import org.apache.pig.impl.logicalLayer.schema.Schema;
 import org.apache.pig.impl.logicalLayer.schema.Schema.FieldSchema;
+import org.apache.pig.tools.pigstats.PigStatusReporter;
 import org.encog.ml.BasicML;
-
-import java.io.IOException;
-import java.util.List;
-import java.util.Map;
-
 
 /**
  * Calculate the score for each evaluation data
@@ -45,32 +47,42 @@ public class EvalScoreUDF extends AbstractTrainerUDF<Tuple> {
     private ModelRunner modelRunner;
     private String[] header;
 
+    private List<String> negTags;
+
+    private List<String> posTags;
+
     private int modelCnt;
 
-    public EvalScoreUDF(String source, String pathModelConfig, String pathColumnConfig, String evalSetName) throws IOException {
+    public EvalScoreUDF(String source, String pathModelConfig, String pathColumnConfig, String evalSetName)
+            throws IOException {
         super(source, pathModelConfig, pathColumnConfig);
 
         evalConfig = modelConfig.getEvalConfigByName(evalSetName);
 
-        if (evalConfig.getModelsPath() != null) {
-            //renew columnConfig
+        negTags = modelConfig.getNegTags();
+        log.debug("Negative Tags: " + negTags);
+        posTags = modelConfig.getPosTags();
+        log.debug("Positive Tags: " + posTags);
+
+        if(evalConfig.getModelsPath() != null) {
+            // renew columnConfig
             this.columnConfigList = ShifuFileUtils.searchColumnConfig(evalConfig, columnConfigList);
         }
 
         // create model runner
-        this.header = CommonUtils.getHeaders(
-                evalConfig.getDataSet().getHeaderPath(),
-                evalConfig.getDataSet().getHeaderDelimiter(),
-                evalConfig.getDataSet().getSource());
+        this.header = CommonUtils.getHeaders(evalConfig.getDataSet().getHeaderPath(), evalConfig.getDataSet()
+                .getHeaderDelimiter(), evalConfig.getDataSet().getSource());
 
-        List<BasicML> models = CommonUtils.loadBasicModels(modelConfig, evalConfig, evalConfig.getDataSet().getSource());
-        modelRunner = new ModelRunner(modelConfig, columnConfigList, this.header, evalConfig.getDataSet().getDataDelimiter(), models);
+        List<BasicML> models = CommonUtils
+                .loadBasicModels(modelConfig, evalConfig, evalConfig.getDataSet().getSource());
+        modelRunner = new ModelRunner(modelConfig, columnConfigList, this.header, evalConfig.getDataSet()
+                .getDataDelimiter(), models);
         modelCnt = models.size();
     }
 
     public Tuple exec(Tuple input) throws IOException {
         CaseScoreResult cs = modelRunner.compute(input);
-        if (cs == null) {
+        if(cs == null) {
             log.error("Get null result, for input: " + input.toDelimitedString("|"));
             return null;
         }
@@ -81,30 +93,74 @@ public class EvalScoreUDF extends AbstractTrainerUDF<Tuple> {
         String tag = rawDataMap.get(modelConfig.getTargetColumnName(evalConfig));
         tuple.append(StringUtils.trimToEmpty(tag));
 
-        if (StringUtils.isNotBlank(evalConfig.getDataSet().getWeightColumnName())) {
-            tuple.append(rawDataMap.get(evalConfig.getDataSet().getWeightColumnName()));
+        String weight = null;
+        if(StringUtils.isNotBlank(evalConfig.getDataSet().getWeightColumnName())) {
+            weight = rawDataMap.get(evalConfig.getDataSet().getWeightColumnName());
         } else {
-            tuple.append(Double.valueOf(1.0));
+            weight = "1.0";
         }
+
+        incrementTagCounters(tag, weight);
+
+        tuple.append(weight);
 
         tuple.append(cs.getAvgScore());
         tuple.append(cs.getMaxScore());
         tuple.append(cs.getMinScore());
         tuple.append(cs.getMedianScore());
 
-        for (Integer score : cs.getScores()) {
+        for(Integer score: cs.getScores()) {
             tuple.append(score);
         }
 
         // append meta data
         List<String> metaColumns = evalConfig.getScoreMetaColumns(modelConfig);
-        if (CollectionUtils.isNotEmpty(metaColumns)) {
-            for (String meta : metaColumns) {
+        if(CollectionUtils.isNotEmpty(metaColumns)) {
+            for(String meta: metaColumns) {
                 tuple.append(rawDataMap.get(meta));
             }
         }
 
         return tuple;
+    }
+
+    private void incrementTagCounters(String tag, String weight) {
+        long weightLong = (long) (Double.parseDouble(weight) * Constants.EVAL_COUNTER_WEIGHT_SCALE);
+
+        if(isPigEnabled(Constants.SHIFU_GROUP_COUNTER, Constants.COUNTER_RECORDS)) {
+            PigStatusReporter.getInstance().getCounter(Constants.SHIFU_GROUP_COUNTER, Constants.COUNTER_RECORDS)
+                    .increment(1);
+        }
+
+        if(posTags.contains(tag)) {
+            if(isPigEnabled(Constants.SHIFU_GROUP_COUNTER, Constants.COUNTER_POSTAGS)) {
+                PigStatusReporter.getInstance().getCounter(Constants.SHIFU_GROUP_COUNTER, Constants.COUNTER_POSTAGS)
+                        .increment(1);
+            }
+            if(isPigEnabled(Constants.SHIFU_GROUP_COUNTER, Constants.COUNTER_WPOSTAGS)) {
+                PigStatusReporter.getInstance().getCounter(Constants.SHIFU_GROUP_COUNTER, Constants.COUNTER_WPOSTAGS)
+                        .increment(weightLong);
+            }
+        }
+
+        if(negTags.contains(tag)) {
+            if(isPigEnabled(Constants.SHIFU_GROUP_COUNTER, Constants.COUNTER_NEGTAGS)) {
+                PigStatusReporter.getInstance().getCounter(Constants.SHIFU_GROUP_COUNTER, Constants.COUNTER_NEGTAGS)
+                        .increment(1);
+            }
+            if(isPigEnabled(Constants.SHIFU_GROUP_COUNTER, Constants.COUNTER_WNEGTAGS)) {
+                PigStatusReporter.getInstance().getCounter(Constants.SHIFU_GROUP_COUNTER, Constants.COUNTER_WNEGTAGS)
+                        .increment(weightLong);
+            }
+        }
+    }
+
+    /**
+     * Check whether is a pig environment, for example, in unit test, PigStatusReporter.getInstance() is null
+     */
+    private boolean isPigEnabled(String group, String counter) {
+        return PigStatusReporter.getInstance() != null
+                && PigStatusReporter.getInstance().getCounter(group, counter) != null;
     }
 
     /**
@@ -113,10 +169,11 @@ public class EvalScoreUDF extends AbstractTrainerUDF<Tuple> {
     public Schema outputSchema(Schema input) {
         try {
             Schema tupleSchema = new Schema();
-            tupleSchema.add(new FieldSchema(SCHEMA_PREFIX + modelConfig.getTargetColumnName(evalConfig), DataType.CHARARRAY));
+            tupleSchema.add(new FieldSchema(SCHEMA_PREFIX + modelConfig.getTargetColumnName(evalConfig),
+                    DataType.CHARARRAY));
 
-            String weightName = StringUtils.isBlank(evalConfig.getDataSet().getWeightColumnName())
-                    ? "weight" : evalConfig.getDataSet().getWeightColumnName();
+            String weightName = StringUtils.isBlank(evalConfig.getDataSet().getWeightColumnName()) ? "weight"
+                    : evalConfig.getDataSet().getWeightColumnName();
 
             tupleSchema.add(new FieldSchema(SCHEMA_PREFIX + weightName, DataType.CHARARRAY));
             tupleSchema.add(new FieldSchema(SCHEMA_PREFIX + "mean", DataType.INTEGER));
@@ -124,13 +181,13 @@ public class EvalScoreUDF extends AbstractTrainerUDF<Tuple> {
             tupleSchema.add(new FieldSchema(SCHEMA_PREFIX + "min", DataType.INTEGER));
             tupleSchema.add(new FieldSchema(SCHEMA_PREFIX + "median", DataType.INTEGER));
 
-            for (int i = 0; i < modelCnt; i++) {
+            for(int i = 0; i < modelCnt; i++) {
                 tupleSchema.add(new FieldSchema(SCHEMA_PREFIX + "model" + i, DataType.INTEGER));
             }
 
             List<String> metaColumns = evalConfig.getScoreMetaColumns(modelConfig);
-            if (CollectionUtils.isNotEmpty(metaColumns)) {
-                for (String columnName : metaColumns) {
+            if(CollectionUtils.isNotEmpty(metaColumns)) {
+                for(String columnName: metaColumns) {
                     tupleSchema.add(new FieldSchema(columnName, DataType.CHARARRAY));
                 }
             }

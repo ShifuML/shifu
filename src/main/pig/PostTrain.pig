@@ -18,13 +18,12 @@ REGISTER '$path_jar'
 SET default_parallel $num_parallel
 SET mapred.job.queue.name $queue_name;
 SET job.name 'shifu post train'
+SET io.sort.mb 500
 
-
-DEFINE SimpleScore 		ml.shifu.shifu.udf.SimpleScoreUDF('$source_type', '$path_model_config', '$path_column_config', '$pathHeader', '$pathDelimiter');
-DEFINE FullScore 		ml.shifu.shifu.udf.FullScoreUDF('$source_type', '$path_model_config', '$path_column_config', '$pathHeader', '$pathDelimiter');
-DEFINE Scatter      	ml.shifu.shifu.udf.ScatterUDF('$source_type', '$path_column_config');
-DEFINE CalculateBinAvgScore 	ml.shifu.shifu.udf.CalculateBinAvgScoreUDF('$source_type', '$path_column_config');
-
+DEFINE SimpleScore              ml.shifu.shifu.udf.SimpleScoreUDF('$source_type', '$path_model_config', '$path_column_config', '$pathHeader', '$pathDelimiter');
+DEFINE FullScore                ml.shifu.shifu.udf.FullScoreUDF('$source_type', '$path_model_config', '$path_column_config', '$pathHeader', '$pathDelimiter');
+DEFINE Scatter                  ml.shifu.shifu.udf.ScatterUDF('$source_type', '$path_column_config');
+DEFINE CalculateBinAvgScore     ml.shifu.shifu.udf.CalculateBinAvgScoreUDF('$source_type', '$path_column_config');
 
 raw = LOAD '$pathSelectedRawData' USING PigStorage('$delimiter');
 

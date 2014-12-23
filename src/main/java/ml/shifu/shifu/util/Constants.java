@@ -149,4 +149,19 @@ public interface Constants {
 
     public static final float SHIFU_DEFAULT_VARSELECT_WRAPPER_RATIO = 0.05f;
 
+    public static final String COUNTER_WNEGTAGS = "WNEGTAGS";
+
+    public static final String COUNTER_WPOSTAGS = "WPOSTAGS";
+
+    public static final String COUNTER_POSTAGS = "POSTAGS";
+
+    public static final String COUNTER_NEGTAGS = "NEGTAGS";
+
+    public static final String SHIFU_GROUP_COUNTER = "SHIFU_COUNTER";
+
+    public static final long EVAL_COUNTER_WEIGHT_SCALE = 1000l;
+    
+    public static final String COUNTER_RECORDS = "RECORDS";
+
+
 }

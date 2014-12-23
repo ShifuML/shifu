@@ -39,6 +39,19 @@ import org.slf4j.LoggerFactory;
  * <p>
  * This is a global accumulation, reducer number in current MapReduce job should be set to 1.
  * 
+ * <p>
+ * Input type is <ColumnId, Iterable<MSE>> from all mapper tasks.
+ * 
+ * <p>
+ * In {@link #cleanup(org.apache.hadoop.mapreduce.Reducer.Context)}, variables with MSE will be sorted according to
+ * variable wrapper type. According to {@link #wrapperRatio} setting, only variables in that range will be written into
+ * HDFS.
+ * 
+ * <p>
+ * {@link #wrapperRatio} means each time we need remove how many percentage of variables. A ratio is better than a fixed
+ * number. Since each time we reduce variables which number is also decreased. Say 100 variables, wrapperRatio is 0.05.
+ * First time we remove 100*0.05 = 5 variables, second time 95 * 0.05 variables will be removed.
+ * 
  * @author Zhang David (pengzhang@paypal.com)
  */
 public class VarSelectReducer extends Reducer<LongWritable, DoubleWritable, LongWritable, NullWritable> {
@@ -141,7 +154,6 @@ public class VarSelectReducer extends Reducer<LongWritable, DoubleWritable, Long
             this.outputKey.set(this.results.get(i).key);
             context.write(this.outputKey, NullWritable.get());
         }
-
     }
 
     /**
