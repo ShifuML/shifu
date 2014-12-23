@@ -80,9 +80,13 @@ import com.google.common.base.Splitter;
 
 /**
  * Variable selection processor, select the variable based on KS/IV value, or </p>
- * <p/>
+ * 
+ * <p>
  * Selection variable based on the wrapper training processor.
- * </p>
+ * 
+ * <p>
+ * For sensitive variable selection, each time wrapperRatio percent of variables will be removed. If continue do
+ * variable selection, continue to run varselect command. Current design will do variable selection continuously.
  */
 public class VarSelectModelProcessor extends BasicModelProcessor implements Processor {
 
@@ -457,6 +461,7 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
 
             BufferedReader reader = null;
             try {
+                // here only works for 1 reducer
                 reader = ShifuFileUtils.getReader(varSelectMSEOutputPath + Path.SEPARATOR + "part-r-00000", source);
                 String str = null;
                 int count = 0;
