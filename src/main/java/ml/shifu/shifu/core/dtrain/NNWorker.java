@@ -337,8 +337,7 @@ public class NNWorker extends
                 } else {
                     if(this.inputNodeCount == this.candidateCount) {
                         // all variables are not set final-selectByFilter
-                        // TODO Using Zhanghao's isCandidate in CommonUtils(including KV, IS info)
-                        if(columnConfig != null && columnConfig.isCandidate()) {
+                        if(CommonUtils.isGoodCandidate(columnConfig)) {
                             inputs[inputsIndex++] = doubleValue;
                             hashcode = hashcode * 31 + Double.valueOf(doubleValue).hashCode();
                         }
