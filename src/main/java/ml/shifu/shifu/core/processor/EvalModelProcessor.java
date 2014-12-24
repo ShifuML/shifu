@@ -274,9 +274,11 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
             this.pigNegTags = jobStats.getHadoopCounters().getGroup(Constants.SHIFU_GROUP_COUNTER)
                     .getCounter(Constants.COUNTER_NEGTAGS);
             this.pigPosWeightTags = jobStats.getHadoopCounters().getGroup(Constants.SHIFU_GROUP_COUNTER)
-                    .getCounter(Constants.COUNTER_WPOSTAGS) / 1000d;
+                    .getCounter(Constants.COUNTER_WPOSTAGS)
+                    / (Constants.EVAL_COUNTER_WEIGHT_SCALE * 1.0d);
             this.pigNegWeightTags = jobStats.getHadoopCounters().getGroup(Constants.SHIFU_GROUP_COUNTER)
-                    .getCounter(Constants.COUNTER_WNEGTAGS) / 1000d;
+                    .getCounter(Constants.COUNTER_WNEGTAGS)
+                    / (Constants.EVAL_COUNTER_WEIGHT_SCALE * 1.0d);
             // TODO test hadoop 1.x and 2.x
             this.evalRecords = jobStats.getHadoopCounters().getGroup(Constants.SHIFU_GROUP_COUNTER)
                     .getCounter(Constants.COUNTER_RECORDS);

@@ -23,7 +23,7 @@ import java.util.List;
 import java.util.Set;
 
 import ml.shifu.shifu.udf.CalculateNewStatsUDF;
-import ml.shifu.shifu.udf.CalculateStatsUDF;
+
 import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
