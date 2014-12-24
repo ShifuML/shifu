@@ -133,7 +133,6 @@ public class Environment {
      * Get property as Integer value
      *
      * @param propertyName
-     * @param defValue
      * @return
      */
     public static Integer getInt(String propertyName) {

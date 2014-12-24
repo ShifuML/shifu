@@ -302,14 +302,6 @@ public final class CommonUtils {
      * @throws NumberFormatException    if columnVal does not contain a parsable number.
      */
     public static int getBinNum(ColumnConfig columnConfig, String columnVal) {
-        if (StringUtils.isEmpty(columnVal) || columnConfig == null) {
-            throw new IllegalArgumentException(
-                    String.format(
-                            "columnVal should not be null or empty, columnConfig should not be null, columnVal:%s, columnConfig:%s",
-                            columnVal, columnConfig)
-            );
-        }
-
         if (columnConfig.isCategorical()) {
             List<String> binCategories = columnConfig.getBinCategory();
             for (int i = 0; i < binCategories.size(); i++) {
@@ -317,9 +309,18 @@ public final class CommonUtils {
                     return i;
                 }
             }
-            return 0;
+            return -1;
         } else {
-            return getNumericBinNum(columnConfig.getBinBoundary(), Double.valueOf(columnVal));
+            if ( StringUtils.isBlank(columnVal) ) {
+                return -1;
+            }
+            double dval = 0.0;
+            try {
+                dval = Double.parseDouble(columnVal);
+            } catch ( Exception e ) {
+                return -1;
+            }
+            return getNumericBinNum(columnConfig.getBinBoundary(), dval);
         }
     }
 

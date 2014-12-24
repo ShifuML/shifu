@@ -22,6 +22,8 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
+import ml.shifu.shifu.udf.CalculateNewStatsUDF;
+import ml.shifu.shifu.udf.CalculateStatsUDF;
 import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -35,7 +37,8 @@ import org.slf4j.LoggerFactory;
 public class CategoricalBinning extends AbstractBinning<String> {
     
     private final static Logger log = LoggerFactory.getLogger(CategoricalBinning.class);
-    
+
+    private boolean isValid = true;
     private Set<String> categoricalVals;
     
     /**
@@ -73,7 +76,14 @@ public class CategoricalBinning extends AbstractBinning<String> {
     public void addData(String val) {
         String fval = StringUtils.trimToEmpty(val);
         if ( !isMissingVal(fval) ) {
-            categoricalVals.add(fval);
+            if ( isValid ) {
+                categoricalVals.add(fval);
+            }
+
+            if ( categoricalVals.size() > CalculateNewStatsUDF.MAX_CATEGORICAL_BINC_COUNT ) {
+                isValid = false;
+                categoricalVals.clear();
+            }
         } else {
             super.incMissingValCnt();
         }
@@ -94,10 +104,15 @@ public class CategoricalBinning extends AbstractBinning<String> {
      */
     @Override
     public void mergeBin(AbstractBinning<?> another) {
-       CategoricalBinning binning = (CategoricalBinning) another;
-       super.mergeBin(another);
-       
-       this.categoricalVals.addAll(binning.categoricalVals);
+        CategoricalBinning binning = (CategoricalBinning) another;
+        super.mergeBin(another);
+
+        this.isValid = (this.isValid && binning.isValid);
+        if ( this.isValid ) {
+            this.categoricalVals.addAll(binning.categoricalVals);
+        } else {
+            this.categoricalVals.clear();
+        }
     }
     
     /**
@@ -113,9 +128,10 @@ public class CategoricalBinning extends AbstractBinning<String> {
             categoricalVals.clear();
         }
         
-        String[] objStrArr = objValStr.split(Character.toString(FIELD_SEPARATOR), -1);        
-        if ( objStrArr.length > 4 && StringUtils.isNotBlank(objStrArr[4]) ) {
-            String[] elements = objStrArr[4].split(Character.toString(SETLIST_SEPARATOR), -1);
+        String[] objStrArr = objValStr.split(Character.toString(FIELD_SEPARATOR), -1);
+        this.isValid = Boolean.valueOf(objStrArr[4]);
+        if ( objStrArr.length > 5 && StringUtils.isNotBlank(objStrArr[5]) ) {
+            String[] elements = objStrArr[5].split(Character.toString(SETLIST_SEPARATOR), -1);
             for ( String element : elements ) {
                 categoricalVals.add(element);
             }
@@ -130,7 +146,9 @@ public class CategoricalBinning extends AbstractBinning<String> {
      */
     public String objToString() {
         return super.objToString() 
-                + Character.toString(FIELD_SEPARATOR) 
+                + Character.toString(FIELD_SEPARATOR)
+                + Boolean.toString(isValid)
+                + Character.toString(FIELD_SEPARATOR)
                 + StringUtils.join(categoricalVals, SETLIST_SEPARATOR);
     }
 

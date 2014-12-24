@@ -19,6 +19,7 @@ package ml.shifu.shifu.udf;
 
 import java.io.IOException;
 import java.util.Iterator;
+import java.util.List;
 
 import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.core.binning.AbstractBinning;
@@ -84,8 +85,16 @@ public class BinningDataMergeUDF extends AbstractTrainerUDF<Tuple> {
         
         Tuple output = TupleFactory.getInstance().newTuple(2);
         output.set(0, columnId);
-        output.set(1, StringUtils.join(binning.getDataBin(), CalculateStatsUDF.CATEGORY_VAL_SEPARATOR));
-        
+        List<?> binFields = binning.getDataBin();
+
+        // Do check here. It's because if there are too many value for categorical variable,
+        // it will consume too much memory when join them together, that will cause OOM exception
+        if ( binFields.size() > CalculateNewStatsUDF.MAX_CATEGORICAL_BINC_COUNT ) {
+            output.set(1, "");
+        } else {
+            output.set(1, StringUtils.join(binning.getDataBin(), CalculateStatsUDF.CATEGORY_VAL_SEPARATOR));
+        }
+
         log.info("Finish merging bin info for columnId - " + columnId);
         
         return output;

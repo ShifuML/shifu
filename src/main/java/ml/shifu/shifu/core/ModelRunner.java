@@ -118,7 +118,7 @@ public class ModelRunner {
     /**
      * Run model to compute score for input tuple
      *
-     * @param inputData - the whole original input data as @Tuple
+     * @param tuple - the whole original input data as @Tuple
      * @return @CaseScoreResult
      */
     public CaseScoreResult compute(Tuple tuple) throws ExecException {

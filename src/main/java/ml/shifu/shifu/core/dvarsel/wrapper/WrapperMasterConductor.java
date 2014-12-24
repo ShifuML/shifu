@@ -86,7 +86,7 @@ public class WrapperMasterConductor extends AbstractMasterConductor {
             }
         }
 
-        LOG.info("Column - {} get most votes - {}", maxVotedColumnId, maxVoteCount);
+        LOG.info("Column - {} get most votes - {}", (maxVotedColumnId - 1), maxVoteCount);
         // no voted columnId found
         if ( maxVotedColumnId > 0 ) {
             workingSet.add(maxVotedColumnId - 1);

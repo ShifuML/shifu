@@ -17,6 +17,8 @@
  */
 package ml.shifu.shifu.core.binning;
 
+import java.io.FileInputStream;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
@@ -27,6 +29,7 @@ import ml.shifu.shifu.container.obj.ColumnConfig.ColumnType;
 import ml.shifu.shifu.container.obj.ModelConfig;
 import ml.shifu.shifu.container.obj.ModelStatsConf.BinningMethod;
 
+import org.apache.commons.io.IOUtils;
 import org.testng.annotations.Test;
 
 /**
@@ -138,5 +141,31 @@ public class EqualPopulationBinningTest {
         String binStr = binning.objToString();
         String[] fieldArr = binStr.split(Character.toString(AbstractBinning.FIELD_SEPARATOR));
         Assert.assertTrue(fieldArr.length == 5);
+    }
+
+    @Test
+    public void testUsageAge() throws IOException {
+        EqualPopulationBinning binning = new EqualPopulationBinning(10);
+        List<String> usageList = IOUtils.readLines(new FileInputStream("src/test/resources/example/binning-data/usage_age.txt"));
+
+        for ( String data : usageList ) {
+            binning.addData(data);
+        }
+
+        List<Double> binBoundary = binning.getDataBin();
+        Assert.assertTrue(binBoundary.size() > 1);
+    }
+
+    @Test
+    public void testReturn180d() throws IOException {
+        EqualPopulationBinning binning = new EqualPopulationBinning(10);
+        List<String> usageList = IOUtils.readLines(new FileInputStream("src/test/resources/example/binning-data/return_lt_180d_amt.txt"));
+
+        for ( String data : usageList ) {
+            binning.addData(data);
+        }
+
+        List<Double> binBoundary = binning.getDataBin();
+        Assert.assertTrue(binBoundary.size() > 1);
     }
 }
