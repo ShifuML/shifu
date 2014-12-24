@@ -24,6 +24,7 @@ import java.util.Scanner;
 import ml.shifu.shifu.actor.AkkaSystemExecutor;
 import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.container.obj.ColumnConfig.ColumnType;
+import ml.shifu.shifu.container.obj.ModelStatsConf;
 import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
 import ml.shifu.shifu.core.validator.ModelInspector.ModelStep;
 import ml.shifu.shifu.exception.ShifuErrorCode;
@@ -111,8 +112,13 @@ public class StatsModelProcessor extends BasicModelProcessor implements Processo
         
         // execute pig job
         try {
-            PigExecutor.getExecutor().submitJob(modelConfig,
-                    pathFinder.getAbsolutePath("scripts/PreTrainingStats.pig"), paramsMap);
+            if (modelConfig.getBinningAlgorithm().equals(ModelStatsConf.BinningAlgorithm.MunroPat)) {
+
+                PigExecutor.getExecutor().submitJob(modelConfig, pathFinder.getAbsolutePath("script/Stats.pig"), paramsMap);
+            } else {
+                PigExecutor.getExecutor().submitJob(modelConfig,
+                        pathFinder.getAbsolutePath("scripts/PreTrainingStats.pig"), paramsMap);
+            }
         } catch (IOException e) {
             throw new ShifuException(ShifuErrorCode.ERROR_RUNNING_PIG_JOB, e);
         } catch (Throwable e) {

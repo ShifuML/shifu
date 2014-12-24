@@ -75,26 +75,7 @@ public class BinningPartialDataUDF extends AbstractTrainerUDF<String> {
                     if ( super.modelConfig.getBinningMethod().equals(BinningMethod.EqualInterval) ) {
                         binning = new EqualIntervalBinning(modelConfig.getStats().getMaxNumBin());
                     } else {
-                        //binning = new EqualPopulationBinning(modelConfig.getStats().getMaxNumBin());
-                        switch (modelConfig.getBinningAlgorithm()) {
-                            case Native:
-                                log.info("Invoke Native binning method, memory cosuming!!");
-                                //always merge bins
-                                binning = new NativeBinning(modelConfig.getStats().getMaxNumBin(), true);
-                                break;
-                            case SPDT:
-                                log.info("Invoke SPDT(Streaming Parallel Decision Tree) binning method, ");
-                                binning = new EqualPopulationBinning(modelConfig.getStats().getMaxNumBin());
-                                break;
-                            case MunroPat:
-                                log.info("Invoke Munro & Paterson selecting algorithm");
-                                binning = new MunroPatBinning(modelConfig.getStats().getMaxNumBin());
-                                break;
-                            default:
-                                log.info("default: Invoke SPDT(Streaming Parallel Decision Tree) binning method");
-                                binning = new MunroPatBinning(modelConfig.getStats().getMaxNumBin());
-                                break;
-                        }
+                        binning = new EqualPopulationBinning(modelConfig.getStats().getMaxNumBin());
                     }
                 }
             }
