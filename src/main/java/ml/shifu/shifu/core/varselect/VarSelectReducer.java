@@ -52,6 +52,9 @@ import org.slf4j.LoggerFactory;
  * number. Since each time we reduce variables which number is also decreased. Say 100 variables, wrapperRatio is 0.05.
  * First time we remove 100*0.05 = 5 variables, second time 95 * 0.05 variables will be removed.
  * 
+ * <p>
+ * TODO Add mean value, not only MSE value; Write mean and MSE to files for later analysis.
+ * 
  * @author Zhang David (pengzhang@paypal.com)
  */
 public class VarSelectReducer extends Reducer<LongWritable, DoubleWritable, LongWritable, NullWritable> {

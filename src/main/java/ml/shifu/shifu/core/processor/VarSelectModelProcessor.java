@@ -108,7 +108,7 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
         VariableSelector selector = new VariableSelector(this.modelConfig, this.columnConfigList);
 
         if(!modelConfig.getVarSelectWrapperEnabled()) {
-            // Selelct by local KS, IV
+            // Select by local KS, IV
             CommonUtils.updateColumnConfigFlags(modelConfig, columnConfigList);
 
             this.columnConfigList = selector.selectByFilter();

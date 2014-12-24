@@ -65,6 +65,8 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
 
     private final static Logger LOG = LoggerFactory.getLogger(TrainModelProcessor.class);
 
+    private static final int VAR_SELECT_TRAINING_DECAY_EPOCHES_THRESHOLD = 200;
+
     public static final String SHIFU_DEFAULT_DTRAIN_PARALLEL = "true";
 
     public static final String SHIFU_DTRAIN_PARALLEL = "shifu.dtrain.parallel";
@@ -369,9 +371,14 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
         args.add("-c");
         // the reason to add 1 is that the first iteration in D-NN
         // implementation is used for training preparation.
-        int numTrainEpochs = super.getModelConfig().getTrain().getNumTrainEpochs() + 1;
 
-        args.add(String.valueOf(numTrainEpochs));
+        int numTrainEpoches = super.getModelConfig().getTrain().getNumTrainEpochs();
+        if(this.isForVarSelect() && numTrainEpoches >= VAR_SELECT_TRAINING_DECAY_EPOCHES_THRESHOLD) {
+            numTrainEpoches = numTrainEpoches / 2;
+        }
+        numTrainEpoches = numTrainEpoches + 1;
+
+        args.add(String.valueOf(numTrainEpoches));
 
         args.add("-mr");
         args.add(NNParams.class.getName());
