@@ -144,37 +144,8 @@ public class BinningDataUDF extends AbstractTrainerUDF<Tuple> implements Accumul
      */
     @Override
     public Tuple exec(Tuple input) throws IOException {
-        if ( input == null || input.size() != 1 ) {
-            return null;
-        }
-        
-        DataBag databag = (DataBag) input.get(0);
-        Iterator<Tuple> iterator = databag.iterator();
-        while ( iterator.hasNext() ) {
-            Tuple element = iterator.next();
-            if ( element == null || element.size() != 4) {
-                continue;
-            }
-            
-            if ( columnId < 0 ) {
-                columnId = (Integer) element.get(0);
-                ColumnConfig columnConfig = super.columnConfigList.get(columnId);
-                if ( columnConfig.isCategorical() ) {
-                    binning = new CategoricalBinning(-1);
-                } else {
-                    if ( super.modelConfig.getBinningMethod().equals(BinningMethod.EqualInterval) ) {
-                        binning = new EqualIntervalBinning(modelConfig.getStats().getMaxNumBin());
-                    } else {
-                        binning = new EqualPopulationBinning(modelConfig.getStats().getMaxNumBin());
-                    }
-                }
-            }
-            
-            Object value = element.get(1);
-            if ( value != null ) {
-                binning.addData(value.toString());
-            }
-        }
+
+        this.accumulate(input);
         
         Tuple output = TupleFactory.getInstance().newTuple(2);
         output.set(0, columnId);

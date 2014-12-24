@@ -140,7 +140,7 @@ public class ConfusionMatrix {
 
         ConfusionMatrixCalculator.saveConfusionMaxtrixWithWriter(confMatWriter, prevCmo);
 
-        for(Scanner scanner: scanners) {
+        for (Scanner scanner : scanners) {
             while(scanner.hasNext()) {
                 if((++cnt) % 100000 == 0) {
                     log.info("Loaded " + cnt + " records.");
@@ -172,7 +172,7 @@ public class ConfusionMatrix {
                     }
                 }
 
-                double score = 0;
+                double score = 0.0;
                 try {
                     score = Double.parseDouble(raw[scoreColumnIndex]);
                 } catch (NumberFormatException e) {
