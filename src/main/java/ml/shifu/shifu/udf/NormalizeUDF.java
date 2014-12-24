@@ -25,6 +25,7 @@ import ml.shifu.shifu.container.WeightAmplifier;
 import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.core.DataSampler;
 import ml.shifu.shifu.core.Normalizer;
+import ml.shifu.shifu.util.CommonUtils;
 
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.jexl2.Expression;
@@ -108,7 +109,7 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
                 continue;
             }
 
-            if(!config.isCandidate()) {
+            if(!CommonUtils.isGoodCandidate(config)) {
                 tuple.append(null);
             } else {
                 String val = ((input.get(i) == null) ? "" : input.get(i).toString());

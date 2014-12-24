@@ -22,6 +22,7 @@ import ml.shifu.shifu.container.obj.ModelConfig;
 import ml.shifu.shifu.core.dtrain.NNConstants;
 import ml.shifu.shifu.core.dtrain.NNUtils;
 import ml.shifu.shifu.message.*;
+import ml.shifu.shifu.util.CommonUtils;
 import ml.shifu.shifu.util.Environment;
 import org.encog.ml.data.MLDataPair;
 import org.encog.ml.data.basic.BasicMLData;
@@ -231,8 +232,7 @@ public class DataLoadWorker extends AbstractWorkerActor {
                     } else {
                         if(this.inputNodeCount == this.candidateCount) {
                             // all variables are not set final-select
-                            // TODO Using Zhanghao's isCandidate in CommonUtils(including KV, IS info)
-                            if(columnConfig != null && columnConfig.isCandidate()) {
+                            if(CommonUtils.isGoodCandidate(columnConfig)) {
                                 inputs[inputsIndex++] = doubleValue;
                             }
                         } else {
