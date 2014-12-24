@@ -34,7 +34,7 @@ public class CategoricalBinningTest {
         CategoricalBinning binning = new CategoricalBinning(10);
         String binStr = binning.objToString();
         String[] fieldArr = binStr.split(Character.toString(AbstractBinning.FIELD_SEPARATOR), -1);
-        Assert.assertTrue(fieldArr.length == 5);
+        Assert.assertTrue(fieldArr.length == 6);
     }
     
 }

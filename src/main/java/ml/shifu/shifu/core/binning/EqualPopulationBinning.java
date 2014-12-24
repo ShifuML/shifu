@@ -172,7 +172,7 @@ public class EqualPopulationBinning extends AbstractBinning<Double> {
         }
         
         int totalCnt = getTotalInHistogram();
-        LinkNode<HistogramUnit> currStartPos = this.header;
+        LinkNode<HistogramUnit> currStartPos = null;
         for(int j = 1; j < toBinningNum; j++) {
             double s = (double) (j * totalCnt) / toBinningNum;
             LinkNode<HistogramUnit> pos = locateHistogram(s, currStartPos);
@@ -183,6 +183,13 @@ public class EqualPopulationBinning extends AbstractBinning<Double> {
                 HistogramUnit nhu = pos.next().data();
 
                 double d = s - sum(chu.getHval());
+                if ( d < 0 ) {
+                    double u = (chu.getHval() + nhu.getHval()) / 2;
+                    binBorders.add(u);
+                    currStartPos = pos;
+                    continue;
+                }
+
                 double a = nhu.getHcnt() - chu.getHcnt();
                 double b = 2 * chu.getHcnt();
                 double c = -2 * d;
@@ -243,13 +250,17 @@ public class EqualPopulationBinning extends AbstractBinning<Double> {
      */
     private LinkNode<HistogramUnit> locateHistogram(double s, LinkNode<HistogramUnit> startPos) {
         while ( startPos != this.tail ) {
+            if ( startPos == null ) {
+                startPos = this.header;
+            }
+
             HistogramUnit chu = startPos.data();
             HistogramUnit nhu = startPos.next().data();
             
             double sc = sum(chu.getHval());
             double sn = sum(nhu.getHval());
             
-            if ( sc < s && s <= sn ) {
+            if ( sc >= s || (sc < s && s <= sn) ) {
                 return startPos;
             }
             
@@ -279,7 +290,7 @@ public class EqualPopulationBinning extends AbstractBinning<Double> {
             
             tmp = tmp.next();
         }
-        
+
         if (  posHistogramUnit != null ) {
             HistogramUnit chu = posHistogramUnit.data();
             HistogramUnit nhu = posHistogramUnit.next().data();
@@ -295,7 +306,15 @@ public class EqualPopulationBinning extends AbstractBinning<Double> {
             }
             
             return s + chu.getHcnt() / 2;
-        } 
+        } else if ( tmp == this.tail ) {
+            double sum = 0.0;
+            tmp = this.header;
+            while ( tmp != null ) {
+                sum += tmp.data().getHcnt();
+                tmp = tmp.next();
+            }
+            return sum;
+        }
         
         return -1.0;
     }
@@ -402,9 +421,10 @@ public class EqualPopulationBinning extends AbstractBinning<Double> {
             this.currentHistogramUnitCnt++;
         }
     }
-    
+
     /**
-     * @param minIntervalOpsUnit
+     * @param currNode
+     * @param nextNode
      */
     private void removeCurrentNode(LinkNode<HistogramUnit> currNode, LinkNode<HistogramUnit> nextNode) {
         // remove current node

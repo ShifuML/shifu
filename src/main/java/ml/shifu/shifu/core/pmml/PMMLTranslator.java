@@ -25,6 +25,8 @@ import org.apache.commons.lang.StringUtils;
 import org.dmg.pmml.*;
 import org.encog.ml.BasicML;
 import org.encog.neural.networks.BasicNetwork;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 
@@ -36,6 +38,8 @@ import java.util.List;
 import java.util.Map;
 
 public class PMMLTranslator {
+
+    private static final Logger LOG = LoggerFactory.getLogger(PMMLTranslator.class);
 
     private static final String NAME_SPACE_URI = "http://www.dmg.org/PMML-4_2";
     private static final String ELEMENT_OUT = "out";
@@ -193,7 +197,7 @@ public class PMMLTranslator {
         ModelStats modelStats = new ModelStats();
 
         for (ColumnConfig columnConfig : columnConfigList) {
-            if (columnConfig.isFinalSelect()) {
+            if ( columnConfig.isFinalSelect() ) {
                 UnivariateStats univariateStats = new UnivariateStats();
                 univariateStats.setField(FieldName.create(columnConfig.getColumnName()));
 
@@ -244,31 +248,43 @@ public class PMMLTranslator {
      * @return DerivedField for variable
      */
     private DerivedField createCategoricalDerivedField(ColumnConfig config, double cutoff) {
+        Document document = null;
+        try {
+            document = DocumentBuilderFactory.newInstance().newDocumentBuilder().newDocument();
+        } catch (ParserConfigurationException e) {
+            LOG.error("Fail to create document node.", e);
+            throw new RuntimeException("Fail to create document node.", e);
+        }
+
+        String defaultValue = "0.0";
+        String missingValue = "0.0";
+
         InlineTable inlineTable = new InlineTable();
         for (int i = 0; i < config.getBinCategory().size(); i++) {
             String cval = config.getBinCategory().get(i);
             String dval = Normalizer.normalize(config, cval, cutoff).toString();
-            Document document = null;
-            try {
-                document = DocumentBuilderFactory.newInstance().newDocumentBuilder().newDocument();
 
-            } catch (ParserConfigurationException e) {
-                e.printStackTrace();
-            }
             Element out = document.createElementNS(NAME_SPACE_URI, ELEMENT_OUT);
             out.setTextContent(dval);
+
             Element origin = document.createElementNS(NAME_SPACE_URI, ELEMENT_ORIGIN);
             origin.setTextContent(cval);
+
             inlineTable.withRows(new Row().withContent(origin).withContent(out));
+            if ( StringUtils.isBlank(cval) ){
+                missingValue = dval;
+            }
         }
 
-        MapValues mapValues = new MapValues("out").withDataType(DataType.DOUBLE).withDefaultValue("0.0").
-                withFieldColumnPairs(new FieldColumnPair(new FieldName(config.getColumnName()), "origin")).
-                withInlineTable(inlineTable);
-        mapValues.setMapMissingTo("0.0");
+        MapValues mapValues = new MapValues("out").withDataType(DataType.DOUBLE)
+                .withDefaultValue(defaultValue)
+                .withFieldColumnPairs(new FieldColumnPair(new FieldName(config.getColumnName()), ELEMENT_ORIGIN))
+                .withInlineTable(inlineTable)
+                .withMapMissingTo(missingValue);
 
-        return new DerivedField(OpType.CONTINUOUS, DataType.DOUBLE).
-                withName(FieldName.create(config.getColumnName() + ZSCORE_POSTFIX)).withExpression(mapValues);
+        return new DerivedField(OpType.CONTINUOUS, DataType.DOUBLE)
+                .withName(FieldName.create(config.getColumnName() + ZSCORE_POSTFIX))
+                .withExpression(mapValues);
     }
 
     /**

@@ -118,6 +118,7 @@ public class ColumnConfig {
         this.columnBinning = columnBinning;
     }
 
+
     /**
      * ---------------------------------------------------------------------------
      * 
