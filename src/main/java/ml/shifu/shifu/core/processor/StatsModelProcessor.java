@@ -113,8 +113,7 @@ public class StatsModelProcessor extends BasicModelProcessor implements Processo
         // execute pig job
         try {
             if (modelConfig.getBinningAlgorithm().equals(ModelStatsConf.BinningAlgorithm.MunroPat)) {
-
-                PigExecutor.getExecutor().submitJob(modelConfig, pathFinder.getAbsolutePath("script/Stats.pig"), paramsMap);
+                PigExecutor.getExecutor().submitJob(modelConfig, pathFinder.getAbsolutePath("scripts/Stats.pig"), paramsMap);
             } else {
                 PigExecutor.getExecutor().submitJob(modelConfig,
                         pathFinder.getAbsolutePath("scripts/PreTrainingStats.pig"), paramsMap);

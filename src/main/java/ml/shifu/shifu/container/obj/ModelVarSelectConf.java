@@ -39,7 +39,6 @@ public class ModelVarSelectConf {
     private Integer wrapperNum = Integer.valueOf(50);
     private Float wrapperRatio = Float.valueOf(0.05f);
     private String wrapperBy = "S";
-    private Boolean votedVariablesSelection = Boolean.FALSE;
 
     public Boolean getForceEnable() {
         return forceEnable;
@@ -126,14 +125,6 @@ public class ModelVarSelectConf {
      */
     public void setWrapperRatio(Float wrapperRatio) {
         this.wrapperRatio = wrapperRatio;
-    }
-
-    public Boolean getVotedVariablesSelection() {
-        return votedVariablesSelection;
-    }
-
-    public void setVotedVariablesSelection(Boolean votedVariablesSelection) {
-        this.votedVariablesSelection = votedVariablesSelection;
     }
 
 }
