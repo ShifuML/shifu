@@ -1,9 +1,9 @@
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
     <groupId>ml.shifu</groupId>
     <artifactId>shifu</artifactId>
     <version>0.2.4-SNAPSHOT</version>
-
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <version.platform>2.0.0</version.platform>
@@ -13,14 +13,12 @@
         <maven.build.timestamp.format>yyyy-MM-dd HH:mm:ss</maven.build.timestamp.format>
         <powermock.version>1.5.1</powermock.version>
     </properties>
-
     <scm>
         <developerConnection>scm:git:https://github.com/shifuml/shifu.git</developerConnection>
         <connection>scm:git:https://github.com/shifuml/shifu.git</connection>
         <url>https://github.com/shifuml/shifu.git</url>
-    	<tag>shifu-0.2.4-SNAPSHOT</tag>
-  	</scm>
-
+        <tag>shifu-0.2.4-SNAPSHOT</tag>
+    </scm>
     <dependencies>
         <dependency>
             <groupId>jline</groupId>
@@ -92,10 +90,10 @@
             <artifactId>commons-collections</artifactId>
             <version>3.2.1</version>
         </dependency>
-		<dependency>
-			<groupId>commons-codec</groupId>
-			<artifactId>commons-codec</artifactId>
-			<version>1.6</version>
+        <dependency>
+            <groupId>commons-codec</groupId>
+            <artifactId>commons-codec</artifactId>
+            <version>1.6</version>
         </dependency>
         <dependency>
             <groupId>commons-lang</groupId>
@@ -126,8 +124,7 @@
             <version>6.8</version>
             <scope>test</scope>
         </dependency>
-        
-        <!-- pmml related jars-->
+        <!-- pmml related jars -->
         <dependency>
             <groupId>org.jpmml</groupId>
             <artifactId>pmml-model</artifactId>
@@ -149,28 +146,8 @@
             <version>2.2.6</version>
         </dependency>
     </dependencies>
-
     <build>
         <plugins>
-            <plugin>
-                <artifactId> maven-assembly-plugin </artifactId>
-                <version>2.3</version>
-                <executions>
-                    <execution>
-                        <id>make-assembly</id>
-                        <phase>package</phase>
-                        <goals>
-                            <goal>single</goal>
-                        </goals>
-                        <configuration>
-                            <descriptors>
-                                <descriptor>assembly.xml</descriptor>
-                            </descriptors>
-                        </configuration>
-                    </execution>
-                </executions>
-            </plugin>
-
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-jar-plugin</artifactId>
@@ -190,7 +167,6 @@
                     </archive>
                 </configuration>
             </plugin>
-
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-release-plugin</artifactId>
@@ -218,7 +194,6 @@
                     </execution>
                 </executions>
             </plugin>
-
             <plugin>
                 <artifactId>maven-deploy-plugin</artifactId>
                 <version>2.7</version>
@@ -232,7 +207,6 @@
                     </execution>
                 </executions>
             </plugin>
-
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-source-plugin</artifactId>
@@ -246,7 +220,6 @@
                     </execution>
                 </executions>
             </plugin>
-
             <plugin>
                 <artifactId>maven-compiler-plugin</artifactId>
                 <version>3.1</version>
@@ -255,8 +228,6 @@
                     <target>1.6</target>
                 </configuration>
             </plugin>
-
-
             <plugin>
                 <groupId>org.codehaus.mojo</groupId>
                 <artifactId>rpm-maven-plugin</artifactId>
@@ -381,7 +352,6 @@
             </plugin>
         </plugins>
     </build>
-
     <distributionManagement>
         <repository>
             <id>libs-releases</id>
@@ -398,7 +368,6 @@
             <url>${siteDeployUrl}</url>
         </site>
     </distributionManagement>
-
     <profiles>
         <!-- For hadoop 0.20.2 cloudera version -->
         <profile>
@@ -433,34 +402,73 @@
                     <classifier>hadoop1</classifier>
                 </dependency>
             </dependencies>
+            <build>
+                <plugins>
+                    <plugin>
+                        <artifactId> maven-assembly-plugin </artifactId>
+                        <version>2.3</version>
+                        <executions>
+                            <execution>
+                                <id>make-assembly</id>
+                                <phase>package</phase>
+                                <goals>
+                                    <goal>single</goal>
+                                </goals>
+                                <configuration>
+                                    <descriptors>
+                                        <descriptor>assembly-hadoop1.xml</descriptor>
+                                    </descriptors>
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
+                </plugins>
+            </build>
         </profile>
-
         <!-- Release and Sign -->
         <profile>
             <id>release-sign-artifacts</id>
             <activation>
-              <property>
-                <name>performRelease</name>
-                <value>false</value>
-              </property>
+                <property>
+                    <name>performRelease</name>
+                    <value>false</value>
+                </property>
             </activation>
             <build>
-              <plugins>
-                <plugin>
-                  <groupId>org.apache.maven.plugins</groupId>
-                  <artifactId>maven-gpg-plugin</artifactId>
-                  <version>1.1</version>
-                  <executions>
-                    <execution>
-                      <id>sign-artifacts</id>
-                      <phase>verify</phase>
-                      <goals>
-                        <goal>sign</goal>
-                      </goals>
-                    </execution>
-                  </executions>
-                </plugin>
-              </plugins>
+                <plugins>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-gpg-plugin</artifactId>
+                        <version>1.1</version>
+                        <executions>
+                            <execution>
+                                <id>sign-artifacts</id>
+                                <phase>verify</phase>
+                                <goals>
+                                    <goal>sign</goal>
+                                </goals>
+                            </execution>
+                        </executions>
+                    </plugin>
+                    <plugin>
+                        <artifactId> maven-assembly-plugin </artifactId>
+                        <version>2.3</version>
+                        <executions>
+                            <execution>
+                                <id>make-assembly</id>
+                                <phase>package</phase>
+                                <goals>
+                                    <goal>single</goal>
+                                </goals>
+                                <configuration>
+                                    <descriptors>
+                                        <descriptor>assembly-hadoop1.xml</descriptor>
+                                    </descriptors>
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
+                </plugins>
             </build>
             <repositories>
                 <repository>
@@ -489,8 +497,7 @@
             <properties>
                 <maven.test.skip>true</maven.test.skip>
             </properties>
-          </profile>
-
+        </profile>
         <!-- For hadoop 2.2.0cluster -->
         <profile>
             <id>hdp-yarn</id>
@@ -507,9 +514,31 @@
                 </repository>
                 <repository>
                     <id>HortonWorks HDP</id>
-                    <url>http://repo.hortonworks.com/nexus/content/repositories/releases</url>                                                                            
+                    <url>http://repo.hortonworks.com/nexus/content/repositories/releases</url>
                 </repository>
             </repositories>
+            <build>
+                <plugins>
+                    <plugin>
+                        <artifactId> maven-assembly-plugin </artifactId>
+                        <version>2.3</version>
+                        <executions>
+                            <execution>
+                                <id>make-assembly</id>
+                                <phase>package</phase>
+                                <goals>
+                                    <goal>single</goal>
+                                </goals>
+                                <configuration>
+                                    <descriptors>
+                                        <descriptor>assembly-hadoop2.xml</descriptor>
+                                    </descriptors>
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
+                </plugins>
+            </build>
             <dependencies>
                 <dependency>
                     <groupId>org.apache.hadoop</groupId>
@@ -550,5 +579,4 @@
             </dependencies>
         </profile>
     </profiles>
-
 </project>

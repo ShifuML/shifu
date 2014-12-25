@@ -15,7 +15,6 @@
  */
 package ml.shifu.shifu.core.processor;
 
-import java.io.BufferedReader;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
@@ -52,10 +51,10 @@ import ml.shifu.shifu.util.Environment;
 
 import org.apache.commons.collections.ListUtils;
 import org.apache.commons.compress.compressors.bzip2.BZip2CompressorInputStream;
-import org.apache.commons.io.IOUtils;
 import org.apache.commons.jexl2.JexlException;
 import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.DoubleWritable;
 import org.apache.hadoop.io.LongWritable;
@@ -99,6 +98,9 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
      */
     @Override
     public int run() throws Exception {
+        log.info("Step Start: varselect");
+        long start = System.currentTimeMillis();
+
         setUp(ModelStep.VARSELECT);
 
         validateNormalize();
@@ -137,7 +139,7 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
         }
 
         clearUp(ModelStep.VARSELECT);
-        log.info("Step Finished: varselect");
+        log.info("Step Finished: varselect with {} ms", (System.currentTimeMillis() - start));
         return 0;
     }
 
@@ -449,7 +451,7 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
 
         // submit job
         if(job.waitForCompletion(true)) {
-            if(!ShifuFileUtils.isFileExists(varSelectMSEOutputPath + Path.SEPARATOR + "part-r-00000", source)) {
+            if(!ShifuFileUtils.isFileExists(varSelectMSEOutputPath + Path.SEPARATOR + "part-r-00000*", source)) {
                 throw new RuntimeException("Var select MSE stats output file not exist.");
             }
 
@@ -459,21 +461,30 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
                 }
             }
 
-            BufferedReader reader = null;
+            List<Scanner> scanners = null;
             try {
                 // here only works for 1 reducer
-                reader = ShifuFileUtils.getReader(varSelectMSEOutputPath + Path.SEPARATOR + "part-r-00000", source);
+                FileStatus[] globStatus = ShifuFileUtils.getFileSystemBySourceType(source).globStatus(
+                        new Path(varSelectMSEOutputPath + Path.SEPARATOR + "part-r-00000*"));
+                if(globStatus == null || globStatus.length == 0) {
+                    throw new RuntimeException("Var select MSE stats output file not exist.");
+                }
+                scanners = ShifuFileUtils.getDataScanners(globStatus[0].getPath().toString(), source);
+
                 String str = null;
                 int count = 0;
-                while((str = reader.readLine()) != null) {
+                while(scanners.get(0).hasNext()) {
                     ++count;
+                    str = scanners.get(0).nextLine();
                     ColumnConfig columnConfig = this.columnConfigList.get(Integer.parseInt(str));
                     columnConfig.setFinalSelect(true);
                     log.info("Variable {} is selected.", columnConfig.getColumnName());
                 }
                 log.info("{} variables are selected.", count);
             } finally {
-                IOUtils.closeQuietly(reader);
+                for(Scanner scanner: scanners) {
+                    scanner.close();
+                }
             }
 
             this.saveColumnConfigList();
