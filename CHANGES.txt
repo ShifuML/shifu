@@ -36,9 +36,14 @@ Changes for Shifu-0.2.4
         b) Big data training, independent zookeeper cluster is strongly recommended.
         c) Upgrade Guagua to 0.5.0 to get support from Guagua for this feature.
     * Add PMML standard model converter.
+        a) To convert .nn files into pmml, run "shifu export -t pmml" or just "shifu export" (The pmml is default)
+           All generated pmml files will be under <Model-Directory>/pmmls/
     * Bug fix:
         a) https://github.com/ShifuML/shifu/issues/45
         b) https://github.com/ShifuML/shifu/issues/51
+        c) https://github.com/ShifuML/shifu/issues/39
+        d) https://github.com/ShifuML/shifu/issues/40
+        e) https://github.com/ShifuML/shifu/issues/45
 
 Changes for Shifu-0.2.0
     * Make Shifu to support Hadoop-2.0 (add -Phdp-yarn when building)
