@@ -84,7 +84,6 @@ Changes for Shifu-0.0.4
     * TA457512 - Fix the bug: the delimiter of evaluation data doesn't take effect in AKKA mode
     * TA458788 - Fix the bug: Meta validation fails to report error when - "NumHiddenNodes" : [ "a", 45 ]
     * TA459375 - Write in-place QuickSort to replace Collections.sort() for memory consumption
-	
 
 Changes for Shifu-0.0.3
     * TA446629 - Fix the bug: when there is am empty file, shifu in akka mode will be stucked

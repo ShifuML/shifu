@@ -294,7 +294,7 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
 
         // copy model files at last.
         for(int i = 0; i < baggingNum; i++) {
-            String modelName = getModelName(i + 1);
+            String modelName = getModelName(i);
             Path modelPath = ShifuFileUtils.getFileSystemBySourceType(sourceType).makeQualified(
                     new Path(super.getPathFinder().getModelsPath(sourceType), modelName));
             copyModelToLocal(modelName, modelPath, sourceType);
