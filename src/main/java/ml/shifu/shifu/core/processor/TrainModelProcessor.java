@@ -431,9 +431,11 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
         }
         args.add(String.format(NNConstants.MAPREDUCE_PARAM_FORMAT, GuaguaConstants.GUAGUA_SPLIT_COMBINABLE,
                 Environment.getProperty(GuaguaConstants.GUAGUA_SPLIT_COMBINABLE, "true")));
+        // set to 512M to save mappers, sometimes maybe OOM, users should tune guagua.split.maxCombinedSplitSize in
+        // shifuconfig
         args.add(String.format(NNConstants.MAPREDUCE_PARAM_FORMAT,
                 GuaguaConstants.GUAGUA_SPLIT_MAX_COMBINED_SPLIT_SIZE,
-                Environment.getProperty(GuaguaConstants.GUAGUA_SPLIT_MAX_COMBINED_SPLIT_SIZE, "268435456")));
+                Environment.getProperty(GuaguaConstants.GUAGUA_SPLIT_MAX_COMBINED_SPLIT_SIZE, "536870912")));
     }
 
     private void copyModelToLocal(String modelName, Path modelPath, SourceType sourceType) throws IOException {
