@@ -104,6 +104,8 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
      */
     @Override
     public int run() throws Exception {
+        log.info("Step Start: eval");
+        long start = System.currentTimeMillis();
 
         setUp(ModelStep.EVAL);
 
@@ -134,6 +136,8 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
         }
 
         clearUp(ModelStep.EVAL);
+        log.info("Step Finished: eval with {} ms", (System.currentTimeMillis() - start));
+
         return 0;
     }
 

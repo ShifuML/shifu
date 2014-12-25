@@ -24,7 +24,6 @@ import org.slf4j.LoggerFactory;
 import java.io.IOException;
 import java.util.ArrayList;
 
-
 /**
  * Initialize processor, the purpose of this processor is create columnConfig based on modelConfig instance
  */
@@ -37,17 +36,18 @@ public class InitModelProcessor extends BasicModelProcessor implements Processor
 
     /**
      * runner for init the model
-     *
+     * 
      * @throws Exception
      */
     @Override
     public int run() throws Exception {
-
+        log.info("Step Start: init");
+        long start = System.currentTimeMillis();
         setUp(ModelStep.INIT);
 
         // initialize ColumnConfig list
         int status = initColumnConfigList();
-        if (status != 0) {
+        if(status != 0) {
             return status;
         }
 
@@ -55,22 +55,21 @@ public class InitModelProcessor extends BasicModelProcessor implements Processor
         saveColumnConfigList();
 
         clearUp(ModelStep.INIT);
-        log.info("Step Finished: init");
+        log.info("Step Finished: init with {} ms", (System.currentTimeMillis() - start));
         return 0;
     }
 
     /**
      * initialize the columnConfig file
-     *
+     * 
      * @throws IOException
      */
     private int initColumnConfigList() throws IOException {
-        String[] fields = CommonUtils.getHeaders(modelConfig.getHeaderPath(),
-                modelConfig.getHeaderDelimiter(),
+        String[] fields = CommonUtils.getHeaders(modelConfig.getHeaderPath(), modelConfig.getHeaderDelimiter(),
                 modelConfig.getDataSet().getSource());
 
         columnConfigList = new ArrayList<ColumnConfig>();
-        for (int i = 0; i < fields.length; i++) {
+        for(int i = 0; i < fields.length; i++) {
             String varName = fields[i];
             ColumnConfig config = new ColumnConfig();
             config.setColumnNum(i);
@@ -81,13 +80,13 @@ public class InitModelProcessor extends BasicModelProcessor implements Processor
         CommonUtils.updateColumnConfigFlags(modelConfig, columnConfigList);
 
         boolean hasTarget = false;
-        for (ColumnConfig config : columnConfigList) {
-            if (config.isTarget()) {
+        for(ColumnConfig config: columnConfigList) {
+            if(config.isTarget()) {
                 hasTarget = true;
             }
         }
 
-        if (!hasTarget) {
+        if(!hasTarget) {
             log.error("Target is not valid: " + modelConfig.getTargetColumnName());
             return 1;
         }

@@ -107,6 +107,9 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
      */
     @Override
     public int run() throws Exception {
+        LOG.info("Step Start: train");
+        long start = System.currentTimeMillis();
+
         setUp(ModelStep.TRAIN);
 
         if(isDebug) {
@@ -130,8 +133,7 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
         }
 
         clearUp(ModelStep.TRAIN);
-
-        LOG.info("Step Finished: train");
+        LOG.info("Step Finished: train with {} ms", (System.currentTimeMillis() - start));
         return 0;
     }
 
@@ -263,7 +265,7 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
             localArgs.add(String.format("Shifu Master-Workers NN Iteration: %s id:%s", super.getModelConfig()
                     .getModelSetName(), i + 1));
             LOG.info("Start trainer with id: {}", (i + 1));
-            String modelName = getModelName(i + 1);
+            String modelName = getModelName(i);
             Path modelPath = ShifuFileUtils.getFileSystemBySourceType(sourceType).makeQualified(
                     new Path(super.getPathFinder().getModelsPath(sourceType), modelName));
             localArgs.add(String.format(NNConstants.MAPREDUCE_PARAM_FORMAT, NNConstants.GUAGUA_NN_OUTPUT,
@@ -402,8 +404,7 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
                         new Path(super.getPathFinder().getColumnConfigPath(sourceType)))));
         args.add(String.format(NNConstants.MAPREDUCE_PARAM_FORMAT, NNConstants.NN_MODELSET_SOURCE_TYPE, sourceType));
         args.add(String.format(NNConstants.MAPREDUCE_PARAM_FORMAT, NNConstants.NN_DRY_TRAIN, isDryTrain()));
-        // hard code set computation threshold for 40s. TODO, set it in
-        // shifuconfig.
+        // hard code set computation threshold for 40s. TODO, set it in shifuconfig.
         args.add(String.format(NNConstants.MAPREDUCE_PARAM_FORMAT, GuaguaConstants.GUAGUA_COMPUTATION_TIME_THRESHOLD,
                 40 * 1000l));
         setHeapSizeAndSplitSize(args);
@@ -420,10 +421,7 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
     }
 
     private void setHeapSizeAndSplitSize(final List<String> args) {
-        // TODO tmp setting 1G heap for each worker, need to be set in
-        // ModelConfig, each split is set to 256M for heap
-        // with 1G, should be set in ModelConfig also. Replace string as
-        // constants.
+        // can be override by shifuconfig, ok for hard code
         if(this.isDebug()) {
             args.add(String.format(NNConstants.MAPREDUCE_PARAM_FORMAT, GuaguaMapReduceConstants.MAPRED_CHILD_JAVA_OPTS,
                     "-Xmn128m -Xms1G -Xmx1G -verbose:gc -XX:+PrintGCDetails -XX:+PrintGCTimeStamps"));

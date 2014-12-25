@@ -44,6 +44,8 @@ public class NormalizeModelProcessor extends BasicModelProcessor implements Proc
      */
     @Override
     public int run() throws Exception {
+        log.info("Step Start: normalize");
+        long start = System.currentTimeMillis();
         setUp(ModelStep.NORMALIZE);
         syncDataToHdfs(modelConfig.getDataSet().getSource());
 
@@ -58,7 +60,7 @@ public class NormalizeModelProcessor extends BasicModelProcessor implements Proc
 
         clearUp(ModelStep.NORMALIZE);
 
-        log.info("Step Finished: normalize");
+        log.info("Step Finished: normalize with {} ms", (System.currentTimeMillis() - start));
         return 0;
     }
 

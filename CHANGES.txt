@@ -20,6 +20,7 @@ Changes for Shifu-0.2.4
     * https://github.com/ShifuML/shifu/issues/20: Work flow change.
         a) Old: new -> init -> stats -> varselect -> normalize -> train -> eval
         b) New: new -> init -> stats -> normalize -> varselect -> train -> eval
+        c) If do variable selection again after a model, current work flow no need do normalize step, after variable selection then do training step.
     * https://github.com/ShifuML/shifu/issues/49: Add distributed sensitivity analysis variable selection.
         a) 'varSelect.wrapperEnabled=true' and 'wrapperBy=SE' in ModelConfig.json#varSelect part to enable sensitivity variable selection.
         b) 'wrapperRatio' in ModelConfig.json#varSelect part is a percent to set how many variables will be removed.
@@ -30,7 +31,7 @@ Changes for Shifu-0.2.4
             Using SPDT, with 20 million of records and 1600 variables, 50 minutes to finish variable selection.
         b) 'binningAlgorithm=MunroPat' in ModelConfig.json#stats is another approach to do variable statistics to improve scalability for big data.
     * https://github.com/ShifuML/shifu/issues/58: Improve scalability in eval step for HDFS mode.
-        a) With 20 million of records and 1600 variables, 28 minutes to finish eval step with only 1GB driver memory.
+        a) With 20 million of records and 1600 variables, 20 minutes to finish eval step with only 1GB driver memory.
     * https://github.com/ShifuML/shifu/issues/61: Embeded zookeeper server support.
         a) No need to set zookeeper servers so far since embeded zookeeper server will help on training models.
         b) Big data training, independent zookeeper cluster is strongly recommended.

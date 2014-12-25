@@ -52,6 +52,8 @@ public class StatsModelProcessor extends BasicModelProcessor implements Processo
     @Override
     public int run() throws Exception {
         log.info("Step Start: stats");
+        long start = System.currentTimeMillis();
+
         setUp(ModelStep.STATS);
 
         syncDataToHdfs(modelConfig.getDataSet().getSource());
@@ -65,7 +67,7 @@ public class StatsModelProcessor extends BasicModelProcessor implements Processo
         }
         clearUp(ModelStep.STATS);
 
-        log.info("Step Finished: stats");
+        log.info("Step Finished: stats with {} ms", (System.currentTimeMillis() - start));
         return 0;
     }
 

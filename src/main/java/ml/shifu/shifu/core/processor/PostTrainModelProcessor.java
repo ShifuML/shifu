@@ -45,6 +45,9 @@ public class PostTrainModelProcessor extends BasicModelProcessor implements Proc
      */
     @Override
     public int run() throws Exception {
+        log.info("Step Start: posttrain");
+        long start = System.currentTimeMillis();
+
         setUp(ModelStep.POSTTRAIN);
         syncDataToHdfs(modelConfig.getDataSet().getSource());
 
@@ -57,6 +60,8 @@ public class PostTrainModelProcessor extends BasicModelProcessor implements Proc
         }
 
         clearUp(ModelStep.POSTTRAIN);
+        log.info("Step Finished: posttrain with {} ms", (System.currentTimeMillis() - start));
+
         return 0;
     }
 
