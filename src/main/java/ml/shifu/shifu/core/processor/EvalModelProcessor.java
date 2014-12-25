@@ -271,8 +271,15 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
 
         Iterator<JobStats> iter = PigStats.get().getJobGraph().iterator();
 
-        if(iter.hasNext()) {
+        while(iter.hasNext()) {
             JobStats jobStats = iter.next();
+            this.evalRecords = jobStats.getHadoopCounters().getGroup(Constants.SHIFU_GROUP_COUNTER)
+                    .getCounter(Constants.COUNTER_RECORDS);
+            log.info("evalRecords:" + evalRecords);
+            // If no basic record counter, check next one
+            if(this.evalRecords == 0L) {
+                continue;
+            }
             this.pigPosTags = jobStats.getHadoopCounters().getGroup(Constants.SHIFU_GROUP_COUNTER)
                     .getCounter(Constants.COUNTER_POSTAGS);
             this.pigNegTags = jobStats.getHadoopCounters().getGroup(Constants.SHIFU_GROUP_COUNTER)
@@ -283,10 +290,8 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
             this.pigNegWeightTags = jobStats.getHadoopCounters().getGroup(Constants.SHIFU_GROUP_COUNTER)
                     .getCounter(Constants.COUNTER_WNEGTAGS)
                     / (Constants.EVAL_COUNTER_WEIGHT_SCALE * 1.0d);
-            // TODO test hadoop 1.x and 2.x
-            this.evalRecords = jobStats.getHadoopCounters().getGroup(Constants.SHIFU_GROUP_COUNTER)
-                    .getCounter(Constants.COUNTER_RECORDS);
-            log.info("evalRecords:" + evalRecords);
+            // only one pig job with such counters, break
+            break;
         }
     }
 
