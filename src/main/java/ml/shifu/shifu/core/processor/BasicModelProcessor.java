@@ -15,6 +15,18 @@
  */
 package ml.shifu.shifu.core.processor;
 
+import java.io.BufferedWriter;
+import java.io.File;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Scanner;
+import java.util.Set;
+
 import ml.shifu.shifu.container.meta.ValidateResult;
 import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.container.obj.ModelConfig;
@@ -27,19 +39,14 @@ import ml.shifu.shifu.fs.PathFinder;
 import ml.shifu.shifu.util.CommonUtils;
 import ml.shifu.shifu.util.Environment;
 import ml.shifu.shifu.util.JSONUtils;
+
 import org.apache.commons.collections.CollectionUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.BufferedWriter;
-import java.io.File;
-import java.io.FileWriter;
-import java.io.IOException;
-import java.util.*;
-
-
 /**
- * Model Basic Processor, it helps to do basic manipulate in model, including load/save configuration, copy configuration file
+ * Model Basic Processor, it helps to do basic manipulate in model, including load/save configuration, copy
+ * configuration file
  */
 public class BasicModelProcessor {
 
@@ -48,15 +55,16 @@ public class BasicModelProcessor {
     protected ModelConfig modelConfig;
     protected List<ColumnConfig> columnConfigList;
     protected PathFinder pathFinder;
-    
+
     /**
      * initialize the config file, pathFinder and other input
-     *
-     * @param step Shifu running step
+     * 
+     * @param step
+     *            Shifu running step
      * @throws Exception
      */
     protected void setUp(ModelStep step) throws Exception {
-        if (hasInitialized()) {
+        if(hasInitialized()) {
             return;
         }
 
@@ -70,12 +78,29 @@ public class BasicModelProcessor {
 
         log.info(String.format("Training Data Soure Location: %s", modelConfig.getDataSet().getSource()));
 
-        switch (step) {
+        switch(step) {
             case INIT:
                 break;
             default:
                 loadColumnConfig();
+                validateColumnNameUnique();
                 break;
+        }
+    }
+
+    private void validateColumnNameUnique() {
+        if(this.columnConfigList == null) {
+            return;
+        }
+        Set<String> names = new HashSet<String>();
+        for(ColumnConfig config: this.columnConfigList) {
+            if(names.contains(config.getColumnName())) {
+                throw new IllegalArgumentException(
+                        "Duplicated "
+                                + config.getColumnName()
+                                + " in ColumnConfig.json file, please check you header setting if there are two columns with the same name.");
+            }
+            names.add(config.getColumnName());
         }
     }
 
@@ -84,9 +109,11 @@ public class BasicModelProcessor {
      * </p>
      * copy file to hdfs if SourceType is HDFS
      * </p>
-     *
-     * @param step Shifu running step
-     * @throws IOException if any problem happen in copying files to HDFS
+     * 
+     * @param step
+     *            Shifu running step
+     * @throws IOException
+     *             if any problem happen in copying files to HDFS
      */
     protected void clearUp(ModelStep step) throws IOException {
         // do nothing now
@@ -94,7 +121,7 @@ public class BasicModelProcessor {
 
     /**
      * save Model Config
-     *
+     * 
      * @throws IOException
      */
     protected void saveModelConfig() throws IOException {
@@ -104,7 +131,7 @@ public class BasicModelProcessor {
 
     /**
      * save the Column Config
-     *
+     * 
      * @throws IOException
      */
     protected void saveColumnConfigList() throws IOException {
@@ -114,22 +141,22 @@ public class BasicModelProcessor {
 
     /**
      * validate the modelconfig if it's well written.
-     *
+     * 
      * @return
      * @throws Exception
      */
     protected void validateModelConfig(ModelStep modelStep) throws Exception {
         ValidateResult result = new ValidateResult(false);
 
-        if (modelConfig == null) {
+        if(modelConfig == null) {
             result.getCauses().add("The ModelConfig is not loaded!");
         } else {
             result = ModelInspector.getInspector().probe(modelConfig, modelStep);
         }
 
-        if (!result.getStatus()) {
+        if(!result.getStatus()) {
             log.error("ModelConfig Validation - Fail! See below:");
-            for (String cause : result.getCauses()) {
+            for(String cause: result.getCauses()) {
                 log.error("\t!!! " + cause);
             }
 
@@ -141,12 +168,12 @@ public class BasicModelProcessor {
 
     /**
      * Close all scanners
-     *
+     * 
      * @param scanners
      */
     protected void closeScanners(List<Scanner> scanners) {
-        if (CollectionUtils.isNotEmpty(scanners)) {
-            for (Scanner scanner : scanners) {
+        if(CollectionUtils.isNotEmpty(scanners)) {
+            for(Scanner scanner: scanners) {
                 scanner.close();
             }
         }
@@ -155,13 +182,13 @@ public class BasicModelProcessor {
     /**
      * Sync data into HDFS if necessary:
      * RunMode == pig && SourceType == HDFS
-     *
+     * 
      * @param sourceType
      * @return
      * @throws IOException
      */
     protected boolean syncDataToHdfs(SourceType sourceType) throws IOException {
-        if (SourceType.HDFS.equals(sourceType)) {
+        if(SourceType.HDFS.equals(sourceType)) {
             CommonUtils.copyConfFromLocalToHDFS(modelConfig);
             return true;
         }
@@ -171,7 +198,7 @@ public class BasicModelProcessor {
 
     /**
      * copy model configuration file
-     *
+     * 
      * @param sourcePath
      * @param targetPath
      * @throws IOException
@@ -192,7 +219,7 @@ public class BasicModelProcessor {
 
     /**
      * get the modelConfig instance
-     *
+     * 
      * @return the modelConfig
      */
     public ModelConfig getModelConfig() {
@@ -201,7 +228,7 @@ public class BasicModelProcessor {
 
     /**
      * get the columnConfigList instance
-     *
+     * 
      * @return the columnConfigList
      */
     public List<ColumnConfig> getColumnConfigList() {
@@ -210,7 +237,7 @@ public class BasicModelProcessor {
 
     /**
      * get the pathFinder instance
-     *
+     * 
      * @return the pathFinder
      */
     public PathFinder getPathFinder() {
@@ -219,10 +246,11 @@ public class BasicModelProcessor {
 
     /**
      * check algorithm parameter
-     *
-     * @throws Exception </p>
-     *                   modelConfig is not loaded or</p>
-     *                   save ModelConfig.json file error </p>
+     * 
+     * @throws Exception
+     *             </p>
+     *             modelConfig is not loaded or</p>
+     *             save ModelConfig.json file error </p>
      */
     public void checkAlgorithmParam() throws Exception {
 
@@ -230,15 +258,15 @@ public class BasicModelProcessor {
         Map<String, Object> param = modelConfig.getParams();
         log.info("Check algorithm parameter");
 
-        if (alg.equalsIgnoreCase("LR")) {
-            if (!param.containsKey("LearningRate")) {
+        if(alg.equalsIgnoreCase("LR")) {
+            if(!param.containsKey("LearningRate")) {
                 param = new LinkedHashMap<String, Object>();
                 param.put("LearningRate", 0.1);
                 modelConfig.setParams(param);
                 saveModelConfig();
             }
-        } else if (alg.equalsIgnoreCase("NN")) {
-            if (!param.containsKey("Propagation")) {
+        } else if(alg.equalsIgnoreCase("NN")) {
+            if(!param.containsKey("Propagation")) {
                 param = new LinkedHashMap<String, Object>();
 
                 param.put("Propagation", "Q");
@@ -259,8 +287,8 @@ public class BasicModelProcessor {
                 saveModelConfig();
             }
 
-        } else if (alg.equalsIgnoreCase("SVM")) {
-            if (!param.containsKey("Kernel")) {
+        } else if(alg.equalsIgnoreCase("SVM")) {
+            if(!param.containsKey("Kernel")) {
                 param = new LinkedHashMap<String, Object>();
 
                 param.put("Kernel", "linear");
@@ -270,18 +298,18 @@ public class BasicModelProcessor {
                 modelConfig.setParams(param);
                 saveModelConfig();
             }
-        } else if (alg.equalsIgnoreCase("DT")) {
+        } else if(alg.equalsIgnoreCase("DT")) {
             // do nothing
         } else {
             throw new ShifuException(ShifuErrorCode.ERROR_UNSUPPORT_ALG);
         }
 
-        //log.info("Finished: check the algorithm parameter");
+        // log.info("Finished: check the algorithm parameter");
     }
 
     /**
      * load Model Config method
-     *
+     * 
      * @throws IOException
      */
     private void loadModelConfig() throws IOException {
@@ -290,7 +318,7 @@ public class BasicModelProcessor {
 
     /**
      * load Model Config method
-     *
+     * 
      * @throws IOException
      */
     private void loadModelConfig(String pathToModel, SourceType source) throws IOException {
@@ -299,7 +327,7 @@ public class BasicModelProcessor {
 
     /**
      * load Column Config
-     *
+     * 
      * @throws IOException
      */
     private void loadColumnConfig() throws IOException {
@@ -308,9 +336,9 @@ public class BasicModelProcessor {
 
     /**
      * Check the processor is initialized or not
-     *
+     * 
      * @return true - if the process is initialized
-     * false - if not
+     *         false - if not
      */
     private boolean hasInitialized() {
         return (null != this.modelConfig && null != this.columnConfigList && null != this.pathFinder);
@@ -318,13 +346,14 @@ public class BasicModelProcessor {
 
     /**
      * create HEAD file contain the workspace
-     *
+     * 
      * @param modelName
      * @throws IOException
      */
     protected void createHead(String modelName) throws IOException {
         File header = new File(modelName == null ? "" : modelName + "/.HEAD");
-        if (header.exists()) return;
+        if(header.exists())
+            return;
 
         BufferedWriter writer = null;
         try {
@@ -334,7 +363,7 @@ public class BasicModelProcessor {
         } catch (IOException e) {
             log.error("Fail to create HEAD file to store the current workspace");
         } finally {
-            if (writer != null) {
+            if(writer != null) {
                 writer.close();
             }
         }
