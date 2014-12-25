@@ -41,93 +41,8 @@ import org.apache.pig.parser.ParserException;
  * @Oct 27, 2014
  *
  */
-public class BinningDataUDF extends AbstractTrainerUDF<Tuple> implements Accumulator<Tuple> {
+public class BinningDataUDF extends AbstractTrainerUDF<Tuple> {
 
-    private int columnId = -1;
-    private AbstractBinning<?> binning = null;
-    
-    /* (non-Javadoc)
-     * @see org.apache.pig.Accumulator#accumulate(org.apache.pig.data.Tuple)
-     */
-    @Override
-    public void accumulate(Tuple input) throws IOException {
-        if ( input == null || input.size() != 1 ) {
-            return;
-        }
-        
-        DataBag databag = (DataBag) input.get(0);
-        Iterator<Tuple> iterator = databag.iterator();
-        while ( iterator.hasNext() ) {
-            Tuple element = iterator.next();
-            if ( element == null || element.size() != 4) {
-                continue;
-            }
-            
-            if ( columnId < 0 ) {
-                columnId = (Integer) element.get(0);
-                ColumnConfig columnConfig = super.columnConfigList.get(columnId);
-                if ( columnConfig.isCategorical() ) {
-                    binning = new CategoricalBinning(-1);
-                } else {
-                    if ( super.modelConfig.getBinningMethod().equals(BinningMethod.EqualInterval) ) {
-                        binning = new EqualIntervalBinning(modelConfig.getStats().getMaxNumBin());
-                    } else {
-                        //binning = new EqualPopulationBinning(modelConfig.getStats().getMaxNumBin());
-                        switch (this.modelConfig.getBinningAlgorithm()) {
-                            case  Native:
-                                log.info("Invoke Native binning method, memory cosuming!!");
-                                //always merge bins
-                                binning = new NativeBinning(modelConfig.getStats().getMaxNumBin(), true);
-                                break;
-                            case SPDT:
-                                log.info("Invoke SPDT(Streaming Parallel Decision Tree) binning method, ");
-                                binning = new EqualPopulationBinning(modelConfig.getStats().getMaxNumBin());
-                                break;
-                            case MunroPat:
-                                log.info("Invoke Munro & Paterson selecting algorithm");
-                                binning = new MunroPatBinning(modelConfig.getStats().getMaxNumBin());
-                                break;
-                            default:
-                                log.info("default: Invoke SPDT(Streaming Parallel Decision Tree) binning method");
-                                binning = new MunroPatBinning(modelConfig.getStats().getMaxNumBin());
-                                break;
-                        }
-                    }
-                }
-            }
-            
-            Object value = element.get(1);
-            if ( value != null ) {
-                binning.addData(value.toString());
-            }
-        }
-    }
-
-    /* (non-Javadoc)
-     * @see org.apache.pig.Accumulator#getValue()
-     */
-    @Override
-    public Tuple getValue() {
-        Tuple output = TupleFactory.getInstance().newTuple(2);
-        try {
-            output.set(0, columnId);
-            output.set(1, StringUtils.join(binning.getDataBin(), CalculateStatsUDF.CATEGORY_VAL_SEPARATOR));
-        } catch ( ExecException e ) {
-            log.error("Fail to generate output for columnId - " + columnId);
-        }
-        
-        return output;
-    }
-
-    /* (non-Javadoc)
-     * @see org.apache.pig.Accumulator#cleanup()
-     */
-    @Override
-    public void cleanup() {
-        this.columnId = -1;
-        this.binning = null;
-    }
-    
     /**
      * @param source
      * @param pathModelConfig
@@ -144,16 +59,63 @@ public class BinningDataUDF extends AbstractTrainerUDF<Tuple> implements Accumul
      */
     @Override
     public Tuple exec(Tuple input) throws IOException {
+        if ( input == null && input.size() < 2) {
+            return null;
+        }
 
-        this.accumulate(input);
-        
+        Integer columnId = (Integer) input.get(0);
+        DataBag databag = (DataBag) input.get(1);
+
+        ColumnConfig columnConfig = super.columnConfigList.get(columnId);
+        AbstractBinning<?> binning = null;
+        if ( columnConfig.isCategorical() ) {
+            binning = new CategoricalBinning(-1);
+        } else {
+            if ( super.modelConfig.getBinningMethod().equals(BinningMethod.EqualInterval) ) {
+                binning = new EqualIntervalBinning(modelConfig.getStats().getMaxNumBin());
+            } else {
+                switch (this.modelConfig.getBinningAlgorithm()) {
+                    case Native:
+                        log.info("Invoke Native binning method, memory cosuming!!");
+                        //always merge bins
+                        binning = new NativeBinning(modelConfig.getStats().getMaxNumBin(), true);
+                        break;
+                    case SPDT:
+                        log.info("Invoke SPDT(Streaming Parallel Decision Tree) binning method, ");
+                        binning = new EqualPopulationBinning(modelConfig.getStats().getMaxNumBin());
+                        break;
+                    case MunroPat:
+                        log.info("Invoke Munro & Paterson selecting algorithm");
+                        binning = new MunroPatBinning(modelConfig.getStats().getMaxNumBin());
+                        break;
+                    default:
+                        log.info("default: Invoke SPDT(Streaming Parallel Decision Tree) binning method");
+                        binning = new MunroPatBinning(modelConfig.getStats().getMaxNumBin());
+                        break;
+                }
+            }
+        }
+
+        Iterator<Tuple> iterator = databag.iterator();
+        while ( iterator.hasNext() ) {
+            Tuple element = iterator.next();
+            if ( element == null || element.size() < 2) {
+                continue;
+            }
+
+            Object value = element.get(1);
+            if ( value != null ) {
+                binning.addData(value.toString());
+            }
+        }
+
         Tuple output = TupleFactory.getInstance().newTuple(2);
         output.set(0, columnId);
         output.set(1, StringUtils.join(binning.getDataBin(), CalculateStatsUDF.CATEGORY_VAL_SEPARATOR));
-        
+
         return output;
     }
-    
+
     public Schema outputSchema(Schema input) {
         try {
             return Utils.getSchemaFromString("BinningDataInfo:Tuple(columnId : int, binningDataInfo : chararray)");
@@ -163,5 +125,4 @@ public class BinningDataUDF extends AbstractTrainerUDF<Tuple> implements Accumul
             return null;
         }
     }
-
 }
