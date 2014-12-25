@@ -99,6 +99,9 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
      */
     @Override
     public int run() throws Exception {
+        log.info("Step Start: varselect");
+        long start = System.currentTimeMillis();
+
         setUp(ModelStep.VARSELECT);
 
         validateNormalize();
@@ -137,7 +140,7 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
         }
 
         clearUp(ModelStep.VARSELECT);
-        log.info("Step Finished: varselect");
+        log.info("Step Finished: varselect with {} ms", (System.currentTimeMillis() - start));
         return 0;
     }
 

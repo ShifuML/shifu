@@ -141,6 +141,6 @@ public class QuickSortTest {
 
         System.out.println(timeConsumptionA + "  " + timeConsumptionB);
         // Sometimes Collections.sort may run faster than QuickSort
-        Assert.assertTrue((double)timeConsumptionB/timeConsumptionA < 3.0d);
+        Assert.assertTrue((double)timeConsumptionB/timeConsumptionA < 5.0d);
     }
 }
