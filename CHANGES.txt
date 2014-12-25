@@ -20,6 +20,7 @@ Changes for Shifu-0.2.4
     * https://github.com/ShifuML/shifu/issues/20: Work flow change.
         a) Old: new -> init -> stats -> varselect -> normalize -> train -> eval
         b) New: new -> init -> stats -> normalize -> varselect -> train -> eval
+        c) If do variable selection again after a model, current work flow no need do normalize step, after variable selection then do training step.
     * https://github.com/ShifuML/shifu/issues/49: Add distributed sensitivity analysis variable selection.
         a) 'varSelect.wrapperEnabled=true' and 'wrapperBy=SE' in ModelConfig.json#varSelect part to enable sensitivity variable selection.
         b) 'wrapperRatio' in ModelConfig.json#varSelect part is a percent to set how many variables will be removed.
@@ -30,15 +31,20 @@ Changes for Shifu-0.2.4
             Using SPDT, with 20 million of records and 1600 variables, 50 minutes to finish variable selection.
         b) 'binningAlgorithm=MunroPat' in ModelConfig.json#stats is another approach to do variable statistics to improve scalability for big data.
     * https://github.com/ShifuML/shifu/issues/58: Improve scalability in eval step for HDFS mode.
-        a) With 20 million of records and 1600 variables, 28 minutes to finish eval step with only 1GB driver memory.
+        a) With 20 million of records and 1600 variables, 20 minutes to finish eval step with only 1GB driver memory.
     * https://github.com/ShifuML/shifu/issues/61: Embeded zookeeper server support.
         a) No need to set zookeeper servers so far since embeded zookeeper server will help on training models.
         b) Big data training, independent zookeeper cluster is strongly recommended.
         c) Upgrade Guagua to 0.5.0 to get support from Guagua for this feature.
     * Add PMML standard model converter.
+        a) To convert .nn files into pmml, run "shifu export -t pmml" or just "shifu export" (The pmml is default)
+           All generated pmml files will be under <Model-Directory>/pmmls/
     * Bug fix:
         a) https://github.com/ShifuML/shifu/issues/45
         b) https://github.com/ShifuML/shifu/issues/51
+        c) https://github.com/ShifuML/shifu/issues/39
+        d) https://github.com/ShifuML/shifu/issues/40
+        e) https://github.com/ShifuML/shifu/issues/45
 
 Changes for Shifu-0.2.0
     * Make Shifu to support Hadoop-2.0 (add -Phdp-yarn when building)
@@ -78,7 +84,6 @@ Changes for Shifu-0.0.4
     * TA457512 - Fix the bug: the delimiter of evaluation data doesn't take effect in AKKA mode
     * TA458788 - Fix the bug: Meta validation fails to report error when - "NumHiddenNodes" : [ "a", 45 ]
     * TA459375 - Write in-place QuickSort to replace Collections.sort() for memory consumption
-	
 
 Changes for Shifu-0.0.3
     * TA446629 - Fix the bug: when there is am empty file, shifu in akka mode will be stucked

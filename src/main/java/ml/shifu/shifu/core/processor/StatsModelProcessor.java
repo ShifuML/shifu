@@ -52,6 +52,8 @@ public class StatsModelProcessor extends BasicModelProcessor implements Processo
     @Override
     public int run() throws Exception {
         log.info("Step Start: stats");
+        long start = System.currentTimeMillis();
+
         setUp(ModelStep.STATS);
 
         syncDataToHdfs(modelConfig.getDataSet().getSource());
@@ -65,7 +67,7 @@ public class StatsModelProcessor extends BasicModelProcessor implements Processo
         }
         clearUp(ModelStep.STATS);
 
-        log.info("Step Finished: stats");
+        log.info("Step Finished: stats with {} ms", (System.currentTimeMillis() - start));
         return 0;
     }
 
@@ -109,12 +111,13 @@ public class StatsModelProcessor extends BasicModelProcessor implements Processo
         Map<String, String> paramsMap = new HashMap<String, String>();
         paramsMap.put("delimiter", CommonUtils.escapePigString(modelConfig.getDataSetDelimiter()));
         paramsMap.put("column_parallel", Integer.toString(columnConfigList.size() / 3));
-        
+
         // execute pig job
         try {
             log.info("execute binning algorithm: {}", modelConfig.getBinningAlgorithm().toString());
-            if (modelConfig.getBinningAlgorithm().equals(ModelStatsConf.BinningAlgorithm.MunroPat)) {
-                PigExecutor.getExecutor().submitJob(modelConfig, pathFinder.getAbsolutePath("scripts/Stats.pig"), paramsMap);
+            if(modelConfig.getBinningAlgorithm().equals(ModelStatsConf.BinningAlgorithm.MunroPat)) {
+                PigExecutor.getExecutor().submitJob(modelConfig, pathFinder.getAbsolutePath("scripts/Stats.pig"),
+                        paramsMap);
             } else {
                 PigExecutor.getExecutor().submitJob(modelConfig,
                         pathFinder.getAbsolutePath("scripts/PreTrainingStats.pig"), paramsMap);
@@ -162,18 +165,19 @@ public class StatsModelProcessor extends BasicModelProcessor implements Processo
                 continue;
             }
 
-            if ( raw.length != 19 ) {
+            if(raw.length != 19) {
                 log.info("The stats data has " + raw.length + " fields.");
                 log.info("The stats data is - " + raw);
             }
-            
+
             int columnNum = Integer.parseInt(raw[0]);
             try {
                 ColumnConfig config = this.columnConfigList.get(columnNum);
 
                 if(config.isCategorical()) {
                     String binCategory = Base64Utils.base64Decode(raw[1]);
-                    config.setBinCategory(CommonUtils.stringToStringList(binCategory, CalculateStatsUDF.CATEGORY_VAL_SEPARATOR));
+                    config.setBinCategory(CommonUtils.stringToStringList(binCategory,
+                            CalculateStatsUDF.CATEGORY_VAL_SEPARATOR));
                 } else {
                     config.setBinBoundary(CommonUtils.stringToDoubleList(raw[1]));
                 }
@@ -201,14 +205,15 @@ public class StatsModelProcessor extends BasicModelProcessor implements Processo
                 config.setMissingCnt(Long.valueOf(raw[14]));
                 config.setTotalCount(Long.valueOf(raw[15]));
                 config.setMissingPercentage(Double.valueOf(raw[16]));
-                
+
                 config.setBinWeightedNeg(CommonUtils.stringToDoubleList(raw[17]));
                 config.setBinWeightedPos(CommonUtils.stringToDoubleList(raw[18]));
 
             } catch (Exception e) {
-            	log.error("Fail to process following column : {} name: {}", columnNum, this.columnConfigList.get(columnNum).getColumnName());
-                
-            	continue;
+                log.error("Fail to process following column : {} name: {} error: {}", columnNum, this.columnConfigList
+                        .get(columnNum).getColumnName(), e.getMessage());
+
+                continue;
             }
         }
     }
