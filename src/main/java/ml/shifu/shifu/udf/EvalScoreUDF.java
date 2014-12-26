@@ -27,6 +27,7 @@ import ml.shifu.shifu.util.CommonUtils;
 import ml.shifu.shifu.util.Constants;
 
 import org.apache.commons.collections.CollectionUtils;
+import org.apache.commons.collections.MapUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.pig.data.DataType;
 import org.apache.pig.data.Tuple;
@@ -81,7 +82,11 @@ public class EvalScoreUDF extends AbstractTrainerUDF<Tuple> {
     }
 
     public Tuple exec(Tuple input) throws IOException {
-        CaseScoreResult cs = modelRunner.compute(input);
+        Map<String, String> rawDataMap = CommonUtils.convertDataIntoMap(input, this.header);
+        if (MapUtils.isEmpty(rawDataMap)) {
+            return null;
+        }
+        CaseScoreResult cs = modelRunner.compute(rawDataMap);
         if(cs == null) {
             log.error("Get null result, for input: " + input.toDelimitedString("|"));
             return null;
@@ -89,7 +94,6 @@ public class EvalScoreUDF extends AbstractTrainerUDF<Tuple> {
 
         Tuple tuple = TupleFactory.getInstance().newTuple();
 
-        Map<String, String> rawDataMap = CommonUtils.convertDataIntoMap(input, this.header);
         String tag = rawDataMap.get(modelConfig.getTargetColumnName(evalConfig));
         tuple.append(StringUtils.trimToEmpty(tag));
 
