@@ -40,8 +40,7 @@ data_cols = FOREACH data_cols GENERATE FLATTEN($0);
 -- prepare data and do binning
 data_binning = FILTER data_cols BY IsToBinningData(*);
 data_binning_grp = GROUP data_binning BY $0 PARALLEL $column_parallel;
-binning_info = FOREACH data_binning_grp GENERATE group.$0, GenBinningData(data_binning);
-binning_info = FILTER binning_info BY $1 IS NOT NULL;
+binning_info = FOREACH data_binning_grp GENERATE FLATTEN(GenBinningData(*));
 
 -- do stats
 data_stats = GROUP data_cols BY $0;
