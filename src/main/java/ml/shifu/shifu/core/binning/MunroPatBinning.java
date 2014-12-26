@@ -53,7 +53,7 @@ public class MunroPatBinning extends AbstractBinning<Double> {
 		
 		int i = 1;
 		while (i < bins.size()) {
-			if (Math.abs(cur - bins.get(i)) > 1e-4) {
+			if (Math.abs(cur - bins.get(i)) > 1e-10) {
 				newBins.add(bins.get(i));
 			}
 			cur = bins.get(i);
@@ -78,5 +78,9 @@ public class MunroPatBinning extends AbstractBinning<Double> {
 	public List<Double> getDataBin() {
 		return binMerge(estimator.getQuantiles());
 	}
+
+    public List<Double> getUnMergedDataBin(){
+        return estimator.getQuantiles();
+    }
 
 }
