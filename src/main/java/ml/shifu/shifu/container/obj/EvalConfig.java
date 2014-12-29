@@ -44,16 +44,24 @@ public class EvalConfig {
     private String scoreMetaColumnNameFile;
     private Map<String, String> customPaths;
 
+    /**
+     * Cache meta columns to a list to avoid reading this file for several times
+     */
+    @JsonIgnore
+    private volatile List<String> metaColumns = null;
+
     public EvalConfig() {
         customPaths = new HashMap<String, String>(1);
         /**
          * Since most user won't use this function,
          * hidden the custom paths for creating new model.
          */
-        /*customPaths.put(Constants.KEY_MODELS_PATH, null);
-	    customPaths.put(Constants.KEY_SCORE_PATH, null);
-	    customPaths.put(Constants.KEY_CONFUSION_MATRIX_PATH, null);
-	    customPaths.put(Constants.KEY_PERFORMANCE_PATH, null);*/
+        /*
+         * customPaths.put(Constants.KEY_MODELS_PATH, null);
+         * customPaths.put(Constants.KEY_SCORE_PATH, null);
+         * customPaths.put(Constants.KEY_CONFUSION_MATRIX_PATH, null);
+         * customPaths.put(Constants.KEY_PERFORMANCE_PATH, null);
+         */
     }
 
     /**
@@ -94,15 +102,21 @@ public class EvalConfig {
      */
     @JsonIgnore
     public List<String> getScoreMetaColumns(ModelConfig modelConfig) throws IOException {
-        String path = scoreMetaColumnNameFile;
-        if (StringUtils.isNotBlank(scoreMetaColumnNameFile)
-                && SourceType.HDFS.equals(dataSet.getSource())) {
-            PathFinder pathFinder = new PathFinder(modelConfig);
-            File file = new File(scoreMetaColumnNameFile);
-            path = new Path(pathFinder.getEvalSetPath(this), file.getName()).toString();
+        if(metaColumns == null) {
+            synchronized(this) {
+                if(metaColumns == null) {
+                    String path = scoreMetaColumnNameFile;
+                    if(StringUtils.isNotBlank(scoreMetaColumnNameFile) && SourceType.HDFS.equals(dataSet.getSource())) {
+                        PathFinder pathFinder = new PathFinder(modelConfig);
+                        File file = new File(scoreMetaColumnNameFile);
+                        path = new Path(pathFinder.getEvalSetPath(this), file.getName()).toString();
+                    }
+                    metaColumns = CommonUtils.readConfFileIntoList(path, dataSet.getSource(),
+                            dataSet.getHeaderDelimiter());
+                }
+            }
         }
-
-        return CommonUtils.readConfFileIntoList(path, dataSet.getSource(), dataSet.getHeaderDelimiter());
+        return metaColumns;
     }
 
     public String getName() {
