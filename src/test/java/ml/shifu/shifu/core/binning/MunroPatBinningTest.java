@@ -32,7 +32,7 @@ public class MunroPatBinningTest {
         Random rd = new Random(System.currentTimeMillis());
 
         MunroPatBinning binning = new MunroPatBinning(10);
-        for ( int i = 0; i < 10000; i ++ ) {
+        for ( int i = 0; i < 100; i ++ ) {
             binning.addData(Double.toString(rd.nextGaussian() % 1000));
         }
 
