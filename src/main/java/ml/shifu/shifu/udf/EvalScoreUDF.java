@@ -86,6 +86,7 @@ public class EvalScoreUDF extends AbstractTrainerUDF<Tuple> {
         if (MapUtils.isEmpty(rawDataMap)) {
             return null;
         }
+       
         CaseScoreResult cs = modelRunner.compute(rawDataMap);
         if(cs == null) {
             log.error("Get null result, for input: " + input.toDelimitedString("|"));
