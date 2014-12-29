@@ -22,7 +22,7 @@ import java.util.List;
 public class MunroPatEstimator<T extends Comparable<T>> {
 
 	private static final long MAX_TOT_ELEMS = 1024L * 1024L * 1024L * 1024L;
-
+    
 	private final List<List<T>> buffer = new ArrayList<List<T>>();
 	private final int numQuantiles;
 	private final int maxElementsPerBuffer;
