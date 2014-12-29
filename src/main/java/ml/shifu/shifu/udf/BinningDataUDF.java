@@ -22,11 +22,14 @@ import java.util.Iterator;
 
 import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.container.obj.ModelStatsConf.BinningMethod;
-import ml.shifu.shifu.core.binning.*;
+import ml.shifu.shifu.core.binning.AbstractBinning;
+import ml.shifu.shifu.core.binning.CategoricalBinning;
+import ml.shifu.shifu.core.binning.EqualIntervalBinning;
+import ml.shifu.shifu.core.binning.EqualPopulationBinning;
+import ml.shifu.shifu.core.binning.MunroPatBinning;
+import ml.shifu.shifu.core.binning.NativeBinning;
 
 import org.apache.commons.lang.StringUtils;
-import org.apache.pig.Accumulator;
-import org.apache.pig.backend.executionengine.ExecException;
 import org.apache.pig.data.DataBag;
 import org.apache.pig.data.Tuple;
 import org.apache.pig.data.TupleFactory;
@@ -59,7 +62,7 @@ public class BinningDataUDF extends AbstractTrainerUDF<Tuple> {
      */
     @Override
     public Tuple exec(Tuple input) throws IOException {
-        if ( input == null && input.size() < 2) {
+        if ( input == null || input.size() < 2) {
             return null;
         }
 
