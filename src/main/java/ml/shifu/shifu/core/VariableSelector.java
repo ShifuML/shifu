@@ -83,8 +83,8 @@ public class VariableSelector {
                 }
             } else if (config.isMeta() || config.isTarget()) {
                 log.info("\t Skip meta or target column: " + config.getColumnName());
-            } else if (config.getKs() == null || config.getIv() == null) {
-                log.info("\t Incomplete info: " + config.getColumnName());
+            } else if ( !CommonUtils.isGoodCandidate(config) ) {
+                log.info("\t Incomplete info(please check KS, IV, Mean, or StdDev fields): " + config.getColumnName());
             } else if ((config.isCategorical() && !modelConfig.isCategoricalDisabled()) || config.isNumerical()) {
                 ksList.add(config);
                 ivList.add(config);

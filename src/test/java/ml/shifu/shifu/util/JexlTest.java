@@ -23,6 +23,8 @@ import org.apache.commons.lang.math.NumberUtils;
 import org.testng.Assert;
 import org.testng.annotations.Test;
 
+import java.text.DecimalFormat;
+
 /**
  * JexlTest class
  */
@@ -188,5 +190,14 @@ public class JexlTest {
         System.out.println((result instanceof Integer));
         System.out.println((result instanceof Double));
         System.out.println(result.toString());
+    }
+
+    @Test
+    public void testDoubleFormat() {
+        Double a = Double.NaN;
+        DecimalFormat df = new DecimalFormat("##.######");
+
+        Assert.assertEquals("NaN", a.toString());
+        Assert.assertFalse(df.format(a).equals("NaN"));
     }
 }
