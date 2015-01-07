@@ -125,6 +125,8 @@ public class NNWorker extends
      */
     private boolean isDry;
 
+    private int epochsPerIteration = 1;
+
     /**
      * Load all configurations for modelConfig and columnConfigList from source type.
      */
@@ -174,8 +176,11 @@ public class NNWorker extends
 
     @Override
     public void init(WorkerContext<NNParams, NNParams> workerContext) {
-
         loadConfigFiles(workerContext.getProps());
+
+        Integer epochsPerIterationInteger = this.modelConfig.getTrain().getEpochsPerIteration();
+        this.epochsPerIteration = epochsPerIterationInteger == null ? 1 : epochsPerIterationInteger.intValue();
+        LOG.info("epochsPerIteration in worker is :{}", epochsPerIteration);
 
         int[] inputOutputIndex = NNUtils.getInputOutputCandidateCounts(this.columnConfigList);
         this.inputNodeCount = inputOutputIndex[0] == 0 ? inputOutputIndex[2] : inputOutputIndex[0];
@@ -227,8 +232,10 @@ public class NNWorker extends
         // using the weights from master to train model in current iteration
         this.gradient.setWeights(workerContext.getLastMasterResult().getWeights());
 
-        this.gradient.run();
-
+        for(int i = 0; i < epochsPerIteration; i++) {
+            this.gradient.run();
+            this.gradient.setWeights(this.gradient.getWeights());
+        }
         // get train errors and test errors
         double trainError = this.gradient.getError();
         double testError = this.testingData.getRecordCount() > 0 ? (this.gradient.getNetwork()

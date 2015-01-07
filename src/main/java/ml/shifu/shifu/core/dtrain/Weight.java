@@ -53,7 +53,7 @@ public class Weight {
         this.lastGradient = new double[numWeight];
         this.eps = this.outputEpsilon / numTrainSize;
         this.shrink = rate / (1.0 + rate);
-        this.learningRate = rate;
+        this.setLearningRate(rate);
         this.algorithm = algorithm;
         this.updateValues = new double[numWeight];
 
@@ -72,7 +72,6 @@ public class Weight {
     }
 
     private double updateWeight(int index, double[] weights, double[] gradients) {
-
         if (this.algorithm.equalsIgnoreCase(NNUtils.BACK_PROPAGATION)) {
             return updateWeightBP(index, weights, gradients);
         } else if (this.algorithm.equalsIgnoreCase(NNUtils.QUICK_PROPAGATION)) {
@@ -90,7 +89,7 @@ public class Weight {
     }
 
     private double updateWeightBP(int index, double[] weights, double[] gradients) {
-        double delta = (gradients[index] * this.learningRate) + (this.lastDelta[index] * this.momentum);
+        double delta = (gradients[index] * this.getLearningRate()) + (this.lastDelta[index] * this.momentum);
         this.lastDelta[index] = delta;
         return delta;
     }
@@ -113,7 +112,7 @@ public class Weight {
             // If current slope is close to or larger than prev slope...
             if (s >= (this.shrink * p)) {
                 // Take maximum size negative step.
-                nextStep += this.learningRate * d;
+                nextStep += this.getLearningRate() * d;
             } else {
                 // Else, use quadratic estimate.
                 nextStep += d * s / (p - s);
@@ -127,7 +126,7 @@ public class Weight {
             // If current slope is close to or more neg than prev slope...
             if (s <= (this.shrink * p)) {
                 // Take maximum size negative step.
-                nextStep += this.learningRate * d;
+                nextStep += this.getLearningRate() * d;
             } else {
                 // Else, use quadratic estimate.
                 nextStep += d * s / (p - s);
@@ -149,9 +148,9 @@ public class Weight {
         if (Math.abs(gradients[index]) < this.zeroTolerance) {
             return 0;
         } else if (gradients[index] > 0) {
-            return this.learningRate;
+            return this.getLearningRate();
         } else {
-            return -this.learningRate;
+            return -this.getLearningRate();
         }
     }
 
@@ -194,5 +193,19 @@ public class Weight {
         this.lastDelta[index] = weightChange;
         // apply the weight change, if any
         return weightChange;
+    }
+
+    /**
+     * @return the learningRate
+     */
+    public double getLearningRate() {
+        return learningRate;
+    }
+
+    /**
+     * @param learningRate the learningRate to set
+     */
+    public void setLearningRate(double learningRate) {
+        this.learningRate = learningRate;
     }
 }

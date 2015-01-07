@@ -42,6 +42,7 @@ public class ModelTrainConf {
     private Double baggingSampleRate = Double.valueOf(0.8);
     private Double validSetRate = Double.valueOf(0.2);
     private Integer numTrainEpochs = Integer.valueOf(100);
+    private Integer epochsPerIteration = Integer.valueOf(1);
 
     private Boolean trainOnDisk = Boolean.FALSE;
     private Boolean fixInitInput = Boolean.FALSE;
@@ -180,6 +181,20 @@ public class ModelTrainConf {
         }
 
         return params;
+    }
+
+    /**
+     * @return the epochsPerIteration
+     */
+    public Integer getEpochsPerIteration() {
+        return epochsPerIteration;
+    }
+
+    /**
+     * @param epochsPerIteration the epochsPerIteration to set
+     */
+    public void setEpochsPerIteration(Integer epochsPerIteration) {
+        this.epochsPerIteration = epochsPerIteration;
     }
 
 }
