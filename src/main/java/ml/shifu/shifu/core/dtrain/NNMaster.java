@@ -73,6 +73,14 @@ public class NNMaster implements MasterComputable<NNParams, NNParams> {
      */
     private List<ColumnConfig> columnConfigList;
 
+    private String propagation = "Q";
+
+    private Double rawLearningRate = 0.1d;
+
+    private Double learningRate = 0.1d;
+
+    private double learningDecay = 0.01d;
+
     @Override
     public NNParams compute(MasterContext<NNParams, NNParams> context) {
 
@@ -116,13 +124,12 @@ public class NNMaster implements MasterComputable<NNParams, NNParams> {
 
         // initialize weightCalCulater.
         if(this.weightCalculator == null) {
-            // get the propagation
-            String propagation = (String) this.modelConfig.getParams().get(NNTrainer.PROPAGATION);
-            // get the learning rate
-            Double learningRate = Double.valueOf(this.modelConfig.getParams().get(NNTrainer.LEARNING_RATE).toString());
-
+            this.learningRate = this.rawLearningRate;
             this.weightCalculator = new Weight(this.globalNNParams.getGradients().length,
                     this.globalNNParams.getTrainSize(), learningRate, propagation);
+        } else {
+            this.learningRate = this.learningRate * (1.0d - this.learningDecay);
+            this.weightCalculator.setLearningRate(this.learningRate);
         }
 
         // use last weights and current gradients to calculate
@@ -182,6 +189,10 @@ public class NNMaster implements MasterComputable<NNParams, NNParams> {
 
             this.columnConfigList = CommonUtils.loadColumnConfigList(
                     props.getProperty(NNConstants.SHIFU_NN_COLUMN_CONFIG), sourceType);
+            propagation = (String) this.modelConfig.getParams().get(NNTrainer.PROPAGATION);
+            rawLearningRate = Double.valueOf(this.modelConfig.getParams().get(NNTrainer.LEARNING_RATE).toString());
+            learningDecay = Double.valueOf(this.modelConfig.getParams().get("LearningDecay").toString());
+            LOG.info("learningDecay in master is :{}", learningDecay);
         } catch (IOException e) {
             throw new RuntimeException(e);
         }

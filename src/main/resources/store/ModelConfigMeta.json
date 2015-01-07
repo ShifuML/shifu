@@ -381,6 +381,11 @@
                         "directive": "input",
                         "defval" : 0.1
                     }, {
+                        "name" : "LearningDecay",
+                        "type" : "number",
+                        "directive": "input",
+                        "defval" : 0.01
+                    }, {
                         "name" : "Propagation",
                         "type" : "text",
                         "directive": "select",
