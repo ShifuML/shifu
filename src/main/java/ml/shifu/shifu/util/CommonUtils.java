@@ -524,6 +524,14 @@ public final class CommonUtils {
             }
         });
 
+        // sort file names
+        Arrays.sort(modelFiles, new Comparator<File>() {
+            @Override
+            public int compare(File from, File to) {
+                return from.getName().compareTo(to.getName());
+            }
+        });
+
         List<BasicML> models = new ArrayList<BasicML>(modelFiles.length);
         for (File nnf : modelFiles) {
             InputStream is = null;
