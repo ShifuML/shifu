@@ -525,7 +525,7 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
      * A thread used to tail progress log from hdfs log file.
      */
     private static class TailThread extends Thread {
-        private volatile long offset[];
+        private long offset[];
         private String[] progressLogs;
 
         public TailThread(String[] progressLogs) {

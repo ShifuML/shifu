@@ -11,6 +11,7 @@ Shifu provides a simple command-line interface for each step of the model buildi
 
 * Statistic calculation & variable selection to determine the most predictive variables in your data
 * Variable normalization
+* Distributed variable selection based on sensitivity analysis
 * Distributed neural network model training
 * Post training analysis & model evaluation
 
@@ -27,4 +28,4 @@ Shifu’s fast Hadoop-based, distributed neural network training can reduce mode
 
 ## Copyright and License
 
-Copyright 2012-2014, eBay Software Foundation under [the Apache License](LICENSE.txt).
+Copyright 2012-2014, eBay Software Foundation under the [Apache License](LICENSE.txt).

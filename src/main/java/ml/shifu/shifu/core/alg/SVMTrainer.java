@@ -147,7 +147,7 @@ public class SVMTrainer extends AbstractTrainer {
     /**
      * SVMtrainer worker
      */
-    private class SVMRunner implements Runnable {
+    private static class SVMRunner implements Runnable {
 
         private SVMTrain trainer;
         private boolean isFinish;

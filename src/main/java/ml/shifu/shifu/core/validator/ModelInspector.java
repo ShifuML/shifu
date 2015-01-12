@@ -380,7 +380,7 @@ public class ModelInspector {
                                 .valueOf(1)) >= 0))) {
                     ValidateResult tmpResult = new ValidateResult(true);
                     tmpResult.setStatus(false);
-                    tmpResult.getCauses().add("Learning decay should be in [0, 1).");
+                    tmpResult.getCauses().add("Learning decay should be in [0, 1) if set.");
                     result = ValidateResult.mergeResult(result, tmpResult);
                 }
             }

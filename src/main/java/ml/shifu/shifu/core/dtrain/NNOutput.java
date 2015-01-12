@@ -221,10 +221,13 @@ public class NNOutput extends BasicMasterInterceptor<NNParams, NNParams> {
     }
 
     private void writeModelWeightsToFileSystem(double[] weights, Path out) {
+        if(out == null || weights == null) {
+
+        }
         FSDataOutputStream fos = null;
         try {
             fos = FileSystem.get(new Configuration()).create(out);
-            LOG.info("Writing results to {}", out.toString());
+            LOG.info("Writing results to {}", out);
             this.network.getFlat().setWeights(weights);
             if(out != null) {
                 EncogDirectoryPersistence.saveObject(fos, this.network);

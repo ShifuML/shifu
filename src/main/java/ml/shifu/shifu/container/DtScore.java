@@ -109,7 +109,7 @@ public class DtScore {
     }
 
     public Object getMostFavoriateModelTarget() {
-        if (modelTargetVoteMap == null && modelTargetVoteMap.size() == 0) {
+        if (modelTargetVoteMap == null || modelTargetVoteMap.size() == 0) {
             return null;
         }
 

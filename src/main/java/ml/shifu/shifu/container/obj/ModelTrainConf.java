@@ -59,12 +59,14 @@ public class ModelTrainConf {
         /**
          * Since most user won't use this function,
          * hidden the custom paths for creating new model.
-         */   
-        /*customPaths.put(Constants.KEY_PRE_TRAIN_STATS_PATH, null);
-        customPaths.put(Constants.KEY_SELECTED_RAW_DATA_PATH, null);
-        customPaths.put(Constants.KEY_NORMALIZED_DATA_PATH, null);
-        customPaths.put(Constants.KEY_TRAIN_SCORES_PATH, null);
-        customPaths.put(Constants.KEY_BIN_AVG_SCORE_PATH, null);*/
+         */
+        /*
+         * customPaths.put(Constants.KEY_PRE_TRAIN_STATS_PATH, null);
+         * customPaths.put(Constants.KEY_SELECTED_RAW_DATA_PATH, null);
+         * customPaths.put(Constants.KEY_NORMALIZED_DATA_PATH, null);
+         * customPaths.put(Constants.KEY_TRAIN_SCORES_PATH, null);
+         * customPaths.put(Constants.KEY_BIN_AVG_SCORE_PATH, null);
+         */
     }
 
     public Integer getBaggingNum() {
@@ -155,9 +157,10 @@ public class ModelTrainConf {
     public static Map<String, Object> createParamsByAlg(ALGORITHM alg) {
         Map<String, Object> params = new HashMap<String, Object>();
 
-        if (ALGORITHM.NN.equals(alg)) {
+        if(ALGORITHM.NN.equals(alg)) {
             params.put(NNTrainer.PROPAGATION, "Q");
             params.put(NNTrainer.LEARNING_RATE, 0.1);
+            params.put("LearningDecay", 0.0);
             params.put(NNTrainer.NUM_HIDDEN_LAYERS, 2);
 
             List<Integer> nodes = new ArrayList<Integer>();
@@ -169,14 +172,14 @@ public class ModelTrainConf {
             func.add("sigmoid");
             func.add("sigmoid");
             params.put(NNTrainer.ACTIVATION_FUNC, func);
-        } else if (ALGORITHM.SVM.equals(alg)) {
+        } else if(ALGORITHM.SVM.equals(alg)) {
             params.put(SVMTrainer.SVM_KERNEL, "linear");
             params.put(SVMTrainer.SVM_GAMMA, 1.0);
             params.put(SVMTrainer.SVM_CONST, 1.0);
-        } else if (ALGORITHM.DT.equals(alg)) {
-            //To be decide
-            //DecisionTreeTrainer
-        } else if (ALGORITHM.LR.equals(alg)) {
+        } else if(ALGORITHM.DT.equals(alg)) {
+            // To be decide
+            // DecisionTreeTrainer
+        } else if(ALGORITHM.LR.equals(alg)) {
             params.put(LogisticRegressionTrainer.LEARNING_RATE, 0.1);
         }
 
@@ -191,7 +194,8 @@ public class ModelTrainConf {
     }
 
     /**
-     * @param epochsPerIteration the epochsPerIteration to set
+     * @param epochsPerIteration
+     *            the epochsPerIteration to set
      */
     public void setEpochsPerIteration(Integer epochsPerIteration) {
         this.epochsPerIteration = epochsPerIteration;

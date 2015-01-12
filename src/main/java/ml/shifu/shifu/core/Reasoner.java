@@ -142,7 +142,7 @@ public class Reasoner {
         return map;
     }
 
-    class ScoreDiffObject {
+    static class ScoreDiffObject {
         public String columnName;
         public Integer columnNum;
         public Integer binNum;
@@ -160,7 +160,7 @@ public class Reasoner {
         this.numTopVariables = numTopVariables;
     }
 
-    class ScoreDiffComparator implements Comparator<ScoreDiffObject> {
+    static class ScoreDiffComparator implements Comparator<ScoreDiffObject> {
         public int compare(ScoreDiffObject a, ScoreDiffObject b) {
             if (!a.scoreDiff.equals(b.scoreDiff)) {
                 return -a.scoreDiff.compareTo(b.scoreDiff);

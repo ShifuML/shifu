@@ -252,7 +252,7 @@ public class VarSelectMapper extends Mapper<LongWritable, Text, LongWritable, Do
                 break;
             } else {
                 ColumnConfig columnConfig = this.columnConfigList.get(index);
-                if(columnConfig.isTarget()) {
+                if(columnConfig != null && columnConfig.isTarget()) {
                     this.outputs[outputsIndex++] = doubleValue;
                 } else {
                     if(this.inputNodeCount == this.candidateCount) {
