@@ -45,6 +45,9 @@ public class PMMLTranslator {
     private static final String ELEMENT_OUT = "out";
     private static final String ELEMENT_ORIGIN = "origin";
     private static final String ZSCORE_POSTFIX = "_zscl";
+    private static final String RAW_RESULT = "RawResult";
+    private static final String ROUND_FUNC = "round";
+    public static final String FINAL_RESULT = "FinalResult";
 
     private static final double EPS = 1e-10;
 
@@ -105,6 +108,8 @@ public class PMMLTranslator {
         if ( model instanceof  NeuralNetwork ) {
             NeuralNetwork nnPmmlModel = (NeuralNetwork) model;
             new PMMLEncogNeuralNetworkModel().adaptMLModelToPMML((BasicNetwork) models.get(index), nnPmmlModel);
+
+            nnPmmlModel.withOutput(createNormalizedOutput());
         } else {
             // something wrong
             throw new RuntimeException("Not support model type.");
@@ -114,7 +119,6 @@ public class PMMLTranslator {
 
         return pmml;
     }
-
 
     /**
      * Convert the list of @ColumnConfig into data dictionary
@@ -508,5 +512,60 @@ public class PMMLTranslator {
         targets.withTargets(target);
 
         return targets;
+    }
+
+    /**
+     * Create the normalized output for model, since the final score should be 0 ~ 1000, instead of 0.o ~ 1.0
+     * @return @Output for model
+     */
+    private Output createNormalizedOutput() {
+        Output output = new Output();
+
+        output.withOutputFields(
+                createOutputField(RAW_RESULT, OpType.CONTINUOUS, DataType.DOUBLE, ResultFeatureType.PREDICTED_VALUE));
+
+        OutputField finalResult = createOutputField(FINAL_RESULT,
+                OpType.CONTINUOUS, DataType.DOUBLE, ResultFeatureType.TRANSFORMED_VALUE);
+        finalResult.withExpression(createApplyFunc());
+
+        output.withOutputFields(finalResult);
+
+        return output;
+    }
+
+    /**
+     * Create the output field, and set the field name, operation type, data type and feature type
+     * @param fieldName - the name of output field
+     * @param opType - operation type
+     * @param dataType - data type
+     * @param feature - result feature type
+     * @return @OutputField
+     */
+    private OutputField createOutputField(String fieldName, OpType opType, DataType dataType, ResultFeatureType feature) {
+        OutputField outputField = new OutputField();
+        outputField.withName(new FieldName(fieldName));
+        outputField.withOptype(opType);
+        outputField.withDataType(dataType);
+        outputField.withFeature(feature);
+        return outputField;
+    }
+
+    /**
+     * Create the apply expression for final output, the function is "round"
+     * @return @Apply
+     */
+    private Apply createApplyFunc() {
+        Apply apply = new Apply();
+
+        apply.withFunction(ROUND_FUNC);
+
+        NormContinuous normContinuous = new NormContinuous();
+        normContinuous.withField(new FieldName(RAW_RESULT));
+        normContinuous.withLinearNorms(new LinearNorm().withOrig(0).withNorm(0));
+        normContinuous.withLinearNorms(new LinearNorm().withOrig(1).withNorm(1000));
+
+        apply.withExpressions(normContinuous);
+
+        return apply;
     }
 }

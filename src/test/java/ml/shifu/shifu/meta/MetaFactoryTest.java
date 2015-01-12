@@ -51,7 +51,7 @@ public class MetaFactoryTest {
 
     @Test
     public void testGetModelConfigMeta() {
-        Assert.assertEquals(MetaFactory.getModelConfigMeta().size(), 93);
+        Assert.assertEquals(MetaFactory.getModelConfigMeta().size(), 94);
     }
 
     @Test

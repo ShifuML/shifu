@@ -29,16 +29,17 @@ import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
 import ml.shifu.shifu.udf.CalculateStatsUDF;
 
 import org.apache.commons.io.FileUtils;
+import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.fs.FileStatus;
+import org.encog.ml.BasicML;
 import org.encog.ml.data.MLDataPair;
+import org.encog.persist.EncogDirectoryPersistence;
 import org.testng.Assert;
 import org.testng.annotations.AfterClass;
 import org.testng.annotations.Test;
 
-import java.io.File;
-import java.io.FileWriter;
-import java.io.IOException;
+import java.io.*;
 import java.util.*;
 
 /**
@@ -436,7 +437,27 @@ public class CommonUtilsTest {
         Assert.assertEquals(strList.get(0).substring(1), recoverList.get(0));
         Assert.assertEquals(strList.get(1).substring(0, strList.get(1).length() - 1), recoverList.get(1));
     }
-    
+
+    @Test
+    public void testSortFileNames() {
+        File[] modelFiles = new File[5];
+        modelFiles[0] = new File("model3.nn");
+        modelFiles[1] = new File("model1.nn");
+        modelFiles[2] = new File("model0.nn");
+        modelFiles[3] = new File("model4.nn");
+        modelFiles[4] = new File("model2.nn");
+
+        Arrays.sort(modelFiles, new Comparator<File>() {
+            @Override
+            public int compare(File from, File to) {
+                return from.getName().compareTo(to.getName());
+            }
+        });
+
+        Assert.assertEquals(modelFiles[0].getName(), "model0.nn");
+        Assert.assertEquals(modelFiles[4].getName(), "model4.nn");
+    }
+
     @AfterClass
     public void tearDown() {
         FileUtils.deleteQuietly(new File(Constants.DEFAULT_META_COLUMN_FILE));
@@ -445,4 +466,5 @@ public class CommonUtilsTest {
         FileUtils.deleteQuietly(new File(Constants.DEFAULT_FORCEREMOVE_COLUMN_FILE));
         FileUtils.deleteQuietly(new File("Eval1" + Constants.DEFAULT_EVALSCORE_META_COLUMN_FILE));
     }
+
 }
