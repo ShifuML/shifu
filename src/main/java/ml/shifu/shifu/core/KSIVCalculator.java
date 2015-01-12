@@ -22,7 +22,7 @@ import java.util.List;
  */
 public class KSIVCalculator {
 
-    private final double EPS = 1e-10;
+    private final static double EPS = 1e-10;
 
     private double ks;
     private double iv;

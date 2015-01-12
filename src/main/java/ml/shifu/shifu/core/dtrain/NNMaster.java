@@ -79,7 +79,7 @@ public class NNMaster implements MasterComputable<NNParams, NNParams> {
 
     private Double learningRate = 0.1d;
 
-    private double learningDecay = 0.01d;
+    private double learningDecay = 0d;
 
     @Override
     public NNParams compute(MasterContext<NNParams, NNParams> context) {
@@ -189,9 +189,12 @@ public class NNMaster implements MasterComputable<NNParams, NNParams> {
 
             this.columnConfigList = CommonUtils.loadColumnConfigList(
                     props.getProperty(NNConstants.SHIFU_NN_COLUMN_CONFIG), sourceType);
-            propagation = (String) this.modelConfig.getParams().get(NNTrainer.PROPAGATION);
-            rawLearningRate = Double.valueOf(this.modelConfig.getParams().get(NNTrainer.LEARNING_RATE).toString());
-            learningDecay = Double.valueOf(this.modelConfig.getParams().get("LearningDecay").toString());
+            this.propagation = (String) this.modelConfig.getParams().get(NNTrainer.PROPAGATION);
+            this.rawLearningRate = Double.valueOf(this.modelConfig.getParams().get(NNTrainer.LEARNING_RATE).toString());
+            Object learningDecayO = this.modelConfig.getParams().get("LearningDecay");
+            if(learningDecayO != null) {
+                this.learningDecay = Double.valueOf(learningDecayO.toString());
+            }
             LOG.info("learningDecay in master is :{}", learningDecay);
         } catch (IOException e) {
             throw new RuntimeException(e);

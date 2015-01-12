@@ -83,10 +83,10 @@ public class EvalScoreUDF extends AbstractTrainerUDF<Tuple> {
 
     public Tuple exec(Tuple input) throws IOException {
         Map<String, String> rawDataMap = CommonUtils.convertDataIntoMap(input, this.header);
-        if (MapUtils.isEmpty(rawDataMap)) {
+        if(MapUtils.isEmpty(rawDataMap)) {
             return null;
         }
-       
+
         CaseScoreResult cs = modelRunner.compute(rawDataMap);
         if(cs == null) {
             log.error("Get null result, for input: " + input.toDelimitedString("|"));
@@ -198,12 +198,10 @@ public class EvalScoreUDF extends AbstractTrainerUDF<Tuple> {
             }
 
             return new Schema(new Schema.FieldSchema("EvalScore", tupleSchema, DataType.TUPLE));
-
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error("Error in outputSchema", e);
             return null;
         }
-
     }
 
 }
