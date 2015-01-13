@@ -106,7 +106,7 @@
                 <include>*:guagua-core:*</include>
                 <include>*:guagua-mapreduce:*</include>
                 <include>*:guava:*</include>
-                <include>*:hadoop-core*:jar</include>
+                <!-- <include>*:hadoop-core*:jar</include> -->
                 <include>*:jackson-annotations:*</include>
                 <include>*:jackson-core:*</include>
                 <include>*:jackson-core-asl:*</include>

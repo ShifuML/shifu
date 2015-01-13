@@ -363,8 +363,6 @@ public class NNWorker extends
             index++;
         }
 
-        // TODO check input and output number with while split number
-
         // if fixInitialInput = true, we should use hashcode to sample.
         long longBaggingSampleRate = Double.valueOf(baggingSampleRate * 100).longValue();
         if(this.modelConfig.isFixInitialInput() && hashcode % 100 >= longBaggingSampleRate) {
