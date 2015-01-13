@@ -19,6 +19,7 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import ml.shifu.shifu.util.Constants;
 
+import java.io.Serializable;
 import java.util.Comparator;
 import java.util.List;
 
@@ -117,7 +118,6 @@ public class ColumnConfig {
     public void setColumnBinning(ColumnBinning columnBinning) {
         this.columnBinning = columnBinning;
     }
-
 
     /**
      * ---------------------------------------------------------------------------
@@ -443,7 +443,10 @@ public class ColumnConfig {
     /**
      * ColumnConfigComparator class
      */
-    public static class ColumnConfigComparator implements Comparator<ColumnConfig> {
+    public static class ColumnConfigComparator implements Comparator<ColumnConfig>, Serializable {
+
+        private static final long serialVersionUID = -1636776342389912951L;
+
         private String key;
 
         public ColumnConfigComparator(String key) {
