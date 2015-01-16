@@ -39,7 +39,6 @@ public class LogisticRegressionTest {
 
     LogisticRegressionTrainer trainer;
     ModelConfig config;
-    boolean dryRun = false;
 
     MLDataSet trainSet;
 

@@ -20,11 +20,10 @@ import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import java.util.ArrayList;
 import java.util.List;
 
-
 /**
  * SourceData class
  */
-public class RawSourceData {
+public class RawSourceData implements Cloneable {
 
     @JsonDeserialize(using = SouceTypeDeserializer.class)
     public static enum SourceType {

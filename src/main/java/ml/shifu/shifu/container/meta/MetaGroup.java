@@ -25,7 +25,7 @@ import java.util.List;
  * ItemMetaGroup class
  */
 @JsonIgnoreProperties(ignoreUnknown = true)
-public class MetaGroup {
+public class MetaGroup implements Cloneable {
     private String group;
 
     private List<MetaItem> metaList;
@@ -54,9 +54,9 @@ public class MetaGroup {
         metaGroup.setGroup(group);
 
         // copy meta list, if not null
-        if (CollectionUtils.isNotEmpty(metaList)) {
+        if(CollectionUtils.isNotEmpty(metaList)) {
             List<MetaItem> metas = new ArrayList<MetaItem>();
-            for (MetaItem metaItem : metaList) {
+            for(MetaItem metaItem: metaList) {
                 metas.add(metaItem.clone());
             }
             metaGroup.setMetaList(metas);

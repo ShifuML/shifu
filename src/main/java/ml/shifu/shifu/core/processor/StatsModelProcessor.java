@@ -16,6 +16,7 @@
 package ml.shifu.shifu.core.processor;
 
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -167,7 +168,7 @@ public class StatsModelProcessor extends BasicModelProcessor implements Processo
 
             if(raw.length != 19) {
                 log.info("The stats data has " + raw.length + " fields.");
-                log.info("The stats data is - " + raw);
+                log.info("The stats data is - " + Arrays.toString(raw));
             }
 
             int columnNum = Integer.parseInt(raw[0]);

@@ -44,8 +44,8 @@ public class DTrainTest {
     public static final int INPUT_COUNT = 1000;
     public static final int HIDDEN_COUNT = 20;
     public static final int OUTPUT_COUNT = 1;
-    public static BasicNetwork network;
-    public static MLDataSet training;
+    public BasicNetwork network;
+    public MLDataSet training;
 
     public static final int NUM_EPOCHS = 20;
 

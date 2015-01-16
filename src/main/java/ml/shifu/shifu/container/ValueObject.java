@@ -19,6 +19,7 @@ import ml.shifu.shifu.core.Binning.BinningDataType;
 
 import java.util.Comparator;
 
+import scala.Serializable;
 
 /**
  * data input object
@@ -34,7 +35,9 @@ public class ValueObject {
         this.weight = 1.0;
     }
 
-    public static class ValueObjectComparator implements Comparator<ValueObject> {
+    public static class ValueObjectComparator implements Comparator<ValueObject>, Serializable {
+
+        private static final long serialVersionUID = -6290803062854530962L;
 
         private BinningDataType type;
 
@@ -43,16 +46,16 @@ public class ValueObject {
         }
 
         public int compare(ValueObject a, ValueObject b) {
-            if (type.equals(BinningDataType.Categorical)) {
+            if(type.equals(BinningDataType.Categorical)) {
                 int d = a.raw.compareTo(b.raw);
-                if (d == 0) {
+                if(d == 0) {
                     return a.tag.compareTo(b.tag);
                 } else {
                     return d;
                 }
             } else {
                 int d = a.value.compareTo(b.value);
-                if (d == 0) {
+                if(d == 0) {
                     return a.tag.compareTo(b.tag);
                 } else {
                     return d;
@@ -71,9 +74,9 @@ public class ValueObject {
 
         @Override
         public int compare(ValueObject a, ValueObject b) {
-            if (type.equals(BinningDataType.Categorical)) {
+            if(type.equals(BinningDataType.Categorical)) {
                 int d = a.raw.compareTo(b.raw);
-                if (d == 0) {
+                if(d == 0) {
                     return a.tag.compareTo(b.tag);
                 } else {
                     return d;
@@ -82,7 +85,7 @@ public class ValueObject {
                 Double weightA = a.value * a.weight;
                 Double weightB = b.value * b.weight;
                 int d = weightA.compareTo(weightB);
-                if (d == 0) {
+                if(d == 0) {
                     return a.tag.compareTo(b.tag);
                 } else {
                     return d;

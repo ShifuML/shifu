@@ -482,8 +482,12 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
                 }
                 log.info("{} variables are selected.", count);
             } finally {
-                for(Scanner scanner: scanners) {
-                    scanner.close();
+                if(scanners != null) {
+                    for(Scanner scanner: scanners) {
+                        if(scanner != null) {
+                            scanner.close();
+                        }
+                    }
                 }
             }
 

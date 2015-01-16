@@ -24,7 +24,6 @@ import org.encog.ml.data.MLDataSet;
 import org.encog.ml.data.basic.BasicMLData;
 import org.encog.ml.data.basic.BasicMLDataPair;
 import org.encog.ml.data.basic.BasicMLDataSet;
-import org.encog.ml.svm.SVM;
 import org.testng.Assert;
 import org.testng.annotations.AfterClass;
 import org.testng.annotations.BeforeClass;
@@ -94,9 +93,7 @@ public class SVMTrainerTest {
     //MLDataSet dataSet;
     //MLDataSet trainSet;
     //MLDataSet validSet, testSet;
-    Random random;
-
-    SVM svm;
+//    Random random;
 
     @BeforeClass
     public void setUp() throws IOException {
@@ -123,8 +120,6 @@ public class SVMTrainerTest {
     public void SVMTest() throws IOException {
 
         trainer.train();
-
-        svm = trainer.getSVM();
 
         Assert.assertEquals(4, trainer.getValidSet().getRecordCount());
 

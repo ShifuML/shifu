@@ -188,8 +188,9 @@ public class Environment {
             return;
         }
 
-        FileInputStream inStream = new FileInputStream(configFile);
+        FileInputStream inStream = null;
         try {
+            inStream = new FileInputStream(configFile);
             props.load(inStream);
         } finally {
             IOUtils.closeQuietly(inStream);
