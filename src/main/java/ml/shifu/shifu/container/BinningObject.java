@@ -17,6 +17,8 @@ package ml.shifu.shifu.container;
 
 import java.util.Comparator;
 
+import scala.Serializable;
+
 /**
  * Binning object, data with its type
  */
@@ -48,9 +50,8 @@ public class BinningObject {
     }
 
     public String getCategoricalData() {
-        if (this.type.equals(DataType.Numerical)) {
-            throw new RuntimeException(
-                    "Cannot get categorical data from a numerical variable.");
+        if(this.type.equals(DataType.Numerical)) {
+            throw new RuntimeException("Cannot get categorical data from a numerical variable.");
         }
         return this.cData;
     }
@@ -69,9 +70,8 @@ public class BinningObject {
     }
 
     public void setCategoricalData(String data) {
-        if (this.type.equals(DataType.Numerical)) {
-            throw new RuntimeException(
-                    "Cannot set categorical data to a numerical variable.");
+        if(this.type.equals(DataType.Numerical)) {
+            throw new RuntimeException("Cannot set categorical data to a numerical variable.");
         }
         this.cData = data;
     }
@@ -85,21 +85,21 @@ public class BinningObject {
     }
 
     // Comparator
-    public static class VariableObjectComparator implements
-            Comparator<BinningObject> {
+    public static class VariableObjectComparator implements Comparator<BinningObject>, Serializable {
+
+        private static final long serialVersionUID = 4201177584298492190L;
+
         public int compare(BinningObject a, BinningObject b) {
-            if (a.type.equals(DataType.Categorical)
-                    && b.type.equals(DataType.Categorical)) {
+            if(a.type.equals(DataType.Categorical) && b.type.equals(DataType.Categorical)) {
                 int d = a.cData.compareTo(b.cData);
-                if (d == 0) {
+                if(d == 0) {
                     return a.tag.compareTo(b.tag);
                 } else {
                     return d;
                 }
-            } else if (a.type.equals(DataType.Numerical)
-                    && b.type.equals(DataType.Numerical)) {
+            } else if(a.type.equals(DataType.Numerical) && b.type.equals(DataType.Numerical)) {
                 int d = a.nData.compareTo(b.nData);
-                if (d == 0) {
+                if(d == 0) {
                     return a.tag.compareTo(b.tag);
                 } else {
                     return d;
@@ -112,7 +112,7 @@ public class BinningObject {
 
     // Others
     public String toString() {
-        if (this.type.equals(DataType.Categorical)) {
+        if(this.type.equals(DataType.Categorical)) {
             return "(" + this.cData + ", " + this.tag + ", " + this.score + ")";
         } else {
             return "(" + this.nData + ", " + this.tag + ", " + this.score + ")";

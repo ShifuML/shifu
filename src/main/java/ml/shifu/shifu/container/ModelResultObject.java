@@ -17,15 +17,16 @@ package ml.shifu.shifu.container;
 
 import java.util.Comparator;
 
+import scala.Serializable;
+
 /**
  * Model score result object
  */
-public class ModelResultObject implements Comparable<ModelResultObject>{
+public class ModelResultObject implements Comparable<ModelResultObject> {
 
     private double score;
     private String tag;
     private double weight = 1.0;
-
 
     public ModelResultObject(double score, String tag, double weight) {
         this.score = score;
@@ -46,7 +47,10 @@ public class ModelResultObject implements Comparable<ModelResultObject>{
     }
 
     // Comparator, descends
-    public static class ModelResultObjectComparator implements Comparator<ModelResultObject> {
+    public static class ModelResultObjectComparator implements Comparator<ModelResultObject>, Serializable {
+
+        private static final long serialVersionUID = -2599980259257417138L;
+
         public int compare(ModelResultObject a, ModelResultObject b) {
             return Double.compare(b.score, a.score);
         }
@@ -57,9 +61,9 @@ public class ModelResultObject implements Comparable<ModelResultObject>{
         return "(" + this.score + ", " + this.tag + ", " + this.weight + ")";
     }
 
-	@Override
-	public int compareTo(ModelResultObject o) {
-		return Double.compare(o.score, score);
-	}
+    @Override
+    public int compareTo(ModelResultObject o) {
+        return Double.compare(o.score, score);
+    }
 
 }

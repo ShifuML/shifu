@@ -28,7 +28,7 @@ import java.util.List;
  */
 @JsonIgnoreProperties(ignoreUnknown = true)
 @JsonInclude(Include.NON_NULL)
-public class MetaItem {
+public class MetaItem implements Cloneable {
 
     private String name;
 
@@ -142,9 +142,9 @@ public class MetaItem {
         copy.setOptions(options);
         copy.setElementType(elementType);
 
-        if (CollectionUtils.isNotEmpty(element)) {
+        if(CollectionUtils.isNotEmpty(element)) {
             List<MetaItem> elementList = new ArrayList<MetaItem>();
-            for (MetaItem meta : element) {
+            for(MetaItem meta: element) {
                 elementList.add(meta.clone());
             }
 

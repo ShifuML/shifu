@@ -128,7 +128,7 @@ public class JavaBeanTester {
             public int compare(Constructor<?> o1, Constructor<?> o2) {
                 int primitiveParamsSize1 = findPrimitiveParamsSize(o1);
                 int primitiveParamsSize2 = findPrimitiveParamsSize(o2);
-                return new Integer(primitiveParamsSize2).compareTo(primitiveParamsSize1);
+                return Integer.valueOf(primitiveParamsSize2).compareTo(primitiveParamsSize1);
             }
 
             private int findPrimitiveParamsSize(Constructor<?> o1) {
