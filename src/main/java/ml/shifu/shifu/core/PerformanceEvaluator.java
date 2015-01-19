@@ -35,6 +35,7 @@ import ml.shifu.shifu.fs.ShifuFileUtils;
 import ml.shifu.shifu.util.Constants;
 import ml.shifu.shifu.util.JSONUtils;
 
+import org.apache.commons.io.IOUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -110,10 +111,14 @@ public class PerformanceEvaluator {
         log.info("Loading confusion matrix in {}",
                 pathFinder.getEvalMatrixPath(evalConfig, evalConfig.getDataSet().getSource()));
 
-        final BufferedReader reader = ShifuFileUtils.getReader(pathFinder.getEvalMatrixPath(evalConfig, evalConfig
-                .getDataSet().getSource()), evalConfig.getDataSet().getSource());
-
-        review(new CMOIterable(reader), records);
+        BufferedReader reader = null;
+        try {
+            reader = ShifuFileUtils.getReader(pathFinder.getEvalMatrixPath(evalConfig, evalConfig.getDataSet()
+                    .getSource()), evalConfig.getDataSet().getSource());
+            review(new CMOIterable(reader), records);
+        } finally {
+            IOUtils.closeQuietly(reader);
+        }
     }
 
     private static class CMOIterable implements Iterable<ConfusionMatrixObject> {
@@ -121,6 +126,9 @@ public class PerformanceEvaluator {
         private BufferedReader reader = null;
 
         public CMOIterable(BufferedReader reader) {
+            if(reader == null) {
+                throw new NullPointerException("reader is null");
+            }
             this.reader = reader;
         }
 
@@ -135,21 +143,12 @@ public class PerformanceEvaluator {
                     try {
                         this.line = CMOIterable.this.reader.readLine();
                         if(this.line == null) {
-                            closeReader();
                             return false;
                         } else {
                             return true;
                         }
                     } catch (IOException e) {
-                        closeReader();
-                    }
-                    return false;
-                }
-
-                private void closeReader() {
-                    try {
-                        CMOIterable.this.reader.close();
-                    } catch (IOException ignore) {
+                        throw new RuntimeException(e);
                     }
                 }
 
