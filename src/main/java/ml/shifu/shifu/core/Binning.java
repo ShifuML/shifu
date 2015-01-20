@@ -520,7 +520,8 @@ public class Binning {
         Map<String, Double> sortedCategoryFraudRateMap = new TreeMap<String, Double>(cmp);
         sortedCategoryFraudRateMap.putAll(categoryFraudRateMap);
 
-        for(String key: sortedCategoryFraudRateMap.keySet()) {
+        for(Map.Entry<String, Double> entry: sortedCategoryFraudRateMap.entrySet()) {
+            String key = entry.getKey();
             Integer countNeg = categoryHistNeg.containsKey(key) ? categoryHistNeg.get(key) : 0;
             binCountNeg.add(countNeg);
             Integer countPos = categoryHistPos.containsKey(key) ? categoryHistPos.get(key) : 0;
@@ -535,7 +536,7 @@ public class Binning {
             // use zero, the average score is calculate in post-process
             binAvgScore.add(0);
             binCategory.add(key);
-            binPosCaseRate.add(sortedCategoryFraudRateMap.get(key));
+            binPosCaseRate.add(entry.getValue());
         }
 
         this.actualNumBins = binCategory.size();

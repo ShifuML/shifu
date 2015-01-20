@@ -63,6 +63,7 @@ public class PMMLTranslator {
 
     /**
      * Convert all models into multi pmml format
+     * 
      * @return - pmmls for models
      */
     public List<PMML> translate() {
@@ -77,12 +78,14 @@ public class PMMLTranslator {
 
     /**
      * Convert some model into pmml format
-     * @param index - which model to pmml format
-     * @return  pmml for model
-     *          Notice, if the index is out of bound, return null
+     * 
+     * @param index
+     *            - which model to pmml format
+     * @return pmml for model
+     *         Notice, if the index is out of bound, return null
      */
     public PMML translate(int index) {
-        if ( index > models.size() ) {
+        if(index > models.size()) {
             // out-of-bound. return null or throw exception, which is better
             return null;
         }
@@ -102,10 +105,11 @@ public class PMMLTranslator {
         model.setModelStats(createModelMiningStats(columnConfigList));
 
         // create variable transform
-        model.setLocalTransformations(createLocalTransformations(columnConfigList, modelConfig.getNormalizeStdDevCutOff()));
+        model.setLocalTransformations(createLocalTransformations(columnConfigList,
+                modelConfig.getNormalizeStdDevCutOff()));
 
         // create specification
-        if ( model instanceof  NeuralNetwork ) {
+        if(model instanceof NeuralNetwork) {
             NeuralNetwork nnPmmlModel = (NeuralNetwork) model;
             new PMMLEncogNeuralNetworkModel().adaptMLModelToPMML((BasicNetwork) models.get(index), nnPmmlModel);
 
@@ -122,7 +126,9 @@ public class PMMLTranslator {
 
     /**
      * Convert the list of @ColumnConfig into data dictionary
-     * @param columnConfigList - ColumnConfig list from Shifu
+     * 
+     * @param columnConfigList
+     *            - ColumnConfig list from Shifu
      * @return @DataDictionary that represent ColumnConfig list
      */
     private DataDictionary createDataDictionary(List<ColumnConfig> columnConfigList) {
@@ -130,7 +136,7 @@ public class PMMLTranslator {
 
         List<DataField> fields = new ArrayList<DataField>();
 
-        for (ColumnConfig columnConfig : columnConfigList) {
+        for(ColumnConfig columnConfig: columnConfigList) {
             DataField field = new DataField();
             field.setName(FieldName.create(columnConfig.getColumnName()));
             field.setOptype(getOptype(columnConfig));
@@ -144,15 +150,16 @@ public class PMMLTranslator {
         return dict;
     }
 
-
     /**
      * Create a @Model according @ModelConfig. Currently we only support NeuralNetwork
-     * @param modelConfig @ModelConfig from Shifu
+     * 
+     * @param modelConfig
+     *            @ModelConfig from Shifu
      * @return a model with targets
      */
     private Model createModel(ModelConfig modelConfig) {
         Model model = null;
-        if (ModelTrainConf.ALGORITHM.NN.name().equalsIgnoreCase(modelConfig.getTrain().getAlgorithm())) {
+        if(ModelTrainConf.ALGORITHM.NN.name().equalsIgnoreCase(modelConfig.getTrain().getAlgorithm())) {
             model = new NeuralNetwork();
         } else {
             throw new RuntimeException("Model not supported: " + modelConfig.getTrain().getAlgorithm());
@@ -164,22 +171,24 @@ public class PMMLTranslator {
     /**
      * Create model mining schema from ColumnConfig list.
      * Only final select and target column will be added into MiningSchema
-     * @param columnConfigList List of @ColumnConfig from Shifu
+     * 
+     * @param columnConfigList
+     *            List of @ColumnConfig from Shifu
      * @return MiningSchema for model
      */
     private MiningSchema createModelMiningSchema(List<ColumnConfig> columnConfigList) {
         MiningSchema miningSchema = new MiningSchema();
 
-        for (ColumnConfig columnConfig : columnConfigList) {
-            if ( columnConfig.isFinalSelect() || columnConfig.isTarget() ) {
+        for(ColumnConfig columnConfig: columnConfigList) {
+            if(columnConfig.isFinalSelect() || columnConfig.isTarget()) {
                 MiningField miningField = new MiningField();
 
                 miningField.setName(FieldName.create(columnConfig.getColumnName()));
                 miningField.setOptype(getOptype(columnConfig));
 
-                if ( columnConfig.isFinalSelect() ) {
+                if(columnConfig.isFinalSelect()) {
                     miningField.setUsageType(FieldUsageType.ACTIVE);
-                } else if (columnConfig.isTarget()) {
+                } else if(columnConfig.isTarget()) {
                     miningField.setUsageType(FieldUsageType.TARGET);
                 }
 
@@ -194,18 +203,20 @@ public class PMMLTranslator {
     /**
      * Create ModelStats for model. The needed info are all from ColumnConfig list
      * Only final select column will be added into ModelStats
-     * @param columnConfigList List of @ColumnConfig from Shifu
+     * 
+     * @param columnConfigList
+     *            List of @ColumnConfig from Shifu
      * @return ModelStats for model
      */
     private ModelStats createModelMiningStats(List<ColumnConfig> columnConfigList) {
         ModelStats modelStats = new ModelStats();
 
-        for (ColumnConfig columnConfig : columnConfigList) {
-            if ( columnConfig.isFinalSelect() ) {
+        for(ColumnConfig columnConfig: columnConfigList) {
+            if(columnConfig.isFinalSelect()) {
                 UnivariateStats univariateStats = new UnivariateStats();
                 univariateStats.setField(FieldName.create(columnConfig.getColumnName()));
 
-                if (columnConfig.isCategorical()) {
+                if(columnConfig.isCategorical()) {
                     DiscrStats discrStats = new DiscrStats();
 
                     Array countArray = createCountArray(columnConfig);
@@ -230,16 +241,17 @@ public class PMMLTranslator {
     /**
      * Create LocalTransformations for model. The needed info are all from ColumnConfig list
      * Only final select column will be added into LocalTransformations
-     * @param columnConfigList List of @ColumnConfig from Shifu
+     * 
+     * @param columnConfigList
+     *            List of @ColumnConfig from Shifu
      * @return LocalTransformations for model
      */
     private LocalTransformations createLocalTransformations(List<ColumnConfig> columnConfigList, double cutoff) {
         LocalTransformations localTransformations = new LocalTransformations();
-        for (ColumnConfig config : columnConfigList) {
-            if (config.isFinalSelect()) {
-                localTransformations.withDerivedFields(
-                        config.isCategorical() ? createCategoricalDerivedField(config, cutoff) : createNumericalDerivedField(config, cutoff)
-                );
+        for(ColumnConfig config: columnConfigList) {
+            if(config.isFinalSelect()) {
+                localTransformations.withDerivedFields(config.isCategorical() ? createCategoricalDerivedField(config,
+                        cutoff) : createNumericalDerivedField(config, cutoff));
             }
         }
         return localTransformations;
@@ -247,8 +259,11 @@ public class PMMLTranslator {
 
     /**
      * Create @DerivedField for categorical variable
-     * @param config - ColumnConfig for categorical variable
-     * @param cutoff - cutoff for normalization
+     * 
+     * @param config
+     *            - ColumnConfig for categorical variable
+     * @param cutoff
+     *            - cutoff for normalization
      * @return DerivedField for variable
      */
     private DerivedField createCategoricalDerivedField(ColumnConfig config, double cutoff) {
@@ -264,7 +279,7 @@ public class PMMLTranslator {
         String missingValue = "0.0";
 
         InlineTable inlineTable = new InlineTable();
-        for (int i = 0; i < config.getBinCategory().size(); i++) {
+        for(int i = 0; i < config.getBinCategory().size(); i++) {
             String cval = config.getBinCategory().get(i);
             String dval = Normalizer.normalize(config, cval, cutoff).toString();
 
@@ -275,56 +290,59 @@ public class PMMLTranslator {
             origin.setTextContent(cval);
 
             inlineTable.withRows(new Row().withContent(origin).withContent(out));
-            if ( StringUtils.isBlank(cval) ){
+            if(StringUtils.isBlank(cval)) {
                 missingValue = dval;
             }
         }
 
-        MapValues mapValues = new MapValues("out").withDataType(DataType.DOUBLE)
-                .withDefaultValue(defaultValue)
+        MapValues mapValues = new MapValues("out").withDataType(DataType.DOUBLE).withDefaultValue(defaultValue)
                 .withFieldColumnPairs(new FieldColumnPair(new FieldName(config.getColumnName()), ELEMENT_ORIGIN))
-                .withInlineTable(inlineTable)
-                .withMapMissingTo(missingValue);
+                .withInlineTable(inlineTable).withMapMissingTo(missingValue);
 
-        return new DerivedField(OpType.CONTINUOUS, DataType.DOUBLE)
-                .withName(FieldName.create(config.getColumnName() + ZSCORE_POSTFIX))
-                .withExpression(mapValues);
+        return new DerivedField(OpType.CONTINUOUS, DataType.DOUBLE).withName(
+                FieldName.create(config.getColumnName() + ZSCORE_POSTFIX)).withExpression(mapValues);
     }
 
     /**
      * Create @DerivedField for numerical variable
-     * @param config - ColumnConfig for numerical variable
-     * @param cutoff - cutoff of normalization
+     * 
+     * @param config
+     *            - ColumnConfig for numerical variable
+     * @param cutoff
+     *            - cutoff of normalization
      * @return DerivedField for variable
      */
     private DerivedField createNumericalDerivedField(ColumnConfig config, double cutoff) {
 
-        //added capping logic to linearNorm
+        // added capping logic to linearNorm
         LinearNorm from = new LinearNorm().withOrig(config.getMean() - config.getStdDev() * cutoff).withNorm(-cutoff);
         LinearNorm to = new LinearNorm().withOrig(config.getMean() + config.getStdDev() * cutoff).withNorm(cutoff);
-        NormContinuous normContinuous = new NormContinuous(FieldName.create(config.getColumnName())).
-                withLinearNorms(from, to).withMapMissingTo(0.0).withOutliers(OutlierTreatmentMethodType.AS_EXTREME_VALUES);
+        NormContinuous normContinuous = new NormContinuous(FieldName.create(config.getColumnName()))
+                .withLinearNorms(from, to).withMapMissingTo(0.0)
+                .withOutliers(OutlierTreatmentMethodType.AS_EXTREME_VALUES);
 
-        //derived field name is consisted of FieldName and "_zscl"
-        return new DerivedField(OpType.CONTINUOUS, DataType.DOUBLE).
-                withName(FieldName.create(config.getColumnName() + ZSCORE_POSTFIX)).withExpression(normContinuous);
+        // derived field name is consisted of FieldName and "_zscl"
+        return new DerivedField(OpType.CONTINUOUS, DataType.DOUBLE).withName(
+                FieldName.create(config.getColumnName() + ZSCORE_POSTFIX)).withExpression(normContinuous);
     }
 
     /**
      * Create @ConStats for numerical variable
-     * @param columnConfig - ColumnConfig to generate ConStats
+     * 
+     * @param columnConfig
+     *            - ColumnConfig to generate ConStats
      * @return ConStats for variable
      */
     private ContStats createConStats(ColumnConfig columnConfig) {
         ContStats conStats = new ContStats();
 
         List<Interval> intervals = new ArrayList<Interval>();
-        for (int i = 0; i < columnConfig.getBinBoundary().size(); i++) {
+        for(int i = 0; i < columnConfig.getBinBoundary().size(); i++) {
             Interval interval = new Interval();
             interval.setClosure(Interval.Closure.OPEN_CLOSED);
             interval.setLeftMargin(columnConfig.getBinBoundary().get(i));
 
-            if (i == columnConfig.getBinBoundary().size() - 1) {
+            if(i == columnConfig.getBinBoundary().size() - 1) {
                 interval.setRightMargin(Double.POSITIVE_INFINITY);
             } else {
                 interval.setRightMargin(columnConfig.getBinBoundary().get(i + 1));
@@ -341,7 +359,8 @@ public class PMMLTranslator {
         extensionMap.put("BinWeightedCountPos", columnConfig.getBinWeightedPos().toString());
         extensionMap.put("BinWeightedCountNeg", columnConfig.getBinWeightedNeg().toString());
         extensionMap.put("BinPosRate", columnConfig.getBinPosRate().toString());
-        extensionMap.put("BinWOE", calculateWoe(columnConfig.getBinCountPos(), columnConfig.getBinCountNeg()).toString());
+        extensionMap.put("BinWOE", calculateWoe(columnConfig.getBinCountPos(), columnConfig.getBinCountNeg())
+                .toString());
         extensionMap.put("KS", Double.toString(columnConfig.getKs()));
         extensionMap.put("IV", Double.toString(columnConfig.getIv()));
         conStats.withExtensions(createExtensions(extensionMap));
@@ -351,8 +370,11 @@ public class PMMLTranslator {
 
     /**
      * Generate Woe data from positive and negative counts
-     * @param binCountPos - positive count list
-     * @param binCountNeg - negative count list
+     * 
+     * @param binCountPos
+     *            - positive count list
+     * @param binCountNeg
+     *            - negative count list
      * @return Woe value list
      */
     private List<Double> calculateWoe(List<Integer> binCountPos, List<Integer> binCountNeg) {
@@ -361,12 +383,12 @@ public class PMMLTranslator {
         double sumPos = 0.0;
         double sumNeg = 0.0;
 
-        for (int i = 0; i < binCountPos.size(); i++) {
+        for(int i = 0; i < binCountPos.size(); i++) {
             sumPos += binCountPos.get(i);
             sumNeg += binCountNeg.get(i);
         }
 
-        for (int i = 0; i < binCountPos.size(); i++) {
+        for(int i = 0; i < binCountPos.size(); i++) {
             woe.add(Math.log((binCountPos.get(i) / sumPos + EPS) / (binCountNeg.get(i) / sumNeg + EPS)));
         }
 
@@ -375,7 +397,9 @@ public class PMMLTranslator {
 
     /**
      * Create @NumericInfo for numerical variable
-     * @param columnConfig - ColumnConfig for numerical variable
+     * 
+     * @param columnConfig
+     *            - ColumnConfig for numerical variable
      * @return NumericInfo for variable
      */
     private NumericInfo createNumericInfo(ColumnConfig columnConfig) {
@@ -392,7 +416,9 @@ public class PMMLTranslator {
 
     /**
      * Create common extension list from ColumnConfig
-     * @param columnConfig - ColumnConfig to create extension
+     * 
+     * @param columnConfig
+     *            - ColumnConfig to create extension
      * @return extension list
      */
     private List<Extension> createExtensions(ColumnConfig columnConfig) {
@@ -409,17 +435,19 @@ public class PMMLTranslator {
 
     /**
      * Create extension list from HashMap
-     * @param extensionMap the <String,String> map to create extension list
+     * 
+     * @param extensionMap
+     *            the <String,String> map to create extension list
      * @return extension list
      */
     private List<Extension> createExtensions(Map<String, String> extensionMap) {
         List<Extension> extensions = new ArrayList<Extension>();
 
-        for (String key : extensionMap.keySet()) {
+        for(Map.Entry<String, String> entry: extensionMap.entrySet()) {
+            String key = entry.getKey();
             Extension extension = new Extension();
             extension.setName(key);
-            extension.setValue(extensionMap.get(key));
-
+            extension.setValue(entry.getValue());
             extensions.add(extension);
         }
 
@@ -428,14 +456,16 @@ public class PMMLTranslator {
 
     /**
      * Create @Array for numerical variable
-     * @param columnConfig - ColumnConfig for numerical variable
+     * 
+     * @param columnConfig
+     *            - ColumnConfig for numerical variable
      * @return Array for numerical variable ( positive count + negative count )
      */
     private Array createCountArray(ColumnConfig columnConfig) {
         Array countAllArray = new Array();
 
         List<Integer> binCountAll = new ArrayList<Integer>(columnConfig.getBinCountPos().size());
-        for (int i = 0; i < binCountAll.size(); i++) {
+        for(int i = 0; i < binCountAll.size(); i++) {
             binCountAll.add(columnConfig.getBinCountPos().get(i) + columnConfig.getBinCountNeg().get(i));
         }
 
@@ -448,17 +478,19 @@ public class PMMLTranslator {
 
     /**
      * Get @OpType from ColumnConfig
-     *      Meta Column -> ORDINAL
-     *      Target Column -> CATEGORICAL
-     *      Categorical Column -> CATEGORICAL
-     *      Numerical Column -> CONTINUOUS
-     * @param columnConfig - ColumnConfig for variable
+     * Meta Column -> ORDINAL
+     * Target Column -> CATEGORICAL
+     * Categorical Column -> CATEGORICAL
+     * Numerical Column -> CONTINUOUS
+     * 
+     * @param columnConfig
+     *            - ColumnConfig for variable
      * @return OpType
      */
     private OpType getOptype(ColumnConfig columnConfig) {
-        if (columnConfig.isMeta()) {
+        if(columnConfig.isMeta()) {
             return OpType.ORDINAL;
-        } else if (columnConfig.isTarget()) {
+        } else if(columnConfig.isTarget()) {
             return OpType.CATEGORICAL;
         } else {
             return (columnConfig.isCategorical() ? OpType.CATEGORICAL : OpType.CONTINUOUS);
@@ -467,9 +499,11 @@ public class PMMLTranslator {
 
     /**
      * Get DataType from OpType
-     *      CONTINUOUS -> DOUBLE
-     *      Other -> STRING
-     * @param optype OpType
+     * CONTINUOUS -> DOUBLE
+     * Other -> STRING
+     * 
+     * @param optype
+     *            OpType
      * @return DataType
      */
     private DataType getDataType(OpType optype) {
@@ -478,7 +512,9 @@ public class PMMLTranslator {
 
     /**
      * Create @Targets from @ModelConfig
-     * @param modelConfig - ModelConfig from Shifu
+     * 
+     * @param modelConfig
+     *            - ModelConfig from Shifu
      * @return Targets that includes positive tags and negative tags
      */
     public Targets createTargets(ModelConfig modelConfig) {
@@ -491,7 +527,7 @@ public class PMMLTranslator {
 
         List<TargetValue> targetValueList = new ArrayList<TargetValue>();
 
-        for (String posTagValue : modelConfig.getPosTags()) {
+        for(String posTagValue: modelConfig.getPosTags()) {
             TargetValue pos = new TargetValue();
             pos.setValue(posTagValue);
             pos.setDisplayValue("Positive");
@@ -499,7 +535,7 @@ public class PMMLTranslator {
             targetValueList.add(pos);
         }
 
-        for (String negTagValue : modelConfig.getNegTags()) {
+        for(String negTagValue: modelConfig.getNegTags()) {
             TargetValue neg = new TargetValue();
             neg.setValue(negTagValue);
             neg.setDisplayValue("Negative");
@@ -516,16 +552,17 @@ public class PMMLTranslator {
 
     /**
      * Create the normalized output for model, since the final score should be 0 ~ 1000, instead of 0.o ~ 1.0
+     * 
      * @return @Output for model
      */
     private Output createNormalizedOutput() {
         Output output = new Output();
 
-        output.withOutputFields(
-                createOutputField(RAW_RESULT, OpType.CONTINUOUS, DataType.DOUBLE, ResultFeatureType.PREDICTED_VALUE));
+        output.withOutputFields(createOutputField(RAW_RESULT, OpType.CONTINUOUS, DataType.DOUBLE,
+                ResultFeatureType.PREDICTED_VALUE));
 
-        OutputField finalResult = createOutputField(FINAL_RESULT,
-                OpType.CONTINUOUS, DataType.DOUBLE, ResultFeatureType.TRANSFORMED_VALUE);
+        OutputField finalResult = createOutputField(FINAL_RESULT, OpType.CONTINUOUS, DataType.DOUBLE,
+                ResultFeatureType.TRANSFORMED_VALUE);
         finalResult.withExpression(createApplyFunc());
 
         output.withOutputFields(finalResult);
@@ -535,10 +572,15 @@ public class PMMLTranslator {
 
     /**
      * Create the output field, and set the field name, operation type, data type and feature type
-     * @param fieldName - the name of output field
-     * @param opType - operation type
-     * @param dataType - data type
-     * @param feature - result feature type
+     * 
+     * @param fieldName
+     *            - the name of output field
+     * @param opType
+     *            - operation type
+     * @param dataType
+     *            - data type
+     * @param feature
+     *            - result feature type
      * @return @OutputField
      */
     private OutputField createOutputField(String fieldName, OpType opType, DataType dataType, ResultFeatureType feature) {
@@ -552,6 +594,7 @@ public class PMMLTranslator {
 
     /**
      * Create the apply expression for final output, the function is "round"
+     * 
      * @return @Apply
      */
     private Apply createApplyFunc() {

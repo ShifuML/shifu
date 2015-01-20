@@ -109,11 +109,12 @@ public class DataPrepareWorker extends AbstractWorkerActor {
             DataPrepareStatsResult rt = convertRawDataIntoValueObject(partData.getRawDataList(), columnVoListMap);
             int totalMsgCnt = partData.getTotalMsgCnt();
 
-            for(Integer columnNum: columnVoListMap.keySet()) {
+            for(Map.Entry<Integer, List<ValueObject>> entry: columnVoListMap.entrySet()) {
+                Integer columnNum = entry.getKey();
                 columnNumToActorMap.get(columnNum).tell(
-                        new StatsValueObjectMessage(totalMsgCnt, columnNum, columnVoListMap.get(columnNum), rt
-                                .getMissingMap().containsKey(columnNum) ? rt.getMissingMap().get(columnNum) : 0,
-                                rt.getTotal()), getSelf());
+                        new StatsValueObjectMessage(totalMsgCnt, columnNum, entry.getValue(), rt.getMissingMap()
+                                .containsKey(columnNum) ? rt.getMissingMap().get(columnNum) : 0, rt.getTotal()),
+                        getSelf());
             }
         } else if(message instanceof RunModelResultMessage) {
             RunModelResultMessage msg = (RunModelResultMessage) message;

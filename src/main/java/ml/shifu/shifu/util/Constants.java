@@ -138,6 +138,10 @@ public interface Constants {
     public static final String SHIFU_DEFAULT_VARSEL_SE_MULTI = "false";
 
     public static final String SHIFU_VARSEL_SE_MULTI = "shifu.varsel.se.multi";
+    
+    public static final String SHIFU_VARSEL_SE_MULTI_THREAD = "shifu.varsel.se.multi.thread";
+    
+    public static final int SHIFU_DEFAULT_VARSEL_SE_MULTI_THREAD = 6;
 
     public static final String WRAPPER_BY_REMOVE = "R";
 
@@ -162,6 +166,7 @@ public interface Constants {
     public static final long EVAL_COUNTER_WEIGHT_SCALE = 1000l;
     
     public static final String COUNTER_RECORDS = "RECORDS";
-
+    
+    public static final String SHIFU_VARSELECT_SE_OUTPUT_NAME = "se";
 
 }

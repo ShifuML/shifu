@@ -38,13 +38,13 @@ public class PMMLUtils {
 
 
     public static List<Extension> createExtensions(Map<String, String> extensionMap) {
-
         List<Extension> extensions = new ArrayList<Extension>();
 
-        for (String key : extensionMap.keySet()) {
+        for(Map.Entry<String, String> entry: extensionMap.entrySet()) {
+            String key = entry.getKey();
             Extension extension = new Extension();
             extension.setName(key);
-            extension.setValue(extensionMap.get(key));
+            extension.setValue(entry.getValue());
             extensions.add(extension);
         }
 
