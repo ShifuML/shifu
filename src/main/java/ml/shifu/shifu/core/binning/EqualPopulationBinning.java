@@ -305,7 +305,7 @@ public class EqualPopulationBinning extends AbstractBinning<Double> {
                 tmp = tmp.next();
             }
             
-            return s + chu.getHcnt() / 2;
+            return s + chu.getHcnt() / 2d;
         } else if ( tmp == this.tail ) {
             double sum = 0.0;
             tmp = this.header;

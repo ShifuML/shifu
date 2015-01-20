@@ -15,11 +15,10 @@
  */
 package ml.shifu.shifu.container;
 
-import ml.shifu.shifu.core.Binning.BinningDataType;
-
+import java.io.Serializable;
 import java.util.Comparator;
 
-import scala.Serializable;
+import ml.shifu.shifu.core.Binning.BinningDataType;
 
 /**
  * data input object
@@ -64,8 +63,10 @@ public class ValueObject {
         }
     }
 
-    public static class WeightValueObjectComparator implements Comparator<ValueObject> {
+    public static class WeightValueObjectComparator implements Comparator<ValueObject>, Serializable {
 
+        private static final long serialVersionUID = -2312088241656723511L;
+        
         private BinningDataType type;
 
         public WeightValueObjectComparator(BinningDataType type) {

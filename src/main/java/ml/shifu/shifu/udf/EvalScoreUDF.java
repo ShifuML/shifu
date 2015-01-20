@@ -198,7 +198,7 @@ public class EvalScoreUDF extends AbstractTrainerUDF<Tuple> {
             }
 
             return new Schema(new Schema.FieldSchema("EvalScore", tupleSchema, DataType.TUPLE));
-        } catch (Exception e) {
+        } catch (IOException e) {
             log.error("Error in outputSchema", e);
             return null;
         }
