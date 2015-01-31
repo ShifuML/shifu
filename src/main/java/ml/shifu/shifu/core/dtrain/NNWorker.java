@@ -20,6 +20,7 @@ import java.io.IOException;
 import java.util.List;
 import java.util.Properties;
 
+import ml.shifu.guagua.GuaguaRuntimeException;
 import ml.shifu.guagua.io.GuaguaFileSplit;
 import ml.shifu.guagua.mapreduce.GuaguaLineRecordReader;
 import ml.shifu.guagua.mapreduce.GuaguaWritableAdapter;
@@ -147,6 +148,7 @@ public class NNWorker extends
     /**
      * Create memory data set object
      */
+    @SuppressWarnings("unused")
     private void initMemoryDataSet() {
         this.trainingData = new BasicMLDataSet();
         this.testingData = new BasicMLDataSet();
@@ -175,8 +177,8 @@ public class NNWorker extends
     }
 
     @Override
-    public void init(WorkerContext<NNParams, NNParams> workerContext) {
-        loadConfigFiles(workerContext.getProps());
+    public void init(WorkerContext<NNParams, NNParams> context) {
+        loadConfigFiles(context.getProps());
 
         Integer epochsPerIterationInteger = this.modelConfig.getTrain().getEpochsPerIteration();
         this.epochsPerIteration = epochsPerIterationInteger == null ? 1 : epochsPerIterationInteger.intValue();
@@ -187,8 +189,7 @@ public class NNWorker extends
         this.outputNodeCount = inputOutputIndex[1];
         this.candidateCount = inputOutputIndex[2];
 
-        this.isDry = Boolean.TRUE.toString().equalsIgnoreCase(
-                workerContext.getProps().getProperty(NNConstants.NN_DRY_TRAIN));
+        this.isDry = Boolean.TRUE.toString().equalsIgnoreCase(context.getProps().getProperty(NNConstants.NN_DRY_TRAIN));
 
         if(isOnDisk()) {
             LOG.info("NNWorker is loading data into disk.");
@@ -197,9 +198,35 @@ public class NNWorker extends
             } catch (IOException e) {
                 throw new RuntimeException(e);
             }
+            // cannot find a good place to close these two data set, using Shutdown hook
+            Runtime.getRuntime().addShutdownHook(new Thread(new Runnable() {
+                @Override
+                public void run() {
+                    ((BufferedMLDataSet) (NNWorker.this.trainingData)).close();
+                    ((BufferedMLDataSet) (NNWorker.this.testingData)).close();
+                }
+            }));
         } else {
             LOG.info("NNWorker is loading data into memory.");
-            initMemoryDataSet();
+            double memoryFraction = Double.valueOf(context.getProps().getProperty("guagua.data.memoryFraction", "0.5"));
+            long memoryStoreSize = (long) (Runtime.getRuntime().maxMemory() * memoryFraction);
+            double crossValidationRate = this.modelConfig.getCrossValidationRate();
+            try {
+                this.trainingData = new MemoryDiskMLDataSet((long) (memoryStoreSize * (1 - crossValidationRate)),
+                        NNUtils.getTrainingFile().toString(), this.inputNodeCount, this.outputNodeCount);
+                this.testingData = new MemoryDiskMLDataSet((long) (memoryStoreSize * crossValidationRate), NNUtils
+                        .getTestingFile().toString(), this.inputNodeCount, this.outputNodeCount);
+                // cannot find a good place to close these two data set, using Shutdown hook
+                Runtime.getRuntime().addShutdownHook(new Thread(new Runnable() {
+                    @Override
+                    public void run() {
+                        ((MemoryDiskMLDataSet) (NNWorker.this.trainingData)).close();
+                        ((MemoryDiskMLDataSet) (NNWorker.this.testingData)).close();
+                    }
+                }));
+            } catch (IOException e) {
+                throw new GuaguaRuntimeException(e);
+            }
         }
     }
 
@@ -274,7 +301,7 @@ public class NNWorker extends
             flatSpot[i] = flat.getActivationFunctions()[i] instanceof ActivationSigmoid ? 0.1 : 0.0;
         }
 
-        this.gradient = new Gradient(flat, training.openAdditional(), flatSpot, new LinearErrorFunction());
+        this.gradient = new Gradient(flat, training, flatSpot, new LinearErrorFunction());
     }
 
     private NNParams buildEmptyNNParams(WorkerContext<NNParams, NNParams> workerContext) {
@@ -291,6 +318,9 @@ public class NNWorker extends
         if(isOnDisk()) {
             ((BufferedMLDataSet) this.trainingData).endLoad();
             ((BufferedMLDataSet) this.testingData).endLoad();
+        } else {
+            ((MemoryDiskMLDataSet) this.trainingData).endLoad();
+            ((MemoryDiskMLDataSet) this.testingData).endLoad();
         }
         LOG.info("    - # Records of the Master Data Set: {}.", this.count);
         LOG.info("    - Bagging Sample Rate: {}.", this.modelConfig.getBaggingSampleRate());
