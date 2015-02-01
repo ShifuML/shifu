@@ -119,12 +119,17 @@ public class Gradient {
 
     /**
      * Construct a gradient worker.
-     *
-     * @param theNetwork  The network to train.
-     * @param theOwner    The owner that is doing the training.
-     * @param theTraining The training data.
-     * @param theLow      The low index to use in the training data.
-     * @param theHigh     The high index to use in the training data.
+     * 
+     * @param theNetwork
+     *            The network to train.
+     * @param theOwner
+     *            The owner that is doing the training.
+     * @param theTraining
+     *            The training data.
+     * @param theLow
+     *            The low index to use in the training data.
+     * @param theHigh
+     *            The high index to use in the training data.
      */
     public Gradient(final FlatNetwork theNetwork, final MLDataSet theTraining, final double[] flatSpot, ErrorFunction ef) {
         this.network = theNetwork;
@@ -149,10 +154,13 @@ public class Gradient {
 
     /**
      * Process one training set element.
-     *
-     * @param input The network input.
-     * @param ideal The ideal values.
-     * @param s     The significance.
+     * 
+     * @param input
+     *            The network input.
+     * @param ideal
+     *            The ideal values.
+     * @param s
+     *            The significance.
      */
     private void process(final double[] input, final double[] ideal, double s) {
         this.getNetwork().compute(input, this.actual);
@@ -160,20 +168,21 @@ public class Gradient {
         this.errorCalculation.updateError(this.actual, ideal, s);
         this.errorFunction.calculateError(ideal, actual, this.getLayerDelta());
 
-        for (int i = 0; i < this.actual.length; i++) {
+        for(int i = 0; i < this.actual.length; i++) {
             this.getLayerDelta()[i] = ((this.getNetwork().getActivationFunctions()[0].derivativeFunction(
                     this.layerSums[i], this.layerOutput[i]) + this.flatSpot[0])) * (this.getLayerDelta()[i] * s);
         }
 
-        for (int i = this.getNetwork().getBeginTraining(); i < this.getNetwork().getEndTraining(); i++) {
+        for(int i = this.getNetwork().getBeginTraining(); i < this.getNetwork().getEndTraining(); i++) {
             processLevel(i);
         }
     }
 
     /**
      * Process one level.
-     *
-     * @param currentLevel The level.
+     * 
+     * @param currentLevel
+     *            The level.
      */
     private void processLevel(final int currentLevel) {
         final int fromLayerIndex = this.layerIndex[currentLevel + 1];
@@ -187,12 +196,12 @@ public class Gradient {
 
         // handle weights
         int yi = fromLayerIndex;
-        for (int y = 0; y < fromLayerSize; y++) {
+        for(int y = 0; y < fromLayerSize; y++) {
             final double output = this.layerOutput[yi];
             double sum = 0;
             int xi = toLayerIndex;
             int wi = index + y;
-            for (int x = 0; x < toLayerSize; x++) {
+            for(int x = 0; x < toLayerSize; x++) {
                 this.gradients[wi] += output * this.getLayerDelta()[xi];
                 sum += this.weights[wi] * this.getLayerDelta()[xi];
                 wi += fromLayerSize;
@@ -214,7 +223,7 @@ public class Gradient {
             this.errorCalculation.reset();
             Arrays.fill(this.gradients, 0.0);
 
-            for (int i = 0; i < this.training.getRecordCount(); i++) {
+            for(int i = 0; i < this.training.getRecordCount(); i++) {
                 this.training.getRecord(i, this.pair);
                 process(this.pair.getInputArray(), this.pair.getIdealArray(), pair.getSignificance());
             }
@@ -251,7 +260,8 @@ public class Gradient {
     }
 
     /**
-     * @param weights the weights to set
+     * @param weights
+     *            the weights to set
      */
     public void setWeights(double[] weights) {
         this.weights = weights;
