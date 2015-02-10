@@ -481,7 +481,7 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
         switch(modelConfig.getBasic().getRunMode()) {
             case mapred:
                 worker.bufferedComputeConfusionMatrixAndPerformance(this.pigPosTags, this.pigNegTags, this.pigPosWeightTags,
-                        this.pigNegWeightTags);
+                        this.pigNegWeightTags, this.evalRecords);
                 break;
             default:
                 worker.computeConfusionMatrix();

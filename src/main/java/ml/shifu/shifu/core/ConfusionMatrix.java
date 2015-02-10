@@ -114,14 +114,16 @@ public class ConfusionMatrix {
         return CommonUtils.getHeaders(pathHeader, "|", sourceType);
     }
     
-    public void bufferedComputeConfusionMatrixAndPerformance(long pigPosTags, long pigNegTags, double pigPosWeightTags,
-            double pigNegWeightTags) throws IOException {
+    public void bufferedComputeConfusionMatrixAndPerformance(long pigPosTags,
+                                                             long pigNegTags,
+                                                             double pigPosWeightTags,
+                                                             double pigNegWeightTags,
+                                                             long records) throws IOException {
         PathFinder pathFinder = new PathFinder(modelConfig);
 
         SourceType sourceType = evalConfig.getDataSet().getSource();
 
-        List<Scanner> scanners = ShifuFileUtils.getDataScanners(pathFinder.getEvalScorePath(evalConfig, sourceType),
-                sourceType);
+        List<Scanner> scanners = ShifuFileUtils.getDataScanners(pathFinder.getEvalScorePath(evalConfig, sourceType), sourceType);
 
         int numBucket = evalConfig.getPerformanceBucketNum();
         boolean isWeight = evalConfig.getDataSet().getWeightColumnName() != null;
@@ -153,9 +155,8 @@ public class ConfusionMatrix {
         prevCmo.setWeightedFn(pigPosWeightTags);
         prevCmo.setWeightedTn(pigNegWeightTags);
         prevCmo.setScore(1000);
-        
-        po = setPerformanceObject(prevCmo);
-    	log.info("first_po:"+po.binLowestScore);
+
+        po = PerformanceEvaluator.setPerformanceObject(prevCmo);
         // hit rate == NaN
         po.precision = 1.0;
         po.weightedPrecision = 1.0;
@@ -170,48 +171,43 @@ public class ConfusionMatrix {
         FPRWeightList.add(po);
         catchRateWeightList.add(po);
         gainWeightList.add(po);
-
-
         for (Scanner scanner : scanners) {
-            while(scanner.hasNext()) {
-                if((++cnt) % 100000 == 0) {
+            while (scanner.hasNext()) {
+                if ((++cnt) % 100000 == 0) {
                     log.info("Loaded " + cnt + " records.");
                 }
 
                 String[] raw = scanner.nextLine().split("\\|");
 
-                if((!isDir) && cnt == 1) {
+                if ((!isDir) && cnt == 1) {
                     // if the evaluation score file is the local file, skip the
                     // first line since we add
                     continue;
                 }
 
                 String tag = raw[targetColumnIndex];
-                if(StringUtils.isBlank(tag)) {
-                    if(rd.nextDouble() < 0.01) {
+                if (StringUtils.isBlank(tag)) {
+                    if (rd.nextDouble() < 0.01) {
                         log.warn("Empty target value!!");
                     }
 
                     continue;
                 }
-
                 double weight = 1.0d;
-                if(this.weightColumnIndex > 0) {
+                if (this.weightColumnIndex > 0) {
                     try {
                         weight = Double.parseDouble(raw[1]);
                     } catch (NumberFormatException e) {
                         // Do nothing
                     }
                 }
-
                 double score = 0.0;
                 try {
                     score = Double.parseDouble(raw[scoreColumnIndex]);
                 } catch (NumberFormatException e) {
                     // user set the score column wrong ?
-                    if(rd.nextDouble() < 0.05) {
-                        log.warn("The score column - {} is not integer. Is score column set correctly?",
-                                raw[scoreColumnIndex]);
+                    if (rd.nextDouble() < 0.05) {
+                        log.warn("The score column - {} is not integer. Is score column set correctly?", raw[scoreColumnIndex]);
                     }
                     continue;
                 }
@@ -219,7 +215,7 @@ public class ConfusionMatrix {
                 ConfusionMatrixObject cmo = new ConfusionMatrixObject(prevCmo);
 
                 // TODO enable scaling factor
-                if(posTags.contains(tag)) {
+                if (posTags.contains(tag)) {
                     // Positive Instance
                     cmo.setTp(cmo.getTp() + 1);
                     cmo.setFn(cmo.getFn() - 1);
@@ -234,65 +230,63 @@ public class ConfusionMatrix {
                 }
 
                 cmo.setScore(score);
-                
+
                 ConfusionMatrixObject object = cmo;
-                po = setPerformanceObject(object);
-                    log.info("po_lowestscore:"+po.binLowestScore);
-                    if(po.fpr >= fpBin * binCapacity) {
-                        po.binNum = fpBin++;
-                        FPRList.add(po);
-                    }
+                po = PerformanceEvaluator.setPerformanceObject(object);
+                if (po.fpr >= fpBin * binCapacity) {
+                    po.binNum = fpBin++;
+                    FPRList.add(po);
+                }
 
-                    if(po.recall >= tpBin * binCapacity) {
-                        po.binNum = tpBin++;
-                        catchRateList.add(po);
-                    }
+                if (po.recall >= tpBin * binCapacity) {
+                    po.binNum = tpBin++;
+                    catchRateList.add(po);
+                }
 
-                    // prevent 99%
-//                    if((double) (i + 1) / records >= gainBin * binCapacity) {
-//                        po.binNum = gainBin++;
-//                        gainList.add(po);
-//                    }
+                // prevent 99%
+                if ((double) (i + 1) / records >= gainBin * binCapacity) {
+                    po.binNum = gainBin++;
+                    gainList.add(po);
+                }
 
-                    if(po.weightedFpr >= fpWeightBin * binCapacity) {
-                        po.binNum = fpWeightBin++;
-                        FPRWeightList.add(po);
-                    }
+                if (po.weightedFpr >= fpWeightBin * binCapacity) {
+                    po.binNum = fpWeightBin++;
+                    FPRWeightList.add(po);
+                }
 
-                    if(po.weightedRecall >= tpWeightBin * binCapacity) {
-                        po.binNum = tpWeightBin++;
-                        catchRateWeightList.add(po);
-                    }
+                if (po.weightedRecall >= tpWeightBin * binCapacity) {
+                    po.binNum = tpWeightBin++;
+                    catchRateWeightList.add(po);
+                }
 
-                    if((object.getWeightedTp() + object.getWeightedFp() + 1) / object.getWeightedTotal() >= gainWeightBin
-                            * binCapacity) {
-                        po.binNum = gainWeightBin++;
-                        gainWeightList.add(po);
+                if ((object.getWeightedTp() + object.getWeightedFp() + 1) / object.getWeightedTotal() >= gainWeightBin * binCapacity) {
+                    po.binNum = gainWeightBin++;
+                    gainWeightList.add(po);
 
-                    }
+                }
                 i++;
                 prevCmo = cmo;
-        }
+            }
             scanner.close();
         }
         log.info("Totally loaded " + cnt + " records.");
-        
-        logResult(FPRList, "Bucketing False Positive Rate");
 
-        if(isWeight) {
-            logResult(FPRWeightList, "Bucketing Weighted False Positive Rate");
+        PerformanceEvaluator.logResult(FPRList, "Bucketing False Positive Rate");
+
+        if (isWeight) {
+            PerformanceEvaluator.logResult(FPRWeightList, "Bucketing Weighted False Positive Rate");
         }
 
-        logResult(catchRateList, "Bucketing Catch Rate");
+        PerformanceEvaluator.logResult(catchRateList, "Bucketing Catch Rate");
 
-        if(isWeight) {
-            logResult(catchRateWeightList, "Bucketing Weighted Catch Rate");
+        if (isWeight) {
+            PerformanceEvaluator.logResult(catchRateWeightList, "Bucketing Weighted Catch Rate");
         }
 
-        logResult(gainList, "Bucketing Action rate");
+        PerformanceEvaluator.logResult(gainList, "Bucketing Action rate");
 
-        if(isWeight) {
-            logResult(gainWeightList, "Bucketing Weighted action rate");
+        if (isWeight) {
+            PerformanceEvaluator.logResult(gainWeightList, "Bucketing Weighted action rate");
         }
 
         PerformanceResult result = new PerformanceResult();
@@ -304,90 +298,90 @@ public class ConfusionMatrix {
         result.weightedRoc = FPRWeightList;
         result.gains = gainList;
         result.weightedGains = gainWeightList;
-        
+
         Writer writer = null;
         try {
-            writer = ShifuFileUtils.getWriter(pathFinder.getEvalPerformancePath(evalConfig, evalConfig.getDataSet()
-                    .getSource()), evalConfig.getDataSet().getSource());
+            writer = ShifuFileUtils.getWriter(pathFinder.getEvalPerformancePath(evalConfig, evalConfig.getDataSet().getSource()), evalConfig
+                    .getDataSet().getSource());
             JSONUtils.writeValue(writer, result);
         } catch (IOException e) {
             IOUtils.closeQuietly(writer);
         }
-        if(cnt == 0) {
+        if (cnt == 0) {
             log.error("No score read, the EvalScore did not genernate or is null file");
             throw new ShifuException(ShifuErrorCode.ERROR_EVALSCORE);
         }
 
     }
     
-    private void logResult(List<PerformanceObject> list, String info) {
-        DecimalFormat df = new DecimalFormat("#.####");
-
-        String formatString = "%10s %18s %10s %18s %15s %18s %10s %11s %10s";
-
-        log.info("Start print: " + info);
-
-        log.info(String.format(formatString, "ActionRate", "WeightedActionRate", "Recall", "WeightedRecall",
-                "Precision", "WeightedPrecision", "FPR", "WeightedFRP", "BinLowestScore"));
-
-        for(PerformanceObject po: list) {
-            log.info(String.format(formatString, df.format(po.actionRate), df.format(po.weightedActionRate),
-                    df.format(po.recall), df.format(po.weightedRecall), df.format(po.precision),
-                    df.format(po.weightedPrecision), df.format(po.fpr), df.format(po.weightedFpr), po.binLowestScore));
-        }
-
-    }
-    
-    private PerformanceObject setPerformanceObject(ConfusionMatrixObject confMatObject) {
-        PerformanceObject po = new PerformanceObject();
-
-        po.binLowestScore = confMatObject.getScore();
-        po.tp = confMatObject.getTp();
-        po.tn = confMatObject.getTn();
-        po.fp = confMatObject.getFp();
-        po.fn = confMatObject.getFn();
-
-        po.weightedTp = confMatObject.getWeightedTp();
-        po.weightedTn = confMatObject.getWeightedTn();
-        po.weightedFp = confMatObject.getWeightedFp();
-        po.weightedFn = confMatObject.getWeightedFn();
-
-        // Action Rate, TP + FP / Total;
-        po.actionRate = (confMatObject.getTp() + confMatObject.getFp()) / confMatObject.getTotal();
-
-        po.weightedActionRate = (confMatObject.getWeightedTp() + confMatObject.getWeightedFp())
-                / confMatObject.getWeightedTotal();
-
-        // recall = TP / (TP+FN)
-        po.recall = confMatObject.getTp() / (confMatObject.getTp() + confMatObject.getFn());
-
-        po.weightedRecall = confMatObject.getWeightedTp()
-                / (confMatObject.getWeightedTp() + confMatObject.getWeightedFn());
-
-        // precision = TP / (TP+FP)
-        po.precision = confMatObject.getTp() / (confMatObject.getTp() + confMatObject.getFp());
-
-        po.weightedPrecision = confMatObject.getWeightedTp()
-                / (confMatObject.getWeightedTp() + confMatObject.getWeightedFp());
-
-        // FPR, False Positive Rate (fp/(fp+tn))
-        po.fpr = confMatObject.getFp() / (confMatObject.getFp() + confMatObject.getTn());
-
-        po.weightedFpr = confMatObject.getWeightedFp()
-                / (confMatObject.getWeightedFp() + confMatObject.getWeightedTn());
-
-        // Lift tp / (number_action * (number_postive / all_unit))
-        po.liftUnit = confMatObject.getTp()
-                / ((confMatObject.getTp() + confMatObject.getFp()) * (confMatObject.getTp() + confMatObject.getFn()) / confMatObject
-                        .getTotal());
-
-        po.weightLiftUnit = confMatObject.getWeightedTp()
-                / ((confMatObject.getWeightedTp() + confMatObject.getWeightedFp())
-                        * (confMatObject.getWeightedTp() + confMatObject.getWeightedFn()) / confMatObject
-                            .getWeightedTotal());
-
-        return po;
-    }
+//    private void logResult(List<PerformanceObject> list, String info) {
+//        DecimalFormat df = new DecimalFormat("#.####");
+//
+//        String formatString = "%10s %18s %10s %18s %15s %18s %10s %11s %10s";
+//
+//        log.info("Start print: " + info);
+//
+//        log.info(String.format(formatString, "ActionRate", "WeightedActionRate", "Recall", "WeightedRecall",
+//                "Precision", "WeightedPrecision", "FPR", "WeightedFRP", "BinLowestScore"));
+//
+//        for(PerformanceObject po: list) {
+//            log.info(String.format(formatString, df.format(po.actionRate), df.format(po.weightedActionRate),
+//                    df.format(po.recall), df.format(po.weightedRecall), df.format(po.precision),
+//                    df.format(po.weightedPrecision), df.format(po.fpr), df.format(po.weightedFpr), po.binLowestScore));
+//        }
+//
+//    }
+//    
+//    private PerformanceObject setPerformanceObject(ConfusionMatrixObject confMatObject) {
+//        PerformanceObject po = new PerformanceObject();
+//
+//        po.binLowestScore = confMatObject.getScore();
+//        po.tp = confMatObject.getTp();
+//        po.tn = confMatObject.getTn();
+//        po.fp = confMatObject.getFp();
+//        po.fn = confMatObject.getFn();
+//
+//        po.weightedTp = confMatObject.getWeightedTp();
+//        po.weightedTn = confMatObject.getWeightedTn();
+//        po.weightedFp = confMatObject.getWeightedFp();
+//        po.weightedFn = confMatObject.getWeightedFn();
+//
+//        // Action Rate, TP + FP / Total;
+//        po.actionRate = (confMatObject.getTp() + confMatObject.getFp()) / confMatObject.getTotal();
+//
+//        po.weightedActionRate = (confMatObject.getWeightedTp() + confMatObject.getWeightedFp())
+//                / confMatObject.getWeightedTotal();
+//
+//        // recall = TP / (TP+FN)
+//        po.recall = confMatObject.getTp() / (confMatObject.getTp() + confMatObject.getFn());
+//
+//        po.weightedRecall = confMatObject.getWeightedTp()
+//                / (confMatObject.getWeightedTp() + confMatObject.getWeightedFn());
+//
+//        // precision = TP / (TP+FP)
+//        po.precision = confMatObject.getTp() / (confMatObject.getTp() + confMatObject.getFp());
+//
+//        po.weightedPrecision = confMatObject.getWeightedTp()
+//                / (confMatObject.getWeightedTp() + confMatObject.getWeightedFp());
+//
+//        // FPR, False Positive Rate (fp/(fp+tn))
+//        po.fpr = confMatObject.getFp() / (confMatObject.getFp() + confMatObject.getTn());
+//
+//        po.weightedFpr = confMatObject.getWeightedFp()
+//                / (confMatObject.getWeightedFp() + confMatObject.getWeightedTn());
+//
+//        // Lift tp / (number_action * (number_postive / all_unit))
+//        po.liftUnit = confMatObject.getTp()
+//                / ((confMatObject.getTp() + confMatObject.getFp()) * (confMatObject.getTp() + confMatObject.getFn()) / confMatObject
+//                        .getTotal());
+//
+//        po.weightLiftUnit = confMatObject.getWeightedTp()
+//                / ((confMatObject.getWeightedTp() + confMatObject.getWeightedFp())
+//                        * (confMatObject.getWeightedTp() + confMatObject.getWeightedFn()) / confMatObject
+//                            .getWeightedTotal());
+//
+//        return po;
+//    }
 
     public void bufferedComputeConfusionMatrix(long pigPosTags, long pigNegTags, double pigPosWeightTags,
             double pigNegWeightTags) throws IOException {
@@ -467,7 +461,6 @@ public class ConfusionMatrix {
                 }
 
                 ConfusionMatrixObject cmo = new ConfusionMatrixObject(prevCmo);
-
                 // TODO enable scaling factor
                 if(posTags.contains(tag)) {
                     // Positive Instance
@@ -496,14 +489,9 @@ public class ConfusionMatrix {
             log.error("No score read, the EvalScore did not genernate or is null file");
             throw new ShifuException(ShifuErrorCode.ERROR_EVALSCORE);
         }
-
         confMatWriter.close();
     }
     
-    private void reviewPerformance(ConfusionMatrixObject cmo){
-    	
-    }
-
     public void computeConfusionMatrix() throws IOException {
 
         PathFinder pathFinder = new PathFinder(modelConfig);
