@@ -498,7 +498,7 @@
                 <maven.test.skip>true</maven.test.skip>
             </properties>
         </profile>
-        <!-- For hadoop 2.2.0cluster -->
+        <!-- For hadoop 2.2.0 cluster -->
         <profile>
             <id>hdp-yarn</id>
             <activation>

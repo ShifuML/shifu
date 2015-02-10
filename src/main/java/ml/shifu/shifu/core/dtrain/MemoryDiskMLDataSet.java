@@ -157,9 +157,6 @@ public class MemoryDiskMLDataSet implements MLDataSet {
      * fill will then be opened for reading.
      */
     public final void endLoad() {
-        System.out.println("this.memoryCount: " + this.memoryCount + ";" + "this.diskCount: " + this.diskCount + " "
-                + this.maxByteSize + " " + this.byteSize + " " + this.getRecordCount());
-
         if(this.diskDataSet != null) {
             ((BufferedMLDataSet) this.diskDataSet).endLoad();
         }
