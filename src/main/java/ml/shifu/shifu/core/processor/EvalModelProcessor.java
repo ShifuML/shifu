@@ -402,7 +402,6 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
         runConfusionMatrix(evalConfig);
        // runPerformance(evalConfig);
     }
-
     
     /**
      * Use akka to run model evaluation
@@ -477,7 +476,7 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
         ConfusionMatrix worker = new ConfusionMatrix(modelConfig, config);
         switch(modelConfig.getBasic().getRunMode()) {
             case mapred:
-                worker.\(this.pigPosTags, this.pigNegTags, this.pigPosWeightTags,
+                worker.bufferedComputeConfusionMatrixAndPerformance(this.pigPosTags, this.pigNegTags, this.pigPosWeightTags,
                         this.pigNegWeightTags, this.evalRecords);
                 break;
             default:
