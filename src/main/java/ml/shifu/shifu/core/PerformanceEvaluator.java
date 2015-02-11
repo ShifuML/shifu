@@ -198,7 +198,7 @@ public class PerformanceEvaluator {
         }
     }
 
-    private PerformanceObject setPerformanceObject(ConfusionMatrixObject confMatObject) {
+    static PerformanceObject setPerformanceObject(ConfusionMatrixObject confMatObject) {
         PerformanceObject po = new PerformanceObject();
 
         po.binLowestScore = confMatObject.getScore();
@@ -354,7 +354,7 @@ public class PerformanceEvaluator {
         return result;
     }
 
-    private void logResult(List<PerformanceObject> list, String info) {
+    static void logResult(List<PerformanceObject> list, String info) {
         DecimalFormat df = new DecimalFormat("#.####");
 
         String formatString = "%10s %18s %10s %18s %15s %18s %10s %11s %10s";

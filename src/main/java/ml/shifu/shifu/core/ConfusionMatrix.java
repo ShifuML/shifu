@@ -17,6 +17,8 @@ package ml.shifu.shifu.core;
 
 import java.io.BufferedWriter;
 import java.io.IOException;
+import java.io.Writer;
+import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
@@ -24,15 +26,20 @@ import java.util.Scanner;
 
 import ml.shifu.shifu.container.ConfusionMatrixObject;
 import ml.shifu.shifu.container.ModelResultObject;
+import ml.shifu.shifu.container.PerformanceObject;
 import ml.shifu.shifu.container.obj.EvalConfig;
 import ml.shifu.shifu.container.obj.ModelConfig;
+import ml.shifu.shifu.container.obj.PerformanceResult;
 import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
 import ml.shifu.shifu.exception.ShifuErrorCode;
 import ml.shifu.shifu.exception.ShifuException;
 import ml.shifu.shifu.fs.PathFinder;
 import ml.shifu.shifu.fs.ShifuFileUtils;
 import ml.shifu.shifu.util.CommonUtils;
+import ml.shifu.shifu.util.Constants;
+import ml.shifu.shifu.util.JSONUtils;
 
+import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang.ArrayUtils;
 import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
@@ -105,6 +112,206 @@ public class ConfusionMatrix {
         }
 
         return CommonUtils.getHeaders(pathHeader, "|", sourceType);
+    }
+    
+    public void bufferedComputeConfusionMatrixAndPerformance(long pigPosTags,
+                                                             long pigNegTags,
+                                                             double pigPosWeightTags,
+                                                             double pigNegWeightTags,
+                                                             long records) throws IOException {
+        PathFinder pathFinder = new PathFinder(modelConfig);
+
+        SourceType sourceType = evalConfig.getDataSet().getSource();
+
+        List<Scanner> scanners = ShifuFileUtils.getDataScanners(pathFinder.getEvalScorePath(evalConfig, sourceType), sourceType);
+
+        int numBucket = evalConfig.getPerformanceBucketNum();
+        boolean isWeight = evalConfig.getDataSet().getWeightColumnName() != null;
+        boolean isDir = ShifuFileUtils.isDir(pathFinder.getEvalScorePath(evalConfig, sourceType), sourceType);
+        List<PerformanceObject> FPRList = new ArrayList<PerformanceObject>(numBucket + 1);
+        List<PerformanceObject> catchRateList = new ArrayList<PerformanceObject>(numBucket + 1);
+        List<PerformanceObject> gainList = new ArrayList<PerformanceObject>(numBucket + 1);
+
+        List<PerformanceObject> FPRWeightList = new ArrayList<PerformanceObject>(numBucket + 1);
+        List<PerformanceObject> catchRateWeightList = new ArrayList<PerformanceObject>(numBucket + 1);
+        List<PerformanceObject> gainWeightList = new ArrayList<PerformanceObject>(numBucket + 1);
+
+        int fpBin = 1, tpBin = 1, gainBin = 1, fpWeightBin = 1, tpWeightBin = 1, gainWeightBin = 1;
+        double binCapacity = 1.0 / numBucket;
+        PerformanceObject po = null;
+        int i = 0;
+        log.info("The size of scanner is {}", scanners.size());
+
+        int cnt = 0;
+        List<String> posTags = modelConfig.getPosTags(evalConfig);
+
+        ConfusionMatrixObject prevCmo = new ConfusionMatrixObject();
+        prevCmo.setTp(0.0);
+        prevCmo.setFp(0.0);
+        prevCmo.setFn(pigPosTags);
+        prevCmo.setTn(pigNegTags);
+        prevCmo.setWeightedTp(0.0);
+        prevCmo.setWeightedFp(0.0);
+        prevCmo.setWeightedFn(pigPosWeightTags);
+        prevCmo.setWeightedTn(pigNegWeightTags);
+        prevCmo.setScore(1000);
+
+        po = PerformanceEvaluator.setPerformanceObject(prevCmo);
+        // hit rate == NaN
+        po.precision = 1.0;
+        po.weightedPrecision = 1.0;
+
+        // lift = NaN
+        po.liftUnit = 0.0;
+        po.weightLiftUnit = 0.0;
+
+        FPRList.add(po);
+        catchRateList.add(po);
+        gainList.add(po);
+        FPRWeightList.add(po);
+        catchRateWeightList.add(po);
+        gainWeightList.add(po);
+        for (Scanner scanner : scanners) {
+            while (scanner.hasNext()) {
+                if ((++cnt) % 100000 == 0) {
+                    log.info("Loaded " + cnt + " records.");
+                }
+
+                String[] raw = scanner.nextLine().split("\\|");
+
+                if ((!isDir) && cnt == 1) {
+                    // if the evaluation score file is the local file, skip the
+                    // first line since we add
+                    continue;
+                }
+
+                String tag = raw[targetColumnIndex];
+                if (StringUtils.isBlank(tag)) {
+                    if (rd.nextDouble() < 0.01) {
+                        log.warn("Empty target value!!");
+                    }
+
+                    continue;
+                }
+                double weight = 1.0d;
+                if (this.weightColumnIndex > 0) {
+                    try {
+                        weight = Double.parseDouble(raw[1]);
+                    } catch (NumberFormatException e) {
+                        // Do nothing
+                    }
+                }
+                double score = 0.0;
+                try {
+                    score = Double.parseDouble(raw[scoreColumnIndex]);
+                } catch (NumberFormatException e) {
+                    // user set the score column wrong ?
+                    if (rd.nextDouble() < 0.05) {
+                        log.warn("The score column - {} is not integer. Is score column set correctly?", raw[scoreColumnIndex]);
+                    }
+                    continue;
+                }
+
+                ConfusionMatrixObject cmo = new ConfusionMatrixObject(prevCmo);
+
+                // TODO enable scaling factor
+                if (posTags.contains(tag)) {
+                    // Positive Instance
+                    cmo.setTp(cmo.getTp() + 1);
+                    cmo.setFn(cmo.getFn() - 1);
+                    cmo.setWeightedTp(cmo.getWeightedTp() + weight * 1.0);
+                    cmo.setWeightedFn(cmo.getWeightedFn() - weight * 1.0);
+                } else {
+                    // Negative Instance
+                    cmo.setFp(cmo.getFp() + 1);
+                    cmo.setTn(cmo.getTn() - 1);
+                    cmo.setWeightedFp(cmo.getWeightedFp() + weight * 1.0);
+                    cmo.setWeightedTn(cmo.getWeightedTn() - weight * 1.0);
+                }
+
+                cmo.setScore(score);
+
+                ConfusionMatrixObject object = cmo;
+                po = PerformanceEvaluator.setPerformanceObject(object);
+                if (po.fpr >= fpBin * binCapacity) {
+                    po.binNum = fpBin++;
+                    FPRList.add(po);
+                }
+
+                if (po.recall >= tpBin * binCapacity) {
+                    po.binNum = tpBin++;
+                    catchRateList.add(po);
+                }
+
+                // prevent 99%
+                if ((double) (i + 1) / records >= gainBin * binCapacity) {
+                    po.binNum = gainBin++;
+                    gainList.add(po);
+                }
+
+                if (po.weightedFpr >= fpWeightBin * binCapacity) {
+                    po.binNum = fpWeightBin++;
+                    FPRWeightList.add(po);
+                }
+
+                if (po.weightedRecall >= tpWeightBin * binCapacity) {
+                    po.binNum = tpWeightBin++;
+                    catchRateWeightList.add(po);
+                }
+
+                if ((object.getWeightedTp() + object.getWeightedFp() + 1) / object.getWeightedTotal() >= gainWeightBin * binCapacity) {
+                    po.binNum = gainWeightBin++;
+                    gainWeightList.add(po);
+
+                }
+                i++;
+                prevCmo = cmo;
+            }
+            scanner.close();
+        }
+        log.info("Totally loaded " + cnt + " records.");
+
+        PerformanceEvaluator.logResult(FPRList, "Bucketing False Positive Rate");
+
+        if (isWeight) {
+            PerformanceEvaluator.logResult(FPRWeightList, "Bucketing Weighted False Positive Rate");
+        }
+
+        PerformanceEvaluator.logResult(catchRateList, "Bucketing Catch Rate");
+
+        if (isWeight) {
+            PerformanceEvaluator.logResult(catchRateWeightList, "Bucketing Weighted Catch Rate");
+        }
+
+        PerformanceEvaluator.logResult(gainList, "Bucketing Action rate");
+
+        if (isWeight) {
+            PerformanceEvaluator.logResult(gainWeightList, "Bucketing Weighted action rate");
+        }
+
+        PerformanceResult result = new PerformanceResult();
+
+        result.version = Constants.version;
+        result.pr = catchRateList;
+        result.weightedPr = catchRateWeightList;
+        result.roc = FPRList;
+        result.weightedRoc = FPRWeightList;
+        result.gains = gainList;
+        result.weightedGains = gainWeightList;
+
+        Writer writer = null;
+        try {
+            writer = ShifuFileUtils.getWriter(pathFinder.getEvalPerformancePath(evalConfig, evalConfig.getDataSet().getSource()), evalConfig
+                    .getDataSet().getSource());
+            JSONUtils.writeValue(writer, result);
+        } catch (IOException e) {
+            IOUtils.closeQuietly(writer);
+        }
+        if (cnt == 0) {
+            log.error("No score read, the EvalScore did not genernate or is null file");
+            throw new ShifuException(ShifuErrorCode.ERROR_EVALSCORE);
+        }
+
     }
 
     public void bufferedComputeConfusionMatrix(long pigPosTags, long pigNegTags, double pigPosWeightTags,
@@ -185,7 +392,6 @@ public class ConfusionMatrix {
                 }
 
                 ConfusionMatrixObject cmo = new ConfusionMatrixObject(prevCmo);
-
                 // TODO enable scaling factor
                 if(posTags.contains(tag)) {
                     // Positive Instance
@@ -214,10 +420,9 @@ public class ConfusionMatrix {
             log.error("No score read, the EvalScore did not genernate or is null file");
             throw new ShifuException(ShifuErrorCode.ERROR_EVALSCORE);
         }
-
         confMatWriter.close();
     }
-
+    
     public void computeConfusionMatrix() throws IOException {
 
         PathFinder pathFinder = new PathFinder(modelConfig);

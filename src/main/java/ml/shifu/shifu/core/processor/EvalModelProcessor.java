@@ -400,9 +400,9 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
         // TODO runConfusionMatrix write and runPerformance read, merge together
         // TODO code refacter because of several magic numbers and not good name functions ...
         runConfusionMatrix(evalConfig);
-        runPerformance(evalConfig);
+       // runPerformance(evalConfig);
     }
-
+    
     /**
      * Use akka to run model evaluation
      * 
@@ -474,11 +474,10 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
      */
     private void runConfusionMatrix(EvalConfig config) throws IOException {
         ConfusionMatrix worker = new ConfusionMatrix(modelConfig, config);
-        // worker.computeConfusionMatrix();
         switch(modelConfig.getBasic().getRunMode()) {
             case mapred:
-                worker.bufferedComputeConfusionMatrix(this.pigPosTags, this.pigNegTags, this.pigPosWeightTags,
-                        this.pigNegWeightTags);
+                worker.bufferedComputeConfusionMatrixAndPerformance(this.pigPosTags, this.pigNegTags, this.pigPosWeightTags,
+                        this.pigNegWeightTags, this.evalRecords);
                 break;
             default:
                 worker.computeConfusionMatrix();
