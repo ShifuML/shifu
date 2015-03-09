@@ -18,7 +18,6 @@ package ml.shifu.shifu.core;
 import java.io.BufferedWriter;
 import java.io.IOException;
 import java.io.Writer;
-import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
