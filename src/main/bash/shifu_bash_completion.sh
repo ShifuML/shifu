@@ -15,7 +15,7 @@
 # limitations under the License.
 
 ############################################################################################
-# Bash Competion for shifu command
+# Bash Completion for shifu command
 # To use it:
 #  1. Set shifu command to PATH env: 
 #     export PATH=${PATH}:${SHIFU_HOME}/bin/

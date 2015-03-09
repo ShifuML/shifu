@@ -15,7 +15,8 @@
  */
 REGISTER '$path_jar'
 
-SET default_parallel $num_parallel;
+SET pig.exec.reducers.max 999;
+SET pig.exec.reducers.bytes.per.reducer 536870912;
 SET mapred.map.tasks.speculative.execution true;
 SET mapred.reduce.tasks.speculative.execution true;
 SET mapred.job.queue.name $queue_name;
