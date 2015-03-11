@@ -322,6 +322,7 @@ public final class CommonUtils {
      */
     public static String getFullPigHeaderColumnName(String raw) {
         return raw == null ? raw : raw.replaceAll(Constants.PIG_COLUMN_SEPARATOR, Constants.PIG_FULL_COLUMN_SEPARATOR);
+        // return raw;
     }
 
     /**
