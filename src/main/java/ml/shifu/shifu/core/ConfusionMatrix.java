@@ -110,7 +110,7 @@ public class ConfusionMatrix {
             pathHeader = pathFinder.getEvalScorePath(evalConfig, sourceType);
         }
 
-        return CommonUtils.getHeaders(pathHeader, "|", sourceType);
+        return CommonUtils.getHeaders(pathHeader, "|", sourceType, false);
     }
     
     public void bufferedComputeConfusionMatrixAndPerformance(long pigPosTags,
