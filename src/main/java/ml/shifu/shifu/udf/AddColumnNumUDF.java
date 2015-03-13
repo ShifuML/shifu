@@ -37,32 +37,26 @@ import java.util.Random;
  * 		(column-id, column-value, column-tag, column-score)
  * 		(column-id, column-value, column-tag, column-score)
  * 		...
- *  }
+ * }
  */
 public class AddColumnNumUDF extends AbstractTrainerUDF<DataBag> {
-    private List<String> negTags;
-    // private List<String> posTags;
 
-    //private int scoreColumnNum;
-    //private boolean withScore = false;
+    private List<String> negTags;
 
     private Random random = new Random(System.currentTimeMillis());
 
     private int weightedColumnNum = -1;
 
-    public AddColumnNumUDF(String source, String pathModelConfig, String pathColumnConfig, String withScoreStr) throws Exception {
+    public AddColumnNumUDF(String source, String pathModelConfig, String pathColumnConfig, String withScoreStr)
+            throws Exception {
         super(source, pathModelConfig, pathColumnConfig);
 
-		/*if (withScoreStr.equalsIgnoreCase("true")) {
-			this.withScore = true;
-		}*/
-
-        if (!StringUtils.isEmpty(this.modelConfig.getDataSet().getWeightColumnName())) {
+        if(!StringUtils.isEmpty(this.modelConfig.getDataSet().getWeightColumnName())) {
             String weightColumnName = this.modelConfig.getDataSet().getWeightColumnName();
 
-            for (int i = 0; i < this.columnConfigList.size(); i++) {
+            for(int i = 0; i < this.columnConfigList.size(); i++) {
                 ColumnConfig config = this.columnConfigList.get(i);
-                if (config.getColumnName().equals(weightColumnName)) {
+                if(config.getColumnName().equals(weightColumnName)) {
                     this.weightedColumnNum = i;
                     break;
                 }
@@ -70,45 +64,42 @@ public class AddColumnNumUDF extends AbstractTrainerUDF<DataBag> {
         }
 
         negTags = modelConfig.getNegTags();
-        // posTags = modelConfig.getPosTags();
     }
 
     public DataBag exec(Tuple input) throws IOException {
-
         DataBag bag = BagFactory.getInstance().newDefaultBag();
         TupleFactory tupleFactory = TupleFactory.getInstance();
 
-        if (input == null) {
+        if(input == null) {
             return null;
         }
 
         int size = input.size();
 
-        if (size == 0 || input.size() < this.columnConfigList.size()) {
+        if(size == 0 || input.size() < this.columnConfigList.size()) {
             log.info("the input size - " + input.size() + ", while column size - " + columnConfigList.size());
             throw new ShifuException(ShifuErrorCode.ERROR_NO_EQUAL_COLCONFIG);
         }
 
-        if (input.get(tagColumnNum) == null) {
+        if(input.get(tagColumnNum) == null) {
             throw new ShifuException(ShifuErrorCode.ERROR_NO_TARGET_COLUMN);
         }
 
         String tag = input.get(tagColumnNum).toString();
 
         Double rate = modelConfig.getBinningSampleRate();
-        if (modelConfig.isBinningSampleNegOnly()) {
-            if (negTags.contains(tag) && random.nextDouble() > rate) {
+        if(modelConfig.isBinningSampleNegOnly()) {
+            if(negTags.contains(tag) && random.nextDouble() > rate) {
                 return null;
             }
         } else {
-            if (random.nextDouble() > rate) {
+            if(random.nextDouble() > rate) {
                 return null;
             }
         }
 
-        for (int i = 0; i < size; i++) {
-
-            if (modelConfig.isCategoricalDisabled()) {
+        for(int i = 0; i < size; i++) {
+            if(modelConfig.isCategoricalDisabled()) {
                 try {
                     Double.valueOf(input.get(i).toString());
                 } catch (Exception e) {
@@ -117,7 +108,7 @@ public class AddColumnNumUDF extends AbstractTrainerUDF<DataBag> {
             }
 
             ColumnConfig config = columnConfigList.get(i);
-            if (config.isCandidate()) {
+            if(config.isCandidate()) {
                 Tuple tuple = tupleFactory.newTuple(5);
                 tuple.set(0, i);
 
@@ -127,16 +118,16 @@ public class AddColumnNumUDF extends AbstractTrainerUDF<DataBag> {
                 // Set Tag
                 tuple.set(2, tag);
 
-                //set weights
-                if (weightedColumnNum != -1) {
+                // set weights
+                if(weightedColumnNum != -1) {
                     try {
                         tuple.set(3, Double.valueOf(input.get(weightedColumnNum).toString()));
                     } catch (NumberFormatException e) {
                         tuple.set(3, 1.0);
                     }
 
-                    if (i == weightedColumnNum) {
-                        //weight and its column, set to 1
+                    if(i == weightedColumnNum) {
+                        // weight and its column, set to 1
                         tuple.set(3, 1.0);
                     }
                 } else {
@@ -145,7 +136,7 @@ public class AddColumnNumUDF extends AbstractTrainerUDF<DataBag> {
 
                 // add random seed for distribution
                 tuple.set(4, Math.abs(random.nextInt() % 300));
-                
+
                 bag.add(tuple);
             }
         }

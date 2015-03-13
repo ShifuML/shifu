@@ -240,7 +240,7 @@ public class NNWorker extends
         // For dry option, return empty result.
         // For first iteration, we don't do anything, just wait for master to update weights in next iteration. This
         // make sure all workers in the 1st iteration to get the same weights.
-        if(this.isDry || workerContext.getCurrentIteration() == 1) {
+        if(this.isDry || workerContext.isFirstIteration()) {
             return buildEmptyNNParams(workerContext);
         }
 
