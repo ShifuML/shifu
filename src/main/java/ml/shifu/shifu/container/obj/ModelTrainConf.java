@@ -46,6 +46,8 @@ public class ModelTrainConf {
 
     private Boolean trainOnDisk = Boolean.FALSE;
     private Boolean fixInitInput = Boolean.FALSE;
+    
+    private Boolean isContinuousEnabled = Boolean.FALSE; 
 
     private String algorithm = "NN";
 
@@ -199,6 +201,20 @@ public class ModelTrainConf {
      */
     public void setEpochsPerIteration(Integer epochsPerIteration) {
         this.epochsPerIteration = epochsPerIteration;
+    }
+
+    /**
+     * @return the isContinuousEnabled
+     */
+    public Boolean getIsContinuousEnabled() {
+        return isContinuousEnabled;
+    }
+
+    /**
+     * @param isContinuousEnabled the isContinuousEnabled to set
+     */
+    public void setIsContinuousEnabled(Boolean isContinuousEnabled) {
+        this.isContinuousEnabled = isContinuousEnabled;
     }
 
 }

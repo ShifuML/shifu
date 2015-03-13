@@ -42,6 +42,7 @@ import org.apache.commons.collections.ListUtils;
 import org.apache.commons.compress.compressors.bzip2.BZip2CompressorInputStream;
 import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.fs.FSDataInputStream;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.pig.impl.util.JarManager;
@@ -231,7 +232,6 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
         if(isDebug()) {
             LOG.warn("Currently we haven't debug logic. It's the same as you don't set it.");
         }
-
     }
 
     protected void runDistributedTrain() throws IOException, InterruptedException, ClassNotFoundException {
@@ -244,9 +244,9 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
         prepareCommonParams(args, sourceType);
 
         // add tmp models folder to config
-        Path tmpModelsPath = ShifuFileUtils.getFileSystemBySourceType(sourceType).makeQualified(
-                new Path(super.getPathFinder().getPathBySourceType(
-                        new Path(Constants.TMP, Constants.DEFAULT_MODELS_TMP_FOLDER), sourceType)));
+        FileSystem fileSystem = ShifuFileUtils.getFileSystemBySourceType(sourceType);
+        Path tmpModelsPath = fileSystem.makeQualified(new Path(super.getPathFinder().getPathBySourceType(
+                new Path(Constants.TMP, Constants.DEFAULT_MODELS_TMP_FOLDER), sourceType)));
         args.add(String.format(NNConstants.MAPREDUCE_PARAM_FORMAT, NNConstants.NN_TMP_MODELS_FOLDER,
                 tmpModelsPath.toString()));
         int baggingNum = isForVarSelect ? 1 : super.getModelConfig().getBaggingNum();
@@ -266,8 +266,15 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
                     .getModelSetName(), i + 1));
             LOG.info("Start trainer with id: {}", (i + 1));
             String modelName = getModelName(i);
-            Path modelPath = ShifuFileUtils.getFileSystemBySourceType(sourceType).makeQualified(
-                    new Path(super.getPathFinder().getModelsPath(sourceType), modelName));
+            Path modelPath = fileSystem.makeQualified(new Path(super.getPathFinder().getModelsPath(sourceType),
+                    modelName));
+            if(!fileSystem.exists(modelPath)) {
+                localArgs.add(String.format(NNConstants.MAPREDUCE_PARAM_FORMAT, NNConstants.NN_CONTINUOUS_TRAINING,
+                        Boolean.FALSE.toString()));
+            } else {
+                localArgs.add(String.format(NNConstants.MAPREDUCE_PARAM_FORMAT, NNConstants.NN_CONTINUOUS_TRAINING,
+                        this.modelConfig.getTrain().getIsContinuousEnabled()));
+            }
             localArgs.add(String.format(NNConstants.MAPREDUCE_PARAM_FORMAT, NNConstants.GUAGUA_NN_OUTPUT,
                     modelPath.toString()));
             localArgs.add(String.format(NNConstants.MAPREDUCE_PARAM_FORMAT, NNConstants.NN_TRAINER_ID,
@@ -295,8 +302,8 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
         // copy model files at last.
         for(int i = 0; i < baggingNum; i++) {
             String modelName = getModelName(i);
-            Path modelPath = ShifuFileUtils.getFileSystemBySourceType(sourceType).makeQualified(
-                    new Path(super.getPathFinder().getModelsPath(sourceType), modelName));
+            Path modelPath = fileSystem.makeQualified(new Path(super.getPathFinder().getModelsPath(sourceType),
+                    modelName));
             copyModelToLocal(modelName, modelPath, sourceType);
         }
 
@@ -406,7 +413,7 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
         args.add(String.format(NNConstants.MAPREDUCE_PARAM_FORMAT, NNConstants.NN_DRY_TRAIN, isDryTrain()));
         // hard code set computation threshold for 40s. TODO, set it in shifuconfig.
         args.add(String.format(NNConstants.MAPREDUCE_PARAM_FORMAT, GuaguaConstants.GUAGUA_COMPUTATION_TIME_THRESHOLD,
-                40 * 1000l));
+                50 * 1000l));
         setHeapSizeAndSplitSize(args);
 
         // one can set guagua conf in shifuconfig
@@ -417,7 +424,6 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
                         .toString()));
             }
         }
-
     }
 
     private void setHeapSizeAndSplitSize(final List<String> args) {

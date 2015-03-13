@@ -85,4 +85,6 @@ public class NNConstants {
     public static final String NN_PROGRESS_FILE = "nn.progress.file";
 
     public static final int DEFAULT_JOIN_TIME = 3000;
+    
+    public static final String NN_CONTINUOUS_TRAINING = "nn.continuous.training";
 }
