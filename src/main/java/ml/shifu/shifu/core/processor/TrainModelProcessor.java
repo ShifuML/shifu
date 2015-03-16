@@ -20,6 +20,7 @@ import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Splitter;
 import ml.shifu.guagua.GuaguaConstants;
+import ml.shifu.guagua.GuaguaRuntimeException;
 import ml.shifu.guagua.mapreduce.GuaguaMapReduceClient;
 import ml.shifu.guagua.mapreduce.GuaguaMapReduceConstants;
 import ml.shifu.shifu.actor.AkkaSystemExecutor;
@@ -48,6 +49,7 @@ import org.apache.hadoop.io.IOUtils;
 import org.apache.pig.impl.util.JarManager;
 import org.apache.zookeeper.ZooKeeper;
 import org.encog.ml.data.MLDataSet;
+import org.encog.neural.networks.BasicNetwork;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -268,13 +270,8 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
             String modelName = getModelName(i);
             Path modelPath = fileSystem.makeQualified(new Path(super.getPathFinder().getModelsPath(sourceType),
                     modelName));
-            if(!fileSystem.exists(modelPath)) {
-                localArgs.add(String.format(NNConstants.MAPREDUCE_PARAM_FORMAT, NNConstants.NN_CONTINUOUS_TRAINING,
-                        Boolean.FALSE.toString()));
-            } else {
-                localArgs.add(String.format(NNConstants.MAPREDUCE_PARAM_FORMAT, NNConstants.NN_CONTINUOUS_TRAINING,
-                        this.modelConfig.getTrain().getIsContinuousEnabled()));
-            }
+
+            checkContinuousTraining(fileSystem, localArgs, modelPath);
             localArgs.add(String.format(NNConstants.MAPREDUCE_PARAM_FORMAT, NNConstants.GUAGUA_NN_OUTPUT,
                     modelPath.toString()));
             localArgs.add(String.format(NNConstants.MAPREDUCE_PARAM_FORMAT, NNConstants.NN_TRAINER_ID,
@@ -310,6 +307,43 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
         // copy temp model files
         copyTmpModelsToLocal(tmpModelsPath, sourceType);
         LOG.info("Distributed trainning finished in {}ms.", System.currentTimeMillis() - start);
+    }
+
+    private void checkContinuousTraining(FileSystem fileSystem, List<String> localArgs, Path modelPath)
+            throws IOException {
+        // if varselect d-training or no such existing models, directly to disable continuous training.
+        if(this.isForVarSelect) {
+            localArgs.add(String.format(NNConstants.MAPREDUCE_PARAM_FORMAT, NNConstants.NN_CONTINUOUS_TRAINING,
+                    Boolean.FALSE.toString()));
+            if(Boolean.TRUE.toString().equals(this.modelConfig.getTrain().getIsContinuousEnabled())) {
+                LOG.warn("For varSelect step, continous model training is always disabled.");
+            }
+        } else if(!fileSystem.exists(modelPath)) {
+            localArgs.add(String.format(NNConstants.MAPREDUCE_PARAM_FORMAT, NNConstants.NN_CONTINUOUS_TRAINING,
+                    Boolean.FALSE.toString()));
+            if(Boolean.TRUE.toString().equals(this.modelConfig.getTrain().getIsContinuousEnabled())) {
+                LOG.info("No existing model, model training will start from scratch.");
+            }
+        } else if(!inputOutputModelCheckSuccess(fileSystem, modelPath)) {
+            // TODO hidden layer size and activation functions should also be validated
+            localArgs.add(String.format(NNConstants.MAPREDUCE_PARAM_FORMAT, NNConstants.NN_CONTINUOUS_TRAINING,
+                    Boolean.FALSE.toString()));
+            if(Boolean.TRUE.toString().equals(this.modelConfig.getTrain().getIsContinuousEnabled())) {
+                // An exception is thrown to notice user wrong settings. directly disabled continuous training is not
+                // good because this condition sometimes is wrong setting.
+                throw new GuaguaRuntimeException(
+                        "Model input and output settings are not consistent with input and output columns settings, please check your model input and output or disable continuous model training.");
+            }
+        } else {
+            localArgs.add(String.format(NNConstants.MAPREDUCE_PARAM_FORMAT, NNConstants.NN_CONTINUOUS_TRAINING,
+                    this.modelConfig.getTrain().getIsContinuousEnabled()));
+        }
+    }
+
+    private boolean inputOutputModelCheckSuccess(FileSystem fileSystem, Path modelPath) throws IOException {
+        BasicNetwork model = NNUtils.loadModel(modelPath, fileSystem);
+        int[] outputCandidateCounts = NNUtils.getInputOutputCandidateCounts(getColumnConfigList());
+        return model.getInputCount() == outputCandidateCounts[0] && model.getOutputCount() == outputCandidateCounts[1];
     }
 
     private String getProgressLogFile(int i) {
@@ -411,7 +445,7 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
                         new Path(super.getPathFinder().getColumnConfigPath(sourceType)))));
         args.add(String.format(NNConstants.MAPREDUCE_PARAM_FORMAT, NNConstants.NN_MODELSET_SOURCE_TYPE, sourceType));
         args.add(String.format(NNConstants.MAPREDUCE_PARAM_FORMAT, NNConstants.NN_DRY_TRAIN, isDryTrain()));
-        // hard code set computation threshold for 40s. TODO, set it in shifuconfig.
+        // hard code set computation threshold for 50s. Can be changed in shifuconfig file
         args.add(String.format(NNConstants.MAPREDUCE_PARAM_FORMAT, GuaguaConstants.GUAGUA_COMPUTATION_TIME_THRESHOLD,
                 50 * 1000l));
         setHeapSizeAndSplitSize(args);
