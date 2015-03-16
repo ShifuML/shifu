@@ -315,20 +315,20 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
         if(this.isForVarSelect) {
             localArgs.add(String.format(NNConstants.MAPREDUCE_PARAM_FORMAT, NNConstants.NN_CONTINUOUS_TRAINING,
                     Boolean.FALSE.toString()));
-            if(Boolean.TRUE.toString().equals(this.modelConfig.getTrain().getIsContinuousEnabled())) {
+            if(Boolean.TRUE.toString().equals(this.modelConfig.getTrain().getIsContinuousEnabled().toString())) {
                 LOG.warn("For varSelect step, continous model training is always disabled.");
             }
         } else if(!fileSystem.exists(modelPath)) {
             localArgs.add(String.format(NNConstants.MAPREDUCE_PARAM_FORMAT, NNConstants.NN_CONTINUOUS_TRAINING,
                     Boolean.FALSE.toString()));
-            if(Boolean.TRUE.toString().equals(this.modelConfig.getTrain().getIsContinuousEnabled())) {
+            if(Boolean.TRUE.toString().equals(this.modelConfig.getTrain().getIsContinuousEnabled().toString())) {
                 LOG.info("No existing model, model training will start from scratch.");
             }
         } else if(!inputOutputModelCheckSuccess(fileSystem, modelPath)) {
             // TODO hidden layer size and activation functions should also be validated
             localArgs.add(String.format(NNConstants.MAPREDUCE_PARAM_FORMAT, NNConstants.NN_CONTINUOUS_TRAINING,
                     Boolean.FALSE.toString()));
-            if(Boolean.TRUE.toString().equals(this.modelConfig.getTrain().getIsContinuousEnabled())) {
+            if(Boolean.TRUE.toString().equals(this.modelConfig.getTrain().getIsContinuousEnabled().toString())) {
                 // An exception is thrown to notice user wrong settings. directly disabled continuous training is not
                 // good because this condition sometimes is wrong setting.
                 throw new GuaguaRuntimeException(
