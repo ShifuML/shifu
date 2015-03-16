@@ -30,12 +30,8 @@ import ml.shifu.shifu.core.alg.NNTrainer;
 import ml.shifu.shifu.fs.ShifuFileUtils;
 import ml.shifu.shifu.util.CommonUtils;
 
-import org.apache.commons.io.IOUtils;
-import org.apache.hadoop.fs.FSDataInputStream;
-import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.encog.neural.networks.BasicNetwork;
-import org.encog.persist.EncogDirectoryPersistence;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -106,28 +102,6 @@ public class NNMaster implements MasterComputable<NNParams, NNParams> {
      */
     private boolean isContinuousEnabled = false;
 
-    /**
-     * Load existing model. If no such model, return null.
-     */
-    private BasicNetwork loadModel(Path modelPath) throws IOException {
-        FileSystem fs = ShifuFileUtils.getFileSystemBySourceType(this.modelConfig.getDataSet().getSource());
-        if(!fs.exists(modelPath)) {
-            // no such existing model, return null.
-            return null;
-        }
-        BasicNetwork model = null;
-        FSDataInputStream stream = null;
-        try {
-            stream = fs.open(modelPath);
-            model = BasicNetwork.class.cast(EncogDirectoryPersistence.loadObject(stream));
-        } catch (RuntimeException e) {
-            throw new GuaguaRuntimeException("Only Neural Network so far supported in NNMaster.", e);
-        } finally {
-            IOUtils.closeQuietly(stream);
-        }
-        return model;
-    }
-
     @Override
     public NNParams compute(MasterContext<NNParams, NNParams> context) {
         // For first step, we not only initialize whole context but also return weights to master to make sure all
@@ -144,7 +118,8 @@ public class NNMaster implements MasterComputable<NNParams, NNParams> {
             } else {
                 try {
                     Path modelPath = new Path(context.getProps().getProperty(NNConstants.GUAGUA_NN_OUTPUT));
-                    BasicNetwork existingModel = loadModel(modelPath);
+                    BasicNetwork existingModel = NNUtils.loadModel(modelPath,
+                            ShifuFileUtils.getFileSystemBySourceType(this.modelConfig.getDataSet().getSource()));
                     if(existingModel == null) {
                         params = initWeights();
                         LOG.info("Starting to train model from scratch.");
