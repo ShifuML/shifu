@@ -168,5 +168,12 @@ public interface Constants {
     public static final String COUNTER_RECORDS = "RECORDS";
     
     public static final String SHIFU_VARSELECT_SE_OUTPUT_NAME = "se";
+    
+    //TODO xiaobin : convergence criteria constants
+    public static final String TRAIN_ERR_ONLY = "TRAIN_ERR_ONLY";
+    
+    public static final String VALID_ERR_ONLY = "VALID_ERR_ONLY";
+    
+    public static final String TRAIN_VALID_AVG_ERR = "TRAIN_VALID_AVG_ERR";
 
 }
