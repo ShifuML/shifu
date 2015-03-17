@@ -169,6 +169,6 @@ public interface Constants {
     
     public static final String SHIFU_VARSELECT_SE_OUTPUT_NAME = "se";
 
-    public static final Double DEFAULT_THRESHOLD = Double.valueOf(0.0d);
+    public static final Double DEFAULT_THRESHOLD = Double.valueOf(0.0);
 
 }
