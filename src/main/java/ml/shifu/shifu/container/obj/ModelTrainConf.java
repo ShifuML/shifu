@@ -45,9 +45,7 @@ public class ModelTrainConf {
     private Double validSetRate = Double.valueOf(0.2);
     private Integer numTrainEpochs = Integer.valueOf(100);
     private Integer epochsPerIteration = Integer.valueOf(1);
-
-    private String convergenceType = Constants.VALID_ERR_ONLY;
-    private Double threshold = Double.valueOf(10e-4);
+    private Double threshold = Double.valueOf(Constants.DEFAULT_THRESHOLD);
     
     private Boolean trainOnDisk = Boolean.FALSE;
     private Boolean fixInitInput = Boolean.FALSE;
@@ -204,14 +202,6 @@ public class ModelTrainConf {
      */
     public void setEpochsPerIteration(Integer epochsPerIteration) {
         this.epochsPerIteration = epochsPerIteration;
-    }
-
-    public String getConvergenceType() {
-        return convergenceType;
-    }
-
-    public void setConvergenceType(String convergenceType) {
-        this.convergenceType = convergenceType;
     }
 
     public Double getThreshold() {
