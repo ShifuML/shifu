@@ -91,7 +91,7 @@ public final class SizeEstimator {
             Object bean = ManagementFactory.newPlatformMXBeanProxy(server, hotSpotMBeanName, hotSpotMBeanClass);
             // TODO: We could use reflection on the VMOption returned ?
             return getVMMethod.invoke(bean, "UseCompressedOops").toString().contains("true");
-        } catch (Exception e) {
+        } catch (Throwable e) {
             return false;
         }
     }

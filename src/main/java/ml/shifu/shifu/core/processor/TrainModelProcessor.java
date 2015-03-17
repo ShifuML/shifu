@@ -311,28 +311,27 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
 
     private void checkContinuousTraining(FileSystem fileSystem, List<String> localArgs, Path modelPath)
             throws IOException {
-        // if varselect d-training or no such existing models, directly to disable continuous training.
-        if(this.isForVarSelect) {
-            localArgs.add(String.format(NNConstants.MAPREDUCE_PARAM_FORMAT, NNConstants.NN_CONTINUOUS_TRAINING,
-                    Boolean.FALSE.toString()));
-            if(Boolean.TRUE.toString().equals(this.modelConfig.getTrain().getIsContinuousEnabled().toString())) {
+        if(Boolean.TRUE.toString().equals(this.modelConfig.getTrain().getIsContinuousEnabled().toString())) {
+            // if varselect d-training or no such existing models, directly to disable continuous training.
+            if(this.isForVarSelect) {
+                localArgs.add(String.format(NNConstants.MAPREDUCE_PARAM_FORMAT, NNConstants.NN_CONTINUOUS_TRAINING,
+                        Boolean.FALSE.toString()));
                 LOG.warn("For varSelect step, continous model training is always disabled.");
-            }
-        } else if(!fileSystem.exists(modelPath)) {
-            localArgs.add(String.format(NNConstants.MAPREDUCE_PARAM_FORMAT, NNConstants.NN_CONTINUOUS_TRAINING,
-                    Boolean.FALSE.toString()));
-            if(Boolean.TRUE.toString().equals(this.modelConfig.getTrain().getIsContinuousEnabled().toString())) {
+            } else if(!fileSystem.exists(modelPath)) {
+                localArgs.add(String.format(NNConstants.MAPREDUCE_PARAM_FORMAT, NNConstants.NN_CONTINUOUS_TRAINING,
+                        Boolean.FALSE.toString()));
                 LOG.info("No existing model, model training will start from scratch.");
-            }
-        } else if(!inputOutputModelCheckSuccess(fileSystem, modelPath)) {
-            // TODO hidden layer size and activation functions should also be validated
-            localArgs.add(String.format(NNConstants.MAPREDUCE_PARAM_FORMAT, NNConstants.NN_CONTINUOUS_TRAINING,
-                    Boolean.FALSE.toString()));
-            if(Boolean.TRUE.toString().equals(this.modelConfig.getTrain().getIsContinuousEnabled().toString())) {
-                // An exception is thrown to notice user wrong settings. directly disabled continuous training is not
-                // good because this condition sometimes is wrong setting.
+            } else if(!inputOutputModelCheckSuccess(fileSystem, modelPath)) {
+                // TODO hidden layer size and activation functions should also be validated
+                localArgs.add(String.format(NNConstants.MAPREDUCE_PARAM_FORMAT, NNConstants.NN_CONTINUOUS_TRAINING,
+                        Boolean.FALSE.toString()));
+                // An exception is thrown to notice user wrong settings. directly disabled continuous training is
+                // not good because this condition sometimes is wrong setting.
                 throw new GuaguaRuntimeException(
                         "Model input and output settings are not consistent with input and output columns settings, please check your model input and output or disable continuous model training.");
+            } else {
+                localArgs.add(String.format(NNConstants.MAPREDUCE_PARAM_FORMAT, NNConstants.NN_CONTINUOUS_TRAINING,
+                        this.modelConfig.getTrain().getIsContinuousEnabled()));
             }
         } else {
             localArgs.add(String.format(NNConstants.MAPREDUCE_PARAM_FORMAT, NNConstants.NN_CONTINUOUS_TRAINING,
