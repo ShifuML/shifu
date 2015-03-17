@@ -195,6 +195,7 @@ public class ModelConfig {
         trainConf.setAlgorithm(alg.name());
         trainConf.setNumTrainEpochs(100);
         trainConf.setEpochsPerIteration(1);
+        trainConf.setThreshold(Constants.DEFAULT_THRESHOLD);
         trainConf.setParams(ModelTrainConf.createParamsByAlg(alg));
         modelConfig.setTrain(trainConf);
 
