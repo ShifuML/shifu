@@ -17,9 +17,11 @@ package ml.shifu.shifu.container.obj;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+
 import ml.shifu.shifu.core.alg.LogisticRegressionTrainer;
 import ml.shifu.shifu.core.alg.NNTrainer;
 import ml.shifu.shifu.core.alg.SVMTrainer;
+import ml.shifu.shifu.util.Constants;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -35,7 +37,7 @@ public class ModelTrainConf {
     public static enum ALGORITHM {
         NN, LR, SVM, DT
     }
-
+    
     private Integer baggingNum = Integer.valueOf(5);
     // change it to false by default, as we often don't use this way.
     private Boolean baggingWithReplacement = Boolean.FALSE;
@@ -44,6 +46,9 @@ public class ModelTrainConf {
     private Integer numTrainEpochs = Integer.valueOf(100);
     private Integer epochsPerIteration = Integer.valueOf(1);
 
+    private String convergenceType = Constants.VALID_ERR_ONLY;
+    private Double threshold = Double.valueOf(10e-4);
+    
     private Boolean trainOnDisk = Boolean.FALSE;
     private Boolean fixInitInput = Boolean.FALSE;
 
@@ -199,6 +204,22 @@ public class ModelTrainConf {
      */
     public void setEpochsPerIteration(Integer epochsPerIteration) {
         this.epochsPerIteration = epochsPerIteration;
+    }
+
+    public String getConvergenceType() {
+        return convergenceType;
+    }
+
+    public void setConvergenceType(String convergenceType) {
+        this.convergenceType = convergenceType;
+    }
+
+    public Double getThreshold() {
+        return threshold;
+    }
+
+    public void setThreshold(Double threshold) {
+        this.threshold = threshold;
     }
 
 }
