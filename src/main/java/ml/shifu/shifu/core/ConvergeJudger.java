@@ -15,14 +15,21 @@
  */
 package ml.shifu.shifu.core;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 /**
  * @author xiaobzheng
  * 
  */
 public class ConvergeJudger {
 
+    private static final Logger log = LoggerFactory.getLogger(ConvergeJudger.class);
+            
     public static boolean isConverged(Double train_err, Double test_err, Double threshold) {
-        return (train_err + test_err) / 2 <= threshold ? true : false;
+        Double avgErr = (train_err + test_err) / 2;
+        log.info("Average err now is: " + avgErr);
+        return avgErr <= threshold ? true : false;
     }
 
 }
