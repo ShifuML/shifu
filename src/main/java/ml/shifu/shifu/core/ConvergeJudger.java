@@ -20,12 +20,20 @@ import org.slf4j.LoggerFactory;
 
 /**
  * @author xiaobzheng
- * 
+ * class for training convergence judging.
  */
 public class ConvergeJudger {
 
     private static final Logger log = LoggerFactory.getLogger(ConvergeJudger.class);
-            
+
+    /**
+     * Compute average training error and testing error value and judge if the average value is less than threshold
+     *  
+     * @param train_err training error value
+     * @param test_err test error value
+     * @param threshold 
+     * @return convergence judging result. return true if (train_err + test_err) / 2 <= threshold, else false.
+     */
     public static boolean isConverged(double train_err, double test_err, double threshold) {
         double avgErr = (train_err + test_err) / 2;
         log.info("Average err now is: " + avgErr);
@@ -33,4 +41,3 @@ public class ConvergeJudger {
     }
 
 }
-
