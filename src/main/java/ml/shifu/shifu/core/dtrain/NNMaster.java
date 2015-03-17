@@ -169,6 +169,8 @@ public class NNMaster implements MasterComputable<NNParams, NNParams> {
                     this.globalNNParams.getTrainSize(), learningRate, propagation);
         } else {
             this.learningRate = this.learningRate * (1.0d - this.learningDecay);
+            // without learningDecay Parameter using sqrt(iteration number) to decrease learning rate
+            // this.learningRate = this.learningRate / Math.sqrt(context.getCurrentIteration() -1);
             this.weightCalculator.setLearningRate(this.learningRate);
         }
 

@@ -343,11 +343,11 @@ public class ModelInspector {
         if(train.getAlgorithm().equalsIgnoreCase("nn")) {
             Map<String, Object> params = train.getParams();
             int layerCnt = (Integer) params.get(NNTrainer.NUM_HIDDEN_LAYERS);
-            if(layerCnt <= 0) {
+            if(layerCnt < 0) {
                 ValidateResult tmpResult = new ValidateResult(true);
                 tmpResult.setStatus(false);
                 tmpResult.getCauses().add(
-                        "The number of hidden layers should be greater than zero in train configuration");
+                        "The number of hidden layers should be >= 0 in train configuration");
                 result = ValidateResult.mergeResult(result, tmpResult);
             }
 

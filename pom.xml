@@ -405,7 +405,7 @@
             <build>
                 <plugins>
                     <plugin>
-                        <artifactId> maven-assembly-plugin </artifactId>
+                        <artifactId>maven-assembly-plugin</artifactId>
                         <version>2.3</version>
                         <executions>
                             <execution>
@@ -451,7 +451,7 @@
                         </executions>
                     </plugin>
                     <plugin>
-                        <artifactId> maven-assembly-plugin </artifactId>
+                        <artifactId>maven-assembly-plugin</artifactId>
                         <version>2.3</version>
                         <executions>
                             <execution>
@@ -520,7 +520,7 @@
             <build>
                 <plugins>
                     <plugin>
-                        <artifactId> maven-assembly-plugin </artifactId>
+                        <artifactId>maven-assembly-plugin</artifactId>
                         <version>2.3</version>
                         <executions>
                             <execution>
