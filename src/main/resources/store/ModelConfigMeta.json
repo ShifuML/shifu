@@ -312,6 +312,11 @@
                 "directive": "input",
                 "defval": 100
             }, {
+                "name": "threshold",
+                "type": "number",
+                "directive": "input",
+                "defval": 0.0
+            }, {
                 "name": "zkServers",
                 "type": "text",
                 "directive": "input",
