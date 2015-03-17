@@ -20,10 +20,8 @@ import ml.shifu.guagua.master.MasterContext;
 import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.container.obj.ModelConfig;
 import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
-import ml.shifu.shifu.core.ConvergeJudger;
 import ml.shifu.shifu.core.alg.NNTrainer;
 import ml.shifu.shifu.util.CommonUtils;
-
 import org.encog.neural.networks.BasicNetwork;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -153,14 +151,6 @@ public class NNMaster implements MasterComputable<NNParams, NNParams> {
         params.setGradients(new double[0]);
         params.setWeights(weights);
         LOG.debug("master result {} in iteration {}", params, context.getCurrentIteration());
-
-        LOG.info("Start judge convergence:");
-        double threshold = modelConfig.getTrain().getThreshold();
-        if (ConvergeJudger.isConverged(params.getTrainError(), params.getTestError(), threshold)) {
-            LOG.info("Training converged with threshold " + threshold + " , now exit job.");
-            params.setHalt(true);
-        }
-        
         return params;
     }
 
