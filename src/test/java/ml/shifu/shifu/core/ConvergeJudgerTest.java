@@ -13,9 +13,9 @@ public class ConvergeJudgerTest {
         double threshold2 = 2.0;
         double threshold3 = 3.0;
         
-        Assert.assertTrue(ConvergeJudger.isConverged(train_err, test_err, threshold1));
+        Assert.assertFalse(ConvergeJudger.isConverged(train_err, test_err, threshold1));
         Assert.assertTrue(ConvergeJudger.isConverged(train_err, test_err, threshold2));
-        Assert.assertFalse(ConvergeJudger.isConverged(train_err, test_err, threshold3));
+        Assert.assertTrue(ConvergeJudger.isConverged(train_err, test_err, threshold3));
         
     }
 }
