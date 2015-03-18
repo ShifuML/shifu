@@ -127,11 +127,11 @@ public class EvalConfig {
         this.name = name;
     }
 
-    public RawSourceData getDataSet() {
+    public synchronized RawSourceData getDataSet() {
         return dataSet;
     }
 
-    public void setDataSet(RawSourceData dataSet) {
+    public synchronized void setDataSet(RawSourceData dataSet) {
         this.dataSet = dataSet;
     }
 
@@ -143,11 +143,11 @@ public class EvalConfig {
         this.performanceBucketNum = performanceBucketNum;
     }
 
-    public String getScoreMetaColumnNameFile() {
+    public synchronized String getScoreMetaColumnNameFile() {
         return scoreMetaColumnNameFile;
     }
 
-    public void setScoreMetaColumnNameFile(String scoreMetaColumnNameFile) {
+    public synchronized void setScoreMetaColumnNameFile(String scoreMetaColumnNameFile) {
         this.scoreMetaColumnNameFile = scoreMetaColumnNameFile;
     }
 

@@ -48,6 +48,8 @@ public class ModelTrainConf {
     private Boolean fixInitInput = Boolean.FALSE;
     
     private Boolean isContinuousEnabled = Boolean.FALSE; 
+    
+    private Boolean isCrossOver = Boolean.FALSE;
 
     private String algorithm = "NN";
 
@@ -215,6 +217,20 @@ public class ModelTrainConf {
      */
     public void setIsContinuousEnabled(Boolean isContinuousEnabled) {
         this.isContinuousEnabled = isContinuousEnabled;
+    }
+
+    /**
+     * @return the isCrossOver
+     */
+    public Boolean getIsCrossOver() {
+        return isCrossOver;
+    }
+
+    /**
+     * @param isCrossOver the isCrossOver to set
+     */
+    public void setIsCrossOver(Boolean isCrossOver) {
+        this.isCrossOver = isCrossOver;
     }
 
 }
