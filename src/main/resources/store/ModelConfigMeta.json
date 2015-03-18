@@ -327,6 +327,11 @@
                 "type": "boolean",
                 "directive": "input",
                 "defval": false
+            }, {               
+                "name": "isCrossOver",
+                "type": "boolean",
+                "directive": "input",
+                "defval": false
             }, {
                 "name": "algorithm",
                 "type": "text",

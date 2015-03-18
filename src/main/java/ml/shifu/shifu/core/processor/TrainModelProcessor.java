@@ -15,12 +15,19 @@
  */
 package ml.shifu.shifu.core.processor;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
-import com.fasterxml.jackson.core.JsonParser;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.base.Splitter;
+import java.io.ByteArrayOutputStream;
+import java.io.DataOutputStream;
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.lang.Thread.UncaughtExceptionHandler;
+import java.nio.charset.Charset;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.Scanner;
+
 import ml.shifu.guagua.GuaguaConstants;
-import ml.shifu.guagua.GuaguaRuntimeException;
 import ml.shifu.guagua.mapreduce.GuaguaMapReduceClient;
 import ml.shifu.guagua.mapreduce.GuaguaMapReduceConstants;
 import ml.shifu.shifu.actor.AkkaSystemExecutor;
@@ -30,7 +37,12 @@ import ml.shifu.shifu.core.AbstractTrainer;
 import ml.shifu.shifu.core.alg.LogisticRegressionTrainer;
 import ml.shifu.shifu.core.alg.NNTrainer;
 import ml.shifu.shifu.core.alg.SVMTrainer;
-import ml.shifu.shifu.core.dtrain.*;
+import ml.shifu.shifu.core.dtrain.NNConstants;
+import ml.shifu.shifu.core.dtrain.NNMaster;
+import ml.shifu.shifu.core.dtrain.NNOutput;
+import ml.shifu.shifu.core.dtrain.NNParams;
+import ml.shifu.shifu.core.dtrain.NNUtils;
+import ml.shifu.shifu.core.dtrain.NNWorker;
 import ml.shifu.shifu.core.validator.ModelInspector.ModelStep;
 import ml.shifu.shifu.exception.ShifuErrorCode;
 import ml.shifu.shifu.exception.ShifuException;
@@ -38,6 +50,7 @@ import ml.shifu.shifu.fs.ShifuFileUtils;
 import ml.shifu.shifu.util.Constants;
 import ml.shifu.shifu.util.Environment;
 import ml.shifu.shifu.util.HDFSUtils;
+
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.collections.ListUtils;
 import org.apache.commons.compress.compressors.bzip2.BZip2CompressorInputStream;
@@ -53,13 +66,10 @@ import org.encog.neural.networks.BasicNetwork;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.*;
-import java.lang.Thread.UncaughtExceptionHandler;
-import java.nio.charset.Charset;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.Scanner;
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.core.JsonParser;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.base.Splitter;
 
 /**
  * Train processor, produce model based on the normalized dataset
@@ -325,10 +335,7 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
                 // TODO hidden layer size and activation functions should also be validated
                 localArgs.add(String.format(NNConstants.MAPREDUCE_PARAM_FORMAT, NNConstants.NN_CONTINUOUS_TRAINING,
                         Boolean.FALSE.toString()));
-                // An exception is thrown to notice user wrong settings. directly disabled continuous training is
-                // not good because this condition sometimes is wrong setting.
-                throw new GuaguaRuntimeException(
-                        "Model input and output settings are not consistent with input and output columns settings, please check your model input and output or disable continuous model training.");
+                LOG.warn("Model input and output settings are not consistent with input and output columns settings,  model training will start from scratch.");
             } else {
                 localArgs.add(String.format(NNConstants.MAPREDUCE_PARAM_FORMAT, NNConstants.NN_CONTINUOUS_TRAINING,
                         this.modelConfig.getTrain().getIsContinuousEnabled()));

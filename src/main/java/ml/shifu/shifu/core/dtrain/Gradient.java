@@ -103,6 +103,21 @@ public class Gradient {
     private final MLDataSet training;
 
     /**
+     * The testing data, test data set here is used for training and testing cross over.
+     */
+    private final MLDataSet testing;
+
+    /**
+     * Whether to replace training and testing elements.
+     */
+    private final boolean isCrossOver;
+
+    /**
+     * Seed used to sample training and testing data set to choose which element is used for training
+     */
+    private long seed = System.currentTimeMillis();
+
+    /**
      * error
      */
     private double error;
@@ -131,9 +146,12 @@ public class Gradient {
      * @param theHigh
      *            The high index to use in the training data.
      */
-    public Gradient(final FlatNetwork theNetwork, final MLDataSet theTraining, final double[] flatSpot, ErrorFunction ef) {
+    public Gradient(final FlatNetwork theNetwork, final MLDataSet theTraining, final MLDataSet theTesting,
+            final double[] flatSpot, ErrorFunction ef, boolean isCrossOver) {
         this.network = theNetwork;
         this.training = theTraining;
+        this.testing = theTesting;
+        this.isCrossOver = isCrossOver;
         this.flatSpot = flatSpot;
         this.errorFunction = ef;
 
@@ -224,7 +242,21 @@ public class Gradient {
             Arrays.fill(this.gradients, 0.0);
 
             for(int i = 0; i < this.training.getRecordCount(); i++) {
-                this.training.getRecord(i, this.pair);
+                if(this.isCrossOver) {
+                    // 3:1 to select testing data set, tmp hard code, TODO fix hard code issue
+                    if((i + seed) % 4 < 3) {
+                        this.training.getRecord(i, this.pair);
+                    } else {
+                        long testingSize = this.testing.getRecordCount();
+                        if(i < testingSize) {
+                            this.testing.getRecord(i, this.pair);
+                        } else {
+                            this.testing.getRecord(i % testingSize, this.pair);
+                        }
+                    }
+                } else {
+                    this.training.getRecord(i, this.pair);
+                }
                 process(this.pair.getInputArray(), this.pair.getIdealArray(), pair.getSignificance());
             }
             this.error = this.errorCalculation.calculate();
@@ -232,6 +264,42 @@ public class Gradient {
         } catch (final Throwable ex) {
             throw new RuntimeException(ex);
         }
+    }
+
+    /**
+     * Calculate the error for this neural network. The error is calculated
+     * using root-mean-square(RMS).
+     * 
+     * @param data
+     *            The training set.
+     * @return The error percentage.
+     */
+    public final double calculateError() {
+        final ErrorCalculation errorCalculation = new ErrorCalculation();
+
+        final double[] actual = new double[this.getNetwork().getOutputCount()];
+        final MLDataPair pair = BasicMLDataPair.createPair(testing.getInputSize(), testing.getIdealSize());
+
+        for(int i = 0; i < testing.getRecordCount(); i++) {
+            if(this.isCrossOver) {
+                // 3:1 to select testing data set, tmp hard code, TODO fix hard code issue
+                if((i + seed) % 4 < 3) {
+                    this.testing.getRecord(i, pair);
+                } else {
+                    long trainingSize = this.training.getRecordCount();
+                    if(i < trainingSize) {
+                        this.training.getRecord(i, pair);
+                    } else {
+                        this.training.getRecord(i % trainingSize, pair);
+                    }
+                }
+            } else {
+                this.testing.getRecord(i, pair);
+            }
+            this.getNetwork().compute(pair.getInputArray(), actual);
+            errorCalculation.updateError(actual, pair.getIdealArray(), pair.getSignificance());
+        }
+        return errorCalculation.calculate();
     }
 
     public ErrorCalculation getErrorCalculation() {
@@ -279,6 +347,21 @@ public class Gradient {
 
     public double[] getLayerDelta() {
         return layerDelta;
+    }
+
+    /**
+     * @return the seed
+     */
+    public long getSeed() {
+        return seed;
+    }
+
+    /**
+     * @param seed
+     *            the seed to set
+     */
+    public void setSeed(long seed) {
+        this.seed = seed;
     }
 
 }
