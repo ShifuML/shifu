@@ -146,6 +146,7 @@ public class NNWorker extends
             this.modelConfig = CommonUtils.loadModelConfig(props.getProperty(NNConstants.SHIFU_NN_MODEL_CONFIG),
                     sourceType);
             this.isCrossOver = this.modelConfig.getTrain().getIsCrossOver().booleanValue();
+            LOG.info("Parameter isCrossOver:{}", this.isCrossOver);
             this.columnConfigList = CommonUtils.loadColumnConfigList(
                     props.getProperty(NNConstants.SHIFU_NN_COLUMN_CONFIG), sourceType);
 
