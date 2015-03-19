@@ -31,8 +31,21 @@ package ml.shifu.shifu.core;
  * boolean result = judger.isConverged();
  * </pre>
  * 
- * <p> Use <code>{@link ConvergeJudger#reset()}</code> to restore both errors and threshold to 
- * their initialization value.
+ * <p> If you just want get the average error value, use <code>{@link ConvergeJudger#CalculateAvgErr()}</code> 
+ * after judging setting compelte. For example,
+ * 
+ * <pre>
+ * judger.setTrainErr(1.0);
+ * judger.setTestErr(2.0);
+ * Double avgErr = judger.CalculateAvgErr();
+ * </pre>
+ * 
+ * <p> Both <code>{@link ConvergeJudger#isConverged()}, {@link ConvergeJudger#CalculateAvgErr()}</code> will
+ * update this.currentAvgErr. You can directly get latest updated average error value by using 
+ * {@link ConvergeJudger#getCurrentAvgErr()}</code> without calculation.
+ * 
+ * <p> Use <code>{@link ConvergeJudger#reset()}</code> to restore both errors, threshold and current average error
+ *  to their initialization value.
  * 
  * <p> You can also get currently input error and threshold setting by using
  * <code>{@link ConvergeJudger#getJudgeSetting()}</code>.
