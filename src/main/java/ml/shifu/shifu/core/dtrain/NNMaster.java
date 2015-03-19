@@ -23,7 +23,6 @@ import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
 import ml.shifu.shifu.core.ConvergeJudger;
 import ml.shifu.shifu.core.alg.NNTrainer;
 import ml.shifu.shifu.util.CommonUtils;
-import ml.shifu.shifu.util.Constants;
 
 import org.encog.neural.networks.BasicNetwork;
 import org.slf4j.Logger;
