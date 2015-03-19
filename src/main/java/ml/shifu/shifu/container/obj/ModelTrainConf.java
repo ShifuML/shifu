@@ -21,7 +21,6 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import ml.shifu.shifu.core.alg.LogisticRegressionTrainer;
 import ml.shifu.shifu.core.alg.NNTrainer;
 import ml.shifu.shifu.core.alg.SVMTrainer;
-import ml.shifu.shifu.util.Constants;
 
 import java.util.ArrayList;
 import java.util.HashMap;
