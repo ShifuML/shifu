@@ -23,6 +23,7 @@ import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
 import ml.shifu.shifu.core.ConvergeJudger;
 import ml.shifu.shifu.core.alg.NNTrainer;
 import ml.shifu.shifu.util.CommonUtils;
+import ml.shifu.shifu.util.Constants;
 
 import org.encog.neural.networks.BasicNetwork;
 import org.slf4j.Logger;
@@ -83,6 +84,11 @@ public class NNMaster implements MasterComputable<NNParams, NNParams> {
 
     private double learningDecay = 0d;
 
+    /**
+     * Convergence judger instance for convergence criteria checking.
+     */
+    private ConvergeJudger judger = new ConvergeJudger();
+    
     @Override
     public NNParams compute(MasterContext<NNParams, NNParams> context) {
 
@@ -154,11 +160,20 @@ public class NNMaster implements MasterComputable<NNParams, NNParams> {
         params.setWeights(weights);
         LOG.debug("master result {} in iteration {}", params, context.getCurrentIteration());
         
-        LOG.info("Start judge convergence:");
-        double threshold = modelConfig.getTrain().getThreshold();
-        if (ConvergeJudger.isConverged(params.getTrainError(), params.getTestError(), threshold)) {
-            LOG.info("Training converged with threshold " + threshold + " , now exit job.");
+        // Convergence judging part
+        LOG.info("Start judging convergence :");
+        
+        judger.setThreshold(modelConfig.getTrain().getThreshold());
+        judger.setTrainErr(params.getTrainError());
+        judger.setTestErr(params.getTestError());
+
+        LOG.info("Judging with setting {}", judger.getJudgeSetting());
+        
+        if (judger.isConverged()) {
+            LOG.info("Converged at final average error: {}", judger.getCurrentAvgErr());
             params.setHalt(true);
+        } else {
+            LOG.info("Not converged yet, currently average error is: {}", judger.getCurrentAvgErr());
         }
 
         return params;
