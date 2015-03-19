@@ -17,6 +17,7 @@ package ml.shifu.shifu.container.obj;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
 import ml.shifu.shifu.core.alg.LogisticRegressionTrainer;
 import ml.shifu.shifu.core.alg.NNTrainer;
@@ -203,10 +204,12 @@ public class ModelTrainConf {
         this.epochsPerIteration = epochsPerIteration;
     }
 
+    @JsonIgnore
     public Double getThreshold() {
         return threshold;
     }
 
+    @JsonProperty
     public void setThreshold(Double threshold) {
         this.threshold = threshold;
     }
