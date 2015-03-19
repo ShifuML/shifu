@@ -203,7 +203,6 @@ public class ModelTrainConf {
         this.epochsPerIteration = epochsPerIteration;
     }
 
-    @JsonIgnore
     public Double getThreshold() {
         return threshold;
     }
