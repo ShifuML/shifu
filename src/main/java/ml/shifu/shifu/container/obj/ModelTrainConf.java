@@ -45,7 +45,7 @@ public class ModelTrainConf {
     private Double validSetRate = Double.valueOf(0.2);
     private Integer numTrainEpochs = Integer.valueOf(100);
     private Integer epochsPerIteration = Integer.valueOf(1);
-    private Double threshold = Double.valueOf(Constants.DEFAULT_THRESHOLD);
+    private Double threshold = Double.valueOf(0.0);
     
     private Boolean trainOnDisk = Boolean.FALSE;
     private Boolean fixInitInput = Boolean.FALSE;
@@ -204,6 +204,7 @@ public class ModelTrainConf {
         this.epochsPerIteration = epochsPerIteration;
     }
 
+    @JsonIgnore
     public Double getThreshold() {
         return threshold;
     }
