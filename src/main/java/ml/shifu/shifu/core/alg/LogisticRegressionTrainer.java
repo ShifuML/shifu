@@ -114,8 +114,8 @@ public class LogisticRegressionTrainer extends AbstractTrainer {
                         ,trainerID, (i + 1), df.format(avgErr), formatedThreshold);
                 break;
             } else {
-                    LOG.info("Trainer-{}> Epoch #{} Average Error: {}, Threshold: {}"
-                            ,trainerID, (i + 1), df.format(avgErr), formatedThreshold);
+                LOG.info("Trainer-{}> Epoch #{} Average Error: {}, Threshold: {}"
+                        , trainerID, (i + 1), df.format(avgErr), formatedThreshold);
             }
         }
         propagation.finishTraining();
