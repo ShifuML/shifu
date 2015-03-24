@@ -176,6 +176,7 @@ public class NNTrainer extends AbstractTrainer {
         // Get convergence threshold from modelConfig.
         double threshold = modelConfig.getTrain().getConvergenceThreshold() == null ? 0.0
                 : modelConfig.getTrain().getConvergenceThreshold().doubleValue();
+        String formatedThreshold = df.format(threshold);
         
         setBaseMSE(Double.MAX_VALUE);
 
@@ -204,10 +205,14 @@ public class NNTrainer extends AbstractTrainer {
             double avgErr = (mlTrain.getError() + validMSE) / 2;
 
             if (judger.judge(avgErr, threshold)) {
-                LOG.info("Converged at final average error: {} , convergence threshold: {}", avgErr, threshold);
+                LOG.info("Trainer-{}> Epoch #{} converged! Average Error: {}, Threshold: {}"
+                        ,trainerID, (i + 1), df.format(avgErr), formatedThreshold);
                 break;
             } else {
-                LOG.info("Not converged yet, average error is: {}, convergence threshold: {}", avgErr, threshold);
+                if (toLoggingProcess) {
+                    LOG.info("Trainer-{}> Epoch #{} Average Error: {}, Threshold: {}"
+                            ,trainerID, (i + 1), df.format(avgErr), formatedThreshold);
+                }
             }
         }
 
