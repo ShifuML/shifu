@@ -204,6 +204,11 @@ public class ModelTrainConf {
         this.epochsPerIteration = epochsPerIteration;
     }
 
+    /**
+     * As threshold is an optional setting, Use @{@link JsonIgnore} to ignore threshold when initially write
+     * out to ModelConfig.json. 
+     * @return Cvergence threshold.
+     */
     @JsonIgnore
     public Double getThreshold() {
         return threshold;
