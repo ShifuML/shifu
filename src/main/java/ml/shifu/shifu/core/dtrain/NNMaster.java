@@ -163,7 +163,7 @@ public class NNMaster implements MasterComputable<NNParams, NNParams> {
         // Convergence judging part
         LOG.info("Judging convergence :");
         
-        double avgErr = (currentTrainError + currentTrainError) / 2;
+        double avgErr = (currentTrainError + currentTestError) / 2;
         
         LOG.info("NNMaster compute iteration {} Average error: {} , Threshold: {}"
                 , context.getCurrentIteration(), avgErr, convergenceThreshold);
