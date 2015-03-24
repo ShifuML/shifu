@@ -31,6 +31,9 @@ package ml.shifu.shifu.core;
  * boolean result = judger.isConverged();
  * </pre>
  * 
+ * <p> <code>{@link ConvergeJudger#isConverged()}</code> returns true if (train_err + test_err) / 2 <= threshold,
+ * else false.
+ * 
  * <p> If you just want get the average error value, use <code>{@link ConvergeJudger#CalculateAvgErr()}</code> 
  * after judging setting complete. For example,
  * 
