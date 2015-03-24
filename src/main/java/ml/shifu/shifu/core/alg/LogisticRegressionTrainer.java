@@ -102,15 +102,14 @@ public class LogisticRegressionTrainer extends AbstractTrainer {
             double trainError = propagation.getError();
             double validError = classifier.calculateError(this.validSet);
 
-            LOG.info("Epoch #" + (i + 1) + " Train Error:"
-                    + df.format(trainError) + " Validation Error:"
-                    + df.format(validError));
+            LOG.info("Epoch #" + (i + 1) + " Train Error:" + df.format(trainError)
+                    + " Validation Error:" + df.format(validError));
 
             // Convergence judging.
             double avgErr = (trainError + validError) / 2;
 
             if (judger.judge(avgErr, threshold)) {
-                LOG.info("Trainer-{}> Epoch #{} converged! Average Error: {}, Threshold: {}"
+                LOG.info("Trainer-{}> Epoch #{} converged! Average Error: {}, Threshold: {}" 
                         ,trainerID, (i + 1), df.format(avgErr), formatedThreshold);
                 break;
             } else {

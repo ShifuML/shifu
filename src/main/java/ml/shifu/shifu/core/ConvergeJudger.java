@@ -22,7 +22,7 @@ package ml.shifu.shifu.core;
  */
 
 public class ConvergeJudger {
-    
+
     /**
      * Compare threshold and error, if error <= threshold then return true, else false.
      * 

@@ -37,7 +37,7 @@ public class ModelTrainConf {
     public static enum ALGORITHM {
         NN, LR, SVM, DT
     }
-    
+
     private Integer baggingNum = Integer.valueOf(5);
     // change it to false by default, as we often don't use this way.
     private Boolean baggingWithReplacement = Boolean.FALSE;
@@ -46,7 +46,7 @@ public class ModelTrainConf {
     private Integer numTrainEpochs = Integer.valueOf(100);
     private Integer epochsPerIteration = Integer.valueOf(1);
     private Double convergenceThreshold = Double.valueOf(0.0);
-    
+
     private Boolean trainOnDisk = Boolean.FALSE;
     private Boolean fixInitInput = Boolean.FALSE;
 
