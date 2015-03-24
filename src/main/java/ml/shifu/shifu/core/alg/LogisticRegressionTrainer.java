@@ -92,6 +92,7 @@ public class LogisticRegressionTrainer extends AbstractTrainer {
         // Get convergence threshold from modelConfig.
         double threshold = modelConfig.getTrain().getConvergenceThreshold() == null ? 0.0
                 : modelConfig.getTrain().getConvergenceThreshold().doubleValue();
+        String formatedThreshold = df.format(threshold);
         
         LOG.info("Using " + (Double) modelConfig.getParams().get("LearningRate") + " training rate");
 
@@ -109,10 +110,12 @@ public class LogisticRegressionTrainer extends AbstractTrainer {
             double avgErr = (trainError + validError) / 2;
 
             if (judger.judge(avgErr, threshold)) {
-                LOG.info("Converged at final average error: {} , convergence threshold: {}", avgErr, threshold);
+                LOG.info("Trainer-{}> Epoch #{} converged! Average Error: {}, Threshold: {}"
+                        ,trainerID, (i + 1), df.format(avgErr), formatedThreshold);
                 break;
             } else {
-                LOG.info("Not converged yet, average error is: {}, convergence threshold: {}", avgErr, threshold);
+                    LOG.info("Trainer-{}> Epoch #{} Average Error: {}, Threshold: {}"
+                            ,trainerID, (i + 1), df.format(avgErr), formatedThreshold);
             }
         }
         propagation.finishTraining();

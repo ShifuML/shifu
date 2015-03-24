@@ -83,6 +83,8 @@ public class NNMaster implements MasterComputable<NNParams, NNParams> {
 
     private double learningDecay = 0d;
 
+    private double convergenceThreshold = 0d;
+    
     /**
      * Convergence judger instance for convergence criteria checking.
      */
@@ -159,17 +161,18 @@ public class NNMaster implements MasterComputable<NNParams, NNParams> {
         LOG.debug("master result {} in iteration {}", params, context.getCurrentIteration());
         
         // Convergence judging part
-        LOG.info("Start judging convergence :");
+        LOG.info("Judging convergence :");
         
         double avgErr = (currentTrainError + currentTrainError) / 2;
-        double threshold = modelConfig.getTrain().getConvergenceThreshold() == null ? 0.0
-                : modelConfig.getTrain().getConvergenceThreshold().doubleValue();
-
-        if (judger.judge(avgErr, threshold)) {
-            LOG.info("Converged at final average error: {} , convergence threshold: {}", avgErr, threshold);
+        
+        LOG.info("NNMaster compute iteration {} Average error: {} , Threshold: {}"
+                , context.getCurrentIteration(), avgErr, convergenceThreshold);
+        
+        if (judger.judge(avgErr, convergenceThreshold)) {
+            LOG.info("NNMaster compute iteration {} converged !", context.getCurrentIteration());
             params.setHalt(true);
         } else {
-            LOG.info("Not converged yet, average error is: {}, convergence threshold: {}", avgErr, threshold);
+            LOG.info("NNMaster compute iteration {} not converged yet !", context.getCurrentIteration());
         }
 
         return params;
@@ -216,6 +219,9 @@ public class NNMaster implements MasterComputable<NNParams, NNParams> {
             if(learningDecayO != null) {
                 this.learningDecay = Double.valueOf(learningDecayO.toString());
             }
+            Double threshold =  this.modelConfig.getTrain().getConvergenceThreshold();
+            this.convergenceThreshold = threshold == null ? 0d : threshold.doubleValue();
+            
             LOG.info("learningDecay in master is :{}", learningDecay);
         } catch (IOException e) {
             throw new RuntimeException(e);
