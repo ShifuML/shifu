@@ -312,7 +312,7 @@
                 "directive": "input",
                 "defval": 100
             }, {
-                "name": "threshold",
+                "name": "convergenceThreshold",
                 "type": "number",
                 "directive": "input",
                 "defval": 0.0

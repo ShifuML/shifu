@@ -90,7 +90,6 @@ public class NNMaster implements MasterComputable<NNParams, NNParams> {
     
     @Override
     public NNParams compute(MasterContext<NNParams, NNParams> context) {
-
         // For first step, we not only initialize whole context but also return weights to master to make sure all
         // workers and master are using the same weights.
         if(this.isInitialized.compareAndSet(false, true)) {
@@ -162,17 +161,15 @@ public class NNMaster implements MasterComputable<NNParams, NNParams> {
         // Convergence judging part
         LOG.info("Start judging convergence :");
         
-        judger.setThreshold(modelConfig.getTrain().getThreshold());
-        judger.setTrainErr(params.getTrainError());
-        judger.setTestErr(params.getTestError());
+        double avgErr = (currentTrainError + currentTrainError) / 2;
+        double threshold = modelConfig.getTrain().getConvergenceThreshold() == null ? 0.0
+                : modelConfig.getTrain().getConvergenceThreshold().doubleValue();
 
-        LOG.info("Judging with setting {}", judger.getJudgeSetting());
-        
-        if (judger.isConverged()) {
-            LOG.info("Converged at final average error: {}", judger.getCurrentAvgErr());
+        if (judger.judge(avgErr, threshold)) {
+            LOG.info("Converged at final average error: {} , convergence threshold: {}", avgErr, threshold);
             params.setHalt(true);
         } else {
-            LOG.info("Not converged yet, currently average error is: {}", judger.getCurrentAvgErr());
+            LOG.info("Not converged yet, average error is: {}, convergence threshold: {}", avgErr, threshold);
         }
 
         return params;

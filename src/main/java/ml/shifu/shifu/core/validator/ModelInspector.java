@@ -340,10 +340,10 @@ public class ModelInspector {
             result = ValidateResult.mergeResult(result, tmpResult);
         }
 
-        if(train.getThreshold() != null && train.getThreshold() < 0) {
+        if(train.getConvergenceThreshold() != null && train.getConvergenceThreshold().compareTo(0.0) < 0) {
             ValidateResult tmpResult = new ValidateResult(true);
             tmpResult.setStatus(false);
-            tmpResult.getCauses().add("'threshold' should be large than or equal to 0 if set.");
+            tmpResult.getCauses().add("'threshold' should be large than or equal to 0.0 if set.");
             result = ValidateResult.mergeResult(result, tmpResult);
         }
 
