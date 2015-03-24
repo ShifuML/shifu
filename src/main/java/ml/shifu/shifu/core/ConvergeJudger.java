@@ -32,7 +32,7 @@ package ml.shifu.shifu.core;
  * </pre>
  * 
  * <p> If you just want get the average error value, use <code>{@link ConvergeJudger#CalculateAvgErr()}</code> 
- * after judging setting compelte. For example,
+ * after judging setting complete. For example,
  * 
  * <pre>
  * judger.setTrainErr(1.0);
