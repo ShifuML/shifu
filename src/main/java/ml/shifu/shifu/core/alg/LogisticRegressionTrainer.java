@@ -17,6 +17,8 @@ package ml.shifu.shifu.core.alg;
 
 import ml.shifu.shifu.container.obj.ModelConfig;
 import ml.shifu.shifu.core.AbstractTrainer;
+import ml.shifu.shifu.core.ConvergeJudger;
+
 import org.encog.engine.network.activation.ActivationLinear;
 import org.encog.engine.network.activation.ActivationSigmoid;
 import org.encog.ml.data.MLDataSet;
@@ -37,11 +39,17 @@ import java.io.IOException;
  */
 public class LogisticRegressionTrainer extends AbstractTrainer {
 
+    private static final Logger LOG = LoggerFactory.getLogger(LogisticRegressionTrainer.class);
+
     public static final String LEARNING_RATE = "LearningRate";
 
     private BasicNetwork classifier;
-    protected Logger log = LoggerFactory.getLogger(LogisticRegressionTrainer.class);
-
+   
+    /**
+     * Convergence judger instance for convergence criteria checking.
+     */
+    private ConvergeJudger judger = new ConvergeJudger();
+    
     public LogisticRegressionTrainer(ModelConfig modelConfig, int trainerID, Boolean dryRun) {
         super(modelConfig, trainerID, dryRun);
 
@@ -63,10 +71,10 @@ public class LogisticRegressionTrainer extends AbstractTrainer {
      */
     @Override
     public double train() throws IOException {
-        log.info("Using logistic regression algorithm...");
+        LOG.info("Using logistic regression algorithm...");
 
-        log.info("Input Size: " + trainSet.getInputSize());
-        log.info("Ideal Size: " + trainSet.getIdealSize());
+        LOG.info("Input Size: " + trainSet.getInputSize());
+        LOG.info("Ideal Size: " + trainSet.getIdealSize());
 
         classifier = new BasicNetwork();
 
@@ -81,7 +89,11 @@ public class LogisticRegressionTrainer extends AbstractTrainer {
         Propagation propagation = new QuickPropagation(classifier, trainSet, (Double) modelConfig.getParams().get("LearningRate"));
         int epochs = modelConfig.getNumTrainEpochs();
 
-        log.info("Using " + (Double) modelConfig.getParams().get("LearningRate") + " training rate");
+        // Get convergence threshold from modelConfig.
+        double threshold = modelConfig.getTrain().getConvergenceThreshold() == null ? 0.0
+                : modelConfig.getTrain().getConvergenceThreshold().doubleValue();
+        
+        LOG.info("Using " + (Double) modelConfig.getParams().get("LearningRate") + " training rate");
 
         for (int i = 0; i < epochs; i++) {
 
@@ -89,11 +101,23 @@ public class LogisticRegressionTrainer extends AbstractTrainer {
             double trainError = propagation.getError();
             double validError = classifier.calculateError(this.validSet);
 
-            log.info("Epoch #" + (i + 1) + " Train Error:" + df.format(trainError) + " Validation Error:" + df.format(validError));
+            LOG.info("Epoch #" + (i + 1) + " Train Error:"
+                    + df.format(trainError) + " Validation Error:"
+                    + df.format(validError));
+
+            // Convergence judging.
+            double avgErr = (trainError + validError) / 2;
+
+            if (judger.judge(avgErr, threshold)) {
+                LOG.info("Converged at final average error: {} , convergence threshold: {}", avgErr, threshold);
+                break;
+            } else {
+                LOG.info("Not converged yet, average error is: {}, convergence threshold: {}", avgErr, threshold);
+            }
         }
         propagation.finishTraining();
 
-        log.info("#" + this.trainerID + " finish training");
+        LOG.info("#" + this.trainerID + " finish training");
 
         saveLR();
 
