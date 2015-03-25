@@ -18,6 +18,7 @@ package ml.shifu.shifu.core.dvarsel.wrapper;
 import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.container.obj.ModelConfig;
 import ml.shifu.shifu.core.dvarsel.AbstractMasterConductor;
+import ml.shifu.shifu.core.dvarsel.CandidateSeed;
 import ml.shifu.shifu.core.dvarsel.VarSelWorkerResult;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -62,8 +63,9 @@ public class WrapperMasterConductor extends AbstractMasterConductor {
     }
 
     @Override
-    public List<Integer> getNextWorkingSet() {
-        return new ArrayList<Integer>(workingSet);
+    public List<CandidateSeed> getNextWorkingSet() {
+        //TODO
+        return new ArrayList<CandidateSeed>();
     }
 
     @Override
