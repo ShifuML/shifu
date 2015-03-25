@@ -126,7 +126,15 @@ public class NNWorker extends
      */
     private boolean isDry;
 
+    /**
+     * In each iteration, how many epochs will be run.
+     */
     private int epochsPerIteration = 1;
+
+    /**
+     * Whether to alternative training and testing elements.
+     */
+    private boolean isCrossOver = false;
 
     /**
      * Load all configurations for modelConfig and columnConfigList from source type.
@@ -137,6 +145,8 @@ public class NNWorker extends
                     SourceType.HDFS.toString()));
             this.modelConfig = CommonUtils.loadModelConfig(props.getProperty(NNConstants.SHIFU_NN_MODEL_CONFIG),
                     sourceType);
+            this.isCrossOver = this.modelConfig.getTrain().getIsCrossOver().booleanValue();
+            LOG.info("Parameter isCrossOver:{}", this.isCrossOver);
             this.columnConfigList = CommonUtils.loadColumnConfigList(
                     props.getProperty(NNConstants.SHIFU_NN_COLUMN_CONFIG), sourceType);
 
@@ -240,7 +250,7 @@ public class NNWorker extends
         // For dry option, return empty result.
         // For first iteration, we don't do anything, just wait for master to update weights in next iteration. This
         // make sure all workers in the 1st iteration to get the same weights.
-        if(this.isDry || workerContext.getCurrentIteration() == 1) {
+        if(this.isDry || workerContext.isFirstIteration()) {
             return buildEmptyNNParams(workerContext);
         }
 
@@ -253,7 +263,13 @@ public class NNWorker extends
 
         // initialize gradients if null
         if(gradient == null) {
-            initGradient(this.trainingData, workerContext.getLastMasterResult().getWeights());
+            initGradient(this.trainingData, this.testingData, workerContext.getLastMasterResult().getWeights(),
+                    this.isCrossOver);
+        }
+
+        if(this.isCrossOver) {
+            // each iteration reset seed
+            this.gradient.setSeed(System.currentTimeMillis());
         }
 
         // using the weights from master to train model in current iteration
@@ -265,8 +281,8 @@ public class NNWorker extends
         }
         // get train errors and test errors
         double trainError = this.gradient.getError();
-        double testError = this.testingData.getRecordCount() > 0 ? (this.gradient.getNetwork()
-                .calculateError(this.testingData)) : this.gradient.getError();
+        double testError = this.testingData.getRecordCount() > 0 ? (this.gradient.calculateError()) : this.gradient
+                .getError();
         // if the validation set is 0%, then the validation error should be "N/A"
         LOG.info("NNWorker compute iteration {} (train error {} validation error {})",
                 new Object[] { workerContext.getCurrentIteration(), trainError,
@@ -284,7 +300,7 @@ public class NNWorker extends
     }
 
     @SuppressWarnings("unchecked")
-    private void initGradient(MLDataSet training, double[] weights) {
+    private void initGradient(MLDataSet training, MLDataSet testing, double[] weights, boolean isCrossOver) {
         int numLayers = (Integer) getModelConfig().getParams().get(NNTrainer.NUM_HIDDEN_LAYERS);
         List<String> actFunc = (List<String>) getModelConfig().getParams().get(NNTrainer.ACTIVATION_FUNC);
         List<Integer> hiddenNodeList = (List<Integer>) getModelConfig().getParams().get(NNTrainer.NUM_HIDDEN_NODES);
@@ -301,7 +317,7 @@ public class NNWorker extends
             flatSpot[i] = flat.getActivationFunctions()[i] instanceof ActivationSigmoid ? 0.1 : 0.0;
         }
 
-        this.gradient = new Gradient(flat, training, flatSpot, new LinearErrorFunction());
+        this.gradient = new Gradient(flat, training, testing, flatSpot, new LinearErrorFunction(), isCrossOver);
     }
 
     private NNParams buildEmptyNNParams(WorkerContext<NNParams, NNParams> workerContext) {

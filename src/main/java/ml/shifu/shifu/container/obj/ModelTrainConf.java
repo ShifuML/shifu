@@ -43,12 +43,16 @@ public class ModelTrainConf {
     private Boolean baggingWithReplacement = Boolean.FALSE;
     private Double baggingSampleRate = Double.valueOf(0.8);
     private Double validSetRate = Double.valueOf(0.2);
+    private Double convergenceThreshold = Double.valueOf(0.0);
     private Integer numTrainEpochs = Integer.valueOf(100);
     private Integer epochsPerIteration = Integer.valueOf(1);
-    private Double convergenceThreshold = Double.valueOf(0.0);
     
     private Boolean trainOnDisk = Boolean.FALSE;
     private Boolean fixInitInput = Boolean.FALSE;
+    
+    private Boolean isContinuousEnabled = Boolean.FALSE; 
+    
+    private Boolean isCrossOver = Boolean.FALSE;
 
     private String algorithm = "NN";
 
@@ -217,6 +221,34 @@ public class ModelTrainConf {
     @JsonProperty
     public void setConvergenceThreshold(Double convergenceThreshold) {
         this.convergenceThreshold = convergenceThreshold;
+    }
+
+    /**
+     * @return the isContinuousEnabled
+     */
+    public Boolean getIsContinuousEnabled() {
+        return isContinuousEnabled;
+    }
+
+    /**
+     * @param isContinuousEnabled the isContinuousEnabled to set
+     */
+    public void setIsContinuousEnabled(Boolean isContinuousEnabled) {
+        this.isContinuousEnabled = isContinuousEnabled;
+    }
+
+    /**
+     * @return the isCrossOver
+     */
+    public Boolean getIsCrossOver() {
+        return isCrossOver;
+    }
+
+    /**
+     * @param isCrossOver the isCrossOver to set
+     */
+    public void setIsCrossOver(Boolean isCrossOver) {
+        this.isCrossOver = isCrossOver;
     }
 
 }

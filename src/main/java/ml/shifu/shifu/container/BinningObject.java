@@ -28,8 +28,6 @@ public class BinningObject {
         Numerical, Categorical
     }
 
-    ;
-
     private DataType type;
     private Double nData;
     private String cData;

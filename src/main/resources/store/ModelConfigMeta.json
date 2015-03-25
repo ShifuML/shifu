@@ -328,6 +328,16 @@
                 "directive": "input",
                 "defval" : 1
             }, {
+                "name": "isContinuousEnabled",
+                "type": "boolean",
+                "directive": "input",
+                "defval": false
+            }, {               
+                "name": "isCrossOver",
+                "type": "boolean",
+                "directive": "input",
+                "defval": false
+            }, {
                 "name": "algorithm",
                 "type": "text",
                 "directive": "select",

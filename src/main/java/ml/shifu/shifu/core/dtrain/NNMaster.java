@@ -15,6 +15,12 @@
  */
 package ml.shifu.shifu.core.dtrain;
 
+import java.io.IOException;
+import java.util.List;
+import java.util.Properties;
+import java.util.concurrent.atomic.AtomicBoolean;
+
+import ml.shifu.guagua.GuaguaRuntimeException;
 import ml.shifu.guagua.master.MasterComputable;
 import ml.shifu.guagua.master.MasterContext;
 import ml.shifu.shifu.container.obj.ColumnConfig;
@@ -22,16 +28,13 @@ import ml.shifu.shifu.container.obj.ModelConfig;
 import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
 import ml.shifu.shifu.core.ConvergeJudger;
 import ml.shifu.shifu.core.alg.NNTrainer;
+import ml.shifu.shifu.fs.ShifuFileUtils;
 import ml.shifu.shifu.util.CommonUtils;
 
+import org.apache.hadoop.fs.Path;
 import org.encog.neural.networks.BasicNetwork;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import java.io.IOException;
-import java.util.List;
-import java.util.Properties;
-import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * {@link NNMaster} is used to accumulate all workers NN parameters.
@@ -75,21 +78,41 @@ public class NNMaster implements MasterComputable<NNParams, NNParams> {
      */
     private List<ColumnConfig> columnConfigList;
 
+    /**
+     * Propagation type for Encog neural network model setting: Q, B, R, C
+     */
     private String propagation = "Q";
 
+    /**
+     * Raw learning rate set by model configuration.
+     */
     private Double rawLearningRate = 0.1d;
 
+    /**
+     * Real learning rate used to train nn model
+     */
     private Double learningRate = 0.1d;
 
+    /**
+     * Learning decay setting to decrease learning rate iteration by iteration. Common setting value is from 0 to 0.1
+     */
     private double learningDecay = 0d;
 
+    /**
+     * Whether to enable continuous model training based on existing models.
+     */
+    private boolean isContinuousEnabled = false;
+
+    /**
+     * Convergence threshold setting.
+     */
     private double convergenceThreshold = 0d;
     
     /**
-     * Convergence judger instance for convergence criteria checking.
+     * Convergence judger instance for convergence checking.
      */
     private ConvergeJudger judger = new ConvergeJudger();
-    
+
     @Override
     public NNParams compute(MasterContext<NNParams, NNParams> context) {
         // For first step, we not only initialize whole context but also return weights to master to make sure all
@@ -98,11 +121,31 @@ public class NNMaster implements MasterComputable<NNParams, NNParams> {
             // initilize configuration
             init(context);
 
-            // first iteration is used to set initial weights
-            NNParams params = initWeights();
+            NNParams params = null;
+            if(!this.isContinuousEnabled) {
+                // first iteration is used to set initial weights
+                params = initWeights();
+                LOG.info("Starting to train model from scratch.");
+            } else {
+                try {
+                    Path modelPath = new Path(context.getProps().getProperty(NNConstants.GUAGUA_NN_OUTPUT));
+                    BasicNetwork existingModel = NNUtils.loadModel(modelPath,
+                            ShifuFileUtils.getFileSystemBySourceType(this.modelConfig.getDataSet().getSource()));
+                    if(existingModel == null) {
+                        params = initWeights();
+                        LOG.info("Starting to train model from scratch.");
+                    } else {
+                        params = initModelParams(existingModel);
+                        LOG.info("Starting to train model from existing model {}.", modelPath);
+                    }
+                } catch (IOException e) {
+                    throw new GuaguaRuntimeException(e);
+                }
+            }
             // should be set here to make sure master and workers use the same weights
             this.globalNNParams.setWeights(params.getWeights());
-
+            // for continuous model training, here can be optimized by return null and load model weights in worker by
+            // reading HDFS.
             return params;
         }
 
@@ -137,6 +180,8 @@ public class NNMaster implements MasterComputable<NNParams, NNParams> {
                     this.globalNNParams.getTrainSize(), learningRate, propagation);
         } else {
             this.learningRate = this.learningRate * (1.0d - this.learningDecay);
+            // without learningDecay Parameter using sqrt(iteration number) to decrease learning rate
+            // this.learningRate = this.learningRate / Math.sqrt(context.getCurrentIteration() -1);
             this.weightCalculator.setLearningRate(this.learningRate);
         }
 
@@ -174,7 +219,17 @@ public class NNMaster implements MasterComputable<NNParams, NNParams> {
         } else {
             LOG.info("NNMaster compute iteration {} not converged yet !", context.getCurrentIteration());
         }
+        
+        return params;
+    }
 
+    private NNParams initModelParams(BasicNetwork loadModel) {
+        NNParams params = new NNParams();
+        params.setTrainError(0);
+        params.setTestError(0);
+        // prevent null point
+        params.setGradients(new double[0]);
+        params.setWeights(loadModel.getFlat().getWeights());
         return params;
     }
 
@@ -219,10 +274,14 @@ public class NNMaster implements MasterComputable<NNParams, NNParams> {
             if(learningDecayO != null) {
                 this.learningDecay = Double.valueOf(learningDecayO.toString());
             }
+            LOG.info("learningDecay in master is :{}", learningDecay);
+            
             Double threshold =  this.modelConfig.getTrain().getConvergenceThreshold();
             this.convergenceThreshold = threshold == null ? 0d : threshold.doubleValue();
+            LOG.info("Convergence threshold in master is :{}", this.convergenceThreshold);
             
-            LOG.info("learningDecay in master is :{}", learningDecay);
+            this.isContinuousEnabled = Boolean.TRUE.toString().equalsIgnoreCase(
+                    context.getProps().getProperty(NNConstants.NN_CONTINUOUS_TRAINING));
         } catch (IOException e) {
             throw new RuntimeException(e);
         }

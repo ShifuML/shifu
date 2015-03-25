@@ -15,18 +15,28 @@
  */
 package ml.shifu.shifu.core.dtrain;
 
+import java.io.IOException;
+import java.util.List;
+
+import ml.shifu.guagua.GuaguaRuntimeException;
 import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.util.Constants;
 import ml.shifu.shifu.util.HDFSUtils;
+
+import org.apache.commons.io.IOUtils;
+import org.apache.hadoop.fs.FSDataInputStream;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.encog.Encog;
-import org.encog.engine.network.activation.*;
+import org.encog.engine.network.activation.ActivationLOG;
+import org.encog.engine.network.activation.ActivationLinear;
+import org.encog.engine.network.activation.ActivationSIN;
+import org.encog.engine.network.activation.ActivationSigmoid;
+import org.encog.engine.network.activation.ActivationTANH;
 import org.encog.mathutil.randomize.NguyenWidrowRandomizer;
 import org.encog.neural.networks.BasicNetwork;
 import org.encog.neural.networks.layers.BasicLayer;
-
-import java.io.IOException;
-import java.util.List;
+import org.encog.persist.EncogDirectoryPersistence;
 
 /**
  * Helper class for NN distributed training.
@@ -216,6 +226,37 @@ public final class NNUtils {
         // ConsistentRandomizer randomizer = new ConsistentRandomizer(-1, 1, seed);
         NguyenWidrowRandomizer randomizer = new NguyenWidrowRandomizer(-1, 1);
         randomizer.randomize(weights);
+    }
+
+    /**
+     * Loading model according to existing model path.
+     * 
+     * @param modelPath
+     *            the path to store model
+     * @param fs
+     *            file system used to store model
+     * @return model object or null if no modelPath file,
+     * @throws IOException
+     *             if loading file for any IOException
+     * @throws GuaguaRuntimeException
+     *             if any exception to load model object and cast to {@link BasicNetwork}
+     */
+    public static BasicNetwork loadModel(Path modelPath, FileSystem fs) throws IOException {
+        if(!fs.exists(modelPath)) {
+            // no such existing model, return null.
+            return null;
+        }
+        BasicNetwork model = null;
+        FSDataInputStream stream = null;
+        try {
+            stream = fs.open(modelPath);
+            model = BasicNetwork.class.cast(EncogDirectoryPersistence.loadObject(stream));
+        } catch (Exception e) {
+            throw new GuaguaRuntimeException("Loading model exception.", e);
+        } finally {
+            IOUtils.closeQuietly(stream);
+        }
+        return model;
     }
 
 }
