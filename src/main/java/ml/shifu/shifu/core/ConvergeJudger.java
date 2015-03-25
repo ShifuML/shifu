@@ -1,5 +1,5 @@
-/**
- * Copyright [2012-2014] eBay Software Foundation
+/*
+ * Copyright [2013-2015] eBay Software Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,29 +13,23 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package ml.shifu.shifu.container.obj;
-
-import ml.shifu.shifu.container.PerformanceObject;
-
-import java.util.List;
-
+package ml.shifu.shifu.core;
 
 /**
- * Performance object to persist the result
+ * Class for training convergence judging. 
+ * 
+ * @author xiaobzheng (zheng.xiaobin.roubao@gmail.com)
  */
-public class PerformanceResult {
 
-    public String version;
+public class ConvergeJudger {
+    
+    /**
+     * Compare threshold and error, if error <= threshold then return true, else false.
+     * 
+     * @return threshold and error compare result.
+     */
+    public boolean judge(double error, double threshold) {
+        return Double.compare(error, threshold) <= 0;
+    }
 
-    public List<PerformanceObject> pr;
-
-    public List<PerformanceObject> weightedPr;
-
-    public List<PerformanceObject> roc;
-
-    public List<PerformanceObject> weightedRoc;
-
-    public List<PerformanceObject> gains;
-
-    public List<PerformanceObject> weightedGains;
 }
