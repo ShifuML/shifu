@@ -37,7 +37,7 @@ public class ModelTrainConf {
     public static enum ALGORITHM {
         NN, LR, SVM, DT
     }
-    
+
     private Integer baggingNum = Integer.valueOf(5);
     // change it to false by default, as we often don't use this way.
     private Boolean baggingWithReplacement = Boolean.FALSE;
@@ -206,7 +206,7 @@ public class ModelTrainConf {
 
     /**
      * As threshold is an optional setting, Use @{@link JsonIgnore} to ignore threshold when initially write
-     * out to ModelConfig.json. 
+     * out to ModelConfig.json.
      * @return Cvergence threshold.
      */
     @JsonIgnore
