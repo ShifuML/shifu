@@ -15,7 +15,8 @@
  */
 REGISTER $path_jar;
 
-SET default_parallel $num_parallel;
+SET pig.exec.reducers.max 999;
+SET pig.exec.reducers.bytes.per.reducer 536870912;
 SET mapred.map.tasks.speculative.execution true;
 SET mapred.reduce.tasks.speculative.execution true;
 SET mapred.job.queue.name $queue_name;
@@ -43,8 +44,8 @@ data_binning_grp = GROUP data_binning BY $0 PARALLEL $column_parallel;
 binning_info = FOREACH data_binning_grp GENERATE FLATTEN(GenBinningData(*));
 
 -- do stats
-data_stats = GROUP data_cols BY $0;
-data_stats = JOIN data_stats BY $0, binning_info BY columnId;
+data_stats = GROUP data_cols BY $0 PARALLEL $column_parallel;
+data_stats = JOIN data_stats BY $0, binning_info BY columnId PARALLEL $column_parallel;
 
 stats_info = FOREACH data_stats GENERATE FLATTEN(CalculateStats(*));
 STORE stats_info INTO '$path_pre_training_stats' USING PigStorage('|', '-schema');

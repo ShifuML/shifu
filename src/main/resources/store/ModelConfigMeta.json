@@ -312,6 +312,11 @@
                 "directive": "input",
                 "defval": 100
             }, {
+                "name": "convergenceThreshold",
+                "type": "number",
+                "directive": "input",
+                "defval": 0.0
+            }, {
                 "name": "zkServers",
                 "type": "text",
                 "directive": "input",
@@ -322,6 +327,16 @@
                 "type": "number",
                 "directive": "input",
                 "defval" : 1
+            }, {
+                "name": "isContinuousEnabled",
+                "type": "boolean",
+                "directive": "input",
+                "defval": false
+            }, {               
+                "name": "isCrossOver",
+                "type": "boolean",
+                "directive": "input",
+                "defval": false
             }, {
                 "name": "algorithm",
                 "type": "text",
