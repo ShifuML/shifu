@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-REGISTER '$path_jar'
+REGISTER $path_jar;
 
 SET default_parallel $num_parallel;
 SET mapred.map.tasks.speculative.execution true;
@@ -21,7 +21,7 @@ SET mapred.reduce.tasks.speculative.execution true;
 SET mapred.job.queue.name $queue_name;
 SET mapred.task.timeout 1200000;
 SET job.name 'shifu statistic';
-SET io.sort.mb 500
+SET io.sort.mb 500;
 
 DEFINE IsDataFilterOut  ml.shifu.shifu.udf.PurifyDataUDF('$source_type', '$path_model_config', '$path_column_config');
 DEFINE IsToBinningData  ml.shifu.shifu.udf.FilterBinningDataUDF('$source_type', '$path_model_config', '$path_column_config');

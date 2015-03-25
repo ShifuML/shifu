@@ -13,11 +13,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-REGISTER '$path_jar'
+REGISTER $path_jar;
 
-SET default_parallel $num_parallel
+SET default_parallel $num_parallel;
 SET mapred.job.queue.name $queue_name;
-SET job.name 'shifu evaluation'
+SET job.name 'shifu evaluation';
 
 DEFINE IsDataFilterOut          ml.shifu.shifu.udf.PurifyDataUDF('$source_type', '$path_model_config', '$path_column_config', '$eval_set_name');
 DEFINE EvalScore                ml.shifu.shifu.udf.EvalScoreUDF('$source_type', '$path_model_config', '$path_column_config', '$eval_set_name');

@@ -13,12 +13,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-REGISTER '$path_jar'
+REGISTER $path_jar;
 
-SET default_parallel $num_parallel
+SET default_parallel $num_parallel;
 SET mapred.job.queue.name $queue_name;
-SET job.name 'shifu normalize'
-SET io.sort.mb 500
+SET job.name 'shifu normalize';
+SET io.sort.mb 500;
 
 DEFINE IsDataFilterOut  ml.shifu.shifu.udf.PurifyDataUDF('$source_type', '$path_model_config', '$path_column_config');
 DEFINE Normalize        ml.shifu.shifu.udf.NormalizeUDF('$source_type', '$path_model_config', '$path_column_config');
