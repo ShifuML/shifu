@@ -26,6 +26,7 @@ import ml.shifu.guagua.master.MasterContext;
 import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.container.obj.ModelConfig;
 import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
+import ml.shifu.shifu.core.ConvergeJudger;
 import ml.shifu.shifu.core.alg.NNTrainer;
 import ml.shifu.shifu.fs.ShifuFileUtils;
 import ml.shifu.shifu.util.CommonUtils;
@@ -101,6 +102,16 @@ public class NNMaster implements MasterComputable<NNParams, NNParams> {
      * Whether to enable continuous model training based on existing models.
      */
     private boolean isContinuousEnabled = false;
+
+    /**
+     * Convergence threshold setting.
+     */
+    private double convergenceThreshold = 0d;
+    
+    /**
+     * Convergence judger instance for convergence checking.
+     */
+    private ConvergeJudger judger = new ConvergeJudger();
 
     @Override
     public NNParams compute(MasterContext<NNParams, NNParams> context) {
@@ -193,6 +204,22 @@ public class NNMaster implements MasterComputable<NNParams, NNParams> {
         params.setGradients(new double[0]);
         params.setWeights(weights);
         LOG.debug("master result {} in iteration {}", params, context.getCurrentIteration());
+        
+        // Convergence judging part
+        LOG.info("Judging convergence :");
+        
+        double avgErr = (currentTrainError + currentTestError) / 2;
+        
+        LOG.info("NNMaster compute iteration {} Average error: {} , Threshold: {}"
+                , context.getCurrentIteration(), avgErr, convergenceThreshold);
+        
+        if (judger.judge(avgErr, convergenceThreshold)) {
+            LOG.info("NNMaster compute iteration {} converged !", context.getCurrentIteration());
+            params.setHalt(true);
+        } else {
+            LOG.info("NNMaster compute iteration {} not converged yet !", context.getCurrentIteration());
+        }
+        
         return params;
     }
 
@@ -248,6 +275,11 @@ public class NNMaster implements MasterComputable<NNParams, NNParams> {
                 this.learningDecay = Double.valueOf(learningDecayO.toString());
             }
             LOG.info("learningDecay in master is :{}", learningDecay);
+            
+            Double threshold =  this.modelConfig.getTrain().getConvergenceThreshold();
+            this.convergenceThreshold = threshold == null ? 0d : threshold.doubleValue();
+            LOG.info("Convergence threshold in master is :{}", this.convergenceThreshold);
+            
             this.isContinuousEnabled = Boolean.TRUE.toString().equalsIgnoreCase(
                     context.getProps().getProperty(NNConstants.NN_CONTINUOUS_TRAINING));
         } catch (IOException e) {
