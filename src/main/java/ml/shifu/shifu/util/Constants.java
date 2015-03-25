@@ -77,6 +77,7 @@ public interface Constants {
     public static final String REGEX_MULTIPLE_INPUTS = "[{}]";
     public static final String COMMA = ",";
     public static final String PIG_COLUMN_SEPARATOR = "::";
+    public static final String PIG_FULL_COLUMN_SEPARATOR = "_";
 
     public static final String LOCAL_MODEL_CONFIG_JSON = "./ModelConfig.json";
     public static final String LOCAL_COLUMN_CONFIG_JSON = "./ColumnConfig.json";
@@ -138,9 +139,9 @@ public interface Constants {
     public static final String SHIFU_DEFAULT_VARSEL_SE_MULTI = "false";
 
     public static final String SHIFU_VARSEL_SE_MULTI = "shifu.varsel.se.multi";
-    
+
     public static final String SHIFU_VARSEL_SE_MULTI_THREAD = "shifu.varsel.se.multi.thread";
-    
+
     public static final int SHIFU_DEFAULT_VARSEL_SE_MULTI_THREAD = 6;
 
     public static final String WRAPPER_BY_REMOVE = "R";
@@ -164,9 +165,9 @@ public interface Constants {
     public static final String SHIFU_GROUP_COUNTER = "SHIFU_COUNTER";
 
     public static final long EVAL_COUNTER_WEIGHT_SCALE = 1000l;
-    
+
     public static final String COUNTER_RECORDS = "RECORDS";
-    
+
     public static final String SHIFU_VARSELECT_SE_OUTPUT_NAME = "se";
 
 }

@@ -17,6 +17,8 @@ package ml.shifu.shifu.container.obj;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.JsonProperty;
+
 import ml.shifu.shifu.core.alg.LogisticRegressionTrainer;
 import ml.shifu.shifu.core.alg.NNTrainer;
 import ml.shifu.shifu.core.alg.SVMTrainer;
@@ -41,11 +43,16 @@ public class ModelTrainConf {
     private Boolean baggingWithReplacement = Boolean.FALSE;
     private Double baggingSampleRate = Double.valueOf(0.8);
     private Double validSetRate = Double.valueOf(0.2);
+    private Double convergenceThreshold = Double.valueOf(0.0);
     private Integer numTrainEpochs = Integer.valueOf(100);
     private Integer epochsPerIteration = Integer.valueOf(1);
-
+    
     private Boolean trainOnDisk = Boolean.FALSE;
     private Boolean fixInitInput = Boolean.FALSE;
+    
+    private Boolean isContinuousEnabled = Boolean.FALSE; 
+    
+    private Boolean isCrossOver = Boolean.FALSE;
 
     private String algorithm = "NN";
 
@@ -199,6 +206,49 @@ public class ModelTrainConf {
      */
     public void setEpochsPerIteration(Integer epochsPerIteration) {
         this.epochsPerIteration = epochsPerIteration;
+    }
+
+    /**
+     * As threshold is an optional setting, Use @{@link JsonIgnore} to ignore threshold when initially write
+     * out to ModelConfig.json.
+     * @return Cvergence threshold.
+     */
+    @JsonIgnore
+    public Double getConvergenceThreshold() {
+        return convergenceThreshold;
+    }
+
+    @JsonProperty
+    public void setConvergenceThreshold(Double convergenceThreshold) {
+        this.convergenceThreshold = convergenceThreshold;
+    }
+
+    /**
+     * @return the isContinuousEnabled
+     */
+    public Boolean getIsContinuousEnabled() {
+        return isContinuousEnabled;
+    }
+
+    /**
+     * @param isContinuousEnabled the isContinuousEnabled to set
+     */
+    public void setIsContinuousEnabled(Boolean isContinuousEnabled) {
+        this.isContinuousEnabled = isContinuousEnabled;
+    }
+
+    /**
+     * @return the isCrossOver
+     */
+    public Boolean getIsCrossOver() {
+        return isCrossOver;
+    }
+
+    /**
+     * @param isCrossOver the isCrossOver to set
+     */
+    public void setIsCrossOver(Boolean isCrossOver) {
+        this.isCrossOver = isCrossOver;
     }
 
 }

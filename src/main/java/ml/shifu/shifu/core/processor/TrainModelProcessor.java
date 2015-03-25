@@ -15,10 +15,18 @@
  */
 package ml.shifu.shifu.core.processor;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
-import com.fasterxml.jackson.core.JsonParser;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.base.Splitter;
+import java.io.ByteArrayOutputStream;
+import java.io.DataOutputStream;
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.lang.Thread.UncaughtExceptionHandler;
+import java.nio.charset.Charset;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.Scanner;
+
 import ml.shifu.guagua.GuaguaConstants;
 import ml.shifu.guagua.mapreduce.GuaguaMapReduceClient;
 import ml.shifu.guagua.mapreduce.GuaguaMapReduceConstants;
@@ -29,7 +37,12 @@ import ml.shifu.shifu.core.AbstractTrainer;
 import ml.shifu.shifu.core.alg.LogisticRegressionTrainer;
 import ml.shifu.shifu.core.alg.NNTrainer;
 import ml.shifu.shifu.core.alg.SVMTrainer;
-import ml.shifu.shifu.core.dtrain.*;
+import ml.shifu.shifu.core.dtrain.NNConstants;
+import ml.shifu.shifu.core.dtrain.NNMaster;
+import ml.shifu.shifu.core.dtrain.NNOutput;
+import ml.shifu.shifu.core.dtrain.NNParams;
+import ml.shifu.shifu.core.dtrain.NNUtils;
+import ml.shifu.shifu.core.dtrain.NNWorker;
 import ml.shifu.shifu.core.validator.ModelInspector.ModelStep;
 import ml.shifu.shifu.exception.ShifuErrorCode;
 import ml.shifu.shifu.exception.ShifuException;
@@ -37,26 +50,26 @@ import ml.shifu.shifu.fs.ShifuFileUtils;
 import ml.shifu.shifu.util.Constants;
 import ml.shifu.shifu.util.Environment;
 import ml.shifu.shifu.util.HDFSUtils;
+
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.collections.ListUtils;
 import org.apache.commons.compress.compressors.bzip2.BZip2CompressorInputStream;
 import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.fs.FSDataInputStream;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.pig.impl.util.JarManager;
 import org.apache.zookeeper.ZooKeeper;
 import org.encog.ml.data.MLDataSet;
+import org.encog.neural.networks.BasicNetwork;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.*;
-import java.lang.Thread.UncaughtExceptionHandler;
-import java.nio.charset.Charset;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.Scanner;
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.core.JsonParser;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.base.Splitter;
 
 /**
  * Train processor, produce model based on the normalized dataset
@@ -231,7 +244,6 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
         if(isDebug()) {
             LOG.warn("Currently we haven't debug logic. It's the same as you don't set it.");
         }
-
     }
 
     protected void runDistributedTrain() throws IOException, InterruptedException, ClassNotFoundException {
@@ -244,9 +256,9 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
         prepareCommonParams(args, sourceType);
 
         // add tmp models folder to config
-        Path tmpModelsPath = ShifuFileUtils.getFileSystemBySourceType(sourceType).makeQualified(
-                new Path(super.getPathFinder().getPathBySourceType(
-                        new Path(Constants.TMP, Constants.DEFAULT_MODELS_TMP_FOLDER), sourceType)));
+        FileSystem fileSystem = ShifuFileUtils.getFileSystemBySourceType(sourceType);
+        Path tmpModelsPath = fileSystem.makeQualified(new Path(super.getPathFinder().getPathBySourceType(
+                new Path(Constants.TMP, Constants.DEFAULT_MODELS_TMP_FOLDER), sourceType)));
         args.add(String.format(NNConstants.MAPREDUCE_PARAM_FORMAT, NNConstants.NN_TMP_MODELS_FOLDER,
                 tmpModelsPath.toString()));
         int baggingNum = isForVarSelect ? 1 : super.getModelConfig().getBaggingNum();
@@ -266,8 +278,10 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
                     .getModelSetName(), i + 1));
             LOG.info("Start trainer with id: {}", (i + 1));
             String modelName = getModelName(i);
-            Path modelPath = ShifuFileUtils.getFileSystemBySourceType(sourceType).makeQualified(
-                    new Path(super.getPathFinder().getModelsPath(sourceType), modelName));
+            Path modelPath = fileSystem.makeQualified(new Path(super.getPathFinder().getModelsPath(sourceType),
+                    modelName));
+
+            checkContinuousTraining(fileSystem, localArgs, modelPath);
             localArgs.add(String.format(NNConstants.MAPREDUCE_PARAM_FORMAT, NNConstants.GUAGUA_NN_OUTPUT,
                     modelPath.toString()));
             localArgs.add(String.format(NNConstants.MAPREDUCE_PARAM_FORMAT, NNConstants.NN_TRAINER_ID,
@@ -295,14 +309,47 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
         // copy model files at last.
         for(int i = 0; i < baggingNum; i++) {
             String modelName = getModelName(i);
-            Path modelPath = ShifuFileUtils.getFileSystemBySourceType(sourceType).makeQualified(
-                    new Path(super.getPathFinder().getModelsPath(sourceType), modelName));
+            Path modelPath = fileSystem.makeQualified(new Path(super.getPathFinder().getModelsPath(sourceType),
+                    modelName));
             copyModelToLocal(modelName, modelPath, sourceType);
         }
 
         // copy temp model files
         copyTmpModelsToLocal(tmpModelsPath, sourceType);
         LOG.info("Distributed trainning finished in {}ms.", System.currentTimeMillis() - start);
+    }
+
+    private void checkContinuousTraining(FileSystem fileSystem, List<String> localArgs, Path modelPath)
+            throws IOException {
+        if(Boolean.TRUE.toString().equals(this.modelConfig.getTrain().getIsContinuousEnabled().toString())) {
+            // if varselect d-training or no such existing models, directly to disable continuous training.
+            if(this.isForVarSelect) {
+                localArgs.add(String.format(NNConstants.MAPREDUCE_PARAM_FORMAT, NNConstants.NN_CONTINUOUS_TRAINING,
+                        Boolean.FALSE.toString()));
+                LOG.warn("For varSelect step, continous model training is always disabled.");
+            } else if(!fileSystem.exists(modelPath)) {
+                localArgs.add(String.format(NNConstants.MAPREDUCE_PARAM_FORMAT, NNConstants.NN_CONTINUOUS_TRAINING,
+                        Boolean.FALSE.toString()));
+                LOG.info("No existing model, model training will start from scratch.");
+            } else if(!inputOutputModelCheckSuccess(fileSystem, modelPath)) {
+                // TODO hidden layer size and activation functions should also be validated
+                localArgs.add(String.format(NNConstants.MAPREDUCE_PARAM_FORMAT, NNConstants.NN_CONTINUOUS_TRAINING,
+                        Boolean.FALSE.toString()));
+                LOG.warn("Model input and output settings are not consistent with input and output columns settings,  model training will start from scratch.");
+            } else {
+                localArgs.add(String.format(NNConstants.MAPREDUCE_PARAM_FORMAT, NNConstants.NN_CONTINUOUS_TRAINING,
+                        this.modelConfig.getTrain().getIsContinuousEnabled()));
+            }
+        } else {
+            localArgs.add(String.format(NNConstants.MAPREDUCE_PARAM_FORMAT, NNConstants.NN_CONTINUOUS_TRAINING,
+                    this.modelConfig.getTrain().getIsContinuousEnabled()));
+        }
+    }
+
+    private boolean inputOutputModelCheckSuccess(FileSystem fileSystem, Path modelPath) throws IOException {
+        BasicNetwork model = NNUtils.loadModel(modelPath, fileSystem);
+        int[] outputCandidateCounts = NNUtils.getInputOutputCandidateCounts(getColumnConfigList());
+        return model.getInputCount() == outputCandidateCounts[0] && model.getOutputCount() == outputCandidateCounts[1];
     }
 
     private String getProgressLogFile(int i) {
@@ -404,9 +451,9 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
                         new Path(super.getPathFinder().getColumnConfigPath(sourceType)))));
         args.add(String.format(NNConstants.MAPREDUCE_PARAM_FORMAT, NNConstants.NN_MODELSET_SOURCE_TYPE, sourceType));
         args.add(String.format(NNConstants.MAPREDUCE_PARAM_FORMAT, NNConstants.NN_DRY_TRAIN, isDryTrain()));
-        // hard code set computation threshold for 40s. TODO, set it in shifuconfig.
+        // hard code set computation threshold for 50s. Can be changed in shifuconfig file
         args.add(String.format(NNConstants.MAPREDUCE_PARAM_FORMAT, GuaguaConstants.GUAGUA_COMPUTATION_TIME_THRESHOLD,
-                40 * 1000l));
+                50 * 1000l));
         setHeapSizeAndSplitSize(args);
 
         // one can set guagua conf in shifuconfig
@@ -417,7 +464,6 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
                         .toString()));
             }
         }
-
     }
 
     private void setHeapSizeAndSplitSize(final List<String> args) {

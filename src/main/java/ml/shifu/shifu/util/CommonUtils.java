@@ -267,6 +267,21 @@ public final class CommonUtils {
      *             if first line of pathHeader is null or empty.
      */
     public static String[] getHeaders(String pathHeader, String delimiter, SourceType sourceType) throws IOException {
+        return getHeaders(pathHeader, delimiter, sourceType, true);
+    }
+
+    /**
+     * Return header column array from header file.
+     * 
+     * @throws IOException
+     *             if any IO exception in reading file.
+     * @throws IllegalArgumentException
+     *             if sourceType is null, if pathHeader is null or empty, if delimiter is null or empty.
+     * @throws RuntimeException
+     *             if first line of pathHeader is null or empty.
+     */
+    public static String[] getHeaders(String pathHeader, String delimiter, SourceType sourceType, boolean isFull)
+            throws IOException {
         if(StringUtils.isEmpty(pathHeader) || StringUtils.isEmpty(delimiter) || sourceType == null) {
             throw new IllegalArgumentException(String.format(
                     "Null or empty parameters srcDataPath:%s, dstDataPath:%s, sourceType:%s", pathHeader, delimiter,
@@ -293,9 +308,21 @@ public final class CommonUtils {
 
         List<String> headerList = new ArrayList<String>();
         for(String str: Splitter.on(delimiter).split(pigHeaderStr)) {
-            headerList.add(getRelativePigHeaderColumnName(str));
+            if(isFull) {
+                headerList.add(getFullPigHeaderColumnName(str));
+            } else {
+                headerList.add(getRelativePigHeaderColumnName(str));
+            }
         }
         return headerList.toArray(new String[0]);
+    }
+
+    /**
+     * Get full column name from pig header. For example, one column is a::b, return a_b. If b, return b.
+     */
+    public static String getFullPigHeaderColumnName(String raw) {
+        return raw == null ? raw : raw.replaceAll(Constants.PIG_COLUMN_SEPARATOR, Constants.PIG_FULL_COLUMN_SEPARATOR);
+        // return raw;
     }
 
     /**
