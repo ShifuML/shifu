@@ -358,7 +358,6 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
         for(EvalConfig evalConfig: evalSetList) {
             runEval(evalConfig);
         }
-        log.info("Step Finished: eval");
     }
 
     /**

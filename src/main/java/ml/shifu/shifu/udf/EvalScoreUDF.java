@@ -46,7 +46,7 @@ public class EvalScoreUDF extends AbstractTrainerUDF<Tuple> {
 
     private EvalConfig evalConfig;
     private ModelRunner modelRunner;
-    private String[] header;
+    private String[] headers;
 
     private List<String> negTags;
 
@@ -71,18 +71,18 @@ public class EvalScoreUDF extends AbstractTrainerUDF<Tuple> {
         }
 
         // create model runner
-        this.header = CommonUtils.getHeaders(evalConfig.getDataSet().getHeaderPath(), evalConfig.getDataSet()
+        this.headers = CommonUtils.getHeaders(evalConfig.getDataSet().getHeaderPath(), evalConfig.getDataSet()
                 .getHeaderDelimiter(), evalConfig.getDataSet().getSource());
 
         List<BasicML> models = CommonUtils
                 .loadBasicModels(modelConfig, evalConfig, evalConfig.getDataSet().getSource());
-        modelRunner = new ModelRunner(modelConfig, columnConfigList, this.header, evalConfig.getDataSet()
+        modelRunner = new ModelRunner(modelConfig, columnConfigList, this.headers, evalConfig.getDataSet()
                 .getDataDelimiter(), models);
         modelCnt = models.size();
     }
 
     public Tuple exec(Tuple input) throws IOException {
-        Map<String, String> rawDataMap = CommonUtils.convertDataIntoMap(input, this.header);
+        Map<String, String> rawDataMap = CommonUtils.convertDataIntoMap(input, this.headers);
         if(MapUtils.isEmpty(rawDataMap)) {
             return null;
         }

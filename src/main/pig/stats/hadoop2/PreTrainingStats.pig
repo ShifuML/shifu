@@ -48,8 +48,8 @@ binning_info_grp = GROUP binning_info_partial BY $0;
 binning_info = FOREACH binning_info_grp GENERATE FLATTEN(MergeBinningData(*));
 
 -- do stats
-data_stats = GROUP data_cols BY $0;
-data_stats = JOIN data_stats BY $0, binning_info BY columnId;
+data_stats = GROUP data_cols BY $0 PARALLEL $column_parallel;
+data_stats = JOIN data_stats BY $0, binning_info BY columnId PARALLEL $column_parallel;
 
 stats_info = FOREACH data_stats GENERATE FLATTEN(CalculateStats(*));
 STORE stats_info INTO '$path_pre_training_stats' USING PigStorage('|', '-schema');
