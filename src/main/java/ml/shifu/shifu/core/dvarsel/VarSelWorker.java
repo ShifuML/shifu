@@ -147,7 +147,7 @@ public class VarSelWorker
             return null;
         }
 
-        LOG.info("Get result from master, the base set is - {}", masterResult.getColumnIdList().toString());
+        LOG.info("Get result from master, the base seed count is - {}", masterResult.getSeeds().size());
 
         workerConductor.consumeMasterResult(masterResult);
         return workerConductor.generateVarSelResult();

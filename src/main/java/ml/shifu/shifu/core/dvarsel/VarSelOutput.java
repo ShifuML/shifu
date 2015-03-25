@@ -85,13 +85,13 @@ public class VarSelOutput extends BasicMasterInterceptor<VarSelMasterResult, Var
     public void postApplication(MasterContext<VarSelMasterResult, VarSelWorkerResult> context) {
         VarSelMasterResult varSelMasterResult = context.getMasterResult();
 
-        List<Integer> results = varSelMasterResult.getColumnIdList();
+        List<CandidateSeed> candidateSeeds = varSelMasterResult.getSeeds();
 
-        LOG.info("Results:" + results);
+        LOG.info("Results:" + candidateSeeds.toString());
 
         Path out = new Path(context.getProps().getProperty(Constants.VAR_SEL_COLUMN_IDS_OUPUT));
 
-        writeColumnIdsIntoHDFS(out, results);
+        writeColumnIdsIntoHDFS(out, candidateSeeds.get(0).getColumnIdList());
     }
 
     private void writeColumnIdsIntoHDFS(Path path, List<Integer> columnIds) {
