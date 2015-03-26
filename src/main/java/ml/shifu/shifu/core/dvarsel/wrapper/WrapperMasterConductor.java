@@ -31,7 +31,6 @@ import java.util.*;
 public class WrapperMasterConductor extends AbstractMasterConductor {
     private CandidateGenerator candidateGenerator;
     private CandidateSeeds seeds;
-    private int expectIterationCount;
 
     private int iterationCount = 0;
 
@@ -46,17 +45,18 @@ public class WrapperMasterConductor extends AbstractMasterConductor {
         }
         this.candidateGenerator = new CandidateGenerator(this.modelConfig.getVarSelect().getParams(), variables);
         this.seeds = candidateGenerator.initSeeds();
-        this.expectIterationCount = (Integer) this.modelConfig.getVarSelect().getParams().get("EXPECT_ITERATION_COUNT");
     }
 
     @Override
     public int getEstimateIterationCnt() {
-        return (expectIterationCount < iterationCount ? 0 : expectIterationCount - iterationCount);
+        return (candidateGenerator.getExpectIterationCount() < iterationCount ?
+                0 :
+                candidateGenerator.getExpectIterationCount() - iterationCount);
     }
 
     @Override
     public boolean isToStop() {
-        return (iterationCount >= expectIterationCount);
+        return (iterationCount >= candidateGenerator.getExpectIterationCount());
     }
 
     @Override
