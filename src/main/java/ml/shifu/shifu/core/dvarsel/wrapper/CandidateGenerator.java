@@ -106,7 +106,9 @@ public class CandidateGenerator {
                 return o1.getVerror() < o2.getVerror() ? -1 : 1;
             }
         });
-        logger.info("Best seed: {}", perfs.get(0).toString());
+        for (int i = 0; i < 5; i++) {
+            logger.info("Best seed: {}", perfs.get(i).toString());
+        }
         logger.info("Worst seed: {}", perfs.get(perfs.size() - 1).toString());
 
         List<CandidatePerf> bestPerfs = perfs.subList(0, toBestIndex(perfs));
