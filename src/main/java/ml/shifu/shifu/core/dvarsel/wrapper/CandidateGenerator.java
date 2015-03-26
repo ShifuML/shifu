@@ -32,6 +32,8 @@ public class CandidateGenerator {
     private int inheritPercent;
     private int crossPercent;
 
+    private int seedSequence;
+
     public CandidateGenerator(Map<String, Object> params, List<Integer> variables) {
         this.expectIterationCount = (Integer) params.get(EXPECT_ITERATION_COUNT);
         this.iteratorSeedCount = (Integer) params.get(ITERATION_SEED_COUNT);
@@ -82,7 +84,7 @@ public class CandidateGenerator {
             for (int varIndex = 0; varIndex < expectVariableCount; varIndex++) {
                 variableList.add(randomVariable(seedRandom, variableList));
             }
-            seeds.addCandidateSeed(seedIndex, variableList);
+            seeds.addCandidateSeed(seedSequence++, variableList);
         }
         return seeds;
     }
@@ -104,9 +106,9 @@ public class CandidateGenerator {
                 return o1.getVerror() < o2.getVerror() ? -1 : 1;
             }
         });
-        List<CandidatePerf> bestPerfs = perfs.subList(0, perfs.size() * inheritPercent / 100);
-        List<CandidatePerf> worstPerfs = perfs.subList(perfs.size() * inheritPercent / 100 + 1, perfs.size() * inheritPercent / 100 + 1 + perfs.size() * crossPercent / 100);
-        List<CandidatePerf> ordinaryPerfs = perfs.subList(perfs.size() * crossPercent / 100 + 1, perfs.size() - 1);
+        List<CandidatePerf> bestPerfs = perfs.subList(0, toBestIndex(perfs));
+        List<CandidatePerf> worstPerfs = perfs.subList(toBestIndex(perfs) + 1, toBestIndex(perfs) + 1 + toWorstIndex(perfs));
+        List<CandidatePerf> ordinaryPerfs = perfs.subList(toWorstIndex(perfs) + 1, perfs.size() - 1);
 
         List<CandidateSeed> bestSeeds = filter(seeds.getCandidateSeeds(), bestPerfs);
         List<CandidateSeed> worstSeeds = filter(seeds.getCandidateSeeds(), worstPerfs);
@@ -122,6 +124,14 @@ public class CandidateGenerator {
         return result;
     }
 
+    private int toBestIndex(List<CandidatePerf> perfs) {
+        return perfs.size() * inheritPercent / 100;
+    }
+
+    private int toWorstIndex(List<CandidatePerf> perfs) {
+        return perfs.size() * crossPercent / 100;
+    }
+
     private List<CandidateSeed> inherit(List<CandidateSeed> bestSeeds) {
         return bestSeeds;
     }
@@ -134,15 +144,15 @@ public class CandidateGenerator {
             while (allSeeds.contains(first) || allSeeds.contains(second)) {
                 crossTwoSeed(first, second);
             }
-            result.add(first);
-            result.add(second);
+            result.add(new CandidateSeed(seedSequence++, first.getColumnIdList()));
+            result.add(new CandidateSeed(seedSequence++, second.getColumnIdList()));
         }
         return result;
     }
 
     private void crossTwoSeed(CandidateSeed first, CandidateSeed second) {
         Random splitIndexRandom = new Random();
-        int splitIndex = Double.valueOf(splitIndexRandom.nextDouble() * (first.getColumnIdList().size() - 2) + 1).intValue();
+        int splitIndex = randomSplitIndex(first, splitIndexRandom);
         for (int i = 0; i < splitIndex; i++) {
             int id = first.getColumnIdList().get(i);
             first.getColumnIdList().set(i, second.getColumnIdList().get(i));
@@ -150,18 +160,22 @@ public class CandidateGenerator {
         }
     }
 
+    private int randomSplitIndex(CandidateSeed first, Random splitIndexRandom) {
+        return Double.valueOf(splitIndexRandom.nextDouble() * (first.getColumnIdList().size() - 2) + 1).intValue();
+    }
+
     private List<CandidateSeed> mutate(List<CandidateSeed> worstSeeds, CandidateSeeds seeds) {
         List<CandidateSeed> result = new ArrayList<CandidateSeed>(worstSeeds.size());
         Random candidateRandom = new Random();
         for (CandidateSeed seed : worstSeeds) {
             seed = _mutate(candidateRandom, seed, seeds);
-            result.add(seed);
+            result.add(new CandidateSeed(seedSequence++, seed.getColumnIdList()));
         }
         return result;
     }
 
     private CandidateSeed _mutate(Random candidateRandom, CandidateSeed worseSeed, CandidateSeeds allSeeds) {
-        int index = Double.valueOf(candidateRandom.nextDouble() * (expectVariableCount - 1)).intValue();
+        int index = randomMutatedIndex(candidateRandom);
 
         CandidateSeed result = new CandidateSeed(worseSeed.getId(), new ArrayList<Integer>(worseSeed.getColumnIdList()));
         result.getColumnIdList().set(index, randomVariable(candidateRandom, worseSeed.getColumnIdList()));
@@ -169,6 +183,10 @@ public class CandidateGenerator {
             result = _mutate(candidateRandom, worseSeed, allSeeds);
         }
         return result;
+    }
+
+    private int randomMutatedIndex(Random candidateRandom) {
+        return Double.valueOf(candidateRandom.nextDouble() * (expectVariableCount - 1)).intValue();
     }
 
     private List<CandidateSeed> filter(List<CandidateSeed> seeds, final List<CandidatePerf> perfs) {
