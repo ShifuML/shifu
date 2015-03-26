@@ -1,6 +1,7 @@
 package ml.shifu.shifu.core.dvarsel.wrapper;
 
 import ml.shifu.shifu.core.dvarsel.CandidatePerf;
+import ml.shifu.shifu.core.dvarsel.CandidateSeed;
 import ml.shifu.shifu.core.dvarsel.CandidateSeeds;
 import ml.shifu.shifu.core.dvarsel.VarSelWorkerResult;
 import org.testng.annotations.BeforeClass;
@@ -43,21 +44,22 @@ public class CandidateGeneratorTest {
 
     @Test
     public void testNextGeneration() throws Exception {
-        CandidateSeeds seed1 = generator.initSeeds();
-        System.out.println(seed1);
+        CandidateSeeds seed = generator.initSeeds();
+        System.out.println(seed);
 
         Random random = new Random();
+
         for (int i = 0; i < EXPECT_ITERATION_COUNT - 1; i++) {
-            CandidateSeeds seed2 = generateNext(seed1, random);
-            System.out.println(seed2);
+            seed = generateNext(seed, random);
+            System.out.println(seed);
         }
     }
 
-    private CandidateSeeds generateNext(CandidateSeeds seed1, Random random) {
+    private CandidateSeeds generateNext(CandidateSeeds seed, Random random) {
         List<VarSelWorkerResult> workerResults = new ArrayList<VarSelWorkerResult>();
-        workerResults.add(new VarSelWorkerResult(getCandidatePerfs(random)));
-        workerResults.add(new VarSelWorkerResult(getCandidatePerfs(random)));
-        workerResults.add(new VarSelWorkerResult(getCandidatePerfs(random)));
+        workerResults.add(new VarSelWorkerResult(getCandidatePerfs(random, seed)));
+        workerResults.add(new VarSelWorkerResult(getCandidatePerfs(random, seed)));
+        workerResults.add(new VarSelWorkerResult(getCandidatePerfs(random, seed)));
 
         final List<VarSelWorkerResult> workerResultList = Collections.unmodifiableList(workerResults);
         Iterable<VarSelWorkerResult> results = new Iterable<VarSelWorkerResult>() {
@@ -66,13 +68,13 @@ public class CandidateGeneratorTest {
                 return workerResultList.iterator();
             }
         };
-        return generator.nextGeneration(results, seed1);
+        return generator.nextGeneration(results, seed);
     }
 
-    private List<CandidatePerf> getCandidatePerfs(Random random) {
+    private List<CandidatePerf> getCandidatePerfs(Random random, CandidateSeeds seed) {
         List<CandidatePerf> seedPerfList = new ArrayList<CandidatePerf>();
-        for (int i = 0; i < ITERATION_SEED_COUNT; i++) {
-            seedPerfList.add(new CandidatePerf(i, random.nextDouble()));
+        for (CandidateSeed s : seed.getCandidateSeeds()) {
+            seedPerfList.add(new CandidatePerf(s.getId(), random.nextDouble()));
         }
         return seedPerfList;
     }
