@@ -243,7 +243,8 @@ public class Gradient {
 
             for(int i = 0; i < this.training.getRecordCount(); i++) {
                 if(this.isCrossOver) {
-                    // 3:1 to select testing data set, tmp hard code, TODO fix hard code issue
+                    // 3:1 to select testing data set, tmp hard code, TODO fix hard code issue,extract such logic to a
+                    // method
                     if((i + seed) % 4 < 3) {
                         this.training.getRecord(i, this.pair);
                     } else {

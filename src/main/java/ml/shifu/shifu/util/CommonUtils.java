@@ -364,7 +364,7 @@ public final class CommonUtils {
             } catch (Exception e) {
                 return -1;
             }
-            return getNumericBinNum(columnConfig.getBinBoundary(), dval);
+            return getBinIndex(columnConfig.getBinBoundary(), dval);
         }
     }
 
@@ -377,6 +377,7 @@ public final class CommonUtils {
      * @throws IllegalArgumentException
      *             if binBoundary is null or empty.
      */
+    @SuppressWarnings("unused")
     private static int getNumericBinNum(List<Double> binBoundary, double value) {
         if(CollectionUtils.isEmpty(binBoundary)) {
             throw new IllegalArgumentException("binBoundary should not be null or empty.");
@@ -463,6 +464,36 @@ public final class CommonUtils {
         }
 
         return loadBasicModels(modelConfig, evalConfig, modelConfig.getDataSet().getSource());
+    }
+
+    /**
+     * Get bin index by binary search. The last bin in <code>binBoundary</code> is missing value bin.
+     */
+    public static int getBinIndex(List<Double> binBoundary, Double dVal) {
+        assert binBoundary != null && binBoundary.size() > 1;
+        int binSize = binBoundary.size();
+        if(dVal == null) {
+            return binSize - 1;
+        }
+
+        int low = 0;
+        int high = binSize - 2;
+
+        while(low <= high) {
+            int mid = (low + high) >>> 1;
+            Double midVal = binBoundary.get(mid);
+            int cmp = midVal.compareTo(dVal);
+
+            if(cmp < 0) {
+                low = mid + 1;
+            } else if(cmp > 0) {
+                high = mid - 1;
+            } else {
+                return mid; // key found
+            }
+        }
+
+        return low == 0 ? 0 : low - 1;
     }
 
     /**
