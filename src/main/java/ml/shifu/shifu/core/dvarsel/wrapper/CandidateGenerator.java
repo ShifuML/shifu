@@ -16,21 +16,29 @@ import java.util.*;
 public class CandidateGenerator {
     private static final Logger logger = LoggerFactory.getLogger(CandidateGenerator.class);
 
-    private int iteratorSeedCount;
-    private int expectVariableCount;
-    private List<Integer> variables;
+    private final int iteratorSeedCount;
+    private final int expectVariableCount;
+    private final int expectIterationCount;
+    private final List<Integer> variables;
+
+    private static final String EXPECT_ITERATION_COUNT = "EXPECT_ITERATION_COUNT";
+    private static final String ITERATION_SEED_COUNT = "ITERATION_SEED_COUNT";
+    private static final String EXPECT_VARIABLE_COUNT = "EXPECT_VARIABLE_COUNT";
+    private static final String CROSS_PERCENT = "CROSS_PERCENT";
+    private static final String MUTATION_PERCENT = "MUTATION_PERCENT";
 
     private int inheritPercent;
     private int crossPercent;
 
     public CandidateGenerator(Map<String, Object> params, List<Integer> variables) {
-        this.iteratorSeedCount = (Integer) params.get("ITERATION_SEED_COUNT");
+        this.expectIterationCount = (Integer) params.get(EXPECT_ITERATION_COUNT);
+        this.iteratorSeedCount = (Integer) params.get(ITERATION_SEED_COUNT);
         if (this.iteratorSeedCount < 1) {
             logger.error("Iterator seed count should be larger than 1.");
             throw new ShifuException(ShifuErrorCode.ERROR_SHIFU_CONFIG, "Iterator seed count should be larger than 1.");
         }
 
-        this.expectVariableCount = (Integer) params.get("EXPECT_VARIABLE_COUNT");
+        this.expectVariableCount = (Integer) params.get(EXPECT_VARIABLE_COUNT);
         if (this.expectVariableCount < 1) {
             logger.error("Expect variable count should be larger than 1.");
             throw new ShifuException(ShifuErrorCode.ERROR_SHIFU_CONFIG, "Expect variable count should be larger than 1.");
@@ -38,13 +46,13 @@ public class CandidateGenerator {
 
         this.variables = variables;
 
-        this.crossPercent = (Integer) params.get("CROSS_PERCENT");
+        this.crossPercent = (Integer) params.get(CROSS_PERCENT);
         if (this.crossPercent < 0 || this.crossPercent > 100) {
             logger.error("Cross percent should be larger than 0 and less than 100");
             throw new ShifuException(ShifuErrorCode.ERROR_SHIFU_CONFIG, "Cross percent should be larger than 0 and less than 100.");
         }
 
-        int mutationPercent = (Integer) params.get("MUTATION_PERCENT");
+        int mutationPercent = (Integer) params.get(MUTATION_PERCENT);
         if (mutationPercent < 0 || mutationPercent > 100) {
             logger.error("Mutation percent should be larger than 0 and less 100");
             throw new ShifuException(ShifuErrorCode.ERROR_SHIFU_CONFIG, "Mutation percent should be larger than 0 and less than 100.");
@@ -55,6 +63,10 @@ public class CandidateGenerator {
             logger.error("Cross percent add mutation percent should be larger than 0 and less than 100");
             throw new ShifuException(ShifuErrorCode.ERROR_SHIFU_CONFIG, "Cross percent add mutation percent should be larger than 0 and less than 100.");
         }
+    }
+
+    public int getExpectIterationCount() {
+        return expectIterationCount;
     }
 
     /**
