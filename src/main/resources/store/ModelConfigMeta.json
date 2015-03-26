@@ -250,6 +250,43 @@
                     {"label": "Voted", "value":"V"},
                     {"label": "Sensitivity", "value":"SE"}
                 ]   
+              }, {
+                "name": "params",
+                "type": "map",
+                "directive": "input",
+                "element": [
+                    {
+                      "name" : "worker_sample_rate",
+                      "type" : "number",
+                      "directive": "input",
+                      "defval" : 0.1
+                    }, {
+                      "name" : "expect_iteration_count",
+                      "type" : "number",
+                      "directive": "input",
+                      "defval" : 100
+                    }, {
+                      "name" : "iteration_seed_count",
+                      "type" : "number",
+                      "directive": "input",
+                      "defval" : 500
+                    }, {
+                      "name" : "expect_variable_count",
+                      "type" : "number",
+                      "directive": "input",
+                      "defval" : 300
+                    }, {
+                      "name" : "cross_percent",
+                      "type" : "number",
+                      "directive": "input",
+                      "defval" : 60
+                    }, {
+                      "name" : "cross_percent",
+                      "type" : "number",
+                      "directive": "input",
+                      "defval" : 30
+                    }
+                ]
             }
         ]
     }, 
