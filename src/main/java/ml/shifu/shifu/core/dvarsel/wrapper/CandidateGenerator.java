@@ -98,6 +98,10 @@ public class CandidateGenerator {
     }
 
     public CandidateSeeds nextGeneration(Iterable<VarSelWorkerResult> workerResults, CandidateSeeds seeds) {
+        if ( hasNoneResults(workerResults) ) {
+            return seeds;
+        }
+
         List<CandidatePerf> perfs = getIndividual(workerResults);
 
         Collections.sort(perfs, new Comparator<CandidatePerf>() {
@@ -123,6 +127,16 @@ public class CandidateGenerator {
         result.addCandidateSeeds(mutate(worstSeeds, result));
         logger.debug("new generation:" + result);
         return result;
+    }
+
+    private boolean hasNoneResults(Iterable<VarSelWorkerResult> workerResults) {
+        for ( VarSelWorkerResult result : workerResults ) {
+            if ( result.getSeedPerfList().size() > 0 ) {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     private int toBestIndex(List<CandidatePerf> perfs) {
