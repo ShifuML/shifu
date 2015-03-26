@@ -50,8 +50,7 @@ public class WrapperMasterConductor extends AbstractMasterConductor {
     @Override
     public int getEstimateIterationCnt() {
         return (candidateGenerator.getExpectIterationCount() < iterationCount ?
-                0 :
-                candidateGenerator.getExpectIterationCount() - iterationCount);
+                0 : candidateGenerator.getExpectIterationCount() - iterationCount);
     }
 
     @Override

@@ -200,19 +200,19 @@ public class CandidateGenerator {
         List<CandidateSeed> result = new ArrayList<CandidateSeed>(worstSeeds.size());
         Random candidateRandom = new Random();
         for (CandidateSeed seed : worstSeeds) {
-            seed = _mutate(candidateRandom, seed, seeds);
+            seed = doMutate(candidateRandom, seed, seeds);
             result.add(new CandidateSeed(seedSequence++, seed.getColumnIdList()));
         }
         return result;
     }
 
-    private CandidateSeed _mutate(Random candidateRandom, CandidateSeed worseSeed, CandidateSeeds allSeeds) {
+    private CandidateSeed doMutate(Random candidateRandom, CandidateSeed worseSeed, CandidateSeeds allSeeds) {
         int index = randomMutatedIndex(candidateRandom);
 
         CandidateSeed result = new CandidateSeed(worseSeed.getId(), new ArrayList<Integer>(worseSeed.getColumnIdList()));
         result.getColumnIdList().set(index, randomVariable(candidateRandom, worseSeed.getColumnIdList()));
         if (allSeeds.contains(result)) {
-            result = _mutate(candidateRandom, worseSeed, allSeeds);
+            result = doMutate(candidateRandom, worseSeed, allSeeds);
         }
         return result;
     }
