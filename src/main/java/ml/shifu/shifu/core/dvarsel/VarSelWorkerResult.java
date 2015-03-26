@@ -63,4 +63,11 @@ public class VarSelWorkerResult extends HaltBytable {
     public List<CandidatePerf> getSeedPerfList() {
         return this.seedPerfList;
     }
+
+    @Override
+    public String toString() {
+        return "VarSelWorkerResult{" +
+                "seedPerfList=" + seedPerfList +
+                '}';
+    }
 }

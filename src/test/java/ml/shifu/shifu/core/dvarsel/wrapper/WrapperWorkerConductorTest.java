@@ -56,11 +56,11 @@ public class WrapperWorkerConductorTest {
 
         List<Integer> workingList = new ArrayList<Integer>();
         while ( workingList.size() < 5 ) {
-            wrapper.consumeMasterResult(new VarSelMasterResult(workingList));
-            VarSelWorkerResult result = wrapper.generateVarSelResult();
-            if ( result.getColumnIdList().get(0) != -1  ) {
-                workingList.add(result.getColumnIdList().get(0));
-            }
+//            wrapper.consumeMasterResult(new VarSelMasterResult(workingList));
+//            VarSelWorkerResult result = wrapper.generateVarSelResult();
+//            if ( result.getColumnIdList().get(0) != -1  ) {
+//                workingList.add(result.getColumnIdList().get(0));
+//            }
         }
 
         System.out.println(workingList.toString());
