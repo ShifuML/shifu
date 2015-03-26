@@ -20,4 +20,12 @@ public class CandidatePerf {
     public double getVerror() {
         return this.verror;
     }
+
+    @Override
+    public String toString() {
+        return "CandidatePerf{" +
+                "id=" + id +
+                ", verror=" + verror +
+                '}';
+    }
 }

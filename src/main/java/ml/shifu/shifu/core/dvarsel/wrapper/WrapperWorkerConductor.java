@@ -54,7 +54,7 @@ public class WrapperWorkerConductor extends AbstractWorkerConductor {
 
     @Override
     public void consumeMasterResult(VarSelMasterResult masterResult) {
-        baseColumnSet = new HashSet<Integer>(masterResult.getColumnIdList());
+//        baseColumnSet = new HashSet<Integer>(masterResult.getSeeds());
     }
 
     @Override
@@ -97,7 +97,8 @@ public class WrapperWorkerConductor extends AbstractWorkerConductor {
     private VarSelWorkerResult getWorkerResult(int columnId) {
         List<Integer> columnIdList = new ArrayList<Integer>();
         columnIdList.add(columnId);
-        return new VarSelWorkerResult(columnIdList);
+//        return new VarSelWorkerResult(columnIdList);
+        return null;
     }
 
 }

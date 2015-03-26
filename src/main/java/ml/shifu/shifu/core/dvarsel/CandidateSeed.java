@@ -21,4 +21,24 @@ public class CandidateSeed {
     public List<Integer> getColumnIdList() {
         return this.columnIdList;
     }
+
+    public boolean sameAs(CandidateSeed worseSeed) {
+        if (columnIdList.size() != worseSeed.getColumnIdList().size()) {
+            return false;
+        }
+        for (Integer columnId : columnIdList) {
+            if (!worseSeed.getColumnIdList().contains(columnId)) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    @Override
+    public String toString() {
+        return "CandidateSeed{" +
+                "id=" + id +
+                ", columnIdList=" + columnIdList +
+                '}';
+    }
 }

@@ -19,80 +19,53 @@ import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.container.obj.ModelConfig;
 import ml.shifu.shifu.core.dvarsel.AbstractMasterConductor;
 import ml.shifu.shifu.core.dvarsel.CandidateSeed;
+import ml.shifu.shifu.core.dvarsel.CandidateSeeds;
 import ml.shifu.shifu.core.dvarsel.VarSelWorkerResult;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 
 /**
  * Created on 11/24/2014.
  */
 public class WrapperMasterConductor extends AbstractMasterConductor {
+    private CandidateGenerator candidateGenerator;
+    private CandidateSeeds seeds;
+    private int expectIterationCount;
 
-    private static final Logger LOG = LoggerFactory.getLogger(WrapperMasterConductor.class);
-
-    private int expectVarCount;
-    private Set<Integer> workingSet;
+    private int iterationCount = 0;
 
     public WrapperMasterConductor(ModelConfig modelConfig, List<ColumnConfig> columnConfigList) {
         super(modelConfig, columnConfigList);
 
-        this.workingSet = new HashSet<Integer>();
-        this.expectVarCount = this.modelConfig.getVarSelectFilterNum();
-        for ( ColumnConfig columnConfig : columnConfigList ) {
+        List<Integer> variables = new ArrayList<Integer>(columnConfigList.size());
+        for (ColumnConfig columnConfig : columnConfigList) {
             if ( columnConfig.isCandidate() && columnConfig.isForceSelect() ) {
-                workingSet.add(columnConfig.getColumnNum());
+                variables.add(columnConfig.getColumnNum());
             }
         }
-
-        LOG.info("Expected variable count is - {}, base working set size is - {}", expectVarCount, workingSet.size());
+        this.candidateGenerator = new CandidateGenerator(modelConfig.getParams(), variables);
+        this.seeds = candidateGenerator.initSeeds();
+        this.expectIterationCount = (Integer) this.modelConfig.getParams().get("EXPECT_ITERATION_COUNT");
     }
 
     @Override
     public int getEstimateIterationCnt() {
-        return expectVarCount - workingSet.size();
+        return (expectIterationCount < iterationCount ? 0 : expectIterationCount - iterationCount);
     }
 
     @Override
     public boolean isToStop() {
-        return (workingSet.size() == expectVarCount);
+        return (iterationCount >= expectIterationCount);
     }
 
     @Override
     public List<CandidateSeed> getNextWorkingSet() {
-        //TODO
-        return new ArrayList<CandidateSeed>();
+        return seeds.getCandidateSeeds();
     }
 
     @Override
     public void consumeWorkerResults(Iterable<VarSelWorkerResult> workerResults) {
-        int[] voteStats = new int[columnConfigList.size() + 1];
-
-        for (VarSelWorkerResult workerResult : workerResults ) {
-            for ( Integer columnId : workerResult.getColumnIdList() ) {
-                voteStats[columnId + 1]++;
-            }
-        }
-
-        // get max voted column id
-        int maxVotedColumnId = -1;
-        int maxVoteCount = Integer.MIN_VALUE;
-        for ( int i = 0; i < voteStats.length; i ++ ) {
-            if ( voteStats[i] > maxVoteCount ) {
-                maxVoteCount = voteStats[i];
-                maxVotedColumnId = i;
-            }
-        }
-
-        LOG.info("Column - {} get most votes - {}", (maxVotedColumnId - 1), maxVoteCount);
-        // no voted columnId found
-        if ( maxVotedColumnId > 0 ) {
-            workingSet.add(maxVotedColumnId - 1);
-        }
+        this.iterationCount++;
+        this.seeds = candidateGenerator.nextGeneration(workerResults, this.seeds);
     }
-
 }
