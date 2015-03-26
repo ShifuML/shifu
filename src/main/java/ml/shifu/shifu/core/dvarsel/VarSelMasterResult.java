@@ -42,11 +42,11 @@ public class VarSelMasterResult extends HaltBytable {
     public void doWrite(DataOutput out) throws IOException {
         out.writeInt(this.seedList.size());
         for ( CandidateSeed seed : this.seedList ){
-            out.write(seed.getId());
+            out.writeInt(seed.getId());
             List<Integer> columnIdList = seed.getColumnIdList();
-            out.write(columnIdList.size());
+            out.writeInt(columnIdList.size());
             for ( Integer columnId : columnIdList ) {
-                out.write(columnId);
+                out.writeInt(columnId);
             }
         }
     }
