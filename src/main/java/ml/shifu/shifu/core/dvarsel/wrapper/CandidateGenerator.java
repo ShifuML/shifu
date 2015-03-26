@@ -106,21 +106,22 @@ public class CandidateGenerator {
                 return o1.getVerror() < o2.getVerror() ? -1 : 1;
             }
         });
+        logger.info("Best seed: {}", perfs.get(0).toString());
+        logger.info("Worst seed: {}", perfs.get(perfs.size() - 1).toString());
+
         List<CandidatePerf> bestPerfs = perfs.subList(0, toBestIndex(perfs));
-        List<CandidatePerf> worstPerfs = perfs.subList(toBestIndex(perfs) + 1, toBestIndex(perfs) + 1 + toWorstIndex(perfs));
-        List<CandidatePerf> ordinaryPerfs = perfs.subList(toWorstIndex(perfs) + 1, perfs.size() - 1);
+        List<CandidatePerf> ordinaryPerfs = perfs.subList(toBestIndex(perfs) + 1, toBestIndex(perfs) + 1 + toWorstIndex(perfs));
+        List<CandidatePerf> worstPerfs = perfs.subList(toWorstIndex(perfs) + 1, perfs.size() - 1);
 
         List<CandidateSeed> bestSeeds = filter(seeds.getCandidateSeeds(), bestPerfs);
-        List<CandidateSeed> worstSeeds = filter(seeds.getCandidateSeeds(), worstPerfs);
         List<CandidateSeed> ordinarySeeds = filter(seeds.getCandidateSeeds(), ordinaryPerfs);
+        List<CandidateSeed> worstSeeds = filter(seeds.getCandidateSeeds(), worstPerfs);
 
         CandidateSeeds result = new CandidateSeeds(iteratorSeedCount);
         result.addCandidateSeeds(inherit(bestSeeds));
-        logger.debug("result:" + result);
         result.addCandidateSeeds(cross(ordinarySeeds, ordinaryPerfs, result));
-        logger.debug("result:" + result);
         result.addCandidateSeeds(mutate(worstSeeds, result));
-        logger.debug("result:" + result);
+        logger.debug("new generation:" + result);
         return result;
     }
 
