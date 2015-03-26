@@ -281,7 +281,7 @@
                       "directive": "input",
                       "defval" : 60
                     }, {
-                      "name" : "cross_percent",
+                      "name" : "mutation_percent",
                       "type" : "number",
                       "directive": "input",
                       "defval" : 30
