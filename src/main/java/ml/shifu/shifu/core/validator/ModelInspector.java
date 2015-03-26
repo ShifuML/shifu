@@ -340,6 +340,13 @@ public class ModelInspector {
             result = ValidateResult.mergeResult(result, tmpResult);
         }
 
+        if(train.getConvergenceThreshold() != null && train.getConvergenceThreshold().compareTo(0.0) < 0) {
+            ValidateResult tmpResult = new ValidateResult(true);
+            tmpResult.setStatus(false);
+            tmpResult.getCauses().add("'threshold' should be large than or equal to 0.0 if set.");
+            result = ValidateResult.mergeResult(result, tmpResult);
+        }
+
         if(train.getAlgorithm().equalsIgnoreCase("nn")) {
             Map<String, Object> params = train.getParams();
             int layerCnt = (Integer) params.get(NNTrainer.NUM_HIDDEN_LAYERS);
