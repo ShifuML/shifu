@@ -46,10 +46,7 @@ import java.util.Properties;
 /**
  * Created on 11/24/2014.
  */
-public class VarSelWorker
-        extends
-        AbstractWorkerComputable<VarSelMasterResult, VarSelWorkerResult, GuaguaWritableAdapter<LongWritable>, GuaguaWritableAdapter<Text>> {
-
+public class VarSelWorker extends AbstractWorkerComputable<VarSelMasterResult, VarSelWorkerResult, GuaguaWritableAdapter<LongWritable>, GuaguaWritableAdapter<Text>> {
     private static final Logger LOG = LoggerFactory.getLogger(VarSelWorker.class);
 
     private ModelConfig modelConfig;
@@ -62,6 +59,7 @@ public class VarSelWorker
     private int outputNodeCount;
 
     private DataPurifier dataPurifier;
+    private int targetColumnId = -1;
     private int weightColumnId = -1;
 
     private TrainingDataSet trainingDataSet;
@@ -82,18 +80,16 @@ public class VarSelWorker
             RawSourceData.SourceType sourceType = RawSourceData.SourceType.valueOf(props.getProperty(
                     NNConstants.NN_MODELSET_SOURCE_TYPE, RawSourceData.SourceType.HDFS.toString()));
 
-            this.modelConfig = CommonUtils.loadModelConfig(props.getProperty(NNConstants.SHIFU_NN_MODEL_CONFIG),
-                    sourceType);
+            this.modelConfig = CommonUtils.loadModelConfig(
+                    props.getProperty(NNConstants.SHIFU_NN_MODEL_CONFIG), sourceType);
 
             this.columnConfigList = CommonUtils.loadColumnConfigList(
                     props.getProperty(NNConstants.SHIFU_NN_COLUMN_CONFIG), sourceType);
 
             String conductorClsName = props.getProperty(Constants.VAR_SEL_WORKER_CONDUCTOR);
-
             this.workerConductor = (AbstractWorkerConductor) Class.forName(conductorClsName)
                     .getDeclaredConstructor(ModelConfig.class, List.class)
                     .newInstance(this.modelConfig, this.columnConfigList);
-
         } catch (IOException e) {
             throw new RuntimeException("Fail to load ModelConfig or List<ColumnConfig>", e);
         } catch (ClassNotFoundException e) {
@@ -119,6 +115,7 @@ public class VarSelWorker
             throw new RuntimeException("Fail to create DataPurifier", e);
         }
 
+        this.targetColumnId = CommonUtils.getTargetColumnNum(this.columnConfigList);
         if(StringUtils.isNotBlank(modelConfig.getWeightColumnName())) {
             for(ColumnConfig columnConfig: columnConfigList) {
                 if(columnConfig.getColumnName().equalsIgnoreCase(modelConfig.getWeightColumnName().trim())) {
@@ -156,17 +153,14 @@ public class VarSelWorker
     @Override
     public void load(GuaguaWritableAdapter<LongWritable> currentKey, GuaguaWritableAdapter<Text> currentValue,
             WorkerContext<VarSelMasterResult, VarSelWorkerResult> workerContext) {
-        if((++this.count) % 100000 == 0)
-        {
+        if( (++this.count) % 100000 == 0 ) {
             LOG.info("Read {} records.", this.count);
         }
         String record = currentValue.getWritable().toString();
-        String[] fields = CommonUtils.split(record, modelConfig.getDataSetDelimiter());
+        String[] fields = CommonUtils.split(record, this.modelConfig.getDataSetDelimiter());
+        String tag = StringUtils.trim(fields[this.targetColumnId]);
 
-        int targetColumnId = CommonUtils.getTargetColumnNum(columnConfigList);
-        String tag = StringUtils.trim(fields[targetColumnId]);
-
-        if(this.dataPurifier.isFilterOut(record) && isPosOrNegTag(modelConfig, tag)) {
+        if(this.dataPurifier.isFilterOut(record) && isPosOrNegTag(this.modelConfig, tag)) {
             this.totalRecordCount ++;
             if ( this.modelConfig.getPosTags().contains(tag) ) {
                 this.posRecordCount ++;
@@ -206,7 +200,6 @@ public class VarSelWorker
                 normalizedColumnIdList.add(config.getColumnNum());
             }
         }
-
         return normalizedColumnIdList;
     }
 

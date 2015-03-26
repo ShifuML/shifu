@@ -16,16 +16,18 @@ import java.util.*;
 public class CandidateGenerator {
     private static final Logger logger = LoggerFactory.getLogger(CandidateGenerator.class);
 
+    public static final String WORKER_SAMPLE_RATE = "worker_sample_rate";
+    public static final String EXPECT_ITERATION_COUNT = "expect_iteration_count";
+    public static final String ITERATION_SEED_COUNT = "iteration_seed_count";
+    public static final String EXPECT_VARIABLE_COUNT = "expect_variable_count";
+    public static final String CROSS_PERCENT = "cross_percent";
+    public static final String MUTATION_PERCENT = "mutation_percent";
+
     private final int iteratorSeedCount;
     private final int expectVariableCount;
     private final int expectIterationCount;
-    private final List<Integer> variables;
 
-    private static final String EXPECT_ITERATION_COUNT = "EXPECT_ITERATION_COUNT";
-    private static final String ITERATION_SEED_COUNT = "ITERATION_SEED_COUNT";
-    private static final String EXPECT_VARIABLE_COUNT = "EXPECT_VARIABLE_COUNT";
-    private static final String CROSS_PERCENT = "CROSS_PERCENT";
-    private static final String MUTATION_PERCENT = "MUTATION_PERCENT";
+    private final List<Integer> variables;
 
     private int inheritPercent;
     private int crossPercent;
