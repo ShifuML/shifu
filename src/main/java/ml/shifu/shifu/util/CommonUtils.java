@@ -470,14 +470,12 @@ public final class CommonUtils {
      * Get bin index by binary search. The last bin in <code>binBoundary</code> is missing value bin.
      */
     public static int getBinIndex(List<Double> binBoundary, Double dVal) {
-        assert binBoundary != null && binBoundary.size() > 1;
+        assert binBoundary != null && binBoundary.size() > 0;
+        assert dVal != null;
         int binSize = binBoundary.size();
-        if(dVal == null) {
-            return binSize - 1;
-        }
 
         int low = 0;
-        int high = binSize - 2;
+        int high = binSize - 1;
 
         while(low <= high) {
             int mid = (low + high) >>> 1;
@@ -801,9 +799,9 @@ public final class CommonUtils {
      * @throws NumberFormatException
      *             if column value is not number format.
      */
-    public static MLDataPair assembleDataPair(List<ColumnConfig> columnConfigList,
+    public static MLDataPair assembleDataPair(ModelConfig modelConfig, List<ColumnConfig> columnConfigList,
             Map<String, ? extends Object> rawDataMap) {
-        return assembleDataPair(columnConfigList, rawDataMap, Constants.DEFAULT_CUT_OFF);
+        return assembleDataPair(modelConfig, columnConfigList, rawDataMap, Constants.DEFAULT_CUT_OFF);
     }
 
     /**
@@ -814,7 +812,7 @@ public final class CommonUtils {
      * @throws NumberFormatException
      *             if column value is not number format.
      */
-    public static MLDataPair assembleDataPair(List<ColumnConfig> columnConfigList,
+    public static MLDataPair assembleDataPair(ModelConfig modelConfig, List<ColumnConfig> columnConfigList,
             Map<String, ? extends Object> rawDataMap, double cutoff) {
         // if the tag is provided, ideal will be updated; otherwise it defaults to -1
         double[] ideal = { Constants.DEFAULT_IDEAL_VALUE };
@@ -833,8 +831,36 @@ public final class CommonUtils {
             } else if(config.isFinalSelect()) {
                 // add log for debug purpose
                 // log.info("key: " + key + ", raw_value " + rawDataMap.get(key).toString() + ", zscl_value: " +
-                // Normalizer.normalize(config, rawDataMap.get(key).toString()));
-                inputList.add(Normalizer.normalize(config, rawDataMap.get(key).toString(), cutoff));
+                String val = rawDataMap.get(key) == null ? null : rawDataMap.get(key).toString();
+                Double normalizeValue = null;
+                switch(modelConfig.getNormalize().getNormType()) {
+                    case WOE:
+                        List<Double> binWoe;
+                        if(modelConfig.getNormalize().getIsWeightNorm()) {
+                            binWoe = config.getColumnBinning().getBinWeightedWoe();
+                        } else {
+                            binWoe = config.getColumnBinning().getBinCountWoe();
+                        }
+                        if(StringUtils.isEmpty(val)) {
+                            // append last missing bin woe
+                            // TODO how if merge missing bin with last valid bin.
+                            normalizeValue = binWoe.get(binWoe.size() - 1);
+                        } else {
+                            try {
+                                int binNum = CommonUtils.getBinNum(config, val);
+                                binNum = binNum == -1 ? binWoe.size() - 1 : binNum;
+                                normalizeValue = binWoe.get(binNum);
+                            } catch (NumberFormatException e) {
+                                normalizeValue = binWoe.get(binWoe.size() - 1);
+                            }
+                        }
+                        break;
+                    case ZSCALE:
+                    default:
+                        normalizeValue = Normalizer.normalize(config, val, cutoff);
+                        break;
+                }
+                inputList.add(normalizeValue);
             }
         }
 

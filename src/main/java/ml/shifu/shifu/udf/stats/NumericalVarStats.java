@@ -81,7 +81,6 @@ public class NumericalVarStats extends AbstractVarStats {
      */
     private void statsNumericalColumnInfo(DataBag databag, ColumnConfig columnConfig) throws ExecException {
         // The last bin is for missingOrInvalid values
-
         Integer[] binCountPos = new Integer[columnConfig.getBinBoundary().size() + 1];
         Integer[] binCountNeg = new Integer[columnConfig.getBinBoundary().size() + 1];
         Double[] binWeightCountPos = new Double[columnConfig.getBinBoundary().size() + 1];
@@ -137,6 +136,9 @@ public class NumericalVarStats extends AbstractVarStats {
                 streamStatsCalculator.addData(colVal);
                 // binning.addData(colVal);
                 int binNum = CommonUtils.getBinNum(columnConfig, str);
+                if(binNum == -1) {
+                    throw new RuntimeException("binNum should not be -1 to this step.");
+                }
                 if(modelConfig.getPosTags().contains(tag)) {
                     increaseInstCnt(binCountPos, binNum);
                     increaseInstCnt(binWeightCountPos, binNum, weight);
