@@ -16,6 +16,7 @@
 package ml.shifu.shifu.container.obj;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 
 /**
  * ModelNormalizeConf class
@@ -23,9 +24,16 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class ModelNormalizeConf {
 
+    @JsonDeserialize(using = NormTypeDeserializer.class)
+    public static enum NormType {
+        ZSCALE, WOE;
+    }
+
     private Double stdDevCutOff = Double.valueOf(4.0);
     private Double sampleRate = Double.valueOf(1.0);
     private Boolean sampleNegOnly = Boolean.FALSE;
+    private NormType normType = NormType.ZSCALE;
+    private Boolean isWeightNorm = Boolean.FALSE;
 
     // move to RawSourceData
     // private String weightAmplifier;
@@ -53,6 +61,34 @@ public class ModelNormalizeConf {
 
     public void setSampleNegOnly(Boolean sampleNegOnly) {
         this.sampleNegOnly = sampleNegOnly;
+    }
+
+    /**
+     * @return the normType
+     */
+    public NormType getNormType() {
+        return normType;
+    }
+
+    /**
+     * @param normType the normType to set
+     */
+    public void setNormType(NormType normType) {
+        this.normType = normType;
+    }
+
+    /**
+     * @return the isWeightNorm
+     */
+    public Boolean getIsWeightNorm() {
+        return isWeightNorm;
+    }
+
+    /**
+     * @param isWeightNorm the isWeightNorm to set
+     */
+    public void setIsWeightNorm(Boolean isWeightNorm) {
+        this.isWeightNorm = isWeightNorm;
     }
 
 }

@@ -257,6 +257,15 @@
         "group" : "normalize",
         "metaList" : [
             {
+                "name": "normType",
+                "type": "text",
+                "directive": "select",
+                "defval" : "ZSCALE",
+                "options": [ 
+                    {"label":"zscale mode", "value":"ZSCALE"},
+                    {"label":"woe mode", "value":"WOE"}
+                ]
+            }, {
                 "name": "stdDevCutOff",
                 "type": "number",
                 "directive": "input",
@@ -268,6 +277,11 @@
                 "defval": 0.8
             }, {
                 "name": "sampleNegOnly",
+                "type": "boolean",
+                "directive": "checkbox",
+                "defval" : false
+            }, {
+                "name": "isWeightNorm",
                 "type": "boolean",
                 "directive": "checkbox",
                 "defval" : false
@@ -323,7 +337,7 @@
                 "directive": "input",
                 "defval" : 1
             }, {
-                "name": "isContinuousEnabled",
+                "name": "isContinuous",
                 "type": "boolean",
                 "directive": "input",
                 "defval": false

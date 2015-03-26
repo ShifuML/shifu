@@ -47,7 +47,7 @@ public class ModelTrainConf {
     private Boolean trainOnDisk = Boolean.FALSE;
     private Boolean fixInitInput = Boolean.FALSE;
     
-    private Boolean isContinuousEnabled = Boolean.FALSE; 
+    private Boolean isContinuous = Boolean.FALSE; 
     
     private Boolean isCrossOver = Boolean.FALSE;
 
@@ -206,20 +206,6 @@ public class ModelTrainConf {
     }
 
     /**
-     * @return the isContinuousEnabled
-     */
-    public Boolean getIsContinuousEnabled() {
-        return isContinuousEnabled;
-    }
-
-    /**
-     * @param isContinuousEnabled the isContinuousEnabled to set
-     */
-    public void setIsContinuousEnabled(Boolean isContinuousEnabled) {
-        this.isContinuousEnabled = isContinuousEnabled;
-    }
-
-    /**
      * @return the isCrossOver
      */
     public Boolean getIsCrossOver() {
@@ -231,6 +217,20 @@ public class ModelTrainConf {
      */
     public void setIsCrossOver(Boolean isCrossOver) {
         this.isCrossOver = isCrossOver;
+    }
+
+    /**
+     * @return the isContinuous
+     */
+    public Boolean getIsContinuous() {
+        return isContinuous;
+    }
+
+    /**
+     * @param isContinuous the isContinuous to set
+     */
+    public void setIsContinuous(Boolean isContinuous) {
+        this.isContinuous = isContinuous;
     }
 
 }
