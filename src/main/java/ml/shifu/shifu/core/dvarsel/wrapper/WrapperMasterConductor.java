@@ -21,6 +21,7 @@ import ml.shifu.shifu.core.dvarsel.AbstractMasterConductor;
 import ml.shifu.shifu.core.dvarsel.CandidateSeed;
 import ml.shifu.shifu.core.dvarsel.CandidateSeeds;
 import ml.shifu.shifu.core.dvarsel.VarSelWorkerResult;
+import ml.shifu.shifu.util.CommonUtils;
 
 import java.util.*;
 
@@ -39,13 +40,13 @@ public class WrapperMasterConductor extends AbstractMasterConductor {
 
         List<Integer> variables = new ArrayList<Integer>(columnConfigList.size());
         for (ColumnConfig columnConfig : columnConfigList) {
-            if ( columnConfig.isCandidate() && columnConfig.isForceSelect() ) {
+            if ( CommonUtils.isGoodCandidate(columnConfig) ) {
                 variables.add(columnConfig.getColumnNum());
             }
         }
-        this.candidateGenerator = new CandidateGenerator(modelConfig.getParams(), variables);
+        this.candidateGenerator = new CandidateGenerator(this.modelConfig.getVarSelect().getParams(), variables);
         this.seeds = candidateGenerator.initSeeds();
-        this.expectIterationCount = (Integer) this.modelConfig.getParams().get("EXPECT_ITERATION_COUNT");
+        this.expectIterationCount = (Integer) this.modelConfig.getVarSelect().getParams().get("EXPECT_ITERATION_COUNT");
     }
 
     @Override

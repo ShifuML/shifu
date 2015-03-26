@@ -17,6 +17,8 @@ package ml.shifu.shifu.container.obj;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
+import java.util.Map;
+
 /**
  * ModelVarSelectConf class
  */
@@ -39,6 +41,8 @@ public class ModelVarSelectConf {
     private Integer wrapperNum = Integer.valueOf(50);
     private Float wrapperRatio = Float.valueOf(0.05f);
     private String wrapperBy = "S";
+
+    private Map<String, Object> params;
 
     public Boolean getForceEnable() {
         return forceEnable;
@@ -127,4 +131,11 @@ public class ModelVarSelectConf {
         this.wrapperRatio = wrapperRatio;
     }
 
+    public Map<String, Object> getParams() {
+        return params;
+    }
+
+    public void setParams(Map<String, Object> params) {
+        this.params = params;
+    }
 }
