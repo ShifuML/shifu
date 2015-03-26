@@ -67,7 +67,7 @@ public class VarSelMasterResult extends HaltBytable {
         }
     }
 
-    public List<CandidateSeed> getSeeds() {
+    public List<CandidateSeed> getSeedList() {
         return this.seedList;
     }
 }

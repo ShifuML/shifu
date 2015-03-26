@@ -140,7 +140,8 @@ public class ColumnConfig {
      */
     @JsonIgnore
     public boolean isCandidate() {
-        return !ColumnFlag.ForceRemove.equals(columnFlag) && !ColumnFlag.Meta.equals(columnFlag)
+        return !ColumnFlag.ForceRemove.equals(columnFlag)
+                && !ColumnFlag.Meta.equals(columnFlag)
                 && !ColumnFlag.Target.equals(columnFlag);
     }
 

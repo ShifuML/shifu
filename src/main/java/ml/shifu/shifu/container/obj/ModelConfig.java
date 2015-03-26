@@ -118,8 +118,8 @@ public class ModelConfig {
     }
 
     /**
+     * @param modelName
      * @param alg
-     * @param modelSetPath
      * @param description
      * @return
      * @throws IOException
@@ -420,7 +420,7 @@ public class ModelConfig {
     }
 
     /**
-     * @param string
+     * @param modelSetName
      */
     @JsonIgnore
     public void setModelSetName(String modelSetName) {
@@ -428,7 +428,7 @@ public class ModelConfig {
     }
 
     /**
-     * @param property
+     * @param author
      */
     @JsonIgnore
     public void setModelSetCreator(String author) {
@@ -525,7 +525,7 @@ public class ModelConfig {
     }
 
     /**
-     * @param param
+     * @param params
      */
     @JsonIgnore
     public void setParams(Map<String, Object> params) {
