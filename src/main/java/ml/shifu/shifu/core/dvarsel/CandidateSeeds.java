@@ -54,4 +54,8 @@ public class CandidateSeeds {
     public String toString() {
         return candidateSeeds.toString();
     }
+
+    public CandidateSeed getSeedById(int id) {
+        return candidateSeedMap.get(id);
+    }
 }

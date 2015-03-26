@@ -116,11 +116,11 @@ public class CandidateGenerator {
 
         CandidateSeeds result = new CandidateSeeds(iteratorSeedCount);
         result.addCandidateSeeds(inherit(bestSeeds));
-        System.out.println("result:" + result);
-        result.addCandidateSeeds(cross(worstSeeds, result));
-        System.out.println("result:" + result);
-        result.addCandidateSeeds(mutate(ordinarySeeds, result));
-        System.out.println("result:" + result);
+        logger.debug("result:" + result);
+        result.addCandidateSeeds(cross(ordinarySeeds, ordinaryPerfs, result));
+        logger.debug("result:" + result);
+        result.addCandidateSeeds(mutate(worstSeeds, result));
+        logger.debug("result:" + result);
         return result;
     }
 
@@ -136,18 +136,50 @@ public class CandidateGenerator {
         return bestSeeds;
     }
 
-    private List<CandidateSeed> cross(List<CandidateSeed> ordinarySeeds, CandidateSeeds allSeeds) {
-        List<CandidateSeed> result = new ArrayList<CandidateSeed>(ordinarySeeds.size());
-        for (int index = 0; index < ordinarySeeds.size() / 2; index++) {
-            CandidateSeed first = ordinarySeeds.get(index);
-            CandidateSeed second = ordinarySeeds.get(ordinarySeeds.size() - index - 1);
-            while (allSeeds.contains(first) || allSeeds.contains(second)) {
-                crossTwoSeed(first, second);
+    private List<CandidateSeed> cross(List<CandidateSeed> ordinarySeedList,
+                                      List<CandidatePerf> ordinaryPerfs,
+                                      CandidateSeeds allSeeds) {
+        List<CandidateSeed> result = new ArrayList<CandidateSeed>(ordinarySeedList.size());
+        CandidateSeeds ordinarySeeds = new CandidateSeeds();
+        ordinarySeeds.addCandidateSeeds(ordinarySeedList);
+
+        for (int index = 0; index < ordinarySeedList.size(); index++) {
+            CandidateSeed first = ordinarySeeds.getSeedById(chooseForCross(ordinaryPerfs));
+            CandidateSeed second = ordinarySeeds.getSeedById(chooseForCross(ordinaryPerfs));
+            if (first.sameAs(second)) {
+                result.add(new CandidateSeed(seedSequence++, first.getColumnIdList()));
+            } else {
+                CandidateSeed firstNew = new CandidateSeed(first.getId(), first.getColumnIdList());
+                CandidateSeed secondNew = new CandidateSeed(second.getId(), second.getColumnIdList());
+                crossTwoSeed(firstNew, secondNew);
+                while (allSeeds.contains(firstNew) || allSeeds.contains(secondNew)) {
+                    crossTwoSeed(firstNew, secondNew);
+                }
+                result.add(new CandidateSeed(seedSequence++, firstNew.getColumnIdList()));
+                result.add(new CandidateSeed(seedSequence++, secondNew.getColumnIdList()));
             }
-            result.add(new CandidateSeed(seedSequence++, first.getColumnIdList()));
-            result.add(new CandidateSeed(seedSequence++, second.getColumnIdList()));
         }
         return result;
+    }
+
+    private int chooseForCross(List<CandidatePerf> perfs) {
+        double slice = (new Random()).nextDouble() * (totalVerror(perfs));
+        double fitness = 0;
+        for (CandidatePerf perf : perfs) {
+            fitness += perf.getVerror();
+            if (slice < fitness) {
+                return perf.getId();
+            }
+        }
+        return -1;
+    }
+
+    private double totalVerror(List<CandidatePerf> perfs) {
+        double total = 0;
+        for (CandidatePerf perf : perfs) {
+            total += perf.getVerror();
+        }
+        return total;
     }
 
     private void crossTwoSeed(CandidateSeed first, CandidateSeed second) {
