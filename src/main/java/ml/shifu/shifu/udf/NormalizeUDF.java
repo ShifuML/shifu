@@ -124,21 +124,21 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
                         if(StringUtils.isEmpty(val)) {
                             // append last missing bin woe
                             // TODO how if merge missing bin with last valid bin.
-                            tuple.append(binWoe.get(binWoe.size() - 1));
+                            tuple.append(df.format(binWoe.get(binWoe.size() - 1)));
                         } else {
                             try {
                                 int binNum = CommonUtils.getBinNum(config, val);
                                 binNum = binNum == -1 ? binWoe.size() - 1 : binNum;
-                                tuple.append(binWoe.get(binNum));
+                                tuple.append(df.format(binWoe.get(binNum)));
                             } catch (NumberFormatException e) {
-                                tuple.append(binWoe.get(binWoe.size() - 1));
+                                tuple.append(df.format(binWoe.get(binWoe.size() - 1)));
                             }
                         }
                         break;
                     case ZSCALE:
+                    default:
                         Double z = Normalizer.normalize(config, val, cutoff);
                         tuple.append(df.format(z));
-                    default:
                         break;
                 }
             }

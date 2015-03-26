@@ -328,5 +328,5 @@ public class VarSelectMapper extends Mapper<LongWritable, Text, LongWritable, Co
     private double power2(double data) {
         return data * data;
     }
-    
+
 }
