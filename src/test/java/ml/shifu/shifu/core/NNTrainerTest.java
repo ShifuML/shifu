@@ -237,7 +237,6 @@ public class NNTrainerTest {
                 computeScore(modelFile, dataPair0, dataPair1, dataPair2, dataPair3);
             }    
         } else {
-            // TODO Other error hints ?
             System.err.println("No ./model_folder exist!");
         }
         
