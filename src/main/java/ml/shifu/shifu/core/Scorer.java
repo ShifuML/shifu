@@ -17,6 +17,7 @@ package ml.shifu.shifu.core;
 
 import ml.shifu.shifu.container.ScoreObject;
 import ml.shifu.shifu.container.obj.ColumnConfig;
+import ml.shifu.shifu.container.obj.ModelConfig;
 import ml.shifu.shifu.util.CommonUtils;
 import org.encog.ml.BasicML;
 import org.encog.ml.data.MLData;
@@ -43,45 +44,50 @@ public class Scorer {
     private List<BasicML> models;
     private List<ColumnConfig> columnConfigList;
     private double cutoff = 4.0d;
+    private ModelConfig modelConfig;
 
     // private boolean verbose = false;
 
-    public Scorer(List<BasicML> models, List<ColumnConfig> columnConfigList, String algorithm) {
-        this(models, columnConfigList, algorithm, 4.0d);
+    public Scorer(List<BasicML> models, List<ColumnConfig> columnConfigList, String algorithm, ModelConfig modelConfig) {
+        this(models, columnConfigList, algorithm, modelConfig, 4.0d);
     }
 
-    public Scorer(List<BasicML> models, List<ColumnConfig> columnConfigList, String algorithm, Double cutoff) {
+    public Scorer(List<BasicML> models, List<ColumnConfig> columnConfigList, String algorithm, ModelConfig modelConfig,
+            Double cutoff) {
         this.models = models;
         this.columnConfigList = columnConfigList;
         this.cutoff = cutoff;
         this.alg = algorithm;
+        this.modelConfig = modelConfig;
     }
 
     public ScoreObject score(Map<String, String> rawDataMap) {
-        MLDataPair pair = CommonUtils.assembleDataPair(columnConfigList, rawDataMap, cutoff);
+        MLDataPair pair = CommonUtils.assembleDataPair(modelConfig, columnConfigList, rawDataMap, cutoff);
         return score(pair, rawDataMap);
     }
 
     public ScoreObject score(MLDataPair pair, Map<String, String> rawDataMap) {
-        if (pair == null) {
+        if(pair == null) {
             return null;
         }
 
         List<Integer> scores = new ArrayList<Integer>();
 
-        for (BasicML model : models) {
-            if (model instanceof BasicNetwork) {
+        for(BasicML model: models) {
+            if(model instanceof BasicNetwork) {
                 BasicNetwork network = (BasicNetwork) model;
-                if (network.getInputCount() != pair.getInput().size()) {
-                    log.error("Network and input size mismatch: Network Size = " + network.getInputCount() + "; Input Size = " + pair.getInput().size());
+                if(network.getInputCount() != pair.getInput().size()) {
+                    log.error("Network and input size mismatch: Network Size = " + network.getInputCount()
+                            + "; Input Size = " + pair.getInput().size());
                     continue;
                 }
                 MLData score = network.compute(pair.getInput());
                 scores.add(toScore(score.getData(0)));
-            } else if (model instanceof SVM) {
+            } else if(model instanceof SVM) {
                 SVM svm = (SVM) model;
-                if (svm.getInputCount() != pair.getInput().size()) {
-                    log.error("SVM and input size mismatch: SVM Size = " + svm.getInputCount() + "; Input Size = " + pair.getInput().size());
+                if(svm.getInputCount() != pair.getInput().size()) {
+                    log.error("SVM and input size mismatch: SVM Size = " + svm.getInputCount() + "; Input Size = "
+                            + pair.getInput().size());
                     continue;
                 }
                 MLData score = svm.compute(pair.getInput());
@@ -93,7 +99,7 @@ public class Scorer {
 
         Integer tag = (int) pair.getIdeal().getData(0);
 
-        if (scores.size() == 0) {
+        if(scores.size() == 0) {
             log.error("No Scores Calculated...");
             return null;
         }

@@ -166,7 +166,7 @@ public class StatsModelProcessor extends BasicModelProcessor implements Processo
                 continue;
             }
 
-            if(raw.length != 19) {
+            if(raw.length != 25) {
                 log.info("The stats data has " + raw.length + " fields.");
                 log.info("The stats data is - " + Arrays.toString(raw));
             }
@@ -209,7 +209,12 @@ public class StatsModelProcessor extends BasicModelProcessor implements Processo
 
                 config.setBinWeightedNeg(CommonUtils.stringToDoubleList(raw[17]));
                 config.setBinWeightedPos(CommonUtils.stringToDoubleList(raw[18]));
-
+                config.getColumnStats().setWoe(Double.valueOf(raw[19]));
+                config.getColumnStats().setWeightedWoe(Double.valueOf(raw[20]));
+                config.getColumnStats().setWeightedKs(Double.valueOf(raw[21]));
+                config.getColumnStats().setWeightedIv(Double.valueOf(raw[22]));
+                config.getColumnBinning().setBinCountWoe(CommonUtils.stringToDoubleList(raw[23]));
+                config.getColumnBinning().setBinWeightedWoe(CommonUtils.stringToDoubleList(raw[24]));
             } catch (Exception e) {
                 log.error("Fail to process following column : {} name: {} error: {}", columnNum, this.columnConfigList
                         .get(columnNum).getColumnName(), e.getMessage());

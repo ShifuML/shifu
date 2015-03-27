@@ -23,7 +23,8 @@ import ml.shifu.shifu.container.obj.ModelConfig;
 import ml.shifu.shifu.core.BasicStatsCalculator;
 import ml.shifu.shifu.core.Binning;
 import ml.shifu.shifu.core.Binning.BinningDataType;
-import ml.shifu.shifu.core.KSIVCalculator;
+import ml.shifu.shifu.core.ColumnStatsCalculator;
+import ml.shifu.shifu.core.ColumnStatsCalculator.ColumnMetrics;
 import ml.shifu.shifu.message.StatsResultMessage;
 import ml.shifu.shifu.message.StatsValueObjectMessage;
 import org.apache.commons.collections.CollectionUtils;
@@ -32,7 +33,6 @@ import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
 import java.util.List;
-
 
 /**
  * StatsCalculateWorker class calculates the stats for each column
@@ -46,10 +46,7 @@ public class StatsCalculateWorker extends AbstractWorkerActor {
     private long missing;
     private long total;
 
-    public StatsCalculateWorker(
-            ModelConfig modelConfig,
-            List<ColumnConfig> columnConfigList,
-            ActorRef parentActorRef,
+    public StatsCalculateWorker(ModelConfig modelConfig, List<ColumnConfig> columnConfigList, ActorRef parentActorRef,
             ActorRef nextActorRef) {
         super(modelConfig, columnConfigList, parentActorRef, nextActorRef);
         voList = new ArrayList<ValueObject>();
@@ -60,7 +57,7 @@ public class StatsCalculateWorker extends AbstractWorkerActor {
 
     @Override
     public void handleMsg(Object message) {
-        if (message instanceof StatsValueObjectMessage) {
+        if(message instanceof StatsValueObjectMessage) {
             log.debug("Received value object list for stats");
             StatsValueObjectMessage statsVoMessage = (StatsValueObjectMessage) message;
             voList.addAll(statsVoMessage.getVoList());
@@ -68,7 +65,7 @@ public class StatsCalculateWorker extends AbstractWorkerActor {
             this.total += statsVoMessage.getTotal();
             receivedMsgCnt++;
 
-            if (receivedMsgCnt == statsVoMessage.getTotalMsgCnt()) {
+            if(receivedMsgCnt == statsVoMessage.getTotalMsgCnt()) {
                 log.debug("received " + receivedMsgCnt + ", start to work");
                 ColumnConfig columnConfig = columnConfigList.get(statsVoMessage.getColumnNum());
                 calculateColumnStats(columnConfig, voList);
@@ -85,20 +82,20 @@ public class StatsCalculateWorker extends AbstractWorkerActor {
 
     /**
      * Do the stats calculation
-     *
+     * 
      * @param columnConfig
      * @param valueObjList
      */
     private void calculateColumnStats(ColumnConfig columnConfig, List<ValueObject> valueObjList) {
-        if (CollectionUtils.isEmpty(valueObjList)) {
+        if(CollectionUtils.isEmpty(valueObjList)) {
             log.error("No values for column : {}, please check!", columnConfig.getColumnName());
             return;
         }
 
         BinningDataType dataType;
-        if (columnConfig.isNumerical()) {
+        if(columnConfig.isNumerical()) {
             dataType = BinningDataType.Numerical;
-        } else if (columnConfig.isCategorical()) {
+        } else if(columnConfig.isCategorical()) {
             dataType = BinningDataType.Categorical;
         } else {
             dataType = BinningDataType.Auto;
@@ -113,13 +110,17 @@ public class StatsCalculateWorker extends AbstractWorkerActor {
         binning.doBinning();
 
         // Calculate Basic Stats
-        BasicStatsCalculator basicStatsCalculator = new BasicStatsCalculator(binning.getUpdatedVoList(), modelConfig.getNumericalValueThreshold());
+        BasicStatsCalculator basicStatsCalculator = new BasicStatsCalculator(binning.getUpdatedVoList(),
+                modelConfig.getNumericalValueThreshold());
+
         // Calculate KSIV, based on Binning result
-        KSIVCalculator ksivCalculator = new KSIVCalculator();
-        ksivCalculator.calculateKSIV(binning.getBinCountNeg(), binning.getBinCountPos());
+        ColumnMetrics columnCountMetrics = ColumnStatsCalculator.calculateColumnMetrics(binning.getBinCountNeg(),
+                binning.getBinCountPos());
+        ColumnMetrics columnWeightMetrics = ColumnStatsCalculator.calculateColumnMetrics(binning.getBinWeightedNeg(),
+                binning.getBinWeightedPos());
 
         dataType = binning.getUpdatedDataType();
-        if (dataType.equals(BinningDataType.Numerical)) {
+        if(dataType.equals(BinningDataType.Numerical)) {
             columnConfig.setColumnType(ColumnType.N);
             columnConfig.setBinBoundary(binning.getBinBoundary());
         } else {
@@ -130,8 +131,13 @@ public class StatsCalculateWorker extends AbstractWorkerActor {
         columnConfig.setBinCountNeg(binning.getBinCountNeg());
         columnConfig.setBinCountPos(binning.getBinCountPos());
         columnConfig.setBinPosCaseRate(binning.getBinPosCaseRate());
-        columnConfig.setKs(ksivCalculator.getKS());
-        columnConfig.setIv(ksivCalculator.getIV());
+        columnConfig.setKs(columnCountMetrics.getKs());
+        columnConfig.setIv(columnCountMetrics.getIv());
+        columnConfig.getColumnStats().setWoe(columnCountMetrics.getWoe());
+        columnConfig.getColumnStats().setWeightedKs(columnWeightMetrics.getKs());
+        columnConfig.getColumnStats().setWeightedIv(columnWeightMetrics.getIv());
+        columnConfig.getColumnStats().setWeightedWoe(columnWeightMetrics.getWoe());
+
         columnConfig.setMax(basicStatsCalculator.getMax());
         columnConfig.setMin(basicStatsCalculator.getMin());
         columnConfig.setMean(basicStatsCalculator.getMean());
@@ -139,6 +145,9 @@ public class StatsCalculateWorker extends AbstractWorkerActor {
         columnConfig.setMedian(basicStatsCalculator.getMedian());
         columnConfig.setBinWeightedNeg(binning.getBinWeightedNeg());
         columnConfig.setBinWeightedPos(binning.getBinWeightedPos());
-        //columnConfig.setMissingCnt(cnt)
+        columnConfig.getColumnBinning().setBinCountWoe(columnCountMetrics.getBinningWoe());
+        columnConfig.getColumnBinning().setBinWeightedWoe(columnWeightMetrics.getBinningWoe());
+
+        // columnConfig.setMissingCnt(cnt)
     }
 }

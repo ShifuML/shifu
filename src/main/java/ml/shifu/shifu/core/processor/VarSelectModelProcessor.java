@@ -195,7 +195,7 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
 
         GuaguaMapReduceClient guaguaClient = new GuaguaMapReduceClient();
 
-        guaguaClient.creatJob(args.toArray(new String[0])).waitForCompletion(true);
+        guaguaClient.createJob(args.toArray(new String[0])).waitForCompletion(true);
 
         log.info("Voted variables selection finished in {}ms.", System.currentTimeMillis() - start);
 

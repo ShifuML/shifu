@@ -19,7 +19,7 @@ import java.io.IOException;
 import java.util.Properties;
 
 import ml.shifu.guagua.GuaguaConstants;
-import ml.shifu.guagua.mapreduce.GuaguaMRUnitDriver;
+import ml.shifu.guagua.hadoop.GuaguaMRUnitDriver;
 import ml.shifu.guagua.unit.GuaguaUnitDriver;
 import ml.shifu.shifu.core.dvarsel.VarSelMaster;
 import ml.shifu.shifu.core.dvarsel.VarSelMasterResult;

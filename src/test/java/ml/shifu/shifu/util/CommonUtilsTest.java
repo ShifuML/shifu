@@ -38,7 +38,6 @@ import ml.shifu.shifu.udf.CalculateStatsUDF;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.fs.FileStatus;
-import org.encog.ml.data.MLDataPair;
 import org.testng.Assert;
 import org.testng.annotations.AfterClass;
 import org.testng.annotations.Test;
@@ -228,29 +227,29 @@ public class CommonUtilsTest {
         Assert.assertEquals(CommonUtils.stringToIntegerList("[]").size(), 1);
     }
 
-    @Test
-    public void assembleDataPairTest() throws Exception {
-        Map<String, String> rawDataMap = new HashMap<String, String>();
-        rawDataMap.put("ColumnA", "TestValue");
-
-        ColumnConfig config = new ColumnConfig();
-        config.setColumnName("ColumnA");
-        List<ColumnConfig> columnConfigList = new ArrayList<ColumnConfig>();
-        columnConfigList.add(config);
-
-        MLDataPair dp = CommonUtils.assembleDataPair(columnConfigList,
-                rawDataMap);
-        Assert.assertTrue(dp.getInput().getData().length == 0);
-
-        Map<String, Object> objDataMap = new HashMap<String, Object>();
-        objDataMap.put("ColumnA", 10);
-        config.setFinalSelect(true);
-        config.setMean(12.0);
-        config.setStdDev(4.6);
-        MLDataPair pair = CommonUtils.assembleDataPair(columnConfigList,
-                objDataMap);
-        Assert.assertTrue(pair.getInput().getData()[0] < 0.0);
-    }
+    // @Test
+    // public void assembleDataPairTest() throws Exception {
+    // Map<String, String> rawDataMap = new HashMap<String, String>();
+    // rawDataMap.put("ColumnA", "TestValue");
+    //
+    // ColumnConfig config = new ColumnConfig();
+    // config.setColumnName("ColumnA");
+    // List<ColumnConfig> columnConfigList = new ArrayList<ColumnConfig>();
+    // columnConfigList.add(config);
+    //
+    // MLDataPair dp = CommonUtils.assembleDataPair(columnConfigList,
+    // rawDataMap);
+    // Assert.assertTrue(dp.getInput().getData().length == 0);
+    //
+    // Map<String, Object> objDataMap = new HashMap<String, Object>();
+    // objDataMap.put("ColumnA", 10);
+    // config.setFinalSelect(true);
+    // config.setMean(12.0);
+    // config.setStdDev(4.6);
+    // MLDataPair pair = CommonUtils.assembleDataPair(columnConfigList,
+    // objDataMap);
+    // Assert.assertTrue(pair.getInput().getData()[0] < 0.0);
+    // }
 
     @Test
     public void getTargetColumnNumTest() {
