@@ -36,9 +36,9 @@ public class CandidateSeed {
 
     @Override
     public String toString() {
-        return "CandidateSeed{" +
-                "id=" + id +
-                ", columnIdList=" + columnIdList +
-                '}';
+        return "CandidateSeed{"
+                + "id=" + id
+                + ", columnIdList=" + columnIdList
+                + "}";
     }
 }

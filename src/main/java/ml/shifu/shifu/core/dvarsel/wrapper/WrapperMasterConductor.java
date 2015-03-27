@@ -19,7 +19,7 @@ import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.container.obj.ModelConfig;
 import ml.shifu.shifu.core.dvarsel.AbstractMasterConductor;
 import ml.shifu.shifu.core.dvarsel.CandidateSeed;
-import ml.shifu.shifu.core.dvarsel.CandidateSeeds;
+import ml.shifu.shifu.core.dvarsel.CandidatePopulation;
 import ml.shifu.shifu.core.dvarsel.VarSelWorkerResult;
 import ml.shifu.shifu.util.CommonUtils;
 
@@ -30,7 +30,7 @@ import java.util.*;
  */
 public class WrapperMasterConductor extends AbstractMasterConductor {
     private CandidateGenerator candidateGenerator;
-    private CandidateSeeds seeds;
+    private CandidatePopulation seeds;
 
     private int iterationCount = 0;
 
@@ -60,7 +60,7 @@ public class WrapperMasterConductor extends AbstractMasterConductor {
 
     @Override
     public List<CandidateSeed> getNextWorkingSet() {
-        return seeds.getCandidateSeeds();
+        return seeds.getSeedList();
     }
 
     @Override
