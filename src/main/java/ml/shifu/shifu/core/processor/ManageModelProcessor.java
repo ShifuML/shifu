@@ -80,10 +80,12 @@ public class ManageModelProcessor extends BasicModelProcessor implements
     private void listModels() {
         File root = new File(Constants.BACKUPNAME);
 
-        for (File folder : root.listFiles()) {
-            if (folder.isDirectory()) {
-                System.out.println(folder.getName());
-            }
+        if (root.exists() && root.isDirectory()) {
+            for (File folder : root.listFiles()) {
+                if (folder.isDirectory()) {
+                    System.out.println(folder.getName());
+                }
+            }    
         }
     }
 
@@ -152,7 +154,7 @@ public class ManageModelProcessor extends BasicModelProcessor implements
             //copy models
             File sourceModelFolder = new File(String.format("./%s/%s/models/", Constants.BACKUPNAME, modelName));
             File workspaceFolder = new File("./models");
-            if (sourceModelFolder.exists()) {
+            if (sourceModelFolder.exists() && sourceModelFolder.isDirectory()) {
                 for (File model : sourceModelFolder.listFiles(new FileFilter() {
 
                     @Override
@@ -294,7 +296,7 @@ public class ManageModelProcessor extends BasicModelProcessor implements
 
         File currentModelFoler = new File("models");
 
-        if (currentModelFoler.exists()) {
+        if (currentModelFoler.exists() && currentModelFoler.isDirectory()) {
 
             for (File model : currentModelFoler.listFiles(new FileFilter() {
 

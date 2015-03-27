@@ -230,10 +230,16 @@ public class NNTrainerTest {
 
         File modelDir = new File(
                 "model_folder");
-        for (File modelFile : modelDir.listFiles()) {
-            System.out.println("result of " + modelFile.getName() + ":");
-            computeScore(modelFile, dataPair0, dataPair1, dataPair2, dataPair3);
+        
+        if (modelDir.exists() && modelDir.isDirectory()) {
+            for (File modelFile : modelDir.listFiles()) {
+                System.out.println("result of " + modelFile.getName() + ":");
+                computeScore(modelFile, dataPair0, dataPair1, dataPair2, dataPair3);
+            }    
+        } else {
+            System.err.println("No ./model_folder exist!");
         }
+        
     }
 
     private void computeScore(File modelFile, MLDataPair dataPair0,
