@@ -40,7 +40,6 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
-
 public class ScorerTest {
 
     List<BasicML> models = new ArrayList<BasicML>();
@@ -62,31 +61,26 @@ public class ScorerTest {
         config.getTrain().getParams().put("NumHiddenNodes", nodes);
         config.getTrain().getParams().put("ActivationFunc", func);
 
-
         NNTrainer trainer = new NNTrainer(config, 0, false);
 
-        double[] input = {0., 0.,};
-        double[] ideal = {1.};
-        MLDataPair pair = new BasicMLDataPair(new BasicMLData(input),
-                new BasicMLData(ideal));
+        double[] input = { 0., 0., };
+        double[] ideal = { 1. };
+        MLDataPair pair = new BasicMLDataPair(new BasicMLData(input), new BasicMLData(ideal));
         set.add(pair);
 
-        input = new double[]{0., 1.,};
-        ideal = new double[]{0.};
-        pair = new BasicMLDataPair(new BasicMLData(input),
-                new BasicMLData(ideal));
+        input = new double[] { 0., 1., };
+        ideal = new double[] { 0. };
+        pair = new BasicMLDataPair(new BasicMLData(input), new BasicMLData(ideal));
         set.add(pair);
 
-        input = new double[]{1., 0.,};
-        ideal = new double[]{0.};
-        pair = new BasicMLDataPair(new BasicMLData(input),
-                new BasicMLData(ideal));
+        input = new double[] { 1., 0., };
+        ideal = new double[] { 0. };
+        pair = new BasicMLDataPair(new BasicMLData(input), new BasicMLData(ideal));
         set.add(pair);
 
-        input = new double[]{1., 1.,};
-        ideal = new double[]{1.};
-        pair = new BasicMLDataPair(new BasicMLData(input),
-                new BasicMLData(ideal));
+        input = new double[] { 1., 1., };
+        ideal = new double[] { 1. };
+        pair = new BasicMLDataPair(new BasicMLData(input), new BasicMLData(ideal));
         set.add(pair);
 
         trainer.setTrainSet(set);
@@ -105,7 +99,6 @@ public class ScorerTest {
         svm.setValidSet(set);
 
         svm.train();
-
 
         models.add(trainer.getNetwork());
         models.add(svm.getSVM());
@@ -130,12 +123,11 @@ public class ScorerTest {
         col.setFinalSelect(true);
         list.add(col);
 
-        Scorer s = new Scorer(models, list, "NN");
+        Scorer s = new Scorer(models, list, "NN", null);
 
-        double[] input = {0., 0.,};
-        double[] ideal = {1.};
-        MLDataPair pair = new BasicMLDataPair(new BasicMLData(input),
-                new BasicMLData(ideal));
+        double[] input = { 0., 0., };
+        double[] ideal = { 1. };
+        MLDataPair pair = new BasicMLDataPair(new BasicMLData(input), new BasicMLData(ideal));
 
         ScoreObject o = s.score(pair, null);
         List<Integer> scores = o.getScores();
@@ -146,7 +138,7 @@ public class ScorerTest {
 
     @Test
     public void scoreNull() {
-        Scorer s = new Scorer(models, null, "NN");
+        Scorer s = new Scorer(models, null, "NN", null);
 
         Assert.assertNull(s.score(null, null));
     }
@@ -168,12 +160,11 @@ public class ScorerTest {
         col.setFinalSelect(true);
         list.add(col);
 
-        Scorer s = new Scorer(models, list, "NN");
+        Scorer s = new Scorer(models, list, "NN", null);
 
-        double[] input = {0., 0., 3.};
-        double[] ideal = {1.};
-        MLDataPair pair = new BasicMLDataPair(new BasicMLData(input),
-                new BasicMLData(ideal));
+        double[] input = { 0., 0., 3. };
+        double[] ideal = { 1. };
+        MLDataPair pair = new BasicMLDataPair(new BasicMLData(input), new BasicMLData(ideal));
 
         Assert.assertNull(s.score(pair, null));
     }

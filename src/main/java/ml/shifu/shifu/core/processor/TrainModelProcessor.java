@@ -63,6 +63,7 @@ import org.apache.pig.impl.util.JarManager;
 import org.apache.zookeeper.ZooKeeper;
 import org.encog.ml.data.MLDataSet;
 import org.encog.neural.networks.BasicNetwork;
+import org.jboss.netty.bootstrap.ServerBootstrap;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -295,7 +296,7 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
                 guaguaClient.addJob(localArgs.toArray(new String[0]));
             } else {
                 TailThread tailThread = startTailThread(new String[] { progressLogFile });
-                guaguaClient.creatJob(localArgs.toArray(new String[0])).waitForCompletion(true);
+                guaguaClient.createJob(localArgs.toArray(new String[0])).waitForCompletion(true);
                 stopTailThread(tailThread);
             }
         }
@@ -321,7 +322,7 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
 
     private void checkContinuousTraining(FileSystem fileSystem, List<String> localArgs, Path modelPath)
             throws IOException {
-        if(Boolean.TRUE.toString().equals(this.modelConfig.getTrain().getIsContinuousEnabled().toString())) {
+        if(Boolean.TRUE.toString().equals(this.modelConfig.getTrain().getIsContinuous().toString())) {
             // if varselect d-training or no such existing models, directly to disable continuous training.
             if(this.isForVarSelect) {
                 localArgs.add(String.format(NNConstants.MAPREDUCE_PARAM_FORMAT, NNConstants.NN_CONTINUOUS_TRAINING,
@@ -338,11 +339,11 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
                 LOG.warn("Model input and output settings are not consistent with input and output columns settings,  model training will start from scratch.");
             } else {
                 localArgs.add(String.format(NNConstants.MAPREDUCE_PARAM_FORMAT, NNConstants.NN_CONTINUOUS_TRAINING,
-                        this.modelConfig.getTrain().getIsContinuousEnabled()));
+                        this.modelConfig.getTrain().getIsContinuous()));
             }
         } else {
             localArgs.add(String.format(NNConstants.MAPREDUCE_PARAM_FORMAT, NNConstants.NN_CONTINUOUS_TRAINING,
-                    this.modelConfig.getTrain().getIsContinuousEnabled()));
+                    this.modelConfig.getTrain().getIsContinuous()));
         }
     }
 
@@ -402,10 +403,13 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
         args.add("-i");
         args.add(ShifuFileUtils.getFileSystemBySourceType(sourceType)
                 .makeQualified(new Path(super.getPathFinder().getNormalizedDataPath())).toString());
+        // args.add(ShifuFileUtils.getFileSystemBySourceType(sourceType)
+        // .makeQualified(new Path(super.getPathFinder().getNormalizedDataPath(), "part-m-003[1-5][0-9]"))
+        // .toString());
 
         String zkServers = Environment.getProperty(Environment.ZOO_KEEPER_SERVERS);
         if(StringUtils.isEmpty(zkServers)) {
-            LOG.warn("No specified zookeeper settings from zookeeperServers in shifuConfig file, Guagua will set embeded zookeeper server in client process. For big data applications, specified zookeeper servers are strongly recommended.");
+            LOG.warn("No specified zookeeper settings from zookeeperServers in shifuConfig file, Guagua will set embeded zookeeper server in client process or master node. For big data applications, specified zookeeper servers are strongly recommended.");
         } else {
             args.add("-z");
             args.add(zkServers);
@@ -453,7 +457,7 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
         args.add(String.format(NNConstants.MAPREDUCE_PARAM_FORMAT, NNConstants.NN_DRY_TRAIN, isDryTrain()));
         // hard code set computation threshold for 50s. Can be changed in shifuconfig file
         args.add(String.format(NNConstants.MAPREDUCE_PARAM_FORMAT, GuaguaConstants.GUAGUA_COMPUTATION_TIME_THRESHOLD,
-                50 * 1000l));
+                60 * 1000l));
         setHeapSizeAndSplitSize(args);
 
         // one can set guagua conf in shifuconfig
@@ -520,6 +524,8 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
         jars.add(JarManager.findContainingJar(GuaguaMapReduceConstants.class));
         // zookeeper-*.jar
         jars.add(JarManager.findContainingJar(ZooKeeper.class));
+        // netty-*.jar
+        jars.add(JarManager.findContainingJar(ServerBootstrap.class));
 
         args.add(StringUtils.join(jars, NNConstants.LIB_JAR_SEPARATOR));
     }

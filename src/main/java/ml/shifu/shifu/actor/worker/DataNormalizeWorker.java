@@ -139,8 +139,7 @@ public class DataNormalizeWorker extends AbstractWorkerActor {
                 retDouList.add(null);
             } else {
                 String val = (rfs[i] == null) ? "" : rfs[i];
-                Double z = Normalizer.normalize(config, val, cutoff);
-                retDouList.add(z);
+                retDouList.add(normalize(config, val, cutoff));
             }
         }
 
@@ -168,6 +167,35 @@ public class DataNormalizeWorker extends AbstractWorkerActor {
         retDouList.add(weight);
 
         return retDouList;
+    }
+
+    private Double normalize(ColumnConfig config, Object value, Double cutoff) {
+        String val = ((value == null) ? "" : value.toString());
+        switch(super.modelConfig.getNormalize().getNormType()) {
+            case WOE:
+                List<Double> binWoe;
+                if(super.modelConfig.getNormalize().getIsWeightNorm()) {
+                    binWoe = config.getColumnBinning().getBinWeightedWoe();
+                } else {
+                    binWoe = config.getColumnBinning().getBinCountWoe();
+                }
+                if(StringUtils.isEmpty(val)) {
+                    // append last missing bin woe
+                    // TODO how if merge missing bin with last valid bin.
+                    return binWoe.get(binWoe.size() - 1);
+                } else {
+                    try {
+                        int binNum = CommonUtils.getBinNum(config, val);
+                        binNum = binNum == -1 ? binWoe.size() - 1 : binNum;
+                        return binWoe.get(binNum);
+                    } catch (NumberFormatException e) {
+                        return binWoe.get(binWoe.size() - 1);
+                    }
+                }
+            case ZSCALE:
+            default:
+                return Normalizer.normalize(config, val, cutoff);
+        }
     }
 
     /**

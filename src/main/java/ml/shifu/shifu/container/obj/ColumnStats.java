@@ -34,8 +34,40 @@ public class ColumnStats {
     private Long missingCount;
     private Double stdDev;
     private Double missingPercentage;
+    private Double woe;
     private Double ks;
     private Double iv;
+    private Double weightedKs;
+    private Double weightedIv;
+    private Double weightedWoe;
+
+    /**
+     * @return the weightedKs
+     */
+    public Double getWeightedKs() {
+        return weightedKs;
+    }
+
+    /**
+     * @param weightedKs the weightedKs to set
+     */
+    public void setWeightedKs(Double weightedKs) {
+        this.weightedKs = weightedKs;
+    }
+
+    /**
+     * @return the weightedIv
+     */
+    public Double getWeightedIv() {
+        return weightedIv;
+    }
+
+    /**
+     * @param weightedIv the weightedIv to set
+     */
+    public void setWeightedIv(Double weightedIv) {
+        this.weightedIv = weightedIv;
+    }
 
     public Double getMax() {
         return max;
@@ -115,6 +147,34 @@ public class ColumnStats {
 
     public void setMissingPercentage(Double missingPercentage) {
         this.missingPercentage = missingPercentage;
+    }
+
+    /**
+     * @return the woe
+     */
+    public Double getWoe() {
+        return woe;
+    }
+
+    /**
+     * @return the weightedWoe
+     */
+    public Double getWeightedWoe() {
+        return weightedWoe;
+    }
+
+    /**
+     * @param woe the woe to set
+     */
+    public void setWoe(Double woe) {
+        this.woe = woe;
+    }
+
+    /**
+     * @param weightedWoe the weightedWoe to set
+     */
+    public void setWeightedWoe(Double weightedWoe) {
+        this.weightedWoe = weightedWoe;
     }
 
 }

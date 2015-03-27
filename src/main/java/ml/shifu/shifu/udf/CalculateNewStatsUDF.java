@@ -21,7 +21,8 @@ import java.io.IOException;
 import java.text.DecimalFormat;
 
 import ml.shifu.shifu.container.obj.ColumnConfig;
-import ml.shifu.shifu.core.KSIVCalculator;
+import ml.shifu.shifu.core.ColumnStatsCalculator;
+import ml.shifu.shifu.core.ColumnStatsCalculator.ColumnMetrics;
 import ml.shifu.shifu.udf.stats.AbstractVarStats;
 import ml.shifu.shifu.util.Base64Utils;
 
@@ -34,7 +35,7 @@ import org.apache.pig.data.TupleFactory;
  * CalculateNewStatsUDF class
  * 
  * @Oct 27, 2014
- *
+ * 
  */
 public class CalculateNewStatsUDF extends AbstractTrainerUDF<Tuple> {
 
@@ -42,88 +43,103 @@ public class CalculateNewStatsUDF extends AbstractTrainerUDF<Tuple> {
      * Experience value from modeler
      */
     public static final int MAX_CATEGORICAL_BINC_COUNT = 4000;
-    
+
     private Double valueThreshold = 1e6;
+
+    private DecimalFormat df = new DecimalFormat("##.######");
 
     public CalculateNewStatsUDF(String source, String pathModelConfig, String pathColumnConfig) throws IOException {
         super(source, pathModelConfig, pathColumnConfig);
 
-        if (modelConfig.getNumericalValueThreshold() != null) {
+        if(modelConfig.getNumericalValueThreshold() != null) {
             valueThreshold = modelConfig.getNumericalValueThreshold();
         }
         log.debug("Value Threshold: " + valueThreshold);
     }
 
-    /* (non-Javadoc)
+    /*
+     * (non-Javadoc)
+     * 
      * @see org.apache.pig.EvalFunc#exec(org.apache.pig.data.Tuple)
      */
     @Override
     public Tuple exec(Tuple input) throws IOException {
-        if (input == null ) {
+        if(input == null) {
             return null;
         }
-        
+
         Integer columnId = (Integer) input.get(0);
         DataBag databag = (DataBag) input.get(1);
         String binningDataInfo = (String) input.get(3);
-        
+
         log.info("start to process column id - " + columnId.toString());
-        
+
         ColumnConfig columnConfig = super.columnConfigList.get(columnId);
         AbstractVarStats varstats = AbstractVarStats.getVarStatsInst(modelConfig, columnConfig, valueThreshold);
         varstats.runVarStats(binningDataInfo, databag);
-        
-        log.info("after to process column id - " + columnId.toString());
-        
-        KSIVCalculator ksivCalculator = new KSIVCalculator();
-        ksivCalculator.calculateKSIV(columnConfig.getBinCountNeg(), columnConfig.getBinCountPos());
-        
-        // Assemble the results
-        DecimalFormat df = new DecimalFormat("##.######");
 
+        log.info("after to process column id - " + columnId.toString());
+
+        ColumnMetrics columnCountMetrics = ColumnStatsCalculator.calculateColumnMetrics(columnConfig.getBinCountNeg(),
+                columnConfig.getBinCountPos());
+
+        ColumnMetrics columnWeightMetrics = ColumnStatsCalculator.calculateColumnMetrics(
+                columnConfig.getBinWeightedNeg(), columnConfig.getBinWeightedPos());
+
+        // Assemble the results
         Tuple tuple = TupleFactory.getInstance().newTuple();
         tuple.append(columnId);
-        if ( columnConfig.isCategorical() ) {
-            if ( columnConfig.getBinCategory().size() == 0 || columnConfig.getBinCategory().size() > MAX_CATEGORICAL_BINC_COUNT) {
+        if(columnConfig.isCategorical()) {
+            if(columnConfig.getBinCategory().size() == 0
+                    || columnConfig.getBinCategory().size() > MAX_CATEGORICAL_BINC_COUNT) {
                 return null;
             }
-            
-            String binCategory = "[" + StringUtils.join(columnConfig.getBinCategory(), CalculateStatsUDF.CATEGORY_VAL_SEPARATOR) + "]";
+
+            String binCategory = "["
+                    + StringUtils.join(columnConfig.getBinCategory(), CalculateStatsUDF.CATEGORY_VAL_SEPARATOR) + "]";
             tuple.append(Base64Utils.base64Encode(binCategory));
         } else {
-            if ( columnConfig.getBinBoundary().size() == 1 ) {
+            if(columnConfig.getBinBoundary().size() == 1) {
                 return null;
             }
-            
+
             tuple.append(columnConfig.getBinBoundary().toString());
         }
-        
+
         tuple.append(columnConfig.getBinCountNeg().toString());
         tuple.append(columnConfig.getBinCountPos().toString());
         tuple.append(columnConfig.getBinAvgScore().toString());
         tuple.append(columnConfig.getBinPosRate().toString());
-        
-        tuple.append(df.format(ksivCalculator.getKS()));
-        tuple.append(df.format(ksivCalculator.getIV()));
+
+        tuple.append(df.format(columnCountMetrics.getKs()));
+        tuple.append(df.format(columnCountMetrics.getIv()));
 
         tuple.append(df.format(columnConfig.getColumnStats().getMax()));
         tuple.append(df.format(columnConfig.getColumnStats().getMin()));
         tuple.append(df.format(columnConfig.getColumnStats().getMean()));
         tuple.append(df.format(columnConfig.getColumnStats().getStdDev()));
-        if ( columnConfig.isCategorical() ) {
+        if(columnConfig.isCategorical()) {
             tuple.append("C");
         } else {
             tuple.append("N");
         }
         tuple.append(df.format(columnConfig.getColumnStats().getMedian()));
-        
+
         tuple.append(columnConfig.getMissingCount());
         tuple.append(columnConfig.getTotalCount());
         tuple.append(df.format(columnConfig.getMissingPercentage()));
-        
+
         tuple.append(columnConfig.getBinWeightedNeg().toString());
         tuple.append(columnConfig.getBinWeightedPos().toString());
 
+        tuple.append(columnCountMetrics.getWoe());
+        tuple.append(columnWeightMetrics.getWoe());
+
+        tuple.append(df.format(columnWeightMetrics.getKs()));
+        tuple.append(df.format(columnWeightMetrics.getIv()));
+
+        tuple.append(columnCountMetrics.getBinningWoe().toString());
+        tuple.append(columnWeightMetrics.getBinningWoe().toString());
 
         return tuple;
     }
