@@ -307,7 +307,7 @@ public class JavaBeanTester {
             throws ClassNotFoundException {
 
         List<Class<?>> results = new ArrayList<Class<?>>();
-        if (!directory.exists())
+        if (!directory.exists() || !directory.isDirectory())
             return Collections.EMPTY_LIST;
         File[] files = directory.listFiles();
         for (File file : files) {
