@@ -2,14 +2,12 @@ package ml.shifu.shifu.core.dvarsel.wrapper;
 
 import ml.shifu.shifu.core.dvarsel.CandidatePerf;
 import ml.shifu.shifu.core.dvarsel.CandidateSeed;
-import ml.shifu.shifu.core.dvarsel.CandidateSeeds;
+import ml.shifu.shifu.core.dvarsel.CandidatePopulation;
 import ml.shifu.shifu.core.dvarsel.VarSelWorkerResult;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.Test;
 
 import java.util.*;
-
-import static org.testng.Assert.*;
 
 public class CandidateGeneratorTest {
     private CandidateGenerator generator;
@@ -38,13 +36,13 @@ public class CandidateGeneratorTest {
 
     @Test
     public void testInitSeeds() throws Exception {
-        CandidateSeeds seeds = generator.initSeeds();
+        CandidatePopulation seeds = generator.initSeeds();
         System.out.println(seeds);
     }
 
     @Test
     public void testNextGeneration() throws Exception {
-        CandidateSeeds seed = generator.initSeeds();
+        CandidatePopulation seed = generator.initSeeds();
         System.out.println(seed);
 
         Random random = new Random();
@@ -55,7 +53,7 @@ public class CandidateGeneratorTest {
         }
     }
 
-    private CandidateSeeds generateNext(CandidateSeeds seed, Random random) {
+    private CandidatePopulation generateNext(CandidatePopulation seed, Random random) {
         List<VarSelWorkerResult> workerResults = new ArrayList<VarSelWorkerResult>();
         workerResults.add(new VarSelWorkerResult(getCandidatePerfs(random, seed)));
         workerResults.add(new VarSelWorkerResult(getCandidatePerfs(random, seed)));
@@ -71,9 +69,9 @@ public class CandidateGeneratorTest {
         return generator.nextGeneration(results, seed);
     }
 
-    private List<CandidatePerf> getCandidatePerfs(Random random, CandidateSeeds seed) {
+    private List<CandidatePerf> getCandidatePerfs(Random random, CandidatePopulation seed) {
         List<CandidatePerf> seedPerfList = new ArrayList<CandidatePerf>();
-        for (CandidateSeed s : seed.getCandidateSeeds()) {
+        for (CandidateSeed s : seed.getSeedList()) {
             seedPerfList.add(new CandidatePerf(s.getId(), random.nextDouble()));
         }
         return seedPerfList;

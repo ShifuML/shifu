@@ -261,22 +261,22 @@
                       "directive": "input",
                       "defval" : 0.1
                     }, {
-                      "name" : "expect_iteration_count",
+                      "name" : "population_multiply_cnt",
                       "type" : "number",
                       "directive": "input",
                       "defval" : 100
                     }, {
-                      "name" : "iteration_seed_count",
+                      "name" : "population_live_size",
                       "type" : "number",
                       "directive": "input",
                       "defval" : 500
                     }, {
-                      "name" : "expect_variable_count",
+                      "name" : "expect_variable_cnt",
                       "type" : "number",
                       "directive": "input",
                       "defval" : 300
                     }, {
-                      "name" : "cross_percent",
+                      "name" : "hybrid_percent",
                       "type" : "number",
                       "directive": "input",
                       "defval" : 60
