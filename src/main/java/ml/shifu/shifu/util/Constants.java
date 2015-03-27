@@ -142,7 +142,7 @@ public interface Constants {
 
     public static final String SHIFU_VARSEL_SE_MULTI_THREAD = "shifu.varsel.se.multi.thread";
 
-    public static final int SHIFU_DEFAULT_VARSEL_SE_MULTI_THREAD = 6;
+    public static final int SHIFU_DEFAULT_VARSEL_SE_MULTI_THREAD = 4;
 
     public static final String WRAPPER_BY_REMOVE = "R";
 
