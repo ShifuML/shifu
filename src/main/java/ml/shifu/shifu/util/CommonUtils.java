@@ -19,6 +19,7 @@ import com.google.common.base.Function;
 import com.google.common.base.Splitter;
 import com.google.common.collect.Collections2;
 import com.google.common.collect.Lists;
+
 import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.container.obj.ColumnConfig.ColumnFlag;
 import ml.shifu.shifu.container.obj.ColumnConfig.ColumnType;
@@ -31,6 +32,7 @@ import ml.shifu.shifu.exception.ShifuErrorCode;
 import ml.shifu.shifu.exception.ShifuException;
 import ml.shifu.shifu.fs.PathFinder;
 import ml.shifu.shifu.fs.ShifuFileUtils;
+
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.collections.Predicate;
 import org.apache.commons.io.IOUtils;
@@ -578,13 +580,18 @@ public final class CommonUtils {
         }
 
         File modelsPathDir = new File(modelsPath);
+        
+        if(!modelsPathDir.exists() || !modelsPathDir.isDirectory()) {
+            throw new IllegalArgumentException("The model path does't exist or not a directory!");
+        }
+
         File[] modelFiles = modelsPathDir.listFiles(new FilenameFilter() {
             @Override
             public boolean accept(File dir, String name) {
                 return name.endsWith("." + alg.name().toLowerCase());
             }
         });
-
+ 
         // sort file names
         Arrays.sort(modelFiles, new Comparator<File>() {
             @Override
