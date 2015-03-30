@@ -63,7 +63,7 @@ public class VariableSelectorTest {
         for (ColumnConfig config : selected) {
             if (config.isFinalSelect()) i++;
         }
-        Assert.assertEquals(i, Integer.valueOf(modelConfig.getVarSelectFilterNum()));
+        Assert.assertEquals(i, modelConfig.getVarSelectFilterNum());
 
         modelConfig.getVarSelect().setFilterBy("iv");
         selector = new VariableSelector(modelConfig, columnConfigList);

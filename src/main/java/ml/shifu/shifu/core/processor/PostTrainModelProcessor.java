@@ -130,7 +130,7 @@ public class PostTrainModelProcessor extends BasicModelProcessor implements Proc
             while(scanner.hasNextLine()) {
                 List<Integer> scores = new ArrayList<Integer>();
                 String[] raw = scanner.nextLine().split("\\|");
-                int columnNum = Integer.valueOf(raw[0]);
+                int columnNum = Integer.parseInt(raw[0]);
                 for(int i = 1; i < raw.length; i++) {
                     scores.add(Integer.valueOf(raw[i]));
                 }
