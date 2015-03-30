@@ -37,6 +37,10 @@ import ml.shifu.shifu.core.AbstractTrainer;
 import ml.shifu.shifu.core.alg.LogisticRegressionTrainer;
 import ml.shifu.shifu.core.alg.NNTrainer;
 import ml.shifu.shifu.core.alg.SVMTrainer;
+import ml.shifu.shifu.core.dtrain.LogisticRegressionContants;
+import ml.shifu.shifu.core.dtrain.LogisticRegressionMaster;
+import ml.shifu.shifu.core.dtrain.LogisticRegressionParams;
+import ml.shifu.shifu.core.dtrain.LogisticRegressionWorker;
 import ml.shifu.shifu.core.dtrain.NNConstants;
 import ml.shifu.shifu.core.dtrain.NNMaster;
 import ml.shifu.shifu.core.dtrain.NNOutput;
@@ -234,8 +238,9 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
     }
 
     private void validateDistributedTrain() {
-        if(!NNConstants.NN_ALG_NAME.equalsIgnoreCase(super.getModelConfig().getTrain().getAlgorithm())) {
-            throw new IllegalArgumentException("Currently we only support NN distributed training.");
+    	String alg = super.getModelConfig().getTrain().getAlgorithm();
+        if(!(NNConstants.NN_ALG_NAME.equalsIgnoreCase(alg)||LogisticRegressionContants.LR_ALG_NAME.equalsIgnoreCase(alg))) {
+            throw new IllegalArgumentException("Currently we only support NN and LR distributed training.");
         }
 
         if(super.getModelConfig().getDataSet().getSource() != SourceType.HDFS) {
@@ -414,12 +419,22 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
             args.add("-z");
             args.add(zkServers);
         }
+    	String alg = super.getModelConfig().getTrain().getAlgorithm();
+    	if(LogisticRegressionContants.LR_ALG_NAME.equalsIgnoreCase(alg))
+    	{
+            args.add("-w");
+            args.add(LogisticRegressionWorker.class.getName());
 
+            args.add("-m");
+            args.add(LogisticRegressionMaster.class.getName());
+    	}
+    	else{
         args.add("-w");
         args.add(NNWorker.class.getName());
 
         args.add("-m");
         args.add(NNMaster.class.getName());
+        }
 
         args.add("-c");
         // the reason to add 1 is that the first iteration in D-NN
@@ -433,11 +448,21 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
 
         args.add(String.valueOf(numTrainEpoches));
 
+    	if(LogisticRegressionContants.LR_ALG_NAME.equalsIgnoreCase(alg))
+    	{
+            args.add("-mr");
+            args.add(LogisticRegressionParams.class.getName());
+
+            args.add("-wr");
+            args.add(LogisticRegressionParams.class.getName());
+    	}
+    	else{
         args.add("-mr");
         args.add(NNParams.class.getName());
 
         args.add("-wr");
         args.add(NNParams.class.getName());
+        }
 
         args.add(String.format(NNConstants.MAPREDUCE_PARAM_FORMAT, NNConstants.MAPRED_JOB_QUEUE_NAME,
                 Environment.getProperty(Environment.HADOOP_JOB_QUEUE, Constants.DEFAULT_JOB_QUEUE)));
