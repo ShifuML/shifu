@@ -48,7 +48,7 @@ import org.slf4j.LoggerFactory;
  * Confusion matrix, hold the confusion matrix computing
  */
 public class ConfusionMatrix {
-    public static Random rd = new Random(System.currentTimeMillis());
+    public static final Random rd = new Random(System.currentTimeMillis());
 
     enum EvaluatorMethod {
         MEAN, MAX, MIN, DEFAULT, MEDIAN;
