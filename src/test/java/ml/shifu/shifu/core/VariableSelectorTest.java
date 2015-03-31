@@ -68,12 +68,12 @@ public class VariableSelectorTest {
         modelConfig.getVarSelect().setFilterBy("iv");
         selector = new VariableSelector(modelConfig, columnConfigList);
         selector.selectByFilter();
-        Assert.assertEquals(i, Integer.valueOf(modelConfig.getVarSelectFilterNum()));
+        Assert.assertEquals(i, modelConfig.getVarSelectFilterNum());
 
         modelConfig.getVarSelect().setFilterBy("mix");
         selector = new VariableSelector(modelConfig, columnConfigList);
         selector.selectByFilter();
-        Assert.assertEquals(i, Integer.valueOf(modelConfig.getVarSelectFilterNum()));
+        Assert.assertEquals(i, modelConfig.getVarSelectFilterNum());
     }
 
     @Test

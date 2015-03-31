@@ -50,7 +50,7 @@ public abstract class AbstractTrainer {
     /**
      * Log for abstract trainer
      */
-    protected static Logger log = LoggerFactory.getLogger(AbstractTrainer.class);
+    protected static final Logger log = LoggerFactory.getLogger(AbstractTrainer.class);
 
     /**
      * formatter

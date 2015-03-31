@@ -159,6 +159,7 @@ public class StatsModelProcessor extends BasicModelProcessor implements Processo
      * @param scanner
      */
     private void scanStatsResult(Scanner scanner) {
+        //TODO xiaobin
         while(scanner.hasNextLine()) {
             String[] raw = scanner.nextLine().trim().split("\\|");
 

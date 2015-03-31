@@ -17,6 +17,7 @@ package ml.shifu.shifu.core.processor;
 
 import ml.shifu.shifu.core.validator.ModelInspector.ModelStep;
 import ml.shifu.shifu.util.Constants;
+
 import org.apache.commons.io.FileUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -77,15 +78,20 @@ public class ManageModelProcessor extends BasicModelProcessor implements
     /**
      * list all models' name
      */
-    private void listModels() {
+    private void listModels() throws IOException {
         File root = new File(Constants.BACKUPNAME);
 
-        if (root.exists() && root.isDirectory()) {
-            for (File folder : root.listFiles()) {
-                if (folder.isDirectory()) {
-                    System.out.println(folder.getName());
-                }
-            }    
+        if (root.isDirectory()) {
+            File[] files = root.listFiles();
+            if (files != null) {
+                for (File folder : files) {
+                    if (folder.isDirectory()) {
+                        System.out.println(folder.getName());
+                    }
+                }    
+            } else {
+                throw new IOException(String.format("Failed to list files in %s", root.getAbsolutePath())); 
+            }
         }
     }
 
@@ -154,21 +160,27 @@ public class ManageModelProcessor extends BasicModelProcessor implements
             //copy models
             File sourceModelFolder = new File(String.format("./%s/%s/models/", Constants.BACKUPNAME, modelName));
             File workspaceFolder = new File("./models");
-            if (sourceModelFolder.exists() && sourceModelFolder.isDirectory()) {
-                for (File model : sourceModelFolder.listFiles(new FileFilter() {
-
+            if (sourceModelFolder.isDirectory()) {
+                File[] files = sourceModelFolder.listFiles(new FileFilter() {
                     @Override
                     public boolean accept(File file) {
                         return file.isFile() && file.getName().startsWith("model");
                     }
-
-                })) {
-                    try {
-                        FileUtils.copyFileToDirectory(model, workspaceFolder);
-                    } catch (IOException e) {
-                        log.info("Fail to swith models file");
+                });
+                
+                if (files != null) {
+                    for (File model : files) {
+                        try {
+                            FileUtils.copyFileToDirectory(model, workspaceFolder);
+                        } catch (IOException e) {
+                            log.info("Fail to copy models file");
+                        }
                     }
+                } else {
+                    throw new IOException(String.format("Failed to list files in %s", sourceModelFolder.getAbsolutePath()));
                 }
+            } else {
+                log.error("{} does not exist or is not a directory!", sourceModelFolder.getAbsoluteFile());
             }
 
         }
@@ -177,7 +189,8 @@ public class ManageModelProcessor extends BasicModelProcessor implements
         BufferedWriter writer = null;
         try {
             file.delete();
-            writer = new BufferedWriter(new FileWriter(file));
+            writer = new BufferedWriter(new OutputStreamWriter(
+                    new FileOutputStream(file), Constants.DEFAULT_CHARSET));
             writer.write(modelName);
         } catch (IOException e) {
             log.info("Fail to rewrite HEAD file");
@@ -212,7 +225,8 @@ public class ManageModelProcessor extends BasicModelProcessor implements
 
         BufferedReader reader = null;
         try {
-            reader = new BufferedReader(new FileReader(file));
+            reader = new BufferedReader(new InputStreamReader(
+                    new FileInputStream(file), Constants.DEFAULT_CHARSET));
 
             return reader.readLine();
 
@@ -245,7 +259,8 @@ public class ManageModelProcessor extends BasicModelProcessor implements
             BufferedWriter writer = null;
             try {
                 file.delete();
-                writer = new BufferedWriter(new FileWriter(file));
+                writer = new BufferedWriter(new OutputStreamWriter(
+                        new FileOutputStream(file), Constants.DEFAULT_CHARSET));
                 writer.write(modelName);
             } catch (IOException e) {
                 log.info("Fail to rewrite HEAD file");
@@ -295,24 +310,30 @@ public class ManageModelProcessor extends BasicModelProcessor implements
         modelFolder.mkdirs();
 
         File currentModelFoler = new File("models");
-
-        if (currentModelFoler.exists() && currentModelFoler.isDirectory()) {
-
-            for (File model : currentModelFoler.listFiles(new FileFilter() {
-
+        if (currentModelFoler.isDirectory()) {
+            File[] files = currentModelFoler.listFiles(new FileFilter() {
                 @Override
                 public boolean accept(File file) {
                     return file.isFile() && file.getName().startsWith("model");
                 }
-            })) {
-                try {
-                    FileUtils.copyFileToDirectory(model, modelFolder);
-                } catch (IOException e) {
-                    log.error("Fail in copy model file, source: {}", model.getAbsolutePath());
+            });
+            
+            if (files != null) {
+                for (File model : files) {
+                    try {
+                        FileUtils.copyFileToDirectory(model, modelFolder);
+                    } catch (IOException e) {
+                        log.error("Fail in copy model file, source: {}", model.getAbsolutePath());
+                    }
                 }
+            } else {
+                throw new IOException(String.format("Failed to list files in %s", currentModelFoler.getAbsolutePath()));
             }
+            
+            log.info("Save model: {} successfully", modelName);
+        } else {
+            log.error("Save model: {} failed", modelName);
+            log.error("{} does not exist or not a directory!",currentModelFoler.getAbsolutePath());
         }
-
-        log.info("Save model: {} successfully", modelName);
     }
 }

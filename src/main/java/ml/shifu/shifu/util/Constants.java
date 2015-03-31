@@ -15,6 +15,9 @@
  */
 package ml.shifu.shifu.util;
 
+import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
+
 /**
  * Global constants class
  */
@@ -170,4 +173,8 @@ public interface Constants {
 
     public static final String SHIFU_VARSELECT_SE_OUTPUT_NAME = "se";
 
+    /**
+     * Default Charset in SHIFU. Use <code>{@link StandardCharsets#UTF_8}</code>
+     */
+    public static final Charset DEFAULT_CHARSET = StandardCharsets.UTF_8;
 }

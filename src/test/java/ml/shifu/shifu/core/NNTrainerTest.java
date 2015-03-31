@@ -19,6 +19,7 @@ import ml.shifu.shifu.container.obj.ModelConfig;
 import ml.shifu.shifu.container.obj.ModelTrainConf.ALGORITHM;
 import ml.shifu.shifu.core.alg.NNTrainer;
 import ml.shifu.shifu.util.Constants;
+
 import org.apache.commons.io.FileUtils;
 import org.encog.Encog;
 import org.encog.engine.network.activation.*;
@@ -207,7 +208,7 @@ public class NNTrainerTest {
     }
 
     @Test
-    public void testExistingModels() {
+    public void testExistingModels() throws IOException {
         MLDataPair dataPair0 = BasicMLDataPair.createPair(2, 1);
         dataPair0.setInputArray(new double[]{-0.866025, -0.866025});
         dataPair0.setIdealArray(new double[]{0.0});
@@ -228,14 +229,18 @@ public class NNTrainerTest {
         dataPair3.setIdealArray(new double[]{1.0});
         trainSet.add(dataPair3);
 
-        File modelDir = new File(
-                "model_folder");
+        File modelDir = new File("model_folder");
         
-        if (modelDir.exists() && modelDir.isDirectory()) {
-            for (File modelFile : modelDir.listFiles()) {
-                System.out.println("result of " + modelFile.getName() + ":");
-                computeScore(modelFile, dataPair0, dataPair1, dataPair2, dataPair3);
-            }    
+        if (modelDir.isDirectory()) {
+            File[] files = modelDir.listFiles();
+            if (files != null) {
+                for (File modelFile : files) {
+                    System.out.println("result of " + modelFile.getName() + ":");
+                    computeScore(modelFile, dataPair0, dataPair1, dataPair2, dataPair3);
+                }
+            } else {
+                throw new IOException(String.format("Failed to list files in %s", modelDir.getAbsolutePath())); 
+            }
         } else {
             System.err.println("No ./model_folder exist!");
         }
@@ -259,38 +264,18 @@ public class NNTrainerTest {
 
     @AfterClass
     public void shutDown() throws IOException {
-        File file = new File("./models/");
-        if (file.exists() && file.isDirectory()) {
-            for (File f : file.listFiles()) {
-                f.delete();
-            }
-            file.delete();
-        }
-        file = new File("./modelsTmp/");
-        if (file.exists() && file.isDirectory()) {
-            for (File f : file.listFiles()) {
-                f.delete();
-            }
-            file.delete();
-        }
-        file = new File("init0.json");
-        if (file.exists()) {
-            file.delete();
-        }
-
-        file = new File("model_folder");
-        if (file.exists()) {
-            FileUtils.deleteDirectory(file);
-        }
-
-        Encog.getInstance().shutdown();
-
+        FileUtils.deleteDirectory(new File("./models/"));
+        FileUtils.deleteDirectory(new File("./modelsTmp/"));
+        FileUtils.deleteDirectory(new File("model_folder"));
         FileUtils.deleteDirectory(new File("tmp"));
 
+        FileUtils.deleteQuietly(new File("init0.json"));
         FileUtils.deleteQuietly(new File(Constants.DEFAULT_META_COLUMN_FILE));
         FileUtils.deleteQuietly(new File(Constants.DEFAULT_CATEGORICAL_COLUMN_FILE));
         FileUtils.deleteQuietly(new File(Constants.DEFAULT_FORCESELECT_COLUMN_FILE));
         FileUtils.deleteQuietly(new File(Constants.DEFAULT_FORCEREMOVE_COLUMN_FILE));
         FileUtils.deleteQuietly(new File("Eval1" + Constants.DEFAULT_EVALSCORE_META_COLUMN_FILE));
+        
+        Encog.getInstance().shutdown();
     }
 }
