@@ -15,6 +15,7 @@
  */
 package ml.shifu.shifu.core.dvarsel;
 
+import java.io.BufferedWriter;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.List;
@@ -27,6 +28,7 @@ import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.container.obj.ModelConfig;
 import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
 import ml.shifu.shifu.core.dtrain.NNConstants;
+import ml.shifu.shifu.fs.ShifuFileUtils;
 import ml.shifu.shifu.util.CommonUtils;
 import ml.shifu.shifu.util.Constants;
 
@@ -89,24 +91,23 @@ public class VarSelOutput extends BasicMasterInterceptor<VarSelMasterResult, Var
 
         LOG.info("Results:" + results);
 
-        Path out = new Path(context.getProps().getProperty(Constants.VAR_SEL_COLUMN_IDS_OUPUT));
+        String out = context.getProps().getProperty(Constants.VAR_SEL_COLUMN_IDS_OUPUT);
 
         writeColumnIdsIntoHDFS(out, results);
     }
 
-    private void writeColumnIdsIntoHDFS(Path path, List<Integer> columnIds) {
-        PrintWriter pw = null;
+    private void writeColumnIdsIntoHDFS(String path, List<Integer> columnIds) {
+        BufferedWriter bw = null;
         try {
-            FSDataOutputStream fos = FileSystem.get(new Configuration()).create(path);
-            pw = new PrintWriter(fos);
-            pw.println(Integer.toString(columnIds.size()) + "|" + columnIds.toString());
-            pw.flush();
+            bw = ShifuFileUtils.getWriter(path, SourceType.HDFS);
+            bw.write(String.format("%s|%s", Integer.toString(columnIds.size()), columnIds.toString()));
+            bw.newLine();
+            bw.flush();
         } catch (IOException e) {
         	e.printStackTrace();
             LOG.error("Error in writing output.", e);
-
         } finally {
-            IOUtils.closeStream(pw);
+            IOUtils.closeStream(bw);
         }
     }
 

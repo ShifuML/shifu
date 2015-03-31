@@ -113,10 +113,14 @@ public class AbstractTrainerTest {
     @AfterClass
     public void delete() throws IOException {
         File json = new File(".");
-        for (File tmp : json.listFiles(filter)) {
-            tmp.delete();
+        File[] files = json.listFiles(filter);
+        if (files != null) {
+            for (File tmp : files) {
+                tmp.delete();
+            }
+        } else {
+          throw new IOException(String.format("Failed to list files in %s", json.getAbsolutePath()));
         }
-
         FileUtils.deleteDirectory(new File("tmp"));
     }
 

@@ -18,12 +18,15 @@ package ml.shifu.shifu.container.meta;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.math.DoubleMath;
+
 import ml.shifu.shifu.container.obj.*;
 import ml.shifu.shifu.util.Constants;
+
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang.ArrayUtils;
 import org.apache.commons.lang.StringUtils;
 
+import java.io.UnsupportedEncodingException;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
@@ -531,12 +534,10 @@ public class MetaFactory {
     /**
      * Get the method-style name of the property. (UPPER the first character:))
      * 
-     * @param fildeName
+     * @param fieldName
      * @return first character Upper style
      */
-    private static String getMethodName(String fildeName) {
-        byte[] items = fildeName.getBytes();
-        items[0] = (byte) ((char) items[0] - 'a' + 'A');
-        return new String(items);
+    private static String getMethodName(String fieldName) {
+        return StringUtils.capitalize(fieldName);
     }
 }

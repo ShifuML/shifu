@@ -74,19 +74,23 @@ public class NNTrainer extends AbstractTrainer {
     private ConvergeJudger judger = new ConvergeJudger();
     
     static {
-        defaultLearningRate = new HashMap<String, Double>();
-        defaultLearningRate.put("S", 0.1);
-        defaultLearningRate.put("R", 0.1);
-        defaultLearningRate.put("Q", 2.0);
-        defaultLearningRate.put("B", 0.01);
-        defaultLearningRate.put("M", 0.00001);
+        // TODO use UnmodifiableMap or use other immutable Collections such as guava's
+        Map<String, Double> tmpLearningRate = new HashMap<String, Double>();
+        tmpLearningRate.put("S", 0.1);
+        tmpLearningRate.put("R", 0.1);
+        tmpLearningRate.put("Q", 2.0);
+        tmpLearningRate.put("B", 0.01);
+        tmpLearningRate.put("M", 0.00001);
+        defaultLearningRate = Collections.unmodifiableMap(tmpLearningRate);
 
-        learningAlgMap = new HashMap<String, String>();
-        learningAlgMap.put("S", "Scaled Conjugate Gradient");
-        learningAlgMap.put("R", "Resilient Propagation");
-        learningAlgMap.put("M", "Manhattan Propagation");
-        learningAlgMap.put("B", "Back Propagation");
-        learningAlgMap.put("Q", "Quick Propagation");
+        Map<String, String> tmpLearningAlgMap = new HashMap<String, String>();
+        tmpLearningAlgMap = new HashMap<String, String>();
+        tmpLearningAlgMap.put("S", "Scaled Conjugate Gradient");
+        tmpLearningAlgMap.put("R", "Resilient Propagation");
+        tmpLearningAlgMap.put("M", "Manhattan Propagation");
+        tmpLearningAlgMap.put("B", "Back Propagation");
+        tmpLearningAlgMap.put("Q", "Quick Propagation");
+        learningAlgMap = Collections.unmodifiableMap(tmpLearningAlgMap);
     }
 
     public NNTrainer(ModelConfig modelConfig, int trainerID, Boolean dryRun) {

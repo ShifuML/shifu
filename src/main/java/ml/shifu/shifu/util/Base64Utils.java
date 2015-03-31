@@ -18,7 +18,6 @@
 package ml.shifu.shifu.util;
 
 import java.io.IOException;
-import java.nio.charset.Charset;
 
 import org.apache.commons.codec.binary.Base64;
 
@@ -26,28 +25,28 @@ import org.apache.commons.codec.binary.Base64;
  * Base64Utils class
  * 
  * @Nov 18, 2014
- *
+ * 
  */
 public class Base64Utils {
     private Base64Utils() {
         // singleton
     }
-    
+
     public static String base64Encode(String text) {
-        if ( text == null ) {
+        if (text == null) {
             return null;
         }
-        
+
         Base64 encoder = new Base64(-1);
-        return new String(encoder.encode(text.getBytes(Charset.forName("UTF-8"))));
+        return new String(encoder.encode(text.getBytes(Constants.DEFAULT_CHARSET)), Constants.DEFAULT_CHARSET);
     }
-    
+
     public static String base64Decode(String text) throws IOException {
-        if ( text == null ) {
+        if (text == null) {
             return null;
         }
         
         Base64 decoder = new Base64(-1);
-        return new String(decoder.decode(text.getBytes()), Charset.forName("UTF-8"));
+        return new String(decoder.decode(text.getBytes(Constants.DEFAULT_CHARSET)), Constants.DEFAULT_CHARSET);
     }
 }
