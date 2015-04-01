@@ -368,7 +368,7 @@ public class BinningInfoWritable implements Writable {
                 int bytesSize = in.readInt();
                 byte[] bytes = new byte[bytesSize];
                 for(int j = 0; j < bytesSize; j++) {
-                    bytes[i] = in.readByte();
+                    bytes[j] = in.readByte();
                 }
                 this.binCategories.add(new String(bytes, Charset.forName("UTF-8")));
             }
