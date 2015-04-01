@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package ml.shifu.shifu.core.varselect;
+package ml.shifu.shifu.core.mr.input;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -50,15 +50,17 @@ import org.slf4j.LoggerFactory;
  * 
  * TODO make it as common. May be in guagua framework.
  */
-public class VarSelectInputFormat extends TextInputFormat {
+public class CombineInputFormat extends TextInputFormat {
 
-    private static final Logger LOG = LoggerFactory.getLogger(VarSelectInputFormat.class);
+    private static final String GZ = "gz";
+
+    private static final Logger LOG = LoggerFactory.getLogger(CombineInputFormat.class);
 
     private static final String TEXTINPUTFORMAT_RECORD_DELIMITER = "textinputformat.record.delimiter";
 
-    private static final String SHIFU_VS_SPLIT_MAX_COMBINED_SPLIT_SIZE = "shifu.vs.split.maxCombinedSplitSize";
+    public static final String SHIFU_VS_SPLIT_MAX_COMBINED_SPLIT_SIZE = "shifu.vs.split.maxCombinedSplitSize";
 
-    private static final String SHIFU_VS_SPLIT_COMBINABLE = "shifu.vs.split.combinable";
+    public static final String SHIFU_VS_SPLIT_COMBINABLE = "shifu.vs.split.combinable";
 
     /**
      * Splitter building logic including master setting, also includes combining input feature like Pig.
@@ -66,7 +68,7 @@ public class VarSelectInputFormat extends TextInputFormat {
     @Override
     public List<InputSplit> getSplits(JobContext job) throws IOException {
         List<InputSplit> newSplits = null;
-        boolean combinable = job.getConfiguration().getBoolean(SHIFU_VS_SPLIT_COMBINABLE, true);
+        boolean combinable = job.getConfiguration().getBoolean(SHIFU_VS_SPLIT_COMBINABLE, false);
         if(combinable) {
             @SuppressWarnings("deprecation")
             // use this deprecation method to make it works on 0.20.2
@@ -105,7 +107,7 @@ public class VarSelectInputFormat extends TextInputFormat {
             for(int i = 0; i < inputSplits.size(); i++) {
                 fss[i] = (FileSplit) (inputSplits.get(i));
             }
-            newSplits.add(new VarSelectInputSplit(fss));
+            newSplits.add(new CombineInputSplit(fss));
         }
         return newSplits;
     }
@@ -136,20 +138,20 @@ public class VarSelectInputFormat extends TextInputFormat {
                 // here double comparison can be directly used because of no precision requirement
                 while(((double) bytesRemaining) / splitSize > 1.1d) {
                     int blkIndex = getBlockIndex(blkLocations, length - bytesRemaining);
-                    splits.add(new VarSelectInputSplit(new FileSplit(path, length - bytesRemaining, splitSize,
+                    splits.add(new CombineInputSplit(new FileSplit(path, length - bytesRemaining, splitSize,
                             blkLocations[blkIndex].getHosts())));
                     bytesRemaining -= splitSize;
                 }
 
                 if(bytesRemaining != 0) {
-                    splits.add(new VarSelectInputSplit(new FileSplit(path, length - bytesRemaining, bytesRemaining,
+                    splits.add(new CombineInputSplit(new FileSplit(path, length - bytesRemaining, bytesRemaining,
                             blkLocations[blkLocations.length - 1].getHosts())));
                 }
             } else if(length != 0) {
-                splits.add(new VarSelectInputSplit(new FileSplit(path, 0, length, blkLocations[0].getHosts())));
+                splits.add(new CombineInputSplit(new FileSplit(path, 0, length, blkLocations[0].getHosts())));
             } else {
                 // Create empty hosts array for zero length files
-                splits.add(new VarSelectInputSplit(new FileSplit(path, 0, length, new String[0])));
+                splits.add(new CombineInputSplit(new FileSplit(path, 0, length, new String[0])));
             }
         }
 
@@ -481,8 +483,13 @@ public class VarSelectInputFormat extends TextInputFormat {
     @Override
     protected boolean isSplitable(JobContext context, Path file) {
         // bzip2 can be split.
-        if(file.getName().endsWith(BZ2)) {
+        if(file.getName().endsWith(GuaguaMapReduceConstants.BZ2)) {
             return true;
+        }
+
+        // gz can not be split.
+        if(file.getName().endsWith(GZ)) {
+            return false;
         }
         // other compression can not be split, maybe for lzo I should add it to split list.
         CompressionCodec codec = new CompressionCodecFactory(context.getConfiguration()).getCodec(file);
@@ -495,7 +502,7 @@ public class VarSelectInputFormat extends TextInputFormat {
         byte[] recordDelimiterBytes = null;
         if(null != delimiter)
             recordDelimiterBytes = delimiter.getBytes();
-        return new VarSelectRecordReader(recordDelimiterBytes);
+        return new CombineRecordReader(recordDelimiterBytes);
     }
 
 }

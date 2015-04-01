@@ -73,6 +73,96 @@ public final class ColumnStatsCalculator {
         return new ColumnMetrics(ks * 100, iv, woe, binningWoe);
     }
 
+    public static ColumnMetrics calculateColumnMetrics(long[] negative, long[] positive) {
+        assert negative != null && positive != null && negative.length == positive.length;
+
+        int numBins = negative.length;
+
+        double sumN = 0.0;
+        double sumP = 0.0;
+        double cumN = 0.0;
+        double cumP = 0.0;
+        double iv = 0.0;
+        double ks = 0.0;
+
+        for(int i = 0; i < numBins; i++) {
+            sumN += negative[i];
+            sumP += positive[i];
+        }
+
+        if(sumN == 0 || sumP == 0) {
+            return null;
+        }
+
+        double woe = Math.log((sumP + EPS) / (sumN + EPS));
+
+        List<Double> binningWoe = new ArrayList<Double>(numBins);
+
+        for(int i = 0; i < numBins; i++) {
+            double cntN = negative[i];
+            double cntP = positive[i];
+            double p = cntP / sumP;
+            double n = cntN / sumN;
+            // TODO merge bin with p or q = 0 ???
+            double woePerBin = Math.log((p + EPS) / (n + EPS));
+            binningWoe.add(woePerBin);
+            iv += (p - n) * woePerBin;
+            cumP += p;
+            cumN += n;
+            double tmpKS = Math.abs(cumP - cumN);
+            if(ks < tmpKS) {
+                ks = tmpKS;
+            }
+        }
+
+        return new ColumnMetrics(ks * 100, iv, woe, binningWoe);
+    }
+
+    public static ColumnMetrics calculateColumnMetrics(double[] negative, double[] positive) {
+        assert negative != null && positive != null && negative.length == positive.length;
+
+        int numBins = negative.length;
+
+        double sumN = 0.0;
+        double sumP = 0.0;
+        double cumN = 0.0;
+        double cumP = 0.0;
+        double iv = 0.0;
+        double ks = 0.0;
+
+        for(int i = 0; i < numBins; i++) {
+            sumN += negative[i];
+            sumP += positive[i];
+        }
+
+        if(sumN == 0 || sumP == 0) {
+            return null;
+        }
+
+        double woe = Math.log((sumP + EPS) / (sumN + EPS));
+
+        List<Double> binningWoe = new ArrayList<Double>(numBins);
+
+        for(int i = 0; i < numBins; i++) {
+            double cntN = negative[i];
+            double cntP = positive[i];
+            double p = cntP / sumP;
+            double n = cntN / sumN;
+            // TODO merge bin with p or q = 0 ???
+            double woePerBin = Math.log((p + EPS) / (n + EPS));
+            binningWoe.add(woePerBin);
+            iv += (p - n) * woePerBin;
+            cumP += p;
+            cumN += n;
+            double tmpKS = Math.abs(cumP - cumN);
+            if(ks < tmpKS) {
+                ks = tmpKS;
+            }
+        }
+
+        return new ColumnMetrics(ks * 100, iv, woe, binningWoe);
+    }
+
     public static class ColumnMetrics {
 
         public ColumnMetrics(double ks, double iv, double woe, List<Double> binningWoe) {
