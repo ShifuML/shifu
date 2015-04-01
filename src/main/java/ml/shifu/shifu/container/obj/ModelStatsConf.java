@@ -29,11 +29,13 @@ public class ModelStatsConf {
     public static enum BinningMethod {
         EqualPositive, EqualTotal, EqualInterval
     }
-    
+
     public static enum BinningAlgorithm {
-    	Native,               //sorting way
-    	SPDT,				  //paper reference: www.jmlr.org/papers/volume11/ben-haim10a/ben-haim10a.pdf
-    	MunroPat			  //paper reference: www.cs.ucsb.edu/~suri/cs290/MunroPat.pdf
+        Native, // sorting way
+        SPDT, // paper reference: www.jmlr.org/papers/volume11/ben-haim10a/ben-haim10a.pdf
+        SPDTI, // paper reference: www.jmlr.org/papers/volume11/ben-haim10a/ben-haim10a.pdf, improvement for last
+               // binning updating step
+        MunroPat // paper reference: www.cs.ucsb.edu/~suri/cs290/MunroPat.pdf
     }
 
     private Integer maxNumBin = Integer.valueOf(10);
@@ -46,7 +48,7 @@ public class ModelStatsConf {
     private Boolean binningAutoTypeEnable = Boolean.FALSE;
     private Integer binningAutoTypeThreshold = Integer.valueOf(5);
     private Boolean binningMergeEnable = Boolean.TRUE;
-    
+
     private BinningAlgorithm binningAlgorithm = BinningAlgorithm.SPDT;
 
     public Integer getMaxNumBin() {
@@ -117,12 +119,12 @@ public class ModelStatsConf {
         this.sampleNegOnly = sampleNegOnly;
     }
 
-	public BinningAlgorithm getBinningAlgorithm() {
-		return binningAlgorithm;
-	}
+    public BinningAlgorithm getBinningAlgorithm() {
+        return binningAlgorithm;
+    }
 
-	public void setBinningAlgorithm(BinningAlgorithm binningAlgorithm) {
-		this.binningAlgorithm = binningAlgorithm;
-	}
+    public void setBinningAlgorithm(BinningAlgorithm binningAlgorithm) {
+        this.binningAlgorithm = binningAlgorithm;
+    }
 
 }
