@@ -22,6 +22,8 @@ import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
 import ml.shifu.shifu.fs.ShifuFileUtils;
 import ml.shifu.shifu.message.AkkaActorInputMessage;
 import ml.shifu.shifu.util.CommonUtils;
+
+import org.apache.commons.io.FileUtils;
 import org.testng.Assert;
 import org.testng.annotations.AfterClass;
 import org.testng.annotations.BeforeClass;
@@ -72,10 +74,10 @@ public class CalculateStatsActorTest {
     }
 
     @AfterClass
-    public void delete() {
+    public void delete() throws IOException {
         File file = new File("./ColumnConfig.json");
         if (file.exists()) {
-            file.delete();
+            FileUtils.deleteQuietly(file);
         }
     }
 

@@ -25,6 +25,8 @@ import ml.shifu.shifu.core.pmml.PMMLTranslator;
 import ml.shifu.shifu.core.pmml.PMMLUtils;
 import ml.shifu.shifu.fs.PathFinder;
 import ml.shifu.shifu.util.CommonUtils;
+
+import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang.StringUtils;
 import org.encog.ml.BasicML;
 import org.slf4j.Logger;
@@ -62,7 +64,7 @@ public class ExportModelProcessor extends BasicModelProcessor implements Process
     @Override
     public int run() throws Exception {
         File pmmls = new File("pmmls");
-        pmmls.mkdirs();
+        FileUtils.forceMkdir(pmmls);
 
         if (StringUtils.isBlank(type)) {
             type = PMML;

@@ -19,6 +19,7 @@ import ml.shifu.shifu.container.obj.ModelConfig;
 import ml.shifu.shifu.core.AbstractTrainer;
 import ml.shifu.shifu.core.ConvergeJudger;
 
+import org.apache.commons.io.FileUtils;
 import org.encog.engine.network.activation.ActivationLinear;
 import org.encog.engine.network.activation.ActivationSigmoid;
 import org.encog.ml.data.MLDataSet;
@@ -130,7 +131,7 @@ public class LogisticRegressionTrainer extends AbstractTrainer {
     private void saveLR() throws IOException {
         File folder = new File("./models");
         if (!folder.exists()) {
-            folder.mkdirs();
+            FileUtils.forceMkdir(folder);
         }
         EncogDirectoryPersistence.saveObject(new File("./models/model" + this.trainerID + ".lr"), classifier);
     }

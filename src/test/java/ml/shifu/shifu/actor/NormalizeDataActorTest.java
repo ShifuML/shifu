@@ -53,11 +53,11 @@ public class NormalizeDataActorTest {
     @Test
     public void testActor() throws IOException, InterruptedException {
         File tmpDir = new File("./tmp");
-        if (tmpDir.exists() && tmpDir.isDirectory()) {
-            FileUtils.deleteDirectory(new File("./tmp"));
+        if (tmpDir.isDirectory()) {
+            FileUtils.deleteDirectory(tmpDir);
         }
 
-        tmpDir.mkdir();
+        FileUtils.forceMkdir(tmpDir);
 
         ActorRef normalizeRef = actorSystem.actorOf(new Props(new UntypedActorFactory() {
             private static final long serialVersionUID = 6777309320338075269L;

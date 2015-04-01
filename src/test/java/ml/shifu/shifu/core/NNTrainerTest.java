@@ -160,7 +160,7 @@ public class NNTrainerTest {
     }
 
     @Test
-    public void testAndOperation() {
+    public void testAndOperation() throws IOException {
         MLDataPair dataPair0 = BasicMLDataPair.createPair(2, 1);
         dataPair0.setInputArray(new double[]{0.0, 0.0});
         dataPair0.setIdealArray(new double[]{0.0});
@@ -198,13 +198,13 @@ public class NNTrainerTest {
 
         File tmp = new File("model_folder");
         if (!tmp.exists()) {
-            tmp.mkdirs();
+            FileUtils.forceMkdir(tmp);
         }
         File modelFile = new File(
                 "model_folder/model6.nn");
         EncogDirectoryPersistence.saveObject(modelFile, network);
         Assert.assertTrue(modelFile.exists());
-        modelFile.delete();
+        FileUtils.deleteQuietly(modelFile);
     }
 
     @Test

@@ -116,7 +116,7 @@ public class AbstractTrainerTest {
         File[] files = json.listFiles(filter);
         if (files != null) {
             for (File tmp : files) {
-                tmp.delete();
+                FileUtils.deleteQuietly(tmp);
             }
         } else {
           throw new IOException(String.format("Failed to list files in %s", json.getAbsolutePath()));

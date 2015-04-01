@@ -90,7 +90,7 @@ public class CommonUtilsTest {
         File file = null;
         file = new File("models");
         if (!file.exists()) {
-            file.mkdir();
+            FileUtils.forceMkdir(file);
         }
 
         file = new File("models/model1.nn");
@@ -108,12 +108,11 @@ public class CommonUtilsTest {
 
         file = new File("EvalSets/test");
         if (!file.exists()) {
-            file.mkdirs();
+            FileUtils.forceMkdir(file);
         }
 
         file = new File("EvalSets/test/EvalConfig.json");
         if (!file.exists()) {
-            file.createNewFile();
             BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(
                     new FileOutputStream(file), Constants.DEFAULT_CHARSET));
             writer.write("test string");
@@ -149,10 +148,10 @@ public class CommonUtilsTest {
         }
 
         file = new File("ColumnConfig.json");
-        file.delete();
+        FileUtils.deleteQuietly(file);
 
         file = new File("ModelConfig.json");
-        file.delete();
+        FileUtils.deleteQuietly(file);
 
         FileUtils.deleteDirectory(new File("models"));
         FileUtils.deleteDirectory(new File("EvalSets"));
@@ -166,11 +165,10 @@ public class CommonUtilsTest {
 
         File file = new File("evals/EvalA");
         if (!file.exists()) {
-            file.mkdirs();
+            FileUtils.forceMkdir(file);
         }
 
-        file = new File("testEval/EvalConfig.json");
-        file.createNewFile();
+        FileUtils.touch(new File("testEval/EvalConfig.json"));
 
         // CommonUtils.copyEvalConfFromLocalToHDFS(config, "testEval");
         Assert.assertTrue(file.exists());
