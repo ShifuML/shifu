@@ -291,7 +291,7 @@ public class ShifuFileUtils {
      *             - if any I/O exception in processing
      */
     public static void copy(String srcPath, String destPath, SourceType sourceType) throws IOException {
-        if(StringUtils.isEmpty(destPath) || StringUtils.isEmpty(destPath) || sourceType == null) {
+        if(StringUtils.isEmpty(srcPath) || StringUtils.isEmpty(destPath) || sourceType == null) {
             throw new IllegalArgumentException(String.format(
                     "Null or empty parameters srcDataPath:%s, dstDataPath:%s, sourceType:%s", srcPath, destPath,
                     sourceType));
