@@ -388,7 +388,6 @@ public class NNTrainer extends AbstractTrainer {
                     io.setNumWeights(numWeights);
                     io.setWeights(randomSetWeights(numWeights));
 
-                    file.createNewFile();
                     JSONUtils.writeValue(file, io);
                 }
 

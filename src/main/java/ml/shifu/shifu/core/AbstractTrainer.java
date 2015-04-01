@@ -377,7 +377,6 @@ public abstract class AbstractTrainer {
                 io.setNumSample(sampleSize);
                 io.setSampleIndex(list);
 
-                file.createNewFile();
                 JSONUtils.writeValue(file, io);
             } else {
                 list = io.getSampleIndex();
