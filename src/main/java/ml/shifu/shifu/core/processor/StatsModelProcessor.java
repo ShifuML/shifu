@@ -344,12 +344,12 @@ public class StatsModelProcessor extends BasicModelProcessor implements Processo
                 // config.setBinAvgScore(CommonUtils.stringToIntegerList(raw[4]));
                 config.setBinPosCaseRate(CommonUtils.stringToDoubleList(raw[5]));
                 config.setBinLength(config.getBinCountNeg().size());
-                config.setKs(Double.valueOf(raw[6]));
-                config.setIv(Double.valueOf(raw[7]));
-                config.setMax(Double.valueOf(raw[8]));
-                config.setMin(Double.valueOf(raw[9]));
-                config.setMean(Double.valueOf(raw[10]));
-                config.setStdDev(Double.valueOf(raw[11]));
+                config.setKs(parseDouble(raw[6]));
+                config.setIv(parseDouble(raw[7]));
+                config.setMax(parseDouble(raw[8]));
+                config.setMin(parseDouble(raw[9]));
+                config.setMean(parseDouble(raw[10]));
+                config.setStdDev(parseDouble(raw[11], Double.NaN));
 
                 // magic?
                 if(raw[12].equals("N")) {
@@ -358,18 +358,18 @@ public class StatsModelProcessor extends BasicModelProcessor implements Processo
                     config.setColumnType(ColumnType.C);
                 }
 
-                config.setMedian(Double.valueOf(raw[13]));
+                config.setMedian(parseDouble(raw[13]));
 
-                config.setMissingCnt(Long.valueOf(raw[14]));
-                config.setTotalCount(Long.valueOf(raw[15]));
-                config.setMissingPercentage(Double.valueOf(raw[16]));
+                config.setMissingCnt(parseLong(raw[14]));
+                config.setTotalCount(parseLong(raw[15]));
+                config.setMissingPercentage(parseDouble(raw[16]));
 
                 config.setBinWeightedNeg(CommonUtils.stringToDoubleList(raw[17]));
                 config.setBinWeightedPos(CommonUtils.stringToDoubleList(raw[18]));
-                config.getColumnStats().setWoe(Double.valueOf(raw[19]));
-                config.getColumnStats().setWeightedWoe(Double.valueOf(raw[20]));
-                config.getColumnStats().setWeightedKs(Double.valueOf(raw[21]));
-                config.getColumnStats().setWeightedIv(Double.valueOf(raw[22]));
+                config.getColumnStats().setWoe(parseDouble(raw[19]));
+                config.getColumnStats().setWeightedWoe(parseDouble(raw[20]));
+                config.getColumnStats().setWeightedKs(parseDouble(raw[21]));
+                config.getColumnStats().setWeightedIv(parseDouble(raw[22]));
                 config.getColumnBinning().setBinCountWoe(CommonUtils.stringToDoubleList(raw[23]));
                 config.getColumnBinning().setBinWeightedWoe(CommonUtils.stringToDoubleList(raw[24]));
             } catch (Exception e) {
@@ -378,6 +378,30 @@ public class StatsModelProcessor extends BasicModelProcessor implements Processo
 
                 continue;
             }
+        }
+    }
+    
+    private static double parseDouble(String str) {
+       return parseDouble(str, 0d);
+    }
+
+    private static double parseDouble(String str, double dVal) {
+        try {
+            return Double.parseDouble(str);
+        } catch (Exception e) {
+            return dVal;
+        }
+    }
+    
+    private static long parseLong(String str) {
+        return parseLong(str, 0L);
+    }
+
+    private static long parseLong(String str, long lVal) {
+        try {
+            return Long.parseLong(str);
+        } catch (Exception e) {
+            return lVal;
         }
     }
 
