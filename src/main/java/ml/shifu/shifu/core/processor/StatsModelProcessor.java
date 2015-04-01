@@ -373,16 +373,15 @@ public class StatsModelProcessor extends BasicModelProcessor implements Processo
                 config.getColumnBinning().setBinCountWoe(CommonUtils.stringToDoubleList(raw[23]));
                 config.getColumnBinning().setBinWeightedWoe(CommonUtils.stringToDoubleList(raw[24]));
             } catch (Exception e) {
-                log.error("Fail to process following column : {} name: {} error: {}", columnNum, this.columnConfigList
-                        .get(columnNum).getColumnName(), e.getMessage());
-
+                log.error(String.format("Fail to process following column : %s name: %s error: %s", columnNum,
+                        this.columnConfigList.get(columnNum).getColumnName(), e.getMessage()), e);
                 continue;
             }
         }
     }
-    
+
     private static double parseDouble(String str) {
-       return parseDouble(str, 0d);
+        return parseDouble(str, 0d);
     }
 
     private static double parseDouble(String str, double dVal) {
@@ -392,7 +391,7 @@ public class StatsModelProcessor extends BasicModelProcessor implements Processo
             return dVal;
         }
     }
-    
+
     private static long parseLong(String str) {
         return parseLong(str, 0L);
     }
