@@ -28,8 +28,11 @@ import ml.shifu.shifu.util.Base64Utils;
 
 import org.apache.commons.lang.StringUtils;
 import org.apache.pig.data.DataBag;
+import org.apache.pig.data.DataType;
 import org.apache.pig.data.Tuple;
 import org.apache.pig.data.TupleFactory;
+import org.apache.pig.impl.logicalLayer.schema.Schema;
+import org.apache.pig.impl.logicalLayer.schema.Schema.FieldSchema;
 
 /**
  * CalculateNewStatsUDF class
@@ -142,6 +145,43 @@ public class CalculateNewStatsUDF extends AbstractTrainerUDF<Tuple> {
         tuple.append(columnWeightMetrics.getBinningWoe().toString());
 
         return tuple;
+    }
+
+    @Override
+    public Schema outputSchema(Schema input) {
+        try {
+            Schema tupleSchema = new Schema();
+            tupleSchema.add(new FieldSchema("columnId", DataType.INTEGER));
+            tupleSchema.add(new FieldSchema("binBoundary", DataType.CHARARRAY));
+            tupleSchema.add(new FieldSchema("binCountNeg", DataType.CHARARRAY));
+            tupleSchema.add(new FieldSchema("binCountPos", DataType.CHARARRAY));
+            tupleSchema.add(new FieldSchema("binAvgScore", DataType.CHARARRAY));
+            tupleSchema.add(new FieldSchema("binPosRate", DataType.CHARARRAY));
+            tupleSchema.add(new FieldSchema("ks", DataType.CHARARRAY));
+            tupleSchema.add(new FieldSchema("iv", DataType.CHARARRAY));
+            tupleSchema.add(new FieldSchema("max", DataType.CHARARRAY));
+            tupleSchema.add(new FieldSchema("min", DataType.CHARARRAY));
+            tupleSchema.add(new FieldSchema("mean", DataType.CHARARRAY));
+            tupleSchema.add(new FieldSchema("stddev", DataType.CHARARRAY));
+            tupleSchema.add(new FieldSchema("isCate", DataType.CHARARRAY));
+            tupleSchema.add(new FieldSchema("median", DataType.CHARARRAY));
+            tupleSchema.add(new FieldSchema("missingCount", DataType.LONG));
+            tupleSchema.add(new FieldSchema("totalCount", DataType.LONG));
+            tupleSchema.add(new FieldSchema("missingRatio", DataType.CHARARRAY));
+            tupleSchema.add(new FieldSchema("binWeightedNeg", DataType.CHARARRAY));
+            tupleSchema.add(new FieldSchema("binWeightedPos", DataType.CHARARRAY));
+            tupleSchema.add(new FieldSchema("woe", DataType.CHARARRAY));
+            tupleSchema.add(new FieldSchema("weightedWoe", DataType.CHARARRAY));
+            tupleSchema.add(new FieldSchema("weightedKs", DataType.CHARARRAY));
+            tupleSchema.add(new FieldSchema("weightedIv", DataType.CHARARRAY));
+            tupleSchema.add(new FieldSchema("binWoe", DataType.CHARARRAY));
+            tupleSchema.add(new FieldSchema("binWeightedWoe", DataType.CHARARRAY));
+
+            return new Schema(new Schema.FieldSchema("ColumnStatistics", tupleSchema, DataType.TUPLE));
+        } catch (IOException e) {
+            log.error("Error in outputSchema", e);
+            return null;
+        }
     }
 
 }

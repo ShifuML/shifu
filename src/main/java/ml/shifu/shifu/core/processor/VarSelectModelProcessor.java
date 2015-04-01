@@ -38,9 +38,9 @@ import ml.shifu.shifu.core.dvarsel.VarSelWorker;
 import ml.shifu.shifu.core.dvarsel.VarSelWorkerResult;
 import ml.shifu.shifu.core.dvarsel.wrapper.WrapperMasterConductor;
 import ml.shifu.shifu.core.dvarsel.wrapper.WrapperWorkerConductor;
+import ml.shifu.shifu.core.mr.input.CombineInputFormat;
 import ml.shifu.shifu.core.validator.ModelInspector.ModelStep;
 import ml.shifu.shifu.core.varselect.ColumnInfo;
-import ml.shifu.shifu.core.varselect.VarSelectInputFormat;
 import ml.shifu.shifu.core.varselect.VarSelectMapper;
 import ml.shifu.shifu.core.varselect.VarSelectReducer;
 import ml.shifu.shifu.exception.ShifuErrorCode;
@@ -413,7 +413,7 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
 
         job.setMapOutputKeyClass(LongWritable.class);
         job.setMapOutputValueClass(ColumnInfo.class);
-        job.setInputFormatClass(VarSelectInputFormat.class);
+        job.setInputFormatClass(CombineInputFormat.class);
         FileInputFormat.setInputPaths(
                 job,
                 ShifuFileUtils.getFileSystemBySourceType(source).makeQualified(
@@ -461,6 +461,7 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
         conf.set(Constants.SHIFU_MODELSET_SOURCE_TYPE, source.toString());
         // set mapreduce.job.max.split.locations to 30 to suppress warnings
         conf.setInt(GuaguaMapReduceConstants.MAPREDUCE_JOB_MAX_SPLIT_LOCATIONS, 30);
+        conf.setBoolean(CombineInputFormat.SHIFU_VS_SPLIT_COMBINABLE, true);
 
         Float wrapperRatio = this.modelConfig.getVarSelect().getWrapperRatio();
         if(wrapperRatio == null) {

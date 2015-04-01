@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package ml.shifu.shifu.core.varselect;
+package ml.shifu.shifu.core.mr.input;
 
 import java.io.DataInput;
 import java.io.DataOutput;
@@ -33,7 +33,7 @@ import org.apache.hadoop.mapreduce.lib.input.FileSplit;
  * For worker, input {@link #fileSplits} are included, here <code>FileSplit</code> array is used to support combining
  * <code>FileSplit</code>s in one task.
  */
-public class VarSelectInputSplit extends InputSplit implements Writable {
+public class CombineInputSplit extends InputSplit implements Writable {
 
     /**
      * File splits used for the task. Using array here to make support combining small files into one GuaguaInputSplit.
@@ -43,7 +43,7 @@ public class VarSelectInputSplit extends InputSplit implements Writable {
     /**
      * Default constructor without any setting.
      */
-    public VarSelectInputSplit() {
+    public CombineInputSplit() {
     }
 
     /**
@@ -52,7 +52,7 @@ public class VarSelectInputSplit extends InputSplit implements Writable {
      * @param fileSplits
      *            File splits used for mapper task.
      */
-    public VarSelectInputSplit(FileSplit... fileSplits) {
+    public CombineInputSplit(FileSplit... fileSplits) {
         this.fileSplits = fileSplits;
     }
 
@@ -62,7 +62,7 @@ public class VarSelectInputSplit extends InputSplit implements Writable {
      * @param fileSplit
      *            File split used for mapper task.
      */
-    public VarSelectInputSplit(FileSplit fileSplit) {
+    public CombineInputSplit(FileSplit fileSplit) {
         this(new FileSplit[] { fileSplit });
     }
 

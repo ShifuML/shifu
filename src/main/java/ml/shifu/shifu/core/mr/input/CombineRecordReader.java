@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package ml.shifu.shifu.core.varselect;
+package ml.shifu.shifu.core.mr.input;
 
 import java.io.IOException;
 
@@ -36,8 +36,8 @@ import org.slf4j.LoggerFactory;
 /**
  * Copy from Hadoop LineRecordReder to support multiple file splits into one mapper task.
  */
-public class VarSelectRecordReader extends RecordReader<LongWritable, Text> {
-    private final static Logger LOG = LoggerFactory.getLogger(VarSelectRecordReader.class);
+public class CombineRecordReader extends RecordReader<LongWritable, Text> {
+    private final static Logger LOG = LoggerFactory.getLogger(CombineRecordReader.class);
 
     private CompressionCodecFactory compressionCodecs = null;
     private long start;
@@ -55,17 +55,17 @@ public class VarSelectRecordReader extends RecordReader<LongWritable, Text> {
     private long wholeSize;
     private long comsumedSplitSize;
 
-    public VarSelectRecordReader() {
+    public CombineRecordReader() {
     }
 
-    public VarSelectRecordReader(byte[] recordDelimiter) {
+    public CombineRecordReader(byte[] recordDelimiter) {
         this.recordDelimiterBytes = recordDelimiter;
     }
 
     public void initialize(InputSplit genericSplit, TaskAttemptContext context) throws IOException {
         this.splitIndex = 0;
         this.context = context;
-        this.fileSplits = ((VarSelectInputSplit) genericSplit).getFileSplits();
+        this.fileSplits = ((CombineInputSplit) genericSplit).getFileSplits();
         initializeOne(context, this.fileSplits[this.splitIndex++]);
         for(FileSplit fileSplit: this.fileSplits) {
             this.wholeSize += fileSplit.getLength();

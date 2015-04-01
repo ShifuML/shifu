@@ -22,7 +22,9 @@ SET mapred.reduce.tasks.speculative.execution true;
 SET mapred.job.queue.name $queue_name;
 SET mapred.task.timeout 1200000;
 SET job.name 'shifu statistic';
-SET io.sort.mb 500
+SET io.sort.mb 500;
+SET mapred.child.java.opts -Xmx1G;
+SET mapred.child.ulimit 2.5G;
 
 DEFINE IsDataFilterOut  ml.shifu.shifu.udf.PurifyDataUDF('$source_type', '$path_model_config', '$path_column_config');
 DEFINE IsToBinningData  ml.shifu.shifu.udf.FilterBinningDataUDF('$source_type', '$path_model_config', '$path_column_config');
