@@ -171,7 +171,7 @@ public class ModelConfig {
 
         // build stats info
         modelConfig.setStats(new ModelStatsConf());
-        modelConfig.setBinningAlgorithm(BinningAlgorithm.SPDT);
+        modelConfig.setBinningAlgorithm(BinningAlgorithm.SPDTI);
 
         // build varselect info
         ModelVarSelectConf varselect = new ModelVarSelectConf();
