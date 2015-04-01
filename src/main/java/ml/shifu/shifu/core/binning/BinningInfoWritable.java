@@ -373,7 +373,6 @@ public class BinningInfoWritable implements Writable {
                 this.binCategories.add(new String(bytes, Charset.forName("UTF-8")));
             }
         }
-
     }
 
     /*

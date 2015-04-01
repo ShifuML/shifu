@@ -152,7 +152,7 @@ public class UpdateBinningInfoMapper extends Mapper<LongWritable, Text, IntWrita
 
         this.outputKey = new IntWritable();
 
-        LOG.info("Column binning info: {}", this.columnBinningInfo);
+        LOG.debug("Column binning info: {}", this.columnBinningInfo);
     }
 
     /**
@@ -391,7 +391,7 @@ public class UpdateBinningInfoMapper extends Mapper<LongWritable, Text, IntWrita
      */
     @Override
     protected void cleanup(Context context) throws IOException, InterruptedException {
-        LOG.info("Column binning info: {}", this.columnBinningInfo);
+        LOG.debug("Column binning info: {}", this.columnBinningInfo);
 
         for(Map.Entry<Integer, BinningInfoWritable> entry: this.columnBinningInfo.entrySet()) {
             this.outputKey.set(entry.getKey());

@@ -53,6 +53,7 @@ public class UpdateBinningInfoReducer extends Reducer<IntWritable, BinningInfoWr
 
     private static final int MAX_CATEGORICAL_BINC_COUNT = 4000;
 
+    @SuppressWarnings("unused")
     private static final double EPS = 1e-6;
 
     /**
@@ -195,7 +196,7 @@ public class UpdateBinningInfoReducer extends Reducer<IntWritable, BinningInfoWr
                 .append(Constants.DEFAULT_DELIMITER).append(df.format(max)).append(Constants.DEFAULT_DELIMITER)
                 .append(df.format(min)).append(Constants.DEFAULT_DELIMITER).append(df.format(sum / count))
                 .append(Constants.DEFAULT_DELIMITER)
-                .append(df.format(Math.sqrt((sumSquare / count - (sum * sum) / count + EPS) / (count - 1))))
+                .append(df.format(Math.sqrt(Math.abs(((sumSquare / count) - power2(sum / count))))))
                 .append(Constants.DEFAULT_DELIMITER).append(columnConfig.isCategorical() ? "C" : "N")
                 .append(Constants.DEFAULT_DELIMITER).append(df.format(sum / count)).append(Constants.DEFAULT_DELIMITER)
                 .append(missingCount).append(Constants.DEFAULT_DELIMITER).append(count)
@@ -224,7 +225,6 @@ public class UpdateBinningInfoReducer extends Reducer<IntWritable, BinningInfoWr
         return posRate;
     }
 
-    @SuppressWarnings("unused")
     private double power2(double data) {
         return data * data;
     }
