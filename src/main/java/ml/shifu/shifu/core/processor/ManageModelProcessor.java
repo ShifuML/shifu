@@ -188,7 +188,7 @@ public class ManageModelProcessor extends BasicModelProcessor implements
         File file = new File("./.HEAD");
         BufferedWriter writer = null;
         try {
-            file.delete();
+            FileUtils.forceDelete(file);
             writer = new BufferedWriter(new OutputStreamWriter(
                     new FileOutputStream(file), Constants.DEFAULT_CHARSET));
             writer.write(modelName);
@@ -258,7 +258,7 @@ public class ManageModelProcessor extends BasicModelProcessor implements
             File file = new File("./.HEAD");
             BufferedWriter writer = null;
             try {
-                file.delete();
+                FileUtils.deleteQuietly(file);
                 writer = new BufferedWriter(new OutputStreamWriter(
                         new FileOutputStream(file), Constants.DEFAULT_CHARSET));
                 writer.write(modelName);
@@ -288,7 +288,7 @@ public class ManageModelProcessor extends BasicModelProcessor implements
             log.error("Fail to delete historical folder, please manually delete it : {}", configFolder.getAbsolutePath());
         }
 
-        configFolder.mkdirs();
+        FileUtils.forceMkdir(configFolder);
 
         // copy configs
         File modelFile = new File("./ModelConfig.json");
@@ -307,7 +307,7 @@ public class ManageModelProcessor extends BasicModelProcessor implements
         File modelFolder = new File(Constants.BACKUPNAME + File.separator + modelName
                 + File.separator + "models");
 
-        modelFolder.mkdirs();
+        FileUtils.forceMkdir(modelFolder);
 
         File currentModelFoler = new File("models");
         if (currentModelFoler.isDirectory()) {

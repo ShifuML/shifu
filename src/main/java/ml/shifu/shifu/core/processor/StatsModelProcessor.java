@@ -216,7 +216,7 @@ public class StatsModelProcessor extends BasicModelProcessor implements Processo
                 config.getColumnStats().setWeightedIv(Double.valueOf(raw[22]));
                 config.getColumnBinning().setBinCountWoe(CommonUtils.stringToDoubleList(raw[23]));
                 config.getColumnBinning().setBinWeightedWoe(CommonUtils.stringToDoubleList(raw[24]));
-            } catch (Exception e) {
+            } catch (IOException e) {
                 log.error("Fail to process following column : {} name: {} error: {}", columnNum, this.columnConfigList
                         .get(columnNum).getColumnName(), e.getMessage());
 
