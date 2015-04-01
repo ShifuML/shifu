@@ -19,7 +19,10 @@ SET pig.exec.reducers.max 999;
 SET pig.exec.reducers.bytes.per.reducer 536870912;
 SET mapred.job.queue.name $queue_name;
 SET job.name 'shifu normalize'
-SET io.sort.mb 500
+SET io.sort.mb 500;
+SET mapred.child.java.opts -Xmx1G;
+SET mapred.child.ulimit 2.5G;
+SET output.compression.enabled false;
 
 DEFINE IsDataFilterOut  ml.shifu.shifu.udf.PurifyDataUDF('$source_type', '$path_model_config', '$path_column_config');
 DEFINE Normalize        ml.shifu.shifu.udf.NormalizeUDF('$source_type', '$path_model_config', '$path_column_config');

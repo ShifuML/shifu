@@ -40,23 +40,22 @@ import java.util.Scanner;
 import java.util.zip.GZIPInputStream;
 
 /**
- * ShifuFileUtils class encapsulate the file system interface from other
- * components. It provides the functions that for all kinds of file operation.
+ * ShifuFileUtils class encapsulate the file system interface from other components.
+ * It provides the functions that for all kinds of file operation.
  * <p/>
  * Caller need to pass the file path and @SourceType to do file operation
  */
 public class ShifuFileUtils {
 
-    private static final Logger log = LoggerFactory
-            .getLogger(ShifuFileUtils.class);
+    private static final Logger log = LoggerFactory.getLogger(ShifuFileUtils.class);
 
     // avoid user to create instance
     private ShifuFileUtils() {
     }
 
     /**
-     * Create an empty file, if file doesn't exist if the file already exists,
-     * this method won't do nothing just return false
+     * Create an empty file, if file doesn't exist
+     * if the file already exists, this method won't do nothing just return false
      * 
      * @param path
      *            - file path to create
@@ -66,15 +65,13 @@ public class ShifuFileUtils {
      * @throws IOException
      *             - if any I/O exception in processing
      */
-    public static boolean createFileIfNotExists(String path,
-            SourceType sourceType) throws IOException {
-        return getFileSystemBySourceType(sourceType).createNewFile(
-                new Path(path));
+    public static boolean createFileIfNotExists(String path, SourceType sourceType) throws IOException {
+        return getFileSystemBySourceType(sourceType).createNewFile(new Path(path));
     }
 
     /**
-     * Create Directory if directory doesn't exist if the directory exists, this
-     * method will do nothing
+     * Create Directory if directory doesn't exist
+     * if the directory exists, this method will do nothing
      * 
      * @param sourceFile
      *            - source file
@@ -82,15 +79,13 @@ public class ShifuFileUtils {
      * @throws IOException
      *             - if any I/O exception in processing
      */
-    public static boolean createDirIfNotExists(SourceFile sourceFile)
-            throws IOException {
-        return createDirIfNotExists(sourceFile.getPath(),
-                sourceFile.getSourceType());
+    public static boolean createDirIfNotExists(SourceFile sourceFile) throws IOException {
+        return createDirIfNotExists(sourceFile.getPath(), sourceFile.getSourceType());
     }
 
     /**
-     * Create Directory if directory doesn't exist if the directory exists, this
-     * method will do nothing
+     * Create Directory if directory doesn't exist
+     * if the directory exists, this method will do nothing
      * 
      * @param path
      *            - directory path
@@ -99,8 +94,7 @@ public class ShifuFileUtils {
      * @return operation status
      * @throws IOException
      */
-    public static boolean createDirIfNotExists(String path,
-            SourceType sourceType) throws IOException {
+    public static boolean createDirIfNotExists(String path, SourceType sourceType) throws IOException {
         return getFileSystemBySourceType(sourceType).mkdirs(new Path(path));
     }
 
@@ -177,11 +171,11 @@ public class ShifuFileUtils {
     }
 
     /**
-     * Get the data scanners for a list specified paths if the file is
-     * directory, get all scanner of normal sub-files if the file is normal
-     * file, get its scanner !!! Notice, all hidden files (file name start with
-     * ".") will be skipped !!! Warning: scanner instances should be closed by
-     * caller.
+     * Get the data scanners for a list specified paths
+     * if the file is directory, get all scanner of normal sub-files
+     * if the file is normal file, get its scanner
+     * !!! Notice, all hidden files (file name start with ".") will be skipped
+     * !!! Warning: scanner instances should be closed by caller.
      * 
      * @param paths
      *            - file paths to get the scanner
@@ -191,24 +185,23 @@ public class ShifuFileUtils {
      * @throws IOException
      *             - if any I/O exception in processing
      */
-    public static List<Scanner> getDataScanners(List<String> paths,
-            SourceType sourceType) throws IOException {
-        if (paths == null || sourceType == null) {
-            throw new IllegalArgumentException(
-                    "paths should not be null, sourceType should not be null.");
+    public static List<Scanner> getDataScanners(List<String> paths, SourceType sourceType) throws IOException {
+        if(paths == null || sourceType == null) {
+            throw new IllegalArgumentException("paths should not be null, sourceType should not be null.");
         }
         List<Scanner> scanners = new ArrayList<Scanner>();
-        for (String path : paths) {
+        for(String path: paths) {
             scanners.addAll(getDataScanners(path, sourceType));
         }
         return scanners;
     }
 
     /**
-     * Get the data scanners for some specified path if the file is directory,
-     * get all scanner of normal sub-files if the file is normal file, get its
-     * scanner !!! Notice, all hidden files (file name start with ".") will be
-     * skipped !!! Warning: scanner instances should be closed by caller.
+     * Get the data scanners for some specified path
+     * if the file is directory, get all scanner of normal sub-files
+     * if the file is normal file, get its scanner
+     * !!! Notice, all hidden files (file name start with ".") will be skipped
+     * !!! Warning: scanner instances should be closed by caller.
      * 
      * @param path
      *            - file path to get the scanner
@@ -218,52 +211,49 @@ public class ShifuFileUtils {
      * @throws IOException
      *             - if any I/O exception in processing
      */
-    public static List<Scanner> getDataScanners(String path,
-            SourceType sourceType) throws IOException {
+    public static List<Scanner> getDataScanners(String path, SourceType sourceType) throws IOException {
         FileSystem fs = getFileSystemBySourceType(sourceType);
 
         FileStatus[] listStatus;
         Path p = new Path(path);
-        if (fs.getFileStatus(p).isDir()) {
+        if(fs.getFileStatus(p).isDir()) {
             // for folder we need filter pig header files
             listStatus = fs.listStatus(p, new PathFilter() {
                 @Override
                 public boolean accept(Path path) {
-                    return (!path.getName().startsWith(Constants.HIDDEN_FILES));
+                    return !path.getName().startsWith(Constants.HIDDEN_FILES)
+                            && !path.getName().equalsIgnoreCase("_SUCCESS");
                 }
             });
         } else {
             listStatus = new FileStatus[] { fs.getFileStatus(p) };
         }
 
-        if (listStatus.length > 1) {
+        if(listStatus.length > 1) {
             Arrays.sort(listStatus, new Comparator<FileStatus>() {
 
                 @Override
                 public int compare(FileStatus f1, FileStatus f2) {
-                    return f1.getPath().getName()
-                            .compareTo(f2.getPath().getName());
+                    return f1.getPath().getName().compareTo(f2.getPath().getName());
                 }
 
             });
         }
 
         List<Scanner> scanners = new ArrayList<Scanner>();
-        for (FileStatus f : listStatus) {
+        for(FileStatus f: listStatus) {
             String filename = f.getPath().getName();
 
-            if (f.isDir()) {
-                log.warn(
-                        "Skip - {}, since it's direcory, please check your configuration.",
-                        filename);
+            if(f.isDir()) {
+                log.warn("Skip - {}, since it's direcory, please check your configuration.", filename);
                 continue;
             }
 
             log.debug("Creating Scanner for file: {} ", filename);
-            if (filename.endsWith(Constants.GZ_SUFFIX)) {
+            if(filename.endsWith(Constants.GZ_SUFFIX)) {
                 scanners.add(new Scanner(new GZIPInputStream(fs.open(f
                         .getPath())), Constants.DEFAULT_CHARSET.name()));
-            } else if (filename.endsWith(Constants.BZ2_SUFFIX)) {
+            } else if(filename.endsWith(Constants.BZ2_SUFFIX)) {
                 scanners.add(new Scanner(new BZip2CompressorInputStream(fs
                         .open(f.getPath())), Constants.DEFAULT_CHARSET.name()));
             } else {
@@ -276,10 +266,11 @@ public class ShifuFileUtils {
     }
 
     /**
-     * Get the data scanners for some specified path if the file is directory,
-     * get all scanner of normal sub-files if the file is normal file, get its
-     * scanner !!! Notice, all hidden files (file name start with ".") will be
-     * skipped !!! Warning: scanner instances should be closed by caller.
+     * Get the data scanners for some specified path
+     * if the file is directory, get all scanner of normal sub-files
+     * if the file is normal file, get its scanner
+     * !!! Notice, all hidden files (file name start with ".") will be skipped
+     * !!! Warning: scanner instances should be closed by caller.
      * 
      * @param sourceFile
      *            - source file
@@ -287,14 +278,13 @@ public class ShifuFileUtils {
      * @throws IOException
      *             - if any I/O exception in processing
      */
-    public static List<Scanner> getDataScanners(SourceFile sourceFile)
-            throws IOException {
+    public static List<Scanner> getDataScanners(SourceFile sourceFile) throws IOException {
         return getDataScanners(sourceFile.getPath(), sourceFile.getSourceType());
     }
 
     /**
-     * Copy src file to dst file in the same FileSystem. Such as copy local
-     * source to local destination, copy hdfs source to hdfs dest.
+     * Copy src file to dst file in the same FileSystem. Such as copy local source to local destination,
+     * copy hdfs source to hdfs dest.
      * 
      * @param srcPath
      *            - source file to copy
@@ -305,30 +295,24 @@ public class ShifuFileUtils {
      * @throws IOException
      *             - if any I/O exception in processing
      */
-    public static void copy(String srcPath, String destPath,
-            SourceType sourceType) throws IOException {
-        if (StringUtils.isEmpty(srcPath) || StringUtils.isEmpty(destPath)
-                || sourceType == null) {
-            throw new IllegalArgumentException(
-                    String.format(
-                            "Null or empty parameters srcDataPath:%s, dstDataPath:%s, sourceType:%s",
-                            srcPath, destPath, sourceType));
+    public static void copy(String srcPath, String destPath, SourceType sourceType) throws IOException {
+        if(StringUtils.isEmpty(destPath) || StringUtils.isEmpty(destPath) || sourceType == null) {
+            throw new IllegalArgumentException(String.format(
+                    "Null or empty parameters srcDataPath:%s, dstDataPath:%s, sourceType:%s", srcPath, destPath,
+                    sourceType));
         }
 
         FileSystem fs = getFileSystemBySourceType(sourceType);
-        // delete all files in dst firstly because of different folder if has
-        // dstDataPath
-        if (!fs.delete(new Path(destPath), true)) {
+        // delete all files in dst firstly because of different folder if has dstDataPath
+        if(!fs.delete(new Path(destPath), true)) {
             // ignore delete failed, it's ok.
         }
 
-        FileUtil.copy(fs, new Path(srcPath), fs, new Path(destPath), false,
-                new Configuration());
+        FileUtil.copy(fs, new Path(srcPath), fs, new Path(destPath), false, new Configuration());
     }
 
     /**
-     * Check the path is directory or not, the SourceType is used to find the
-     * file system
+     * Check the path is directory or not, the SourceType is used to find the file system
      * 
      * @param sourceFile
      *            - source file
@@ -341,8 +325,7 @@ public class ShifuFileUtils {
     }
 
     /**
-     * Check the path is directory or not, the SourceType is used to find the
-     * file system
+     * Check the path is directory or not, the SourceType is used to find the file system
      * 
      * @param path
      *            - the path of source file
@@ -352,8 +335,7 @@ public class ShifuFileUtils {
      * @throws IOException
      *             - if any I/O exception in processing
      */
-    public static boolean isDir(String path, SourceType sourceType)
-            throws IOException {
+    public static boolean isDir(String path, SourceType sourceType) throws IOException {
         FileSystem fs = getFileSystemBySourceType(sourceType);
         FileStatus status = fs.getFileStatus(new Path(path));
         return status.isDir();
@@ -368,8 +350,7 @@ public class ShifuFileUtils {
      * @throws IOException
      *             - if any I/O exception in processing
      */
-    public static boolean isFileExists(SourceFile sourceFile)
-            throws IOException {
+    public static boolean isFileExists(SourceFile sourceFile) throws IOException {
         return isFileExists(sourceFile.getPath(), sourceFile.getSourceType());
     }
 
@@ -384,8 +365,7 @@ public class ShifuFileUtils {
      * @throws IOException
      *             - if any I/O exception in processing
      */
-    public static boolean isFileExists(String path, SourceType sourceType)
-            throws IOException {
+    public static boolean isFileExists(String path, SourceType sourceType) throws IOException {
         FileSystem fs = getFileSystemBySourceType(sourceType);
         FileStatus[] fileStatusArr = fs.globStatus(new Path(path));
         return !(fileStatusArr == null || fileStatusArr.length == 0);
@@ -415,15 +395,14 @@ public class ShifuFileUtils {
      * @throws IOException
      *             - if any I/O exception in processing
      */
-    public static boolean deleteFile(String path, SourceType sourceType)
-            throws IOException {
+    public static boolean deleteFile(String path, SourceType sourceType) throws IOException {
         FileSystem fs = getFileSystemBySourceType(sourceType);
         return fs.delete(new Path(path), true);
     }
 
     /**
-     * Expand the file path, allowing user to use regex just like when using
-     * `hadoop fs` According the rules in glob, "{2,3}", "*" will be allowed
+     * Expand the file path, allowing user to use regex just like when using `hadoop fs`
+     * According the rules in glob, "{2,3}", "*" will be allowed
      * 
      * @param rawPath
      *            - the raw file path that may contains regex
@@ -433,14 +412,13 @@ public class ShifuFileUtils {
      * @throws IOException
      *             - if any I/O exception in processing
      */
-    public static List<String> expandPath(String rawPath, SourceType sourceType)
-            throws IOException {
+    public static List<String> expandPath(String rawPath, SourceType sourceType) throws IOException {
         FileSystem fs = getFileSystemBySourceType(sourceType);
         FileStatus[] fsArr = fs.globStatus(new Path(rawPath));
 
         List<String> filePathList = new ArrayList<String>();
-        if (fsArr != null) {
-            for (FileStatus fileStatus : fsArr) {
+        if(fsArr != null) {
+            for(FileStatus fileStatus: fsArr) {
                 filePathList.add(fileStatus.getPath().toString());
             }
         }
@@ -456,41 +434,38 @@ public class ShifuFileUtils {
      * @return - file system handler
      */
     public static FileSystem getFileSystemBySourceType(SourceType sourceType) {
-        if (sourceType == null) {
+        if(sourceType == null) {
             throw new IllegalArgumentException("sourceType should not be null.");
         }
 
-        switch (sourceType) {
-        case HDFS:
-            return HDFSUtils.getFS();
-        case LOCAL:
-            return HDFSUtils.getLocalFS();
-        default:
-            throw new IllegalStateException(String.format(
-                    "No such source type - %s.", sourceType));
+        switch(sourceType) {
+            case HDFS:
+                return HDFSUtils.getFS();
+            case LOCAL:
+                return HDFSUtils.getLocalFS();
+            default:
+                throw new IllegalStateException(String.format("No such source type - %s.", sourceType));
         }
     }
 
-    public static List<ColumnConfig> searchColumnConfig(EvalConfig config,
-            List<ColumnConfig> configList) throws IOException {
+    public static List<ColumnConfig> searchColumnConfig(EvalConfig config, List<ColumnConfig> configList)
+            throws IOException {
         String path = config.getModelsPath();
 
-        if (StringUtils.isNotEmpty(path)) {
+        if(StringUtils.isNotEmpty(path)) {
 
-            FileSystem fs = ShifuFileUtils.getFileSystemBySourceType(config
-                    .getDataSet().getSource());
+            FileSystem fs = ShifuFileUtils.getFileSystemBySourceType(config.getDataSet().getSource());
 
-            while (path.indexOf("/") > 0) {
+            while(path.indexOf("/") > 0) {
                 path = path.substring(0, path.lastIndexOf("/"));
 
                 Path columnConfigFile = new Path(path + "/ColumnConfig.json");
 
-                if (fs.exists(columnConfigFile)) {
+                if(fs.exists(columnConfigFile)) {
 
-                    log.info("Using config file in this column config : {}",
-                            columnConfigFile.toString());
-                    return CommonUtils.loadColumnConfigList(columnConfigFile
-                            .toString(), config.getDataSet().getSource());
+                    log.info("Using config file in this column config : {}", columnConfigFile.toString());
+                    return CommonUtils.loadColumnConfigList(columnConfigFile.toString(), config.getDataSet()
+                            .getSource());
 
                 }
             }

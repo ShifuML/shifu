@@ -29,7 +29,7 @@ import org.apache.pig.data.Tuple;
  * 
  * @author zhanhu
  * @Oct 27, 2014
- *
+ * 
  */
 public class FilterBinningDataUDF extends AbstractTrainerUDF<Boolean> {
 
@@ -39,36 +39,39 @@ public class FilterBinningDataUDF extends AbstractTrainerUDF<Boolean> {
      * @param pathColumnConfig
      * @throws IOException
      */
-    public FilterBinningDataUDF(String source, String pathModelConfig, String pathColumnConfig)
-            throws IOException {
+    public FilterBinningDataUDF(String source, String pathModelConfig, String pathColumnConfig) throws IOException {
         super(source, pathModelConfig, pathColumnConfig);
     }
-    
-    /* (non-Javadoc)
+
+    /*
+     * (non-Javadoc)
+     * 
      * @see org.apache.pig.EvalFunc#exec(org.apache.pig.data.Tuple)
      */
     @Override
     public Boolean exec(Tuple input) throws IOException {
-        if ( input == null || input.size() < 4 ) {
+        // if(input == null || input.size() < 5) {
+        // return false;
+        // }
+
+        Integer columnNum = (Integer) input.get(0);
+        if(columnNum == null) {
             return false;
         }
-        
-        Integer columnNum = (Integer) input.get(0);
         String tag = (String) input.get(2);
+        // log.info("input =" + input + ";columnNum: " + (columnNum == null ? "" : columnNum.toString()));
         ColumnConfig columnConfig = columnConfigList.get(columnNum);
-        
-        if( columnConfig != null
+
+        if(columnConfig != null
                 && tag != null
                 && (modelConfig.getPosTags().contains(tag) || modelConfig.getNegTags().contains(tag))
-                && ( columnConfig.isCategorical()
-                        || modelConfig.getBinningMethod().equals(BinningMethod.EqualTotal)
-                        || modelConfig.getBinningMethod().equals(BinningMethod.EqualInterval) 
-                        || ( modelConfig.getBinningMethod().equals(BinningMethod.EqualPositive) 
-                                && modelConfig.getPosTags().contains(tag) ))) {
+                && (columnConfig.isCategorical() || modelConfig.getBinningMethod().equals(BinningMethod.EqualTotal)
+                        || modelConfig.getBinningMethod().equals(BinningMethod.EqualInterval) || (modelConfig
+                        .getBinningMethod().equals(BinningMethod.EqualPositive) && modelConfig.getPosTags().contains(
+                        tag)))) {
             return true;
         }
 
         return false;
     }
-
 }

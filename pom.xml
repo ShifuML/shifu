@@ -31,11 +31,6 @@
             <version>3.4</version>
         </dependency>
         <dependency>
-            <groupId>org.apache.pig</groupId>
-            <artifactId>pig</artifactId>
-            <version>0.10.0</version>
-        </dependency>
-        <dependency>
             <groupId>org.codehaus.jackson</groupId>
             <artifactId>jackson-mapper-asl</artifactId>
             <version>1.9.9</version>
@@ -398,7 +393,7 @@
                 <dependency>
                     <groupId>ml.shifu</groupId>
                     <artifactId>guagua-mapreduce</artifactId>
-                    <version>0.6.0</version>
+                    <version>0.6.1</version>
                     <classifier>hadoop1</classifier>
                 </dependency>
             </dependencies>
@@ -490,7 +485,7 @@
                 <dependency>
                     <groupId>ml.shifu</groupId>
                     <artifactId>guagua-mapreduce</artifactId>
-                    <version>0.6.0</version>
+                    <version>0.6.1</version>
                     <classifier>hadoop1</classifier>
                 </dependency>
             </dependencies>
@@ -573,8 +568,13 @@
                 <dependency>
                     <groupId>ml.shifu</groupId>
                     <artifactId>guagua-mapreduce</artifactId>
-                    <version>0.6.0</version>
+                    <version>0.6.1</version>
                     <classifier>hadoop2</classifier>
+                </dependency>
+                <dependency>
+                    <groupId>io.netty</groupId>
+                    <artifactId>netty</artifactId>
+                    <version>3.6.2.Final</version>
                 </dependency>
             </dependencies>
         </profile>
