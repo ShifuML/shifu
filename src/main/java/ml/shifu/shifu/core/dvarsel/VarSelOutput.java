@@ -99,7 +99,7 @@ public class VarSelOutput extends BasicMasterInterceptor<VarSelMasterResult, Var
             bw.newLine();
             bw.flush();
         } catch (IOException e) {
-        	e.printStackTrace();
+            e.printStackTrace();
             LOG.error("Error in writing output.", e);
         } finally {
             IOUtils.closeStream(bw);

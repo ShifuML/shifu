@@ -148,16 +148,14 @@ public class CsvUtil {
     static private String stripQuotes(String string, String quote) {
 
         if (string.startsWith(quote) && string.endsWith(quote)) {
-            string = string.substring(quote.length(),
-                    string.length() - quote.length());
+            string = string.substring(quote.length(), string.length() - quote.length());
         }
 
         return string;
     }
 
     @SuppressWarnings("unused")
-    static public List<Map<FieldName, FieldValue>> prepareAll(
-            Evaluator evaluator, Table table) {
+    static public List<Map<FieldName, FieldValue>> prepareAll(Evaluator evaluator, Table table) {
         List<FieldName> names = new ArrayList<FieldName>();
 
         List<FieldName> activeFields = evaluator.getActiveFields();
@@ -168,8 +166,7 @@ public class CsvUtil {
             for (int column = 0; column < headerRow.size(); column++) {
                 FieldName field = FieldName.create(headerRow.get(column));
 
-                if (!(activeFields.contains(field) || groupFields
-                        .contains(field))) {
+                if (!(activeFields.contains(field) || groupFields.contains(field))) {
                     field = null;
                 }
 
@@ -191,8 +188,7 @@ public class CsvUtil {
                 }
 
                 String value = bodyRow.get(column);
-                if (("").equals(value) || ("NA").equals(value)
-                        || ("N/A").equals(value)) {
+                if (("").equals(value) || ("NA").equals(value) || ("N/A").equals(value)) {
                     value = null;
                 }
 
@@ -215,8 +211,7 @@ public class CsvUtil {
         for (Map<FieldName, Object> stringRow : stringRows) {
             Map<FieldName, FieldValue> fieldValueRow = new LinkedHashMap<FieldName, FieldValue>();
 
-            Collection<Map.Entry<FieldName, Object>> entries = stringRow
-                    .entrySet();
+            Collection<Map.Entry<FieldName, Object>> entries = stringRow.entrySet();
             for (Map.Entry<FieldName, Object> entry : entries) {
                 FieldName name = entry.getKey();
                 // Pre Data process: for numeric variable convert non-double
@@ -228,8 +223,7 @@ public class CsvUtil {
                         entry.setValue(null);
                     }
                 }
-                FieldValue value = EvaluatorUtil.prepare(evaluator, name,
-                        entry.getValue());
+                FieldValue value = EvaluatorUtil.prepare(evaluator, name, entry.getValue());
                 fieldValueRow.put(name, value);
             }
 
@@ -239,8 +233,8 @@ public class CsvUtil {
         return fieldValueRows;
     }
 
-    static public List<Map<FieldName, FieldValue>> load(Evaluator evaluator,
-            String dataPath, String c) throws IOException {
+    static public List<Map<FieldName, FieldValue>> load(Evaluator evaluator, String dataPath, String c)
+            throws IOException {
         Table table = CsvUtil.readTable(new File(dataPath), c);
         return CsvUtil.prepareAll(evaluator, table);
     }
