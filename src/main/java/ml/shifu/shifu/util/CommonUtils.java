@@ -609,11 +609,6 @@ public final class CommonUtils {
         }
 
         File modelsPathDir = new File(modelsPath);
-
-        if (!modelsPathDir.isDirectory()) {
-            throw new IllegalArgumentException(
-                    String.format("The model path does not denote a directory: %s", modelsPath));
-        }
         
         File[] modelFiles = modelsPathDir.listFiles(new FilenameFilter() {
             @Override

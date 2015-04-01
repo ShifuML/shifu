@@ -108,8 +108,7 @@ public class ShifuFileUtils {
      * @throws IOException
      *             - if any I/O exception in processing
      */
-    public static BufferedWriter getWriter(SourceFile sourceFile)
-            throws IOException {
+    public static BufferedWriter getWriter(SourceFile sourceFile) throws IOException {
         return getWriter(sourceFile.getPath(), sourceFile.getSourceType());
     }
 
@@ -126,8 +125,7 @@ public class ShifuFileUtils {
      * @throws IOException
      *             - if any I/O exception in processing
      */
-    public static BufferedWriter getWriter(String path, SourceType sourceType)
-            throws IOException {
+    public static BufferedWriter getWriter(String path, SourceType sourceType) throws IOException {
         return new BufferedWriter(new OutputStreamWriter(
                 getFileSystemBySourceType(sourceType).create(new Path(path)),
                 Constants.DEFAULT_CHARSET));
@@ -144,8 +142,7 @@ public class ShifuFileUtils {
      *             - if any I/O exception in processing
      * @return buffered reader
      */
-    public static BufferedReader getReader(SourceFile sourceFile)
-            throws IOException {
+    public static BufferedReader getReader(SourceFile sourceFile) throws IOException {
         return getReader(sourceFile.getPath(), sourceFile.getSourceType());
     }
 
@@ -162,8 +159,7 @@ public class ShifuFileUtils {
      *             - if any I/O exception in processing
      * @return buffered reader with <code>{@link Constants#DEFAULT_CHARSET}</code>
      */
-    public static BufferedReader getReader(String path, SourceType sourceType)
-            throws IOException {
+    public static BufferedReader getReader(String path, SourceType sourceType) throws IOException {
         return new BufferedReader(new InputStreamReader(
                 getFileSystemBySourceType(sourceType).open(new Path(path)),
                 Constants.DEFAULT_CHARSET));

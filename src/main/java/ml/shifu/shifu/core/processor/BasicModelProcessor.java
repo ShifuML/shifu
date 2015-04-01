@@ -354,18 +354,16 @@ public class BasicModelProcessor {
      */
     protected void createHead(String modelName) throws IOException {
         File header = new File(modelName == null ? "" : modelName + "/.HEAD");
-        if(header.exists())
+        if(header.exists()) {
+            log.error("File {} already exist.", header.getAbsolutePath());
             return;
+        }
 
         BufferedWriter writer = null;
         try {
-            if(!header.createNewFile()) {
-                log.error("File {} already exist.", header.getAbsolutePath());
-            } else {
-                writer = new BufferedWriter(new OutputStreamWriter(
-                        new FileOutputStream(header), Constants.DEFAULT_CHARSET));
-                writer.write("master");
-            }
+            writer = new BufferedWriter(new OutputStreamWriter(
+                    new FileOutputStream(header), Constants.DEFAULT_CHARSET));
+            writer.write("master");
         } catch (IOException e) {
             log.error("Fail to create HEAD file to store the current workspace");
         } finally {
