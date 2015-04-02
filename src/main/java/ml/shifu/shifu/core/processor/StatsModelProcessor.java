@@ -39,7 +39,6 @@ import ml.shifu.shifu.core.binning.BinningInfoWritable;
 import ml.shifu.shifu.core.binning.UpdateBinningInfoMapper;
 import ml.shifu.shifu.core.binning.UpdateBinningInfoReducer;
 import ml.shifu.shifu.core.dtrain.NNConstants;
-import ml.shifu.shifu.core.mr.input.CombineInputFormat;
 import ml.shifu.shifu.core.validator.ModelInspector.ModelStep;
 import ml.shifu.shifu.exception.ShifuErrorCode;
 import ml.shifu.shifu.exception.ShifuException;
@@ -64,6 +63,7 @@ import org.apache.hadoop.io.NullWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
+import org.apache.hadoop.mapreduce.lib.input.TextInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.mapreduce.lib.output.TextOutputFormat;
 import org.apache.hadoop.util.GenericOptionsParser;
@@ -268,7 +268,7 @@ public class StatsModelProcessor extends BasicModelProcessor implements Processo
 
         job.setMapOutputKeyClass(IntWritable.class);
         job.setMapOutputValueClass(BinningInfoWritable.class);
-        job.setInputFormatClass(CombineInputFormat.class);
+        job.setInputFormatClass(TextInputFormat.class);
         FileInputFormat.setInputPaths(
                 job,
                 ShifuFileUtils.getFileSystemBySourceType(source).makeQualified(

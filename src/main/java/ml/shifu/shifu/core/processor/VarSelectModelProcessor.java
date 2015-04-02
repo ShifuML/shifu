@@ -62,6 +62,7 @@ import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
+import org.apache.hadoop.mapreduce.lib.input.TextInputFormat;
 import org.apache.hadoop.mapreduce.lib.map.MultithreadedMapper;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.mapreduce.lib.output.MultipleOutputs;
@@ -413,7 +414,7 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
 
         job.setMapOutputKeyClass(LongWritable.class);
         job.setMapOutputValueClass(ColumnInfo.class);
-        job.setInputFormatClass(CombineInputFormat.class);
+        job.setInputFormatClass(TextInputFormat.class);
         FileInputFormat.setInputPaths(
                 job,
                 ShifuFileUtils.getFileSystemBySourceType(source).makeQualified(
@@ -461,7 +462,9 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
         conf.set(Constants.SHIFU_MODELSET_SOURCE_TYPE, source.toString());
         // set mapreduce.job.max.split.locations to 30 to suppress warnings
         conf.setInt(GuaguaMapReduceConstants.MAPREDUCE_JOB_MAX_SPLIT_LOCATIONS, 30);
-        conf.setBoolean(CombineInputFormat.SHIFU_VS_SPLIT_COMBINABLE, true);
+        // Tmp set to false because of some cluster by default use gzip while CombineInputFormat will split gzip file (a
+        // bug)
+        conf.setBoolean(CombineInputFormat.SHIFU_VS_SPLIT_COMBINABLE, false);
 
         Float wrapperRatio = this.modelConfig.getVarSelect().getWrapperRatio();
         if(wrapperRatio == null) {
