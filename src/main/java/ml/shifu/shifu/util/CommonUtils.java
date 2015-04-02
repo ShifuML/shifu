@@ -267,7 +267,7 @@ public final class CommonUtils {
      *             if first line of pathHeader is null or empty.
      */
     public static String[] getHeaders(String pathHeader, String delimiter, SourceType sourceType) throws IOException {
-        return getHeaders(pathHeader, delimiter, sourceType, true);
+        return getHeaders(pathHeader, delimiter, sourceType, false);
     }
 
     /**
@@ -307,12 +307,22 @@ public final class CommonUtils {
         }
 
         List<String> headerList = new ArrayList<String>();
+        Set<String> headerSet = new HashSet<String>();
+        int index = 0;
         for(String str: Splitter.on(delimiter).split(pigHeaderStr)) {
+            String columnName;
             if(isFull) {
-                headerList.add(getFullPigHeaderColumnName(str));
+                columnName = getFullPigHeaderColumnName(str);
             } else {
-                headerList.add(getRelativePigHeaderColumnName(str));
+                columnName = getRelativePigHeaderColumnName(str);
             }
+
+            if(headerSet.contains(columnName)) {
+                columnName = columnName + "_" + index;
+            }
+            headerSet.add(columnName);
+            index++;
+            headerList.add(columnName);
         }
         return headerList.toArray(new String[0]);
     }
