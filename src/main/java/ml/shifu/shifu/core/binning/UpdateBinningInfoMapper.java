@@ -152,7 +152,7 @@ public class UpdateBinningInfoMapper extends Mapper<LongWritable, Text, IntWrita
 
         this.outputKey = new IntWritable();
 
-        LOG.info("Column binning info: {}", this.columnBinningInfo);
+        LOG.debug("Column binning info: {}", this.columnBinningInfo);
     }
 
     /**
@@ -300,7 +300,7 @@ public class UpdateBinningInfoMapper extends Mapper<LongWritable, Text, IntWrita
                         || "null".equalsIgnoreCase(units[i].trim())) {
                     isMissingValue = true;
                 } else {
-                    String str = StringUtils.trim(value.toString());
+                    String str = StringUtils.trim(units[i]);
                     binNum = quickLocateCategorialBin(this.categoricalBinMap.get(i), str);
                     if(binNum < 0) {
                         isInvalidValue = true;
@@ -313,11 +313,11 @@ public class UpdateBinningInfoMapper extends Mapper<LongWritable, Text, IntWrita
                 }
 
                 if(modelConfig.getPosTags().contains(tag)) {
-                    binningInfoWritable.getBinCountPos()[lastBinIndex] += 1L;
-                    binningInfoWritable.getBinWeightPos()[lastBinIndex] += weight;
+                    binningInfoWritable.getBinCountPos()[binNum] += 1L;
+                    binningInfoWritable.getBinWeightPos()[binNum] += weight;
                 } else if(modelConfig.getNegTags().contains(tag)) {
-                    binningInfoWritable.getBinCountNeg()[lastBinIndex] += 1L;
-                    binningInfoWritable.getBinWeightNeg()[lastBinIndex] += weight;
+                    binningInfoWritable.getBinCountNeg()[binNum] += 1L;
+                    binningInfoWritable.getBinWeightNeg()[binNum] += weight;
                 }
             } else if(columnConfig.isNumerical()) {
                 int lastBinIndex = binningInfoWritable.getBinBoundaries().size();
@@ -391,7 +391,7 @@ public class UpdateBinningInfoMapper extends Mapper<LongWritable, Text, IntWrita
      */
     @Override
     protected void cleanup(Context context) throws IOException, InterruptedException {
-        LOG.info("Column binning info: {}", this.columnBinningInfo);
+        LOG.debug("Column binning info: {}", this.columnBinningInfo);
 
         for(Map.Entry<Integer, BinningInfoWritable> entry: this.columnBinningInfo.entrySet()) {
             this.outputKey.set(entry.getKey());

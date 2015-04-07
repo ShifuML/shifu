@@ -53,6 +53,7 @@ public class UpdateBinningInfoReducer extends Reducer<IntWritable, BinningInfoWr
 
     private static final int MAX_CATEGORICAL_BINC_COUNT = 4000;
 
+    @SuppressWarnings("unused")
     private static final double EPS = 1e-6;
 
     /**
@@ -115,15 +116,23 @@ public class UpdateBinningInfoReducer extends Reducer<IntWritable, BinningInfoWr
 
         ColumnConfig columnConfig = this.columnConfigList.get(key.get());
 
+        int binSize = 0;
         for(BinningInfoWritable info: values) {
-            if(binBoundaryList == null) {
+            if(info.isNumeric() && binBoundaryList == null) {
                 binBoundaryList = info.getBinBoundaries();
+                binSize = binBoundaryList.size();
+                binCountPos = new long[binSize + 1];
+                binCountNeg = new long[binSize + 1];
+                binWeightPos = new double[binSize + 1];
+                binWeightNeg = new double[binSize + 1];
+            }
+            if(!info.isNumeric() && binCategories == null) {
                 binCategories = info.getBinCategories();
-                int size = columnConfig.isCategorical() ? binCategories.size() : binBoundaryList.size();
-                binCountPos = new long[size + 1];
-                binCountNeg = new long[size + 1];
-                binWeightPos = new double[size + 1];
-                binWeightNeg = new double[size + 1];
+                binSize = binCategories.size();
+                binCountPos = new long[binSize + 1];
+                binCountNeg = new long[binSize + 1];
+                binWeightPos = new double[binSize + 1];
+                binWeightNeg = new double[binSize + 1];
             }
             count += info.getTotalCount();
             missingCount += info.getMissingCount();
@@ -137,7 +146,7 @@ public class UpdateBinningInfoReducer extends Reducer<IntWritable, BinningInfoWr
                 min = info.getMin();
             }
 
-            for(int i = 0; i < binBoundaryList.size() + 1; i++) {
+            for(int i = 0; i < (binSize + 1); i++) {
                 binCountPos[i] += info.getBinCountPos()[i];
                 binCountNeg[i] += info.getBinCountNeg()[i];
                 binWeightPos[i] += info.getBinWeightPos()[i];
@@ -149,14 +158,14 @@ public class UpdateBinningInfoReducer extends Reducer<IntWritable, BinningInfoWr
 
         String binBounString = null;
         if(columnConfig.isCategorical()) {
-            if(binBoundaryList.size() == 0 || binBoundaryList.size() > MAX_CATEGORICAL_BINC_COUNT) {
+            if(binCategories.size() == 0 || binCategories.size() > MAX_CATEGORICAL_BINC_COUNT) {
                 LOG.warn("Column {} {} with invalid bin boundary size.", key.get(), columnConfig.getColumnName(),
-                        binBoundaryList.size());
+                        binCategories.size());
                 return;
             }
             binBounString = Base64Utils.base64Encode("["
                     + StringUtils.join(binCategories, CalculateStatsUDF.CATEGORY_VAL_SEPARATOR) + "]");
-            // recompute such value for categorieal variables
+            // recompute such value for categorial variables
             min = Double.MAX_VALUE;
             max = Double.MIN_VALUE;
             sum = 0d;
@@ -195,7 +204,7 @@ public class UpdateBinningInfoReducer extends Reducer<IntWritable, BinningInfoWr
                 .append(Constants.DEFAULT_DELIMITER).append(df.format(max)).append(Constants.DEFAULT_DELIMITER)
                 .append(df.format(min)).append(Constants.DEFAULT_DELIMITER).append(df.format(sum / count))
                 .append(Constants.DEFAULT_DELIMITER)
-                .append(df.format(Math.sqrt((sumSquare / count - (sum * sum) / count + EPS) / (count - 1))))
+                .append(df.format(Math.sqrt(Math.abs(((sumSquare / count) - power2(sum / count))))))
                 .append(Constants.DEFAULT_DELIMITER).append(columnConfig.isCategorical() ? "C" : "N")
                 .append(Constants.DEFAULT_DELIMITER).append(df.format(sum / count)).append(Constants.DEFAULT_DELIMITER)
                 .append(missingCount).append(Constants.DEFAULT_DELIMITER).append(count)
@@ -224,7 +233,6 @@ public class UpdateBinningInfoReducer extends Reducer<IntWritable, BinningInfoWr
         return posRate;
     }
 
-    @SuppressWarnings("unused")
     private double power2(double data) {
         return data * data;
     }
