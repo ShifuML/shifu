@@ -267,7 +267,7 @@
                     {"label":"woe mode", "value":"WOE"}
                 ]
             }, {
-                "name": "MissValueFillType",
+                "name": "missValueFillType",
                 "type": "text",
                 "directive": "select",
                 "defval" : "MEAN",
