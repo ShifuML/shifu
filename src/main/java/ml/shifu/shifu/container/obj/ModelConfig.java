@@ -265,7 +265,7 @@ public class ModelConfig {
      */
     @JsonIgnore
     public MissValueFillType getNormalizeMissValueFillType() {
-        return normalize.getFillType();
+        return normalize.getMissValueFillType();
     }
 
     /**
