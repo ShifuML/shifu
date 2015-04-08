@@ -162,13 +162,13 @@ public class CombineRecordReader extends RecordReader<LongWritable, Text> {
     }
 
     /**
-     * Get the progress within the split TODO should be rewrite
+     * Get the progress within the split
      */
     public float getProgress() {
         if(start == end) {
             return 0.0f;
         } else {
-            return Math.min(1.0f, (comsumedSplitSize + (pos - start)) / (float) (this.wholeSize));
+            return Math.min(1.0f, (comsumedSplitSize + (pos - start)) / (this.wholeSize));
         }
     }
 

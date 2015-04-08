@@ -48,11 +48,10 @@ import org.slf4j.LoggerFactory;
 /**
  * Copy from GuaguaInputFormat to support combining multiple small file splits together for one task.
  * 
- * TODO make it as common. May be in guagua framework.
+ * <p>
+ * TODO How to support combine input together. 
  */
 public class CombineInputFormat extends TextInputFormat {
-
-    private static final String GZ = "gz";
 
     private static final Logger LOG = LoggerFactory.getLogger(CombineInputFormat.class);
 
@@ -482,16 +481,7 @@ public class CombineInputFormat extends TextInputFormat {
 
     @Override
     protected boolean isSplitable(JobContext context, Path file) {
-        // bzip2 can be split.
-        if(file.getName().endsWith(GuaguaMapReduceConstants.BZ2)) {
-            return true;
-        }
-
-        // gz can not be split.
-        if(file.getName().endsWith(GZ)) {
-            return false;
-        }
-        // other compression can not be split, maybe for lzo I should add it to split list.
+        // All compression types set here non split. For bz or bz2, think about how to do combine.
         CompressionCodec codec = new CompressionCodecFactory(context.getConfiguration()).getCodec(file);
         return codec == null;
     }
