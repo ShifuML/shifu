@@ -38,7 +38,7 @@ public class ModelNormalizeConf {
     private Double sampleRate = Double.valueOf(1.0);
     private Boolean sampleNegOnly = Boolean.FALSE;
     private NormType normType = NormType.ZSCALE;
-    private MissValueFillType fillType = MissValueFillType.MEAN;
+    private MissValueFillType missValueFillType = MissValueFillType.MEAN;
     private Boolean isWeightNorm = Boolean.FALSE;
 
     // move to RawSourceData
@@ -86,15 +86,15 @@ public class ModelNormalizeConf {
     /**
      * @return the fillType
      */
-    public MissValueFillType getFillType() {
-        return fillType;
+    public MissValueFillType getMissValueFillType() {
+        return missValueFillType;
     }
 
     /**
      * @param fillType the fillType to set
      */
-    public void setFillType(MissValueFillType fillType) {
-        this.fillType = fillType;
+    public void setMissValueFillType(MissValueFillType fillType) {
+        this.missValueFillType = fillType;
     }
 
     /**
