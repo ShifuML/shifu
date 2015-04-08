@@ -267,6 +267,17 @@
                     {"label":"woe mode", "value":"WOE"}
                 ]
             }, {
+                "name": "MissValueFillType",
+                "type": "text",
+                "directive": "select",
+                "defval" : "MEAN",
+                "options": [ 
+                    {"label":"mean mode", "value":"MEAN"},
+                    {"label":"countWoe mode", "value":"COUNTWOE"}
+                    {"label":"weightedWoe mode", "value":"WEIGHTEDWOE"}
+                    {"label":"zero mode", "value":"ZERO"}
+                ]
+            }, {
                 "name": "stdDevCutOff",
                 "type": "number",
                 "directive": "input",

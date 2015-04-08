@@ -53,7 +53,6 @@ public class UpdateBinningInfoReducer extends Reducer<IntWritable, BinningInfoWr
 
     private static final int MAX_CATEGORICAL_BINC_COUNT = 4000;
 
-    @SuppressWarnings("unused")
     private static final double EPS = 1e-6;
 
     /**
@@ -104,7 +103,7 @@ public class UpdateBinningInfoReducer extends Reducer<IntWritable, BinningInfoWr
             InterruptedException {
         long start = System.currentTimeMillis();
         double sum = 0d;
-        double sumSquare = 0d;
+        double squaredSum = 0d;
         long count = 0L, missingCount = 0L;
         double min = Double.MAX_VALUE, max = Double.MIN_VALUE;
         List<Double> binBoundaryList = null;
@@ -137,7 +136,7 @@ public class UpdateBinningInfoReducer extends Reducer<IntWritable, BinningInfoWr
             count += info.getTotalCount();
             missingCount += info.getMissingCount();
             sum += info.getSum();
-            sumSquare += info.getSquaredSum();
+            squaredSum += info.getSquaredSum();
             if(Double.compare(max, info.getMax()) < 0) {
                 max = info.getMax();
             }
@@ -169,7 +168,7 @@ public class UpdateBinningInfoReducer extends Reducer<IntWritable, BinningInfoWr
             min = Double.MAX_VALUE;
             max = Double.MIN_VALUE;
             sum = 0d;
-            sumSquare = 0d;
+            squaredSum = 0d;
             for(int i = 0; i < binPosRate.length; i++) {
                 if(Double.compare(max, binPosRate[i]) < 0) {
                     max = binPosRate[i];
@@ -179,7 +178,7 @@ public class UpdateBinningInfoReducer extends Reducer<IntWritable, BinningInfoWr
                     min = binPosRate[i];
                 }
                 sum += binPosRate[i] * (binCountPos[i] + binCountNeg[i]);
-                sumSquare += binPosRate[i] * binPosRate[i] * (binCountPos[i] + binCountNeg[i]);
+                squaredSum += binPosRate[i] * binPosRate[i] * (binCountPos[i] + binCountNeg[i]);
             }
         } else {
             if(binBoundaryList.size() == 0) {
@@ -191,7 +190,6 @@ public class UpdateBinningInfoReducer extends Reducer<IntWritable, BinningInfoWr
         }
 
         ColumnMetrics columnCountMetrics = ColumnStatsCalculator.calculateColumnMetrics(binCountNeg, binCountPos);
-
         ColumnMetrics columnWeightMetrics = ColumnStatsCalculator.calculateColumnMetrics(binWeightNeg, binWeightPos);
 
         sb.append(key.get()).append(Constants.DEFAULT_DELIMITER).append(binBounString)
@@ -204,7 +202,7 @@ public class UpdateBinningInfoReducer extends Reducer<IntWritable, BinningInfoWr
                 .append(Constants.DEFAULT_DELIMITER).append(df.format(max)).append(Constants.DEFAULT_DELIMITER)
                 .append(df.format(min)).append(Constants.DEFAULT_DELIMITER).append(df.format(sum / count))
                 .append(Constants.DEFAULT_DELIMITER)
-                .append(df.format(Math.sqrt(Math.abs(((sumSquare / count) - power2(sum / count))))))
+                .append(df.format(Math.sqrt(Math.abs((squaredSum - (sum * sum) / count + EPS) / (count - 1)))))
                 .append(Constants.DEFAULT_DELIMITER).append(columnConfig.isCategorical() ? "C" : "N")
                 .append(Constants.DEFAULT_DELIMITER).append(df.format(sum / count)).append(Constants.DEFAULT_DELIMITER)
                 .append(missingCount).append(Constants.DEFAULT_DELIMITER).append(count)
@@ -231,10 +229,6 @@ public class UpdateBinningInfoReducer extends Reducer<IntWritable, BinningInfoWr
             posRate[i] = binCountPos[i] * 1.0d / (binCountPos[i] + binCountNeg[i]);
         }
         return posRate;
-    }
-
-    private double power2(double data) {
-        return data * data;
     }
 
 }

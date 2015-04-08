@@ -403,13 +403,10 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
         args.add("-i");
         args.add(ShifuFileUtils.getFileSystemBySourceType(sourceType)
                 .makeQualified(new Path(super.getPathFinder().getNormalizedDataPath())).toString());
-        // args.add(ShifuFileUtils.getFileSystemBySourceType(sourceType)
-        // .makeQualified(new Path(super.getPathFinder().getNormalizedDataPath(), "part-m-003[1-5][0-9]"))
-        // .toString());
 
         String zkServers = Environment.getProperty(Environment.ZOO_KEEPER_SERVERS);
         if(StringUtils.isEmpty(zkServers)) {
-            LOG.warn("No specified zookeeper settings from zookeeperServers in shifuConfig file, Guagua will set embeded zookeeper server in client process or master node. For big data applications, specified zookeeper servers are strongly recommended.");
+            LOG.warn("No specified zookeeper settings from zookeeperServers in shifuConfig file, Guagua will set embeded zookeeper server in client process or master node. For fail-over zookeeper applications, specified zookeeper servers are strongly recommended.");
         } else {
             args.add("-z");
             args.add(zkServers);
@@ -457,7 +454,7 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
         args.add(String.format(NNConstants.MAPREDUCE_PARAM_FORMAT, NNConstants.NN_DRY_TRAIN, isDryTrain()));
         // hard code set computation threshold for 50s. Can be changed in shifuconfig file
         args.add(String.format(NNConstants.MAPREDUCE_PARAM_FORMAT, GuaguaConstants.GUAGUA_COMPUTATION_TIME_THRESHOLD,
-                60 * 1000l));
+                60 * 1000L));
         setHeapSizeAndSplitSize(args);
 
         // one can set guagua conf in shifuconfig
@@ -486,6 +483,13 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
         args.add(String.format(NNConstants.MAPREDUCE_PARAM_FORMAT,
                 GuaguaConstants.GUAGUA_SPLIT_MAX_COMBINED_SPLIT_SIZE,
                 Environment.getProperty(GuaguaConstants.GUAGUA_SPLIT_MAX_COMBINED_SPLIT_SIZE, "536870912")));
+        // special tuning parameters for shifu, 0.99 means each iteation master wait for 99% workers and then can go to
+        // next iteration.
+        args.add(String.format(NNConstants.MAPREDUCE_PARAM_FORMAT, GuaguaConstants.GUAGUA_MIN_WORKERS_RATIO, 0.99));
+        // 20 seconds if waiting over 20, consider 99% workers
+        // these two can be overrided in shifuconfig
+        args.add(String.format(NNConstants.MAPREDUCE_PARAM_FORMAT, GuaguaConstants.GUAGUA_MIN_WORKERS_TIMEOUT,
+                20 * 1000L));
     }
 
     private void copyModelToLocal(String modelName, Path modelPath, SourceType sourceType) throws IOException {
