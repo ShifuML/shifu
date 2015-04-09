@@ -507,7 +507,7 @@ public class Binning {
             double cnt0 = categoryHistNeg.containsKey(key) ? categoryHistNeg.get(key) : 0;
             double cnt1 = categoryHistPos.containsKey(key) ? categoryHistPos.get(key) : 0;
             double rate;
-            if(cnt0 + cnt1 == 0) {
+            if(Double.compare(cnt0 + cnt1, 0) == 0) {
                 rate = 0;
             } else {
                 rate = cnt1 / (cnt0 + cnt1);

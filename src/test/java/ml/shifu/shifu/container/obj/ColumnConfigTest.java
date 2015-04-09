@@ -63,7 +63,7 @@ public class ColumnConfigTest {
         Assert.assertEquals(2, ccList.size());
         Assert.assertEquals("TestColumn", ccList.get(0).getColumnName());
 
-        file.delete();
+        FileUtils.deleteQuietly(file);
     }
 
     @Test

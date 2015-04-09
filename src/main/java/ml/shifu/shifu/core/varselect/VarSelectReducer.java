@@ -166,7 +166,7 @@ public class VarSelectReducer extends Reducer<LongWritable, ColumnInfo, Text, Te
         Collections.sort(this.results, new Comparator<Pair>() {
             @Override
             public int compare(Pair o1, Pair o2) {
-                return Double.valueOf(o2.value.getRms()).compareTo(Double.valueOf(o1.value.getRms()));
+                return Double.compare(o2.value.getRms(), o1.value.getRms());
             }
         });
 
