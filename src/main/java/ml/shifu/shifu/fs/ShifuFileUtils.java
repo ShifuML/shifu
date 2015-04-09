@@ -98,13 +98,13 @@ public class ShifuFileUtils {
     }
 
     /**
-     * Get buffered writer for source file
-     * !!! Notice, if the file exists, it will be overwritten
-     * !!! Warning: writer instance should be closed by caller
+     * Get buffered writer with <code>{@link Constants#DEFAULT_CHARSET}</code> for source file
+     * !!! Notice, if the file exists, it will be overwritten.
+     * !!! Warning: writer instance should be closed by caller.
      * 
      * @param sourceFile
      *            - source file
-     * @return buffered writer
+     * @return buffered writer with <code>{@link Constants#DEFAULT_CHARSET}</code>
      * @throws IOException
      *             - if any I/O exception in processing
      */
@@ -113,29 +113,31 @@ public class ShifuFileUtils {
     }
 
     /**
-     * Get buffered writer for specified file
-     * !!! Notice, if the file exists, it will be overwritten
-     * !!! Warning: writer instance should be closed by caller
+     * Get buffered writer with <code>{@link Constants#DEFAULT_CHARSET}</code> for specified file.
+     * !!! Notice, if the file exists, it will be overwritten.
+     * !!! Warning: writer instance should be closed by caller.
      * 
      * @param path
      *            - file path
      * @param sourceType
      *            - local/hdfs
-     * @return buffered writer
+     * @return buffered writer with <code>{@link Constants#DEFAULT_CHARSET}</code>
      * @throws IOException
      *             - if any I/O exception in processing
      */
     public static BufferedWriter getWriter(String path, SourceType sourceType) throws IOException {
-        return new BufferedWriter(new OutputStreamWriter(getFileSystemBySourceType(sourceType).create(new Path(path))));
+        return new BufferedWriter(new OutputStreamWriter(
+                getFileSystemBySourceType(sourceType).create(new Path(path)),
+                Constants.DEFAULT_CHARSET));
     }
 
     /**
-     * Get buffered reader for specified file
+     * Get buffered reader with <code>{@link Constants#DEFAULT_CHARSET}</code> for specified file
      * <p/>
      * !!! Warning: reader instance should be closed by caller.
      * 
      * @param sourceFile
-     *            - source file
+     *            - source file with <code>{@link Constants#DEFAULT_CHARSET}</code>
      * @throws IOException
      *             - if any I/O exception in processing
      * @return buffered reader
@@ -145,7 +147,7 @@ public class ShifuFileUtils {
     }
 
     /**
-     * Get buffered reader for specified file
+     * Get buffered reader with <code>{@link Constants#DEFAULT_CHARSET}</code> for specified file
      * <p/>
      * !!! Warning: reader instance should be closed by caller.
      * 
@@ -155,10 +157,12 @@ public class ShifuFileUtils {
      *            - local/hdfs
      * @throws IOException
      *             - if any I/O exception in processing
-     * @return buffered reader
+     * @return buffered reader with <code>{@link Constants#DEFAULT_CHARSET}</code>
      */
     public static BufferedReader getReader(String path, SourceType sourceType) throws IOException {
-        return new BufferedReader(new InputStreamReader(getFileSystemBySourceType(sourceType).open(new Path(path))));
+        return new BufferedReader(new InputStreamReader(
+                getFileSystemBySourceType(sourceType).open(new Path(path)),
+                Constants.DEFAULT_CHARSET));
     }
 
     /**
@@ -242,11 +246,14 @@ public class ShifuFileUtils {
 
             log.debug("Creating Scanner for file: {} ", filename);
             if(filename.endsWith(Constants.GZ_SUFFIX)) {
-                scanners.add(new Scanner(new GZIPInputStream(fs.open(f.getPath()))));
+                scanners.add(new Scanner(new GZIPInputStream(fs.open(f
+                        .getPath())), Constants.DEFAULT_CHARSET.name()));
             } else if(filename.endsWith(Constants.BZ2_SUFFIX)) {
-                scanners.add(new Scanner(new BZip2CompressorInputStream(fs.open(f.getPath()))));
+                scanners.add(new Scanner(new BZip2CompressorInputStream(fs
+                        .open(f.getPath())), Constants.DEFAULT_CHARSET.name()));
             } else {
-                scanners.add(new Scanner(new BufferedInputStream(fs.open(f.getPath()))));
+                scanners.add(new Scanner(new BufferedInputStream(fs.open(f
+                        .getPath())), Constants.DEFAULT_CHARSET.name()));
             }
         }
 
@@ -284,7 +291,7 @@ public class ShifuFileUtils {
      *             - if any I/O exception in processing
      */
     public static void copy(String srcPath, String destPath, SourceType sourceType) throws IOException {
-        if(StringUtils.isEmpty(destPath) || StringUtils.isEmpty(destPath) || sourceType == null) {
+        if(StringUtils.isEmpty(srcPath) || StringUtils.isEmpty(destPath) || sourceType == null) {
             throw new IllegalArgumentException(String.format(
                     "Null or empty parameters srcDataPath:%s, dstDataPath:%s, sourceType:%s", srcPath, destPath,
                     sourceType));

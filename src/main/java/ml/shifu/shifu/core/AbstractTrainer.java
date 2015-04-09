@@ -50,7 +50,7 @@ public abstract class AbstractTrainer {
     /**
      * Log for abstract trainer
      */
-    protected static Logger log = LoggerFactory.getLogger(AbstractTrainer.class);
+    protected static final Logger log = LoggerFactory.getLogger(AbstractTrainer.class);
 
     /**
      * formatter
@@ -354,7 +354,6 @@ public abstract class AbstractTrainer {
 
         File file = new File("./init" + trainerID + ".json");
         if (!file.exists()) {
-            file.createNewFile();
 
             list = randomSetSampleIndex(sampleSize, masterSize, replaceable);
 
@@ -378,7 +377,6 @@ public abstract class AbstractTrainer {
                 io.setNumSample(sampleSize);
                 io.setSampleIndex(list);
 
-                file.createNewFile();
                 JSONUtils.writeValue(file, io);
             } else {
                 list = io.getSampleIndex();

@@ -24,6 +24,7 @@ import ml.shifu.shifu.core.MSEWorker;
 import ml.shifu.shifu.fs.ShifuFileUtils;
 import ml.shifu.shifu.util.JSONUtils;
 
+import org.apache.commons.io.FileUtils;
 import org.encog.engine.network.activation.*;
 import org.encog.mathutil.IntRange;
 import org.encog.ml.data.MLDataSet;
@@ -74,19 +75,22 @@ public class NNTrainer extends AbstractTrainer {
     private ConvergeJudger judger = new ConvergeJudger();
     
     static {
-        defaultLearningRate = new HashMap<String, Double>();
-        defaultLearningRate.put("S", 0.1);
-        defaultLearningRate.put("R", 0.1);
-        defaultLearningRate.put("Q", 2.0);
-        defaultLearningRate.put("B", 0.01);
-        defaultLearningRate.put("M", 0.00001);
+        // TODO use UnmodifiableMap or use other immutable Collections such as guava's
+        Map<String, Double> tmpLearningRate = new HashMap<String, Double>();
+        tmpLearningRate.put("S", 0.1);
+        tmpLearningRate.put("R", 0.1);
+        tmpLearningRate.put("Q", 2.0);
+        tmpLearningRate.put("B", 0.01);
+        tmpLearningRate.put("M", 0.00001);
+        defaultLearningRate = Collections.unmodifiableMap(tmpLearningRate);
 
-        learningAlgMap = new HashMap<String, String>();
-        learningAlgMap.put("S", "Scaled Conjugate Gradient");
-        learningAlgMap.put("R", "Resilient Propagation");
-        learningAlgMap.put("M", "Manhattan Propagation");
-        learningAlgMap.put("B", "Back Propagation");
-        learningAlgMap.put("Q", "Quick Propagation");
+        Map<String, String> tmpLearningAlgMap = new HashMap<String, String>();
+        tmpLearningAlgMap.put("S", "Scaled Conjugate Gradient");
+        tmpLearningAlgMap.put("R", "Resilient Propagation");
+        tmpLearningAlgMap.put("M", "Manhattan Propagation");
+        tmpLearningAlgMap.put("B", "Back Propagation");
+        tmpLearningAlgMap.put("Q", "Quick Propagation");
+        learningAlgMap = Collections.unmodifiableMap(tmpLearningAlgMap);
     }
 
     public NNTrainer(ModelConfig modelConfig, int trainerID, Boolean dryRun) {
@@ -331,7 +335,7 @@ public class NNTrainer extends AbstractTrainer {
 
         File folder = new File(pathFinder.getModelsPath(SourceType.LOCAL));
         if (!folder.exists()) {
-            folder.mkdirs();
+            FileUtils.forceMkdir(folder);
         }
         EncogDirectoryPersistence.saveObject(new File(folder, "model" + this.trainerID + ".nn"), network);
     }
@@ -343,7 +347,7 @@ public class NNTrainer extends AbstractTrainer {
 
         File tmpFolder = new File(pathFinder.getTmpModelsPath(SourceType.LOCAL));
         if (!tmpFolder.exists()) {
-            tmpFolder.mkdirs();
+            FileUtils.forceMkdir(tmpFolder);
         }
 
         EncogDirectoryPersistence.saveObject(new File(tmpFolder, "model" + trainerID + "-" + epoch + ".nn"), network);
@@ -365,7 +369,6 @@ public class NNTrainer extends AbstractTrainer {
         try {
             File file = new File("./init" + this.trainerID + ".json");
             if (!file.exists()) {
-                file.createNewFile();
 
                 ModelInitInputObject io = new ModelInitInputObject();
                 io.setWeights(randomSetWeights(numWeights));
@@ -385,7 +388,6 @@ public class NNTrainer extends AbstractTrainer {
                     io.setNumWeights(numWeights);
                     io.setWeights(randomSetWeights(numWeights));
 
-                    file.createNewFile();
                     JSONUtils.writeValue(file, io);
                 }
 
