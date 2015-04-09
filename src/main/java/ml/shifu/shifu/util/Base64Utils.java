@@ -18,6 +18,7 @@
 package ml.shifu.shifu.util;
 
 import java.io.IOException;
+import java.io.UnsupportedEncodingException;
 
 import org.apache.commons.codec.binary.Base64;
 
@@ -33,19 +34,23 @@ public class Base64Utils {
     }
 
     public static String base64Encode(String text) {
-        if (text == null) {
+        if(text == null) {
             return null;
         }
 
         Base64 encoder = new Base64(-1);
-        return new String(encoder.encode(text.getBytes(Constants.DEFAULT_CHARSET)), Constants.DEFAULT_CHARSET);
+        try {
+            return new String(encoder.encode(text.getBytes(Constants.DEFAULT_CHARSET)), Constants.DEFAULT_CHARSET);
+        } catch (UnsupportedEncodingException e) {
+            return null;
+        }
     }
 
     public static String base64Decode(String text) throws IOException {
-        if (text == null) {
+        if(text == null) {
             return null;
         }
-        
+
         Base64 decoder = new Base64(-1);
         return new String(decoder.decode(text.getBytes(Constants.DEFAULT_CHARSET)), Constants.DEFAULT_CHARSET);
     }

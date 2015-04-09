@@ -126,8 +126,7 @@ public class ShifuFileUtils {
      *             - if any I/O exception in processing
      */
     public static BufferedWriter getWriter(String path, SourceType sourceType) throws IOException {
-        return new BufferedWriter(new OutputStreamWriter(
-                getFileSystemBySourceType(sourceType).create(new Path(path)),
+        return new BufferedWriter(new OutputStreamWriter(getFileSystemBySourceType(sourceType).create(new Path(path)),
                 Constants.DEFAULT_CHARSET));
     }
 
@@ -160,8 +159,7 @@ public class ShifuFileUtils {
      * @return buffered reader with <code>{@link Constants#DEFAULT_CHARSET}</code>
      */
     public static BufferedReader getReader(String path, SourceType sourceType) throws IOException {
-        return new BufferedReader(new InputStreamReader(
-                getFileSystemBySourceType(sourceType).open(new Path(path)),
+        return new BufferedReader(new InputStreamReader(getFileSystemBySourceType(sourceType).open(new Path(path)),
                 Constants.DEFAULT_CHARSET));
     }
 
@@ -246,14 +244,12 @@ public class ShifuFileUtils {
 
             log.debug("Creating Scanner for file: {} ", filename);
             if(filename.endsWith(Constants.GZ_SUFFIX)) {
-                scanners.add(new Scanner(new GZIPInputStream(fs.open(f
-                        .getPath())), Constants.DEFAULT_CHARSET.name()));
+                scanners.add(new Scanner(new GZIPInputStream(fs.open(f.getPath())), Constants.DEFAULT_CHARSET));
             } else if(filename.endsWith(Constants.BZ2_SUFFIX)) {
-                scanners.add(new Scanner(new BZip2CompressorInputStream(fs
-                        .open(f.getPath())), Constants.DEFAULT_CHARSET.name()));
+                scanners.add(new Scanner(new BZip2CompressorInputStream(fs.open(f.getPath())),
+                        Constants.DEFAULT_CHARSET));
             } else {
-                scanners.add(new Scanner(new BufferedInputStream(fs.open(f
-                        .getPath())), Constants.DEFAULT_CHARSET.name()));
+                scanners.add(new Scanner(new BufferedInputStream(fs.open(f.getPath())), Constants.DEFAULT_CHARSET));
             }
         }
 
