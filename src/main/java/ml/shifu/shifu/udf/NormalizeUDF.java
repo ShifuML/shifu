@@ -192,7 +192,7 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
             JexlEngine jexl = new JexlEngine();
 
             for(WeightAmplifier we: weightExprList) {
-                ewMap.put(jexl.createExpression(we.getTargetExpression()), Double.valueOf(we.getTargetWeight()));
+                ewMap.put(jexl.createExpression(we.getTargetExpression()), we.getTargetWeight());
             }
         }
 

@@ -206,13 +206,13 @@ public class ModelInspectorTest {
     }
 
     @AfterClass
-    public void tearDown() {
+    public void tearDown() throws IOException {
         if (modelFile != null) {
-            modelFile.delete();
+            FileUtils.deleteQuietly(modelFile);
         }
 
         if (columnFile != null) {
-            columnFile.delete();
+            FileUtils.deleteQuietly(columnFile);
         }
     }
 }

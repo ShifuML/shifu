@@ -18,6 +18,8 @@ package ml.shifu.shifu.core;
 import ml.shifu.shifu.container.obj.ModelConfig;
 import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
 import ml.shifu.shifu.core.alg.SVMTrainer;
+
+import org.apache.commons.io.FileUtils;
 import org.encog.Encog;
 import org.encog.ml.data.MLDataPair;
 import org.encog.ml.data.MLDataSet;
@@ -125,21 +127,10 @@ public class SVMTrainerTest {
     }
 
     @AfterClass
-    public void shutDown() {
-        File file = new File("./models/");
-        if (file.exists() && file.isDirectory()) {
-            for (File f : file.listFiles()) {
-                f.delete();
-            }
-            file.delete();
-        }
-        file = new File("./modelsTmp/");
-        if (file.exists() && file.isDirectory()) {
-            for (File f : file.listFiles()) {
-                f.delete();
-            }
-            file.delete();
-        }
+    public void shutDown() throws IOException {
+        FileUtils.deleteDirectory(new File("./models/"));
+        FileUtils.deleteDirectory(new File("./modelsTmp/"));
+        
         Encog.getInstance().shutdown();
     }
 

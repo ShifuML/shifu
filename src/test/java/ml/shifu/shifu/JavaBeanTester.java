@@ -304,32 +304,37 @@ public class JavaBeanTester {
 
     @SuppressWarnings("unchecked")
     private static List<Class<?>> findResources(Class<?> interfaceClass, File directory, String packageName)
-            throws ClassNotFoundException {
+            throws ClassNotFoundException, IOException {
 
         List<Class<?>> results = new ArrayList<Class<?>>();
-        if (!directory.exists())
+        if (directory == null || !directory.isDirectory())
             return Collections.EMPTY_LIST;
+        
         File[] files = directory.listFiles();
-        for (File file : files) {
-            if (file.isDirectory()) {
-                if (!file.getName().contains(".")) {
+        if (files != null) {
+            for (File file : files) {
+                if (file.isDirectory()) {
+                    if (!file.getName().contains(".")) {
+                        if (!packageName.equals("/")) {
+                            results.addAll(findResources(interfaceClass, file, packageName + "." + file.getName()));
+                        } else {
+                            results.addAll(findResources(interfaceClass, file, file.getName()));
+                        }
+                    }
+                } else if (file.getName().endsWith(".class")) {
+                    Class<?> clazz = null;
                     if (!packageName.equals("/")) {
-                        results.addAll(findResources(interfaceClass, file, packageName + "." + file.getName()));
+                        clazz = Class.forName(packageName + "." + file.getName().substring(0, file.getName().length() - 6));
                     } else {
-                        results.addAll(findResources(interfaceClass, file, file.getName()));
+                        clazz = Class.forName(file.getName().substring(0, file.getName().length() - 6));
+                    }
+                    if (interfaceClass.isAssignableFrom(clazz) && !interfaceClass.equals(clazz)) {
+                        results.add(clazz);
                     }
                 }
-            } else if (file.getName().endsWith(".class")) {
-                Class<?> clazz = null;
-                if (!packageName.equals("/")) {
-                    clazz = Class.forName(packageName + "." + file.getName().substring(0, file.getName().length() - 6));
-                } else {
-                    clazz = Class.forName(file.getName().substring(0, file.getName().length() - 6));
-                }
-                if (interfaceClass.isAssignableFrom(clazz) && !interfaceClass.equals(clazz)) {
-                    results.add(clazz);
-                }
             }
+        } else {
+            throw new IOException(String.format("Failed to list files in %s", directory.getAbsolutePath())); 
         }
         return results;
     }
