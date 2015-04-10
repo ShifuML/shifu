@@ -622,7 +622,14 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
         }
 
         private long dumpFromOffset(Path item, long offset) throws IOException {
-            FSDataInputStream in = HDFSUtils.getFS().open(item);
+            FSDataInputStream in;
+            try {
+                in = HDFSUtils.getFS().open(item);
+            } catch (Exception e) {
+                // in hadoop 0.20.2, we found InteruptedException here and cannot be caught by run, here is to ignore
+                // such exception. It's ok we return old offset to read message twice.
+                return offset;
+            }
             ByteArrayOutputStream out = null;
             DataOutputStream dataOut = null;
             try {
