@@ -117,7 +117,6 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
                 tuple.append(null);
             } else {
                 String val = ((input.get(i) == null) ? "" : input.get(i).toString());
-                //TODO: normtype/isweightnorm, should we take it out the loop ?
                 switch(super.modelConfig.getNormalize().getNormType()) {
                     case WOE:
                         Double w = Normalizer.woeNormalize(config, val, isWeightedNorm, fillType);

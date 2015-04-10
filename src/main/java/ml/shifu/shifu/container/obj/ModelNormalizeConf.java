@@ -38,7 +38,7 @@ public class ModelNormalizeConf {
     private Double sampleRate = Double.valueOf(1.0);
     private Boolean sampleNegOnly = Boolean.FALSE;
     private NormType normType = NormType.ZSCALE;
-    private MissValueFillType missValueFillType = MissValueFillType.MEAN;
+    private MissValueFillType missValueFillType = MissValueFillType.ZERO;
     private Boolean isWeightNorm = Boolean.FALSE;
 
     // move to RawSourceData

@@ -213,7 +213,7 @@ public class Normalizer {
      * @return - normalized value for ZScore method
      */
     private static Double getZScore(ColumnConfig config, String raw, Double cutoff) {
-        return getZScore(config, raw, cutoff, MissValueFillType.MEAN);
+        return getZScore(config, raw, cutoff, MissValueFillType.ZERO);
     }
 
     /**
@@ -333,8 +333,7 @@ public class Normalizer {
             break;            
         case ZERO:
         default:
-            fillValue = Double.valueOf(0.0);
-            break;
+            return Double.valueOf(0.0);
         }
 
         return fillValue == null ? Double.valueOf(0.0) : fillValue;
