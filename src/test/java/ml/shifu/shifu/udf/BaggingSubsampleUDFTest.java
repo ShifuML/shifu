@@ -41,8 +41,8 @@ public class BaggingSubsampleUDFTest {
     public void setUp() throws Exception {
 
         File file = new File("udf");
-        if (!file.exists() || !file.isDirectory()) {
-            file.mkdir();
+        if (!file.exists()) {
+            FileUtils.forceMkdir(file);
         }
 
         ModelConfig modelConfig = CommonUtils.loadModelConfig(

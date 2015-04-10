@@ -54,6 +54,7 @@ import ml.shifu.shifu.util.HDFSUtils;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.collections.ListUtils;
 import org.apache.commons.compress.compressors.bzip2.BZip2CompressorInputStream;
+import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileSystem;
@@ -161,8 +162,8 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
     private void runAkkaTrain(int numBags) throws IOException {
 
         File models = new File("models");
-        models.delete();
-        models.mkdir();
+        FileUtils.deleteDirectory(models);
+        FileUtils.forceMkdir(models);
 
         trainers.clear();
 

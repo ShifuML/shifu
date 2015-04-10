@@ -360,7 +360,7 @@ public class NNWorker extends
         double baggingSampleRate = this.modelConfig.getBaggingSampleRate();
         // if fixInitialInput = false, we only compare random value with baggingSampleRate to avoid parsing data.
         // if fixInitialInput = true, we should use hashcode after parsing.
-        if(!this.modelConfig.isFixInitialInput() && Double.valueOf(Math.random()).compareTo(baggingSampleRate) >= 0) {
+        if(!this.modelConfig.isFixInitialInput() && Double.compare(Math.random(), baggingSampleRate) >= 0) {
             return;
         }
 
@@ -459,7 +459,7 @@ public class NNWorker extends
         long size = trainingSize + testingSize;
         return this.modelConfig.isBaggingWithReplacement() && (testingSize > 0) && (trainingSize > 0)
                 && (size > NNConstants.NN_BAGGING_THRESHOLD)
-                && (Double.valueOf(random).compareTo(Double.valueOf(0.5d)) < 0);
+                && (Double.compare(random, 0.5d) < 0);
     }
 
     /**
@@ -481,7 +481,7 @@ public class NNWorker extends
             this.trainingData.getRecord(next, dataPair);
         }
 
-        if(Double.valueOf(random).compareTo(Double.valueOf(crossValidationRate)) < 0) {
+        if(Double.compare(random, crossValidationRate) < 0) {
             this.testingData.add(dataPair);
         } else {
             this.trainingData.add(dataPair);
@@ -492,7 +492,7 @@ public class NNWorker extends
      * Add data pair to data set according to random number compare with crossValidationRate.
      */
     private void addDataPairToDataSet(MLDataPair pair, double crossValidationRate, double random) {
-        if(Double.valueOf(random).compareTo(Double.valueOf(crossValidationRate)) < 0) {
+        if(Double.compare(random, crossValidationRate) < 0) {
             this.testingData.add(pair);
         } else {
             this.trainingData.add(pair);

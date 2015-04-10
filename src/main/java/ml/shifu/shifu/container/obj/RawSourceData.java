@@ -15,6 +15,7 @@
  */
 package ml.shifu.shifu.container.obj;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 
 import java.util.ArrayList;
@@ -23,6 +24,7 @@ import java.util.List;
 /**
  * SourceData class
  */
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class RawSourceData implements Cloneable {
 
     @JsonDeserialize(using = SouceTypeDeserializer.class)
@@ -132,7 +134,14 @@ public class RawSourceData implements Cloneable {
 
     @Override
     public RawSourceData clone() {
-        RawSourceData copy = new RawSourceData();
+        RawSourceData copy = null;
+        try {
+            copy = (RawSourceData) super.clone();
+        } catch (CloneNotSupportedException e) {
+            // This should never happen
+            throw new InternalError(e.toString());
+        }
+
         copy.setSource(source);
         copy.setDataPath(dataPath);
         copy.setDataDelimiter(dataDelimiter);

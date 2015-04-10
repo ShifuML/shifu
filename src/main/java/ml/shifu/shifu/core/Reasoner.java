@@ -173,7 +173,7 @@ public class Reasoner {
 
         public int compare(ScoreDiffObject a, ScoreDiffObject b) {
             if (!a.scoreDiff.equals(b.scoreDiff)) {
-                return -a.scoreDiff.compareTo(b.scoreDiff);
+                return b.scoreDiff.compareTo(a.scoreDiff);
             } else {
                 return a.columnNum.compareTo(b.columnNum);
             }

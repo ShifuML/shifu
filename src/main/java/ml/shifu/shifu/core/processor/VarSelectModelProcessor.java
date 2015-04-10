@@ -213,7 +213,7 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
                     String[] raw = scanner.nextLine().trim().split("\\|");
 
                     @SuppressWarnings("unused")
-                    int idSize = Integer.valueOf(raw[0]);
+                    int idSize = Integer.parseInt(raw[0]);
 
                     ids = CommonUtils.stringToIntegerList(raw[1]);
 
