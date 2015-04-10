@@ -534,6 +534,15 @@ public final class CommonUtils {
 
         });
 
+        log.info("Models before slice: {}", listStatus);
+
+        // added in shifu 0.2.5 to slice models not belonging to last training
+        int baggingModelSize = modelConfig.getTrain().getBaggingNum();
+
+        listStatus = listStatus.size() <= baggingModelSize ? listStatus : listStatus.subList(0, baggingModelSize);
+
+        log.info("Models after slice: {}", listStatus);
+
         List<BasicML> models = new ArrayList<BasicML>(listStatus.size());
         for(FileStatus f: listStatus) {
             FSDataInputStream stream = null;
@@ -619,15 +628,15 @@ public final class CommonUtils {
         }
 
         File modelsPathDir = new File(modelsPath);
-        
+
         File[] modelFiles = modelsPathDir.listFiles(new FilenameFilter() {
             @Override
             public boolean accept(File dir, String name) {
                 return name.endsWith("." + alg.name().toLowerCase());
             }
         });
- 
-        if (modelFiles != null) {
+
+        if(modelFiles != null) {
             // sort file names
             Arrays.sort(modelFiles, new Comparator<File>() {
                 @Override
@@ -635,7 +644,7 @@ public final class CommonUtils {
                     return from.getName().compareTo(to.getName());
                 }
             });
-            
+
             List<BasicML> models = new ArrayList<BasicML>(modelFiles.length);
             for(File nnf: modelFiles) {
                 InputStream is = null;
@@ -646,10 +655,10 @@ public final class CommonUtils {
                     IOUtils.closeQuietly(is);
                 }
             }
-            
+
             return models;
         } else {
-            throw new IOException(String.format("Failed to list files in %s", modelsPathDir.getAbsolutePath())); 
+            throw new IOException(String.format("Failed to list files in %s", modelsPathDir.getAbsolutePath()));
         }
     }
 
