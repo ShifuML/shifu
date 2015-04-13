@@ -534,14 +534,9 @@ public final class CommonUtils {
 
         });
 
-        log.info("Models before slice: {}", listStatus);
-
         // added in shifu 0.2.5 to slice models not belonging to last training
         int baggingModelSize = modelConfig.getTrain().getBaggingNum();
-
         listStatus = listStatus.size() <= baggingModelSize ? listStatus : listStatus.subList(0, baggingModelSize);
-
-        log.info("Models after slice: {}", listStatus);
 
         List<BasicML> models = new ArrayList<BasicML>(listStatus.size());
         for(FileStatus f: listStatus) {
