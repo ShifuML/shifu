@@ -15,6 +15,7 @@
  */
 package ml.shifu.shifu.util;
 
+import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.fs.Path;
 import org.testng.Assert;
 import org.testng.annotations.Test;
@@ -30,7 +31,7 @@ public class HDFSUtilsTest {
     public void test() throws IOException, IntrospectionException {
         File tmp = new File("tmp");
         if (!tmp.exists()) {
-            tmp.mkdir();
+            FileUtils.forceMkdir(tmp);
         }
 
         // HDFSUtils utils = null;

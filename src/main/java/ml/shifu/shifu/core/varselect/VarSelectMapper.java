@@ -41,7 +41,6 @@ import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.io.DoubleWritable;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.Mapper;
@@ -66,7 +65,7 @@ import com.google.common.base.Splitter;
  * 
  * @author Zhang David (pengzhang@paypal.com)
  */
-public class VarSelectMapper extends Mapper<LongWritable, Text, LongWritable, DoubleWritable> {
+public class VarSelectMapper extends Mapper<LongWritable, Text, LongWritable, ColumnInfo> {
 
     private final static Logger LOG = LoggerFactory.getLogger(VarSelectMapper.class);
 
@@ -107,7 +106,7 @@ public class VarSelectMapper extends Mapper<LongWritable, Text, LongWritable, Do
     /**
      * Final results map, this map is loaded in memory for sum, and will be written by context in cleanup.
      */
-    private Map<Long, Double> results = new HashMap<Long, Double>();
+    private Map<Long, ColumnInfo> results = new HashMap<Long, ColumnInfo>();
 
     /**
      * Inputs columns for each record. To save new objects in
@@ -138,14 +137,14 @@ public class VarSelectMapper extends Mapper<LongWritable, Text, LongWritable, Do
     private LongWritable outputKey;
 
     /**
-     * Prevent too many new objects for output value.
-     */
-    private DoubleWritable outputValue;
-
-    /**
      * Wrapper by adding(A), removing(R) or sensitivity(SE).
      */
     private String wrapperBy;
+
+    /**
+     * A counter to count # of records in current mapper.
+     */
+    private long recordCount;
 
     /**
      * Load all configurations for modelConfig and columnConfigList from source type.
@@ -240,11 +239,11 @@ public class VarSelectMapper extends Mapper<LongWritable, Text, LongWritable, Do
         this.columnIndexes = new long[this.inputNodeCount];
         this.inputsMLData = new BasicMLData(this.inputNodeCount);
         this.outputKey = new LongWritable();
-        this.outputValue = new DoubleWritable();
     }
 
     @Override
     protected void map(LongWritable key, Text value, Context context) throws IOException, InterruptedException {
+        recordCount += 1L;
         int index = 0, inputsIndex = 0, outputsIndex = 0;
         for(String input: DEFAULT_SPLITTER.split(value.toString())) {
             double doubleValue = NumberFormatUtils.getDouble(input.trim(), 0.0d);
@@ -252,7 +251,7 @@ public class VarSelectMapper extends Mapper<LongWritable, Text, LongWritable, Do
                 break;
             } else {
                 ColumnConfig columnConfig = this.columnConfigList.get(index);
-                if(columnConfig.isTarget()) {
+                if(columnConfig != null && columnConfig.isTarget()) {
                     this.outputs[outputsIndex++] = doubleValue;
                 } else {
                     if(this.inputNodeCount == this.candidateCount) {
@@ -288,8 +287,6 @@ public class VarSelectMapper extends Mapper<LongWritable, Text, LongWritable, Do
             this.inputsMLData.setData(this.inputs);
             double currentModelScore = this.model.compute(new BasicMLData(inputs)).getData()[0];
 
-            Double MSESum = this.results.get(this.columnIndexes[i]);
-
             double diff = 0d;
             if(Constants.WRAPPER_BY_ADD.equalsIgnoreCase(this.wrapperBy)
                     || Constants.WRAPPER_BY_REMOVE.equalsIgnoreCase(this.wrapperBy)) {
@@ -298,12 +295,17 @@ public class VarSelectMapper extends Mapper<LongWritable, Text, LongWritable, Do
                 // SE
                 diff = candidateModelScore - currentModelScore;
             }
-            if(MSESum == null) {
-                MSESum = power2(diff);
+            ColumnInfo columnInfo = this.results.get(this.columnIndexes[i]);
+
+            if(columnInfo == null) {
+                columnInfo = new ColumnInfo();
+                columnInfo.setSumScoreDiff(Math.abs(diff));
+                columnInfo.setSumSquareScoreDiff(power2(diff));
             } else {
-                MSESum += power2(diff);
+                columnInfo.setSumScoreDiff(columnInfo.getSumScoreDiff() + Math.abs(diff));
+                columnInfo.setSumSquareScoreDiff(columnInfo.getSumSquareScoreDiff() + power2(diff));
             }
-            this.results.put(this.columnIndexes[i], MSESum);
+            this.results.put(this.columnIndexes[i], columnInfo);
             this.inputs[i] = oldValue;
         }
     }
@@ -313,13 +315,14 @@ public class VarSelectMapper extends Mapper<LongWritable, Text, LongWritable, Do
      */
     @Override
     protected void cleanup(Context context) throws IOException, InterruptedException {
-        LOG.debug("Final results: {}", results);
-        for(Entry<Long, Double> entry: results.entrySet()) {
+        for(Entry<Long, ColumnInfo> entry: results.entrySet()) {
             this.outputKey.set(entry.getKey());
             // value is sumValue, not sumValue/(number of records)
-            this.outputValue.set(entry.getValue());
-            context.write(this.outputKey, this.outputValue);
+            ColumnInfo columnInfo = entry.getValue();
+            columnInfo.setCount(this.recordCount);
+            context.write(this.outputKey, columnInfo);
         }
+        LOG.debug("Final results: {}", results);
     }
 
     private double power2(double data) {

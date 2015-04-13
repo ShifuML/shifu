@@ -38,6 +38,7 @@ import ml.shifu.shifu.pig.PigExecutor;
 import ml.shifu.shifu.util.Constants;
 
 import org.apache.commons.collections.CollectionUtils;
+import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.fs.Path;
 import org.apache.pig.tools.pigstats.JobStats;
@@ -217,8 +218,7 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
         // create evalset home directory firstly in local file system
         PathFinder pathFinder = new PathFinder(modelConfig);
         String evalSetPath = pathFinder.getEvalSetPath(config, SourceType.LOCAL);
-        (new File(evalSetPath)).mkdirs();
-
+        FileUtils.forceMkdir(new File(evalSetPath));
         syncDataToHdfs(config.getDataSet().getSource());
 
         switch(modelConfig.getBasic().getRunMode()) {
@@ -358,7 +358,6 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
         for(EvalConfig evalConfig: evalSetList) {
             runEval(evalConfig);
         }
-        log.info("Step Finished: eval");
     }
 
     /**
@@ -371,8 +370,7 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
         // create evalset home directory firstly in local file system
         PathFinder pathFinder = new PathFinder(modelConfig);
         String evalSetPath = pathFinder.getEvalSetPath(evalConfig, SourceType.LOCAL);
-        (new File(evalSetPath)).mkdirs();
-
+        FileUtils.forceMkdir(new File(evalSetPath));
         syncDataToHdfs(evalConfig.getDataSet().getSource());
 
         switch(modelConfig.getBasic().getRunMode()) {
@@ -400,9 +398,9 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
         // TODO runConfusionMatrix write and runPerformance read, merge together
         // TODO code refacter because of several magic numbers and not good name functions ...
         runConfusionMatrix(evalConfig);
-        runPerformance(evalConfig);
+       // runPerformance(evalConfig);
     }
-
+    
     /**
      * Use akka to run model evaluation
      * 
@@ -474,11 +472,10 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
      */
     private void runConfusionMatrix(EvalConfig config) throws IOException {
         ConfusionMatrix worker = new ConfusionMatrix(modelConfig, config);
-        // worker.computeConfusionMatrix();
         switch(modelConfig.getBasic().getRunMode()) {
             case mapred:
-                worker.bufferedComputeConfusionMatrix(this.pigPosTags, this.pigNegTags, this.pigPosWeightTags,
-                        this.pigNegWeightTags);
+                worker.bufferedComputeConfusionMatrixAndPerformance(this.pigPosTags, this.pigNegTags, this.pigPosWeightTags,
+                        this.pigNegWeightTags, this.evalRecords);
                 break;
             default:
                 worker.computeConfusionMatrix();

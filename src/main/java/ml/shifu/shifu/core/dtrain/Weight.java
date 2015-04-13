@@ -25,7 +25,7 @@ public class Weight {
     /**
      * The zero tolerance to use.
      */
-    private final double zeroTolerance = 0.00000000000000001;
+    private final static double ZERO_TOLERANCE = 0.00000000000000001;
 
     private double learningRate;
 
@@ -53,18 +53,18 @@ public class Weight {
         this.lastGradient = new double[numWeight];
         this.eps = this.outputEpsilon / numTrainSize;
         this.shrink = rate / (1.0 + rate);
-        this.learningRate = rate;
+        this.setLearningRate(rate);
         this.algorithm = algorithm;
         this.updateValues = new double[numWeight];
 
-        for (int i = 0; i < this.updateValues.length; i++) {
+        for(int i = 0; i < this.updateValues.length; i++) {
             this.updateValues[i] = DEFAULT_INITIAL_UPDATE;
             this.lastDelta[i] = 0;
         }
     }
 
     public double[] calculateWeights(double[] weights, double[] gradients) {
-        for (int i = 0; i < gradients.length; i++) {
+        for(int i = 0; i < gradients.length; i++) {
             weights[i] += updateWeight(i, weights, gradients);
         }
 
@@ -72,16 +72,15 @@ public class Weight {
     }
 
     private double updateWeight(int index, double[] weights, double[] gradients) {
-
-        if (this.algorithm.equalsIgnoreCase(NNUtils.BACK_PROPAGATION)) {
+        if(this.algorithm.equalsIgnoreCase(NNUtils.BACK_PROPAGATION)) {
             return updateWeightBP(index, weights, gradients);
-        } else if (this.algorithm.equalsIgnoreCase(NNUtils.QUICK_PROPAGATION)) {
+        } else if(this.algorithm.equalsIgnoreCase(NNUtils.QUICK_PROPAGATION)) {
             return updateWeightQBP(index, weights, gradients);
-        } else if (this.algorithm.equalsIgnoreCase(NNUtils.MANHATTAN_PROPAGATION)) {
+        } else if(this.algorithm.equalsIgnoreCase(NNUtils.MANHATTAN_PROPAGATION)) {
             return updateWeightMHP(index, weights, gradients);
-        } else if (this.algorithm.equalsIgnoreCase(NNUtils.SCALEDCONJUGATEGRADIENT)) {
+        } else if(this.algorithm.equalsIgnoreCase(NNUtils.SCALEDCONJUGATEGRADIENT)) {
             return updateWeightSCG(index, weights, gradients);
-        } else if (this.algorithm.equalsIgnoreCase(NNUtils.RESILIENTPROPAGATION)) {
+        } else if(this.algorithm.equalsIgnoreCase(NNUtils.RESILIENTPROPAGATION)) {
             return updateWeightRLP(index, weights, gradients);
         }
 
@@ -90,7 +89,7 @@ public class Weight {
     }
 
     private double updateWeightBP(int index, double[] weights, double[] gradients) {
-        double delta = (gradients[index] * this.learningRate) + (this.lastDelta[index] * this.momentum);
+        double delta = (gradients[index] * this.getLearningRate()) + (this.lastDelta[index] * this.momentum);
         this.lastDelta[index] = delta;
         return delta;
     }
@@ -104,30 +103,30 @@ public class Weight {
         double nextStep = 0.0;
 
         // The step must always be in direction opposite to the slope.
-        if (d < 0.0) {
+        if(d < 0.0) {
             // If last step was negative...
-            if (s > 0.0) {
+            if(s > 0.0) {
                 // Add in linear term if current slope is still positive.
                 nextStep -= this.eps * s;
             }
             // If current slope is close to or larger than prev slope...
-            if (s >= (this.shrink * p)) {
+            if(s >= (this.shrink * p)) {
                 // Take maximum size negative step.
-                nextStep += this.learningRate * d;
+                nextStep += this.getLearningRate() * d;
             } else {
                 // Else, use quadratic estimate.
                 nextStep += d * s / (p - s);
             }
-        } else if (d > 0.0) {
+        } else if(d > 0.0) {
             // If last step was positive...
-            if (s < 0.0) {
+            if(s < 0.0) {
                 // Add in linear term if current slope is still negative.
                 nextStep -= this.eps * s;
             }
             // If current slope is close to or more neg than prev slope...
-            if (s <= (this.shrink * p)) {
+            if(s <= (this.shrink * p)) {
                 // Take maximum size negative step.
-                nextStep += this.learningRate * d;
+                nextStep += this.getLearningRate() * d;
             } else {
                 // Else, use quadratic estimate.
                 nextStep += d * s / (p - s);
@@ -145,13 +144,12 @@ public class Weight {
     }
 
     private double updateWeightMHP(int index, double[] weights, double[] gradients) {
-
-        if (Math.abs(gradients[index]) < this.zeroTolerance) {
+        if(Math.abs(gradients[index]) < ZERO_TOLERANCE) {
             return 0;
-        } else if (gradients[index] > 0) {
-            return this.learningRate;
+        } else if(gradients[index] > 0) {
+            return this.getLearningRate();
         } else {
-            return -this.learningRate;
+            return -this.getLearningRate();
         }
     }
 
@@ -168,13 +166,13 @@ public class Weight {
 
         // if the gradient has retained its sign, then we increase the
         // delta so that it will converge faster
-        if (change > 0) {
+        if(change > 0) {
             double delta = this.updateValues[index] * NNUtils.POSITIVE_ETA;
             delta = Math.min(delta, DEFAULT_MAX_STEP);
             weightChange = NNUtils.sign(gradients[index]) * delta;
             this.updateValues[index] = delta;
             lastGradient[index] = gradients[index];
-        } else if (change < 0) {
+        } else if(change < 0) {
             // if change<0, then the sign has changed, and the last
             // delta was too big
             double delta = this.updateValues[index] * NNUtils.NEGATIVE_ETA;
@@ -184,7 +182,7 @@ public class Weight {
             // set the previous gradent to zero so that there will be no
             // adjustment the next iteration
             lastGradient[index] = 0;
-        } else if (change == 0) {
+        } else if(change == 0) {
             // if change==0 then there is no change to the delta
             final double delta = this.updateValues[index];
             weightChange = NNUtils.sign(gradients[index]) * delta;
@@ -194,5 +192,20 @@ public class Weight {
         this.lastDelta[index] = weightChange;
         // apply the weight change, if any
         return weightChange;
+    }
+
+    /**
+     * @return the learningRate
+     */
+    public double getLearningRate() {
+        return learningRate;
+    }
+
+    /**
+     * @param learningRate
+     *            the learningRate to set
+     */
+    public void setLearningRate(double learningRate) {
+        this.learningRate = learningRate;
     }
 }

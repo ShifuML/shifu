@@ -17,6 +17,8 @@ package ml.shifu.shifu.core.alg;
 
 import ml.shifu.shifu.container.obj.ModelConfig;
 import ml.shifu.shifu.core.AbstractTrainer;
+
+import org.apache.commons.io.FileUtils;
 import org.encog.ml.svm.KernelType;
 import org.encog.ml.svm.SVM;
 import org.encog.ml.svm.SVMType;
@@ -130,7 +132,12 @@ public class SVMTrainer extends AbstractTrainer {
     private void saveModel() {
         File folder = new File("./models");
         if (!folder.exists()) {
-            folder.mkdirs();
+            try {
+                FileUtils.forceMkdir(folder);
+            } catch (IOException e) {
+                log.error("Failed to create directory: {}", folder.getAbsolutePath());
+                e.printStackTrace();
+            }
         }
         EncogDirectoryPersistence.saveObject(new File("./models/model" + this.trainerID + ".svm"), svm);
     }
@@ -147,7 +154,7 @@ public class SVMTrainer extends AbstractTrainer {
     /**
      * SVMtrainer worker
      */
-    private class SVMRunner implements Runnable {
+    private static class SVMRunner implements Runnable {
 
         private SVMTrain trainer;
         private boolean isFinish;

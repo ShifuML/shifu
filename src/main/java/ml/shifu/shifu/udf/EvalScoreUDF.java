@@ -46,7 +46,7 @@ public class EvalScoreUDF extends AbstractTrainerUDF<Tuple> {
 
     private EvalConfig evalConfig;
     private ModelRunner modelRunner;
-    private String[] header;
+    private String[] headers;
 
     private List<String> negTags;
 
@@ -71,22 +71,22 @@ public class EvalScoreUDF extends AbstractTrainerUDF<Tuple> {
         }
 
         // create model runner
-        this.header = CommonUtils.getHeaders(evalConfig.getDataSet().getHeaderPath(), evalConfig.getDataSet()
+        this.headers = CommonUtils.getHeaders(evalConfig.getDataSet().getHeaderPath(), evalConfig.getDataSet()
                 .getHeaderDelimiter(), evalConfig.getDataSet().getSource());
 
         List<BasicML> models = CommonUtils
                 .loadBasicModels(modelConfig, evalConfig, evalConfig.getDataSet().getSource());
-        modelRunner = new ModelRunner(modelConfig, columnConfigList, this.header, evalConfig.getDataSet()
+        modelRunner = new ModelRunner(modelConfig, columnConfigList, this.headers, evalConfig.getDataSet()
                 .getDataDelimiter(), models);
         modelCnt = models.size();
     }
 
     public Tuple exec(Tuple input) throws IOException {
-        Map<String, String> rawDataMap = CommonUtils.convertDataIntoMap(input, this.header);
-        if (MapUtils.isEmpty(rawDataMap)) {
+        Map<String, String> rawDataMap = CommonUtils.convertDataIntoMap(input, this.headers);
+        if(MapUtils.isEmpty(rawDataMap)) {
             return null;
         }
-       
+
         CaseScoreResult cs = modelRunner.compute(rawDataMap);
         if(cs == null) {
             log.error("Get null result, for input: " + input.toDelimitedString("|"));
@@ -198,12 +198,10 @@ public class EvalScoreUDF extends AbstractTrainerUDF<Tuple> {
             }
 
             return new Schema(new Schema.FieldSchema("EvalScore", tupleSchema, DataType.TUPLE));
-
-        } catch (Exception e) {
-            e.printStackTrace();
+        } catch (IOException e) {
+            log.error("Error in outputSchema", e);
             return null;
         }
-
     }
 
 }

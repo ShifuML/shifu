@@ -26,10 +26,10 @@ import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
 import ml.shifu.shifu.util.CommonUtils;
 import ml.shifu.shifu.util.Constants;
 
-import org.apache.hadoop.io.DoubleWritable;
 import org.apache.hadoop.io.LongWritable;
-import org.apache.hadoop.io.NullWritable;
+import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.Reducer;
+import org.apache.hadoop.mapreduce.lib.output.MultipleOutputs;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -57,7 +57,7 @@ import org.slf4j.LoggerFactory;
  * 
  * @author Zhang David (pengzhang@paypal.com)
  */
-public class VarSelectReducer extends Reducer<LongWritable, DoubleWritable, LongWritable, NullWritable> {
+public class VarSelectReducer extends Reducer<LongWritable, ColumnInfo, Text, Text> {
 
     private final static Logger LOG = LoggerFactory.getLogger(VarSelectReducer.class);
 
@@ -86,12 +86,27 @@ public class VarSelectReducer extends Reducer<LongWritable, DoubleWritable, Long
     /**
      * Prevent too many new objects for output key.
      */
-    private LongWritable outputKey;
+    private Text outputKey;
+
+    /**
+     * Prevent too many new objects for output key.
+     */
+    private Text outputValue;
+
+    /**
+     * Output value text.
+     */
+    private final static Text OUTPUT_VALUE = new Text("");
 
     /**
      * Wrapper by adding(A), removing(R) or sensitivity(SE).
      */
     private String wrapperBy;
+
+    /**
+     * Multiple outputs to write se report in HDFS.
+     */
+    private MultipleOutputs<Text, Text> mos;
 
     /**
      * Load all configurations for modelConfig and columnConfigList from source type.
@@ -117,20 +132,33 @@ public class VarSelectReducer extends Reducer<LongWritable, DoubleWritable, Long
         this.inputNodeCount = inputOutputIndex[0] == 0 ? inputOutputIndex[2] : inputOutputIndex[0];
         this.wrapperRatio = context.getConfiguration().getFloat(Constants.SHIFU_VARSELECT_WRAPPER_RATIO,
                 Constants.SHIFU_DEFAULT_VARSELECT_WRAPPER_RATIO);
-        this.outputKey = new LongWritable();
-
+        this.outputKey = new Text();
+        this.outputValue = new Text();
         this.wrapperBy = context.getConfiguration()
                 .get(Constants.SHIFU_VARSELECT_WRAPPER_TYPE, Constants.WRAPPER_BY_SE);
+        this.mos = new MultipleOutputs<Text, Text>(context);
     }
 
     @Override
-    protected void reduce(LongWritable key, Iterable<DoubleWritable> values, Context context) throws IOException,
+    protected void reduce(LongWritable key, Iterable<ColumnInfo> values, Context context) throws IOException,
             InterruptedException {
-        double MSE = 0d;
-        for(DoubleWritable value: values) {
-            MSE += value.get();
+        ColumnStatistics column = new ColumnStatistics();
+        double sum = 0d;
+        double sumSquare = 0d;
+        long count = 0L;
+        for(ColumnInfo info: values) {
+            sum += info.getSumScoreDiff();
+            sumSquare += info.getSumSquareScoreDiff();
+            count += info.getCount();
         }
-        results.add(new Pair(key.get(), MSE));
+        column.setMean(sum / count);
+        column.setRms(sumSquare / count);
+        column.setVariance((sumSquare / count) - power2(sum / count));
+        this.results.add(new Pair(key.get(), column));
+    }
+
+    private double power2(double data) {
+        return data * data;
     }
 
     @Override
@@ -138,7 +166,7 @@ public class VarSelectReducer extends Reducer<LongWritable, DoubleWritable, Long
         Collections.sort(this.results, new Comparator<Pair>() {
             @Override
             public int compare(Pair o1, Pair o2) {
-                return Double.valueOf(o2.value).compareTo(Double.valueOf(o1.value));
+                return Double.compare(o2.value.getRms(), o1.value.getRms());
             }
         });
 
@@ -153,10 +181,22 @@ public class VarSelectReducer extends Reducer<LongWritable, DoubleWritable, Long
             candidates = (int) (this.inputNodeCount * (this.wrapperRatio));
         }
 
-        for(int i = 0; i < candidates; i++) {
-            this.outputKey.set(this.results.get(i).key);
-            context.write(this.outputKey, NullWritable.get());
+        for(int i = 0; i < this.results.size(); i++) {
+            Pair pair = this.results.get(i);
+            this.outputKey.set(pair.key + "");
+            if(i < candidates) {
+                context.write(this.outputKey, OUTPUT_VALUE);
+            }
+            // for thousands of features, here using new ok
+            StringBuilder sb = new StringBuilder(100);
+            sb.append(this.columnConfigList.get((int) pair.key).getColumnName()).append("\t")
+                    .append(pair.value.getMean()).append("\t").append(pair.value.getRms()).append("\t")
+                    .append(pair.value.getVariance());
+            this.outputValue.set(sb.toString());
+            this.mos.write(Constants.SHIFU_VARSELECT_SE_OUTPUT_NAME, this.outputKey, this.outputValue);
         }
+
+        this.mos.close();
     }
 
     /**
@@ -188,13 +228,13 @@ public class VarSelectReducer extends Reducer<LongWritable, DoubleWritable, Long
 
     private static class Pair {
 
-        public Pair(long key, double value) {
+        public Pair(long key, ColumnStatistics value) {
             this.key = key;
             this.value = value;
         }
 
         public long key;
-        public double value;
+        public ColumnStatistics value;
 
         @Override
         public String toString() {

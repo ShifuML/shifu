@@ -48,6 +48,8 @@ public interface Constants {
     public static final String PATH_COLUMN_CONFIG = "path_column_config";
     public static final String PATH_MODEL_CONFIG = "path_model_config";
     public static final String PATH_PRE_TRAINING_STATS = "path_pre_training_stats";
+    public static final String PATH_STATS_BINNING_INFO = "path_stats_binning_info";
+
     public static final String PATH_NORMALIZED_DATA = "pathNormalizedData";
     public static final String PATH_RAW_DATA = "path_raw_data";
     public static final String PATH_JAR = "path_jar";
@@ -77,6 +79,7 @@ public interface Constants {
     public static final String REGEX_MULTIPLE_INPUTS = "[{}]";
     public static final String COMMA = ",";
     public static final String PIG_COLUMN_SEPARATOR = "::";
+    public static final String PIG_FULL_COLUMN_SEPARATOR = "_";
 
     public static final String LOCAL_MODEL_CONFIG_JSON = "./ModelConfig.json";
     public static final String LOCAL_COLUMN_CONFIG_JSON = "./ColumnConfig.json";
@@ -99,6 +102,15 @@ public interface Constants {
     public static final String KEY_SCORE_PATH = "scorePath";
     public static final String KEY_PERFORMANCE_PATH = "performancePath";
     public static final String KEY_CONFUSION_MATRIX_PATH = "confusionMatrixPath";
+
+    public static final String BIN_BOUNDRY_DELIMITER = "\u0001";
+
+    public static final String DEFAULT_ESCAPE_DELIMITER = "\\|";
+    
+    public static final String DEFAULT_DELIMITER = "|";
+
+
+    public static final String BINNING_INFO_FILE_NAME = "binning_info.txt";
 
     public static final String PRE_TRAINING_STATS = "PreTrainingStats";
     public static final String SELECTED_RAW_DATA = "SelectedRawData";
@@ -139,6 +151,10 @@ public interface Constants {
 
     public static final String SHIFU_VARSEL_SE_MULTI = "shifu.varsel.se.multi";
 
+    public static final String SHIFU_VARSEL_SE_MULTI_THREAD = "shifu.varsel.se.multi.thread";
+
+    public static final int SHIFU_DEFAULT_VARSEL_SE_MULTI_THREAD = 4;
+
     public static final String WRAPPER_BY_REMOVE = "R";
 
     public static final String WRAPPER_BY_ADD = "A";
@@ -160,8 +176,10 @@ public interface Constants {
     public static final String SHIFU_GROUP_COUNTER = "SHIFU_COUNTER";
 
     public static final long EVAL_COUNTER_WEIGHT_SCALE = 1000l;
-    
+
     public static final String COUNTER_RECORDS = "RECORDS";
 
+    public static final String SHIFU_VARSELECT_SE_OUTPUT_NAME = "se";
 
+    public static final String DEFAULT_CHARSET = "UTF-8";
 }

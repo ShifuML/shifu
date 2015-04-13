@@ -18,6 +18,7 @@ package ml.shifu.shifu.container.meta;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonInclude.Include;
+
 import org.apache.commons.collections.CollectionUtils;
 
 import java.util.ArrayList;
@@ -28,7 +29,7 @@ import java.util.List;
  */
 @JsonIgnoreProperties(ignoreUnknown = true)
 @JsonInclude(Include.NON_NULL)
-public class MetaItem {
+public class MetaItem implements Cloneable {
 
     private String name;
 
@@ -132,7 +133,13 @@ public class MetaItem {
 
     @Override
     public MetaItem clone() {
-        MetaItem copy = new MetaItem();
+        MetaItem copy = null;
+        try {
+            copy = (MetaItem)super.clone();
+        } catch (CloneNotSupportedException e) {
+            // This should never happen
+            throw new InternalError(e.toString());
+        }
 
         copy.setName(name);
         copy.setType(type);
@@ -142,9 +149,9 @@ public class MetaItem {
         copy.setOptions(options);
         copy.setElementType(elementType);
 
-        if (CollectionUtils.isNotEmpty(element)) {
+        if(CollectionUtils.isNotEmpty(element)) {
             List<MetaItem> elementList = new ArrayList<MetaItem>();
-            for (MetaItem meta : element) {
+            for(MetaItem meta: element) {
                 elementList.add(meta.clone());
             }
 

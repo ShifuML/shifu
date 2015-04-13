@@ -22,75 +22,80 @@ import java.util.Iterator;
 
 import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.container.obj.ModelStatsConf.BinningMethod;
-import ml.shifu.shifu.core.binning.*;
+import ml.shifu.shifu.core.binning.AbstractBinning;
+import ml.shifu.shifu.core.binning.CategoricalBinning;
+import ml.shifu.shifu.core.binning.EqualIntervalBinning;
+import ml.shifu.shifu.core.binning.EqualPopulationBinning;
 
 import org.apache.pig.data.DataBag;
+import org.apache.pig.data.DataType;
 import org.apache.pig.data.Tuple;
+import org.apache.pig.impl.logicalLayer.schema.Schema;
 
 /**
  * GenBinningDataUDF class
  * 
  * @Nov 11, 2014
- *
+ * 
  */
 public class BinningPartialDataUDF extends AbstractTrainerUDF<String> {
-    
+
     private int columnId = -1;
     private AbstractBinning<?> binning = null;
-    
+
     /**
      * @param source
      * @param pathModelConfig
      * @param pathColumnConfig
      * @throws IOException
      */
-    public BinningPartialDataUDF(String source, String pathModelConfig, String pathColumnConfig)
-            throws IOException {
+    public BinningPartialDataUDF(String source, String pathModelConfig, String pathColumnConfig) throws IOException {
         super(source, pathModelConfig, pathColumnConfig);
     }
-    
-    /* (non-Javadoc)
+
+    /*
+     * (non-Javadoc)
+     * 
      * @see org.apache.pig.EvalFunc#exec(org.apache.pig.data.Tuple)
      */
     @Override
     public String exec(Tuple input) throws IOException {
-        if ( input == null ) {
+        if(input == null) {
             return null;
         }
-        
+
         DataBag databag = (DataBag) input.get(0);
         Iterator<Tuple> iterator = databag.iterator();
-        while ( iterator.hasNext() ) {
+        while(iterator.hasNext()) {
             Tuple element = iterator.next();
-            if ( element == null ) {
+            if(element == null) {
                 continue;
             }
-            
-            if ( columnId < 0 ) {
+
+            if(columnId < 0) {
                 columnId = (Integer) element.get(0);
                 ColumnConfig columnConfig = super.columnConfigList.get(columnId);
-                if ( columnConfig.isCategorical() ) {
+                if(columnConfig.isCategorical()) {
                     binning = new CategoricalBinning(-1);
                 } else {
-                    if ( super.modelConfig.getBinningMethod().equals(BinningMethod.EqualInterval) ) {
+                    if(super.modelConfig.getBinningMethod().equals(BinningMethod.EqualInterval)) {
                         binning = new EqualIntervalBinning(modelConfig.getStats().getMaxNumBin());
                     } else {
                         binning = new EqualPopulationBinning(modelConfig.getStats().getMaxNumBin());
                     }
                 }
             }
-            
+
             Object value = element.get(1);
-            if ( value != null ) {
+            if(value != null) {
                 binning.addData(value.toString());
             }
         }
-        
-        log.info("columnId = " + columnId + ", bag-size = " + databag.size());
+
         String binningObjStr = ((binning == null) ? null : binning.objToString());
         
         cleanUp();
-        
+
         return binningObjStr;
     }
 
@@ -100,5 +105,10 @@ public class BinningPartialDataUDF extends AbstractTrainerUDF<String> {
     private void cleanUp() {
         this.columnId = -1;
         this.binning = null;
+    }
+
+    @Override
+    public Schema outputSchema(Schema input) {
+        return new Schema(new Schema.FieldSchema("binning_info", DataType.CHARARRAY));
     }
 }

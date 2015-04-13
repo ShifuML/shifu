@@ -169,9 +169,7 @@ public class PMMLTranslatorTest {
             switch (evaluator.getModel().getFunctionName()) {
                 case REGRESSION:
                     Map<FieldName, Double> regressionTerm = (Map<FieldName, Double>) evaluator.evaluate(maps);
-                    for (Double value : regressionTerm.values()) {
-                        writer.println((int) Math.round(value * 1000));
-                    }
+                    writer.println(regressionTerm.get(new FieldName(PMMLTranslator.FINAL_RESULT)).intValue());
                     break;
                 case CLASSIFICATION:
                     Map<FieldName, ClassificationMap<String>> classificationTerm = (Map<FieldName, ClassificationMap<String>>) evaluator.evaluate(maps);

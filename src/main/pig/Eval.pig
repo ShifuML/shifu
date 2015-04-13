@@ -15,9 +15,12 @@
  */
 REGISTER '$path_jar'
 
-SET default_parallel $num_parallel
+SET pig.exec.reducers.max 999;
+SET pig.exec.reducers.bytes.per.reducer 536870912;
 SET mapred.job.queue.name $queue_name;
 SET job.name 'shifu evaluation'
+SET mapred.child.java.opts -Xmx1G;
+SET mapred.child.ulimit 2.5G;
 
 DEFINE IsDataFilterOut          ml.shifu.shifu.udf.PurifyDataUDF('$source_type', '$path_model_config', '$path_column_config', '$eval_set_name');
 DEFINE EvalScore                ml.shifu.shifu.udf.EvalScoreUDF('$source_type', '$path_model_config', '$path_column_config', '$eval_set_name');
@@ -28,7 +31,7 @@ raw = FILTER raw BY IsDataFilterOut(*);
 
 evalScore = FOREACH raw GENERATE FLATTEN(EvalScore(*));
 evalScore = FILTER evalScore BY $0 IS NOT NULL;
--- leverage hadoop sorting, TODO how to set parallel number here
+-- leverage hadoop sorting
 evalScore = ORDER evalScore BY shifu::$columnIndex DESC;
 
 STORE evalScore INTO '$pathEvalScore' USING PigStorage('|', '-schema');

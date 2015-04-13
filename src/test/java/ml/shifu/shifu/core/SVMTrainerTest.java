@@ -18,13 +18,14 @@ package ml.shifu.shifu.core;
 import ml.shifu.shifu.container.obj.ModelConfig;
 import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
 import ml.shifu.shifu.core.alg.SVMTrainer;
+
+import org.apache.commons.io.FileUtils;
 import org.encog.Encog;
 import org.encog.ml.data.MLDataPair;
 import org.encog.ml.data.MLDataSet;
 import org.encog.ml.data.basic.BasicMLData;
 import org.encog.ml.data.basic.BasicMLDataPair;
 import org.encog.ml.data.basic.BasicMLDataSet;
-import org.encog.ml.svm.SVM;
 import org.testng.Assert;
 import org.testng.annotations.AfterClass;
 import org.testng.annotations.BeforeClass;
@@ -33,7 +34,6 @@ import org.testng.annotations.Test;
 import java.io.File;
 import java.io.IOException;
 import java.util.HashMap;
-import java.util.Random;
 
 
 public class SVMTrainerTest {
@@ -94,9 +94,7 @@ public class SVMTrainerTest {
     //MLDataSet dataSet;
     //MLDataSet trainSet;
     //MLDataSet validSet, testSet;
-    Random random;
-
-    SVM svm;
+//    Random random;
 
     @BeforeClass
     public void setUp() throws IOException {
@@ -124,28 +122,15 @@ public class SVMTrainerTest {
 
         trainer.train();
 
-        svm = trainer.getSVM();
-
         Assert.assertEquals(4, trainer.getValidSet().getRecordCount());
 
     }
 
     @AfterClass
-    public void shutDown() {
-        File file = new File("./models/");
-        if (file.exists() && file.isDirectory()) {
-            for (File f : file.listFiles()) {
-                f.delete();
-            }
-            file.delete();
-        }
-        file = new File("./modelsTmp/");
-        if (file.exists() && file.isDirectory()) {
-            for (File f : file.listFiles()) {
-                f.delete();
-            }
-            file.delete();
-        }
+    public void shutDown() throws IOException {
+        FileUtils.deleteDirectory(new File("./models/"));
+        FileUtils.deleteDirectory(new File("./modelsTmp/"));
+        
         Encog.getInstance().shutdown();
     }
 

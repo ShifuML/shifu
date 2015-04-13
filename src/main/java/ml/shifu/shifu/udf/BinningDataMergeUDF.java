@@ -26,17 +26,17 @@ import ml.shifu.shifu.core.binning.AbstractBinning;
 
 import org.apache.commons.lang.StringUtils;
 import org.apache.pig.data.DataBag;
+import org.apache.pig.data.DataType;
 import org.apache.pig.data.Tuple;
 import org.apache.pig.data.TupleFactory;
 import org.apache.pig.impl.logicalLayer.schema.Schema;
-import org.apache.pig.impl.util.Utils;
-import org.apache.pig.parser.ParserException;
+import org.apache.pig.impl.logicalLayer.schema.Schema.FieldSchema;
 
 /**
  * MergeBinningDataUDF class
  * 
  * @Nov 11, 2014
- *
+ * 
  */
 public class BinningDataMergeUDF extends AbstractTrainerUDF<Tuple> {
 
@@ -46,66 +46,72 @@ public class BinningDataMergeUDF extends AbstractTrainerUDF<Tuple> {
      * @param pathColumnConfig
      * @throws IOException
      */
-    public BinningDataMergeUDF(String source, String pathModelConfig, String pathColumnConfig)
-            throws IOException {
+    public BinningDataMergeUDF(String source, String pathModelConfig, String pathColumnConfig) throws IOException {
         super(source, pathModelConfig, pathColumnConfig);
     }
 
-    /* (non-Javadoc)
+    /*
+     * (non-Javadoc)
+     * 
      * @see org.apache.pig.EvalFunc#exec(org.apache.pig.data.Tuple)
      */
     @Override
     public Tuple exec(Tuple input) throws IOException {
-        if ( input == null ) {
+        if(input == null) {
             return null;
         }
-        
+
         Integer columnId = (Integer) input.get(0);
         DataBag databag = (DataBag) input.get(1);
         ColumnConfig columnConfig = super.columnConfigList.get(columnId);
-        
+
         AbstractBinning<?> binning = null;
         log.info("Start merging bin info for columnId - " + columnId + ", the bag size is - " + databag.size());
-        
+
         Iterator<Tuple> iterator = databag.iterator();
-        while ( iterator.hasNext() ) {
+        while(iterator.hasNext()) {
             Tuple element = iterator.next();
-            if ( element == null || element.size() < 2) {
+            if(element == null || element.size() < 2) {
                 continue;
             }
-            
+
             String objValStr = (String) element.get(1);
-            AbstractBinning<?> partialBinning = AbstractBinning.constructBinningFromStr(modelConfig, columnConfig, objValStr);
-            if ( binning == null ) {
+            AbstractBinning<?> partialBinning = AbstractBinning.constructBinningFromStr(modelConfig, columnConfig,
+                    objValStr);
+            if(binning == null) {
                 binning = partialBinning;
             } else {
                 binning.mergeBin(partialBinning);
             }
         }
-        
+
         Tuple output = TupleFactory.getInstance().newTuple(2);
         output.set(0, columnId);
         List<?> binFields = binning.getDataBin();
 
         // Do check here. It's because if there are too many value for categorical variable,
         // it will consume too much memory when join them together, that will cause OOM exception
-        if ( binFields.size() > CalculateNewStatsUDF.MAX_CATEGORICAL_BINC_COUNT ) {
+        if(binFields.size() > CalculateNewStatsUDF.MAX_CATEGORICAL_BINC_COUNT) {
             output.set(1, "");
         } else {
             output.set(1, StringUtils.join(binning.getDataBin(), CalculateStatsUDF.CATEGORY_VAL_SEPARATOR));
         }
 
         log.info("Finish merging bin info for columnId - " + columnId);
-        
+
         return output;
     }
-    
+
+    @Override
     public Schema outputSchema(Schema input) {
         try {
-            return Utils.getSchemaFromString("BinningDataInfo:Tuple(columnId : int, binningDataInfo : chararray)");
-        } catch (ParserException e) {
-            log.debug("Error when generating output schema.", e);
-            // just ignore
+            Schema tupleSchema = new Schema();
+            tupleSchema.add(new FieldSchema("columnId", DataType.INTEGER));
+            tupleSchema.add(new FieldSchema("binningDataInfo", DataType.CHARARRAY));
+
+            return new Schema(new Schema.FieldSchema("BinningDataInfo", tupleSchema, DataType.TUPLE));
+        } catch (IOException e) {
+            log.error("Error in outputSchema", e);
             return null;
         }
     }

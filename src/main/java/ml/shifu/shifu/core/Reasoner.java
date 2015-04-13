@@ -15,11 +15,18 @@
  */
 package ml.shifu.shifu.core;
 
+import java.io.Serializable;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
 import ml.shifu.shifu.container.obj.ColumnConfig;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import java.util.*;
 
 /**
  * Reasoner, it helps to find the the majority contributor to the model
@@ -142,7 +149,7 @@ public class Reasoner {
         return map;
     }
 
-    class ScoreDiffObject {
+    static class ScoreDiffObject {
         public String columnName;
         public Integer columnNum;
         public Integer binNum;
@@ -160,10 +167,13 @@ public class Reasoner {
         this.numTopVariables = numTopVariables;
     }
 
-    class ScoreDiffComparator implements Comparator<ScoreDiffObject> {
+    static class ScoreDiffComparator implements Comparator<ScoreDiffObject>, Serializable {
+        
+        private static final long serialVersionUID = 652346402551215269L;
+
         public int compare(ScoreDiffObject a, ScoreDiffObject b) {
             if (!a.scoreDiff.equals(b.scoreDiff)) {
-                return -a.scoreDiff.compareTo(b.scoreDiff);
+                return b.scoreDiff.compareTo(a.scoreDiff);
             } else {
                 return a.columnNum.compareTo(b.columnNum);
             }

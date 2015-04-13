@@ -305,7 +305,7 @@ public class EqualPopulationBinning extends AbstractBinning<Double> {
                 tmp = tmp.next();
             }
             
-            return s + chu.getHcnt() / 2;
+            return s + chu.getHcnt() / 2d;
         } else if ( tmp == this.tail ) {
             double sum = 0.0;
             tmp = this.header;
@@ -536,6 +536,34 @@ public class EqualPopulationBinning extends AbstractBinning<Double> {
             return Double.compare(hval, another.getHval());
         }
         
+        /* (non-Javadoc)
+         * @see java.lang.Object#hashCode()
+         */
+        @Override
+        public int hashCode() {
+            final int prime = 31;
+            int result = 1;
+            long temp;
+            temp = Double.doubleToLongBits(hval);
+            result = prime * result + (int) (temp ^ (temp >>> 32));
+            return result;
+        }
+
+        /* (non-Javadoc)
+         * @see java.lang.Object#equals(java.lang.Object)
+         */
+        @Override
+        public boolean equals(Object obj) {
+            if (this == obj)
+                return true;
+            if (obj == null)
+                return false;
+            if (!(obj instanceof HistogramUnit))
+                return false;
+            HistogramUnit other = (HistogramUnit) obj;
+            return Double.compare(hval, other.hval) == 0;
+        }
+
         @Override
         public String toString() {
             return "[" + hval + ", " + hcnt + "]";
