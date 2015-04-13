@@ -16,6 +16,44 @@
  
 Shifu Change Log
 
+Changes for Shifu-0.2.5
+    * https://github.com/ShifuML/shifu/issues/97: Upgrade Guagua to latest version 0.7.0.
+        a) New features included in Guagua 0.6.0 to continuous improve performance of Shifu:
+            1) 'out-of-core' list to support worker to scale out from memory to disk.
+            2) Netty-based coordinators to decrease dependency on zookeeper and improve iteration communication performance.
+            3) Embedded zookeeper server supported not only in client as a thread, but also in master node as a process.
+        b) One improtant feature included in Guagua 0.7.0 to accelerate training in Shifu:
+            1) Partial-compete feature means in each iteration master only wait for partial workers complete and to 
+               ignore straggler worker result. 
+    * https://github.com/ShifuML/shifu/issues/105: SPDT stats performance improvement.
+        a) 'binningAlgorithm=SPDTI' (default value) in ModelConfig.json#stats is to improve scalability for big data. 
+            This solution is based on SPDT binning algorithm and called SPDT-Improvement(SPDTI).
+        b) Using SPDTI, with 20 million of records and 1600 variables, 20 minutes to finish stats. With 100 million of 
+            records and 1600 variables, 30 minutes to finish stats.
+    * https://github.com/ShifuML/shifu/issues/59: Shifu eval confusion and performance improvement.
+        a) With 20 million of records and 1600 variables, 13 minutes to finish eval step compared with 20 minutes in 
+            Shifu 0.2.4.
+    * https://github.com/ShifuML/shifu/issues/64: Set the Hadoop parallel number automatically.
+        a) With input data set increase, user no need to set 'hadoopParallelNumber' in shifuconfig.
+        b) This value is tuned automatically new Shifu.
+    * Binning improvement
+        a) https://github.com/ShifuML/shifu/issues/77: Add missing value count as a bin.
+        b) https://github.com/ShifuML/shifu/issues/79: Add weights to binning.
+        c) https://github.com/ShifuML/shifu/issues/80: Weights binning KS/IV/WoE computing.
+    * https://github.com/ShifuML/shifu/issues/72: Support WoE transformation when doing normalization
+    * Training step improvement
+        a) https://github.com/ShifuML/shifu/issues/95: NN doesn't support 0 hidden layer.
+        b) https://github.com/ShifuML/shifu/issues/76: Add convergence parameter to Shifu d-train.
+        c) https://github.com/ShifuML/shifu/issues/84: Add local disk support to scale in-memory data set.
+        d) https://github.com/ShifuML/shifu/issues/60: Continuous model training.
+        e) https://github.com/ShifuML/shifu/issues/85: Add 'epochsPerIteration' parameter in NNWorker.
+    * Bug fix:
+        a) https://github.com/ShifuML/shifu/issues/98
+        b) https://github.com/ShifuML/shifu/issues/92
+        c) https://github.com/ShifuML/shifu/issues/70
+        d) https://github.com/ShifuML/shifu/issues/69
+        e) https://github.com/ShifuML/shifu/issues/67
+
 Changes for Shifu-0.2.4
     * https://github.com/ShifuML/shifu/issues/20: Work flow change.
         a) Old: new -> init -> stats -> varselect -> normalize -> train -> eval

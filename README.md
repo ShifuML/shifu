@@ -26,6 +26,10 @@ Shifu’s fast Hadoop-based, distributed neural network training can reduce mode
  - David Zhang
  - Xin Zhong
 
+## Google Group
+
+Please join [Shifu group](https://groups.google.com/forum/#!forum/shifuml) if questions, bugs or anything else.
+
 ## Copyright and License
 
 Copyright 2012-2014, eBay Software Foundation under the [Apache License](LICENSE.txt).
