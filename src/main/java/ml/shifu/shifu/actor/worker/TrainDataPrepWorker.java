@@ -24,7 +24,6 @@ import ml.shifu.shifu.fs.ShifuFileUtils;
 import ml.shifu.shifu.message.StatsPartRawDataMessage;
 import ml.shifu.shifu.message.TrainInstanceMessage;
 import ml.shifu.shifu.message.TrainPartDataMessage;
-import ml.shifu.shifu.util.CommonUtils;
 import ml.shifu.shifu.util.Constants;
 import org.encog.ml.data.MLDataPair;
 import org.encog.ml.data.MLDataSet;
@@ -36,7 +35,6 @@ import org.slf4j.LoggerFactory;
 import java.io.File;
 import java.io.IOException;
 import java.util.List;
-
 
 /**
  * TrainDataPrepWorker class prepare the data for trainer
@@ -51,19 +49,12 @@ public class TrainDataPrepWorker extends AbstractWorkerActor {
     private List<AbstractTrainer> trainers;
     private boolean initialized = false;
 
-    @SuppressWarnings("unused")
-    private String[] headers;
-
-    public TrainDataPrepWorker(
-            ModelConfig modelConfig,
-            List<ColumnConfig> columnConfigList,
-            ActorRef parentActorRef,
-            ActorRef nextActorRef,
-            List<AbstractTrainer> trainers) throws IOException {
+    public TrainDataPrepWorker(ModelConfig modelConfig, List<ColumnConfig> columnConfigList, ActorRef parentActorRef,
+            ActorRef nextActorRef, List<AbstractTrainer> trainers) throws IOException {
         super(modelConfig, columnConfigList, parentActorRef, nextActorRef);
         this.trainers = trainers;
 
-        if (modelConfig.isTrainOnDisk()) {
+        if(modelConfig.isTrainOnDisk()) {
             log.info("Training Option: Disk");
             ShifuFileUtils.createDirIfNotExists(Constants.TMP, SourceType.LOCAL);
             masterDataSet = new BufferedMLDataSet(new File(Constants.TMP, "master.egb"));
@@ -72,22 +63,20 @@ public class TrainDataPrepWorker extends AbstractWorkerActor {
             masterDataSet = new BasicMLDataSet();
         }
 
-        headers = CommonUtils.getHeaders(
-                modelConfig.getHeaderPath(),
-                modelConfig.getHeaderDelimiter(),
-                modelConfig.getDataSet().getSource());
     }
 
-    /* (non-Javadoc)
+    /*
+     * (non-Javadoc)
+     * 
      * @see akka.actor.UntypedActor#onReceive(java.lang.Object)
      */
     @Override
     public void handleMsg(Object message) throws IOException {
-        if (message instanceof TrainPartDataMessage) {
+        if(message instanceof TrainPartDataMessage) {
             log.debug("Received value object list for training model.");
             TrainPartDataMessage msg = (TrainPartDataMessage) message;
-            for (MLDataPair mlDataPir : msg.getMlDataPairList()) {
-                if (modelConfig.isTrainOnDisk() && !initialized) {
+            for(MLDataPair mlDataPir: msg.getMlDataPairList()) {
+                if(modelConfig.isTrainOnDisk() && !initialized) {
                     int inputSize = mlDataPir.getInput().size();
                     int idealSize = mlDataPir.getIdeal().size();
                     ((BufferedMLDataSet) masterDataSet).beginLoad(inputSize, idealSize);
@@ -99,14 +88,14 @@ public class TrainDataPrepWorker extends AbstractWorkerActor {
             receivedMsgCnt++;
 
             log.debug("Expected " + msg.getTotalMsgCnt() + " messages, received " + receivedMsgCnt + " message(s).");
-            if (receivedMsgCnt == msg.getTotalMsgCnt()) {
-                if (modelConfig.isTrainOnDisk() && initialized) {
+            if(receivedMsgCnt == msg.getTotalMsgCnt()) {
+                if(modelConfig.isTrainOnDisk() && initialized) {
                     ((BufferedMLDataSet) masterDataSet).endLoad();
                 }
 
-                for (AbstractTrainer trainer : trainers) {
+                for(AbstractTrainer trainer: trainers) {
                     // if the trainOnDisk is true, setting the "D" option
-                    if (modelConfig.isTrainOnDisk()) {
+                    if(modelConfig.isTrainOnDisk()) {
                         trainer.setTrainingOption("D");
                     }
 
@@ -114,19 +103,19 @@ public class TrainDataPrepWorker extends AbstractWorkerActor {
                     nextActorRef.tell(new TrainInstanceMessage(trainer), this.getSelf());
                 }
 
-                if (modelConfig.isTrainOnDisk() && initialized) {
+                if(modelConfig.isTrainOnDisk() && initialized) {
                     masterDataSet.close();
                     masterDataSet = null;
                 }
             }
-        } else if (message instanceof StatsPartRawDataMessage) {
+        } else if(message instanceof StatsPartRawDataMessage) {
             StatsPartRawDataMessage msg = (StatsPartRawDataMessage) message;
             receivedMsgCnt++;
 
             log.debug("Expected " + msg.getTotalMsgCnt() + " messages, received " + receivedMsgCnt + " message(s).");
-            if (receivedMsgCnt == msg.getTotalMsgCnt()) {
-                for (AbstractTrainer trainer : trainers) {
-//                    ((DecisionTreeTrainer)trainer).setDataSet(rawInstanceList);
+            if(receivedMsgCnt == msg.getTotalMsgCnt()) {
+                for(AbstractTrainer trainer: trainers) {
+                    // ((DecisionTreeTrainer)trainer).setDataSet(rawInstanceList);
                     nextActorRef.tell(new TrainInstanceMessage(trainer), this.getSelf());
                 }
             }

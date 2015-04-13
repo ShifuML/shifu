@@ -15,7 +15,9 @@
  */
 package ml.shifu.shifu.util;
 
-import ml.shifu.shifu.core.KSIVCalculator;
+import ml.shifu.shifu.core.ColumnStatsCalculator;
+import ml.shifu.shifu.core.ColumnStatsCalculator.ColumnMetrics;
+
 import org.testng.Assert;
 import org.testng.annotations.Test;
 
@@ -23,24 +25,22 @@ import java.text.DecimalFormat;
 import java.util.Arrays;
 import java.util.List;
 
-
 /**
  * KSIVCalculatorTest class
  */
 public class KSIVCalculatorTest {
 
-    private KSIVCalculator calc = new KSIVCalculator();
     private static final DecimalFormat df = new DecimalFormat("0.00");
 
     @Test
     public void test() {
-        List<Integer> a = Arrays.asList(new Integer[]{1, 2, 3, 4, 5, 6});
-        List<Integer> b = Arrays.asList(new Integer[]{2, 2, 5, 5, 5, 5});
+        List<Integer> a = Arrays.asList(new Integer[] { 1, 2, 3, 4, 5, 6 });
+        List<Integer> b = Arrays.asList(new Integer[] { 2, 2, 5, 5, 5, 5 });
 
-        calc.calculateKSIV(a, b);
+        ColumnMetrics columnMetrics = ColumnStatsCalculator.calculateColumnMetrics(a, b);
 
-        Assert.assertEquals(df.format(calc.getIV()), "0.08");
-        Assert.assertEquals(df.format(calc.getKS()), "10.71");
+        Assert.assertEquals(df.format(columnMetrics.getIv()), "0.08");
+        Assert.assertEquals(df.format(columnMetrics.getKs()), "10.71");
 
     }
 }

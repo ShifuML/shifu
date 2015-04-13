@@ -17,6 +17,8 @@ package ml.shifu.shifu.util;
 
 import ml.shifu.shifu.exception.ShifuErrorCode;
 import ml.shifu.shifu.exception.ShifuException;
+
+import org.apache.commons.io.IOUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -24,7 +26,6 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.util.Properties;
-
 
 /**
  * {@link Environment} is used to store common env like 'SHIFU_HOME' and return to user by calling
@@ -48,7 +49,7 @@ public class Environment {
     public static final String LOCAL_NUM_PARALLEL = "localNumParallel";
     public static final String RECORD_CNT_PER_MESSAGE = "recordCntPerMessage";
     public static final String HADOOP_JOB_QUEUE = "hadoopJobQueue";
-    
+
     public static final String VAR_SEL_MASTER_CONDUCTOR = "varselectMasterConductor";
     public static final String VAR_SEL_WORKER_CONDUCTOR = "varselectWorkerConductor";
 
@@ -66,14 +67,14 @@ public class Environment {
             throw new ShifuException(ShifuErrorCode.ERROR_SHIFU_CONFIG, e);
         }
 
-        if (properties.size() == 1) {
+        if(properties.size() == 1) {
             logger.warn("No shifuconfig is found or there is no content in it");
         }
 
         String osName = System.getProperty(OS_NAME).toLowerCase();
-        if (isUnix(osName)) {
+        if(isUnix(osName)) {
             properties.put(SYSTEM_USER, System.getenv(USER));
-        } else if (isWindows(osName)) {
+        } else if(isWindows(osName)) {
             properties.put(SYSTEM_USER, System.getProperty(USER_NAME));
         }
     }
@@ -84,7 +85,7 @@ public class Environment {
      * /etc/shifconfig
      * ~/.shifconfig
      * Provide function to reload
-     *
+     * 
      * @throws IOException
      */
     public static void loadShifuConfig() throws IOException {
@@ -93,8 +94,7 @@ public class Environment {
                 + "shifuconfig");
 
         // check /etc/shifuconfig, if exists, load it
-        loadProperties(properties,
-                File.separator + "etc" + File.separator + "shifuconfig");
+        loadProperties(properties, File.separator + "etc" + File.separator + "shifuconfig");
 
         // check <user-home>/.shifuconfig, if exists, load it
         String userHome = System.getProperty("user.home");
@@ -119,7 +119,7 @@ public class Environment {
 
     /**
      * Get property, if null return default value
-     *
+     * 
      * @param propertyName
      * @param defValue
      * @return
@@ -131,7 +131,7 @@ public class Environment {
 
     /**
      * Get property as Integer value
-     *
+     * 
      * @param propertyName
      * @return
      */
@@ -142,7 +142,7 @@ public class Environment {
 
     /**
      * Get property as Integer value, if null return default value
-     *
+     * 
      * @param propertyName
      * @param defValue
      * @return
@@ -154,8 +154,9 @@ public class Environment {
 
     /**
      * Check the system type is Windows or not
-     *
-     * @param osName osName from env
+     * 
+     * @param osName
+     *            osName from env
      * @return true if it is windows, or return false
      */
     private static boolean isWindows(String osName) {
@@ -164,8 +165,9 @@ public class Environment {
 
     /**
      * Check the system type is Unix or not
-     *
-     * @param osName osName from env
+     * 
+     * @param osName
+     *            osName from env
      * @return true if it is windows, or return false
      */
     private static boolean isUnix(String osName) {
@@ -175,18 +177,24 @@ public class Environment {
 
     /**
      * Load shifuconfig into properties
-     *
+     * 
      * @param props
      * @param fileName
      * @throws IOException
      */
     private static void loadProperties(Properties props, String fileName) throws IOException {
         File configFile = new File(fileName);
-        if (!configFile.exists()) {
+        if(!configFile.exists()) {
             return;
         }
 
-        props.load(new FileInputStream(configFile));
+        FileInputStream inStream = null;
+        try {
+            inStream = new FileInputStream(configFile);
+            props.load(inStream);
+        } finally {
+            IOUtils.closeQuietly(inStream);
+        }
     }
 
     /**

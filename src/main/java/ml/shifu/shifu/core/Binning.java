@@ -22,8 +22,8 @@ import ml.shifu.shifu.util.QuickSort;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.Serializable;
 import java.util.*;
-
 
 /**
  * Binning, it helps to put data input bins
@@ -149,11 +149,15 @@ public class Binning {
 
     /**
      * Constructor
-     *
-     * @param posTags The positive tags list, identify the positive tag in voList
-     * @param negTags The negative tags list, identify the negative tag in volist
-     * @param type    The data type
-     * @param voList  Value object list
+     * 
+     * @param posTags
+     *            The positive tags list, identify the positive tag in voList
+     * @param negTags
+     *            The negative tags list, identify the negative tag in volist
+     * @param type
+     *            The data type
+     * @param voList
+     *            Value object list
      */
     public Binning(List<String> posTags, List<String> negTags, BinningDataType type, List<ValueObject> voList) {
         this.posTags = posTags;
@@ -180,7 +184,7 @@ public class Binning {
 
     /**
      * setter, the max bins
-     *
+     * 
      * @param numBins
      */
     public void setMaxNumOfBins(int numBins) {
@@ -189,7 +193,7 @@ public class Binning {
 
     /**
      * setter, the binning method
-     *
+     * 
      * @param binningMethod
      */
     public void setBinningMethod(BinningMethod binningMethod) {
@@ -198,7 +202,7 @@ public class Binning {
 
     /**
      * Set the the max size of auto type threshold
-     *
+     * 
      * @param autoTypeThreshold
      */
     public void setAutoTypeThreshold(Integer autoTypeThreshold) {
@@ -217,12 +221,12 @@ public class Binning {
         // Set DataType by the number of different keys.
         // If it is lower than the threshold, will be treated as Categorical;
         // otherwise as Numerical;
-        if (dataType.equals(BinningDataType.Auto)) {
+        if(dataType.equals(BinningDataType.Auto)) {
             int cntRaw = 0;
             int cntValue = 0;
 
-            for (ValueObject vo : voList) {
-                if (vo.getValue() != null) {
+            for(ValueObject vo: voList) {
+                if(vo.getValue() != null) {
                     cntValue++;
                 } else {
                     cntRaw++;
@@ -230,13 +234,13 @@ public class Binning {
             }
 
             Set<Object> keySet = new HashSet<Object>();
-            for (ValueObject vo : voList) {
-                if (vo.getValue() != null) {
+            for(ValueObject vo: voList) {
+                if(vo.getValue() != null) {
                     keySet.add(vo.getValue());
                 } else {
                     keySet.add(vo.getRaw());
                 }
-                if (keySet.size() > this.autoTypeThreshold) {
+                if(keySet.size() > this.autoTypeThreshold) {
                     break;
                 }
             }
@@ -246,11 +250,11 @@ public class Binning {
             // log.info("    # Categorical: " + cntRaw);
             // log.info("    # Different Key: " + keySet.size());
 
-            if (cntRaw > 0 || keySet.size() <= this.autoTypeThreshold) {
+            if(cntRaw > 0 || keySet.size() <= this.autoTypeThreshold) {
                 this.dataType = BinningDataType.Categorical;
-                if (cntValue > 0) {
-                    for (ValueObject vo : voList) {
-                        if (vo.getRaw() == null) {
+                if(cntValue > 0) {
+                    for(ValueObject vo: voList) {
+                        if(vo.getRaw() == null) {
                             vo.setRaw(vo.getValue().toString());
                         }
                     }
@@ -262,9 +266,9 @@ public class Binning {
             }
         }
 
-        if (dataType.equals(BinningDataType.Categorical)) {
+        if(dataType.equals(BinningDataType.Categorical)) {
             doCategoricalBinning();
-        } else if (dataType.equals(BinningDataType.Numerical)) {
+        } else if(dataType.equals(BinningDataType.Numerical)) {
             doNumericalBinning();
         }
     }
@@ -282,9 +286,9 @@ public class Binning {
         // Collections.sort(voList, new ValueObjectComparator(BinningDataType.Numerical));
         log.debug("==> Spend " + (System.currentTimeMillis() - timestamp) + " milli-seconds to sort data.");
 
-        if (BinningMethod.EqualPositive.equals(binningMethod)) {
+        if(BinningMethod.EqualPositive.equals(binningMethod)) {
             doEqualPositiveBinning();
-        } else if (BinningMethod.EqualTotal.equals(binningMethod)) {
+        } else if(BinningMethod.EqualTotal.equals(binningMethod)) {
             doEqualTotalBinning();
         }
     }
@@ -294,7 +298,7 @@ public class Binning {
      */
     private void doEqualPositiveBinning() {
         int sumBad = 0;
-        for (int i = 0; i < voSize; i++) {
+        for(int i = 0; i < voSize; i++) {
             sumBad += (posTags.contains(voList.get(i).getTag()) ? 1 : 0);
         }
         int binSize = (int) Math.ceil((double) sumBad / (double) expectNumBins);
@@ -319,26 +323,26 @@ public class Binning {
 
         double prevData = voList.get(0).getValue();
         // For each Variable
-        for (int i = 0; i < voSize; i++) {
+        for(int i = 0; i < voSize; i++) {
 
             vo = voList.get(i);
             double currData = vo.getValue();
             // currBinSumScore += vo.getScore();
 
             // current bin is full
-            if (countPos[currBin] >= binSize) { // vo.getTag() != 0 &&
+            if(countPos[currBin] >= binSize) { // vo.getTag() != 0 &&
                 // still have some negative leftover
-                if (currBin == expectNumBins - 1 && i != voList.size() - 1) {
+                if(currBin == expectNumBins - 1 && i != voList.size() - 1) {
                     continue;
                 }
                 // and data is different from the previous pair
-                if (i == 0 || (mergeEnabled == true && Math.abs(currData - prevData) > EPS) || mergeEnabled == false) {
+                if(i == 0 || (mergeEnabled == true && Math.abs(currData - prevData) > EPS) || mergeEnabled == false) {
                     // BEFORE move to the new bin
                     // this.binAvgScore.add(currBinSumScore / (countNeg[currBin]
                     // + countPos[currBin]));
 
                     // MOVE to the new bin, if not the last vo
-                    if (i == voList.size() - 1) {
+                    if(i == voList.size() - 1) {
                         break;
                     }
                     currBin++;
@@ -354,7 +358,7 @@ public class Binning {
             }
 
             // increment the counter of the current bin
-            if (negTags.contains(voList.get(i).getTag())) {
+            if(negTags.contains(voList.get(i).getTag())) {
                 countNeg[currBin]++;
                 countWeightedNeg[currBin] += vo.getWeight();
             } else {
@@ -370,7 +374,7 @@ public class Binning {
         // countPos[currBin]));
         this.actualNumBins = currBin + 1;
 
-        for (int i = 0; i < this.actualNumBins; i++) {
+        for(int i = 0; i < this.actualNumBins; i++) {
             binCountNeg.add(countNeg[i]);
             binCountPos.add(countPos[i]);
             binAvgScore.add(0);
@@ -398,40 +402,38 @@ public class Binning {
         // Add initial bin left boundary: -infinity
         binBoundary.add(Double.NEGATIVE_INFINITY);
 
-        for (ValueObject vo : voList) {
-            if (posTags.contains(vo.getTag()) || negTags.contains(vo.getTag())) {
+        for(ValueObject vo: voList) {
+            if(posTags.contains(vo.getTag()) || negTags.contains(vo.getTag())) {
                 cntValidValue += 1;
             }
         }
 
-
         int cntCumTotal = 0;
-        for (ValueObject vo : voList) {
+        for(ValueObject vo: voList) {
 
             // Pre-processing: if bin is full, add binBoundary
-            if (isFull) {
+            if(isFull) {
                 binBoundary.add(vo.getValue());
                 isFull = false;
             }
 
             // Core: push into bin or skip
-            if (posTags.contains(vo.getTag())) {
+            if(posTags.contains(vo.getTag())) {
                 cntPos++;
                 cntWeightedPos += vo.getWeight();
                 cntTotal += 1;
                 cntCumTotal += 1;
-            } else if (negTags.contains(vo.getTag())) {
+            } else if(negTags.contains(vo.getTag())) {
                 cntNeg++;
                 cntWeightedNeg += vo.getWeight();
                 cntTotal += 1;
                 cntCumTotal += 1;
             } else {
-                //skip
+                // skip
             }
 
-
             // Post-processing: if bin is full, update related fields
-            if ((double) cntCumTotal / (double) cntValidValue >= (double) (bin + 1) / (double) expectNumBins) {
+            if((double) cntCumTotal / (double) cntValidValue >= (double) (bin + 1) / (double) expectNumBins) {
                 // Bin is Full
                 isFull = true;
                 binCountPos.add(cntPos);
@@ -454,7 +456,7 @@ public class Binning {
 
     /**
      * if map contain key, the value increase 1
-     *
+     * 
      * @param map
      * @param key
      */
@@ -484,13 +486,13 @@ public class Binning {
         Set<String> categorySet = new HashSet<String>();
         // Map<String, Double> categoryScoreMap = new HashMap<String, Double>();
 
-        for (int i = 0; i < voSize; i++) {
+        for(int i = 0; i < voSize; i++) {
             String category = voList.get(i).getRaw();
             categorySet.add(category);
             // Double score = categoryScoreMap.containsKey(category) ? categoryScoreMap.get(category) : 0;
             // categoryScoreMap.put(category, score + voList.get(i).getScore());
 
-            if (negTags.contains(voList.get(i).getTag())) {
+            if(negTags.contains(voList.get(i).getTag())) {
                 incMapCnt(categoryHistNeg, category);
                 incMapWithValue(categoryWeightedNeg, category, voList.get(i).getWeight());
             } else {
@@ -501,11 +503,11 @@ public class Binning {
 
         Map<String, Double> categoryFraudRateMap = new HashMap<String, Double>();
 
-        for (String key : categorySet) {
+        for(String key: categorySet) {
             double cnt0 = categoryHistNeg.containsKey(key) ? categoryHistNeg.get(key) : 0;
             double cnt1 = categoryHistPos.containsKey(key) ? categoryHistPos.get(key) : 0;
             double rate;
-            if (cnt0 + cnt1 == 0) {
+            if(Double.compare(cnt0 + cnt1, 0) == 0) {
                 rate = 0;
             } else {
                 rate = cnt1 / (cnt0 + cnt1);
@@ -518,7 +520,8 @@ public class Binning {
         Map<String, Double> sortedCategoryFraudRateMap = new TreeMap<String, Double>(cmp);
         sortedCategoryFraudRateMap.putAll(categoryFraudRateMap);
 
-        for (String key : sortedCategoryFraudRateMap.keySet()) {
+        for(Map.Entry<String, Double> entry: sortedCategoryFraudRateMap.entrySet()) {
+            String key = entry.getKey();
             Integer countNeg = categoryHistNeg.containsKey(key) ? categoryHistNeg.get(key) : 0;
             binCountNeg.add(countNeg);
             Integer countPos = categoryHistPos.containsKey(key) ? categoryHistPos.get(key) : 0;
@@ -533,16 +536,16 @@ public class Binning {
             // use zero, the average score is calculate in post-process
             binAvgScore.add(0);
             binCategory.add(key);
-            binPosCaseRate.add(sortedCategoryFraudRateMap.get(key));
+            binPosCaseRate.add(entry.getValue());
         }
 
         this.actualNumBins = binCategory.size();
 
-        for (ValueObject vo : voList) {
+        for(ValueObject vo: voList) {
             String key = vo.getRaw();
 
             // TODO: Delete this after categorical data is correctly labeled.
-            if (binCategory.indexOf(key) == -1) {
+            if(binCategory.indexOf(key) == -1) {
                 vo.setValue(0.0);
             } else {
                 // --- end deletion ---
@@ -553,7 +556,7 @@ public class Binning {
 
     /**
      * getter the number of bins
-     *
+     * 
      * @return the actual number of bins
      */
     public int getNumBins() {
@@ -562,7 +565,7 @@ public class Binning {
 
     /**
      * get the bin boundary, from negative infinite to the max of value object
-     *
+     * 
      * @return the bins boundary
      */
     public List<Double> getBinBoundary() {
@@ -571,7 +574,7 @@ public class Binning {
 
     /**
      * get the bin category
-     *
+     * 
      * @return bin category
      */
     public List<String> getBinCategory() {
@@ -610,8 +613,8 @@ public class Binning {
      * @return get the volist
      */
     public List<ValueObject> getUpdatedVoList() {
-        for (ValueObject vo : voList) {
-            if (vo.getValue() == null) {
+        for(ValueObject vo: voList) {
+            if(vo.getValue() == null) {
                 log.error("Not Updated yet.");
                 return null;
             }
@@ -622,7 +625,10 @@ public class Binning {
     /**
      * comparator for map
      */
-    private class MapComparator implements Comparator<String> {
+    private static class MapComparator implements Comparator<String>, Serializable {
+
+        private static final long serialVersionUID = 2178035954425107063L;
+
         Map<String, Double> base;
 
         public MapComparator(Map<String, Double> base) {
@@ -643,7 +649,7 @@ public class Binning {
 
     /**
      * set the merge flag
-     *
+     * 
      * @param mergeEnabled
      */
     public void setMergeEnabled(Boolean mergeEnabled) {

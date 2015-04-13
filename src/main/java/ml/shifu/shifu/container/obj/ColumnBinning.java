@@ -23,9 +23,8 @@ import java.util.List;
  * ColumnBinning class represents the information of BINNING.
  * Usually the BINNING information will be used to calculate KS/IV, or reason code in evaluation.
  * <p/>
- * Please note for numerical variables, @binCategory will be null, but
- * for categorical variables @binBoundary will be null.
- * The @binLength will equal size of @binBoundary or size of @binCategory.
+ * Please note for numerical variables, @binCategory will be null, but for categorical variables @binBoundary will be
+ * null. The @binLength will equal size of @binBoundary or size of @binCategory.
  */
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class ColumnBinning {
@@ -43,6 +42,9 @@ public class ColumnBinning {
 
     private List<Double> binWeightedNeg;
     private List<Double> binWeightedPos;
+
+    private List<Double> binCountWoe;
+    private List<Double> binWeightedWoe;
 
     public Integer getLength() {
         return length;
@@ -114,6 +116,34 @@ public class ColumnBinning {
 
     public void setBinWeightedPos(List<Double> binWeightedPos) {
         this.binWeightedPos = binWeightedPos;
+    }
+
+    /**
+     * @return the binCountWoe
+     */
+    public List<Double> getBinCountWoe() {
+        return binCountWoe;
+    }
+
+    /**
+     * @param binCountWoe the binCountWoe to set
+     */
+    public void setBinCountWoe(List<Double> binCountWoe) {
+        this.binCountWoe = binCountWoe;
+    }
+
+    /**
+     * @return the binWeightedWoe
+     */
+    public List<Double> getBinWeightedWoe() {
+        return binWeightedWoe;
+    }
+
+    /**
+     * @param binWeightedWoe the binWeightedWoe to set
+     */
+    public void setBinWeightedWoe(List<Double> binWeightedWoe) {
+        this.binWeightedWoe = binWeightedWoe;
     }
 
 }

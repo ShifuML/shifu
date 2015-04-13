@@ -34,8 +34,9 @@ import java.util.Map;
  * ModelInspector class is to do Safety Testing for model.
  * <p/>
  * Safety Testing include: 1. validate the @ModelConfig against its meta data
- * @links{src/main/resources/store/ModelConfigMeta.json} 2. check source data for training and evaluation 3. check the
- * prerequisite for each step
+ * 
+ * @links{src/main/resources/store/ModelConfigMeta.json 2. check source data for training and evaluation 3. check the
+ *                                                      prerequisite for each step
  */
 public class ModelInspector {
 
@@ -81,7 +82,7 @@ public class ModelInspector {
             ValidateResult tmpResult = new ValidateResult(true);
             // tmpResult.setStatus(false);
             // tmpResult.getCauses().add(
-            //        "'LOCAL' data set (dataSet.source) cannot be run with 'mapred' run mode(basic.runMode)");
+            // "'LOCAL' data set (dataSet.source) cannot be run with 'mapred' run mode(basic.runMode)");
             result = ValidateResult.mergeResult(result, tmpResult);
         }
 
@@ -332,14 +333,28 @@ public class ModelInspector {
             result = ValidateResult.mergeResult(result, tmpResult);
         }
 
+        if(train.getEpochsPerIteration() != null && train.getEpochsPerIteration() <= 0) {
+            ValidateResult tmpResult = new ValidateResult(true);
+            tmpResult.setStatus(false);
+            tmpResult.getCauses().add("'epochsPerIteration' should be larger than 0 if set.");
+            result = ValidateResult.mergeResult(result, tmpResult);
+        }
+
+        if(train.getConvergenceThreshold() != null && train.getConvergenceThreshold().compareTo(0.0) < 0) {
+            ValidateResult tmpResult = new ValidateResult(true);
+            tmpResult.setStatus(false);
+            tmpResult.getCauses().add("'threshold' should be large than or equal to 0.0 if set.");
+            result = ValidateResult.mergeResult(result, tmpResult);
+        }
+
         if(train.getAlgorithm().equalsIgnoreCase("nn")) {
             Map<String, Object> params = train.getParams();
             int layerCnt = (Integer) params.get(NNTrainer.NUM_HIDDEN_LAYERS);
-            if(layerCnt <= 0) {
+            if(layerCnt < 0) {
                 ValidateResult tmpResult = new ValidateResult(true);
                 tmpResult.setStatus(false);
                 tmpResult.getCauses().add(
-                        "The number of hidden layers should be greater than zero in train configuration");
+                        "The number of hidden layers should be >= 0 in train configuration");
                 result = ValidateResult.mergeResult(result, tmpResult);
             }
 
@@ -362,6 +377,19 @@ public class ModelInspector {
                 tmpResult.setStatus(false);
                 tmpResult.getCauses().add("Learning rate should be larger than 0.");
                 result = ValidateResult.mergeResult(result, tmpResult);
+            }
+
+            Object learningDecayO = params.get("LearningDecay");
+            if(learningDecayO != null) {
+                Double learningDecay = Double.valueOf(learningDecayO.toString());
+                if(learningDecay != null
+                        && ((learningDecay.compareTo(Double.valueOf(0)) < 0) || (learningDecay.compareTo(Double
+                                .valueOf(1)) >= 0))) {
+                    ValidateResult tmpResult = new ValidateResult(true);
+                    tmpResult.setStatus(false);
+                    tmpResult.getCauses().add("Learning decay should be in [0, 1) if set.");
+                    result = ValidateResult.mergeResult(result, tmpResult);
+                }
             }
 
         }

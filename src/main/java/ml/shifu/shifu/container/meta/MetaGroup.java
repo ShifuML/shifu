@@ -16,6 +16,7 @@
 package ml.shifu.shifu.container.meta;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+
 import org.apache.commons.collections.CollectionUtils;
 
 import java.util.ArrayList;
@@ -25,7 +26,7 @@ import java.util.List;
  * ItemMetaGroup class
  */
 @JsonIgnoreProperties(ignoreUnknown = true)
-public class MetaGroup {
+public class MetaGroup implements Cloneable {
     private String group;
 
     private List<MetaItem> metaList;
@@ -48,15 +49,22 @@ public class MetaGroup {
 
     @Override
     public MetaGroup clone() {
-        MetaGroup metaGroup = new MetaGroup();
+        MetaGroup metaGroup = null;
+        try {
+            metaGroup = (MetaGroup) super.clone();
+        } catch (CloneNotSupportedException e) {
+            // This should never happen
+            throw new InternalError(e.toString());
+        }
+        
 
         // copy group
         metaGroup.setGroup(group);
 
         // copy meta list, if not null
-        if (CollectionUtils.isNotEmpty(metaList)) {
+        if(CollectionUtils.isNotEmpty(metaList)) {
             List<MetaItem> metas = new ArrayList<MetaItem>();
-            for (MetaItem metaItem : metaList) {
+            for(MetaItem metaItem: metaList) {
                 metas.add(metaItem.clone());
             }
             metaGroup.setMetaList(metas);

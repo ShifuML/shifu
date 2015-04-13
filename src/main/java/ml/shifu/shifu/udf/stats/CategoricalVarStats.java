@@ -37,13 +37,13 @@ import org.slf4j.LoggerFactory;
  * CategoricalVarStats class
  * 
  * @Nov 3, 2014
- *
+ * 
  */
 public class CategoricalVarStats extends AbstractVarStats {
-    
+
     private static Logger log = LoggerFactory.getLogger(CategoricalVarStats.class);
     private Map<String, Integer> categoricalBinMap;
-    
+
     /**
      * @param modelConfig
      * @param columnConfig
@@ -52,107 +52,122 @@ public class CategoricalVarStats extends AbstractVarStats {
     public CategoricalVarStats(ModelConfig modelConfig, ColumnConfig columnConfig, Double valueThreshold) {
         super(modelConfig, columnConfig, valueThreshold);
     }
-    
-    /* (non-Javadoc)
+
+    /*
+     * (non-Javadoc)
+     * 
      * @see ml.shifu.shifu.udf.stats.AbstractVarStats#runVarStats(java.lang.String, org.apache.pig.data.DataBag)
      */
     @Override
     public void runVarStats(String binningInfo, DataBag databag) throws ExecException {
         String[] binningDataArr = StringUtils.split(binningInfo, CalculateStatsUDF.CATEGORY_VAL_SEPARATOR);
-        
-        log.info("Column Name - " + this.columnConfig.getColumnName() + ", Column Bin Length - " + binningDataArr.length);
-        
+
+        log.info("Column Name - " + this.columnConfig.getColumnName() + ", Column Bin Length - "
+                + binningDataArr.length);
+
         columnConfig.setBinCategory(Arrays.asList(binningDataArr));
         categoricalBinMap = new HashMap<String, Integer>(columnConfig.getBinCategory().size());
-        for ( int i = 0; i < columnConfig.getBinCategory().size(); i ++ ) {
+        for(int i = 0; i < columnConfig.getBinCategory().size(); i++) {
             categoricalBinMap.put(columnConfig.getBinCategory().get(i), Integer.valueOf(i));
         }
-        
+
         statsCategoricalColumnInfo(databag, columnConfig);
     }
-    
+
     /**
      * @param databag
      * @param columnConfig
-     * @throws ExecException 
+     * @throws ExecException
      */
     private void statsCategoricalColumnInfo(DataBag databag, ColumnConfig columnConfig) throws ExecException {
-        Integer[] binCountPos = new Integer[columnConfig.getBinCategory().size()];
-        Integer[] binCountNeg = new Integer[columnConfig.getBinCategory().size()];
-        Double[] binWeightCountPos = new Double[columnConfig.getBinCategory().size()];
-        Double[] binWeightCountNeg = new Double[columnConfig.getBinCategory().size()];
-        
+        // The last bin is for missingOrInvalid values
+        Integer[] binCountPos = new Integer[columnConfig.getBinCategory().size() + 1];
+        Integer[] binCountNeg = new Integer[columnConfig.getBinCategory().size() + 1];
+        Double[] binWeightCountPos = new Double[columnConfig.getBinCategory().size() + 1];
+        Double[] binWeightCountNeg = new Double[columnConfig.getBinCategory().size() + 1];
+        int lastBinIndex = columnConfig.getBinCategory().size();
         initializeZeroArr(binCountPos);
         initializeZeroArr(binCountNeg);
         initializeZeroArr(binWeightCountPos);
         initializeZeroArr(binWeightCountNeg);
-        
+
         Iterator<Tuple> iterator = databag.iterator();
-        while ( iterator.hasNext() ) {
+        boolean isMissingValue = false;
+        boolean isInvalidValue = false;
+        while(iterator.hasNext()) {
+            isInvalidValue = false;
+            isMissingValue = false;
             Tuple element = iterator.next();
-            
-            if ( element.size() < 4 ) {
+
+            if(element.size() < 4) {
                 continue;
             }
-            
+
             Object value = element.get(1);
             String tag = (String) element.get(2);
             Double weight = (Double) element.get(3);
-            
-            if ( value == null || StringUtils.isBlank(value.toString()) ) {
-                //TODO check missing value list in ModelConfig??
-                missingValueCnt ++;
-                continue;
+
+            int binNum = 0;
+            if(value == null || StringUtils.isBlank(value.toString()) || "*".equals(value.toString().trim())
+                    || "#".equals(value.toString().trim()) || "?".equals(value.toString().trim())
+                    || "null".equalsIgnoreCase(value.toString().trim())) {
+                // TODO check missing value list in ModelConfig??
+                missingValueCnt++;
+                isMissingValue = true;
+            } else {
+                String str = StringUtils.trim(value.toString());
+                binNum = quickLocateCategorialBin(str);
+                if(binNum < 0) {
+                    invalidValueCnt++;
+                    isInvalidValue = true;
+                }
             }
-            String str = StringUtils.trim(value.toString());
-            
-            // int binNum = CommonUtils.getBinNum(columnConfig, str);
-            int binNum = quickLocateCategorialBin(str);
-            if ( binNum < 0 ) {
-                continue;
+
+            if(isInvalidValue || isMissingValue) {
+                binNum = lastBinIndex;
             }
-            
-            if ( modelConfig.getPosTags().contains(tag) ) {
+
+            if(modelConfig.getPosTags().contains(tag)) {
                 increaseInstCnt(binCountPos, binNum);
                 increaseInstCnt(binWeightCountPos, binNum, weight);
-            } else if ( modelConfig.getNegTags().contains(tag) ) {
+            } else if(modelConfig.getNegTags().contains(tag)) {
                 increaseInstCnt(binCountNeg, binNum);
                 increaseInstCnt(binWeightCountNeg, binNum, weight);
             }
         }
-        
+
         columnConfig.setBinCountPos(Arrays.asList(binCountPos));
         columnConfig.setBinCountNeg(Arrays.asList(binCountNeg));
         columnConfig.setBinWeightedPos(Arrays.asList(binWeightCountPos));
         columnConfig.setBinWeightedNeg(Arrays.asList(binWeightCountNeg));
-        
+
         calculateBinPosRateAndAvgScore();
-        
-        for ( int i = 0; i < columnConfig.getBinCountPos().size(); i ++ ) {
+
+        for(int i = 0; i < columnConfig.getBinCountPos().size(); i++) {
             int posCount = columnConfig.getBinCountPos().get(i);
             int negCount = columnConfig.getBinCountNeg().get(i);
-            
+
             binning.addData(columnConfig.getBinPosRate().get(i), posCount);
             binning.addData(columnConfig.getBinPosRate().get(i), negCount);
-            
+
             streamStatsCalculator.addData(columnConfig.getBinPosRate().get(i), posCount);
             streamStatsCalculator.addData(columnConfig.getBinPosRate().get(i), negCount);
         }
-        
+
         columnConfig.setMax(streamStatsCalculator.getMax());
         columnConfig.setMean(streamStatsCalculator.getMean());
         columnConfig.setMin(streamStatsCalculator.getMin());
-        if ( binning.getMedian() == null ) {
+        if(binning.getMedian() == null) {
             columnConfig.setMedian(streamStatsCalculator.getMean());
         } else {
             columnConfig.setMedian(binning.getMedian());
         }
         columnConfig.setStdDev(streamStatsCalculator.getStdDev());
-        
+
         // Currently, invalid value will be regarded as missing
         columnConfig.setMissingCnt(missingValueCnt + invalidValueCnt);
         columnConfig.setTotalCount(databag.size());
-        columnConfig.setMissingPercentage(((double)columnConfig.getMissingCount()) / columnConfig.getTotalCount());
+        columnConfig.setMissingPercentage(((double) columnConfig.getMissingCount()) / columnConfig.getTotalCount());
     }
 
     /**
@@ -162,6 +177,10 @@ public class CategoricalVarStats extends AbstractVarStats {
     private int quickLocateCategorialBin(String val) {
         Integer binNum = categoricalBinMap.get(val);
         return ((binNum == null) ? -1 : binNum);
+    }
+
+    public static void main(String[] args) {
+        System.out.println(Math.log((9 * 1.0d / 21d) / (41 * 1.0d / 90d)));
     }
 
 }

@@ -15,13 +15,16 @@
  */
 REGISTER '$path_jar'
 
-SET default_parallel $num_parallel;
+SET pig.exec.reducers.max 999;
+SET pig.exec.reducers.bytes.per.reducer 536870912;
 SET mapred.map.tasks.speculative.execution true;
 SET mapred.reduce.tasks.speculative.execution true;
 SET mapred.job.queue.name $queue_name;
 SET mapred.task.timeout 1200000;
 SET job.name 'shifu statistic';
-SET io.sort.mb 500
+SET io.sort.mb 500;
+SET mapred.child.java.opts -Xmx1G;
+SET mapred.child.ulimit 2.5G;
 
 DEFINE IsDataFilterOut  ml.shifu.shifu.udf.PurifyDataUDF('$source_type', '$path_model_config', '$path_column_config');
 DEFINE IsToBinningData  ml.shifu.shifu.udf.FilterBinningDataUDF('$source_type', '$path_model_config', '$path_column_config');
@@ -47,8 +50,8 @@ binning_info_grp = GROUP binning_info_partial BY $0;
 binning_info = FOREACH binning_info_grp GENERATE FLATTEN(MergeBinningData(*));
 
 -- do stats
-data_stats = GROUP data_cols BY $0;
-data_stats = JOIN data_stats BY $0, binning_info BY columnId USING 'replicated';
+data_stats = GROUP data_cols BY $0 PARALLEL $column_parallel;
+data_stats = JOIN data_stats BY $0, binning_info BY columnId USING 'replicated' PARALLEL $column_parallel;
 
 stats_info = FOREACH data_stats GENERATE FLATTEN(CalculateStats(*));
 STORE stats_info INTO '$path_pre_training_stats' USING PigStorage('|', '-schema');

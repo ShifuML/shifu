@@ -19,9 +19,12 @@ import ml.shifu.shifu.container.ModelInitInputObject;
 import ml.shifu.shifu.container.obj.ModelConfig;
 import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
 import ml.shifu.shifu.core.AbstractTrainer;
+import ml.shifu.shifu.core.ConvergeJudger;
 import ml.shifu.shifu.core.MSEWorker;
 import ml.shifu.shifu.fs.ShifuFileUtils;
 import ml.shifu.shifu.util.JSONUtils;
+
+import org.apache.commons.io.FileUtils;
 import org.encog.engine.network.activation.*;
 import org.encog.mathutil.IntRange;
 import org.encog.ml.data.MLDataSet;
@@ -56,7 +59,7 @@ public class NNTrainer extends AbstractTrainer {
     public static final String LEARNING_RATE = "LearningRate";
     public static final String PROPAGATION = "Propagation";
 
-    private static Logger log = LoggerFactory.getLogger(NNTrainer.class);
+    private static final Logger LOG = LoggerFactory.getLogger(NNTrainer.class);
     private final static double Epsilon = 1.0;  // set the weight range in [-INIT_EPSILON INIT_EPSILON];
 
     public static final Map<String, Double> defaultLearningRate;
@@ -66,20 +69,28 @@ public class NNTrainer extends AbstractTrainer {
     private volatile boolean toPersistentModel = true;
     private volatile boolean toLoggingProcess = true;
 
+    /**
+     * Convergence judger instance for convergence criteria checking.
+     */
+    private ConvergeJudger judger = new ConvergeJudger();
+    
     static {
-        defaultLearningRate = new HashMap<String, Double>();
-        defaultLearningRate.put("S", 0.1);
-        defaultLearningRate.put("R", 0.1);
-        defaultLearningRate.put("Q", 2.0);
-        defaultLearningRate.put("B", 0.01);
-        defaultLearningRate.put("M", 0.00001);
+        // TODO use UnmodifiableMap or use other immutable Collections such as guava's
+        Map<String, Double> tmpLearningRate = new HashMap<String, Double>();
+        tmpLearningRate.put("S", 0.1);
+        tmpLearningRate.put("R", 0.1);
+        tmpLearningRate.put("Q", 2.0);
+        tmpLearningRate.put("B", 0.01);
+        tmpLearningRate.put("M", 0.00001);
+        defaultLearningRate = Collections.unmodifiableMap(tmpLearningRate);
 
-        learningAlgMap = new HashMap<String, String>();
-        learningAlgMap.put("S", "Scaled Conjugate Gradient");
-        learningAlgMap.put("R", "Resilient Propagation");
-        learningAlgMap.put("M", "Manhattan Propagation");
-        learningAlgMap.put("B", "Back Propagation");
-        learningAlgMap.put("Q", "Quick Propagation");
+        Map<String, String> tmpLearningAlgMap = new HashMap<String, String>();
+        tmpLearningAlgMap.put("S", "Scaled Conjugate Gradient");
+        tmpLearningAlgMap.put("R", "Resilient Propagation");
+        tmpLearningAlgMap.put("M", "Manhattan Propagation");
+        tmpLearningAlgMap.put("B", "Back Propagation");
+        tmpLearningAlgMap.put("Q", "Quick Propagation");
+        learningAlgMap = Collections.unmodifiableMap(tmpLearningAlgMap);
     }
 
     public NNTrainer(ModelConfig modelConfig, int trainerID, Boolean dryRun) {
@@ -101,7 +112,7 @@ public class NNTrainer extends AbstractTrainer {
             throw new RuntimeException("the number of layer do not equal to the number of activation function or the function list and node list empty");
         }
         if ( toLoggingProcess )
-            log.info("    - total " + numLayers + " layers, each layers are: " + Arrays.toString(hiddenNodeList.toArray()) + " the activation function are: " + Arrays.toString(actFunc.toArray()));
+            LOG.info("    - total " + numLayers + " layers, each layers are: " + Arrays.toString(hiddenNodeList.toArray()) + " the activation function are: " + Arrays.toString(actFunc.toArray()));
 
         for (int i = 0; i < numLayers; i++) {
             String func = actFunc.get(i);
@@ -118,7 +129,7 @@ public class NNTrainer extends AbstractTrainer {
             } else if (func.equalsIgnoreCase("sin")) {
                 network.addLayer(new BasicLayer(new ActivationSIN(), true, numHiddenNode));
             } else {
-                log.info("Unsupported activation function: " + func + " !! Set this layer activation function to be Sigmoid ");
+                LOG.info("Unsupported activation function: " + func + " !! Set this layer activation function to be Sigmoid ");
                 network.addLayer(new BasicLayer(new ActivationSigmoid(), true, numHiddenNode));
             }
         }
@@ -132,7 +143,7 @@ public class NNTrainer extends AbstractTrainer {
             for (int i = 0; i < network.getLayerCount() - 1; i++) {
                 numWeight = numWeight + network.getLayerTotalNeuronCount(i) * network.getLayerNeuronCount(i + 1);
             }
-            log.info("    - You have " + numWeight + " weights to be initialize");
+            LOG.info("    - You have " + numWeight + " weights to be initialize");
             loadWeightsInput(numWeight);
         }
     }
@@ -140,17 +151,17 @@ public class NNTrainer extends AbstractTrainer {
     @Override
     public double train() throws IOException {
         if ( toLoggingProcess )
-        log.info("Using neural network algorithm...");
+        LOG.info("Using neural network algorithm...");
 
         if ( toLoggingProcess ) {
             if (this.dryRun) {
-                log.info("Start Training(Dry Run)... Model #" + this.trainerID);
+                LOG.info("Start Training(Dry Run)... Model #" + this.trainerID);
             } else {
-                log.info("Start Training... Model #" + this.trainerID);
+                LOG.info("Start Training... Model #" + this.trainerID);
             }
 
-            log.info("    - Input Size: " + trainSet.getInputSize());
-            log.info("    - Ideal Size: " + trainSet.getIdealSize());
+            LOG.info("    - Input Size: " + trainSet.getInputSize());
+            LOG.info("    - Ideal Size: " + trainSet.getIdealSize());
         }
 
         //set up the model
@@ -165,7 +176,12 @@ public class NNTrainer extends AbstractTrainer {
 
         int epochs = this.modelConfig.getNumTrainEpochs();
         int factor = Math.max(epochs / 50, 10);
-
+        
+        // Get convergence threshold from modelConfig.
+        double threshold = modelConfig.getTrain().getConvergenceThreshold() == null ? 0.0
+                : modelConfig.getTrain().getConvergenceThreshold().doubleValue();
+        String formatedThreshold = df.format(threshold);
+        
         setBaseMSE(Double.MAX_VALUE);
 
         for (int i = 0; i < epochs; i++) {
@@ -184,15 +200,29 @@ public class NNTrainer extends AbstractTrainer {
                 extra = " <-- NN saved: ./models/model" + this.trainerID + ".nn";
             }
             if ( toLoggingProcess )
-                log.info("  Trainer-" + trainerID + "> Epoch #" + (i + 1)
+                LOG.info("  Trainer-" + trainerID + "> Epoch #" + (i + 1)
                     + " Train Error: " + df.format(mlTrain.getError())
-                    + " Validation Error: " + ((this.validSet.getRecordCount() > 0) ? df.format(validMSE) : "N/A") + " " + extra);
+                    + " Validation Error: " 
+                    + ((this.validSet.getRecordCount() > 0) ? df.format(validMSE) : "N/A") + " " + extra);
 
+            // Convergence judging.
+            double avgErr = (mlTrain.getError() + validMSE) / 2;
+
+            if (judger.judge(avgErr, threshold)) {
+                LOG.info("Trainer-{}> Epoch #{} converged! Average Error: {}, Threshold: {}"
+                        ,trainerID, (i + 1), df.format(avgErr), formatedThreshold);
+                break;
+            } else {
+                if (toLoggingProcess) {
+                    LOG.info("Trainer-{}> Epoch #{} Average Error: {}, Threshold: {}"
+                            ,trainerID, (i + 1), df.format(avgErr), formatedThreshold);
+                }
+            }
         }
 
         mlTrain.finishTraining();
         if ( toLoggingProcess )
-            log.info("Trainer #" + this.trainerID + " is Finished!");
+            LOG.info("Trainer #" + this.trainerID + " is Finished!");
         return getBaseMSE();
     }
 
@@ -242,10 +272,10 @@ public class NNTrainer extends AbstractTrainer {
         }
 
         if ( toLoggingProcess )
-            log.info("    - Learning Algorithm: " + learningAlgMap.get(alg));
+            LOG.info("    - Learning Algorithm: " + learningAlgMap.get(alg));
         if (alg.equals("Q") || alg.equals("B") || alg.equals("M")) {
             if ( toLoggingProcess )
-                log.info("    - Learning Rate: " + rate);
+                LOG.info("    - Learning Rate: " + rate);
         }
 
         if (alg.equals("B")) {
@@ -305,7 +335,7 @@ public class NNTrainer extends AbstractTrainer {
 
         File folder = new File(pathFinder.getModelsPath(SourceType.LOCAL));
         if (!folder.exists()) {
-            folder.mkdirs();
+            FileUtils.forceMkdir(folder);
         }
         EncogDirectoryPersistence.saveObject(new File(folder, "model" + this.trainerID + ".nn"), network);
     }
@@ -317,7 +347,7 @@ public class NNTrainer extends AbstractTrainer {
 
         File tmpFolder = new File(pathFinder.getTmpModelsPath(SourceType.LOCAL));
         if (!tmpFolder.exists()) {
-            tmpFolder.mkdirs();
+            FileUtils.forceMkdir(tmpFolder);
         }
 
         EncogDirectoryPersistence.saveObject(new File(tmpFolder, "model" + trainerID + "-" + epoch + ".nn"), network);
@@ -329,7 +359,7 @@ public class NNTrainer extends AbstractTrainer {
 
     public Double getBaseMSE() {
         if (baseMSE == null) {
-            log.error("baseMSE is not available. Run train() First!");
+            LOG.error("baseMSE is not available. Run train() First!");
             return null;
         }
         return baseMSE;
@@ -339,7 +369,6 @@ public class NNTrainer extends AbstractTrainer {
         try {
             File file = new File("./init" + this.trainerID + ".json");
             if (!file.exists()) {
-                file.createNewFile();
 
                 ModelInitInputObject io = new ModelInitInputObject();
                 io.setWeights(randomSetWeights(numWeights));
@@ -359,7 +388,6 @@ public class NNTrainer extends AbstractTrainer {
                     io.setNumWeights(numWeights);
                     io.setWeights(randomSetWeights(numWeights));
 
-                    file.createNewFile();
                     JSONUtils.writeValue(file, io);
                 }
 

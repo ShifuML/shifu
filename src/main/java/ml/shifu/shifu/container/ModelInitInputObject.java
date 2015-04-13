@@ -44,7 +44,6 @@ public class ModelInitInputObject {
         validSetIndex = new ArrayList<Integer>();
     }
 
-
     /**
      * @return the trainSetIndex
      */

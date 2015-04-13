@@ -173,14 +173,15 @@
                 "directive": "checkbox",
                 "defval" : true
             }, {
-            	"name": "binningAlgorithm",
-            	"type": "text",
-            	"directive": "select",
-            	"options": [
-            		{"label": "Native", "value":"Native"},
-            		{"label": "SPDT", "value": "SPDT"},
-            		{"label": "MunroPat", "value": "MunroPat"}
-            	]
+                "name": "binningAlgorithm",
+                "type": "text",
+                "directive": "select",
+                "options": [
+                    {"label": "Native", "value":"Native"},
+                    {"label": "SPDTI", "value": "SPDTI"},
+                    {"label": "SPDT", "value": "SPDT"},
+                    {"label": "MunroPat", "value": "MunroPat"}
+                ]
             }
         ]
     },
@@ -219,10 +220,10 @@
                     {"label": "Mixed KS and IV", "value":"mix"}
                 ]
             }, {
-            	"name": "votedVariablesSelection",
-            	"type": "boolean",
-            	"directive": "checkbox",
-            	"defval": false
+                "name": "votedVariablesSelection",
+                "type": "boolean",
+                "directive": "checkbox",
+                "defval": false
             }, {
                 "name": "wrapperEnabled",
                 "type": "boolean",
@@ -257,6 +258,15 @@
         "group" : "normalize",
         "metaList" : [
             {
+                "name": "normType",
+                "type": "text",
+                "directive": "select",
+                "defval" : "ZSCALE",
+                "options": [ 
+                    {"label":"zscale mode", "value":"ZSCALE"},
+                    {"label":"woe mode", "value":"WOE"}
+                ]
+            }, {
                 "name": "stdDevCutOff",
                 "type": "number",
                 "directive": "input",
@@ -268,6 +278,11 @@
                 "defval": 0.8
             }, {
                 "name": "sampleNegOnly",
+                "type": "boolean",
+                "directive": "checkbox",
+                "defval" : false
+            }, {
+                "name": "isWeightNorm",
                 "type": "boolean",
                 "directive": "checkbox",
                 "defval" : false
@@ -312,6 +327,11 @@
                 "directive": "input",
                 "defval": 100
             }, {
+                "name": "convergenceThreshold",
+                "type": "number",
+                "directive": "input",
+                "defval": 0.0
+            }, {
                 "name": "zkServers",
                 "type": "text",
                 "directive": "input",
@@ -322,6 +342,16 @@
                 "type": "number",
                 "directive": "input",
                 "defval" : 1
+            }, {
+                "name": "isContinuous",
+                "type": "boolean",
+                "directive": "input",
+                "defval": false
+            }, {               
+                "name": "isCrossOver",
+                "type": "boolean",
+                "directive": "input",
+                "defval": false
             }, {
                 "name": "algorithm",
                 "type": "text",
@@ -381,6 +411,11 @@
                         "directive": "input",
                         "defval" : 0.1
                     }, {
+                        "name" : "LearningDecay",
+                        "type" : "number",
+                        "directive": "input",
+                        "defval" : 0.01
+                    }, {
                         "name" : "Propagation",
                         "type" : "text",
                         "directive": "select",
@@ -393,21 +428,21 @@
                             {"label": "Scaled Conjugate Gradient", "value":"S"}
                         ]
                     } , {
-						"name" : "Kernel",
-						"type" : "text",
-						"directive": "input",
-						"defval" : "linear"
-					} , {
-						"name" : "Const",
-						"type" : "number",
-						"directive": "input",
+                        "name" : "Kernel",
+                        "type" : "text",
+                        "directive": "input",
+                        "defval" : "linear"
+                    } , {
+                        "name" : "Const",
+                        "type" : "number",
+                        "directive": "input",
                         "defval" : 0.1
-					}, {
-						"name" : "Gamma",
-						"type" : "number",
-						"directive": "input",
+                    }, {
+                        "name" : "Gamma",
+                        "type" : "number",
+                        "directive": "input",
                         "defval" : 0.1
-					}
+                    }
                 ]
             }, {
                 "name": "customPaths",
