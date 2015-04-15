@@ -40,6 +40,8 @@ public interface Constants {
 
     public static final String DEFAULT_JOB_QUEUE = "default";
 
+    public static final int DEFAULT_MAPRED_TIME_OUT = 600000;
+
     public static final String JOB_QUEUE = "queue_name";
 
     public static final String PATH_TRAIN_SCORE = "pathTrainScore";
