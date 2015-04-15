@@ -64,6 +64,9 @@ public class VarSelMaster implements MasterComputable<VarSelMasterResult, VarSel
         if(masterConductor.isToStop()) {
             LOG.info("Variables are selected. Send halt to workers ... ");
             masterResult.setHalt(true);
+
+            // save the best seed
+            masterResult.setBestSeed(masterConductor.voteBestSeed());
         } else {
             LOG.info("Send next working set to slaves ... ");
         }

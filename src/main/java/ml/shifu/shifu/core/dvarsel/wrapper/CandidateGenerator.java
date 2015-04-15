@@ -111,7 +111,7 @@ public class CandidateGenerator {
         });
 
         for (int i = 0; i < 5; i++) {
-            LOG.info("Best seed: {}", seeds.getSeedById(perfs.get(i).getId()));
+            LOG.info("The error rate is {}, the best-{} seed: {} ", perfs.get(i).getVerror(), i, seeds.getSeedById(perfs.get(i).getId()));
         }
         LOG.info("Worst seed: {}", perfs.get(perfs.size() - 1).toString());
 
