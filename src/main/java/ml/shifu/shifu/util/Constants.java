@@ -48,6 +48,8 @@ public interface Constants {
     public static final String PATH_COLUMN_CONFIG = "path_column_config";
     public static final String PATH_MODEL_CONFIG = "path_model_config";
     public static final String PATH_PRE_TRAINING_STATS = "path_pre_training_stats";
+    public static final String PATH_STATS_BINNING_INFO = "path_stats_binning_info";
+
     public static final String PATH_NORMALIZED_DATA = "pathNormalizedData";
     public static final String PATH_RAW_DATA = "path_raw_data";
     public static final String PATH_JAR = "path_jar";
@@ -101,6 +103,15 @@ public interface Constants {
     public static final String KEY_PERFORMANCE_PATH = "performancePath";
     public static final String KEY_CONFUSION_MATRIX_PATH = "confusionMatrixPath";
 
+    public static final String BIN_BOUNDRY_DELIMITER = "\u0001";
+
+    public static final String DEFAULT_ESCAPE_DELIMITER = "\\|";
+    
+    public static final String DEFAULT_DELIMITER = "|";
+
+
+    public static final String BINNING_INFO_FILE_NAME = "binning_info.txt";
+
     public static final String PRE_TRAINING_STATS = "PreTrainingStats";
     public static final String SELECTED_RAW_DATA = "SelectedRawData";
     public static final String NORMALIZED_DATA = "NormalizedData";
@@ -142,7 +153,7 @@ public interface Constants {
 
     public static final String SHIFU_VARSEL_SE_MULTI_THREAD = "shifu.varsel.se.multi.thread";
 
-    public static final int SHIFU_DEFAULT_VARSEL_SE_MULTI_THREAD = 6;
+    public static final int SHIFU_DEFAULT_VARSEL_SE_MULTI_THREAD = 4;
 
     public static final String WRAPPER_BY_REMOVE = "R";
 
@@ -170,4 +181,5 @@ public interface Constants {
 
     public static final String SHIFU_VARSELECT_SE_OUTPUT_NAME = "se";
 
+    public static final String DEFAULT_CHARSET = "UTF-8";
 }
