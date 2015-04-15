@@ -17,8 +17,9 @@ package ml.shifu.shifu.core.processor;
 
 import java.io.BufferedWriter;
 import java.io.File;
-import java.io.FileWriter;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.OutputStreamWriter;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
@@ -37,6 +38,7 @@ import ml.shifu.shifu.exception.ShifuErrorCode;
 import ml.shifu.shifu.exception.ShifuException;
 import ml.shifu.shifu.fs.PathFinder;
 import ml.shifu.shifu.util.CommonUtils;
+import ml.shifu.shifu.util.Constants;
 import ml.shifu.shifu.util.Environment;
 import ml.shifu.shifu.util.JSONUtils;
 
@@ -352,13 +354,15 @@ public class BasicModelProcessor {
      */
     protected void createHead(String modelName) throws IOException {
         File header = new File(modelName == null ? "" : modelName + "/.HEAD");
-        if(header.exists())
+        if(header.exists()) {
+            log.error("File {} already exist.", header.getAbsolutePath());
             return;
+        }
 
         BufferedWriter writer = null;
         try {
-            header.createNewFile();
-            writer = new BufferedWriter(new FileWriter(header));
+            writer = new BufferedWriter(new OutputStreamWriter(
+                    new FileOutputStream(header), Constants.DEFAULT_CHARSET));
             writer.write("master");
         } catch (IOException e) {
             log.error("Fail to create HEAD file to store the current workspace");

@@ -19,7 +19,9 @@ import ml.shifu.shifu.container.ValueObject;
 import ml.shifu.shifu.core.BasicStatsCalculator;
 import ml.shifu.shifu.core.Binning;
 import ml.shifu.shifu.core.Binning.BinningDataType;
-import ml.shifu.shifu.core.KSIVCalculator;
+import ml.shifu.shifu.core.ColumnStatsCalculator;
+import ml.shifu.shifu.core.ColumnStatsCalculator.ColumnMetrics;
+
 import org.apache.commons.lang.StringUtils;
 import org.apache.pig.data.DataBag;
 import org.apache.pig.data.Tuple;
@@ -31,27 +33,29 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 
-
 /**
  * CalculateStatsUDF class is calculate the stats for each column
  */
 public class CalculateStatsUDF extends AbstractTrainerUDF<Tuple> {
 
     public static final char CATEGORY_VAL_SEPARATOR = '\u0001';
-            
+
     private Double valueThreshold = 1e6;
 
-    public CalculateStatsUDF(String source, String pathModelConfig, String pathColumnConfig, String withScoreStr) throws IOException {
+    DecimalFormat df = new DecimalFormat("##.######");
+
+    public CalculateStatsUDF(String source, String pathModelConfig, String pathColumnConfig, String withScoreStr)
+            throws IOException {
         super(source, pathModelConfig, pathColumnConfig);
 
-        if (modelConfig.getNumericalValueThreshold() != null) {
+        if(modelConfig.getNumericalValueThreshold() != null) {
             valueThreshold = modelConfig.getNumericalValueThreshold();
         }
         log.debug("Value Threshold: " + valueThreshold);
     }
 
     public Tuple exec(Tuple input) throws IOException {
-        if (input == null || input.size() == 0) {
+        if(input == null || input.size() == 0) {
             return null;
         }
 
@@ -61,14 +65,14 @@ public class CalculateStatsUDF extends AbstractTrainerUDF<Tuple> {
         DataBag bag = (DataBag) input.get(1);
 
         BinningDataType dataType;
-        if (modelConfig.isCategoricalDisabled()) {
+        if(modelConfig.isCategoricalDisabled()) {
             dataType = BinningDataType.Numerical;
         } else {
-            if (columnConfigList.get(columnNum).isCategorical()) {
+            if(columnConfigList.get(columnNum).isCategorical()) {
                 dataType = BinningDataType.Categorical;
-            } else if (columnConfigList.get(columnNum).isNumerical()) {
+            } else if(columnConfigList.get(columnNum).isNumerical()) {
                 dataType = BinningDataType.Numerical;
-            } else if (modelConfig.isBinningAutoTypeEnabled()) {
+            } else if(modelConfig.isBinningAutoTypeEnabled()) {
                 // if type is Auto, and the auto type enable is true
                 dataType = BinningDataType.Auto;
             } else {
@@ -84,12 +88,12 @@ public class CalculateStatsUDF extends AbstractTrainerUDF<Tuple> {
         long total = 0l;
         long missing = 0l;
 
-        while (iterator.hasNext()) {
+        while(iterator.hasNext()) {
 
             total++;
 
             Tuple t = iterator.next();
-            if (t.get(1) == null) {
+            if(t.get(1) == null) {
                 missing++;
                 continue;
             }
@@ -97,18 +101,19 @@ public class CalculateStatsUDF extends AbstractTrainerUDF<Tuple> {
             ValueObject vo = new ValueObject();
             String valueStr = ((t.get(0) == null) ? "" : t.get(0).toString());
 
-            if (dataType.equals(BinningDataType.Numerical)) {
+            if(dataType.equals(BinningDataType.Numerical)) {
                 Double value = null;
                 try {
                     value = Double.valueOf(valueStr);
                 } catch (NumberFormatException e) {
-                    // if there are too many log, it will case ReduceTask - `java.lang.OutOfMemoryError: Java heap space`
+                    // if there are too many log, it will case ReduceTask - `java.lang.OutOfMemoryError: Java heap
+                    // space`
                     // log.warn("Incorrect data, not numerical - " + valueStr);
                     missing++;
                     continue;
                 }
 
-                if (value > valueThreshold) {
+                if(value > valueThreshold) {
                     log.warn("Exceed Threshold: " + value + " / " + valueThreshold);
                     missing++;
                     continue;
@@ -117,12 +122,12 @@ public class CalculateStatsUDF extends AbstractTrainerUDF<Tuple> {
                 vo.setValue(value);
             } else {
                 // Categorical or Auto
-                if (StringUtils.isEmpty(valueStr)) {
+                if(StringUtils.isEmpty(valueStr)) {
                     missing++;
                 }
                 vo.setRaw(valueStr);
             }
-            //do not need to catch exception, see AddColumnNumUDF which have already normalized the weight value
+            // do not need to catch exception, see AddColumnNumUDF which have already normalized the weight value
             vo.setWeight(Double.valueOf(t.get(2).toString()));
 
             vo.setTag(t.get(1).toString());
@@ -130,7 +135,7 @@ public class CalculateStatsUDF extends AbstractTrainerUDF<Tuple> {
             voList.add(vo);
         }
 
-        if (voList.size() < 10) {
+        if(voList.size() < 10) {
             return null;
         }
 
@@ -143,36 +148,34 @@ public class CalculateStatsUDF extends AbstractTrainerUDF<Tuple> {
         binning.doBinning();
 
         // Calculate Basic Stats
-        BasicStatsCalculator basicStatsCalculator = new BasicStatsCalculator(binning.getUpdatedVoList(), this.valueThreshold);
+        BasicStatsCalculator basicStatsCalculator = new BasicStatsCalculator(binning.getUpdatedVoList(),
+                this.valueThreshold);
 
-        // Calculate KSIV, based on Binning result
-        KSIVCalculator ksivCalculator = new KSIVCalculator();
-        ksivCalculator.calculateKSIV(binning.getBinCountNeg(), binning.getBinCountPos());
+        ColumnMetrics columnCountMetrics = ColumnStatsCalculator.calculateColumnMetrics(binning.getBinCountNeg(),
+                binning.getBinCountPos());
 
         // Assemble the results
-        DecimalFormat df = new DecimalFormat("##.######");
-
         Tuple tuple = tupleFactory.newTuple();
         tuple.append(columnNum);
-        if (binning.getUpdatedDataType().equals(BinningDataType.Categorical)) {
+        if(binning.getUpdatedDataType().equals(BinningDataType.Categorical)) {
             tuple.append("[" + StringUtils.join(binning.getBinCategory(), CATEGORY_VAL_SEPARATOR) + "]");
         } else {
             tuple.append(binning.getBinBoundary().toString());
         }
         tuple.append(binning.getBinCountNeg().toString());
         tuple.append(binning.getBinCountPos().toString());
-        //tuple.append(null);
+        // tuple.append(null);
         tuple.append(binning.getBinAvgScore().toString());
         tuple.append(binning.getBinPosCaseRate().toString());
-        tuple.append(df.format(ksivCalculator.getKS()));
-        tuple.append(df.format(ksivCalculator.getIV()));
+        tuple.append(df.format(columnCountMetrics.getKs()));
+        tuple.append(df.format(columnCountMetrics.getIv()));
 
         tuple.append(df.format(basicStatsCalculator.getMax()));
         tuple.append(df.format(basicStatsCalculator.getMin()));
         tuple.append(df.format(basicStatsCalculator.getMean()));
         tuple.append(df.format(basicStatsCalculator.getStdDev()));
 
-        if (binning.getUpdatedDataType().equals(BinningDataType.Numerical)) {
+        if(binning.getUpdatedDataType().equals(BinningDataType.Numerical)) {
             tuple.append("N");
         } else {
             tuple.append("C");
@@ -184,7 +187,6 @@ public class CalculateStatsUDF extends AbstractTrainerUDF<Tuple> {
         tuple.append(df.format((double) missing / total));
         tuple.append(binning.getBinWeightedNeg().toString());
         tuple.append(binning.getBinWeightedPos().toString());
-
 
         return tuple;
 

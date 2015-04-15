@@ -210,7 +210,7 @@ public class NNMaster implements MasterComputable<NNParams, NNParams> {
         
         double avgErr = (currentTrainError + currentTestError) / 2;
         
-        LOG.info("NNMaster compute iteration {} Average error: {} , Threshold: {}"
+        LOG.info("NNMaster compute iteration {} average error: {}, threshold: {}"
                 , context.getCurrentIteration(), avgErr, convergenceThreshold);
         
         if (judger.judge(avgErr, convergenceThreshold)) {

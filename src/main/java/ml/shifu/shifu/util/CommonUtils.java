@@ -19,6 +19,7 @@ import com.google.common.base.Function;
 import com.google.common.base.Splitter;
 import com.google.common.collect.Collections2;
 import com.google.common.collect.Lists;
+
 import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.container.obj.ColumnConfig.ColumnFlag;
 import ml.shifu.shifu.container.obj.ColumnConfig.ColumnType;
@@ -31,6 +32,7 @@ import ml.shifu.shifu.exception.ShifuErrorCode;
 import ml.shifu.shifu.exception.ShifuException;
 import ml.shifu.shifu.fs.PathFinder;
 import ml.shifu.shifu.fs.ShifuFileUtils;
+
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.collections.Predicate;
 import org.apache.commons.io.IOUtils;
@@ -267,7 +269,7 @@ public final class CommonUtils {
      *             if first line of pathHeader is null or empty.
      */
     public static String[] getHeaders(String pathHeader, String delimiter, SourceType sourceType) throws IOException {
-        return getHeaders(pathHeader, delimiter, sourceType, true);
+        return getHeaders(pathHeader, delimiter, sourceType, false);
     }
 
     /**
@@ -307,12 +309,22 @@ public final class CommonUtils {
         }
 
         List<String> headerList = new ArrayList<String>();
+        Set<String> headerSet = new HashSet<String>();
+        int index = 0;
         for(String str: Splitter.on(delimiter).split(pigHeaderStr)) {
+            String columnName;
             if(isFull) {
-                headerList.add(getFullPigHeaderColumnName(str));
+                columnName = getFullPigHeaderColumnName(str);
             } else {
-                headerList.add(getRelativePigHeaderColumnName(str));
+                columnName = getRelativePigHeaderColumnName(str);
             }
+
+            if(headerSet.contains(columnName)) {
+                columnName = columnName + "_" + index;
+            }
+            headerSet.add(columnName);
+            index++;
+            headerList.add(columnName);
         }
         return headerList.toArray(new String[0]);
     }
@@ -364,7 +376,7 @@ public final class CommonUtils {
             } catch (Exception e) {
                 return -1;
             }
-            return getNumericBinNum(columnConfig.getBinBoundary(), dval);
+            return getBinIndex(columnConfig.getBinBoundary(), dval);
         }
     }
 
@@ -377,6 +389,7 @@ public final class CommonUtils {
      * @throws IllegalArgumentException
      *             if binBoundary is null or empty.
      */
+    @SuppressWarnings("unused")
     private static int getNumericBinNum(List<Double> binBoundary, double value) {
         if(CollectionUtils.isEmpty(binBoundary)) {
             throw new IllegalArgumentException("binBoundary should not be null or empty.");
@@ -466,6 +479,34 @@ public final class CommonUtils {
     }
 
     /**
+     * Get bin index by binary search. The last bin in <code>binBoundary</code> is missing value bin.
+     */
+    public static int getBinIndex(List<Double> binBoundary, Double dVal) {
+        assert binBoundary != null && binBoundary.size() > 0;
+        assert dVal != null;
+        int binSize = binBoundary.size();
+
+        int low = 0;
+        int high = binSize - 1;
+
+        while(low <= high) {
+            int mid = (low + high) >>> 1;
+            Double midVal = binBoundary.get(mid);
+            int cmp = midVal.compareTo(dVal);
+
+            if(cmp < 0) {
+                low = mid + 1;
+            } else if(cmp > 0) {
+                high = mid - 1;
+            } else {
+                return mid; // key found
+            }
+        }
+
+        return low == 0 ? 0 : low - 1;
+    }
+
+    /**
      * Load basic models from files.
      * 
      * @throws IOException
@@ -492,6 +533,10 @@ public final class CommonUtils {
             }
 
         });
+
+        // added in shifu 0.2.5 to slice models not belonging to last training
+        int baggingModelSize = modelConfig.getTrain().getBaggingNum();
+        listStatus = listStatus.size() <= baggingModelSize ? listStatus : listStatus.subList(0, baggingModelSize);
 
         List<BasicML> models = new ArrayList<BasicML>(listStatus.size());
         for(FileStatus f: listStatus) {
@@ -578,6 +623,7 @@ public final class CommonUtils {
         }
 
         File modelsPathDir = new File(modelsPath);
+
         File[] modelFiles = modelsPathDir.listFiles(new FilenameFilter() {
             @Override
             public boolean accept(File dir, String name) {
@@ -585,26 +631,30 @@ public final class CommonUtils {
             }
         });
 
-        // sort file names
-        Arrays.sort(modelFiles, new Comparator<File>() {
-            @Override
-            public int compare(File from, File to) {
-                return from.getName().compareTo(to.getName());
-            }
-        });
+        if(modelFiles != null) {
+            // sort file names
+            Arrays.sort(modelFiles, new Comparator<File>() {
+                @Override
+                public int compare(File from, File to) {
+                    return from.getName().compareTo(to.getName());
+                }
+            });
 
-        List<BasicML> models = new ArrayList<BasicML>(modelFiles.length);
-        for(File nnf: modelFiles) {
-            InputStream is = null;
-            try {
-                is = new FileInputStream(nnf);
-                models.add(BasicML.class.cast(EncogDirectoryPersistence.loadObject(is)));
-            } finally {
-                IOUtils.closeQuietly(is);
+            List<BasicML> models = new ArrayList<BasicML>(modelFiles.length);
+            for(File nnf: modelFiles) {
+                InputStream is = null;
+                try {
+                    is = new FileInputStream(nnf);
+                    models.add(BasicML.class.cast(EncogDirectoryPersistence.loadObject(is)));
+                } finally {
+                    IOUtils.closeQuietly(is);
+                }
             }
+
+            return models;
+        } else {
+            throw new IOException(String.format("Failed to list files in %s", modelsPathDir.getAbsolutePath()));
         }
-
-        return models;
     }
 
     /**
@@ -648,6 +698,8 @@ public final class CommonUtils {
 
         pigParamMap.put(Constants.PATH_NORMALIZED_DATA, pathFinder.getNormalizedDataPath(sourceType));
         pigParamMap.put(Constants.PATH_PRE_TRAINING_STATS, pathFinder.getPreTrainingStatsPath(sourceType));
+        pigParamMap.put(Constants.PATH_STATS_BINNING_INFO, pathFinder.getUpdatedBinningInfoPath(sourceType));
+
         pigParamMap.put(Constants.WITH_SCORE, Boolean.FALSE.toString());
         pigParamMap.put(Constants.STATS_SAMPLE_RATE, modelConfig.getBinningSampleRate().toString());
         pigParamMap.put(Constants.PATH_MODEL_CONFIG, pathFinder.getModelConfigPath(sourceType));
@@ -770,9 +822,9 @@ public final class CommonUtils {
      * @throws NumberFormatException
      *             if column value is not number format.
      */
-    public static MLDataPair assembleDataPair(List<ColumnConfig> columnConfigList,
+    public static MLDataPair assembleDataPair(ModelConfig modelConfig, List<ColumnConfig> columnConfigList,
             Map<String, ? extends Object> rawDataMap) {
-        return assembleDataPair(columnConfigList, rawDataMap, Constants.DEFAULT_CUT_OFF);
+        return assembleDataPair(modelConfig, columnConfigList, rawDataMap, Constants.DEFAULT_CUT_OFF);
     }
 
     /**
@@ -783,7 +835,7 @@ public final class CommonUtils {
      * @throws NumberFormatException
      *             if column value is not number format.
      */
-    public static MLDataPair assembleDataPair(List<ColumnConfig> columnConfigList,
+    public static MLDataPair assembleDataPair(ModelConfig modelConfig, List<ColumnConfig> columnConfigList,
             Map<String, ? extends Object> rawDataMap, double cutoff) {
         // if the tag is provided, ideal will be updated; otherwise it defaults to -1
         double[] ideal = { Constants.DEFAULT_IDEAL_VALUE };
@@ -802,8 +854,36 @@ public final class CommonUtils {
             } else if(config.isFinalSelect()) {
                 // add log for debug purpose
                 // log.info("key: " + key + ", raw_value " + rawDataMap.get(key).toString() + ", zscl_value: " +
-                // Normalizer.normalize(config, rawDataMap.get(key).toString()));
-                inputList.add(Normalizer.normalize(config, rawDataMap.get(key).toString(), cutoff));
+                String val = rawDataMap.get(key) == null ? null : rawDataMap.get(key).toString();
+                Double normalizeValue = null;
+                switch(modelConfig.getNormalize().getNormType()) {
+                    case WOE:
+                        List<Double> binWoe;
+                        if(modelConfig.getNormalize().getIsWeightNorm()) {
+                            binWoe = config.getColumnBinning().getBinWeightedWoe();
+                        } else {
+                            binWoe = config.getColumnBinning().getBinCountWoe();
+                        }
+                        if(StringUtils.isEmpty(val)) {
+                            // append last missing bin woe
+                            // TODO how if merge missing bin with last valid bin.
+                            normalizeValue = binWoe.get(binWoe.size() - 1);
+                        } else {
+                            try {
+                                int binNum = CommonUtils.getBinNum(config, val);
+                                binNum = binNum == -1 ? binWoe.size() - 1 : binNum;
+                                normalizeValue = binWoe.get(binNum);
+                            } catch (NumberFormatException e) {
+                                normalizeValue = binWoe.get(binWoe.size() - 1);
+                            }
+                        }
+                        break;
+                    case ZSCALE:
+                    default:
+                        normalizeValue = Normalizer.normalize(config, val, cutoff);
+                        break;
+                }
+                inputList.add(normalizeValue);
             }
         }
 

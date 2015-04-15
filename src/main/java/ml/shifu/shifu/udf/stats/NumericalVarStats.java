@@ -38,12 +38,12 @@ import org.slf4j.LoggerFactory;
  * NumericalVarStats class
  * 
  * @Nov 3, 2014
- *
+ * 
  */
 public class NumericalVarStats extends AbstractVarStats {
 
     private static Logger log = LoggerFactory.getLogger(NumericalVarStats.class);
-    
+
     /**
      * @param modelConfig
      * @param columnConfig
@@ -53,98 +53,118 @@ public class NumericalVarStats extends AbstractVarStats {
         super(modelConfig, columnConfig, valueThreshold);
     }
 
-    /* (non-Javadoc)
+    /*
+     * (non-Javadoc)
+     * 
      * @see ml.shifu.shifu.udf.stats.AbstractVarStats#runVarStats(java.lang.String, org.apache.pig.data.DataBag)
      */
     @Override
     public void runVarStats(String binningInfo, DataBag databag) throws ExecException {
         String[] binningDataArr = StringUtils.split(binningInfo, CalculateStatsUDF.CATEGORY_VAL_SEPARATOR);
 
-        log.info("Column Name - " + this.columnConfig.getColumnName() + ", Column Bin Length - " + binningDataArr.length);
-        
+        log.info("Column Name - " + this.columnConfig.getColumnName() + ", Column Bin Length - "
+                + binningDataArr.length);
+
         List<Double> binBoundary = new ArrayList<Double>();
         for(String binningElement: binningDataArr) {
             binBoundary.add(Double.valueOf(binningElement));
         }
-        
+
         columnConfig.setBinBoundary(binBoundary);
         statsNumericalColumnInfo(databag, columnConfig);
     }
-    
+
     /**
      * @param databag
      * @param columnConfig
-     * @throws ExecException 
+     * @throws ExecException
      */
-    private void statsNumericalColumnInfo(DataBag databag, ColumnConfig columnConfig) throws ExecException {     
-        Integer[] binCountPos = new Integer[columnConfig.getBinBoundary().size()];
-        Integer[] binCountNeg = new Integer[columnConfig.getBinBoundary().size()];
-        Double[] binWeightCountPos = new Double[columnConfig.getBinBoundary().size()];
-        Double[] binWeightCountNeg = new Double[columnConfig.getBinBoundary().size()];
-        
+    private void statsNumericalColumnInfo(DataBag databag, ColumnConfig columnConfig) throws ExecException {
+        // The last bin is for missingOrInvalid values
+        Integer[] binCountPos = new Integer[columnConfig.getBinBoundary().size() + 1];
+        Integer[] binCountNeg = new Integer[columnConfig.getBinBoundary().size() + 1];
+        Double[] binWeightCountPos = new Double[columnConfig.getBinBoundary().size() + 1];
+        Double[] binWeightCountNeg = new Double[columnConfig.getBinBoundary().size() + 1];
+        int lastBinIndex = columnConfig.getBinBoundary().size();
+
         initializeZeroArr(binCountPos);
         initializeZeroArr(binCountNeg);
         initializeZeroArr(binWeightCountPos);
         initializeZeroArr(binWeightCountNeg);
-        
+
+        boolean isMissingValue = false;
+        boolean isInvalidValue = false;
         Iterator<Tuple> iterator = databag.iterator();
-        while ( iterator.hasNext() ) {
+        while(iterator.hasNext()) {
+            isMissingValue = false;
+            isInvalidValue = false;
             Tuple element = iterator.next();
-            
-            if ( element.size() < 4 ) {
+
+            if(element.size() < 4) {
                 continue;
             }
-            
+
             Object value = element.get(1);
             String tag = (String) element.get(2);
             Double weight = (Double) element.get(3);
-            
-            if ( value == null || StringUtils.isBlank(value.toString()) ) {
-                //TODO check missing value list in ModelConfig??
-                missingValueCnt ++;
-                continue;
-            }
-            String str = StringUtils.trim(value.toString());
-            
+
             double colVal = 0.0;
-            try {
-                colVal = Double.parseDouble(str);
-            } catch ( Exception e ) {
-                invalidValueCnt ++;
-                continue;
+            String str = null;
+            if(value == null || StringUtils.isBlank(value.toString())) {
+                // TODO check missing value list in ModelConfig??
+                missingValueCnt++;
+                isMissingValue = true;
+            } else {
+                str = StringUtils.trim(value.toString());
+                try {
+                    colVal = Double.parseDouble(str);
+                } catch (Exception e) {
+                    invalidValueCnt++;
+                    isInvalidValue = true;
+                }
             }
-            
-            streamStatsCalculator.addData(colVal);
-            // binning.addData(colVal);
-            
-            int binNum = CommonUtils.getBinNum(columnConfig, str);
-            
-            if ( modelConfig.getPosTags().contains(tag) ) {
-                increaseInstCnt(binCountPos, binNum);
-                increaseInstCnt(binWeightCountPos, binNum, weight);
-            } else if ( modelConfig.getNegTags().contains(tag) ) {
-                increaseInstCnt(binCountNeg, binNum);
-                increaseInstCnt(binWeightCountNeg, binNum, weight);
+
+            if(isInvalidValue || isMissingValue) {
+                if(modelConfig.getPosTags().contains(tag)) {
+                    increaseInstCnt(binCountPos, lastBinIndex);
+                    increaseInstCnt(binWeightCountPos, lastBinIndex, weight);
+                } else if(modelConfig.getNegTags().contains(tag)) {
+                    increaseInstCnt(binCountNeg, lastBinIndex);
+                    increaseInstCnt(binWeightCountNeg, lastBinIndex, weight);
+                }
+            } else {
+                streamStatsCalculator.addData(colVal);
+                // binning.addData(colVal);
+                int binNum = CommonUtils.getBinNum(columnConfig, str);
+                if(binNum == -1) {
+                    throw new RuntimeException("binNum should not be -1 to this step.");
+                }
+                if(modelConfig.getPosTags().contains(tag)) {
+                    increaseInstCnt(binCountPos, binNum);
+                    increaseInstCnt(binWeightCountPos, binNum, weight);
+                } else if(modelConfig.getNegTags().contains(tag)) {
+                    increaseInstCnt(binCountNeg, binNum);
+                    increaseInstCnt(binWeightCountNeg, binNum, weight);
+                }
             }
         }
-        
+
         columnConfig.setBinCountPos(Arrays.asList(binCountPos));
         columnConfig.setBinCountNeg(Arrays.asList(binCountNeg));
         columnConfig.setBinWeightedPos(Arrays.asList(binWeightCountPos));
         columnConfig.setBinWeightedNeg(Arrays.asList(binWeightCountNeg));
-        
+
         columnConfig.setMax(streamStatsCalculator.getMax());
         columnConfig.setMean(streamStatsCalculator.getMean());
         columnConfig.setMin(streamStatsCalculator.getMin());
         columnConfig.setMedian(streamStatsCalculator.getMedian());
         columnConfig.setStdDev(streamStatsCalculator.getStdDev());
-        
+
         // Currently, invalid value will be regarded as missing
         columnConfig.setMissingCnt(missingValueCnt + invalidValueCnt);
         columnConfig.setTotalCount(databag.size());
-        columnConfig.setMissingPercentage(((double)columnConfig.getMissingCount()) / columnConfig.getTotalCount());
-        
+        columnConfig.setMissingPercentage(((double) columnConfig.getMissingCount()) / columnConfig.getTotalCount());
+
         calculateBinPosRateAndAvgScore();
     }
-
 }

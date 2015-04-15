@@ -238,6 +238,24 @@ public class PathFinder {
             return new Path(varSelectStatsPath).toString();
         }
     }
+    
+    /**
+     * Get the path of varselect MSE stats path.
+     * 
+     * @param sourceType
+     *            - Local/HDFS
+     * @return path of var select MSE stats path
+     */
+    public String getUpdatedBinningInfoPath(SourceType sourceType) {
+        String preTrainPath = getPreferPath(modelConfig.getTrain().getCustomPaths(),
+                Constants.KEY_PRE_TRAIN_STATS_PATH);
+
+        if(StringUtils.isBlank(preTrainPath)) {
+            return getPathBySourceType(new Path(Constants.TMP, "UpdatedBinningInfo"), sourceType);
+        } else {
+            return new Path(preTrainPath).toString();
+        }
+    }
 
     /**
      * Get the path of models

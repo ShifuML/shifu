@@ -113,8 +113,34 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
                 tuple.append(null);
             } else {
                 String val = ((input.get(i) == null) ? "" : input.get(i).toString());
-                Double z = Normalizer.normalize(config, val, cutoff);
-                tuple.append(df.format(z));
+                switch(super.modelConfig.getNormalize().getNormType()) {
+                    case WOE:
+                        List<Double> binWoe;
+                        if(super.modelConfig.getNormalize().getIsWeightNorm()) {
+                            binWoe = config.getColumnBinning().getBinWeightedWoe();
+                        } else {
+                            binWoe = config.getColumnBinning().getBinCountWoe();
+                        }
+                        if(StringUtils.isEmpty(val)) {
+                            // append last missing bin woe
+                            // TODO how if merge missing bin with last valid bin.
+                            tuple.append(df.format(binWoe.get(binWoe.size() - 1)));
+                        } else {
+                            try {
+                                int binNum = CommonUtils.getBinNum(config, val);
+                                binNum = binNum == -1 ? binWoe.size() - 1 : binNum;
+                                tuple.append(df.format(binWoe.get(binNum)));
+                            } catch (NumberFormatException e) {
+                                tuple.append(df.format(binWoe.get(binWoe.size() - 1)));
+                            }
+                        }
+                        break;
+                    case ZSCALE:
+                    default:
+                        Double z = Normalizer.normalize(config, val, cutoff);
+                        tuple.append(df.format(z));
+                        break;
+                }
             }
         }
 
@@ -176,7 +202,7 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
             JexlEngine jexl = new JexlEngine();
 
             for(WeightAmplifier we: weightExprList) {
-                ewMap.put(jexl.createExpression(we.getTargetExpression()), Double.valueOf(we.getTargetWeight()));
+                ewMap.put(jexl.createExpression(we.getTargetExpression()), we.getTargetWeight());
             }
         }
 

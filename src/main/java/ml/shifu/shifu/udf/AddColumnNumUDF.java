@@ -15,19 +15,22 @@
  */
 package ml.shifu.shifu.udf;
 
-import ml.shifu.shifu.container.obj.ColumnConfig;
-import ml.shifu.shifu.exception.ShifuErrorCode;
-import ml.shifu.shifu.exception.ShifuException;
-import org.apache.commons.lang.StringUtils;
-import org.apache.pig.data.BagFactory;
-import org.apache.pig.data.DataBag;
-import org.apache.pig.data.Tuple;
-import org.apache.pig.data.TupleFactory;
-import org.apache.pig.impl.logicalLayer.schema.Schema;
-
 import java.io.IOException;
 import java.util.List;
 import java.util.Random;
+
+import ml.shifu.shifu.container.obj.ColumnConfig;
+import ml.shifu.shifu.exception.ShifuErrorCode;
+import ml.shifu.shifu.exception.ShifuException;
+
+import org.apache.commons.lang.StringUtils;
+import org.apache.pig.data.BagFactory;
+import org.apache.pig.data.DataBag;
+import org.apache.pig.data.DataType;
+import org.apache.pig.data.Tuple;
+import org.apache.pig.data.TupleFactory;
+import org.apache.pig.impl.logicalLayer.schema.Schema;
+import org.apache.pig.impl.logicalLayer.schema.Schema.FieldSchema;
 
 /**
  * <pre>
@@ -113,7 +116,7 @@ public class AddColumnNumUDF extends AbstractTrainerUDF<DataBag> {
                 tuple.set(0, i);
 
                 // Set Data
-                tuple.set(1, input.get(i));
+                tuple.set(1, input.get(i) == null ? null : input.get(i).toString());
 
                 // Set Tag
                 tuple.set(2, tag);
@@ -144,7 +147,21 @@ public class AddColumnNumUDF extends AbstractTrainerUDF<DataBag> {
         return bag;
     }
 
+    @Override
     public Schema outputSchema(Schema input) {
-        return null;
+        try {
+            Schema tupleSchema = new Schema();
+            tupleSchema.add(new FieldSchema("columnId", DataType.INTEGER));
+            tupleSchema.add(new FieldSchema("value", DataType.CHARARRAY));
+            tupleSchema.add(new FieldSchema("tag", DataType.CHARARRAY));
+            tupleSchema.add(new FieldSchema("weight", DataType.DOUBLE));
+            tupleSchema.add(new FieldSchema("rand", DataType.INTEGER));
+
+            return new Schema(new Schema.FieldSchema("columnInfos", new Schema(new Schema.FieldSchema("columnInfo",
+                    tupleSchema, DataType.TUPLE)), DataType.BAG));
+        } catch (IOException e) {
+            log.error("Error in outputSchema", e);
+            return null;
+        }
     }
 }

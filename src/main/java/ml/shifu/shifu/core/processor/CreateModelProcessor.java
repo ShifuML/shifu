@@ -18,6 +18,8 @@ package ml.shifu.shifu.core.processor;
 import ml.shifu.shifu.container.obj.ModelConfig;
 import ml.shifu.shifu.container.obj.ModelTrainConf.ALGORITHM;
 import ml.shifu.shifu.util.JSONUtils;
+
+import org.apache.commons.io.FileUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -70,7 +72,7 @@ public class CreateModelProcessor extends BasicModelProcessor implements Process
         }
 
         log.info("Creating ModelSet Folder: " + modelSetFolder.getCanonicalPath() + "...");
-        modelSetFolder.mkdir();
+        FileUtils.forceMkdir(modelSetFolder);
 
         log.info("Creating Initial ModelConfig.json ...");
         modelConfig = ModelConfig.createInitModelConfig(name, alg, description);
