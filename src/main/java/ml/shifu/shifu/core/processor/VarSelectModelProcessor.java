@@ -72,6 +72,7 @@ import org.apache.hadoop.util.GenericOptionsParser;
 import org.apache.pig.impl.util.JarManager;
 import org.apache.zookeeper.ZooKeeper;
 import org.encog.ml.data.MLDataSet;
+import org.jboss.netty.bootstrap.ServerBootstrap;
 import org.mortbay.log.Log;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -376,6 +377,8 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
         jars.add(JarManager.findContainingJar(GuaguaMapReduceConstants.class));
         // zookeeper-*.jar
         jars.add(JarManager.findContainingJar(ZooKeeper.class));
+        // netty-*.jar
+        jars.add(JarManager.findContainingJar(ServerBootstrap.class));
 
         jars.add(JarManager.findContainingJar(JexlException.class));
 
