@@ -30,6 +30,8 @@ public class VarSelMasterResult extends HaltBytable {
 
     private List<CandidateSeed> seedList = new ArrayList<CandidateSeed>(0);
 
+    private CandidateSeed bestSeed = null;
+
     public VarSelMasterResult() {
         // default constructor, it is used to send halt
     }
@@ -69,5 +71,13 @@ public class VarSelMasterResult extends HaltBytable {
 
     public List<CandidateSeed> getSeedList() {
         return this.seedList;
+    }
+
+    public void setBestSeed(CandidateSeed bestSeed) {
+        this.bestSeed = bestSeed;
+    }
+
+    public CandidateSeed getBestSeed() {
+        return bestSeed;
     }
 }

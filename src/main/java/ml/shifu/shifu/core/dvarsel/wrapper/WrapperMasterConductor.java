@@ -22,6 +22,7 @@ import ml.shifu.shifu.core.dvarsel.CandidateSeed;
 import ml.shifu.shifu.core.dvarsel.CandidatePopulation;
 import ml.shifu.shifu.core.dvarsel.VarSelWorkerResult;
 import ml.shifu.shifu.util.CommonUtils;
+import scala.Int;
 
 import java.util.*;
 
@@ -34,6 +35,13 @@ public class WrapperMasterConductor extends AbstractMasterConductor {
 
     private int iterationCount = 0;
 
+    private final int BEST_SEED_CNT = 5;
+    private final int MAX_ITERATIONS_TO_KEEP = 5;
+    private final int SC_QUEUE_LEN = BEST_SEED_CNT * MAX_ITERATIONS_TO_KEEP;
+
+    private SeedCredit[] seedCreditQueue;
+    private int scCnt;
+
     public WrapperMasterConductor(ModelConfig modelConfig, List<ColumnConfig> columnConfigList) {
         super(modelConfig, columnConfigList);
 
@@ -45,6 +53,9 @@ public class WrapperMasterConductor extends AbstractMasterConductor {
         }
         this.candidateGenerator = new CandidateGenerator(this.modelConfig.getVarSelect().getParams(), variables);
         this.seeds = candidateGenerator.initSeeds();
+
+        this.seedCreditQueue = new SeedCredit[SC_QUEUE_LEN];
+        this.scCnt = 0;
     }
 
     @Override
@@ -67,5 +78,41 @@ public class WrapperMasterConductor extends AbstractMasterConductor {
     public void consumeWorkerResults(Iterable<VarSelWorkerResult> workerResults) {
         this.iterationCount++;
         this.seeds = candidateGenerator.nextGeneration(workerResults, this.seeds);
+
+        for ( int i = 0; i < BEST_SEED_CNT; i ++ ) {
+            seedCreditQueue[(scCnt ++) % this.SC_QUEUE_LEN] =
+                    new SeedCredit(BEST_SEED_CNT - i, this.seeds.getSeedById(i));
+        }
+    }
+
+    @Override
+    public CandidateSeed voteBestSeed() {
+        Map<CandidateSeed, Integer> seedCreditMap = new HashMap<CandidateSeed, Integer>();
+        for ( int i = 0; i < seedCreditQueue.length; i ++ ) {
+            SeedCredit seedCredit = seedCreditQueue[i];
+            if ( seedCredit != null ) {
+                CandidateSeed candidateSeed = seedCredit.getSeed();
+                if ( !seedCreditMap.containsKey(candidateSeed) ) {
+                    seedCreditMap.put(candidateSeed, Integer.valueOf(0));
+                }
+
+                seedCreditMap.put(seedCredit.getSeed(),
+                        Integer.valueOf(seedCreditMap.get(candidateSeed) + seedCredit.getCredit()));
+            }
+        }
+
+        CandidateSeed bestSeed = null;
+        int maxCredit = Integer.MIN_VALUE;
+
+        Iterator<Map.Entry<CandidateSeed, Integer>> iterator = seedCreditMap.entrySet().iterator();
+        while ( iterator.hasNext() ) {
+            Map.Entry<CandidateSeed, Integer> entry = iterator.next();
+            if ( entry.getValue() > maxCredit ) {
+                maxCredit = entry.getValue();
+                bestSeed = entry.getKey();
+            }
+        }
+
+        return bestSeed;
     }
 }

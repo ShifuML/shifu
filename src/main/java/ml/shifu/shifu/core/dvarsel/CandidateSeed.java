@@ -35,6 +35,25 @@ public class CandidateSeed {
     }
 
     @Override
+    public int hashCode() {
+        return id;
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        if ( obj == null || !(obj instanceof CandidateSeed)) {
+            return false;
+        }
+
+        CandidateSeed cs = (CandidateSeed) obj;
+        if ( cs == this ) {
+            return true;
+        }
+
+        return (id == cs.getId());
+    }
+
+    @Override
     public String toString() {
         return "CandidateSeed{"
                 + "id=" + id

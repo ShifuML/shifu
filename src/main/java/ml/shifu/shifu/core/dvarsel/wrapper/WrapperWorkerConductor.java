@@ -54,7 +54,7 @@ public class WrapperWorkerConductor extends AbstractWorkerConductor {
 
         for( CandidateSeed seed : seedList ) {
             if ( rd.nextDouble() < this.workerSampleRate ) {
-                LOG.info("Start to test seed -  {} ", seed.getColumnIdList());
+                LOG.info("Start to test seed id = {} ", seed.getId());
                 ValidationConductor validationConductor = new ValidationConductor(
                         modelConfig, columnConfigList,
                         new HashSet<Integer>(seed.getColumnIdList()), trainingDataSet);

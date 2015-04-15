@@ -36,6 +36,7 @@ import ml.shifu.shifu.core.dvarsel.VarSelMasterResult;
 import ml.shifu.shifu.core.dvarsel.VarSelOutput;
 import ml.shifu.shifu.core.dvarsel.VarSelWorker;
 import ml.shifu.shifu.core.dvarsel.VarSelWorkerResult;
+import ml.shifu.shifu.core.dvarsel.wrapper.CandidateGenerator;
 import ml.shifu.shifu.core.dvarsel.wrapper.WrapperMasterConductor;
 import ml.shifu.shifu.core.dvarsel.wrapper.WrapperWorkerConductor;
 import ml.shifu.shifu.core.validator.ModelInspector.ModelStep;
@@ -289,7 +290,8 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
             }
         }
 
-        args.add(String.valueOf(Math.min(expectVarCount, candidateCount) - forceSelectCount + 1));
+        int iterationCnt = (Integer)this.modelConfig.getVarSelect().getParams().get(CandidateGenerator.POPULATION_MULTIPLY_CNT) + 1;
+        args.add(Integer.toString(iterationCnt));
 
         args.add("-mr");
         args.add(VarSelMasterResult.class.getName());
@@ -309,6 +311,9 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
         // setting queue
         args.add(String.format(NNConstants.MAPREDUCE_PARAM_FORMAT, NNConstants.MAPRED_JOB_QUEUE_NAME,
                 Environment.getProperty(Environment.HADOOP_JOB_QUEUE, ml.shifu.shifu.util.Constants.DEFAULT_JOB_QUEUE)));
+
+        // MAPRED timeout
+        args.add(String.format(NNConstants.MAPREDUCE_PARAM_FORMAT, NNConstants.MAPRED_TASK_TIMEOUT, Integer.toString(3600000)));
 
         args.add(String.format(NNConstants.MAPREDUCE_PARAM_FORMAT, GuaguaConstants.GUAGUA_MASTER_INTERCEPTERS,
                 VarSelOutput.class.getName()));

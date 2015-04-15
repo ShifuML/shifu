@@ -38,4 +38,6 @@ public abstract class AbstractMasterConductor {
 
     public abstract List<CandidateSeed> getNextWorkingSet();
     public abstract void consumeWorkerResults(Iterable<VarSelWorkerResult> workerResults);
+
+    public abstract CandidateSeed voteBestSeed();
 }
