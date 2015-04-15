@@ -4,6 +4,7 @@ import ml.shifu.shifu.core.dvarsel.CandidatePerf;
 import ml.shifu.shifu.core.dvarsel.CandidateSeed;
 import ml.shifu.shifu.core.dvarsel.CandidatePopulation;
 import ml.shifu.shifu.core.dvarsel.VarSelWorkerResult;
+import org.testng.Assert;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.Test;
 
@@ -21,11 +22,11 @@ public class CandidateGeneratorTest {
     @BeforeClass
     public void setUpBeforeClass() throws Exception {
         Map<String, Object> params = new HashMap<String, Object>();
-        params.put("EXPECT_ITERATION_COUNT", EXPECT_ITERATION_COUNT);
-        params.put("ITERATION_SEED_COUNT", ITERATION_SEED_COUNT);
-        params.put("EXPECT_VARIABLE_COUNT", EXPECT_VARIABLE_COUNT);
-        params.put("CROSS_PERCENT", CROSS_PERCENT);
-        params.put("MUTATION_PERCENT", MUTATION_PERCENT);
+        params.put(CandidateGenerator.POPULATION_MULTIPLY_CNT, EXPECT_ITERATION_COUNT);
+        params.put(CandidateGenerator.POPULATION_LIVE_SIZE, ITERATION_SEED_COUNT);
+        params.put(CandidateGenerator.EXPECT_VARIABLE_CNT, EXPECT_VARIABLE_COUNT);
+        params.put(CandidateGenerator.HYBRID_PERCENT, CROSS_PERCENT);
+        params.put(CandidateGenerator.MUTATION_PERCENT, MUTATION_PERCENT);
 
         List<Integer> variables = new ArrayList<Integer>(100);
         for (int i = 0; i < 100; i++) {
@@ -50,6 +51,8 @@ public class CandidateGeneratorTest {
         for (int i = 0; i < EXPECT_ITERATION_COUNT - 1; i++) {
             seed = generateNext(seed, random);
             System.out.println(seed);
+
+            Assert.assertEquals(10, seed.getSeedList().size());
         }
     }
 
