@@ -61,7 +61,7 @@ public class WrapperWorkerConductor extends AbstractWorkerConductor {
                 double validateError = validationConductor.runValidate();
                 perfList.add(new CandidatePerf(seed.getId(), validateError));
 
-                LOG.info("The validation error for - {} is {}", seed.getColumnIdList(), validateError);
+                LOG.info("The validation error is {} for {}", validateError, seed.getColumnIdList());
             }
         }
 
