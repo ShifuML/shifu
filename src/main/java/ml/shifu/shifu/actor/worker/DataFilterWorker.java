@@ -40,7 +40,7 @@ import java.util.List;
  */
 public class DataFilterWorker extends AbstractWorkerActor {
 
-    public static Logger log = LoggerFactory.getLogger(DataFilterWorker.class);
+    public static final Logger log = LoggerFactory.getLogger(DataFilterWorker.class);
 
     private DataPurifier dataPurifier;
 

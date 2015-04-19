@@ -38,6 +38,7 @@ import ml.shifu.shifu.pig.PigExecutor;
 import ml.shifu.shifu.util.Constants;
 
 import org.apache.commons.collections.CollectionUtils;
+import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.fs.Path;
 import org.apache.pig.tools.pigstats.JobStats;
@@ -217,8 +218,7 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
         // create evalset home directory firstly in local file system
         PathFinder pathFinder = new PathFinder(modelConfig);
         String evalSetPath = pathFinder.getEvalSetPath(config, SourceType.LOCAL);
-        (new File(evalSetPath)).mkdirs();
-
+        FileUtils.forceMkdir(new File(evalSetPath));
         syncDataToHdfs(config.getDataSet().getSource());
 
         switch(modelConfig.getBasic().getRunMode()) {
@@ -370,8 +370,7 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
         // create evalset home directory firstly in local file system
         PathFinder pathFinder = new PathFinder(modelConfig);
         String evalSetPath = pathFinder.getEvalSetPath(evalConfig, SourceType.LOCAL);
-        (new File(evalSetPath)).mkdirs();
-
+        FileUtils.forceMkdir(new File(evalSetPath));
         syncDataToHdfs(evalConfig.getDataSet().getSource());
 
         switch(modelConfig.getBasic().getRunMode()) {

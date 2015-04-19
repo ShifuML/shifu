@@ -15,18 +15,30 @@
  */
 package ml.shifu.shifu.core.processor;
 
+import java.io.BufferedWriter;
+import java.io.File;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.OutputStreamWriter;
+import java.nio.charset.Charset;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Scanner;
 
+import ml.shifu.guagua.mapreduce.GuaguaMapReduceConstants;
+import ml.shifu.guagua.util.FileUtils;
 import ml.shifu.shifu.actor.AkkaSystemExecutor;
 import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.container.obj.ColumnConfig.ColumnType;
 import ml.shifu.shifu.container.obj.ModelStatsConf;
 import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
+import ml.shifu.shifu.core.binning.BinningInfoWritable;
+import ml.shifu.shifu.core.binning.UpdateBinningInfoMapper;
+import ml.shifu.shifu.core.binning.UpdateBinningInfoReducer;
+import ml.shifu.shifu.core.dtrain.NNConstants;
 import ml.shifu.shifu.core.validator.ModelInspector.ModelStep;
 import ml.shifu.shifu.exception.ShifuErrorCode;
 import ml.shifu.shifu.exception.ShifuException;
@@ -35,10 +47,35 @@ import ml.shifu.shifu.pig.PigExecutor;
 import ml.shifu.shifu.udf.CalculateStatsUDF;
 import ml.shifu.shifu.util.Base64Utils;
 import ml.shifu.shifu.util.CommonUtils;
+import ml.shifu.shifu.util.Constants;
+import ml.shifu.shifu.util.Environment;
 
+import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.collections.CollectionUtils;
+import org.apache.commons.collections.Predicate;
+import org.apache.commons.compress.compressors.bzip2.BZip2CompressorInputStream;
+import org.apache.commons.jexl2.JexlException;
+import org.apache.commons.lang.StringUtils;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.io.IntWritable;
+import org.apache.hadoop.io.NullWritable;
+import org.apache.hadoop.io.Text;
+import org.apache.hadoop.mapreduce.Job;
+import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
+import org.apache.hadoop.mapreduce.lib.input.TextInputFormat;
+import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
+import org.apache.hadoop.mapreduce.lib.output.TextOutputFormat;
+import org.apache.hadoop.util.GenericOptionsParser;
+import org.apache.pig.impl.util.JarManager;
+import org.encog.ml.data.MLDataSet;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.core.JsonParser;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.base.Splitter;
 
 /**
  * statistics, max/min/avg/std for each column dataset if it's numerical
@@ -60,7 +97,7 @@ public class StatsModelProcessor extends BasicModelProcessor implements Processo
         syncDataToHdfs(modelConfig.getDataSet().getSource());
 
         if(modelConfig.isMapReduceRunMode()) {
-            runPigStats();
+            runMapRedStats();
         } else if(modelConfig.isLocalRunMode()) {
             runAkkaStats();
         } else {
@@ -101,17 +138,17 @@ public class StatsModelProcessor extends BasicModelProcessor implements Processo
     }
 
     /**
-     * run pig stats
+     * run mapreduce stats
      * 
      * @throws IOException
      */
-    private void runPigStats() throws IOException {
+    private void runMapRedStats() throws IOException {
         log.info("delete historical pre-train data");
 
         ShifuFileUtils.deleteFile(pathFinder.getPreTrainingStatsPath(), modelConfig.getDataSet().getSource());
         Map<String, String> paramsMap = new HashMap<String, String>();
         paramsMap.put("delimiter", CommonUtils.escapePigString(modelConfig.getDataSetDelimiter()));
-        paramsMap.put("column_parallel", Integer.toString(columnConfigList.size() / 3));
+        paramsMap.put("column_parallel", Integer.toString(columnConfigList.size() / 5));
 
         // execute pig job
         try {
@@ -119,9 +156,19 @@ public class StatsModelProcessor extends BasicModelProcessor implements Processo
             if(modelConfig.getBinningAlgorithm().equals(ModelStatsConf.BinningAlgorithm.MunroPat)) {
                 PigExecutor.getExecutor().submitJob(modelConfig, pathFinder.getAbsolutePath("scripts/Stats.pig"),
                         paramsMap);
-            } else {
+            } else if(modelConfig.getBinningAlgorithm().equals(ModelStatsConf.BinningAlgorithm.SPDT)) {
                 PigExecutor.getExecutor().submitJob(modelConfig,
                         pathFinder.getAbsolutePath("scripts/PreTrainingStats.pig"), paramsMap);
+            } else if(modelConfig.getBinningAlgorithm().equals(ModelStatsConf.BinningAlgorithm.SPDTI)) {
+                paramsMap.put("group_binning_parallel", Integer.toString(columnConfigList.size() / (5 * 16)));
+                ShifuFileUtils.deleteFile(pathFinder.getUpdatedBinningInfoPath(modelConfig.getDataSet().getSource()),
+                        modelConfig.getDataSet().getSource());
+
+                PigExecutor.getExecutor().submitJob(modelConfig, pathFinder.getAbsolutePath("scripts/StatsSpdtI.pig"),
+                        paramsMap);
+                // update
+                log.info("Updating binning info ...");
+                updateBinningInfoWithMRJob();
             }
         } catch (IOException e) {
             throw new ShifuException(ShifuErrorCode.ERROR_RUNNING_PIG_JOB, e);
@@ -135,6 +182,116 @@ public class StatsModelProcessor extends BasicModelProcessor implements Processo
         updateColumnConfigWithPreTrainingStats();
         // save it to local/hdfs
         saveColumnConfigList();
+    }
+
+    // GuaguaOptionsParser doesn't to support *.jar currently.
+    private String addRuntimeJars() {
+        List<String> jars = new ArrayList<String>(16);
+        // common-codec
+        jars.add(JarManager.findContainingJar(Base64.class));
+        // commons-compress-*.jar
+        jars.add(JarManager.findContainingJar(BZip2CompressorInputStream.class));
+        // commons-lang-*.jar
+        jars.add(JarManager.findContainingJar(StringUtils.class));
+        // common-io-*.jar
+        jars.add(JarManager.findContainingJar(org.apache.commons.io.IOUtils.class));
+        // common-collections
+        jars.add(JarManager.findContainingJar(Predicate.class));
+        // guava-*.jar
+        jars.add(JarManager.findContainingJar(Splitter.class));
+        // shifu-*.jar
+        jars.add(JarManager.findContainingJar(getClass()));
+        // jexl
+        jars.add(JarManager.findContainingJar(JexlException.class));
+        // encog-core-*.jar
+        jars.add(JarManager.findContainingJar(MLDataSet.class));
+        // jackson-databind-*.jar
+        jars.add(JarManager.findContainingJar(ObjectMapper.class));
+        // jackson-core-*.jar
+        jars.add(JarManager.findContainingJar(JsonParser.class));
+        // jackson-annotations-*.jar
+        jars.add(JarManager.findContainingJar(JsonIgnore.class));
+
+        return StringUtils.join(jars, NNConstants.LIB_JAR_SEPARATOR);
+    }
+
+    private void prepareJobConf(SourceType source, Configuration conf, String filePath) throws IOException {
+        // add jars to hadoop mapper and reducer
+        new GenericOptionsParser(conf, new String[] { "-libjars", addRuntimeJars(), "-files", filePath });
+
+        conf.setBoolean(GuaguaMapReduceConstants.MAPRED_MAP_TASKS_SPECULATIVE_EXECUTION, true);
+        conf.setBoolean(GuaguaMapReduceConstants.MAPRED_REDUCE_TASKS_SPECULATIVE_EXECUTION, true);
+        conf.set(
+                Constants.SHIFU_MODEL_CONFIG,
+                ShifuFileUtils.getFileSystemBySourceType(source)
+                        .makeQualified(new Path(super.getPathFinder().getModelConfigPath(source))).toString());
+        conf.set(
+                Constants.SHIFU_COLUMN_CONFIG,
+                ShifuFileUtils.getFileSystemBySourceType(source)
+                        .makeQualified(new Path(super.getPathFinder().getColumnConfigPath(source))).toString());
+        conf.set(NNConstants.MAPRED_JOB_QUEUE_NAME, Environment.getProperty(Environment.HADOOP_JOB_QUEUE, "default"));
+        conf.set(Constants.SHIFU_MODELSET_SOURCE_TYPE, source.toString());
+        // set mapreduce.job.max.split.locations to 30 to suppress warnings
+        conf.setInt(GuaguaMapReduceConstants.MAPREDUCE_JOB_MAX_SPLIT_LOCATIONS, 30);
+    }
+
+    private void updateBinningInfoWithMRJob() throws IOException, InterruptedException, ClassNotFoundException {
+        SourceType source = this.modelConfig.getDataSet().getSource();
+        Configuration conf = new Configuration();
+
+        String filePath = Constants.BINNING_INFO_FILE_NAME;
+        BufferedWriter writer = null;
+        List<Scanner> scanners = null;
+        try {
+            scanners = ShifuFileUtils.getDataScanners(pathFinder.getUpdatedBinningInfoPath(source), source);
+            writer = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(new File(filePath)),
+                    Charset.forName("UTF-8")));
+            for(Scanner scanner: scanners) {
+                while(scanner.hasNextLine()) {
+                    String line = scanner.nextLine();
+                    writer.write(line + "\n");
+                }
+            }
+        } finally {
+            // release
+            closeScanners(scanners);
+            if(writer != null) {
+                writer.close();
+            }
+        }
+
+        prepareJobConf(source, conf, filePath);
+
+        Job job = new Job(conf, "Shifu: Stats Updating Binning Job : " + this.modelConfig.getModelSetName());
+        job.setJarByClass(getClass());
+        job.setMapperClass(UpdateBinningInfoMapper.class);
+
+        job.setMapOutputKeyClass(IntWritable.class);
+        job.setMapOutputValueClass(BinningInfoWritable.class);
+        job.setInputFormatClass(TextInputFormat.class);
+        FileInputFormat.setInputPaths(
+                job,
+                ShifuFileUtils.getFileSystemBySourceType(source).makeQualified(
+                        new Path(super.modelConfig.getDataSetRawPath())));
+
+        job.setReducerClass(UpdateBinningInfoReducer.class);
+        job.setNumReduceTasks(1);
+        job.setOutputKeyClass(NullWritable.class);
+        job.setOutputValueClass(Text.class);
+        job.setOutputFormatClass(TextOutputFormat.class);
+
+        String preTrainingInfo = super.getPathFinder().getPreTrainingStatsPath(source);
+        FileOutputFormat.setOutputPath(job, new Path(preTrainingInfo));
+
+        // clean output firstly
+        ShifuFileUtils.deleteFile(preTrainingInfo, source);
+
+        // submit job
+        if(!job.waitForCompletion(true)) {
+            FileUtils.deleteQuietly(new File(filePath));
+            throw new RuntimeException("MapReduce Job Updateing Binning Info failed.");
+        }
+        FileUtils.deleteQuietly(new File(filePath));
     }
 
     /**
@@ -187,12 +344,12 @@ public class StatsModelProcessor extends BasicModelProcessor implements Processo
                 // config.setBinAvgScore(CommonUtils.stringToIntegerList(raw[4]));
                 config.setBinPosCaseRate(CommonUtils.stringToDoubleList(raw[5]));
                 config.setBinLength(config.getBinCountNeg().size());
-                config.setKs(Double.valueOf(raw[6]));
-                config.setIv(Double.valueOf(raw[7]));
-                config.setMax(Double.valueOf(raw[8]));
-                config.setMin(Double.valueOf(raw[9]));
-                config.setMean(Double.valueOf(raw[10]));
-                config.setStdDev(Double.valueOf(raw[11]));
+                config.setKs(parseDouble(raw[6]));
+                config.setIv(parseDouble(raw[7]));
+                config.setMax(parseDouble(raw[8]));
+                config.setMin(parseDouble(raw[9]));
+                config.setMean(parseDouble(raw[10]));
+                config.setStdDev(parseDouble(raw[11], Double.NaN));
 
                 // magic?
                 if(raw[12].equals("N")) {
@@ -201,26 +358,49 @@ public class StatsModelProcessor extends BasicModelProcessor implements Processo
                     config.setColumnType(ColumnType.C);
                 }
 
-                config.setMedian(Double.valueOf(raw[13]));
+                config.setMedian(parseDouble(raw[13]));
 
-                config.setMissingCnt(Long.valueOf(raw[14]));
-                config.setTotalCount(Long.valueOf(raw[15]));
-                config.setMissingPercentage(Double.valueOf(raw[16]));
+                config.setMissingCnt(parseLong(raw[14]));
+                config.setTotalCount(parseLong(raw[15]));
+                config.setMissingPercentage(parseDouble(raw[16]));
 
                 config.setBinWeightedNeg(CommonUtils.stringToDoubleList(raw[17]));
                 config.setBinWeightedPos(CommonUtils.stringToDoubleList(raw[18]));
-                config.getColumnStats().setWoe(Double.valueOf(raw[19]));
-                config.getColumnStats().setWeightedWoe(Double.valueOf(raw[20]));
-                config.getColumnStats().setWeightedKs(Double.valueOf(raw[21]));
-                config.getColumnStats().setWeightedIv(Double.valueOf(raw[22]));
+                config.getColumnStats().setWoe(parseDouble(raw[19]));
+                config.getColumnStats().setWeightedWoe(parseDouble(raw[20]));
+                config.getColumnStats().setWeightedKs(parseDouble(raw[21]));
+                config.getColumnStats().setWeightedIv(parseDouble(raw[22]));
                 config.getColumnBinning().setBinCountWoe(CommonUtils.stringToDoubleList(raw[23]));
                 config.getColumnBinning().setBinWeightedWoe(CommonUtils.stringToDoubleList(raw[24]));
             } catch (Exception e) {
-                log.error("Fail to process following column : {} name: {} error: {}", columnNum, this.columnConfigList
-                        .get(columnNum).getColumnName(), e.getMessage());
-
+                log.error(String.format("Fail to process following column : %s name: %s error: %s", columnNum,
+                        this.columnConfigList.get(columnNum).getColumnName(), e.getMessage()), e);
                 continue;
             }
+        }
+    }
+
+    private static double parseDouble(String str) {
+        return parseDouble(str, 0d);
+    }
+
+    private static double parseDouble(String str, double dVal) {
+        try {
+            return Double.parseDouble(str);
+        } catch (Exception e) {
+            return dVal;
+        }
+    }
+
+    private static long parseLong(String str) {
+        return parseLong(str, 0L);
+    }
+
+    private static long parseLong(String str, long lVal) {
+        try {
+            return Long.parseLong(str);
+        } catch (Exception e) {
+            return lVal;
         }
     }
 

@@ -31,6 +31,6 @@ public class EnvironmentTest {
     public void testLoadShifuConfig() throws IOException {
         Environment.setProperty("SHIFU_HOME", "src/main/resources");
         Environment.loadShifuConfig();
-        Assert.assertEquals(40, Environment.getInt(Environment.HADOOP_NUM_PARALLEL).intValue());
+        Assert.assertEquals(6, Environment.getInt(Environment.LOCAL_NUM_PARALLEL).intValue());
     }
 }

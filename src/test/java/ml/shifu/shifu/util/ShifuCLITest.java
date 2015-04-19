@@ -17,6 +17,7 @@ package ml.shifu.shifu.util;
 
 import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
 import ml.shifu.shifu.fs.ShifuFileUtils;
+
 import org.apache.commons.io.FileUtils;
 import org.easymock.EasyMock;
 import org.powermock.api.easymock.PowerMock;
@@ -30,8 +31,9 @@ import org.testng.annotations.Test;
 
 import java.io.BufferedReader;
 import java.io.File;
-import java.io.FileReader;
+import java.io.FileInputStream;
 import java.io.IOException;
+import java.io.InputStreamReader;
 
 /**
  * ManagerTest class
@@ -50,10 +52,14 @@ public class ShifuCLITest {
 
     // @Test
     public void testInitializeModelOld() throws Exception {
-        BufferedReader reader = new BufferedReader(new FileReader(new File(
-                "src/test/resources/data/ModelStore/ModelSet1/ModelConfig.json")));
-        BufferedReader reader2 = new BufferedReader(new FileReader(new File(
-                "src/test/resources/common/VariableStore.json")));
+        File modelConfigFile = new File("src/test/resources/data/ModelStore/ModelSet1/ModelConfig.json");
+        BufferedReader reader = new BufferedReader(
+                new InputStreamReader(new FileInputStream(modelConfigFile), Constants.DEFAULT_CHARSET));
+        
+        File variableStoreFile = new File("src/test/resources/common/VariableStore.json");
+        BufferedReader reader2 = new BufferedReader(
+                new InputStreamReader(new FileInputStream(variableStoreFile), Constants.DEFAULT_CHARSET));
+        
         String[] headers = "id|diagnosis|column_3|column_4|column_5|column_6|column_7|column_8|column_9|column_10|column_11|column_12|column_13|column_14|column_15|column_16|column_17|column_18|column_19|column_20|column_21|column_22|column_23|column_24|column_25|column_26|column_27|column_28|column_29|column_30|column_31|column_32|result"
                 .split("\\|");
 
@@ -63,7 +69,7 @@ public class ShifuCLITest {
         EasyMock.expect(ShifuFileUtils.getReader("common/VariableStore.json", SourceType.LOCAL)).andReturn(reader2)
                 .anyTimes();
         EasyMock.expect(
-                CommonUtils.getHeaders("./src/test/resources/data/DataStore/DataSet1/.pig_header", "|",
+                CommonUtils.getHeaders("./src/test/resources/data/DataStore/DataSet1/.pig_header", "|", 
                         SourceType.LOCAL)).andReturn(headers).anyTimes();
 
         PowerMock.replayAll(CommonUtils.class);
@@ -113,8 +119,7 @@ public class ShifuCLITest {
         File originModel = new File("src/test/resources/example/cancer-judgement/ModelStore/ModelSet1/ModelConfig.json");
         File tmpModel = new File("ModelConfig.json");
 
-        File originColumn = new File(
-                "src/test/resources/example/cancer-judgement/ModelStore/ModelSet1/ColumnConfig.json");
+        File originColumn = new File("src/test/resources/example/cancer-judgement/ModelStore/ModelSet1/ColumnConfig.json");
         File tmpColumn = new File("ColumnConfig.json");
 
         FileUtils.copyFile(originModel, tmpModel);
@@ -135,8 +140,7 @@ public class ShifuCLITest {
         File originModel = new File("src/test/resources/example/cancer-judgement/ModelStore/ModelSet1/ModelConfig.json");
         File tmpModel = new File("ModelConfig.json");
 
-        File originColumn = new File(
-                "src/test/resources/example/cancer-judgement/ModelStore/ModelSet1/ColumnConfig.json");
+        File originColumn = new File("src/test/resources/example/cancer-judgement/ModelStore/ModelSet1/ColumnConfig.json");
         File tmpColumn = new File("ColumnConfig.json");
 
         FileUtils.copyFile(originModel, tmpModel);
@@ -155,8 +159,7 @@ public class ShifuCLITest {
         File originModel = new File("src/test/resources/example/cancer-judgement/ModelStore/ModelSet1/ModelConfig.json");
         File tmpModel = new File("ModelConfig.json");
 
-        File originColumn = new File(
-                "src/test/resources/example/cancer-judgement/ModelStore/ModelSet1/ColumnConfig.json");
+        File originColumn = new File("src/test/resources/example/cancer-judgement/ModelStore/ModelSet1/ColumnConfig.json");
         File tmpColumn = new File("ColumnConfig.json");
 
         FileUtils.copyFile(originModel, tmpModel);
@@ -181,8 +184,7 @@ public class ShifuCLITest {
         File originModel = new File("src/test/resources/example/cancer-judgement/ModelStore/ModelSet1/ModelConfig.json");
         File tmpModel = new File("ModelConfig.json");
 
-        File originColumn = new File(
-                "src/test/resources/example/cancer-judgement/ModelStore/ModelSet1/ColumnConfig.json");
+        File originColumn = new File("src/test/resources/example/cancer-judgement/ModelStore/ModelSet1/ColumnConfig.json");
         File tmpColumn = new File("ColumnConfig.json");
 
         FileUtils.copyFile(originModel, tmpModel);
@@ -208,8 +210,7 @@ public class ShifuCLITest {
         File originModel = new File("src/test/resources/example/cancer-judgement/ModelStore/ModelSet1/ModelConfig.json");
         File tmpModel = new File("ModelConfig.json");
 
-        File originColumn = new File(
-                "src/test/resources/example/cancer-judgement/ModelStore/ModelSet1/ColumnConfig.json");
+        File originColumn = new File("src/test/resources/example/cancer-judgement/ModelStore/ModelSet1/ColumnConfig.json");
         File tmpColumn = new File("ColumnConfig.json");
 
         File modelsDir = new File("src/test/resources/example/cancer-judgement/ModelStore/ModelSet1/models");
@@ -239,8 +240,7 @@ public class ShifuCLITest {
         File originModel = new File("src/test/resources/example/cancer-judgement/ModelStore/ModelSet1/ModelConfig.json");
         File tmpModel = new File("ModelConfig.json");
 
-        File originColumn = new File(
-                "src/test/resources/example/cancer-judgement/ModelStore/ModelSet1/ColumnConfig.json");
+        File originColumn = new File("src/test/resources/example/cancer-judgement/ModelStore/ModelSet1/ColumnConfig.json");
         File tmpColumn = new File("ColumnConfig.json");
 
         File modelsDir = new File("src/test/resources/example/cancer-judgement/ModelStore/ModelSet1/models");
@@ -265,8 +265,7 @@ public class ShifuCLITest {
     public void testCreateEvalSet() throws Exception {
         File originModel = new File("src/test/resources/example/cancer-judgement/ModelStore/ModelSet1/ModelConfig.json");
         File tmpModel = new File("ModelConfig.json");
-        File originColumn = new File(
-                "src/test/resources/example/cancer-judgement/ModelStore/ModelSet1/ColumnConfig.json");
+        File originColumn = new File("src/test/resources/example/cancer-judgement/ModelStore/ModelSet1/ColumnConfig.json");
         File tmpColumn = new File("ColumnConfig.json");
 
         FileUtils.copyFile(originModel, tmpModel);
@@ -278,7 +277,8 @@ public class ShifuCLITest {
         Assert.assertTrue(tmpModel.lastModified() > timestamp);
 
         FileUtils.deleteQuietly(tmpModel);
-        FileUtils.deleteQuietly(new File("EvalC" + Constants.DEFAULT_EVALSCORE_META_COLUMN_FILE));
+        FileUtils.deleteQuietly(new File("EvalC"
+                + Constants.DEFAULT_EVALSCORE_META_COLUMN_FILE));
     }
 
     @Test
@@ -286,8 +286,7 @@ public class ShifuCLITest {
         File originModel = new File("src/test/resources/example/cancer-judgement/ModelStore/ModelSet1/ModelConfig.json");
         File tmpModel = new File("ModelConfig.json");
 
-        File originColumn = new File(
-                "src/test/resources/example/cancer-judgement/ModelStore/ModelSet1/ColumnConfig.json");
+        File originColumn = new File("src/test/resources/example/cancer-judgement/ModelStore/ModelSet1/ColumnConfig.json");
 
         File tmpColumn = new File("ColumnConfig.json");
 

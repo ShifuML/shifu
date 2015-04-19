@@ -15,21 +15,37 @@
  */
 package ml.shifu.shifu.util;
 
+import java.io.IOException;
+import java.util.jar.JarFile;
+import java.util.jar.Manifest;
+
 import ml.shifu.shifu.container.obj.ModelTrainConf.ALGORITHM;
-import ml.shifu.shifu.core.processor.*;
+import ml.shifu.shifu.core.processor.BasicModelProcessor;
+import ml.shifu.shifu.core.processor.CreateModelProcessor;
+import ml.shifu.shifu.core.processor.EvalModelProcessor;
 import ml.shifu.shifu.core.processor.EvalModelProcessor.EvalStep;
+import ml.shifu.shifu.core.processor.ExportModelProcessor;
+import ml.shifu.shifu.core.processor.InitModelProcessor;
+import ml.shifu.shifu.core.processor.ManageModelProcessor;
 import ml.shifu.shifu.core.processor.ManageModelProcessor.ModelAction;
+import ml.shifu.shifu.core.processor.NormalizeModelProcessor;
+import ml.shifu.shifu.core.processor.PostTrainModelProcessor;
+import ml.shifu.shifu.core.processor.StatsModelProcessor;
+import ml.shifu.shifu.core.processor.TrainModelProcessor;
+import ml.shifu.shifu.core.processor.VarSelectModelProcessor;
 import ml.shifu.shifu.exception.ShifuException;
 
-import org.apache.commons.cli.*;
+import org.apache.commons.cli.CommandLine;
+import org.apache.commons.cli.CommandLineParser;
+import org.apache.commons.cli.GnuParser;
+import org.apache.commons.cli.Option;
+import org.apache.commons.cli.OptionBuilder;
+import org.apache.commons.cli.Options;
+import org.apache.commons.cli.ParseException;
 import org.apache.commons.lang.StringUtils;
 import org.apache.pig.impl.util.JarManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import java.io.IOException;
-import java.util.jar.JarFile;
-import java.util.jar.Manifest;
 
 
 /**

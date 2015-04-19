@@ -37,19 +37,17 @@ public class ShifuFileUtilsTest {
     public void getDataScannersTest() throws IOException {
 
         File file = new File("common-utils");
-        if (!file.exists()) {
-            file.mkdirs();
-        } else {
-            FileUtils.deleteDirectory(file);
-            file.mkdirs();
+        if (file.exists()) {
+			FileUtils.deleteDirectory(file);
         }
+        FileUtils.forceMkdir(file);
 
         List<Scanner> list = ShifuFileUtils.getDataScanners(Arrays.asList(new String[]{"common-utils"}), SourceType.HDFS);
 
         Assert.assertTrue(list.size() == 0);
 
         file = new File("common-utils/part-0000");
-        file.createNewFile();
+        FileUtils.touch(file);
 
         list = ShifuFileUtils.getDataScanners(Arrays.asList(new String[]{"common-utils"}), SourceType.HDFS);
 
@@ -76,7 +74,7 @@ public class ShifuFileUtilsTest {
     public void copyDataTest() throws IOException {
         File file = new File("common-utils/from_data");
         if (!file.exists()) {
-            file.mkdirs();
+            FileUtils.forceMkdir(file);
         }
 
         ShifuFileUtils.copy("common-utils/from_data", "common-utils/to_data", SourceType.LOCAL);
@@ -98,15 +96,15 @@ public class ShifuFileUtilsTest {
     @Test
     public void testExpandPath() throws IOException {
         File testDir = new File("test-dir");
-        testDir.mkdir();
+        FileUtils.forceMkdir(testDir);
 
         File tmp0 = new File("test-dir/tmp0");
         File tmp1 = new File("test-dir/tmp1");
         File tmp2 = new File("test-dir/tmp2");
 
-        tmp0.createNewFile();
-        tmp1.createNewFile();
-        tmp2.createNewFile();
+        FileUtils.touch(tmp0);
+        FileUtils.touch(tmp1);
+        FileUtils.touch(tmp2);
 
         List<String> filePathList = ShifuFileUtils.expandPath("test-dir/tmp[0-2]", SourceType.LOCAL);
         Assert.assertEquals(3, filePathList.size());

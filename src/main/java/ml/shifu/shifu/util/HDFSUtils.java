@@ -60,8 +60,11 @@ public final class HDFSUtils {
                 if (hdfs == null) {
                     try {
                         // initialization
-                        hdfs = FileSystem.get(conf);
-                        hdfs.setVerifyChecksum(false);
+                        // Assign to the hdfs instance after the tmpHdfs instance initialization fully complete.
+                        // Avoid hdfs instance being used before fully initializaion.
+                        FileSystem tmpHdfs = FileSystem.get(conf);
+                        tmpHdfs.setVerifyChecksum(false);
+                        hdfs = tmpHdfs;
                     } catch (IOException e) {
                         LOG.error("Error on creating hdfs FileSystem object.", e);
                         throw new ShifuException(ShifuErrorCode.ERROR_GET_HDFS_SYSTEM);

@@ -56,7 +56,7 @@ public class TrainModelActorTest {
     @Test
     public void testActor() throws IOException, InterruptedException {
         File tmpDir = new File("./tmp");
-        tmpDir.mkdir();
+        FileUtils.forceMkdir(tmpDir);
 
         // create normalize data
         actorSystem = ActorSystem.create("shifuActorSystem");
@@ -82,7 +82,7 @@ public class TrainModelActorTest {
         // start to run trainer
         actorSystem = ActorSystem.create("shifuActorSystem");
         File models = new File("./models");
-        models.mkdir();
+        FileUtils.forceMkdir(models);
 
         final List<AbstractTrainer> trainers = new ArrayList<AbstractTrainer>();
         for (int i = 0; i < 5; i++) {

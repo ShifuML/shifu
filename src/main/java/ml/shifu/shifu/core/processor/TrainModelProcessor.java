@@ -58,6 +58,7 @@ import ml.shifu.shifu.util.HDFSUtils;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.collections.ListUtils;
 import org.apache.commons.compress.compressors.bzip2.BZip2CompressorInputStream;
+import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileSystem;
@@ -125,7 +126,9 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
      */
     @Override
     public int run() throws Exception {
-        LOG.info("Step Start: train");
+        if(!this.isForVarSelect()) {
+            LOG.info("Step Start: train");
+        }
         long start = System.currentTimeMillis();
 
         setUp(ModelStep.TRAIN);
@@ -151,7 +154,10 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
         }
 
         clearUp(ModelStep.TRAIN);
-        LOG.info("Step Finished: train with {} ms", (System.currentTimeMillis() - start));
+
+        if(!this.isForVarSelect()) {
+            LOG.info("Step Finished: train with {} ms", (System.currentTimeMillis() - start));
+        }
         return 0;
     }
 
@@ -165,8 +171,8 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
     private void runAkkaTrain(int numBags) throws IOException {
 
         File models = new File("models");
-        models.delete();
-        models.mkdir();
+        FileUtils.deleteDirectory(models);
+        FileUtils.forceMkdir(models);
 
         trainers.clear();
 
@@ -408,13 +414,10 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
         args.add("-i");
         args.add(ShifuFileUtils.getFileSystemBySourceType(sourceType)
                 .makeQualified(new Path(super.getPathFinder().getNormalizedDataPath())).toString());
-        // args.add(ShifuFileUtils.getFileSystemBySourceType(sourceType)
-        // .makeQualified(new Path(super.getPathFinder().getNormalizedDataPath(), "part-m-003[1-5][0-9]"))
-        // .toString());
 
         String zkServers = Environment.getProperty(Environment.ZOO_KEEPER_SERVERS);
         if(StringUtils.isEmpty(zkServers)) {
-            LOG.warn("No specified zookeeper settings from zookeeperServers in shifuConfig file, Guagua will set embeded zookeeper server in client process or master node. For big data applications, specified zookeeper servers are strongly recommended.");
+            LOG.warn("No specified zookeeper settings from zookeeperServers in shifuConfig file, Guagua will set embeded zookeeper server in client process or master node. For fail-over zookeeper applications, specified zookeeper servers are strongly recommended.");
         } else {
             args.add("-z");
             args.add(zkServers);
@@ -482,7 +485,7 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
         args.add(String.format(NNConstants.MAPREDUCE_PARAM_FORMAT, NNConstants.NN_DRY_TRAIN, isDryTrain()));
         // hard code set computation threshold for 50s. Can be changed in shifuconfig file
         args.add(String.format(NNConstants.MAPREDUCE_PARAM_FORMAT, GuaguaConstants.GUAGUA_COMPUTATION_TIME_THRESHOLD,
-                60 * 1000l));
+                60 * 1000L));
         setHeapSizeAndSplitSize(args);
 
         // one can set guagua conf in shifuconfig
@@ -511,6 +514,13 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
         args.add(String.format(NNConstants.MAPREDUCE_PARAM_FORMAT,
                 GuaguaConstants.GUAGUA_SPLIT_MAX_COMBINED_SPLIT_SIZE,
                 Environment.getProperty(GuaguaConstants.GUAGUA_SPLIT_MAX_COMBINED_SPLIT_SIZE, "536870912")));
+        // special tuning parameters for shifu, 0.99 means each iteation master wait for 99% workers and then can go to
+        // next iteration.
+        args.add(String.format(NNConstants.MAPREDUCE_PARAM_FORMAT, GuaguaConstants.GUAGUA_MIN_WORKERS_RATIO, 0.99));
+        // 20 seconds if waiting over 20, consider 99% workers
+        // these two can be overrided in shifuconfig
+        args.add(String.format(NNConstants.MAPREDUCE_PARAM_FORMAT, GuaguaConstants.GUAGUA_MIN_WORKERS_TIMEOUT,
+                20 * 1000L));
     }
 
     private void copyModelToLocal(String modelName, Path modelPath, SourceType sourceType) throws IOException {
@@ -642,7 +652,14 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
         }
 
         private long dumpFromOffset(Path item, long offset) throws IOException {
-            FSDataInputStream in = HDFSUtils.getFS().open(item);
+            FSDataInputStream in;
+            try {
+                in = HDFSUtils.getFS().open(item);
+            } catch (Exception e) {
+                // in hadoop 0.20.2, we found InteruptedException here and cannot be caught by run, here is to ignore
+                // such exception. It's ok we return old offset to read message twice.
+                return offset;
+            }
             ByteArrayOutputStream out = null;
             DataOutputStream dataOut = null;
             try {

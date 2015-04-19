@@ -173,14 +173,15 @@
                 "directive": "checkbox",
                 "defval" : true
             }, {
-            	"name": "binningAlgorithm",
-            	"type": "text",
-            	"directive": "select",
-            	"options": [
-            		{"label": "Native", "value":"Native"},
-            		{"label": "SPDT", "value": "SPDT"},
-            		{"label": "MunroPat", "value": "MunroPat"}
-            	]
+                "name": "binningAlgorithm",
+                "type": "text",
+                "directive": "select",
+                "options": [
+                    {"label": "Native", "value":"Native"},
+                    {"label": "SPDTI", "value": "SPDTI"},
+                    {"label": "SPDT", "value": "SPDT"},
+                    {"label": "MunroPat", "value": "MunroPat"}
+                ]
             }
         ]
     },
@@ -219,10 +220,10 @@
                     {"label": "Mixed KS and IV", "value":"mix"}
                 ]
             }, {
-            	"name": "votedVariablesSelection",
-            	"type": "boolean",
-            	"directive": "checkbox",
-            	"defval": false
+                "name": "votedVariablesSelection",
+                "type": "boolean",
+                "directive": "checkbox",
+                "defval": false
             }, {
                 "name": "wrapperEnabled",
                 "type": "boolean",
@@ -427,21 +428,21 @@
                             {"label": "Scaled Conjugate Gradient", "value":"S"}
                         ]
                     } , {
-						"name" : "Kernel",
-						"type" : "text",
-						"directive": "input",
-						"defval" : "linear"
-					} , {
-						"name" : "Const",
-						"type" : "number",
-						"directive": "input",
+                        "name" : "Kernel",
+                        "type" : "text",
+                        "directive": "input",
+                        "defval" : "linear"
+                    } , {
+                        "name" : "Const",
+                        "type" : "number",
+                        "directive": "input",
                         "defval" : 0.1
-					}, {
-						"name" : "Gamma",
-						"type" : "number",
-						"directive": "input",
+                    }, {
+                        "name" : "Gamma",
+                        "type" : "number",
+                        "directive": "input",
                         "defval" : 0.1
-					}
+                    }
                 ]
             }, {
                 "name": "customPaths",

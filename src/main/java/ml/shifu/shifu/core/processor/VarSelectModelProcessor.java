@@ -38,6 +38,7 @@ import ml.shifu.shifu.core.dvarsel.VarSelWorker;
 import ml.shifu.shifu.core.dvarsel.VarSelWorkerResult;
 import ml.shifu.shifu.core.dvarsel.wrapper.WrapperMasterConductor;
 import ml.shifu.shifu.core.dvarsel.wrapper.WrapperWorkerConductor;
+import ml.shifu.shifu.core.mr.input.CombineInputFormat;
 import ml.shifu.shifu.core.validator.ModelInspector.ModelStep;
 import ml.shifu.shifu.core.varselect.ColumnInfo;
 import ml.shifu.shifu.core.varselect.VarSelectMapper;
@@ -92,8 +93,6 @@ import com.google.common.base.Splitter;
 public class VarSelectModelProcessor extends BasicModelProcessor implements Processor {
 
     private final static Logger log = LoggerFactory.getLogger(VarSelectModelProcessor.class);
-
-    public static final String SHIFU_DEFAULT_DTRAIN_PARALLEL = "true";
 
     /**
      * Run for the variable selection
@@ -214,7 +213,7 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
                     String[] raw = scanner.nextLine().trim().split("\\|");
 
                     @SuppressWarnings("unused")
-                    int idSize = Integer.valueOf(raw[0]);
+                    int idSize = Integer.parseInt(raw[0]);
 
                     ids = CommonUtils.stringToIntegerList(raw[1]);
 
@@ -461,6 +460,11 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
                         .makeQualified(new Path(super.getPathFinder().getColumnConfigPath(source))).toString());
         conf.set(NNConstants.MAPRED_JOB_QUEUE_NAME, Environment.getProperty(Environment.HADOOP_JOB_QUEUE, "default"));
         conf.set(Constants.SHIFU_MODELSET_SOURCE_TYPE, source.toString());
+        // set mapreduce.job.max.split.locations to 30 to suppress warnings
+        conf.setInt(GuaguaMapReduceConstants.MAPREDUCE_JOB_MAX_SPLIT_LOCATIONS, 30);
+        // Tmp set to false because of some cluster by default use gzip while CombineInputFormat will split gzip file (a
+        // bug)
+        conf.setBoolean(CombineInputFormat.SHIFU_VS_SPLIT_COMBINABLE, false);
 
         Float wrapperRatio = this.modelConfig.getVarSelect().getWrapperRatio();
         if(wrapperRatio == null) {
@@ -529,7 +533,7 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
         args.add(String.format(NNConstants.MAPREDUCE_PARAM_FORMAT, GuaguaMapReduceConstants.MAPRED_CHILD_JAVA_OPTS,
                 "-Xmn128m -Xms1G -Xmx1G"));
         args.add(String.format(NNConstants.MAPREDUCE_PARAM_FORMAT, GuaguaConstants.GUAGUA_SPLIT_COMBINABLE,
-                Environment.getProperty(GuaguaConstants.GUAGUA_SPLIT_COMBINABLE, SHIFU_DEFAULT_DTRAIN_PARALLEL)));
+                Environment.getProperty(GuaguaConstants.GUAGUA_SPLIT_COMBINABLE, "true")));
         args.add(String.format(NNConstants.MAPREDUCE_PARAM_FORMAT,
                 GuaguaConstants.GUAGUA_SPLIT_MAX_COMBINED_SPLIT_SIZE,
                 Environment.getProperty(GuaguaConstants.GUAGUA_SPLIT_MAX_COMBINED_SPLIT_SIZE, "268435456")));
