@@ -16,6 +16,7 @@
 package ml.shifu.shifu.container.meta;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+
 import org.apache.commons.collections.CollectionUtils;
 
 import java.util.ArrayList;
@@ -48,7 +49,14 @@ public class MetaGroup implements Cloneable {
 
     @Override
     public MetaGroup clone() {
-        MetaGroup metaGroup = new MetaGroup();
+        MetaGroup metaGroup = null;
+        try {
+            metaGroup = (MetaGroup) super.clone();
+        } catch (CloneNotSupportedException e) {
+            // This should never happen
+            throw new InternalError(e.toString());
+        }
+        
 
         // copy group
         metaGroup.setGroup(group);

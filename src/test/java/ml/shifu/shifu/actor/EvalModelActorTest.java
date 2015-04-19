@@ -65,8 +65,8 @@ public class EvalModelActorTest {
         FileUtils.copyDirectory(models, tmpModels);
 
         File tmpEvalA = new File("evals");
-        tmpEvalA.mkdir();
-
+        FileUtils.forceMkdir(tmpEvalA);
+        
         ActorRef modelEvalRef = actorSystem.actorOf(new Props(new UntypedActorFactory() {
             private static final long serialVersionUID = -1437127862571741369L;
 
