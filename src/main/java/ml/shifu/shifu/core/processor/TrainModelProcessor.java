@@ -122,7 +122,9 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
      */
     @Override
     public int run() throws Exception {
-        LOG.info("Step Start: train");
+        if(!this.isForVarSelect()) {
+            LOG.info("Step Start: train");
+        }
         long start = System.currentTimeMillis();
 
         setUp(ModelStep.TRAIN);
@@ -148,7 +150,10 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
         }
 
         clearUp(ModelStep.TRAIN);
-        LOG.info("Step Finished: train with {} ms", (System.currentTimeMillis() - start));
+
+        if(!this.isForVarSelect()) {
+            LOG.info("Step Finished: train with {} ms", (System.currentTimeMillis() - start));
+        }
         return 0;
     }
 
