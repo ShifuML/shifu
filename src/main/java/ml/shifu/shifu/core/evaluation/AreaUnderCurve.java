@@ -27,14 +27,81 @@ import ml.shifu.shifu.container.PerformanceObject;
  */
 public class AreaUnderCurve {
     
-    private static Double trapezoid() {
-        // TODO: calculate trapezoid area.
-        return Double.valueOf(0);
+    /**
+     * Calculate trapezoid area under two points.
+     * 
+     * @param first the point with the lower X coordinate.
+     * @param second the point with the higher X coordinate.
+     * @return trapezoid area
+     */
+    public static double trapezoid(double[] first, double[] second) {
+        return (second[1] + first[1]) * (second[0] - first[0]) / 2.0;
     }
     
-    public static Double calculate(List<PerformanceObject> curves) {
-        Double area = Double.valueOf(0);
-        // TODO: calculate area.
-        return area;
+    
+    /**
+     * Calculate area of ROC curve based on the PerformanceObject List.
+     * 
+     * @param curves PerformanceObject List contains ROC curve data.
+     * @return area under ROC.
+     */
+    public static double ofRoc(List<PerformanceObject> roc) {
+        return calculate(CurveIteratorFactory.getRocIterator(roc));
     }
+    
+    /**
+     * Calculate area of ROC curve based on the PerformanceObject List.
+     * 
+     * @param curves PerformanceObject List contains ROC curve data.
+     * @return area under ROC.
+     */
+    public static double ofWeightedRoc(List<PerformanceObject> weightedRoc) {
+        return calculate(CurveIteratorFactory.getWeightedRocIterator(weightedRoc));
+    }
+    
+    /**
+     * Calculate area of PR curve based on the PerformanceObject List.
+     * 
+     * @param curves PerformanceObject List contains PR curve data.
+     * @return area under PR.
+     */
+    public static double ofPr(List<PerformanceObject> pr) {
+        return calculate(CurveIteratorFactory.getPrIterator(pr));
+    }
+    
+    /**
+     * Calculate area of PR curve based on the PerformanceObject List.
+     * 
+     * @param curves PerformanceObject List contains PR curve data.
+     * @return area under PR.
+     */
+    public static double ofWeightedPr(List<PerformanceObject> weightedPr) {
+        return calculate(CurveIteratorFactory.getWeightedPrIterator(weightedPr));
+    }
+    
+    /**
+     * Calculate area of the given curve.
+     * 
+     * @param curve curve with iterator @see {@link CurveIterator}
+     * @return area under curve.
+     */
+    public static double calculate(CurveIterator curve) {
+        if(curve.getPointNum() < 2) {
+            throw new IllegalArgumentException("We need at least 2 point to calculate area.");
+        }
+        
+        // accumulate the trapezoid area of every successive two points in the curve.
+        double sum = 0.0;
+        double[] firstPoint = curve.next();
+        double[] secondPoint = null;
+        while(curve.hasNext()) {
+            secondPoint = curve.next();
+            sum += trapezoid(firstPoint, secondPoint);
+            firstPoint = secondPoint;
+        }
+        
+        return sum;
+    }
+    
+    
 }

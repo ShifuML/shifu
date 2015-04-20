@@ -34,7 +34,15 @@ public class PerformanceResult {
     public List<PerformanceObject> roc;
 
     public List<PerformanceObject> weightedRoc;
+    
+    public double areaUnderRoc;
 
+    public double weightedAreaUnderRoc;
+    
+    public double areaUnderPr;
+    
+    public double weightedAreaUnderPr;
+    
     public List<PerformanceObject> gains;
 
     public List<PerformanceObject> weightedGains;
