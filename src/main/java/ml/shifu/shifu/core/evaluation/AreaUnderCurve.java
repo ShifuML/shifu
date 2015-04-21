@@ -15,6 +15,7 @@
  */
 package ml.shifu.shifu.core.evaluation;
 
+import java.util.Iterator;
 import java.util.List;
 
 import ml.shifu.shifu.container.PerformanceObject;
@@ -46,7 +47,7 @@ public class AreaUnderCurve {
      * @return area under ROC.
      */
     public static double ofRoc(List<PerformanceObject> roc) {
-        return calculate(CurveIteratorFactory.getRocIterator(roc));
+        return calculate(roc, PerformanceExtractors.getRocPointExtractor());
     }
     
     /**
@@ -56,7 +57,7 @@ public class AreaUnderCurve {
      * @return area under ROC.
      */
     public static double ofWeightedRoc(List<PerformanceObject> weightedRoc) {
-        return calculate(CurveIteratorFactory.getWeightedRocIterator(weightedRoc));
+        return calculate(weightedRoc, PerformanceExtractors.getWeightRocPointExtractor());
     }
     
     /**
@@ -66,7 +67,7 @@ public class AreaUnderCurve {
      * @return area under PR.
      */
     public static double ofPr(List<PerformanceObject> pr) {
-        return calculate(CurveIteratorFactory.getPrIterator(pr));
+        return calculate(pr, PerformanceExtractors.getPrPointExtractor());
     }
     
     /**
@@ -76,7 +77,7 @@ public class AreaUnderCurve {
      * @return area under PR.
      */
     public static double ofWeightedPr(List<PerformanceObject> weightedPr) {
-        return calculate(CurveIteratorFactory.getWeightedPrIterator(weightedPr));
+        return calculate(weightedPr, PerformanceExtractors.getWeightPrPointExtractor());
     }
     
     /**
@@ -85,17 +86,18 @@ public class AreaUnderCurve {
      * @param curve curve with iterator @see {@link CurveIterator}
      * @return area under curve.
      */
-    public static double calculate(CurveIterator curve) {
-        if(curve.getPointNum() < 2) {
+    public static double calculate(List<PerformanceObject> perform, PerformanceExtractor<double[]> extractor) {
+        if(perform.size() < 2) {
             throw new IllegalArgumentException("We need at least 2 point to calculate area.");
         }
         
         // accumulate the trapezoid area of every successive two points in the curve.
+        Iterator<PerformanceObject> iter = perform.iterator();
         double sum = 0.0;
-        double[] firstPoint = curve.next();
+        double[] firstPoint = extractor.extract(iter.next());
         double[] secondPoint = null;
-        while(curve.hasNext()) {
-            secondPoint = curve.next();
+        while(iter.hasNext()) {
+            secondPoint = extractor.extract(iter.next());
             sum += trapezoid(firstPoint, secondPoint);
             firstPoint = secondPoint;
         }
