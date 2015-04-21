@@ -79,11 +79,12 @@ public class AreaUnderCurve {
     public static double ofWeightedPr(List<PerformanceObject> weightedPr) {
         return calculate(weightedPr, PerformanceExtractors.getWeightPrPointExtractor());
     }
-    
+
     /**
-     * Calculate area of the given curve.
+     * Calculate curve area based on the PerformanceObject List and given extractor.
      * 
-     * @param curve curve with iterator @see {@link CurveIterator}
+     * @param perform PerformanceObject List contains curve data.
+     * @param extractor PerformanceExtractor instance used extract desired data from PerformanceObject.
      * @return area under curve.
      */
     public static double calculate(List<PerformanceObject> perform, PerformanceExtractor<double[]> extractor) {
@@ -104,6 +105,5 @@ public class AreaUnderCurve {
         
         return sum;
     }
-    
     
 }

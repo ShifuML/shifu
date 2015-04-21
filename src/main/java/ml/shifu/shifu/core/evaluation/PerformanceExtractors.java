@@ -41,9 +41,6 @@ public class PerformanceExtractors {
 /**
  * Extractor used to extract point - (fpr,recall) from PerformanceExtractor object.
  * Use double array to represent the point.
- * 
- * @author xiaobzheng (zheng.xiaobin.roubao@gmail.com)
- *
  */
 class RocPointExtractor implements PerformanceExtractor<double[]> {
 
@@ -57,9 +54,6 @@ class RocPointExtractor implements PerformanceExtractor<double[]> {
 /**
  * Extractor used to extract point - (weightedFpr,weightedRecall) from PerformanceExtractor object.
  * Use double array to represent the point.
- * 
- * @author xiaobzheng (zheng.xiaobin.roubao@gmail.com)
- *
  */
 class WeightRocPointExtractor implements PerformanceExtractor<double[]> {
     
@@ -73,9 +67,6 @@ class WeightRocPointExtractor implements PerformanceExtractor<double[]> {
 /**
  * Extractor used to extract point - (recall,precision) from PerformanceExtractor object.
  * Use double array to represent the point.
- * 
- * @author xiaobzheng (zheng.xiaobin.roubao@gmail.com)
- *
  */
 class PrPointExtractor implements PerformanceExtractor<double[]> {
     
@@ -89,9 +80,6 @@ class PrPointExtractor implements PerformanceExtractor<double[]> {
 /**
  * Extractor used to extract point - (weightedRecall,weightedPrecision) from PerformanceExtractor object.
  * Use double array to represent the point.
- * 
- * @author xiaobzheng (zheng.xiaobin.roubao@gmail.com)
- *
  */
 class WeightPrPointExtractor implements PerformanceExtractor<double[]> {
     

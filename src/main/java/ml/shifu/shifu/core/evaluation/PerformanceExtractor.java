@@ -4,7 +4,7 @@ import ml.shifu.shifu.container.PerformanceObject;
 
 /**
  * Class for extracting performance from PerformanceObject.
- * You can find some useful implementation in {@link PerformanceExtractors}.
+ * You can find some useful implementations in {@link PerformanceExtractors}.
  * 
  * @author xiaobzheng (zheng.xiaobin.roubao@gmail.com)
  *
