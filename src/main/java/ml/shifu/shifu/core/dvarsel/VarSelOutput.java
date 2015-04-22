@@ -84,7 +84,7 @@ public class VarSelOutput extends BasicMasterInterceptor<VarSelMasterResult, Var
 
         List<CandidateSeed> candidateSeeds = varSelMasterResult.getSeedList();
 
-        LOG.info("Results:" + varSelMasterResult.getBestSeed().toString());
+        LOG.info("Results is - {}", varSelMasterResult.getBestSeed());
 
         String out = context.getProps().getProperty(Constants.VAR_SEL_COLUMN_IDS_OUPUT);
 

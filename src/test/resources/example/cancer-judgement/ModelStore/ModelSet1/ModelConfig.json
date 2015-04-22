@@ -34,7 +34,7 @@
     "filterNum" : 200,
     "filterBy" : "KS",
     "params" : {
-      "worker_sample_rate" : 0.15,
+      "worker_sample_rate" : 0.5,
       "population_multiply_cnt" :  20,
       "population_live_size" : 10,
       "expect_variable_cnt" : 6,
