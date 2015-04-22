@@ -1,6 +1,7 @@
 package ml.shifu.shifu.core.evaluation;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 import ml.shifu.shifu.container.PerformanceObject;
@@ -51,6 +52,16 @@ public class AreaUnderCurveTest {
         }
     }
     
+    @Test
+    public void calculateAreaTest() {
+        PerformanceExtractor xExtractor = Performances.fpr();
+        PerformanceExtractor yExtractor = Performances.recall();
+        List<PerformanceObject> nullList = null;
+        List<PerformanceObject> oneList = Arrays.asList(new PerformanceObject());
+        
+        Assert.assertEquals(AreaUnderCurve.calculateArea(nullList, xExtractor, yExtractor), 0.0);
+        Assert.assertEquals(AreaUnderCurve.calculateArea(oneList, xExtractor, yExtractor), 0.0);
+    }
     
     @Test
     public void trapezoidTest() {
@@ -58,14 +69,16 @@ public class AreaUnderCurveTest {
         Assert.assertEquals(area, 5.0);
     }
     
-    @Test void ofRocTest() {
+    @Test 
+    void ofRocTest() {
         double area = AreaUnderCurve.ofRoc(roc);
         double weightedArea = AreaUnderCurve.ofWeightedRoc(roc);
         Assert.assertEquals(area, 0.55);
         Assert.assertEquals(weightedArea, 0.6);
     }
     
-    @Test void ofPrTest() {
+    @Test 
+    void ofPrTest() {
         double area = AreaUnderCurve.ofPr(pr);
         double weightedArea = AreaUnderCurve.ofWeightedPr(pr);
         Assert.assertEquals(area, 0.55);

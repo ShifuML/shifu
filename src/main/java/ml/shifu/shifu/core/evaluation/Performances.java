@@ -31,7 +31,9 @@ import ml.shifu.shifu.container.PerformanceObject;
  * @author xiaobzheng (zheng.xiaobin.roubao@gmail.com)
  *
  */
-public class Performances {
+public final class Performances {
+    
+    private Performances() {}
     
     private static Fpr fpr = new Fpr();
     private static WeightedFpr wFpr = new WeightedFpr();
@@ -40,27 +42,27 @@ public class Performances {
     private static Precision precision = new Precision();
     private static WeightedPrecision wPrecision = new WeightedPrecision();
 
-    public static PerformanceExtractor getFprExtractor() {
+    public static PerformanceExtractor fpr() {
         return fpr;
     }
     
-    public static PerformanceExtractor getWeightedFprExtractor() {
+    public static PerformanceExtractor weightedFpr() {
         return wFpr;
     }
     
-    public static PerformanceExtractor getRecallExtractor() {
+    public static PerformanceExtractor recall() {
         return recall;
     }
     
-    public static PerformanceExtractor getWeightedRecallExtractor() {
+    public static PerformanceExtractor weightedRecall() {
         return wRecall;
     }
 
-    public static PerformanceExtractor getPrecisionExtractor() {
+    public static PerformanceExtractor precision() {
         return precision;
     }
 
-    public static PerformanceExtractor getWeightedPrecisionExtractor() {
+    public static PerformanceExtractor weightedPrecision() {
         return wPrecision;
     }
 }
