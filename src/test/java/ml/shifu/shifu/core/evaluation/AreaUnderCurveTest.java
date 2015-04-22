@@ -54,10 +54,8 @@ public class AreaUnderCurveTest {
     
     @Test
     public void trapezoidTest() {
-        double[] first = new double[]{1,1};
-        double[] second = new double[]{3,2};
-        double area = AreaUnderCurve.trapezoid(first, second);
-        Assert.assertEquals(area, 3.0);
+        double area = AreaUnderCurve.trapezoid(1, 1, 3, 4);
+        Assert.assertEquals(area, 5.0);
     }
     
     @Test void ofRocTest() {
