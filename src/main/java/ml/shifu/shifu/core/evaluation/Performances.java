@@ -68,7 +68,7 @@ public final class Performances {
 }
 
 /**
- * Extractor used to extract fpr from PerformanceExtractor object.
+ * Extractor used to extract fpr from PerformanceObject.
  */
 class Fpr implements PerformanceExtractor {
 
@@ -80,7 +80,7 @@ class Fpr implements PerformanceExtractor {
 }
 
 /**
- * Extractor used to extract weightedFpr from PerformanceExtractor object.
+ * Extractor used to extract weightedFpr from PerformanceObject.
  */
 class WeightedFpr implements PerformanceExtractor {
     
@@ -92,7 +92,7 @@ class WeightedFpr implements PerformanceExtractor {
 }
 
 /**
- * Extractor used to extract recall from PerformanceExtractor object.
+ * Extractor used to extract recall from PerformanceObject.
  */
 class Recall implements PerformanceExtractor {
     
@@ -104,7 +104,7 @@ class Recall implements PerformanceExtractor {
 }
 
 /**
- * Extractor used to extract weightedRecall from PerformanceExtractor object.
+ * Extractor used to extract weightedRecall from PerformanceObject.
  */
 class WeightedRecall implements PerformanceExtractor {
     
