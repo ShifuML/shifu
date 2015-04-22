@@ -22,6 +22,8 @@ import ml.shifu.shifu.core.dvarsel.CandidateSeed;
 import ml.shifu.shifu.core.dvarsel.CandidatePopulation;
 import ml.shifu.shifu.core.dvarsel.VarSelWorkerResult;
 import ml.shifu.shifu.util.CommonUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import scala.Int;
 
 import java.util.*;
@@ -30,6 +32,9 @@ import java.util.*;
  * Created on 11/24/2014.
  */
 public class WrapperMasterConductor extends AbstractMasterConductor {
+
+    private static final Logger LOG = LoggerFactory.getLogger(WrapperMasterConductor.class);
+
     private CandidateGenerator candidateGenerator;
     private CandidatePopulation seeds;
 
@@ -66,7 +71,7 @@ public class WrapperMasterConductor extends AbstractMasterConductor {
 
     @Override
     public boolean isToStop() {
-        return (iterationCount >= candidateGenerator.getExpectIterationCount());
+        return (iterationCount > candidateGenerator.getExpectIterationCount());
     }
 
     @Override
@@ -113,6 +118,7 @@ public class WrapperMasterConductor extends AbstractMasterConductor {
             }
         }
 
+        LOG.info("With max credit - {}, the best candidate is {}", maxCredit, bestSeed);
         return bestSeed;
     }
 }
