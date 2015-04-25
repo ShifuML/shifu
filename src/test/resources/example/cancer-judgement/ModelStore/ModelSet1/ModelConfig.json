@@ -32,7 +32,15 @@
     "forceRemoveColumnNameFile" : null,
     "filterEnable" : true,
     "filterNum" : 200,
-    "filterBy" : "KS"
+    "filterBy" : "KS",
+    "params" : {
+      "worker_sample_rate" : 0.5,
+      "population_multiply_cnt" :  20,
+      "population_live_size" : 10,
+      "expect_variable_cnt" : 6,
+      "hybrid_percent" : 60,
+      "mutation_percent" : 30
+    }
   },
   "normalize" : {
     "stdDevCutOff" : 4.0,

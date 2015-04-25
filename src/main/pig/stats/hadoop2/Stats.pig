@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-REGISTER '$path_jar'
+REGISTER $path_jar;
 
 SET pig.exec.reducers.max 999;
 SET pig.exec.reducers.bytes.per.reducer 536870912;
@@ -23,8 +23,11 @@ SET mapred.job.queue.name $queue_name;
 SET mapred.task.timeout 1200000;
 SET job.name 'shifu statistic';
 SET io.sort.mb 500;
+<<<<<<< HEAD
+=======
 SET mapred.child.java.opts -Xmx1G;
 SET mapred.child.ulimit 2.5G;
+>>>>>>> 1b329082d54e8ee58b5685454a3d8e02b60c96c8
 
 DEFINE IsDataFilterOut  ml.shifu.shifu.udf.PurifyDataUDF('$source_type', '$path_model_config', '$path_column_config');
 DEFINE IsToBinningData  ml.shifu.shifu.udf.FilterBinningDataUDF('$source_type', '$path_model_config', '$path_column_config');

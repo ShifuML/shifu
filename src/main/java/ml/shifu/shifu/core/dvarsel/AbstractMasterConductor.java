@@ -36,6 +36,8 @@ public abstract class AbstractMasterConductor {
     public abstract int getEstimateIterationCnt();
     public abstract boolean isToStop();
 
-    public abstract List<Integer> getNextWorkingSet();
+    public abstract List<CandidateSeed> getNextWorkingSet();
     public abstract void consumeWorkerResults(Iterable<VarSelWorkerResult> workerResults);
+
+    public abstract CandidateSeed voteBestSeed();
 }
