@@ -493,9 +493,17 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
             throw new RuntimeException("Var select MSE stats output file not exist.");
         }
 
+        int selectCnt = 0;
         for(ColumnConfig config: super.columnConfigList) {
             if(config.isFinalSelect()) {
                 config.setFinalSelect(false);
+            }
+
+            // enable ForceSelect
+            if(config.isForceSelect()) {
+                config.setFinalSelect(true);
+                selectCnt ++;
+                log.info("Variable {} is selected, since it is in ForceSelect list.", config.getColumnName());
             }
         }
 
@@ -509,16 +517,29 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
             }
             scanners = ShifuFileUtils.getDataScanners(globStatus[0].getPath().toString(), source);
             String str = null;
-            int count = 0;
+            int targetCnt = 0; // total variable count that user want to select
+            List<Integer> candidateColumnIdList = new ArrayList<Integer>();
             Scanner scanner = scanners.get(0);
             while(scanner.hasNext()) {
-                ++count;
+                ++targetCnt;
                 str = scanner.nextLine().trim();
-                ColumnConfig columnConfig = this.columnConfigList.get(Integer.parseInt(str));
-                columnConfig.setFinalSelect(true);
-                log.info("Variable {} is selected.", columnConfig.getColumnName());
+                candidateColumnIdList.add(Integer.parseInt(str));
             }
-            log.info("{} variables are selected.", count);
+
+            int i = 0;
+            // try to select another (targetCnt - selectCnt) variables, but we need to exclude those
+            // force-selected variables
+            while ( selectCnt < targetCnt && i < targetCnt ) {
+                Integer columnId = candidateColumnIdList.get(i++);
+                ColumnConfig columnConfig = this.columnConfigList.get(columnId);
+                if(!columnConfig.isForceSelect()) {
+                    columnConfig.setFinalSelect(true);
+                    selectCnt ++;
+                    log.info("Variable {} is selected.", columnConfig.getColumnName());
+                }
+            }
+
+            log.info("{} variables are selected.", selectCnt);
             log.info(
                     "Sensitivity analysis report is in {}/{}-* file(s) with format 'column_index\tcolumn_name\tmean\trms\tvariance'.",
                     varSelectMSEOutputPath, Constants.SHIFU_VARSELECT_SE_OUTPUT_NAME);
