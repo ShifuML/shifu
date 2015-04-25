@@ -28,35 +28,56 @@ import ml.shifu.guagua.io.HaltBytable;
  */
 public class VarSelMasterResult extends HaltBytable {
 
-    private List<Integer> columnIdList = new ArrayList<Integer>(0);
+    private List<CandidateSeed> seedList = new ArrayList<CandidateSeed>(0);
+
+    private CandidateSeed bestSeed = null;
 
     public VarSelMasterResult() {
         // default constructor, it is used to send halt
     }
 
-    public VarSelMasterResult(List<Integer> columnIdList) {
-        this.columnIdList = columnIdList;
+    public VarSelMasterResult(List<CandidateSeed> seedList) {
+        this.seedList = seedList;
     }
 
     @Override
     public void doWrite(DataOutput out) throws IOException {
-        out.writeInt(columnIdList.size());
-        for ( Integer columnId : columnIdList ){
-            out.writeInt(columnId);
+        out.writeInt(this.seedList.size());
+        for ( CandidateSeed seed : this.seedList ){
+            out.writeInt(seed.getId());
+            List<Integer> columnIdList = seed.getColumnIdList();
+            out.writeInt(columnIdList.size());
+            for ( Integer columnId : columnIdList ) {
+                out.writeInt(columnId);
+            }
         }
     }
 
     @Override
     public void doReadFields(DataInput in) throws IOException {
-        Integer size = in.readInt();
-        columnIdList = new ArrayList<Integer>(size);
-
+        int size = in.readInt();
+        this.seedList = new ArrayList<CandidateSeed>(size);
         for ( int i = 0 ; i < size; i++) {
-            columnIdList.add(in.readInt());
+            int id = in.readInt();
+            int columnIdCnt = in.readInt();
+            List<Integer> columnIdList = new ArrayList<Integer>(columnIdCnt);
+            for ( int j = 0; j < columnIdCnt; j ++ ) {
+                columnIdList.add(in.readInt());
+            }
+
+            this.seedList.add(new CandidateSeed(id, columnIdList));
         }
     }
 
-    public List<Integer> getColumnIdList() {
-        return this.columnIdList;
+    public List<CandidateSeed> getSeedList() {
+        return this.seedList;
+    }
+
+    public void setBestSeed(CandidateSeed bestSeed) {
+        this.bestSeed = bestSeed;
+    }
+
+    public CandidateSeed getBestSeed() {
+        return bestSeed;
     }
 }

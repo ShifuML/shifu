@@ -29,35 +29,45 @@ import java.util.List;
  */
 public class VarSelWorkerResult extends HaltBytable {
 
-    private List<Integer> columnIdList = new ArrayList<Integer>(0);
+    private List<CandidatePerf> seedPerfList = new ArrayList<CandidatePerf>(0);
 
     public VarSelWorkerResult() {
-        // default constructor, for serialization
-    }
+    // default constructor, for serialization
+}
 
-    public VarSelWorkerResult(List<Integer> columnIdList) {
-        this.columnIdList = columnIdList;
+    public VarSelWorkerResult(List<CandidatePerf> seedPerfList) {
+        this.seedPerfList = seedPerfList;
     }
 
     @Override
     public void doWrite(DataOutput out) throws IOException {
-        out.writeInt(columnIdList.size());
-        for(Integer columnId: columnIdList) {
-            out.writeInt(columnId);
+        out.writeInt(this.seedPerfList.size());
+        for(CandidatePerf seedPerf : this.seedPerfList) {
+            out.writeInt(seedPerf.getId());
+            out.writeDouble(seedPerf.getVerror());
         }
     }
 
     @Override
     public void doReadFields(DataInput in) throws IOException {
         Integer size = in.readInt();
-        columnIdList = new ArrayList<Integer>(size);
+        this.seedPerfList = new ArrayList<CandidatePerf>(size);
 
         for(int i = 0; i < size; i++) {
-            columnIdList.add(in.readInt());
+            int id = in.readInt();
+            double verror = in.readDouble();
+            this.seedPerfList.add(new CandidatePerf(id, verror));
         }
     }
 
-    public List<Integer> getColumnIdList() {
-        return this.columnIdList;
+    public List<CandidatePerf> getSeedPerfList() {
+        return this.seedPerfList;
+    }
+
+    @Override
+    public String toString() {
+        return "VarSelWorkerResult{" +
+                "seedPerfList=" + seedPerfList +
+                '}';
     }
 }

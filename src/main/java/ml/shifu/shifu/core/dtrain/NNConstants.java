@@ -44,6 +44,8 @@ public class NNConstants {
 
     public static final String MAPRED_JOB_QUEUE_NAME = "mapred.job.queue.name";
 
+    public static final String MAPRED_TASK_TIMEOUT = "mapred.task.timeout";
+
     public static final String NN_TRAINER_ID = "nn.trainer.id";
 
     public static final String TESTING_EGB = "testing.egb";

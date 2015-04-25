@@ -26,6 +26,7 @@ import ml.shifu.shifu.container.obj.ModelConfig;
 import ml.shifu.shifu.container.obj.RawSourceData;
 import ml.shifu.shifu.core.Normalizer;
 import ml.shifu.shifu.core.dtrain.NNConstants;
+import ml.shifu.shifu.core.dvarsel.CandidateSeed;
 import ml.shifu.shifu.core.dvarsel.VarSelMasterResult;
 import ml.shifu.shifu.core.dvarsel.VarSelWorkerResult;
 import ml.shifu.shifu.core.dvarsel.dataset.TrainingDataSet;
@@ -54,17 +55,20 @@ public class WrapperWorkerConductorTest {
         TrainingDataSet trainingDataSet = genTrainingDataSet(modelConfig, columnConfigList);
         wrapper.retainData(trainingDataSet);
 
-        List<Integer> workingList = new ArrayList<Integer>();
-        while ( workingList.size() < 5 ) {
-            wrapper.consumeMasterResult(new VarSelMasterResult(workingList));
-            VarSelWorkerResult result = wrapper.generateVarSelResult();
-            if ( result.getColumnIdList().get(0) != -1  ) {
-                workingList.add(result.getColumnIdList().get(0));
-            }
+        List<Integer> columnIdList = new ArrayList<Integer>();
+        for ( int i = 2; i < 30; i ++ ) {
+            columnIdList.add(i);
         }
 
-        System.out.println(workingList.toString());
-        Assert.assertEquals(5, workingList.size());
+        List<CandidateSeed> seedList = new ArrayList<CandidateSeed>();
+        for ( int i = 0; i < 10; i ++ ) {
+            seedList.add(new CandidateSeed(0, columnIdList.subList(i + 1, i + 7)));
+        }
+        wrapper.consumeMasterResult(new VarSelMasterResult(seedList));
+        VarSelWorkerResult workerResult = wrapper.generateVarSelResult();
+
+        Assert.assertNotNull(workerResult);
+        Assert.assertTrue(workerResult.getSeedPerfList().size() > 0 );
     }
 
     public TrainingDataSet genTrainingDataSet(ModelConfig modelConfig, List<ColumnConfig> columnConfigList) throws IOException {

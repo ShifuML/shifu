@@ -13,12 +13,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-REGISTER '$path_jar'
+REGISTER $path_jar;
 
-SET pig.exec.reducers.max 999;
-SET pig.exec.reducers.bytes.per.reducer 536870912;
+SET default_parallel $num_parallel;
 SET mapred.job.queue.name $queue_name;
-SET job.name 'shifu post train'
+SET job.name 'shifu post train';
 SET io.sort.mb 500;
 SET mapred.child.java.opts -Xmx1G;
 SET mapred.child.ulimit 2.5G;
