@@ -26,6 +26,14 @@ import java.util.List;
 public class PerformanceResult {
 
     public String version;
+    
+    public double areaUnderRoc;
+
+    public double weightedAreaUnderRoc;
+    
+    public double areaUnderPr;
+    
+    public double weightedAreaUnderPr;
 
     public List<PerformanceObject> pr;
 
@@ -34,7 +42,7 @@ public class PerformanceResult {
     public List<PerformanceObject> roc;
 
     public List<PerformanceObject> weightedRoc;
-
+    
     public List<PerformanceObject> gains;
 
     public List<PerformanceObject> weightedGains;
