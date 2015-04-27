@@ -23,6 +23,7 @@ import java.util.Map;
 import ml.shifu.shifu.container.WeightAmplifier;
 import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.container.obj.ModelConfig;
+import ml.shifu.shifu.container.obj.ModelNormalizeConf.MissValueFillType;
 import ml.shifu.shifu.core.DataSampler;
 import ml.shifu.shifu.core.Normalizer;
 import ml.shifu.shifu.message.NormPartRawDataMessage;
@@ -171,30 +172,14 @@ public class DataNormalizeWorker extends AbstractWorkerActor {
 
     private Double normalize(ColumnConfig config, Object value, Double cutoff) {
         String val = ((value == null) ? "" : value.toString());
+        MissValueFillType fillType = modelConfig.getNormalizeMissValueFillType();
         switch(super.modelConfig.getNormalize().getNormType()) {
             case WOE:
-                List<Double> binWoe;
-                if(super.modelConfig.getNormalize().getIsWeightNorm()) {
-                    binWoe = config.getColumnBinning().getBinWeightedWoe();
-                } else {
-                    binWoe = config.getColumnBinning().getBinCountWoe();
-                }
-                if(StringUtils.isEmpty(val)) {
-                    // append last missing bin woe
-                    // TODO how if merge missing bin with last valid bin.
-                    return binWoe.get(binWoe.size() - 1);
-                } else {
-                    try {
-                        int binNum = CommonUtils.getBinNum(config, val);
-                        binNum = binNum == -1 ? binWoe.size() - 1 : binNum;
-                        return binWoe.get(binNum);
-                    } catch (NumberFormatException e) {
-                        return binWoe.get(binWoe.size() - 1);
-                    }
-                }
+                boolean isWeightedNorm = modelConfig.getNormalize().getIsWeightNorm();
+                return Normalizer.woeNormalize(config, val, isWeightedNorm, fillType);
             case ZSCALE:
             default:
-                return Normalizer.normalize(config, val, cutoff);
+                return Normalizer.zScoreNormalize(config, val, cutoff, fillType);
         }
     }
 

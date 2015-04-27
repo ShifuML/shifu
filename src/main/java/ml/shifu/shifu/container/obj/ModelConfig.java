@@ -19,6 +19,7 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
 import ml.shifu.shifu.container.obj.ModelBasicConf.RunMode;
+import ml.shifu.shifu.container.obj.ModelNormalizeConf.MissValueFillType;
 import ml.shifu.shifu.container.obj.ModelStatsConf.BinningAlgorithm;
 import ml.shifu.shifu.container.obj.ModelStatsConf.BinningMethod;
 import ml.shifu.shifu.container.obj.ModelTrainConf.ALGORITHM;
@@ -257,6 +258,14 @@ public class ModelConfig {
     @JsonIgnore
     public Double getNormalizeStdDevCutOff() {
         return normalize.getStdDevCutOff();
+    }
+    
+    /**
+     * @return normalize missing value filling type
+     */
+    @JsonIgnore
+    public MissValueFillType getNormalizeMissValueFillType() {
+        return normalize.getMissValueFillType();
     }
 
     /**

@@ -240,7 +240,23 @@ public class ColumnConfig {
     public List<Integer> getBinAvgScore() {
         return columnBinning.getBinAvgScore();
     }
-
+    
+    /**
+     * @return binCountWoe
+     */
+    @JsonIgnore
+    public List<Double> getBinCountWoe() {
+        return columnBinning.getBinCountWoe();
+    }
+    
+    /**
+     * @return binWeightedWoe
+     */
+    @JsonIgnore
+    public List<Double> getBinWeightedWoe() {
+        return columnBinning.getBinWeightedWoe();
+    }
+    
     /**
      * @param length
      */
