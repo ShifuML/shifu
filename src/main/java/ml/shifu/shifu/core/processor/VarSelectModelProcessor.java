@@ -532,7 +532,7 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
             while ( selectCnt < targetCnt && i < targetCnt ) {
                 Integer columnId = candidateColumnIdList.get(i++);
                 ColumnConfig columnConfig = this.columnConfigList.get(columnId);
-                if(!columnConfig.isForceSelect()) {
+                if(!columnConfig.isForceSelect() && !columnConfig.isForceRemove()) {
                     columnConfig.setFinalSelect(true);
                     selectCnt ++;
                     log.info("Variable {} is selected.", columnConfig.getColumnName());
