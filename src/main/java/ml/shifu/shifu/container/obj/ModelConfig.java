@@ -159,7 +159,7 @@ public class ModelConfig {
         dataSet.setPosTags(posTags);
         dataSet.setNegTags(negTags);
 
-        dataSet.setMissingOrInvalidValues(Lists.asList("", new String[] { "*", "#", "?", "null", "~"}));
+        dataSet.setMissingOrInvalidValues(Lists.asList("", new String[] { "*", "#", "?", "null", "~" }));
         // create empty <ModelName>/meta.column.names
         ShifuFileUtils.createFileIfNotExists(new Path(modelName, Constants.DEFAULT_META_COLUMN_FILE).toString(),
                 SourceType.LOCAL);
@@ -188,6 +188,7 @@ public class ModelConfig {
         ShifuFileUtils.createFileIfNotExists(new Path(modelName, Constants.DEFAULT_FORCEREMOVE_COLUMN_FILE).toString(),
                 SourceType.LOCAL);
         varselect.setForceRemoveColumnNameFile(Constants.DEFAULT_FORCEREMOVE_COLUMN_FILE);
+        varselect.setFilterBySE(Boolean.TRUE);
         modelConfig.setVarSelect(varselect);
 
         // build normalize info
