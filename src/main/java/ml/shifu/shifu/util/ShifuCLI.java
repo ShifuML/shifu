@@ -63,7 +63,9 @@ public class ShifuCLI {
     private static final String TRAIN_CMD_DRY = "dry";
     private static final String TRAIN_CMD = "train";
     private static final String VARSELECT_CMD = "varselect";
+    private static final String VARSEL_CMD = "varsel";
     private static final String NORMALIZE_CMD = "normalize";
+    private static final String NORM_CMD = "norm";
     private static final String STATS_CMD = "stats";
     private static final String INIT_CMD_MODEL = "model";
     private static final String INIT_CMD = "init";
@@ -150,12 +152,12 @@ public class ShifuCLI {
                 } else if (args[0].equals(STATS_CMD)) {
                     // stats step
                     calModelStats();
-                    log.info("Do model set statistics successfully. Please continue next step by using 'shifu normalize'.");
-                } else if (args[0].equals(NORMALIZE_CMD)) {
+                    log.info("Do model set statistics successfully. Please continue next step by using 'shifu normalize or shifu norm'.");
+                } else if (args[0].equals(NORMALIZE_CMD) || args[0].equals(NORM_CMD)) {
                     // normalize step
                     normalizeTrainData();
-                    log.info("Do model set normalization successfully. Please continue next step by using 'shifu varselect'.");
-                } else if (args[0].equals(VARSELECT_CMD)) {
+                    log.info("Do model set normalization successfully. Please continue next step by using 'shifu varselect or shifu varsel'.");
+                } else if (args[0].equals(VARSELECT_CMD) || args[0].equals(VARSEL_CMD)) {
                     // variable selected step
                     selectModelVar();
                     log.info("Do model set variables selection successfully. Please continue next step by using 'shifu train'.");
@@ -531,8 +533,8 @@ public class ShifuCLI {
         //System.out.println("\tcp <srcModel> <dstMoel>               Copy from an existing model set.");
         System.out.println("\tinit                                    Create initial ColumnConfig.json and upload to HDFS.");
         System.out.println("\tstats                                   Calculate statistics on HDFS and update local ColumnConfig.json.");
-        System.out.println("\tvarselect                               Variable selection, will update finalSelect in ColumnConfig.json.");
-        System.out.println("\tnormalize                               Normalize the columns with finalSelect as true.");
+        System.out.println("\tvarselect/varsel                        Variable selection, will update finalSelect in ColumnConfig.json.");
+        System.out.println("\tnormalize/norm                          Normalize the columns with finalSelect as true.");
         System.out.println("\ttrain [-dry]                            Train the model with the normalized data.");
         System.out.println("\tposttrain                               Post-process data after training models.");
         System.out.println("\teval                                    Run all eval sets.");

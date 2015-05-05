@@ -115,6 +115,18 @@
                     }
                 ]
             }, {
+                "name": "missingOrInvalidValues",
+                "type" : "list",
+                "directive": "input",
+                "elementType" : "text",
+                "element" : [ 
+                    {
+                        "name" : "dummy",
+                        "type" : "text",
+                        "directive": "input"       
+                    }
+                ]
+            }, {
                 "name": "metaColumnNameFile",
                 "type" : "text",
                 "directive": "input"
@@ -597,18 +609,6 @@
                         ]
                     }, {
                         "name": "negTags",
-                        "type" : "list",
-                        "directive": "input",
-                        "elementType" : "text",
-                        "element" : [ 
-                            {
-                                "name" : "dummy",
-                                "type" : "text",
-                                "directive": "input"       
-                            }
-                        ]
-                    }, {
-                        "name": "missingOrInvalidValues",
                         "type" : "list",
                         "directive": "input",
                         "elementType" : "text",
