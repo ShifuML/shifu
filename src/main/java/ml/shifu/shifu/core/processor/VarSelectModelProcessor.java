@@ -131,7 +131,7 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
                     // SE method supports remove and sensitivity se so far
                     validateDistributedWrapperVarSelect();
                     syncDataToHdfs(super.modelConfig.getDataSet().getSource());
-                    distributedSEWrapper(new createSEMapReduceJob());
+                    distributedSEWrapper();
                 } else if(Constants.WRAPPER_BY_VOTED.equalsIgnoreCase(modelConfig.getVarSelect().getWrapperBy())) {
                     votedVariablesSelection();
                 }
@@ -390,11 +390,8 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
 
     /**
      * Wrapper through {@link TrainModelProcessor} and a MapReduce job to analyze biggest sensitivity RMS.
-     * 
-     * @param parameterObject
-     *            TODO
      */
-    private void distributedSEWrapper(createSEMapReduceJob parameterObject) throws Exception {
+    private void distributedSEWrapper() throws Exception {
         // 1. Train a model using current selected variables, if no variables selected, use all candidate variables.
         TrainModelProcessor trainModelProcessor = new TrainModelProcessor();
         trainModelProcessor.setForVarSelect(true);
