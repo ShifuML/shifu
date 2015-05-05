@@ -230,6 +230,11 @@
                 "directive": "checkbox",
                 "defval" : false
             }, {
+                "name": "filterBySE",
+                "type": "boolean",
+                "directive": "checkbox",
+                "defval" : true
+            }, {
                 "name": "wrapperNum",
                 "type": "number",
                 "directive": "input",
@@ -592,6 +597,18 @@
                         ]
                     }, {
                         "name": "negTags",
+                        "type" : "list",
+                        "directive": "input",
+                        "elementType" : "text",
+                        "element" : [ 
+                            {
+                                "name" : "dummy",
+                                "type" : "text",
+                                "directive": "input"       
+                            }
+                        ]
+                    }, {
+                        "name": "missingOrInvalidValues",
                         "type" : "list",
                         "directive": "input",
                         "elementType" : "text",
