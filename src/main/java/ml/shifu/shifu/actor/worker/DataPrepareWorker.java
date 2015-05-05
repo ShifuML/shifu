@@ -233,7 +233,10 @@ public class DataPrepareWorker extends AbstractWorkerActor {
                         continue;
                     }
                 } else if(config.isCategorical()) { // CATEGORICAL
-                    if(StringUtils.isEmpty(raw[i])) {
+                    if(raw[i] == null
+                            || StringUtils.isEmpty(raw[i])
+                            || modelConfig.getDataSet().getMissingOrInvalidValues()
+                                    .contains(raw[i].toLowerCase().trim())) {
                         incMap(i, missingMap);
                     }
                     vo.setRaw(raw[i].trim());

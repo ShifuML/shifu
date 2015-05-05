@@ -131,7 +131,7 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
                     // SE method supports remove and sensitivity se so far
                     validateDistributedWrapperVarSelect();
                     syncDataToHdfs(super.modelConfig.getDataSet().getSource());
-                    distributedSEWrapper();
+                    distributedSEWrapper(new createSEMapReduceJob());
                 } else if(Constants.WRAPPER_BY_VOTED.equalsIgnoreCase(modelConfig.getVarSelect().getWrapperBy())) {
                     votedVariablesSelection();
                 }
@@ -251,6 +251,7 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
                 new Path(getPathFinder().getVarSelsPath(sourceType), "VarSels"));
     }
 
+    @SuppressWarnings("unused")
     private void prepareVarSelParams(final List<String> args, final SourceType sourceType) {
         args.add("-libjars");
 
@@ -290,7 +291,8 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
             }
         }
 
-        int iterationCnt = (Integer)this.modelConfig.getVarSelect().getParams().get(CandidateGenerator.POPULATION_MULTIPLY_CNT) + 1;
+        int iterationCnt = (Integer) this.modelConfig.getVarSelect().getParams()
+                .get(CandidateGenerator.POPULATION_MULTIPLY_CNT) + 1;
         args.add(Integer.toString(iterationCnt));
 
         args.add("-mr");
@@ -313,8 +315,8 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
                 Environment.getProperty(Environment.HADOOP_JOB_QUEUE, ml.shifu.shifu.util.Constants.DEFAULT_JOB_QUEUE)));
 
         // MAPRED timeout
-        args.add(String.format(NNConstants.MAPREDUCE_PARAM_FORMAT, NNConstants.MAPRED_TASK_TIMEOUT,
-                Environment.getInt(NNConstants.MAPRED_TASK_TIMEOUT, ml.shifu.shifu.util.Constants.DEFAULT_MAPRED_TIME_OUT)));
+        args.add(String.format(NNConstants.MAPREDUCE_PARAM_FORMAT, NNConstants.MAPRED_TASK_TIMEOUT, Environment.getInt(
+                NNConstants.MAPRED_TASK_TIMEOUT, ml.shifu.shifu.util.Constants.DEFAULT_MAPRED_TIME_OUT)));
 
         args.add(String.format(NNConstants.MAPREDUCE_PARAM_FORMAT, GuaguaConstants.GUAGUA_MASTER_INTERCEPTERS,
                 VarSelOutput.class.getName()));
@@ -388,8 +390,11 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
 
     /**
      * Wrapper through {@link TrainModelProcessor} and a MapReduce job to analyze biggest sensitivity RMS.
+     * 
+     * @param parameterObject
+     *            TODO
      */
-    private void distributedSEWrapper() throws Exception {
+    private void distributedSEWrapper(createSEMapReduceJob parameterObject) throws Exception {
         // 1. Train a model using current selected variables, if no variables selected, use all candidate variables.
         TrainModelProcessor trainModelProcessor = new TrainModelProcessor();
         trainModelProcessor.setForVarSelect(true);
@@ -398,8 +403,36 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
         // 2. Submit a MapReduce job to analyze sensitivity RMS.
         SourceType source = this.modelConfig.getDataSet().getSource();
         Configuration conf = new Configuration();
+        // 2.1 prepare se job conf
         prepareSEJobConf(source, conf);
+        // 2.2 get output path
+        String varSelectMSEOutputPath = super.getPathFinder().getVarSelectMSEOutputPath(source);
 
+        // 2.3 create se job
+        Job job = createSEMapReduceJob(source, conf, varSelectMSEOutputPath);
+
+        // 2.4 clean output firstly
+        ShifuFileUtils.deleteFile(varSelectMSEOutputPath, source);
+
+        // 2.5 submit job
+        if(job.waitForCompletion(true)) {
+            // 2.6 post process 4 var select
+            if(super.modelConfig.getVarSelect().getFilterBySE()) {
+                postProcess4SEVarSelect(source, varSelectMSEOutputPath);
+            } else {
+                log.info("Only print sensitivity analysis report.");
+                log.info(
+                        "Sensitivity analysis report is in {}/{}-* file(s) with format 'column_index\tcolumn_name\tmean\trms\tvariance'.",
+                        varSelectMSEOutputPath, Constants.SHIFU_VARSELECT_SE_OUTPUT_NAME);
+            }
+        } else {
+            log.error("VarSelect SE hadoop job is failed, please re-try varselect step.");
+        }
+
+    }
+
+    private Job createSEMapReduceJob(SourceType source, Configuration conf, String varSelectMSEOutputPath)
+            throws IOException {
         Job job = new Job(conf, "Shifu: Variable Selection Wrapper Job : " + this.modelConfig.getModelSetName());
         job.setJarByClass(getClass());
         boolean isSEVarSelMulti = Boolean.TRUE.toString().equalsIgnoreCase(
@@ -436,21 +469,10 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
         job.setOutputValueClass(Text.class);
         job.setOutputFormatClass(TextOutputFormat.class);
 
-        String varSelectMSEOutputPath = super.getPathFinder().getVarSelectMSEOutputPath(source);
         FileOutputFormat.setOutputPath(job, new Path(varSelectMSEOutputPath));
         MultipleOutputs.addNamedOutput(job, Constants.SHIFU_VARSELECT_SE_OUTPUT_NAME, TextOutputFormat.class,
                 Text.class, Text.class);
-
-        // clean output firstly
-        ShifuFileUtils.deleteFile(varSelectMSEOutputPath, source);
-
-        // submit job
-        if(job.waitForCompletion(true)) {
-            postProcess4SEVarSelect(source, varSelectMSEOutputPath);
-        } else {
-            log.error("VarSelect SE hadoop job is failed, please re-try varselect step.");
-        }
-
+        return job;
     }
 
     private void prepareSEJobConf(SourceType source, Configuration conf) throws IOException {
@@ -502,7 +524,7 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
             // enable ForceSelect
             if(config.isForceSelect()) {
                 config.setFinalSelect(true);
-                selectCnt ++;
+                selectCnt++;
                 log.info("Variable {} is selected, since it is in ForceSelect list.", config.getColumnName());
             }
         }
@@ -529,12 +551,12 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
             int i = 0;
             // try to select another (targetCnt - selectCnt) variables, but we need to exclude those
             // force-selected variables
-            while ( selectCnt < targetCnt && i < targetCnt ) {
+            while(selectCnt < targetCnt && i < targetCnt) {
                 Integer columnId = candidateColumnIdList.get(i++);
                 ColumnConfig columnConfig = this.columnConfigList.get(columnId);
                 if(!columnConfig.isForceSelect()) {
                     columnConfig.setFinalSelect(true);
-                    selectCnt ++;
+                    selectCnt++;
                     log.info("Variable {} is selected.", columnConfig.getColumnName());
                 }
             }

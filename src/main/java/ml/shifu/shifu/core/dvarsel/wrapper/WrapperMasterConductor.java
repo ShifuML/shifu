@@ -15,18 +15,22 @@
  */
 package ml.shifu.shifu.core.dvarsel.wrapper;
 
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+
 import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.container.obj.ModelConfig;
 import ml.shifu.shifu.core.dvarsel.AbstractMasterConductor;
-import ml.shifu.shifu.core.dvarsel.CandidateSeed;
 import ml.shifu.shifu.core.dvarsel.CandidatePopulation;
+import ml.shifu.shifu.core.dvarsel.CandidateSeed;
 import ml.shifu.shifu.core.dvarsel.VarSelWorkerResult;
 import ml.shifu.shifu.util.CommonUtils;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import scala.Int;
-
-import java.util.*;
 
 /**
  * Created on 11/24/2014.

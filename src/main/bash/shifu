@@ -111,7 +111,7 @@ CLASSPATH=`remove_duplicate_jars_func "${CLASSPATH}"`
 if [ "${HADOOP_CONF_DIR}" != "" -a -d "${HADOOP_CONF_DIR}" ]; then
     CLASSPATH="${HADOOP_CONF_DIR}:${CLASSPATH}"
 fi
-CLASSPATH=".:${SHIFU_HOME}:${CLASSPATH}:${SHIFU_HOME}/conf"
+CLASSPATH=".:${CLASSPATH}:${SHIFU_HOME}/conf"
 
 if [ "${HADOOP_ROOT}" != "" ]; then
     LINUX_ARCH="i386-32"
