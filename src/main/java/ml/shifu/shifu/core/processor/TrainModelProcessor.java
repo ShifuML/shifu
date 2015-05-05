@@ -165,7 +165,6 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
      * @throws IOException
      */
     private void runAkkaTrain(int numBags) throws IOException {
-
         File models = new File("models");
         FileUtils.deleteDirectory(models);
         FileUtils.forceMkdir(models);
@@ -492,10 +491,9 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
         // special tuning parameters for shifu, 0.99 means each iteation master wait for 99% workers and then can go to
         // next iteration.
         args.add(String.format(NNConstants.MAPREDUCE_PARAM_FORMAT, GuaguaConstants.GUAGUA_MIN_WORKERS_RATIO, 0.99));
-        // 20 seconds if waiting over 20, consider 99% workers
-        // these two can be overrided in shifuconfig
+        // 10 seconds if waiting over 10, consider 99% workers; these two can be overrided in shifuconfig
         args.add(String.format(NNConstants.MAPREDUCE_PARAM_FORMAT, GuaguaConstants.GUAGUA_MIN_WORKERS_TIMEOUT,
-                20 * 1000L));
+                10 * 1000L));
     }
 
     private void copyModelToLocal(String modelName, Path modelPath, SourceType sourceType) throws IOException {

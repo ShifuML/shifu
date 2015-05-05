@@ -37,7 +37,7 @@
         </fileSet>
         <fileSet>
             <directory>${project.basedir}/src/main/resources/conf</directory>
-            <outputDirectory>/</outputDirectory>
+            <outputDirectory>/conf</outputDirectory>
             <includes>
                 <include>log4j.*</include>
             </includes>

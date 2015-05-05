@@ -82,6 +82,7 @@ public class VarSelOutput extends BasicMasterInterceptor<VarSelMasterResult, Var
     public void postApplication(MasterContext<VarSelMasterResult, VarSelWorkerResult> context) {
         VarSelMasterResult varSelMasterResult = context.getMasterResult();
 
+        @SuppressWarnings("unused")
         List<CandidateSeed> candidateSeeds = varSelMasterResult.getSeedList();
 
         LOG.info("Results is - {}", varSelMasterResult.getBestSeed());

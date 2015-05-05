@@ -199,6 +199,7 @@ public class CandidateGenerator {
         return result;
     }
 
+    @SuppressWarnings("unchecked")
     private CandidateSeed doMutation(CandidateSeed seed) {
         List<Integer> geneList = new ArrayList<Integer>();
 

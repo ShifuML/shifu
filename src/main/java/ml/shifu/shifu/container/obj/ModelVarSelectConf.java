@@ -42,6 +42,11 @@ public class ModelVarSelectConf {
     private Float wrapperRatio = Float.valueOf(0.05f);
     private String wrapperBy = "S";
 
+    /**
+     * Do var select by SE or only print se report.
+     */
+    private Boolean filterBySE = Boolean.TRUE;
+
     private Map<String, Object> params;
 
     public Boolean getForceEnable() {
@@ -137,5 +142,19 @@ public class ModelVarSelectConf {
 
     public void setParams(Map<String, Object> params) {
         this.params = params;
+    }
+
+    /**
+     * @return the filterBySE
+     */
+    public Boolean getFilterBySE() {
+        return filterBySE;
+    }
+
+    /**
+     * @param filterBySE the filterBySE to set
+     */
+    public void setFilterBySE(Boolean filterBySE) {
+        this.filterBySE = filterBySE;
     }
 }

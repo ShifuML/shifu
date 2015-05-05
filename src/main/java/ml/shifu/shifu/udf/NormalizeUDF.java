@@ -173,7 +173,7 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
 
             return Utils.getSchemaFromString(schemaStr.toString());
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error("error in outputSchema", e);
             return null;
         }
     }

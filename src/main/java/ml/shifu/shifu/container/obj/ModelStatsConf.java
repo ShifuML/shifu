@@ -49,7 +49,7 @@ public class ModelStatsConf {
     private Integer binningAutoTypeThreshold = Integer.valueOf(5);
     private Boolean binningMergeEnable = Boolean.TRUE;
 
-    private BinningAlgorithm binningAlgorithm = BinningAlgorithm.SPDT;
+    private BinningAlgorithm binningAlgorithm = BinningAlgorithm.SPDTI;
 
     public Integer getMaxNumBin() {
         return maxNumBin;
