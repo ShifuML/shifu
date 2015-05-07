@@ -115,6 +115,18 @@
                     }
                 ]
             }, {
+                "name": "missingOrInvalidValues",
+                "type" : "list",
+                "directive": "input",
+                "elementType" : "text",
+                "element" : [ 
+                    {
+                        "name" : "dummy",
+                        "type" : "text",
+                        "directive": "input"       
+                    }
+                ]
+            }, {
                 "name": "metaColumnNameFile",
                 "type" : "text",
                 "directive": "input"
@@ -230,6 +242,11 @@
                 "directive": "checkbox",
                 "defval" : false
             }, {
+                "name": "filterBySE",
+                "type": "boolean",
+                "directive": "checkbox",
+                "defval" : true
+            }, {
                 "name": "wrapperNum",
                 "type": "number",
                 "directive": "input",
@@ -302,6 +319,17 @@
                 "options": [ 
                     {"label":"zscale mode", "value":"ZSCALE"},
                     {"label":"woe mode", "value":"WOE"}
+                ]
+            }, {
+                "name": "missValueFillType",
+                "type": "text",
+                "directive": "select",
+                "defval" : "MEAN",
+                "options": [ 
+                    {"label":"mean mode", "value":"MEAN"},
+                    {"label":"countWoe mode", "value":"COUNTWOE"},
+                    {"label":"weightedWoe mode", "value":"WEIGHTEDWOE"},
+                    {"label":"zero mode", "value":"ZERO"}
                 ]
             }, {
                 "name": "stdDevCutOff",

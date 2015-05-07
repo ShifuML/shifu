@@ -23,6 +23,7 @@ import java.util.Map;
 
 import ml.shifu.shifu.container.WeightAmplifier;
 import ml.shifu.shifu.container.obj.ColumnConfig;
+import ml.shifu.shifu.container.obj.ModelNormalizeConf.MissValueFillType;
 import ml.shifu.shifu.core.DataSampler;
 import ml.shifu.shifu.core.Normalizer;
 import ml.shifu.shifu.util.CommonUtils;
@@ -90,6 +91,9 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
         }
 
         Double cutoff = modelConfig.getNormalizeStdDevCutOff();
+        boolean isWeightedNorm = modelConfig.getNormalize().getIsWeightNorm();
+        MissValueFillType fillType = modelConfig.getNormalizeMissValueFillType();
+        
         for(int i = 0; i < size; i++) {
             ColumnConfig config = columnConfigList.get(i);
             if(weightExpr != null) {
@@ -115,29 +119,12 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
                 String val = ((input.get(i) == null) ? "" : input.get(i).toString());
                 switch(super.modelConfig.getNormalize().getNormType()) {
                     case WOE:
-                        List<Double> binWoe;
-                        if(super.modelConfig.getNormalize().getIsWeightNorm()) {
-                            binWoe = config.getColumnBinning().getBinWeightedWoe();
-                        } else {
-                            binWoe = config.getColumnBinning().getBinCountWoe();
-                        }
-                        if(StringUtils.isEmpty(val)) {
-                            // append last missing bin woe
-                            // TODO how if merge missing bin with last valid bin.
-                            tuple.append(df.format(binWoe.get(binWoe.size() - 1)));
-                        } else {
-                            try {
-                                int binNum = CommonUtils.getBinNum(config, val);
-                                binNum = binNum == -1 ? binWoe.size() - 1 : binNum;
-                                tuple.append(df.format(binWoe.get(binNum)));
-                            } catch (NumberFormatException e) {
-                                tuple.append(df.format(binWoe.get(binWoe.size() - 1)));
-                            }
-                        }
+                        Double w = Normalizer.woeNormalize(config, val, isWeightedNorm, fillType);
+                        tuple.append(df.format(w));
                         break;
                     case ZSCALE:
                     default:
-                        Double z = Normalizer.normalize(config, val, cutoff);
+                        Double z = Normalizer.zScoreNormalize(config, val, cutoff, fillType);
                         tuple.append(df.format(z));
                         break;
                 }
@@ -168,6 +155,8 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
 
         return tuple;
     }
+    
+    
 
     public Schema outputSchema(Schema input) {
         try {
@@ -184,7 +173,7 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
 
             return Utils.getSchemaFromString(schemaStr.toString());
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error("error in outputSchema", e);
             return null;
         }
     }

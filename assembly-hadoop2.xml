@@ -109,9 +109,7 @@
                 <!-- <include>*:hadoop-core*:jar</include> -->
                 <include>*:jackson-annotations:*</include>
                 <include>*:jackson-core:*</include>
-                <include>*:jackson-core-asl:*</include>
                 <include>*:jackson-databind:*</include>
-                <include>*:jackson-mapper-asl:*</include>
                 <include>*:pmml-model:*</include>
                 <include>*:pmml-schema:*</include>
                 <include>*:pmml-evaluator:*</include>

@@ -28,6 +28,7 @@ import ml.shifu.shifu.container.PerformanceObject;
 import ml.shifu.shifu.container.obj.EvalConfig;
 import ml.shifu.shifu.container.obj.ModelConfig;
 import ml.shifu.shifu.container.obj.PerformanceResult;
+import ml.shifu.shifu.core.evaluation.AreaUnderCurve;
 import ml.shifu.shifu.exception.ShifuErrorCode;
 import ml.shifu.shifu.exception.ShifuException;
 import ml.shifu.shifu.fs.PathFinder;
@@ -350,7 +351,13 @@ public class PerformanceEvaluator {
         result.weightedRoc = FPRWeightList;
         result.gains = gainList;
         result.weightedGains = gainWeightList;
-
+        
+        // Calculate area under curve
+        result.areaUnderRoc = AreaUnderCurve.ofRoc(result.roc);
+        result.weightedAreaUnderRoc = AreaUnderCurve.ofWeightedRoc(result.weightedRoc);
+        result.areaUnderPr = AreaUnderCurve.ofPr(result.pr);
+        result.weightedAreaUnderPr = AreaUnderCurve.ofWeightedPr(result.weightedPr);
+        
         return result;
     }
 

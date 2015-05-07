@@ -141,36 +141,37 @@ CLASS=ml.shifu.shifu.util.ShifuCLI
 
 COMMAND=$1
 
+# add concurrent gc 
+JAVA_OPTIONS="-server -XX:+UseParNewGC -XX:+UseConcMarkSweepGC -XX:CMSInitiatingOccupancyFraction=70 ${JAVA_OPTIONS}"
+
 case ${COMMAND} in
     "modelset")
-        java -classpath ${CLASSPATH} ${CLASS} "$@"
+        java ${JAVA_OPTIONS} -classpath ${CLASSPATH} ${CLASS} "$@"
         ;;
-    "varselect")
+    "varselect"|"varsel")
         sanity_check
-        java -classpath ${CLASSPATH} ${CLASS} "$@"
+        java ${JAVA_OPTIONS} -classpath ${CLASSPATH} ${CLASS} "$@"
         ;;
-    "init"|"stats"|"normalize"|"posttrain"|"eval")
+    "init"|"stats"|"normalize"|"norm"|"posttrain"|"eval")
         sanity_check
         java ${JAVA_OPTIONS} -classpath ${CLASSPATH} ${CLASS} "$@"
         ;;
     "train")
         sanity_check
-        # add concurrent gc for training data with large date set in akka mode
-        JAVA_OPTIONS="-server -XX:+UseParNewGC -XX:+UseConcMarkSweepGC -XX:CMSInitiatingOccupancyFraction=70 ${JAVA_OPTIONS}"
         java ${JAVA_OPTIONS} -classpath ${CLASSPATH} ${CLASS} "$@"
         ;;
     "syncUp")
         sanity_check
-        java -classpath ${CLASSPATH} ${CLASS} "$@"
+        java ${JAVA_OPTIONS} -classpath ${CLASSPATH} ${CLASS} "$@"
         ;;
     "syncHDFS")
         sanity_check
         sync_model_to_hdfs
         ;;
     "--help"|"-help"|"-h"|"h"|"help")
-        java -classpath ${CLASSPATH} ${CLASS} "$@"
+        java ${JAVA_OPTIONS} -classpath ${CLASSPATH} ${CLASS} "$@"
         ;;
     *)
-        java -classpath ${CLASSPATH} ${CLASS} "$@"
+        java ${JAVA_OPTIONS} -classpath ${CLASSPATH} ${CLASS} "$@"
         ;;
 esac

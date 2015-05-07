@@ -15,11 +15,12 @@
  */
 package ml.shifu.shifu.container.obj;
 
-import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
-import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
-
 import java.util.ArrayList;
 import java.util.List;
+
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+import com.google.common.collect.Lists;
 
 /**
  * SourceData class
@@ -51,6 +52,8 @@ public class RawSourceData implements Cloneable {
     private List<String> posTags;
 
     private List<String> negTags;
+
+    private List<String> missingOrInvalidValues = Lists.asList("", new String[] { "*", "#", "?", "null", "none" });
 
     public SourceType getSource() {
         return source;
@@ -152,7 +155,21 @@ public class RawSourceData implements Cloneable {
         copy.setTargetColumnName(targetColumnName);
         copy.setPosTags(new ArrayList<String>(posTags));
         copy.setNegTags(new ArrayList<String>(negTags));
-
+        copy.setMissingOrInvalidValues(missingOrInvalidValues);
         return copy;
+    }
+
+    /**
+     * @return the missingOrInvalidValues
+     */
+    public List<String> getMissingOrInvalidValues() {
+        return missingOrInvalidValues;
+    }
+
+    /**
+     * @param missingOrInvalidValues the missingOrInvalidValues to set
+     */
+    public void setMissingOrInvalidValues(List<String> missingOrInvalidValues) {
+        this.missingOrInvalidValues = missingOrInvalidValues;
     }
 }
