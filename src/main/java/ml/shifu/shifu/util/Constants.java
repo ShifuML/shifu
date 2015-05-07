@@ -114,6 +114,7 @@ public interface Constants {
 
     public static final String BINNING_INFO_FILE_NAME = "binning_info.txt";
 
+    public static final String AUTO_TYPE_PATH= "AutoTypePath";
     public static final String PRE_TRAINING_STATS = "PreTrainingStats";
     public static final String SELECTED_RAW_DATA = "SelectedRawData";
     public static final String NORMALIZED_DATA = "NormalizedData";

@@ -180,7 +180,7 @@ public class PathFinder {
                 Constants.KEY_AUTO_TYPE_PATH);
 
         if(StringUtils.isBlank(preTrainingStatsPath)) {
-            return getPathBySourceType(new Path(Constants.TMP, Constants.KEY_AUTO_TYPE_PATH), sourceType);
+            return getPathBySourceType(new Path(Constants.TMP, Constants.AUTO_TYPE_PATH), sourceType);
         } else {
             return new Path(preTrainingStatsPath).toString();
         }
