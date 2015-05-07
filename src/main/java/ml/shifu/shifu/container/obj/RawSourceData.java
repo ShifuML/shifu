@@ -55,6 +55,25 @@ public class RawSourceData implements Cloneable {
 
     private List<String> missingOrInvalidValues = Lists.asList("", new String[] { "*", "#", "?", "null", "none" });
 
+    private Boolean autoType = Boolean.FALSE;
+
+    private Integer autoTypeThreshold = 250;
+
+    /**
+     * @return the autoTypeThreshold
+     */
+    public Integer getAutoTypeThreshold() {
+        return autoTypeThreshold;
+    }
+
+    /**
+     * @param autoTypeThreshold
+     *            the autoTypeThreshold to set
+     */
+    public void setAutoTypeThreshold(Integer autoTypeThreshold) {
+        this.autoTypeThreshold = autoTypeThreshold;
+    }
+
     public SourceType getSource() {
         return source;
     }
@@ -167,9 +186,25 @@ public class RawSourceData implements Cloneable {
     }
 
     /**
-     * @param missingOrInvalidValues the missingOrInvalidValues to set
+     * @param missingOrInvalidValues
+     *            the missingOrInvalidValues to set
      */
     public void setMissingOrInvalidValues(List<String> missingOrInvalidValues) {
         this.missingOrInvalidValues = missingOrInvalidValues;
+    }
+
+    /**
+     * @return the autoType
+     */
+    public Boolean getAutoType() {
+        return autoType;
+    }
+
+    /**
+     * @param autoType
+     *            the autoType to set
+     */
+    public void setAutoType(Boolean autoType) {
+        this.autoType = autoType;
     }
 }

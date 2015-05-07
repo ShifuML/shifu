@@ -76,13 +76,18 @@ public class BinningDataMergeUDF extends AbstractTrainerUDF<Tuple> {
             }
 
             String objValStr = (String) element.get(1);
+            long start = System.currentTimeMillis();
             AbstractBinning<?> partialBinning = AbstractBinning.constructBinningFromStr(modelConfig, columnConfig,
                     objValStr);
+            log.info("constructBinningFromStr: " + (System.currentTimeMillis() - start) + "ms");
+            start = System.currentTimeMillis();
+
             if(binning == null) {
                 binning = partialBinning;
             } else {
                 binning.mergeBin(partialBinning);
             }
+            log.info("mergeBin: " + (System.currentTimeMillis() - start) + "ms");
         }
 
         Tuple output = TupleFactory.getInstance().newTuple(2);

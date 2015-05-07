@@ -20,6 +20,8 @@ import ml.shifu.shifu.container.obj.ModelConfig;
 import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
 import ml.shifu.shifu.util.Constants;
 import ml.shifu.shifu.util.Environment;
+import ml.shifu.shifu.util.HDFSUtils;
+
 import org.apache.commons.lang.NotImplementedException;
 import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.fs.Path;
@@ -168,6 +170,24 @@ public class PathFinder {
     }
 
     /**
+     * Get auto type distinct count file path.
+     * 
+     * @param sourceType
+     *            - Local/HDFS
+     * @return path of auto type folder name
+     */
+    public String getAutoTypeFilePath(SourceType sourceType) {
+        String preTrainingStatsPath = getPreferPath(modelConfig.getTrain().getCustomPaths(),
+                Constants.KEY_AUTO_TYPE_PATH);
+
+        if(StringUtils.isBlank(preTrainingStatsPath)) {
+            return getPathBySourceType(new Path(Constants.TMP, Constants.KEY_AUTO_TYPE_PATH), sourceType);
+        } else {
+            return new Path(preTrainingStatsPath).toString();
+        }
+    }
+
+    /**
      * Get the path for select raw data
      * 
      * @return path of selected raw data
@@ -238,7 +258,7 @@ public class PathFinder {
             return new Path(varSelectStatsPath).toString();
         }
     }
-    
+
     /**
      * Get the path of varselect MSE stats path.
      * 
@@ -247,8 +267,7 @@ public class PathFinder {
      * @return path of var select MSE stats path
      */
     public String getUpdatedBinningInfoPath(SourceType sourceType) {
-        String preTrainPath = getPreferPath(modelConfig.getTrain().getCustomPaths(),
-                Constants.KEY_PRE_TRAIN_STATS_PATH);
+        String preTrainPath = getPreferPath(modelConfig.getTrain().getCustomPaths(), Constants.KEY_PRE_TRAIN_STATS_PATH);
 
         if(StringUtils.isBlank(preTrainPath)) {
             return getPathBySourceType(new Path(Constants.TMP, "UpdatedBinningInfo"), sourceType);
@@ -288,7 +307,7 @@ public class PathFinder {
         return getPathBySourceType(new Path(Constants.TMP, Constants.DEFAULT_MODELS_TMP_FOLDER), sourceType);
     }
 
-    public String getVarSelsPath(SourceType sourceType){
+    public String getVarSelsPath(SourceType sourceType) {
 
         return getPathBySourceType(new Path(Constants.VarSels), sourceType);
     }
@@ -596,7 +615,8 @@ public class PathFinder {
             case LOCAL:
                 return new Path(getModelSetLocalPath(), path).toString();
             case HDFS:
-                return new Path(getModelSetHdfsPath(), path).toString();
+                return ShifuFileUtils.getFileSystemBySourceType(sourceType)
+                        .makeQualified(new Path(getModelSetHdfsPath(), path)).toString();
             default:
                 // Others, maybe be we will support S3 in future
                 throw new NotImplementedException("Source type - " + sourceType.name() + " is not supported yet!");

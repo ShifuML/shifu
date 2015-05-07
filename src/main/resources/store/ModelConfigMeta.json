@@ -131,6 +131,14 @@
                 "type" : "text",
                 "directive": "input"
             }, {
+                "name": "autoType",
+                "type" : "boolean",
+                "directive": "checkbox"
+            }, {
+                "name": "autoTypeThreshold",
+                "type" : "number",
+                "directive": "input"
+            }, {
                 "name": "categoricalColumnNameFile",
                 "type" : "text",
                 "directive": "input"

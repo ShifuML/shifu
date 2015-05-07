@@ -219,7 +219,7 @@ public class UpdateBinningInfoReducer extends Reducer<IntWritable, BinningInfoWr
         outputValue.set(sb.toString());
         context.write(NullWritable.get(), outputValue);
         sb.delete(0, sb.length());
-        LOG.info("Time:{}", (System.currentTimeMillis() - start));
+        LOG.debug("Time:{}", (System.currentTimeMillis() - start));
     }
 
     private double[] computePosRate(long[] binCountPos, long[] binCountNeg) {
