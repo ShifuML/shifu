@@ -388,6 +388,7 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
 
         String hdpVersion = HDPUtils.getHdpVersionForHDP224();
         if(StringUtils.isNotBlank(hdpVersion)) {
+            // for hdp 2.2.4, hdp.version should be set and configuration files should be add to container class path
             jars.add(HDPUtils.findContainingFile("hdfs-site.xml"));
             jars.add(HDPUtils.findContainingFile("core-site.xml"));
             jars.add(HDPUtils.findContainingFile("mapred-site.xml"));
@@ -517,6 +518,7 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
         conf.setFloat(Constants.SHIFU_VARSELECT_WRAPPER_RATIO, wrapperRatio);
         String hdpVersion = HDPUtils.getHdpVersionForHDP224();
         if(StringUtils.isNotBlank(hdpVersion)) {
+            // for hdp 2.2.4, hdp.version should be set and configuration files should be add to container class path
             conf.set("hdp.version", hdpVersion);
             HDPUtils.addFileToClassPath(HDPUtils.findContainingFile("hdfs-site.xml"), conf);
             HDPUtils.addFileToClassPath(HDPUtils.findContainingFile("core-site.xml"), conf);

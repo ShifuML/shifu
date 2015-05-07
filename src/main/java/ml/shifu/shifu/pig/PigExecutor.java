@@ -105,6 +105,8 @@ public class PigExecutor {
             pigServer = new PigServer(ExecType.MAPREDUCE);
             String hdpVersion = HDPUtils.getHdpVersionForHDP224();
             if(StringUtils.isNotBlank(hdpVersion)) {
+                // for hdp 2.2.4, hdp.version should be set and configuration files should be added to container class
+                // path
                 pigServer.getPigContext().getProperties().put("hdp.version", hdpVersion);
                 pigServer.getPigContext().addJar(HDPUtils.findContainingFile("hdfs-site.xml"));
                 pigServer.getPigContext().addJar(HDPUtils.findContainingFile("core-site.xml"));

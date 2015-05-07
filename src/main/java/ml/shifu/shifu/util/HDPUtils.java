@@ -34,13 +34,27 @@ import org.apache.pig.impl.PigContext;
 import org.apache.pig.impl.util.JarManager;
 
 /**
- * For HortonWorks HDP 2.2.4 cannot find hdp.version on the fly, we need find the version firstly and set to
- * Configuration.
+ * For HortonWorks HDP 2.2.4 two issues not caomptible with other hadoop 2.x versions.
+ * 
+ * <p>
+ * Two major issues include:
+ * <ul>
+ * <li>1. Cannot find hdp.version on the fly, we need find the version firstly and we need find such number from
+ * dependency jar and set it on Hadoop Configuration object.</li>
+ * <li>2. HADOOP_CONF_DIR is not set as classpath in classpath of every container, which make Shifu UDF and
+ * mapper/reducer cannot read configuration from HDFS. To solve it we have to find such configuration files like
+ * 'yarn-site.xml', 'core-site.xml', 'hdfs-site.xml' and 'mapred-site.xml' on client class path and ship them to
+ * container classpath as distributed cache files or jars.</li>
+ * </ul>
  * 
  * @author Zhang David (pengzhang@paypal.com)
  */
 public class HDPUtils {
 
+    /**
+     * A ugly method to retrieve hdp version like 2.2.4.6633 from hadoop-hdfs jar name. The jar name is like
+     * 'hadoop-hdfs-2.6.0.2.2.4.6633.jar'.
+     */
     public static String getHdpVersionForHDP224() {
         String hdfsJarWithVersion = JarManager.findContainingJar(DistributedFileSystem.class);
         String hdpVersion = "";
@@ -64,11 +78,17 @@ public class HDPUtils {
         return hdpVersion;
     }
 
+    /**
+     * Add a hdfs file to classpath of one container.
+     */
     public static void addFileToClassPath(String file, Configuration conf) throws IOException {
         Path pathInHDFS = shipToHDFS(conf, file);
         DistributedCache.addFileToClassPath(pathInHDFS, conf, FileSystem.get(conf));
     }
 
+    /**
+     * Copy local file to HDFS. This is used to set as classpath by distributed cache.
+     */
     private static Path shipToHDFS(Configuration conf, String fileName) throws IOException {
         Path dst = new Path("tmp", fileName.substring(fileName.lastIndexOf(File.separator) + 1));
         FileSystem fs = dst.getFileSystem(conf);

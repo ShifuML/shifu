@@ -101,16 +101,7 @@ public class InitModelProcessor extends BasicModelProcessor implements Processor
         }
 
         if(distinctCountMap != null) {
-            for(ColumnConfig columnConfig: columnConfigList) {
-                Long distinctCount = distinctCountMap.get(columnConfig.getColumnNum());
-                if(distinctCount != null) {
-                    if(distinctCount < modelConfig.getDataSet().getAutoTypeThreshold().longValue()) {
-                        columnConfig.setColumnType(ColumnType.C);
-                        log.info("Column {} with index {} is set to categorical type according to auto type checking.", columnConfig.getColumnName(), columnConfig.getColumnNum());
-                    }
-                    columnConfig.getColumnStats().setDistinctCount(distinctCount);
-                }
-            }
+            setCategoricalColumns(distinctCountMap);
         }
         // save ColumnConfig list into file
         saveColumnConfigList();
@@ -118,6 +109,22 @@ public class InitModelProcessor extends BasicModelProcessor implements Processor
         clearUp(ModelStep.INIT);
         log.info("Step Finished: init with {} ms", (System.currentTimeMillis() - start));
         return 0;
+    }
+
+    private void setCategoricalColumns(Map<Integer, Long> distinctCountMap) {
+        for(ColumnConfig columnConfig: columnConfigList) {
+            Long distinctCount = distinctCountMap.get(columnConfig.getColumnNum());
+            if(distinctCount != null && modelConfig.getDataSet().getAutoTypeThreshold() != null) {
+                if(distinctCount < modelConfig.getDataSet().getAutoTypeThreshold().longValue()) {
+                    columnConfig.setColumnType(ColumnType.C);
+                    log.info(
+                            "Column {} with index {} is set to categorical type according to auto type checking: distinct count {}, threshold {}.",
+                            columnConfig.getColumnName(), columnConfig.getColumnNum(), distinctCount, modelConfig
+                                    .getDataSet().getAutoTypeThreshold());
+                }
+                columnConfig.getColumnStats().setDistinctCount(distinctCount);
+            }
+        }
     }
 
     // GuaguaOptionsParser doesn't to support *.jar currently.
@@ -173,6 +180,7 @@ public class InitModelProcessor extends BasicModelProcessor implements Processor
                 Environment.getProperty("mapred.reduce.slowstart.completed.maps", "0.9"));
         String hdpVersion = HDPUtils.getHdpVersionForHDP224();
         if(StringUtils.isNotBlank(hdpVersion)) {
+            // for hdp 2.2.4, hdp.version should be set and configuration files should be add to container class path
             conf.set("hdp.version", hdpVersion);
             HDPUtils.addFileToClassPath(HDPUtils.findContainingFile("hdfs-site.xml"), conf);
             HDPUtils.addFileToClassPath(HDPUtils.findContainingFile("core-site.xml"), conf);
