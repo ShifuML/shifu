@@ -126,6 +126,7 @@ public interface Constants {
     public static final String KEY_VARSLECT_STATS_PATH = "varSelectStatsPath";
     public static final String KEY_TRAIN_SCORES_PATH = "trainScoresPath";
     public static final String KEY_BIN_AVG_SCORE_PATH = "binAvgScorePath";
+    public static final String KEY_AUTO_TYPE_PATH= "autoTypePath";
 
     public static final String DEFAULT_META_COLUMN_FILE = "meta.column.names";
     public static final String DEFAULT_CATEGORICAL_COLUMN_FILE = "categorical.column.names";

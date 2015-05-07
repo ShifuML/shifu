@@ -21,6 +21,7 @@ SET job.name 'shifu normalize';
 SET io.sort.mb 500;
 SET mapred.child.java.opts -Xmx1G;
 SET mapred.child.ulimit 2.5G;
+SET mapred.reduce.slowstart.completed.maps 0.6;
 -- to disable compress output to make sure in train step, input files can be merged into one worker, this is a 
 -- work-around solution to solve issue on train.
 SET mapred.output.compress false;

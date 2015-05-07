@@ -51,6 +51,7 @@ import ml.shifu.shifu.fs.ShifuFileUtils;
 import ml.shifu.shifu.util.CommonUtils;
 import ml.shifu.shifu.util.Constants;
 import ml.shifu.shifu.util.Environment;
+import ml.shifu.shifu.util.HDPUtils;
 
 import org.apache.commons.collections.ListUtils;
 import org.apache.commons.compress.compressors.bzip2.BZip2CompressorInputStream;
@@ -385,6 +386,14 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
 
         jars.add(JarManager.findContainingJar(JexlException.class));
 
+        String hdpVersion = HDPUtils.getHdpVersionForHDP224();
+        if(StringUtils.isNotBlank(hdpVersion)) {
+            jars.add(HDPUtils.findContainingFile("hdfs-site.xml"));
+            jars.add(HDPUtils.findContainingFile("core-site.xml"));
+            jars.add(HDPUtils.findContainingFile("mapred-site.xml"));
+            jars.add(HDPUtils.findContainingFile("yarn-site.xml"));
+        }
+
         return StringUtils.join(jars, NNConstants.LIB_JAR_SEPARATOR);
     }
 
@@ -493,6 +502,8 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
         // Tmp set to false because of some cluster by default use gzip while CombineInputFormat will split gzip file (a
         // bug)
         conf.setBoolean(CombineInputFormat.SHIFU_VS_SPLIT_COMBINABLE, false);
+        conf.set("mapred.reduce.slowstart.completed.maps",
+                Environment.getProperty("mapred.reduce.slowstart.completed.maps", "0.9"));
 
         Float wrapperRatio = this.modelConfig.getVarSelect().getWrapperRatio();
         if(wrapperRatio == null) {
@@ -504,6 +515,14 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
             throw new IllegalArgumentException("WrapperRatio should be in (0, 1).");
         }
         conf.setFloat(Constants.SHIFU_VARSELECT_WRAPPER_RATIO, wrapperRatio);
+        String hdpVersion = HDPUtils.getHdpVersionForHDP224();
+        if(StringUtils.isNotBlank(hdpVersion)) {
+            conf.set("hdp.version", hdpVersion);
+            HDPUtils.addFileToClassPath(HDPUtils.findContainingFile("hdfs-site.xml"), conf);
+            HDPUtils.addFileToClassPath(HDPUtils.findContainingFile("core-site.xml"), conf);
+            HDPUtils.addFileToClassPath(HDPUtils.findContainingFile("mapred-site.xml"), conf);
+            HDPUtils.addFileToClassPath(HDPUtils.findContainingFile("yarn-site.xml"), conf);
+        }
     }
 
     private void postProcess4SEVarSelect(SourceType source, String varSelectMSEOutputPath) throws IOException {

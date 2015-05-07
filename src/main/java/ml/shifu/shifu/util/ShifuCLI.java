@@ -529,8 +529,6 @@ public class ShifuCLI {
         System.out.println("Usage: shifu COMMAND");
         System.out.println("where COMMAND is one of:");
         System.out.println("\tnew <ModelSetName> [-t <NN|LR|SVM|DT>]  Create a new model set.");
-        // hide cp for release
-        //System.out.println("\tcp <srcModel> <dstMoel>               Copy from an existing model set.");
         System.out.println("\tinit                                    Create initial ColumnConfig.json and upload to HDFS.");
         System.out.println("\tstats                                   Calculate statistics on HDFS and update local ColumnConfig.json.");
         System.out.println("\tvarselect/varsel                        Variable selection, will update finalSelect in ColumnConfig.json.");
@@ -545,6 +543,7 @@ public class ShifuCLI {
         System.out.println("\teval -score   <EvalSetName>             Scoring evaluation dataset.");
         System.out.println("\teval -confmat <EvalSetName>             Compute the TP/FP/TN/FN based on scoring");
         System.out.println("\teval -perf <EvalSetName>                Calculate the model performance based on confmat");
+        System.out.println("\texport [-t pmml]                        Export model to PMML format.");
         System.out.println("\tversion|v|-v|-version                   Print version of current package.");
         System.out.println("\thelp|h|-h|-help                         Help message.");
     }

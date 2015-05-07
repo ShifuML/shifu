@@ -50,12 +50,14 @@ import ml.shifu.shifu.fs.ShifuFileUtils;
 import ml.shifu.shifu.util.Constants;
 import ml.shifu.shifu.util.Environment;
 import ml.shifu.shifu.util.HDFSUtils;
+import ml.shifu.shifu.util.HDPUtils;
 
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.collections.ListUtils;
 import org.apache.commons.compress.compressors.bzip2.BZip2CompressorInputStream;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang.StringUtils;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -255,6 +257,8 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
     protected void runDistributedTrain() throws IOException, InterruptedException, ClassNotFoundException {
         LOG.info("Started {} d-training.", isDryTrain ? "dry" : "");
 
+        Configuration conf = new Configuration();
+
         SourceType sourceType = super.getModelConfig().getDataSet().getSource();
 
         final List<String> args = new ArrayList<String>();
@@ -296,7 +300,14 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
             progressLogList.add(progressLogFile);
             localArgs.add(String.format(NNConstants.MAPREDUCE_PARAM_FORMAT, NNConstants.NN_PROGRESS_FILE,
                     progressLogFile));
-
+            String hdpVersion = HDPUtils.getHdpVersionForHDP224();
+            if(StringUtils.isNotBlank(hdpVersion)) {
+                localArgs.add(String.format(NNConstants.MAPREDUCE_PARAM_FORMAT, "hdp.version", hdpVersion));
+                HDPUtils.addFileToClassPath(HDPUtils.findContainingFile("hdfs-site.xml"), conf);
+                HDPUtils.addFileToClassPath(HDPUtils.findContainingFile("core-site.xml"), conf);
+                HDPUtils.addFileToClassPath(HDPUtils.findContainingFile("mapred-site.xml"), conf);
+                HDPUtils.addFileToClassPath(HDPUtils.findContainingFile("yarn-site.xml"), conf);
+            }
             if(isParallel) {
                 guaguaClient.addJob(localArgs.toArray(new String[0]));
             } else {
@@ -534,6 +545,14 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
         jars.add(JarManager.findContainingJar(ZooKeeper.class));
         // netty-*.jar
         jars.add(JarManager.findContainingJar(ServerBootstrap.class));
+
+        String hdpVersion = HDPUtils.getHdpVersionForHDP224();
+        if(StringUtils.isNotBlank(hdpVersion)) {
+            jars.add(HDPUtils.findContainingFile("hdfs-site.xml"));
+            jars.add(HDPUtils.findContainingFile("core-site.xml"));
+            jars.add(HDPUtils.findContainingFile("mapred-site.xml"));
+            jars.add(HDPUtils.findContainingFile("yarn-site.xml"));
+        }
 
         args.add(StringUtils.join(jars, NNConstants.LIB_JAR_SEPARATOR));
     }
