@@ -96,9 +96,15 @@ public class DataPurifier {
         }
 
         Boolean result = Boolean.FALSE;
+        Object retObj = null;
 
-        Object retObj = dataFilterExpr.evaluate(jc);
-        if (retObj instanceof Boolean) {
+        try {
+            retObj = dataFilterExpr.evaluate(jc);
+        } catch ( Throwable e ) {
+            log.debug("Error occurred when trying to evaluate", dataFilterExpr.toString(), e);
+        }
+
+        if (retObj != null && retObj instanceof Boolean) {
             result = (Boolean) retObj;
         }
 
@@ -122,9 +128,14 @@ public class DataPurifier {
         }
 
         Boolean result = Boolean.FALSE;
+        Object retObj = null;
+        try {
+            retObj = dataFilterExpr.evaluate(jc);
+        } catch ( Throwable e ) {
+            log.debug("Error occurred when trying to evaluate", dataFilterExpr.toString(), e);
+        }
 
-        Object retObj = dataFilterExpr.evaluate(jc);
-        if (retObj instanceof Boolean) {
+        if (retObj != null && retObj instanceof Boolean) {
             result = (Boolean) retObj;
         }
 
