@@ -290,6 +290,9 @@ public class UpdateBinningInfoMapper extends Mapper<LongWritable, Text, IntWrita
             isInvalidValue = false;
 
             BinningInfoWritable binningInfoWritable = this.columnBinningInfo.get(i);
+            if(binningInfoWritable == null) {
+                continue; // doesn't exist
+            }
             binningInfoWritable.setTotalCount(binningInfoWritable.getTotalCount() + 1L);
             if(columnConfig.isCategorical()) {
                 int lastBinIndex = binningInfoWritable.getBinCategories().size();
