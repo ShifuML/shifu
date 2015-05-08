@@ -51,7 +51,7 @@ public class NormalizerTest {
         config.setColumnType(ColumnType.N);
         Assert.assertEquals(0.0, Normalizer.normalize(config, "2", 6.0));
 
-        Assert.assertEquals(0.0, Normalizer.normalize(config, "ABC", 0.1));
+        Assert.assertEquals(0.0, Normalizer.normalize(config, "ABC", 0.0));
     }
 
     @Test
@@ -70,10 +70,12 @@ public class NormalizerTest {
         config.setMean(2.0);
         config.setStdDev(1.0);
         config.setBinCategory(Arrays.asList(new String[]{"1", "2", "3", "4", "ABC"}));
-        config.setBinPosCaseRate(Arrays.asList(new Double[]{0.1, 2.0, 0.3, 0.1}));
+        config.setBinPosCaseRate(Arrays.asList(new Double[]{0.1, 2.0, 0.3, 0.1, 0.3}));
+        config.setBinCountNeg(Arrays.asList(new Integer[]{1, 2, 3, 1, 3}));
+        config.setBinCountPos(Arrays.asList(new Integer[]{1, 2, 3, 1, 2}));
         Assert.assertEquals(0.0, Normalizer.normalize(config, "2", 0.1));
 
-        Assert.assertEquals(0.0, Normalizer.normalize(config, "5", 0.1));
+        Assert.assertEquals(-0.10000000000000009, Normalizer.normalize(config, "5", 0.1));
 
     }
 
@@ -101,16 +103,16 @@ public class NormalizerTest {
         
         // Test miss value.
         Double missZero = Normalizer.zScoreNormalize(config, "wrongFormat", 4.0, MissValueFillType.ZERO);
-        Assert.assertEquals(missZero, 0.0);
+        Assert.assertEquals(missZero, -2.0);
         
         Double missMean = Normalizer.zScoreNormalize(config, "wrongFormat", 4.0, MissValueFillType.MEAN);
-        Assert.assertEquals(missMean, 2.0);
+        Assert.assertEquals(missMean, 0.0);
         
         Double missCWoe = Normalizer.zScoreNormalize(config, "wrongFormat", 4.0, MissValueFillType.COUNTWOE);
-        Assert.assertEquals(missCWoe, 2.1);
+        Assert.assertEquals(missCWoe, 0.10000000000000009);
         
         Double missWWoe = Normalizer.zScoreNormalize(config, "wrongFormat", 4.0, MissValueFillType.WEIGHTEDWOE);
-        Assert.assertEquals(missWWoe, 4.2);
+        Assert.assertEquals(missWWoe, 2.2);
         
         // Test norm value
         Double normValue1 = Normalizer.zScoreNormalize(config, "5.0", 4.0, MissValueFillType.ZERO);
