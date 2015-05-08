@@ -234,11 +234,13 @@ public class Normalizer {
         }
         
         if (config.isCategorical()) {
-            int index = config.getBinCategory().indexOf(raw);
+            // int index = config.getBinCategory().indexOf(raw);
+            int index = getCategoryIndexOrMostFreq(config, raw);
 
             if (index == -1) {
                 // Use default value configured by MissValueFillType for missing value.
-                return getDefaultValueByFillType(fillType, config);
+                // return getDefaultValueByFillType(fillType, config);
+                return computeZScore(config.getBinPosRate().get(0), config.getMean(), config.getStdDev(), stdDevCutOff);
             } else {
                 return computeZScore(config.getBinPosRate().get(index), config.getMean(), config.getStdDev(), stdDevCutOff);
             }
@@ -248,12 +250,40 @@ public class Normalizer {
                 value = Double.parseDouble(raw);
             } catch (Exception e) {
                 log.debug("Not decimal format " + raw + ", using default!");
-                return getDefaultValueByFillType(fillType, config);
+                value = getDefaultValueByFillType(fillType, config);
             }
             
             return computeZScore(value, config.getMean(), config.getStdDev(), stdDevCutOff);
         }
     }
+
+    /**
+     * Get the index of categorical value in bin category list
+     * If the column value is not in bin category list, just return the most frequent column value index
+     *
+     * @param config - @ColumnConfig info
+     * @param raw    - input column value
+     * @return       - value index in bin category list
+     */
+    private static int getCategoryIndexOrMostFreq(ColumnConfig config, String raw) {
+        int mostFreqIndex = -1;
+        int maxValCnt = -1;
+        int categoryValSize = config.getBinCategory().size();
+        for ( int i = 0; i < categoryValSize; i ++ ) {
+            if ( config.getBinCategory().get(i).equals(raw) ) {
+                return i;
+            }
+
+            int catValCnt = config.getBinCountNeg().get(i) + config.getBinCountPos().get(i);
+            if ( catValCnt >  maxValCnt ) {
+                maxValCnt = catValCnt;
+                mostFreqIndex = i;
+            }
+        }
+
+        return mostFreqIndex;
+    }
+
     /**
      * Compute the normalized data for Woe Score
      *

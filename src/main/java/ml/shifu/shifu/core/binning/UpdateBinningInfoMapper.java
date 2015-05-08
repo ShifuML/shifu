@@ -293,15 +293,14 @@ public class UpdateBinningInfoMapper extends Mapper<LongWritable, Text, IntWrita
             if ( binningInfoWritable == null ) {
                 continue; //doesn't exist
             }
-
+            
             binningInfoWritable.setTotalCount(binningInfoWritable.getTotalCount() + 1L);
             if(columnConfig.isCategorical()) {
                 int lastBinIndex = binningInfoWritable.getBinCategories().size();
 
                 int binNum = 0;
-                if(units[i] == null || StringUtils.isBlank(units[i]) || "*".equals(units[i].trim())
-                        || "#".equals(units[i].trim()) || "?".equals(units[i].trim())
-                        || "null".equalsIgnoreCase(units[i].trim())) {
+                if(units[i] == null
+                        || this.modelConfig.getDataSet().getMissingOrInvalidValues().contains(units[i].toLowerCase())) {
                     isMissingValue = true;
                 } else {
                     String str = StringUtils.trim(units[i]);

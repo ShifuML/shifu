@@ -37,7 +37,8 @@
         </fileSet>
         <fileSet>
             <directory>${project.basedir}/src/main/resources/conf</directory>
-            <outputDirectory>/</outputDirectory>
+            <!-- cannot set it to conf, as in conf mapred-site will override system configurations -->
+            <outputDirectory>/log4jconf</outputDirectory>
             <includes>
                 <include>log4j.*</include>
             </includes>
@@ -130,6 +131,7 @@
                 <include>*:joda-time:*</include>
                 <include>*:automaton:*</include>
                 <include>*:jpmml:*</include>
+                <include>*:stream:*</include>
             </includes>
         </dependencySet>
     </dependencySets>

@@ -86,6 +86,11 @@
             <version>2.5</version>
         </dependency>
         <dependency>
+            <groupId>com.clearspring.analytics</groupId>
+            <artifactId>stream</artifactId>
+            <version>2.8.0</version>
+        </dependency>
+        <dependency>
             <groupId>org.easymock</groupId>
             <artifactId>easymock</artifactId>
             <version>3.1</version>
@@ -420,6 +425,7 @@
         <profile>
             <id>release-sign-artifacts</id>
             <activation>
+                <activeByDefault>false</activeByDefault>
                 <property>
                     <name>performRelease</name>
                     <value>false</value>
@@ -564,6 +570,133 @@
                 <dependency>
                     <groupId>ml.shifu</groupId>
                     <artifactId>guagua-mapreduce</artifactId>
+                    <version>0.7.0</version>
+                    <classifier>hadoop2</classifier>
+                </dependency>
+                <dependency>
+                    <groupId>io.netty</groupId>
+                    <artifactId>netty</artifactId>
+                    <version>3.6.2.Final</version>
+                </dependency>
+            </dependencies>
+        </profile>
+        <!-- For hadoop 2.2.4 cluster -->
+        <profile>
+            <id>hdp-yarn-2.2.4</id>
+            <activation>
+                <activeByDefault>false</activeByDefault>
+            </activation>
+            <properties>
+                <platform.version>hdp-yarn-2.2.4</platform.version>
+            </properties>
+            <repositories>
+                <repository>
+                    <id>HortonWorks HDP Local</id>
+                    <url>http://repo.hortonworks.com/service/local/repositories/releases/content/</url>
+                </repository>
+                <repository>
+                    <id>HortonWorks HDP</id>
+                    <url>http://repo.hortonworks.com/nexus/content/repositories/releases</url>
+                </repository>
+            </repositories>
+            <build>
+                <plugins>
+                    <plugin>
+                        <artifactId>maven-assembly-plugin</artifactId>
+                        <version>2.3</version>
+                        <executions>
+                            <execution>
+                                <id>make-assembly</id>
+                                <phase>package</phase>
+                                <goals>
+                                    <goal>single</goal>
+                                </goals>
+                                <configuration>
+                                    <descriptors>
+                                        <descriptor>assembly-hadoop2.xml</descriptor>
+                                    </descriptors>
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
+                </plugins>
+            </build>
+            <dependencies>
+                <dependency>
+                    <groupId>org.apache.hadoop</groupId>
+                    <artifactId>hadoop-hdfs</artifactId>
+                    <version>2.6.0.2.2.4.0-2633</version>
+                    <exclusions>
+                        <exclusion>
+                            <groupId>org.mortbay.jetty</groupId>
+                            <artifactId>jetty</artifactId>
+                        </exclusion>
+                        <exclusion>
+                            <groupId>org.mortbay.jetty</groupId>
+                            <artifactId>jetty-util</artifactId>
+                        </exclusion>
+                    </exclusions>
+                </dependency>
+                <dependency>
+                    <groupId>org.apache.hadoop</groupId>
+                    <artifactId>hadoop-common</artifactId>
+                    <version>2.6.0.2.2.4.0-2633</version>
+                    <exclusions>
+                        <exclusion>
+                            <groupId>org.mortbay.jetty</groupId>
+                            <artifactId>jetty</artifactId>
+                        </exclusion>
+                        <exclusion>
+                            <groupId>org.mortbay.jetty</groupId>
+                            <artifactId>jetty-util</artifactId>
+                        </exclusion>
+                    </exclusions>
+                </dependency>
+                <dependency>
+                    <groupId>org.apache.hadoop</groupId>
+                    <artifactId>hadoop-mapreduce-client-core</artifactId>
+                    <version>2.6.0.2.2.4.0-2633</version>
+                    <exclusions>
+                        <exclusion>
+                            <groupId>org.mortbay.jetty</groupId>
+                            <artifactId>jetty</artifactId>
+                        </exclusion>
+                        <exclusion>
+                            <groupId>org.mortbay.jetty</groupId>
+                            <artifactId>jetty-util</artifactId>
+                        </exclusion>
+                    </exclusions>
+                </dependency>
+                <dependency>
+                    <groupId>org.apache.pig</groupId>
+                    <artifactId>pig</artifactId>
+                    <version>0.14.0.2.2.4.0-2633</version>
+                    <exclusions>
+                        <exclusion>
+                            <groupId>org.mortbay.jetty</groupId>
+                            <artifactId>jetty</artifactId>
+                        </exclusion>
+                        <exclusion>
+                            <groupId>org.mortbay.jetty</groupId>
+                            <artifactId>jetty-util</artifactId>
+                        </exclusion>
+                    </exclusions>
+                    <classifier>h2</classifier>
+                </dependency>
+                <dependency>
+                    <groupId>joda-time</groupId>
+                    <artifactId>joda-time</artifactId>
+                    <version>2.3</version>
+                </dependency>
+                <dependency>
+                    <groupId>dk.brics.automaton</groupId>
+                    <artifactId>automaton</artifactId>
+                    <version>1.11-8</version>
+                </dependency>
+                <dependency>
+                    <groupId>ml.shifu</groupId>
+                    <artifactId>guagua-mapreduce</artifactId>
+                    <!-- <version>0.8.0-SNAPSHOT</version> -->
                     <version>0.7.0</version>
                     <classifier>hadoop2</classifier>
                 </dependency>

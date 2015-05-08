@@ -49,6 +49,7 @@ import ml.shifu.shifu.util.Base64Utils;
 import ml.shifu.shifu.util.CommonUtils;
 import ml.shifu.shifu.util.Constants;
 import ml.shifu.shifu.util.Environment;
+import ml.shifu.shifu.util.HDPUtils;
 
 import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.collections.CollectionUtils;
@@ -160,7 +161,7 @@ public class StatsModelProcessor extends BasicModelProcessor implements Processo
                 PigExecutor.getExecutor().submitJob(modelConfig,
                         pathFinder.getAbsolutePath("scripts/PreTrainingStats.pig"), paramsMap);
             } else if(modelConfig.getBinningAlgorithm().equals(ModelStatsConf.BinningAlgorithm.SPDTI)) {
-                paramsMap.put("group_binning_parallel", Integer.toString(columnConfigList.size() / (5 * 16)));
+                paramsMap.put("group_binning_parallel", Integer.toString(columnConfigList.size() / (5 * 8)));
                 ShifuFileUtils.deleteFile(pathFinder.getUpdatedBinningInfoPath(modelConfig.getDataSet().getSource()),
                         modelConfig.getDataSet().getSource());
 
@@ -233,6 +234,17 @@ public class StatsModelProcessor extends BasicModelProcessor implements Processo
         conf.set(Constants.SHIFU_MODELSET_SOURCE_TYPE, source.toString());
         // set mapreduce.job.max.split.locations to 30 to suppress warnings
         conf.setInt(GuaguaMapReduceConstants.MAPREDUCE_JOB_MAX_SPLIT_LOCATIONS, 30);
+        conf.set("mapred.reduce.slowstart.completed.maps",
+                Environment.getProperty("mapred.reduce.slowstart.completed.maps", "0.9"));
+        String hdpVersion = HDPUtils.getHdpVersionForHDP224();
+        if(StringUtils.isNotBlank(hdpVersion)) {
+            // for hdp 2.2.4, hdp.version should be set and configuration files should be add to container class path
+            conf.set("hdp.version", hdpVersion);
+            HDPUtils.addFileToClassPath(HDPUtils.findContainingFile("hdfs-site.xml"), conf);
+            HDPUtils.addFileToClassPath(HDPUtils.findContainingFile("core-site.xml"), conf);
+            HDPUtils.addFileToClassPath(HDPUtils.findContainingFile("mapred-site.xml"), conf);
+            HDPUtils.addFileToClassPath(HDPUtils.findContainingFile("yarn-site.xml"), conf);
+        }
     }
 
     private void updateBinningInfoWithMRJob() throws IOException, InterruptedException, ClassNotFoundException {

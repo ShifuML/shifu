@@ -86,6 +86,15 @@ public class ModelInspector {
             result = ValidateResult.mergeResult(result, tmpResult);
         }
 
+        if(modelConfig.getDataSet().getAutoType()) {
+            if(modelConfig.getDataSet().getAutoTypeThreshold() < 1) {
+                ValidateResult tmpResult = new ValidateResult(true);
+                // tmpResult.getCauses().add(
+                tmpResult.addCause("'autoTypeThreshold' should not be less than 1.");
+                result = ValidateResult.mergeResult(result, tmpResult);
+            }
+        }
+
         if(ModelStep.INIT.equals(modelStep)) {
             result = ValidateResult.mergeResult(result, checkTrainData(modelConfig.getDataSet()));
             result = ValidateResult.mergeResult(result, checkVarSelect(modelConfig.getVarSelect()));
@@ -353,8 +362,7 @@ public class ModelInspector {
             if(layerCnt < 0) {
                 ValidateResult tmpResult = new ValidateResult(true);
                 tmpResult.setStatus(false);
-                tmpResult.getCauses().add(
-                        "The number of hidden layers should be >= 0 in train configuration");
+                tmpResult.getCauses().add("The number of hidden layers should be >= 0 in train configuration");
                 result = ValidateResult.mergeResult(result, tmpResult);
             }
 
