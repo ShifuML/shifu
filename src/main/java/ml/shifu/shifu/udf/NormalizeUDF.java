@@ -23,7 +23,6 @@ import java.util.Map;
 
 import ml.shifu.shifu.container.WeightAmplifier;
 import ml.shifu.shifu.container.obj.ColumnConfig;
-import ml.shifu.shifu.container.obj.ModelNormalizeConf.MissValueFillType;
 import ml.shifu.shifu.core.DataSampler;
 import ml.shifu.shifu.core.Normalizer;
 import ml.shifu.shifu.util.CommonUtils;
@@ -92,7 +91,6 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
 
         Double cutoff = modelConfig.getNormalizeStdDevCutOff();
         boolean isWeightedNorm = modelConfig.getNormalize().getIsWeightNorm();
-        MissValueFillType fillType = modelConfig.getNormalizeMissValueFillType();
         
         for(int i = 0; i < size; i++) {
             ColumnConfig config = columnConfigList.get(i);
@@ -119,13 +117,17 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
                 String val = ((input.get(i) == null) ? "" : input.get(i).toString());
                 switch(super.modelConfig.getNormalize().getNormType()) {
                     case WOE:
-                        Double w = Normalizer.woeNormalize(config, val, isWeightedNorm, fillType);
+                        Double w = Normalizer.woeNormalize(config, val, isWeightedNorm);
                         tuple.append(df.format(w));
                         break;
                     case ZSCALE:
-                    default:
-                        Double z = Normalizer.zScoreNormalize(config, val, cutoff, fillType);
+                        Double z = Normalizer.zScoreNormalize(config, val, cutoff);
                         tuple.append(df.format(z));
+                        break;
+                    case HYBRID:
+                    default:
+                        Double h = Normalizer.hybridNormalize(config, val, cutoff, isWeightedNorm);
+                        tuple.append(df.format(h));
                         break;
                 }
             }
