@@ -26,19 +26,13 @@ public class ModelNormalizeConf {
 
     @JsonDeserialize(using = NormTypeDeserializer.class)
     public static enum NormType {
-        ZSCALE, WOE;
-    }
-    
-    @JsonDeserialize(using = MissValueFillTypeDeserializer.class)
-    public static enum MissValueFillType {
-        MEAN, COUNTWOE, WEIGHTEDWOE, ZERO;
+        ZSCALE, WOE, HYBRID;
     }
     
     private Double stdDevCutOff = Double.valueOf(4.0);
     private Double sampleRate = Double.valueOf(1.0);
     private Boolean sampleNegOnly = Boolean.FALSE;
     private NormType normType = NormType.ZSCALE;
-    private MissValueFillType missValueFillType = MissValueFillType.MEAN;
     private Boolean isWeightNorm = Boolean.FALSE;
 
     // move to RawSourceData
@@ -81,20 +75,6 @@ public class ModelNormalizeConf {
      */
     public void setNormType(NormType normType) {
         this.normType = normType;
-    }
-
-    /**
-     * @return the fillType
-     */
-    public MissValueFillType getMissValueFillType() {
-        return missValueFillType;
-    }
-
-    /**
-     * @param fillType the fillType to set
-     */
-    public void setMissValueFillType(MissValueFillType fillType) {
-        this.missValueFillType = fillType;
     }
 
     /**

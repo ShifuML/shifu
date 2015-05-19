@@ -172,14 +172,13 @@ public class DataNormalizeWorker extends AbstractWorkerActor {
 
     private Double normalize(ColumnConfig config, Object value, Double cutoff) {
         String val = ((value == null) ? "" : value.toString());
-        MissValueFillType fillType = modelConfig.getNormalizeMissValueFillType();
         switch(super.modelConfig.getNormalize().getNormType()) {
             case WOE:
                 boolean isWeightedNorm = modelConfig.getNormalize().getIsWeightNorm();
-                return Normalizer.woeNormalize(config, val, isWeightedNorm, fillType);
+                return Normalizer.woeNormalize(config, val, isWeightedNorm);
             case ZSCALE:
             default:
-                return Normalizer.zScoreNormalize(config, val, cutoff, fillType);
+                return Normalizer.zScoreNormalize(config, val, cutoff);
         }
     }
 

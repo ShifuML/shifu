@@ -112,7 +112,7 @@ public class ModelInspector {
                 result = ValidateResult.mergeResult(result, checkColumnConf(modelConfig));
             }
         } else if(ModelStep.NORMALIZE.equals(modelStep)) {
-            // TODO
+            result = ValidateResult.mergeResult(result, checkNormSetting(modelConfig.getNormalize()));
         } else if(ModelStep.TRAIN.equals(modelStep)) {
             result = ValidateResult.mergeResult(result, checkTrainSetting(modelConfig.getTrain()));
         } else if(ModelStep.POSTTRAIN.equals(modelStep)) {
@@ -298,6 +298,33 @@ public class ModelInspector {
         return result;
     }
 
+    private ValidateResult checkNormSetting(ModelNormalizeConf norm) {
+        ValidateResult result = new ValidateResult(true);
+
+        if(norm.getStdDevCutOff() == null || norm.getStdDevCutOff() <= 0) {
+            ValidateResult tmpResult = new ValidateResult(true);
+            tmpResult.setStatus(false);
+            tmpResult.getCauses().add("stdDevCutOff should be positive value in normalize configuration");
+            result = ValidateResult.mergeResult(result, tmpResult);
+        }
+        
+        if(norm.getSampleRate() == null || norm.getSampleRate() <= 0) {
+            ValidateResult tmpResult = new ValidateResult(true);
+            tmpResult.setStatus(false);
+            tmpResult.getCauses().add("sampleRate should be positive value in normalize configuration");
+            result = ValidateResult.mergeResult(result, tmpResult);
+        }
+        
+        if(norm.getIsWeightNorm() == null) {
+            ValidateResult tmpResult = new ValidateResult(true);
+            tmpResult.setStatus(false);
+            tmpResult.getCauses().add("isWeightNorm should be true or false in normalize configuration");
+            result = ValidateResult.mergeResult(result, tmpResult);
+        }
+        
+        return result;
+    }
+    
     /**
      * Check the setting for model training.
      * It will make sure (num_of_layers > 0
