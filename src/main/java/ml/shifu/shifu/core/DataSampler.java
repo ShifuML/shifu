@@ -87,7 +87,8 @@ public class DataSampler {
     }
 
     /**
-     * to decide whether the data should be filtered out or not
+     * To decide whether the data should be filtered out or not. Both unselected data or invalid tag will be 
+     * filtered out. 
      *
      * @param posTags
      * @param negTags
