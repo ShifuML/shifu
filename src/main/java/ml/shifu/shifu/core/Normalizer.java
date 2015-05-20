@@ -18,6 +18,7 @@ package ml.shifu.shifu.core;
 import java.util.List;
 
 import ml.shifu.shifu.container.obj.ColumnConfig;
+import ml.shifu.shifu.container.obj.ModelNormalizeConf;
 import ml.shifu.shifu.util.CommonUtils;
 
 import org.slf4j.Logger;
@@ -111,14 +112,7 @@ public class Normalizer {
      * @return
      */
     public Double normalize(String raw) {
-        switch(method) {
-            case ZScore:
-                return getZScore(config, raw, stdDevCutOff);
-            case MaxMin:
-                return getMaxMinScore(config, raw);
-            default:
-                return 0.0;
-        }
+        return normalize(config, raw, method, stdDevCutOff);
     }
 
     /**
@@ -184,7 +178,7 @@ public class Normalizer {
 
         switch(method) {
             case ZScore:
-                return getZScore(config, raw, stdDevCutoff);
+                return zScoreNormalize(config, raw, stdDevCutoff);
             case MaxMin:
                 return getMaxMinScore(config, raw);
             default:
@@ -212,6 +206,43 @@ public class Normalizer {
         return null;
     }
 
+    
+
+    
+    /**
+     * Normalize the raw data, according the ColumnConfig info and normalization type.
+     * Currently, the cutoff value doesn't affect the computation of WOE or WEIGHT_WOE
+     * 
+     * @param config
+     *            - ColumnConfig to normalize data
+     * @param raw
+     *            - raw input data
+     * @param method
+     *            - the method used to do normalization
+     * @param cutoff
+     *            - standard deviation cut off
+     * @param type
+     *            - normalization type. {@link ModelNormalizeConf.NormType}
+     * @return - normalized value
+     */
+    public static Double normalize(ColumnConfig config, String raw, Double cutoff, ModelNormalizeConf.NormType type) {
+        switch(type) {
+        case ZSCALE:
+            return zScoreNormalize(config, raw, cutoff);
+        case WOE:
+            return woeNormalize(config, raw, false);
+        case WEIGHT_WOE:
+            return woeNormalize(config, raw, true);
+        case HYBRID:
+            return hybridNormalize(config, raw, cutoff, false);
+        case WEIGHT_HYBRID:
+            return hybridNormalize(config, raw, cutoff, true);
+        default:
+            return Double.valueOf(0.0);
+        }
+    }
+    
+    
     /**
      * Compute the normalized data for @NormalizeMethod.Zscore
      * 
@@ -223,7 +254,7 @@ public class Normalizer {
      *            - standard deviation cut off
      * @return - normalized value for ZScore method
      */
-    private static Double getZScore(ColumnConfig config, String raw, Double cutoff) {
+    public static Double zScoreNormalize(ColumnConfig config, String raw, Double cutoff) {
         Double stdDevCutOff;
         if(cutoff != null && !cutoff.isInfinite() && !cutoff.isNaN()) {
             stdDevCutOff = cutoff;
@@ -236,13 +267,13 @@ public class Normalizer {
     }
     
     /**
-     * Calculate desiring value parsed from raw based on ColumnConfig.
+     * Parse raw value based on ColumnConfig.
      * 
      * @param config
      *            - @ColumnConfig info
      * @param raw
      *            - input column value
-     * @return desiring value parsed from raw. For categorical type, return BinPosRate. For numerical type, return 
+     * @return parsed raw value. For categorical type, return BinPosRate. For numerical type, return 
      *         corresponding double value. For missing data, return default value using 
      *         {@link Normalizer#defaultMissingValue}.
      */
@@ -275,27 +306,11 @@ public class Normalizer {
      * 
      * @param config
      *            - @ColumnConfig info
-     * @return - default value for missing data. Now simply return Mean value.
+     * @return - default value for missing data. Now simply return Mean value. If mean is null then return 0.
      */
-    private static double defaultMissingValue(ColumnConfig config) {
-        // TODO
+    private static Double defaultMissingValue(ColumnConfig config) {
         // Here simply return Mean as the default value. We may customize it later.
         return config.getMean();
-    }
-
-    /**
-     * Compute the normalized data for @NormalizeMethod.Zscore
-     * 
-     * @param config
-     *            - @ColumnConfig info
-     * @param raw
-     *            - input column value
-     * @param cutoff
-     *            - standard deviation cut off
-     * @return - normalized value for ZScore method
-     */
-    public static Double zScoreNormalize(ColumnConfig config, String raw, double cutoff) {
-        return getZScore(config, raw, cutoff);
     }
     
     /**
@@ -339,7 +354,7 @@ public class Normalizer {
         Double normValue;
         if (config.isNumerical()) {
             // For numerical data, use zscore.
-            normValue = getZScore(config, raw, cutoff);
+            normValue = zScoreNormalize(config, raw, cutoff);
         } else {
             // For categorical data, use woe.
             normValue = woeNormalize(config, raw, isWeightedNorm);

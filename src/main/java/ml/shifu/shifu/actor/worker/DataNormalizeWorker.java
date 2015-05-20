@@ -139,7 +139,7 @@ public class DataNormalizeWorker extends AbstractWorkerActor {
                 retDouList.add(null);
             } else {
                 String val = (rfs[i] == null) ? "" : rfs[i];
-                retDouList.add(normalize(config, val, cutoff));
+                retDouList.add(Normalizer.normalize(config, val, cutoff, modelConfig.getNormalizeType()));
             }
         }
 
@@ -167,18 +167,6 @@ public class DataNormalizeWorker extends AbstractWorkerActor {
         retDouList.add(weight);
 
         return retDouList;
-    }
-
-    private Double normalize(ColumnConfig config, Object value, Double cutoff) {
-        String val = ((value == null) ? "" : value.toString());
-        switch(super.modelConfig.getNormalize().getNormType()) {
-            case WOE:
-                boolean isWeightedNorm = modelConfig.getNormalize().getIsWeightNorm();
-                return Normalizer.woeNormalize(config, val, isWeightedNorm);
-            case ZSCALE:
-            default:
-                return Normalizer.zScoreNormalize(config, val, cutoff);
-        }
     }
 
     /**

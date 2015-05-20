@@ -315,13 +315,6 @@ public class ModelInspector {
             result = ValidateResult.mergeResult(result, tmpResult);
         }
         
-        if(norm.getIsWeightNorm() == null) {
-            ValidateResult tmpResult = new ValidateResult(true);
-            tmpResult.setStatus(false);
-            tmpResult.getCauses().add("isWeightNorm should be true or false in normalize configuration");
-            result = ValidateResult.mergeResult(result, tmpResult);
-        }
-        
         return result;
     }
     

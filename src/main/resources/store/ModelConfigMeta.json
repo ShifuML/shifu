@@ -323,11 +323,13 @@
                 "name": "normType",
                 "type": "text",
                 "directive": "select",
-                "defval" : "HYBRID",
+                "defval" : "ZSCALE",
                 "options": [ 
                     {"label":"zscale mode", "value":"ZSCALE"},
                     {"label":"woe mode", "value":"WOE"},
-					{"label":"hybrid mode", "value":"HYBRID"}
+                    {"label":"weight woe mode", "value":"WEIGHT_WOE"},
+                    {"label":"hybrid mode", "value":"HYBRID"},
+                    {"label":"weight hybrid mode", "value":"WEIGHT_HYBRID"}
                 ]
             }, {
                 "name": "stdDevCutOff",
@@ -341,11 +343,6 @@
                 "defval": 0.8
             }, {
                 "name": "sampleNegOnly",
-                "type": "boolean",
-                "directive": "checkbox",
-                "defval" : false
-            }, {
-                "name": "isWeightNorm",
                 "type": "boolean",
                 "directive": "checkbox",
                 "defval" : false
