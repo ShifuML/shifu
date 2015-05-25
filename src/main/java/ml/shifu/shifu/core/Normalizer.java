@@ -249,7 +249,7 @@ public class Normalizer {
      *            - input column value
      * @param cutoff
      *            - standard deviation cut off
-     * @return - normalized value for ZScore method
+     * @return - normalized value for ZScore method.
      */
     private static Double zScoreNormalize(ColumnConfig config, String raw, Double cutoff) {
         Double stdDevCutOff;
@@ -279,18 +279,16 @@ public class Normalizer {
         if(config.isCategorical()) {
             int index = config.getBinCategory().indexOf(raw);
             if(index == -1) {
-                // When raw is not a invalid Category, a proper value should be returned.
                 value = defaultMissingValue(config);
             } else {
-                value = config.getBinPosRate().get(index);
+                Double binPosRate = config.getBinPosRate().get(index);
+                value = binPosRate == null ? defaultMissingValue(config) : binPosRate.doubleValue();
             }
         } else {
             try {
                 value = Double.parseDouble(raw);
             } catch (Exception e) {
                 log.debug("Not decimal format " + raw + ", using default!");
-                // When raw is non-parsable, usually we use mean value instead.
-                // So the corresponding zscore becomes 0.
                 value = defaultMissingValue(config);
             }
         }
@@ -305,9 +303,8 @@ public class Normalizer {
      *            - @ColumnConfig info
      * @return - default value for missing data. Now simply return Mean value. If mean is null then return 0.
      */
-    private static Double defaultMissingValue(ColumnConfig config) {
-        // Here simply return Mean as the default value. We may customize it later.
-        return config.getMean();
+    private static double defaultMissingValue(ColumnConfig config) {
+        return config.getMean() == null ? 0 : config.getMean().doubleValue();
     }
     
     /**
@@ -335,7 +332,7 @@ public class Normalizer {
     
     /**
      * Compute the normalized data for hbrid normalize. Use zscore noramlize for numerical data. Use woe normalize
-     * for categorical data.
+     * for categorical data while use weight woe normalize when isWeightedNorm is true.
      * 
      * @param config
      *            - @ColumnConfig info

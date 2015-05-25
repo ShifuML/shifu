@@ -23,6 +23,7 @@ import java.util.Map;
 
 import ml.shifu.shifu.container.WeightAmplifier;
 import ml.shifu.shifu.container.obj.ColumnConfig;
+import ml.shifu.shifu.container.obj.ModelNormalizeConf.NormType;
 import ml.shifu.shifu.core.DataSampler;
 import ml.shifu.shifu.core.Normalizer;
 import ml.shifu.shifu.util.CommonUtils;
@@ -46,7 +47,7 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
     private List<String> negTags;
     private List<String> posTags;
     private Double cutoff;
-
+    private NormType normType;
     private Expression weightExpr;
     private DecimalFormat df = new DecimalFormat("#.######");
     
@@ -57,10 +58,16 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
 
         negTags = modelConfig.getNegTags();
         log.debug("\t Negative Tags: " + negTags);
+        
         posTags = modelConfig.getPosTags();
         log.debug("\t Positive Tags: " + posTags);
+        
         cutoff = modelConfig.getNormalizeStdDevCutOff();
         log.debug("\t stdDevCutOff: " + cutoff);
+        
+        normType = modelConfig.getNormalizeType();
+        log.debug("\t normType: " + normType.name());
+        
         weightExpr = createExpression(modelConfig.getWeightColumnName());
         log.debug("NormalizeUDF Initialized");
     }
@@ -70,8 +77,8 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
             return null;
         }
 
-        // do data sampling. If not sampled, return null.
-        String rawTag = input.get(tagColumnNum).toString();
+        // do data sampling. Unselected data or data with invalid tag will be filtered out.
+        final String rawTag = input.get(tagColumnNum).toString();
         boolean isNotSampled = DataSampler.isNotSampled(posTags, negTags,
                 modelConfig.getNormalizeSampleRate(), modelConfig.isNormalizeSampleNegOnly(), rawTag);
         if(isNotSampled) {
@@ -81,6 +88,8 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
         // append tuple with tag, normalized value.
         Tuple tuple = TupleFactory.getInstance().newTuple();
         JexlContext jc = new MapContext();
+        final NormType normType =  modelConfig.getNormalizeType();
+        
         for(int i = 0; i < input.size(); i++) {
             ColumnConfig config = columnConfigList.get(i);
             String val = (input.get(i) == null) ? "" : input.get(i).toString();
@@ -92,13 +101,12 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
 
             // check tag type.
             if(tagColumnNum == i) {
-                int tagType = tagTypeCheck(posTags, negTags, rawTag);
-                if(tagType == -1) {
+                String tagType = tagTypeCheck(posTags, negTags, rawTag);
+                if(tagType == null) {
                     log.error("Invalid data! The target value is not listed - " + rawTag);
                     return null;
                 }
-                // TODO double format ?
-                tuple.append(df.format(Double.valueOf(tagType)));
+                tuple.append(tagType);
                 continue;
             }
 
@@ -106,7 +114,7 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
             if(!CommonUtils.isGoodCandidate(config)) {
                 tuple.append(null);
             } else {
-                Double normVal = Normalizer.normalize(config, val, cutoff, modelConfig.getNormalizeType());
+                Double normVal = Normalizer.normalize(config, val, cutoff, normType);
                 tuple.append(df.format(normVal));
             }
         }
@@ -155,14 +163,14 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
      * @param posTags - positive tag list.
      * @param negTags - negtive tag list.
      * @param rawTag - raw tag string
-     * @return tag type. Return 1 for positive tag. Return 0 for negtive tag. Return -1 for invalid tag.
+     * @return tag type String. Return "1" for positive tag. Return "0" for negtive tag. Return null for invalid tag.
      */
-    public int tagTypeCheck(List<String> posTags, List<String> negTags, String rawTag) {
-        int type = -1;
+    public String tagTypeCheck(List<String> posTags, List<String> negTags, String rawTag) {
+        String type = null;
         if(posTags.contains(rawTag)) {
-            type = 1;
+            type = "1";
         } else if(negTags.contains(rawTag)) {
-            type = 0;
+            type = "0";
         }
         
         return type;
