@@ -210,20 +210,18 @@ public class Normalizer {
 
     
     /**
-     * Normalize the raw data, according the ColumnConfig info and normalization type.
-     * Currently, the cutoff value doesn't affect the computation of WOE or WEIGHT_WOE
+     * Normalize the raw data, according the ColumnConfig infomation and normalization type.
+     * Currently, the cutoff value doesn't affect the computation of WOE or WEIGHT_WOE type.
      * 
      * @param config
      *            - ColumnConfig to normalize data
      * @param raw
      *            - raw input data
-     * @param method
-     *            - the method used to do normalization
      * @param cutoff
      *            - standard deviation cut off
      * @param type
      *            - normalization type. {@link ModelNormalizeConf.NormType}
-     * @return - normalized value
+     * @return normalized value. If normType parameter is invalid, then the WEIGHT_HYBRID will be used as default.
      */
     public static Double normalize(ColumnConfig config, String raw, Double cutoff, ModelNormalizeConf.NormType type) {
         switch(type) {
@@ -236,9 +234,8 @@ public class Normalizer {
         case HYBRID:
             return hybridNormalize(config, raw, cutoff, false);
         case WEIGHT_HYBRID:
-            return hybridNormalize(config, raw, cutoff, true);
         default:
-            return Double.valueOf(0.0);
+            return hybridNormalize(config, raw, cutoff, true);
         }
     }
     
@@ -254,7 +251,7 @@ public class Normalizer {
      *            - standard deviation cut off
      * @return - normalized value for ZScore method
      */
-    public static Double zScoreNormalize(ColumnConfig config, String raw, Double cutoff) {
+    private static Double zScoreNormalize(ColumnConfig config, String raw, Double cutoff) {
         Double stdDevCutOff;
         if(cutoff != null && !cutoff.isInfinite() && !cutoff.isNaN()) {
             stdDevCutOff = cutoff;
@@ -325,7 +322,7 @@ public class Normalizer {
      * @return - normalized value for Woe method. For missing value, we return the value in last bin. Since the last
      *           bin refers to the missing value bin. 
      */
-    public static Double woeNormalize(ColumnConfig config, String raw, boolean isWeightNorm) {
+    private static Double woeNormalize(ColumnConfig config, String raw, boolean isWeightNorm) {
         List<Double> woeBins = isWeightNorm ? config.getBinWeightedWoe() : config.getBinCountWoe();
         int binIndex = CommonUtils.getBinNum(config, raw);
         if(binIndex == -1) {
@@ -350,7 +347,7 @@ public class Normalizer {
      *            - if use weighted woe
      * @return - normalized value for hybrid method.
      */
-    public static Double hybridNormalize(ColumnConfig config, String raw, Double cutoff, boolean isWeightedNorm) {
+    private static Double hybridNormalize(ColumnConfig config, String raw, Double cutoff, boolean isWeightedNorm) {
         Double normValue;
         if (config.isNumerical()) {
             // For numerical data, use zscore.
