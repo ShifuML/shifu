@@ -49,6 +49,7 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
     private Double cutoff;
     private NormType normType;
     private Expression weightExpr;
+    private JexlContext weightContext;
     private DecimalFormat df = new DecimalFormat("#.######");
     
     public NormalizeUDF(String source, String pathModelConfig, String pathColumnConfig) throws Exception {
@@ -69,7 +70,12 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
         log.debug("\t normType: " + normType.name());
         
         weightExpr = createExpression(modelConfig.getWeightColumnName());
+        if(weightExpr != null) {
+            weightContext = new MapContext();
+        }
+
         log.debug("NormalizeUDF Initialized");
+        
     }
 
     public Tuple exec(Tuple input) throws IOException {
@@ -87,7 +93,6 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
         
         // append tuple with tag, normalized value.
         Tuple tuple = TupleFactory.getInstance().newTuple();
-        JexlContext jc = new MapContext();
         final NormType normType =  modelConfig.getNormalizeType();
         
         for(int i = 0; i < input.size(); i++) {
@@ -96,7 +101,7 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
             
             // load variables for weight calculating.
             if(weightExpr != null) {
-                jc.set(config.getColumnName(), val);
+                weightContext.set(config.getColumnName(), val);
             }
 
             // check tag type.
@@ -120,7 +125,7 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
         }
 
         // append tuple with weight.
-        double weight = evaluateWeight(weightExpr, jc);
+        double weight = evaluateWeight(weightExpr, weightContext);
         tuple.append(weight);
 
         return tuple;
