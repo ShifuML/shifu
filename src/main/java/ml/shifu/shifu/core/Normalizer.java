@@ -221,12 +221,10 @@ public class Normalizer {
      *            - standard deviation cut off
      * @param type
      *            - normalization type. {@link ModelNormalizeConf.NormType}
-     * @return normalized value. If normType parameter is invalid, then the WEIGHT_HYBRID will be used as default.
+     * @return normalized value. If normType parameter is invalid, then the ZSCALE will be used as default.
      */
     public static Double normalize(ColumnConfig config, String raw, Double cutoff, ModelNormalizeConf.NormType type) {
         switch(type) {
-        case ZSCALE:
-            return zScoreNormalize(config, raw, cutoff);
         case WOE:
             return woeNormalize(config, raw, false);
         case WEIGHT_WOE:
@@ -234,8 +232,10 @@ public class Normalizer {
         case HYBRID:
             return hybridNormalize(config, raw, cutoff, false);
         case WEIGHT_HYBRID:
-        default:
             return hybridNormalize(config, raw, cutoff, true);
+        case ZSCALE:
+        default:
+            return zScoreNormalize(config, raw, cutoff);
         }
     }
     
