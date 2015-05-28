@@ -37,7 +37,8 @@ import com.clearspring.analytics.stream.cardinality.HyperLogLogPlus;
 import com.google.common.base.Splitter;
 
 /**
- * {@link AutoTypeDistinctCountMapper} TODO
+ * {@link AutoTypeDistinctCountMapper} is a mapper to get {@link HyperLogLogPlus} statistics per split. Such statistics
+ * will be merged in our reducer.
  */
 public class AutoTypeDistinctCountMapper extends Mapper<LongWritable, Text, IntWritable, BytesWritable> {
 

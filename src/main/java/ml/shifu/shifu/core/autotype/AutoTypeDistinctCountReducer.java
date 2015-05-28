@@ -26,7 +26,7 @@ import com.clearspring.analytics.stream.cardinality.CardinalityMergeException;
 import com.clearspring.analytics.stream.cardinality.HyperLogLogPlus;
 
 /**
- * TODO
+ * To merge all mapper {@link HyperLogLogPlus} statistics together according to variable id.
  */
 public class AutoTypeDistinctCountReducer extends Reducer<IntWritable, BytesWritable, IntWritable, LongWritable> {
 

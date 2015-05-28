@@ -333,7 +333,7 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
 
         // copy temp model files
         copyTmpModelsToLocal(tmpModelsPath, sourceType);
-        LOG.info("Distributed trainning finished in {}ms.", System.currentTimeMillis() - start);
+        LOG.info("Distributed training finished in {}ms.", System.currentTimeMillis() - start);
     }
 
     private void checkContinuousTraining(FileSystem fileSystem, List<String> localArgs, Path modelPath)

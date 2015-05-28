@@ -101,7 +101,8 @@ public class InitModelProcessor extends BasicModelProcessor implements Processor
         }
 
         if(distinctCountMap != null) {
-            setCategoricalColumns(distinctCountMap);
+            int cateCount = setCategoricalColumns(distinctCountMap);
+            log.info("Automatically check {} variables to categorical type.", cateCount);
         }
         // save ColumnConfig list into file
         saveColumnConfigList();
@@ -111,12 +112,14 @@ public class InitModelProcessor extends BasicModelProcessor implements Processor
         return 0;
     }
 
-    private void setCategoricalColumns(Map<Integer, Long> distinctCountMap) {
+    private int setCategoricalColumns(Map<Integer, Long> distinctCountMap) {
+        int cateCount = 0;
         for(ColumnConfig columnConfig: columnConfigList) {
             Long distinctCount = distinctCountMap.get(columnConfig.getColumnNum());
             if(distinctCount != null && modelConfig.getDataSet().getAutoTypeThreshold() != null) {
                 if(distinctCount < modelConfig.getDataSet().getAutoTypeThreshold().longValue()) {
                     columnConfig.setColumnType(ColumnType.C);
+                    cateCount += 1;
                     log.info(
                             "Column {} with index {} is set to categorical type according to auto type checking: distinct count {}, threshold {}.",
                             columnConfig.getColumnName(), columnConfig.getColumnNum(), distinctCount, modelConfig
@@ -125,6 +128,7 @@ public class InitModelProcessor extends BasicModelProcessor implements Processor
                 columnConfig.getColumnStats().setDistinctCount(distinctCount);
             }
         }
+        return cateCount;
     }
 
     // GuaguaOptionsParser doesn't to support *.jar currently.
