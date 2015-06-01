@@ -25,7 +25,6 @@ import java.net.URLDecoder;
 import java.util.Enumeration;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.filecache.DistributedCache;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
@@ -81,9 +80,10 @@ public class HDPUtils {
     /**
      * Add a hdfs file to classpath of one container.
      */
+    @SuppressWarnings("deprecation")
     public static void addFileToClassPath(String file, Configuration conf) throws IOException {
         Path pathInHDFS = shipToHDFS(conf, file);
-        DistributedCache.addFileToClassPath(pathInHDFS, conf, FileSystem.get(conf));
+        org.apache.hadoop.filecache.DistributedCache.addFileToClassPath(pathInHDFS, conf, FileSystem.get(conf));
     }
 
     /**

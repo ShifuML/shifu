@@ -189,6 +189,7 @@ public class InitModelProcessor extends BasicModelProcessor implements Processor
             HDPUtils.addFileToClassPath(HDPUtils.findContainingFile("yarn-site.xml"), conf);
         }
 
+        @SuppressWarnings("deprecation")
         Job job = new Job(conf, "Shifu: Column Type Auto Checking Job : " + this.modelConfig.getModelSetName());
         job.setJarByClass(getClass());
         job.setMapperClass(AutoTypeDistinctCountMapper.class);

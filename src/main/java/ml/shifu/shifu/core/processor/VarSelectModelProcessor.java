@@ -440,6 +440,7 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
 
     private Job createSEMapReduceJob(SourceType source, Configuration conf, String varSelectMSEOutputPath)
             throws IOException {
+        @SuppressWarnings("deprecation")
         Job job = new Job(conf, "Shifu: Variable Selection Wrapper Job : " + this.modelConfig.getModelSetName());
         job.setJarByClass(getClass());
         boolean isSEVarSelMulti = Boolean.TRUE.toString().equalsIgnoreCase(

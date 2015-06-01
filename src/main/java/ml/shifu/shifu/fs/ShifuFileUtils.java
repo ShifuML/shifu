@@ -204,6 +204,7 @@ public class ShifuFileUtils {
      * @throws IOException
      *             - if any I/O exception in processing
      */
+    @SuppressWarnings("deprecation")
     public static List<Scanner> getDataScanners(String path, SourceType sourceType) throws IOException {
         FileSystem fs = getFileSystemBySourceType(sourceType);
 
@@ -326,6 +327,7 @@ public class ShifuFileUtils {
      * @throws IOException
      *             - if any I/O exception in processing
      */
+    @SuppressWarnings("deprecation")
     public static boolean isDir(String path, SourceType sourceType) throws IOException {
         FileSystem fs = getFileSystemBySourceType(sourceType);
         FileStatus status = fs.getFileStatus(new Path(path));

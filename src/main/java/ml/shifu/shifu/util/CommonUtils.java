@@ -132,6 +132,7 @@ public final class CommonUtils {
      * @param evalName
      * @throws IOException
      */
+    @SuppressWarnings("deprecation")
     public static void copyEvalDataFromLocalToHDFS(ModelConfig modelConfig, String evalName) throws IOException {
         EvalConfig evalConfig = modelConfig.getEvalConfigByName(evalName);
         if(evalConfig != null) {
