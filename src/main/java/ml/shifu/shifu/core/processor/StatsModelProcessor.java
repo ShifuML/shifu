@@ -274,6 +274,7 @@ public class StatsModelProcessor extends BasicModelProcessor implements Processo
 
         prepareJobConf(source, conf, filePath);
 
+        @SuppressWarnings("deprecation")
         Job job = new Job(conf, "Shifu: Stats Updating Binning Job : " + this.modelConfig.getModelSetName());
         job.setJarByClass(getClass());
         job.setMapperClass(UpdateBinningInfoMapper.class);

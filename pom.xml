@@ -363,7 +363,7 @@
         <profile>
             <id>cdh-20</id>
             <activation>
-                <activeByDefault>true</activeByDefault>
+                <activeByDefault>false</activeByDefault>
             </activation>
             <properties>
                 <platform.version>cdh-20</platform.version>
@@ -499,7 +499,7 @@
         <profile>
             <id>hdp-yarn</id>
             <activation>
-                <activeByDefault>false</activeByDefault>
+                <activeByDefault>true</activeByDefault>
             </activation>
             <properties>
                 <platform.version>hdp-yarn</platform.version>
