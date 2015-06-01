@@ -15,7 +15,8 @@
  */
 REGISTER $path_jar;
 
-SET default_parallel $num_parallel;
+SET pig.exec.reducers.max 999;
+SET pig.exec.reducers.bytes.per.reducer 536870912;
 SET mapred.job.queue.name $queue_name;
 SET job.name 'shifu evaluation';
 SET mapred.child.java.opts -Xmx1G;
