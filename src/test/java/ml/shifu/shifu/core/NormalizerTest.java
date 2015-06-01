@@ -18,21 +18,15 @@ package ml.shifu.shifu.core;
 import ml.shifu.shifu.container.obj.ColumnBinning;
 import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.container.obj.ColumnConfig.ColumnType;
-import ml.shifu.shifu.container.obj.ModelNormalizeConf.MissValueFillType;
+import ml.shifu.shifu.container.obj.ModelNormalizeConf.NormType;
 
 import org.testng.Assert;
-import org.testng.annotations.BeforeClass;
 import org.testng.annotations.Test;
 
 import java.util.Arrays;
 
 
 public class NormalizerTest {
-
-    @BeforeClass
-    public void setUp() {
-
-    }
 
     @Test
     public void computeZScore() {
@@ -94,27 +88,12 @@ public class NormalizerTest {
         config.setStdDev(1.0);
         config.setColumnType(ColumnType.N);
         
-        ColumnBinning cbin = new ColumnBinning();
-        cbin.setBinCountWoe(Arrays.asList(new Double[]{1.1, 2.1}));
-        cbin.setBinWeightedWoe(Arrays.asList(new Double[]{3.2, 4.2}));
-        config.setColumnBinning(cbin);
-        
-        // Test miss value.
-        Double missZero = Normalizer.zScoreNormalize(config, "wrongFormat", 4.0, MissValueFillType.ZERO);
-        Assert.assertEquals(missZero, 0.0);
-        
-        Double missMean = Normalizer.zScoreNormalize(config, "wrongFormat", 4.0, MissValueFillType.MEAN);
-        Assert.assertEquals(missMean, 2.0);
-        
-        Double missCWoe = Normalizer.zScoreNormalize(config, "wrongFormat", 4.0, MissValueFillType.COUNTWOE);
-        Assert.assertEquals(missCWoe, 2.1);
-        
-        Double missWWoe = Normalizer.zScoreNormalize(config, "wrongFormat", 4.0, MissValueFillType.WEIGHTEDWOE);
-        Assert.assertEquals(missWWoe, 4.2);
-        
         // Test norm value
-        Double normValue1 = Normalizer.zScoreNormalize(config, "5.0", 4.0, MissValueFillType.ZERO);
+        Double normValue1 = Normalizer.normalize(config, "5.0", 4.0, NormType.ZSCALE);
         Assert.assertEquals(normValue1, 3.0);
+        
+        Double normValue2 = Normalizer.normalize(config, "wrong_format", 4.0, NormType.ZSCALE);
+        Assert.assertEquals(normValue2, 0.0);
     }
     
     @Test
@@ -130,25 +109,59 @@ public class NormalizerTest {
         cbin.setBinBoundary(Arrays.asList(new Double[]{Double.NEGATIVE_INFINITY, 4.0}));
         config.setColumnBinning(cbin);
         
-        // Test miss value.
-        Double missZero = Normalizer.woeNormalize(config, "wrongFormat", true, MissValueFillType.ZERO);
-        Assert.assertEquals(missZero, 0.0);
-        
-        Double missMean = Normalizer.woeNormalize(config, "wrongFormat", true, MissValueFillType.MEAN);
-        Assert.assertEquals(missMean, 2.0);
-        
-        Double missCWoe = Normalizer.woeNormalize(config, "wrongFormat", true, MissValueFillType.COUNTWOE);
-        Assert.assertEquals(missCWoe, 2.1);
-        
-        Double missWWoe = Normalizer.woeNormalize(config, "wrongFormat", true, MissValueFillType.WEIGHTEDWOE);
-        Assert.assertEquals(missWWoe, 4.2);
-        
         // Test norm value
-        Double normValue1 = Normalizer.woeNormalize(config, "3.0", true, MissValueFillType.ZERO);
+        Double normValue1 = Normalizer.normalize(config, "3.0", 4.0, NormType.WEIGHT_WOE);
         Assert.assertEquals(normValue1, 3.2);
         
-        Double normValue2 = Normalizer.woeNormalize(config, "3.0", false, MissValueFillType.ZERO);
-        Assert.assertEquals(normValue2, 1.1);
+        Double normValue2 = Normalizer.normalize(config, "wrong_format", 4.0, NormType.WEIGHT_WOE);
+        Assert.assertEquals(normValue2, 4.2);
+        
+        Double normValue3 = Normalizer.normalize(config, "3.0", 4.0, NormType.WOE);
+        Assert.assertEquals(normValue3, 1.1);
+        
+        Double normValue4 = Normalizer.normalize(config, "wrong_format", 4.0, NormType.WOE);
+        Assert.assertEquals(normValue4, 2.1);
+    }
+    
+    @Test
+    public void hybridNormalizeTest() {
+        ColumnConfig config = new ColumnConfig();
+        config.setMean(2.0);
+        config.setStdDev(1.0);
+        config.setColumnType(ColumnType.C);
+        
+        ColumnBinning cbin = new ColumnBinning();
+        cbin.setBinCountWoe(Arrays.asList(new Double[]{1.1, 2.1, 3.1}));
+        cbin.setBinWeightedWoe(Arrays.asList(new Double[]{3.2, 4.2, 5.2}));
+        cbin.setBinCategory(Arrays.asList(new String[]{"a", "b"}));
+        config.setColumnBinning(cbin);
+        
+        Double normValue1 = Normalizer.normalize(config, "a", 4.0, NormType.HYBRID);
+        Assert.assertEquals(normValue1, 1.1);
+        
+        Double normValue2 = Normalizer.normalize(config, "wrong_format", 4.0, NormType.HYBRID);
+        Assert.assertEquals(normValue2, 3.1);
+        
+        Double normValue3 = Normalizer.normalize(config, "b", 4.0, NormType.WEIGHT_HYBRID);
+        Assert.assertEquals(normValue3, 4.2);
+        
+        Double normValue4 = Normalizer.normalize(config, "wrong_format", 4.0, NormType.WEIGHT_HYBRID);
+        Assert.assertEquals(normValue4, 5.2);
+        
+        config.setColumnType(ColumnType.N);
+        
+        Double normValue5 = Normalizer.normalize(config, "5.0", 4.0, NormType.HYBRID);
+        Assert.assertEquals(normValue5, 3.0);
+        
+        Double normValue6 = Normalizer.normalize(config, "wrong_format", 4.0, NormType.HYBRID);
+        Assert.assertEquals(normValue6, 0.0);
+        
+        Double normValue7 = Normalizer.normalize(config, "5.0", 4.0, NormType.WEIGHT_HYBRID);
+        Assert.assertEquals(normValue7, 3.0);
+        
+        Double normValue8 = Normalizer.normalize(config, "wrong_format", 4.0, NormType.WEIGHT_HYBRID);
+        Assert.assertEquals(normValue8, 0.0);
+        
     }
     
 }

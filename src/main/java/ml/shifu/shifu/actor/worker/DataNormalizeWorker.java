@@ -23,7 +23,6 @@ import java.util.Map;
 import ml.shifu.shifu.container.WeightAmplifier;
 import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.container.obj.ModelConfig;
-import ml.shifu.shifu.container.obj.ModelNormalizeConf.MissValueFillType;
 import ml.shifu.shifu.core.DataSampler;
 import ml.shifu.shifu.core.Normalizer;
 import ml.shifu.shifu.message.NormPartRawDataMessage;
@@ -140,7 +139,7 @@ public class DataNormalizeWorker extends AbstractWorkerActor {
                 retDouList.add(null);
             } else {
                 String val = (rfs[i] == null) ? "" : rfs[i];
-                retDouList.add(normalize(config, val, cutoff));
+                retDouList.add(Normalizer.normalize(config, val, cutoff, modelConfig.getNormalizeType()));
             }
         }
 
@@ -168,19 +167,6 @@ public class DataNormalizeWorker extends AbstractWorkerActor {
         retDouList.add(weight);
 
         return retDouList;
-    }
-
-    private Double normalize(ColumnConfig config, Object value, Double cutoff) {
-        String val = ((value == null) ? "" : value.toString());
-        MissValueFillType fillType = modelConfig.getNormalizeMissValueFillType();
-        switch(super.modelConfig.getNormalize().getNormType()) {
-            case WOE:
-                boolean isWeightedNorm = modelConfig.getNormalize().getIsWeightNorm();
-                return Normalizer.woeNormalize(config, val, isWeightedNorm, fillType);
-            case ZSCALE:
-            default:
-                return Normalizer.zScoreNormalize(config, val, cutoff, fillType);
-        }
     }
 
     /**

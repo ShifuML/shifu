@@ -326,18 +326,10 @@
                 "defval" : "ZSCALE",
                 "options": [ 
                     {"label":"zscale mode", "value":"ZSCALE"},
-                    {"label":"woe mode", "value":"WOE"}
-                ]
-            }, {
-                "name": "missValueFillType",
-                "type": "text",
-                "directive": "select",
-                "defval" : "MEAN",
-                "options": [ 
-                    {"label":"mean mode", "value":"MEAN"},
-                    {"label":"countWoe mode", "value":"COUNTWOE"},
-                    {"label":"weightedWoe mode", "value":"WEIGHTEDWOE"},
-                    {"label":"zero mode", "value":"ZERO"}
+                    {"label":"woe mode", "value":"WOE"},
+                    {"label":"weight woe mode", "value":"WEIGHT_WOE"},
+                    {"label":"hybrid mode", "value":"HYBRID"},
+                    {"label":"weight hybrid mode", "value":"WEIGHT_HYBRID"}
                 ]
             }, {
                 "name": "stdDevCutOff",
@@ -351,11 +343,6 @@
                 "defval": 0.8
             }, {
                 "name": "sampleNegOnly",
-                "type": "boolean",
-                "directive": "checkbox",
-                "defval" : false
-            }, {
-                "name": "isWeightNorm",
                 "type": "boolean",
                 "directive": "checkbox",
                 "defval" : false
