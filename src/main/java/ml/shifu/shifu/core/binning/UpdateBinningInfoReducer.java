@@ -170,15 +170,17 @@ public class UpdateBinningInfoReducer extends Reducer<IntWritable, BinningInfoWr
             sum = 0d;
             squaredSum = 0d;
             for(int i = 0; i < binPosRate.length; i++) {
-                if(Double.compare(max, binPosRate[i]) < 0) {
-                    max = binPosRate[i];
-                }
+                if(!Double.isNaN(binPosRate[i])) {
+                    if(Double.compare(max, binPosRate[i]) < 0) {
+                        max = binPosRate[i];
+                    }
 
-                if(Double.compare(min, binPosRate[i]) > 0) {
-                    min = binPosRate[i];
+                    if(Double.compare(min, binPosRate[i]) > 0) {
+                        min = binPosRate[i];
+                    }
+                    sum += binPosRate[i] * (binCountPos[i] + binCountNeg[i]);
+                    squaredSum += binPosRate[i] * binPosRate[i] * (binCountPos[i] + binCountNeg[i]);
                 }
-                sum += binPosRate[i] * (binCountPos[i] + binCountNeg[i]);
-                squaredSum += binPosRate[i] * binPosRate[i] * (binCountPos[i] + binCountNeg[i]);
             }
         } else {
             if(binBoundaryList.size() == 0) {
