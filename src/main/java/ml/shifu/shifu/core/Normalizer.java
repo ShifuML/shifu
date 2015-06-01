@@ -206,9 +206,6 @@ public class Normalizer {
         return null;
     }
 
-    
-
-    
     /**
      * Normalize the raw data, according the ColumnConfig infomation and normalization type.
      * Currently, the cutoff value doesn't affect the computation of WOE or WEIGHT_WOE type.
@@ -225,21 +222,20 @@ public class Normalizer {
      */
     public static Double normalize(ColumnConfig config, String raw, Double cutoff, ModelNormalizeConf.NormType type) {
         switch(type) {
-        case WOE:
-            return woeNormalize(config, raw, false);
-        case WEIGHT_WOE:
-            return woeNormalize(config, raw, true);
-        case HYBRID:
-            return hybridNormalize(config, raw, cutoff, false);
-        case WEIGHT_HYBRID:
-            return hybridNormalize(config, raw, cutoff, true);
-        case ZSCALE:
-        default:
-            return zScoreNormalize(config, raw, cutoff);
+            case WOE:
+                return woeNormalize(config, raw, false);
+            case WEIGHT_WOE:
+                return woeNormalize(config, raw, true);
+            case HYBRID:
+                return hybridNormalize(config, raw, cutoff, false);
+            case WEIGHT_HYBRID:
+                return hybridNormalize(config, raw, cutoff, true);
+            case ZSCALE:
+            default:
+                return zScoreNormalize(config, raw, cutoff);
         }
     }
-    
-    
+
     /**
      * Compute the normalized data for @NormalizeMethod.Zscore
      * 
@@ -262,7 +258,7 @@ public class Normalizer {
         double value = parseRawValue(config, raw);
         return computeZScore(value, config.getMean(), config.getStdDev(), stdDevCutOff);
     }
-    
+
     /**
      * Parse raw value based on ColumnConfig.
      * 
@@ -270,8 +266,8 @@ public class Normalizer {
      *            - @ColumnConfig info
      * @param raw
      *            - input column value
-     * @return parsed raw value. For categorical type, return BinPosRate. For numerical type, return 
-     *         corresponding double value. For missing data, return default value using 
+     * @return parsed raw value. For categorical type, return BinPosRate. For numerical type, return
+     *         corresponding double value. For missing data, return default value using
      *         {@link Normalizer#defaultMissingValue}.
      */
     private static double parseRawValue(ColumnConfig config, String raw) {
@@ -292,12 +288,12 @@ public class Normalizer {
                 value = defaultMissingValue(config);
             }
         }
-        
+
         return value;
     }
-    
+
     /**
-     * Get the default value for missing data. 
+     * Get the default value for missing data.
      * 
      * @param config
      *            - @ColumnConfig info
@@ -306,7 +302,7 @@ public class Normalizer {
     private static double defaultMissingValue(ColumnConfig config) {
         return config.getMean() == null ? 0 : config.getMean().doubleValue();
     }
-    
+
     /**
      * Compute the normalized data for Woe Score.
      * 
@@ -317,7 +313,7 @@ public class Normalizer {
      * @param isWeightedNorm
      *            - if use weighted woe
      * @return - normalized value for Woe method. For missing value, we return the value in last bin. Since the last
-     *           bin refers to the missing value bin. 
+     *         bin refers to the missing value bin.
      */
     private static Double woeNormalize(ColumnConfig config, String raw, boolean isWeightNorm) {
         List<Double> woeBins = isWeightNorm ? config.getBinWeightedWoe() : config.getBinCountWoe();
@@ -329,7 +325,7 @@ public class Normalizer {
             return woeBins.get(binIndex);
         }
     }
-    
+
     /**
      * Compute the normalized data for hbrid normalize. Use zscore noramlize for numerical data. Use woe normalize
      * for categorical data while use weight woe normalize when isWeightedNorm is true.
@@ -346,14 +342,14 @@ public class Normalizer {
      */
     private static Double hybridNormalize(ColumnConfig config, String raw, Double cutoff, boolean isWeightedNorm) {
         Double normValue;
-        if (config.isNumerical()) {
+        if(config.isNumerical()) {
             // For numerical data, use zscore.
             normValue = zScoreNormalize(config, raw, cutoff);
         } else {
             // For categorical data, use woe.
             normValue = woeNormalize(config, raw, isWeightedNorm);
         }
-        
+
         return normValue;
     }
 
