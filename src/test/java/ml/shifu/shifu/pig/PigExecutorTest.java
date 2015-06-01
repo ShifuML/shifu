@@ -15,18 +15,18 @@
  */
 package ml.shifu.shifu.pig;
 
+import java.io.File;
+import java.io.IOException;
+
 import ml.shifu.shifu.container.obj.ModelConfig;
 import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
 import ml.shifu.shifu.util.CommonUtils;
 import ml.shifu.shifu.util.Environment;
+
 import org.apache.commons.io.FileUtils;
 import org.powermock.modules.testng.PowerMockObjectFactory;
 import org.testng.IObjectFactory;
 import org.testng.annotations.ObjectFactory;
-import org.testng.annotations.Test;
-
-import java.io.File;
-import java.io.IOException;
 
 
 public class PigExecutorTest {
@@ -36,7 +36,8 @@ public class PigExecutorTest {
         return new PowerMockObjectFactory();
     }
 
-    @Test
+    
+//    @Test
     public void test() throws IOException {
         PigExecutor exec = PigExecutor.getExecutor();
         ModelConfig modelConfig = CommonUtils.loadModelConfig(

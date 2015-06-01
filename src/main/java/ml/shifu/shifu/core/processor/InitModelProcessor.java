@@ -69,9 +69,6 @@ import com.google.common.base.Splitter;
  */
 public class InitModelProcessor extends BasicModelProcessor implements Processor {
 
-    /**
-     * 
-     */
     private static final String TAB_STR = "\t";
     /**
      * log object
