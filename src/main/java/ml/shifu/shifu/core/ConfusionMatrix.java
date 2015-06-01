@@ -304,6 +304,7 @@ public class ConfusionMatrix {
         result.weightedAreaUnderRoc = AreaUnderCurve.ofWeightedRoc(result.weightedRoc);
         result.areaUnderPr = AreaUnderCurve.ofPr(result.pr);
         result.weightedAreaUnderPr = AreaUnderCurve.ofWeightedPr(result.weightedPr);
+        PerformanceEvaluator.logAucResult(result, isWeight);
         
         Writer writer = null;
         try {
