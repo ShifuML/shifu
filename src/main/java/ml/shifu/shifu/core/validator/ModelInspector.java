@@ -112,7 +112,7 @@ public class ModelInspector {
                 result = ValidateResult.mergeResult(result, checkColumnConf(modelConfig));
             }
         } else if(ModelStep.NORMALIZE.equals(modelStep)) {
-            // TODO
+            result = ValidateResult.mergeResult(result, checkNormSetting(modelConfig.getNormalize()));
         } else if(ModelStep.TRAIN.equals(modelStep)) {
             result = ValidateResult.mergeResult(result, checkTrainSetting(modelConfig.getTrain()));
         } else if(ModelStep.POSTTRAIN.equals(modelStep)) {
@@ -298,6 +298,56 @@ public class ModelInspector {
         return result;
     }
 
+    /**
+     * Check the setting for model normalize.
+     * It will make sure the following condition:
+     * 
+     * <p>
+     * <ul>
+     *     <li>stdDevCutOff > 0</li>
+     *     <li>0 < sampleRate <= 1</li>
+     *     <li>sampleNegOnly is either true or false</li>
+     *     <li>normType contains valid value among [ZSCALE, WOE, WEIGHT_WOE, HYBRID, WEIGHT_HYBRID]</li>
+     * </ul>
+     * </p>
+     * 
+     * @param norm {@link ModelNormalizeConf} instance.
+     * @return check result instance {@link ValidateResult}. 
+     */
+    private ValidateResult checkNormSetting(ModelNormalizeConf norm) {
+        ValidateResult result = new ValidateResult(true);
+
+        if(norm.getStdDevCutOff() == null || norm.getStdDevCutOff() <= 0) {
+            ValidateResult tmpResult = new ValidateResult(true);
+            tmpResult.setStatus(false);
+            tmpResult.getCauses().add("stdDevCutOff should be positive value in normalize configuration");
+            result = ValidateResult.mergeResult(result, tmpResult);
+        }
+        
+        if(norm.getSampleRate() == null || norm.getSampleRate() <= 0 || norm.getSampleRate() > 1) {
+            ValidateResult tmpResult = new ValidateResult(true);
+            tmpResult.setStatus(false);
+            tmpResult.getCauses().add("sampleRate should be positive value in normalize configuration");
+            result = ValidateResult.mergeResult(result, tmpResult);
+        }
+        
+        if(norm.getSampleNegOnly() == null) {
+            ValidateResult tmpResult = new ValidateResult(true);
+            tmpResult.setStatus(false);
+            tmpResult.getCauses().add("sampleNegOnly should be true/false in normalize configuration");
+            result = ValidateResult.mergeResult(result, tmpResult);
+        }
+        
+        if(norm.getNormType() == null) {
+            ValidateResult tmpResult = new ValidateResult(true);
+            tmpResult.setStatus(false);
+            tmpResult.getCauses().add("normType should be one of [ZSCALE, WOE, WEIGHT_WOE, HYBRID, WEIGHT_HYBRID] in normalize configuration");
+            result = ValidateResult.mergeResult(result, tmpResult);
+        }
+        
+        return result;
+    }
+    
     /**
      * Check the setting for model training.
      * It will make sure (num_of_layers > 0

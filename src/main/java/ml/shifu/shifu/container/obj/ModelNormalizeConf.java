@@ -24,22 +24,18 @@ import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class ModelNormalizeConf {
 
+    /**
+     *  Normalization type including ZSCALE, WOE, WEIGHT_WOE, HYBRID, WEIGHT_HYBRID.
+     */
     @JsonDeserialize(using = NormTypeDeserializer.class)
     public static enum NormType {
-        ZSCALE, WOE;
-    }
-    
-    @JsonDeserialize(using = MissValueFillTypeDeserializer.class)
-    public static enum MissValueFillType {
-        MEAN, COUNTWOE, WEIGHTEDWOE, ZERO;
+        ZSCALE, WOE, WEIGHT_WOE, HYBRID, WEIGHT_HYBRID;
     }
     
     private Double stdDevCutOff = Double.valueOf(4.0);
     private Double sampleRate = Double.valueOf(1.0);
     private Boolean sampleNegOnly = Boolean.FALSE;
     private NormType normType = NormType.ZSCALE;
-    private MissValueFillType missValueFillType = MissValueFillType.MEAN;
-    private Boolean isWeightNorm = Boolean.FALSE;
 
     // move to RawSourceData
     // private String weightAmplifier;
@@ -81,34 +77,6 @@ public class ModelNormalizeConf {
      */
     public void setNormType(NormType normType) {
         this.normType = normType;
-    }
-
-    /**
-     * @return the fillType
-     */
-    public MissValueFillType getMissValueFillType() {
-        return missValueFillType;
-    }
-
-    /**
-     * @param fillType the fillType to set
-     */
-    public void setMissValueFillType(MissValueFillType fillType) {
-        this.missValueFillType = fillType;
-    }
-
-    /**
-     * @return the isWeightNorm
-     */
-    public Boolean getIsWeightNorm() {
-        return isWeightNorm;
-    }
-
-    /**
-     * @param isWeightNorm the isWeightNorm to set
-     */
-    public void setIsWeightNorm(Boolean isWeightNorm) {
-        this.isWeightNorm = isWeightNorm;
     }
 
 }

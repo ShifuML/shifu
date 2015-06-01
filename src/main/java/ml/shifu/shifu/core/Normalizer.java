@@ -15,8 +15,10 @@
  */
 package ml.shifu.shifu.core;
 
+import java.util.List;
+
 import ml.shifu.shifu.container.obj.ColumnConfig;
-import ml.shifu.shifu.container.obj.ModelNormalizeConf.MissValueFillType;
+import ml.shifu.shifu.container.obj.ModelNormalizeConf;
 import ml.shifu.shifu.util.CommonUtils;
 
 import org.slf4j.Logger;
@@ -110,14 +112,7 @@ public class Normalizer {
      * @return
      */
     public Double normalize(String raw) {
-        switch(method) {
-            case ZScore:
-                return getZScore(config, raw, stdDevCutOff);
-            case MaxMin:
-                return getMaxMinScore(config, raw);
-            default:
-                return 0.0;
-        }
+        return normalize(config, raw, method, stdDevCutOff);
     }
 
     /**
@@ -164,23 +159,6 @@ public class Normalizer {
     }
 
     /**
-     * Compute the normalized data for @NormalizeMethod.Zscore
-     * 
-     * @param config
-     *            - @ColumnConfig info
-     * @param raw
-     *            - input column value
-     * @param cutoff
-     *            - standard deviation cut off
-     * @param fillType
-     *            - fill value type for missing value
-     * @return - normalized value for ZScore method
-     */
-    public static Double zScoreNormalize(ColumnConfig config, String raw, double cutoff, MissValueFillType fillType) {
-        return getZScore(config, raw, cutoff, fillType);
-    }
-
-    /**
      * Normalize the raw file, according the @ColumnConfig info, normalized method and standard deviation cutoff
      * 
      * @param config
@@ -200,7 +178,7 @@ public class Normalizer {
 
         switch(method) {
             case ZScore:
-                return getZScore(config, raw, stdDevCutoff);
+                return zScoreNormalize(config, raw, stdDevCutoff);
             case MaxMin:
                 return getMaxMinScore(config, raw);
             default:
@@ -228,21 +206,40 @@ public class Normalizer {
         return null;
     }
 
-    /**
-     * Compute the normalized data for @NormalizeMethod.Zscore
-     * 
-     * @param config
-     *            - @ColumnConfig info
-     * @param raw
-     *            - input column value
-     * @param cutoff
-     *            - standard deviation cut off
-     * @return - normalized value for ZScore method
-     */
-    private static Double getZScore(ColumnConfig config, String raw, Double cutoff) {
-        return getZScore(config, raw, cutoff, MissValueFillType.ZERO);
-    }
+    
 
+    
+    /**
+     * Normalize the raw data, according the ColumnConfig infomation and normalization type.
+     * Currently, the cutoff value doesn't affect the computation of WOE or WEIGHT_WOE type.
+     * 
+     * @param config
+     *            - ColumnConfig to normalize data
+     * @param raw
+     *            - raw input data
+     * @param cutoff
+     *            - standard deviation cut off
+     * @param type
+     *            - normalization type. {@link ModelNormalizeConf.NormType}
+     * @return normalized value. If normType parameter is invalid, then the ZSCALE will be used as default.
+     */
+    public static Double normalize(ColumnConfig config, String raw, Double cutoff, ModelNormalizeConf.NormType type) {
+        switch(type) {
+        case WOE:
+            return woeNormalize(config, raw, false);
+        case WEIGHT_WOE:
+            return woeNormalize(config, raw, true);
+        case HYBRID:
+            return hybridNormalize(config, raw, cutoff, false);
+        case WEIGHT_HYBRID:
+            return hybridNormalize(config, raw, cutoff, true);
+        case ZSCALE:
+        default:
+            return zScoreNormalize(config, raw, cutoff);
+        }
+    }
+    
+    
     /**
      * Compute the normalized data for @NormalizeMethod.Zscore
      * 
@@ -252,11 +249,9 @@ public class Normalizer {
      *            - input column value
      * @param cutoff
      *            - standard deviation cut off
-     * @param fillType
-     *            - fill value type for missing value
-     * @return - normalized value for ZScore method
+     * @return - normalized value for ZScore method.
      */
-    private static Double getZScore(ColumnConfig config, String raw, Double cutoff, MissValueFillType fillType) {
+    private static Double zScoreNormalize(ColumnConfig config, String raw, Double cutoff) {
         Double stdDevCutOff;
         if(cutoff != null && !cutoff.isInfinite() && !cutoff.isNaN()) {
             stdDevCutOff = cutoff;
@@ -264,30 +259,56 @@ public class Normalizer {
             stdDevCutOff = STD_DEV_CUTOFF;
         }
 
+        double value = parseRawValue(config, raw);
+        return computeZScore(value, config.getMean(), config.getStdDev(), stdDevCutOff);
+    }
+    
+    /**
+     * Parse raw value based on ColumnConfig.
+     * 
+     * @param config
+     *            - @ColumnConfig info
+     * @param raw
+     *            - input column value
+     * @return parsed raw value. For categorical type, return BinPosRate. For numerical type, return 
+     *         corresponding double value. For missing data, return default value using 
+     *         {@link Normalizer#defaultMissingValue}.
+     */
+    private static double parseRawValue(ColumnConfig config, String raw) {
+        double value = 0.0;
         if(config.isCategorical()) {
             int index = config.getBinCategory().indexOf(raw);
-            double value = 0d;
             if(index == -1) {
-                // Use default value configured by MissValueFillType for missing value.
-                value = getDefaultValueByFillType(fillType, config);
+                value = defaultMissingValue(config);
             } else {
-                value = config.getBinPosRate().get(index);
+                Double binPosRate = config.getBinPosRate().get(index);
+                value = binPosRate == null ? defaultMissingValue(config) : binPosRate.doubleValue();
             }
-            return computeZScore(value, config.getMean(), config.getStdDev(), stdDevCutOff);
         } else {
-            double value = 0.0;
             try {
                 value = Double.parseDouble(raw);
             } catch (Exception e) {
                 log.debug("Not decimal format " + raw + ", using default!");
-                value = getDefaultValueByFillType(fillType, config);
+                value = defaultMissingValue(config);
             }
-            return computeZScore(value, config.getMean(), config.getStdDev(), stdDevCutOff);
         }
+        
+        return value;
     }
-
+    
     /**
-     * Compute the normalized data for Woe Score
+     * Get the default value for missing data. 
+     * 
+     * @param config
+     *            - @ColumnConfig info
+     * @return - default value for missing data. Now simply return Mean value. If mean is null then return 0.
+     */
+    private static double defaultMissingValue(ColumnConfig config) {
+        return config.getMean() == null ? 0 : config.getMean().doubleValue();
+    }
+    
+    /**
+     * Compute the normalized data for Woe Score.
      * 
      * @param config
      *            - @ColumnConfig info
@@ -295,24 +316,45 @@ public class Normalizer {
      *            - input column value
      * @param isWeightedNorm
      *            - if use weighted woe
-     * @param fillType
-     *            - fill value type for missing value
-     * @return - normalized value for Woe method
+     * @return - normalized value for Woe method. For missing value, we return the value in last bin. Since the last
+     *           bin refers to the missing value bin. 
      */
-    public static Double woeNormalize(ColumnConfig config, String raw, boolean isWeightedNorm,
-            MissValueFillType fillType) {
-        // binNum = -1 when val is empty/null/non-parsable.
-        // we regard this as missing value, return default value configured by MissValueFillType instead.
-        int binNum = CommonUtils.getBinNum(config, raw);
-        if(binNum == -1) {
-            return getDefaultValueByFillType(fillType, config);
+    private static Double woeNormalize(ColumnConfig config, String raw, boolean isWeightNorm) {
+        List<Double> woeBins = isWeightNorm ? config.getBinWeightedWoe() : config.getBinCountWoe();
+        int binIndex = CommonUtils.getBinNum(config, raw);
+        if(binIndex == -1) {
+            // The last bin in woeBins is the miss value bin.
+            return woeBins.get(woeBins.size() - 1);
         } else {
-            if(isWeightedNorm) {
-                return config.getColumnBinning().getBinWeightedWoe().get(binNum);
-            } else {
-                return config.getColumnBinning().getBinCountWoe().get(binNum);
-            }
+            return woeBins.get(binIndex);
         }
+    }
+    
+    /**
+     * Compute the normalized data for hbrid normalize. Use zscore noramlize for numerical data. Use woe normalize
+     * for categorical data while use weight woe normalize when isWeightedNorm is true.
+     * 
+     * @param config
+     *            - @ColumnConfig info
+     * @param raw
+     *            - input column value
+     * @param cutoff
+     *            - standard deviation cut off
+     * @param isWeightedNorm
+     *            - if use weighted woe
+     * @return - normalized value for hybrid method.
+     */
+    private static Double hybridNormalize(ColumnConfig config, String raw, Double cutoff, boolean isWeightedNorm) {
+        Double normValue;
+        if (config.isNumerical()) {
+            // For numerical data, use zscore.
+            normValue = zScoreNormalize(config, raw, cutoff);
+        } else {
+            // For categorical data, use woe.
+            normValue = woeNormalize(config, raw, isWeightedNorm);
+        }
+        
+        return normValue;
     }
 
     /**
@@ -344,42 +386,6 @@ public class Normalizer {
         } else {
             return 0.0;
         }
-    }
-
-    /**
-     * <p>
-     * Get default value for missing value.
-     * </p>
-     * 
-     * <p>
-     * The Default value choice is based on the configuration setting in modelConfig#normalize#MissValueFillType. The
-     * Fill Type can refer to <code>{@link MissValueFillType}</code>.
-     * </p>
-     * 
-     * @param fillType
-     *            fill type for missing value. @see <code>{@link MissValueFillType}</code>.
-     * @param config
-     *            column config
-     * @return Double value used to fill missing value. If the choosing value is null, then return 0.
-     */
-    public static Double getDefaultValueByFillType(MissValueFillType fillType, ColumnConfig config) {
-        Double fillValue = null;
-        switch(fillType) {
-            case COUNTWOE:
-                fillValue = config.getBinCountWoe().get(config.getBinCountWoe().size() - 1);
-                break;
-            case WEIGHTEDWOE:
-                fillValue = config.getBinWeightedWoe().get(config.getBinWeightedWoe().size() - 1);
-                break;
-            case MEAN:
-                fillValue = config.getMean();
-                break;
-            case ZERO:
-            default:
-                return Double.valueOf(0.0);
-        }
-
-        return fillValue == null ? Double.valueOf(0.0) : fillValue;
     }
 
 }
