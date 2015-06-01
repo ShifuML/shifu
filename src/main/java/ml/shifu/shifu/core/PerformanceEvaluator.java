@@ -357,10 +357,21 @@ public class PerformanceEvaluator {
         result.weightedAreaUnderRoc = AreaUnderCurve.ofWeightedRoc(result.weightedRoc);
         result.areaUnderPr = AreaUnderCurve.ofPr(result.pr);
         result.weightedAreaUnderPr = AreaUnderCurve.ofWeightedPr(result.weightedPr);
+        logAucResult(result, isWeight);
         
         return result;
     }
 
+    static void logAucResult(PerformanceResult result, boolean isWeight) {
+        log.info("AUC value of ROC: {}", result.areaUnderRoc);
+        log.info("AUC value of PR: {}", result.areaUnderPr);
+        
+        if(isWeight) {
+            log.info("AUC value of weighted ROC: {}", result.weightedAreaUnderRoc);
+            log.info("AUC value of weighted PR: {}", result.weightedAreaUnderPr);
+        }
+    }
+    
     static void logResult(List<PerformanceObject> list, String info) {
         DecimalFormat df = new DecimalFormat("#.####");
 
