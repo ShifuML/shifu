@@ -1,5 +1,5 @@
 /**
- * Copyright [2012-2014] eBay Software Foundation
+ * Copyright [2012-2014] PayPal Software Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,21 +15,18 @@
  */
 package ml.shifu.shifu.core;
 
+import ml.shifu.shifu.container.obj.ColumnBinning;
 import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.container.obj.ColumnConfig.ColumnType;
+import ml.shifu.shifu.container.obj.ModelNormalizeConf.NormType;
+
 import org.testng.Assert;
-import org.testng.annotations.BeforeClass;
 import org.testng.annotations.Test;
 
 import java.util.Arrays;
 
 
 public class NormalizerTest {
-
-    @BeforeClass
-    public void setUp() {
-
-    }
 
     @Test
     public void computeZScore() {
@@ -83,4 +80,88 @@ public class NormalizerTest {
         config.setColumnType(ColumnType.N);
         Assert.assertEquals(0.0, n.normalize("2"));
     }
+    
+    @Test
+    public void zScoreNormalizeTest() {
+        ColumnConfig config = new ColumnConfig();
+        config.setMean(2.0);
+        config.setStdDev(1.0);
+        config.setColumnType(ColumnType.N);
+        
+        // Test norm value
+        Double normValue1 = Normalizer.normalize(config, "5.0", 4.0, NormType.ZSCALE);
+        Assert.assertEquals(normValue1, 3.0);
+        
+        Double normValue2 = Normalizer.normalize(config, "wrong_format", 4.0, NormType.ZSCALE);
+        Assert.assertEquals(normValue2, 0.0);
+    }
+    
+    @Test
+    public void woeNormalizeTest() {
+        ColumnConfig config = new ColumnConfig();
+        config.setMean(2.0);
+        config.setStdDev(1.0);
+        config.setColumnType(ColumnType.N);
+        
+        ColumnBinning cbin = new ColumnBinning();
+        cbin.setBinCountWoe(Arrays.asList(new Double[]{1.1, 2.1}));
+        cbin.setBinWeightedWoe(Arrays.asList(new Double[]{3.2, 4.2}));
+        cbin.setBinBoundary(Arrays.asList(new Double[]{Double.NEGATIVE_INFINITY, 4.0}));
+        config.setColumnBinning(cbin);
+        
+        // Test norm value
+        Double normValue1 = Normalizer.normalize(config, "3.0", 4.0, NormType.WEIGHT_WOE);
+        Assert.assertEquals(normValue1, 3.2);
+        
+        Double normValue2 = Normalizer.normalize(config, "wrong_format", 4.0, NormType.WEIGHT_WOE);
+        Assert.assertEquals(normValue2, 4.2);
+        
+        Double normValue3 = Normalizer.normalize(config, "3.0", 4.0, NormType.WOE);
+        Assert.assertEquals(normValue3, 1.1);
+        
+        Double normValue4 = Normalizer.normalize(config, "wrong_format", 4.0, NormType.WOE);
+        Assert.assertEquals(normValue4, 2.1);
+    }
+    
+    @Test
+    public void hybridNormalizeTest() {
+        ColumnConfig config = new ColumnConfig();
+        config.setMean(2.0);
+        config.setStdDev(1.0);
+        config.setColumnType(ColumnType.C);
+        
+        ColumnBinning cbin = new ColumnBinning();
+        cbin.setBinCountWoe(Arrays.asList(new Double[]{1.1, 2.1, 3.1}));
+        cbin.setBinWeightedWoe(Arrays.asList(new Double[]{3.2, 4.2, 5.2}));
+        cbin.setBinCategory(Arrays.asList(new String[]{"a", "b"}));
+        config.setColumnBinning(cbin);
+        
+        Double normValue1 = Normalizer.normalize(config, "a", 4.0, NormType.HYBRID);
+        Assert.assertEquals(normValue1, 1.1);
+        
+        Double normValue2 = Normalizer.normalize(config, "wrong_format", 4.0, NormType.HYBRID);
+        Assert.assertEquals(normValue2, 3.1);
+        
+        Double normValue3 = Normalizer.normalize(config, "b", 4.0, NormType.WEIGHT_HYBRID);
+        Assert.assertEquals(normValue3, 4.2);
+        
+        Double normValue4 = Normalizer.normalize(config, "wrong_format", 4.0, NormType.WEIGHT_HYBRID);
+        Assert.assertEquals(normValue4, 5.2);
+        
+        config.setColumnType(ColumnType.N);
+        
+        Double normValue5 = Normalizer.normalize(config, "5.0", 4.0, NormType.HYBRID);
+        Assert.assertEquals(normValue5, 3.0);
+        
+        Double normValue6 = Normalizer.normalize(config, "wrong_format", 4.0, NormType.HYBRID);
+        Assert.assertEquals(normValue6, 0.0);
+        
+        Double normValue7 = Normalizer.normalize(config, "5.0", 4.0, NormType.WEIGHT_HYBRID);
+        Assert.assertEquals(normValue7, 3.0);
+        
+        Double normValue8 = Normalizer.normalize(config, "wrong_format", 4.0, NormType.WEIGHT_HYBRID);
+        Assert.assertEquals(normValue8, 0.0);
+        
+    }
+    
 }

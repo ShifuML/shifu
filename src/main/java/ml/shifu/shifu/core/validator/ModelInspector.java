@@ -1,5 +1,5 @@
 /**
- * Copyright [2012-2014] eBay Software Foundation
+ * Copyright [2012-2014] PayPal Software Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -86,6 +86,15 @@ public class ModelInspector {
             result = ValidateResult.mergeResult(result, tmpResult);
         }
 
+        if(modelConfig.getDataSet().getAutoType()) {
+            if(modelConfig.getDataSet().getAutoTypeThreshold() < 1) {
+                ValidateResult tmpResult = new ValidateResult(true);
+                // tmpResult.getCauses().add(
+                tmpResult.addCause("'autoTypeThreshold' should not be less than 1.");
+                result = ValidateResult.mergeResult(result, tmpResult);
+            }
+        }
+
         if(ModelStep.INIT.equals(modelStep)) {
             result = ValidateResult.mergeResult(result, checkTrainData(modelConfig.getDataSet()));
             result = ValidateResult.mergeResult(result, checkVarSelect(modelConfig.getVarSelect()));
@@ -103,7 +112,7 @@ public class ModelInspector {
                 result = ValidateResult.mergeResult(result, checkColumnConf(modelConfig));
             }
         } else if(ModelStep.NORMALIZE.equals(modelStep)) {
-            // TODO
+            result = ValidateResult.mergeResult(result, checkNormSetting(modelConfig.getNormalize()));
         } else if(ModelStep.TRAIN.equals(modelStep)) {
             result = ValidateResult.mergeResult(result, checkTrainSetting(modelConfig.getTrain()));
         } else if(ModelStep.POSTTRAIN.equals(modelStep)) {
@@ -290,6 +299,56 @@ public class ModelInspector {
     }
 
     /**
+     * Check the setting for model normalize.
+     * It will make sure the following condition:
+     * 
+     * <p>
+     * <ul>
+     *     <li>stdDevCutOff > 0</li>
+     *     <li>0 < sampleRate <= 1</li>
+     *     <li>sampleNegOnly is either true or false</li>
+     *     <li>normType contains valid value among [ZSCALE, WOE, WEIGHT_WOE, HYBRID, WEIGHT_HYBRID]</li>
+     * </ul>
+     * </p>
+     * 
+     * @param norm {@link ModelNormalizeConf} instance.
+     * @return check result instance {@link ValidateResult}. 
+     */
+    private ValidateResult checkNormSetting(ModelNormalizeConf norm) {
+        ValidateResult result = new ValidateResult(true);
+
+        if(norm.getStdDevCutOff() == null || norm.getStdDevCutOff() <= 0) {
+            ValidateResult tmpResult = new ValidateResult(true);
+            tmpResult.setStatus(false);
+            tmpResult.getCauses().add("stdDevCutOff should be positive value in normalize configuration");
+            result = ValidateResult.mergeResult(result, tmpResult);
+        }
+        
+        if(norm.getSampleRate() == null || norm.getSampleRate() <= 0 || norm.getSampleRate() > 1) {
+            ValidateResult tmpResult = new ValidateResult(true);
+            tmpResult.setStatus(false);
+            tmpResult.getCauses().add("sampleRate should be positive value in normalize configuration");
+            result = ValidateResult.mergeResult(result, tmpResult);
+        }
+        
+        if(norm.getSampleNegOnly() == null) {
+            ValidateResult tmpResult = new ValidateResult(true);
+            tmpResult.setStatus(false);
+            tmpResult.getCauses().add("sampleNegOnly should be true/false in normalize configuration");
+            result = ValidateResult.mergeResult(result, tmpResult);
+        }
+        
+        if(norm.getNormType() == null) {
+            ValidateResult tmpResult = new ValidateResult(true);
+            tmpResult.setStatus(false);
+            tmpResult.getCauses().add("normType should be one of [ZSCALE, WOE, WEIGHT_WOE, HYBRID, WEIGHT_HYBRID] in normalize configuration");
+            result = ValidateResult.mergeResult(result, tmpResult);
+        }
+        
+        return result;
+    }
+    
+    /**
      * Check the setting for model training.
      * It will make sure (num_of_layers > 0
      * && num_of_layers = hidden_nodes_size
@@ -353,8 +412,7 @@ public class ModelInspector {
             if(layerCnt < 0) {
                 ValidateResult tmpResult = new ValidateResult(true);
                 tmpResult.setStatus(false);
-                tmpResult.getCauses().add(
-                        "The number of hidden layers should be >= 0 in train configuration");
+                tmpResult.getCauses().add("The number of hidden layers should be >= 0 in train configuration");
                 result = ValidateResult.mergeResult(result, tmpResult);
             }
 

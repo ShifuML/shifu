@@ -1,5 +1,5 @@
 /**
- * Copyright [2012-2014] eBay Software Foundation
+ * Copyright [2012-2014] PayPal Software Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -43,6 +43,8 @@ public class NNConstants {
     public static final String SHIFU_NN_MODEL_CONFIG = "shifu.nn.model.config";
 
     public static final String MAPRED_JOB_QUEUE_NAME = "mapred.job.queue.name";
+
+    public static final String MAPRED_TASK_TIMEOUT = "mapred.task.timeout";
 
     public static final String NN_TRAINER_ID = "nn.trainer.id";
 

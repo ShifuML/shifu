@@ -1,5 +1,5 @@
 /**
- * Copyright [2012-2014] eBay Software Foundation
+ * Copyright [2012-2014] PayPal Software Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,11 +15,12 @@
  */
 package ml.shifu.shifu.container.obj;
 
-import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
-import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
-
 import java.util.ArrayList;
 import java.util.List;
+
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+import com.google.common.collect.Lists;
 
 /**
  * SourceData class
@@ -51,6 +52,27 @@ public class RawSourceData implements Cloneable {
     private List<String> posTags;
 
     private List<String> negTags;
+
+    private List<String> missingOrInvalidValues = Lists.asList("", new String[] { "*", "#", "?", "null", "none" });
+
+    private Boolean autoType = Boolean.FALSE;
+
+    private Integer autoTypeThreshold = 250;
+
+    /**
+     * @return the autoTypeThreshold
+     */
+    public Integer getAutoTypeThreshold() {
+        return autoTypeThreshold;
+    }
+
+    /**
+     * @param autoTypeThreshold
+     *            the autoTypeThreshold to set
+     */
+    public void setAutoTypeThreshold(Integer autoTypeThreshold) {
+        this.autoTypeThreshold = autoTypeThreshold;
+    }
 
     public SourceType getSource() {
         return source;
@@ -152,7 +174,37 @@ public class RawSourceData implements Cloneable {
         copy.setTargetColumnName(targetColumnName);
         copy.setPosTags(new ArrayList<String>(posTags));
         copy.setNegTags(new ArrayList<String>(negTags));
-
+        copy.setMissingOrInvalidValues(missingOrInvalidValues);
         return copy;
+    }
+
+    /**
+     * @return the missingOrInvalidValues
+     */
+    public List<String> getMissingOrInvalidValues() {
+        return missingOrInvalidValues;
+    }
+
+    /**
+     * @param missingOrInvalidValues
+     *            the missingOrInvalidValues to set
+     */
+    public void setMissingOrInvalidValues(List<String> missingOrInvalidValues) {
+        this.missingOrInvalidValues = missingOrInvalidValues;
+    }
+
+    /**
+     * @return the autoType
+     */
+    public Boolean getAutoType() {
+        return autoType;
+    }
+
+    /**
+     * @param autoType
+     *            the autoType to set
+     */
+    public void setAutoType(Boolean autoType) {
+        this.autoType = autoType;
     }
 }

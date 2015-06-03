@@ -1,5 +1,5 @@
 /**
- * Copyright [2012-2014] eBay Software Foundation
+ * Copyright [2012-2014] PayPal Software Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,16 +24,18 @@ import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class ModelNormalizeConf {
 
+    /**
+     *  Normalization type including ZSCALE, WOE, WEIGHT_WOE, HYBRID, WEIGHT_HYBRID.
+     */
     @JsonDeserialize(using = NormTypeDeserializer.class)
     public static enum NormType {
-        ZSCALE, WOE;
+        ZSCALE, WOE, WEIGHT_WOE, HYBRID, WEIGHT_HYBRID;
     }
-
+    
     private Double stdDevCutOff = Double.valueOf(4.0);
     private Double sampleRate = Double.valueOf(1.0);
     private Boolean sampleNegOnly = Boolean.FALSE;
     private NormType normType = NormType.ZSCALE;
-    private Boolean isWeightNorm = Boolean.FALSE;
 
     // move to RawSourceData
     // private String weightAmplifier;
@@ -75,20 +77,6 @@ public class ModelNormalizeConf {
      */
     public void setNormType(NormType normType) {
         this.normType = normType;
-    }
-
-    /**
-     * @return the isWeightNorm
-     */
-    public Boolean getIsWeightNorm() {
-        return isWeightNorm;
-    }
-
-    /**
-     * @param isWeightNorm the isWeightNorm to set
-     */
-    public void setIsWeightNorm(Boolean isWeightNorm) {
-        this.isWeightNorm = isWeightNorm;
     }
 
 }

@@ -1,5 +1,5 @@
 /**
- * Copyright [2012-2014] eBay Software Foundation
+ * Copyright [2012-2014] PayPal Software Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -26,6 +26,14 @@ import java.util.List;
 public class PerformanceResult {
 
     public String version;
+    
+    public double areaUnderRoc;
+
+    public double weightedAreaUnderRoc;
+    
+    public double areaUnderPr;
+    
+    public double weightedAreaUnderPr;
 
     public List<PerformanceObject> pr;
 
@@ -34,7 +42,7 @@ public class PerformanceResult {
     public List<PerformanceObject> roc;
 
     public List<PerformanceObject> weightedRoc;
-
+    
     public List<PerformanceObject> gains;
 
     public List<PerformanceObject> weightedGains;

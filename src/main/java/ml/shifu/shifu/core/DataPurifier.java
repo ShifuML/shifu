@@ -1,5 +1,5 @@
 /**
- * Copyright [2012-2014] eBay Software Foundation
+ * Copyright [2012-2014] PayPal Software Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -96,9 +96,15 @@ public class DataPurifier {
         }
 
         Boolean result = Boolean.FALSE;
+        Object retObj = null;
 
-        Object retObj = dataFilterExpr.evaluate(jc);
-        if (retObj instanceof Boolean) {
+        try {
+            retObj = dataFilterExpr.evaluate(jc);
+        } catch ( Throwable e ) {
+            log.debug("Error occurred when trying to evaluate", dataFilterExpr.toString(), e);
+        }
+
+        if (retObj != null && retObj instanceof Boolean) {
             result = (Boolean) retObj;
         }
 
@@ -122,9 +128,14 @@ public class DataPurifier {
         }
 
         Boolean result = Boolean.FALSE;
+        Object retObj = null;
+        try {
+            retObj = dataFilterExpr.evaluate(jc);
+        } catch ( Throwable e ) {
+            log.debug("Error occurred when trying to evaluate", dataFilterExpr.toString(), e);
+        }
 
-        Object retObj = dataFilterExpr.evaluate(jc);
-        if (retObj instanceof Boolean) {
+        if (retObj != null && retObj instanceof Boolean) {
             result = (Boolean) retObj;
         }
 

@@ -1,5 +1,5 @@
 /**
- * Copyright [2012-2014] eBay Software Foundation
+ * Copyright [2012-2014] PayPal Software Foundation
  *  
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,15 +13,16 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-REGISTER '$path_jar'
+REGISTER $path_jar;
 
 SET pig.exec.reducers.max 999;
 SET pig.exec.reducers.bytes.per.reducer 536870912;
 SET mapred.job.queue.name $queue_name;
-SET job.name 'shifu post train'
+SET job.name 'shifu post train';
 SET io.sort.mb 500;
 SET mapred.child.java.opts -Xmx1G;
 SET mapred.child.ulimit 2.5G;
+SET mapred.reduce.slowstart.completed.maps 0.6;
 
 DEFINE SimpleScore              ml.shifu.shifu.udf.SimpleScoreUDF('$source_type', '$path_model_config', '$path_column_config', '$pathHeader', '$pathDelimiter');
 DEFINE FullScore                ml.shifu.shifu.udf.FullScoreUDF('$source_type', '$path_model_config', '$path_column_config', '$pathHeader', '$pathDelimiter');

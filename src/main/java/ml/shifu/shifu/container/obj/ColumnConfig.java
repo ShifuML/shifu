@@ -1,5 +1,5 @@
 /**
- * Copyright [2012-2014] eBay Software Foundation
+ * Copyright [2012-2014] PayPal Software Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -140,7 +140,8 @@ public class ColumnConfig {
      */
     @JsonIgnore
     public boolean isCandidate() {
-        return !ColumnFlag.ForceRemove.equals(columnFlag) && !ColumnFlag.Meta.equals(columnFlag)
+        return !ColumnFlag.ForceRemove.equals(columnFlag)
+                && !ColumnFlag.Meta.equals(columnFlag)
                 && !ColumnFlag.Target.equals(columnFlag);
     }
 
@@ -239,7 +240,23 @@ public class ColumnConfig {
     public List<Integer> getBinAvgScore() {
         return columnBinning.getBinAvgScore();
     }
-
+    
+    /**
+     * @return binCountWoe
+     */
+    @JsonIgnore
+    public List<Double> getBinCountWoe() {
+        return columnBinning.getBinCountWoe();
+    }
+    
+    /**
+     * @return binWeightedWoe
+     */
+    @JsonIgnore
+    public List<Double> getBinWeightedWoe() {
+        return columnBinning.getBinWeightedWoe();
+    }
+    
     /**
      * @param length
      */

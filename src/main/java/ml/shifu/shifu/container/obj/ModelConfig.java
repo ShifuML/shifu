@@ -1,5 +1,5 @@
 /**
- * Copyright [2012-2014] eBay Software Foundation
+ * Copyright [2012-2014] PayPal Software Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,10 +15,17 @@
  */
 package ml.shifu.shifu.container.obj;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
-import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import java.io.File;
+import java.io.IOException;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.List;
+import java.util.Map;
 
 import ml.shifu.shifu.container.obj.ModelBasicConf.RunMode;
+import ml.shifu.shifu.container.obj.ModelNormalizeConf.NormType;
 import ml.shifu.shifu.container.obj.ModelStatsConf.BinningAlgorithm;
 import ml.shifu.shifu.container.obj.ModelStatsConf.BinningMethod;
 import ml.shifu.shifu.container.obj.ModelTrainConf.ALGORITHM;
@@ -32,14 +39,9 @@ import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.fs.Path;
 
-import java.io.File;
-import java.io.IOException;
-import java.text.DateFormat;
-import java.text.SimpleDateFormat;
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.List;
-import java.util.Map;
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.google.common.collect.Lists;
 
 /**
  * ModelConfig class
@@ -117,13 +119,6 @@ public class ModelConfig {
         this.evals = evals;
     }
 
-    /**
-     * @param alg
-     * @param modelSetPath
-     * @param description
-     * @return
-     * @throws IOException
-     */
     public static ModelConfig createInitModelConfig(String modelName, ALGORITHM alg, String description)
             throws IOException {
         ModelConfig modelConfig = new ModelConfig();
@@ -156,6 +151,8 @@ public class ModelConfig {
 
         dataSet.setPosTags(posTags);
         dataSet.setNegTags(negTags);
+
+        dataSet.setMissingOrInvalidValues(Lists.asList("", new String[] { "*", "#", "?", "null", "~" }));
         // create empty <ModelName>/meta.column.names
         ShifuFileUtils.createFileIfNotExists(new Path(modelName, Constants.DEFAULT_META_COLUMN_FILE).toString(),
                 SourceType.LOCAL);
@@ -184,6 +181,7 @@ public class ModelConfig {
         ShifuFileUtils.createFileIfNotExists(new Path(modelName, Constants.DEFAULT_FORCEREMOVE_COLUMN_FILE).toString(),
                 SourceType.LOCAL);
         varselect.setForceRemoveColumnNameFile(Constants.DEFAULT_FORCEREMOVE_COLUMN_FILE);
+        varselect.setFilterBySE(Boolean.TRUE);
         modelConfig.setVarSelect(varselect);
 
         // build normalize info
@@ -219,73 +217,51 @@ public class ModelConfig {
         return modelConfig;
     }
 
-    /**
-     * @return
-     */
     @JsonIgnore
     public boolean isLocalFileSystem() {
         return SourceType.LOCAL.equals(dataSet.getSource());
     }
 
-    /**
-     * @return
-     */
     @JsonIgnore
     public boolean isHdfsFileSystem() {
         return SourceType.HDFS.equals(dataSet.getSource());
     }
 
-    /**
-     * @return
-     */
     @JsonIgnore
     public String getDataSetDelimiter() {
         return dataSet.getDataDelimiter();
     }
 
-    /**
-     * @return
-     */
     @JsonIgnore
     public int getBaggingNum() {
         return train.getBaggingNum();
     }
 
-    /**
-     * @return
-     */
     @JsonIgnore
     public Double getNormalizeStdDevCutOff() {
         return normalize.getStdDevCutOff();
     }
 
-    /**
-     * @return
-     */
     @JsonIgnore
     public boolean isBinningSampleNegOnly() {
         return stats.getSampleNegOnly();
     }
 
-    /**
-     * @return
-     */
     @JsonIgnore
     public Double getBinningSampleRate() {
         return stats.getSampleRate();
     }
 
-    /**
-     * @return
-     */
     @JsonIgnore
     public List<String> getPosTags() {
         return dataSet.getPosTags();
     }
 
-    /**
-     * @return
-     */
+    @JsonIgnore
+    public List<String> getMissingOrInvalidValues() {
+        return dataSet.getMissingOrInvalidValues();
+    }
+
     @JsonIgnore
     public List<String> getPosTags(EvalConfig evalConfig) {
         if(CollectionUtils.isNotEmpty(evalConfig.getDataSet().getPosTags())) {
@@ -295,17 +271,11 @@ public class ModelConfig {
         }
     }
 
-    /**
-     * @return
-     */
     @JsonIgnore
     public List<String> getNegTags() {
         return dataSet.getNegTags();
     }
 
-    /**
-     * @return
-     */
     @JsonIgnore
     public List<String> getNegTags(EvalConfig evalConfig) {
         if(CollectionUtils.isNotEmpty(evalConfig.getDataSet().getNegTags())) {
@@ -315,154 +285,102 @@ public class ModelConfig {
         }
     }
 
-    /**
-     * @return
-     */
     @JsonIgnore
     public Double getNormalizeSampleRate() {
         return normalize.getSampleRate();
     }
+    
+    @JsonIgnore
+    public NormType getNormalizeType() {
+        return normalize.getNormType();
+    }
 
-    /**
-     * @return
-     */
     @JsonIgnore
     public Boolean isNormalizeSampleNegOnly() {
         return normalize.getSampleNegOnly();
     }
 
-    /**
-     * @return
-     */
     @JsonIgnore
     public int getBinningExpectedNum() {
         return stats.getMaxNumBin();
     }
 
-    /**
-     * @return
-     */
     @JsonIgnore
     public BinningMethod getBinningMethod() {
         return stats.getBinningMethod();
     }
 
-    /**
-     * @return
-     */
     @JsonIgnore
     public boolean isTrainOnDisk() {
         return train.getTrainOnDisk();
     }
 
-    /**
-     * @return
-     */
     @JsonIgnore
     public Double getCrossValidationRate() {
         return train.getValidSetRate();
     }
 
-    /**
-     * @return
-     */
     @JsonIgnore
     public Double getBaggingSampleRate() {
         return train.getBaggingSampleRate();
     }
 
-    /**
-     * @return
-     */
     @JsonIgnore
     public boolean isFixInitialInput() {
         return train.getFixInitInput();
     }
 
-    /**
-     * @return
-     */
     @JsonIgnore
     public boolean isBaggingWithReplacement() {
         return train.getBaggingWithReplacement();
     }
 
-    /**
-     * @return
-     */
     @JsonIgnore
     public String getAlgorithm() {
         return train.getAlgorithm();
     }
 
-    /**
-     * @return
-     */
     @JsonIgnore
     public String getModelSetName() {
         return basic.getName();
     }
 
-    /**
-     * @return
-     */
     @JsonIgnore
     public Integer getAutoTypeThreshold() {
         return stats.getBinningAutoTypeThreshold();
     }
 
-    /**
-     * @return
-     */
     @JsonIgnore
     public Double getNumericalValueThreshold() {
         return stats.getNumericalValueThreshold();
     }
 
-    /**
-     * @param string
-     */
     @JsonIgnore
     public void setModelSetName(String modelSetName) {
         basic.setName(modelSetName);
     }
 
-    /**
-     * @param property
-     */
     @JsonIgnore
     public void setModelSetCreator(String author) {
         basic.setAuthor(author);
     }
 
-    /**
-     * @return
-     */
     @JsonIgnore
     public String getDataSetRawPath() {
         return dataSet.getDataPath();
     }
 
-    /**
-     * @return
-     */
     @JsonIgnore
     public boolean isVariableStoreEnabled() {
         // default - disable
         return false;
     }
 
-    /**
-     * @return
-     */
     @JsonIgnore
     public String getTargetColumnName() {
         return dataSet.getTargetColumnName();
     }
 
-    /**
-     * @return
-     */
     @JsonIgnore
     public String getTargetColumnName(EvalConfig evalConfig) {
         if(StringUtils.isNotBlank(evalConfig.getDataSet().getTargetColumnName())) {
@@ -472,211 +390,131 @@ public class ModelConfig {
         }
     }
 
-    /**
-     * @return
-     */
     @JsonIgnore
     public boolean isMapReduceRunMode() {
         return RunMode.mapred.equals(basic.getRunMode());
     }
 
-    /**
-     * @return
-     */
     @JsonIgnore
     public boolean isLocalRunMode() {
         return RunMode.local.equals(basic.getRunMode());
     }
 
-    /**
-     * @return
-     */
     @JsonIgnore
     public Boolean getVarSelectWrapperEnabled() {
         return varSelect.getWrapperEnabled();
     }
 
-    /**
-     * @return
-     * @throws IOException
-     */
     @JsonIgnore
     public List<String> getMetaColumnNames() throws IOException {
         return CommonUtils.readConfFileIntoList(dataSet.getMetaColumnNameFile(), SourceType.LOCAL,
                 this.getHeaderDelimiter());
     }
 
-    /**
-     * @return
-     * @throws IOException
-     */
     @JsonIgnore
     public List<String> getCategoricalColumnNames() throws IOException {
         return CommonUtils.readConfFileIntoList(dataSet.getCategoricalColumnNameFile(), SourceType.LOCAL,
                 this.getHeaderDelimiter());
     }
 
-    /**
-     * @return
-     */
     @JsonIgnore
     public Map<String, Object> getParams() {
         return train.getParams();
     }
 
-    /**
-     * @param param
-     */
     @JsonIgnore
     public void setParams(Map<String, Object> params) {
         train.setParams(params);
-
     }
 
-    /**
-     * @return
-     */
     @JsonIgnore
     public String getFilterExpressions() {
         return dataSet.getFilterExpressions();
     }
 
-    /**
-     * @return
-     */
     @JsonIgnore
     public Boolean getVarSelectFilterEnabled() {
         return varSelect.getFilterEnable();
     }
 
-    /**
-     * @return
-     */
     @JsonIgnore
     public Integer getVarSelectFilterNum() {
         return varSelect.getFilterNum();
     }
 
-    /**
-     * @return
-     */
     @JsonIgnore
     public String getVarSelectFilterBy() {
         return varSelect.getFilterBy();
     }
 
-    /**
-     * @return
-     */
     @JsonIgnore
     public boolean isCategoricalDisabled() {
         // there is no settings now, always enable
         return false;
     }
 
-    /**
-     * @return
-     */
     @JsonIgnore
     public String getVarSelectWrapperBy() {
         return varSelect.getWrapperBy();
     }
 
-    /**
-     * @return
-     */
     @JsonIgnore
     public int getVarSelectWrapperNum() {
         return varSelect.getWrapperNum();
     }
 
-    /**
-     * @return
-     */
     @JsonIgnore
     public int getNumTrainEpochs() {
         return train.getNumTrainEpochs();
     }
 
-    /**
-     * @return
-     */
     @JsonIgnore
     public String getMode() {
         return dataSet.getSource().name();
     }
 
-    /**
-     * @return
-     * @throws IOException
-     */
     @JsonIgnore
     public List<String> getListForceRemove() throws IOException {
         return CommonUtils.readConfFileIntoList(varSelect.getForceRemoveColumnNameFile(), SourceType.LOCAL,
                 this.getHeaderDelimiter());
     }
 
-    /**
-     * @return
-     * @throws IOException
-     */
     @JsonIgnore
     public List<String> getListForceSelect() throws IOException {
         return CommonUtils.readConfFileIntoList(varSelect.getForceSelectColumnNameFile(), SourceType.LOCAL,
                 this.getHeaderDelimiter());
     }
 
-    /**
-     * @return
-     */
     @JsonIgnore
     public String getModelSetPath() {
         return ".";
     }
 
-    /**
-     * @return
-     */
     @JsonIgnore
     public Boolean isBinningAutoTypeEnabled() {
         return stats.getBinningAutoTypeEnable();
     }
 
-    /**
-     * @return
-     */
     @JsonIgnore
     public Integer getBinningAutoTypeThreshold() {
         return stats.getBinningAutoTypeThreshold();
     }
 
-    /**
-     * @return
-     */
     @JsonIgnore
     public Boolean isBinningMergeEnabled() {
         return stats.getBinningMergeEnable();
     }
 
-    /**
-     * @return
-     */
     @JsonIgnore
     public String getWeightColumnName() {
         return dataSet.getWeightColumnName();
     }
 
-    /**
-     * @return
-     */
     @JsonIgnore
     public String getHeaderPath() {
         return dataSet.getHeaderPath();
     }
 
-    /**
-     * @return
-     */
     @JsonIgnore
     public String getHeaderDelimiter() {
         return dataSet.getHeaderDelimiter();
@@ -692,10 +530,6 @@ public class ModelConfig {
         this.stats.setBinningAlgorithm(binningAlgorithm);
     }
 
-    /**
-     * @param evalSetName
-     * @return
-     */
     @JsonIgnore
     public EvalConfig getEvalConfigByName(String evalSetName) {
         if(CollectionUtils.isNotEmpty(evals)) {
@@ -722,7 +556,7 @@ public class ModelConfig {
         ModelConfig mc = (ModelConfig) obj;
         return mc.getBasic().equals(basic);
     }
-    
+
     /**
      * Auto generated by eclipse
      */

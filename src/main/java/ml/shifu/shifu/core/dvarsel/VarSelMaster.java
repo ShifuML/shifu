@@ -1,5 +1,5 @@
 /**
- * Copyright [2012-2014] eBay Software Foundation
+ * Copyright [2012-2014] PayPal Software Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -64,6 +64,9 @@ public class VarSelMaster implements MasterComputable<VarSelMasterResult, VarSel
         if(masterConductor.isToStop()) {
             LOG.info("Variables are selected. Send halt to workers ... ");
             masterResult.setHalt(true);
+
+            // save the best seed
+            masterResult.setBestSeed(masterConductor.voteBestSeed());
         } else {
             LOG.info("Send next working set to slaves ... ");
         }

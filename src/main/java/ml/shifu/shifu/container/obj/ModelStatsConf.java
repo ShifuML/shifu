@@ -1,5 +1,5 @@
 /**
- * Copyright [2012-2014] eBay Software Foundation
+ * Copyright [2012-2014] PayPal Software Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -49,7 +49,7 @@ public class ModelStatsConf {
     private Integer binningAutoTypeThreshold = Integer.valueOf(5);
     private Boolean binningMergeEnable = Boolean.TRUE;
 
-    private BinningAlgorithm binningAlgorithm = BinningAlgorithm.SPDT;
+    private BinningAlgorithm binningAlgorithm = BinningAlgorithm.SPDTI;
 
     public Integer getMaxNumBin() {
         return maxNumBin;

@@ -1,5 +1,5 @@
 /*
- * Copyright [2012-2015] eBay Software Foundation
+ * Copyright [2012-2015] PayPal Software Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -290,14 +290,16 @@ public class UpdateBinningInfoMapper extends Mapper<LongWritable, Text, IntWrita
             isInvalidValue = false;
 
             BinningInfoWritable binningInfoWritable = this.columnBinningInfo.get(i);
+            if(binningInfoWritable == null) {
+                continue; // doesn't exist
+            }
             binningInfoWritable.setTotalCount(binningInfoWritable.getTotalCount() + 1L);
             if(columnConfig.isCategorical()) {
                 int lastBinIndex = binningInfoWritable.getBinCategories().size();
 
                 int binNum = 0;
-                if(units[i] == null || StringUtils.isBlank(units[i]) || "*".equals(units[i].trim())
-                        || "#".equals(units[i].trim()) || "?".equals(units[i].trim())
-                        || "null".equalsIgnoreCase(units[i].trim())) {
+                if(units[i] == null
+                        || this.modelConfig.getDataSet().getMissingOrInvalidValues().contains(units[i].toLowerCase())) {
                     isMissingValue = true;
                 } else {
                     String str = StringUtils.trim(units[i]);

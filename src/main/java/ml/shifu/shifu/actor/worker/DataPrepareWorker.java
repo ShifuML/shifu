@@ -1,5 +1,5 @@
 /**
- * Copyright [2012-2014] eBay Software Foundation
+ * Copyright [2012-2014] PayPal Software Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -233,7 +233,10 @@ public class DataPrepareWorker extends AbstractWorkerActor {
                         continue;
                     }
                 } else if(config.isCategorical()) { // CATEGORICAL
-                    if(StringUtils.isEmpty(raw[i])) {
+                    if(raw[i] == null
+                            || StringUtils.isEmpty(raw[i])
+                            || modelConfig.getDataSet().getMissingOrInvalidValues()
+                                    .contains(raw[i].toLowerCase().trim())) {
                         incMap(i, missingMap);
                     }
                     vo.setRaw(raw[i].trim());
