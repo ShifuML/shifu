@@ -1,5 +1,5 @@
 /**
- * Copyright [2012-2014] eBay Software Foundation
+ * Copyright [2012-2014] PayPal Software Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -36,6 +36,7 @@ import ml.shifu.shifu.core.dvarsel.VarSelMasterResult;
 import ml.shifu.shifu.core.dvarsel.VarSelOutput;
 import ml.shifu.shifu.core.dvarsel.VarSelWorker;
 import ml.shifu.shifu.core.dvarsel.VarSelWorkerResult;
+import ml.shifu.shifu.core.dvarsel.wrapper.CandidateGenerator;
 import ml.shifu.shifu.core.dvarsel.wrapper.WrapperMasterConductor;
 import ml.shifu.shifu.core.dvarsel.wrapper.WrapperWorkerConductor;
 import ml.shifu.shifu.core.mr.input.CombineInputFormat;
@@ -50,6 +51,7 @@ import ml.shifu.shifu.fs.ShifuFileUtils;
 import ml.shifu.shifu.util.CommonUtils;
 import ml.shifu.shifu.util.Constants;
 import ml.shifu.shifu.util.Environment;
+import ml.shifu.shifu.util.HDPUtils;
 
 import org.apache.commons.collections.ListUtils;
 import org.apache.commons.compress.compressors.bzip2.BZip2CompressorInputStream;
@@ -71,6 +73,7 @@ import org.apache.hadoop.util.GenericOptionsParser;
 import org.apache.pig.impl.util.JarManager;
 import org.apache.zookeeper.ZooKeeper;
 import org.encog.ml.data.MLDataSet;
+import org.jboss.netty.bootstrap.ServerBootstrap;
 import org.mortbay.log.Log;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -249,6 +252,7 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
                 new Path(getPathFinder().getVarSelsPath(sourceType), "VarSels"));
     }
 
+    @SuppressWarnings("unused")
     private void prepareVarSelParams(final List<String> args, final SourceType sourceType) {
         args.add("-libjars");
 
@@ -288,7 +292,9 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
             }
         }
 
-        args.add(String.valueOf(Math.min(expectVarCount, candidateCount) - forceSelectCount + 1));
+        int iterationCnt = (Integer) this.modelConfig.getVarSelect().getParams()
+                .get(CandidateGenerator.POPULATION_MULTIPLY_CNT) + 1;
+        args.add(Integer.toString(iterationCnt));
 
         args.add("-mr");
         args.add(VarSelMasterResult.class.getName());
@@ -308,6 +314,10 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
         // setting queue
         args.add(String.format(NNConstants.MAPREDUCE_PARAM_FORMAT, NNConstants.MAPRED_JOB_QUEUE_NAME,
                 Environment.getProperty(Environment.HADOOP_JOB_QUEUE, ml.shifu.shifu.util.Constants.DEFAULT_JOB_QUEUE)));
+
+        // MAPRED timeout
+        args.add(String.format(NNConstants.MAPREDUCE_PARAM_FORMAT, NNConstants.MAPRED_TASK_TIMEOUT, Environment.getInt(
+                NNConstants.MAPRED_TASK_TIMEOUT, ml.shifu.shifu.util.Constants.DEFAULT_MAPRED_TIME_OUT)));
 
         args.add(String.format(NNConstants.MAPREDUCE_PARAM_FORMAT, GuaguaConstants.GUAGUA_MASTER_INTERCEPTERS,
                 VarSelOutput.class.getName()));
@@ -371,8 +381,19 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
         jars.add(JarManager.findContainingJar(GuaguaMapReduceConstants.class));
         // zookeeper-*.jar
         jars.add(JarManager.findContainingJar(ZooKeeper.class));
+        // netty-*.jar
+        jars.add(JarManager.findContainingJar(ServerBootstrap.class));
 
         jars.add(JarManager.findContainingJar(JexlException.class));
+
+        String hdpVersion = HDPUtils.getHdpVersionForHDP224();
+        if(StringUtils.isNotBlank(hdpVersion)) {
+            // for hdp 2.2.4, hdp.version should be set and configuration files should be add to container class path
+            jars.add(HDPUtils.findContainingFile("hdfs-site.xml"));
+            jars.add(HDPUtils.findContainingFile("core-site.xml"));
+            jars.add(HDPUtils.findContainingFile("mapred-site.xml"));
+            jars.add(HDPUtils.findContainingFile("yarn-site.xml"));
+        }
 
         return StringUtils.join(jars, NNConstants.LIB_JAR_SEPARATOR);
     }
@@ -389,8 +410,37 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
         // 2. Submit a MapReduce job to analyze sensitivity RMS.
         SourceType source = this.modelConfig.getDataSet().getSource();
         Configuration conf = new Configuration();
+        // 2.1 prepare se job conf
         prepareSEJobConf(source, conf);
+        // 2.2 get output path
+        String varSelectMSEOutputPath = super.getPathFinder().getVarSelectMSEOutputPath(source);
 
+        // 2.3 create se job
+        Job job = createSEMapReduceJob(source, conf, varSelectMSEOutputPath);
+
+        // 2.4 clean output firstly
+        ShifuFileUtils.deleteFile(varSelectMSEOutputPath, source);
+
+        // 2.5 submit job
+        if(job.waitForCompletion(true)) {
+            // 2.6 post process 4 var select
+            if(super.modelConfig.getVarSelect().getFilterBySE()) {
+                postProcess4SEVarSelect(source, varSelectMSEOutputPath);
+            } else {
+                log.info("Only print sensitivity analysis report.");
+                log.info(
+                        "Sensitivity analysis report is in {}/{}-* file(s) with format 'column_index\tcolumn_name\tmean\trms\tvariance'.",
+                        varSelectMSEOutputPath, Constants.SHIFU_VARSELECT_SE_OUTPUT_NAME);
+            }
+        } else {
+            log.error("VarSelect SE hadoop job is failed, please re-try varselect step.");
+        }
+
+    }
+
+    private Job createSEMapReduceJob(SourceType source, Configuration conf, String varSelectMSEOutputPath)
+            throws IOException {
+        @SuppressWarnings("deprecation")
         Job job = new Job(conf, "Shifu: Variable Selection Wrapper Job : " + this.modelConfig.getModelSetName());
         job.setJarByClass(getClass());
         boolean isSEVarSelMulti = Boolean.TRUE.toString().equalsIgnoreCase(
@@ -427,21 +477,10 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
         job.setOutputValueClass(Text.class);
         job.setOutputFormatClass(TextOutputFormat.class);
 
-        String varSelectMSEOutputPath = super.getPathFinder().getVarSelectMSEOutputPath(source);
         FileOutputFormat.setOutputPath(job, new Path(varSelectMSEOutputPath));
         MultipleOutputs.addNamedOutput(job, Constants.SHIFU_VARSELECT_SE_OUTPUT_NAME, TextOutputFormat.class,
                 Text.class, Text.class);
-
-        // clean output firstly
-        ShifuFileUtils.deleteFile(varSelectMSEOutputPath, source);
-
-        // submit job
-        if(job.waitForCompletion(true)) {
-            postProcess4SEVarSelect(source, varSelectMSEOutputPath);
-        } else {
-            log.error("VarSelect SE hadoop job is failed, please re-try varselect step.");
-        }
-
+        return job;
     }
 
     private void prepareSEJobConf(SourceType source, Configuration conf) throws IOException {
@@ -465,6 +504,8 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
         // Tmp set to false because of some cluster by default use gzip while CombineInputFormat will split gzip file (a
         // bug)
         conf.setBoolean(CombineInputFormat.SHIFU_VS_SPLIT_COMBINABLE, false);
+        conf.set("mapred.reduce.slowstart.completed.maps",
+                Environment.getProperty("mapred.reduce.slowstart.completed.maps", "0.9"));
 
         Float wrapperRatio = this.modelConfig.getVarSelect().getWrapperRatio();
         if(wrapperRatio == null) {
@@ -476,6 +517,15 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
             throw new IllegalArgumentException("WrapperRatio should be in (0, 1).");
         }
         conf.setFloat(Constants.SHIFU_VARSELECT_WRAPPER_RATIO, wrapperRatio);
+        String hdpVersion = HDPUtils.getHdpVersionForHDP224();
+        if(StringUtils.isNotBlank(hdpVersion)) {
+            // for hdp 2.2.4, hdp.version should be set and configuration files should be add to container class path
+            conf.set("hdp.version", hdpVersion);
+            HDPUtils.addFileToClassPath(HDPUtils.findContainingFile("hdfs-site.xml"), conf);
+            HDPUtils.addFileToClassPath(HDPUtils.findContainingFile("core-site.xml"), conf);
+            HDPUtils.addFileToClassPath(HDPUtils.findContainingFile("mapred-site.xml"), conf);
+            HDPUtils.addFileToClassPath(HDPUtils.findContainingFile("yarn-site.xml"), conf);
+        }
     }
 
     private void postProcess4SEVarSelect(SourceType source, String varSelectMSEOutputPath) throws IOException {
@@ -484,9 +534,17 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
             throw new RuntimeException("Var select MSE stats output file not exist.");
         }
 
+        int selectCnt = 0;
         for(ColumnConfig config: super.columnConfigList) {
             if(config.isFinalSelect()) {
                 config.setFinalSelect(false);
+            }
+
+            // enable ForceSelect
+            if(config.isForceSelect()) {
+                config.setFinalSelect(true);
+                selectCnt++;
+                log.info("Variable {} is selected, since it is in ForceSelect list.", config.getColumnName());
             }
         }
 
@@ -500,16 +558,29 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
             }
             scanners = ShifuFileUtils.getDataScanners(globStatus[0].getPath().toString(), source);
             String str = null;
-            int count = 0;
+            int targetCnt = 0; // total variable count that user want to select
+            List<Integer> candidateColumnIdList = new ArrayList<Integer>();
             Scanner scanner = scanners.get(0);
             while(scanner.hasNext()) {
-                ++count;
+                ++targetCnt;
                 str = scanner.nextLine().trim();
-                ColumnConfig columnConfig = this.columnConfigList.get(Integer.parseInt(str));
-                columnConfig.setFinalSelect(true);
-                log.info("Variable {} is selected.", columnConfig.getColumnName());
+                candidateColumnIdList.add(Integer.parseInt(str));
             }
-            log.info("{} variables are selected.", count);
+
+            int i = 0;
+            // try to select another (targetCnt - selectCnt) variables, but we need to exclude those
+            // force-selected variables
+            while(selectCnt < targetCnt && i < targetCnt) {
+                Integer columnId = candidateColumnIdList.get(i++);
+                ColumnConfig columnConfig = this.columnConfigList.get(columnId);
+                if(!columnConfig.isForceSelect() && !columnConfig.isForceRemove()) {
+                    columnConfig.setFinalSelect(true);
+                    selectCnt++;
+                    log.info("Variable {} is selected.", columnConfig.getColumnName());
+                }
+            }
+
+            log.info("{} variables are selected.", selectCnt);
             log.info(
                     "Sensitivity analysis report is in {}/{}-* file(s) with format 'column_index\tcolumn_name\tmean\trms\tvariance'.",
                     varSelectMSEOutputPath, Constants.SHIFU_VARSELECT_SE_OUTPUT_NAME);

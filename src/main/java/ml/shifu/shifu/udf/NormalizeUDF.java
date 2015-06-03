@@ -1,5 +1,5 @@
 /**
- * Copyright [2012-2014] eBay Software Foundation
+ * Copyright [2012-2014] PayPal Software Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,6 +23,7 @@ import java.util.Map;
 
 import ml.shifu.shifu.container.WeightAmplifier;
 import ml.shifu.shifu.container.obj.ColumnConfig;
+import ml.shifu.shifu.container.obj.ModelNormalizeConf.NormType;
 import ml.shifu.shifu.core.DataSampler;
 import ml.shifu.shifu.core.Normalizer;
 import ml.shifu.shifu.util.CommonUtils;
@@ -45,9 +46,12 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
 
     private List<String> negTags;
     private List<String> posTags;
+    private Double cutoff;
+    private NormType normType;
     private Expression weightExpr;
+    private JexlContext weightContext;
     private DecimalFormat df = new DecimalFormat("#.######");
-
+    
     public NormalizeUDF(String source, String pathModelConfig, String pathColumnConfig) throws Exception {
         super(source, pathModelConfig, pathColumnConfig);
 
@@ -55,11 +59,23 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
 
         negTags = modelConfig.getNegTags();
         log.debug("\t Negative Tags: " + negTags);
+        
         posTags = modelConfig.getPosTags();
         log.debug("\t Positive Tags: " + posTags);
-
+        
+        cutoff = modelConfig.getNormalizeStdDevCutOff();
+        log.debug("\t stdDevCutOff: " + cutoff);
+        
+        normType = modelConfig.getNormalizeType();
+        log.debug("\t normType: " + normType.name());
+        
         weightExpr = createExpression(modelConfig.getWeightColumnName());
+        if(weightExpr != null) {
+            weightContext = new MapContext();
+        }
+
         log.debug("NormalizeUDF Initialized");
+        
     }
 
     public Tuple exec(Tuple input) throws IOException {
@@ -67,86 +83,65 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
             return null;
         }
 
-        int size = input.size();
-
-        // new ????
-        JexlContext jc = new MapContext();
-
-        Tuple tuple = TupleFactory.getInstance().newTuple();
-
-        String tag = input.get(tagColumnNum).toString();
-        if(!(posTags.contains(tag) || negTags.contains(tag))) {
-            // avoid too many logs
-            if(System.currentTimeMillis() % 100 == 0) {
-                log.warn("Invalid target column value - " + tag);
-            }
-            return null;
-        }
-
-        boolean isNotSampled = DataSampler.isNotSampled(modelConfig.getPosTags(), modelConfig.getNegTags(),
-                modelConfig.getNormalizeSampleRate(), modelConfig.isNormalizeSampleNegOnly(), tag);
+        // do data sampling. Unselected data or data with invalid tag will be filtered out.
+        final String rawTag = input.get(tagColumnNum).toString();
+        boolean isNotSampled = DataSampler.isNotSampled(posTags, negTags,
+                modelConfig.getNormalizeSampleRate(), modelConfig.isNormalizeSampleNegOnly(), rawTag);
         if(isNotSampled) {
             return null;
         }
-
-        Double cutoff = modelConfig.getNormalizeStdDevCutOff();
-        for(int i = 0; i < size; i++) {
+        
+        // append tuple with tag, normalized value.
+        Tuple tuple = TupleFactory.getInstance().newTuple();
+        final NormType normType =  modelConfig.getNormalizeType();
+        
+        for(int i = 0; i < input.size(); i++) {
             ColumnConfig config = columnConfigList.get(i);
+            String val = (input.get(i) == null) ? "" : input.get(i).toString();
+            
+            // load variables for weight calculating.
             if(weightExpr != null) {
-                jc.set(config.getColumnName(), ((input.get(i) == null) ? "" : input.get(i).toString()));
+                weightContext.set(config.getColumnName(), val);
             }
 
-            if(super.tagColumnNum == i) {
-                if(modelConfig.getPosTags().contains(tag)) {
-                    tuple.append(df.format(Double.valueOf(1)));
-                } else if(modelConfig.getNegTags().contains(tag)) {
-                    tuple.append(df.format(Double.valueOf(0)));
-                } else {
-                    log.error("Invalid data! The target value is not listed - " + tag);
-                    // Return null to skip such record.
+            // check tag type.
+            if(tagColumnNum == i) {
+                String tagType = tagTypeCheck(posTags, negTags, rawTag);
+                if(tagType == null) {
+                    log.error("Invalid data! The target value is not listed - " + rawTag);
                     return null;
                 }
+                tuple.append(tagType);
                 continue;
             }
 
+            // append normalize data.
             if(!CommonUtils.isGoodCandidate(config)) {
                 tuple.append(null);
             } else {
-                String val = ((input.get(i) == null) ? "" : input.get(i).toString());
-                switch(super.modelConfig.getNormalize().getNormType()) {
-                    case WOE:
-                        List<Double> binWoe;
-                        if(super.modelConfig.getNormalize().getIsWeightNorm()) {
-                            binWoe = config.getColumnBinning().getBinWeightedWoe();
-                        } else {
-                            binWoe = config.getColumnBinning().getBinCountWoe();
-                        }
-                        if(StringUtils.isEmpty(val)) {
-                            // append last missing bin woe
-                            // TODO how if merge missing bin with last valid bin.
-                            tuple.append(df.format(binWoe.get(binWoe.size() - 1)));
-                        } else {
-                            try {
-                                int binNum = CommonUtils.getBinNum(config, val);
-                                binNum = binNum == -1 ? binWoe.size() - 1 : binNum;
-                                tuple.append(df.format(binWoe.get(binNum)));
-                            } catch (NumberFormatException e) {
-                                tuple.append(df.format(binWoe.get(binWoe.size() - 1)));
-                            }
-                        }
-                        break;
-                    case ZSCALE:
-                    default:
-                        Double z = Normalizer.normalize(config, val, cutoff);
-                        tuple.append(df.format(z));
-                        break;
-                }
+                Double normVal = Normalizer.normalize(config, val, cutoff, normType);
+                tuple.append(df.format(normVal));
             }
         }
 
+        // append tuple with weight.
+        double weight = evaluateWeight(weightExpr, weightContext);
+        tuple.append(weight);
+
+        return tuple;
+    }
+    
+    /**
+     * Evaluate weight expression based on the variables context.
+     * 
+     * @param expr - weight evaluation expression
+     * @param jc -  A JexlContext containing variables for weight expression.
+     * @return The result of this evaluation
+     */
+    public double evaluateWeight(Expression expr, JexlContext jc) {
         double weight = 1.0d;
-        if(weightExpr != null) {
-            Object result = weightExpr.evaluate(jc);
+        if(expr != null) {
+            Object result = expr.evaluate(jc);
             if(result instanceof Integer) {
                 weight = ((Integer) result).doubleValue();
             } else if(result instanceof Double) {
@@ -164,11 +159,28 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
                 }
             }
         }
-        tuple.append(weight);
-
-        return tuple;
+        return weight;
     }
-
+    
+    /**
+     * Check tag type.
+     * 
+     * @param posTags - positive tag list.
+     * @param negTags - negtive tag list.
+     * @param rawTag - raw tag string
+     * @return tag type String. Return "1" for positive tag. Return "0" for negtive tag. Return null for invalid tag.
+     */
+    public String tagTypeCheck(List<String> posTags, List<String> negTags, String rawTag) {
+        String type = null;
+        if(posTags.contains(rawTag)) {
+            type = "1";
+        } else if(negTags.contains(rawTag)) {
+            type = "0";
+        }
+        
+        return type;
+    }
+    
     public Schema outputSchema(Schema input) {
         try {
             StringBuilder schemaStr = new StringBuilder();
@@ -184,7 +196,7 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
 
             return Utils.getSchemaFromString(schemaStr.toString());
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error("error in outputSchema", e);
             return null;
         }
     }

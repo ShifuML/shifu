@@ -1,5 +1,5 @@
 /**
- * Copyright [2012-2014] eBay Software Foundation
+ * Copyright [2012-2014] PayPal Software Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,6 +16,8 @@
 package ml.shifu.shifu.container.obj;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+
+import java.util.Map;
 
 /**
  * ModelVarSelectConf class
@@ -39,6 +41,13 @@ public class ModelVarSelectConf {
     private Integer wrapperNum = Integer.valueOf(50);
     private Float wrapperRatio = Float.valueOf(0.05f);
     private String wrapperBy = "S";
+
+    /**
+     * Do var select by SE or only print se report.
+     */
+    private Boolean filterBySE = Boolean.TRUE;
+
+    private Map<String, Object> params;
 
     public Boolean getForceEnable() {
         return forceEnable;
@@ -127,4 +136,25 @@ public class ModelVarSelectConf {
         this.wrapperRatio = wrapperRatio;
     }
 
+    public Map<String, Object> getParams() {
+        return params;
+    }
+
+    public void setParams(Map<String, Object> params) {
+        this.params = params;
+    }
+
+    /**
+     * @return the filterBySE
+     */
+    public Boolean getFilterBySE() {
+        return filterBySE;
+    }
+
+    /**
+     * @param filterBySE the filterBySE to set
+     */
+    public void setFilterBySE(Boolean filterBySE) {
+        this.filterBySE = filterBySE;
+    }
 }

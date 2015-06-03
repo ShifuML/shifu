@@ -1,6 +1,6 @@
 # /bin/bash
 
-# Copyright [2012-2014] eBay Software Foundation
+# Copyright [2012-2014] PayPal Software Foundation
 #  
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -31,7 +31,7 @@ function _shifu_completion() {
     local com=${COMP_WORDS[COMP_CWORD-1]};
     case $com in
     'shifu')
-        COMPREPLY=($(compgen -W 'new cp init stats varselect normalize train posttrain eval' -- $cur))
+        COMPREPLY=($(compgen -W 'new cp init stats varselect varsel normalize norm train posttrain eval' -- $cur))
         ;;
     'eval')
         COMPREPLY=($(compgen -W '-new -run -perf' -- $cur))

@@ -108,9 +108,10 @@ public class CategoricalVarStats extends AbstractVarStats {
             Double weight = (Double) element.get(3);
 
             int binNum = 0;
-            if(value == null || StringUtils.isBlank(value.toString()) || "*".equals(value.toString().trim())
-                    || "#".equals(value.toString().trim()) || "?".equals(value.toString().trim())
-                    || "null".equalsIgnoreCase(value.toString().trim())) {
+
+            if(value == null
+                    || modelConfig.getDataSet().getMissingOrInvalidValues()
+                            .contains(value.toString().toLowerCase().trim())) {
                 // TODO check missing value list in ModelConfig??
                 missingValueCnt++;
                 isMissingValue = true;

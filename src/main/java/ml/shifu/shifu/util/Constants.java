@@ -1,5 +1,5 @@
 /**
- * Copyright [2012-2014] eBay Software Foundation
+ * Copyright [2012-2014] PayPal Software Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -39,6 +39,8 @@ public interface Constants {
     public static final String REASON_CODE_MAP_JSON = "ReasonCodeMap.json";
 
     public static final String DEFAULT_JOB_QUEUE = "default";
+
+    public static final int DEFAULT_MAPRED_TIME_OUT = 600000;
 
     public static final String JOB_QUEUE = "queue_name";
 
@@ -112,6 +114,7 @@ public interface Constants {
 
     public static final String BINNING_INFO_FILE_NAME = "binning_info.txt";
 
+    public static final String AUTO_TYPE_PATH= "AutoTypePath";
     public static final String PRE_TRAINING_STATS = "PreTrainingStats";
     public static final String SELECTED_RAW_DATA = "SelectedRawData";
     public static final String NORMALIZED_DATA = "NormalizedData";
@@ -124,6 +127,7 @@ public interface Constants {
     public static final String KEY_VARSLECT_STATS_PATH = "varSelectStatsPath";
     public static final String KEY_TRAIN_SCORES_PATH = "trainScoresPath";
     public static final String KEY_BIN_AVG_SCORE_PATH = "binAvgScorePath";
+    public static final String KEY_AUTO_TYPE_PATH= "autoTypePath";
 
     public static final String DEFAULT_META_COLUMN_FILE = "meta.column.names";
     public static final String DEFAULT_CATEGORICAL_COLUMN_FILE = "categorical.column.names";

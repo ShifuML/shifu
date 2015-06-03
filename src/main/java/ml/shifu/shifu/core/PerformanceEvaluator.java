@@ -1,5 +1,5 @@
 /**
- * Copyright [2012-2014] eBay Software Foundation
+ * Copyright [2012-2014] PayPal Software Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -28,6 +28,7 @@ import ml.shifu.shifu.container.PerformanceObject;
 import ml.shifu.shifu.container.obj.EvalConfig;
 import ml.shifu.shifu.container.obj.ModelConfig;
 import ml.shifu.shifu.container.obj.PerformanceResult;
+import ml.shifu.shifu.core.evaluation.AreaUnderCurve;
 import ml.shifu.shifu.exception.ShifuErrorCode;
 import ml.shifu.shifu.exception.ShifuException;
 import ml.shifu.shifu.fs.PathFinder;
@@ -350,10 +351,27 @@ public class PerformanceEvaluator {
         result.weightedRoc = FPRWeightList;
         result.gains = gainList;
         result.weightedGains = gainWeightList;
-
+        
+        // Calculate area under curve
+        result.areaUnderRoc = AreaUnderCurve.ofRoc(result.roc);
+        result.weightedAreaUnderRoc = AreaUnderCurve.ofWeightedRoc(result.weightedRoc);
+        result.areaUnderPr = AreaUnderCurve.ofPr(result.pr);
+        result.weightedAreaUnderPr = AreaUnderCurve.ofWeightedPr(result.weightedPr);
+        logAucResult(result, isWeight);
+        
         return result;
     }
 
+    static void logAucResult(PerformanceResult result, boolean isWeight) {
+        log.info("AUC value of ROC: {}", result.areaUnderRoc);
+        log.info("AUC value of PR: {}", result.areaUnderPr);
+        
+        if(isWeight) {
+            log.info("AUC value of weighted ROC: {}", result.weightedAreaUnderRoc);
+            log.info("AUC value of weighted PR: {}", result.weightedAreaUnderPr);
+        }
+    }
+    
     static void logResult(List<PerformanceObject> list, String info) {
         DecimalFormat df = new DecimalFormat("#.####");
 

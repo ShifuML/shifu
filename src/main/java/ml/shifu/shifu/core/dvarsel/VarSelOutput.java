@@ -1,5 +1,5 @@
 /**
- * Copyright [2012-2014] eBay Software Foundation
+ * Copyright [2012-2014] PayPal Software Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -82,13 +82,14 @@ public class VarSelOutput extends BasicMasterInterceptor<VarSelMasterResult, Var
     public void postApplication(MasterContext<VarSelMasterResult, VarSelWorkerResult> context) {
         VarSelMasterResult varSelMasterResult = context.getMasterResult();
 
-        List<Integer> results = varSelMasterResult.getColumnIdList();
+        @SuppressWarnings("unused")
+        List<CandidateSeed> candidateSeeds = varSelMasterResult.getSeedList();
 
-        LOG.info("Results:" + results);
+        LOG.info("Results is - {}", varSelMasterResult.getBestSeed());
 
         String out = context.getProps().getProperty(Constants.VAR_SEL_COLUMN_IDS_OUPUT);
 
-        writeColumnIdsIntoHDFS(out, results);
+        writeColumnIdsIntoHDFS(out, varSelMasterResult.getBestSeed().getColumnIdList());
     }
 
     private void writeColumnIdsIntoHDFS(String path, List<Integer> columnIds) {

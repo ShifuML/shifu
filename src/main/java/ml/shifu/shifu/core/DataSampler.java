@@ -1,5 +1,5 @@
 /**
- * Copyright [2012-2014] eBay Software Foundation
+ * Copyright [2012-2014] PayPal Software Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -87,7 +87,8 @@ public class DataSampler {
     }
 
     /**
-     * to decide whether the data should be filtered out or not
+     * To decide whether the data should be filtered out or not. Both unselected data or invalid tag will be 
+     * filtered out. 
      *
      * @param posTags
      * @param negTags

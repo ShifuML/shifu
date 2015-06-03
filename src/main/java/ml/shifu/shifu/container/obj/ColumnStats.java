@@ -1,5 +1,5 @@
 /**
- * Copyright [2012-2014] eBay Software Foundation
+ * Copyright [2012-2014] PayPal Software Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -31,6 +31,10 @@ public class ColumnStats {
     private Double mean;
     private Double median;
     private Long totalCount;
+    /**
+     * Missing count are not included
+     */
+    private Long distinctCount;
     private Long missingCount;
     private Double stdDev;
     private Double missingPercentage;
@@ -175,6 +179,20 @@ public class ColumnStats {
      */
     public void setWeightedWoe(Double weightedWoe) {
         this.weightedWoe = weightedWoe;
+    }
+
+    /**
+     * @return the distinctCount
+     */
+    public Long getDistinctCount() {
+        return distinctCount;
+    }
+
+    /**
+     * @param distinctCount the distinctCount to set
+     */
+    public void setDistinctCount(Long distinctCount) {
+        this.distinctCount = distinctCount;
     }
 
 }

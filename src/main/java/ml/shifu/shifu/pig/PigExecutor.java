@@ -1,5 +1,5 @@
 /**
- * Copyright [2012-2014] eBay Software Foundation
+ * Copyright [2012-2014] PayPal Software Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,17 +15,19 @@
  */
 package ml.shifu.shifu.pig;
 
+import java.io.IOException;
+import java.util.Map;
+
 import ml.shifu.shifu.container.obj.ModelConfig;
 import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
 import ml.shifu.shifu.util.CommonUtils;
+import ml.shifu.shifu.util.HDPUtils;
+
+import org.apache.commons.lang.StringUtils;
 import org.apache.pig.ExecType;
 import org.apache.pig.PigServer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import java.io.IOException;
-import java.util.Map;
-
 
 /**
  * PigExecutor class
@@ -40,7 +42,7 @@ public class PigExecutor {
 
     /**
      * Get the pig executor handler
-     *
+     * 
      * @return - executor handler
      */
     public static PigExecutor getExecutor() {
@@ -50,10 +52,13 @@ public class PigExecutor {
     /**
      * Submit the pig job with @ModelConfig and pig script
      * This functions doesn't allow customer setting
-     *
-     * @param modelConfig   - model configuration
-     * @param pigScriptPath - path of pig script
-     * @throws IOException throw IOException when loading the parameter from @ModelConfig
+     * 
+     * @param modelConfig
+     *            - model configuration
+     * @param pigScriptPath
+     *            - path of pig script
+     * @throws IOException
+     *             throw IOException when loading the parameter from @ModelConfig
      */
     public void submitJob(ModelConfig modelConfig, String pigScriptPath) throws IOException {
         submitJob(modelConfig, pigScriptPath, null);
@@ -61,42 +66,64 @@ public class PigExecutor {
 
     /**
      * Run the pig, Local or MapReduce mode is decide by the training source data type in modelConfig
-     *
-     * @param modelConfig   - model configuration
-     * @param pigScriptPath - path of pig script
-     * @param paramsMap     - additional parameters for pig script
-     * @throws IOException throw IOException when loading the parameter from @ModelConfig
+     * 
+     * @param modelConfig
+     *            - model configuration
+     * @param pigScriptPath
+     *            - path of pig script
+     * @param paramsMap
+     *            - additional parameters for pig script
+     * @throws IOException
+     *             throw IOException when loading the parameter from @ModelConfig
      */
-    public void submitJob(ModelConfig modelConfig, String pigScriptPath, Map<String, String> paramsMap) throws IOException {
+    public void submitJob(ModelConfig modelConfig, String pigScriptPath, Map<String, String> paramsMap)
+            throws IOException {
         submitJob(modelConfig, pigScriptPath, paramsMap, modelConfig.getDataSet().getSource());
     }
 
     /**
      * Run the pig, Local or MapReduce mode is decide by parameter @sourceTpe
-     *
-     * @param modelConfig   - model configuration
-     * @param pigScriptPath - path of pig script
-     * @param paramsMap     - additional parameters for pig script
-     * @param sourceType    - the mode run pig: pig-local/pig-hdfs
-     * @throws IOException throw IOException when loading the parameter from @ModelConfig
+     * 
+     * @param modelConfig
+     *            - model configuration
+     * @param pigScriptPath
+     *            - path of pig script
+     * @param paramsMap
+     *            - additional parameters for pig script
+     * @param sourceType
+     *            - the mode run pig: pig-local/pig-hdfs
+     * @throws IOException
+     *             throw IOException when loading the parameter from @ModelConfig
      */
-    public void submitJob(ModelConfig modelConfig, String pigScriptPath, Map<String, String> paramsMap, SourceType sourceType) throws IOException {
+    public void submitJob(ModelConfig modelConfig, String pigScriptPath, Map<String, String> paramsMap,
+            SourceType sourceType) throws IOException {
         // Run Pig Scripts
         PigServer pigServer;
 
-        if (SourceType.HDFS.equals(sourceType)) {
+        if(SourceType.HDFS.equals(sourceType)) {
             log.info("ExecType: MAPREDUCE");
             pigServer = new PigServer(ExecType.MAPREDUCE);
+            String hdpVersion = HDPUtils.getHdpVersionForHDP224();
+            if(StringUtils.isNotBlank(hdpVersion)) {
+                // for hdp 2.2.4, hdp.version should be set and configuration files should be added to container class
+                // path
+                pigServer.getPigContext().getProperties().put("hdp.version", hdpVersion);
+                pigServer.getPigContext().addJar(HDPUtils.findContainingFile("hdfs-site.xml"));
+                pigServer.getPigContext().addJar(HDPUtils.findContainingFile("core-site.xml"));
+                pigServer.getPigContext().addJar(HDPUtils.findContainingFile("mapred-site.xml"));
+                pigServer.getPigContext().addJar(HDPUtils.findContainingFile("yarn-site.xml"));
+            }
         } else {
             log.info("ExecType: LOCAL");
             pigServer = new PigServer(ExecType.LOCAL);
         }
 
         Map<String, String> pigParamsMap = CommonUtils.getPigParamMap(modelConfig, sourceType);
-        if (paramsMap != null) {
+        if(paramsMap != null) {
             pigParamsMap.putAll(paramsMap);
         }
 
         pigServer.registerScript(pigScriptPath, pigParamsMap);
     }
+
 }

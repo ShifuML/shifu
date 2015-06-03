@@ -115,8 +115,28 @@
                     }
                 ]
             }, {
+                "name": "missingOrInvalidValues",
+                "type" : "list",
+                "directive": "input",
+                "elementType" : "text",
+                "element" : [ 
+                    {
+                        "name" : "dummy",
+                        "type" : "text",
+                        "directive": "input"       
+                    }
+                ]
+            }, {
                 "name": "metaColumnNameFile",
                 "type" : "text",
+                "directive": "input"
+            }, {
+                "name": "autoType",
+                "type" : "boolean",
+                "directive": "checkbox"
+            }, {
+                "name": "autoTypeThreshold",
+                "type" : "number",
                 "directive": "input"
             }, {
                 "name": "categoricalColumnNameFile",
@@ -230,6 +250,11 @@
                 "directive": "checkbox",
                 "defval" : false
             }, {
+                "name": "filterBySE",
+                "type": "boolean",
+                "directive": "checkbox",
+                "defval" : true
+            }, {
                 "name": "wrapperNum",
                 "type": "number",
                 "directive": "input",
@@ -251,6 +276,43 @@
                     {"label": "Voted", "value":"V"},
                     {"label": "Sensitivity", "value":"SE"}
                 ]   
+              }, {
+                "name": "params",
+                "type": "map",
+                "directive": "input",
+                "element": [
+                    {
+                      "name" : "worker_sample_rate",
+                      "type" : "number",
+                      "directive": "input",
+                      "defval" : 0.1
+                    }, {
+                      "name" : "population_multiply_cnt",
+                      "type" : "number",
+                      "directive": "input",
+                      "defval" : 100
+                    }, {
+                      "name" : "population_live_size",
+                      "type" : "number",
+                      "directive": "input",
+                      "defval" : 500
+                    }, {
+                      "name" : "expect_variable_cnt",
+                      "type" : "number",
+                      "directive": "input",
+                      "defval" : 300
+                    }, {
+                      "name" : "hybrid_percent",
+                      "type" : "number",
+                      "directive": "input",
+                      "defval" : 60
+                    }, {
+                      "name" : "mutation_percent",
+                      "type" : "number",
+                      "directive": "input",
+                      "defval" : 30
+                    }
+                ]
             }
         ]
     }, 
@@ -264,7 +326,10 @@
                 "defval" : "ZSCALE",
                 "options": [ 
                     {"label":"zscale mode", "value":"ZSCALE"},
-                    {"label":"woe mode", "value":"WOE"}
+                    {"label":"woe mode", "value":"WOE"},
+                    {"label":"weight woe mode", "value":"WEIGHT_WOE"},
+                    {"label":"hybrid mode", "value":"HYBRID"},
+                    {"label":"weight hybrid mode", "value":"WEIGHT_HYBRID"}
                 ]
             }, {
                 "name": "stdDevCutOff",
@@ -278,11 +343,6 @@
                 "defval": 0.8
             }, {
                 "name": "sampleNegOnly",
-                "type": "boolean",
-                "directive": "checkbox",
-                "defval" : false
-            }, {
-                "name": "isWeightNorm",
                 "type": "boolean",
                 "directive": "checkbox",
                 "defval" : false

@@ -1,5 +1,5 @@
 /*
- * Copyright [2012-2015] eBay Software Foundation
+ * Copyright [2012-2015] PayPal Software Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -170,15 +170,17 @@ public class UpdateBinningInfoReducer extends Reducer<IntWritable, BinningInfoWr
             sum = 0d;
             squaredSum = 0d;
             for(int i = 0; i < binPosRate.length; i++) {
-                if(Double.compare(max, binPosRate[i]) < 0) {
-                    max = binPosRate[i];
-                }
+                if(!Double.isNaN(binPosRate[i])) {
+                    if(Double.compare(max, binPosRate[i]) < 0) {
+                        max = binPosRate[i];
+                    }
 
-                if(Double.compare(min, binPosRate[i]) > 0) {
-                    min = binPosRate[i];
+                    if(Double.compare(min, binPosRate[i]) > 0) {
+                        min = binPosRate[i];
+                    }
+                    sum += binPosRate[i] * (binCountPos[i] + binCountNeg[i]);
+                    squaredSum += binPosRate[i] * binPosRate[i] * (binCountPos[i] + binCountNeg[i]);
                 }
-                sum += binPosRate[i] * (binCountPos[i] + binCountNeg[i]);
-                squaredSum += binPosRate[i] * binPosRate[i] * (binCountPos[i] + binCountNeg[i]);
             }
         } else {
             if(binBoundaryList.size() == 0) {
@@ -219,7 +221,7 @@ public class UpdateBinningInfoReducer extends Reducer<IntWritable, BinningInfoWr
         outputValue.set(sb.toString());
         context.write(NullWritable.get(), outputValue);
         sb.delete(0, sb.length());
-        LOG.info("Time:{}", (System.currentTimeMillis() - start));
+        LOG.debug("Time:{}", (System.currentTimeMillis() - start));
     }
 
     private double[] computePosRate(long[] binCountPos, long[] binCountNeg) {

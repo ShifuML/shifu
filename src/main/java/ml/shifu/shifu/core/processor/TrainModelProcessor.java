@@ -1,5 +1,5 @@
 /**
- * Copyright [2012-2014] eBay Software Foundation
+ * Copyright [2012-2014] PayPal Software Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -54,12 +54,14 @@ import ml.shifu.shifu.fs.ShifuFileUtils;
 import ml.shifu.shifu.util.Constants;
 import ml.shifu.shifu.util.Environment;
 import ml.shifu.shifu.util.HDFSUtils;
+import ml.shifu.shifu.util.HDPUtils;
 
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.collections.ListUtils;
 import org.apache.commons.compress.compressors.bzip2.BZip2CompressorInputStream;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang.StringUtils;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -169,7 +171,6 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
      * @throws IOException
      */
     private void runAkkaTrain(int numBags) throws IOException {
-
         File models = new File("models");
         FileUtils.deleteDirectory(models);
         FileUtils.forceMkdir(models);
@@ -261,6 +262,8 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
     protected void runDistributedTrain() throws IOException, InterruptedException, ClassNotFoundException {
         LOG.info("Started {} d-training.", isDryTrain ? "dry" : "");
 
+        Configuration conf = new Configuration();
+
         SourceType sourceType = super.getModelConfig().getDataSet().getSource();
 
         final List<String> args = new ArrayList<String>();
@@ -302,7 +305,14 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
             progressLogList.add(progressLogFile);
             localArgs.add(String.format(NNConstants.MAPREDUCE_PARAM_FORMAT, NNConstants.NN_PROGRESS_FILE,
                     progressLogFile));
-
+            String hdpVersion = HDPUtils.getHdpVersionForHDP224();
+            if(StringUtils.isNotBlank(hdpVersion)) {
+                localArgs.add(String.format(NNConstants.MAPREDUCE_PARAM_FORMAT, "hdp.version", hdpVersion));
+                HDPUtils.addFileToClassPath(HDPUtils.findContainingFile("hdfs-site.xml"), conf);
+                HDPUtils.addFileToClassPath(HDPUtils.findContainingFile("core-site.xml"), conf);
+                HDPUtils.addFileToClassPath(HDPUtils.findContainingFile("mapred-site.xml"), conf);
+                HDPUtils.addFileToClassPath(HDPUtils.findContainingFile("yarn-site.xml"), conf);
+            }
             if(isParallel) {
                 guaguaClient.addJob(localArgs.toArray(new String[0]));
             } else {
@@ -328,7 +338,7 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
 
         // copy temp model files
         copyTmpModelsToLocal(tmpModelsPath, sourceType);
-        LOG.info("Distributed trainning finished in {}ms.", System.currentTimeMillis() - start);
+        LOG.info("Distributed training finished in {}ms.", System.currentTimeMillis() - start);
     }
 
     private void checkContinuousTraining(FileSystem fileSystem, List<String> localArgs, Path modelPath)
@@ -517,10 +527,9 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
         // special tuning parameters for shifu, 0.99 means each iteation master wait for 99% workers and then can go to
         // next iteration.
         args.add(String.format(NNConstants.MAPREDUCE_PARAM_FORMAT, GuaguaConstants.GUAGUA_MIN_WORKERS_RATIO, 0.99));
-        // 20 seconds if waiting over 20, consider 99% workers
-        // these two can be overrided in shifuconfig
+        // 10 seconds if waiting over 10, consider 99% workers; these two can be overrided in shifuconfig
         args.add(String.format(NNConstants.MAPREDUCE_PARAM_FORMAT, GuaguaConstants.GUAGUA_MIN_WORKERS_TIMEOUT,
-                20 * 1000L));
+                10 * 1000L));
     }
 
     private void copyModelToLocal(String modelName, Path modelPath, SourceType sourceType) throws IOException {
@@ -561,6 +570,14 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
         jars.add(JarManager.findContainingJar(ZooKeeper.class));
         // netty-*.jar
         jars.add(JarManager.findContainingJar(ServerBootstrap.class));
+
+        String hdpVersion = HDPUtils.getHdpVersionForHDP224();
+        if(StringUtils.isNotBlank(hdpVersion)) {
+            jars.add(HDPUtils.findContainingFile("hdfs-site.xml"));
+            jars.add(HDPUtils.findContainingFile("core-site.xml"));
+            jars.add(HDPUtils.findContainingFile("mapred-site.xml"));
+            jars.add(HDPUtils.findContainingFile("yarn-site.xml"));
+        }
 
         args.add(StringUtils.join(jars, NNConstants.LIB_JAR_SEPARATOR));
     }
