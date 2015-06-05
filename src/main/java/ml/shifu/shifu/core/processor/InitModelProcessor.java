@@ -102,7 +102,7 @@ public class InitModelProcessor extends BasicModelProcessor implements Processor
             log.info("Automatically check {} variables to categorical type.", cateCount);
         }
         // save ColumnConfig list into file
-        saveColumnConfigList();
+        saveColumnConfigListAndColumnStats();
 
         clearUp(ModelStep.INIT);
         log.info("Step Finished: init with {} ms", (System.currentTimeMillis() - start));

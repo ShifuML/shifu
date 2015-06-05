@@ -45,6 +45,9 @@ public class ColumnStats {
     private Double weightedIv;
     private Double weightedWoe;
 
+    private Double skewness;
+    private Double kurtosis;
+
     /**
      * @return the weightedKs
      */
@@ -53,7 +56,8 @@ public class ColumnStats {
     }
 
     /**
-     * @param weightedKs the weightedKs to set
+     * @param weightedKs
+     *            the weightedKs to set
      */
     public void setWeightedKs(Double weightedKs) {
         this.weightedKs = weightedKs;
@@ -67,7 +71,8 @@ public class ColumnStats {
     }
 
     /**
-     * @param weightedIv the weightedIv to set
+     * @param weightedIv
+     *            the weightedIv to set
      */
     public void setWeightedIv(Double weightedIv) {
         this.weightedIv = weightedIv;
@@ -168,14 +173,16 @@ public class ColumnStats {
     }
 
     /**
-     * @param woe the woe to set
+     * @param woe
+     *            the woe to set
      */
     public void setWoe(Double woe) {
         this.woe = woe;
     }
 
     /**
-     * @param weightedWoe the weightedWoe to set
+     * @param weightedWoe
+     *            the weightedWoe to set
      */
     public void setWeightedWoe(Double weightedWoe) {
         this.weightedWoe = weightedWoe;
@@ -189,10 +196,39 @@ public class ColumnStats {
     }
 
     /**
-     * @param distinctCount the distinctCount to set
+     * @param distinctCount
+     *            the distinctCount to set
      */
     public void setDistinctCount(Long distinctCount) {
         this.distinctCount = distinctCount;
+    }
+
+    /**
+     * @return the skewness
+     */
+    public Double getSkewness() {
+        return skewness;
+    }
+
+    /**
+     * @param skewness the skewness to set
+     */
+    public void setSkewness(Double skewness) {
+        this.skewness = skewness;
+    }
+
+    /**
+     * @return the kurtosis
+     */
+    public Double getKurtosis() {
+        return kurtosis;
+    }
+
+    /**
+     * @param kurtosis the kurtosis to set
+     */
+    public void setKurtosis(Double kurtosis) {
+        this.kurtosis = kurtosis;
     }
 
 }

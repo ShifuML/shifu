@@ -29,6 +29,8 @@ public interface Constants {
     public static final String COLUMN_CONFIG_JSON_FILE_NAME = "ColumnConfig.json";
 
     public static final String MODEL_CONFIG_JSON_FILE_NAME = "ModelConfig.json";
+    
+    public static final String COLUMN_STATS_CSV_FILE_NAME = "ColumnStats.csv";
 
     public static final String MODEL_SETS = "ModelSets";
 

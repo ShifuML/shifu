@@ -93,7 +93,7 @@ public class PostTrainModelProcessor extends BasicModelProcessor implements Proc
 
         // Sync Down
         columnConfigList = updateColumnConfigWithBinAvgScore(columnConfigList);
-        saveColumnConfigList();
+        saveColumnConfigListAndColumnStats();
     }
 
     /**

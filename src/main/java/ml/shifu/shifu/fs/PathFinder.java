@@ -142,6 +142,13 @@ public class PathFinder {
     }
 
     /**
+     * Get the file path for column csv stats.
+     */
+    public String getLocalColumnStatsPath() {
+        return getPathBySourceType(Constants.COLUMN_STATS_CSV_FILE_NAME, SourceType.LOCAL);
+    }
+
+    /**
      * Get pre-traing stats path.
      * 
      * @return path of pre-training stats file

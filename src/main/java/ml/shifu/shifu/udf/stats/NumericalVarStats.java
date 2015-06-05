@@ -164,7 +164,8 @@ public class NumericalVarStats extends AbstractVarStats {
         columnConfig.setMissingCnt(missingValueCnt + invalidValueCnt);
         columnConfig.setTotalCount(databag.size());
         columnConfig.setMissingPercentage(((double) columnConfig.getMissingCount()) / columnConfig.getTotalCount());
-
+        columnConfig.getColumnStats().setSkewness(streamStatsCalculator.getSkewness());
+        columnConfig.getColumnStats().setKurtosis(streamStatsCalculator.getKurtosis());
         calculateBinPosRateAndAvgScore();
     }
 }
