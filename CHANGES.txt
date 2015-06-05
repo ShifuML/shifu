@@ -17,6 +17,8 @@
 Shifu Change Log
 
 Changes for Shifu-0.2.6
+    * https://github.com/ShifuML/shifu/issues/133: Add skewness and kurtosis stats
+    * https://github.com/ShifuML/shifu/issues/134: Add CSV ColumnConfig Format for ColumnConfig.json
     * https://github.com/ShifuML/shifu/issues/117: Add AUC Computation on Eval Step
     * https://github.com/ShifuML/shifu/issues/118: Add Shortcut Commands: 'norm', 'varsel'
     * https://github.com/ShifuML/shifu/issues/127: Support HDP 2.6.0.2.2.4.2-2
