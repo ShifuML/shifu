@@ -334,6 +334,11 @@ public class UpdateBinningInfoMapper extends Mapper<LongWritable, Text, IntWrita
                     }
                 }
 
+                // add logic the same as CalculateNewStatsUDF
+                if(Double.compare(douVal, modelConfig.getNumericalValueThreshold()) > 0) {
+                    isInvalidValue = true;
+                }
+
                 if(isInvalidValue || isMissingValue) {
                     binningInfoWritable.setMissingCount(binningInfoWritable.getMissingCount() + 1L);
                     if(modelConfig.getPosTags().contains(tag)) {
@@ -343,8 +348,8 @@ public class UpdateBinningInfoMapper extends Mapper<LongWritable, Text, IntWrita
                         binningInfoWritable.getBinCountNeg()[lastBinIndex] += 1L;
                         binningInfoWritable.getBinWeightNeg()[lastBinIndex] += weight;
                     }
-                    // For invalid or missing values, no need update sum, squaredSum, max, min ...
                 } else {
+                    // For invalid or missing values, no need update sum, squaredSum, max, min ...
                     int binNum = getBinNum(binningInfoWritable.getBinBoundaries(), units[i]);
                     if(binNum == -1) {
                         throw new RuntimeException("binNum should not be -1 to this step.");
@@ -358,7 +363,11 @@ public class UpdateBinningInfoMapper extends Mapper<LongWritable, Text, IntWrita
                     }
 
                     binningInfoWritable.setSum(binningInfoWritable.getSum() + douVal);
-                    binningInfoWritable.setSquaredSum(binningInfoWritable.getSquaredSum() + douVal * douVal);
+                    double squaredVal = douVal * douVal;
+                    binningInfoWritable.setSquaredSum(binningInfoWritable.getSquaredSum() + squaredVal);
+                    binningInfoWritable.setTripleSum(binningInfoWritable.getTripleSum() + squaredVal * douVal);
+                    binningInfoWritable.setQuarticSum(binningInfoWritable.getQuarticSum() + squaredVal * squaredVal);
+
                     if(Double.compare(binningInfoWritable.getMax(), douVal) < 0) {
                         binningInfoWritable.setMax(douVal);
                     }

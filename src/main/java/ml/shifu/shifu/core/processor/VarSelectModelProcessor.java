@@ -119,7 +119,7 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
 
             this.columnConfigList = selector.selectByFilter();
             try {
-                this.saveColumnConfigList();
+                this.saveColumnConfigListAndColumnStats();
             } catch (ShifuException e) {
                 throw new ShifuException(ShifuErrorCode.ERROR_WRITE_COLCONFIG, e);
             }
@@ -234,7 +234,7 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
                 this.columnConfigList.get(id).setFinalSelect(Boolean.TRUE);
             }
 
-            super.saveColumnConfigList();
+            super.saveColumnConfigListAndColumnStats();
 
         } catch (IOException e) {
             e.printStackTrace();
@@ -594,7 +594,7 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
             }
         }
 
-        this.saveColumnConfigList();
+        this.saveColumnConfigListAndColumnStats();
         this.syncDataToHdfs(this.modelConfig.getDataSet().getSource());
     }
 
@@ -629,7 +629,7 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
         if(trainer instanceof NNTrainer) {
             selector.selectByWrapper((NNTrainer) trainer);
             try {
-                this.saveColumnConfigList();
+                this.saveColumnConfigListAndColumnStats();
             } catch (ShifuException e) {
                 throw new ShifuException(ShifuErrorCode.ERROR_WRITE_COLCONFIG, e);
             }

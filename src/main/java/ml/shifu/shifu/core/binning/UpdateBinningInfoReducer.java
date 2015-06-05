@@ -104,6 +104,9 @@ public class UpdateBinningInfoReducer extends Reducer<IntWritable, BinningInfoWr
         long start = System.currentTimeMillis();
         double sum = 0d;
         double squaredSum = 0d;
+        double tripleSum = 0d;
+        double quarticSum = 0d;
+
         long count = 0L, missingCount = 0L;
         double min = Double.MAX_VALUE, max = Double.MIN_VALUE;
         List<Double> binBoundaryList = null;
@@ -135,8 +138,12 @@ public class UpdateBinningInfoReducer extends Reducer<IntWritable, BinningInfoWr
             }
             count += info.getTotalCount();
             missingCount += info.getMissingCount();
+            // for numeric, such sums are OK, for categorical, such values are all 0, should be updated by using
+            // binCountPos and binCountNeg
             sum += info.getSum();
             squaredSum += info.getSquaredSum();
+            tripleSum += info.getTripleSum();
+            quarticSum += info.getQuarticSum();
             if(Double.compare(max, info.getMax()) < 0) {
                 max = info.getMax();
             }
@@ -164,7 +171,7 @@ public class UpdateBinningInfoReducer extends Reducer<IntWritable, BinningInfoWr
             }
             binBounString = Base64Utils.base64Encode("["
                     + StringUtils.join(binCategories, CalculateStatsUDF.CATEGORY_VAL_SEPARATOR) + "]");
-            // recompute such value for categorial variables
+            // recompute such value for categorical variables
             min = Double.MAX_VALUE;
             max = Double.MIN_VALUE;
             sum = 0d;
@@ -178,8 +185,12 @@ public class UpdateBinningInfoReducer extends Reducer<IntWritable, BinningInfoWr
                     if(Double.compare(min, binPosRate[i]) > 0) {
                         min = binPosRate[i];
                     }
-                    sum += binPosRate[i] * (binCountPos[i] + binCountNeg[i]);
-                    squaredSum += binPosRate[i] * binPosRate[i] * (binCountPos[i] + binCountNeg[i]);
+                    long binCount = binCountPos[i] + binCountNeg[i];
+                    sum += binPosRate[i] * binCount;
+                    double squaredVal = binPosRate[i] * binPosRate[i];
+                    squaredSum += squaredVal * binCount;
+                    tripleSum += squaredVal * binPosRate[i] * binCount;
+                    quarticSum += squaredVal * squaredVal * binCount;
                 }
             }
         } else {
@@ -194,6 +205,15 @@ public class UpdateBinningInfoReducer extends Reducer<IntWritable, BinningInfoWr
         ColumnMetrics columnCountMetrics = ColumnStatsCalculator.calculateColumnMetrics(binCountNeg, binCountPos);
         ColumnMetrics columnWeightMetrics = ColumnStatsCalculator.calculateColumnMetrics(binWeightNeg, binWeightPos);
 
+        // TODO & FIXME do we need validCount(totalCount - missingValueCount) for mean and stddev???
+        double mean = sum / count;
+        double stdDev = Math.sqrt(Math.abs((squaredSum - (sum * sum) / count + EPS) / (count - 1)));
+        double aStdDev = Math.sqrt(Math.abs((squaredSum - (sum * sum) / count + EPS) / count));
+
+        double skewness = ColumnStatsCalculator.computeSkewness(count, mean, aStdDev, sum, squaredSum, tripleSum);
+        double kurtosis = ColumnStatsCalculator.computeKurtosis(count, mean, aStdDev, sum, squaredSum, tripleSum,
+                quarticSum);
+
         sb.append(key.get()).append(Constants.DEFAULT_DELIMITER).append(binBounString)
                 .append(Constants.DEFAULT_DELIMITER).append(Arrays.toString(binCountNeg))
                 .append(Constants.DEFAULT_DELIMITER).append(Arrays.toString(binCountPos))
@@ -202,21 +222,21 @@ public class UpdateBinningInfoReducer extends Reducer<IntWritable, BinningInfoWr
                 .append(Constants.DEFAULT_DELIMITER).append(df.format(columnCountMetrics.getKs()))
                 .append(Constants.DEFAULT_DELIMITER).append(df.format(columnWeightMetrics.getIv()))
                 .append(Constants.DEFAULT_DELIMITER).append(df.format(max)).append(Constants.DEFAULT_DELIMITER)
-                .append(df.format(min)).append(Constants.DEFAULT_DELIMITER).append(df.format(sum / count))
-                .append(Constants.DEFAULT_DELIMITER)
-                .append(df.format(Math.sqrt(Math.abs((squaredSum - (sum * sum) / count + EPS) / (count - 1)))))
-                .append(Constants.DEFAULT_DELIMITER).append(columnConfig.isCategorical() ? "C" : "N")
-                .append(Constants.DEFAULT_DELIMITER).append(df.format(sum / count)).append(Constants.DEFAULT_DELIMITER)
-                .append(missingCount).append(Constants.DEFAULT_DELIMITER).append(count)
-                .append(Constants.DEFAULT_DELIMITER).append(missingCount * 1.0d / count)
-                .append(Constants.DEFAULT_DELIMITER).append(Arrays.toString(binWeightNeg))
-                .append(Constants.DEFAULT_DELIMITER).append(Arrays.toString(binWeightPos))
-                .append(Constants.DEFAULT_DELIMITER).append(columnCountMetrics.getWoe())
-                .append(Constants.DEFAULT_DELIMITER).append(columnWeightMetrics.getWoe())
-                .append(Constants.DEFAULT_DELIMITER).append(columnWeightMetrics.getKs())
-                .append(Constants.DEFAULT_DELIMITER).append(columnCountMetrics.getIv())
-                .append(Constants.DEFAULT_DELIMITER).append(columnCountMetrics.getBinningWoe().toString())
-                .append(Constants.DEFAULT_DELIMITER).append(columnWeightMetrics.getBinningWoe().toString());
+                .append(df.format(min)).append(Constants.DEFAULT_DELIMITER).append(df.format(mean))
+                .append(Constants.DEFAULT_DELIMITER).append(df.format(stdDev)).append(Constants.DEFAULT_DELIMITER)
+                .append(columnConfig.isCategorical() ? "C" : "N").append(Constants.DEFAULT_DELIMITER)
+                .append(df.format(mean)).append(Constants.DEFAULT_DELIMITER).append(missingCount)
+                .append(Constants.DEFAULT_DELIMITER).append(count).append(Constants.DEFAULT_DELIMITER)
+                .append(missingCount * 1.0d / count).append(Constants.DEFAULT_DELIMITER)
+                .append(Arrays.toString(binWeightNeg)).append(Constants.DEFAULT_DELIMITER)
+                .append(Arrays.toString(binWeightPos)).append(Constants.DEFAULT_DELIMITER)
+                .append(columnCountMetrics.getWoe()).append(Constants.DEFAULT_DELIMITER)
+                .append(columnWeightMetrics.getWoe()).append(Constants.DEFAULT_DELIMITER)
+                .append(columnWeightMetrics.getKs()).append(Constants.DEFAULT_DELIMITER)
+                .append(columnCountMetrics.getIv()).append(Constants.DEFAULT_DELIMITER)
+                .append(columnCountMetrics.getBinningWoe().toString()).append(Constants.DEFAULT_DELIMITER)
+                .append(columnWeightMetrics.getBinningWoe().toString()).append(Constants.DEFAULT_DELIMITER)
+                .append(skewness).append(Constants.DEFAULT_DELIMITER).append(kurtosis);
 
         outputValue.set(sb.toString());
         context.write(NullWritable.get(), outputValue);
