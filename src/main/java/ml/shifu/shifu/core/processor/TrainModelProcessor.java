@@ -39,6 +39,7 @@ import ml.shifu.shifu.core.alg.NNTrainer;
 import ml.shifu.shifu.core.alg.SVMTrainer;
 import ml.shifu.shifu.core.dtrain.LogisticRegressionContants;
 import ml.shifu.shifu.core.dtrain.LogisticRegressionMaster;
+import ml.shifu.shifu.core.dtrain.LogisticRegressionOutput;
 import ml.shifu.shifu.core.dtrain.LogisticRegressionParams;
 import ml.shifu.shifu.core.dtrain.LogisticRegressionWorker;
 import ml.shifu.shifu.core.dtrain.NNConstants;
@@ -468,6 +469,10 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
 
             args.add("-wr");
             args.add(LogisticRegressionParams.class.getName());
+            args.add(String.format(NNConstants.MAPREDUCE_PARAM_FORMAT, GuaguaConstants.GUAGUA_MASTER_INTERCEPTERS,
+            		LogisticRegressionOutput.class.getName()));
+            args.add(String.format(NNConstants.MAPREDUCE_PARAM_FORMAT, "lr.model.output",
+            		"modeloutput"));
     	}
     	else{
         args.add("-mr");
@@ -475,12 +480,12 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
 
         args.add("-wr");
         args.add(NNParams.class.getName());
+        args.add(String.format(NNConstants.MAPREDUCE_PARAM_FORMAT, GuaguaConstants.GUAGUA_MASTER_INTERCEPTERS,
+                NNOutput.class.getName()));
         }
 
         args.add(String.format(NNConstants.MAPREDUCE_PARAM_FORMAT, NNConstants.MAPRED_JOB_QUEUE_NAME,
                 Environment.getProperty(Environment.HADOOP_JOB_QUEUE, Constants.DEFAULT_JOB_QUEUE)));
-        args.add(String.format(NNConstants.MAPREDUCE_PARAM_FORMAT, GuaguaConstants.GUAGUA_MASTER_INTERCEPTERS,
-                NNOutput.class.getName()));
         args.add(String.format(
                 NNConstants.MAPREDUCE_PARAM_FORMAT,
                 NNConstants.SHIFU_NN_MODEL_CONFIG,

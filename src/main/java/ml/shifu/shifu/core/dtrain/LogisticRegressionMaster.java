@@ -15,12 +15,18 @@
  */
 package ml.shifu.shifu.core.dtrain;
 
+import java.io.IOException;
 import java.util.Arrays;
+import java.util.List;
+import java.util.Properties;
 import java.util.Random;
 
 import ml.shifu.guagua.master.MasterComputable;
 import ml.shifu.guagua.master.MasterContext;
 import ml.shifu.guagua.util.NumberFormatUtils;
+import ml.shifu.shifu.container.obj.ColumnConfig;
+import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
+import ml.shifu.shifu.util.CommonUtils;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -54,24 +60,35 @@ public class LogisticRegressionMaster implements MasterComputable<LogisticRegres
     private double[] weights;
 
     private double learnRate;
+    
+    /**
+     * Column Config list read from HDFS
+     */
+    private List<ColumnConfig> columnConfigList;
 
     private void init(MasterContext<LogisticRegressionParams, LogisticRegressionParams> context) {
-        this.inputNum = NumberFormatUtils.getInt(LogisticRegressionContants.LR_INPUT_NUM,
-                LogisticRegressionContants.LR_INPUT_DEFAULT_NUM);
+//        this.inputNum = NumberFormatUtils.getInt(LogisticRegressionContants.LR_INPUT_NUM,
+//                LogisticRegressionContants.LR_INPUT_DEFAULT_NUM);
         this.learnRate = NumberFormatUtils.getDouble(LogisticRegressionContants.LR_LEARNING_RATE,
                 LogisticRegressionContants.LR_LEARNING_DEFAULT_RATE);
+        
+        loadConfigFiles(context.getProps());
+        //this.inputNum = NumberFormatUtils.getInt(LogisticRegressionContants.LR_INPUT_NUM,
+          //      LogisticRegressionContants.LR_INPUT_DEFAULT_NUM);
+        int[] inputOutputIndex = NNUtils.getInputOutputCandidateCounts(this.columnConfigList);
+        this.inputNum = inputOutputIndex[0] == 0 ? inputOutputIndex[2] : inputOutputIndex[0];
     }
 
     @Override
     public LogisticRegressionParams compute(MasterContext<LogisticRegressionParams, LogisticRegressionParams> context) {
         if(context.isFirstIteration()) {
             init(context);
-            weights = new double[this.inputNum + 1];
+            weights = new double[this.inputNum];
             for(int i = 0; i < weights.length; i++) {
                 weights[i] = RANDOM.nextDouble();
             }
         } else {
-            double[] gradients = new double[this.inputNum + 1];
+            double[] gradients = new double[this.inputNum];
             double sumError = 0.0d;
             int size = 0;
             for(LogisticRegressionParams param: context.getWorkerResults()) {
@@ -90,6 +107,20 @@ public class LogisticRegressionMaster implements MasterComputable<LogisticRegres
             LOG.info("Iteration {} with error {}", context.getCurrentIteration(), sumError / size);
         }
         return new LogisticRegressionParams(weights);
+    }
+    
+    private void loadConfigFiles(final Properties props) {
+        try {
+            SourceType sourceType = SourceType.valueOf(props.getProperty(NNConstants.NN_MODELSET_SOURCE_TYPE,
+                    SourceType.HDFS.toString()));
+//            this.modelConfig = CommonUtils.loadModelConfig(props.getProperty(NNConstants.SHIFU_NN_MODEL_CONFIG),
+//                    sourceType);
+            this.columnConfigList = CommonUtils.loadColumnConfigList(
+                    props.getProperty(NNConstants.SHIFU_NN_COLUMN_CONFIG), sourceType);
+
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
     }
 
 }
