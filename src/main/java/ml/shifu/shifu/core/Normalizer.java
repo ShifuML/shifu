@@ -230,21 +230,64 @@ public class Normalizer {
                 return hybridNormalize(config, raw, cutoff, false);
             case WEIGHT_HYBRID:
                 return hybridNormalize(config, raw, cutoff, true);
+            case OLD_ZSCALE:
+                return oldZScoreNormalize(config, raw, cutoff);
             case ZSCALE:
             default:
                 return zScoreNormalize(config, raw, cutoff);
+        }
+    }
+    
+    /**
+     * This is the old zscore computation method copied form Shifu 0.2.5 release.
+     * Though its original method name is 'getZScore', we change it to 'oldZScoreNormalize' for recognition.
+     * We remain this old method to support {@code OLD_ZSCALE} normalization type which used comparing to
+     * the new zscore computation method 'zScoreNormalize'.
+     * 
+     * <p>
+     * Actually, these two zscore methods (old and new) both return a zero score for missing value.
+     * </p>
+     *
+     * @param config - @ColumnConfig info
+     * @param raw    - input column value
+     * @param cutoff
+     * @return - normalized value for old zscore method.
+     */
+    private static Double oldZScoreNormalize(ColumnConfig config, String raw, Double cutoff) {
+        Double stdDevCutOff;
+        if (cutoff != null && !cutoff.isInfinite() && !cutoff.isNaN()) {
+            stdDevCutOff = cutoff;
+        } else {
+            stdDevCutOff = STD_DEV_CUTOFF;
+        }
+
+        if (config.isCategorical()) {
+            int index = config.getBinCategory().indexOf(raw);
+            if (index == -1) {
+                return 0.0;
+            } else {
+                return computeZScore(config.getBinPosRate().get(index), config.getMean(), config.getStdDev(), stdDevCutOff);
+            }
+        } else {
+            double value = 0.0;
+            try {
+                value = Double.parseDouble(raw);
+            } catch (Exception e) {
+                log.debug("Not decimal format " + raw + ", using default!");
+                value = ((config.getMean() == null) ? 0.0 : config.getMean());
+            }
+
+            return computeZScore(value, config.getMean(), config.getStdDev(), stdDevCutOff);
         }
     }
 
     /**
      * Compute the normalized data for @NormalizeMethod.Zscore
      * 
-     * @param config
-     *            - @ColumnConfig info
-     * @param raw
-     *            - input column value
-     * @param cutoff
-     *            - standard deviation cut off
+     * @param config @ColumnConfig info
+     * @param raw input column value
+     * @param cutoff standard deviation cut off
+     * 
      * @return - normalized value for ZScore method.
      */
     private static Double zScoreNormalize(ColumnConfig config, String raw, Double cutoff) {
@@ -262,10 +305,9 @@ public class Normalizer {
     /**
      * Parse raw value based on ColumnConfig.
      * 
-     * @param config
-     *            - @ColumnConfig info
-     * @param raw
-     *            - input column value
+     * @param config @ColumnConfig info
+     * @param raw input column value
+     * 
      * @return parsed raw value. For categorical type, return BinPosRate. For numerical type, return
      *         corresponding double value. For missing data, return default value using
      *         {@link Normalizer#defaultMissingValue}.
@@ -295,9 +337,10 @@ public class Normalizer {
     /**
      * Get the default value for missing data.
      * 
-     * @param config
-     *            - @ColumnConfig info
-     * @return - default value for missing data. Now simply return Mean value. If mean is null then return 0.
+     * @param config @ColumnConfig info
+     * @param isOldZScore whether use old zscore which take zero as the default missing value
+     * 
+     * @return - default value for missing data. If isOldZScore is true, return zero else return mean.
      */
     private static double defaultMissingValue(ColumnConfig config) {
         return config.getMean() == null ? 0 : config.getMean().doubleValue();
