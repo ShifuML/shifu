@@ -230,6 +230,10 @@ public class Normalizer {
                 return hybridNormalize(config, raw, cutoff, false);
             case WEIGHT_HYBRID:
                 return hybridNormalize(config, raw, cutoff, true);
+            case WOE_ZSCORE:
+                return woeZScoreNormalize(config, raw, cutoff, false);
+            case WEIGHT_WOE_ZSCORE:
+                return woeZScoreNormalize(config, raw, cutoff, true);
             case ZSCALE:
             default:
                 return zScoreNormalize(config, raw, cutoff);
@@ -248,13 +252,7 @@ public class Normalizer {
      * @return - normalized value for ZScore method.
      */
     private static Double zScoreNormalize(ColumnConfig config, String raw, Double cutoff) {
-        Double stdDevCutOff;
-        if(cutoff != null && !cutoff.isInfinite() && !cutoff.isNaN()) {
-            stdDevCutOff = cutoff;
-        } else {
-            stdDevCutOff = STD_DEV_CUTOFF;
-        }
-
+        double stdDevCutOff = checkCutOff(cutoff);
         double value = parseRawValue(config, raw);
         return computeZScore(value, config.getMean(), config.getStdDev(), stdDevCutOff);
     }
@@ -300,23 +298,21 @@ public class Normalizer {
      * @return - default value for missing data. Now simply return Mean value. If mean is null then return 0.
      */
     private static double defaultMissingValue(ColumnConfig config) {
+        // TODO return 0 for mean == null is correct or reasonable?
         return config.getMean() == null ? 0 : config.getMean().doubleValue();
     }
 
     /**
      * Compute the normalized data for Woe Score.
      * 
-     * @param config
-     *            - @ColumnConfig info
-     * @param raw
-     *            - input column value
-     * @param isWeightedNorm
-     *            - if use weighted woe
-     * @return - normalized value for Woe method. For missing value, we return the value in last bin. Since the last
+     * @param config @ColumnConfig info
+     * @param raw input column value
+     * @param isWeightedNorm if use weighted woe
+     * @return normalized value for Woe method. For missing value, we return the value in last bin. Since the last
      *         bin refers to the missing value bin.
      */
-    private static Double woeNormalize(ColumnConfig config, String raw, boolean isWeightNorm) {
-        List<Double> woeBins = isWeightNorm ? config.getBinWeightedWoe() : config.getBinCountWoe();
+    private static Double woeNormalize(ColumnConfig config, String raw, boolean isWeightedNorm) {
+        List<Double> woeBins = isWeightedNorm ? config.getBinWeightedWoe() : config.getBinCountWoe();
         int binIndex = CommonUtils.getBinNum(config, raw);
         if(binIndex == -1) {
             // The last bin in woeBins is the miss value bin.
@@ -325,20 +321,33 @@ public class Normalizer {
             return woeBins.get(binIndex);
         }
     }
+    
+    
+    /**
+     * Compute the normalized value for woe zscore normalize.Take woe as variable value and using zscore normalizing 
+     * to compute zscore of woe.
+     * 
+     * @param config @ColumnConfig info
+     * @param raw input column value
+     * @param cutoff standard deviation cut off
+     * @param isWeightedNorm if use weighted woe
+     * @return normalized value for woe zscore method.
+     */
+    private static Double woeZScoreNormalize(ColumnConfig config, String raw, Double cutoff, boolean isWeightedNorm) {
+        double stdDevCutOff = checkCutOff(cutoff);
+        double woe = woeNormalize(config, raw, isWeightedNorm);
+        return computeZScore(woe, config.getMean(), config.getStdDev(), stdDevCutOff);
+    }
 
     /**
      * Compute the normalized data for hbrid normalize. Use zscore noramlize for numerical data. Use woe normalize
      * for categorical data while use weight woe normalize when isWeightedNorm is true.
      * 
-     * @param config
-     *            - @ColumnConfig info
-     * @param raw
-     *            - input column value
-     * @param cutoff
-     *            - standard deviation cut off
-     * @param isWeightedNorm
-     *            - if use weighted woe
-     * @return - normalized value for hybrid method.
+     * @param config @ColumnConfig info
+     * @param raw input column value
+     * @param cutoff standard deviation cut off
+     * @param isWeightedNorm if use weighted woe
+     * @return normalized value for hybrid method.
      */
     private static Double hybridNormalize(ColumnConfig config, String raw, Double cutoff, boolean isWeightedNorm) {
         Double normValue;
@@ -351,6 +360,24 @@ public class Normalizer {
         }
 
         return normValue;
+    }
+    
+    
+    /**
+     * Check specified standard deviation cutoff and return the correct value.
+     * 
+     * @param cutoff specified standard deviation cutoff
+     * @return If cutoff is valid then return it, else return {@link Normalizer#STD_DEV_CUTOFF}
+     */
+    private static double checkCutOff(Double cutoff) {
+        double stdDevCutOff;
+        if(cutoff != null && !cutoff.isInfinite() && !cutoff.isNaN()) {
+            stdDevCutOff = cutoff;
+        } else {
+            stdDevCutOff = STD_DEV_CUTOFF;
+        }
+        
+        return stdDevCutOff;
     }
 
     /**
