@@ -210,6 +210,10 @@ public class Normalizer {
      * Normalize the raw data, according the ColumnConfig infomation and normalization type.
      * Currently, the cutoff value doesn't affect the computation of WOE or WEIGHT_WOE type.
      * 
+     * <p>
+     * Noticd: currently OLD_ZSCALE and ZSCALE is implemented with the same process method.
+     * </p>
+     * 
      * @param config
      *            - ColumnConfig to normalize data
      * @param raw
@@ -231,53 +235,10 @@ public class Normalizer {
             case WEIGHT_HYBRID:
                 return hybridNormalize(config, raw, cutoff, true);
             case OLD_ZSCALE:
-                return oldZScoreNormalize(config, raw, cutoff);
+                return zScoreNormalize(config, raw, cutoff);
             case ZSCALE:
             default:
                 return zScoreNormalize(config, raw, cutoff);
-        }
-    }
-    
-    /**
-     * This is the old zscore computation method copied form Shifu 0.2.5 release.
-     * Though its original method name is 'getZScore', we change it to 'oldZScoreNormalize' for recognition.
-     * We remain this old method to support {@code OLD_ZSCALE} normalization type which used comparing to
-     * the new zscore computation method 'zScoreNormalize'.
-     * 
-     * <p>
-     * Actually, these two zscore methods (old and new) both return a zero score for missing value.
-     * </p>
-     *
-     * @param config - @ColumnConfig info
-     * @param raw    - input column value
-     * @param cutoff
-     * @return - normalized value for old zscore method.
-     */
-    private static Double oldZScoreNormalize(ColumnConfig config, String raw, Double cutoff) {
-        Double stdDevCutOff;
-        if (cutoff != null && !cutoff.isInfinite() && !cutoff.isNaN()) {
-            stdDevCutOff = cutoff;
-        } else {
-            stdDevCutOff = STD_DEV_CUTOFF;
-        }
-
-        if (config.isCategorical()) {
-            int index = config.getBinCategory().indexOf(raw);
-            if (index == -1) {
-                return 0.0;
-            } else {
-                return computeZScore(config.getBinPosRate().get(index), config.getMean(), config.getStdDev(), stdDevCutOff);
-            }
-        } else {
-            double value = 0.0;
-            try {
-                value = Double.parseDouble(raw);
-            } catch (Exception e) {
-                log.debug("Not decimal format " + raw + ", using default!");
-                value = ((config.getMean() == null) ? 0.0 : config.getMean());
-            }
-
-            return computeZScore(value, config.getMean(), config.getStdDev(), stdDevCutOff);
         }
     }
 
