@@ -338,9 +338,8 @@ public class Normalizer {
      * Get the default value for missing data.
      * 
      * @param config @ColumnConfig info
-     * @param isOldZScore whether use old zscore which take zero as the default missing value
      * 
-     * @return - default value for missing data. If isOldZScore is true, return zero else return mean.
+     * @return - default value for missing data. Now simply return Mean value. If mean is null then return 0.
      */
     private static double defaultMissingValue(ColumnConfig config) {
         return config.getMean() == null ? 0 : config.getMean().doubleValue();
