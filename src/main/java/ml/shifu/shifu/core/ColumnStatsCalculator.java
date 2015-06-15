@@ -163,6 +163,25 @@ public final class ColumnStatsCalculator {
         return new ColumnMetrics(ks * 100, iv, woe, binningWoe);
     }
 
+    /**
+     * From link {@literal <a href="http://www.itl.nist.gov/div898/handbook/eda/section3/eda35b.htm">Kurtosis</a>}
+     */
+    public static double computeKurtosis(long count, double mean, double stdDev, double sum, double squaredSum,
+            double tripleSum, double quarticSum) {
+        return (quarticSum - 4 * tripleSum * mean + 6 * squaredSum * mean * mean - 4 * sum * mean * mean * mean + mean
+                * mean * mean * mean)
+                / (count * stdDev * stdDev * stdDev * stdDev);
+    }
+
+    /**
+     * From link {@literal <a href="http://www.itl.nist.gov/div898/handbook/eda/section3/eda35b.htm">Skewness</a>}
+     */
+    public static double computeSkewness(long count, double mean, double stdDev, double sum, double squaredSum,
+            double tripleSum) {
+        return (tripleSum - 3 * squaredSum * mean + 3 * mean * mean * sum - 3 * mean * mean * mean)
+                / (count * stdDev * stdDev * stdDev);
+    }
+
     public static class ColumnMetrics {
 
         public ColumnMetrics(double ks, double iv, double woe, List<Double> binningWoe) {

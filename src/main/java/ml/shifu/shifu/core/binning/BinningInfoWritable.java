@@ -54,6 +54,10 @@ public class BinningInfoWritable implements Writable {
 
     private double squaredSum = 0.0d;
 
+    private double tripleSum = 0.0d;
+
+    private double quarticSum = 0.0d;
+
     private long missingCount = 0L;
 
     private long totalCount = 0L;
@@ -277,6 +281,8 @@ public class BinningInfoWritable implements Writable {
         out.writeDouble(this.min);
         out.writeDouble(this.sum);
         out.writeDouble(this.squaredSum);
+        out.writeDouble(this.tripleSum);
+        out.writeDouble(this.quarticSum);
 
         out.writeLong(this.missingCount);
         out.writeLong(this.totalCount);
@@ -327,6 +333,8 @@ public class BinningInfoWritable implements Writable {
         this.min = in.readDouble();
         this.sum = in.readDouble();
         this.squaredSum = in.readDouble();
+        this.tripleSum = in.readDouble();
+        this.quarticSum = in.readDouble();
 
         this.missingCount = in.readLong();
         this.totalCount = in.readLong();
@@ -375,6 +383,36 @@ public class BinningInfoWritable implements Writable {
         }
     }
 
+    /**
+     * @return the tripleSum
+     */
+    public double getTripleSum() {
+        return tripleSum;
+    }
+
+    /**
+     * @param tripleSum
+     *            the tripleSum to set
+     */
+    public void setTripleSum(double tripleSum) {
+        this.tripleSum = tripleSum;
+    }
+
+    /**
+     * @return the quarticSum
+     */
+    public double getQuarticSum() {
+        return quarticSum;
+    }
+
+    /**
+     * @param quarticSum
+     *            the quarticSum to set
+     */
+    public void setQuarticSum(double quarticSum) {
+        this.quarticSum = quarticSum;
+    }
+
     /*
      * (non-Javadoc)
      * 
@@ -386,7 +424,8 @@ public class BinningInfoWritable implements Writable {
                 + binBoundaries + ", binCategories=" + binCategories + ", binCountPos=" + Arrays.toString(binCountPos)
                 + ", binCountNeg=" + Arrays.toString(binCountNeg) + ", binWeightPos=" + Arrays.toString(binWeightPos)
                 + ", binWeightNeg=" + Arrays.toString(binWeightNeg) + ", min=" + min + ", max=" + max + ", sum=" + sum
-                + ", squaredSum=" + squaredSum + ", missingCount=" + missingCount + ", totalCount=" + totalCount + "]";
+                + ", squaredSum=" + squaredSum + ", tripleSum=" + tripleSum + ", quarticSum=" + quarticSum
+                + ", missingCount=" + missingCount + ", totalCount=" + totalCount + "]";
     }
 
 }

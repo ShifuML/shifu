@@ -24,6 +24,7 @@ import java.util.Map;
 
 import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.container.obj.ModelConfig;
+import ml.shifu.shifu.core.ColumnStatsCalculator;
 import ml.shifu.shifu.udf.CalculateStatsUDF;
 
 import org.apache.commons.lang.StringUtils;
@@ -169,12 +170,10 @@ public class CategoricalVarStats extends AbstractVarStats {
         columnConfig.setMissingCnt(missingValueCnt + invalidValueCnt);
         columnConfig.setTotalCount(databag.size());
         columnConfig.setMissingPercentage(((double) columnConfig.getMissingCount()) / columnConfig.getTotalCount());
+        columnConfig.getColumnStats().setSkewness(streamStatsCalculator.getSkewness());
+        columnConfig.getColumnStats().setKurtosis(streamStatsCalculator.getKurtosis());
     }
 
-    /**
-     * @param val
-     * @return
-     */
     private int quickLocateCategorialBin(String val) {
         Integer binNum = categoricalBinMap.get(val);
         return ((binNum == null) ? -1 : binNum);
