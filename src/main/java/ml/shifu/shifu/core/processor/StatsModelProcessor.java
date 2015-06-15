@@ -182,7 +182,7 @@ public class StatsModelProcessor extends BasicModelProcessor implements Processo
         // update column config
         updateColumnConfigWithPreTrainingStats();
         // save it to local/hdfs
-        saveColumnConfigList();
+        saveColumnConfigListAndColumnStats();
     }
 
     // GuaguaOptionsParser doesn't to support *.jar currently.
@@ -336,7 +336,7 @@ public class StatsModelProcessor extends BasicModelProcessor implements Processo
                 continue;
             }
 
-            if(raw.length != 25) {
+            if(raw.length < 25) {
                 log.info("The stats data has " + raw.length + " fields.");
                 log.info("The stats data is - " + Arrays.toString(raw));
             }
@@ -385,6 +385,12 @@ public class StatsModelProcessor extends BasicModelProcessor implements Processo
                 config.getColumnStats().setWeightedIv(parseDouble(raw[22]));
                 config.getColumnBinning().setBinCountWoe(CommonUtils.stringToDoubleList(raw[23]));
                 config.getColumnBinning().setBinWeightedWoe(CommonUtils.stringToDoubleList(raw[24]));
+                if(raw.length >= 26) {
+                    config.getColumnStats().setSkewness(parseDouble(raw[25]));
+                }
+                if(raw.length >= 27) {
+                    config.getColumnStats().setKurtosis(parseDouble(raw[26]));
+                }
             } catch (Exception e) {
                 log.error(String.format("Fail to process following column : %s name: %s error: %s", columnNum,
                         this.columnConfigList.get(columnNum).getColumnName(), e.getMessage()), e);

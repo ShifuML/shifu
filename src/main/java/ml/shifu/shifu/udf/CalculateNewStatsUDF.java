@@ -143,6 +143,8 @@ public class CalculateNewStatsUDF extends AbstractTrainerUDF<Tuple> {
 
         tuple.append(columnCountMetrics.getBinningWoe().toString());
         tuple.append(columnWeightMetrics.getBinningWoe().toString());
+        tuple.append(columnConfig.getColumnStats().getSkewness());
+        tuple.append(columnConfig.getColumnStats().getKurtosis());
 
         return tuple;
     }
@@ -176,7 +178,8 @@ public class CalculateNewStatsUDF extends AbstractTrainerUDF<Tuple> {
             tupleSchema.add(new FieldSchema("weightedIv", DataType.CHARARRAY));
             tupleSchema.add(new FieldSchema("binWoe", DataType.CHARARRAY));
             tupleSchema.add(new FieldSchema("binWeightedWoe", DataType.CHARARRAY));
-
+            tupleSchema.add(new FieldSchema("skewness", DataType.CHARARRAY));
+            tupleSchema.add(new FieldSchema("kurtosis", DataType.CHARARRAY));
             return new Schema(new Schema.FieldSchema("ColumnStatistics", tupleSchema, DataType.TUPLE));
         } catch (IOException e) {
             log.error("Error in outputSchema", e);
