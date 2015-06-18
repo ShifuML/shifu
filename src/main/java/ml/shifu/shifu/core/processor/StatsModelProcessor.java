@@ -220,6 +220,9 @@ public class StatsModelProcessor extends BasicModelProcessor implements Processo
         // add jars to hadoop mapper and reducer
         new GenericOptionsParser(conf, new String[] { "-libjars", addRuntimeJars(), "-files", filePath });
 
+        conf.set(Constants.SHIFU_STATS_EXLCUDE_MISSING,
+                Environment.getProperty(Constants.SHIFU_STATS_EXLCUDE_MISSING, "true"));
+
         conf.setBoolean(GuaguaMapReduceConstants.MAPRED_MAP_TASKS_SPECULATIVE_EXECUTION, true);
         conf.setBoolean(GuaguaMapReduceConstants.MAPRED_REDUCE_TASKS_SPECULATIVE_EXECUTION, true);
         conf.set(

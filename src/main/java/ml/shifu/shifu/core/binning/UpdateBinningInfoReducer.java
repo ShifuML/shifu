@@ -75,6 +75,8 @@ public class UpdateBinningInfoReducer extends Reducer<IntWritable, BinningInfoWr
      */
     private DecimalFormat df = new DecimalFormat("##.######");
 
+    private boolean statsExcludeMissingValue;
+
     /**
      * Load all configurations for modelConfig and columnConfigList from source type.
      */
@@ -95,6 +97,10 @@ public class UpdateBinningInfoReducer extends Reducer<IntWritable, BinningInfoWr
     @Override
     protected void setup(Context context) throws IOException, InterruptedException {
         loadConfigFiles(context);
+
+        this.statsExcludeMissingValue = context.getConfiguration().getBoolean(Constants.SHIFU_STATS_EXLCUDE_MISSING,
+                true);
+
         this.outputValue = new Text();
     }
 
@@ -205,13 +211,15 @@ public class UpdateBinningInfoReducer extends Reducer<IntWritable, BinningInfoWr
         ColumnMetrics columnCountMetrics = ColumnStatsCalculator.calculateColumnMetrics(binCountNeg, binCountPos);
         ColumnMetrics columnWeightMetrics = ColumnStatsCalculator.calculateColumnMetrics(binWeightNeg, binWeightPos);
 
-        // TODO & FIXME do we need validCount(totalCount - missingValueCount) for mean and stddev???
-        double mean = sum / count;
-        double stdDev = Math.sqrt(Math.abs((squaredSum - (sum * sum) / count + EPS) / (count - 1)));
-        double aStdDev = Math.sqrt(Math.abs((squaredSum - (sum * sum) / count + EPS) / count));
+        // To make it be consistent with SPDT, missingCount is excluded to compute mean, stddev ...
+        long realCount = this.statsExcludeMissingValue ? (count - missingCount) : count;
 
-        double skewness = ColumnStatsCalculator.computeSkewness(count, mean, aStdDev, sum, squaredSum, tripleSum);
-        double kurtosis = ColumnStatsCalculator.computeKurtosis(count, mean, aStdDev, sum, squaredSum, tripleSum,
+        double mean = sum / realCount;
+        double stdDev = Math.sqrt(Math.abs((squaredSum - (sum * sum) / realCount + EPS) / (realCount - 1)));
+        double aStdDev = Math.sqrt(Math.abs((squaredSum - (sum * sum) / realCount + EPS) / realCount));
+
+        double skewness = ColumnStatsCalculator.computeSkewness(realCount, mean, aStdDev, sum, squaredSum, tripleSum);
+        double kurtosis = ColumnStatsCalculator.computeKurtosis(realCount, mean, aStdDev, sum, squaredSum, tripleSum,
                 quarticSum);
 
         sb.append(key.get()).append(Constants.DEFAULT_DELIMITER).append(binBounString)
