@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package ml.shifu.shifu.core.evaluation;
+package ml.shifu.shifu.core.eval;
 
 import ml.shifu.shifu.container.PerformanceObject;
 

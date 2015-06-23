@@ -468,6 +468,8 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
                         new Path(super.getPathFinder().getColumnConfigPath(sourceType)))));
         args.add(String.format(NNConstants.MAPREDUCE_PARAM_FORMAT, NNConstants.NN_MODELSET_SOURCE_TYPE, sourceType));
         args.add(String.format(NNConstants.MAPREDUCE_PARAM_FORMAT, NNConstants.NN_DRY_TRAIN, isDryTrain()));
+        args.add(String.format(NNConstants.MAPREDUCE_PARAM_FORMAT, NNConstants.NN_POISON_SAMPLER,
+                Environment.getProperty(NNConstants.NN_POISON_SAMPLER, "true")));
         // hard code set computation threshold for 50s. Can be changed in shifuconfig file
         args.add(String.format(NNConstants.MAPREDUCE_PARAM_FORMAT, GuaguaConstants.GUAGUA_COMPUTATION_TIME_THRESHOLD,
                 60 * 1000L));
@@ -476,7 +478,7 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
         // one can set guagua conf in shifuconfig
         for(Map.Entry<Object, Object> entry: Environment.getProperties().entrySet()) {
             if(entry.getKey().toString().startsWith("nn") || entry.getKey().toString().startsWith("guagua")
-                    || entry.getKey().toString().startsWith("mapred")) {
+                    || entry.getKey().toString().startsWith("shifu") || entry.getKey().toString().startsWith("mapred")) {
                 args.add(String.format(NNConstants.MAPREDUCE_PARAM_FORMAT, entry.getKey().toString(), entry.getValue()
                         .toString()));
             }
