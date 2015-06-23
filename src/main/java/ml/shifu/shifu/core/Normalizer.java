@@ -309,7 +309,8 @@ public class Normalizer {
     private static Double woeZScoreNormalize(ColumnConfig config, String raw, Double cutoff, boolean isWeightedNorm) {
         double stdDevCutOff = checkCutOff(cutoff);
         double woe = woeNormalize(config, raw, isWeightedNorm);
-        return computeZScore(woe, config.getMean(), config.getStdDev(), stdDevCutOff);
+        double[] meanAndStdDev = calculateWoeMeanAndStdDev(config, isWeightedNorm);
+        return computeZScore(woe, meanAndStdDev[0], meanAndStdDev[1], stdDevCutOff);
     }
 
     /**
@@ -351,6 +352,31 @@ public class Normalizer {
         }
         
         return stdDevCutOff;
+    }
+    
+    private static double[] calculateWoeMeanAndStdDev(ColumnConfig config, boolean isWeightedNorm) {
+        List<Double> woeList = isWeightedNorm ? config.getBinWeightedWoe() : config.getBinCountWoe();
+        if(woeList == null || woeList.size() < 2) {
+            throw new IllegalArgumentException("Woe list is null or too short(size < 2)");
+        }
+        
+        int actualSize = config.getMissingCount() == 0L ? woeList.size() - 1 : woeList.size();
+        
+        // calculate woe mean
+        Double sum = 0.0;
+        for(int i = 0; i < actualSize; i++) {
+            sum += woeList.get(i);
+        }
+        double woeMean = sum / actualSize;
+        
+        // calculate woe stdDev
+        Double squareDiffSum = 0.0;
+        for(int i = 0; i < actualSize; i++) {
+            squareDiffSum += Math.pow(woeList.get(i) - woeMean, 2);
+        }
+        double woeStdDev = Math.sqrt(squareDiffSum / (actualSize -1));
+        
+        return new double[]{woeMean, woeStdDev};
     }
 
     /**
