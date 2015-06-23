@@ -34,6 +34,7 @@ import ml.shifu.shifu.core.alg.NNTrainer;
 import ml.shifu.shifu.util.CommonUtils;
 
 import org.apache.commons.lang.math.RandomUtils;
+import org.apache.commons.math3.distribution.PoissonDistribution;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Text;
@@ -137,6 +138,16 @@ public class NNWorker extends
     private boolean isCrossOver = false;
 
     /**
+     * Whether to enable possion bagging with replacement.
+     */
+    private boolean poissonSampler;
+
+    /**
+     * PoissonDistribution which is used for possion sampling for bagging with replacement.
+     */
+    private PoissonDistribution rng = null;
+
+    /**
      * Load all configurations for modelConfig and columnConfigList from source type.
      */
     private void loadConfigFiles(final Properties props) {
@@ -190,6 +201,9 @@ public class NNWorker extends
     public void init(WorkerContext<NNParams, NNParams> context) {
         loadConfigFiles(context.getProps());
 
+        this.poissonSampler = Boolean.TRUE.toString().equalsIgnoreCase(
+                context.getProps().getProperty(NNConstants.NN_POISON_SAMPLER));
+        this.rng = new PoissonDistribution(1.0d);
         Integer epochsPerIterationInteger = this.modelConfig.getTrain().getEpochsPerIteration();
         this.epochsPerIteration = epochsPerIterationInteger == null ? 1 : epochsPerIterationInteger.intValue();
         LOG.info("epochsPerIteration in worker is :{}", epochsPerIteration);
@@ -440,10 +454,24 @@ public class NNWorker extends
             }
         } else {
             double random = Math.random();
-            if(isBaggingReplacementTrigged(random)) {
-                mockRandomRepeatData(crossValidationRate, random);
+            if(this.poissonSampler && this.modelConfig.isBaggingWithReplacement()) {
+                int count = rng.sample();
+                if(count > 0) {
+                    pair.setSignificance(pair.getSignificance() * count);
+                    if(Double.compare(random, crossValidationRate) < 0) {
+                        this.testingData.add(pair);
+                    } else {
+                        this.trainingData.add(pair);
+                    }
+                }
             } else {
-                addDataPairToDataSet(pair, crossValidationRate, random);
+                // old for compatible, set nn.poison.sampler.enable to false in shifuconfig can set bagging with
+                // replacement to old
+                if(isBaggingReplacementTrigged(random)) {
+                    mockRandomRepeatData(crossValidationRate, random);
+                } else {
+                    addDataPairToDataSet(pair, crossValidationRate, random);
+                }
             }
         }
     }
@@ -458,8 +486,7 @@ public class NNWorker extends
         // size should be equals to sampleCount:)
         long size = trainingSize + testingSize;
         return this.modelConfig.isBaggingWithReplacement() && (testingSize > 0) && (trainingSize > 0)
-                && (size > NNConstants.NN_BAGGING_THRESHOLD)
-                && (Double.compare(random, 0.5d) < 0);
+                && (size > NNConstants.NN_BAGGING_THRESHOLD) && (Double.compare(random, 0.5d) < 0);
     }
 
     /**

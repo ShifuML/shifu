@@ -5,6 +5,9 @@ import java.util.Arrays;
 import java.util.List;
 
 import ml.shifu.shifu.container.PerformanceObject;
+import ml.shifu.shifu.core.eval.AreaUnderCurve;
+import ml.shifu.shifu.core.eval.PerformanceExtractor;
+import ml.shifu.shifu.core.eval.Performances;
 
 import org.testng.Assert;
 import org.testng.annotations.BeforeClass;

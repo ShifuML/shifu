@@ -102,6 +102,7 @@
                 <include>*:commons-lang:*</include>
                 <include>*:commons-logging:*</include>
                 <include>*:commons-net:*</include>
+                <include>*:commons-math3:*</include>
                 <include>*:config:*</include>
                 <include>*:encog-core:*</include>
                 <include>*:guagua-core:*</include>
