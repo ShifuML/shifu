@@ -24,7 +24,6 @@ import java.util.Map;
 
 import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.container.obj.ModelConfig;
-import ml.shifu.shifu.core.ColumnStatsCalculator;
 import ml.shifu.shifu.udf.CalculateStatsUDF;
 
 import org.apache.commons.lang.StringUtils;
