@@ -55,8 +55,7 @@ public class Normalizer {
      * NormalizeMethod method will be NormalizeMethod.ZScore
      * stdDevCutOff will be STD_DEV_CUTOFF
      * 
-     * @param config
-     *            - @ColumnConfig to create normalizer
+     * @param config @ColumnConfig to create normalizer
      */
     public Normalizer(ColumnConfig config) {
         this(config, NormalizeMethod.ZScore, STD_DEV_CUTOFF);
@@ -66,10 +65,8 @@ public class Normalizer {
      * Create @Normalizer, according @ColumnConfig and NormalizeMethod
      * stdDevCutOff will be STD_DEV_CUTOFF
      * 
-     * @param config
-     *            - @ColumnConfig to create normalizer
-     * @param method
-     *            - NormalizMethod to use
+     * @param config @ColumnConfig to create normalizer
+     * @param method NormalizMethod to use
      */
     public Normalizer(ColumnConfig config, NormalizeMethod method) {
         this(config, method, STD_DEV_CUTOFF);
@@ -79,10 +76,8 @@ public class Normalizer {
      * Create @Normalizer, according @ColumnConfig and NormalizeMethod
      * NormalizeMethod method will be NormalizeMethod.ZScore
      * 
-     * @param config
-     *            - @ColumnConfig to create normalizer
-     * @param cutoff
-     *            - stand_dev_cutoff to use
+     * @param config @ColumnConfig to create normalizer
+     * @param cutoff stand_dev_cutoff to use
      */
     public Normalizer(ColumnConfig config, Double cutoff) {
         this(config, NormalizeMethod.ZScore, STD_DEV_CUTOFF);
@@ -92,12 +87,9 @@ public class Normalizer {
      * Create @Normalizer, according @ColumnConfig and NormalizeMethod
      * NormalizeMethod method will be NormalizeMethod.ZScore
      * 
-     * @param config
-     *            - @ColumnConfig to create normalizer
-     * @param method
-     *            - NormalizMethod to use
-     * @param cutoff
-     *            - stand_dev_cutoff to use
+     * @param config @ColumnConfig to create normalizer
+     * @param method NormalizMethod to use
+     * @param cutoff stand_dev_cutoff to use
      */
     public Normalizer(ColumnConfig config, NormalizeMethod method, Double cutoff) {
         this.config = config;
@@ -109,7 +101,7 @@ public class Normalizer {
      * Normalize the input data for column
      * 
      * @param raw
-     * @return
+     * @return normalized value
      */
     public Double normalize(String raw) {
         return normalize(config, raw, method, stdDevCutOff);
@@ -118,11 +110,9 @@ public class Normalizer {
     /**
      * Normalize the raw file, according the @ColumnConfig info
      * 
-     * @param config
-     *            - @ColumnConfig to normalize data
-     * @param raw
-     *            - raw input data
-     * @return - normalized value
+     * @param config @ColumnConfig to normalize data
+     * @param raw raw input data
+     * @return normalized value
      */
     public static Double normalize(ColumnConfig config, String raw) {
         return normalize(config, raw, NormalizeMethod.ZScore);
@@ -131,13 +121,10 @@ public class Normalizer {
     /**
      * Normalize the raw file, according the @ColumnConfig info and normalized method
      * 
-     * @param config
-     *            - @ColumnConfig to normalize data
-     * @param raw
-     *            - raw input data
-     * @param method
-     *            - the method used to do normalization
-     * @return - normalized value
+     * @param config @ColumnConfig to normalize data
+     * @param raw raw input data
+     * @param method the method used to do normalization
+     * @return normalized value
      */
     public static Double normalize(ColumnConfig config, String raw, NormalizeMethod method) {
         return normalize(config, raw, method, STD_DEV_CUTOFF);
@@ -146,13 +133,10 @@ public class Normalizer {
     /**
      * Normalize the raw file, according the @ColumnConfig info and standard deviation cutoff
      * 
-     * @param config
-     *            - @ColumnConfig to normalize data
-     * @param raw
-     *            - raw input data
-     * @param stdDevCutoff
-     *            - the standard deviation cutoff to use
-     * @return - normalized value
+     * @param config @ColumnConfig to normalize data
+     * @param raw raw input data
+     * @param stdDevCutoff the standard deviation cutoff to use
+     * @return normalized value
      */
     public static Double normalize(ColumnConfig config, String raw, double stdDevCutoff) {
         return normalize(config, raw, NormalizeMethod.ZScore, stdDevCutoff);
@@ -161,15 +145,11 @@ public class Normalizer {
     /**
      * Normalize the raw file, according the @ColumnConfig info, normalized method and standard deviation cutoff
      * 
-     * @param config
-     *            - @ColumnConfig to normalize data
-     * @param raw
-     *            - raw input data
-     * @param method
-     *            - the method used to do normalization
-     * @param stdDevCutoff
-     *            - the standard deviation cutoff to use
-     * @return - normalized value
+     * @param config @ColumnConfig to normalize data
+     * @param raw raw input data
+     * @param method the method used to do normalization
+     * @param stdDevCutoff the standard deviation cutoff to use
+     * @return normalized value
      */
     public static Double normalize(ColumnConfig config, String raw, NormalizeMethod method, double stdDevCutoff) {
         if(method == null) {
@@ -189,11 +169,9 @@ public class Normalizer {
     /**
      * Compute the normalized data for @NormalizeMethod.MaxMin
      * 
-     * @param config
-     *            - @ColumnConfig info
-     * @param raw
-     *            - input column value
-     * @return - normalized value for MaxMin method
+     * @param config @ColumnConfig info
+     * @param raw input column value
+     * @return normalized value for MaxMin method
      */
     private static Double getMaxMinScore(ColumnConfig config, String raw) {
         if(config.isCategorical()) {
@@ -214,14 +192,10 @@ public class Normalizer {
      * Noticd: currently OLD_ZSCALE and ZSCALE is implemented with the same process method.
      * </p>
      * 
-     * @param config
-     *            - ColumnConfig to normalize data
-     * @param raw
-     *            - raw input data
-     * @param cutoff
-     *            - standard deviation cut off
-     * @param type
-     *            - normalization type. {@link ModelNormalizeConf.NormType}
+     * @param config ColumnConfig to normalize data
+     * @param raw raw input data
+     * @param cutoff standard deviation cut off
+     * @param type normalization type. {@link ModelNormalizeConf.NormType}
      * @return normalized value. If normType parameter is invalid, then the ZSCALE will be used as default.
      */
     public static Double normalize(ColumnConfig config, String raw, Double cutoff, ModelNormalizeConf.NormType type) {
@@ -248,14 +222,10 @@ public class Normalizer {
     /**
      * Compute the normalized data for @NormalizeMethod.Zscore
      * 
-     * @param config
-     *            @ColumnConfig info
-     * @param raw
-     *            input column value
-     * @param cutoff
-     *            standard deviation cut off
-     * 
-     * @return - normalized value for ZScore method.
+     * @param config @ColumnConfig info
+     * @param raw input column value
+     * @param cutoff standard deviation cut off
+     * @return normalized value for ZScore method.
      */
     private static Double zScoreNormalize(ColumnConfig config, String raw, Double cutoff) {
         double stdDevCutOff = checkCutOff(cutoff);
@@ -266,11 +236,8 @@ public class Normalizer {
     /**
      * Parse raw value based on ColumnConfig.
      * 
-     * @param config
-     *            @ColumnConfig info
-     * @param raw
-     *            input column value
-     * 
+     * @param config @ColumnConfig info
+     * @param raw input column value
      * @return parsed raw value. For categorical type, return BinPosRate. For numerical type, return
      *         corresponding double value. For missing data, return default value using
      *         {@link Normalizer#defaultMissingValue}.
@@ -300,10 +267,8 @@ public class Normalizer {
     /**
      * Get the default value for missing data.
      * 
-     * @param config
-     *            @ColumnConfig info
-     * 
-     * @return - default value for missing data. Now simply return Mean value. If mean is null then return 0.
+     * @param config @ColumnConfig info
+     * @return default value for missing data. Now simply return Mean value. If mean is null then return 0.
      */
     private static double defaultMissingValue(ColumnConfig config) {
         // TODO return 0 for mean == null is correct or reasonable?
@@ -391,14 +356,10 @@ public class Normalizer {
     /**
      * Compute the zscore, by original value, mean, standard deviation and standard deviation cutoff
      * 
-     * @param var
-     *            - original value
-     * @param mean
-     *            - mean value
-     * @param stdDev
-     *            - standard deviation
-     * @param stdDevCutOff
-     *            - standard deviation cutoff
+     * @param var original value
+     * @param mean mean value
+     * @param stdDev standard deviation
+     * @param stdDevCutOff standard deviation cutoff
      * @return zscore
      */
     public static double computeZScore(double var, double mean, double stdDev, double stdDevCutOff) {
