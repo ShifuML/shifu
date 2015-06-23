@@ -1,4 +1,4 @@
-
+[<img src="images/logo/shifu.png" alt="Shifu" align="left">](http://shifu.ml)<div align="right">[![Build Status](https://travis-ci.org/ShifuML/shifu.svg?branch=master)](https://travis-ci.org/ShifuML/shifu)</div>
 
 ## Getting Started
 
@@ -32,4 +32,4 @@ Please join [Shifu group](https://groups.google.com/forum/#!forum/shifuml) if qu
 
 ## Copyright and License
 
-Copyright 2012-2014, PayPal Software Foundation under the [Apache License](LICENSE.txt).
+Copyright 2012-2015, PayPal Software Foundation under the [Apache License](LICENSE.txt).

@@ -193,6 +193,11 @@
                 "directive": "checkbox",
                 "defval" : true
             }, {
+                "name": "pearsonEnable",
+                "type": "boolean",
+                "directive": "checkbox",
+                "defval" : true
+            }, {
                 "name": "binningAlgorithm",
                 "type": "text",
                 "directive": "select",

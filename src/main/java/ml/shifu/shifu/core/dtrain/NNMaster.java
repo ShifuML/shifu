@@ -107,7 +107,7 @@ public class NNMaster implements MasterComputable<NNParams, NNParams> {
      * Convergence threshold setting.
      */
     private double convergenceThreshold = 0d;
-    
+
     /**
      * Convergence judger instance for convergence checking.
      */
@@ -204,22 +204,20 @@ public class NNMaster implements MasterComputable<NNParams, NNParams> {
         params.setGradients(new double[0]);
         params.setWeights(weights);
         LOG.debug("master result {} in iteration {}", params, context.getCurrentIteration());
-        
+
         // Convergence judging part
-        LOG.info("Judging convergence :");
-        
         double avgErr = (currentTrainError + currentTestError) / 2;
-        
-        LOG.info("NNMaster compute iteration {} average error: {}, threshold: {}"
-                , context.getCurrentIteration(), avgErr, convergenceThreshold);
-        
-        if (judger.judge(avgErr, convergenceThreshold)) {
+
+        LOG.info("NNMaster compute iteration {} average error: {}, threshold: {}", context.getCurrentIteration(),
+                avgErr, convergenceThreshold);
+
+        if(judger.judge(avgErr, convergenceThreshold)) {
             LOG.info("NNMaster compute iteration {} converged !", context.getCurrentIteration());
             params.setHalt(true);
         } else {
             LOG.info("NNMaster compute iteration {} not converged yet !", context.getCurrentIteration());
         }
-        
+
         return params;
     }
 
@@ -275,11 +273,11 @@ public class NNMaster implements MasterComputable<NNParams, NNParams> {
                 this.learningDecay = Double.valueOf(learningDecayO.toString());
             }
             LOG.info("learningDecay in master is :{}", learningDecay);
-            
-            Double threshold =  this.modelConfig.getTrain().getConvergenceThreshold();
+
+            Double threshold = this.modelConfig.getTrain().getConvergenceThreshold();
             this.convergenceThreshold = threshold == null ? 0d : threshold.doubleValue();
             LOG.info("Convergence threshold in master is :{}", this.convergenceThreshold);
-            
+
             this.isContinuousEnabled = Boolean.TRUE.toString().equalsIgnoreCase(
                     context.getProps().getProperty(NNConstants.NN_CONTINUOUS_TRAINING));
         } catch (IOException e) {

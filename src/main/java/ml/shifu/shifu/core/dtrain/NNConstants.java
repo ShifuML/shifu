@@ -75,6 +75,8 @@ public class NNConstants {
     public static final int NN_BAGGING_THRESHOLD = 50;
 
     public static final String NN_DRY_TRAIN = "nn.dry.train";
+    
+    public static final String NN_POISON_SAMPLER = "nn.poison.sampler.enable";
 
     public static final double DRY_ERROR = 0.0d;
 
