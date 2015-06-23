@@ -329,7 +329,8 @@
                 "type": "text",
                 "directive": "select",
                 "defval" : "ZSCALE",
-                "options": [ 
+                "options": [
+                    {"label":"old zscale mode", "value":"OLD_ZSCALE"},
                     {"label":"zscale mode", "value":"ZSCALE"},
                     {"label":"woe mode", "value":"WOE"},
                     {"label":"weight woe mode", "value":"WEIGHT_WOE"},
