@@ -16,6 +16,13 @@
  
 Shifu Change Log
 
+Changes for Shifu-0.2.6
+    * https://github.com/ShifuML/shifu/issues/117: Add AUC Computation on Eval Step
+    * https://github.com/ShifuML/shifu/issues/118: Add Shortcut Commands: 'norm', 'varsel'
+    * https://github.com/ShifuML/shifu/issues/127: Support HDP 2.6.0.2.2.4.2-2
+    * https://github.com/ShifuML/shifu/issues/83: Add Distinct Count Statistics
+    * https://github.com/ShifuML/shifu/issues/82: Auto-detect Variable Type
+
 Changes for Shifu-0.2.5
     * https://github.com/ShifuML/shifu/issues/97: Upgrade Guagua to latest version 0.7.0.
         a) New features included in Guagua 0.6.0 to continuous improve performance of Shifu:
