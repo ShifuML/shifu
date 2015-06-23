@@ -235,7 +235,6 @@ public class Normalizer {
             case WEIGHT_HYBRID:
                 return hybridNormalize(config, raw, cutoff, true);
             case OLD_ZSCALE:
-                return zScoreNormalize(config, raw, cutoff);
             case ZSCALE:
             default:
                 return zScoreNormalize(config, raw, cutoff);
@@ -245,9 +244,12 @@ public class Normalizer {
     /**
      * Compute the normalized data for @NormalizeMethod.Zscore
      * 
-     * @param config @ColumnConfig info
-     * @param raw input column value
-     * @param cutoff standard deviation cut off
+     * @param config
+     *            @ColumnConfig info
+     * @param raw
+     *            input column value
+     * @param cutoff
+     *            standard deviation cut off
      * 
      * @return - normalized value for ZScore method.
      */
@@ -266,8 +268,10 @@ public class Normalizer {
     /**
      * Parse raw value based on ColumnConfig.
      * 
-     * @param config @ColumnConfig info
-     * @param raw input column value
+     * @param config
+     *            @ColumnConfig info
+     * @param raw
+     *            input column value
      * 
      * @return parsed raw value. For categorical type, return BinPosRate. For numerical type, return
      *         corresponding double value. For missing data, return default value using
@@ -298,7 +302,8 @@ public class Normalizer {
     /**
      * Get the default value for missing data.
      * 
-     * @param config @ColumnConfig info
+     * @param config
+     *            @ColumnConfig info
      * 
      * @return - default value for missing data. Now simply return Mean value. If mean is null then return 0.
      */
