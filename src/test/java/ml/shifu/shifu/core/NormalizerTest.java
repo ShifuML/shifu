@@ -91,9 +91,9 @@ public class NormalizerTest {
         config.setColumnType(ColumnType.N);
         
         ColumnBinning cbin = new ColumnBinning();
-        cbin.setBinCountWoe(Arrays.asList(new Double[]{10.0, 11.0, 12.0, 13.0}));
-        cbin.setBinWeightedWoe(Arrays.asList(new Double[]{20.0, 21.0, 22.0, 23.0}));
-        cbin.setBinBoundary(Arrays.asList(new Double[]{Double.NEGATIVE_INFINITY, 2.0, 4.0}));
+        cbin.setBinCountWoe(Arrays.asList(new Double[]{10.0, 11.0, 12.0, 13.0, 6.5}));
+        cbin.setBinWeightedWoe(Arrays.asList(new Double[]{20.0, 21.0, 22.0, 23.0, 16.5}));
+        cbin.setBinBoundary(Arrays.asList(new Double[]{Double.NEGATIVE_INFINITY, 2.0, 4.0, 6.0}));
         config.setColumnBinning(cbin);
         
         // Test zscore normalization
@@ -110,12 +110,12 @@ public class NormalizerTest {
         
         // Test woe normalization
         Assert.assertEquals(Normalizer.normalize(config, "3.0", null, NormType.WEIGHT_WOE), 21.0);
-        Assert.assertEquals(Normalizer.normalize(config, "wrong_format", null, NormType.WEIGHT_WOE), 23.0);
-        Assert.assertEquals(Normalizer.normalize(config, null, null, NormType.WEIGHT_WOE), 23.0);
+        Assert.assertEquals(Normalizer.normalize(config, "wrong_format", null, NormType.WEIGHT_WOE), 16.5);
+        Assert.assertEquals(Normalizer.normalize(config, null, null, NormType.WEIGHT_WOE), 16.5);
         
         Assert.assertEquals(Normalizer.normalize(config, "3.0", null, NormType.WOE), 11.0);
-        Assert.assertEquals(Normalizer.normalize(config, "wrong_format", null, NormType.WOE), 13.0);
-        Assert.assertEquals(Normalizer.normalize(config, null, null, NormType.WOE), 13.0);
+        Assert.assertEquals(Normalizer.normalize(config, "wrong_format", null, NormType.WOE), 6.5);
+        Assert.assertEquals(Normalizer.normalize(config, null, null, NormType.WOE), 6.5);
         
         // Test hybrid normalization, for numerical use zscore.
         Assert.assertEquals(Normalizer.normalize(config, "5.0", 4.0, NormType.HYBRID), 3.0);
@@ -130,13 +130,13 @@ public class NormalizerTest {
         Assert.assertEquals(Normalizer.normalize(config, null, 4.0, NormType.WEIGHT_HYBRID), 0.0);
         
         // Test woe zscore normalization
-        Assert.assertEquals(Normalizer.normalize(config, "3.0", 10.0, NormType.WOE_ZSCORE), 9.0);
-        Assert.assertEquals(Normalizer.normalize(config, "wrong_format", 12.0, NormType.WOE_ZSCORE), 11.0);
-        Assert.assertEquals(Normalizer.normalize(config, null, 12.0, NormType.WOE_ZSCORE), 11.0);
+        Assert.assertEquals(Normalizer.normalize(config, "3.0", 10.0, NormType.WOE_ZSCORE), 0.2);
+        Assert.assertEquals(Normalizer.normalize(config, "wrong_format", 12.0, NormType.WOE_ZSCORE), -1.6);
+        Assert.assertEquals(Normalizer.normalize(config, null, 12.0, NormType.WOE_ZSCORE), -1.6);
         
-        Assert.assertEquals(Normalizer.normalize(config, "3.0", 20.0, NormType.WEIGHT_WOE_ZSCORE), 19.0);
-        Assert.assertEquals(Normalizer.normalize(config, "wrong_format", 22.0, NormType.WEIGHT_WOE_ZSCORE), 21.0);
-        Assert.assertEquals(Normalizer.normalize(config, null, 22.0, NormType.WEIGHT_WOE_ZSCORE), 21.0);
+        Assert.assertEquals(Normalizer.normalize(config, "3.0", 20.0, NormType.WEIGHT_WOE_ZSCORE), 0.2);
+        Assert.assertEquals(Normalizer.normalize(config, "wrong_format", 22.0, NormType.WEIGHT_WOE_ZSCORE), -1.6);
+        Assert.assertEquals(Normalizer.normalize(config, null, 22.0, NormType.WEIGHT_WOE_ZSCORE), -1.6);
     }
     
     @Test
@@ -148,10 +148,10 @@ public class NormalizerTest {
         config.setColumnType(ColumnType.C);
         
         ColumnBinning cbin = new ColumnBinning();
-        cbin.setBinCountWoe(Arrays.asList(new Double[]{10.0, 11.0, 12.0, 13.0}));
-        cbin.setBinWeightedWoe(Arrays.asList(new Double[]{20.0, 21.0, 22.0, 23.0}));
-        cbin.setBinCategory(Arrays.asList(new String[]{"a", "b", "c"}));
-        cbin.setBinPosRate(Arrays.asList(new Double[]{0.2, 0.4, 0.8}));
+        cbin.setBinCountWoe(Arrays.asList(new Double[]{10.0, 11.0, 12.0, 13.0, 6.5}));
+        cbin.setBinWeightedWoe(Arrays.asList(new Double[]{20.0, 21.0, 22.0, 23.0, 16.5}));
+        cbin.setBinCategory(Arrays.asList(new String[]{"a", "b", "c", "d"}));
+        cbin.setBinPosRate(Arrays.asList(new Double[]{0.2, 0.4, 0.8, 1.0}));
         config.setColumnBinning(cbin);
         
         // Test zscore normalization
@@ -168,30 +168,30 @@ public class NormalizerTest {
         
         // Test woe normalization
         Assert.assertEquals(Normalizer.normalize(config, "c", null, NormType.WEIGHT_WOE), 22.0);
-        Assert.assertEquals(Normalizer.normalize(config, "wrong_format", null, NormType.WEIGHT_WOE), 23.0);
-        Assert.assertEquals(Normalizer.normalize(config, null, null, NormType.WEIGHT_WOE), 23.0);
+        Assert.assertEquals(Normalizer.normalize(config, "wrong_format", null, NormType.WEIGHT_WOE), 16.5);
+        Assert.assertEquals(Normalizer.normalize(config, null, null, NormType.WEIGHT_WOE), 16.5);
         
         Assert.assertEquals(Normalizer.normalize(config, "c", null, NormType.WOE), 12.0);
-        Assert.assertEquals(Normalizer.normalize(config, "wrong_format", null, NormType.WOE), 13.0);
-        Assert.assertEquals(Normalizer.normalize(config, null, null, NormType.WOE), 13.0);
+        Assert.assertEquals(Normalizer.normalize(config, "wrong_format", null, NormType.WOE), 6.5);
+        Assert.assertEquals(Normalizer.normalize(config, null, null, NormType.WOE), 6.5);
         
         // Test hybrid normalization, for categorical value use [weight]woe.
         Assert.assertEquals(Normalizer.normalize(config, "a", null, NormType.HYBRID), 10.0);
-        Assert.assertEquals(Normalizer.normalize(config, "wrong_format", null, NormType.HYBRID), 13.0);
-        Assert.assertEquals(Normalizer.normalize(config, null, null, NormType.HYBRID), 13.0);
+        Assert.assertEquals(Normalizer.normalize(config, "wrong_format", null, NormType.HYBRID), 6.5);
+        Assert.assertEquals(Normalizer.normalize(config, null, null, NormType.HYBRID), 6.5);
         
         Assert.assertEquals(Normalizer.normalize(config, "a", null, NormType.WEIGHT_HYBRID), 20.0);
-        Assert.assertEquals(Normalizer.normalize(config, "wrong_format", null, NormType.WEIGHT_HYBRID), 23.0);
-        Assert.assertEquals(Normalizer.normalize(config, null, null, NormType.WEIGHT_HYBRID), 23.0);
+        Assert.assertEquals(Normalizer.normalize(config, "wrong_format", null, NormType.WEIGHT_HYBRID), 16.5);
+        Assert.assertEquals(Normalizer.normalize(config, null, null, NormType.WEIGHT_HYBRID), 16.5);
         
         // Test woe zscore normalization
-        Assert.assertEquals(Normalizer.normalize(config, "c", 12.0, NormType.WOE_ZSCORE), 11.8);
-        Assert.assertEquals(Normalizer.normalize(config, "wrong_format", 13.0, NormType.WOE_ZSCORE), 12.8);
-        Assert.assertEquals(Normalizer.normalize(config, null, 13.0, NormType.WOE_ZSCORE), 12.8);
+        Assert.assertEquals(Normalizer.normalize(config, "b", 12.0, NormType.WOE_ZSCORE), 0.2);
+        Assert.assertEquals(Normalizer.normalize(config, "wrong_format", 13.0, NormType.WOE_ZSCORE), -1.6);
+        Assert.assertEquals(Normalizer.normalize(config, null, 13.0, NormType.WOE_ZSCORE), -1.6);
         
-        Assert.assertEquals(Normalizer.normalize(config, "c", 22.0, NormType.WEIGHT_WOE_ZSCORE), 21.8);
-        Assert.assertEquals(Normalizer.normalize(config, "wrong_format", 23.0, NormType.WEIGHT_WOE_ZSCORE), 22.8);
-        Assert.assertEquals(Normalizer.normalize(config, null, 23.0, NormType.WEIGHT_WOE_ZSCORE), 22.8);
+        Assert.assertEquals(Normalizer.normalize(config, "b", 22.0, NormType.WEIGHT_WOE_ZSCORE), 0.2);
+        Assert.assertEquals(Normalizer.normalize(config, "wrong_format", 23.0, NormType.WEIGHT_WOE_ZSCORE), -1.6);
+        Assert.assertEquals(Normalizer.normalize(config, null, 23.0, NormType.WEIGHT_WOE_ZSCORE), -1.6);
     }
     
 }

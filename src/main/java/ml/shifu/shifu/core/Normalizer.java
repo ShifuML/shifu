@@ -41,7 +41,7 @@ public class Normalizer {
 
     private static Logger log = LoggerFactory.getLogger(Normalizer.class);
     public static final double STD_DEV_CUTOFF = 4.0d;
-
+    
     public enum NormalizeMethod {
         ZScore, MaxMin;
     }
@@ -336,7 +336,6 @@ public class Normalizer {
         return normValue;
     }
     
-    
     /**
      * Check specified standard deviation cutoff and return the correct value.
      * 
@@ -354,27 +353,31 @@ public class Normalizer {
         return stdDevCutOff;
     }
     
+    /**
+     * Calculate woe mean and woe standard deviation.
+     * 
+     * @param config @ColumnConfig info
+     * @param isWeightedNorm if use weighted woe
+     * @return an double array contains woe mean and woe standard deviation as order {mean, stdDev}
+     */
     private static double[] calculateWoeMeanAndStdDev(ColumnConfig config, boolean isWeightedNorm) {
         List<Double> woeList = isWeightedNorm ? config.getBinWeightedWoe() : config.getBinCountWoe();
         if(woeList == null || woeList.size() < 2) {
             throw new IllegalArgumentException("Woe list is null or too short(size < 2)");
         }
         
-        int actualSize = config.getMissingCount() == 0L ? woeList.size() - 1 : woeList.size();
-        
-        // calculate woe mean
+        // calculate woe mean and standard deviation
+        int size = woeList.size();
         Double sum = 0.0;
-        for(int i = 0; i < actualSize; i++) {
-            sum += woeList.get(i);
+        Double squaredSum = 0.0;
+        for(int i = 0; i < size; i++) {
+            Double x = woeList.get(i);
+            sum += x;
+            squaredSum += x * x;
         }
-        double woeMean = sum / actualSize;
         
-        // calculate woe stdDev
-        Double squareDiffSum = 0.0;
-        for(int i = 0; i < actualSize; i++) {
-            squareDiffSum += Math.pow(woeList.get(i) - woeMean, 2);
-        }
-        double woeStdDev = Math.sqrt(squareDiffSum / (actualSize -1));
+        double woeMean = sum / size;
+        double woeStdDev = Math.sqrt(Math.abs((squaredSum - (sum * sum) / size) / (size - 1)));
         
         return new double[]{woeMean, woeStdDev};
     }
