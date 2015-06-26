@@ -133,6 +133,15 @@
                 <include>*:automaton:*</include>
                 <include>*:jpmml:*</include>
                 <include>*:stream:*</include>
+                <include>*:parquet-pig:*</include>
+                <include>*:parquet-column:*</include>
+                <include>*:parquet-common:*</include>
+                <include>*:parquet-encoding:*</include>
+                <include>*:parquet-generator:*</include>
+                <include>*:parquet-hadoop:*</include>
+                <include>*:parquet-format:*</include>
+                <include>*:parquet-jackson:*</include>
+                <include>*:snappy-java:*</include>
             </includes>
         </dependencySet>
     </dependencySets>

@@ -347,6 +347,11 @@
                 "directive": "input",
                 "defval": 0.8
             }, {
+                "name": "isParquet",
+                "type": "boolean",
+                "directive": "checkbox",
+                "defval": true    
+            }, {
                 "name": "sampleNegOnly",
                 "type": "boolean",
                 "directive": "checkbox",

@@ -112,8 +112,13 @@ public class NormalizeModelProcessor extends BasicModelProcessor implements Proc
         paramsMap.put("delimiter", CommonUtils.escapePigString(modelConfig.getDataSetDelimiter()));
 
         try {
-            PigExecutor.getExecutor().submitJob(modelConfig, pathFinder.getAbsolutePath("scripts/Normalize.pig"),
-                    paramsMap);
+            String normPigPath = null;
+            if(modelConfig.getNormalize().getIsParquet()) {
+                normPigPath = pathFinder.getAbsolutePath("scripts/NormalizeWithParquetOut.pig");
+            } else {
+                normPigPath = pathFinder.getAbsolutePath("scripts/Normalize.pig");
+            }
+            PigExecutor.getExecutor().submitJob(modelConfig, normPigPath, paramsMap);
         } catch (IOException e) {
             throw new ShifuException(ShifuErrorCode.ERROR_RUNNING_PIG_JOB, e);
         } catch (Throwable e) {
