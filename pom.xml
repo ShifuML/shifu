@@ -135,6 +135,11 @@
             <artifactId>jaxb-impl</artifactId>
             <version>2.2.6</version>
         </dependency>
+        <dependency>
+            <groupId>com.twitter</groupId>
+            <artifactId>parquet-pig</artifactId>
+            <version>1.6.0</version>
+        </dependency>
     </dependencies>
     <build>
         <plugins>
