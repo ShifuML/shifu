@@ -44,6 +44,8 @@ public class LogisticRegressionParams extends HaltBytable {
      * Model error in one worker one iteration.
      */
     private double error;
+    
+    private int recordCount;
 
     public LogisticRegressionParams() {
     }
@@ -52,9 +54,10 @@ public class LogisticRegressionParams extends HaltBytable {
         this.parameters = parameters;
     }
 
-    public LogisticRegressionParams(double[] parameters, double error) {
+    public LogisticRegressionParams(double[] parameters, double error, int recordCount) {
         this.parameters = parameters;
         this.error = error;
+        this.recordCount = recordCount;
     }
 
     public double[] getParameters() {
@@ -72,6 +75,14 @@ public class LogisticRegressionParams extends HaltBytable {
     public void setError(double error) {
         this.error = error;
     }
+    
+    public int getRecordCount() {
+        return recordCount;
+    }
+
+    public void setRecordCount(int recordCount) {
+        this.recordCount = recordCount;
+    }
 
     @Override
     public void doWrite(DataOutput out) throws IOException {
@@ -82,6 +93,7 @@ public class LogisticRegressionParams extends HaltBytable {
             }
         }
         out.writeDouble(this.error);
+        out.writeInt(this.recordCount);
     }
 
     @Override
@@ -92,6 +104,7 @@ public class LogisticRegressionParams extends HaltBytable {
             parameters[i] = in.readDouble();
         }
         this.error = in.readDouble();
+        this.recordCount = in.readInt();
     }
 
 }

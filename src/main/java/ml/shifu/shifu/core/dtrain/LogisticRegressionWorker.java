@@ -31,10 +31,17 @@ import ml.shifu.guagua.worker.WorkerContext;
 import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.container.obj.ModelConfig;
 import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
+import ml.shifu.shifu.core.alg.NNTrainer;
+import ml.shifu.shifu.exception.ShifuErrorCode;
+import ml.shifu.shifu.exception.ShifuException;
 import ml.shifu.shifu.util.CommonUtils;
 
+import org.apache.commons.lang.math.RandomUtils;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Text;
+import org.encog.ml.data.MLDataPair;
+import org.encog.ml.data.basic.BasicMLData;
+import org.encog.ml.data.basic.BasicMLDataPair;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -42,7 +49,8 @@ import com.google.common.base.Splitter;
 
 /**
  * {@link LogisticRegressionWorker} defines logic to accumulate local <a
- * href=http://en.wikipedia.org/wiki/Logistic_regression >logistic regression</a> gradients.
+ * href=http://en.wikipedia.org/wiki/Logistic_regression >logistic
+ * regression</a> gradients.
  * 
  * <p>
  * At first iteration, wait for master to use the consistent initiating model.
@@ -70,22 +78,35 @@ public class LogisticRegressionWorker
      * Output column number
      */
     private int outputNum;
-    
+
     /**
      * Candidate column number
      */
     private int candidateNum;
+    
+    /**
+     * Record count
+     */
+    private int count;
+    
+    
+    private double regularizedRate = 0.0d;
 
     /**
-     * In-memory data which located in memory at the first iteration.
+     * Testing data set.
      */
-    private MemoryDiskList<Data> dataList;
-
+    private MemoryDiskList<Data> testingData;
+    
+    /**
+     * Training data set.
+     */
+    private MemoryDiskList<Data> trainingData;
+ 
     /**
      * Local logistic regression model.
      */
     private double[] weights;
-    
+
     /**
      * Model Config read from HDFS
      */
@@ -109,21 +130,29 @@ public class LogisticRegressionWorker
     @Override
     public void init(WorkerContext<LogisticRegressionParams, LogisticRegressionParams> context) {
         loadConfigFiles(context.getProps());
-        //this.inputNum = NumberFormatUtils.getInt(LogisticRegressionContants.LR_INPUT_NUM,
-          //      LogisticRegressionContants.LR_INPUT_DEFAULT_NUM);
+        // this.inputNum =
+        // NumberFormatUtils.getInt(LogisticRegressionContants.LR_INPUT_NUM,
+        // LogisticRegressionContants.LR_INPUT_DEFAULT_NUM);
         int[] inputOutputIndex = NNUtils.getInputOutputCandidateCounts(this.columnConfigList);
         this.inputNum = inputOutputIndex[0] == 0 ? inputOutputIndex[2] : inputOutputIndex[0];
         this.outputNum = 1;
         this.candidateNum = inputOutputIndex[2];
+        this.regularizedRate = Double.valueOf(this.modelConfig.getParams().get(LogisticRegressionContants.LR_REGULARIZED_RATE).toString());
+        LOG.info("regularizedRate:" + this.regularizedRate);
+        LOG.info("inputNum:" + this.inputNum);
         double memoryFraction = Double.valueOf(context.getProps().getProperty("guagua.data.memoryFraction", "0.5"));
         String tmpFolder = context.getProps().getProperty("guagua.data.tmpfolder", "tmp");
-        this.dataList = new MemoryDiskList<Data>((long) (Runtime.getRuntime().maxMemory() * memoryFraction), tmpFolder
-                + File.separator + System.currentTimeMillis());
-        // cannot find a good place to close these two data set, using Shutdown hook
+        this.testingData = new MemoryDiskList<Data>((long) (Runtime.getRuntime().maxMemory() * memoryFraction),
+                tmpFolder + File.separator + System.currentTimeMillis());
+        this.trainingData = new MemoryDiskList<Data>((long) (Runtime.getRuntime().maxMemory() * memoryFraction),
+                tmpFolder + File.separator + System.currentTimeMillis());
+        // cannot find a good place to close these two data set, using Shutdown
+        // hook
         Runtime.getRuntime().addShutdownHook(new Thread(new Runnable() {
             @Override
             public void run() {
-                LogisticRegressionWorker.this.dataList.close();
+                LogisticRegressionWorker.this.testingData.close();
+                LogisticRegressionWorker.this.trainingData.close();
             }
         }));
     }
@@ -135,25 +164,33 @@ public class LogisticRegressionWorker
         } else {
             this.weights = context.getLastMasterResult().getParameters();
             double[] gradients = new double[this.inputNum];
-            double finalError = 0.0d;
-            int size = 0;
-            this.dataList.reOpen();
-            for(Data data: dataList) {
-            	double result = sigmoid(data.inputs, this.weights);
-            	LOG.info("iteration_result:"+result);
+            double trainingFinalError = 0.0d;
+            double testingFinalError = 0.0d;
+            int trainingSize = (int)this.trainingData.size();
+            int testingSize = (int)this.testingData.size();
+            LOG.info("training_size:" + trainingSize);
+            LOG.info("testing_size:" + testingSize);
+            this.trainingData.reOpen();
+            for(Data data: trainingData) {
+                double result = sigmoid(data.inputs, this.weights);
                 double error = result - data.outputs[0];
-               // finalError += error * error / 2;
-                finalError += cost(result,data.outputs[0]);
-            	LOG.info("iteration_final:"+finalError);
+                trainingFinalError += cost(result, data.outputs[0]);
                 for(int i = 0; i < gradients.length; i++) {
                     gradients[i] += error * data.inputs[i] * data.significance;
                 }
-                size++;
             }
-        	LOG.info("finish_final:"+finalError);
-        	LOG.info("finish_size:"+size);
-            LOG.info("Iteration {} with error {}", context.getCurrentIteration(), finalError / size);
-            return new LogisticRegressionParams(gradients, finalError/size);
+            
+            this.testingData.reOpen();
+            for(Data data: testingData) {
+                double result = sigmoid(data.inputs, this.weights);
+                testingFinalError += cost(result, data.outputs[0]);
+            }
+            double trainingReg = this.regularizedParameter(this.regularizedRate, trainingSize);
+            double testingReg = this.regularizedParameter(this.regularizedRate, testingSize);
+            LOG.info("training_finish_final:" + trainingFinalError);
+            LOG.info("Iteration {} training data with error {}", context.getCurrentIteration(), trainingFinalError / trainingSize+trainingReg);
+            LOG.info("Iteration {} testing data with error {}", context.getCurrentIteration(), testingFinalError / testingSize+testingReg);
+            return new LogisticRegressionParams(gradients, trainingFinalError / trainingSize+trainingReg,trainingSize);
         }
     }
 
@@ -167,69 +204,91 @@ public class LogisticRegressionWorker
         }
         return 1.0d / (1.0d + Math.exp(-value));
     }
+
+    private double cost(double result, double output) {
+        if(output == 1.0d) {
+            return -Math.log(result);
+        } else {
+            return -Math.log(1 - result);
+        }
+    }
     
-    public double cost(double result, double output){
-    	if(output==1.0d){
-    		return -Math.log(result);
-    	}
-    	else{
-    		return -Math.log(1-result);
-    	}
+    private double regularizedParameter(double regularizedRate,int recordCount){
+        if(regularizedRate == 0.0d){
+            return 0.0d;
+        }
+        double sumSqureWeights = 0.0d;
+        for(int i = 0;i<this.weights.length;i++){
+            sumSqureWeights+= this.weights[i]*this.weights[i];
+        }
+        double result = regularizedRate*sumSqureWeights/recordCount*0.5d;
+        return result;
     }
 
     @Override
     protected void postLoad(WorkerContext<LogisticRegressionParams, LogisticRegressionParams> context) {
-        this.dataList.switchState();
+        this.trainingData.switchState();
+        this.testingData.switchState();
     }
 
     @Override
     public void load(GuaguaWritableAdapter<LongWritable> currentKey, GuaguaWritableAdapter<Text> currentValue,
             WorkerContext<LogisticRegressionParams, LogisticRegressionParams> context) {
+        ++this.count;
+        if((this.count) % 100000 == 0) {
+            LOG.info("Read {} records.", this.count);
+        }
+        double baggingSampleRate = this.modelConfig.getBaggingSampleRate();
+        // if fixInitialInput = false, we only compare random value with baggingSampleRate to avoid parsing data.
+        // if fixInitialInput = true, we should use hashcode after parsing.
+        if(!this.modelConfig.isFixInitialInput() && Double.compare(Math.random(), baggingSampleRate) >= 0) {
+            return;
+        }
         String line = currentValue.getWritable().toString();
         double[] inputData = new double[inputNum];
         double[] outputData = new double[outputNum];
         int count = 0, inputIndex = 0, outputIndex = 0;
         long hashcode = 0;
-        double significance = NNConstants.DEFAULT_SIGNIFICANCE_VALUE;
-        //inputData[inputIndex++] = 1.0d;
-        LOG.info("inputnum:"+inputNum);
-        LOG.info("outputnum:"+outputNum);
-        LOG.info("current_line"+line);
-        LOG.info("columnconfig_size:"+this.columnConfigList.size());
+        double significance = CommonConstants.DEFAULT_SIGNIFICANCE_VALUE;
         for(String unit: splitter.split(line)) {
             double doubleValue = NumberFormatUtils.getDouble(unit.trim(), 0.0d);
             if(count == this.columnConfigList.size()) {
-                significance = NumberFormatUtils.getDouble(unit.trim(), NNConstants.DEFAULT_SIGNIFICANCE_VALUE);
+                significance = NumberFormatUtils.getDouble(unit.trim(), CommonConstants.DEFAULT_SIGNIFICANCE_VALUE);
                 break;
-            }
-            else{
-                ColumnConfig columnConfig = this.columnConfigList.get(count);
-            if(columnConfig != null && columnConfig.isTarget()) {
-                outputData[outputIndex++] = doubleValue;
             } else {
-                if(this.inputNum == this.candidateNum) {
-                    // all variables are not set final-selectByFilter
-                    if(CommonUtils.isGoodCandidate(columnConfig)) {
-                        inputData[inputIndex++] = doubleValue;
-                        hashcode = hashcode * 31 + Double.valueOf(doubleValue).hashCode();
+                ColumnConfig columnConfig = this.columnConfigList.get(count);
+                if(columnConfig != null && columnConfig.isTarget()) {
+                    if(doubleValue != 1.0d && doubleValue != 0d) {
+                        throw new ShifuException(ShifuErrorCode.ERROR_INVALID_TARGET_VALUE);
                     }
+                    outputData[outputIndex++] = doubleValue;
                 } else {
-                    // final select some variables
-                    if(columnConfig != null && !columnConfig.isMeta() && !columnConfig.isTarget()
-                            && columnConfig.isFinalSelect()) {
-                        inputData[inputIndex++] = doubleValue;
-                        // only fixInitialInput=true, hashcode is effective. Remove Arrays.hashcode to avoid one
-                        // iteration for the input columns. Last weight column should be excluded.
-                        hashcode = hashcode * 31 + Double.valueOf(doubleValue).hashCode();
+                    if(this.inputNum == this.candidateNum) {
+                        // all variables are not set final-selectByFilter
+                        if(CommonUtils.isGoodCandidate(columnConfig)) {
+                            inputData[inputIndex++] = doubleValue;
+                            hashcode = hashcode * 31 + Double.valueOf(doubleValue).hashCode();
+                        }
+                    } else {
+                        // final select some variables
+                        if(columnConfig != null && !columnConfig.isMeta() && !columnConfig.isTarget()
+                                && columnConfig.isFinalSelect()) {
+                            inputData[inputIndex++] = doubleValue;
+                            // only fixInitialInput=true, hashcode is effective.
+                            // Remove Arrays.hashcode to avoid one
+                            // iteration for the input columns. Last weight
+                            // column should be excluded.
+                            hashcode = hashcode * 31 + Double.valueOf(doubleValue).hashCode();
+                        }
                     }
                 }
             }
-            }
             count++;
         }
-        this.dataList.append(new Data(inputData, outputData,significance));
+        this.addDataPairToDataSet(hashcode,new Data(inputData, outputData, significance));
+       // this.dataList.append(new Data(inputData, outputData, significance));
     }
-    
+
     private void loadConfigFiles(final Properties props) {
         try {
             SourceType sourceType = SourceType.valueOf(props.getProperty(NNConstants.NN_MODELSET_SOURCE_TYPE,
@@ -243,6 +302,81 @@ public class LogisticRegressionWorker
             throw new RuntimeException(e);
         }
     }
+    
+    /**
+     * Add data pair to data set according to setting parameters. Still set hashCode to long to make double and long
+     * friendly.
+     */
+    private void addDataPairToDataSet(long hashcode, Data record) {
+        double crossValidationRate = this.modelConfig.getCrossValidationRate();
+        if(this.modelConfig.isFixInitialInput()) {
+            long longCrossValidation = Double.valueOf(crossValidationRate * 100).longValue();
+            if(hashcode % 100 < longCrossValidation) {
+                this.testingData.append(record);
+            } else {
+                this.trainingData.append(record);
+            }
+        } else {
+            double random = Math.random();
+//            if(isBaggingReplacementTrigged(random)) {
+//                mockRandomRepeatData(crossValidationRate, random);
+//            } else {
+                addDataPairToDataSet(record, crossValidationRate, random);
+           // }
+        }
+    }
+    
+    /**
+     * Add data pair to data set according to random number compare with crossValidationRate.
+     */
+    private void addDataPairToDataSet(Data record, double crossValidationRate, double random) {
+        if(Double.compare(random, crossValidationRate) < 0) {
+            this.testingData.append(record);
+        } else {
+            this.trainingData.append(record);
+        }
+    }
+
+    
+    /**
+     * Only baggingWithReplacement is set and size over NNConstants.NN_BAGGING_THRESHOLD, and random value <= 1/size. We
+     * choose use existing data to add training data set and testing data set.
+     */
+    private boolean isBaggingReplacementTrigged(double random) {
+        long trainingSize = this.trainingData.size();
+        long testingSize = this.testingData.size();
+        // size should be equals to sampleCount:)
+        long size = trainingSize + testingSize;
+        return this.modelConfig.isBaggingWithReplacement() && (testingSize > 0) && (trainingSize > 0)
+                && (size > NNConstants.NN_BAGGING_THRESHOLD)
+                && (Double.compare(random, 0.5d) < 0);
+    }
+
+    /**
+     * From Trainer, the logic is to random choose items in master dataset, but I don't want to load data twice for
+     * saving memory. Use this to mock raw random repeat logic. This should be some logic difference because of data are
+     * not loaded into data set, not random.
+     */
+//    private void mockRandomRepeatData(double crossValidationRate, double random) {
+//        long trainingSize = this.trainingData.getRecordCount();
+//        long testingSize = this.testingData.getRecordCount();
+//        long size = trainingSize + testingSize;
+//        // here we used a strong cast from long to int since it's just a random choosing algorithm
+//        int next = RandomUtils.nextInt((int) size);
+//        MLDataPair dataPair = new BasicMLDataPair(new BasicMLData(new double[this.inputNodeCount]), new BasicMLData(
+//                new double[this.outputNodeCount]));
+//        if(next >= trainingSize) {
+//            this.testingData.getRecord(next - trainingSize, dataPair);
+//        } else {
+//            this.trainingData.getRecord(next, dataPair);
+//        }
+//
+//        if(Double.compare(random, crossValidationRate) < 0) {
+//            this.testingData.add(dataPair);
+//        } else {
+//            this.trainingData.add(dataPair);
+//        }
+//    }
 
     private static class Data implements Serializable {
 
@@ -253,29 +387,28 @@ public class LogisticRegressionWorker
             this.outputs = outputs;
             this.significance = significance;
         }
+
         private final double significance;
         private final double[] inputs;
         private final double[] outputs;
     }
-    
-    public void test(String input)
-    {
-    	int count = 0;
-    	for(String unit: splitter.split(input)){
-    		System.out.println("count:"+count);
-    		System.out.println("current_value:"+unit);
-    		count++;
 
-    	}
+    public void test(String input) {
+        int count = 0;
+        for(String unit: splitter.split(input)) {
+            System.out.println("count:" + count);
+            System.out.println("current_value:" + unit);
+            count++;
+
+        }
     }
-    
-    public static void main(String[] args){
-    	String line ="|1|1.126082|-1.979292|1.307047|1.018816|1.555019|3.408517|2.816882|2.619519|2.274134|2.31";
-    	LogisticRegressionWorker w =  new LogisticRegressionWorker();
-    	//w.test(line);
-    	w.cost(1, 1);
-    	
-    	
+
+    public static void main(String[] args) {
+        String line = "|1|1.126082|-1.979292|1.307047|1.018816|1.555019|3.408517|2.816882|2.619519|2.274134|2.31";
+        LogisticRegressionWorker w = new LogisticRegressionWorker();
+        // w.test(line);
+        w.cost(1, 1);
+
     }
 
 }

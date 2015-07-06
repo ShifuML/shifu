@@ -471,6 +471,11 @@
                         "directive": "input",
                         "defval" : 0.1
                     }, {
+                        "name" : "RegularizedRate",
+                        "type" : "number",
+                        "directive": "input",
+                        "defval" : 0.0
+                    }, {
                         "name" : "LearningDecay",
                         "type" : "number",
                         "directive": "input",

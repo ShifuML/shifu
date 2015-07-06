@@ -15,20 +15,18 @@
  */
 package ml.shifu.shifu.core.dtrain;
 
-public final class LogisticRegressionContants {
-
-    // avoid new
-    private LogisticRegressionContants() {
-    }
+public interface LogisticRegressionContants {
 
     public static final String LR_INPUT_NUM = "lr.input.num";
 
     public static final int LR_INPUT_DEFAULT_NUM = 2;
-
-    public static final String LR_LEARNING_RATE = "lr.learning.rate";
-
-    public static final double LR_LEARNING_DEFAULT_RATE = 0.1d;
     
+    public static final String LR_REGULARIZED_RATE = "RegularizedRate";
+        
     public static final String LR_ALG_NAME = "LR";
+    
+    public static final String LR_LEARNING_RATE = "LearningRate";
+    
+    public static final String LR_MODEL_OUTPUT = "guagua.nn.output";
 
 }
