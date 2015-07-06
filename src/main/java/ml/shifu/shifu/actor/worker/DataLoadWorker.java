@@ -19,11 +19,13 @@ import akka.actor.ActorRef;
 import ml.shifu.guagua.util.NumberFormatUtils;
 import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.container.obj.ModelConfig;
+import ml.shifu.shifu.core.dtrain.CommonConstants;
 import ml.shifu.shifu.core.dtrain.NNConstants;
 import ml.shifu.shifu.core.dtrain.NNUtils;
 import ml.shifu.shifu.message.*;
 import ml.shifu.shifu.util.CommonUtils;
 import ml.shifu.shifu.util.Environment;
+
 import org.encog.ml.data.MLDataPair;
 import org.encog.ml.data.basic.BasicMLData;
 import org.encog.ml.data.basic.BasicMLDataPair;
@@ -222,7 +224,7 @@ public class DataLoadWorker extends AbstractWorkerActor {
             for(String input: DEFAULT_SPLITTER.split(line.trim())) {
                 double doubleValue = NumberFormatUtils.getDouble(input.trim(), 0.0d);
                 if(index == this.columnConfigList.size()) {
-                    significance = NumberFormatUtils.getDouble(input.trim(), NNConstants.DEFAULT_SIGNIFICANCE_VALUE);
+                    significance = NumberFormatUtils.getDouble(input.trim(), CommonConstants.DEFAULT_SIGNIFICANCE_VALUE);
                     break;
                 } else {
                     ColumnConfig columnConfig = this.columnConfigList.get(index);

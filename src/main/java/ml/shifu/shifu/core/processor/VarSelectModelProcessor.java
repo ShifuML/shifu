@@ -30,6 +30,7 @@ import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
 import ml.shifu.shifu.core.AbstractTrainer;
 import ml.shifu.shifu.core.VariableSelector;
 import ml.shifu.shifu.core.alg.NNTrainer;
+import ml.shifu.shifu.core.dtrain.CommonConstants;
 import ml.shifu.shifu.core.dtrain.NNConstants;
 import ml.shifu.shifu.core.dvarsel.VarSelMaster;
 import ml.shifu.shifu.core.dvarsel.VarSelMasterResult;
@@ -190,7 +191,7 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
         prepareVarSelParams(args, sourceType);
 
         Path columnIdsPath = getVotedSelectionPath(sourceType);
-        args.add(String.format(NNConstants.MAPREDUCE_PARAM_FORMAT,
+        args.add(String.format(CommonConstants.MAPREDUCE_PARAM_FORMAT,
                 ml.shifu.shifu.util.Constants.VAR_SEL_COLUMN_IDS_OUPUT, columnIdsPath.toString()));
 
         long start = System.currentTimeMillis();
@@ -303,42 +304,42 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
         args.add(VarSelWorkerResult.class.getName());
 
         // setting conductor
-        args.add(String.format(NNConstants.MAPREDUCE_PARAM_FORMAT,
+        args.add(String.format(CommonConstants.MAPREDUCE_PARAM_FORMAT,
                 ml.shifu.shifu.util.Constants.VAR_SEL_MASTER_CONDUCTOR,
                 Environment.getProperty(Environment.VAR_SEL_MASTER_CONDUCTOR, WrapperMasterConductor.class.getName())));
 
-        args.add(String.format(NNConstants.MAPREDUCE_PARAM_FORMAT,
+        args.add(String.format(CommonConstants.MAPREDUCE_PARAM_FORMAT,
                 ml.shifu.shifu.util.Constants.VAR_SEL_WORKER_CONDUCTOR,
                 Environment.getProperty(Environment.VAR_SEL_MASTER_CONDUCTOR, WrapperWorkerConductor.class.getName())));
 
         // setting queue
-        args.add(String.format(NNConstants.MAPREDUCE_PARAM_FORMAT, NNConstants.MAPRED_JOB_QUEUE_NAME,
+        args.add(String.format(CommonConstants.MAPREDUCE_PARAM_FORMAT, NNConstants.MAPRED_JOB_QUEUE_NAME,
                 Environment.getProperty(Environment.HADOOP_JOB_QUEUE, ml.shifu.shifu.util.Constants.DEFAULT_JOB_QUEUE)));
 
         // MAPRED timeout
-        args.add(String.format(NNConstants.MAPREDUCE_PARAM_FORMAT, NNConstants.MAPRED_TASK_TIMEOUT, Environment.getInt(
+        args.add(String.format(CommonConstants.MAPREDUCE_PARAM_FORMAT, NNConstants.MAPRED_TASK_TIMEOUT, Environment.getInt(
                 NNConstants.MAPRED_TASK_TIMEOUT, ml.shifu.shifu.util.Constants.DEFAULT_MAPRED_TIME_OUT)));
 
-        args.add(String.format(NNConstants.MAPREDUCE_PARAM_FORMAT, GuaguaConstants.GUAGUA_MASTER_INTERCEPTERS,
+        args.add(String.format(CommonConstants.MAPREDUCE_PARAM_FORMAT, GuaguaConstants.GUAGUA_MASTER_INTERCEPTERS,
                 VarSelOutput.class.getName()));
 
         // setting model config column config
         args.add(String.format(
-                NNConstants.MAPREDUCE_PARAM_FORMAT,
+                CommonConstants.MAPREDUCE_PARAM_FORMAT,
                 NNConstants.SHIFU_NN_MODEL_CONFIG,
                 ShifuFileUtils.getFileSystemBySourceType(sourceType).makeQualified(
                         new Path(super.getPathFinder().getModelConfigPath(sourceType)))));
         args.add(String.format(
-                NNConstants.MAPREDUCE_PARAM_FORMAT,
+                CommonConstants.MAPREDUCE_PARAM_FORMAT,
                 NNConstants.SHIFU_NN_COLUMN_CONFIG,
                 ShifuFileUtils.getFileSystemBySourceType(sourceType).makeQualified(
                         new Path(super.getPathFinder().getColumnConfigPath(sourceType)))));
 
         // source type
-        args.add(String.format(NNConstants.MAPREDUCE_PARAM_FORMAT, NNConstants.NN_MODELSET_SOURCE_TYPE, sourceType));
+        args.add(String.format(CommonConstants.MAPREDUCE_PARAM_FORMAT, NNConstants.NN_MODELSET_SOURCE_TYPE, sourceType));
 
         // computation time
-        args.add(String.format(NNConstants.MAPREDUCE_PARAM_FORMAT, GuaguaConstants.GUAGUA_COMPUTATION_TIME_THRESHOLD,
+        args.add(String.format(CommonConstants.MAPREDUCE_PARAM_FORMAT, GuaguaConstants.GUAGUA_COMPUTATION_TIME_THRESHOLD,
                 60 * 60 * 1000l));
         setHeapSizeAndSplitSize(args);
 
@@ -346,7 +347,7 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
         for(Map.Entry<Object, Object> entry: Environment.getProperties().entrySet()) {
             if(entry.getKey().toString().startsWith("nn") || entry.getKey().toString().startsWith("guagua")
                     || entry.getKey().toString().startsWith("mapred")) {
-                args.add(String.format(NNConstants.MAPREDUCE_PARAM_FORMAT, entry.getKey().toString(), entry.getValue()
+                args.add(String.format(CommonConstants.MAPREDUCE_PARAM_FORMAT, entry.getKey().toString(), entry.getValue()
                         .toString()));
             }
         }
@@ -601,11 +602,11 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
     private void setHeapSizeAndSplitSize(final List<String> args) {
         // args.add(String.format(NNConstants.MAPREDUCE_PARAM_FORMAT, GuaguaMapReduceConstants.MAPRED_CHILD_JAVA_OPTS,
         // "-Xmn128m -Xms1G -Xmx1G -verbose:gc -XX:+PrintGCDetails -XX:+PrintGCTimeStamps"));
-        args.add(String.format(NNConstants.MAPREDUCE_PARAM_FORMAT, GuaguaMapReduceConstants.MAPRED_CHILD_JAVA_OPTS,
+        args.add(String.format(CommonConstants.MAPREDUCE_PARAM_FORMAT, GuaguaMapReduceConstants.MAPRED_CHILD_JAVA_OPTS,
                 "-Xmn128m -Xms1G -Xmx1G"));
-        args.add(String.format(NNConstants.MAPREDUCE_PARAM_FORMAT, GuaguaConstants.GUAGUA_SPLIT_COMBINABLE,
+        args.add(String.format(CommonConstants.MAPREDUCE_PARAM_FORMAT, GuaguaConstants.GUAGUA_SPLIT_COMBINABLE,
                 Environment.getProperty(GuaguaConstants.GUAGUA_SPLIT_COMBINABLE, "true")));
-        args.add(String.format(NNConstants.MAPREDUCE_PARAM_FORMAT,
+        args.add(String.format(CommonConstants.MAPREDUCE_PARAM_FORMAT,
                 GuaguaConstants.GUAGUA_SPLIT_MAX_COMBINED_SPLIT_SIZE,
                 Environment.getProperty(GuaguaConstants.GUAGUA_SPLIT_MAX_COMBINED_SPLIT_SIZE, "268435456")));
     }

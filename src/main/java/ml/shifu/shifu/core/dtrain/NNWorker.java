@@ -21,6 +21,7 @@ import java.util.List;
 import java.util.Properties;
 
 import ml.shifu.guagua.GuaguaRuntimeException;
+import ml.shifu.guagua.GuaguaConstants;
 import ml.shifu.guagua.hadoop.io.GuaguaLineRecordReader;
 import ml.shifu.guagua.hadoop.io.GuaguaWritableAdapter;
 import ml.shifu.guagua.io.GuaguaFileSplit;
@@ -374,7 +375,7 @@ public class NNWorker extends
         }
 
         long hashcode = 0;
-        double significance = NNConstants.DEFAULT_SIGNIFICANCE_VALUE;
+        double significance = CommonConstants.DEFAULT_SIGNIFICANCE_VALUE;
         // use guava Splitter to iterate only once
         // use NNConstants.NN_DEFAULT_COLUMN_SEPARATOR to replace getModelConfig().getDataSetDelimiter(), this follows
         // the function in akka mode.
@@ -382,7 +383,7 @@ public class NNWorker extends
         for(String input: DEFAULT_SPLITTER.split(currentValue.getWritable().toString())) {
             double doubleValue = NumberFormatUtils.getDouble(input.trim(), 0.0d);
             if(index == this.columnConfigList.size()) {
-                significance = NumberFormatUtils.getDouble(input, NNConstants.DEFAULT_SIGNIFICANCE_VALUE);
+                significance = NumberFormatUtils.getDouble(input, CommonConstants.DEFAULT_SIGNIFICANCE_VALUE);
                 break;
             } else {
                 ColumnConfig columnConfig = this.columnConfigList.get(index);
@@ -447,7 +448,7 @@ public class NNWorker extends
             }
         }
     }
-
+    
     /**
      * Only baggingWithReplacement is set and size over NNConstants.NN_BAGGING_THRESHOLD, and random value <= 1/size. We
      * choose use existing data to add training data set and testing data set.

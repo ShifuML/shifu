@@ -37,6 +37,7 @@ import ml.shifu.shifu.core.AbstractTrainer;
 import ml.shifu.shifu.core.alg.LogisticRegressionTrainer;
 import ml.shifu.shifu.core.alg.NNTrainer;
 import ml.shifu.shifu.core.alg.SVMTrainer;
+import ml.shifu.shifu.core.dtrain.CommonConstants;
 import ml.shifu.shifu.core.dtrain.LogisticRegressionContants;
 import ml.shifu.shifu.core.dtrain.LogisticRegressionMaster;
 import ml.shifu.shifu.core.dtrain.LogisticRegressionOutput;
@@ -275,7 +276,7 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
         FileSystem fileSystem = ShifuFileUtils.getFileSystemBySourceType(sourceType);
         Path tmpModelsPath = fileSystem.makeQualified(new Path(super.getPathFinder().getPathBySourceType(
                 new Path(Constants.TMP, Constants.DEFAULT_MODELS_TMP_FOLDER), sourceType)));
-        args.add(String.format(NNConstants.MAPREDUCE_PARAM_FORMAT, NNConstants.NN_TMP_MODELS_FOLDER,
+        args.add(String.format(CommonConstants.MAPREDUCE_PARAM_FORMAT, NNConstants.NN_TMP_MODELS_FOLDER,
                 tmpModelsPath.toString()));
         int baggingNum = isForVarSelect ? 1 : super.getModelConfig().getBaggingNum();
 
@@ -298,17 +299,17 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
                     modelName));
 
             checkContinuousTraining(fileSystem, localArgs, modelPath);
-            localArgs.add(String.format(NNConstants.MAPREDUCE_PARAM_FORMAT, NNConstants.GUAGUA_NN_OUTPUT,
+            localArgs.add(String.format(CommonConstants.MAPREDUCE_PARAM_FORMAT, CommonConstants.GUAGUA_OUTPUT,
                     modelPath.toString()));
-            localArgs.add(String.format(NNConstants.MAPREDUCE_PARAM_FORMAT, NNConstants.NN_TRAINER_ID,
+            localArgs.add(String.format(CommonConstants.MAPREDUCE_PARAM_FORMAT, NNConstants.NN_TRAINER_ID,
                     String.valueOf(i + 1)));
             final String progressLogFile = getProgressLogFile(i + 1);
             progressLogList.add(progressLogFile);
-            localArgs.add(String.format(NNConstants.MAPREDUCE_PARAM_FORMAT, NNConstants.NN_PROGRESS_FILE,
+            localArgs.add(String.format(CommonConstants.MAPREDUCE_PARAM_FORMAT, NNConstants.NN_PROGRESS_FILE,
                     progressLogFile));
             String hdpVersion = HDPUtils.getHdpVersionForHDP224();
             if(StringUtils.isNotBlank(hdpVersion)) {
-                localArgs.add(String.format(NNConstants.MAPREDUCE_PARAM_FORMAT, "hdp.version", hdpVersion));
+                localArgs.add(String.format(CommonConstants.MAPREDUCE_PARAM_FORMAT, "hdp.version", hdpVersion));
                 HDPUtils.addFileToClassPath(HDPUtils.findContainingFile("hdfs-site.xml"), conf);
                 HDPUtils.addFileToClassPath(HDPUtils.findContainingFile("core-site.xml"), conf);
                 HDPUtils.addFileToClassPath(HDPUtils.findContainingFile("mapred-site.xml"), conf);
@@ -347,24 +348,24 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
         if(Boolean.TRUE.toString().equals(this.modelConfig.getTrain().getIsContinuous().toString())) {
             // if varselect d-training or no such existing models, directly to disable continuous training.
             if(this.isForVarSelect) {
-                localArgs.add(String.format(NNConstants.MAPREDUCE_PARAM_FORMAT, NNConstants.NN_CONTINUOUS_TRAINING,
+                localArgs.add(String.format(CommonConstants.MAPREDUCE_PARAM_FORMAT, NNConstants.NN_CONTINUOUS_TRAINING,
                         Boolean.FALSE.toString()));
                 LOG.warn("For varSelect step, continous model training is always disabled.");
             } else if(!fileSystem.exists(modelPath)) {
-                localArgs.add(String.format(NNConstants.MAPREDUCE_PARAM_FORMAT, NNConstants.NN_CONTINUOUS_TRAINING,
+                localArgs.add(String.format(CommonConstants.MAPREDUCE_PARAM_FORMAT, NNConstants.NN_CONTINUOUS_TRAINING,
                         Boolean.FALSE.toString()));
                 LOG.info("No existing model, model training will start from scratch.");
             } else if(!inputOutputModelCheckSuccess(fileSystem, modelPath)) {
                 // TODO hidden layer size and activation functions should also be validated
-                localArgs.add(String.format(NNConstants.MAPREDUCE_PARAM_FORMAT, NNConstants.NN_CONTINUOUS_TRAINING,
+                localArgs.add(String.format(CommonConstants.MAPREDUCE_PARAM_FORMAT, NNConstants.NN_CONTINUOUS_TRAINING,
                         Boolean.FALSE.toString()));
                 LOG.warn("Model input and output settings are not consistent with input and output columns settings,  model training will start from scratch.");
             } else {
-                localArgs.add(String.format(NNConstants.MAPREDUCE_PARAM_FORMAT, NNConstants.NN_CONTINUOUS_TRAINING,
+                localArgs.add(String.format(CommonConstants.MAPREDUCE_PARAM_FORMAT, NNConstants.NN_CONTINUOUS_TRAINING,
                         this.modelConfig.getTrain().getIsContinuous()));
             }
         } else {
-            localArgs.add(String.format(NNConstants.MAPREDUCE_PARAM_FORMAT, NNConstants.NN_CONTINUOUS_TRAINING,
+            localArgs.add(String.format(CommonConstants.MAPREDUCE_PARAM_FORMAT, NNConstants.NN_CONTINUOUS_TRAINING,
                     this.modelConfig.getTrain().getIsContinuous()));
         }
     }
@@ -417,6 +418,38 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
             }
         }
     }
+    
+    private void prepareLRParams(final List<String> args, final SourceType sourceType){
+        args.add("-w");
+        args.add(LogisticRegressionWorker.class.getName());
+
+        args.add("-m");
+        args.add(LogisticRegressionMaster.class.getName());
+        args.add("-mr");
+        args.add(LogisticRegressionParams.class.getName());
+
+        args.add("-wr");
+        args.add(LogisticRegressionParams.class.getName());
+        args.add(String.format(CommonConstants.MAPREDUCE_PARAM_FORMAT, GuaguaConstants.GUAGUA_MASTER_INTERCEPTERS,
+        		LogisticRegressionOutput.class.getName()));
+//        args.add(String.format(CommonConstants.MAPREDUCE_PARAM_FORMAT, LogisticRegressionContants.LR_MODEL_OUTPUT,
+//        		"modeloutput"));
+    }
+    
+    private void prepareNNParams(final List<String> args, final SourceType sourceType){
+        args.add("-w");
+        args.add(NNWorker.class.getName());
+        args.add("-m");
+        args.add(NNMaster.class.getName());
+        
+        args.add("-mr");
+        args.add(NNParams.class.getName());
+        args.add("-wr");
+        
+        args.add(NNParams.class.getName());
+        args.add(String.format(CommonConstants.MAPREDUCE_PARAM_FORMAT, GuaguaConstants.GUAGUA_MASTER_INTERCEPTERS,
+                NNOutput.class.getName()));
+    }
 
     private void prepareCommonParams(final List<String> args, final SourceType sourceType) {
         args.add("-libjars");
@@ -434,22 +467,13 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
             args.add(zkServers);
         }
     	String alg = super.getModelConfig().getTrain().getAlgorithm();
-    	if(LogisticRegressionContants.LR_ALG_NAME.equalsIgnoreCase(alg))
-    	{
-            args.add("-w");
-            args.add(LogisticRegressionWorker.class.getName());
-
-            args.add("-m");
-            args.add(LogisticRegressionMaster.class.getName());
-    	}
-    	else{
-        args.add("-w");
-        args.add(NNWorker.class.getName());
-
-        args.add("-m");
-        args.add(NNMaster.class.getName());
+        if(LogisticRegressionContants.LR_ALG_NAME.equalsIgnoreCase(alg))
+        {
+            this.prepareLRParams(args, sourceType);
         }
-
+        else{
+            this.prepareNNParams(args, sourceType);
+        }
         args.add("-c");
         // the reason to add 1 is that the first iteration in D-NN
         // implementation is used for training preparation.
@@ -462,44 +486,22 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
 
         args.add(String.valueOf(numTrainEpoches));
 
-    	if(LogisticRegressionContants.LR_ALG_NAME.equalsIgnoreCase(alg))
-    	{
-            args.add("-mr");
-            args.add(LogisticRegressionParams.class.getName());
-
-            args.add("-wr");
-            args.add(LogisticRegressionParams.class.getName());
-            args.add(String.format(NNConstants.MAPREDUCE_PARAM_FORMAT, GuaguaConstants.GUAGUA_MASTER_INTERCEPTERS,
-            		LogisticRegressionOutput.class.getName()));
-            args.add(String.format(NNConstants.MAPREDUCE_PARAM_FORMAT, "lr.model.output",
-            		"modeloutput"));
-    	}
-    	else{
-        args.add("-mr");
-        args.add(NNParams.class.getName());
-
-        args.add("-wr");
-        args.add(NNParams.class.getName());
-        args.add(String.format(NNConstants.MAPREDUCE_PARAM_FORMAT, GuaguaConstants.GUAGUA_MASTER_INTERCEPTERS,
-                NNOutput.class.getName()));
-        }
-
-        args.add(String.format(NNConstants.MAPREDUCE_PARAM_FORMAT, NNConstants.MAPRED_JOB_QUEUE_NAME,
+        args.add(String.format(CommonConstants.MAPREDUCE_PARAM_FORMAT, NNConstants.MAPRED_JOB_QUEUE_NAME,
                 Environment.getProperty(Environment.HADOOP_JOB_QUEUE, Constants.DEFAULT_JOB_QUEUE)));
         args.add(String.format(
-                NNConstants.MAPREDUCE_PARAM_FORMAT,
+                CommonConstants.MAPREDUCE_PARAM_FORMAT,
                 NNConstants.SHIFU_NN_MODEL_CONFIG,
                 ShifuFileUtils.getFileSystemBySourceType(sourceType).makeQualified(
                         new Path(super.getPathFinder().getModelConfigPath(sourceType)))));
         args.add(String.format(
-                NNConstants.MAPREDUCE_PARAM_FORMAT,
+                CommonConstants.MAPREDUCE_PARAM_FORMAT,
                 NNConstants.SHIFU_NN_COLUMN_CONFIG,
                 ShifuFileUtils.getFileSystemBySourceType(sourceType).makeQualified(
                         new Path(super.getPathFinder().getColumnConfigPath(sourceType)))));
-        args.add(String.format(NNConstants.MAPREDUCE_PARAM_FORMAT, NNConstants.NN_MODELSET_SOURCE_TYPE, sourceType));
-        args.add(String.format(NNConstants.MAPREDUCE_PARAM_FORMAT, NNConstants.NN_DRY_TRAIN, isDryTrain()));
+        args.add(String.format(CommonConstants.MAPREDUCE_PARAM_FORMAT, NNConstants.NN_MODELSET_SOURCE_TYPE, sourceType));
+        args.add(String.format(CommonConstants.MAPREDUCE_PARAM_FORMAT, NNConstants.NN_DRY_TRAIN, isDryTrain()));
         // hard code set computation threshold for 50s. Can be changed in shifuconfig file
-        args.add(String.format(NNConstants.MAPREDUCE_PARAM_FORMAT, GuaguaConstants.GUAGUA_COMPUTATION_TIME_THRESHOLD,
+        args.add(String.format(CommonConstants.MAPREDUCE_PARAM_FORMAT, GuaguaConstants.GUAGUA_COMPUTATION_TIME_THRESHOLD,
                 60 * 1000L));
         setHeapSizeAndSplitSize(args);
 
@@ -507,7 +509,7 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
         for(Map.Entry<Object, Object> entry: Environment.getProperties().entrySet()) {
             if(entry.getKey().toString().startsWith("nn") || entry.getKey().toString().startsWith("guagua")
                     || entry.getKey().toString().startsWith("mapred")) {
-                args.add(String.format(NNConstants.MAPREDUCE_PARAM_FORMAT, entry.getKey().toString(), entry.getValue()
+                args.add(String.format(CommonConstants.MAPREDUCE_PARAM_FORMAT, entry.getKey().toString(), entry.getValue()
                         .toString()));
             }
         }
@@ -516,24 +518,24 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
     private void setHeapSizeAndSplitSize(final List<String> args) {
         // can be override by shifuconfig, ok for hard code
         if(this.isDebug()) {
-            args.add(String.format(NNConstants.MAPREDUCE_PARAM_FORMAT, GuaguaMapReduceConstants.MAPRED_CHILD_JAVA_OPTS,
+            args.add(String.format(CommonConstants.MAPREDUCE_PARAM_FORMAT, GuaguaMapReduceConstants.MAPRED_CHILD_JAVA_OPTS,
                     "-Xmn128m -Xms1G -Xmx1G -verbose:gc -XX:+PrintGCDetails -XX:+PrintGCTimeStamps"));
         } else {
-            args.add(String.format(NNConstants.MAPREDUCE_PARAM_FORMAT, GuaguaMapReduceConstants.MAPRED_CHILD_JAVA_OPTS,
+            args.add(String.format(CommonConstants.MAPREDUCE_PARAM_FORMAT, GuaguaMapReduceConstants.MAPRED_CHILD_JAVA_OPTS,
                     "-Xmn128m -Xms1G -Xmx1G"));
         }
-        args.add(String.format(NNConstants.MAPREDUCE_PARAM_FORMAT, GuaguaConstants.GUAGUA_SPLIT_COMBINABLE,
+        args.add(String.format(CommonConstants.MAPREDUCE_PARAM_FORMAT, GuaguaConstants.GUAGUA_SPLIT_COMBINABLE,
                 Environment.getProperty(GuaguaConstants.GUAGUA_SPLIT_COMBINABLE, "true")));
         // set to 512M to save mappers, sometimes maybe OOM, users should tune guagua.split.maxCombinedSplitSize in
         // shifuconfig
-        args.add(String.format(NNConstants.MAPREDUCE_PARAM_FORMAT,
+        args.add(String.format(CommonConstants.MAPREDUCE_PARAM_FORMAT,
                 GuaguaConstants.GUAGUA_SPLIT_MAX_COMBINED_SPLIT_SIZE,
                 Environment.getProperty(GuaguaConstants.GUAGUA_SPLIT_MAX_COMBINED_SPLIT_SIZE, "536870912")));
         // special tuning parameters for shifu, 0.99 means each iteation master wait for 99% workers and then can go to
         // next iteration.
-        args.add(String.format(NNConstants.MAPREDUCE_PARAM_FORMAT, GuaguaConstants.GUAGUA_MIN_WORKERS_RATIO, 0.99));
+        args.add(String.format(CommonConstants.MAPREDUCE_PARAM_FORMAT, GuaguaConstants.GUAGUA_MIN_WORKERS_RATIO, 0.99));
         // 10 seconds if waiting over 10, consider 99% workers; these two can be overrided in shifuconfig
-        args.add(String.format(NNConstants.MAPREDUCE_PARAM_FORMAT, GuaguaConstants.GUAGUA_MIN_WORKERS_TIMEOUT,
+        args.add(String.format(CommonConstants.MAPREDUCE_PARAM_FORMAT, GuaguaConstants.GUAGUA_MIN_WORKERS_TIMEOUT,
                 10 * 1000L));
     }
 
@@ -588,13 +590,20 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
     }
 
     /**
-     * Get NN model name
+     * Get model name
      * 
      * @param i
      *            index for model name
      */
-    public static String getModelName(int i) {
-        return String.format("model%s.nn", i);
+    public String getModelName(int i) {
+        String alg = super.getModelConfig().getTrain().getAlgorithm();
+        if(LogisticRegressionContants.LR_ALG_NAME.equalsIgnoreCase(alg))
+        {
+            return String.format("model%s.lr", i);
+        }
+        else{
+            return String.format("model%s.nn", i);
+        }
     }
 
     // d-train part ends here

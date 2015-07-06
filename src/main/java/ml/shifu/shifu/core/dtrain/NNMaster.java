@@ -128,7 +128,7 @@ public class NNMaster implements MasterComputable<NNParams, NNParams> {
                 LOG.info("Starting to train model from scratch.");
             } else {
                 try {
-                    Path modelPath = new Path(context.getProps().getProperty(NNConstants.GUAGUA_NN_OUTPUT));
+                    Path modelPath = new Path(context.getProps().getProperty(CommonConstants.GUAGUA_OUTPUT));
                     BasicNetwork existingModel = NNUtils.loadModel(modelPath,
                             ShifuFileUtils.getFileSystemBySourceType(this.modelConfig.getDataSet().getSource()));
                     if(existingModel == null) {

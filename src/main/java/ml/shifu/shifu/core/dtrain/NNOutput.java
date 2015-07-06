@@ -157,7 +157,7 @@ public class NNOutput extends BasicMasterInterceptor<NNParams, NNParams> {
         }
 
         if(optimizeddWeights != null) {
-            Path out = new Path(context.getProps().getProperty(NNConstants.GUAGUA_NN_OUTPUT));
+            Path out = new Path(context.getProps().getProperty(CommonConstants.GUAGUA_OUTPUT));
             writeModelWeightsToFileSystem(optimizeddWeights, out);
         }
     }

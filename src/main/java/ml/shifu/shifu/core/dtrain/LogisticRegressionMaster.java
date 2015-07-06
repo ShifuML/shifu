@@ -25,7 +25,9 @@ import ml.shifu.guagua.master.MasterComputable;
 import ml.shifu.guagua.master.MasterContext;
 import ml.shifu.guagua.util.NumberFormatUtils;
 import ml.shifu.shifu.container.obj.ColumnConfig;
+import ml.shifu.shifu.container.obj.ModelConfig;
 import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
+import ml.shifu.shifu.core.alg.NNTrainer;
 import ml.shifu.shifu.util.CommonUtils;
 
 import org.slf4j.Logger;
@@ -59,7 +61,14 @@ public class LogisticRegressionMaster implements MasterComputable<LogisticRegres
 
     private double[] weights;
 
-    private double learnRate;
+    private double learningRate = 1.0d;
+    
+    private double regularizedRate = 0.0d;
+    
+    /**
+     * Model configuration loaded from configuration file.
+     */
+    private ModelConfig modelConfig;
     
     /**
      * Column Config list read from HDFS
@@ -67,14 +76,11 @@ public class LogisticRegressionMaster implements MasterComputable<LogisticRegres
     private List<ColumnConfig> columnConfigList;
 
     private void init(MasterContext<LogisticRegressionParams, LogisticRegressionParams> context) {
-//        this.inputNum = NumberFormatUtils.getInt(LogisticRegressionContants.LR_INPUT_NUM,
-//                LogisticRegressionContants.LR_INPUT_DEFAULT_NUM);
-        this.learnRate = NumberFormatUtils.getDouble(LogisticRegressionContants.LR_LEARNING_RATE,
-                LogisticRegressionContants.LR_LEARNING_DEFAULT_RATE);
-        
+        // this.inputNum = NumberFormatUtils.getInt(LogisticRegressionContants.LR_INPUT_NUM,
+        // LogisticRegressionContants.LR_INPUT_DEFAULT_NUM);
         loadConfigFiles(context.getProps());
-        //this.inputNum = NumberFormatUtils.getInt(LogisticRegressionContants.LR_INPUT_NUM,
-          //      LogisticRegressionContants.LR_INPUT_DEFAULT_NUM);
+        this.learningRate = Double.valueOf(this.modelConfig.getParams().get(LogisticRegressionContants.LR_LEARNING_RATE).toString());
+        this.regularizedRate = Double.valueOf(this.modelConfig.getParams().get(LogisticRegressionContants.LR_REGULARIZED_RATE).toString());
         int[] inputOutputIndex = NNUtils.getInputOutputCandidateCounts(this.columnConfigList);
         this.inputNum = inputOutputIndex[0] == 0 ? inputOutputIndex[2] : inputOutputIndex[0];
     }
@@ -91,17 +97,25 @@ public class LogisticRegressionMaster implements MasterComputable<LogisticRegres
             double[] gradients = new double[this.inputNum];
             double sumError = 0.0d;
             int size = 0;
+            int recordCount = 0;
             for(LogisticRegressionParams param: context.getWorkerResults()) {
                 if(param != null) {
                     for(int i = 0; i < gradients.length; i++) {
                         gradients[i] += param.getParameters()[i];
                     }
+                    LOG.info("param_recordCount:", param.getRecordCount());
                     sumError += param.getError();
+                    recordCount+= param.getRecordCount();
                 }
                 size++;
             }
+            LOG.info("recordCount_master"+recordCount );
             for(int i = 0; i < weights.length; i++) {
-                weights[i] -= learnRate * gradients[i];
+                if(this.regularizedRate==0.0d){
+                    weights[i] -= learningRate * (gradients[i]/recordCount);
+                }else{
+                    weights[i] -= learningRate * ((gradients[i]+this.regularizedRate*weights[i])/recordCount);
+                }
             }
             LOG.debug("DEBUG: Weights: {}", Arrays.toString(this.weights));
             LOG.info("Iteration {} with error {}", context.getCurrentIteration(), sumError / size);
@@ -113,8 +127,8 @@ public class LogisticRegressionMaster implements MasterComputable<LogisticRegres
         try {
             SourceType sourceType = SourceType.valueOf(props.getProperty(NNConstants.NN_MODELSET_SOURCE_TYPE,
                     SourceType.HDFS.toString()));
-//            this.modelConfig = CommonUtils.loadModelConfig(props.getProperty(NNConstants.SHIFU_NN_MODEL_CONFIG),
-//                    sourceType);
+            this.modelConfig = CommonUtils.loadModelConfig(props.getProperty(NNConstants.SHIFU_NN_MODEL_CONFIG),
+                    sourceType);
             this.columnConfigList = CommonUtils.loadColumnConfigList(
                     props.getProperty(NNConstants.SHIFU_NN_COLUMN_CONFIG), sourceType);
 
