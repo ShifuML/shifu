@@ -17,6 +17,7 @@ package ml.shifu.shifu.guagua;
 
 import java.io.IOException;
 import java.lang.reflect.Constructor;
+import java.lang.reflect.InvocationTargetException;
 
 import ml.shifu.guagua.GuaguaRuntimeException;
 import ml.shifu.guagua.hadoop.io.GuaguaWritableAdapter;
@@ -126,10 +127,10 @@ public class GuaguaParquetRecordReader implements
 
         try {
             if(isHadoop2()) {
+                Class<?> taskTypeClass = Class.forName("org.apache.hadoop.mapreduce.TaskType");
                 Constructor<TaskAttemptID> constructor = TaskAttemptID.class.getDeclaredConstructor(String.class,
-                        Integer.TYPE, Boolean.TYPE, Integer.TYPE, Integer.TYPE);
-                id = constructor.newInstance("mock", -1,
-                        fromEnumConstantName(Class.forName("org.apache.hadoop.mapreduce.TaskType"), "MAP"), -1, -1);
+                        Integer.TYPE, taskTypeClass, Integer.TYPE, Integer.TYPE);
+                id = constructor.newInstance("mock", -1, fromEnumConstantName(taskTypeClass, "MAP"), -1, -1);
                 Constructor<?> contextConstructor = Class.forName(
                         "org.apache.hadoop.mapreduce.task.TaskAttemptContextImpl").getDeclaredConstructor(
                         Configuration.class, TaskAttemptID.class);
