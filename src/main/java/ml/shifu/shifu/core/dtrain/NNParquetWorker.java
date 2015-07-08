@@ -16,7 +16,6 @@
 package ml.shifu.shifu.core.dtrain;
 
 import java.io.IOException;
-import java.util.Arrays;
 
 import ml.shifu.guagua.hadoop.io.GuaguaWritableAdapter;
 import ml.shifu.guagua.io.GuaguaFileSplit;
@@ -126,8 +125,6 @@ public class NNParquetWorker extends AbstractNNWorker<Tuple> {
 
         super.sampleCount += 1;
 
-        LOG.info("Input: {}, Output:{}, Significance:{}", Arrays.toString(inputs), Arrays.toString(ideal), significance);
-
         MLDataPair pair = new BasicMLDataPair(new BasicMLData(inputs), new BasicMLData(ideal));
         pair.setSignificance(significance);
 
@@ -139,7 +136,7 @@ public class NNParquetWorker extends AbstractNNWorker<Tuple> {
             try {
                 requiredFieldList = (RequiredFieldList) ObjectSerializer.deserialize(super.props
                         .getProperty("parquet.private.pig.required.fields"));
-                LOG.info("required list: {}", requiredFieldList);
+                LOG.debug("required list: {}", requiredFieldList);
             } catch (IOException e) {
                 throw new RuntimeException(e);
             }
