@@ -15,7 +15,6 @@
  */
 package ml.shifu.shifu.container.obj;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 
@@ -85,7 +84,6 @@ public class ModelNormalizeConf {
     /**
      * @return the isParquet
      */
-    @JsonIgnore
     public Boolean getIsParquet() {
         return isParquet;
     }

@@ -39,7 +39,8 @@ import org.apache.pig.impl.logicalLayer.schema.Schema;
 import org.apache.pig.impl.util.Utils;
 
 /**
- * NormalizeUDF class normalize the training data
+ * For parquet format, only double type data will be saved. Not string like in {@link NormalizeUDF}. TODO, should merge
+ * together with {@link NormalizeUDF}.
  */
 public class NormalizeParquetUDF extends AbstractTrainerUDF<Tuple> {
 
@@ -49,7 +50,8 @@ public class NormalizeParquetUDF extends AbstractTrainerUDF<Tuple> {
     private NormType normType;
     private Expression weightExpr;
     private JexlContext weightContext;
-//    private DecimalFormat df = new DecimalFormat("#.######");
+
+    // private DecimalFormat df = new DecimalFormat("#.######");
 
     public NormalizeParquetUDF(String source, String pathModelConfig, String pathColumnConfig) throws Exception {
         super(source, pathModelConfig, pathColumnConfig);
@@ -116,7 +118,7 @@ public class NormalizeParquetUDF extends AbstractTrainerUDF<Tuple> {
 
             // append normalize data.
             if(!CommonUtils.isGoodCandidate(config)) {
-                tuple.append((Double)null);
+                tuple.append((Double) null);
             } else {
                 Double normVal = Normalizer.normalize(config, val, cutoff, normType);
                 tuple.append(normVal);

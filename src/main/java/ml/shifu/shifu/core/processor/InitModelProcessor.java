@@ -288,6 +288,8 @@ public class InitModelProcessor extends BasicModelProcessor implements Processor
 
         if(!hasTarget) {
             log.error("Target is not valid: " + modelConfig.getTargetColumnName());
+            log.error("Please check your header file {} and your header delimiter {}", modelConfig.getHeaderPath(),
+                    modelConfig.getHeaderDelimiter());
             return 1;
         }
 
