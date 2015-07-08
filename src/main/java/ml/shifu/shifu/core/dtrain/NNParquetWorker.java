@@ -17,6 +17,7 @@ package ml.shifu.shifu.core.dtrain;
 
 import java.io.IOException;
 
+import ml.shifu.guagua.GuaguaRuntimeException;
 import ml.shifu.guagua.hadoop.io.GuaguaWritableAdapter;
 import ml.shifu.guagua.io.GuaguaFileSplit;
 import ml.shifu.guagua.util.NumberFormatUtils;
@@ -27,6 +28,7 @@ import ml.shifu.shifu.guagua.GuaguaParquetRecordReader;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.pig.LoadPushDown.RequiredFieldList;
+import org.apache.pig.backend.executionengine.ExecException;
 import org.apache.pig.data.Tuple;
 import org.apache.pig.impl.util.ObjectSerializer;
 import org.encog.ml.data.MLDataPair;
@@ -84,7 +86,16 @@ public class NNParquetWorker extends AbstractNNWorker<Tuple> {
         // the function in akka mode.
         int index = 0, inputsIndex = 0, outputIndex = 0;
 
-        for(Object element: currentValue.getWritable()) {
+        Tuple tuple = currentValue.getWritable();
+
+        // back from foreach to for loop because of in earlier version, tuple cannot be iterable.
+        for(int i = 0; i < tuple.size(); i++) {
+            Object element = null;
+            try {
+                element = tuple.get(i);
+            } catch (ExecException e) {
+                throw new GuaguaRuntimeException(e);
+            }
             double doubleValue = 0d;
             if(element != null) {
                 if(element instanceof Double) {

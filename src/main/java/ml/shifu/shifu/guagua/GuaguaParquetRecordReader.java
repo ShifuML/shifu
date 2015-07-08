@@ -16,6 +16,7 @@
 package ml.shifu.shifu.guagua;
 
 import java.io.IOException;
+import java.lang.reflect.Constructor;
 
 import ml.shifu.guagua.GuaguaRuntimeException;
 import ml.shifu.guagua.hadoop.io.GuaguaWritableAdapter;
@@ -26,9 +27,8 @@ import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.LongWritable;
+import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.apache.hadoop.mapreduce.TaskAttemptID;
-import org.apache.hadoop.mapreduce.TaskType;
-import org.apache.hadoop.mapreduce.task.TaskAttemptContextImpl;
 import org.apache.pig.data.Tuple;
 
 import parquet.filter.UnboundRecordFilter;
@@ -87,6 +87,17 @@ public class GuaguaParquetRecordReader implements
         initialize(split);
     }
 
+    private boolean isHadoop2() {
+        @SuppressWarnings("unused")
+        Class<?> mapContextImplClazz = null;
+        try {
+            mapContextImplClazz = Class.forName("org.apache.hadoop.mapreduce.task.MapContextImpl");
+            return true;
+        } catch (ClassNotFoundException e) {
+            return false;
+        }
+    }
+
     /*
      * (non-Javadoc)
      * 
@@ -100,11 +111,42 @@ public class GuaguaParquetRecordReader implements
         ParquetInputSplit parquetInputSplit = new ParquetInputSplit(new Path(split.getPath()), split.getOffset(),
                 split.getOffset() + split.getLength(), split.getLength(), null, null);
         try {
-            this.parquetRecordReader.initialize(parquetInputSplit, new TaskAttemptContextImpl(this.conf,
-                    new TaskAttemptID("mock", -1, TaskType.MAP, -1, -1)));
+            this.parquetRecordReader.initialize(parquetInputSplit, buildContext());
         } catch (InterruptedException e) {
             throw new GuaguaRuntimeException(e);
         }
+    }
+
+    /**
+     * Build context through reflection to make sure code compatible between hadoop 1 and hadoop 2
+     */
+    private TaskAttemptContext buildContext() {
+        TaskAttemptID id = null;
+        TaskAttemptContext context = null;
+
+        try {
+            if(isHadoop2()) {
+                Constructor<TaskAttemptID> constructor = TaskAttemptID.class.getDeclaredConstructor(String.class,
+                        Integer.TYPE, Boolean.TYPE, Integer.TYPE, Integer.TYPE);
+                id = constructor.newInstance("mock", -1,
+                        fromEnumConstantName(Class.forName("org.apache.hadoop.mapreduce.TaskType"), "MAP"), -1, -1);
+                Constructor<?> contextConstructor = Class.forName(
+                        "org.apache.hadoop.mapreduce.task.TaskAttemptContextImpl").getDeclaredConstructor(
+                        Configuration.class, TaskAttemptID.class);
+                context = (TaskAttemptContext) contextConstructor.newInstance(this.conf, id);
+            } else {
+                Constructor<TaskAttemptID> constructor = TaskAttemptID.class.getDeclaredConstructor(String.class,
+                        Integer.TYPE, Boolean.TYPE, Integer.TYPE, Integer.TYPE);
+                constructor.setAccessible(true);
+                id = constructor.newInstance("mock", -1, false, -1, -1);
+                Constructor<?> contextConstructor = Class.forName("org.apache.hadoop.mapreduce.TaskAttemptContext")
+                        .getDeclaredConstructor(Configuration.class, TaskAttemptID.class);
+                context = (TaskAttemptContext) contextConstructor.newInstance(this.conf, id);
+            }
+        } catch (Throwable e) {
+            throw new GuaguaRuntimeException(e);
+        }
+        return context;
     }
 
     private static FilterPredicate getFilterPredicate(Configuration configuration) {
@@ -216,6 +258,17 @@ public class GuaguaParquetRecordReader implements
         } catch (InterruptedException e) {
             throw new GuaguaRuntimeException(e);
         }
+    }
+
+    @SuppressWarnings("rawtypes")
+    private static Enum fromEnumConstantName(Class<?> enumClass, String constantName) {
+        Object[] enumConstants = enumClass.getEnumConstants();
+        for(Object t: enumConstants) {
+            if(((java.lang.Enum<?>) t).name().equals(constantName)) {
+                return (Enum) t;
+            }
+        }
+        return null;
     }
 
     /*
