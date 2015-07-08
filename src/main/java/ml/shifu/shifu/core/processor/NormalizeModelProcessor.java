@@ -114,7 +114,7 @@ public class NormalizeModelProcessor extends BasicModelProcessor implements Proc
         try {
             String normPigPath = null;
             if(modelConfig.getNormalize().getIsParquet()) {
-                normPigPath = pathFinder.getAbsolutePath("scripts/NormalizeWithParquetOut.pig");
+                normPigPath = pathFinder.getAbsolutePath("scripts/NormalizeWithParquet.pig");
             } else {
                 normPigPath = pathFinder.getAbsolutePath("scripts/Normalize.pig");
             }
