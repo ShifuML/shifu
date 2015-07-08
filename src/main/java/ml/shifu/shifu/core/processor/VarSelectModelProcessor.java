@@ -74,7 +74,6 @@ import org.apache.pig.impl.util.JarManager;
 import org.apache.zookeeper.ZooKeeper;
 import org.encog.ml.data.MLDataSet;
 import org.jboss.netty.bootstrap.ServerBootstrap;
-import org.mortbay.log.Log;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -453,7 +452,7 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
                 threads = Integer.parseInt(Environment.getProperty(Constants.SHIFU_VARSEL_SE_MULTI_THREAD,
                         Constants.SHIFU_DEFAULT_VARSEL_SE_MULTI_THREAD + ""));
             } catch (Exception e) {
-                Log.warn("'shifu.varsel.se.multi.thread' should be a int value, set default value: {}",
+                log.warn("'shifu.varsel.se.multi.thread' should be a int value, set default value: {}",
                         Constants.SHIFU_DEFAULT_VARSEL_SE_MULTI_THREAD);
                 threads = Constants.SHIFU_DEFAULT_VARSEL_SE_MULTI_THREAD;
             }

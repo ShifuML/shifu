@@ -22,6 +22,8 @@ SET job.name 'shifu evaluation';
 SET mapred.child.java.opts -Xmx1G;
 SET mapred.child.ulimit 2.5G;
 SET mapred.reduce.slowstart.completed.maps 0.6;
+SET mapred.map.tasks.speculative.execution true;
+SET mapred.reduce.tasks.speculative.execution true;
 
 DEFINE IsDataFilterOut          ml.shifu.shifu.udf.PurifyDataUDF('$source_type', '$path_model_config', '$path_column_config', '$eval_set_name');
 DEFINE EvalScore                ml.shifu.shifu.udf.EvalScoreUDF('$source_type', '$path_model_config', '$path_column_config', '$eval_set_name');
