@@ -20,6 +20,7 @@ import java.util.List;
 
 import ml.shifu.guagua.GuaguaRuntimeException;
 import ml.shifu.shifu.container.obj.ColumnConfig;
+import ml.shifu.shifu.util.CommonUtils;
 import ml.shifu.shifu.util.Constants;
 import ml.shifu.shifu.util.HDFSUtils;
 
@@ -143,19 +144,23 @@ public final class NNUtils {
      *             if columnConfigList or ColumnConfig object in columnConfigList is null.
      */
     public static int[] getInputOutputCandidateCounts(List<ColumnConfig> columnConfigList) {
-        int input = 0, output = 0, candidate = 0;
+        @SuppressWarnings("unused")
+        int input = 0, output = 0, totalCandidate = 0, goodCandidate = 0;
         for(ColumnConfig config: columnConfigList) {
             if(!config.isTarget() && !config.isMeta()) {
-                candidate++;
+                totalCandidate++;
+                if(CommonUtils.isGoodCandidate(config)) {
+                    goodCandidate++;
+                }
             }
-            if(config.isFinalSelect()) {
+            if(config.isFinalSelect() && !config.isTarget() && !config.isMeta()) {
                 input++;
             }
             if(config.isTarget()) {
                 output++;
             }
         }
-        return new int[] { input, output, candidate };
+        return new int[] { input, output, goodCandidate };
     }
 
     public static String getTmpNNModelName(String tmpModelsFolder, String trainerId, int iteration) {

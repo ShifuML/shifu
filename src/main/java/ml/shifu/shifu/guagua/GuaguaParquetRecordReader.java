@@ -17,7 +17,6 @@ package ml.shifu.shifu.guagua;
 
 import java.io.IOException;
 import java.lang.reflect.Constructor;
-import java.lang.reflect.InvocationTargetException;
 
 import ml.shifu.guagua.GuaguaRuntimeException;
 import ml.shifu.guagua.hadoop.io.GuaguaWritableAdapter;

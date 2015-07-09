@@ -193,7 +193,7 @@ public abstract class AbstractNNWorker<VALUE extends Writable> extends
         this.testingData = new BufferedMLDataSet(new File(testingFile.toString()));
         ((BufferedMLDataSet) this.testingData).beginLoad(getInputNodeCount(), getOutputNodeCount());
     }
-    
+
     @Override
     public void init(WorkerContext<NNParams, NNParams> context) {
         // load props firstly
@@ -276,9 +276,9 @@ public abstract class AbstractNNWorker<VALUE extends Writable> extends
         LOG.debug("Set current model with params {}", workerContext.getLastMasterResult());
 
         // initialize gradients if null
+        double[] weights = workerContext.getLastMasterResult().getWeights();
         if(gradient == null) {
-            initGradient(this.trainingData, this.testingData, workerContext.getLastMasterResult().getWeights(),
-                    this.isCrossOver);
+            initGradient(this.trainingData, this.testingData, weights, this.isCrossOver);
         }
 
         if(this.isCrossOver) {
@@ -287,7 +287,7 @@ public abstract class AbstractNNWorker<VALUE extends Writable> extends
         }
 
         // using the weights from master to train model in current iteration
-        this.gradient.setWeights(workerContext.getLastMasterResult().getWeights());
+        this.gradient.setWeights(weights);
 
         for(int i = 0; i < epochsPerIteration; i++) {
             this.gradient.run();

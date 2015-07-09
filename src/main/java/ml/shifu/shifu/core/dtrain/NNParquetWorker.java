@@ -24,6 +24,7 @@ import ml.shifu.guagua.util.NumberFormatUtils;
 import ml.shifu.guagua.worker.WorkerContext;
 import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.guagua.GuaguaParquetRecordReader;
+import ml.shifu.shifu.util.CommonUtils;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.LongWritable;
@@ -115,14 +116,37 @@ public class NNParquetWorker extends AbstractNNWorker<Tuple> {
                 // break here if we reach weight column which is last column
                 break;
             } else {
-                ColumnConfig columnConfig = super.columnConfigList.get(requiredFieldList.getFields().get(index)
-                        .getIndex());
-
-                if(columnConfig != null && columnConfig.isTarget()) {
-                    ideal[outputIndex++] = doubleValue;
+                int columnIndex = requiredFieldList.getFields().get(index).getIndex();
+                if(columnIndex >= super.columnConfigList.size()) {
+                    if(element != null && element instanceof Double) {
+                        significance = (Double) element;
+                    } else {
+                        significance = NumberFormatUtils.getDouble(element.toString().trim(),
+                                NNConstants.DEFAULT_SIGNIFICANCE_VALUE);;
+                    }
+                    break;
                 } else {
-                    inputs[inputsIndex++] = doubleValue;
-                    hashcode = hashcode * 31 + Double.valueOf(doubleValue).hashCode();
+                    ColumnConfig columnConfig = super.columnConfigList.get(columnIndex);
+                    if(columnConfig != null && columnConfig.isTarget()) {
+                        ideal[outputIndex++] = doubleValue;
+                    } else {
+                        if(super.inputNodeCount == super.candidateCount) {
+                            // no variable selected, good candidate but not meta and not target choosed
+                            if(columnConfig != null && !columnConfig.isMeta() && !columnConfig.isTarget()
+                                    && CommonUtils.isGoodCandidate(columnConfig)) {
+                                inputs[inputsIndex++] = doubleValue;
+                                hashcode = hashcode * 31 + Double.valueOf(doubleValue).hashCode();
+                            }
+                        } else {
+                            // only choose variable final select and not meta, not target
+                            if(columnConfig != null && !columnConfig.isMeta() && !columnConfig.isTarget()
+                                    && columnConfig.isFinalSelect()) {
+                                inputs[inputsIndex++] = doubleValue;
+                                hashcode = hashcode * 31 + Double.valueOf(doubleValue).hashCode();
+                            }
+                        }
+
+                    }
                 }
             }
             index += 1;
@@ -147,7 +171,7 @@ public class NNParquetWorker extends AbstractNNWorker<Tuple> {
             try {
                 requiredFieldList = (RequiredFieldList) ObjectSerializer.deserialize(super.props
                         .getProperty("parquet.private.pig.required.fields"));
-                LOG.debug("required list: {}", requiredFieldList);
+                LOG.info("required list: {}", requiredFieldList);
             } catch (IOException e) {
                 throw new RuntimeException(e);
             }
@@ -164,16 +188,16 @@ public class NNParquetWorker extends AbstractNNWorker<Tuple> {
         Configuration conf = new Configuration();
         // new configuration don't have parquet.pig.schema, we need to add it manually.
         String pigSchema = super.props.getProperty("parquet.pig.schema");
-        LOG.info("pig schema: {}", pigSchema);
+        LOG.debug("pig schema: {}", pigSchema);
         conf.set("parquet.pig.schema", pigSchema);
 
         String requiredFieldList = super.props.getProperty("parquet.private.pig.required.fields");
         conf.set("parquet.private.pig.required.fields", requiredFieldList);
-        LOG.info("pig required fields: {}", requiredFieldList);
+        LOG.debug("pig required fields: {}", requiredFieldList);
 
         String indexAccess = super.props.getProperty("parquet.private.pig.column.index.access");
         conf.set("parquet.private.pig.column.index.access", indexAccess);
-        LOG.info("parquet.private.pig.column.index.access: {}", indexAccess);
+        LOG.debug("parquet.private.pig.column.index.access: {}", indexAccess);
 
         super.setRecordReader(new GuaguaParquetRecordReader(conf, fileSplit));
     }
