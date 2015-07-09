@@ -86,13 +86,14 @@ public class NNWorker extends AbstractNNWorker<Text> {
                     ideal[outputIndex++] = doubleValue;
                 } else {
                     if(super.inputNodeCount == super.candidateCount) {
-                        // all variables are not set final-selectByFilter
-                        if(CommonUtils.isGoodCandidate(columnConfig)) {
+                        // no variable selected, good candidate but not meta and not target choosed
+                        if(!columnConfig.isMeta() && !columnConfig.isTarget()
+                                && CommonUtils.isGoodCandidate(columnConfig)) {
                             inputs[inputsIndex++] = doubleValue;
                             hashcode = hashcode * 31 + Double.valueOf(doubleValue).hashCode();
                         }
                     } else {
-                        // final select some variables
+                        // final select some variables but meta and target are not included
                         if(columnConfig != null && !columnConfig.isMeta() && !columnConfig.isTarget()
                                 && columnConfig.isFinalSelect()) {
                             inputs[inputsIndex++] = doubleValue;
@@ -127,8 +128,7 @@ public class NNWorker extends AbstractNNWorker<Text> {
      */
     @Override
     public void initRecordReader(GuaguaFileSplit fileSplit) throws IOException {
-        super.setRecordReader(new GuaguaLineRecordReader());
-        super.getRecordReader().initialize(fileSplit);
+        super.setRecordReader(new GuaguaLineRecordReader(fileSplit));
     }
 
 }

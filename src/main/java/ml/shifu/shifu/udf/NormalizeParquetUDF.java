@@ -194,14 +194,12 @@ public class NormalizeParquetUDF extends AbstractTrainerUDF<Tuple> {
             for(int i = 0; i < columnConfigList.size(); i++) {
                 ColumnConfig config = this.columnConfigList.get(i);
                 if(tagColumnNum == i) {
-                    schemaStr.append(config.getColumnName() + ":int" + ",");
-                } else if(!config.isMeta()) {
-                    schemaStr.append(config.getColumnName() + ":double" + ",");
+                    schemaStr.append(config.getColumnName() + ":float" + ",");
                 } else {
-                    schemaStr.append(config.getColumnName() + ":chararray" + ",");
+                    schemaStr.append(config.getColumnName() + ":float" + ",");
                 }
             }
-            schemaStr.append("weight:double)");
+            schemaStr.append("weight:float)");
 
             return Utils.getSchemaFromString(schemaStr.toString());
         } catch (Exception e) {

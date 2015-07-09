@@ -325,25 +325,24 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
             int candidateCount = inputOutputIndex[2];
 
             for(ColumnConfig columnConfig: super.columnConfigList) {
-                if(inputNodeCount == candidateCount) {
-                    // no any variables are selected
-                    if(CommonUtils.isGoodCandidate(columnConfig)) {
-                        requiredFieldList.add(new RequiredField(columnConfig.getColumnName(), columnConfig
-                                .getColumnNum(), null, DataType.DOUBLE));
-                    } else if(columnConfig.isTarget()) {
-                        requiredFieldList.add(new RequiredField(columnConfig.getColumnName(), columnConfig
-                                .getColumnNum(), null, DataType.INTEGER));
-                    }
+                if(columnConfig.isTarget()) {
+                    requiredFieldList.add(new RequiredField(columnConfig.getColumnName(), columnConfig.getColumnNum(),
+                            null, DataType.FLOAT));
                 } else {
-                    if(columnConfig.isFinalSelect()) {
-                        requiredFieldList.add(new RequiredField(columnConfig.getColumnName(), columnConfig
-                                .getColumnNum(), null, DataType.DOUBLE));
-                    } else if(columnConfig.isTarget()) {
-                        requiredFieldList.add(new RequiredField(columnConfig.getColumnName(), columnConfig
-                                .getColumnNum(), null, DataType.INTEGER));
+                    if(inputNodeCount == candidateCount) {
+                        // no any variables are selected
+                        if(!columnConfig.isMeta() && !columnConfig.isTarget()
+                                && CommonUtils.isGoodCandidate(columnConfig)) {
+                            requiredFieldList.add(new RequiredField(columnConfig.getColumnName(), columnConfig
+                                    .getColumnNum(), null, DataType.FLOAT));
+                        }
+                    } else {
+                        if(!columnConfig.isMeta() && !columnConfig.isTarget() && columnConfig.isFinalSelect()) {
+                            requiredFieldList.add(new RequiredField(columnConfig.getColumnName(), columnConfig
+                                    .getColumnNum(), null, DataType.FLOAT));
+                        }
                     }
                 }
-
             }
             // weight is added manually
             requiredFieldList.add(new RequiredField("weight", columnConfigList.size(), null, DataType.DOUBLE));
