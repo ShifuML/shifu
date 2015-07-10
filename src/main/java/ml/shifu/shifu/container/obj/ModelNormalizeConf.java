@@ -29,7 +29,7 @@ public class ModelNormalizeConf {
      */
     @JsonDeserialize(using = NormTypeDeserializer.class)
     public static enum NormType {
-        OLD_ZSCALE, ZSCALE, WOE, WEIGHT_WOE, HYBRID, WEIGHT_HYBRID;
+        OLD_ZSCALE, ZSCALE, WOE, WEIGHT_WOE, HYBRID, WEIGHT_HYBRID, WOE_ZSCORE, WEIGHT_WOE_ZSCORE;
     }
 
     private Double stdDevCutOff = Double.valueOf(4.0);

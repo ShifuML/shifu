@@ -188,7 +188,9 @@ public class BasicModelProcessor {
                 writer.write(builder.toString());
             }
         } finally {
-            writer.close();
+            if(writer != null) {
+                writer.close();
+            }
         }
     }
 
