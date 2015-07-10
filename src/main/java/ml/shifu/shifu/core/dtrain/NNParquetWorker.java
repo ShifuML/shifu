@@ -105,7 +105,10 @@ public class NNParquetWorker extends AbstractNNWorker<Tuple> {
                     doubleValue = NumberFormatUtils.getDouble(element.toString().trim(), 0d);
                 }
             }
-            // double doubleValue = NumberFormatUtils.getDouble(input.trim(), 0.0d);
+            // no idea about why NaN in input data, we should process it as missing value TODO , according to norm type
+            if(Double.isNaN(doubleValue)) {
+                doubleValue = 0d;
+            }
             if(index == (super.inputNodeCount + super.outputNodeCount)) {
                 if(element != null && element instanceof Double) {
                     significance = (Double) element;
@@ -171,7 +174,7 @@ public class NNParquetWorker extends AbstractNNWorker<Tuple> {
             try {
                 requiredFieldList = (RequiredFieldList) ObjectSerializer.deserialize(super.props
                         .getProperty("parquet.private.pig.required.fields"));
-                LOG.info("required list: {}", requiredFieldList);
+                LOG.debug("required list: {}", requiredFieldList);
             } catch (IOException e) {
                 throw new RuntimeException(e);
             }
@@ -201,4 +204,5 @@ public class NNParquetWorker extends AbstractNNWorker<Tuple> {
 
         super.setRecordReader(new GuaguaParquetRecordReader(conf, fileSplit));
     }
+
 }
