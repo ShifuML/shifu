@@ -106,9 +106,10 @@
                 <include>*:config:*</include>
                 <include>*:encog-core:*</include>
                 <include>*:guagua-core:*</include>
+                <include>*:hadoop-core:*</include>
                 <include>*:guagua-mapreduce:*</include>
                 <include>*:guava:*</include>
-                <include>*:hadoop-core*:jar</include>
+                <include>*:hadoop-core:*</include>
                 <include>*:jackson-annotations:*</include>
                 <include>*:jackson-core:*</include>
                 <include>*:jackson-databind:*</include>

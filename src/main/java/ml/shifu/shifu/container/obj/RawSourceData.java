@@ -55,9 +55,15 @@ public class RawSourceData implements Cloneable {
 
     private List<String> missingOrInvalidValues = Lists.asList("", new String[] { "*", "#", "?", "null", "none" });
 
-    private Boolean autoType = Boolean.FALSE;
+    /**
+     * Change it to true by default to compute distinct value for later variable selection.
+     */
+    private Boolean autoType = Boolean.TRUE;
 
-    private Integer autoTypeThreshold = 250;
+    /**
+     * To change it to 0 instead of 250 because 0-1 columns shouldn't be set to categorical. TODO, fix 0-1 bug
+     */
+    private Integer autoTypeThreshold = 0;
 
     /**
      * @return the autoTypeThreshold

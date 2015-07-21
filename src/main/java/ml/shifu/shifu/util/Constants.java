@@ -190,5 +190,7 @@ public interface Constants {
     public static final String DEFAULT_CHARSET = "UTF-8";
     
     public static final String SHIFU_STATS_EXLCUDE_MISSING = "shifu.stats.exlcudeMissing";
+    
+    public static final String COLUMN_META_FOLDER_NAME = "columns";
 
 }

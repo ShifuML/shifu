@@ -17,13 +17,14 @@ package ml.shifu.shifu.util;
 
 import ml.shifu.shifu.exception.ShifuErrorCode;
 import ml.shifu.shifu.exception.ShifuException;
+import ml.shifu.shifu.fs.ShifuFileUtils;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
-
 
 /**
  * {@link HDFSUtils} is a unified class to get HDFS FileSystem Object.
@@ -55,9 +56,9 @@ public final class HDFSUtils {
      * Get HDFS FileSystem
      */
     public static FileSystem getFS() {
-        if (hdfs == null) {
-            synchronized (HDFSUtils.class) {
-                if (hdfs == null) {
+        if(hdfs == null) {
+            synchronized(HDFSUtils.class) {
+                if(hdfs == null) {
                     try {
                         // initialization
                         // Assign to the hdfs instance after the tmpHdfs instance initialization fully complete.
@@ -76,14 +77,38 @@ public final class HDFSUtils {
     }
 
     /**
+     * Sometimes FileSystem will be close in NodeManger while no reason about that so far. Here we add a renew method to
+     * create a new FileSystem instance. This should be package level but ShifuFileUtils is not in the same package.
+     * 
+     * @see ShifuFileUtils#getReader(String, ml.shifu.shifu.container.obj.RawSourceData.SourceType)
+     */
+    public static FileSystem renewFS() {
+        synchronized(HDFSUtils.class) {
+            try {
+                // initialization
+                // Assign to the hdfs instance after the tmpHdfs instance initialization fully complete.
+                // Avoid hdfs instance being used before fully initializaion.
+                FileSystem tmpHdfs = FileSystem.get(conf);
+                tmpHdfs.setVerifyChecksum(false);
+                hdfs = tmpHdfs;
+            } catch (IOException e) {
+                LOG.error("Error on creating hdfs FileSystem object.", e);
+                throw new ShifuException(ShifuErrorCode.ERROR_GET_HDFS_SYSTEM);
+            }
+        }
+        return hdfs;
+    }
+
+    /**
      * Get local FileSystem
-     *
-     * @throws IOException if any IOException to retrieve local file system.
+     * 
+     * @throws IOException
+     *             if any IOException to retrieve local file system.
      */
     public static FileSystem getLocalFS() {
-        if (lfs == null) {
-            synchronized (HDFSUtils.class) {
-                if (lfs == null) {
+        if(lfs == null) {
+            synchronized(HDFSUtils.class) {
+                if(lfs == null) {
                     try {
                         // initialization
                         lfs = FileSystem.getLocal(conf).getRaw();

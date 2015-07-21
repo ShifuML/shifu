@@ -93,7 +93,9 @@ public final class CommonUtils {
         // Copy ColumnConfig
         Path srcColumnConfig = new Path(pathFinder.getColumnConfigPath(SourceType.LOCAL));
         Path dstColumnConfig = new Path(pathFinder.getColumnConfigPath(SourceType.HDFS));
-        hdfs.copyFromLocalFile(srcColumnConfig, dstColumnConfig);
+        if(ShifuFileUtils.isFileExists(srcColumnConfig.toString(), SourceType.LOCAL)) {
+            hdfs.copyFromLocalFile(srcColumnConfig, dstColumnConfig);
+        }
 
         // copy others
         Path srcVersion = new Path(pathFinder.getModelVersion(SourceType.LOCAL));
@@ -829,6 +831,57 @@ public final class CommonUtils {
     }
 
     /**
+     * Assemble map data to Encog standard input format. If no variable selected(noVarSel = true), all candidate
+     * variables will be selected.
+     * 
+     * @throws NullPointerException
+     *             if input is null
+     * @throws NumberFormatException
+     *             if column value is not number format.
+     */
+    public static MLDataPair assembleDataPair(boolean noVarSel, ModelConfig modelConfig,
+            List<ColumnConfig> columnConfigList, Map<String, ? extends Object> rawDataMap, double cutoff) {
+        double[] ideal = { Constants.DEFAULT_IDEAL_VALUE };
+
+        List<Double> inputList = new ArrayList<Double>();
+        for(ColumnConfig config: columnConfigList) {
+            String key = config.getColumnName();
+            if(config.isFinalSelect() && !rawDataMap.containsKey(key)) {
+                throw new IllegalStateException(String.format("Variable Missing in Test Data: %s", key));
+            }
+
+            if(config.isTarget()) {
+                continue;
+            } else {
+                if(!noVarSel) {
+                    if(config != null && !config.isMeta() && !config.isTarget() && config.isFinalSelect()) {
+                        String val = rawDataMap.get(key) == null ? null : rawDataMap.get(key).toString();
+                        Double normalizeValue = Normalizer.normalize(config, val, cutoff,
+                                modelConfig.getNormalizeType());
+                        inputList.add(normalizeValue);
+                    }
+                } else {
+                    if(!config.isMeta() && !config.isTarget() && CommonUtils.isGoodCandidate(config)) {
+                        String val = rawDataMap.get(key) == null ? null : rawDataMap.get(key).toString();
+                        Double normalizeValue = Normalizer.normalize(config, val, cutoff,
+                                modelConfig.getNormalizeType());
+                        inputList.add(normalizeValue);
+                    }
+                }
+            }
+        }
+
+        // god, Double [] cannot be casted to double[], toArray doesn't work
+        int size = inputList.size();
+        double[] input = new double[size];
+        for(int i = 0; i < size; i++) {
+            input[i] = inputList.get(i);
+        }
+
+        return new BasicMLDataPair(new BasicMLData(input), new BasicMLData(ideal));
+    }
+
+    /**
      * Assemble map data to Encog standard input format.
      * 
      * @throws NullPointerException
@@ -1207,10 +1260,10 @@ public final class CommonUtils {
         }
 
         return columnConfig.isCandidate()
-                && (columnConfig.getKs() != null && columnConfig.getKs() > 0
-                        && columnConfig.getIv() != null && columnConfig.getIv() > 0
-                        && columnConfig.getMean() != null && columnConfig.getStdDev() != null
-                        && ( (columnConfig.isCategorical() && columnConfig.getBinCategory() != null && columnConfig.getBinCategory().size() > 1)
-                            || (columnConfig.isNumerical() && columnConfig.getBinBoundary() != null && columnConfig.getBinBoundary().size() > 1)));
+                && (columnConfig.getKs() != null && columnConfig.getKs() > 0 && columnConfig.getIv() != null
+                        && columnConfig.getIv() > 0 && columnConfig.getMean() != null
+                        && columnConfig.getStdDev() != null && ((columnConfig.isCategorical()
+                        && columnConfig.getBinCategory() != null && columnConfig.getBinCategory().size() > 1) || (columnConfig
+                        .isNumerical() && columnConfig.getBinBoundary() != null && columnConfig.getBinBoundary().size() > 1)));
     }
 }

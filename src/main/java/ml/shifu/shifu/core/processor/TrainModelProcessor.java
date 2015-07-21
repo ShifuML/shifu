@@ -148,31 +148,37 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
             LOG.info("Step Start: train");
         }
         long start = System.currentTimeMillis();
+        try {
+            setUp(ModelStep.TRAIN);
 
-        setUp(ModelStep.TRAIN);
-
-        if(isDebug) {
-            File file = new File(LOGS);
-            if(!file.exists() && !file.mkdir()) {
-                throw new RuntimeException("logs file is created failed.");
+            if(isDebug) {
+                File file = new File(LOGS);
+                if(!file.exists() && !file.mkdir()) {
+                    throw new RuntimeException("logs file is created failed.");
+                }
             }
+
+            RunMode runMode = super.modelConfig.getBasic().getRunMode();
+            switch(runMode) {
+                case DIST:
+                case MAPRED:
+                    validateDistributedTrain();
+                    syncDataToHdfs(super.modelConfig.getDataSet().getSource());
+                    runDistributedTrain();
+                    break;
+                case LOCAL:
+                default:
+                    runAkkaTrain(isForVarSelect ? 1 : modelConfig.getBaggingNum());
+                    break;
+            }
+
+            syncDataToHdfs(modelConfig.getDataSet().getSource());
+
+            clearUp(ModelStep.TRAIN);
+        } catch (Exception e) {
+            LOG.error("Error:", e);
+            return -1;
         }
-
-        RunMode runMode = super.modelConfig.getBasic().getRunMode();
-        switch(runMode) {
-            case mapred:
-                validateDistributedTrain();
-                syncDataToHdfs(super.modelConfig.getDataSet().getSource());
-                runDistributedTrain();
-                break;
-            case local:
-            default:
-                runAkkaTrain(isForVarSelect ? 1 : modelConfig.getBaggingNum());
-                break;
-        }
-
-        clearUp(ModelStep.TRAIN);
-
         if(!this.isForVarSelect()) {
             LOG.info("Step Finished: train with {} ms", (System.currentTimeMillis() - start));
         }

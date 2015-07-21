@@ -45,7 +45,7 @@ public class CreateModelProcessor extends BasicModelProcessor implements Process
 
     /**
      * Constructor, giving a model and a model description to initialize a model configuration
-     *
+     * 
      * @param modelSetName
      * @param modelAlg
      * @param description
@@ -58,29 +58,35 @@ public class CreateModelProcessor extends BasicModelProcessor implements Process
 
     /**
      * Runner, running the create model processor
-     *
-     * @throws IOException - when creating files
+     * 
+     * @throws IOException
+     *             - when creating files
      */
     @Override
     public int run() throws IOException {
-
         File modelSetFolder = new File(name);
-        if (modelSetFolder.exists()) {
+        if(modelSetFolder.exists()) {
             log.error("ModelSet - {} already exists.", name);
             return 1;
         }
 
-        log.info("Creating ModelSet Folder: " + modelSetFolder.getCanonicalPath() + "...");
-        FileUtils.forceMkdir(modelSetFolder);
+        try {
+            log.info("Creating ModelSet Folder: " + modelSetFolder.getCanonicalPath() + "...");
+            FileUtils.forceMkdir(modelSetFolder);
 
-        log.info("Creating Initial ModelConfig.json ...");
-        modelConfig = ModelConfig.createInitModelConfig(name, alg, description);
+            log.info("Creating Initial ModelConfig.json ...");
+            modelConfig = ModelConfig.createInitModelConfig(name, alg, description);
 
-        JSONUtils.writeValue(new File(modelSetFolder.getCanonicalPath() + File.separator + "ModelConfig.json"), modelConfig);
+            JSONUtils.writeValue(new File(modelSetFolder.getCanonicalPath() + File.separator + "ModelConfig.json"),
+                    modelConfig);
 
-        createHead(modelSetFolder.getCanonicalPath());
+            createHead(modelSetFolder.getCanonicalPath());
 
-        log.info("Step Finished: new");
+            log.info("Step Finished: new");
+        } catch (Exception e) {
+            log.error("Error:", e);
+            return -1;
+        }
         return 0;
     }
 

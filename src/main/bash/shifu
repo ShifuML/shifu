@@ -76,8 +76,8 @@ HADOOP_ROOT=""
 HADOOP_CMD_PATH=`which hadoop 2>/dev/null`
 _status=`echo $?`
 if [ "${_status}" != "0" ]; then
-    echo "No hadoop command in PATH env, please configure, or you cannot run Shifu in your Hadoop cluster."
-    exit 1    
+    echo "Warning: No hadoop command in PATH env, you can only run Shifu in local mode."
+    #exit 1
 fi
 # Check whether hadoop is installed under /usr/bin or not
 if [ "${HADOOP_CMD_PATH}" == "/usr/bin/hadoop" -a -d /usr/lib/hadoop -a -d /usr/lib/hadoop/bin ]; then
@@ -110,9 +110,6 @@ fi
 if [ "${HD_CLASSPATH}" != "" ]; then
     CLASSPATH="${HD_CLASSPATH}:${CLASSPATH}"
 fi
-if ${cygwin}; then
-  CLASSPATH=`cygpath -p -u "${CLASSPATH}"`
-fi    
 
 CLASSPATH=`remove_duplicate_jars_func "${CLASSPATH}"`
 
@@ -146,7 +143,7 @@ fi
 export LD_LIBRARY_PATH
 # ---------------- Detection End -------------------------------------------------
 
-CLASS=ml.shifu.shifu.util.ShifuCLI
+CLASS=ml.shifu.shifu.ShifuCLI
 
 COMMAND=$1
 

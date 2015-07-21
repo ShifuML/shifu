@@ -92,19 +92,26 @@ public class StatsModelProcessor extends BasicModelProcessor implements Processo
     public int run() throws Exception {
         log.info("Step Start: stats");
         long start = System.currentTimeMillis();
+        try {
+            setUp(ModelStep.STATS);
 
-        setUp(ModelStep.STATS);
+            syncDataToHdfs(modelConfig.getDataSet().getSource());
 
-        syncDataToHdfs(modelConfig.getDataSet().getSource());
+            if(modelConfig.isMapReduceRunMode()) {
+                runMapRedStats();
+            } else if(modelConfig.isLocalRunMode()) {
+                runAkkaStats();
+            } else {
+                throw new ShifuException(ShifuErrorCode.ERROR_UNSUPPORT_MODE);
+            }
+            
+            syncDataToHdfs(modelConfig.getDataSet().getSource());
 
-        if(modelConfig.isMapReduceRunMode()) {
-            runMapRedStats();
-        } else if(modelConfig.isLocalRunMode()) {
-            runAkkaStats();
-        } else {
-            throw new ShifuException(ShifuErrorCode.ERROR_UNSUPPORT_MODE);
+            clearUp(ModelStep.STATS);
+        } catch (Exception e) {
+            log.error("Error:", e);
+            return -1;
         }
-        clearUp(ModelStep.STATS);
 
         log.info("Step Finished: stats with {} ms", (System.currentTimeMillis() - start));
         return 0;
@@ -182,7 +189,7 @@ public class StatsModelProcessor extends BasicModelProcessor implements Processo
         // update column config
         updateColumnConfigWithPreTrainingStats();
         // save it to local/hdfs
-        saveColumnConfigListAndColumnStats();
+        saveColumnConfigListAndColumnStats(true);
     }
 
     // GuaguaOptionsParser doesn't to support *.jar currently.

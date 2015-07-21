@@ -84,45 +84,75 @@ public class InitModelProcessor extends BasicModelProcessor implements Processor
     public int run() throws Exception {
         log.info("Step Start: init");
         long start = System.currentTimeMillis();
-        setUp(ModelStep.INIT);
+        try {
+            setUp(ModelStep.INIT);
 
-        Map<Integer, Long> distinctCountMap = null;
-        if(modelConfig.isMapReduceRunMode() && modelConfig.getDataSet().getAutoType()) {
-            distinctCountMap = getApproxDistinctCountByMRJob();
+            // initialize and save ColumnConfig list firstly to make sure in mr jobs we can load columnconfig.json
+            int status = initColumnConfigList();
+
+            if(status != 0) {
+                return status;
+            }
+
+            saveColumnConfigListAndColumnStats(false);
+
+            syncDataToHdfs(modelConfig.getDataSet().getSource());
+
+            Map<Integer, Long> distinctCountMap = null;
+            if(autoTypeEnableCondition()) {
+                distinctCountMap = getApproxDistinctCountByMRJob();
+            }
+
+            if(autoTypeEnableCondition() && distinctCountMap != null) {
+                if(modelConfig.getDataSet().getAutoTypeThreshold() <= 0) {
+                    log.info("Auto type detection is on but threshold <= 0, only compute distinct count but not detect "
+                            + "categorical columns.");
+                    setCategoricalColumnsAndDistinctAccount(distinctCountMap, false, true);
+                } else {
+                    int cateCount = setCategoricalColumnsAndDistinctAccount(distinctCountMap, true, true);
+                    log.info("Automatically check {} variables to categorical type.", cateCount);
+                }
+            }
+            // save ColumnConfig list into file
+            saveColumnConfigListAndColumnStats(false);
+
+            syncDataToHdfs(modelConfig.getDataSet().getSource());
+
+            clearUp(ModelStep.INIT);
+        } catch (Exception e) {
+            log.error("Error:", e);
+            return -1;
         }
-
-        // initialize ColumnConfig list
-        int status = initColumnConfigList();
-        if(status != 0) {
-            return status;
-        }
-
-        if(distinctCountMap != null) {
-            int cateCount = setCategoricalColumns(distinctCountMap);
-            log.info("Automatically check {} variables to categorical type.", cateCount);
-        }
-        // save ColumnConfig list into file
-        saveColumnConfigListAndColumnStats();
-
-        clearUp(ModelStep.INIT);
         log.info("Step Finished: init with {} ms", (System.currentTimeMillis() - start));
         return 0;
     }
 
-    private int setCategoricalColumns(Map<Integer, Long> distinctCountMap) {
+    /**
+     * @return
+     */
+    private boolean autoTypeEnableCondition() {
+        return modelConfig.isMapReduceRunMode() && modelConfig.getDataSet().getAutoType();
+    }
+
+    private int setCategoricalColumnsAndDistinctAccount(Map<Integer, Long> distinctCountMap, boolean cateOn,
+            boolean distinctOn) {
         int cateCount = 0;
         for(ColumnConfig columnConfig: columnConfigList) {
             Long distinctCount = distinctCountMap.get(columnConfig.getColumnNum());
             if(distinctCount != null && modelConfig.getDataSet().getAutoTypeThreshold() != null) {
-                if(distinctCount < modelConfig.getDataSet().getAutoTypeThreshold().longValue()) {
-                    columnConfig.setColumnType(ColumnType.C);
-                    cateCount += 1;
-                    log.info(
-                            "Column {} with index {} is set to categorical type according to auto type checking: distinct count {}, threshold {}.",
-                            columnConfig.getColumnName(), columnConfig.getColumnNum(), distinctCount, modelConfig
-                                    .getDataSet().getAutoTypeThreshold());
+                if(cateOn) {
+                    if(distinctCount < modelConfig.getDataSet().getAutoTypeThreshold().longValue()) {
+                        columnConfig.setColumnType(ColumnType.C);
+                        cateCount += 1;
+                        log.info(
+                                "Column {} with index {} is set to categorical type according to auto type checking: distinct count {}, threshold {}.",
+                                columnConfig.getColumnName(), columnConfig.getColumnNum(), distinctCount, modelConfig
+                                        .getDataSet().getAutoTypeThreshold());
+                    }
                 }
-                columnConfig.getColumnStats().setDistinctCount(distinctCount);
+                if(distinctOn) {
+                    columnConfig.getColumnStats().setDistinctCount(distinctCount);
+                }
             }
         }
         return cateCount;
@@ -177,6 +207,12 @@ public class InitModelProcessor extends BasicModelProcessor implements Processor
                 Constants.SHIFU_MODEL_CONFIG,
                 ShifuFileUtils.getFileSystemBySourceType(source)
                         .makeQualified(new Path(super.getPathFinder().getModelConfigPath(source))).toString());
+        conf.set(
+                Constants.SHIFU_COLUMN_CONFIG,
+                ShifuFileUtils.getFileSystemBySourceType(source)
+                        .makeQualified(new Path(super.getPathFinder().getColumnConfigPath(source))).toString());
+        conf.set(NNConstants.MAPRED_JOB_QUEUE_NAME, Environment.getProperty(Environment.HADOOP_JOB_QUEUE, "default"));
+        conf.set(Constants.SHIFU_MODELSET_SOURCE_TYPE, source.toString());
         conf.set("mapred.reduce.slowstart.completed.maps",
                 Environment.getProperty("mapred.reduce.slowstart.completed.maps", "0.9"));
         String hdpVersion = HDPUtils.getHdpVersionForHDP224();
