@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package ml.shifu.shifu.util;
+package ml.shifu.shifu;
 
 import java.io.IOException;
 import java.util.jar.JarFile;
@@ -34,6 +34,7 @@ import ml.shifu.shifu.core.processor.StatsModelProcessor;
 import ml.shifu.shifu.core.processor.TrainModelProcessor;
 import ml.shifu.shifu.core.processor.VarSelectModelProcessor;
 import ml.shifu.shifu.exception.ShifuException;
+import ml.shifu.shifu.util.Constants;
 
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.CommandLineParser;
@@ -51,10 +52,7 @@ import org.slf4j.LoggerFactory;
  * ShifuCLI class is the MAIN class for whole project
  * It will read and analysis the parameters from command line
  * and execute corresponding functions
- * 
- * @deprecated please use {@link ml.shifu.shifu.ShifuCLI}.
  */
-@Deprecated
 public class ShifuCLI {
 
     private static final String MODELSET_CMD_M = "m";
@@ -122,17 +120,20 @@ public class ShifuCLI {
             System.exit(1);
         }
 
+        int status = 0;
+
         try {
             if(args[0].equals(NEW) && args.length >= 2 && StringUtils.isNotEmpty(args[1])) {
                 // modelset step
                 String modelName = args[1];
-                int status = createNewModel(modelName, cmd.getOptionValue(MODELSET_CMD_TYPE),
+                status = createNewModel(modelName, cmd.getOptionValue(MODELSET_CMD_TYPE),
                         cmd.getOptionValue(MODELSET_CMD_M));
                 if(status == 0) {
                     printModelSetCreatedSuccessfulLog(modelName);
                 } else {
                     log.warn("Error in create new model set, please check your shifu config or report issue");
                 }
+                System.exit(status);
                 // copyModel(manager, cmd.getOptionValues(MODELSET_CMD_CP));
             } else {
                 if(args[0].equals(MODELSET_CMD_CP) && args.length >= 3 && StringUtils.isNotEmpty(args[1])
@@ -144,7 +145,7 @@ public class ShifuCLI {
                 } else if(args[0].equals(INIT_CMD)) {
                     // init step
                     if(cmd.getOptions() == null || cmd.getOptions().length == 0) {
-                        int status = initializeModel();
+                        status = initializeModel();
                         if(status == 0) {
                             log.info("ModelSet initilization is successful. Please continue next step by using 'shifu stats'.");
                         } else {
@@ -158,34 +159,39 @@ public class ShifuCLI {
                     }
                 } else if(args[0].equals(STATS_CMD)) {
                     // stats step
-                    if(calModelStats() == 0) {
+                    status = calModelStats();
+                    if(status == 0) {
                         log.info("Do model set statistics successfully. Please continue next step by using 'shifu normalize or shifu norm'.");
                     } else {
                         log.warn("Error in model set stats computation, please report issue on http:/github.com/shifuml/shifu/issues.");
                     }
                 } else if(args[0].equals(NORMALIZE_CMD) || args[0].equals(NORM_CMD)) {
                     // normalize step
-                    if(normalizeTrainData() == 0) {
+                    status = normalizeTrainData();
+                    if(status == 0) {
                         log.info("Do model set normalization successfully. Please continue next step by using 'shifu varselect or shifu varsel'.");
                     } else {
                         log.warn("Error in model set stats computation, please report issue on http:/github.com/shifuml/shifu/issues.");
                     }
                 } else if(args[0].equals(VARSELECT_CMD) || args[0].equals(VARSEL_CMD)) {
                     // variable selected step
-                    if(selectModelVar() == 0) {
+                    status = selectModelVar();
+                    if(status == 0) {
                         log.info("Do model set variables selection successfully. Please continue next step by using 'shifu train'.");
                     } else {
                         log.info("Do variable selection with error, please check error message or report issue.");
                     }
                 } else if(args[0].equals(TRAIN_CMD)) {
                     // train step
-                    if(trainModel(cmd.hasOption(TRAIN_CMD_DRY), cmd.hasOption(TRAIN_CMD_DEBUG)) == 0) {
+                    status = trainModel(cmd.hasOption(TRAIN_CMD_DRY), cmd.hasOption(TRAIN_CMD_DEBUG));
+                    if(status == 0) {
                         log.info("Do model set training successfully. Please continue next step by using 'shifu posttrain' or if no need posttrain you can go through with 'shifu eval'.");
                     } else {
                         log.info("Do model training with error, please check error message or report issue.");
                     }
                 } else if(args[0].equals(POSTTRAIN_CMD)) {
                     // post train step
+                    status = postTrainModel();
                     if(postTrainModel() == 0) {
                         log.info("Do model set post-training successfully. Please configurate your eval set in ModelConfig.json and continue next step by using 'shifu eval' or 'shifu eval -new <eval set>' to create a new eval set.");
                     } else {
@@ -204,7 +210,8 @@ public class ShifuCLI {
                     // eval step
                     if(args.length == 1) {
                         // run everything
-                        if(runEvalSet(cmd.hasOption(TRAIN_CMD_DRY)) == 0) {
+                        status = runEvalSet(cmd.hasOption(TRAIN_CMD_DRY));
+                        if(status == 0) {
                             log.info("Run eval performance with all eval sets successfully.");
                         } else {
                             log.info("Do evaluation with error, please check error message or report issue.");
@@ -243,7 +250,8 @@ public class ShifuCLI {
                         printUsage();
                     }
                 } else if(args[0].equals(CMD_EXPORT)) {
-                    if(exportModel(cmd.getOptionValue(MODELSET_CMD_TYPE)) == 0) {
+                    status = exportModel(cmd.getOptionValue(MODELSET_CMD_TYPE));
+                    if(status == 0) {
                         log.info("Export models to PMML format successfully in current folder.");
                     } else {
                         log.warn("Export models to PMML format with error, please check or report issue.");
@@ -253,6 +261,8 @@ public class ShifuCLI {
                     printUsage();
                 }
             }
+            // for some case jvm cannot stop
+            System.exit(status);
         } catch (ShifuException e) {
             // need define error code in each step.
             log.error(e.getError().toString(), e.getCause());

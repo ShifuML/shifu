@@ -25,17 +25,18 @@ SET mapred.child.ulimit 2.5G;
 SET mapred.reduce.slowstart.completed.maps 0.6;
 SET mapred.map.tasks.speculative.execution true;
 SET mapred.reduce.tasks.speculative.execution true;
--- to disable compress output to make sure in train step, input files can be merged into one worker, this is a 
--- work-around solution to solve issue on train.
-SET mapred.output.compress false;
+-- compress outputs
+SET mapred.output.compress true;
+SET mapreduce.output.fileoutputformat.compress true;
+SET mapred.map.output.compress.codec org.apache.hadoop.io.compress.GzipCodec;
+SET mapreduce.output.fileoutputformat.compress.codec org.apache.hadoop.io.compress.GzipCodec;
+SET mapreduce.output.fileoutputformat.compress.type block;
 
 DEFINE IsDataFilterOut  ml.shifu.shifu.udf.PurifyDataUDF('$source_type', '$path_model_config', '$path_column_config');
 DEFINE Normalize        ml.shifu.shifu.udf.NormalizeUDF('$source_type', '$path_model_config', '$path_column_config');
 
 raw = LOAD '$path_raw_data' USING PigStorage('$delimiter');
 filtered = FILTER raw BY IsDataFilterOut(*);
-
-STORE filtered INTO '$pathSelectedRawData' USING PigStorage('$delimiter', '-schema');
 
 normalized = FOREACH filtered GENERATE Normalize(*);
 normalized = FILTER normalized BY $0 IS NOT NULL;

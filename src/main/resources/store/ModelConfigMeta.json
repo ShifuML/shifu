@@ -23,12 +23,17 @@
                 "defval" : "local",
                 "options": [ 
                     {"label":"local mode", "value":"local"},
-                    {"label":"mapred mode", "value":"mapred"}
+                    {"label":"mapred mode", "value":"mapred"},
+                    {"label":"distributed/mapred mode", "value":"dist"}
                 ]
             }, {
                 "name" : "version",
                 "type" : "text",
                 "directive": "input"
+            }, {
+                "name": "postTrainOn",
+                "type" : "boolean",
+                "directive": "checkbox"
             }, {
                 "name": "customPaths",
                 "type": "map",
@@ -269,6 +274,11 @@
                 "type": "number",
                 "directive": "input",
                 "defval" : 0.05
+            }, {
+                "name": "missingRateThreshold",
+                "type": "number",
+                "directive": "input",
+                "defval" : 0.5
             }, {
                 "name": "wrapperBy",
                 "type": "text",

@@ -39,7 +39,7 @@ public class PerformanceEvaluatorTest {
         eval.setName("test");
         eval.setDataSet(new RawSourceData());
 
-        model.getBasic().setRunMode(RunMode.local);
+        model.getBasic().setRunMode(RunMode.LOCAL);
         PerformanceEvaluator actor = new PerformanceEvaluator(model, eval);
 
         actor.review();

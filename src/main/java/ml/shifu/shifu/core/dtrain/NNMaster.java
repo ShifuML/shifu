@@ -160,13 +160,17 @@ public class NNMaster implements MasterComputable<NNParams, NNParams> {
         // before accumulate, reset gradients and train size
         this.globalNNParams.reset();
 
+        long totalCounts = 0L;
         for(NNParams nn: context.getWorkerResults()) {
             totalTestError += nn.getTestError();
             totalTrainError += nn.getTrainError();
             this.globalNNParams.accumulateGradients(nn.getGradients());
             this.globalNNParams.accumulateTrainSize(nn.getTrainSize());
+            totalCounts += nn.getCount();
             size++;
         }
+
+        LOG.info("Total Count is {}.", totalCounts);
 
         // worker result size is 0. throw exception because shouldn't happen
         if(size == 0) {
@@ -243,7 +247,6 @@ public class NNMaster implements MasterComputable<NNParams, NNParams> {
         List<String> actFunc = (List<String>) this.modelConfig.getParams().get(NNTrainer.ACTIVATION_FUNC);
         List<Integer> hiddenNodeList = (List<Integer>) this.modelConfig.getParams().get(NNTrainer.NUM_HIDDEN_NODES);
 
-        LOG.info("master input:{}, master output: {}", inputNodeCount, outputNodeCount);
         BasicNetwork network = NNUtils.generateNetwork(inputNodeCount, outputNodeCount, numLayers, actFunc,
                 hiddenNodeList);
 

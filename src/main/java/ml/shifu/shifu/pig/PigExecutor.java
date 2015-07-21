@@ -21,6 +21,7 @@ import java.util.Map;
 import ml.shifu.shifu.container.obj.ModelConfig;
 import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
 import ml.shifu.shifu.util.CommonUtils;
+import ml.shifu.shifu.util.Environment;
 import ml.shifu.shifu.util.HDPUtils;
 
 import org.apache.commons.lang.StringUtils;
@@ -101,8 +102,21 @@ public class PigExecutor {
         PigServer pigServer;
 
         if(SourceType.HDFS.equals(sourceType)) {
-            log.info("ExecType: MAPREDUCE");
-            pigServer = new PigServer(ExecType.MAPREDUCE);
+            if(Environment.getProperty("shifu.pig.exectype", "MAPREDUCE").toLowerCase().equals("tez")) {
+
+                try {
+                    Class<?> tezClazz = Class.forName("org.apache.pig.backend.hadoop.executionengine.tez.TezExecType");
+                    pigServer = new PigServer((ExecType) tezClazz.newInstance());
+                    log.info("Pig ExecType: TEZ");
+                } catch (Exception e) {
+                    pigServer = new PigServer(ExecType.MAPREDUCE);
+                    log.info("Pig ExecType: MAPREDUCE");
+                }
+            } else {
+                pigServer = new PigServer(ExecType.MAPREDUCE);
+                log.info("Pig ExecType: MAPREDUCE");
+
+            }
             String hdpVersion = HDPUtils.getHdpVersionForHDP224();
             if(StringUtils.isNotBlank(hdpVersion)) {
                 // for hdp 2.2.4, hdp.version should be set and configuration files should be added to container class

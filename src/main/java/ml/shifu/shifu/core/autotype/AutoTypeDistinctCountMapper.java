@@ -17,8 +17,10 @@ package ml.shifu.shifu.core.autotype;
 
 import java.io.IOException;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
+import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.container.obj.ModelConfig;
 import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
 import ml.shifu.shifu.core.DataPurifier;
@@ -34,7 +36,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.clearspring.analytics.stream.cardinality.HyperLogLogPlus;
-import com.google.common.base.Splitter;
 
 /**
  * {@link AutoTypeDistinctCountMapper} is a mapper to get {@link HyperLogLogPlus} statistics per split. Such statistics
@@ -61,7 +62,15 @@ public class AutoTypeDistinctCountMapper extends Mapper<LongWritable, Text, IntW
 
     private Map<Integer, HyperLogLogPlus> variableCountMap;
 
-    private Splitter splitter;
+    /**
+     * Tag column index
+     */
+    private int tagColumnNum = -1;
+
+    /**
+     * Column Config list read from HDFS
+     */
+    private List<ColumnConfig> columnConfigList;
 
     private void loadConfigFiles(final Context context) {
         try {
@@ -69,6 +78,8 @@ public class AutoTypeDistinctCountMapper extends Mapper<LongWritable, Text, IntW
                     Constants.SHIFU_MODELSET_SOURCE_TYPE, SourceType.HDFS.toString()));
             this.modelConfig = CommonUtils.loadModelConfig(
                     context.getConfiguration().get(Constants.SHIFU_MODEL_CONFIG), sourceType);
+            this.columnConfigList = CommonUtils.loadColumnConfigList(
+                    context.getConfiguration().get(Constants.SHIFU_COLUMN_CONFIG), sourceType);
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
@@ -80,11 +91,27 @@ public class AutoTypeDistinctCountMapper extends Mapper<LongWritable, Text, IntW
 
         this.dataPurifier = new DataPurifier(this.modelConfig);
 
-        this.splitter = Splitter.on(this.modelConfig.getDataSetDelimiter()).trimResults();
+        loadTagWeightNum();
 
         this.variableCountMap = new HashMap<Integer, HyperLogLogPlus>();
 
         this.outputKey = new IntWritable();
+    }
+
+    /**
+     * Load tag weight index field.
+     */
+    private void loadTagWeightNum() {
+        for(ColumnConfig config: this.columnConfigList) {
+            if(config.isTarget()) {
+                this.tagColumnNum = config.getColumnNum();
+                break;
+            }
+        }
+
+        if(this.tagColumnNum == -1) {
+            throw new RuntimeException("No valid target column.");
+        }
     }
 
     @Override
@@ -99,8 +126,19 @@ public class AutoTypeDistinctCountMapper extends Mapper<LongWritable, Text, IntW
             return;
         }
 
+        String[] units = CommonUtils.split(valueStr, this.modelConfig.getDataSetDelimiter());
+        // tagColumnNum should be in units array, if not IndexOutofBoundException
+        String tag = units[this.tagColumnNum];
+
+        if(tag == null || (!modelConfig.getPosTags().contains(tag) && !modelConfig.getNegTags().contains(tag))) {
+            if(System.currentTimeMillis() % 20 == 0) {
+                LOG.warn("Data with invalid tag is ignored in distinct count computing, invalid tag: {}.", tag);
+            }
+            return;
+        }
+
         int i = 0;
-        for(String unit: this.splitter.split(valueStr)) {
+        for(String unit: units) {
             if(unit == null || this.modelConfig.getDataSet().getMissingOrInvalidValues().contains(unit.toLowerCase())) {
                 i++;
                 continue;

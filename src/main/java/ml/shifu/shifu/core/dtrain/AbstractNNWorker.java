@@ -312,6 +312,7 @@ public abstract class AbstractNNWorker<VALUE extends Writable> extends
         // prevent null point;
         params.setWeights(new double[0]);
         params.setTrainSize(this.trainingData.getRecordCount());
+        params.setCount(count);
         return params;
     }
 

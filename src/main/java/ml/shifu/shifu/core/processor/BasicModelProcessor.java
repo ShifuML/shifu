@@ -100,10 +100,8 @@ public class BasicModelProcessor {
         Set<String> names = new HashSet<String>();
         for(ColumnConfig config: this.columnConfigList) {
             if(names.contains(config.getColumnName())) {
-                throw new IllegalArgumentException(
-                        "Duplicated "
-                                + config.getColumnName()
-                                + " in ColumnConfig.json file, please check you header setting if there are two columns with the same name.");
+                log.warn("Duplicated {} in ColumnConfig.json file, later one will be append index to make it unique.",
+                        config.getColumnName());
             }
             names.add(config.getColumnName());
         }
@@ -139,10 +137,13 @@ public class BasicModelProcessor {
      * 
      * @throws IOException
      */
-    protected void saveColumnConfigListAndColumnStats() throws IOException {
+    protected void saveColumnConfigListAndColumnStats(boolean columnStats) throws IOException {
         log.info("Saving ColumnConfig...");
         JSONUtils.writeValue(new File(pathFinder.getColumnConfigPath(SourceType.LOCAL)), columnConfigList);
-        saveColumnStatus();
+        // TODO in ut, this file is also generated.
+        if(columnStats) {
+            saveColumnStatus();
+        }
     }
 
     @SuppressWarnings("deprecation")

@@ -504,7 +504,7 @@
         <profile>
             <id>hdp-yarn</id>
             <activation>
-                <activeByDefault>true</activeByDefault>
+                <activeByDefault>false</activeByDefault>
             </activation>
             <properties>
                 <platform.version>hdp-yarn</platform.version>
@@ -589,7 +589,7 @@
         <profile>
             <id>hdp-yarn-2.2.4</id>
             <activation>
-                <activeByDefault>false</activeByDefault>
+                <activeByDefault>true</activeByDefault>
             </activation>
             <properties>
                 <platform.version>hdp-yarn-2.2.4</platform.version>

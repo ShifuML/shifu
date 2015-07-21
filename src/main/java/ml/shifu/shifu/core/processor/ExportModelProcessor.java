@@ -38,7 +38,7 @@ import java.util.List;
 
 /**
  * ExportModelProcessor class
- *
+ * 
  * @author zhanhu
  * @Nov 6, 2014
  */
@@ -51,14 +51,15 @@ public class ExportModelProcessor extends BasicModelProcessor implements Process
      */
     private final static Logger log = LoggerFactory.getLogger(ExportModelProcessor.class);
 
-
     private String type;
 
     public ExportModelProcessor(String type) {
         this.type = type;
     }
 
-    /* (non-Javadoc)
+    /*
+     * (non-Javadoc)
+     * 
      * @see ml.shifu.shifu.core.processor.Processor#run()
      */
     @Override
@@ -66,30 +67,38 @@ public class ExportModelProcessor extends BasicModelProcessor implements Process
         File pmmls = new File("pmmls");
         FileUtils.forceMkdir(pmmls);
 
-        if (StringUtils.isBlank(type)) {
+        if(StringUtils.isBlank(type)) {
             type = PMML;
         }
 
-        if (!type.equalsIgnoreCase(PMML)) {
+        if(!type.equalsIgnoreCase(PMML)) {
             log.error("Unsupported output format - {}", type);
             return -1;
         }
 
-        log.info("Convert models into {} format", type);
+        try {
+            log.info("Convert models into {} format", type);
 
-        ModelConfig modelConfig = CommonUtils.loadModelConfig();
-        List<ColumnConfig> columnConfigList = CommonUtils.loadColumnConfigList();
+            ModelConfig modelConfig = CommonUtils.loadModelConfig();
+            List<ColumnConfig> columnConfigList = CommonUtils.loadColumnConfigList();
 
-        PathFinder pathFinder = new PathFinder(modelConfig);
-        List<BasicML> models = CommonUtils.loadBasicModels(pathFinder.getModelsPath(SourceType.LOCAL), ALGORITHM.NN);
+            PathFinder pathFinder = new PathFinder(modelConfig);
+            List<BasicML> models = CommonUtils
+                    .loadBasicModels(pathFinder.getModelsPath(SourceType.LOCAL), ALGORITHM.NN);
 
-        for (int index = 0; index < models.size(); index++) {
-            log.info("\t start to generate " + "pmmls" + File.separator + modelConfig.getModelSetName() + Integer.toString(index) + ".pmml");
-            PMML pmml = new PMMLTranslator(modelConfig, columnConfigList, models).translate(index);
-            PMMLUtils.savePMML(pmml, "pmmls" + File.separator + modelConfig.getModelSetName() + Integer.toString(index) + ".pmml");
+            for(int index = 0; index < models.size(); index++) {
+                log.info("\t start to generate " + "pmmls" + File.separator + modelConfig.getModelSetName()
+                        + Integer.toString(index) + ".pmml");
+                PMML pmml = new PMMLTranslator(modelConfig, columnConfigList, models).translate(index);
+                PMMLUtils.savePMML(pmml,
+                        "pmmls" + File.separator + modelConfig.getModelSetName() + Integer.toString(index) + ".pmml");
+            }
+
+            log.info("Done.");
+        } catch (Exception e) {
+            log.error("Error:", e);
+            return -1;
         }
-
-        log.info("Done.");
 
         return 0;
     }
