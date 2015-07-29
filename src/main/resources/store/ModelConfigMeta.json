@@ -471,7 +471,7 @@
                         "directive": "input",
                         "defval" : 0.1
                     }, {
-                        "name" : "RegularizedRate",
+                        "name" : "RegularizedConstant",
                         "type" : "number",
                         "directive": "input",
                         "defval" : 0.0

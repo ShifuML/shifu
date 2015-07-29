@@ -44,7 +44,7 @@ public class LogisticRegressionOutput extends
     @Override
     public void postApplication(final MasterContext<LogisticRegressionParams, LogisticRegressionParams> context) {
         LOG.info("Starts to write final value to file.");
-        Path out = new Path(context.getProps().getProperty(LogisticRegressionContants.LR_MODEL_OUTPUT));
+        Path out = new Path(context.getProps().getProperty(CommonConstants.GUAGUA_OUTPUT));
         LOG.info("Writing results to {}", out.toString());
         PrintWriter pw = null;
         try {
