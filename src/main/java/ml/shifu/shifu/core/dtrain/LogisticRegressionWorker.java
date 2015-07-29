@@ -83,25 +83,24 @@ public class LogisticRegressionWorker
      * Candidate column number
      */
     private int candidateNum;
-    
+
     /**
      * Record count
      */
     private int count;
-    
-    
-    private double regularizedRate = 0.0d;
+
+    private double regularizedConstant = 0.0d;
 
     /**
      * Testing data set.
      */
     private MemoryDiskList<Data> testingData;
-    
+
     /**
      * Training data set.
      */
     private MemoryDiskList<Data> trainingData;
- 
+
     /**
      * Local logistic regression model.
      */
@@ -137,8 +136,9 @@ public class LogisticRegressionWorker
         this.inputNum = inputOutputIndex[0] == 0 ? inputOutputIndex[2] : inputOutputIndex[0];
         this.outputNum = 1;
         this.candidateNum = inputOutputIndex[2];
-        this.regularizedRate = Double.valueOf(this.modelConfig.getParams().get(LogisticRegressionContants.LR_REGULARIZED_RATE).toString());
-        LOG.info("regularizedRate:" + this.regularizedRate);
+        this.regularizedConstant = Double.valueOf(this.modelConfig.getParams()
+                .get(LogisticRegressionContants.LR_REGULARIZED_CONSTANT).toString());
+        LOG.info("regularizedConstant:" + this.regularizedConstant);
         LOG.info("inputNum:" + this.inputNum);
         double memoryFraction = Double.valueOf(context.getProps().getProperty("guagua.data.memoryFraction", "0.5"));
         String tmpFolder = context.getProps().getProperty("guagua.data.tmpfolder", "tmp");
@@ -166,31 +166,36 @@ public class LogisticRegressionWorker
             double[] gradients = new double[this.inputNum];
             double trainingFinalError = 0.0d;
             double testingFinalError = 0.0d;
-            int trainingSize = (int)this.trainingData.size();
-            int testingSize = (int)this.testingData.size();
+            int trainingSize = (int) this.trainingData.size();
+            int testingSize = (int) this.testingData.size();
             LOG.info("training_size:" + trainingSize);
             LOG.info("testing_size:" + testingSize);
             this.trainingData.reOpen();
             for(Data data: trainingData) {
                 double result = sigmoid(data.inputs, this.weights);
                 double error = result - data.outputs[0];
-                trainingFinalError += cost(result, data.outputs[0]);
+                //trainingFinalError += cost(result, data.outputs[0]);
+                trainingFinalError += error*error/2;
                 for(int i = 0; i < gradients.length; i++) {
                     gradients[i] += error * data.inputs[i] * data.significance;
                 }
             }
-            
+
             this.testingData.reOpen();
             for(Data data: testingData) {
                 double result = sigmoid(data.inputs, this.weights);
-                testingFinalError += cost(result, data.outputs[0]);
+                double error = result - data.outputs[0];
+                //testingFinalError += cost(result, data.outputs[0]);
+                testingFinalError += error*error/2;
             }
-            double trainingReg = this.regularizedParameter(this.regularizedRate, trainingSize);
-            double testingReg = this.regularizedParameter(this.regularizedRate, testingSize);
+            double trainingReg = this.regularizedParameter(this.regularizedConstant, trainingSize);
+            double testingReg = this.regularizedParameter(this.regularizedConstant, testingSize);
             LOG.info("training_finish_final:" + trainingFinalError);
-            LOG.info("Iteration {} training data with error {}", context.getCurrentIteration(), trainingFinalError / trainingSize+trainingReg);
-            LOG.info("Iteration {} testing data with error {}", context.getCurrentIteration(), testingFinalError / testingSize+testingReg);
-            return new LogisticRegressionParams(gradients, trainingFinalError / trainingSize+trainingReg,trainingSize);
+            LOG.info("Iteration {} training data with error {}", context.getCurrentIteration(), trainingFinalError
+                    / trainingSize + trainingReg);
+            LOG.info("Iteration {} testing data with error {}", context.getCurrentIteration(), testingFinalError
+                    / testingSize + testingReg);
+            return new LogisticRegressionParams(gradients, trainingFinalError,trainingSize);
         }
     }
 
@@ -212,16 +217,17 @@ public class LogisticRegressionWorker
             return -Math.log(1 - result);
         }
     }
-    
-    private double regularizedParameter(double regularizedRate,int recordCount){
-        if(regularizedRate == 0.0d){
+
+    private double regularizedParameter(double regularizedRate, int recordCount) {
+        if(regularizedRate == 0.0d) {
             return 0.0d;
         }
-        double sumSqureWeights = 0.0d;
-        for(int i = 0;i<this.weights.length;i++){
-            sumSqureWeights+= this.weights[i]*this.weights[i];
+        double sumSquareWeights = 0.0d;
+        for(int i = 0; i < this.weights.length; i++) {
+            sumSquareWeights += this.weights[i] * this.weights[i];
         }
-        double result = regularizedRate*sumSqureWeights/recordCount*0.5d;
+        LOG.info("regularized_formula:"+regularizedRate +"*" +sumSquareWeights +"/" +recordCount+"0.5");
+        double result = regularizedRate * sumSquareWeights / recordCount * 0.5d;
         return result;
     }
 
@@ -285,8 +291,8 @@ public class LogisticRegressionWorker
             }
             count++;
         }
-        this.addDataPairToDataSet(hashcode,new Data(inputData, outputData, significance));
-       // this.dataList.append(new Data(inputData, outputData, significance));
+        this.addDataPairToDataSet(hashcode, new Data(inputData, outputData, significance));
+        // this.dataList.append(new Data(inputData, outputData, significance));
     }
 
     private void loadConfigFiles(final Properties props) {
@@ -302,7 +308,7 @@ public class LogisticRegressionWorker
             throw new RuntimeException(e);
         }
     }
-    
+
     /**
      * Add data pair to data set according to setting parameters. Still set hashCode to long to make double and long
      * friendly.
@@ -318,14 +324,14 @@ public class LogisticRegressionWorker
             }
         } else {
             double random = Math.random();
-//            if(isBaggingReplacementTrigged(random)) {
-//                mockRandomRepeatData(crossValidationRate, random);
-//            } else {
-                addDataPairToDataSet(record, crossValidationRate, random);
-           // }
+            // if(isBaggingReplacementTrigged(random)) {
+            // mockRandomRepeatData(crossValidationRate, random);
+            // } else {
+            addDataPairToDataSet(record, crossValidationRate, random);
+            // }
         }
     }
-    
+
     /**
      * Add data pair to data set according to random number compare with crossValidationRate.
      */
@@ -337,7 +343,6 @@ public class LogisticRegressionWorker
         }
     }
 
-    
     /**
      * Only baggingWithReplacement is set and size over NNConstants.NN_BAGGING_THRESHOLD, and random value <= 1/size. We
      * choose use existing data to add training data set and testing data set.
@@ -348,8 +353,7 @@ public class LogisticRegressionWorker
         // size should be equals to sampleCount:)
         long size = trainingSize + testingSize;
         return this.modelConfig.isBaggingWithReplacement() && (testingSize > 0) && (trainingSize > 0)
-                && (size > NNConstants.NN_BAGGING_THRESHOLD)
-                && (Double.compare(random, 0.5d) < 0);
+                && (size > NNConstants.NN_BAGGING_THRESHOLD) && (Double.compare(random, 0.5d) < 0);
     }
 
     /**
@@ -357,26 +361,26 @@ public class LogisticRegressionWorker
      * saving memory. Use this to mock raw random repeat logic. This should be some logic difference because of data are
      * not loaded into data set, not random.
      */
-//    private void mockRandomRepeatData(double crossValidationRate, double random) {
-//        long trainingSize = this.trainingData.getRecordCount();
-//        long testingSize = this.testingData.getRecordCount();
-//        long size = trainingSize + testingSize;
-//        // here we used a strong cast from long to int since it's just a random choosing algorithm
-//        int next = RandomUtils.nextInt((int) size);
-//        MLDataPair dataPair = new BasicMLDataPair(new BasicMLData(new double[this.inputNodeCount]), new BasicMLData(
-//                new double[this.outputNodeCount]));
-//        if(next >= trainingSize) {
-//            this.testingData.getRecord(next - trainingSize, dataPair);
-//        } else {
-//            this.trainingData.getRecord(next, dataPair);
-//        }
-//
-//        if(Double.compare(random, crossValidationRate) < 0) {
-//            this.testingData.add(dataPair);
-//        } else {
-//            this.trainingData.add(dataPair);
-//        }
-//    }
+    // private void mockRandomRepeatData(double crossValidationRate, double random) {
+    // long trainingSize = this.trainingData.getRecordCount();
+    // long testingSize = this.testingData.getRecordCount();
+    // long size = trainingSize + testingSize;
+    // // here we used a strong cast from long to int since it's just a random choosing algorithm
+    // int next = RandomUtils.nextInt((int) size);
+    // MLDataPair dataPair = new BasicMLDataPair(new BasicMLData(new double[this.inputNodeCount]), new BasicMLData(
+    // new double[this.outputNodeCount]));
+    // if(next >= trainingSize) {
+    // this.testingData.getRecord(next - trainingSize, dataPair);
+    // } else {
+    // this.trainingData.getRecord(next, dataPair);
+    // }
+    //
+    // if(Double.compare(random, crossValidationRate) < 0) {
+    // this.testingData.add(dataPair);
+    // } else {
+    // this.trainingData.add(dataPair);
+    // }
+    // }
 
     private static class Data implements Serializable {
 

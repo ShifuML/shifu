@@ -247,8 +247,9 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
     }
 
     private void validateDistributedTrain() {
-    	String alg = super.getModelConfig().getTrain().getAlgorithm();
-        if(!(NNConstants.NN_ALG_NAME.equalsIgnoreCase(alg)||LogisticRegressionContants.LR_ALG_NAME.equalsIgnoreCase(alg))) {
+        String alg = super.getModelConfig().getTrain().getAlgorithm();
+        if(!(NNConstants.NN_ALG_NAME.equalsIgnoreCase(alg) || LogisticRegressionContants.LR_ALG_NAME
+                .equalsIgnoreCase(alg))) {
             throw new IllegalArgumentException("Currently we only support NN and LR distributed training.");
         }
 
@@ -418,8 +419,8 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
             }
         }
     }
-    
-    private void prepareLRParams(final List<String> args, final SourceType sourceType){
+
+    private void prepareLRParams(final List<String> args, final SourceType sourceType) {
         args.add("-w");
         args.add(LogisticRegressionWorker.class.getName());
 
@@ -431,21 +432,21 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
         args.add("-wr");
         args.add(LogisticRegressionParams.class.getName());
         args.add(String.format(CommonConstants.MAPREDUCE_PARAM_FORMAT, GuaguaConstants.GUAGUA_MASTER_INTERCEPTERS,
-        		LogisticRegressionOutput.class.getName()));
-//        args.add(String.format(CommonConstants.MAPREDUCE_PARAM_FORMAT, LogisticRegressionContants.LR_MODEL_OUTPUT,
-//        		"modeloutput"));
+                LogisticRegressionOutput.class.getName()));
+        // args.add(String.format(CommonConstants.MAPREDUCE_PARAM_FORMAT, LogisticRegressionContants.LR_MODEL_OUTPUT,
+        // "modeloutput"));
     }
-    
-    private void prepareNNParams(final List<String> args, final SourceType sourceType){
+
+    private void prepareNNParams(final List<String> args, final SourceType sourceType) {
         args.add("-w");
         args.add(NNWorker.class.getName());
         args.add("-m");
         args.add(NNMaster.class.getName());
-        
+
         args.add("-mr");
         args.add(NNParams.class.getName());
         args.add("-wr");
-        
+
         args.add(NNParams.class.getName());
         args.add(String.format(CommonConstants.MAPREDUCE_PARAM_FORMAT, GuaguaConstants.GUAGUA_MASTER_INTERCEPTERS,
                 NNOutput.class.getName()));
@@ -466,12 +467,10 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
             args.add("-z");
             args.add(zkServers);
         }
-    	String alg = super.getModelConfig().getTrain().getAlgorithm();
-        if(LogisticRegressionContants.LR_ALG_NAME.equalsIgnoreCase(alg))
-        {
+        String alg = super.getModelConfig().getTrain().getAlgorithm();
+        if(LogisticRegressionContants.LR_ALG_NAME.equalsIgnoreCase(alg)) {
             this.prepareLRParams(args, sourceType);
-        }
-        else{
+        } else {
             this.prepareNNParams(args, sourceType);
         }
         args.add("-c");
@@ -501,16 +500,16 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
         args.add(String.format(CommonConstants.MAPREDUCE_PARAM_FORMAT, NNConstants.NN_MODELSET_SOURCE_TYPE, sourceType));
         args.add(String.format(CommonConstants.MAPREDUCE_PARAM_FORMAT, NNConstants.NN_DRY_TRAIN, isDryTrain()));
         // hard code set computation threshold for 50s. Can be changed in shifuconfig file
-        args.add(String.format(CommonConstants.MAPREDUCE_PARAM_FORMAT, GuaguaConstants.GUAGUA_COMPUTATION_TIME_THRESHOLD,
-                60 * 1000L));
+        args.add(String.format(CommonConstants.MAPREDUCE_PARAM_FORMAT,
+                GuaguaConstants.GUAGUA_COMPUTATION_TIME_THRESHOLD, 60 * 1000L));
         setHeapSizeAndSplitSize(args);
 
         // one can set guagua conf in shifuconfig
         for(Map.Entry<Object, Object> entry: Environment.getProperties().entrySet()) {
             if(entry.getKey().toString().startsWith("nn") || entry.getKey().toString().startsWith("guagua")
                     || entry.getKey().toString().startsWith("mapred")) {
-                args.add(String.format(CommonConstants.MAPREDUCE_PARAM_FORMAT, entry.getKey().toString(), entry.getValue()
-                        .toString()));
+                args.add(String.format(CommonConstants.MAPREDUCE_PARAM_FORMAT, entry.getKey().toString(), entry
+                        .getValue().toString()));
             }
         }
     }
@@ -518,11 +517,12 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
     private void setHeapSizeAndSplitSize(final List<String> args) {
         // can be override by shifuconfig, ok for hard code
         if(this.isDebug()) {
-            args.add(String.format(CommonConstants.MAPREDUCE_PARAM_FORMAT, GuaguaMapReduceConstants.MAPRED_CHILD_JAVA_OPTS,
+            args.add(String.format(CommonConstants.MAPREDUCE_PARAM_FORMAT,
+                    GuaguaMapReduceConstants.MAPRED_CHILD_JAVA_OPTS,
                     "-Xmn128m -Xms1G -Xmx1G -verbose:gc -XX:+PrintGCDetails -XX:+PrintGCTimeStamps"));
         } else {
-            args.add(String.format(CommonConstants.MAPREDUCE_PARAM_FORMAT, GuaguaMapReduceConstants.MAPRED_CHILD_JAVA_OPTS,
-                    "-Xmn128m -Xms1G -Xmx1G"));
+            args.add(String.format(CommonConstants.MAPREDUCE_PARAM_FORMAT,
+                    GuaguaMapReduceConstants.MAPRED_CHILD_JAVA_OPTS, "-Xmn128m -Xms1G -Xmx1G"));
         }
         args.add(String.format(CommonConstants.MAPREDUCE_PARAM_FORMAT, GuaguaConstants.GUAGUA_SPLIT_COMBINABLE,
                 Environment.getProperty(GuaguaConstants.GUAGUA_SPLIT_COMBINABLE, "true")));
@@ -597,11 +597,9 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
      */
     public String getModelName(int i) {
         String alg = super.getModelConfig().getTrain().getAlgorithm();
-        if(LogisticRegressionContants.LR_ALG_NAME.equalsIgnoreCase(alg))
-        {
+        if(LogisticRegressionContants.LR_ALG_NAME.equalsIgnoreCase(alg)) {
             return String.format("model%s.lr", i);
-        }
-        else{
+        } else {
             return String.format("model%s.nn", i);
         }
     }

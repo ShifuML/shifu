@@ -63,7 +63,7 @@ public class LogisticRegressionMaster implements MasterComputable<LogisticRegres
 
     private double learningRate = 1.0d;
     
-    private double regularizedRate = 0.0d;
+    private double regularizedConstant = 0.0d;
     
     /**
      * Model configuration loaded from configuration file.
@@ -76,11 +76,9 @@ public class LogisticRegressionMaster implements MasterComputable<LogisticRegres
     private List<ColumnConfig> columnConfigList;
 
     private void init(MasterContext<LogisticRegressionParams, LogisticRegressionParams> context) {
-        // this.inputNum = NumberFormatUtils.getInt(LogisticRegressionContants.LR_INPUT_NUM,
-        // LogisticRegressionContants.LR_INPUT_DEFAULT_NUM);
         loadConfigFiles(context.getProps());
         this.learningRate = Double.valueOf(this.modelConfig.getParams().get(LogisticRegressionContants.LR_LEARNING_RATE).toString());
-        this.regularizedRate = Double.valueOf(this.modelConfig.getParams().get(LogisticRegressionContants.LR_REGULARIZED_RATE).toString());
+        this.regularizedConstant = Double.valueOf(this.modelConfig.getParams().get(LogisticRegressionContants.LR_REGULARIZED_CONSTANT).toString());
         int[] inputOutputIndex = NNUtils.getInputOutputCandidateCounts(this.columnConfigList);
         this.inputNum = inputOutputIndex[0] == 0 ? inputOutputIndex[2] : inputOutputIndex[0];
     }
@@ -96,31 +94,38 @@ public class LogisticRegressionMaster implements MasterComputable<LogisticRegres
         } else {
             double[] gradients = new double[this.inputNum];
             double sumError = 0.0d;
-            int size = 0;
             int recordCount = 0;
             for(LogisticRegressionParams param: context.getWorkerResults()) {
                 if(param != null) {
                     for(int i = 0; i < gradients.length; i++) {
                         gradients[i] += param.getParameters()[i];
                     }
-                    LOG.info("param_recordCount:", param.getRecordCount());
                     sumError += param.getError();
                     recordCount+= param.getRecordCount();
                 }
-                size++;
             }
             LOG.info("recordCount_master"+recordCount );
-            for(int i = 0; i < weights.length; i++) {
-                if(this.regularizedRate==0.0d){
-                    weights[i] -= learningRate * (gradients[i]/recordCount);
-                }else{
-                    weights[i] -= learningRate * ((gradients[i]+this.regularizedRate*weights[i])/recordCount);
-                }
+            for(int i = 0; i < weights.length; i++) {                    
+                weights[i] -= learningRate * ((gradients[i]+this.regularizedConstant*weights[i])/recordCount);
             }
+            double reg = this.regularizedParameter(this.regularizedConstant, recordCount);
             LOG.debug("DEBUG: Weights: {}", Arrays.toString(this.weights));
-            LOG.info("Iteration {} with error {}", context.getCurrentIteration(), sumError / size);
+            LOG.info("Iteration {} with error {}", context.getCurrentIteration(), sumError / recordCount+reg);
         }
         return new LogisticRegressionParams(weights);
+    }
+    
+    private double regularizedParameter(double regularizedRate, int recordCount) {
+        if(regularizedRate == 0.0d) {
+            return 0.0d;
+        }
+        double sumSquareWeights = 0.0d;
+        for(int i = 0; i < this.weights.length; i++) {
+            sumSquareWeights += this.weights[i] * this.weights[i];
+        }
+        LOG.info("regularized_formula_master:"+regularizedRate +"*" +sumSquareWeights +"/" +recordCount+"*0.5");
+        double result = regularizedRate * sumSquareWeights / recordCount * 0.5d;
+        return result;
     }
     
     private void loadConfigFiles(final Properties props) {
