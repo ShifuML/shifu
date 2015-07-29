@@ -433,8 +433,6 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
         args.add(LogisticRegressionParams.class.getName());
         args.add(String.format(CommonConstants.MAPREDUCE_PARAM_FORMAT, GuaguaConstants.GUAGUA_MASTER_INTERCEPTERS,
                 LogisticRegressionOutput.class.getName()));
-        // args.add(String.format(CommonConstants.MAPREDUCE_PARAM_FORMAT, LogisticRegressionContants.LR_MODEL_OUTPUT,
-        // "modeloutput"));
     }
 
     private void prepareNNParams(final List<String> args, final SourceType sourceType) {

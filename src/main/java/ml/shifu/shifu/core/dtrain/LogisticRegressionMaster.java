@@ -23,11 +23,9 @@ import java.util.Random;
 
 import ml.shifu.guagua.master.MasterComputable;
 import ml.shifu.guagua.master.MasterContext;
-import ml.shifu.guagua.util.NumberFormatUtils;
 import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.container.obj.ModelConfig;
 import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
-import ml.shifu.shifu.core.alg.NNTrainer;
 import ml.shifu.shifu.util.CommonUtils;
 
 import org.slf4j.Logger;
@@ -49,8 +47,6 @@ import org.slf4j.LoggerFactory;
  * <li>3. Send new global model to workers by returning model parameters.</li>
  * </ul>
  */
-// FIXME miss one parameter: size, the formula should be weights[i] -= learnRate * (1/size) * gradients[i]; pass from
-// workers
 public class LogisticRegressionMaster implements MasterComputable<LogisticRegressionParams, LogisticRegressionParams> {
 
     private static final Logger LOG = LoggerFactory.getLogger(LogisticRegressionMaster.class);
@@ -62,14 +58,14 @@ public class LogisticRegressionMaster implements MasterComputable<LogisticRegres
     private double[] weights;
 
     private double learningRate = 1.0d;
-    
+
     private double regularizedConstant = 0.0d;
-    
+
     /**
      * Model configuration loaded from configuration file.
      */
     private ModelConfig modelConfig;
-    
+
     /**
      * Column Config list read from HDFS
      */
@@ -77,8 +73,10 @@ public class LogisticRegressionMaster implements MasterComputable<LogisticRegres
 
     private void init(MasterContext<LogisticRegressionParams, LogisticRegressionParams> context) {
         loadConfigFiles(context.getProps());
-        this.learningRate = Double.valueOf(this.modelConfig.getParams().get(LogisticRegressionContants.LR_LEARNING_RATE).toString());
-        this.regularizedConstant = Double.valueOf(this.modelConfig.getParams().get(LogisticRegressionContants.LR_REGULARIZED_CONSTANT).toString());
+        this.learningRate = Double.valueOf(this.modelConfig.getParams()
+                .get(LogisticRegressionContants.LR_LEARNING_RATE).toString());
+        this.regularizedConstant = Double.valueOf(this.modelConfig.getParams()
+                .get(LogisticRegressionContants.LR_REGULARIZED_CONSTANT).toString());
         int[] inputOutputIndex = NNUtils.getInputOutputCandidateCounts(this.columnConfigList);
         this.inputNum = inputOutputIndex[0] == 0 ? inputOutputIndex[2] : inputOutputIndex[0];
     }
@@ -91,31 +89,36 @@ public class LogisticRegressionMaster implements MasterComputable<LogisticRegres
             for(int i = 0; i < weights.length; i++) {
                 weights[i] = RANDOM.nextDouble();
             }
+            return new LogisticRegressionParams(weights);
         } else {
             double[] gradients = new double[this.inputNum];
-            double sumError = 0.0d;
-            int recordCount = 0;
+            double trainError = 0.0d, testError = 0d;
+            long recordCount = 0;
             for(LogisticRegressionParams param: context.getWorkerResults()) {
                 if(param != null) {
                     for(int i = 0; i < gradients.length; i++) {
                         gradients[i] += param.getParameters()[i];
                     }
-                    sumError += param.getError();
-                    recordCount+= param.getRecordCount();
+                    trainError += param.getTrainError();
+                    testError += param.getTestError();
+                    recordCount += param.getRecordCount();
                 }
             }
-            LOG.info("recordCount_master"+recordCount );
-            for(int i = 0; i < weights.length; i++) {                    
-                weights[i] -= learningRate * ((gradients[i]+this.regularizedConstant*weights[i])/recordCount);
+            LOG.info("recordCount_master" + recordCount);
+            for(int i = 0; i < weights.length; i++) {
+                weights[i] -= learningRate * ((gradients[i] + this.regularizedConstant * weights[i]) / recordCount);
             }
             double reg = this.regularizedParameter(this.regularizedConstant, recordCount);
             LOG.debug("DEBUG: Weights: {}", Arrays.toString(this.weights));
-            LOG.info("Iteration {} with error {}", context.getCurrentIteration(), sumError / recordCount+reg);
+            double finalTrainError = trainError / recordCount + reg;
+            double finalTestError = testError / recordCount + reg;
+            LOG.info("Iteration {} with train error {}, test error {}", context.getCurrentIteration(), finalTrainError,
+                    finalTestError);
+            return new LogisticRegressionParams(weights, finalTrainError, finalTestError, recordCount);
         }
-        return new LogisticRegressionParams(weights);
     }
-    
-    private double regularizedParameter(double regularizedRate, int recordCount) {
+
+    private double regularizedParameter(double regularizedRate, long recordCount) {
         if(regularizedRate == 0.0d) {
             return 0.0d;
         }
@@ -123,11 +126,10 @@ public class LogisticRegressionMaster implements MasterComputable<LogisticRegres
         for(int i = 0; i < this.weights.length; i++) {
             sumSquareWeights += this.weights[i] * this.weights[i];
         }
-        LOG.info("regularized_formula_master:"+regularizedRate +"*" +sumSquareWeights +"/" +recordCount+"*0.5");
-        double result = regularizedRate * sumSquareWeights / recordCount * 0.5d;
-        return result;
+        LOG.info("regularized_formula_master:" + regularizedRate + "*" + sumSquareWeights + "/" + recordCount + "*0.5");
+        return regularizedRate * sumSquareWeights / recordCount * 0.5d;
     }
-    
+
     private void loadConfigFiles(final Properties props) {
         try {
             SourceType sourceType = SourceType.valueOf(props.getProperty(NNConstants.NN_MODELSET_SOURCE_TYPE,
@@ -136,7 +138,6 @@ public class LogisticRegressionMaster implements MasterComputable<LogisticRegres
                     sourceType);
             this.columnConfigList = CommonUtils.loadColumnConfigList(
                     props.getProperty(NNConstants.SHIFU_NN_COLUMN_CONFIG), sourceType);
-
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
