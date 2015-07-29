@@ -21,7 +21,6 @@ import java.util.List;
 import java.util.Properties;
 
 import ml.shifu.guagua.GuaguaRuntimeException;
-import ml.shifu.guagua.GuaguaConstants;
 import ml.shifu.guagua.hadoop.io.GuaguaLineRecordReader;
 import ml.shifu.guagua.hadoop.io.GuaguaWritableAdapter;
 import ml.shifu.guagua.io.GuaguaFileSplit;

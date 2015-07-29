@@ -31,17 +31,13 @@ import ml.shifu.guagua.worker.WorkerContext;
 import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.container.obj.ModelConfig;
 import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
-import ml.shifu.shifu.core.alg.NNTrainer;
 import ml.shifu.shifu.exception.ShifuErrorCode;
 import ml.shifu.shifu.exception.ShifuException;
 import ml.shifu.shifu.util.CommonUtils;
 
-import org.apache.commons.lang.math.RandomUtils;
+import org.apache.commons.math3.distribution.PoissonDistribution;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Text;
-import org.encog.ml.data.MLDataPair;
-import org.encog.ml.data.basic.BasicMLData;
-import org.encog.ml.data.basic.BasicMLDataPair;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -49,8 +45,7 @@ import com.google.common.base.Splitter;
 
 /**
  * {@link LogisticRegressionWorker} defines logic to accumulate local <a
- * href=http://en.wikipedia.org/wiki/Logistic_regression >logistic
- * regression</a> gradients.
+ * href=http://en.wikipedia.org/wiki/Logistic_regression >logistic regression</a> gradients.
  * 
  * <p>
  * At first iteration, wait for master to use the consistent initiating model.
@@ -121,6 +116,11 @@ public class LogisticRegressionWorker
      */
     private Splitter splitter = Splitter.on("|");
 
+    /**
+     * PoissonDistribution which is used for possion sampling for bagging with replacement.
+     */
+    protected PoissonDistribution rng = null;
+
     @Override
     public void initRecordReader(GuaguaFileSplit fileSplit) throws IOException {
         this.setRecordReader(new GuaguaLineRecordReader(fileSplit));
@@ -129,25 +129,22 @@ public class LogisticRegressionWorker
     @Override
     public void init(WorkerContext<LogisticRegressionParams, LogisticRegressionParams> context) {
         loadConfigFiles(context.getProps());
-        // this.inputNum =
-        // NumberFormatUtils.getInt(LogisticRegressionContants.LR_INPUT_NUM,
-        // LogisticRegressionContants.LR_INPUT_DEFAULT_NUM);
         int[] inputOutputIndex = NNUtils.getInputOutputCandidateCounts(this.columnConfigList);
         this.inputNum = inputOutputIndex[0] == 0 ? inputOutputIndex[2] : inputOutputIndex[0];
         this.outputNum = 1;
         this.candidateNum = inputOutputIndex[2];
         this.regularizedConstant = Double.valueOf(this.modelConfig.getParams()
                 .get(LogisticRegressionContants.LR_REGULARIZED_CONSTANT).toString());
-        LOG.info("regularizedConstant:" + this.regularizedConstant);
-        LOG.info("inputNum:" + this.inputNum);
-        double memoryFraction = Double.valueOf(context.getProps().getProperty("guagua.data.memoryFraction", "0.5"));
+        this.rng = new PoissonDistribution(1.0d);
+        LOG.info("regularizedConstant: {}", this.regularizedConstant);
+        LOG.info("inputNum: {}", this.inputNum);
+        double memoryFraction = Double.valueOf(context.getProps().getProperty("guagua.data.memoryFraction", "0.35"));
         String tmpFolder = context.getProps().getProperty("guagua.data.tmpfolder", "tmp");
         this.testingData = new MemoryDiskList<Data>((long) (Runtime.getRuntime().maxMemory() * memoryFraction),
-                tmpFolder + File.separator + System.currentTimeMillis());
+                tmpFolder + File.separator + "test-" + System.currentTimeMillis());
         this.trainingData = new MemoryDiskList<Data>((long) (Runtime.getRuntime().maxMemory() * memoryFraction),
-                tmpFolder + File.separator + System.currentTimeMillis());
-        // cannot find a good place to close these two data set, using Shutdown
-        // hook
+                tmpFolder + File.separator + "train-" + System.currentTimeMillis());
+        // cannot find a good place to close these two data set, using Shutdown hook
         Runtime.getRuntime().addShutdownHook(new Thread(new Runnable() {
             @Override
             public void run() {
@@ -174,10 +171,10 @@ public class LogisticRegressionWorker
             for(Data data: trainingData) {
                 double result = sigmoid(data.inputs, this.weights);
                 double error = result - data.outputs[0];
-                //trainingFinalError += cost(result, data.outputs[0]);
-                trainingFinalError += error*error/2;
+                // trainingFinalError += cost(result, data.outputs[0]);
+                trainingFinalError += error * error / 2;
                 for(int i = 0; i < gradients.length; i++) {
-                    gradients[i] += error * data.inputs[i] * data.significance;
+                    gradients[i] += error * data.inputs[i] * data.getSignificance();
                 }
             }
 
@@ -185,8 +182,7 @@ public class LogisticRegressionWorker
             for(Data data: testingData) {
                 double result = sigmoid(data.inputs, this.weights);
                 double error = result - data.outputs[0];
-                //testingFinalError += cost(result, data.outputs[0]);
-                testingFinalError += error*error/2;
+                testingFinalError += error * error / 2;
             }
             double trainingReg = this.regularizedParameter(this.regularizedConstant, trainingSize);
             double testingReg = this.regularizedParameter(this.regularizedConstant, testingSize);
@@ -195,7 +191,7 @@ public class LogisticRegressionWorker
                     / trainingSize + trainingReg);
             LOG.info("Iteration {} testing data with error {}", context.getCurrentIteration(), testingFinalError
                     / testingSize + testingReg);
-            return new LogisticRegressionParams(gradients, trainingFinalError,trainingSize);
+            return new LogisticRegressionParams(gradients, trainingFinalError, testingFinalError, trainingSize);
         }
     }
 
@@ -210,6 +206,7 @@ public class LogisticRegressionWorker
         return 1.0d / (1.0d + Math.exp(-value));
     }
 
+    @SuppressWarnings("unused")
     private double cost(double result, double output) {
         if(output == 1.0d) {
             return -Math.log(result);
@@ -226,7 +223,7 @@ public class LogisticRegressionWorker
         for(int i = 0; i < this.weights.length; i++) {
             sumSquareWeights += this.weights[i] * this.weights[i];
         }
-        LOG.info("regularized_formula:"+regularizedRate +"*" +sumSquareWeights +"/" +recordCount+"0.5");
+        LOG.info("regularized_formula:" + regularizedRate + "*" + sumSquareWeights + "/" + recordCount + "0.5");
         double result = regularizedRate * sumSquareWeights / recordCount * 0.5d;
         return result;
     }
@@ -281,9 +278,8 @@ public class LogisticRegressionWorker
                                 && columnConfig.isFinalSelect()) {
                             inputData[inputIndex++] = doubleValue;
                             // only fixInitialInput=true, hashcode is effective.
-                            // Remove Arrays.hashcode to avoid one
-                            // iteration for the input columns. Last weight
-                            // column should be excluded.
+                            // Remove Arrays.hashcode to avoid one iteration for the input columns. Last weight column
+                            // should be excluded.
                             hashcode = hashcode * 31 + Double.valueOf(doubleValue).hashCode();
                         }
                     }
@@ -292,7 +288,6 @@ public class LogisticRegressionWorker
             count++;
         }
         this.addDataPairToDataSet(hashcode, new Data(inputData, outputData, significance));
-        // this.dataList.append(new Data(inputData, outputData, significance));
     }
 
     private void loadConfigFiles(final Properties props) {
@@ -303,7 +298,6 @@ public class LogisticRegressionWorker
                     sourceType);
             this.columnConfigList = CommonUtils.loadColumnConfigList(
                     props.getProperty(NNConstants.SHIFU_NN_COLUMN_CONFIG), sourceType);
-
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
@@ -324,11 +318,19 @@ public class LogisticRegressionWorker
             }
         } else {
             double random = Math.random();
-            // if(isBaggingReplacementTrigged(random)) {
-            // mockRandomRepeatData(crossValidationRate, random);
-            // } else {
-            addDataPairToDataSet(record, crossValidationRate, random);
-            // }
+            if(this.modelConfig.isBaggingWithReplacement()) {
+                int count = rng.sample();
+                if(count > 0) {
+                    record.setSignificance(record.significance * count);
+                    if(Double.compare(random, crossValidationRate) < 0) {
+                        this.testingData.append(record);
+                    } else {
+                        this.trainingData.append(record);
+                    }
+                }
+            } else {
+                addDataPairToDataSet(record, crossValidationRate, random);
+            }
         }
     }
 
@@ -343,75 +345,34 @@ public class LogisticRegressionWorker
         }
     }
 
-    /**
-     * Only baggingWithReplacement is set and size over NNConstants.NN_BAGGING_THRESHOLD, and random value <= 1/size. We
-     * choose use existing data to add training data set and testing data set.
-     */
-    private boolean isBaggingReplacementTrigged(double random) {
-        long trainingSize = this.trainingData.size();
-        long testingSize = this.testingData.size();
-        // size should be equals to sampleCount:)
-        long size = trainingSize + testingSize;
-        return this.modelConfig.isBaggingWithReplacement() && (testingSize > 0) && (trainingSize > 0)
-                && (size > NNConstants.NN_BAGGING_THRESHOLD) && (Double.compare(random, 0.5d) < 0);
-    }
-
-    /**
-     * From Trainer, the logic is to random choose items in master dataset, but I don't want to load data twice for
-     * saving memory. Use this to mock raw random repeat logic. This should be some logic difference because of data are
-     * not loaded into data set, not random.
-     */
-    // private void mockRandomRepeatData(double crossValidationRate, double random) {
-    // long trainingSize = this.trainingData.getRecordCount();
-    // long testingSize = this.testingData.getRecordCount();
-    // long size = trainingSize + testingSize;
-    // // here we used a strong cast from long to int since it's just a random choosing algorithm
-    // int next = RandomUtils.nextInt((int) size);
-    // MLDataPair dataPair = new BasicMLDataPair(new BasicMLData(new double[this.inputNodeCount]), new BasicMLData(
-    // new double[this.outputNodeCount]));
-    // if(next >= trainingSize) {
-    // this.testingData.getRecord(next - trainingSize, dataPair);
-    // } else {
-    // this.trainingData.getRecord(next, dataPair);
-    // }
-    //
-    // if(Double.compare(random, crossValidationRate) < 0) {
-    // this.testingData.add(dataPair);
-    // } else {
-    // this.trainingData.add(dataPair);
-    // }
-    // }
-
     private static class Data implements Serializable {
 
         private static final long serialVersionUID = 903201066309036170L;
 
+        private double significance;
+        private final double[] inputs;
+        private final double[] outputs;
+
         public Data(double[] inputs, double[] outputs, double significance) {
             this.inputs = inputs;
             this.outputs = outputs;
+            this.setSignificance(significance);
+        }
+
+        /**
+         * @return the significance
+         */
+        public double getSignificance() {
+            return significance;
+        }
+
+        /**
+         * @param significance
+         *            the significance to set
+         */
+        public void setSignificance(double significance) {
             this.significance = significance;
         }
-
-        private final double significance;
-        private final double[] inputs;
-        private final double[] outputs;
-    }
-
-    public void test(String input) {
-        int count = 0;
-        for(String unit: splitter.split(input)) {
-            System.out.println("count:" + count);
-            System.out.println("current_value:" + unit);
-            count++;
-
-        }
-    }
-
-    public static void main(String[] args) {
-        String line = "|1|1.126082|-1.979292|1.307047|1.018816|1.555019|3.408517|2.816882|2.619519|2.274134|2.31";
-        LogisticRegressionWorker w = new LogisticRegressionWorker();
-        // w.test(line);
-        w.cost(1, 1);
 
     }
 

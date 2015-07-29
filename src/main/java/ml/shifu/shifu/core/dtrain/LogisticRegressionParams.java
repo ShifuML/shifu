@@ -41,11 +41,19 @@ public class LogisticRegressionParams extends HaltBytable {
     private double[] parameters;
 
     /**
-     * Model error in one worker one iteration.
+     * Current test error which can be sent to master
      */
-    private double error;
-    
-    private int recordCount;
+    private double testError = 0;
+
+    /**
+     * Current train error which can be sent to master
+     */
+    private double trainError = 0;
+
+    /**
+     * Training record count in one worker
+     */
+    private long recordCount;
 
     public LogisticRegressionParams() {
     }
@@ -54,9 +62,10 @@ public class LogisticRegressionParams extends HaltBytable {
         this.parameters = parameters;
     }
 
-    public LogisticRegressionParams(double[] parameters, double error, int recordCount) {
+    public LogisticRegressionParams(double[] parameters, double trainError, double testError, long recordCount) {
         this.parameters = parameters;
-        this.error = error;
+        this.trainError = trainError;
+        this.testError = testError;
         this.recordCount = recordCount;
     }
 
@@ -68,19 +77,11 @@ public class LogisticRegressionParams extends HaltBytable {
         this.parameters = parameters;
     }
 
-    public double getError() {
-        return error;
-    }
-
-    public void setError(double error) {
-        this.error = error;
-    }
-    
-    public int getRecordCount() {
+    public long getRecordCount() {
         return recordCount;
     }
 
-    public void setRecordCount(int recordCount) {
+    public void setRecordCount(long recordCount) {
         this.recordCount = recordCount;
     }
 
@@ -92,8 +93,9 @@ public class LogisticRegressionParams extends HaltBytable {
                 out.writeDouble(this.parameters[i]);
             }
         }
-        out.writeDouble(this.error);
-        out.writeInt(this.recordCount);
+        out.writeDouble(this.trainError);
+        out.writeDouble(this.testError);
+        out.writeLong(this.recordCount);
     }
 
     @Override
@@ -103,8 +105,39 @@ public class LogisticRegressionParams extends HaltBytable {
         for(int i = 0; i < length; i++) {
             parameters[i] = in.readDouble();
         }
-        this.error = in.readDouble();
-        this.recordCount = in.readInt();
+        this.trainError = in.readDouble();
+        this.testError = in.readDouble();
+        this.recordCount = in.readLong();
+    }
+
+    /**
+     * @return the testError
+     */
+    public double getTestError() {
+        return testError;
+    }
+
+    /**
+     * @param testError
+     *            the testError to set
+     */
+    public void setTestError(double testError) {
+        this.testError = testError;
+    }
+
+    /**
+     * @return the trainError
+     */
+    public double getTrainError() {
+        return trainError;
+    }
+
+    /**
+     * @param trainError
+     *            the trainError to set
+     */
+    public void setTrainError(double trainError) {
+        this.trainError = trainError;
     }
 
 }
