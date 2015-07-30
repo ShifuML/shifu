@@ -75,10 +75,12 @@ public class LogisticRegressionMaster implements MasterComputable<LogisticRegres
         loadConfigFiles(context.getProps());
         this.learningRate = Double.valueOf(this.modelConfig.getParams()
                 .get(LogisticRegressionContants.LR_LEARNING_RATE).toString());
-        this.regularizedConstant = Double.valueOf(this.modelConfig.getParams()
-                .get(LogisticRegressionContants.LR_REGULARIZED_CONSTANT).toString());
         int[] inputOutputIndex = DTrainUtils.getInputOutputCandidateCounts(this.columnConfigList);
         this.inputNum = inputOutputIndex[0] == 0 ? inputOutputIndex[2] : inputOutputIndex[0];
+        Object rconstant = this.modelConfig.getParams().get(LogisticRegressionContants.LR_REGULARIZED_CONSTANT);
+        if(rconstant !=null){
+            this.regularizedConstant = Double.valueOf(rconstant.toString());
+        }
     }
 
     @Override
@@ -105,7 +107,6 @@ public class LogisticRegressionMaster implements MasterComputable<LogisticRegres
                     testSize += param.getTestSize();
                 }
             }
-            LOG.info("recordCount_master" + trainSize);
             for(int i = 0; i < weights.length; i++) {
                 // TODO l1 and l2 both support
                 weights[i] -= learningRate * ((gradients[i] + this.regularizedConstant * weights[i]) / trainSize);
@@ -128,7 +129,6 @@ public class LogisticRegressionMaster implements MasterComputable<LogisticRegres
         for(int i = 0; i < this.weights.length; i++) {
             sumSquareWeights += this.weights[i] * this.weights[i];
         }
-        LOG.info("regularized_formula_master:" + regularizedRate + "*" + sumSquareWeights + "/" + recordCount + "*0.5");
         return regularizedRate * sumSquareWeights / recordCount * 0.5d;
     }
 

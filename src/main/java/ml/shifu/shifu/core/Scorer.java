@@ -92,7 +92,17 @@ public class Scorer {
                 }
                 MLData score = svm.compute(pair.getInput());
                 scores.add(toScore(score.getData(0)));
-            } else {
+            }  else if(model instanceof LR) {
+                LR lr = (LR) model;
+                if(lr.getInputCount() != pair.getInput().size()) {
+                    log.error("LR and input size mismatch: LR Size = " + lr.getInputCount() + "; Input Size = "
+                            + pair.getInput().size());
+                    continue;
+                }
+                MLData score = lr.compute(pair.getInput());
+                scores.add(toScore(score.getData(0)));
+            } 
+            else {
                 throw new RuntimeException("unspport models");
             }
         }

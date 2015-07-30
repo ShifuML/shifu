@@ -135,11 +135,11 @@ public class LogisticRegressionWorker
         if(this.inputNum == 0) {
             throw new IllegalStateException("No any variables are selected, please try variable select step firstly.");
         }
-        this.regularizedConstant = Double.valueOf(this.modelConfig.getParams()
-                .get(LogisticRegressionContants.LR_REGULARIZED_CONSTANT).toString());
+        Object rconstant = this.modelConfig.getParams().get(LogisticRegressionContants.LR_REGULARIZED_CONSTANT);
+        if(rconstant !=null){
+            this.regularizedConstant = Double.valueOf(rconstant.toString());
+        }
         this.rng = new PoissonDistribution(1.0d);
-        LOG.info("regularizedConstant: {}", this.regularizedConstant);
-        LOG.info("inputNum: {}", this.inputNum);
         double memoryFraction = Double.valueOf(context.getProps().getProperty("guagua.data.memoryFraction", "0.35"));
         String tmpFolder = context.getProps().getProperty("guagua.data.tmpfolder", "tmp");
         this.testingData = new MemoryDiskList<Data>((long) (Runtime.getRuntime().maxMemory() * memoryFraction),
@@ -167,8 +167,6 @@ public class LogisticRegressionWorker
             double testingFinalError = 0.0d;
             long trainingSize = this.trainingData.size();
             long testingSize = this.testingData.size();
-            LOG.info("training_size:" + trainingSize);
-            LOG.info("testing_size:" + testingSize);
             this.trainingData.reOpen();
             for(Data data: trainingData) {
                 double result = sigmoid(data.inputs, this.weights);
@@ -189,7 +187,6 @@ public class LogisticRegressionWorker
             }
             double trainingReg = this.regularizedParameter(this.regularizedConstant, trainingSize);
             double testingReg = this.regularizedParameter(this.regularizedConstant, testingSize);
-            LOG.info("training_finish_final:" + trainingFinalError);
             LOG.info("Iteration {} training data with error {}", context.getCurrentIteration(), trainingFinalError
                     / trainingSize + trainingReg);
             LOG.info("Iteration {} testing data with error {}", context.getCurrentIteration(), testingFinalError
@@ -228,7 +225,6 @@ public class LogisticRegressionWorker
         for(int i = 0; i < this.weights.length; i++) {
             sumSquareWeights += this.weights[i] * this.weights[i];
         }
-        LOG.info("regularized_formula:" + regularizedRate + "*" + sumSquareWeights + "/" + recordCount + "0.5");
         return regularizedRate * sumSquareWeights / recordCount * 0.5d;
     }
 
