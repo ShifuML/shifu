@@ -102,13 +102,13 @@ public class LogisticRegressionOutput extends
         }
 
         // save tmp to hdfs according to raw trainer logic
-        if(context.getCurrentIteration() % NNUtils.tmpModelFactor(context.getTotalIteration()) == 0) {
+        if(context.getCurrentIteration() % DTrainUtils.tmpModelFactor(context.getTotalIteration()) == 0) {
             Thread tmpNNThread = new Thread(new Runnable() {
                 @Override
                 public void run() {
-                    saveTmpNNToHDFS(context.getCurrentIteration(), context.getMasterResult().getParameters());
+                    saveTmpModelToHDFS(context.getCurrentIteration(), context.getMasterResult().getParameters());
                 }
-            }, "saveTmpNNToHDFS thread");
+            }, "saveTmpModelToHDFS thread");
             tmpNNThread.setDaemon(true);
             tmpNNThread.start();
         }
@@ -156,8 +156,9 @@ public class LogisticRegressionOutput extends
     /**
      * Save tmp nn model to HDFS.
      */
-    private void saveTmpNNToHDFS(int iteration, double[] weights) {
-        Path out = new Path(NNUtils.getTmpNNModelName(this.tmpModelsFolder, this.trainerId, iteration));
+    private void saveTmpModelToHDFS(int iteration, double[] weights) {
+        Path out = new Path(DTrainUtils.getTmpModelName(this.tmpModelsFolder, this.trainerId, iteration, modelConfig
+                .getTrain().getAlgorithm().toLowerCase()));
         writeModelWeightsToFileSystem(weights, out);
     }
 

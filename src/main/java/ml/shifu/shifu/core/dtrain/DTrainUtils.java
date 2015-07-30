@@ -20,6 +20,7 @@ import java.util.List;
 
 import ml.shifu.guagua.GuaguaRuntimeException;
 import ml.shifu.shifu.container.obj.ColumnConfig;
+import ml.shifu.shifu.util.CommonUtils;
 import ml.shifu.shifu.util.Constants;
 import ml.shifu.shifu.util.HDFSUtils;
 
@@ -41,7 +42,7 @@ import org.encog.persist.EncogDirectoryPersistence;
 /**
  * Helper class for NN distributed training.
  */
-public final class NNUtils {
+public final class DTrainUtils {
 
     public static final String RESILIENTPROPAGATION = "R";
     public static final String SCALEDCONJUGATEGRADIENT = "S";
@@ -77,7 +78,7 @@ public final class NNUtils {
      * The maximum amount a delta can reach.
      */
 
-    private NNUtils() {
+    private DTrainUtils() {
     }
 
     /**
@@ -143,24 +144,28 @@ public final class NNUtils {
      *             if columnConfigList or ColumnConfig object in columnConfigList is null.
      */
     public static int[] getInputOutputCandidateCounts(List<ColumnConfig> columnConfigList) {
-        int input = 0, output = 0, candidate = 0;
+        @SuppressWarnings("unused")
+        int input = 0, output = 0, totalCandidate = 0, goodCandidate = 0;
         for(ColumnConfig config: columnConfigList) {
             if(!config.isTarget() && !config.isMeta()) {
-                candidate++;
+                totalCandidate++;
+                if(CommonUtils.isGoodCandidate(config)) {
+                    goodCandidate++;
+                }
             }
-            if(config.isFinalSelect()) {
+            if(config.isFinalSelect() && !config.isTarget() && !config.isMeta()) {
                 input++;
             }
             if(config.isTarget()) {
                 output++;
             }
         }
-        return new int[] { input, output, candidate };
+        return new int[] { input, output, goodCandidate };
     }
 
-    public static String getTmpNNModelName(String tmpModelsFolder, String trainerId, int iteration) {
+    public static String getTmpModelName(String tmpModelsFolder, String trainerId, int iteration, String modelPost) {
         return new StringBuilder(200).append(tmpModelsFolder).append(Path.SEPARATOR_CHAR).append("model")
-                .append(trainerId).append('-').append(iteration).append(".nn").toString();
+                .append(trainerId).append('-').append(iteration).append(".").append(modelPost).toString();
     }
 
     static int tmpModelFactor(int epochs) {

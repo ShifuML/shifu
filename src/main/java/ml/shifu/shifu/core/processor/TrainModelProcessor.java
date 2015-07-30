@@ -47,7 +47,7 @@ import ml.shifu.shifu.core.dtrain.NNConstants;
 import ml.shifu.shifu.core.dtrain.NNMaster;
 import ml.shifu.shifu.core.dtrain.NNOutput;
 import ml.shifu.shifu.core.dtrain.NNParams;
-import ml.shifu.shifu.core.dtrain.NNUtils;
+import ml.shifu.shifu.core.dtrain.DTrainUtils;
 import ml.shifu.shifu.core.dtrain.NNWorker;
 import ml.shifu.shifu.core.validator.ModelInspector.ModelStep;
 import ml.shifu.shifu.exception.ShifuErrorCode;
@@ -289,10 +289,9 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
         List<String> progressLogList = new ArrayList<String>(baggingNum);
         for(int i = 0; i < baggingNum; i++) {
             List<String> localArgs = new ArrayList<String>(args);
-
             // set name for each bagging job.
             localArgs.add("-n");
-            localArgs.add(String.format("Shifu Master-Workers NN Iteration: %s id:%s", super.getModelConfig()
+            localArgs.add(String.format("Shifu Master-Workers Training Iteration: %s id:%s", super.getModelConfig()
                     .getModelSetName(), i + 1));
             LOG.info("Start trainer with id: {}", (i + 1));
             String modelName = getModelName(i);
@@ -372,8 +371,8 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
     }
 
     private boolean inputOutputModelCheckSuccess(FileSystem fileSystem, Path modelPath) throws IOException {
-        BasicNetwork model = NNUtils.loadModel(modelPath, fileSystem);
-        int[] outputCandidateCounts = NNUtils.getInputOutputCandidateCounts(getColumnConfigList());
+        BasicNetwork model = DTrainUtils.loadModel(modelPath, fileSystem);
+        int[] outputCandidateCounts = DTrainUtils.getInputOutputCandidateCounts(getColumnConfigList());
         return model.getInputCount() == outputCandidateCounts[0] && model.getOutputCount() == outputCandidateCounts[1];
     }
 
@@ -595,11 +594,7 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
      */
     public String getModelName(int i) {
         String alg = super.getModelConfig().getTrain().getAlgorithm();
-        if(LogisticRegressionContants.LR_ALG_NAME.equalsIgnoreCase(alg)) {
-            return String.format("model%s.lr", i);
-        } else {
-            return String.format("model%s.nn", i);
-        }
+        return String.format("model%s.%s", i, alg.toLowerCase());
     }
 
     // d-train part ends here

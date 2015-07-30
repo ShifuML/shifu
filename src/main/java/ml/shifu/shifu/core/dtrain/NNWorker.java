@@ -173,8 +173,8 @@ public class NNWorker extends
      *             if error on deleting testing or training file.
      */
     private void initDiskDataSet() throws IOException {
-        Path trainingFile = NNUtils.getTrainingFile();
-        Path testingFile = NNUtils.getTestingFile();
+        Path trainingFile = DTrainUtils.getTrainingFile();
+        Path testingFile = DTrainUtils.getTestingFile();
 
         LOG.debug("Use disk to store training data and testing data. Training data file:{}; Testing data file:{} ",
                 trainingFile.toString(), testingFile.toString());
@@ -194,7 +194,7 @@ public class NNWorker extends
         this.epochsPerIteration = epochsPerIterationInteger == null ? 1 : epochsPerIterationInteger.intValue();
         LOG.info("epochsPerIteration in worker is :{}", epochsPerIteration);
 
-        int[] inputOutputIndex = NNUtils.getInputOutputCandidateCounts(this.columnConfigList);
+        int[] inputOutputIndex = DTrainUtils.getInputOutputCandidateCounts(this.columnConfigList);
         this.inputNodeCount = inputOutputIndex[0] == 0 ? inputOutputIndex[2] : inputOutputIndex[0];
         this.outputNodeCount = inputOutputIndex[1];
         this.candidateCount = inputOutputIndex[2];
@@ -223,8 +223,8 @@ public class NNWorker extends
             double crossValidationRate = this.modelConfig.getCrossValidationRate();
             try {
                 this.trainingData = new MemoryDiskMLDataSet((long) (memoryStoreSize * (1 - crossValidationRate)),
-                        NNUtils.getTrainingFile().toString(), this.inputNodeCount, this.outputNodeCount);
-                this.testingData = new MemoryDiskMLDataSet((long) (memoryStoreSize * crossValidationRate), NNUtils
+                        DTrainUtils.getTrainingFile().toString(), this.inputNodeCount, this.outputNodeCount);
+                this.testingData = new MemoryDiskMLDataSet((long) (memoryStoreSize * crossValidationRate), DTrainUtils
                         .getTestingFile().toString(), this.inputNodeCount, this.outputNodeCount);
                 // cannot find a good place to close these two data set, using Shutdown hook
                 Runtime.getRuntime().addShutdownHook(new Thread(new Runnable() {
@@ -307,7 +307,7 @@ public class NNWorker extends
         List<String> actFunc = (List<String>) getModelConfig().getParams().get(NNTrainer.ACTIVATION_FUNC);
         List<Integer> hiddenNodeList = (List<Integer>) getModelConfig().getParams().get(NNTrainer.NUM_HIDDEN_NODES);
 
-        BasicNetwork network = NNUtils.generateNetwork(this.inputNodeCount, this.outputNodeCount, numLayers, actFunc,
+        BasicNetwork network = DTrainUtils.generateNetwork(this.inputNodeCount, this.outputNodeCount, numLayers, actFunc,
                 hiddenNodeList);
         // use the weights from master
         network.getFlat().setWeights(weights);

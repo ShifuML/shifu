@@ -129,7 +129,7 @@ public class NNMaster implements MasterComputable<NNParams, NNParams> {
             } else {
                 try {
                     Path modelPath = new Path(context.getProps().getProperty(CommonConstants.GUAGUA_OUTPUT));
-                    BasicNetwork existingModel = NNUtils.loadModel(modelPath,
+                    BasicNetwork existingModel = DTrainUtils.loadModel(modelPath,
                             ShifuFileUtils.getFileSystemBySourceType(this.modelConfig.getDataSet().getSource()));
                     if(existingModel == null) {
                         params = initWeights();
@@ -237,7 +237,7 @@ public class NNMaster implements MasterComputable<NNParams, NNParams> {
     private NNParams initWeights() {
         NNParams params = new NNParams();
 
-        int[] inputAndOutput = NNUtils.getInputOutputCandidateCounts(this.columnConfigList);
+        int[] inputAndOutput = DTrainUtils.getInputOutputCandidateCounts(this.columnConfigList);
         int inputNodeCount = inputAndOutput[0] == 0 ? inputAndOutput[2] : inputAndOutput[0];
         int outputNodeCount = inputAndOutput[1];
 
@@ -245,7 +245,7 @@ public class NNMaster implements MasterComputable<NNParams, NNParams> {
         List<String> actFunc = (List<String>) this.modelConfig.getParams().get(NNTrainer.ACTIVATION_FUNC);
         List<Integer> hiddenNodeList = (List<Integer>) this.modelConfig.getParams().get(NNTrainer.NUM_HIDDEN_NODES);
 
-        BasicNetwork network = NNUtils.generateNetwork(inputNodeCount, outputNodeCount, numLayers, actFunc,
+        BasicNetwork network = DTrainUtils.generateNetwork(inputNodeCount, outputNodeCount, numLayers, actFunc,
                 hiddenNodeList);
 
         params.setTrainError(0);

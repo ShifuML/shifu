@@ -92,7 +92,7 @@ public class NNParams extends HaltBytable {
 
         if (this.weights == null) {
             this.weights = new double[gradients.length];
-            NNUtils.randomize(gradients.length, this.weights);
+            DTrainUtils.randomize(gradients.length, this.weights);
         }
 
         for (int i = 0; i < gradients.length; i++) {
