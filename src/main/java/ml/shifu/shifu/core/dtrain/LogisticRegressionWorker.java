@@ -31,13 +31,12 @@ import ml.shifu.guagua.worker.WorkerContext;
 import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.container.obj.ModelConfig;
 import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
-import ml.shifu.shifu.exception.ShifuErrorCode;
-import ml.shifu.shifu.exception.ShifuException;
 import ml.shifu.shifu.util.CommonUtils;
 
 import org.apache.commons.math3.distribution.PoissonDistribution;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Text;
+import org.encog.mathutil.BoundMath;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -114,7 +113,7 @@ public class LogisticRegressionWorker
     /**
      * A splitter to split data with specified delimiter.
      */
-    private Splitter splitter = Splitter.on("|");
+    private Splitter splitter = Splitter.on("|").trimResults();
 
     /**
      * PoissonDistribution which is used for possion sampling for bagging with replacement.
@@ -129,10 +128,13 @@ public class LogisticRegressionWorker
     @Override
     public void init(WorkerContext<LogisticRegressionParams, LogisticRegressionParams> context) {
         loadConfigFiles(context.getProps());
-        int[] inputOutputIndex = NNUtils.getInputOutputCandidateCounts(this.columnConfigList);
+        int[] inputOutputIndex = DTrainUtils.getInputOutputCandidateCounts(this.columnConfigList);
         this.inputNum = inputOutputIndex[0] == 0 ? inputOutputIndex[2] : inputOutputIndex[0];
-        this.outputNum = 1;
+        this.outputNum = inputOutputIndex[1];
         this.candidateNum = inputOutputIndex[2];
+        if(this.inputNum == 0) {
+            throw new IllegalStateException("No any variables are selected, please try variable select step firstly.");
+        }
         this.regularizedConstant = Double.valueOf(this.modelConfig.getParams()
                 .get(LogisticRegressionContants.LR_REGULARIZED_CONSTANT).toString());
         this.rng = new PoissonDistribution(1.0d);
@@ -163,8 +165,8 @@ public class LogisticRegressionWorker
             double[] gradients = new double[this.inputNum];
             double trainingFinalError = 0.0d;
             double testingFinalError = 0.0d;
-            int trainingSize = (int) this.trainingData.size();
-            int testingSize = (int) this.testingData.size();
+            long trainingSize = this.trainingData.size();
+            long testingSize = this.testingData.size();
             LOG.info("training_size:" + trainingSize);
             LOG.info("testing_size:" + testingSize);
             this.trainingData.reOpen();
@@ -172,17 +174,18 @@ public class LogisticRegressionWorker
                 double result = sigmoid(data.inputs, this.weights);
                 double error = result - data.outputs[0];
                 // trainingFinalError += cost(result, data.outputs[0]);
-                trainingFinalError += error * error / 2;
+                trainingFinalError += error * error;
                 for(int i = 0; i < gradients.length; i++) {
                     gradients[i] += error * data.inputs[i] * data.getSignificance();
                 }
             }
 
             this.testingData.reOpen();
+            // TODO here we should use current weights+gradients to compute testing error
             for(Data data: testingData) {
                 double result = sigmoid(data.inputs, this.weights);
                 double error = result - data.outputs[0];
-                testingFinalError += error * error / 2;
+                testingFinalError += error * error;
             }
             double trainingReg = this.regularizedParameter(this.regularizedConstant, trainingSize);
             double testingReg = this.regularizedParameter(this.regularizedConstant, testingSize);
@@ -191,7 +194,8 @@ public class LogisticRegressionWorker
                     / trainingSize + trainingReg);
             LOG.info("Iteration {} testing data with error {}", context.getCurrentIteration(), testingFinalError
                     / testingSize + testingReg);
-            return new LogisticRegressionParams(gradients, trainingFinalError, testingFinalError, trainingSize);
+            return new LogisticRegressionParams(gradients, trainingFinalError, testingFinalError, trainingSize,
+                    testingSize);
         }
     }
 
@@ -203,7 +207,8 @@ public class LogisticRegressionWorker
         for(int i = 0; i < weights.length; i++) {
             value += weights[i] * inputs[i];
         }
-        return 1.0d / (1.0d + Math.exp(-value));
+
+        return 1.0d / (1.0d + BoundMath.exp(-1 * value));
     }
 
     @SuppressWarnings("unused")
@@ -215,7 +220,7 @@ public class LogisticRegressionWorker
         }
     }
 
-    private double regularizedParameter(double regularizedRate, int recordCount) {
+    private double regularizedParameter(double regularizedRate, long recordCount) {
         if(regularizedRate == 0.0d) {
             return 0.0d;
         }
@@ -224,8 +229,7 @@ public class LogisticRegressionWorker
             sumSquareWeights += this.weights[i] * this.weights[i];
         }
         LOG.info("regularized_formula:" + regularizedRate + "*" + sumSquareWeights + "/" + recordCount + "0.5");
-        double result = regularizedRate * sumSquareWeights / recordCount * 0.5d;
-        return result;
+        return regularizedRate * sumSquareWeights / recordCount * 0.5d;
     }
 
     @Override
@@ -250,42 +254,40 @@ public class LogisticRegressionWorker
         String line = currentValue.getWritable().toString();
         double[] inputData = new double[inputNum];
         double[] outputData = new double[outputNum];
-        int count = 0, inputIndex = 0, outputIndex = 0;
+        int index = 0, inputIndex = 0, outputIndex = 0;
         long hashcode = 0;
         double significance = CommonConstants.DEFAULT_SIGNIFICANCE_VALUE;
         for(String unit: splitter.split(line)) {
             double doubleValue = NumberFormatUtils.getDouble(unit.trim(), 0.0d);
-            if(count == this.columnConfigList.size()) {
-                significance = NumberFormatUtils.getDouble(unit.trim(), CommonConstants.DEFAULT_SIGNIFICANCE_VALUE);
+            if(index == this.columnConfigList.size()) {
+                significance = NumberFormatUtils.getDouble(unit.trim(), 1.0d);
                 break;
             } else {
-                ColumnConfig columnConfig = this.columnConfigList.get(count);
+                ColumnConfig columnConfig = this.columnConfigList.get(index);
+
                 if(columnConfig != null && columnConfig.isTarget()) {
-                    if(doubleValue != 1.0d && doubleValue != 0d) {
-                        throw new ShifuException(ShifuErrorCode.ERROR_INVALID_TARGET_VALUE);
-                    }
                     outputData[outputIndex++] = doubleValue;
                 } else {
                     if(this.inputNum == this.candidateNum) {
-                        // all variables are not set final-selectByFilter
-                        if(CommonUtils.isGoodCandidate(columnConfig)) {
+                        // no variable selected, good candidate but not meta and not target choosed
+                        if(!columnConfig.isMeta() && !columnConfig.isTarget()
+                                && CommonUtils.isGoodCandidate(columnConfig)) {
                             inputData[inputIndex++] = doubleValue;
                             hashcode = hashcode * 31 + Double.valueOf(doubleValue).hashCode();
                         }
                     } else {
-                        // final select some variables
+                        // final select some variables but meta and target are not included
                         if(columnConfig != null && !columnConfig.isMeta() && !columnConfig.isTarget()
                                 && columnConfig.isFinalSelect()) {
                             inputData[inputIndex++] = doubleValue;
-                            // only fixInitialInput=true, hashcode is effective.
-                            // Remove Arrays.hashcode to avoid one iteration for the input columns. Last weight column
-                            // should be excluded.
+                            // only fixInitialInput=true, hashcode is effective. Remove Arrays.hashcode to avoid one
+                            // iteration for the input columns. Last weight column should be excluded.
                             hashcode = hashcode * 31 + Double.valueOf(doubleValue).hashCode();
                         }
                     }
                 }
             }
-            count++;
+            index += 1;
         }
         this.addDataPairToDataSet(hashcode, new Data(inputData, outputData, significance));
     }
@@ -356,7 +358,7 @@ public class LogisticRegressionWorker
         public Data(double[] inputs, double[] outputs, double significance) {
             this.inputs = inputs;
             this.outputs = outputs;
-            this.setSignificance(significance);
+            this.significance = significance;
         }
 
         /**

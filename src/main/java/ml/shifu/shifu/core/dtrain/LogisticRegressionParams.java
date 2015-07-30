@@ -53,7 +53,12 @@ public class LogisticRegressionParams extends HaltBytable {
     /**
      * Training record count in one worker
      */
-    private long recordCount;
+    private long trainSize;
+
+    /**
+     * Testing record count in one worker
+     */
+    private long testSize;
 
     public LogisticRegressionParams() {
     }
@@ -62,11 +67,13 @@ public class LogisticRegressionParams extends HaltBytable {
         this.parameters = parameters;
     }
 
-    public LogisticRegressionParams(double[] parameters, double trainError, double testError, long recordCount) {
+    public LogisticRegressionParams(double[] parameters, double trainError, double testError, long trainSize,
+            long testSize) {
         this.parameters = parameters;
         this.trainError = trainError;
         this.testError = testError;
-        this.recordCount = recordCount;
+        this.trainSize = trainSize;
+        this.testSize = testSize;
     }
 
     public double[] getParameters() {
@@ -77,12 +84,19 @@ public class LogisticRegressionParams extends HaltBytable {
         this.parameters = parameters;
     }
 
-    public long getRecordCount() {
-        return recordCount;
+    /**
+     * @return the trainSize
+     */
+    public long getTrainSize() {
+        return trainSize;
     }
 
-    public void setRecordCount(long recordCount) {
-        this.recordCount = recordCount;
+    /**
+     * @param trainSize
+     *            the trainSize to set
+     */
+    public void setTrainSize(long trainSize) {
+        this.trainSize = trainSize;
     }
 
     @Override
@@ -95,19 +109,22 @@ public class LogisticRegressionParams extends HaltBytable {
         }
         out.writeDouble(this.trainError);
         out.writeDouble(this.testError);
-        out.writeLong(this.recordCount);
+        out.writeLong(this.trainSize);
+        out.writeLong(this.testSize);
+
     }
 
     @Override
     public void doReadFields(DataInput in) throws IOException {
         int length = in.readInt();
-        parameters = new double[length];
+        this.parameters = new double[length];
         for(int i = 0; i < length; i++) {
-            parameters[i] = in.readDouble();
+            this.parameters[i] = in.readDouble();
         }
         this.trainError = in.readDouble();
         this.testError = in.readDouble();
-        this.recordCount = in.readLong();
+        this.trainSize = in.readLong();
+        this.testSize = in.readLong();
     }
 
     /**
@@ -138,6 +155,20 @@ public class LogisticRegressionParams extends HaltBytable {
      */
     public void setTrainError(double trainError) {
         this.trainError = trainError;
+    }
+
+    /**
+     * @return the testSize
+     */
+    public long getTestSize() {
+        return testSize;
+    }
+
+    /**
+     * @param testSize the testSize to set
+     */
+    public void setTestSize(long testSize) {
+        this.testSize = testSize;
     }
 
 }

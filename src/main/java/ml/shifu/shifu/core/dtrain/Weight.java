@@ -72,15 +72,15 @@ public class Weight {
     }
 
     private double updateWeight(int index, double[] weights, double[] gradients) {
-        if(this.algorithm.equalsIgnoreCase(NNUtils.BACK_PROPAGATION)) {
+        if(this.algorithm.equalsIgnoreCase(DTrainUtils.BACK_PROPAGATION)) {
             return updateWeightBP(index, weights, gradients);
-        } else if(this.algorithm.equalsIgnoreCase(NNUtils.QUICK_PROPAGATION)) {
+        } else if(this.algorithm.equalsIgnoreCase(DTrainUtils.QUICK_PROPAGATION)) {
             return updateWeightQBP(index, weights, gradients);
-        } else if(this.algorithm.equalsIgnoreCase(NNUtils.MANHATTAN_PROPAGATION)) {
+        } else if(this.algorithm.equalsIgnoreCase(DTrainUtils.MANHATTAN_PROPAGATION)) {
             return updateWeightMHP(index, weights, gradients);
-        } else if(this.algorithm.equalsIgnoreCase(NNUtils.SCALEDCONJUGATEGRADIENT)) {
+        } else if(this.algorithm.equalsIgnoreCase(DTrainUtils.SCALEDCONJUGATEGRADIENT)) {
             return updateWeightSCG(index, weights, gradients);
-        } else if(this.algorithm.equalsIgnoreCase(NNUtils.RESILIENTPROPAGATION)) {
+        } else if(this.algorithm.equalsIgnoreCase(DTrainUtils.RESILIENTPROPAGATION)) {
             return updateWeightRLP(index, weights, gradients);
         }
 
@@ -161,22 +161,22 @@ public class Weight {
     private double updateWeightRLP(int index, double[] weights, double[] gradients) {
         // multiply the current and previous gradient, and take the
         // sign. We want to see if the gradient has changed its sign.
-        final int change = NNUtils.sign(gradients[index] * lastGradient[index]);
+        final int change = DTrainUtils.sign(gradients[index] * lastGradient[index]);
         double weightChange = 0;
 
         // if the gradient has retained its sign, then we increase the
         // delta so that it will converge faster
         if(change > 0) {
-            double delta = this.updateValues[index] * NNUtils.POSITIVE_ETA;
+            double delta = this.updateValues[index] * DTrainUtils.POSITIVE_ETA;
             delta = Math.min(delta, DEFAULT_MAX_STEP);
-            weightChange = NNUtils.sign(gradients[index]) * delta;
+            weightChange = DTrainUtils.sign(gradients[index]) * delta;
             this.updateValues[index] = delta;
             lastGradient[index] = gradients[index];
         } else if(change < 0) {
             // if change<0, then the sign has changed, and the last
             // delta was too big
-            double delta = this.updateValues[index] * NNUtils.NEGATIVE_ETA;
-            delta = Math.max(delta, NNUtils.DELTA_MIN);
+            double delta = this.updateValues[index] * DTrainUtils.NEGATIVE_ETA;
+            delta = Math.max(delta, DTrainUtils.DELTA_MIN);
             this.updateValues[index] = delta;
             weightChange = -this.lastDelta[index];
             // set the previous gradent to zero so that there will be no
@@ -185,7 +185,7 @@ public class Weight {
         } else if(change == 0) {
             // if change==0 then there is no change to the delta
             final double delta = this.updateValues[index];
-            weightChange = NNUtils.sign(gradients[index]) * delta;
+            weightChange = DTrainUtils.sign(gradients[index]) * delta;
             lastGradient[index] = gradients[index];
         }
 

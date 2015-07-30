@@ -77,7 +77,7 @@ public class LogisticRegressionMaster implements MasterComputable<LogisticRegres
                 .get(LogisticRegressionContants.LR_LEARNING_RATE).toString());
         this.regularizedConstant = Double.valueOf(this.modelConfig.getParams()
                 .get(LogisticRegressionContants.LR_REGULARIZED_CONSTANT).toString());
-        int[] inputOutputIndex = NNUtils.getInputOutputCandidateCounts(this.columnConfigList);
+        int[] inputOutputIndex = DTrainUtils.getInputOutputCandidateCounts(this.columnConfigList);
         this.inputNum = inputOutputIndex[0] == 0 ? inputOutputIndex[2] : inputOutputIndex[0];
     }
 
@@ -87,13 +87,13 @@ public class LogisticRegressionMaster implements MasterComputable<LogisticRegres
             init(context);
             weights = new double[this.inputNum];
             for(int i = 0; i < weights.length; i++) {
-                weights[i] = RANDOM.nextDouble();
+                weights[i] = nextDouble(-1, 1);
             }
             return new LogisticRegressionParams(weights);
         } else {
             double[] gradients = new double[this.inputNum];
             double trainError = 0.0d, testError = 0d;
-            long recordCount = 0;
+            long trainSize = 0, testSize = 0;
             for(LogisticRegressionParams param: context.getWorkerResults()) {
                 if(param != null) {
                     for(int i = 0; i < gradients.length; i++) {
@@ -101,20 +101,22 @@ public class LogisticRegressionMaster implements MasterComputable<LogisticRegres
                     }
                     trainError += param.getTrainError();
                     testError += param.getTestError();
-                    recordCount += param.getRecordCount();
+                    trainSize += param.getTrainSize();
+                    testSize += param.getTestSize();
                 }
             }
-            LOG.info("recordCount_master" + recordCount);
+            LOG.info("recordCount_master" + trainSize);
             for(int i = 0; i < weights.length; i++) {
-                weights[i] -= learningRate * ((gradients[i] + this.regularizedConstant * weights[i]) / recordCount);
+                // TODO l1 and l2 both support
+                weights[i] -= learningRate * ((gradients[i] + this.regularizedConstant * weights[i]) / trainSize);
             }
-            double reg = this.regularizedParameter(this.regularizedConstant, recordCount);
+            double reg = this.regularizedParameter(this.regularizedConstant, trainSize);
             LOG.debug("DEBUG: Weights: {}", Arrays.toString(this.weights));
-            double finalTrainError = trainError / recordCount + reg;
-            double finalTestError = testError / recordCount + reg;
+            double finalTrainError = trainError / trainSize + reg;
+            double finalTestError = testError / testSize + reg;
             LOG.info("Iteration {} with train error {}, test error {}", context.getCurrentIteration(), finalTrainError,
                     finalTestError);
-            return new LogisticRegressionParams(weights, finalTrainError, finalTestError, recordCount);
+            return new LogisticRegressionParams(weights, finalTrainError, finalTestError, trainSize, testSize);
         }
     }
 
@@ -141,6 +143,11 @@ public class LogisticRegressionMaster implements MasterComputable<LogisticRegres
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
+    }
+
+    public final double nextDouble(final double min, final double max) {
+        final double range = max - min;
+        return (range * RANDOM.nextDouble()) + min;
     }
 
 }

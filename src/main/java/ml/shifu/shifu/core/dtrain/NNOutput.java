@@ -113,7 +113,7 @@ public class NNOutput extends BasicMasterInterceptor<NNParams, NNParams> {
         }
 
         // save tmp to hdfs according to raw trainer logic
-        if(context.getCurrentIteration() % NNUtils.tmpModelFactor(context.getTotalIteration()) == 0) {
+        if(context.getCurrentIteration() % DTrainUtils.tmpModelFactor(context.getTotalIteration()) == 0) {
             Thread tmpNNThread = new Thread(new Runnable() {
                 @Override
                 public void run() {
@@ -166,7 +166,8 @@ public class NNOutput extends BasicMasterInterceptor<NNParams, NNParams> {
      * Save tmp nn model to HDFS.
      */
     private void saveTmpNNToHDFS(int iteration, double[] weights) {
-        Path out = new Path(NNUtils.getTmpNNModelName(this.tmpModelsFolder, this.trainerId, iteration));
+        Path out = new Path(DTrainUtils.getTmpModelName(this.tmpModelsFolder, this.trainerId, iteration, modelConfig
+                .getTrain().getAlgorithm().toLowerCase()));
         writeModelWeightsToFileSystem(weights, out);
     }
 
@@ -210,7 +211,7 @@ public class NNOutput extends BasicMasterInterceptor<NNParams, NNParams> {
 
     @SuppressWarnings("unchecked")
     private void initNetwork() {
-        int[] inputOutputIndex = NNUtils.getInputOutputCandidateCounts(this.columnConfigList);
+        int[] inputOutputIndex = DTrainUtils.getInputOutputCandidateCounts(this.columnConfigList);
         int inputNodeCount = inputOutputIndex[0] == 0 ? inputOutputIndex[2] : inputOutputIndex[0];
         int outputNodeCount = inputOutputIndex[1];
 
@@ -218,7 +219,7 @@ public class NNOutput extends BasicMasterInterceptor<NNParams, NNParams> {
         List<String> actFunc = (List<String>) getModelConfig().getParams().get(NNTrainer.ACTIVATION_FUNC);
         List<Integer> hiddenNodeList = (List<Integer>) getModelConfig().getParams().get(NNTrainer.NUM_HIDDEN_NODES);
 
-        this.network = NNUtils.generateNetwork(inputNodeCount, outputNodeCount, numLayers, actFunc, hiddenNodeList);
+        this.network = DTrainUtils.generateNetwork(inputNodeCount, outputNodeCount, numLayers, actFunc, hiddenNodeList);
     }
 
     private void writeModelWeightsToFileSystem(double[] weights, Path out) {
