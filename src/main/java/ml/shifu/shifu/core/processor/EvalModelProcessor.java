@@ -247,6 +247,7 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
      * @param config
      * @throws IOException
      */
+    @SuppressWarnings("deprecation")
     private void runPigScore(EvalConfig evalConfig) throws IOException {
         // clean up output directories
         SourceType sourceType = evalConfig.getDataSet().getSource();

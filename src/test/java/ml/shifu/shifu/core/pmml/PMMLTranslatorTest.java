@@ -15,8 +15,15 @@
  */
 package ml.shifu.shifu.core.pmml;
 
+import java.io.File;
+import java.io.PrintWriter;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import ml.shifu.shifu.ShifuCLI;
 import ml.shifu.shifu.util.Environment;
-import ml.shifu.shifu.util.ShifuCLI;
+
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
 import org.dmg.pmml.FieldName;
@@ -27,12 +34,6 @@ import org.jpmml.evaluator.NeuralNetworkEvaluator;
 import org.testng.Assert;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.Test;
-
-import java.io.File;
-import java.io.PrintWriter;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
 
 
 /**
