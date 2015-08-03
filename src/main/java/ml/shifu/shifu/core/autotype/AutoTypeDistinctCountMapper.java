@@ -17,8 +17,10 @@ package ml.shifu.shifu.core.autotype;
 
 import java.io.IOException;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.container.obj.ModelConfig;
@@ -27,7 +29,6 @@ import ml.shifu.shifu.core.DataPurifier;
 import ml.shifu.shifu.util.CommonUtils;
 import ml.shifu.shifu.util.Constants;
 
-import org.apache.hadoop.io.BytesWritable;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Text;
@@ -41,7 +42,7 @@ import com.clearspring.analytics.stream.cardinality.HyperLogLogPlus;
  * {@link AutoTypeDistinctCountMapper} is a mapper to get {@link HyperLogLogPlus} statistics per split. Such statistics
  * will be merged in our reducer.
  */
-public class AutoTypeDistinctCountMapper extends Mapper<LongWritable, Text, IntWritable, BytesWritable> {
+public class AutoTypeDistinctCountMapper extends Mapper<LongWritable, Text, IntWritable, CountAndFrequentItemsWritable> {
 
     private final static Logger LOG = LoggerFactory.getLogger(AutoTypeDistinctCountMapper.class);
 
@@ -60,7 +61,10 @@ public class AutoTypeDistinctCountMapper extends Mapper<LongWritable, Text, IntW
      */
     private IntWritable outputKey;
 
-    private Map<Integer, HyperLogLogPlus> variableCountMap;
+    /**
+     * TODO using approximate method to estimate real frequent items and store into this map
+     */
+    private Map<Integer, CountAndFrequentItems> variableCountMap;
 
     /**
      * Tag column index
@@ -93,7 +97,7 @@ public class AutoTypeDistinctCountMapper extends Mapper<LongWritable, Text, IntW
 
         loadTagWeightNum();
 
-        this.variableCountMap = new HashMap<Integer, HyperLogLogPlus>();
+        this.variableCountMap = new HashMap<Integer, CountAndFrequentItems>();
 
         this.outputKey = new IntWritable();
     }
@@ -143,12 +147,12 @@ public class AutoTypeDistinctCountMapper extends Mapper<LongWritable, Text, IntW
                 i++;
                 continue;
             }
-            HyperLogLogPlus hyperLogLogPlus = this.variableCountMap.get(i);
-            if(hyperLogLogPlus == null) {
-                hyperLogLogPlus = new HyperLogLogPlus(8);
-                this.variableCountMap.put(i, hyperLogLogPlus);
+            CountAndFrequentItems countAndFrequentItems = this.variableCountMap.get(i);
+            if(countAndFrequentItems == null) {
+                countAndFrequentItems = new CountAndFrequentItems();
+                this.variableCountMap.put(i, countAndFrequentItems);
             }
-            hyperLogLogPlus.offer(unit);
+            countAndFrequentItems.offer(unit);
             i++;
         }
     }
@@ -158,10 +162,26 @@ public class AutoTypeDistinctCountMapper extends Mapper<LongWritable, Text, IntW
      */
     @Override
     protected void cleanup(Context context) throws IOException, InterruptedException {
-        for(Map.Entry<Integer, HyperLogLogPlus> entry: this.variableCountMap.entrySet()) {
+        for(Map.Entry<Integer, CountAndFrequentItems> entry: this.variableCountMap.entrySet()) {
             this.outputKey.set(entry.getKey());
-            byte[] bytes = entry.getValue().getBytes();
-            context.write(this.outputKey, new BytesWritable(bytes));
+            byte[] bytes = entry.getValue().hyper.getBytes();
+            Set<String> frequentItems = entry.getValue().frequentItems;
+            context.write(this.outputKey, new CountAndFrequentItemsWritable(bytes, frequentItems));
+        }
+    }
+
+    private static class CountAndFrequentItems {
+
+        private final HyperLogLogPlus hyper = new HyperLogLogPlus(8);;
+
+        private final Set<String> frequentItems = new HashSet<String>();
+
+        public void offer(String unit) {
+            hyper.offer(unit);
+            if(frequentItems.size() <= CountAndFrequentItemsWritable.FREQUET_ITEM_MAX_SIZE
+                    && !frequentItems.contains(unit)) {
+                frequentItems.add(unit);
+            }
         }
     }
 }

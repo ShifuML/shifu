@@ -500,14 +500,14 @@
                 <maven.test.skip>true</maven.test.skip>
             </properties>
         </profile>
-        <!-- For hadoop 2.2.0 cluster -->
+        <!-- For hadoop 2.4.0 cluster (hdp 2.1.2) -->
         <profile>
-            <id>hdp-yarn</id>
+            <id>hdp-yarn-2.1.2</id>
             <activation>
                 <activeByDefault>false</activeByDefault>
             </activation>
             <properties>
-                <platform.version>hdp-yarn</platform.version>
+                <platform.version>hdp-yarn-2.1.2</platform.version>
             </properties>
             <repositories>
                 <repository>
@@ -585,14 +585,14 @@
                 </dependency>
             </dependencies>
         </profile>
-        <!-- For hadoop 2.2.4 cluster -->
+        <!-- For hdp 2.2.4 (hadoop 2.6.0) cluster -->
         <profile>
-            <id>hdp-yarn-2.2.4</id>
+            <id>hdp-yarn</id>
             <activation>
                 <activeByDefault>true</activeByDefault>
             </activation>
             <properties>
-                <platform.version>hdp-yarn-2.2.4</platform.version>
+                <platform.version>hdp-yarn</platform.version>
             </properties>
             <repositories>
                 <repository>

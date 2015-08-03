@@ -131,6 +131,7 @@ public class EvalScoreUDF extends AbstractTrainerUDF<Tuple> {
         return tuple;
     }
 
+    @SuppressWarnings("deprecation")
     private void incrementTagCounters(String tag, String weight) {
         long weightLong = (long) (Double.parseDouble(weight) * Constants.EVAL_COUNTER_WEIGHT_SCALE);
 
@@ -165,6 +166,7 @@ public class EvalScoreUDF extends AbstractTrainerUDF<Tuple> {
     /**
      * Check whether is a pig environment, for example, in unit test, PigStatusReporter.getInstance() is null
      */
+    @SuppressWarnings("deprecation")
     private boolean isPigEnabled(String group, String counter) {
         return PigStatusReporter.getInstance() != null
                 && PigStatusReporter.getInstance().getCounter(group, counter) != null;

@@ -157,7 +157,6 @@ public abstract class AbstractNNWorker<VALUE extends Writable> extends
             LOG.info("Parameter isCrossOver:{}", this.isCrossOver);
             this.columnConfigList = CommonUtils.loadColumnConfigList(
                     props.getProperty(NNConstants.SHIFU_NN_COLUMN_CONFIG), sourceType);
-
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
