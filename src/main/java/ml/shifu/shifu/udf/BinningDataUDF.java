@@ -84,6 +84,7 @@ public class BinningDataUDF extends AbstractTrainerUDF<Tuple> {
                         binning = new NativeBinning(modelConfig.getStats().getMaxNumBin(), true);
                         break;
                     case SPDT:
+                    case SPDTI:
                         log.info("Invoke SPDT(Streaming Parallel Decision Tree) binning method, ");
                         binning = new EqualPopulationBinning(modelConfig.getStats().getMaxNumBin());
                         break;

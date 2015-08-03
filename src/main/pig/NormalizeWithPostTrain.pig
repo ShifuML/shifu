@@ -38,6 +38,8 @@ DEFINE Normalize        ml.shifu.shifu.udf.NormalizeUDF('$source_type', '$path_m
 raw = LOAD '$path_raw_data' USING PigStorage('$delimiter');
 filtered = FILTER raw BY IsDataFilterOut(*);
 
+STORE filtered INTO '$pathSelectedRawData' USING PigStorage('$delimiter', '-schema');
+
 normalized = FOREACH filtered GENERATE Normalize(*);
 normalized = FILTER normalized BY $0 IS NOT NULL;
 normalized = FOREACH normalized GENERATE FLATTEN($0);

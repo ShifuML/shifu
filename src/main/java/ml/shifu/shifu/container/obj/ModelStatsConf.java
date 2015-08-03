@@ -27,7 +27,8 @@ public class ModelStatsConf {
 
     @JsonDeserialize(using = BinningMethodDeserializer.class)
     public static enum BinningMethod {
-        EqualPositive, EqualTotal, EqualInterval
+        EqualNegtive, EqualInterval, EqualPositive, EqualTotal
+        // TODO another four with weights
     }
 
     public static enum BinningAlgorithm {
@@ -50,6 +51,8 @@ public class ModelStatsConf {
     private Boolean binningMergeEnable = Boolean.TRUE;
 
     private BinningAlgorithm binningAlgorithm = BinningAlgorithm.SPDTI;
+
+    private Boolean pearsonEnable = Boolean.FALSE;
 
     public Integer getMaxNumBin() {
         return maxNumBin;
@@ -125,6 +128,21 @@ public class ModelStatsConf {
 
     public void setBinningAlgorithm(BinningAlgorithm binningAlgorithm) {
         this.binningAlgorithm = binningAlgorithm;
+    }
+
+    /**
+     * @return the pearsonEnable
+     */
+    public Boolean getPearsonEnable() {
+        return pearsonEnable;
+    }
+
+    /**
+     * @param pearsonEnable
+     *            the pearsonEnable to set
+     */
+    public void setPearsonEnable(Boolean pearsonEnable) {
+        this.pearsonEnable = pearsonEnable;
     }
 
 }

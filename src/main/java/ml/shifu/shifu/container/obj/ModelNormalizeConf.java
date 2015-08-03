@@ -25,17 +25,18 @@ import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 public class ModelNormalizeConf {
 
     /**
-     *  Normalization type including ZSCALE, WOE, WEIGHT_WOE, HYBRID, WEIGHT_HYBRID.
+     * Normalization type including ZSCALE, WOE, WEIGHT_WOE, HYBRID, WEIGHT_HYBRID.
      */
     @JsonDeserialize(using = NormTypeDeserializer.class)
     public static enum NormType {
-        ZSCALE, WOE, WEIGHT_WOE, HYBRID, WEIGHT_HYBRID;
+        OLD_ZSCALE, ZSCALE, WOE, WEIGHT_WOE, HYBRID, WEIGHT_HYBRID, WOE_ZSCORE, WEIGHT_WOE_ZSCORE;
     }
-    
+
     private Double stdDevCutOff = Double.valueOf(4.0);
     private Double sampleRate = Double.valueOf(1.0);
     private Boolean sampleNegOnly = Boolean.FALSE;
     private NormType normType = NormType.ZSCALE;
+    private Boolean isParquet = Boolean.FALSE;
 
     // move to RawSourceData
     // private String weightAmplifier;
@@ -73,10 +74,26 @@ public class ModelNormalizeConf {
     }
 
     /**
-     * @param normType the normType to set
+     * @param normType
+     *            the normType to set
      */
     public void setNormType(NormType normType) {
         this.normType = normType;
+    }
+
+    /**
+     * @return the isParquet
+     */
+    public Boolean getIsParquet() {
+        return isParquet;
+    }
+
+    /**
+     * @param isParquet
+     *            the isParquet to set
+     */
+    public void setIsParquet(Boolean isParquet) {
+        this.isParquet = isParquet;
     }
 
 }

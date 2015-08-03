@@ -80,9 +80,9 @@ public class CombineInputFormat extends TextInputFormat {
             job.getConfiguration().setLong(GuaguaMapReduceConstants.MAPRED_MAX_SPLIT_SIZE, combineSize);
             List<InputSplit> splits = super.getSplits(job);
             LOG.debug("combine size:{}, splits:{}", combineSize, splits);
-            newSplits = getFinalCombineVarSelectSplits(splits, combineSize);
+            newSplits = getFinalCombineSplits(splits, combineSize);
         } else {
-            newSplits = getVarSelectSplits(job);
+            newSplits = getCommonSplits(job);
         }
         LOG.info("Input size: {}", newSplits.size());
         return newSplits;
@@ -91,11 +91,11 @@ public class CombineInputFormat extends TextInputFormat {
     /**
      * Copy from pig implementation, need to check this code logic.
      */
-    protected List<InputSplit> getFinalCombineVarSelectSplits(List<InputSplit> newSplits, long combineSize)
+    protected List<InputSplit> getFinalCombineSplits(List<InputSplit> newSplits, long combineSize)
             throws IOException {
         List<List<InputSplit>> combinePigSplits;
         try {
-            combinePigSplits = getCombineVarSelectSplits(newSplits, combineSize);
+            combinePigSplits = getCombineSplits(newSplits, combineSize);
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
             throw new RuntimeException(e);
@@ -114,7 +114,7 @@ public class CombineInputFormat extends TextInputFormat {
     /**
      * Generate the list of files and make them into FileSplits.
      */
-    protected List<InputSplit> getVarSelectSplits(JobContext job) throws IOException {
+    protected List<InputSplit> getCommonSplits(JobContext job) throws IOException {
         long minSize = Math.max(getFormatMinSplitSize(), getMinSplitSize(job));
         long maxSize = getMaxSplitSize(job);
 
@@ -273,7 +273,7 @@ public class CombineInputFormat extends TextInputFormat {
         }
     }
 
-    public static List<List<InputSplit>> getCombineVarSelectSplits(List<InputSplit> oneInputSplits,
+    public static List<List<InputSplit>> getCombineSplits(List<InputSplit> oneInputSplits,
             long maxCombinedSplitSize) throws IOException, InterruptedException {
         List<Node> nodes = new ArrayList<Node>();
         Map<String, Node> nodeMap = new HashMap<String, Node>();

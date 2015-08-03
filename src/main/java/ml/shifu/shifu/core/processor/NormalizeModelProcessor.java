@@ -46,20 +46,26 @@ public class NormalizeModelProcessor extends BasicModelProcessor implements Proc
     public int run() throws Exception {
         log.info("Step Start: normalize");
         long start = System.currentTimeMillis();
-        setUp(ModelStep.NORMALIZE);
-        syncDataToHdfs(modelConfig.getDataSet().getSource());
+        try {
+            setUp(ModelStep.NORMALIZE);
+            syncDataToHdfs(modelConfig.getDataSet().getSource());
 
-        switch(modelConfig.getBasic().getRunMode()) {
-            case mapred:
-                runPigNormalize();
-                break;
-            case local:
-                runAkkaNormalize();
-                break;
+            switch(modelConfig.getBasic().getRunMode()) {
+                case DIST:
+                case MAPRED:
+                    runPigNormalize();
+                    break;
+                case LOCAL:
+                    runAkkaNormalize();
+                    break;
+            }
+
+            syncDataToHdfs(modelConfig.getDataSet().getSource());
+            clearUp(ModelStep.NORMALIZE);
+        } catch (Exception e) {
+            log.error("Error:", e);
+            return -1;
         }
-
-        clearUp(ModelStep.NORMALIZE);
-
         log.info("Step Finished: normalize with {} ms", (System.currentTimeMillis() - start));
         return 0;
     }
@@ -112,8 +118,22 @@ public class NormalizeModelProcessor extends BasicModelProcessor implements Proc
         paramsMap.put("delimiter", CommonUtils.escapePigString(modelConfig.getDataSetDelimiter()));
 
         try {
-            PigExecutor.getExecutor().submitJob(modelConfig, pathFinder.getAbsolutePath("scripts/Normalize.pig"),
-                    paramsMap);
+            String normPigPath = null;
+            if(modelConfig.getNormalize().getIsParquet()) {
+                if(modelConfig.getBasic().getPostTrainOn()) {
+                    normPigPath = pathFinder.getAbsolutePath("scripts/NormalizeWithParquetAndPostTrain.pig");
+                } else {
+                    log.info("Post train is disabled by 'postTrainOn=false'.");
+                    normPigPath = pathFinder.getAbsolutePath("scripts/NormalizeWithParquet.pig");
+                }
+            } else {
+                if(modelConfig.getBasic().getPostTrainOn()) {
+                    normPigPath = pathFinder.getAbsolutePath("scripts/NormalizeWithPostTrain.pig");
+                } else {
+                    normPigPath = pathFinder.getAbsolutePath("scripts/Normalize.pig");
+                }
+            }
+            PigExecutor.getExecutor().submitJob(modelConfig, normPigPath, paramsMap);
         } catch (IOException e) {
             throw new ShifuException(ShifuErrorCode.ERROR_RUNNING_PIG_JOB, e);
         } catch (Throwable e) {

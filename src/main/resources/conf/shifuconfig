@@ -13,3 +13,6 @@ localNumParallel=6
 
 # how many records per message
 recordCntPerMessage=100000
+
+# fix a bug in hdp by default mapreduce.job.max.split.locations is 10
+mapreduce.job.max.split.locations=100

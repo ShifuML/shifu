@@ -15,20 +15,26 @@
  */
 package ml.shifu.shifu.core.validator;
 
+import java.io.IOException;
+import java.util.List;
+import java.util.Map;
+
 import ml.shifu.shifu.container.meta.MetaFactory;
 import ml.shifu.shifu.container.meta.ValidateResult;
-import ml.shifu.shifu.container.obj.*;
-import ml.shifu.shifu.container.obj.ModelBasicConf.RunMode;
+import ml.shifu.shifu.container.obj.EvalConfig;
+import ml.shifu.shifu.container.obj.ModelConfig;
+import ml.shifu.shifu.container.obj.ModelNormalizeConf;
+import ml.shifu.shifu.container.obj.ModelSourceDataConf;
+import ml.shifu.shifu.container.obj.ModelTrainConf;
+import ml.shifu.shifu.container.obj.ModelVarSelectConf;
+import ml.shifu.shifu.container.obj.RawSourceData;
 import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
 import ml.shifu.shifu.core.alg.NNTrainer;
 import ml.shifu.shifu.fs.ShifuFileUtils;
 import ml.shifu.shifu.util.CommonUtils;
+
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang.StringUtils;
-
-import java.io.IOException;
-import java.util.List;
-import java.util.Map;
 
 /**
  * ModelInspector class is to do Safety Testing for model.
@@ -77,22 +83,12 @@ public class ModelInspector {
             return result;
         }
 
-        if(modelConfig.getDataSet().getSource() == SourceType.LOCAL
-                && modelConfig.getBasic().getRunMode() == RunMode.mapred) {
+        if(modelConfig.getDataSet().getSource() == SourceType.LOCAL && modelConfig.isMapReduceRunMode()) {
             ValidateResult tmpResult = new ValidateResult(true);
             // tmpResult.setStatus(false);
             // tmpResult.getCauses().add(
             // "'LOCAL' data set (dataSet.source) cannot be run with 'mapred' run mode(basic.runMode)");
             result = ValidateResult.mergeResult(result, tmpResult);
-        }
-
-        if(modelConfig.getDataSet().getAutoType()) {
-            if(modelConfig.getDataSet().getAutoTypeThreshold() < 1) {
-                ValidateResult tmpResult = new ValidateResult(true);
-                // tmpResult.getCauses().add(
-                tmpResult.addCause("'autoTypeThreshold' should not be less than 1.");
-                result = ValidateResult.mergeResult(result, tmpResult);
-            }
         }
 
         if(ModelStep.INIT.equals(modelStep)) {
@@ -304,15 +300,16 @@ public class ModelInspector {
      * 
      * <p>
      * <ul>
-     *     <li>stdDevCutOff > 0</li>
-     *     <li>0 < sampleRate <= 1</li>
-     *     <li>sampleNegOnly is either true or false</li>
-     *     <li>normType contains valid value among [ZSCALE, WOE, WEIGHT_WOE, HYBRID, WEIGHT_HYBRID]</li>
+     * <li>stdDevCutOff > 0</li>
+     * <li>0 < sampleRate <= 1</li>
+     * <li>sampleNegOnly is either true or false</li>
+     * <li>normType contains valid value among [ZSCALE, WOE, WEIGHT_WOE, HYBRID, WEIGHT_HYBRID]</li>
      * </ul>
      * </p>
      * 
-     * @param norm {@link ModelNormalizeConf} instance.
-     * @return check result instance {@link ValidateResult}. 
+     * @param norm
+     *            {@link ModelNormalizeConf} instance.
+     * @return check result instance {@link ValidateResult}.
      */
     private ValidateResult checkNormSetting(ModelNormalizeConf norm) {
         ValidateResult result = new ValidateResult(true);
@@ -323,31 +320,33 @@ public class ModelInspector {
             tmpResult.getCauses().add("stdDevCutOff should be positive value in normalize configuration");
             result = ValidateResult.mergeResult(result, tmpResult);
         }
-        
+
         if(norm.getSampleRate() == null || norm.getSampleRate() <= 0 || norm.getSampleRate() > 1) {
             ValidateResult tmpResult = new ValidateResult(true);
             tmpResult.setStatus(false);
             tmpResult.getCauses().add("sampleRate should be positive value in normalize configuration");
             result = ValidateResult.mergeResult(result, tmpResult);
         }
-        
+
         if(norm.getSampleNegOnly() == null) {
             ValidateResult tmpResult = new ValidateResult(true);
             tmpResult.setStatus(false);
             tmpResult.getCauses().add("sampleNegOnly should be true/false in normalize configuration");
             result = ValidateResult.mergeResult(result, tmpResult);
         }
-        
+
         if(norm.getNormType() == null) {
             ValidateResult tmpResult = new ValidateResult(true);
             tmpResult.setStatus(false);
-            tmpResult.getCauses().add("normType should be one of [ZSCALE, WOE, WEIGHT_WOE, HYBRID, WEIGHT_HYBRID] in normalize configuration");
+            tmpResult
+                    .getCauses()
+                    .add("normType should be one of [ZSCALE, WOE, WEIGHT_WOE, HYBRID, WEIGHT_HYBRID] in normalize configuration");
             result = ValidateResult.mergeResult(result, tmpResult);
         }
-        
+
         return result;
     }
-    
+
     /**
      * Check the setting for model training.
      * It will make sure (num_of_layers > 0

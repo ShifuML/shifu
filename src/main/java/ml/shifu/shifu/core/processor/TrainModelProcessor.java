@@ -31,6 +31,7 @@ import ml.shifu.guagua.GuaguaConstants;
 import ml.shifu.guagua.mapreduce.GuaguaMapReduceClient;
 import ml.shifu.guagua.mapreduce.GuaguaMapReduceConstants;
 import ml.shifu.shifu.actor.AkkaSystemExecutor;
+import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.container.obj.ModelBasicConf.RunMode;
 import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
 import ml.shifu.shifu.core.AbstractTrainer;
@@ -48,16 +49,20 @@ import ml.shifu.shifu.core.dtrain.NNMaster;
 import ml.shifu.shifu.core.dtrain.NNOutput;
 import ml.shifu.shifu.core.dtrain.NNParams;
 import ml.shifu.shifu.core.dtrain.DTrainUtils;
+import ml.shifu.shifu.core.dtrain.NNParquetWorker;
 import ml.shifu.shifu.core.dtrain.NNWorker;
 import ml.shifu.shifu.core.validator.ModelInspector.ModelStep;
 import ml.shifu.shifu.exception.ShifuErrorCode;
 import ml.shifu.shifu.exception.ShifuException;
 import ml.shifu.shifu.fs.ShifuFileUtils;
+import ml.shifu.shifu.guagua.GuaguaParquetMapReduceClient;
+import ml.shifu.shifu.util.CommonUtils;
 import ml.shifu.shifu.util.Constants;
 import ml.shifu.shifu.util.Environment;
 import ml.shifu.shifu.util.HDFSUtils;
 import ml.shifu.shifu.util.HDPUtils;
 
+import org.antlr.runtime.RecognitionException;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.collections.ListUtils;
 import org.apache.commons.compress.compressors.bzip2.BZip2CompressorInputStream;
@@ -68,13 +73,28 @@ import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.IOUtils;
+import org.apache.pig.LoadPushDown.RequiredField;
+import org.apache.pig.LoadPushDown.RequiredFieldList;
+import org.apache.pig.data.DataType;
+import org.apache.pig.impl.PigContext;
 import org.apache.pig.impl.util.JarManager;
+import org.apache.pig.impl.util.ObjectSerializer;
 import org.apache.zookeeper.ZooKeeper;
 import org.encog.ml.data.MLDataSet;
 import org.encog.neural.networks.BasicNetwork;
 import org.jboss.netty.bootstrap.ServerBootstrap;
+import org.joda.time.ReadableInstant;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.xerial.snappy.Snappy;
+
+import parquet.ParquetRuntimeException;
+import parquet.column.ParquetProperties;
+import parquet.column.values.bitpacking.Packer;
+import parquet.encoding.Generator;
+import parquet.format.PageType;
+import parquet.hadoop.ParquetRecordReader;
+import parquet.org.codehaus.jackson.Base64Variant;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.core.JsonParser;
@@ -134,31 +154,37 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
             LOG.info("Step Start: train");
         }
         long start = System.currentTimeMillis();
+        try {
+            setUp(ModelStep.TRAIN);
 
-        setUp(ModelStep.TRAIN);
-
-        if(isDebug) {
-            File file = new File(LOGS);
-            if(!file.exists() && !file.mkdir()) {
-                throw new RuntimeException("logs file is created failed.");
+            if(isDebug) {
+                File file = new File(LOGS);
+                if(!file.exists() && !file.mkdir()) {
+                    throw new RuntimeException("logs file is created failed.");
+                }
             }
+
+            RunMode runMode = super.modelConfig.getBasic().getRunMode();
+            switch(runMode) {
+                case DIST:
+                case MAPRED:
+                    validateDistributedTrain();
+                    syncDataToHdfs(super.modelConfig.getDataSet().getSource());
+                    runDistributedTrain();
+                    break;
+                case LOCAL:
+                default:
+                    runAkkaTrain(isForVarSelect ? 1 : modelConfig.getBaggingNum());
+                    break;
+            }
+
+            syncDataToHdfs(modelConfig.getDataSet().getSource());
+
+            clearUp(ModelStep.TRAIN);
+        } catch (Exception e) {
+            LOG.error("Error:", e);
+            return -1;
         }
-
-        RunMode runMode = super.modelConfig.getBasic().getRunMode();
-        switch(runMode) {
-            case mapred:
-                validateDistributedTrain();
-                syncDataToHdfs(super.modelConfig.getDataSet().getSource());
-                runDistributedTrain();
-                break;
-            case local:
-            default:
-                runAkkaTrain(isForVarSelect ? 1 : modelConfig.getBaggingNum());
-                break;
-        }
-
-        clearUp(ModelStep.TRAIN);
-
         if(!this.isForVarSelect()) {
             LOG.info("Step Finished: train with {} ms", (System.currentTimeMillis() - start));
         }
@@ -246,7 +272,7 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
         return trainers.get(index);
     }
 
-    private void validateDistributedTrain() {
+    private void validateDistributedTrain() throws IOException {
         String alg = super.getModelConfig().getTrain().getAlgorithm();
         if(!(NNConstants.NN_ALG_NAME.equalsIgnoreCase(alg) || LogisticRegressionContants.LR_ALG_NAME
                 .equalsIgnoreCase(alg))) {
@@ -259,6 +285,22 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
 
         if(isDebug()) {
             LOG.warn("Currently we haven't debug logic. It's the same as you don't set it.");
+        }
+
+        // check if parquet format norm output is consistent with current isParquet setting.
+        boolean isParquetMetaFileExist = ShifuFileUtils.getFileSystemBySourceType(
+                super.getModelConfig().getDataSet().getSource()).exists(
+                new Path(super.getPathFinder().getNormalizedDataPath(), "_common_metadata"));
+        if(super.modelConfig.getNormalize().getIsParquet() && !isParquetMetaFileExist) {
+            throw new IllegalArgumentException(
+                    "Your normlized input in "
+                            + super.getPathFinder().getNormalizedDataPath()
+                            + " is not parquet format. Please keep isParquet and re-run norm again and then run training step or change isParquet to false.");
+        } else if(!super.modelConfig.getNormalize().getIsParquet() && isParquetMetaFileExist) {
+            throw new IllegalArgumentException(
+                    "Your normlized input in "
+                            + super.getPathFinder().getNormalizedDataPath()
+                            + " is parquet format. Please keep isParquet and re-run norm again or change isParquet directly to true.");
         }
     }
 
@@ -285,7 +327,47 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
         LOG.info("Distributed trainning with baggingNum: {}", baggingNum);
         boolean isParallel = Boolean.valueOf(
                 Environment.getProperty(SHIFU_DTRAIN_PARALLEL, SHIFU_DEFAULT_DTRAIN_PARALLEL)).booleanValue();
-        GuaguaMapReduceClient guaguaClient = new GuaguaMapReduceClient();
+        GuaguaMapReduceClient guaguaClient;
+        if(modelConfig.getNormalize().getIsParquet()) {
+            guaguaClient = new GuaguaParquetMapReduceClient();
+
+            // set required field list to make sure we only load selected columns.
+            RequiredFieldList requiredFieldList = new RequiredFieldList();
+
+            int[] inputOutputIndex = DTrainUtils.getInputOutputCandidateCounts(this.columnConfigList);
+            int inputNodeCount = inputOutputIndex[0] == 0 ? inputOutputIndex[2] : inputOutputIndex[0];
+            int candidateCount = inputOutputIndex[2];
+
+            for(ColumnConfig columnConfig: super.columnConfigList) {
+                if(columnConfig.isTarget()) {
+                    requiredFieldList.add(new RequiredField(columnConfig.getColumnName(), columnConfig.getColumnNum(),
+                            null, DataType.FLOAT));
+                } else {
+                    if(inputNodeCount == candidateCount) {
+                        // no any variables are selected
+                        if(!columnConfig.isMeta() && !columnConfig.isTarget()
+                                && CommonUtils.isGoodCandidate(columnConfig)) {
+                            requiredFieldList.add(new RequiredField(columnConfig.getColumnName(), columnConfig
+                                    .getColumnNum(), null, DataType.FLOAT));
+                        }
+                    } else {
+                        if(!columnConfig.isMeta() && !columnConfig.isTarget() && columnConfig.isFinalSelect()) {
+                            requiredFieldList.add(new RequiredField(columnConfig.getColumnName(), columnConfig
+                                    .getColumnNum(), null, DataType.FLOAT));
+                        }
+                    }
+                }
+            }
+            // weight is added manually
+            requiredFieldList.add(new RequiredField("weight", columnConfigList.size(), null, DataType.DOUBLE));
+
+            args.add(String.format(CommonConstants.MAPREDUCE_PARAM_FORMAT, "parquet.private.pig.required.fields",
+                    serializeRequiredFieldList(requiredFieldList)));
+            args.add(String.format(CommonConstants.MAPREDUCE_PARAM_FORMAT, "parquet.private.pig.column.index.access",
+                    "true"));
+        } else {
+            guaguaClient = new GuaguaMapReduceClient();
+        }
         List<String> progressLogList = new ArrayList<String>(baggingNum);
         for(int i = 0; i < baggingNum; i++) {
             List<String> localArgs = new ArrayList<String>(args);
@@ -341,6 +423,14 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
         // copy temp model files
         copyTmpModelsToLocal(tmpModelsPath, sourceType);
         LOG.info("Distributed training finished in {}ms.", System.currentTimeMillis() - start);
+    }
+
+    static String serializeRequiredFieldList(RequiredFieldList requiredFieldList) {
+        try {
+            return ObjectSerializer.serialize(requiredFieldList);
+        } catch (IOException e) {
+            throw new RuntimeException("Failed to searlize required fields.", e);
+        }
     }
 
     private void checkContinuousTraining(FileSystem fileSystem, List<String> localArgs, Path modelPath)
@@ -436,7 +526,12 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
 
     private void prepareNNParams(final List<String> args, final SourceType sourceType) {
         args.add("-w");
-        args.add(NNWorker.class.getName());
+        if(modelConfig.getNormalize().getIsParquet()) {
+            args.add(NNParquetWorker.class.getName());
+        } else {
+            args.add(NNWorker.class.getName());
+        }
+
         args.add("-m");
         args.add(NNMaster.class.getName());
 
@@ -464,12 +559,14 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
             args.add("-z");
             args.add(zkServers);
         }
+
         String alg = super.getModelConfig().getTrain().getAlgorithm();
         if(LogisticRegressionContants.LR_ALG_NAME.equalsIgnoreCase(alg)) {
             this.prepareLRParams(args, sourceType);
         } else {
             this.prepareNNParams(args, sourceType);
         }
+
         args.add("-c");
         // the reason to add 1 is that the first iteration in D-NN
         // implementation is used for training preparation.
@@ -496,6 +593,8 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
                         new Path(super.getPathFinder().getColumnConfigPath(sourceType)))));
         args.add(String.format(CommonConstants.MAPREDUCE_PARAM_FORMAT, NNConstants.NN_MODELSET_SOURCE_TYPE, sourceType));
         args.add(String.format(CommonConstants.MAPREDUCE_PARAM_FORMAT, NNConstants.NN_DRY_TRAIN, isDryTrain()));
+        args.add(String.format(CommonConstants.MAPREDUCE_PARAM_FORMAT, NNConstants.NN_POISON_SAMPLER,
+                Environment.getProperty(NNConstants.NN_POISON_SAMPLER, "true")));
         // hard code set computation threshold for 50s. Can be changed in shifuconfig file
         args.add(String.format(CommonConstants.MAPREDUCE_PARAM_FORMAT,
                 GuaguaConstants.GUAGUA_COMPUTATION_TIME_THRESHOLD, 60 * 1000L));
@@ -504,7 +603,7 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
         // one can set guagua conf in shifuconfig
         for(Map.Entry<Object, Object> entry: Environment.getProperties().entrySet()) {
             if(entry.getKey().toString().startsWith("nn") || entry.getKey().toString().startsWith("guagua")
-                    || entry.getKey().toString().startsWith("mapred")) {
+                    || entry.getKey().toString().startsWith("shifu") || entry.getKey().toString().startsWith("mapred")) {
                 args.add(String.format(CommonConstants.MAPREDUCE_PARAM_FORMAT, entry.getKey().toString(), entry
                         .getValue().toString()));
             }
@@ -521,13 +620,18 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
             args.add(String.format(CommonConstants.MAPREDUCE_PARAM_FORMAT,
                     GuaguaMapReduceConstants.MAPRED_CHILD_JAVA_OPTS, "-Xmn128m -Xms1G -Xmx1G"));
         }
-        args.add(String.format(CommonConstants.MAPREDUCE_PARAM_FORMAT, GuaguaConstants.GUAGUA_SPLIT_COMBINABLE,
-                Environment.getProperty(GuaguaConstants.GUAGUA_SPLIT_COMBINABLE, "true")));
-        // set to 512M to save mappers, sometimes maybe OOM, users should tune guagua.split.maxCombinedSplitSize in
-        // shifuconfig
-        args.add(String.format(CommonConstants.MAPREDUCE_PARAM_FORMAT,
-                GuaguaConstants.GUAGUA_SPLIT_MAX_COMBINED_SPLIT_SIZE,
-                Environment.getProperty(GuaguaConstants.GUAGUA_SPLIT_MAX_COMBINED_SPLIT_SIZE, "536870912")));
+        if(super.modelConfig.getNormalize().getIsParquet()) {
+            args.add(String.format(CommonConstants.MAPREDUCE_PARAM_FORMAT, GuaguaConstants.GUAGUA_SPLIT_COMBINABLE,
+                    Environment.getProperty(GuaguaConstants.GUAGUA_SPLIT_COMBINABLE, "false")));
+        } else {
+            args.add(String.format(CommonConstants.MAPREDUCE_PARAM_FORMAT, GuaguaConstants.GUAGUA_SPLIT_COMBINABLE,
+                    Environment.getProperty(GuaguaConstants.GUAGUA_SPLIT_COMBINABLE, "true")));
+            // set to 512M to save mappers, sometimes maybe OOM, users should tune guagua.split.maxCombinedSplitSize in
+            // shifuconfig
+            args.add(String.format(CommonConstants.MAPREDUCE_PARAM_FORMAT,
+                    GuaguaConstants.GUAGUA_SPLIT_MAX_COMBINED_SPLIT_SIZE,
+                    Environment.getProperty(GuaguaConstants.GUAGUA_SPLIT_MAX_COMBINED_SPLIT_SIZE, "536870912")));
+        }
         // special tuning parameters for shifu, 0.99 means each iteation master wait for 99% workers and then can go to
         // next iteration.
         args.add(String.format(CommonConstants.MAPREDUCE_PARAM_FORMAT, GuaguaConstants.GUAGUA_MIN_WORKERS_RATIO, 0.99));
@@ -574,6 +678,33 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
         jars.add(JarManager.findContainingJar(ZooKeeper.class));
         // netty-*.jar
         jars.add(JarManager.findContainingJar(ServerBootstrap.class));
+        if(modelConfig.getNormalize().getIsParquet()) {
+            // this jars are only for parquet format
+            // parquet-mr-*.jar
+            jars.add(JarManager.findContainingJar(ParquetRecordReader.class));
+            // parquet-pig-*.jar
+            jars.add(JarManager.findContainingJar(parquet.pig.ParquetLoader.class));
+            // pig-*.jar
+            jars.add(JarManager.findContainingJar(PigContext.class));
+            // parquet-common-*.jar
+            jars.add(JarManager.findContainingJar(ParquetRuntimeException.class));
+            // parquet-column-*.jar
+            jars.add(JarManager.findContainingJar(ParquetProperties.class));
+            // parquet-encoding-*.jar
+            jars.add(JarManager.findContainingJar(Packer.class));
+            // parquet-generator-*.jar
+            jars.add(JarManager.findContainingJar(Generator.class));
+            // parquet-format-*.jar
+            jars.add(JarManager.findContainingJar(PageType.class));
+            // snappy-*.jar
+            jars.add(JarManager.findContainingJar(Snappy.class));
+            // parquet-jackson-*.jar
+            jars.add(JarManager.findContainingJar(Base64Variant.class));
+            // antlr jar
+            jars.add(JarManager.findContainingJar(RecognitionException.class));
+            // joda-time jar
+            jars.add(JarManager.findContainingJar(ReadableInstant.class));
+        }
 
         String hdpVersion = HDPUtils.getHdpVersionForHDP224();
         if(StringUtils.isNotBlank(hdpVersion)) {
