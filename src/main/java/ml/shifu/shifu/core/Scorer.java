@@ -15,10 +15,16 @@
  */
 package ml.shifu.shifu.core;
 
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+
 import ml.shifu.shifu.container.ScoreObject;
 import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.container.obj.ModelConfig;
+import ml.shifu.shifu.core.dtrain.DTrainUtils;
 import ml.shifu.shifu.util.CommonUtils;
+
 import org.encog.ml.BasicML;
 import org.encog.ml.data.MLData;
 import org.encog.ml.data.MLDataPair;
@@ -26,10 +32,6 @@ import org.encog.ml.svm.SVM;
 import org.encog.neural.networks.BasicNetwork;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
 
 /**
  * Scorer, calculate the score for a specify input
@@ -46,7 +48,10 @@ public class Scorer {
     private double cutoff = 4.0d;
     private ModelConfig modelConfig;
 
-    // private boolean verbose = false;
+    /**
+     * No any variables set to finalSelect=true, we should take all candidate variables as inputs.
+     */
+    private boolean noVarSelect = false;
 
     public Scorer(List<BasicML> models, List<ColumnConfig> columnConfigList, String algorithm, ModelConfig modelConfig) {
         this(models, columnConfigList, algorithm, modelConfig, 4.0d);
@@ -59,10 +64,19 @@ public class Scorer {
         this.cutoff = cutoff;
         this.alg = algorithm;
         this.modelConfig = modelConfig;
+
+        int[] inputOutputIndex = DTrainUtils.getInputOutputCandidateCounts(this.columnConfigList);
+        int inputNodeCount = inputOutputIndex[0] == 0 ? inputOutputIndex[2] : inputOutputIndex[0];
+        int candidateCount = inputOutputIndex[2];
+        if(inputNodeCount == candidateCount) {
+            this.noVarSelect = true;
+        } else {
+            this.noVarSelect = false;
+        }
     }
 
     public ScoreObject score(Map<String, String> rawDataMap) {
-        MLDataPair pair = CommonUtils.assembleDataPair(modelConfig, columnConfigList, rawDataMap, cutoff);
+        MLDataPair pair = CommonUtils.assembleDataPair(noVarSelect, modelConfig, columnConfigList, rawDataMap, cutoff);
         return score(pair, rawDataMap);
     }
 
@@ -92,7 +106,7 @@ public class Scorer {
                 }
                 MLData score = svm.compute(pair.getInput());
                 scores.add(toScore(score.getData(0)));
-            }  else if(model instanceof LR) {
+            } else if(model instanceof LR) {
                 LR lr = (LR) model;
                 if(lr.getInputCount() != pair.getInput().size()) {
                     log.error("LR and input size mismatch: LR Size = " + lr.getInputCount() + "; Input Size = "
@@ -101,8 +115,7 @@ public class Scorer {
                 }
                 MLData score = lr.compute(pair.getInput());
                 scores.add(toScore(score.getData(0)));
-            } 
-            else {
+            } else {
                 throw new RuntimeException("unspport models");
             }
         }

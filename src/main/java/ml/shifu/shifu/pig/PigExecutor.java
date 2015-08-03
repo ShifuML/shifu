@@ -21,6 +21,7 @@ import java.util.Map;
 import ml.shifu.shifu.container.obj.ModelConfig;
 import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
 import ml.shifu.shifu.util.CommonUtils;
+import ml.shifu.shifu.util.Environment;
 import ml.shifu.shifu.util.HDPUtils;
 
 import org.apache.commons.lang.StringUtils;
@@ -101,8 +102,27 @@ public class PigExecutor {
         PigServer pigServer;
 
         if(SourceType.HDFS.equals(sourceType)) {
-            log.info("ExecType: MAPREDUCE");
-            pigServer = new PigServer(ExecType.MAPREDUCE);
+            if(Environment.getProperty("shifu.pig.exectype", "MAPREDUCE").toLowerCase().equals("tez")) {
+                if(isTezRunnable()) {
+                    try {
+                        Class<?> tezClazz = Class
+                                .forName("org.apache.pig.backend.hadoop.executionengine.tez.TezExecType");
+                        log.info("Pig ExecType: TEZ");
+                        pigServer = new PigServer((ExecType) tezClazz.newInstance());
+                    } catch (Throwable t) {
+                        log.info("Pig ExecType: MAPREDUCE");
+                        pigServer = new PigServer(ExecType.MAPREDUCE);
+                    }
+                } else {
+                    // fall back to mapreduce
+                    log.info("Pig ExecType: MAPREDUCE");
+                    pigServer = new PigServer(ExecType.MAPREDUCE);
+                }
+            } else {
+                log.info("Pig ExecType: MAPREDUCE");
+                pigServer = new PigServer(ExecType.MAPREDUCE);
+
+            }
             String hdpVersion = HDPUtils.getHdpVersionForHDP224();
             if(StringUtils.isNotBlank(hdpVersion)) {
                 // for hdp 2.2.4, hdp.version should be set and configuration files should be added to container class
@@ -124,6 +144,20 @@ public class PigExecutor {
         }
 
         pigServer.registerScript(pigScriptPath, pigParamsMap);
+    }
+
+    /**
+     * Check if tez version is ok to run. In hdp 2.4.0.2.1.2.0-402, with such error 'NoClassDefFoundError:
+     * org/apache/tez/runtime/library/input/OrderedGroupedKVInput'
+     */
+    private boolean isTezRunnable() {
+        boolean isTezRunnable = true;
+        try {
+            Class.forName("org.apache.tez.runtime.library.input.OrderedGroupedKVInput");
+        } catch (Throwable t) {
+            isTezRunnable = false;
+        }
+        return isTezRunnable;
     }
 
 }

@@ -17,15 +17,18 @@ package ml.shifu.shifu.core.autotype;
 
 import java.io.IOException;
 import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
+import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.container.obj.ModelConfig;
 import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
 import ml.shifu.shifu.core.DataPurifier;
 import ml.shifu.shifu.util.CommonUtils;
 import ml.shifu.shifu.util.Constants;
 
-import org.apache.hadoop.io.BytesWritable;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Text;
@@ -34,13 +37,12 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.clearspring.analytics.stream.cardinality.HyperLogLogPlus;
-import com.google.common.base.Splitter;
 
 /**
  * {@link AutoTypeDistinctCountMapper} is a mapper to get {@link HyperLogLogPlus} statistics per split. Such statistics
  * will be merged in our reducer.
  */
-public class AutoTypeDistinctCountMapper extends Mapper<LongWritable, Text, IntWritable, BytesWritable> {
+public class AutoTypeDistinctCountMapper extends Mapper<LongWritable, Text, IntWritable, CountAndFrequentItemsWritable> {
 
     private final static Logger LOG = LoggerFactory.getLogger(AutoTypeDistinctCountMapper.class);
 
@@ -59,9 +61,20 @@ public class AutoTypeDistinctCountMapper extends Mapper<LongWritable, Text, IntW
      */
     private IntWritable outputKey;
 
-    private Map<Integer, HyperLogLogPlus> variableCountMap;
+    /**
+     * TODO using approximate method to estimate real frequent items and store into this map
+     */
+    private Map<Integer, CountAndFrequentItems> variableCountMap;
 
-    private Splitter splitter;
+    /**
+     * Tag column index
+     */
+    private int tagColumnNum = -1;
+
+    /**
+     * Column Config list read from HDFS
+     */
+    private List<ColumnConfig> columnConfigList;
 
     private void loadConfigFiles(final Context context) {
         try {
@@ -69,6 +82,8 @@ public class AutoTypeDistinctCountMapper extends Mapper<LongWritable, Text, IntW
                     Constants.SHIFU_MODELSET_SOURCE_TYPE, SourceType.HDFS.toString()));
             this.modelConfig = CommonUtils.loadModelConfig(
                     context.getConfiguration().get(Constants.SHIFU_MODEL_CONFIG), sourceType);
+            this.columnConfigList = CommonUtils.loadColumnConfigList(
+                    context.getConfiguration().get(Constants.SHIFU_COLUMN_CONFIG), sourceType);
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
@@ -80,11 +95,27 @@ public class AutoTypeDistinctCountMapper extends Mapper<LongWritable, Text, IntW
 
         this.dataPurifier = new DataPurifier(this.modelConfig);
 
-        this.splitter = Splitter.on(this.modelConfig.getDataSetDelimiter()).trimResults();
+        loadTagWeightNum();
 
-        this.variableCountMap = new HashMap<Integer, HyperLogLogPlus>();
+        this.variableCountMap = new HashMap<Integer, CountAndFrequentItems>();
 
         this.outputKey = new IntWritable();
+    }
+
+    /**
+     * Load tag weight index field.
+     */
+    private void loadTagWeightNum() {
+        for(ColumnConfig config: this.columnConfigList) {
+            if(config.isTarget()) {
+                this.tagColumnNum = config.getColumnNum();
+                break;
+            }
+        }
+
+        if(this.tagColumnNum == -1) {
+            throw new RuntimeException("No valid target column.");
+        }
     }
 
     @Override
@@ -99,18 +130,29 @@ public class AutoTypeDistinctCountMapper extends Mapper<LongWritable, Text, IntW
             return;
         }
 
+        String[] units = CommonUtils.split(valueStr, this.modelConfig.getDataSetDelimiter());
+        // tagColumnNum should be in units array, if not IndexOutofBoundException
+        String tag = units[this.tagColumnNum];
+
+        if(tag == null || (!modelConfig.getPosTags().contains(tag) && !modelConfig.getNegTags().contains(tag))) {
+            if(System.currentTimeMillis() % 20 == 0) {
+                LOG.warn("Data with invalid tag is ignored in distinct count computing, invalid tag: {}.", tag);
+            }
+            return;
+        }
+
         int i = 0;
-        for(String unit: this.splitter.split(valueStr)) {
+        for(String unit: units) {
             if(unit == null || this.modelConfig.getDataSet().getMissingOrInvalidValues().contains(unit.toLowerCase())) {
                 i++;
                 continue;
             }
-            HyperLogLogPlus hyperLogLogPlus = this.variableCountMap.get(i);
-            if(hyperLogLogPlus == null) {
-                hyperLogLogPlus = new HyperLogLogPlus(8);
-                this.variableCountMap.put(i, hyperLogLogPlus);
+            CountAndFrequentItems countAndFrequentItems = this.variableCountMap.get(i);
+            if(countAndFrequentItems == null) {
+                countAndFrequentItems = new CountAndFrequentItems();
+                this.variableCountMap.put(i, countAndFrequentItems);
             }
-            hyperLogLogPlus.offer(unit);
+            countAndFrequentItems.offer(unit);
             i++;
         }
     }
@@ -120,10 +162,26 @@ public class AutoTypeDistinctCountMapper extends Mapper<LongWritable, Text, IntW
      */
     @Override
     protected void cleanup(Context context) throws IOException, InterruptedException {
-        for(Map.Entry<Integer, HyperLogLogPlus> entry: this.variableCountMap.entrySet()) {
+        for(Map.Entry<Integer, CountAndFrequentItems> entry: this.variableCountMap.entrySet()) {
             this.outputKey.set(entry.getKey());
-            byte[] bytes = entry.getValue().getBytes();
-            context.write(this.outputKey, new BytesWritable(bytes));
+            byte[] bytes = entry.getValue().hyper.getBytes();
+            Set<String> frequentItems = entry.getValue().frequentItems;
+            context.write(this.outputKey, new CountAndFrequentItemsWritable(bytes, frequentItems));
+        }
+    }
+
+    private static class CountAndFrequentItems {
+
+        private final HyperLogLogPlus hyper = new HyperLogLogPlus(8);;
+
+        private final Set<String> frequentItems = new HashSet<String>();
+
+        public void offer(String unit) {
+            hyper.offer(unit);
+            if(frequentItems.size() <= CountAndFrequentItemsWritable.FREQUET_ITEM_MAX_SIZE
+                    && !frequentItems.contains(unit)) {
+                frequentItems.add(unit);
+            }
         }
     }
 }

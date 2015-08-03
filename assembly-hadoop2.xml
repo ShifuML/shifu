@@ -102,12 +102,14 @@
                 <include>*:commons-lang:*</include>
                 <include>*:commons-logging:*</include>
                 <include>*:commons-net:*</include>
+                <include>*:commons-math3:*</include>
+                <!-- <include>*:commons-configuration:*</include> -->
                 <include>*:config:*</include>
                 <include>*:encog-core:*</include>
+                <!-- <include>*:hadoop-common:*</include> <include>*:hadoop-hdfs:*</include> <include>*:hadoop-auth:*</include> -->
                 <include>*:guagua-core:*</include>
                 <include>*:guagua-mapreduce:*</include>
                 <include>*:guava:*</include>
-                <!-- <include>*:hadoop-core*:jar</include> -->
                 <include>*:jackson-annotations:*</include>
                 <include>*:jackson-core:*</include>
                 <include>*:jackson-databind:*</include>
@@ -123,7 +125,6 @@
                 <include>*:scala-library:*</include>
                 <include>*:shifu:*</include>
                 <include>*:slf4j-api:*</include>
-                <include>*:slf4j-log4j12:*</include>
                 <include>*:stringtemplate:*</include>
                 <include>*:xmlenc:*</include>
                 <include>*:xz:*</include>
@@ -132,6 +133,15 @@
                 <include>*:automaton:*</include>
                 <include>*:jpmml:*</include>
                 <include>*:stream:*</include>
+                <include>*:parquet-pig:*</include>
+                <include>*:parquet-column:*</include>
+                <include>*:parquet-common:*</include>
+                <include>*:parquet-encoding:*</include>
+                <include>*:parquet-generator:*</include>
+                <include>*:parquet-hadoop:*</include>
+                <include>*:parquet-format:*</include>
+                <include>*:parquet-jackson:*</include>
+                <include>*:snappy-java:*</include>
             </includes>
         </dependencySet>
     </dependencySets>

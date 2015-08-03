@@ -154,13 +154,15 @@ public class ModelConfig {
 
         dataSet.setMissingOrInvalidValues(Lists.asList("", new String[] { "*", "#", "?", "null", "~" }));
         // create empty <ModelName>/meta.column.names
-        ShifuFileUtils.createFileIfNotExists(new Path(modelName, Constants.DEFAULT_META_COLUMN_FILE).toString(),
-                SourceType.LOCAL);
-        dataSet.setMetaColumnNameFile(Constants.DEFAULT_META_COLUMN_FILE);
+        ShifuFileUtils.createFileIfNotExists(new Path(modelName, Constants.COLUMN_META_FOLDER_NAME + File.separator
+                + Constants.DEFAULT_META_COLUMN_FILE).toString(), SourceType.LOCAL);
+        dataSet.setMetaColumnNameFile(Constants.COLUMN_META_FOLDER_NAME + File.separator
+                + Constants.DEFAULT_META_COLUMN_FILE);
         // create empty <ModelName>/categorical.column.names
-        ShifuFileUtils.createFileIfNotExists(new Path(modelName, Constants.DEFAULT_CATEGORICAL_COLUMN_FILE).toString(),
-                SourceType.LOCAL);
-        dataSet.setCategoricalColumnNameFile(Constants.DEFAULT_CATEGORICAL_COLUMN_FILE);
+        ShifuFileUtils.createFileIfNotExists(new Path(modelName, Constants.COLUMN_META_FOLDER_NAME + File.separator
+                + Constants.DEFAULT_CATEGORICAL_COLUMN_FILE).toString(), SourceType.LOCAL);
+        dataSet.setCategoricalColumnNameFile(Constants.COLUMN_META_FOLDER_NAME + File.separator
+                + Constants.DEFAULT_CATEGORICAL_COLUMN_FILE);
         modelConfig.setDataSet(dataSet);
 
         // build runtime info
@@ -173,14 +175,16 @@ public class ModelConfig {
         // build varselect info
         ModelVarSelectConf varselect = new ModelVarSelectConf();
         // create empty <ModelName>/forceselect.column.names
-        ShifuFileUtils.createFileIfNotExists(new Path(modelName, Constants.DEFAULT_FORCESELECT_COLUMN_FILE).toString(),
-                SourceType.LOCAL);
-        varselect.setForceSelectColumnNameFile(Constants.DEFAULT_FORCESELECT_COLUMN_FILE);
+        ShifuFileUtils.createFileIfNotExists(new Path(modelName, Constants.COLUMN_META_FOLDER_NAME + File.separator
+                + Constants.DEFAULT_FORCESELECT_COLUMN_FILE).toString(), SourceType.LOCAL);
+        varselect.setForceSelectColumnNameFile(Constants.COLUMN_META_FOLDER_NAME + File.separator
+                + Constants.DEFAULT_FORCESELECT_COLUMN_FILE);
 
         // create empty <ModelName>/forceremove.column.names
-        ShifuFileUtils.createFileIfNotExists(new Path(modelName, Constants.DEFAULT_FORCEREMOVE_COLUMN_FILE).toString(),
-                SourceType.LOCAL);
-        varselect.setForceRemoveColumnNameFile(Constants.DEFAULT_FORCEREMOVE_COLUMN_FILE);
+        ShifuFileUtils.createFileIfNotExists(new Path(modelName, Constants.COLUMN_META_FOLDER_NAME + File.separator
+                + Constants.DEFAULT_FORCEREMOVE_COLUMN_FILE).toString(), SourceType.LOCAL);
+        varselect.setForceRemoveColumnNameFile(Constants.COLUMN_META_FOLDER_NAME + File.separator
+                + Constants.DEFAULT_FORCEREMOVE_COLUMN_FILE);
         varselect.setFilterBySE(Boolean.TRUE);
         modelConfig.setVarSelect(varselect);
 
@@ -209,9 +213,10 @@ public class ModelConfig {
                 + File.separator + ".pig_header").toString());
         evalConfig.setDataSet(evalSet);
         // create empty <ModelName>/<EvalSetName>Score.meta.column.names
-        ShifuFileUtils.createFileIfNotExists(new Path(modelName, evalConfig.getName()
-                + Constants.DEFAULT_EVALSCORE_META_COLUMN_FILE).toString(), SourceType.LOCAL);
-        evalConfig.setScoreMetaColumnNameFile(evalConfig.getName() + Constants.DEFAULT_EVALSCORE_META_COLUMN_FILE);
+        ShifuFileUtils.createFileIfNotExists(new Path(modelName, Constants.COLUMN_META_FOLDER_NAME + File.separator
+                + evalConfig.getName() + Constants.DEFAULT_EVALSCORE_META_COLUMN_FILE).toString(), SourceType.LOCAL);
+        evalConfig.setScoreMetaColumnNameFile(Constants.COLUMN_META_FOLDER_NAME + File.separator + evalConfig.getName()
+                + Constants.DEFAULT_EVALSCORE_META_COLUMN_FILE);
         modelConfig.getEvals().add(evalConfig);
 
         return modelConfig;
@@ -289,7 +294,7 @@ public class ModelConfig {
     public Double getNormalizeSampleRate() {
         return normalize.getSampleRate();
     }
-    
+
     @JsonIgnore
     public NormType getNormalizeType() {
         return normalize.getNormType();
@@ -392,12 +397,17 @@ public class ModelConfig {
 
     @JsonIgnore
     public boolean isMapReduceRunMode() {
-        return RunMode.mapred.equals(basic.getRunMode());
+        return RunMode.MAPRED == basic.getRunMode() || RunMode.DIST == basic.getRunMode();
+    }
+
+    @JsonIgnore
+    public boolean isDistributedRunMode() {
+        return isMapReduceRunMode();
     }
 
     @JsonIgnore
     public boolean isLocalRunMode() {
-        return RunMode.local.equals(basic.getRunMode());
+        return RunMode.LOCAL.equals(basic.getRunMode());
     }
 
     @JsonIgnore

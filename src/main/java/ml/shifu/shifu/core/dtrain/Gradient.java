@@ -15,6 +15,8 @@
  */
 package ml.shifu.shifu.core.dtrain;
 
+import java.util.Arrays;
+
 import org.encog.engine.network.activation.ActivationFunction;
 import org.encog.mathutil.error.ErrorCalculation;
 import org.encog.ml.data.MLDataPair;
@@ -23,8 +25,6 @@ import org.encog.ml.data.basic.BasicMLDataPair;
 import org.encog.neural.error.ErrorFunction;
 import org.encog.neural.flat.FlatNetwork;
 import org.encog.neural.networks.BasicNetwork;
-
-import java.util.Arrays;
 
 /**
  * {@link Gradient} is copied from Encog framework. The reason is that we original Gradient don't pop up
@@ -184,6 +184,7 @@ public class Gradient {
         this.getNetwork().compute(input, this.actual);
 
         this.errorCalculation.updateError(this.actual, ideal, s);
+
         this.errorFunction.calculateError(ideal, actual, this.getLayerDelta());
 
         for(int i = 0; i < this.actual.length; i++) {

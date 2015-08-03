@@ -25,7 +25,6 @@ import ml.shifu.guagua.GuaguaConstants;
 import ml.shifu.guagua.mapreduce.GuaguaMapReduceClient;
 import ml.shifu.guagua.mapreduce.GuaguaMapReduceConstants;
 import ml.shifu.shifu.container.obj.ColumnConfig;
-import ml.shifu.shifu.container.obj.ModelBasicConf.RunMode;
 import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
 import ml.shifu.shifu.core.AbstractTrainer;
 import ml.shifu.shifu.core.VariableSelector;
@@ -75,7 +74,6 @@ import org.apache.pig.impl.util.JarManager;
 import org.apache.zookeeper.ZooKeeper;
 import org.encog.ml.data.MLDataSet;
 import org.jboss.netty.bootstrap.ServerBootstrap;
-import org.mortbay.log.Log;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -105,45 +103,46 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
     public int run() throws Exception {
         log.info("Step Start: varselect");
         long start = System.currentTimeMillis();
+        try {
+            setUp(ModelStep.VARSELECT);
 
-        setUp(ModelStep.VARSELECT);
+            validateNormalize();
 
-        validateNormalize();
+            // sync to make sure load from hdfs config is consistent with local configuration
+            syncDataToHdfs(super.modelConfig.getDataSet().getSource());
 
-        syncDataToHdfs(super.modelConfig.getDataSet().getSource());
+            VariableSelector selector = new VariableSelector(this.modelConfig, this.columnConfigList);
 
-        VariableSelector selector = new VariableSelector(this.modelConfig, this.columnConfigList);
+            if(!modelConfig.getVarSelectWrapperEnabled()) {
+                // Select by local KS, IV
+                CommonUtils.updateColumnConfigFlags(modelConfig, columnConfigList);
 
-        if(!modelConfig.getVarSelectWrapperEnabled()) {
-            // Select by local KS, IV
-            CommonUtils.updateColumnConfigFlags(modelConfig, columnConfigList);
-
-            this.columnConfigList = selector.selectByFilter();
-            try {
-                this.saveColumnConfigListAndColumnStats();
-            } catch (ShifuException e) {
-                throw new ShifuException(ShifuErrorCode.ERROR_WRITE_COLCONFIG, e);
-            }
-        } else {
-            // wrapper method
-            if(super.getModelConfig().getDataSet().getSource() == SourceType.HDFS
-                    && super.getModelConfig().getBasic().getRunMode() == RunMode.mapred) {
-                if(Constants.WRAPPER_BY_SE.equalsIgnoreCase(modelConfig.getVarSelect().getWrapperBy())
-                        || Constants.WRAPPER_BY_REMOVE.equalsIgnoreCase(modelConfig.getVarSelect().getWrapperBy())) {
-                    // SE method supports remove and sensitivity se so far
-                    validateDistributedWrapperVarSelect();
-                    syncDataToHdfs(super.modelConfig.getDataSet().getSource());
-                    distributedSEWrapper();
-                } else if(Constants.WRAPPER_BY_VOTED.equalsIgnoreCase(modelConfig.getVarSelect().getWrapperBy())) {
-                    votedVariablesSelection();
-                }
+                this.columnConfigList = selector.selectByFilter();
             } else {
-                // local wrapper mode: old
-                wrapper(selector);
+                // wrapper method
+                if(super.getModelConfig().getDataSet().getSource() == SourceType.HDFS
+                        && super.getModelConfig().isMapReduceRunMode()) {
+                    if(Constants.WRAPPER_BY_SE.equalsIgnoreCase(modelConfig.getVarSelect().getWrapperBy())
+                            || Constants.WRAPPER_BY_REMOVE.equalsIgnoreCase(modelConfig.getVarSelect().getWrapperBy())) {
+                        // SE method supports remove and sensitivity se so far
+                        validateDistributedWrapperVarSelect();
+                        syncDataToHdfs(super.modelConfig.getDataSet().getSource());
+                        distributedSEWrapper();
+                    } else if(Constants.WRAPPER_BY_VOTED.equalsIgnoreCase(modelConfig.getVarSelect().getWrapperBy())) {
+                        votedVariablesSelection();
+                    }
+                } else {
+                    // local wrapper mode: old
+                    wrapper(selector);
+                }
             }
-        }
 
-        clearUp(ModelStep.VARSELECT);
+            // save column config to file and sync to
+            clearUp(ModelStep.VARSELECT);
+        } catch (Exception e) {
+            log.error("Error:", e);
+            return -1;
+        }
         log.info("Step Finished: varselect with {} ms", (System.currentTimeMillis() - start));
         return 0;
     }
@@ -173,9 +172,9 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
                     "Currently we only support distributed wrapper by analyzing on HDFS source type.");
         }
 
-        if(super.getModelConfig().getBasic().getRunMode() != RunMode.mapred) {
+        if(!super.getModelConfig().isMapReduceRunMode()) {
             throw new IllegalArgumentException(
-                    "Currently we only support distributed wrapper by analyzing on HDFS source type.");
+                    "Currently we only support distributed wrapper by on MAPRED or DIST mode.");
         }
     }
 
@@ -235,7 +234,7 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
                 this.columnConfigList.get(id).setFinalSelect(Boolean.TRUE);
             }
 
-            super.saveColumnConfigListAndColumnStats();
+            super.saveColumnConfigListAndColumnStats(false);
 
         } catch (IOException e) {
             e.printStackTrace();
@@ -454,7 +453,7 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
                 threads = Integer.parseInt(Environment.getProperty(Constants.SHIFU_VARSEL_SE_MULTI_THREAD,
                         Constants.SHIFU_DEFAULT_VARSEL_SE_MULTI_THREAD + ""));
             } catch (Exception e) {
-                Log.warn("'shifu.varsel.se.multi.thread' should be a int value, set default value: {}",
+                log.warn("'shifu.varsel.se.multi.thread' should be a int value, set default value: {}",
                         Constants.SHIFU_DEFAULT_VARSEL_SE_MULTI_THREAD);
                 threads = Constants.SHIFU_DEFAULT_VARSEL_SE_MULTI_THREAD;
             }
@@ -594,9 +593,67 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
                 }
             }
         }
+    }
 
-        this.saveColumnConfigListAndColumnStats();
+    @Override
+    protected void clearUp(ModelStep step) throws IOException {
+        autoVarSelCondition();
+        try {
+            this.saveColumnConfigListAndColumnStats(true);
+        } catch (Exception e) {
+            throw new ShifuException(ShifuErrorCode.ERROR_WRITE_COLCONFIG, e);
+        }
         this.syncDataToHdfs(this.modelConfig.getDataSet().getSource());
+    }
+
+    /**
+     * To do some auto variable selection like remove ID-like variables, remove variable with high missing rate.
+     */
+    private void autoVarSelCondition() {
+        // here we do loop again as it is not bad for variables less than 100,000
+        for(ColumnConfig config: columnConfigList) {
+            // check ID-like variables
+            if(isIDLikeVariable(config)) {
+                log.warn(
+                        "Column {} is like an ID, set final select to false. If not, you can check it manually in ColumnConfig.json",
+                        config.getColumnName());
+                config.setFinalSelect(false);
+                continue;
+            }
+            if(isHighMissingRateColumn(config)) {
+                log.warn(
+                        "Column {} is with very high missing rate, set final select to false. If not, you can check it manually in ColumnConfig.json",
+                        config.getColumnName());
+                config.setFinalSelect(false);
+                continue;
+            }
+            // add more here
+        }
+    }
+
+    /**
+     * Check is high rate is very high.
+     */
+    private boolean isHighMissingRateColumn(ColumnConfig config) {
+        Double missingPercentage = config.getMissingPercentage();
+        if(missingPercentage != null && missingPercentage >= modelConfig.getVarSelect().getMissingRateThreshold()) {
+            return true;
+        }
+        return false;
+    }
+
+    /**
+     * Check if column is ID-like.
+     */
+    private boolean isIDLikeVariable(ColumnConfig config) {
+        Long distinctCount = config.getColumnStats().getDistinctCount();
+        Long totalCount = config.getColumnStats().getTotalCount();
+        if(totalCount != null && distinctCount != null && totalCount >= 10000
+                && distinctCount * 1.0 / totalCount >= 0.97d) {
+            return true;
+        }
+
+        return false;
     }
 
     private void setHeapSizeAndSplitSize(final List<String> args) {
@@ -629,11 +686,6 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
 
         if(trainer instanceof NNTrainer) {
             selector.selectByWrapper((NNTrainer) trainer);
-            try {
-                this.saveColumnConfigListAndColumnStats();
-            } catch (ShifuException e) {
-                throw new ShifuException(ShifuErrorCode.ERROR_WRITE_COLCONFIG, e);
-            }
         }
     }
 
