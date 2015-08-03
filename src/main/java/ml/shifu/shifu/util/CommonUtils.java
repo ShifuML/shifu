@@ -565,10 +565,11 @@ public final class CommonUtils {
         List<BasicML> models = new ArrayList<BasicML>(listStatus.size());
         for(FileStatus f: listStatus) {
             FSDataInputStream stream = null;
+            BufferedReader br = null;
             try {
                 stream = fs.open(f.getPath());
-                if(f.getPath().getName().endsWith(LogisticRegressionContants.LR_ALG_NAME.toLowerCase())){
-                    BufferedReader br = new BufferedReader(new InputStreamReader(stream));
+                if(f.getPath().getName().endsWith(LogisticRegressionContants.LR_ALG_NAME.toLowerCase())) {
+                    br = new BufferedReader(new InputStreamReader(stream));
                     models.add(LR.loadFromString(br.readLine()));
                     continue;
                 }
@@ -577,6 +578,7 @@ public final class CommonUtils {
                 String msg = "the expecting model file is: " + f.getPath();
                 throw new ShifuException(ShifuErrorCode.ERROR_FAIL_TO_LOAD_MODEL_FILE, e, msg);
             } finally {
+                IOUtils.closeQuietly(br);
                 IOUtils.closeQuietly(stream);
             }
         }
@@ -1235,10 +1237,10 @@ public final class CommonUtils {
         }
 
         return columnConfig.isCandidate()
-                && (columnConfig.getKs() != null && columnConfig.getKs() > 0
-                        && columnConfig.getIv() != null && columnConfig.getIv() > 0
-                        && columnConfig.getMean() != null && columnConfig.getStdDev() != null
-                        && ( (columnConfig.isCategorical() && columnConfig.getBinCategory() != null && columnConfig.getBinCategory().size() > 1)
-                            || (columnConfig.isNumerical() && columnConfig.getBinBoundary() != null && columnConfig.getBinBoundary().size() > 1)));
+                && (columnConfig.getKs() != null && columnConfig.getKs() > 0 && columnConfig.getIv() != null
+                        && columnConfig.getIv() > 0 && columnConfig.getMean() != null
+                        && columnConfig.getStdDev() != null && ((columnConfig.isCategorical()
+                        && columnConfig.getBinCategory() != null && columnConfig.getBinCategory().size() > 1) || (columnConfig
+                        .isNumerical() && columnConfig.getBinBoundary() != null && columnConfig.getBinBoundary().size() > 1)));
     }
 }
