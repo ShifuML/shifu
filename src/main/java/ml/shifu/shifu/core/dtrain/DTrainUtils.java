@@ -42,7 +42,7 @@ import org.encog.persist.EncogDirectoryPersistence;
 /**
  * Helper class for NN distributed training.
  */
-public final class NNUtils {
+public final class DTrainUtils {
 
     public static final String RESILIENTPROPAGATION = "R";
     public static final String SCALEDCONJUGATEGRADIENT = "S";
@@ -78,7 +78,7 @@ public final class NNUtils {
      * The maximum amount a delta can reach.
      */
 
-    private NNUtils() {
+    private DTrainUtils() {
     }
 
     /**
@@ -163,9 +163,9 @@ public final class NNUtils {
         return new int[] { input, output, goodCandidate };
     }
 
-    public static String getTmpNNModelName(String tmpModelsFolder, String trainerId, int iteration) {
+    public static String getTmpModelName(String tmpModelsFolder, String trainerId, int iteration, String modelPost) {
         return new StringBuilder(200).append(tmpModelsFolder).append(Path.SEPARATOR_CHAR).append("model")
-                .append(trainerId).append('-').append(iteration).append(".nn").toString();
+                .append(trainerId).append('-').append(iteration).append(".").append(modelPost).toString();
     }
 
     static int tmpModelFactor(int epochs) {

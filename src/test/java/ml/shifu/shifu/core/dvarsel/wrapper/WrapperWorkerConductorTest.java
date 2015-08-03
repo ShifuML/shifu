@@ -25,7 +25,7 @@ import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.container.obj.ModelConfig;
 import ml.shifu.shifu.container.obj.RawSourceData;
 import ml.shifu.shifu.core.Normalizer;
-import ml.shifu.shifu.core.dtrain.NNConstants;
+import ml.shifu.shifu.core.dtrain.CommonConstants;
 import ml.shifu.shifu.core.dvarsel.CandidateSeed;
 import ml.shifu.shifu.core.dvarsel.VarSelMasterResult;
 import ml.shifu.shifu.core.dvarsel.VarSelWorkerResult;
@@ -101,7 +101,7 @@ public class WrapperWorkerConductorTest {
         double[] inputs = new double[trainingDataSet.getDataColumnIdList().size()];
         double[] ideal = new double[1];
 
-        double significance = NNConstants.DEFAULT_SIGNIFICANCE_VALUE;
+        double significance = CommonConstants.DEFAULT_SIGNIFICANCE_VALUE;
 
         ideal[0] = (modelConfig.getPosTags().contains(tag) ? 1.0d : 0.0d);
 

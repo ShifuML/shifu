@@ -81,7 +81,7 @@ public class NNParquetWorker extends AbstractNNWorker<Tuple> {
         }
 
         long hashcode = 0;
-        double significance = NNConstants.DEFAULT_SIGNIFICANCE_VALUE;
+        double significance = CommonConstants.DEFAULT_SIGNIFICANCE_VALUE;
         // use guava Splitter to iterate only once
         // use NNConstants.NN_DEFAULT_COLUMN_SEPARATOR to replace getModelConfig().getDataSetDelimiter(), super follows
         // the function in akka mode.
@@ -114,7 +114,7 @@ public class NNParquetWorker extends AbstractNNWorker<Tuple> {
                     significance = (Double) element;
                 } else {
                     significance = NumberFormatUtils.getDouble(element.toString().trim(),
-                            NNConstants.DEFAULT_SIGNIFICANCE_VALUE);;
+                            CommonConstants.DEFAULT_SIGNIFICANCE_VALUE);;
                 }
                 // break here if we reach weight column which is last column
                 break;
@@ -125,7 +125,7 @@ public class NNParquetWorker extends AbstractNNWorker<Tuple> {
                         significance = (Double) element;
                     } else {
                         significance = NumberFormatUtils.getDouble(element.toString().trim(),
-                                NNConstants.DEFAULT_SIGNIFICANCE_VALUE);;
+                                CommonConstants.DEFAULT_SIGNIFICANCE_VALUE);;
                     }
                     break;
                 } else {
