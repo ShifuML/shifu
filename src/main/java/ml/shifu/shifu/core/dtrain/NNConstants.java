@@ -33,7 +33,6 @@ public class NNConstants {
     public static final int GUAGUA_NN_DEFAULT_OUTPUT_NODES = 1;
     public static final int GUAGUA_NN_DEFAULT_HIDDEN_NODES = 2;
     public static final int GUAGUA_NN_DEFAULT_INPUT_NODES = 100;
-    public static final String GUAGUA_NN_OUTPUT = "guagua.nn.output";
     public static final String NN_RECORD_SCALE = "nn.record.scale";
     public static final String NN_TEST_SCALE = "nn.test.scale";
     public static final String NN_DEFAULT_COLUMN_SEPARATOR = "|";
@@ -64,8 +63,6 @@ public class NNConstants {
 
     public static final String LIB_PATH_NAME = "lib";
 
-    public static final String MAPREDUCE_PARAM_FORMAT = "-D%s=%s";
-
     public static final String NN_TMP_MODELS_FOLDER = "nn.tmp.models.folder";
 
     public static final String NN_ALG_NAME = "NN";
@@ -80,8 +77,6 @@ public class NNConstants {
 
     public static final double DRY_ERROR = 0.0d;
 
-    public static final double DEFAULT_SIGNIFICANCE_VALUE = 1.0d;
-
     public static final int DEFAULT_EPOCHS_PER_ITERATION = 1;
 
     public static final String DEFAULT_GUAGUA_VERSION = "0.1.0";
@@ -91,4 +86,6 @@ public class NNConstants {
     public static final int DEFAULT_JOIN_TIME = 3000;
     
     public static final String NN_CONTINUOUS_TRAINING = "nn.continuous.training";
+
+
 }

@@ -15,10 +15,27 @@
  */
 package ml.shifu.shifu.util;
 
-import com.google.common.base.Function;
-import com.google.common.base.Splitter;
-import com.google.common.collect.Collections2;
-import com.google.common.collect.Lists;
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FilenameFilter;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.io.Reader;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
+import java.util.Set;
 
 import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.container.obj.ColumnConfig.ColumnFlag;
@@ -27,7 +44,9 @@ import ml.shifu.shifu.container.obj.EvalConfig;
 import ml.shifu.shifu.container.obj.ModelConfig;
 import ml.shifu.shifu.container.obj.ModelTrainConf.ALGORITHM;
 import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
+import ml.shifu.shifu.core.LR;
 import ml.shifu.shifu.core.Normalizer;
+import ml.shifu.shifu.core.dtrain.LogisticRegressionContants;
 import ml.shifu.shifu.exception.ShifuErrorCode;
 import ml.shifu.shifu.exception.ShifuException;
 import ml.shifu.shifu.fs.PathFinder;
@@ -38,8 +57,11 @@ import org.apache.commons.collections.Predicate;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang.ArrayUtils;
 import org.apache.commons.lang.StringUtils;
-import org.apache.hadoop.fs.*;
+import org.apache.hadoop.fs.FSDataInputStream;
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.PathFilter;
 import org.apache.pig.backend.executionengine.ExecException;
 import org.apache.pig.data.Tuple;
 import org.encog.ml.BasicML;
@@ -50,9 +72,10 @@ import org.encog.persist.EncogDirectoryPersistence;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.*;
-import java.util.*;
-import java.util.Map.Entry;
+import com.google.common.base.Function;
+import com.google.common.base.Splitter;
+import com.google.common.collect.Collections2;
+import com.google.common.collect.Lists;
 
 /**
  * {@link CommonUtils} is used to for almost all kinds of utility function in this framework.
@@ -544,13 +567,20 @@ public final class CommonUtils {
         List<BasicML> models = new ArrayList<BasicML>(listStatus.size());
         for(FileStatus f: listStatus) {
             FSDataInputStream stream = null;
+            BufferedReader br = null;
             try {
                 stream = fs.open(f.getPath());
+                if(f.getPath().getName().endsWith(LogisticRegressionContants.LR_ALG_NAME.toLowerCase())) {
+                    br = new BufferedReader(new InputStreamReader(stream));
+                    models.add(LR.loadFromString(br.readLine()));
+                    continue;
+                }
                 models.add(BasicML.class.cast(EncogDirectoryPersistence.loadObject(stream)));
             } catch (RuntimeException e) {
                 String msg = "the expecting model file is: " + f.getPath();
                 throw new ShifuException(ShifuErrorCode.ERROR_FAIL_TO_LOAD_MODEL_FILE, e, msg);
             } finally {
+                IOUtils.closeQuietly(br);
                 IOUtils.closeQuietly(stream);
             }
         }

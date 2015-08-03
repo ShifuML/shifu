@@ -69,7 +69,7 @@ public class NNWorker extends AbstractNNWorker<Text> {
         }
 
         long hashcode = 0;
-        double significance = NNConstants.DEFAULT_SIGNIFICANCE_VALUE;
+        double significance = CommonConstants.DEFAULT_SIGNIFICANCE_VALUE;
         // use guava Splitter to iterate only once
         // use NNConstants.NN_DEFAULT_COLUMN_SEPARATOR to replace getModelConfig().getDataSetDelimiter(), super follows
         // the function in akka mode.
@@ -77,7 +77,7 @@ public class NNWorker extends AbstractNNWorker<Text> {
         for(String input: DEFAULT_SPLITTER.split(currentValue.getWritable().toString())) {
             double doubleValue = NumberFormatUtils.getDouble(input.trim(), 0.0d);
             if(index == super.columnConfigList.size()) {
-                significance = NumberFormatUtils.getDouble(input, NNConstants.DEFAULT_SIGNIFICANCE_VALUE);
+                significance = NumberFormatUtils.getDouble(input, CommonConstants.DEFAULT_SIGNIFICANCE_VALUE);
                 break;
             } else {
                 ColumnConfig columnConfig = super.columnConfigList.get(index);
