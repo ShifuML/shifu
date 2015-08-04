@@ -136,7 +136,7 @@ public class LogisticRegressionWorker
             throw new IllegalStateException("No any variables are selected, please try variable select step firstly.");
         }
         Object rconstant = this.modelConfig.getParams().get(LogisticRegressionContants.LR_REGULARIZED_CONSTANT);
-        if(rconstant !=null){
+        if(rconstant != null) {
             this.regularizedConstant = Double.valueOf(rconstant.toString());
         }
         this.rng = new PoissonDistribution(1.0d);
@@ -162,7 +162,7 @@ public class LogisticRegressionWorker
             return new LogisticRegressionParams();
         } else {
             this.weights = context.getLastMasterResult().getParameters();
-            double[] gradients = new double[this.inputNum];
+            double[] gradients = new double[this.inputNum + 1];
             double trainingFinalError = 0.0d;
             double testingFinalError = 0.0d;
             long trainingSize = this.trainingData.size();
@@ -170,11 +170,17 @@ public class LogisticRegressionWorker
             this.trainingData.reOpen();
             for(Data data: trainingData) {
                 double result = sigmoid(data.inputs, this.weights);
-                double error = result - data.outputs[0];
+                double error = data.outputs[0] - result;
                 // trainingFinalError += cost(result, data.outputs[0]);
                 trainingFinalError += error * error;
+                // TODO explain me here
                 for(int i = 0; i < gradients.length; i++) {
-                    gradients[i] += error * data.inputs[i] * data.getSignificance();
+                    if(i < gradients.length - 1) {
+                        gradients[i] += error * data.inputs[i] * (result * (1d - result) + 0.1d)
+                                * data.getSignificance();
+                    } else {
+                        gradients[i] += error * 1d * (result * (1d - result) + 0.1d) * data.getSignificance();
+                    }
                 }
             }
 
@@ -201,9 +207,11 @@ public class LogisticRegressionWorker
      */
     private double sigmoid(double[] inputs, double[] weights) {
         double value = 0.0d;
-        for(int i = 0; i < weights.length; i++) {
+        for(int i = 0; i < inputs.length; i++) {
             value += weights[i] * inputs[i];
         }
+        // append bias
+        value += weights[inputs.length] * 1d;
 
         return 1.0d / (1.0d + BoundMath.exp(-1 * value));
     }
@@ -232,6 +240,12 @@ public class LogisticRegressionWorker
     protected void postLoad(WorkerContext<LogisticRegressionParams, LogisticRegressionParams> context) {
         this.trainingData.switchState();
         this.testingData.switchState();
+        LOG.info("    - # Records of the Master Data Set: {}.", this.count);
+        LOG.info("    - Bagging Sample Rate: {}.", this.modelConfig.getBaggingSampleRate());
+        LOG.info("    - Bagging With Replacement: {}.", this.modelConfig.isBaggingWithReplacement());
+        LOG.info("        - Cross Validation Rate: {}.", this.modelConfig.getCrossValidationRate());
+        LOG.info("        - # Records of the Training Set: {}.", this.trainingData.size());
+        LOG.info("        - # Records of the Validation Set: {}.", this.testingData.size());
     }
 
     @Override

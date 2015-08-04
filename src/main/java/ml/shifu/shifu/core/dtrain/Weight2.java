@@ -16,12 +16,12 @@
 package ml.shifu.shifu.core.dtrain;
 
 /**
- * {@link Weight} is used to update NN weights according to propagation option. Which is also copied from Encog.
+ * {@link Weight2} is used to update NN weights according to propagation option. Which is also copied from Encog.
  * <p/>
  * <p/>
  * We'd like to reuse code from Encog but unfortunately the methods are private:(.
  */
-public class Weight {
+public class Weight2 {
     /**
      * The zero tolerance to use.
      */
@@ -47,9 +47,14 @@ public class Weight {
     private static final double DEFAULT_INITIAL_UPDATE = 0.1;
     private static final double DEFAULT_MAX_STEP = 50;
 
-    public Weight(int numWeight, double numTrainSize, double rate, String algorithm) {
+    private double reg;
+
+    private double numTrainSize;
+
+    public Weight2(int numWeight, double numTrainSize, double rate, String algorithm, double reg) {
         this.lastDelta = new double[numWeight];
         this.lastGradient = new double[numWeight];
+        this.numTrainSize = numTrainSize;
         this.eps = this.outputEpsilon / numTrainSize;
         this.shrink = rate / (1.0 + rate);
         this.learningRate = rate;
@@ -60,11 +65,13 @@ public class Weight {
             this.updateValues[i] = DEFAULT_INITIAL_UPDATE;
             this.lastDelta[i] = 0;
         }
+        this.reg = reg;
     }
 
     public double[] calculateWeights(double[] weights, double[] gradients) {
         for(int i = 0; i < gradients.length; i++) {
-            weights[i] += updateWeight(i, weights, gradients);
+            // TODO l1 and l2 both support
+            weights[i] += updateWeight(i, weights, gradients) + this.reg * weights[i] / getNumTrainSize();
         }
 
         return weights;
@@ -205,5 +212,21 @@ public class Weight {
      */
     public void setLearningRate(double learningRate) {
         this.learningRate = learningRate;
+    }
+
+    /**
+     * @return the numTrainSize
+     */
+    public double getNumTrainSize() {
+        return numTrainSize;
+    }
+
+    /**
+     * @param numTrainSize
+     *            the numTrainSize to set
+     */
+    public void setNumTrainSize(double numTrainSize) {
+        this.numTrainSize = numTrainSize;
+        this.eps = this.outputEpsilon / numTrainSize;
     }
 }
