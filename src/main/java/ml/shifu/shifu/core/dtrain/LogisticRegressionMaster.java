@@ -61,7 +61,7 @@ public class LogisticRegressionMaster implements MasterComputable<LogisticRegres
     /**
      * To calculate weights according to last weights and accumulated gradients
      */
-    private Weight weightCalculator = null;
+    private Weight2 weightCalculator = null;
 
     /**
      * Model configuration loaded from configuration file.
@@ -112,16 +112,14 @@ public class LogisticRegressionMaster implements MasterComputable<LogisticRegres
             }
 
             if(this.weightCalculator == null) {
-                this.weightCalculator = new Weight(weights.length, trainSize, learningRate, "Q");
+                // TODO add propagation to configuration
+                this.weightCalculator = new Weight2(weights.length, trainSize, learningRate, "Q",
+                        this.regularizedConstant);
+            } else {
+                this.weightCalculator.setNumTrainSize(trainSize);
             }
 
-            // double [] tmpWeights =
             this.weights = this.weightCalculator.calculateWeights(this.weights, gradients);
-            // for(int i = 0; i < weights.length; i++) {
-            // // TODO l1 and l2 both support
-            // weights[i] += learningRate * ((gradients[i] + this.regularizedConstant * weights[i]) / trainSize);
-            // }
-            // this.weights = tmpWeights;
             double reg = this.regularizedParameter(this.regularizedConstant, trainSize);
             LOG.debug("DEBUG: Weights: {}", Arrays.toString(this.weights));
             double finalTrainError = trainError / trainSize + reg;
