@@ -48,12 +48,11 @@ public class Weight {
     private static final double DEFAULT_MAX_STEP = 50;
 
     public Weight(int numWeight, double numTrainSize, double rate, String algorithm) {
-
         this.lastDelta = new double[numWeight];
         this.lastGradient = new double[numWeight];
         this.eps = this.outputEpsilon / numTrainSize;
         this.shrink = rate / (1.0 + rate);
-        this.setLearningRate(rate);
+        this.learningRate = rate;
         this.algorithm = algorithm;
         this.updateValues = new double[numWeight];
 
@@ -95,7 +94,6 @@ public class Weight {
     }
 
     private double updateWeightQBP(int index, double[] weights, double[] gradients) {
-
         final double w = weights[index];
         final double d = this.lastDelta[index];
         final double s = -gradients[index] + this.decay * w;
