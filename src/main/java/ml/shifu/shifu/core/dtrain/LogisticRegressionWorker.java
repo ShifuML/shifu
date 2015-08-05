@@ -56,12 +56,21 @@ import com.google.common.base.Splitter;
  * <li>2. Accumulate gradients by using local worker input data.</li>
  * <li>3. Send new local gradients to master by returning parameters.</li>
  * </ul>
+ * 
+ * <p>
+ * L1 and l2 regulations are supported by configuration: RegularizedConstant in model params of ModelConfig.json.
  */
 public class LogisticRegressionWorker
         extends
         AbstractWorkerComputable<LogisticRegressionParams, LogisticRegressionParams, GuaguaWritableAdapter<LongWritable>, GuaguaWritableAdapter<Text>> {
 
     private static final Logger LOG = LoggerFactory.getLogger(LogisticRegressionWorker.class);
+
+    /**
+     * Flat spot value to smooth lr derived function: result * (1 - result): This value sometimes may be close to zero.
+     * Add flat sport to improve it: result * (1 - result) + 0.1d
+     */
+    private static final double FLAT_SPOT_VALUE = 0.1d;
 
     /**
      * Input column number
@@ -82,8 +91,6 @@ public class LogisticRegressionWorker
      * Record count
      */
     private int count;
-
-    private double regularizedConstant = 0.0d;
 
     /**
      * Testing data set.
@@ -116,7 +123,7 @@ public class LogisticRegressionWorker
     private Splitter splitter = Splitter.on("|").trimResults();
 
     /**
-     * PoissonDistribution which is used for possion sampling for bagging with replacement.
+     * PoissonDistribution which is used for poisson sampling for bagging with replacement.
      */
     protected PoissonDistribution rng = null;
 
@@ -134,10 +141,6 @@ public class LogisticRegressionWorker
         this.candidateNum = inputOutputIndex[2];
         if(this.inputNum == 0) {
             throw new IllegalStateException("No any variables are selected, please try variable select step firstly.");
-        }
-        Object rconstant = this.modelConfig.getParams().get(LogisticRegressionContants.LR_REGULARIZED_CONSTANT);
-        if(rconstant != null) {
-            this.regularizedConstant = Double.valueOf(rconstant.toString());
         }
         this.rng = new PoissonDistribution(1.0d);
         double memoryFraction = Double.valueOf(context.getProps().getProperty("guagua.data.memoryFraction", "0.35"));
@@ -171,35 +174,50 @@ public class LogisticRegressionWorker
             for(Data data: trainingData) {
                 double result = sigmoid(data.inputs, this.weights);
                 double error = data.outputs[0] - result;
-                // trainingFinalError += cost(result, data.outputs[0]);
-                trainingFinalError += error * error;
-                // TODO explain me here
+                trainingFinalError += caculateMSEError(error);
                 for(int i = 0; i < gradients.length; i++) {
                     if(i < gradients.length - 1) {
-                        gradients[i] += error * data.inputs[i] * (result * (1d - result) + 0.1d)
+                        // compute gradient for each weight, this is not like traditional LR (no derived function), with
+                        // derived function, we see good convergence speed in our models.
+                        gradients[i] += error * data.inputs[i] * (derivedFunction(result) + FLAT_SPOT_VALUE)
                                 * data.getSignificance();
                     } else {
-                        gradients[i] += error * 1d * (result * (1d - result) + 0.1d) * data.getSignificance();
+                        // for bias parameter, input is a constant 1d
+                        gradients[i] += error * 1d * (derivedFunction(result) + FLAT_SPOT_VALUE)
+                                * data.getSignificance();
                     }
                 }
             }
 
             this.testingData.reOpen();
-            // TODO here we should use current weights+gradients to compute testing error
+            // TODO here we should use current weights+gradients to compute testing error, so far it is for last error
+            // computing.
             for(Data data: testingData) {
                 double result = sigmoid(data.inputs, this.weights);
                 double error = result - data.outputs[0];
-                testingFinalError += error * error;
+                testingFinalError += caculateMSEError(error);
             }
-            double trainingReg = this.regularizedParameter(this.regularizedConstant, trainingSize);
-            double testingReg = this.regularizedParameter(this.regularizedConstant, testingSize);
             LOG.info("Iteration {} training data with error {}", context.getCurrentIteration(), trainingFinalError
-                    / trainingSize + trainingReg);
+                    / trainingSize);
             LOG.info("Iteration {} testing data with error {}", context.getCurrentIteration(), testingFinalError
-                    / testingSize + testingReg);
+                    / testingSize);
             return new LogisticRegressionParams(gradients, trainingFinalError, testingFinalError, trainingSize,
                     testingSize);
         }
+    }
+
+    /**
+     * MSE value computation. We can provide more for user to configure in the future.
+     */
+    private double caculateMSEError(double error) {
+        return error * error;
+    }
+
+    /**
+     * Derived function for simmoid function.
+     */
+    private double derivedFunction(double result) {
+        return result * (1d - result);
     }
 
     /**
@@ -223,17 +241,6 @@ public class LogisticRegressionWorker
         } else {
             return -Math.log(1 - result);
         }
-    }
-
-    private double regularizedParameter(double regularizedRate, long recordCount) {
-        if(regularizedRate == 0.0d) {
-            return 0.0d;
-        }
-        double sumSquareWeights = 0.0d;
-        for(int i = 0; i < this.weights.length; i++) {
-            sumSquareWeights += this.weights[i] * this.weights[i];
-        }
-        return regularizedRate * sumSquareWeights / recordCount * 0.5d;
     }
 
     @Override
@@ -274,7 +281,6 @@ public class LogisticRegressionWorker
                 break;
             } else {
                 ColumnConfig columnConfig = this.columnConfigList.get(index);
-
                 if(columnConfig != null && columnConfig.isTarget()) {
                     outputData[outputIndex++] = doubleValue;
                 } else {

@@ -46,12 +46,12 @@ public class ModelTrainConf {
     private Double convergenceThreshold = Double.valueOf(0.0);
     private Integer numTrainEpochs = Integer.valueOf(100);
     private Integer epochsPerIteration = Integer.valueOf(1);
-    
+
     private Boolean trainOnDisk = Boolean.FALSE;
     private Boolean fixInitInput = Boolean.FALSE;
-    
-    private Boolean isContinuous = Boolean.FALSE; 
-    
+
+    private Boolean isContinuous = Boolean.FALSE;
+
     private Boolean isCrossOver = Boolean.FALSE;
 
     private String algorithm = "NN";
@@ -179,6 +179,8 @@ public class ModelTrainConf {
             func.add("sigmoid");
             func.add("sigmoid");
             params.put(NNTrainer.ACTIVATION_FUNC, func);
+            params.put("LearningDecay", 0.0);
+            params.put("RegularizedConstant", 0.0);
         } else if(ALGORITHM.SVM.equals(alg)) {
             params.put(SVMTrainer.SVM_KERNEL, "linear");
             params.put(SVMTrainer.SVM_GAMMA, 1.0);
@@ -188,8 +190,9 @@ public class ModelTrainConf {
             // DecisionTreeTrainer
         } else if(ALGORITHM.LR.equals(alg)) {
             params.put(LogisticRegressionTrainer.LEARNING_RATE, 0.1);
+            params.put("RegularizedConstant", 0.0);
+            params.put(NNTrainer.PROPAGATION, "Q");
         }
-
         return params;
     }
 
@@ -211,6 +214,7 @@ public class ModelTrainConf {
     /**
      * As threshold is an optional setting, Use @{@link JsonIgnore} to ignore threshold when initially write
      * out to ModelConfig.json.
+     * 
      * @return Cvergence threshold.
      */
     @JsonIgnore
@@ -230,7 +234,8 @@ public class ModelTrainConf {
     }
 
     /**
-     * @param isCrossOver the isCrossOver to set
+     * @param isCrossOver
+     *            the isCrossOver to set
      */
     public void setIsCrossOver(Boolean isCrossOver) {
         this.isCrossOver = isCrossOver;
@@ -244,7 +249,8 @@ public class ModelTrainConf {
     }
 
     /**
-     * @param isContinuous the isContinuous to set
+     * @param isContinuous
+     *            the isContinuous to set
      */
     public void setIsContinuous(Boolean isContinuous) {
         this.isContinuous = isContinuous;

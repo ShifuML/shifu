@@ -23,6 +23,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import ml.shifu.guagua.GuaguaRuntimeException;
 import ml.shifu.guagua.master.MasterComputable;
 import ml.shifu.guagua.master.MasterContext;
+import ml.shifu.guagua.util.NumberFormatUtils;
 import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.container.obj.ModelConfig;
 import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
@@ -92,6 +93,11 @@ public class NNMaster implements MasterComputable<NNParams, NNParams> {
      * Real learning rate used to train nn model
      */
     private Double learningRate = 0.1d;
+
+    /**
+     * L1 and L2 regurized constant
+     */
+    private double regularizedConstant = 0.0d;
 
     /**
      * Learning decay setting to decrease learning rate iteration by iteration. Common setting value is from 0 to 0.1
@@ -181,12 +187,14 @@ public class NNMaster implements MasterComputable<NNParams, NNParams> {
         if(this.weightCalculator == null) {
             this.learningRate = this.rawLearningRate;
             this.weightCalculator = new Weight(this.globalNNParams.getGradients().length,
-                    this.globalNNParams.getTrainSize(), learningRate, propagation);
+                    this.globalNNParams.getTrainSize(), learningRate, propagation, this.regularizedConstant,
+                    RegulationLevel.to(this.modelConfig.getParams().get(CommonConstants.REG_LEVEL_KEY)));
         } else {
             this.learningRate = this.learningRate * (1.0d - this.learningDecay);
             // without learningDecay Parameter using sqrt(iteration number) to decrease learning rate
             // this.learningRate = this.learningRate / Math.sqrt(context.getCurrentIteration() -1);
             this.weightCalculator.setLearningRate(this.learningRate);
+            this.weightCalculator.setNumTrainSize(this.globalNNParams.getTrainSize());
         }
 
         // use last weights and current gradients to calculate
@@ -284,6 +292,8 @@ public class NNMaster implements MasterComputable<NNParams, NNParams> {
 
             this.isContinuousEnabled = Boolean.TRUE.toString().equalsIgnoreCase(
                     context.getProps().getProperty(NNConstants.NN_CONTINUOUS_TRAINING));
+            Object rconstant = this.modelConfig.getParams().get(CommonConstants.LR_REGULARIZED_CONSTANT);
+            this.regularizedConstant = NumberFormatUtils.getDouble(rconstant == null ? "" : rconstant.toString(), 0d);
         } catch (IOException e) {
             throw new RuntimeException(e);
         }

@@ -21,10 +21,7 @@ public interface LogisticRegressionContants {
 
     public static final int LR_INPUT_DEFAULT_NUM = 2;
     
-    public static final String LR_REGULARIZED_CONSTANT = "RegularizedConstant";
-        
     public static final String LR_ALG_NAME = "LR";
     
-    public static final String LR_LEARNING_RATE = "LearningRate";
 
 }

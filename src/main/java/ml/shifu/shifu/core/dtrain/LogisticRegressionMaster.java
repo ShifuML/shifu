@@ -16,15 +16,17 @@
 package ml.shifu.shifu.core.dtrain;
 
 import java.io.IOException;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Properties;
 
 import ml.shifu.guagua.master.MasterComputable;
 import ml.shifu.guagua.master.MasterContext;
+import ml.shifu.guagua.util.NumberFormatUtils;
 import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.container.obj.ModelConfig;
 import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
+import ml.shifu.shifu.core.ConvergeJudger;
+import ml.shifu.shifu.core.alg.NNTrainer;
 import ml.shifu.shifu.util.CommonUtils;
 
 import org.slf4j.Logger;
@@ -45,23 +47,38 @@ import org.slf4j.LoggerFactory;
  * <li>2. Update global models by using accumulated gradients.</li>
  * <li>3. Send new global model to workers by returning model parameters.</li>
  * </ul>
+ * 
+ * <p>
+ * L1 and l2 regulations are supported by configuration: RegularizedConstant in model params of ModelConfig.json.
  */
 public class LogisticRegressionMaster implements MasterComputable<LogisticRegressionParams, LogisticRegressionParams> {
 
     private static final Logger LOG = LoggerFactory.getLogger(LogisticRegressionMaster.class);
 
+    /**
+     * Input column number without bias
+     */
     private int inputNum;
 
+    /**
+     * This is the model weights in LR which will be updated each iteration
+     */
     private double[] weights;
 
+    /**
+     * Learning rate configured by user in params
+     */
     private double learningRate = 1.0d;
 
+    /**
+     * Regulation parameter for l1 or l2
+     */
     private double regularizedConstant = 0.0d;
 
     /**
      * To calculate weights according to last weights and accumulated gradients
      */
-    private Weight2 weightCalculator = null;
+    private Weight weightCalculator = null;
 
     /**
      * Model configuration loaded from configuration file.
@@ -73,16 +90,36 @@ public class LogisticRegressionMaster implements MasterComputable<LogisticRegres
      */
     private List<ColumnConfig> columnConfigList;
 
+    /**
+     * Convergence threshold setting by user in ModelConfig.json.
+     */
+    private double convergenceThreshold;
+
+    /**
+     * Convergence judger instance for convergence checking.
+     */
+    private ConvergeJudger judger = new ConvergeJudger();
+
+    /**
+     * Propagation type for lr model setting: Q, B, R, C
+     */
+    private String propagation = "Q";
+
     private void init(MasterContext<LogisticRegressionParams, LogisticRegressionParams> context) {
         loadConfigFiles(context.getProps());
-        this.learningRate = Double.valueOf(this.modelConfig.getParams()
-                .get(LogisticRegressionContants.LR_LEARNING_RATE).toString());
+        this.learningRate = Double.valueOf(this.modelConfig.getParams().get(CommonConstants.LR_LEARNING_RATE)
+                .toString());
         int[] inputOutputIndex = DTrainUtils.getInputOutputCandidateCounts(this.columnConfigList);
         this.inputNum = inputOutputIndex[0] == 0 ? inputOutputIndex[2] : inputOutputIndex[0];
-        Object rconstant = this.modelConfig.getParams().get(LogisticRegressionContants.LR_REGULARIZED_CONSTANT);
-        if(rconstant != null) {
-            this.regularizedConstant = Double.valueOf(rconstant.toString());
-        }
+
+        Double threshold = this.modelConfig.getTrain().getConvergenceThreshold();
+        this.convergenceThreshold = threshold == null ? 0d : threshold.doubleValue();
+        LOG.info("Convergence threshold in master is :{}", this.convergenceThreshold);
+
+        this.propagation = (String) this.modelConfig.getParams().get(NNTrainer.PROPAGATION);
+
+        Object rconstant = this.modelConfig.getParams().get(CommonConstants.LR_REGULARIZED_CONSTANT);
+        this.regularizedConstant = NumberFormatUtils.getDouble(rconstant == null ? "" : rconstant.toString(), 0d);
     }
 
     @Override
@@ -112,33 +149,29 @@ public class LogisticRegressionMaster implements MasterComputable<LogisticRegres
             }
 
             if(this.weightCalculator == null) {
-                // TODO add propagation to configuration
-                this.weightCalculator = new Weight2(weights.length, trainSize, learningRate, "Q",
-                        this.regularizedConstant);
+                this.weightCalculator = new Weight(weights.length, trainSize, learningRate, this.propagation,
+                        this.regularizedConstant, RegulationLevel.to(this.modelConfig.getParams().get(
+                                CommonConstants.REG_LEVEL_KEY)));
             } else {
                 this.weightCalculator.setNumTrainSize(trainSize);
             }
 
             this.weights = this.weightCalculator.calculateWeights(this.weights, gradients);
-            double reg = this.regularizedParameter(this.regularizedConstant, trainSize);
-            LOG.debug("DEBUG: Weights: {}", Arrays.toString(this.weights));
-            double finalTrainError = trainError / trainSize + reg;
-            double finalTestError = testError / testSize + reg;
+
+            double finalTrainError = trainError / trainSize;
+            double finalTestError = testError / testSize;
             LOG.info("Iteration {} with train error {}, test error {}", context.getCurrentIteration(), finalTrainError,
                     finalTestError);
-            return new LogisticRegressionParams(weights, finalTrainError, finalTestError, trainSize, testSize);
+            LogisticRegressionParams lrParams = new LogisticRegressionParams(weights, finalTrainError, finalTestError,
+                    trainSize, testSize);
+            if(judger.judge(finalTrainError + finalTestError / 2, convergenceThreshold)) {
+                LOG.info("LRMaster compute iteration {} converged !", context.getCurrentIteration());
+                lrParams.setHalt(true);
+            } else {
+                LOG.info("LRMaster compute iteration {} not converged yet !", context.getCurrentIteration());
+            }
+            return lrParams;
         }
-    }
-
-    private double regularizedParameter(double regularizedRate, long recordCount) {
-        if(regularizedRate == 0.0d) {
-            return 0.0d;
-        }
-        double sumSquareWeights = 0.0d;
-        for(int i = 0; i < this.weights.length; i++) {
-            sumSquareWeights += this.weights[i] * this.weights[i];
-        }
-        return regularizedRate * sumSquareWeights / recordCount * 0.5d;
     }
 
     private void loadConfigFiles(final Properties props) {
