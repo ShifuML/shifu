@@ -65,13 +65,15 @@ public class Scorer {
         this.alg = algorithm;
         this.modelConfig = modelConfig;
 
-        int[] inputOutputIndex = DTrainUtils.getInputOutputCandidateCounts(this.columnConfigList);
-        int inputNodeCount = inputOutputIndex[0] == 0 ? inputOutputIndex[2] : inputOutputIndex[0];
-        int candidateCount = inputOutputIndex[2];
-        if(inputNodeCount == candidateCount) {
-            this.noVarSelect = true;
-        } else {
-            this.noVarSelect = false;
+        if(this.columnConfigList != null) {
+            int[] inputOutputIndex = DTrainUtils.getInputOutputCandidateCounts(this.columnConfigList);
+            int inputNodeCount = inputOutputIndex[0] == 0 ? inputOutputIndex[2] : inputOutputIndex[0];
+            int candidateCount = inputOutputIndex[2];
+            if(inputNodeCount == candidateCount) {
+                this.noVarSelect = true;
+            } else {
+                this.noVarSelect = false;
+            }
         }
     }
 
