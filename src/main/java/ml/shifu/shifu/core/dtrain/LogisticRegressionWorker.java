@@ -179,6 +179,8 @@ public class LogisticRegressionWorker
                     if(i < gradients.length - 1) {
                         // compute gradient for each weight, this is not like traditional LR (no derived function), with
                         // derived function, we see good convergence speed in our models.
+                        // TODO extract function to provide traditional lr gradients and derived version for user to
+                        // configure
                         gradients[i] += error * data.inputs[i] * (derivedFunction(result) + FLAT_SPOT_VALUE)
                                 * data.getSignificance();
                     } else {
