@@ -22,8 +22,9 @@ import ml.shifu.shifu.util.CommonUtils;
 import org.apache.pig.EvalFunc;
 
 import java.io.IOException;
+import java.util.HashSet;
 import java.util.List;
-
+import java.util.Set;
 
 /**
  * AbstractTrainerUDF class is the abstract class for most UDF
@@ -36,40 +37,56 @@ public abstract class AbstractTrainerUDF<T> extends EvalFunc<T> {
     // Need to specify the default value as -1, or it won't report error if it doesn't find target column
     protected int tagColumnNum = -1;
 
+    // cache tags in set for search
+    protected Set<String> posTagSet;
+    protected Set<String> negTagSet;
+    protected Set<String> tagSet;
+
     /**
      * Constructor with SourceType, ModelConfig path and ColumnConfig path
-     *
-     * @param source           - source type of ModelConfig file and ColumnConfig file
-     * @param pathModelConfig  - the path of ModelConfig
-     * @param pathColumnConfig - the path of ColumnConfig
-     * @throws IOException throw exceptions when loading configuration
+     * 
+     * @param source
+     *            - source type of ModelConfig file and ColumnConfig file
+     * @param pathModelConfig
+     *            - the path of ModelConfig
+     * @param pathColumnConfig
+     *            - the path of ColumnConfig
+     * @throws IOException
+     *             throw exceptions when loading configuration
      */
     public AbstractTrainerUDF(String source, String pathModelConfig, String pathColumnConfig) throws IOException {
         SourceType sourceType = SourceType.valueOf(source);
 
-        if (pathModelConfig != null) {
+        if(pathModelConfig != null) {
             modelConfig = CommonUtils.loadModelConfig(pathModelConfig, sourceType);
         }
 
         columnConfigList = CommonUtils.loadColumnConfigList(pathColumnConfig, sourceType);
-        for (ColumnConfig config : columnConfigList) {
-            if (config.isTarget()) {
+        for(ColumnConfig config: columnConfigList) {
+            if(config.isTarget()) {
                 tagColumnNum = config.getColumnNum();
                 break;
             }
         }
 
-        if (tagColumnNum == -1) {
+        if(tagColumnNum == -1) {
             throw new RuntimeException("No Valid Target.");
         }
+
+        this.posTagSet = new HashSet<String>(modelConfig.getPosTags());
+        this.negTagSet = new HashSet<String>(modelConfig.getNegTags());
+        this.tagSet = new HashSet<String>(modelConfig.getFlattenTags());
     }
 
     /**
      * Constructor with SourceType, and ColumnConfig path
-     *
-     * @param source           - source type of ColumnConfig file
-     * @param pathColumnConfig - the path of ColumnConfig
-     * @throws IOException throw exceptions when loading configuration
+     * 
+     * @param source
+     *            - source type of ColumnConfig file
+     * @param pathColumnConfig
+     *            - the path of ColumnConfig
+     * @throws IOException
+     *             throw exceptions when loading configuration
      */
     public AbstractTrainerUDF(String source, String pathColumnConfig) throws IOException {
         this(source, null, pathColumnConfig);

@@ -50,28 +50,31 @@ public class FilterBinningDataUDF extends AbstractTrainerUDF<Boolean> {
      */
     @Override
     public Boolean exec(Tuple input) throws IOException {
-        // if(input == null || input.size() < 5) {
-        // return false;
-        // }
-
         Integer columnNum = (Integer) input.get(0);
         if(columnNum == null) {
             return false;
         }
-        String tag = (String) input.get(2);
-        // log.info("input =" + input + ";columnNum: " + (columnNum == null ? "" : columnNum.toString()));
         ColumnConfig columnConfig = columnConfigList.get(columnNum);
 
-        if(columnConfig != null
-                && tag != null
-                && (modelConfig.getPosTags().contains(tag) || modelConfig.getNegTags().contains(tag))
-                && (columnConfig.isCategorical() || modelConfig.getBinningMethod().equals(BinningMethod.EqualTotal)
-                        || modelConfig.getBinningMethod().equals(BinningMethod.EqualInterval) || (modelConfig
-                        .getBinningMethod().equals(BinningMethod.EqualPositive) && modelConfig.getPosTags().contains(
-                        tag)))) {
+        boolean isPositive = (Boolean) input.get(2);
+
+        if(isValidRecord(modelConfig.isBinaryClassification(), isPositive, columnConfig)) {
             return true;
         }
-
         return false;
+    }
+
+    private boolean isValidRecord(boolean isBinary, boolean isPositive, ColumnConfig columnConfig) {
+        if(isBinary) {
+            return columnConfig != null
+                    && (columnConfig.isCategorical() || modelConfig.getBinningMethod().equals(BinningMethod.EqualTotal)
+                            || modelConfig.getBinningMethod().equals(BinningMethod.EqualInterval)
+                            || (modelConfig.getBinningMethod().equals(BinningMethod.EqualPositive) && isPositive) || (modelConfig
+                            .getBinningMethod().equals(BinningMethod.EqualNegtive) && !isPositive));
+        } else {
+            return columnConfig != null
+                    && (columnConfig.isCategorical() || modelConfig.getBinningMethod().equals(BinningMethod.EqualTotal) || modelConfig
+                            .getBinningMethod().equals(BinningMethod.EqualInterval));
+        }
     }
 }

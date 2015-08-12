@@ -269,8 +269,13 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
         paramsMap.put("delimiter", evalConfig.getDataSet().getDataDelimiter());
         paramsMap.put("columnIndex", evalConfig.getPerformanceScoreSelector().trim());
 
+        String pigScript = "scripts/Eval.pig";
+        if(modelConfig.isMultiClassification()) {
+            pigScript = "scripts/EvalScore.pig";
+        }
+
         try {
-            PigExecutor.getExecutor().submitJob(modelConfig, pathFinder.getAbsolutePath("scripts/Eval.pig"), paramsMap,
+            PigExecutor.getExecutor().submitJob(modelConfig, pathFinder.getAbsolutePath(pigScript), paramsMap,
                     evalConfig.getDataSet().getSource());
         } catch (IOException e) {
             throw new ShifuException(ShifuErrorCode.ERROR_RUNNING_PIG_JOB, e);
@@ -405,10 +410,8 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
      */
     private void runPigEval(EvalConfig evalConfig) throws IOException {
         runPigScore(evalConfig);
-        // TODO runConfusionMatrix write and runPerformance read, merge together
         // TODO code refacter because of several magic numbers and not good name functions ...
         runConfusionMatrix(evalConfig);
-        // runPerformance(evalConfig);
     }
 
     /**
@@ -486,13 +489,16 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
         switch(modelConfig.getBasic().getRunMode()) {
             case DIST:
             case MAPRED:
-                worker.bufferedComputeConfusionMatrixAndPerformance(this.pigPosTags, this.pigNegTags,
-                        this.pigPosWeightTags, this.pigNegWeightTags, this.evalRecords);
+                if(modelConfig.isBinaryClassification()) {
+                    worker.bufferedComputeConfusionMatrixAndPerformance(this.pigPosTags, this.pigNegTags,
+                            this.pigPosWeightTags, this.pigNegWeightTags, this.evalRecords);
+                } else {
+                    worker.computeConfusionMatixForMultipleClassification(this.evalRecords);
+                }
                 break;
             default:
                 worker.computeConfusionMatrix();
                 break;
         }
     }
-
 }

@@ -34,7 +34,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-
 /**
  * MetaFactoryTest class
  */
@@ -51,7 +50,7 @@ public class MetaFactoryTest {
 
     @Test
     public void testGetModelConfigMeta() {
-        Assert.assertEquals(MetaFactory.getModelConfigMeta().size(), 115);
+        Assert.assertEquals(MetaFactory.getModelConfigMeta().size(), 114);
     }
 
     @Test

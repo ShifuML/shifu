@@ -163,6 +163,7 @@
                 "type": "text",
                 "directive": "select",
                 "options": [
+                    {"label": "Equal Negative", "value":"EqualNegative"},
                     {"label": "Equal Positive", "value":"EqualPositive"},
                     {"label": "Equal Total", "value":"EqualTotal"},
                     {"label": "Equal Interval", "value":"EqualInterval"}
@@ -194,11 +195,6 @@
                 "defval" : 5
             }, {
                 "name": "binningMergeEnable",
-                "type": "boolean",
-                "directive": "checkbox",
-                "defval" : true
-            }, {
-                "name": "pearsonEnable",
                 "type": "boolean",
                 "directive": "checkbox",
                 "defval" : true

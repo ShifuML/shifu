@@ -249,7 +249,7 @@ public class NNMaster implements MasterComputable<NNParams, NNParams> {
 
         int[] inputAndOutput = DTrainUtils.getInputOutputCandidateCounts(this.columnConfigList);
         int inputNodeCount = inputAndOutput[0] == 0 ? inputAndOutput[2] : inputAndOutput[0];
-        int outputNodeCount = inputAndOutput[1];
+        int outputNodeCount = modelConfig.isBinaryClassification() ? inputAndOutput[1] : modelConfig.getTags().size();
 
         int numLayers = (Integer) this.modelConfig.getParams().get(NNTrainer.NUM_HIDDEN_LAYERS);
         List<String> actFunc = (List<String>) this.modelConfig.getParams().get(NNTrainer.ACTIVATION_FUNC);
@@ -268,7 +268,6 @@ public class NNMaster implements MasterComputable<NNParams, NNParams> {
 
     public void init(MasterContext<NNParams, NNParams> context) {
         Properties props = context.getProps();
-
         try {
             SourceType sourceType = SourceType.valueOf(props.getProperty(NNConstants.NN_MODELSET_SOURCE_TYPE,
                     SourceType.HDFS.toString()));

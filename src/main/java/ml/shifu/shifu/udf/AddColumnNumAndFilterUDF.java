@@ -21,6 +21,7 @@ import java.util.Random;
 import java.util.Set;
 
 import ml.shifu.shifu.container.obj.ColumnConfig;
+import ml.shifu.shifu.container.obj.ModelStatsConf.BinningMethod;
 import ml.shifu.shifu.exception.ShifuErrorCode;
 import ml.shifu.shifu.exception.ShifuException;
 
@@ -42,13 +43,13 @@ import org.apache.pig.impl.logicalLayer.schema.Schema.FieldSchema;
  *         ...
  * }
  */
-public class AddColumnNumUDF extends AbstractTrainerUDF<DataBag> {
+public class AddColumnNumAndFilterUDF extends AbstractTrainerUDF<DataBag> {
 
     protected Set<String> negTags;
 
     private Random random = new Random(System.currentTimeMillis());
 
-    public AddColumnNumUDF(String source, String pathModelConfig, String pathColumnConfig, String withScoreStr)
+    public AddColumnNumAndFilterUDF(String source, String pathModelConfig, String pathColumnConfig, String withScoreStr)
             throws Exception {
         super(source, pathModelConfig, pathColumnConfig);
 
@@ -95,33 +96,27 @@ public class AddColumnNumUDF extends AbstractTrainerUDF<DataBag> {
         for(int i = 0; i < size; i++) {
             ColumnConfig config = columnConfigList.get(i);
             if(config.isCandidate()) {
-                Tuple tuple = tupleFactory.newTuple(4);
+                boolean isPositive = false;;
+                if(modelConfig.isBinaryClassification()) {
+                    if(super.posTagSet.contains(tag)) {
+                        isPositive = true;
+                    }
+                    if(super.negTagSet.contains(tag)) {
+                        isPositive = false;
+                    }
+                }
+                if(!isValidRecord(modelConfig.isBinaryClassification(), isPositive, config)) {
+                    continue;
+                }
+                Tuple tuple = tupleFactory.newTuple(3);
                 tuple.set(0, i);
-
                 // Set Data
                 tuple.set(1, input.get(i) == null ? null : input.get(i).toString());
-
-                if(modelConfig.isBinaryClassification()) {
-                    // Set Tag
-                    if(super.posTagSet.contains(tag)) {
-                        tuple.set(2, true);
-                    }
-
-                    if(super.negTagSet.contains(tag)) {
-                        tuple.set(2, false);
-                    }
-                } else {
-                    // a mock for multiple classification
-                    tuple.set(2, true);
-                }
-
-                // add random seed for distribution
-                tuple.set(3, Math.abs(random.nextInt() % 300));
-
+                // add random seed for distribution for bigger mapper, 300 is not enough TODO
+                tuple.set(2, Math.abs(random.nextInt() % 300));
                 bag.add(tuple);
             }
         }
-
         return bag;
     }
 
@@ -131,7 +126,6 @@ public class AddColumnNumUDF extends AbstractTrainerUDF<DataBag> {
             Schema tupleSchema = new Schema();
             tupleSchema.add(new FieldSchema("columnId", DataType.INTEGER));
             tupleSchema.add(new FieldSchema("value", DataType.CHARARRAY));
-            tupleSchema.add(new FieldSchema("tag", DataType.BOOLEAN));
             tupleSchema.add(new FieldSchema("rand", DataType.INTEGER));
 
             return new Schema(new Schema.FieldSchema("columnInfos", new Schema(new Schema.FieldSchema("columnInfo",
@@ -139,6 +133,20 @@ public class AddColumnNumUDF extends AbstractTrainerUDF<DataBag> {
         } catch (IOException e) {
             log.error("Error in outputSchema", e);
             return null;
+        }
+    }
+
+    private boolean isValidRecord(boolean isBinary, boolean isPositive, ColumnConfig columnConfig) {
+        if(isBinary) {
+            return columnConfig != null
+                    && (columnConfig.isCategorical() || modelConfig.getBinningMethod().equals(BinningMethod.EqualTotal)
+                            || modelConfig.getBinningMethod().equals(BinningMethod.EqualInterval)
+                            || (modelConfig.getBinningMethod().equals(BinningMethod.EqualPositive) && isPositive) || (modelConfig
+                            .getBinningMethod().equals(BinningMethod.EqualNegtive) && !isPositive));
+        } else {
+            return columnConfig != null
+                    && (columnConfig.isCategorical() || modelConfig.getBinningMethod().equals(BinningMethod.EqualTotal) || modelConfig
+                            .getBinningMethod().equals(BinningMethod.EqualInterval));
         }
     }
 }

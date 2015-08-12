@@ -39,6 +39,7 @@ data = FILTER data BY IsDataFilterOut(*);
 
 -- convert data into column based
 data_cols = FOREACH data GENERATE AddColumnNum(*);
+data_cols = FILTER data_cols BY $0 IS NOT NULL;
 data_cols = FOREACH data_cols GENERATE FLATTEN($0);
 
 -- prepare data and do binning

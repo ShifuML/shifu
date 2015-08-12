@@ -76,6 +76,9 @@ public class AutoTypeDistinctCountMapper extends Mapper<LongWritable, Text, IntW
      */
     private List<ColumnConfig> columnConfigList;
 
+    // cache tags in set for search
+    private Set<String> tags;
+
     private void loadConfigFiles(final Context context) {
         try {
             SourceType sourceType = SourceType.valueOf(context.getConfiguration().get(
@@ -100,6 +103,8 @@ public class AutoTypeDistinctCountMapper extends Mapper<LongWritable, Text, IntW
         this.variableCountMap = new HashMap<Integer, CountAndFrequentItems>();
 
         this.outputKey = new IntWritable();
+
+        this.tags = new HashSet<String>(modelConfig.getFlattenTags());
     }
 
     /**
@@ -125,6 +130,7 @@ public class AutoTypeDistinctCountMapper extends Mapper<LongWritable, Text, IntW
             return;
         }
 
+        // StringUtils.isBlank is not used here to avoid import new jar
         if(valueStr == null || valueStr.length() == 0 || valueStr.trim().length() == 0) {
             LOG.warn("Empty input.");
             return;
@@ -134,7 +140,7 @@ public class AutoTypeDistinctCountMapper extends Mapper<LongWritable, Text, IntW
         // tagColumnNum should be in units array, if not IndexOutofBoundException
         String tag = units[this.tagColumnNum];
 
-        if(tag == null || (!modelConfig.getPosTags().contains(tag) && !modelConfig.getNegTags().contains(tag))) {
+        if(!this.tags.contains(tag)) {
             if(System.currentTimeMillis() % 20 == 0) {
                 LOG.warn("Data with invalid tag is ignored in distinct count computing, invalid tag: {}.", tag);
             }

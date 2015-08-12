@@ -98,7 +98,14 @@ public class Scorer {
                     continue;
                 }
                 MLData score = network.compute(pair.getInput());
-                scores.add(toScore(score.getData(0)));
+                if(modelConfig.isBinaryClassification()) {
+                    scores.add(toScore(score.getData(0)));
+                } else {
+                    double[] outputs = score.getData();
+                    for(double d: outputs) {
+                        scores.add(toScore(d));
+                    }
+                }
             } else if(model instanceof SVM) {
                 SVM svm = (SVM) model;
                 if(svm.getInputCount() != pair.getInput().size()) {
@@ -118,7 +125,7 @@ public class Scorer {
                 MLData score = lr.compute(pair.getInput());
                 scores.add(toScore(score.getData(0)));
             } else {
-                throw new RuntimeException("unspport models");
+                throw new RuntimeException("unsupport models");
             }
         }
 

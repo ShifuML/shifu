@@ -168,16 +168,14 @@ public class ModelTrainConf {
             params.put(NNTrainer.PROPAGATION, "Q");
             params.put(NNTrainer.LEARNING_RATE, 0.1);
             params.put("LearningDecay", 0.0);
-            params.put(NNTrainer.NUM_HIDDEN_LAYERS, 2);
+            params.put(NNTrainer.NUM_HIDDEN_LAYERS, 1);
 
             List<Integer> nodes = new ArrayList<Integer>();
-            nodes.add(30);
-            nodes.add(20);
+            nodes.add(50);
             params.put(NNTrainer.NUM_HIDDEN_NODES, nodes);
 
             List<String> func = new ArrayList<String>();
-            func.add("sigmoid");
-            func.add("sigmoid");
+            func.add("tanh");
             params.put(NNTrainer.ACTIVATION_FUNC, func);
             params.put("LearningDecay", 0.0);
             params.put("RegularizedConstant", 0.0);
