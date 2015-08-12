@@ -21,8 +21,10 @@ import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import ml.shifu.shifu.container.obj.ModelBasicConf.RunMode;
 import ml.shifu.shifu.container.obj.ModelNormalizeConf.NormType;
@@ -265,6 +267,90 @@ public class ModelConfig {
     @JsonIgnore
     public List<String> getMissingOrInvalidValues() {
         return dataSet.getMissingOrInvalidValues();
+    }
+
+    @JsonIgnore
+    public boolean isBinaryClassification() {
+        return (CollectionUtils.isNotEmpty(dataSet.getPosTags()) && CollectionUtils.isNotEmpty(dataSet.getNegTags()));
+    }
+
+    @JsonIgnore
+    public boolean isMultiClassification() {
+        return (CollectionUtils.isNotEmpty(dataSet.getPosTags()) && CollectionUtils.isEmpty(dataSet.getNegTags()))
+                || (CollectionUtils.isEmpty(dataSet.getPosTags()) && CollectionUtils.isNotEmpty(dataSet.getNegTags()));
+    }
+
+    /**
+     * Flattened tags for multiple classification. '1', '2|3' will be flattened to '1', '2', '3'. While '2' and '3' are
+     * combined to one class.
+     */
+    @JsonIgnore
+    public List<String> getFlattenTags() {
+        List<String> tags = new ArrayList<String>();
+        if(CollectionUtils.isNotEmpty(dataSet.getPosTags())) {
+            for(String tag: dataSet.getPosTags()) {
+                if(tag.contains("|")) {
+                    for(String inTag: tag.split("\\|")) {
+                        // FIXME, if blank or not
+                        if(StringUtils.isNotBlank(inTag)) {
+                            tags.add(inTag);
+                        }
+                    }
+                } else {
+                    tags.add(tag);
+                }
+            }
+        }
+        if(CollectionUtils.isNotEmpty(dataSet.getNegTags())) {
+            for(String tag: dataSet.getNegTags()) {
+                if(tag.contains("|")) {
+                    for(String inTag: tag.split("\\|")) {
+                        if(StringUtils.isNotBlank(inTag)) {
+                            tags.add(inTag);
+                        }
+                    }
+                } else {
+                    tags.add(tag);
+                }
+            }
+        }
+        return tags;
+    }
+
+    @JsonIgnore
+    public List<String> getTags() {
+        List<String> tags = new ArrayList<String>();
+        if(CollectionUtils.isNotEmpty(dataSet.getPosTags())) {
+            for(String tag: dataSet.getPosTags()) {
+                tags.add(tag);
+            }
+        }
+        if(CollectionUtils.isNotEmpty(dataSet.getNegTags())) {
+            for(String tag: dataSet.getNegTags()) {
+                tags.add(tag);
+            }
+        }
+        return tags;
+    }
+
+    @JsonIgnore
+    public List<Set<String>> getSetTags() {
+        List<String> tags = getTags();
+        List<Set<String>> result = new ArrayList<Set<String>>();
+        for(String tag: tags) {
+            Set<String> set = new HashSet<String>(16);
+            if(tag.contains("|")) {
+                for(String inTag: tag.split("\\|")) {
+                    if(StringUtils.isNotBlank(inTag)) {
+                        set.add(inTag);
+                    }
+                }
+            } else {
+                set.add(tag);
+            }
+            result.add(set);
+        }
+        return result;
     }
 
     @JsonIgnore

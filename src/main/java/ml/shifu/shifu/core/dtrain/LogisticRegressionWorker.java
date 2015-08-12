@@ -278,6 +278,10 @@ public class LogisticRegressionWorker
         double significance = CommonConstants.DEFAULT_SIGNIFICANCE_VALUE;
         for(String unit: splitter.split(line)) {
             double doubleValue = NumberFormatUtils.getDouble(unit.trim(), 0.0d);
+            // no idea about why NaN in input data, we should process it as missing value TODO , according to norm type
+            if(Double.isNaN(doubleValue)) {
+                doubleValue = 0d;
+            }
             if(index == this.columnConfigList.size()) {
                 significance = NumberFormatUtils.getDouble(unit.trim(), 1.0d);
                 break;

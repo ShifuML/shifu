@@ -39,6 +39,9 @@ public class EqualPopulationBinning extends AbstractBinning<Double> {
     /**
      * The default scale for generating histogram is for keep accuracy.
      * General speaking, larger scale will guarantee better accuracy. But it will also cause worse efficiency
+     * 
+     * TODO here to make it computable with expected bin num, 100 * 10 = 1000, if set bin num to 100, this should not be
+     * 100 because of bad performance.
      */
     public static final int HIST_SCALE = 100;
 
@@ -73,6 +76,16 @@ public class EqualPopulationBinning extends AbstractBinning<Double> {
     }
 
     /**
+     * Construct @EqualPopulationBinning with expected bin number and with histogram scale factor
+     * 
+     * @param binningNum
+     */
+    public EqualPopulationBinning(int binningNum, int histogramScale) {
+        this(binningNum, null);
+        this.maxHistogramUnitCnt = super.expectedBinningNum * histogramScale;
+    }
+
+    /**
      * Construct @@EqualPopulationBinning with expected bin number and
      * values list that would be treated as missing value
      * 
@@ -86,10 +99,9 @@ public class EqualPopulationBinning extends AbstractBinning<Double> {
         this.currentHistogramUnitCnt = 0;
         this.header = null;
         this.tail = null;
-        // this.histogram = new ArrayList<HistogramUnit>(this.maxHistogramUnitCnt + 1);
     }
 
-    /*
+    /**
      * Add the value (in format of text) into histogram with frequency 1.
      * First of all the input string will be trimmed and check whether it is missing value or not
      * If it is missing value, the missing value count will +1
@@ -216,7 +228,6 @@ public class EqualPopulationBinning extends AbstractBinning<Double> {
             }
         }
 
-        // binBorders.add(Double.POSITIVE_INFINITY);
         return binBorders;
     }
 
@@ -612,6 +623,11 @@ public class EqualPopulationBinning extends AbstractBinning<Double> {
             return new HistogramUnit(Double.parseDouble(fields[0]), Integer.parseInt(fields[1]));
         }
 
+    }
+
+    public static void main(String[] args) {
+        double aa = 1.0 / (1.0 + 10E20);
+        System.out.println(aa);
     }
 
 }

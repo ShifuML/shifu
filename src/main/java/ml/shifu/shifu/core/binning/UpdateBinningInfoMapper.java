@@ -23,8 +23,10 @@ import java.io.InputStreamReader;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.container.obj.ModelConfig;
@@ -114,6 +116,12 @@ public class UpdateBinningInfoMapper extends Mapper<LongWritable, Text, IntWrita
      */
     private Map<Integer, Map<String, Integer>> categoricalBinMap;
 
+    // cache tags in set for search
+    private Set<String> posTags;
+    private Set<String> negTags;
+    private Set<String> tags;
+    private Set<String> missingOrInvalidValues;
+
     /**
      * Load model config and column config files.
      */
@@ -152,6 +160,13 @@ public class UpdateBinningInfoMapper extends Mapper<LongWritable, Text, IntWrita
 
         this.outputKey = new IntWritable();
 
+        this.posTags = new HashSet<String>(modelConfig.getPosTags());
+        this.negTags = new HashSet<String>(modelConfig.getNegTags());
+        this.tags = new HashSet<String>(modelConfig.getFlattenTags());
+        
+        this.missingOrInvalidValues =  new HashSet<String>(this.modelConfig.getDataSet().getMissingOrInvalidValues());
+
+
         LOG.debug("Column binning info: {}", this.columnBinningInfo);
     }
 
@@ -174,10 +189,6 @@ public class UpdateBinningInfoMapper extends Mapper<LongWritable, Text, IntWrita
                     binningInfo.setColumnNum(columnNum);
                     ColumnConfig columnConfig = this.columnConfigList.get(columnNum);
                     int binSize = 0;
-                    // only for enabled, we need compute X*Y.
-                    if(this.modelConfig.getStats().getPearsonEnable()) {
-                        binningInfo.setxMultiY(new double[this.columnConfigList.size()]);
-                    }
                     if(columnConfig.isNumerical()) {
                         binningInfo.setNumeric(true);
                         List<Double> list = new ArrayList<Double>();
@@ -276,8 +287,14 @@ public class UpdateBinningInfoMapper extends Mapper<LongWritable, Text, IntWrita
         // tagColumnNum should be in units array, if not IndexOutofBoundException
         String tag = units[this.tagColumnNum];
 
-        if(tag == null || (!modelConfig.getPosTags().contains(tag) && !modelConfig.getNegTags().contains(tag))) {
-            return;
+        if(modelConfig.isBinaryClassification()) {
+            if(tag == null || (!posTags.contains(tag) && !negTags.contains(tag))) {
+                return;
+            }
+        } else {
+            if(tag == null || (!tags.contains(tag))) {
+                return;
+            }
         }
 
         Double weight = this.weightedColumnNum == -1 ? 1.0d : Double.valueOf(units[this.weightedColumnNum]);
@@ -285,18 +302,7 @@ public class UpdateBinningInfoMapper extends Mapper<LongWritable, Text, IntWrita
         // valid data process
         boolean isMissingValue = false;
         boolean isInvalidValue = false;
-        // only for numeric and enabled, we need compute X*Y.
-        double[] xMy = null;
-        if(this.modelConfig.getStats().getPearsonEnable()) {
-            xMy = new double[this.columnConfigList.size()];
-            for(int i = 0; i < units.length; i++) {
-                try {
-                    xMy[i] = Double.parseDouble(units[i].trim());
-                } catch (Exception e) {
-                    // ignore
-                }
-            }
-        }
+
         for(int i = 0; i < units.length; i++) {
             ColumnConfig columnConfig = this.columnConfigList.get(i);
             if(columnConfig.isMeta() || columnConfig.isTarget()) {
@@ -315,7 +321,7 @@ public class UpdateBinningInfoMapper extends Mapper<LongWritable, Text, IntWrita
 
                 int binNum = 0;
                 if(units[i] == null
-                        || this.modelConfig.getDataSet().getMissingOrInvalidValues().contains(units[i].toLowerCase())) {
+                        || missingOrInvalidValues.contains(units[i].toLowerCase())) {
                     isMissingValue = true;
                 } else {
                     String str = StringUtils.trim(units[i]);
@@ -330,22 +336,13 @@ public class UpdateBinningInfoMapper extends Mapper<LongWritable, Text, IntWrita
                     binNum = lastBinIndex;
                 }
 
-                if(modelConfig.getPosTags().contains(tag)) {
-                    binningInfoWritable.getBinCountPos()[binNum] += 1L;
-                    binningInfoWritable.getBinWeightPos()[binNum] += weight;
-                } else if(modelConfig.getNegTags().contains(tag)) {
-                    binningInfoWritable.getBinCountNeg()[binNum] += 1L;
-                    binningInfoWritable.getBinWeightNeg()[binNum] += weight;
-                }
-                if(this.modelConfig.getStats().getPearsonEnable()) {
-                    for(int j = 0; j < xMy.length; j++) {
-                        double[] xMultiY = binningInfoWritable.getxMultiY();
-                        // for catogorial, compute Y+Y first and multiple sum X in Reducer
-                        if(columnConfigList.get(j).isCategorical()) {
-                            // C * C ignore
-                        } else {
-                            xMultiY[j] += xMy[j];
-                        }
+                if(modelConfig.isBinaryClassification()) {
+                    if(posTags.contains(tag)) {
+                        binningInfoWritable.getBinCountPos()[binNum] += 1L;
+                        binningInfoWritable.getBinWeightPos()[binNum] += weight;
+                    } else if(negTags.contains(tag)) {
+                        binningInfoWritable.getBinCountNeg()[binNum] += 1L;
+                        binningInfoWritable.getBinWeightNeg()[binNum] += weight;
                     }
                 }
             } else if(columnConfig.isNumerical()) {
@@ -368,12 +365,14 @@ public class UpdateBinningInfoMapper extends Mapper<LongWritable, Text, IntWrita
 
                 if(isInvalidValue || isMissingValue) {
                     binningInfoWritable.setMissingCount(binningInfoWritable.getMissingCount() + 1L);
-                    if(modelConfig.getPosTags().contains(tag)) {
-                        binningInfoWritable.getBinCountPos()[lastBinIndex] += 1L;
-                        binningInfoWritable.getBinWeightPos()[lastBinIndex] += weight;
-                    } else if(modelConfig.getNegTags().contains(tag)) {
-                        binningInfoWritable.getBinCountNeg()[lastBinIndex] += 1L;
-                        binningInfoWritable.getBinWeightNeg()[lastBinIndex] += weight;
+                    if(modelConfig.isBinaryClassification()) {
+                        if(posTags.contains(tag)) {
+                            binningInfoWritable.getBinCountPos()[lastBinIndex] += 1L;
+                            binningInfoWritable.getBinWeightPos()[lastBinIndex] += weight;
+                        } else if(negTags.contains(tag)) {
+                            binningInfoWritable.getBinCountNeg()[lastBinIndex] += 1L;
+                            binningInfoWritable.getBinWeightNeg()[lastBinIndex] += weight;
+                        }
                     }
                 } else {
                     // For invalid or missing values, no need update sum, squaredSum, max, min ...
@@ -381,14 +380,15 @@ public class UpdateBinningInfoMapper extends Mapper<LongWritable, Text, IntWrita
                     if(binNum == -1) {
                         throw new RuntimeException("binNum should not be -1 to this step.");
                     }
-                    if(modelConfig.getPosTags().contains(tag)) {
-                        binningInfoWritable.getBinCountPos()[binNum] += 1L;
-                        binningInfoWritable.getBinWeightPos()[binNum] += weight;
-                    } else if(modelConfig.getNegTags().contains(tag)) {
-                        binningInfoWritable.getBinCountNeg()[binNum] += 1L;
-                        binningInfoWritable.getBinWeightNeg()[binNum] += weight;
+                    if(modelConfig.isBinaryClassification()) {
+                        if(posTags.contains(tag)) {
+                            binningInfoWritable.getBinCountPos()[binNum] += 1L;
+                            binningInfoWritable.getBinWeightPos()[binNum] += weight;
+                        } else if(negTags.contains(tag)) {
+                            binningInfoWritable.getBinCountNeg()[binNum] += 1L;
+                            binningInfoWritable.getBinWeightNeg()[binNum] += weight;
+                        }
                     }
-
                     binningInfoWritable.setSum(binningInfoWritable.getSum() + douVal);
                     double squaredVal = douVal * douVal;
                     binningInfoWritable.setSquaredSum(binningInfoWritable.getSquaredSum() + squaredVal);
@@ -400,17 +400,6 @@ public class UpdateBinningInfoMapper extends Mapper<LongWritable, Text, IntWrita
                     }
                     if(Double.compare(binningInfoWritable.getMin(), douVal) > 0) {
                         binningInfoWritable.setMin(douVal);
-                    }
-                }
-                if(this.modelConfig.getStats().getPearsonEnable()) {
-                    for(int j = 0; j < xMy.length; j++) {
-                        double[] xMultiY = binningInfoWritable.getxMultiY();
-                        // for catogorial, compute Y+Y first and multiple sum X in Reducer
-                        if(columnConfigList.get(j).isCategorical()) {
-                            xMultiY[j] += douVal;
-                        } else {
-                            xMultiY[j] += xMy[j] * douVal;
-                        }
                     }
                 }
             }

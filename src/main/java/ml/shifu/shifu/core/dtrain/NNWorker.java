@@ -16,6 +16,7 @@
 package ml.shifu.shifu.core.dtrain;
 
 import java.io.IOException;
+import java.util.Arrays;
 
 import ml.shifu.guagua.hadoop.io.GuaguaLineRecordReader;
 import ml.shifu.guagua.hadoop.io.GuaguaWritableAdapter;
@@ -43,6 +44,8 @@ import org.encog.ml.data.basic.BasicMLDataPair;
  * {@link NNWorker} is to load data with text format.
  */
 public class NNWorker extends AbstractNNWorker<Text> {
+
+    boolean isPrint = false;
 
     @Override
     public void load(GuaguaWritableAdapter<LongWritable> currentKey, GuaguaWritableAdapter<Text> currentValue,
@@ -76,6 +79,10 @@ public class NNWorker extends AbstractNNWorker<Text> {
         int index = 0, inputsIndex = 0, outputIndex = 0;
         for(String input: DEFAULT_SPLITTER.split(currentValue.getWritable().toString())) {
             double doubleValue = NumberFormatUtils.getDouble(input.trim(), 0.0d);
+            // no idea about why NaN in input data, we should process it as missing value TODO , according to norm type
+            if(Double.isNaN(doubleValue)) {
+                doubleValue = 0d;
+            }
             if(index == super.columnConfigList.size()) {
                 significance = NumberFormatUtils.getDouble(input, CommonConstants.DEFAULT_SIGNIFICANCE_VALUE);
                 break;
@@ -83,7 +90,12 @@ public class NNWorker extends AbstractNNWorker<Text> {
                 ColumnConfig columnConfig = super.columnConfigList.get(index);
 
                 if(columnConfig != null && columnConfig.isTarget()) {
-                    ideal[outputIndex++] = doubleValue;
+                    if(modelConfig.isBinaryClassification()) {
+                        ideal[outputIndex++] = doubleValue;
+                    } else {
+                        int ideaIndex = (int) doubleValue;
+                        ideal[ideaIndex] = 1d;
+                    }
                 } else {
                     if(super.inputNodeCount == super.candidateCount) {
                         // no variable selected, good candidate but not meta and not target choosed
@@ -105,6 +117,11 @@ public class NNWorker extends AbstractNNWorker<Text> {
                 }
             }
             index += 1;
+        }
+
+        if(!isPrint) {
+            LOG.info("data: input: {}, output: {}", Arrays.toString(inputs), Arrays.toString(ideal));
+            isPrint = true;
         }
 
         // if fixInitialInput = true, we should use hashcode to sample.

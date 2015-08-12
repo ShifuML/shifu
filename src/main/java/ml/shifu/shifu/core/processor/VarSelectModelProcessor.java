@@ -114,10 +114,18 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
             VariableSelector selector = new VariableSelector(this.modelConfig, this.columnConfigList);
 
             if(!modelConfig.getVarSelectWrapperEnabled()) {
-                // Select by local KS, IV
-                CommonUtils.updateColumnConfigFlags(modelConfig, columnConfigList);
-
-                this.columnConfigList = selector.selectByFilter();
+                if(modelConfig.isBinaryClassification()) {
+                    // Select by local KS, IV
+                    CommonUtils.updateColumnConfigFlags(modelConfig, columnConfigList);
+                    this.columnConfigList = selector.selectByFilter();
+                } else {
+                    // multiple classification, select all candidate at first, TODO add SE for multi-classification
+                    for(ColumnConfig config: this.columnConfigList) {
+                        if(CommonUtils.isGoodCandidate(modelConfig.isBinaryClassification(), config)) {
+                            config.setFinalSelect(true);
+                        }
+                    }
+                }
             } else {
                 // wrapper method
                 if(super.getModelConfig().getDataSet().getSource() == SourceType.HDFS
@@ -316,8 +324,8 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
                 Environment.getProperty(Environment.HADOOP_JOB_QUEUE, ml.shifu.shifu.util.Constants.DEFAULT_JOB_QUEUE)));
 
         // MAPRED timeout
-        args.add(String.format(CommonConstants.MAPREDUCE_PARAM_FORMAT, NNConstants.MAPRED_TASK_TIMEOUT, Environment.getInt(
-                NNConstants.MAPRED_TASK_TIMEOUT, ml.shifu.shifu.util.Constants.DEFAULT_MAPRED_TIME_OUT)));
+        args.add(String.format(CommonConstants.MAPREDUCE_PARAM_FORMAT, NNConstants.MAPRED_TASK_TIMEOUT, Environment
+                .getInt(NNConstants.MAPRED_TASK_TIMEOUT, ml.shifu.shifu.util.Constants.DEFAULT_MAPRED_TIME_OUT)));
 
         args.add(String.format(CommonConstants.MAPREDUCE_PARAM_FORMAT, GuaguaConstants.GUAGUA_MASTER_INTERCEPTERS,
                 VarSelOutput.class.getName()));
@@ -338,16 +346,16 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
         args.add(String.format(CommonConstants.MAPREDUCE_PARAM_FORMAT, NNConstants.NN_MODELSET_SOURCE_TYPE, sourceType));
 
         // computation time
-        args.add(String.format(CommonConstants.MAPREDUCE_PARAM_FORMAT, GuaguaConstants.GUAGUA_COMPUTATION_TIME_THRESHOLD,
-                60 * 60 * 1000l));
+        args.add(String.format(CommonConstants.MAPREDUCE_PARAM_FORMAT,
+                GuaguaConstants.GUAGUA_COMPUTATION_TIME_THRESHOLD, 60 * 60 * 1000l));
         setHeapSizeAndSplitSize(args);
 
         // one can set guagua conf in shifuconfig
         for(Map.Entry<Object, Object> entry: Environment.getProperties().entrySet()) {
             if(entry.getKey().toString().startsWith("nn") || entry.getKey().toString().startsWith("guagua")
                     || entry.getKey().toString().startsWith("mapred")) {
-                args.add(String.format(CommonConstants.MAPREDUCE_PARAM_FORMAT, entry.getKey().toString(), entry.getValue()
-                        .toString()));
+                args.add(String.format(CommonConstants.MAPREDUCE_PARAM_FORMAT, entry.getKey().toString(), entry
+                        .getValue().toString()));
             }
         }
     }

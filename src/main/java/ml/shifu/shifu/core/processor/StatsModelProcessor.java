@@ -104,7 +104,7 @@ public class StatsModelProcessor extends BasicModelProcessor implements Processo
             } else {
                 throw new ShifuException(ShifuErrorCode.ERROR_UNSUPPORT_MODE);
             }
-            
+
             syncDataToHdfs(modelConfig.getDataSet().getSource());
 
             clearUp(ModelStep.STATS);
@@ -156,8 +156,16 @@ public class StatsModelProcessor extends BasicModelProcessor implements Processo
         ShifuFileUtils.deleteFile(pathFinder.getPreTrainingStatsPath(), modelConfig.getDataSet().getSource());
         Map<String, String> paramsMap = new HashMap<String, String>();
         paramsMap.put("delimiter", CommonUtils.escapePigString(modelConfig.getDataSetDelimiter()));
-        paramsMap.put("column_parallel", Integer.toString(columnConfigList.size() / 5));
+        if(columnConfigList.size() <= 1000) {
+            paramsMap.put("column_parallel", Integer.toString(columnConfigList.size() / 5));
+        } else {
+            paramsMap.put("column_parallel", Integer.toString(columnConfigList.size() / 4));
+        }
+        paramsMap.put("histo_scale_factor", Environment.getProperty("shifu.stats.histo.scale.factor", "100"));
 
+        // FIXME how to estimate mapper size then to estimate reducer size, in stats, reducer size is estimated by
+        // column_parallel is not a good
+        // new PigInputFormat().getSplits(jobcontext)
         // execute pig job
         try {
             log.info("execute binning algorithm: {}", modelConfig.getBinningAlgorithm().toString());

@@ -568,13 +568,11 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
         }
 
         args.add("-c");
-        // the reason to add 1 is that the first iteration in D-NN
-        // implementation is used for training preparation.
-
         int numTrainEpoches = super.getModelConfig().getTrain().getNumTrainEpochs();
         if(this.isForVarSelect() && numTrainEpoches >= VAR_SELECT_TRAINING_DECAY_EPOCHES_THRESHOLD) {
             numTrainEpoches = numTrainEpoches / 2;
         }
+        // the reason to add 1 is that the first iteration in implementation is used for training preparation.
         numTrainEpoches = numTrainEpoches + 1;
 
         args.add(String.valueOf(numTrainEpoches));
