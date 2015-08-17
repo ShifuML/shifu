@@ -73,9 +73,15 @@ public abstract class AbstractTrainerUDF<T> extends EvalFunc<T> {
             throw new RuntimeException("No Valid Target.");
         }
 
-        this.posTagSet = new HashSet<String>(modelConfig.getPosTags());
-        this.negTagSet = new HashSet<String>(modelConfig.getNegTags());
-        this.tagSet = new HashSet<String>(modelConfig.getFlattenTags());
+        if(modelConfig != null && modelConfig.getPosTags() != null) {
+            this.posTagSet = new HashSet<String>(modelConfig.getPosTags());
+        }
+        if(modelConfig != null && modelConfig.getNegTags() != null) {
+            this.negTagSet = new HashSet<String>(modelConfig.getNegTags());
+        }
+        if(modelConfig != null && modelConfig.getFlattenTags() != null) {
+            this.tagSet = new HashSet<String>(modelConfig.getFlattenTags());
+        }
     }
 
     /**

@@ -286,9 +286,14 @@ public class ModelConfig {
      */
     @JsonIgnore
     public List<String> getFlattenTags() {
+        return getFlattenTags(dataSet.getPosTags(), dataSet.getNegTags());
+    }
+
+    @JsonIgnore
+    public List<String> getFlattenTags(List<String> tags1, List<String> tags2) {
         List<String> tags = new ArrayList<String>();
-        if(CollectionUtils.isNotEmpty(dataSet.getPosTags())) {
-            for(String tag: dataSet.getPosTags()) {
+        if(CollectionUtils.isNotEmpty(tags1)) {
+            for(String tag: tags1) {
                 if(tag.contains("|")) {
                     for(String inTag: tag.split("\\|")) {
                         // FIXME, if blank or not
@@ -301,8 +306,8 @@ public class ModelConfig {
                 }
             }
         }
-        if(CollectionUtils.isNotEmpty(dataSet.getNegTags())) {
-            for(String tag: dataSet.getNegTags()) {
+        if(CollectionUtils.isNotEmpty(tags2)) {
+            for(String tag: tags2) {
                 if(tag.contains("|")) {
                     for(String inTag: tag.split("\\|")) {
                         if(StringUtils.isNotBlank(inTag)) {
@@ -318,15 +323,15 @@ public class ModelConfig {
     }
 
     @JsonIgnore
-    public List<String> getTags() {
+    public List<String> getTags(List<String> tags1, List<String> tags2) {
         List<String> tags = new ArrayList<String>();
-        if(CollectionUtils.isNotEmpty(dataSet.getPosTags())) {
-            for(String tag: dataSet.getPosTags()) {
+        if(CollectionUtils.isNotEmpty(tags1)) {
+            for(String tag: tags1) {
                 tags.add(tag);
             }
         }
-        if(CollectionUtils.isNotEmpty(dataSet.getNegTags())) {
-            for(String tag: dataSet.getNegTags()) {
+        if(CollectionUtils.isNotEmpty(tags2)) {
+            for(String tag: tags2) {
                 tags.add(tag);
             }
         }
@@ -334,8 +339,13 @@ public class ModelConfig {
     }
 
     @JsonIgnore
-    public List<Set<String>> getSetTags() {
-        List<String> tags = getTags();
+    public List<String> getTags() {
+        return getTags(dataSet.getPosTags(), dataSet.getNegTags());
+    }
+
+    @JsonIgnore
+    public List<Set<String>> getSetTags(List<String> tags1, List<String> tags2) {
+        List<String> tags = getTags(tags1, tags2);
         List<Set<String>> result = new ArrayList<Set<String>>();
         for(String tag: tags) {
             Set<String> set = new HashSet<String>(16);
@@ -351,6 +361,11 @@ public class ModelConfig {
             result.add(set);
         }
         return result;
+    }
+
+    @JsonIgnore
+    public List<Set<String>> getSetTags() {
+        return getSetTags(dataSet.getPosTags(), dataSet.getNegTags());
     }
 
     @JsonIgnore

@@ -369,6 +369,7 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
             guaguaClient = new GuaguaMapReduceClient();
         }
         List<String> progressLogList = new ArrayList<String>(baggingNum);
+        boolean isOneJobNotContinuous = false;
         for(int i = 0; i < baggingNum; i++) {
             List<String> localArgs = new ArrayList<String>(args);
             // set name for each bagging job.
@@ -380,7 +381,18 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
             Path modelPath = fileSystem.makeQualified(new Path(super.getPathFinder().getModelsPath(sourceType),
                     modelName));
 
-            checkContinuousTraining(fileSystem, localArgs, modelPath);
+            // check if job is continunous trainining, this can be set multiple times and we only get last one
+            boolean isContinous = checkContinuousTraining(fileSystem, localArgs, modelPath);
+            if(!isContinous && !isOneJobNotContinuous) {
+                isOneJobNotContinuous = true;
+                // delete all old models if not continous
+                String srcModelPath = super.getPathFinder().getModelsPath(sourceType);
+                String mvModelPath = srcModelPath + "_" + System.currentTimeMillis();
+                LOG.info("Old model path has been moved to {}", mvModelPath);
+                fileSystem.rename(new Path(srcModelPath), new Path(mvModelPath));
+                fileSystem.mkdirs(new Path(srcModelPath));
+                FileSystem.getLocal(conf).delete(new Path(super.getPathFinder().getModelsPath(SourceType.LOCAL)), true);
+            }
             localArgs.add(String.format(CommonConstants.MAPREDUCE_PARAM_FORMAT, CommonConstants.GUAGUA_OUTPUT,
                     modelPath.toString()));
             localArgs.add(String.format(CommonConstants.MAPREDUCE_PARAM_FORMAT, NNConstants.NN_TRAINER_ID,
@@ -397,6 +409,7 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
                 HDPUtils.addFileToClassPath(HDPUtils.findContainingFile("mapred-site.xml"), conf);
                 HDPUtils.addFileToClassPath(HDPUtils.findContainingFile("yarn-site.xml"), conf);
             }
+
             if(isParallel) {
                 guaguaClient.addJob(localArgs.toArray(new String[0]));
             } else {
@@ -433,31 +446,31 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
         }
     }
 
-    private void checkContinuousTraining(FileSystem fileSystem, List<String> localArgs, Path modelPath)
+    private boolean checkContinuousTraining(FileSystem fileSystem, List<String> localArgs, Path modelPath)
             throws IOException {
+        boolean finalContinuous = false;
         if(Boolean.TRUE.toString().equals(this.modelConfig.getTrain().getIsContinuous().toString())) {
             // if varselect d-training or no such existing models, directly to disable continuous training.
             if(this.isForVarSelect) {
-                localArgs.add(String.format(CommonConstants.MAPREDUCE_PARAM_FORMAT, NNConstants.NN_CONTINUOUS_TRAINING,
-                        Boolean.FALSE.toString()));
+                finalContinuous = false;
                 LOG.warn("For varSelect step, continous model training is always disabled.");
             } else if(!fileSystem.exists(modelPath)) {
-                localArgs.add(String.format(CommonConstants.MAPREDUCE_PARAM_FORMAT, NNConstants.NN_CONTINUOUS_TRAINING,
-                        Boolean.FALSE.toString()));
+                finalContinuous = false;
                 LOG.info("No existing model, model training will start from scratch.");
             } else if(!inputOutputModelCheckSuccess(fileSystem, modelPath)) {
                 // TODO hidden layer size and activation functions should also be validated
-                localArgs.add(String.format(CommonConstants.MAPREDUCE_PARAM_FORMAT, NNConstants.NN_CONTINUOUS_TRAINING,
-                        Boolean.FALSE.toString()));
-                LOG.warn("Model input and output settings are not consistent with input and output columns settings,  model training will start from scratch.");
+                finalContinuous = false;
+                LOG.warn("Model input and output settings are not consistent with input and output columns settings, "
+                        + "model training will start from scratch.");
             } else {
-                localArgs.add(String.format(CommonConstants.MAPREDUCE_PARAM_FORMAT, NNConstants.NN_CONTINUOUS_TRAINING,
-                        this.modelConfig.getTrain().getIsContinuous()));
+                finalContinuous = true;
             }
         } else {
-            localArgs.add(String.format(CommonConstants.MAPREDUCE_PARAM_FORMAT, NNConstants.NN_CONTINUOUS_TRAINING,
-                    this.modelConfig.getTrain().getIsContinuous()));
+            finalContinuous = false;
         }
+        localArgs.add(String.format(CommonConstants.MAPREDUCE_PARAM_FORMAT, NNConstants.NN_CONTINUOUS_TRAINING,
+                finalContinuous));
+        return finalContinuous;
     }
 
     private boolean inputOutputModelCheckSuccess(FileSystem fileSystem, Path modelPath) throws IOException {

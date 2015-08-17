@@ -37,7 +37,7 @@ import com.microsoft.azure.storage.Constants;
  */
 public class CountAndFrequentItemsWritable implements Writable {
 
-    static final int FREQUET_ITEM_MAX_SIZE = 10;
+    static final int FREQUET_ITEM_MAX_SIZE = 20;
     /**
      * Serializing form for HyperLogLogPlus instance.
      */

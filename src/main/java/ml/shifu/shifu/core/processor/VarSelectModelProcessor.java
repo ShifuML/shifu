@@ -64,7 +64,6 @@ import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
-import org.apache.hadoop.mapreduce.lib.input.TextInputFormat;
 import org.apache.hadoop.mapreduce.lib.map.MultithreadedMapper;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.mapreduce.lib.output.MultipleOutputs;
@@ -96,6 +95,8 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
 
     private final static Logger log = LoggerFactory.getLogger(VarSelectModelProcessor.class);
 
+    private static final double BAD_IV_THRESHOLD = 0.02d;
+    
     /**
      * Run for the variable selection
      */
@@ -472,7 +473,7 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
 
         job.setMapOutputKeyClass(LongWritable.class);
         job.setMapOutputValueClass(ColumnInfo.class);
-        job.setInputFormatClass(TextInputFormat.class);
+        job.setInputFormatClass(CombineInputFormat.class);
         FileInputFormat.setInputPaths(
                 job,
                 ShifuFileUtils.getFileSystemBySourceType(source).makeQualified(
@@ -494,6 +495,8 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
     private void prepareSEJobConf(SourceType source, Configuration conf) throws IOException {
         // add jars to hadoop mapper and reducer
         new GenericOptionsParser(conf, new String[] { "-libjars", addRuntimeJars() });
+
+        conf.setBoolean(CombineInputFormat.SHIFU_VS_SPLIT_COMBINABLE, true);
 
         conf.setBoolean(GuaguaMapReduceConstants.MAPRED_MAP_TASKS_SPECULATIVE_EXECUTION, true);
         conf.setBoolean(GuaguaMapReduceConstants.MAPRED_REDUCE_TASKS_SPECULATIVE_EXECUTION, true);
@@ -632,6 +635,13 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
                 log.warn(
                         "Column {} is with very high missing rate, set final select to false. If not, you can check it manually in ColumnConfig.json",
                         config.getColumnName());
+                config.setFinalSelect(false);
+                continue;
+            }
+            if(config.getIv() == null || config.getIv() <= BAD_IV_THRESHOLD) {
+                log.warn(
+                        "Column {} is with bad iv value less than {}, set final select to false. If not, you can check it manually in ColumnConfig.json",
+                        config.getColumnName(), BAD_IV_THRESHOLD);
                 config.setFinalSelect(false);
                 continue;
             }

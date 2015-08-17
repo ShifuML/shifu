@@ -36,7 +36,9 @@ public class ModelStatsConf {
         SPDT, // paper reference: www.jmlr.org/papers/volume11/ben-haim10a/ben-haim10a.pdf
         SPDTI, // paper reference: www.jmlr.org/papers/volume11/ben-haim10a/ben-haim10a.pdf, improvement for last
                // binning updating step
-        MunroPat // paper reference: www.cs.ucsb.edu/~suri/cs290/MunroPat.pdf
+        MunroPat, // paper reference: www.cs.ucsb.edu/~suri/cs290/MunroPat.pdf
+        MunroPatI; // paper reference: www.cs.ucsb.edu/~suri/cs290/MunroPat.pdf, improvement for last
+                   // binning updating step
     }
 
     private Integer maxNumBin = Integer.valueOf(10);

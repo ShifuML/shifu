@@ -44,7 +44,6 @@ import ml.shifu.shifu.util.Constants;
 import ml.shifu.shifu.util.HDFSUtils;
 import ml.shifu.shifu.util.JSONUtils;
 
-import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang.ArrayUtils;
 import org.apache.commons.lang.StringUtils;
@@ -336,37 +335,6 @@ public class ConfusionMatrix {
         }
     }
 
-    public List<String> getTags(List<String> postTags, List<String> negTags) {
-        List<String> tags = new ArrayList<String>();
-        if(CollectionUtils.isNotEmpty(postTags)) {
-            for(String tag: postTags) {
-                if(tag.contains("|")) {
-                    for(String inTag: tag.split("\\|")) {
-                        if(StringUtils.isNotBlank(inTag)) {
-                            tags.add(inTag);
-                        }
-                    }
-                } else {
-                    tags.add(tag);
-                }
-            }
-        }
-        if(CollectionUtils.isNotEmpty(negTags)) {
-            for(String tag: negTags) {
-                if(tag.contains("|")) {
-                    for(String inTag: tag.split("\\|")) {
-                        if(StringUtils.isNotBlank(inTag)) {
-                            tags.add(inTag);
-                        }
-                    }
-                } else {
-                    tags.add(tag);
-                }
-            }
-        }
-        return tags;
-    }
-
     @SuppressWarnings("deprecation")
     public void computeConfusionMatixForMultipleClassification(long records) throws IOException {
         PathFinder pathFinder = new PathFinder(modelConfig);
@@ -378,7 +346,13 @@ public class ConfusionMatrix {
         int cnt = 0;
         Set<String> posTags = new HashSet<String>(modelConfig.getPosTags(evalConfig));
         Set<String> negTags = new HashSet<String>(modelConfig.getNegTags(evalConfig));
-        List<String> tags = getTags(modelConfig.getPosTags(evalConfig), modelConfig.getNegTags(evalConfig));
+        Set<String> tagSet = new HashSet<String>(modelConfig.getFlattenTags(modelConfig.getPosTags(evalConfig),
+                modelConfig.getNegTags(evalConfig)));
+        // List<String> tags = modelConfig.getFlattenTags(modelConfig.getPosTags(evalConfig),
+        // modelConfig.getNegTags(evalConfig));
+        List<Set<String>> tags = modelConfig.getSetTags(modelConfig.getPosTags(evalConfig),
+                modelConfig.getNegTags(evalConfig));
+
         int classes = tags.size();
 
         long[][] confusionMatrix = new long[classes][classes];
@@ -396,11 +370,20 @@ public class ConfusionMatrix {
                 }
 
                 String tag = raw[targetColumnIndex];
-                if(StringUtils.isBlank(tag) || (!posTags.contains(tag) && !negTags.contains(tag))) {
-                    if(rd.nextDouble() < 0.01) {
-                        log.warn("Empty target value!!");
+                if(modelConfig.isBinaryClassification()) {
+                    if(StringUtils.isBlank(tag) || (!posTags.contains(tag) && !negTags.contains(tag))) {
+                        if(rd.nextDouble() < 0.01) {
+                            log.warn("Empty or invalid target value!!");
+                        }
+                        continue;
                     }
-                    continue;
+                } else {
+                    if(StringUtils.isBlank(tag) || !tagSet.contains(tag)) {
+                        if(rd.nextDouble() < 0.01) {
+                            log.warn("Empty or invalid target value!!");
+                        }
+                        continue;
+                    }
                 }
 
                 double[] scores = new double[classes];
@@ -419,7 +402,13 @@ public class ConfusionMatrix {
                         maxScore = scores[i];
                     }
                 }
-                int tagIndex = tags.indexOf(tag);
+                int tagIndex = -1;
+                for(int i = 0; i < tags.size(); i++) {
+                    if(tags.get(i).contains(tag)) {
+                        tagIndex = i;
+                        break;
+                    }
+                }
                 confusionMatrix[tagIndex][maxIndex] += 1L;
             }
             scanner.close();
