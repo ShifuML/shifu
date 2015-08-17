@@ -49,10 +49,17 @@ public class AddColumnNumAndFilterUDF extends AbstractTrainerUDF<DataBag> {
 
     private Random random = new Random(System.currentTimeMillis());
 
+    private final boolean isAppendRandom;
+
     public AddColumnNumAndFilterUDF(String source, String pathModelConfig, String pathColumnConfig, String withScoreStr)
             throws Exception {
-        super(source, pathModelConfig, pathColumnConfig);
+        this(source, pathModelConfig, pathColumnConfig, withScoreStr, "true");
+    }
 
+    public AddColumnNumAndFilterUDF(String source, String pathModelConfig, String pathColumnConfig,
+            String withScoreStr, String isAppendRandom) throws Exception {
+        super(source, pathModelConfig, pathColumnConfig);
+        this.isAppendRandom = Boolean.TRUE.toString().equalsIgnoreCase(isAppendRandom);
         negTags = new HashSet<String>(modelConfig.getNegTags());
     }
 
@@ -113,7 +120,9 @@ public class AddColumnNumAndFilterUDF extends AbstractTrainerUDF<DataBag> {
                 // Set Data
                 tuple.set(1, input.get(i) == null ? null : input.get(i).toString());
                 // add random seed for distribution for bigger mapper, 300 is not enough TODO
-                tuple.set(2, Math.abs(random.nextInt() % 300));
+                if(this.isAppendRandom) {
+                    tuple.set(2, Math.abs(random.nextInt() % 300));
+                }
                 bag.add(tuple);
             }
         }
@@ -126,8 +135,9 @@ public class AddColumnNumAndFilterUDF extends AbstractTrainerUDF<DataBag> {
             Schema tupleSchema = new Schema();
             tupleSchema.add(new FieldSchema("columnId", DataType.INTEGER));
             tupleSchema.add(new FieldSchema("value", DataType.CHARARRAY));
-            tupleSchema.add(new FieldSchema("rand", DataType.INTEGER));
-
+            if(this.isAppendRandom) {
+                tupleSchema.add(new FieldSchema("rand", DataType.INTEGER));
+            }
             return new Schema(new Schema.FieldSchema("columnInfos", new Schema(new Schema.FieldSchema("columnInfo",
                     tupleSchema, DataType.TUPLE)), DataType.BAG));
         } catch (IOException e) {

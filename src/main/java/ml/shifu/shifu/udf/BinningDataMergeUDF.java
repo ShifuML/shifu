@@ -99,7 +99,7 @@ public class BinningDataMergeUDF extends AbstractTrainerUDF<Tuple> {
         if(binFields.size() > CalculateNewStatsUDF.MAX_CATEGORICAL_BINC_COUNT) {
             output.set(1, "");
         } else {
-            output.set(1, StringUtils.join(binning.getDataBin(), CalculateStatsUDF.CATEGORY_VAL_SEPARATOR));
+            output.set(1, StringUtils.join(binFields, CalculateStatsUDF.CATEGORY_VAL_SEPARATOR));
         }
 
         log.info("Finish merging bin info for columnId - " + columnId);

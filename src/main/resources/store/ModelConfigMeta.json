@@ -206,7 +206,8 @@
                     {"label": "Native", "value":"Native"},
                     {"label": "SPDTI", "value": "SPDTI"},
                     {"label": "SPDT", "value": "SPDT"},
-                    {"label": "MunroPat", "value": "MunroPat"}
+                    {"label": "MunroPat", "value": "MunroPat"},
+                    {"label": "MunroPatI", "value": "MunroPatI"}
                 ]
             }
         ]

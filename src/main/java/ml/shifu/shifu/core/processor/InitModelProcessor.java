@@ -31,6 +31,7 @@ import ml.shifu.shifu.core.autotype.AutoTypeDistinctCountMapper;
 import ml.shifu.shifu.core.autotype.AutoTypeDistinctCountReducer;
 import ml.shifu.shifu.core.autotype.CountAndFrequentItemsWritable;
 import ml.shifu.shifu.core.dtrain.NNConstants;
+import ml.shifu.shifu.core.mr.input.CombineInputFormat;
 import ml.shifu.shifu.core.validator.ModelInspector.ModelStep;
 import ml.shifu.shifu.fs.ShifuFileUtils;
 import ml.shifu.shifu.util.CommonUtils;
@@ -50,7 +51,6 @@ import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
-import org.apache.hadoop.mapreduce.lib.input.TextInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.mapreduce.lib.output.TextOutputFormat;
 import org.apache.hadoop.util.GenericOptionsParser;
@@ -150,6 +150,12 @@ public class InitModelProcessor extends BasicModelProcessor implements Processor
                                     columnConfig.getColumnName(), columnConfig.getColumnNum(), distinctCount,
                                     Arrays.toString(items));
                             columnConfig.setColumnType(ColumnType.N);
+                        } else if(isDoubleFrequentVariable(distinctCount, items)) {
+                            log.info(
+                                    "Column {} with index {} is set to numeric type because of all sampled items are double(including blank). Distinct count {}, items {}.",
+                                    columnConfig.getColumnName(), columnConfig.getColumnNum(), distinctCount,
+                                    Arrays.toString(items));
+                            columnConfig.setColumnType(ColumnType.N);
                         } else {
                             columnConfig.setColumnType(ColumnType.C);
                             cateCount += 1;
@@ -188,6 +194,40 @@ public class InitModelProcessor extends BasicModelProcessor implements Processor
             }
         }
         return true;
+    }
+
+    private boolean isDoubleFrequentVariable(long distinctCount, String[] items) {
+        int doubleNotInfSize = 0;
+        boolean isExistNotEmptyAndNotNumberItem = false;
+        for(String string: items) {
+            boolean isDouble = false;
+            boolean isInt = false;
+            try {
+                Double.parseDouble(string);
+                isDouble = true;
+            } catch (NumberFormatException e) {
+                isDouble = false;
+                if(StringUtils.isNotBlank(string)) {
+                    isExistNotEmptyAndNotNumberItem = true;
+                }
+            }
+            try {
+                Integer.parseInt(string);
+                isInt = true;
+            } catch (NumberFormatException e) {
+                isInt = false;
+            }
+            if(isDouble && !isInt) {
+                doubleNotInfSize += 1;
+            }
+        }
+
+        if(doubleNotInfSize == items.length
+                || (doubleNotInfSize == items.length - 1 && !isExistNotEmptyAndNotNumberItem)) {
+            return true;
+        }
+
+        return false;
     }
 
     // GuaguaOptionsParser doesn't to support *.jar currently.
@@ -234,7 +274,7 @@ public class InitModelProcessor extends BasicModelProcessor implements Processor
         conf.setBoolean(GuaguaMapReduceConstants.MAPRED_MAP_TASKS_SPECULATIVE_EXECUTION, true);
         conf.setBoolean(GuaguaMapReduceConstants.MAPRED_REDUCE_TASKS_SPECULATIVE_EXECUTION, true);
         conf.set(NNConstants.MAPRED_JOB_QUEUE_NAME, Environment.getProperty(Environment.HADOOP_JOB_QUEUE, "default"));
-        conf.setInt(GuaguaMapReduceConstants.MAPREDUCE_JOB_MAX_SPLIT_LOCATIONS, 30);
+        conf.setInt(GuaguaMapReduceConstants.MAPREDUCE_JOB_MAX_SPLIT_LOCATIONS, 100);
         conf.set(
                 Constants.SHIFU_MODEL_CONFIG,
                 ShifuFileUtils.getFileSystemBySourceType(source)
@@ -243,8 +283,8 @@ public class InitModelProcessor extends BasicModelProcessor implements Processor
                 Constants.SHIFU_COLUMN_CONFIG,
                 ShifuFileUtils.getFileSystemBySourceType(source)
                         .makeQualified(new Path(super.getPathFinder().getColumnConfigPath(source))).toString());
-        conf.set(NNConstants.MAPRED_JOB_QUEUE_NAME, Environment.getProperty(Environment.HADOOP_JOB_QUEUE, "default"));
         conf.set(Constants.SHIFU_MODELSET_SOURCE_TYPE, source.toString());
+
         conf.set("mapred.reduce.slowstart.completed.maps",
                 Environment.getProperty("mapred.reduce.slowstart.completed.maps", "0.9"));
         String hdpVersion = HDPUtils.getHdpVersionForHDP224();
@@ -257,6 +297,8 @@ public class InitModelProcessor extends BasicModelProcessor implements Processor
             HDPUtils.addFileToClassPath(HDPUtils.findContainingFile("yarn-site.xml"), conf);
         }
 
+        conf.setBoolean(CombineInputFormat.SHIFU_VS_SPLIT_COMBINABLE, true);
+
         @SuppressWarnings("deprecation")
         Job job = new Job(conf, "Shifu: Column Type Auto Checking Job : " + this.modelConfig.getModelSetName());
         job.setJarByClass(getClass());
@@ -264,7 +306,8 @@ public class InitModelProcessor extends BasicModelProcessor implements Processor
 
         job.setMapOutputKeyClass(IntWritable.class);
         job.setMapOutputValueClass(CountAndFrequentItemsWritable.class);
-        job.setInputFormatClass(TextInputFormat.class);
+
+        job.setInputFormatClass(CombineInputFormat.class);
         FileInputFormat.setInputPaths(
                 job,
                 ShifuFileUtils.getFileSystemBySourceType(source).makeQualified(

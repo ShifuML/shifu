@@ -98,7 +98,7 @@ public class Scorer {
                     continue;
                 }
                 MLData score = network.compute(pair.getInput());
-                if(modelConfig.isBinaryClassification()) {
+                if(modelConfig != null && modelConfig.isBinaryClassification()) {
                     scores.add(toScore(score.getData(0)));
                 } else {
                     double[] outputs = score.getData();

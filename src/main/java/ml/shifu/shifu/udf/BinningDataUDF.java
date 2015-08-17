@@ -19,6 +19,7 @@ package ml.shifu.shifu.udf;
 
 import java.io.IOException;
 import java.util.Iterator;
+import java.util.List;
 
 import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.container.obj.ModelStatsConf.BinningMethod;
@@ -42,7 +43,7 @@ import org.apache.pig.parser.ParserException;
  * 
  * @author zhanhu
  * @Oct 27, 2014
- *
+ * 
  */
 public class BinningDataUDF extends AbstractTrainerUDF<Tuple> {
 
@@ -52,17 +53,18 @@ public class BinningDataUDF extends AbstractTrainerUDF<Tuple> {
      * @param pathColumnConfig
      * @throws IOException
      */
-    public BinningDataUDF(String source, String pathModelConfig, String pathColumnConfig)
-            throws IOException {
+    public BinningDataUDF(String source, String pathModelConfig, String pathColumnConfig) throws IOException {
         super(source, pathModelConfig, pathColumnConfig);
     }
 
-    /* (non-Javadoc)
+    /*
+     * (non-Javadoc)
+     * 
      * @see org.apache.pig.EvalFunc#exec(org.apache.pig.data.Tuple)
      */
     @Override
     public Tuple exec(Tuple input) throws IOException {
-        if ( input == null || input.size() < 2) {
+        if(input == null || input.size() < 2) {
             return null;
         }
 
@@ -71,16 +73,16 @@ public class BinningDataUDF extends AbstractTrainerUDF<Tuple> {
 
         ColumnConfig columnConfig = super.columnConfigList.get(columnId);
         AbstractBinning<?> binning = null;
-        if ( columnConfig.isCategorical() ) {
+        if(columnConfig.isCategorical()) {
             binning = new CategoricalBinning(-1);
         } else {
-            if ( super.modelConfig.getBinningMethod().equals(BinningMethod.EqualInterval) ) {
+            if(super.modelConfig.getBinningMethod().equals(BinningMethod.EqualInterval)) {
                 binning = new EqualIntervalBinning(modelConfig.getStats().getMaxNumBin());
             } else {
-                switch (this.modelConfig.getBinningAlgorithm()) {
+                switch(this.modelConfig.getBinningAlgorithm()) {
                     case Native:
                         log.info("Invoke Native binning method, memory cosuming!!");
-                        //always merge bins
+                        // always merge bins
                         binning = new NativeBinning(modelConfig.getStats().getMaxNumBin(), true);
                         break;
                     case SPDT:
@@ -89,11 +91,12 @@ public class BinningDataUDF extends AbstractTrainerUDF<Tuple> {
                         binning = new EqualPopulationBinning(modelConfig.getStats().getMaxNumBin());
                         break;
                     case MunroPat:
+                    case MunroPatI:
                         log.info("Invoke Munro & Paterson selecting algorithm");
                         binning = new MunroPatBinning(modelConfig.getStats().getMaxNumBin());
                         break;
                     default:
-                        log.info("default: Invoke SPDT(Streaming Parallel Decision Tree) binning method");
+                        log.info("Default: Invoke Munro & Paterson selecting algorithm");
                         binning = new MunroPatBinning(modelConfig.getStats().getMaxNumBin());
                         break;
                 }
@@ -101,21 +104,30 @@ public class BinningDataUDF extends AbstractTrainerUDF<Tuple> {
         }
 
         Iterator<Tuple> iterator = databag.iterator();
-        while ( iterator.hasNext() ) {
+        while(iterator.hasNext()) {
             Tuple element = iterator.next();
-            if ( element == null || element.size() < 2) {
+            if(element == null || element.size() < 2) {
                 continue;
             }
 
             Object value = element.get(1);
-            if ( value != null ) {
+            if(value != null) {
                 binning.addData(value.toString());
             }
         }
 
         Tuple output = TupleFactory.getInstance().newTuple(2);
         output.set(0, columnId);
-        output.set(1, StringUtils.join(binning.getDataBin(), CalculateStatsUDF.CATEGORY_VAL_SEPARATOR));
+        // Do check here. It's because if there are too many value for categorical variable,
+        // it will consume too much memory when join them together, that will cause OOM exception
+        List<?> dataBin = binning.getDataBin();
+        if(dataBin.size() > CalculateNewStatsUDF.MAX_CATEGORICAL_BINC_COUNT) {
+            output.set(1, "");
+        } else {
+            output.set(1, StringUtils.join(dataBin, CalculateStatsUDF.CATEGORY_VAL_SEPARATOR));
+        }
+
+        log.info("Finish merging bin info for columnId - " + columnId);
 
         return output;
     }

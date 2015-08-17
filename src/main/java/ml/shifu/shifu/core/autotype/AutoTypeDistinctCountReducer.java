@@ -60,7 +60,7 @@ public class AutoTypeDistinctCountReducer extends
 
     private static String limitedFrequentItems(Set<String> fis) {
         StringBuilder sb = new StringBuilder(200);
-        int size = Math.min(fis.size(), CountAndFrequentItemsWritable.FREQUET_ITEM_MAX_SIZE);
+        int size = Math.min(fis.size(), CountAndFrequentItemsWritable.FREQUET_ITEM_MAX_SIZE * 10);
         Iterator<String> iterator = fis.iterator();
         int i = 0;
         while(i < size) {

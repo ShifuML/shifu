@@ -56,7 +56,6 @@ public class MunroPatBinning extends AbstractBinning<Double> {
      * @return
      */
     private List<Double> binMerge(List<Double> bins) {
-
         List<Double> newBins = new ArrayList<Double>();
         if(bins.size() == 0) {
             bins.add(Double.NaN);
