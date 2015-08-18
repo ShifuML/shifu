@@ -16,7 +16,6 @@
 package ml.shifu.shifu.core.dtrain;
 
 import java.io.IOException;
-import java.util.Arrays;
 
 import ml.shifu.guagua.hadoop.io.GuaguaLineRecordReader;
 import ml.shifu.guagua.hadoop.io.GuaguaWritableAdapter;
@@ -44,8 +43,6 @@ import org.encog.ml.data.basic.BasicMLDataPair;
  * {@link NNWorker} is to load data with text format.
  */
 public class NNWorker extends AbstractNNWorker<Text> {
-
-    boolean isPrint = false;
 
     @Override
     public void load(GuaguaWritableAdapter<LongWritable> currentKey, GuaguaWritableAdapter<Text> currentValue,
@@ -85,6 +82,7 @@ public class NNWorker extends AbstractNNWorker<Text> {
             }
             if(index == super.columnConfigList.size()) {
                 significance = NumberFormatUtils.getDouble(input, CommonConstants.DEFAULT_SIGNIFICANCE_VALUE);
+                // the last field is significance, break here
                 break;
             } else {
                 ColumnConfig columnConfig = super.columnConfigList.get(index);
@@ -117,11 +115,6 @@ public class NNWorker extends AbstractNNWorker<Text> {
                 }
             }
             index += 1;
-        }
-
-        if(!isPrint) {
-            LOG.info("data: input: {}, output: {}", Arrays.toString(inputs), Arrays.toString(ideal));
-            isPrint = true;
         }
 
         // if fixInitialInput = true, we should use hashcode to sample.

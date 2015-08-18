@@ -39,8 +39,8 @@ public class ModelTrainConf {
     }
 
     private Integer baggingNum = Integer.valueOf(5);
-    // change it to false by default, as we often don't use this way.
-    private Boolean baggingWithReplacement = Boolean.FALSE;
+    // this is set default as true as bagging often with replacement sampleing.
+    private Boolean baggingWithReplacement = Boolean.TRUE;
     private Double baggingSampleRate = Double.valueOf(0.8);
     private Double validSetRate = Double.valueOf(0.2);
     private Double convergenceThreshold = Double.valueOf(0.0);
@@ -53,7 +53,9 @@ public class ModelTrainConf {
     private Boolean isContinuous = Boolean.FALSE;
 
     private Boolean isCrossOver = Boolean.FALSE;
-
+    
+    private int workerThreadCount = 4;
+    
     private String algorithm = "NN";
 
     private Map<String, Object> params;
@@ -252,6 +254,20 @@ public class ModelTrainConf {
      */
     public void setIsContinuous(Boolean isContinuous) {
         this.isContinuous = isContinuous;
+    }
+
+    /**
+     * @return the workerThreadCount
+     */
+    public int getWorkerThreadCount() {
+        return workerThreadCount;
+    }
+
+    /**
+     * @param workerThreadCount the workerThreadCount to set
+     */
+    public void setWorkerThreadCount(int workerThreadCount) {
+        this.workerThreadCount = workerThreadCount;
     }
 
 }

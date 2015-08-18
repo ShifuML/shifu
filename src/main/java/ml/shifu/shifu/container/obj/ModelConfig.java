@@ -200,6 +200,7 @@ public class ModelConfig {
         trainConf.setNumTrainEpochs(100);
         trainConf.setEpochsPerIteration(1);
         trainConf.setParams(ModelTrainConf.createParamsByAlg(alg));
+        trainConf.setBaggingWithReplacement(true);
         modelConfig.setTrain(trainConf);
 
         EvalConfig evalConfig = new EvalConfig();

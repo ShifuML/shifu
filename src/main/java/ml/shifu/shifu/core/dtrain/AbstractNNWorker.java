@@ -76,7 +76,7 @@ public abstract class AbstractNNWorker<VALUE extends Writable> extends
     /**
      * NN algorithm runner instance.
      */
-    protected Gradient gradient;
+    protected ParallelGradient gradient;
 
     /**
      * Model Config read from HDFS
@@ -232,8 +232,9 @@ public abstract class AbstractNNWorker<VALUE extends Writable> extends
             }));
         } else {
             LOG.info("NNWorker is loading data into memory.");
-            double memoryFraction = Double.valueOf(context.getProps().getProperty("guagua.data.memoryFraction", "0.5"));
+            double memoryFraction = Double.valueOf(context.getProps().getProperty("guagua.data.memoryFraction", "0.6"));
             long memoryStoreSize = (long) (Runtime.getRuntime().maxMemory() * memoryFraction);
+            LOG.info("Max heap memory: {}, fraction: {}", Runtime.getRuntime().maxMemory(), memoryFraction);
             double crossValidationRate = this.modelConfig.getCrossValidationRate();
             try {
                 this.trainingData = new MemoryDiskMLDataSet((long) (memoryStoreSize * (1 - crossValidationRate)),
@@ -279,25 +280,28 @@ public abstract class AbstractNNWorker<VALUE extends Writable> extends
         double[] weights = workerContext.getLastMasterResult().getWeights();
         if(gradient == null) {
             initGradient(this.trainingData, this.testingData, weights, this.isCrossOver);
+        } else {
+            if(this.isCrossOver) {
+                // each iteration reset seed
+                this.gradient.setSeed(System.currentTimeMillis());
+            }
         }
 
-        if(this.isCrossOver) {
-            // each iteration reset seed
-            this.gradient.setSeed(System.currentTimeMillis());
-        }
+        this.gradient.getNetwork().setWeights(weights);
 
         // using the weights from master to train model in current iteration
-        this.gradient.setWeights(weights);
-
+        double[] gradients = null;
         for(int i = 0; i < epochsPerIteration; i++) {
-            this.gradient.run();
-            this.gradient.setWeights(this.gradient.getWeights());
+            gradients = this.gradient.computeGradients();
         }
         // get train errors and test errors
-        double trainError = this.gradient.getError();
+        double trainError = this.gradient.getTrainError();
 
+        // TODO testing error computing time?? if too big, Run in parallel
+        long start = System.currentTimeMillis();
         double testError = this.testingData.getRecordCount() > 0 ? (this.gradient.calculateError()) : this.gradient
-                .getError();
+                .getTrainError();
+        LOG.info("Computing test error time: {}ms", (System.currentTimeMillis() - start));
 
         // if the validation set is 0%, then the validation error should be "N/A"
         LOG.info("NNWorker compute iteration {} (train error {} validation error {})",
@@ -305,10 +309,9 @@ public abstract class AbstractNNWorker<VALUE extends Writable> extends
                         (this.testingData.getRecordCount() > 0 ? testError : "N/A") });
 
         NNParams params = new NNParams();
-
         params.setTestError(testError);
         params.setTrainError(trainError);
-        params.setGradients(this.gradient.getGradients());
+        params.setGradients(gradients);
         // prevent null point;
         params.setWeights(new double[0]);
         params.setTrainSize(this.trainingData.getRecordCount());
@@ -323,18 +326,21 @@ public abstract class AbstractNNWorker<VALUE extends Writable> extends
         List<Integer> hiddenNodeList = (List<Integer>) getModelConfig().getParams().get(NNTrainer.NUM_HIDDEN_NODES);
 
         BasicNetwork network = DTrainUtils.generateNetwork(this.inputNodeCount, this.outputNodeCount, numLayers,
-                actFunc, hiddenNodeList);
+                actFunc, hiddenNodeList, false);
         // use the weights from master
         network.getFlat().setWeights(weights);
 
         FlatNetwork flat = network.getFlat();
-        // copy Propagation from encog
+        // copy Propagation from encog, fix flat spot problem
         double[] flatSpot = new double[flat.getActivationFunctions().length];
         for(int i = 0; i < flat.getActivationFunctions().length; i++) {
             flatSpot[i] = flat.getActivationFunctions()[i] instanceof ActivationSigmoid ? 0.1 : 0.0;
         }
 
-        this.gradient = new Gradient(flat, training, testing, flatSpot, new LinearErrorFunction(), isCrossOver);
+        LOG.info("Gradient computing thread count is {}.", modelConfig.getTrain().getWorkerThreadCount());
+
+        this.gradient = new ParallelGradient(flat, training, testing, flatSpot, new LinearErrorFunction(), isCrossOver,
+                modelConfig.getTrain().getWorkerThreadCount());
     }
 
     private NNParams buildEmptyNNParams(WorkerContext<NNParams, NNParams> workerContext) {
@@ -354,6 +360,9 @@ public abstract class AbstractNNWorker<VALUE extends Writable> extends
         } else {
             ((MemoryDiskMLDataSet) this.trainingData).endLoad();
             ((MemoryDiskMLDataSet) this.testingData).endLoad();
+            LOG.info("    - # Training Records in memory: {}.",
+                    ((MemoryDiskMLDataSet) this.trainingData).getMemoryCount());
+            LOG.info("    - # Training Records in disk: {}.", ((MemoryDiskMLDataSet) this.trainingData).getDiskCount());
         }
         LOG.info("    - # Records of the Master Data Set: {}.", this.count);
         LOG.info("    - Bagging Sample Rate: {}.", this.modelConfig.getBaggingSampleRate());

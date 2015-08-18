@@ -232,7 +232,6 @@ public class LogisticRegressionWorker
         }
         // append bias
         value += weights[inputs.length] * 1d;
-
         return 1.0d / (1.0d + BoundMath.exp(-1 * value));
     }
 

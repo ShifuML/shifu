@@ -375,8 +375,8 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
             // set name for each bagging job.
             localArgs.add("-n");
             localArgs.add(String.format("Shifu Master-Workers Training Iteration: %s id:%s", super.getModelConfig()
-                    .getModelSetName(), i + 1));
-            LOG.info("Start trainer with id: {}", (i + 1));
+                    .getModelSetName(), i));
+            LOG.info("Start trainer with id: {}", i);
             String modelName = getModelName(i);
             Path modelPath = fileSystem.makeQualified(new Path(super.getPathFinder().getModelsPath(sourceType),
                     modelName));
@@ -396,8 +396,8 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
             localArgs.add(String.format(CommonConstants.MAPREDUCE_PARAM_FORMAT, CommonConstants.GUAGUA_OUTPUT,
                     modelPath.toString()));
             localArgs.add(String.format(CommonConstants.MAPREDUCE_PARAM_FORMAT, NNConstants.NN_TRAINER_ID,
-                    String.valueOf(i + 1)));
-            final String progressLogFile = getProgressLogFile(i + 1);
+                    String.valueOf(i)));
+            final String progressLogFile = getProgressLogFile(i);
             progressLogList.add(progressLogFile);
             localArgs.add(String.format(CommonConstants.MAPREDUCE_PARAM_FORMAT, NNConstants.NN_PROGRESS_FILE,
                     progressLogFile));
@@ -641,7 +641,7 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
             // shifuconfig
             args.add(String.format(CommonConstants.MAPREDUCE_PARAM_FORMAT,
                     GuaguaConstants.GUAGUA_SPLIT_MAX_COMBINED_SPLIT_SIZE,
-                    Environment.getProperty(GuaguaConstants.GUAGUA_SPLIT_MAX_COMBINED_SPLIT_SIZE, "536870912")));
+                    Environment.getProperty(GuaguaConstants.GUAGUA_SPLIT_MAX_COMBINED_SPLIT_SIZE, "268435456")));
         }
         // special tuning parameters for shifu, 0.99 means each iteation master wait for 99% workers and then can go to
         // next iteration.
@@ -843,7 +843,7 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
                 if(e.getMessage().indexOf("Cannot seek after EOF") < 0) {
                     throw e;
                 } else {
-                    LOG.warn(e.getMessage());
+                    // LOG.warn(e.getMessage());
                 }
             } finally {
                 IOUtils.closeStream(in);
