@@ -16,6 +16,7 @@
 package ml.shifu.shifu.core.dtrain;
 
 import java.util.Arrays;
+import java.util.concurrent.Callable;
 
 import org.encog.engine.network.activation.ActivationFunction;
 import org.encog.mathutil.error.ErrorCalculation;
@@ -27,10 +28,10 @@ import org.encog.neural.flat.FlatNetwork;
 import org.encog.neural.networks.BasicNetwork;
 
 /**
- * {@link Gradient} is copied from Encog framework. The reason is that we original Gradient don't pop up
+ * {@link SubGradient} is copied from Encog framework. The reason is that we original Gradient don't pop up
  * {@link #gradients} outside. While we need gradients accumulated into {@link NNMaster} to update NN weights.
  */
-public class Gradient {
+public class SubGradient implements Callable<double[]> {
 
     /**
      * The network to train.
@@ -105,7 +106,7 @@ public class Gradient {
     /**
      * The testing data, test data set here is used for training and testing cross over.
      */
-    private final MLDataSet testing;
+    private MLDataSet testing;
 
     /**
      * Whether to replace training and testing elements.
@@ -132,6 +133,14 @@ public class Gradient {
      */
     private final ErrorFunction errorFunction;
 
+    private final long trainLow;
+
+    private final long trainHigh;
+
+    private final long testLow;
+
+    private final long testHigh;
+
     /**
      * Construct a gradient worker.
      * 
@@ -146,11 +155,16 @@ public class Gradient {
      * @param theHigh
      *            The high index to use in the training data.
      */
-    public Gradient(final FlatNetwork theNetwork, final MLDataSet theTraining, final MLDataSet theTesting,
-            final double[] flatSpot, ErrorFunction ef, boolean isCrossOver) {
+    public SubGradient(final FlatNetwork theNetwork, final MLDataSet theTraining, long trainLow, long trainHigh,
+            final MLDataSet theTesting, long testLow, long testHigh, final double[] flatSpot, ErrorFunction ef,
+            boolean isCrossOver) {
         this.network = theNetwork;
         this.training = theTraining;
+        this.trainLow = trainLow;
+        this.trainHigh = trainHigh;
         this.testing = theTesting;
+        this.testLow = testLow;
+        this.testHigh = testHigh;
         this.isCrossOver = isCrossOver;
         this.flatSpot = flatSpot;
         this.errorFunction = ef;
@@ -236,13 +250,13 @@ public class Gradient {
     /**
      * Perform the gradient calculation
      */
-    public final void run() {
+    public final double[] call() {
         try {
             // reset errors and gradients firstly
             this.errorCalculation.reset();
             Arrays.fill(this.gradients, 0.0);
 
-            for(int i = 0; i < this.training.getRecordCount(); i++) {
+            for(long i = this.trainLow; i <= this.trainHigh; i++) {
                 if(this.isCrossOver) {
                     // 3:1 to select testing data set, tmp hard code, TODO fix hard code issue,extract such logic to a
                     // method
@@ -265,6 +279,7 @@ public class Gradient {
         } catch (final Throwable ex) {
             throw new RuntimeException(ex);
         }
+        return this.gradients;
     }
 
     /**
@@ -275,13 +290,13 @@ public class Gradient {
      *            The training set.
      * @return The error percentage.
      */
-    public final double calculateError() {
+    private final double calculateError() {
         final ErrorCalculation errorCalculation = new ErrorCalculation();
 
         final double[] actual = new double[this.getNetwork().getOutputCount()];
         final MLDataPair pair = BasicMLDataPair.createPair(testing.getInputSize(), testing.getIdealSize());
 
-        for(int i = 0; i < testing.getRecordCount(); i++) {
+        for(long i = testLow; i <= testHigh; i++) {
             if(this.isCrossOver) {
                 // 3:1 to select testing data set, tmp hard code, TODO fix hard code issue
                 if((i + seed) % 4 < 3) {
@@ -301,6 +316,10 @@ public class Gradient {
             errorCalculation.updateError(actual, pair.getIdealArray(), pair.getSignificance());
         }
         return errorCalculation.calculate();
+    }
+
+    public final double caculateTotalError() {
+        return (testHigh - testLow + 1) * this.network.getOutputCount() * calculateError();
     }
 
     public ErrorCalculation getErrorCalculation() {

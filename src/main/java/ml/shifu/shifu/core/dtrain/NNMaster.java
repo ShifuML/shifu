@@ -39,15 +39,15 @@ import org.slf4j.LoggerFactory;
 
 /**
  * {@link NNMaster} is used to accumulate all workers NN parameters.
- * <p/>
- * <p/>
+ * 
+ * <p>
  * We accumulate all gradients from workers to calculate model weights. And set weights to workers. Then workers use
  * weights to set their models and train for another iteration.
- * <p/>
- * <p/>
+ * 
+ * <p>
  * This logic follows Encog multi-core implementation.
- * <p/>
- * <p/>
+ * 
+ * <p>
  * Make sure workers and master use the same initialization weights.
  */
 public class NNMaster implements MasterComputable<NNParams, NNParams> {
@@ -128,11 +128,8 @@ public class NNMaster implements MasterComputable<NNParams, NNParams> {
             init(context);
 
             NNParams params = null;
-            if(!this.isContinuousEnabled) {
-                // first iteration is used to set initial weights
-                params = initWeights();
-                LOG.info("Starting to train model from scratch.");
-            } else {
+            if(this.isContinuousEnabled) {
+                // read existing model weights
                 try {
                     Path modelPath = new Path(context.getProps().getProperty(CommonConstants.GUAGUA_OUTPUT));
                     BasicNetwork existingModel = DTrainUtils.loadModel(modelPath,
@@ -147,6 +144,10 @@ public class NNMaster implements MasterComputable<NNParams, NNParams> {
                 } catch (IOException e) {
                     throw new GuaguaRuntimeException(e);
                 }
+            } else {
+                // first iteration is used to set initial weights
+                params = initWeights();
+                LOG.info("Starting to train model from scratch.");
             }
             // should be set here to make sure master and workers use the same weights
             this.globalNNParams.setWeights(params.getWeights());

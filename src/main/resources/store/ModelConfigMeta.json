@@ -427,11 +427,16 @@
                 "type": "boolean",
                 "directive": "input",
                 "defval": false
-            }, {               
+            }, { 
                 "name": "isCrossOver",
                 "type": "boolean",
                 "directive": "input",
                 "defval": false
+            }, {              
+                "name": "workerThreadCount",
+                "type": "number",
+                "directive": "input",
+                "defval": 4
             }, {
                 "name": "algorithm",
                 "type": "text",

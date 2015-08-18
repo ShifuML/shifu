@@ -176,8 +176,7 @@ public final class DTrainUtils {
      * Generate basic NN network object
      */
     public static BasicNetwork generateNetwork(int in, int out, int numLayers, List<String> actFunc,
-            List<Integer> hiddenNodeList) {
-
+            List<Integer> hiddenNodeList, boolean isRandomizeWeights) {
         final BasicNetwork network = new BasicNetwork();
 
         network.addLayer(new BasicLayer(new ActivationLinear(), true, in));
@@ -205,9 +204,19 @@ public final class DTrainUtils {
         network.addLayer(new BasicLayer(new ActivationSigmoid(), false, out));
 
         network.getStructure().finalizeStructure();
-        network.reset();
+        if(isRandomizeWeights) {
+            network.reset();
+        }
 
         return network;
+    }
+
+    /**
+     * Generate basic NN network object
+     */
+    public static BasicNetwork generateNetwork(int in, int out, int numLayers, List<String> actFunc,
+            List<Integer> hiddenNodeList) {
+        return generateNetwork(in, out, numLayers, actFunc, hiddenNodeList, true);
     }
 
     /**
