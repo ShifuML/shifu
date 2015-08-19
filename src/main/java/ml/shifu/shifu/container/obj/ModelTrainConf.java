@@ -53,9 +53,9 @@ public class ModelTrainConf {
     private Boolean isContinuous = Boolean.FALSE;
 
     private Boolean isCrossOver = Boolean.FALSE;
-    
-    private int workerThreadCount = 4;
-    
+
+    private Integer workerThreadCount = 4;
+
     private String algorithm = "NN";
 
     private Map<String, Object> params;
@@ -259,14 +259,15 @@ public class ModelTrainConf {
     /**
      * @return the workerThreadCount
      */
-    public int getWorkerThreadCount() {
+    public Integer getWorkerThreadCount() {
         return workerThreadCount;
     }
 
     /**
-     * @param workerThreadCount the workerThreadCount to set
+     * @param workerThreadCount
+     *            the workerThreadCount to set
      */
-    public void setWorkerThreadCount(int workerThreadCount) {
+    public void setWorkerThreadCount(Integer workerThreadCount) {
         this.workerThreadCount = workerThreadCount;
     }
 

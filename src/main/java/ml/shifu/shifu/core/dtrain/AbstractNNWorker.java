@@ -293,11 +293,13 @@ public abstract class AbstractNNWorker<VALUE extends Writable> extends
         double[] gradients = null;
         for(int i = 0; i < epochsPerIteration; i++) {
             gradients = this.gradient.computeGradients();
+            if(this.epochsPerIteration > 1) {
+                this.gradient.resetNetworkWeights();
+            }
         }
         // get train errors and test errors
         double trainError = this.gradient.getTrainError();
 
-        // TODO testing error computing time?? if too big, Run in parallel
         long start = System.currentTimeMillis();
         double testError = this.testingData.getRecordCount() > 0 ? (this.gradient.calculateError()) : this.gradient
                 .getTrainError();
