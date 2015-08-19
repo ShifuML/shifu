@@ -161,7 +161,7 @@ public class ParallelGradient {
             for(int i = 0; i < this.threadCount; i++) {
                 this.subGradients[i] = new SubGradient(this.getNetwork().clone(), this.training, this.trainLows[i],
                         this.trainHighs[i], this.testing, this.testLows[i], this.testHighs[i], this.flatSpot,
-                        this.errorFunction, this.isCrossOver);
+                        this.errorFunction, this.isCrossOver, this);
                 this.subGradients[i].setSeed(this.getSeed());
                 completionService.submit(this.subGradients[i]);
             }
@@ -266,6 +266,23 @@ public class ParallelGradient {
                 Thread.currentThread().interrupt();
             }
         }
+    }
+
+    /**
+     * Average weights for all sub gradients and then set to current network.
+     */
+    public void resetNetworkWeights() {
+        double[] weights = new double[this.network.getWeights().length];
+        for(int i = 0; i < subGradients.length; i++) {
+            double[] subWeights = subGradients[i].getNetwork().getWeights();
+            for(int j = 0; j < weights.length; j++) {
+                weights[j] += subWeights[j];
+            }
+        }
+        for(int j = 0; j < weights.length; j++) {
+            weights[j] /= subGradients.length;
+        }
+        this.network.setWeights(weights);
     }
 
 }

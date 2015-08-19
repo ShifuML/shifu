@@ -143,12 +143,16 @@ public class LogisticRegressionWorker
             throw new IllegalStateException("No any variables are selected, please try variable select step firstly.");
         }
         this.rng = new PoissonDistribution(1.0d);
-        double memoryFraction = Double.valueOf(context.getProps().getProperty("guagua.data.memoryFraction", "0.35"));
+        double memoryFraction = Double.valueOf(context.getProps().getProperty("guagua.data.memoryFraction", "0.6"));
+        LOG.info("Max heap memory: {}, fraction: {}", Runtime.getRuntime().maxMemory(), memoryFraction);
+        double crossValidationRate = this.modelConfig.getCrossValidationRate();
         String tmpFolder = context.getProps().getProperty("guagua.data.tmpfolder", "tmp");
-        this.testingData = new MemoryDiskList<Data>((long) (Runtime.getRuntime().maxMemory() * memoryFraction),
-                tmpFolder + File.separator + "test-" + System.currentTimeMillis());
-        this.trainingData = new MemoryDiskList<Data>((long) (Runtime.getRuntime().maxMemory() * memoryFraction),
-                tmpFolder + File.separator + "train-" + System.currentTimeMillis());
+        this.trainingData = new MemoryDiskList<Data>(
+                (long) (Runtime.getRuntime().maxMemory() * memoryFraction * (1 - crossValidationRate)), tmpFolder
+                        + File.separator + "train-" + System.currentTimeMillis());
+        this.testingData = new MemoryDiskList<Data>(
+                (long) (Runtime.getRuntime().maxMemory() * memoryFraction * crossValidationRate), tmpFolder
+                        + File.separator + "test-" + System.currentTimeMillis());
         // cannot find a good place to close these two data set, using Shutdown hook
         Runtime.getRuntime().addShutdownHook(new Thread(new Runnable() {
             @Override

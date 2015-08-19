@@ -467,6 +467,14 @@ public class ModelInspector {
             result = ValidateResult.mergeResult(result, tmpResult);
         }
 
+        if(train.getWorkerThreadCount() != null
+                && (train.getWorkerThreadCount() <= 0 || train.getWorkerThreadCount() >= 100)) {
+            ValidateResult tmpResult = new ValidateResult(true);
+            tmpResult.setStatus(false);
+            tmpResult.getCauses().add("'workerThreadCount' should be in (0, 100) if set.");
+            result = ValidateResult.mergeResult(result, tmpResult);
+        }
+
         if(train.getConvergenceThreshold() != null && train.getConvergenceThreshold().compareTo(0.0) < 0) {
             ValidateResult tmpResult = new ValidateResult(true);
             tmpResult.setStatus(false);

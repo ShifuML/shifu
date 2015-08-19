@@ -141,6 +141,8 @@ public class SubGradient implements Callable<double[]> {
 
     private final long testHigh;
 
+    private ParallelGradient owner;
+
     /**
      * Construct a gradient worker.
      * 
@@ -157,7 +159,7 @@ public class SubGradient implements Callable<double[]> {
      */
     public SubGradient(final FlatNetwork theNetwork, final MLDataSet theTraining, long trainLow, long trainHigh,
             final MLDataSet theTesting, long testLow, long testHigh, final double[] flatSpot, ErrorFunction ef,
-            boolean isCrossOver) {
+            boolean isCrossOver, ParallelGradient owner) {
         this.network = theNetwork;
         this.training = theTraining;
         this.trainLow = trainLow;
@@ -168,6 +170,7 @@ public class SubGradient implements Callable<double[]> {
         this.isCrossOver = isCrossOver;
         this.flatSpot = flatSpot;
         this.errorFunction = ef;
+        this.owner = owner;
 
         this.layerDelta = new double[getNetwork().getLayerOutput().length];
         this.gradients = new double[getNetwork().getWeights().length];
@@ -257,21 +260,25 @@ public class SubGradient implements Callable<double[]> {
             Arrays.fill(this.gradients, 0.0);
 
             for(long i = this.trainLow; i <= this.trainHigh; i++) {
-                if(this.isCrossOver) {
-                    // 3:1 to select testing data set, tmp hard code, TODO fix hard code issue,extract such logic to a
-                    // method
-                    if((i + seed) % 4 < 3) {
-                        this.training.getRecord(i, this.pair);
-                    } else {
-                        long testingSize = this.testing.getRecordCount();
-                        if(i < testingSize) {
-                            this.testing.getRecord(i, this.pair);
+                synchronized(this.owner) {
+                    if(this.isCrossOver) {
+                        // 3:1 to select testing data set, tmp hard code, TODO fix hard code issue,extract such logic to
+                        // a
+                        // method
+                        if((i + seed) % 4 < 3) {
+                            this.training.getRecord(i, this.pair);
                         } else {
-                            this.testing.getRecord(i % testingSize, this.pair);
+                            long testingSize = this.testing.getRecordCount();
+                            // it's ok to take data from all testing set
+                            if(i < testingSize) {
+                                this.testing.getRecord(i, this.pair);
+                            } else {
+                                this.testing.getRecord(i % testingSize, this.pair);
+                            }
                         }
+                    } else {
+                        this.training.getRecord(i, this.pair);
                     }
-                } else {
-                    this.training.getRecord(i, this.pair);
                 }
                 process(this.pair.getInputArray(), this.pair.getIdealArray(), pair.getSignificance());
             }
@@ -297,20 +304,23 @@ public class SubGradient implements Callable<double[]> {
         final MLDataPair pair = BasicMLDataPair.createPair(testing.getInputSize(), testing.getIdealSize());
 
         for(long i = testLow; i <= testHigh; i++) {
-            if(this.isCrossOver) {
-                // 3:1 to select testing data set, tmp hard code, TODO fix hard code issue
-                if((i + seed) % 4 < 3) {
-                    this.testing.getRecord(i, pair);
-                } else {
-                    long trainingSize = this.training.getRecordCount();
-                    if(i < trainingSize) {
-                        this.training.getRecord(i, pair);
+            synchronized(this.owner) {
+                if(this.isCrossOver) {
+                    // 3:1 to select testing data set, tmp hard code, TODO fix hard code issue
+                    if((i + seed) % 4 < 3) {
+                        this.testing.getRecord(i, pair);
                     } else {
-                        this.training.getRecord(i % trainingSize, pair);
+                        long trainingSize = this.training.getRecordCount();
+                        // it's ok to take data from all training set
+                        if(i < trainingSize) {
+                            this.training.getRecord(i, pair);
+                        } else {
+                            this.training.getRecord(i % trainingSize, pair);
+                        }
                     }
+                } else {
+                    this.testing.getRecord(i, pair);
                 }
-            } else {
-                this.testing.getRecord(i, pair);
             }
             this.getNetwork().compute(pair.getInputArray(), actual);
             errorCalculation.updateError(actual, pair.getIdealArray(), pair.getSignificance());
