@@ -140,9 +140,18 @@ public abstract class AbstractNNWorker<VALUE extends Writable> extends
     protected PoissonDistribution rng = null;
 
     /**
+     * PoissonDistribution which is used for up sampleing positive records.
+     */
+    protected PoissonDistribution upSampleRng = null;
+
+    /**
      * A instance from context properties which is from job configuration.
      */
     protected Properties props;
+
+    protected boolean isUpSampleEnabled() {
+        return this.upSampleRng != null;
+    }
 
     /**
      * Load all configurations for modelConfig and columnConfigList from source type.
@@ -203,6 +212,12 @@ public abstract class AbstractNNWorker<VALUE extends Writable> extends
         this.poissonSampler = Boolean.TRUE.toString().equalsIgnoreCase(
                 context.getProps().getProperty(NNConstants.NN_POISON_SAMPLER));
         this.rng = new PoissonDistribution(1.0d);
+        Double upSampleWeight = modelConfig.getTrain().getUpSampleWeight();
+        if(Double.compare(upSampleWeight, 1d) != 0) {
+            // set mean to upSampleWeight -1 and get sample + 1to make sure no zero sample value
+            LOG.info("Enable up sampling with weight {}.", upSampleWeight);
+            this.upSampleRng = new PoissonDistribution(upSampleWeight - 1);
+        }
         Integer epochsPerIterationInteger = this.modelConfig.getTrain().getEpochsPerIteration();
         this.epochsPerIteration = epochsPerIterationInteger == null ? 1 : epochsPerIterationInteger.intValue();
         LOG.info("epochsPerIteration in worker is :{}", epochsPerIteration);
@@ -232,7 +247,7 @@ public abstract class AbstractNNWorker<VALUE extends Writable> extends
             }));
         } else {
             LOG.info("NNWorker is loading data into memory.");
-            double memoryFraction = Double.valueOf(context.getProps().getProperty("guagua.data.memoryFraction", "0.6"));
+            double memoryFraction = Double.valueOf(context.getProps().getProperty("guagua.data.memoryFraction", "0.5"));
             long memoryStoreSize = (long) (Runtime.getRuntime().maxMemory() * memoryFraction);
             LOG.info("Max heap memory: {}, fraction: {}", Runtime.getRuntime().maxMemory(), memoryFraction);
             double crossValidationRate = this.modelConfig.getCrossValidationRate();

@@ -435,8 +435,13 @@
             }, {              
                 "name": "workerThreadCount",
                 "type": "number",
-                "directive": "input",
+                "directive":"input",
                 "defval": 4
+            }, {
+                "name": "upSampleWeight",
+                "type": "number",
+                "directive": "input",
+                "defval": 1.0
             }, {
                 "name": "algorithm",
                 "type": "text",
