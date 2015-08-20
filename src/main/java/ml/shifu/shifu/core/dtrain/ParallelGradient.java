@@ -24,6 +24,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
+import org.encog.mathutil.error.ErrorCalculation;
 import org.encog.ml.data.MLDataSet;
 import org.encog.neural.error.ErrorFunction;
 import org.encog.neural.flat.FlatNetwork;
@@ -114,6 +115,10 @@ public class ParallelGradient {
         this.trainLows = new long[threadCount];
         this.trainHighs = new long[threadCount];
         long stepCount = recordCount / threadCount;
+        if(recordCount % threadCount != 0) {
+            // move step count to append last gap to avoid last thread worse 2*stepCount-1
+            stepCount += (recordCount % threadCount) / stepCount;
+        }
         for(int i = 0; i < threadCount; i++) {
             this.trainLows[i] = i * stepCount;
             if(i != threadCount - 1) {
@@ -123,7 +128,6 @@ public class ParallelGradient {
             }
         }
         LOG.info("Train record count: {}", recordCount);
-
         LOG.info("Train lows: {}", Arrays.toString(trainLows));
         LOG.info("Train highs: {}", Arrays.toString(trainHighs));
 
@@ -133,6 +137,10 @@ public class ParallelGradient {
         this.testLows = new long[threadCount];
         this.testHighs = new long[threadCount];
         long testStepCount = testRecordCount / threadCount;
+        if(testRecordCount % threadCount != 0) {
+            // move step count to append last gap to avoid last thread worse 2*testStepCount-1
+            testStepCount += (testRecordCount % threadCount) / testStepCount;
+        }
         for(int i = 0; i < threadCount; i++) {
             this.testLows[i] = i * testStepCount;
             if(i != threadCount - 1) {
@@ -159,9 +167,13 @@ public class ParallelGradient {
         this.subGradients = new SubGradient[this.threadCount];
         try {
             for(int i = 0; i < this.threadCount; i++) {
-                this.subGradients[i] = new SubGradient(this.getNetwork().clone(), this.training, this.trainLows[i],
-                        this.trainHighs[i], this.testing, this.testLows[i], this.testHighs[i], this.flatSpot,
-                        this.errorFunction, this.isCrossOver, this);
+                if(this.subGradients[i] == null) {
+                    this.subGradients[i] = new SubGradient(this.network.clone(), this.training, this.trainLows[i],
+                            this.trainHighs[i], this.testing, this.testLows[i], this.testHighs[i], this.flatSpot,
+                            this.errorFunction, this.isCrossOver, this);
+                } else {
+                    this.subGradients[i].setNetwork(this.network.clone());
+                }
                 this.subGradients[i].setSeed(this.getSeed());
                 completionService.submit(this.subGradients[i]);
             }
@@ -233,22 +245,22 @@ public class ParallelGradient {
         ExecutorService threadPool = Executors.newFixedThreadPool(this.threadCount);
         CompletionService<Double> completionService = new ExecutorCompletionService<Double>(threadPool);
         try {
+            final ErrorCalculation ec = new ErrorCalculation();
             for(int i = 0; i < this.threadCount; i++) {
                 final SubGradient subGradient = this.subGradients[i];
                 completionService.submit(new Callable<Double>() {
 
                     @Override
                     public Double call() throws Exception {
-                        return subGradient.caculateTotalError();
+                        return subGradient.calculateError(ec);
                     }
                 });
             }
 
             int rCnt = 0;
-            double errorSum = 0d;
             while(rCnt < this.threadCount) {
                 try {
-                    errorSum += completionService.take().get();
+                    completionService.take().get();
                 } catch (ExecutionException e) {
                     throw new RuntimeException(e);
                 } catch (InterruptedException e) {
@@ -257,7 +269,7 @@ public class ParallelGradient {
                 rCnt += 1;
             }
 
-            return errorSum / (this.testing.getRecordCount() * this.getNetwork().getOutputCount());
+            return ec.calculate();
         } finally {
             threadPool.shutdownNow();
             try {

@@ -46,42 +46,42 @@ public class SubGradient implements Callable<double[]> {
     /**
      * The actual values from the neural network.
      */
-    private final double[] actual;
+    private double[] actual;
 
     /**
      * The deltas for each layer.
      */
-    private final double[] layerDelta;
+    private double[] layerDelta;
 
     /**
      * The neuron counts, per layer.
      */
-    private final int[] layerCounts;
+    private int[] layerCounts;
 
     /**
      * The feed counts, per layer.
      */
-    private final int[] layerFeedCounts;
+    private int[] layerFeedCounts;
 
     /**
      * The layer indexes.
      */
-    private final int[] layerIndex;
+    private int[] layerIndex;
 
     /**
      * The index to each layer's weights and thresholds.
      */
-    private final int[] weightIndex;
+    private int[] weightIndex;
 
     /**
      * The output from each layer.
      */
-    private final double[] layerOutput;
+    private double[] layerOutput;
 
     /**
      * The sums.
      */
-    private final double[] layerSums;
+    private double[] layerSums;
 
     /**
      * The gradients.
@@ -96,7 +96,7 @@ public class SubGradient implements Callable<double[]> {
     /**
      * The pair to use for training.
      */
-    private final MLDataPair pair;
+    private MLDataPair pair;
 
     /**
      * The training data.
@@ -172,19 +172,23 @@ public class SubGradient implements Callable<double[]> {
         this.errorFunction = ef;
         this.owner = owner;
 
-        this.layerDelta = new double[getNetwork().getLayerOutput().length];
-        this.gradients = new double[getNetwork().getWeights().length];
-        this.actual = new double[getNetwork().getOutputCount()];
+        this.initNetworkParams();
+    }
 
-        this.weights = getNetwork().getWeights();
-        this.layerIndex = getNetwork().getLayerIndex();
-        this.layerCounts = getNetwork().getLayerCounts();
-        this.weightIndex = getNetwork().getWeightIndex();
-        this.layerOutput = getNetwork().getLayerOutput();
-        this.layerSums = getNetwork().getLayerSums();
-        this.layerFeedCounts = getNetwork().getLayerFeedCounts();
+    private void initNetworkParams() {
+        this.layerDelta = new double[this.network.getLayerOutput().length];
+        this.gradients = new double[this.network.getWeights().length];
+        this.actual = new double[this.network.getOutputCount()];
 
-        this.pair = BasicMLDataPair.createPair(getNetwork().getInputCount(), getNetwork().getOutputCount());
+        this.weights = this.network.getWeights();
+        this.layerIndex = this.network.getLayerIndex();
+        this.layerCounts = this.network.getLayerCounts();
+        this.weightIndex = this.network.getWeightIndex();
+        this.layerOutput = this.network.getLayerOutput();
+        this.layerSums = this.network.getLayerSums();
+        this.layerFeedCounts = this.network.getLayerFeedCounts();
+
+        this.pair = BasicMLDataPair.createPair(this.network.getInputCount(), getNetwork().getOutputCount());
     }
 
     /**
@@ -297,9 +301,7 @@ public class SubGradient implements Callable<double[]> {
      *            The training set.
      * @return The error percentage.
      */
-    private final double calculateError() {
-        final ErrorCalculation errorCalculation = new ErrorCalculation();
-
+    public final double calculateError(ErrorCalculation ec) {
         final double[] actual = new double[this.getNetwork().getOutputCount()];
         final MLDataPair pair = BasicMLDataPair.createPair(testing.getInputSize(), testing.getIdealSize());
 
@@ -323,14 +325,13 @@ public class SubGradient implements Callable<double[]> {
                 }
             }
             this.getNetwork().compute(pair.getInputArray(), actual);
-            errorCalculation.updateError(actual, pair.getIdealArray(), pair.getSignificance());
+            synchronized(ec) {
+                ec.updateError(actual, pair.getIdealArray(), pair.getSignificance());
+            }
         }
-        return errorCalculation.calculate();
+        return -1;
     }
 
-    public final double caculateTotalError() {
-        return (testHigh - testLow + 1) * this.network.getOutputCount() * calculateError();
-    }
 
     public ErrorCalculation getErrorCalculation() {
         return errorCalculation;
@@ -367,7 +368,7 @@ public class SubGradient implements Callable<double[]> {
     }
 
     public void setParams(BasicNetwork network) {
-        this.network = network.getFlat();
+        this.setNetwork(network.getFlat());
         this.weights = network.getFlat().getWeights();
     }
 
@@ -392,6 +393,15 @@ public class SubGradient implements Callable<double[]> {
      */
     public void setSeed(long seed) {
         this.seed = seed;
+    }
+
+    /**
+     * @param network
+     *            the network to set
+     */
+    public void setNetwork(FlatNetwork network) {
+        this.network = network;
+        this.weights = this.network.getWeights();
     }
 
 }

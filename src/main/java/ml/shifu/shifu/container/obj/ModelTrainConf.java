@@ -56,6 +56,8 @@ public class ModelTrainConf {
 
     private Integer workerThreadCount = 4;
 
+    private Double upSampleWeight = Double.valueOf(1d);
+
     private String algorithm = "NN";
 
     private Map<String, Object> params;
@@ -269,6 +271,23 @@ public class ModelTrainConf {
      */
     public void setWorkerThreadCount(Integer workerThreadCount) {
         this.workerThreadCount = workerThreadCount;
+    }
+
+    /**
+     * @return the upSampleWeight
+     */
+    @JsonIgnore
+    public Double getUpSampleWeight() {
+        return upSampleWeight;
+    }
+
+    /**
+     * @param upSampleWeight
+     *            the upSampleWeight to set
+     */
+    @JsonIgnore
+    public void setUpSampleWeight(Double upSampleWeight) {
+        this.upSampleWeight = upSampleWeight;
     }
 
 }

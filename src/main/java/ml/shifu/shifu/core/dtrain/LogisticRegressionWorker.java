@@ -93,6 +93,11 @@ public class LogisticRegressionWorker
     private int count;
 
     /**
+     * sampled input record size.
+     */
+    protected long sampleCount;
+
+    /**
      * Testing data set.
      */
     private MemoryDiskList<Data> testingData;
@@ -127,6 +132,15 @@ public class LogisticRegressionWorker
      */
     protected PoissonDistribution rng = null;
 
+    /**
+     * PoissonDistribution which is used for up sampleing positive records.
+     */
+    protected PoissonDistribution upSampleRng = null;
+
+    protected boolean isUpSampleEnabled() {
+        return this.upSampleRng != null;
+    }
+
     @Override
     public void initRecordReader(GuaguaFileSplit fileSplit) throws IOException {
         this.setRecordReader(new GuaguaLineRecordReader(fileSplit));
@@ -143,7 +157,13 @@ public class LogisticRegressionWorker
             throw new IllegalStateException("No any variables are selected, please try variable select step firstly.");
         }
         this.rng = new PoissonDistribution(1.0d);
-        double memoryFraction = Double.valueOf(context.getProps().getProperty("guagua.data.memoryFraction", "0.6"));
+        Double upSampleWeight = modelConfig.getTrain().getUpSampleWeight();
+        if(Double.compare(upSampleWeight, 1d) != 0) {
+            // set mean to upSampleWeight -1 and get sample + 1to make sure no zero sample value
+            LOG.info("Enable up sampling with weight {}.", upSampleWeight);
+            this.upSampleRng = new PoissonDistribution(upSampleWeight - 1);
+        }
+        double memoryFraction = Double.valueOf(context.getProps().getProperty("guagua.data.memoryFraction", "0.5"));
         LOG.info("Max heap memory: {}, fraction: {}", Runtime.getRuntime().maxMemory(), memoryFraction);
         double crossValidationRate = this.modelConfig.getCrossValidationRate();
         String tmpFolder = context.getProps().getProperty("guagua.data.tmpfolder", "tmp");
@@ -313,6 +333,19 @@ public class LogisticRegressionWorker
                 }
             }
             index += 1;
+        }
+
+        // if fixInitialInput = true, we should use hashcode to sample.
+        long longBaggingSampleRate = Double.valueOf(baggingSampleRate * 100).longValue();
+        if(modelConfig.isFixInitialInput() && hashcode % 100 >= longBaggingSampleRate) {
+            return;
+        }
+
+        this.sampleCount += 1;
+
+        if(modelConfig.isBinaryClassification() && isUpSampleEnabled() && Double.compare(outputData[0], 1d) == 0) {
+            // Double.compare(ideal[0], 1d) == 0 means positive tags; sample + 1 to avoid sample count to 0
+            significance *= (this.upSampleRng.sample() + 1);
         }
         this.addDataPairToDataSet(hashcode, new Data(inputData, outputData, significance));
     }
