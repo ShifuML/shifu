@@ -1319,4 +1319,51 @@ public final class CommonUtils {
                         && columnConfig.getBinCategory() != null && columnConfig.getBinCategory().size() > 1) || (columnConfig
                         .isNumerical() && columnConfig.getBinBoundary() != null && columnConfig.getBinBoundary().size() > 1)));
     }
+
+    /**
+     * Return first line split string array. This is used to detect data schema.
+     */
+    public static String[] takeFirstLine(String dataSetRawPath, String headerDelimiter, SourceType source)
+            throws IOException {
+        if(dataSetRawPath == null || headerDelimiter == null || source == null) {
+            throw new IllegalArgumentException("Input parameters should not be null.");
+        }
+
+        String firstValidFile = null;
+        if(ShifuFileUtils.isDir(dataSetRawPath, source)) {
+            FileSystem fs = ShifuFileUtils.getFileSystemBySourceType(source);
+            FileStatus[] globStatus = fs.globStatus(new Path(dataSetRawPath), HIDDEN_FILE_FILTER);
+            if(globStatus == null || globStatus.length == 0) {
+                throw new IllegalArgumentException("No files founded in " + dataSetRawPath);
+            } else {
+                FileStatus[] listStatus = fs.listStatus(globStatus[0].getPath(), HIDDEN_FILE_FILTER);
+                if(listStatus == null || listStatus.length == 0) {
+                    throw new IllegalArgumentException("No files founded in " + globStatus[0].getPath());
+                }
+                firstValidFile = listStatus[0].getPath().toString();
+            }
+        } else {
+            firstValidFile = dataSetRawPath;
+        }
+
+        BufferedReader reader = null;
+        try {
+            reader = ShifuFileUtils.getReader(firstValidFile, source);
+            String firstLine = reader.readLine();
+            List<String> list = new ArrayList<String>();
+            for(String unit: Splitter.on(headerDelimiter).split(firstLine)) {
+                list.add(unit);
+            }
+            return list.toArray(new String[0]);
+        } finally {
+            IOUtils.closeQuietly(reader);
+        }
+    }
+
+    private static final PathFilter HIDDEN_FILE_FILTER = new PathFilter() {
+        public boolean accept(Path p) {
+            String name = p.getName();
+            return !name.startsWith("_") && !name.startsWith(".");
+        }
+    };
 }

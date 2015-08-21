@@ -116,7 +116,6 @@ public class Weight {
         }
 
         return 0.0;
-
     }
 
     private double updateWeightBP(int index, double[] weights, double[] gradients) {

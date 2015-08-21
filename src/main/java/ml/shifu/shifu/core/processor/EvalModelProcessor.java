@@ -262,7 +262,6 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
         paramsMap.put(Constants.SOURCE_TYPE, sourceType.toString());
         paramsMap.put("pathEvalRawData", evalConfig.getDataSet().getDataPath());
         paramsMap.put("pathEvalNormalized", pathFinder.getEvalNormalizedPath(evalConfig));
-        paramsMap.put("pathHeader", evalConfig.getDataSet().getHeaderPath());
         paramsMap.put("pathEvalScore", pathFinder.getEvalScorePath(evalConfig));
         paramsMap.put("pathEvalPerformance", pathFinder.getEvalPerformancePath(evalConfig));
         paramsMap.put("eval_set_name", evalConfig.getName());
@@ -273,7 +272,6 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
         if(modelConfig.isMultiClassification()) {
             pigScript = "scripts/EvalScore.pig";
         }
-
         try {
             PigExecutor.getExecutor().submitJob(modelConfig, pathFinder.getAbsolutePath(pigScript), paramsMap,
                     evalConfig.getDataSet().getSource());

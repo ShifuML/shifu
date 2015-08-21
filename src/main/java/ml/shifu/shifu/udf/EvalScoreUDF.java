@@ -66,8 +66,20 @@ public class EvalScoreUDF extends AbstractTrainerUDF<Tuple> {
         }
 
         // create model runner
-        this.headers = CommonUtils.getHeaders(evalConfig.getDataSet().getHeaderPath(), evalConfig.getDataSet()
-                .getHeaderDelimiter(), evalConfig.getDataSet().getSource());
+        if(StringUtils.isNotBlank(evalConfig.getDataSet().getHeaderPath())) {
+            this.headers = CommonUtils.getHeaders(evalConfig.getDataSet().getHeaderPath(), evalConfig.getDataSet()
+                    .getHeaderDelimiter(), evalConfig.getDataSet().getSource());
+        } else {
+            log.warn("No header path is provided, we will try to read first line and detect schema.");
+            log.warn("Schema in ColumnConfig.json are named as  index 0, 1, 2, 3 ...");
+            log.warn("Please make sure weight column and tag column are also taking index as name.");
+            String[] fields = CommonUtils.takeFirstLine(evalConfig.getDataSet().getDataPath(), evalConfig.getDataSet()
+                    .getHeaderDelimiter(), evalConfig.getDataSet().getSource());
+            this.headers = new String[fields.length];
+            for(int i = 0; i < fields.length; i++) {
+                this.headers[i] = i + "";
+            }
+        }
 
         List<BasicML> models = CommonUtils
                 .loadBasicModels(modelConfig, evalConfig, evalConfig.getDataSet().getSource());

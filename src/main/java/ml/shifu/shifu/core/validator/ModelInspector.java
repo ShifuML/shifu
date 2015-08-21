@@ -40,6 +40,8 @@ import ml.shifu.shifu.util.CommonUtils;
 
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang.StringUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * ModelInspector class is to do Safety Testing for model.
@@ -50,6 +52,8 @@ import org.apache.commons.lang.StringUtils;
  *                                                      prerequisite for each step
  */
 public class ModelInspector {
+
+    private static final Logger LOG = LoggerFactory.getLogger(ModelInspector.class);
 
     public static enum ModelStep {
         INIT, STATS, VARSELECT, NORMALIZE, TRAIN, POSTTRAIN, EVAL
@@ -321,9 +325,13 @@ public class ModelInspector {
 
         result = ValidateResult.mergeResult(result,
                 checkFile(dataSet.getDataPath(), dataSet.getSource(), prefix + "data path "));
-        result = ValidateResult.mergeResult(result,
-                checkFile(dataSet.getHeaderPath(), dataSet.getSource(), prefix + "header path "));
-
+        if(!StringUtils.isBlank(dataSet.getHeaderPath())) {
+            result = ValidateResult.mergeResult(result,
+                    checkFile(dataSet.getHeaderPath(), dataSet.getSource(), prefix + "header path "));
+        } else {
+            LOG.warn("Header file is set to empty, shifu will try to detect schema by first line of input and header "
+                    + "delimiter.");
+        }
         return result;
     }
 

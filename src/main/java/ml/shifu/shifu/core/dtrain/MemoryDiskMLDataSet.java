@@ -23,8 +23,6 @@ import ml.shifu.shifu.util.SizeEstimator;
 import org.encog.ml.data.MLData;
 import org.encog.ml.data.MLDataPair;
 import org.encog.ml.data.MLDataSet;
-import org.encog.ml.data.basic.BasicMLData;
-import org.encog.ml.data.basic.BasicMLDataPair;
 import org.encog.ml.data.basic.BasicMLDataSet;
 import org.encog.ml.data.buffer.BufferedMLDataSet;
 
@@ -387,67 +385,6 @@ public class MemoryDiskMLDataSet implements MLDataSet {
      */
     public long getDiskCount() {
         return diskCount;
-    }
-
-    public static void main(String[] args) {
-        double[] input = createInput(1);
-        double[] output = new double[] { 1d };
-
-        MLDataPair pair = new BasicMLDataPair(new BasicMLData(input), new BasicMLData(output));
-
-        MemoryDiskMLDataSet dataSet = new MemoryDiskMLDataSet(400, "a.txt");
-        dataSet.beginLoad(10, 1);
-        dataSet.add(pair);
-        MLDataPair pair2 = new BasicMLDataPair(new BasicMLData(createInput(2)), new BasicMLData(output));
-        MLDataPair pair3 = new BasicMLDataPair(new BasicMLData(createInput(3)), new BasicMLData(output));
-        MLDataPair pair4 = new BasicMLDataPair(new BasicMLData(createInput(4)), new BasicMLData(output));
-        MLDataPair pair5 = new BasicMLDataPair(new BasicMLData(createInput(5)), new BasicMLData(output));
-        MLDataPair pair6 = new BasicMLDataPair(new BasicMLData(createInput(6)), new BasicMLData(output));
-        dataSet.add(pair2);
-        dataSet.add(pair3);
-        dataSet.add(pair4);
-        dataSet.add(pair5);
-        dataSet.add(pair6);
-        dataSet.endLoad();
-        long recordCount = dataSet.getRecordCount();
-        for(long i = 0; i < recordCount; i++) {
-            long start = System.currentTimeMillis();
-            MLDataPair p = new BasicMLDataPair(new BasicMLData(createInput(6)), new BasicMLData(output));
-            dataSet.getRecord(i, p);
-            System.out.println((System.currentTimeMillis() - start) + " " + p);
-        }
-
-        System.out.println();
-
-        Iterator<MLDataPair> iterator = dataSet.iterator();
-        while(iterator.hasNext()) {
-            long start = System.currentTimeMillis();
-            MLDataPair next = iterator.next();
-            System.out.println((System.currentTimeMillis() - start) + " " + next);
-        }
-
-        System.out.println();
-
-        iterator = dataSet.iterator();
-        while(iterator.hasNext()) {
-            long start = System.currentTimeMillis();
-            MLDataPair next = iterator.next();
-            System.out.println((System.currentTimeMillis() - start) + " " + next);
-        }
-
-        dataSet.close();
-
-        long size = SizeEstimator.estimate(pair);
-        System.out.println(size);
-    }
-
-    private static double[] createInput(double d) {
-        double[] input = new double[10];
-        // Random r = new Random();
-        for(int i = 0; i < input.length; i++) {
-            input[i] = d;
-        }
-        return input;
     }
 
 }

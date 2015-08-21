@@ -163,7 +163,7 @@ public class LogisticRegressionWorker
             LOG.info("Enable up sampling with weight {}.", upSampleWeight);
             this.upSampleRng = new PoissonDistribution(upSampleWeight - 1);
         }
-        double memoryFraction = Double.valueOf(context.getProps().getProperty("guagua.data.memoryFraction", "0.5"));
+        double memoryFraction = Double.valueOf(context.getProps().getProperty("guagua.data.memoryFraction", "0.6"));
         LOG.info("Max heap memory: {}, fraction: {}", Runtime.getRuntime().maxMemory(), memoryFraction);
         double crossValidationRate = this.modelConfig.getCrossValidationRate();
         String tmpFolder = context.getProps().getProperty("guagua.data.tmpfolder", "tmp");
