@@ -114,6 +114,8 @@ public class ParallelGradient {
 
         this.trainLows = new long[threadCount];
         this.trainHighs = new long[threadCount];
+
+        // TODO not very good for such case: 80% in memory, 20% in disk, while all in disk are split into one thread
         long stepCount = recordCount / threadCount;
         if(recordCount % threadCount != 0) {
             // move step count to append last gap to avoid last thread worse 2*stepCount-1

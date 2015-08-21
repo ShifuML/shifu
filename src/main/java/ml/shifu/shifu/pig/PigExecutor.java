@@ -143,6 +143,7 @@ public class PigExecutor {
             pigParamsMap.putAll(paramsMap);
         }
 
+        log.debug("Pig submit parameters: {}", pigParamsMap);
         pigServer.registerScript(pigScriptPath, pigParamsMap);
     }
 

@@ -247,7 +247,7 @@ public abstract class AbstractNNWorker<VALUE extends Writable> extends
             }));
         } else {
             LOG.info("NNWorker is loading data into memory.");
-            double memoryFraction = Double.valueOf(context.getProps().getProperty("guagua.data.memoryFraction", "0.5"));
+            double memoryFraction = Double.valueOf(context.getProps().getProperty("guagua.data.memoryFraction", "0.6"));
             long memoryStoreSize = (long) (Runtime.getRuntime().maxMemory() * memoryFraction);
             LOG.info("Max heap memory: {}, fraction: {}", Runtime.getRuntime().maxMemory(), memoryFraction);
             double crossValidationRate = this.modelConfig.getCrossValidationRate();

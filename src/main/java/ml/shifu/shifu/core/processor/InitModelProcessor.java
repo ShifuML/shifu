@@ -379,15 +379,29 @@ public class InitModelProcessor extends BasicModelProcessor implements Processor
      * @throws IOException
      */
     private int initColumnConfigList() throws IOException {
-        String[] fields = CommonUtils.getHeaders(modelConfig.getHeaderPath(), modelConfig.getHeaderDelimiter(),
-                modelConfig.getDataSet().getSource());
+        String[] fields = null;
+        boolean isSchemaProvided = true;
+        if(StringUtils.isNotBlank(modelConfig.getHeaderPath())) {
+            fields = CommonUtils.getHeaders(modelConfig.getHeaderPath(), modelConfig.getHeaderDelimiter(), modelConfig
+                    .getDataSet().getSource());
+        } else {
+            log.warn("No header path is provided, we will try to read first line and detect schema.");
+            log.warn("Schema in ColumnConfig.json are named as  index 0, 1, 2, 3 ...");
+            log.warn("Please make sure weight column and tag column are also taking index as name.");
+            fields = CommonUtils.takeFirstLine(modelConfig.getDataSetRawPath(), modelConfig.getHeaderDelimiter(),
+                    modelConfig.getDataSet().getSource());
+            isSchemaProvided = false;
+        }
 
         columnConfigList = new ArrayList<ColumnConfig>();
         for(int i = 0; i < fields.length; i++) {
-            String varName = fields[i];
             ColumnConfig config = new ColumnConfig();
             config.setColumnNum(i);
-            config.setColumnName(varName);
+            if(isSchemaProvided) {
+                config.setColumnName(fields[i]);
+            } else {
+                config.setColumnName(i + "");
+            }
             columnConfigList.add(config);
         }
 

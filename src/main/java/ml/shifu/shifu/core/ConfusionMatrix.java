@@ -438,9 +438,9 @@ public class ConfusionMatrix {
         }
 
         log.info("Multiple classification confustion matrix:");
-        log.info("      {}", tags.toString());
+        log.info(String.format("%15s: %20s", "     ", tags.toString()));
         for(int i = 0; i < confusionMatrix.length; i++) {
-            log.info("{}: {}", tags.get(i), Arrays.toString(confusionMatrix[i]));
+            log.info(String.format("%15s: %20s", tags.get(i), Arrays.toString(confusionMatrix[i])));
         }
     }
 
