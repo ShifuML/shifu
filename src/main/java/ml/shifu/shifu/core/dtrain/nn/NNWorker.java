@@ -23,14 +23,13 @@ import ml.shifu.guagua.io.GuaguaFileSplit;
 import ml.shifu.guagua.util.NumberFormatUtils;
 import ml.shifu.guagua.worker.WorkerContext;
 import ml.shifu.shifu.container.obj.ColumnConfig;
-import ml.shifu.shifu.core.dtrain.CommonConstants;
+import ml.shifu.shifu.core.dtrain.dataset.BasicFloatMLData;
+import ml.shifu.shifu.core.dtrain.dataset.BasicFloatMLDataPair;
+import ml.shifu.shifu.core.dtrain.dataset.FloatMLDataPair;
 import ml.shifu.shifu.util.CommonUtils;
 
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Text;
-import org.encog.ml.data.MLDataPair;
-import org.encog.ml.data.basic.BasicMLData;
-import org.encog.ml.data.basic.BasicMLDataPair;
 
 /**
  * {@link NNWorker} is used to compute NN model according to splits assigned. The result will be sent to master for
@@ -60,29 +59,29 @@ public class NNWorker extends AbstractNNWorker<Text> {
             return;
         }
 
-        double[] inputs = new double[super.inputNodeCount];
-        double[] ideal = new double[super.outputNodeCount];
+        float[] inputs = new float[super.inputNodeCount];
+        float[] ideal = new float[super.outputNodeCount];
 
         if(super.isDry) {
             // dry train, use empty data.
-            addDataPairToDataSet(0, new BasicMLDataPair(new BasicMLData(inputs), new BasicMLData(ideal)));
+            addDataPairToDataSet(0, new BasicFloatMLDataPair(new BasicFloatMLData(inputs), new BasicFloatMLData(ideal)));
             return;
         }
 
         long hashcode = 0;
-        double significance = CommonConstants.DEFAULT_SIGNIFICANCE_VALUE;
+        float significance = 1f;
         // use guava Splitter to iterate only once
         // use NNConstants.NN_DEFAULT_COLUMN_SEPARATOR to replace getModelConfig().getDataSetDelimiter(), super follows
         // the function in akka mode.
         int index = 0, inputsIndex = 0, outputIndex = 0;
         for(String input: DEFAULT_SPLITTER.split(currentValue.getWritable().toString())) {
-            double doubleValue = NumberFormatUtils.getDouble(input.trim(), 0.0d);
+            float floatValue = NumberFormatUtils.getFloat(input.trim(), 0f);
             // no idea about why NaN in input data, we should process it as missing value TODO , according to norm type
-            if(Double.isNaN(doubleValue)) {
-                doubleValue = 0d;
+            if(Float.isNaN(floatValue) || Double.isNaN(floatValue)) {
+                floatValue = 0f;
             }
             if(index == super.columnConfigList.size()) {
-                significance = NumberFormatUtils.getDouble(input, CommonConstants.DEFAULT_SIGNIFICANCE_VALUE);
+                significance = NumberFormatUtils.getFloat(input, 1f);
                 // the last field is significance, break here
                 break;
             } else {
@@ -90,27 +89,27 @@ public class NNWorker extends AbstractNNWorker<Text> {
 
                 if(columnConfig != null && columnConfig.isTarget()) {
                     if(modelConfig.isBinaryClassification()) {
-                        ideal[outputIndex++] = doubleValue;
+                        ideal[outputIndex++] = floatValue;
                     } else {
-                        int ideaIndex = (int) doubleValue;
-                        ideal[ideaIndex] = 1d;
+                        int ideaIndex = (int) floatValue;
+                        ideal[ideaIndex] = 1f;
                     }
                 } else {
                     if(super.inputNodeCount == super.candidateCount) {
                         // no variable selected, good candidate but not meta and not target choosed
                         if(!columnConfig.isMeta() && !columnConfig.isTarget()
                                 && CommonUtils.isGoodCandidate(columnConfig)) {
-                            inputs[inputsIndex++] = doubleValue;
-                            hashcode = hashcode * 31 + Double.valueOf(doubleValue).hashCode();
+                            inputs[inputsIndex++] = floatValue;
+                            hashcode = hashcode * 31 + Double.valueOf(floatValue).hashCode();
                         }
                     } else {
                         // final select some variables but meta and target are not included
                         if(columnConfig != null && !columnConfig.isMeta() && !columnConfig.isTarget()
                                 && columnConfig.isFinalSelect()) {
-                            inputs[inputsIndex++] = doubleValue;
+                            inputs[inputsIndex++] = floatValue;
                             // only fixInitialInput=true, hashcode is effective. Remove Arrays.hashcode to avoid one
                             // iteration for the input columns. Last weight column should be excluded.
-                            hashcode = hashcode * 31 + Double.valueOf(doubleValue).hashCode();
+                            hashcode = hashcode * 31 + Double.valueOf(floatValue).hashCode();
                         }
                     }
                 }
@@ -126,7 +125,7 @@ public class NNWorker extends AbstractNNWorker<Text> {
 
         super.sampleCount += 1;
 
-        MLDataPair pair = new BasicMLDataPair(new BasicMLData(inputs), new BasicMLData(ideal));
+        FloatMLDataPair pair = new BasicFloatMLDataPair(new BasicFloatMLData(inputs), new BasicFloatMLData(ideal));
 
         if(modelConfig.isBinaryClassification() && isUpSampleEnabled() && Double.compare(ideal[0], 1d) == 0) {
             // Double.compare(ideal[0], 1d) == 0 means positive tags; sample + 1 to avoid sample count to 0

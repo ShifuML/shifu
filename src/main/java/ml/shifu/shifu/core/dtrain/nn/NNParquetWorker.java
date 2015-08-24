@@ -23,7 +23,9 @@ import ml.shifu.guagua.io.GuaguaFileSplit;
 import ml.shifu.guagua.util.NumberFormatUtils;
 import ml.shifu.guagua.worker.WorkerContext;
 import ml.shifu.shifu.container.obj.ColumnConfig;
-import ml.shifu.shifu.core.dtrain.CommonConstants;
+import ml.shifu.shifu.core.dtrain.dataset.BasicFloatMLData;
+import ml.shifu.shifu.core.dtrain.dataset.BasicFloatMLDataPair;
+import ml.shifu.shifu.core.dtrain.dataset.FloatMLDataPair;
 import ml.shifu.shifu.guagua.GuaguaParquetRecordReader;
 import ml.shifu.shifu.util.CommonUtils;
 
@@ -33,9 +35,6 @@ import org.apache.pig.LoadPushDown.RequiredFieldList;
 import org.apache.pig.backend.executionengine.ExecException;
 import org.apache.pig.data.Tuple;
 import org.apache.pig.impl.util.ObjectSerializer;
-import org.encog.ml.data.MLDataPair;
-import org.encog.ml.data.basic.BasicMLData;
-import org.encog.ml.data.basic.BasicMLDataPair;
 
 /**
  * {@link NNParquetWorker} is used to compute NN model according to splits assigned. The result will be sent to master
@@ -72,17 +71,17 @@ public class NNParquetWorker extends AbstractNNWorker<Tuple> {
             return;
         }
 
-        double[] inputs = new double[super.inputNodeCount];
-        double[] ideal = new double[super.outputNodeCount];
+        float[] inputs = new float[super.inputNodeCount];
+        float[] ideal = new float[super.outputNodeCount];
 
         if(super.isDry) {
             // dry train, use empty data.
-            addDataPairToDataSet(0, new BasicMLDataPair(new BasicMLData(inputs), new BasicMLData(ideal)));
+            addDataPairToDataSet(0, new BasicFloatMLDataPair(new BasicFloatMLData(inputs), new BasicFloatMLData(ideal)));
             return;
         }
 
         long hashcode = 0;
-        double significance = CommonConstants.DEFAULT_SIGNIFICANCE_VALUE;
+        float significance = 1f;
         // use guava Splitter to iterate only once
         // use NNConstants.NN_DEFAULT_COLUMN_SEPARATOR to replace getModelConfig().getDataSetDelimiter(), super follows
         // the function in akka mode.
@@ -98,55 +97,53 @@ public class NNParquetWorker extends AbstractNNWorker<Tuple> {
             } catch (ExecException e) {
                 throw new GuaguaRuntimeException(e);
             }
-            double doubleValue = 0d;
+            float floatValue = 0f;
             if(element != null) {
                 if(element instanceof Double) {
-                    doubleValue = (Double) element;
+                    floatValue = (Float) element;
                 } else {
-                    doubleValue = NumberFormatUtils.getDouble(element.toString().trim(), 0d);
+                    floatValue = NumberFormatUtils.getFloat(element.toString().trim(), 0f);
                 }
             }
             // no idea about why NaN in input data, we should process it as missing value TODO , according to norm type
-            if(Double.isNaN(doubleValue)) {
-                doubleValue = 0d;
+            if(Double.isNaN(floatValue)) {
+                floatValue = 0f;
             }
             if(index == (super.inputNodeCount + super.outputNodeCount)) {
-                if(element != null && element instanceof Double) {
-                    significance = (Double) element;
+                if(element != null && element instanceof Float) {
+                    significance = (Float) element;
                 } else {
-                    significance = NumberFormatUtils.getDouble(element.toString().trim(),
-                            CommonConstants.DEFAULT_SIGNIFICANCE_VALUE);;
+                    significance = NumberFormatUtils.getFloat(element.toString().trim(), 1f);;
                 }
                 // break here if we reach weight column which is last column
                 break;
             } else {
                 int columnIndex = requiredFieldList.getFields().get(index).getIndex();
                 if(columnIndex >= super.columnConfigList.size()) {
-                    if(element != null && element instanceof Double) {
-                        significance = (Double) element;
+                    if(element != null && element instanceof Float) {
+                        significance = (Float) element;
                     } else {
-                        significance = NumberFormatUtils.getDouble(element.toString().trim(),
-                                CommonConstants.DEFAULT_SIGNIFICANCE_VALUE);;
+                        significance = NumberFormatUtils.getFloat(element.toString().trim(), 1f);;
                     }
                     break;
                 } else {
                     ColumnConfig columnConfig = super.columnConfigList.get(columnIndex);
                     if(columnConfig != null && columnConfig.isTarget()) {
-                        ideal[outputIndex++] = doubleValue;
+                        ideal[outputIndex++] = floatValue;
                     } else {
                         if(super.inputNodeCount == super.candidateCount) {
                             // no variable selected, good candidate but not meta and not target choosed
                             if(columnConfig != null && !columnConfig.isMeta() && !columnConfig.isTarget()
                                     && CommonUtils.isGoodCandidate(columnConfig)) {
-                                inputs[inputsIndex++] = doubleValue;
-                                hashcode = hashcode * 31 + Double.valueOf(doubleValue).hashCode();
+                                inputs[inputsIndex++] = floatValue;
+                                hashcode = hashcode * 31 + Double.valueOf(floatValue).hashCode();
                             }
                         } else {
                             // only choose variable final select and not meta, not target
                             if(columnConfig != null && !columnConfig.isMeta() && !columnConfig.isTarget()
                                     && columnConfig.isFinalSelect()) {
-                                inputs[inputsIndex++] = doubleValue;
-                                hashcode = hashcode * 31 + Double.valueOf(doubleValue).hashCode();
+                                inputs[inputsIndex++] = floatValue;
+                                hashcode = hashcode * 31 + Double.valueOf(floatValue).hashCode();
                             }
                         }
 
@@ -164,7 +161,7 @@ public class NNParquetWorker extends AbstractNNWorker<Tuple> {
 
         super.sampleCount += 1;
 
-        MLDataPair pair = new BasicMLDataPair(new BasicMLData(inputs), new BasicMLData(ideal));
+        FloatMLDataPair pair = new BasicFloatMLDataPair(new BasicFloatMLData(inputs), new BasicFloatMLData(ideal));
         if(modelConfig.isBinaryClassification() && isUpSampleEnabled() && Double.compare(ideal[0], 1d) == 0) {
             // Double.compare(ideal[0], 1d) == 0 means positive tags; sample + 1 to avoid sample count to 0
             pair.setSignificance(significance * (super.upSampleRng.sample() + 1));

@@ -46,6 +46,7 @@ import ml.shifu.shifu.container.obj.ModelTrainConf.ALGORITHM;
 import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
 import ml.shifu.shifu.core.LR;
 import ml.shifu.shifu.core.Normalizer;
+import ml.shifu.shifu.core.dtrain.dataset.PersistBasicFloatNetwork;
 import ml.shifu.shifu.core.dtrain.lr.LogisticRegressionContants;
 import ml.shifu.shifu.exception.ShifuErrorCode;
 import ml.shifu.shifu.exception.ShifuException;
@@ -69,6 +70,7 @@ import org.encog.ml.data.MLDataPair;
 import org.encog.ml.data.basic.BasicMLData;
 import org.encog.ml.data.basic.BasicMLDataPair;
 import org.encog.persist.EncogDirectoryPersistence;
+import org.encog.persist.PersistorRegistry;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -544,6 +546,9 @@ public final class CommonUtils {
      */
     public static List<BasicML> loadBasicModels(ModelConfig modelConfig, EvalConfig evalConfig, SourceType sourceType)
             throws IOException {
+        // we have to register PersistBasicFloatNetwork for loading such models
+        PersistorRegistry.getInstance().add(new PersistBasicFloatNetwork());
+
         FileSystem fs = ShifuFileUtils.getFileSystemBySourceType(sourceType);
 
         List<FileStatus> listStatus = findModels(modelConfig, evalConfig, sourceType);
@@ -654,6 +659,8 @@ public final class CommonUtils {
         if(modelsPath == null || alg == null || ALGORITHM.DT.equals(alg)) {
             throw new IllegalArgumentException("The model path shouldn't be null");
         }
+        // we have to register PersistBasicFloatNetwork for loading such models
+        PersistorRegistry.getInstance().add(new PersistBasicFloatNetwork());
 
         File modelsPathDir = new File(modelsPath);
 

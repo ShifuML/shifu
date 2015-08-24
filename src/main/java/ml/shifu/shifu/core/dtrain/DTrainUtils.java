@@ -20,6 +20,8 @@ import java.util.List;
 
 import ml.shifu.guagua.GuaguaRuntimeException;
 import ml.shifu.shifu.container.obj.ColumnConfig;
+import ml.shifu.shifu.core.dtrain.dataset.BasicFloatNetwork;
+import ml.shifu.shifu.core.dtrain.dataset.FloatNeuralStructure;
 import ml.shifu.shifu.core.dtrain.nn.NNConstants;
 import ml.shifu.shifu.util.CommonUtils;
 import ml.shifu.shifu.util.Constants;
@@ -38,6 +40,7 @@ import org.encog.engine.network.activation.ActivationTANH;
 import org.encog.mathutil.randomize.NguyenWidrowRandomizer;
 import org.encog.neural.networks.BasicNetwork;
 import org.encog.neural.networks.layers.BasicLayer;
+import org.encog.neural.networks.structure.NeuralStructure;
 import org.encog.persist.EncogDirectoryPersistence;
 
 /**
@@ -178,7 +181,7 @@ public final class DTrainUtils {
      */
     public static BasicNetwork generateNetwork(int in, int out, int numLayers, List<String> actFunc,
             List<Integer> hiddenNodeList, boolean isRandomizeWeights) {
-        final BasicNetwork network = new BasicNetwork();
+        final BasicFloatNetwork network = new BasicFloatNetwork();
 
         network.addLayer(new BasicLayer(new ActivationLinear(), true, in));
 
@@ -204,7 +207,12 @@ public final class DTrainUtils {
 
         network.addLayer(new BasicLayer(new ActivationSigmoid(), false, out));
 
-        network.getStructure().finalizeStructure();
+        NeuralStructure structure = network.getStructure();
+        if(network.getStructure() instanceof FloatNeuralStructure) {
+            ((FloatNeuralStructure) structure).finalizeStruct();
+        } else {
+            structure.finalizeStructure();
+        }
         if(isRandomizeWeights) {
             network.reset();
         }

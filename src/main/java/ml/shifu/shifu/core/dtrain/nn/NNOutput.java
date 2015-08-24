@@ -28,6 +28,7 @@ import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
 import ml.shifu.shifu.core.alg.NNTrainer;
 import ml.shifu.shifu.core.dtrain.CommonConstants;
 import ml.shifu.shifu.core.dtrain.DTrainUtils;
+import ml.shifu.shifu.core.dtrain.dataset.PersistBasicFloatNetwork;
 import ml.shifu.shifu.util.CommonUtils;
 
 import org.apache.hadoop.conf.Configuration;
@@ -37,6 +38,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.IOUtils;
 import org.encog.neural.networks.BasicNetwork;
 import org.encog.persist.EncogDirectoryPersistence;
+import org.encog.persist.PersistorRegistry;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -222,7 +224,9 @@ public class NNOutput extends BasicMasterInterceptor<NNParams, NNParams> {
         List<String> actFunc = (List<String>) getModelConfig().getParams().get(NNTrainer.ACTIVATION_FUNC);
         List<Integer> hiddenNodeList = (List<Integer>) getModelConfig().getParams().get(NNTrainer.NUM_HIDDEN_NODES);
 
-        this.network = DTrainUtils.generateNetwork(inputNodeCount, outputNodeCount, numLayers, actFunc, hiddenNodeList);
+        this.network = DTrainUtils.generateNetwork(inputNodeCount, outputNodeCount, numLayers, actFunc, hiddenNodeList,
+                false);
+        PersistorRegistry.getInstance().add(new PersistBasicFloatNetwork());
     }
 
     private void writeModelWeightsToFileSystem(double[] weights, Path out) {
@@ -232,7 +236,7 @@ public class NNOutput extends BasicMasterInterceptor<NNParams, NNParams> {
             LOG.info("Writing results to {}", out);
             this.network.getFlat().setWeights(weights);
             if(out != null) {
-                EncogDirectoryPersistence.saveObject(fos, this.network);
+                EncogDirectoryPersistence.saveObject(fos, (BasicNetwork) this.network);
             }
         } catch (IOException e) {
             LOG.error("Error in writing output.", e);

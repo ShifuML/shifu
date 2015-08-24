@@ -18,14 +18,16 @@ package ml.shifu.shifu.core.dtrain.nn;
 import java.util.Arrays;
 import java.util.concurrent.Callable;
 
+import ml.shifu.shifu.core.dtrain.dataset.BasicFloatMLDataPair;
+import ml.shifu.shifu.core.dtrain.dataset.BasicFloatNetwork;
+import ml.shifu.shifu.core.dtrain.dataset.FloatFlatNetwork;
+import ml.shifu.shifu.core.dtrain.dataset.FloatMLDataPair;
+import ml.shifu.shifu.core.dtrain.dataset.FloatMLDataSet;
+
 import org.encog.engine.network.activation.ActivationFunction;
 import org.encog.mathutil.error.ErrorCalculation;
-import org.encog.ml.data.MLDataPair;
-import org.encog.ml.data.MLDataSet;
-import org.encog.ml.data.basic.BasicMLDataPair;
 import org.encog.neural.error.ErrorFunction;
 import org.encog.neural.flat.FlatNetwork;
-import org.encog.neural.networks.BasicNetwork;
 
 /**
  * {@link SubGradient} is copied from Encog framework. The reason is that we original Gradient don't pop up
@@ -36,7 +38,7 @@ public class SubGradient implements Callable<double[]> {
     /**
      * The network to train.
      */
-    private FlatNetwork network;
+    private FloatFlatNetwork network;
 
     /**
      * The error calculation method.
@@ -96,17 +98,17 @@ public class SubGradient implements Callable<double[]> {
     /**
      * The pair to use for training.
      */
-    private MLDataPair pair;
+    private FloatMLDataPair pair;
 
     /**
      * The training data.
      */
-    private final MLDataSet training;
+    private final FloatMLDataSet training;
 
     /**
      * The testing data, test data set here is used for training and testing cross over.
      */
-    private MLDataSet testing;
+    private FloatMLDataSet testing;
 
     /**
      * Whether to replace training and testing elements.
@@ -143,6 +145,8 @@ public class SubGradient implements Callable<double[]> {
 
     private ParallelGradient owner;
 
+    private double[] doubleIdeal;
+
     /**
      * Construct a gradient worker.
      * 
@@ -157,8 +161,8 @@ public class SubGradient implements Callable<double[]> {
      * @param theHigh
      *            The high index to use in the training data.
      */
-    public SubGradient(final FlatNetwork theNetwork, final MLDataSet theTraining, long trainLow, long trainHigh,
-            final MLDataSet theTesting, long testLow, long testHigh, final double[] flatSpot, ErrorFunction ef,
+    public SubGradient(final FloatFlatNetwork theNetwork, final FloatMLDataSet theTraining, long trainLow, long trainHigh,
+            final FloatMLDataSet theTesting, long testLow, long testHigh, final double[] flatSpot, ErrorFunction ef,
             boolean isCrossOver, ParallelGradient owner) {
         this.network = theNetwork;
         this.training = theTraining;
@@ -188,7 +192,7 @@ public class SubGradient implements Callable<double[]> {
         this.layerSums = this.network.getLayerSums();
         this.layerFeedCounts = this.network.getLayerFeedCounts();
 
-        this.pair = BasicMLDataPair.createPair(this.network.getInputCount(), getNetwork().getOutputCount());
+        this.pair = BasicFloatMLDataPair.createPair(this.network.getInputCount(), getNetwork().getOutputCount());
     }
 
     /**
@@ -201,12 +205,19 @@ public class SubGradient implements Callable<double[]> {
      * @param s
      *            The significance.
      */
-    private void process(final double[] input, final double[] ideal, double s) {
-        this.getNetwork().compute(input, this.actual);
+    private void process(final float[] input, final float[] ideal, double s) {
+        ((FloatFlatNetwork) this.getNetwork()).compute(input, this.actual);
 
-        this.errorCalculation.updateError(this.actual, ideal, s);
+        // have to copy float ideal array to double array, since ideal array is small, it's ok to copy an array
+        if(doubleIdeal == null) {
+            doubleIdeal = new double[ideal.length];
+        }
+        for(int i = 0; i < doubleIdeal.length; i++) {
+            doubleIdeal[i] = ideal[i];
+        }
 
-        this.errorFunction.calculateError(ideal, actual, this.getLayerDelta());
+        this.errorCalculation.updateError(this.actual, doubleIdeal, s);
+        this.errorFunction.calculateError(doubleIdeal, actual, this.getLayerDelta());
 
         for(int i = 0; i < this.actual.length; i++) {
             this.getLayerDelta()[i] = ((this.getNetwork().getActivationFunctions()[0].derivativeFunction(
@@ -303,7 +314,7 @@ public class SubGradient implements Callable<double[]> {
      */
     public final double calculateError(ErrorCalculation ec) {
         final double[] actual = new double[this.getNetwork().getOutputCount()];
-        final MLDataPair pair = BasicMLDataPair.createPair(testing.getInputSize(), testing.getIdealSize());
+        final FloatMLDataPair pair = BasicFloatMLDataPair.createPair(testing.getInputSize(), testing.getIdealSize());
 
         for(long i = testLow; i <= testHigh; i++) {
             synchronized(this.owner) {
@@ -324,14 +335,21 @@ public class SubGradient implements Callable<double[]> {
                     this.testing.getRecord(i, pair);
                 }
             }
-            this.getNetwork().compute(pair.getInputArray(), actual);
+            ((FloatFlatNetwork) this.getNetwork()).compute(pair.getInputArray(), actual);
+            // copy float idea array to double for api compatiability
+            if(doubleIdeal == null) {
+                doubleIdeal = new double[pair.getIdealArray().length];
+            }
+            for(int j = 0; j < doubleIdeal.length; j++) {
+                doubleIdeal[j] = pair.getIdealArray()[j];
+            }
+
             synchronized(ec) {
-                ec.updateError(actual, pair.getIdealArray(), pair.getSignificance());
+                ec.updateError(actual, doubleIdeal, pair.getSignificance());
             }
         }
         return -1;
     }
-
 
     public ErrorCalculation getErrorCalculation() {
         return errorCalculation;
@@ -367,8 +385,8 @@ public class SubGradient implements Callable<double[]> {
         this.getNetwork().setWeights(weights);
     }
 
-    public void setParams(BasicNetwork network) {
-        this.setNetwork(network.getFlat());
+    public void setParams(BasicFloatNetwork network) {
+        this.setNetwork((FloatFlatNetwork)network.getFlat());
         this.weights = network.getFlat().getWeights();
     }
 
@@ -399,7 +417,7 @@ public class SubGradient implements Callable<double[]> {
      * @param network
      *            the network to set
      */
-    public void setNetwork(FlatNetwork network) {
+    public void setNetwork(FloatFlatNetwork network) {
         this.network = network;
         this.weights = this.network.getWeights();
     }

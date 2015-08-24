@@ -24,8 +24,10 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
+import ml.shifu.shifu.core.dtrain.dataset.FloatFlatNetwork;
+import ml.shifu.shifu.core.dtrain.dataset.FloatMLDataSet;
+
 import org.encog.mathutil.error.ErrorCalculation;
-import org.encog.ml.data.MLDataSet;
 import org.encog.neural.error.ErrorFunction;
 import org.encog.neural.flat.FlatNetwork;
 import org.slf4j.Logger;
@@ -42,17 +44,17 @@ public class ParallelGradient {
     /**
      * The network to train.
      */
-    private FlatNetwork network;
+    private FloatFlatNetwork network;
 
     /**
      * The training data.
      */
-    private final MLDataSet training;
+    private final FloatMLDataSet training;
 
     /**
      * The testing data, test data set here is used for training and testing cross over.
      */
-    private final MLDataSet testing;
+    private final FloatMLDataSet testing;
 
     /**
      * Whether to replace training and testing elements.
@@ -110,7 +112,7 @@ public class ParallelGradient {
      * @param theHigh
      *            The high index to use in the training data.
      */
-    public ParallelGradient(final FlatNetwork theNetwork, final MLDataSet theTraining, final MLDataSet theTesting,
+    public ParallelGradient(final FloatFlatNetwork theNetwork, final FloatMLDataSet theTraining, final FloatMLDataSet theTesting,
             final double[] flatSpot, ErrorFunction ef, boolean isCrossOver, int threadCount) {
         assert threadCount > 0 && threadCount < 33;
         this.threadCount = threadCount;
