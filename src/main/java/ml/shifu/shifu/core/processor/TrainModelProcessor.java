@@ -39,18 +39,18 @@ import ml.shifu.shifu.core.alg.LogisticRegressionTrainer;
 import ml.shifu.shifu.core.alg.NNTrainer;
 import ml.shifu.shifu.core.alg.SVMTrainer;
 import ml.shifu.shifu.core.dtrain.CommonConstants;
-import ml.shifu.shifu.core.dtrain.LogisticRegressionContants;
-import ml.shifu.shifu.core.dtrain.LogisticRegressionMaster;
-import ml.shifu.shifu.core.dtrain.LogisticRegressionOutput;
-import ml.shifu.shifu.core.dtrain.LogisticRegressionParams;
-import ml.shifu.shifu.core.dtrain.LogisticRegressionWorker;
-import ml.shifu.shifu.core.dtrain.NNConstants;
-import ml.shifu.shifu.core.dtrain.NNMaster;
-import ml.shifu.shifu.core.dtrain.NNOutput;
-import ml.shifu.shifu.core.dtrain.NNParams;
 import ml.shifu.shifu.core.dtrain.DTrainUtils;
-import ml.shifu.shifu.core.dtrain.NNParquetWorker;
-import ml.shifu.shifu.core.dtrain.NNWorker;
+import ml.shifu.shifu.core.dtrain.lr.LogisticRegressionContants;
+import ml.shifu.shifu.core.dtrain.lr.LogisticRegressionMaster;
+import ml.shifu.shifu.core.dtrain.lr.LogisticRegressionOutput;
+import ml.shifu.shifu.core.dtrain.lr.LogisticRegressionParams;
+import ml.shifu.shifu.core.dtrain.lr.LogisticRegressionWorker;
+import ml.shifu.shifu.core.dtrain.nn.NNConstants;
+import ml.shifu.shifu.core.dtrain.nn.NNMaster;
+import ml.shifu.shifu.core.dtrain.nn.NNOutput;
+import ml.shifu.shifu.core.dtrain.nn.NNParams;
+import ml.shifu.shifu.core.dtrain.nn.NNParquetWorker;
+import ml.shifu.shifu.core.dtrain.nn.NNWorker;
 import ml.shifu.shifu.core.validator.ModelInspector.ModelStep;
 import ml.shifu.shifu.exception.ShifuErrorCode;
 import ml.shifu.shifu.exception.ShifuException;
@@ -655,9 +655,9 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
         // special tuning parameters for shifu, 0.99 means each iteation master wait for 99% workers and then can go to
         // next iteration.
         args.add(String.format(CommonConstants.MAPREDUCE_PARAM_FORMAT, GuaguaConstants.GUAGUA_MIN_WORKERS_RATIO, 0.99));
-        // 10 seconds if waiting over 10, consider 99% workers; these two can be overrided in shifuconfig
+        // 1 seconds if waiting over 10, consider 99% workers; these two can be overrided in shifuconfig
         args.add(String.format(CommonConstants.MAPREDUCE_PARAM_FORMAT, GuaguaConstants.GUAGUA_MIN_WORKERS_TIMEOUT,
-                10 * 1000L));
+                1 * 1000L));
     }
 
     private void copyModelToLocal(String modelName, Path modelPath, SourceType sourceType) throws IOException {

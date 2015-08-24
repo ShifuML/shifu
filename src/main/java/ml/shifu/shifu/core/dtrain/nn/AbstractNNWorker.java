@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package ml.shifu.shifu.core.dtrain;
+package ml.shifu.shifu.core.dtrain.nn;
 
 import java.io.File;
 import java.io.IOException;
@@ -24,10 +24,12 @@ import ml.shifu.guagua.GuaguaRuntimeException;
 import ml.shifu.guagua.hadoop.io.GuaguaWritableAdapter;
 import ml.shifu.guagua.worker.AbstractWorkerComputable;
 import ml.shifu.guagua.worker.WorkerContext;
+import ml.shifu.guagua.worker.WorkerContext.WorkerCompletionCallBack;
 import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.container.obj.ModelConfig;
 import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
 import ml.shifu.shifu.core.alg.NNTrainer;
+import ml.shifu.shifu.core.dtrain.DTrainUtils;
 import ml.shifu.shifu.util.CommonUtils;
 
 import org.apache.commons.lang.math.RandomUtils;
@@ -276,25 +278,32 @@ public abstract class AbstractNNWorker<VALUE extends Writable> extends
     }
 
     @Override
-    public NNParams doCompute(WorkerContext<NNParams, NNParams> workerContext) {
+    public NNParams doCompute(WorkerContext<NNParams, NNParams> context) {
         // For dry option, return empty result.
         // For first iteration, we don't do anything, just wait for master to update weights in next iteration. This
         // make sure all workers in the 1st iteration to get the same weights.
-        if(this.isDry || workerContext.isFirstIteration()) {
-            return buildEmptyNNParams(workerContext);
+        if(this.isDry || context.isFirstIteration()) {
+            return buildEmptyNNParams(context);
         }
 
-        if(workerContext.getLastMasterResult() == null) {
+        if(context.getLastMasterResult() == null) {
             // This may not happen since master will set initialization weights firstly.
             LOG.warn("Master result of last iteration is null.");
             return null;
         }
-        LOG.debug("Set current model with params {}", workerContext.getLastMasterResult());
+        LOG.debug("Set current model with params {}", context.getLastMasterResult());
 
         // initialize gradients if null
-        double[] weights = workerContext.getLastMasterResult().getWeights();
+        double[] weights = context.getLastMasterResult().getWeights();
         if(gradient == null) {
             initGradient(this.trainingData, this.testingData, weights, this.isCrossOver);
+            // register call back for shut down thread pool.
+            context.addCompletionCallBack(new WorkerCompletionCallBack<NNParams, NNParams>() {
+                @Override
+                public void callback(WorkerContext<NNParams, NNParams> context) {
+                    AbstractNNWorker.this.gradient.shutdown();
+                }
+            });
         } else {
             if(this.isCrossOver) {
                 // each iteration reset seed
@@ -322,7 +331,7 @@ public abstract class AbstractNNWorker<VALUE extends Writable> extends
 
         // if the validation set is 0%, then the validation error should be "N/A"
         LOG.info("NNWorker compute iteration {} (train error {} validation error {})",
-                new Object[] { workerContext.getCurrentIteration(), trainError,
+                new Object[] { context.getCurrentIteration(), trainError,
                         (this.testingData.getRecordCount() > 0 ? testError : "N/A") });
 
         NNParams params = new NNParams();

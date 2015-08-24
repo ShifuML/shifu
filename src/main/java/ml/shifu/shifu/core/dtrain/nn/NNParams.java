@@ -13,14 +13,15 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package ml.shifu.shifu.core.dtrain;
-
-import ml.shifu.guagua.io.HaltBytable;
+package ml.shifu.shifu.core.dtrain.nn;
 
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 import java.util.Arrays;
+
+import ml.shifu.guagua.io.HaltBytable;
+import ml.shifu.shifu.core.dtrain.DTrainUtils;
 
 /**
  * NNParams are used to save NN model info which can also be stored into ZooKeeper.

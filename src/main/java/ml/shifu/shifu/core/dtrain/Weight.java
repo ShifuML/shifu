@@ -74,7 +74,9 @@ public class Weight {
             this.lastDelta[i] = 0;
         }
         this.reg = reg;
-        this.rl = rl;
+        if(rl != null) {
+            this.rl = rl;
+        }
     }
 
     public double[] calculateWeights(double[] weights, double[] gradients) {

@@ -15,6 +15,10 @@
  */
 package ml.shifu.shifu.core.dtrain;
 
+import java.io.IOException;
+
+import ml.shifu.shifu.core.dtrain.nn.NNParams;
+
 import org.encog.engine.network.activation.ActivationFunction;
 import org.encog.engine.network.activation.ActivationSigmoid;
 import org.encog.ml.data.MLDataPair;
@@ -36,8 +40,6 @@ import org.slf4j.LoggerFactory;
 import org.testng.Assert;
 import org.testng.annotations.BeforeTest;
 import org.testng.annotations.Test;
-
-import java.io.IOException;
 
 public class DTrainTest {
 

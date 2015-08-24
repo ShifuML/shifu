@@ -15,14 +15,25 @@
  */
 package ml.shifu.shifu.actor.worker;
 
-import akka.actor.ActorRef;
+import java.util.ArrayList;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Scanner;
+
 import ml.shifu.guagua.util.NumberFormatUtils;
 import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.container.obj.ModelConfig;
 import ml.shifu.shifu.core.dtrain.CommonConstants;
-import ml.shifu.shifu.core.dtrain.NNConstants;
 import ml.shifu.shifu.core.dtrain.DTrainUtils;
-import ml.shifu.shifu.message.*;
+import ml.shifu.shifu.core.dtrain.nn.NNConstants;
+import ml.shifu.shifu.message.NormPartRawDataMessage;
+import ml.shifu.shifu.message.RunModelDataMessage;
+import ml.shifu.shifu.message.ScanEvalDataMessage;
+import ml.shifu.shifu.message.ScanNormInputDataMessage;
+import ml.shifu.shifu.message.ScanStatsRawDataMessage;
+import ml.shifu.shifu.message.ScanTrainDataMessage;
+import ml.shifu.shifu.message.StatsPartRawDataMessage;
+import ml.shifu.shifu.message.TrainPartDataMessage;
 import ml.shifu.shifu.util.CommonUtils;
 import ml.shifu.shifu.util.Environment;
 
@@ -32,12 +43,9 @@ import org.encog.ml.data.basic.BasicMLDataPair;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.google.common.base.Splitter;
+import akka.actor.ActorRef;
 
-import java.util.ArrayList;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Scanner;
+import com.google.common.base.Splitter;
 
 /**
  * DataLoadWorker class is used to load data from all kinds of source.

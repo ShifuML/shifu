@@ -1,30 +1,33 @@
-/*
- * Copyright [2013-2014] eBay Software Foundation
- *  
+/**
+ * Copyright [2012-2014] PayPal Software Foundation
+ *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
  *    http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package ml.shifu.shifu.core.dtrain;
+package ml.shifu.shifu.core.dtrain.nn;
 
 import java.io.IOException;
-import java.io.PrintWriter;
-import java.util.Arrays;
+import java.util.List;
 import java.util.Properties;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import ml.shifu.guagua.master.BasicMasterInterceptor;
 import ml.shifu.guagua.master.MasterContext;
+import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.container.obj.ModelConfig;
 import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
+import ml.shifu.shifu.core.alg.NNTrainer;
+import ml.shifu.shifu.core.dtrain.CommonConstants;
+import ml.shifu.shifu.core.dtrain.DTrainUtils;
 import ml.shifu.shifu.util.CommonUtils;
 
 import org.apache.hadoop.conf.Configuration;
@@ -32,27 +35,38 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.IOUtils;
+import org.encog.neural.networks.BasicNetwork;
+import org.encog.persist.EncogDirectoryPersistence;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * {@link LogisticRegressionOutput} is used to write the final model output to file system.
+ * {@link NNOutput} is used to write the model output to file system.
  */
-public class LogisticRegressionOutput extends
-        BasicMasterInterceptor<LogisticRegressionParams, LogisticRegressionParams> {
+public class NNOutput extends BasicMasterInterceptor<NNParams, NNParams> {
 
-    private static final Logger LOG = LoggerFactory.getLogger(LogisticRegressionOutput.class);
+    private static final Logger LOG = LoggerFactory.getLogger(NNOutput.class);
 
     private static final double EPSILON = 0.0000001;
-
-    private String trainerId;
-
-    private String tmpModelsFolder;
 
     /**
      * Model Config read from HDFS
      */
     private ModelConfig modelConfig;
+
+    /**
+     * Column Config list read from HDFS
+     */
+    private List<ColumnConfig> columnConfigList;
+
+    /**
+     * network
+     */
+    private BasicNetwork network;
+
+    private String trainerId;
+
+    private String tmpModelsFolder;
 
     /**
      * Whether the training is dry training.
@@ -81,12 +95,12 @@ public class LogisticRegressionOutput extends
     private FSDataOutputStream progressOutput = null;
 
     @Override
-    public void preApplication(MasterContext<LogisticRegressionParams, LogisticRegressionParams> context) {
+    public void preApplication(MasterContext<NNParams, NNParams> context) {
         init(context);
     }
 
     @Override
-    public void postIteration(final MasterContext<LogisticRegressionParams, LogisticRegressionParams> context) {
+    public void postIteration(final MasterContext<NNParams, NNParams> context) {
         if(this.isDry) {
             // for dry mode, we don't save models files.
             return;
@@ -98,7 +112,7 @@ public class LogisticRegressionOutput extends
         // save the weights according the error decreasing
         if(currentError < this.minTestError) {
             this.minTestError = currentError;
-            this.optimizeddWeights = context.getMasterResult().getParameters();
+            this.optimizeddWeights = context.getMasterResult().getWeights();
         }
 
         // save tmp to hdfs according to raw trainer logic
@@ -106,9 +120,9 @@ public class LogisticRegressionOutput extends
             Thread tmpNNThread = new Thread(new Runnable() {
                 @Override
                 public void run() {
-                    saveTmpModelToHDFS(context.getCurrentIteration(), context.getMasterResult().getParameters());
+                    saveTmpNNToHDFS(context.getCurrentIteration(), context.getMasterResult().getWeights());
                 }
-            }, "saveTmpModelToHDFS thread");
+            }, "saveTmpNNToHDFS thread");
             tmpNNThread.setDaemon(true);
             tmpNNThread.start();
         }
@@ -117,7 +131,7 @@ public class LogisticRegressionOutput extends
     }
 
     @SuppressWarnings("deprecation")
-    private void updateProgressLog(final MasterContext<LogisticRegressionParams, LogisticRegressionParams> context) {
+    private void updateProgressLog(final MasterContext<NNParams, NNParams> context) {
         int currentIteration = context.getCurrentIteration();
         if(currentIteration == 1) {
             // first iteration is used for training preparation
@@ -137,7 +151,7 @@ public class LogisticRegressionOutput extends
     }
 
     @Override
-    public void postApplication(MasterContext<LogisticRegressionParams, LogisticRegressionParams> context) {
+    public void postApplication(MasterContext<NNParams, NNParams> context) {
         IOUtils.closeStream(this.progressOutput);
 
         // for dry mode, we don't save models files.
@@ -145,24 +159,22 @@ public class LogisticRegressionOutput extends
             return;
         }
 
-        if(optimizeddWeights == null) {
-            optimizeddWeights = context.getMasterResult().getParameters();
+        if(optimizeddWeights != null) {
+            Path out = new Path(context.getProps().getProperty(CommonConstants.GUAGUA_OUTPUT));
+            writeModelWeightsToFileSystem(optimizeddWeights, out);
         }
-
-        Path out = new Path(context.getProps().getProperty(CommonConstants.GUAGUA_OUTPUT));
-        writeModelWeightsToFileSystem(optimizeddWeights, out);
     }
 
     /**
      * Save tmp nn model to HDFS.
      */
-    private void saveTmpModelToHDFS(int iteration, double[] weights) {
+    private void saveTmpNNToHDFS(int iteration, double[] weights) {
         Path out = new Path(DTrainUtils.getTmpModelName(this.tmpModelsFolder, this.trainerId, iteration, modelConfig
                 .getTrain().getAlgorithm().toLowerCase()));
         writeModelWeightsToFileSystem(weights, out);
     }
 
-    private void init(MasterContext<LogisticRegressionParams, LogisticRegressionParams> context) {
+    private void init(MasterContext<NNParams, NNParams> context) {
         this.isDry = Boolean.TRUE.toString().equals(context.getProps().getProperty(NNConstants.NN_DRY_TRAIN));
 
         if(this.isDry) {
@@ -170,6 +182,7 @@ public class LogisticRegressionOutput extends
         }
         if(isInit.compareAndSet(false, true)) {
             loadConfigFiles(context.getProps());
+            initNetwork();
             this.trainerId = context.getProps().getProperty(NNConstants.NN_TRAINER_ID);
             this.tmpModelsFolder = context.getProps().getProperty(NNConstants.NN_TMP_MODELS_FOLDER);
         }
@@ -192,26 +205,44 @@ public class LogisticRegressionOutput extends
                     SourceType.HDFS.toString()));
             this.modelConfig = CommonUtils.loadModelConfig(props.getProperty(NNConstants.SHIFU_NN_MODEL_CONFIG),
                     sourceType);
+            this.columnConfigList = CommonUtils.loadColumnConfigList(
+                    props.getProperty(NNConstants.SHIFU_NN_COLUMN_CONFIG), sourceType);
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
     }
 
+    @SuppressWarnings("unchecked")
+    private void initNetwork() {
+        int[] inputOutputIndex = DTrainUtils.getInputOutputCandidateCounts(this.columnConfigList);
+        int inputNodeCount = inputOutputIndex[0] == 0 ? inputOutputIndex[2] : inputOutputIndex[0];
+        int outputNodeCount = modelConfig.isBinaryClassification() ? inputOutputIndex[1] : modelConfig.getTags().size();
+
+        int numLayers = (Integer) getModelConfig().getParams().get(NNTrainer.NUM_HIDDEN_LAYERS);
+        List<String> actFunc = (List<String>) getModelConfig().getParams().get(NNTrainer.ACTIVATION_FUNC);
+        List<Integer> hiddenNodeList = (List<Integer>) getModelConfig().getParams().get(NNTrainer.NUM_HIDDEN_NODES);
+
+        this.network = DTrainUtils.generateNetwork(inputNodeCount, outputNodeCount, numLayers, actFunc, hiddenNodeList);
+    }
+
     private void writeModelWeightsToFileSystem(double[] weights, Path out) {
         FSDataOutputStream fos = null;
-        PrintWriter pw = null;
         try {
             fos = FileSystem.get(new Configuration()).create(out);
             LOG.info("Writing results to {}", out);
+            this.network.getFlat().setWeights(weights);
             if(out != null) {
-                pw = new PrintWriter(fos);
-                pw.println(Arrays.toString(weights));
+                EncogDirectoryPersistence.saveObject(fos, this.network);
             }
         } catch (IOException e) {
             LOG.error("Error in writing output.", e);
         } finally {
-            IOUtils.closeStream(pw);
+            IOUtils.closeStream(fos);
         }
+    }
+
+    public ModelConfig getModelConfig() {
+        return modelConfig;
     }
 
 }

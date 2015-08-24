@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package ml.shifu.shifu.core.dtrain;
+package ml.shifu.shifu.core.dtrain.nn;
 
 import java.io.IOException;
 
@@ -23,6 +23,7 @@ import ml.shifu.guagua.io.GuaguaFileSplit;
 import ml.shifu.guagua.util.NumberFormatUtils;
 import ml.shifu.guagua.worker.WorkerContext;
 import ml.shifu.shifu.container.obj.ColumnConfig;
+import ml.shifu.shifu.core.dtrain.CommonConstants;
 import ml.shifu.shifu.guagua.GuaguaParquetRecordReader;
 import ml.shifu.shifu.util.CommonUtils;
 

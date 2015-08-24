@@ -30,7 +30,7 @@ import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
 import ml.shifu.shifu.core.autotype.AutoTypeDistinctCountMapper;
 import ml.shifu.shifu.core.autotype.AutoTypeDistinctCountReducer;
 import ml.shifu.shifu.core.autotype.CountAndFrequentItemsWritable;
-import ml.shifu.shifu.core.dtrain.NNConstants;
+import ml.shifu.shifu.core.dtrain.nn.NNConstants;
 import ml.shifu.shifu.core.mr.input.CombineInputFormat;
 import ml.shifu.shifu.core.validator.ModelInspector.ModelStep;
 import ml.shifu.shifu.fs.ShifuFileUtils;
