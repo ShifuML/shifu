@@ -18,7 +18,9 @@ package ml.shifu.shifu.container.obj;
 import java.util.ArrayList;
 import java.util.List;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.google.common.collect.Lists;
 
@@ -68,6 +70,7 @@ public class RawSourceData implements Cloneable {
     /**
      * @return the autoTypeThreshold
      */
+    @JsonIgnore
     public Integer getAutoTypeThreshold() {
         return autoTypeThreshold;
     }
@@ -76,6 +79,7 @@ public class RawSourceData implements Cloneable {
      * @param autoTypeThreshold
      *            the autoTypeThreshold to set
      */
+    @JsonProperty
     public void setAutoTypeThreshold(Integer autoTypeThreshold) {
         this.autoTypeThreshold = autoTypeThreshold;
     }
@@ -202,6 +206,7 @@ public class RawSourceData implements Cloneable {
     /**
      * @return the autoType
      */
+    @JsonIgnore
     public Boolean getAutoType() {
         return autoType;
     }
@@ -210,6 +215,7 @@ public class RawSourceData implements Cloneable {
      * @param autoType
      *            the autoType to set
      */
+    @JsonProperty
     public void setAutoType(Boolean autoType) {
         this.autoType = autoType;
     }

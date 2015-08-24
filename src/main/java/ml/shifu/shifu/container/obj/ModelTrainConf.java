@@ -229,8 +229,7 @@ public class ModelTrainConf {
         this.convergenceThreshold = convergenceThreshold;
     }
 
-    /**
-     */
+    @JsonIgnore
     public Boolean getIsCrossOver() {
         return isCrossOver;
     }
@@ -239,6 +238,7 @@ public class ModelTrainConf {
      * @param isCrossOver
      *            the isCrossOver to set
      */
+    @JsonProperty
     public void setIsCrossOver(Boolean isCrossOver) {
         this.isCrossOver = isCrossOver;
     }
@@ -285,7 +285,6 @@ public class ModelTrainConf {
      * @param upSampleWeight
      *            the upSampleWeight to set
      */
-    @JsonIgnore
     public void setUpSampleWeight(Double upSampleWeight) {
         this.upSampleWeight = upSampleWeight;
     }

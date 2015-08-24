@@ -30,6 +30,14 @@ import ml.shifu.shifu.container.obj.ModelConfig;
 import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
 import ml.shifu.shifu.core.alg.NNTrainer;
 import ml.shifu.shifu.core.dtrain.DTrainUtils;
+import ml.shifu.shifu.core.dtrain.dataset.BasicFloatMLData;
+import ml.shifu.shifu.core.dtrain.dataset.BasicFloatMLDataPair;
+import ml.shifu.shifu.core.dtrain.dataset.BasicFloatMLDataSet;
+import ml.shifu.shifu.core.dtrain.dataset.BufferedFloatMLDataSet;
+import ml.shifu.shifu.core.dtrain.dataset.FloatFlatNetwork;
+import ml.shifu.shifu.core.dtrain.dataset.FloatMLDataPair;
+import ml.shifu.shifu.core.dtrain.dataset.FloatMLDataSet;
+import ml.shifu.shifu.core.dtrain.dataset.MemoryDiskFloatMLDataSet;
 import ml.shifu.shifu.util.CommonUtils;
 
 import org.apache.commons.lang.math.RandomUtils;
@@ -38,12 +46,6 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Writable;
 import org.encog.engine.network.activation.ActivationSigmoid;
-import org.encog.ml.data.MLDataPair;
-import org.encog.ml.data.MLDataSet;
-import org.encog.ml.data.basic.BasicMLData;
-import org.encog.ml.data.basic.BasicMLDataPair;
-import org.encog.ml.data.basic.BasicMLDataSet;
-import org.encog.ml.data.buffer.BufferedMLDataSet;
 import org.encog.neural.error.LinearErrorFunction;
 import org.encog.neural.flat.FlatNetwork;
 import org.encog.neural.networks.BasicNetwork;
@@ -68,12 +70,12 @@ public abstract class AbstractNNWorker<VALUE extends Writable> extends
     /**
      * Training data set
      */
-    protected MLDataSet trainingData = null;
+    protected FloatMLDataSet trainingData = null;
 
     /**
      * Testing data set
      */
-    protected MLDataSet testingData = null;
+    protected FloatMLDataSet testingData = null;
 
     /**
      * NN algorithm runner instance.
@@ -178,8 +180,8 @@ public abstract class AbstractNNWorker<VALUE extends Writable> extends
      */
     @SuppressWarnings("unused")
     private void initMemoryDataSet() {
-        this.trainingData = new BasicMLDataSet();
-        this.testingData = new BasicMLDataSet();
+        this.trainingData = new BasicFloatMLDataSet();
+        this.testingData = new BasicFloatMLDataSet();
     }
 
     /**
@@ -197,11 +199,11 @@ public abstract class AbstractNNWorker<VALUE extends Writable> extends
         LOG.debug("Use disk to store training data and testing data. Training data file:{}; Testing data file:{} ",
                 trainingFile.toString(), testingFile.toString());
 
-        this.trainingData = new BufferedMLDataSet(new File(trainingFile.toString()));
-        ((BufferedMLDataSet) this.trainingData).beginLoad(getInputNodeCount(), getOutputNodeCount());
+        this.trainingData = new BufferedFloatMLDataSet(new File(trainingFile.toString()));
+        ((BufferedFloatMLDataSet) this.trainingData).beginLoad(getInputNodeCount(), getOutputNodeCount());
 
-        this.testingData = new BufferedMLDataSet(new File(testingFile.toString()));
-        ((BufferedMLDataSet) this.testingData).beginLoad(getInputNodeCount(), getOutputNodeCount());
+        this.testingData = new BufferedFloatMLDataSet(new File(testingFile.toString()));
+        ((BufferedFloatMLDataSet) this.testingData).beginLoad(getInputNodeCount(), getOutputNodeCount());
     }
 
     @Override
@@ -243,8 +245,8 @@ public abstract class AbstractNNWorker<VALUE extends Writable> extends
             Runtime.getRuntime().addShutdownHook(new Thread(new Runnable() {
                 @Override
                 public void run() {
-                    ((BufferedMLDataSet) (AbstractNNWorker.this.trainingData)).close();
-                    ((BufferedMLDataSet) (AbstractNNWorker.this.testingData)).close();
+                    ((BufferedFloatMLDataSet) (AbstractNNWorker.this.trainingData)).close();
+                    ((BufferedFloatMLDataSet) (AbstractNNWorker.this.testingData)).close();
                 }
             }));
         } else {
@@ -254,16 +256,16 @@ public abstract class AbstractNNWorker<VALUE extends Writable> extends
             LOG.info("Max heap memory: {}, fraction: {}", Runtime.getRuntime().maxMemory(), memoryFraction);
             double crossValidationRate = this.modelConfig.getCrossValidationRate();
             try {
-                this.trainingData = new MemoryDiskMLDataSet((long) (memoryStoreSize * (1 - crossValidationRate)),
+                this.trainingData = new MemoryDiskFloatMLDataSet((long) (memoryStoreSize * (1 - crossValidationRate)),
                         DTrainUtils.getTrainingFile().toString(), this.inputNodeCount, this.outputNodeCount);
-                this.testingData = new MemoryDiskMLDataSet((long) (memoryStoreSize * crossValidationRate), DTrainUtils
-                        .getTestingFile().toString(), this.inputNodeCount, this.outputNodeCount);
+                this.testingData = new MemoryDiskFloatMLDataSet((long) (memoryStoreSize * crossValidationRate),
+                        DTrainUtils.getTestingFile().toString(), this.inputNodeCount, this.outputNodeCount);
                 // cannot find a good place to close these two data set, using Shutdown hook
                 Runtime.getRuntime().addShutdownHook(new Thread(new Runnable() {
                     @Override
                     public void run() {
-                        ((MemoryDiskMLDataSet) (AbstractNNWorker.this.trainingData)).close();
-                        ((MemoryDiskMLDataSet) (AbstractNNWorker.this.testingData)).close();
+                        ((MemoryDiskFloatMLDataSet) (AbstractNNWorker.this.trainingData)).close();
+                        ((MemoryDiskFloatMLDataSet) (AbstractNNWorker.this.testingData)).close();
                     }
                 }));
             } catch (IOException e) {
@@ -346,7 +348,7 @@ public abstract class AbstractNNWorker<VALUE extends Writable> extends
     }
 
     @SuppressWarnings("unchecked")
-    private void initGradient(MLDataSet training, MLDataSet testing, double[] weights, boolean isCrossOver) {
+    private void initGradient(FloatMLDataSet training, FloatMLDataSet testing, double[] weights, boolean isCrossOver) {
         int numLayers = (Integer) getModelConfig().getParams().get(NNTrainer.NUM_HIDDEN_LAYERS);
         List<String> actFunc = (List<String>) getModelConfig().getParams().get(NNTrainer.ACTIVATION_FUNC);
         List<Integer> hiddenNodeList = (List<Integer>) getModelConfig().getParams().get(NNTrainer.NUM_HIDDEN_NODES);
@@ -365,8 +367,8 @@ public abstract class AbstractNNWorker<VALUE extends Writable> extends
 
         LOG.info("Gradient computing thread count is {}.", modelConfig.getTrain().getWorkerThreadCount());
 
-        this.gradient = new ParallelGradient(flat, training, testing, flatSpot, new LinearErrorFunction(), isCrossOver,
-                modelConfig.getTrain().getWorkerThreadCount());
+        this.gradient = new ParallelGradient((FloatFlatNetwork) flat, training, testing, flatSpot,
+                new LinearErrorFunction(), isCrossOver, modelConfig.getTrain().getWorkerThreadCount());
     }
 
     private NNParams buildEmptyNNParams(WorkerContext<NNParams, NNParams> workerContext) {
@@ -381,14 +383,15 @@ public abstract class AbstractNNWorker<VALUE extends Writable> extends
     @Override
     protected void postLoad(WorkerContext<NNParams, NNParams> workerContext) {
         if(isOnDisk()) {
-            ((BufferedMLDataSet) this.trainingData).endLoad();
-            ((BufferedMLDataSet) this.testingData).endLoad();
+            ((BufferedFloatMLDataSet) this.trainingData).endLoad();
+            ((BufferedFloatMLDataSet) this.testingData).endLoad();
         } else {
-            ((MemoryDiskMLDataSet) this.trainingData).endLoad();
-            ((MemoryDiskMLDataSet) this.testingData).endLoad();
+            ((MemoryDiskFloatMLDataSet) this.trainingData).endLoad();
+            ((MemoryDiskFloatMLDataSet) this.testingData).endLoad();
             LOG.info("    - # Training Records in memory: {}.",
-                    ((MemoryDiskMLDataSet) this.trainingData).getMemoryCount());
-            LOG.info("    - # Training Records in disk: {}.", ((MemoryDiskMLDataSet) this.trainingData).getDiskCount());
+                    ((MemoryDiskFloatMLDataSet) this.trainingData).getMemoryCount());
+            LOG.info("    - # Training Records in disk: {}.",
+                    ((MemoryDiskFloatMLDataSet) this.trainingData).getDiskCount());
         }
         LOG.info("    - # Records of the Master Data Set: {}.", this.count);
         LOG.info("    - Bagging Sample Rate: {}.", this.modelConfig.getBaggingSampleRate());
@@ -403,7 +406,7 @@ public abstract class AbstractNNWorker<VALUE extends Writable> extends
      * Add data pair to data set according to setting parameters. Still set hashCode to long to make double and long
      * friendly.
      */
-    protected void addDataPairToDataSet(long hashcode, MLDataPair pair) {
+    protected void addDataPairToDataSet(long hashcode, FloatMLDataPair pair) {
         double crossValidationRate = this.modelConfig.getCrossValidationRate();
         if(this.modelConfig.isFixInitialInput()) {
             long longCrossValidation = Double.valueOf(crossValidationRate * 100).longValue();
@@ -460,8 +463,8 @@ public abstract class AbstractNNWorker<VALUE extends Writable> extends
         long size = trainingSize + testingSize;
         // here we used a strong cast from long to int since it's just a random choosing algorithm
         int next = RandomUtils.nextInt((int) size);
-        MLDataPair dataPair = new BasicMLDataPair(new BasicMLData(new double[this.inputNodeCount]), new BasicMLData(
-                new double[this.outputNodeCount]));
+        FloatMLDataPair dataPair = new BasicFloatMLDataPair(new BasicFloatMLData(new float[this.inputNodeCount]),
+                new BasicFloatMLData(new float[this.outputNodeCount]));
         if(next >= trainingSize) {
             this.testingData.getRecord(next - trainingSize, dataPair);
         } else {
@@ -478,7 +481,7 @@ public abstract class AbstractNNWorker<VALUE extends Writable> extends
     /**
      * Add data pair to data set according to random number compare with crossValidationRate.
      */
-    private void addDataPairToDataSet(MLDataPair pair, double crossValidationRate, double random) {
+    private void addDataPairToDataSet(FloatMLDataPair pair, double crossValidationRate, double random) {
         if(Double.compare(random, crossValidationRate) < 0) {
             this.testingData.add(pair);
         } else {
@@ -486,19 +489,19 @@ public abstract class AbstractNNWorker<VALUE extends Writable> extends
         }
     }
 
-    public MLDataSet getTrainingData() {
+    public FloatMLDataSet getTrainingData() {
         return trainingData;
     }
 
-    public void setTrainingData(MLDataSet trainingData) {
+    public void setTrainingData(FloatMLDataSet trainingData) {
         this.trainingData = trainingData;
     }
 
-    public MLDataSet getTestingData() {
+    public FloatMLDataSet getTestingData() {
         return testingData;
     }
 
-    public void setTestingData(MLDataSet testingData) {
+    public void setTestingData(FloatMLDataSet testingData) {
         this.testingData = testingData;
     }
 
