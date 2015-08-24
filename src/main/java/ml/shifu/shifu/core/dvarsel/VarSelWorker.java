@@ -33,7 +33,7 @@ import ml.shifu.shifu.container.obj.RawSourceData;
 import ml.shifu.shifu.core.DataPurifier;
 import ml.shifu.shifu.core.Normalizer;
 import ml.shifu.shifu.core.dtrain.CommonConstants;
-import ml.shifu.shifu.core.dtrain.NNConstants;
+import ml.shifu.shifu.core.dtrain.nn.NNConstants;
 import ml.shifu.shifu.core.dvarsel.dataset.TrainingDataSet;
 import ml.shifu.shifu.core.dvarsel.dataset.TrainingRecord;
 import ml.shifu.shifu.util.CommonUtils;

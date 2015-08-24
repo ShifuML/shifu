@@ -20,6 +20,7 @@ import java.util.List;
 
 import ml.shifu.guagua.GuaguaRuntimeException;
 import ml.shifu.shifu.container.obj.ColumnConfig;
+import ml.shifu.shifu.core.dtrain.nn.NNConstants;
 import ml.shifu.shifu.util.CommonUtils;
 import ml.shifu.shifu.util.Constants;
 import ml.shifu.shifu.util.HDFSUtils;
@@ -168,8 +169,8 @@ public final class DTrainUtils {
                 .append(trainerId).append('-').append(iteration).append(".").append(modelPost).toString();
     }
 
-    static int tmpModelFactor(int epochs) {
-        return Math.max(epochs / 50, 10);
+    public static int tmpModelFactor(int epochs) {
+        return Math.max(epochs / 25, 10);
     }
 
     /**

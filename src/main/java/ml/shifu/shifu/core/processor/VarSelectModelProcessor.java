@@ -30,7 +30,7 @@ import ml.shifu.shifu.core.AbstractTrainer;
 import ml.shifu.shifu.core.VariableSelector;
 import ml.shifu.shifu.core.alg.NNTrainer;
 import ml.shifu.shifu.core.dtrain.CommonConstants;
-import ml.shifu.shifu.core.dtrain.NNConstants;
+import ml.shifu.shifu.core.dtrain.nn.NNConstants;
 import ml.shifu.shifu.core.dvarsel.VarSelMaster;
 import ml.shifu.shifu.core.dvarsel.VarSelMasterResult;
 import ml.shifu.shifu.core.dvarsel.VarSelOutput;

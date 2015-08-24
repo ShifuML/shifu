@@ -17,6 +17,7 @@ package ml.shifu.shifu.core.dtrain;
 
 import java.util.Iterator;
 
+import ml.shifu.shifu.core.dtrain.nn.MemoryDiskMLDataSet;
 import ml.shifu.shifu.util.SizeEstimator;
 
 import org.encog.ml.data.MLDataPair;

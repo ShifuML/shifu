@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package ml.shifu.shifu.core.dtrain;
+package ml.shifu.shifu.core.dtrain.lr;
 
 import java.io.File;
 import java.io.IOException;
@@ -31,6 +31,9 @@ import ml.shifu.guagua.worker.WorkerContext;
 import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.container.obj.ModelConfig;
 import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
+import ml.shifu.shifu.core.dtrain.CommonConstants;
+import ml.shifu.shifu.core.dtrain.DTrainUtils;
+import ml.shifu.shifu.core.dtrain.nn.NNConstants;
 import ml.shifu.shifu.util.CommonUtils;
 
 import org.apache.commons.math3.distribution.PoissonDistribution;

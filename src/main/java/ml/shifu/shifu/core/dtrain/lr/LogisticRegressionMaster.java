@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package ml.shifu.shifu.core.dtrain;
+package ml.shifu.shifu.core.dtrain.lr;
 
 import java.io.IOException;
 import java.util.List;
@@ -27,6 +27,11 @@ import ml.shifu.shifu.container.obj.ModelConfig;
 import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
 import ml.shifu.shifu.core.ConvergeJudger;
 import ml.shifu.shifu.core.alg.NNTrainer;
+import ml.shifu.shifu.core.dtrain.CommonConstants;
+import ml.shifu.shifu.core.dtrain.DTrainUtils;
+import ml.shifu.shifu.core.dtrain.RegulationLevel;
+import ml.shifu.shifu.core.dtrain.Weight;
+import ml.shifu.shifu.core.dtrain.nn.NNConstants;
 import ml.shifu.shifu.util.CommonUtils;
 
 import org.slf4j.Logger;

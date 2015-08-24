@@ -476,10 +476,10 @@ public class ModelInspector {
         }
 
         if(train.getWorkerThreadCount() != null
-                && (train.getWorkerThreadCount() <= 0 || train.getWorkerThreadCount() >= 100)) {
+                && (train.getWorkerThreadCount() <= 0 || train.getWorkerThreadCount() > 32)) {
             ValidateResult tmpResult = new ValidateResult(true);
             tmpResult.setStatus(false);
-            tmpResult.getCauses().add("'workerThreadCount' should be in (0, 100) if set.");
+            tmpResult.getCauses().add("'workerThreadCount' should be in (0, 32] if set.");
             result = ValidateResult.mergeResult(result, tmpResult);
         }
 

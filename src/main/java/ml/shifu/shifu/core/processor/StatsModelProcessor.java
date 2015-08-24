@@ -38,7 +38,7 @@ import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
 import ml.shifu.shifu.core.binning.BinningInfoWritable;
 import ml.shifu.shifu.core.binning.UpdateBinningInfoMapper;
 import ml.shifu.shifu.core.binning.UpdateBinningInfoReducer;
-import ml.shifu.shifu.core.dtrain.NNConstants;
+import ml.shifu.shifu.core.dtrain.nn.NNConstants;
 import ml.shifu.shifu.core.mr.input.CombineInputFormat;
 import ml.shifu.shifu.core.validator.ModelInspector.ModelStep;
 import ml.shifu.shifu.exception.ShifuErrorCode;

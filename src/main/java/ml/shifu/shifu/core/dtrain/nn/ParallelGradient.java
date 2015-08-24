@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package ml.shifu.shifu.core.dtrain;
+package ml.shifu.shifu.core.dtrain.nn;
 
 import java.util.Arrays;
 import java.util.concurrent.Callable;
@@ -92,6 +92,11 @@ public class ParallelGradient {
     private SubGradient[] subGradients;
 
     /**
+     * Create a thread pool to do gradient computing and test set error computing using multiple threads.
+     */
+    private ExecutorService threadPool;
+
+    /**
      * Construct a gradient worker.
      * 
      * @param theNetwork
@@ -107,7 +112,7 @@ public class ParallelGradient {
      */
     public ParallelGradient(final FlatNetwork theNetwork, final MLDataSet theTraining, final MLDataSet theTesting,
             final double[] flatSpot, ErrorFunction ef, boolean isCrossOver, int threadCount) {
-        assert threadCount > 0 && threadCount < 100;
+        assert threadCount > 0 && threadCount < 33;
         this.threadCount = threadCount;
         this.training = theTraining;
         long recordCount = this.training.getRecordCount();
@@ -160,58 +165,49 @@ public class ParallelGradient {
         this.isCrossOver = isCrossOver;
         this.flatSpot = flatSpot;
         this.errorFunction = ef;
+
+        this.threadPool = Executors.newFixedThreadPool(this.threadCount);
     }
 
     public double[] computeGradients() {
-        // TODO make theradPool as instance
-        ExecutorService threadPool = Executors.newFixedThreadPool(this.threadCount);
-        CompletionService<double[]> completionService = new ExecutorCompletionService<double[]>(threadPool);
+        CompletionService<double[]> completionService = new ExecutorCompletionService<double[]>(this.threadPool);
         this.subGradients = new SubGradient[this.threadCount];
-        try {
-            for(int i = 0; i < this.threadCount; i++) {
-                if(this.subGradients[i] == null) {
-                    this.subGradients[i] = new SubGradient(this.network.clone(), this.training, this.trainLows[i],
-                            this.trainHighs[i], this.testing, this.testLows[i], this.testHighs[i], this.flatSpot,
-                            this.errorFunction, this.isCrossOver, this);
-                } else {
-                    this.subGradients[i].setNetwork(this.network.clone());
-                }
-                this.subGradients[i].setSeed(this.getSeed());
-                completionService.submit(this.subGradients[i]);
+        for(int i = 0; i < this.threadCount; i++) {
+            if(this.subGradients[i] == null) {
+                this.subGradients[i] = new SubGradient(this.network.clone(), this.training, this.trainLows[i],
+                        this.trainHighs[i], this.testing, this.testLows[i], this.testHighs[i], this.flatSpot,
+                        this.errorFunction, this.isCrossOver, this);
+            } else {
+                this.subGradients[i].setNetwork(this.network.clone());
             }
+            this.subGradients[i].setSeed(this.getSeed());
+            completionService.submit(this.subGradients[i]);
+        }
 
-            int rCnt = 0;
-            double[] finalGradients = new double[this.getNetwork().getWeights().length];
-            while(rCnt < this.threadCount) {
-                double[] gradients = null;
-                try {
-                    gradients = completionService.take().get();
-                } catch (ExecutionException e) {
-                    throw new RuntimeException(e);
-                } catch (InterruptedException e) {
-                    Thread.currentThread().interrupt();
-                }
-                for(int i = 0; i < finalGradients.length; i++) {
-                    finalGradients[i] += gradients[i];
-                }
-                rCnt += 1;
-            }
-
-            double errorSum = 0d;
-            for(int i = 0; i < this.threadCount; i++) {
-                errorSum += this.subGradients[i].getError() * (trainHighs[i] - trainLows[i] + 1)
-                        * this.getNetwork().getOutputCount();
-            }
-            this.trainError = errorSum / (this.training.getRecordCount() * this.getNetwork().getOutputCount());
-            return finalGradients;
-        } finally {
-            threadPool.shutdownNow();
+        int rCnt = 0;
+        double[] finalGradients = new double[this.getNetwork().getWeights().length];
+        while(rCnt < this.threadCount) {
+            double[] gradients = null;
             try {
-                threadPool.awaitTermination(2, TimeUnit.SECONDS);
+                gradients = completionService.take().get();
+            } catch (ExecutionException e) {
+                throw new RuntimeException(e);
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
             }
+            for(int i = 0; i < finalGradients.length; i++) {
+                finalGradients[i] += gradients[i];
+            }
+            rCnt += 1;
         }
+
+        double errorSum = 0d;
+        for(int i = 0; i < this.threadCount; i++) {
+            errorSum += this.subGradients[i].getError() * (trainHighs[i] - trainLows[i] + 1)
+                    * this.getNetwork().getOutputCount();
+        }
+        this.trainError = errorSum / (this.training.getRecordCount() * this.getNetwork().getOutputCount());
+        return finalGradients;
     }
 
     /**
@@ -244,42 +240,32 @@ public class ParallelGradient {
     }
 
     public double calculateError() {
-        ExecutorService threadPool = Executors.newFixedThreadPool(this.threadCount);
-        CompletionService<Double> completionService = new ExecutorCompletionService<Double>(threadPool);
-        try {
-            final ErrorCalculation ec = new ErrorCalculation();
-            for(int i = 0; i < this.threadCount; i++) {
-                final SubGradient subGradient = this.subGradients[i];
-                completionService.submit(new Callable<Double>() {
+        CompletionService<Double> completionService = new ExecutorCompletionService<Double>(this.threadPool);
+        final ErrorCalculation ec = new ErrorCalculation();
+        for(int i = 0; i < this.threadCount; i++) {
+            final SubGradient subGradient = this.subGradients[i];
+            completionService.submit(new Callable<Double>() {
 
-                    @Override
-                    public Double call() throws Exception {
-                        return subGradient.calculateError(ec);
-                    }
-                });
-            }
-
-            int rCnt = 0;
-            while(rCnt < this.threadCount) {
-                try {
-                    completionService.take().get();
-                } catch (ExecutionException e) {
-                    throw new RuntimeException(e);
-                } catch (InterruptedException e) {
-                    Thread.currentThread().interrupt();
+                @Override
+                public Double call() throws Exception {
+                    return subGradient.calculateError(ec);
                 }
-                rCnt += 1;
-            }
+            });
+        }
 
-            return ec.calculate();
-        } finally {
-            threadPool.shutdownNow();
+        int rCnt = 0;
+        while(rCnt < this.threadCount) {
             try {
-                threadPool.awaitTermination(2, TimeUnit.SECONDS);
+                completionService.take().get();
+            } catch (ExecutionException e) {
+                throw new RuntimeException(e);
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
             }
+            rCnt += 1;
         }
+
+        return ec.calculate();
     }
 
     /**
@@ -297,6 +283,18 @@ public class ParallelGradient {
             weights[j] /= subGradients.length;
         }
         this.network.setWeights(weights);
+    }
+
+    /**
+     * Shut down thread pool, should be called at last to make sure jvm exit
+     */
+    public void shutdown() {
+        this.threadPool.shutdownNow();
+        try {
+            this.threadPool.awaitTermination(2, TimeUnit.SECONDS);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
     }
 
 }
