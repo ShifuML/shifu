@@ -310,7 +310,6 @@ public class BufferedFloatMLDataSet implements FloatMLDataSet, Serializable {
         this.egb.close();
 
         open();
-
     }
 
     /**
@@ -354,6 +353,6 @@ public class BufferedFloatMLDataSet implements FloatMLDataSet, Serializable {
             add(pair);
         }
         endLoad();
-
     }
+
 }
