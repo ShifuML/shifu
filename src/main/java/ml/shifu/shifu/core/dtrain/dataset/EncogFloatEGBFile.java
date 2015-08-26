@@ -35,7 +35,7 @@ public class EncogFloatEGBFile {
     /**
      * The size of the file header.
      */
-    public static final int HEADER_SIZE = EncogFloatEGBFile.FLOAT_SIZE * 3;
+    public static final int HEADER_SIZE = EncogFloatEGBFile.FLOAT_SIZE * 2 * 3;
 
     /**
      * The file that we are working with.
@@ -360,7 +360,6 @@ public class EncogFloatEGBFile {
      *            The column to delete.
      */
     public final void deleteCol(final int col) {
-
         try {
             // process the file
 
@@ -441,7 +440,6 @@ public class EncogFloatEGBFile {
         } catch (final IOException ex) {
             throw new RuntimeException(ex);
         }
-
     }
 
     /**
@@ -468,7 +466,6 @@ public class EncogFloatEGBFile {
         } catch (final IOException ex) {
             throw new RuntimeException(ex);
         }
-
     }
 
     /**
