@@ -22,6 +22,7 @@ import ml.shifu.guagua.GuaguaRuntimeException;
 import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.core.dtrain.dataset.BasicFloatNetwork;
 import ml.shifu.shifu.core.dtrain.dataset.FloatNeuralStructure;
+import ml.shifu.shifu.core.dtrain.dataset.PersistBasicFloatNetwork;
 import ml.shifu.shifu.core.dtrain.nn.NNConstants;
 import ml.shifu.shifu.util.CommonUtils;
 import ml.shifu.shifu.util.Constants;
@@ -42,6 +43,7 @@ import org.encog.neural.networks.BasicNetwork;
 import org.encog.neural.networks.layers.BasicLayer;
 import org.encog.neural.networks.structure.NeuralStructure;
 import org.encog.persist.EncogDirectoryPersistence;
+import org.encog.persist.PersistorRegistry;
 
 /**
  * Helper class for NN distributed training.
@@ -269,6 +271,8 @@ public final class DTrainUtils {
             // no such existing model, return null.
             return null;
         }
+        // we have to register PersistBasicFloatNetwork for loading such models
+        PersistorRegistry.getInstance().add(new PersistBasicFloatNetwork());
         BasicNetwork model = null;
         FSDataInputStream stream = null;
         try {
