@@ -24,11 +24,9 @@ import java.util.Map.Entry;
 import ml.shifu.guagua.util.NumberFormatUtils;
 import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.container.obj.ModelConfig;
-import ml.shifu.shifu.container.obj.ModelTrainConf.ALGORITHM;
 import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
 import ml.shifu.shifu.core.dtrain.DTrainUtils;
 import ml.shifu.shifu.core.dtrain.nn.NNConstants;
-import ml.shifu.shifu.fs.PathFinder;
 import ml.shifu.shifu.util.CommonUtils;
 import ml.shifu.shifu.util.Constants;
 
@@ -154,9 +152,7 @@ public class VarSelectMapper extends Mapper<LongWritable, Text, LongWritable, Co
      * Load first model in model path as a {@link MLRegression} instance.
      */
     private void loadModel() throws IOException {
-        PathFinder pathFinder = new PathFinder(this.modelConfig);
-        this.model = (MLRegression) (CommonUtils.loadBasicModels(pathFinder.getModelsPath(),
-                ALGORITHM.valueOf(this.modelConfig.getAlgorithm().toUpperCase())).get(0));
+        this.model = (MLRegression) (CommonUtils.loadBasicModels(this.modelConfig, null).get(0));
     }
 
     /**
@@ -194,7 +190,8 @@ public class VarSelectMapper extends Mapper<LongWritable, Text, LongWritable, Co
                 } else {
                     if(this.inputNodeCount == this.candidateCount) {
                         // all variables are not set final-select
-                        if(columnConfig != null && !columnConfig.isMeta() && !columnConfig.isTarget()) {
+                        if(!columnConfig.isMeta() && !columnConfig.isTarget()
+                                && CommonUtils.isGoodCandidate(columnConfig)) {
                             inputs[inputsIndex] = doubleValue;
                             columnIndexes[inputsIndex++] = columnConfig.getColumnNum();
                         }
