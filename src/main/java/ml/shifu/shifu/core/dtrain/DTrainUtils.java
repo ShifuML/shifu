@@ -39,6 +39,7 @@ import org.encog.engine.network.activation.ActivationSIN;
 import org.encog.engine.network.activation.ActivationSigmoid;
 import org.encog.engine.network.activation.ActivationTANH;
 import org.encog.mathutil.randomize.NguyenWidrowRandomizer;
+import org.encog.ml.BasicML;
 import org.encog.neural.networks.BasicNetwork;
 import org.encog.neural.networks.layers.BasicLayer;
 import org.encog.neural.networks.structure.NeuralStructure;
@@ -266,18 +267,18 @@ public final class DTrainUtils {
      * @throws GuaguaRuntimeException
      *             if any exception to load model object and cast to {@link BasicNetwork}
      */
-    public static BasicNetwork loadModel(Path modelPath, FileSystem fs) throws IOException {
+    public static BasicML loadModel(Path modelPath, FileSystem fs) throws IOException {
         if(!fs.exists(modelPath)) {
             // no such existing model, return null.
             return null;
         }
         // we have to register PersistBasicFloatNetwork for loading such models
         PersistorRegistry.getInstance().add(new PersistBasicFloatNetwork());
-        BasicNetwork model = null;
+        BasicML model = null;
         FSDataInputStream stream = null;
         try {
             stream = fs.open(modelPath);
-            model = BasicNetwork.class.cast(EncogDirectoryPersistence.loadObject(stream));
+            model = BasicML.class.cast(EncogDirectoryPersistence.loadObject(stream));
         } catch (Exception e) {
             throw new GuaguaRuntimeException("Loading model exception.", e);
         } finally {

@@ -18,13 +18,8 @@ package ml.shifu.shifu.core.dtrain.lr;
 import java.io.File;
 import java.io.IOException;
 import java.io.Serializable;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Properties;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.TimeUnit;
 
 import ml.shifu.guagua.hadoop.io.GuaguaLineRecordReader;
 import ml.shifu.guagua.hadoop.io.GuaguaWritableAdapter;
@@ -144,10 +139,6 @@ public class LogisticRegressionWorker
      * PoissonDistribution which is used for up sampleing positive records.
      */
     protected PoissonDistribution upSampleRng = null;
-    
-    private final Data endMark = new Data(null,null,0);
-    
-    private int threadCount = 1;
 
     protected boolean isUpSampleEnabled() {
         return this.upSampleRng != null;
@@ -206,51 +197,34 @@ public class LogisticRegressionWorker
             double testingFinalError = 0.0d;
             long trainingSize = this.trainingData.size();
             long testingSize = this.testingData.size();
-            LinkedBlockingQueue<Data> trainingDataQ = new LinkedBlockingQueue<Data>();
-            LinkedBlockingQueue<Data> testingDataQ = new LinkedBlockingQueue<Data>();
-            List<DataWorker> trainingWorkers = new ArrayList<DataWorker>();
-            List<DataWorker> testingWorkers = new ArrayList<DataWorker>();
-            ExecutorService executor = Executors.newFixedThreadPool(threadCount);
-
-            try {
-                for(int i = 0; i < threadCount; i++) {
-                    DataWorker dw = new DataWorker(trainingDataQ, true);
-                    trainingWorkers.add(dw);
-                    executor.execute(dw);
-                }
-                this.trainingData.reOpen();
-                for(Data data: trainingData) {
-                    trainingDataQ.put(data);
-                }
-                trainingDataQ.put(endMark);
-                // TODO here we should use current weights+gradients to compute testing error, so far it is for last
-                // error
-                // computing.
-                for(int i = 0; i < threadCount; i++) {
-                    DataWorker dw = new DataWorker(testingDataQ, false);
-                    testingWorkers.add(dw);
-                    executor.execute(dw);
-                }
-                this.testingData.reOpen();
-                for(Data data: testingData) {
-                    testingDataQ.put(data);
-                }
-                testingDataQ.put(endMark);
-                
-                executor.shutdown();
-                executor.awaitTermination(60, TimeUnit.SECONDS);
-
-                for(DataWorker dw:trainingWorkers){
-                    trainingFinalError+=dw.finalError;
-                    for(int i = 0; i < gradients.length; i++) {
-                        gradients[i]+= dw.gradients[i];
+            this.trainingData.reOpen();
+            for(Data data: trainingData) {
+                double result = sigmoid(data.inputs, this.weights);
+                double error = data.outputs[0] - result;
+                trainingFinalError += caculateMSEError(error);
+                for(int i = 0; i < gradients.length; i++) {
+                    if(i < gradients.length - 1) {
+                        // compute gradient for each weight, this is not like traditional LR (no derived function), with
+                        // derived function, we see good convergence speed in our models.
+                        // TODO extract function to provide traditional lr gradients and derived version for user to
+                        // configure
+                        gradients[i] += error * data.inputs[i] * (derivedFunction(result) + FLAT_SPOT_VALUE)
+                                * data.getSignificance();
+                    } else {
+                        // for bias parameter, input is a constant 1d
+                        gradients[i] += error * 1d * (derivedFunction(result) + FLAT_SPOT_VALUE)
+                                * data.getSignificance();
                     }
                 }
-                for(DataWorker dw:testingWorkers){
-                    testingFinalError+=dw.finalError;
-                }
-            } catch (Exception e) {
-                throw new RuntimeException(e);
+            }
+
+            this.testingData.reOpen();
+            // TODO here we should use current weights+gradients to compute testing error, so far it is for last error
+            // computing.
+            for(Data data: testingData) {
+                double result = sigmoid(data.inputs, this.weights);
+                double error = result - data.outputs[0];
+                testingFinalError += caculateMSEError(error);
             }
             LOG.info("Iteration {} training data with error {}", context.getCurrentIteration(), trainingFinalError
                     / trainingSize);
@@ -461,53 +435,6 @@ public class LogisticRegressionWorker
          */
         public void setSignificance(double significance) {
             this.significance = significance;
-        }
-
-    }
-    
-    class DataWorker implements Runnable {
-        private LinkedBlockingQueue<Data> queue;
-        private boolean isTraining = true;
-        double[] gradients = new double[inputNum + 1];
-        double finalError = 0.0d;
-        
-
-        public DataWorker(LinkedBlockingQueue<Data> queue, boolean isTraining) {
-            this.queue = queue;
-            this.isTraining = isTraining;
-        }
-
-        public void run() {
-            Data data = null;
-            try {
-                while((data = queue.take()) != endMark) {
-                    double result = sigmoid(data.inputs, weights);
-                    double error = data.outputs[0] - result;
-                    finalError += caculateMSEError(error);
-                    if(isTraining) {
-                        for(int i = 0; i < gradients.length; i++) {
-                            if(i < gradients.length - 1) {
-                                // compute gradient for each weight, this is not like traditional LR (no derived
-                                // function),
-                                // with
-                                // derived function, we see good convergence speed in our models.
-                                // TODO extract function to provide traditional lr gradients and derived version for
-                                // user to
-                                // configure
-                                gradients[i] += error * data.inputs[i] * (derivedFunction(result) + FLAT_SPOT_VALUE)
-                                        * data.getSignificance();
-                            } else {
-                                // for bias parameter, input is a constant 1d
-                                gradients[i] += error * 1d * (derivedFunction(result) + FLAT_SPOT_VALUE)
-                                        * data.getSignificance();
-                            }
-                        }
-                    }
-                }
-                queue.put(endMark);
-            } catch (Exception e) {
-                throw new RuntimeException(e);
-            }
         }
 
     }

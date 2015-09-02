@@ -136,7 +136,7 @@ public class NNMaster implements MasterComputable<NNParams, NNParams> {
                 // read existing model weights
                 try {
                     Path modelPath = new Path(context.getProps().getProperty(CommonConstants.GUAGUA_OUTPUT));
-                    BasicNetwork existingModel = DTrainUtils.loadModel(modelPath,
+                    BasicNetwork existingModel = (BasicNetwork) DTrainUtils.loadModel(modelPath,
                             ShifuFileUtils.getFileSystemBySourceType(this.modelConfig.getDataSet().getSource()));
                     if(existingModel == null) {
                         params = initWeights();
@@ -282,7 +282,8 @@ public class NNMaster implements MasterComputable<NNParams, NNParams> {
 
             this.columnConfigList = CommonUtils.loadColumnConfigList(
                     props.getProperty(NNConstants.SHIFU_NN_COLUMN_CONFIG), sourceType);
-            this.propagation = (String) this.modelConfig.getParams().get(NNTrainer.PROPAGATION);
+            Object pObject = this.modelConfig.getParams().get(NNTrainer.PROPAGATION);
+            this.propagation = pObject == null ? "Q" : (String) pObject;
             this.rawLearningRate = Double.valueOf(this.modelConfig.getParams().get(NNTrainer.LEARNING_RATE).toString());
             Object learningDecayO = this.modelConfig.getParams().get("LearningDecay");
             if(learningDecayO != null) {

@@ -121,7 +121,8 @@ public class LogisticRegressionMaster implements MasterComputable<LogisticRegres
         this.convergenceThreshold = threshold == null ? 0d : threshold.doubleValue();
         LOG.info("Convergence threshold in master is :{}", this.convergenceThreshold);
 
-        this.propagation = (String) this.modelConfig.getParams().get(NNTrainer.PROPAGATION);
+        Object pObject = this.modelConfig.getParams().get(NNTrainer.PROPAGATION);
+        this.propagation = pObject == null ? "Q" : (String) pObject;
 
         Object rconstant = this.modelConfig.getParams().get(CommonConstants.LR_REGULARIZED_CONSTANT);
         this.regularizedConstant = NumberFormatUtils.getDouble(rconstant == null ? "" : rconstant.toString(), 0d);
