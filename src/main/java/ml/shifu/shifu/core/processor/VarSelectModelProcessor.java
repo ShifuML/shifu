@@ -96,7 +96,7 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
     private final static Logger log = LoggerFactory.getLogger(VarSelectModelProcessor.class);
 
     private static final double BAD_IV_THRESHOLD = 0.02d;
-    
+
     /**
      * Run for the variable selection
      */
@@ -171,9 +171,10 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
                     "Only R(Remove) and SE(Sensitivity Selection) wrapperBy methods are supported so far in distributed variable selection.");
         }
 
-        if(!NNConstants.NN_ALG_NAME.equalsIgnoreCase(super.getModelConfig().getTrain().getAlgorithm())) {
+        if(!NNConstants.NN_ALG_NAME.equalsIgnoreCase(super.getModelConfig().getTrain().getAlgorithm())
+                && !"LR".equalsIgnoreCase(super.getModelConfig().getTrain().getAlgorithm())) {
             throw new IllegalArgumentException(
-                    "Currently we only support NN distributed training to do wrapper by analyzing variable selection.");
+                    "Currently we only support NN and LR distributed training to do wrapper by analyzing variable selection.");
         }
 
         if(super.getModelConfig().getDataSet().getSource() != SourceType.HDFS) {

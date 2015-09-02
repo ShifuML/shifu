@@ -23,6 +23,7 @@ import java.util.List;
 
 import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
+import ml.shifu.shifu.core.dtrain.DTrainUtils;
 import ml.shifu.shifu.util.CommonUtils;
 import ml.shifu.shifu.util.Constants;
 
@@ -128,7 +129,7 @@ public class VarSelectReducer extends Reducer<LongWritable, ColumnInfo, Text, Te
     @Override
     protected void setup(Context context) throws IOException, InterruptedException {
         loadConfigFiles(context);
-        int[] inputOutputIndex = getInputOutputCandidateCounts(this.columnConfigList);
+        int[] inputOutputIndex = DTrainUtils.getInputOutputCandidateCounts(this.columnConfigList);
         this.inputNodeCount = inputOutputIndex[0] == 0 ? inputOutputIndex[2] : inputOutputIndex[0];
         this.wrapperRatio = context.getConfiguration().getFloat(Constants.SHIFU_VARSELECT_WRAPPER_RATIO,
                 Constants.SHIFU_DEFAULT_VARSELECT_WRAPPER_RATIO);
@@ -197,33 +198,6 @@ public class VarSelectReducer extends Reducer<LongWritable, ColumnInfo, Text, Te
         }
 
         this.mos.close();
-    }
-
-    /**
-     * Get input nodes number (final select) and output nodes number from column config, and candidate input node
-     * number.
-     * 
-     * <p>
-     * If number of column in final-select is 0, which means to select all non meta and non target columns. So the input
-     * number is set to all candidates.
-     * 
-     * @throws NullPointerException
-     *             if columnConfigList or ColumnConfig object in columnConfigList is null.
-     */
-    private static int[] getInputOutputCandidateCounts(List<ColumnConfig> columnConfigList) {
-        int input = 0, output = 0, candidate = 0;
-        for(ColumnConfig config: columnConfigList) {
-            if(!config.isTarget() && !config.isMeta()) {
-                candidate++;
-            }
-            if(config.isFinalSelect()) {
-                input++;
-            }
-            if(config.isTarget()) {
-                output++;
-            }
-        }
-        return new int[] { input, output, candidate };
     }
 
     private static class Pair {

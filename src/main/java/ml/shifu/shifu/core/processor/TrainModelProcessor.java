@@ -80,8 +80,8 @@ import org.apache.pig.impl.PigContext;
 import org.apache.pig.impl.util.JarManager;
 import org.apache.pig.impl.util.ObjectSerializer;
 import org.apache.zookeeper.ZooKeeper;
+import org.encog.ml.MLInputOutput;
 import org.encog.ml.data.MLDataSet;
-import org.encog.neural.networks.BasicNetwork;
 import org.jboss.netty.bootstrap.ServerBootstrap;
 import org.joda.time.ReadableInstant;
 import org.slf4j.Logger;
@@ -474,7 +474,7 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
     }
 
     private boolean inputOutputModelCheckSuccess(FileSystem fileSystem, Path modelPath) throws IOException {
-        BasicNetwork model = DTrainUtils.loadModel(modelPath, fileSystem);
+        MLInputOutput model = (MLInputOutput) DTrainUtils.loadModel(modelPath, fileSystem);
         int[] outputCandidateCounts = DTrainUtils.getInputOutputCandidateCounts(getColumnConfigList());
         return model.getInputCount() == outputCandidateCounts[0] && model.getOutputCount() == outputCandidateCounts[1];
     }

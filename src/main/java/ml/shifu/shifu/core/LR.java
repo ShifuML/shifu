@@ -20,10 +20,11 @@ import java.util.Arrays;
 import org.apache.commons.lang.StringUtils;
 import org.encog.mathutil.BoundMath;
 import org.encog.ml.BasicML;
+import org.encog.ml.MLRegression;
 import org.encog.ml.data.MLData;
 import org.encog.ml.data.basic.BasicMLData;
 
-public class LR extends BasicML {
+public class LR extends BasicML implements MLRegression {
 
     /**
      * Serial id.
@@ -36,6 +37,7 @@ public class LR extends BasicML {
         this.weights = weights;
     }
 
+    @Override
     public final MLData compute(final MLData input) {
         MLData result = new BasicMLData(1);
         double score = this.sigmoid(input.getData(), this.weights);
@@ -44,7 +46,8 @@ public class LR extends BasicML {
     }
 
     public int getInputCount() {
-        return this.weights.length;
+        // minus bias
+        return this.weights.length - 1;
     }
 
     @Override
@@ -57,16 +60,17 @@ public class LR extends BasicML {
      */
     private double sigmoid(double[] inputs, double[] weights) {
         double value = 0.0d;
-        for(int i = 0; i < weights.length; i++) {
+        for(int i = 0; i < inputs.length; i++) {
             value += weights[i] * inputs[i];
         }
-
+        // append bias
+        value += weights[inputs.length] * 1d;
         return 1.0d / (1.0d + BoundMath.exp(-1 * value));
     }
 
     @Override
     public void updateProperties() {
-
+        // No need implementation
     }
 
     public static LR loadFromString(String input) {
@@ -78,6 +82,16 @@ public class LR extends BasicML {
             weights[index++] = Double.parseDouble(weight);
         }
         return new LR(weights);
+    }
+
+    /*
+     * (non-Javadoc)
+     * 
+     * @see org.encog.ml.MLOutput#getOutputCount()
+     */
+    @Override
+    public int getOutputCount() {
+        return 1;
     }
 
 }
