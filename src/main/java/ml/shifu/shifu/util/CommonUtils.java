@@ -37,6 +37,7 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 
+import ml.shifu.guagua.GuaguaRuntimeException;
 import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.container.obj.ColumnConfig.ColumnFlag;
 import ml.shifu.shifu.container.obj.ColumnConfig.ColumnType;
@@ -69,6 +70,7 @@ import org.encog.ml.BasicML;
 import org.encog.ml.data.MLDataPair;
 import org.encog.ml.data.basic.BasicMLData;
 import org.encog.ml.data.basic.BasicMLDataPair;
+import org.encog.neural.networks.BasicNetwork;
 import org.encog.persist.EncogDirectoryPersistence;
 import org.encog.persist.PersistorRegistry;
 import org.slf4j.Logger;
@@ -571,25 +573,52 @@ public final class CommonUtils {
 
         List<BasicML> models = new ArrayList<BasicML>(listStatus.size());
         for(FileStatus f: listStatus) {
-            FSDataInputStream stream = null;
-            BufferedReader br = null;
-            try {
-                stream = fs.open(f.getPath());
-                if(f.getPath().getName().endsWith(LogisticRegressionContants.LR_ALG_NAME.toLowerCase())) {
-                    br = new BufferedReader(new InputStreamReader(stream));
-                    models.add(LR.loadFromString(br.readLine()));
-                    continue;
-                }
-                models.add(BasicML.class.cast(EncogDirectoryPersistence.loadObject(stream)));
-            } catch (RuntimeException e) {
-                String msg = "the expecting model file is: " + f.getPath();
-                throw new ShifuException(ShifuErrorCode.ERROR_FAIL_TO_LOAD_MODEL_FILE, e, msg);
-            } finally {
+            models.add(loadModel(f.getPath(), fs));
+        }
+        return models;
+    }
+
+    /**
+     * Loading model according to existing model path.
+     * 
+     * @param modelPath
+     *            the path to store model
+     * @param fs
+     *            file system used to store model
+     * @return model object or null if no modelPath file,
+     * @throws IOException
+     *             if loading file for any IOException
+     * @throws GuaguaRuntimeException
+     *             if any exception to load model object and cast to {@link BasicNetwork}
+     */
+    public static BasicML loadModel(Path modelPath, FileSystem fs) throws IOException {
+        if(!fs.exists(modelPath)) {
+            // no such existing model, return null.
+            return null;
+        }
+        // we have to register PersistBasicFloatNetwork for loading such models
+        PersistorRegistry.getInstance().add(new PersistBasicFloatNetwork());
+        FSDataInputStream stream = null;
+        BufferedReader br = null;
+        try {
+            stream = fs.open(modelPath);
+            if(modelPath.getName().endsWith(LogisticRegressionContants.LR_ALG_NAME.toLowerCase())) {
+                br = new BufferedReader(new InputStreamReader(stream));
+                return LR.loadFromString(br.readLine());
+            } else {
+                return BasicML.class.cast(EncogDirectoryPersistence.loadObject(stream));
+            }
+        } catch (Exception e) {
+            String msg = "the expecting model file is: " + modelPath;
+            throw new ShifuException(ShifuErrorCode.ERROR_FAIL_TO_LOAD_MODEL_FILE, e, msg);
+        } finally {
+            if(br != null) {
                 IOUtils.closeQuietly(br);
+            }
+            if(stream != null) {
                 IOUtils.closeQuietly(stream);
             }
         }
-        return models;
     }
 
     /**

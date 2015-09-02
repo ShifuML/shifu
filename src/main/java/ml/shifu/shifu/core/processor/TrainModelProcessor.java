@@ -474,7 +474,7 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
     }
 
     private boolean inputOutputModelCheckSuccess(FileSystem fileSystem, Path modelPath) throws IOException {
-        MLInputOutput model = (MLInputOutput) DTrainUtils.loadModel(modelPath, fileSystem);
+        MLInputOutput model = (MLInputOutput) CommonUtils.loadModel(modelPath, fileSystem);
         int[] outputCandidateCounts = DTrainUtils.getInputOutputCandidateCounts(getColumnConfigList());
         return model.getInputCount() == outputCandidateCounts[0] && model.getOutputCount() == outputCandidateCounts[1];
     }

@@ -136,7 +136,7 @@ public class NNMaster implements MasterComputable<NNParams, NNParams> {
                 // read existing model weights
                 try {
                     Path modelPath = new Path(context.getProps().getProperty(CommonConstants.GUAGUA_OUTPUT));
-                    BasicNetwork existingModel = (BasicNetwork) DTrainUtils.loadModel(modelPath,
+                    BasicNetwork existingModel = (BasicNetwork) CommonUtils.loadModel(modelPath,
                             ShifuFileUtils.getFileSystemBySourceType(this.modelConfig.getDataSet().getSource()));
                     if(existingModel == null) {
                         params = initWeights();
