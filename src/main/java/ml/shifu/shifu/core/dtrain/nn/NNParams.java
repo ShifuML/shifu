@@ -20,6 +20,7 @@ import java.io.DataOutput;
 import java.io.IOException;
 import java.util.Arrays;
 
+import ml.shifu.guagua.io.Combinable;
 import ml.shifu.guagua.io.HaltBytable;
 import ml.shifu.shifu.core.dtrain.DTrainUtils;
 
@@ -33,7 +34,7 @@ import ml.shifu.shifu.core.dtrain.DTrainUtils;
  * {@link #gradients} is used to accumulate all workers' gradients together in master and then use the accumulated
  * gradients to update weights.
  */
-public class NNParams extends HaltBytable {
+public class NNParams extends HaltBytable implements Combinable<NNParams> {
 
     /**
      * Weights used for NN model
@@ -60,7 +61,15 @@ public class NNParams extends HaltBytable {
      */
     private long trainSize = 0;
 
+    /**
+     * Total size of record
+     */
     private long count = 0L;
+
+    /**
+     * Worker count for such iteration.
+     */
+    private int wrCount = 1;
 
     public double[] getWeights() {
         return weights;
@@ -154,6 +163,7 @@ public class NNParams extends HaltBytable {
         }
 
         out.writeLong(count);
+        out.writeInt(getWrCount());
     }
 
     @Override
@@ -176,13 +186,14 @@ public class NNParams extends HaltBytable {
         }
         this.gradients = gradients;
         this.count = in.readLong();
+        this.setWrCount(in.readInt());
     }
 
     @Override
     public String toString() {
-        return String.format("NNParams [testError=%s, trainError=%s, trainSize=%s, weights=%s, gradients%s]",
-                this.testError, this.trainError, this.trainSize, Arrays.toString(this.weights),
-                Arrays.toString(this.gradients));
+        return String.format("NNParams [testError=%s, trainError=%s, trainSize=%s, wrCount=%s, gSize=%s]",
+                this.testError, this.trainError, this.trainSize, this.getWrCount(),
+                this.gradients != null ? this.gradients.length : 0);
     }
 
     /**
@@ -198,6 +209,40 @@ public class NNParams extends HaltBytable {
      */
     public void setCount(long count) {
         this.count = count;
+    }
+
+    /*
+     * (non-Javadoc)
+     * 
+     * @see ml.shifu.guagua.io.Combinable#combine(ml.shifu.guagua.io.Bytable)
+     */
+    @Override
+    public NNParams combine(NNParams from) {
+        assert from != null;
+        this.count += from.count;
+        this.trainSize += from.trainSize;
+        this.trainError += from.trainError;
+        this.testError += from.testError;
+        assert this.gradients != null && from.gradients != null;
+        for(int i = 0; i < this.gradients.length; i++) {
+            this.gradients[i] += from.gradients[i];
+        }
+        this.setWrCount(this.getWrCount() + from.getWrCount());
+        return this;
+    }
+
+    /**
+     * @return the wrCount
+     */
+    public int getWrCount() {
+        return wrCount;
+    }
+
+    /**
+     * @param wrCount the wrCount to set
+     */
+    public void setWrCount(int wrCount) {
+        this.wrCount = wrCount;
     }
 
 }
