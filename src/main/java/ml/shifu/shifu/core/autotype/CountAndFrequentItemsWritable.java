@@ -22,9 +22,9 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Set;
 
-import org.apache.hadoop.io.Writable;
+import ml.shifu.shifu.util.Constants;
 
-import com.microsoft.azure.storage.Constants;
+import org.apache.hadoop.io.Writable;
 
 /**
  * A mixed writable class to wrapper HyperLogLogPlus byte instance and frequent items together.
@@ -73,7 +73,7 @@ public class CountAndFrequentItemsWritable implements Writable {
         while(i < setSize) {
             String unit = iter.next();
             out.writeInt(unit.length());
-            byte[] bytes = unit.getBytes(Constants.UTF8_CHARSET);
+            byte[] bytes = unit.getBytes(Constants.DEFAULT_CHARSET);
             out.write(bytes, 0, bytes.length);
             i++;
         }
@@ -96,7 +96,7 @@ public class CountAndFrequentItemsWritable implements Writable {
             int unitLen = in.readInt();
             byte[] bytes = new byte[unitLen];
             in.readFully(bytes);
-            frequetItems.add(new String(bytes, Constants.UTF8_CHARSET));
+            frequetItems.add(new String(bytes, Constants.DEFAULT_CHARSET));
         }
     }
 

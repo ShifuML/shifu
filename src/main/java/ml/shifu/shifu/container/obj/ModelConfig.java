@@ -167,9 +167,6 @@ public class ModelConfig {
                 + Constants.DEFAULT_CATEGORICAL_COLUMN_FILE);
         modelConfig.setDataSet(dataSet);
 
-        // build runtime info
-        // modelConfig.setRunConf(new ModelRuntimeConf());
-
         // build stats info
         modelConfig.setStats(new ModelStatsConf());
         modelConfig.setBinningAlgorithm(BinningAlgorithm.SPDTI);
