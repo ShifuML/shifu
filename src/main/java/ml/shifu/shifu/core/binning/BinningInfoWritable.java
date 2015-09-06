@@ -62,6 +62,8 @@ public class BinningInfoWritable implements Writable {
 
     private long totalCount = 0L;
 
+    private double[] xMultiY = null;
+
     /**
      * @return the binBoundaries
      */
@@ -312,6 +314,15 @@ public class BinningInfoWritable implements Writable {
             for(int i = 0; i < this.binBoundaries.size(); i++) {
                 out.writeDouble(this.binBoundaries.get(i));
             }
+
+            if(this.xMultiY != null) {
+                out.writeInt(this.xMultiY.length);
+                for(double d: this.xMultiY) {
+                    out.writeDouble(d);
+                }
+            } else {
+                out.writeInt(0);
+            }
         } else {
             out.writeInt(this.binCategories.size());
             for(int i = 0; i < this.binCategories.size(); i++) {
@@ -322,6 +333,7 @@ public class BinningInfoWritable implements Writable {
                     out.writeByte(bytes[j]);
                 }
             }
+            // xMultiY computation is in the reducer computation
         }
     }
 
@@ -369,6 +381,13 @@ public class BinningInfoWritable implements Writable {
             for(int i = 0; i < size; i++) {
                 this.binBoundaries.add(in.readDouble());
             }
+            int xMultiYSize = in.readInt();
+            if(xMultiYSize != 0) {
+                this.xMultiY = new double[xMultiYSize];
+                for(int i = 0; i < xMultiYSize; i++) {
+                    this.xMultiY[i] = in.readDouble();
+                }
+            }
         } else {
             size = in.readInt();
             this.binCategories = new ArrayList<String>(size);
@@ -411,6 +430,21 @@ public class BinningInfoWritable implements Writable {
      */
     public void setQuarticSum(double quarticSum) {
         this.quarticSum = quarticSum;
+    }
+
+    /**
+     * @return the xMultiY
+     */
+    public double[] getxMultiY() {
+        return xMultiY;
+    }
+
+    /**
+     * @param xMultiY
+     *            the xMultiY to set
+     */
+    public void setxMultiY(double[] xMultiY) {
+        this.xMultiY = xMultiY;
     }
 
     /*

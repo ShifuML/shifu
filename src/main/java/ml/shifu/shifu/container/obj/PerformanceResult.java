@@ -19,7 +19,6 @@ import ml.shifu.shifu.container.PerformanceObject;
 
 import java.util.List;
 
-
 /**
  * Performance object to persist the result
  */

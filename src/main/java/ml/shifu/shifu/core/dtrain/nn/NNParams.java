@@ -13,15 +13,15 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package ml.shifu.shifu.core.dtrain;
-
-import ml.shifu.guagua.io.HaltBytable;
+package ml.shifu.shifu.core.dtrain.nn;
 
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 import java.util.Arrays;
 
+import ml.shifu.guagua.io.HaltBytable;
+import ml.shifu.shifu.core.dtrain.DTrainUtils;
 
 /**
  * NNParams are used to save NN model info which can also be stored into ZooKeeper.
@@ -60,6 +60,8 @@ public class NNParams extends HaltBytable {
      */
     private long trainSize = 0;
 
+    private long count = 0L;
+
     public double[] getWeights() {
         return weights;
     }
@@ -85,17 +87,17 @@ public class NNParams extends HaltBytable {
     }
 
     public void accumulateGradients(double[] gradients) {
-        if (this.gradients == null) {
+        if(this.gradients == null) {
             this.gradients = new double[gradients.length];
             Arrays.fill(this.gradients, 0.0);
         }
 
-        if (this.weights == null) {
+        if(this.weights == null) {
             this.weights = new double[gradients.length];
-            NNUtils.randomize(gradients.length, this.weights);
+            DTrainUtils.randomize(gradients.length, this.weights);
         }
 
-        for (int i = 0; i < gradients.length; i++) {
+        for(int i = 0; i < gradients.length; i++) {
             this.gradients[i] += gradients[i];
         }
     }
@@ -108,7 +110,8 @@ public class NNParams extends HaltBytable {
     }
 
     /**
-     * @param gradients the gradients to set
+     * @param gradients
+     *            the gradients to set
      */
     public void setGradients(double[] gradients) {
         this.gradients = gradients;
@@ -128,7 +131,7 @@ public class NNParams extends HaltBytable {
 
     public void reset() {
         this.setTrainSize(0);
-        if (this.gradients != null) {
+        if(this.gradients != null) {
             Arrays.fill(this.gradients, 0.0);
         }
     }
@@ -141,14 +144,16 @@ public class NNParams extends HaltBytable {
         out.writeLong(getTrainSize());
 
         out.writeInt(getWeights().length);
-        for (double weight : getWeights()) {
+        for(double weight: getWeights()) {
             out.writeDouble(weight);
         }
 
         out.writeInt(getGradients().length);
-        for (double gradient : getGradients()) {
+        for(double gradient: getGradients()) {
             out.writeDouble(gradient);
         }
+
+        out.writeLong(count);
     }
 
     @Override
@@ -159,17 +164,18 @@ public class NNParams extends HaltBytable {
 
         int len = in.readInt();
         double[] weights = new double[len];
-        for (int i = 0; i < len; i++) {
+        for(int i = 0; i < len; i++) {
             weights[i] = in.readDouble();
         }
         this.weights = weights;
 
         len = in.readInt();
         double[] gradients = new double[len];
-        for (int i = 0; i < len; i++) {
+        for(int i = 0; i < len; i++) {
             gradients[i] = in.readDouble();
         }
         this.gradients = gradients;
+        this.count = in.readLong();
     }
 
     @Override
@@ -177,6 +183,21 @@ public class NNParams extends HaltBytable {
         return String.format("NNParams [testError=%s, trainError=%s, trainSize=%s, weights=%s, gradients%s]",
                 this.testError, this.trainError, this.trainSize, Arrays.toString(this.weights),
                 Arrays.toString(this.gradients));
+    }
+
+    /**
+     * @return the count
+     */
+    public long getCount() {
+        return count;
+    }
+
+    /**
+     * @param count
+     *            the count to set
+     */
+    public void setCount(long count) {
+        this.count = count;
     }
 
 }

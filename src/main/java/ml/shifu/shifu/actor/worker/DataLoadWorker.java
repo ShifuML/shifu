@@ -15,27 +15,37 @@
  */
 package ml.shifu.shifu.actor.worker;
 
-import akka.actor.ActorRef;
+import java.util.ArrayList;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Scanner;
+
 import ml.shifu.guagua.util.NumberFormatUtils;
 import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.container.obj.ModelConfig;
-import ml.shifu.shifu.core.dtrain.NNConstants;
-import ml.shifu.shifu.core.dtrain.NNUtils;
-import ml.shifu.shifu.message.*;
+import ml.shifu.shifu.core.dtrain.CommonConstants;
+import ml.shifu.shifu.core.dtrain.DTrainUtils;
+import ml.shifu.shifu.core.dtrain.nn.NNConstants;
+import ml.shifu.shifu.message.NormPartRawDataMessage;
+import ml.shifu.shifu.message.RunModelDataMessage;
+import ml.shifu.shifu.message.ScanEvalDataMessage;
+import ml.shifu.shifu.message.ScanNormInputDataMessage;
+import ml.shifu.shifu.message.ScanStatsRawDataMessage;
+import ml.shifu.shifu.message.ScanTrainDataMessage;
+import ml.shifu.shifu.message.StatsPartRawDataMessage;
+import ml.shifu.shifu.message.TrainPartDataMessage;
 import ml.shifu.shifu.util.CommonUtils;
 import ml.shifu.shifu.util.Environment;
+
 import org.encog.ml.data.MLDataPair;
 import org.encog.ml.data.basic.BasicMLData;
 import org.encog.ml.data.basic.BasicMLDataPair;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.google.common.base.Splitter;
+import akka.actor.ActorRef;
 
-import java.util.ArrayList;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Scanner;
+import com.google.common.base.Splitter;
 
 /**
  * DataLoadWorker class is used to load data from all kinds of source.
@@ -64,7 +74,7 @@ public class DataLoadWorker extends AbstractWorkerActor {
     public DataLoadWorker(ModelConfig modelConfig, List<ColumnConfig> columnConfigList, ActorRef parentActorRef,
             ActorRef nextActorRef) {
         super(modelConfig, columnConfigList, parentActorRef, nextActorRef);
-        int[] inputOutputIndex = NNUtils.getInputOutputCandidateCounts(this.columnConfigList);
+        int[] inputOutputIndex = DTrainUtils.getInputOutputCandidateCounts(this.columnConfigList);
         this.inputNodeCount = inputOutputIndex[0] == 0 ? inputOutputIndex[2] : inputOutputIndex[0];
         this.candidateCount = inputOutputIndex[2];
     }
@@ -222,7 +232,7 @@ public class DataLoadWorker extends AbstractWorkerActor {
             for(String input: DEFAULT_SPLITTER.split(line.trim())) {
                 double doubleValue = NumberFormatUtils.getDouble(input.trim(), 0.0d);
                 if(index == this.columnConfigList.size()) {
-                    significance = NumberFormatUtils.getDouble(input.trim(), NNConstants.DEFAULT_SIGNIFICANCE_VALUE);
+                    significance = NumberFormatUtils.getDouble(input.trim(), CommonConstants.DEFAULT_SIGNIFICANCE_VALUE);
                     break;
                 } else {
                     ColumnConfig columnConfig = this.columnConfigList.get(index);

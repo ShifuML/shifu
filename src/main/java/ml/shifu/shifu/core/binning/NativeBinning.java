@@ -49,7 +49,6 @@ public class NativeBinning extends AbstractBinning<Double> {
                 return;
             }
             array.add(dval);
-
         } else {
             super.incMissingValCnt();
         }
@@ -57,7 +56,6 @@ public class NativeBinning extends AbstractBinning<Double> {
 
     @Override
     public List<Double> getDataBin() {
-
         QuickSort.sort(array);
 
         int actualBinSize = (int) Math.ceil((double) array.size() / (double) expectedBinningNum);

@@ -18,14 +18,14 @@ package ml.shifu.shifu.core.dtrain;
 import java.io.IOException;
 import java.util.List;
 
-import ml.shifu.guagua.GuaguaRuntimeException;
 import ml.shifu.shifu.container.obj.ColumnConfig;
+import ml.shifu.shifu.core.dtrain.dataset.BasicFloatNetwork;
+import ml.shifu.shifu.core.dtrain.dataset.FloatNeuralStructure;
+import ml.shifu.shifu.core.dtrain.nn.NNConstants;
+import ml.shifu.shifu.util.CommonUtils;
 import ml.shifu.shifu.util.Constants;
 import ml.shifu.shifu.util.HDFSUtils;
 
-import org.apache.commons.io.IOUtils;
-import org.apache.hadoop.fs.FSDataInputStream;
-import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.encog.Encog;
 import org.encog.engine.network.activation.ActivationLOG;
@@ -36,12 +36,12 @@ import org.encog.engine.network.activation.ActivationTANH;
 import org.encog.mathutil.randomize.NguyenWidrowRandomizer;
 import org.encog.neural.networks.BasicNetwork;
 import org.encog.neural.networks.layers.BasicLayer;
-import org.encog.persist.EncogDirectoryPersistence;
+import org.encog.neural.networks.structure.NeuralStructure;
 
 /**
  * Helper class for NN distributed training.
  */
-public final class NNUtils {
+public final class DTrainUtils {
 
     public static final String RESILIENTPROPAGATION = "R";
     public static final String SCALEDCONJUGATEGRADIENT = "S";
@@ -77,7 +77,7 @@ public final class NNUtils {
      * The maximum amount a delta can reach.
      */
 
-    private NNUtils() {
+    private DTrainUtils() {
     }
 
     /**
@@ -143,37 +143,40 @@ public final class NNUtils {
      *             if columnConfigList or ColumnConfig object in columnConfigList is null.
      */
     public static int[] getInputOutputCandidateCounts(List<ColumnConfig> columnConfigList) {
-        int input = 0, output = 0, candidate = 0;
+        @SuppressWarnings("unused")
+        int input = 0, output = 0, totalCandidate = 0, goodCandidate = 0;
         for(ColumnConfig config: columnConfigList) {
             if(!config.isTarget() && !config.isMeta()) {
-                candidate++;
+                totalCandidate++;
+                if(CommonUtils.isGoodCandidate(config)) {
+                    goodCandidate++;
+                }
             }
-            if(config.isFinalSelect()) {
+            if(config.isFinalSelect() && !config.isTarget() && !config.isMeta()) {
                 input++;
             }
             if(config.isTarget()) {
                 output++;
             }
         }
-        return new int[] { input, output, candidate };
+        return new int[] { input, output, goodCandidate };
     }
 
-    public static String getTmpNNModelName(String tmpModelsFolder, String trainerId, int iteration) {
+    public static String getTmpModelName(String tmpModelsFolder, String trainerId, int iteration, String modelPost) {
         return new StringBuilder(200).append(tmpModelsFolder).append(Path.SEPARATOR_CHAR).append("model")
-                .append(trainerId).append('-').append(iteration).append(".nn").toString();
+                .append(trainerId).append('-').append(iteration).append(".").append(modelPost).toString();
     }
 
-    static int tmpModelFactor(int epochs) {
-        return Math.max(epochs / 50, 10);
+    public static int tmpModelFactor(int epochs) {
+        return Math.max(epochs / 25, 10);
     }
 
     /**
      * Generate basic NN network object
      */
     public static BasicNetwork generateNetwork(int in, int out, int numLayers, List<String> actFunc,
-            List<Integer> hiddenNodeList) {
-
-        final BasicNetwork network = new BasicNetwork();
+            List<Integer> hiddenNodeList, boolean isRandomizeWeights) {
+        final BasicFloatNetwork network = new BasicFloatNetwork();
 
         network.addLayer(new BasicLayer(new ActivationLinear(), true, in));
 
@@ -199,10 +202,25 @@ public final class NNUtils {
 
         network.addLayer(new BasicLayer(new ActivationSigmoid(), false, out));
 
-        network.getStructure().finalizeStructure();
-        network.reset();
+        NeuralStructure structure = network.getStructure();
+        if(network.getStructure() instanceof FloatNeuralStructure) {
+            ((FloatNeuralStructure) structure).finalizeStruct();
+        } else {
+            structure.finalizeStructure();
+        }
+        if(isRandomizeWeights) {
+            network.reset();
+        }
 
         return network;
+    }
+
+    /**
+     * Generate basic NN network object
+     */
+    public static BasicNetwork generateNetwork(int in, int out, int numLayers, List<String> actFunc,
+            List<Integer> hiddenNodeList) {
+        return generateNetwork(in, out, numLayers, actFunc, hiddenNodeList, true);
     }
 
     /**
@@ -226,37 +244,6 @@ public final class NNUtils {
         // ConsistentRandomizer randomizer = new ConsistentRandomizer(-1, 1, seed);
         NguyenWidrowRandomizer randomizer = new NguyenWidrowRandomizer(-1, 1);
         randomizer.randomize(weights);
-    }
-
-    /**
-     * Loading model according to existing model path.
-     * 
-     * @param modelPath
-     *            the path to store model
-     * @param fs
-     *            file system used to store model
-     * @return model object or null if no modelPath file,
-     * @throws IOException
-     *             if loading file for any IOException
-     * @throws GuaguaRuntimeException
-     *             if any exception to load model object and cast to {@link BasicNetwork}
-     */
-    public static BasicNetwork loadModel(Path modelPath, FileSystem fs) throws IOException {
-        if(!fs.exists(modelPath)) {
-            // no such existing model, return null.
-            return null;
-        }
-        BasicNetwork model = null;
-        FSDataInputStream stream = null;
-        try {
-            stream = fs.open(modelPath);
-            model = BasicNetwork.class.cast(EncogDirectoryPersistence.loadObject(stream));
-        } catch (Exception e) {
-            throw new GuaguaRuntimeException("Loading model exception.", e);
-        } finally {
-            IOUtils.closeQuietly(stream);
-        }
-        return model;
     }
 
 }

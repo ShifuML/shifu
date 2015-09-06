@@ -70,6 +70,6 @@ public class AddColumnNumUDFTest {
         DataBag dataBag = instance.exec(tuple);
         Assert.assertEquals(30, dataBag.size());
 
-        Assert.assertEquals(dataBag.iterator().next().size(), 5);
+        Assert.assertEquals(dataBag.iterator().next().size(), 4);
     }
 }

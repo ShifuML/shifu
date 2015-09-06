@@ -38,7 +38,8 @@ import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
 import ml.shifu.shifu.core.binning.BinningInfoWritable;
 import ml.shifu.shifu.core.binning.UpdateBinningInfoMapper;
 import ml.shifu.shifu.core.binning.UpdateBinningInfoReducer;
-import ml.shifu.shifu.core.dtrain.NNConstants;
+import ml.shifu.shifu.core.dtrain.nn.NNConstants;
+import ml.shifu.shifu.core.mr.input.CombineInputFormat;
 import ml.shifu.shifu.core.validator.ModelInspector.ModelStep;
 import ml.shifu.shifu.exception.ShifuErrorCode;
 import ml.shifu.shifu.exception.ShifuException;
@@ -64,7 +65,6 @@ import org.apache.hadoop.io.NullWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
-import org.apache.hadoop.mapreduce.lib.input.TextInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.mapreduce.lib.output.TextOutputFormat;
 import org.apache.hadoop.util.GenericOptionsParser;
@@ -92,19 +92,26 @@ public class StatsModelProcessor extends BasicModelProcessor implements Processo
     public int run() throws Exception {
         log.info("Step Start: stats");
         long start = System.currentTimeMillis();
+        try {
+            setUp(ModelStep.STATS);
 
-        setUp(ModelStep.STATS);
+            syncDataToHdfs(modelConfig.getDataSet().getSource());
 
-        syncDataToHdfs(modelConfig.getDataSet().getSource());
+            if(modelConfig.isMapReduceRunMode()) {
+                runMapRedStats();
+            } else if(modelConfig.isLocalRunMode()) {
+                runAkkaStats();
+            } else {
+                throw new ShifuException(ShifuErrorCode.ERROR_UNSUPPORT_MODE);
+            }
 
-        if(modelConfig.isMapReduceRunMode()) {
-            runMapRedStats();
-        } else if(modelConfig.isLocalRunMode()) {
-            runAkkaStats();
-        } else {
-            throw new ShifuException(ShifuErrorCode.ERROR_UNSUPPORT_MODE);
+            syncDataToHdfs(modelConfig.getDataSet().getSource());
+
+            clearUp(ModelStep.STATS);
+        } catch (Exception e) {
+            log.error("Error:", e);
+            return -1;
         }
-        clearUp(ModelStep.STATS);
 
         log.info("Step Finished: stats with {} ms", (System.currentTimeMillis() - start));
         return 0;
@@ -149,8 +156,16 @@ public class StatsModelProcessor extends BasicModelProcessor implements Processo
         ShifuFileUtils.deleteFile(pathFinder.getPreTrainingStatsPath(), modelConfig.getDataSet().getSource());
         Map<String, String> paramsMap = new HashMap<String, String>();
         paramsMap.put("delimiter", CommonUtils.escapePigString(modelConfig.getDataSetDelimiter()));
-        paramsMap.put("column_parallel", Integer.toString(columnConfigList.size() / 5));
+        if(columnConfigList.size() <= 1000) {
+            paramsMap.put("column_parallel", Integer.toString(columnConfigList.size() / 5));
+        } else {
+            paramsMap.put("column_parallel", Integer.toString(columnConfigList.size() / 4));
+        }
+        paramsMap.put("histo_scale_factor", Environment.getProperty("shifu.stats.histo.scale.factor", "100"));
 
+        // FIXME how to estimate mapper size then to estimate reducer size, in stats, reducer size is estimated by
+        // column_parallel is not a good
+        // new PigInputFormat().getSplits(jobcontext)
         // execute pig job
         try {
             log.info("execute binning algorithm: {}", modelConfig.getBinningAlgorithm().toString());
@@ -170,6 +185,14 @@ public class StatsModelProcessor extends BasicModelProcessor implements Processo
                 // update
                 log.info("Updating binning info ...");
                 updateBinningInfoWithMRJob();
+            } else if(modelConfig.getBinningAlgorithm().equals(ModelStatsConf.BinningAlgorithm.MunroPatI)) {
+                ShifuFileUtils.deleteFile(pathFinder.getUpdatedBinningInfoPath(modelConfig.getDataSet().getSource()),
+                        modelConfig.getDataSet().getSource());
+                PigExecutor.getExecutor().submitJob(modelConfig,
+                        pathFinder.getAbsolutePath("scripts/StatsMunroPatI.pig"), paramsMap);
+                // update
+                log.info("Updating binning info ...");
+                updateBinningInfoWithMRJob();
             }
         } catch (IOException e) {
             throw new ShifuException(ShifuErrorCode.ERROR_RUNNING_PIG_JOB, e);
@@ -182,7 +205,7 @@ public class StatsModelProcessor extends BasicModelProcessor implements Processo
         // update column config
         updateColumnConfigWithPreTrainingStats();
         // save it to local/hdfs
-        saveColumnConfigListAndColumnStats();
+        saveColumnConfigListAndColumnStats(true);
     }
 
     // GuaguaOptionsParser doesn't to support *.jar currently.
@@ -220,6 +243,11 @@ public class StatsModelProcessor extends BasicModelProcessor implements Processo
         // add jars to hadoop mapper and reducer
         new GenericOptionsParser(conf, new String[] { "-libjars", addRuntimeJars(), "-files", filePath });
 
+        conf.setBoolean(CombineInputFormat.SHIFU_VS_SPLIT_COMBINABLE, true);
+
+        conf.set(Constants.SHIFU_STATS_EXLCUDE_MISSING,
+                Environment.getProperty(Constants.SHIFU_STATS_EXLCUDE_MISSING, "true"));
+
         conf.setBoolean(GuaguaMapReduceConstants.MAPRED_MAP_TASKS_SPECULATIVE_EXECUTION, true);
         conf.setBoolean(GuaguaMapReduceConstants.MAPRED_REDUCE_TASKS_SPECULATIVE_EXECUTION, true);
         conf.set(
@@ -235,7 +263,7 @@ public class StatsModelProcessor extends BasicModelProcessor implements Processo
         // set mapreduce.job.max.split.locations to 30 to suppress warnings
         conf.setInt(GuaguaMapReduceConstants.MAPREDUCE_JOB_MAX_SPLIT_LOCATIONS, 30);
         conf.set("mapred.reduce.slowstart.completed.maps",
-                Environment.getProperty("mapred.reduce.slowstart.completed.maps", "0.9"));
+                Environment.getProperty("mapred.reduce.slowstart.completed.maps", "0.8"));
         String hdpVersion = HDPUtils.getHdpVersionForHDP224();
         if(StringUtils.isNotBlank(hdpVersion)) {
             // for hdp 2.2.4, hdp.version should be set and configuration files should be add to container class path
@@ -281,7 +309,7 @@ public class StatsModelProcessor extends BasicModelProcessor implements Processo
 
         job.setMapOutputKeyClass(IntWritable.class);
         job.setMapOutputValueClass(BinningInfoWritable.class);
-        job.setInputFormatClass(TextInputFormat.class);
+        job.setInputFormatClass(CombineInputFormat.class);
         FileInputFormat.setInputPaths(
                 job,
                 ShifuFileUtils.getFileSystemBySourceType(source).makeQualified(

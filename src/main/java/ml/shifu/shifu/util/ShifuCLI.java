@@ -51,7 +51,10 @@ import org.slf4j.LoggerFactory;
  * ShifuCLI class is the MAIN class for whole project
  * It will read and analysis the parameters from command line
  * and execute corresponding functions
+ * 
+ * @deprecated please use {@link ml.shifu.shifu.ShifuCLI}.
  */
+@Deprecated
 public class ShifuCLI {
 
     private static final String MODELSET_CMD_M = "m";
@@ -127,6 +130,8 @@ public class ShifuCLI {
                         cmd.getOptionValue(MODELSET_CMD_M));
                 if(status == 0) {
                     printModelSetCreatedSuccessfulLog(modelName);
+                } else {
+                    log.warn("Error in create new model set, please check your shifu config or report issue");
                 }
                 // copyModel(manager, cmd.getOptionValues(MODELSET_CMD_CP));
             } else {
@@ -142,6 +147,8 @@ public class ShifuCLI {
                         int status = initializeModel();
                         if(status == 0) {
                             log.info("ModelSet initilization is successful. Please continue next step by using 'shifu stats'.");
+                        } else {
+                            log.warn("Error in ModelSet initilization, please check your shifu config or report issue");
                         }
                     } else if(cmd.hasOption(INIT_CMD_MODEL)) {
                         initializeModelParam();
@@ -151,24 +158,39 @@ public class ShifuCLI {
                     }
                 } else if(args[0].equals(STATS_CMD)) {
                     // stats step
-                    calModelStats();
-                    log.info("Do model set statistics successfully. Please continue next step by using 'shifu normalize or shifu norm'.");
+                    if(calModelStats() == 0) {
+                        log.info("Do model set statistics successfully. Please continue next step by using 'shifu normalize or shifu norm'.");
+                    } else {
+                        log.warn("Error in model set stats computation, please report issue on http:/github.com/shifuml/shifu/issues.");
+                    }
                 } else if(args[0].equals(NORMALIZE_CMD) || args[0].equals(NORM_CMD)) {
                     // normalize step
-                    normalizeTrainData();
-                    log.info("Do model set normalization successfully. Please continue next step by using 'shifu varselect or shifu varsel'.");
+                    if(normalizeTrainData() == 0) {
+                        log.info("Do model set normalization successfully. Please continue next step by using 'shifu varselect or shifu varsel'.");
+                    } else {
+                        log.warn("Error in model set stats computation, please report issue on http:/github.com/shifuml/shifu/issues.");
+                    }
                 } else if(args[0].equals(VARSELECT_CMD) || args[0].equals(VARSEL_CMD)) {
                     // variable selected step
-                    selectModelVar();
-                    log.info("Do model set variables selection successfully. Please continue next step by using 'shifu train'.");
+                    if(selectModelVar() == 0) {
+                        log.info("Do model set variables selection successfully. Please continue next step by using 'shifu train'.");
+                    } else {
+                        log.info("Do variable selection with error, please check error message or report issue.");
+                    }
                 } else if(args[0].equals(TRAIN_CMD)) {
                     // train step
-                    trainModel(cmd.hasOption(TRAIN_CMD_DRY), cmd.hasOption(TRAIN_CMD_DEBUG));
-                    log.info("Do model set training successfully. Please continue next step by using 'shifu posttrain' or if no need posttrain you can go through with 'shifu eval'.");
+                    if(trainModel(cmd.hasOption(TRAIN_CMD_DRY), cmd.hasOption(TRAIN_CMD_DEBUG)) == 0) {
+                        log.info("Do model set training successfully. Please continue next step by using 'shifu posttrain' or if no need posttrain you can go through with 'shifu eval'.");
+                    } else {
+                        log.info("Do model training with error, please check error message or report issue.");
+                    }
                 } else if(args[0].equals(POSTTRAIN_CMD)) {
                     // post train step
-                    postTrainModel();
-                    log.info("Do model set post-training successfully. Please configurate your eval set in ModelConfig.json and continue next step by using 'shifu eval' or 'shifu eval -new <eval set>' to create a new eval set.");
+                    if(postTrainModel() == 0) {
+                        log.info("Do model set post-training successfully. Please configurate your eval set in ModelConfig.json and continue next step by using 'shifu eval' or 'shifu eval -new <eval set>' to create a new eval set.");
+                    } else {
+                        log.info("Do model post training with error, please check error message or report issue.");
+                    }
                 } else if(args[0].equals(SAVE)) {
                     String newModelSetName = args.length >= 2 ? args[1] : null;
                     saveCurrentModel(newModelSetName);
@@ -182,8 +204,11 @@ public class ShifuCLI {
                     // eval step
                     if(args.length == 1) {
                         // run everything
-                        runEvalSet(cmd.hasOption(TRAIN_CMD_DRY));
-                        log.info("Run eval performance with all eval sets successfully.");
+                        if(runEvalSet(cmd.hasOption(TRAIN_CMD_DRY)) == 0) {
+                            log.info("Run eval performance with all eval sets successfully.");
+                        } else {
+                            log.info("Do evaluation with error, please check error message or report issue.");
+                        }
                     } else if(cmd.getOptionValue(MODELSET_CMD_NEW) != null) {
                         // create new eval
                         createNewEvalSet(cmd.getOptionValue(MODELSET_CMD_NEW));
@@ -218,7 +243,11 @@ public class ShifuCLI {
                         printUsage();
                     }
                 } else if(args[0].equals(CMD_EXPORT)) {
-                    exportModel(cmd.getOptionValue(MODELSET_CMD_TYPE));
+                    if(exportModel(cmd.getOptionValue(MODELSET_CMD_TYPE)) == 0) {
+                        log.info("Export models to PMML format successfully in current folder.");
+                    } else {
+                        log.warn("Export models to PMML format with error, please check or report issue.");
+                    }
                 } else {
                     log.error("Invalid command, please check help message.");
                     printUsage();
@@ -299,9 +328,9 @@ public class ShifuCLI {
     /**
      * Calculate variables stats for model - ks/iv/mean/max/min
      */
-    public static void calModelStats() throws Exception {
+    public static int calModelStats() throws Exception {
         StatsModelProcessor p = new StatsModelProcessor();
-        p.run();
+        return p.run();
     }
 
     /**
@@ -310,9 +339,9 @@ public class ShifuCLI {
      * @throws Exception
      * @throws ShifuException
      */
-    public static void selectModelVar() throws Exception {
+    public static int selectModelVar() throws Exception {
         VarSelectModelProcessor p = new VarSelectModelProcessor();
-        p.run();
+        return p.run();
     }
 
     /**
@@ -320,9 +349,9 @@ public class ShifuCLI {
      * 
      * @throws Exception
      */
-    public static void normalizeTrainData() throws Exception {
+    public static int normalizeTrainData() throws Exception {
         NormalizeModelProcessor p = new NormalizeModelProcessor();
-        p.run();
+        return p.run();
     }
 
     /**
@@ -330,17 +359,17 @@ public class ShifuCLI {
      * 
      * @throws Exception
      */
-    public static void trainModel(boolean isDryTrain, boolean isDebug) throws Exception {
+    public static int trainModel(boolean isDryTrain, boolean isDebug) throws Exception {
         TrainModelProcessor p = new TrainModelProcessor(isDryTrain, isDebug);
-        p.run();
+        return p.run();
     }
 
     /**
      * Run post-train step
      */
-    public static void postTrainModel() throws Exception {
+    public static int postTrainModel() throws Exception {
         PostTrainModelProcessor p = new PostTrainModelProcessor();
-        p.run();
+        return p.run();
     }
 
     /**
@@ -348,18 +377,17 @@ public class ShifuCLI {
      * 
      * @throws Exception
      */
-    public static void createNewEvalSet(String evalSetName) throws Exception {
+    public static int createNewEvalSet(String evalSetName) throws Exception {
         EvalModelProcessor p = new EvalModelProcessor(EvalStep.NEW, evalSetName);
-
-        p.run();
+        return p.run();
     }
 
     /**
      * Run the evalset to test the model with isDry switch
      */
-    public static void runEvalSet(boolean isDryRun) throws Exception {
+    public static int runEvalSet(boolean isDryRun) throws Exception {
         EvalModelProcessor p = new EvalModelProcessor(EvalStep.RUN);
-        p.run();
+        return p.run();
     }
 
     /**
@@ -367,37 +395,36 @@ public class ShifuCLI {
      * @param isDryRun
      * @throws Exception
      */
-    public static void runEvalSet(String evalSetName, boolean isDryRun) throws Exception {
-        // TODO dry run useful?
+    public static int runEvalSet(String evalSetName, boolean isDryRun) throws Exception {
         EvalModelProcessor p = new EvalModelProcessor(EvalStep.RUN, evalSetName);
-        p.run();
+        return p.run();
     }
 
     /**
      * @param evalSetNames
      * @throws Exception
      */
-    public static void runEvalScore(String evalSetNames) throws Exception {
+    public static int runEvalScore(String evalSetNames) throws Exception {
         EvalModelProcessor p = new EvalModelProcessor(EvalStep.SCORE, evalSetNames);
-        p.run();
+        return p.run();
     }
 
     /**
      * @param evalSetNames
      * @throws Exception
      */
-    private static void runEvalConfMat(String evalSetNames) throws Exception {
+    private static int runEvalConfMat(String evalSetNames) throws Exception {
         EvalModelProcessor p = new EvalModelProcessor(EvalStep.CONFMAT, evalSetNames);
-        p.run();
+        return p.run();
     }
 
     /**
      * @param evalSetNames
      * @throws Exception
      */
-    private static void runEvalPerf(String evalSetNames) throws Exception {
+    private static int runEvalPerf(String evalSetNames) throws Exception {
         EvalModelProcessor p = new EvalModelProcessor(EvalStep.PERF, evalSetNames);
-        p.run();
+        return p.run();
     }
 
     /**
@@ -405,9 +432,9 @@ public class ShifuCLI {
      * 
      * @throws Exception
      */
-    private static void listEvalSet() throws Exception {
+    private static int listEvalSet() throws Exception {
         EvalModelProcessor p = new EvalModelProcessor(EvalStep.LIST);
-        p.run();
+        return p.run();
     }
 
     /**
@@ -416,9 +443,9 @@ public class ShifuCLI {
      * @param optionValue
      * @throws Exception
      */
-    private static void deleteEvalSet(String evalSetName) throws Exception {
+    private static int deleteEvalSet(String evalSetName) throws Exception {
         EvalModelProcessor p = new EvalModelProcessor(EvalStep.DELETE, evalSetName);
-        p.run();
+        return p.run();
     }
 
     /**
@@ -438,9 +465,9 @@ public class ShifuCLI {
      * @param optionValue
      * @throws Exception
      */
-    public static void exportModel(String type) throws Exception {
+    public static int exportModel(String type) throws Exception {
         ExportModelProcessor p = new ExportModelProcessor(type);
-        p.run();
+        return p.run();
     }
 
     /**

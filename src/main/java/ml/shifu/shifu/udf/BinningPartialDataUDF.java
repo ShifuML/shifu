@@ -20,6 +20,7 @@ package ml.shifu.shifu.udf;
 import java.io.IOException;
 import java.util.Iterator;
 
+import ml.shifu.guagua.util.NumberFormatUtils;
 import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.container.obj.ModelStatsConf.BinningMethod;
 import ml.shifu.shifu.core.binning.AbstractBinning;
@@ -42,6 +43,7 @@ public class BinningPartialDataUDF extends AbstractTrainerUDF<String> {
 
     private int columnId = -1;
     private AbstractBinning<?> binning = null;
+    private int histoScaleFactor;
 
     /**
      * @param source
@@ -50,7 +52,22 @@ public class BinningPartialDataUDF extends AbstractTrainerUDF<String> {
      * @throws IOException
      */
     public BinningPartialDataUDF(String source, String pathModelConfig, String pathColumnConfig) throws IOException {
+        this(source, pathModelConfig, pathColumnConfig, "100");
+    }
+
+    /**
+     * @param source
+     * @param pathModelConfig
+     * @param pathColumnConfig
+     * @throws IOException
+     */
+    public BinningPartialDataUDF(String source, String pathModelConfig, String pathColumnConfig, String histoScaleFactor)
+            throws IOException {
         super(source, pathModelConfig, pathColumnConfig);
+        this.histoScaleFactor = NumberFormatUtils.getInt(histoScaleFactor, 100);
+        if(this.histoScaleFactor < 100) {
+            this.histoScaleFactor = 100;
+        }
     }
 
     /*
@@ -93,7 +110,7 @@ public class BinningPartialDataUDF extends AbstractTrainerUDF<String> {
         }
 
         String binningObjStr = ((binning == null) ? null : binning.objToString());
-        
+
         cleanUp();
 
         return binningObjStr;

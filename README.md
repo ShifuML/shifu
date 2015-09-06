@@ -25,6 +25,7 @@ Shifu’s fast Hadoop-based, distributed neural network training can reduce mode
  - Mark Liu
  - David Zhang
  - Xin Zhong
+ - Simon Zhang
 
 ## Google Group
 

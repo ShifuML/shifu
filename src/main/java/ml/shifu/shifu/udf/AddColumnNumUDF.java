@@ -16,14 +16,14 @@
 package ml.shifu.shifu.udf;
 
 import java.io.IOException;
-import java.util.List;
+import java.util.HashSet;
 import java.util.Random;
+import java.util.Set;
 
 import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.exception.ShifuErrorCode;
 import ml.shifu.shifu.exception.ShifuException;
 
-import org.apache.commons.lang.StringUtils;
 import org.apache.pig.data.BagFactory;
 import org.apache.pig.data.DataBag;
 import org.apache.pig.data.DataType;
@@ -37,36 +37,22 @@ import org.apache.pig.impl.logicalLayer.schema.Schema.FieldSchema;
  * AddColumnNumUDF class is to convert tuple of row data into bag of column data
  * Its structure is like
  *    {
- * 		(column-id, column-value, column-tag, column-score)
- * 		(column-id, column-value, column-tag, column-score)
- * 		...
+ *         (column-id, column-value, column-tag, column-score)
+ *         (column-id, column-value, column-tag, column-score)
+ *         ...
  * }
  */
 public class AddColumnNumUDF extends AbstractTrainerUDF<DataBag> {
 
-    private List<String> negTags;
+    protected Set<String> negTags;
 
     private Random random = new Random(System.currentTimeMillis());
-
-    private int weightedColumnNum = -1;
 
     public AddColumnNumUDF(String source, String pathModelConfig, String pathColumnConfig, String withScoreStr)
             throws Exception {
         super(source, pathModelConfig, pathColumnConfig);
 
-        if(!StringUtils.isEmpty(this.modelConfig.getDataSet().getWeightColumnName())) {
-            String weightColumnName = this.modelConfig.getDataSet().getWeightColumnName();
-
-            for(int i = 0; i < this.columnConfigList.size(); i++) {
-                ColumnConfig config = this.columnConfigList.get(i);
-                if(config.getColumnName().equals(weightColumnName)) {
-                    this.weightedColumnNum = i;
-                    break;
-                }
-            }
-        }
-
-        negTags = modelConfig.getNegTags();
+        negTags = new HashSet<String>(modelConfig.getNegTags());
     }
 
     public DataBag exec(Tuple input) throws IOException {
@@ -90,6 +76,11 @@ public class AddColumnNumUDF extends AbstractTrainerUDF<DataBag> {
 
         String tag = input.get(tagColumnNum).toString();
 
+        // filter out tag not in setting tagging list
+        if(!super.tagSet.contains(tag)) {
+            return null;
+        }
+
         Double rate = modelConfig.getBinningSampleRate();
         if(modelConfig.isBinningSampleNegOnly()) {
             if(negTags.contains(tag) && random.nextDouble() > rate) {
@@ -102,43 +93,30 @@ public class AddColumnNumUDF extends AbstractTrainerUDF<DataBag> {
         }
 
         for(int i = 0; i < size; i++) {
-            if(modelConfig.isCategoricalDisabled()) {
-                try {
-                    Double.valueOf(input.get(i).toString());
-                } catch (Exception e) {
-                    continue;
-                }
-            }
-
             ColumnConfig config = columnConfigList.get(i);
             if(config.isCandidate()) {
-                Tuple tuple = tupleFactory.newTuple(5);
+                Tuple tuple = tupleFactory.newTuple(4);
                 tuple.set(0, i);
 
                 // Set Data
                 tuple.set(1, input.get(i) == null ? null : input.get(i).toString());
 
-                // Set Tag
-                tuple.set(2, tag);
-
-                // set weights
-                if(weightedColumnNum != -1) {
-                    try {
-                        tuple.set(3, Double.valueOf(input.get(weightedColumnNum).toString()));
-                    } catch (NumberFormatException e) {
-                        tuple.set(3, 1.0);
+                if(modelConfig.isBinaryClassification()) {
+                    // Set Tag
+                    if(super.posTagSet.contains(tag)) {
+                        tuple.set(2, true);
                     }
 
-                    if(i == weightedColumnNum) {
-                        // weight and its column, set to 1
-                        tuple.set(3, 1.0);
+                    if(super.negTagSet.contains(tag)) {
+                        tuple.set(2, false);
                     }
                 } else {
-                    tuple.set(3, 1.0);
+                    // a mock for multiple classification
+                    tuple.set(2, true);
                 }
 
                 // add random seed for distribution
-                tuple.set(4, Math.abs(random.nextInt() % 300));
+                tuple.set(3, Math.abs(random.nextInt() % 300));
 
                 bag.add(tuple);
             }
@@ -153,8 +131,7 @@ public class AddColumnNumUDF extends AbstractTrainerUDF<DataBag> {
             Schema tupleSchema = new Schema();
             tupleSchema.add(new FieldSchema("columnId", DataType.INTEGER));
             tupleSchema.add(new FieldSchema("value", DataType.CHARARRAY));
-            tupleSchema.add(new FieldSchema("tag", DataType.CHARARRAY));
-            tupleSchema.add(new FieldSchema("weight", DataType.DOUBLE));
+            tupleSchema.add(new FieldSchema("tag", DataType.BOOLEAN));
             tupleSchema.add(new FieldSchema("rand", DataType.INTEGER));
 
             return new Schema(new Schema.FieldSchema("columnInfos", new Schema(new Schema.FieldSchema("columnInfo",

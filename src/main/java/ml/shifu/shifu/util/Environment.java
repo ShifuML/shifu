@@ -81,9 +81,10 @@ public class Environment {
 
     /**
      * Load properties from
-     * ${SHIFU_HOME}/conf/shifconfig
-     * /etc/shifconfig
-     * ~/.shifconfig
+     * 1. ${SHIFU_HOME}/conf/shifuconfig
+     * 2. /etc/shifuconfig
+     * 3. ~/.shifuconfig
+     * 
      * Provide function to reload
      * 
      * @throws IOException

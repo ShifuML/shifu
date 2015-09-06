@@ -47,13 +47,25 @@ public class Weight {
     private static final double DEFAULT_INITIAL_UPDATE = 0.1;
     private static final double DEFAULT_MAX_STEP = 50;
 
-    public Weight(int numWeight, double numTrainSize, double rate, String algorithm) {
+    /**
+     * L1 or L2 regulation parameter.
+     */
+    private double reg;
 
+    private double numTrainSize;
+
+    /**
+     * Regulazation level
+     */
+    private RegulationLevel rl = RegulationLevel.NONE;
+
+    public Weight(int numWeight, double numTrainSize, double rate, String algorithm, double reg, RegulationLevel rl) {
         this.lastDelta = new double[numWeight];
         this.lastGradient = new double[numWeight];
+        this.numTrainSize = numTrainSize;
         this.eps = this.outputEpsilon / numTrainSize;
         this.shrink = rate / (1.0 + rate);
-        this.setLearningRate(rate);
+        this.learningRate = rate;
         this.algorithm = algorithm;
         this.updateValues = new double[numWeight];
 
@@ -61,31 +73,51 @@ public class Weight {
             this.updateValues[i] = DEFAULT_INITIAL_UPDATE;
             this.lastDelta[i] = 0;
         }
+        this.reg = reg;
+        if(rl != null) {
+            this.rl = rl;
+        }
     }
 
     public double[] calculateWeights(double[] weights, double[] gradients) {
         for(int i = 0; i < gradients.length; i++) {
-            weights[i] += updateWeight(i, weights, gradients);
+            switch(this.rl) {
+                case NONE:
+                    weights[i] += updateWeight(i, weights, gradients);
+                    break;
+                case L1:
+                    if(Double.compare(this.reg, 0d) == 0) {
+                        weights[i] += updateWeight(i, weights, gradients);
+                    } else {
+                        double shrinkValue = this.reg / getNumTrainSize();
+                        double delta = updateWeight(i, weights, gradients);
+                        weights[i] += Math.signum(delta) * Math.max(0.0, Math.abs(delta) - shrinkValue);
+                    }
+                    break;
+                case L2:
+                default:
+                    weights[i] += (updateWeight(i, weights, gradients) - this.reg * weights[i] / getNumTrainSize());
+                    break;
+            }
         }
 
         return weights;
     }
 
     private double updateWeight(int index, double[] weights, double[] gradients) {
-        if(this.algorithm.equalsIgnoreCase(NNUtils.BACK_PROPAGATION)) {
+        if(this.algorithm.equalsIgnoreCase(DTrainUtils.BACK_PROPAGATION)) {
             return updateWeightBP(index, weights, gradients);
-        } else if(this.algorithm.equalsIgnoreCase(NNUtils.QUICK_PROPAGATION)) {
+        } else if(this.algorithm.equalsIgnoreCase(DTrainUtils.QUICK_PROPAGATION)) {
             return updateWeightQBP(index, weights, gradients);
-        } else if(this.algorithm.equalsIgnoreCase(NNUtils.MANHATTAN_PROPAGATION)) {
+        } else if(this.algorithm.equalsIgnoreCase(DTrainUtils.MANHATTAN_PROPAGATION)) {
             return updateWeightMHP(index, weights, gradients);
-        } else if(this.algorithm.equalsIgnoreCase(NNUtils.SCALEDCONJUGATEGRADIENT)) {
+        } else if(this.algorithm.equalsIgnoreCase(DTrainUtils.SCALEDCONJUGATEGRADIENT)) {
             return updateWeightSCG(index, weights, gradients);
-        } else if(this.algorithm.equalsIgnoreCase(NNUtils.RESILIENTPROPAGATION)) {
+        } else if(this.algorithm.equalsIgnoreCase(DTrainUtils.RESILIENTPROPAGATION)) {
             return updateWeightRLP(index, weights, gradients);
         }
 
         return 0.0;
-
     }
 
     private double updateWeightBP(int index, double[] weights, double[] gradients) {
@@ -95,7 +127,6 @@ public class Weight {
     }
 
     private double updateWeightQBP(int index, double[] weights, double[] gradients) {
-
         final double w = weights[index];
         final double d = this.lastDelta[index];
         final double s = -gradients[index] + this.decay * w;
@@ -161,22 +192,22 @@ public class Weight {
     private double updateWeightRLP(int index, double[] weights, double[] gradients) {
         // multiply the current and previous gradient, and take the
         // sign. We want to see if the gradient has changed its sign.
-        final int change = NNUtils.sign(gradients[index] * lastGradient[index]);
+        final int change = DTrainUtils.sign(gradients[index] * lastGradient[index]);
         double weightChange = 0;
 
         // if the gradient has retained its sign, then we increase the
         // delta so that it will converge faster
         if(change > 0) {
-            double delta = this.updateValues[index] * NNUtils.POSITIVE_ETA;
+            double delta = this.updateValues[index] * DTrainUtils.POSITIVE_ETA;
             delta = Math.min(delta, DEFAULT_MAX_STEP);
-            weightChange = NNUtils.sign(gradients[index]) * delta;
+            weightChange = DTrainUtils.sign(gradients[index]) * delta;
             this.updateValues[index] = delta;
             lastGradient[index] = gradients[index];
         } else if(change < 0) {
             // if change<0, then the sign has changed, and the last
             // delta was too big
-            double delta = this.updateValues[index] * NNUtils.NEGATIVE_ETA;
-            delta = Math.max(delta, NNUtils.DELTA_MIN);
+            double delta = this.updateValues[index] * DTrainUtils.NEGATIVE_ETA;
+            delta = Math.max(delta, DTrainUtils.DELTA_MIN);
             this.updateValues[index] = delta;
             weightChange = -this.lastDelta[index];
             // set the previous gradent to zero so that there will be no
@@ -185,7 +216,7 @@ public class Weight {
         } else if(change == 0) {
             // if change==0 then there is no change to the delta
             final double delta = this.updateValues[index];
-            weightChange = NNUtils.sign(gradients[index]) * delta;
+            weightChange = DTrainUtils.sign(gradients[index]) * delta;
             lastGradient[index] = gradients[index];
         }
 
@@ -207,5 +238,21 @@ public class Weight {
      */
     public void setLearningRate(double learningRate) {
         this.learningRate = learningRate;
+    }
+
+    /**
+     * @return the numTrainSize
+     */
+    public double getNumTrainSize() {
+        return numTrainSize;
+    }
+
+    /**
+     * @param numTrainSize
+     *            the numTrainSize to set
+     */
+    public void setNumTrainSize(double numTrainSize) {
+        this.numTrainSize = numTrainSize;
+        this.eps = this.outputEpsilon / numTrainSize;
     }
 }

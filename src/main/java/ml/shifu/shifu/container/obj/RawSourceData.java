@@ -18,7 +18,9 @@ package ml.shifu.shifu.container.obj;
 import java.util.ArrayList;
 import java.util.List;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.google.common.collect.Lists;
 
@@ -55,13 +57,20 @@ public class RawSourceData implements Cloneable {
 
     private List<String> missingOrInvalidValues = Lists.asList("", new String[] { "*", "#", "?", "null", "none" });
 
-    private Boolean autoType = Boolean.FALSE;
+    /**
+     * Change it to true by default to compute distinct value for later variable selection.
+     */
+    private Boolean autoType = Boolean.TRUE;
 
-    private Integer autoTypeThreshold = 250;
+    /**
+     * To change it to 0 instead of 250 because 0-1 columns shouldn't be set to categorical. TODO, fix 0-1 bug
+     */
+    private Integer autoTypeThreshold = 0;
 
     /**
      * @return the autoTypeThreshold
      */
+    @JsonIgnore
     public Integer getAutoTypeThreshold() {
         return autoTypeThreshold;
     }
@@ -70,6 +79,7 @@ public class RawSourceData implements Cloneable {
      * @param autoTypeThreshold
      *            the autoTypeThreshold to set
      */
+    @JsonProperty
     public void setAutoTypeThreshold(Integer autoTypeThreshold) {
         this.autoTypeThreshold = autoTypeThreshold;
     }
@@ -196,6 +206,7 @@ public class RawSourceData implements Cloneable {
     /**
      * @return the autoType
      */
+    @JsonIgnore
     public Boolean getAutoType() {
         return autoType;
     }
@@ -204,6 +215,7 @@ public class RawSourceData implements Cloneable {
      * @param autoType
      *            the autoType to set
      */
+    @JsonProperty
     public void setAutoType(Boolean autoType) {
         this.autoType = autoType;
     }

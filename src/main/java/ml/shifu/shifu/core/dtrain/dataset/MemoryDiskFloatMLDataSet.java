@@ -13,23 +13,15 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package ml.shifu.shifu.core.dtrain;
+package ml.shifu.shifu.core.dtrain.dataset;
 
 import java.io.File;
 import java.util.Iterator;
 
 import ml.shifu.shifu.util.SizeEstimator;
 
-import org.encog.ml.data.MLData;
-import org.encog.ml.data.MLDataPair;
-import org.encog.ml.data.MLDataSet;
-import org.encog.ml.data.basic.BasicMLData;
-import org.encog.ml.data.basic.BasicMLDataPair;
-import org.encog.ml.data.basic.BasicMLDataSet;
-import org.encog.ml.data.buffer.BufferedMLDataSet;
-
 /**
- * A hybrid data set combining {@link BasicMLDataSet} and {@link BufferedMLDataSet} together.
+ * A hybrid data set combining {@link BasicFloatMLDataSet} and {@link BufferedFloatMLDataSet} together.
  * 
  * <p>
  * With this data set, element is added firstly in memory, if over {@link #maxByteSize} then element will be added into
@@ -40,17 +32,17 @@ import org.encog.ml.data.buffer.BufferedMLDataSet;
  * memory, memory and disk will be leveraged together to accelerate computing.
  * 
  * <p>
- * Example almost same as {@link BufferedMLDataSet}:
+ * Example almost same as {@link BufferedFloatMLDataSet}:
  * 
  * <pre>
- * MemoryDiskMLDataSet dataSet = new MemoryDiskMLDataSet(400, "a.txt");
+ * MemoryDiskMLDataSet dataSet = new MemoryDiskFloatMLDataSet(400, "a.txt");
  * dataSet.beginLoad(10, 1);
  * dataSet.add(pair);
  * dataSet.endLoad();
  * 
  * Iterator<MLDataPair> iterator = dataSet.iterator();
  * while(iterator.hasNext()) {
- *     MLDataPair next = iterator.next();
+ *     FloatMLDataPair next = iterator.next();
  *     ...
  * }
  * 
@@ -59,7 +51,7 @@ import org.encog.ml.data.buffer.BufferedMLDataSet;
  * 
  * @author Zhang David (pengzhang@paypal.com)
  */
-public class MemoryDiskMLDataSet implements MLDataSet {
+public class MemoryDiskFloatMLDataSet implements FloatMLDataSet {
 
     /**
      * Max bytes located in memory.
@@ -72,14 +64,14 @@ public class MemoryDiskMLDataSet implements MLDataSet {
     private long byteSize = 0;
 
     /**
-     * Memory data set which type is {@link BasicMLDataSet}
+     * Memory data set which type is {@link BasicFloatMLDataSet}
      */
-    private MLDataSet memoryDataSet;
+    private FloatMLDataSet memoryDataSet;
 
     /**
-     * Disk data set which type is {@link BufferedMLDataSet}
+     * Disk data set which type is {@link BufferedFloatMLDataSet}
      */
-    private MLDataSet diskDataSet;
+    private FloatMLDataSet diskDataSet;
 
     /**
      * Input variable count
@@ -109,8 +101,8 @@ public class MemoryDiskMLDataSet implements MLDataSet {
     /**
      * Constructor with {@link #fileName}, {@link #inputCount} and {@link #outputCount}
      */
-    public MemoryDiskMLDataSet(String fileName, int inputCount, int outputCount) {
-        this.memoryDataSet = new BasicMLDataSet();
+    public MemoryDiskFloatMLDataSet(String fileName, int inputCount, int outputCount) {
+        this.memoryDataSet = new BasicFloatMLDataSet();
         this.inputCount = inputCount;
         this.outputCount = outputCount;
         this.fileName = fileName;
@@ -119,18 +111,18 @@ public class MemoryDiskMLDataSet implements MLDataSet {
     /**
      * Constructor with {@link #maxByteSize} and {@link #fileName}
      */
-    public MemoryDiskMLDataSet(long maxByteSize, String fileName) {
+    public MemoryDiskFloatMLDataSet(long maxByteSize, String fileName) {
         this.maxByteSize = maxByteSize;
-        this.memoryDataSet = new BasicMLDataSet();
+        this.memoryDataSet = new BasicFloatMLDataSet();
         this.fileName = fileName;
     }
 
     /**
      * Constructor with {@link #maxByteSize}, {@link #fileName}, {@link #inputCount} and {@link #outputCount}.
      */
-    public MemoryDiskMLDataSet(long maxByteSize, String fileName, int inputCount, int outputCount) {
+    public MemoryDiskFloatMLDataSet(long maxByteSize, String fileName, int inputCount, int outputCount) {
         this.maxByteSize = maxByteSize;
-        this.memoryDataSet = new BasicMLDataSet();
+        this.memoryDataSet = new BasicFloatMLDataSet();
         this.inputCount = inputCount;
         this.outputCount = outputCount;
         this.fileName = fileName;
@@ -148,7 +140,7 @@ public class MemoryDiskMLDataSet implements MLDataSet {
         this.inputCount = inputSize;
         this.outputCount = idealSize;
         if(this.diskDataSet != null) {
-            ((BufferedMLDataSet) this.diskDataSet).beginLoad(this.inputCount, this.outputCount);
+            ((BufferedFloatMLDataSet) this.diskDataSet).beginLoad(this.inputCount, this.outputCount);
         }
     }
 
@@ -158,7 +150,7 @@ public class MemoryDiskMLDataSet implements MLDataSet {
      */
     public final void endLoad() {
         if(this.diskDataSet != null) {
-            ((BufferedMLDataSet) this.diskDataSet).endLoad();
+            ((BufferedFloatMLDataSet) this.diskDataSet).endLoad();
         }
     }
 
@@ -168,13 +160,13 @@ public class MemoryDiskMLDataSet implements MLDataSet {
      * @see java.lang.Iterable#iterator()
      */
     @Override
-    public Iterator<MLDataPair> iterator() {
-        return new Iterator<MLDataPair>() {
+    public Iterator<FloatMLDataPair> iterator() {
+        return new Iterator<FloatMLDataPair>() {
 
-            private Iterator<MLDataPair> iter1 = MemoryDiskMLDataSet.this.memoryDataSet.iterator();
+            private Iterator<FloatMLDataPair> iter1 = MemoryDiskFloatMLDataSet.this.memoryDataSet.iterator();
 
-            private Iterator<MLDataPair> iter2 = MemoryDiskMLDataSet.this.diskDataSet == null ? null
-                    : MemoryDiskMLDataSet.this.diskDataSet.iterator();
+            private Iterator<FloatMLDataPair> iter2 = MemoryDiskFloatMLDataSet.this.diskDataSet == null ? null
+                    : MemoryDiskFloatMLDataSet.this.diskDataSet.iterator();
 
             /**
              * If iterating in memory data set
@@ -206,7 +198,7 @@ public class MemoryDiskMLDataSet implements MLDataSet {
             }
 
             @Override
-            public MLDataPair next() {
+            public FloatMLDataPair next() {
                 if(isMemoryHasNext) {
                     return iter1.next();
                 }
@@ -275,7 +267,7 @@ public class MemoryDiskMLDataSet implements MLDataSet {
      * @see org.encog.ml.data.MLDataSet#getRecord(long, org.encog.ml.data.MLDataPair)
      */
     @Override
-    public void getRecord(long index, MLDataPair pair) {
+    public void getRecord(long index, FloatMLDataPair pair) {
         if(index < this.memoryCount) {
             this.memoryDataSet.getRecord(index, pair);
         } else {
@@ -289,7 +281,7 @@ public class MemoryDiskMLDataSet implements MLDataSet {
      * @see org.encog.ml.data.MLDataSet#openAdditional()
      */
     @Override
-    public MLDataSet openAdditional() {
+    public FloatMLDataSet openAdditional() {
         throw new UnsupportedOperationException();
     }
 
@@ -299,7 +291,7 @@ public class MemoryDiskMLDataSet implements MLDataSet {
      * @see org.encog.ml.data.MLDataSet#add(org.encog.ml.data.MLData)
      */
     @Override
-    public void add(MLData data) {
+    public void add(FloatMLData data) {
         long currentSize = SizeEstimator.estimate(data);
         if(this.byteSize + currentSize < this.maxByteSize) {
             this.byteSize += currentSize;
@@ -307,8 +299,8 @@ public class MemoryDiskMLDataSet implements MLDataSet {
             this.memoryDataSet.add(data);
         } else {
             if(this.diskDataSet == null) {
-                this.diskDataSet = new BufferedMLDataSet(new File(this.fileName));
-                ((BufferedMLDataSet) this.diskDataSet).beginLoad(this.inputCount, this.outputCount);
+                this.diskDataSet = new BufferedFloatMLDataSet(new File(this.fileName));
+                ((BufferedFloatMLDataSet) this.diskDataSet).beginLoad(this.inputCount, this.outputCount);
             }
             this.byteSize += currentSize;
             this.diskCount += 1l;
@@ -322,7 +314,7 @@ public class MemoryDiskMLDataSet implements MLDataSet {
      * @see org.encog.ml.data.MLDataSet#add(org.encog.ml.data.MLData, org.encog.ml.data.MLData)
      */
     @Override
-    public void add(MLData inputData, MLData idealData) {
+    public void add(FloatMLData inputData, FloatMLData idealData) {
         long currentSize = SizeEstimator.estimate(inputData) + SizeEstimator.estimate(idealData);
         if(this.byteSize + currentSize < this.maxByteSize) {
             this.byteSize += currentSize;
@@ -330,8 +322,8 @@ public class MemoryDiskMLDataSet implements MLDataSet {
             this.memoryDataSet.add(inputData, idealData);
         } else {
             if(this.diskDataSet == null) {
-                this.diskDataSet = new BufferedMLDataSet(new File(this.fileName));
-                ((BufferedMLDataSet) this.diskDataSet).beginLoad(this.inputCount, this.outputCount);
+                this.diskDataSet = new BufferedFloatMLDataSet(new File(this.fileName));
+                ((BufferedFloatMLDataSet) this.diskDataSet).beginLoad(this.inputCount, this.outputCount);
             }
             this.byteSize += currentSize;
             this.diskCount += 1l;
@@ -345,7 +337,7 @@ public class MemoryDiskMLDataSet implements MLDataSet {
      * @see org.encog.ml.data.MLDataSet#add(org.encog.ml.data.MLDataPair)
      */
     @Override
-    public void add(MLDataPair inputData) {
+    public void add(FloatMLDataPair inputData) {
         long currentSize = SizeEstimator.estimate(inputData);
         if(this.byteSize + currentSize < this.maxByteSize) {
             this.byteSize += currentSize;
@@ -353,8 +345,8 @@ public class MemoryDiskMLDataSet implements MLDataSet {
             this.memoryDataSet.add(inputData);
         } else {
             if(this.diskDataSet == null) {
-                this.diskDataSet = new BufferedMLDataSet(new File(this.fileName));
-                ((BufferedMLDataSet) this.diskDataSet).beginLoad(this.inputCount, this.outputCount);
+                this.diskDataSet = new BufferedFloatMLDataSet(new File(this.fileName));
+                ((BufferedFloatMLDataSet) this.diskDataSet).beginLoad(this.inputCount, this.outputCount);
             }
             this.byteSize += currentSize;
             this.diskCount += 1l;
@@ -387,67 +379,6 @@ public class MemoryDiskMLDataSet implements MLDataSet {
      */
     public long getDiskCount() {
         return diskCount;
-    }
-
-    public static void main(String[] args) {
-        double[] input = createInput(1);
-        double[] output = new double[] { 1d };
-
-        MLDataPair pair = new BasicMLDataPair(new BasicMLData(input), new BasicMLData(output));
-
-        MemoryDiskMLDataSet dataSet = new MemoryDiskMLDataSet(400, "a.txt");
-        dataSet.beginLoad(10, 1);
-        dataSet.add(pair);
-        MLDataPair pair2 = new BasicMLDataPair(new BasicMLData(createInput(2)), new BasicMLData(output));
-        MLDataPair pair3 = new BasicMLDataPair(new BasicMLData(createInput(3)), new BasicMLData(output));
-        MLDataPair pair4 = new BasicMLDataPair(new BasicMLData(createInput(4)), new BasicMLData(output));
-        MLDataPair pair5 = new BasicMLDataPair(new BasicMLData(createInput(5)), new BasicMLData(output));
-        MLDataPair pair6 = new BasicMLDataPair(new BasicMLData(createInput(6)), new BasicMLData(output));
-        dataSet.add(pair2);
-        dataSet.add(pair3);
-        dataSet.add(pair4);
-        dataSet.add(pair5);
-        dataSet.add(pair6);
-        dataSet.endLoad();
-        long recordCount = dataSet.getRecordCount();
-        for(long i = 0; i < recordCount; i++) {
-            long start = System.currentTimeMillis();
-            MLDataPair p = new BasicMLDataPair(new BasicMLData(createInput(6)), new BasicMLData(output));
-            dataSet.getRecord(i, p);
-            System.out.println((System.currentTimeMillis() - start) + " " + p);
-        }
-
-        System.out.println();
-
-        Iterator<MLDataPair> iterator = dataSet.iterator();
-        while(iterator.hasNext()) {
-            long start = System.currentTimeMillis();
-            MLDataPair next = iterator.next();
-            System.out.println((System.currentTimeMillis() - start) + " " + next);
-        }
-
-        System.out.println();
-
-        iterator = dataSet.iterator();
-        while(iterator.hasNext()) {
-            long start = System.currentTimeMillis();
-            MLDataPair next = iterator.next();
-            System.out.println((System.currentTimeMillis() - start) + " " + next);
-        }
-
-        dataSet.close();
-
-        long size = SizeEstimator.estimate(pair);
-        System.out.println(size);
-    }
-
-    private static double[] createInput(double d) {
-        double[] input = new double[10];
-        // Random r = new Random();
-        for(int i = 0; i < input.length; i++) {
-            input[i] = d;
-        }
-        return input;
     }
 
 }

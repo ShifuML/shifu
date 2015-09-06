@@ -15,6 +15,19 @@
  */
 package ml.shifu.shifu.fs;
 
+import java.io.BufferedInputStream;
+import java.io.BufferedReader;
+import java.io.BufferedWriter;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.io.OutputStreamWriter;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Comparator;
+import java.util.List;
+import java.util.Scanner;
+import java.util.zip.GZIPInputStream;
+
 import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.container.obj.EvalConfig;
 import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
@@ -25,18 +38,13 @@ import ml.shifu.shifu.util.HDFSUtils;
 import org.apache.commons.compress.compressors.bzip2.BZip2CompressorInputStream;
 import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.*;
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.FileUtil;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.PathFilter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import java.io.*;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Comparator;
-import java.util.List;
-import java.util.Scanner;
-import java.util.zip.GZIPInputStream;
 
 /**
  * ShifuFileUtils class encapsulate the file system interface from other components.
@@ -159,8 +167,22 @@ public class ShifuFileUtils {
      * @return buffered reader with <code>{@link Constants#DEFAULT_CHARSET}</code>
      */
     public static BufferedReader getReader(String path, SourceType sourceType) throws IOException {
-        return new BufferedReader(new InputStreamReader(getFileSystemBySourceType(sourceType).open(new Path(path)),
-                Constants.DEFAULT_CHARSET));
+        try {
+            return new BufferedReader(new InputStreamReader(getFileSystemBySourceType(sourceType).open(new Path(path)),
+                    Constants.DEFAULT_CHARSET));
+        } catch (IOException e) {
+            // To manual fix a issue that FileSystem is closed exceptionally. Here we renew a FileSystem object to make
+            // sure all go through such issues.
+            if(e.getMessage() != null) {
+                if(e.getMessage().toLowerCase().indexOf("filesystem closed") >= 0) {
+                    if(sourceType == SourceType.HDFS) {
+                        return new BufferedReader(new InputStreamReader(HDFSUtils.renewFS().open(new Path(path)),
+                                Constants.DEFAULT_CHARSET));
+                    }
+                }
+            }
+            throw e;
+        }
     }
 
     /**

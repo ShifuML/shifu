@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package ml.shifu.shifu.core.dtrain;
+package ml.shifu.shifu.core.dtrain.nn;
 
 import java.io.IOException;
 import java.util.List;
@@ -23,11 +23,16 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import ml.shifu.guagua.GuaguaRuntimeException;
 import ml.shifu.guagua.master.MasterComputable;
 import ml.shifu.guagua.master.MasterContext;
+import ml.shifu.guagua.util.NumberFormatUtils;
 import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.container.obj.ModelConfig;
 import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
 import ml.shifu.shifu.core.ConvergeJudger;
 import ml.shifu.shifu.core.alg.NNTrainer;
+import ml.shifu.shifu.core.dtrain.CommonConstants;
+import ml.shifu.shifu.core.dtrain.DTrainUtils;
+import ml.shifu.shifu.core.dtrain.RegulationLevel;
+import ml.shifu.shifu.core.dtrain.Weight;
 import ml.shifu.shifu.fs.ShifuFileUtils;
 import ml.shifu.shifu.util.CommonUtils;
 
@@ -38,15 +43,15 @@ import org.slf4j.LoggerFactory;
 
 /**
  * {@link NNMaster} is used to accumulate all workers NN parameters.
- * <p/>
- * <p/>
+ * 
+ * <p>
  * We accumulate all gradients from workers to calculate model weights. And set weights to workers. Then workers use
  * weights to set their models and train for another iteration.
- * <p/>
- * <p/>
+ * 
+ * <p>
  * This logic follows Encog multi-core implementation.
- * <p/>
- * <p/>
+ * 
+ * <p>
  * Make sure workers and master use the same initialization weights.
  */
 public class NNMaster implements MasterComputable<NNParams, NNParams> {
@@ -94,6 +99,11 @@ public class NNMaster implements MasterComputable<NNParams, NNParams> {
     private Double learningRate = 0.1d;
 
     /**
+     * L1 and L2 regurized constant
+     */
+    private double regularizedConstant = 0.0d;
+
+    /**
      * Learning decay setting to decrease learning rate iteration by iteration. Common setting value is from 0 to 0.1
      */
     private double learningDecay = 0d;
@@ -107,7 +117,7 @@ public class NNMaster implements MasterComputable<NNParams, NNParams> {
      * Convergence threshold setting.
      */
     private double convergenceThreshold = 0d;
-    
+
     /**
      * Convergence judger instance for convergence checking.
      */
@@ -122,14 +132,11 @@ public class NNMaster implements MasterComputable<NNParams, NNParams> {
             init(context);
 
             NNParams params = null;
-            if(!this.isContinuousEnabled) {
-                // first iteration is used to set initial weights
-                params = initWeights();
-                LOG.info("Starting to train model from scratch.");
-            } else {
+            if(this.isContinuousEnabled) {
+                // read existing model weights
                 try {
-                    Path modelPath = new Path(context.getProps().getProperty(NNConstants.GUAGUA_NN_OUTPUT));
-                    BasicNetwork existingModel = NNUtils.loadModel(modelPath,
+                    Path modelPath = new Path(context.getProps().getProperty(CommonConstants.GUAGUA_OUTPUT));
+                    BasicNetwork existingModel = (BasicNetwork) CommonUtils.loadModel(modelPath,
                             ShifuFileUtils.getFileSystemBySourceType(this.modelConfig.getDataSet().getSource()));
                     if(existingModel == null) {
                         params = initWeights();
@@ -141,6 +148,10 @@ public class NNMaster implements MasterComputable<NNParams, NNParams> {
                 } catch (IOException e) {
                     throw new GuaguaRuntimeException(e);
                 }
+            } else {
+                // first iteration is used to set initial weights
+                params = initWeights();
+                LOG.info("Starting to train model from scratch.");
             }
             // should be set here to make sure master and workers use the same weights
             this.globalNNParams.setWeights(params.getWeights());
@@ -160,13 +171,17 @@ public class NNMaster implements MasterComputable<NNParams, NNParams> {
         // before accumulate, reset gradients and train size
         this.globalNNParams.reset();
 
+        long totalCounts = 0L;
         for(NNParams nn: context.getWorkerResults()) {
             totalTestError += nn.getTestError();
             totalTrainError += nn.getTrainError();
             this.globalNNParams.accumulateGradients(nn.getGradients());
             this.globalNNParams.accumulateTrainSize(nn.getTrainSize());
+            totalCounts += nn.getCount();
             size++;
         }
+
+        LOG.info("Total Count is {}.", totalCounts);
 
         // worker result size is 0. throw exception because shouldn't happen
         if(size == 0) {
@@ -177,12 +192,14 @@ public class NNMaster implements MasterComputable<NNParams, NNParams> {
         if(this.weightCalculator == null) {
             this.learningRate = this.rawLearningRate;
             this.weightCalculator = new Weight(this.globalNNParams.getGradients().length,
-                    this.globalNNParams.getTrainSize(), learningRate, propagation);
+                    this.globalNNParams.getTrainSize(), learningRate, propagation, this.regularizedConstant,
+                    RegulationLevel.to(this.modelConfig.getParams().get(CommonConstants.REG_LEVEL_KEY)));
         } else {
             this.learningRate = this.learningRate * (1.0d - this.learningDecay);
             // without learningDecay Parameter using sqrt(iteration number) to decrease learning rate
             // this.learningRate = this.learningRate / Math.sqrt(context.getCurrentIteration() -1);
             this.weightCalculator.setLearningRate(this.learningRate);
+            this.weightCalculator.setNumTrainSize(this.globalNNParams.getTrainSize());
         }
 
         // use last weights and current gradients to calculate
@@ -204,22 +221,20 @@ public class NNMaster implements MasterComputable<NNParams, NNParams> {
         params.setGradients(new double[0]);
         params.setWeights(weights);
         LOG.debug("master result {} in iteration {}", params, context.getCurrentIteration());
-        
+
         // Convergence judging part
-        LOG.info("Judging convergence :");
-        
         double avgErr = (currentTrainError + currentTestError) / 2;
-        
-        LOG.info("NNMaster compute iteration {} average error: {}, threshold: {}"
-                , context.getCurrentIteration(), avgErr, convergenceThreshold);
-        
-        if (judger.judge(avgErr, convergenceThreshold)) {
+
+        LOG.info("NNMaster compute iteration {} average error: {}, threshold: {}", context.getCurrentIteration(),
+                avgErr, convergenceThreshold);
+
+        if(judger.judge(avgErr, convergenceThreshold)) {
             LOG.info("NNMaster compute iteration {} converged !", context.getCurrentIteration());
             params.setHalt(true);
         } else {
             LOG.info("NNMaster compute iteration {} not converged yet !", context.getCurrentIteration());
         }
-        
+
         return params;
     }
 
@@ -237,15 +252,15 @@ public class NNMaster implements MasterComputable<NNParams, NNParams> {
     private NNParams initWeights() {
         NNParams params = new NNParams();
 
-        int[] inputAndOutput = NNUtils.getInputOutputCandidateCounts(this.columnConfigList);
+        int[] inputAndOutput = DTrainUtils.getInputOutputCandidateCounts(this.columnConfigList);
         int inputNodeCount = inputAndOutput[0] == 0 ? inputAndOutput[2] : inputAndOutput[0];
-        int outputNodeCount = inputAndOutput[1];
+        int outputNodeCount = modelConfig.isBinaryClassification() ? inputAndOutput[1] : modelConfig.getTags().size();
 
         int numLayers = (Integer) this.modelConfig.getParams().get(NNTrainer.NUM_HIDDEN_LAYERS);
         List<String> actFunc = (List<String>) this.modelConfig.getParams().get(NNTrainer.ACTIVATION_FUNC);
         List<Integer> hiddenNodeList = (List<Integer>) this.modelConfig.getParams().get(NNTrainer.NUM_HIDDEN_NODES);
 
-        BasicNetwork network = NNUtils.generateNetwork(inputNodeCount, outputNodeCount, numLayers, actFunc,
+        BasicNetwork network = DTrainUtils.generateNetwork(inputNodeCount, outputNodeCount, numLayers, actFunc,
                 hiddenNodeList);
 
         params.setTrainError(0);
@@ -258,7 +273,6 @@ public class NNMaster implements MasterComputable<NNParams, NNParams> {
 
     public void init(MasterContext<NNParams, NNParams> context) {
         Properties props = context.getProps();
-
         try {
             SourceType sourceType = SourceType.valueOf(props.getProperty(NNConstants.NN_MODELSET_SOURCE_TYPE,
                     SourceType.HDFS.toString()));
@@ -268,20 +282,23 @@ public class NNMaster implements MasterComputable<NNParams, NNParams> {
 
             this.columnConfigList = CommonUtils.loadColumnConfigList(
                     props.getProperty(NNConstants.SHIFU_NN_COLUMN_CONFIG), sourceType);
-            this.propagation = (String) this.modelConfig.getParams().get(NNTrainer.PROPAGATION);
+            Object pObject = this.modelConfig.getParams().get(NNTrainer.PROPAGATION);
+            this.propagation = pObject == null ? "Q" : (String) pObject;
             this.rawLearningRate = Double.valueOf(this.modelConfig.getParams().get(NNTrainer.LEARNING_RATE).toString());
             Object learningDecayO = this.modelConfig.getParams().get("LearningDecay");
             if(learningDecayO != null) {
                 this.learningDecay = Double.valueOf(learningDecayO.toString());
             }
             LOG.info("learningDecay in master is :{}", learningDecay);
-            
-            Double threshold =  this.modelConfig.getTrain().getConvergenceThreshold();
+
+            Double threshold = this.modelConfig.getTrain().getConvergenceThreshold();
             this.convergenceThreshold = threshold == null ? 0d : threshold.doubleValue();
             LOG.info("Convergence threshold in master is :{}", this.convergenceThreshold);
-            
+
             this.isContinuousEnabled = Boolean.TRUE.toString().equalsIgnoreCase(
                     context.getProps().getProperty(NNConstants.NN_CONTINUOUS_TRAINING));
+            Object rconstant = this.modelConfig.getParams().get(CommonConstants.LR_REGULARIZED_CONSTANT);
+            this.regularizedConstant = NumberFormatUtils.getDouble(rconstant == null ? "" : rconstant.toString(), 0d);
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
