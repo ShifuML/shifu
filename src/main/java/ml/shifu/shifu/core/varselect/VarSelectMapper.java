@@ -16,10 +16,6 @@
 package ml.shifu.shifu.core.varselect;
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -29,24 +25,16 @@ import ml.shifu.guagua.util.NumberFormatUtils;
 import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.container.obj.ModelConfig;
 import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
-import ml.shifu.shifu.core.dtrain.NNConstants;
-import ml.shifu.shifu.fs.PathFinder;
-import ml.shifu.shifu.fs.ShifuFileUtils;
+import ml.shifu.shifu.core.dtrain.DTrainUtils;
+import ml.shifu.shifu.core.dtrain.nn.NNConstants;
 import ml.shifu.shifu.util.CommonUtils;
-import ml.shifu.shifu.util.CommonUtils.FileSuffixPathFilter;
 import ml.shifu.shifu.util.Constants;
 
-import org.apache.commons.io.IOUtils;
-import org.apache.hadoop.fs.FSDataInputStream;
-import org.apache.hadoop.fs.FileStatus;
-import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.Mapper;
+import org.encog.ml.MLRegression;
 import org.encog.ml.data.basic.BasicMLData;
-import org.encog.neural.networks.BasicNetwork;
-import org.encog.persist.EncogDirectoryPersistence;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -87,10 +75,8 @@ public class VarSelectMapper extends Mapper<LongWritable, Text, LongWritable, Co
     /**
      * Basic neural network model instance to compute basic score with all selected columns and wrapper selected
      * columns.
-     * 
-     * TODO so far only NN is supported, think about how to extend to SVM and LR.
      */
-    private BasicNetwork model;
+    private MLRegression model;
 
     /**
      * Basic input node count for NN model, all the variables selected in current model training.
@@ -163,62 +149,10 @@ public class VarSelectMapper extends Mapper<LongWritable, Text, LongWritable, Co
     }
 
     /**
-     * Load first model in model path as a {@link BasicNetwork} instance.
+     * Load first model in model path as a {@link MLRegression} instance.
      */
     private void loadModel() throws IOException {
-        PathFinder pathFinder = new PathFinder(this.modelConfig);
-        FileSystem fs = ShifuFileUtils.getFileSystemBySourceType(this.modelConfig.getDataSet().getSource());
-        String modelSuffix = "." + this.modelConfig.getAlgorithm().toLowerCase();
-        List<FileStatus> fileList = new ArrayList<FileStatus>();
-        Path path = new Path(pathFinder.getModelsPath());
-        fileList.addAll(Arrays.asList(fs.listStatus(path, new FileSuffixPathFilter(modelSuffix))));
-
-        Collections.sort(fileList, new Comparator<FileStatus>() {
-            @Override
-            public int compare(FileStatus f1, FileStatus f2) {
-                return f1.getPath().getName().compareToIgnoreCase(f2.getPath().getName());
-            }
-        });
-
-        for(FileStatus f: fileList) {
-            FSDataInputStream stream = null;
-            try {
-                stream = fs.open(f.getPath());
-                this.model = BasicNetwork.class.cast(EncogDirectoryPersistence.loadObject(stream));
-                break;
-            } catch (RuntimeException e) {
-                throw new RuntimeException("Only Neural Network so far supported in sentivity variable selection.", e);
-            } finally {
-                IOUtils.closeQuietly(stream);
-            }
-        }
-    }
-
-    /**
-     * Get input nodes number (final select) and output nodes number from column config, and candidate input node
-     * number.
-     * 
-     * <p>
-     * If number of column in final-select is 0, which means to select all non meta and non target columns. So the input
-     * number is set to all candidates.
-     * 
-     * @throws NullPointerException
-     *             if columnConfigList or ColumnConfig object in columnConfigList is null.
-     */
-    private static int[] getInputOutputCandidateCounts(List<ColumnConfig> columnConfigList) {
-        int input = 0, output = 0, candidate = 0;
-        for(ColumnConfig config: columnConfigList) {
-            if(!config.isTarget() && !config.isMeta()) {
-                candidate++;
-            }
-            if(config.isFinalSelect()) {
-                input++;
-            }
-            if(config.isTarget()) {
-                output++;
-            }
-        }
-        return new int[] { input, output, candidate };
+        this.model = (MLRegression) (CommonUtils.loadBasicModels(this.modelConfig, null).get(0));
     }
 
     /**
@@ -231,7 +165,7 @@ public class VarSelectMapper extends Mapper<LongWritable, Text, LongWritable, Co
         loadModel();
         this.wrapperBy = context.getConfiguration()
                 .get(Constants.SHIFU_VARSELECT_WRAPPER_TYPE, Constants.WRAPPER_BY_SE);
-        int[] inputOutputIndex = getInputOutputCandidateCounts(this.columnConfigList);
+        int[] inputOutputIndex = DTrainUtils.getInputOutputCandidateCounts(this.columnConfigList);
         this.inputNodeCount = inputOutputIndex[0] == 0 ? inputOutputIndex[2] : inputOutputIndex[0];
         this.candidateCount = inputOutputIndex[2];
         this.inputs = new double[this.inputNodeCount];
@@ -256,7 +190,8 @@ public class VarSelectMapper extends Mapper<LongWritable, Text, LongWritable, Co
                 } else {
                     if(this.inputNodeCount == this.candidateCount) {
                         // all variables are not set final-select
-                        if(columnConfig != null && !columnConfig.isMeta() && !columnConfig.isTarget()) {
+                        if(!columnConfig.isMeta() && !columnConfig.isTarget()
+                                && CommonUtils.isGoodCandidate(columnConfig)) {
                             inputs[inputsIndex] = doubleValue;
                             columnIndexes[inputsIndex++] = columnConfig.getColumnNum();
                         }

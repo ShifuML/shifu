@@ -43,6 +43,11 @@ public class ModelVarSelectConf {
     private String wrapperBy = "S";
 
     /**
+     * If column missing rate is lower than this column, no matter what, whis column will be removed.
+     */
+    private Float missingRateThreshold = 0.5f;
+
+    /**
      * Do var select by SE or only print se report.
      */
     private Boolean filterBySE = Boolean.TRUE;
@@ -152,9 +157,25 @@ public class ModelVarSelectConf {
     }
 
     /**
-     * @param filterBySE the filterBySE to set
+     * @param filterBySE
+     *            the filterBySE to set
      */
     public void setFilterBySE(Boolean filterBySE) {
         this.filterBySE = filterBySE;
+    }
+
+    /**
+     * @return the missingRateThreshold
+     */
+    public Float getMissingRateThreshold() {
+        return missingRateThreshold;
+    }
+
+    /**
+     * @param missingRateThreshold
+     *            the missingRateThreshold to set
+     */
+    public void setMissingRateThreshold(Float missingRateThreshold) {
+        this.missingRateThreshold = missingRateThreshold;
     }
 }

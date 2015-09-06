@@ -168,8 +168,8 @@ public final class ColumnStatsCalculator {
      */
     public static double computeKurtosis(long count, double mean, double stdDev, double sum, double squaredSum,
             double tripleSum, double quarticSum) {
-        return (quarticSum - 4 * tripleSum * mean + 6 * squaredSum * mean * mean - 4 * sum * mean * mean * mean + mean
-                * mean * mean * mean)
+        return (quarticSum - 4 * tripleSum * mean + 6 * squaredSum * mean * mean - 4 * sum * mean * mean * mean + count
+                * mean * mean * mean * mean)
                 / (count * stdDev * stdDev * stdDev * stdDev);
     }
 
@@ -178,7 +178,7 @@ public final class ColumnStatsCalculator {
      */
     public static double computeSkewness(long count, double mean, double stdDev, double sum, double squaredSum,
             double tripleSum) {
-        return (tripleSum - 3 * squaredSum * mean + 3 * mean * mean * sum - 3 * mean * mean * mean)
+        return (tripleSum - 3 * squaredSum * mean + 3 * mean * mean * sum - count * mean * mean * mean)
                 / (count * stdDev * stdDev * stdDev);
     }
 

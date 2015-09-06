@@ -30,76 +30,91 @@ import org.slf4j.LoggerFactory;
  * EqualPopulationBinning class
  * 
  * @Oct 22, 2014
- *
+ * 
  */
 public class EqualPopulationBinning extends AbstractBinning<Double> {
-    
+
     private final static Logger log = LoggerFactory.getLogger(EqualPopulationBinning.class);
-    
+
     /**
-     * The default scale for generating histogram is for keep accuracy. 
-     * General speaking, larger scale will guarantee better accuracy. But it will also cause worse efficiency  
+     * The default scale for generating histogram is for keep accuracy.
+     * General speaking, larger scale will guarantee better accuracy. But it will also cause worse efficiency
+     * 
+     * TODO here to make it computable with expected bin num, 100 * 10 = 1000, if set bin num to 100, this should not be
+     * 100 because of bad performance.
      */
     public static final int HIST_SCALE = 100;
-    
+
     /**
      * The maximum histogram unit count that could be hold
      */
     private int maxHistogramUnitCnt;
-    
+
     /**
      * Current histogram unit count in histogram
      */
     private int currentHistogramUnitCnt;
-    
+
     /**
      * The header and tail of histogram
      */
     private LinkNode<HistogramUnit> header, tail;
-    
+
     /**
      * Empty constructor : it is just for bin merging
      */
-    protected EqualPopulationBinning() {}
-    
+    protected EqualPopulationBinning() {
+    }
+
     /**
      * Construct @EqualPopulationBinning with expected bin number
+     * 
      * @param binningNum
      */
     public EqualPopulationBinning(int binningNum) {
         this(binningNum, null);
     }
-    
+
     /**
-     * Construct @@EqualPopulationBinning with expected bin number and 
-     *      values list that would be treated as missing value
+     * Construct @EqualPopulationBinning with expected bin number and with histogram scale factor
+     * 
+     * @param binningNum
+     */
+    public EqualPopulationBinning(int binningNum, int histogramScale) {
+        this(binningNum, null);
+        this.maxHistogramUnitCnt = super.expectedBinningNum * histogramScale;
+    }
+
+    /**
+     * Construct @@EqualPopulationBinning with expected bin number and
+     * values list that would be treated as missing value
+     * 
      * @param binningNum
      * @param missingValList
      */
     public EqualPopulationBinning(int binningNum, List<String> missingValList) {
         super(binningNum);
         this.maxHistogramUnitCnt = super.expectedBinningNum * HIST_SCALE;
-        
+
         this.currentHistogramUnitCnt = 0;
         this.header = null;
         this.tail = null;
-        //this.histogram = new ArrayList<HistogramUnit>(this.maxHistogramUnitCnt + 1);
     }
 
-    
-    /* 
-     * Add the value (in format of text) into histogram with frequency 1. 
+    /**
+     * Add the value (in format of text) into histogram with frequency 1.
      * First of all the input string will be trimmed and check whether it is missing value or not
      * If it is missing value, the missing value count will +1
-     * After that, the input string will be parsed into double. If it is not a double, invalid value count will +1 
+     * After that, the input string will be parsed into double. If it is not a double, invalid value count will +1
+     * 
      * @see ml.shifu.shifu.core.binning.AbstractBinning#addData(java.lang.String)
      */
     @Override
     public void addData(String val) {
         String fval = StringUtils.trimToEmpty(val);
-        if ( !isMissingVal(fval) ) {
+        if(!isMissingVal(fval)) {
             double dval = 0;
-            
+
             try {
                 dval = Double.parseDouble(fval);
             } catch (NumberFormatException e) {
@@ -112,28 +127,31 @@ public class EqualPopulationBinning extends AbstractBinning<Double> {
         } else {
             super.incMissingValCnt();
         }
-        
+
     }
 
     /**
      * Add a value into histogram with frequency 1.
+     * 
      * @param val
      */
     public void addData(double val) {
         process(val, 1);
     }
-    
+
     /**
      * Add a value into histogram with frequency.
+     * 
      * @param val
      * @param frequency
      */
     public void addData(double val, int frequency) {
         process(val, frequency);
     }
-    
-    /* 
+
+    /*
      * Generate data bin by expected bin number
+     * 
      * @see ml.shifu.shifu.core.binning.AbstractBinning#getDataBin()
      */
     @Override
@@ -143,47 +161,49 @@ public class EqualPopulationBinning extends AbstractBinning<Double> {
 
     /**
      * Get the median value in the histogram
+     * 
      * @return
      */
     public Double getMedian() {
         List<Double> dataBinning = getDataBin(2);
-        if ( dataBinning.size() > 1 ) {
+        if(dataBinning.size() > 1) {
             return dataBinning.get(1);
         } else {
             return null;
         }
     }
-    
+
     /**
      * Generate data bin by expected bin number
+     * 
      * @param toBinningNum
      * @return
      */
-    private List<Double> getDataBin(int toBinningNum) {        
+    private List<Double> getDataBin(int toBinningNum) {
         List<Double> binBorders = new ArrayList<Double>();
         binBorders.add(Double.NEGATIVE_INFINITY);
 
-        if ( this.currentHistogramUnitCnt <= toBinningNum ) {
+        if(this.currentHistogramUnitCnt <= toBinningNum) {
             // if the count of histogram unit is less than expected bin number
-            // return each histogram unit as a bin. The boundary will be middle value 
+            // return each histogram unit as a bin. The boundary will be middle value
             // of every two histogram unit values
             convertHistogramUnitIntoBin(binBorders);
             return binBorders;
         }
-        
+
         int totalCnt = getTotalInHistogram();
         LinkNode<HistogramUnit> currStartPos = null;
         for(int j = 1; j < toBinningNum; j++) {
             double s = (double) (j * totalCnt) / toBinningNum;
             LinkNode<HistogramUnit> pos = locateHistogram(s, currStartPos);
-            if ( pos == null || pos == currStartPos  ) {
+            if(pos == null || pos == currStartPos) {
                 continue;
             } else {
                 HistogramUnit chu = pos.data();
                 HistogramUnit nhu = pos.next().data();
 
                 double d = s - sum(chu.getHval());
-                if ( d < 0 ) {
+                if(d < 0) {
                     double u = (chu.getHval() + nhu.getHval()) / 2;
                     binBorders.add(u);
                     currStartPos = pos;
@@ -207,11 +227,10 @@ public class EqualPopulationBinning extends AbstractBinning<Double> {
                 currStartPos = pos;
             }
         }
-            
-        // binBorders.add(Double.POSITIVE_INFINITY);
+
         return binBorders;
     }
-    
+
     /**
      * @param binBorders
      */
@@ -228,105 +247,110 @@ public class EqualPopulationBinning extends AbstractBinning<Double> {
 
     /**
      * Get the total value count in histogram
+     * 
      * @return
      */
     private int getTotalInHistogram() {
         int total = 0;
-        
+
         LinkNode<HistogramUnit> tmp = this.header;
-        while ( tmp != null ) {
+        while(tmp != null) {
             total += tmp.data().getHcnt();
             tmp = tmp.next();
         }
-        
+
         return total;
     }
 
     /**
      * Locate histogram unit with just less than s, from some histogram unit
+     * 
      * @param s
      * @param startPos
      * @return
      */
     private LinkNode<HistogramUnit> locateHistogram(double s, LinkNode<HistogramUnit> startPos) {
-        while ( startPos != this.tail ) {
-            if ( startPos == null ) {
+        while(startPos != this.tail) {
+            if(startPos == null) {
                 startPos = this.header;
             }
 
             HistogramUnit chu = startPos.data();
             HistogramUnit nhu = startPos.next().data();
-            
+
             double sc = sum(chu.getHval());
             double sn = sum(nhu.getHval());
-            
-            if ( sc >= s || (sc < s && s <= sn) ) {
+
+            if(sc >= s || (sc < s && s <= sn)) {
                 return startPos;
             }
-            
+
             startPos = startPos.next();
         }
-        
+
         return null;
     }
 
     /**
-     * Sum the histogram's frequency whose value less than or equal some value 
+     * Sum the histogram's frequency whose value less than or equal some value
+     * 
      * @param hval
      * @return
      */
     private double sum(double hval) {
         LinkNode<HistogramUnit> posHistogramUnit = null;
-        
+
         LinkNode<HistogramUnit> tmp = this.header;
-        while ( tmp != this.tail ) {
+        while(tmp != this.tail) {
             HistogramUnit chu = tmp.data();
             HistogramUnit nhu = tmp.next().data();
-            
-            if ( chu.getHval() <= hval && hval < nhu.getHval() ) {
+
+            if(chu.getHval() <= hval && hval < nhu.getHval()) {
                 posHistogramUnit = tmp;
                 break;
             }
-            
+
             tmp = tmp.next();
         }
 
-        if (  posHistogramUnit != null ) {
+        if(posHistogramUnit != null) {
             HistogramUnit chu = posHistogramUnit.data();
             HistogramUnit nhu = posHistogramUnit.next().data();
-            double mb = chu.getHcnt() + (nhu.getHcnt() - nhu.getHcnt()) * (hval - chu.getHval()) / (nhu.getHval() - chu.getHval());
+            double mb = chu.getHcnt() + (nhu.getHcnt() - nhu.getHcnt()) * (hval - chu.getHval())
+                    / (nhu.getHval() - chu.getHval());
             double s = (chu.getHcnt() + mb) * (hval - chu.getHval()) / (nhu.getHval() - chu.getHval());
-            s = s  / 2;
-            
+            s = s / 2;
+
             tmp = this.header;
-            while ( tmp != posHistogramUnit ) {
+            while(tmp != posHistogramUnit) {
                 HistogramUnit hu = tmp.data();
                 s = s + hu.getHcnt();
                 tmp = tmp.next();
             }
-            
+
             return s + chu.getHcnt() / 2d;
-        } else if ( tmp == this.tail ) {
+        } else if(tmp == this.tail) {
             double sum = 0.0;
             tmp = this.header;
-            while ( tmp != null ) {
+            while(tmp != null) {
                 sum += tmp.data().getHcnt();
                 tmp = tmp.next();
             }
             return sum;
         }
-        
+
         return -1.0;
     }
 
     /**
      * Process the histogram with value and frequency
+     * 
      * @param dval
      * @param frequency
      */
     private void process(double dval, int frequency) {
         LinkNode<HistogramUnit> node = new LinkNode<HistogramUnit>(new HistogramUnit(dval, frequency));
-        if ( this.tail == null && this.maxHistogramUnitCnt > 1) {
+        if(this.tail == null && this.maxHistogramUnitCnt > 1) {
             this.header = node;
             this.tail = node;
             this.currentHistogramUnitCnt = 1;
@@ -334,71 +358,72 @@ public class EqualPopulationBinning extends AbstractBinning<Double> {
             insertWithTrim(node);
         }
     }
-    
+
     /**
      * Insert one @HistogramUnit node into the histogram.
      * Meanwhile it will try to keep the histogram as most @maxHistogramUnitCnt
      * So when inserting one node in, the method will try to find the place to insert as well as minimum interval
+     * 
      * @param node
      */
     private void insertWithTrim(LinkNode<HistogramUnit> node) {
         LinkNode<HistogramUnit> insertOpsUnit = null;
         LinkNode<HistogramUnit> minIntervalOpsUnit = null;
         Double minInterval = Double.MAX_VALUE;
-        
+
         LinkNode<HistogramUnit> tmp = this.tail;
-        while ( tmp != null ) {
-            if ( insertOpsUnit == null ) {
+        while(tmp != null) {
+            if(insertOpsUnit == null) {
                 int res = Double.compare(tmp.data().getHval(), node.data().getHval());
-                if ( res > 0 ) {
+                if(res > 0) {
                     // do nothing
-                } else if ( res == 0 ) {
+                } else if(res == 0) {
                     tmp.data().setHcnt(tmp.data().getHcnt() + node.data().getHcnt());
                     return;
-                } else if ( res < 0 ) {
+                } else if(res < 0) {
                     // find the right insert position to insert
                     insertOpsUnit = tmp;
-                    
+
                     double interval = node.data().getHval() - tmp.data().getHval();
-                    if ( interval < minInterval ) {
+                    if(interval < minInterval) {
                         minInterval = interval;
                         minIntervalOpsUnit = tmp;
                     }
-                    
-                    if ( tmp.next() != null ) {
+
+                    if(tmp.next() != null) {
                         interval = tmp.next().data().getHval() - node.data().getHval();
-                        if ( interval < minInterval ) {
+                        if(interval < minInterval) {
                             minInterval = interval;
                             minIntervalOpsUnit = node;
                         }
                     }
                 }
             }
-            
-            if ( tmp.next()  != null ) {
+
+            if(tmp.next() != null) {
                 LinkNode<HistogramUnit> next = tmp.next();
                 double interval = next.data().getHval() - tmp.data().getHval();
-                
-                if ( interval < minInterval ) {
+
+                if(interval < minInterval) {
                     minInterval = interval;
                     minIntervalOpsUnit = tmp;
                 }
             }
-            
+
             tmp = tmp.prev();
         }
-        
+
         // insert node into linked list
-        if ( insertOpsUnit == null ) { // insert as the first node
-            if ( this.header != null ) {
+        if(insertOpsUnit == null) { // insert as the first node
+            if(this.header != null) {
                 this.header.setPrev(node);
             }
             node.setNext(this.header);
             this.header = node;
-            if ( this.tail == null ) {
+            if(this.tail == null) {
                 this.tail = node;
             }
-        } else if ( insertOpsUnit == this.tail ) { // insert as the last node
+        } else if(insertOpsUnit == this.tail) { // insert as the last node
             node.setPrev(insertOpsUnit);
             insertOpsUnit.setNext(node);
             this.tail = node;
@@ -408,13 +433,14 @@ public class EqualPopulationBinning extends AbstractBinning<Double> {
             insertOpsUnit.next().setPrev(node);
             insertOpsUnit.setNext(node);
         }
-        
+
         // merge info into next node
         if(this.currentHistogramUnitCnt == this.maxHistogramUnitCnt) {
             LinkNode<HistogramUnit> nextNode = minIntervalOpsUnit.next();
             HistogramUnit chu = minIntervalOpsUnit.data();
             HistogramUnit nhu = nextNode.data();
-            nhu.setHval((chu.getHval() * chu.getHcnt() + nhu.getHval() * nhu.getHcnt()) / (chu.getHcnt() + nhu.getHcnt()));
+            nhu.setHval((chu.getHval() * chu.getHcnt() + nhu.getHval() * nhu.getHcnt())
+                    / (chu.getHcnt() + nhu.getHcnt()));
             nhu.setHcnt(chu.getHcnt() + nhu.getHcnt());
             removeCurrentNode(minIntervalOpsUnit, nextNode);
         } else {
@@ -428,7 +454,7 @@ public class EqualPopulationBinning extends AbstractBinning<Double> {
      */
     private void removeCurrentNode(LinkNode<HistogramUnit> currNode, LinkNode<HistogramUnit> nextNode) {
         // remove current node
-        if ( currNode == this.header ) {
+        if(currNode == this.header) {
             nextNode.setPrev(null);
             this.header = nextNode;
         } else {
@@ -438,24 +464,27 @@ public class EqualPopulationBinning extends AbstractBinning<Double> {
         }
     }
 
-    /* (non-Javadoc)
+    /*
+     * (non-Javadoc)
+     * 
      * @see ml.shifu.shifu.core.binning.AbstractBinning#mergeBin(ml.shifu.shifu.core.binning.AbstractBinning)
      */
     @Override
     public void mergeBin(AbstractBinning<?> another) {
         EqualPopulationBinning binning = (EqualPopulationBinning) another;
-        
+
         super.mergeBin(binning);
-        
+
         LinkNode<HistogramUnit> tmp = binning.header;
-        while ( tmp != null ) {
+        while(tmp != null) {
             this.insertWithTrim(new LinkNode<HistogramUnit>(tmp.data()));
             tmp = tmp.next();
         }
     }
-    
+
     /**
      * convert @EqualIntervalBinning to String
+     * 
      * @return
      */
     protected void stringToObj(String objValStr) {
@@ -463,10 +492,10 @@ public class EqualPopulationBinning extends AbstractBinning<Double> {
 
         String[] objStrArr = objValStr.split(Character.toString(FIELD_SEPARATOR), -1);
         maxHistogramUnitCnt = Integer.parseInt(objStrArr[4]);
-        
-        if ( objStrArr.length > 5 &&  StringUtils.isNotBlank(objStrArr[5]) ) {
+
+        if(objStrArr.length > 5 && StringUtils.isNotBlank(objStrArr[5])) {
             String[] histogramStrArr = objStrArr[5].split(Character.toString(SETLIST_SEPARATOR), -1);
-            for ( String histogramStr : histogramStrArr ) {
+            for(String histogramStr: histogramStrArr) {
                 HistogramUnit hu = HistogramUnit.stringToObj(histogramStr);
                 this.insertWithTrim(new LinkNode<HistogramUnit>(hu));
             }
@@ -474,39 +503,38 @@ public class EqualPopulationBinning extends AbstractBinning<Double> {
             log.warn("Empty categorical bin - " + objValStr);
         }
     }
-    
+
     /**
      * convert @EqualIntervalBinning to String
+     * 
      * @return
      */
     public String objToString() {
         List<String> histogramStrList = new ArrayList<String>();
-        
-        if ( this.header != null ) {
+
+        if(this.header != null) {
             LinkNode<HistogramUnit> tmp = this.header;
-            while ( tmp != null ) {
+            while(tmp != null) {
                 histogramStrList.add(tmp.data().objToString());
                 tmp = tmp.next();
             }
         }
-        
-        return super.objToString() 
-                + Character.toString(FIELD_SEPARATOR) 
-                + Integer.toString(maxHistogramUnitCnt)
-                + Character.toString(FIELD_SEPARATOR) 
-                + StringUtils.join(histogramStrList, SETLIST_SEPARATOR);
+
+        return super.objToString() + Character.toString(FIELD_SEPARATOR) + Integer.toString(maxHistogramUnitCnt)
+                + Character.toString(FIELD_SEPARATOR) + StringUtils.join(histogramStrList, SETLIST_SEPARATOR);
     }
-    
+
     /**
      * 
      * HistogramUnit class is the unit for histogram
+     * 
      * @Nov 19, 2014
-     *
+     * 
      */
     public static class HistogramUnit implements Comparable<HistogramUnit> {
         private double hval;
         private int hcnt;
-        
+
         public HistogramUnit(double hval, int hcnt) {
             this.hval = hval;
             this.hcnt = hcnt;
@@ -528,15 +556,19 @@ public class EqualPopulationBinning extends AbstractBinning<Double> {
             this.hcnt = hcnt;
         }
 
-        /* (non-Javadoc)
+        /*
+         * (non-Javadoc)
+         * 
          * @see java.lang.Comparable#compareTo(java.lang.Object)
          */
         @Override
         public int compareTo(HistogramUnit another) {
             return Double.compare(hval, another.getHval());
         }
-        
-        /* (non-Javadoc)
+
+        /*
+         * (non-Javadoc)
+         * 
          * @see java.lang.Object#hashCode()
          */
         @Override
@@ -549,16 +581,18 @@ public class EqualPopulationBinning extends AbstractBinning<Double> {
             return result;
         }
 
-        /* (non-Javadoc)
+        /*
+         * (non-Javadoc)
+         * 
          * @see java.lang.Object#equals(java.lang.Object)
          */
         @Override
         public boolean equals(Object obj) {
-            if (this == obj)
+            if(this == obj)
                 return true;
-            if (obj == null)
+            if(obj == null)
                 return false;
-            if (!(obj instanceof HistogramUnit))
+            if(!(obj instanceof HistogramUnit))
                 return false;
             HistogramUnit other = (HistogramUnit) obj;
             return Double.compare(hval, other.hval) == 0;
@@ -568,17 +602,19 @@ public class EqualPopulationBinning extends AbstractBinning<Double> {
         public String toString() {
             return "[" + hval + ", " + hcnt + "]";
         }
-        
+
         /**
          * convert @HistogramUnit object to String
+         * 
          * @return
          */
         public String objToString() {
             return Double.toString(hval) + Character.toString(PAIR_SEPARATOR) + Integer.toString(hcnt);
         }
-        
+
         /**
          * Constructor @HistogramUnit from String
+         * 
          * @param histogramStr
          * @return
          */
@@ -588,5 +624,10 @@ public class EqualPopulationBinning extends AbstractBinning<Double> {
         }
 
     }
-    
+
+    public static void main(String[] args) {
+        double aa = 1.0 / (1.0 + 10E20);
+        System.out.println(aa);
+    }
+
 }

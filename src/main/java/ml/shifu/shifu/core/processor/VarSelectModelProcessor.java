@@ -25,12 +25,12 @@ import ml.shifu.guagua.GuaguaConstants;
 import ml.shifu.guagua.mapreduce.GuaguaMapReduceClient;
 import ml.shifu.guagua.mapreduce.GuaguaMapReduceConstants;
 import ml.shifu.shifu.container.obj.ColumnConfig;
-import ml.shifu.shifu.container.obj.ModelBasicConf.RunMode;
 import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
 import ml.shifu.shifu.core.AbstractTrainer;
 import ml.shifu.shifu.core.VariableSelector;
 import ml.shifu.shifu.core.alg.NNTrainer;
-import ml.shifu.shifu.core.dtrain.NNConstants;
+import ml.shifu.shifu.core.dtrain.CommonConstants;
+import ml.shifu.shifu.core.dtrain.nn.NNConstants;
 import ml.shifu.shifu.core.dvarsel.VarSelMaster;
 import ml.shifu.shifu.core.dvarsel.VarSelMasterResult;
 import ml.shifu.shifu.core.dvarsel.VarSelOutput;
@@ -64,7 +64,6 @@ import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
-import org.apache.hadoop.mapreduce.lib.input.TextInputFormat;
 import org.apache.hadoop.mapreduce.lib.map.MultithreadedMapper;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.mapreduce.lib.output.MultipleOutputs;
@@ -74,7 +73,6 @@ import org.apache.pig.impl.util.JarManager;
 import org.apache.zookeeper.ZooKeeper;
 import org.encog.ml.data.MLDataSet;
 import org.jboss.netty.bootstrap.ServerBootstrap;
-import org.mortbay.log.Log;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -97,6 +95,8 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
 
     private final static Logger log = LoggerFactory.getLogger(VarSelectModelProcessor.class);
 
+    private static final double BAD_IV_THRESHOLD = 0.02d;
+
     /**
      * Run for the variable selection
      */
@@ -104,45 +104,54 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
     public int run() throws Exception {
         log.info("Step Start: varselect");
         long start = System.currentTimeMillis();
+        try {
+            setUp(ModelStep.VARSELECT);
 
-        setUp(ModelStep.VARSELECT);
+            validateNormalize();
 
-        validateNormalize();
+            // sync to make sure load from hdfs config is consistent with local configuration
+            syncDataToHdfs(super.modelConfig.getDataSet().getSource());
 
-        syncDataToHdfs(super.modelConfig.getDataSet().getSource());
+            VariableSelector selector = new VariableSelector(this.modelConfig, this.columnConfigList);
 
-        VariableSelector selector = new VariableSelector(this.modelConfig, this.columnConfigList);
-
-        if(!modelConfig.getVarSelectWrapperEnabled()) {
-            // Select by local KS, IV
-            CommonUtils.updateColumnConfigFlags(modelConfig, columnConfigList);
-
-            this.columnConfigList = selector.selectByFilter();
-            try {
-                this.saveColumnConfigListAndColumnStats();
-            } catch (ShifuException e) {
-                throw new ShifuException(ShifuErrorCode.ERROR_WRITE_COLCONFIG, e);
-            }
-        } else {
-            // wrapper method
-            if(super.getModelConfig().getDataSet().getSource() == SourceType.HDFS
-                    && super.getModelConfig().getBasic().getRunMode() == RunMode.mapred) {
-                if(Constants.WRAPPER_BY_SE.equalsIgnoreCase(modelConfig.getVarSelect().getWrapperBy())
-                        || Constants.WRAPPER_BY_REMOVE.equalsIgnoreCase(modelConfig.getVarSelect().getWrapperBy())) {
-                    // SE method supports remove and sensitivity se so far
-                    validateDistributedWrapperVarSelect();
-                    syncDataToHdfs(super.modelConfig.getDataSet().getSource());
-                    distributedSEWrapper();
-                } else if(Constants.WRAPPER_BY_VOTED.equalsIgnoreCase(modelConfig.getVarSelect().getWrapperBy())) {
-                    votedVariablesSelection();
+            if(!modelConfig.getVarSelectWrapperEnabled()) {
+                if(modelConfig.isBinaryClassification()) {
+                    // Select by local KS, IV
+                    CommonUtils.updateColumnConfigFlags(modelConfig, columnConfigList);
+                    this.columnConfigList = selector.selectByFilter();
+                } else {
+                    // multiple classification, select all candidate at first, TODO add SE for multi-classification
+                    for(ColumnConfig config: this.columnConfigList) {
+                        if(CommonUtils.isGoodCandidate(modelConfig.isBinaryClassification(), config)) {
+                            config.setFinalSelect(true);
+                        }
+                    }
                 }
             } else {
-                // local wrapper mode: old
-                wrapper(selector);
+                // wrapper method
+                if(super.getModelConfig().getDataSet().getSource() == SourceType.HDFS
+                        && super.getModelConfig().isMapReduceRunMode()) {
+                    if(Constants.WRAPPER_BY_SE.equalsIgnoreCase(modelConfig.getVarSelect().getWrapperBy())
+                            || Constants.WRAPPER_BY_REMOVE.equalsIgnoreCase(modelConfig.getVarSelect().getWrapperBy())) {
+                        // SE method supports remove and sensitivity se so far
+                        validateDistributedWrapperVarSelect();
+                        syncDataToHdfs(super.modelConfig.getDataSet().getSource());
+                        distributedSEWrapper();
+                    } else if(Constants.WRAPPER_BY_VOTED.equalsIgnoreCase(modelConfig.getVarSelect().getWrapperBy())) {
+                        votedVariablesSelection();
+                    }
+                } else {
+                    // local wrapper mode: old
+                    wrapper(selector);
+                }
             }
-        }
 
-        clearUp(ModelStep.VARSELECT);
+            // save column config to file and sync to
+            clearUp(ModelStep.VARSELECT);
+        } catch (Exception e) {
+            log.error("Error:", e);
+            return -1;
+        }
         log.info("Step Finished: varselect with {} ms", (System.currentTimeMillis() - start));
         return 0;
     }
@@ -162,9 +171,10 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
                     "Only R(Remove) and SE(Sensitivity Selection) wrapperBy methods are supported so far in distributed variable selection.");
         }
 
-        if(!NNConstants.NN_ALG_NAME.equalsIgnoreCase(super.getModelConfig().getTrain().getAlgorithm())) {
+        if(!NNConstants.NN_ALG_NAME.equalsIgnoreCase(super.getModelConfig().getTrain().getAlgorithm())
+                && !"LR".equalsIgnoreCase(super.getModelConfig().getTrain().getAlgorithm())) {
             throw new IllegalArgumentException(
-                    "Currently we only support NN distributed training to do wrapper by analyzing variable selection.");
+                    "Currently we only support NN and LR distributed training to do wrapper by analyzing variable selection.");
         }
 
         if(super.getModelConfig().getDataSet().getSource() != SourceType.HDFS) {
@@ -172,9 +182,9 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
                     "Currently we only support distributed wrapper by analyzing on HDFS source type.");
         }
 
-        if(super.getModelConfig().getBasic().getRunMode() != RunMode.mapred) {
+        if(!super.getModelConfig().isMapReduceRunMode()) {
             throw new IllegalArgumentException(
-                    "Currently we only support distributed wrapper by analyzing on HDFS source type.");
+                    "Currently we only support distributed wrapper by on MAPRED or DIST mode.");
         }
     }
 
@@ -190,7 +200,7 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
         prepareVarSelParams(args, sourceType);
 
         Path columnIdsPath = getVotedSelectionPath(sourceType);
-        args.add(String.format(NNConstants.MAPREDUCE_PARAM_FORMAT,
+        args.add(String.format(CommonConstants.MAPREDUCE_PARAM_FORMAT,
                 ml.shifu.shifu.util.Constants.VAR_SEL_COLUMN_IDS_OUPUT, columnIdsPath.toString()));
 
         long start = System.currentTimeMillis();
@@ -234,7 +244,7 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
                 this.columnConfigList.get(id).setFinalSelect(Boolean.TRUE);
             }
 
-            super.saveColumnConfigListAndColumnStats();
+            super.saveColumnConfigListAndColumnStats(false);
 
         } catch (IOException e) {
             e.printStackTrace();
@@ -303,51 +313,51 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
         args.add(VarSelWorkerResult.class.getName());
 
         // setting conductor
-        args.add(String.format(NNConstants.MAPREDUCE_PARAM_FORMAT,
+        args.add(String.format(CommonConstants.MAPREDUCE_PARAM_FORMAT,
                 ml.shifu.shifu.util.Constants.VAR_SEL_MASTER_CONDUCTOR,
                 Environment.getProperty(Environment.VAR_SEL_MASTER_CONDUCTOR, WrapperMasterConductor.class.getName())));
 
-        args.add(String.format(NNConstants.MAPREDUCE_PARAM_FORMAT,
+        args.add(String.format(CommonConstants.MAPREDUCE_PARAM_FORMAT,
                 ml.shifu.shifu.util.Constants.VAR_SEL_WORKER_CONDUCTOR,
                 Environment.getProperty(Environment.VAR_SEL_MASTER_CONDUCTOR, WrapperWorkerConductor.class.getName())));
 
         // setting queue
-        args.add(String.format(NNConstants.MAPREDUCE_PARAM_FORMAT, NNConstants.MAPRED_JOB_QUEUE_NAME,
+        args.add(String.format(CommonConstants.MAPREDUCE_PARAM_FORMAT, NNConstants.MAPRED_JOB_QUEUE_NAME,
                 Environment.getProperty(Environment.HADOOP_JOB_QUEUE, ml.shifu.shifu.util.Constants.DEFAULT_JOB_QUEUE)));
 
         // MAPRED timeout
-        args.add(String.format(NNConstants.MAPREDUCE_PARAM_FORMAT, NNConstants.MAPRED_TASK_TIMEOUT, Environment.getInt(
-                NNConstants.MAPRED_TASK_TIMEOUT, ml.shifu.shifu.util.Constants.DEFAULT_MAPRED_TIME_OUT)));
+        args.add(String.format(CommonConstants.MAPREDUCE_PARAM_FORMAT, NNConstants.MAPRED_TASK_TIMEOUT, Environment
+                .getInt(NNConstants.MAPRED_TASK_TIMEOUT, ml.shifu.shifu.util.Constants.DEFAULT_MAPRED_TIME_OUT)));
 
-        args.add(String.format(NNConstants.MAPREDUCE_PARAM_FORMAT, GuaguaConstants.GUAGUA_MASTER_INTERCEPTERS,
+        args.add(String.format(CommonConstants.MAPREDUCE_PARAM_FORMAT, GuaguaConstants.GUAGUA_MASTER_INTERCEPTERS,
                 VarSelOutput.class.getName()));
 
         // setting model config column config
         args.add(String.format(
-                NNConstants.MAPREDUCE_PARAM_FORMAT,
+                CommonConstants.MAPREDUCE_PARAM_FORMAT,
                 NNConstants.SHIFU_NN_MODEL_CONFIG,
                 ShifuFileUtils.getFileSystemBySourceType(sourceType).makeQualified(
                         new Path(super.getPathFinder().getModelConfigPath(sourceType)))));
         args.add(String.format(
-                NNConstants.MAPREDUCE_PARAM_FORMAT,
+                CommonConstants.MAPREDUCE_PARAM_FORMAT,
                 NNConstants.SHIFU_NN_COLUMN_CONFIG,
                 ShifuFileUtils.getFileSystemBySourceType(sourceType).makeQualified(
                         new Path(super.getPathFinder().getColumnConfigPath(sourceType)))));
 
         // source type
-        args.add(String.format(NNConstants.MAPREDUCE_PARAM_FORMAT, NNConstants.NN_MODELSET_SOURCE_TYPE, sourceType));
+        args.add(String.format(CommonConstants.MAPREDUCE_PARAM_FORMAT, NNConstants.NN_MODELSET_SOURCE_TYPE, sourceType));
 
         // computation time
-        args.add(String.format(NNConstants.MAPREDUCE_PARAM_FORMAT, GuaguaConstants.GUAGUA_COMPUTATION_TIME_THRESHOLD,
-                60 * 60 * 1000l));
+        args.add(String.format(CommonConstants.MAPREDUCE_PARAM_FORMAT,
+                GuaguaConstants.GUAGUA_COMPUTATION_TIME_THRESHOLD, 60 * 60 * 1000l));
         setHeapSizeAndSplitSize(args);
 
         // one can set guagua conf in shifuconfig
         for(Map.Entry<Object, Object> entry: Environment.getProperties().entrySet()) {
             if(entry.getKey().toString().startsWith("nn") || entry.getKey().toString().startsWith("guagua")
                     || entry.getKey().toString().startsWith("mapred")) {
-                args.add(String.format(NNConstants.MAPREDUCE_PARAM_FORMAT, entry.getKey().toString(), entry.getValue()
-                        .toString()));
+                args.add(String.format(CommonConstants.MAPREDUCE_PARAM_FORMAT, entry.getKey().toString(), entry
+                        .getValue().toString()));
             }
         }
     }
@@ -453,7 +463,7 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
                 threads = Integer.parseInt(Environment.getProperty(Constants.SHIFU_VARSEL_SE_MULTI_THREAD,
                         Constants.SHIFU_DEFAULT_VARSEL_SE_MULTI_THREAD + ""));
             } catch (Exception e) {
-                Log.warn("'shifu.varsel.se.multi.thread' should be a int value, set default value: {}",
+                log.warn("'shifu.varsel.se.multi.thread' should be a int value, set default value: {}",
                         Constants.SHIFU_DEFAULT_VARSEL_SE_MULTI_THREAD);
                 threads = Constants.SHIFU_DEFAULT_VARSEL_SE_MULTI_THREAD;
             }
@@ -464,7 +474,7 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
 
         job.setMapOutputKeyClass(LongWritable.class);
         job.setMapOutputValueClass(ColumnInfo.class);
-        job.setInputFormatClass(TextInputFormat.class);
+        job.setInputFormatClass(CombineInputFormat.class);
         FileInputFormat.setInputPaths(
                 job,
                 ShifuFileUtils.getFileSystemBySourceType(source).makeQualified(
@@ -486,6 +496,8 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
     private void prepareSEJobConf(SourceType source, Configuration conf) throws IOException {
         // add jars to hadoop mapper and reducer
         new GenericOptionsParser(conf, new String[] { "-libjars", addRuntimeJars() });
+
+        conf.setBoolean(CombineInputFormat.SHIFU_VS_SPLIT_COMBINABLE, true);
 
         conf.setBoolean(GuaguaMapReduceConstants.MAPRED_MAP_TASKS_SPECULATIVE_EXECUTION, true);
         conf.setBoolean(GuaguaMapReduceConstants.MAPRED_REDUCE_TASKS_SPECULATIVE_EXECUTION, true);
@@ -593,19 +605,84 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
                 }
             }
         }
+    }
 
-        this.saveColumnConfigListAndColumnStats();
+    @Override
+    protected void clearUp(ModelStep step) throws IOException {
+        autoVarSelCondition();
+        try {
+            this.saveColumnConfigListAndColumnStats(true);
+        } catch (Exception e) {
+            throw new ShifuException(ShifuErrorCode.ERROR_WRITE_COLCONFIG, e);
+        }
         this.syncDataToHdfs(this.modelConfig.getDataSet().getSource());
+    }
+
+    /**
+     * To do some auto variable selection like remove ID-like variables, remove variable with high missing rate.
+     */
+    private void autoVarSelCondition() {
+        // here we do loop again as it is not bad for variables less than 100,000
+        for(ColumnConfig config: columnConfigList) {
+            // check ID-like variables
+            if(isIDLikeVariable(config)) {
+                log.warn(
+                        "Column {} is like an ID, set final select to false. If not, you can check it manually in ColumnConfig.json",
+                        config.getColumnName());
+                config.setFinalSelect(false);
+                continue;
+            }
+            if(isHighMissingRateColumn(config)) {
+                log.warn(
+                        "Column {} is with very high missing rate, set final select to false. If not, you can check it manually in ColumnConfig.json",
+                        config.getColumnName());
+                config.setFinalSelect(false);
+                continue;
+            }
+            if(config.getIv() == null || config.getIv() <= BAD_IV_THRESHOLD) {
+                log.warn(
+                        "Column {} is with bad iv value less than {}, set final select to false. If not, you can check it manually in ColumnConfig.json",
+                        config.getColumnName(), BAD_IV_THRESHOLD);
+                config.setFinalSelect(false);
+                continue;
+            }
+            // add more here
+        }
+    }
+
+    /**
+     * Check is high rate is very high.
+     */
+    private boolean isHighMissingRateColumn(ColumnConfig config) {
+        Double missingPercentage = config.getMissingPercentage();
+        if(missingPercentage != null && missingPercentage >= modelConfig.getVarSelect().getMissingRateThreshold()) {
+            return true;
+        }
+        return false;
+    }
+
+    /**
+     * Check if column is ID-like.
+     */
+    private boolean isIDLikeVariable(ColumnConfig config) {
+        Long distinctCount = config.getColumnStats().getDistinctCount();
+        Long totalCount = config.getColumnStats().getTotalCount();
+        if(totalCount != null && distinctCount != null && totalCount >= 10000
+                && distinctCount * 1.0 / totalCount >= 0.97d) {
+            return true;
+        }
+
+        return false;
     }
 
     private void setHeapSizeAndSplitSize(final List<String> args) {
         // args.add(String.format(NNConstants.MAPREDUCE_PARAM_FORMAT, GuaguaMapReduceConstants.MAPRED_CHILD_JAVA_OPTS,
         // "-Xmn128m -Xms1G -Xmx1G -verbose:gc -XX:+PrintGCDetails -XX:+PrintGCTimeStamps"));
-        args.add(String.format(NNConstants.MAPREDUCE_PARAM_FORMAT, GuaguaMapReduceConstants.MAPRED_CHILD_JAVA_OPTS,
+        args.add(String.format(CommonConstants.MAPREDUCE_PARAM_FORMAT, GuaguaMapReduceConstants.MAPRED_CHILD_JAVA_OPTS,
                 "-Xmn128m -Xms1G -Xmx1G"));
-        args.add(String.format(NNConstants.MAPREDUCE_PARAM_FORMAT, GuaguaConstants.GUAGUA_SPLIT_COMBINABLE,
+        args.add(String.format(CommonConstants.MAPREDUCE_PARAM_FORMAT, GuaguaConstants.GUAGUA_SPLIT_COMBINABLE,
                 Environment.getProperty(GuaguaConstants.GUAGUA_SPLIT_COMBINABLE, "true")));
-        args.add(String.format(NNConstants.MAPREDUCE_PARAM_FORMAT,
+        args.add(String.format(CommonConstants.MAPREDUCE_PARAM_FORMAT,
                 GuaguaConstants.GUAGUA_SPLIT_MAX_COMBINED_SPLIT_SIZE,
                 Environment.getProperty(GuaguaConstants.GUAGUA_SPLIT_MAX_COMBINED_SPLIT_SIZE, "268435456")));
     }
@@ -628,11 +705,6 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
 
         if(trainer instanceof NNTrainer) {
             selector.selectByWrapper((NNTrainer) trainer);
-            try {
-                this.saveColumnConfigListAndColumnStats();
-            } catch (ShifuException e) {
-                throw new ShifuException(ShifuErrorCode.ERROR_WRITE_COLCONFIG, e);
-            }
         }
     }
 

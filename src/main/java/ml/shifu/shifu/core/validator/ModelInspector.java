@@ -15,20 +15,33 @@
  */
 package ml.shifu.shifu.core.validator;
 
+import java.io.IOException;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Map;
+
 import ml.shifu.shifu.container.meta.MetaFactory;
 import ml.shifu.shifu.container.meta.ValidateResult;
-import ml.shifu.shifu.container.obj.*;
+import ml.shifu.shifu.container.obj.EvalConfig;
 import ml.shifu.shifu.container.obj.ModelBasicConf.RunMode;
+import ml.shifu.shifu.container.obj.ModelConfig;
+import ml.shifu.shifu.container.obj.ModelNormalizeConf;
+import ml.shifu.shifu.container.obj.ModelSourceDataConf;
+import ml.shifu.shifu.container.obj.ModelNormalizeConf.NormType;
+import ml.shifu.shifu.container.obj.ModelStatsConf.BinningAlgorithm;
+import ml.shifu.shifu.container.obj.ModelStatsConf.BinningMethod;
+import ml.shifu.shifu.container.obj.ModelTrainConf;
+import ml.shifu.shifu.container.obj.ModelVarSelectConf;
+import ml.shifu.shifu.container.obj.RawSourceData;
 import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
 import ml.shifu.shifu.core.alg.NNTrainer;
 import ml.shifu.shifu.fs.ShifuFileUtils;
 import ml.shifu.shifu.util.CommonUtils;
+
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang.StringUtils;
-
-import java.io.IOException;
-import java.util.List;
-import java.util.Map;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * ModelInspector class is to do Safety Testing for model.
@@ -39,6 +52,8 @@ import java.util.Map;
  *                                                      prerequisite for each step
  */
 public class ModelInspector {
+
+    private static final Logger LOG = LoggerFactory.getLogger(ModelInspector.class);
 
     public static enum ModelStep {
         INIT, STATS, VARSELECT, NORMALIZE, TRAIN, POSTTRAIN, EVAL
@@ -77,8 +92,16 @@ public class ModelInspector {
             return result;
         }
 
-        if(modelConfig.getDataSet().getSource() == SourceType.LOCAL
-                && modelConfig.getBasic().getRunMode() == RunMode.mapred) {
+        if(modelConfig.isMultiClassification()) {
+            if(modelConfig.getBasic().getRunMode() == RunMode.LOCAL
+                    || modelConfig.getDataSet().getSource() == SourceType.LOCAL) {
+                ValidateResult tmpResult = new ValidateResult(true);
+                tmpResult.addCause("Multiple classification is only effective in MAPRED runmode and HDFS source type.");
+                result = ValidateResult.mergeResult(result, tmpResult);
+            }
+        }
+
+        if(modelConfig.getDataSet().getSource() == SourceType.LOCAL && modelConfig.isMapReduceRunMode()) {
             ValidateResult tmpResult = new ValidateResult(true);
             // tmpResult.setStatus(false);
             // tmpResult.getCauses().add(
@@ -86,35 +109,43 @@ public class ModelInspector {
             result = ValidateResult.mergeResult(result, tmpResult);
         }
 
-        if(modelConfig.getDataSet().getAutoType()) {
-            if(modelConfig.getDataSet().getAutoTypeThreshold() < 1) {
-                ValidateResult tmpResult = new ValidateResult(true);
-                // tmpResult.getCauses().add(
-                tmpResult.addCause("'autoTypeThreshold' should not be less than 1.");
-                result = ValidateResult.mergeResult(result, tmpResult);
-            }
-        }
-
         if(ModelStep.INIT.equals(modelStep)) {
             result = ValidateResult.mergeResult(result, checkTrainData(modelConfig.getDataSet()));
-            result = ValidateResult.mergeResult(result, checkVarSelect(modelConfig.getVarSelect()));
+            result = ValidateResult.mergeResult(result, checkVarSelect(modelConfig, modelConfig.getVarSelect()));
             if(result.getStatus()) {
                 result = ValidateResult.mergeResult(result, checkColumnConf(modelConfig));
             }
         } else if(ModelStep.STATS.equals(modelStep)) {
             result = ValidateResult.mergeResult(result,
                     checkFile("ColumnConfig.json", SourceType.LOCAL, "ColumnConfig.json : "));
+            result = ValidateResult.mergeResult(result, checkStatsConf(modelConfig));
         } else if(ModelStep.VARSELECT.equals(modelStep)) {
-            result = ValidateResult.mergeResult(result, checkVarSelect(modelConfig.getVarSelect()));
+            result = ValidateResult.mergeResult(result, checkVarSelect(modelConfig, modelConfig.getVarSelect()));
             if(result.getStatus()) {
                 // user may add configure file between steps
                 // add validation to avoid user to make mistake
                 result = ValidateResult.mergeResult(result, checkColumnConf(modelConfig));
             }
+            if(modelConfig.isMultiClassification()) {
+                if(!"nn".equalsIgnoreCase((modelConfig.getTrain().getAlgorithm()))) {
+                    ValidateResult tmpResult = new ValidateResult(true);
+                    tmpResult
+                            .addCause("Multiple classification is only effective in neural network (nn) training method.");
+                    result = ValidateResult.mergeResult(result, tmpResult);
+                }
+            }
         } else if(ModelStep.NORMALIZE.equals(modelStep)) {
-            result = ValidateResult.mergeResult(result, checkNormSetting(modelConfig.getNormalize()));
+            result = ValidateResult.mergeResult(result, checkNormSetting(modelConfig, modelConfig.getNormalize()));
         } else if(ModelStep.TRAIN.equals(modelStep)) {
             result = ValidateResult.mergeResult(result, checkTrainSetting(modelConfig.getTrain()));
+            if(modelConfig.isMultiClassification()) {
+                if(!"nn".equalsIgnoreCase((modelConfig.getTrain().getAlgorithm()))) {
+                    ValidateResult tmpResult = new ValidateResult(true);
+                    tmpResult
+                            .addCause("Multiple classification is only effective in neural network (nn) training method.");
+                    result = ValidateResult.mergeResult(result, tmpResult);
+                }
+            }
         } else if(ModelStep.POSTTRAIN.equals(modelStep)) {
             // TODO
         } else if(ModelStep.EVAL.equals(modelStep)) {
@@ -212,6 +243,29 @@ public class ModelInspector {
         return result;
     }
 
+    private ValidateResult checkStatsConf(ModelConfig modelConfig) throws IOException {
+        ValidateResult result = new ValidateResult(true);
+
+        if(modelConfig.isMultiClassification()
+                && (modelConfig.getBinningMethod() == BinningMethod.EqualPositive || modelConfig.getBinningMethod() == BinningMethod.EqualNegtive)) {
+            result = ValidateResult
+                    .mergeResult(
+                            result,
+                            new ValidateResult(
+                                    true,
+                                    Arrays.asList("Multiple classification cannot leverage EqualNegtive and EqualPositive binning.")));
+        }
+
+        if(modelConfig.isMultiClassification() && modelConfig.getBinningAlgorithm() != BinningAlgorithm.SPDTI) {
+            result = ValidateResult.mergeResult(
+                    result,
+                    new ValidateResult(true, Arrays
+                            .asList("Only SPDTI binning algorithm are supported with multiple classification.")));
+
+        }
+        return result;
+    }
+
     /**
      * Check the prerequisite for variable selection
      * 1. if the force remove is not empty, check the conf file exists or not
@@ -223,7 +277,7 @@ public class ModelInspector {
      * @throws IOException
      *             IOException may be thrown when checking file
      */
-    private ValidateResult checkVarSelect(ModelVarSelectConf varSelect) throws IOException {
+    private ValidateResult checkVarSelect(ModelConfig modelConfig, ModelVarSelectConf varSelect) throws IOException {
         ValidateResult result = new ValidateResult(true);
 
         if(Boolean.TRUE.equals(varSelect.getForceEnable())) {
@@ -239,6 +293,15 @@ public class ModelInspector {
                         result,
                         checkFile(varSelect.getForceSelectColumnNameFile(), SourceType.LOCAL,
                                 "forceSelect columns configuration"));
+            }
+        }
+
+        if(modelConfig.isMultiClassification()) {
+            if(varSelect.getWrapperEnabled()) {
+                result = ValidateResult.mergeResult(
+                        result,
+                        new ValidateResult(true, Arrays
+                                .asList("Multiple classification is not enabled for wrapperBy variable selection.")));
             }
         }
 
@@ -262,9 +325,13 @@ public class ModelInspector {
 
         result = ValidateResult.mergeResult(result,
                 checkFile(dataSet.getDataPath(), dataSet.getSource(), prefix + "data path "));
-        result = ValidateResult.mergeResult(result,
-                checkFile(dataSet.getHeaderPath(), dataSet.getSource(), prefix + "header path "));
-
+        if(!StringUtils.isBlank(dataSet.getHeaderPath())) {
+            result = ValidateResult.mergeResult(result,
+                    checkFile(dataSet.getHeaderPath(), dataSet.getSource(), prefix + "header path "));
+        } else {
+            LOG.warn("Header file is set to empty, shifu will try to detect schema by first line of input and header "
+                    + "delimiter.");
+        }
         return result;
     }
 
@@ -304,17 +371,18 @@ public class ModelInspector {
      * 
      * <p>
      * <ul>
-     *     <li>stdDevCutOff > 0</li>
-     *     <li>0 < sampleRate <= 1</li>
-     *     <li>sampleNegOnly is either true or false</li>
-     *     <li>normType contains valid value among [ZSCALE, WOE, WEIGHT_WOE, HYBRID, WEIGHT_HYBRID]</li>
+     * <li>stdDevCutOff > 0</li>
+     * <li>0 < sampleRate <= 1</li>
+     * <li>sampleNegOnly is either true or false</li>
+     * <li>normType contains valid value among [ZSCALE, WOE, WEIGHT_WOE, HYBRID, WEIGHT_HYBRID]</li>
      * </ul>
      * </p>
      * 
-     * @param norm {@link ModelNormalizeConf} instance.
-     * @return check result instance {@link ValidateResult}. 
+     * @param norm
+     *            {@link ModelNormalizeConf} instance.
+     * @return check result instance {@link ValidateResult}.
      */
-    private ValidateResult checkNormSetting(ModelNormalizeConf norm) {
+    private ValidateResult checkNormSetting(ModelConfig modelConfig, ModelNormalizeConf norm) {
         ValidateResult result = new ValidateResult(true);
 
         if(norm.getStdDevCutOff() == null || norm.getStdDevCutOff() <= 0) {
@@ -323,31 +391,39 @@ public class ModelInspector {
             tmpResult.getCauses().add("stdDevCutOff should be positive value in normalize configuration");
             result = ValidateResult.mergeResult(result, tmpResult);
         }
-        
+
         if(norm.getSampleRate() == null || norm.getSampleRate() <= 0 || norm.getSampleRate() > 1) {
             ValidateResult tmpResult = new ValidateResult(true);
             tmpResult.setStatus(false);
             tmpResult.getCauses().add("sampleRate should be positive value in normalize configuration");
             result = ValidateResult.mergeResult(result, tmpResult);
         }
-        
+
         if(norm.getSampleNegOnly() == null) {
             ValidateResult tmpResult = new ValidateResult(true);
             tmpResult.setStatus(false);
             tmpResult.getCauses().add("sampleNegOnly should be true/false in normalize configuration");
             result = ValidateResult.mergeResult(result, tmpResult);
         }
-        
+
         if(norm.getNormType() == null) {
             ValidateResult tmpResult = new ValidateResult(true);
             tmpResult.setStatus(false);
-            tmpResult.getCauses().add("normType should be one of [ZSCALE, WOE, WEIGHT_WOE, HYBRID, WEIGHT_HYBRID] in normalize configuration");
+            tmpResult
+                    .getCauses()
+                    .add("normType should be one of [ZSCALE, WOE, WEIGHT_WOE, HYBRID, WEIGHT_HYBRID] in normalize configuration");
             result = ValidateResult.mergeResult(result, tmpResult);
         }
-        
+
+        if(modelConfig.isMultiClassification() && norm.getNormType() != NormType.ZSCALE) {
+            ValidateResult tmpResult = new ValidateResult(false);
+            tmpResult.getCauses().add("NormType 'ZSCALE' is the only norm type for multiple classification.");
+            result = ValidateResult.mergeResult(result, tmpResult);
+        }
+
         return result;
     }
-    
+
     /**
      * Check the setting for model training.
      * It will make sure (num_of_layers > 0
@@ -396,6 +472,14 @@ public class ModelInspector {
             ValidateResult tmpResult = new ValidateResult(true);
             tmpResult.setStatus(false);
             tmpResult.getCauses().add("'epochsPerIteration' should be larger than 0 if set.");
+            result = ValidateResult.mergeResult(result, tmpResult);
+        }
+
+        if(train.getWorkerThreadCount() != null
+                && (train.getWorkerThreadCount() <= 0 || train.getWorkerThreadCount() > 32)) {
+            ValidateResult tmpResult = new ValidateResult(true);
+            tmpResult.setStatus(false);
+            tmpResult.getCauses().add("'workerThreadCount' should be in (0, 32] if set.");
             result = ValidateResult.mergeResult(result, tmpResult);
         }
 

@@ -47,19 +47,29 @@ public class PostTrainModelProcessor extends BasicModelProcessor implements Proc
     public int run() throws Exception {
         log.info("Step Start: posttrain");
         long start = System.currentTimeMillis();
+        try {
+            setUp(ModelStep.POSTTRAIN);
+            syncDataToHdfs(modelConfig.getDataSet().getSource());
 
-        setUp(ModelStep.POSTTRAIN);
-        syncDataToHdfs(modelConfig.getDataSet().getSource());
+            if(modelConfig.isMapReduceRunMode()) {
+                if(modelConfig.getBasic().getPostTrainOn()
+                        && ShifuFileUtils.isFileExists(pathFinder.getSelectedRawDataPath(), SourceType.HDFS)) {
+                    runPigPostTrain();
+                } else {
+                    log.info("Post train is disabled in MapRed mode or post train input path doesn't exist. To enable it, please set "
+                            + "'postTrainOn' to 'true' and re-run norm step.");
+                }
+            } else if(modelConfig.isLocalRunMode()) {
+                runAkkaPostTrain();
+            } else {
+                log.error("Invalid RunMode Setting!");
+            }
 
-        if(modelConfig.isMapReduceRunMode()) {
-            runPigPostTrain();
-        } else if(modelConfig.isLocalRunMode()) {
-            runAkkaPostTrain();
-        } else {
-            log.error("Invalid RunMode Setting!");
+            clearUp(ModelStep.POSTTRAIN);
+        } catch (Exception e) {
+            log.error("Error:", e);
+            return -1;
         }
-
-        clearUp(ModelStep.POSTTRAIN);
         log.info("Step Finished: posttrain with {} ms", (System.currentTimeMillis() - start));
 
         return 0;
@@ -93,7 +103,7 @@ public class PostTrainModelProcessor extends BasicModelProcessor implements Proc
 
         // Sync Down
         columnConfigList = updateColumnConfigWithBinAvgScore(columnConfigList);
-        saveColumnConfigListAndColumnStats();
+        saveColumnConfigListAndColumnStats(false);
     }
 
     /**

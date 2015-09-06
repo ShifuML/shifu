@@ -1,5 +1,5 @@
-/*
- * Copyright [2013-2015] PayPal Software Foundation
+/**
+ * Copyright [2012-2015] PayPal Software Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,17 +13,17 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package ml.shifu.shifu.core.evaluation;
+package ml.shifu.shifu.core.dtrain;
 
-import ml.shifu.shifu.container.PerformanceObject;
+public interface CommonConstants {
 
-/**
- * Class for extracting performance from PerformanceObject.
- * You can find some useful implementations in {@link Performances}.
- * 
- * @author xiaobzheng (zheng.xiaobin.roubao@gmail.com)
- *
- */
-public interface PerformanceExtractor {
-    double extract(PerformanceObject perform);
+    public static final double DEFAULT_SIGNIFICANCE_VALUE = 1.0d;
+    public static final String MAPREDUCE_PARAM_FORMAT = "-D%s=%s";
+    public static final String GUAGUA_OUTPUT = "guagua.output";
+
+    public static final String LR_REGULARIZED_CONSTANT = "RegularizedConstant";
+
+    public static final String LR_LEARNING_RATE = "LearningRate";
+
+    public static final String REG_LEVEL_KEY = "L1orL2";
 }

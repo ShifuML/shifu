@@ -3,7 +3,7 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>ml.shifu</groupId>
     <artifactId>shifu</artifactId>
-    <version>0.2.6</version>
+    <version>0.2.7</version>
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <version.platform>2.0.0</version.platform>
@@ -12,12 +12,13 @@
         <rpmDisabled>true</rpmDisabled>
         <maven.build.timestamp.format>yyyy-MM-dd HH:mm:ss</maven.build.timestamp.format>
         <powermock.version>1.5.1</powermock.version>
+        <guagua.version>0.7.2</guagua.version>
     </properties>
     <scm>
         <developerConnection>scm:git:https://github.com/shifuml/shifu.git</developerConnection>
         <connection>scm:git:https://github.com/shifuml/shifu.git</connection>
         <url>https://github.com/shifuml/shifu.git</url>
-        <tag>shifu-0.2.6</tag>
+        <tag>shifu-0.2.7-SNAPSHOT</tag>
     </scm>
     <dependencies>
         <dependency>
@@ -134,6 +135,11 @@
             <groupId>com.sun.xml.bind</groupId>
             <artifactId>jaxb-impl</artifactId>
             <version>2.2.6</version>
+        </dependency>
+        <dependency>
+            <groupId>com.twitter</groupId>
+            <artifactId>parquet-pig</artifactId>
+            <version>1.6.0</version>
         </dependency>
     </dependencies>
     <build>
@@ -394,7 +400,7 @@
                 <dependency>
                     <groupId>ml.shifu</groupId>
                     <artifactId>guagua-mapreduce</artifactId>
-                    <version>0.7.1</version>
+                    <version>${guagua.version}</version>
                     <classifier>hadoop1</classifier>
                 </dependency>
             </dependencies>
@@ -487,7 +493,7 @@
                 <dependency>
                     <groupId>ml.shifu</groupId>
                     <artifactId>guagua-mapreduce</artifactId>
-                    <version>0.7.1</version>
+                    <version>${guagua.version}</version>
                     <classifier>hadoop1</classifier>
                 </dependency>
             </dependencies>
@@ -495,14 +501,14 @@
                 <maven.test.skip>true</maven.test.skip>
             </properties>
         </profile>
-        <!-- For hadoop 2.2.0 cluster -->
+        <!-- For hadoop 2.4.0 cluster (hdp 2.1.2) -->
         <profile>
-            <id>hdp-yarn</id>
+            <id>hdp-yarn-2.1.2</id>
             <activation>
-                <activeByDefault>true</activeByDefault>
+                <activeByDefault>false</activeByDefault>
             </activation>
             <properties>
-                <platform.version>hdp-yarn</platform.version>
+                <platform.version>hdp-yarn-2.1.2</platform.version>
             </properties>
             <repositories>
                 <repository>
@@ -570,7 +576,7 @@
                 <dependency>
                     <groupId>ml.shifu</groupId>
                     <artifactId>guagua-mapreduce</artifactId>
-                    <version>0.7.1</version>
+                    <version>0.8.0-SNAPSHOT</version>
                     <classifier>hadoop2</classifier>
                 </dependency>
                 <dependency>
@@ -580,14 +586,14 @@
                 </dependency>
             </dependencies>
         </profile>
-        <!-- For hadoop 2.2.4 cluster -->
+        <!-- For hdp 2.2.4 (hadoop 2.6.0) cluster -->
         <profile>
-            <id>hdp-yarn-2.2.4</id>
+            <id>hdp-yarn</id>
             <activation>
-                <activeByDefault>false</activeByDefault>
+                <activeByDefault>true</activeByDefault>
             </activation>
             <properties>
-                <platform.version>hdp-yarn-2.2.4</platform.version>
+                <platform.version>hdp-yarn</platform.version>
             </properties>
             <repositories>
                 <repository>
@@ -696,7 +702,7 @@
                 <dependency>
                     <groupId>ml.shifu</groupId>
                     <artifactId>guagua-mapreduce</artifactId>
-                    <version>0.7.1</version>
+                    <version>${guagua.version}</version>
                     <classifier>hadoop2</classifier>
                 </dependency>
                 <dependency>

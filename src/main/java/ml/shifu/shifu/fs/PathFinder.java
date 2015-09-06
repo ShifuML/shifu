@@ -15,6 +15,7 @@
  */
 package ml.shifu.shifu.fs;
 
+import java.io.File;
 import java.util.Map;
 
 import ml.shifu.shifu.container.obj.EvalConfig;
@@ -145,7 +146,8 @@ public class PathFinder {
      * Get the file path for column csv stats.
      */
     public String getLocalColumnStatsPath() {
-        return getPathBySourceType(Constants.COLUMN_STATS_CSV_FILE_NAME, SourceType.LOCAL);
+        return getPathBySourceType(Constants.COLUMN_META_FOLDER_NAME + File.separator
+                + Constants.COLUMN_STATS_CSV_FILE_NAME, SourceType.LOCAL);
     }
 
     /**
@@ -486,6 +488,15 @@ public class PathFinder {
         }
     }
 
+    public String getEvalConfusionPath(EvalConfig evalConfig, SourceType sourceType) {
+        String scorePath = getPreferPath(evalConfig.getCustomPaths(), Constants.KEY_SCORE_PATH);
+        if(StringUtils.isBlank(scorePath)) {
+            return getEvalFilePath(evalConfig.getName(), Constants.EVAL_SCORE, sourceType);
+        } else {
+            return new Path(scorePath).toString();
+        }
+    }
+
     /**
      * Get the header path of evaluation score
      * 
@@ -568,6 +579,11 @@ public class PathFinder {
      */
     public String getEvalFilePath(String evalName, String specifiedFileName, SourceType sourceType) {
         return (new Path(this.getEvalSetPath(evalName, sourceType), specifiedFileName)).toString();
+    }
+
+    public String getEvalLocalMultiMatrixFile(String evalName) {
+        return (new Path(this.getEvalSetPath(evalName, SourceType.LOCAL), "multi-eval-confustion-matrix.csv"))
+                .toString();
     }
 
     /**

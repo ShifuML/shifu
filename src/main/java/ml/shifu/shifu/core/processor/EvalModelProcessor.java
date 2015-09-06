@@ -107,36 +107,43 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
     public int run() throws Exception {
         log.info("Step Start: eval");
         long start = System.currentTimeMillis();
+        try {
+            setUp(ModelStep.EVAL);
+            syncDataToHdfs(modelConfig.getDataSet().getSource());
 
-        setUp(ModelStep.EVAL);
+            switch(evalStep) {
+                case LIST:
+                    listEvalSet();
+                    break;
+                case NEW:
+                    createNewEval(evalName);
+                    break;
+                case DELETE:
+                    deleteEvalSet(evalName);
+                    break;
+                case RUN:
+                    runEval(getEvalConfigListFromInput());
+                    break;
+                case PERF:
+                    runPerformance(getEvalConfigListFromInput());
+                    break;
+                case SCORE:
+                    runScore(getEvalConfigListFromInput());
+                    break;
+                case CONFMAT:
+                    runConfusionMatrix(getEvalConfigListFromInput());
+                    break;
+                default:
+                    break;
+            }
 
-        switch(evalStep) {
-            case LIST:
-                listEvalSet();
-                break;
-            case NEW:
-                createNewEval(evalName);
-                break;
-            case DELETE:
-                deleteEvalSet(evalName);
-                break;
-            case RUN:
-                runEval(getEvalConfigListFromInput());
-                break;
-            case PERF:
-                runPerformance(getEvalConfigListFromInput());
-                break;
-            case SCORE:
-                runScore(getEvalConfigListFromInput());
-                break;
-            case CONFMAT:
-                runConfusionMatrix(getEvalConfigListFromInput());
-                break;
-            default:
-                break;
+            syncDataToHdfs(modelConfig.getDataSet().getSource());
+
+            clearUp(ModelStep.EVAL);
+        } catch (Exception e) {
+            log.error("Error:", e);
+            return -1;
         }
-
-        clearUp(ModelStep.EVAL);
         log.info("Step Finished: eval with {} ms", (System.currentTimeMillis() - start));
 
         return 0;
@@ -222,10 +229,11 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
         syncDataToHdfs(config.getDataSet().getSource());
 
         switch(modelConfig.getBasic().getRunMode()) {
-            case mapred:
+            case DIST:
+            case MAPRED:
                 runPigScore(config);
                 break;
-            case local:
+            case LOCAL:
                 runAkkaScore(config);
                 break;
             default:
@@ -239,6 +247,7 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
      * @param config
      * @throws IOException
      */
+    @SuppressWarnings("deprecation")
     private void runPigScore(EvalConfig evalConfig) throws IOException {
         // clean up output directories
         SourceType sourceType = evalConfig.getDataSet().getSource();
@@ -253,15 +262,18 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
         paramsMap.put(Constants.SOURCE_TYPE, sourceType.toString());
         paramsMap.put("pathEvalRawData", evalConfig.getDataSet().getDataPath());
         paramsMap.put("pathEvalNormalized", pathFinder.getEvalNormalizedPath(evalConfig));
-        paramsMap.put("pathHeader", evalConfig.getDataSet().getHeaderPath());
         paramsMap.put("pathEvalScore", pathFinder.getEvalScorePath(evalConfig));
         paramsMap.put("pathEvalPerformance", pathFinder.getEvalPerformancePath(evalConfig));
         paramsMap.put("eval_set_name", evalConfig.getName());
         paramsMap.put("delimiter", evalConfig.getDataSet().getDataDelimiter());
         paramsMap.put("columnIndex", evalConfig.getPerformanceScoreSelector().trim());
 
+        String pigScript = "scripts/Eval.pig";
+        if(modelConfig.isMultiClassification()) {
+            pigScript = "scripts/EvalScore.pig";
+        }
         try {
-            PigExecutor.getExecutor().submitJob(modelConfig, pathFinder.getAbsolutePath("scripts/Eval.pig"), paramsMap,
+            PigExecutor.getExecutor().submitJob(modelConfig, pathFinder.getAbsolutePath(pigScript), paramsMap,
                     evalConfig.getDataSet().getSource());
         } catch (IOException e) {
             throw new ShifuException(ShifuErrorCode.ERROR_RUNNING_PIG_JOB, e);
@@ -374,10 +386,11 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
         syncDataToHdfs(evalConfig.getDataSet().getSource());
 
         switch(modelConfig.getBasic().getRunMode()) {
-            case mapred:
+            case DIST:
+            case MAPRED:
                 runPigEval(evalConfig);
                 break;
-            case local:
+            case LOCAL:
                 runAkkaEval(evalConfig);
                 break;
             default:
@@ -395,12 +408,10 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
      */
     private void runPigEval(EvalConfig evalConfig) throws IOException {
         runPigScore(evalConfig);
-        // TODO runConfusionMatrix write and runPerformance read, merge together
         // TODO code refacter because of several magic numbers and not good name functions ...
         runConfusionMatrix(evalConfig);
-       // runPerformance(evalConfig);
     }
-    
+
     /**
      * Use akka to run model evaluation
      * 
@@ -440,10 +451,11 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
     private void runPerformance(EvalConfig evalConfig) throws IOException {
         PerformanceEvaluator perfEval = new PerformanceEvaluator(modelConfig, evalConfig);
         switch(modelConfig.getBasic().getRunMode()) {
-            case mapred:
+            case DIST:
+            case MAPRED:
                 perfEval.review(this.evalRecords);
                 break;
-            case local:
+            case LOCAL:
             default:
                 perfEval.review();
                 break;
@@ -473,14 +485,18 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
     private void runConfusionMatrix(EvalConfig config) throws IOException {
         ConfusionMatrix worker = new ConfusionMatrix(modelConfig, config);
         switch(modelConfig.getBasic().getRunMode()) {
-            case mapred:
-                worker.bufferedComputeConfusionMatrixAndPerformance(this.pigPosTags, this.pigNegTags, this.pigPosWeightTags,
-                        this.pigNegWeightTags, this.evalRecords);
+            case DIST:
+            case MAPRED:
+                if(modelConfig.isBinaryClassification()) {
+                    worker.bufferedComputeConfusionMatrixAndPerformance(this.pigPosTags, this.pigNegTags,
+                            this.pigPosWeightTags, this.pigNegWeightTags, this.evalRecords);
+                } else {
+                    worker.computeConfusionMatixForMultipleClassification(this.evalRecords);
+                }
                 break;
             default:
                 worker.computeConfusionMatrix();
                 break;
         }
     }
-
 }

@@ -21,8 +21,10 @@ import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import ml.shifu.shifu.container.obj.ModelBasicConf.RunMode;
 import ml.shifu.shifu.container.obj.ModelNormalizeConf.NormType;
@@ -154,17 +156,16 @@ public class ModelConfig {
 
         dataSet.setMissingOrInvalidValues(Lists.asList("", new String[] { "*", "#", "?", "null", "~" }));
         // create empty <ModelName>/meta.column.names
-        ShifuFileUtils.createFileIfNotExists(new Path(modelName, Constants.DEFAULT_META_COLUMN_FILE).toString(),
-                SourceType.LOCAL);
-        dataSet.setMetaColumnNameFile(Constants.DEFAULT_META_COLUMN_FILE);
+        ShifuFileUtils.createFileIfNotExists(new Path(modelName, Constants.COLUMN_META_FOLDER_NAME + File.separator
+                + Constants.DEFAULT_META_COLUMN_FILE).toString(), SourceType.LOCAL);
+        dataSet.setMetaColumnNameFile(Constants.COLUMN_META_FOLDER_NAME + File.separator
+                + Constants.DEFAULT_META_COLUMN_FILE);
         // create empty <ModelName>/categorical.column.names
-        ShifuFileUtils.createFileIfNotExists(new Path(modelName, Constants.DEFAULT_CATEGORICAL_COLUMN_FILE).toString(),
-                SourceType.LOCAL);
-        dataSet.setCategoricalColumnNameFile(Constants.DEFAULT_CATEGORICAL_COLUMN_FILE);
+        ShifuFileUtils.createFileIfNotExists(new Path(modelName, Constants.COLUMN_META_FOLDER_NAME + File.separator
+                + Constants.DEFAULT_CATEGORICAL_COLUMN_FILE).toString(), SourceType.LOCAL);
+        dataSet.setCategoricalColumnNameFile(Constants.COLUMN_META_FOLDER_NAME + File.separator
+                + Constants.DEFAULT_CATEGORICAL_COLUMN_FILE);
         modelConfig.setDataSet(dataSet);
-
-        // build runtime info
-        // modelConfig.setRunConf(new ModelRuntimeConf());
 
         // build stats info
         modelConfig.setStats(new ModelStatsConf());
@@ -173,14 +174,16 @@ public class ModelConfig {
         // build varselect info
         ModelVarSelectConf varselect = new ModelVarSelectConf();
         // create empty <ModelName>/forceselect.column.names
-        ShifuFileUtils.createFileIfNotExists(new Path(modelName, Constants.DEFAULT_FORCESELECT_COLUMN_FILE).toString(),
-                SourceType.LOCAL);
-        varselect.setForceSelectColumnNameFile(Constants.DEFAULT_FORCESELECT_COLUMN_FILE);
+        ShifuFileUtils.createFileIfNotExists(new Path(modelName, Constants.COLUMN_META_FOLDER_NAME + File.separator
+                + Constants.DEFAULT_FORCESELECT_COLUMN_FILE).toString(), SourceType.LOCAL);
+        varselect.setForceSelectColumnNameFile(Constants.COLUMN_META_FOLDER_NAME + File.separator
+                + Constants.DEFAULT_FORCESELECT_COLUMN_FILE);
 
         // create empty <ModelName>/forceremove.column.names
-        ShifuFileUtils.createFileIfNotExists(new Path(modelName, Constants.DEFAULT_FORCEREMOVE_COLUMN_FILE).toString(),
-                SourceType.LOCAL);
-        varselect.setForceRemoveColumnNameFile(Constants.DEFAULT_FORCEREMOVE_COLUMN_FILE);
+        ShifuFileUtils.createFileIfNotExists(new Path(modelName, Constants.COLUMN_META_FOLDER_NAME + File.separator
+                + Constants.DEFAULT_FORCEREMOVE_COLUMN_FILE).toString(), SourceType.LOCAL);
+        varselect.setForceRemoveColumnNameFile(Constants.COLUMN_META_FOLDER_NAME + File.separator
+                + Constants.DEFAULT_FORCEREMOVE_COLUMN_FILE);
         varselect.setFilterBySE(Boolean.TRUE);
         modelConfig.setVarSelect(varselect);
 
@@ -194,6 +197,7 @@ public class ModelConfig {
         trainConf.setNumTrainEpochs(100);
         trainConf.setEpochsPerIteration(1);
         trainConf.setParams(ModelTrainConf.createParamsByAlg(alg));
+        trainConf.setBaggingWithReplacement(true);
         modelConfig.setTrain(trainConf);
 
         EvalConfig evalConfig = new EvalConfig();
@@ -209,9 +213,10 @@ public class ModelConfig {
                 + File.separator + ".pig_header").toString());
         evalConfig.setDataSet(evalSet);
         // create empty <ModelName>/<EvalSetName>Score.meta.column.names
-        ShifuFileUtils.createFileIfNotExists(new Path(modelName, evalConfig.getName()
-                + Constants.DEFAULT_EVALSCORE_META_COLUMN_FILE).toString(), SourceType.LOCAL);
-        evalConfig.setScoreMetaColumnNameFile(evalConfig.getName() + Constants.DEFAULT_EVALSCORE_META_COLUMN_FILE);
+        ShifuFileUtils.createFileIfNotExists(new Path(modelName, Constants.COLUMN_META_FOLDER_NAME + File.separator
+                + evalConfig.getName() + Constants.DEFAULT_EVALSCORE_META_COLUMN_FILE).toString(), SourceType.LOCAL);
+        evalConfig.setScoreMetaColumnNameFile(Constants.COLUMN_META_FOLDER_NAME + File.separator + evalConfig.getName()
+                + Constants.DEFAULT_EVALSCORE_META_COLUMN_FILE);
         modelConfig.getEvals().add(evalConfig);
 
         return modelConfig;
@@ -263,6 +268,105 @@ public class ModelConfig {
     }
 
     @JsonIgnore
+    public boolean isBinaryClassification() {
+        return (CollectionUtils.isNotEmpty(dataSet.getPosTags()) && CollectionUtils.isNotEmpty(dataSet.getNegTags()));
+    }
+
+    @JsonIgnore
+    public boolean isMultiClassification() {
+        return (CollectionUtils.isNotEmpty(dataSet.getPosTags()) && CollectionUtils.isEmpty(dataSet.getNegTags()))
+                || (CollectionUtils.isEmpty(dataSet.getPosTags()) && CollectionUtils.isNotEmpty(dataSet.getNegTags()));
+    }
+
+    /**
+     * Flattened tags for multiple classification. '1', '2|3' will be flattened to '1', '2', '3'. While '2' and '3' are
+     * combined to one class.
+     */
+    @JsonIgnore
+    public List<String> getFlattenTags() {
+        return getFlattenTags(dataSet.getPosTags(), dataSet.getNegTags());
+    }
+
+    @JsonIgnore
+    public List<String> getFlattenTags(List<String> tags1, List<String> tags2) {
+        List<String> tags = new ArrayList<String>();
+        if(CollectionUtils.isNotEmpty(tags1)) {
+            for(String tag: tags1) {
+                if(tag.contains("|")) {
+                    for(String inTag: tag.split("\\|")) {
+                        // FIXME, if blank or not
+                        if(StringUtils.isNotBlank(inTag)) {
+                            tags.add(inTag);
+                        }
+                    }
+                } else {
+                    tags.add(tag);
+                }
+            }
+        }
+        if(CollectionUtils.isNotEmpty(tags2)) {
+            for(String tag: tags2) {
+                if(tag.contains("|")) {
+                    for(String inTag: tag.split("\\|")) {
+                        if(StringUtils.isNotBlank(inTag)) {
+                            tags.add(inTag);
+                        }
+                    }
+                } else {
+                    tags.add(tag);
+                }
+            }
+        }
+        return tags;
+    }
+
+    @JsonIgnore
+    public List<String> getTags(List<String> tags1, List<String> tags2) {
+        List<String> tags = new ArrayList<String>();
+        if(CollectionUtils.isNotEmpty(tags1)) {
+            for(String tag: tags1) {
+                tags.add(tag);
+            }
+        }
+        if(CollectionUtils.isNotEmpty(tags2)) {
+            for(String tag: tags2) {
+                tags.add(tag);
+            }
+        }
+        return tags;
+    }
+
+    @JsonIgnore
+    public List<String> getTags() {
+        return getTags(dataSet.getPosTags(), dataSet.getNegTags());
+    }
+
+    @JsonIgnore
+    public List<Set<String>> getSetTags(List<String> tags1, List<String> tags2) {
+        List<String> tags = getTags(tags1, tags2);
+        List<Set<String>> result = new ArrayList<Set<String>>();
+        for(String tag: tags) {
+            Set<String> set = new HashSet<String>(16);
+            if(tag.contains("|")) {
+                for(String inTag: tag.split("\\|")) {
+                    if(StringUtils.isNotBlank(inTag)) {
+                        set.add(inTag);
+                    }
+                }
+            } else {
+                set.add(tag);
+            }
+            result.add(set);
+        }
+        return result;
+    }
+
+    @JsonIgnore
+    public List<Set<String>> getSetTags() {
+        return getSetTags(dataSet.getPosTags(), dataSet.getNegTags());
+    }
+
+    @JsonIgnore
     public List<String> getPosTags(EvalConfig evalConfig) {
         if(CollectionUtils.isNotEmpty(evalConfig.getDataSet().getPosTags())) {
             return evalConfig.getDataSet().getPosTags();
@@ -289,7 +393,7 @@ public class ModelConfig {
     public Double getNormalizeSampleRate() {
         return normalize.getSampleRate();
     }
-    
+
     @JsonIgnore
     public NormType getNormalizeType() {
         return normalize.getNormType();
@@ -392,12 +496,17 @@ public class ModelConfig {
 
     @JsonIgnore
     public boolean isMapReduceRunMode() {
-        return RunMode.mapred.equals(basic.getRunMode());
+        return RunMode.MAPRED == basic.getRunMode() || RunMode.DIST == basic.getRunMode();
+    }
+
+    @JsonIgnore
+    public boolean isDistributedRunMode() {
+        return isMapReduceRunMode();
     }
 
     @JsonIgnore
     public boolean isLocalRunMode() {
-        return RunMode.local.equals(basic.getRunMode());
+        return RunMode.LOCAL.equals(basic.getRunMode());
     }
 
     @JsonIgnore

@@ -16,6 +16,36 @@
  
 Shifu Change Log
 
+Changes for Shifu-0.2.7
+    * Sampling Function Improvement
+        a) https://github.com/ShifuML/shifu/issues/93
+        b) https://github.com/ShifuML/shifu/issues/140
+    * Binning Improvement
+        a) https://github.com/ShifuML/shifu/issues/148
+        b) https://github.com/ShifuML/shifu/issues/157
+    * Stats Step Improvement
+        a) https://github.com/ShifuML/shifu/issues/155
+        b) https://github.com/ShifuML/shifu/issues/137
+        c) https://github.com/ShifuML/shifu/issues/75
+    * Norm Step Improvement
+        a) https://github.com/ShifuML/shifu/issues/103
+        b) https://github.com/ShifuML/shifu/issues/120
+        c) https://github.com/ShifuML/shifu/issues/131
+        d) https://github.com/ShifuML/shifu/issues/142
+    * Train Step Improvement
+        a) https://github.com/ShifuML/shifu/issues/66
+        b) https://github.com/ShifuML/shifu/issues/159
+        c) https://github.com/ShifuML/shifu/issues/166
+        d) https://github.com/ShifuML/shifu/issues/106
+    * Variable Selection Step Improvement
+        a) https://github.com/ShifuML/shifu/issues/57
+        b) https://github.com/ShifuML/shifu/issues/102
+    * Distributed LR Algorithm Improvement (Experimental)
+        a) https://github.com/ShifuML/shifu/issues/56
+    * Multiple classes NN Algorithm Improvement (Experimental)
+        a) https://github.com/ShifuML/shifu/issues/149
+    * Pig on Tez Support
+
 Changes for Shifu-0.2.6
     * https://github.com/ShifuML/shifu/issues/133: Add skewness and kurtosis stats
     * https://github.com/ShifuML/shifu/issues/134: Add CSV ColumnConfig Format for ColumnConfig.json
@@ -155,8 +185,8 @@ Changes for Shifu-0.0.2
     * DE29230 - Fix the bugs if the training data path is HDFS globe path
     * DE29231 - User only need put the configuration in local file system
     * US201443 - PathFinder refactor, split Manager class into several processes
-	* US207747 - Add option in ModelConfig for job queue name
-	* US177973 - Update code license and test data license 
+    * US207747 - Add option in ModelConfig for job queue name
+    * US177973 - Update code license and test data license 
     * Don't copy data and purify data when run `shifu init`
     * Add more comments
     

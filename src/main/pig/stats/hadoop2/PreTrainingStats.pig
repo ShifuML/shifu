@@ -44,7 +44,7 @@ data_cols = FOREACH data_cols GENERATE FLATTEN($0);
 
 -- prepare data and do binning
 data_binning = FILTER data_cols BY IsToBinningData(*);
-data_binning_grp = GROUP data_binning BY ($0, $4) PARALLEL $column_parallel;
+data_binning_grp = GROUP data_binning BY ($0, $3) PARALLEL $column_parallel;
 binning_info_partial = FOREACH data_binning_grp GENERATE group.$0, GenBinningData(data_binning);
 binning_info_partial = FILTER binning_info_partial BY $1 IS NOT NULL;
 binning_info_grp = GROUP binning_info_partial BY $0;

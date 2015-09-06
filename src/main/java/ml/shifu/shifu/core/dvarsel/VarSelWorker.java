@@ -32,7 +32,8 @@ import ml.shifu.shifu.container.obj.ModelConfig;
 import ml.shifu.shifu.container.obj.RawSourceData;
 import ml.shifu.shifu.core.DataPurifier;
 import ml.shifu.shifu.core.Normalizer;
-import ml.shifu.shifu.core.dtrain.NNConstants;
+import ml.shifu.shifu.core.dtrain.CommonConstants;
+import ml.shifu.shifu.core.dtrain.nn.NNConstants;
 import ml.shifu.shifu.core.dvarsel.dataset.TrainingDataSet;
 import ml.shifu.shifu.core.dvarsel.dataset.TrainingRecord;
 import ml.shifu.shifu.util.CommonUtils;
@@ -170,7 +171,7 @@ public class VarSelWorker extends AbstractWorkerComputable<VarSelMasterResult, V
             double[] inputs = new double[this.inputNodeCount];
             double[] ideal = new double[this.outputNodeCount];
 
-            double significance = NNConstants.DEFAULT_SIGNIFICANCE_VALUE;
+            double significance = CommonConstants.DEFAULT_SIGNIFICANCE_VALUE;
             if(this.weightColumnId >= 0) {
                 try {
                     significance = Double.parseDouble(fields[this.weightColumnId]);

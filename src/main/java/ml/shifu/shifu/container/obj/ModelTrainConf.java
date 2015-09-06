@@ -39,20 +39,24 @@ public class ModelTrainConf {
     }
 
     private Integer baggingNum = Integer.valueOf(5);
-    // change it to false by default, as we often don't use this way.
-    private Boolean baggingWithReplacement = Boolean.FALSE;
+    // this is set default as true as bagging often with replacement sampleing.
+    private Boolean baggingWithReplacement = Boolean.TRUE;
     private Double baggingSampleRate = Double.valueOf(0.8);
     private Double validSetRate = Double.valueOf(0.2);
     private Double convergenceThreshold = Double.valueOf(0.0);
     private Integer numTrainEpochs = Integer.valueOf(100);
     private Integer epochsPerIteration = Integer.valueOf(1);
-    
+
     private Boolean trainOnDisk = Boolean.FALSE;
     private Boolean fixInitInput = Boolean.FALSE;
-    
-    private Boolean isContinuous = Boolean.FALSE; 
-    
+
+    private Boolean isContinuous = Boolean.FALSE;
+
     private Boolean isCrossOver = Boolean.FALSE;
+
+    private Integer workerThreadCount = 4;
+
+    private Double upSampleWeight = Double.valueOf(1d);
 
     private String algorithm = "NN";
 
@@ -168,17 +172,17 @@ public class ModelTrainConf {
             params.put(NNTrainer.PROPAGATION, "Q");
             params.put(NNTrainer.LEARNING_RATE, 0.1);
             params.put("LearningDecay", 0.0);
-            params.put(NNTrainer.NUM_HIDDEN_LAYERS, 2);
+            params.put(NNTrainer.NUM_HIDDEN_LAYERS, 1);
 
             List<Integer> nodes = new ArrayList<Integer>();
-            nodes.add(30);
-            nodes.add(20);
+            nodes.add(50);
             params.put(NNTrainer.NUM_HIDDEN_NODES, nodes);
 
             List<String> func = new ArrayList<String>();
-            func.add("sigmoid");
-            func.add("sigmoid");
+            func.add("tanh");
             params.put(NNTrainer.ACTIVATION_FUNC, func);
+            params.put("LearningDecay", 0.0);
+            params.put("RegularizedConstant", 0.0);
         } else if(ALGORITHM.SVM.equals(alg)) {
             params.put(SVMTrainer.SVM_KERNEL, "linear");
             params.put(SVMTrainer.SVM_GAMMA, 1.0);
@@ -188,8 +192,9 @@ public class ModelTrainConf {
             // DecisionTreeTrainer
         } else if(ALGORITHM.LR.equals(alg)) {
             params.put(LogisticRegressionTrainer.LEARNING_RATE, 0.1);
+            params.put("RegularizedConstant", 0.0);
+            params.put(NNTrainer.PROPAGATION, "Q");
         }
-
         return params;
     }
 
@@ -211,6 +216,7 @@ public class ModelTrainConf {
     /**
      * As threshold is an optional setting, Use @{@link JsonIgnore} to ignore threshold when initially write
      * out to ModelConfig.json.
+     * 
      * @return Cvergence threshold.
      */
     @JsonIgnore
@@ -223,15 +229,16 @@ public class ModelTrainConf {
         this.convergenceThreshold = convergenceThreshold;
     }
 
-    /**
-     */
+    @JsonIgnore
     public Boolean getIsCrossOver() {
         return isCrossOver;
     }
 
     /**
-     * @param isCrossOver the isCrossOver to set
+     * @param isCrossOver
+     *            the isCrossOver to set
      */
+    @JsonProperty
     public void setIsCrossOver(Boolean isCrossOver) {
         this.isCrossOver = isCrossOver;
     }
@@ -244,10 +251,42 @@ public class ModelTrainConf {
     }
 
     /**
-     * @param isContinuous the isContinuous to set
+     * @param isContinuous
+     *            the isContinuous to set
      */
     public void setIsContinuous(Boolean isContinuous) {
         this.isContinuous = isContinuous;
+    }
+
+    /**
+     * @return the workerThreadCount
+     */
+    public Integer getWorkerThreadCount() {
+        return workerThreadCount;
+    }
+
+    /**
+     * @param workerThreadCount
+     *            the workerThreadCount to set
+     */
+    public void setWorkerThreadCount(Integer workerThreadCount) {
+        this.workerThreadCount = workerThreadCount;
+    }
+
+    /**
+     * @return the upSampleWeight
+     */
+    @JsonIgnore
+    public Double getUpSampleWeight() {
+        return upSampleWeight;
+    }
+
+    /**
+     * @param upSampleWeight
+     *            the upSampleWeight to set
+     */
+    public void setUpSampleWeight(Double upSampleWeight) {
+        this.upSampleWeight = upSampleWeight;
     }
 
 }
