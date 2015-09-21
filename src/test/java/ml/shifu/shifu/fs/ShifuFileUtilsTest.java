@@ -87,7 +87,7 @@ public class ShifuFileUtilsTest {
     @Test
     public void testIsFileExists() throws IOException {
         Assert.assertTrue(ShifuFileUtils.isFileExists("src/test/resources/example/wdbc/wdbcDataSet", SourceType.LOCAL));
-        Assert.assertTrue(ShifuFileUtils.isFileExists("src\\test\\resources\\example\\wdbc\\wdbcDataSet", SourceType.LOCAL));
+        // Assert.assertTrue(ShifuFileUtils.isFileExists("src\\test\\resources\\example\\wdbc\\wdbcDataSet", SourceType.LOCAL));
         Assert.assertTrue(ShifuFileUtils.isFileExists("src/test/resources/example/wdbc/wdbcDataSet/wdbc.{data,eval,header,train}", SourceType.LOCAL));
         Assert.assertTrue(ShifuFileUtils.isFileExists("src/test/resources/example/wdbc/wdbcDataSet/wdbc.{not-exists,eval,header,train}", SourceType.LOCAL));
         Assert.assertFalse(ShifuFileUtils.isFileExists("src/test/resources/example/wdbc/wdbcDataSet/wdbc.{not-exists,not-existsa,not-existsb}", SourceType.LOCAL));
