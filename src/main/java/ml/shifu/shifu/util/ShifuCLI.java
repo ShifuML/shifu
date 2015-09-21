@@ -593,12 +593,14 @@ public class ShifuCLI {
     /**
      * check the argument is for listing help info or not
      * 
-     * @param arg
+     * @param opts
      * @return true - if arg is h/-h/help/-help, or return false
      */
-    private static boolean isHelpOption(String string) {
-        return "h".equalsIgnoreCase(string) || "-h".equalsIgnoreCase(string) || "help".equalsIgnoreCase(string)
-                || "-help".equalsIgnoreCase(string);
+    private static boolean isHelpOption(String opts) {
+        return "h".equalsIgnoreCase(opts)
+                || "-h".equalsIgnoreCase(opts)
+                || "help".equalsIgnoreCase(opts)
+                || "-help".equalsIgnoreCase(opts);
     }
 
     /**
