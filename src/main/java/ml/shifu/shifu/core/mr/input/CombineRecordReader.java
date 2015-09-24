@@ -53,7 +53,7 @@ public class CombineRecordReader extends RecordReader<LongWritable, Text> {
     private FileSplit[] fileSplits;
     private int splitIndex = 0;
     private long wholeSize;
-    private long comsumedSplitSize;
+    private long consumedSplitSize;
 
     public CombineRecordReader() {
     }
@@ -133,15 +133,22 @@ public class CombineRecordReader extends RecordReader<LongWritable, Text> {
             // line too long. try again
             LOG.info("Skipped line of size " + newSize + " at pos " + (pos - newSize));
         }
+
+        if(this.splitIndex == this.fileSplits.length && newSize == 0 && consumedSplitSize == wholeSize) {
+            key = null;
+            value = null;
+            return false;
+        }
+
         if(newSize == 0) {
             if(this.splitIndex < this.fileSplits.length) {
-                comsumedSplitSize += (end - start);
+                consumedSplitSize += (end - start);
                 // should close previous recorder here and the new one
                 close();
                 initializeOne(context, this.fileSplits[this.splitIndex++]);
                 return true;
             } else {
-                comsumedSplitSize += (end - start);
+                consumedSplitSize += (end - start);
                 key = null;
                 value = null;
                 return false;
@@ -168,7 +175,7 @@ public class CombineRecordReader extends RecordReader<LongWritable, Text> {
         if(start == end) {
             return 0.0f;
         } else {
-            return Math.min(1.0f, (comsumedSplitSize + (pos - start)) / (this.wholeSize));
+            return Math.min(1.0f, ((consumedSplitSize + (pos - start)) * 1f) / (this.wholeSize * 1f));
         }
     }
 

@@ -87,7 +87,6 @@ public class PMMLTranslator {
             // out-of-bound. return null or throw exception, which is better
             return null;
         }
-
         PMML pmml = new PMML();
 
         // create and set data dictionary
@@ -118,7 +117,6 @@ public class PMMLTranslator {
         }
 
         pmml.withModels(model);
-
         return pmml;
     }
 
@@ -131,7 +129,6 @@ public class PMMLTranslator {
      */
     private DataDictionary createDataDictionary(List<ColumnConfig> columnConfigList) {
         DataDictionary dict = new DataDictionary();
-
         List<DataField> fields = new ArrayList<DataField>();
 
         for(ColumnConfig columnConfig: columnConfigList) {
@@ -192,7 +189,6 @@ public class PMMLTranslator {
 
                 miningSchema.withMiningFields(miningField);
             }
-
         }
 
         return miningSchema;
