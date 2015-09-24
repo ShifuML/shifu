@@ -323,8 +323,8 @@ public class Normalizer {
      * @return - normalized value for Woe method. For missing value, we return the value in last bin. Since the last
      *         bin refers to the missing value bin.
      */
-    private static Double woeNormalize(ColumnConfig config, String raw, boolean isWeightNorm) {
-        List<Double> woeBins = isWeightNorm ? config.getBinWeightedWoe() : config.getBinCountWoe();
+    private static Double woeNormalize(ColumnConfig config, String raw, boolean isWeightedNorm) {
+        List<Double> woeBins = isWeightedNorm ? config.getBinWeightedWoe() : config.getBinCountWoe();
         int binIndex = CommonUtils.getBinNum(config, raw);
         if(binIndex == -1) {
             // The last bin in woeBins is the miss value bin.
