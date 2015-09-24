@@ -279,6 +279,7 @@ public class StatsModelProcessor extends BasicModelProcessor implements Processo
         SourceType source = this.modelConfig.getDataSet().getSource();
         Configuration conf = new Configuration();
 
+        // TODO directly use hdfs file
         String filePath = Constants.BINNING_INFO_FILE_NAME;
         BufferedWriter writer = null;
         List<Scanner> scanners = null;
