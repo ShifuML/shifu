@@ -210,6 +210,10 @@ public class Normalizer {
      * Normalize the raw data, according the ColumnConfig infomation and normalization type.
      * Currently, the cutoff value doesn't affect the computation of WOE or WEIGHT_WOE type.
      * 
+     * <p>
+     * Noticd: currently OLD_ZSCALE and ZSCALE is implemented with the same process method.
+     * </p>
+     * 
      * @param config
      *            - ColumnConfig to normalize data
      * @param raw
@@ -230,6 +234,7 @@ public class Normalizer {
                 return hybridNormalize(config, raw, cutoff, false);
             case WEIGHT_HYBRID:
                 return hybridNormalize(config, raw, cutoff, true);
+            case OLD_ZSCALE:
             case ZSCALE:
             default:
                 return zScoreNormalize(config, raw, cutoff);
@@ -240,11 +245,12 @@ public class Normalizer {
      * Compute the normalized data for @NormalizeMethod.Zscore
      * 
      * @param config
-     *            - @ColumnConfig info
+     *            @ColumnConfig info
      * @param raw
-     *            - input column value
+     *            input column value
      * @param cutoff
-     *            - standard deviation cut off
+     *            standard deviation cut off
+     * 
      * @return - normalized value for ZScore method.
      */
     private static Double zScoreNormalize(ColumnConfig config, String raw, Double cutoff) {
@@ -263,9 +269,10 @@ public class Normalizer {
      * Parse raw value based on ColumnConfig.
      * 
      * @param config
-     *            - @ColumnConfig info
+     *            @ColumnConfig info
      * @param raw
-     *            - input column value
+     *            input column value
+     * 
      * @return parsed raw value. For categorical type, return BinPosRate. For numerical type, return
      *         corresponding double value. For missing data, return default value using
      *         {@link Normalizer#defaultMissingValue}.
@@ -296,7 +303,8 @@ public class Normalizer {
      * Get the default value for missing data.
      * 
      * @param config
-     *            - @ColumnConfig info
+     *            @ColumnConfig info
+     * 
      * @return - default value for missing data. Now simply return Mean value. If mean is null then return 0.
      */
     private static double defaultMissingValue(ColumnConfig config) {
@@ -315,8 +323,8 @@ public class Normalizer {
      * @return - normalized value for Woe method. For missing value, we return the value in last bin. Since the last
      *         bin refers to the missing value bin.
      */
-    private static Double woeNormalize(ColumnConfig config, String raw, boolean isWeightNorm) {
-        List<Double> woeBins = isWeightNorm ? config.getBinWeightedWoe() : config.getBinCountWoe();
+    private static Double woeNormalize(ColumnConfig config, String raw, boolean isWeightedNorm) {
+        List<Double> woeBins = isWeightedNorm ? config.getBinWeightedWoe() : config.getBinCountWoe();
         int binIndex = CommonUtils.getBinNum(config, raw);
         if(binIndex == -1) {
             // The last bin in woeBins is the miss value bin.
