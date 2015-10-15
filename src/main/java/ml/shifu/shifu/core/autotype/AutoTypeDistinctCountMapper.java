@@ -254,7 +254,9 @@ public class AutoTypeDistinctCountMapper extends Mapper<LongWritable, Text, IntW
             return validNumCount;
         }
 
-        /* (non-Javadoc)
+        /*
+         * (non-Javadoc)
+         * 
          * @see java.lang.Object#toString()
          */
         @Override
@@ -262,6 +264,6 @@ public class AutoTypeDistinctCountMapper extends Mapper<LongWritable, Text, IntW
             return "CountAndFrequentItems [hyper=" + hyper + ", frequentItems=" + frequentItems + ", count=" + count
                     + ", invalidCount=" + invalidCount + ", validNumCount=" + validNumCount + "]";
         }
-        
+
     }
 }

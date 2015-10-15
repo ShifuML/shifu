@@ -18,7 +18,7 @@ package ml.shifu.shifu.core.dtrain.dt;
 import java.util.List;
 
 /**
- * Wrapper gain value and gain info to compute gain.
+ * Gain information bean.
  * 
  * @author Zhang David (pengzhang@paypal.com)
  */
@@ -190,6 +190,13 @@ public class GainInfo {
         this.wgtCnt = wgtCnt;
     }
 
+    /**
+     * Return {@link GainInfo} instance with max gain value.
+     * 
+     * @param gainList
+     *            the gain info list
+     * @return max {@link GainInfo} instance
+     */
     public static GainInfo getGainInfoByMaxGain(List<GainInfo> gainList) {
         double maxGain = Double.MIN_VALUE;
         int maxGainIndex = -1;
@@ -206,11 +213,6 @@ public class GainInfo {
         return gainList.get(maxGainIndex);
     }
 
-    /*
-     * (non-Javadoc)
-     * 
-     * @see java.lang.Object#toString()
-     */
     @Override
     public String toString() {
         return "GainInfo [gain=" + gain + ", impurity=" + impurity + ", predict=" + predict + ", leftImpurity="

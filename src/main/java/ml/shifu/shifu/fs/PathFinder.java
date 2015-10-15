@@ -37,6 +37,7 @@ import java.util.Map;
  */
 public class PathFinder {
 
+    private static final String CORRELATION_CSV = "correlation.csv";
     private static final String REASON_CODE_PATH = "common/ReasonCodeMapV3.json";
     private static final String SHIFU_JAR_PATH = "lib/*.jar";
 
@@ -200,6 +201,7 @@ public class PathFinder {
     }
 
     public String getLocalColumnStatsPath() {
+
         return getPathBySourceType(Constants.COLUMN_META_FOLDER_NAME + File.separator
                 + Constants.COLUMN_STATS_CSV_FILE_NAME, SourceType.LOCAL);
     }
@@ -291,7 +293,7 @@ public class PathFinder {
      */
     public String getCorrelationPath(SourceType sourceType) {
         String preTrainingStatsPath = getPreferPath(modelConfig.getTrain().getCustomPaths(),
-                Constants.KEY_AUTO_TYPE_PATH);
+                Constants.KEY_CORRELATION_PATH);
 
         if(StringUtils.isBlank(preTrainingStatsPath)) {
             return getPathBySourceType(new Path(Constants.TMP, Constants.CORRELATION_PATH), sourceType);
@@ -669,6 +671,19 @@ public class PathFinder {
      * 
      * @param evalConfig
      *            - EvalConfig to find
+     * @param metaColumn
+     *            - score column
+     * @return path of evaluation score
+     */
+    public String getEvalScorePath(EvalConfig evalConfig, String metaColumn) {
+        return new Path(getEvalScorePath(evalConfig, evalConfig.getDataSet().getSource()), metaColumn).toString();
+    }
+
+    /**
+     * Get the path of evaluation score
+     * 
+     * @param evalConfig
+     *            - EvalConfig to find
      * @param sourceType
      *            - Local/HDFS
      * @return path of evaluation score
@@ -714,6 +729,16 @@ public class PathFinder {
     public String getEvalScoreHeaderPath(EvalConfig evalConfig, SourceType sourceType) {
         String scorePath = getEvalScorePath(evalConfig, sourceType);
         return new Path(scorePath, Constants.PIG_HEADER).toString();
+    }
+
+    public String getEvalPerformancePath(EvalConfig evalConfig, String metaColumn) {
+        String evalPerformancePath = getPreferPath(evalConfig.getCustomPaths(), Constants.KEY_PERFORMANCE_PATH);
+        if(StringUtils.isBlank(evalPerformancePath)) {
+            return getEvalFilePath(evalConfig.getName(), metaColumn + Path.SEPARATOR + Constants.EVAL_PERFORMANCE,
+                    evalConfig.getDataSet().getSource());
+        } else {
+            return new Path(evalPerformancePath, metaColumn + Path.SEPARATOR + Constants.EVAL_PERFORMANCE).toString();
+        }
     }
 
     /**
@@ -792,7 +817,8 @@ public class PathFinder {
      * @return - the Path of local home directory
      */
     private Path getModelSetLocalPath() {
-        return new Path(".");
+        return (otherConfigs != null && otherConfigs.get(Constants.SHIFU_CURRENT_WORKING_DIR) != null) ? new Path(
+                otherConfigs.get(Constants.SHIFU_CURRENT_WORKING_DIR).toString()) : new Path(".");
     }
 
     /**
@@ -840,6 +866,13 @@ public class PathFinder {
      */
     public String getPathBySourceType(String path, SourceType sourceType) {
         return getPathBySourceType(new Path(path), sourceType);
+    }
+
+    /**
+     * Return local correlation csv path
+     */
+    public String getLocalCorrelationCsvPath() {
+        return getPathBySourceType(CORRELATION_CSV, SourceType.LOCAL);
     }
 
     /**
@@ -900,6 +933,6 @@ public class PathFinder {
     }
 
     private String getShuffleDataPath(SourceType sourceType) {
-        return getPathBySourceType(new Path(Constants.TMP, Constants.SHUFFLED_NORM_DATA), sourceType);
+        return getPathBySourceType(new Path(Constants.TMP, Constants.SHUFFLED_DATA_PATH), sourceType);
     }
 }

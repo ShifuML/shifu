@@ -34,7 +34,7 @@ public class DynamicBinningTest {
     public void testDIB() {
         List<NumBinInfo> binInfoList = createNumBinInfos(30);
         DynamicBinning dynamicBinning = new DynamicBinning(binInfoList, 10);
-        Assert.assertEquals(dynamicBinning.getDataBin().size(), 10);
+        Assert.assertTrue(dynamicBinning.getDataBin().size() <= 10);
     }
 
     public static List<NumBinInfo> createNumBinInfos(int binCnt) {
@@ -50,7 +50,7 @@ public class DynamicBinningTest {
         List<NumBinInfo> binInfoList = NumBinInfo.constructNumBinfo(StringUtils.join(thresholds, ':'), ':');
         for ( NumBinInfo binInfo : binInfoList ) {
             if ( rd.nextDouble() > 0.45 ) {
-                int total = Math.abs(rd.nextInt()) % 1000;
+                int total = rd.nextInt() % 1000;
                 int positive = (int) (total * rd.nextDouble());
                 binInfo.setTotalInstCnt(total);
                 binInfo.setPositiveInstCnt(positive);

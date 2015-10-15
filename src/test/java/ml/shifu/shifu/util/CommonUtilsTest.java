@@ -19,6 +19,8 @@ import com.fasterxml.jackson.core.JsonGenerationException;
 import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
+import ml.shifu.shifu.core.validator.ModelInspector;
+import ml.shifu.shifu.util.updater.ColumnConfigUpdater;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.fs.FileStatus;
@@ -42,6 +44,7 @@ import ml.shifu.shifu.container.obj.EvalConfig;
 import ml.shifu.shifu.container.obj.ModelConfig;
 import ml.shifu.shifu.container.obj.ModelTrainConf.ALGORITHM;
 import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
+import ml.shifu.shifu.fs.PathFinder;
 import ml.shifu.shifu.udf.CalculateStatsUDF;
 
 /**
@@ -49,49 +52,42 @@ import ml.shifu.shifu.udf.CalculateStatsUDF;
  */
 public class CommonUtilsTest {
 
-    private static final Logger LOG = LoggerFactory
-            .getLogger(CommonUtilsTest.class);
+    private static final Logger LOG = LoggerFactory.getLogger(CommonUtilsTest.class);
 
     private ObjectMapper jsonMapper = new ObjectMapper();
 
     @Test
     public void stringToIntegerListTest() {
-        Assert.assertEquals(Arrays.asList(new Integer[] { 1, 2, 3 }),
-                CommonUtils.stringToIntegerList("[1, 2, 3]"));
+        Assert.assertEquals(Arrays.asList(new Integer[] { 1, 2, 3 }), CommonUtils.stringToIntegerList("[1, 2, 3]"));
     }
 
     // @Test
     public void syncTest() throws IOException {
-        ModelConfig config = ModelConfig.createInitModelConfig(".",
-                ALGORITHM.NN, "test");
+        ModelConfig config = ModelConfig.createInitModelConfig(".", ALGORITHM.NN, "test");
         config.setModelSetName("testModel");
 
-        jsonMapper.writerWithDefaultPrettyPrinter().writeValue(
-                new File("ModelConfig.json"), config);
+        jsonMapper.writerWithDefaultPrettyPrinter().writeValue(new File("ModelConfig.json"), config);
 
         ColumnConfig col = new ColumnConfig();
         col.setColumnName("ColumnA");
         List<ColumnConfig> columnConfigList = new ArrayList<ColumnConfig>();
         columnConfigList.add(col);
 
-        config.getDataSet().setSource(SourceType.LOCAL);
-        ;
+        config.getDataSet().setSource(SourceType.LOCAL);;
 
-        jsonMapper.writerWithDefaultPrettyPrinter().writeValue(
-                new File("ColumnConfig.json"), columnConfigList);
+        jsonMapper.writerWithDefaultPrettyPrinter().writeValue(new File("ColumnConfig.json"), columnConfigList);
 
         File file = null;
         file = new File("models");
-        if (!file.exists()) {
+        if(!file.exists()) {
             FileUtils.forceMkdir(file);
         }
 
         file = new File("models/model1.nn");
-        if (!file.exists()) {
-            if (file.createNewFile()) {
-                BufferedWriter writer = new BufferedWriter(
-                        new OutputStreamWriter(new FileOutputStream(file),
-                                Constants.DEFAULT_CHARSET));
+        if(!file.exists()) {
+            if(file.createNewFile()) {
+                BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(file),
+                        Constants.DEFAULT_CHARSET));
                 writer.write("test string");
                 writer.close();
             } else {
@@ -100,19 +96,19 @@ public class CommonUtilsTest {
         }
 
         file = new File("EvalSets/test");
-        if (!file.exists()) {
+        if(!file.exists()) {
             FileUtils.forceMkdir(file);
         }
 
         file = new File("EvalSets/test/EvalConfig.json");
-        if (!file.exists()) {
-            BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(
-                    new FileOutputStream(file), Constants.DEFAULT_CHARSET));
+        if(!file.exists()) {
+            BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(file),
+                    Constants.DEFAULT_CHARSET));
             writer.write("test string");
             writer.close();
         }
 
-        CommonUtils.copyConfFromLocalToHDFS(config);
+        CommonUtils.copyConfFromLocalToHDFS(config, new PathFinder(config));
 
         file = new File("ModelSets");
         Assert.assertTrue(file.exists());
@@ -136,7 +132,7 @@ public class CommonUtilsTest {
         Assert.assertTrue(file.exists());
 
         file = new File("ModelSets");
-        if (file.exists()) {
+        if(file.exists()) {
             FileUtils.deleteDirectory(file);
         }
 
@@ -152,12 +148,11 @@ public class CommonUtilsTest {
 
     // @Test
     public void syncUpEvalTest() throws IOException {
-        ModelConfig config = ModelConfig.createInitModelConfig(".",
-                ALGORITHM.NN, "test");
+        ModelConfig config = ModelConfig.createInitModelConfig(".", ALGORITHM.NN, "test");
         config.setModelSetName("shifu");
 
         File file = new File("evals/EvalA");
-        if (!file.exists()) {
+        if(!file.exists()) {
             FileUtils.forceMkdir(file);
         }
 
@@ -173,8 +168,7 @@ public class CommonUtilsTest {
     }
 
     @Test
-    public void loadModelConfigTest() throws JsonGenerationException,
-            JsonMappingException, IOException {
+    public void loadModelConfigTest() throws JsonGenerationException, JsonMappingException, IOException {
         ModelConfig config = ModelConfig.createInitModelConfig(".", ALGORITHM.NN, "test");
         config.setModelSetName("shifu");
 
@@ -285,7 +279,8 @@ public class CommonUtilsTest {
     @Test
     public void getRawDataMapTest() {
 
-        Map<String, String> map = CommonUtils.getRawDataMap(new String[] {"input1", "input2" }, new String[] { "1", "2" });
+        Map<String, String> map = CommonUtils.getRawDataMap(new String[] { "input1", "input2" }, new String[] { "1",
+                "2" });
 
         Assert.assertTrue(map.containsKey("input2"));
         Assert.assertTrue(map.keySet().size() == 2);
@@ -305,7 +300,6 @@ public class CommonUtilsTest {
         ModelConfig config = ModelConfig.createInitModelConfig("test", ALGORITHM.NN, "test");
 
         config.getDataSet().setMetaColumnNameFile("./conf/meta_column_conf.txt");
-        ;
         config.getVarSelect().setForceRemoveColumnNameFile("./conf/remove_column_list.txt");
         List<ColumnConfig> list = new ArrayList<ColumnConfig>();
 
@@ -321,7 +315,7 @@ public class CommonUtilsTest {
         e.setColumnName("d");
         list.add(e);
 
-        CommonUtils.updateColumnConfigFlags(config, list);
+        ColumnConfigUpdater.updateColumnConfigFlags(config, list, ModelInspector.ModelStep.VARSELECT);
 
         Assert.assertTrue(list.get(0).isMeta());
     }
@@ -397,11 +391,13 @@ public class CommonUtilsTest {
 
         FileUtils.deleteDirectory(dstModels);
 
-        evalConfig.getCustomPaths().put(Constants.KEY_MODELS_PATH, "./src/test/resources/example/cancer-judgement/ModelStore/ModelSet1/models");
+        evalConfig.getCustomPaths().put(Constants.KEY_MODELS_PATH,
+                "./src/test/resources/example/cancer-judgement/ModelStore/ModelSet1/models");
         modelFiles = CommonUtils.findModels(modelConfig, evalConfig, SourceType.LOCAL);
         Assert.assertEquals(5, modelFiles.size());
 
-        evalConfig.getCustomPaths().put(Constants.KEY_MODELS_PATH, "./src/test/resources/example/cancer-judgement/ModelStore/ModelSet1/models/model0.nn");
+        evalConfig.getCustomPaths().put(Constants.KEY_MODELS_PATH,
+                "./src/test/resources/example/cancer-judgement/ModelStore/ModelSet1/models/model0.nn");
         modelFiles = CommonUtils.findModels(modelConfig, evalConfig, SourceType.LOCAL);
         Assert.assertEquals(1, modelFiles.size());
 
@@ -409,11 +405,13 @@ public class CommonUtilsTest {
         modelFiles = CommonUtils.findModels(modelConfig, evalConfig, SourceType.LOCAL);
         Assert.assertEquals(0, modelFiles.size());
 
-        evalConfig.getCustomPaths().put(Constants.KEY_MODELS_PATH, "./src/test/resources/example/cancer-judgement/ModelStore/ModelSet1/models/*.nn");
+        evalConfig.getCustomPaths().put(Constants.KEY_MODELS_PATH,
+                "./src/test/resources/example/cancer-judgement/ModelStore/ModelSet1/models/*.nn");
         modelFiles = CommonUtils.findModels(modelConfig, evalConfig, SourceType.LOCAL);
         Assert.assertEquals(5, modelFiles.size());
 
-        evalConfig.getCustomPaths().put(Constants.KEY_MODELS_PATH, "./src/test/resources/example/cancer-judgement/ModelStore/ModelSet{0,1,9}/*/*.nn");
+        evalConfig.getCustomPaths().put(Constants.KEY_MODELS_PATH,
+                "./src/test/resources/example/cancer-judgement/ModelStore/ModelSet{0,1,9}/*/*.nn");
         modelFiles = CommonUtils.findModels(modelConfig, evalConfig, SourceType.LOCAL);
         Assert.assertEquals(5, modelFiles.size());
     }
@@ -426,12 +424,9 @@ public class CommonUtilsTest {
 
         Assert.assertEquals(
                 output,
-                Arrays.asList(new Double[] { -37.075125208681136,
-                        0.5043788517677587, 1.2588712402838798,
-                        2.543219666931007, 4.896511355654414,
-                        8.986345381526105, 17.06859410430839,
-                        33.557046979865774, 73.27777777777777,
-                        231.63698630136986, 100000.0 }));
+                Arrays.asList(new Double[] { -37.075125208681136, 0.5043788517677587, 1.2588712402838798,
+                        2.543219666931007, 4.896511355654414, 8.986345381526105, 17.06859410430839, 33.557046979865774,
+                        73.27777777777777, 231.63698630136986, 100000.0 }));
     }
 
     @Test
@@ -469,9 +464,9 @@ public class CommonUtilsTest {
 
     @Test
     public void binIndexTest() {
-        Double[] array = { Double.NEGATIVE_INFINITY, 2.1E-4, 0.00351, 0.01488, 0.02945, 0.0642, 0.11367, 0.22522, 0.23977 };
+        Double[] array = { Double.NEGATIVE_INFINITY, 2.1E-4, 0.00351, 0.01488, 0.02945, 0.0642, 0.11367, 0.22522,
+                0.23977 };
         List<Double> binBoundary = Arrays.asList(array);
-
 
         Assert.assertEquals(CommonUtils.getBinIndex(binBoundary, 0.00350), 1);
         Assert.assertEquals(CommonUtils.getBinIndex(binBoundary, 0.00010), 0);

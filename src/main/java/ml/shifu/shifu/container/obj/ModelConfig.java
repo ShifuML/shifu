@@ -48,7 +48,7 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.google.common.collect.Lists;
 
 /**
- * ModelConfig class
+ * ModelConfig is for ModelConfig.json configurations.
  */
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class ModelConfig {
@@ -56,18 +56,39 @@ public class ModelConfig {
     @JsonIgnore
     private final static Logger LOG = LoggerFactory.getLogger(ModelConfig.class);
 
+    /**
+     * Basic information like name, version, author ...
+     */
     private ModelBasicConf basic = new ModelBasicConf();
 
+    /**
+     * Data configuration like data location, data schema, ...
+     */
     private ModelSourceDataConf dataSet = new ModelSourceDataConf();
 
+    /**
+     * Stats configuration like sample rate, stats method ...
+     */
     private ModelStatsConf stats = new ModelStatsConf();
 
+    /**
+     * Var select configuration parameters like filterNum, filterBy ...
+     */
     private ModelVarSelectConf varSelect = new ModelVarSelectConf();
 
+    /**
+     * Normalizing configurations like norm type, sampleRate ...
+     */
     private ModelNormalizeConf normalize = new ModelNormalizeConf();
 
+    /**
+     * Model training configurations like baggingNum, algorithm (LR/NN/GBT/RF), training parameters ...
+     */
     private ModelTrainConf train = new ModelTrainConf();
 
+    /**
+     * Eval configurations listed to evaluated trained models.
+     */
     private List<EvalConfig> evals = new ArrayList<EvalConfig>();
 
     public ModelBasicConf getBasic() {
@@ -126,6 +147,19 @@ public class ModelConfig {
         this.evals = evals;
     }
 
+    /**
+     * Create init ModelConfig.json
+     * 
+     * @param modelName
+     *            name of model dataset
+     * @param alg
+     *            , algorithm used, for LR/NN/RF/GBT, diferent init parameters will be set
+     * @param description
+     *            data set description
+     * @return ModelConfig instance
+     * @throws IOException
+     *             if any exception in column configuration file creation
+     */
     public static ModelConfig createInitModelConfig(String modelName, ALGORITHM alg, String description)
             throws IOException {
         ModelConfig modelConfig = new ModelConfig();
@@ -176,6 +210,9 @@ public class ModelConfig {
         modelConfig.setStats(new ModelStatsConf());
         modelConfig.setBinningAlgorithm(BinningAlgorithm.SPDTI);
 
+        // build normalize info
+        modelConfig.setNormalize(new ModelNormalizeConf());
+
         // build varselect info
         ModelVarSelectConf varselect = new ModelVarSelectConf();
         // create empty <ModelName>/forceselect.column.names
@@ -192,9 +229,6 @@ public class ModelConfig {
         varselect.setFilterEnable(Boolean.TRUE);
         varselect.setFilterNum(200);
         modelConfig.setVarSelect(varselect);
-
-        // build normalize info
-        modelConfig.setNormalize(new ModelNormalizeConf());
 
         // build train info
         ModelTrainConf trainConf = new ModelTrainConf();
@@ -229,20 +263,19 @@ public class ModelConfig {
                 + File.separator + "cancer-judgement" + File.separator + "DataStore" + File.separator + "EvalSet1"
                 + File.separator + ".pig_header").toString());
         // create empty <ModelName>/<EvalSetName>.meta.column.names
-        String namesFilePath = Constants.COLUMN_META_FOLDER_NAME + File.separator
-                + evalConfig.getName() + "." + Constants.DEFAULT_META_COLUMN_FILE;
+        String namesFilePath = Constants.COLUMN_META_FOLDER_NAME + File.separator + evalConfig.getName() + "."
+                + Constants.DEFAULT_META_COLUMN_FILE;
         ShifuFileUtils.createFileIfNotExists(new Path(modelName, namesFilePath).toString(), SourceType.LOCAL);
         evalSet.setMetaColumnNameFile(namesFilePath);
         evalConfig.setDataSet(evalSet);
 
         // create empty <ModelName>/<EvalSetName>Score.meta.column.names
-        namesFilePath = Constants.COLUMN_META_FOLDER_NAME + File.separator
-                + evalConfig.getName() + Constants.DEFAULT_EVALSCORE_META_COLUMN_FILE;
+        namesFilePath = Constants.COLUMN_META_FOLDER_NAME + File.separator + evalConfig.getName()
+                + Constants.DEFAULT_EVALSCORE_META_COLUMN_FILE;
         ShifuFileUtils.createFileIfNotExists(new Path(modelName, namesFilePath).toString(), SourceType.LOCAL);
         evalConfig.setScoreMetaColumnNameFile(namesFilePath);
 
         modelConfig.getEvals().add(evalConfig);
-
         return modelConfig;
     }
 
@@ -676,6 +709,7 @@ public class ModelConfig {
                 return new ArrayList<String>();
             }
         }
+
         return CommonUtils.readConfFileIntoList(forceSelectColumnNameFile, SourceType.LOCAL, delimiter);
     }
 

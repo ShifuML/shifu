@@ -26,9 +26,11 @@ SET mapred.map.tasks.speculative.execution true;
 SET mapred.reduce.tasks.speculative.execution true;
 SET mapreduce.map.speculative true;
 SET mapreduce.reduce.speculative true;
+SET pig.splitCombination true;
+SET pig.maxCombinedSplitSize 134217728;
 
 DEFINE IsDataFilterOut          ml.shifu.shifu.udf.PurifyDataUDF('$source_type', '$path_model_config', '$path_column_config', '$eval_set_name');
-DEFINE EvalNormalize            ml.shifu.shifu.udf.EvalNormUDF('$source_type', '$path_model_config', '$path_column_config', '$eval_set_name');
+DEFINE EvalNormalize            ml.shifu.shifu.udf.EvalNormUDF('$source_type', '$path_model_config', '$path_column_config', '$eval_set_name', '$scale');
 
 raw = LOAD '$pathEvalRawData' USING PigStorage('$delimiter', '-noschema');
 raw = FILTER raw BY IsDataFilterOut(*);

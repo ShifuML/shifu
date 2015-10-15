@@ -22,9 +22,11 @@ import ml.shifu.shifu.container.obj.EvalConfig;
 import ml.shifu.shifu.container.obj.ModelConfig;
 import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
 import ml.shifu.shifu.core.ModelRunner;
+import ml.shifu.shifu.core.model.ModelSpec;
 import ml.shifu.shifu.message.RunModelDataMessage;
 import ml.shifu.shifu.message.RunModelResultMessage;
 import ml.shifu.shifu.util.CommonUtils;
+import org.apache.commons.collections.CollectionUtils;
 import org.encog.ml.BasicML;
 
 import java.io.IOException;
@@ -42,14 +44,14 @@ public class RunModelWorker extends AbstractWorkerActor {
             ActorRef parentActorRef, ActorRef nextActorRef) throws IOException {
         super(modelConfig, columnConfigList, parentActorRef, nextActorRef);
 
-        List<BasicML> models = CommonUtils.loadBasicModels(modelConfig, columnConfigList, evalConfig, SourceType.LOCAL);
+        List<BasicML> models = CommonUtils.loadBasicModels(modelConfig, evalConfig, SourceType.LOCAL);
 
         String[] header = null;
         String delimiter = null;
 
-        if(null == evalConfig || null == evalConfig.getDataSet().getHeaderPath()
+        if( null == evalConfig
+                || null == evalConfig.getDataSet().getHeaderPath()
                 || null == evalConfig.getDataSet().getHeaderDelimiter()) {
-
             header = CommonUtils.getFinalHeaders(modelConfig);
             delimiter = modelConfig.getDataSetDelimiter();
         } else {
@@ -58,6 +60,17 @@ public class RunModelWorker extends AbstractWorkerActor {
         }
 
         modelRunner = new ModelRunner(modelConfig, columnConfigList, header, delimiter, models);
+
+        boolean gbtConvertToProp = ((evalConfig == null) ? false :  evalConfig.getGbtConvertToProb());
+        SourceType sourceType = ((evalConfig == null) ?
+                modelConfig.getDataSet().getSource() : evalConfig.getDataSet().getSource());
+        List<ModelSpec> subModels = CommonUtils.loadSubModels(modelConfig, this.columnConfigList, evalConfig,
+                sourceType, gbtConvertToProp);
+        if(CollectionUtils.isNotEmpty(subModels)) {
+            for(ModelSpec modelSpec: subModels) {
+                this.modelRunner.addSubModels(modelSpec);
+            }
+        }
     }
 
     /*

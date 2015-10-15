@@ -16,6 +16,8 @@
 package ml.shifu.shifu.core.dtrain.nn;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
@@ -28,15 +30,16 @@ import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.container.obj.ModelConfig;
 import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
 import ml.shifu.shifu.core.ConvergeJudger;
-import ml.shifu.shifu.core.alg.NNTrainer;
 import ml.shifu.shifu.core.dtrain.CommonConstants;
 import ml.shifu.shifu.core.dtrain.DTrainUtils;
 import ml.shifu.shifu.core.dtrain.RegulationLevel;
 import ml.shifu.shifu.core.dtrain.Weight;
+import ml.shifu.shifu.core.dtrain.dataset.BasicFloatNetwork;
 import ml.shifu.shifu.core.dtrain.gs.GridSearch;
 import ml.shifu.shifu.fs.ShifuFileUtils;
 import ml.shifu.shifu.util.CommonUtils;
 
+import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.fs.Path;
 import org.encog.neural.networks.BasicNetwork;
 import org.slf4j.Logger;
@@ -124,6 +127,36 @@ public class NNMaster extends AbstractMasterComputable<NNParams, NNParams> {
      */
     private Map<String, Object> validParams;
 
+    /**
+     * Validation tolerance which is for early stop, by default it is 0d which means early stop is not enabled.
+     */
+    private double validationTolerance = 0d;
+
+    /**
+     * The best validation error for error computing
+     */
+    private double bestValidationError = Double.MAX_VALUE;
+
+    /**
+     * Dropout rate which is in [0, 1], default it is 0
+     */
+    private double dropoutRate = 0d;
+
+    /**
+     * Cache all features with feature index for searching
+     */
+    private List<Integer> allFeatures;
+
+    /**
+     * Cache subset features with feature index for searching
+     */
+    private List<Integer> subFeatures;
+
+    /**
+     * If variables are selected, if not, select variables with good candidate.
+     */
+    private boolean isAfterVarSelect;
+
     @Override
     public NNParams doCompute(MasterContext<NNParams, NNParams> context) {
         if(context.isFirstIteration()) {
@@ -137,6 +170,7 @@ public class NNMaster extends AbstractMasterComputable<NNParams, NNParams> {
                 params = initWeights();
                 LOG.info("Starting to train model from scratch.");
             }
+
             // should be set here to make sure master and workers use the same weights
             this.globalNNParams.setWeights(params.getWeights());
             // for continuous model training, here can be optimized by return null and load model weights in worker by
@@ -168,6 +202,7 @@ public class NNMaster extends AbstractMasterComputable<NNParams, NNParams> {
             size++;
         }
 
+        LOG.debug("ELM gradients debug for 0 gradient {}", this.globalNNParams.getGradients()[0]);
         LOG.debug("Total Count is {}. totalWorkerCount is {}", totalCount, totalWorkerCount);
 
         // worker result size is 0. throw exception because shouldn't happen
@@ -180,7 +215,7 @@ public class NNMaster extends AbstractMasterComputable<NNParams, NNParams> {
             this.learningRate = this.rawLearningRate;
             this.weightCalculator = new Weight(this.globalNNParams.getGradients().length,
                     this.globalNNParams.getTrainSize(), learningRate, propagation, this.regularizedConstant,
-                    RegulationLevel.to(this.validParams.get(CommonConstants.REG_LEVEL_KEY)));
+                    RegulationLevel.to(this.validParams.get(CommonConstants.REG_LEVEL_KEY)), this.dropoutRate);
         } else {
             this.learningRate = this.learningRate * (1.0d - this.learningDecay);
             // without learningDecay Parameter using sqrt(iteration number) to decrease learning rate
@@ -189,14 +224,38 @@ public class NNMaster extends AbstractMasterComputable<NNParams, NNParams> {
             this.weightCalculator.setNumTrainSize(this.globalNNParams.getTrainSize());
         }
 
+        double[] oldWeights = Arrays.copyOf(this.globalNNParams.getWeights(), this.globalNNParams.getWeights().length);
+
         // use last weights and current gradients to calculate
         double[] weights = this.weightCalculator.calculateWeights(this.globalNNParams.getWeights(),
                 this.globalNNParams.getGradients());
 
         this.globalNNParams.setWeights(weights);
 
+        // average error
         double currentTestError = totalTestError / totalWorkerCount;
         double currentTrainError = totalTrainError / totalWorkerCount;
+
+        boolean vtTriggered = false;
+        // if validationTolerance == 0d, means vt check is not enabled
+        if(validationTolerance > 0d) {
+            double weightSumSquare = 0d;
+            double diffWeightSumSquare = 0d;
+            for(int i = 0; i < weights.length; i++) {
+                weightSumSquare += Math.pow(weights[i], 2);
+                diffWeightSumSquare += Math.pow(weights[i] - oldWeights[i], 2);
+            }
+            if(Math.pow(diffWeightSumSquare, 0.5) < this.validationTolerance
+                    * Math.max(Math.pow(weightSumSquare, 0.5), 1d)) {
+                LOG.info("Debug: diffWeightSumSquare {}, weightSumSquare {}, validationTolerance {}",
+                        Math.pow(diffWeightSumSquare, 0.5), Math.pow(weightSumSquare, 0.5), validationTolerance);
+                vtTriggered = true;
+            }
+        }
+
+        if(currentTestError < this.bestValidationError) {
+            this.bestValidationError = currentTestError;
+        }
 
         LOG.info("NNMaster compute iteration {} ( avg train error {}, avg validation error {} )", new Object[] {
                 context.getCurrentIteration(), currentTrainError, currentTestError });
@@ -215,11 +274,11 @@ public class NNMaster extends AbstractMasterComputable<NNParams, NNParams> {
         LOG.info("NNMaster compute iteration {} average error: {}, threshold: {}", context.getCurrentIteration(),
                 avgErr, convergenceThreshold);
 
-        if(judger.judge(avgErr, convergenceThreshold)) {
+        if(judger.judge(avgErr, convergenceThreshold) || vtTriggered) {
             LOG.info("NNMaster compute iteration {} converged !", context.getCurrentIteration());
             params.setHalt(true);
         } else {
-            LOG.info("NNMaster compute iteration {} not converged yet !", context.getCurrentIteration());
+            LOG.debug("NNMaster compute iteration {} not converged yet !", context.getCurrentIteration());
         }
 
         return params;
@@ -230,7 +289,7 @@ public class NNMaster extends AbstractMasterComputable<NNParams, NNParams> {
         NNParams params = null;
         try {
             Path modelPath = new Path(context.getProps().getProperty(CommonConstants.GUAGUA_OUTPUT));
-            BasicNetwork existingModel = (BasicNetwork) CommonUtils.loadModel(modelConfig, columnConfigList, modelPath,
+            BasicFloatNetwork existingModel = (BasicFloatNetwork) CommonUtils.loadModel(modelConfig, modelPath,
                     ShifuFileUtils.getFileSystemBySourceType(this.modelConfig.getDataSet().getSource()));
             if(existingModel == null) {
                 params = initWeights();
@@ -260,16 +319,17 @@ public class NNMaster extends AbstractMasterComputable<NNParams, NNParams> {
         NNParams params = new NNParams();
 
         int[] inputAndOutput = DTrainUtils.getInputOutputCandidateCounts(this.columnConfigList);
+        @SuppressWarnings("unused")
         int inputNodeCount = inputAndOutput[0] == 0 ? inputAndOutput[2] : inputAndOutput[0];
         // if is one vs all classification, outputNodeCount is set to 1
         int outputNodeCount = modelConfig.isRegression() ? inputAndOutput[1]
                 : (modelConfig.getTrain().isOneVsAll() ? inputAndOutput[1] : modelConfig.getTags().size());
-        int numLayers = (Integer) validParams.get(NNTrainer.NUM_HIDDEN_LAYERS);
-        List<String> actFunc = (List<String>) validParams.get(NNTrainer.ACTIVATION_FUNC);
-        List<Integer> hiddenNodeList = (List<Integer>) validParams.get(NNTrainer.NUM_HIDDEN_NODES);
+        int numLayers = (Integer) validParams.get(CommonConstants.NUM_HIDDEN_LAYERS);
+        List<String> actFunc = (List<String>) validParams.get(CommonConstants.ACTIVATION_FUNC);
+        List<Integer> hiddenNodeList = (List<Integer>) validParams.get(CommonConstants.NUM_HIDDEN_NODES);
 
-        BasicNetwork network = DTrainUtils.generateNetwork(inputNodeCount, outputNodeCount, numLayers, actFunc,
-                hiddenNodeList);
+        BasicNetwork network = DTrainUtils.generateNetwork(this.subFeatures.size(), outputNodeCount, numLayers,
+                actFunc, hiddenNodeList);
 
         params.setTrainError(0);
         params.setTestError(0);
@@ -302,9 +362,31 @@ public class NNMaster extends AbstractMasterComputable<NNParams, NNParams> {
             validParams = gs.getParams(trainerId);
             LOG.info("Start grid search master with params: {}", validParams);
         }
-        Object pObject = validParams.get(NNTrainer.PROPAGATION);
+
+        Object vtObj = validParams.get("ValidationTolerance");
+        if(vtObj != null) {
+            try {
+                validationTolerance = Double.parseDouble(vtObj.toString());
+                LOG.warn("Validation by tolerance is enabled with value {}.", validationTolerance);
+            } catch (NumberFormatException ee) {
+                validationTolerance = 0d;
+                LOG.warn(
+                        "Validation by tolerance isn't enabled because of non numerical value of ValidationTolerance: {}.",
+                        vtObj);
+            }
+        } else {
+            LOG.info("Validation by tolerance isn't enabled.");
+        }
+
+        Object pObject = validParams.get(CommonConstants.PROPAGATION);
         this.propagation = pObject == null ? "Q" : (String) pObject;
-        this.rawLearningRate = Double.valueOf(validParams.get(NNTrainer.LEARNING_RATE).toString());
+        this.rawLearningRate = Double.valueOf(validParams.get(CommonConstants.LEARNING_RATE).toString());
+        Object dropoutRateObj = validParams.get(CommonConstants.DROPOUT_RATE);
+        if(dropoutRateObj != null) {
+            this.dropoutRate = Double.valueOf(dropoutRateObj.toString());
+        }
+        LOG.info("dropoutRate in master is :{}", this.dropoutRate);
+
         Object learningDecayO = validParams.get("LearningDecay");
         if(learningDecayO != null) {
             this.learningDecay = Double.valueOf(learningDecayO.toString());
@@ -319,6 +401,22 @@ public class NNMaster extends AbstractMasterComputable<NNParams, NNParams> {
                 context.getProps().getProperty(CommonConstants.CONTINUOUS_TRAINING));
         Object rconstant = validParams.get(CommonConstants.LR_REGULARIZED_CONSTANT);
         this.regularizedConstant = NumberFormatUtils.getDouble(rconstant == null ? "" : rconstant.toString(), 0d);
+
+        // check if variables are set final selected
+        int[] inputOutputIndex = DTrainUtils.getNumericAndCategoricalInputAndOutputCounts(this.columnConfigList);
+        this.isAfterVarSelect = (inputOutputIndex[3] == 1);
+        // cache all feature list for sampling features
+        this.allFeatures = CommonUtils.getAllFeatureList(columnConfigList, isAfterVarSelect);
+        String subsetStr = context.getProps().getProperty(CommonConstants.SHIFU_NN_FEATURE_SUBSET);
+        if(StringUtils.isBlank(subsetStr)) {
+            this.subFeatures = this.allFeatures;
+        } else {
+            String[] splits = subsetStr.split(",");
+            this.subFeatures = new ArrayList<Integer>(splits.length);
+            for(String split: splits) {
+                this.subFeatures.add(Integer.parseInt(split));
+            }
+        }
 
         // recover master states here is globalNNParams
         // not init but not first iteration, first recover from last master result set from guagua

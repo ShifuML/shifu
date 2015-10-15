@@ -18,7 +18,7 @@ recordCntPerMessage=100000
 mapreduce.job.max.split.locations=5000
 
 # disable map output compress because some issue for snappy config in our clusters
-mapreduce.map.output.compress=false
+# mapreduce.map.output.compress=false
 
 # how to control how many mappers when training models
 # If there are too many small files after normalization, set it to true
@@ -41,8 +41,8 @@ guagua.zk.embedbed.isInClient=true
 guagua.computation.time.threshold=120000
 
 ## tunning for rf, in rf, tree models are stored in master memory, if two many models, please tune such parameters 
-mapreduce.map.memory.mb=2400
-mapreduce.map.java.opts=-Xms2G -Xmx2G -server -XX:MaxPermSize=128M -XX:PermSize=64M -XX:+UseParallelGC -XX:+UseParallelOldGC -XX:ParallelGCThreads=8 -verbose:gc -XX:+PrintGCDetails -XX:+PrintGCTimeStamps
+mapreduce.map.memory.mb=2048
+mapreduce.map.java.opts=-Xms1800m -Xmx1800m -server -XX:MaxPermSize=128M -XX:PermSize=64M -XX:+UseParallelGC -XX:+UseParallelOldGC -XX:ParallelGCThreads=8 -verbose:gc -XX:+PrintGCDetails -XX:+PrintGCTimeStamps
 
 ## each round how many jobs can be running, if bagging is 10, two rounds of bagging with each one 5 guagua jobs 
 shifu.train.bagging.inparallel=5
@@ -51,7 +51,8 @@ shifu.train.bagging.inparallel=5
 shifu.gridsearch.threshold=30
 
 ## set min worker done ratio in each guagua iteration step 
-guagua.min.workers.ratio=0.97
+## From 0.11.0, change to 0.95 to make it works well for # of workers less than 50
+guagua.min.workers.ratio=0.95
 
 ## the hadoop capacity may limit parallel number, add this parameter for hadoop performance tunning
 # shifu.combo.thread.parallel = 5
@@ -67,3 +68,12 @@ guagua.min.workers.ratio=0.97
 
 # the precision of model scores
 # shifu.score.scale = 1000
+
+## enable pig combination to save mappers
+pig.splitCombination=true
+pig.maxCombinedSplitSize=268435456
+
+## specified reduce memory to avoid default memory too big or too small
+mapreduce.reduce.memory.mb=2400
+mapreduce.reduce.java.opts=-Xms2G -Xmx2G
+

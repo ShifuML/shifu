@@ -15,12 +15,10 @@
  */
 package ml.shifu.shifu.core.dtrain.lr;
 
-import org.apache.hadoop.fs.Path;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 import java.util.Properties;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -33,13 +31,17 @@ import ml.shifu.shifu.container.obj.ModelConfig;
 import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
 import ml.shifu.shifu.core.ConvergeJudger;
 import ml.shifu.shifu.core.LR;
-import ml.shifu.shifu.core.alg.NNTrainer;
 import ml.shifu.shifu.core.dtrain.CommonConstants;
 import ml.shifu.shifu.core.dtrain.DTrainUtils;
 import ml.shifu.shifu.core.dtrain.RegulationLevel;
 import ml.shifu.shifu.core.dtrain.Weight;
+import ml.shifu.shifu.core.dtrain.gs.GridSearch;
 import ml.shifu.shifu.fs.ShifuFileUtils;
 import ml.shifu.shifu.util.CommonUtils;
+
+import org.apache.hadoop.fs.Path;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * {@link LogisticRegressionMaster} defines logic to update global <a
@@ -119,34 +121,71 @@ public class LogisticRegressionMaster extends
      * Whether some configurations are initialized
      */
     private AtomicBoolean isInitialized = new AtomicBoolean(false);
-    
+
     /**
      * Whether to enable continuous model training based on existing models.
      */
     private boolean isContinuousEnabled = false;
 
+    /**
+     * Validation tolerance which is for early stop, by default it is 0d which means early stop is not enabled.
+     */
+    private double validationTolerance = 0d;
+
+    /**
+     * The best validation error for error computing
+     */
+    private double bestValidationError = Double.MAX_VALUE;
+
+    /**
+     * Valid params specially for grid search
+     */
+    private Map<String, Object> validParams;
+
     @Override
     public void init(MasterContext<LogisticRegressionParams, LogisticRegressionParams> context) {
         loadConfigFiles(context.getProps());
-        this.learningRate = Double.valueOf(this.modelConfig.getParams().get(CommonConstants.LR_LEARNING_RATE)
-                .toString());
+        int trainerId = Integer.valueOf(context.getProps().getProperty(CommonConstants.SHIFU_TRAINER_ID, "0"));
+
+        GridSearch gs = new GridSearch(modelConfig.getTrain().getParams());
+        validParams = this.modelConfig.getTrain().getParams();
+        if(gs.hasHyperParam()) {
+            validParams = gs.getParams(trainerId);
+            LOG.info("Start grid search master with params: {}", validParams);
+        }
+
+        this.learningRate = Double.valueOf(this.validParams.get(CommonConstants.LR_LEARNING_RATE).toString());
         int[] inputOutputIndex = DTrainUtils.getInputOutputCandidateCounts(this.columnConfigList);
         this.inputNum = inputOutputIndex[0] == 0 ? inputOutputIndex[2] : inputOutputIndex[0];
+
+        Object vtObj = this.validParams.get("ValidationTolerance");
+        if(vtObj != null) {
+            try {
+                validationTolerance = Double.parseDouble(vtObj.toString());
+                LOG.warn("Validation by tolerance is enabled with value {}.", validationTolerance);
+            } catch (NumberFormatException ee) {
+                validationTolerance = 0d;
+                LOG.warn(
+                        "Validation by tolerance isn't enabled because of non numerical value of ValidationTolerance: {}.",
+                        vtObj);
+            }
+        } else {
+            LOG.info("Validation by tolerance isn't enabled.");
+        }
 
         Double threshold = this.modelConfig.getTrain().getConvergenceThreshold();
         this.convergenceThreshold = threshold == null ? 0d : threshold.doubleValue();
         LOG.info("Convergence threshold in master is :{}", this.convergenceThreshold);
 
-        Object pObject = this.modelConfig.getParams().get(NNTrainer.PROPAGATION);
+        Object pObject = validParams.get(CommonConstants.PROPAGATION);
         this.propagation = pObject == null ? "Q" : (String) pObject;
 
-        Object rconstant = this.modelConfig.getParams().get(CommonConstants.LR_REGULARIZED_CONSTANT);
+        Object rconstant = validParams.get(CommonConstants.LR_REGULARIZED_CONSTANT);
         this.regularizedConstant = NumberFormatUtils.getDouble(rconstant == null ? "" : rconstant.toString(), 0d);
-        
+
         this.isContinuousEnabled = Boolean.TRUE.toString().equalsIgnoreCase(
                 context.getProps().getProperty(CommonConstants.CONTINUOUS_TRAINING));
         LOG.info("continuousEnabled: {}", this.isContinuousEnabled);
-
 
         // not initialized and not first iteration, should be fault tolerence, recover state in LogisticRegressionMaster
         if(!context.isFirstIteration()) {
@@ -160,7 +199,7 @@ public class LogisticRegressionMaster extends
             }
         }
     }
-    
+
     private LogisticRegressionParams initModelParams(LR loadModel) {
         LogisticRegressionParams params = new LogisticRegressionParams();
         params.setTrainError(0);
@@ -170,14 +209,15 @@ public class LogisticRegressionMaster extends
         params.setParameters(this.weights);
         return params;
     }
-    
-    private LogisticRegressionParams initOrRecoverParams(MasterContext<LogisticRegressionParams, LogisticRegressionParams> context) {
+
+    private LogisticRegressionParams initOrRecoverParams(
+            MasterContext<LogisticRegressionParams, LogisticRegressionParams> context) {
         LOG.info("read from existing model");
         LogisticRegressionParams params = null;
         // read existing model weights
         try {
             Path modelPath = new Path(context.getProps().getProperty(CommonConstants.GUAGUA_OUTPUT));
-            LR existingModel = (LR) CommonUtils.loadModel(modelConfig, columnConfigList, modelPath,
+            LR existingModel = (LR) CommonUtils.loadModel(modelConfig, modelPath,
                     ShifuFileUtils.getFileSystemBySourceType(this.modelConfig.getDataSet().getSource()));
             if(existingModel == null) {
                 params = initWeights();
@@ -235,12 +275,13 @@ public class LogisticRegressionMaster extends
 
             if(this.weightCalculator == null) {
                 this.weightCalculator = new Weight(weights.length, trainSize, learningRate, this.propagation,
-                        this.regularizedConstant, RegulationLevel.to(this.modelConfig.getParams().get(
-                                CommonConstants.REG_LEVEL_KEY)));
+                        this.regularizedConstant, RegulationLevel.to(this.validParams
+                                .get(CommonConstants.REG_LEVEL_KEY)), 0d);
             } else {
                 this.weightCalculator.setNumTrainSize(trainSize);
             }
 
+            double[] oldWeights = Arrays.copyOf(this.weights, this.weights.length);
             this.weights = this.weightCalculator.calculateWeights(this.weights, gradients);
 
             double finalTrainError = trainError / trainSize;
@@ -249,11 +290,33 @@ public class LogisticRegressionMaster extends
                     finalTestError);
             LogisticRegressionParams lrParams = new LogisticRegressionParams(weights, finalTrainError, finalTestError,
                     trainSize, testSize);
-            if(judger.judge(finalTrainError + finalTestError / 2, convergenceThreshold)) {
+
+            boolean vtTriggered = false;
+            // if validationTolerance == 0d, means vt check is not enabled
+            if(validationTolerance > 0d) {
+                double weightSumSquare = 0d;
+                double diffWeightSumSquare = 0d;
+                for(int i = 0; i < weights.length; i++) {
+                    weightSumSquare += Math.pow(weights[i], 2);
+                    diffWeightSumSquare += Math.pow(weights[i] - oldWeights[i], 2);
+                }
+                if(Math.pow(diffWeightSumSquare, 0.5) < this.validationTolerance
+                        * Math.max(Math.pow(weightSumSquare, 0.5), 1d)) {
+                    LOG.info("Debug: diffWeightSumSquare {}, weightSumSquare {}, validationTolerance {}",
+                            Math.pow(diffWeightSumSquare, 0.5), Math.pow(weightSumSquare, 0.5), validationTolerance);
+                    vtTriggered = true;
+                }
+            }
+
+            if(finalTestError < this.bestValidationError) {
+                this.bestValidationError = finalTestError;
+            }
+
+            if(judger.judge(finalTrainError + finalTestError / 2, convergenceThreshold) || vtTriggered) {
                 LOG.info("LRMaster compute iteration {} converged !", context.getCurrentIteration());
                 lrParams.setHalt(true);
             } else {
-                LOG.info("LRMaster compute iteration {} not converged yet !", context.getCurrentIteration());
+                LOG.debug("LRMaster compute iteration {} not converged yet !", context.getCurrentIteration());
             }
             return lrParams;
         }
