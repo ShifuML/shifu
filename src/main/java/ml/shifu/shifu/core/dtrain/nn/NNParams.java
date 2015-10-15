@@ -185,15 +185,9 @@ public class NNParams extends HaltBytable implements Combinable<NNParams> {
             gradients[i] = in.readDouble();
         }
         this.gradients = gradients;
+
         this.count = in.readLong();
         this.wrCount = in.readInt();
-    }
-
-    @Override
-    public String toString() {
-        return String.format("NNParams [testError=%s, trainError=%s, trainSize=%s, wrCount=%s, gSize=%s]",
-                this.testError, this.trainError, this.trainSize, this.getWrCount(),
-                this.gradients != null ? this.gradients.length : 0);
     }
 
     /**
@@ -244,6 +238,13 @@ public class NNParams extends HaltBytable implements Combinable<NNParams> {
      */
     public void setWrCount(int wrCount) {
         this.wrCount = wrCount;
+    }
+
+    @Override
+    public String toString() {
+        return String.format("NNParams [testError=%s, trainError=%s, trainSize=%s, wrCount=%s, gSize=%s]",
+                this.testError, this.trainError, this.trainSize, this.getWrCount(),
+                this.gradients != null ? this.gradients.length : 0);
     }
 
 }

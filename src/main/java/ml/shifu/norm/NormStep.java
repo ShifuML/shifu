@@ -61,61 +61,57 @@ public class NormStep extends Step<List<ColumnConfig>> {
     public List<ColumnConfig> process() throws IOException {
         LOG.info("Step Start: stats");
         long start = System.currentTimeMillis();
+
+        LOG.info("Saving ModelConfig, ColumnConfig and then upload to HDFS ...");
+        JSONUtils.writeValue(new File(pathFinder.getModelConfigPath(SourceType.LOCAL)), modelConfig);
+        JSONUtils.writeValue(new File(pathFinder.getColumnConfigPath(SourceType.LOCAL)), columnConfigList);
+
+        if(SourceType.HDFS.equals(modelConfig.getDataSet().getSource())) {
+            CommonUtils.copyConfFromLocalToHDFS(modelConfig, this.pathFinder);
+        }
+
+        SourceType sourceType = modelConfig.getDataSet().getSource();
+
+        ShifuFileUtils.deleteFile(pathFinder.getNormalizedDataPath(), sourceType);
+        ShifuFileUtils.deleteFile(pathFinder.getNormalizedValidationDataPath(), sourceType);
+        ShifuFileUtils.deleteFile(pathFinder.getSelectedRawDataPath(), sourceType);
+
+        Map<String, String> paramsMap = new HashMap<String, String>();
+        paramsMap.put("sampleRate", modelConfig.getNormalizeSampleRate().toString());
+        paramsMap.put("sampleNegOnly", ((Boolean) modelConfig.isNormalizeSampleNegOnly()).toString());
+        paramsMap.put("delimiter", CommonUtils.escapePigString(modelConfig.getDataSetDelimiter()));
+
         try {
-
-            LOG.info("Saving ModelConfig, ColumnConfig and then upload to HDFS ...");
-            JSONUtils.writeValue(new File(pathFinder.getModelConfigPath(SourceType.LOCAL)), modelConfig);
-            JSONUtils.writeValue(new File(pathFinder.getColumnConfigPath(SourceType.LOCAL)), columnConfigList);
-
-            if(SourceType.HDFS.equals(modelConfig.getDataSet().getSource())) {
-                CommonUtils.copyConfFromLocalToHDFS(modelConfig);
-            }
-
-            SourceType sourceType = modelConfig.getDataSet().getSource();
-
-            ShifuFileUtils.deleteFile(pathFinder.getNormalizedDataPath(), sourceType);
-            ShifuFileUtils.deleteFile(pathFinder.getNormalizedValidationDataPath(), sourceType);
-            ShifuFileUtils.deleteFile(pathFinder.getSelectedRawDataPath(), sourceType);
-
-            Map<String, String> paramsMap = new HashMap<String, String>();
-            paramsMap.put("sampleRate", modelConfig.getNormalizeSampleRate().toString());
-            paramsMap.put("sampleNegOnly", ((Boolean) modelConfig.isNormalizeSampleNegOnly()).toString());
-            paramsMap.put("delimiter", CommonUtils.escapePigString(modelConfig.getDataSetDelimiter()));
-
-            try {
-                String normPigPath = null;
-                if(modelConfig.getNormalize().getIsParquet()) {
-                    if(modelConfig.getBasic().getPostTrainOn()) {
-                        normPigPath = pathFinder.getScriptPath("scripts/NormalizeWithParquetAndPostTrain.pig");
-                    } else {
-                        LOG.info("Post train is disabled by 'postTrainOn=false'.");
-                        normPigPath = pathFinder.getScriptPath("scripts/NormalizeWithParquet.pig");
-                    }
+            String normPigPath = null;
+            if(modelConfig.getNormalize().getIsParquet()) {
+                if(modelConfig.getBasic().getPostTrainOn()) {
+                    normPigPath = pathFinder.getScriptPath("scripts/NormalizeWithParquetAndPostTrain.pig");
                 } else {
-                    if(modelConfig.getBasic().getPostTrainOn()) {
-                        // this condition is for comment, no matter post train enabled or not, only norm results will be
-                        // stored since new post train solution
-                    }
-                    normPigPath = pathFinder.getScriptPath("scripts/Normalize.pig");
+                    LOG.info("Post train is disabled by 'postTrainOn=false'.");
+                    normPigPath = pathFinder.getScriptPath("scripts/NormalizeWithParquet.pig");
                 }
-                paramsMap.put(Constants.IS_COMPRESS, "true");
-                paramsMap.put(Constants.IS_NORM_FOR_CLEAN, "false");
+            } else {
+                if(modelConfig.getBasic().getPostTrainOn()) {
+                    // this condition is for comment, no matter post train enabled or not, only norm results will be
+                    // stored since new post train solution
+                }
+                normPigPath = pathFinder.getScriptPath("scripts/Normalize.pig");
+            }
+            paramsMap.put(Constants.IS_COMPRESS, "true");
+            paramsMap.put(Constants.IS_NORM_FOR_CLEAN, "false");
+            PigExecutor.getExecutor().submitJob(modelConfig, normPigPath, paramsMap,
+                    modelConfig.getDataSet().getSource(), super.pathFinder);
+            if(StringUtils.isNotBlank(modelConfig.getValidationDataSetRawPath())) {
+                paramsMap.put(Constants.IS_COMPRESS, "false");
+                paramsMap.put(Constants.PATH_RAW_DATA, modelConfig.getValidationDataSetRawPath());
+                paramsMap.put(Constants.PATH_NORMALIZED_DATA, pathFinder.getNormalizedValidationDataPath());
                 PigExecutor.getExecutor().submitJob(modelConfig, normPigPath, paramsMap,
                         modelConfig.getDataSet().getSource(), super.pathFinder);
-                if(StringUtils.isNotBlank(modelConfig.getValidationDataSetRawPath())) {
-                    paramsMap.put(Constants.IS_COMPRESS, "false");
-                    paramsMap.put(Constants.PATH_RAW_DATA, modelConfig.getValidationDataSetRawPath());
-                    paramsMap.put(Constants.PATH_NORMALIZED_DATA, pathFinder.getNormalizedValidationDataPath());
-                    PigExecutor.getExecutor().submitJob(modelConfig, normPigPath, paramsMap,
-                            modelConfig.getDataSet().getSource(), super.pathFinder);
-                }
-            } catch (IOException e) {
-                throw new ShifuException(ShifuErrorCode.ERROR_RUNNING_PIG_JOB, e);
-            } catch (Throwable e) {
-                throw new RuntimeException(e);
             }
-        } catch (Exception e) {
-            LOG.error("Error:", e);
+        } catch (IOException e) {
+            throw new ShifuException(ShifuErrorCode.ERROR_RUNNING_PIG_JOB, e);
+        } catch (Throwable e) {
+            throw new RuntimeException(e);
         }
 
         LOG.info("Step Finished: stats with {} ms", (System.currentTimeMillis() - start));

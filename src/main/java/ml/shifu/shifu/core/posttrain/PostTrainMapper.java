@@ -118,6 +118,7 @@ public class PostTrainMapper extends Mapper<LongWritable, Text, IntWritable, Fea
     @Override
     protected void setup(Context context) throws IOException, InterruptedException {
         loadConfigFiles(context);
+
         loadTagWeightNum();
 
         this.dataPurifier = new DataPurifier(this.modelConfig);
@@ -128,7 +129,7 @@ public class PostTrainMapper extends Mapper<LongWritable, Text, IntWritable, Fea
         this.tags = new HashSet<String>(modelConfig.getFlattenTags());
         SourceType sourceType = this.modelConfig.getDataSet().getSource();
 
-        List<BasicML> models = CommonUtils.loadBasicModels(modelConfig, columnConfigList, null, sourceType);
+        List<BasicML> models = CommonUtils.loadBasicModels(modelConfig, null, sourceType);
 
         this.headers = CommonUtils.getFinalHeaders(modelConfig);
         this.modelRunner = new ModelRunner(modelConfig, columnConfigList, this.headers,
@@ -208,7 +209,7 @@ public class PostTrainMapper extends Mapper<LongWritable, Text, IntWritable, Fea
         StringBuilder sb = new StringBuilder(500);
         sb.append(csr.getAvgScore()).append(Constants.DEFAULT_DELIMITER).append(csr.getMaxScore())
                 .append(Constants.DEFAULT_DELIMITER).append(csr.getMinScore()).append(Constants.DEFAULT_DELIMITER);
-        for(Integer score: csr.getScores()) {
+        for(Double score: csr.getScores()) {
             sb.append(score).append(Constants.DEFAULT_DELIMITER);
         }
         List<String> metaList = modelConfig.getMetaColumnNames();

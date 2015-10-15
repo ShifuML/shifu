@@ -20,7 +20,11 @@ import ml.shifu.guagua.io.Bytable;
  * {@link SimpleBitSet} mocks part of functions in {@link BitSet}. The reason for {@link SimpleBitSet} is to implement
  * compressed serialization format in {@link Bytable}, which can help compress binary tree ensemble model.
  * 
- * @author pengzhang
+ * <p>
+ * This is only appended set. Bit removing is not supported. And in fact only Number instance is supported if not
+ * number, a ClassCastException will be thrown when adding to it.
+ * 
+ * @author Zhang David (pengzhang@paypal.com)
  */
 class SimpleBitSet<T> implements Set<T>, Bytable {
 

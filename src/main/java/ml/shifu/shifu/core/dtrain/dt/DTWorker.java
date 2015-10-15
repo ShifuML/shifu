@@ -22,7 +22,6 @@ import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -55,7 +54,6 @@ import ml.shifu.shifu.container.obj.ModelConfig;
 import ml.shifu.shifu.container.obj.ModelTrainConf.ALGORITHM;
 import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
 import ml.shifu.shifu.core.TreeModel;
-import ml.shifu.shifu.core.alg.NNTrainer;
 import ml.shifu.shifu.core.dtrain.CommonConstants;
 import ml.shifu.shifu.core.dtrain.DTrainUtils;
 import ml.shifu.shifu.core.dtrain.dt.DTWorkerParams.NodeStats;
@@ -96,12 +94,12 @@ import com.google.common.base.Splitter;
  * For RF, bagging with replacement are enabled by {@link PoissonDistribution}.
  * 
  * <p>
- * Weighted training are supported in our RF and GBDT impl, in such worker, data.significance is weight set from input.
- * If no weight, such value is set to 1.
+ * Weighted training are supported in our RF and GBDT impl, in such worker, data.significance is weight field set from
+ * input. If no weight, such value is set to 1.
  * 
  * <p>
  * Bin index is stored in each Data object as short to save memory, especially for categorical features, memory is saved
- * a lot.
+ * a lot from String to short. With short type, number of categories only limited in Short.MAX_VALUE.
  * 
  * @author Zhang David (pengzhang@paypal.com)
  */
@@ -196,10 +194,13 @@ public class DTWorker
     private volatile MemoryLimitedList<Data> validationData;
 
     /**
-     * PoissonDistribution which is used for poission sampling for bagging with replacement.
+     * PoissonDistribution which is used for up sampling positive records.
      */
-    // protected PoissonDistribution[] rng = null;
+    protected PoissonDistribution upSampleRng = null;
 
+    /**
+     * Bagging with poisson distribution instances
+     */
     private Map<Integer, PoissonDistribution[]> baggingRngMap = new HashMap<Integer, PoissonDistribution[]>();
 
     /**
@@ -319,9 +320,31 @@ public class DTWorker
      */
     private boolean isKFoldCV;
 
+    /**
+     * Drop out rate for gbdt to drop trees in training. http://xgboost.readthedocs.io/en/latest/tutorials/dart.html
+     */
+    private double dropOutRate = 0.0;
+
+    /**
+     * Random object to drop out trees, work with {@link #dropOutRate}
+     */
+    private Random dropOutRandom = new Random(System.currentTimeMillis() + 5000L);
+
+    /**
+     * Random object to sample negative records
+     */
+    private Random sampelNegOnlyRandom = new Random(System.currentTimeMillis() + 1000L);
+
     @Override
     public void initRecordReader(GuaguaFileSplit fileSplit) throws IOException {
         super.setRecordReader(new GuaguaLineRecordReader(fileSplit));
+    }
+
+    protected boolean isUpSampleEnabled() {
+        // only enabled in regression
+        return this.upSampleRng != null
+                && (modelConfig.isRegression() || (modelConfig.isClassification() && modelConfig.getTrain()
+                        .isOneVsAll()));
     }
 
     @Override
@@ -344,7 +367,10 @@ public class DTWorker
                 if(config.getBinCategory() != null) {
                     Map<String, Integer> tmpMap = new HashMap<String, Integer>();
                     for(int i = 0; i < config.getBinCategory().size(); i++) {
-                        tmpMap.put(config.getBinCategory().get(i), i);
+                        List<String> catVals = CommonUtils.flattenCatValGrp(config.getBinCategory().get(i));
+                        for(String cval: catVals) {
+                            tmpMap.put(cval, i);
+                        }
                     }
                     this.columnCategoryIndexMapping.put(config.getColumnNum(), tmpMap);
                 }
@@ -354,6 +380,15 @@ public class DTWorker
         Integer kCrossValidation = this.modelConfig.getTrain().getNumKFold();
         if(kCrossValidation != null && kCrossValidation > 0) {
             isKFoldCV = true;
+        }
+
+        Double upSampleWeight = modelConfig.getTrain().getUpSampleWeight();
+        if(Double.compare(upSampleWeight, 1d) != 0
+                && (modelConfig.isRegression() || (modelConfig.isClassification() && modelConfig.getTrain()
+                        .isOneVsAll()))) {
+            // set mean to upSampleWeight -1 and get sample + 1 to make sure no zero sample value
+            LOG.info("Enable up sampling with weight {}.", upSampleWeight);
+            this.upSampleRng = new PoissonDistribution(upSampleWeight - 1);
         }
 
         this.isContinuousEnabled = Boolean.TRUE.toString().equalsIgnoreCase(
@@ -411,9 +446,9 @@ public class DTWorker
         int[] inputOutputIndex = DTrainUtils.getNumericAndCategoricalInputAndOutputCounts(this.columnConfigList);
         // numerical + categorical = # of all input
         this.inputCount = inputOutputIndex[0] + inputOutputIndex[1];
-        // regression outputNodeCount is 1, binaryClassfication, it is 1, OneVsAll it is 1, Native classificaiton it is
+        // regression outputNodeCount is 1, binaryClassfication, it is 1, OneVsAll it is 1, Native classification it is
         // 1, with index of 0,1,2,3 denotes different classes
-        this.isAfterVarSelect = inputOutputIndex[3] == 1 ? true : false;
+        this.isAfterVarSelect = (inputOutputIndex[3] == 1);
         this.isManualValidation = (modelConfig.getValidationDataSetRawPath() != null && !"".equals(modelConfig
                 .getValidationDataSetRawPath()));
 
@@ -453,10 +488,15 @@ public class DTWorker
         }
 
         if(this.isGBDT) {
-            this.learningRate = Double.valueOf(validParams.get(NNTrainer.LEARNING_RATE).toString());
+            this.learningRate = Double.valueOf(validParams.get(CommonConstants.LEARNING_RATE).toString());
             Object swrObj = validParams.get("GBTSampleWithReplacement");
             if(swrObj != null) {
                 this.gbdtSampleWithReplacement = Boolean.TRUE.toString().equalsIgnoreCase(swrObj.toString());
+            }
+
+            Object dropoutObj = validParams.get(CommonConstants.DROPOUT_RATE);
+            if(dropoutObj != null) {
+                this.dropOutRate = Double.valueOf(dropoutObj.toString());
             }
         }
 
@@ -466,10 +506,10 @@ public class DTWorker
                 CommonConstants.SHIFU_DT_MASTER_CHECKPOINT_FOLDER, "tmp/cp_" + context.getAppId()));
 
         LOG.info(
-                "Worker init params:isAfterVarSel={}, treeNum={}, impurity={}, loss={}, learningRate={}, gbdtSampleWithReplacement={}, isRF={}, isGBDT={}, isStratifiedSampling={}, isKFoldCV={}, kCrossValidation={}",
+                "Worker init params:isAfterVarSel={}, treeNum={}, impurity={}, loss={}, learningRate={}, gbdtSampleWithReplacement={}, isRF={}, isGBDT={}, isStratifiedSampling={}, isKFoldCV={}, kCrossValidation={}, dropOutRate={}",
                 isAfterVarSelect, treeNum, impurity.getClass().getName(), loss.getClass().getName(), this.learningRate,
                 this.gbdtSampleWithReplacement, this.isRF, this.isGBDT, this.isStratifiedSampling, this.isKFoldCV,
-                kCrossValidation);
+                kCrossValidation, this.dropOutRate);
 
         // for fail over, load existing trees
         if(!context.isFirstIteration()) {
@@ -478,7 +518,7 @@ public class DTWorker
                 // can load latest trees in #doCompute
                 isNeedRecoverGBDTPredict = true;
             } else {
-                // RF , trees are recovered from last mastre results
+                // RF , trees are recovered from last master results
                 recoverTrees = context.getLastMasterResult().getTrees();
             }
         }
@@ -487,7 +527,7 @@ public class DTWorker
             Path modelPath = new Path(context.getProps().getProperty(CommonConstants.GUAGUA_OUTPUT));
             TreeModel existingModel = null;
             try {
-                existingModel = (TreeModel) CommonUtils.loadModel(modelConfig, columnConfigList, modelPath,
+                existingModel = (TreeModel) CommonUtils.loadModel(modelConfig, modelPath,
                         ShifuFileUtils.getFileSystemBySourceType(this.modelConfig.getDataSet().getSource()));
             } catch (IOException e) {
                 LOG.error("Error in get existing model, will ignore and start from scratch", e);
@@ -529,6 +569,7 @@ public class DTWorker
             this.baggingRandomMap = new HashMap<Integer, Random>();
         }
 
+        long start = System.nanoTime();
         for(Data data: this.trainingData) {
             if(this.isRF) {
                 for(TreeNode treeNode: trees) {
@@ -580,7 +621,11 @@ public class DTWorker
                                 if(context.getLastMasterResult().isFirstTree()) {
                                     data.predict = (float) predict;
                                 } else {
-                                    data.predict += (float) (this.learningRate * predict);
+                                    // random drop
+                                    boolean drop = (this.dropOutRate > 0.0 && dropOutRandom.nextDouble() < this.dropOutRate);
+                                    if(!drop) {
+                                        data.predict += (float) (this.learningRate * predict);
+                                    }
                                 }
                                 data.output = -1f * loss.computeGradient(data.predict, data.label);
                             }
@@ -625,8 +670,10 @@ public class DTWorker
                 }
             }
         }
+        LOG.debug("Compute train error time is {}ms", TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - start));
 
         if(validationData != null) {
+            start = System.nanoTime();
             for(Data data: this.validationData) {
                 if(this.isRF) {
                     for(TreeNode treeNode: trees) {
@@ -686,38 +733,53 @@ public class DTWorker
                     }
                 }
             }
+            LOG.debug("Compute val error time is {}ms", TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - start));
         }
 
-        if(this.isGBDT && this.isNeedRecoverGBDTPredict) {
-            // no need recover again
-            this.isNeedRecoverGBDTPredict = false;
+        if(this.isGBDT) {
+            // reset trees to null to save memory
             this.recoverTrees = null;
+            if(this.isNeedRecoverGBDTPredict) {
+                // no need recover again
+                this.isNeedRecoverGBDTPredict = false;
+            }
         }
 
+        start = System.nanoTime();
         CompletionService<Map<Integer, NodeStats>> completionService = new ExecutorCompletionService<Map<Integer, NodeStats>>(
                 this.threadPool);
 
-        Set<Entry<Integer, TreeNode>> treeNodeEntrySet = todoNodes.entrySet();
-        Iterator<Entry<Integer, TreeNode>> treeNodeIterator = treeNodeEntrySet.iterator();
-        int roundNodeNumer = treeNodeEntrySet.size() / this.workerThreadCount;
-        int modeNodeNumber = treeNodeEntrySet.size() % this.workerThreadCount;
         int realThreadCount = 0;
         LOG.debug("while todo size {}", todoNodes.size());
-        for(int i = 0; i < this.workerThreadCount; i++) {
-            final Map<Integer, TreeNode> localTodoNodes = new HashMap<Integer, TreeNode>();
-            final Map<Integer, NodeStats> localStatistics = new HashMap<Integer, DTWorkerParams.NodeStats>();
-            for(int j = 0; j < roundNodeNumer; j++) {
-                Entry<Integer, TreeNode> tmpTreeNode = treeNodeIterator.next();
-                localTodoNodes.put(tmpTreeNode.getKey(), tmpTreeNode.getValue());
-                localStatistics.put(tmpTreeNode.getKey(), statistics.get(tmpTreeNode.getKey()));
+
+        int realRecords = this.trainingData.size();
+        int realThreads = this.workerThreadCount > realRecords ? realRecords : this.workerThreadCount;
+
+        int[] trainLows = new int[realThreads];
+        int[] trainHighs = new int[realThreads];
+
+        int stepCount = realRecords / realThreads;
+        if(realRecords % realThreads != 0) {
+            // move step count to append last gap to avoid last thread worse 2*stepCount-1
+            stepCount += (realRecords % realThreads) / stepCount;
+        }
+        for(int i = 0; i < realThreads; i++) {
+            trainLows[i] = i * stepCount;
+            if(i != realThreads - 1) {
+                trainHighs[i] = trainLows[i] + stepCount - 1;
+            } else {
+                trainHighs[i] = realRecords - 1;
             }
-            if(modeNodeNumber > 0) {
-                Entry<Integer, TreeNode> tmpTreeNode = treeNodeIterator.next();
-                localTodoNodes.put(tmpTreeNode.getKey(), tmpTreeNode.getValue());
-                localStatistics.put(tmpTreeNode.getKey(), statistics.get(tmpTreeNode.getKey()));
-                modeNodeNumber -= 1;
-            }
-            LOG.info("Thread {} todo size {} stats size {} ", i, localTodoNodes.size(), localStatistics.size());
+        }
+
+        for(int i = 0; i < realThreads; i++) {
+            final Map<Integer, TreeNode> localTodoNodes = new HashMap<Integer, TreeNode>(todoNodes);
+            final Map<Integer, NodeStats> localStatistics = initTodoNodeStats(todoNodes);
+
+            final int startIndex = trainLows[i];
+            final int endIndex = trainHighs[i];
+            LOG.info("Thread {} todo size {} stats size {} start index {} end index {}", i, localTodoNodes.size(),
+                    localStatistics.size(), startIndex, endIndex);
 
             if(localTodoNodes.size() == 0) {
                 continue;
@@ -726,8 +788,10 @@ public class DTWorker
             completionService.submit(new Callable<Map<Integer, NodeStats>>() {
                 @Override
                 public Map<Integer, NodeStats> call() throws Exception {
+                    long start = System.nanoTime();
                     List<Integer> nodeIndexes = new ArrayList<Integer>(trees.size());
-                    for(Data data: DTWorker.this.trainingData) {
+                    for(int j = startIndex; j <= endIndex; j++) {
+                        Data data = DTWorker.this.trainingData.get(j);
                         nodeIndexes.clear();
                         if(DTWorker.this.isRF) {
                             for(TreeNode treeNode: trees) {
@@ -746,7 +810,6 @@ public class DTWorker
                             // update node index
                             nodeIndexes.add(predictNode.getId());
                         }
-
                         for(Map.Entry<Integer, TreeNode> entry: localTodoNodes.entrySet()) {
                             // only do statistics on effective data
                             Node todoNode = entry.getValue().getNode();
@@ -778,6 +841,8 @@ public class DTWorker
                             }
                         }
                     }
+                    LOG.debug("Thread computing stats time is {}ms in thread {}",
+                            TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - start), Thread.currentThread().getName());
                     return localStatistics;
                 }
             });
@@ -786,7 +851,15 @@ public class DTWorker
         int rCnt = 0;
         while(rCnt < realThreadCount) {
             try {
-                statistics.putAll(completionService.take().get());
+                Map<Integer, NodeStats> currNodeStatsmap = completionService.take().get();
+                if(rCnt == 0) {
+                    statistics = currNodeStatsmap;
+                } else {
+                    for(Entry<Integer, NodeStats> entry: statistics.entrySet()) {
+                        NodeStats resultNodeStats = entry.getValue();
+                        mergeNodeStats(resultNodeStats, currNodeStatsmap.get(entry.getKey()));
+                    }
+                }
             } catch (ExecutionException e) {
                 throw new RuntimeException(e);
             } catch (InterruptedException e) {
@@ -794,12 +867,23 @@ public class DTWorker
             }
             rCnt += 1;
         }
+        LOG.debug("Compute stats time is {}ms", TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - start));
 
         LOG.info(
                 "worker count is {}, error is {}, and stats size is {}. weightedTrainCount {}, weightedValidationCount {}, trainError {}, validationError {}",
                 count, trainError, statistics.size(), weightedTrainCount, weightedValidationCount, trainError,
                 validationError);
         return new DTWorkerParams(weightedTrainCount, weightedValidationCount, trainError, validationError, statistics);
+    }
+
+    private void mergeNodeStats(NodeStats resultNodeStats, NodeStats nodeStats) {
+        Map<Integer, double[]> featureStatistics = resultNodeStats.getFeatureStatistics();
+        for(Entry<Integer, double[]> entry: nodeStats.getFeatureStatistics().entrySet()) {
+            double[] statistics = featureStatistics.get(entry.getKey());
+            for(int i = 0; i < statistics.length; i++) {
+                statistics[i] += entry.getValue()[i];
+            }
+        }
     }
 
     private Map<Integer, NodeStats> initTodoNodeStats(Map<Integer, TreeNode> todoNodes) {
@@ -1127,26 +1211,40 @@ public class DTWorker
             ideal = updateOneVsAllTargetValue(ideal);
         }
 
-        // if only sample negative, no matter bagging or replacement, do sampling here.
-        if(modelConfig.getTrain().getSampleNegOnly() // sample negative enabled
-                && (modelConfig.isRegression() || (modelConfig.isClassification() && modelConfig.getTrain()
-                        .isOneVsAll())) // regression or onevsall
-                && Double.compare(ideal + 0.01d, 0d) == 0 // negative record
-                && (!this.modelConfig.isFixInitialInput() && Double.compare(Math.random(),
-                        this.modelConfig.getBaggingSampleRate()) >= 0)) {
-            return;
-        }
-        if(modelConfig.getTrain().getSampleNegOnly()// sample negative enabled
-                && (modelConfig.isRegression() || (modelConfig.isClassification() && modelConfig.getTrain()
-                        .isOneVsAll()))// regression or onevsall
-                && (Double.compare(ideal + 0.01d, 0d) == 0 // negative record
-                        && this.modelConfig.isFixInitialInput() && hashcode % 100 >= Double.valueOf(
-                        this.modelConfig.getBaggingSampleRate() * 100).longValue())) {
-            return;
+        // sample negative only logic here
+        if(modelConfig.getTrain().getSampleNegOnly()) {
+            if(this.modelConfig.isFixInitialInput()) {
+                // if fixInitialInput, sample hashcode in 1-sampleRate range out if negative records
+                int startHashCode = (100 / this.modelConfig.getBaggingNum()) * this.trainerId;
+                // here BaggingSampleRate means how many data will be used in training and validation, if it is 0.8, we
+                // should take 1-0.8 to check endHashCode
+                int endHashCode = startHashCode
+                        + Double.valueOf((1d - this.modelConfig.getBaggingSampleRate()) * 100).intValue();
+                if((modelConfig.isRegression() || this.isOneVsAll) // regression or onevsall
+                        && (int) (ideal + 0.01d) == 0 // negative record
+                        && isInRange(hashcode, startHashCode, endHashCode)) {
+                    return;
+                }
+            } else {
+                // if not fixed initial input, and for regression or onevsall multiple classification (regression also).
+                // and if negative record do sampling out
+                if((modelConfig.isRegression() || this.isOneVsAll) // regression or onevsall
+                        && (int) (ideal + 0.01d) == 0 // negative record
+                        && Double.compare(this.sampelNegOnlyRandom.nextDouble(),
+                                this.modelConfig.getBaggingSampleRate()) >= 0) {
+                    return;
+                }
+            }
         }
 
         float output = ideal;
         float predict = ideal;
+
+        // up sampling logic, just add more weights while bagging sampling rate is still not changed
+        if(modelConfig.isRegression() && isUpSampleEnabled() && Double.compare(ideal, 1d) == 0) {
+            // Double.compare(ideal, 1d) == 0 means positive tags; sample + 1 to avoid sample count to 0
+            significance = significance * (this.upSampleRng.sample() + 1);
+        }
 
         Data data = new Data(inputs, predict, output, output, significance);
 
@@ -1257,27 +1355,50 @@ public class DTWorker
                     }
                 }
 
-                // for fix initial input, if hashcode% 100 over validRate * 100, training
-                // not fixed initial input, if random value >= validRate, training.
-                if((this.modelConfig.isFixInitialInput() && hashcode % 100 >= Double.valueOf(
-                        this.modelConfig.getValidSetRate() * 100).longValue())
-                        || (!this.modelConfig.isFixInitialInput() && random.nextDouble() >= this.modelConfig
-                                .getValidSetRate())) {
-                    this.trainingData.append(data);
-                    if(isPositive(data.label)) {
-                        this.positiveTrainCount += 1L;
+                if(this.modelConfig.isFixInitialInput()) {
+                    // for fix initial input, if hashcode%100 is in [start-hashcode, end-hashcode), validation,
+                    // otherwise training. start hashcode in different job is different to make sure bagging jobs have
+                    // different data. if end-hashcode is over 100, then check if hashcode is in [start-hashcode, 100]
+                    // or [0, end-hashcode]
+                    int startHashCode = (100 / this.modelConfig.getBaggingNum()) * this.trainerId;
+                    int endHashCode = startHashCode
+                            + Double.valueOf(this.modelConfig.getValidSetRate() * 100).intValue();
+                    if(isInRange(hashcode, startHashCode, endHashCode)) {
+                        this.validationData.append(data);
+                        if(isPositive(data.label)) {
+                            this.positiveValidationCount += 1L;
+                        } else {
+                            this.negativeValidationCount += 1L;
+                        }
+                        return false;
                     } else {
-                        this.negativeTrainCount += 1L;
+                        this.trainingData.append(data);
+                        if(isPositive(data.label)) {
+                            this.positiveTrainCount += 1L;
+                        } else {
+                            this.negativeTrainCount += 1L;
+                        }
+                        return true;
                     }
-                    return true;
                 } else {
-                    this.validationData.append(data);
-                    if(isPositive(data.label)) {
-                        this.positiveValidationCount += 1L;
+                    // not fixed initial input, if random value >= validRate, training, otherwise validation.
+                    if(random.nextDouble() >= this.modelConfig.getValidSetRate()) {
+                        this.trainingData.append(data);
+                        if(isPositive(data.label)) {
+                            this.positiveTrainCount += 1L;
+                        } else {
+                            this.negativeTrainCount += 1L;
+                        }
+                        return true;
                     } else {
-                        this.negativeValidationCount += 1L;
+                        this.validationData.append(data);
+                        if(isPositive(data.label)) {
+                            this.positiveValidationCount += 1L;
+                        } else {
+                            this.negativeValidationCount += 1L;
+                        }
+                        return false;
                     }
-                    return false;
                 }
             } else {
                 this.trainingData.append(data);
@@ -1288,6 +1409,18 @@ public class DTWorker
                 }
                 return true;
             }
+        }
+    }
+
+    private boolean isInRange(long hashcode, int startHashCode, int endHashCode) {
+        // check if in [start, end] or if in [start, 100) and [0, end-100)
+        int hashCodeIn100 = (int) hashcode % 100;
+        if(endHashCode <= 100) {
+            // in range [start, end)
+            return hashCodeIn100 >= startHashCode && hashCodeIn100 < endHashCode;
+        } else {
+            // in range [start, 100) or [0, endHashCode-100)
+            return hashCodeIn100 >= startHashCode || hashCodeIn100 < (endHashCode % 100);
         }
     }
 
@@ -1316,6 +1449,10 @@ public class DTWorker
                     predict = (float) oldPredict;
                     output = -1f * loss.computeGradient(predict, data.label);
                 } else {
+                    // random drop
+                    if(this.dropOutRate > 0.0 && dropOutRandom.nextDouble() < this.dropOutRate) {
+                        continue;
+                    }
                     double oldPredict = predictNodeIndex(currTree.getNode(), data, false).getPredict().getPredict();
                     predict += (float) (this.learningRate * oldPredict);
                     output = -1f * loss.computeGradient(predict, data.label);

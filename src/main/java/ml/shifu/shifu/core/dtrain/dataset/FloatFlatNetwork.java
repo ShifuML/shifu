@@ -35,7 +35,6 @@ public class FloatFlatNetwork extends FlatNetwork implements Cloneable {
     public void compute(float[] input, double[] output) {
         final int sourceIndex = getLayerOutput().length - getLayerCounts()[getLayerCounts().length - 1];
 
-//        System.arraycopy(input, 0, getLayerOutput(), sourceIndex, getInputCount());
         for(int i = 0; i < getInputCount(); i++) {
             getLayerOutput()[i + sourceIndex] = input[i] ;
         }

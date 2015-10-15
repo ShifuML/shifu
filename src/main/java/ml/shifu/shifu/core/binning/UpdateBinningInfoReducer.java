@@ -17,11 +17,7 @@ package ml.shifu.shifu.core.binning;
 
 import java.io.IOException;
 import java.text.DecimalFormat;
-import java.util.Arrays;
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 
 import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.container.obj.ModelConfig;
@@ -200,6 +196,20 @@ public class UpdateBinningInfoReducer extends Reducer<IntWritable, BinningInfoWr
             }
         }
 
+        // To merge categorical binning
+        if ( columnConfig.isCategorical() && modelConfig.getStats().getCateMaxNumBin() > 0 ) {
+            CateBinningStats cateBinningStats = rebinCategoricalValues(new CateBinningStats(binCategories,
+                    binCountPos, binCountNeg, binWeightPos, binWeightNeg));
+            LOG.info("For variable - {}, {} bins is rebined to {} bins",
+                    columnConfig.getColumnName(), binCategories.size(), cateBinningStats.binCategories.size());
+
+            binCategories = cateBinningStats.binCategories;
+            binCountPos = cateBinningStats.binCountPos;
+            binCountNeg = cateBinningStats.binCountNeg;
+            binWeightPos = cateBinningStats.binWeightPos;
+            binWeightNeg = cateBinningStats.binWeightNeg;
+        }
+
         double[] binPosRate;
         if(modelConfig.isRegression()) {
             binPosRate = computePosRate(binCountPos, binCountNeg);
@@ -369,5 +379,61 @@ public class UpdateBinningInfoReducer extends Reducer<IntWritable, BinningInfoWr
             }
         }
         return rate;
+    }
+
+    public CateBinningStats rebinCategoricalValues(CateBinningStats cateBinStats) {
+        List<CategoricalBinInfo> categoricalBinInfos = new ArrayList<CategoricalBinInfo>();
+        for ( int i = 0; i < cateBinStats.binCategories.size(); i ++ ) {
+            String cval = cateBinStats.binCategories.get(i);
+            CategoricalBinInfo binInfo = new CategoricalBinInfo();
+            List<String> vals = new ArrayList<String>();
+            vals.add(cval);
+            binInfo.setValues(vals);
+            binInfo.setPositiveCnt(cateBinStats.binCountPos[i]);
+            binInfo.setNegativeCnt(cateBinStats.binCountNeg[i]);
+            binInfo.setWeightPos(cateBinStats.binWeightPos[i]);
+            binInfo.setWeightNeg(cateBinStats.binWeightNeg[i]);
+            categoricalBinInfos.add(binInfo);
+        }
+        Collections.sort(categoricalBinInfos);
+        CateDynamicBinning binInst = new CateDynamicBinning(modelConfig.getStats().getCateMaxNumBin());
+        List<CategoricalBinInfo> mergedBinInfos = binInst.merge(categoricalBinInfos);
+
+        List<String> binCategories = new ArrayList<String>();
+        long[] binCountPos = new long[mergedBinInfos.size() + 1];
+        long[] binCountNeg = new long[mergedBinInfos.size() + 1];
+        double[] binWeightPos = new double[mergedBinInfos.size() + 1];
+        double[] binWeightNeg = new double[mergedBinInfos.size() + 1];
+        for ( int i = 0; i < mergedBinInfos.size(); i ++ ) {
+            CategoricalBinInfo binInfo = mergedBinInfos.get(i);
+            binCategories.add(StringUtils.join(binInfo.getValues(), '^'));
+            binCountPos[i] = binInfo.getPositiveCnt();
+            binCountNeg[i] = binInfo.getNegativeCnt();
+            binWeightPos[i] = binInfo.getWeightPos();
+            binWeightNeg[i] = binInfo.getWeightNeg();
+        }
+        binCountPos[binCountPos.length - 1] = cateBinStats.binCountPos[cateBinStats.binCountPos.length - 1];
+        binCountNeg[binCountNeg.length - 1] = cateBinStats.binCountNeg[cateBinStats.binCountNeg.length - 1];
+        binWeightPos[binWeightPos.length - 1] = cateBinStats.binWeightPos[cateBinStats.binWeightPos.length - 1];
+        binWeightNeg[binWeightNeg.length - 1] = cateBinStats.binWeightNeg[cateBinStats.binWeightNeg.length - 1];
+
+        return new CateBinningStats(binCategories, binCountPos, binCountNeg, binWeightPos, binWeightNeg);
+    }
+
+    public static class CateBinningStats {
+        List<String> binCategories = null;
+        long[] binCountPos = null;
+        long[] binCountNeg = null;
+        double[] binWeightPos = null;
+        double[] binWeightNeg = null;
+
+        public CateBinningStats(List<String> binCategories,
+                long[] binCountPos,long[] binCountNeg,double[] binWeightPos, double[] binWeightNeg) {
+            this.binCategories = binCategories;
+            this.binCountPos = binCountPos;
+            this.binCountNeg = binCountNeg;
+            this.binWeightPos = binWeightPos;
+            this.binWeightNeg = binWeightNeg;
+        }
     }
 }
