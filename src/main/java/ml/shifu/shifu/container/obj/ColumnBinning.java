@@ -20,8 +20,9 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import java.util.List;
 
 /**
- * ColumnBinning class represents the information of BINNING.
- * Usually the BINNING information will be used to calculate KS/IV, or reason code in evaluation.
+ * ColumnBinning class represents the information of BINNING. Usually the BINNING information will be used to calculate
+ * KS/IV, or reason code in evaluation.
+ * 
  * <p>
  * Please note for numerical variables, @binCategory will be null, but for categorical variables @binBoundary will be
  * null. The @binLength will equal size of @binBoundary or size of @binCategory.
@@ -31,19 +32,54 @@ public class ColumnBinning {
 
     private Integer length = Integer.valueOf(0);
 
+    /**
+     * Works for numerical feature, then {@link #binCategory} is null.
+     */
     private List<Double> binBoundary;
+
+    /**
+     * Works for categorical feature, it is all categories of such column
+     */
     private List<String> binCategory;
 
+    /**
+     * Count of negative records in bins
+     */
     private List<Integer> binCountNeg;
+
+    /**
+     * Count of positive records in bins
+     */
     private List<Integer> binCountPos;
+
+    /**
+     * Positive rate in each bin
+     */
     private List<Double> binPosRate;
 
+    /**
+     * Average score in each bin, this will be populated in posttrain step.
+     */
     private List<Integer> binAvgScore;
 
+    /**
+     * Weighted negative value in each bin.
+     */
     private List<Double> binWeightedNeg;
+
+    /**
+     * Weighted positive value in each bin.
+     */
     private List<Double> binWeightedPos;
 
+    /**
+     * Woe value in each bin
+     */
     private List<Double> binCountWoe;
+
+    /**
+     * Weighted woe value in each bin
+     */
     private List<Double> binWeightedWoe;
 
     public Integer getLength() {

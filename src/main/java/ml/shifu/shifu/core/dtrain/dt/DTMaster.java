@@ -30,6 +30,7 @@ import java.util.Random;
 
 import ml.shifu.guagua.GuaguaConstants;
 import ml.shifu.guagua.GuaguaRuntimeException;
+import ml.shifu.guagua.io.BytableSerializer;
 import ml.shifu.guagua.master.AbstractMasterComputable;
 import ml.shifu.guagua.master.MasterComputable;
 import ml.shifu.guagua.master.MasterContext;
@@ -39,9 +40,9 @@ import ml.shifu.shifu.container.obj.ModelConfig;
 import ml.shifu.shifu.container.obj.ModelTrainConf.ALGORITHM;
 import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
 import ml.shifu.shifu.core.TreeModel;
-import ml.shifu.shifu.core.alg.NNTrainer;
 import ml.shifu.shifu.core.dtrain.CommonConstants;
 import ml.shifu.shifu.core.dtrain.DTrainUtils;
+import ml.shifu.shifu.core.dtrain.FeatureSubsetStrategy;
 import ml.shifu.shifu.core.dtrain.dt.DTWorkerParams.NodeStats;
 import ml.shifu.shifu.core.dtrain.gs.GridSearch;
 import ml.shifu.shifu.fs.ShifuFileUtils;
@@ -58,25 +59,31 @@ import org.slf4j.LoggerFactory;
 
 /**
  * Random forest and gradient boost decision tree {@link MasterComputable} implementation.
+ * 
  * <p>
  * {@link #isRF} and {@link #isGBDT} are for RF or GBDT checking, by default RF is trained.
+ * 
  * <p>
- * Each iteration, update node statistics and determine best split which is used for tree node split. Besides node
- * statistics, error and count info are also collected for client display.
+ * In each iteration, update node statistics and determine best split which is used for tree node split. Besides node
+ * statistics, error and count info are also collected for metrics display.
+ * 
  * <p>
  * Each iteration, new node group with nodes in limited estimated memory consumption are sent out to all workers for
  * feature statistics.
+ * 
  * <p>
- * For gradient boost decision tree, each time a tree is updated and if one tree is finalized, then start a new tree.
+ * For gradient boost decision tree, each time a tree is updated and after one tree is finalized, then start a new tree.
  * Both random forest and gradient boost decision trees are all stored in {@link #trees}.
+ * 
  * <p>
  * Terminal condition: for random forest, just to collect all nodes in all trees from all workers. Terminal condition is
  * all trees cannot be split. If one tree cannot be split with threshold count and meaningful impurity, one tree if
  * finalized and stopped update. For gradient boost decision tree, each time only one tree is trained, if last tree
- * cannot be split, training is stopped.
+ * cannot be split, training is stopped. Early stop feature is enabled by validationTolerance in train part.
+ * 
  * <p>
  * In current {@link DTMaster}, there are states like {@link #trees} and {@link #toDoQueue}. All stats can be recovered
- * once master is done. Such states are checkpointed to HDFS for fault tolerence.
+ * once master is done. Such states are being check-pointed to HDFS for fault tolerance.
  * 
  * @author Zhang David (pengzhang@paypal.com)
  */
@@ -227,7 +234,20 @@ public class DTMaster extends AbstractMasterComputable<DTMasterParams, DTWorkerP
      */
     private boolean enableEarlyStop = false;
 
+    /**
+     * Validation tolerance which is for early stop, by default it is 0d which means early stop is not enabled.
+     */
+    private double validationTolerance = 0d;
+
+    /**
+     * Random generator for get sampling features per each iteration.
+     */
     private Random featureSamplingRandom = new Random();
+
+    /**
+     * The best validation error for error computing
+     */
+    private double bestValidationError = Double.MAX_VALUE;
 
     // ############################################################################################################
     // ## There parts are states, for fail over such instances should be recovered in {@link #init(MasterContext)}
@@ -284,6 +304,8 @@ public class DTMaster extends AbstractMasterComputable<DTMasterParams, DTWorkerP
                     NodeStats resultNodeStats = entry.getValue();
                     mergeNodeStats(resultNodeStats, currNodeStatsmap.get(entry.getKey()));
                 }
+                // set to null after merging, release memory at the earliest stage
+                params.setNodeStatsMap(null);
             }
             trainError += params.getTrainError();
             validationError += params.getValidationError();
@@ -341,13 +363,30 @@ public class DTMaster extends AbstractMasterComputable<DTMasterParams, DTWorkerP
         }
 
         Map<Integer, TreeNode> todoNodes = new HashMap<Integer, TreeNode>();
-        double averageValidationError = validationError;
-        if(this.isGBDT && this.dtEarlyStopDecider != null && validationError > 0) {
-            this.dtEarlyStopDecider.add(validationError);
+        double averageValidationError = validationError / weightedValidationCount;
+        if(this.isGBDT && this.dtEarlyStopDecider != null && averageValidationError > 0) {
+            this.dtEarlyStopDecider.add(averageValidationError);
             averageValidationError = this.dtEarlyStopDecider.getCurrentAverageValue();
         }
+
+        boolean vtTriggered = false;
+        // if validationTolerance == 0d, means vt check is not enabled
+        if(validationTolerance > 0d
+                && Math.abs(this.bestValidationError - averageValidationError) < this.validationTolerance
+                        * averageValidationError) {
+            LOG.debug("Debug: bestValidationError {}, averageValidationError {}, validationTolerance {}",
+                    bestValidationError, averageValidationError, validationTolerance);
+            vtTriggered = true;
+        }
+
+        if(averageValidationError < this.bestValidationError) {
+            this.bestValidationError = averageValidationError;
+        }
+
+        // validation error is averageValidationError * weightedValidationCount because of here averageValidationError
+        // is divided by validation count.
         DTMasterParams masterParams = new DTMasterParams(weightedTrainCount, trainError, weightedValidationCount,
-                averageValidationError);
+                averageValidationError * weightedValidationCount);
 
         if(toDoQueue.isEmpty()) {
             if(this.isGBDT) {
@@ -370,6 +409,9 @@ public class DTMaster extends AbstractMasterComputable<DTMasterParams, DTWorkerP
                     masterParams.setHalt(true);
                     LOG.info("Early stop identified, training is stopped in iteration {}.",
                             context.getCurrentIteration());
+                } else if(vtTriggered) {
+                    LOG.info("Early stop training by validation tolerance.");
+                    masterParams.setHalt(true);
                 } else {
                     // set first tree to true even after ROOT node is set in next tree
                     masterParams.setFirstTree(this.trees.size() == 1);
@@ -469,10 +511,26 @@ public class DTMaster extends AbstractMasterComputable<DTMasterParams, DTWorkerP
             // set tmp trees to DTOutput
             masterParams.setTmpTrees(this.trees);
         }
-        // before master result, do checkpoint according to n iteration set by user
-        doCheckPoint(context, masterParams);
 
-        LOG.info("weightedTrainCount {}, weightedValidationCount {}, trainError {}, validationError {}",
+        if(context.getCurrentIteration() % 100 == 0) {
+            // every 100 iterations do gc explicitly to avoid one case:
+            // mapper memory is 2048M and final in our cluster, if -Xmx is 2G, then occasionally oom issue.
+            // to fix this issue: 1. set -Xmx to 1800m; 2. call gc to drop unused memory at early stage.
+            // this is ugly and if it is stable with 1800m, this line should be removed
+            Thread gcThread = new Thread(new Runnable() {
+                @Override
+                public void run() {
+                    System.gc();
+                }
+            });
+            gcThread.setDaemon(true);
+            gcThread.start();
+        }
+
+        // before master result, do checkpoint according to n iteration set by user
+        doCheckPoint(context, masterParams, context.getCurrentIteration());
+
+        LOG.debug("weightedTrainCount {}, weightedValidationCount {}, trainError {}, validationError {}",
                 weightedTrainCount, weightedValidationCount, trainError, validationError);
         return masterParams;
     }
@@ -576,20 +634,29 @@ public class DTMaster extends AbstractMasterComputable<DTMasterParams, DTWorkerP
      * Do checkpoint for master states, this is for master fail over
      */
     private void doCheckPoint(final MasterContext<DTMasterParams, DTWorkerParams> context,
-            final DTMasterParams masterParams) {
-        LOG.info("Do checkpoint at hdfs file {}", this.checkpointOutput);
+            final DTMasterParams masterParams, int iteration) {
+        LOG.info("Do checkpoint at hdfs file {} at iteration {}.", this.checkpointOutput, iteration);
         final Queue<TreeNode> finalTodoQueue = this.toDoQueue;
         final Queue<TreeNode> finalToSplitQueue = this.toSplitQueue;
         final boolean finalIsLeaf = this.isLeafWise;
-        final List<TreeNode> finalTrees = this.trees;
+        
+        long start = System.currentTimeMillis();
+        final List<TreeNode> finalTrees = new ArrayList<TreeNode>();
+        for(TreeNode treeNode: this.trees) {
+            BytableSerializer<TreeNode> bs = new BytableSerializer<TreeNode>();
+            // clone by serialization
+            byte[] bytes = bs.objectToBytes(treeNode);
+            TreeNode newTreeNode = bs.bytesToObject(bytes, TreeNode.class.getName());
+            finalTrees.add(newTreeNode);
+        }
+        LOG.info("Do checkpoint at clone trees in iteration {} with run time {}", context.getCurrentIteration(),
+                (System.currentTimeMillis() - start));
+
         Thread cpPersistThread = new Thread(new Runnable() {
             @Override
             public void run() {
-                long start = System.currentTimeMillis();
                 writeStatesToHdfs(DTMaster.this.checkpointOutput, masterParams, finalTrees, finalIsLeaf,
                         finalTodoQueue, finalToSplitQueue);
-                LOG.info("Do checkpoint at iteration {} with run time {}", context.getCurrentIteration(),
-                        (System.currentTimeMillis() - start));
             }
         }, "Master checkpoint thread");
         cpPersistThread.setDaemon(true);
@@ -627,10 +694,11 @@ public class DTMaster extends AbstractMasterComputable<DTMasterParams, DTWorkerP
 
             // master result
             masterParams.write(fos);
-        } catch (IOException e) {
+        } catch (Throwable e) {
             LOG.error("Error in writing output.", e);
         } finally {
             IOUtils.closeStream(fos);
+            fos = null;
         }
     }
 
@@ -831,7 +899,7 @@ public class DTMaster extends AbstractMasterComputable<DTMasterParams, DTWorkerP
         // check if variables are set final selected
         int[] inputOutputIndex = DTrainUtils.getNumericAndCategoricalInputAndOutputCounts(this.columnConfigList);
         this.inputNum = inputOutputIndex[0] + inputOutputIndex[1];
-        this.isAfterVarSelect = inputOutputIndex[3] == 1 ? true : false;
+        this.isAfterVarSelect = (inputOutputIndex[3] == 1);
         // cache all feature list for sampling features
         this.allFeatures = this.getAllFeatureList(columnConfigList, isAfterVarSelect);
 
@@ -842,6 +910,21 @@ public class DTMaster extends AbstractMasterComputable<DTMasterParams, DTWorkerP
         if(gs.hasHyperParam()) {
             validParams = gs.getParams(trainerId);
             LOG.info("Start grid search master with params: {}", validParams);
+        }
+
+        Object vtObj = validParams.get("ValidationTolerance");
+        if(vtObj != null) {
+            try {
+                validationTolerance = Double.parseDouble(vtObj.toString());
+                LOG.warn("Validation by tolerance is enabled with value {}.", validationTolerance);
+            } catch (NumberFormatException ee) {
+                validationTolerance = 0d;
+                LOG.warn(
+                        "Validation by tolerance isn't enabled because of non numerical value of ValidationTolerance: {}.",
+                        vtObj);
+            }
+        } else {
+            LOG.warn("Validation by tolerance isn't enabled.");
         }
 
         // tree related parameters initialization
@@ -907,7 +990,7 @@ public class DTMaster extends AbstractMasterComputable<DTMasterParams, DTWorkerP
         this.isGBDT = ALGORITHM.GBT.toString().equalsIgnoreCase(modelConfig.getAlgorithm());
         if(this.isGBDT) {
             // learning rate only effective in gbdt
-            this.learningRate = Double.valueOf(validParams.get(NNTrainer.LEARNING_RATE).toString());
+            this.learningRate = Double.valueOf(validParams.get(CommonConstants.LEARNING_RATE).toString());
         }
 
         // initialize impurity type according to regression or classfication
@@ -940,20 +1023,21 @@ public class DTMaster extends AbstractMasterComputable<DTMasterParams, DTWorkerP
         this.isContinuousEnabled = Boolean.TRUE.toString().equalsIgnoreCase(
                 context.getProps().getProperty(CommonConstants.CONTINUOUS_TRAINING));
 
-        LOG.info(
-                "Master init params: isAfterVarSel={}, featureSubsetStrategy={}, featureSubsetRate={} maxDepth={}, maxStatsMemory={}, "
-                        + "treeNum={}, impurity={}, workerNumber={}, minInstancesPerNode={}, minInfoGain={}, isRF={}, "
-                        + "isGBDT={}, isContinuousEnabled={}", isAfterVarSelect, featureSubsetStrategy,
-                this.featureSubsetRate, maxDepth, maxStatsMemory, treeNum, imStr, this.workerNumber,
-                minInstancesPerNode, minInfoGain, this.isRF, this.isGBDT, this.isContinuousEnabled);
-
-        this.toDoQueue = new LinkedList<TreeNode>();
-
         this.dtEarlyStopDecider = new DTEarlyStopDecider(this.maxDepth);
         if(validParams.containsKey("EnableEarlyStop")
                 && Boolean.valueOf(validParams.get("EnableEarlyStop").toString().toLowerCase())) {
             this.enableEarlyStop = true;
         }
+
+        LOG.info(
+                "Master init params: isAfterVarSel={}, featureSubsetStrategy={}, featureSubsetRate={} maxDepth={}, maxStatsMemory={}, "
+                        + "treeNum={}, impurity={}, workerNumber={}, minInstancesPerNode={}, minInfoGain={}, isRF={}, "
+                        + "isGBDT={}, isContinuousEnabled={}, enableEarlyStop={}.", isAfterVarSelect,
+                featureSubsetStrategy, this.featureSubsetRate, maxDepth, maxStatsMemory, treeNum, imStr,
+                this.workerNumber, minInstancesPerNode, minInfoGain, this.isRF, this.isGBDT, this.isContinuousEnabled,
+                this.enableEarlyStop);
+
+        this.toDoQueue = new LinkedList<TreeNode>();
 
         if(this.isLeafWise) {
             this.toSplitQueue = new PriorityQueue<TreeNode>(64, new Comparator<TreeNode>() {
@@ -978,7 +1062,7 @@ public class DTMaster extends AbstractMasterComputable<DTMasterParams, DTWorkerP
                     TreeModel existingModel;
                     try {
                         Path modelPath = new Path(context.getProps().getProperty(CommonConstants.GUAGUA_OUTPUT));
-                        existingModel = (TreeModel) CommonUtils.loadModel(modelConfig, columnConfigList, modelPath,
+                        existingModel = (TreeModel) CommonUtils.loadModel(modelConfig, modelPath,
                                 ShifuFileUtils.getFileSystemBySourceType(this.modelConfig.getDataSet().getSource()));
                         if(existingModel == null) {
                             // null means no existing model file or model file is in wrong format
@@ -1047,4 +1131,5 @@ public class DTMaster extends AbstractMasterComputable<DTMasterParams, DTWorkerP
             org.apache.commons.io.IOUtils.closeQuietly(stream);
         }
     }
+
 }

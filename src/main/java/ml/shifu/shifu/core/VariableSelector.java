@@ -92,10 +92,10 @@ public class VariableSelector {
                     + "]";
         }
     }
-    
-    public static void setFilterNumberByFilterOutRatio(ModelConfig modelConfig,List<ColumnConfig> columnConfigList){
-        //if user already set filter number then ignore filter out ratio
-        if(modelConfig.getVarSelectFilterNum()>0){
+
+    public static void setFilterNumberByFilterOutRatio(ModelConfig modelConfig, List<ColumnConfig> columnConfigList) {
+        // if user already set filter number then ignore filter out ratio
+        if(modelConfig.getVarSelectFilterNum() > 0) {
             return;
         }
         int[] inputOutputIndex = DTrainUtils.getInputOutputCandidateCounts(columnConfigList);
@@ -125,7 +125,9 @@ public class VariableSelector {
         int cntSelected = 0;
 
         for(ColumnConfig config: this.columnConfigList) {
-            if(config.isForceRemove()) {
+            if(config.isMeta() || config.isTarget()) {
+                log.info("\t Skip meta, weight or target column: " + config.getColumnName());
+            } else if(config.isForceRemove()) {
                 log.info("\t ForceRemove: " + config.getColumnName());
             } else if(config.isForceSelect()) {
                 log.info("\t ForceSelect: " + config.getColumnName());
@@ -137,8 +139,6 @@ public class VariableSelector {
                     cntSelected++;
                     cntByForce++;
                 }
-            } else if(config.isMeta() || config.isTarget()) {
-                log.info("\t Skip meta or target column: " + config.getColumnName());
             } else if(!CommonUtils.isGoodCandidate(config)) {
                 log.info("\t Incomplete info(please check KS, IV, Mean, or StdDev fields): " + config.getColumnName());
             } else if((config.isCategorical() && !modelConfig.isCategoricalDisabled()) || config.isNumerical()) {
@@ -152,6 +152,7 @@ public class VariableSelector {
             }
         }
 
+        // not enabled filter, so only select forceSelect columns
         if(!this.modelConfig.getVarSelectFilterEnabled()) {
             log.info("Summary:");
             log.info("\tSelected Variables: " + cntSelected);
@@ -175,7 +176,9 @@ public class VariableSelector {
         List<Tuple> newParetoList = sortByPareto(paretoList);
 
         int expectedVarNum = Math.min(ksList.size(), modelConfig.getVarSelectFilterNum());
-        log.info("expectedNum:"+expectedVarNum);
+        log.info("Expected selected columns:" + expectedVarNum);
+
+        // reset to false at first.
         for(ColumnConfig columnConfig: this.columnConfigList) {
             if(columnConfig.isFinalSelect()) {
                 columnConfig.setFinalSelect(false);
@@ -262,6 +265,7 @@ public class VariableSelector {
             log.info("\t - By IV: " + ptrIv);
         }
 
+        // update column config list and set finalSelect to true
         for(int n: selectedColumnNumList) {
             this.columnConfigList.get(n).setFinalSelect(true);
         }
@@ -324,7 +328,6 @@ public class VariableSelector {
                     return;
                 }
                 if(sdominate) { // # candidate solution dominated archive solution
-                    // System.out.println("remove 1");
                     // System.out.println(currTuple.columnNum + " " + currTuple.ks + " " + currTuple.iv);
                     // System.out.println(index);
                     this.tuples.remove(index);

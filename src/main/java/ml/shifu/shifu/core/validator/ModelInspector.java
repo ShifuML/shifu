@@ -26,19 +26,21 @@ import ml.shifu.shifu.container.obj.EvalConfig;
 import ml.shifu.shifu.container.obj.ModelBasicConf.RunMode;
 import ml.shifu.shifu.container.obj.ModelConfig;
 import ml.shifu.shifu.container.obj.ModelNormalizeConf;
-import ml.shifu.shifu.container.obj.ModelSourceDataConf;
 import ml.shifu.shifu.container.obj.ModelNormalizeConf.NormType;
+import ml.shifu.shifu.container.obj.ModelSourceDataConf;
 import ml.shifu.shifu.container.obj.ModelStatsConf.BinningAlgorithm;
 import ml.shifu.shifu.container.obj.ModelStatsConf.BinningMethod;
 import ml.shifu.shifu.container.obj.ModelTrainConf;
 import ml.shifu.shifu.container.obj.ModelTrainConf.MultipleClassification;
 import ml.shifu.shifu.container.obj.ModelVarSelectConf;
+import ml.shifu.shifu.container.obj.ModelVarSelectConf.PostCorrelationMetric;
 import ml.shifu.shifu.container.obj.RawSourceData;
 import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
-import ml.shifu.shifu.core.alg.NNTrainer;
 import ml.shifu.shifu.core.dtrain.CommonConstants;
-import ml.shifu.shifu.core.dtrain.dt.FeatureSubsetStrategy;
+import ml.shifu.shifu.core.dtrain.DTrainUtils;
+import ml.shifu.shifu.core.dtrain.FeatureSubsetStrategy;
 import ml.shifu.shifu.core.dtrain.gs.GridSearch;
+import ml.shifu.shifu.core.dtrain.nn.NNConstants;
 import ml.shifu.shifu.fs.ShifuFileUtils;
 import ml.shifu.shifu.util.CommonUtils;
 
@@ -147,7 +149,7 @@ public class ModelInspector {
             }
 
             if(modelConfig.isClassification() && modelConfig.getTrain().isOneVsAll()) {
-                if(!CommonUtils.isDesicionTreeAlgorithm(modelConfig.getAlgorithm())
+                if(!CommonUtils.isTreeModel(modelConfig.getAlgorithm())
                         && !modelConfig.getAlgorithm().equalsIgnoreCase("nn")) {
                     ValidateResult tmpResult = new ValidateResult(true);
                     tmpResult
@@ -311,6 +313,15 @@ public class ModelInspector {
                         checkFile(varSelect.getForceSelectColumnNameFile(), SourceType.LOCAL,
                                 "forceSelect columns configuration"));
             }
+        }
+
+        PostCorrelationMetric corrMetric = varSelect.getPostCorrelationMetric();
+        if(!varSelect.getFilterBy().equals("SE") && corrMetric != null && corrMetric == PostCorrelationMetric.SE) {
+            ValidateResult tmpResult = new ValidateResult(true);
+            tmpResult.setStatus(false);
+            tmpResult.getCauses().add(
+                    "VarSelect#filterBy and VarSelect#postCorrelationMetric should be both set to SE.");
+            result = ValidateResult.mergeResult(result, tmpResult);
         }
 
         return result;
@@ -510,8 +521,7 @@ public class ModelInspector {
             result = ValidateResult.mergeResult(result, tmpResult);
         }
 
-        if(modelConfig.isClassification() && train.isOneVsAll()
-                && !CommonUtils.isDesicionTreeAlgorithm(train.getAlgorithm())
+        if(modelConfig.isClassification() && train.isOneVsAll() && !CommonUtils.isTreeModel(train.getAlgorithm())
                 && !train.getAlgorithm().equalsIgnoreCase("nn")) {
             ValidateResult tmpResult = new ValidateResult(true);
             tmpResult.setStatus(false);
@@ -538,7 +548,7 @@ public class ModelInspector {
         if(modelConfig.isRegression() && !gs.hasHyperParam()) {
             if(train.getAlgorithm().equalsIgnoreCase("nn")) {
                 Map<String, Object> params = train.getParams();
-                int layerCnt = (Integer) params.get(NNTrainer.NUM_HIDDEN_LAYERS);
+                int layerCnt = (Integer) params.get(CommonConstants.NUM_HIDDEN_LAYERS);
                 if(layerCnt < 0) {
                     ValidateResult tmpResult = new ValidateResult(true);
                     tmpResult.setStatus(false);
@@ -546,19 +556,20 @@ public class ModelInspector {
                     result = ValidateResult.mergeResult(result, tmpResult);
                 }
 
-                List<Integer> hiddenNode = (List<Integer>) params.get(NNTrainer.NUM_HIDDEN_NODES);
-                List<String> activateFucs = (List<String>) params.get(NNTrainer.ACTIVATION_FUNC);
+                List<Integer> hiddenNode = (List<Integer>) params.get(CommonConstants.NUM_HIDDEN_NODES);
+                List<String> activateFucs = (List<String>) params.get(CommonConstants.ACTIVATION_FUNC);
 
                 if(hiddenNode.size() != activateFucs.size() || layerCnt != activateFucs.size()) {
                     ValidateResult tmpResult = new ValidateResult(true);
                     tmpResult.setStatus(false);
                     tmpResult.getCauses().add(
-                            NNTrainer.NUM_HIDDEN_LAYERS + "/SIZE(" + NNTrainer.NUM_HIDDEN_NODES + ")" + "/SIZE("
-                                    + NNTrainer.ACTIVATION_FUNC + ")" + " should be equal in train configuration");
+                            CommonConstants.NUM_HIDDEN_LAYERS + "/SIZE(" + CommonConstants.NUM_HIDDEN_NODES + ")"
+                                    + "/SIZE(" + CommonConstants.ACTIVATION_FUNC + ")"
+                                    + " should be equal in train configuration");
                     result = ValidateResult.mergeResult(result, tmpResult);
                 }
 
-                Double learningRate = Double.valueOf(params.get(NNTrainer.LEARNING_RATE).toString());
+                Double learningRate = Double.valueOf(params.get(CommonConstants.LEARNING_RATE).toString());
                 if(learningRate != null && (learningRate.compareTo(Double.valueOf(0)) <= 0)) {
                     ValidateResult tmpResult = new ValidateResult(true);
                     tmpResult.setStatus(false);
@@ -576,6 +587,73 @@ public class ModelInspector {
                         tmpResult.setStatus(false);
                         tmpResult.getCauses().add("Learning decay should be in [0, 1) if set.");
                         result = ValidateResult.mergeResult(result, tmpResult);
+                    }
+                }
+
+                Object elmObject = params.get(DTrainUtils.IS_ELM);
+                boolean isELM = elmObject == null ? false : "true".equalsIgnoreCase(elmObject.toString());
+                if(isELM && layerCnt != 1) {
+                    ValidateResult tmpResult = new ValidateResult(true);
+                    tmpResult.setStatus(false);
+                    tmpResult.getCauses().add(
+                            "If ELM(extreme learning machine), hidden layer should only be one layer.");
+                    result = ValidateResult.mergeResult(result, tmpResult);
+                }
+
+                Object dropoutObj = params.get(CommonConstants.DROPOUT_RATE);
+                if(dropoutObj != null) {
+                    Double dropoutRate = Double.valueOf(dropoutObj.toString());
+                    if(dropoutRate != null && (dropoutRate < 0d || dropoutRate >= 1d)) {
+                        ValidateResult tmpResult = new ValidateResult(true);
+                        tmpResult.setStatus(false);
+                        tmpResult.getCauses().add("Dropout rate should be in [0, 1).");
+                        result = ValidateResult.mergeResult(result, tmpResult);
+                    }
+                }
+            }
+            if(train.getAlgorithm().equalsIgnoreCase(CommonConstants.GBT_ALG_NAME)
+                    || train.getAlgorithm().equalsIgnoreCase(CommonConstants.RF_ALG_NAME)
+                    || train.getAlgorithm().equalsIgnoreCase(NNConstants.NN_ALG_NAME)) {
+                Map<String, Object> params = train.getParams();
+                Object fssObj = params.get("FeatureSubsetStrategy");
+                if(fssObj == null) {
+                    if(train.getAlgorithm().equalsIgnoreCase(CommonConstants.GBT_ALG_NAME)
+                            || train.getAlgorithm().equalsIgnoreCase(CommonConstants.RF_ALG_NAME)) {
+                        ValidateResult tmpResult = new ValidateResult(true);
+                        tmpResult.setStatus(false);
+                        tmpResult.getCauses().add("FeatureSubsetStrategy is not set in RF/GBT algorithm.");
+                        result = ValidateResult.mergeResult(result, tmpResult);
+                    }
+                } else {
+                    boolean isNumber = false;
+                    double doubleFss = 0;
+                    try {
+                        doubleFss = Double.parseDouble(fssObj.toString());
+                        isNumber = true;
+                    } catch (Exception e) {
+                        isNumber = false;
+                    }
+
+                    if(isNumber && (doubleFss <= 0d || doubleFss > 1d)) {
+                        ValidateResult tmpResult = new ValidateResult(true);
+                        tmpResult.setStatus(false);
+                        tmpResult.getCauses().add("FeatureSubsetStrategy if double should be in (0, 1]");
+                    } else {
+                        boolean fssInEnum = false;
+                        for(FeatureSubsetStrategy fss: FeatureSubsetStrategy.values()) {
+                            if(fss.toString().equalsIgnoreCase(fssObj.toString())) {
+                                fssInEnum = true;
+                                break;
+                            }
+                        }
+
+                        if(!fssInEnum) {
+                            ValidateResult tmpResult = new ValidateResult(true);
+                            tmpResult.setStatus(false);
+                            tmpResult
+                                    .getCauses()
+                                    .add("FeatureSubsetStrategy if string should be in ['ALL', 'HALF', 'ONETHIRD' , 'TWOTHIRDS' , 'AUTO' , 'SQRT' , 'LOG2']");
+                        }
                     }
                 }
             }
@@ -614,10 +692,21 @@ public class ModelInspector {
                     }
                 }
 
+                Object vtObj = params.get("ValidationTolerance");
+                if(vtObj != null) {
+                    double validationTolerance = Double.valueOf(vtObj.toString());
+                    if(validationTolerance < 0d || validationTolerance >= 1d) {
+                        ValidateResult tmpResult = new ValidateResult(true);
+                        tmpResult.setStatus(false);
+                        tmpResult.getCauses().add("ValidationTolerance should in [0, 1).");
+                        result = ValidateResult.mergeResult(result, tmpResult);
+                    }
+                }
+
                 Object maxLeavesObj = params.get("MaxLeaves");
                 if(maxLeavesObj != null) {
                     int maxLeaves = Integer.valueOf(maxLeavesObj.toString());
-                    if(maxLeaves <= 0 || maxLeaves > Integer.MAX_VALUE) {
+                    if(maxLeaves <= 0) {
                         ValidateResult tmpResult = new ValidateResult(true);
                         tmpResult.setStatus(false);
                         tmpResult.getCauses().add("MaxLeaves should in [1, Integer.MAX_VALUE].");
@@ -645,8 +734,19 @@ public class ModelInspector {
                     }
                 }
 
+                Object dropoutObj = params.get(CommonConstants.DROPOUT_RATE);
+                if(dropoutObj != null) {
+                    Double dropoutRate = Double.valueOf(dropoutObj.toString());
+                    if(dropoutRate != null && (dropoutRate < 0d || dropoutRate >= 1d)) {
+                        ValidateResult tmpResult = new ValidateResult(true);
+                        tmpResult.setStatus(false);
+                        tmpResult.getCauses().add("Dropout rate should be in [0, 1).");
+                        result = ValidateResult.mergeResult(result, tmpResult);
+                    }
+                }
+
                 if(train.getAlgorithm().equalsIgnoreCase(CommonConstants.GBT_ALG_NAME)) {
-                    Object learningRateObj = params.get(NNTrainer.LEARNING_RATE);
+                    Object learningRateObj = params.get(CommonConstants.LEARNING_RATE);
                     if(learningRateObj != null) {
                         Double learningRate = Double.valueOf(learningRateObj.toString());
                         if(learningRate != null && (learningRate.compareTo(Double.valueOf(0)) <= 0)) {
@@ -744,46 +844,8 @@ public class ModelInspector {
                         }
                     }
                 }
-
-                Object fssObj = params.get("FeatureSubsetStrategy");
-                if(fssObj == null) {
-                    ValidateResult tmpResult = new ValidateResult(true);
-                    tmpResult.setStatus(false);
-                    tmpResult.getCauses().add("FeatureSubsetStrategy is not set in RF/GBT algorithm.");
-                    result = ValidateResult.mergeResult(result, tmpResult);
-                } else {
-                    boolean isNumber = false;
-                    double doubleFss = 0;
-                    try {
-                        doubleFss = Double.parseDouble(fssObj.toString());
-                        isNumber = true;
-                    } catch (Exception e) {
-                        isNumber = false;
-                    }
-
-                    if(isNumber && (doubleFss <= 0d || doubleFss > 1d)) {
-                        ValidateResult tmpResult = new ValidateResult(true);
-                        tmpResult.setStatus(false);
-                        tmpResult.getCauses().add("FeatureSubsetStrategy if double should be in (0, 1]");
-                    } else {
-                        boolean fssInEnum = false;
-                        for(FeatureSubsetStrategy fss: FeatureSubsetStrategy.values()) {
-                            if(fss.toString().equalsIgnoreCase(fssObj.toString())) {
-                                fssInEnum = true;
-                                break;
-                            }
-                        }
-
-                        if(!fssInEnum) {
-                            ValidateResult tmpResult = new ValidateResult(true);
-                            tmpResult.setStatus(false);
-                            tmpResult
-                                    .getCauses()
-                                    .add("FeatureSubsetStrategy if string should be in ['ALL', 'HALF', 'ONETHIRD' , 'TWOTHIRDS' , 'AUTO' , 'SQRT' , 'LOG2']");
-                        }
-                    }
-                }
             }
+
         }
         return result;
     }

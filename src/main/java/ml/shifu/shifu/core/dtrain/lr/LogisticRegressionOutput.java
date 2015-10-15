@@ -27,6 +27,7 @@ import ml.shifu.shifu.container.obj.ModelConfig;
 import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
 import ml.shifu.shifu.core.dtrain.CommonConstants;
 import ml.shifu.shifu.core.dtrain.DTrainUtils;
+import ml.shifu.shifu.core.dtrain.gs.GridSearch;
 //import ml.shifu.shifu.core.dtrain.nn.NNConstants;
 import ml.shifu.shifu.fs.ShifuFileUtils;
 import ml.shifu.shifu.util.CommonUtils;
@@ -84,7 +85,15 @@ public class LogisticRegressionOutput extends
      */
     private FSDataOutputStream progressOutput = null;
 
+    /**
+     * If current mode is cross validation
+     */
     private boolean isKFoldCV;
+
+    /**
+     * If current mode is grid search
+     */
+    private boolean isGsMode;
 
     @Override
     public void preApplication(MasterContext<LogisticRegressionParams, LogisticRegressionParams> context) {
@@ -163,7 +172,7 @@ public class LogisticRegressionOutput extends
 
         Path out = new Path(context.getProps().getProperty(CommonConstants.GUAGUA_OUTPUT));
         writeModelWeightsToFileSystem(optimizedWeights, out);
-        if(this.isKFoldCV) {
+        if(this.isKFoldCV || this.isGsMode) {
             Path valErrOutput = new Path(context.getProps().getProperty(CommonConstants.GS_VALIDATION_ERROR));
             writeValErrorToFileSystem(context.getMasterResult().getTestError(), valErrOutput);
         }
@@ -206,13 +215,16 @@ public class LogisticRegressionOutput extends
             if(kCrossValidation != null && kCrossValidation > 0) {
                 isKFoldCV = true;
             }
+
+            GridSearch gs = new GridSearch(modelConfig.getTrain().getParams());
+            this.isGsMode = gs.hasHyperParam();
         }
 
         try {
             Path progressLog = new Path(context.getProps().getProperty(CommonConstants.SHIFU_DTRAIN_PROGRESS_FILE));
             // if the progressLog already exists, that because the master failed, and fail-over
             // we need to append the log, so that client console can get refreshed. Or console will appear stuck.
-            if (ShifuFileUtils.isFileExists(progressLog, SourceType.HDFS)) {
+            if(ShifuFileUtils.isFileExists(progressLog, SourceType.HDFS)) {
                 this.progressOutput = FileSystem.get(new Configuration()).append(progressLog);
             } else {
                 this.progressOutput = FileSystem.get(new Configuration()).create(progressLog);

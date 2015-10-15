@@ -14,6 +14,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# HADOOP_HOME or HADOOP_ROOT
+# 
+# Shifu will check if current hadoop is installed well, if not installed well, please check and configure your HADOOP_HOME
+# or HADOOP_ROOT well.
+
 function sanity_check() {
     if [ ! -f ModelConfig.json ]; then
         echo "[Error] This is not a model set folder because no ModelConfig.json found in current folder, please change folder to your model set folder."
@@ -109,6 +114,12 @@ case "`uname`" in
 esac
 
 JAVA_OPTIONS=${SHIFU_OPTS:=-server -Xms1G -Xmx2G}
+if [ "${1}" == "stats" ]; then
+    if [ "${2}" == "-correlation" -o "${2}" == "-c" ]; then
+        # set to 4G for correlation computing to avoid OOM
+        JAVA_OPTIONS=${SHIFU_OPTS:=-server -Xms1G -Xmx4G}
+    fi
+fi
 
 PIG_OPTIONS="${PIG_OPTIONS} -Dmapred.map.tasks.speculative.execution=true"
 PIG_OPTIONS="${PIG_OPTIONS} -Dmapred.reduce.tasks.speculative.execution=true"
@@ -121,11 +132,17 @@ PIG_OPTIONS="${PIG_OPTIONS} -m PigConfig.conf"
 CLASSPATH=`find ${SHIFU_HOME}/lib -name "*.jar" | grep -v javadoc | xargs | sed 's/ /:/g'`
 
 # ---------------- HADOOP Environment Detection -----------------------------
-HADOOP_ROOT=`find_hadoop_root`
 if [ "${HADOOP_ROOT}" == "" ]; then
-    echo "Warning: No hadoop command in PATH env, you can only run Shifu in local mode."
+    if [ "${HADOOP_HOME}" == "" ]; then
+        HADOOP_ROOT="${HADOOP_HOME}"
+    else
+        HADOOP_ROOT=`find_hadoop_root`
+    fi
+    if [ "${HADOOP_ROOT}" == "" ]; then
+        echo "Warning: no HADOOP_HOME(please check) or hadoop is found, you can only run Shifu in local mode."
+    fi
 fi
-    
+
 if [ -e ${HADOOP_ROOT}/bin/hadoop ]; then
     HD_CLASSPATH=`${HADOOP_ROOT}/bin/hadoop classpath 2> /dev/null`
 else
@@ -133,7 +150,11 @@ else
 fi
 
 if [ "${HD_CLASSPATH}" != "" ]; then
+    ## no need add slfloglib because hadoop classpath has
     CLASSPATH="${HD_CLASSPATH}:${CLASSPATH}"
+else
+   LOG_CLASSPATH=`find ${SHIFU_HOME}/slfloglib -name "*.jar" | grep -v javadoc | xargs | sed 's/ /:/g'`
+   CLASSPATH="${CLASSPATH}:${LOG_CLASSPATH}"
 fi
 
 CLASSPATH=`remove_duplicate_jars_func "${CLASSPATH}"`
@@ -142,7 +163,7 @@ CLASSPATH=`remove_duplicate_jars_func "${CLASSPATH}"`
 if [ "${HADOOP_CONF_DIR}" != "" -a -d "${HADOOP_CONF_DIR}" ]; then
     CLASSPATH="${HADOOP_CONF_DIR}:${CLASSPATH}"
 fi
-CLASSPATH=".:${SHIFU_HOME}/log4jconf:${CLASSPATH}:${SHIFU_HOME}/conf"
+CLASSPATH=".:${SHIFU_HOME}/conf:${SHIFU_HOME}/log4jconf:${CLASSPATH}"
 
 LD_LIBRARY_PATH=`find_ld_library_path ${HADOOP_ROOT}`
 

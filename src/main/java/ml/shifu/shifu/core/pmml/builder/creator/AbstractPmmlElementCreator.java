@@ -19,6 +19,7 @@ import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.container.obj.ModelConfig;
 import org.dmg.pmml.DataType;
 import org.dmg.pmml.OpType;
+import org.encog.ml.BasicML;
 
 import java.util.List;
 
@@ -41,7 +42,7 @@ public abstract class AbstractPmmlElementCreator<T> {
         this.isConcise = isConcise;
     }
 
-    public abstract T build();
+    public abstract T build(BasicML basicML);
 
     /**
      * Get OpType from ColumnConfig

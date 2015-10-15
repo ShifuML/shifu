@@ -22,6 +22,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import ml.shifu.shifu.column.NSColumn;
 import ml.shifu.shifu.container.WeightAmplifier;
 import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.container.obj.ModelNormalizeConf.NormType;
@@ -55,6 +56,11 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
     private JexlContext weightContext;
     private DecimalFormat df = new DecimalFormat("#.######");
 
+    /**
+     * For categorical feature, a map is used to save query time in execution
+     */
+    private Map<Integer, Map<String, Integer>> categoricalIndexMap = new HashMap<Integer, Map<String, Integer>>();
+
     public static enum WarnInNormalizeUDF {
         INVALID_TAG;
     };
@@ -85,6 +91,21 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
         }
 
         this.tags = super.modelConfig.getSetTags();
+
+        for(ColumnConfig config: columnConfigList) {
+            if(config.isCategorical()) {
+                Map<String, Integer> map = new HashMap<String, Integer>();
+                if(config.getBinCategory() != null) {
+                    for(int i = 0; i < config.getBinCategory().size(); i++) {
+                        List<String> catValues = CommonUtils.flattenCatValGrp(config.getBinCategory().get(i));
+                        for(String cval: catValues) {
+                            map.put(cval, i);
+                        }
+                    }
+                }
+                this.categoricalIndexMap.put(config.getColumnNum(), map);
+            }
+        }
 
         log.debug("NormalizeUDF Initialized");
     }
@@ -129,7 +150,7 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
             String val = (input.get(i) == null) ? "" : input.get(i).toString().trim();
             // load variables for weight calculating.
             if(weightExpr != null) {
-                weightContext.set(config.getColumnName(), val);
+                weightContext.set(new NSColumn(config.getColumnName()).getSimpleName(), val);
             }
 
             // check tag type.
@@ -167,18 +188,9 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
             if(this.isForClean) {
                 // for RF/GBT model, only clean data, not real do norm data
                 if(config.isCategorical()) {
-                    if(config.getBinCategory() != null) {
-                        // TODO using HashSet instead of ArrayList
-                        int index = config.getBinCategory().indexOf(val);
-                        if(index == -1) {
-                            // set to empty for invalid category
-                            tuple.append("");
-                        } else {
-                            tuple.append(val);
-                        }
-                    } else {
-                        tuple.append(val);
-                    }
+                    Map<String, Integer> map = this.categoricalIndexMap.get(config.getColumnNum());
+                    // map should not be null, no need check if map is null, if val not in binCategory, set it to ""
+                    tuple.append(((map.get(val) == null || map.get(val) == -1)) ? "" : val);
                 } else {
                     Double normVal = 0d;
                     try {
@@ -191,17 +203,13 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
                 }
             } else {
                 // append normalize data. exclude data clean, for data cleaning, no need check good or bad candidate
-                if(!CommonUtils.isGoodCandidate(modelConfig.isRegression(), config)) {
-                    if(config.isMeta()) {
-                        tuple.append(val);
-                    } else {
-                        tuple.append(null);
-                    }
-                } else {
+                if(CommonUtils.isGoodCandidate(modelConfig.isRegression(), config)) {
                     // for multiple classification, binPosRate means rate of such category over all counts, reuse
                     // binPosRate for normalize
                     Double normVal = Normalizer.normalize(config, val, cutoff, normType);
                     tuple.append(df.format(normVal));
+                } else {
+                    tuple.append(config.isMeta() ? val : null);
                 }
             }
         }

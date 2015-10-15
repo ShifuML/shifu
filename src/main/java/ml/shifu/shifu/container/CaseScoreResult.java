@@ -25,11 +25,11 @@ import java.util.TreeMap;
 public class CaseScoreResult {
     private String inputData;
 
-    private List<Integer> scores;
-    private int maxScore;
-    private int minScore;
-    private int avgScore;
-    private int medianScore;
+    private List<Double> scores;
+    private double maxScore;
+    private double minScore;
+    private double avgScore;
+    private double medianScore;
 
     private Map<String, CaseScoreResult> subModelScores;
 
@@ -37,49 +37,49 @@ public class CaseScoreResult {
         super();
     }
 
-    public List<Integer> getScores() {
+    public List<Double> getScores() {
         return scores;
     }
 
-    public void setScores(List<Integer> scores) {
+    public void setScores(List<Double> scores) {
         this.scores = scores;
     }
 
-    public int getMaxScore() {
+    public double getMaxScore() {
         return maxScore;
     }
 
-    public void setMaxScore(int maxScore) {
+    public void setMaxScore(double maxScore) {
         this.maxScore = maxScore;
     }
 
-    public int getMinScore() {
+    public double getMinScore() {
         return minScore;
     }
 
-    public void setMinScore(int minScore) {
+    public void setMinScore(double minScore) {
         this.minScore = minScore;
     }
 
-    public int getAvgScore() {
+    public double getAvgScore() {
         return avgScore;
     }
 
-    public void setAvgScore(int avgScore) {
+    public void setAvgScore(double avgScore) {
         this.avgScore = avgScore;
     }
 
     /**
      * @return the medianScore
      */
-    public int getMedianScore() {
+    public double getMedianScore() {
         return medianScore;
     }
 
     /**
      * @param medianScore the medianScore to set
      */
-    public void setMedianScore(int medianScore) {
+    public void setMedianScore(double medianScore) {
         this.medianScore = medianScore;
     }
 

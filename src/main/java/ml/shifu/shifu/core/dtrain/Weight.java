@@ -15,6 +15,8 @@
  */
 package ml.shifu.shifu.core.dtrain;
 
+import java.util.Random;
+
 /**
  * {@link Weight} is used to update NN weights according to propagation option. Which is also copied from Encog.
  * 
@@ -52,6 +54,9 @@ public class Weight {
      */
     private double reg;
 
+    /**
+     * Number of training records
+     */
     private double numTrainSize;
 
     /**
@@ -59,7 +64,20 @@ public class Weight {
      */
     private RegulationLevel rl = RegulationLevel.NONE;
 
-    public Weight(int numWeight, double numTrainSize, double rate, String algorithm, double reg, RegulationLevel rl) {
+    /**
+     * Dropout rate.
+     */
+    private double dropoutRate = 0d;
+
+    /**
+     * Random object to do drop out
+     */
+    private Random random;
+
+    public Weight(int numWeight, double numTrainSize, double rate, String algorithm, double reg, RegulationLevel rl,
+            double dropoutRate) {
+        this.dropoutRate = dropoutRate;
+        this.random = new Random();
         this.lastDelta = new double[numWeight];
         this.lastGradient = new double[numWeight];
         this.numTrainSize = numTrainSize;
@@ -81,6 +99,10 @@ public class Weight {
 
     public double[] calculateWeights(double[] weights, double[] gradients) {
         for(int i = 0; i < gradients.length; i++) {
+            if(this.random.nextDouble() < this.dropoutRate) {
+                // drop out, no need to update weight, just continue next weight
+                continue;
+            }
             switch(this.rl) {
                 case NONE:
                     weights[i] += updateWeight(i, weights, gradients);
@@ -185,18 +207,16 @@ public class Weight {
     }
 
     private double updateWeightSCG(int index, double[] weights, double[] gradients) {
-        // TODO Auto-generated method stub
-        return 0;
+        throw new RuntimeException("SCG propagation is not supported in distributed NN computing.");
     }
 
     private double updateWeightRLP(int index, double[] weights, double[] gradients) {
-        // multiply the current and previous gradient, and take the
-        // sign. We want to see if the gradient has changed its sign.
+        // multiply the current and previous gradient, and take the sign. We want to see if the gradient has changed its
+        // sign.
         final int change = DTrainUtils.sign(gradients[index] * lastGradient[index]);
         double weightChange = 0;
 
-        // if the gradient has retained its sign, then we increase the
-        // delta so that it will converge faster
+        // if the gradient has retained its sign, then we increase the delta so that it will converge faster
         if(change > 0) {
             double delta = this.updateValues[index] * DTrainUtils.POSITIVE_ETA;
             delta = Math.min(delta, DEFAULT_MAX_STEP);
@@ -204,14 +224,12 @@ public class Weight {
             this.updateValues[index] = delta;
             lastGradient[index] = gradients[index];
         } else if(change < 0) {
-            // if change<0, then the sign has changed, and the last
-            // delta was too big
+            // if change<0, then the sign has changed, and the last delta was too big
             double delta = this.updateValues[index] * DTrainUtils.NEGATIVE_ETA;
             delta = Math.max(delta, DTrainUtils.DELTA_MIN);
             this.updateValues[index] = delta;
             weightChange = -this.lastDelta[index];
-            // set the previous gradient to zero so that there will be no
-            // adjustment the next iteration
+            // set the previous gradient to zero so that there will be no adjustment the next iteration
             lastGradient[index] = 0;
         } else if(change == 0) {
             // if change==0 then there is no change to the delta

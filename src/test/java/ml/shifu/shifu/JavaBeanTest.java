@@ -107,8 +107,8 @@ public class JavaBeanTest {
 
         HashMap<String, String> hashMap = new HashMap<String, String>();
         hashMap.put("id", "12");
-        new ScoreObject(Arrays.asList(1), 1);
-        new ScoreObject(Arrays.asList(1), 0);
+        new ScoreObject(Arrays.asList(1d), 1);
+        new ScoreObject(Arrays.asList(1d), 0);
 
         ValueObjectComparator voc = new ValueObjectComparator(BinningDataType.Categorical);
         ValueObject valueObject = new ValueObject();

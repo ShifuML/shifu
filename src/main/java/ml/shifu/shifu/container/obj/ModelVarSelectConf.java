@@ -18,6 +18,7 @@ package ml.shifu.shifu.container.obj;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 
 import ml.shifu.shifu.util.Constants;
 
@@ -26,30 +27,85 @@ import java.util.HashMap;
 import java.util.Map;
 
 /**
- * ModelVarSelectConf class
+ * {@link ModelVarSelectConf} is 'varselect' part configuration in ModelConfig.json
  */
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class ModelVarSelectConf {
 
-    // for force select or force remove
+    @JsonDeserialize(using = PostCorrelationMetricDeserializer.class)
+    public static enum PostCorrelationMetric {
+        IV, KS, SE
+    }
+
+    /**
+     * If enable force select and force remove
+     */
     private Boolean forceEnable = Boolean.TRUE;
+
+    /**
+     * Force-selected column configuration file
+     */
     private String forceSelectColumnNameFile;
+
+    /**
+     * Force-remove column configuration file
+     */
     private String forceRemoveColumnNameFile;
 
-    // settings for variable selection
+    /**
+     * If enable variable selection
+     */
     private Boolean filterEnable = Boolean.TRUE;
-    private Integer filterNum = Integer.valueOf(Constants.SHIFU_DEFAULT_VARSELECT_FILTER_NUM);
+
+    /**
+     * How many columns will be selected. This number includes forceSelet columns.
+     */
+    private Integer filterNum = Constants.SHIFU_DEFAULT_VARSELECT_FILTER_NUM;
+
+    /**
+     * Filter by 'KS', 'IV', 'SE', 'SR'
+     */
     private String filterBy = "KS";
-    private Float filterOutRatio = Float.valueOf(Constants.SHIFU_DEFAULT_VARSELECT_FILTEROUT_RATIO);
+
+    /**
+     * Filter out ratio, filterNum has higher priority than {@link #filterOutRatio}, if {@link #filterNum} is less than
+     * 0. Then filterOutRatio will be effective.
+     */
+    private Float filterOutRatio = Constants.SHIFU_DEFAULT_VARSELECT_FILTEROUT_RATIO;
+
     /**
      * For filterBy pareto mode, such epsilons are used in pareto sorting
      */
     private double[] epsilons;
 
     /**
-     * If column missing rate is lower than this column, no matter what, whis column will be removed.
+     * If column missing rate is larger than this value, this column will be removed even it is set as 'FinalSelect'.
      */
     private Float missingRateThreshold = 0.98f;
+
+    /**
+     * If two features correlation value is larger than {@link #correlationThreshold}, one with larger IV value will be
+     * selected. Set it to default 1 or not computed correlation value in norm step, means such threshold has no effect.
+     */
+    private Float correlationThreshold = 1f;
+
+    /**
+     * If IV value of feature is less than this threshold, such feature will be dropped and not selected.
+     */
+    private Float minIvThreshold = 0f;
+
+    /**
+     * If KS value of feature is less than this threshold, such feature will be dropped and not selected.
+     */
+    private Float minKsThreshold = 0f;
+
+    /**
+     * Enable variable selection for correlation value, this is the metric to keep the better feature. If column i and j
+     * has higher correlation value than {@link #correlationThreshold}. According to {@link #postCorrelationMetric} to
+     * choose a better one to keep, the other one would be dropped. For example, if set it KS, drop column with smaller
+     * KS value.
+     */
+    private PostCorrelationMetric postCorrelationMetric = PostCorrelationMetric.IV;
 
     private Map<String, Object> params;
 
@@ -100,7 +156,7 @@ public class ModelVarSelectConf {
     public void setFilterBy(String filterBy) {
         this.filterBy = filterBy;
     }
-    
+
     /**
      * @return the filterOutRatio
      */
@@ -156,10 +212,70 @@ public class ModelVarSelectConf {
         this.epsilons = epsilons;
     }
 
+    /**
+     * @return the correlationThreshold
+     */
+    public Float getCorrelationThreshold() {
+        return correlationThreshold;
+    }
+
+    /**
+     * @param correlationThreshold
+     *            the correlationThreshold to set
+     */
+    public void setCorrelationThreshold(Float correlationThreshold) {
+        this.correlationThreshold = correlationThreshold;
+    }
+
+    /**
+     * @return the postCorrelationMetric
+     */
+    public PostCorrelationMetric getPostCorrelationMetric() {
+        return postCorrelationMetric;
+    }
+
+    /**
+     * @param postCorrelationMetric
+     *            the postCorrelationMetric to set
+     */
+    public void setPostCorrelationMetric(PostCorrelationMetric postCorrelationMetric) {
+        this.postCorrelationMetric = postCorrelationMetric;
+    }
+
+    /**
+     * @return the minIvThreshold
+     */
+    public Float getMinIvThreshold() {
+        return minIvThreshold;
+    }
+
+    /**
+     * @return the minKsThreshold
+     */
+    public Float getMinKsThreshold() {
+        return minKsThreshold;
+    }
+
+    /**
+     * @param minIvThreshold
+     *            the minIvThreshold to set
+     */
+    public void setMinIvThreshold(Float minIvThreshold) {
+        this.minIvThreshold = minIvThreshold;
+    }
+
+    /**
+     * @param minKsThreshold
+     *            the minKsThreshold to set
+     */
+    public void setMinKsThreshold(Float minKsThreshold) {
+        this.minKsThreshold = minKsThreshold;
+    }
+
     @Override
     public ModelVarSelectConf clone() {
         ModelVarSelectConf other = new ModelVarSelectConf();
-        if ( epsilons != null ) {
+        if(epsilons != null) {
             other.setEpsilons(Arrays.copyOf(epsilons, epsilons.length));
         }
         other.setFilterBy(filterBy);
@@ -169,7 +285,7 @@ public class ModelVarSelectConf {
         other.setForceRemoveColumnNameFile(forceRemoveColumnNameFile);
         other.setForceSelectColumnNameFile(forceSelectColumnNameFile);
         other.setMissingRateThreshold(missingRateThreshold);
-        if ( params != null ) {
+        if(params != null) {
             other.setParams(new HashMap<String, Object>(params));
         }
         other.setFilerOutRatio(filterOutRatio);

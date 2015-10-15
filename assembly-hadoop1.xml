@@ -117,6 +117,7 @@
                 <include>*:commons-logging:*</include>
                 <include>*:commons-net:*</include>
                 <include>*:commons-math3:*</include>
+                <include>*:commons-lang3:*</include>
                 <include>*:config:*</include>
                 <include>*:encog-core:*</include>
                 <include>*:guagua-core:*</include>
@@ -139,7 +140,6 @@
                 <include>*:scala-library:*</include>
                 <include>*:shifu:*</include>
                 <include>*:slf4j-api:*</include>
-                <include>*:slf4j-log4j12:*</include>
                 <include>*:stringtemplate:*</include>
                 <include>*:xmlenc:*</include>
                 <include>*:xz:*</include>
@@ -157,6 +157,12 @@
                 <include>*:parquet-format:*</include>
                 <include>*:parquet-jackson:*</include>
                 <include>*:snappy-java:*</include>
+            </includes>
+        </dependencySet>
+        <dependencySet>
+            <outputDirectory>/slfloglib</outputDirectory>
+            <includes>
+                <include>*:slf4j-log4j12:*</include>
             </includes>
         </dependencySet>
     </dependencySets>

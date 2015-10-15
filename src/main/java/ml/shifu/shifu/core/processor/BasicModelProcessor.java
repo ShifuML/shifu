@@ -21,6 +21,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStreamWriter;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -28,22 +29,28 @@ import java.util.Map;
 import java.util.Scanner;
 import java.util.Set;
 
+import ml.shifu.shifu.column.NSColumn;
 import ml.shifu.shifu.container.meta.ValidateResult;
 import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.container.obj.ModelConfig;
 import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
+import ml.shifu.shifu.core.shuffle.MapReduceShuffle;
 import ml.shifu.shifu.core.validator.ModelInspector;
 import ml.shifu.shifu.core.validator.ModelInspector.ModelStep;
 import ml.shifu.shifu.exception.ShifuErrorCode;
 import ml.shifu.shifu.exception.ShifuException;
 import ml.shifu.shifu.fs.PathFinder;
+import ml.shifu.shifu.fs.ShifuFileUtils;
+import ml.shifu.shifu.pig.PigExecutor;
 import ml.shifu.shifu.util.CommonUtils;
 import ml.shifu.shifu.util.Constants;
 import ml.shifu.shifu.util.Environment;
 import ml.shifu.shifu.util.JSONUtils;
+import ml.shifu.shifu.util.updater.ColumnConfigUpdater;
 
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang.StringUtils;
+import org.apache.hadoop.fs.Path;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -53,7 +60,7 @@ import org.slf4j.LoggerFactory;
  */
 public class BasicModelProcessor {
 
-    private final static Logger log = LoggerFactory.getLogger(BasicModelProcessor.class);
+    private final static Logger LOG = LoggerFactory.getLogger(BasicModelProcessor.class);
 
     protected ModelConfig modelConfig;
     protected List<ColumnConfig> columnConfigList;
@@ -75,7 +82,7 @@ public class BasicModelProcessor {
             Map<String, Object> otherConfigs) {
         this.modelConfig = modelConfig;
         this.columnConfigList = columnConfigList;
-        this.setOtherConfigs(otherConfigs);
+        this.otherConfigs = otherConfigs;
         this.pathFinder = new PathFinder(modelConfig, otherConfigs);
     }
 
@@ -96,18 +103,20 @@ public class BasicModelProcessor {
         loadModelConfig();
         validateModelConfig(step);
 
-        pathFinder = new PathFinder(modelConfig, this.getOtherConfigs());
-
+        this.pathFinder = new PathFinder(modelConfig, this.getOtherConfigs());
         checkAlgorithmParam();
 
-        log.info(String.format("Training Data Soure Location: %s", modelConfig.getDataSet().getSource()));
-
+        LOG.info(String.format("Training Data Soure Location: %s", modelConfig.getDataSet().getSource()));
         switch(step) {
             case INIT:
                 break;
             default:
                 loadColumnConfig();
                 validateColumnConfig();
+
+                // update ColumnConfig and save to disk
+                ColumnConfigUpdater.updateColumnConfigFlags(modelConfig, columnConfigList, step);
+                saveColumnConfigList();
                 break;
         }
     }
@@ -116,25 +125,25 @@ public class BasicModelProcessor {
         if(this.columnConfigList == null) {
             return;
         }
-        Set<String> names = new HashSet<String>();
+        Set<NSColumn> names = new HashSet<NSColumn>();
         for(ColumnConfig config: this.columnConfigList) {
             if(StringUtils.isEmpty(config.getColumnName())) {
-                throw new IllegalArgumentException("Empry column name, please check your header file.");
+                throw new IllegalArgumentException("Empty column name, please check your header file.");
             }
-            if(names.contains(config.getColumnName())) {
-                log.warn("Duplicated {} in ColumnConfig.json file, later one will be append index to make it unique.",
+            if(names.contains(new NSColumn(config.getColumnName()))) {
+                LOG.warn("Duplicated {} in ColumnConfig.json file, later one will be append index to make it unique.",
                         config.getColumnName());
             }
-            names.add(config.getColumnName());
+            names.add(new NSColumn(config.getColumnName()));
         }
 
-        if(!names.contains(modelConfig.getTargetColumnName())) {
+        if(!names.contains(new NSColumn(modelConfig.getTargetColumnName()))) {
             throw new IllegalArgumentException("target column " + modelConfig.getTargetColumnName()
                     + " does not exist.");
         }
 
         if(StringUtils.isNotBlank(modelConfig.getWeightColumnName())
-                && !names.contains(modelConfig.getWeightColumnName())) {
+                && !names.contains(new NSColumn(modelConfig.getWeightColumnName()))) {
             throw new IllegalArgumentException("weight column " + modelConfig.getWeightColumnName()
                     + " does not exist.");
         }
@@ -161,20 +170,18 @@ public class BasicModelProcessor {
      *             an exception in saving model config
      */
     public void saveModelConfig() throws IOException {
-        log.info("Saving ModelConfig...");
+        LOG.info("Saving ModelConfig...");
         JSONUtils.writeValue(new File(pathFinder.getModelConfigPath(SourceType.LOCAL)), modelConfig);
     }
 
     /**
      * save the Column Config
      * 
-     * @param columnStats
-     *            if saev column status
      * @throws IOException
      *             an exception in saving column config
      */
-    public void saveColumnConfigListAndColumnStats(boolean columnStats) throws IOException {
-        log.info("Saving ColumnConfig...");
+    public void saveColumnConfigList() throws IOException {
+        LOG.info("Saving ColumnConfig...");
         JSONUtils.writeValue(new File(pathFinder.getColumnConfigPath(SourceType.LOCAL)), columnConfigList);
     }
 
@@ -196,14 +203,14 @@ public class BasicModelProcessor {
         }
 
         if(!result.getStatus()) {
-            log.error("ModelConfig Validation - Fail! See below:");
+            LOG.error("ModelConfig Validation - Fail! See below:");
             for(String cause: result.getCauses()) {
-                log.error("\t!!! " + cause);
+                LOG.error("\t!!! " + cause);
             }
 
             throw new ShifuException(ShifuErrorCode.ERROR_MODELCONFIG_NOT_VALIDATION);
         } else {
-            log.info("ModelConfig Validation - OK");
+            LOG.info("ModelConfig Validation - OK");
         }
     }
 
@@ -233,7 +240,7 @@ public class BasicModelProcessor {
      */
     public boolean syncDataToHdfs(SourceType sourceType) throws IOException {
         if(SourceType.HDFS.equals(sourceType)) {
-            CommonUtils.copyConfFromLocalToHDFS(modelConfig);
+            CommonUtils.copyConfFromLocalToHDFS(modelConfig, this.pathFinder);
             return true;
         }
 
@@ -291,7 +298,7 @@ public class BasicModelProcessor {
 
         String alg = modelConfig.getAlgorithm();
         Map<String, Object> param = modelConfig.getParams();
-        log.info("Check algorithm parameter");
+        LOG.info("Check algorithm parameter");
 
         if(alg.equalsIgnoreCase("LR")) {
             if(!param.containsKey("LearningRate")) {
@@ -374,7 +381,8 @@ public class BasicModelProcessor {
      *             in load model config
      */
     private void loadModelConfig() throws IOException {
-        modelConfig = CommonUtils.loadModelConfig();
+        modelConfig = CommonUtils.loadModelConfig(new Path(CommonUtils.getLocalModelSetPath(otherConfigs),
+                Constants.LOCAL_MODEL_CONFIG_JSON).toString(), SourceType.LOCAL);
     }
 
     /**
@@ -394,7 +402,8 @@ public class BasicModelProcessor {
      *             in load column config
      */
     private void loadColumnConfig() throws IOException {
-        columnConfigList = CommonUtils.loadColumnConfigList();
+        columnConfigList = CommonUtils.loadColumnConfigList(new Path(CommonUtils.getLocalModelSetPath(otherConfigs),
+                Constants.LOCAL_COLUMN_CONFIG_JSON).toString(), SourceType.LOCAL);
     }
 
     /**
@@ -418,7 +427,7 @@ public class BasicModelProcessor {
     protected void createHead(String modelName) throws IOException {
         File header = new File(modelName == null ? "" : modelName + "/.HEAD");
         if(header.exists()) {
-            log.error("File {} already exist.", header.getAbsolutePath());
+            LOG.error("File {} already exist.", header.getAbsolutePath());
             return;
         }
 
@@ -427,7 +436,7 @@ public class BasicModelProcessor {
             writer = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(header), Constants.DEFAULT_CHARSET));
             writer.write("master");
         } catch (IOException e) {
-            log.error("Fail to create HEAD file to store the current workspace");
+            LOG.error("Fail to create HEAD file to store the current workspace");
         } finally {
             if(writer != null) {
                 writer.close();
@@ -448,6 +457,56 @@ public class BasicModelProcessor {
      */
     public void setOtherConfigs(Map<String, Object> otherConfigs) {
         this.otherConfigs = otherConfigs;
+    }
+
+    protected void runDataClean(boolean isToShuffle) throws IOException {
+        SourceType sourceType = modelConfig.getDataSet().getSource();
+        String cleanedDataPath = this.pathFinder.getCleanedDataPath();
+
+        LOG.info("Start to generate clean data for tree model ... ");
+        if(ShifuFileUtils.isFileExists(cleanedDataPath, sourceType)) {
+            ShifuFileUtils.deleteFile(cleanedDataPath, sourceType);
+        }
+
+        Map<String, String> paramsMap = new HashMap<String, String>();
+        paramsMap.put("sampleRate", modelConfig.getNormalizeSampleRate().toString());
+        paramsMap.put("sampleNegOnly", ((Boolean) modelConfig.isNormalizeSampleNegOnly()).toString());
+        paramsMap.put("delimiter", CommonUtils.escapePigString(modelConfig.getDataSetDelimiter()));
+
+        try {
+            String normPigPath = pathFinder.getScriptPath("scripts/Normalize.pig");
+            paramsMap.put(Constants.IS_COMPRESS, "true");
+            paramsMap.put(Constants.IS_NORM_FOR_CLEAN, "true");
+            paramsMap.put(Constants.PATH_NORMALIZED_DATA, pathFinder.getCleanedDataPath());
+            PigExecutor.getExecutor().submitJob(modelConfig, normPigPath, paramsMap, sourceType, this.pathFinder);
+            // cleaned validation data
+            if(StringUtils.isNotBlank(modelConfig.getValidationDataSetRawPath())) {
+                String cleandedValidationDataPath = pathFinder.getCleanedValidationDataPath();
+                if(ShifuFileUtils.isFileExists(cleandedValidationDataPath, sourceType)) {
+                    ShifuFileUtils.deleteFile(cleandedValidationDataPath, sourceType);
+                }
+                paramsMap.put(Constants.IS_COMPRESS, "false");
+                paramsMap.put(Constants.PATH_RAW_DATA, modelConfig.getValidationDataSetRawPath());
+                paramsMap.put(Constants.PATH_NORMALIZED_DATA, pathFinder.getCleanedValidationDataPath());
+                PigExecutor.getExecutor().submitJob(modelConfig, normPigPath, paramsMap, sourceType, this.pathFinder);
+            }
+        } catch (IOException e) {
+            throw new ShifuException(ShifuErrorCode.ERROR_RUNNING_PIG_JOB, e);
+        } catch (Throwable e) {
+            throw new RuntimeException(e);
+        }
+
+        if(isToShuffle) {
+            MapReduceShuffle shuffler = new MapReduceShuffle(this.modelConfig);
+            try {
+                shuffler.run(pathFinder.getCleanedDataPath());
+            } catch (ClassNotFoundException e) {
+                throw new RuntimeException("Fail to shuffle the cleaned data.", e);
+            } catch (InterruptedException e) {
+                throw new RuntimeException("Fail to shuffle the cleaned data.", e);
+            }
+        }
+        LOG.info("Generate clean data for tree model successful.");
     }
 
 }
