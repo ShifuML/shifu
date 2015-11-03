@@ -31,6 +31,7 @@ import org.dmg.pmml.PMML;
 import org.jpmml.evaluator.ClassificationMap;
 import org.jpmml.evaluator.FieldValue;
 import org.jpmml.evaluator.NeuralNetworkEvaluator;
+import org.jpmml.evaluator.RegressionModelEvaluator;
 import org.testng.Assert;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.Test;
@@ -78,7 +79,7 @@ public class PMMLTranslatorTest {
         for (int index = 0; index < 5; index++) {
             String num = Integer.toString(index);
             String pmmlPath = "pmmls/cancer-judgement" + num + ".pmml";
-            evalPmml(pmmlPath, DataPath, OutPath, "\\|", "model" + num);
+            evalNNPmml(pmmlPath, DataPath, OutPath, "\\|", "model" + num);
             compareScore(evalScore, new File(OutPath), "model" + num, "\\|", 1.0);
             FileUtils.deleteQuietly(new File(OutPath));
         }
@@ -117,11 +118,56 @@ public class PMMLTranslatorTest {
         String pmmlPath = "pmmls/ModelK0.pmml";
         String DataPath = "src/test/resources/example/labor-neg/DataStore/DataSet1/data.dat";
         String OutPath = "model_k_out.dat";
-        evalPmml(pmmlPath, DataPath, OutPath, ",", "model0");
+        evalNNPmml(pmmlPath, DataPath, OutPath, ",", "model0");
 
         // Step 3. Compare the SHIFU Eval score and PMML score
         compareScore(evalScore, new File(OutPath), "model0", "\\|", 1.0);
         FileUtils.deleteQuietly(new File(OutPath));
+
+        FileUtils.deleteQuietly(tmpModel);
+        FileUtils.deleteQuietly(tmpColumn);
+        FileUtils.deleteDirectory(tmpModelsDir);
+
+        FileUtils.deleteQuietly(new File("./pmmls"));
+        FileUtils.deleteQuietly(new File("evals"));
+    }
+    
+    @Test
+    public void testLRNumericVariablePmmlCase() throws Exception {
+        // Step 1. Eval the scores using SHIFU
+        File originModel = new File(
+                "src/test/resources/example/cancer-judgement/ModelStore/ModelSet1/LR/ModelConfig.json");
+        File tmpModel = new File("ModelConfig.json");
+
+        File originColumn = new File(
+                "src/test/resources/example/cancer-judgement/ModelStore/ModelSet1/LR/ColumnConfig.json");
+        File tmpColumn = new File("ColumnConfig.json");
+
+        File modelsDir = new File(
+                "src/test/resources/example/cancer-judgement/ModelStore/ModelSet1/LR/models");
+        File tmpModelsDir = new File("models");
+
+        FileUtils.copyFile(originModel, tmpModel);
+        FileUtils.copyFile(originColumn, tmpColumn);
+        FileUtils.copyDirectory(modelsDir, tmpModelsDir);
+
+        // run evaluation set
+        ShifuCLI.runEvalScore("EvalA");
+        File evalScore = new File("evals/EvalA/EvalScore");
+
+        ShifuCLI.exportModel(null);
+
+        // Step 2. Eval the scores using PMML and compare it with SHIFU output
+
+        String DataPath = "./src/test/resources/example/cancer-judgement/DataStore/Full_data/data.dat";
+        String OutPath = "./pmml_out.dat";
+        for (int index = 0; index < 1; index++) {
+            String num = Integer.toString(index);
+            String pmmlPath = "pmmls/cancer-judgement" + num + ".pmml";
+            evalLRPmml(pmmlPath, DataPath, OutPath, "\\|", "model" + num);
+            compareScore(evalScore, new File(OutPath), "model" + num, "\\|", 1.0);
+            FileUtils.deleteQuietly(new File(OutPath));
+        }
 
         FileUtils.deleteQuietly(tmpModel);
         FileUtils.deleteQuietly(tmpColumn);
@@ -158,7 +204,7 @@ public class PMMLTranslatorTest {
     }
 
     @SuppressWarnings("unchecked")
-    private void evalPmml(String pmmlPath, String DataPath, String OutPath, String sep, String scoreName) throws Exception {
+    private void evalNNPmml(String pmmlPath, String DataPath, String OutPath, String sep, String scoreName) throws Exception {
         PMML pmml = PMMLUtils.loadPMML(pmmlPath);
         NeuralNetworkEvaluator evaluator = new NeuralNetworkEvaluator(pmml);
 
@@ -180,6 +226,25 @@ public class PMMLTranslatorTest {
                 default:
                     break;
             }
+        }
+
+        IOUtils.closeQuietly(writer);
+    }
+
+    @SuppressWarnings("unchecked")
+    private void evalLRPmml(String pmmlPath, String DataPath, String OutPath, String sep, String scoreName)
+            throws Exception {
+        PMML pmml = PMMLUtils.loadPMML(pmmlPath);
+        RegressionModelEvaluator evaluator = new RegressionModelEvaluator(pmml);
+
+        PrintWriter writer = new PrintWriter(OutPath, "UTF-8");
+        writer.println(scoreName);
+        List<Map<FieldName, FieldValue>> input = CsvUtil.load(evaluator, DataPath, sep);
+
+        for(Map<FieldName, FieldValue> maps: input) {
+            Map<FieldName, Double> regressionTerm = (Map<FieldName, Double>) evaluator.evaluate(maps);
+            //System.out.println("score:"+regressionTerm.get(new FieldName(PMMLTranslator.FINAL_RESULT)).intValue());
+            writer.println(regressionTerm.get(new FieldName(PMMLTranslator.FINAL_RESULT)).intValue());
         }
 
         IOUtils.closeQuietly(writer);
