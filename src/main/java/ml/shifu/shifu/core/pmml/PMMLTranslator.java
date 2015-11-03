@@ -15,25 +15,63 @@
  */
 package ml.shifu.shifu.core.pmml;
 
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import javax.xml.parsers.DocumentBuilderFactory;
+import javax.xml.parsers.ParserConfigurationException;
+
 import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.container.obj.ModelConfig;
 import ml.shifu.shifu.container.obj.ModelTrainConf;
+import ml.shifu.shifu.core.LR;
 import ml.shifu.shifu.core.Normalizer;
+
 import org.apache.commons.lang.StringUtils;
-import org.dmg.pmml.*;
+import org.dmg.pmml.Apply;
+import org.dmg.pmml.Array;
+import org.dmg.pmml.ContStats;
+import org.dmg.pmml.DataDictionary;
+import org.dmg.pmml.DataField;
+import org.dmg.pmml.DataType;
+import org.dmg.pmml.DerivedField;
+import org.dmg.pmml.DiscrStats;
+import org.dmg.pmml.Extension;
+import org.dmg.pmml.FieldColumnPair;
+import org.dmg.pmml.FieldName;
+import org.dmg.pmml.FieldUsageType;
+import org.dmg.pmml.InlineTable;
+import org.dmg.pmml.Interval;
+import org.dmg.pmml.LinearNorm;
+import org.dmg.pmml.LocalTransformations;
+import org.dmg.pmml.MapValues;
+import org.dmg.pmml.MiningField;
+import org.dmg.pmml.MiningSchema;
+import org.dmg.pmml.Model;
+import org.dmg.pmml.ModelStats;
+import org.dmg.pmml.NeuralNetwork;
+import org.dmg.pmml.NormContinuous;
+import org.dmg.pmml.NumericInfo;
+import org.dmg.pmml.OpType;
+import org.dmg.pmml.OutlierTreatmentMethodType;
+import org.dmg.pmml.Output;
+import org.dmg.pmml.OutputField;
+import org.dmg.pmml.PMML;
+import org.dmg.pmml.RegressionModel;
+import org.dmg.pmml.ResultFeatureType;
+import org.dmg.pmml.Row;
+import org.dmg.pmml.Target;
+import org.dmg.pmml.TargetValue;
+import org.dmg.pmml.Targets;
+import org.dmg.pmml.UnivariateStats;
 import org.encog.ml.BasicML;
 import org.encog.neural.networks.BasicNetwork;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
-
-import javax.xml.parsers.DocumentBuilderFactory;
-import javax.xml.parsers.ParserConfigurationException;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
 
 public class PMMLTranslator {
 
@@ -110,9 +148,14 @@ public class PMMLTranslator {
         if(model instanceof NeuralNetwork) {
             NeuralNetwork nnPmmlModel = (NeuralNetwork) model;
             new PMMLEncogNeuralNetworkModel().adaptMLModelToPMML((BasicNetwork) models.get(index), nnPmmlModel);
-
             nnPmmlModel.withOutput(createNormalizedOutput());
-        } else {
+        } 
+        else if (model instanceof RegressionModel){
+            RegressionModel regression = (RegressionModel)model;
+            new PMMLLRModelBuilder().adaptMLModelToPMML((LR) models.get(index), regression);
+            regression.withOutput(createNormalizedOutput());
+        }
+        else {
             // something wrong
             throw new RuntimeException("Not support model type.");
         }
@@ -159,7 +202,11 @@ public class PMMLTranslator {
         Model model = null;
         if(ModelTrainConf.ALGORITHM.NN.name().equalsIgnoreCase(modelConfig.getTrain().getAlgorithm())) {
             model = new NeuralNetwork();
-        } else {
+        } 
+        else if(ModelTrainConf.ALGORITHM.LR.name().equalsIgnoreCase(modelConfig.getTrain().getAlgorithm())) {
+            model = new RegressionModel();
+        }
+        else {
             throw new RuntimeException("Model not supported: " + modelConfig.getTrain().getAlgorithm());
         }
         model.setTargets(createTargets(modelConfig));
@@ -194,7 +241,6 @@ public class PMMLTranslator {
             }
 
         }
-
         return miningSchema;
     }
 

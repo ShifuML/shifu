@@ -15,8 +15,13 @@
  */
 package ml.shifu.shifu.core;
 
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.util.Arrays;
 
+import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang.StringUtils;
 import org.encog.mathutil.BoundMath;
 import org.encog.ml.BasicML;
@@ -64,10 +69,17 @@ public class LR extends BasicML implements MLRegression {
             value += weights[i] * inputs[i];
         }
         // append bias
-        value += weights[inputs.length] * 1d;
+        value += weights[weights.length-1] * 1d;
         return 1.0d / (1.0d + BoundMath.exp(-1 * value));
     }
 
+    public double[] getWeights(){
+        return this.weights;
+    }
+    
+    public double getBias(){
+        return this.weights[weights.length-1];
+    }
     @Override
     public void updateProperties() {
         // No need implementation
@@ -82,6 +94,16 @@ public class LR extends BasicML implements MLRegression {
             weights[index++] = Double.parseDouble(weight);
         }
         return new LR(weights);
+    }
+    
+    public static LR loadFromStream(InputStream input) throws IOException {
+        BufferedReader br = new BufferedReader(new InputStreamReader(input));
+        StringBuffer sb = new StringBuffer();
+        String line;
+        while((line = br.readLine()) != null) {
+            sb.append(line);
+        }
+        return loadFromString(sb.toString());
     }
 
     /*
