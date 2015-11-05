@@ -1,8 +1,8 @@
-[<img src="images/logo/shifu.png" alt="Shifu" align="left">](http://shifu.ml)<div align="right">[![Build Status](https://travis-ci.org/ShifuML/shifu.svg?branch=master)](https://travis-ci.org/ShifuML/shifu)</div>
+[<img src="images/logo/shifu.png" alt="Shifu" align="left">](http://shifu.site)<div align="right">[![Build Status](https://travis-ci.org/ShifuML/shifu.svg?branch=master)](https://travis-ci.org/ShifuML/shifu)</div>
 
 ## Getting Started
 
-Please visit [shifu.ml](http://shifu.ml) for download infomation, installation instructions, and tutorials.
+Please visit [shifu.site](http://shifu.site) for download infomation, installation instructions, and tutorials.
 
 ## What is Shifu?
 Shifu is an open-source, end-to-end machine learning and data mining framework built on top of Hadoop. Shifu is designed for data scientists, simplifying the life-cycle of building machine learning models. While originally built for fraud modeling, Shifu is generalized for many other modeling domains.
