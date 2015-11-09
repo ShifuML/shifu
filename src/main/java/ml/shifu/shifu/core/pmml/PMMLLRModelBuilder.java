@@ -21,7 +21,6 @@ import java.util.List;
 import org.dmg.pmml.DerivedField;
 import org.dmg.pmml.LocalTransformations;
 import org.dmg.pmml.MiningFunctionType;
-import org.dmg.pmml.MiningSchema;
 import org.dmg.pmml.NumericPredictor;
 import org.dmg.pmml.RegressionNormalizationMethodType;
 import org.dmg.pmml.RegressionTable;
@@ -35,20 +34,6 @@ public class PMMLLRModelBuilder
         implements
         PMMLModelBuilder<org.dmg.pmml.RegressionModel, ml.shifu.shifu.core.LR> {
 
-
-    /**
-     * <p/>
-     * The function which converts an Encog NeuralNetwork to a PMML
-     * NeuralNetwork Model.
-     * <p/>
-     * This function reads the weights from the Encog NeuralNetwork model and
-     * assign them to the corresponding connections of Neurons in PMML model.
-     *
-     * @param bNetwork   Encog NeuralNetwork
-     * @param pmmlModel  DataFieldUtility that provides supplementary data field for
-     *                 the model conversion
-     * @return The generated PMML NeuralNetwork Model
-     */
     public org.dmg.pmml.RegressionModel adaptMLModelToPMML(
             ml.shifu.shifu.core.LR lr,
             org.dmg.pmml.RegressionModel pmmlModel) {

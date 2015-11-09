@@ -21,20 +21,24 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import ml.shifu.shifu.ShifuCLI;
-import ml.shifu.shifu.util.Environment;
-
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
 import org.dmg.pmml.FieldName;
+import org.dmg.pmml.Model;
 import org.dmg.pmml.PMML;
 import org.jpmml.evaluator.ClassificationMap;
 import org.jpmml.evaluator.FieldValue;
+import org.jpmml.evaluator.ModelEvaluator;
+import org.jpmml.evaluator.ModelEvaluatorFactory;
 import org.jpmml.evaluator.NeuralNetworkEvaluator;
 import org.jpmml.evaluator.RegressionModelEvaluator;
+import org.jpmml.manager.PMMLManager;
 import org.testng.Assert;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.Test;
+
+import ml.shifu.shifu.ShifuCLI;
+import ml.shifu.shifu.util.Environment;
 
 
 /**
@@ -235,18 +239,16 @@ public class PMMLTranslatorTest {
     private void evalLRPmml(String pmmlPath, String DataPath, String OutPath, String sep, String scoreName)
             throws Exception {
         PMML pmml = PMMLUtils.loadPMML(pmmlPath);
-        RegressionModelEvaluator evaluator = new RegressionModelEvaluator(pmml);
-
+        Model m =pmml.getModels().get(0);
+        ModelEvaluator<?> evaluator = ModelEvaluatorFactory.getInstance().getModelManager(pmml, m);
         PrintWriter writer = new PrintWriter(OutPath, "UTF-8");
         writer.println(scoreName);
         List<Map<FieldName, FieldValue>> input = CsvUtil.load(evaluator, DataPath, sep);
 
         for(Map<FieldName, FieldValue> maps: input) {
             Map<FieldName, Double> regressionTerm = (Map<FieldName, Double>) evaluator.evaluate(maps);
-            //System.out.println("score:"+regressionTerm.get(new FieldName(PMMLTranslator.FINAL_RESULT)).intValue());
             writer.println(regressionTerm.get(new FieldName(PMMLTranslator.FINAL_RESULT)).intValue());
         }
-
         IOUtils.closeQuietly(writer);
     }
 }
