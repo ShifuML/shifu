@@ -118,11 +118,18 @@ public class NNOutput extends BasicMasterInterceptor<NNParams, NNParams> {
         }
 
         // save tmp to hdfs according to raw trainer logic
-        if(context.getCurrentIteration() % DTrainUtils.tmpModelFactor(context.getTotalIteration()) == 0) {
+        final int tmpModelFactor = DTrainUtils.tmpModelFactor(context.getTotalIteration());
+        if(context.getCurrentIteration() % tmpModelFactor == 0) {
             Thread tmpNNThread = new Thread(new Runnable() {
                 @Override
                 public void run() {
                     saveTmpNNToHDFS(context.getCurrentIteration(), context.getMasterResult().getWeights());
+                    if(context.getCurrentIteration() % (tmpModelFactor * 3) == 0) {
+                        // save model results for continue model training, if current job is failed, then next running
+                        // we can start from this point to save time. 
+                        Path out = new Path(context.getProps().getProperty(CommonConstants.GUAGUA_OUTPUT));
+                        writeModelWeightsToFileSystem(optimizeddWeights, out);
+                    }
                 }
             }, "saveTmpNNToHDFS thread");
             tmpNNThread.setDaemon(true);
