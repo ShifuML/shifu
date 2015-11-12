@@ -124,9 +124,10 @@ public class NNOutput extends BasicMasterInterceptor<NNParams, NNParams> {
                 @Override
                 public void run() {
                     saveTmpNNToHDFS(context.getCurrentIteration(), context.getMasterResult().getWeights());
-                    if(context.getCurrentIteration() % (tmpModelFactor * 3) == 0) {
+                    if(modelConfig.getTrain().getIsContinuous()
+                            && context.getCurrentIteration() % (tmpModelFactor * 3) == 0) {
                         // save model results for continue model training, if current job is failed, then next running
-                        // we can start from this point to save time. 
+                        // we can start from this point to save time.
                         Path out = new Path(context.getProps().getProperty(CommonConstants.GUAGUA_OUTPUT));
                         writeModelWeightsToFileSystem(optimizeddWeights, out);
                     }
@@ -142,7 +143,7 @@ public class NNOutput extends BasicMasterInterceptor<NNParams, NNParams> {
     @SuppressWarnings("deprecation")
     private void updateProgressLog(final MasterContext<NNParams, NNParams> context) {
         int currentIteration = context.getCurrentIteration();
-        if(currentIteration == 1) {
+        if(context.isFirstIteration()) {
             // first iteration is used for training preparation
             return;
         }
