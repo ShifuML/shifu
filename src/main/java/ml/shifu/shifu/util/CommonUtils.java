@@ -689,7 +689,9 @@ public final class CommonUtils {
             throw new IllegalArgumentException("The model path shouldn't be null");
         }
         // we have to register PersistBasicFloatNetwork for loading such models
-        PersistorRegistry.getInstance().add(new PersistBasicFloatNetwork());
+        if(ALGORITHM.NN.equals(alg)){
+            PersistorRegistry.getInstance().add(new PersistBasicFloatNetwork());
+        }
 
         File modelsPathDir = new File(modelsPath);
 
@@ -714,7 +716,12 @@ public final class CommonUtils {
                 InputStream is = null;
                 try {
                     is = new FileInputStream(nnf);
-                    models.add(BasicML.class.cast(EncogDirectoryPersistence.loadObject(is)));
+                    if(ALGORITHM.NN.equals(alg)){
+                        models.add(BasicML.class.cast(EncogDirectoryPersistence.loadObject(is)));
+                    }
+                    else if(ALGORITHM.LR.equals(alg)){
+                        models.add(LR.loadFromStream(is));
+                    }
                 } finally {
                     IOUtils.closeQuietly(is);
                 }

@@ -84,7 +84,7 @@ public class ExportModelProcessor extends BasicModelProcessor implements Process
 
             PathFinder pathFinder = new PathFinder(modelConfig);
             List<BasicML> models = CommonUtils
-                    .loadBasicModels(pathFinder.getModelsPath(SourceType.LOCAL), ALGORITHM.NN);
+                    .loadBasicModels(pathFinder.getModelsPath(SourceType.LOCAL), ALGORITHM.valueOf(modelConfig.getAlgorithm().toUpperCase()));
 
             for(int index = 0; index < models.size(); index++) {
                 log.info("\t start to generate " + "pmmls" + File.separator + modelConfig.getModelSetName()
