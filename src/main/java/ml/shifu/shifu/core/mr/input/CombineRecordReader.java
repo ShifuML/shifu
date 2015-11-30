@@ -145,8 +145,13 @@ public class CombineRecordReader extends RecordReader<LongWritable, Text> {
                 consumedSplitSize += (end - start);
                 // should close previous recorder here and the new one
                 close();
-                initializeOne(context, this.fileSplits[this.splitIndex++]);
-                return true;
+                FileSplit currSplit = this.fileSplits[this.splitIndex++];
+                initializeOne(context, currSplit);
+                if(currSplit.getLength() == 0L) {
+                    throw new IllegalStateException("file split " + currSplit + " is empty and should not be");
+                }
+                // we have to read one line if last newSize is 0 (end of last file) to make sure whole process continues
+                return nextKeyValue();
             } else {
                 consumedSplitSize += (end - start);
                 key = null;
