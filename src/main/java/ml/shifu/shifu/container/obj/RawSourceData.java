@@ -53,7 +53,8 @@ public class RawSourceData implements Cloneable {
 
     private List<String> negTags;
 
-    private List<String> missingOrInvalidValues = Lists.asList("", new String[] { "*", "#", "?", "null", "none" });
+    private List<String> missingOrInvalidValues = Lists.asList("", new String[] { "?" });
+    // private List<String> missingOrInvalidValues = Lists.asList("", new String[] { "*", "#", "?", "null", "none" });
 
     private Boolean autoType = Boolean.FALSE;
 

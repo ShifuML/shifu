@@ -65,10 +65,11 @@ public class FilterBinningDataUDF extends AbstractTrainerUDF<Boolean> {
         if(columnConfig != null
                 && tag != null
                 && (modelConfig.getPosTags().contains(tag) || modelConfig.getNegTags().contains(tag))
-                && (columnConfig.isCategorical() || modelConfig.getBinningMethod().equals(BinningMethod.EqualTotal)
-                        || modelConfig.getBinningMethod().equals(BinningMethod.EqualInterval) || (modelConfig
-                        .getBinningMethod().equals(BinningMethod.EqualPositive) && modelConfig.getPosTags().contains(
-                        tag)))) {
+                && ( columnConfig.isCategorical()
+                     || modelConfig.getBinningMethod().equals(BinningMethod.EqualTotal)
+                     || modelConfig.getBinningMethod().equals(BinningMethod.EqualInterval)
+                     || ( modelConfig.getBinningMethod().equals(BinningMethod.EqualPositive)
+                          && modelConfig.getPosTags().contains(tag)))) {
             return true;
         }
 

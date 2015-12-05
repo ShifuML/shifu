@@ -162,6 +162,8 @@ public class NNTrainer extends AbstractTrainer {
 
             LOG.info("    - Input Size: " + trainSet.getInputSize());
             LOG.info("    - Ideal Size: " + trainSet.getIdealSize());
+            LOG.info("    - Training Records Count: " + trainSet.getRecordCount());
+            LOG.info("    - Validation Records Count: " + validSet.getRecordCount());
         }
 
         //set up the model
@@ -199,10 +201,11 @@ public class NNTrainer extends AbstractTrainer {
                 saveNN();
                 extra = " <-- NN saved: ./models/model" + this.trainerID + ".nn";
             }
+
             if ( toLoggingProcess )
                 LOG.info("  Trainer-" + trainerID + "> Epoch #" + (i + 1)
                     + " Train Error: " + df.format(mlTrain.getError())
-                    + " Validation Error: " 
+                    + " Validation Error: "
                     + ((this.validSet.getRecordCount() > 0) ? df.format(validMSE) : "N/A") + " " + extra);
 
             // Convergence judging.
