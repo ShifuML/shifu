@@ -24,16 +24,21 @@ import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
 import ml.shifu.shifu.core.pmml.PMMLTranslator;
 import ml.shifu.shifu.core.pmml.PMMLUtils;
 import ml.shifu.shifu.fs.PathFinder;
+import ml.shifu.shifu.fs.ShifuFileUtils;
 import ml.shifu.shifu.util.CommonUtils;
 
+import ml.shifu.shifu.util.HDFSUtils;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang.StringUtils;
+import org.apache.hadoop.fs.Path;
 import org.encog.ml.BasicML;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.dmg.pmml.PMML;
 
+import java.io.BufferedWriter;
 import java.io.File;
+import java.io.IOException;
 import java.util.List;
 
 /**
@@ -45,6 +50,7 @@ import java.util.List;
 public class ExportModelProcessor extends BasicModelProcessor implements Processor {
 
     public static final String PMML = "pmml";
+    public static final String COLUMN_STATS = "columnstats";
 
     /**
      * log object
@@ -103,4 +109,49 @@ public class ExportModelProcessor extends BasicModelProcessor implements Process
         return 0;
     }
 
+    private void saveColumnStatus() throws IOException {
+        Path localColumnStatsPath = new Path(pathFinder.getLocalColumnStatsPath());
+        log.info("Saving ColumnStatus to local file system: {}.", localColumnStatsPath);
+        if(HDFSUtils.getLocalFS().exists(localColumnStatsPath)) {
+            HDFSUtils.getLocalFS().delete(localColumnStatsPath);
+        }
+
+        BufferedWriter writer = null;
+        try {
+            writer = ShifuFileUtils.getWriter(localColumnStatsPath.toString(), SourceType.LOCAL);
+            writer.write("dataSet,columnFlag,columnName,columnNum,iv,ks,max,mean,median,min,missingCount,"
+                    + "missingPercentage,stdDev,totalCount,weightedIv,weightedKs,weightedWoe,woe,"
+                    + "skewness,kurtosis,columnType,finalSelect,version\n");
+            StringBuilder builder = new StringBuilder(500);
+            for(ColumnConfig columnConfig: columnConfigList) {
+                builder.setLength(0);
+                builder.append(modelConfig.getBasic().getName()).append(',');
+                builder.append(columnConfig.getColumnFlag()).append(',');
+                builder.append(columnConfig.getColumnName()).append(',');
+                builder.append(columnConfig.getColumnNum()).append(',');
+                builder.append(columnConfig.getIv()).append(',');
+                builder.append(columnConfig.getKs()).append(',');
+                builder.append(columnConfig.getColumnStats().getMax()).append(',');
+                builder.append(columnConfig.getColumnStats().getMean()).append(',');
+                builder.append(columnConfig.getColumnStats().getMedian()).append(',');
+                builder.append(columnConfig.getColumnStats().getMin()).append(',');
+                builder.append(columnConfig.getColumnStats().getMissingCount()).append(',');
+                builder.append(columnConfig.getColumnStats().getMissingPercentage()).append(',');
+                builder.append(columnConfig.getColumnStats().getStdDev()).append(',');
+                builder.append(columnConfig.getColumnStats().getTotalCount()).append(',');
+                builder.append(columnConfig.getColumnStats().getWeightedIv()).append(',');
+                builder.append(columnConfig.getColumnStats().getWeightedKs()).append(',');
+                builder.append(columnConfig.getColumnStats().getWeightedWoe()).append(',');
+                builder.append(columnConfig.getColumnStats().getWoe()).append(',');
+                builder.append(columnConfig.getColumnStats().getSkewness()).append(',');
+                builder.append(columnConfig.getColumnStats().getKurtosis()).append(',');
+                builder.append(columnConfig.getColumnType()).append(',');
+                builder.append(columnConfig.isFinalSelect()).append(',');
+                builder.append(modelConfig.getBasic().getVersion()).append("\n");
+                writer.write(builder.toString());
+            }
+        } finally {
+            writer.close();
+        }
+    }
 }
