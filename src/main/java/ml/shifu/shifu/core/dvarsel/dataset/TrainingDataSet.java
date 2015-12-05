@@ -27,7 +27,7 @@ import java.util.Set;
  * Created on 11/24/2014.
  */
 public class TrainingDataSet {
-    @SuppressWarnings("unused")
+
     private static Random rd = new Random(System.currentTimeMillis());
 
     private List<Integer> dataColumnIdList;
@@ -51,12 +51,12 @@ public class TrainingDataSet {
         for ( TrainingRecord trainingRecord : trainingRecords ) {
             MLDataPair pair = trainingRecord.toMLDataPair(dataColumnIdList, workingColumnIdSet);
 
-            //double seed = rd.nextDouble();
-            //if (seed > validationRate) {
+            double seed = rd.nextDouble();
+            if (seed > validationRate) {
                 trainingData.add(pair);
-            //} else {
-            //    testingData.add(pair);
-            //}
+            } else {
+                testingData.add(pair);
+            }
         }
     }
 
