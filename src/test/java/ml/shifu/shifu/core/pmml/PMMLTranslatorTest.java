@@ -31,8 +31,6 @@ import org.jpmml.evaluator.FieldValue;
 import org.jpmml.evaluator.ModelEvaluator;
 import org.jpmml.evaluator.ModelEvaluatorFactory;
 import org.jpmml.evaluator.NeuralNetworkEvaluator;
-import org.jpmml.evaluator.RegressionModelEvaluator;
-import org.jpmml.manager.PMMLManager;
 import org.testng.Assert;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.Test;
