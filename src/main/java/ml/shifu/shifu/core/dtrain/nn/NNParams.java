@@ -163,7 +163,7 @@ public class NNParams extends HaltBytable implements Combinable<NNParams> {
         }
 
         out.writeLong(count);
-        out.writeInt(getWrCount());
+        out.writeInt(this.wrCount);
     }
 
     @Override
@@ -186,7 +186,7 @@ public class NNParams extends HaltBytable implements Combinable<NNParams> {
         }
         this.gradients = gradients;
         this.count = in.readLong();
-        this.setWrCount(in.readInt());
+        this.wrCount = in.readInt();
     }
 
     @Override
@@ -239,7 +239,8 @@ public class NNParams extends HaltBytable implements Combinable<NNParams> {
     }
 
     /**
-     * @param wrCount the wrCount to set
+     * @param wrCount
+     *            the wrCount to set
      */
     public void setWrCount(int wrCount) {
         this.wrCount = wrCount;
