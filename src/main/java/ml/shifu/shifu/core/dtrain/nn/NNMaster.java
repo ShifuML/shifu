@@ -171,17 +171,20 @@ public class NNMaster implements MasterComputable<NNParams, NNParams> {
         // before accumulate, reset gradients and train size
         this.globalNNParams.reset();
 
-        long totalCounts = 0L;
+        long totalCount = 0L;
+        int totalWorkerCount = 0;
         for(NNParams nn: context.getWorkerResults()) {
             totalTestError += nn.getTestError();
             totalTrainError += nn.getTrainError();
             this.globalNNParams.accumulateGradients(nn.getGradients());
             this.globalNNParams.accumulateTrainSize(nn.getTrainSize());
-            totalCounts += nn.getCount();
+            totalCount += nn.getCount();
+            // original worker count before combinable
+            totalWorkerCount += nn.getWrCount();
             size++;
         }
 
-        LOG.info("Total Count is {}.", totalCounts);
+        LOG.debug("Total Count is {}. totalWorkerCount is {}", totalCount, totalWorkerCount);
 
         // worker result size is 0. throw exception because shouldn't happen
         if(size == 0) {
@@ -208,8 +211,8 @@ public class NNMaster implements MasterComputable<NNParams, NNParams> {
 
         this.globalNNParams.setWeights(weights);
 
-        double currentTestError = totalTestError / size;
-        double currentTrainError = totalTrainError / size;
+        double currentTestError = totalTestError / totalWorkerCount;
+        double currentTrainError = totalTrainError / totalWorkerCount;
 
         LOG.info("NNMaster compute iteration {} ( avg train error {}, avg validation error {} )", new Object[] {
                 context.getCurrentIteration(), currentTrainError, currentTestError });
