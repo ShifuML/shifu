@@ -450,7 +450,7 @@ public class ShifuCLI {
     /**
      * delete some evaluation set
      * 
-     * @param optionValue
+     * @param evalSetName
      * @throws Exception
      */
     private static int deleteEvalSet(String evalSetName) throws Exception {
@@ -472,7 +472,7 @@ public class ShifuCLI {
     /**
      * export Shifu model into other format, i.e. PMML
      * 
-     * @param optionValue
+     * @param type
      * @throws Exception
      */
     public static int exportModel(String type) throws Exception {
@@ -559,12 +559,9 @@ public class ShifuCLI {
         System.out.println("Usage: shifu COMMAND");
         System.out.println("where COMMAND is one of:");
         System.out.println("\tnew <ModelSetName> [-t <NN|LR|SVM|DT>]  Create a new model set.");
-        System.out
-                .println("\tinit                                    Create initial ColumnConfig.json and upload to HDFS.");
-        System.out
-                .println("\tstats                                   Calculate statistics on HDFS and update local ColumnConfig.json.");
-        System.out
-                .println("\tvarselect/varsel                        Variable selection, will update finalSelect in ColumnConfig.json.");
+        System.out.println("\tinit                                    Create initial ColumnConfig.json and upload to HDFS.");
+        System.out.println("\tstats                                   Calculate statistics on HDFS and update local ColumnConfig.json.");
+        System.out.println("\tvarselect/varsel                        Variable selection, will update finalSelect in ColumnConfig.json.");
         System.out.println("\tnormalize/norm                          Normalize the columns with finalSelect as true.");
         System.out.println("\ttrain [-dry]                            Train the model with the normalized data.");
         System.out.println("\tposttrain                               Post-process data after training models.");
@@ -575,9 +572,8 @@ public class ShifuCLI {
         System.out.println("\teval -run     <EvalSetName>             Run eval set evaluation.");
         System.out.println("\teval -score   <EvalSetName>             Scoring evaluation dataset.");
         System.out.println("\teval -confmat <EvalSetName>             Compute the TP/FP/TN/FN based on scoring");
-        System.out
-                .println("\teval -perf <EvalSetName>                Calculate the model performance based on confmat");
-        System.out.println("\texport [-t pmml]                        Export model to PMML format.");
+        System.out.println("\teval -perf <EvalSetName>                Calculate the model performance based on confmat");
+        System.out.println("\texport [-t pmml|columnstats]            Export model to PMML format or export ColumnConfig.");
         System.out.println("\tversion|v|-v|-version                   Print version of current package.");
         System.out.println("\thelp|h|-h|-help                         Help message.");
     }
@@ -624,19 +620,23 @@ public class ShifuCLI {
      * @return true - if arg is v/version/-v/-version, or return false
      */
     private static boolean isVersionOption(String arg) {
-        return arg.equalsIgnoreCase("v") || arg.equalsIgnoreCase("version") || arg.equalsIgnoreCase("-version")
+        return arg.equalsIgnoreCase("v")
+                || arg.equalsIgnoreCase("version")
+                || arg.equalsIgnoreCase("-version")
                 || arg.equalsIgnoreCase("-v");
     }
 
     /**
      * check the argument is for listing help info or not
      * 
-     * @param arg
+     * @param str
      * @return true - if arg is h/-h/help/-help, or return false
      */
-    private static boolean isHelpOption(String string) {
-        return "h".equalsIgnoreCase(string) || "-h".equalsIgnoreCase(string) || "help".equalsIgnoreCase(string)
-                || "-help".equalsIgnoreCase(string);
+    private static boolean isHelpOption(String str) {
+        return "h".equalsIgnoreCase(str)
+                || "-h".equalsIgnoreCase(str)
+                || "help".equalsIgnoreCase(str)
+                || "-help".equalsIgnoreCase(str);
     }
 
     /**

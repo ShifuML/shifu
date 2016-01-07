@@ -70,6 +70,8 @@ public class ExportModelProcessor extends BasicModelProcessor implements Process
      */
     @Override
     public int run() throws Exception {
+        int status = 0;
+
         File pmmls = new File("pmmls");
         FileUtils.forceMkdir(pmmls);
 
@@ -77,36 +79,30 @@ public class ExportModelProcessor extends BasicModelProcessor implements Process
             type = PMML;
         }
 
-        if(!type.equalsIgnoreCase(PMML)) {
-            log.error("Unsupported output format - {}", type);
-            return -1;
-        }
-
-        try {
+        if ( type.equalsIgnoreCase(PMML) ) {
             log.info("Convert models into {} format", type);
 
             ModelConfig modelConfig = CommonUtils.loadModelConfig();
             List<ColumnConfig> columnConfigList = CommonUtils.loadColumnConfigList();
 
             PathFinder pathFinder = new PathFinder(modelConfig);
-            List<BasicML> models = CommonUtils
-                    .loadBasicModels(pathFinder.getModelsPath(SourceType.LOCAL), ALGORITHM.valueOf(modelConfig.getAlgorithm().toUpperCase()));
+            List<BasicML> models = CommonUtils.loadBasicModels(pathFinder.getModelsPath(SourceType.LOCAL), ALGORITHM.valueOf(modelConfig.getAlgorithm().toUpperCase()));
 
-            for(int index = 0; index < models.size(); index++) {
-                log.info("\t start to generate " + "pmmls" + File.separator + modelConfig.getModelSetName()
-                        + Integer.toString(index) + ".pmml");
+            for (int index = 0; index < models.size(); index++) {
+                log.info("\t start to generate " + "pmmls" + File.separator + modelConfig.getModelSetName() + Integer.toString(index) + ".pmml");
                 PMML pmml = new PMMLTranslator(modelConfig, columnConfigList, models).translate(index);
-                PMMLUtils.savePMML(pmml,
-                        "pmmls" + File.separator + modelConfig.getModelSetName() + Integer.toString(index) + ".pmml");
+                PMMLUtils.savePMML(pmml, "pmmls" + File.separator + modelConfig.getModelSetName() + Integer.toString(index) + ".pmml");
             }
-
-            log.info("Done.");
-        } catch (Exception e) {
-            log.error("Error:", e);
-            return -1;
+        } else if ( type.equalsIgnoreCase(COLUMN_STATS) ) {
+            saveColumnStatus();
+        } else {
+            log.error("Unsupported output format - {}", type);
+            status = -1;
         }
 
-        return 0;
+        log.info("Done.");
+
+        return status;
     }
 
     private void saveColumnStatus() throws IOException {
