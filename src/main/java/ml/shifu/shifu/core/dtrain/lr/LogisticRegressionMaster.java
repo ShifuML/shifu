@@ -20,7 +20,7 @@ import java.util.List;
 import java.util.Properties;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import ml.shifu.guagua.master.MasterComputable;
+import ml.shifu.guagua.master.AbstractMasterComputable;
 import ml.shifu.guagua.master.MasterContext;
 import ml.shifu.guagua.util.NumberFormatUtils;
 import ml.shifu.shifu.container.obj.ColumnConfig;
@@ -57,7 +57,8 @@ import org.slf4j.LoggerFactory;
  * <p>
  * L1 and l2 regulations are supported by configuration: RegularizedConstant in model params of ModelConfig.json.
  */
-public class LogisticRegressionMaster implements MasterComputable<LogisticRegressionParams, LogisticRegressionParams> {
+public class LogisticRegressionMaster extends
+        AbstractMasterComputable<LogisticRegressionParams, LogisticRegressionParams> {
 
     private static final Logger LOG = LoggerFactory.getLogger(LogisticRegressionMaster.class);
 
@@ -116,7 +117,8 @@ public class LogisticRegressionMaster implements MasterComputable<LogisticRegres
      */
     private AtomicBoolean isInitialized = new AtomicBoolean(false);
 
-    private void init(MasterContext<LogisticRegressionParams, LogisticRegressionParams> context) {
+    @Override
+    public void init(MasterContext<LogisticRegressionParams, LogisticRegressionParams> context) {
         loadConfigFiles(context.getProps());
         this.learningRate = Double.valueOf(this.modelConfig.getParams().get(CommonConstants.LR_LEARNING_RATE)
                 .toString());
@@ -132,12 +134,23 @@ public class LogisticRegressionMaster implements MasterComputable<LogisticRegres
 
         Object rconstant = this.modelConfig.getParams().get(CommonConstants.LR_REGULARIZED_CONSTANT);
         this.regularizedConstant = NumberFormatUtils.getDouble(rconstant == null ? "" : rconstant.toString(), 0d);
+
+        // not initialized and not first iteration, should be fault tolerence, recover state in LogisticRegressionMaster
+        if(!context.isFirstIteration()) {
+            LogisticRegressionParams lastMasterResult = context.getMasterResult();
+            if(lastMasterResult != null && lastMasterResult.getParameters() != null) {
+                // recover state in current master computable and return to workers
+                this.weights = lastMasterResult.getParameters();
+            } else {
+                // no weights, restarted from the very beginning, this may not happen
+                this.weights = initWeights().getParameters();
+            }
+        }
     }
 
     @Override
-    public LogisticRegressionParams compute(MasterContext<LogisticRegressionParams, LogisticRegressionParams> context) {
+    public LogisticRegressionParams doCompute(MasterContext<LogisticRegressionParams, LogisticRegressionParams> context) {
         if(isInitialized.compareAndSet(false, true)) {
-            init(context);
             // not initialized and not first iteration, should be fault tolerence, recover state in
             // LogisticRegressionMaster
             if(!context.isFirstIteration()) {
@@ -198,9 +211,6 @@ public class LogisticRegressionMaster implements MasterComputable<LogisticRegres
         }
     }
 
-    /**
-     * @return
-     */
     private LogisticRegressionParams initWeights() {
         weights = new double[this.inputNum + 1];
         for(int i = 0; i < weights.length; i++) {

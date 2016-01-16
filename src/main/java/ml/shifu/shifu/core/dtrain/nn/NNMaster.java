@@ -18,7 +18,6 @@ package ml.shifu.shifu.core.dtrain.nn;
 import java.io.IOException;
 import java.util.List;
 import java.util.Properties;
-import java.util.concurrent.atomic.AtomicBoolean;
 
 import ml.shifu.guagua.GuaguaRuntimeException;
 import ml.shifu.guagua.master.AbstractMasterComputable;
@@ -62,11 +61,6 @@ public class NNMaster extends AbstractMasterComputable<NNParams, NNParams> {
      * Global master NN parameters instance which is used to update model weights by using accumulated gradients.
      */
     private NNParams globalNNParams = new NNParams();
-
-    /**
-     * Whether some configurations are initialized
-     */
-    private AtomicBoolean isInitialized = new AtomicBoolean(false);
 
     /**
      * Model configuration loaded from configuration file.
@@ -125,20 +119,6 @@ public class NNMaster extends AbstractMasterComputable<NNParams, NNParams> {
 
     @Override
     public NNParams doCompute(MasterContext<NNParams, NNParams> context) {
-        if(this.isInitialized.compareAndSet(false, true) && !context.isFirstIteration()) {
-            // not init but not first iteration, first recover from last master result set from guagua
-            NNParams params = context.getMasterResult();
-            if(params != null && params.getWeights() != null) {
-                this.globalNNParams.setWeights(params.getWeights());
-            } else {
-                // else read from checkpoint
-                params = initOrRecoverParams(context);
-                this.globalNNParams.setWeights(params.getWeights());
-            }
-            // directly return as we may cannot get enough worker results after failover restarting
-            return params;
-        }
-
         if(context.isFirstIteration()) {
             // For first step, we not only initialize whole context but also return weights to master to make sure all
             // workers and master are using the same weights.
@@ -238,11 +218,6 @@ public class NNMaster extends AbstractMasterComputable<NNParams, NNParams> {
         return params;
     }
 
-    /**
-     * @param context
-     * @param params
-     * @return
-     */
     private NNParams initOrRecoverParams(MasterContext<NNParams, NNParams> context) {
         // read existing model weights
         NNParams params = null;
@@ -327,6 +302,19 @@ public class NNMaster extends AbstractMasterComputable<NNParams, NNParams> {
             this.regularizedConstant = NumberFormatUtils.getDouble(rconstant == null ? "" : rconstant.toString(), 0d);
         } catch (IOException e) {
             throw new RuntimeException(e);
+        }
+
+        // recover master states here is globalNNParams
+        // not init but not first iteration, first recover from last master result set from guagua
+        if(!context.isFirstIteration()) {
+            NNParams params = context.getMasterResult();
+            if(params != null && params.getWeights() != null) {
+                this.globalNNParams.setWeights(params.getWeights());
+            } else {
+                // else read from checkpoint
+                params = initOrRecoverParams(context);
+                this.globalNNParams.setWeights(params.getWeights());
+            }
         }
     }
 
