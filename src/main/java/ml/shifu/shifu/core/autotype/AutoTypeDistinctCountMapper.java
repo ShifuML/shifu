@@ -126,13 +126,13 @@ public class AutoTypeDistinctCountMapper extends Mapper<LongWritable, Text, IntW
     @Override
     protected void map(LongWritable key, Text value, Context context) throws IOException, InterruptedException {
         String valueStr = value.toString();
-        if(!this.dataPurifier.isFilterOut(valueStr)) {
-            return;
-        }
-
         // StringUtils.isBlank is not used here to avoid import new jar
         if(valueStr == null || valueStr.length() == 0 || valueStr.trim().length() == 0) {
             LOG.warn("Empty input.");
+            return;
+        }
+
+        if(!this.dataPurifier.isFilterOut(valueStr)) {
             return;
         }
 
