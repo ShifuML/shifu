@@ -138,7 +138,7 @@ public class CombineInputSplit extends InputSplit implements Writable {
 
     @Override
     public String toString() {
-        return String.format("VarSelectInputSplit [fileSplit=%s]", Arrays.toString(this.fileSplits));
+        return String.format("CombineInputSplit [fileSplit=%s]", Arrays.toString(this.fileSplits));
     }
 
 }
