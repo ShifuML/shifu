@@ -198,14 +198,16 @@ public class DTWorker
             this.rng[i] = new PoissonDistribution(this.modelConfig.getTrain().getBaggingSampleRate());
         }
 
+        int numClasses = this.modelConfig.isMultiClassification() ? this.modelConfig.getFlattenTags().size() : 2;
         String imStr = this.modelConfig.getTrain().getParams().get("impurity").toString();
         if(imStr.equalsIgnoreCase("entropy")) {
-            impurity = new Entropy();
+            impurity = new Entropy(numClasses);
         } else if(imStr.equalsIgnoreCase("gini")) {
-            impurity = new Gini();
+            impurity = new Gini(numClasses);
         } else {
             impurity = new Variance();
         }
+
     }
 
     /*
@@ -225,15 +227,20 @@ public class DTWorker
             Map<Integer, NodeStats> statistics = new HashMap<Integer, NodeStats>();
             for(Map.Entry<Integer, TreeNode> entry: todoNodes.entrySet()) {
                 List<Integer> features = entry.getValue().getFeatures();
+                if(features.isEmpty()) {
+                    features = getAllValidFeatures();
+                }
                 Map<Integer, double[]> featureStatistics = new HashMap<Integer, double[]>();
                 for(Integer columnNum: features) {
                     ColumnConfig columnConfig = this.columnConfigList.get(columnNum);
                     if(columnConfig.isNumerical()) {
                         // TODO, how to process null bin
-                        int featureStatsSize = (columnConfig.getBinBoundary().size() + 1) * 3;
+                        int featureStatsSize = (columnConfig.getBinBoundary().size() + 1)
+                                * this.impurity.getStatsSize();
                         featureStatistics.put(columnNum, new double[featureStatsSize]);
                     } else if(columnConfig.isCategorical()) {
-                        int featureStatsSize = (columnConfig.getBinCategory().size() + 1) * 3;
+                        int featureStatsSize = (columnConfig.getBinCategory().size() + 1)
+                                * this.impurity.getStatsSize();
                         featureStatistics.put(columnNum, new double[featureStatsSize]);
                     }
                 }
@@ -244,6 +251,7 @@ public class DTWorker
             for(Data data: this.trainingData) {
                 List<Integer> nodeIndexes = new ArrayList<Integer>(trees.size());
                 for(TreeNode treeNode: trees) {
+                    // TODO how to debug here
                     nodeIndexes.add(predictNodeIndex(treeNode.getNode(), data));
                 }
                 for(Map.Entry<Integer, TreeNode> entry: todoNodes.entrySet()) {
@@ -260,19 +268,13 @@ public class DTWorker
                             if(config.isNumerical()) {
                                 float value = data.numericInputs[this.numericInputIndexMap.get(columnNum)];
                                 int binIndex = getBinIndex(value, config.getBinBoundary());
-                                // TODO, just for variance, for entropy and gini should be wrapped
-                                featuerStatistic[binIndex * 3] += data.significance * weight;
-                                featuerStatistic[binIndex * 3 + 1] += data.outputs[0] * data.significance * weight;
-                                featuerStatistic[binIndex * 3 + 2] += data.outputs[0] * data.outputs[0]
-                                        * data.significance * weight;
+                                this.impurity.featureUpdate(featuerStatistic, binIndex, data.outputs[0],
+                                        data.significance, weight);
                             } else if(config.isCategorical()) {
                                 String category = data.categoricalInputs[this.categoricalInputIndexMap.get(columnNum)];
                                 Integer binIndex = this.categoryIndexMap.get(columnNum).get(category);
-                                // TODO, just for variance, for entropy and gini should be wrapped
-                                featuerStatistic[binIndex * 3] += data.significance * weight;
-                                featuerStatistic[binIndex * 3 + 1] += data.outputs[0] * data.significance * weight;
-                                featuerStatistic[binIndex * 3 + 2] += data.outputs[0] * data.outputs[0]
-                                        * data.significance * weight;
+                                this.impurity.featureUpdate(featuerStatistic, binIndex, data.outputs[0],
+                                        data.significance, weight);
                             } else {
                                 throw new IllegalStateException("Only numerical and categorical columns supported. ");
                             }
@@ -280,8 +282,25 @@ public class DTWorker
                     }
                 }
             }
+            LOG.debug("Worker statistics is {}", statistics);
             return new DTWorkerParams(statistics);
         }
+    }
+
+    private List<Integer> getAllValidFeatures() {
+        List<Integer> features = new ArrayList<Integer>();
+        for(ColumnConfig config: columnConfigList) {
+            if(isAfterVarSelect) {
+                if(config.isFinalSelect() && !config.isTarget() && !config.isMeta()) {
+                    features.add(config.getColumnNum());
+                }
+            } else {
+                if(!config.isMeta() && !config.isTarget() && CommonUtils.isGoodCandidate(config)) {
+                    features.add(config.getColumnNum());
+                }
+            }
+        }
+        return features;
     }
 
     /**
@@ -316,18 +335,18 @@ public class DTWorker
             return currNode.getId();
         }
 
-        ColumnConfig columnConfig = this.columnConfigList.get(split.getFeatureIndex());
+        ColumnConfig columnConfig = this.columnConfigList.get(split.getColumnNum());
 
         Node nextNode = null;
         if(columnConfig.isNumerical()) {
-            float value = data.numericInputs[this.numericInputIndexMap.get(split.getFeatureIndex())];
+            float value = data.numericInputs[this.numericInputIndexMap.get(split.getColumnNum())];
             if(value <= split.getThreshold()) {
                 nextNode = currNode.getLeft();
             } else {
                 nextNode = currNode.getRight();
             }
         } else if(columnConfig.isCategorical()) {
-            String value = data.categoricalInputs[this.categoricalInputIndexMap.get(split.getFeatureIndex())];
+            String value = data.categoricalInputs[this.categoricalInputIndexMap.get(split.getColumnNum())];
             if(split.getLeftCategories().contains(value)) {
                 nextNode = currNode.getLeft();
             } else {
@@ -464,6 +483,7 @@ public class DTWorker
 
             out.writeInt(categoricalInputs.length);
             for(String input: categoricalInputs) {
+                // TODO if writeUTF, readUTF is right???
                 out.writeUTF(input);
             }
 

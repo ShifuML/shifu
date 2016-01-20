@@ -183,7 +183,7 @@ public class NNOutput extends BasicMasterInterceptor<NNParams, NNParams> {
     }
 
     private void init(MasterContext<NNParams, NNParams> context) {
-        this.isDry = Boolean.TRUE.toString().equals(context.getProps().getProperty(NNConstants.NN_DRY_TRAIN));
+        this.isDry = Boolean.TRUE.toString().equals(context.getProps().getProperty(CommonConstants.SHIFU_DRY_DTRAIN));
 
         if(this.isDry) {
             return;
@@ -191,12 +191,12 @@ public class NNOutput extends BasicMasterInterceptor<NNParams, NNParams> {
         if(isInit.compareAndSet(false, true)) {
             loadConfigFiles(context.getProps());
             initNetwork();
-            this.trainerId = context.getProps().getProperty(NNConstants.NN_TRAINER_ID);
-            this.tmpModelsFolder = context.getProps().getProperty(NNConstants.NN_TMP_MODELS_FOLDER);
+            this.trainerId = context.getProps().getProperty(CommonConstants.SHIFU_TRAINER_ID);
+            this.tmpModelsFolder = context.getProps().getProperty(CommonConstants.SHIFU_TMP_MODELS_FOLDER);
         }
 
         try {
-            Path progressLog = new Path(context.getProps().getProperty(NNConstants.NN_PROGRESS_FILE));
+            Path progressLog = new Path(context.getProps().getProperty(CommonConstants.SHIFU_DTRAIN_PROGRESS_FILE));
             this.progressOutput = FileSystem.get(new Configuration()).create(progressLog);
         } catch (IOException e) {
             LOG.error("Error in create progress log:", e);

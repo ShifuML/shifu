@@ -35,7 +35,7 @@ import ml.shifu.guagua.io.Bytable;
  */
 public class Split implements Bytable {
 
-    private int featureIndex;
+    private int columnNum;
 
     private FeatureType featureType;
 
@@ -47,11 +47,11 @@ public class Split implements Bytable {
     }
 
     public Split(int featureIndex) {
-        this.featureIndex = featureIndex;
+        this.columnNum = featureIndex;
     }
 
-    public Split(int featureIndex, FeatureType featureType, double threshold, Set<String> leftCategories) {
-        this.featureIndex = featureIndex;
+    public Split(int columnNum, FeatureType featureType, double threshold, Set<String> leftCategories) {
+        this.columnNum = columnNum;
         this.featureType = featureType;
         this.threshold = threshold;
         this.leftCategories = leftCategories;
@@ -60,8 +60,8 @@ public class Split implements Bytable {
     /**
      * @return the featureIndex
      */
-    public int getFeatureIndex() {
-        return featureIndex;
+    public int getColumnNum() {
+        return columnNum;
     }
 
     /**
@@ -86,11 +86,11 @@ public class Split implements Bytable {
     }
 
     /**
-     * @param featureIndex
-     *            the featureIndex to set
+     * @param columnNum
+     *            the columnNum to set
      */
-    public void setFeatureIndex(int featureIndex) {
-        this.featureIndex = featureIndex;
+    public void setColumnNum(int columnNum) {
+        this.columnNum = columnNum;
     }
 
     /**
@@ -119,7 +119,7 @@ public class Split implements Bytable {
 
     @Override
     public void write(DataOutput out) throws IOException {
-        out.writeInt(this.featureIndex);
+        out.writeInt(this.columnNum);
         out.writeDouble(this.threshold);
         if(featureType == null) {
             out.writeBoolean(false);
@@ -141,7 +141,7 @@ public class Split implements Bytable {
 
     @Override
     public void readFields(DataInput in) throws IOException {
-        this.featureIndex = in.readInt();
+        this.columnNum = in.readInt();
         this.threshold = in.readDouble();
 
         if(in.readBoolean()) {
@@ -162,7 +162,7 @@ public class Split implements Bytable {
      */
     @Override
     public String toString() {
-        return "Split [featureIndex=" + featureIndex + ", featureType=" + featureType + ", threshold=" + threshold
+        return "Split [featureIndex=" + columnNum + ", featureType=" + featureType + ", threshold=" + threshold
                 + ", leftCategories=" + leftCategories + "]";
     }
 

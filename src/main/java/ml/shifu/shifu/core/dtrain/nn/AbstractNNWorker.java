@@ -233,7 +233,8 @@ public abstract class AbstractNNWorker<VALUE extends Writable> extends
                 .size();
         this.candidateCount = inputOutputIndex[2];
 
-        this.isDry = Boolean.TRUE.toString().equalsIgnoreCase(context.getProps().getProperty(NNConstants.NN_DRY_TRAIN));
+        this.isDry = Boolean.TRUE.toString().equalsIgnoreCase(
+                context.getProps().getProperty(CommonConstants.SHIFU_DRY_DTRAIN));
 
         if(isOnDisk()) {
             LOG.info("NNWorker is loading data into disk.");

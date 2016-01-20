@@ -319,7 +319,7 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
         FileSystem fileSystem = ShifuFileUtils.getFileSystemBySourceType(sourceType);
         Path tmpModelsPath = fileSystem.makeQualified(new Path(super.getPathFinder().getPathBySourceType(
                 new Path(Constants.TMP, Constants.DEFAULT_MODELS_TMP_FOLDER), sourceType)));
-        args.add(String.format(CommonConstants.MAPREDUCE_PARAM_FORMAT, NNConstants.NN_TMP_MODELS_FOLDER,
+        args.add(String.format(CommonConstants.MAPREDUCE_PARAM_FORMAT, CommonConstants.SHIFU_TMP_MODELS_FOLDER,
                 tmpModelsPath.toString()));
         int baggingNum = isForVarSelect ? 1 : super.getModelConfig().getBaggingNum();
 
@@ -395,12 +395,12 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
             }
             localArgs.add(String.format(CommonConstants.MAPREDUCE_PARAM_FORMAT, CommonConstants.GUAGUA_OUTPUT,
                     modelPath.toString()));
-            localArgs.add(String.format(CommonConstants.MAPREDUCE_PARAM_FORMAT, NNConstants.NN_TRAINER_ID,
+            localArgs.add(String.format(CommonConstants.MAPREDUCE_PARAM_FORMAT, CommonConstants.SHIFU_TRAINER_ID,
                     String.valueOf(i)));
             final String progressLogFile = getProgressLogFile(i);
             progressLogList.add(progressLogFile);
-            localArgs.add(String.format(CommonConstants.MAPREDUCE_PARAM_FORMAT, NNConstants.NN_PROGRESS_FILE,
-                    progressLogFile));
+            localArgs.add(String.format(CommonConstants.MAPREDUCE_PARAM_FORMAT,
+                    CommonConstants.SHIFU_DTRAIN_PROGRESS_FILE, progressLogFile));
             String hdpVersion = HDPUtils.getHdpVersionForHDP224();
             if(StringUtils.isNotBlank(hdpVersion)) {
                 localArgs.add(String.format(CommonConstants.MAPREDUCE_PARAM_FORMAT, "hdp.version", hdpVersion));
@@ -604,7 +604,7 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
                         new Path(super.getPathFinder().getColumnConfigPath(sourceType)))));
         args.add(String
                 .format(CommonConstants.MAPREDUCE_PARAM_FORMAT, CommonConstants.MODELSET_SOURCE_TYPE, sourceType));
-        args.add(String.format(CommonConstants.MAPREDUCE_PARAM_FORMAT, NNConstants.NN_DRY_TRAIN, isDryTrain()));
+        args.add(String.format(CommonConstants.MAPREDUCE_PARAM_FORMAT, CommonConstants.SHIFU_DRY_DTRAIN, isDryTrain()));
         args.add(String.format(CommonConstants.MAPREDUCE_PARAM_FORMAT, NNConstants.NN_POISON_SAMPLER,
                 Environment.getProperty(NNConstants.NN_POISON_SAMPLER, "true")));
         // hard code set computation threshold for 50s. Can be changed in shifuconfig file

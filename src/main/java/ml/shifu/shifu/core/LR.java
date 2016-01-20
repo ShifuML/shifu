@@ -30,9 +30,6 @@ import org.encog.ml.data.basic.BasicMLData;
 
 public class LR extends BasicML implements MLRegression {
 
-    /**
-     * Serial id.
-     */
     private static final long serialVersionUID = 1L;
 
     private double[] weights;
