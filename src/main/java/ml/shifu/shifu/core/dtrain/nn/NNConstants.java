@@ -41,7 +41,6 @@ public class NNConstants {
 
     public static final String MAPRED_TASK_TIMEOUT = "mapred.task.timeout";
 
-    public static final String NN_TRAINER_ID = "nn.trainer.id";
 
     public static final String TESTING_EGB = "testing.egb";
 
@@ -57,16 +56,12 @@ public class NNConstants {
 
     public static final String LIB_PATH_NAME = "lib";
 
-    public static final String NN_TMP_MODELS_FOLDER = "nn.tmp.models.folder";
-
     public static final String NN_ALG_NAME = "NN";
 
     public static final String JAVA_IO_TMPDIR = "java.io.tmpdir";
 
     public static final int NN_BAGGING_THRESHOLD = 50;
 
-    public static final String NN_DRY_TRAIN = "nn.dry.train";
-    
     public static final String NN_POISON_SAMPLER = "nn.poison.sampler.enable";
 
     public static final double DRY_ERROR = 0.0d;
@@ -74,8 +69,6 @@ public class NNConstants {
     public static final int DEFAULT_EPOCHS_PER_ITERATION = 1;
 
     public static final String DEFAULT_GUAGUA_VERSION = "0.1.0";
-
-    public static final String NN_PROGRESS_FILE = "nn.progress.file";
 
     public static final int DEFAULT_JOIN_TIME = 3000;
     

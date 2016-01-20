@@ -32,4 +32,12 @@ public interface CommonConstants {
     public static final String SHIFU_COLUMN_CONFIG = "shifu.column.config";
 
     public static final String SHIFU_MODEL_CONFIG = "shifu.model.config";
+
+    public static final String SHIFU_TMP_MODELS_FOLDER = "shifu.tmp.models.folder";
+    
+    public static final String SHIFU_DRY_DTRAIN = "shifu.dry.dtrain";
+
+    public static final String SHIFU_TRAINER_ID = "shifu.trainer.id";
+
+    public static final String SHIFU_DTRAIN_PROGRESS_FILE = "shifu.progress.file";
 }

@@ -26,6 +26,9 @@ import java.util.Properties;
 import java.util.Queue;
 import java.util.Random;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import ml.shifu.guagua.master.AbstractMasterComputable;
 import ml.shifu.guagua.master.MasterContext;
 import ml.shifu.shifu.container.obj.ColumnConfig;
@@ -42,6 +45,8 @@ import ml.shifu.shifu.util.CommonUtils;
  * @author Zhang David (pengzhang@paypal.com)
  */
 public class DTMaster extends AbstractMasterComputable<DTMasterParams, DTWorkerParams> {
+
+    private static final Logger LOG = LoggerFactory.getLogger(DTMaster.class);
 
     /**
      * Model configuration loaded from configuration file.
@@ -78,96 +83,37 @@ public class DTMaster extends AbstractMasterComputable<DTMasterParams, DTWorkerP
             return buildInitialMasterParams();
         } else {
             Map<Integer, NodeStats> nodeStatsMap = mergeWorkerResults(context.getWorkerResults());
+            LOG.debug("node stats after merged: {}", nodeStatsMap);
             for(Entry<Integer, NodeStats> entry: nodeStatsMap.entrySet()) {
                 NodeStats nodeStats = entry.getValue();
                 int treeId = nodeStats.getTreeId();
                 Node doneNode = Node.getNode(trees.get(treeId).getNode(), nodeStats.getNodeId());
-
+                LOG.info("Node stats with treeId {} and node id {},", treeId, doneNode.getId());
                 // doneNode, NodeStats
                 Map<Integer, double[]> statistics = nodeStats.getFeatureStatistics();
                 List<GainInfo> gainList = new ArrayList<GainInfo>();
                 for(Entry<Integer, double[]> gainEntry: statistics.entrySet()) {
                     int columnNum = gainEntry.getKey();
                     ColumnConfig config = this.columnConfigList.get(columnNum);
-                    GainInfo maxGainInfoInFeature = null;
                     double[] statsArray = gainEntry.getValue();
-                    if(config.isNumerical()) {
-                        double count = 0d;
-                        double sum = 0d;
-                        double sumSquare = 0d;
-                        for(int i = 0; i < statsArray.length / 3; i++) {
-                            count += statsArray[i * 3];
-                            sum += statsArray[i * 3 + 1];
-                            sumSquare += statsArray[i * 3 + 2];
-                        }
-
-                        double impurity = 0d;
-                        if(count != 0d) {
-                            impurity = (sumSquare - (sum * sum) / count) / count;
-                        }
-                        Predict predict = new Predict(sum / count);
-
-                        double leftCount = 0d;
-                        double leftSum = 0d;
-                        double leftSumSquare = 0d;
-                        double rightCount = 0d;
-                        double rightSum = 0d;
-                        double rightSumSquare = 0d;
-                        List<GainInfo> internalGainList = new ArrayList<GainInfo>();
-                        for(int i = 0; i < statsArray.length / 3; i++) {
-                            leftCount += statsArray[i * 3];
-                            leftSum += statsArray[i * 3 + 1];
-                            leftSumSquare += statsArray[i * 3 + 2];
-                            rightCount = count - leftCount;
-                            rightSum = sum - leftSum;
-                            rightSumSquare = sumSquare - leftSumSquare;
-                            double leftWeight = leftCount / count;
-                            double rightWeight = rightCount / count;
-                            double leftImpurity = 0d;
-                            if(leftCount != 0d) {
-                                leftImpurity = (leftSumSquare - (leftSum * leftSum) / leftCount) / leftCount;
-                            }
-                            double rightImpurity = 0d;
-                            if(rightCount != 0d) {
-                                rightImpurity = (rightSumSquare - (rightSum * rightSum) / rightCount) / rightCount;
-                            }
-                            double gain = impurity - leftWeight * leftImpurity - rightWeight * rightImpurity;
-                            Split split = new Split(columnNum, FeatureType.CONTINUOUS, config.getBinBoundary().get(i),
-                                    null);
-                            Predict leftPredict = new Predict(leftSum / leftCount);
-                            Predict rightPredict = new Predict(rightSum / rightCount);
-                            internalGainList.add(new GainInfo(gain, impurity, predict, leftImpurity, rightImpurity,
-                                    leftPredict, rightPredict, split));
-                        }
-                        maxGainInfoInFeature = getGainInfoByMaxGain(internalGainList);
-                    } else if(config.isCategorical()) {
-                        // TODO
-                    }
-                    gainList.add(maxGainInfoInFeature);
+                    gainList.add(this.impurity.computeImpurity(statsArray, config));
                 }
 
-                GainInfo maxGainInfo = getGainInfoByMaxGain(gainList);
-                doneNode.setPredict(maxGainInfo.predict);
-                doneNode.setSplit(maxGainInfo.split);
-                doneNode.setGain(maxGainInfo.gain);
-                doneNode.setImpurity(maxGainInfo.impurity);
-                doneNode.setLeftImpurity(maxGainInfo.leftImpurity);
-                doneNode.setRightImpurity(maxGainInfo.rightImpurity);
-                doneNode.setLeftPredict(maxGainInfo.leftPredict);
-                doneNode.setRightPredict(maxGainInfo.rightPredict);
+                GainInfo maxGainInfo = GainInfo.getGainInfoByMaxGain(gainList);
+                populateGainInfoToNode(doneNode, maxGainInfo);
+                LOG.info("GainInfo is {} and node with info is {}.", maxGainInfo, doneNode);
 
-                boolean isLeaf = maxGainInfo.gain <= 0 || Node.indexToLevel(doneNode.getId()) == this.maxDepth;
+                boolean isLeaf = maxGainInfo.getGain() <= 0 || Node.indexToLevel(doneNode.getId()) == this.maxDepth;
                 doneNode.setLeaf(isLeaf);
-
                 if(!doneNode.isLeaf()) {
                     boolean leftChildIsLeaf = Node.indexToLevel(doneNode.getId()) + 1 == this.maxDepth
-                            || (maxGainInfo.leftImpurity == 0.0);
-                    Node left = new Node(Node.leftIndex(doneNode.getId()), maxGainInfo.leftPredict,
-                            maxGainInfo.leftImpurity, leftChildIsLeaf);
+                            || (maxGainInfo.getLeftImpurity() == 0.0);
+                    Node left = new Node(Node.leftIndex(doneNode.getId()), maxGainInfo.getLeftPredict(),
+                            maxGainInfo.getLeftImpurity(), leftChildIsLeaf);
                     boolean rightChildIsLeaf = Node.indexToLevel(doneNode.getId()) + 1 == this.maxDepth
-                            || (maxGainInfo.rightImpurity == 0.0);
-                    Node right = new Node(Node.rightIndex(doneNode.getId()), maxGainInfo.rightPredict,
-                            maxGainInfo.rightImpurity, rightChildIsLeaf);
+                            || (maxGainInfo.getRightImpurity() == 0.0);
+                    Node right = new Node(Node.rightIndex(doneNode.getId()), maxGainInfo.getRightPredict(),
+                            maxGainInfo.getRightImpurity(), rightChildIsLeaf);
                     doneNode.setLeft(left);
                     if(!leftChildIsLeaf) {
                         this.queue.offer(new TreeNode(treeId, left));
@@ -179,82 +125,54 @@ public class DTMaster extends AbstractMasterComputable<DTMasterParams, DTWorkerP
                     }
                 }
             }
-            Map<Integer, TreeNode> todoNodes = new HashMap<Integer, TreeNode>();
-            int nodeIndexInGroup = 0;
-            long currMem = 0L;
-            while(!queue.isEmpty() && currMem <= this.maxStatsMemory) {
-                TreeNode node = this.queue.poll();
-                List<Integer> subsetFeatures = getSubsamplingFeatures(featureSubsetStrategy);
-                node.setFeatures(subsetFeatures);
-                currMem += getStatsMem(subsetFeatures);
-                todoNodes.put(nodeIndexInGroup, node);
-                nodeIndexInGroup += 1;
-            }
 
-            DTMasterParams masterParams = new DTMasterParams(trees, todoNodes);
+            Map<Integer, TreeNode> todoNodes = new HashMap<Integer, TreeNode>();
+            DTMasterParams masterParams = new DTMasterParams();
             if(queue.isEmpty()) {
                 masterParams.setHalt(true);
+                LOG.info("Queue is empty, training is stopped in iteration {}.", context.getCurrentIteration());
+            } else {
+                int nodeIndexInGroup = 0;
+                long currMem = 0L;
+                while(!queue.isEmpty() && currMem <= this.maxStatsMemory) {
+                    TreeNode node = this.queue.poll();
+                    List<Integer> subsetFeatures = getSubsamplingFeatures(featureSubsetStrategy);
+                    node.setFeatures(subsetFeatures);
+                    currMem += getStatsMem(subsetFeatures);
+                    todoNodes.put(nodeIndexInGroup, node);
+                    nodeIndexInGroup += 1;
+                }
+                masterParams.setTodoNodes(todoNodes);
+                LOG.info("Todo nodes with size {}.", todoNodes.size());
             }
+            masterParams.setTrees(trees);
             return masterParams;
         }
+    }
+
+    private void populateGainInfoToNode(Node doneNode, GainInfo maxGainInfo) {
+        doneNode.setPredict(maxGainInfo.getPredict());
+        doneNode.setSplit(maxGainInfo.getSplit());
+        doneNode.setGain(maxGainInfo.getGain());
+        doneNode.setImpurity(maxGainInfo.getImpurity());
+        doneNode.setLeftImpurity(maxGainInfo.getLeftImpurity());
+        doneNode.setRightImpurity(maxGainInfo.getRightImpurity());
+        doneNode.setLeftPredict(maxGainInfo.getLeftPredict());
+        doneNode.setRightPredict(maxGainInfo.getRightPredict());
     }
 
     private long getStatsMem(List<Integer> subsetFeatures) {
         long statsMem = 0L;
         for(Integer columnNum: subsetFeatures) {
             ColumnConfig config = this.columnConfigList.get(columnNum);
-            // TODO according to Gini, Entropy or Variance
+            // 1.5 is overhead for java object
             if(config.isNumerical()) {
-                statsMem += (config.getBinBoundary().size() + 1) * 3 * 8L;
+                statsMem += (config.getBinBoundary().size() + 1) * this.impurity.getStatsSize() * 8L * 1.5;
             } else if(config.isCategorical()) {
-                statsMem += (config.getBinCategory().size() + 1) * 3 * 8L;
+                statsMem += (config.getBinCategory().size() + 1) * this.impurity.getStatsSize() * 8L * 1.5;
             }
         }
         return statsMem;
-    }
-
-    public GainInfo getGainInfoByMaxGain(List<GainInfo> gainList) {
-        double maxGain = Double.MIN_VALUE;
-        int maxGainIndex = -1;
-        for(int i = 0; i < gainList.size(); i++) {
-            double gain = gainList.get(i).gain;
-            if(gain > maxGain) {
-                maxGain = gain;
-                maxGainIndex = i;
-            }
-        }
-        return gainList.get(maxGainIndex);
-    }
-
-    private static class GainInfo {
-
-        public GainInfo(double gain, double impurity, Predict predict, double leftImpurity, double rightImpurity,
-                Predict leftPredict, Predict rightPredict, Split split) {
-            this.gain = gain;
-            this.impurity = impurity;
-            this.predict = predict;
-            this.leftImpurity = leftImpurity;
-            this.rightImpurity = rightImpurity;
-            this.leftPredict = leftPredict;
-            this.rightPredict = rightPredict;
-            this.split = split;
-        }
-
-        private double gain;
-
-        private double impurity;
-
-        private Predict predict;
-
-        private double leftImpurity;
-
-        private double rightImpurity;
-
-        private Predict leftPredict;
-
-        private Predict rightPredict;
-
-        private Split split;
     }
 
     private Map<Integer, NodeStats> mergeWorkerResults(Iterable<DTWorkerParams> workerResults) {
@@ -297,7 +215,6 @@ public class DTMaster extends AbstractMasterComputable<DTMasterParams, DTWorkerP
         return new DTMasterParams(trees, todoNodes);
     }
 
-    // TODO refactor me please
     private List<Integer> getSubsamplingFeatures(FeatureSubsetStrategy featureSubsetStrategy) {
         List<Integer> features = new ArrayList<Integer>();
         Random random = new Random();
@@ -338,17 +255,7 @@ public class DTMaster extends AbstractMasterComputable<DTMasterParams, DTWorkerP
                 break;
             case ALL:
             default:
-                for(ColumnConfig config: columnConfigList) {
-                    if(isAfterVarSelect) {
-                        if(config.isFinalSelect() && !config.isTarget() && !config.isMeta()) {
-                            features.add(config.getColumnNum());
-                        }
-                    } else {
-                        if(!config.isMeta() && !config.isTarget() && CommonUtils.isGoodCandidate(config)) {
-                            features.add(config.getColumnNum());
-                        }
-                    }
-                }
+                // an empty list means all
                 break;
         }
         return features;
@@ -381,21 +288,28 @@ public class DTMaster extends AbstractMasterComputable<DTMasterParams, DTWorkerP
         assert this.maxStatsMemory <= Math.min(Runtime.getRuntime().maxMemory() * 0.6, 800 * 1024 * 1024L);
 
         this.treeNum = this.modelConfig.getTrain().getBaggingNum();
+
+        String imStr = this.modelConfig.getTrain().getParams().get("impurity").toString();
+        int numClasses = 2;
+        if(this.modelConfig.isMultiClassification()) {
+            numClasses = this.modelConfig.getFlattenTags().size();
+        }
+        if(imStr.equalsIgnoreCase("entropy")) {
+            impurity = new Entropy(numClasses);
+        } else if(imStr.equalsIgnoreCase("gini")) {
+            impurity = new Gini(numClasses);
+        } else {
+            impurity = new Variance();
+        }
+        LOG.info("Master init params: isAfterVarSel={}, featureSubsetStrategy={}, maxDepth={}, maxStatsMemory={}, "
+                + "treeNum={}, impurity= {}", isAfterVarSelect, featureSubsetStrategy, maxDepth, maxStatsMemory,
+                treeNum, imStr);
         this.trees = new ArrayList<TreeNode>(treeNum);
         for(int i = 0; i < treeNum; i++) {
             this.trees.add(new TreeNode(i, new Node(Node.ROOT_INDEX)));
         }
 
-        String imStr = this.modelConfig.getTrain().getParams().get("impurity").toString();
-        if(imStr.equalsIgnoreCase("entropy")) {
-            impurity = new Entropy();
-        } else if(imStr.equalsIgnoreCase("gini")) {
-            impurity = new Gini();
-        } else {
-            impurity = new Variance();
-        }
-
         this.queue = new LinkedList<TreeNode>();
-        // TODO recover state trees here for fail-over
+        // TODO recover state trees and queue here for fail-over
     }
 }
