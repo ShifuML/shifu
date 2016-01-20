@@ -26,4 +26,10 @@ public interface CommonConstants {
     public static final String LR_LEARNING_RATE = "LearningRate";
 
     public static final String REG_LEVEL_KEY = "L1orL2";
+
+    public static final String MODELSET_SOURCE_TYPE = "shifu.source.type";
+
+    public static final String SHIFU_COLUMN_CONFIG = "shifu.column.config";
+
+    public static final String SHIFU_MODEL_CONFIG = "shifu.model.config";
 }

@@ -147,19 +147,66 @@ public final class DTrainUtils {
         int input = 0, output = 0, totalCandidate = 0, goodCandidate = 0;
         for(ColumnConfig config: columnConfigList) {
             if(!config.isTarget() && !config.isMeta()) {
-                totalCandidate++;
+                totalCandidate += 1;
                 if(CommonUtils.isGoodCandidate(config)) {
-                    goodCandidate++;
+                    goodCandidate += 1;
                 }
             }
             if(config.isFinalSelect() && !config.isTarget() && !config.isMeta()) {
-                input++;
+                input += 1;
             }
             if(config.isTarget()) {
-                output++;
+                output += 1;
             }
         }
         return new int[] { input, output, goodCandidate };
+    }
+
+    /**
+     * Get numeric and categorical input nodes number (final select) and output nodes number from column config, and
+     * candidate input node number.
+     * 
+     * <p>
+     * If number of column in final-select is 0, which means to select all non meta and non target columns. So the input
+     * number is set to all candidates.
+     * 
+     * @throws NullPointerException
+     *             if columnConfigList or ColumnConfig object in columnConfigList is null.
+     */
+    public static int[] getNumericAndCategoricalInputAndOutputCounts(List<ColumnConfig> columnConfigList) {
+        int numericInput = 0, categoricalInput = 0, output = 0, numericCandidateInput = 0, categoricalCandidateInput = 0;
+        for(ColumnConfig config: columnConfigList) {
+            if(!config.isTarget() && !config.isMeta()) {
+                if(config.isNumerical()) {
+                    numericCandidateInput += 1;
+                }
+                if(config.isCategorical()) {
+                    categoricalCandidateInput += 1;
+                }
+            }
+            if(config.isFinalSelect() && !config.isTarget() && !config.isMeta()) {
+                if(config.isNumerical()) {
+                    numericInput += 1;
+                }
+                if(config.isCategorical()) {
+                    categoricalInput += 1;
+                }
+            }
+            if(config.isTarget()) {
+                output += 1;
+            }
+        }
+
+        // check if it is after varselect, if not, no variable is set to finalSelect which means, all good variable
+        // should be set as finalSelect TODO, bad practice, refact me
+        int isVarSelect = 1;
+        if(numericInput == 0 && categoricalInput == 0) {
+            numericInput = numericCandidateInput;
+            categoricalInput = categoricalCandidateInput;
+            isVarSelect = 0;
+        }
+
+        return new int[] { numericInput, categoricalInput, output, isVarSelect };
     }
 
     public static String getTmpModelName(String tmpModelsFolder, String trainerId, int iteration, String modelPost) {

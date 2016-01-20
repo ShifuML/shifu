@@ -22,5 +22,14 @@ package ml.shifu.shifu.core.dtrain.dt;
  * @author Zhang David (pengzhang@paypal.com)
  */
 public enum FeatureSubsetStrategy {
-    ALL, HALF, ONETHIRD,
+    ALL, HALF, ONETHIRD;
+
+    public static FeatureSubsetStrategy of(String strategy) {
+        for(FeatureSubsetStrategy element: values()) {
+            if(element.toString().equalsIgnoreCase(strategy)) {
+                return element;
+            }
+        }
+        throw new IllegalArgumentException("cannot find such enum in FeatureSubsetStrategy");
+    }
 }

@@ -18,6 +18,8 @@ package ml.shifu.shifu.core.dtrain.dt;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 
 import ml.shifu.guagua.io.Bytable;
 
@@ -50,7 +52,15 @@ public class Node implements Bytable {
 
     private double rightImpurity;
 
+    /**
+     * 'isLeaf' is used to set a flag not to extend this tree.
+     */
+    private boolean isLeaf;
+
+    public static final int ROOT_INDEX = 1;
+
     public Node() {
+        this(ROOT_INDEX);
     }
 
     public Node(int id) {
@@ -61,6 +71,13 @@ public class Node implements Bytable {
         this.id = id;
         this.left = left;
         this.right = right;
+    }
+
+    public Node(int id, Predict predict, double impurity, boolean isLeaf) {
+        this.id = id;
+        this.predict = predict;
+        this.impurity = impurity;
+        this.isLeaf = isLeaf;
     }
 
     public Node(int id, Split split, Node left, Node right, Predict predict, double gain, double impurity) {
@@ -74,7 +91,7 @@ public class Node implements Bytable {
     }
 
     public Node(int id, Split split, Node left, Node right, Predict predict, double gain, double impurity,
-            Predict leftPredict, double leftImpurity, Predict rightPredict, double rightImpurity) {
+            Predict leftPredict, double leftImpurity, Predict rightPredict, double rightImpurity, boolean isLeaf) {
         this.id = id;
         this.split = split;
         this.left = left;
@@ -86,10 +103,7 @@ public class Node implements Bytable {
         this.leftImpurity = leftImpurity;
         this.rightPredict = rightPredict;
         this.rightImpurity = rightImpurity;
-    }
-
-    public boolean isLeaf() {
-        return left == null && right == null;
+        this.isLeaf = isLeaf;
     }
 
     /**
@@ -257,6 +271,75 @@ public class Node implements Bytable {
         this.split = split;
     }
 
+    public static int indexToLevel(int nodeIndex) {
+        return Integer.numberOfTrailingZeros(Integer.highestOneBit(nodeIndex));
+    }
+
+    public static void main(String[] args) {
+        System.out.println(indexToLevel(1));
+        System.out.println(indexToLevel(2));
+        System.out.println(indexToLevel(3));
+        System.out.println(indexToLevel(4));
+        System.out.println(indexToLevel(5));
+        System.out.println(indexToLevel(6));
+        System.out.println(indexToLevel(7));
+
+    }
+
+    /**
+     * @param isLeaf
+     *            the isLeaf to set
+     */
+    public void setLeaf(boolean isLeaf) {
+        this.isLeaf = isLeaf;
+    }
+
+    public boolean isLeaf() {
+        return this.isLeaf;
+    }
+
+    /**
+     * According to node index and topNode, find the exact node.
+     * 
+     * @param topNode
+     *            the top node of the tree
+     * @param index
+     *            the index to be searched
+     * @return the node with such index, null
+     */
+    public static Node getNode(Node topNode, int index) {
+        assert index > 0 && topNode != null && topNode.id == 1;
+        if(index == 1) {
+            return topNode;
+        }
+
+        int currIndex = index;
+        List<Integer> walkIndexes = new ArrayList<Integer>(16);
+        while(currIndex >= 1) {
+            walkIndexes.add(currIndex);
+            currIndex /= 2;
+        }
+
+        // reverse walk through
+        Node result = topNode;
+        for(int i = 0; i < walkIndexes.size(); i++) {
+            int searchIndex = walkIndexes.get(walkIndexes.size() - 1 - i);
+            if(searchIndex == index) {
+                return result;
+            }
+
+            if(searchIndex % 2 == 1) {
+                result = result.getRight();
+            } else {
+                result = result.getLeft();
+            }
+            if(result == null) {
+                return null;
+            }
+        }
+        return null;
+    }
+
     public static int leftIndex(int id) {
         return id << 1;
     }
@@ -276,12 +359,13 @@ public class Node implements Bytable {
         out.writeDouble(impurity);
         out.writeDouble(leftImpurity);
         out.writeDouble(rightImpurity);
+        out.writeBoolean(isLeaf);
 
         if(split == null) {
             out.writeBoolean(false);
         } else {
-            split.write(out);
             out.writeBoolean(true);
+            split.write(out);
         }
 
         if(predict == null) {
@@ -327,6 +411,7 @@ public class Node implements Bytable {
         this.impurity = in.readDouble();
         this.leftImpurity = in.readDouble();
         this.rightImpurity = in.readDouble();
+        this.isLeaf = in.readBoolean();
 
         if(in.readBoolean()) {
             this.split = new Split();
@@ -334,13 +419,13 @@ public class Node implements Bytable {
         }
 
         if(in.readBoolean()) {
-            this.leftPredict = new Predict();
-            this.leftPredict.readFields(in);
+            this.predict = new Predict();
+            this.predict.readFields(in);
         }
 
         if(in.readBoolean()) {
-            this.predict = new Predict();
-            this.predict.readFields(in);
+            this.leftPredict = new Predict();
+            this.leftPredict.readFields(in);
         }
 
         if(in.readBoolean()) {
