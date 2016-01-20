@@ -30,7 +30,7 @@ import ml.shifu.guagua.io.Bytable;
  */
 public class TreeNode implements Bytable {
 
-    private int treeIndex;
+    private int treeId;
 
     private Node node;
 
@@ -39,22 +39,22 @@ public class TreeNode implements Bytable {
     public TreeNode() {
     }
 
-    public TreeNode(int treeIndex, Node node) {
-        this.treeIndex = treeIndex;
+    public TreeNode(int treeId, Node node) {
+        this.treeId = treeId;
         this.node = node;
     }
 
-    public TreeNode(int treeIndex, Node node, List<Integer> features) {
-        this.treeIndex = treeIndex;
+    public TreeNode(int treeId, Node node, List<Integer> features) {
+        this.treeId = treeId;
         this.node = node;
         this.features = features;
     }
 
     /**
-     * @return the treeIndex
+     * @return the treeId
      */
-    public int getTreeIndex() {
-        return treeIndex;
+    public int getTreeId() {
+        return treeId;
     }
 
     /**
@@ -68,8 +68,8 @@ public class TreeNode implements Bytable {
      * @param treeIndex
      *            the treeIndex to set
      */
-    public void setTreeIndex(int treeIndex) {
-        this.treeIndex = treeIndex;
+    public void setTreeId(int treeId) {
+        this.treeId = treeId;
     }
 
     /**
@@ -97,7 +97,7 @@ public class TreeNode implements Bytable {
 
     @Override
     public void write(DataOutput out) throws IOException {
-        out.writeInt(treeIndex);
+        out.writeInt(treeId);
         this.node.write(out);
         if(features == null) {
             out.writeInt(0);
@@ -111,7 +111,7 @@ public class TreeNode implements Bytable {
 
     @Override
     public void readFields(DataInput in) throws IOException {
-        this.treeIndex = in.readInt();
+        this.treeId = in.readInt();
         this.node = new Node();
         this.node.readFields(in);
 

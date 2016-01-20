@@ -22,7 +22,8 @@ import java.io.IOException;
 import ml.shifu.guagua.io.Bytable;
 
 /**
- * Predict wrappers classification result {@link #predict} and regression result {@link #prob}.
+ * Predict wrappers classification and regression result in {@link #predict}, for classification {@link #prob} means the
+ * probability, for regression no meaning for {@link #prob}
  * 
  * @author Zhang David (pengzhang@paypal.com)
  */
@@ -33,6 +34,10 @@ public class Predict implements Bytable {
     private double prob;
 
     public Predict() {
+    }
+
+    public Predict(double predict) {
+        this.predict = predict;
     }
 
     public Predict(double predict, double prob) {

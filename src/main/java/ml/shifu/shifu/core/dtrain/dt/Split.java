@@ -35,6 +35,14 @@ import ml.shifu.guagua.io.Bytable;
  */
 public class Split implements Bytable {
 
+    private int featureIndex;
+
+    private FeatureType featureType;
+
+    private double threshold;
+
+    private Set<String> leftCategories;
+
     public Split() {
     }
 
@@ -43,20 +51,11 @@ public class Split implements Bytable {
     }
 
     public Split(int featureIndex, FeatureType featureType, double threshold, Set<String> leftCategories) {
-        super();
         this.featureIndex = featureIndex;
         this.featureType = featureType;
         this.threshold = threshold;
         this.leftCategories = leftCategories;
     }
-
-    protected int featureIndex;
-
-    private FeatureType featureType;
-
-    private double threshold;
-
-    private Set<String> leftCategories;
 
     /**
      * @return the featureIndex
@@ -151,14 +150,14 @@ public class Split implements Bytable {
 
         int len = in.readInt();
         this.leftCategories = new HashSet<String>();
-        if(len > 0) {
-            for(int i = 0; i < len; i++) {
-                this.leftCategories.add(in.readUTF());
-            }
+        for(int i = 0; i < len; i++) {
+            this.leftCategories.add(in.readUTF());
         }
     }
 
-    /* (non-Javadoc)
+    /*
+     * (non-Javadoc)
+     * 
      * @see java.lang.Object#toString()
      */
     @Override

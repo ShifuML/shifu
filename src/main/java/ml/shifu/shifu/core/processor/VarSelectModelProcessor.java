@@ -335,17 +335,18 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
         // setting model config column config
         args.add(String.format(
                 CommonConstants.MAPREDUCE_PARAM_FORMAT,
-                NNConstants.SHIFU_NN_MODEL_CONFIG,
+                CommonConstants.SHIFU_MODEL_CONFIG,
                 ShifuFileUtils.getFileSystemBySourceType(sourceType).makeQualified(
                         new Path(super.getPathFinder().getModelConfigPath(sourceType)))));
         args.add(String.format(
                 CommonConstants.MAPREDUCE_PARAM_FORMAT,
-                NNConstants.SHIFU_NN_COLUMN_CONFIG,
+                CommonConstants.SHIFU_COLUMN_CONFIG,
                 ShifuFileUtils.getFileSystemBySourceType(sourceType).makeQualified(
                         new Path(super.getPathFinder().getColumnConfigPath(sourceType)))));
 
         // source type
-        args.add(String.format(CommonConstants.MAPREDUCE_PARAM_FORMAT, NNConstants.NN_MODELSET_SOURCE_TYPE, sourceType));
+        args.add(String
+                .format(CommonConstants.MAPREDUCE_PARAM_FORMAT, CommonConstants.MODELSET_SOURCE_TYPE, sourceType));
 
         // computation time
         args.add(String.format(CommonConstants.MAPREDUCE_PARAM_FORMAT,

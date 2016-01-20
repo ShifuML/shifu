@@ -23,14 +23,14 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import ml.shifu.guagua.io.Bytable;
+import ml.shifu.guagua.io.HaltBytable;
 
 /**
  * TODO
  * 
  * @author Zhang David (pengzhang@paypal.com)
  */
-public class DTMasterParams implements Bytable {
+public class DTMasterParams extends HaltBytable {
 
     /**
      * All trees
@@ -38,7 +38,7 @@ public class DTMasterParams implements Bytable {
     private List<TreeNode> trees;
 
     /**
-     * index => (treeIndex, Node); index is starting from 1 in one iteration.
+     * nodeIndexInGroup => (treeId, Node); nodeIndexInGroup is starting from 0 in each iteration.
      */
     private Map<Integer, TreeNode> todoNodes;
 
@@ -81,7 +81,7 @@ public class DTMasterParams implements Bytable {
     }
 
     @Override
-    public void write(DataOutput out) throws IOException {
+    public void doWrite(DataOutput out) throws IOException {
         assert trees != null;
         out.writeInt(trees.size());
         for(TreeNode node: trees) {
@@ -97,7 +97,7 @@ public class DTMasterParams implements Bytable {
     }
 
     @Override
-    public void readFields(DataInput in) throws IOException {
+    public void doReadFields(DataInput in) throws IOException {
         int treeNum = in.readInt();
         this.trees = new ArrayList<TreeNode>(treeNum);
         for(int i = 0; i < treeNum; i++) {
