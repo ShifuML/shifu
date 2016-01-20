@@ -299,6 +299,14 @@ public class InitModelProcessor extends BasicModelProcessor implements Processor
 
         conf.setBoolean(CombineInputFormat.SHIFU_VS_SPLIT_COMBINABLE, true);
 
+        // one can set guagua conf in shifuconfig
+        for(Map.Entry<Object, Object> entry: Environment.getProperties().entrySet()) {
+            if(entry.getKey().toString().startsWith("nn") || entry.getKey().toString().startsWith("guagua")
+                    || entry.getKey().toString().startsWith("shifu") || entry.getKey().toString().startsWith("mapred")) {
+                conf.set(entry.getKey().toString(), entry.getValue().toString());
+            }
+        }
+
         @SuppressWarnings("deprecation")
         Job job = new Job(conf, "Shifu: Column Type Auto Checking Job : " + this.modelConfig.getModelSetName());
         job.setJarByClass(getClass());
