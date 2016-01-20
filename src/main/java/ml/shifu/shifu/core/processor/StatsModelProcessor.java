@@ -261,7 +261,7 @@ public class StatsModelProcessor extends BasicModelProcessor implements Processo
         conf.set(NNConstants.MAPRED_JOB_QUEUE_NAME, Environment.getProperty(Environment.HADOOP_JOB_QUEUE, "default"));
         conf.set(Constants.SHIFU_MODELSET_SOURCE_TYPE, source.toString());
         // set mapreduce.job.max.split.locations to 30 to suppress warnings
-        conf.setInt(GuaguaMapReduceConstants.MAPREDUCE_JOB_MAX_SPLIT_LOCATIONS, 30);
+        conf.setInt(GuaguaMapReduceConstants.MAPREDUCE_JOB_MAX_SPLIT_LOCATIONS, 100);
         conf.set("mapred.reduce.slowstart.completed.maps",
                 Environment.getProperty("mapred.reduce.slowstart.completed.maps", "0.8"));
         String hdpVersion = HDPUtils.getHdpVersionForHDP224();
@@ -272,6 +272,14 @@ public class StatsModelProcessor extends BasicModelProcessor implements Processo
             HDPUtils.addFileToClassPath(HDPUtils.findContainingFile("core-site.xml"), conf);
             HDPUtils.addFileToClassPath(HDPUtils.findContainingFile("mapred-site.xml"), conf);
             HDPUtils.addFileToClassPath(HDPUtils.findContainingFile("yarn-site.xml"), conf);
+        }
+
+        // one can set guagua conf in shifuconfig
+        for(Map.Entry<Object, Object> entry: Environment.getProperties().entrySet()) {
+            if(entry.getKey().toString().startsWith("nn") || entry.getKey().toString().startsWith("guagua")
+                    || entry.getKey().toString().startsWith("shifu") || entry.getKey().toString().startsWith("mapred")) {
+                conf.set(entry.getKey().toString(), entry.getValue().toString());
+            }
         }
     }
 
