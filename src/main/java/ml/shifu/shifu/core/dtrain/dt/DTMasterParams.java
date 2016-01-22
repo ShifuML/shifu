@@ -42,7 +42,17 @@ public class DTMasterParams extends HaltBytable {
      */
     private Map<Integer, TreeNode> todoNodes;
 
+    private long count;
+
+    private double squareError;
+
     public DTMasterParams() {
+    }
+
+    public DTMasterParams(long count, double squareError) {
+        super();
+        this.count = count;
+        this.setSquareError(squareError);
     }
 
     public DTMasterParams(List<TreeNode> trees, Map<Integer, TreeNode> todoNodes) {
@@ -82,22 +92,31 @@ public class DTMasterParams extends HaltBytable {
 
     @Override
     public void doWrite(DataOutput out) throws IOException {
+        out.writeLong(count);
+        out.writeDouble(getSquareError());
+
         assert trees != null;
         out.writeInt(trees.size());
         for(TreeNode node: trees) {
             node.write(out);
         }
 
-        assert todoNodes != null;
-        out.writeInt(todoNodes.size());
-        for(Map.Entry<Integer, TreeNode> node: todoNodes.entrySet()) {
-            out.writeInt(node.getKey());
-            node.getValue().write(out);
+        if(todoNodes == null) {
+            out.writeInt(0);
+        } else {
+            out.writeInt(todoNodes.size());
+            for(Map.Entry<Integer, TreeNode> node: todoNodes.entrySet()) {
+                out.writeInt(node.getKey());
+                node.getValue().write(out);
+            }
         }
     }
 
     @Override
     public void doReadFields(DataInput in) throws IOException {
+        this.count = in.readLong();
+        this.setSquareError(in.readDouble());
+
         int treeNum = in.readInt();
         this.trees = new ArrayList<TreeNode>(treeNum);
         for(int i = 0; i < treeNum; i++) {
@@ -107,13 +126,43 @@ public class DTMasterParams extends HaltBytable {
         }
 
         int todoNodesSize = in.readInt();
-        todoNodes = new HashMap<Integer, TreeNode>((int) (todoNodesSize * 1.25));
-        for(int i = 0; i < todoNodesSize; i++) {
-            int key = in.readInt();
-            TreeNode treeNode = new TreeNode();
-            treeNode.readFields(in);
-            todoNodes.put(key, treeNode);
+        if(todoNodesSize > 0) {
+            todoNodes = new HashMap<Integer, TreeNode>(todoNodesSize, 1f);
+            for(int i = 0; i < todoNodesSize; i++) {
+                int key = in.readInt();
+                TreeNode treeNode = new TreeNode();
+                treeNode.readFields(in);
+                todoNodes.put(key, treeNode);
+            }
         }
     }
 
+    /**
+     * @return the count
+     */
+    public long getCount() {
+        return count;
+    }
+
+    /**
+     * @param count
+     *            the count to set
+     */
+    public void setCount(long count) {
+        this.count = count;
+    }
+
+    /**
+     * @return the squareError
+     */
+    public double getSquareError() {
+        return squareError;
+    }
+
+    /**
+     * @param squareError the squareError to set
+     */
+    public void setSquareError(double squareError) {
+        this.squareError = squareError;
+    }
 }

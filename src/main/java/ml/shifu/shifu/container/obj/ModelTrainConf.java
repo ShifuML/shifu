@@ -188,11 +188,14 @@ public class ModelTrainConf {
             params.put(SVMTrainer.SVM_GAMMA, 1.0);
             params.put(SVMTrainer.SVM_CONST, 1.0);
         } else if(ALGORITHM.DT.equals(alg)) {
-            // To be decide
-            // DecisionTreeTrainer
+            params.put("featureSubsetStrategy", "Q");
+            params.put("maxDepth", 10);
+            params.put("maxStatsMemoryMB", 256);
+            params.put("impurity", "variance");
         } else if(ALGORITHM.LR.equals(alg)) {
             params.put(LogisticRegressionTrainer.LEARNING_RATE, 0.1);
             params.put("RegularizedConstant", 0.0);
+            params.put("L1orL2", "NONE");
             params.put(NNTrainer.PROPAGATION, "Q");
         }
         return params;
@@ -217,7 +220,7 @@ public class ModelTrainConf {
      * As threshold is an optional setting, Use @{@link JsonIgnore} to ignore threshold when initially write
      * out to ModelConfig.json.
      * 
-     * @return Cvergence threshold.
+     * @return Convergence threshold.
      */
     @JsonIgnore
     public Double getConvergenceThreshold() {

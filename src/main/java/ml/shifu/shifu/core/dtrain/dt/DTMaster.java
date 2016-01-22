@@ -17,6 +17,7 @@ package ml.shifu.shifu.core.dtrain.dt;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
@@ -81,73 +82,94 @@ public class DTMaster extends AbstractMasterComputable<DTMasterParams, DTWorkerP
     public DTMasterParams doCompute(MasterContext<DTMasterParams, DTWorkerParams> context) {
         if(context.isFirstIteration()) {
             return buildInitialMasterParams();
-        } else {
-            Map<Integer, NodeStats> nodeStatsMap = mergeWorkerResults(context.getWorkerResults());
-            LOG.debug("node stats after merged: {}", nodeStatsMap);
-            for(Entry<Integer, NodeStats> entry: nodeStatsMap.entrySet()) {
-                NodeStats nodeStats = entry.getValue();
-                int treeId = nodeStats.getTreeId();
-                Node doneNode = Node.getNode(trees.get(treeId).getNode(), nodeStats.getNodeId());
-                LOG.info("Node stats with treeId {} and node id {},", treeId, doneNode.getId());
-                // doneNode, NodeStats
-                Map<Integer, double[]> statistics = nodeStats.getFeatureStatistics();
-                List<GainInfo> gainList = new ArrayList<GainInfo>();
-                for(Entry<Integer, double[]> gainEntry: statistics.entrySet()) {
-                    int columnNum = gainEntry.getKey();
-                    ColumnConfig config = this.columnConfigList.get(columnNum);
-                    double[] statsArray = gainEntry.getValue();
-                    gainList.add(this.impurity.computeImpurity(statsArray, config));
-                }
-
-                GainInfo maxGainInfo = GainInfo.getGainInfoByMaxGain(gainList);
-                populateGainInfoToNode(doneNode, maxGainInfo);
-                LOG.info("GainInfo is {} and node with info is {}.", maxGainInfo, doneNode);
-
-                boolean isLeaf = maxGainInfo.getGain() <= 0 || Node.indexToLevel(doneNode.getId()) == this.maxDepth;
-                doneNode.setLeaf(isLeaf);
-                if(!doneNode.isLeaf()) {
-                    boolean leftChildIsLeaf = Node.indexToLevel(doneNode.getId()) + 1 == this.maxDepth
-                            || (maxGainInfo.getLeftImpurity() == 0.0);
-                    Node left = new Node(Node.leftIndex(doneNode.getId()), maxGainInfo.getLeftPredict(),
-                            maxGainInfo.getLeftImpurity(), leftChildIsLeaf);
-                    boolean rightChildIsLeaf = Node.indexToLevel(doneNode.getId()) + 1 == this.maxDepth
-                            || (maxGainInfo.getRightImpurity() == 0.0);
-                    Node right = new Node(Node.rightIndex(doneNode.getId()), maxGainInfo.getRightPredict(),
-                            maxGainInfo.getRightImpurity(), rightChildIsLeaf);
-                    doneNode.setLeft(left);
-                    if(!leftChildIsLeaf) {
-                        this.queue.offer(new TreeNode(treeId, left));
-                    }
-
-                    doneNode.setRight(right);
-                    if(!rightChildIsLeaf) {
-                        this.queue.offer(new TreeNode(treeId, right));
-                    }
-                }
-            }
-
-            Map<Integer, TreeNode> todoNodes = new HashMap<Integer, TreeNode>();
-            DTMasterParams masterParams = new DTMasterParams();
-            if(queue.isEmpty()) {
-                masterParams.setHalt(true);
-                LOG.info("Queue is empty, training is stopped in iteration {}.", context.getCurrentIteration());
-            } else {
-                int nodeIndexInGroup = 0;
-                long currMem = 0L;
-                while(!queue.isEmpty() && currMem <= this.maxStatsMemory) {
-                    TreeNode node = this.queue.poll();
-                    List<Integer> subsetFeatures = getSubsamplingFeatures(featureSubsetStrategy);
-                    node.setFeatures(subsetFeatures);
-                    currMem += getStatsMem(subsetFeatures);
-                    todoNodes.put(nodeIndexInGroup, node);
-                    nodeIndexInGroup += 1;
-                }
-                masterParams.setTodoNodes(todoNodes);
-                LOG.info("Todo nodes with size {}.", todoNodes.size());
-            }
-            masterParams.setTrees(trees);
-            return masterParams;
         }
+        boolean isFirst = false;
+        Map<Integer, NodeStats> nodeStatsMap = null;
+        double squareError = 0d;
+        long count = 0L;
+        for(DTWorkerParams params: context.getWorkerResults()) {
+            if(!isFirst) {
+                isFirst = true;
+                nodeStatsMap = params.getNodeStatsMap();
+            } else {
+                Map<Integer, NodeStats> currNodeStatsmap = params.getNodeStatsMap();
+                for(Entry<Integer, NodeStats> entry: nodeStatsMap.entrySet()) {
+                    NodeStats resultNodeStats = entry.getValue();
+                    mergeNodeStats(resultNodeStats, currNodeStatsmap.get(entry.getKey()));
+                }
+            }
+            squareError += params.getSquareError();
+            count += params.getCount() * this.treeNum;
+        }
+        LOG.info("node stats after merged: {}", nodeStatsMap);
+        for(Entry<Integer, NodeStats> entry: nodeStatsMap.entrySet()) {
+            NodeStats nodeStats = entry.getValue();
+            int treeId = nodeStats.getTreeId();
+            Node doneNode = Node.getNode(trees.get(treeId).getNode(), nodeStats.getNodeId());
+            // LOG.info("Node stats with treeId {} and node id {},", treeId, doneNode.getId());
+            // doneNode, NodeStats
+            Map<Integer, double[]> statistics = nodeStats.getFeatureStatistics();
+            // LOG.info("Node stats {},", statistics);
+
+            List<GainInfo> gainList = new ArrayList<GainInfo>();
+            for(Entry<Integer, double[]> gainEntry: statistics.entrySet()) {
+                int columnNum = gainEntry.getKey();
+                ColumnConfig config = this.columnConfigList.get(columnNum);
+                double[] statsArray = gainEntry.getValue();
+                // LOG.info("fstatssss: {}", Arrays.toString(statsArray));
+                gainList.add(this.impurity.computeImpurity(statsArray, config));
+            }
+
+            GainInfo maxGainInfo = GainInfo.getGainInfoByMaxGain(gainList);
+            populateGainInfoToNode(doneNode, maxGainInfo);
+            LOG.info("GainInfo is {} and node with info is {}.", maxGainInfo, doneNode);
+
+            boolean isLeaf = maxGainInfo.getGain() <= 0d || Node.indexToLevel(doneNode.getId()) == this.maxDepth;
+            doneNode.setLeaf(isLeaf);
+            if(!doneNode.isLeaf()) {
+                boolean leftChildIsLeaf = Node.indexToLevel(doneNode.getId()) + 1 == this.maxDepth
+                        || (maxGainInfo.getLeftImpurity() == 0.0);
+                // such node is just set into isLeaf to true
+                int leftIndex = Node.leftIndex(doneNode.getId());
+                Node left = new Node(leftIndex, maxGainInfo.getLeftPredict(), maxGainInfo.getLeftImpurity(), true);
+                doneNode.setLeft(left);
+                if(!leftChildIsLeaf) {
+                    this.queue.offer(new TreeNode(treeId, left));
+                }
+
+                boolean rightChildIsLeaf = Node.indexToLevel(doneNode.getId()) + 1 == this.maxDepth
+                        || (maxGainInfo.getRightImpurity() == 0.0);
+                // such node is just set into isLeaf to true
+                int rightIndex = Node.rightIndex(doneNode.getId());
+                Node right = new Node(rightIndex, maxGainInfo.getRightPredict(), maxGainInfo.getRightImpurity(), true);
+                doneNode.setRight(right);
+                if(!rightChildIsLeaf) {
+                    this.queue.offer(new TreeNode(treeId, right));
+                }
+            }
+        }
+
+        Map<Integer, TreeNode> todoNodes = new HashMap<Integer, TreeNode>();
+        DTMasterParams masterParams = new DTMasterParams(count, squareError);
+        if(queue.isEmpty()) {
+            masterParams.setHalt(true);
+            LOG.info("Queue is empty, training is stopped in iteration {}.", context.getCurrentIteration());
+        } else {
+            int nodeIndexInGroup = 0;
+            long currMem = 0L;
+            while(!queue.isEmpty() && currMem <= this.maxStatsMemory) {
+                TreeNode node = this.queue.poll();
+                List<Integer> subsetFeatures = getSubsamplingFeatures(featureSubsetStrategy);
+                node.setFeatures(subsetFeatures);
+                currMem += getStatsMem(subsetFeatures);
+                todoNodes.put(nodeIndexInGroup, node);
+                nodeIndexInGroup += 1;
+            }
+            masterParams.setTodoNodes(todoNodes);
+            LOG.info("Todo nodes with size {}.", todoNodes.size());
+        }
+        masterParams.setTrees(trees);
+        return masterParams;
     }
 
     private void populateGainInfoToNode(Node doneNode, GainInfo maxGainInfo) {
@@ -167,7 +189,7 @@ public class DTMaster extends AbstractMasterComputable<DTMasterParams, DTWorkerP
             ColumnConfig config = this.columnConfigList.get(columnNum);
             // 1.5 is overhead for java object
             if(config.isNumerical()) {
-                statsMem += (config.getBinBoundary().size() + 1) * this.impurity.getStatsSize() * 8L * 1.5;
+                statsMem += config.getBinBoundary().size() * this.impurity.getStatsSize() * 8L * 1.5;
             } else if(config.isCategorical()) {
                 statsMem += (config.getBinCategory().size() + 1) * this.impurity.getStatsSize() * 8L * 1.5;
             }
@@ -175,36 +197,20 @@ public class DTMaster extends AbstractMasterComputable<DTMasterParams, DTWorkerP
         return statsMem;
     }
 
-    private Map<Integer, NodeStats> mergeWorkerResults(Iterable<DTWorkerParams> workerResults) {
-        boolean isFirst = false;
-        Map<Integer, NodeStats> nodeStatsMap = null;
-        for(DTWorkerParams params: workerResults) {
-            if(!isFirst) {
-                isFirst = true;
-                nodeStatsMap = params.getNodeStatsMap();
-            } else {
-                Map<Integer, NodeStats> currNodeStatsmap = params.getNodeStatsMap();
-                for(Entry<Integer, NodeStats> entry: nodeStatsMap.entrySet()) {
-                    NodeStats resultNodeStats = entry.getValue();
-                    mergeNodeStats(resultNodeStats, currNodeStatsmap.get(entry.getKey()));
-                }
-            }
-        }
-        return nodeStatsMap;
-    }
-
     private void mergeNodeStats(NodeStats resultNodeStats, NodeStats nodeStats) {
         Map<Integer, double[]> featureStatistics = resultNodeStats.getFeatureStatistics();
         for(Entry<Integer, double[]> entry: nodeStats.getFeatureStatistics().entrySet()) {
             double[] statistics = featureStatistics.get(entry.getKey());
+            LOG.info("statistics1 {}", Arrays.toString(statistics));
             for(int i = 0; i < statistics.length; i++) {
                 statistics[i] += entry.getValue()[i];
             }
+            LOG.info("statistics2 {}", Arrays.toString(statistics));
         }
     }
 
     private DTMasterParams buildInitialMasterParams() {
-        Map<Integer, TreeNode> todoNodes = new HashMap<Integer, TreeNode>();
+        Map<Integer, TreeNode> todoNodes = new HashMap<Integer, TreeNode>(treeNum, 1.0f);
         int nodeIndexInGroup = 0;
         for(TreeNode treeNode: trees) {
             List<Integer> features = getSubsamplingFeatures(this.featureSubsetStrategy);
@@ -279,17 +285,17 @@ public class DTMaster extends AbstractMasterComputable<DTMasterParams, DTWorkerP
         this.isAfterVarSelect = inputOutputIndex[3] == 1 ? true : false;
 
         this.featureSubsetStrategy = FeatureSubsetStrategy.of(this.modelConfig.getTrain().getParams()
-                .get("featureSubsetStrategy").toString());
+                .get("FeatureSubsetStrategy").toString());
 
-        this.maxDepth = Integer.valueOf(this.modelConfig.getTrain().getParams().get("maxDepth").toString());
+        this.maxDepth = Integer.valueOf(this.modelConfig.getTrain().getParams().get("MaxDepth").toString());
         assert this.maxDepth > 0 && this.maxDepth <= 20;
 
-        this.maxStatsMemory = Long.valueOf(this.modelConfig.getTrain().getParams().get("maxStatsMemoryMB").toString()) * 1024 * 1024;
+        this.maxStatsMemory = Long.valueOf(this.modelConfig.getTrain().getParams().get("MaxStatsMemoryMB").toString()) * 1024 * 1024;
         assert this.maxStatsMemory <= Math.min(Runtime.getRuntime().maxMemory() * 0.6, 800 * 1024 * 1024L);
 
         this.treeNum = this.modelConfig.getTrain().getBaggingNum();
 
-        String imStr = this.modelConfig.getTrain().getParams().get("impurity").toString();
+        String imStr = this.modelConfig.getTrain().getParams().get("Impurity").toString();
         int numClasses = 2;
         if(this.modelConfig.isMultiClassification()) {
             numClasses = this.modelConfig.getFlattenTags().size();

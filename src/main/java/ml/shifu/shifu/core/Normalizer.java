@@ -211,7 +211,7 @@ public class Normalizer {
      * Currently, the cutoff value doesn't affect the computation of WOE or WEIGHT_WOE type.
      * 
      * <p>
-     * Noticd: currently OLD_ZSCALE and ZSCALE is implemented with the same process method.
+     * Noticed: currently OLD_ZSCALE and ZSCALE is implemented with the same process method.
      * </p>
      * 
      * @param config
@@ -302,7 +302,7 @@ public class Normalizer {
      * @ColumnConfig info
      * @return default value for missing data. Now simply return Mean value. If mean is null then return 0.
      */
-    private static double defaultMissingValue(ColumnConfig config) {
+    public static double defaultMissingValue(ColumnConfig config) {
         // TODO return 0 for mean == null is correct or reasonable?
         return config.getMean() == null ? 0 : config.getMean().doubleValue();
     }

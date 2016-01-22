@@ -16,14 +16,19 @@
 package ml.shifu.shifu.core.dtrain.dt;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import ml.shifu.shifu.container.obj.ColumnConfig;
 
 /**
- * TODO FOR categorigcal feature, do a shuffle in {@link #computeImpurity(double[], ColumnConfig)} firstly
+ * TODO FOR categorigcal feature, do a shuffle in {@link #computeImpurity(double[], ColumnConfig)} firstly, sort by
+ * centroid
  * 
  * @author Zhang David (pengzhang@paypal.com)
  */
@@ -55,6 +60,8 @@ public abstract class Impurity {
 
 class Variance extends Impurity {
 
+    private static final Logger LOG = LoggerFactory.getLogger(Variance.class);
+
     public Variance() {
         // 3 are count, sum and sumSquare
         super.statsSize = 3;
@@ -63,6 +70,8 @@ class Variance extends Impurity {
     @Override
     public GainInfo computeImpurity(double[] stats, ColumnConfig config) {
         double count = 0d, sum = 0d, sumSquare = 0d;
+        LOG.info("stats: {}", Arrays.toString(stats));
+        LOG.info("statsSize {}", statsSize);
         for(int i = 0; i < stats.length / super.statsSize; i++) {
             count += stats[i * super.statsSize];
             sum += stats[i * super.statsSize + 1];
@@ -76,7 +85,10 @@ class Variance extends Impurity {
         double rightCount = 0d, rightSum = 0d, rightSumSquare = 0d;
         List<GainInfo> internalGainList = new ArrayList<GainInfo>();
         Set<String> leftCategories = config.isCategorical() ? new HashSet<String>() : null;
-        for(int i = 0; i < stats.length / super.statsSize; i++) {
+
+        LOG.info("loop size {}", (stats.length / super.statsSize));
+
+        for(int i = 0; i < ((stats.length / super.statsSize) - 1); i++) {
             leftCount += stats[i * super.statsSize];
             leftSum += stats[i * super.statsSize + 1];
             leftSumSquare += stats[i * super.statsSize + 2];
@@ -96,7 +108,8 @@ class Variance extends Impurity {
                 leftCategories.add(config.getBinCategory().get(i));
                 split = new Split(config.getColumnNum(), FeatureType.CATEGORICAL, 0d, leftCategories);
             } else {
-                split = new Split(config.getColumnNum(), FeatureType.CONTINUOUS, config.getBinBoundary().get(i), null);
+                split = new Split(config.getColumnNum(), FeatureType.CONTINUOUS, config.getBinBoundary().get(i + 1),
+                        null);
             }
 
             Predict leftPredict = new Predict(leftSum / leftCount);
@@ -142,24 +155,25 @@ class Entropy extends Impurity {
 
         InternalEntropyInfo info = getEntropyInterInfo(statsByClasses);
         // prob only effective in binary classes
-        Predict predict = new Predict(info.indexOfLagestElement, statsByClasses[1] / info.sumAll);
+        Predict predict = new Predict(info.indexOfLargestElement, statsByClasses[1] / info.sumAll);
 
         double[] leftStatByClasses = new double[numClasses];
         double[] rightStatByClasses = new double[numClasses];
         List<GainInfo> internalGainList = new ArrayList<GainInfo>();
         Set<String> leftCategories = config.isCategorical() ? new HashSet<String>() : null;
-        for(int i = 0; i < stats.length / numClasses; i++) {
+        for(int i = 0; i < (stats.length / numClasses - 1); i++) {
             for(int j = 0; j < leftStatByClasses.length; j++) {
                 leftStatByClasses[j] += stats[i * numClasses + j];
             }
             InternalEntropyInfo leftInfo = getEntropyInterInfo(leftStatByClasses);
-            Predict leftPredict = new Predict(leftInfo.indexOfLagestElement, leftStatByClasses[1] / leftInfo.sumAll);
+            Predict leftPredict = new Predict(leftInfo.indexOfLargestElement, leftStatByClasses[1] / leftInfo.sumAll);
 
             for(int j = 0; j < leftStatByClasses.length; j++) {
                 rightStatByClasses[j] = statsByClasses[j] - leftStatByClasses[j];
             }
             InternalEntropyInfo rightInfo = getEntropyInterInfo(rightStatByClasses);
-            Predict rightPredict = new Predict(rightInfo.indexOfLagestElement, rightStatByClasses[1] / rightInfo.sumAll);
+            Predict rightPredict = new Predict(rightInfo.indexOfLargestElement, rightStatByClasses[1]
+                    / rightInfo.sumAll);
 
             double gain = info.impurity - (leftInfo.sumAll / info.sumAll) * leftInfo.impurity
                     - (rightInfo.sumAll / info.sumAll) * rightInfo.impurity;
@@ -168,7 +182,8 @@ class Entropy extends Impurity {
                 leftCategories.add(config.getBinCategory().get(i));
                 split = new Split(config.getColumnNum(), FeatureType.CATEGORICAL, 0d, leftCategories);
             } else {
-                split = new Split(config.getColumnNum(), FeatureType.CONTINUOUS, config.getBinBoundary().get(i), null);
+                split = new Split(config.getColumnNum(), FeatureType.CONTINUOUS, config.getBinBoundary().get(i + 1),
+                        null);
             }
 
             internalGainList.add(new GainInfo(gain, info.impurity, predict, leftInfo.impurity, rightInfo.impurity,
@@ -200,12 +215,12 @@ class Entropy extends Impurity {
 
     private static class InternalEntropyInfo {
         double sumAll;
-        double indexOfLagestElement;
+        double indexOfLargestElement;
         double impurity;
 
-        public InternalEntropyInfo(double sumAll, double indexOfLagestElement, double impurity) {
+        public InternalEntropyInfo(double sumAll, double indexOfLargestElement, double impurity) {
             this.sumAll = sumAll;
-            this.indexOfLagestElement = indexOfLagestElement;
+            this.indexOfLargestElement = indexOfLargestElement;
             this.impurity = impurity;
         }
     }
@@ -243,24 +258,25 @@ class Gini extends Impurity {
 
         InternalEntropyInfo info = getEntropyInterInfo(statsByClasses);
         // prob only effective in binary classes
-        Predict predict = new Predict(info.indexOfLagestElement, statsByClasses[1] / info.sumAll);
+        Predict predict = new Predict(info.indexOfLargestElement, statsByClasses[1] / info.sumAll);
 
         double[] leftStatByClasses = new double[numClasses];
         double[] rightStatByClasses = new double[numClasses];
         List<GainInfo> internalGainList = new ArrayList<GainInfo>();
         Set<String> leftCategories = config.isCategorical() ? new HashSet<String>() : null;
-        for(int i = 0; i < stats.length / numClasses; i++) {
+        for(int i = 0; i < (stats.length / numClasses - 1); i++) {
             for(int j = 0; j < leftStatByClasses.length; j++) {
                 leftStatByClasses[j] += stats[i * numClasses + j];
             }
             InternalEntropyInfo leftInfo = getEntropyInterInfo(leftStatByClasses);
-            Predict leftPredict = new Predict(leftInfo.indexOfLagestElement, leftStatByClasses[1] / leftInfo.sumAll);
+            Predict leftPredict = new Predict(leftInfo.indexOfLargestElement, leftStatByClasses[1] / leftInfo.sumAll);
 
             for(int j = 0; j < leftStatByClasses.length; j++) {
                 rightStatByClasses[j] = statsByClasses[j] - leftStatByClasses[j];
             }
             InternalEntropyInfo rightInfo = getEntropyInterInfo(rightStatByClasses);
-            Predict rightPredict = new Predict(rightInfo.indexOfLagestElement, rightStatByClasses[1] / rightInfo.sumAll);
+            Predict rightPredict = new Predict(rightInfo.indexOfLargestElement, rightStatByClasses[1]
+                    / rightInfo.sumAll);
 
             double gain = info.impurity - (leftInfo.sumAll / info.sumAll) * leftInfo.impurity
                     - (rightInfo.sumAll / info.sumAll) * rightInfo.impurity;
@@ -269,7 +285,8 @@ class Gini extends Impurity {
                 leftCategories.add(config.getBinCategory().get(i));
                 split = new Split(config.getColumnNum(), FeatureType.CATEGORICAL, 0d, leftCategories);
             } else {
-                split = new Split(config.getColumnNum(), FeatureType.CONTINUOUS, config.getBinBoundary().get(i), null);
+                split = new Split(config.getColumnNum(), FeatureType.CONTINUOUS, config.getBinBoundary().get(i + 1),
+                        null);
             }
 
             internalGainList.add(new GainInfo(gain, info.impurity, predict, leftInfo.impurity, rightInfo.impurity,
@@ -301,12 +318,12 @@ class Gini extends Impurity {
 
     private static class InternalEntropyInfo {
         double sumAll;
-        double indexOfLagestElement;
+        double indexOfLargestElement;
         double impurity;
 
-        public InternalEntropyInfo(double sumAll, double indexOfLagestElement, double impurity) {
+        public InternalEntropyInfo(double sumAll, double indexOfLargestElement, double impurity) {
             this.sumAll = sumAll;
-            this.indexOfLagestElement = indexOfLagestElement;
+            this.indexOfLargestElement = indexOfLargestElement;
             this.impurity = impurity;
         }
     }
