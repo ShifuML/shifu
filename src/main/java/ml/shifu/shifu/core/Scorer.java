@@ -16,12 +16,14 @@
 package ml.shifu.shifu.core;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
 import ml.shifu.shifu.container.ScoreObject;
 import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.container.obj.ModelConfig;
+import ml.shifu.shifu.core.dtrain.CommonConstants;
 import ml.shifu.shifu.core.dtrain.DTrainUtils;
 import ml.shifu.shifu.util.CommonUtils;
 
@@ -53,6 +55,11 @@ public class Scorer {
      */
     private boolean noVarSelect = false;
 
+    /**
+     * For faster query from categorical bins
+     */
+    private Map<Integer, Map<String, Integer>> binCategoryMap = new HashMap<Integer, Map<String, Integer>>();
+
     public Scorer(List<BasicML> models, List<ColumnConfig> columnConfigList, String algorithm, ModelConfig modelConfig) {
         this(models, columnConfigList, algorithm, modelConfig, 4.0d);
     }
@@ -75,10 +82,23 @@ public class Scorer {
                 this.noVarSelect = false;
             }
         }
+        if(this.modelConfig.getAlgorithm().equalsIgnoreCase(CommonConstants.DT_ALG_NAME)) {
+            for(ColumnConfig columnConfig: columnConfigList) {
+                if(columnConfig.isCategorical()) {
+                    Map<String, Integer> map = new HashMap<String, Integer>();
+                    List<String> categories = columnConfig.getBinCategory();
+                    for(int i = 0; i < categories.size(); i++) {
+                        map.put(categories.get(i) == null ? "" : categories.get(i), i);
+                    }
+                    this.binCategoryMap.put(columnConfig.getColumnNum(), map);
+                }
+            }
+        }
     }
 
     public ScoreObject score(Map<String, String> rawDataMap) {
-        MLDataPair pair = CommonUtils.assembleDataPair(noVarSelect, modelConfig, columnConfigList, rawDataMap, cutoff);
+        MLDataPair pair = CommonUtils.assembleDataPair(binCategoryMap, noVarSelect, modelConfig, columnConfigList,
+                rawDataMap, cutoff);
         return score(pair, rawDataMap);
     }
 
@@ -123,6 +143,15 @@ public class Scorer {
                     continue;
                 }
                 MLData score = lr.compute(pair.getInput());
+                scores.add(toScore(score.getData(0)));
+            } else if(model instanceof TreeModel) {
+                TreeModel rf = (TreeModel) model;
+                if(rf.getInputCount() != pair.getInput().size()) {
+                    log.error("RandomForest and input size mismatch: rf Size = " + rf.getInputCount() + "; Input Size = "
+                            + pair.getInput().size());
+                    continue;
+                }
+                MLData score = rf.compute(pair.getInput());
                 scores.add(toScore(score.getData(0)));
             } else {
                 throw new RuntimeException("unsupport models");

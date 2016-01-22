@@ -25,7 +25,6 @@ import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.container.obj.ModelConfig;
 import ml.shifu.shifu.core.dtrain.CommonConstants;
 import ml.shifu.shifu.core.dtrain.DTrainUtils;
-import ml.shifu.shifu.core.dtrain.nn.NNConstants;
 import ml.shifu.shifu.message.NormPartRawDataMessage;
 import ml.shifu.shifu.message.RunModelDataMessage;
 import ml.shifu.shifu.message.ScanEvalDataMessage;
@@ -58,7 +57,7 @@ public class DataLoadWorker extends AbstractWorkerActor {
     /**
      * Default splitter used to split input record. Use one instance to prevent more news in Splitter.on.
      */
-    private static final Splitter DEFAULT_SPLITTER = Splitter.on(NNConstants.NN_DEFAULT_COLUMN_SEPARATOR);
+    private static final Splitter DEFAULT_SPLITTER = Splitter.on(CommonConstants.DEFAULT_COLUMN_SEPARATOR);
 
     /**
      * Basic input node count for NN model
@@ -232,7 +231,8 @@ public class DataLoadWorker extends AbstractWorkerActor {
             for(String input: DEFAULT_SPLITTER.split(line.trim())) {
                 double doubleValue = NumberFormatUtils.getDouble(input.trim(), 0.0d);
                 if(index == this.columnConfigList.size()) {
-                    significance = NumberFormatUtils.getDouble(input.trim(), CommonConstants.DEFAULT_SIGNIFICANCE_VALUE);
+                    significance = NumberFormatUtils
+                            .getDouble(input.trim(), CommonConstants.DEFAULT_SIGNIFICANCE_VALUE);
                     break;
                 } else {
                     ColumnConfig columnConfig = this.columnConfigList.get(index);

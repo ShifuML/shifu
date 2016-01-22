@@ -21,9 +21,11 @@ import java.io.File;
 import java.io.IOException;
 import java.io.Serializable;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Properties;
 import java.util.Random;
 
@@ -41,7 +43,6 @@ import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
 import ml.shifu.shifu.core.dtrain.CommonConstants;
 import ml.shifu.shifu.core.dtrain.DTrainUtils;
 import ml.shifu.shifu.core.dtrain.dt.DTWorkerParams.NodeStats;
-import ml.shifu.shifu.core.dtrain.nn.NNConstants;
 import ml.shifu.shifu.util.CommonUtils;
 
 import org.apache.commons.math3.distribution.PoissonDistribution;
@@ -133,7 +134,7 @@ public class DTWorker
     /**
      * Default splitter used to split input record. Use one instance to prevent more news in Splitter.on.
      */
-    protected static final Splitter DEFAULT_SPLITTER = Splitter.on(NNConstants.NN_DEFAULT_COLUMN_SEPARATOR)
+    protected static final Splitter DEFAULT_SPLITTER = Splitter.on(CommonConstants.DEFAULT_COLUMN_SEPARATOR)
             .trimResults();
 
     /**
@@ -199,7 +200,7 @@ public class DTWorker
         }
 
         int numClasses = this.modelConfig.isMultiClassification() ? this.modelConfig.getFlattenTags().size() : 2;
-        String imStr = this.modelConfig.getTrain().getParams().get("impurity").toString();
+        String imStr = this.modelConfig.getTrain().getParams().get("Impurity").toString();
         if(imStr.equalsIgnoreCase("entropy")) {
             impurity = new Entropy(numClasses);
         } else if(imStr.equalsIgnoreCase("gini")) {
@@ -207,7 +208,6 @@ public class DTWorker
         } else {
             impurity = new Variance();
         }
-
     }
 
     /*
@@ -219,72 +219,94 @@ public class DTWorker
     public DTWorkerParams doCompute(WorkerContext<DTMasterParams, DTWorkerParams> context) {
         if(context.isFirstIteration()) {
             return new DTWorkerParams();
-        } else {
-            DTMasterParams lastMasterResult = context.getLastMasterResult();
-            List<TreeNode> trees = lastMasterResult.getTrees();
-            Map<Integer, TreeNode> todoNodes = lastMasterResult.getTodoNodes();
+        }
+        DTMasterParams lastMasterResult = context.getLastMasterResult();
+        List<TreeNode> trees = lastMasterResult.getTrees();
+        Map<Integer, TreeNode> todoNodes = lastMasterResult.getTodoNodes();
 
-            Map<Integer, NodeStats> statistics = new HashMap<Integer, NodeStats>();
-            for(Map.Entry<Integer, TreeNode> entry: todoNodes.entrySet()) {
-                List<Integer> features = entry.getValue().getFeatures();
-                if(features.isEmpty()) {
-                    features = getAllValidFeatures();
-                }
-                Map<Integer, double[]> featureStatistics = new HashMap<Integer, double[]>();
-                for(Integer columnNum: features) {
-                    ColumnConfig columnConfig = this.columnConfigList.get(columnNum);
-                    if(columnConfig.isNumerical()) {
-                        // TODO, how to process null bin
-                        int featureStatsSize = (columnConfig.getBinBoundary().size() + 1)
-                                * this.impurity.getStatsSize();
-                        featureStatistics.put(columnNum, new double[featureStatsSize]);
-                    } else if(columnConfig.isCategorical()) {
-                        int featureStatsSize = (columnConfig.getBinCategory().size() + 1)
-                                * this.impurity.getStatsSize();
-                        featureStatistics.put(columnNum, new double[featureStatsSize]);
-                    }
-                }
-                statistics.put(entry.getKey(), new NodeStats(entry.getValue().getTreeId(), entry.getValue().getNode()
-                        .getId(), featureStatistics));
+        Map<Integer, NodeStats> statistics = new HashMap<Integer, NodeStats>(todoNodes.size(), 1f);
+        for(Map.Entry<Integer, TreeNode> entry: todoNodes.entrySet()) {
+            List<Integer> features = entry.getValue().getFeatures();
+            if(features.isEmpty()) {
+                features = getAllValidFeatures();
             }
-
-            for(Data data: this.trainingData) {
-                List<Integer> nodeIndexes = new ArrayList<Integer>(trees.size());
-                for(TreeNode treeNode: trees) {
-                    // TODO how to debug here
-                    nodeIndexes.add(predictNodeIndex(treeNode.getNode(), data));
+            Map<Integer, double[]> featureStatistics = new HashMap<Integer, double[]>(features.size(), 1f);
+            for(Integer columnNum: features) {
+                ColumnConfig columnConfig = this.columnConfigList.get(columnNum);
+                if(columnConfig.isNumerical()) {
+                    // TODO, how to process null bin
+                    int featureStatsSize = columnConfig.getBinBoundary().size() * this.impurity.getStatsSize();
+                    featureStatistics.put(columnNum, new double[featureStatsSize]);
+                } else if(columnConfig.isCategorical()) {
+                    int featureStatsSize = (columnConfig.getBinCategory().size() + 1) * this.impurity.getStatsSize();
+                    featureStatistics.put(columnNum, new double[featureStatsSize]);
                 }
-                for(Map.Entry<Integer, TreeNode> entry: todoNodes.entrySet()) {
-                    // only do statistics on effective data
-                    Node todoNode = entry.getValue().getNode();
-                    int treeId = entry.getValue().getTreeId();
-                    if(todoNode.getId() == nodeIndexes.get(entry.getValue().getTreeId())) {
-                        List<Integer> features = entry.getValue().getFeatures();
-                        for(Integer columnNum: features) {
-                            ColumnConfig config = this.columnConfigList.get(columnNum);
-                            double[] featuerStatistic = statistics.get(entry.getKey()).getFeatureStatistics()
-                                    .get(columnNum);
-                            float weight = data.subsampleWeights[treeId];
-                            if(config.isNumerical()) {
-                                float value = data.numericInputs[this.numericInputIndexMap.get(columnNum)];
-                                int binIndex = getBinIndex(value, config.getBinBoundary());
-                                this.impurity.featureUpdate(featuerStatistic, binIndex, data.outputs[0],
-                                        data.significance, weight);
-                            } else if(config.isCategorical()) {
-                                String category = data.categoricalInputs[this.categoricalInputIndexMap.get(columnNum)];
-                                Integer binIndex = this.categoryIndexMap.get(columnNum).get(category);
-                                this.impurity.featureUpdate(featuerStatistic, binIndex, data.outputs[0],
-                                        data.significance, weight);
-                            } else {
-                                throw new IllegalStateException("Only numerical and categorical columns supported. ");
-                            }
+            }
+            statistics.put(entry.getKey(), new NodeStats(entry.getValue().getTreeId(), entry.getValue().getNode()
+                    .getId(), featureStatistics));
+        }
+        // reopen for iteration
+        this.trainingData.reOpen();
+        double squareError = 0d;
+        for(Data data: this.trainingData) {
+            List<Integer> nodeIndexes = new ArrayList<Integer>(trees.size());
+            for(TreeNode treeNode: trees) {
+                Node predictNode = predictNodeIndex(treeNode.getNode(), data);
+                if(predictNode.getPredict() != null) {
+                    // only update when not in first node, for treeNode, no predict statistics at that time
+                    double error = data.outputs[0] - predictNode.getPredict().getPredict();
+                    squareError += error * error;
+                }
+                int predictNodeIndex = predictNode.getId();
+                nodeIndexes.add(predictNodeIndex);
+            }
+            for(Map.Entry<Integer, TreeNode> entry: todoNodes.entrySet()) {
+                // only do statistics on effective data
+                Node todoNode = entry.getValue().getNode();
+                int treeId = entry.getValue().getTreeId();
+                if(todoNode.getId() == nodeIndexes.get(entry.getValue().getTreeId())) {
+                    List<Integer> features = entry.getValue().getFeatures();
+                    if(features.isEmpty()) {
+                        features = getAllValidFeatures();
+                    }
+                    for(Integer columnNum: features) {
+                        ColumnConfig config = this.columnConfigList.get(columnNum);
+                        double[] featuerStatistic = statistics.get(entry.getKey()).getFeatureStatistics()
+                                .get(columnNum);
+                        float weight = data.subsampleWeights[treeId];
+                        if(config.isNumerical()) {
+                            float value = data.numericInputs[this.numericInputIndexMap.get(columnNum)];
+                            int binIndex = getBinIndex(value, config.getBinBoundary());
+                            this.impurity.featureUpdate(featuerStatistic, binIndex, data.outputs[0], data.significance,
+                                    weight);
+                        } else if(config.isCategorical()) {
+                            String category = data.categoricalInputs[this.categoricalInputIndexMap.get(columnNum)];
+                            Integer binIndex = this.categoryIndexMap.get(columnNum).get(category);
+                            this.impurity.featureUpdate(featuerStatistic, binIndex, data.outputs[0], data.significance,
+                                    weight);
+                        } else {
+                            throw new IllegalStateException("Only numerical and categorical columns supported. ");
                         }
                     }
                 }
             }
-            LOG.debug("Worker statistics is {}", statistics);
-            return new DTWorkerParams(statistics);
         }
+        for(Map.Entry<Integer, NodeStats> entry: statistics.entrySet()) {
+            NodeStats nodeStats = entry.getValue();
+            LOG.info("Node index {}, node id {}, tree id{}", entry.getKey(), nodeStats.getNodeId(),
+                    nodeStats.getTreeId());
+            Map<Integer, double[]> featureStatistics = nodeStats.getFeatureStatistics();
+            for(Entry<Integer, double[]> feaEntry: featureStatistics.entrySet()) {
+                LOG.info("ColumnNum {} statistics {}", feaEntry.getKey(), Arrays.toString(feaEntry.getValue()));
+            }
+        }
+        LOG.debug("Worker statistics is {}", statistics);
+        return new DTWorkerParams(count, squareError, statistics);
+    }
+
+    @Override
+    protected void postLoad(WorkerContext<DTMasterParams, DTWorkerParams> context) {
+        this.trainingData.switchState();
     }
 
     private List<Integer> getAllValidFeatures() {
@@ -304,18 +326,18 @@ public class DTWorker
     }
 
     /**
-     * 'binBoundary' is ArrayList in fact, so we can use get method.
+     * 'binBoundary' is ArrayList in fact, so we can use get method. ["-Infinity", 1d, 4d, ....]
      */
     private int getBinIndex(float value, List<Double> binBoundary) {
-        if(binBoundary.isEmpty()) {
-            return 0;
+        if(binBoundary.size() <= 1) {
+            throw new IllegalArgumentException();
         }
 
-        int low = 0, high = binBoundary.size();
+        int low = 0, high = binBoundary.size() - 1;
         while(low <= high) {
             int mid = (low + high) >>> 1;
-            double lowThreshold = mid == 0 ? Double.MIN_VALUE : binBoundary.get(mid - 1);
-            double highThreshold = mid == binBoundary.size() ? Double.MAX_VALUE : binBoundary.get(mid);
+            double lowThreshold = binBoundary.get(mid);
+            double highThreshold = mid == binBoundary.size() - 1 ? Double.MAX_VALUE : binBoundary.get(mid + 1);
             if(value >= lowThreshold && value < highThreshold) {
                 return mid;
             }
@@ -328,11 +350,11 @@ public class DTWorker
         return -1;
     }
 
-    private int predictNodeIndex(Node node, Data data) {
+    private Node predictNodeIndex(Node node, Data data) {
         Node currNode = node;
         Split split = currNode.getSplit();
         if(split == null || currNode.isLeaf()) {
-            return currNode.getId();
+            return currNode;
         }
 
         ColumnConfig columnConfig = this.columnConfigList.get(split.getColumnNum());

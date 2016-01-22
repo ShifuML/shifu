@@ -66,7 +66,7 @@ public abstract class AbstractNNWorker<VALUE extends Writable> extends
     /**
      * Default splitter used to split input record. Use one instance to prevent more news in Splitter.on.
      */
-    protected static final Splitter DEFAULT_SPLITTER = Splitter.on(NNConstants.NN_DEFAULT_COLUMN_SEPARATOR);
+    protected static final Splitter DEFAULT_SPLITTER = Splitter.on(CommonConstants.DEFAULT_COLUMN_SEPARATOR);
 
     /**
      * Training data set

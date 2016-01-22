@@ -23,25 +23,34 @@ import java.util.Map;
 import java.util.Map.Entry;
 
 import ml.shifu.guagua.io.Bytable;
+import ml.shifu.guagua.io.HaltBytable;
 
 /**
  * TODO
  * 
  * @author Zhang David (pengzhang@paypal.com)
  */
-public class DTWorkerParams implements Bytable {
+public class DTWorkerParams extends HaltBytable {
+
+    private long count;
+
+    private double squareError;
 
     private Map<Integer, NodeStats> nodeStatsMap;
 
     public DTWorkerParams() {
     }
 
-    public DTWorkerParams(Map<Integer, NodeStats> nodeStatsMap) {
+    public DTWorkerParams(long count, double squareError, Map<Integer, NodeStats> nodeStatsMap) {
+        this.count = count;
+        this.squareError = squareError;
         this.nodeStatsMap = nodeStatsMap;
     }
 
     @Override
-    public void write(DataOutput out) throws IOException {
+    public void doWrite(DataOutput out) throws IOException {
+        out.writeLong(count);
+        out.writeDouble(squareError);
         if(nodeStatsMap == null) {
             out.writeBoolean(false);
         } else {
@@ -55,7 +64,9 @@ public class DTWorkerParams implements Bytable {
     }
 
     @Override
-    public void readFields(DataInput in) throws IOException {
+    public void doReadFields(DataInput in) throws IOException {
+        this.count = in.readLong();
+        this.squareError = in.readDouble();
         if(in.readBoolean()) {
             this.nodeStatsMap = new HashMap<Integer, NodeStats>();
             int len = in.readInt();
@@ -81,6 +92,36 @@ public class DTWorkerParams implements Bytable {
      */
     public void setNodeStatsMap(Map<Integer, NodeStats> nodeStatsMap) {
         this.nodeStatsMap = nodeStatsMap;
+    }
+
+    /**
+     * @return the count
+     */
+    public long getCount() {
+        return count;
+    }
+
+    /**
+     * @return the squareError
+     */
+    public double getSquareError() {
+        return squareError;
+    }
+
+    /**
+     * @param count
+     *            the count to set
+     */
+    public void setCount(long count) {
+        this.count = count;
+    }
+
+    /**
+     * @param squareError
+     *            the squareError to set
+     */
+    public void setSquareError(double squareError) {
+        this.squareError = squareError;
     }
 
     public static class NodeStats implements Bytable {
@@ -149,7 +190,7 @@ public class DTWorkerParams implements Bytable {
             this.setNodeId(in.readInt());
             this.treeId = in.readInt();
             int len = in.readInt();
-            this.featureStatistics = new HashMap<Integer, double[]>();
+            this.featureStatistics = new HashMap<Integer, double[]>(len, 1f);
             for(int i = 0; i < len; i++) {
                 int key = in.readInt();
                 int vLen = in.readInt();

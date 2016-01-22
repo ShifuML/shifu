@@ -40,7 +40,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 
-
 /**
  * ScoreModelWorker class collect all the score for evaluation data and save
  * them into file. If the evaluation data contains target column, it will also
@@ -57,34 +56,27 @@ public class ScoreModelWorker extends AbstractWorkerActor {
     private int receivedStreamCnt;
     private Map<Integer, StreamBulletin> resultMap;
 
-    public ScoreModelWorker(ModelConfig modelConfig,
-                            List<ColumnConfig> columnConfigList, ActorRef parentActorRef,
-                            ActorRef nextActorRef, EvalConfig evalConfig) throws IOException {
+    public ScoreModelWorker(ModelConfig modelConfig, List<ColumnConfig> columnConfigList, ActorRef parentActorRef,
+            ActorRef nextActorRef, EvalConfig evalConfig) throws IOException {
         super(modelConfig, columnConfigList, parentActorRef, nextActorRef);
         this.evalConfig = evalConfig;
 
         PathFinder pathFinder = new PathFinder(modelConfig);
 
         // make sure local directory - evals/<EvalSetName> exists
-        ShifuFileUtils.createDirIfNotExists(
-                pathFinder.getEvalSetPath(evalConfig),
-                evalConfig.getDataSet().getSource());
+        ShifuFileUtils.createDirIfNotExists(pathFinder.getEvalSetPath(evalConfig), evalConfig.getDataSet().getSource());
 
         // clear output - evals/<EvalSetName>/EvalScore at first,
         // for it may be directory
-        ShifuFileUtils.deleteFile(
-                pathFinder.getEvalScorePath(evalConfig),
-                evalConfig.getDataSet().getSource());
+        ShifuFileUtils.deleteFile(pathFinder.getEvalScorePath(evalConfig), evalConfig.getDataSet().getSource());
 
         // create score writer
-        scoreWriter = ShifuFileUtils.getWriter(
-                pathFinder.getEvalScorePath(evalConfig),
-                evalConfig.getDataSet().getSource());
+        scoreWriter = ShifuFileUtils.getWriter(pathFinder.getEvalScorePath(evalConfig), evalConfig.getDataSet()
+                .getSource());
 
         // load the header for evaluation data
-        header = CommonUtils.getHeaders(evalConfig.getDataSet().getHeaderPath(),
-                evalConfig.getDataSet().getHeaderDelimiter(),
-                evalConfig.getDataSet().getSource());
+        header = CommonUtils.getHeaders(evalConfig.getDataSet().getHeaderPath(), evalConfig.getDataSet()
+                .getHeaderDelimiter(), evalConfig.getDataSet().getSource());
 
         writeScoreHeader();
 
@@ -94,15 +86,15 @@ public class ScoreModelWorker extends AbstractWorkerActor {
 
     /*
      * (non-Javadoc)
-     *
+     * 
      * @see akka.actor.UntypedActor#onReceive(java.lang.Object)
      */
     @Override
     public void handleMsg(Object message) throws IOException {
-        if (message instanceof RunModelResultMessage) {
+        if(message instanceof RunModelResultMessage) {
             log.debug("Received model score data for evaluation");
             RunModelResultMessage msg = (RunModelResultMessage) message;
-            if (!resultMap.containsKey(msg.getStreamId())) {
+            if(!resultMap.containsKey(msg.getStreamId())) {
                 receivedStreamCnt++;
                 resultMap.put(msg.getStreamId(), new StreamBulletin(msg.getStreamId()));
             }
@@ -111,20 +103,18 @@ public class ScoreModelWorker extends AbstractWorkerActor {
             List<CaseScoreResult> caseScoreResultList = msg.getScoreResultList();
 
             StringBuilder buf = new StringBuilder();
-            for (CaseScoreResult csResult : caseScoreResultList) {
+            for(CaseScoreResult csResult: caseScoreResultList) {
                 buf.setLength(0);
 
-                Map<String, String> rawDataMap = CommonUtils.convertDataIntoMap(
-                        csResult.getInputData(),
-                        evalConfig.getDataSet().getDataDelimiter(),
-                        header);
+                Map<String, String> rawDataMap = CommonUtils.convertDataIntoMap(csResult.getInputData(), evalConfig
+                        .getDataSet().getDataDelimiter(), header);
 
                 // get the tag
                 String tag = rawDataMap.get(modelConfig.getTargetColumnName(evalConfig));
                 buf.append(StringUtils.trimToEmpty(tag));
 
                 // append weight column value
-                if (StringUtils.isNotBlank(evalConfig.getDataSet().getWeightColumnName())) {
+                if(StringUtils.isNotBlank(evalConfig.getDataSet().getWeightColumnName())) {
                     String metric = rawDataMap.get(evalConfig.getDataSet().getWeightColumnName());
                     buf.append("|" + StringUtils.trimToEmpty(metric));
                 } else {
@@ -137,14 +127,14 @@ public class ScoreModelWorker extends AbstractWorkerActor {
                 buf.append("|" + csResult.getMedianScore());
 
                 // score
-                for (Integer score : csResult.getScores()) {
+                for(Integer score: csResult.getScores()) {
                     buf.append("|" + score);
                 }
 
                 // append meta data
                 List<String> metaColumns = evalConfig.getScoreMetaColumns(modelConfig);
-                if (CollectionUtils.isNotEmpty(metaColumns)) {
-                    for (String columnName : metaColumns) {
+                if(CollectionUtils.isNotEmpty(metaColumns)) {
+                    for(String columnName: metaColumns) {
                         String value = rawDataMap.get(columnName);
                         buf.append("|" + StringUtils.trimToEmpty(value));
                     }
@@ -153,10 +143,9 @@ public class ScoreModelWorker extends AbstractWorkerActor {
                 scoreWriter.write(buf.toString() + "\n");
             }
 
-            if (receivedStreamCnt == msg.getTotalStreamCnt() && hasAllMessageResult(resultMap)) {
-                log.info("Finish running scoring, the score file - {} is stored in {}.",
-                        new PathFinder(modelConfig).getEvalScorePath(evalConfig).toString(),
-                        evalConfig.getDataSet().getSource().name());
+            if(receivedStreamCnt == msg.getTotalStreamCnt() && hasAllMessageResult(resultMap)) {
+                log.info("Finish running scoring, the score file - {} is stored in {}.", new PathFinder(modelConfig)
+                        .getEvalScorePath(evalConfig).toString(), evalConfig.getDataSet().getSource().name());
                 scoreWriter.close();
 
                 // only one message will be sent
@@ -173,9 +162,9 @@ public class ScoreModelWorker extends AbstractWorkerActor {
      */
     private boolean hasAllMessageResult(Map<Integer, StreamBulletin> resultMsgMap) {
         Iterator<Entry<Integer, StreamBulletin>> iterator = resultMsgMap.entrySet().iterator();
-        while (iterator.hasNext()) {
+        while(iterator.hasNext()) {
             Entry<Integer, StreamBulletin> entry = iterator.next();
-            if (!entry.getValue().isMessageEnd()) {
+            if(!entry.getValue().isMessageEnd()) {
                 return false;
             }
         }
@@ -184,28 +173,29 @@ public class ScoreModelWorker extends AbstractWorkerActor {
 
     /**
      * Write the file header for score file
-     *
+     * 
      * @throws IOException
      */
     private void writeScoreHeader() throws IOException {
         StringBuilder buf = new StringBuilder();
-        buf.append(modelConfig.getTargetColumnName(evalConfig) == null
-                ? "tag" : modelConfig.getTargetColumnName(evalConfig));
+        buf.append(modelConfig.getTargetColumnName(evalConfig) == null ? "tag" : modelConfig
+                .getTargetColumnName(evalConfig));
 
-        buf.append("|" + (StringUtils.isBlank(evalConfig.getDataSet().getWeightColumnName())
-                ? "weight" : evalConfig.getDataSet().getWeightColumnName()));
+        buf.append("|"
+                + (StringUtils.isBlank(evalConfig.getDataSet().getWeightColumnName()) ? "weight" : evalConfig
+                        .getDataSet().getWeightColumnName()));
 
         buf.append("|mean|max|min|median");
 
-        List<BasicML> models = CommonUtils.loadBasicModels(modelConfig, evalConfig, SourceType.LOCAL);
-        for (int i = 0; i < models.size(); i++) {
+        List<BasicML> models = CommonUtils.loadBasicModels(modelConfig, columnConfigList, evalConfig, SourceType.LOCAL);
+        for(int i = 0; i < models.size(); i++) {
             buf.append("|model" + i);
         }
 
         // append meta data
         List<String> metaColumns = evalConfig.getScoreMetaColumns(modelConfig);
-        if (CollectionUtils.isNotEmpty(metaColumns)) {
-            for (String columnName : metaColumns) {
+        if(CollectionUtils.isNotEmpty(metaColumns)) {
+            for(String columnName: metaColumns) {
                 buf.append("|" + columnName);
             }
         }
@@ -227,7 +217,7 @@ public class ScoreModelWorker extends AbstractWorkerActor {
         }
 
         public void receiveMsge(int msgId, boolean isLastMsg) {
-            if (isLastMsg) {
+            if(isLastMsg) {
                 hasLastMsg = true;
                 targetSum = msgId * (msgId + 1) / 2;
             }

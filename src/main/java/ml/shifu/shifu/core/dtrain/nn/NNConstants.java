@@ -35,7 +35,6 @@ public class NNConstants {
     public static final int GUAGUA_NN_DEFAULT_INPUT_NODES = 100;
     public static final String NN_RECORD_SCALE = "nn.record.scale";
     public static final String NN_TEST_SCALE = "nn.test.scale";
-    public static final String NN_DEFAULT_COLUMN_SEPARATOR = "|";
 
     public static final String MAPRED_JOB_QUEUE_NAME = "mapred.job.queue.name";
 

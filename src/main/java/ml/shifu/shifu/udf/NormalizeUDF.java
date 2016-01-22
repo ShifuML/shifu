@@ -27,6 +27,7 @@ import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.container.obj.ModelNormalizeConf.NormType;
 import ml.shifu.shifu.core.DataSampler;
 import ml.shifu.shifu.core.Normalizer;
+import ml.shifu.shifu.core.dtrain.CommonConstants;
 import ml.shifu.shifu.util.CommonUtils;
 
 import org.apache.commons.collections.CollectionUtils;
@@ -53,6 +54,8 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
     private JexlContext weightContext;
     private DecimalFormat df = new DecimalFormat("#.######");
 
+    private String alg;
+
     public NormalizeUDF(String source, String pathModelConfig, String pathColumnConfig) throws Exception {
         super(source, pathModelConfig, pathColumnConfig);
 
@@ -72,6 +75,8 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
         this.tags = super.modelConfig.getSetTags();
 
         log.debug("NormalizeUDF Initialized");
+
+        this.alg = this.modelConfig.getAlgorithm();
     }
 
     public Tuple exec(Tuple input) throws IOException {
@@ -138,8 +143,23 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
             if(!CommonUtils.isGoodCandidate(modelConfig.isBinaryClassification(), config)) {
                 tuple.append(null);
             } else {
-                Double normVal = Normalizer.normalize(config, val, cutoff, normType);
-                tuple.append(df.format(normVal));
+                if(CommonConstants.DT_ALG_NAME.equalsIgnoreCase(this.alg)) {
+                    Double normVal = 0d;
+                    if(config.isCategorical()) {
+                        tuple.append(val);
+                    } else {
+                        try {
+                            normVal = Double.parseDouble(val);
+                        } catch (Exception e) {
+                            log.debug("Not decimal format " + val + ", using default!");
+                            normVal = Normalizer.defaultMissingValue(config);
+                        }
+                    }
+                    tuple.append(df.format(normVal));
+                } else {
+                    Double normVal = Normalizer.normalize(config, val, cutoff, normType);
+                    tuple.append(df.format(normVal));
+                }
             }
         }
 
@@ -213,11 +233,16 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
                 if(!config.isMeta() && config.isNumerical()) {
                     schemaStr.append(config.getColumnName() + ":float" + ",");
                 } else {
-                    schemaStr.append(config.getColumnName() + ":chararray" + ",");
+                    if(config.isCategorical() && CommonConstants.DT_ALG_NAME.equalsIgnoreCase(this.alg)) {
+                        schemaStr.append(config.getColumnName() + ":chararray" + ",");
+                    } else if(config.isCategorical()) {
+                        schemaStr.append(config.getColumnName() + ":float" + ",");
+                    } else {
+                        schemaStr.append(config.getColumnName() + ":chararray" + ",");
+                    }
                 }
             }
             schemaStr.append("weight:float)");
-
             return Utils.getSchemaFromString(schemaStr.toString());
         } catch (Exception e) {
             log.error("error in outputSchema", e);

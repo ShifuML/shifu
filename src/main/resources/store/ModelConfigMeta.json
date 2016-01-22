@@ -506,6 +506,31 @@
                         "directive": "input",
                         "defval" : 0.0
                     }, {
+                        "name" : "L1orL2",
+                        "type" : "text",
+                        "directive": "input",
+                        "defval" : "NONE"
+                    }, {
+                        "name" : "MaxDepth",
+                        "type" : "number",
+                        "directive": "input",
+                        "defval" : 10
+                    }, {
+                        "name" : "MaxStatsMemoryMB",
+                        "type" : "number",
+                        "directive": "input",
+                        "defval" : 256
+                    }, {
+                        "name" : "Impurity",
+                        "type" : "text",
+                        "directive": "input",
+                        "defval" : "variance"
+                    }, {
+                        "name" : "FeatureSubsetStrategy",
+                        "type" : "text",
+                        "directive": "input",
+                        "defval" : "all"
+                    }, {
                         "name" : "LearningDecay",
                         "type" : "number",
                         "directive": "input",

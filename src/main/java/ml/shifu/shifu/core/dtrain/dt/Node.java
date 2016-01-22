@@ -275,17 +275,6 @@ public class Node implements Bytable {
         return Integer.numberOfTrailingZeros(Integer.highestOneBit(nodeIndex));
     }
 
-    public static void main(String[] args) {
-        System.out.println(indexToLevel(1));
-        System.out.println(indexToLevel(2));
-        System.out.println(indexToLevel(3));
-        System.out.println(indexToLevel(4));
-        System.out.println(indexToLevel(5));
-        System.out.println(indexToLevel(6));
-        System.out.println(indexToLevel(7));
-
-    }
-
     /**
      * @param isLeaf
      *            the isLeaf to set
@@ -345,7 +334,7 @@ public class Node implements Bytable {
     }
 
     public static int rightIndex(int id) {
-        return id << 1 + 1;
+        return (id << 1) + 1;
     }
 
     public static int parentIndex(int id) {

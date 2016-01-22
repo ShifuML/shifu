@@ -40,6 +40,11 @@ import ml.shifu.shifu.core.alg.NNTrainer;
 import ml.shifu.shifu.core.alg.SVMTrainer;
 import ml.shifu.shifu.core.dtrain.CommonConstants;
 import ml.shifu.shifu.core.dtrain.DTrainUtils;
+import ml.shifu.shifu.core.dtrain.dt.DTMaster;
+import ml.shifu.shifu.core.dtrain.dt.DTMasterParams;
+import ml.shifu.shifu.core.dtrain.dt.DTOutput;
+import ml.shifu.shifu.core.dtrain.dt.DTWorker;
+import ml.shifu.shifu.core.dtrain.dt.DTWorkerParams;
 import ml.shifu.shifu.core.dtrain.lr.LogisticRegressionContants;
 import ml.shifu.shifu.core.dtrain.lr.LogisticRegressionMaster;
 import ml.shifu.shifu.core.dtrain.lr.LogisticRegressionOutput;
@@ -274,9 +279,11 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
 
     private void validateDistributedTrain() throws IOException {
         String alg = super.getModelConfig().getTrain().getAlgorithm();
-        if(!(NNConstants.NN_ALG_NAME.equalsIgnoreCase(alg) || LogisticRegressionContants.LR_ALG_NAME
-                .equalsIgnoreCase(alg))) {
-            throw new IllegalArgumentException("Currently we only support NN and LR distributed training.");
+        if(!(NNConstants.NN_ALG_NAME.equalsIgnoreCase(alg)
+                || LogisticRegressionContants.LR_ALG_NAME.equalsIgnoreCase(alg) || CommonConstants.DT_ALG_NAME
+                    .equalsIgnoreCase(alg))) {
+            throw new IllegalArgumentException(
+                    "Currently we only support NN, LR and DT(RandomForest) distributed training.");
         }
 
         if(super.getModelConfig().getDataSet().getSource() != SourceType.HDFS) {
@@ -315,13 +322,16 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
 
         prepareCommonParams(args, sourceType);
 
+        String alg = super.getModelConfig().getTrain().getAlgorithm();
+
         // add tmp models folder to config
         FileSystem fileSystem = ShifuFileUtils.getFileSystemBySourceType(sourceType);
         Path tmpModelsPath = fileSystem.makeQualified(new Path(super.getPathFinder().getPathBySourceType(
                 new Path(Constants.TMP, Constants.DEFAULT_MODELS_TMP_FOLDER), sourceType)));
         args.add(String.format(CommonConstants.MAPREDUCE_PARAM_FORMAT, CommonConstants.SHIFU_TMP_MODELS_FOLDER,
                 tmpModelsPath.toString()));
-        int baggingNum = isForVarSelect ? 1 : super.getModelConfig().getBaggingNum();
+        int baggingNum = isForVarSelect || CommonConstants.DT_ALG_NAME.equalsIgnoreCase(alg) ? 1 : super
+                .getModelConfig().getBaggingNum();
 
         long start = System.currentTimeMillis();
         LOG.info("Distributed trainning with baggingNum: {}", baggingNum);
@@ -374,14 +384,14 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
             List<String> localArgs = new ArrayList<String>(args);
             // set name for each bagging job.
             localArgs.add("-n");
-            localArgs.add(String.format("Shifu Master-Workers Training Iteration: %s id:%s", super.getModelConfig()
-                    .getModelSetName(), i));
+            localArgs.add(String.format("Shifu Master-Workers %s Training Iteration: %s id:%s", alg, super
+                    .getModelConfig().getModelSetName(), i));
             LOG.info("Start trainer with id: {}", i);
             String modelName = getModelName(i);
             Path modelPath = fileSystem.makeQualified(new Path(super.getPathFinder().getModelsPath(sourceType),
                     modelName));
 
-            // check if job is continunous trainining, this can be set multiple times and we only get last one
+            // check if job is continunous training, this can be set multiple times and we only get last one
             boolean isContinous = checkContinuousTraining(fileSystem, localArgs, modelPath);
             if(!isContinous && !isOneJobNotContinuous) {
                 isOneJobNotContinuous = true;
@@ -474,7 +484,8 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
     }
 
     private boolean inputOutputModelCheckSuccess(FileSystem fileSystem, Path modelPath) throws IOException {
-        MLInputOutput model = (MLInputOutput) CommonUtils.loadModel(modelPath, fileSystem);
+        MLInputOutput model = (MLInputOutput) CommonUtils.loadModel(this.modelConfig, this.columnConfigList, modelPath,
+                fileSystem);
         int[] outputCandidateCounts = DTrainUtils.getInputOutputCandidateCounts(getColumnConfigList());
         return model.getInputCount() == outputCandidateCounts[0] && model.getOutputCount() == outputCandidateCounts[1];
     }
@@ -522,15 +533,26 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
         }
     }
 
+    private void prepareDTParams(final List<String> args, final SourceType sourceType) {
+        args.add("-w");
+        args.add(DTWorker.class.getName());
+        args.add("-m");
+        args.add(DTMaster.class.getName());
+        args.add("-mr");
+        args.add(DTMasterParams.class.getName());
+        args.add("-wr");
+        args.add(DTWorkerParams.class.getName());
+        args.add(String.format(CommonConstants.MAPREDUCE_PARAM_FORMAT, GuaguaConstants.GUAGUA_MASTER_INTERCEPTERS,
+                DTOutput.class.getName()));
+    }
+
     private void prepareLRParams(final List<String> args, final SourceType sourceType) {
         args.add("-w");
         args.add(LogisticRegressionWorker.class.getName());
-
         args.add("-m");
         args.add(LogisticRegressionMaster.class.getName());
         args.add("-mr");
         args.add(LogisticRegressionParams.class.getName());
-
         args.add("-wr");
         args.add(LogisticRegressionParams.class.getName());
         args.add(String.format(CommonConstants.MAPREDUCE_PARAM_FORMAT, GuaguaConstants.GUAGUA_MASTER_INTERCEPTERS,
@@ -550,8 +572,8 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
 
         args.add("-mr");
         args.add(NNParams.class.getName());
-        args.add("-wr");
 
+        args.add("-wr");
         args.add(NNParams.class.getName());
         args.add(String.format(CommonConstants.MAPREDUCE_PARAM_FORMAT, GuaguaConstants.GUAGUA_MASTER_INTERCEPTERS,
                 NNOutput.class.getName()));
@@ -576,8 +598,10 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
         String alg = super.getModelConfig().getTrain().getAlgorithm();
         if(LogisticRegressionContants.LR_ALG_NAME.equalsIgnoreCase(alg)) {
             this.prepareLRParams(args, sourceType);
-        } else {
+        } else if(NNConstants.NN_ALG_NAME.equalsIgnoreCase(alg)) {
             this.prepareNNParams(args, sourceType);
+        } else if(CommonConstants.DT_ALG_NAME.equalsIgnoreCase(alg)) {
+            this.prepareDTParams(args, sourceType);
         }
 
         args.add("-c");

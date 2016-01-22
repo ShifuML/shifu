@@ -31,7 +31,6 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
-
 /**
  * RunModelWorker class computes the score for input data
  */
@@ -46,62 +45,56 @@ public class RunModelWorker extends AbstractWorkerActor {
      * @param nextActorRef
      * @throws IOException
      */
-    public RunModelWorker(ModelConfig modelConfig,
-                          List<ColumnConfig> columnConfigList, EvalConfig evalConfig,
-                          ActorRef parentActorRef, ActorRef nextActorRef) throws IOException {
+    public RunModelWorker(ModelConfig modelConfig, List<ColumnConfig> columnConfigList, EvalConfig evalConfig,
+            ActorRef parentActorRef, ActorRef nextActorRef) throws IOException {
         super(modelConfig, columnConfigList, parentActorRef, nextActorRef);
 
-        List<BasicML> models = CommonUtils.loadBasicModels(modelConfig, evalConfig, SourceType.LOCAL);
+        List<BasicML> models = CommonUtils.loadBasicModels(modelConfig, columnConfigList, evalConfig, SourceType.LOCAL);
 
         String[] header = null;
         String delimiter = null;
 
-        if (null == evalConfig
-                || null == evalConfig.getDataSet().getHeaderPath()
+        if(null == evalConfig || null == evalConfig.getDataSet().getHeaderPath()
                 || null == evalConfig.getDataSet().getHeaderDelimiter()) {
 
-            header = CommonUtils
-                    .getHeaders(modelConfig.getDataSet().getHeaderPath(),
-                            modelConfig.getDataSet().getHeaderDelimiter(),
-                            modelConfig.getDataSet().getSource());
+            header = CommonUtils.getHeaders(modelConfig.getDataSet().getHeaderPath(), modelConfig.getDataSet()
+                    .getHeaderDelimiter(), modelConfig.getDataSet().getSource());
 
             delimiter = modelConfig.getDataSetDelimiter();
 
         } else {
-            header = CommonUtils
-                    .getHeaders(evalConfig.getDataSet().getHeaderPath(),
-                            evalConfig.getDataSet().getHeaderDelimiter(),
-                            evalConfig.getDataSet().getSource());
+            header = CommonUtils.getHeaders(evalConfig.getDataSet().getHeaderPath(), evalConfig.getDataSet()
+                    .getHeaderDelimiter(), evalConfig.getDataSet().getSource());
 
             delimiter = evalConfig.getDataSet().getDataDelimiter();
         }
 
-        modelRunner = new ModelRunner(modelConfig, columnConfigList, header,
-                delimiter, models);
+        modelRunner = new ModelRunner(modelConfig, columnConfigList, header, delimiter, models);
     }
 
     /*
      * (non-Javadoc)
-     *
+     * 
      * @see akka.actor.UntypedActor#onReceive(java.lang.Object)
      */
     @Override
     public void handleMsg(Object message) {
-        if (message instanceof RunModelDataMessage) {
+        if(message instanceof RunModelDataMessage) {
             RunModelDataMessage msg = (RunModelDataMessage) message;
             List<String> evalDataList = msg.getEvalDataList();
 
             List<CaseScoreResult> scoreDataList = new ArrayList<CaseScoreResult>(evalDataList.size());
-            for (String evalData : evalDataList) {
+            for(String evalData: evalDataList) {
                 CaseScoreResult scoreData = calculateModelScore(evalData);
-                if (scoreData != null) {
+                if(scoreData != null) {
                     scoreData.setInputData(evalData);
                     scoreDataList.add(scoreData);
                 }
             }
 
-            nextActorRef.tell(new RunModelResultMessage(msg.getStreamId(),
-                    msg.getTotalStreamCnt(), msg.getMsgId(), msg.isLastMsg(), scoreDataList), getSelf());
+            nextActorRef.tell(
+                    new RunModelResultMessage(msg.getStreamId(), msg.getTotalStreamCnt(), msg.getMsgId(), msg
+                            .isLastMsg(), scoreDataList), getSelf());
         } else {
             unhandled(message);
         }
@@ -109,8 +102,9 @@ public class RunModelWorker extends AbstractWorkerActor {
 
     /**
      * Call model runner to compute result score
-     *
-     * @param evalData - data to run model
+     * 
+     * @param evalData
+     *            - data to run model
      * @return - the score result
      */
     private CaseScoreResult calculateModelScore(String evalData) {
