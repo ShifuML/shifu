@@ -155,7 +155,8 @@ class Entropy extends Impurity {
 
         InternalEntropyInfo info = getEntropyInterInfo(statsByClasses);
         // prob only effective in binary classes
-        Predict predict = new Predict(info.indexOfLargestElement, statsByClasses[1] / info.sumAll);
+        Predict predict = new Predict(info.sumAll == 0d ? 0d : (statsByClasses[1] / info.sumAll),
+                info.indexOfLargestElement);
 
         double[] leftStatByClasses = new double[numClasses];
         double[] rightStatByClasses = new double[numClasses];
@@ -166,14 +167,16 @@ class Entropy extends Impurity {
                 leftStatByClasses[j] += stats[i * numClasses + j];
             }
             InternalEntropyInfo leftInfo = getEntropyInterInfo(leftStatByClasses);
-            Predict leftPredict = new Predict(leftInfo.indexOfLargestElement, leftStatByClasses[1] / leftInfo.sumAll);
+            Predict leftPredict = new Predict(leftInfo.sumAll == 0d ? 0d : (leftStatByClasses[1] / leftInfo.sumAll),
+                    leftInfo.indexOfLargestElement);
 
             for(int j = 0; j < leftStatByClasses.length; j++) {
                 rightStatByClasses[j] = statsByClasses[j] - leftStatByClasses[j];
             }
             InternalEntropyInfo rightInfo = getEntropyInterInfo(rightStatByClasses);
-            Predict rightPredict = new Predict(rightInfo.indexOfLargestElement, rightStatByClasses[1]
-                    / rightInfo.sumAll);
+            Predict rightPredict = new Predict(
+                    rightInfo.sumAll == 0d ? 0d : (rightStatByClasses[1] / rightInfo.sumAll),
+                    rightInfo.indexOfLargestElement);
 
             double gain = info.impurity - (leftInfo.sumAll / info.sumAll) * leftInfo.impurity
                     - (rightInfo.sumAll / info.sumAll) * rightInfo.impurity;
@@ -199,14 +202,18 @@ class Entropy extends Impurity {
         }
 
         double impurity = 0d;
-        int indexOfLargestElement = 0;
-        double maxElement = Double.MIN_VALUE;
-        for(int i = 0; i < statsByClasses.length; i++) {
-            double rate = statsByClasses[i] / sumAll;
-            impurity -= rate * log2(rate);
-            if(statsByClasses[i] > maxElement) {
-                maxElement = statsByClasses[i];
-                indexOfLargestElement = i;
+        int indexOfLargestElement = -1;
+        if(sumAll != 0d) {
+            double maxElement = Double.MIN_VALUE;
+            for(int i = 0; i < statsByClasses.length; i++) {
+                double rate = statsByClasses[i] / sumAll;
+                if(rate != 0d) {
+                    impurity -= rate * log2(rate);
+                    if(statsByClasses[i] > maxElement) {
+                        maxElement = statsByClasses[i];
+                        indexOfLargestElement = i;
+                    }
+                }
             }
         }
 
@@ -258,7 +265,8 @@ class Gini extends Impurity {
 
         InternalEntropyInfo info = getEntropyInterInfo(statsByClasses);
         // prob only effective in binary classes
-        Predict predict = new Predict(info.indexOfLargestElement, statsByClasses[1] / info.sumAll);
+        Predict predict = new Predict(info.sumAll == 0d ? 0d : statsByClasses[1] / info.sumAll,
+                info.indexOfLargestElement);
 
         double[] leftStatByClasses = new double[numClasses];
         double[] rightStatByClasses = new double[numClasses];
@@ -269,14 +277,15 @@ class Gini extends Impurity {
                 leftStatByClasses[j] += stats[i * numClasses + j];
             }
             InternalEntropyInfo leftInfo = getEntropyInterInfo(leftStatByClasses);
-            Predict leftPredict = new Predict(leftInfo.indexOfLargestElement, leftStatByClasses[1] / leftInfo.sumAll);
+            Predict leftPredict = new Predict(leftInfo.sumAll == 0d ? 0d : leftStatByClasses[1] / leftInfo.sumAll,
+                    leftInfo.indexOfLargestElement);
 
             for(int j = 0; j < leftStatByClasses.length; j++) {
                 rightStatByClasses[j] = statsByClasses[j] - leftStatByClasses[j];
             }
             InternalEntropyInfo rightInfo = getEntropyInterInfo(rightStatByClasses);
-            Predict rightPredict = new Predict(rightInfo.indexOfLargestElement, rightStatByClasses[1]
-                    / rightInfo.sumAll);
+            Predict rightPredict = new Predict(rightInfo.sumAll == 0d ? 0d : rightStatByClasses[1] / rightInfo.sumAll,
+                    rightInfo.indexOfLargestElement);
 
             double gain = info.impurity - (leftInfo.sumAll / info.sumAll) * leftInfo.impurity
                     - (rightInfo.sumAll / info.sumAll) * rightInfo.impurity;
@@ -302,14 +311,16 @@ class Gini extends Impurity {
         }
 
         double impurity = 0d;
-        int indexOfLargestElement = 0;
-        double maxElement = Double.MIN_VALUE;
-        for(int i = 0; i < statsByClasses.length; i++) {
-            double rate = statsByClasses[i] / sumAll;
-            impurity -= rate * rate;
-            if(statsByClasses[i] > maxElement) {
-                maxElement = statsByClasses[i];
-                indexOfLargestElement = i;
+        int indexOfLargestElement = -1;
+        if(sumAll != 0d) {
+            double maxElement = Double.MIN_VALUE;
+            for(int i = 0; i < statsByClasses.length; i++) {
+                double rate = statsByClasses[i] / sumAll;
+                impurity -= rate * rate;
+                if(statsByClasses[i] > maxElement) {
+                    maxElement = statsByClasses[i];
+                    indexOfLargestElement = i;
+                }
             }
         }
 
