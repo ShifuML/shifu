@@ -178,8 +178,10 @@ class Entropy extends Impurity {
                     rightInfo.sumAll == 0d ? 0d : (rightStatByClasses[1] / rightInfo.sumAll),
                     rightInfo.indexOfLargestElement);
 
-            double gain = info.impurity - (leftInfo.sumAll / info.sumAll) * leftInfo.impurity
-                    - (rightInfo.sumAll / info.sumAll) * rightInfo.impurity;
+            double leftWeight = info.sumAll == 0d ? 0d : (leftInfo.sumAll / info.sumAll);
+            double rightWeight = info.sumAll == 0d ? 0d : (rightInfo.sumAll / info.sumAll);
+
+            double gain = info.impurity - leftWeight * leftInfo.impurity - rightWeight * rightInfo.impurity;
             Split split = null;
             if(config.isCategorical()) {
                 leftCategories.add(config.getBinCategory().get(i));
@@ -287,8 +289,9 @@ class Gini extends Impurity {
             Predict rightPredict = new Predict(rightInfo.sumAll == 0d ? 0d : rightStatByClasses[1] / rightInfo.sumAll,
                     rightInfo.indexOfLargestElement);
 
-            double gain = info.impurity - (leftInfo.sumAll / info.sumAll) * leftInfo.impurity
-                    - (rightInfo.sumAll / info.sumAll) * rightInfo.impurity;
+            double leftWeight = info.sumAll == 0d ? 0d : (leftInfo.sumAll / info.sumAll);
+            double rightWeight = info.sumAll == 0d ? 0d : (rightInfo.sumAll / info.sumAll);
+            double gain = info.impurity - leftWeight * leftInfo.impurity - rightWeight * rightInfo.impurity;
             Split split = null;
             if(config.isCategorical()) {
                 leftCategories.add(config.getBinCategory().get(i));
