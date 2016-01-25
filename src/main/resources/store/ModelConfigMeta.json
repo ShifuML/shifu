@@ -450,8 +450,10 @@
                 "options": [
                     {"label": "Neural Network", "value":"NN"},
                     {"label": "Logic Regression", "value":"LR"},
-                    {"label": "Support Vertor Machine", "value":"SVM"},
-                    {"label": "Decision Tree", "value":"DT"}
+                    {"label": "Support Vector Machine", "value":"SVM"},
+                    {"label": "Decision Tree", "value":"DT"},
+                    {"label": "Random Forest", "value":"RF"},
+                    {"label": "Gradient Boost Decision Tree", "value":"GBDT"}
                 ]
             }, {
                 "name": "params",
@@ -523,13 +525,33 @@
                     }, {
                         "name" : "Impurity",
                         "type" : "text",
-                        "directive": "input",
-                        "defval" : "variance"
+                        "directive": "select",
+                        "defval" : "variance",
+                        "options": [
+                            {"label": "Variance", "value":"variance"},
+                            {"label": "Entropy", "value":"entropy"},
+                            {"label": "Gini", "value":"gini"}
+                        ]
                     }, {
                         "name" : "FeatureSubsetStrategy",
                         "type" : "text",
-                        "directive": "input",
-                        "defval" : "all"
+                        "directive": "select",
+                        "defval" : "all",
+                        "options": [
+                            {"label": "ALL", "value":"all"},
+                            {"label": "HALF", "value":"half"},
+                            {"label": "ONETHIRD", "value":"onethird"}
+                        ]
+                    }, {
+                        "name" : "Loss",
+                        "type" : "text",
+                        "directive": "select",
+                        "defval" : "squared",
+                        "options": [
+                            {"label": "Squared", "value":"squared"},
+                            {"label": "Absolute", "value":"absolute"},
+                            {"label": "Log", "value":"log"}
+                        ]
                     }, {
                         "name" : "LearningDecay",
                         "type" : "number",

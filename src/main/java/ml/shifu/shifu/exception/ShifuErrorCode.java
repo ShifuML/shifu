@@ -56,7 +56,7 @@ public enum ShifuErrorCode {
      * ModelConfig validated 1051 - 1100
      */
     ERROR_MODELCONFIG_NOT_VALIDATION(1051, "The ModelConfig file did not pass the validation."),
-    ERROR_UNSUPPORT_ALG(1052, "Un-support algorithm, make sure your ModelConfig.json -> algorithm is NN/SVM/LR"),
+    ERROR_UNSUPPORT_ALG(1052, "Un-support algorithm, make sure your ModelConfig.json -> algorithm is NN/SVM/LR/DT/RF/GBDT"),
     ERROR_UNSUPPORT_MODE(1053, "Un-support mode, make sure your ModelConfig.json -> mode is \"local\" or \"hdfs\"."),
     ERROR_UNSUPPORT_RUNMODE(1054, "Un-support running mode, make sure your ModelConfig.json -> runMode is pig or akka"),
 

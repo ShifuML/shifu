@@ -39,7 +39,9 @@ import ml.shifu.guagua.worker.AbstractWorkerComputable;
 import ml.shifu.guagua.worker.WorkerContext;
 import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.container.obj.ModelConfig;
+import ml.shifu.shifu.container.obj.ModelTrainConf.ALGORITHM;
 import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
+import ml.shifu.shifu.core.alg.NNTrainer;
 import ml.shifu.shifu.core.dtrain.CommonConstants;
 import ml.shifu.shifu.core.dtrain.DTrainUtils;
 import ml.shifu.shifu.core.dtrain.dt.DTWorkerParams.NodeStats;
@@ -117,7 +119,8 @@ public class DTWorker
     protected long sampleCount;
 
     /**
-     * Training data set.
+     * Training data set. FIXME, memory list as we have to change Data in computing while DiskList doesn't support
+     * change
      */
     private BytableMemoryDiskList<Data> trainingData;
 
@@ -149,7 +152,29 @@ public class DTWorker
 
     private Map<Integer, Map<String, Integer>> categoryIndexMap = new HashMap<Integer, Map<String, Integer>>();
 
+    /**
+     * Different {@link Impurity} for node, {@link Entropy} and {@link Gini} are mostly for classification,
+     * {@link Variance} are mostly for regression.
+     */
     private Impurity impurity;
+
+    /**
+     * If for random forest running, this is default for such master.
+     */
+    private boolean isRF = true;
+
+    /**
+     * If gradient boost decision tree, for GBDT, each time a tree is trained, next train is trained by gradient label
+     * from previous tree.
+     */
+    private boolean isGBDT = false;
+
+    /**
+     * Learning rate GBDT.
+     */
+    private double learningRate = 0.1d;
+
+    private Loss loss;
 
     @Override
     public void initRecordReader(GuaguaFileSplit fileSplit) throws IOException {
@@ -208,6 +233,22 @@ public class DTWorker
         } else {
             impurity = new Variance();
         }
+
+        this.isRF = ALGORITHM.RF.toString().equalsIgnoreCase(modelConfig.getAlgorithm());
+        this.isGBDT = ALGORITHM.GBDT.toString().equals(modelConfig.getAlgorithm());
+
+        if(this.isGBDT) {
+            this.learningRate = Double.valueOf(this.modelConfig.getParams().get(NNTrainer.LEARNING_RATE).toString());
+            String lossStr = this.modelConfig.getTrain().getParams().get("Loss").toString();
+            if(lossStr.equalsIgnoreCase("log")) {
+                this.loss = new LogLoss();
+            } else if(lossStr.equalsIgnoreCase("absolute")) {
+                this.loss = new AbsoluteLoss();
+            } else {
+                this.loss = new SquaredLoss();
+            }
+        }
+
     }
 
     /*
@@ -220,6 +261,7 @@ public class DTWorker
         if(context.isFirstIteration()) {
             return new DTWorkerParams();
         }
+
         DTMasterParams lastMasterResult = context.getLastMasterResult();
         List<TreeNode> trees = lastMasterResult.getTrees();
         Map<Integer, TreeNode> todoNodes = lastMasterResult.getTodoNodes();
@@ -250,21 +292,56 @@ public class DTWorker
         double squareError = 0d;
         for(Data data: this.trainingData) {
             List<Integer> nodeIndexes = new ArrayList<Integer>(trees.size());
-            for(TreeNode treeNode: trees) {
-                Node predictNode = predictNodeIndex(treeNode.getNode(), data);
+            if(this.isRF) {
+                for(TreeNode treeNode: trees) {
+                    Node predictNode = predictNodeIndex(treeNode.getNode(), data);
+                    if(predictNode.getPredict() != null) {
+                        // only update when not in first node, for treeNode, no predict statistics at that time
+                        double error = data.output - predictNode.getPredict().getPredict();
+                        squareError += error * error;
+                    }
+                    int predictNodeIndex = predictNode.getId();
+                    nodeIndexes.add(predictNodeIndex);
+                }
+            }
+
+            if(this.isGBDT) {
+                if(lastMasterResult.isSwitchToNextTree()) {
+                    int currTreeIndex = trees.size() - 1;
+                    if(currTreeIndex >= 1) {
+                        double predict = predictNodeIndex(trees.get(currTreeIndex - 1).getNode(), data).getPredict()
+                                .getPredict();
+                        if(currTreeIndex == 1) {
+                            data.predict = 1.0f * ((float) predict);
+                        } else {
+                            data.predict = data.predict + (float) (this.learningRate * predict);
+                        }
+                        data.output = -loss.computeGradient(data.predict, data.output);
+                    }
+                }
+                Node predictNode = predictNodeIndex(trees.get(trees.size() - 1).getNode(), data);
                 if(predictNode.getPredict() != null) {
                     // only update when not in first node, for treeNode, no predict statistics at that time
-                    double error = data.outputs[0] - predictNode.getPredict().getPredict();
+                    double error = data.output - predictNode.getPredict().getPredict();
                     squareError += error * error;
                 }
                 int predictNodeIndex = predictNode.getId();
                 nodeIndexes.add(predictNodeIndex);
             }
+
             for(Map.Entry<Integer, TreeNode> entry: todoNodes.entrySet()) {
                 // only do statistics on effective data
                 Node todoNode = entry.getValue().getNode();
                 int treeId = entry.getValue().getTreeId();
-                if(todoNode.getId() == nodeIndexes.get(entry.getValue().getTreeId())) {
+                int currPredictIndex = 0;
+                if(this.isRF) {
+                    currPredictIndex = nodeIndexes.get(entry.getValue().getTreeId());
+                }
+                if(this.isGBDT) {
+                    currPredictIndex = nodeIndexes.get(0);
+                }
+
+                if(todoNode.getId() == currPredictIndex) {
                     List<Integer> features = entry.getValue().getFeatures();
                     if(features.isEmpty()) {
                         features = getAllValidFeatures();
@@ -277,12 +354,12 @@ public class DTWorker
                         if(config.isNumerical()) {
                             float value = data.numericInputs[this.numericInputIndexMap.get(columnNum)];
                             int binIndex = getBinIndex(value, config.getBinBoundary());
-                            this.impurity.featureUpdate(featuerStatistic, binIndex, data.outputs[0], data.significance,
+                            this.impurity.featureUpdate(featuerStatistic, binIndex, data.output, data.significance,
                                     weight);
                         } else if(config.isCategorical()) {
                             String category = data.categoricalInputs[this.categoricalInputIndexMap.get(columnNum)];
                             Integer binIndex = this.categoryIndexMap.get(columnNum).get(category);
-                            this.impurity.featureUpdate(featuerStatistic, binIndex, data.outputs[0], data.significance,
+                            this.impurity.featureUpdate(featuerStatistic, binIndex, data.output, data.significance,
                                     weight);
                         } else {
                             throw new IllegalStateException("Only numerical and categorical columns supported. ");
@@ -390,13 +467,13 @@ public class DTWorker
 
         float[] numericInputs = new float[this.numericInputCount];
         String[] categoricalInputs = new String[this.categoricalInputCount];
-        float[] ideal = new float[this.outputNodeCount];
+        float ideal = 0f;
 
         float significance = 1f;
         // use guava Splitter to iterate only once
         // use NNConstants.NN_DEFAULT_COLUMN_SEPARATOR to replace getModelConfig().getDataSetDelimiter(), super follows
         // the function in akka mode.
-        int index = 0, numericInputsIndex = 0, outputIndex = 0, categoricalInputsIndex = 0;
+        int index = 0, numericInputsIndex = 0, categoricalInputsIndex = 0;
         for(String input: DEFAULT_SPLITTER.split(currentValue.getWritable().toString())) {
             float floatValue = NumberFormatUtils.getFloat(input, 0f);
             // no idea about why NaN in input data, we should process it as missing value TODO, according to norm type
@@ -410,12 +487,7 @@ public class DTWorker
             } else {
                 ColumnConfig columnConfig = this.columnConfigList.get(index);
                 if(columnConfig != null && columnConfig.isTarget()) {
-                    if(modelConfig.isBinaryClassification()) {
-                        ideal[outputIndex++] = floatValue;
-                    } else {
-                        int ideaIndex = (int) floatValue;
-                        ideal[ideaIndex] = 1f;
-                    }
+                    ideal = floatValue;
                 } else {
                     if(!isAfterVarSelect) {
                         // no variable selected, good candidate but not meta and not target chose
@@ -474,7 +546,36 @@ public class DTWorker
                 sampleWeights[i] = this.rng[i].sample();
             }
         }
-        this.trainingData.append(new Data(numericInputs, categoricalInputs, ideal, significance, sampleWeights));
+        float output = ideal;
+        float predict = ideal;
+
+        Data data = new Data(numericInputs, categoricalInputs, predict, output, significance, sampleWeights);
+
+        boolean isFailOver = !context.isFirstIteration();
+        // recover for gbdt fail over
+        if(isFailOver && this.isGBDT) {
+            DTMasterParams lastMasterResult = context.getLastMasterResult();
+            if(lastMasterResult != null) {
+                List<TreeNode> trees = lastMasterResult.getTrees();
+                if(trees.size() > 1) {
+                    for(int i = 0; i < trees.size() - 1; i++) {
+                        TreeNode currTree = trees.get(i);
+                        if(i == 0) {
+                            double oldPredict = predictNodeIndex(currTree.getNode(), data).getPredict().getPredict();
+                            predict = 1f * (float) oldPredict;
+                            output = -loss.computeGradient(predict, output);
+                        } else {
+                            double oldPredict = predictNodeIndex(currTree.getNode(), data).getPredict().getPredict();
+                            predict += (float) (this.learningRate * oldPredict);
+                            output = -loss.computeGradient(predict, output);
+                        }
+                    }
+                    data.output = output;
+                    data.predict = predict;
+                }
+            }
+        }
+        this.trainingData.append(data);
     }
 
     private static class Data implements Serializable, Bytable {
@@ -483,15 +584,17 @@ public class DTWorker
 
         private float[] numericInputs;
         private String[] categoricalInputs;
-        private float[] outputs;
+        private float output;
+        private float predict;
         private float significance;
         private float[] subsampleWeights = new float[] { 1.0f };
 
-        public Data(float[] numericInputs, String[] categoricalInputs, float[] outputs, float significance,
+        public Data(float[] numericInputs, String[] categoricalInputs, float predict, float output, float significance,
                 float[] subsampleWeights) {
             this.numericInputs = numericInputs;
             this.categoricalInputs = categoricalInputs;
-            this.outputs = outputs;
+            this.predict = predict;
+            this.output = output;
             this.significance = significance;
             this.subsampleWeights = subsampleWeights;
         }
@@ -505,14 +608,11 @@ public class DTWorker
 
             out.writeInt(categoricalInputs.length);
             for(String input: categoricalInputs) {
-                // TODO if writeUTF, readUTF is right???
                 out.writeUTF(input);
             }
 
-            out.writeInt(outputs.length);
-            for(float output: outputs) {
-                out.writeFloat(output);
-            }
+            out.writeFloat(output);
+            out.writeFloat(predict);
 
             out.writeFloat(significance);
 
@@ -536,11 +636,8 @@ public class DTWorker
                 this.categoricalInputs[i] = in.readUTF();
             }
 
-            int oLen = in.readInt();
-            this.outputs = new float[oLen];
-            for(int i = 0; i < oLen; i++) {
-                this.outputs[i] = in.readFloat();
-            }
+            this.output = in.readFloat();
+            this.predict = in.readFloat();
 
             this.significance = in.readFloat();
 

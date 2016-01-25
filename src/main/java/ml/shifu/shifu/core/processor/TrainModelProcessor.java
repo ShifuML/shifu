@@ -280,10 +280,17 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
     private void validateDistributedTrain() throws IOException {
         String alg = super.getModelConfig().getTrain().getAlgorithm();
         if(!(NNConstants.NN_ALG_NAME.equalsIgnoreCase(alg)
-                || LogisticRegressionContants.LR_ALG_NAME.equalsIgnoreCase(alg) || CommonConstants.DT_ALG_NAME
-                    .equalsIgnoreCase(alg))) {
+                || LogisticRegressionContants.LR_ALG_NAME.equalsIgnoreCase(alg) || CommonUtils
+                    .isDesicionTreeAlgorithm(alg))) {
             throw new IllegalArgumentException(
-                    "Currently we only support NN, LR and DT(RandomForest) distributed training.");
+                    "Currently we only support NN, LR, RF(RandomForest) and GBDT(Gradient Boost Desicion Tree) distributed training.");
+        }
+
+        if((LogisticRegressionContants.LR_ALG_NAME.equalsIgnoreCase(alg) || CommonUtils.isDesicionTreeAlgorithm(alg))
+                && modelConfig.isMultiClassification()) {
+            throw new IllegalArgumentException(
+                    "Distributed LR, RF(RandomForest) and GBDT(Gradient Boost Desicion Tree) only support binary classi"
+                            + "fication, multiple classification is not supported.");
         }
 
         if(super.getModelConfig().getDataSet().getSource() != SourceType.HDFS) {
@@ -330,8 +337,8 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
                 new Path(Constants.TMP, Constants.DEFAULT_MODELS_TMP_FOLDER), sourceType)));
         args.add(String.format(CommonConstants.MAPREDUCE_PARAM_FORMAT, CommonConstants.SHIFU_TMP_MODELS_FOLDER,
                 tmpModelsPath.toString()));
-        int baggingNum = isForVarSelect || CommonConstants.DT_ALG_NAME.equalsIgnoreCase(alg) ? 1 : super
-                .getModelConfig().getBaggingNum();
+        int baggingNum = (isForVarSelect || CommonUtils.isDesicionTreeAlgorithm(alg)) ? 1 : super.getModelConfig()
+                .getBaggingNum();
 
         long start = System.currentTimeMillis();
         LOG.info("Distributed trainning with baggingNum: {}", baggingNum);
@@ -600,7 +607,7 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
             this.prepareLRParams(args, sourceType);
         } else if(NNConstants.NN_ALG_NAME.equalsIgnoreCase(alg)) {
             this.prepareNNParams(args, sourceType);
-        } else if(CommonConstants.DT_ALG_NAME.equalsIgnoreCase(alg)) {
+        } else if(CommonUtils.isDesicionTreeAlgorithm(alg)) {
             this.prepareDTParams(args, sourceType);
         }
 

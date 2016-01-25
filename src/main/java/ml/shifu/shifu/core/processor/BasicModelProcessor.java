@@ -356,6 +356,31 @@ public class BasicModelProcessor {
             }
         } else if(alg.equalsIgnoreCase("DT")) {
             // do nothing
+        } else if(alg.equalsIgnoreCase("RF")) {
+            if(!param.containsKey("FeatureSubsetStrategy")) {
+                param = new LinkedHashMap<String, Object>();
+
+                param.put("FeatureSubsetStrategy", "all");
+                param.put("MaxDepth", 10);
+                param.put("MaxStatsMemoryMB", 256);
+                param.put("Impurity", "entropy");
+
+                modelConfig.setParams(param);
+                saveModelConfig();
+            }
+        } else if(alg.equalsIgnoreCase("GBDT")) {
+            if(!param.containsKey("FeatureSubsetStrategy")) {
+                param = new LinkedHashMap<String, Object>();
+
+                param.put("FeatureSubsetStrategy", "all");
+                param.put("MaxDepth", 10);
+                param.put("MaxStatsMemoryMB", 256);
+                param.put("Impurity", "entropy");
+                param.put("Loss", "squared");
+
+                modelConfig.setParams(param);
+                saveModelConfig();
+            }
         } else {
             throw new ShifuException(ShifuErrorCode.ERROR_UNSUPPORT_ALG);
         }

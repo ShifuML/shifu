@@ -42,7 +42,11 @@ public interface CommonConstants {
     public static final String SHIFU_DTRAIN_PROGRESS_FILE = "shifu.progress.file";
 
     public static final String DEFAULT_COLUMN_SEPARATOR = "|";
-    
-    public static final String DT_ALG_NAME = "DT";
+
+    // public static final String DT_ALG_NAME = "DT";
+
+    public static final String RF_ALG_NAME = "RF";
+
+    public static final String GBDT_ALG_NAME = "GBDT";
 
 }
