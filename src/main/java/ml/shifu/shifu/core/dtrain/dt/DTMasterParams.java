@@ -46,6 +46,11 @@ public class DTMasterParams extends HaltBytable {
 
     private double squareError;
 
+    /**
+     * For GBDT only, in GBDT, this means move compute to next tree.
+     */
+    private boolean isSwitchToNextTree = false;
+
     public DTMasterParams() {
     }
 
@@ -93,7 +98,8 @@ public class DTMasterParams extends HaltBytable {
     @Override
     public void doWrite(DataOutput out) throws IOException {
         out.writeLong(count);
-        out.writeDouble(getSquareError());
+        out.writeDouble(squareError);
+        out.writeBoolean(this.isSwitchToNextTree);
 
         assert trees != null;
         out.writeInt(trees.size());
@@ -115,7 +121,8 @@ public class DTMasterParams extends HaltBytable {
     @Override
     public void doReadFields(DataInput in) throws IOException {
         this.count = in.readLong();
-        this.setSquareError(in.readDouble());
+        this.squareError = in.readDouble();
+        this.isSwitchToNextTree = in.readBoolean();
 
         int treeNum = in.readInt();
         this.trees = new ArrayList<TreeNode>(treeNum);
@@ -160,9 +167,25 @@ public class DTMasterParams extends HaltBytable {
     }
 
     /**
-     * @param squareError the squareError to set
+     * @param squareError
+     *            the squareError to set
      */
     public void setSquareError(double squareError) {
         this.squareError = squareError;
+    }
+
+    /**
+     * @return the isSwitchToNextTree
+     */
+    public boolean isSwitchToNextTree() {
+        return isSwitchToNextTree;
+    }
+
+    /**
+     * @param isSwitchToNextTree
+     *            the isSwitchToNextTree to set
+     */
+    public void setSwitchToNextTree(boolean isSwitchToNextTree) {
+        this.isSwitchToNextTree = isSwitchToNextTree;
     }
 }

@@ -609,7 +609,9 @@ public final class CommonUtils {
             if(modelPath.getName().endsWith(LogisticRegressionContants.LR_ALG_NAME.toLowerCase())) {
                 br = new BufferedReader(new InputStreamReader(stream));
                 return LR.loadFromString(br.readLine());
-            } else if(modelPath.getName().endsWith(CommonConstants.DT_ALG_NAME.toLowerCase())) {
+            } else if(modelPath.getName().endsWith(CommonConstants.RF_ALG_NAME.toLowerCase())
+                    || modelPath.getName().endsWith(CommonConstants.GBDT_ALG_NAME.toLowerCase())) {
+                // TODO fix me please
                 return TreeModel.loadFromStream(stream, columnConfigList);
             } else {
                 return BasicML.class.cast(EncogDirectoryPersistence.loadObject(stream));
@@ -935,8 +937,7 @@ public final class CommonUtils {
                 if(!noVarSel) {
                     if(config != null && !config.isMeta() && !config.isTarget() && config.isFinalSelect()) {
                         String val = rawDataMap.get(key) == null ? null : rawDataMap.get(key).toString();
-                        if(modelConfig.getAlgorithm().equalsIgnoreCase(CommonConstants.DT_ALG_NAME)
-                                && config.isCategorical()) {
+                        if(CommonUtils.isDesicionTreeAlgorithm(modelConfig.getAlgorithm()) && config.isCategorical()) {
                             inputList.add(binCategoryMap.get(config.getColumnNum()).get(val == null ? "" : val) + 0d);
                         } else {
                             Double normalizeValue = Normalizer.normalize(config, val, cutoff,
@@ -947,8 +948,7 @@ public final class CommonUtils {
                 } else {
                     if(!config.isMeta() && !config.isTarget() && CommonUtils.isGoodCandidate(config)) {
                         String val = rawDataMap.get(key) == null ? null : rawDataMap.get(key).toString();
-                        if(modelConfig.getAlgorithm().equalsIgnoreCase(CommonConstants.DT_ALG_NAME)
-                                && config.isCategorical()) {
+                        if(CommonUtils.isDesicionTreeAlgorithm(modelConfig.getAlgorithm()) && config.isCategorical()) {
                             inputList.add(binCategoryMap.get(config.getColumnNum()).get(val == null ? "" : val) + 0d);
                         } else {
                             Double normalizeValue = Normalizer.normalize(config, val, cutoff,
@@ -968,6 +968,10 @@ public final class CommonUtils {
         }
 
         return new BasicMLDataPair(new BasicMLData(input), new BasicMLData(ideal));
+    }
+
+    public static boolean isDesicionTreeAlgorithm(String alg) {
+        return CommonConstants.RF_ALG_NAME.equalsIgnoreCase(alg) || CommonConstants.GBDT_ALG_NAME.equalsIgnoreCase(alg);
     }
 
     /**

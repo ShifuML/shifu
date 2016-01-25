@@ -99,16 +99,18 @@ public class DTOutput extends BasicMasterInterceptor<DTMasterParams, DTWorkerPar
             return;
         }
         double error = context.getMasterResult().getSquareError() / context.getMasterResult().getCount();
-        String progress = new StringBuilder(200).append("    Trainer ").append(this.trainerId).append(" Iteration #")
-                .append(currentIteration - 1).append(" Squared Train Error: ")
-                .append(error == 0d ? "No Statistics" : error).append("\n").toString();
-        try {
-            LOG.debug("Writing progress results to {} {}", context.getCurrentIteration(), progress.toString());
-            this.progressOutput.write(progress.getBytes("UTF-8"));
-            this.progressOutput.flush();
-            this.progressOutput.sync();
-        } catch (IOException e) {
-            LOG.error("Error in write progress log:", e);
+        if(error != 0d) {
+            String progress = new StringBuilder(200).append("    Trainer ").append(this.trainerId)
+                    .append(" Iteration #").append(currentIteration - 1).append(" Squared Train Error: ").append(error)
+                    .append("\n").toString();
+            try {
+                LOG.debug("Writing progress results to {} {}", context.getCurrentIteration(), progress.toString());
+                this.progressOutput.write(progress.getBytes("UTF-8"));
+                this.progressOutput.flush();
+                this.progressOutput.sync();
+            } catch (IOException e) {
+                LOG.error("Error in write progress log:", e);
+            }
         }
     }
 

@@ -16,6 +16,7 @@
 package ml.shifu.shifu.core;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -23,8 +24,10 @@ import java.util.Map;
 import ml.shifu.shifu.container.ScoreObject;
 import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.container.obj.ModelConfig;
+import ml.shifu.shifu.core.alg.NNTrainer;
 import ml.shifu.shifu.core.dtrain.CommonConstants;
 import ml.shifu.shifu.core.dtrain.DTrainUtils;
+import ml.shifu.shifu.core.dtrain.dt.TreeNode;
 import ml.shifu.shifu.util.CommonUtils;
 
 import org.encog.ml.BasicML;
@@ -42,7 +45,6 @@ public class Scorer {
 
     private static Logger log = LoggerFactory.getLogger(Scorer.class);
 
-    @SuppressWarnings("unused")
     private String alg;
 
     private List<BasicML> models;
@@ -82,7 +84,7 @@ public class Scorer {
                 this.noVarSelect = false;
             }
         }
-        if(this.modelConfig.getAlgorithm().equalsIgnoreCase(CommonConstants.DT_ALG_NAME)) {
+        if(CommonUtils.isDesicionTreeAlgorithm(alg)) {
             for(ColumnConfig columnConfig: columnConfigList) {
                 if(columnConfig.isCategorical()) {
                     Map<String, Integer> map = new HashMap<String, Integer>();
@@ -109,52 +111,80 @@ public class Scorer {
 
         List<Integer> scores = new ArrayList<Integer>();
 
-        for(BasicML model: models) {
-            if(model instanceof BasicNetwork) {
-                BasicNetwork network = (BasicNetwork) model;
-                if(network.getInputCount() != pair.getInput().size()) {
-                    log.error("Network and input size mismatch: Network Size = " + network.getInputCount()
-                            + "; Input Size = " + pair.getInput().size());
-                    continue;
+        if(modelConfig.getAlgorithm().equalsIgnoreCase(CommonConstants.GBDT_ALG_NAME)) {
+            double score = 0d;
+            double sumWeight = 0d;
+            double learningRate = Double.valueOf(this.modelConfig.getParams().get(NNTrainer.LEARNING_RATE).toString());
+            BasicML model = models.get(0);
+            if(model instanceof TreeModel) {
+                TreeModel trees = (TreeModel) model;
+                if(trees.getInputCount() != pair.getInput().size()) {
+                    log.error("GBDT and input size mismatch: rf Size = " + trees.getInputCount() + "; Input Size = "
+                            + pair.getInput().size());
                 }
-                MLData score = network.compute(pair.getInput());
-                if(modelConfig != null && modelConfig.isBinaryClassification()) {
-                    scores.add(toScore(score.getData(0)));
-                } else {
-                    double[] outputs = score.getData();
-                    for(double d: outputs) {
-                        scores.add(toScore(d));
+                List<TreeNode> treeNodes = trees.getTrees();
+                for(int j = 0; j < treeNodes.size(); j++) {
+                    // TODO in TreeNode(), there is some computation for columnConfigList and should be cached
+                    TreeModel treeModel = new TreeModel(Arrays.asList(treeNodes.get(j)), columnConfigList);
+                    MLData internalScore = treeModel.compute(pair.getInput());
+                    if(j == 0) {
+                        score += internalScore.getData(0);
+                        sumWeight += 1d;
+                    } else {
+                        score += learningRate * internalScore.getData(0);
+                        sumWeight += learningRate;
                     }
                 }
-            } else if(model instanceof SVM) {
-                SVM svm = (SVM) model;
-                if(svm.getInputCount() != pair.getInput().size()) {
-                    log.error("SVM and input size mismatch: SVM Size = " + svm.getInputCount() + "; Input Size = "
-                            + pair.getInput().size());
-                    continue;
+            }
+            scores.add(toScore(score / sumWeight));
+        } else {
+            for(BasicML model: models) {
+                if(model instanceof BasicNetwork) {
+                    BasicNetwork network = (BasicNetwork) model;
+                    if(network.getInputCount() != pair.getInput().size()) {
+                        log.error("Network and input size mismatch: Network Size = " + network.getInputCount()
+                                + "; Input Size = " + pair.getInput().size());
+                        continue;
+                    }
+                    MLData score = network.compute(pair.getInput());
+                    if(modelConfig != null && modelConfig.isBinaryClassification()) {
+                        scores.add(toScore(score.getData(0)));
+                    } else {
+                        double[] outputs = score.getData();
+                        for(double d: outputs) {
+                            scores.add(toScore(d));
+                        }
+                    }
+                } else if(model instanceof SVM) {
+                    SVM svm = (SVM) model;
+                    if(svm.getInputCount() != pair.getInput().size()) {
+                        log.error("SVM and input size mismatch: SVM Size = " + svm.getInputCount() + "; Input Size = "
+                                + pair.getInput().size());
+                        continue;
+                    }
+                    MLData score = svm.compute(pair.getInput());
+                    scores.add(toScore(score.getData(0)));
+                } else if(model instanceof LR) {
+                    LR lr = (LR) model;
+                    if(lr.getInputCount() != pair.getInput().size()) {
+                        log.error("LR and input size mismatch: LR Size = " + lr.getInputCount() + "; Input Size = "
+                                + pair.getInput().size());
+                        continue;
+                    }
+                    MLData score = lr.compute(pair.getInput());
+                    scores.add(toScore(score.getData(0)));
+                } else if(model instanceof TreeModel) {
+                    TreeModel rf = (TreeModel) model;
+                    if(rf.getInputCount() != pair.getInput().size()) {
+                        log.error("RandomForest and input size mismatch: rf Size = " + rf.getInputCount()
+                                + "; Input Size = " + pair.getInput().size());
+                        continue;
+                    }
+                    MLData score = rf.compute(pair.getInput());
+                    scores.add(toScore(score.getData(0)));
+                } else {
+                    throw new RuntimeException("unsupport models");
                 }
-                MLData score = svm.compute(pair.getInput());
-                scores.add(toScore(score.getData(0)));
-            } else if(model instanceof LR) {
-                LR lr = (LR) model;
-                if(lr.getInputCount() != pair.getInput().size()) {
-                    log.error("LR and input size mismatch: LR Size = " + lr.getInputCount() + "; Input Size = "
-                            + pair.getInput().size());
-                    continue;
-                }
-                MLData score = lr.compute(pair.getInput());
-                scores.add(toScore(score.getData(0)));
-            } else if(model instanceof TreeModel) {
-                TreeModel rf = (TreeModel) model;
-                if(rf.getInputCount() != pair.getInput().size()) {
-                    log.error("RandomForest and input size mismatch: rf Size = " + rf.getInputCount() + "; Input Size = "
-                            + pair.getInput().size());
-                    continue;
-                }
-                MLData score = rf.compute(pair.getInput());
-                scores.add(toScore(score.getData(0)));
-            } else {
-                throw new RuntimeException("unsupport models");
             }
         }
 

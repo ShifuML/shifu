@@ -26,7 +26,6 @@ import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.container.obj.ModelNormalizeConf.NormType;
 import ml.shifu.shifu.core.DataSampler;
 import ml.shifu.shifu.core.Normalizer;
-import ml.shifu.shifu.core.dtrain.CommonConstants;
 import ml.shifu.shifu.util.CommonUtils;
 
 import org.apache.commons.collections.CollectionUtils;
@@ -125,7 +124,7 @@ public class NormalizeParquetUDF extends AbstractTrainerUDF<Tuple> {
             if(!CommonUtils.isGoodCandidate(config)) {
                 tuple.append((Double) null);
             } else {
-                if(CommonConstants.DT_ALG_NAME.equalsIgnoreCase(this.alg)) {
+                if(CommonUtils.isDesicionTreeAlgorithm(this.alg)) {
                     Double normVal = 0d;
                     if(config.isCategorical()) {
                         tuple.append(val);
@@ -216,7 +215,7 @@ public class NormalizeParquetUDF extends AbstractTrainerUDF<Tuple> {
                 if(tagColumnNum == i) {
                     schemaStr.append(config.getColumnName() + ":float" + ",");
                 } else {
-                    if(config.isCategorical() && CommonConstants.DT_ALG_NAME.equalsIgnoreCase(this.alg)) {
+                    if(config.isCategorical() && CommonUtils.isDesicionTreeAlgorithm(this.alg)) {
                         schemaStr.append(config.getColumnName() + ":chararray" + ",");
                     } else {
                         schemaStr.append(config.getColumnName() + ":float" + ",");

@@ -34,7 +34,9 @@ import ml.shifu.guagua.master.AbstractMasterComputable;
 import ml.shifu.guagua.master.MasterContext;
 import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.container.obj.ModelConfig;
+import ml.shifu.shifu.container.obj.ModelTrainConf.ALGORITHM;
 import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
+import ml.shifu.shifu.core.alg.NNTrainer;
 import ml.shifu.shifu.core.dtrain.CommonConstants;
 import ml.shifu.shifu.core.dtrain.DTrainUtils;
 import ml.shifu.shifu.core.dtrain.dt.DTWorkerParams.NodeStats;
@@ -59,16 +61,24 @@ public class DTMaster extends AbstractMasterComputable<DTMasterParams, DTWorkerP
      */
     private List<ColumnConfig> columnConfigList;
 
+    /**
+     * Number of trees for both RF and GBDT
+     */
     private int treeNum;
 
-    private List<TreeNode> trees;
-
-    private Queue<TreeNode> queue;
-
+    /**
+     * Feature sub sampling strategy: ALL, HALF, ONETHIRD
+     */
     private FeatureSubsetStrategy featureSubsetStrategy = FeatureSubsetStrategy.ALL;
 
+    /**
+     * Max depth of a tree, by default is 10
+     */
     private int maxDepth;
 
+    /**
+     * Max stats memory to group nodes.
+     */
     private long maxStatsMemory;
 
     /**
@@ -76,7 +86,42 @@ public class DTMaster extends AbstractMasterComputable<DTMasterParams, DTWorkerP
      */
     private boolean isAfterVarSelect;
 
+    /**
+     * Different {@link Impurity} for node, {@link Entropy} and {@link Gini} are mostly for classification,
+     * {@link Variance} are mostly for regression.
+     */
     private Impurity impurity;
+
+    /**
+     * If for random forest running, this is default for such master.
+     */
+    private boolean isRF = true;
+
+    /**
+     * If gradient boost decision tree, for GBDT, each time a tree is trained, next train is trained by gradient label
+     * from previous tree.
+     */
+    private boolean isGBDT = false;
+
+    /**
+     * Learning rate for GBDT.
+     */
+    @SuppressWarnings("unused")
+    private double learningRate;
+
+    // ############################################################################################################
+    // ## There parts are states, for fail over such instances should be recovered in {@link #init(MasterContext)}
+    // ############################################################################################################
+
+    /**
+     * All trees trained in this master
+     */
+    private List<TreeNode> trees;
+
+    /**
+     * TreeNodes needed to be collected statistics from workers.
+     */
+    private Queue<TreeNode> queue;
 
     @Override
     public DTMasterParams doCompute(MasterContext<DTMasterParams, DTWorkerParams> context) {
@@ -152,8 +197,24 @@ public class DTMaster extends AbstractMasterComputable<DTMasterParams, DTWorkerP
         Map<Integer, TreeNode> todoNodes = new HashMap<Integer, TreeNode>();
         DTMasterParams masterParams = new DTMasterParams(count, squareError);
         if(queue.isEmpty()) {
-            masterParams.setHalt(true);
-            LOG.info("Queue is empty, training is stopped in iteration {}.", context.getCurrentIteration());
+            if(this.isGBDT) {
+                if(this.trees.size() == this.treeNum) {
+                    masterParams.setHalt(true);
+                    LOG.info("Queue is empty, training is stopped in iteration {}.", context.getCurrentIteration());
+                } else {
+                    TreeNode newRootNode = new TreeNode(this.trees.size(), new Node(Node.ROOT_INDEX));
+                    this.trees.add(newRootNode);
+                    newRootNode.setFeatures(getSubsamplingFeatures(this.featureSubsetStrategy));
+                    // only one node
+                    todoNodes.put(0, newRootNode);
+                    masterParams.setTodoNodes(todoNodes);
+                    // set switch flag
+                    masterParams.setSwitchToNextTree(true);
+                }
+            } else {
+                masterParams.setHalt(true);
+                LOG.info("Queue is empty, training is stopped in iteration {}.", context.getCurrentIteration());
+            }
         } else {
             int nodeIndexInGroup = 0;
             long currMem = 0L;
@@ -295,6 +356,20 @@ public class DTMaster extends AbstractMasterComputable<DTMasterParams, DTWorkerP
 
         this.treeNum = this.modelConfig.getTrain().getBaggingNum();
 
+        this.isRF = ALGORITHM.RF.toString().equalsIgnoreCase(modelConfig.getAlgorithm());
+        this.isGBDT = ALGORITHM.GBDT.toString().equals(modelConfig.getAlgorithm());
+        if(this.isRF) {
+            this.trees = new ArrayList<TreeNode>(treeNum);
+            for(int i = 0; i < treeNum; i++) {
+                this.trees.add(new TreeNode(i, new Node(Node.ROOT_INDEX)));
+            }
+        }
+        if(this.isGBDT) {
+            this.trees = new ArrayList<TreeNode>(treeNum);
+            // for GBDT, initialize the first tree.
+            this.trees.add(new TreeNode(0, new Node(Node.ROOT_INDEX)));
+        }
+
         String imStr = this.modelConfig.getTrain().getParams().get("Impurity").toString();
         int numClasses = 2;
         if(this.modelConfig.isMultiClassification()) {
@@ -307,13 +382,13 @@ public class DTMaster extends AbstractMasterComputable<DTMasterParams, DTWorkerP
         } else {
             impurity = new Variance();
         }
+        if(this.isGBDT) {
+            this.learningRate = Double.valueOf(this.modelConfig.getParams().get(NNTrainer.LEARNING_RATE).toString());
+        }
+
         LOG.info("Master init params: isAfterVarSel={}, featureSubsetStrategy={}, maxDepth={}, maxStatsMemory={}, "
                 + "treeNum={}, impurity= {}", isAfterVarSelect, featureSubsetStrategy, maxDepth, maxStatsMemory,
                 treeNum, imStr);
-        this.trees = new ArrayList<TreeNode>(treeNum);
-        for(int i = 0; i < treeNum; i++) {
-            this.trees.add(new TreeNode(i, new Node(Node.ROOT_INDEX)));
-        }
 
         this.queue = new LinkedList<TreeNode>();
         // TODO recover state trees and queue here for fail-over
