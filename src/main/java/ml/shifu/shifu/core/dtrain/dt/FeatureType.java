@@ -16,7 +16,7 @@
 package ml.shifu.shifu.core.dtrain.dt;
 
 /**
- * Two feature types supported in our decision tree algorithm.
+ * Two feature types supported in our decision tree algorithm: {@link #CONTINUOUS} and {@link #CATEGORICAL} types.
  * 
  * @author Zhang David (pengzhang@paypal.com)
  */

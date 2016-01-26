@@ -34,6 +34,7 @@ import ml.shifu.guagua.hadoop.io.GuaguaWritableAdapter;
 import ml.shifu.guagua.io.Bytable;
 import ml.shifu.guagua.io.GuaguaFileSplit;
 import ml.shifu.guagua.util.BytableMemoryDiskList;
+import ml.shifu.guagua.util.MemoryLimitedList;
 import ml.shifu.guagua.util.NumberFormatUtils;
 import ml.shifu.guagua.worker.AbstractWorkerComputable;
 import ml.shifu.guagua.worker.WorkerContext;
@@ -56,7 +57,27 @@ import org.slf4j.LoggerFactory;
 import com.google.common.base.Splitter;
 
 /**
- * TODO
+ * {@link DTWorker} is to collection node statistics for node with sub-sampling features from master {@link DTMaster}.
+ * 
+ * <p>
+ * Random forest and gradient boost decision tree are all supported in such worker. For RF, just to collect statistics
+ * for nodes from master. For GBDT, extra label and predict updated in each iteration.
+ * 
+ * <p>
+ * For GBDT, loaded data instances will also be changed for predict and label. Which means such data can only be stored
+ * into memory. TODO, change {@link #trainingData} to {@link MemoryLimitedList}. To store predict and label in GBDT, In
+ * {@link Data} predict and label are all set even with RF. Data are stored as float types to save memory consumptiom.
+ * 
+ * <p>
+ * For GBDT, when a new tree is transferred to worker, data predict and label are all updated and such value can be
+ * covered according to trees and learning rate.
+ * 
+ * <p>
+ * For RF, bagging with replacement are enabled by {@link PoissonDistribution} fields {@link #rng}.
+ * 
+ * <p>
+ * Weighted training are supported in our RF and GBDT impl, in such worker, data.significance is weight set from input.
+ * If no weight, such value is set to 1.
  * 
  * @author Zhang David (pengzhang@paypal.com)
  */

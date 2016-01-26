@@ -26,16 +26,33 @@ import ml.shifu.guagua.io.Bytable;
 import ml.shifu.guagua.io.HaltBytable;
 
 /**
- * TODO
+ * Worker result return to master.
+ * 
+ * <p>
+ * The first part is for error collections: {@link #count} and {@link #squareError}.
+ * 
+ * <p>
+ * {@link #nodeStatsMap} includes node statistics for each node, key is node group index id from master.
  * 
  * @author Zhang David (pengzhang@paypal.com)
+ * 
+ * @see NodeStats
  */
 public class DTWorkerParams extends HaltBytable {
 
+    /**
+     * # of records per such worker.
+     */
     private long count;
 
+    /**
+     * Error for such worker and such iteration.
+     */
     private double squareError;
 
+    /**
+     * Node statistic map including node group index and node stats object.
+     */
     private Map<Integer, NodeStats> nodeStatsMap;
 
     public DTWorkerParams() {
@@ -124,12 +141,26 @@ public class DTWorkerParams extends HaltBytable {
         this.squareError = squareError;
     }
 
+    /**
+     * Node statistics with {@link #featureStatistics} including all statistics for all sub-sampling features.
+     * 
+     * @author Zhang David (pengzhang@paypal.com)
+     */
     public static class NodeStats implements Bytable {
 
+        /**
+         * Node id in one node.
+         */
         private int nodeId;
 
+        /**
+         * Tree id for such node.
+         */
         private int treeId;
 
+        /**
+         * Feature statistics for sub-sampling features.
+         */
         private Map<Integer, double[]> featureStatistics;
 
         public NodeStats() {

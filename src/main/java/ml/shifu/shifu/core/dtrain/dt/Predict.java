@@ -22,16 +22,22 @@ import java.io.IOException;
 import ml.shifu.guagua.io.Bytable;
 
 /**
- * Predict wrappers classification and regression result in {@link #predict}, for classification {@link #prob} means the
- * probability, for regression no meaning for {@link #prob}
+ * Predict wrappers classification and regression result in {@link #predict}, for classification {@link #classValue} means the
+ * probability, for regression no meaning for {@link #classValue}
  * 
  * @author Zhang David (pengzhang@paypal.com)
  */
 public class Predict implements Bytable {
 
+    /**
+     * Regression predict value no matter classification or regression tree.
+     */
     private double predict;
 
-    private double prob;
+    /**
+     * Classification result, only for classification.
+     */
+    private double classValue;
 
     public Predict() {
     }
@@ -40,9 +46,9 @@ public class Predict implements Bytable {
         this.predict = predict;
     }
 
-    public Predict(double predict, double prob) {
+    public Predict(double predict, double classValue) {
         this.predict = predict;
-        this.prob = prob;
+        this.classValue = classValue;
     }
 
     /**
@@ -55,25 +61,25 @@ public class Predict implements Bytable {
     /**
      * @return the prob
      */
-    public double getProb() {
-        return prob;
+    public double getClassValue() {
+        return classValue;
     }
 
     @Override
     public void write(DataOutput out) throws IOException {
         out.writeDouble(predict);
-        out.writeDouble(prob);
+        out.writeDouble(classValue);
     }
 
     @Override
     public void readFields(DataInput in) throws IOException {
         predict = in.readDouble();
-        prob = in.readDouble();
+        classValue = in.readDouble();
     }
 
     @Override
     public String toString() {
-        return "Predict [predict=" + predict + ", prob=" + prob + "]";
+        return "Predict [predict=" + predict + ", prob=" + classValue + "]";
     }
 
 }

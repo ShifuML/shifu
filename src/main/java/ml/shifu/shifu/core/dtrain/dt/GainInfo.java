@@ -21,7 +21,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * TODO
+ * Wrapper gain value and gain info to compute gain.
  * 
  * @author Zhang David (pengzhang@paypal.com)
  */

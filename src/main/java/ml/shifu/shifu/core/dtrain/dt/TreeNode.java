@@ -24,16 +24,32 @@ import java.util.List;
 import ml.shifu.guagua.io.Bytable;
 
 /**
- * Wrapper node and tree index.
+ * Wrapper node and tree index. With tree id and node in {@link TreeNode}.
+ * 
+ * <p>
+ * {@link #features} is for sub-sampling of such node. For feature sub-sampling, {@link FeatureSubsetStrategy} includes
+ * ALL, HALF and ONETHIRD.
  * 
  * @author Zhang David (pengzhang@paypal.com)
+ * 
+ * @see Node
+ * @see FeatureSubsetStrategy
  */
 public class TreeNode implements Bytable {
 
+    /**
+     * Tree id
+     */
     private int treeId;
 
+    /**
+     * Node to be wrappered
+     */
     private Node node;
 
+    /**
+     * Sub-sampling features.
+     */
     private List<Integer> features;
 
     public TreeNode() {

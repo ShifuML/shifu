@@ -27,17 +27,33 @@ import org.slf4j.LoggerFactory;
 import ml.shifu.shifu.container.obj.ColumnConfig;
 
 /**
- * TODO FOR categorigcal feature, do a shuffle in {@link #computeImpurity(double[], ColumnConfig)} firstly, sort by
+ * Different {@link #Impurity()} strategies to compute impurity and gain for each tree node.
+ * 
+ * <p>
+ * {@link Entropy} and {@link Gini} are mostly for classification while {@link Variance} is for regression.
+ * 
+ * <p>
+ * TODO FOR categorical feature, do a shuffle in {@link #computeImpurity(double[], ColumnConfig)} firstly, sort by
  * centroid
  * 
  * @author Zhang David (pengzhang@paypal.com)
  */
 public abstract class Impurity {
 
+    /**
+     * # of values collected, for example in {@link Variance}, count, sum and squaredSum are collected, statsSize is 3.
+     * For Gini and Entropy, each class, count are selected, for binary classification, statsSize is 2.
+     */
     protected int statsSize;
 
+    /**
+     * Compute impurity by feature statistics. Stats array are for all bins.
+     */
     public abstract GainInfo computeImpurity(double[] stats, ColumnConfig confg);
 
+    /**
+     * Update bin stats value per feature.
+     */
     public abstract void featureUpdate(double[] featuerStatistic, int binIndex, float label, float significance,
             float weight);
 
@@ -58,6 +74,11 @@ public abstract class Impurity {
 
 }
 
+/**
+ * Variance impurity value is computed by ((sumSquare - (sum * sum) / count) / count).
+ * 
+ * @author Zhang David (pengzhang@paypal.com)
+ */
 class Variance extends Impurity {
 
     private static final Logger LOG = LoggerFactory.getLogger(Variance.class);
@@ -134,6 +155,11 @@ class Variance extends Impurity {
 
 }
 
+/**
+ * Entropy impurity value for classification tree. Entropy formula is SUM(- rate * log(rate) )
+ * 
+ * @author Zhang David (pengzhang@paypal.com)
+ */
 class Entropy extends Impurity {
 
     public Entropy(int numClasses) {
@@ -246,6 +272,11 @@ class Entropy extends Impurity {
 
 }
 
+/**
+ * Gini impurity value for classification tree. Entropy formula is SUM(- rate * rate )
+ * 
+ * @author Zhang David (pengzhang@paypal.com)
+ */
 class Gini extends Impurity {
 
     public Gini(int numClasses) {
@@ -265,7 +296,7 @@ class Gini extends Impurity {
             }
         }
 
-        InternalEntropyInfo info = getEntropyInterInfo(statsByClasses);
+        InternalEntropyInfo info = getGiniInfo(statsByClasses);
         // prob only effective in binary classes
         Predict predict = new Predict(info.sumAll == 0d ? 0d : statsByClasses[1] / info.sumAll,
                 info.indexOfLargestElement);
@@ -278,14 +309,14 @@ class Gini extends Impurity {
             for(int j = 0; j < leftStatByClasses.length; j++) {
                 leftStatByClasses[j] += stats[i * numClasses + j];
             }
-            InternalEntropyInfo leftInfo = getEntropyInterInfo(leftStatByClasses);
+            InternalEntropyInfo leftInfo = getGiniInfo(leftStatByClasses);
             Predict leftPredict = new Predict(leftInfo.sumAll == 0d ? 0d : leftStatByClasses[1] / leftInfo.sumAll,
                     leftInfo.indexOfLargestElement);
 
             for(int j = 0; j < leftStatByClasses.length; j++) {
                 rightStatByClasses[j] = statsByClasses[j] - leftStatByClasses[j];
             }
-            InternalEntropyInfo rightInfo = getEntropyInterInfo(rightStatByClasses);
+            InternalEntropyInfo rightInfo = getGiniInfo(rightStatByClasses);
             Predict rightPredict = new Predict(rightInfo.sumAll == 0d ? 0d : rightStatByClasses[1] / rightInfo.sumAll,
                     rightInfo.indexOfLargestElement);
 
@@ -307,7 +338,7 @@ class Gini extends Impurity {
         return GainInfo.getGainInfoByMaxGain(internalGainList);
     }
 
-    private InternalEntropyInfo getEntropyInterInfo(double[] statsByClasses) {
+    private InternalEntropyInfo getGiniInfo(double[] statsByClasses) {
         double sumAll = 0;
         for(int i = 0; i < statsByClasses.length; i++) {
             sumAll += statsByClasses[i];

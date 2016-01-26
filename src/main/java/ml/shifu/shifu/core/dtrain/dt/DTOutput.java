@@ -37,7 +37,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * {@link DTOutput} is used to write the model output to file system.
+ * {@link DTOutput} is used to write the model output and error info to file system.
  */
 public class DTOutput extends BasicMasterInterceptor<DTMasterParams, DTWorkerParams> {
 
