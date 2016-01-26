@@ -113,7 +113,6 @@ public class LogisticRegressionParams extends HaltBytable {
         out.writeDouble(this.testError);
         out.writeLong(this.trainSize);
         out.writeLong(this.testSize);
-
     }
 
     @Override
