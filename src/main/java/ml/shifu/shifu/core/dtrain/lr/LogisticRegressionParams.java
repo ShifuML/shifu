@@ -101,7 +101,9 @@ public class LogisticRegressionParams extends HaltBytable {
 
     @Override
     public void doWrite(DataOutput out) throws IOException {
-        if(parameters != null) {
+        if(parameters == null) {
+            out.writeInt(0);
+        } else {
             out.writeInt(this.parameters.length);
             for(int i = 0; i < this.parameters.length; i++) {
                 out.writeDouble(this.parameters[i]);
@@ -165,7 +167,8 @@ public class LogisticRegressionParams extends HaltBytable {
     }
 
     /**
-     * @param testSize the testSize to set
+     * @param testSize
+     *            the testSize to set
      */
     public void setTestSize(long testSize) {
         this.testSize = testSize;

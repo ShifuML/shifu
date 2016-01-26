@@ -79,7 +79,7 @@ class Variance extends Impurity {
         }
 
         double impurity = getImpurity(count, sum, sumSquare);
-        Predict predict = new Predict(sum / count);
+        Predict predict = new Predict(count == 0d ? 0d : sum / count);
 
         double leftCount = 0d, leftSum = 0d, leftSumSquare = 0d;
         double rightCount = 0d, rightSum = 0d, rightSumSquare = 0d;
@@ -112,8 +112,8 @@ class Variance extends Impurity {
                         null);
             }
 
-            Predict leftPredict = new Predict(leftSum / leftCount);
-            Predict rightPredict = new Predict(rightSum / rightCount);
+            Predict leftPredict = new Predict(leftCount == 0d ? 0d : leftSum / leftCount);
+            Predict rightPredict = new Predict(rightCount == 0d ? 0d : rightSum / rightCount);
 
             internalGainList.add(new GainInfo(gain, impurity, predict, leftImpurity, rightImpurity, leftPredict,
                     rightPredict, split));
