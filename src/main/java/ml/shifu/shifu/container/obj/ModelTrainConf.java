@@ -202,7 +202,7 @@ public class ModelTrainConf {
             params.put(LogisticRegressionTrainer.LEARNING_RATE, 0.1);
             params.put("RegularizedConstant", 0.0);
             params.put("L1orL2", "NONE");
-            params.put(NNTrainer.PROPAGATION, "Q");
+            // params.put(NNTrainer.PROPAGATION, "Q");
         }
         return params;
     }

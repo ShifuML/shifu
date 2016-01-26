@@ -610,7 +610,7 @@ public final class CommonUtils {
                 br = new BufferedReader(new InputStreamReader(stream));
                 return LR.loadFromString(br.readLine());
             } else if(modelPath.getName().endsWith(CommonConstants.RF_ALG_NAME.toLowerCase())
-                    || modelPath.getName().endsWith(CommonConstants.GBDT_ALG_NAME.toLowerCase())) {
+                    || modelPath.getName().endsWith(CommonConstants.GBDT_ALG_NAME)) {
                 // TODO fix me please
                 return TreeModel.loadFromStream(stream, columnConfigList);
             } else {

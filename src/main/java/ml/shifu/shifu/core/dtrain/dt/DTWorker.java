@@ -320,13 +320,9 @@ public class DTWorker
                     }
                 }
                 Node predictNode = predictNodeIndex(trees.get(trees.size() - 1).getNode(), data);
-                if(predictNode.getPredict() != null) {
-                    // only update when not in first node, for treeNode, no predict statistics at that time
-                    double error = data.output - predictNode.getPredict().getPredict();
-                    squareError += error * error;
-                }
                 int predictNodeIndex = predictNode.getId();
                 nodeIndexes.add(predictNodeIndex);
+                squareError += loss.computeError(data.predict, data.output);
             }
 
             for(Map.Entry<Integer, TreeNode> entry: todoNodes.entrySet()) {

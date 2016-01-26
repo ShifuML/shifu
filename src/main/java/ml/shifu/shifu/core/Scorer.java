@@ -124,7 +124,7 @@ public class Scorer {
                 }
                 List<TreeNode> treeNodes = trees.getTrees();
                 for(int j = 0; j < treeNodes.size(); j++) {
-                    // TODO in TreeNode(), there is some computation for columnConfigList and should be cached
+                    // FIXME in TreeNode(), there is some computation for columnConfigList and should be cached
                     TreeModel treeModel = new TreeModel(Arrays.asList(treeNodes.get(j)), columnConfigList);
                     MLData internalScore = treeModel.compute(pair.getInput());
                     if(j == 0) {
