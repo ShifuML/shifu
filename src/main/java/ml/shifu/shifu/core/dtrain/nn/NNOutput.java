@@ -124,13 +124,11 @@ public class NNOutput extends BasicMasterInterceptor<NNParams, NNParams> {
                 @Override
                 public void run() {
                     saveTmpNNToHDFS(context.getCurrentIteration(), context.getMasterResult().getWeights());
-                    if(modelConfig.getTrain().getIsContinuous()
-                            && context.getCurrentIteration() % (tmpModelFactor * 3) == 0) {
-                        // save model results for continue model training, if current job is failed, then next running
-                        // we can start from this point to save time.
-                        Path out = new Path(context.getProps().getProperty(CommonConstants.GUAGUA_OUTPUT));
-                        writeModelWeightsToFileSystem(optimizeddWeights, out);
-                    }
+                    // save model results for continue model training, if current job is failed, then next running
+                    // we can start from this point to save time.
+                    // another case for master recovery, if master is failed, read such checkpoint model
+                    Path out = new Path(context.getProps().getProperty(CommonConstants.GUAGUA_OUTPUT));
+                    writeModelWeightsToFileSystem(optimizeddWeights, out);
                 }
             }, "saveTmpNNToHDFS thread");
             tmpNNThread.setDaemon(true);
@@ -185,7 +183,7 @@ public class NNOutput extends BasicMasterInterceptor<NNParams, NNParams> {
     }
 
     private void init(MasterContext<NNParams, NNParams> context) {
-        this.isDry = Boolean.TRUE.toString().equals(context.getProps().getProperty(NNConstants.NN_DRY_TRAIN));
+        this.isDry = Boolean.TRUE.toString().equals(context.getProps().getProperty(CommonConstants.SHIFU_DRY_DTRAIN));
 
         if(this.isDry) {
             return;
@@ -193,12 +191,12 @@ public class NNOutput extends BasicMasterInterceptor<NNParams, NNParams> {
         if(isInit.compareAndSet(false, true)) {
             loadConfigFiles(context.getProps());
             initNetwork();
-            this.trainerId = context.getProps().getProperty(NNConstants.NN_TRAINER_ID);
-            this.tmpModelsFolder = context.getProps().getProperty(NNConstants.NN_TMP_MODELS_FOLDER);
+            this.trainerId = context.getProps().getProperty(CommonConstants.SHIFU_TRAINER_ID);
+            this.tmpModelsFolder = context.getProps().getProperty(CommonConstants.SHIFU_TMP_MODELS_FOLDER);
         }
 
         try {
-            Path progressLog = new Path(context.getProps().getProperty(NNConstants.NN_PROGRESS_FILE));
+            Path progressLog = new Path(context.getProps().getProperty(CommonConstants.SHIFU_DTRAIN_PROGRESS_FILE));
             this.progressOutput = FileSystem.get(new Configuration()).create(progressLog);
         } catch (IOException e) {
             LOG.error("Error in create progress log:", e);
@@ -211,12 +209,12 @@ public class NNOutput extends BasicMasterInterceptor<NNParams, NNParams> {
      */
     private void loadConfigFiles(final Properties props) {
         try {
-            SourceType sourceType = SourceType.valueOf(props.getProperty(NNConstants.NN_MODELSET_SOURCE_TYPE,
+            SourceType sourceType = SourceType.valueOf(props.getProperty(CommonConstants.MODELSET_SOURCE_TYPE,
                     SourceType.HDFS.toString()));
-            this.modelConfig = CommonUtils.loadModelConfig(props.getProperty(NNConstants.SHIFU_NN_MODEL_CONFIG),
+            this.modelConfig = CommonUtils.loadModelConfig(props.getProperty(CommonConstants.SHIFU_MODEL_CONFIG),
                     sourceType);
             this.columnConfigList = CommonUtils.loadColumnConfigList(
-                    props.getProperty(NNConstants.SHIFU_NN_COLUMN_CONFIG), sourceType);
+                    props.getProperty(CommonConstants.SHIFU_COLUMN_CONFIG), sourceType);
         } catch (IOException e) {
             throw new RuntimeException(e);
         }

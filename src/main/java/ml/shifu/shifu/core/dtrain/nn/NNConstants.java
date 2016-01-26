@@ -35,23 +35,15 @@ public class NNConstants {
     public static final int GUAGUA_NN_DEFAULT_INPUT_NODES = 100;
     public static final String NN_RECORD_SCALE = "nn.record.scale";
     public static final String NN_TEST_SCALE = "nn.test.scale";
-    public static final String NN_DEFAULT_COLUMN_SEPARATOR = "|";
-
-    public static final String SHIFU_NN_COLUMN_CONFIG = "shifu.nn.column.config";
-
-    public static final String SHIFU_NN_MODEL_CONFIG = "shifu.nn.model.config";
 
     public static final String MAPRED_JOB_QUEUE_NAME = "mapred.job.queue.name";
 
     public static final String MAPRED_TASK_TIMEOUT = "mapred.task.timeout";
 
-    public static final String NN_TRAINER_ID = "nn.trainer.id";
 
     public static final String TESTING_EGB = "testing.egb";
 
     public static final String TRAINING_EGB = "training.egb";
-
-    public static final String NN_MODELSET_SOURCE_TYPE = "nn.modelset.source.type";
 
     public static final String NN_SIN = "sin";
     public static final String NN_LOG = "log";
@@ -63,16 +55,12 @@ public class NNConstants {
 
     public static final String LIB_PATH_NAME = "lib";
 
-    public static final String NN_TMP_MODELS_FOLDER = "nn.tmp.models.folder";
-
     public static final String NN_ALG_NAME = "NN";
 
     public static final String JAVA_IO_TMPDIR = "java.io.tmpdir";
 
     public static final int NN_BAGGING_THRESHOLD = 50;
 
-    public static final String NN_DRY_TRAIN = "nn.dry.train";
-    
     public static final String NN_POISON_SAMPLER = "nn.poison.sampler.enable";
 
     public static final double DRY_ERROR = 0.0d;
@@ -80,8 +68,6 @@ public class NNConstants {
     public static final int DEFAULT_EPOCHS_PER_ITERATION = 1;
 
     public static final String DEFAULT_GUAGUA_VERSION = "0.1.0";
-
-    public static final String NN_PROGRESS_FILE = "nn.progress.file";
 
     public static final int DEFAULT_JOIN_TIME = 3000;
     

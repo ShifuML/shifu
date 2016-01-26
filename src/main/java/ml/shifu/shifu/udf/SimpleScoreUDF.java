@@ -40,14 +40,16 @@ public class SimpleScoreUDF extends AbstractTrainerUDF<Integer> {
     private String[] header;
     private ModelRunner modelRunner;
 
-    public SimpleScoreUDF(String source, String pathModelConfig, String pathColumnConfig, String pathHeader, String delimiter) throws IOException {
+    public SimpleScoreUDF(String source, String pathModelConfig, String pathColumnConfig, String pathHeader,
+            String delimiter) throws IOException {
         super(source, pathModelConfig, pathColumnConfig);
 
         SourceType sourceType = SourceType.valueOf(source);
 
-        List<BasicML> models = CommonUtils.loadBasicModels(modelConfig, null, sourceType);
+        List<BasicML> models = CommonUtils.loadBasicModels(modelConfig, columnConfigList, null, sourceType);
         this.header = CommonUtils.getHeaders(pathHeader, delimiter, sourceType);
-        modelRunner = new ModelRunner(modelConfig, columnConfigList, this.header, modelConfig.getDataSetDelimiter(), models);
+        modelRunner = new ModelRunner(modelConfig, columnConfigList, this.header, modelConfig.getDataSetDelimiter(),
+                models);
 
         targetColumnName = columnConfigList.get(tagColumnNum).getColumnName();
         log.debug("Target Column Name: " + targetColumnName);
@@ -58,18 +60,18 @@ public class SimpleScoreUDF extends AbstractTrainerUDF<Integer> {
 
     public Integer exec(Tuple input) throws IOException {
         CaseScoreResult cs = modelRunner.compute(input);
-        if (cs == null) {
+        if(cs == null) {
             log.error("Get null result.");
             return null;
         }
 
         Map<String, String> rawDataMap = CommonUtils.convertDataIntoMap(input, this.header);
-        if (MapUtils.isEmpty(rawDataMap)) {
+        if(MapUtils.isEmpty(rawDataMap)) {
             return null;
         }
 
         String tag = rawDataMap.get(targetColumnName);
-        if (!(negTags.contains(tag) || posTags.contains(tag))) {
+        if(!(negTags.contains(tag) || posTags.contains(tag))) {
             // invalid record
             log.error("Detected invalid record. Its tag is - " + tag);
             return null;

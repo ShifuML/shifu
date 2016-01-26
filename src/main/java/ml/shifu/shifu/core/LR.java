@@ -30,9 +30,6 @@ import org.encog.ml.data.basic.BasicMLData;
 
 public class LR extends BasicML implements MLRegression {
 
-    /**
-     * Serial id.
-     */
     private static final long serialVersionUID = 1L;
 
     private double[] weights;
@@ -94,7 +91,7 @@ public class LR extends BasicML implements MLRegression {
         }
         return new LR(weights);
     }
-    
+   
     public static LR loadFromStream(InputStream input) throws IOException {
         BufferedReader br = new BufferedReader(new InputStreamReader(input));
         StringBuffer sb = new StringBuffer();
