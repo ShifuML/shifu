@@ -16,14 +16,17 @@
 package ml.shifu.shifu.core.dtrain.dt;
 
 /**
- * Strategy in each iteration to get statistics for tree node split.
- * 
+ * In each iteration, each node, how many features should be collected from workers.
  * 
  * @author Zhang David (pengzhang@paypal.com)
  */
 public enum FeatureSubsetStrategy {
-    ALL, HALF, ONETHIRD;
 
+    ALL /* All features */, HALF /* A half features */, ONETHIRD /* One third features */;
+
+    /**
+     * Get {@link FeatureSubsetStrategy} by string, case can be ignored.
+     */
     public static FeatureSubsetStrategy of(String strategy) {
         for(FeatureSubsetStrategy element: values()) {
             if(element.toString().equalsIgnoreCase(strategy)) {

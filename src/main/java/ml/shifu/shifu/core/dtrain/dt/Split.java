@@ -32,6 +32,8 @@ import ml.shifu.guagua.io.Bytable;
  * split.
  * 
  * @author Zhang David (pengzhang@paypal.com)
+ * 
+ * @see FeatureType
  */
 public class Split implements Bytable {
 

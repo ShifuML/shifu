@@ -24,32 +24,76 @@ import java.util.List;
 import ml.shifu.guagua.io.Bytable;
 
 /**
- * A node tree
+ * A binary tree node.
+ * 
+ * <p>
+ * {@link #left} and {@link #right} are children for node. Other attributes are attached as fields. {@link #predict} are
+ * node predict info with predict value and classification value. To predict a node is to find a lef node and get its
+ * predict.
+ * 
+ * <p>
+ * A tree can be set as a only root node and started with id 1, 2, 3 ...
  * 
  * @author Zhang David (pengzhang@paypal.com)
  */
 public class Node implements Bytable {
 
+    /**
+     * Node id, start from 1, 2, 3 ...
+     */
     private int id;
 
+    /**
+     * Feature split for such node, if leaf node means no split. Node is split by numeric feature or categorical
+     * feature. Please check {@link Split} for details.
+     */
     private Split split;
 
+    /**
+     * Left child, if leaf, left is null.
+     */
     private Node left;
 
+    /**
+     * Right child, if leaf, right is null.
+     */
     private Node right;
 
+    /**
+     * Predict value and probability for such node which is collected from workers.
+     */
     private Predict predict;
 
+    /**
+     * Gain for such node, such value can be computed from different {@link Impurity} like {@link Entropy},
+     * {@link Variance}. Gain = impurity - leftWeight * leftImpurity - rightWeight * rightImpurity.
+     */
     private double gain;
 
+    /**
+     * Impurity value for such node, such value can be computed from different {@link Impurity} like {@link Entropy},
+     * {@link Variance}.
+     */
     private double impurity;
 
+    /**
+     * Predict value for left child, null if leaf.
+     */
     private Predict leftPredict;
 
+    /**
+     * Left impurity value, 0 if leaf.
+     */
     private double leftImpurity;
 
+    /**
+     * Predict value for right child, null if leaf.
+     */
     private Predict rightPredict;
 
+    /**
+     * Impurity for right node.
+     */
     private double rightImpurity;
 
     /**

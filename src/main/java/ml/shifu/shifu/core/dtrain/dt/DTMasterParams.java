@@ -26,14 +26,18 @@ import java.util.Map;
 import ml.shifu.guagua.io.HaltBytable;
 
 /**
- * TODO
+ * Master parameters transferred from master to all workers in all iterations.
+ * 
+ * <p>
+ * Every iteration, tree root nodes {@link #trees} are transferred to avoid maintain such updated trees in workers.
+ * TODO, consider add cache in worker computable instance to avoid a big tree transferred from master each time.
  * 
  * @author Zhang David (pengzhang@paypal.com)
  */
 public class DTMasterParams extends HaltBytable {
 
     /**
-     * All trees
+     * All updated trees.
      */
     private List<TreeNode> trees;
 
@@ -42,8 +46,14 @@ public class DTMasterParams extends HaltBytable {
      */
     private Map<Integer, TreeNode> todoNodes;
 
+    /**
+     * Sum of counts accumulated by workers.
+     */
     private long count;
 
+    /**
+     * Sum of error accumulated by workers.
+     */
     private double squareError;
 
     /**
@@ -55,7 +65,6 @@ public class DTMasterParams extends HaltBytable {
     }
 
     public DTMasterParams(long count, double squareError) {
-        super();
         this.count = count;
         this.setSquareError(squareError);
     }
