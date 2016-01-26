@@ -26,4 +26,27 @@ public interface CommonConstants {
     public static final String LR_LEARNING_RATE = "LearningRate";
 
     public static final String REG_LEVEL_KEY = "L1orL2";
+
+    public static final String MODELSET_SOURCE_TYPE = "shifu.source.type";
+
+    public static final String SHIFU_COLUMN_CONFIG = "shifu.column.config";
+
+    public static final String SHIFU_MODEL_CONFIG = "shifu.model.config";
+
+    public static final String SHIFU_TMP_MODELS_FOLDER = "shifu.tmp.models.folder";
+
+    public static final String SHIFU_DRY_DTRAIN = "shifu.dry.dtrain";
+
+    public static final String SHIFU_TRAINER_ID = "shifu.trainer.id";
+
+    public static final String SHIFU_DTRAIN_PROGRESS_FILE = "shifu.progress.file";
+
+    public static final String DEFAULT_COLUMN_SEPARATOR = "|";
+
+    // public static final String DT_ALG_NAME = "DT";
+
+    public static final String RF_ALG_NAME = "RF";
+
+    public static final String GBDT_ALG_NAME = "GBDT";
+
 }

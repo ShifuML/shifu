@@ -450,8 +450,10 @@
                 "options": [
                     {"label": "Neural Network", "value":"NN"},
                     {"label": "Logic Regression", "value":"LR"},
-                    {"label": "Support Vertor Machine", "value":"SVM"},
-                    {"label": "Decision Tree", "value":"DT"}
+                    {"label": "Support Vector Machine", "value":"SVM"},
+                    {"label": "Decision Tree", "value":"DT"},
+                    {"label": "Random Forest", "value":"RF"},
+                    {"label": "Gradient Boost Decision Tree", "value":"GBDT"}
                 ]
             }, {
                 "name": "params",
@@ -505,6 +507,51 @@
                         "type" : "number",
                         "directive": "input",
                         "defval" : 0.0
+                    }, {
+                        "name" : "L1orL2",
+                        "type" : "text",
+                        "directive": "input",
+                        "defval" : "NONE"
+                    }, {
+                        "name" : "MaxDepth",
+                        "type" : "number",
+                        "directive": "input",
+                        "defval" : 10
+                    }, {
+                        "name" : "MaxStatsMemoryMB",
+                        "type" : "number",
+                        "directive": "input",
+                        "defval" : 256
+                    }, {
+                        "name" : "Impurity",
+                        "type" : "text",
+                        "directive": "select",
+                        "defval" : "variance",
+                        "options": [
+                            {"label": "Variance", "value":"variance"},
+                            {"label": "Entropy", "value":"entropy"},
+                            {"label": "Gini", "value":"gini"}
+                        ]
+                    }, {
+                        "name" : "FeatureSubsetStrategy",
+                        "type" : "text",
+                        "directive": "select",
+                        "defval" : "all",
+                        "options": [
+                            {"label": "ALL", "value":"all"},
+                            {"label": "HALF", "value":"half"},
+                            {"label": "ONETHIRD", "value":"onethird"}
+                        ]
+                    }, {
+                        "name" : "Loss",
+                        "type" : "text",
+                        "directive": "select",
+                        "defval" : "squared",
+                        "options": [
+                            {"label": "Squared", "value":"squared"},
+                            {"label": "Absolute", "value":"absolute"},
+                            {"label": "Log", "value":"log"}
+                        ]
                     }, {
                         "name" : "LearningDecay",
                         "type" : "number",

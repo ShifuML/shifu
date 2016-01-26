@@ -15,7 +15,6 @@
  */
 package ml.shifu.shifu.core.dvarsel;
 
-
 import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
@@ -33,7 +32,6 @@ import ml.shifu.shifu.container.obj.RawSourceData;
 import ml.shifu.shifu.core.DataPurifier;
 import ml.shifu.shifu.core.Normalizer;
 import ml.shifu.shifu.core.dtrain.CommonConstants;
-import ml.shifu.shifu.core.dtrain.nn.NNConstants;
 import ml.shifu.shifu.core.dvarsel.dataset.TrainingDataSet;
 import ml.shifu.shifu.core.dvarsel.dataset.TrainingRecord;
 import ml.shifu.shifu.util.CommonUtils;
@@ -48,7 +46,9 @@ import org.slf4j.LoggerFactory;
 /**
  * Created on 11/24/2014.
  */
-public class VarSelWorker extends AbstractWorkerComputable<VarSelMasterResult, VarSelWorkerResult, GuaguaWritableAdapter<LongWritable>, GuaguaWritableAdapter<Text>> {
+public class VarSelWorker
+        extends
+        AbstractWorkerComputable<VarSelMasterResult, VarSelWorkerResult, GuaguaWritableAdapter<LongWritable>, GuaguaWritableAdapter<Text>> {
     private static final Logger LOG = LoggerFactory.getLogger(VarSelWorker.class);
 
     private ModelConfig modelConfig;
@@ -80,13 +80,13 @@ public class VarSelWorker extends AbstractWorkerComputable<VarSelMasterResult, V
 
         try {
             RawSourceData.SourceType sourceType = RawSourceData.SourceType.valueOf(props.getProperty(
-                    NNConstants.NN_MODELSET_SOURCE_TYPE, RawSourceData.SourceType.HDFS.toString()));
+                    CommonConstants.MODELSET_SOURCE_TYPE, RawSourceData.SourceType.HDFS.toString()));
 
-            this.modelConfig = CommonUtils.loadModelConfig(
-                    props.getProperty(NNConstants.SHIFU_NN_MODEL_CONFIG), sourceType);
+            this.modelConfig = CommonUtils.loadModelConfig(props.getProperty(CommonConstants.SHIFU_MODEL_CONFIG),
+                    sourceType);
 
             this.columnConfigList = CommonUtils.loadColumnConfigList(
-                    props.getProperty(NNConstants.SHIFU_NN_COLUMN_CONFIG), sourceType);
+                    props.getProperty(CommonConstants.SHIFU_COLUMN_CONFIG), sourceType);
 
             String conductorClsName = props.getProperty(Constants.VAR_SEL_WORKER_CONDUCTOR);
             this.workerConductor = (AbstractWorkerConductor) Class.forName(conductorClsName)
@@ -131,7 +131,8 @@ public class VarSelWorker extends AbstractWorkerComputable<VarSelMasterResult, V
     @Override
     public VarSelWorkerResult doCompute(WorkerContext<VarSelMasterResult, VarSelWorkerResult> workerContext) {
         if(!workerConductor.isInitialized()) {
-            LOG.info("There are {} records in current worker, with {} positive records.", totalRecordCount, posRecordCount);
+            LOG.info("There are {} records in current worker, with {} positive records.", totalRecordCount,
+                    posRecordCount);
             workerConductor.retainData(trainingDataSet);
         }
 
@@ -155,7 +156,7 @@ public class VarSelWorker extends AbstractWorkerComputable<VarSelMasterResult, V
     @Override
     public void load(GuaguaWritableAdapter<LongWritable> currentKey, GuaguaWritableAdapter<Text> currentValue,
             WorkerContext<VarSelMasterResult, VarSelWorkerResult> workerContext) {
-        if( (++this.count) % 100000 == 0 ) {
+        if((++this.count) % 100000 == 0) {
             LOG.info("Read {} records.", this.count);
         }
         String record = currentValue.getWritable().toString();
@@ -163,9 +164,9 @@ public class VarSelWorker extends AbstractWorkerComputable<VarSelMasterResult, V
         String tag = StringUtils.trim(fields[this.targetColumnId]);
 
         if(this.dataPurifier.isFilterOut(record) && isPosOrNegTag(this.modelConfig, tag)) {
-            this.totalRecordCount ++;
-            if ( this.modelConfig.getPosTags().contains(tag) ) {
-                this.posRecordCount ++;
+            this.totalRecordCount++;
+            if(this.modelConfig.getPosTags().contains(tag)) {
+                this.posRecordCount++;
             }
 
             double[] inputs = new double[this.inputNodeCount];
@@ -198,7 +199,7 @@ public class VarSelWorker extends AbstractWorkerComputable<VarSelMasterResult, V
     private List<Integer> getNormalizedColumnIdList() {
         List<Integer> normalizedColumnIdList = new ArrayList<Integer>();
         for(ColumnConfig config: columnConfigList) {
-            if( CommonUtils.isGoodCandidate(config)) {
+            if(CommonUtils.isGoodCandidate(config)) {
                 normalizedColumnIdList.add(config.getColumnNum());
             }
         }

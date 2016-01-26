@@ -345,17 +345,18 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
         // setting model config column config
         args.add(String.format(
                 CommonConstants.MAPREDUCE_PARAM_FORMAT,
-                NNConstants.SHIFU_NN_MODEL_CONFIG,
+                CommonConstants.SHIFU_MODEL_CONFIG,
                 ShifuFileUtils.getFileSystemBySourceType(sourceType).makeQualified(
                         new Path(super.getPathFinder().getModelConfigPath(sourceType)))));
         args.add(String.format(
                 CommonConstants.MAPREDUCE_PARAM_FORMAT,
-                NNConstants.SHIFU_NN_COLUMN_CONFIG,
+                CommonConstants.SHIFU_COLUMN_CONFIG,
                 ShifuFileUtils.getFileSystemBySourceType(sourceType).makeQualified(
                         new Path(super.getPathFinder().getColumnConfigPath(sourceType)))));
 
         // source type
-        args.add(String.format(CommonConstants.MAPREDUCE_PARAM_FORMAT, NNConstants.NN_MODELSET_SOURCE_TYPE, sourceType));
+        args.add(String
+                .format(CommonConstants.MAPREDUCE_PARAM_FORMAT, CommonConstants.MODELSET_SOURCE_TYPE, sourceType));
 
         // computation time
         args.add(String.format(CommonConstants.MAPREDUCE_PARAM_FORMAT,
@@ -521,8 +522,8 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
                         .makeQualified(new Path(super.getPathFinder().getColumnConfigPath(source))).toString());
         conf.set(NNConstants.MAPRED_JOB_QUEUE_NAME, Environment.getProperty(Environment.HADOOP_JOB_QUEUE, "default"));
         conf.set(Constants.SHIFU_MODELSET_SOURCE_TYPE, source.toString());
-        // set mapreduce.job.max.split.locations to 30 to suppress warnings
-        conf.setInt(GuaguaMapReduceConstants.MAPREDUCE_JOB_MAX_SPLIT_LOCATIONS, 30);
+        // set mapreduce.job.max.split.locations to 100 to suppress warnings
+        conf.setInt(GuaguaMapReduceConstants.MAPREDUCE_JOB_MAX_SPLIT_LOCATIONS, 100);
         // Tmp set to false because of some cluster by default use gzip while CombineInputFormat will split gzip file (a
         // bug)
         conf.setBoolean(CombineInputFormat.SHIFU_VS_SPLIT_COMBINABLE, false);
@@ -547,6 +548,13 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
             HDPUtils.addFileToClassPath(HDPUtils.findContainingFile("core-site.xml"), conf);
             HDPUtils.addFileToClassPath(HDPUtils.findContainingFile("mapred-site.xml"), conf);
             HDPUtils.addFileToClassPath(HDPUtils.findContainingFile("yarn-site.xml"), conf);
+        }
+        // one can set guagua conf in shifuconfig
+        for(Map.Entry<Object, Object> entry: Environment.getProperties().entrySet()) {
+            if(entry.getKey().toString().startsWith("nn") || entry.getKey().toString().startsWith("guagua")
+                    || entry.getKey().toString().startsWith("shifu") || entry.getKey().toString().startsWith("mapred")) {
+                conf.set(entry.getKey().toString(), entry.getValue().toString());
+            }
         }
     }
 
@@ -635,21 +643,21 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
         // here we do loop again as it is not bad for variables less than 100,000
         for(ColumnConfig config: columnConfigList) {
             // check ID-like variables
-            if(isIDLikeVariable(config)) {
+            if(isIDLikeVariable(config) && !config.isForceSelect()) {
                 log.warn(
                         "Column {} is like an ID, set final select to false. If not, you can check it manually in ColumnConfig.json",
                         config.getColumnName());
                 config.setFinalSelect(false);
                 continue;
             }
-            if(isHighMissingRateColumn(config)) {
+            if(isHighMissingRateColumn(config) && !config.isForceSelect()) {
                 log.warn(
                         "Column {} is with very high missing rate, set final select to false. If not, you can check it manually in ColumnConfig.json",
                         config.getColumnName());
                 config.setFinalSelect(false);
                 continue;
             }
-            if(config.getIv() == null || config.getIv() <= BAD_IV_THRESHOLD) {
+            if((config.getIv() == null || config.getIv() <= BAD_IV_THRESHOLD) && !config.isForceSelect()) {
                 log.warn(
                         "Column {} is with bad iv value less than {}, set final select to false. If not, you can check it manually in ColumnConfig.json",
                         config.getColumnName(), BAD_IV_THRESHOLD);

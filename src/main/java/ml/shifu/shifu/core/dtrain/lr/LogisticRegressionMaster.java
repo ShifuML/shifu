@@ -18,8 +18,9 @@ package ml.shifu.shifu.core.dtrain.lr;
 import java.io.IOException;
 import java.util.List;
 import java.util.Properties;
+import java.util.concurrent.atomic.AtomicBoolean;
 
-import ml.shifu.guagua.master.MasterComputable;
+import ml.shifu.guagua.master.AbstractMasterComputable;
 import ml.shifu.guagua.master.MasterContext;
 import ml.shifu.guagua.util.NumberFormatUtils;
 import ml.shifu.shifu.container.obj.ColumnConfig;
@@ -31,7 +32,6 @@ import ml.shifu.shifu.core.dtrain.CommonConstants;
 import ml.shifu.shifu.core.dtrain.DTrainUtils;
 import ml.shifu.shifu.core.dtrain.RegulationLevel;
 import ml.shifu.shifu.core.dtrain.Weight;
-import ml.shifu.shifu.core.dtrain.nn.NNConstants;
 import ml.shifu.shifu.util.CommonUtils;
 
 import org.slf4j.Logger;
@@ -56,7 +56,8 @@ import org.slf4j.LoggerFactory;
  * <p>
  * L1 and l2 regulations are supported by configuration: RegularizedConstant in model params of ModelConfig.json.
  */
-public class LogisticRegressionMaster implements MasterComputable<LogisticRegressionParams, LogisticRegressionParams> {
+public class LogisticRegressionMaster extends
+        AbstractMasterComputable<LogisticRegressionParams, LogisticRegressionParams> {
 
     private static final Logger LOG = LoggerFactory.getLogger(LogisticRegressionMaster.class);
 
@@ -66,7 +67,7 @@ public class LogisticRegressionMaster implements MasterComputable<LogisticRegres
     private int inputNum;
 
     /**
-     * This is the model weights in LR which will be updated each iteration
+     * This is the model weights in LR which will be updated each iteration TODO, if master is failed, how to recovery
      */
     private double[] weights;
 
@@ -110,7 +111,13 @@ public class LogisticRegressionMaster implements MasterComputable<LogisticRegres
      */
     private String propagation = "Q";
 
-    private void init(MasterContext<LogisticRegressionParams, LogisticRegressionParams> context) {
+    /**
+     * Whether some configurations are initialized
+     */
+    private AtomicBoolean isInitialized = new AtomicBoolean(false);
+
+    @Override
+    public void init(MasterContext<LogisticRegressionParams, LogisticRegressionParams> context) {
         loadConfigFiles(context.getProps());
         this.learningRate = Double.valueOf(this.modelConfig.getParams().get(CommonConstants.LR_LEARNING_RATE)
                 .toString());
@@ -126,17 +133,40 @@ public class LogisticRegressionMaster implements MasterComputable<LogisticRegres
 
         Object rconstant = this.modelConfig.getParams().get(CommonConstants.LR_REGULARIZED_CONSTANT);
         this.regularizedConstant = NumberFormatUtils.getDouble(rconstant == null ? "" : rconstant.toString(), 0d);
+
+        // not initialized and not first iteration, should be fault tolerence, recover state in LogisticRegressionMaster
+        if(!context.isFirstIteration()) {
+            LogisticRegressionParams lastMasterResult = context.getMasterResult();
+            if(lastMasterResult != null && lastMasterResult.getParameters() != null) {
+                // recover state in current master computable and return to workers
+                this.weights = lastMasterResult.getParameters();
+            } else {
+                // no weights, restarted from the very beginning, this may not happen
+                this.weights = initWeights().getParameters();
+            }
+        }
     }
 
     @Override
-    public LogisticRegressionParams compute(MasterContext<LogisticRegressionParams, LogisticRegressionParams> context) {
-        if(context.isFirstIteration()) {
-            init(context);
-            weights = new double[this.inputNum + 1];
-            for(int i = 0; i < weights.length; i++) {
-                weights[i] = nextDouble(-1, 1);
+    public LogisticRegressionParams doCompute(MasterContext<LogisticRegressionParams, LogisticRegressionParams> context) {
+        if(isInitialized.compareAndSet(false, true)) {
+            // not initialized and not first iteration, should be fault tolerence, recover state in
+            // LogisticRegressionMaster
+            if(!context.isFirstIteration()) {
+                LogisticRegressionParams lastMasterResult = context.getMasterResult();
+                if(lastMasterResult != null && lastMasterResult.getParameters() != null) {
+                    // recover state in current master computable and return to workers
+                    this.weights = lastMasterResult.getParameters();
+                    return lastMasterResult;
+                } else {
+                    // no weights, restarted from the very beginning, this may not happen
+                    return initWeights();
+                }
             }
-            return new LogisticRegressionParams(weights);
+        }
+
+        if(context.isFirstIteration()) {
+            return initWeights();
         } else {
             // append bias
             double[] gradients = new double[this.inputNum + 1];
@@ -180,14 +210,22 @@ public class LogisticRegressionMaster implements MasterComputable<LogisticRegres
         }
     }
 
+    private LogisticRegressionParams initWeights() {
+        weights = new double[this.inputNum + 1];
+        for(int i = 0; i < weights.length; i++) {
+            weights[i] = nextDouble(-1, 1);
+        }
+        return new LogisticRegressionParams(weights);
+    }
+
     private void loadConfigFiles(final Properties props) {
         try {
-            SourceType sourceType = SourceType.valueOf(props.getProperty(NNConstants.NN_MODELSET_SOURCE_TYPE,
+            SourceType sourceType = SourceType.valueOf(props.getProperty(CommonConstants.MODELSET_SOURCE_TYPE,
                     SourceType.HDFS.toString()));
-            this.modelConfig = CommonUtils.loadModelConfig(props.getProperty(NNConstants.SHIFU_NN_MODEL_CONFIG),
+            this.modelConfig = CommonUtils.loadModelConfig(props.getProperty(CommonConstants.SHIFU_MODEL_CONFIG),
                     sourceType);
             this.columnConfigList = CommonUtils.loadColumnConfigList(
-                    props.getProperty(NNConstants.SHIFU_NN_COLUMN_CONFIG), sourceType);
+                    props.getProperty(CommonConstants.SHIFU_COLUMN_CONFIG), sourceType);
         } catch (IOException e) {
             throw new RuntimeException(e);
         }

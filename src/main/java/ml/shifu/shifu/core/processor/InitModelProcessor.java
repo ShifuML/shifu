@@ -139,11 +139,15 @@ public class InitModelProcessor extends BasicModelProcessor implements Processor
             boolean distinctOn) {
         int cateCount = 0;
         for(ColumnConfig columnConfig: columnConfigList) {
-            Long distinctCount = distinctCountMap.get(columnConfig.getColumnNum()).count;
+            Data data = distinctCountMap.get(columnConfig.getColumnNum());
+            if(data == null) {
+                continue;
+            }
+            Long distinctCount = data.count;
             if(distinctCount != null && modelConfig.getDataSet().getAutoTypeThreshold() != null) {
                 if(cateOn) {
                     if(distinctCount < modelConfig.getDataSet().getAutoTypeThreshold().longValue()) {
-                        String[] items = distinctCountMap.get(columnConfig.getColumnNum()).items;
+                        String[] items = data.items;
                         if(is01Variable(distinctCount, items)) {
                             log.info(
                                     "Column {} with index {} is set to numeric type because of 0-1 variable. Distinct count {}, items {}.",
@@ -298,6 +302,14 @@ public class InitModelProcessor extends BasicModelProcessor implements Processor
         }
 
         conf.setBoolean(CombineInputFormat.SHIFU_VS_SPLIT_COMBINABLE, true);
+
+        // one can set guagua conf in shifuconfig
+        for(Map.Entry<Object, Object> entry: Environment.getProperties().entrySet()) {
+            if(entry.getKey().toString().startsWith("nn") || entry.getKey().toString().startsWith("guagua")
+                    || entry.getKey().toString().startsWith("shifu") || entry.getKey().toString().startsWith("mapred")) {
+                conf.set(entry.getKey().toString(), entry.getValue().toString());
+            }
+        }
 
         @SuppressWarnings("deprecation")
         Job job = new Job(conf, "Shifu: Column Type Auto Checking Job : " + this.modelConfig.getModelSetName());

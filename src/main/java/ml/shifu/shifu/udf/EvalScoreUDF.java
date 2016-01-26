@@ -81,8 +81,8 @@ public class EvalScoreUDF extends AbstractTrainerUDF<Tuple> {
             }
         }
 
-        List<BasicML> models = CommonUtils
-                .loadBasicModels(modelConfig, evalConfig, evalConfig.getDataSet().getSource());
+        List<BasicML> models = CommonUtils.loadBasicModels(modelConfig, this.columnConfigList, evalConfig, evalConfig
+                .getDataSet().getSource());
         modelRunner = new ModelRunner(modelConfig, columnConfigList, this.headers, evalConfig.getDataSet()
                 .getDataDelimiter(), models);
         modelCnt = models.size();

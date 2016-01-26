@@ -37,17 +37,20 @@ public class FullScoreUDF extends AbstractTrainerUDF<Tuple> {
     private String[] header;
     private ModelRunner modelRunner;
 
-    public FullScoreUDF(String source, String pathModelConfig, String pathColumnConfig, String pathHeader, String delimiter) throws Exception {
+    public FullScoreUDF(String source, String pathModelConfig, String pathColumnConfig, String pathHeader,
+            String delimiter) throws Exception {
         super(source, pathModelConfig, pathColumnConfig);
 
-        List<BasicML> models = CommonUtils.loadBasicModels(modelConfig, null, SourceType.valueOf(source));
+        List<BasicML> models = CommonUtils.loadBasicModels(modelConfig, this.columnConfigList, null,
+                SourceType.valueOf(source));
         this.header = CommonUtils.getHeaders(pathHeader, delimiter, SourceType.valueOf(source));
-        modelRunner = new ModelRunner(modelConfig, columnConfigList, this.header, modelConfig.getDataSetDelimiter(), models);
+        modelRunner = new ModelRunner(modelConfig, columnConfigList, this.header, modelConfig.getDataSetDelimiter(),
+                models);
     }
 
     public Tuple exec(Tuple input) throws IOException {
         CaseScoreResult cs = modelRunner.compute(input);
-        if (cs == null) {
+        if(cs == null) {
             log.error("Get null result.");
             return null;
         }
@@ -58,13 +61,13 @@ public class FullScoreUDF extends AbstractTrainerUDF<Tuple> {
         tuple.append(cs.getMaxScore());
         tuple.append(cs.getMinScore());
 
-        for (Integer score : cs.getScores()) {
+        for(Integer score: cs.getScores()) {
             tuple.append(score);
         }
 
         Map<String, String> rawDataMap = CommonUtils.convertDataIntoMap(input, this.header);
         List<String> metaList = modelConfig.getMetaColumnNames();
-        for (String meta : metaList) {
+        for(String meta: metaList) {
             tuple.append(rawDataMap.get(meta));
         }
 

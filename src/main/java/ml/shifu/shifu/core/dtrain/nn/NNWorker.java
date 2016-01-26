@@ -86,7 +86,6 @@ public class NNWorker extends AbstractNNWorker<Text> {
                 break;
             } else {
                 ColumnConfig columnConfig = super.columnConfigList.get(index);
-
                 if(columnConfig != null && columnConfig.isTarget()) {
                     if(modelConfig.isBinaryClassification()) {
                         ideal[outputIndex++] = floatValue;
