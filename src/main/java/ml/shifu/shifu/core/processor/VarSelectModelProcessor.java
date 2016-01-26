@@ -632,21 +632,21 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
         // here we do loop again as it is not bad for variables less than 100,000
         for(ColumnConfig config: columnConfigList) {
             // check ID-like variables
-            if(isIDLikeVariable(config)) {
+            if(isIDLikeVariable(config) && !config.isForceSelect()) {
                 log.warn(
                         "Column {} is like an ID, set final select to false. If not, you can check it manually in ColumnConfig.json",
                         config.getColumnName());
                 config.setFinalSelect(false);
                 continue;
             }
-            if(isHighMissingRateColumn(config)) {
+            if(isHighMissingRateColumn(config) && !config.isForceSelect()) {
                 log.warn(
                         "Column {} is with very high missing rate, set final select to false. If not, you can check it manually in ColumnConfig.json",
                         config.getColumnName());
                 config.setFinalSelect(false);
                 continue;
             }
-            if(config.getIv() == null || config.getIv() <= BAD_IV_THRESHOLD) {
+            if((config.getIv() == null || config.getIv() <= BAD_IV_THRESHOLD) && !config.isForceSelect()) {
                 log.warn(
                         "Column {} is with bad iv value less than {}, set final select to false. If not, you can check it manually in ColumnConfig.json",
                         config.getColumnName(), BAD_IV_THRESHOLD);
