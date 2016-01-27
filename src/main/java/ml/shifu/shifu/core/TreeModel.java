@@ -53,7 +53,7 @@ public class TreeModel extends BasicML implements MLRegression {
     private int inputNode;
 
     public TreeModel(List<TreeNode> trees, List<ColumnConfig> columnConfigList) {
-        this.setTrees(trees);
+        this.trees = trees;
         this.columnConfigList = columnConfigList;
         this.columnMapping = new HashMap<Integer, Integer>(columnConfigList.size(), 1f);
         int[] inputOutputIndex = DTrainUtils.getNumericAndCategoricalInputAndOutputCounts(this.columnConfigList);
@@ -75,6 +75,13 @@ public class TreeModel extends BasicML implements MLRegression {
             }
         }
         this.inputNode = index;
+    }
+
+    public TreeModel(List<TreeNode> trees, List<ColumnConfig> columnConfigList, Map<Integer, Integer> columnMapping) {
+        this.trees = trees;
+        this.columnConfigList = columnConfigList;
+        this.columnMapping = columnMapping;
+        this.inputNode = columnMapping.size();
     }
 
     @Override
@@ -165,7 +172,8 @@ public class TreeModel extends BasicML implements MLRegression {
     }
 
     /**
-     * @param trees the trees to set
+     * @param trees
+     *            the trees to set
      */
     public void setTrees(List<TreeNode> trees) {
         this.trees = trees;
