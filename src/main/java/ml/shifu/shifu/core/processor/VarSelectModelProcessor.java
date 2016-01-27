@@ -95,6 +95,7 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
 
     private final static Logger log = LoggerFactory.getLogger(VarSelectModelProcessor.class);
 
+    @SuppressWarnings("unused")
     private static final double BAD_IV_THRESHOLD = 0.02d;
 
     /**
@@ -646,13 +647,13 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
                 config.setFinalSelect(false);
                 continue;
             }
-            if((config.getIv() == null || config.getIv() <= BAD_IV_THRESHOLD) && !config.isForceSelect()) {
-                log.warn(
-                        "Column {} is with bad iv value less than {}, set final select to false. If not, you can check it manually in ColumnConfig.json",
-                        config.getColumnName(), BAD_IV_THRESHOLD);
-                config.setFinalSelect(false);
-                continue;
-            }
+            // if((config.getIv() == null || config.getIv() <= BAD_IV_THRESHOLD) && !config.isForceSelect()) {
+            // log.warn(
+            // "Column {} is with bad iv value less than {}, set final select to false. If not, you can check it manually in ColumnConfig.json",
+            // config.getColumnName(), BAD_IV_THRESHOLD);
+            // config.setFinalSelect(false);
+            // continue;
+            // }
             // add more here
         }
     }
