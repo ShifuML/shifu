@@ -462,7 +462,7 @@ public class ShifuCLI {
     /**
      * export Shifu model into other format, i.e. PMML
      * 
-     * @param optionValue
+     * @param type
      * @throws Exception
      */
     public static int exportModel(String type) throws Exception {
@@ -565,9 +565,8 @@ public class ShifuCLI {
         System.out.println("\teval -run     <EvalSetName>             Run eval set evaluation.");
         System.out.println("\teval -score   <EvalSetName>             Scoring evaluation dataset.");
         System.out.println("\teval -confmat <EvalSetName>             Compute the TP/FP/TN/FN based on scoring");
-        System.out
-                .println("\teval -perf <EvalSetName>                Calculate the model performance based on confmat");
-        System.out.println("\texport [-t pmml]                        Export model to PMML format.");
+        System.out.println("\teval -perf <EvalSetName>                Calculate the model performance based on confmat");
+        System.out.println("\texport [-t pmml|columnstats]                        Export model to PMML format.");
         System.out.println("\tversion|v|-v|-version                   Print version of current package.");
         System.out.println("\thelp|h|-h|-help                         Help message.");
     }
@@ -621,12 +620,14 @@ public class ShifuCLI {
     /**
      * check the argument is for listing help info or not
      * 
-     * @param arg
+     * @param opts
      * @return true - if arg is h/-h/help/-help, or return false
      */
-    private static boolean isHelpOption(String string) {
-        return "h".equalsIgnoreCase(string) || "-h".equalsIgnoreCase(string) || "help".equalsIgnoreCase(string)
-                || "-help".equalsIgnoreCase(string);
+    private static boolean isHelpOption(String opts) {
+        return "h".equalsIgnoreCase(opts)
+                || "-h".equalsIgnoreCase(opts)
+                || "help".equalsIgnoreCase(opts)
+                || "-help".equalsIgnoreCase(opts);
     }
 
     /**
