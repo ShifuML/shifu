@@ -62,6 +62,8 @@ public class Scorer {
      */
     private Map<Integer, Map<String, Integer>> binCategoryMap = new HashMap<Integer, Map<String, Integer>>();
 
+    private Map<Integer, Integer> columnMapping;
+
     public Scorer(List<BasicML> models, List<ColumnConfig> columnConfigList, String algorithm, ModelConfig modelConfig) {
         this(models, columnConfigList, algorithm, modelConfig, 4.0d);
     }
@@ -96,6 +98,26 @@ public class Scorer {
                 }
             }
         }
+
+        this.columnMapping = new HashMap<Integer, Integer>(columnConfigList.size(), 1f);
+        int[] inputOutputIndex = DTrainUtils.getNumericAndCategoricalInputAndOutputCounts(this.columnConfigList);
+        boolean isAfterVarSelect = inputOutputIndex[3] == 1 ? true : false;
+        int index = 0;
+        for(int i = 0; i < columnConfigList.size(); i++) {
+            ColumnConfig columnConfig = columnConfigList.get(i);
+            if(isAfterVarSelect) {
+                if(!columnConfig.isMeta() && !columnConfig.isTarget() && CommonUtils.isGoodCandidate(columnConfig)) {
+                    this.columnMapping.put(columnConfig.getColumnNum(), index);
+                    index += 1;
+                }
+            } else {
+                if(columnConfig != null && !columnConfig.isMeta() && !columnConfig.isTarget()
+                        && columnConfig.isFinalSelect()) {
+                    this.columnMapping.put(columnConfig.getColumnNum(), index);
+                    index += 1;
+                }
+            }
+        }
     }
 
     public ScoreObject score(Map<String, String> rawDataMap) {
@@ -124,8 +146,8 @@ public class Scorer {
                 }
                 List<TreeNode> treeNodes = trees.getTrees();
                 for(int j = 0; j < treeNodes.size(); j++) {
-                    // FIXME in TreeNode(), there is some computation for columnConfigList and should be cached
-                    TreeModel treeModel = new TreeModel(Arrays.asList(treeNodes.get(j)), columnConfigList);
+                    TreeModel treeModel = new TreeModel(Arrays.asList(treeNodes.get(j)), columnConfigList,
+                            columnMapping);
                     MLData internalScore = treeModel.compute(pair.getInput());
                     if(j == 0) {
                         score += internalScore.getData(0);
