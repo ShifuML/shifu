@@ -73,5 +73,5 @@ public class NNConstants {
     
     public static final String NN_CONTINUOUS_TRAINING = "nn.continuous.training";
 
-
+    public static final double DEFAULT_SIGNIFICANCE_VALUE = 1.0;
 }

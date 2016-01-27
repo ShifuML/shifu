@@ -140,59 +140,6 @@ public class BasicModelProcessor {
     protected void saveColumnConfigListAndColumnStats(boolean columnStats) throws IOException {
         log.info("Saving ColumnConfig...");
         JSONUtils.writeValue(new File(pathFinder.getColumnConfigPath(SourceType.LOCAL)), columnConfigList);
-        // TODO in ut, this file is also generated.
-        if(columnStats) {
-            saveColumnStatus();
-        }
-    }
-
-    @SuppressWarnings("deprecation")
-    private void saveColumnStatus() throws IOException {
-        Path localColumnStatsPath = new Path(pathFinder.getLocalColumnStatsPath());
-        log.info("Saving ColumnStatus to local file system: {}.", localColumnStatsPath);
-        if(HDFSUtils.getLocalFS().exists(localColumnStatsPath)) {
-            HDFSUtils.getLocalFS().delete(localColumnStatsPath);
-        }
-
-        BufferedWriter writer = null;
-        try {
-            writer = ShifuFileUtils.getWriter(localColumnStatsPath.toString(), SourceType.LOCAL);
-            writer.write("dataSet,columnFlag,columnName,columnNum,iv,ks,max,mean,median,min,missingCount,"
-                    + "missingPercentage,stdDev,totalCount,weightedIv,weightedKs,weightedWoe,woe,"
-                    + "skewness,kurtosis,columnType,finalSelect,version\n");
-            StringBuilder builder = new StringBuilder(500);
-            for(ColumnConfig columnConfig: columnConfigList) {
-                builder.setLength(0);
-                builder.append(modelConfig.getBasic().getName()).append(',');
-                builder.append(columnConfig.getColumnFlag()).append(',');
-                builder.append(columnConfig.getColumnName()).append(',');
-                builder.append(columnConfig.getColumnNum()).append(',');
-                builder.append(columnConfig.getIv()).append(',');
-                builder.append(columnConfig.getKs()).append(',');
-                builder.append(columnConfig.getColumnStats().getMax()).append(',');
-                builder.append(columnConfig.getColumnStats().getMean()).append(',');
-                builder.append(columnConfig.getColumnStats().getMedian()).append(',');
-                builder.append(columnConfig.getColumnStats().getMin()).append(',');
-                builder.append(columnConfig.getColumnStats().getMissingCount()).append(',');
-                builder.append(columnConfig.getColumnStats().getMissingPercentage()).append(',');
-                builder.append(columnConfig.getColumnStats().getStdDev()).append(',');
-                builder.append(columnConfig.getColumnStats().getTotalCount()).append(',');
-                builder.append(columnConfig.getColumnStats().getWeightedIv()).append(',');
-                builder.append(columnConfig.getColumnStats().getWeightedKs()).append(',');
-                builder.append(columnConfig.getColumnStats().getWeightedWoe()).append(',');
-                builder.append(columnConfig.getColumnStats().getWoe()).append(',');
-                builder.append(columnConfig.getColumnStats().getSkewness()).append(',');
-                builder.append(columnConfig.getColumnStats().getKurtosis()).append(',');
-                builder.append(columnConfig.getColumnType()).append(',');
-                builder.append(columnConfig.isFinalSelect()).append(',');
-                builder.append(modelConfig.getBasic().getVersion()).append("\n");
-                writer.write(builder.toString());
-            }
-        } finally {
-            if(writer != null) {
-                writer.close();
-            }
-        }
     }
 
     /**

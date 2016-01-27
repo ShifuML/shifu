@@ -194,6 +194,7 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
         super.syncDataToHdfs(modelConfig.getDataSet().getSource());
 
         SourceType sourceType = super.getModelConfig().getDataSet().getSource();
+        Configuration conf = new Configuration();
 
         final List<String> args = new ArrayList<String>();
         // prepare parameter
@@ -207,6 +208,15 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
 
         GuaguaMapReduceClient guaguaClient = new GuaguaMapReduceClient();
 
+        String hdpVersion = HDPUtils.getHdpVersionForHDP224();
+        if(StringUtils.isNotBlank(hdpVersion)) {
+            // for hdp 2.2.4, hdp.version should be set and configuration files should be add to container class path
+            conf.set("hdp.version", hdpVersion);
+            HDPUtils.addFileToClassPath(HDPUtils.findContainingFile("hdfs-site.xml"), conf);
+            HDPUtils.addFileToClassPath(HDPUtils.findContainingFile("core-site.xml"), conf);
+            HDPUtils.addFileToClassPath(HDPUtils.findContainingFile("mapred-site.xml"), conf);
+            HDPUtils.addFileToClassPath(HDPUtils.findContainingFile("yarn-site.xml"), conf);
+        }
         guaguaClient.createJob(args.toArray(new String[0])).waitForCompletion(true);
 
         log.info("Voted variables selection finished in {}ms.", System.currentTimeMillis() - start);

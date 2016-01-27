@@ -15,25 +15,25 @@
  */
 package ml.shifu.shifu.core.dvarsel.wrapper;
 
+import ml.shifu.shifu.container.obj.ColumnConfig;
+import ml.shifu.shifu.container.obj.ModelConfig;
+import ml.shifu.shifu.container.obj.RawSourceData;
+import ml.shifu.shifu.core.Normalizer;
+import ml.shifu.shifu.core.dtrain.CommonConstants;
+import ml.shifu.shifu.core.dtrain.nn.NNConstants;
+import ml.shifu.shifu.core.dvarsel.dataset.TrainingDataSet;
+import ml.shifu.shifu.core.dvarsel.dataset.TrainingRecord;
+import ml.shifu.shifu.util.CommonUtils;
+import org.apache.commons.io.IOUtils;
+import org.apache.commons.lang.StringUtils;
+import org.testng.annotations.Test;
+
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
-
-import ml.shifu.shifu.container.obj.ColumnConfig;
-import ml.shifu.shifu.container.obj.ModelConfig;
-import ml.shifu.shifu.container.obj.RawSourceData;
-import ml.shifu.shifu.core.Normalizer;
-import ml.shifu.shifu.core.dtrain.CommonConstants;
-import ml.shifu.shifu.core.dvarsel.dataset.TrainingDataSet;
-import ml.shifu.shifu.core.dvarsel.dataset.TrainingRecord;
-import ml.shifu.shifu.util.CommonUtils;
-
-import org.apache.commons.io.IOUtils;
-import org.apache.commons.lang.StringUtils;
-import org.testng.annotations.Test;
 
 /**
  * Created on 11/27/2014.
@@ -94,6 +94,71 @@ public class ValidationConductorTest {
         int i = 0;
         for ( Integer columnId : trainingDataSet.getDataColumnIdList() ) {
             inputs[i++] = Normalizer.normalize(columnConfigList.get(columnId), fields[columnId]);
+        }
+
+        trainingDataSet.addTrainingRecord(new TrainingRecord(inputs, ideal, significance));
+    }
+
+    //@Test
+    public void testPartershipModel() throws IOException {
+        ModelConfig modelConfig = CommonUtils.loadModelConfig(
+                "/Users/zhanhu/temp/partnership_varselect/ModelConfig.json",
+                RawSourceData.SourceType.LOCAL);
+        List<ColumnConfig> columnConfigList = CommonUtils.loadColumnConfigList(
+                "/Users/zhanhu/temp/partnership_varselect/ColumnConfig.json",
+                RawSourceData.SourceType.LOCAL);
+
+        List<Integer> columnIdList = new ArrayList<Integer>();
+        for ( ColumnConfig columnConfig : columnConfigList ) {
+            if ( CommonUtils.isGoodCandidate(columnConfig) ) {
+                columnIdList.add(columnConfig.getColumnNum());
+            }
+        }
+
+        TrainingDataSet trainingDataSet = new TrainingDataSet(columnIdList);
+        List<String> recordsList = IOUtils.readLines(
+                new FileInputStream("/Users/zhanhu/temp/partnership_varselect/part-m-00479"));
+        for( String record :  recordsList ) {
+            addNormalizedRecordIntoTrainDataSet(modelConfig, columnConfigList, trainingDataSet, record);
+        }
+
+        Set<Integer> workingList = new HashSet<Integer>();
+        for ( Integer columnId : trainingDataSet.getDataColumnIdList() ) {
+            workingList.clear();
+            workingList.add(columnId);
+            ValidationConductor conductor =
+                    new ValidationConductor(modelConfig, columnConfigList, workingList, trainingDataSet);
+
+            double error = conductor.runValidate();
+            System.out.println("The error is - " + error + ", for columnId - " + columnId);
+        }
+    }
+
+    public void addNormalizedRecordIntoTrainDataSet(ModelConfig modelConfig,
+                                          List<ColumnConfig> columnConfigList,
+                                          TrainingDataSet trainingDataSet,
+                                          String record) {
+        String[] fields = CommonUtils.split(record, "|");
+
+        double[] inputs = new double[trainingDataSet.getDataColumnIdList().size()];
+        double[] ideal = new double[1];
+
+        double significance = NNConstants.DEFAULT_SIGNIFICANCE_VALUE;
+
+        int targetColumnId = CommonUtils.getTargetColumnNum(columnConfigList);
+        ideal[0] = Double.parseDouble(fields[targetColumnId]);
+
+        int i = 0;
+        for ( Integer columnId : trainingDataSet.getDataColumnIdList() ) {
+            if ( StringUtils.isBlank(fields[columnId]) ) {
+                System.out.println(columnId + "|" + fields[columnId]);
+            }
+
+            try {
+                inputs[i++] = Double.parseDouble(fields[columnId]);
+            } catch ( Exception e ) {
+                System.out.println(columnId + "|" + fields[columnId]);
+            }
         }
 
         trainingDataSet.addTrainingRecord(new TrainingRecord(inputs, ideal, significance));
