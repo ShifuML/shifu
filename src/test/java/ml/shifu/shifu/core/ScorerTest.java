@@ -139,7 +139,7 @@ public class ScorerTest {
 
     @Test
     public void scoreNull() {
-        Scorer s = new Scorer(models, null, "NN", null);
+        Scorer s = new Scorer(models, null, "NN", modelConfig);
 
         Assert.assertNull(s.score(null, null));
     }
