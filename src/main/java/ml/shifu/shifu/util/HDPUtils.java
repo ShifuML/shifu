@@ -90,7 +90,8 @@ public class HDPUtils {
      * Copy local file to HDFS. This is used to set as classpath by distributed cache.
      */
     private static Path shipToHDFS(Configuration conf, String fileName) throws IOException {
-        Path dst = new Path("tmp", fileName.substring(fileName.lastIndexOf(File.separator) + 1));
+        Path dst = new Path(File.separator + "tmp" + File.separator + System.getProperty("user.name") + "_"
+                + System.currentTimeMillis(), fileName.substring(fileName.lastIndexOf(File.separator) + 1));
         FileSystem fs = dst.getFileSystem(conf);
         OutputStream os = null;
         InputStream is = null;
