@@ -17,12 +17,12 @@ package ml.shifu.shifu.core.dtrain.dt;
 
 import java.io.DataInput;
 import java.io.DataOutput;
-import java.io.File;
 import java.io.IOException;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -33,7 +33,6 @@ import ml.shifu.guagua.hadoop.io.GuaguaLineRecordReader;
 import ml.shifu.guagua.hadoop.io.GuaguaWritableAdapter;
 import ml.shifu.guagua.io.Bytable;
 import ml.shifu.guagua.io.GuaguaFileSplit;
-import ml.shifu.guagua.util.BytableMemoryDiskList;
 import ml.shifu.guagua.util.MemoryLimitedList;
 import ml.shifu.guagua.util.NumberFormatUtils;
 import ml.shifu.guagua.worker.AbstractWorkerComputable;
@@ -65,8 +64,8 @@ import com.google.common.base.Splitter;
  * 
  * <p>
  * For GBDT, loaded data instances will also be changed for predict and label. Which means such data can only be stored
- * into memory. TODO, change {@link #trainingData} to {@link MemoryLimitedList}. To store predict and label in GBDT, In
- * {@link Data} predict and label are all set even with RF. Data are stored as float types to save memory consumptiom.
+ * into memory. To store predict and label in GBDT, In {@link Data} predict and label are all set even with RF. Data are
+ * stored as float types to save memory consumption.
  * 
  * <p>
  * For GBDT, when a new tree is transferred to worker, data predict and label are all updated and such value can be
@@ -143,7 +142,7 @@ public class DTWorker
      * Training data set. FIXME, memory list as we have to change Data in computing while DiskList doesn't support
      * change
      */
-    private BytableMemoryDiskList<Data> trainingData;
+    private MemoryLimitedList<Data> trainingData;
 
     /**
      * PoissonDistribution which is used for possion sampling for bagging with replacement.
@@ -229,9 +228,8 @@ public class DTWorker
 
         double memoryFraction = Double.valueOf(context.getProps().getProperty("guagua.data.memoryFraction", "0.6"));
         LOG.info("Max heap memory: {}, fraction: {}", Runtime.getRuntime().maxMemory(), memoryFraction);
-        String tmpFolder = context.getProps().getProperty("guagua.data.tmpfolder", "tmp");
-        this.trainingData = new BytableMemoryDiskList<Data>((long) (Runtime.getRuntime().maxMemory() * memoryFraction),
-                tmpFolder + File.separator + "train-" + System.currentTimeMillis());
+        this.trainingData = new MemoryLimitedList<Data>((long) (Runtime.getRuntime().maxMemory() * memoryFraction),
+                new LinkedList<Data>());
 
         int[] inputOutputIndex = DTrainUtils.getNumericAndCategoricalInputAndOutputCounts(this.columnConfigList);
         this.numericInputCount = inputOutputIndex[0];
@@ -308,8 +306,7 @@ public class DTWorker
             statistics.put(entry.getKey(), new NodeStats(entry.getValue().getTreeId(), entry.getValue().getNode()
                     .getId(), featureStatistics));
         }
-        // reopen for iteration
-        this.trainingData.reOpen();
+
         double squareError = 0d;
         for(Data data: this.trainingData) {
             List<Integer> nodeIndexes = new ArrayList<Integer>(trees.size());
