@@ -18,11 +18,11 @@ package ml.shifu.shifu.pig;
 import java.io.IOException;
 import java.util.Map;
 
+import ml.shifu.guagua.hadoop.util.HDPUtils;
 import ml.shifu.shifu.container.obj.ModelConfig;
 import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
 import ml.shifu.shifu.util.CommonUtils;
 import ml.shifu.shifu.util.Environment;
-import ml.shifu.shifu.util.HDPUtils;
 
 import org.apache.commons.lang.StringUtils;
 import org.apache.pig.ExecType;
