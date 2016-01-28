@@ -15,7 +15,6 @@
  */
 package ml.shifu.shifu.core.dvarsel.dataset;
 
-import java.util.Arrays;
 import java.util.List;
 import java.util.Set;
 
@@ -30,6 +29,7 @@ import org.slf4j.LoggerFactory;
  */
 public class TrainingRecord {
 
+    @SuppressWarnings("unused")
     private static final Logger LOG = LoggerFactory.getLogger(TrainingRecord.class);
 
     private double[] inputs;

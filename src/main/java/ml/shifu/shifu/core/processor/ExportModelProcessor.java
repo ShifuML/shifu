@@ -105,6 +105,7 @@ public class ExportModelProcessor extends BasicModelProcessor implements Process
         return status;
     }
 
+    @SuppressWarnings("deprecation")
     private void saveColumnStatus() throws IOException {
         Path localColumnStatsPath = new Path(pathFinder.getLocalColumnStatsPath());
         log.info("Saving ColumnStatus to local file system: {}.", localColumnStatsPath);
