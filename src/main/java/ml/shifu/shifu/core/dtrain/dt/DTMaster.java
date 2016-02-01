@@ -173,15 +173,15 @@ public class DTMaster extends AbstractMasterComputable<DTMasterParams, DTWorkerP
             squareError += params.getSquareError();
             count += params.getCount() * this.treeNum;
         }
-        LOG.info("node stats after merged: {}", nodeStatsMap);
+        LOG.debug("node stats after merged: {}", nodeStatsMap);
         for(Entry<Integer, NodeStats> entry: nodeStatsMap.entrySet()) {
             NodeStats nodeStats = entry.getValue();
             int treeId = nodeStats.getTreeId();
             Node doneNode = Node.getNode(trees.get(treeId).getNode(), nodeStats.getNodeId());
-            // LOG.info("Node stats with treeId {} and node id {},", treeId, doneNode.getId());
+            LOG.debug("Node stats with treeId {} and node id {},", treeId, doneNode.getId());
             // doneNode, NodeStats
             Map<Integer, double[]> statistics = nodeStats.getFeatureStatistics();
-            // LOG.info("Node stats {},", statistics);
+            LOG.debug("Node stats {},", statistics);
 
             List<GainInfo> gainList = new ArrayList<GainInfo>();
             for(Entry<Integer, double[]> gainEntry: statistics.entrySet()) {
@@ -196,6 +196,7 @@ public class DTMaster extends AbstractMasterComputable<DTMasterParams, DTWorkerP
             populateGainInfoToNode(doneNode, maxGainInfo);
             LOG.info("GainInfo is {} and node with info is {}.", maxGainInfo, doneNode);
 
+            // another stop condition: max instandce count
             boolean isLeaf = maxGainInfo.getGain() <= 0d || Node.indexToLevel(doneNode.getId()) == this.maxDepth;
             doneNode.setLeaf(isLeaf);
             if(!doneNode.isLeaf()) {
@@ -289,11 +290,10 @@ public class DTMaster extends AbstractMasterComputable<DTMasterParams, DTWorkerP
         Map<Integer, double[]> featureStatistics = resultNodeStats.getFeatureStatistics();
         for(Entry<Integer, double[]> entry: nodeStats.getFeatureStatistics().entrySet()) {
             double[] statistics = featureStatistics.get(entry.getKey());
-            LOG.info("statistics1 {}", Arrays.toString(statistics));
             for(int i = 0; i < statistics.length; i++) {
                 statistics[i] += entry.getValue()[i];
             }
-            LOG.info("statistics2 {}", Arrays.toString(statistics));
+            LOG.debug("statistics {}", Arrays.toString(statistics));
         }
     }
 
@@ -358,6 +358,8 @@ public class DTMaster extends AbstractMasterComputable<DTMasterParams, DTWorkerP
     @Override
     public void init(MasterContext<DTMasterParams, DTWorkerParams> context) {
         Properties props = context.getProps();
+
+        // init model config and column config list at first
         try {
             SourceType sourceType = SourceType.valueOf(props.getProperty(CommonConstants.MODELSET_SOURCE_TYPE,
                     SourceType.HDFS.toString()));
@@ -369,34 +371,24 @@ public class DTMaster extends AbstractMasterComputable<DTMasterParams, DTWorkerP
             throw new RuntimeException(e);
         }
 
+        // check if variables are set final selected
         int[] inputOutputIndex = DTrainUtils.getNumericAndCategoricalInputAndOutputCounts(this.columnConfigList);
         this.isAfterVarSelect = inputOutputIndex[3] == 1 ? true : false;
 
+        // tree related parameters initialization
         this.featureSubsetStrategy = FeatureSubsetStrategy.of(this.modelConfig.getTrain().getParams()
                 .get("FeatureSubsetStrategy").toString());
-
         this.maxDepth = Integer.valueOf(this.modelConfig.getTrain().getParams().get("MaxDepth").toString());
         assert this.maxDepth > 0 && this.maxDepth <= 20;
-
         this.maxStatsMemory = Long.valueOf(this.modelConfig.getTrain().getParams().get("MaxStatsMemoryMB").toString()) * 1024 * 1024;
         assert this.maxStatsMemory <= Math.min(Runtime.getRuntime().maxMemory() * 0.6, 800 * 1024 * 1024L);
-
         this.treeNum = this.modelConfig.getTrain().getBaggingNum();
-
         this.isRF = ALGORITHM.RF.toString().equalsIgnoreCase(modelConfig.getAlgorithm());
         this.isGBDT = ALGORITHM.GBDT.toString().equals(modelConfig.getAlgorithm());
-        if(this.isRF) {
-            this.trees = new ArrayList<TreeNode>(treeNum);
-            for(int i = 0; i < treeNum; i++) {
-                this.trees.add(new TreeNode(i, new Node(Node.ROOT_INDEX)));
-            }
-        }
         if(this.isGBDT) {
-            this.trees = new ArrayList<TreeNode>(treeNum);
-            // for GBDT, initialize the first tree.
-            this.trees.add(new TreeNode(0, new Node(Node.ROOT_INDEX)));
+            // learning rate only effective in gbdt
+            this.learningRate = Double.valueOf(this.modelConfig.getParams().get(NNTrainer.LEARNING_RATE).toString());
         }
-
         String imStr = this.modelConfig.getTrain().getParams().get("Impurity").toString();
         int numClasses = 2;
         if(this.modelConfig.isMultiClassification()) {
@@ -409,15 +401,28 @@ public class DTMaster extends AbstractMasterComputable<DTMasterParams, DTWorkerP
         } else {
             impurity = new Variance();
         }
-        if(this.isGBDT) {
-            this.learningRate = Double.valueOf(this.modelConfig.getParams().get(NNTrainer.LEARNING_RATE).toString());
-        }
-
         LOG.info("Master init params: isAfterVarSel={}, featureSubsetStrategy={}, maxDepth={}, maxStatsMemory={}, "
                 + "treeNum={}, impurity= {}", isAfterVarSelect, featureSubsetStrategy, maxDepth, maxStatsMemory,
                 treeNum, imStr);
-
         this.queue = new LinkedList<TreeNode>();
-        // TODO recover state trees and queue here for fail-over
+
+        // initialize trees
+        if(context.isFirstIteration()) {
+            if(this.isRF) {
+                // for random forest, trees are trained in parallel
+                this.trees = new ArrayList<TreeNode>(treeNum);
+                for(int i = 0; i < treeNum; i++) {
+                    this.trees.add(new TreeNode(i, new Node(Node.ROOT_INDEX)));
+                }
+            }
+            if(this.isGBDT) {
+                this.trees = new ArrayList<TreeNode>(treeNum);
+                // for GBDT, initialize the first tree. trees are trained sequentially
+                this.trees.add(new TreeNode(0, new Node(Node.ROOT_INDEX)));
+            }
+        } else {
+            this.trees = context.getMasterResult().getTrees();
+            // TODO recover state trees and queue here for fail-over
+        }
     }
 }

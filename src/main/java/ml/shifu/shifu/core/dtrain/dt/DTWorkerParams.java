@@ -23,6 +23,7 @@ import java.util.Map;
 import java.util.Map.Entry;
 
 import ml.shifu.guagua.io.Bytable;
+import ml.shifu.guagua.io.Combinable;
 import ml.shifu.guagua.io.HaltBytable;
 
 /**
@@ -38,7 +39,7 @@ import ml.shifu.guagua.io.HaltBytable;
  * 
  * @see NodeStats
  */
-public class DTWorkerParams extends HaltBytable {
+public class DTWorkerParams extends HaltBytable implements Combinable<DTWorkerParams> {
 
     /**
      * # of records per such worker.
@@ -204,7 +205,7 @@ public class DTWorkerParams extends HaltBytable {
 
         @Override
         public void write(DataOutput out) throws IOException {
-            out.writeInt(getNodeId());
+            out.writeInt(nodeId);
             out.writeInt(treeId);
             out.writeInt(this.featureStatistics.size());
             for(Entry<Integer, double[]> entry: this.featureStatistics.entrySet()) {
@@ -218,7 +219,7 @@ public class DTWorkerParams extends HaltBytable {
 
         @Override
         public void readFields(DataInput in) throws IOException {
-            this.setNodeId(in.readInt());
+            this.nodeId = in.readInt();
             this.treeId = in.readInt();
             int len = in.readInt();
             this.featureStatistics = new HashMap<Integer, double[]>(len, 1f);
@@ -247,6 +248,31 @@ public class DTWorkerParams extends HaltBytable {
         public void setNodeId(int nodeId) {
             this.nodeId = nodeId;
         }
+    }
+
+    @Override
+    public DTWorkerParams combine(DTWorkerParams that) {
+        assert that != null;
+
+        this.count += that.count;
+        this.squareError += that.squareError;
+
+        for(Entry<Integer, NodeStats> entry: this.nodeStatsMap.entrySet()) {
+            NodeStats nodeStats = entry.getValue();
+            NodeStats thatNodeStats = that.nodeStatsMap.get(entry.getKey());
+            assert nodeStats.nodeId == thatNodeStats.nodeId;
+            assert nodeStats.treeId == thatNodeStats.treeId;
+
+            for(Entry<Integer, double[]> featureStatsEntry: nodeStats.getFeatureStatistics().entrySet()) {
+                double[] thisFeatureStats = featureStatsEntry.getValue();
+                double[] thatFeatureStats = thatNodeStats.featureStatistics.get(featureStatsEntry.getKey());
+                for(int i = 0; i < thisFeatureStats.length; i++) {
+                    thisFeatureStats[i] += thatFeatureStats[i];
+                }
+            }
+        }
+
+        return this;
     }
 
 }

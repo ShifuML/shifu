@@ -144,6 +144,7 @@ public class AutoTypeDistinctCountMapper extends Mapper<LongWritable, Text, IntW
             if(System.currentTimeMillis() % 20 == 0) {
                 LOG.warn("Data with invalid tag is ignored in distinct count computing, invalid tag: {}.", tag);
             }
+            context.getCounter(Constants.SHIFU_GROUP_COUNTER, "INVALID_TAG").increment(1L);
             return;
         }
 

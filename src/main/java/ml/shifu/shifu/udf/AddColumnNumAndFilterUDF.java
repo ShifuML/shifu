@@ -24,6 +24,7 @@ import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.container.obj.ModelStatsConf.BinningMethod;
 import ml.shifu.shifu.exception.ShifuErrorCode;
 import ml.shifu.shifu.exception.ShifuException;
+import ml.shifu.shifu.util.Constants;
 
 import org.apache.pig.data.BagFactory;
 import org.apache.pig.data.DataBag;
@@ -32,6 +33,7 @@ import org.apache.pig.data.Tuple;
 import org.apache.pig.data.TupleFactory;
 import org.apache.pig.impl.logicalLayer.schema.Schema;
 import org.apache.pig.impl.logicalLayer.schema.Schema.FieldSchema;
+import org.apache.pig.tools.pigstats.PigStatusReporter;
 
 /**
  * <pre>
@@ -63,6 +65,7 @@ public class AddColumnNumAndFilterUDF extends AbstractTrainerUDF<DataBag> {
         negTags = new HashSet<String>(modelConfig.getNegTags());
     }
 
+    @SuppressWarnings("deprecation")
     public DataBag exec(Tuple input) throws IOException {
         DataBag bag = BagFactory.getInstance().newDefaultBag();
         TupleFactory tupleFactory = TupleFactory.getInstance();
@@ -86,6 +89,9 @@ public class AddColumnNumAndFilterUDF extends AbstractTrainerUDF<DataBag> {
 
         // filter out tag not in setting tagging list
         if(!super.tagSet.contains(tag)) {
+            if(isPigEnabled(Constants.SHIFU_GROUP_COUNTER, "INVALID_TAG")) {
+                PigStatusReporter.getInstance().getCounter(Constants.SHIFU_GROUP_COUNTER, "INVALID_TAG").increment(1);
+            }
             return null;
         }
 

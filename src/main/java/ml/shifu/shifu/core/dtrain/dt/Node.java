@@ -390,8 +390,6 @@ public class Node implements Bytable {
         out.writeInt(id);
         out.writeDouble(gain);
         out.writeDouble(impurity);
-        out.writeDouble(leftImpurity);
-        out.writeDouble(rightImpurity);
         out.writeBoolean(isLeaf);
 
         if(split == null) {
@@ -408,20 +406,6 @@ public class Node implements Bytable {
             predict.write(out);
         }
 
-        if(leftPredict == null) {
-            out.writeBoolean(false);
-        } else {
-            out.writeBoolean(true);
-            leftPredict.write(out);
-        }
-
-        if(rightPredict == null) {
-            out.writeBoolean(false);
-        } else {
-            out.writeBoolean(true);
-            rightPredict.write(out);
-        }
-
         if(left == null) {
             out.writeBoolean(false);
         } else {
@@ -435,6 +419,23 @@ public class Node implements Bytable {
             out.writeBoolean(true);
             right.write(out);
         }
+
+        // left and right stats info not used anywhere, do we remove them
+        // out.writeDouble(leftImpurity);
+        // out.writeDouble(rightImpurity);
+        // if(leftPredict == null) {
+        // out.writeBoolean(false);
+        // } else {
+        // out.writeBoolean(true);
+        // leftPredict.write(out);
+        // }
+        //
+        // if(rightPredict == null) {
+        // out.writeBoolean(false);
+        // } else {
+        // out.writeBoolean(true);
+        // rightPredict.write(out);
+        // }
     }
 
     @Override
@@ -442,8 +443,6 @@ public class Node implements Bytable {
         this.id = in.readInt();
         this.gain = in.readDouble();
         this.impurity = in.readDouble();
-        this.leftImpurity = in.readDouble();
-        this.rightImpurity = in.readDouble();
         this.isLeaf = in.readBoolean();
 
         if(in.readBoolean()) {
@@ -457,16 +456,6 @@ public class Node implements Bytable {
         }
 
         if(in.readBoolean()) {
-            this.leftPredict = new Predict();
-            this.leftPredict.readFields(in);
-        }
-
-        if(in.readBoolean()) {
-            this.rightPredict = new Predict();
-            this.rightPredict.readFields(in);
-        }
-
-        if(in.readBoolean()) {
             this.left = new Node();
             this.left.readFields(in);
         }
@@ -475,6 +464,18 @@ public class Node implements Bytable {
             this.right = new Node();
             this.right.readFields(in);
         }
+
+        // left and right stats info not use anywhere, no need serialization
+        // this.leftImpurity = in.readDouble();
+        // this.rightImpurity = in.readDouble();
+        // if(in.readBoolean()) {
+        // this.leftPredict = new Predict();
+        // this.leftPredict.readFields(in);
+        // }
+        // if(in.readBoolean()) {
+        // this.rightPredict = new Predict();
+        // this.rightPredict.readFields(in);
+        // }
     }
 
     @Override
