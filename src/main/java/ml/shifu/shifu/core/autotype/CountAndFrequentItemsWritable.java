@@ -28,7 +28,7 @@ import org.apache.hadoop.io.Writable;
  * A mixed writable class to wrapper HyperLogLogPlus byte instance and frequent items together.
  * 
  * <p>
- * {@link #frequetItems} is used to check 0-1 variables which is not set to be categorical variables. THe size of it is
+ * {@link #frequetItems} is used to check 0-1 variables which is not set to be categorical variables. The size of it is
  * limited to {@link #FREQUET_ITEM_MAX_SIZE}.
  * 
  * @author Zhang David (pengzhang@paypal.com)
