@@ -139,13 +139,12 @@ public class DTWorker
     protected long sampleCount;
 
     /**
-     * Training data set. FIXME, memory list as we have to change Data in computing while DiskList doesn't support
-     * change
+     * Training data set with only in memory because for GBDT data will be changed in later iterations.
      */
     private MemoryLimitedList<Data> trainingData;
 
     /**
-     * PoissonDistribution which is used for possion sampling for bagging with replacement.
+     * PoissonDistribution which is used for poission sampling for bagging with replacement.
      */
     protected PoissonDistribution[] rng = null;
 
@@ -170,6 +169,9 @@ public class DTWorker
      */
     private Map<Integer, Integer> categoricalInputIndexMap = new HashMap<Integer, Integer>();
 
+    /**
+     * A map with internal BinCategory map which stores index per each category.
+     */
     private Map<Integer, Map<String, Integer>> categoryIndexMap = new HashMap<Integer, Map<String, Integer>>();
 
     /**
@@ -194,7 +196,10 @@ public class DTWorker
      */
     private double learningRate = 0.1d;
 
-    private Loss loss;
+    /**
+     * Different loss strategy for GBDT.
+     */
+    private Loss loss = null;
 
     @Override
     public void initRecordReader(GuaguaFileSplit fileSplit) throws IOException {
@@ -308,8 +313,9 @@ public class DTWorker
         }
 
         double squareError = 0d;
+        List<Integer> nodeIndexes = new ArrayList<Integer>(trees.size());
         for(Data data: this.trainingData) {
-            List<Integer> nodeIndexes = new ArrayList<Integer>(trees.size());
+            nodeIndexes.clear();
             if(this.isRF) {
                 for(TreeNode treeNode: trees) {
                     Node predictNode = predictNodeIndex(treeNode.getNode(), data);
@@ -324,20 +330,20 @@ public class DTWorker
             }
 
             if(this.isGBDT) {
+                int currTreeIndex = trees.size() - 1;
                 if(lastMasterResult.isSwitchToNextTree()) {
-                    int currTreeIndex = trees.size() - 1;
                     if(currTreeIndex >= 1) {
                         double predict = predictNodeIndex(trees.get(currTreeIndex - 1).getNode(), data).getPredict()
                                 .getPredict();
                         if(currTreeIndex == 1) {
                             data.predict = 1.0f * ((float) predict);
                         } else {
-                            data.predict = data.predict + (float) (this.learningRate * predict);
+                            data.predict += (float) (this.learningRate * predict);
                         }
                         data.output = -loss.computeGradient(data.predict, data.output);
                     }
                 }
-                Node predictNode = predictNodeIndex(trees.get(trees.size() - 1).getNode(), data);
+                Node predictNode = predictNodeIndex(trees.get(currTreeIndex).getNode(), data);
                 int predictNodeIndex = predictNode.getId();
                 nodeIndexes.add(predictNodeIndex);
                 squareError += loss.computeError(data.predict, data.output);
@@ -382,6 +388,8 @@ public class DTWorker
                 }
             }
         }
+
+        // TODO Remove me please, only for debug
         for(Map.Entry<Integer, NodeStats> entry: statistics.entrySet()) {
             NodeStats nodeStats = entry.getValue();
             LOG.info("Node index {}, node id {}, tree id{}", entry.getKey(), nodeStats.getNodeId(),
@@ -397,6 +405,7 @@ public class DTWorker
 
     @Override
     protected void postLoad(WorkerContext<DTMasterParams, DTWorkerParams> context) {
+        // need to switch state for read
         this.trainingData.switchState();
     }
 

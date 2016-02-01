@@ -28,6 +28,7 @@ import ml.shifu.shifu.container.obj.ModelNormalizeConf.NormType;
 import ml.shifu.shifu.core.DataSampler;
 import ml.shifu.shifu.core.Normalizer;
 import ml.shifu.shifu.util.CommonUtils;
+import ml.shifu.shifu.util.Constants;
 
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.jexl2.Expression;
@@ -39,6 +40,7 @@ import org.apache.pig.data.Tuple;
 import org.apache.pig.data.TupleFactory;
 import org.apache.pig.impl.logicalLayer.schema.Schema;
 import org.apache.pig.impl.util.Utils;
+import org.apache.pig.tools.pigstats.PigStatusReporter;
 
 /**
  * NormalizeUDF class normalize the training data for parquet format.
@@ -78,6 +80,7 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
         this.alg = this.modelConfig.getAlgorithm();
     }
 
+    @SuppressWarnings("deprecation")
     public Tuple exec(Tuple input) throws IOException {
         if(input == null || input.size() == 0) {
             return null;
@@ -87,6 +90,9 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
 
         // make sure all invalid tag record are filter out
         if(!super.tagSet.contains(rawTag)) {
+            if(isPigEnabled(Constants.SHIFU_GROUP_COUNTER, "INVALID_TAG")) {
+                PigStatusReporter.getInstance().getCounter(Constants.SHIFU_GROUP_COUNTER, "INVALID_TAG").increment(1);
+            }
             return null;
         }
 

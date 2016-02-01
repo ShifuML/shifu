@@ -113,7 +113,7 @@ public class DTMasterParams extends HaltBytable {
         assert trees != null;
         out.writeInt(trees.size());
         for(TreeNode node: trees) {
-            node.write(out);
+            node.writeWithoutFeatures(out);
         }
 
         if(todoNodes == null) {
@@ -122,6 +122,7 @@ public class DTMasterParams extends HaltBytable {
             out.writeInt(todoNodes.size());
             for(Map.Entry<Integer, TreeNode> node: todoNodes.entrySet()) {
                 out.writeInt(node.getKey());
+                // for todo nodes, no left and right node, so node serialization not waste space
                 node.getValue().write(out);
             }
         }
@@ -137,7 +138,7 @@ public class DTMasterParams extends HaltBytable {
         this.trees = new ArrayList<TreeNode>(treeNum);
         for(int i = 0; i < treeNum; i++) {
             TreeNode treeNode = new TreeNode();
-            treeNode.readFields(in);
+            treeNode.readFieldsWithoutFeatures(in);
             this.trees.add(treeNode);
         }
 

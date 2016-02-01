@@ -124,6 +124,11 @@ public class TreeNode implements Bytable {
             }
         }
     }
+    
+    public void writeWithoutFeatures(DataOutput out) throws IOException {
+        out.writeInt(treeId);
+        this.node.write(out);
+    }
 
     @Override
     public void readFields(DataInput in) throws IOException {
@@ -136,6 +141,12 @@ public class TreeNode implements Bytable {
         for(int i = 0; i < len; i++) {
             this.features.add(in.readInt());
         }
+    }
+    
+    public void readFieldsWithoutFeatures(DataInput in) throws IOException {
+        this.treeId = in.readInt();
+        this.node = new Node();
+        this.node.readFields(in);
     }
 
 }
