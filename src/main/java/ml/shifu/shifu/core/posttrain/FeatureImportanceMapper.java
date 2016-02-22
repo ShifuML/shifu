@@ -17,6 +17,8 @@ package ml.shifu.shifu.core.posttrain;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -24,24 +26,18 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 
-import ml.shifu.shifu.container.CaseScoreResult;
 import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.container.obj.ModelConfig;
 import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
 import ml.shifu.shifu.core.DataPurifier;
-import ml.shifu.shifu.core.ModelRunner;
-import ml.shifu.shifu.core.posttrain.FeatureStatsWritable.BinStats;
 import ml.shifu.shifu.util.CommonUtils;
 import ml.shifu.shifu.util.Constants;
 
+import org.apache.hadoop.io.DoubleWritable;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.LongWritable;
-import org.apache.hadoop.io.NullWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.Mapper;
-import org.apache.hadoop.mapreduce.TaskInputOutputContext;
-import org.apache.hadoop.mapreduce.lib.output.MultipleOutputs;
-import org.encog.ml.BasicML;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -50,9 +46,9 @@ import org.slf4j.LoggerFactory;
  * 
  * @author Zhang David (pengzhang@paypal.com)
  */
-public class PostTrainMapper extends Mapper<LongWritable, Text, IntWritable, FeatureStatsWritable> {
+public class FeatureImportanceMapper extends Mapper<LongWritable, Text, IntWritable, DoubleWritable> {
 
-    private final static Logger LOG = LoggerFactory.getLogger(PostTrainMapper.class);
+    private final static Logger LOG = LoggerFactory.getLogger(FeatureImportanceMapper.class);
 
     /**
      * Model Config read from HDFS
@@ -84,16 +80,12 @@ public class PostTrainMapper extends Mapper<LongWritable, Text, IntWritable, Fea
 
     private String[] headers;
 
-    private ModelRunner modelRunner;
-
-    private MultipleOutputs<NullWritable, Text> mos;
-
     /**
      * Prevent too many new objects for output key.
      */
-    private Text outputValue;
+    private DoubleWritable outputValue;
 
-    private Map<Integer, List<BinStats>> variableStatsMap;
+    private Map<Integer, Double> variableStatsMap;
 
     private void loadConfigFiles(final Context context) {
         try {
@@ -108,7 +100,6 @@ public class PostTrainMapper extends Mapper<LongWritable, Text, IntWritable, Fea
         }
     }
 
-    @SuppressWarnings({ "rawtypes", "unchecked" })
     @Override
     protected void setup(Context context) throws IOException, InterruptedException {
         loadConfigFiles(context);
@@ -117,18 +108,13 @@ public class PostTrainMapper extends Mapper<LongWritable, Text, IntWritable, Fea
         this.dataPurifier = new DataPurifier(this.modelConfig);
 
         this.outputKey = new IntWritable();
-        this.outputValue = new Text();
+        this.outputValue = new DoubleWritable();
 
         this.tags = new HashSet<String>(modelConfig.getFlattenTags());
         SourceType sourceType = this.modelConfig.getDataSet().getSource();
 
-        List<BasicML> models = CommonUtils.loadBasicModels(modelConfig, columnConfigList, null, sourceType);
         this.headers = CommonUtils.getHeaders(this.modelConfig.getDataSet().getHeaderPath(), this.modelConfig
                 .getDataSet().getDataDelimiter(), sourceType);
-        this.modelRunner = new ModelRunner(modelConfig, columnConfigList, this.headers,
-                modelConfig.getDataSetDelimiter(), models);
-
-        this.mos = new MultipleOutputs<NullWritable, Text>((TaskInputOutputContext) context);
 
         this.initFeatureStats();
     }
@@ -150,24 +136,24 @@ public class PostTrainMapper extends Mapper<LongWritable, Text, IntWritable, Fea
     }
 
     private void initFeatureStats() {
-        this.variableStatsMap = new HashMap<Integer, List<BinStats>>();
+        this.variableStatsMap = new HashMap<Integer, Double>();
         for(ColumnConfig config: this.columnConfigList) {
             if(!config.isMeta() && !config.isTarget() && config.isFinalSelect()) {
-                List<BinStats> feaureStatistics = null;
-                int binSize = 0;
-                if(config.isNumerical()) {
-                    binSize = config.getBinBoundary().size() + 1;
-                }
-                if(config.isCategorical()) {
-                    binSize = config.getBinCategory().size();
-                }
-                feaureStatistics = new ArrayList<BinStats>(binSize);
-                for(int i = 0; i < binSize; i++) {
-                    feaureStatistics.add(new BinStats(0, 0));
-                }
-                this.variableStatsMap.put(config.getColumnNum(), feaureStatistics);
+                this.variableStatsMap.put(config.getColumnNum(), 0d);
             }
         }
+    }
+
+    public static class FeatureScore {
+
+        public FeatureScore(int columnNum, int binAvgScore) {
+            super();
+            this.columnNum = columnNum;
+            this.binAvgScore = binAvgScore;
+        }
+
+        private int columnNum;
+        private int binAvgScore;
     }
 
     @Override
@@ -195,60 +181,50 @@ public class PostTrainMapper extends Mapper<LongWritable, Text, IntWritable, Fea
             return;
         }
 
-        Map<String, String> rawDataMap = buildRawDataMap(units);
-        CaseScoreResult csr = this.modelRunner.compute(rawDataMap);
-
-        // store score value
-        StringBuilder sb = new StringBuilder(500);
-        sb.append(csr.getAvgScore()).append(Constants.DEFAULT_DELIMITER).append(csr.getMaxScore())
-                .append(Constants.DEFAULT_DELIMITER).append(csr.getMinScore()).append(Constants.DEFAULT_DELIMITER);
-        for(Integer score: csr.getScores()) {
-            sb.append(score).append(Constants.DEFAULT_DELIMITER);
-        }
-        List<String> metaList = modelConfig.getMetaColumnNames();
-        for(String meta: metaList) {
-            sb.append(rawDataMap.get(meta)).append(Constants.DEFAULT_DELIMITER);
-        }
-        sb.deleteCharAt(sb.length() - Constants.DEFAULT_DELIMITER.length());
-        this.outputValue.set(sb.toString());
-        this.mos.write(Constants.POST_TRAIN_OUTPUT_SCORE, NullWritable.get(), this.outputValue);
-
+        List<FeatureScore> featureScores = new ArrayList<FeatureImportanceMapper.FeatureScore>();
         for(int i = 0; i < headers.length; i++) {
             ColumnConfig config = this.columnConfigList.get(i);
             if(!config.isMeta() && !config.isTarget() && config.isFinalSelect()) {
                 int binNum = CommonUtils.getBinNum(config, units[i]);
-                List<BinStats> feaureStatistics = this.variableStatsMap.get(config.getColumnNum());
-                BinStats bs = null;
+                List<Integer> binAvgScores = config.getBinAvgScore();
+                int binScore = 0;
                 if(binNum == -1) {
-                    // if -1, means invalid numeric value like null or empty, last one is for empty stats.
-                    bs = feaureStatistics.get(feaureStatistics.size() - 1);
+                    binScore = binAvgScores.get(binAvgScores.size() - 1);
                 } else {
-                    bs = feaureStatistics.get(binNum);
+                    binScore = binAvgScores.get(binNum);
                 }
-                // bs should not be null as already initialized in setup
-                bs.setBinSum(csr.getAvgScore() + bs.getBinSum());
-                bs.setBinCnt(1L + bs.getBinCnt());
+                featureScores.add(new FeatureScore(config.getColumnNum(), binScore));
             }
         }
-    }
+        Collections.sort(featureScores, new Comparator<FeatureScore>() {
+            @Override
+            public int compare(FeatureScore fs1, FeatureScore fs2) {
+                if(fs1.binAvgScore < fs2.binAvgScore) {
+                    return 1;
+                }
+                if(fs1.binAvgScore > fs2.binAvgScore) {
+                    return -1;
+                }
 
-    private Map<String, String> buildRawDataMap(String[] units) {
-        Map<String, String> rawDataMap = new HashMap<String, String>(headers.length, 1f);
-        for(int i = 0; i < headers.length; i++) {
-            if(units[i] == null) {
-                rawDataMap.put(headers[i], "");
-            } else {
-                rawDataMap.put(headers[i], units[i].toString());
+                return 0;
             }
+        });
+
+        int size = featureScores.size() >= 3 ? 3 : featureScores.size();
+        for(int i = 0; i < size; i++) {
+            FeatureScore featureScore = featureScores.get(i);
+            Double currValue = this.variableStatsMap.get(featureScore.columnNum);
+            currValue += size - i;
+            this.variableStatsMap.put(featureScore.columnNum, currValue);
         }
-        return rawDataMap;
     }
 
     @Override
     protected void cleanup(Context context) throws IOException, InterruptedException {
-        for(Entry<Integer, List<BinStats>> entry: this.variableStatsMap.entrySet()) {
+        for(Entry<Integer, Double> entry: this.variableStatsMap.entrySet()) {
             this.outputKey.set(entry.getKey());
-            context.write(this.outputKey, new FeatureStatsWritable(entry.getValue()));
+            this.outputValue.set(entry.getValue());
+            context.write(this.outputKey, this.outputValue);
         }
     }
 }

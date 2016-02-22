@@ -211,6 +211,10 @@ public class ShifuFileUtils {
         return scanners;
     }
 
+    public static List<Scanner> getDataScanners(String path, SourceType sourceType) throws IOException {
+        return getDataScanners(path, sourceType, null);
+    }
+
     /**
      * Get the data scanners for some specified path
      * if the file is directory, get all scanner of normal sub-files
@@ -227,7 +231,8 @@ public class ShifuFileUtils {
      *             - if any I/O exception in processing
      */
     @SuppressWarnings("deprecation")
-    public static List<Scanner> getDataScanners(String path, SourceType sourceType) throws IOException {
+    public static List<Scanner> getDataScanners(String path, SourceType sourceType, final PathFilter pathFilter)
+            throws IOException {
         FileSystem fs = getFileSystemBySourceType(sourceType);
 
         FileStatus[] listStatus;
@@ -237,8 +242,13 @@ public class ShifuFileUtils {
             listStatus = fs.listStatus(p, new PathFilter() {
                 @Override
                 public boolean accept(Path path) {
-                    return !path.getName().startsWith(Constants.HIDDEN_FILES)
-                            && !path.getName().equalsIgnoreCase("_SUCCESS");
+                    boolean hiddenOrSuccessFile = path.getName().startsWith(Constants.HIDDEN_FILES)
+                            || path.getName().equalsIgnoreCase("_SUCCESS");
+                    if(pathFilter != null) {
+                        return !hiddenOrSuccessFile && pathFilter.accept(path);
+                    } else {
+                        return !hiddenOrSuccessFile;
+                    }
                 }
             });
         } else {
