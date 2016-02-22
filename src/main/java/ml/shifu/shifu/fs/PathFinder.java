@@ -178,6 +178,24 @@ public class PathFinder {
     }
 
     /**
+     * Get post train out put path
+     * 
+     * @param sourceType
+     *            - Local/HDFS
+     * @return path of pre-training stats file
+     */
+    public String getPostTrainOutputPath(SourceType sourceType) {
+        String postTrainOutput = getPreferPath(modelConfig.getTrain().getCustomPaths(),
+                Constants. KEY_PRE_TRAIN_STATS_PATH);
+
+        if(StringUtils.isBlank(postTrainOutput)) {
+            return getPathBySourceType(new Path(Constants.TMP, "posttrain-output"), sourceType);
+        } else {
+            return new Path(postTrainOutput).toString();
+        }
+    }
+
+    /**
      * Get auto type distinct count file path.
      * 
      * @param sourceType

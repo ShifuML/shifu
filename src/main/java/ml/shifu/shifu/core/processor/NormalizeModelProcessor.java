@@ -128,10 +128,10 @@ public class NormalizeModelProcessor extends BasicModelProcessor implements Proc
                 }
             } else {
                 if(modelConfig.getBasic().getPostTrainOn()) {
-                    normPigPath = pathFinder.getAbsolutePath("scripts/NormalizeWithPostTrain.pig");
-                } else {
-                    normPigPath = pathFinder.getAbsolutePath("scripts/Normalize.pig");
+                    // this condition is for comment, no matter post train enabled or not, only norm results will be
+                    // stored since new post train solution
                 }
+                normPigPath = pathFinder.getAbsolutePath("scripts/Normalize.pig");
             }
             PigExecutor.getExecutor().submitJob(modelConfig, normPigPath, paramsMap);
         } catch (IOException e) {

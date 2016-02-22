@@ -192,7 +192,7 @@ public class ShifuCLI {
                 } else if(args[0].equals(POSTTRAIN_CMD)) {
                     // post train step
                     status = postTrainModel();
-                    if(postTrainModel() == 0) {
+                    if(status == 0) {
                         log.info("Do model set post-training successfully. Please configurate your eval set in ModelConfig.json and continue next step by using 'shifu eval' or 'shifu eval -new <eval set>' to create a new eval set.");
                     } else {
                         log.info("Do model post training with error, please check error message or report issue.");
