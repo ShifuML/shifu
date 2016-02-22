@@ -15,25 +15,16 @@
  */
 package ml.shifu.shifu.core.dtrain.lr;
 
+import java.io.DataInput;
+import java.io.DataInputStream;
+import java.io.DataOutput;
+import java.io.DataOutputStream;
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.IOException;
-import java.io.Serializable;
 import java.util.List;
 import java.util.Properties;
-
-import ml.shifu.guagua.hadoop.io.GuaguaLineRecordReader;
-import ml.shifu.guagua.hadoop.io.GuaguaWritableAdapter;
-import ml.shifu.guagua.io.GuaguaFileSplit;
-import ml.shifu.guagua.util.MemoryDiskList;
-import ml.shifu.guagua.util.NumberFormatUtils;
-import ml.shifu.guagua.worker.AbstractWorkerComputable;
-import ml.shifu.guagua.worker.WorkerContext;
-import ml.shifu.shifu.container.obj.ColumnConfig;
-import ml.shifu.shifu.container.obj.ModelConfig;
-import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
-import ml.shifu.shifu.core.dtrain.CommonConstants;
-import ml.shifu.shifu.core.dtrain.DTrainUtils;
-import ml.shifu.shifu.util.CommonUtils;
 
 import org.apache.commons.math3.distribution.PoissonDistribution;
 import org.apache.hadoop.io.LongWritable;
@@ -43,6 +34,21 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.common.base.Splitter;
+
+import ml.shifu.guagua.hadoop.io.GuaguaLineRecordReader;
+import ml.shifu.guagua.hadoop.io.GuaguaWritableAdapter;
+import ml.shifu.guagua.io.Bytable;
+import ml.shifu.guagua.io.GuaguaFileSplit;
+import ml.shifu.guagua.util.BytableMemoryDiskList;
+import ml.shifu.guagua.util.NumberFormatUtils;
+import ml.shifu.guagua.worker.AbstractWorkerComputable;
+import ml.shifu.guagua.worker.WorkerContext;
+import ml.shifu.shifu.container.obj.ColumnConfig;
+import ml.shifu.shifu.container.obj.ModelConfig;
+import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
+import ml.shifu.shifu.core.dtrain.CommonConstants;
+import ml.shifu.shifu.core.dtrain.DTrainUtils;
+import ml.shifu.shifu.util.CommonUtils;
 
 /**
  * {@link LogisticRegressionWorker} defines logic to accumulate local <a
@@ -102,12 +108,12 @@ public class LogisticRegressionWorker
     /**
      * Testing data set.
      */
-    private MemoryDiskList<Data> testingData;
+    private BytableMemoryDiskList<Data> testingData;
 
     /**
      * Training data set.
      */
-    private MemoryDiskList<Data> trainingData;
+    private BytableMemoryDiskList<Data> trainingData;
 
     /**
      * Local logistic regression model.
@@ -169,12 +175,12 @@ public class LogisticRegressionWorker
         LOG.info("Max heap memory: {}, fraction: {}", Runtime.getRuntime().maxMemory(), memoryFraction);
         double crossValidationRate = this.modelConfig.getCrossValidationRate();
         String tmpFolder = context.getProps().getProperty("guagua.data.tmpfolder", "tmp");
-        this.trainingData = new MemoryDiskList<Data>(
+        this.trainingData = new BytableMemoryDiskList<Data>(
                 (long) (Runtime.getRuntime().maxMemory() * memoryFraction * (1 - crossValidationRate)), tmpFolder
-                        + File.separator + "train-" + System.currentTimeMillis());
-        this.testingData = new MemoryDiskList<Data>(
+                        + File.separator + "train-" + System.currentTimeMillis(), Data.class.getName());
+        this.testingData = new BytableMemoryDiskList<Data>(
                 (long) (Runtime.getRuntime().maxMemory() * memoryFraction * crossValidationRate), tmpFolder
-                        + File.separator + "test-" + System.currentTimeMillis());
+                        + File.separator + "test-" + System.currentTimeMillis(),Data.class.getName());
         // cannot find a good place to close these two data set, using Shutdown hook
         Runtime.getRuntime().addShutdownHook(new Thread(new Runnable() {
             @Override
@@ -251,7 +257,7 @@ public class LogisticRegressionWorker
     /**
      * Compute sigmoid value by dot operation of two vectors.
      */
-    private double sigmoid(double[] inputs, double[] weights) {
+    private double sigmoid(float[] inputs, double[] weights) {
         double value = 0.0d;
         for(int i = 0; i < inputs.length; i++) {
             value += weights[i] * inputs[i];
@@ -296,16 +302,16 @@ public class LogisticRegressionWorker
             return;
         }
         String line = currentValue.getWritable().toString();
-        double[] inputData = new double[inputNum];
-        double[] outputData = new double[outputNum];
+        float[] inputData = new float[inputNum];
+        float[] outputData = new float[outputNum];
         int index = 0, inputIndex = 0, outputIndex = 0;
         long hashcode = 0;
         double significance = CommonConstants.DEFAULT_SIGNIFICANCE_VALUE;
         for(String unit: splitter.split(line)) {
-            double doubleValue = NumberFormatUtils.getDouble(unit.trim(), 0.0d);
+            float floatValue = NumberFormatUtils.getFloat(unit.trim(), 0f);
             // no idea about why NaN in input data, we should process it as missing value TODO , according to norm type
-            if(Double.isNaN(doubleValue)) {
-                doubleValue = 0d;
+            if(Double.isNaN(floatValue)) {
+                floatValue = 0f;
             }
             if(index == this.columnConfigList.size()) {
                 significance = NumberFormatUtils.getDouble(unit.trim(), 1.0d);
@@ -313,23 +319,23 @@ public class LogisticRegressionWorker
             } else {
                 ColumnConfig columnConfig = this.columnConfigList.get(index);
                 if(columnConfig != null && columnConfig.isTarget()) {
-                    outputData[outputIndex++] = doubleValue;
+                    outputData[outputIndex++] = floatValue;
                 } else {
                     if(this.inputNum == this.candidateNum) {
                         // no variable selected, good candidate but not meta and not target choosed
                         if(!columnConfig.isMeta() && !columnConfig.isTarget()
                                 && CommonUtils.isGoodCandidate(columnConfig)) {
-                            inputData[inputIndex++] = doubleValue;
-                            hashcode = hashcode * 31 + Double.valueOf(doubleValue).hashCode();
+                            inputData[inputIndex++] = floatValue;
+                            hashcode = hashcode * 31 + Float.valueOf(floatValue).hashCode();
                         }
                     } else {
                         // final select some variables but meta and target are not included
                         if(columnConfig != null && !columnConfig.isMeta() && !columnConfig.isTarget()
                                 && columnConfig.isFinalSelect()) {
-                            inputData[inputIndex++] = doubleValue;
+                            inputData[inputIndex++] = floatValue;
                             // only fixInitialInput=true, hashcode is effective. Remove Arrays.hashcode to avoid one
                             // iteration for the input columns. Last weight column should be excluded.
-                            hashcode = hashcode * 31 + Double.valueOf(doubleValue).hashCode();
+                            hashcode = hashcode * 31 + Float.valueOf(floatValue).hashCode();
                         }
                     }
                 }
@@ -407,18 +413,19 @@ public class LogisticRegressionWorker
         }
     }
 
-    private static class Data implements Serializable {
-
-        private static final long serialVersionUID = 903201066309036170L;
+    private static class Data implements Bytable {
 
         private double significance;
-        private final double[] inputs;
-        private final double[] outputs;
+        private float[] inputs;
+        private float[] outputs;
 
-        public Data(double[] inputs, double[] outputs, double significance) {
+        public Data(float[] inputs, float[] outputs, double significance) {
             this.inputs = inputs;
             this.outputs = outputs;
             this.significance = significance;
+        }
+        
+        public Data(){   
         }
 
         /**
@@ -435,7 +442,39 @@ public class LogisticRegressionWorker
         public void setSignificance(double significance) {
             this.significance = significance;
         }
-
+        
+        @Override
+        public void write(DataOutput out) throws IOException{
+            out.writeDouble(significance);
+            out.writeInt(inputs.length);
+            out.writeInt(outputs.length);
+            for(int i = 0; i<inputs.length;i++)
+            {
+                out.writeFloat(inputs[i]);
+            }
+            for(int i = 0; i<outputs.length;i++)
+            {
+                out.writeFloat(outputs[i]);
+            }
+        }
+        
+        @Override
+        public void readFields(DataInput in) throws IOException{
+            this.significance = in.readDouble();
+            int inputsLen = in.readInt();
+            int outputsLen = in.readInt();
+            this.inputs = new float[inputsLen];
+            this.outputs = new float[outputsLen];
+            for(int i = 0; i<inputsLen;i++)
+            {
+                inputs[i] = in.readFloat();
+            }
+            for(int i = 0; i<outputsLen;i++)
+            {
+                outputs[i] = in.readFloat();
+            }        
+        }
     }
+
 
 }
