@@ -17,6 +17,7 @@ package ml.shifu.shifu.core.pmml;
 
 import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.container.obj.ModelConfig;
+import ml.shifu.shifu.container.obj.ModelNormalizeConf;
 import ml.shifu.shifu.container.obj.ModelTrainConf;
 import ml.shifu.shifu.core.Normalizer;
 import org.apache.commons.lang.StringUtils;
@@ -42,7 +43,6 @@ public class PMMLTranslator {
     private static final String NAME_SPACE_URI = "http://www.dmg.org/PMML-4_2";
     private static final String ELEMENT_OUT = "out";
     private static final String ELEMENT_ORIGIN = "origin";
-    private static final String ZSCORE_POSTFIX = "_zscl";
     private static final String RAW_RESULT = "RawResult";
     private static final String ROUND_FUNC = "round";
     public static final String FINAL_RESULT = "FinalResult";
@@ -248,8 +248,8 @@ public class PMMLTranslator {
         LocalTransformations localTransformations = new LocalTransformations();
         for(ColumnConfig config: columnConfigList) {
             if(config.isFinalSelect()) {
-                localTransformations.withDerivedFields(config.isCategorical() ? createCategoricalDerivedField(config,
-                        cutoff) : createNumericalDerivedField(config, cutoff));
+                localTransformations.withDerivedFields(config.isCategorical() ?
+                        createCategoricalDerivedField(config, cutoff) : createNumericalDerivedField(config, cutoff));
             }
         }
         return localTransformations;
@@ -273,13 +273,13 @@ public class PMMLTranslator {
             throw new RuntimeException("Fail to create document node.", e);
         }
 
-        String defaultValue = "0.0";
-        String missingValue = "0.0";
+        String defaultValue = Normalizer.normalize(config, "doesn't exist at all...by paypal", cutoff, this.modelConfig.getNormalizeType()).toString();
+        String missingValue = Normalizer.normalize(config, null, cutoff, this.modelConfig.getNormalizeType()).toString();
 
         InlineTable inlineTable = new InlineTable();
         for(int i = 0; i < config.getBinCategory().size(); i++) {
             String cval = config.getBinCategory().get(i);
-            String dval = Normalizer.normalize(config, cval, cutoff).toString();
+            String dval = Normalizer.normalize(config, cval, cutoff, this.modelConfig.getNormalizeType()).toString();
 
             Element out = document.createElementNS(NAME_SPACE_URI, ELEMENT_OUT);
             out.setTextContent(dval);
@@ -288,9 +288,6 @@ public class PMMLTranslator {
             origin.setTextContent(cval);
 
             inlineTable.withRows(new Row().withContent(origin).withContent(out));
-            if(StringUtils.isBlank(cval)) {
-                missingValue = dval;
-            }
         }
 
         MapValues mapValues = new MapValues("out").withDataType(DataType.DOUBLE).withDefaultValue(defaultValue)
@@ -298,7 +295,16 @@ public class PMMLTranslator {
                 .withInlineTable(inlineTable).withMapMissingTo(missingValue);
 
         return new DerivedField(OpType.CONTINUOUS, DataType.DOUBLE).withName(
-                FieldName.create(config.getColumnName() + ZSCORE_POSTFIX)).withExpression(mapValues);
+                FieldName.create(genPmmlColumnName(config.getColumnName()))).withExpression(mapValues);
+    }
+
+    /**
+     * Convert column name into PMML format(with normalization)
+     * @param columnName
+     * @return - PMML standard column name
+     */
+    private String genPmmlColumnName(String columnName) {
+        return columnName + "_" + this.modelConfig.getNormalizeType().name().toLowerCase();
     }
 
     /**
@@ -311,17 +317,58 @@ public class PMMLTranslator {
      * @return DerivedField for variable
      */
     private DerivedField createNumericalDerivedField(ColumnConfig config, double cutoff) {
+        ModelNormalizeConf.NormType normType = this.modelConfig.getNormalizeType();
 
-        // added capping logic to linearNorm
-        LinearNorm from = new LinearNorm().withOrig(config.getMean() - config.getStdDev() * cutoff).withNorm(-cutoff);
-        LinearNorm to = new LinearNorm().withOrig(config.getMean() + config.getStdDev() * cutoff).withNorm(cutoff);
-        NormContinuous normContinuous = new NormContinuous(FieldName.create(config.getColumnName()))
-                .withLinearNorms(from, to).withMapMissingTo(0.0)
-                .withOutliers(OutlierTreatmentMethodType.AS_EXTREME_VALUES);
+        if ( normType.equals(ModelNormalizeConf.NormType.WOE)
+                || normType.equals(ModelNormalizeConf.NormType.WEIGHT_WOE) ) {
+            List<Double> binWoeList = (normType.equals(ModelNormalizeConf.NormType.WOE) ?
+                    config.getBinCountWoe() : config.getBinWeightedWoe() );
+            List<Double> binBoundaryList = config.getBinBoundary();
 
-        // derived field name is consisted of FieldName and "_zscl"
-        return new DerivedField(OpType.CONTINUOUS, DataType.DOUBLE).withName(
-                FieldName.create(config.getColumnName() + ZSCORE_POSTFIX)).withExpression(normContinuous);
+            List<DiscretizeBin> discretizeBinList = new ArrayList();
+            for ( int i = 0; i < config.getBinLength(); i ++ ) {
+                DiscretizeBin discretizeBin = new DiscretizeBin();
+
+                Interval interval = new Interval();
+
+                if ( i == 0 ) {
+                    interval.withClosure(Interval.Closure.OPEN_OPEN)
+                            .withRightMargin(binBoundaryList.get(i + 1));
+                } else if ( i == config.getBinLength() - 1 ) {
+                    interval.withClosure(Interval.Closure.CLOSED_OPEN)
+                            .withLeftMargin(binBoundaryList.get(i));
+                } else {
+                    interval.withClosure(Interval.Closure.CLOSED_OPEN)
+                            .withLeftMargin(binBoundaryList.get(i))
+                            .withRightMargin(binBoundaryList.get(i + 1));
+                }
+
+                discretizeBin.withInterval(interval).withBinValue(Double.toString(binWoeList.get(i)));
+                discretizeBinList.add(discretizeBin);
+            }
+
+            Discretize discretize = new Discretize();
+            discretize.withDataType(DataType.DOUBLE)
+                    .withField(FieldName.create(config.getColumnName()))
+                    .withMapMissingTo(Normalizer.normalize(config, null, cutoff, this.modelConfig.getNormalizeType()).toString())
+                    .withDefaultValue(Normalizer.normalize(config, null, cutoff, this.modelConfig.getNormalizeType()).toString())
+                    .withDiscretizeBins(discretizeBinList);
+
+            // derived field name is consisted of FieldName and "_zscl"
+            return new DerivedField(OpType.CONTINUOUS, DataType.DOUBLE).withName(
+                    FieldName.create(genPmmlColumnName(config.getColumnName()))).withExpression(discretize);
+        } else {
+            // added capping logic to linearNorm
+            LinearNorm from = new LinearNorm().withOrig(config.getMean() - config.getStdDev() * cutoff).withNorm(-cutoff);
+            LinearNorm to = new LinearNorm().withOrig(config.getMean() + config.getStdDev() * cutoff).withNorm(cutoff);
+            NormContinuous normContinuous = new NormContinuous(FieldName.create(config.getColumnName()))
+                    .withLinearNorms(from, to).withMapMissingTo(0.0)
+                    .withOutliers(OutlierTreatmentMethodType.AS_EXTREME_VALUES);
+
+            // derived field name is consisted of FieldName and "_zscl"
+            return new DerivedField(OpType.CONTINUOUS, DataType.DOUBLE).withName(
+                    FieldName.create(genPmmlColumnName(config.getColumnName()))).withExpression(normContinuous);
+        }
     }
 
     /**
