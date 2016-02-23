@@ -326,7 +326,7 @@ public class PMMLTranslator {
             List<Double> binBoundaryList = config.getBinBoundary();
 
             List<DiscretizeBin> discretizeBinList = new ArrayList();
-            for ( int i = 0; i < config.getBinLength(); i ++ ) {
+            for ( int i = 0; i < binBoundaryList.size(); i ++ ) {
                 DiscretizeBin discretizeBin = new DiscretizeBin();
 
                 Interval interval = new Interval();
@@ -334,7 +334,7 @@ public class PMMLTranslator {
                 if ( i == 0 ) {
                     interval.withClosure(Interval.Closure.OPEN_OPEN)
                             .withRightMargin(binBoundaryList.get(i + 1));
-                } else if ( i == config.getBinLength() - 1 ) {
+                } else if ( i == binBoundaryList.size() - 1 ) {
                     interval.withClosure(Interval.Closure.CLOSED_OPEN)
                             .withLeftMargin(binBoundaryList.get(i));
                 } else {
