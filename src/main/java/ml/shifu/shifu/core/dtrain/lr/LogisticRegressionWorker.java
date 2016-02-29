@@ -444,35 +444,31 @@ public class LogisticRegressionWorker
         }
         
         @Override
-        public void write(DataOutput out) throws IOException{
+        public void write(DataOutput out) throws IOException {
             out.writeDouble(significance);
             out.writeInt(inputs.length);
             out.writeInt(outputs.length);
-            for(int i = 0; i<inputs.length;i++)
-            {
+            for(int i = 0; i < inputs.length; i++) {
                 out.writeFloat(inputs[i]);
             }
-            for(int i = 0; i<outputs.length;i++)
-            {
+            for(int i = 0; i < outputs.length; i++) {
                 out.writeFloat(outputs[i]);
             }
         }
-        
+
         @Override
-        public void readFields(DataInput in) throws IOException{
+        public void readFields(DataInput in) throws IOException {
             this.significance = in.readDouble();
             int inputsLen = in.readInt();
             int outputsLen = in.readInt();
             this.inputs = new float[inputsLen];
             this.outputs = new float[outputsLen];
-            for(int i = 0; i<inputsLen;i++)
-            {
+            for(int i = 0; i < inputsLen; i++) {
                 inputs[i] = in.readFloat();
             }
-            for(int i = 0; i<outputsLen;i++)
-            {
+            for(int i = 0; i < outputsLen; i++) {
                 outputs[i] = in.readFloat();
-            }        
+            }
         }
     }
 
