@@ -28,6 +28,7 @@ import java.util.Map;
 import java.util.Scanner;
 
 import ml.shifu.guagua.GuaguaConstants;
+import ml.shifu.guagua.hadoop.util.HDPUtils;
 import ml.shifu.guagua.mapreduce.GuaguaMapReduceClient;
 import ml.shifu.guagua.mapreduce.GuaguaMapReduceConstants;
 import ml.shifu.shifu.actor.AkkaSystemExecutor;
@@ -60,7 +61,6 @@ import ml.shifu.shifu.util.CommonUtils;
 import ml.shifu.shifu.util.Constants;
 import ml.shifu.shifu.util.Environment;
 import ml.shifu.shifu.util.HDFSUtils;
-import ml.shifu.shifu.util.HDPUtils;
 
 import org.antlr.runtime.RecognitionException;
 import org.apache.commons.collections.CollectionUtils;
