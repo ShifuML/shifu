@@ -22,6 +22,7 @@ import java.util.Map;
 import java.util.Scanner;
 
 import ml.shifu.guagua.GuaguaConstants;
+import ml.shifu.guagua.hadoop.util.HDPUtils;
 import ml.shifu.guagua.mapreduce.GuaguaMapReduceClient;
 import ml.shifu.guagua.mapreduce.GuaguaMapReduceConstants;
 import ml.shifu.shifu.container.obj.ColumnConfig;
@@ -51,7 +52,6 @@ import ml.shifu.shifu.fs.ShifuFileUtils;
 import ml.shifu.shifu.util.CommonUtils;
 import ml.shifu.shifu.util.Constants;
 import ml.shifu.shifu.util.Environment;
-import ml.shifu.shifu.util.HDPUtils;
 
 import org.apache.commons.collections.ListUtils;
 import org.apache.commons.compress.compressors.bzip2.BZip2CompressorInputStream;
@@ -95,6 +95,7 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
 
     private final static Logger log = LoggerFactory.getLogger(VarSelectModelProcessor.class);
 
+    @SuppressWarnings("unused")
     private static final double BAD_IV_THRESHOLD = 0.02d;
 
     /**
@@ -632,27 +633,27 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
         // here we do loop again as it is not bad for variables less than 100,000
         for(ColumnConfig config: columnConfigList) {
             // check ID-like variables
-            if(isIDLikeVariable(config)) {
+            if(isIDLikeVariable(config) && !config.isForceSelect()) {
                 log.warn(
                         "Column {} is like an ID, set final select to false. If not, you can check it manually in ColumnConfig.json",
                         config.getColumnName());
                 config.setFinalSelect(false);
                 continue;
             }
-            if(isHighMissingRateColumn(config)) {
+            if(isHighMissingRateColumn(config) && !config.isForceSelect()) {
                 log.warn(
                         "Column {} is with very high missing rate, set final select to false. If not, you can check it manually in ColumnConfig.json",
                         config.getColumnName());
                 config.setFinalSelect(false);
                 continue;
             }
-//            if(config.getIv() == null || config.getIv() <= BAD_IV_THRESHOLD) {
-//                log.warn(
-//                        "Column {} is with bad iv value less than {}, set final select to false. If not, you can check it manually in ColumnConfig.json",
-//                        config.getColumnName(), BAD_IV_THRESHOLD);
-//                config.setFinalSelect(false);
-//                continue;
-//            }
+            // if((config.getIv() == null || config.getIv() <= BAD_IV_THRESHOLD) && !config.isForceSelect()) {
+            // log.warn(
+            // "Column {} is with bad iv value less than {}, set final select to false. If not, you can check it manually in ColumnConfig.json",
+            // config.getColumnName(), BAD_IV_THRESHOLD);
+            // config.setFinalSelect(false);
+            // continue;
+            // }
             // add more here
         }
     }

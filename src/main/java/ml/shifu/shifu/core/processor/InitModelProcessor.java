@@ -23,6 +23,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Scanner;
 
+import ml.shifu.guagua.hadoop.util.HDPUtils;
 import ml.shifu.guagua.mapreduce.GuaguaMapReduceConstants;
 import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.container.obj.ColumnConfig.ColumnType;
@@ -37,7 +38,6 @@ import ml.shifu.shifu.fs.ShifuFileUtils;
 import ml.shifu.shifu.util.CommonUtils;
 import ml.shifu.shifu.util.Constants;
 import ml.shifu.shifu.util.Environment;
-import ml.shifu.shifu.util.HDPUtils;
 
 import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.collections.Predicate;
@@ -139,11 +139,15 @@ public class InitModelProcessor extends BasicModelProcessor implements Processor
             boolean distinctOn) {
         int cateCount = 0;
         for(ColumnConfig columnConfig: columnConfigList) {
-            Long distinctCount = distinctCountMap.get(columnConfig.getColumnNum()).count;
+            Data data = distinctCountMap.get(columnConfig.getColumnNum());
+            if(data == null) {
+                continue;
+            }
+            Long distinctCount = data.count;
             if(distinctCount != null && modelConfig.getDataSet().getAutoTypeThreshold() != null) {
                 if(cateOn) {
                     if(distinctCount < modelConfig.getDataSet().getAutoTypeThreshold().longValue()) {
-                        String[] items = distinctCountMap.get(columnConfig.getColumnNum()).items;
+                        String[] items = data.items;
                         if(is01Variable(distinctCount, items)) {
                             log.info(
                                     "Column {} with index {} is set to numeric type because of 0-1 variable. Distinct count {}, items {}.",
