@@ -23,6 +23,7 @@ import ml.shifu.shifu.container.obj.ModelTrainConf.ALGORITHM;
 import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
 import ml.shifu.shifu.core.pmml.PMMLTranslator;
 import ml.shifu.shifu.core.pmml.PMMLUtils;
+import ml.shifu.shifu.core.pmml.builder.PMMLConstructorFactory;
 import ml.shifu.shifu.fs.PathFinder;
 import ml.shifu.shifu.fs.ShifuFileUtils;
 import ml.shifu.shifu.util.CommonUtils;
@@ -58,9 +59,11 @@ public class ExportModelProcessor extends BasicModelProcessor implements Process
     private final static Logger log = LoggerFactory.getLogger(ExportModelProcessor.class);
 
     private String type;
+    private boolean isConcise;
 
-    public ExportModelProcessor(String type) {
+    public ExportModelProcessor(String type, boolean isConcise) {
         this.type = type;
+        this.isConcise = isConcise;
     }
 
     /*
@@ -88,9 +91,11 @@ public class ExportModelProcessor extends BasicModelProcessor implements Process
             PathFinder pathFinder = new PathFinder(modelConfig);
             List<BasicML> models = CommonUtils.loadBasicModels(pathFinder.getModelsPath(SourceType.LOCAL), ALGORITHM.valueOf(modelConfig.getAlgorithm().toUpperCase()));
 
+            PMMLTranslator translator = PMMLConstructorFactory.produce(modelConfig, columnConfigList, this.isConcise);
+
             for (int index = 0; index < models.size(); index++) {
                 log.info("\t start to generate " + "pmmls" + File.separator + modelConfig.getModelSetName() + Integer.toString(index) + ".pmml");
-                PMML pmml = new PMMLTranslator(modelConfig, columnConfigList, models).translate(index);
+                PMML pmml = translator.build(models.get(index));
                 PMMLUtils.savePMML(pmml, "pmmls" + File.separator + modelConfig.getModelSetName() + Integer.toString(index) + ".pmml");
             }
         } else if ( type.equalsIgnoreCase(COLUMN_STATS) ) {
