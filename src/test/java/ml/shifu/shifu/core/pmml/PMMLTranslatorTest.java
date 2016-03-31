@@ -21,6 +21,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import ml.shifu.shifu.core.pmml.builder.creator.AbstractSpecifCreator;
+import ml.shifu.shifu.core.pmml.builder.impl.NNSpecifCreator;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
 import org.dmg.pmml.FieldName;
@@ -43,6 +45,8 @@ import ml.shifu.shifu.util.Environment;
  * PMMLTranslatorTest class
  */
 public class PMMLTranslatorTest {
+
+    private boolean isConcisePmml = true;
 
     @BeforeClass
     public void setUp() {
@@ -72,7 +76,7 @@ public class PMMLTranslatorTest {
         ShifuCLI.runEvalScore("EvalA");
         File evalScore = new File("evals/EvalA/EvalScore");
 
-        ShifuCLI.exportModel(null);
+        ShifuCLI.exportModel(null, isConcisePmml);
 
         // Step 2. Eval the scores using PMML and compare it with SHIFU output
 
@@ -81,6 +85,51 @@ public class PMMLTranslatorTest {
         for (int index = 0; index < 5; index++) {
             String num = Integer.toString(index);
             String pmmlPath = "pmmls/cancer-judgement" + num + ".pmml";
+            evalNNPmml(pmmlPath, DataPath, OutPath, "\\|", "model" + num);
+            compareScore(evalScore, new File(OutPath), "model" + num, "\\|", 1.0);
+            FileUtils.deleteQuietly(new File(OutPath));
+        }
+
+        FileUtils.deleteQuietly(tmpModel);
+        FileUtils.deleteQuietly(tmpColumn);
+        FileUtils.deleteDirectory(tmpModelsDir);
+
+        FileUtils.deleteQuietly(new File("./pmmls"));
+        FileUtils.deleteQuietly(new File("evals"));
+    }
+
+    @Test
+    public void testWoeVariablePmmlCase() throws Exception {
+        // Step 1. Eval the scores using SHIFU
+        File originModel = new File(
+                "src/test/resources/example/cancer-judgement/ModelStore/ModelSet2/ModelConfig.json");
+        File tmpModel = new File("ModelConfig.json");
+
+        File originColumn = new File(
+                "src/test/resources/example/cancer-judgement/ModelStore/ModelSet2/ColumnConfig.json");
+        File tmpColumn = new File("ColumnConfig.json");
+
+        File modelsDir = new File(
+                "src/test/resources/example/cancer-judgement/ModelStore/ModelSet2/models");
+        File tmpModelsDir = new File("models");
+
+        FileUtils.copyFile(originModel, tmpModel);
+        FileUtils.copyFile(originColumn, tmpColumn);
+        FileUtils.copyDirectory(modelsDir, tmpModelsDir);
+
+        // run evaluation set
+        ShifuCLI.runEvalScore("EvalA");
+        File evalScore = new File("evals/EvalA/EvalScore");
+
+        ShifuCLI.exportModel(null, isConcisePmml);
+
+        // Step 2. Eval the scores using PMML and compare it with SHIFU output
+
+        String DataPath = "./src/test/resources/example/cancer-judgement/DataStore/Full_data/data.dat";
+        String OutPath = "./pmml_out.dat";
+        for (int index = 0; index < 5; index++) {
+            String num = Integer.toString(index);
+            String pmmlPath = "pmmls/testWoePmml" + num + ".pmml";
             evalNNPmml(pmmlPath, DataPath, OutPath, "\\|", "model" + num);
             compareScore(evalScore, new File(OutPath), "model" + num, "\\|", 1.0);
             FileUtils.deleteQuietly(new File(OutPath));
@@ -114,7 +163,7 @@ public class PMMLTranslatorTest {
         ShifuCLI.runEvalScore("EvalA");
         File evalScore = new File("evals/EvalA/EvalScore");
 
-        ShifuCLI.exportModel(null);
+        ShifuCLI.exportModel(null, isConcisePmml);
 
         // Step 2. Eval the scores using PMML
         String pmmlPath = "pmmls/ModelK0.pmml";
@@ -157,7 +206,7 @@ public class PMMLTranslatorTest {
         ShifuCLI.runEvalScore("EvalA");
         File evalScore = new File("evals/EvalA/EvalScore");
 
-        ShifuCLI.exportModel(null);
+        ShifuCLI.exportModel(null, isConcisePmml);
 
         // Step 2. Eval the scores using PMML and compare it with SHIFU output
 
@@ -170,6 +219,46 @@ public class PMMLTranslatorTest {
             compareScore(evalScore, new File(OutPath), "model" + num, "\\|", 1.0);
             FileUtils.deleteQuietly(new File(OutPath));
         }
+
+        FileUtils.deleteQuietly(tmpModel);
+        FileUtils.deleteQuietly(tmpColumn);
+        FileUtils.deleteDirectory(tmpModelsDir);
+
+        FileUtils.deleteQuietly(new File("./pmmls"));
+        FileUtils.deleteQuietly(new File("evals"));
+    }
+
+    @Test
+    public void testMixTypeWoePmmlCase() throws Exception {
+        // Step 1. Eval the scores using SHIFU
+        File originModel = new File("src/test/resources/example/labor-neg/DataStore/DataSet2/ModelConfig.json");
+        File tmpModel = new File("ModelConfig.json");
+
+        File originColumn = new File("src/test/resources/example/labor-neg/DataStore/DataSet2/ColumnConfig.json");
+        File tmpColumn = new File("ColumnConfig.json");
+
+        File modelsDir = new File("src/test/resources/example/labor-neg/DataStore/DataSet2/models");
+        File tmpModelsDir = new File("models");
+
+        FileUtils.copyFile(originModel, tmpModel);
+        FileUtils.copyFile(originColumn, tmpColumn);
+        FileUtils.copyDirectory(modelsDir, tmpModelsDir);
+
+        // run evaluation set
+        ShifuCLI.runEvalScore("EvalA");
+        File evalScore = new File("evals/EvalA/EvalScore");
+
+        ShifuCLI.exportModel(null, isConcisePmml);
+
+        // Step 2. Eval the scores using PMML
+        String pmmlPath = "pmmls/testWoe2Pmml0.pmml";
+        String DataPath = "src/test/resources/example/labor-neg/DataStore/DataSet1/data.dat";
+        String OutPath = "model_k_out.dat";
+        evalNNPmml(pmmlPath, DataPath, OutPath, ",", "model0");
+
+        // Step 3. Compare the SHIFU Eval score and PMML score
+        compareScore(evalScore, new File(OutPath), "model0", "\\|", 1.0);
+        FileUtils.deleteQuietly(new File(OutPath));
 
         FileUtils.deleteQuietly(tmpModel);
         FileUtils.deleteQuietly(tmpColumn);
@@ -218,7 +307,7 @@ public class PMMLTranslatorTest {
             switch (evaluator.getModel().getFunctionName()) {
                 case REGRESSION:
                     Map<FieldName, Double> regressionTerm = (Map<FieldName, Double>) evaluator.evaluate(maps);
-                    writer.println(regressionTerm.get(new FieldName(PMMLTranslator.FINAL_RESULT)).intValue());
+                    writer.println(regressionTerm.get(new FieldName(AbstractSpecifCreator.FINAL_RESULT)).intValue());
                     break;
                 case CLASSIFICATION:
                     Map<FieldName, ClassificationMap<String>> classificationTerm = (Map<FieldName, ClassificationMap<String>>) evaluator.evaluate(maps);
@@ -245,7 +334,7 @@ public class PMMLTranslatorTest {
 
         for(Map<FieldName, FieldValue> maps: input) {
             Map<FieldName, Double> regressionTerm = (Map<FieldName, Double>) evaluator.evaluate(maps);
-            writer.println(regressionTerm.get(new FieldName(PMMLTranslator.FINAL_RESULT)).intValue());
+            writer.println(regressionTerm.get(new FieldName(NNSpecifCreator.FINAL_RESULT)).intValue());
         }
         IOUtils.closeQuietly(writer);
     }
