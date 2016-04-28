@@ -19,7 +19,9 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
+import ml.shifu.guagua.io.Combinable;
 import ml.shifu.guagua.io.HaltBytable;
+import ml.shifu.shifu.core.dtrain.nn.NNParams;
 
 /**
  * A model class to store logistic regression weight on first iteration by using {@link #parameters}, while in other
@@ -33,7 +35,7 @@ import ml.shifu.guagua.io.HaltBytable;
  * Workers are responsible to compute local accumulated gradients and send to master while master accumulates all
  * gradients together to build a global model.
  */
-public class LogisticRegressionParams extends HaltBytable {
+public class LogisticRegressionParams extends HaltBytable implements Combinable<LogisticRegressionParams>{
 
     /**
      * Model weights in the first iteration, gradients in other iterations.
@@ -97,6 +99,20 @@ public class LogisticRegressionParams extends HaltBytable {
      */
     public void setTrainSize(long trainSize) {
         this.trainSize = trainSize;
+    }
+    
+    @Override
+    public LogisticRegressionParams combine(LogisticRegressionParams from) {
+        assert from != null;
+        this.trainError += from.trainError;
+        this.testError += from.testError;
+        this.trainSize+=from.trainSize;
+        this.testSize+=from.testSize;
+        assert this.parameters != null && from.parameters != null;
+        for(int i = 0; i < this.parameters.length; i++) {
+            this.parameters[i] += from.parameters[i];
+        }
+        return this;
     }
 
     @Override
