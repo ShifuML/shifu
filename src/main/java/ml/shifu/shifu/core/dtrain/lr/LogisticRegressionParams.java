@@ -21,7 +21,6 @@ import java.io.IOException;
 
 import ml.shifu.guagua.io.Combinable;
 import ml.shifu.guagua.io.HaltBytable;
-import ml.shifu.shifu.core.dtrain.nn.NNParams;
 
 /**
  * A model class to store logistic regression weight on first iteration by using {@link #parameters}, while in other
