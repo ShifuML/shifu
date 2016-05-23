@@ -171,7 +171,12 @@ public class DTMaster extends AbstractMasterComputable<DTMasterParams, DTWorkerP
                 }
             }
             squareError += params.getSquareError();
-            count += params.getCount() * this.treeNum;
+            if(this.isRF) {
+                count += params.getCount() * this.treeNum;
+            }
+            if(this.isGBDT) {
+                count += params.getCount();
+            }
         }
         LOG.debug("node stats after merged: {}", nodeStatsMap);
         for(Entry<Integer, NodeStats> entry: nodeStatsMap.entrySet()) {
@@ -384,7 +389,7 @@ public class DTMaster extends AbstractMasterComputable<DTMasterParams, DTWorkerP
         assert this.maxStatsMemory <= Math.min(Runtime.getRuntime().maxMemory() * 0.6, 800 * 1024 * 1024L);
         this.treeNum = this.modelConfig.getTrain().getBaggingNum();
         this.isRF = ALGORITHM.RF.toString().equalsIgnoreCase(modelConfig.getAlgorithm());
-        this.isGBDT = ALGORITHM.GBDT.toString().equals(modelConfig.getAlgorithm());
+        this.isGBDT = ALGORITHM.GBDT.toString().equalsIgnoreCase(modelConfig.getAlgorithm());
         if(this.isGBDT) {
             // learning rate only effective in gbdt
             this.learningRate = Double.valueOf(this.modelConfig.getParams().get(NNTrainer.LEARNING_RATE).toString());

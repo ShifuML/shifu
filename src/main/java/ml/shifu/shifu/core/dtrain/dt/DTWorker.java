@@ -20,12 +20,10 @@ import java.io.DataOutput;
 import java.io.IOException;
 import java.io.Serializable;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
 import java.util.Properties;
 import java.util.Random;
 
@@ -272,7 +270,6 @@ public class DTWorker
                 this.loss = new SquaredLoss();
             }
         }
-
     }
 
     /*
@@ -289,6 +286,9 @@ public class DTWorker
         DTMasterParams lastMasterResult = context.getLastMasterResult();
         List<TreeNode> trees = lastMasterResult.getTrees();
         Map<Integer, TreeNode> todoNodes = lastMasterResult.getTodoNodes();
+        if(todoNodes == null) {
+            return new DTWorkerParams();
+        }
 
         Map<Integer, NodeStats> statistics = new HashMap<Integer, NodeStats>(todoNodes.size(), 1f);
         for(Map.Entry<Integer, TreeNode> entry: todoNodes.entrySet()) {
@@ -340,7 +340,7 @@ public class DTWorker
                         } else {
                             data.predict += (float) (this.learningRate * predict);
                         }
-                        data.output = -loss.computeGradient(data.predict, data.output);
+                        data.output = -loss.computeGradient(data.predict, data.originalOutput);
                     }
                 }
                 Node predictNode = predictNodeIndex(trees.get(currTreeIndex).getNode(), data);
@@ -390,16 +390,16 @@ public class DTWorker
         }
 
         // TODO Remove me please, only for debug
-        for(Map.Entry<Integer, NodeStats> entry: statistics.entrySet()) {
-            NodeStats nodeStats = entry.getValue();
-            LOG.info("Node index {}, node id {}, tree id{}", entry.getKey(), nodeStats.getNodeId(),
-                    nodeStats.getTreeId());
-            Map<Integer, double[]> featureStatistics = nodeStats.getFeatureStatistics();
-            for(Entry<Integer, double[]> feaEntry: featureStatistics.entrySet()) {
-                LOG.info("ColumnNum {} statistics {}", feaEntry.getKey(), Arrays.toString(feaEntry.getValue()));
-            }
-        }
-        LOG.debug("Worker statistics is {}", statistics);
+//        for(Map.Entry<Integer, NodeStats> entry: statistics.entrySet()) {
+//            NodeStats nodeStats = entry.getValue();
+//            LOG.info("Node index {}, node id {}, tree id{}", entry.getKey(), nodeStats.getNodeId(),
+//                    nodeStats.getTreeId());
+//            Map<Integer, double[]> featureStatistics = nodeStats.getFeatureStatistics();
+//            for(Entry<Integer, double[]> feaEntry: featureStatistics.entrySet()) {
+//                LOG.info("ColumnNum {} statistics {}", feaEntry.getKey(), Arrays.toString(feaEntry.getValue()));
+//            }
+//        }
+//        LOG.debug("Worker statistics is {}", statistics);
         return new DTWorkerParams(count, squareError, statistics);
     }
 
@@ -572,11 +572,11 @@ public class DTWorker
         float output = ideal;
         float predict = ideal;
 
-        Data data = new Data(numericInputs, categoricalInputs, predict, output, significance, sampleWeights);
+        Data data = new Data(numericInputs, categoricalInputs, predict, output, output, significance, sampleWeights);
 
-        boolean isFailOver = !context.isFirstIteration();
+        boolean isNeedFailOver = !context.isFirstIteration();
         // recover for gbdt fail over
-        if(isFailOver && this.isGBDT) {
+        if(isNeedFailOver && this.isGBDT) {
             DTMasterParams lastMasterResult = context.getLastMasterResult();
             if(lastMasterResult != null) {
                 List<TreeNode> trees = lastMasterResult.getTrees();
@@ -607,17 +607,29 @@ public class DTWorker
 
         private float[] numericInputs;
         private String[] categoricalInputs;
+        /**
+         * Original output label and not changed in GBDT
+         */
+        private float originalOutput;
+        /**
+         * Output lable and maybe changed in GBDT
+         */
         private float output;
         private float predict;
         private float significance;
         private float[] subsampleWeights = new float[] { 1.0f };
 
-        public Data(float[] numericInputs, String[] categoricalInputs, float predict, float output, float significance,
-                float[] subsampleWeights) {
+        @SuppressWarnings("unused")
+        public Data() {
+        }
+
+        public Data(float[] numericInputs, String[] categoricalInputs, float predict, float output,
+                float originalOutput, float significance, float[] subsampleWeights) {
             this.numericInputs = numericInputs;
             this.categoricalInputs = categoricalInputs;
             this.predict = predict;
             this.output = output;
+            this.originalOutput = originalOutput;
             this.significance = significance;
             this.subsampleWeights = subsampleWeights;
         }
@@ -635,6 +647,7 @@ public class DTWorker
             }
 
             out.writeFloat(output);
+            out.writeFloat(originalOutput);
             out.writeFloat(predict);
 
             out.writeFloat(significance);
@@ -660,6 +673,7 @@ public class DTWorker
             }
 
             this.output = in.readFloat();
+            this.originalOutput = in.readFloat();
             this.predict = in.readFloat();
 
             this.significance = in.readFloat();

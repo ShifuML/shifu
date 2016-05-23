@@ -72,6 +72,11 @@ public abstract class Impurity {
         this.statsSize = statsSize;
     }
 
+    public static void main(String[] args) {
+        double a = Double.NaN;
+        System.out.println(a - 0d);
+    }
+
 }
 
 /**
