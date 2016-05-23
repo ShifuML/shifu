@@ -201,6 +201,9 @@ public class LogisticRegressionOutput extends
     }
 
     private void writeModelWeightsToFileSystem(double[] weights, Path out) {
+        if(weights==null || weights.length<=0){
+            return;
+        }
         FSDataOutputStream fos = null;
         PrintWriter pw = null;
         try {

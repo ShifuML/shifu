@@ -76,7 +76,9 @@ import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.pig.LoadPushDown.RequiredField;
 import org.apache.pig.LoadPushDown.RequiredFieldList;
@@ -397,7 +399,6 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
             String modelName = getModelName(i);
             Path modelPath = fileSystem.makeQualified(new Path(super.getPathFinder().getModelsPath(sourceType),
                     modelName));
-
             // check if job is continunous training, this can be set multiple times and we only get last one
             boolean isContinous = checkContinuousTraining(fileSystem, localArgs, modelPath);
             if(!isContinous && !isOneJobNotContinuous) {

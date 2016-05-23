@@ -72,6 +72,7 @@ public class ShifuCLI {
     private static final String MODELSET_CMD_CP = "cp";
     private static final String MODELSET_CMD_NEW = "new";
     private static final String MODELSET_CMD_TYPE = "t";
+    private static final String EXPORT_CONCISE = "c";
     private static final String NEW = "new";
 
     private static final String CMD_EXPORT = "export";
@@ -250,7 +251,8 @@ public class ShifuCLI {
                         printUsage();
                     }
                 } else if(args[0].equals(CMD_EXPORT)) {
-                    status = exportModel(cmd.getOptionValue(MODELSET_CMD_TYPE));
+                    boolean isConcise = cmd.hasOption(EXPORT_CONCISE);
+                    status = exportModel(cmd.getOptionValue(MODELSET_CMD_TYPE), isConcise);
                     if(status == 0) {
                         log.info("Export models to PMML format successfully in current folder.");
                     } else {
@@ -475,8 +477,8 @@ public class ShifuCLI {
      * @param type
      * @throws Exception
      */
-    public static int exportModel(String type) throws Exception {
-        ExportModelProcessor p = new ExportModelProcessor(type);
+    public static int exportModel(String type, boolean isConcise) throws Exception {
+        ExportModelProcessor p = new ExportModelProcessor(type, isConcise);
         return p.run();
     }
 
@@ -513,14 +515,22 @@ public class ShifuCLI {
     private static Options buildModelSetOptions(String[] args) {
         Options opts = new Options();
 
-        Option opt_cmt = OptionBuilder.hasArg().withDescription("The description for new model").create(MODELSET_CMD_M);
-        Option opt_new = OptionBuilder.hasArg().withDescription("To create an eval set").create(NEW);
-        Option opt_type = OptionBuilder.hasArg().withDescription("Specify model type").create(MODELSET_CMD_TYPE);
-        Option opt_run = OptionBuilder.hasArg().withDescription("To run eval set").create(EVAL_CMD_RUN);
-        Option opt_dry = OptionBuilder.hasArg(false).withDescription("Dry run the train").create(TRAIN_CMD_DRY);
-        Option opt_debug = OptionBuilder.hasArg(false).withDescription("Save the log of train process")
-                .create(TRAIN_CMD_DEBUG);
-        Option opt_model = OptionBuilder.hasArg(false).withDescription("Init model").create(INIT_CMD_MODEL);
+        Option opt_cmt = OptionBuilder.hasArg()
+                .withDescription("The description for new model").create(MODELSET_CMD_M);
+        Option opt_new = OptionBuilder.hasArg()
+                .withDescription("To create an eval set").create(NEW);
+        Option opt_type = OptionBuilder.hasArg()
+                .withDescription("Specify model type").create(MODELSET_CMD_TYPE);
+        Option opt_run = OptionBuilder.hasArg()
+                .withDescription("To run eval set").create(EVAL_CMD_RUN);
+        Option opt_dry = OptionBuilder.hasArg(false)
+                .withDescription("Dry run the train").create(TRAIN_CMD_DRY);
+        Option opt_debug = OptionBuilder.hasArg(false)
+                .withDescription("Save the log of train process").create(TRAIN_CMD_DEBUG);
+        Option opt_model = OptionBuilder.hasArg(false)
+                .withDescription("Init model").create(INIT_CMD_MODEL);
+        Option opt_concise = OptionBuilder.hasArg(false)
+                .withDescription("Export concise PMML").create(EXPORT_CONCISE);
 
         Option opt_list = OptionBuilder.hasArg(false).create(LIST);
         Option opt_delete = OptionBuilder.hasArg().create(DELETE);
@@ -540,6 +550,7 @@ public class ShifuCLI {
         opts.addOption(opt_dry);
         opts.addOption(opt_debug);
         opts.addOption(opt_model);
+        opts.addOption(opt_concise);
 
         opts.addOption(opt_list);
         opts.addOption(opt_delete);
@@ -573,7 +584,7 @@ public class ShifuCLI {
         System.out.println("\teval -score   <EvalSetName>             Scoring evaluation dataset.");
         System.out.println("\teval -confmat <EvalSetName>             Compute the TP/FP/TN/FN based on scoring");
         System.out.println("\teval -perf <EvalSetName>                Calculate the model performance based on confmat");
-        System.out.println("\texport [-t pmml|columnstats]            Export model to PMML format or export ColumnConfig.");
+        System.out.println("\texport [-t pmml|columnstats] [-c]       Export model to PMML format or export ColumnConfig.");
         System.out.println("\tversion|v|-v|-version                   Print version of current package.");
         System.out.println("\thelp|h|-h|-help                         Help message.");
     }
