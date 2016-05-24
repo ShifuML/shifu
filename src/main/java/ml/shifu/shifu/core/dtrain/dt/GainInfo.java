@@ -189,10 +189,14 @@ public class GainInfo {
         }
         if(maxGainIndex == -1) {
             LOG.info("gian list is {}", gainList);
+            if(gainList.size() >= 1) {
+                // choose the first one if all gain are 'NaN'
+                maxGainIndex = 0;
+            }
         }
         return gainList.get(maxGainIndex);
     }
-    
+
     /*
      * (non-Javadoc)
      * 

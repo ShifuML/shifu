@@ -42,7 +42,10 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * TODO
+ * {@link FeatureImportanceMapper} is to compute the most important variables in one model.
+ * 
+ * <p>
+ * Per each record, get the top 3 biggest variables in one bin. Then sent to reducer for further statistics.
  * 
  * @author Zhang David (pengzhang@paypal.com)
  */
