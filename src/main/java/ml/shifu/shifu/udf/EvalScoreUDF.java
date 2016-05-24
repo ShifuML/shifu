@@ -94,7 +94,9 @@ public class EvalScoreUDF extends AbstractTrainerUDF<Tuple> {
         String tag = rawDataMap.get(modelConfig.getTargetColumnName(evalConfig));
 
         // filter invalid tag record out
-        if(!tagSet.contains(tag)) {
+        // disable the tag check, since there is no bad tag in eval data set
+        // and user just want to score the data, but don't run performance evaluation
+        /*if(!tagSet.contains(tag)) {
             if(System.currentTimeMillis() % 100 == 0) {
                 log.warn("Invalid tag: " + tag);
             }
@@ -103,7 +105,7 @@ public class EvalScoreUDF extends AbstractTrainerUDF<Tuple> {
                         .increment(1);
             }
             return null;
-        }
+        }*/
 
         CaseScoreResult cs = modelRunner.compute(rawDataMap);
         if(cs == null) {
