@@ -29,7 +29,8 @@ import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.mapreduce.Reducer;
 
 /**
- * TODO
+ * {@link FeatureImportanceReducer} is to aggregate feature importance statistics and compute the top important
+ * variables.
  * 
  * @author Zhang David (pengzhang@paypal.com)
  */
