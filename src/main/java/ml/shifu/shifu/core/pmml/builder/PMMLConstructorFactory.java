@@ -1,5 +1,7 @@
 package ml.shifu.shifu.core.pmml.builder;
 
+import java.util.List;
+
 import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.container.obj.ModelConfig;
 import ml.shifu.shifu.container.obj.ModelNormalizeConf;
@@ -7,11 +9,21 @@ import ml.shifu.shifu.container.obj.ModelTrainConf;
 import ml.shifu.shifu.core.pmml.PMMLTranslator;
 import ml.shifu.shifu.core.pmml.builder.creator.AbstractPmmlElementCreator;
 import ml.shifu.shifu.core.pmml.builder.creator.AbstractSpecifCreator;
-import ml.shifu.shifu.core.pmml.builder.impl.*;
-import org.dmg.pmml.*;
-import org.encog.ml.BasicML;
+import ml.shifu.shifu.core.pmml.builder.impl.DataDictionaryCreator;
+import ml.shifu.shifu.core.pmml.builder.impl.MiningSchemaCreator;
+import ml.shifu.shifu.core.pmml.builder.impl.ModelStatsCreator;
+import ml.shifu.shifu.core.pmml.builder.impl.NNPmmlModelCreator;
+import ml.shifu.shifu.core.pmml.builder.impl.NNSpecifCreator;
+import ml.shifu.shifu.core.pmml.builder.impl.RegressionPmmlModelCreator;
+import ml.shifu.shifu.core.pmml.builder.impl.RegressionSpecifCreator;
+import ml.shifu.shifu.core.pmml.builder.impl.WoeLocalTransformCreator;
+import ml.shifu.shifu.core.pmml.builder.impl.ZscoreLocalTransformCreator;
 
-import java.util.List;
+import org.dmg.pmml.DataDictionary;
+import org.dmg.pmml.LocalTransformations;
+import org.dmg.pmml.MiningSchema;
+import org.dmg.pmml.Model;
+import org.dmg.pmml.ModelStats;
 
 /**
  * Created by zhanhu on 3/29/16.
