@@ -285,6 +285,30 @@ public class PathFinder {
     }
 
     /**
+     *
+     * @return
+     */
+    public String getPSIInfoPath() {
+        return this.getPSIInfoPath(modelConfig.getDataSet().getSource());
+    }
+
+    /**
+     *
+     * @param sourceType
+     * @return
+     */
+    public String getPSIInfoPath(SourceType sourceType) {
+        String preTrainPath = getPreferPath(modelConfig.getTrain().getCustomPaths(), Constants.KEY_PRE_PSI_PATH);
+
+        if(StringUtils.isBlank(preTrainPath)) {
+            return getPathBySourceType(new Path(Constants.TMP, "PSIInfo"), sourceType);
+        } else {
+            return new Path(preTrainPath).toString();
+        }
+
+    }
+
+    /**
      * Get the path of models
      * 
      * @return path of models
@@ -587,7 +611,7 @@ public class PathFinder {
     }
 
     /**
-     * @param hdfs
+     * @param sourceType
      * @return
      */
     public String getModelSetPath(SourceType sourceType) {

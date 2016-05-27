@@ -43,6 +43,7 @@ import ml.shifu.shifu.core.mr.input.CombineInputFormat;
 import ml.shifu.shifu.core.validator.ModelInspector.ModelStep;
 import ml.shifu.shifu.exception.ShifuErrorCode;
 import ml.shifu.shifu.exception.ShifuException;
+import ml.shifu.shifu.fs.PathFinder;
 import ml.shifu.shifu.fs.ShifuFileUtils;
 import ml.shifu.shifu.pig.PigExecutor;
 import ml.shifu.shifu.udf.CalculateStatsUDF;
@@ -57,6 +58,7 @@ import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.collections.Predicate;
 import org.apache.commons.compress.compressors.bzip2.BZip2CompressorInputStream;
 import org.apache.commons.jexl2.JexlException;
+import org.apache.commons.jexl2.UnifiedJEXL;
 import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
@@ -205,6 +207,12 @@ public class StatsModelProcessor extends BasicModelProcessor implements Processo
         // update column config
         updateColumnConfigWithPreTrainingStats();
         // save it to local/hdfs
+        saveColumnConfigListAndColumnStats(true);
+
+        syncDataToHdfs(modelConfig.getDataSet().getSource());
+
+        runPSI();
+
         saveColumnConfigListAndColumnStats(true);
     }
 
@@ -413,6 +421,7 @@ public class StatsModelProcessor extends BasicModelProcessor implements Processo
                 config.getColumnStats().setWeightedIv(parseDouble(raw[22]));
                 config.getColumnBinning().setBinCountWoe(CommonUtils.stringToDoubleList(raw[23]));
                 config.getColumnBinning().setBinWeightedWoe(CommonUtils.stringToDoubleList(raw[24]));
+                // TODO magic code?
                 if(raw.length >= 26) {
                     config.getColumnStats().setSkewness(parseDouble(raw[25]));
                 }
@@ -448,6 +457,48 @@ public class StatsModelProcessor extends BasicModelProcessor implements Processo
             return Long.parseLong(str);
         } catch (Exception e) {
             return lVal;
+        }
+    }
+
+    /**
+     * Calculate the PSI
+     * @throws IOException
+     */
+    private void runPSI() throws IOException {
+        if (StringUtils.isNotEmpty(modelConfig.getPSIColumnName())) {
+            ColumnConfig columnConfig = CommonUtils.findColumnConfigByName(columnConfigList,
+                                                                           modelConfig.getPSIColumnName());
+
+            if (columnConfig == null || !columnConfig.isMeta()) {
+                log.warn("Unable to use the PSI column name specify in ModelConfig to compute PSI");
+                return;
+            }
+
+            log.info("Start to use %s to compute the PSI ", columnConfig.getColumnName());
+            Map<String, String> paramsMap = new HashMap<String, String>();
+            paramsMap.put("delimiter", CommonUtils.escapePigString(modelConfig.getDataSetDelimiter()));
+
+            PigExecutor.getExecutor().submitJob(modelConfig, pathFinder.getAbsolutePath("scripts/PSI.pig"),
+                    paramsMap);
+
+            List<Scanner> scanners = ShifuFileUtils.getDataScanners(pathFinder.getPSIInfoPath(), modelConfig
+                    .getDataSet().getSource());
+
+
+            for (Scanner scanner : scanners) {
+                while (scanner.hasNext()) {
+                    String[] output = scanner.nextLine().trim().split("\\|");
+
+                    try {
+                        int columnNum = Integer.parseInt(output[0]);
+                        ColumnConfig config = this.columnConfigList.get(columnNum);
+                        config.setPSI(Double.parseDouble(output[1]));
+                    } catch (Exception e) {
+                        // TODO
+                    }
+
+                }
+            }
         }
     }
 
