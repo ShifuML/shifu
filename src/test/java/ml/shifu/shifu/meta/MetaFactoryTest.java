@@ -15,12 +15,6 @@
  */
 package ml.shifu.shifu.meta;
 
-import ml.shifu.shifu.container.meta.MetaFactory;
-import ml.shifu.shifu.container.meta.ValidateResult;
-import ml.shifu.shifu.container.obj.ModelConfig;
-import ml.shifu.shifu.container.obj.ModelTrainConf;
-import ml.shifu.shifu.container.obj.ModelTrainConf.ALGORITHM;
-import ml.shifu.shifu.core.alg.NNTrainer;
 import org.apache.commons.io.FileUtils;
 import org.testng.Assert;
 import org.testng.annotations.AfterClass;
@@ -33,6 +27,13 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+
+import ml.shifu.shifu.container.meta.MetaFactory;
+import ml.shifu.shifu.container.meta.ValidateResult;
+import ml.shifu.shifu.container.obj.ModelConfig;
+import ml.shifu.shifu.container.obj.ModelTrainConf;
+import ml.shifu.shifu.container.obj.ModelTrainConf.ALGORITHM;
+import ml.shifu.shifu.core.alg.NNTrainer;
 
 /**
  * MetaFactoryTest class
@@ -50,7 +51,7 @@ public class MetaFactoryTest {
 
     @Test
     public void testGetModelConfigMeta() {
-        Assert.assertEquals(MetaFactory.getModelConfigMeta().size(), 116);
+        Assert.assertEquals(MetaFactory.getModelConfigMeta().size(), 117);
     }
 
     @Test
