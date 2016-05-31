@@ -21,18 +21,19 @@ public class NumericCounter extends Counter {
     public NumericCounter(String name, List<Double> binBoundary) {
         this.name = name;
         this.binBoundary = binBoundary;
-        this.counter = new Integer[binBoundary.size()];
+        this.counter = new Integer[binBoundary.size() + 1];
         Arrays.fill(counter, 0);
     }
 
     @Override
-    public void addData(String val) {
+    public void addData(Object val) {
         try {
-            Double dVal = Double.parseDouble(val);
+            Double dVal = Double.parseDouble(val.toString());
             int index = CommonUtils.getBinIndex(binBoundary, dVal);
             counter[index] = counter[index] + 1;
         } catch (Exception e) {
             logger.warn(String.format("Unable to logger this column %s with %s", name, val));
+            counter[binBoundary.size()] = counter[binBoundary.size()] + 1;
         }
     }
 

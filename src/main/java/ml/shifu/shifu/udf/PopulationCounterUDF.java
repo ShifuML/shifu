@@ -54,9 +54,7 @@ public class PopulationCounterUDF extends AbstractTrainerUDF<Tuple> {
             Tuple tuple = iter.next();
             if (tuple != null && tuple.size() != 0) {
                 Object value = tuple.get(2);
-                if (value != null) {
-                    counter.addData(value.toString());
-                }
+                counter.addData(value);
             }
         }
 

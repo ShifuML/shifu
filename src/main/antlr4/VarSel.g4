@@ -1,6 +1,6 @@
 grammar VarSel;
 
-varsel : expr ('and'  expr)+;
+prog : expr ('and'  expr)+;
 expr : (ID opt NUM) | ID ;
 ID: [a-zA-Z]+;
 opt: '>' | '<' | '>=' | '<=' | '=' ;

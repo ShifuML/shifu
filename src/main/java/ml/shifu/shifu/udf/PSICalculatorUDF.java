@@ -18,9 +18,9 @@ import ml.shifu.shifu.container.obj.ColumnConfig;
 /**
  * Calculate the Population Stability Index
  */
-public class PSICaculatorUDF extends AbstractTrainerUDF<Tuple> {
+public class PSICalculatorUDF extends AbstractTrainerUDF<Tuple> {
 
-    public PSICaculatorUDF(String source, String pathModelConfig, String pathColumnConfig)
+    public PSICalculatorUDF(String source, String pathModelConfig, String pathColumnConfig)
         throws IOException {
         super(source, pathModelConfig, pathColumnConfig);
 
@@ -44,8 +44,8 @@ public class PSICaculatorUDF extends AbstractTrainerUDF<Tuple> {
             if (columnConfig.getTotalCount() == 0) {
                 expected.add(0D);
             } else {
-                expected.add((double) (negativeBin.get(i) + positiveBin.get(i)) / columnConfig
-                    .getTotalCount());
+                expected.add(((double)negativeBin.get(i) + (double)positiveBin.get(i))
+                             / columnConfig.getTotalCount());
             }
         }
 
@@ -69,12 +69,14 @@ public class PSICaculatorUDF extends AbstractTrainerUDF<Tuple> {
                 for (Double sub : subCounter) {
                     if ( total == 0 ) {
                         continue;
+                    } else if (expected.get(i) == 0) {
+                        continue;
                     } else {
-                        double logNum = sub / total - expected.get(i);
-                        if (logNum < 10e-10) {
+                        double logNum = (sub / total) / expected.get(i);
+                        if (logNum <= 0) {
                             continue;
                         } else {
-                            psi = psi + ((sub / total - expected.get(i)) * Math.log(sub / total - expected.get(i)));
+                            psi = psi + ((sub / total - expected.get(i)) * Math.log((sub / total) / expected.get(i)));
                         }
                     }
                     i ++;
