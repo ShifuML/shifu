@@ -43,8 +43,10 @@ public class PopulationCounterUDF extends AbstractTrainerUDF<Tuple> {
 
         if (columnConfig.isCategorical()) {
             this.counter = new CategoryCounter(columnConfig.getBinCategory());
+        } else if (columnConfig.isNumerical()){
+            this.counter = new NumericCounter(columnConfig.getColumnName(), columnConfig.getBinBoundary());
         } else {
-            this.counter = new NumericCounter(columnConfig.getBinBoundary());
+            return null;
         }
 
         Iterator<Tuple> iter = bag.iterator();
@@ -52,7 +54,9 @@ public class PopulationCounterUDF extends AbstractTrainerUDF<Tuple> {
             Tuple tuple = iter.next();
             if (tuple != null && tuple.size() != 0) {
                 Object value = tuple.get(2);
-                counter.addData(value);
+                if (value != null) {
+                    counter.addData(value.toString());
+                }
             }
         }
 

@@ -132,7 +132,6 @@ public class ModelStatsConf {
         this.binningAlgorithm = binningAlgorithm;
     }
 
-    @JsonIgnore
     public String getPSIColumnName() {
         return PSIColumnName;
     }

@@ -15,11 +15,6 @@
  */
 package ml.shifu.shifu.core;
 
-import ml.shifu.shifu.container.obj.ColumnConfig;
-import ml.shifu.shifu.container.obj.ColumnConfig.ColumnConfigComparator;
-import ml.shifu.shifu.container.obj.ModelConfig;
-import ml.shifu.shifu.core.alg.NNTrainer;
-import ml.shifu.shifu.util.CommonUtils;
 import org.encog.ml.data.MLDataPair;
 import org.encog.ml.data.MLDataSet;
 import org.encog.ml.data.basic.BasicMLData;
@@ -29,7 +24,19 @@ import org.encog.neural.networks.BasicNetwork;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+
+import ml.shifu.shifu.container.obj.ColumnConfig;
+import ml.shifu.shifu.container.obj.ColumnConfig.ColumnConfigComparator;
+import ml.shifu.shifu.container.obj.ModelConfig;
+import ml.shifu.shifu.core.alg.NNTrainer;
+import ml.shifu.shifu.util.CommonUtils;
 
 /**
  * variable selector
@@ -44,6 +51,12 @@ public class VariableSelector {
         log.info("Creating VariableSelector...");
         this.modelConfig = modelConfig;
         this.columnConfigList = columnConfigList;
+    }
+
+    // TODO it should support some DSL like "KS > 2 and IV and PSI <= 0.1"
+    public List<ColumnConfig> selectByFilter(String input) {
+        //VarSelParser parser = new VarSelParser(new CommonTokenStream(new VarSelLexer(new ANTLRInputStream(input))));
+        return null;
     }
 
     // return the list of selected column nums

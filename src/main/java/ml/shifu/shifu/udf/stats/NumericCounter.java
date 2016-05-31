@@ -1,6 +1,9 @@
 package ml.shifu.shifu.udf.stats;
 
-import java.util.ArrayList;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.util.Arrays;
 import java.util.List;
 
 import ml.shifu.shifu.util.CommonUtils;
@@ -8,25 +11,33 @@ import ml.shifu.shifu.util.CommonUtils;
 /**
  * Created by Mark on 5/27/2016.
  */
-public class NumericCounter extends Counter<Object> {
+public class NumericCounter extends Counter {
 
+    private final static Logger logger = LoggerFactory.getLogger(NumericCounter.class);
     private List<Double> binBoundary;
-    private List<Integer> counter;
+    private Integer[] counter;
+    private String name;
 
-    public NumericCounter(List<Double> binBoundary) {
+    public NumericCounter(String name, List<Double> binBoundary) {
+        this.name = name;
         this.binBoundary = binBoundary;
-        this.counter = new ArrayList<Integer>(binBoundary.size() + 1);
+        this.counter = new Integer[binBoundary.size()];
+        Arrays.fill(counter, 0);
     }
 
     @Override
-    public void addData(Object val) {
-        Double dVal = ((Number) val).doubleValue();
-        int index = CommonUtils.getBinIndex(binBoundary, dVal);
-        counter.set(index, counter.get(index) + 1);
+    public void addData(String val) {
+        try {
+            Double dVal = Double.parseDouble(val);
+            int index = CommonUtils.getBinIndex(binBoundary, dVal);
+            counter[index] = counter[index] + 1;
+        } catch (Exception e) {
+            logger.warn(String.format("Unable to logger this column %s with %s", name, val));
+        }
     }
 
     @Override
     public List<Integer> getCounter() {
-        return counter;
+        return Arrays.asList(counter);
     }
 }
