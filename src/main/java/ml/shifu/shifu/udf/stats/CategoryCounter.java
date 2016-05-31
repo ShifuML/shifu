@@ -8,7 +8,7 @@ import java.util.TreeMap;
 /**
  * counter for the categorical val
  */
-public class CategoryCounter extends Counter<String> {
+public class CategoryCounter extends Counter {
 
     private Map<String, Integer> categoryMap = new TreeMap<String, Integer>();
     private List<String> categories;
@@ -31,10 +31,10 @@ public class CategoryCounter extends Counter<String> {
 
     @Override
     public List<Integer> getCounter() {
-        List<Integer> counters = new ArrayList<Integer>(categories.size());
+        List<Integer> counters = new ArrayList<Integer>();
 
         for (int i = 0 ; i < categories.size(); i ++) {
-            counters.set(i, categoryMap.get(categories.get(i)));
+            counters.add(categoryMap.get(categories.get(i)));
         }
 
         return counters;

@@ -13,6 +13,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+SET job.name 'shifu PSI calculator';
+SET mapred.map.tasks.speculative.execution true;
+SET mapred.reduce.tasks.speculative.execution true;
+SET mapred.job.queue.name $queue_name;
 
 REGISTER $path_jar;
 
@@ -23,8 +27,9 @@ DEFINE PSI               ml.shifu.shifu.udf.PSICaculatorUDF('$source_type', '$pa
 data = LOAD '$path_raw_data' USING PigStorage('$delimiter');
 
 -- not need to filtering
-data_cols = FOREACH data GENERATE AddColumnNum(*), $PSIColumn;
-data_cols = FOREACH data_cols GENERATE $PSIColumn, FLATTEN($0);
+data_cols = FOREACH data GENERATE $PSIColumn, AddColumnNum(*);
+data_cols = FILTER data_cols by $1 is not null;
+data_cols = FOREACH data_cols GENERATE $PSIColumn, FLATTEN($1);
 
 -- calculate counting number for each column and each psi bin
 population_info = foreach (group data_cols by ($PSIColumn, $1)) generate FLATTEN(PopulationCounter(*));

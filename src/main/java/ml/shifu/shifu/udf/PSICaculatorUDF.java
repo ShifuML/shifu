@@ -38,10 +38,15 @@ public class PSICaculatorUDF extends AbstractTrainerUDF<Tuple> {
         ColumnConfig columnConfig = this.columnConfigList.get(columnId);
 
         List<Integer> negativeBin = columnConfig.getBinCountNeg();
-        List<Integer> postiveBin  = columnConfig.getBinCountPos();
+        List<Integer> positiveBin  = columnConfig.getBinCountPos();
         List<Double> expected = new ArrayList<Double>(negativeBin.size());
         for (int i = 0 ; i < columnConfig.getBinCountNeg().size(); i ++) {
-            expected.set(i, (double)(negativeBin.get(i) + postiveBin.get(i)) / columnConfig.getTotalCount());
+            if (columnConfig.getTotalCount() == 0) {
+                expected.add(0D);
+            } else {
+                expected.add((double) (negativeBin.get(i) + positiveBin.get(i)) / columnConfig
+                    .getTotalCount());
+            }
         }
 
         Iterator<Tuple> iter = databag.iterator();
@@ -62,8 +67,16 @@ public class PSICaculatorUDF extends AbstractTrainerUDF<Tuple> {
 
                 int i = 0;
                 for (Double sub : subCounter) {
-                    // TODO Is it possible total == 0? or expect == actual ?
-                    psi = psi + ((sub / total - expected.get(i)) * Math.log(sub / total - expected.get(i)));
+                    if ( total == 0 ) {
+                        continue;
+                    } else {
+                        double logNum = sub / total - expected.get(i);
+                        if (logNum < 10e-10) {
+                            continue;
+                        } else {
+                            psi = psi + ((sub / total - expected.get(i)) * Math.log(sub / total - expected.get(i)));
+                        }
+                    }
                     i ++;
                 }
             }
