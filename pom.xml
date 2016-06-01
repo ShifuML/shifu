@@ -28,8 +28,8 @@
         </dependency>
         <dependency>
             <groupId>org.antlr</groupId>
-            <artifactId>antlr4-runtime</artifactId>
-            <version>4.2</version>
+            <artifactId>antlr-runtime</artifactId>
+            <version>3.4</version>
         </dependency>
         <dependency>
             <groupId>com.fasterxml.jackson.core</groupId>
