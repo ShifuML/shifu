@@ -23,7 +23,8 @@ public class PopulationCounterUDFTest {
     public void setup() throws IOException {
         inst = new PopulationCounterUDF("LOCAL",
                                         "src/test/resources/example/cancer-judgement/ModelStore/ModelSet1/ModelConfig.json",
-                                        "src/test/resources/example/cancer-judgement/ModelStore/ModelSet1/ColumnConfig.json");
+                                        "src/test/resources/example/cancer-judgement/ModelStore/ModelSet1/ColumnConfig.json",
+                                        "2");
 
         array = new double[] {13D, 14D, 14D, 17D, 17D, 18D, 19D, 20D, 21D, 27D};
     }
