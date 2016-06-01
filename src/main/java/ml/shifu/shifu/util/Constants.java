@@ -53,6 +53,7 @@ public interface Constants {
     public static final String PATH_MODEL_CONFIG = "path_model_config";
     public static final String PATH_PRE_TRAINING_STATS = "path_pre_training_stats";
     public static final String PATH_STATS_BINNING_INFO = "path_stats_binning_info";
+    public static final String PATH_STATS_PSI_INFO = "path_psi";
 
     public static final String PATH_NORMALIZED_DATA = "pathNormalizedData";
     public static final String PATH_RAW_DATA = "path_raw_data";
@@ -124,6 +125,7 @@ public interface Constants {
     public static final String BIN_AVG_SCORE = "BinAvgScore";
 
     public static final String KEY_PRE_TRAIN_STATS_PATH = "preTrainStatsPath";
+    public static final String KEY_PRE_PSI_PATH = "StatsPSIPath";
     public static final String KEY_SELECTED_RAW_DATA_PATH = "selectedRawDataPath";
     public static final String KEY_NORMALIZED_DATA_PATH = "normalizedDataPath";
     public static final String KEY_VARSLECT_STATS_PATH = "varSelectStatsPath";
