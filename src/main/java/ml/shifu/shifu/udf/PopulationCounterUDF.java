@@ -23,10 +23,19 @@ import ml.shifu.shifu.udf.stats.NumericCounter;
 public class PopulationCounterUDF extends AbstractTrainerUDF<Tuple> {
 
     private Counter counter;
+    private int index;
 
-    public PopulationCounterUDF(String source, String pathModelConfig, String pathColumnConfig)
+    // DO NOT use this constructor
+    private PopulationCounterUDF(String source, String pathModelConfig, String pathColumnConfig)
         throws IOException {
         super(source, pathModelConfig, pathColumnConfig);
+        this.index = 1;
+    }
+
+    public PopulationCounterUDF(String source, String pathModelConfig, String pathColumnConfig, String index)
+        throws IOException {
+        super(source, pathModelConfig, pathColumnConfig);
+        this.index = Integer.valueOf(index);
     }
 
     @Override
@@ -53,7 +62,7 @@ public class PopulationCounterUDF extends AbstractTrainerUDF<Tuple> {
         while (iter.hasNext()) {
             Tuple tuple = iter.next();
             if (tuple != null && tuple.size() != 0) {
-                Object value = tuple.get(2);
+                Object value = tuple.get(index);
                 counter.addData(value);
             }
         }

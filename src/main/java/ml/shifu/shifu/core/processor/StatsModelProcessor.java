@@ -477,6 +477,7 @@ public class StatsModelProcessor extends BasicModelProcessor implements Processo
             Map<String, String> paramsMap = new HashMap<String, String>();
             paramsMap.put("delimiter", CommonUtils.escapePigString(modelConfig.getDataSetDelimiter()));
             paramsMap.put("PSIColumn", modelConfig.getPSIColumnName().trim());
+            paramsMap.put("value_index", "2");
 
             PigExecutor.getExecutor().submitJob(modelConfig, pathFinder.getAbsolutePath("scripts/PSI.pig"),
                     paramsMap);
