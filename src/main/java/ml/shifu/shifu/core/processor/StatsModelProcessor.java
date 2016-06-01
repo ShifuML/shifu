@@ -211,8 +211,8 @@ public class StatsModelProcessor extends BasicModelProcessor implements Processo
         syncDataToHdfs(modelConfig.getDataSet().getSource());
 
         runPSI();
-
         saveColumnConfigListAndColumnStats(true);
+        syncDataToHdfs(modelConfig.getDataSet().getSource());
     }
 
     // GuaguaOptionsParser doesn't to support *.jar currently.
