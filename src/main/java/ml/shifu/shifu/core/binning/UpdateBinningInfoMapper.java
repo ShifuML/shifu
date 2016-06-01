@@ -15,6 +15,16 @@
  */
 package ml.shifu.shifu.core.binning;
 
+import com.google.common.base.Splitter;
+
+import org.apache.commons.lang.StringUtils;
+import org.apache.hadoop.io.IntWritable;
+import org.apache.hadoop.io.LongWritable;
+import org.apache.hadoop.io.Text;
+import org.apache.hadoop.mapreduce.Mapper;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.io.BufferedReader;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
@@ -34,16 +44,6 @@ import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
 import ml.shifu.shifu.core.DataPurifier;
 import ml.shifu.shifu.util.CommonUtils;
 import ml.shifu.shifu.util.Constants;
-
-import org.apache.commons.lang.StringUtils;
-import org.apache.hadoop.io.IntWritable;
-import org.apache.hadoop.io.LongWritable;
-import org.apache.hadoop.io.Text;
-import org.apache.hadoop.mapreduce.Mapper;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import com.google.common.base.Splitter;
 
 /**
  * {@link UpdateBinningInfoMapper} is a mapper to update local data statistics given bin boundary list.
@@ -325,7 +325,7 @@ public class UpdateBinningInfoMapper extends Mapper<LongWritable, Text, IntWrita
                     isMissingValue = true;
                 } else {
                     String str = StringUtils.trim(units[i]);
-                    binNum = quickLocateCategorialBin(this.categoricalBinMap.get(i), str);
+                    binNum = quickLocateCategoricalBin(this.categoricalBinMap.get(i), str);
                     if(binNum < 0) {
                         isInvalidValue = true;
                     }
@@ -419,7 +419,7 @@ public class UpdateBinningInfoMapper extends Mapper<LongWritable, Text, IntWrita
         return CommonUtils.getBinIndex(binBoundaryList, dval);
     }
 
-    private int quickLocateCategorialBin(Map<String, Integer> map, String val) {
+    private int quickLocateCategoricalBin(Map<String, Integer> map, String val) {
         Integer binNum = map.get(val);
         return ((binNum == null) ? -1 : binNum);
     }

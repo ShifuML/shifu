@@ -15,6 +15,8 @@
  */
 package ml.shifu.shifu.core.binning;
 
+import org.apache.hadoop.io.Writable;
+
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
@@ -22,8 +24,6 @@ import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-
-import org.apache.hadoop.io.Writable;
 
 /**
  * {@link BinningInfoWritable} is to store column statistics collected from mapper and aggregated in reducer.
