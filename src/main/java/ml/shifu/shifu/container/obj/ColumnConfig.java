@@ -17,6 +17,7 @@ package ml.shifu.shifu.container.obj;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.databind.ser.std.StdArraySerializers;
 import ml.shifu.shifu.util.Constants;
 
 import java.io.Serializable;
@@ -295,7 +296,7 @@ public class ColumnConfig {
     }
 
     /**
-     * @param binPosCaseRate
+     * @param binPosRate
      */
     public void setBinPosCaseRate(List<Double> binPosRate) {
         columnBinning.setBinPosRate(binPosRate);
@@ -455,6 +456,16 @@ public class ColumnConfig {
      */
     public void setVersion(String version) {
         this.version = version;
+    }
+
+    @JsonIgnore
+    public void setPSI(Double psi) {
+        this.columnStats.setPsi(psi);
+    }
+
+    @JsonIgnore
+    public Double getPSI() {
+        return this.columnStats.getPsi();
     }
 
     /**

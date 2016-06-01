@@ -17,11 +17,11 @@
  */
 package ml.shifu.shifu.core.binning;
 
+import org.apache.commons.lang.StringUtils;
+
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-
-import org.apache.commons.lang.StringUtils;
 
 import ml.shifu.shifu.core.MunroPatEstimator;
 
@@ -51,7 +51,7 @@ public class MunroPatBinning extends AbstractBinning<Double> {
 
     /**
      * set min/max, merge same bins
-     * 
+     * In a very skewed data array, this one may not be well performed
      * @param bins
      * @return
      */
