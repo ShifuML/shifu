@@ -15,6 +15,33 @@
  */
 package ml.shifu.shifu.core.processor;
 
+import com.google.common.base.Splitter;
+
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.core.JsonParser;
+import com.fasterxml.jackson.databind.ObjectMapper;
+
+import org.apache.commons.codec.binary.Base64;
+import org.apache.commons.collections.CollectionUtils;
+import org.apache.commons.collections.Predicate;
+import org.apache.commons.compress.compressors.bzip2.BZip2CompressorInputStream;
+import org.apache.commons.jexl2.JexlException;
+import org.apache.commons.lang.StringUtils;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.io.IntWritable;
+import org.apache.hadoop.io.NullWritable;
+import org.apache.hadoop.io.Text;
+import org.apache.hadoop.mapreduce.Job;
+import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
+import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
+import org.apache.hadoop.mapreduce.lib.output.TextOutputFormat;
+import org.apache.hadoop.util.GenericOptionsParser;
+import org.apache.pig.impl.util.JarManager;
+import org.encog.ml.data.MLDataSet;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileOutputStream;
@@ -51,32 +78,6 @@ import ml.shifu.shifu.util.CommonUtils;
 import ml.shifu.shifu.util.Constants;
 import ml.shifu.shifu.util.Environment;
 import ml.shifu.shifu.util.HDPUtils;
-
-import org.apache.commons.codec.binary.Base64;
-import org.apache.commons.collections.CollectionUtils;
-import org.apache.commons.collections.Predicate;
-import org.apache.commons.compress.compressors.bzip2.BZip2CompressorInputStream;
-import org.apache.commons.jexl2.JexlException;
-import org.apache.commons.lang.StringUtils;
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.io.IntWritable;
-import org.apache.hadoop.io.NullWritable;
-import org.apache.hadoop.io.Text;
-import org.apache.hadoop.mapreduce.Job;
-import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
-import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
-import org.apache.hadoop.mapreduce.lib.output.TextOutputFormat;
-import org.apache.hadoop.util.GenericOptionsParser;
-import org.apache.pig.impl.util.JarManager;
-import org.encog.ml.data.MLDataSet;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import com.fasterxml.jackson.annotation.JsonIgnore;
-import com.fasterxml.jackson.core.JsonParser;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.base.Splitter;
 
 /**
  * statistics, max/min/avg/std for each column dataset if it's numerical
@@ -206,6 +207,12 @@ public class StatsModelProcessor extends BasicModelProcessor implements Processo
         updateColumnConfigWithPreTrainingStats();
         // save it to local/hdfs
         saveColumnConfigListAndColumnStats(true);
+
+        syncDataToHdfs(modelConfig.getDataSet().getSource());
+
+        runPSI();
+        saveColumnConfigListAndColumnStats(true);
+        syncDataToHdfs(modelConfig.getDataSet().getSource());
     }
 
     // GuaguaOptionsParser doesn't to support *.jar currently.
@@ -413,6 +420,7 @@ public class StatsModelProcessor extends BasicModelProcessor implements Processo
                 config.getColumnStats().setWeightedIv(parseDouble(raw[22]));
                 config.getColumnBinning().setBinCountWoe(CommonUtils.stringToDoubleList(raw[23]));
                 config.getColumnBinning().setBinWeightedWoe(CommonUtils.stringToDoubleList(raw[24]));
+                // TODO magic code?
                 if(raw.length >= 26) {
                     config.getColumnStats().setSkewness(parseDouble(raw[25]));
                 }
@@ -448,6 +456,50 @@ public class StatsModelProcessor extends BasicModelProcessor implements Processo
             return Long.parseLong(str);
         } catch (Exception e) {
             return lVal;
+        }
+    }
+
+    /**
+     * Calculate the PSI
+     * @throws IOException
+     */
+    private void runPSI() throws IOException {
+        if (StringUtils.isNotEmpty(modelConfig.getPSIColumnName())) {
+            ColumnConfig columnConfig = CommonUtils.findColumnConfigByName(columnConfigList,
+                                                                           modelConfig.getPSIColumnName());
+
+            if (columnConfig == null || !columnConfig.isMeta()) {
+                log.warn("Unable to use the PSI column name specify in ModelConfig to compute PSI");
+                return;
+            }
+
+            log.info("Start to use %s to compute the PSI ", columnConfig.getColumnName());
+            Map<String, String> paramsMap = new HashMap<String, String>();
+            paramsMap.put("delimiter", CommonUtils.escapePigString(modelConfig.getDataSetDelimiter()));
+            paramsMap.put("PSIColumn", modelConfig.getPSIColumnName().trim());
+            paramsMap.put("value_index", "2");
+
+            PigExecutor.getExecutor().submitJob(modelConfig, pathFinder.getAbsolutePath("scripts/PSI.pig"),
+                    paramsMap);
+
+            List<Scanner> scanners = ShifuFileUtils.getDataScanners(pathFinder.getPSIInfoPath(), modelConfig
+                    .getDataSet().getSource());
+
+
+            for (Scanner scanner : scanners) {
+                while (scanner.hasNext()) {
+                    String[] output = scanner.nextLine().trim().split("\\|");
+
+                    try {
+                        int columnNum = Integer.parseInt(output[0]);
+                        ColumnConfig config = this.columnConfigList.get(columnNum);
+                        config.setPSI(Double.parseDouble(output[1]));
+                    } catch (Exception e) {
+                        // TODO
+                    }
+
+                }
+            }
         }
     }
 

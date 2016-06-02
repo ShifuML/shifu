@@ -17,8 +17,8 @@ REGISTER $path_jar;
 
 SET pig.exec.reducers.max 999;
 SET pig.exec.reducers.bytes.per.reducer 536870912;
-SET mapred.map.tasks.speculative.execution true;
-SET mapred.reduce.tasks.speculative.execution true;
+SET mapreduce.map.speculative true;
+SET mapreduce.reduce.speculative true;
 SET mapred.job.queue.name $queue_name;
 SET mapred.task.timeout 1200000;
 SET job.name 'shifu statistic';
