@@ -17,6 +17,14 @@
  */
 package ml.shifu.shifu.udf;
 
+import org.apache.commons.lang.StringUtils;
+import org.apache.pig.data.DataBag;
+import org.apache.pig.data.DataType;
+import org.apache.pig.data.Tuple;
+import org.apache.pig.data.TupleFactory;
+import org.apache.pig.impl.logicalLayer.schema.Schema;
+import org.apache.pig.impl.logicalLayer.schema.Schema.FieldSchema;
+
 import java.io.IOException;
 import java.text.DecimalFormat;
 
@@ -25,14 +33,6 @@ import ml.shifu.shifu.core.ColumnStatsCalculator;
 import ml.shifu.shifu.core.ColumnStatsCalculator.ColumnMetrics;
 import ml.shifu.shifu.udf.stats.AbstractVarStats;
 import ml.shifu.shifu.util.Base64Utils;
-
-import org.apache.commons.lang.StringUtils;
-import org.apache.pig.data.DataBag;
-import org.apache.pig.data.DataType;
-import org.apache.pig.data.Tuple;
-import org.apache.pig.data.TupleFactory;
-import org.apache.pig.impl.logicalLayer.schema.Schema;
-import org.apache.pig.impl.logicalLayer.schema.Schema.FieldSchema;
 
 /**
  * CalculateNewStatsUDF class
@@ -83,8 +83,8 @@ public class CalculateNewStatsUDF extends AbstractTrainerUDF<Tuple> {
 
         log.info("after to process column id - " + columnId.toString());
 
-        ColumnMetrics columnCountMetrics = ColumnStatsCalculator.calculateColumnMetrics(columnConfig.getBinCountNeg(),
-                columnConfig.getBinCountPos());
+        ColumnMetrics columnCountMetrics = ColumnStatsCalculator.calculateColumnMetrics(
+                columnConfig.getBinCountNeg(), columnConfig.getBinCountPos());
 
         ColumnMetrics columnWeightMetrics = ColumnStatsCalculator.calculateColumnMetrics(
                 columnConfig.getBinWeightedNeg(), columnConfig.getBinWeightedPos());
