@@ -16,7 +16,6 @@
 package ml.shifu.shifu.core;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -99,20 +98,20 @@ public class Scorer {
             }
         }
 
-        if ( columnConfigList != null ) {
+        if(columnConfigList != null) {
             this.columnMapping = new HashMap<Integer, Integer>(columnConfigList.size(), 1f);
             int[] inputOutputIndex = DTrainUtils.getNumericAndCategoricalInputAndOutputCounts(this.columnConfigList);
             boolean isAfterVarSelect = inputOutputIndex[3] == 1 ? true : false;
             int index = 0;
-            for (int i = 0; i < columnConfigList.size(); i++) {
+            for(int i = 0; i < columnConfigList.size(); i++) {
                 ColumnConfig columnConfig = columnConfigList.get(i);
-                if (isAfterVarSelect) {
-                    if (!columnConfig.isMeta() && !columnConfig.isTarget() && CommonUtils.isGoodCandidate(columnConfig)) {
+                if(isAfterVarSelect) {
+                    if(!columnConfig.isMeta() && !columnConfig.isTarget() && CommonUtils.isGoodCandidate(columnConfig)) {
                         this.columnMapping.put(columnConfig.getColumnNum(), index);
                         index += 1;
                     }
                 } else {
-                    if (columnConfig != null && !columnConfig.isMeta() && !columnConfig.isTarget()
+                    if(columnConfig != null && !columnConfig.isMeta() && !columnConfig.isTarget()
                             && columnConfig.isFinalSelect()) {
                         this.columnMapping.put(columnConfig.getColumnNum(), index);
                         index += 1;
@@ -136,8 +135,6 @@ public class Scorer {
         List<Integer> scores = new ArrayList<Integer>();
 
         if(modelConfig.getAlgorithm().equalsIgnoreCase(CommonConstants.GBDT_ALG_NAME)) {
-            double score = 0d;
-            double sumWeight = 0d;
             double learningRate = Double.valueOf(this.modelConfig.getParams().get(NNTrainer.LEARNING_RATE).toString());
             BasicML model = models.get(0);
             if(model instanceof TreeModel) {
@@ -147,20 +144,27 @@ public class Scorer {
                             + pair.getInput().size());
                 }
                 List<TreeNode> treeNodes = trees.getTrees();
-                for(int j = 0; j < treeNodes.size(); j++) {
-                    TreeModel treeModel = new TreeModel(Arrays.asList(treeNodes.get(j)), columnConfigList,
-                            columnMapping);
-                    MLData internalScore = treeModel.compute(pair.getInput());
-                    if(j == 0) {
-                        score += internalScore.getData(0);
-                        sumWeight += 1d;
-                    } else {
-                        score += learningRate * internalScore.getData(0);
-                        sumWeight += learningRate;
+
+                // TODO extract me out of per each input
+                String algorithm = modelConfig.getAlgorithm();
+                List<Double> weights = new ArrayList<Double>(treeNodes.size());
+                for(int i = 0; i < treeNodes.size(); i++) {
+                    if(CommonConstants.RF_ALG_NAME.equalsIgnoreCase(algorithm)) {
+                        weights.add(1d);
+                    }
+                    if(CommonConstants.GBDT_ALG_NAME.equalsIgnoreCase(algorithm)) {
+                        if(i == 0) {
+                            weights.add(1d);
+                        } else {
+                            weights.add(learningRate);
+                        }
                     }
                 }
+                TreeModel treeModel = new TreeModel(treeNodes, weights,
+                        CommonConstants.GBDT_ALG_NAME.equalsIgnoreCase(algorithm), columnConfigList, columnMapping);
+                MLData internalScore = treeModel.compute(pair.getInput());
+                scores.add(toScore(internalScore.getData(0)));
             }
-            scores.add(toScore(score / sumWeight));
         } else {
             for(BasicML model: models) {
                 if(model instanceof BasicNetwork) {

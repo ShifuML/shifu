@@ -24,33 +24,32 @@ public class WoeLocalTransformCreator extends ZscoreLocalTransformCreator {
 
     /**
      * Create @DerivedField for numerical variable
-     *
-     * @param config - ColumnConfig for numerical variable
-     * @param cutoff - cutoff of normalization
+     * 
+     * @param config
+     *            - ColumnConfig for numerical variable
+     * @param cutoff
+     *            - cutoff of normalization
      * @return DerivedField for variable
      */
     protected DerivedField createNumericalDerivedField(ColumnConfig config, double cutoff) {
         ModelNormalizeConf.NormType normType = this.modelConfig.getNormalizeType();
 
-        List<Double> binWoeList = (normType.equals(ModelNormalizeConf.NormType.WOE) ?
-                config.getBinCountWoe() : config.getBinWeightedWoe());
+        List<Double> binWoeList = (normType.equals(ModelNormalizeConf.NormType.WOE) ? config.getBinCountWoe() : config
+                .getBinWeightedWoe());
         List<Double> binBoundaryList = config.getBinBoundary();
 
-        List<DiscretizeBin> discretizeBinList = new ArrayList();
-        for (int i = 0; i < binBoundaryList.size(); i++) {
+        List<DiscretizeBin> discretizeBinList = new ArrayList<DiscretizeBin>();
+        for(int i = 0; i < binBoundaryList.size(); i++) {
             DiscretizeBin discretizeBin = new DiscretizeBin();
 
             Interval interval = new Interval();
 
-            if (i == 0) {
-                interval.withClosure(Interval.Closure.OPEN_OPEN)
-                        .withRightMargin(binBoundaryList.get(i + 1));
-            } else if (i == binBoundaryList.size() - 1) {
-                interval.withClosure(Interval.Closure.CLOSED_OPEN)
-                        .withLeftMargin(binBoundaryList.get(i));
+            if(i == 0) {
+                interval.withClosure(Interval.Closure.OPEN_OPEN).withRightMargin(binBoundaryList.get(i + 1));
+            } else if(i == binBoundaryList.size() - 1) {
+                interval.withClosure(Interval.Closure.CLOSED_OPEN).withLeftMargin(binBoundaryList.get(i));
             } else {
-                interval.withClosure(Interval.Closure.CLOSED_OPEN)
-                        .withLeftMargin(binBoundaryList.get(i))
+                interval.withClosure(Interval.Closure.CLOSED_OPEN).withLeftMargin(binBoundaryList.get(i))
                         .withRightMargin(binBoundaryList.get(i + 1));
             }
 
@@ -59,10 +58,13 @@ public class WoeLocalTransformCreator extends ZscoreLocalTransformCreator {
         }
 
         Discretize discretize = new Discretize();
-        discretize.withDataType(DataType.DOUBLE)
+        discretize
+                .withDataType(DataType.DOUBLE)
                 .withField(FieldName.create(config.getColumnName()))
-                .withMapMissingTo(Normalizer.normalize(config, null, cutoff, this.modelConfig.getNormalizeType()).toString())
-                .withDefaultValue(Normalizer.normalize(config, null, cutoff, this.modelConfig.getNormalizeType()).toString())
+                .withMapMissingTo(
+                        Normalizer.normalize(config, null, cutoff, this.modelConfig.getNormalizeType()).toString())
+                .withDefaultValue(
+                        Normalizer.normalize(config, null, cutoff, this.modelConfig.getNormalizeType()).toString())
                 .withDiscretizeBins(discretizeBinList);
 
         // derived field name is consisted of FieldName and "_zscl"

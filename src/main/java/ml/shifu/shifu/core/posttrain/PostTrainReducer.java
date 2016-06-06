@@ -27,7 +27,11 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * TODO
+ * {@link PostTrainReducer} is to aggregate sum of score per each bin of each variable together to compute average score
+ * value.
+ * 
+ * <p>
+ * Only 1 reducer is OK, since all mappers are feature-wised and 1 reducer is enough to process all variables. 
  * 
  * @author Zhang David (pengzhang@paypal.com)
  */

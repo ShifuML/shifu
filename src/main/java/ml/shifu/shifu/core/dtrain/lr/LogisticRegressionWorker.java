@@ -16,24 +16,11 @@
 package ml.shifu.shifu.core.dtrain.lr;
 
 import java.io.DataInput;
-import java.io.DataInputStream;
 import java.io.DataOutput;
-import java.io.DataOutputStream;
 import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
 import java.io.IOException;
 import java.util.List;
 import java.util.Properties;
-
-import org.apache.commons.math3.distribution.PoissonDistribution;
-import org.apache.hadoop.io.LongWritable;
-import org.apache.hadoop.io.Text;
-import org.encog.mathutil.BoundMath;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import com.google.common.base.Splitter;
 
 import ml.shifu.guagua.hadoop.io.GuaguaLineRecordReader;
 import ml.shifu.guagua.hadoop.io.GuaguaWritableAdapter;
@@ -49,6 +36,15 @@ import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
 import ml.shifu.shifu.core.dtrain.CommonConstants;
 import ml.shifu.shifu.core.dtrain.DTrainUtils;
 import ml.shifu.shifu.util.CommonUtils;
+
+import org.apache.commons.math3.distribution.PoissonDistribution;
+import org.apache.hadoop.io.LongWritable;
+import org.apache.hadoop.io.Text;
+import org.encog.mathutil.BoundMath;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import com.google.common.base.Splitter;
 
 /**
  * {@link LogisticRegressionWorker} defines logic to accumulate local <a
@@ -180,7 +176,7 @@ public class LogisticRegressionWorker
                         + File.separator + "train-" + System.currentTimeMillis(), Data.class.getName());
         this.testingData = new BytableMemoryDiskList<Data>(
                 (long) (Runtime.getRuntime().maxMemory() * memoryFraction * crossValidationRate), tmpFolder
-                        + File.separator + "test-" + System.currentTimeMillis(),Data.class.getName());
+                        + File.separator + "test-" + System.currentTimeMillis(), Data.class.getName());
         // cannot find a good place to close these two data set, using Shutdown hook
         Runtime.getRuntime().addShutdownHook(new Thread(new Runnable() {
             @Override
@@ -424,8 +420,9 @@ public class LogisticRegressionWorker
             this.outputs = outputs;
             this.significance = significance;
         }
-        
-        public Data(){   
+
+        @SuppressWarnings("unused")
+        public Data() {
         }
 
         /**
@@ -442,7 +439,7 @@ public class LogisticRegressionWorker
         public void setSignificance(double significance) {
             this.significance = significance;
         }
-        
+
         @Override
         public void write(DataOutput out) throws IOException {
             out.writeDouble(significance);
@@ -471,6 +468,5 @@ public class LogisticRegressionWorker
             }
         }
     }
-
 
 }

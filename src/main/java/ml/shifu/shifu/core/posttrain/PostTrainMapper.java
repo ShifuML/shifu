@@ -46,7 +46,13 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * TODO
+ * {@link PostTrainMapper} is mapper to improve original post train efficiency.
+ * 
+ * <p>
+ * In Mapper, scan all normalized input data, then compute sum score in each bin of each variable.
+ * 
+ * <p>
+ * Besides variable average score computing, score related info are stored to HDFS by using {@link MultipleOutputs}.
  * 
  * @author Zhang David (pengzhang@paypal.com)
  */
