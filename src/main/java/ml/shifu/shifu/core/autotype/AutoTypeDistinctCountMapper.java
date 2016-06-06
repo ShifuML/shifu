@@ -126,13 +126,13 @@ public class AutoTypeDistinctCountMapper extends Mapper<LongWritable, Text, IntW
     @Override
     protected void map(LongWritable key, Text value, Context context) throws IOException, InterruptedException {
         String valueStr = value.toString();
-        if(!this.dataPurifier.isFilterOut(valueStr)) {
-            return;
-        }
-
         // StringUtils.isBlank is not used here to avoid import new jar
         if(valueStr == null || valueStr.length() == 0 || valueStr.trim().length() == 0) {
             LOG.warn("Empty input.");
+            return;
+        }
+
+        if(!this.dataPurifier.isFilterOut(valueStr)) {
             return;
         }
 
@@ -144,6 +144,7 @@ public class AutoTypeDistinctCountMapper extends Mapper<LongWritable, Text, IntW
             if(System.currentTimeMillis() % 20 == 0) {
                 LOG.warn("Data with invalid tag is ignored in distinct count computing, invalid tag: {}.", tag);
             }
+            context.getCounter(Constants.SHIFU_GROUP_COUNTER, "INVALID_TAG").increment(1L);
             return;
         }
 

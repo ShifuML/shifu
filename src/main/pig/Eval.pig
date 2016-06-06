@@ -18,7 +18,7 @@ REGISTER $path_jar;
 SET pig.exec.reducers.max 999;
 SET pig.exec.reducers.bytes.per.reducer 536870912;
 SET mapred.job.queue.name $queue_name;
-SET job.name 'shifu evaluation';
+SET job.name 'Shifu Evaluation';
 SET mapred.child.java.opts -Xmx1G;
 SET mapred.child.ulimit 2.5G;
 SET mapred.reduce.slowstart.completed.maps 0.6;
@@ -29,7 +29,7 @@ DEFINE IsDataFilterOut          ml.shifu.shifu.udf.PurifyDataUDF('$source_type',
 DEFINE EvalScore                ml.shifu.shifu.udf.EvalScoreUDF('$source_type', '$path_model_config', '$path_column_config', '$eval_set_name');
 DEFINE Normalize                ml.shifu.shifu.udf.NormalizeUDF('$source_type', '$path_model_config', '$path_column_config');
 
-raw = LOAD '$pathEvalRawData' USING PigStorage('$delimiter');
+raw = LOAD '$pathEvalRawData' USING PigStorage('$delimiter', '-noschema');
 raw = FILTER raw BY IsDataFilterOut(*);
 
 evalScore = FOREACH raw GENERATE FLATTEN(EvalScore(*));

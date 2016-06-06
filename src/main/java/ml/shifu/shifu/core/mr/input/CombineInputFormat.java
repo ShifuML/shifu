@@ -73,6 +73,9 @@ public class CombineInputFormat extends TextInputFormat {
             }
             job.getConfiguration().setLong(GuaguaMapReduceConstants.MAPRED_MIN_SPLIT_SIZE, 1l);
             job.getConfiguration().setLong(GuaguaMapReduceConstants.MAPRED_MAX_SPLIT_SIZE, combineSize);
+            // in hadoop 2.0 such keys are changed
+            job.getConfiguration().setLong("mapreduce.input.fileinputformat.split.minsize", 1);
+            job.getConfiguration().setLong("mapreduce.input.fileinputformat.split.maxsize", combineSize);
             List<InputSplit> splits = super.getSplits(job);
             LOG.debug("combine size:{}, splits:{}", combineSize, splits);
             newSplits = getFinalCombineSplits(splits, combineSize);

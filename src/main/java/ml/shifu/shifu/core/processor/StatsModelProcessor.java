@@ -55,6 +55,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Scanner;
 
+import ml.shifu.guagua.hadoop.util.HDPUtils;
 import ml.shifu.guagua.mapreduce.GuaguaMapReduceConstants;
 import ml.shifu.guagua.util.FileUtils;
 import ml.shifu.shifu.actor.AkkaSystemExecutor;
@@ -77,7 +78,6 @@ import ml.shifu.shifu.util.Base64Utils;
 import ml.shifu.shifu.util.CommonUtils;
 import ml.shifu.shifu.util.Constants;
 import ml.shifu.shifu.util.Environment;
-import ml.shifu.shifu.util.HDPUtils;
 
 /**
  * statistics, max/min/avg/std for each column dataset if it's numerical
@@ -268,7 +268,7 @@ public class StatsModelProcessor extends BasicModelProcessor implements Processo
         conf.set(NNConstants.MAPRED_JOB_QUEUE_NAME, Environment.getProperty(Environment.HADOOP_JOB_QUEUE, "default"));
         conf.set(Constants.SHIFU_MODELSET_SOURCE_TYPE, source.toString());
         // set mapreduce.job.max.split.locations to 30 to suppress warnings
-        conf.setInt(GuaguaMapReduceConstants.MAPREDUCE_JOB_MAX_SPLIT_LOCATIONS, 30);
+        conf.setInt(GuaguaMapReduceConstants.MAPREDUCE_JOB_MAX_SPLIT_LOCATIONS, 100);
         conf.set("mapred.reduce.slowstart.completed.maps",
                 Environment.getProperty("mapred.reduce.slowstart.completed.maps", "0.8"));
         String hdpVersion = HDPUtils.getHdpVersionForHDP224();
@@ -280,12 +280,21 @@ public class StatsModelProcessor extends BasicModelProcessor implements Processo
             HDPUtils.addFileToClassPath(HDPUtils.findContainingFile("mapred-site.xml"), conf);
             HDPUtils.addFileToClassPath(HDPUtils.findContainingFile("yarn-site.xml"), conf);
         }
+
+        // one can set guagua conf in shifuconfig
+        for(Map.Entry<Object, Object> entry: Environment.getProperties().entrySet()) {
+            if(entry.getKey().toString().startsWith("nn") || entry.getKey().toString().startsWith("guagua")
+                    || entry.getKey().toString().startsWith("shifu") || entry.getKey().toString().startsWith("mapred")) {
+                conf.set(entry.getKey().toString(), entry.getValue().toString());
+            }
+        }
     }
 
     private void updateBinningInfoWithMRJob() throws IOException, InterruptedException, ClassNotFoundException {
         SourceType source = this.modelConfig.getDataSet().getSource();
         Configuration conf = new Configuration();
 
+        // TODO directly use hdfs file
         String filePath = Constants.BINNING_INFO_FILE_NAME;
         BufferedWriter writer = null;
         List<Scanner> scanners = null;

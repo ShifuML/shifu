@@ -21,11 +21,17 @@ import java.util.Set;
 import org.encog.ml.data.MLDataPair;
 import org.encog.ml.data.basic.BasicMLData;
 import org.encog.ml.data.basic.BasicMLDataPair;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Created on 11/24/2014.
  */
 public class TrainingRecord {
+
+    @SuppressWarnings("unused")
+    private static final Logger LOG = LoggerFactory.getLogger(TrainingRecord.class);
+
     private double[] inputs;
     private double[] ideal;
     private double significance;
@@ -57,6 +63,8 @@ public class TrainingRecord {
                 params[pos++] = inputs[i];
             }
         }
+
+        // LOG.info("inputs = {}, output = {}", Arrays.toString(params), Arrays.toString(this.ideal));
 
         return new BasicMLDataPair(new BasicMLData(params), new BasicMLData(this.ideal));
     }

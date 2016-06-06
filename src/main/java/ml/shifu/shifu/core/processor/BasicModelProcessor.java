@@ -37,15 +37,12 @@ import ml.shifu.shifu.core.validator.ModelInspector.ModelStep;
 import ml.shifu.shifu.exception.ShifuErrorCode;
 import ml.shifu.shifu.exception.ShifuException;
 import ml.shifu.shifu.fs.PathFinder;
-import ml.shifu.shifu.fs.ShifuFileUtils;
 import ml.shifu.shifu.util.CommonUtils;
 import ml.shifu.shifu.util.Constants;
 import ml.shifu.shifu.util.Environment;
-import ml.shifu.shifu.util.HDFSUtils;
 import ml.shifu.shifu.util.JSONUtils;
 
 import org.apache.commons.collections.CollectionUtils;
-import org.apache.hadoop.fs.Path;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -140,59 +137,6 @@ public class BasicModelProcessor {
     protected void saveColumnConfigListAndColumnStats(boolean columnStats) throws IOException {
         log.info("Saving ColumnConfig...");
         JSONUtils.writeValue(new File(pathFinder.getColumnConfigPath(SourceType.LOCAL)), columnConfigList);
-        // TODO in ut, this file is also generated.
-        if(columnStats) {
-            saveColumnStatus();
-        }
-    }
-
-    @SuppressWarnings("deprecation")
-    private void saveColumnStatus() throws IOException {
-        Path localColumnStatsPath = new Path(pathFinder.getLocalColumnStatsPath());
-        log.info("Saving ColumnStatus to local file system: {}.", localColumnStatsPath);
-        if(HDFSUtils.getLocalFS().exists(localColumnStatsPath)) {
-            HDFSUtils.getLocalFS().delete(localColumnStatsPath);
-        }
-
-        BufferedWriter writer = null;
-        try {
-            writer = ShifuFileUtils.getWriter(localColumnStatsPath.toString(), SourceType.LOCAL);
-            writer.write("dataSet,columnFlag,columnName,columnNum,iv,ks,max,mean,median,min,missingCount,"
-                    + "missingPercentage,stdDev,totalCount,weightedIv,weightedKs,weightedWoe,woe,"
-                    + "skewness,kurtosis,columnType,finalSelect,version\n");
-            StringBuilder builder = new StringBuilder(500);
-            for(ColumnConfig columnConfig: columnConfigList) {
-                builder.setLength(0);
-                builder.append(modelConfig.getBasic().getName()).append(',');
-                builder.append(columnConfig.getColumnFlag()).append(',');
-                builder.append(columnConfig.getColumnName()).append(',');
-                builder.append(columnConfig.getColumnNum()).append(',');
-                builder.append(columnConfig.getIv()).append(',');
-                builder.append(columnConfig.getKs()).append(',');
-                builder.append(columnConfig.getColumnStats().getMax()).append(',');
-                builder.append(columnConfig.getColumnStats().getMean()).append(',');
-                builder.append(columnConfig.getColumnStats().getMedian()).append(',');
-                builder.append(columnConfig.getColumnStats().getMin()).append(',');
-                builder.append(columnConfig.getColumnStats().getMissingCount()).append(',');
-                builder.append(columnConfig.getColumnStats().getMissingPercentage()).append(',');
-                builder.append(columnConfig.getColumnStats().getStdDev()).append(',');
-                builder.append(columnConfig.getColumnStats().getTotalCount()).append(',');
-                builder.append(columnConfig.getColumnStats().getWeightedIv()).append(',');
-                builder.append(columnConfig.getColumnStats().getWeightedKs()).append(',');
-                builder.append(columnConfig.getColumnStats().getWeightedWoe()).append(',');
-                builder.append(columnConfig.getColumnStats().getWoe()).append(',');
-                builder.append(columnConfig.getColumnStats().getSkewness()).append(',');
-                builder.append(columnConfig.getColumnStats().getKurtosis()).append(',');
-                builder.append(columnConfig.getColumnType()).append(',');
-                builder.append(columnConfig.isFinalSelect()).append(',');
-                builder.append(modelConfig.getBasic().getVersion()).append("\n");
-                writer.write(builder.toString());
-            }
-        } finally {
-            if(writer != null) {
-                writer.close();
-            }
-        }
     }
 
     /**
@@ -356,6 +300,31 @@ public class BasicModelProcessor {
             }
         } else if(alg.equalsIgnoreCase("DT")) {
             // do nothing
+        } else if(alg.equalsIgnoreCase("RF")) {
+            if(!param.containsKey("FeatureSubsetStrategy")) {
+                param = new LinkedHashMap<String, Object>();
+
+                param.put("FeatureSubsetStrategy", "all");
+                param.put("MaxDepth", 10);
+                param.put("MaxStatsMemoryMB", 256);
+                param.put("Impurity", "entropy");
+
+                modelConfig.setParams(param);
+                saveModelConfig();
+            }
+        } else if(alg.equalsIgnoreCase("GBDT")) {
+            if(!param.containsKey("FeatureSubsetStrategy")) {
+                param = new LinkedHashMap<String, Object>();
+
+                param.put("FeatureSubsetStrategy", "all");
+                param.put("MaxDepth", 10);
+                param.put("MaxStatsMemoryMB", 256);
+                param.put("Impurity", "entropy");
+                param.put("Loss", "squared");
+
+                modelConfig.setParams(param);
+                saveModelConfig();
+            }
         } else {
             throw new ShifuException(ShifuErrorCode.ERROR_UNSUPPORT_ALG);
         }

@@ -15,14 +15,17 @@
  */
 package ml.shifu.shifu.core.dtrain;
 
+import java.io.File;
 import java.util.Iterator;
 
 import ml.shifu.shifu.core.dtrain.dataset.MemoryDiskMLDataSet;
 import ml.shifu.shifu.util.SizeEstimator;
 
+import org.apache.commons.io.FileUtils;
 import org.encog.ml.data.MLDataPair;
 import org.encog.ml.data.basic.BasicMLData;
 import org.encog.ml.data.basic.BasicMLDataPair;
+import org.testng.annotations.AfterClass;
 import org.testng.annotations.Test;
 
 public class MemoryDiskMLDataSetTest {
@@ -87,5 +90,10 @@ public class MemoryDiskMLDataSetTest {
 
         long size = SizeEstimator.estimate(pair);
         System.out.println(size);
+    }
+
+    @AfterClass
+    public void cleanup() {
+        FileUtils.deleteQuietly(new File("a.txt"));
     }
 }

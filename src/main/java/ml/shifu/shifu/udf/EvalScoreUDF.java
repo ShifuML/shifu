@@ -48,10 +48,6 @@ public class EvalScoreUDF extends AbstractTrainerUDF<Tuple> {
     private ModelRunner modelRunner;
     private String[] headers;
 
-    // private List<String> negTags;
-
-    // private List<String> posTags;
-
     private int modelCnt;
 
     public EvalScoreUDF(String source, String pathModelConfig, String pathColumnConfig, String evalSetName)
@@ -81,13 +77,14 @@ public class EvalScoreUDF extends AbstractTrainerUDF<Tuple> {
             }
         }
 
-        List<BasicML> models = CommonUtils
-                .loadBasicModels(modelConfig, evalConfig, evalConfig.getDataSet().getSource());
+        List<BasicML> models = CommonUtils.loadBasicModels(modelConfig, this.columnConfigList, evalConfig, evalConfig
+                .getDataSet().getSource());
         modelRunner = new ModelRunner(modelConfig, columnConfigList, this.headers, evalConfig.getDataSet()
                 .getDataDelimiter(), models);
         modelCnt = models.size();
     }
 
+    @SuppressWarnings("deprecation")
     public Tuple exec(Tuple input) throws IOException {
         Map<String, String> rawDataMap = CommonUtils.convertDataIntoMap(input, this.headers);
         if(MapUtils.isEmpty(rawDataMap)) {
@@ -97,12 +94,18 @@ public class EvalScoreUDF extends AbstractTrainerUDF<Tuple> {
         String tag = rawDataMap.get(modelConfig.getTargetColumnName(evalConfig));
 
         // filter invalid tag record out
-        if(!tagSet.contains(tag)) {
+        // disable the tag check, since there is no bad tag in eval data set
+        // and user just want to score the data, but don't run performance evaluation
+        /*if(!tagSet.contains(tag)) {
             if(System.currentTimeMillis() % 100 == 0) {
                 log.warn("Invalid tag: " + tag);
             }
+            if(isPigEnabled(Constants.SHIFU_GROUP_COUNTER, "INVALID_TAG")) {
+                PigStatusReporter.getInstance().getCounter(Constants.SHIFU_GROUP_COUNTER, Constants.COUNTER_RECORDS)
+                        .increment(1);
+            }
             return null;
-        }
+        }*/
 
         CaseScoreResult cs = modelRunner.compute(rawDataMap);
         if(cs == null) {
@@ -182,15 +185,6 @@ public class EvalScoreUDF extends AbstractTrainerUDF<Tuple> {
                         .increment(weightLong);
             }
         }
-    }
-
-    /**
-     * Check whether is a pig environment, for example, in unit test, PigStatusReporter.getInstance() is null
-     */
-    @SuppressWarnings("deprecation")
-    private boolean isPigEnabled(String group, String counter) {
-        return PigStatusReporter.getInstance() != null
-                && PigStatusReporter.getInstance().getCounter(group, counter) != null;
     }
 
     /**

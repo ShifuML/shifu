@@ -22,15 +22,13 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Set;
 
-import ml.shifu.shifu.util.Constants;
-
 import org.apache.hadoop.io.Writable;
 
 /**
  * A mixed writable class to wrapper HyperLogLogPlus byte instance and frequent items together.
  * 
  * <p>
- * {@link #frequetItems} is used to check 0-1 variables which is not set to be categorical variables. THe size of it is
+ * {@link #frequetItems} is used to check 0-1 variables which is not set to be categorical variables. The size of it is
  * limited to {@link #FREQUET_ITEM_MAX_SIZE}.
  * 
  * @author Zhang David (pengzhang@paypal.com)
@@ -64,18 +62,31 @@ public class CountAndFrequentItemsWritable implements Writable {
      */
     @Override
     public void write(DataOutput out) throws IOException {
-        out.writeInt(hyperBytes.length);
-        out.write(hyperBytes, 0, hyperBytes.length);
-        int setSize = Math.min(frequetItems.size(), FREQUET_ITEM_MAX_SIZE);
-        out.writeInt(setSize);
-        Iterator<String> iter = frequetItems.iterator();
-        int i = 0;
-        while(i < setSize) {
-            String unit = iter.next();
-            out.writeInt(unit.length());
-            byte[] bytes = unit.getBytes(Constants.DEFAULT_CHARSET);
-            out.write(bytes, 0, bytes.length);
-            i++;
+        if(hyperBytes == null) {
+            out.writeInt(0);
+        } else {
+            out.writeInt(hyperBytes.length);
+            for(int i = 0; i < hyperBytes.length; i++) {
+                out.writeByte(hyperBytes[i]);
+            }
+        }
+        if(frequetItems == null) {
+            out.writeInt(0);
+        } else {
+            int setSize = Math.min(frequetItems.size(), FREQUET_ITEM_MAX_SIZE);
+            out.writeInt(setSize);
+            Iterator<String> iter = frequetItems.iterator();
+            int i = 0;
+            while(i < setSize) {
+                String unit = iter.next();
+                if(unit == null) {
+                    out.writeBoolean(false);
+                } else {
+                    out.writeBoolean(true);
+                    out.writeUTF(unit);
+                }
+                i++;
+            }
         }
     }
 
@@ -88,15 +99,20 @@ public class CountAndFrequentItemsWritable implements Writable {
     public void readFields(DataInput in) throws IOException {
         int len = in.readInt();
         hyperBytes = new byte[len];
-        in.readFully(hyperBytes);
+        if(len != 0) {
+            for(int i = 0; i < len; i++) {
+                hyperBytes[i] = in.readByte();
+            }
+        }
 
         len = in.readInt();
-        frequetItems = new HashSet<String>(len);
-        for(int i = 0; i < len; i++) {
-            int unitLen = in.readInt();
-            byte[] bytes = new byte[unitLen];
-            in.readFully(bytes);
-            frequetItems.add(new String(bytes, Constants.DEFAULT_CHARSET));
+        frequetItems = new HashSet<String>(len, 1f);
+        if(len != 0) {
+            for(int i = 0; i < len; i++) {
+                if(in.readBoolean()) {
+                    frequetItems.add(in.readUTF());
+                }
+            }
         }
     }
 

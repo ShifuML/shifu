@@ -15,11 +15,6 @@
  */
 package ml.shifu.shifu.core.binning;
 
-import java.io.IOException;
-import java.text.DecimalFormat;
-import java.util.Arrays;
-import java.util.List;
-
 import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.container.obj.ModelConfig;
 import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
@@ -29,7 +24,6 @@ import ml.shifu.shifu.udf.CalculateStatsUDF;
 import ml.shifu.shifu.util.Base64Utils;
 import ml.shifu.shifu.util.CommonUtils;
 import ml.shifu.shifu.util.Constants;
-
 import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.NullWritable;
@@ -37,6 +31,11 @@ import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.Reducer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.io.IOException;
+import java.text.DecimalFormat;
+import java.util.Arrays;
+import java.util.List;
 
 /**
  * Collect all statistics together in reducer.
@@ -237,56 +236,30 @@ public class UpdateBinningInfoReducer extends Reducer<IntWritable, BinningInfoWr
                 quarticSum);
 
         sb.append(key.get())
-                .append(Constants.DEFAULT_DELIMITER)
-                .append(binBounString)
-                .append(Constants.DEFAULT_DELIMITER)
-                .append(Arrays.toString(binCountNeg))
-                .append(Constants.DEFAULT_DELIMITER)
-                .append(Arrays.toString(binCountPos))
-                .append(Constants.DEFAULT_DELIMITER)
-                .append(Arrays.toString(new double[0]))
-                .append(Constants.DEFAULT_DELIMITER)
-                .append(Arrays.toString(binPosRate))
-                .append(Constants.DEFAULT_DELIMITER)
-                .append(columnCountMetrics == null ? "" : df.format(columnCountMetrics.getKs()))
-                .append(Constants.DEFAULT_DELIMITER)
-                .append(columnWeightMetrics == null ? "" : df.format(columnWeightMetrics.getIv()))
-                .append(Constants.DEFAULT_DELIMITER)
-                .append(df.format(max))
-                .append(Constants.DEFAULT_DELIMITER)
-                .append(df.format(min))
-                .append(Constants.DEFAULT_DELIMITER)
-                .append(df.format(mean))
-                .append(Constants.DEFAULT_DELIMITER)
-                .append(df.format(stdDev))
-                .append(Constants.DEFAULT_DELIMITER)
-                .append(columnConfig.isCategorical() ? "C" : "N")
-                .append(Constants.DEFAULT_DELIMITER)
-                .append(df.format(mean))
-                .append(Constants.DEFAULT_DELIMITER)
-                .append(missingCount)
-                .append(Constants.DEFAULT_DELIMITER)
-                .append(count)
-                .append(Constants.DEFAULT_DELIMITER)
-                .append(missingCount * 1.0d / count)
-                .append(Constants.DEFAULT_DELIMITER)
-                .append(Arrays.toString(binWeightNeg))
-                .append(Constants.DEFAULT_DELIMITER)
-                .append(Arrays.toString(binWeightPos))
-                .append(Constants.DEFAULT_DELIMITER)
-                .append(columnCountMetrics == null ? "" : columnCountMetrics.getWoe())
-                .append(Constants.DEFAULT_DELIMITER)
-                .append(columnWeightMetrics == null ? "" : columnWeightMetrics.getWoe())
-                .append(Constants.DEFAULT_DELIMITER)
-                .append(columnWeightMetrics == null ? "" : columnWeightMetrics.getKs())
-                .append(Constants.DEFAULT_DELIMITER)
-                .append(columnCountMetrics == null ? "" : columnCountMetrics.getIv())
-                .append(Constants.DEFAULT_DELIMITER)
-                .append(columnCountMetrics == null ? Arrays.toString(new double[binSize + 1]) : columnCountMetrics
-                        .getBinningWoe().toString())
-                .append(Constants.DEFAULT_DELIMITER)
-                .append(columnWeightMetrics == null ? Arrays.toString(new double[binSize + 1]) : columnWeightMetrics
-                        .getBinningWoe().toString()).append(Constants.DEFAULT_DELIMITER).append(skewness)
+                .append(Constants.DEFAULT_DELIMITER).append(binBounString)
+                .append(Constants.DEFAULT_DELIMITER).append(Arrays.toString(binCountNeg))
+                .append(Constants.DEFAULT_DELIMITER).append(Arrays.toString(binCountPos))
+                .append(Constants.DEFAULT_DELIMITER).append(Arrays.toString(new double[0]))
+                .append(Constants.DEFAULT_DELIMITER).append(Arrays.toString(binPosRate))
+                .append(Constants.DEFAULT_DELIMITER).append(columnCountMetrics == null ? "" : df.format(columnCountMetrics.getKs()))
+                .append(Constants.DEFAULT_DELIMITER).append(columnWeightMetrics == null ? "" : df.format(columnWeightMetrics.getIv()))
+                .append(Constants.DEFAULT_DELIMITER).append(df.format(max))
+                .append(Constants.DEFAULT_DELIMITER).append(df.format(min))
+                .append(Constants.DEFAULT_DELIMITER).append(df.format(mean))
+                .append(Constants.DEFAULT_DELIMITER).append(df.format(stdDev))
+                .append(Constants.DEFAULT_DELIMITER).append(columnConfig.isCategorical() ? "C" : "N")
+                .append(Constants.DEFAULT_DELIMITER).append(df.format(mean))
+                .append(Constants.DEFAULT_DELIMITER).append(missingCount)
+                .append(Constants.DEFAULT_DELIMITER).append(count)
+                .append(Constants.DEFAULT_DELIMITER).append(missingCount * 1.0d / count)
+                .append(Constants.DEFAULT_DELIMITER).append(Arrays.toString(binWeightNeg))
+                .append(Constants.DEFAULT_DELIMITER).append(Arrays.toString(binWeightPos))
+                .append(Constants.DEFAULT_DELIMITER).append(columnCountMetrics == null ? "" : columnCountMetrics.getWoe())
+                .append(Constants.DEFAULT_DELIMITER).append(columnWeightMetrics == null ? "" : columnWeightMetrics.getWoe())
+                .append(Constants.DEFAULT_DELIMITER).append(columnWeightMetrics == null ? "" : columnWeightMetrics.getKs())
+                .append(Constants.DEFAULT_DELIMITER).append(columnCountMetrics == null ? "" : columnCountMetrics.getIv())
+                .append(Constants.DEFAULT_DELIMITER).append(columnCountMetrics == null ? Arrays.toString(new double[binSize + 1]) : columnCountMetrics.getBinningWoe().toString())
+                .append(Constants.DEFAULT_DELIMITER).append(columnWeightMetrics == null ? Arrays.toString(new double[binSize + 1]) : columnWeightMetrics.getBinningWoe().toString()).append(Constants.DEFAULT_DELIMITER).append(skewness)
                 .append(Constants.DEFAULT_DELIMITER).append(kurtosis);
 
         outputValue.set(sb.toString());

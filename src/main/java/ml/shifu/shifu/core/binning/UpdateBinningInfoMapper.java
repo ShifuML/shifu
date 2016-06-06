@@ -163,9 +163,8 @@ public class UpdateBinningInfoMapper extends Mapper<LongWritable, Text, IntWrita
         this.posTags = new HashSet<String>(modelConfig.getPosTags());
         this.negTags = new HashSet<String>(modelConfig.getNegTags());
         this.tags = new HashSet<String>(modelConfig.getFlattenTags());
-        
-        this.missingOrInvalidValues =  new HashSet<String>(this.modelConfig.getDataSet().getMissingOrInvalidValues());
 
+        this.missingOrInvalidValues = new HashSet<String>(this.modelConfig.getDataSet().getMissingOrInvalidValues());
 
         LOG.debug("Column binning info: {}", this.columnBinningInfo);
     }
@@ -274,12 +273,12 @@ public class UpdateBinningInfoMapper extends Mapper<LongWritable, Text, IntWrita
     @Override
     protected void map(LongWritable key, Text value, Context context) throws IOException, InterruptedException {
         String valueStr = value.toString();
-        if(!this.dataPurifier.isFilterOut(valueStr)) {
+        if(valueStr == null || valueStr.length() == 0 || valueStr.trim().length() == 0) {
+            LOG.warn("Empty input.");
             return;
         }
 
-        if(valueStr == null || valueStr.length() == 0 || valueStr.trim().length() == 0) {
-            LOG.warn("Empty input.");
+        if(!this.dataPurifier.isFilterOut(valueStr)) {
             return;
         }
 
@@ -320,8 +319,7 @@ public class UpdateBinningInfoMapper extends Mapper<LongWritable, Text, IntWrita
                 int lastBinIndex = binningInfoWritable.getBinCategories().size();
 
                 int binNum = 0;
-                if(units[i] == null
-                        || missingOrInvalidValues.contains(units[i].toLowerCase())) {
+                if(units[i] == null || missingOrInvalidValues.contains(units[i].toLowerCase())) {
                     isMissingValue = true;
                 } else {
                     String str = StringUtils.trim(units[i]);

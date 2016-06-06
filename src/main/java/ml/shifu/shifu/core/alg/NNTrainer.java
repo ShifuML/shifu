@@ -15,17 +15,12 @@
  */
 package ml.shifu.shifu.core.alg;
 
-import ml.shifu.shifu.container.ModelInitInputObject;
-import ml.shifu.shifu.container.obj.ModelConfig;
-import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
-import ml.shifu.shifu.core.AbstractTrainer;
-import ml.shifu.shifu.core.ConvergeJudger;
-import ml.shifu.shifu.core.MSEWorker;
-import ml.shifu.shifu.fs.ShifuFileUtils;
-import ml.shifu.shifu.util.JSONUtils;
-
 import org.apache.commons.io.FileUtils;
-import org.encog.engine.network.activation.*;
+import org.encog.engine.network.activation.ActivationLOG;
+import org.encog.engine.network.activation.ActivationLinear;
+import org.encog.engine.network.activation.ActivationSIN;
+import org.encog.engine.network.activation.ActivationSigmoid;
+import org.encog.engine.network.activation.ActivationTANH;
 import org.encog.mathutil.IntRange;
 import org.encog.ml.data.MLDataSet;
 import org.encog.neural.networks.BasicNetwork;
@@ -46,7 +41,21 @@ import org.slf4j.LoggerFactory;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import ml.shifu.shifu.container.ModelInitInputObject;
+import ml.shifu.shifu.container.obj.ModelConfig;
+import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
+import ml.shifu.shifu.core.AbstractTrainer;
+import ml.shifu.shifu.core.ConvergeJudger;
+import ml.shifu.shifu.core.MSEWorker;
+import ml.shifu.shifu.fs.ShifuFileUtils;
+import ml.shifu.shifu.util.JSONUtils;
 
 /**
  * Neural network trainer
@@ -162,6 +171,8 @@ public class NNTrainer extends AbstractTrainer {
 
             LOG.info("    - Input Size: " + trainSet.getInputSize());
             LOG.info("    - Ideal Size: " + trainSet.getIdealSize());
+            LOG.info("    - Training Records Count: " + trainSet.getRecordCount());
+            LOG.info("    - Validation Records Count: " + validSet.getRecordCount());
         }
 
         //set up the model
@@ -199,10 +210,11 @@ public class NNTrainer extends AbstractTrainer {
                 saveNN();
                 extra = " <-- NN saved: ./models/model" + this.trainerID + ".nn";
             }
+
             if ( toLoggingProcess )
                 LOG.info("  Trainer-" + trainerID + "> Epoch #" + (i + 1)
                     + " Train Error: " + df.format(mlTrain.getError())
-                    + " Validation Error: " 
+                    + " Validation Error: "
                     + ((this.validSet.getRecordCount() > 0) ? df.format(validMSE) : "N/A") + " " + extra);
 
             // Convergence judging.

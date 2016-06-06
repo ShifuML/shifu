@@ -486,12 +486,8 @@ public class CommonUtilsTest {
     }
 
     @AfterClass
-    public void tearDown() {
-        FileUtils.deleteQuietly(new File(Constants.DEFAULT_META_COLUMN_FILE));
-        FileUtils.deleteQuietly(new File(Constants.DEFAULT_CATEGORICAL_COLUMN_FILE));
-        FileUtils.deleteQuietly(new File(Constants.DEFAULT_FORCESELECT_COLUMN_FILE));
-        FileUtils.deleteQuietly(new File(Constants.DEFAULT_FORCEREMOVE_COLUMN_FILE));
-        FileUtils.deleteQuietly(new File("Eval1"+ Constants.DEFAULT_EVALSCORE_META_COLUMN_FILE));
+    public void tearDown() throws IOException {
+        FileUtils.deleteDirectory(new File(Constants.COLUMN_META_FOLDER_NAME));
     }
 
 }

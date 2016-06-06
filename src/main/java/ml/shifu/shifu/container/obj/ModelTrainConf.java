@@ -19,14 +19,14 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
-import ml.shifu.shifu.core.alg.LogisticRegressionTrainer;
-import ml.shifu.shifu.core.alg.NNTrainer;
-import ml.shifu.shifu.core.alg.SVMTrainer;
-
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+
+import ml.shifu.shifu.core.alg.LogisticRegressionTrainer;
+import ml.shifu.shifu.core.alg.NNTrainer;
+import ml.shifu.shifu.core.alg.SVMTrainer;
 
 /**
  * ModelTrainConf class
@@ -35,13 +35,13 @@ import java.util.Map;
 public class ModelTrainConf {
 
     public static enum ALGORITHM {
-        NN, LR, SVM, DT
+        NN, LR, SVM, DT, RF, GBDT
     }
 
     private Integer baggingNum = Integer.valueOf(5);
     // this is set default as true as bagging often with replacement sampleing.
     private Boolean baggingWithReplacement = Boolean.TRUE;
-    private Double baggingSampleRate = Double.valueOf(0.8);
+    private Double baggingSampleRate = Double.valueOf(1.0);
     private Double validSetRate = Double.valueOf(0.2);
     private Double convergenceThreshold = Double.valueOf(0.0);
     private Integer numTrainEpochs = Integer.valueOf(100);
@@ -187,13 +187,22 @@ public class ModelTrainConf {
             params.put(SVMTrainer.SVM_KERNEL, "linear");
             params.put(SVMTrainer.SVM_GAMMA, 1.0);
             params.put(SVMTrainer.SVM_CONST, 1.0);
-        } else if(ALGORITHM.DT.equals(alg)) {
-            // To be decide
-            // DecisionTreeTrainer
+        } else if(ALGORITHM.RF.equals(alg)) {
+            params.put("FeatureSubsetStrategy", "Q");
+            params.put("MaxDepth", 10);
+            params.put("MaxStatsMemoryMB", 256);
+            params.put("Impurity", "variance");
+        } else if(ALGORITHM.GBDT.equals(alg)) {
+            params.put("FeatureSubsetStrategy", "Q");
+            params.put("MaxDepth", 10);
+            params.put("MaxStatsMemoryMB", 256);
+            params.put("Impurity", "variance");
+            params.put(NNTrainer.LEARNING_RATE, 0.1);
         } else if(ALGORITHM.LR.equals(alg)) {
             params.put(LogisticRegressionTrainer.LEARNING_RATE, 0.1);
             params.put("RegularizedConstant", 0.0);
-            params.put(NNTrainer.PROPAGATION, "Q");
+            params.put("L1orL2", "NONE");
+            // params.put(NNTrainer.PROPAGATION, "Q");
         }
         return params;
     }
@@ -217,7 +226,7 @@ public class ModelTrainConf {
      * As threshold is an optional setting, Use @{@link JsonIgnore} to ignore threshold when initially write
      * out to ModelConfig.json.
      * 
-     * @return Cvergence threshold.
+     * @return Convergence threshold.
      */
     @JsonIgnore
     public Double getConvergenceThreshold() {
