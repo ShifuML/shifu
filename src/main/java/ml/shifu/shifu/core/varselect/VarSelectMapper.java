@@ -15,6 +15,16 @@
  */
 package ml.shifu.shifu.core.varselect;
 
+import com.google.common.base.Splitter;
+
+import org.apache.hadoop.io.LongWritable;
+import org.apache.hadoop.io.Text;
+import org.apache.hadoop.mapreduce.Mapper;
+import org.encog.ml.MLRegression;
+import org.encog.ml.data.basic.BasicMLData;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.List;
@@ -29,16 +39,6 @@ import ml.shifu.shifu.core.dtrain.CommonConstants;
 import ml.shifu.shifu.core.dtrain.DTrainUtils;
 import ml.shifu.shifu.util.CommonUtils;
 import ml.shifu.shifu.util.Constants;
-
-import org.apache.hadoop.io.LongWritable;
-import org.apache.hadoop.io.Text;
-import org.apache.hadoop.mapreduce.Mapper;
-import org.encog.ml.MLRegression;
-import org.encog.ml.data.basic.BasicMLData;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import com.google.common.base.Splitter;
 
 /**
  * Mapper implementation to accumulate MSE value when remove one column.

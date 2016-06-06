@@ -15,6 +15,10 @@
  */
 package ml.shifu.shifu.core.dtrain.lr;
 
+import org.apache.hadoop.fs.Path;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.io.IOException;
 import java.util.List;
 import java.util.Properties;
@@ -37,10 +41,6 @@ import ml.shifu.shifu.core.dtrain.Weight;
 import ml.shifu.shifu.core.dtrain.nn.NNConstants;
 import ml.shifu.shifu.fs.ShifuFileUtils;
 import ml.shifu.shifu.util.CommonUtils;
-
-import org.apache.hadoop.fs.Path;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * {@link LogisticRegressionMaster} defines logic to update global <a
