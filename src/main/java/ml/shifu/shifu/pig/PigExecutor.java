@@ -15,6 +15,12 @@
  */
 package ml.shifu.shifu.pig;
 
+import org.apache.commons.lang.StringUtils;
+import org.apache.pig.ExecType;
+import org.apache.pig.PigServer;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.io.IOException;
 import java.util.Map;
 
@@ -23,12 +29,6 @@ import ml.shifu.shifu.container.obj.ModelConfig;
 import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
 import ml.shifu.shifu.util.CommonUtils;
 import ml.shifu.shifu.util.Environment;
-
-import org.apache.commons.lang.StringUtils;
-import org.apache.pig.ExecType;
-import org.apache.pig.PigServer;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * PigExecutor class
@@ -126,7 +126,6 @@ public class PigExecutor {
             String hdpVersion = HDPUtils.getHdpVersionForHDP224();
             if(StringUtils.isNotBlank(hdpVersion)) {
                 // for hdp 2.2.4, hdp.version should be set and configuration files should be added to container class
-                // path
                 pigServer.getPigContext().getProperties().put("hdp.version", hdpVersion);
                 pigServer.getPigContext().addJar(HDPUtils.findContainingFile("hdfs-site.xml"));
                 pigServer.getPigContext().addJar(HDPUtils.findContainingFile("core-site.xml"));

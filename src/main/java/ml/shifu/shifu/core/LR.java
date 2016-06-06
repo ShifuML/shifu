@@ -15,18 +15,18 @@
  */
 package ml.shifu.shifu.core;
 
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.util.Arrays;
-
 import org.apache.commons.lang.StringUtils;
 import org.encog.mathutil.BoundMath;
 import org.encog.ml.BasicML;
 import org.encog.ml.MLRegression;
 import org.encog.ml.data.MLData;
 import org.encog.ml.data.basic.BasicMLData;
+
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.util.Arrays;
 
 public class LR extends BasicML implements MLRegression {
 

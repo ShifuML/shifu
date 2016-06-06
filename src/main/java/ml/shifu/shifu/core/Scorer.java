@@ -15,6 +15,14 @@
  */
 package ml.shifu.shifu.core;
 
+import org.encog.ml.BasicML;
+import org.encog.ml.data.MLData;
+import org.encog.ml.data.MLDataPair;
+import org.encog.ml.svm.SVM;
+import org.encog.neural.networks.BasicNetwork;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -28,14 +36,6 @@ import ml.shifu.shifu.core.dtrain.CommonConstants;
 import ml.shifu.shifu.core.dtrain.DTrainUtils;
 import ml.shifu.shifu.core.dtrain.dt.TreeNode;
 import ml.shifu.shifu.util.CommonUtils;
-
-import org.encog.ml.BasicML;
-import org.encog.ml.data.MLData;
-import org.encog.ml.data.MLDataPair;
-import org.encog.ml.svm.SVM;
-import org.encog.neural.networks.BasicNetwork;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * Scorer, calculate the score for a specify input
