@@ -15,6 +15,33 @@
  */
 package ml.shifu.shifu.util;
 
+import com.google.common.base.Function;
+import com.google.common.base.Splitter;
+import com.google.common.collect.Collections2;
+import com.google.common.collect.Lists;
+
+import org.apache.commons.collections.CollectionUtils;
+import org.apache.commons.collections.Predicate;
+import org.apache.commons.io.IOUtils;
+import org.apache.commons.lang.ArrayUtils;
+import org.apache.commons.lang.StringUtils;
+import org.apache.hadoop.fs.FSDataInputStream;
+import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.PathFilter;
+import org.apache.pig.backend.executionengine.ExecException;
+import org.apache.pig.data.Tuple;
+import org.encog.ml.BasicML;
+import org.encog.ml.data.MLDataPair;
+import org.encog.ml.data.basic.BasicMLData;
+import org.encog.ml.data.basic.BasicMLDataPair;
+import org.encog.neural.networks.BasicNetwork;
+import org.encog.persist.EncogDirectoryPersistence;
+import org.encog.persist.PersistorRegistry;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileInputStream;
@@ -47,39 +74,14 @@ import ml.shifu.shifu.container.obj.ModelTrainConf.ALGORITHM;
 import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
 import ml.shifu.shifu.core.LR;
 import ml.shifu.shifu.core.Normalizer;
+import ml.shifu.shifu.core.TreeModel;
+import ml.shifu.shifu.core.dtrain.CommonConstants;
 import ml.shifu.shifu.core.dtrain.dataset.PersistBasicFloatNetwork;
 import ml.shifu.shifu.core.dtrain.lr.LogisticRegressionContants;
 import ml.shifu.shifu.exception.ShifuErrorCode;
 import ml.shifu.shifu.exception.ShifuException;
 import ml.shifu.shifu.fs.PathFinder;
 import ml.shifu.shifu.fs.ShifuFileUtils;
-
-import org.apache.commons.collections.CollectionUtils;
-import org.apache.commons.collections.Predicate;
-import org.apache.commons.io.IOUtils;
-import org.apache.commons.lang.ArrayUtils;
-import org.apache.commons.lang.StringUtils;
-import org.apache.hadoop.fs.FSDataInputStream;
-import org.apache.hadoop.fs.FileStatus;
-import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.PathFilter;
-import org.apache.pig.backend.executionengine.ExecException;
-import org.apache.pig.data.Tuple;
-import org.encog.ml.BasicML;
-import org.encog.ml.data.MLDataPair;
-import org.encog.ml.data.basic.BasicMLData;
-import org.encog.ml.data.basic.BasicMLDataPair;
-import org.encog.neural.networks.BasicNetwork;
-import org.encog.persist.EncogDirectoryPersistence;
-import org.encog.persist.PersistorRegistry;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import com.google.common.base.Function;
-import com.google.common.base.Splitter;
-import com.google.common.collect.Collections2;
-import com.google.common.collect.Lists;
 
 /**
  * {@link CommonUtils} is used to for almost all kinds of utility function in this framework.
@@ -496,7 +498,8 @@ public final class CommonUtils {
      * @throws IllegalStateException
      *             if not HDFS or LOCAL source type or algorithm not supported.
      */
-    public static List<BasicML> loadBasicModels(ModelConfig modelConfig, EvalConfig evalConfig) throws IOException {
+    public static List<BasicML> loadBasicModels(ModelConfig modelConfig, List<ColumnConfig> columnConfigList,
+            EvalConfig evalConfig) throws IOException {
         if(modelConfig == null
                 || (!Constants.NN.equalsIgnoreCase(modelConfig.getAlgorithm())
                         && !Constants.SVM.equalsIgnoreCase(modelConfig.getAlgorithm()) && !Constants.LR
@@ -505,7 +508,7 @@ public final class CommonUtils {
                     " invalid model algorithm %s.", modelConfig.getAlgorithm()));
         }
 
-        return loadBasicModels(modelConfig, evalConfig, modelConfig.getDataSet().getSource());
+        return loadBasicModels(modelConfig, columnConfigList, evalConfig, modelConfig.getDataSet().getSource());
     }
 
     /**
@@ -546,8 +549,8 @@ public final class CommonUtils {
      * @throws IllegalStateException
      *             if not HDFS or LOCAL source type or algorithm not supported.
      */
-    public static List<BasicML> loadBasicModels(ModelConfig modelConfig, EvalConfig evalConfig, SourceType sourceType)
-            throws IOException {
+    public static List<BasicML> loadBasicModels(ModelConfig modelConfig, List<ColumnConfig> columnConfigList,
+            EvalConfig evalConfig, SourceType sourceType) throws IOException {
         // we have to register PersistBasicFloatNetwork for loading such models
         PersistorRegistry.getInstance().add(new PersistBasicFloatNetwork());
 
@@ -573,7 +576,7 @@ public final class CommonUtils {
 
         List<BasicML> models = new ArrayList<BasicML>(listStatus.size());
         for(FileStatus f: listStatus) {
-            models.add(loadModel(f.getPath(), fs));
+            models.add(loadModel(modelConfig, columnConfigList, f.getPath(), fs));
         }
         return models;
     }
@@ -591,7 +594,8 @@ public final class CommonUtils {
      * @throws GuaguaRuntimeException
      *             if any exception to load model object and cast to {@link BasicNetwork}
      */
-    public static BasicML loadModel(Path modelPath, FileSystem fs) throws IOException {
+    public static BasicML loadModel(ModelConfig modelConfig, List<ColumnConfig> columnConfigList, Path modelPath,
+            FileSystem fs) throws IOException {
         if(!fs.exists(modelPath)) {
             // no such existing model, return null.
             return null;
@@ -605,6 +609,9 @@ public final class CommonUtils {
             if(modelPath.getName().endsWith(LogisticRegressionContants.LR_ALG_NAME.toLowerCase())) {
                 br = new BufferedReader(new InputStreamReader(stream));
                 return LR.loadFromString(br.readLine());
+            } else if(modelPath.getName().endsWith(CommonConstants.RF_ALG_NAME.toLowerCase())
+                    || modelPath.getName().endsWith(CommonConstants.GBDT_ALG_NAME.toLowerCase())) {
+                return TreeModel.loadFromStream(stream, modelConfig, columnConfigList);
             } else {
                 return BasicML.class.cast(EncogDirectoryPersistence.loadObject(stream));
             }
@@ -689,7 +696,9 @@ public final class CommonUtils {
             throw new IllegalArgumentException("The model path shouldn't be null");
         }
         // we have to register PersistBasicFloatNetwork for loading such models
-        PersistorRegistry.getInstance().add(new PersistBasicFloatNetwork());
+        if(ALGORITHM.NN.equals(alg)) {
+            PersistorRegistry.getInstance().add(new PersistBasicFloatNetwork());
+        }
 
         File modelsPathDir = new File(modelsPath);
 
@@ -714,7 +723,11 @@ public final class CommonUtils {
                 InputStream is = null;
                 try {
                     is = new FileInputStream(nnf);
-                    models.add(BasicML.class.cast(EncogDirectoryPersistence.loadObject(is)));
+                    if(ALGORITHM.NN.equals(alg)) {
+                        models.add(BasicML.class.cast(EncogDirectoryPersistence.loadObject(is)));
+                    } else if(ALGORITHM.LR.equals(alg)) {
+                        models.add(LR.loadFromStream(is));
+                    }
                 } finally {
                     IOUtils.closeQuietly(is);
                 }
@@ -906,8 +919,9 @@ public final class CommonUtils {
      * @throws NumberFormatException
      *             if column value is not number format.
      */
-    public static MLDataPair assembleDataPair(boolean noVarSel, ModelConfig modelConfig,
-            List<ColumnConfig> columnConfigList, Map<String, ? extends Object> rawDataMap, double cutoff) {
+    public static MLDataPair assembleDataPair(Map<Integer, Map<String, Integer>> binCategoryMap, boolean noVarSel,
+            ModelConfig modelConfig, List<ColumnConfig> columnConfigList, Map<String, ? extends Object> rawDataMap,
+            double cutoff) {
         double[] ideal = { Constants.DEFAULT_IDEAL_VALUE };
 
         List<Double> inputList = new ArrayList<Double>();
@@ -923,16 +937,24 @@ public final class CommonUtils {
                 if(!noVarSel) {
                     if(config != null && !config.isMeta() && !config.isTarget() && config.isFinalSelect()) {
                         String val = rawDataMap.get(key) == null ? null : rawDataMap.get(key).toString();
-                        Double normalizeValue = Normalizer.normalize(config, val, cutoff,
-                                modelConfig.getNormalizeType());
-                        inputList.add(normalizeValue);
+                        if(CommonUtils.isDesicionTreeAlgorithm(modelConfig.getAlgorithm()) && config.isCategorical()) {
+                            inputList.add(binCategoryMap.get(config.getColumnNum()).get(val == null ? "" : val) + 0d);
+                        } else {
+                            Double normalizeValue = Normalizer.normalize(config, val, cutoff,
+                                    modelConfig.getNormalizeType());
+                            inputList.add(normalizeValue);
+                        }
                     }
                 } else {
                     if(!config.isMeta() && !config.isTarget() && CommonUtils.isGoodCandidate(config)) {
                         String val = rawDataMap.get(key) == null ? null : rawDataMap.get(key).toString();
-                        Double normalizeValue = Normalizer.normalize(config, val, cutoff,
-                                modelConfig.getNormalizeType());
-                        inputList.add(normalizeValue);
+                        if(CommonUtils.isDesicionTreeAlgorithm(modelConfig.getAlgorithm()) && config.isCategorical()) {
+                            inputList.add(binCategoryMap.get(config.getColumnNum()).get(val == null ? "" : val) + 0d);
+                        } else {
+                            Double normalizeValue = Normalizer.normalize(config, val, cutoff,
+                                    modelConfig.getNormalizeType());
+                            inputList.add(normalizeValue);
+                        }
                     }
                 }
             }
@@ -946,6 +968,10 @@ public final class CommonUtils {
         }
 
         return new BasicMLDataPair(new BasicMLData(input), new BasicMLData(ideal));
+    }
+
+    public static boolean isDesicionTreeAlgorithm(String alg) {
+        return CommonConstants.RF_ALG_NAME.equalsIgnoreCase(alg) || CommonConstants.GBDT_ALG_NAME.equalsIgnoreCase(alg);
     }
 
     /**

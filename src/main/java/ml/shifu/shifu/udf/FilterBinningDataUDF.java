@@ -67,14 +67,16 @@ public class FilterBinningDataUDF extends AbstractTrainerUDF<Boolean> {
     private boolean isValidRecord(boolean isBinary, boolean isPositive, ColumnConfig columnConfig) {
         if(isBinary) {
             return columnConfig != null
-                    && (columnConfig.isCategorical() || modelConfig.getBinningMethod().equals(BinningMethod.EqualTotal)
-                            || modelConfig.getBinningMethod().equals(BinningMethod.EqualInterval)
-                            || (modelConfig.getBinningMethod().equals(BinningMethod.EqualPositive) && isPositive) || (modelConfig
-                            .getBinningMethod().equals(BinningMethod.EqualNegtive) && !isPositive));
+                    && (columnConfig.isCategorical()
+                    || modelConfig.getBinningMethod().equals(BinningMethod.EqualTotal)
+                    || modelConfig.getBinningMethod().equals(BinningMethod.EqualInterval)
+                    || (modelConfig.getBinningMethod().equals(BinningMethod.EqualPositive) && isPositive)
+                    || (modelConfig.getBinningMethod().equals(BinningMethod.EqualNegtive) && !isPositive) );
         } else {
             return columnConfig != null
-                    && (columnConfig.isCategorical() || modelConfig.getBinningMethod().equals(BinningMethod.EqualTotal) || modelConfig
-                            .getBinningMethod().equals(BinningMethod.EqualInterval));
+                    && ( columnConfig.isCategorical()
+                    || modelConfig.getBinningMethod().equals(BinningMethod.EqualTotal)
+                    || modelConfig.getBinningMethod().equals(BinningMethod.EqualInterval));
         }
     }
 }

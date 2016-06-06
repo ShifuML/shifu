@@ -26,7 +26,7 @@ import ml.shifu.guagua.master.MasterContext;
 import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.container.obj.ModelConfig;
 import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
-import ml.shifu.shifu.core.dtrain.nn.NNConstants;
+import ml.shifu.shifu.core.dtrain.CommonConstants;
 import ml.shifu.shifu.util.CommonUtils;
 import ml.shifu.shifu.util.Constants;
 
@@ -78,14 +78,13 @@ public class VarSelMaster implements MasterComputable<VarSelMasterResult, VarSel
         Properties props = context.getProps();
 
         try {
-            SourceType sourceType = SourceType.valueOf(props.getProperty(NNConstants.NN_MODELSET_SOURCE_TYPE,
+            SourceType sourceType = SourceType.valueOf(props.getProperty(CommonConstants.MODELSET_SOURCE_TYPE,
                     SourceType.HDFS.toString()));
 
-            this.modelConfig = CommonUtils.loadModelConfig(props.getProperty(NNConstants.SHIFU_NN_MODEL_CONFIG),
+            this.modelConfig = CommonUtils.loadModelConfig(props.getProperty(CommonConstants.SHIFU_MODEL_CONFIG),
                     sourceType);
-
             this.columnConfigList = CommonUtils.loadColumnConfigList(
-                    props.getProperty(NNConstants.SHIFU_NN_COLUMN_CONFIG), sourceType);
+                    props.getProperty(CommonConstants.SHIFU_COLUMN_CONFIG), sourceType);
 
             String conductorClsName = props.getProperty(Constants.VAR_SEL_MASTER_CONDUCTOR);
 

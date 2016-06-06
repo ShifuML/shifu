@@ -16,6 +16,7 @@
 package ml.shifu.shifu.udf;
 
 import java.io.IOException;
+import java.text.DecimalFormat;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -50,6 +51,8 @@ public class NormalizeParquetUDF extends AbstractTrainerUDF<Tuple> {
     private NormType normType;
     private Expression weightExpr;
     private JexlContext weightContext;
+    private DecimalFormat df = new DecimalFormat("#.######");
+    private String alg;
 
     // private DecimalFormat df = new DecimalFormat("#.######");
 
@@ -77,6 +80,7 @@ public class NormalizeParquetUDF extends AbstractTrainerUDF<Tuple> {
 
         log.debug("NormalizeUDF Initialized");
 
+        this.alg = this.modelConfig.getAlgorithm();
     }
 
     public Tuple exec(Tuple input) throws IOException {
@@ -120,8 +124,23 @@ public class NormalizeParquetUDF extends AbstractTrainerUDF<Tuple> {
             if(!CommonUtils.isGoodCandidate(config)) {
                 tuple.append((Double) null);
             } else {
-                Double normVal = Normalizer.normalize(config, val, cutoff, normType);
-                tuple.append(normVal);
+                if(CommonUtils.isDesicionTreeAlgorithm(this.alg)) {
+                    Double normVal = 0d;
+                    if(config.isCategorical()) {
+                        tuple.append(val);
+                    } else {
+                        try {
+                            normVal = Double.parseDouble(val);
+                        } catch (Exception e) {
+                            log.debug("Not decimal format " + val + ", using default!");
+                            normVal = Normalizer.defaultMissingValue(config);
+                        }
+                    }
+                    tuple.append(df.format(normVal));
+                } else {
+                    Double normVal = Normalizer.normalize(config, val, cutoff, normType);
+                    tuple.append(df.format(normVal));
+                }
             }
         }
 
@@ -196,7 +215,11 @@ public class NormalizeParquetUDF extends AbstractTrainerUDF<Tuple> {
                 if(tagColumnNum == i) {
                     schemaStr.append(config.getColumnName() + ":float" + ",");
                 } else {
-                    schemaStr.append(config.getColumnName() + ":float" + ",");
+                    if(config.isCategorical() && CommonUtils.isDesicionTreeAlgorithm(this.alg)) {
+                        schemaStr.append(config.getColumnName() + ":chararray" + ",");
+                    } else {
+                        schemaStr.append(config.getColumnName() + ":float" + ",");
+                    }
                 }
             }
             schemaStr.append("weight:float)");

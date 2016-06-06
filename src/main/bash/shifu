@@ -85,6 +85,9 @@ if [ "${HADOOP_CMD_PATH}" == "/usr/bin/hadoop" -a -d /usr/lib/hadoop -a -d /usr/
 else
     # Check whether ${HADOOP_CMD_PATH}/../../lib exists or not
     if [ "${HADOOP_CMD_PATH}" != "" ]; then
+        if [ -L ${HADOOP_CMD_PATH} ]; then
+            HADOOP_CMD_PATH=`readlink ${HADOOP_CMD_PATH}`
+        fi
         if [ -d "`dirname ${HADOOP_CMD_PATH}`/../lib" ]; then
             HADOOP_ROOT=`dirname ${HADOOP_CMD_PATH}`/..
         fi

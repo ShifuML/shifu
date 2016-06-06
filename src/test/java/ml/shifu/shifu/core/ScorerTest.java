@@ -42,26 +42,27 @@ import java.util.List;
 
 public class ScorerTest {
 
+    private ModelConfig modelConfig;
     List<BasicML> models = new ArrayList<BasicML>();
     MLDataSet set = new BasicMLDataSet();
 
     @BeforeClass
     public void setup() throws IOException {
-        ModelConfig config = ModelConfig.createInitModelConfig(".", ALGORITHM.NN, ".");
+        modelConfig = ModelConfig.createInitModelConfig(".", ALGORITHM.NN, ".");
 
-        config.getTrain().getParams().put("Propagation", "B");
-        config.getTrain().getParams().put("NumHiddenLayers", 2);
-        config.getTrain().getParams().put("LearningRate", 0.5);
+        modelConfig.getTrain().getParams().put("Propagation", "B");
+        modelConfig.getTrain().getParams().put("NumHiddenLayers", 2);
+        modelConfig.getTrain().getParams().put("LearningRate", 0.5);
         List<Integer> nodes = new ArrayList<Integer>();
         nodes.add(3);
         nodes.add(4);
         List<String> func = new ArrayList<String>();
         func.add("linear");
         func.add("tanh");
-        config.getTrain().getParams().put("NumHiddenNodes", nodes);
-        config.getTrain().getParams().put("ActivationFunc", func);
+        modelConfig.getTrain().getParams().put("NumHiddenNodes", nodes);
+        modelConfig.getTrain().getParams().put("ActivationFunc", func);
 
-        NNTrainer trainer = new NNTrainer(config, 0, false);
+        NNTrainer trainer = new NNTrainer(modelConfig, 0, false);
 
         double[] input = { 0., 0., };
         double[] ideal = { 1. };
@@ -88,13 +89,13 @@ public class ScorerTest {
 
         trainer.train();
 
-        config.getTrain().setAlgorithm("SVM");
-        config.getTrain().getParams().put("Kernel", "rbf");
-        config.getTrain().getParams().put("Const", 0.1);
-        config.getTrain().getParams().put("Gamma", 1.0);
-        config.getVarSelect().setFilterNum(2);
+        modelConfig.getTrain().setAlgorithm("SVM");
+        modelConfig.getTrain().getParams().put("Kernel", "rbf");
+        modelConfig.getTrain().getParams().put("Const", 0.1);
+        modelConfig.getTrain().getParams().put("Gamma", 1.0);
+        modelConfig.getVarSelect().setFilterNum(2);
 
-        SVMTrainer svm = new SVMTrainer(config, 1, false);
+        SVMTrainer svm = new SVMTrainer(modelConfig, 1, false);
         svm.setTrainSet(set);
         svm.setValidSet(set);
 
@@ -123,7 +124,7 @@ public class ScorerTest {
         col.setFinalSelect(true);
         list.add(col);
 
-        Scorer s = new Scorer(models, list, "NN", null);
+        Scorer s = new Scorer(models, list, "NN", modelConfig);
 
         double[] input = { 0., 0., };
         double[] ideal = { 1. };
@@ -138,7 +139,7 @@ public class ScorerTest {
 
     @Test
     public void scoreNull() {
-        Scorer s = new Scorer(models, null, "NN", null);
+        Scorer s = new Scorer(models, null, "NN", modelConfig);
 
         Assert.assertNull(s.score(null, null));
     }
@@ -160,7 +161,7 @@ public class ScorerTest {
         col.setFinalSelect(true);
         list.add(col);
 
-        Scorer s = new Scorer(models, list, "NN", null);
+        Scorer s = new Scorer(models, list, "NN", modelConfig);
 
         double[] input = { 0., 0., 3. };
         double[] ideal = { 1. };
@@ -175,10 +176,6 @@ public class ScorerTest {
 
         FileUtils.deleteDirectory(new File("models"));
         FileUtils.deleteDirectory(new File("test-output"));
-        FileUtils.deleteQuietly(new File(Constants.DEFAULT_META_COLUMN_FILE));
-        FileUtils.deleteQuietly(new File(Constants.DEFAULT_CATEGORICAL_COLUMN_FILE));
-        FileUtils.deleteQuietly(new File(Constants.DEFAULT_FORCESELECT_COLUMN_FILE));
-        FileUtils.deleteQuietly(new File(Constants.DEFAULT_FORCEREMOVE_COLUMN_FILE));
-        FileUtils.deleteQuietly(new File("Eval1" + Constants.DEFAULT_EVALSCORE_META_COLUMN_FILE));
+        FileUtils.deleteDirectory(new File(Constants.COLUMN_META_FOLDER_NAME));
     }
 }

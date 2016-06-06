@@ -18,10 +18,9 @@ package ml.shifu.shifu.core.dtrain.nn;
 import java.io.IOException;
 import java.util.List;
 import java.util.Properties;
-import java.util.concurrent.atomic.AtomicBoolean;
 
 import ml.shifu.guagua.GuaguaRuntimeException;
-import ml.shifu.guagua.master.MasterComputable;
+import ml.shifu.guagua.master.AbstractMasterComputable;
 import ml.shifu.guagua.master.MasterContext;
 import ml.shifu.guagua.util.NumberFormatUtils;
 import ml.shifu.shifu.container.obj.ColumnConfig;
@@ -54,7 +53,7 @@ import org.slf4j.LoggerFactory;
  * <p>
  * Make sure workers and master use the same initialization weights.
  */
-public class NNMaster implements MasterComputable<NNParams, NNParams> {
+public class NNMaster extends AbstractMasterComputable<NNParams, NNParams> {
 
     private static final Logger LOG = LoggerFactory.getLogger(NNMaster.class);
 
@@ -62,11 +61,6 @@ public class NNMaster implements MasterComputable<NNParams, NNParams> {
      * Global master NN parameters instance which is used to update model weights by using accumulated gradients.
      */
     private NNParams globalNNParams = new NNParams();
-
-    /**
-     * Whether some configurations are initialized
-     */
-    private AtomicBoolean isInitialized = new AtomicBoolean(false);
 
     /**
      * Model configuration loaded from configuration file.
@@ -124,30 +118,13 @@ public class NNMaster implements MasterComputable<NNParams, NNParams> {
     private ConvergeJudger judger = new ConvergeJudger();
 
     @Override
-    public NNParams compute(MasterContext<NNParams, NNParams> context) {
-        // For first step, we not only initialize whole context but also return weights to master to make sure all
-        // workers and master are using the same weights.
-        if(this.isInitialized.compareAndSet(false, true)) {
-            // initilize configuration
-            init(context);
-
+    public NNParams doCompute(MasterContext<NNParams, NNParams> context) {
+        if(context.isFirstIteration()) {
+            // For first step, we not only initialize whole context but also return weights to master to make sure all
+            // workers and master are using the same weights.
             NNParams params = null;
             if(this.isContinuousEnabled) {
-                // read existing model weights
-                try {
-                    Path modelPath = new Path(context.getProps().getProperty(CommonConstants.GUAGUA_OUTPUT));
-                    BasicNetwork existingModel = (BasicNetwork) CommonUtils.loadModel(modelPath,
-                            ShifuFileUtils.getFileSystemBySourceType(this.modelConfig.getDataSet().getSource()));
-                    if(existingModel == null) {
-                        params = initWeights();
-                        LOG.info("Starting to train model from scratch.");
-                    } else {
-                        params = initModelParams(existingModel);
-                        LOG.info("Starting to train model from existing model {}.", modelPath);
-                    }
-                } catch (IOException e) {
-                    throw new GuaguaRuntimeException(e);
-                }
+                params = initOrRecoverParams(context);
             } else {
                 // first iteration is used to set initial weights
                 params = initWeights();
@@ -171,17 +148,20 @@ public class NNMaster implements MasterComputable<NNParams, NNParams> {
         // before accumulate, reset gradients and train size
         this.globalNNParams.reset();
 
-        long totalCounts = 0L;
+        long totalCount = 0L;
+        int totalWorkerCount = 0;
         for(NNParams nn: context.getWorkerResults()) {
             totalTestError += nn.getTestError();
             totalTrainError += nn.getTrainError();
             this.globalNNParams.accumulateGradients(nn.getGradients());
             this.globalNNParams.accumulateTrainSize(nn.getTrainSize());
-            totalCounts += nn.getCount();
+            totalCount += nn.getCount();
+            // original worker count before combinable
+            totalWorkerCount += nn.getWrCount();
             size++;
         }
 
-        LOG.info("Total Count is {}.", totalCounts);
+        LOG.debug("Total Count is {}. totalWorkerCount is {}", totalCount, totalWorkerCount);
 
         // worker result size is 0. throw exception because shouldn't happen
         if(size == 0) {
@@ -208,8 +188,8 @@ public class NNMaster implements MasterComputable<NNParams, NNParams> {
 
         this.globalNNParams.setWeights(weights);
 
-        double currentTestError = totalTestError / size;
-        double currentTrainError = totalTrainError / size;
+        double currentTestError = totalTestError / totalWorkerCount;
+        double currentTrainError = totalTrainError / totalWorkerCount;
 
         LOG.info("NNMaster compute iteration {} ( avg train error {}, avg validation error {} )", new Object[] {
                 context.getCurrentIteration(), currentTrainError, currentTestError });
@@ -235,6 +215,26 @@ public class NNMaster implements MasterComputable<NNParams, NNParams> {
             LOG.info("NNMaster compute iteration {} not converged yet !", context.getCurrentIteration());
         }
 
+        return params;
+    }
+
+    private NNParams initOrRecoverParams(MasterContext<NNParams, NNParams> context) {
+        // read existing model weights
+        NNParams params = null;
+        try {
+            Path modelPath = new Path(context.getProps().getProperty(CommonConstants.GUAGUA_OUTPUT));
+            BasicNetwork existingModel = (BasicNetwork) CommonUtils.loadModel(modelConfig, columnConfigList, modelPath,
+                    ShifuFileUtils.getFileSystemBySourceType(this.modelConfig.getDataSet().getSource()));
+            if(existingModel == null) {
+                params = initWeights();
+                LOG.info("Starting to train model from scratch.");
+            } else {
+                params = initModelParams(existingModel);
+                LOG.info("Starting to train model from existing model {}.", modelPath);
+            }
+        } catch (IOException e) {
+            throw new GuaguaRuntimeException(e);
+        }
         return params;
     }
 
@@ -271,17 +271,18 @@ public class NNMaster implements MasterComputable<NNParams, NNParams> {
         return params;
     }
 
+    @Override
     public void init(MasterContext<NNParams, NNParams> context) {
         Properties props = context.getProps();
         try {
-            SourceType sourceType = SourceType.valueOf(props.getProperty(NNConstants.NN_MODELSET_SOURCE_TYPE,
+            SourceType sourceType = SourceType.valueOf(props.getProperty(CommonConstants.MODELSET_SOURCE_TYPE,
                     SourceType.HDFS.toString()));
 
-            this.modelConfig = CommonUtils.loadModelConfig(props.getProperty(NNConstants.SHIFU_NN_MODEL_CONFIG),
+            this.modelConfig = CommonUtils.loadModelConfig(props.getProperty(CommonConstants.SHIFU_MODEL_CONFIG),
                     sourceType);
 
             this.columnConfigList = CommonUtils.loadColumnConfigList(
-                    props.getProperty(NNConstants.SHIFU_NN_COLUMN_CONFIG), sourceType);
+                    props.getProperty(CommonConstants.SHIFU_COLUMN_CONFIG), sourceType);
             Object pObject = this.modelConfig.getParams().get(NNTrainer.PROPAGATION);
             this.propagation = pObject == null ? "Q" : (String) pObject;
             this.rawLearningRate = Double.valueOf(this.modelConfig.getParams().get(NNTrainer.LEARNING_RATE).toString());
@@ -301,6 +302,19 @@ public class NNMaster implements MasterComputable<NNParams, NNParams> {
             this.regularizedConstant = NumberFormatUtils.getDouble(rconstant == null ? "" : rconstant.toString(), 0d);
         } catch (IOException e) {
             throw new RuntimeException(e);
+        }
+
+        // recover master states here is globalNNParams
+        // not init but not first iteration, first recover from last master result set from guagua
+        if(!context.isFirstIteration()) {
+            NNParams params = context.getMasterResult();
+            if(params != null && params.getWeights() != null) {
+                this.globalNNParams.setWeights(params.getWeights());
+            } else {
+                // else read from checkpoint
+                params = initOrRecoverParams(context);
+                this.globalNNParams.setWeights(params.getWeights());
+            }
         }
     }
 

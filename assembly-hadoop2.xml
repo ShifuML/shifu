@@ -24,6 +24,7 @@
         <fileSet>
             <directory>${project.basedir}/src/main/pig/stats/hadoop2</directory>
             <outputDirectory>/scripts</outputDirectory>
+            <lineEnding>unix</lineEnding>
             <includes>
                 <include>*.pig</include>
             </includes>
@@ -54,6 +55,7 @@
         <fileSet>
             <directory>${project.basedir}/src/main/bash</directory>
             <outputDirectory>/bin</outputDirectory>
+            <lineEnding>unix</lineEnding>
             <fileMode>755</fileMode>
             <includes>
                 <include>*</include>
@@ -62,6 +64,7 @@
         <fileSet>
             <directory>${project.basedir}/src/test/bash</directory>
             <outputDirectory>/bin</outputDirectory>
+            <lineEnding>unix</lineEnding>
             <fileMode>755</fileMode>
             <includes>
                 <include>*</include>
@@ -103,10 +106,8 @@
                 <include>*:commons-logging:*</include>
                 <include>*:commons-net:*</include>
                 <include>*:commons-math3:*</include>
-                <!-- <include>*:commons-configuration:*</include> -->
                 <include>*:config:*</include>
                 <include>*:encog-core:*</include>
-                <!-- <include>*:hadoop-common:*</include> <include>*:hadoop-hdfs:*</include> <include>*:hadoop-auth:*</include> -->
                 <include>*:guagua-core:*</include>
                 <include>*:guagua-mapreduce:*</include>
                 <include>*:guava:*</include>
