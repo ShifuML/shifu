@@ -153,7 +153,7 @@ public class VarSelectReducer extends Reducer<LongWritable, ColumnInfo, Text, Te
             count += info.getCount();
         }
         column.setMean(sum / count);
-        column.setRms(sumSquare / count);
+        column.setRms(Math.sqrt(sumSquare / count));
         column.setVariance((sumSquare / count) - power2(sum / count));
         this.results.add(new Pair(key.get(), column));
     }

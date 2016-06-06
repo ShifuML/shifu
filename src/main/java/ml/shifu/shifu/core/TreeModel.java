@@ -24,6 +24,9 @@ import java.util.List;
 import java.util.Map;
 
 import ml.shifu.shifu.container.obj.ColumnConfig;
+import ml.shifu.shifu.container.obj.ModelConfig;
+import ml.shifu.shifu.core.alg.NNTrainer;
+import ml.shifu.shifu.core.dtrain.CommonConstants;
 import ml.shifu.shifu.core.dtrain.DTrainUtils;
 import ml.shifu.shifu.core.dtrain.dt.Node;
 import ml.shifu.shifu.core.dtrain.dt.Split;
@@ -50,10 +53,17 @@ public class TreeModel extends BasicML implements MLRegression {
 
     private List<TreeNode> trees;
 
+    private List<Double> weights;
+
     private int inputNode;
 
-    public TreeModel(List<TreeNode> trees, List<ColumnConfig> columnConfigList) {
+    private boolean isGBDT = false;
+
+    public TreeModel(List<TreeNode> trees, List<Double> weights, boolean isGBDT, List<ColumnConfig> columnConfigList) {
         this.trees = trees;
+        this.weights = weights;
+        assert trees != null && weights != null && trees.size() == weights.size();
+        this.setGBDT(isGBDT);
         this.columnConfigList = columnConfigList;
         this.columnMapping = new HashMap<Integer, Integer>(columnConfigList.size(), 1f);
         int[] inputOutputIndex = DTrainUtils.getNumericAndCategoricalInputAndOutputCounts(this.columnConfigList);
@@ -77,8 +87,11 @@ public class TreeModel extends BasicML implements MLRegression {
         this.inputNode = index;
     }
 
-    public TreeModel(List<TreeNode> trees, List<ColumnConfig> columnConfigList, Map<Integer, Integer> columnMapping) {
+    public TreeModel(List<TreeNode> trees, List<Double> weights, boolean isGBDT, List<ColumnConfig> columnConfigList,
+            Map<Integer, Integer> columnMapping) {
         this.trees = trees;
+        this.weights = weights;
+        assert trees != null && weights != null && trees.size() == weights.size();
         this.columnConfigList = columnConfigList;
         this.columnMapping = columnMapping;
         this.inputNode = columnMapping.size();
@@ -88,11 +101,17 @@ public class TreeModel extends BasicML implements MLRegression {
     public final MLData compute(final MLData input) {
         double[] data = input.getData();
         double predictSum = 0d;
-        for(TreeNode treeNode: getTrees()) {
-            predictSum += predictNode(treeNode.getNode(), data);
+        double weightSum = 0d;
+        for(int i = 0; i < this.trees.size(); i++) {
+            TreeNode treeNode = this.trees.get(i);
+            Double weight = this.weights.get(i);
+            weightSum += weight;
+            predictSum += predictNode(treeNode.getNode(), data) * weight;
         }
+
+        double finalPredict = predictSum / weightSum;
         MLData result = new BasicMLData(1);
-        result.setData(0, predictSum / getTrees().size());
+        result.setData(0, finalPredict);
         return result;
     }
 
@@ -142,16 +161,31 @@ public class TreeModel extends BasicML implements MLRegression {
         // No need implementation
     }
 
-    public static TreeModel loadFromStream(InputStream input, List<ColumnConfig> columnConfigList) throws IOException {
+    public static TreeModel loadFromStream(InputStream input, ModelConfig modelConfig,
+            List<ColumnConfig> columnConfigList) throws IOException {
         DataInputStream dis = new DataInputStream(input);
         int treeNum = dis.readInt();
         List<TreeNode> trees = new ArrayList<TreeNode>(treeNum);
+        String algorithm = modelConfig.getAlgorithm();
+        List<Double> weights = new ArrayList<Double>(treeNum);
         for(int i = 0; i < treeNum; i++) {
             TreeNode treeNode = new TreeNode();
             treeNode.readFields(dis);
+            double learningRate = Double.valueOf(modelConfig.getParams().get(NNTrainer.LEARNING_RATE).toString());
             trees.add(treeNode);
+            if(CommonConstants.RF_ALG_NAME.equalsIgnoreCase(algorithm)) {
+                weights.add(1d);
+            }
+            if(CommonConstants.GBDT_ALG_NAME.equalsIgnoreCase(algorithm)) {
+                if(i == 0) {
+                    weights.add(1d);
+                } else {
+                    weights.add(learningRate);
+                }
+            }
         }
-        return new TreeModel(trees, columnConfigList);
+        return new TreeModel(trees, weights, CommonConstants.GBDT_ALG_NAME.equalsIgnoreCase(algorithm),
+                columnConfigList);
     }
 
     /*
@@ -177,5 +211,20 @@ public class TreeModel extends BasicML implements MLRegression {
      */
     public void setTrees(List<TreeNode> trees) {
         this.trees = trees;
+    }
+
+    /**
+     * @return the isGBDT
+     */
+    public boolean isGBDT() {
+        return isGBDT;
+    }
+
+    /**
+     * @param isGBDT
+     *            the isGBDT to set
+     */
+    public void setGBDT(boolean isGBDT) {
+        this.isGBDT = isGBDT;
     }
 }

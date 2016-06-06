@@ -338,7 +338,7 @@ public class Node implements Bytable {
      *            the top node of the tree
      * @param index
      *            the index to be searched
-     * @return the node with such index, null
+     * @return the node with such index, or null if not found
      */
     public static Node getNode(Node topNode, int index) {
         assert index > 0 && topNode != null && topNode.id == 1;

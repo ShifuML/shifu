@@ -24,7 +24,7 @@ import java.util.List;
 import org.apache.hadoop.io.Writable;
 
 /**
- * TODO
+ * {@link Writable} implementation for bin average score. Sum and count values are included in bin list of one feature..
  * 
  * @author Zhang David (pengzhang@paypal.com)
  */
@@ -47,7 +47,8 @@ public class FeatureStatsWritable implements Writable {
         }
 
         /**
-         * @param binSum the binSum to set
+         * @param binSum
+         *            the binSum to set
          */
         public void setBinSum(long binSum) {
             this.binSum = binSum;
@@ -61,7 +62,8 @@ public class FeatureStatsWritable implements Writable {
         }
 
         /**
-         * @param binCnt the binCnt to set
+         * @param binCnt
+         *            the binCnt to set
          */
         public void setBinCnt(long binCnt) {
             this.binCnt = binCnt;

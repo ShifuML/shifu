@@ -67,6 +67,11 @@ class SquaredLoss implements Loss {
 
 }
 
+/**
+ * Log function is used for {@link LogLoss}.
+ * 
+ * @author Zhang David (pengzhang@paypal.com)
+ */
 class LogLoss implements Loss {
 
     @Override

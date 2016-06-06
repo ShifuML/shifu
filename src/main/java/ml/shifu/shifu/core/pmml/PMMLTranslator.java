@@ -17,8 +17,13 @@ package ml.shifu.shifu.core.pmml;
 
 import ml.shifu.shifu.core.pmml.builder.creator.AbstractPmmlElementCreator;
 import ml.shifu.shifu.core.pmml.builder.creator.AbstractSpecifCreator;
-import ml.shifu.shifu.core.pmml.builder.impl.NNSpecifCreator;
-import org.dmg.pmml.*;
+
+import org.dmg.pmml.DataDictionary;
+import org.dmg.pmml.LocalTransformations;
+import org.dmg.pmml.MiningSchema;
+import org.dmg.pmml.Model;
+import org.dmg.pmml.ModelStats;
+import org.dmg.pmml.PMML;
 import org.encog.ml.BasicML;
 
 public class PMMLTranslator {
