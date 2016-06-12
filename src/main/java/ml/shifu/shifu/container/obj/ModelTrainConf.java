@@ -19,14 +19,14 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
-import ml.shifu.shifu.core.alg.LogisticRegressionTrainer;
-import ml.shifu.shifu.core.alg.NNTrainer;
-import ml.shifu.shifu.core.alg.SVMTrainer;
-
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+
+import ml.shifu.shifu.core.alg.LogisticRegressionTrainer;
+import ml.shifu.shifu.core.alg.NNTrainer;
+import ml.shifu.shifu.core.alg.SVMTrainer;
 
 /**
  * ModelTrainConf class

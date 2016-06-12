@@ -15,6 +15,11 @@
  */
 package ml.shifu.shifu.core;
 
+import org.encog.ml.BasicML;
+import org.encog.ml.MLRegression;
+import org.encog.ml.data.MLData;
+import org.encog.ml.data.basic.BasicMLData;
+
 import java.io.DataInputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -32,11 +37,6 @@ import ml.shifu.shifu.core.dtrain.dt.Node;
 import ml.shifu.shifu.core.dtrain.dt.Split;
 import ml.shifu.shifu.core.dtrain.dt.TreeNode;
 import ml.shifu.shifu.util.CommonUtils;
-
-import org.encog.ml.BasicML;
-import org.encog.ml.MLRegression;
-import org.encog.ml.data.MLData;
-import org.encog.ml.data.basic.BasicMLData;
 
 /**
  * TODO
