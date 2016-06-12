@@ -15,10 +15,10 @@
  */
 package ml.shifu.shifu.core.dtrain.dt;
 
-import java.util.List;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.util.List;
 
 /**
  * Wrapper gain value and gain info to compute gain.
