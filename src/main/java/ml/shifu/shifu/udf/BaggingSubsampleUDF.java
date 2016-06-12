@@ -15,14 +15,14 @@
  */
 package ml.shifu.shifu.udf;
 
+import java.io.IOException;
+import java.util.Random;
+
 import org.apache.pig.data.BagFactory;
 import org.apache.pig.data.DataBag;
 import org.apache.pig.data.Tuple;
 import org.apache.pig.data.TupleFactory;
 import org.apache.pig.impl.logicalLayer.schema.Schema;
-
-import java.io.IOException;
-import java.util.Random;
 
 /**
  * BaggingSubsampleUDF class
@@ -41,9 +41,9 @@ public class BaggingSubsampleUDF extends AbstractTrainerUDF<DataBag> {
         double rate = modelConfig.getBaggingSampleRate();
 
         DataBag bag = BagFactory.getInstance().newDefaultBag();
-        for (int i = 0; i < numBags; i++) {
+        for(int i = 0; i < numBags; i++) {
             double r = rand.nextDouble();
-            if (r <= rate) {
+            if(r <= rate) {
                 Tuple t = TupleFactory.getInstance().newTuple();
                 t.append(i);
                 t.append(input);
@@ -56,4 +56,5 @@ public class BaggingSubsampleUDF extends AbstractTrainerUDF<DataBag> {
     public Schema outputSchema(Schema input) {
         return null;
     }
+
 }
