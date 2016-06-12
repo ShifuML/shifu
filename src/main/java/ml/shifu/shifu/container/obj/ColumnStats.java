@@ -48,6 +48,8 @@ public class ColumnStats {
     private Double skewness;
     private Double kurtosis;
 
+    private Double psi;
+
     /**
      * @return the weightedKs
      */
@@ -229,6 +231,20 @@ public class ColumnStats {
      */
     public void setKurtosis(Double kurtosis) {
         this.kurtosis = kurtosis;
+    }
+
+    /**
+     * @return the PSI
+     */
+    public Double getPsi() {
+        return psi;
+    }
+
+    /**
+     * @param psi the PSI to set
+     */
+    public void setPsi(Double psi) {
+        this.psi = psi;
     }
 
 }
