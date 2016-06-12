@@ -84,7 +84,6 @@ public class EvalScoreUDF extends AbstractTrainerUDF<Tuple> {
         modelCnt = models.size();
     }
 
-    @SuppressWarnings("deprecation")
     public Tuple exec(Tuple input) throws IOException {
         Map<String, String> rawDataMap = CommonUtils.convertDataIntoMap(input, this.headers);
         if(MapUtils.isEmpty(rawDataMap)) {
