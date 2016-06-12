@@ -15,6 +15,19 @@
  */
 package ml.shifu.shifu.util;
 
+import com.fasterxml.jackson.core.JsonGenerationException;
+import com.fasterxml.jackson.databind.JsonMappingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+
+import org.apache.commons.io.FileUtils;
+import org.apache.commons.lang.StringUtils;
+import org.apache.hadoop.fs.FileStatus;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.testng.Assert;
+import org.testng.annotations.AfterClass;
+import org.testng.annotations.Test;
+
 import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileOutputStream;
@@ -36,19 +49,6 @@ import ml.shifu.shifu.container.obj.ModelConfig;
 import ml.shifu.shifu.container.obj.ModelTrainConf.ALGORITHM;
 import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
 import ml.shifu.shifu.udf.CalculateStatsUDF;
-
-import org.apache.commons.io.FileUtils;
-import org.apache.commons.lang.StringUtils;
-import org.apache.hadoop.fs.FileStatus;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.testng.Assert;
-import org.testng.annotations.AfterClass;
-import org.testng.annotations.Test;
-
-import com.fasterxml.jackson.core.JsonGenerationException;
-import com.fasterxml.jackson.databind.JsonMappingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 
 /**
  * CommonUtilsTest
@@ -471,6 +471,18 @@ public class CommonUtilsTest {
 
         Assert.assertEquals(modelFiles[0].getName(), "model0.nn");
         Assert.assertEquals(modelFiles[4].getName(), "model4.nn");
+    }
+
+    @Test
+    public void binIndexTest() {
+        Double[] array = { Double.NEGATIVE_INFINITY, 2.1E-4, 0.00351, 0.01488, 0.02945, 0.0642, 0.11367, 0.22522, 0.23977 };
+        List<Double> binBoundary = Arrays.asList(array);
+
+
+        Assert.assertEquals(CommonUtils.getBinIndex(binBoundary, 0.00350), 1);
+        Assert.assertEquals(CommonUtils.getBinIndex(binBoundary, 0.00010), 0);
+        Assert.assertEquals(CommonUtils.getBinIndex(binBoundary, 5D), 8);
+
     }
 
     @AfterClass

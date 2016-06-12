@@ -209,6 +209,11 @@
                     {"label": "MunroPat", "value": "MunroPat"},
                     {"label": "MunroPatI", "value": "MunroPatI"}
                 ]
+            }, {
+                "name": "PSIColumnName",
+                "type": "text",
+                "directive": "input",
+                "defval" : ""
             }
         ]
     },

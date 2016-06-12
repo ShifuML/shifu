@@ -640,6 +640,16 @@ public class ModelConfig {
     }
 
     @JsonIgnore
+    public String getPSIColumnName() {
+        return this.stats.getPSIColumnName();
+    }
+
+    @JsonIgnore
+    public void setPSIColumnName(String columnName) {
+        this.stats.setPSIColumnName(columnName);
+    }
+
+    @JsonIgnore
     public EvalConfig getEvalConfigByName(String evalSetName) {
         if(CollectionUtils.isNotEmpty(evals)) {
             for(EvalConfig evalConfig: evals) {
