@@ -37,6 +37,7 @@ public class Environment {
     private static final String UNIX_SUFFIX_1 = "nix";
     private static final String UNIX_SUFFIX_2 = "nux";
     private static final String UNIX_SUFFIX_3 = "aix";
+    private static final String UNIX_SUFFIX_4 = "mac os";
     private static final String WIN_PREFIX = "win";
     private static final String USER_NAME = "user.name";
     private static final String USER = "USER";
@@ -172,8 +173,10 @@ public class Environment {
      * @return true if it is windows, or return false
      */
     private static boolean isUnix(String osName) {
-        return (osName.indexOf(UNIX_SUFFIX_1) >= 0 || osName.indexOf(UNIX_SUFFIX_2) >= 0 || osName
-                .indexOf(UNIX_SUFFIX_3) > 0);
+        return (osName.indexOf(UNIX_SUFFIX_1) >= 0
+                || osName.indexOf(UNIX_SUFFIX_2) >= 0
+                || osName.indexOf(UNIX_SUFFIX_3) > 0)
+                || osName.indexOf(UNIX_SUFFIX_4) >=0 ;
     }
 
     /**

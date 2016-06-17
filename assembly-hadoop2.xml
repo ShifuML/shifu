@@ -126,6 +126,7 @@
                 <include>*:scala-library:*</include>
                 <include>*:shifu:*</include>
                 <include>*:slf4j-api:*</include>
+                <include>*:slf4j-log4j12:*</include>
                 <include>*:stringtemplate:*</include>
                 <include>*:xmlenc:*</include>
                 <include>*:xz:*</include>
@@ -143,6 +144,9 @@
                 <include>*:parquet-format:*</include>
                 <include>*:parquet-jackson:*</include>
                 <include>*:snappy-java:*</include>
+                <include>*:hadoop-common:*</include>
+                <include>*:commons-configuration:*</include>
+                <include>*:hadoop-auth:*</include>
             </includes>
         </dependencySet>
     </dependencySets>
