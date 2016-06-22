@@ -39,6 +39,57 @@ function sync_model_to_hdfs() {
     echo "HDFS synced."
 }
 
+function find_hadoop_root() {
+    # locate HADOOP_ROOT by "which hadoop"
+    HADOOP_CMD_PATH=`which hadoop 2>/dev/null`
+    _status=`echo $?`
+
+    # Check whether hadoop is installed under /usr/bin or not
+    if [ "${HADOOP_CMD_PATH}" == "/usr/bin/hadoop" -a -d /usr/lib/hadoop -a -d /usr/lib/hadoop/bin ]; then
+        HADOOP_ROOT=/usr/lib/hadoop
+    else
+        # Check whether ${HADOOP_CMD_PATH}/../../lib exists or not
+        if [ "${HADOOP_CMD_PATH}" != "" ]; then
+            if [ -L ${HADOOP_CMD_PATH} ]; then
+                HADOOP_CMD_PATH=`readlink ${HADOOP_CMD_PATH}`
+            fi
+            if [ -d "`dirname ${HADOOP_CMD_PATH}`/../lib" ]; then
+                HADOOP_ROOT=`dirname ${HADOOP_CMD_PATH}`/..
+            fi
+        fi
+    fi
+
+    # Not find yet, try to locate HADOOP_ROOT by "whereis hadoop"
+    if [ "${HADOOP_ROOT}" == "" ]; then
+        for h_dir in `whereis hadoop 2>/dev/null` ; do
+            if [ -e ${h_dir}/bin/hadoop ]; then
+                HADOOP_ROOT=${h_dir}
+                break
+            fi
+        done
+    fi
+
+    echo ${HADOOP_ROOT}
+}
+
+function find_ld_library_path() {
+    _hadoop_root=$1
+    if [ "${_hadoop_root}" != "" ]; then
+        LINUX_ARCH="i386-32"
+        if [ "`getconf LONG_BIT`" == "64" ]; then
+            LINUX_ARCH="amd64-64"
+        fi
+
+        if [ -d ${_hadoop_root}/lib/native/Linux-${LINUX_ARCH} ] ; then
+            _ld_library_path="${_hadoop_root}/lib/native/Linux-${LINUX_ARCH}":${LD_LIBRARY_PATH}
+        elif [ -d ${_hadoop_root}/lib/native ]; then
+            _ld_library_path="${_hadoop_root}/lib/native":${LD_LIBRARY_PATH}
+        fi
+    fi
+
+    echo ${_ld_library_path}
+}
+
 if [ "${SHIFU_HOME}" == "" ]; then
     COMMAND=`which $0`
     if [ -L ${COMMAND} ]; then
@@ -70,41 +121,12 @@ PIG_OPTIONS="${PIG_OPTIONS} -m PigConfig.conf"
 CLASSPATH=`find ${SHIFU_HOME}/lib -name "*.jar" | xargs | sed 's/ /:/g'`
 
 # ---------------- HADOOP Environment Detection -----------------------------
-HADOOP_ROOT=""
-    
-# locate HADOOP_ROOT "which hadoop"
-HADOOP_CMD_PATH=`which hadoop 2>/dev/null`
-_status=`echo $?`
-if [ "${_status}" != "0" ]; then
-    echo "Warning: No hadoop command in PATH env, you can only run Shifu in local mode."
-    #exit 1
-fi
-# Check whether hadoop is installed under /usr/bin or not
-if [ "${HADOOP_CMD_PATH}" == "/usr/bin/hadoop" -a -d /usr/lib/hadoop -a -d /usr/lib/hadoop/bin ]; then
-    HADOOP_ROOT=/usr/lib/hadoop
-else
-    # Check whether ${HADOOP_CMD_PATH}/../../lib exists or not
-    if [ "${HADOOP_CMD_PATH}" != "" ]; then
-        if [ -L ${HADOOP_CMD_PATH} ]; then
-            HADOOP_CMD_PATH=`readlink ${HADOOP_CMD_PATH}`
-        fi
-        if [ -d "`dirname ${HADOOP_CMD_PATH}`/../lib" ]; then
-            HADOOP_ROOT=`dirname ${HADOOP_CMD_PATH}`/..
-        fi
-    fi
-fi
-
-# Not find yet, try to locate HADOOP_ROOT by "whereis hadoop"    
+HADOOP_ROOT=`find_hadoop_root`
 if [ "${HADOOP_ROOT}" == "" ]; then
-    for h_dir in `whereis hadoop 2>/dev/null` ; do
-        if [ -e ${h_dir}/bin/hadoop ]; then
-            HADOOP_ROOT=${h_dir}
-            break
-        fi
-    done
+    echo "Warning: No hadoop command in PATH env, you can only run Shifu in local mode."
 fi
-
-if [ -e ${HADOOP_ROOT}/bin/hadoop ]; then    
+    
+if [ -e ${HADOOP_ROOT}/bin/hadoop ]; then
     HD_CLASSPATH=`${HADOOP_ROOT}/bin/hadoop classpath 2> /dev/null`
 else
     HD_CLASSPATH=`hadoop classpath 2> /dev/null`
@@ -122,18 +144,7 @@ if [ "${HADOOP_CONF_DIR}" != "" -a -d "${HADOOP_CONF_DIR}" ]; then
 fi
 CLASSPATH=".:${SHIFU_HOME}/log4jconf:${CLASSPATH}:${SHIFU_HOME}/conf"
 
-if [ "${HADOOP_ROOT}" != "" ]; then
-    LINUX_ARCH="i386-32"
-    if [ "`getconf LONG_BIT`" == "64" ]; then
-        LINUX_ARCH="amd64-64"
-    fi
-    
-    if [ -d ${HADOOP_ROOT}/lib/native/Linux-${LINUX_ARCH} ] ; then
-        LD_LIBRARY_PATH="${HADOOP_ROOT}/lib/native/Linux-${LINUX_ARCH}":${LD_LIBRARY_PATH}    
-    elif [ -d ${HADOOP_ROOT}/lib/native ]; then
-        LD_LIBRARY_PATH="${HADOOP_ROOT}/lib/native":${LD_LIBRARY_PATH}  
-    fi
-fi
+LD_LIBRARY_PATH=`find_ld_library_path ${HADOOP_ROOT}`
 
 if ${cygwin}; then
   CLASSPATH=`cygpath -p -w "${CLASSPATH}"`
