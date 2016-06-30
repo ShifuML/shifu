@@ -12,6 +12,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.*;
+import java.util.Map.Entry;
 
 public class CandidateGenerator {
     private static final Logger LOG = LoggerFactory.getLogger(CandidateGenerator.class);
@@ -244,9 +245,9 @@ public class CandidateGenerator {
         }
 
         List<CandidatePerf> perfs = new ArrayList<CandidatePerf>(errorMap.size());
-        for (Integer id : errorMap.keySet()) {
-            double vError = mean(errorMap.get(id));
-            perfs.add(new CandidatePerf(id, vError));
+        for (Entry<Integer, List<Double>> entry : errorMap.entrySet()) {
+            double vError = mean(entry.getValue());
+            perfs.add(new CandidatePerf(entry.getKey(), vError));
         }
         return perfs;
     }

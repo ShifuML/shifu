@@ -322,7 +322,10 @@ public class EncogFloatEGBFile {
             final float[] input = new float[inputCount];
             final float[] ideal = new float[idealCount];
 
-            this.file.delete();
+            boolean delete = this.file.delete();
+            if(!delete) {
+                throw new IOException("Delete failed for encog model file");
+            }
             this.raf = new RandomAccessFile(this.file, "rw");
             this.fc = this.raf.getChannel();
 

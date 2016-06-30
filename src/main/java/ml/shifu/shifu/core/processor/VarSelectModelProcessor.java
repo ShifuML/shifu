@@ -301,7 +301,6 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
         args.add("-c");
         // the reason to add 1 is that the first iteration in D-NN implementation is used for training preparation.
         // FIXME, how to set iteration number
-        int expectVarCount = this.modelConfig.getVarSelectFilterNum();
         int forceSelectCount = 0;
         int candidateCount = 0;
         for(ColumnConfig columnConfig: columnConfigList) {
