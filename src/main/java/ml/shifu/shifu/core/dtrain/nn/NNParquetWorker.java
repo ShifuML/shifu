@@ -99,7 +99,7 @@ public class NNParquetWorker extends AbstractNNWorker<Tuple> {
             }
             float floatValue = 0f;
             if(element != null) {
-                if(element instanceof Double) {
+                if(element instanceof Float) {
                     floatValue = (Float) element;
                 } else {
                     floatValue = NumberFormatUtils.getFloat(element.toString().trim(), 0f);
@@ -110,6 +110,7 @@ public class NNParquetWorker extends AbstractNNWorker<Tuple> {
                 floatValue = 0f;
             }
             if(index == (super.inputNodeCount + super.outputNodeCount)) {
+                assert element != null;
                 if(element != null && element instanceof Float) {
                     significance = (Float) element;
                 } else {
@@ -120,6 +121,7 @@ public class NNParquetWorker extends AbstractNNWorker<Tuple> {
             } else {
                 int columnIndex = requiredFieldList.getFields().get(index).getIndex();
                 if(columnIndex >= super.columnConfigList.size()) {
+                    assert element != null;
                     if(element != null && element instanceof Float) {
                         significance = (Float) element;
                     } else {
