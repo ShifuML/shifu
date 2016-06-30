@@ -1426,6 +1426,7 @@ public final class CommonUtils {
         } finally {
             IOUtils.closeQuietly(reader);
         }
+        return new String[0];
     }
 
     private static final PathFilter HIDDEN_FILE_FILTER = new PathFilter() {
