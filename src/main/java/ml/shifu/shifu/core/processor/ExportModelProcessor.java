@@ -122,7 +122,7 @@ public class ExportModelProcessor extends BasicModelProcessor implements Process
         try {
             writer = ShifuFileUtils.getWriter(localColumnStatsPath.toString(), SourceType.LOCAL);
             writer.write("dataSet,columnFlag,columnName,columnNum,iv,ks,max,mean,median,min,missingCount,"
-                    + "missingPercentage,stdDev,totalCount,weightedIv,weightedKs,weightedWoe,woe,"
+                    + "missingPercentage,stdDev,totalCount,distinctCount,weightedIv,weightedKs,weightedWoe,woe,"
                     + "skewness,kurtosis,columnType,finalSelect,version\n");
             StringBuilder builder = new StringBuilder(500);
             for(ColumnConfig columnConfig: columnConfigList) {
@@ -141,6 +141,7 @@ public class ExportModelProcessor extends BasicModelProcessor implements Process
                 builder.append(columnConfig.getColumnStats().getMissingPercentage()).append(',');
                 builder.append(columnConfig.getColumnStats().getStdDev()).append(',');
                 builder.append(columnConfig.getColumnStats().getTotalCount()).append(',');
+                builder.append(columnConfig.getColumnStats().getDistinctCount()).append(',');
                 builder.append(columnConfig.getColumnStats().getWeightedIv()).append(',');
                 builder.append(columnConfig.getColumnStats().getWeightedKs()).append(',');
                 builder.append(columnConfig.getColumnStats().getWeightedWoe()).append(',');
