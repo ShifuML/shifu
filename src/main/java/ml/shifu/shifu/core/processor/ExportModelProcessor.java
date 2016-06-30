@@ -24,6 +24,7 @@ import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
 import ml.shifu.shifu.core.pmml.PMMLTranslator;
 import ml.shifu.shifu.core.pmml.PMMLUtils;
 import ml.shifu.shifu.core.pmml.builder.PMMLConstructorFactory;
+import ml.shifu.shifu.core.validator.ModelInspector.ModelStep;
 import ml.shifu.shifu.fs.PathFinder;
 import ml.shifu.shifu.fs.ShifuFileUtils;
 import ml.shifu.shifu.util.CommonUtils;
@@ -73,8 +74,9 @@ public class ExportModelProcessor extends BasicModelProcessor implements Process
      */
     @Override
     public int run() throws Exception {
-        int status = 0;
+        setUp(ModelStep.EXPORT);
 
+        int status = 0;
         File pmmls = new File("pmmls");
         FileUtils.forceMkdir(pmmls);
 
@@ -82,28 +84,33 @@ public class ExportModelProcessor extends BasicModelProcessor implements Process
             type = PMML;
         }
 
-        if ( type.equalsIgnoreCase(PMML) ) {
+        if(type.equalsIgnoreCase(PMML)) {
             log.info("Convert models into {} format", type);
 
             ModelConfig modelConfig = CommonUtils.loadModelConfig();
             List<ColumnConfig> columnConfigList = CommonUtils.loadColumnConfigList();
 
             PathFinder pathFinder = new PathFinder(modelConfig);
-            List<BasicML> models = CommonUtils.loadBasicModels(pathFinder.getModelsPath(SourceType.LOCAL), ALGORITHM.valueOf(modelConfig.getAlgorithm().toUpperCase()));
+            List<BasicML> models = CommonUtils.loadBasicModels(pathFinder.getModelsPath(SourceType.LOCAL),
+                    ALGORITHM.valueOf(modelConfig.getAlgorithm().toUpperCase()));
 
             PMMLTranslator translator = PMMLConstructorFactory.produce(modelConfig, columnConfigList, this.isConcise);
 
-            for (int index = 0; index < models.size(); index++) {
-                log.info("\t start to generate " + "pmmls" + File.separator + modelConfig.getModelSetName() + Integer.toString(index) + ".pmml");
+            for(int index = 0; index < models.size(); index++) {
+                log.info("\t start to generate " + "pmmls" + File.separator + modelConfig.getModelSetName()
+                        + Integer.toString(index) + ".pmml");
                 PMML pmml = translator.build(models.get(index));
-                PMMLUtils.savePMML(pmml, "pmmls" + File.separator + modelConfig.getModelSetName() + Integer.toString(index) + ".pmml");
+                PMMLUtils.savePMML(pmml,
+                        "pmmls" + File.separator + modelConfig.getModelSetName() + Integer.toString(index) + ".pmml");
             }
-        } else if ( type.equalsIgnoreCase(COLUMN_STATS) ) {
+        } else if(type.equalsIgnoreCase(COLUMN_STATS)) {
             saveColumnStatus();
         } else {
             log.error("Unsupported output format - {}", type);
             status = -1;
         }
+
+        clearUp(ModelStep.EXPORT);
 
         log.info("Done.");
 
