@@ -361,7 +361,7 @@ public class Node implements Bytable {
                 return result;
             }
 
-            if(searchIndex % 2 == 1) {
+            if(searchIndex % 2 != 0) {
                 result = result.getRight();
             } else {
                 result = result.getLeft();

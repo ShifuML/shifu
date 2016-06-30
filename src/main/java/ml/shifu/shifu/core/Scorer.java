@@ -69,6 +69,10 @@ public class Scorer {
 
     public Scorer(List<BasicML> models, List<ColumnConfig> columnConfigList, String algorithm, ModelConfig modelConfig,
             Double cutoff) {
+        if(modelConfig == null || (columnConfigList == null || columnConfigList.size() == 0)) {
+            throw new IllegalArgumentException("modelConfig and columnConfigList should not be null");
+        }
+
         this.models = models;
         this.columnConfigList = columnConfigList;
         this.cutoff = cutoff;
@@ -134,7 +138,7 @@ public class Scorer {
 
         List<Integer> scores = new ArrayList<Integer>();
 
-        if(modelConfig.getAlgorithm().equalsIgnoreCase(CommonConstants.GBDT_ALG_NAME)) {
+        if(modelConfig != null && modelConfig.getAlgorithm().equalsIgnoreCase(CommonConstants.GBDT_ALG_NAME)) {
             double learningRate = Double.valueOf(this.modelConfig.getParams().get(NNTrainer.LEARNING_RATE).toString());
             BasicML model = models.get(0);
             if(model instanceof TreeModel) {

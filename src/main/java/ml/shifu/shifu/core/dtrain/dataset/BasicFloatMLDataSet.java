@@ -25,7 +25,7 @@ import org.encog.util.obj.ObjectCloner;
 /**
  * Copy from {@link BasicFloatMLDataSet} to support float type data.
  */
-public class BasicFloatMLDataSet implements Serializable, FloatMLDataSet {
+public class BasicFloatMLDataSet implements Serializable, FloatMLDataSet, Cloneable {
 
     /**
      * An iterator to be used with the BasicFloatMLDataSet. This iterator does not
@@ -147,7 +147,7 @@ public class BasicFloatMLDataSet implements Serializable, FloatMLDataSet {
             add(new BasicFloatMLDataPair(input, ideal));
         }
     }
-    
+
     /**
      * Copy an array of floats to an array of floats.
      * 
@@ -157,11 +157,10 @@ public class BasicFloatMLDataSet implements Serializable, FloatMLDataSet {
      *            The target array.
      */
     public static void arrayCopy(final float[] source, final float[] target) {
-        for (int i = 0; i < source.length; i++) {
+        for(int i = 0; i < source.length; i++) {
             target[i] = source[i];
         }
     }
-
 
     /**
      * {@inheritDoc}

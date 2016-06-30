@@ -56,7 +56,7 @@ public class ModelInspector {
     private static final Logger LOG = LoggerFactory.getLogger(ModelInspector.class);
 
     public static enum ModelStep {
-        INIT, STATS, VARSELECT, NORMALIZE, TRAIN, POSTTRAIN, EVAL
+        INIT, STATS, VARSELECT, NORMALIZE, TRAIN, POSTTRAIN, EVAL, EXPORT
     }
 
     private static ModelInspector instance = new ModelInspector();

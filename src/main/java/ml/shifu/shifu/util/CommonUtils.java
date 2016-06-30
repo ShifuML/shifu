@@ -926,6 +926,9 @@ public final class CommonUtils {
 
         List<Double> inputList = new ArrayList<Double>();
         for(ColumnConfig config: columnConfigList) {
+            if(config == null) {
+                continue;
+            }
             String key = config.getColumnName();
             if(config.isFinalSelect() && !rawDataMap.containsKey(key)) {
                 throw new IllegalStateException(String.format("Variable Missing in Test Data: %s", key));
@@ -1413,14 +1416,17 @@ public final class CommonUtils {
         try {
             reader = ShifuFileUtils.getReader(firstValidFile, source);
             String firstLine = reader.readLine();
-            List<String> list = new ArrayList<String>();
-            for(String unit: Splitter.on(headerDelimiter).split(firstLine)) {
-                list.add(unit);
+            if(firstLine != null && firstLine.length() > 0) {
+                List<String> list = new ArrayList<String>();
+                for(String unit: Splitter.on(headerDelimiter).split(firstLine)) {
+                    list.add(unit);
+                }
+                return list.toArray(new String[0]);
             }
-            return list.toArray(new String[0]);
         } finally {
             IOUtils.closeQuietly(reader);
         }
+        return new String[0];
     }
 
     private static final PathFilter HIDDEN_FILE_FILTER = new PathFilter() {

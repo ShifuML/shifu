@@ -17,7 +17,6 @@ package ml.shifu.shifu.container.obj;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
-import com.fasterxml.jackson.databind.ser.std.StdArraySerializers;
 import ml.shifu.shifu.util.Constants;
 
 import java.io.Serializable;
