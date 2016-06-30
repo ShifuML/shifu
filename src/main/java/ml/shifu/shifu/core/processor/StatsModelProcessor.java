@@ -470,14 +470,15 @@ public class StatsModelProcessor extends BasicModelProcessor implements Processo
 
     /**
      * Calculate the PSI
+     * 
      * @throws IOException
      */
     private void runPSI() throws IOException {
-        if (StringUtils.isNotEmpty(modelConfig.getPSIColumnName())) {
+        if(StringUtils.isNotEmpty(modelConfig.getPSIColumnName())) {
             ColumnConfig columnConfig = CommonUtils.findColumnConfigByName(columnConfigList,
-                                                                           modelConfig.getPSIColumnName());
+                    modelConfig.getPSIColumnName());
 
-            if (columnConfig == null || !columnConfig.isMeta()) {
+            if(columnConfig == null || !columnConfig.isMeta()) {
                 log.warn("Unable to use the PSI column name specify in ModelConfig to compute PSI");
                 return;
             }
@@ -488,15 +489,13 @@ public class StatsModelProcessor extends BasicModelProcessor implements Processo
             paramsMap.put("PSIColumn", modelConfig.getPSIColumnName().trim());
             paramsMap.put("value_index", "2");
 
-            PigExecutor.getExecutor().submitJob(modelConfig, pathFinder.getAbsolutePath("scripts/PSI.pig"),
-                    paramsMap);
+            PigExecutor.getExecutor().submitJob(modelConfig, pathFinder.getAbsolutePath("scripts/PSI.pig"), paramsMap);
 
             List<Scanner> scanners = ShifuFileUtils.getDataScanners(pathFinder.getPSIInfoPath(), modelConfig
                     .getDataSet().getSource());
 
-
-            for (Scanner scanner : scanners) {
-                while (scanner.hasNext()) {
+            for(Scanner scanner: scanners) {
+                while(scanner.hasNext()) {
                     String[] output = scanner.nextLine().trim().split("\\|");
 
                     try {
@@ -504,7 +503,7 @@ public class StatsModelProcessor extends BasicModelProcessor implements Processo
                         ColumnConfig config = this.columnConfigList.get(columnNum);
                         config.setPSI(Double.parseDouble(output[1]));
                     } catch (Exception e) {
-                        // TODO
+                        log.error("error in parsing", e);
                     }
 
                 }
