@@ -117,12 +117,11 @@ public class ExportModelProcessor extends BasicModelProcessor implements Process
         return status;
     }
 
-    @SuppressWarnings("deprecation")
     private void saveColumnStatus() throws IOException {
         Path localColumnStatsPath = new Path(pathFinder.getLocalColumnStatsPath());
         log.info("Saving ColumnStatus to local file system: {}.", localColumnStatsPath);
         if(HDFSUtils.getLocalFS().exists(localColumnStatsPath)) {
-            HDFSUtils.getLocalFS().delete(localColumnStatsPath);
+            HDFSUtils.getLocalFS().delete(localColumnStatsPath, true);
         }
 
         BufferedWriter writer = null;
@@ -130,7 +129,7 @@ public class ExportModelProcessor extends BasicModelProcessor implements Process
             writer = ShifuFileUtils.getWriter(localColumnStatsPath.toString(), SourceType.LOCAL);
             writer.write("dataSet,columnFlag,columnName,columnNum,iv,ks,max,mean,median,min,missingCount,"
                     + "missingPercentage,stdDev,totalCount,distinctCount,weightedIv,weightedKs,weightedWoe,woe,"
-                    + "skewness,kurtosis,columnType,finalSelect,version\n");
+                    + "skewness,kurtosis,columnType,finalSelect,psi,unitstats,version\n");
             StringBuilder builder = new StringBuilder(500);
             for(ColumnConfig columnConfig: columnConfigList) {
                 builder.setLength(0);
@@ -157,6 +156,8 @@ public class ExportModelProcessor extends BasicModelProcessor implements Process
                 builder.append(columnConfig.getColumnStats().getKurtosis()).append(',');
                 builder.append(columnConfig.getColumnType()).append(',');
                 builder.append(columnConfig.isFinalSelect()).append(',');
+                builder.append(columnConfig.getPSI()).append(',');
+                builder.append(StringUtils.join(columnConfig.getUnitStats(), '|')).append(',');
                 builder.append(modelConfig.getBasic().getVersion()).append("\n");
                 writer.write(builder.toString());
             }

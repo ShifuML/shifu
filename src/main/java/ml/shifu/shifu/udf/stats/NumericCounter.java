@@ -4,7 +4,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.Arrays;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 import ml.shifu.shifu.util.CommonUtils;
 
@@ -14,31 +16,72 @@ import ml.shifu.shifu.util.CommonUtils;
 public class NumericCounter extends Counter {
 
     private final static Logger logger = LoggerFactory.getLogger(NumericCounter.class);
+
+    private Set<String> missingValSet = new HashSet<String>();
     private List<Double> binBoundary;
-    private Integer[] counter;
     private String name;
 
-    public NumericCounter(String name, List<Double> binBoundary) {
+    private Long[] counter;
+    private double unitSum = 0.0;
+
+    public NumericCounter(List<String> missingInvalidValues, String name, List<Double> binBoundary) {
+        this.missingValSet.addAll(missingInvalidValues);
         this.name = name;
         this.binBoundary = binBoundary;
-        this.counter = new Integer[binBoundary.size() + 1];
-        Arrays.fill(counter, 0);
+        this.counter = new Long[binBoundary.size() + 1];
+        Arrays.fill(counter, 0L);
     }
 
     @Override
-    public void addData(Object val) {
-        try {
-            Double dVal = Double.parseDouble(val.toString());
-            int index = CommonUtils.getBinIndex(binBoundary, dVal);
-            counter[index] = counter[index] + 1;
-        } catch (Exception e) {
-            logger.warn(String.format("Unable to logger this column %s with %s", name, val));
+    public void addData(String val) {
+        if ( val == null || missingValSet.contains(val) ) {
             counter[binBoundary.size()] = counter[binBoundary.size()] + 1;
+        } else {
+            try {
+                Double dVal = Double.parseDouble(val.toString());
+                int index = CommonUtils.getBinIndex(binBoundary, dVal);
+                counter[index] = counter[index] + 1;
+                unitSum += dVal;
+            } catch (Exception e) {
+                // logger.warn("Unable to count this column {} with {}, using default value", name, val);
+                counter[binBoundary.size()] = counter[binBoundary.size()] + 1;
+            }
         }
     }
 
     @Override
-    public List<Integer> getCounter() {
+    public List<Long> getCounter() {
         return Arrays.asList(counter);
+    }
+
+    @Override
+    public double getUnitMean() {
+        long total = getTotalInstCnt();
+
+        double unitMean;
+        if ( total == 0 || total == counter[binBoundary.size()] ){
+            // no instance or all missing
+            unitMean = Double.NaN;
+        } else {
+            unitMean = this.unitSum / total;
+        }
+
+        return unitMean;
+    }
+
+    @Override
+    public double getMissingRate() {
+        long total = getTotalInstCnt();
+        double missingInstCnt = counter[binBoundary.size()];
+        return ((total != 0) ? missingInstCnt/total : 0.0);
+    }
+
+    @Override
+    public long getTotalInstCnt() {
+        long total = 0;
+        for ( Long val: counter ) {
+            total += val;
+        }
+        return total;
     }
 }

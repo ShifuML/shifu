@@ -20,6 +20,7 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.util.Arrays;
 
 import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
 import ml.shifu.shifu.fs.ShifuFileUtils;
@@ -324,4 +325,8 @@ public class ShifuCLITest {
         FileUtils.deleteDirectory(new File("evals"));
     }
 
+    @Test
+    public void testSplit() {
+        System.out.println(Arrays.asList("01Jun2015^0.3456".split("\\^")));
+    }
 }

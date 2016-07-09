@@ -1,53 +1,91 @@
 package ml.shifu.shifu.udf.stats;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.TreeMap;
+import java.util.*;
 
 /**
  * counter for the categorical val
  */
 public class CategoryCounter extends Counter {
 
-    private Map<String, Integer> categoryMap = new TreeMap<String, Integer>();
+    private List<Double> binPosRate;
     private List<String> categories;
-    private Integer missCounter;
 
-    public CategoryCounter(List<String> categories) {
+    private Set<String> missingValSet = new HashSet();
+    private Map<String, Integer> categoryValIndex = new HashMap();
+    private Map<String, Long> categoryMap = new HashMap();
+    private long missCounter;
+    private double unitSum = 0.0;
 
-        for (String category : categories) {
-            categoryMap.put(category, 0);
-        }
+    public CategoryCounter(List<String> missingInvalidValues, List<String> categories, List<Double> binPosRate) {
+        this.missingValSet.addAll(missingInvalidValues);
 
         this.categories = categories;
+        this.binPosRate = binPosRate;
+
+        for (int i = 0; i < categories.size(); i ++) {
+            categoryMap.put(categories.get(i), 0L);
+            categoryValIndex.put(categories.get(i), i);
+        }
+
         this.missCounter = 0;
     }
 
     @Override
-    public void addData(Object val) {
-        if (val != null) {
+    public void addData(String val) {
+        if (val == null || this.missingValSet.contains(val)) {
+            missCounter++;
+        } else {
             String sVal = val.toString();
             if (categoryMap.containsKey(sVal)) {
                 categoryMap.put(sVal, categoryMap.get(sVal) + 1);
+                int index = categoryValIndex.get(sVal);
+                this.unitSum += this.binPosRate.get(index);
             } else {
                 missCounter++;
             }
-        } else {
-            missCounter++;
         }
     }
 
     @Override
-    public List<Integer> getCounter() {
-        List<Integer> counters = new ArrayList<Integer>();
+    public List<Long> getCounter() {
+        List<Long> counters = new ArrayList<Long>();
 
-        for (int i = 0 ; i < categories.size(); i ++) {
+        for (int i = 0; i < categories.size(); i++) {
             counters.add(categoryMap.get(categories.get(i)));
         }
 
         counters.add(missCounter);
 
         return counters;
+    }
+
+    @Override
+    public double getUnitMean() {
+        long total = getTotalInstCnt();
+
+        double unitMean;
+        if ( total == 0 || total == missCounter ) {
+            unitMean = Double.NaN;
+        } else {
+            unitMean = this.unitSum / total;
+        }
+
+        return unitMean;
+    }
+
+    @Override
+    public double getMissingRate() {
+        long total = getTotalInstCnt();
+        double missingInstCnt = missCounter;
+        return ((total != 0) ? missingInstCnt / total : 0.0);
+    }
+
+    @Override
+    public long getTotalInstCnt() {
+        long total = 0;
+        for (Long val : categoryMap.values()) {
+            total += val;
+        }
+        return total + missCounter;
     }
 }
