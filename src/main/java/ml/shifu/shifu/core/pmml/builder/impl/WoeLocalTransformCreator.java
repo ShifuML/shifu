@@ -31,7 +31,7 @@ public class WoeLocalTransformCreator extends ZscoreLocalTransformCreator {
      *            - cutoff of normalization
      * @return DerivedField for variable
      */
-    protected DerivedField createNumericalDerivedField(ColumnConfig config, double cutoff) {
+    protected List<DerivedField> createNumericalDerivedField(ColumnConfig config, double cutoff) {
         ModelNormalizeConf.NormType normType = this.modelConfig.getNormalizeType();
 
         List<Double> binWoeList = (normType.equals(ModelNormalizeConf.NormType.WOE) ? config.getBinCountWoe() : config
@@ -68,7 +68,9 @@ public class WoeLocalTransformCreator extends ZscoreLocalTransformCreator {
                 .withDiscretizeBins(discretizeBinList);
 
         // derived field name is consisted of FieldName and "_zscl"
-        return new DerivedField(OpType.CONTINUOUS, DataType.DOUBLE).withName(
-                FieldName.create(genPmmlColumnName(config.getColumnName()))).withExpression(discretize);
+        List<DerivedField> derivedFields = new ArrayList<DerivedField>();
+        derivedFields.add(new DerivedField(OpType.CONTINUOUS, DataType.DOUBLE).withName(
+                FieldName.create(genPmmlColumnName(config.getColumnName()))).withExpression(discretize));
+        return derivedFields;
     }
 }

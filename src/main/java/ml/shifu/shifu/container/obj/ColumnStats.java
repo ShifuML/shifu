@@ -17,6 +17,8 @@ package ml.shifu.shifu.container.obj;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
+import java.util.List;
+
 /**
  * ColumnStats class is stats collection for Column
  * If the Column type is categorical, the max/min field will be null
@@ -49,6 +51,7 @@ public class ColumnStats {
     private Double kurtosis;
 
     private Double psi;
+    private List<String> unitStats;
 
     /**
      * @return the weightedKs
@@ -247,4 +250,18 @@ public class ColumnStats {
         this.psi = psi;
     }
 
+    /**
+     * @return return List of unit stats
+     */
+    public List<String> getUnitStats() {
+        return unitStats;
+    }
+
+    /**
+     *
+     * @param unitStats
+     */
+    public void setUnitStats(List<String> unitStats) {
+        this.unitStats = unitStats;
+    }
 }

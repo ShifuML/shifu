@@ -12,6 +12,7 @@ import org.w3c.dom.Element;
 
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -53,7 +54,7 @@ public class ZscoreLocalTransformCreator extends AbstractPmmlElementCreator<Loca
      * @param cutoff - cutoff for normalization
      * @return DerivedField for variable
      */
-    protected DerivedField createCategoricalDerivedField(ColumnConfig config, double cutoff) {
+    protected List<DerivedField> createCategoricalDerivedField(ColumnConfig config, double cutoff) {
         Document document = null;
         try {
             document = DocumentBuilderFactory.newInstance().newDocumentBuilder().newDocument();
@@ -83,8 +84,10 @@ public class ZscoreLocalTransformCreator extends AbstractPmmlElementCreator<Loca
                 .withFieldColumnPairs(new FieldColumnPair(new FieldName(config.getColumnName()), ELEMENT_ORIGIN))
                 .withInlineTable(inlineTable).withMapMissingTo(missingValue);
 
-        return new DerivedField(OpType.CONTINUOUS, DataType.DOUBLE).withName(
-                FieldName.create(genPmmlColumnName(config.getColumnName()))).withExpression(mapValues);
+        List<DerivedField> derivedFields = new ArrayList<DerivedField>();
+        derivedFields.add(new DerivedField(OpType.CONTINUOUS, DataType.DOUBLE).withName(
+                FieldName.create(genPmmlColumnName(config.getColumnName()))).withExpression(mapValues));
+        return derivedFields;
     }
 
     /**
@@ -94,7 +97,7 @@ public class ZscoreLocalTransformCreator extends AbstractPmmlElementCreator<Loca
      * @param cutoff - cutoff of normalization
      * @return DerivedField for variable
      */
-    protected DerivedField createNumericalDerivedField(ColumnConfig config, double cutoff) {
+    protected List<DerivedField> createNumericalDerivedField(ColumnConfig config, double cutoff) {
         // added capping logic to linearNorm
         LinearNorm from = new LinearNorm().withOrig(config.getMean() - config.getStdDev() * cutoff).withNorm(-cutoff);
         LinearNorm to = new LinearNorm().withOrig(config.getMean() + config.getStdDev() * cutoff).withNorm(cutoff);
@@ -103,8 +106,10 @@ public class ZscoreLocalTransformCreator extends AbstractPmmlElementCreator<Loca
                 .withOutliers(OutlierTreatmentMethodType.AS_EXTREME_VALUES);
 
         // derived field name is consisted of FieldName and "_zscl"
-        return new DerivedField(OpType.CONTINUOUS, DataType.DOUBLE).withName(
-                FieldName.create(genPmmlColumnName(config.getColumnName()))).withExpression(normContinuous);
+        List<DerivedField> derivedFields = new ArrayList<DerivedField>();
+        derivedFields.add(new DerivedField(OpType.CONTINUOUS, DataType.DOUBLE).withName(
+                FieldName.create(genPmmlColumnName(config.getColumnName()))).withExpression(normContinuous));
+        return derivedFields;
     }
 
     /**
