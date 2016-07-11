@@ -32,5 +32,6 @@ public class EnvironmentTest {
         Environment.setProperty("SHIFU_HOME", "src/main/resources");
         Environment.loadShifuConfig();
         Assert.assertEquals(6, Environment.getInt(Environment.LOCAL_NUM_PARALLEL).intValue());
+        Assert.assertNotNull(Environment.getProperty(Environment.SYSTEM_USER));
     }
 }

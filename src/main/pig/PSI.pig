@@ -32,11 +32,12 @@ data_cols = FILTER data_cols by $1 is not null;
 data_cols = FOREACH data_cols GENERATE $PSIColumn, FLATTEN($1);
 
 -- calculate counting number for each column and each psi bin
-population_info = foreach (group data_cols by ($PSIColumn, $1)) generate FLATTEN(PopulationCounter(*));
+population_info = foreach (group data_cols by ($PSIColumn, $1) PARALLEL $column_parallel) generate FLATTEN(PopulationCounter(*));
 
 -- calculate the psi
 psi = foreach (group population_info by $0) generate FLATTEN(PSI(*));
 
+rmf $path_psi
 store psi INTO '$path_psi' USING PigStorage('|', '-schema');
 
 

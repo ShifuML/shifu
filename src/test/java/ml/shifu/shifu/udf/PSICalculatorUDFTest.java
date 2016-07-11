@@ -35,9 +35,11 @@ public class PSICalculatorUDFTest {
         input.set(0, Integer.valueOf(1));
 
         DataBag dataBag = new DefaultDataBag();
-        Tuple tuple = TupleFactory.getInstance().newTuple(2);
+        Tuple tuple = TupleFactory.getInstance().newTuple(4);
         tuple.set(0, Integer.valueOf(1));
         tuple.set(1, StringUtils.join(array, CalculateStatsUDF.CATEGORY_VAL_SEPARATOR));
+        tuple.set(2, "2015/06/20");
+        tuple.set(3, 3.14d);
         dataBag.add(tuple);
 
         input.set(1, dataBag);

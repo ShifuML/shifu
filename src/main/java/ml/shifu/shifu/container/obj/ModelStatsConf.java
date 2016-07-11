@@ -54,7 +54,7 @@ public class ModelStatsConf {
 
     private BinningAlgorithm binningAlgorithm = BinningAlgorithm.SPDTI;
 
-    private String PSIColumnName = "";
+    private String psiColumnName = "";
 
     public Integer getMaxNumBin() {
         return maxNumBin;
@@ -132,12 +132,11 @@ public class ModelStatsConf {
         this.binningAlgorithm = binningAlgorithm;
     }
 
-    public String getPSIColumnName() {
-        return PSIColumnName;
+    public String getPsiColumnName() {
+        return psiColumnName;
     }
 
-    public void setPSIColumnName(String PSIColumnName) {
-        this.PSIColumnName = PSIColumnName;
+    public void setPsiColumnName(String psiColumnName) {
+        this.psiColumnName = psiColumnName;
     }
-
 }
