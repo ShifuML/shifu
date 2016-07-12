@@ -7,6 +7,9 @@ import java.util.List;
  */
 public abstract class Counter {
 
-    public abstract void addData(Object val);
-    public abstract List<Integer> getCounter();
+    public abstract void addData(String val);
+    public abstract List<Long> getCounter();
+    public abstract double getUnitMean();
+    public abstract double getMissingRate();
+    public abstract long getTotalInstCnt();
 }

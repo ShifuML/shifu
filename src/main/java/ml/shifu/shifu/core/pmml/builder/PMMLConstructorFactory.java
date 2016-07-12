@@ -9,15 +9,7 @@ import ml.shifu.shifu.container.obj.ModelTrainConf;
 import ml.shifu.shifu.core.pmml.PMMLTranslator;
 import ml.shifu.shifu.core.pmml.builder.creator.AbstractPmmlElementCreator;
 import ml.shifu.shifu.core.pmml.builder.creator.AbstractSpecifCreator;
-import ml.shifu.shifu.core.pmml.builder.impl.DataDictionaryCreator;
-import ml.shifu.shifu.core.pmml.builder.impl.MiningSchemaCreator;
-import ml.shifu.shifu.core.pmml.builder.impl.ModelStatsCreator;
-import ml.shifu.shifu.core.pmml.builder.impl.NNPmmlModelCreator;
-import ml.shifu.shifu.core.pmml.builder.impl.NNSpecifCreator;
-import ml.shifu.shifu.core.pmml.builder.impl.RegressionPmmlModelCreator;
-import ml.shifu.shifu.core.pmml.builder.impl.RegressionSpecifCreator;
-import ml.shifu.shifu.core.pmml.builder.impl.WoeLocalTransformCreator;
-import ml.shifu.shifu.core.pmml.builder.impl.ZscoreLocalTransformCreator;
+import ml.shifu.shifu.core.pmml.builder.impl.*;
 
 import org.dmg.pmml.DataDictionary;
 import org.dmg.pmml.LocalTransformations;
@@ -59,6 +51,9 @@ public class PMMLConstructorFactory {
         if ( normType.equals(ModelNormalizeConf.NormType.WOE)
                 || normType.equals(ModelNormalizeConf.NormType.WEIGHT_WOE) ) {
             localTransformationsCreator = new WoeLocalTransformCreator(modelConfig, columnConfigList, isConcise);
+        } else if ( normType.equals(ModelNormalizeConf.NormType.WOE_ZSCORE) ) {
+            localTransformationsCreator
+                    = new WoeZscoreLocalTransformCreator(modelConfig, columnConfigList, isConcise, false);
         } else {
             localTransformationsCreator = new ZscoreLocalTransformCreator(modelConfig, columnConfigList, isConcise);
         }
