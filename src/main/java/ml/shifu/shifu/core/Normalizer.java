@@ -407,7 +407,7 @@ public class Normalizer {
      *            if use weighted woe
      * @return an double array contains woe mean and woe standard deviation as order {mean, stdDev}
      */
-    private static double[] calculateWoeMeanAndStdDev(ColumnConfig config, boolean isWeightedNorm) {
+    public static double[] calculateWoeMeanAndStdDev(ColumnConfig config, boolean isWeightedNorm) {
         List<Double> woeList = isWeightedNorm ? config.getBinWeightedWoe() : config.getBinCountWoe();
         if(woeList == null || woeList.size() < 2) {
             throw new IllegalArgumentException("Woe list is null or too short(size < 2)");

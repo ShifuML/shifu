@@ -254,9 +254,9 @@ public class ShifuCLI {
                     boolean isConcise = cmd.hasOption(EXPORT_CONCISE);
                     status = exportModel(cmd.getOptionValue(MODELSET_CMD_TYPE), isConcise);
                     if(status == 0) {
-                        log.info("Export models/columnstats to PMML format successfully in current folder.");
+                        log.info("Export models/columnstats to PMML/csv format successfully in current folder.");
                     } else {
-                        log.warn("Export models/columnstats to PMML format with error, please check or report issue.");
+                        log.warn("Export models/columnstats to PMML/csv format with error, please check or report issue.");
                     }
                 } else {
                     log.error("Invalid command, please check help message.");

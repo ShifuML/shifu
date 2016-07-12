@@ -468,6 +468,16 @@ public class ColumnConfig {
         return this.columnStats.getPsi();
     }
 
+    @JsonIgnore
+    public List<String> getUnitStats() {
+        return this.columnStats.getUnitStats();
+    }
+
+    @JsonIgnore
+    public void setUnitStats(List<String> unitStats) {
+        this.columnStats.setUnitStats(unitStats);
+    }
+
     /**
      * @return the corrArray
      */

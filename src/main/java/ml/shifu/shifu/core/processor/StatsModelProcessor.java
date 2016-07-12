@@ -15,46 +15,10 @@
  */
 package ml.shifu.shifu.core.processor;
 
-import com.google.common.base.Splitter;
-
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.databind.ObjectMapper;
-
-import org.apache.commons.codec.binary.Base64;
-import org.apache.commons.collections.CollectionUtils;
-import org.apache.commons.collections.Predicate;
-import org.apache.commons.compress.compressors.bzip2.BZip2CompressorInputStream;
-import org.apache.commons.jexl2.JexlException;
-import org.apache.commons.lang.StringUtils;
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.io.IntWritable;
-import org.apache.hadoop.io.NullWritable;
-import org.apache.hadoop.io.Text;
-import org.apache.hadoop.mapreduce.Job;
-import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
-import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
-import org.apache.hadoop.mapreduce.lib.output.TextOutputFormat;
-import org.apache.hadoop.util.GenericOptionsParser;
-import org.apache.pig.impl.util.JarManager;
-import org.encog.ml.data.MLDataSet;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import java.io.BufferedWriter;
-import java.io.File;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.OutputStreamWriter;
-import java.nio.charset.Charset;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Scanner;
-
+import com.google.common.base.Splitter;
 import ml.shifu.guagua.hadoop.util.HDPUtils;
 import ml.shifu.guagua.mapreduce.GuaguaMapReduceConstants;
 import ml.shifu.guagua.util.FileUtils;
@@ -78,6 +42,30 @@ import ml.shifu.shifu.util.Base64Utils;
 import ml.shifu.shifu.util.CommonUtils;
 import ml.shifu.shifu.util.Constants;
 import ml.shifu.shifu.util.Environment;
+import org.apache.commons.codec.binary.Base64;
+import org.apache.commons.collections.CollectionUtils;
+import org.apache.commons.collections.Predicate;
+import org.apache.commons.compress.compressors.bzip2.BZip2CompressorInputStream;
+import org.apache.commons.jexl2.JexlException;
+import org.apache.commons.lang.StringUtils;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.io.IntWritable;
+import org.apache.hadoop.io.NullWritable;
+import org.apache.hadoop.io.Text;
+import org.apache.hadoop.mapreduce.Job;
+import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
+import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
+import org.apache.hadoop.mapreduce.lib.output.TextOutputFormat;
+import org.apache.hadoop.util.GenericOptionsParser;
+import org.apache.pig.impl.util.JarManager;
+import org.encog.ml.data.MLDataSet;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.io.*;
+import java.nio.charset.Charset;
+import java.util.*;
 
 /**
  * statistics, max/min/avg/std for each column dataset if it's numerical
@@ -212,7 +200,6 @@ public class StatsModelProcessor extends BasicModelProcessor implements Processo
 
         runPSI();
         saveColumnConfigListAndColumnStats(true);
-        syncDataToHdfs(modelConfig.getDataSet().getSource());
     }
 
     // GuaguaOptionsParser doesn't to support *.jar currently.
@@ -474,25 +461,29 @@ public class StatsModelProcessor extends BasicModelProcessor implements Processo
      * @throws IOException
      */
     private void runPSI() throws IOException {
-        if(StringUtils.isNotEmpty(modelConfig.getPSIColumnName())) {
+        log.info("Run PSI to use {} to compute the PSI ", modelConfig.getPsiColumnName());
+
+        if(StringUtils.isNotEmpty(modelConfig.getPsiColumnName())) {
             ColumnConfig columnConfig = CommonUtils.findColumnConfigByName(columnConfigList,
-                    modelConfig.getPSIColumnName());
+                    modelConfig.getPsiColumnName());
 
             if(columnConfig == null || !columnConfig.isMeta()) {
                 log.warn("Unable to use the PSI column name specify in ModelConfig to compute PSI");
                 return;
             }
 
-            log.info("Start to use %s to compute the PSI ", columnConfig.getColumnName());
+            log.info("Start to use {} to compute the PSI ", columnConfig.getColumnName());
+
             Map<String, String> paramsMap = new HashMap<String, String>();
             paramsMap.put("delimiter", CommonUtils.escapePigString(modelConfig.getDataSetDelimiter()));
-            paramsMap.put("PSIColumn", modelConfig.getPSIColumnName().trim());
+            paramsMap.put("PSIColumn", modelConfig.getPsiColumnName().trim());
+            paramsMap.put("column_parallel", Integer.toString(columnConfigList.size() / 10));
             paramsMap.put("value_index", "2");
 
             PigExecutor.getExecutor().submitJob(modelConfig, pathFinder.getAbsolutePath("scripts/PSI.pig"), paramsMap);
 
-            List<Scanner> scanners = ShifuFileUtils.getDataScanners(pathFinder.getPSIInfoPath(), modelConfig
-                    .getDataSet().getSource());
+            List<Scanner> scanners = ShifuFileUtils.getDataScanners(pathFinder.getPSIInfoPath(),
+                    modelConfig.getDataSet().getSource());
 
             for(Scanner scanner: scanners) {
                 while(scanner.hasNext()) {
@@ -502,6 +493,8 @@ public class StatsModelProcessor extends BasicModelProcessor implements Processo
                         int columnNum = Integer.parseInt(output[0]);
                         ColumnConfig config = this.columnConfigList.get(columnNum);
                         config.setPSI(Double.parseDouble(output[1]));
+                        config.setUnitStats(
+                                Arrays.asList(StringUtils.split(output[2], CalculateStatsUDF.CATEGORY_VAL_SEPARATOR)));
                     } catch (Exception e) {
                         log.error("error in parsing", e);
                     }
@@ -509,6 +502,8 @@ public class StatsModelProcessor extends BasicModelProcessor implements Processo
                 }
             }
         }
+
+        log.info("Run PSI - done.");
     }
 
 }
