@@ -371,6 +371,15 @@
                 "type": "boolean",
                 "directive": "checkbox",
                 "defval" : false
+            }, {
+                "name": "correlation",
+                "type": "text",
+                "directive": "select",
+                "defval" : "NONE",
+                "options": [
+                    {"label":"not compute correlation", "value":"NONE"},
+                    {"label":"pearson mode", "value":"PEARSON"}
+                ]
             }
         ]
     }, {
