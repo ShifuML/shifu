@@ -15,6 +15,9 @@
  */
 package ml.shifu.shifu.core.processor;
 
+import java.io.File;
+import java.io.IOException;
+
 import ml.shifu.shifu.container.obj.ModelConfig;
 import ml.shifu.shifu.container.obj.ModelTrainConf.ALGORITHM;
 import ml.shifu.shifu.util.JSONUtils;
@@ -22,9 +25,6 @@ import ml.shifu.shifu.util.JSONUtils;
 import org.apache.commons.io.FileUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import java.io.File;
-import java.io.IOException;
 
 /**
  * CreateModelProcessor class

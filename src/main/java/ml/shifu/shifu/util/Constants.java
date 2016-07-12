@@ -122,6 +122,8 @@ public interface Constants {
     public static final String NORMALIZED_DATA = "NormalizedData";
     public static final String TRAIN_SCORES = "TrainScores";
     public static final String BIN_AVG_SCORE = "BinAvgScore";
+    public static final String CORRELATION_PATH = "CorrelationPath";
+    public static final String TAB_STR = "\t";
 
     public static final String KEY_POSTTRAIN_OUT_PATH = "posttrainOutputPath";
     public static final String KEY_PRE_TRAIN_STATS_PATH = "preTrainStatsPath";

@@ -415,9 +415,14 @@ public class ModelInspector {
             result = ValidateResult.mergeResult(result, tmpResult);
         }
 
-        if(modelConfig.isMultiClassification() && norm.getNormType() != NormType.ZSCALE) {
+        boolean isZScore = modelConfig.getNormalize().getNormType() == NormType.ZSCALE
+                || modelConfig.getNormalize().getNormType() == NormType.ZSCORE
+                || modelConfig.getNormalize().getNormType() == NormType.OLD_ZSCALE
+                || modelConfig.getNormalize().getNormType() == NormType.OLD_ZSCORE;
+
+        if(modelConfig.isMultiClassification() && !isZScore) {
             ValidateResult tmpResult = new ValidateResult(false);
-            tmpResult.getCauses().add("NormType 'ZSCALE' is the only norm type for multiple classification.");
+            tmpResult.getCauses().add("NormType 'ZSCALE|ZSCORE' is the only norm type for multiple classification.");
             result = ValidateResult.mergeResult(result, tmpResult);
         }
 
