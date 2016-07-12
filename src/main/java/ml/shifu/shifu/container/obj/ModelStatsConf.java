@@ -27,7 +27,7 @@ public class ModelStatsConf {
 
     @JsonDeserialize(using = BinningMethodDeserializer.class)
     public static enum BinningMethod {
-        EqualNegtive, EqualInterval, EqualPositive, EqualTotal
+        EqualNegtive, EqualInterval, EqualPositive, EqualTotal, DynamicBinning
         // TODO another four with weights
     }
 

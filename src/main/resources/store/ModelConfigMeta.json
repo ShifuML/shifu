@@ -166,7 +166,8 @@
                     {"label": "Equal Negative", "value":"EqualNegative"},
                     {"label": "Equal Positive", "value":"EqualPositive"},
                     {"label": "Equal Total", "value":"EqualTotal"},
-                    {"label": "Equal Interval", "value":"EqualInterval"}
+                    {"label": "Equal Interval", "value":"EqualInterval"},
+                    {"label": "Dynamic Binning", "value":"DynamicBinning"}
                 ]
             }, {
                 "name": "sampleRate",

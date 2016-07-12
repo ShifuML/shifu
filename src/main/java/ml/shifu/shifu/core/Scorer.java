@@ -70,7 +70,7 @@ public class Scorer {
     public Scorer(List<BasicML> models, List<ColumnConfig> columnConfigList, String algorithm, ModelConfig modelConfig,
             Double cutoff) {
         if ( modelConfig == null ) {
-            throw new IllegalArgumentException("modelConfig and columnConfigList should not be null");
+            throw new IllegalArgumentException("modelConfig should not be null");
         }
 
         this.models = models;
