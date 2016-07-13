@@ -1,0 +1,97 @@
+{
+  "basic" : {
+    "name" : "dttest",
+    "author" : "pengzhang",
+    "description" : "Created at 2016-01-21 00:33:23",
+    "version" : "0.2.0",
+    "runMode" : "mapred",
+    "postTrainOn" : false,
+    "customPaths" : { }
+  },
+  "dataSet" : {
+    "source" : "hdfs",
+    "dataPath" : "DataSet1",
+    "dataDelimiter" : "|",
+    "headerPath" : "DataSet1/.pig_header",
+    "headerDelimiter" : "|",
+    "filterExpressions" : "",
+    "weightColumnName" : "",
+    "targetColumnName" : "diagnosis",
+    "posTags" : [ "M" ],
+    "negTags" : [ "B" ],
+    "missingOrInvalidValues" : [ "", "*", "#", "?", "null", "~" ],
+    "metaColumnNameFile" : "columns/meta.column.names",
+    "categoricalColumnNameFile" : "columns/categorical.column.names"
+  },
+  "stats" : {
+    "maxNumBin" : 10,
+    "binningMethod" : "EqualPositive",
+    "sampleRate" : 0.8,
+    "sampleNegOnly" : false,
+    "binningAlgorithm" : "SPDTI"
+  },
+  "varSelect" : {
+    "forceEnable" : true,
+    "forceSelectColumnNameFile" : "columns/forceselect.column.names",
+    "forceRemoveColumnNameFile" : "columns/forceremove.column.names",
+    "filterEnable" : true,
+    "filterNum" : 200,
+    "filterBy" : "KS",
+    "wrapperEnabled" : false,
+    "wrapperNum" : 50,
+    "wrapperRatio" : 0.05,
+    "wrapperBy" : "S",
+    "missingRateThreshold" : 0.5,
+    "filterBySE" : true,
+    "params" : null
+  },
+  "normalize" : {
+    "stdDevCutOff" : 4.0,
+    "sampleRate" : 1.0,
+    "sampleNegOnly" : false,
+    "normType" : "ZSCALE"
+  },
+  "train" : {
+    "baggingNum" : 1,
+    "baggingWithReplacement" : true,
+    "baggingSampleRate" : 0.8,
+    "validSetRate" : 0.2,
+    "numTrainEpochs" : 1000,
+    "epochsPerIteration" : 1,
+    "trainOnDisk" : false,
+    "isContinuous" : false,
+    "workerThreadCount" : 4,
+    "algorithm" : "GBDT",
+    "params" : {
+        "FeatureSubsetStrategy": "all",
+        "MaxDepth": 8,
+        "MaxStatsMemoryMB": 256,
+        "Impurity":"variance",
+        "LearningRate": 0.1,
+        "Loss": "squared"
+    },
+    "customPaths" : { }
+  },
+  "evals" : [ {
+    "name" : "Eval1",
+    "dataSet" : {
+      "source" : "HDFS",
+      "dataPath" : "EvalSet1",
+      "dataDelimiter" : "|",
+      "headerPath" : "EvalSet1/.pig_header",
+      "headerDelimiter" : "|",
+      "filterExpressions" : "",
+      "weightColumnName" : "",
+      "targetColumnName" : "diagnosis",
+      "posTags" : [ "M" ],
+      "negTags" : [ "B" ],
+      "missingOrInvalidValues" : [ "", "*", "#", "?", "null", "~" ],
+      "metaColumnNameFile" : "columns/meta.column.names",
+      "categoricalColumnNameFile" : "columns/categorical.column.names"
+    },
+    "performanceBucketNum" : 10,
+    "performanceScoreSelector" : "mean",
+    "scoreMetaColumnNameFile" : "columns/Eval1score.meta.column.names",
+    "customPaths" : { }
+  } ]
+}

@@ -69,7 +69,7 @@ public class Scorer {
 
     public Scorer(List<BasicML> models, List<ColumnConfig> columnConfigList, String algorithm, ModelConfig modelConfig,
             Double cutoff) {
-        if ( modelConfig == null ) {
+        if(modelConfig == null) {
             throw new IllegalArgumentException("modelConfig and columnConfigList should not be null");
         }
 
@@ -109,7 +109,7 @@ public class Scorer {
             int index = 0;
             for(int i = 0; i < columnConfigList.size(); i++) {
                 ColumnConfig columnConfig = columnConfigList.get(i);
-                if(isAfterVarSelect) {
+                if(!isAfterVarSelect) {
                     if(!columnConfig.isMeta() && !columnConfig.isTarget() && CommonUtils.isGoodCandidate(columnConfig)) {
                         this.columnMapping.put(columnConfig.getColumnNum(), index);
                         index += 1;
@@ -138,7 +138,10 @@ public class Scorer {
 
         List<Integer> scores = new ArrayList<Integer>();
 
-        if(modelConfig != null && modelConfig.getAlgorithm().equalsIgnoreCase(CommonConstants.GBDT_ALG_NAME)) {
+        if(modelConfig != null
+                && (modelConfig.getAlgorithm().equalsIgnoreCase(CommonConstants.GBDT_ALG_NAME) || modelConfig
+                        .getAlgorithm().equalsIgnoreCase(CommonConstants.RF_ALG_NAME))) {
+            // RF or GBDT
             double learningRate = Double.valueOf(this.modelConfig.getParams().get(NNTrainer.LEARNING_RATE).toString());
             BasicML model = models.get(0);
             if(model instanceof TreeModel) {

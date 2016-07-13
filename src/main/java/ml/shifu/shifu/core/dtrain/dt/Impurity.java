@@ -16,13 +16,9 @@
 package ml.shifu.shifu.core.dtrain.dt;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import ml.shifu.shifu.container.obj.ColumnConfig;
 
@@ -72,11 +68,6 @@ public abstract class Impurity {
         this.statsSize = statsSize;
     }
 
-    public static void main(String[] args) {
-        double a = Double.NaN;
-        System.out.println(a - 0d);
-    }
-
 }
 
 /**
@@ -86,8 +77,6 @@ public abstract class Impurity {
  */
 class Variance extends Impurity {
 
-    private static final Logger LOG = LoggerFactory.getLogger(Variance.class);
-
     public Variance() {
         // 3 are count, sum and sumSquare
         super.statsSize = 3;
@@ -96,8 +85,6 @@ class Variance extends Impurity {
     @Override
     public GainInfo computeImpurity(double[] stats, ColumnConfig config) {
         double count = 0d, sum = 0d, sumSquare = 0d;
-        LOG.info("stats: {}", Arrays.toString(stats));
-        LOG.info("statsSize {}", statsSize);
         for(int i = 0; i < stats.length / super.statsSize; i++) {
             count += stats[i * super.statsSize];
             sum += stats[i * super.statsSize + 1];
@@ -112,13 +99,10 @@ class Variance extends Impurity {
         List<GainInfo> internalGainList = new ArrayList<GainInfo>();
         Set<String> leftCategories = config.isCategorical() ? new HashSet<String>() : null;
 
-        LOG.info("loop size {}", (stats.length / super.statsSize));
-
         for(int i = 0; i < ((stats.length / super.statsSize) - 1); i++) {
             leftCount += stats[i * super.statsSize];
             leftSum += stats[i * super.statsSize + 1];
             leftSumSquare += stats[i * super.statsSize + 2];
-
             rightCount = count - leftCount;
             rightSum = sum - leftSum;
             rightSumSquare = sumSquare - leftSumSquare;
@@ -144,7 +128,8 @@ class Variance extends Impurity {
             internalGainList.add(new GainInfo(gain, impurity, predict, leftImpurity, rightImpurity, leftPredict,
                     rightPredict, split));
         }
-        return GainInfo.getGainInfoByMaxGain(internalGainList);
+        GainInfo maxGain = GainInfo.getGainInfoByMaxGain(internalGainList);
+        return maxGain;
     }
 
     private double getImpurity(double count, double sum, double sumSquare) {
