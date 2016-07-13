@@ -24,6 +24,11 @@ public enum FeatureSubsetStrategy {
 
     ALL /* All features */, HALF /* A half features */, ONETHIRD /* One third features */;
 
+    // TODO implement below feature strategy
+    // AUTO, tree num = 1, ALL, else ONETHIRD
+    // SQRT
+    // LOG2
+
     /**
      * Get {@link FeatureSubsetStrategy} by string, case can be ignored.
      */

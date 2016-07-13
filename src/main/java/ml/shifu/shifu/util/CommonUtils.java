@@ -943,9 +943,7 @@ public final class CommonUtils {
                         if(CommonUtils.isDesicionTreeAlgorithm(modelConfig.getAlgorithm()) && config.isCategorical()) {
                             inputList.add(binCategoryMap.get(config.getColumnNum()).get(val == null ? "" : val) + 0d);
                         } else {
-                            Double normalizeValue = Normalizer.normalize(config, val, cutoff,
-                                    modelConfig.getNormalizeType());
-                            inputList.add(normalizeValue);
+                            inputList.add(computeNumericNormResult(modelConfig, cutoff, config, val));
                         }
                     }
                 } else {
@@ -954,9 +952,7 @@ public final class CommonUtils {
                         if(CommonUtils.isDesicionTreeAlgorithm(modelConfig.getAlgorithm()) && config.isCategorical()) {
                             inputList.add(binCategoryMap.get(config.getColumnNum()).get(val == null ? "" : val) + 0d);
                         } else {
-                            Double normalizeValue = Normalizer.normalize(config, val, cutoff,
-                                    modelConfig.getNormalizeType());
-                            inputList.add(normalizeValue);
+                            inputList.add(computeNumericNormResult(modelConfig, cutoff, config, val));
                         }
                     }
                 }
@@ -971,6 +967,21 @@ public final class CommonUtils {
         }
 
         return new BasicMLDataPair(new BasicMLData(input), new BasicMLData(ideal));
+    }
+
+    private static double computeNumericNormResult(ModelConfig modelConfig, double cutoff, ColumnConfig config,
+            String val) {
+        Double normalizeValue = null;
+        if(CommonUtils.isDesicionTreeAlgorithm(modelConfig.getAlgorithm())) {
+            normalizeValue = Normalizer.normalize(config, val, cutoff, modelConfig.getNormalizeType());
+        } else {
+            try {
+                normalizeValue = Double.parseDouble(val);
+            } catch (Exception e) {
+                normalizeValue = Normalizer.defaultMissingValue(config);
+            }
+        }
+        return normalizeValue;
     }
 
     public static boolean isDesicionTreeAlgorithm(String alg) {

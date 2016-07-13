@@ -15,12 +15,8 @@
  */
 package ml.shifu.shifu.core.dtrain.dt;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
@@ -30,9 +26,11 @@ import java.util.Properties;
 import java.util.Queue;
 import java.util.Random;
 
+import ml.shifu.guagua.GuaguaConstants;
 import ml.shifu.guagua.master.AbstractMasterComputable;
 import ml.shifu.guagua.master.MasterComputable;
 import ml.shifu.guagua.master.MasterContext;
+import ml.shifu.guagua.util.NumberFormatUtils;
 import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.container.obj.ModelConfig;
 import ml.shifu.shifu.container.obj.ModelTrainConf.ALGORITHM;
@@ -42,6 +40,9 @@ import ml.shifu.shifu.core.dtrain.CommonConstants;
 import ml.shifu.shifu.core.dtrain.DTrainUtils;
 import ml.shifu.shifu.core.dtrain.dt.DTWorkerParams.NodeStats;
 import ml.shifu.shifu.util.CommonUtils;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Random forest and gradient boost decision tree {@link MasterComputable} implementation.
@@ -150,6 +151,8 @@ public class DTMaster extends AbstractMasterComputable<DTMasterParams, DTWorkerP
      */
     private Queue<TreeNode> queue;
 
+    private int workerNumber;
+
     @Override
     public DTMasterParams doCompute(MasterContext<DTMasterParams, DTWorkerParams> context) {
         if(context.isFirstIteration()) {
@@ -178,15 +181,12 @@ public class DTMaster extends AbstractMasterComputable<DTMasterParams, DTWorkerP
                 count += params.getCount();
             }
         }
-        LOG.debug("node stats after merged: {}", nodeStatsMap);
         for(Entry<Integer, NodeStats> entry: nodeStatsMap.entrySet()) {
             NodeStats nodeStats = entry.getValue();
             int treeId = nodeStats.getTreeId();
             Node doneNode = Node.getNode(trees.get(treeId).getNode(), nodeStats.getNodeId());
-            LOG.debug("Node stats with treeId {} and node id {},", treeId, doneNode.getId());
             // doneNode, NodeStats
             Map<Integer, double[]> statistics = nodeStats.getFeatureStatistics();
-            LOG.debug("Node stats {},", statistics);
 
             List<GainInfo> gainList = new ArrayList<GainInfo>();
             for(Entry<Integer, double[]> gainEntry: statistics.entrySet()) {
@@ -199,20 +199,22 @@ public class DTMaster extends AbstractMasterComputable<DTMasterParams, DTWorkerP
 
             GainInfo maxGainInfo = GainInfo.getGainInfoByMaxGain(gainList);
             populateGainInfoToNode(doneNode, maxGainInfo);
-            LOG.info("GainInfo is {} and node with info is {}.", maxGainInfo, doneNode);
 
-            // another stop condition: max instandce count
+            // another stop condition: max instance count
             boolean isLeaf = maxGainInfo.getGain() <= 0d || Node.indexToLevel(doneNode.getId()) == this.maxDepth;
             doneNode.setLeaf(isLeaf);
             if(!doneNode.isLeaf()) {
                 boolean leftChildIsLeaf = Node.indexToLevel(doneNode.getId()) + 1 == this.maxDepth
                         || (maxGainInfo.getLeftImpurity() == 0.0);
-                // such node is just set into isLeaf to true
+                // such node is just set into isLeaf to true, a new node is created with leaf flag but will be changed
+                // to final leaf in later iteration
                 int leftIndex = Node.leftIndex(doneNode.getId());
                 Node left = new Node(leftIndex, maxGainInfo.getLeftPredict(), maxGainInfo.getLeftImpurity(), true);
                 doneNode.setLeft(left);
                 if(!leftChildIsLeaf) {
                     this.queue.offer(new TreeNode(treeId, left));
+                } else {
+                    LOG.info("Left node {} in tree {} is set to leaf and not submitted to workers", leftIndex, treeId);
                 }
 
                 boolean rightChildIsLeaf = Node.indexToLevel(doneNode.getId()) + 1 == this.maxDepth
@@ -223,7 +225,11 @@ public class DTMaster extends AbstractMasterComputable<DTMasterParams, DTWorkerP
                 doneNode.setRight(right);
                 if(!rightChildIsLeaf) {
                     this.queue.offer(new TreeNode(treeId, right));
+                } else {
+                    LOG.info("Right node {} in tree {} is set to leaf and not submitted to workers", rightIndex, treeId);
                 }
+            } else {
+                LOG.info("Done node {} in tree {} is final set to leaf", doneNode.getId(), treeId);
             }
         }
 
@@ -260,7 +266,7 @@ public class DTMaster extends AbstractMasterComputable<DTMasterParams, DTWorkerP
                 nodeIndexInGroup += 1;
             }
             masterParams.setTodoNodes(todoNodes);
-            LOG.info("Todo nodes with size {}.", todoNodes.size());
+            LOG.info("Todo node size is {}", todoNodes.size());
         }
         masterParams.setTrees(trees);
         return masterParams;
@@ -279,16 +285,38 @@ public class DTMaster extends AbstractMasterComputable<DTMasterParams, DTWorkerP
 
     private long getStatsMem(List<Integer> subsetFeatures) {
         long statsMem = 0L;
-        for(Integer columnNum: subsetFeatures) {
+        List<Integer> tempFeatures = subsetFeatures;
+        if(subsetFeatures.size() == 0) {
+            tempFeatures = getAllValidFeatures();
+        }
+        for(Integer columnNum: tempFeatures) {
             ColumnConfig config = this.columnConfigList.get(columnNum);
-            // 1.5 is overhead for java object
+            // 2 is overhead to avoid oom
             if(config.isNumerical()) {
-                statsMem += config.getBinBoundary().size() * this.impurity.getStatsSize() * 8L * 1.5;
+                statsMem += config.getBinBoundary().size() * this.impurity.getStatsSize() * 8L * 2;
             } else if(config.isCategorical()) {
-                statsMem += (config.getBinCategory().size() + 1) * this.impurity.getStatsSize() * 8L * 1.5;
+                statsMem += (config.getBinCategory().size() + 1) * this.impurity.getStatsSize() * 8L * 2;
             }
         }
+        // times worker number to avoid oom in master, as combinable DTWorkerParams, user half of worker number
+        statsMem = statsMem * this.workerNumber;
         return statsMem;
+    }
+
+    private List<Integer> getAllValidFeatures() {
+        List<Integer> features = new ArrayList<Integer>();
+        for(ColumnConfig config: columnConfigList) {
+            if(isAfterVarSelect) {
+                if(config.isFinalSelect() && !config.isTarget() && !config.isMeta()) {
+                    features.add(config.getColumnNum());
+                }
+            } else {
+                if(!config.isMeta() && !config.isTarget() && CommonUtils.isGoodCandidate(config)) {
+                    features.add(config.getColumnNum());
+                }
+            }
+        }
+        return features;
     }
 
     private void mergeNodeStats(NodeStats resultNodeStats, NodeStats nodeStats) {
@@ -298,7 +326,6 @@ public class DTMaster extends AbstractMasterComputable<DTMasterParams, DTWorkerP
             for(int i = 0; i < statistics.length; i++) {
                 statistics[i] += entry.getValue()[i];
             }
-            LOG.debug("statistics {}", Arrays.toString(statistics));
         }
     }
 
@@ -376,6 +403,9 @@ public class DTMaster extends AbstractMasterComputable<DTMasterParams, DTWorkerP
             throw new RuntimeException(e);
         }
 
+        // worker number is used to estimate nodes per iteration for stats
+        this.workerNumber = NumberFormatUtils.getInt(props.getProperty(GuaguaConstants.GUAGUA_WORKER_NUMBER), true);
+
         // check if variables are set final selected
         int[] inputOutputIndex = DTrainUtils.getNumericAndCategoricalInputAndOutputCounts(this.columnConfigList);
         this.isAfterVarSelect = inputOutputIndex[3] == 1 ? true : false;
@@ -386,7 +416,7 @@ public class DTMaster extends AbstractMasterComputable<DTMasterParams, DTWorkerP
         this.maxDepth = Integer.valueOf(this.modelConfig.getTrain().getParams().get("MaxDepth").toString());
         assert this.maxDepth > 0 && this.maxDepth <= 20;
         this.maxStatsMemory = Long.valueOf(this.modelConfig.getTrain().getParams().get("MaxStatsMemoryMB").toString()) * 1024 * 1024;
-        assert this.maxStatsMemory <= Math.min(Runtime.getRuntime().maxMemory() * 0.6, 800 * 1024 * 1024L);
+        // assert this.maxStatsMemory <= Math.min(Runtime.getRuntime().maxMemory() * 0.6, 800 * 1024 * 1024L);
         this.treeNum = this.modelConfig.getTrain().getBaggingNum();
         this.isRF = ALGORITHM.RF.toString().equalsIgnoreCase(modelConfig.getAlgorithm());
         this.isGBDT = ALGORITHM.GBDT.toString().equalsIgnoreCase(modelConfig.getAlgorithm());
@@ -407,8 +437,8 @@ public class DTMaster extends AbstractMasterComputable<DTMasterParams, DTWorkerP
             impurity = new Variance();
         }
         LOG.info("Master init params: isAfterVarSel={}, featureSubsetStrategy={}, maxDepth={}, maxStatsMemory={}, "
-                + "treeNum={}, impurity= {}", isAfterVarSelect, featureSubsetStrategy, maxDepth, maxStatsMemory,
-                treeNum, imStr);
+                + "treeNum={}, impurity={}, workerNumber={}", isAfterVarSelect, featureSubsetStrategy, maxDepth,
+                maxStatsMemory, treeNum, imStr, this.workerNumber);
         this.queue = new LinkedList<TreeNode>();
 
         // initialize trees

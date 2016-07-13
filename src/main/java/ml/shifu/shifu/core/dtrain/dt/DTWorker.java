@@ -20,6 +20,7 @@ import java.io.DataOutput;
 import java.io.IOException;
 import java.io.Serializable;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
@@ -308,8 +309,10 @@ public class DTWorker
                     featureStatistics.put(columnNum, new double[featureStatsSize]);
                 }
             }
-            statistics.put(entry.getKey(), new NodeStats(entry.getValue().getTreeId(), entry.getValue().getNode()
-                    .getId(), featureStatistics));
+            NodeStats nodeStats = new NodeStats(entry.getValue().getTreeId(), entry.getValue().getNode().getId(),
+                    featureStatistics);
+
+            statistics.put(entry.getKey(), nodeStats);
         }
 
         double squareError = 0d;
@@ -346,6 +349,8 @@ public class DTWorker
                 Node predictNode = predictNodeIndex(trees.get(currTreeIndex).getNode(), data);
                 int predictNodeIndex = predictNode.getId();
                 nodeIndexes.add(predictNodeIndex);
+                LOG.info("tree {} predictNodeIndex {} with data {} ", trees.get(currTreeIndex).getTreeId(),
+                        predictNodeIndex, data);
                 squareError += loss.computeError(data.predict, data.output);
             }
 
@@ -378,7 +383,7 @@ public class DTWorker
                                     weight);
                         } else if(config.isCategorical()) {
                             String category = data.categoricalInputs[this.categoricalInputIndexMap.get(columnNum)];
-                            Integer binIndex = this.categoryIndexMap.get(columnNum).get(category);
+                            int binIndex = this.categoryIndexMap.get(columnNum).get(category);
                             this.impurity.featureUpdate(featuerStatistic, binIndex, data.output, data.significance,
                                     weight);
                         } else {
@@ -388,18 +393,7 @@ public class DTWorker
                 }
             }
         }
-
-        // TODO Remove me please, only for debug
-//        for(Map.Entry<Integer, NodeStats> entry: statistics.entrySet()) {
-//            NodeStats nodeStats = entry.getValue();
-//            LOG.info("Node index {}, node id {}, tree id{}", entry.getKey(), nodeStats.getNodeId(),
-//                    nodeStats.getTreeId());
-//            Map<Integer, double[]> featureStatistics = nodeStats.getFeatureStatistics();
-//            for(Entry<Integer, double[]> feaEntry: featureStatistics.entrySet()) {
-//                LOG.info("ColumnNum {} statistics {}", feaEntry.getKey(), Arrays.toString(feaEntry.getValue()));
-//            }
-//        }
-//        LOG.debug("Worker statistics is {}", statistics);
+        LOG.info("worker count is {}, error is {}, and stats size is {}.", count, squareError, statistics.size());
         return new DTWorkerParams(count, squareError, statistics);
     }
 
@@ -683,6 +677,19 @@ public class DTWorker
             for(int i = 0; i < sLen; i++) {
                 this.subsampleWeights[i] = in.readFloat();
             }
+        }
+
+        /*
+         * (non-Javadoc)
+         * 
+         * @see java.lang.Object#toString()
+         */
+        @Override
+        public String toString() {
+            return "Data [numericInputs=" + Arrays.toString(numericInputs) + ", categoricalInputs="
+                    + Arrays.toString(categoricalInputs) + ", originalOutput=" + originalOutput + ", output=" + output
+                    + ", predict=" + predict + ", significance=" + significance + ", subsampleWeights="
+                    + Arrays.toString(subsampleWeights) + "]";
         }
 
     }

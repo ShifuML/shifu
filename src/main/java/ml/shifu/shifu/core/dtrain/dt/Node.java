@@ -348,7 +348,7 @@ public class Node implements Bytable {
 
         int currIndex = index;
         List<Integer> walkIndexes = new ArrayList<Integer>(16);
-        while(currIndex >= 1) {
+        while(currIndex > 1) {
             walkIndexes.add(currIndex);
             currIndex /= 2;
         }
@@ -357,17 +357,15 @@ public class Node implements Bytable {
         Node result = topNode;
         for(int i = 0; i < walkIndexes.size(); i++) {
             int searchIndex = walkIndexes.get(walkIndexes.size() - 1 - i);
-            if(searchIndex == index) {
-                return result;
+
+            if(searchIndex % 2 == 0) {
+                result = result.getLeft();
+            } else {
+                result = result.getRight();
             }
 
-            if(searchIndex % 2 != 0) {
-                result = result.getRight();
-            } else {
-                result = result.getLeft();
-            }
-            if(result == null) {
-                return null;
+            if(searchIndex == index) {
+                return result;
             }
         }
         return null;

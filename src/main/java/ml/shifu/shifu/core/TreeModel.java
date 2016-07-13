@@ -39,7 +39,13 @@ import ml.shifu.shifu.core.dtrain.dt.TreeNode;
 import ml.shifu.shifu.util.CommonUtils;
 
 /**
- * TODO
+ * {@link TreeModel} is to load Random Forest or Gradient Boosted Decision Tree models.
+ * 
+ * <p>
+ * {@link #loadFromStream(InputStream, ModelConfig, List)} can be used to read serialized models.
+ * 
+ * <p>
+ * TODO, make trees computing in parallel
  * 
  * @author Zhang David (pengzhang@paypal.com)
  */
@@ -63,7 +69,7 @@ public class TreeModel extends BasicML implements MLRegression {
         this.trees = trees;
         this.weights = weights;
         assert trees != null && weights != null && trees.size() == weights.size();
-        this.setGBDT(isGBDT);
+        this.isGBDT = isGBDT;
         this.columnConfigList = columnConfigList;
         this.columnMapping = new HashMap<Integer, Integer>(columnConfigList.size(), 1f);
         int[] inputOutputIndex = DTrainUtils.getNumericAndCategoricalInputAndOutputCounts(this.columnConfigList);
@@ -95,6 +101,7 @@ public class TreeModel extends BasicML implements MLRegression {
         this.columnConfigList = columnConfigList;
         this.columnMapping = columnMapping;
         this.inputNode = columnMapping.size();
+        this.isGBDT = isGBDT;
     }
 
     @Override
@@ -153,7 +160,7 @@ public class TreeModel extends BasicML implements MLRegression {
 
     @Override
     public String toString() {
-        return getTrees().toString();
+        return trees.toString();
     }
 
     @Override

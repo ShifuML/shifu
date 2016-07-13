@@ -10,9 +10,9 @@ public class CategoryCounter extends Counter {
     private List<Double> binPosRate;
     private List<String> categories;
 
-    private Set<String> missingValSet = new HashSet();
-    private Map<String, Integer> categoryValIndex = new HashMap();
-    private Map<String, Long> categoryMap = new HashMap();
+    private Set<String> missingValSet = new HashSet<String>();
+    private Map<String, Integer> categoryValIndex = new HashMap<String, Integer>();
+    private Map<String, Long> categoryMap = new HashMap<String, Long>();
     private long missCounter;
     private double unitSum = 0.0;
 
@@ -22,7 +22,7 @@ public class CategoryCounter extends Counter {
         this.categories = categories;
         this.binPosRate = binPosRate;
 
-        for (int i = 0; i < categories.size(); i ++) {
+        for(int i = 0; i < categories.size(); i++) {
             categoryMap.put(categories.get(i), 0L);
             categoryValIndex.put(categories.get(i), i);
         }
@@ -32,11 +32,11 @@ public class CategoryCounter extends Counter {
 
     @Override
     public void addData(String val) {
-        if (val == null || this.missingValSet.contains(val)) {
+        if(val == null || this.missingValSet.contains(val)) {
             missCounter++;
         } else {
             String sVal = val.toString();
-            if (categoryMap.containsKey(sVal)) {
+            if(categoryMap.containsKey(sVal)) {
                 categoryMap.put(sVal, categoryMap.get(sVal) + 1);
                 int index = categoryValIndex.get(sVal);
                 this.unitSum += this.binPosRate.get(index);
@@ -50,7 +50,7 @@ public class CategoryCounter extends Counter {
     public List<Long> getCounter() {
         List<Long> counters = new ArrayList<Long>();
 
-        for (int i = 0; i < categories.size(); i++) {
+        for(int i = 0; i < categories.size(); i++) {
             counters.add(categoryMap.get(categories.get(i)));
         }
 
@@ -64,7 +64,7 @@ public class CategoryCounter extends Counter {
         long total = getTotalInstCnt();
 
         double unitMean;
-        if ( total == 0 || total == missCounter ) {
+        if(total == 0 || total == missCounter) {
             unitMean = Double.NaN;
         } else {
             unitMean = this.unitSum / total;
@@ -83,7 +83,7 @@ public class CategoryCounter extends Counter {
     @Override
     public long getTotalInstCnt() {
         long total = 0;
-        for (Long val : categoryMap.values()) {
+        for(Long val: categoryMap.values()) {
             total += val;
         }
         return total + missCounter;
