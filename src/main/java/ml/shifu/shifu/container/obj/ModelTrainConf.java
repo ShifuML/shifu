@@ -180,7 +180,7 @@ public class ModelTrainConf {
             List<String> func = new ArrayList<String>();
             func.add("tanh");
             params.put(NNTrainer.ACTIVATION_FUNC, func);
-            // hide LearningDecay since confused for users 
+            // hide LearningDecay since confused for users
             // params.put("LearningDecay", 0.0);
             params.put("RegularizedConstant", 0.0);
         } else if(ALGORITHM.SVM.equals(alg)) {
@@ -188,16 +188,22 @@ public class ModelTrainConf {
             params.put(SVMTrainer.SVM_GAMMA, 1.0);
             params.put(SVMTrainer.SVM_CONST, 1.0);
         } else if(ALGORITHM.RF.equals(alg)) {
-            params.put("FeatureSubsetStrategy", "Q");
+            params.put("FeatureSubsetStrategy", "ALL");
             params.put("MaxDepth", 10);
+            params.put("MinInstancesPerNode", 1);
+            params.put("MinInfoGain", 0.0);
             params.put("MaxStatsMemoryMB", 256);
             params.put("Impurity", "variance");
+            params.put("Loss", "squared");
         } else if(ALGORITHM.GBDT.equals(alg)) {
-            params.put("FeatureSubsetStrategy", "Q");
+            params.put("FeatureSubsetStrategy", "ALL");
             params.put("MaxDepth", 10);
+            params.put("MinInstancesPerNode", 1);
+            params.put("MinInfoGain", 0.0);
             params.put("MaxStatsMemoryMB", 256);
             params.put("Impurity", "variance");
             params.put(NNTrainer.LEARNING_RATE, 0.1);
+            params.put("Loss", "squared");
         } else if(ALGORITHM.LR.equals(alg)) {
             params.put(LogisticRegressionTrainer.LEARNING_RATE, 0.1);
             params.put("RegularizedConstant", 0.0);

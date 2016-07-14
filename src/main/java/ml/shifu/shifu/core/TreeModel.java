@@ -116,7 +116,12 @@ public class TreeModel extends BasicML implements MLRegression {
             predictSum += predictNode(treeNode.getNode(), data) * weight;
         }
 
-        double finalPredict = predictSum / weightSum;
+        double finalPredict;
+        if(this.isGBDT) {
+            finalPredict = predictSum;
+        } else {
+            finalPredict = predictSum / weightSum;
+        }
         MLData result = new BasicMLData(1);
         result.setData(0, finalPredict);
         return result;
@@ -191,8 +196,29 @@ public class TreeModel extends BasicML implements MLRegression {
                 }
             }
         }
+
+        Map<Integer, Integer> columnMapping = new HashMap<Integer, Integer>(columnConfigList.size(), 1f);
+        int[] inputOutputIndex = DTrainUtils.getNumericAndCategoricalInputAndOutputCounts(columnConfigList);
+        boolean isAfterVarSelect = inputOutputIndex[3] == 1 ? true : false;
+        int index = 0;
+        for(int i = 0; i < columnConfigList.size(); i++) {
+            ColumnConfig columnConfig = columnConfigList.get(i);
+            if(!isAfterVarSelect) {
+                if(!columnConfig.isMeta() && !columnConfig.isTarget() && CommonUtils.isGoodCandidate(columnConfig)) {
+                    columnMapping.put(columnConfig.getColumnNum(), index);
+                    index += 1;
+                }
+            } else {
+                if(columnConfig != null && !columnConfig.isMeta() && !columnConfig.isTarget()
+                        && columnConfig.isFinalSelect()) {
+                    columnMapping.put(columnConfig.getColumnNum(), index);
+                    index += 1;
+                }
+            }
+        }
+
         return new TreeModel(trees, weights, CommonConstants.GBDT_ALG_NAME.equalsIgnoreCase(algorithm),
-                columnConfigList);
+                columnConfigList, columnMapping);
     }
 
     /*

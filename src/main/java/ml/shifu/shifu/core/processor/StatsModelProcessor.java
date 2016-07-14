@@ -461,45 +461,47 @@ public class StatsModelProcessor extends BasicModelProcessor implements Processo
      * @throws IOException
      */
     private void runPSI() throws IOException {
+        if(StringUtils.isEmpty(modelConfig.getPsiColumnName())) {
+            return;
+        }
+
         log.info("Run PSI to use {} to compute the PSI ", modelConfig.getPsiColumnName());
 
-        if(StringUtils.isNotEmpty(modelConfig.getPsiColumnName())) {
-            ColumnConfig columnConfig = CommonUtils.findColumnConfigByName(columnConfigList,
-                    modelConfig.getPsiColumnName());
+        ColumnConfig columnConfig = CommonUtils
+                .findColumnConfigByName(columnConfigList, modelConfig.getPsiColumnName());
 
-            if(columnConfig == null || !columnConfig.isMeta()) {
-                log.warn("Unable to use the PSI column name specify in ModelConfig to compute PSI");
-                return;
-            }
+        if(columnConfig == null || !columnConfig.isMeta()) {
+            log.warn("Unable to use the PSI column name specify in ModelConfig to compute PSI");
+            return;
+        }
 
-            log.info("Start to use {} to compute the PSI ", columnConfig.getColumnName());
+        log.info("Start to use {} to compute the PSI ", columnConfig.getColumnName());
 
-            Map<String, String> paramsMap = new HashMap<String, String>();
-            paramsMap.put("delimiter", CommonUtils.escapePigString(modelConfig.getDataSetDelimiter()));
-            paramsMap.put("PSIColumn", modelConfig.getPsiColumnName().trim());
-            paramsMap.put("column_parallel", Integer.toString(columnConfigList.size() / 10));
-            paramsMap.put("value_index", "2");
+        Map<String, String> paramsMap = new HashMap<String, String>();
+        paramsMap.put("delimiter", CommonUtils.escapePigString(modelConfig.getDataSetDelimiter()));
+        paramsMap.put("PSIColumn", modelConfig.getPsiColumnName().trim());
+        paramsMap.put("column_parallel", Integer.toString(columnConfigList.size() / 10));
+        paramsMap.put("value_index", "2");
 
-            PigExecutor.getExecutor().submitJob(modelConfig, pathFinder.getAbsolutePath("scripts/PSI.pig"), paramsMap);
+        PigExecutor.getExecutor().submitJob(modelConfig, pathFinder.getAbsolutePath("scripts/PSI.pig"), paramsMap);
 
-            List<Scanner> scanners = ShifuFileUtils.getDataScanners(pathFinder.getPSIInfoPath(),
-                    modelConfig.getDataSet().getSource());
+        List<Scanner> scanners = ShifuFileUtils.getDataScanners(pathFinder.getPSIInfoPath(), modelConfig.getDataSet()
+                .getSource());
 
-            for(Scanner scanner: scanners) {
-                while(scanner.hasNext()) {
-                    String[] output = scanner.nextLine().trim().split("\\|");
+        for(Scanner scanner: scanners) {
+            while(scanner.hasNext()) {
+                String[] output = scanner.nextLine().trim().split("\\|");
 
-                    try {
-                        int columnNum = Integer.parseInt(output[0]);
-                        ColumnConfig config = this.columnConfigList.get(columnNum);
-                        config.setPSI(Double.parseDouble(output[1]));
-                        config.setUnitStats(
-                                Arrays.asList(StringUtils.split(output[2], CalculateStatsUDF.CATEGORY_VAL_SEPARATOR)));
-                    } catch (Exception e) {
-                        log.error("error in parsing", e);
-                    }
-
+                try {
+                    int columnNum = Integer.parseInt(output[0]);
+                    ColumnConfig config = this.columnConfigList.get(columnNum);
+                    config.setPSI(Double.parseDouble(output[1]));
+                    config.setUnitStats(Arrays.asList(StringUtils.split(output[2],
+                            CalculateStatsUDF.CATEGORY_VAL_SEPARATOR)));
+                } catch (Exception e) {
+                    log.error("error in parsing", e);
                 }
+
             }
         }
 
