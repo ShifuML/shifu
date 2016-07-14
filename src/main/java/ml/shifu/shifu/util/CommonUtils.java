@@ -973,13 +973,13 @@ public final class CommonUtils {
             String val) {
         Double normalizeValue = null;
         if(CommonUtils.isDesicionTreeAlgorithm(modelConfig.getAlgorithm())) {
-            normalizeValue = Normalizer.normalize(config, val, cutoff, modelConfig.getNormalizeType());
-        } else {
             try {
                 normalizeValue = Double.parseDouble(val);
             } catch (Exception e) {
                 normalizeValue = Normalizer.defaultMissingValue(config);
             }
+        } else {
+            normalizeValue = Normalizer.normalize(config, val, cutoff, modelConfig.getNormalizeType());
         }
         return normalizeValue;
     }

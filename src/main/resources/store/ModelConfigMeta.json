@@ -532,6 +532,16 @@
                         "directive": "input",
                         "defval" : 10
                     }, {
+                        "name" : "MinInstancesPerNode",
+                        "type" : "number",
+                        "directive": "input",
+                        "defval" : 1
+                    }, {
+                        "name" : "MinInfoGain",
+                        "type" : "number",
+                        "directive": "input",
+                        "defval" : 0.0
+                    }, {
                         "name" : "MaxStatsMemoryMB",
                         "type" : "number",
                         "directive": "input",
@@ -554,7 +564,11 @@
                         "options": [
                             {"label": "ALL", "value":"all"},
                             {"label": "HALF", "value":"half"},
-                            {"label": "ONETHIRD", "value":"onethird"}
+                            {"label": "ONETHIRD", "value":"onethird"},
+                            {"label": "TWOTHIRDS", "value":"twothirds"},
+                            {"label": "AUTO", "value":"auto"},
+                            {"label": "SQRT", "value":"sqrt"},
+                            {"label": "LOG2", "value":"log2"}
                         ]
                     }, {
                         "name" : "Loss",

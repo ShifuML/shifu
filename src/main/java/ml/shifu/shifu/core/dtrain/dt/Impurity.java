@@ -43,6 +43,16 @@ public abstract class Impurity {
     protected int statsSize;
 
     /**
+     * Per node, min instances, if less than this value, such gain info will be ignored.
+     */
+    protected int minInstancesPerNode = 1;
+
+    /**
+     * Min info gain, if less than this value, such gain info will be ignored.
+     */
+    protected double minInfoGain = 0d;
+
+    /**
      * Compute impurity by feature statistics. Stats array are for all bins.
      */
     public abstract GainInfo computeImpurity(double[] stats, ColumnConfig confg);
@@ -82,6 +92,12 @@ class Variance extends Impurity {
         super.statsSize = 3;
     }
 
+    public Variance(int minInstancesPerNode, double minInfoGain) {
+        super.statsSize = 3;
+        super.minInstancesPerNode = minInstancesPerNode;
+        super.minInfoGain = minInfoGain;
+    }
+
     @Override
     public GainInfo computeImpurity(double[] stats, ColumnConfig config) {
         double count = 0d, sum = 0d, sumSquare = 0d;
@@ -107,11 +123,18 @@ class Variance extends Impurity {
             rightSum = sum - leftSum;
             rightSumSquare = sumSquare - leftSumSquare;
 
+            if(leftCount <= minInstancesPerNode || rightCount <= minInstancesPerNode) {
+                continue;
+            }
+
             double leftWeight = leftCount / count;
             double rightWeight = rightCount / count;
             double leftImpurity = getImpurity(leftCount, leftSum, leftSumSquare);
             double rightImpurity = getImpurity(rightCount, rightSum, rightSumSquare);
             double gain = impurity - leftWeight * leftImpurity - rightWeight * rightImpurity;
+            if(gain <= minInfoGain) {
+                continue;
+            }
 
             Split split = null;
             if(config.isCategorical()) {
@@ -128,8 +151,7 @@ class Variance extends Impurity {
             internalGainList.add(new GainInfo(gain, impurity, predict, leftImpurity, rightImpurity, leftPredict,
                     rightPredict, split));
         }
-        GainInfo maxGain = GainInfo.getGainInfoByMaxGain(internalGainList);
-        return maxGain;
+        return GainInfo.getGainInfoByMaxGain(internalGainList);
     }
 
     private double getImpurity(double count, double sum, double sumSquare) {
@@ -152,9 +174,11 @@ class Variance extends Impurity {
  */
 class Entropy extends Impurity {
 
-    public Entropy(int numClasses) {
+    public Entropy(int numClasses, int minInstancesPerNode, double minInfoGain) {
         assert numClasses > 0;
         super.statsSize = numClasses;
+        super.minInstancesPerNode = minInstancesPerNode;
+        super.minInfoGain = minInfoGain;
     }
 
     @Override
@@ -190,6 +214,11 @@ class Entropy extends Impurity {
                 rightStatByClasses[j] = statsByClasses[j] - leftStatByClasses[j];
             }
             InternalEntropyInfo rightInfo = getEntropyInterInfo(rightStatByClasses);
+
+            if(leftInfo.sumAll <= minInstancesPerNode || rightInfo.sumAll <= minInstancesPerNode) {
+                continue;
+            }
+
             Predict rightPredict = new Predict(
                     rightInfo.sumAll == 0d ? 0d : (rightStatByClasses[1] / rightInfo.sumAll),
                     rightInfo.indexOfLargestElement);
@@ -198,6 +227,10 @@ class Entropy extends Impurity {
             double rightWeight = info.sumAll == 0d ? 0d : (rightInfo.sumAll / info.sumAll);
 
             double gain = info.impurity - leftWeight * leftInfo.impurity - rightWeight * rightInfo.impurity;
+            if(gain <= minInfoGain) {
+                continue;
+            }
+
             Split split = null;
             if(config.isCategorical()) {
                 leftCategories.add(config.getBinCategory().get(i));
@@ -269,9 +302,11 @@ class Entropy extends Impurity {
  */
 class Gini extends Impurity {
 
-    public Gini(int numClasses) {
+    public Gini(int numClasses, int minInstancesPerNode, double minInfoGain) {
         assert numClasses > 0;
         super.statsSize = numClasses;
+        super.minInstancesPerNode = minInstancesPerNode;
+        super.minInfoGain = minInfoGain;
     }
 
     @Override
@@ -307,12 +342,21 @@ class Gini extends Impurity {
                 rightStatByClasses[j] = statsByClasses[j] - leftStatByClasses[j];
             }
             InternalEntropyInfo rightInfo = getGiniInfo(rightStatByClasses);
+
+            if(leftInfo.sumAll <= minInstancesPerNode || rightInfo.sumAll <= minInstancesPerNode) {
+                continue;
+            }
+
             Predict rightPredict = new Predict(rightInfo.sumAll == 0d ? 0d : rightStatByClasses[1] / rightInfo.sumAll,
                     rightInfo.indexOfLargestElement);
 
             double leftWeight = info.sumAll == 0d ? 0d : (leftInfo.sumAll / info.sumAll);
             double rightWeight = info.sumAll == 0d ? 0d : (rightInfo.sumAll / info.sumAll);
             double gain = info.impurity - leftWeight * leftInfo.impurity - rightWeight * rightInfo.impurity;
+            if(gain <= minInfoGain) {
+                continue;
+            }
+
             Split split = null;
             if(config.isCategorical()) {
                 leftCategories.add(config.getBinCategory().get(i));

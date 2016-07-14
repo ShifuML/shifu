@@ -151,7 +151,20 @@ public class DTMaster extends AbstractMasterComputable<DTMasterParams, DTWorkerP
      */
     private Queue<TreeNode> queue;
 
+    /**
+     * How many workers, this is used for memeory usage
+     */
     private int workerNumber;
+
+    /**
+     * Input features numbers
+     */
+    private int inputNum;
+
+    /**
+     * Cache all features
+     */
+    private List<Integer> allFeatures;
 
     @Override
     public DTMasterParams doCompute(MasterContext<DTMasterParams, DTWorkerParams> context) {
@@ -193,19 +206,25 @@ public class DTMaster extends AbstractMasterComputable<DTMasterParams, DTWorkerP
                 int columnNum = gainEntry.getKey();
                 ColumnConfig config = this.columnConfigList.get(columnNum);
                 double[] statsArray = gainEntry.getValue();
-                // LOG.info("fstatssss: {}", Arrays.toString(statsArray));
-                gainList.add(this.impurity.computeImpurity(statsArray, config));
+                GainInfo gainInfo = this.impurity.computeImpurity(statsArray, config);
+                if(gainInfo != null) {
+                    gainList.add(gainInfo);
+                }
             }
 
             GainInfo maxGainInfo = GainInfo.getGainInfoByMaxGain(gainList);
+            if(maxGainInfo == null) {
+                // null gain info, set to leaf and continue next stats
+                doneNode.setLeaf(true);
+                continue;
+            }
             populateGainInfoToNode(doneNode, maxGainInfo);
 
-            // another stop condition: max instance count
             boolean isLeaf = maxGainInfo.getGain() <= 0d || Node.indexToLevel(doneNode.getId()) == this.maxDepth;
             doneNode.setLeaf(isLeaf);
             if(!doneNode.isLeaf()) {
                 boolean leftChildIsLeaf = Node.indexToLevel(doneNode.getId()) + 1 == this.maxDepth
-                        || (maxGainInfo.getLeftImpurity() == 0.0);
+                        || Double.compare(maxGainInfo.getLeftImpurity(), 0d) == 0;
                 // such node is just set into isLeaf to true, a new node is created with leaf flag but will be changed
                 // to final leaf in later iteration
                 int leftIndex = Node.leftIndex(doneNode.getId());
@@ -218,7 +237,8 @@ public class DTMaster extends AbstractMasterComputable<DTMasterParams, DTWorkerP
                 }
 
                 boolean rightChildIsLeaf = Node.indexToLevel(doneNode.getId()) + 1 == this.maxDepth
-                        || (maxGainInfo.getRightImpurity() == 0.0);
+                        || Double.compare(maxGainInfo.getRightImpurity(), 0d) == 0;
+
                 // such node is just set into isLeaf to true
                 int rightIndex = Node.rightIndex(doneNode.getId());
                 Node right = new Node(rightIndex, maxGainInfo.getRightPredict(), maxGainInfo.getRightImpurity(), true);
@@ -266,6 +286,7 @@ public class DTMaster extends AbstractMasterComputable<DTMasterParams, DTWorkerP
                 nodeIndexInGroup += 1;
             }
             masterParams.setTodoNodes(todoNodes);
+            masterParams.setSwitchToNextTree(false);
             LOG.info("Todo node size is {}", todoNodes.size());
         }
         masterParams.setTrees(trees);
@@ -299,7 +320,7 @@ public class DTMaster extends AbstractMasterComputable<DTMasterParams, DTWorkerP
             }
         }
         // times worker number to avoid oom in master, as combinable DTWorkerParams, user half of worker number
-        statsMem = statsMem * this.workerNumber;
+        statsMem = statsMem * this.workerNumber / 2;
         return statsMem;
     }
 
@@ -342,47 +363,59 @@ public class DTMaster extends AbstractMasterComputable<DTMasterParams, DTWorkerP
     }
 
     private List<Integer> getSubsamplingFeatures(FeatureSubsetStrategy featureSubsetStrategy) {
-        List<Integer> features = new ArrayList<Integer>();
-        Random random = new Random();
         switch(featureSubsetStrategy) {
             case HALF:
-                for(ColumnConfig config: columnConfigList) {
-                    if(isAfterVarSelect) {
-                        if(config.isFinalSelect() && !config.isTarget() && !config.isMeta()) {
-                            if(random.nextDouble() >= 0.5d) {
-                                features.add(config.getColumnNum());
-                            }
-                        }
-                    } else {
-                        if(!config.isMeta() && !config.isTarget() && CommonUtils.isGoodCandidate(config)) {
-                            if(random.nextDouble() >= 0.5d) {
-                                features.add(config.getColumnNum());
-                            }
-                        }
-                    }
-                }
-                break;
+                return sampleFeaturesForNodeStats(this.allFeatures, this.allFeatures.size() / 2);
             case ONETHIRD:
-                for(ColumnConfig config: columnConfigList) {
-                    if(isAfterVarSelect) {
-                        if(config.isFinalSelect() && !config.isTarget() && !config.isMeta()) {
-                            if(random.nextDouble() < 0.33d) {
-                                features.add(config.getColumnNum());
-                            }
-                        }
-                    } else {
-                        if(!config.isMeta() && !config.isTarget() && CommonUtils.isGoodCandidate(config)) {
-                            if(random.nextDouble() < 0.33d) {
-                                features.add(config.getColumnNum());
-                            }
-                        }
-                    }
+                return sampleFeaturesForNodeStats(this.allFeatures, this.allFeatures.size() / 3);
+            case TWOTHIRDS:
+                return sampleFeaturesForNodeStats(this.allFeatures, this.allFeatures.size() * 2 / 3);
+            case SQRT:
+                return sampleFeaturesForNodeStats(this.allFeatures,
+                        (int) (this.allFeatures.size() * Math.sqrt(this.inputNum) / this.inputNum));
+            case LOG2:
+                return sampleFeaturesForNodeStats(this.allFeatures,
+                        (int) (this.allFeatures.size() * Math.log(this.inputNum) / Math.log(2) / this.inputNum));
+            case AUTO:
+                if(this.treeNum > 1) {
+                    return sampleFeaturesForNodeStats(this.allFeatures, this.allFeatures.size() / 2);
+                } else {
+                    return new ArrayList<Integer>();
                 }
-                break;
             case ALL:
             default:
-                // an empty list means all
-                break;
+                return new ArrayList<Integer>();
+        }
+    }
+
+    private List<Integer> getAllFeatureList(List<ColumnConfig> columnConfigList, boolean isAfterVarSelect) {
+        List<Integer> features = new ArrayList<Integer>();
+        for(ColumnConfig config: columnConfigList) {
+            if(isAfterVarSelect) {
+                if(config.isFinalSelect() && !config.isTarget() && !config.isMeta()) {
+                    features.add(config.getColumnNum());
+                }
+            } else {
+                if(!config.isMeta() && !config.isTarget() && CommonUtils.isGoodCandidate(config)) {
+                    features.add(config.getColumnNum());
+                }
+            }
+        }
+        return features;
+    }
+
+    private List<Integer> sampleFeaturesForNodeStats(List<Integer> allFeatures, int sample) {
+        List<Integer> features = new ArrayList<Integer>(sample);
+        for(int i = 0; i < sample; i++) {
+            features.add(allFeatures.get(i));
+        }
+
+        Random random = new Random();
+        for(int i = sample; i < allFeatures.size(); i++) {
+            int replacementIndex = (int) (random.nextDouble() * i);
+            if(replacementIndex >= 0 && replacementIndex < sample) {
+                features.set(replacementIndex, allFeatures.get(i));
+            }
         }
         return features;
     }
@@ -408,8 +441,9 @@ public class DTMaster extends AbstractMasterComputable<DTMasterParams, DTWorkerP
 
         // check if variables are set final selected
         int[] inputOutputIndex = DTrainUtils.getNumericAndCategoricalInputAndOutputCounts(this.columnConfigList);
+        this.inputNum = inputOutputIndex[0] + inputOutputIndex[1];
         this.isAfterVarSelect = inputOutputIndex[3] == 1 ? true : false;
-
+        this.allFeatures = this.getAllFeatureList(columnConfigList, isAfterVarSelect);
         // tree related parameters initialization
         this.featureSubsetStrategy = FeatureSubsetStrategy.of(this.modelConfig.getTrain().getParams()
                 .get("FeatureSubsetStrategy").toString());
@@ -429,16 +463,20 @@ public class DTMaster extends AbstractMasterComputable<DTMasterParams, DTWorkerP
         if(this.modelConfig.isMultiClassification()) {
             numClasses = this.modelConfig.getFlattenTags().size();
         }
+
+        int minInstancesPerNode = Integer.valueOf(this.modelConfig.getParams().get("MinInstancesPerNode").toString());
+        double minInfoGain = Double.valueOf(this.modelConfig.getParams().get("MinInfoGain").toString());
         if(imStr.equalsIgnoreCase("entropy")) {
-            impurity = new Entropy(numClasses);
+            impurity = new Entropy(numClasses, minInstancesPerNode, minInfoGain);
         } else if(imStr.equalsIgnoreCase("gini")) {
-            impurity = new Gini(numClasses);
+            impurity = new Gini(numClasses, minInstancesPerNode, minInfoGain);
         } else {
-            impurity = new Variance();
+            impurity = new Variance(minInstancesPerNode, minInfoGain);
         }
         LOG.info("Master init params: isAfterVarSel={}, featureSubsetStrategy={}, maxDepth={}, maxStatsMemory={}, "
-                + "treeNum={}, impurity={}, workerNumber={}", isAfterVarSelect, featureSubsetStrategy, maxDepth,
-                maxStatsMemory, treeNum, imStr, this.workerNumber);
+                + "treeNum={}, impurity={}, workerNumber={}, minInstancesPerNode={}, minInfoGain={}", isAfterVarSelect,
+                featureSubsetStrategy, maxDepth, maxStatsMemory, treeNum, imStr, this.workerNumber,
+                minInstancesPerNode, minInfoGain);
         this.queue = new LinkedList<TreeNode>();
 
         // initialize trees

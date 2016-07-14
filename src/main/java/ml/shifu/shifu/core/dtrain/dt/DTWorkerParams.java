@@ -56,17 +56,6 @@ public class DTWorkerParams extends HaltBytable implements Combinable<DTWorkerPa
      */
     private Map<Integer, NodeStats> nodeStatsMap;
 
-    /*
-     * (non-Javadoc)
-     * 
-     * @see java.lang.Object#toString()
-     */
-    @Override
-    public String toString() {
-        return "DTWorkerParams [count=" + count + ", squareError=" + squareError + ", nodeStatsMap=" + nodeStatsMap
-                + "]";
-    }
-
     public DTWorkerParams() {
     }
 
@@ -151,6 +140,12 @@ public class DTWorkerParams extends HaltBytable implements Combinable<DTWorkerPa
      */
     public void setSquareError(double squareError) {
         this.squareError = squareError;
+    }
+
+    @Override
+    public String toString() {
+        return "DTWorkerParams [count=" + count + ", squareError=" + squareError + ", nodeStatsMap=" + nodeStatsMap
+                + "]";
     }
 
     /**
