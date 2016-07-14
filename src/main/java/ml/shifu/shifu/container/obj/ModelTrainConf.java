@@ -180,7 +180,7 @@ public class ModelTrainConf {
             List<String> func = new ArrayList<String>();
             func.add("tanh");
             params.put(NNTrainer.ACTIVATION_FUNC, func);
-            // hide LearningDecay since confused for users
+            // hide LearningDecay since confused for users 
             // params.put("LearningDecay", 0.0);
             params.put("RegularizedConstant", 0.0);
         } else if(ALGORITHM.SVM.equals(alg)) {
