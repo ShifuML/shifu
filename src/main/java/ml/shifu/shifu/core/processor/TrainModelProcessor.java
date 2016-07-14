@@ -660,15 +660,15 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
         if(this.isDebug()) {
             args.add(String.format(CommonConstants.MAPREDUCE_PARAM_FORMAT,
                     GuaguaMapReduceConstants.MAPRED_CHILD_JAVA_OPTS,
-                    "-Xms1024m -Xmx1638m -verbose:gc -XX:+PrintGCDetails -XX:+PrintGCTimeStamps"));
+                    "-Xms2048m -Xmx2048m -verbose:gc -XX:+PrintGCDetails -XX:+PrintGCTimeStamps"));
         } else {
             args.add(String.format(CommonConstants.MAPREDUCE_PARAM_FORMAT,
                     GuaguaMapReduceConstants.MAPRED_CHILD_JAVA_OPTS,
-                    "-Xms1024m -Xmx1638m -verbose:gc -XX:+PrintGCDetails -XX:+PrintGCTimeStamps"));
+                    "-Xms2048m -Xmx2048m -verbose:gc -XX:+PrintGCDetails -XX:+PrintGCTimeStamps"));
             args.add(String
                     .format(CommonConstants.MAPREDUCE_PARAM_FORMAT,
                             "mapreduce.map.java.opts",
-                            "-Xms1024m -Xmx1638m -server -XX:+UseParNewGC -XX:+UseConcMarkSweepGC "
+                            "-Xms2048m -Xmx2048m -server -XX:+UseParNewGC -XX:+UseConcMarkSweepGC "
                                     + "-XX:CMSInitiatingOccupancyFraction=70 -verbose:gc -XX:+PrintGCDetails -XX:+PrintGCTimeStamps"));
         }
         if(super.modelConfig.getNormalize().getIsParquet()) {
