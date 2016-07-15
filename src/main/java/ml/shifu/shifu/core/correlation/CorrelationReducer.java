@@ -25,6 +25,7 @@ import java.util.Map.Entry;
 
 import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.container.obj.ModelConfig;
+import ml.shifu.shifu.container.obj.ModelNormalizeConf.Correlation;
 import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
 import ml.shifu.shifu.util.CommonUtils;
 import ml.shifu.shifu.util.Constants;
@@ -64,13 +65,14 @@ public class CorrelationReducer extends Reducer<IntWritable, CorrelationWritable
     /**
      * Model Config read from HDFS
      */
-    @SuppressWarnings("unused")
     private ModelConfig modelConfig;
 
     /**
      * Correlation map with <column_idm columnInfo>
      */
     private Map<Integer, CorrelationWritable> correlationMap;
+
+    private Correlation correlation;
 
     /**
      * Load all configurations for modelConfig and columnConfigList from source type.
@@ -97,6 +99,7 @@ public class CorrelationReducer extends Reducer<IntWritable, CorrelationWritable
         this.outputKey = new IntWritable();
         this.outputValue = new Text();
         this.correlationMap = new HashMap<Integer, CorrelationWritable>();
+        this.correlation = this.modelConfig.getNormalize().getCorrelation();
     }
 
     @Override
@@ -106,6 +109,11 @@ public class CorrelationReducer extends Reducer<IntWritable, CorrelationWritable
         CorrelationWritable finalCw = new CorrelationWritable();
         finalCw.setColumnIndex(key.get());
         finalCw.setXySum(new double[this.columnConfigList.size()]);
+        finalCw.setXxSum(new double[this.columnConfigList.size()]);
+        finalCw.setYySum(new double[this.columnConfigList.size()]);
+        finalCw.setAdjustCount(new double[this.columnConfigList.size()]);
+        finalCw.setAdjustSum(new double[this.columnConfigList.size()]);
+        finalCw.setAdjustSumSquare(new double[this.columnConfigList.size()]);
 
         Iterator<CorrelationWritable> cwIt = values.iterator();
         while(cwIt.hasNext()) {
@@ -117,6 +125,32 @@ public class CorrelationReducer extends Reducer<IntWritable, CorrelationWritable
             double[] xySum = cw.getXySum();
             for(int i = 0; i < finalXySum.length; i++) {
                 finalXySum[i] += xySum[i];
+            }
+            double[] finalXxSum = finalCw.getXxSum();
+            double[] xxSum = cw.getXxSum();
+            for(int i = 0; i < finalXxSum.length; i++) {
+                finalXxSum[i] += xxSum[i];
+            }
+            double[] finalYySum = finalCw.getYySum();
+            double[] yySum = cw.getYySum();
+            for(int i = 0; i < finalYySum.length; i++) {
+                finalYySum[i] += yySum[i];
+            }
+
+            double[] finalAdjustCount = finalCw.getAdjustCount();
+            double[] adjustCount = cw.getAdjustCount();
+            for(int i = 0; i < finalAdjustCount.length; i++) {
+                finalAdjustCount[i] += adjustCount[i];
+            }
+            double[] finalAdjustSum = finalCw.getAdjustSum();
+            double[] adjustSum = cw.getAdjustSum();
+            for(int i = 0; i < finalAdjustSum.length; i++) {
+                finalAdjustSum[i] += adjustSum[i];
+            }
+            double[] finalAdjustSumSquare = finalCw.getAdjustSumSquare();
+            double[] adjustSumSquare = cw.getAdjustSumSquare();
+            for(int i = 0; i < finalAdjustSumSquare.length; i++) {
+                finalAdjustSumSquare[i] += adjustSumSquare[i];
             }
         }
         this.correlationMap.put(key.get(), finalCw);
@@ -141,16 +175,33 @@ public class CorrelationReducer extends Reducer<IntWritable, CorrelationWritable
                     continue;
                 }
                 CorrelationWritable yCw = this.correlationMap.get(i);
-                // Count*Sum(X*Y) - SUM(X)*SUM(Y)
-                double numerator = xCw.getCount() * xCw.getXySum()[i] - xCw.getSum() * yCw.getSum();
-                // Math.sqrt ( COUNT * SUM(X2) - SUM(X) * SUM(X) ) * Math.sqrt ( COUNT * SUM(Y2) - SUM(Y) * SUM(Y) )
-                double denominator1 = Math.sqrt(xCw.getCount() * xCw.getSumSquare() - xCw.getSum() * xCw.getSum());
-                double denominator2 = Math.sqrt(yCw.getCount() * yCw.getSumSquare() - yCw.getSum() * yCw.getSum());
-                if(Double.compare(denominator1, Double.valueOf(0d)) == 0
-                        || Double.compare(denominator2, Double.valueOf(0d)) == 0) {
-                    corrArray[i] = 0d;
-                } else {
-                    corrArray[i] = numerator / (denominator1 * denominator2);
+                if(correlation == Correlation.Pearson) {
+                    // Count*Sum(X*Y) - SUM(X)*SUM(Y)
+                    double numerator = xCw.getAdjustCount()[i] * xCw.getXySum()[i] - xCw.getAdjustSum()[i]
+                            * yCw.getAdjustSum()[i];
+                    // Math.sqrt ( COUNT * SUM(X2) - SUM(X) * SUM(X) ) * Math.sqrt ( COUNT * SUM(Y2) - SUM(Y) * SUM(Y) )
+                    double denominator1 = Math.sqrt(xCw.getAdjustCount()[i] * xCw.getAdjustSumSquare()[i]
+                            - xCw.getAdjustSum()[i] * xCw.getAdjustSum()[i]);
+                    double denominator2 = Math.sqrt(yCw.getAdjustCount()[i] * yCw.getAdjustSumSquare()[i]
+                            - yCw.getAdjustSum()[i] * yCw.getAdjustSum()[i]);
+                    if(Double.compare(denominator1, Double.valueOf(0d)) == 0
+                            || Double.compare(denominator2, Double.valueOf(0d)) == 0) {
+                        corrArray[i] = 0d;
+                    } else {
+                        corrArray[i] = numerator / (denominator1 * denominator2);
+                    }
+                } else if(correlation == Correlation.NormPearson) {
+                    // Count*Sum(X*Y) - SUM(X)*SUM(Y)
+                    double numerator = xCw.getCount() * xCw.getXySum()[i] - xCw.getSum() * yCw.getSum();
+                    // Math.sqrt ( COUNT * SUM(X2) - SUM(X) * SUM(X) ) * Math.sqrt ( COUNT * SUM(Y2) - SUM(Y) * SUM(Y) )
+                    double denominator1 = Math.sqrt(xCw.getCount() * xCw.getSumSquare() - xCw.getSum() * xCw.getSum());
+                    double denominator2 = Math.sqrt(yCw.getCount() * yCw.getSumSquare() - yCw.getSum() * yCw.getSum());
+                    if(Double.compare(denominator1, Double.valueOf(0d)) == 0
+                            || Double.compare(denominator2, Double.valueOf(0d)) == 0) {
+                        corrArray[i] = 0d;
+                    } else {
+                        corrArray[i] = numerator / (denominator1 * denominator2);
+                    }
                 }
             }
             outputValue.set(Arrays.toString(corrArray));

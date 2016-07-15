@@ -196,10 +196,21 @@ public class NormalizeModelProcessor extends BasicModelProcessor implements Proc
         job.setMapOutputValueClass(CorrelationWritable.class);
 
         job.setInputFormatClass(CombineInputFormat.class);
-        FileInputFormat.setInputPaths(
-                job,
-                ShifuFileUtils.getFileSystemBySourceType(source).makeQualified(
-                        new Path(super.getPathFinder().getNormalizedDataPath())));
+        switch(modelConfig.getNormalize().getCorrelation()) {
+            case NormPearson:
+                FileInputFormat.setInputPaths(
+                        job,
+                        ShifuFileUtils.getFileSystemBySourceType(source).makeQualified(
+                                new Path(super.getPathFinder().getNormalizedDataPath())));
+                break;
+            case Pearson:
+            default:
+                FileInputFormat.setInputPaths(
+                        job,
+                        ShifuFileUtils.getFileSystemBySourceType(source).makeQualified(
+                                new Path(super.modelConfig.getDataSetRawPath())));
+                break;
+        }
 
         job.setReducerClass(CorrelationReducer.class);
         job.setNumReduceTasks(1);

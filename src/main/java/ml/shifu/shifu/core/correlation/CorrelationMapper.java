@@ -24,7 +24,9 @@ import java.util.Map.Entry;
 import ml.shifu.guagua.util.NumberFormatUtils;
 import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.container.obj.ModelConfig;
+import ml.shifu.shifu.container.obj.ModelNormalizeConf.Correlation;
 import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
+import ml.shifu.shifu.core.DataPurifier;
 import ml.shifu.shifu.util.CommonUtils;
 import ml.shifu.shifu.util.Constants;
 
@@ -48,10 +50,29 @@ public class CorrelationMapper extends Mapper<LongWritable, Text, IntWritable, C
     private final static Logger LOG = LoggerFactory.getLogger(CorrelationMapper.class);
 
     /**
+     * Default splitter used to split input record. Use one instance to prevent more news in Splitter.on.
+     */
+    private String dataSetDelimiter;
+
+    /**
      * Model Config read from HDFS
      */
-    @SuppressWarnings("unused")
     private ModelConfig modelConfig;
+
+    /**
+     * To filter records by customized expressions
+     */
+    private DataPurifier dataPurifier;
+
+    /**
+     * Weight column index.
+     */
+    private int weightedColumnNum = -1;
+
+    /**
+     * Tag column index
+     */
+    private int tagColumnNum = -1;
 
     /**
      * Output key cache to avoid new operation.
@@ -62,6 +83,8 @@ public class CorrelationMapper extends Mapper<LongWritable, Text, IntWritable, C
      * Correlation map with <column_idm columnInfo>
      */
     private Map<Integer, CorrelationWritable> correlationMap;
+
+    private Correlation correlation;
 
     /**
      * Column Config list read from HDFS
@@ -81,24 +104,71 @@ public class CorrelationMapper extends Mapper<LongWritable, Text, IntWritable, C
         }
     }
 
+    /**
+     * Load tag weight index field.
+     */
+    private void loadTagWeightNum() {
+        for(ColumnConfig config: this.columnConfigList) {
+            if(config.isTarget()) {
+                this.tagColumnNum = config.getColumnNum();
+                break;
+            }
+        }
+
+        if(this.tagColumnNum == -1) {
+            throw new RuntimeException("No valid target column.");
+        }
+    }
+
+    /**
+     * Load weight column index field.
+     */
+    private void loadWeightColumnNum() {
+        String weightColumnName = this.modelConfig.getDataSet().getWeightColumnName();
+        if(weightColumnName != null && weightColumnName.length() != 0) {
+            for(int i = 0; i < this.columnConfigList.size(); i++) {
+                ColumnConfig config = this.columnConfigList.get(i);
+                if(config.getColumnName().equals(weightColumnName)) {
+                    this.weightedColumnNum = i;
+                    break;
+                }
+            }
+        }
+    }
+
     @Override
     protected void setup(Context context) throws IOException, InterruptedException {
         loadConfigFiles(context);
 
+        this.dataSetDelimiter = this.modelConfig.getDataSetDelimiter();
+
+        this.dataPurifier = new DataPurifier(this.modelConfig);
+
+        loadWeightColumnNum();
+
+        loadTagWeightNum();
+
         this.outputKey = new IntWritable();
         this.correlationMap = new HashMap<Integer, CorrelationWritable>();
+        this.correlation = modelConfig.getNormalize().getCorrelation();
     }
 
     @Override
     protected void map(LongWritable key, Text value, Context context) throws IOException, InterruptedException {
         String valueStr = value.toString();
-        // StringUtils.isBlank is not used here to avoid import new jar
         if(valueStr == null || valueStr.length() == 0 || valueStr.trim().length() == 0) {
             LOG.warn("Empty input.");
             return;
         }
-
-        double[] dValues = getDoubleArray(CommonUtils.split(valueStr, Constants.DEFAULT_DELIMITER));
+        double[] dValues = null;
+        if(correlation == Correlation.Pearson) {
+            if(!this.dataPurifier.isFilterOut(valueStr)) {
+                return;
+            }
+            dValues = getDoubleArrayByRawArray(CommonUtils.split(valueStr, this.dataSetDelimiter));
+        } else if(correlation == Correlation.NormPearson) {
+            dValues = getDoubleArray(CommonUtils.split(valueStr, Constants.DEFAULT_DELIMITER));
+        }
         for(int i = 0; i < this.columnConfigList.size(); i++) {
             ColumnConfig columnConfig = this.columnConfigList.get(i);
             if(columnConfig.isMeta() || columnConfig.isTarget()) {
@@ -118,14 +188,80 @@ public class CorrelationMapper extends Mapper<LongWritable, Text, IntWritable, C
                 xySum = new double[this.columnConfigList.size()];
                 cw.setXySum(xySum);
             }
+            double[] xxSum = cw.getXxSum();
+            if(xxSum == null) {
+                xxSum = new double[this.columnConfigList.size()];
+                cw.setXxSum(xxSum);
+            }
+            double[] yySum = cw.getYySum();
+            if(yySum == null) {
+                yySum = new double[this.columnConfigList.size()];
+                cw.setYySum(xxSum);
+            }
+
+            double[] adjustCount = cw.getAdjustCount();
+            if(adjustCount == null) {
+                adjustCount = new double[this.columnConfigList.size()];
+                cw.setAdjustCount(adjustCount);
+            }
+            double[] adjustSum = cw.getAdjustSum();
+            if(adjustSum == null) {
+                adjustSum = new double[this.columnConfigList.size()];
+                cw.setAdjustSum(adjustSum);
+            }
+            double[] adjustSumSquare = cw.getAdjustSumSquare();
+            if(adjustSumSquare == null) {
+                adjustSumSquare = new double[this.columnConfigList.size()];
+                cw.setAdjustSumSquare(adjustSumSquare);
+            }
+
             for(int j = 0; j < this.columnConfigList.size(); j++) {
                 ColumnConfig otherColumnConfig = this.columnConfigList.get(j);
                 if(otherColumnConfig.isMeta() || otherColumnConfig.isTarget()) {
                     continue;
                 }
-                xySum[j] += dValues[i] * dValues[j];
+                if(Double.compare(dValues[i], Double.MIN_VALUE) != 0
+                        && Double.compare(dValues[j], Double.MIN_VALUE) != 0) {
+                    xySum[j] += dValues[i] * dValues[j];
+                    xxSum[j] += dValues[i] * dValues[i];
+                    yySum[j] += dValues[j] * dValues[j];
+                    adjustCount[j] += 1d;
+                    adjustSum[j] += dValues[i];
+                    adjustSumSquare[j] += dValues[i] * dValues[i];
+                }
             }
         }
+    }
+
+    private double[] getDoubleArrayByRawArray(String[] units) {
+        double[] dValues = new double[this.columnConfigList.size()];
+        for(int i = 0; i < this.columnConfigList.size(); i++) {
+            ColumnConfig columnConfig = this.columnConfigList.get(i);
+            if(columnConfig.isMeta() || columnConfig.isTarget()
+                    || columnConfig.getColumnNum() == this.weightedColumnNum) {
+                dValues[i] = 0d;
+            } else {
+                if(columnConfig.isNumerical()) {
+                    // if missing it is set to MIN_VALUE, then try to skip rows between
+                    dValues[i] = NumberFormatUtils.getDouble(units[i], Double.MIN_VALUE);
+                }
+                if(columnConfig.isCategorical()) {
+                    // TODO use set to replace indexOf
+                    int index = columnConfig.getBinCategory().indexOf(units[i]);
+                    if(index == -1) {
+                        dValues[i] = columnConfig.getBinPosRate().get(columnConfig.getBinPosRate().size() - 1);
+                    } else {
+                        Double binPosRate = columnConfig.getBinPosRate().get(index);
+                        if(binPosRate == null) {
+                            dValues[i] = columnConfig.getBinPosRate().get(columnConfig.getBinPosRate().size() - 1);
+                        } else {
+                            dValues[i] = binPosRate;
+                        }
+                    }
+                }
+            }
+        }
+        return dValues;
     }
 
     private double[] getDoubleArray(String[] units) {
