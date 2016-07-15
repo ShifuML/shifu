@@ -44,6 +44,16 @@ public class CorrelationWritable implements Writable {
 
     private double[] xySum;
 
+    private double[] xxSum;
+
+    private double[] yySum;
+
+    private double[] adjustCount;
+
+    private double[] adjustSum;
+
+    private double[] adjustSumSquare;
+
     /**
      * @return the columnIndex
      */
@@ -119,6 +129,81 @@ public class CorrelationWritable implements Writable {
         this.xySum = xySum;
     }
 
+    /**
+     * @return the xxSum
+     */
+    public double[] getXxSum() {
+        return xxSum;
+    }
+
+    /**
+     * @return the yySum
+     */
+    public double[] getYySum() {
+        return yySum;
+    }
+
+    /**
+     * @param xxSum
+     *            the xxSum to set
+     */
+    public void setXxSum(double[] xxSum) {
+        this.xxSum = xxSum;
+    }
+
+    /**
+     * @param yySum
+     *            the yySum to set
+     */
+    public void setYySum(double[] yySum) {
+        this.yySum = yySum;
+    }
+
+    /**
+     * @return the adjustCount
+     */
+    public double[] getAdjustCount() {
+        return adjustCount;
+    }
+
+    /**
+     * @return the adjustSum
+     */
+    public double[] getAdjustSum() {
+        return adjustSum;
+    }
+
+    /**
+     * @return the adjustSumSquare
+     */
+    public double[] getAdjustSumSquare() {
+        return adjustSumSquare;
+    }
+
+    /**
+     * @param adjustCount
+     *            the adjustCount to set
+     */
+    public void setAdjustCount(double[] adjustCount) {
+        this.adjustCount = adjustCount;
+    }
+
+    /**
+     * @param adjustSum
+     *            the adjustSum to set
+     */
+    public void setAdjustSum(double[] adjustSum) {
+        this.adjustSum = adjustSum;
+    }
+
+    /**
+     * @param adjustSumSquare
+     *            the adjustSumSquare to set
+     */
+    public void setAdjustSumSquare(double[] adjustSumSquare) {
+        this.adjustSumSquare = adjustSumSquare;
+    }
+
     @Override
     public void write(DataOutput out) throws IOException {
         out.writeInt(this.columnIndex);
@@ -133,6 +218,51 @@ public class CorrelationWritable implements Writable {
                 out.writeDouble(doub);
             }
         }
+
+        if(this.xxSum == null) {
+            out.writeInt(0);
+        } else {
+            out.writeInt(this.xxSum.length);
+            for(double doub: this.xxSum) {
+                out.writeDouble(doub);
+            }
+        }
+
+        if(this.yySum == null) {
+            out.writeInt(0);
+        } else {
+            out.writeInt(this.yySum.length);
+            for(double doub: this.yySum) {
+                out.writeDouble(doub);
+            }
+        }
+
+        if(this.adjustCount == null) {
+            out.writeInt(0);
+        } else {
+            out.writeInt(this.adjustCount.length);
+            for(double doub: this.adjustCount) {
+                out.writeDouble(doub);
+            }
+        }
+
+        if(this.adjustSum == null) {
+            out.writeInt(0);
+        } else {
+            out.writeInt(this.adjustSum.length);
+            for(double doub: this.adjustSum) {
+                out.writeDouble(doub);
+            }
+        }
+
+        if(this.adjustSumSquare == null) {
+            out.writeInt(0);
+        } else {
+            out.writeInt(this.adjustSumSquare.length);
+            for(double doub: this.adjustSumSquare) {
+                out.writeDouble(doub);
+            }
+        }
     }
 
     @Override
@@ -141,10 +271,41 @@ public class CorrelationWritable implements Writable {
         this.sum = in.readDouble();
         this.sumSquare = in.readDouble();
         this.count = in.readDouble();
+
         int length = in.readInt();
         this.xySum = new double[length];
         for(int i = 0; i < length; i++) {
             this.xySum[i] = in.readDouble();
+        }
+
+        length = in.readInt();
+        this.xxSum = new double[length];
+        for(int i = 0; i < length; i++) {
+            this.xxSum[i] = in.readDouble();
+        }
+
+        length = in.readInt();
+        this.yySum = new double[length];
+        for(int i = 0; i < length; i++) {
+            this.yySum[i] = in.readDouble();
+        }
+        
+        length = in.readInt();
+        this.adjustCount = new double[length];
+        for(int i = 0; i < length; i++) {
+            this.adjustCount[i] = in.readDouble();
+        }
+        
+        length = in.readInt();
+        this.adjustSum = new double[length];
+        for(int i = 0; i < length; i++) {
+            this.adjustSum[i] = in.readDouble();
+        }
+        
+        length = in.readInt();
+        this.adjustSumSquare = new double[length];
+        for(int i = 0; i < length; i++) {
+            this.adjustSumSquare[i] = in.readDouble();
         }
     }
 

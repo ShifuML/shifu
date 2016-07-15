@@ -38,7 +38,7 @@ public class ModelNormalizeConf {
 
     @JsonDeserialize(using = CorrelationDeserializer.class)
     public static enum Correlation {
-        None, Pearson, Spearman // Spearman mode isn't implemented as need sort all variables
+        None, Pearson, NormPearson // Spearman mode isn't implemented as need sort all variables
     }
 
     private Double stdDevCutOff = Double.valueOf(4.0);
