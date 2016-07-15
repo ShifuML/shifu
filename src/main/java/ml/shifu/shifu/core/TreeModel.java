@@ -116,12 +116,7 @@ public class TreeModel extends BasicML implements MLRegression {
             predictSum += predictNode(treeNode.getNode(), data) * weight;
         }
 
-        double finalPredict;
-        if(this.isGBDT) {
-            finalPredict = predictSum;
-        } else {
-            finalPredict = predictSum / weightSum;
-        }
+        double finalPredict = predictSum / weightSum;
         MLData result = new BasicMLData(1);
         result.setData(0, finalPredict);
         return result;
