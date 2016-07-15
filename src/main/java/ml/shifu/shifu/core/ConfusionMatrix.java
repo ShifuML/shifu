@@ -34,6 +34,7 @@ import ml.shifu.shifu.container.obj.EvalConfig;
 import ml.shifu.shifu.container.obj.ModelConfig;
 import ml.shifu.shifu.container.obj.PerformanceResult;
 import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
+import ml.shifu.shifu.core.dtrain.CommonConstants;
 import ml.shifu.shifu.core.eval.AreaUnderCurve;
 import ml.shifu.shifu.exception.ShifuErrorCode;
 import ml.shifu.shifu.exception.ShifuException;
@@ -225,6 +226,10 @@ public class ConfusionMatrix {
                                 raw[scoreColumnIndex]);
                     }
                     continue;
+                }
+                if(cnt == 1 && CommonConstants.GBDT_ALG_NAME.equalsIgnoreCase(modelConfig.getAlgorithm())) {
+                    // for gbdt, the result maybe not in [0, 1], set first score to make the upper score bould clear
+                    po.binLowestScore = score;
                 }
 
                 ConfusionMatrixObject cmo = new ConfusionMatrixObject(prevCmo);
