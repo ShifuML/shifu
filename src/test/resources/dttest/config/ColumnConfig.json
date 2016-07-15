@@ -1300,4 +1300,46 @@
     "binWeightedWoe" : [ -0.7884573597642703, -0.9242589009427765, -0.3646431132517983, 0.020202707297876602, -0.007968169641028642, 0.30788477942227654, 0.6539264663912793, 1.0722949787062916, 1.4671216872311557, 1.6094379080341004, 0.0 ]
   },
   "corrArray" : null
+}, {
+  "columnNum" : 31,
+  "columnName" : "column_33",
+  "version" : "0.2.0",
+  "columnType" : "C",
+  "columnFlag" : null,
+  "finalSelect" : true,
+  "columnStats" : {
+    "max" : 0.173,
+    "min" : 0.05521,
+    "mean" : 0.083859,
+    "median" : 0.083859,
+    "totalCount" : 858,
+    "distinctCount" : 417,
+    "missingCount" : 0,
+    "stdDev" : 0.017592,
+    "missingPercentage" : 0.0,
+    "woe" : -0.5798184952527995,
+    "ks" : 30.701299,
+    "iv" : 0.607722,
+    "weightedKs" : 30.701298701298708,
+    "weightedIv" : 0.6077216158768778,
+    "weightedWoe" : -0.5798184952527995,
+    "skewness" : 1.3602420183180428,
+    "kurtosis" : 5.427175897024166,
+    "psi" : null,
+    "unitStats" : null
+  },
+  "columnBinning" : {
+    "length" : 3,
+    "binBoundary" : null,
+    "binCategory" : ["a", "b", "c"],
+    "binCountNeg" : [ 110, 144, 72, 10 ],
+    "binCountPos" : [ 28, 32, 28 ],
+    "binPosRate" : [ 0.2028985507246377, 0.18181818181818182, 0.28, 11],
+    "binAvgScore" : null,
+    "binWeightedNeg" : [ 110.0, 144.0, 72.0 , 1.0],
+    "binWeightedPos" : [ 28.0, 32.0, 28.0, 2.0],
+    "binCountWoe" : [ -0.7884573597642703, -0.9242589009427765, -0.3646431132517983, 0.3],
+    "binWeightedWoe" : [ -0.7884573597642703, -0.9242589009427765, -0.3646431132517983, 0.4 ]
+  },
+  "corrArray" : null
 } ]
