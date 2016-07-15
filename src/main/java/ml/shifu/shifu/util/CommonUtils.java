@@ -502,8 +502,9 @@ public final class CommonUtils {
             EvalConfig evalConfig) throws IOException {
         if(modelConfig == null
                 || (!Constants.NN.equalsIgnoreCase(modelConfig.getAlgorithm())
-                        && !Constants.SVM.equalsIgnoreCase(modelConfig.getAlgorithm()) && !Constants.LR
-                            .equalsIgnoreCase(modelConfig.getAlgorithm()))) {
+                        && !Constants.SVM.equalsIgnoreCase(modelConfig.getAlgorithm())
+                        && !Constants.LR.equalsIgnoreCase(modelConfig.getAlgorithm()) && !CommonUtils
+                            .isDesicionTreeAlgorithm(modelConfig.getAlgorithm()))) {
             throw new IllegalArgumentException(modelConfig == null ? "modelConfig is null." : String.format(
                     " invalid model algorithm %s.", modelConfig.getAlgorithm()));
         }

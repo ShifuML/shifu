@@ -308,6 +308,7 @@ public class DTWorker
                     int featureStatsSize = columnConfig.getBinBoundary().size() * this.impurity.getStatsSize();
                     featureStatistics.put(columnNum, new double[featureStatsSize]);
                 } else if(columnConfig.isCategorical()) {
+                    // the last one is for invalid value category like ?, *, ...
                     int featureStatsSize = (columnConfig.getBinCategory().size() + 1) * this.impurity.getStatsSize();
                     featureStatistics.put(columnNum, new double[featureStatsSize]);
                 }
@@ -383,7 +384,11 @@ public class DTWorker
                                     weight);
                         } else if(config.isCategorical()) {
                             String category = data.categoricalInputs[this.categoricalInputIndexMap.get(columnNum)];
-                            int binIndex = this.categoryIndexMap.get(columnNum).get(category);
+                            Integer binIndex = this.categoryIndexMap.get(columnNum).get(category);
+                            if(binIndex == null) {
+                                // add to null bin which is the last one
+                                binIndex = config.getBinCategory().size();
+                            }
                             this.impurity.featureUpdate(featuerStatistic, binIndex, data.output, data.significance,
                                     weight);
                         } else {
