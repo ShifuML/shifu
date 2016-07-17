@@ -302,8 +302,7 @@ public class InitModelProcessor extends BasicModelProcessor implements Processor
 
         // one can set guagua conf in shifuconfig
         for(Map.Entry<Object, Object> entry: Environment.getProperties().entrySet()) {
-            if(entry.getKey().toString().startsWith("nn") || entry.getKey().toString().startsWith("guagua")
-                    || entry.getKey().toString().startsWith("shifu") || entry.getKey().toString().startsWith("mapred")) {
+            if(CommonUtils.isHadoopConfigurationInjected(entry.getKey().toString())) {
                 conf.set(entry.getKey().toString(), entry.getValue().toString());
             }
         }
@@ -331,7 +330,7 @@ public class InitModelProcessor extends BasicModelProcessor implements Processor
         String autoTypePath = super.getPathFinder().getAutoTypeFilePath(source);
         FileOutputFormat.setOutputPath(job, new Path(autoTypePath));
 
-        // clean output firstly 
+        // clean output firstly
         ShifuFileUtils.deleteFile(autoTypePath, source);
 
         // submit job

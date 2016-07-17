@@ -989,6 +989,11 @@ public final class CommonUtils {
         return CommonConstants.RF_ALG_NAME.equalsIgnoreCase(alg) || CommonConstants.GBDT_ALG_NAME.equalsIgnoreCase(alg);
     }
 
+    public static boolean isHadoopConfigurationInjected(String key) {
+        return key.startsWith("nn") || key.startsWith("guagua") || key.startsWith("shifu") || key.startsWith("mapred")
+                || key.startsWith("io") || key.startsWith("hadoop") || key.startsWith("yarn");
+    }
+
     /**
      * Assemble map data to Encog standard input format.
      * 

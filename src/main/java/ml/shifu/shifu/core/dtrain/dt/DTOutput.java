@@ -99,10 +99,15 @@ public class DTOutput extends BasicMasterInterceptor<DTMasterParams, DTWorkerPar
             return;
         }
         double error = context.getMasterResult().getSquareError() / context.getMasterResult().getCount();
+        String info = "";
+        if(context.getMasterResult().isSwitchToNextTree()) {
+            info = "Tree(starting from 0) " + (context.getMasterResult().getTrees().size() - 1)
+                    + "is finished building. \n";
+        }
         if(error != 0d) {
             String progress = new StringBuilder(200).append("    Trainer ").append(this.trainerId)
                     .append(" Iteration #").append(currentIteration - 1).append(" Squared Train Error: ").append(error)
-                    .append("\n").toString();
+                    .append("\n").append(info).toString();
             try {
                 LOG.debug("Writing progress results to {} {}", context.getCurrentIteration(), progress.toString());
                 this.progressOutput.write(progress.getBytes("UTF-8"));
