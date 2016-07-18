@@ -200,6 +200,12 @@ public class DTWorker
      */
     private Loss loss = null;
 
+    /**
+     * By default in GBDT, sample with replacement is disabled, but looks sometimes good performance with replacement &
+     * GBDT
+     */
+    private boolean gbdtSampleWithReplacement = false;
+
     @Override
     public void initRecordReader(GuaguaFileSplit fileSplit) throws IOException {
         super.setRecordReader(new GuaguaLineRecordReader(fileSplit));
@@ -260,7 +266,7 @@ public class DTWorker
         }
 
         this.isRF = ALGORITHM.RF.toString().equalsIgnoreCase(modelConfig.getAlgorithm());
-        this.isGBDT = ALGORITHM.GBDT.toString().equals(modelConfig.getAlgorithm());
+        this.isGBDT = ALGORITHM.GBDT.toString().equalsIgnoreCase(modelConfig.getAlgorithm());
 
         String lossStr = this.modelConfig.getTrain().getParams().get("Loss").toString();
         if(lossStr.equalsIgnoreCase("log")) {
@@ -273,7 +279,15 @@ public class DTWorker
 
         if(this.isGBDT) {
             this.learningRate = Double.valueOf(this.modelConfig.getParams().get(NNTrainer.LEARNING_RATE).toString());
+            Object swrObj = this.modelConfig.getParams().get("SampleWithReplacement");
+            if(swrObj != null) {
+                this.gbdtSampleWithReplacement = Boolean.TRUE.toString().equalsIgnoreCase(swrObj.toString());
+            }
         }
+        LOG.info(
+                "Worker init params:isAfterVarSel={}, treeNum={}, impurity={}, loss={}, learningRate={}, gbdtSampleWithReplacement={}, isRF={}, isGBDT={}",
+                isAfterVarSelect, treeNum, impurity.getClass().getName(), loss.getClass().getName(), this.learningRate,
+                this.gbdtSampleWithReplacement, this.isRF, this.isGBDT);
     }
 
     /*
@@ -322,7 +336,7 @@ public class DTWorker
         double squareError = 0d;
         List<Integer> nodeIndexes = new ArrayList<Integer>(trees.size());
         // renew random seed
-        if(this.isGBDT && lastMasterResult.isSwitchToNextTree()) {
+        if(this.isGBDT && !this.gbdtSampleWithReplacement && lastMasterResult.isSwitchToNextTree()) {
             this.random = new Random();
         }
         for(Data data: this.trainingData) {
@@ -354,11 +368,13 @@ public class DTWorker
                             }
                             data.output = -1f * loss.computeGradient(data.predict, data.label);
                         }
-                        // renew next subsample rate
-                        if(random.nextDouble() <= modelConfig.getTrain().getBaggingSampleRate()) {
-                            data.subsampleWeights[currTreeIndex] = 1f;
-                        } else {
-                            data.subsampleWeights[currTreeIndex] = 0f;
+                        if(!this.gbdtSampleWithReplacement) {
+                            // renew next subsample rate
+                            if(random.nextDouble() <= modelConfig.getTrain().getBaggingSampleRate()) {
+                                data.subsampleWeights[currTreeIndex] = 1f;
+                            } else {
+                                data.subsampleWeights[currTreeIndex] = 0f;
+                            }
                         }
                     }
                 }
@@ -575,7 +591,7 @@ public class DTWorker
         }
 
         float[] sampleWeights;
-        if(this.treeNum == 1 || this.isGBDT) {
+        if(this.treeNum == 1 || (this.isGBDT && !this.gbdtSampleWithReplacement)) {
             // if tree == 1 or GBDT, don't use with replacement sampling; for GBDT, every time is one tree
             sampleWeights = new float[this.treeNum];
             if(random.nextDouble() <= modelConfig.getTrain().getBaggingSampleRate()) {
@@ -588,6 +604,7 @@ public class DTWorker
                 sampleWeights[i] = 1f;
             }
         } else {
+            // if gbdt and gbdtSampleWithReplacement = true, still sampling with replacement
             sampleWeights = new float[this.treeNum];
             for(int i = 0; i < sampleWeights.length; i++) {
                 sampleWeights[i] = this.rng[i].sample();
