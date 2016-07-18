@@ -321,6 +321,10 @@ public class DTWorker
 
         double squareError = 0d;
         List<Integer> nodeIndexes = new ArrayList<Integer>(trees.size());
+        // renew random seed
+        if(this.isGBDT && lastMasterResult.isSwitchToNextTree()) {
+            this.random = new Random();
+        }
         for(Data data: this.trainingData) {
             nodeIndexes.clear();
             if(this.isRF) {
@@ -328,7 +332,7 @@ public class DTWorker
                     Node predictNode = predictNodeIndex(treeNode.getNode(), data);
                     if(predictNode.getPredict() != null) {
                         // only update when not in first node, for treeNode, no predict statistics at that time
-                        squareError += loss.computeError((float) (predictNode.getPredict().getPredict()), data.output);
+                        squareError += loss.computeError((float) (predictNode.getPredict().getPredict()), data.label);
                     }
                     int predictNodeIndex = predictNode.getId();
                     nodeIndexes.add(predictNodeIndex);
@@ -339,20 +343,35 @@ public class DTWorker
                 int currTreeIndex = trees.size() - 1;
                 if(lastMasterResult.isSwitchToNextTree()) {
                     if(currTreeIndex >= 1) {
-                        double predict = predictNodeIndex(trees.get(currTreeIndex - 1).getNode(), data).getPredict()
-                                .getPredict();
-                        if(currTreeIndex == 1) {
-                            data.predict = (float) predict;
-                        } else {
-                            data.predict += (float) (this.learningRate * predict);
+                        Node node = trees.get(currTreeIndex - 1).getNode();
+                        Node predictNode = predictNodeIndex(node, data);
+                        if(predictNode.getPredict() != null) {
+                            double predict = predictNode.getPredict().getPredict();
+                            if(currTreeIndex == 1) {
+                                data.predict = (float) predict;
+                            } else {
+                                data.predict += (float) (this.learningRate * predict);
+                            }
+                            data.output = -1f * loss.computeGradient(data.predict, data.label);
                         }
-                        data.output = -loss.computeGradient(data.predict, data.label);
+                        // renew next subsample rate
+                        if(random.nextDouble() <= modelConfig.getTrain().getBaggingSampleRate()) {
+                            data.subsampleWeights[currTreeIndex] = 1f;
+                        } else {
+                            data.subsampleWeights[currTreeIndex] = 0f;
+                        }
                     }
                 }
                 Node predictNode = predictNodeIndex(trees.get(currTreeIndex).getNode(), data);
                 int predictNodeIndex = predictNode.getId();
                 nodeIndexes.add(predictNodeIndex);
-                squareError += loss.computeError(data.predict, data.label);
+                if(currTreeIndex >= 1) {
+                    squareError += loss.computeError(data.predict, data.label);
+                } else {
+                    if(predictNode.getPredict() != null) {
+                        squareError += loss.computeError(((float) predictNode.getPredict().getPredict()), data.label);
+                    }
+                }
             }
 
             for(Map.Entry<Integer, TreeNode> entry: todoNodes.entrySet()) {
@@ -380,6 +399,12 @@ public class DTWorker
                         if(config.isNumerical()) {
                             float value = data.numericInputs[this.numericInputIndexMap.get(columnNum)];
                             int binIndex = getBinIndex(value, config.getBinBoundary());
+                            int index = binIndex * this.impurity.statsSize + (int) (data.output + 0.000001f);
+                            if(index >= config.getBinBoundary().size() * this.impurity.statsSize || index < 0) {
+                                LOG.error(
+                                        "binIndex is {}; this.impurity.statsSize {}; data.output {}; config.getBinBoundary().size()",
+                                        binIndex, this.impurity.statsSize, data.output, config.getBinBoundary().size());
+                            }
                             this.impurity.featureUpdate(featuerStatistic, binIndex, data.output, data.significance,
                                     weight);
                         } else if(config.isCategorical()) {
@@ -479,6 +504,37 @@ public class DTWorker
         return predictNodeIndex(nextNode, data);
     }
 
+    //
+    // private double getNodePredict(Node node, Data data) {
+    // Node currNode = node;
+    // Split split = currNode.getSplit();
+    // if((split == null || currNode.isLeaf()) && currNode.getPredict() != null) {
+    // return currNode.getPredict().getPredict();
+    // }
+    //
+    // ColumnConfig columnConfig = this.columnConfigList.get(split.getColumnNum());
+    //
+    // Node nextNode = null;
+    // if(columnConfig.isNumerical()) {
+    // float value = data.numericInputs[this.numericInputIndexMap.get(split.getColumnNum())];
+    // if(value <= split.getThreshold()) {
+    // nextNode = currNode.getLeft();
+    // } else {
+    // nextNode = currNode.getRight();
+    // }
+    // } else if(columnConfig.isCategorical()) {
+    // String value = data.categoricalInputs[this.categoricalInputIndexMap.get(split.getColumnNum())];
+    // if(split.getLeftCategories().contains(value)) {
+    // nextNode = currNode.getLeft();
+    // } else {
+    // nextNode = currNode.getRight();
+    // }
+    // }
+    //
+    // assert nextNode != null;
+    // return predictNodeIndex(nextNode, data);
+    // }
+
     @Override
     public void load(GuaguaWritableAdapter<LongWritable> currentKey, GuaguaWritableAdapter<Text> currentValue,
             WorkerContext<DTMasterParams, DTWorkerParams> context) {
@@ -556,11 +612,17 @@ public class DTWorker
         }
 
         float[] sampleWeights;
-        if(this.treeNum == 1) {
+        if(this.treeNum == 1 || this.isGBDT) {
+            // if tree == 1 or GBDT, don't use with replacement sampling; for GBDT, every time is one tree
+            sampleWeights = new float[this.treeNum];
             if(random.nextDouble() <= modelConfig.getTrain().getBaggingSampleRate()) {
-                sampleWeights = new float[] { 1.0f };
+                sampleWeights[0] = 1f;
             } else {
-                sampleWeights = new float[] { 0.0f };
+                sampleWeights[0] = 0f;
+            }
+            // others just do init, such value will be replaced after the previous tree is built well
+            for(int i = 1; i < sampleWeights.length; i++) {
+                sampleWeights[i] = 1f;
             }
         } else {
             sampleWeights = new float[this.treeNum];

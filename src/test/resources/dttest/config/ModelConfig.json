@@ -52,9 +52,9 @@
     "normType" : "ZSCALE"
   },
   "train" : {
-    "baggingNum" : 3,
+    "baggingNum" : 10,
     "baggingWithReplacement" : true,
-    "baggingSampleRate" : 0.8,
+    "baggingSampleRate" : 1,
     "validSetRate" : 0.2,
     "numTrainEpochs" : 1000,
     "epochsPerIteration" : 1,
@@ -63,10 +63,10 @@
     "workerThreadCount" : 4,
     "algorithm" : "GBDT",
     "params" : {
-        "FeatureSubsetStrategy": "HALF",
+        "FeatureSubsetStrategy": "ALL",
         "MaxDepth": 8,
         "MaxStatsMemoryMB": 256,
-        "Impurity":"variance",
+        "Impurity":"entropy",
         "LearningRate": 0.1,
         "MinInstancesPerNode": 1,
         "MinInfoGain": 0.0,

@@ -257,11 +257,18 @@ public class DTMaster extends AbstractMasterComputable<DTMasterParams, DTWorkerP
         DTMasterParams masterParams = new DTMasterParams(count, squareError);
         if(queue.isEmpty()) {
             if(this.isGBDT) {
+                Node treeNode = this.trees.get(this.trees.size() - 1).getNode();
                 if(this.trees.size() == this.treeNum) {
                     masterParams.setHalt(true);
                     LOG.info("Queue is empty, training is stopped in iteration {}.", context.getCurrentIteration());
+                } else if(treeNode.getLeft() == null && treeNode.getRight() == null) {
+                    masterParams.setHalt(true);
+                    LOG.warn(
+                            "Tree is learned 100% well, there must be overfit here, please tune BaggingSampleRate, training is stopped in iteration {}.",
+                            context.getCurrentIteration());
                 } else {
                     TreeNode newRootNode = new TreeNode(this.trees.size(), new Node(Node.ROOT_INDEX));
+                    LOG.info("The {} tree is to be built.", this.trees.size());
                     this.trees.add(newRootNode);
                     newRootNode.setFeatures(getSubsamplingFeatures(this.featureSubsetStrategy));
                     // only one node
