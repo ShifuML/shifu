@@ -234,7 +234,7 @@ public class DTWorker
             throw new RuntimeException(e);
         }
 
-        this.treeNum = this.modelConfig.getTrain().getBaggingNum();
+        this.treeNum = Integer.valueOf(this.modelConfig.getTrain().getParams().get("TreeNum").toString());;
 
         double memoryFraction = Double.valueOf(context.getProps().getProperty("guagua.data.memoryFraction", "0.6"));
         LOG.info("Max heap memory: {}, fraction: {}", Runtime.getRuntime().maxMemory(), memoryFraction);
