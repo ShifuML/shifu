@@ -598,6 +598,11 @@
                             {"label": "Resilient Propagation", "value":"R"},
                             {"label": "Scaled Conjugate Gradient", "value":"S"}
                         ]
+                    }, {
+                        "name": "SampleWithReplacement",
+                        "type": "boolean",
+                        "directive": "input",
+                        "defval": false
                     } , {
                         "name" : "Kernel",
                         "type" : "text",

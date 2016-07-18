@@ -483,10 +483,11 @@ public class DTMaster extends AbstractMasterComputable<DTMasterParams, DTWorkerP
         } else {
             impurity = new Variance(minInstancesPerNode, minInfoGain);
         }
-        LOG.info("Master init params: isAfterVarSel={}, featureSubsetStrategy={}, maxDepth={}, maxStatsMemory={}, "
-                + "treeNum={}, impurity={}, workerNumber={}, minInstancesPerNode={}, minInfoGain={}", isAfterVarSelect,
-                featureSubsetStrategy, maxDepth, maxStatsMemory, treeNum, imStr, this.workerNumber,
-                minInstancesPerNode, minInfoGain);
+        LOG.info(
+                "Master init params: isAfterVarSel={}, featureSubsetStrategy={}, maxDepth={}, maxStatsMemory={}, "
+                        + "treeNum={}, impurity={}, workerNumber={}, minInstancesPerNode={}, minInfoGain={}, isRF={}, isGBDT={}",
+                isAfterVarSelect, featureSubsetStrategy, maxDepth, maxStatsMemory, treeNum, imStr, this.workerNumber,
+                minInstancesPerNode, minInfoGain, this.isRF, this.isGBDT);
         this.queue = new LinkedList<TreeNode>();
 
         // initialize trees
