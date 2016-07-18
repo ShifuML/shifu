@@ -201,10 +201,10 @@ public class DTWorker
     private Loss loss = null;
 
     /**
-     * By default in GBDT, sample with replacement is disabled, but looks sometimes good performance with replacement &
+     * By default in GBDT, sample with replacement is enabled, but looks sometimes good performance with replacement &
      * GBDT
      */
-    private boolean gbdtSampleWithReplacement = false;
+    private boolean gbdtSampleWithReplacement = true;
 
     @Override
     public void initRecordReader(GuaguaFileSplit fileSplit) throws IOException {
