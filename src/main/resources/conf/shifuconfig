@@ -23,6 +23,11 @@ mapreduce.map.output.compress=false
 # set to 15mins (default 10mins)
 mapreduce.task.timeout=900000
 
+# set default zk in client machine by default it is false and in master node
+# guagua.zk.embedbed.isInClient=true
+
 ## tunning for rf, in rf, tree models are stored in master memory, if two many models, please tune such parameters 
 # mapreduce.map.memory.mb=3072
 # mapreduce.map.java.opts=-Xms2G -Xmx2G -server -XX:MaxPermSize=512M -XX:PermSize=512M -XX:+UseParallelGC -XX:+UseParallelOldGC -XX:ParallelGCThreads=8 -verbose:gc -XX:+PrintGCDetails -XX:+PrintGCTimeStamps
+
+
