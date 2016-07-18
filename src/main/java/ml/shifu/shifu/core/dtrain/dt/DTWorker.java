@@ -504,37 +504,6 @@ public class DTWorker
         return predictNodeIndex(nextNode, data);
     }
 
-    //
-    // private double getNodePredict(Node node, Data data) {
-    // Node currNode = node;
-    // Split split = currNode.getSplit();
-    // if((split == null || currNode.isLeaf()) && currNode.getPredict() != null) {
-    // return currNode.getPredict().getPredict();
-    // }
-    //
-    // ColumnConfig columnConfig = this.columnConfigList.get(split.getColumnNum());
-    //
-    // Node nextNode = null;
-    // if(columnConfig.isNumerical()) {
-    // float value = data.numericInputs[this.numericInputIndexMap.get(split.getColumnNum())];
-    // if(value <= split.getThreshold()) {
-    // nextNode = currNode.getLeft();
-    // } else {
-    // nextNode = currNode.getRight();
-    // }
-    // } else if(columnConfig.isCategorical()) {
-    // String value = data.categoricalInputs[this.categoricalInputIndexMap.get(split.getColumnNum())];
-    // if(split.getLeftCategories().contains(value)) {
-    // nextNode = currNode.getLeft();
-    // } else {
-    // nextNode = currNode.getRight();
-    // }
-    // }
-    //
-    // assert nextNode != null;
-    // return predictNodeIndex(nextNode, data);
-    // }
-
     @Override
     public void load(GuaguaWritableAdapter<LongWritable> currentKey, GuaguaWritableAdapter<Text> currentValue,
             WorkerContext<DTMasterParams, DTWorkerParams> context) {
@@ -642,16 +611,20 @@ public class DTWorker
             if(lastMasterResult != null) {
                 List<TreeNode> trees = lastMasterResult.getTrees();
                 if(trees.size() > 1) {
-                    for(int i = 0; i < trees.size() - 1; i++) {
+                    // if isSwitchToNextTree == false, iterate all trees except current one to get new predict and
+                    // output value; if isSwitchToNextTree == true, iterate all trees except current two trees.
+                    // the last tree is a root node, the tree with index size-2 will be called in doCompute method
+                    int iterLen = lastMasterResult.isSwitchToNextTree() ? trees.size() - 2 : trees.size() - 1;
+                    for(int i = 0; i < iterLen; i++) {
                         TreeNode currTree = trees.get(i);
                         if(i == 0) {
                             double oldPredict = predictNodeIndex(currTree.getNode(), data).getPredict().getPredict();
                             predict = (float) oldPredict;
-                            output = -loss.computeGradient(predict, data.label);
+                            output = -1f * loss.computeGradient(predict, data.label);
                         } else {
                             double oldPredict = predictNodeIndex(currTree.getNode(), data).getPredict().getPredict();
                             predict += (float) (this.learningRate * oldPredict);
-                            output = -loss.computeGradient(predict, data.label);
+                            output = -1f * loss.computeGradient(predict, data.label);
                         }
                     }
                     data.output = output;

@@ -262,6 +262,9 @@ public class DTMaster extends AbstractMasterComputable<DTMasterParams, DTWorkerP
                     masterParams.setHalt(true);
                     LOG.info("Queue is empty, training is stopped in iteration {}.", context.getCurrentIteration());
                 } else if(treeNode.getLeft() == null && treeNode.getRight() == null) {
+                    // if very good performance, here can be some issues, say you'd like to get 5 trees, but in the 2nd
+                    // tree, you get one perfect tree, no need continue but warn users about such issue: set
+                    // BaggingSampleRate not to 1 can solve such issue to avoid overfit
                     masterParams.setHalt(true);
                     LOG.warn(
                             "Tree is learned 100% well, there must be overfit here, please tune BaggingSampleRate, training is stopped in iteration {}.",
