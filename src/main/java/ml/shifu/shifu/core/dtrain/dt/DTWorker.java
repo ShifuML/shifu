@@ -399,12 +399,6 @@ public class DTWorker
                         if(config.isNumerical()) {
                             float value = data.numericInputs[this.numericInputIndexMap.get(columnNum)];
                             int binIndex = getBinIndex(value, config.getBinBoundary());
-                            // int index = binIndex * this.impurity.statsSize + (int) (data.output + 0.000001f);
-                            // if(index >= config.getBinBoundary().size() * this.impurity.statsSize || index < 0) {
-                            // LOG.error(
-                            // "binIndex is {}; this.impurity.statsSize {}; data.output {}; config.getBinBoundary().size() {}",
-                            // binIndex, this.impurity.statsSize, data.output, config.getBinBoundary().size());
-                            // }
                             this.impurity.featureUpdate(featuerStatistic, binIndex, data.output, data.significance,
                                     weight);
                         } else if(config.isCategorical()) {
