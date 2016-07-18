@@ -52,7 +52,7 @@
     "normType" : "ZSCALE"
   },
   "train" : {
-    "baggingNum" : 10,
+    "baggingNum" : 5,
     "baggingWithReplacement" : true,
     "baggingSampleRate" : 1,
     "validSetRate" : 0.2,
@@ -63,6 +63,7 @@
     "workerThreadCount" : 4,
     "algorithm" : "GBDT",
     "params" : {
+        "TreeNum":10,
         "FeatureSubsetStrategy": "ALL",
         "MaxDepth": 8,
         "MaxStatsMemoryMB": 256,

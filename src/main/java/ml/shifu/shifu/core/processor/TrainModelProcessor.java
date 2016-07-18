@@ -337,8 +337,7 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
                 new Path(Constants.TMP, Constants.DEFAULT_MODELS_TMP_FOLDER), sourceType)));
         args.add(String.format(CommonConstants.MAPREDUCE_PARAM_FORMAT, CommonConstants.SHIFU_TMP_MODELS_FOLDER,
                 tmpModelsPath.toString()));
-        int baggingNum = (isForVarSelect || CommonUtils.isDesicionTreeAlgorithm(alg)) ? 1 : super.getModelConfig()
-                .getBaggingNum();
+        int baggingNum = isForVarSelect ? 1 : super.getModelConfig().getBaggingNum();
 
         long start = System.currentTimeMillis();
         LOG.info("Distributed trainning with baggingNum: {}", baggingNum);
@@ -399,6 +398,10 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
                     modelName));
             // check if job is continunous training, this can be set multiple times and we only get last one
             boolean isContinous = checkContinuousTraining(fileSystem, localArgs, modelPath);
+            if(isContinous && CommonUtils.isDesicionTreeAlgorithm(modelConfig.getAlgorithm())) {
+                isContinous = false;
+                LOG.warn("RF & GBDT do not support continuous training");
+            }
             if(!isContinous && !isOneJobNotContinuous) {
                 isOneJobNotContinuous = true;
                 // delete all old models if not continous

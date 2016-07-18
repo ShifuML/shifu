@@ -548,6 +548,11 @@
                         "directive": "input",
                         "defval" : 256
                     }, {
+                        "name" : "TreeNum",
+                        "type" : "number",
+                        "directive": "input",
+                        "defval" : 5
+                    }, {
                         "name" : "Impurity",
                         "type" : "text",
                         "directive": "select",

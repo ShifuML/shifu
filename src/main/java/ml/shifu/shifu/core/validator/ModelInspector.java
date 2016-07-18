@@ -600,6 +600,17 @@ public class ModelInspector {
                     result = ValidateResult.mergeResult(result, tmpResult);
                 }
             }
+            
+            Object treeNumObj = params.get("TreeNum");
+            if(treeNumObj != null) {
+                int treeNum = Integer.valueOf(treeNumObj.toString());
+                if(treeNum <= 0 || treeNum > 200) {
+                    ValidateResult tmpResult = new ValidateResult(true);
+                    tmpResult.setStatus(false);
+                    tmpResult.getCauses().add("TreeNum should be in [1, 200].");
+                    result = ValidateResult.mergeResult(result, tmpResult);
+                }
+            }
 
             Object minInfoGainObj = params.get("MinInfoGain");
             if(minInfoGainObj != null) {
