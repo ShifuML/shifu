@@ -246,8 +246,15 @@ public class CorrelationMapper extends Mapper<LongWritable, Text, IntWritable, C
                     dValues[i] = NumberFormatUtils.getDouble(units[i], Double.MIN_VALUE);
                 }
                 if(columnConfig.isCategorical()) {
-                    // TODO use set to replace indexOf
-                    int index = columnConfig.getBinCategory().indexOf(units[i]);
+                    if(columnConfig.getBinCategory() == null) {
+                        throw new IllegalStateException("Column " + columnConfig.getColumnName()
+                                + " with null binCategory but is not meta or target column.");
+                    }
+                    int index = -1;
+                    if(units[i] != null) {
+                        // TODO use set to replace indexOf
+                        index = columnConfig.getBinCategory().indexOf(units[i]);
+                    }
                     if(index == -1) {
                         dValues[i] = columnConfig.getBinPosRate().get(columnConfig.getBinPosRate().size() - 1);
                     } else {
