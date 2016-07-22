@@ -372,6 +372,16 @@
                 "type": "boolean",
                 "directive": "checkbox",
                 "defval" : false
+            }, {
+                "name": "correlation",
+                "type": "text",
+                "directive": "select",
+                "defval" : "NONE",
+                "options": [
+                    {"label":"not compute correlation", "value":"NONE"},
+                    {"label":"pearson mode", "value":"PEARSON"},
+                    {"label":"norm pearson mode", "value":"NORMPEARSON"}
+                ]
             }
         ]
     }, {
@@ -524,10 +534,25 @@
                         "directive": "input",
                         "defval" : 10
                     }, {
+                        "name" : "MinInstancesPerNode",
+                        "type" : "number",
+                        "directive": "input",
+                        "defval" : 1
+                    }, {
+                        "name" : "MinInfoGain",
+                        "type" : "number",
+                        "directive": "input",
+                        "defval" : 0.0
+                    }, {
                         "name" : "MaxStatsMemoryMB",
                         "type" : "number",
                         "directive": "input",
                         "defval" : 256
+                    }, {
+                        "name" : "TreeNum",
+                        "type" : "number",
+                        "directive": "input",
+                        "defval" : 5
                     }, {
                         "name" : "Impurity",
                         "type" : "text",
@@ -546,7 +571,11 @@
                         "options": [
                             {"label": "ALL", "value":"all"},
                             {"label": "HALF", "value":"half"},
-                            {"label": "ONETHIRD", "value":"onethird"}
+                            {"label": "ONETHIRD", "value":"onethird"},
+                            {"label": "TWOTHIRDS", "value":"twothirds"},
+                            {"label": "AUTO", "value":"auto"},
+                            {"label": "SQRT", "value":"sqrt"},
+                            {"label": "LOG2", "value":"log2"}
                         ]
                     }, {
                         "name" : "Loss",
@@ -575,6 +604,11 @@
                             {"label": "Resilient Propagation", "value":"R"},
                             {"label": "Scaled Conjugate Gradient", "value":"S"}
                         ]
+                    }, {
+                        "name": "SampleWithReplacement",
+                        "type": "boolean",
+                        "directive": "input",
+                        "defval": false
                     } , {
                         "name" : "Kernel",
                         "type" : "text",

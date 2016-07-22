@@ -35,6 +35,7 @@ import ml.shifu.shifu.container.obj.ModelVarSelectConf;
 import ml.shifu.shifu.container.obj.RawSourceData;
 import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
 import ml.shifu.shifu.core.alg.NNTrainer;
+import ml.shifu.shifu.core.dtrain.CommonConstants;
 import ml.shifu.shifu.fs.ShifuFileUtils;
 import ml.shifu.shifu.util.CommonUtils;
 
@@ -415,9 +416,14 @@ public class ModelInspector {
             result = ValidateResult.mergeResult(result, tmpResult);
         }
 
-        if(modelConfig.isMultiClassification() && norm.getNormType() != NormType.ZSCALE) {
+        boolean isZScore = modelConfig.getNormalize().getNormType() == NormType.ZSCALE
+                || modelConfig.getNormalize().getNormType() == NormType.ZSCORE
+                || modelConfig.getNormalize().getNormType() == NormType.OLD_ZSCALE
+                || modelConfig.getNormalize().getNormType() == NormType.OLD_ZSCORE;
+
+        if(modelConfig.isMultiClassification() && !isZScore) {
             ValidateResult tmpResult = new ValidateResult(false);
-            tmpResult.getCauses().add("NormType 'ZSCALE' is the only norm type for multiple classification.");
+            tmpResult.getCauses().add("NormType 'ZSCALE|ZSCORE' is the only norm type for multiple classification.");
             result = ValidateResult.mergeResult(result, tmpResult);
         }
 
@@ -513,7 +519,6 @@ public class ModelInspector {
             }
 
             Double learningRate = Double.valueOf(params.get(NNTrainer.LEARNING_RATE).toString());
-
             if(learningRate != null && (learningRate.compareTo(Double.valueOf(0)) <= 0)) {
                 ValidateResult tmpResult = new ValidateResult(true);
                 tmpResult.setStatus(false);
@@ -530,6 +535,111 @@ public class ModelInspector {
                     ValidateResult tmpResult = new ValidateResult(true);
                     tmpResult.setStatus(false);
                     tmpResult.getCauses().add("Learning decay should be in [0, 1) if set.");
+                    result = ValidateResult.mergeResult(result, tmpResult);
+                }
+            }
+        }
+
+        if(train.getAlgorithm().equalsIgnoreCase(CommonConstants.GBDT_ALG_NAME)
+                || train.getAlgorithm().equalsIgnoreCase(CommonConstants.RF_ALG_NAME)) {
+            Map<String, Object> params = train.getParams();
+            if(train.getAlgorithm().equalsIgnoreCase(CommonConstants.GBDT_ALG_NAME)) {
+                Object loss = params.get("Loss");
+                if(loss != null && !"log".equalsIgnoreCase(loss.toString())
+                        && !"squared".equalsIgnoreCase(loss.toString())
+                        && !"absolute".equalsIgnoreCase(loss.toString())) {
+                    ValidateResult tmpResult = new ValidateResult(true);
+                    tmpResult.setStatus(false);
+                    tmpResult.getCauses().add("Loss should be in [log,squared,absolute].");
+                    result = ValidateResult.mergeResult(result, tmpResult);
+                }
+            }
+
+            Object maxDepthObj = params.get("MaxDepth");
+            if(maxDepthObj != null) {
+                int maxDepth = Integer.valueOf(maxDepthObj.toString());
+                if(maxDepth <= 0 || maxDepth > 20) {
+                    ValidateResult tmpResult = new ValidateResult(true);
+                    tmpResult.setStatus(false);
+                    tmpResult.getCauses().add("MaxDepth should in [1, 20].");
+                    result = ValidateResult.mergeResult(result, tmpResult);
+                }
+            }
+
+            Object maxStatsMemoryMBObj = params.get("MaxStatsMemoryMB");
+            if(maxStatsMemoryMBObj != null) {
+                int maxStatsMemoryMB = Integer.valueOf(maxStatsMemoryMBObj.toString());
+                if(maxStatsMemoryMB <= 0) {
+                    ValidateResult tmpResult = new ValidateResult(true);
+                    tmpResult.setStatus(false);
+                    tmpResult.getCauses().add("MaxStatsMemoryMB should > 0.");
+                    result = ValidateResult.mergeResult(result, tmpResult);
+                }
+            }
+
+            if(train.getAlgorithm().equalsIgnoreCase(CommonConstants.GBDT_ALG_NAME)) {
+                Object learningRateObj = params.get(NNTrainer.LEARNING_RATE);
+                if(learningRateObj != null) {
+                    Double learningRate = Double.valueOf(learningRateObj.toString());
+                    if(learningRate != null && (learningRate.compareTo(Double.valueOf(0)) <= 0)) {
+                        ValidateResult tmpResult = new ValidateResult(true);
+                        tmpResult.setStatus(false);
+                        tmpResult.getCauses().add("Learning rate should be larger than 0.");
+                        result = ValidateResult.mergeResult(result, tmpResult);
+                    }
+                }
+            }
+
+            Object minInstancesPerNodeObj = params.get("MinInstancesPerNode");
+            if(minInstancesPerNodeObj != null) {
+                int minInstancesPerNode = Integer.valueOf(minInstancesPerNodeObj.toString());
+                if(minInstancesPerNode <= 0) {
+                    ValidateResult tmpResult = new ValidateResult(true);
+                    tmpResult.setStatus(false);
+                    tmpResult.getCauses().add("MinInstancesPerNode should > 0.");
+                    result = ValidateResult.mergeResult(result, tmpResult);
+                }
+            }
+            
+            Object treeNumObj = params.get("TreeNum");
+            if(treeNumObj != null) {
+                int treeNum = Integer.valueOf(treeNumObj.toString());
+                if(treeNum <= 0 || treeNum > 200) {
+                    ValidateResult tmpResult = new ValidateResult(true);
+                    tmpResult.setStatus(false);
+                    tmpResult.getCauses().add("TreeNum should be in [1, 200].");
+                    result = ValidateResult.mergeResult(result, tmpResult);
+                }
+            }
+
+            Object minInfoGainObj = params.get("MinInfoGain");
+            if(minInfoGainObj != null) {
+                Double minInfoGain = Double.valueOf(minInfoGainObj.toString());
+                if(minInfoGain != null && (minInfoGain.compareTo(Double.valueOf(0)) < 0)) {
+                    ValidateResult tmpResult = new ValidateResult(true);
+                    tmpResult.setStatus(false);
+                    tmpResult.getCauses().add("MinInfoGain should be >= 0.");
+                    result = ValidateResult.mergeResult(result, tmpResult);
+                }
+            }
+
+            Object impurityObj = params.get("Impurity");
+            if(train.getAlgorithm().equalsIgnoreCase(CommonConstants.GBDT_ALG_NAME)) {
+                if(impurityObj != null && !"variance".equalsIgnoreCase(impurityObj.toString())) {
+                    ValidateResult tmpResult = new ValidateResult(true);
+                    tmpResult.setStatus(false);
+                    tmpResult.getCauses().add("GBDT only supports 'variance' impurity type.");
+                    result = ValidateResult.mergeResult(result, tmpResult);
+                }
+            }
+
+            if(train.getAlgorithm().equalsIgnoreCase(CommonConstants.RF_ALG_NAME)) {
+                if(impurityObj != null && !"entropy".equalsIgnoreCase(impurityObj.toString())
+                        && !"variance".equalsIgnoreCase(impurityObj.toString())
+                        && !"gini".equalsIgnoreCase(impurityObj.toString())) {
+                    ValidateResult tmpResult = new ValidateResult(true);
+                    tmpResult.setStatus(false);
+                    tmpResult.getCauses().add("RF supports 'variance|entropy|gini' impurity types.");
                     result = ValidateResult.mergeResult(result, tmpResult);
                 }
             }

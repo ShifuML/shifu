@@ -22,7 +22,13 @@ package ml.shifu.shifu.core.dtrain.dt;
  */
 public enum FeatureSubsetStrategy {
 
-    ALL /* All features */, HALF /* A half features */, ONETHIRD /* One third features */;
+    ALL /* All features */, 
+    HALF /* A half features */, 
+    ONETHIRD /* One third features */, 
+    TWOTHIRDS /* Two third features */, 
+    AUTO, /* tree num = 1, ALL, else ONETHIRD */
+    SQRT, /* math.sqrt features */
+    LOG2; /* math.log2 features */
 
     /**
      * Get {@link FeatureSubsetStrategy} by string, case can be ignored.

@@ -149,4 +149,12 @@ public class TreeNode implements Bytable {
         this.node.readFields(in);
     }
 
+    /* (non-Javadoc)
+     * @see java.lang.Object#toString()
+     */
+    @Override
+    public String toString() {
+        return "TreeNode [treeId=" + treeId + ", node=" + node.getId() + ", features=" + features + "]";
+    }
+
 }

@@ -502,8 +502,9 @@ public final class CommonUtils {
             EvalConfig evalConfig) throws IOException {
         if(modelConfig == null
                 || (!Constants.NN.equalsIgnoreCase(modelConfig.getAlgorithm())
-                        && !Constants.SVM.equalsIgnoreCase(modelConfig.getAlgorithm()) && !Constants.LR
-                            .equalsIgnoreCase(modelConfig.getAlgorithm()))) {
+                        && !Constants.SVM.equalsIgnoreCase(modelConfig.getAlgorithm())
+                        && !Constants.LR.equalsIgnoreCase(modelConfig.getAlgorithm()) && !CommonUtils
+                            .isDesicionTreeAlgorithm(modelConfig.getAlgorithm()))) {
             throw new IllegalArgumentException(modelConfig == null ? "modelConfig is null." : String.format(
                     " invalid model algorithm %s.", modelConfig.getAlgorithm()));
         }
@@ -943,9 +944,7 @@ public final class CommonUtils {
                         if(CommonUtils.isDesicionTreeAlgorithm(modelConfig.getAlgorithm()) && config.isCategorical()) {
                             inputList.add(binCategoryMap.get(config.getColumnNum()).get(val == null ? "" : val) + 0d);
                         } else {
-                            Double normalizeValue = Normalizer.normalize(config, val, cutoff,
-                                    modelConfig.getNormalizeType());
-                            inputList.add(normalizeValue);
+                            inputList.add(computeNumericNormResult(modelConfig, cutoff, config, val));
                         }
                     }
                 } else {
@@ -954,9 +953,7 @@ public final class CommonUtils {
                         if(CommonUtils.isDesicionTreeAlgorithm(modelConfig.getAlgorithm()) && config.isCategorical()) {
                             inputList.add(binCategoryMap.get(config.getColumnNum()).get(val == null ? "" : val) + 0d);
                         } else {
-                            Double normalizeValue = Normalizer.normalize(config, val, cutoff,
-                                    modelConfig.getNormalizeType());
-                            inputList.add(normalizeValue);
+                            inputList.add(computeNumericNormResult(modelConfig, cutoff, config, val));
                         }
                     }
                 }
@@ -973,8 +970,28 @@ public final class CommonUtils {
         return new BasicMLDataPair(new BasicMLData(input), new BasicMLData(ideal));
     }
 
+    private static double computeNumericNormResult(ModelConfig modelConfig, double cutoff, ColumnConfig config,
+            String val) {
+        Double normalizeValue = null;
+        if(CommonUtils.isDesicionTreeAlgorithm(modelConfig.getAlgorithm())) {
+            try {
+                normalizeValue = Double.parseDouble(val);
+            } catch (Exception e) {
+                normalizeValue = Normalizer.defaultMissingValue(config);
+            }
+        } else {
+            normalizeValue = Normalizer.normalize(config, val, cutoff, modelConfig.getNormalizeType());
+        }
+        return normalizeValue;
+    }
+
     public static boolean isDesicionTreeAlgorithm(String alg) {
         return CommonConstants.RF_ALG_NAME.equalsIgnoreCase(alg) || CommonConstants.GBDT_ALG_NAME.equalsIgnoreCase(alg);
+    }
+
+    public static boolean isHadoopConfigurationInjected(String key) {
+        return key.startsWith("nn") || key.startsWith("guagua") || key.startsWith("shifu") || key.startsWith("mapred")
+                || key.startsWith("io") || key.startsWith("hadoop") || key.startsWith("yarn");
     }
 
     /**

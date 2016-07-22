@@ -186,7 +186,7 @@ public class PathFinder {
      */
     public String getPostTrainOutputPath(SourceType sourceType) {
         String postTrainOutput = getPreferPath(modelConfig.getTrain().getCustomPaths(),
-                Constants. KEY_PRE_TRAIN_STATS_PATH);
+                Constants.KEY_PRE_TRAIN_STATS_PATH);
 
         if(StringUtils.isBlank(postTrainOutput)) {
             return getPathBySourceType(new Path(Constants.TMP, "posttrain-output"), sourceType);
@@ -208,6 +208,24 @@ public class PathFinder {
 
         if(StringUtils.isBlank(preTrainingStatsPath)) {
             return getPathBySourceType(new Path(Constants.TMP, Constants.AUTO_TYPE_PATH), sourceType);
+        } else {
+            return new Path(preTrainingStatsPath).toString();
+        }
+    }
+
+    /**
+     * Get correlation result file path.
+     * 
+     * @param sourceType
+     *            - Local/HDFS
+     * @return path of auto type folder name
+     */
+    public String getCorrelationPath(SourceType sourceType) {
+        String preTrainingStatsPath = getPreferPath(modelConfig.getTrain().getCustomPaths(),
+                Constants.KEY_AUTO_TYPE_PATH);
+
+        if(StringUtils.isBlank(preTrainingStatsPath)) {
+            return getPathBySourceType(new Path(Constants.TMP, Constants.CORRELATION_PATH), sourceType);
         } else {
             return new Path(preTrainingStatsPath).toString();
         }
@@ -303,7 +321,7 @@ public class PathFinder {
     }
 
     /**
-     *
+     * 
      * @return
      */
     public String getPSIInfoPath() {
@@ -311,7 +329,7 @@ public class PathFinder {
     }
 
     /**
-     *
+     * 
      * @param sourceType
      * @return
      */

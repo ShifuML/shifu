@@ -55,6 +55,8 @@ public class ColumnConfig {
     private ColumnStats columnStats = new ColumnStats();
     private ColumnBinning columnBinning = new ColumnBinning();
 
+    private List<Double> corrArray;
+
     /**
      * ---------------------------------------------------------------------------
      * <p/>
@@ -140,8 +142,7 @@ public class ColumnConfig {
      */
     @JsonIgnore
     public boolean isCandidate() {
-        return !ColumnFlag.ForceRemove.equals(columnFlag)
-                && !ColumnFlag.Meta.equals(columnFlag)
+        return !ColumnFlag.ForceRemove.equals(columnFlag) && !ColumnFlag.Meta.equals(columnFlag)
                 && !ColumnFlag.Target.equals(columnFlag);
     }
 
@@ -240,7 +241,7 @@ public class ColumnConfig {
     public List<Integer> getBinAvgScore() {
         return columnBinning.getBinAvgScore();
     }
-    
+
     /**
      * @return binCountWoe
      */
@@ -248,7 +249,7 @@ public class ColumnConfig {
     public List<Double> getBinCountWoe() {
         return columnBinning.getBinCountWoe();
     }
-    
+
     /**
      * @return binWeightedWoe
      */
@@ -256,7 +257,7 @@ public class ColumnConfig {
     public List<Double> getBinWeightedWoe() {
         return columnBinning.getBinWeightedWoe();
     }
-    
+
     /**
      * @param length
      */
@@ -475,6 +476,20 @@ public class ColumnConfig {
     @JsonIgnore
     public void setUnitStats(List<String> unitStats) {
         this.columnStats.setUnitStats(unitStats);
+    }
+
+    /**
+     * @return the corrArray
+     */
+    public List<Double> getCorrArray() {
+        return corrArray;
+    }
+
+    /**
+     * @param corrArray the corrArray to set
+     */
+    public void setCorrArray(List<Double> corrArray) {
+        this.corrArray = corrArray;
     }
 
     /**

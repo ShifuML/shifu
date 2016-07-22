@@ -64,7 +64,7 @@ public class RawSourceData implements Cloneable {
     private Boolean autoType = Boolean.TRUE;
 
     /**
-     * To change it to 0 instead of 250 because 0-1 columns shouldn't be set to categorical. TODO, fix 0-1 bug
+     * To change it to 0 instead of 250 because 0-1 columns shouldn't be set to categorical.
      */
     private Integer autoTypeThreshold = 0;
 

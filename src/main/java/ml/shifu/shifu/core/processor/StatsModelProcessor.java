@@ -49,12 +49,12 @@ public class StatsModelProcessor extends BasicModelProcessor implements Processo
                     statsExecutor = new DIBStatsExecutor(this, modelConfig, columnConfigList);
                 } else if (modelConfig.getBinningAlgorithm().equals(ModelStatsConf.BinningAlgorithm.MunroPat)) {
                     statsExecutor = new MunroPatStatsExecutor(this, modelConfig, columnConfigList);
+                } else if (modelConfig.getBinningAlgorithm().equals(ModelStatsConf.BinningAlgorithm.MunroPatI)) {
+                    statsExecutor = new MunroPatIStatsExecutor(this, modelConfig, columnConfigList);
                 } else if (modelConfig.getBinningAlgorithm().equals(ModelStatsConf.BinningAlgorithm.SPDT)) {
                     statsExecutor = new SPDTStatsExecutor(this, modelConfig, columnConfigList);
                 } else if (modelConfig.getBinningAlgorithm().equals(ModelStatsConf.BinningAlgorithm.SPDTI)) {
                     statsExecutor = new SPDTIStatsExecutor(this, modelConfig, columnConfigList);
-                } else if (modelConfig.getBinningAlgorithm().equals(ModelStatsConf.BinningAlgorithm.MunroPatI)) {
-                    statsExecutor = new MunroPatIStatsExecutor(this, modelConfig, columnConfigList);
                 } else {
                     statsExecutor = new SPDTIStatsExecutor(this, modelConfig, columnConfigList);
                 }

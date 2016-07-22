@@ -171,7 +171,6 @@ public class ModelTrainConf {
         if(ALGORITHM.NN.equals(alg)) {
             params.put(NNTrainer.PROPAGATION, "Q");
             params.put(NNTrainer.LEARNING_RATE, 0.1);
-            params.put("LearningDecay", 0.0);
             params.put(NNTrainer.NUM_HIDDEN_LAYERS, 1);
 
             List<Integer> nodes = new ArrayList<Integer>();
@@ -181,28 +180,34 @@ public class ModelTrainConf {
             List<String> func = new ArrayList<String>();
             func.add("tanh");
             params.put(NNTrainer.ACTIVATION_FUNC, func);
-            params.put("LearningDecay", 0.0);
+            // hide LearningDecay since confused for users 
+            // params.put("LearningDecay", 0.0);
             params.put("RegularizedConstant", 0.0);
         } else if(ALGORITHM.SVM.equals(alg)) {
             params.put(SVMTrainer.SVM_KERNEL, "linear");
             params.put(SVMTrainer.SVM_GAMMA, 1.0);
             params.put(SVMTrainer.SVM_CONST, 1.0);
         } else if(ALGORITHM.RF.equals(alg)) {
-            params.put("FeatureSubsetStrategy", "Q");
+            params.put("FeatureSubsetStrategy", "ALL");
             params.put("MaxDepth", 10);
+            params.put("MinInstancesPerNode", 1);
+            params.put("MinInfoGain", 0.0);
             params.put("MaxStatsMemoryMB", 256);
             params.put("Impurity", "variance");
+            params.put("Loss", "squared");
         } else if(ALGORITHM.GBDT.equals(alg)) {
-            params.put("FeatureSubsetStrategy", "Q");
+            params.put("FeatureSubsetStrategy", "ALL");
             params.put("MaxDepth", 10);
+            params.put("MinInstancesPerNode", 1);
+            params.put("MinInfoGain", 0.0);
             params.put("MaxStatsMemoryMB", 256);
             params.put("Impurity", "variance");
             params.put(NNTrainer.LEARNING_RATE, 0.1);
+            params.put("Loss", "squared");
         } else if(ALGORITHM.LR.equals(alg)) {
             params.put(LogisticRegressionTrainer.LEARNING_RATE, 0.1);
             params.put("RegularizedConstant", 0.0);
             params.put("L1orL2", "NONE");
-            // params.put(NNTrainer.PROPAGATION, "Q");
         }
         return params;
     }

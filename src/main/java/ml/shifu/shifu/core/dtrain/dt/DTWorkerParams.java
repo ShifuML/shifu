@@ -142,6 +142,12 @@ public class DTWorkerParams extends HaltBytable implements Combinable<DTWorkerPa
         this.squareError = squareError;
     }
 
+    @Override
+    public String toString() {
+        return "DTWorkerParams [count=" + count + ", squareError=" + squareError + ", nodeStatsMap=" + nodeStatsMap
+                + "]";
+    }
+
     /**
      * Node statistics with {@link #featureStatistics} including all statistics for all sub-sampling features.
      * 
@@ -248,6 +254,17 @@ public class DTWorkerParams extends HaltBytable implements Combinable<DTWorkerPa
         public void setNodeId(int nodeId) {
             this.nodeId = nodeId;
         }
+
+        /*
+         * (non-Javadoc)
+         * 
+         * @see java.lang.Object#toString()
+         */
+        @Override
+        public String toString() {
+            return "NodeStats [nodeId=" + nodeId + ", treeId=" + treeId + ", featureStatistics=" + featureStatistics
+                    + "]";
+        }
     }
 
     @Override
@@ -257,17 +274,19 @@ public class DTWorkerParams extends HaltBytable implements Combinable<DTWorkerPa
         this.count += that.count;
         this.squareError += that.squareError;
 
-        for(Entry<Integer, NodeStats> entry: this.nodeStatsMap.entrySet()) {
-            NodeStats nodeStats = entry.getValue();
-            NodeStats thatNodeStats = that.nodeStatsMap.get(entry.getKey());
-            assert nodeStats.nodeId == thatNodeStats.nodeId;
-            assert nodeStats.treeId == thatNodeStats.treeId;
+        if(this.nodeStatsMap != null && that.nodeStatsMap != null) {
+            for(Entry<Integer, NodeStats> entry: this.nodeStatsMap.entrySet()) {
+                NodeStats nodeStats = entry.getValue();
+                NodeStats thatNodeStats = that.nodeStatsMap.get(entry.getKey());
+                assert nodeStats.nodeId == thatNodeStats.nodeId;
+                assert nodeStats.treeId == thatNodeStats.treeId;
 
-            for(Entry<Integer, double[]> featureStatsEntry: nodeStats.getFeatureStatistics().entrySet()) {
-                double[] thisFeatureStats = featureStatsEntry.getValue();
-                double[] thatFeatureStats = thatNodeStats.featureStatistics.get(featureStatsEntry.getKey());
-                for(int i = 0; i < thisFeatureStats.length; i++) {
-                    thisFeatureStats[i] += thatFeatureStats[i];
+                for(Entry<Integer, double[]> featureStatsEntry: nodeStats.getFeatureStatistics().entrySet()) {
+                    double[] thisFeatureStats = featureStatsEntry.getValue();
+                    double[] thatFeatureStats = thatNodeStats.featureStatistics.get(featureStatsEntry.getKey());
+                    for(int i = 0; i < thisFeatureStats.length; i++) {
+                        thisFeatureStats[i] += thatFeatureStats[i];
+                    }
                 }
             }
         }

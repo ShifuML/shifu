@@ -39,7 +39,13 @@ import ml.shifu.shifu.core.dtrain.dt.TreeNode;
 import ml.shifu.shifu.util.CommonUtils;
 
 /**
- * TODO
+ * {@link TreeModel} is to load Random Forest or Gradient Boosted Decision Tree models.
+ * 
+ * <p>
+ * {@link #loadFromStream(InputStream, ModelConfig, List)} can be used to read serialized models.
+ * 
+ * <p>
+ * TODO, make trees computing in parallel
  * 
  * @author Zhang David (pengzhang@paypal.com)
  */
@@ -63,7 +69,7 @@ public class TreeModel extends BasicML implements MLRegression {
         this.trees = trees;
         this.weights = weights;
         assert trees != null && weights != null && trees.size() == weights.size();
-        this.setGBDT(isGBDT);
+        this.isGBDT = isGBDT;
         this.columnConfigList = columnConfigList;
         this.columnMapping = new HashMap<Integer, Integer>(columnConfigList.size(), 1f);
         int[] inputOutputIndex = DTrainUtils.getNumericAndCategoricalInputAndOutputCounts(this.columnConfigList);
@@ -95,6 +101,7 @@ public class TreeModel extends BasicML implements MLRegression {
         this.columnConfigList = columnConfigList;
         this.columnMapping = columnMapping;
         this.inputNode = columnMapping.size();
+        this.isGBDT = isGBDT;
     }
 
     @Override
@@ -109,7 +116,12 @@ public class TreeModel extends BasicML implements MLRegression {
             predictSum += predictNode(treeNode.getNode(), data) * weight;
         }
 
-        double finalPredict = predictSum / weightSum;
+        double finalPredict;
+        if(this.isGBDT) {
+            finalPredict = predictSum;
+        } else {
+            finalPredict = predictSum / weightSum;
+        }
         MLData result = new BasicMLData(1);
         result.setData(0, finalPredict);
         return result;
@@ -153,7 +165,7 @@ public class TreeModel extends BasicML implements MLRegression {
 
     @Override
     public String toString() {
-        return getTrees().toString();
+        return trees.toString();
     }
 
     @Override
@@ -184,8 +196,29 @@ public class TreeModel extends BasicML implements MLRegression {
                 }
             }
         }
+
+        Map<Integer, Integer> columnMapping = new HashMap<Integer, Integer>(columnConfigList.size(), 1f);
+        int[] inputOutputIndex = DTrainUtils.getNumericAndCategoricalInputAndOutputCounts(columnConfigList);
+        boolean isAfterVarSelect = inputOutputIndex[3] == 1 ? true : false;
+        int index = 0;
+        for(int i = 0; i < columnConfigList.size(); i++) {
+            ColumnConfig columnConfig = columnConfigList.get(i);
+            if(!isAfterVarSelect) {
+                if(!columnConfig.isMeta() && !columnConfig.isTarget() && CommonUtils.isGoodCandidate(columnConfig)) {
+                    columnMapping.put(columnConfig.getColumnNum(), index);
+                    index += 1;
+                }
+            } else {
+                if(columnConfig != null && !columnConfig.isMeta() && !columnConfig.isTarget()
+                        && columnConfig.isFinalSelect()) {
+                    columnMapping.put(columnConfig.getColumnNum(), index);
+                    index += 1;
+                }
+            }
+        }
+
         return new TreeModel(trees, weights, CommonConstants.GBDT_ALG_NAME.equalsIgnoreCase(algorithm),
-                columnConfigList);
+                columnConfigList, columnMapping);
     }
 
     /*

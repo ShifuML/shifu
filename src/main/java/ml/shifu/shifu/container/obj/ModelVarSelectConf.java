@@ -45,7 +45,7 @@ public class ModelVarSelectConf {
     /**
      * If column missing rate is lower than this column, no matter what, whis column will be removed.
      */
-    private Float missingRateThreshold = 0.5f;
+    private Float missingRateThreshold = 0.98f;
 
     /**
      * Do var select by SE or only print se report.

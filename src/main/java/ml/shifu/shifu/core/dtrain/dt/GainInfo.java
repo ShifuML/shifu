@@ -15,9 +15,6 @@
  */
 package ml.shifu.shifu.core.dtrain.dt;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import java.util.List;
 
 /**
@@ -26,8 +23,6 @@ import java.util.List;
  * @author Zhang David (pengzhang@paypal.com)
  */
 public class GainInfo {
-
-    private static final Logger LOG = LoggerFactory.getLogger(GainInfo.class);
 
     private double gain;
 
@@ -178,7 +173,7 @@ public class GainInfo {
     }
 
     public static GainInfo getGainInfoByMaxGain(List<GainInfo> gainList) {
-        double maxGain = Double.NEGATIVE_INFINITY;
+        double maxGain = Double.MIN_VALUE;
         int maxGainIndex = -1;
         for(int i = 0; i < gainList.size(); i++) {
             double gain = gainList.get(i).getGain();
@@ -188,11 +183,7 @@ public class GainInfo {
             }
         }
         if(maxGainIndex == -1) {
-            LOG.info("gian list is {}", gainList);
-            if(gainList.size() >= 1) {
-                // choose the first one if all gain are 'NaN'
-                maxGainIndex = 0;
-            }
+            return null;
         }
         return gainList.get(maxGainIndex);
     }
