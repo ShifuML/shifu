@@ -71,8 +71,11 @@ public class NeuralNetworkModelIntegrator {
             if (mField.getUsageType() != FieldUsageType.ACTIVE)
                 continue;
             FieldName mFieldName = mField.getName();
-            FieldName fName = (miningTransformMap.containsKey(mFieldName)) ? miningTransformMap
-                    .get(mFieldName) : mFieldName;
+            FieldName fName = mFieldName;
+            while ( miningTransformMap.containsKey(fName) ) {
+                fName = miningTransformMap.get(fName);
+            }
+
             DerivedField field = new DerivedField(OpType.CONTINUOUS,
                     DataType.DOUBLE).withName(fName).withExpression(
                     new FieldRef(fName));
