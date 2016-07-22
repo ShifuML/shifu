@@ -47,7 +47,12 @@ import org.apache.pig.tools.pigstats.PigStatusReporter;
  */
 public class AddColumnNumAndFilterUDF extends AbstractTrainerUDF<DataBag> {
 
-    protected Set<String> negTags;
+    private static final int TOTAL_COLUMN_CNT   = 4;
+    private static final int COLUMN_ID_INDX     = 0;
+    private static final int COLUMN_VAL_INDX    = 1;
+    private static final int COLUMN_TAG_INDX    = 2;
+    private static final int COLUMN_SEED_INDX   = 3;
+
 
     private Random random = new Random(System.currentTimeMillis());
 
@@ -62,10 +67,8 @@ public class AddColumnNumAndFilterUDF extends AbstractTrainerUDF<DataBag> {
             String withScoreStr, String isAppendRandom) throws Exception {
         super(source, pathModelConfig, pathColumnConfig);
         this.isAppendRandom = Boolean.TRUE.toString().equalsIgnoreCase(isAppendRandom);
-        negTags = new HashSet<String>(modelConfig.getNegTags());
     }
 
-    @SuppressWarnings("deprecation")
     public DataBag exec(Tuple input) throws IOException {
         DataBag bag = BagFactory.getInstance().newDefaultBag();
         TupleFactory tupleFactory = TupleFactory.getInstance();
@@ -97,7 +100,7 @@ public class AddColumnNumAndFilterUDF extends AbstractTrainerUDF<DataBag> {
 
         Double rate = modelConfig.getBinningSampleRate();
         if(modelConfig.isBinningSampleNegOnly()) {
-            if(negTags.contains(tag) && random.nextDouble() > rate) {
+            if(super.negTagSet.contains(tag) && random.nextDouble() > rate) {
                 return null;
             }
         } else {
@@ -111,23 +114,40 @@ public class AddColumnNumAndFilterUDF extends AbstractTrainerUDF<DataBag> {
             if(config.isCandidate()) {
                 boolean isPositive = false;;
                 if(modelConfig.isBinaryClassification()) {
-                    if(super.posTagSet.contains(tag)) {
+                    if ( super.posTagSet.contains(tag) ) {
                         isPositive = true;
-                    }
-                    if(super.negTagSet.contains(tag)) {
+                    } else if(super.negTagSet.contains(tag)) {
                         isPositive = false;
+                    } else {
+                        // not valid tag, just skip current record
+                        continue;
                     }
                 }
                 if(!isValidRecord(modelConfig.isBinaryClassification(), isPositive, config)) {
                     continue;
                 }
-                Tuple tuple = tupleFactory.newTuple(3);
-                tuple.set(0, i);
+                Tuple tuple = tupleFactory.newTuple(TOTAL_COLUMN_CNT);
+                tuple.set(COLUMN_ID_INDX, i);
                 // Set Data
-                tuple.set(1, input.get(i) == null ? null : input.get(i).toString());
+                tuple.set(COLUMN_VAL_INDX, (input.get(i) == null ? null : input.get(i).toString()));
+
+                if(modelConfig.isBinaryClassification()) {
+                    // Set Tag
+                    if(super.posTagSet.contains(tag)) {
+                        tuple.set(COLUMN_TAG_INDX, true);
+                    }
+
+                    if(super.negTagSet.contains(tag)) {
+                        tuple.set(COLUMN_TAG_INDX, false);
+                    }
+                } else {
+                    // a mock for multiple classification
+                    tuple.set(COLUMN_TAG_INDX, true);
+                }
+
                 // add random seed for distribution for bigger mapper, 300 is not enough TODO
                 if(this.isAppendRandom) {
-                    tuple.set(2, Math.abs(random.nextInt() % 300));
+                    tuple.set(COLUMN_SEED_INDX, Math.abs(random.nextInt() % 300));
                 }
                 bag.add(tuple);
             }
@@ -141,6 +161,7 @@ public class AddColumnNumAndFilterUDF extends AbstractTrainerUDF<DataBag> {
             Schema tupleSchema = new Schema();
             tupleSchema.add(new FieldSchema("columnId", DataType.INTEGER));
             tupleSchema.add(new FieldSchema("value", DataType.CHARARRAY));
+            tupleSchema.add(new FieldSchema("tag", DataType.BOOLEAN));
             if(this.isAppendRandom) {
                 tupleSchema.add(new FieldSchema("rand", DataType.INTEGER));
             }
@@ -155,14 +176,17 @@ public class AddColumnNumAndFilterUDF extends AbstractTrainerUDF<DataBag> {
     private boolean isValidRecord(boolean isBinary, boolean isPositive, ColumnConfig columnConfig) {
         if(isBinary) {
             return columnConfig != null
-                    && (columnConfig.isCategorical() || modelConfig.getBinningMethod().equals(BinningMethod.EqualTotal)
-                            || modelConfig.getBinningMethod().equals(BinningMethod.EqualInterval)
-                            || (modelConfig.getBinningMethod().equals(BinningMethod.EqualPositive) && isPositive) || (modelConfig
-                            .getBinningMethod().equals(BinningMethod.EqualNegtive) && !isPositive));
+                    && ( columnConfig.isCategorical()
+                        || modelConfig.getBinningMethod().equals(BinningMethod.DynamicBinning)
+                        || modelConfig.getBinningMethod().equals(BinningMethod.EqualTotal)
+                        || modelConfig.getBinningMethod().equals(BinningMethod.EqualInterval)
+                        || (modelConfig.getBinningMethod().equals(BinningMethod.EqualPositive) && isPositive)
+                        || (modelConfig.getBinningMethod().equals(BinningMethod.EqualNegtive) && !isPositive));
         } else {
             return columnConfig != null
-                    && (columnConfig.isCategorical() || modelConfig.getBinningMethod().equals(BinningMethod.EqualTotal) || modelConfig
-                            .getBinningMethod().equals(BinningMethod.EqualInterval));
+                    && ( columnConfig.isCategorical()
+                        || modelConfig.getBinningMethod().equals(BinningMethod.EqualTotal)
+                        || modelConfig.getBinningMethod().equals(BinningMethod.EqualInterval));
         }
     }
 }

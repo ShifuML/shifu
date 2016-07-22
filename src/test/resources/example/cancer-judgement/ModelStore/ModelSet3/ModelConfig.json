@@ -1,0 +1,93 @@
+{
+  "basic" : {
+    "name" : "TestWoeZscale",
+    "author" : "zhanhu",
+    "description" : "Created at 2016-07-14 17:50:13",
+    "version" : "0.2.0",
+    "runMode" : "LOCAL",
+    "postTrainOn" : false,
+    "customPaths" : { }
+  },
+  "dataSet" : {
+    "source" : "LOCAL",
+    "dataPath" : "./src/test/resources/example/cancer-judgement/DataStore/DataSet1",
+    "dataDelimiter" : "|",
+    "headerPath" : "./src/test/resources/example/cancer-judgement/DataStore/DataSet1/.pig_header",
+    "headerDelimiter" : "|",
+    "filterExpressions" : "",
+    "weightColumnName" : "",
+    "targetColumnName" : "diagnosis",
+    "posTags" : [ "M" ],
+    "negTags" : [ "B" ],
+    "missingOrInvalidValues" : [ "", "*", "#", "?", "null", "~" ],
+    "metaColumnNameFile" : "columns/meta.column.names",
+    "categoricalColumnNameFile" : "columns/categorical.column.names"
+  },
+  "stats" : {
+    "maxNumBin" : 10,
+    "binningMethod" : "EqualPositive",
+    "sampleRate" : 0.8,
+    "sampleNegOnly" : false,
+    "binningAlgorithm" : "SPDTI",
+    "psiColumnName" : ""
+  },
+  "varSelect" : {
+    "forceEnable" : true,
+    "forceSelectColumnNameFile" : "columns/forceselect.column.names",
+    "forceRemoveColumnNameFile" : "columns/forceremove.column.names",
+    "filterEnable" : true,
+    "filterNum" : 200,
+    "filterBy" : "KS",
+    "wrapperEnabled" : false,
+    "wrapperNum" : 50,
+    "wrapperRatio" : 0.05,
+    "wrapperBy" : "S",
+    "missingRateThreshold" : 0.5,
+    "filterBySE" : true,
+    "params" : null
+  },
+  "normalize" : {
+    "stdDevCutOff" : 4.0,
+    "sampleRate" : 1.0,
+    "sampleNegOnly" : false,
+    "normType" : "WOE_ZSCORE"
+  },
+  "train" : {
+    "baggingNum" : 5,
+    "baggingWithReplacement" : true,
+    "baggingSampleRate" : 1.0,
+    "validSetRate" : 0.2,
+    "numTrainEpochs" : 100,
+    "epochsPerIteration" : 1,
+    "trainOnDisk" : false,
+    "isContinuous" : false,
+    "workerThreadCount" : 4,
+    "algorithm" : "NN",
+    "params" : {
+      "NumHiddenLayers" : 1,
+      "ActivationFunc" : [ "tanh" ],
+      "NumHiddenNodes" : [ 50 ],
+      "RegularizedConstant" : 0.0,
+      "LearningRate" : 0.1,
+      "Propagation" : "Q",
+      "LearningDecay" : 0.0
+    },
+    "customPaths" : { }
+  },
+  "evals" : [ {
+    "name" : "Eval1",
+    "dataSet" : {
+      "source" : "LOCAL",
+      "dataPath" : "./src/test/resources/example/cancer-judgement/DataStore/EvalSet1",
+      "dataDelimiter" : "|",
+      "headerPath" : "./src/test/resources/example/cancer-judgement/DataStore/EvalSet1/.pig_header",
+      "headerDelimiter" : "|",
+      "filterExpressions" : "",
+      "weightColumnName" : ""
+    },
+    "performanceBucketNum" : 10,
+    "performanceScoreSelector" : "mean",
+    "scoreMetaColumnNameFile" : "",
+    "customPaths" : { }
+  } ]
+}
