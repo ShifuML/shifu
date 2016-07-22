@@ -239,7 +239,9 @@ public class Normalizer {
             case WEIGHT_WOE_ZSCORE:
                 return woeZScoreNormalize(config, raw, cutoff, true);
             case OLD_ZSCALE:
+            case OLD_ZSCORE:
             case ZSCALE:
+            case ZSCORE:
             default:
                 return zScoreNormalize(config, raw, cutoff);
         }

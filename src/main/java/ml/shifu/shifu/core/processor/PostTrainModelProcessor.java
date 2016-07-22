@@ -259,8 +259,7 @@ public class PostTrainModelProcessor extends BasicModelProcessor implements Proc
 
         // one can set guagua conf in shifuconfig
         for(Map.Entry<Object, Object> entry: Environment.getProperties().entrySet()) {
-            if(entry.getKey().toString().startsWith("nn") || entry.getKey().toString().startsWith("guagua")
-                    || entry.getKey().toString().startsWith("shifu") || entry.getKey().toString().startsWith("mapred")) {
+            if(CommonUtils.isHadoopConfigurationInjected(entry.getKey().toString())) {
                 conf.set(entry.getKey().toString(), entry.getValue().toString());
             }
         }
@@ -337,8 +336,7 @@ public class PostTrainModelProcessor extends BasicModelProcessor implements Proc
 
         // one can set guagua conf in shifuconfig
         for(Map.Entry<Object, Object> entry: Environment.getProperties().entrySet()) {
-            if(entry.getKey().toString().startsWith("nn") || entry.getKey().toString().startsWith("guagua")
-                    || entry.getKey().toString().startsWith("shifu") || entry.getKey().toString().startsWith("mapred")) {
+            if(CommonUtils.isHadoopConfigurationInjected(entry.getKey().toString())) {
                 conf.set(entry.getKey().toString(), entry.getValue().toString());
             }
         }

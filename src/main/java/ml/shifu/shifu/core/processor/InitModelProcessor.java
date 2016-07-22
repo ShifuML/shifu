@@ -128,9 +128,6 @@ public class InitModelProcessor extends BasicModelProcessor implements Processor
         return 0;
     }
 
-    /**
-     * @return
-     */
     private boolean autoTypeEnableCondition() {
         return modelConfig.isMapReduceRunMode() && modelConfig.getDataSet().getAutoType();
     }
@@ -187,8 +184,8 @@ public class InitModelProcessor extends BasicModelProcessor implements Processor
         }
         for(String string: items) {
             try {
-                Double d = Double.valueOf(string);
-                if(d.compareTo(Double.valueOf(0d)) == 0 || d.compareTo(Double.valueOf(1d)) == 0) {
+                Double doubleValue = Double.valueOf(string);
+                if(doubleValue.compareTo(Double.valueOf(0d)) == 0 || doubleValue.compareTo(Double.valueOf(1d)) == 0) {
                     continue;
                 } else {
                     return false;
@@ -234,7 +231,7 @@ public class InitModelProcessor extends BasicModelProcessor implements Processor
         return false;
     }
 
-    // GuaguaOptionsParser doesn't to support *.jar currently.
+    // OptionsParser doesn't to support *.jar currently.
     private String addRuntimeJars() {
         List<String> jars = new ArrayList<String>(16);
         // common-codec
@@ -305,8 +302,7 @@ public class InitModelProcessor extends BasicModelProcessor implements Processor
 
         // one can set guagua conf in shifuconfig
         for(Map.Entry<Object, Object> entry: Environment.getProperties().entrySet()) {
-            if(entry.getKey().toString().startsWith("nn") || entry.getKey().toString().startsWith("guagua")
-                    || entry.getKey().toString().startsWith("shifu") || entry.getKey().toString().startsWith("mapred")) {
+            if(CommonUtils.isHadoopConfigurationInjected(entry.getKey().toString())) {
                 conf.set(entry.getKey().toString(), entry.getValue().toString());
             }
         }

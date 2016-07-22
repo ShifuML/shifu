@@ -30,7 +30,7 @@ public class ModelStatsConf {
         EqualNegtive, EqualInterval, EqualPositive, EqualTotal, DynamicBinning
         // TODO another four with weights
     }
-
+    
     public static enum BinningAlgorithm {
         Native, // sorting way
         SPDT, // paper reference: www.jmlr.org/papers/volume11/ben-haim10a/ben-haim10a.pdf

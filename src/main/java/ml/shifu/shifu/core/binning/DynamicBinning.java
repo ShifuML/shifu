@@ -95,6 +95,8 @@ public class DynamicBinning extends AbstractBinning<Double> {
                 nodeIndexToMerge = pos;
                 entryReduction = reduction;
             }
+
+            current = next;
         }
 
         return  nodeIndexToMerge;

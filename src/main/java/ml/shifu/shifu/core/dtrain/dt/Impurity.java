@@ -16,13 +16,11 @@
 package ml.shifu.shifu.core.dtrain.dt;
 
 import java.util.ArrayList;
-import java.util.Arrays;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import ml.shifu.shifu.container.obj.ColumnConfig;
 
@@ -45,6 +43,16 @@ public abstract class Impurity {
      * For Gini and Entropy, each class, count are selected, for binary classification, statsSize is 2.
      */
     protected int statsSize;
+
+    /**
+     * Per node, min instances, if less than this value, such gain info will be ignored.
+     */
+    protected int minInstancesPerNode = 1;
+
+    /**
+     * Min info gain, if less than this value, such gain info will be ignored.
+     */
+    protected double minInfoGain = 0d;
 
     /**
      * Compute impurity by feature statistics. Stats array are for all bins.
@@ -72,11 +80,6 @@ public abstract class Impurity {
         this.statsSize = statsSize;
     }
 
-    public static void main(String[] args) {
-        double a = Double.NaN;
-        System.out.println(a - 0d);
-    }
-
 }
 
 /**
@@ -86,19 +89,22 @@ public abstract class Impurity {
  */
 class Variance extends Impurity {
 
-    private static final Logger LOG = LoggerFactory.getLogger(Variance.class);
-
     public Variance() {
         // 3 are count, sum and sumSquare
         super.statsSize = 3;
     }
 
+    public Variance(int minInstancesPerNode, double minInfoGain) {
+        super.statsSize = 3;
+        super.minInstancesPerNode = minInstancesPerNode;
+        super.minInfoGain = minInfoGain;
+    }
+
     @Override
     public GainInfo computeImpurity(double[] stats, ColumnConfig config) {
         double count = 0d, sum = 0d, sumSquare = 0d;
-        LOG.info("stats: {}", Arrays.toString(stats));
-        LOG.info("statsSize {}", statsSize);
-        for(int i = 0; i < stats.length / super.statsSize; i++) {
+        int binSize = stats.length / super.statsSize;
+        for(int i = 0; i < binSize; i++) {
             count += stats[i * super.statsSize];
             sum += stats[i * super.statsSize + 1];
             sumSquare += stats[i * super.statsSize + 2];
@@ -112,22 +118,36 @@ class Variance extends Impurity {
         List<GainInfo> internalGainList = new ArrayList<GainInfo>();
         Set<String> leftCategories = config.isCategorical() ? new HashSet<String>() : null;
 
-        LOG.info("loop size {}", (stats.length / super.statsSize));
+        List<Pair> categoricalOrderList = null;
+        if(config.isCategorical()) {
+            // sort by predict and then pick the best split
+            categoricalOrderList = getCategoricalOrderList(stats, binSize);
+        }
 
-        for(int i = 0; i < ((stats.length / super.statsSize) - 1); i++) {
-            leftCount += stats[i * super.statsSize];
-            leftSum += stats[i * super.statsSize + 1];
-            leftSumSquare += stats[i * super.statsSize + 2];
-
+        for(int i = 0; i < (binSize - 1); i++) {
+            int index = i;
+            if(config.isCategorical()) {
+                index = categoricalOrderList.get(i).index;
+            }
+            leftCount += stats[index * super.statsSize];
+            leftSum += stats[index * super.statsSize + 1];
+            leftSumSquare += stats[index * super.statsSize + 2];
             rightCount = count - leftCount;
             rightSum = sum - leftSum;
             rightSumSquare = sumSquare - leftSumSquare;
+
+            if(leftCount <= minInstancesPerNode || rightCount <= minInstancesPerNode) {
+                continue;
+            }
 
             double leftWeight = leftCount / count;
             double rightWeight = rightCount / count;
             double leftImpurity = getImpurity(leftCount, leftSum, leftSumSquare);
             double rightImpurity = getImpurity(rightCount, rightSum, rightSumSquare);
             double gain = impurity - leftWeight * leftImpurity - rightWeight * rightImpurity;
+            if(gain <= minInfoGain) {
+                continue;
+            }
 
             Split split = null;
             if(config.isCategorical()) {
@@ -145,6 +165,26 @@ class Variance extends Impurity {
                     rightPredict, split));
         }
         return GainInfo.getGainInfoByMaxGain(internalGainList);
+    }
+
+    private List<Pair> getCategoricalOrderList(double[] stats, int binSize) {
+        List<Pair> categoricalOrderList = new ArrayList<Pair>(binSize);
+        for(int i = 0; i < binSize; i++) {
+            // set default = double min to make it sorted at first
+            double binPredict = Double.MIN_VALUE;
+            if(stats[i * super.statsSize] != 0d) {
+                binPredict = stats[i * super.statsSize + 1] / stats[i * super.statsSize];
+            }
+            // for variance, use predict value to sort
+            categoricalOrderList.add(new Pair(i, binPredict));
+        }
+        Collections.sort(categoricalOrderList, new Comparator<Pair>() {
+            @Override
+            public int compare(Pair o1, Pair o2) {
+                return Double.valueOf(o1.value).compareTo(Double.valueOf(o2.value));
+            }
+        });
+        return categoricalOrderList;
     }
 
     private double getImpurity(double count, double sum, double sumSquare) {
@@ -167,9 +207,11 @@ class Variance extends Impurity {
  */
 class Entropy extends Impurity {
 
-    public Entropy(int numClasses) {
+    public Entropy(int numClasses, int minInstancesPerNode, double minInfoGain) {
         assert numClasses > 0;
         super.statsSize = numClasses;
+        super.minInstancesPerNode = minInstancesPerNode;
+        super.minInfoGain = minInfoGain;
     }
 
     @Override
@@ -184,6 +226,12 @@ class Entropy extends Impurity {
             }
         }
 
+        List<Pair> categoricalOrderList = null;
+        if(config.isCategorical()) {
+            // sort by predict and then pick the best split
+            categoricalOrderList = getCategoricalOrderList(stats, stats.length / super.statsSize);
+        }
+
         InternalEntropyInfo info = getEntropyInterInfo(statsByClasses);
         // prob only effective in binary classes
         Predict predict = new Predict(info.sumAll == 0d ? 0d : (statsByClasses[1] / info.sumAll),
@@ -194,8 +242,12 @@ class Entropy extends Impurity {
         List<GainInfo> internalGainList = new ArrayList<GainInfo>();
         Set<String> leftCategories = config.isCategorical() ? new HashSet<String>() : null;
         for(int i = 0; i < (stats.length / numClasses - 1); i++) {
+            int index = i;
+            if(config.isCategorical()) {
+                index = categoricalOrderList.get(i).index;
+            }
             for(int j = 0; j < leftStatByClasses.length; j++) {
-                leftStatByClasses[j] += stats[i * numClasses + j];
+                leftStatByClasses[j] += stats[index * numClasses + j];
             }
             InternalEntropyInfo leftInfo = getEntropyInterInfo(leftStatByClasses);
             Predict leftPredict = new Predict(leftInfo.sumAll == 0d ? 0d : (leftStatByClasses[1] / leftInfo.sumAll),
@@ -205,6 +257,11 @@ class Entropy extends Impurity {
                 rightStatByClasses[j] = statsByClasses[j] - leftStatByClasses[j];
             }
             InternalEntropyInfo rightInfo = getEntropyInterInfo(rightStatByClasses);
+
+            if(leftInfo.sumAll <= minInstancesPerNode || rightInfo.sumAll <= minInstancesPerNode) {
+                continue;
+            }
+
             Predict rightPredict = new Predict(
                     rightInfo.sumAll == 0d ? 0d : (rightStatByClasses[1] / rightInfo.sumAll),
                     rightInfo.indexOfLargestElement);
@@ -213,6 +270,10 @@ class Entropy extends Impurity {
             double rightWeight = info.sumAll == 0d ? 0d : (rightInfo.sumAll / info.sumAll);
 
             double gain = info.impurity - leftWeight * leftInfo.impurity - rightWeight * rightInfo.impurity;
+            if(gain <= minInfoGain) {
+                continue;
+            }
+
             Split split = null;
             if(config.isCategorical()) {
                 leftCategories.add(config.getBinCategory().get(i));
@@ -226,6 +287,26 @@ class Entropy extends Impurity {
                     leftPredict, rightPredict, split));
         }
         return GainInfo.getGainInfoByMaxGain(internalGainList);
+    }
+
+    private List<Pair> getCategoricalOrderList(double[] stats, int binSize) {
+        List<Pair> categoricalOrderList = new ArrayList<Pair>(binSize);
+        for(int i = 0; i < binSize; i++) {
+            // for entropy, use bin positive rate to sort
+            double sum = stats[i * super.statsSize] + stats[i * super.statsSize + 1];
+            double binPredict = 0d;
+            if(sum != 0d) {
+                binPredict = stats[i * super.statsSize + 1] / sum;
+            }
+            categoricalOrderList.add(new Pair(i, binPredict));
+        }
+        Collections.sort(categoricalOrderList, new Comparator<Pair>() {
+            @Override
+            public int compare(Pair o1, Pair o2) {
+                return Double.valueOf(o1.value).compareTo(Double.valueOf(o2.value));
+            }
+        });
+        return categoricalOrderList;
     }
 
     private InternalEntropyInfo getEntropyInterInfo(double[] statsByClasses) {
@@ -268,7 +349,7 @@ class Entropy extends Impurity {
     @Override
     public void featureUpdate(double[] featuerStatistic, int binIndex, float label, float significance, float weight) {
         // label + 0.1f to avoid 0.99999f is converted to 0
-        featuerStatistic[binIndex * super.statsSize + (int) (label + 0.1f)] += significance * weight;
+        featuerStatistic[binIndex * super.statsSize + (int) (label + 0.000001f)] += significance * weight;
     }
 
     private double log2(double x) {
@@ -284,9 +365,11 @@ class Entropy extends Impurity {
  */
 class Gini extends Impurity {
 
-    public Gini(int numClasses) {
+    public Gini(int numClasses, int minInstancesPerNode, double minInfoGain) {
         assert numClasses > 0;
         super.statsSize = numClasses;
+        super.minInstancesPerNode = minInstancesPerNode;
+        super.minInfoGain = minInfoGain;
     }
 
     @Override
@@ -301,6 +384,12 @@ class Gini extends Impurity {
             }
         }
 
+        List<Pair> categoricalOrderList = null;
+        if(config.isCategorical()) {
+            // sort by predict and then pick the best split
+            categoricalOrderList = getCategoricalOrderList(stats, stats.length / super.statsSize);
+        }
+
         InternalEntropyInfo info = getGiniInfo(statsByClasses);
         // prob only effective in binary classes
         Predict predict = new Predict(info.sumAll == 0d ? 0d : statsByClasses[1] / info.sumAll,
@@ -311,8 +400,12 @@ class Gini extends Impurity {
         List<GainInfo> internalGainList = new ArrayList<GainInfo>();
         Set<String> leftCategories = config.isCategorical() ? new HashSet<String>() : null;
         for(int i = 0; i < (stats.length / numClasses - 1); i++) {
+            int index = i;
+            if(config.isCategorical()) {
+                index = categoricalOrderList.get(i).index;
+            }
             for(int j = 0; j < leftStatByClasses.length; j++) {
-                leftStatByClasses[j] += stats[i * numClasses + j];
+                leftStatByClasses[j] += stats[index * numClasses + j];
             }
             InternalEntropyInfo leftInfo = getGiniInfo(leftStatByClasses);
             Predict leftPredict = new Predict(leftInfo.sumAll == 0d ? 0d : leftStatByClasses[1] / leftInfo.sumAll,
@@ -322,12 +415,21 @@ class Gini extends Impurity {
                 rightStatByClasses[j] = statsByClasses[j] - leftStatByClasses[j];
             }
             InternalEntropyInfo rightInfo = getGiniInfo(rightStatByClasses);
+
+            if(leftInfo.sumAll <= minInstancesPerNode || rightInfo.sumAll <= minInstancesPerNode) {
+                continue;
+            }
+
             Predict rightPredict = new Predict(rightInfo.sumAll == 0d ? 0d : rightStatByClasses[1] / rightInfo.sumAll,
                     rightInfo.indexOfLargestElement);
 
             double leftWeight = info.sumAll == 0d ? 0d : (leftInfo.sumAll / info.sumAll);
             double rightWeight = info.sumAll == 0d ? 0d : (rightInfo.sumAll / info.sumAll);
             double gain = info.impurity - leftWeight * leftInfo.impurity - rightWeight * rightInfo.impurity;
+            if(gain <= minInfoGain) {
+                continue;
+            }
+
             Split split = null;
             if(config.isCategorical()) {
                 leftCategories.add(config.getBinCategory().get(i));
@@ -341,6 +443,26 @@ class Gini extends Impurity {
                     leftPredict, rightPredict, split));
         }
         return GainInfo.getGainInfoByMaxGain(internalGainList);
+    }
+
+    private List<Pair> getCategoricalOrderList(double[] stats, int binSize) {
+        List<Pair> categoricalOrderList = new ArrayList<Pair>(binSize);
+        for(int i = 0; i < binSize; i++) {
+            // for gini, use bin positive rate to sort
+            double sum = stats[i * super.statsSize] + stats[i * super.statsSize + 1];
+            double binPredict = 0d;
+            if(sum != 0d) {
+                binPredict = stats[i * super.statsSize + 1] / sum;
+            }
+            categoricalOrderList.add(new Pair(i, binPredict));
+        }
+        Collections.sort(categoricalOrderList, new Comparator<Pair>() {
+            @Override
+            public int compare(Pair o1, Pair o2) {
+                return Double.valueOf(o1.value).compareTo(Double.valueOf(o2.value));
+            }
+        });
+        return categoricalOrderList;
     }
 
     private InternalEntropyInfo getGiniInfo(double[] statsByClasses) {
@@ -381,7 +503,18 @@ class Gini extends Impurity {
     @Override
     public void featureUpdate(double[] featuerStatistic, int binIndex, float label, float significance, float weight) {
         // label + 0.1f to avoid 0.99999f is converted to 0
-        featuerStatistic[binIndex * super.statsSize + (int) (label + 0.1f)] += significance * weight;
+        featuerStatistic[binIndex * super.statsSize + (int) (label + 0.000001f)] += significance * weight;
     }
 
+}
+
+class Pair {
+    public Pair(int index, double value) {
+        super();
+        this.index = index;
+        this.value = value;
+    }
+
+    int index;
+    double value;
 }

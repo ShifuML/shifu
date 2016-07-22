@@ -337,8 +337,7 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
                 new Path(Constants.TMP, Constants.DEFAULT_MODELS_TMP_FOLDER), sourceType)));
         args.add(String.format(CommonConstants.MAPREDUCE_PARAM_FORMAT, CommonConstants.SHIFU_TMP_MODELS_FOLDER,
                 tmpModelsPath.toString()));
-        int baggingNum = (isForVarSelect || CommonUtils.isDesicionTreeAlgorithm(alg)) ? 1 : super.getModelConfig()
-                .getBaggingNum();
+        int baggingNum = isForVarSelect ? 1 : super.getModelConfig().getBaggingNum();
 
         long start = System.currentTimeMillis();
         LOG.info("Distributed trainning with baggingNum: {}", baggingNum);
@@ -399,6 +398,10 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
                     modelName));
             // check if job is continunous training, this can be set multiple times and we only get last one
             boolean isContinous = checkContinuousTraining(fileSystem, localArgs, modelPath);
+            if(isContinous && CommonUtils.isDesicionTreeAlgorithm(modelConfig.getAlgorithm())) {
+                isContinous = false;
+                LOG.warn("RF & GBDT do not support continuous training");
+            }
             if(!isContinous && !isOneJobNotContinuous) {
                 isOneJobNotContinuous = true;
                 // delete all old models if not continous
@@ -612,7 +615,9 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
 
         args.add("-c");
         int numTrainEpoches = super.getModelConfig().getTrain().getNumTrainEpochs();
-        if(this.isForVarSelect() && numTrainEpoches >= VAR_SELECT_TRAINING_DECAY_EPOCHES_THRESHOLD) {
+        // only for NN varselect, use half of epochs for sensitivity analysis
+        if(NNConstants.NN_ALG_NAME.equalsIgnoreCase(alg) && this.isForVarSelect()
+                && numTrainEpoches >= VAR_SELECT_TRAINING_DECAY_EPOCHES_THRESHOLD) {
             numTrainEpoches = numTrainEpoches / 2;
         }
         // the reason to add 1 is that the first iteration in implementation is used for training preparation.
@@ -647,8 +652,7 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
 
         // one can set guagua conf in shifuconfig
         for(Map.Entry<Object, Object> entry: Environment.getProperties().entrySet()) {
-            if(entry.getKey().toString().startsWith("nn") || entry.getKey().toString().startsWith("guagua")
-                    || entry.getKey().toString().startsWith("shifu") || entry.getKey().toString().startsWith("mapred")) {
+            if(CommonUtils.isHadoopConfigurationInjected(entry.getKey().toString())) {
                 args.add(String.format(CommonConstants.MAPREDUCE_PARAM_FORMAT, entry.getKey().toString(), entry
                         .getValue().toString()));
             }
@@ -660,15 +664,15 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
         if(this.isDebug()) {
             args.add(String.format(CommonConstants.MAPREDUCE_PARAM_FORMAT,
                     GuaguaMapReduceConstants.MAPRED_CHILD_JAVA_OPTS,
-                    "-Xms1024m -Xmx1638m -verbose:gc -XX:+PrintGCDetails -XX:+PrintGCTimeStamps"));
+                    "-Xms2048m -Xmx2048m -verbose:gc -XX:+PrintGCDetails -XX:+PrintGCTimeStamps"));
         } else {
             args.add(String.format(CommonConstants.MAPREDUCE_PARAM_FORMAT,
                     GuaguaMapReduceConstants.MAPRED_CHILD_JAVA_OPTS,
-                    "-Xms1024m -Xmx1638m -verbose:gc -XX:+PrintGCDetails -XX:+PrintGCTimeStamps"));
+                    "-Xms2048m -Xmx2048m -verbose:gc -XX:+PrintGCDetails -XX:+PrintGCTimeStamps"));
             args.add(String
                     .format(CommonConstants.MAPREDUCE_PARAM_FORMAT,
                             "mapreduce.map.java.opts",
-                            "-Xms1024m -Xmx1638m -server -XX:+UseParNewGC -XX:+UseConcMarkSweepGC "
+                            "-Xms2048m -Xmx2048m -server -XX:+UseParNewGC -XX:+UseConcMarkSweepGC "
                                     + "-XX:CMSInitiatingOccupancyFraction=70 -verbose:gc -XX:+PrintGCDetails -XX:+PrintGCTimeStamps"));
         }
         if(super.modelConfig.getNormalize().getIsParquet()) {

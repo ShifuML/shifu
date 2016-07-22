@@ -1,8 +1,5 @@
 package ml.shifu.shifu.udf.stats;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
@@ -15,10 +12,9 @@ import ml.shifu.shifu.util.CommonUtils;
  */
 public class NumericCounter extends Counter {
 
-    private final static Logger logger = LoggerFactory.getLogger(NumericCounter.class);
-
     private Set<String> missingValSet = new HashSet<String>();
     private List<Double> binBoundary;
+    @SuppressWarnings("unused")
     private String name;
 
     private Long[] counter;
