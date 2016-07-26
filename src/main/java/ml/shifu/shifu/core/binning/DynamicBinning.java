@@ -12,6 +12,8 @@ import java.util.List;
  */
 public class DynamicBinning extends AbstractBinning<Double> {
 
+    private final static double EPS = 1e-6;
+
     private List<NumBinInfo> binInfos;
 
     public DynamicBinning(List<NumBinInfo> binInfos, int expectedBinNum) {
@@ -106,10 +108,7 @@ public class DynamicBinning extends AbstractBinning<Double> {
         double entropy = 0.0;
 
         for ( NumBinInfo binInfo : mergedBinInfos ) {
-            double percent = binInfo.getTotalInstCnt() / totalInstCnt;
-            double positive = binInfo.getPositiveInstCnt() + 0.001;
-
-            entropy += -1 * percent * Math.log10(positive / binInfo.getTotalInstCnt());
+            entropy += getInfoValue(binInfo, totalInstCnt);
         }
 
         return entropy;
@@ -117,8 +116,15 @@ public class DynamicBinning extends AbstractBinning<Double> {
 
     private double getInfoValue(NumBinInfo numBinInfo, double totalInstCnt) {
         double percent = numBinInfo.getTotalInstCnt() / totalInstCnt;
-        double positive = numBinInfo.getPositiveInstCnt() + 0.001;
-        return -1 * percent * Math.log10(positive / numBinInfo.getTotalInstCnt());
+        double positiveRate = (numBinInfo.getPositiveInstCnt() + EPS) / numBinInfo.getTotalInstCnt();
+        double negativeRate = (numBinInfo.getTotalInstCnt() - numBinInfo.getPositiveInstCnt() + EPS)
+                / numBinInfo.getTotalInstCnt();
+
+        return -1 * percent * (log2(positiveRate) + log2(negativeRate));
+    }
+
+    private double log2(double ratio) {
+        return Math.log(ratio) / Math.log(2.0d);
     }
 
     private List<NumBinInfo> combineEmptyBin(List<NumBinInfo> binInfos) {
