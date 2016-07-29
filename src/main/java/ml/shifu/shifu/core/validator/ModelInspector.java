@@ -540,10 +540,10 @@ public class ModelInspector {
             }
         }
 
-        if(train.getAlgorithm().equalsIgnoreCase(CommonConstants.GBDT_ALG_NAME)
+        if(train.getAlgorithm().equalsIgnoreCase(CommonConstants.GBT_ALG_NAME)
                 || train.getAlgorithm().equalsIgnoreCase(CommonConstants.RF_ALG_NAME)) {
             Map<String, Object> params = train.getParams();
-            if(train.getAlgorithm().equalsIgnoreCase(CommonConstants.GBDT_ALG_NAME)) {
+            if(train.getAlgorithm().equalsIgnoreCase(CommonConstants.GBT_ALG_NAME)) {
                 Object loss = params.get("Loss");
                 if(loss != null && !"log".equalsIgnoreCase(loss.toString())
                         && !"squared".equalsIgnoreCase(loss.toString())
@@ -577,7 +577,7 @@ public class ModelInspector {
                 }
             }
 
-            if(train.getAlgorithm().equalsIgnoreCase(CommonConstants.GBDT_ALG_NAME)) {
+            if(train.getAlgorithm().equalsIgnoreCase(CommonConstants.GBT_ALG_NAME)) {
                 Object learningRateObj = params.get(NNTrainer.LEARNING_RATE);
                 if(learningRateObj != null) {
                     Double learningRate = Double.valueOf(learningRateObj.toString());
@@ -624,7 +624,7 @@ public class ModelInspector {
             }
 
             Object impurityObj = params.get("Impurity");
-            if(train.getAlgorithm().equalsIgnoreCase(CommonConstants.GBDT_ALG_NAME)) {
+            if(train.getAlgorithm().equalsIgnoreCase(CommonConstants.GBT_ALG_NAME)) {
                 if(impurityObj != null && !"variance".equalsIgnoreCase(impurityObj.toString())) {
                     ValidateResult tmpResult = new ValidateResult(true);
                     tmpResult.setStatus(false);

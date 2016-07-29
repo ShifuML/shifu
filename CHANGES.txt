@@ -16,6 +16,10 @@
  
 Shifu Change Log
 
+Changes for Shifu-0.2.8
+    * Random Forest Support
+    * Gradient Boosted Trees Support
+
 Changes for Shifu-0.2.7
     * Sampling Function Improvement
         a) https://github.com/ShifuML/shifu/issues/93

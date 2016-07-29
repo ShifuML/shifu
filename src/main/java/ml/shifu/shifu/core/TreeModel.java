@@ -188,7 +188,7 @@ public class TreeModel extends BasicML implements MLRegression {
             if(CommonConstants.RF_ALG_NAME.equalsIgnoreCase(algorithm)) {
                 weights.add(1d);
             }
-            if(CommonConstants.GBDT_ALG_NAME.equalsIgnoreCase(algorithm)) {
+            if(CommonConstants.GBT_ALG_NAME.equalsIgnoreCase(algorithm)) {
                 if(i == 0) {
                     weights.add(1d);
                 } else {
@@ -217,7 +217,7 @@ public class TreeModel extends BasicML implements MLRegression {
             }
         }
 
-        return new TreeModel(trees, weights, CommonConstants.GBDT_ALG_NAME.equalsIgnoreCase(algorithm),
+        return new TreeModel(trees, weights, CommonConstants.GBT_ALG_NAME.equalsIgnoreCase(algorithm),
                 columnConfigList, columnMapping);
     }
 
