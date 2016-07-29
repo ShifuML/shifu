@@ -47,6 +47,6 @@ public interface CommonConstants {
 
     public static final String RF_ALG_NAME = "RF";
 
-    public static final String GBDT_ALG_NAME = "GBDT";
+    public static final String GBT_ALG_NAME = "GBT";
 
 }

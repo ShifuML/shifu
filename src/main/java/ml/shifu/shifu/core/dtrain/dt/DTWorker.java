@@ -266,7 +266,7 @@ public class DTWorker
         }
 
         this.isRF = ALGORITHM.RF.toString().equalsIgnoreCase(modelConfig.getAlgorithm());
-        this.isGBDT = ALGORITHM.GBDT.toString().equalsIgnoreCase(modelConfig.getAlgorithm());
+        this.isGBDT = ALGORITHM.GBT.toString().equalsIgnoreCase(modelConfig.getAlgorithm());
 
         String lossStr = this.modelConfig.getTrain().getParams().get("Loss").toString();
         if(lossStr.equalsIgnoreCase("log")) {

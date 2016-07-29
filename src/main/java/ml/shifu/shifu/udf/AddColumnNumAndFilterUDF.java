@@ -16,9 +16,7 @@
 package ml.shifu.shifu.udf;
 
 import java.io.IOException;
-import java.util.HashSet;
 import java.util.Random;
-import java.util.Set;
 
 import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.container.obj.ModelStatsConf.BinningMethod;
@@ -69,6 +67,7 @@ public class AddColumnNumAndFilterUDF extends AbstractTrainerUDF<DataBag> {
         this.isAppendRandom = Boolean.TRUE.toString().equalsIgnoreCase(isAppendRandom);
     }
 
+    @SuppressWarnings("deprecation")
     public DataBag exec(Tuple input) throws IOException {
         DataBag bag = BagFactory.getInstance().newDefaultBag();
         TupleFactory tupleFactory = TupleFactory.getInstance();
