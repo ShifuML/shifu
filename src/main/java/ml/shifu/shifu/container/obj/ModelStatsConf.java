@@ -27,7 +27,7 @@ public class ModelStatsConf {
 
     @JsonDeserialize(using = BinningMethodDeserializer.class)
     public static enum BinningMethod {
-        EqualNegtive, EqualInterval, EqualPositive, EqualTotal, DynamicBinning
+        EqualNegtive, EqualInterval, EqualPositive, EqualTotal
         // TODO another four with weights
     }
     
@@ -37,8 +37,9 @@ public class ModelStatsConf {
         SPDTI, // paper reference: www.jmlr.org/papers/volume11/ben-haim10a/ben-haim10a.pdf, improvement for last
                // binning updating step
         MunroPat, // paper reference: www.cs.ucsb.edu/~suri/cs290/MunroPat.pdf
-        MunroPatI // paper reference: www.cs.ucsb.edu/~suri/cs290/MunroPat.pdf, improvement for last
+        MunroPatI, // paper reference: www.cs.ucsb.edu/~suri/cs290/MunroPat.pdf, improvement for last
                    // binning updating step
+        DynamicBinning
     }
 
     private Integer maxNumBin = Integer.valueOf(10);
