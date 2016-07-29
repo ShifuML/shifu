@@ -18,7 +18,22 @@ Shifu Change Log
 
 Changes for Shifu-0.2.8
     * Random Forest Support
+        a) https://github.com/ShifuML/shifu/issues/123
+        b) https://github.com/ShifuML/shifu/issues/122
     * Gradient Boosted Trees Support
+        a) https://github.com/ShifuML/shifu/issues/124
+        b) https://github.com/ShifuML/shifu/issues/122
+    * Feature Importance in 'posttrain' Step
+        https://github.com/ShifuML/shifu/issues/180
+    * PSI Feature in 'stats' Step
+        https://github.com/ShifuML/shifu/issues/196
+    * Correlation Between Features in 'norm' Step
+        https://github.com/ShifuML/shifu/issues/146
+    * Others
+        a) https://github.com/ShifuML/shifu/issues/190
+        b) https://github.com/ShifuML/shifu/issues/181
+        c) https://github.com/ShifuML/shifu/issues/179
+        d) https://github.com/ShifuML/shifu/issues/178
 
 Changes for Shifu-0.2.7
     * Sampling Function Improvement
