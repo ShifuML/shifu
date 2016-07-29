@@ -45,7 +45,7 @@ public class StatsModelProcessor extends BasicModelProcessor implements Processo
             AbstractStatsExecutor statsExecutor = null;
 
             if (modelConfig.isMapReduceRunMode()) {
-                if (modelConfig.getBinningMethod().equals(ModelStatsConf.BinningMethod.DynamicBinning)) {
+                if (modelConfig.getBinningAlgorithm().equals(ModelStatsConf.BinningAlgorithm.DynamicBinning)) {
                     statsExecutor = new DIBStatsExecutor(this, modelConfig, columnConfigList);
                 } else if (modelConfig.getBinningAlgorithm().equals(ModelStatsConf.BinningAlgorithm.MunroPat)) {
                     statsExecutor = new MunroPatStatsExecutor(this, modelConfig, columnConfigList);
