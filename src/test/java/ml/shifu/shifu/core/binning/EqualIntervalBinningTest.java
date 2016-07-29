@@ -76,7 +76,7 @@ public class EqualIntervalBinningTest {
         ModelConfig modelConfig = CommonUtils.loadModelConfig("src/test/resources/example/inner_seg1_v15/ModelConfig.json", RawSourceData.SourceType.LOCAL);
 
         EqualIntervalBinning inst = new EqualIntervalBinning(1000, modelConfig.getMissingOrInvalidValues());
-        InputStream is = EqualIntervalBinningTest.class.getResourceAsStream("/example/inner_seg1_v15/ars_sample_fields.gz");
+        InputStream is = EqualIntervalBinningTest.class.getResourceAsStream("/example/inner_seg1_v15/dib_sample_fields.gz");
         GZIPInputStream gzis = new GZIPInputStream(is);
 
         List<String> lines = IOUtils.readLines(gzis);
