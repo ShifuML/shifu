@@ -92,7 +92,7 @@ public class DynamicBinning extends AbstractBinning<Double> {
                     - getInfoValue(next, totalInstCnt)
                     + getInfoValue(temp, totalInstCnt);
 
-            double reduction = entropy - entropyMerging;
+            double reduction = entropyMerging - entropy;
             if ( reduction < entryReduction ) {
                 nodeIndexToMerge = pos;
                 entryReduction = reduction;
@@ -120,7 +120,7 @@ public class DynamicBinning extends AbstractBinning<Double> {
         double negativeRate = (numBinInfo.getTotalInstCnt() - numBinInfo.getPositiveInstCnt() + EPS)
                 / numBinInfo.getTotalInstCnt();
 
-        return -1 * percent * (log2(positiveRate) + log2(negativeRate));
+        return -1 * percent * (positiveRate * log2(positiveRate) + negativeRate * log2(negativeRate));
     }
 
     private double log2(double ratio) {
