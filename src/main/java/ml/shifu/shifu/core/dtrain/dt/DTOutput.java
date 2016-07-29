@@ -100,7 +100,7 @@ public class DTOutput extends BasicMasterInterceptor<DTMasterParams, DTWorkerPar
         }
         double error = context.getMasterResult().getSquareError() / context.getMasterResult().getCount();
         String info = "";
-        if(context.getMasterResult().isSwitchToNextTree()) {
+        if(context.getMasterResult().isSwitchToNextTree() || context.getMasterResult().isHalt()) {
             info = new StringBuilder(200).append("    Trainer ").append(this.trainerId).append(" Iteration #")
                     .append(currentIteration - 1).append(" Tree(starting from 1) ")
                     .append(context.getMasterResult().getTrees().size() - 1).append(" is finished building. \n")

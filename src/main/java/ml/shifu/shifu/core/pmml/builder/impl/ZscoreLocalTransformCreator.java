@@ -1,21 +1,33 @@
 package ml.shifu.shifu.core.pmml.builder.impl;
 
+import java.util.ArrayList;
+import java.util.List;
+
+import javax.xml.parsers.DocumentBuilderFactory;
+import javax.xml.parsers.ParserConfigurationException;
+
 import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.container.obj.ModelConfig;
 import ml.shifu.shifu.container.obj.ModelNormalizeConf;
 import ml.shifu.shifu.core.Normalizer;
 import ml.shifu.shifu.core.pmml.builder.creator.AbstractPmmlElementCreator;
-import org.apache.commons.lang.StringUtils;
-import org.dmg.pmml.*;
+
+import org.dmg.pmml.DataType;
+import org.dmg.pmml.DerivedField;
+import org.dmg.pmml.FieldColumnPair;
+import org.dmg.pmml.FieldName;
+import org.dmg.pmml.InlineTable;
+import org.dmg.pmml.LinearNorm;
+import org.dmg.pmml.LocalTransformations;
+import org.dmg.pmml.MapValues;
+import org.dmg.pmml.NormContinuous;
+import org.dmg.pmml.OpType;
+import org.dmg.pmml.OutlierTreatmentMethodType;
+import org.dmg.pmml.Row;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
-
-import javax.xml.parsers.DocumentBuilderFactory;
-import javax.xml.parsers.ParserConfigurationException;
-import java.util.ArrayList;
-import java.util.List;
 
 /**
  * Created by zhanhu on 3/29/16.

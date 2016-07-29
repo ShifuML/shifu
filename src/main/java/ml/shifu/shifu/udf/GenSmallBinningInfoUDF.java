@@ -1,17 +1,16 @@
 package ml.shifu.shifu.udf;
 
+import java.io.IOException;
+import java.util.Iterator;
+
 import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.core.binning.AbstractBinning;
 import ml.shifu.shifu.core.binning.CategoricalBinning;
 import ml.shifu.shifu.core.binning.EqualIntervalBinning;
+
 import org.apache.commons.lang.StringUtils;
-import org.apache.pig.EvalFunc;
 import org.apache.pig.data.DataBag;
 import org.apache.pig.data.Tuple;
-
-import java.io.IOException;
-import java.util.Iterator;
-import java.util.List;
 
 /**
  * Created by zhanhu on 7/5/16.
@@ -36,6 +35,7 @@ public class GenSmallBinningInfoUDF extends AbstractTrainerUDF<String> {
 
         ColumnConfig columnConfig = super.columnConfigList.get(columnId);
 
+        @SuppressWarnings("rawtypes")
         AbstractBinning binning = null;
         if ( columnConfig.isNumerical() ) {
             binning = new EqualIntervalBinning(this.scaleFactor, super.modelConfig.getMissingOrInvalidValues());

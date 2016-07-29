@@ -463,7 +463,7 @@ public class DTMaster extends AbstractMasterComputable<DTMasterParams, DTWorkerP
         // assert this.maxStatsMemory <= Math.min(Runtime.getRuntime().maxMemory() * 0.6, 800 * 1024 * 1024L);
         this.treeNum = Integer.valueOf(this.modelConfig.getTrain().getParams().get("TreeNum").toString());;
         this.isRF = ALGORITHM.RF.toString().equalsIgnoreCase(modelConfig.getAlgorithm());
-        this.isGBDT = ALGORITHM.GBDT.toString().equalsIgnoreCase(modelConfig.getAlgorithm());
+        this.isGBDT = ALGORITHM.GBT.toString().equalsIgnoreCase(modelConfig.getAlgorithm());
         if(this.isGBDT) {
             // learning rate only effective in gbdt
             this.learningRate = Double.valueOf(this.modelConfig.getParams().get(NNTrainer.LEARNING_RATE).toString());

@@ -15,39 +15,18 @@
  */
 package ml.shifu.shifu.core.pmml;
 
-import java.io.File;
-import java.io.PrintWriter;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-
 import ml.shifu.shifu.container.obj.ModelTrainConf;
-import ml.shifu.shifu.core.pmml.builder.creator.AbstractSpecifCreator;
-import ml.shifu.shifu.core.pmml.builder.impl.NNSpecifCreator;
-import org.apache.commons.io.FileUtils;
-import org.apache.commons.io.IOUtils;
-import org.dmg.pmml.FieldName;
-import org.dmg.pmml.Model;
-import org.dmg.pmml.PMML;
-import org.jpmml.evaluator.ClassificationMap;
-import org.jpmml.evaluator.FieldValue;
-import org.jpmml.evaluator.ModelEvaluator;
-import org.jpmml.evaluator.ModelEvaluatorFactory;
-import org.jpmml.evaluator.NeuralNetworkEvaluator;
+import ml.shifu.shifu.util.Environment;
+
 import org.testng.Assert;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.Test;
-
-import ml.shifu.shifu.ShifuCLI;
-import ml.shifu.shifu.util.Environment;
 
 
 /**
  * PMMLTranslatorTest class
  */
 public class PMMLTranslatorTest {
-
-    private boolean isConcisePmml = true;
 
     @BeforeClass
     public void setUp() {

@@ -1,11 +1,10 @@
 package ml.shifu.shifu.core.binning.obj;
 
-import org.apache.commons.jexl2.UnifiedJEXL;
-import org.apache.commons.lang.StringUtils;
-
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+
+import org.apache.commons.lang.StringUtils;
 
 /**
  * Created by zhanhu on 7/6/16.
