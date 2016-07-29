@@ -62,7 +62,7 @@ public class DynamicBinningUDFTest {
     }
 
     private DataBag createDataBag() throws IOException {
-        InputStream is = DynamicBinningUDFTest.class.getResourceAsStream("/example/inner_seg1_v15/ars_sample_fields.gz");
+        InputStream is = DynamicBinningUDFTest.class.getResourceAsStream("/example/inner_seg1_v15/dib_sample_fields.gz");
         GZIPInputStream gzis = new GZIPInputStream(is);
 
         DataBag databag = new DefaultDataBag();
