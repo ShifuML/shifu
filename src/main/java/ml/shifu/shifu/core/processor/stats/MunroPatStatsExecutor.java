@@ -1,19 +1,15 @@
 package ml.shifu.shifu.core.processor.stats;
 
-import ml.shifu.shifu.container.obj.ColumnConfig;
-import ml.shifu.shifu.container.obj.ModelConfig;
-import ml.shifu.shifu.container.obj.ModelStatsConf;
-import ml.shifu.shifu.core.processor.BasicModelProcessor;
-import ml.shifu.shifu.exception.ShifuErrorCode;
-import ml.shifu.shifu.exception.ShifuException;
-import ml.shifu.shifu.fs.ShifuFileUtils;
-import ml.shifu.shifu.pig.PigExecutor;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import java.io.IOException;
 import java.util.List;
 import java.util.Map;
+
+import ml.shifu.shifu.container.obj.ColumnConfig;
+import ml.shifu.shifu.container.obj.ModelConfig;
+import ml.shifu.shifu.core.processor.BasicModelProcessor;
+import ml.shifu.shifu.pig.PigExecutor;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Created by zhanhu on 7/1/16.

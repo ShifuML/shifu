@@ -1,12 +1,10 @@
 package ml.shifu.shifu.core.processor.stats;
 
+import java.util.List;
+
 import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.container.obj.ModelConfig;
 import ml.shifu.shifu.core.processor.BasicModelProcessor;
-import org.apache.commons.collections.CollectionUtils;
-
-import java.util.List;
-import java.util.Scanner;
 
 /**
  * Created by zhanhu on 6/30/16.

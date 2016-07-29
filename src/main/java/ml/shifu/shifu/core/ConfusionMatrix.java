@@ -227,7 +227,7 @@ public class ConfusionMatrix {
                     }
                     continue;
                 }
-                if(cnt == 1 && CommonConstants.GBDT_ALG_NAME.equalsIgnoreCase(modelConfig.getAlgorithm())) {
+                if(cnt == 1 && CommonConstants.GBT_ALG_NAME.equalsIgnoreCase(modelConfig.getAlgorithm())) {
                     // for gbdt, the result maybe not in [0, 1], set first score to make the upper score bould clear
                     po.binLowestScore = score;
                 }

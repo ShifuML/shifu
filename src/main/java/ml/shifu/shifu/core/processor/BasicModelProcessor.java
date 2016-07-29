@@ -312,7 +312,7 @@ public class BasicModelProcessor {
                 modelConfig.setParams(param);
                 saveModelConfig();
             }
-        } else if(alg.equalsIgnoreCase("GBDT")) {
+        } else if(alg.equalsIgnoreCase("GBT")) {
             if(!param.containsKey("FeatureSubsetStrategy")) {
                 param = new LinkedHashMap<String, Object>();
 
