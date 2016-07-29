@@ -51,7 +51,7 @@ public class EqualIntervalBinning extends AbstractBinning<Double> {
      * @param binningNum
      */
     public EqualIntervalBinning(int binningNum, List<String> missingValList) {
-        super(binningNum);
+        super(binningNum, missingValList);
     }
 
     /* 
@@ -92,7 +92,7 @@ public class EqualIntervalBinning extends AbstractBinning<Double> {
             return binBorders;
         }
         
-        double delta = (maxVal - minVal) * 0.1;
+        double delta = (maxVal - minVal) * 0.0005;
         double startVal = minVal - delta;
         double endVal = maxVal + delta;
         
