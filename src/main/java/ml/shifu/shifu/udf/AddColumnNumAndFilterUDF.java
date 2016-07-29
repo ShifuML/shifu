@@ -19,6 +19,7 @@ import java.io.IOException;
 import java.util.Random;
 
 import ml.shifu.shifu.container.obj.ColumnConfig;
+import ml.shifu.shifu.container.obj.ModelStatsConf;
 import ml.shifu.shifu.container.obj.ModelStatsConf.BinningMethod;
 import ml.shifu.shifu.exception.ShifuErrorCode;
 import ml.shifu.shifu.exception.ShifuException;
@@ -176,7 +177,7 @@ public class AddColumnNumAndFilterUDF extends AbstractTrainerUDF<DataBag> {
         if(isBinary) {
             return columnConfig != null
                     && ( columnConfig.isCategorical()
-                        || modelConfig.getBinningMethod().equals(BinningMethod.DynamicBinning)
+                        || modelConfig.getBinningAlgorithm().equals(ModelStatsConf.BinningAlgorithm.DynamicBinning)
                         || modelConfig.getBinningMethod().equals(BinningMethod.EqualTotal)
                         || modelConfig.getBinningMethod().equals(BinningMethod.EqualInterval)
                         || (modelConfig.getBinningMethod().equals(BinningMethod.EqualPositive) && isPositive)

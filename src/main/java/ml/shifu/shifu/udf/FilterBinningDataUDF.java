@@ -20,6 +20,7 @@ package ml.shifu.shifu.udf;
 import java.io.IOException;
 
 import ml.shifu.shifu.container.obj.ColumnConfig;
+import ml.shifu.shifu.container.obj.ModelStatsConf;
 import ml.shifu.shifu.container.obj.ModelStatsConf.BinningMethod;
 
 import org.apache.pig.data.Tuple;
@@ -68,6 +69,7 @@ public class FilterBinningDataUDF extends AbstractTrainerUDF<Boolean> {
         if(isBinary) {
             return columnConfig != null
                     && (columnConfig.isCategorical()
+                    || modelConfig.getBinningAlgorithm().equals(ModelStatsConf.BinningAlgorithm.DynamicBinning)
                     || modelConfig.getBinningMethod().equals(BinningMethod.EqualTotal)
                     || modelConfig.getBinningMethod().equals(BinningMethod.EqualInterval)
                     || (modelConfig.getBinningMethod().equals(BinningMethod.EqualPositive) && isPositive)
