@@ -65,6 +65,8 @@ public class TreeModel extends BasicML implements MLRegression {
 
     private boolean isGBDT = false;
 
+    private boolean isClassification = false;
+
     public TreeModel(List<TreeNode> trees, List<Double> weights, boolean isGBDT, List<ColumnConfig> columnConfigList) {
         this.trees = trees;
         this.weights = weights;
@@ -94,7 +96,7 @@ public class TreeModel extends BasicML implements MLRegression {
     }
 
     public TreeModel(List<TreeNode> trees, List<Double> weights, boolean isGBDT, List<ColumnConfig> columnConfigList,
-            Map<Integer, Integer> columnMapping) {
+            Map<Integer, Integer> columnMapping, boolean isClassfication) {
         this.trees = trees;
         this.weights = weights;
         assert trees != null && weights != null && trees.size() == weights.size();
@@ -102,6 +104,7 @@ public class TreeModel extends BasicML implements MLRegression {
         this.columnMapping = columnMapping;
         this.inputNode = columnMapping.size();
         this.isGBDT = isGBDT;
+        this.isClassification = isClassfication;
     }
 
     @Override
@@ -109,21 +112,29 @@ public class TreeModel extends BasicML implements MLRegression {
         double[] data = input.getData();
         double predictSum = 0d;
         double weightSum = 0d;
+        double[] scores = new double[this.trees.size()];
         for(int i = 0; i < this.trees.size(); i++) {
             TreeNode treeNode = this.trees.get(i);
             Double weight = this.weights.get(i);
             weightSum += weight;
-            predictSum += predictNode(treeNode.getNode(), data) * weight;
+            double score = predictNode(treeNode.getNode(), data);
+            scores[i] = score;
+            predictSum += score * weight;
         }
 
-        double finalPredict;
-        if(this.isGBDT) {
-            finalPredict = predictSum;
+        MLData result = null;
+        if(this.isClassification) {
+            result = new BasicMLData(scores);
         } else {
-            finalPredict = predictSum / weightSum;
+            double finalPredict;
+            if(this.isGBDT) {
+                finalPredict = predictSum;
+            } else {
+                finalPredict = predictSum / weightSum;
+            }
+            result = new BasicMLData(1);
+            result.setData(0, finalPredict);
         }
-        MLData result = new BasicMLData(1);
-        result.setData(0, finalPredict);
         return result;
     }
 
@@ -131,7 +142,11 @@ public class TreeModel extends BasicML implements MLRegression {
         Node currNode = topNode;
         Split split = currNode.getSplit();
         if(split == null || currNode.isLeaf()) {
-            return currNode.getPredict().getPredict();
+            if(this.isClassification) {
+                return currNode.getPredict().getClassValue();
+            } else {
+                return currNode.getPredict().getPredict();
+            }
         }
 
         ColumnConfig columnConfig = this.columnConfigList.get(split.getColumnNum());
@@ -218,7 +233,9 @@ public class TreeModel extends BasicML implements MLRegression {
         }
 
         return new TreeModel(trees, weights, CommonConstants.GBT_ALG_NAME.equalsIgnoreCase(algorithm),
-                columnConfigList, columnMapping);
+                columnConfigList, columnMapping, modelConfig.isMultiClassification()
+                        && !modelConfig.getTrain().isOneVsAll());
+        // if one vs all, even multiple classification, treated as regression
     }
 
     /*
@@ -259,5 +276,20 @@ public class TreeModel extends BasicML implements MLRegression {
      */
     public void setGBDT(boolean isGBDT) {
         this.isGBDT = isGBDT;
+    }
+
+    /**
+     * @return the isClassfication
+     */
+    public boolean isClassfication() {
+        return isClassification;
+    }
+
+    /**
+     * @param isClassfication
+     *            the isClassfication to set
+     */
+    public void setClassfication(boolean isClassfication) {
+        this.isClassification = isClassfication;
     }
 }

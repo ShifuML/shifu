@@ -27,13 +27,13 @@ import ml.shifu.shifu.core.dtrain.dt.DTWorker;
 import ml.shifu.shifu.core.dtrain.dt.DTWorkerParams;
 
 /**
- * TODO
+ * RF & GBT d-train logic change
  * 
  * @author Zhang David (pengzhang@paypal.com)
  */
 public class DTTest {
 
-    //@Test
+    // @Test
     public void testDtApp() throws IOException {
         Properties props = new Properties();
         props.setProperty(GuaguaConstants.MASTER_COMPUTABLE_CLASS, DTMaster.class.getName());

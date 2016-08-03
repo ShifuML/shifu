@@ -316,7 +316,7 @@ public class Node implements Bytable {
     }
 
     public static int indexToLevel(int nodeIndex) {
-        return Integer.numberOfTrailingZeros(Integer.highestOneBit(nodeIndex));
+        return Integer.numberOfTrailingZeros(Integer.highestOneBit(nodeIndex)) + 1;
     }
 
     /**
@@ -417,23 +417,6 @@ public class Node implements Bytable {
             out.writeBoolean(true);
             right.write(out);
         }
-
-        // left and right stats info not used anywhere, do we remove them
-        // out.writeDouble(leftImpurity);
-        // out.writeDouble(rightImpurity);
-        // if(leftPredict == null) {
-        // out.writeBoolean(false);
-        // } else {
-        // out.writeBoolean(true);
-        // leftPredict.write(out);
-        // }
-        //
-        // if(rightPredict == null) {
-        // out.writeBoolean(false);
-        // } else {
-        // out.writeBoolean(true);
-        // rightPredict.write(out);
-        // }
     }
 
     @Override
@@ -462,18 +445,6 @@ public class Node implements Bytable {
             this.right = new Node();
             this.right.readFields(in);
         }
-
-        // left and right stats info not use anywhere, no need serialization
-        // this.leftImpurity = in.readDouble();
-        // this.rightImpurity = in.readDouble();
-        // if(in.readBoolean()) {
-        // this.leftPredict = new Predict();
-        // this.leftPredict.readFields(in);
-        // }
-        // if(in.readBoolean()) {
-        // this.rightPredict = new Predict();
-        // this.rightPredict.readFields(in);
-        // }
     }
 
     @Override

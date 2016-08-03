@@ -173,11 +173,15 @@ public class UpdateBinningInfoReducer extends Reducer<IntWritable, BinningInfoWr
             }
         }
 
-        double[] binPosRate = computePosRate(binCountPos, binCountNeg);
-
+        double[] binPosRate;
+        if(modelConfig.isBinaryClassification()) {
+            binPosRate = computePosRate(binCountPos, binCountNeg);
+        } else {
+            // for multiple classfication, use rate of categories to compute a value
+            binPosRate = computeRateForMultiClassfication(binCountPos);
+        }
         String binBounString = null;
 
-        // TODO how about multi-classification
         if(columnConfig.isCategorical()) {
             if(binCategories.size() == 0 || binCategories.size() > MAX_CATEGORICAL_BINC_COUNT) {
                 LOG.warn("Column {} {} with invalid bin boundary size.", key.get(), columnConfig.getColumnName(),
@@ -236,30 +240,56 @@ public class UpdateBinningInfoReducer extends Reducer<IntWritable, BinningInfoWr
                 quarticSum);
 
         sb.append(key.get())
-                .append(Constants.DEFAULT_DELIMITER).append(binBounString)
-                .append(Constants.DEFAULT_DELIMITER).append(Arrays.toString(binCountNeg))
-                .append(Constants.DEFAULT_DELIMITER).append(Arrays.toString(binCountPos))
-                .append(Constants.DEFAULT_DELIMITER).append(Arrays.toString(new double[0]))
-                .append(Constants.DEFAULT_DELIMITER).append(Arrays.toString(binPosRate))
-                .append(Constants.DEFAULT_DELIMITER).append(columnCountMetrics == null ? "" : df.format(columnCountMetrics.getKs()))
-                .append(Constants.DEFAULT_DELIMITER).append(columnWeightMetrics == null ? "" : df.format(columnWeightMetrics.getIv()))
-                .append(Constants.DEFAULT_DELIMITER).append(df.format(max))
-                .append(Constants.DEFAULT_DELIMITER).append(df.format(min))
-                .append(Constants.DEFAULT_DELIMITER).append(df.format(mean))
-                .append(Constants.DEFAULT_DELIMITER).append(df.format(stdDev))
-                .append(Constants.DEFAULT_DELIMITER).append(columnConfig.isCategorical() ? "C" : "N")
-                .append(Constants.DEFAULT_DELIMITER).append(df.format(mean))
-                .append(Constants.DEFAULT_DELIMITER).append(missingCount)
-                .append(Constants.DEFAULT_DELIMITER).append(count)
-                .append(Constants.DEFAULT_DELIMITER).append(missingCount * 1.0d / count)
-                .append(Constants.DEFAULT_DELIMITER).append(Arrays.toString(binWeightNeg))
-                .append(Constants.DEFAULT_DELIMITER).append(Arrays.toString(binWeightPos))
-                .append(Constants.DEFAULT_DELIMITER).append(columnCountMetrics == null ? "" : columnCountMetrics.getWoe())
-                .append(Constants.DEFAULT_DELIMITER).append(columnWeightMetrics == null ? "" : columnWeightMetrics.getWoe())
-                .append(Constants.DEFAULT_DELIMITER).append(columnWeightMetrics == null ? "" : columnWeightMetrics.getKs())
-                .append(Constants.DEFAULT_DELIMITER).append(columnCountMetrics == null ? "" : columnCountMetrics.getIv())
-                .append(Constants.DEFAULT_DELIMITER).append(columnCountMetrics == null ? Arrays.toString(new double[binSize + 1]) : columnCountMetrics.getBinningWoe().toString())
-                .append(Constants.DEFAULT_DELIMITER).append(columnWeightMetrics == null ? Arrays.toString(new double[binSize + 1]) : columnWeightMetrics.getBinningWoe().toString()).append(Constants.DEFAULT_DELIMITER).append(skewness)
+                .append(Constants.DEFAULT_DELIMITER)
+                .append(binBounString)
+                .append(Constants.DEFAULT_DELIMITER)
+                .append(Arrays.toString(binCountNeg))
+                .append(Constants.DEFAULT_DELIMITER)
+                .append(Arrays.toString(binCountPos))
+                .append(Constants.DEFAULT_DELIMITER)
+                .append(Arrays.toString(new double[0]))
+                .append(Constants.DEFAULT_DELIMITER)
+                .append(Arrays.toString(binPosRate))
+                .append(Constants.DEFAULT_DELIMITER)
+                .append(columnCountMetrics == null ? "" : df.format(columnCountMetrics.getKs()))
+                .append(Constants.DEFAULT_DELIMITER)
+                .append(columnWeightMetrics == null ? "" : df.format(columnWeightMetrics.getIv()))
+                .append(Constants.DEFAULT_DELIMITER)
+                .append(df.format(max))
+                .append(Constants.DEFAULT_DELIMITER)
+                .append(df.format(min))
+                .append(Constants.DEFAULT_DELIMITER)
+                .append(df.format(mean))
+                .append(Constants.DEFAULT_DELIMITER)
+                .append(df.format(stdDev))
+                .append(Constants.DEFAULT_DELIMITER)
+                .append(columnConfig.isCategorical() ? "C" : "N")
+                .append(Constants.DEFAULT_DELIMITER)
+                .append(df.format(mean))
+                .append(Constants.DEFAULT_DELIMITER)
+                .append(missingCount)
+                .append(Constants.DEFAULT_DELIMITER)
+                .append(count)
+                .append(Constants.DEFAULT_DELIMITER)
+                .append(missingCount * 1.0d / count)
+                .append(Constants.DEFAULT_DELIMITER)
+                .append(Arrays.toString(binWeightNeg))
+                .append(Constants.DEFAULT_DELIMITER)
+                .append(Arrays.toString(binWeightPos))
+                .append(Constants.DEFAULT_DELIMITER)
+                .append(columnCountMetrics == null ? "" : columnCountMetrics.getWoe())
+                .append(Constants.DEFAULT_DELIMITER)
+                .append(columnWeightMetrics == null ? "" : columnWeightMetrics.getWoe())
+                .append(Constants.DEFAULT_DELIMITER)
+                .append(columnWeightMetrics == null ? "" : columnWeightMetrics.getKs())
+                .append(Constants.DEFAULT_DELIMITER)
+                .append(columnCountMetrics == null ? "" : columnCountMetrics.getIv())
+                .append(Constants.DEFAULT_DELIMITER)
+                .append(columnCountMetrics == null ? Arrays.toString(new double[binSize + 1]) : columnCountMetrics
+                        .getBinningWoe().toString())
+                .append(Constants.DEFAULT_DELIMITER)
+                .append(columnWeightMetrics == null ? Arrays.toString(new double[binSize + 1]) : columnWeightMetrics
+                        .getBinningWoe().toString()).append(Constants.DEFAULT_DELIMITER).append(skewness)
                 .append(Constants.DEFAULT_DELIMITER).append(kurtosis);
 
         outputValue.set(sb.toString());
@@ -280,4 +310,17 @@ public class UpdateBinningInfoReducer extends Reducer<IntWritable, BinningInfoWr
         return posRate;
     }
 
+    private double[] computeRateForMultiClassfication(long[] binCount) {
+        double[] rate = new double[binCount.length];
+        double sum = 0d;
+        for(int i = 0; i < binCount.length; i++) {
+            sum += binCount[i];
+        }
+        for(int i = 0; i < binCount.length; i++) {
+            if(Double.compare(sum, 0d) != 0) {
+                rate[i] = binCount[i] * 1.0d / sum;
+            }
+        }
+        return rate;
+    }
 }

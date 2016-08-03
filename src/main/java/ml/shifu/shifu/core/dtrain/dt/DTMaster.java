@@ -287,14 +287,28 @@ public class DTMaster extends AbstractMasterComputable<DTMasterParams, DTWorkerP
         } else {
             int nodeIndexInGroup = 0;
             long currMem = 0L;
+            List<Integer> depthList = new ArrayList<Integer>();
+            for(int i = 0; i < this.treeNum; i++) {
+                // -1 means not work on
+                depthList.add(-1);
+            }
+
             while(!queue.isEmpty() && currMem <= this.maxStatsMemory) {
                 TreeNode node = this.queue.poll();
+                int treeId = node.getTreeId();
+                int oldDepth = depthList.get(treeId);
+                int currDepth = Node.indexToLevel(node.getNode().getId());
+                if(currDepth > oldDepth) {
+                    depthList.set(treeId, currDepth);
+                }
+
                 List<Integer> subsetFeatures = getSubsamplingFeatures(featureSubsetStrategy);
                 node.setFeatures(subsetFeatures);
                 currMem += getStatsMem(subsetFeatures);
                 todoNodes.put(nodeIndexInGroup, node);
                 nodeIndexInGroup += 1;
             }
+            masterParams.setTreeDepth(depthList);
             masterParams.setTodoNodes(todoNodes);
             masterParams.setSwitchToNextTree(false);
             LOG.info("Todo node size is {}", todoNodes.size());
@@ -363,13 +377,25 @@ public class DTMaster extends AbstractMasterComputable<DTMasterParams, DTWorkerP
     private DTMasterParams buildInitialMasterParams() {
         Map<Integer, TreeNode> todoNodes = new HashMap<Integer, TreeNode>(treeNum, 1.0f);
         int nodeIndexInGroup = 0;
+        List<Integer> depthList = new ArrayList<Integer>();
+        for(int i = 0; i < this.treeNum; i++) {
+            depthList.add(-1);
+        }
         for(TreeNode treeNode: trees) {
             List<Integer> features = getSubsamplingFeatures(this.featureSubsetStrategy);
             treeNode.setFeatures(features);
             todoNodes.put(nodeIndexInGroup, treeNode);
+            int treeId = treeNode.getTreeId();
+            int oldDepth = depthList.get(treeId);
+            int currDepth = Node.indexToLevel(treeNode.getNode().getId());
+            if(currDepth > oldDepth) {
+                depthList.set(treeId, currDepth);
+            }
             nodeIndexInGroup += 1;
         }
-        return new DTMasterParams(trees, todoNodes);
+        DTMasterParams masterParams = new DTMasterParams(trees, todoNodes);
+        masterParams.setTreeDepth(depthList);
+        return masterParams;
     }
 
     private List<Integer> getSubsamplingFeatures(FeatureSubsetStrategy featureSubsetStrategy) {

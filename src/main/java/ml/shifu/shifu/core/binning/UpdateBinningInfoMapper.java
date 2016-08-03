@@ -342,6 +342,10 @@ public class UpdateBinningInfoMapper extends Mapper<LongWritable, Text, IntWrita
                         binningInfoWritable.getBinCountNeg()[binNum] += 1L;
                         binningInfoWritable.getBinWeightNeg()[binNum] += weight;
                     }
+                } else {
+                    // for multiple classification, set bin count to BinCountPos and leave BinCountNeg empty
+                    binningInfoWritable.getBinCountPos()[binNum] += 1L;
+                    binningInfoWritable.getBinWeightPos()[binNum] += weight;
                 }
             } else if(columnConfig.isNumerical()) {
                 int lastBinIndex = binningInfoWritable.getBinBoundaries().size();

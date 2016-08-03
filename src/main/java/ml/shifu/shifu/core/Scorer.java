@@ -67,7 +67,7 @@ public class Scorer {
     public Scorer(List<BasicML> models, List<ColumnConfig> columnConfigList, String algorithm, ModelConfig modelConfig,
             Double cutoff) {
 
-        if ( modelConfig == null ) {
+        if(modelConfig == null) {
             throw new IllegalArgumentException("modelConfig should not be null");
         }
 
@@ -178,7 +178,15 @@ public class Scorer {
                             + "; Input Size = " + pair.getInput().size());
                 }
                 MLData score = rf.compute(pair.getInput());
-                scores.add(toScore(score.getData(0)));
+                if(modelConfig.isMultiClassification() && !modelConfig.getTrain().isOneVsAll()) {
+                    double[] scoreArray = score.getData();
+                    for(double sc: scoreArray) {
+                        scores.add((int)sc);
+                    }
+                } else {
+                    // if one vs all consider
+                    scores.add(toScore(score.getData(0)));
+                }
             } else {
                 throw new RuntimeException("unsupport models");
             }

@@ -61,6 +61,11 @@ public class DTMasterParams extends HaltBytable {
      */
     private boolean isSwitchToNextTree = false;
 
+    /**
+     * Tree depth per tree index which is used to show on each iteration.
+     */
+    private List<Integer> treeDepth = new ArrayList<Integer>();
+
     public DTMasterParams() {
     }
 
@@ -198,4 +203,20 @@ public class DTMasterParams extends HaltBytable {
     public void setSwitchToNextTree(boolean isSwitchToNextTree) {
         this.isSwitchToNextTree = isSwitchToNextTree;
     }
+
+    /**
+     * @return the treeDepth
+     */
+    public List<Integer> getTreeDepth() {
+        return treeDepth;
+    }
+
+    /**
+     * @param treeDepth
+     *            the treeDepth to set
+     */
+    public void setTreeDepth(List<Integer> treeDepth) {
+        this.treeDepth = treeDepth;
+    }
+
 }

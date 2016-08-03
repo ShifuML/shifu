@@ -162,6 +162,8 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
                     }
                     tuple.append(df.format(normVal));
                 } else {
+                    // for multiple classification, binPosRate means rate of such category over all counts, reuse
+                    // binPosRate for normalize
                     Double normVal = Normalizer.normalize(config, val, cutoff, normType);
                     tuple.append(df.format(normVal));
                 }

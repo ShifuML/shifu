@@ -573,6 +573,9 @@ public final class CommonUtils {
 
         // added in shifu 0.2.5 to slice models not belonging to last training
         int baggingModelSize = modelConfig.getTrain().getBaggingNum();
+        if(modelConfig.isMultiClassification() && modelConfig.getTrain().isOneVsAll()) {
+            baggingModelSize = modelConfig.getTags().size();
+        }
         listStatus = listStatus.size() <= baggingModelSize ? listStatus : listStatus.subList(0, baggingModelSize);
 
         List<BasicML> models = new ArrayList<BasicML>(listStatus.size());
