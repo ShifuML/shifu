@@ -17,8 +17,8 @@
     "filterExpressions" : "",
     "weightColumnName" : "",
     "targetColumnName" : "diagnosis",
-    "posTags" : [ "M", "B" ],
-    "negTags" : [ ],
+    "posTags" : [ "M" ],
+    "negTags" : [ "B" ],
     "missingOrInvalidValues" : [ "", "*", "#", "?", "null", "~" ],
     "metaColumnNameFile" : "columns/meta.column.names",
     "categoricalColumnNameFile" : "columns/categorical.column.names"
@@ -61,7 +61,7 @@
     "trainOnDisk" : false,
     "isContinuous" : false,
     "workerThreadCount" : 4,
-    "algorithm" : "RF",
+    "algorithm" : "GBT",
     "params" : {
         "TreeNum":10,
         "FeatureSubsetStrategy": "ALL",
