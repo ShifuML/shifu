@@ -31,7 +31,7 @@ function _shifu_completion() {
     local com=${COMP_WORDS[COMP_CWORD-1]};
     case $com in
     'shifu')
-        COMPREPLY=($(compgen -W 'new cp init stats varselect varsel normalize norm train posttrain eval' -- $cur))
+        COMPREPLY=($(compgen -W 'new cp init stats varselect varsel normalize norm train posttrain eval export' -- $cur))
         ;;
     'eval')
         COMPREPLY=($(compgen -W '-new -run -perf' -- $cur))

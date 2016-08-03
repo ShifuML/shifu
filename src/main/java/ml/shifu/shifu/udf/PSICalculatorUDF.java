@@ -1,5 +1,6 @@
 package ml.shifu.shifu.udf;
 
+import ml.shifu.shifu.container.obj.ColumnConfig;
 import org.apache.commons.lang.StringUtils;
 import org.apache.pig.data.DataBag;
 import org.apache.pig.data.Tuple;
@@ -10,10 +11,9 @@ import org.apache.pig.parser.ParserException;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
-
-import ml.shifu.shifu.container.obj.ColumnConfig;
 
 /**
  * Calculate the Population Stability Index
@@ -51,6 +51,7 @@ public class PSICalculatorUDF extends AbstractTrainerUDF<Tuple> {
 
         Iterator<Tuple> iter = databag.iterator();
         Double psi = 0D;
+        List<String> unitStats = new ArrayList<String>();
 
         while (iter.hasNext()) {
             Tuple tuple = iter.next();
@@ -81,19 +82,26 @@ public class PSICalculatorUDF extends AbstractTrainerUDF<Tuple> {
                     }
                     i ++;
                 }
+
+                unitStats.add((String) tuple.get(2));
             }
         }
 
-        Tuple output = TupleFactory.getInstance().newTuple(2);
+        // sort by unit
+        Collections.sort(unitStats);
+
+        Tuple output = TupleFactory.getInstance().newTuple(3);
         output.set(0, columnId);
         output.set(1, psi);
+        output.set(2, StringUtils.join(unitStats, CalculateStatsUDF.CATEGORY_VAL_SEPARATOR));
+
         return output;
     }
 
     public Schema outputSchema(Schema input) {
         try {
             return Utils
-                .getSchemaFromString("PSIInfo:Tuple(columnId : int, psi : double)");
+                .getSchemaFromString("PSIInfo:Tuple(columnId : int, psi : double, unitstats : chararray)");
         } catch (ParserException e) {
             log.debug("Error when generating output schema.", e);
             // just ignore

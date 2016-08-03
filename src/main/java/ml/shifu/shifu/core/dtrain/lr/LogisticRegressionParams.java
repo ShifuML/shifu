@@ -19,6 +19,7 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
+import ml.shifu.guagua.io.Combinable;
 import ml.shifu.guagua.io.HaltBytable;
 
 /**
@@ -33,7 +34,7 @@ import ml.shifu.guagua.io.HaltBytable;
  * Workers are responsible to compute local accumulated gradients and send to master while master accumulates all
  * gradients together to build a global model.
  */
-public class LogisticRegressionParams extends HaltBytable {
+public class LogisticRegressionParams extends HaltBytable implements Combinable<LogisticRegressionParams>{
 
     /**
      * Model weights in the first iteration, gradients in other iterations.
@@ -98,10 +99,26 @@ public class LogisticRegressionParams extends HaltBytable {
     public void setTrainSize(long trainSize) {
         this.trainSize = trainSize;
     }
+    
+    @Override
+    public LogisticRegressionParams combine(LogisticRegressionParams from) {
+        assert from != null;
+        this.trainError += from.trainError;
+        this.testError += from.testError;
+        this.trainSize+=from.trainSize;
+        this.testSize+=from.testSize;
+        assert this.parameters != null && from.parameters != null;
+        for(int i = 0; i < this.parameters.length; i++) {
+            this.parameters[i] += from.parameters[i];
+        }
+        return this;
+    }
 
     @Override
     public void doWrite(DataOutput out) throws IOException {
-        if(parameters != null) {
+        if(parameters == null) {
+            out.writeInt(0);
+        } else {
             out.writeInt(this.parameters.length);
             for(int i = 0; i < this.parameters.length; i++) {
                 out.writeDouble(this.parameters[i]);
@@ -111,7 +128,6 @@ public class LogisticRegressionParams extends HaltBytable {
         out.writeDouble(this.testError);
         out.writeLong(this.trainSize);
         out.writeLong(this.testSize);
-
     }
 
     @Override
@@ -165,7 +181,8 @@ public class LogisticRegressionParams extends HaltBytable {
     }
 
     /**
-     * @param testSize the testSize to set
+     * @param testSize
+     *            the testSize to set
      */
     public void setTestSize(long testSize) {
         this.testSize = testSize;

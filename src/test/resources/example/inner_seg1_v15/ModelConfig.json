@@ -1,0 +1,99 @@
+{
+  "basic" : {
+    "name" : "inner_seg1_v15",
+    "author" : "qduan",
+    "description" : "Created at 2015-12-29 13:07:08",
+    "version" : "0.2.0",
+    "runMode" : "mapred",
+    "customPaths" : { }
+  },
+  "dataSet" : {
+    "source" : "hdfs",
+    "dataPath" : "/user/qduan/ATOM16/400var_id_rcvr_category/{04,05,06,07,08,09,10}/part*",
+    "dataDelimiter" : "\u0007",
+    "headerPath" : "/user/qduan/ATOM16/400var_id_rcvr_category/03/.pig_header",
+    "headerDelimiter" : "\u0007",
+    "filterExpressions" : "atom15_seg==1 and rcvr_category!=\"C99\"",
+    "weightColumnName" : "",
+    "targetColumnName" : "is_ato_bad_0104",
+    "posTags" : [ "1" ],
+    "negTags" : [ "0" ],
+    "missingOrInvalidValues" : [ "", "*", "#", "?", "null", "~", "-999.0", "-999" ],
+    "autoType" :false,
+    "autoTypeThreshold" : 250,
+    "metaColumnNameFile" : "meta.column.names",
+    "categoricalColumnNameFile" : "categorical.column.names"
+  },
+  "stats" : {
+    "maxNumBin" : 10,
+    "binningMethod" : "DynamicBinning",
+    "sampleRate" : 1.0,
+    "sampleNegOnly" : false,
+    "binningAlgorithm" : "SPDTI"
+  },
+  "varSelect" : {
+    "forceEnable" :true,
+    "forceSelectColumnNameFile" : "forceselect.column.names",
+    "forceRemoveColumnNameFile" : "forceremove.column.names",
+    "filterEnable" :false,
+    "filterNum" : 20,
+    "filterBy" : "IV",
+    "wrapperEnabled" : false,
+    "wrapperNum" : 50,
+    "wrapperRatio" : 0.5,
+    "wrapperBy" : "SE",
+    "filterBySE" : false,
+    "params" : null
+  },
+  "normalize" : {
+    "stdDevCutOff" : 4.0,
+    "sampleRate" : 1.0,
+    "sampleNegOnly" : false,
+    "normType" : "WOE"
+  },
+  "train" : {
+    "baggingNum" : 2,
+    "baggingWithReplacement" : false,
+    "baggingSampleRate" : 0.8,
+    "validSetRate" : 0.3,
+    "numTrainEpochs" : 500,
+    "epochsPerIteration" : 1,
+    "trainOnDisk" : false,
+    "isContinuous" : false,
+    "isCrossOver" : false,
+    "algorithm" : "NN",
+    "params" : {
+      "NumHiddenLayers" : 1,
+      "ActivationFunc" : [ "tanh"],
+      "NumHiddenNodes" : [ 25 ],
+      "LearningRate" : 0.8,
+      "Propagation" : "Q",
+      "LearningDecay" : 0.0
+    },
+    "customPaths" : {
+      "normalizedDataPath": " "
+    }
+  },
+  "evals" : [ {
+    "name" : "Eval1",
+    "dataSet" : {
+      "source" : "hdfs",
+      "--dummydataPath" : "/apps/risk/det/qduan/atomlive_spark/2016/11/{2*}/part*",
+      "--d2dataPath" : "/user/qduan/atom16_28_31_live_var_for_shifu/part*",
+      "dataPath" : "/user/qduan/ATOM16/400var_id_rcvr_category/{04,05,06,07,08,09,10}/part*",
+      "dataDelimiter" : "\u0007",
+      "--d2headerPath" : "/apps/risk/det/qduan/atomlive_spark/.pig_header",
+      "--dheaderPath" : "/user/qduan/atom16_28_31_live_var_for_shifu/.pig_header",
+      "headerPath" : "/user/qduan/ATOM16/400var_id_rcvr_category/03/.pig_header",
+      "headerDelimiter" : "\u0007",
+      "--d2filterExpressions" : "atom15_v1_seg==1.0",
+      "filterExpressions" : "atom15_seg==1 and rcvr_category!=\"C99\"",
+      "--dfilterExpressions" : "atom15_v1_seg==1.0 and (is_ato_bad_0104==0 or is_ato_bad_0104==1)",
+      "weightColumnName" : ""
+    },
+    "performanceBucketNum" : 10,
+    "performanceScoreSelector" : "mean",
+    "scoreMetaColumnNameFile" : "Eval1score.meta.column.names",
+    "customPaths" : { }
+  } ]
+}

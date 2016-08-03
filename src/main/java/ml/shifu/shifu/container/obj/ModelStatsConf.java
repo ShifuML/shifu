@@ -30,15 +30,16 @@ public class ModelStatsConf {
         EqualNegtive, EqualInterval, EqualPositive, EqualTotal
         // TODO another four with weights
     }
-
+    
     public static enum BinningAlgorithm {
         Native, // sorting way
         SPDT, // paper reference: www.jmlr.org/papers/volume11/ben-haim10a/ben-haim10a.pdf
         SPDTI, // paper reference: www.jmlr.org/papers/volume11/ben-haim10a/ben-haim10a.pdf, improvement for last
                // binning updating step
         MunroPat, // paper reference: www.cs.ucsb.edu/~suri/cs290/MunroPat.pdf
-        MunroPatI // paper reference: www.cs.ucsb.edu/~suri/cs290/MunroPat.pdf, improvement for last
+        MunroPatI, // paper reference: www.cs.ucsb.edu/~suri/cs290/MunroPat.pdf, improvement for last
                    // binning updating step
+        DynamicBinning
     }
 
     private Integer maxNumBin = Integer.valueOf(10);
@@ -54,7 +55,7 @@ public class ModelStatsConf {
 
     private BinningAlgorithm binningAlgorithm = BinningAlgorithm.SPDTI;
 
-    private String PSIColumnName = "";
+    private String psiColumnName = "";
 
     public Integer getMaxNumBin() {
         return maxNumBin;
@@ -132,12 +133,11 @@ public class ModelStatsConf {
         this.binningAlgorithm = binningAlgorithm;
     }
 
-    public String getPSIColumnName() {
-        return PSIColumnName;
+    public String getPsiColumnName() {
+        return psiColumnName;
     }
 
-    public void setPSIColumnName(String PSIColumnName) {
-        this.PSIColumnName = PSIColumnName;
+    public void setPsiColumnName(String psiColumnName) {
+        this.psiColumnName = psiColumnName;
     }
-
 }

@@ -57,6 +57,11 @@ public class NeuralNetworkModelIntegrator {
                         ((MapValues) dField.getExpression()).getFieldColumnPairs().get(0).getField(),
                         dField.getName());
             }
+            else if (dField.getExpression() instanceof Discretize ) {
+                miningTransformMap.put(
+                        ((Discretize) dField.getExpression()).getField(),
+                        dField.getName());
+            }
         }
         List<MiningField> miningList = model.getMiningSchema()
                 .getMiningFields();
@@ -66,8 +71,11 @@ public class NeuralNetworkModelIntegrator {
             if (mField.getUsageType() != FieldUsageType.ACTIVE)
                 continue;
             FieldName mFieldName = mField.getName();
-            FieldName fName = (miningTransformMap.containsKey(mFieldName)) ? miningTransformMap
-                    .get(mFieldName) : mFieldName;
+            FieldName fName = mFieldName;
+            while ( miningTransformMap.containsKey(fName) ) {
+                fName = miningTransformMap.get(fName);
+            }
+
             DerivedField field = new DerivedField(OpType.CONTINUOUS,
                     DataType.DOUBLE).withName(fName).withExpression(
                     new FieldRef(fName));

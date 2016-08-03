@@ -4,6 +4,10 @@
 
 Please visit [shifu.ml](http://shifu.ml) for download infomation, installation instructions, and tutorials.
 
+## Conference
+
+[QCON Shanghai 2015](http://2015.qconshanghai.com/presentation/2827) [Slides](http://www.slideshare.net/pengshanzhang/large-scale-machine-learning-at-pay-pal-risk)
+
 ## What is Shifu?
 Shifu is an open-source, end-to-end machine learning and data mining framework built on top of Hadoop. Shifu is designed for data scientists, simplifying the life-cycle of building machine learning models. While originally built for fraud modeling, Shifu is generalized for many other modeling domains.
 
@@ -33,4 +37,4 @@ Please join [Shifu group](https://groups.google.com/forum/#!forum/shifuml) if qu
 
 ## Copyright and License
 
-Copyright 2012-2015, PayPal Software Foundation under the [Apache License](LICENSE.txt).
+Copyright 2012-2016, PayPal Software Foundation under the [Apache License](LICENSE.txt).

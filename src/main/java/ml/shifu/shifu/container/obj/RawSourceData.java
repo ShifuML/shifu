@@ -55,7 +55,8 @@ public class RawSourceData implements Cloneable {
 
     private List<String> negTags;
 
-    private List<String> missingOrInvalidValues = Lists.asList("", new String[] { "*", "#", "?", "null", "none" });
+    private List<String> missingOrInvalidValues = Lists.asList("", new String[] { "?" });
+    // private List<String> missingOrInvalidValues = Lists.asList("", new String[] { "*", "#", "?", "null", "none" });
 
     /**
      * Change it to true by default to compute distinct value for later variable selection.
@@ -63,7 +64,7 @@ public class RawSourceData implements Cloneable {
     private Boolean autoType = Boolean.TRUE;
 
     /**
-     * To change it to 0 instead of 250 because 0-1 columns shouldn't be set to categorical. TODO, fix 0-1 bug
+     * To change it to 0 instead of 250 because 0-1 columns shouldn't be set to categorical.
      */
     private Integer autoTypeThreshold = 0;
 

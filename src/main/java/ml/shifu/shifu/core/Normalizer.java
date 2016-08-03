@@ -211,7 +211,7 @@ public class Normalizer {
      * Currently, the cutoff value doesn't affect the computation of WOE or WEIGHT_WOE type.
      * 
      * <p>
-     * Noticd: currently OLD_ZSCALE and ZSCALE is implemented with the same process method.
+     * Noticed: currently OLD_ZSCALE and ZSCALE is implemented with the same process method.
      * </p>
      * 
      * @param config
@@ -239,7 +239,9 @@ public class Normalizer {
             case WEIGHT_WOE_ZSCORE:
                 return woeZScoreNormalize(config, raw, cutoff, true);
             case OLD_ZSCALE:
+            case OLD_ZSCORE:
             case ZSCALE:
+            case ZSCORE:
             default:
                 return zScoreNormalize(config, raw, cutoff);
         }
@@ -302,7 +304,7 @@ public class Normalizer {
      * @ColumnConfig info
      * @return default value for missing data. Now simply return Mean value. If mean is null then return 0.
      */
-    private static double defaultMissingValue(ColumnConfig config) {
+    public static double defaultMissingValue(ColumnConfig config) {
         // TODO return 0 for mean == null is correct or reasonable?
         return config.getMean() == null ? 0 : config.getMean().doubleValue();
     }
@@ -405,7 +407,7 @@ public class Normalizer {
      *            if use weighted woe
      * @return an double array contains woe mean and woe standard deviation as order {mean, stdDev}
      */
-    private static double[] calculateWoeMeanAndStdDev(ColumnConfig config, boolean isWeightedNorm) {
+    public static double[] calculateWoeMeanAndStdDev(ColumnConfig config, boolean isWeightedNorm) {
         List<Double> woeList = isWeightedNorm ? config.getBinWeightedWoe() : config.getBinCountWoe();
         if(woeList == null || woeList.size() < 2) {
             throw new IllegalArgumentException("Woe list is null or too short(size < 2)");

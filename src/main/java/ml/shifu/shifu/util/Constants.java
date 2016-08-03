@@ -29,7 +29,7 @@ public interface Constants {
     public static final String COLUMN_CONFIG_JSON_FILE_NAME = "ColumnConfig.json";
 
     public static final String MODEL_CONFIG_JSON_FILE_NAME = "ModelConfig.json";
-    
+
     public static final String COLUMN_STATS_CSV_FILE_NAME = "ColumnStats.csv";
 
     public static final String MODEL_SETS = "ModelSets";
@@ -111,19 +111,21 @@ public interface Constants {
     public static final String BIN_BOUNDRY_DELIMITER = "\u0001";
 
     public static final String DEFAULT_ESCAPE_DELIMITER = "\\|";
-    
-    public static final String DEFAULT_DELIMITER = "|";
 
+    public static final String DEFAULT_DELIMITER = "|";
 
     public static final String BINNING_INFO_FILE_NAME = "binning_info.txt";
 
-    public static final String AUTO_TYPE_PATH= "AutoTypePath";
+    public static final String AUTO_TYPE_PATH = "AutoTypePath";
     public static final String PRE_TRAINING_STATS = "PreTrainingStats";
     public static final String SELECTED_RAW_DATA = "SelectedRawData";
     public static final String NORMALIZED_DATA = "NormalizedData";
     public static final String TRAIN_SCORES = "TrainScores";
     public static final String BIN_AVG_SCORE = "BinAvgScore";
+    public static final String CORRELATION_PATH = "CorrelationPath";
+    public static final String TAB_STR = "\t";
 
+    public static final String KEY_POSTTRAIN_OUT_PATH = "posttrainOutputPath";
     public static final String KEY_PRE_TRAIN_STATS_PATH = "preTrainStatsPath";
     public static final String KEY_PRE_PSI_PATH = "StatsPSIPath";
     public static final String KEY_SELECTED_RAW_DATA_PATH = "selectedRawDataPath";
@@ -131,7 +133,7 @@ public interface Constants {
     public static final String KEY_VARSLECT_STATS_PATH = "varSelectStatsPath";
     public static final String KEY_TRAIN_SCORES_PATH = "trainScoresPath";
     public static final String KEY_BIN_AVG_SCORE_PATH = "binAvgScorePath";
-    public static final String KEY_AUTO_TYPE_PATH= "autoTypePath";
+    public static final String KEY_AUTO_TYPE_PATH = "autoTypePath";
 
     public static final String DEFAULT_META_COLUMN_FILE = "meta.column.names";
     public static final String DEFAULT_CATEGORICAL_COLUMN_FILE = "categorical.column.names";
@@ -190,9 +192,11 @@ public interface Constants {
     public static final String SHIFU_VARSELECT_SE_OUTPUT_NAME = "se";
 
     public static final String DEFAULT_CHARSET = "UTF-8";
-    
+
     public static final String SHIFU_STATS_EXLCUDE_MISSING = "shifu.stats.exlcudeMissing";
-    
+
     public static final String COLUMN_META_FOLDER_NAME = "columns";
+
+    public static final String POST_TRAIN_OUTPUT_SCORE = "score";
 
 }

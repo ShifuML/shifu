@@ -1,5 +1,6 @@
 package ml.shifu.shifu.udf;
 
+import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.pig.data.DataBag;
 import org.apache.pig.data.Tuple;
@@ -16,11 +17,15 @@ import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.udf.stats.CategoryCounter;
 import ml.shifu.shifu.udf.stats.Counter;
 import ml.shifu.shifu.udf.stats.NumericCounter;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Calculate the counter for each bin
  */
 public class PopulationCounterUDF extends AbstractTrainerUDF<Tuple> {
+
+    public static Logger logger = LoggerFactory.getLogger(PopulationCounterUDF.class);
 
     private Counter counter;
     private int index;
@@ -50,10 +55,16 @@ public class PopulationCounterUDF extends AbstractTrainerUDF<Tuple> {
         Integer columnId = (Integer) groupInfo.get(1);
         ColumnConfig columnConfig = columnConfigList.get(columnId);
 
-        if (columnConfig.isCategorical()) {
-            this.counter = new CategoryCounter(columnConfig.getBinCategory());
-        } else if (columnConfig.isNumerical()){
-            this.counter = new NumericCounter(columnConfig.getColumnName(), columnConfig.getBinBoundary());
+        logger.info("Start to count bin value count for {}", columnConfig.getColumnName());
+
+        if ( columnConfig.isCategorical()
+                && CollectionUtils.isNotEmpty(columnConfig.getBinCategory()) ) {
+            this.counter = new CategoryCounter(modelConfig.getMissingOrInvalidValues(),
+                    columnConfig.getBinCategory(), columnConfig.getBinPosRate());
+        } else if (columnConfig.isNumerical()
+                && CollectionUtils.isNotEmpty(columnConfig.getBinBoundary()) ) {
+            this.counter = new NumericCounter(modelConfig.getMissingOrInvalidValues(),
+                    columnConfig.getColumnName(), columnConfig.getBinBoundary());
         } else {
             return null;
         }
@@ -63,15 +74,18 @@ public class PopulationCounterUDF extends AbstractTrainerUDF<Tuple> {
             Tuple tuple = iter.next();
             if (tuple != null && tuple.size() != 0) {
                 Object value = tuple.get(index);
-                counter.addData(value);
+                counter.addData((value == null) ? null : value.toString());
             }
         }
 
-        List<Integer> dataBin = counter.getCounter();
+        List<Long> dataBin = counter.getCounter();
 
-        Tuple output = TupleFactory.getInstance().newTuple(2);
+        Tuple output = TupleFactory.getInstance().newTuple(3);
         output.set(0, columnId);
         output.set(1, StringUtils.join(dataBin, CalculateStatsUDF.CATEGORY_VAL_SEPARATOR));
+
+        String unit = (groupInfo.get(0) == null ? "" : groupInfo.get(0).toString());
+        output.set(2,  toStatsText(unit, counter.getUnitMean(), counter.getMissingRate(), counter.getTotalInstCnt()));
 
         return output;
     }
@@ -79,11 +93,18 @@ public class PopulationCounterUDF extends AbstractTrainerUDF<Tuple> {
     public Schema outputSchema(Schema input) {
         try {
             return Utils
-                .getSchemaFromString("PopulationInfo:Tuple(columnId : int, population : chararray)");
+                .getSchemaFromString("PopulationInfo:Tuple(columnId : int, population : chararray, unitstats : chararray)");
         } catch (ParserException e) {
             log.debug("Error when generating output schema.", e);
             // just ignore
             return null;
         }
+    }
+
+    private String toStatsText(String unit, double mean, double missingRate, long totalInstCnt) {
+        return unit
+                + "^" + Double.toString(mean)
+                + "^" + Double.toString(missingRate)
+                + "^" + Long.toString(totalInstCnt);
     }
 }

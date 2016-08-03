@@ -640,13 +640,13 @@ public class ModelConfig {
     }
 
     @JsonIgnore
-    public String getPSIColumnName() {
-        return this.stats.getPSIColumnName();
+    public String getPsiColumnName() {
+        return this.stats.getPsiColumnName();
     }
 
     @JsonIgnore
-    public void setPSIColumnName(String columnName) {
-        this.stats.setPSIColumnName(columnName);
+    public void setPsiColumnName(String columnName) {
+        this.stats.setPsiColumnName(columnName);
     }
 
     @JsonIgnore

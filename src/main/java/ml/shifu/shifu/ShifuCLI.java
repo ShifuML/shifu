@@ -72,6 +72,7 @@ public class ShifuCLI {
     private static final String MODELSET_CMD_CP = "cp";
     private static final String MODELSET_CMD_NEW = "new";
     private static final String MODELSET_CMD_TYPE = "t";
+    private static final String EXPORT_CONCISE = "c";
     private static final String NEW = "new";
 
     private static final String CMD_EXPORT = "export";
@@ -192,7 +193,7 @@ public class ShifuCLI {
                 } else if(args[0].equals(POSTTRAIN_CMD)) {
                     // post train step
                     status = postTrainModel();
-                    if(postTrainModel() == 0) {
+                    if(status == 0) {
                         log.info("Do model set post-training successfully. Please configurate your eval set in ModelConfig.json and continue next step by using 'shifu eval' or 'shifu eval -new <eval set>' to create a new eval set.");
                     } else {
                         log.info("Do model post training with error, please check error message or report issue.");
@@ -250,11 +251,12 @@ public class ShifuCLI {
                         printUsage();
                     }
                 } else if(args[0].equals(CMD_EXPORT)) {
-                    status = exportModel(cmd.getOptionValue(MODELSET_CMD_TYPE));
+                    boolean isConcise = cmd.hasOption(EXPORT_CONCISE);
+                    status = exportModel(cmd.getOptionValue(MODELSET_CMD_TYPE), isConcise);
                     if(status == 0) {
-                        log.info("Export models to PMML format successfully in current folder.");
+                        log.info("Export models/columnstats to PMML/csv format successfully in current folder.");
                     } else {
-                        log.warn("Export models to PMML format with error, please check or report issue.");
+                        log.warn("Export models/columnstats to PMML/csv format with error, please check or report issue.");
                     }
                 } else {
                     log.error("Invalid command, please check help message.");
@@ -450,7 +452,7 @@ public class ShifuCLI {
     /**
      * delete some evaluation set
      * 
-     * @param optionValue
+     * @param evalSetName
      * @throws Exception
      */
     private static int deleteEvalSet(String evalSetName) throws Exception {
@@ -472,11 +474,11 @@ public class ShifuCLI {
     /**
      * export Shifu model into other format, i.e. PMML
      * 
-     * @param optionValue
+     * @param type
      * @throws Exception
      */
-    public static int exportModel(String type) throws Exception {
-        ExportModelProcessor p = new ExportModelProcessor(type);
+    public static int exportModel(String type, boolean isConcise) throws Exception {
+        ExportModelProcessor p = new ExportModelProcessor(type, isConcise);
         return p.run();
     }
 
@@ -513,14 +515,22 @@ public class ShifuCLI {
     private static Options buildModelSetOptions(String[] args) {
         Options opts = new Options();
 
-        Option opt_cmt = OptionBuilder.hasArg().withDescription("The description for new model").create(MODELSET_CMD_M);
-        Option opt_new = OptionBuilder.hasArg().withDescription("To create an eval set").create(NEW);
-        Option opt_type = OptionBuilder.hasArg().withDescription("Specify model type").create(MODELSET_CMD_TYPE);
-        Option opt_run = OptionBuilder.hasArg().withDescription("To run eval set").create(EVAL_CMD_RUN);
-        Option opt_dry = OptionBuilder.hasArg(false).withDescription("Dry run the train").create(TRAIN_CMD_DRY);
-        Option opt_debug = OptionBuilder.hasArg(false).withDescription("Save the log of train process")
-                .create(TRAIN_CMD_DEBUG);
-        Option opt_model = OptionBuilder.hasArg(false).withDescription("Init model").create(INIT_CMD_MODEL);
+        Option opt_cmt = OptionBuilder.hasArg()
+                .withDescription("The description for new model").create(MODELSET_CMD_M);
+        Option opt_new = OptionBuilder.hasArg()
+                .withDescription("To create an eval set").create(NEW);
+        Option opt_type = OptionBuilder.hasArg()
+                .withDescription("Specify model type").create(MODELSET_CMD_TYPE);
+        Option opt_run = OptionBuilder.hasArg()
+                .withDescription("To run eval set").create(EVAL_CMD_RUN);
+        Option opt_dry = OptionBuilder.hasArg(false)
+                .withDescription("Dry run the train").create(TRAIN_CMD_DRY);
+        Option opt_debug = OptionBuilder.hasArg(false)
+                .withDescription("Save the log of train process").create(TRAIN_CMD_DEBUG);
+        Option opt_model = OptionBuilder.hasArg(false)
+                .withDescription("Init model").create(INIT_CMD_MODEL);
+        Option opt_concise = OptionBuilder.hasArg(false)
+                .withDescription("Export concise PMML").create(EXPORT_CONCISE);
 
         Option opt_list = OptionBuilder.hasArg(false).create(LIST);
         Option opt_delete = OptionBuilder.hasArg().create(DELETE);
@@ -540,6 +550,7 @@ public class ShifuCLI {
         opts.addOption(opt_dry);
         opts.addOption(opt_debug);
         opts.addOption(opt_model);
+        opts.addOption(opt_concise);
 
         opts.addOption(opt_list);
         opts.addOption(opt_delete);
@@ -559,12 +570,9 @@ public class ShifuCLI {
         System.out.println("Usage: shifu COMMAND");
         System.out.println("where COMMAND is one of:");
         System.out.println("\tnew <ModelSetName> [-t <NN|LR|SVM|DT>]  Create a new model set.");
-        System.out
-                .println("\tinit                                    Create initial ColumnConfig.json and upload to HDFS.");
-        System.out
-                .println("\tstats                                   Calculate statistics on HDFS and update local ColumnConfig.json.");
-        System.out
-                .println("\tvarselect/varsel                        Variable selection, will update finalSelect in ColumnConfig.json.");
+        System.out.println("\tinit                                    Create initial ColumnConfig.json and upload to HDFS.");
+        System.out.println("\tstats                                   Calculate statistics on HDFS and update local ColumnConfig.json.");
+        System.out.println("\tvarselect/varsel                        Variable selection, will update finalSelect in ColumnConfig.json.");
         System.out.println("\tnormalize/norm                          Normalize the columns with finalSelect as true.");
         System.out.println("\ttrain [-dry]                            Train the model with the normalized data.");
         System.out.println("\tposttrain                               Post-process data after training models.");
@@ -575,9 +583,8 @@ public class ShifuCLI {
         System.out.println("\teval -run     <EvalSetName>             Run eval set evaluation.");
         System.out.println("\teval -score   <EvalSetName>             Scoring evaluation dataset.");
         System.out.println("\teval -confmat <EvalSetName>             Compute the TP/FP/TN/FN based on scoring");
-        System.out
-                .println("\teval -perf <EvalSetName>                Calculate the model performance based on confmat");
-        System.out.println("\texport [-t pmml]                        Export model to PMML format.");
+        System.out.println("\teval -perf <EvalSetName>                Calculate the model performance based on confmat");
+        System.out.println("\texport [-t pmml|columnstats] [-c]       Export model to PMML format or export ColumnConfig.");
         System.out.println("\tversion|v|-v|-version                   Print version of current package.");
         System.out.println("\thelp|h|-h|-help                         Help message.");
     }
@@ -624,19 +631,23 @@ public class ShifuCLI {
      * @return true - if arg is v/version/-v/-version, or return false
      */
     private static boolean isVersionOption(String arg) {
-        return arg.equalsIgnoreCase("v") || arg.equalsIgnoreCase("version") || arg.equalsIgnoreCase("-version")
+        return arg.equalsIgnoreCase("v")
+                || arg.equalsIgnoreCase("version")
+                || arg.equalsIgnoreCase("-version")
                 || arg.equalsIgnoreCase("-v");
     }
 
     /**
      * check the argument is for listing help info or not
      * 
-     * @param arg
+     * @param str
      * @return true - if arg is h/-h/help/-help, or return false
      */
-    private static boolean isHelpOption(String string) {
-        return "h".equalsIgnoreCase(string) || "-h".equalsIgnoreCase(string) || "help".equalsIgnoreCase(string)
-                || "-help".equalsIgnoreCase(string);
+    private static boolean isHelpOption(String str) {
+        return "h".equalsIgnoreCase(str)
+                || "-h".equalsIgnoreCase(str)
+                || "help".equalsIgnoreCase(str)
+                || "-help".equalsIgnoreCase(str);
     }
 
     /**

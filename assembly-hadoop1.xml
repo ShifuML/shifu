@@ -24,6 +24,7 @@
         <fileSet>
             <directory>${project.basedir}/src/main/pig/stats/hadoop1</directory>
             <outputDirectory>/scripts</outputDirectory>
+            <lineEnding>unix</lineEnding>
             <includes>
                 <include>*.pig</include>
             </includes>
@@ -55,6 +56,7 @@
             <directory>${project.basedir}/src/main/bash</directory>
             <outputDirectory>/bin</outputDirectory>
             <fileMode>755</fileMode>
+            <lineEnding>unix</lineEnding>
             <includes>
                 <include>*</include>
             </includes>
@@ -63,6 +65,7 @@
             <directory>${project.basedir}/src/test/bash</directory>
             <outputDirectory>/bin</outputDirectory>
             <fileMode>755</fileMode>
+            <lineEnding>unix</lineEnding>
             <includes>
                 <include>*</include>
             </includes>

@@ -21,7 +21,7 @@ import org.encog.neural.flat.FlatNetwork;
 /**
  * To solve float input and output types.
  */
-public class FloatFlatNetwork extends FlatNetwork {
+public class FloatFlatNetwork extends FlatNetwork implements Cloneable {
 
     private static final long serialVersionUID = -7208969306860840672L;
     

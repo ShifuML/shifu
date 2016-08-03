@@ -153,7 +153,7 @@ public class VarSelectReducer extends Reducer<LongWritable, ColumnInfo, Text, Te
             count += info.getCount();
         }
         column.setMean(sum / count);
-        column.setRms(sumSquare / count);
+        column.setRms(Math.sqrt(sumSquare / count));
         column.setVariance((sumSquare / count) - power2(sum / count));
         this.results.add(new Pair(key.get(), column));
     }
@@ -188,7 +188,7 @@ public class VarSelectReducer extends Reducer<LongWritable, ColumnInfo, Text, Te
             if(i < candidates) {
                 context.write(this.outputKey, OUTPUT_VALUE);
             }
-            // for thousands of features, here using new ok
+            // for thousands of features, here using 'new' ok
             StringBuilder sb = new StringBuilder(100);
             sb.append(this.columnConfigList.get((int) pair.key).getColumnName()).append("\t")
                     .append(pair.value.getMean()).append("\t").append(pair.value.getRms()).append("\t")

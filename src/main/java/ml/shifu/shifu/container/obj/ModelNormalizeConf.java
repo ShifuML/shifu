@@ -31,7 +31,14 @@ public class ModelNormalizeConf {
      */
     @JsonDeserialize(using = NormTypeDeserializer.class)
     public static enum NormType {
-        OLD_ZSCALE, ZSCALE, WOE, WEIGHT_WOE, HYBRID, WEIGHT_HYBRID, WOE_ZSCORE, WEIGHT_WOE_ZSCORE;
+        OLD_ZSCORE, OLD_ZSCALE, // the same one for user friendly
+        ZSCORE, ZSCALE, // the same one for user friendly
+        WOE, WEIGHT_WOE, HYBRID, WEIGHT_HYBRID, WOE_ZSCORE, WEIGHT_WOE_ZSCORE;
+    }
+
+    @JsonDeserialize(using = CorrelationDeserializer.class)
+    public static enum Correlation {
+        None, Pearson, NormPearson // Spearman mode isn't implemented as need sort all variables
     }
 
     private Double stdDevCutOff = Double.valueOf(4.0);
@@ -39,6 +46,8 @@ public class ModelNormalizeConf {
     private Boolean sampleNegOnly = Boolean.FALSE;
     private NormType normType = NormType.ZSCALE;
     private Boolean isParquet = Boolean.FALSE;
+
+    private Correlation correlation = Correlation.None;
 
     // move to RawSourceData
     // private String weightAmplifier;
@@ -98,6 +107,23 @@ public class ModelNormalizeConf {
     @JsonProperty
     public void setIsParquet(Boolean isParquet) {
         this.isParquet = isParquet;
+    }
+
+    /**
+     * @return the corrlation
+     */
+    @JsonIgnore
+    public Correlation getCorrelation() {
+        return correlation;
+    }
+
+    /**
+     * @param corrlation
+     *            the corrlation to set
+     */
+    @JsonProperty
+    public void setCorrelation(Correlation correlation) {
+        this.correlation = correlation;
     }
 
 }

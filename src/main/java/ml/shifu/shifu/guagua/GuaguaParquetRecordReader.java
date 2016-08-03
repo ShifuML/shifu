@@ -88,10 +88,8 @@ public class GuaguaParquetRecordReader implements
     }
 
     private boolean isHadoop2() {
-        @SuppressWarnings("unused")
-        Class<?> mapContextImplClazz = null;
         try {
-            mapContextImplClazz = Class.forName("org.apache.hadoop.mapreduce.task.MapContextImpl");
+            Class.forName("org.apache.hadoop.mapreduce.task.MapContextImpl");
             return true;
         } catch (ClassNotFoundException e) {
             return false;

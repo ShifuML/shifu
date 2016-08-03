@@ -21,7 +21,7 @@ SET mapred.map.tasks.speculative.execution true;
 SET mapred.reduce.tasks.speculative.execution true;
 SET mapred.job.queue.name $queue_name;
 SET mapred.task.timeout 1200000;
-SET job.name 'shifu statistic';
+SET job.name 'Shifu Statistic';
 SET io.sort.mb 500;
 SET mapred.child.java.opts '-Xmx1G -server -XX:+UseParNewGC -XX:+UseConcMarkSweepGC -XX:CMSInitiatingOccupancyFraction=70';
 SET mapred.child.ulimit 2.5G;
@@ -52,7 +52,7 @@ data_cols = FILTER data_cols BY $0 IS NOT NULL;
 data_cols = FOREACH data_cols GENERATE FLATTEN($0);
 
 -- prepare data and do binning
-data_binning_grp = GROUP data_cols BY ($0, $2) PARALLEL $column_parallel;
+data_binning_grp = GROUP data_cols BY ($0, $3) PARALLEL $column_parallel;
 binning_info_partial = FOREACH data_binning_grp GENERATE group.$0, GenBinningData(data_cols);
 binning_info_partial = FILTER binning_info_partial BY $1 IS NOT NULL;
 binning_info_grp = GROUP binning_info_partial BY $0 PARALLEL $group_binning_parallel;

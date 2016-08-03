@@ -380,7 +380,7 @@ public class PerformanceEvaluator {
         log.info("Start print: " + info);
 
         log.info(String.format(formatString, "ActionRate", "WeightedActionRate", "Recall", "WeightedRecall",
-                "Precision", "WeightedPrecision", "FPR", "WeightedFRP", "BinLowestScore"));
+                "Precision", "WeightedPrecision", "FPR", "WeightedFPR", "BinLowestScore"));
 
         for(PerformanceObject po: list) {
             log.info(String.format(formatString, df.format(po.actionRate), df.format(po.weightedActionRate),
