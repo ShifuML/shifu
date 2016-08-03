@@ -206,6 +206,16 @@ public class DTWorker
      */
     private boolean gbdtSampleWithReplacement = true;
 
+    /**
+     * Trainer id used to tag bagging training job, starting from 0, 1, 2 ...
+     */
+    private int trainerId;
+
+    /**
+     * If one vs all method for multiple classification.
+     */
+    private boolean isOneVsAll = false;
+
     @Override
     public void initRecordReader(GuaguaFileSplit fileSplit) throws IOException {
         super.setRecordReader(new GuaguaLineRecordReader(fileSplit));
@@ -233,6 +243,9 @@ public class DTWorker
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
+
+        this.trainerId = Integer.valueOf(context.getProps().getProperty(CommonConstants.SHIFU_TRAINER_ID));
+        this.isOneVsAll = modelConfig.isMultiClassification() && modelConfig.getTrain().isOneVsAll();
 
         this.treeNum = Integer.valueOf(this.modelConfig.getTrain().getParams().get("TreeNum").toString());;
 
@@ -610,6 +623,18 @@ public class DTWorker
                 sampleWeights[i] = this.rng[i].sample();
             }
         }
+
+        if(this.isOneVsAll) {
+            // if one vs all, set correlated idea value according to trainerId which means in trainer with id 0, target
+            // 0 is treated with 1, other are 0. Such target value are set to index of tags like [0, 1, 2, 3] compared
+            // with ["a", "b", "c", "d"]
+            if(Float.compare(ideal, trainerId) == 0) {
+                ideal = 1.0f;
+            } else {
+                ideal = 0.0f;
+            }
+        }
+
         float output = ideal;
         float predict = ideal;
 

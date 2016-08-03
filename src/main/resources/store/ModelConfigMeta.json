@@ -454,6 +454,17 @@
                 "directive":"input",
                 "defval": 4
             }, {
+                "name": "multiClassifyMethod",
+                "type": "text",
+                "directive": "select",
+                "defval" : "NONE",
+                "options": [
+                    {"label":"REGRESSION", "value":"REGRESSION"},
+                    {"label":"ONEVSALL", "value":"ONEVSALL"},
+                    {"label":"ONVVSREST", "value":"ONVVSREST"},
+                    {"label":"ONVVSONE", "value":"ONVVSONE"}
+                ]
+            }, {
                 "name": "upSampleWeight",
                 "type": "number",
                 "directive": "input",

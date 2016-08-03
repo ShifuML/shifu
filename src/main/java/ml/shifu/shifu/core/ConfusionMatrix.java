@@ -395,16 +395,46 @@ public class ConfusionMatrix {
 
                 int maxIndex = -1;
                 double maxScore = Double.NEGATIVE_INFINITY;
-                // 1,2,3 4,5,6: 1,2,3 is model 0, 4,5,6 is model 1
-                for(int i = 0; i < classes; i++) {
-                    for(int j = 0; j < multiClassModelCnt; j++) {
-                        double dd = NumberFormatUtils.getDouble(raw[this.multiClassScore1Index + j * classes + i], 0d);
-                        scores[i] += dd;
+
+                if(CommonUtils.isDesicionTreeAlgorithm(modelConfig.getAlgorithm())
+                        && !modelConfig.getTrain().isOneVsAll()) {
+                    // for RF classification
+                    double[] tagCounts = new double[tags.size()];
+                    for(int i = this.multiClassScore1Index; i < raw.length; i++) {
+                        double dd = NumberFormatUtils.getDouble(raw[i], 0d);
+                        tagCounts[(int) dd] += 1d;
                     }
-                    scores[i] /= multiClassModelCnt;
-                    if(scores[i] > maxScore) {
-                        maxIndex = i;
-                        maxScore = scores[i];
+                    double maxVotes = -1d;
+                    for(int i = 0; i < tagCounts.length; i++) {
+                        if(tagCounts[i] > maxVotes) {
+                            maxIndex = i;
+                            maxScore = maxVotes = tagCounts[i];
+                        }
+                    }
+                } else if(CommonUtils.isDesicionTreeAlgorithm(modelConfig.getAlgorithm())
+                        && modelConfig.getTrain().isOneVsAll()) {
+                    // for RF classification
+                    for(int i = this.multiClassScore1Index; i < raw.length; i++) {
+                        double dd = NumberFormatUtils.getDouble(raw[i], 0d);
+                        if(dd > maxScore) {
+                            maxScore = dd;
+                            maxIndex = i - this.multiClassScore1Index;
+                        }
+                    }
+                } else {
+                    // only for NN
+                    // 1,2,3 4,5,6: 1,2,3 is model 0, 4,5,6 is model 1
+                    for(int i = 0; i < classes; i++) {
+                        for(int j = 0; j < multiClassModelCnt; j++) {
+                            double dd = NumberFormatUtils.getDouble(raw[this.multiClassScore1Index + j * classes + i],
+                                    0d);
+                            scores[i] += dd;
+                        }
+                        scores[i] /= multiClassModelCnt;
+                        if(scores[i] > maxScore) {
+                            maxIndex = i;
+                            maxScore = scores[i];
+                        }
                     }
                 }
                 int tagIndex = -1;

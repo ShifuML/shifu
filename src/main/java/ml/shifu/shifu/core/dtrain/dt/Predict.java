@@ -79,7 +79,7 @@ public class Predict implements Bytable {
 
     @Override
     public String toString() {
-        return "Predict [predict=" + predict + ", prob=" + classValue + "]";
+        return "Predict [predict=" + predict + ", classValue=" + classValue + "]";
     }
 
 }

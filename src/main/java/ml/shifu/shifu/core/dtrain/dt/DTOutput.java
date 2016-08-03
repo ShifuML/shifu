@@ -16,6 +16,7 @@
 package ml.shifu.shifu.core.dtrain.dt;
 
 import java.io.IOException;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Properties;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -23,6 +24,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import ml.shifu.guagua.master.BasicMasterInterceptor;
 import ml.shifu.guagua.master.MasterContext;
 import ml.shifu.shifu.container.obj.ModelConfig;
+import ml.shifu.shifu.container.obj.ModelTrainConf.ALGORITHM;
 import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
 import ml.shifu.shifu.core.dtrain.CommonConstants;
 import ml.shifu.shifu.core.dtrain.DTrainUtils;
@@ -63,6 +65,17 @@ public class DTOutput extends BasicMasterInterceptor<DTMasterParams, DTWorkerPar
      */
     private FSDataOutputStream progressOutput = null;
 
+    /**
+     * If for random forest running, this is default for such master.
+     */
+    private boolean isRF = true;
+
+    /**
+     * If gradient boost decision tree, for GBDT, each time a tree is trained, next train is trained by gradient label
+     * from previous tree.
+     */
+    private boolean isGBDT = false;
+
     @Override
     public void preApplication(MasterContext<DTMasterParams, DTWorkerParams> context) {
         init(context);
@@ -100,17 +113,41 @@ public class DTOutput extends BasicMasterInterceptor<DTMasterParams, DTWorkerPar
         }
         double error = context.getMasterResult().getSquareError() / context.getMasterResult().getCount();
         String info = "";
-        if(context.getMasterResult().isSwitchToNextTree() || context.getMasterResult().isHalt()) {
-            info = new StringBuilder(200).append("    Trainer ").append(this.trainerId).append(" Iteration #")
-                    .append(currentIteration - 1).append(" Tree(starting from 1) ")
-                    .append(context.getMasterResult().getTrees().size() - 1).append(" is finished building. \n")
-                    .toString();
+        if(this.isGBDT) {
+            int treeSize = 0;
+            if(context.getMasterResult().isSwitchToNextTree() || context.getMasterResult().isHalt()) {
+                treeSize = context.getMasterResult().isSwitchToNextTree() ? (context.getMasterResult().getTrees()
+                        .size() - 1) : (context.getMasterResult().getTrees().size());
+                info = new StringBuilder(200).append("    Trainer ").append(this.trainerId).append(" Iteration #")
+                        .append(currentIteration - 1).append(" Squared Train Error: ")
+                        .append(String.format("%.15f", error)).append("; Tree ").append(treeSize)
+                        .append(" (starting from 1)  is finished building. \n").toString();
+            } else {
+                int treeIndex = context.getMasterResult().getTrees().size() - 1;
+                int nextDepth = context.getMasterResult().getTreeDepth().get(treeIndex);
+                info = new StringBuilder(200).append("    Trainer ").append(this.trainerId).append(" Iteration #")
+                        .append(currentIteration - 1).append(" Squared Train Error: ")
+                        .append(error == 0d ? "N/A" : String.format("%.15f", error)).append("; will work on depth ")
+                        .append(nextDepth).append(" \n").toString();
+            }
         }
-        if(error != 0d) {
-            info = new StringBuilder(200).append("    Trainer ").append(this.trainerId).append(" Iteration #")
-                    .append(currentIteration - 1).append(" Squared Train Error: ").append(error).append("\n")
-                    .append(info).toString();
+
+        if(this.isRF) {
+            if(error != 0d) {
+                List<Integer> treeDepth = context.getMasterResult().getTreeDepth();
+                if(treeDepth.size() == 0) {
+                    info = new StringBuilder(200).append("    Trainer ").append(this.trainerId).append(" Iteration #")
+                            .append(currentIteration - 1).append(" Squared Train Error: ")
+                            .append(error == 0d ? "N/A" : String.format("%.15f", error)).append("\n").toString();
+                } else {
+                    info = new StringBuilder(200).append("    Trainer ").append(this.trainerId).append(" Iteration #")
+                            .append(currentIteration - 1).append(" Squared Train Error: ")
+                            .append(error == 0d ? "N/A" : String.format("%.15f", error))
+                            .append("; will work on depth ").append(toListString(treeDepth)).append("\n").toString();
+                }
+            }
         }
+
         if(info.length() > 0) {
             try {
                 LOG.debug("Writing progress results to {} {}", context.getCurrentIteration(), info.toString());
@@ -120,6 +157,27 @@ public class DTOutput extends BasicMasterInterceptor<DTMasterParams, DTWorkerPar
             } catch (IOException e) {
                 LOG.error("Error in write progress log:", e);
             }
+        }
+    }
+
+    /**
+     * Show -1 as N/A which means not work on such iteration
+     */
+    private String toListString(List<Integer> list) {
+        Iterator<Integer> i = list.iterator();
+        if(!i.hasNext()) {
+            return "[]";
+        }
+
+        StringBuilder sb = new StringBuilder();
+        sb.append('[');
+        for(;;) {
+            Integer e = i.next();
+            sb.append(e == null || e == -1 ? "N/A" : e);
+            if(!i.hasNext()) {
+                return sb.append(']').toString();
+            }
+            sb.append(", ");
         }
     }
 
@@ -162,6 +220,8 @@ public class DTOutput extends BasicMasterInterceptor<DTMasterParams, DTWorkerPar
             loadConfigFiles(context.getProps());
             this.trainerId = context.getProps().getProperty(CommonConstants.SHIFU_TRAINER_ID);
             this.tmpModelsFolder = context.getProps().getProperty(CommonConstants.SHIFU_TMP_MODELS_FOLDER);
+            this.isRF = ALGORITHM.RF.toString().equalsIgnoreCase(modelConfig.getAlgorithm());
+            this.isGBDT = ALGORITHM.GBT.toString().equalsIgnoreCase(modelConfig.getAlgorithm());
         }
 
         try {

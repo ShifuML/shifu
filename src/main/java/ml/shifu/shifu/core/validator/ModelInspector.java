@@ -128,10 +128,11 @@ public class ModelInspector {
                 result = ValidateResult.mergeResult(result, checkColumnConf(modelConfig));
             }
             if(modelConfig.isMultiClassification()) {
-                if(!"nn".equalsIgnoreCase((modelConfig.getTrain().getAlgorithm()))) {
+                if(!"nn".equalsIgnoreCase((modelConfig.getTrain().getAlgorithm()))
+                        && !CommonConstants.RF_ALG_NAME.equalsIgnoreCase(modelConfig.getTrain().getAlgorithm())) {
                     ValidateResult tmpResult = new ValidateResult(true);
                     tmpResult
-                            .addCause("Multiple classification is only effective in neural network (nn) training method.");
+                            .addCause("Multiple classification is only effective in neural network (nn) or random forest (rf) training method.");
                     result = ValidateResult.mergeResult(result, tmpResult);
                 }
             }
@@ -140,10 +141,11 @@ public class ModelInspector {
         } else if(ModelStep.TRAIN.equals(modelStep)) {
             result = ValidateResult.mergeResult(result, checkTrainSetting(modelConfig.getTrain()));
             if(modelConfig.isMultiClassification()) {
-                if(!"nn".equalsIgnoreCase((modelConfig.getTrain().getAlgorithm()))) {
+                if(!"nn".equalsIgnoreCase((modelConfig.getTrain().getAlgorithm()))
+                        && !CommonConstants.RF_ALG_NAME.equalsIgnoreCase(modelConfig.getTrain().getAlgorithm())) {
                     ValidateResult tmpResult = new ValidateResult(true);
                     tmpResult
-                            .addCause("Multiple classification is only effective in neural network (nn) training method.");
+                            .addCause("Multiple classification is only effective in neural network (nn) or random forest (rf) training method.");
                     result = ValidateResult.mergeResult(result, tmpResult);
                 }
             }
@@ -249,18 +251,15 @@ public class ModelInspector {
 
         if(modelConfig.isMultiClassification()
                 && (modelConfig.getBinningMethod() == BinningMethod.EqualPositive || modelConfig.getBinningMethod() == BinningMethod.EqualNegtive)) {
-            result = ValidateResult
-                    .mergeResult(
-                            result,
-                            new ValidateResult(
-                                    true,
-                                    Arrays.asList("Multiple classification cannot leverage EqualNegtive and EqualPositive binning.")));
+            ValidateResult tmpResult = new ValidateResult(false,
+                    Arrays.asList("Multiple classification cannot leverage EqualNegtive and EqualPositive binning."));
+            result = ValidateResult.mergeResult(result, tmpResult);
         }
 
         if(modelConfig.isMultiClassification() && modelConfig.getBinningAlgorithm() != BinningAlgorithm.SPDTI) {
             result = ValidateResult.mergeResult(
                     result,
-                    new ValidateResult(true, Arrays
+                    new ValidateResult(false, Arrays
                             .asList("Only SPDTI binning algorithm are supported with multiple classification.")));
 
         }
@@ -301,7 +300,7 @@ public class ModelInspector {
             if(varSelect.getWrapperEnabled()) {
                 result = ValidateResult.mergeResult(
                         result,
-                        new ValidateResult(true, Arrays
+                        new ValidateResult(false, Arrays
                                 .asList("Multiple classification is not enabled for wrapperBy variable selection.")));
             }
         }
@@ -600,7 +599,7 @@ public class ModelInspector {
                     result = ValidateResult.mergeResult(result, tmpResult);
                 }
             }
-            
+
             Object treeNumObj = params.get("TreeNum");
             if(treeNumObj != null) {
                 int treeNum = Integer.valueOf(treeNumObj.toString());
