@@ -59,7 +59,7 @@ public class FilterBinningDataUDF extends AbstractTrainerUDF<Boolean> {
 
         boolean isPositive = (Boolean) input.get(2);
 
-        if(isValidRecord(modelConfig.isBinaryClassification(), isPositive, columnConfig)) {
+        if(isValidRecord(modelConfig.isRegression(), isPositive, columnConfig)) {
             return true;
         }
         return false;

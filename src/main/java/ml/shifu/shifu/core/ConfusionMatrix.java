@@ -90,7 +90,7 @@ public class ConfusionMatrix {
             throw new ShifuException(ShifuErrorCode.ERROR_EVAL_SELECTOR_EMPTY);
         }
 
-        if(modelConfig.isBinaryClassification()) {
+        if(modelConfig.isRegression()) {
             scoreColumnIndex = ArrayUtils.indexOf(evalScoreHeader, evalConfig.getPerformanceScoreSelector().trim());
             if(scoreColumnIndex < 0) {
                 // the score column is not found in the header of EvalScore
@@ -375,7 +375,7 @@ public class ConfusionMatrix {
                 }
 
                 String tag = raw[targetColumnIndex];
-                if(modelConfig.isBinaryClassification()) {
+                if(modelConfig.isRegression()) {
                     if(StringUtils.isBlank(tag) || (!posTags.contains(tag) && !negTags.contains(tag))) {
                         if(rd.nextDouble() < 0.01) {
                             log.warn("Empty or invalid target value!!");

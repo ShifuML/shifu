@@ -113,7 +113,7 @@ public class AddColumnNumAndFilterUDF extends AbstractTrainerUDF<DataBag> {
             ColumnConfig config = columnConfigList.get(i);
             if(config.isCandidate()) {
                 boolean isPositive = false;;
-                if(modelConfig.isBinaryClassification()) {
+                if(modelConfig.isRegression()) {
                     if ( super.posTagSet.contains(tag) ) {
                         isPositive = true;
                     } else if(super.negTagSet.contains(tag)) {
@@ -123,7 +123,7 @@ public class AddColumnNumAndFilterUDF extends AbstractTrainerUDF<DataBag> {
                         continue;
                     }
                 }
-                if(!isValidRecord(modelConfig.isBinaryClassification(), isPositive, config)) {
+                if(!isValidRecord(modelConfig.isRegression(), isPositive, config)) {
                     continue;
                 }
                 Tuple tuple = tupleFactory.newTuple(TOTAL_COLUMN_CNT);
@@ -131,7 +131,7 @@ public class AddColumnNumAndFilterUDF extends AbstractTrainerUDF<DataBag> {
                 // Set Data
                 tuple.set(COLUMN_VAL_INDX, (input.get(i) == null ? null : input.get(i).toString()));
 
-                if(modelConfig.isBinaryClassification()) {
+                if(modelConfig.isRegression()) {
                     // Set Tag
                     if(super.posTagSet.contains(tag)) {
                         tuple.set(COLUMN_TAG_INDX, true);

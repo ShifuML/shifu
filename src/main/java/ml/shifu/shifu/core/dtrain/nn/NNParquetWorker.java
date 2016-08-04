@@ -164,7 +164,7 @@ public class NNParquetWorker extends AbstractNNWorker<Tuple> {
         super.sampleCount += 1;
 
         FloatMLDataPair pair = new BasicFloatMLDataPair(new BasicFloatMLData(inputs), new BasicFloatMLData(ideal));
-        if(modelConfig.isBinaryClassification() && isUpSampleEnabled() && Double.compare(ideal[0], 1d) == 0) {
+        if(modelConfig.isRegression() && isUpSampleEnabled() && Double.compare(ideal[0], 1d) == 0) {
             // Double.compare(ideal[0], 1d) == 0 means positive tags; sample + 1 to avoid sample count to 0
             pair.setSignificance(significance * (super.upSampleRng.sample() + 1));
         } else {

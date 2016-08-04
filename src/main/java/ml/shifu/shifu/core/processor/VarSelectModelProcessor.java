@@ -116,14 +116,14 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
             VariableSelector selector = new VariableSelector(this.modelConfig, this.columnConfigList);
 
             if(!modelConfig.getVarSelectWrapperEnabled()) {
-                if(modelConfig.isBinaryClassification()) {
+                if(modelConfig.isRegression()) {
                     // Select by local KS, IV
                     CommonUtils.updateColumnConfigFlags(modelConfig, columnConfigList);
                     this.columnConfigList = selector.selectByFilter();
                 } else {
                     // multiple classification, select all candidate at first, TODO add SE for multi-classification
                     for(ColumnConfig config: this.columnConfigList) {
-                        if(CommonUtils.isGoodCandidate(modelConfig.isBinaryClassification(), config)) {
+                        if(CommonUtils.isGoodCandidate(modelConfig.isRegression(), config)) {
                             config.setFinalSelect(true);
                         }
                     }

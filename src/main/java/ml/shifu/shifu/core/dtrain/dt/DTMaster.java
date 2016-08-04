@@ -496,7 +496,7 @@ public class DTMaster extends AbstractMasterComputable<DTMasterParams, DTWorkerP
         }
         String imStr = this.modelConfig.getTrain().getParams().get("Impurity").toString();
         int numClasses = 2;
-        if(this.modelConfig.isMultiClassification()) {
+        if(this.modelConfig.isClassification()) {
             numClasses = this.modelConfig.getFlattenTags().size();
         }
 

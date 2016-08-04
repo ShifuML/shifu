@@ -174,7 +174,7 @@ public class UpdateBinningInfoReducer extends Reducer<IntWritable, BinningInfoWr
         }
 
         double[] binPosRate;
-        if(modelConfig.isBinaryClassification()) {
+        if(modelConfig.isRegression()) {
             binPosRate = computePosRate(binCountPos, binCountNeg);
         } else {
             // for multiple classfication, use rate of categories to compute a value
@@ -223,7 +223,7 @@ public class UpdateBinningInfoReducer extends Reducer<IntWritable, BinningInfoWr
 
         ColumnMetrics columnCountMetrics = null;
         ColumnMetrics columnWeightMetrics = null;
-        if(modelConfig.isBinaryClassification()) {
+        if(modelConfig.isRegression()) {
             columnCountMetrics = ColumnStatsCalculator.calculateColumnMetrics(binCountNeg, binCountPos);
             columnWeightMetrics = ColumnStatsCalculator.calculateColumnMetrics(binWeightNeg, binWeightPos);
         }

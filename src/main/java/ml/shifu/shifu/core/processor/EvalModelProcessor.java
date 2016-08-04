@@ -269,7 +269,7 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
         paramsMap.put("columnIndex", evalConfig.getPerformanceScoreSelector().trim());
 
         String pigScript = "scripts/Eval.pig";
-        if(modelConfig.isMultiClassification()) {
+        if(modelConfig.isClassification()) {
             pigScript = "scripts/EvalScore.pig";
         }
         try {
@@ -487,7 +487,7 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
         switch(modelConfig.getBasic().getRunMode()) {
             case DIST:
             case MAPRED:
-                if(modelConfig.isBinaryClassification()) {
+                if(modelConfig.isRegression()) {
                     worker.bufferedComputeConfusionMatrixAndPerformance(this.pigPosTags, this.pigNegTags,
                             this.pigPosWeightTags, this.pigNegWeightTags, this.evalRecords);
                 } else {

@@ -128,7 +128,7 @@ public class EvalScoreUDF extends AbstractTrainerUDF<Tuple> {
 
         tuple.append(weight);
 
-        if(modelConfig.isBinaryClassification()) {
+        if(modelConfig.isRegression()) {
             tuple.append(cs.getAvgScore());
             tuple.append(cs.getMaxScore());
             tuple.append(cs.getMinScore());
@@ -199,7 +199,7 @@ public class EvalScoreUDF extends AbstractTrainerUDF<Tuple> {
                     : evalConfig.getDataSet().getWeightColumnName();
             tupleSchema.add(new FieldSchema(SCHEMA_PREFIX + weightName, DataType.CHARARRAY));
 
-            if(modelConfig.isBinaryClassification()) {
+            if(modelConfig.isRegression()) {
                 tupleSchema.add(new FieldSchema(SCHEMA_PREFIX + "mean", DataType.INTEGER));
                 tupleSchema.add(new FieldSchema(SCHEMA_PREFIX + "max", DataType.INTEGER));
                 tupleSchema.add(new FieldSchema(SCHEMA_PREFIX + "min", DataType.INTEGER));

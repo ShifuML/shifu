@@ -245,7 +245,7 @@ public class DTWorker
         }
 
         this.trainerId = Integer.valueOf(context.getProps().getProperty(CommonConstants.SHIFU_TRAINER_ID));
-        this.isOneVsAll = modelConfig.isMultiClassification() && modelConfig.getTrain().isOneVsAll();
+        this.isOneVsAll = modelConfig.isClassification() && modelConfig.getTrain().isOneVsAll();
 
         this.treeNum = Integer.valueOf(this.modelConfig.getTrain().getParams().get("TreeNum").toString());;
 
@@ -257,8 +257,7 @@ public class DTWorker
         int[] inputOutputIndex = DTrainUtils.getNumericAndCategoricalInputAndOutputCounts(this.columnConfigList);
         this.numericInputCount = inputOutputIndex[0];
         this.categoricalInputCount = inputOutputIndex[1];
-        this.outputNodeCount = modelConfig.isBinaryClassification() ? inputOutputIndex[2] : modelConfig.getTags()
-                .size();
+        this.outputNodeCount = modelConfig.isRegression() ? inputOutputIndex[2] : modelConfig.getTags().size();
         this.isAfterVarSelect = inputOutputIndex[3] == 1 ? true : false;
 
         this.rng = new PoissonDistribution[treeNum];
@@ -266,7 +265,7 @@ public class DTWorker
             this.rng[i] = new PoissonDistribution(this.modelConfig.getTrain().getBaggingSampleRate());
         }
 
-        int numClasses = this.modelConfig.isMultiClassification() ? this.modelConfig.getFlattenTags().size() : 2;
+        int numClasses = this.modelConfig.isClassification() ? this.modelConfig.getFlattenTags().size() : 2;
         String imStr = this.modelConfig.getTrain().getParams().get("Impurity").toString();
         int minInstancesPerNode = Integer.valueOf(this.modelConfig.getParams().get("MinInstancesPerNode").toString());
         double minInfoGain = Double.valueOf(this.modelConfig.getParams().get("MinInfoGain").toString());
@@ -321,6 +320,26 @@ public class DTWorker
             return new DTWorkerParams();
         }
 
+        Map<Integer, NodeStats> statistics = initTodoNodeStats(todoNodes);
+
+        double squareError = 0d;
+        List<Integer> nodeIndexes = new ArrayList<Integer>(trees.size());
+        // renew random seed
+        if(this.isGBDT && !this.gbdtSampleWithReplacement && lastMasterResult.isSwitchToNextTree()) {
+            this.random = new Random();
+        }
+        for(Data data: this.trainingData) {
+            nodeIndexes.clear();
+
+            squareError += computeErrorAndUpdateNodeIndex(lastMasterResult, trees, nodeIndexes, data);
+
+            updateTodoNodeStats(todoNodes, statistics, nodeIndexes, data);
+        }
+        LOG.info("worker count is {}, error is {}, and stats size is {}.", count, squareError, statistics.size());
+        return new DTWorkerParams(count, squareError, statistics);
+    }
+
+    private Map<Integer, NodeStats> initTodoNodeStats(Map<Integer, TreeNode> todoNodes) {
         Map<Integer, NodeStats> statistics = new HashMap<Integer, NodeStats>(todoNodes.size(), 1f);
         for(Map.Entry<Integer, TreeNode> entry: todoNodes.entrySet()) {
             List<Integer> features = entry.getValue().getFeatures();
@@ -345,109 +364,108 @@ public class DTWorker
 
             statistics.put(entry.getKey(), nodeStats);
         }
+        return statistics;
+    }
 
-        double squareError = 0d;
-        List<Integer> nodeIndexes = new ArrayList<Integer>(trees.size());
-        // renew random seed
-        if(this.isGBDT && !this.gbdtSampleWithReplacement && lastMasterResult.isSwitchToNextTree()) {
-            this.random = new Random();
-        }
-        for(Data data: this.trainingData) {
-            nodeIndexes.clear();
+    private void updateTodoNodeStats(Map<Integer, TreeNode> todoNodes, Map<Integer, NodeStats> statistics,
+            List<Integer> nodeIndexes, Data data) {
+        for(Map.Entry<Integer, TreeNode> entry: todoNodes.entrySet()) {
+            // only do statistics on effective data
+            Node todoNode = entry.getValue().getNode();
+            int treeId = entry.getValue().getTreeId();
+            int currPredictIndex = 0;
             if(this.isRF) {
-                for(TreeNode treeNode: trees) {
-                    Node predictNode = predictNodeIndex(treeNode.getNode(), data);
-                    if(predictNode.getPredict() != null) {
-                        // only update when not in first node, for treeNode, no predict statistics at that time
-                        squareError += loss.computeError((float) (predictNode.getPredict().getPredict()), data.label);
-                    }
-                    int predictNodeIndex = predictNode.getId();
-                    nodeIndexes.add(predictNodeIndex);
-                }
+                currPredictIndex = nodeIndexes.get(entry.getValue().getTreeId());
+            }
+            if(this.isGBDT) {
+                currPredictIndex = nodeIndexes.get(0);
             }
 
-            if(this.isGBDT) {
-                int currTreeIndex = trees.size() - 1;
-                if(lastMasterResult.isSwitchToNextTree()) {
-                    if(currTreeIndex >= 1) {
-                        Node node = trees.get(currTreeIndex - 1).getNode();
-                        Node predictNode = predictNodeIndex(node, data);
-                        if(predictNode.getPredict() != null) {
-                            double predict = predictNode.getPredict().getPredict();
-                            if(currTreeIndex == 1) {
-                                data.predict = (float) predict;
-                            } else {
-                                data.predict += (float) (this.learningRate * predict);
-                            }
-                            data.output = -1f * loss.computeGradient(data.predict, data.label);
+            if(todoNode.getId() == currPredictIndex) {
+                List<Integer> features = entry.getValue().getFeatures();
+                if(features.isEmpty()) {
+                    features = getAllValidFeatures();
+                }
+                for(Integer columnNum: features) {
+                    ColumnConfig config = this.columnConfigList.get(columnNum);
+                    double[] featuerStatistic = statistics.get(entry.getKey()).getFeatureStatistics().get(columnNum);
+                    float weight = data.subsampleWeights[treeId];
+                    if(config.isNumerical()) {
+                        float value = data.numericInputs[this.numericInputIndexMap.get(columnNum)];
+                        int binIndex = getBinIndex(value, config.getBinBoundary());
+                        this.impurity.featureUpdate(featuerStatistic, binIndex, data.output, data.significance, weight);
+                    } else if(config.isCategorical()) {
+                        String category = data.categoricalInputs[this.categoricalInputIndexMap.get(columnNum)];
+                        Integer binIndex = this.categoryIndexMap.get(columnNum).get(category);
+                        if(binIndex == null) {
+                            // add to null bin which is the last one
+                            binIndex = config.getBinCategory().size();
                         }
-                        if(!this.gbdtSampleWithReplacement) {
-                            // renew next subsample rate
-                            if(random.nextDouble() <= modelConfig.getTrain().getBaggingSampleRate()) {
-                                data.subsampleWeights[currTreeIndex] = 1f;
-                            } else {
-                                data.subsampleWeights[currTreeIndex] = 0f;
-                            }
-                        }
+                        this.impurity.featureUpdate(featuerStatistic, binIndex, data.output, data.significance, weight);
+                    } else {
+                        throw new IllegalStateException("Only numerical and categorical columns supported. ");
                     }
                 }
-                Node predictNode = predictNodeIndex(trees.get(currTreeIndex).getNode(), data);
+            }
+        }
+    }
+
+    /**
+     * 1. Compute error for one record, 2.update node index per each tree each record
+     */
+    private double computeErrorAndUpdateNodeIndex(DTMasterParams lastMasterResult, List<TreeNode> trees,
+            List<Integer> nodeIndexes, Data data) {
+        double squareError = 0d;
+        if(this.isRF) {
+            for(TreeNode treeNode: trees) {
+                Node predictNode = predictNodeIndex(treeNode.getNode(), data);
+                if(predictNode.getPredict() != null) {
+                    // only update when not in first node, for treeNode, no predict statistics at that time
+                    squareError += loss.computeError((float) (predictNode.getPredict().getPredict()), data.label);
+                }
                 int predictNodeIndex = predictNode.getId();
                 nodeIndexes.add(predictNodeIndex);
-                if(currTreeIndex >= 1) {
-                    squareError += loss.computeError(data.predict, data.label);
-                } else {
-                    if(predictNode.getPredict() != null) {
-                        squareError += loss.computeError(((float) predictNode.getPredict().getPredict()), data.label);
-                    }
-                }
             }
+        }
 
-            for(Map.Entry<Integer, TreeNode> entry: todoNodes.entrySet()) {
-                // only do statistics on effective data
-                Node todoNode = entry.getValue().getNode();
-                int treeId = entry.getValue().getTreeId();
-                int currPredictIndex = 0;
-                if(this.isRF) {
-                    currPredictIndex = nodeIndexes.get(entry.getValue().getTreeId());
-                }
-                if(this.isGBDT) {
-                    currPredictIndex = nodeIndexes.get(0);
-                }
-
-                if(todoNode.getId() == currPredictIndex) {
-                    List<Integer> features = entry.getValue().getFeatures();
-                    if(features.isEmpty()) {
-                        features = getAllValidFeatures();
-                    }
-                    for(Integer columnNum: features) {
-                        ColumnConfig config = this.columnConfigList.get(columnNum);
-                        double[] featuerStatistic = statistics.get(entry.getKey()).getFeatureStatistics()
-                                .get(columnNum);
-                        float weight = data.subsampleWeights[treeId];
-                        if(config.isNumerical()) {
-                            float value = data.numericInputs[this.numericInputIndexMap.get(columnNum)];
-                            int binIndex = getBinIndex(value, config.getBinBoundary());
-                            this.impurity.featureUpdate(featuerStatistic, binIndex, data.output, data.significance,
-                                    weight);
-                        } else if(config.isCategorical()) {
-                            String category = data.categoricalInputs[this.categoricalInputIndexMap.get(columnNum)];
-                            Integer binIndex = this.categoryIndexMap.get(columnNum).get(category);
-                            if(binIndex == null) {
-                                // add to null bin which is the last one
-                                binIndex = config.getBinCategory().size();
-                            }
-                            this.impurity.featureUpdate(featuerStatistic, binIndex, data.output, data.significance,
-                                    weight);
+        if(this.isGBDT) {
+            int currTreeIndex = trees.size() - 1;
+            if(lastMasterResult.isSwitchToNextTree()) {
+                if(currTreeIndex >= 1) {
+                    Node node = trees.get(currTreeIndex - 1).getNode();
+                    Node predictNode = predictNodeIndex(node, data);
+                    if(predictNode.getPredict() != null) {
+                        double predict = predictNode.getPredict().getPredict();
+                        if(currTreeIndex == 1) {
+                            data.predict = (float) predict;
                         } else {
-                            throw new IllegalStateException("Only numerical and categorical columns supported. ");
+                            data.predict += (float) (this.learningRate * predict);
+                        }
+                        data.output = -1f * loss.computeGradient(data.predict, data.label);
+                    }
+                    if(!this.gbdtSampleWithReplacement) {
+                        // renew next subsample rate
+                        if(random.nextDouble() <= modelConfig.getTrain().getBaggingSampleRate()) {
+                            data.subsampleWeights[currTreeIndex] = 1f;
+                        } else {
+                            data.subsampleWeights[currTreeIndex] = 0f;
                         }
                     }
                 }
             }
+            Node predictNode = predictNodeIndex(trees.get(currTreeIndex).getNode(), data);
+            int predictNodeIndex = predictNode.getId();
+            if(currTreeIndex >= 1) {
+                squareError += loss.computeError(data.predict, data.label);
+            } else {
+                if(predictNode.getPredict() != null) {
+                    squareError += loss.computeError(((float) predictNode.getPredict().getPredict()), data.label);
+                }
+            }
+            // update node index
+            nodeIndexes.add(predictNodeIndex);
         }
-        LOG.info("worker count is {}, error is {}, and stats size is {}.", count, squareError, statistics.size());
-        return new DTWorkerParams(count, squareError, statistics);
+        return squareError;
     }
 
     @Override
@@ -603,6 +621,53 @@ public class DTWorker
             index += 1;
         }
 
+        if(this.isOneVsAll) {
+            // if one vs all, update target value according to index of target
+            ideal = updateOneVsAllTargetValue(ideal);
+        }
+
+        float output = ideal;
+        float predict = ideal;
+
+        Data data = new Data(numericInputs, categoricalInputs, predict, output, output, significance, sampleWeights());
+
+        boolean isNeedFailOver = !context.isFirstIteration();
+        // recover for gbdt fail over
+        if(isNeedFailOver && this.isGBDT) {
+            recoverGBTData(context, output, predict, data);
+        }
+        this.trainingData.append(data);
+    }
+
+    private void recoverGBTData(WorkerContext<DTMasterParams, DTWorkerParams> context, float output, float predict,
+            Data data) {
+        DTMasterParams lastMasterResult = context.getLastMasterResult();
+        if(lastMasterResult != null) {
+            List<TreeNode> trees = lastMasterResult.getTrees();
+            if(trees.size() > 1) {
+                // if isSwitchToNextTree == false, iterate all trees except current one to get new predict and
+                // output value; if isSwitchToNextTree == true, iterate all trees except current two trees.
+                // the last tree is a root node, the tree with index size-2 will be called in doCompute method
+                int iterLen = lastMasterResult.isSwitchToNextTree() ? trees.size() - 2 : trees.size() - 1;
+                for(int i = 0; i < iterLen; i++) {
+                    TreeNode currTree = trees.get(i);
+                    if(i == 0) {
+                        double oldPredict = predictNodeIndex(currTree.getNode(), data).getPredict().getPredict();
+                        predict = (float) oldPredict;
+                        output = -1f * loss.computeGradient(predict, data.label);
+                    } else {
+                        double oldPredict = predictNodeIndex(currTree.getNode(), data).getPredict().getPredict();
+                        predict += (float) (this.learningRate * oldPredict);
+                        output = -1f * loss.computeGradient(predict, data.label);
+                    }
+                }
+                data.output = output;
+                data.predict = predict;
+            }
+        }
+    }
+
+    private float[] sampleWeights() {
         float[] sampleWeights;
         if(this.treeNum == 1 || (this.isGBDT && !this.gbdtSampleWithReplacement)) {
             // if tree == 1 or GBDT, don't use with replacement sampling; for GBDT, every time is one tree
@@ -623,52 +688,20 @@ public class DTWorker
                 sampleWeights[i] = this.rng[i].sample();
             }
         }
+        return sampleWeights;
+    }
 
-        if(this.isOneVsAll) {
-            // if one vs all, set correlated idea value according to trainerId which means in trainer with id 0, target
-            // 0 is treated with 1, other are 0. Such target value are set to index of tags like [0, 1, 2, 3] compared
-            // with ["a", "b", "c", "d"]
-            if(Float.compare(ideal, trainerId) == 0) {
-                ideal = 1.0f;
-            } else {
-                ideal = 0.0f;
-            }
+    private float updateOneVsAllTargetValue(float ideal) {
+        // if one vs all, set correlated idea value according to trainerId which means in trainer with id 0, target
+        // 0 is treated with 1, other are 0. Such target value are set to index of tags like [0, 1, 2, 3] compared
+        // with ["a", "b", "c", "d"]
+        float result = 0f;
+        if(Float.compare(ideal, trainerId) == 0) {
+            result = 1.0f;
+        } else {
+            result = 0.0f;
         }
-
-        float output = ideal;
-        float predict = ideal;
-
-        Data data = new Data(numericInputs, categoricalInputs, predict, output, output, significance, sampleWeights);
-
-        boolean isNeedFailOver = !context.isFirstIteration();
-        // recover for gbdt fail over
-        if(isNeedFailOver && this.isGBDT) {
-            DTMasterParams lastMasterResult = context.getLastMasterResult();
-            if(lastMasterResult != null) {
-                List<TreeNode> trees = lastMasterResult.getTrees();
-                if(trees.size() > 1) {
-                    // if isSwitchToNextTree == false, iterate all trees except current one to get new predict and
-                    // output value; if isSwitchToNextTree == true, iterate all trees except current two trees.
-                    // the last tree is a root node, the tree with index size-2 will be called in doCompute method
-                    int iterLen = lastMasterResult.isSwitchToNextTree() ? trees.size() - 2 : trees.size() - 1;
-                    for(int i = 0; i < iterLen; i++) {
-                        TreeNode currTree = trees.get(i);
-                        if(i == 0) {
-                            double oldPredict = predictNodeIndex(currTree.getNode(), data).getPredict().getPredict();
-                            predict = (float) oldPredict;
-                            output = -1f * loss.computeGradient(predict, data.label);
-                        } else {
-                            double oldPredict = predictNodeIndex(currTree.getNode(), data).getPredict().getPredict();
-                            predict += (float) (this.learningRate * oldPredict);
-                            output = -1f * loss.computeGradient(predict, data.label);
-                        }
-                    }
-                    data.output = output;
-                    data.predict = predict;
-                }
-            }
-        }
-        this.trainingData.append(data);
+        return result;
     }
 
     private static class Data implements Serializable, Bytable {

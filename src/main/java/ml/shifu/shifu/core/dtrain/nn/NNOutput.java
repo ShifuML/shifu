@@ -224,7 +224,7 @@ public class NNOutput extends BasicMasterInterceptor<NNParams, NNParams> {
     private void initNetwork() {
         int[] inputOutputIndex = DTrainUtils.getInputOutputCandidateCounts(this.columnConfigList);
         int inputNodeCount = inputOutputIndex[0] == 0 ? inputOutputIndex[2] : inputOutputIndex[0];
-        int outputNodeCount = modelConfig.isBinaryClassification() ? inputOutputIndex[1] : modelConfig.getTags().size();
+        int outputNodeCount = modelConfig.isRegression() ? inputOutputIndex[1] : modelConfig.getTags().size();
 
         int numLayers = (Integer) getModelConfig().getParams().get(NNTrainer.NUM_HIDDEN_LAYERS);
         List<String> actFunc = (List<String>) getModelConfig().getParams().get(NNTrainer.ACTIVATION_FUNC);

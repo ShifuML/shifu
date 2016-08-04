@@ -145,7 +145,7 @@ public class Scorer {
                     continue;
                 }
                 MLData score = network.compute(pair.getInput());
-                if(modelConfig != null && modelConfig.isBinaryClassification()) {
+                if(modelConfig != null && modelConfig.isRegression()) {
                     scores.add(toScore(score.getData(0)));
                 } else {
                     double[] outputs = score.getData();
@@ -178,7 +178,7 @@ public class Scorer {
                             + "; Input Size = " + pair.getInput().size());
                 }
                 MLData score = rf.compute(pair.getInput());
-                if(modelConfig.isMultiClassification() && !modelConfig.getTrain().isOneVsAll()) {
+                if(modelConfig.isClassification() && !modelConfig.getTrain().isOneVsAll()) {
                     double[] scoreArray = score.getData();
                     for(double sc: scoreArray) {
                         scores.add((int)sc);
