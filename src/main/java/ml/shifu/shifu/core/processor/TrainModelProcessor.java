@@ -287,7 +287,7 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
         }
 
         if(LogisticRegressionContants.LR_ALG_NAME.equalsIgnoreCase(alg)
-                || CommonConstants.GBT_ALG_NAME.equalsIgnoreCase(alg) && modelConfig.isMultiClassification()) {
+                || CommonConstants.GBT_ALG_NAME.equalsIgnoreCase(alg) && modelConfig.isClassification()) {
             throw new IllegalArgumentException(
                     "Distributed LR, GBDT(Gradient Boost Desicion Tree) only support binary classification, multiple classification is not supported.");
         }
@@ -337,7 +337,7 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
         args.add(String.format(CommonConstants.MAPREDUCE_PARAM_FORMAT, CommonConstants.SHIFU_TMP_MODELS_FOLDER,
                 tmpModelsPath.toString()));
         int baggingNum = isForVarSelect ? 1 : super.getModelConfig().getBaggingNum();
-        if(modelConfig.isMultiClassification() && modelConfig.getTrain().isOneVsAll()) {
+        if(modelConfig.isClassification() && modelConfig.getTrain().isOneVsAll()) {
             // one vs all multiple classification, we need multiple bagging jobs to do ONEVSALL
             baggingNum = modelConfig.getTags().size();
             if(baggingNum != super.getModelConfig().getBaggingNum()) {

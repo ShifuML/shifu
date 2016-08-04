@@ -107,7 +107,7 @@ public class AddColumnNumUDF extends AbstractTrainerUDF<DataBag> {
                 // Set Data
                 tuple.set(1, input.get(i) == null ? null : input.get(i).toString());
 
-                if(modelConfig.isBinaryClassification()) {
+                if(modelConfig.isRegression()) {
                     // Set Tag
                     if(super.posTagSet.contains(tag)) {
                         tuple.set(2, true);

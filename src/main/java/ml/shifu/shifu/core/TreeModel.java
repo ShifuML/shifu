@@ -233,7 +233,7 @@ public class TreeModel extends BasicML implements MLRegression {
         }
 
         return new TreeModel(trees, weights, CommonConstants.GBT_ALG_NAME.equalsIgnoreCase(algorithm),
-                columnConfigList, columnMapping, modelConfig.isMultiClassification()
+                columnConfigList, columnMapping, modelConfig.isClassification()
                         && !modelConfig.getTrain().isOneVsAll());
         // if one vs all, even multiple classification, treated as regression
     }

@@ -347,7 +347,7 @@ public class LogisticRegressionWorker
 
         this.sampleCount += 1;
 
-        if(modelConfig.isBinaryClassification() && isUpSampleEnabled() && Double.compare(outputData[0], 1d) == 0) {
+        if(modelConfig.isRegression() && isUpSampleEnabled() && Double.compare(outputData[0], 1d) == 0) {
             // Double.compare(ideal[0], 1d) == 0 means positive tags; sample + 1 to avoid sample count to 0
             significance *= (this.upSampleRng.sample() + 1);
         }

@@ -229,7 +229,7 @@ public abstract class AbstractNNWorker<VALUE extends Writable> extends
 
         int[] inputOutputIndex = DTrainUtils.getInputOutputCandidateCounts(this.columnConfigList);
         this.inputNodeCount = inputOutputIndex[0] == 0 ? inputOutputIndex[2] : inputOutputIndex[0];
-        this.outputNodeCount = modelConfig.isBinaryClassification() ? inputOutputIndex[1] : modelConfig.getTags()
+        this.outputNodeCount = modelConfig.isRegression() ? inputOutputIndex[1] : modelConfig.getTags()
                 .size();
         this.candidateCount = inputOutputIndex[2];
 

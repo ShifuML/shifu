@@ -93,7 +93,7 @@ public class ModelInspector {
             return result;
         }
 
-        if(modelConfig.isMultiClassification()) {
+        if(modelConfig.isClassification()) {
             if(modelConfig.getBasic().getRunMode() == RunMode.LOCAL
                     || modelConfig.getDataSet().getSource() == SourceType.LOCAL) {
                 ValidateResult tmpResult = new ValidateResult(true);
@@ -127,7 +127,7 @@ public class ModelInspector {
                 // add validation to avoid user to make mistake
                 result = ValidateResult.mergeResult(result, checkColumnConf(modelConfig));
             }
-            if(modelConfig.isMultiClassification()) {
+            if(modelConfig.isClassification()) {
                 if(!"nn".equalsIgnoreCase((modelConfig.getTrain().getAlgorithm()))
                         && !CommonConstants.RF_ALG_NAME.equalsIgnoreCase(modelConfig.getTrain().getAlgorithm())) {
                     ValidateResult tmpResult = new ValidateResult(true);
@@ -139,8 +139,8 @@ public class ModelInspector {
         } else if(ModelStep.NORMALIZE.equals(modelStep)) {
             result = ValidateResult.mergeResult(result, checkNormSetting(modelConfig, modelConfig.getNormalize()));
         } else if(ModelStep.TRAIN.equals(modelStep)) {
-            result = ValidateResult.mergeResult(result, checkTrainSetting(modelConfig.getTrain()));
-            if(modelConfig.isMultiClassification()) {
+            result = ValidateResult.mergeResult(result, checkTrainSetting(modelConfig, modelConfig.getTrain()));
+            if(modelConfig.isClassification()) {
                 if(!"nn".equalsIgnoreCase((modelConfig.getTrain().getAlgorithm()))
                         && !CommonConstants.RF_ALG_NAME.equalsIgnoreCase(modelConfig.getTrain().getAlgorithm())) {
                     ValidateResult tmpResult = new ValidateResult(true);
@@ -249,14 +249,14 @@ public class ModelInspector {
     private ValidateResult checkStatsConf(ModelConfig modelConfig) throws IOException {
         ValidateResult result = new ValidateResult(true);
 
-        if(modelConfig.isMultiClassification()
+        if(modelConfig.isClassification()
                 && (modelConfig.getBinningMethod() == BinningMethod.EqualPositive || modelConfig.getBinningMethod() == BinningMethod.EqualNegtive)) {
             ValidateResult tmpResult = new ValidateResult(false,
                     Arrays.asList("Multiple classification cannot leverage EqualNegtive and EqualPositive binning."));
             result = ValidateResult.mergeResult(result, tmpResult);
         }
 
-        if(modelConfig.isMultiClassification() && modelConfig.getBinningAlgorithm() != BinningAlgorithm.SPDTI) {
+        if(modelConfig.isClassification() && modelConfig.getBinningAlgorithm() != BinningAlgorithm.SPDTI) {
             result = ValidateResult.mergeResult(
                     result,
                     new ValidateResult(false, Arrays
@@ -296,7 +296,7 @@ public class ModelInspector {
             }
         }
 
-        if(modelConfig.isMultiClassification()) {
+        if(modelConfig.isClassification()) {
             if(varSelect.getWrapperEnabled()) {
                 result = ValidateResult.mergeResult(
                         result,
@@ -420,7 +420,7 @@ public class ModelInspector {
                 || modelConfig.getNormalize().getNormType() == NormType.OLD_ZSCALE
                 || modelConfig.getNormalize().getNormType() == NormType.OLD_ZSCORE;
 
-        if(modelConfig.isMultiClassification() && !isZScore) {
+        if(modelConfig.isClassification() && !isZScore) {
             ValidateResult tmpResult = new ValidateResult(false);
             tmpResult.getCauses().add("NormType 'ZSCALE|ZSCORE' is the only norm type for multiple classification.");
             result = ValidateResult.mergeResult(result, tmpResult);
@@ -440,7 +440,7 @@ public class ModelInspector {
      * @return @ValidateResult
      */
     @SuppressWarnings("unchecked")
-    private ValidateResult checkTrainSetting(ModelTrainConf train) {
+    private ValidateResult checkTrainSetting(ModelConfig modelConfig, ModelTrainConf train) {
         ValidateResult result = new ValidateResult(true);
 
         if(train.getBaggingNum() == null || train.getBaggingNum() < 0) {
@@ -491,7 +491,15 @@ public class ModelInspector {
         if(train.getConvergenceThreshold() != null && train.getConvergenceThreshold().compareTo(0.0) < 0) {
             ValidateResult tmpResult = new ValidateResult(true);
             tmpResult.setStatus(false);
-            tmpResult.getCauses().add("'threshold' should be large than or equal to 0.0 if set.");
+            tmpResult.getCauses().add("'threshold' should be larger than or equal to 0.0 if set.");
+            result = ValidateResult.mergeResult(result, tmpResult);
+        }
+
+        if(modelConfig.isClassification() && train.isOneVsAll()
+                && !CommonUtils.isDesicionTreeAlgorithm(train.getAlgorithm())) {
+            ValidateResult tmpResult = new ValidateResult(true);
+            tmpResult.setStatus(false);
+            tmpResult.getCauses().add("'one vs all' or 'one vs rest' is only enabled with 'RF' or 'gbt' algorithm");
             result = ValidateResult.mergeResult(result, tmpResult);
         }
 

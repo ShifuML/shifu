@@ -41,7 +41,8 @@ public class ModelTrainConf {
 
     @JsonDeserialize(using = MultipleClassificationDeserializer.class)
     public static enum MultipleClassification {
-        REGRESSION, ONEVSALL, ONVVSREST, // the same as ONEVSALL
+        NATIVE, // means using NN regression or RF classification, not one vs all or one vs one
+        ONEVSALL, ONVVSREST, // the same as ONEVSALL
         ONVVSONE;
 
         /**
@@ -83,7 +84,7 @@ public class ModelTrainConf {
 
     private Map<String, String> customPaths;
 
-    private MultipleClassification multiClassifyMethod = MultipleClassification.REGRESSION;
+    private MultipleClassification multiClassifyMethod = MultipleClassification.NATIVE;
 
     public ModelTrainConf() {
         customPaths = new HashMap<String, String>(1);

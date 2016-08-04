@@ -87,7 +87,7 @@ public class NNWorker extends AbstractNNWorker<Text> {
             } else {
                 ColumnConfig columnConfig = super.columnConfigList.get(index);
                 if(columnConfig != null && columnConfig.isTarget()) {
-                    if(modelConfig.isBinaryClassification()) {
+                    if(modelConfig.isRegression()) {
                         ideal[outputIndex++] = floatValue;
                     } else {
                         int ideaIndex = (int) floatValue;
@@ -126,7 +126,7 @@ public class NNWorker extends AbstractNNWorker<Text> {
 
         FloatMLDataPair pair = new BasicFloatMLDataPair(new BasicFloatMLData(inputs), new BasicFloatMLData(ideal));
 
-        if(modelConfig.isBinaryClassification() && isUpSampleEnabled() && Double.compare(ideal[0], 1d) == 0) {
+        if(modelConfig.isRegression() && isUpSampleEnabled() && Double.compare(ideal[0], 1d) == 0) {
             // Double.compare(ideal[0], 1d) == 0 means positive tags; sample + 1 to avoid sample count to 0
             pair.setSignificance(significance * (super.upSampleRng.sample() + 1));
         } else {

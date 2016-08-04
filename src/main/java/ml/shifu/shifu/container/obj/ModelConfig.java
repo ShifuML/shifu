@@ -268,12 +268,12 @@ public class ModelConfig {
     }
 
     @JsonIgnore
-    public boolean isBinaryClassification() {
+    public boolean isRegression() {
         return (CollectionUtils.isNotEmpty(dataSet.getPosTags()) && CollectionUtils.isNotEmpty(dataSet.getNegTags()));
     }
 
     @JsonIgnore
-    public boolean isMultiClassification() {
+    public boolean isClassification() {
         return (CollectionUtils.isNotEmpty(dataSet.getPosTags()) && CollectionUtils.isEmpty(dataSet.getNegTags()))
                 || (CollectionUtils.isEmpty(dataSet.getPosTags()) && CollectionUtils.isNotEmpty(dataSet.getNegTags()));
     }

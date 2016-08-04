@@ -286,7 +286,7 @@ public class UpdateBinningInfoMapper extends Mapper<LongWritable, Text, IntWrita
         // tagColumnNum should be in units array, if not IndexOutofBoundException
         String tag = units[this.tagColumnNum];
 
-        if(modelConfig.isBinaryClassification()) {
+        if(modelConfig.isRegression()) {
             if(tag == null || (!posTags.contains(tag) && !negTags.contains(tag))) {
                 return;
             }
@@ -334,7 +334,7 @@ public class UpdateBinningInfoMapper extends Mapper<LongWritable, Text, IntWrita
                     binNum = lastBinIndex;
                 }
 
-                if(modelConfig.isBinaryClassification()) {
+                if(modelConfig.isRegression()) {
                     if(posTags.contains(tag)) {
                         binningInfoWritable.getBinCountPos()[binNum] += 1L;
                         binningInfoWritable.getBinWeightPos()[binNum] += weight;
@@ -367,7 +367,7 @@ public class UpdateBinningInfoMapper extends Mapper<LongWritable, Text, IntWrita
 
                 if(isInvalidValue || isMissingValue) {
                     binningInfoWritable.setMissingCount(binningInfoWritable.getMissingCount() + 1L);
-                    if(modelConfig.isBinaryClassification()) {
+                    if(modelConfig.isRegression()) {
                         if(posTags.contains(tag)) {
                             binningInfoWritable.getBinCountPos()[lastBinIndex] += 1L;
                             binningInfoWritable.getBinWeightPos()[lastBinIndex] += weight;
@@ -382,7 +382,7 @@ public class UpdateBinningInfoMapper extends Mapper<LongWritable, Text, IntWrita
                     if(binNum == -1) {
                         throw new RuntimeException("binNum should not be -1 to this step.");
                     }
-                    if(modelConfig.isBinaryClassification()) {
+                    if(modelConfig.isRegression()) {
                         if(posTags.contains(tag)) {
                             binningInfoWritable.getBinCountPos()[binNum] += 1L;
                             binningInfoWritable.getBinWeightPos()[binNum] += weight;

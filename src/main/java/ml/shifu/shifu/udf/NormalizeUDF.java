@@ -97,7 +97,7 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
         }
 
         // do data sampling. Unselected data or data with invalid tag will be filtered out.
-        boolean isNotSampled = DataSampler.isNotSampled(modelConfig.isBinaryClassification(), super.tagSet,
+        boolean isNotSampled = DataSampler.isNotSampled(modelConfig.isRegression(), super.tagSet,
                 super.posTagSet, super.negTagSet, modelConfig.getNormalizeSampleRate(),
                 modelConfig.isNormalizeSampleNegOnly(), rawTag);
         if(isNotSampled) {
@@ -119,7 +119,7 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
 
             // check tag type.
             if(tagColumnNum == i) {
-                if(modelConfig.isBinaryClassification()) {
+                if(modelConfig.isRegression()) {
                     String tagType = tagTypeCheck(super.posTagSet, super.negTagSet, rawTag);
                     if(tagType == null) {
                         log.error("Invalid data! The target value is not listed - " + rawTag);
@@ -145,7 +145,7 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
             }
 
             // append normalize data.
-            if(!CommonUtils.isGoodCandidate(modelConfig.isBinaryClassification(), config)) {
+            if(!CommonUtils.isGoodCandidate(modelConfig.isRegression(), config)) {
                 tuple.append(null);
             } else {
                 if(CommonUtils.isDesicionTreeAlgorithm(this.alg)) {
