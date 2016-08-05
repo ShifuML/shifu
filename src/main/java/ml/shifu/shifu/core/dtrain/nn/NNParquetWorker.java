@@ -60,7 +60,7 @@ public class NNParquetWorker extends AbstractNNWorker<Tuple> {
         this.initFieldList();
 
         super.count += 1;
-        if((super.count) % 100000 == 0) {
+        if((super.count) % 2000 == 0) {
             LOG.info("Read {} records.", super.count);
         }
 
@@ -102,7 +102,12 @@ public class NNParquetWorker extends AbstractNNWorker<Tuple> {
                 if(element instanceof Float) {
                     floatValue = (Float) element;
                 } else {
-                    floatValue = NumberFormatUtils.getFloat(element.toString().trim(), 0f);
+                    // check here to avoid bad performance in failed NumberFormatUtils.getFloat(input, 0f)
+                    if(element.toString().length() == 0) {
+                        floatValue = 0f;
+                    } else {
+                        floatValue = NumberFormatUtils.getFloat(element.toString(), 0f);
+                    }
                 }
             }
             // no idea about why NaN in input data, we should process it as missing value TODO , according to norm type
@@ -114,7 +119,13 @@ public class NNParquetWorker extends AbstractNNWorker<Tuple> {
                 if(element != null && element instanceof Float) {
                     significance = (Float) element;
                 } else {
-                    significance = NumberFormatUtils.getFloat(element.toString().trim(), 1f);;
+                    // check here to avoid bad performance in failed NumberFormatUtils.getFloat(input, 0f)
+                    if(element.toString().length() == 0) {
+                        // check here to avoid bad performance in failed NumberFormatUtils.getFloat(input, 0f)
+                        significance = 1f;
+                    } else {
+                        significance = NumberFormatUtils.getFloat(element.toString(), 1f);
+                    }
                 }
                 // break here if we reach weight column which is last column
                 break;
