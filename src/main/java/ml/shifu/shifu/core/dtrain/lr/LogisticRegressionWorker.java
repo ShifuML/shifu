@@ -304,19 +304,15 @@ public class LogisticRegressionWorker
         long hashcode = 0;
         double significance = CommonConstants.DEFAULT_SIGNIFICANCE_VALUE;
         for(String unit: splitter.split(line)) {
-            float floatValue = 0f;
             // check here to avoid bad performance in failed NumberFormatUtils.getFloat(input, 0f)
-            if(unit.length() == 0) {
-                floatValue = 0f;
-            } else {
-                floatValue = NumberFormatUtils.getFloat(unit, 0f);
-            }
+            float floatValue = unit.length() == 0 ? 0f : NumberFormatUtils.getFloat(unit, 0f);
             // no idea about why NaN in input data, we should process it as missing value TODO , according to norm type
-            if(Double.isNaN(floatValue)) {
-                floatValue = 0f;
-            }
+            floatValue = (Float.isNaN(floatValue) || Double.isNaN(floatValue)) ? 0f : floatValue;
+
             if(index == this.columnConfigList.size()) {
-                significance = NumberFormatUtils.getDouble(unit.trim(), 1.0d);
+                // check here to avoid bad performance in failed NumberFormatUtils.getDouble(input, 1)
+                significance = unit.length() == 0 ? 1f : NumberFormatUtils.getDouble(unit, 1d);
+                // the last field is significance, break here
                 break;
             } else {
                 ColumnConfig columnConfig = this.columnConfigList.get(index);

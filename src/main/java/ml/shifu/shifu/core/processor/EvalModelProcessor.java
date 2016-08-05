@@ -19,12 +19,15 @@ import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Scanner;
+import java.util.Set;
 
 import ml.shifu.shifu.actor.AkkaSystemExecutor;
+import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.container.obj.EvalConfig;
 import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
 import ml.shifu.shifu.core.ConfusionMatrix;
@@ -372,6 +375,27 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
         }
     }
 
+    private void validateEvalColumnConfig(EvalConfig evalConfig) {
+        if(this.columnConfigList == null) {
+            return;
+        }
+        Set<String> names = new HashSet<String>();
+        for(ColumnConfig config: this.columnConfigList) {
+            names.add(config.getColumnName());
+        }
+
+        if(!names.contains(evalConfig.getDataSet().getTargetColumnName())) {
+            throw new IllegalArgumentException("target column " + evalConfig.getDataSet().getTargetColumnName()
+                    + " in eval " + evalConfig.getName() + " does not exist.");
+        }
+
+        if(StringUtils.isNotBlank(evalConfig.getDataSet().getWeightColumnName())
+                && !names.contains(evalConfig.getDataSet().getWeightColumnName())) {
+            throw new IllegalArgumentException("weight column " + evalConfig.getDataSet().getWeightColumnName()
+                    + " in eval " + evalConfig.getName() + " does not exist.");
+        }
+    }
+
     /**
      * Run evaluation by @EvalConfig
      * 
@@ -380,6 +404,7 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
      */
     private void runEval(EvalConfig evalConfig) throws IOException {
         // create evalset home directory firstly in local file system
+        validateEvalColumnConfig(evalConfig);
         PathFinder pathFinder = new PathFinder(modelConfig);
         String evalSetPath = pathFinder.getEvalSetPath(evalConfig, SourceType.LOCAL);
         FileUtils.forceMkdir(new File(evalSetPath));

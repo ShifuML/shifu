@@ -19,7 +19,6 @@ import java.io.IOException;
 import java.util.List;
 import java.util.Map;
 
-import ml.shifu.guagua.util.NumberFormatUtils;
 import ml.shifu.shifu.container.CaseScoreResult;
 import ml.shifu.shifu.container.obj.EvalConfig;
 import ml.shifu.shifu.core.ModelRunner;
@@ -50,6 +49,11 @@ public class EvalScoreUDF extends AbstractTrainerUDF<Tuple> {
     private String[] headers;
 
     private int modelCnt;
+
+    /**
+     * A simple weight exception validation: if over 5000 throw exceptions
+     */
+    private int weightExceptions;
 
     public EvalScoreUDF(String source, String pathModelConfig, String pathColumnConfig, String evalSetName)
             throws IOException {
@@ -163,9 +167,22 @@ public class EvalScoreUDF extends AbstractTrainerUDF<Tuple> {
             log.warn("tag is empty " + tag + " or weight is empty " + weight);
             return;
         }
+        // TODO default weight here = 1 ? or throw exceptions
         double dWeight = 1;
         if(weight.length() != 0) {
-            dWeight = NumberFormatUtils.getDouble(weight, 1);
+            try {
+                dWeight = Double.parseDouble(weight);
+            } catch (Exception e) {
+                if(isPigEnabled(Constants.SHIFU_GROUP_COUNTER, "weight_exceptions")) {
+                    PigStatusReporter.getInstance().getCounter(Constants.SHIFU_GROUP_COUNTER, "weight_exceptions")
+                            .increment(1);
+                }
+                weightExceptions += 1;
+                if(weightExceptions > 5000) {
+                    throw new IllegalStateException(
+                            "Please check weight column in eval, exceptional weight count is over 5000");
+                }
+            }
         }
         long weightLong = (long) (dWeight * Constants.EVAL_COUNTER_WEIGHT_SCALE);
 
