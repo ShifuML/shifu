@@ -304,7 +304,13 @@ public class LogisticRegressionWorker
         long hashcode = 0;
         double significance = CommonConstants.DEFAULT_SIGNIFICANCE_VALUE;
         for(String unit: splitter.split(line)) {
-            float floatValue = NumberFormatUtils.getFloat(unit.trim(), 0f);
+            float floatValue = 0f;
+            // check here to avoid bad performance in failed NumberFormatUtils.getFloat(input, 0f)
+            if(unit.length() == 0) {
+                floatValue = 0f;
+            } else {
+                floatValue = NumberFormatUtils.getFloat(unit, 0f);
+            }
             // no idea about why NaN in input data, we should process it as missing value TODO , according to norm type
             if(Double.isNaN(floatValue)) {
                 floatValue = 0f;

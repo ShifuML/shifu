@@ -19,6 +19,7 @@ import java.io.IOException;
 import java.util.List;
 import java.util.Map;
 
+import ml.shifu.guagua.util.NumberFormatUtils;
 import ml.shifu.shifu.container.CaseScoreResult;
 import ml.shifu.shifu.container.obj.EvalConfig;
 import ml.shifu.shifu.core.ModelRunner;
@@ -95,16 +96,18 @@ public class EvalScoreUDF extends AbstractTrainerUDF<Tuple> {
         // filter invalid tag record out
         // disable the tag check, since there is no bad tag in eval data set
         // and user just want to score the data, but don't run performance evaluation
-        /*if(!tagSet.contains(tag)) {
-            if(System.currentTimeMillis() % 100 == 0) {
-                log.warn("Invalid tag: " + tag);
-            }
-            if(isPigEnabled(Constants.SHIFU_GROUP_COUNTER, "INVALID_TAG")) {
-                PigStatusReporter.getInstance().getCounter(Constants.SHIFU_GROUP_COUNTER, Constants.COUNTER_RECORDS)
-                        .increment(1);
-            }
-            return null;
-        }*/
+        /*
+         * if(!tagSet.contains(tag)) {
+         * if(System.currentTimeMillis() % 100 == 0) {
+         * log.warn("Invalid tag: " + tag);
+         * }
+         * if(isPigEnabled(Constants.SHIFU_GROUP_COUNTER, "INVALID_TAG")) {
+         * PigStatusReporter.getInstance().getCounter(Constants.SHIFU_GROUP_COUNTER, Constants.COUNTER_RECORDS)
+         * .increment(1);
+         * }
+         * return null;
+         * }
+         */
 
         CaseScoreResult cs = modelRunner.compute(rawDataMap);
         if(cs == null) {
@@ -156,7 +159,15 @@ public class EvalScoreUDF extends AbstractTrainerUDF<Tuple> {
 
     @SuppressWarnings("deprecation")
     private void incrementTagCounters(String tag, String weight) {
-        long weightLong = (long) (Double.parseDouble(weight) * Constants.EVAL_COUNTER_WEIGHT_SCALE);
+        if(tag == null || weight == null) {
+            log.warn("tag is empty " + tag + " or weight is empty " + weight);
+            return;
+        }
+        double dWeight = 1;
+        if(weight.length() != 0) {
+            dWeight = NumberFormatUtils.getDouble(weight, 1);
+        }
+        long weightLong = (long) (dWeight * Constants.EVAL_COUNTER_WEIGHT_SCALE);
 
         if(isPigEnabled(Constants.SHIFU_GROUP_COUNTER, Constants.COUNTER_RECORDS)) {
             PigStatusReporter.getInstance().getCounter(Constants.SHIFU_GROUP_COUNTER, Constants.COUNTER_RECORDS)
