@@ -651,24 +651,13 @@ public class DTWorker
         // the function in akka mode.
         int index = 0, numericInputsIndex = 0, categoricalInputsIndex = 0;
         for(String input: DEFAULT_SPLITTER.split(currentValue.getWritable().toString())) {
-            float floatValue = 0f;
             // check here to avoid bad performance in failed NumberFormatUtils.getFloat(input, 0f)
-            if(input.length() == 0) {
-                floatValue = 0f;
-            } else {
-                floatValue = NumberFormatUtils.getFloat(input, 0f);
-            }
-            // no idea about why NaN in input data, we should process it as missing value TODO, according to norm type
-            if(Float.isNaN(floatValue) || Double.isNaN(floatValue)) {
-                floatValue = 0f;
-            }
+            float floatValue = input.length() == 0 ? 0f : NumberFormatUtils.getFloat(input, 0f);
+            // no idea about why NaN in input data, we should process it as missing value TODO , according to norm type
+            floatValue = (Float.isNaN(floatValue) || Double.isNaN(floatValue)) ? 0f : floatValue;
             if(index == this.columnConfigList.size()) {
-                // check here to avoid bad performance in failed NumberFormatUtils.getFloat(input, 1f)
-                if(input.length() == 0) {
-                    significance = 1f;
-                } else {
-                    significance = NumberFormatUtils.getFloat(input, 1f);
-                }
+             // check here to avoid bad performance in failed NumberFormatUtils.getFloat(input, 1f)
+                significance = input.length() == 0 ? 1f : NumberFormatUtils.getFloat(input, 1f);
                 // the last field is significance, break here
                 break;
             } else {

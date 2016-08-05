@@ -103,29 +103,21 @@ public class NNParquetWorker extends AbstractNNWorker<Tuple> {
                     floatValue = (Float) element;
                 } else {
                     // check here to avoid bad performance in failed NumberFormatUtils.getFloat(input, 0f)
-                    if(element.toString().length() == 0) {
-                        floatValue = 0f;
-                    } else {
-                        floatValue = NumberFormatUtils.getFloat(element.toString(), 0f);
-                    }
+                    floatValue = element.toString().length() == 0 ? 0f : NumberFormatUtils.getFloat(element.toString(),
+                            0f);
                 }
             }
             // no idea about why NaN in input data, we should process it as missing value TODO , according to norm type
-            if(Double.isNaN(floatValue)) {
-                floatValue = 0f;
-            }
+            floatValue = (Float.isNaN(floatValue) || Double.isNaN(floatValue)) ? 0f : floatValue;
+
             if(index == (super.inputNodeCount + super.outputNodeCount)) {
                 assert element != null;
                 if(element != null && element instanceof Float) {
                     significance = (Float) element;
                 } else {
                     // check here to avoid bad performance in failed NumberFormatUtils.getFloat(input, 0f)
-                    if(element.toString().length() == 0) {
-                        // check here to avoid bad performance in failed NumberFormatUtils.getFloat(input, 0f)
-                        significance = 1f;
-                    } else {
-                        significance = NumberFormatUtils.getFloat(element.toString(), 1f);
-                    }
+                    significance = element.toString().length() == 0 ? 1f : NumberFormatUtils.getFloat(
+                            element.toString(), 1f);
                 }
                 // break here if we reach weight column which is last column
                 break;
@@ -136,7 +128,9 @@ public class NNParquetWorker extends AbstractNNWorker<Tuple> {
                     if(element != null && element instanceof Float) {
                         significance = (Float) element;
                     } else {
-                        significance = NumberFormatUtils.getFloat(element.toString().trim(), 1f);;
+                        // check here to avoid bad performance in failed NumberFormatUtils.getFloat(input, 0f)
+                        significance = element.toString().length() == 0 ? 1f : NumberFormatUtils.getFloat(
+                                element.toString(), 1f);
                     }
                     break;
                 } else {

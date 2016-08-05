@@ -199,6 +199,7 @@ public class ModelInspector {
     private ValidateResult checkColumnConf(ModelConfig modelConfig) throws IOException {
         ValidateResult result = new ValidateResult(true);
 
+        
         if(StringUtils.isBlank(modelConfig.getTargetColumnName())) {
             result.addCause("The target column name is null or empty.");
         } else {
