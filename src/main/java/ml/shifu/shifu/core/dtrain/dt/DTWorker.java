@@ -637,7 +637,7 @@ public class DTWorker
     public void load(GuaguaWritableAdapter<LongWritable> currentKey, GuaguaWritableAdapter<Text> currentValue,
             WorkerContext<DTMasterParams, DTWorkerParams> context) {
         this.count += 1;
-        if((this.count) % 2000 == 0) {
+        if((this.count) % 5000 == 0) {
             LOG.info("Read {} records.", this.count);
         }
 
@@ -799,8 +799,8 @@ public class DTWorker
         /**
          * Output label and maybe changed in GBDT
          */
-        float output;
-        float predict;
+        volatile float output;
+        volatile float predict;
         float significance;
         float[] subsampleWeights = new float[] { 1.0f };
 
