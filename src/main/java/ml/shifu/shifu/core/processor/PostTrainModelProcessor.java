@@ -91,7 +91,10 @@ public class PostTrainModelProcessor extends BasicModelProcessor implements Proc
         try {
             setUp(ModelStep.POSTTRAIN);
             syncDataToHdfs(modelConfig.getDataSet().getSource());
-
+            if(modelConfig.isClassification()) {
+                throw new IllegalArgumentException(
+                        "post train step is only effective in regresion, not classification.");
+            }
             if(modelConfig.isMapReduceRunMode()) {
                 runMapRedPostTrain();
             } else if(modelConfig.isLocalRunMode()) {
