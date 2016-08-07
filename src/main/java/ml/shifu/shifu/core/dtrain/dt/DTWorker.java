@@ -154,6 +154,11 @@ public class DTWorker
     private volatile MemoryLimitedList<Data> trainingData;
 
     /**
+     * Validation data set with only in memory because for GBDT data will be changed in later iterations.
+     */
+    private volatile MemoryLimitedList<Data> validationData;
+
+    /**
      * PoissonDistribution which is used for poission sampling for bagging with replacement.
      */
     protected PoissonDistribution[] rng = null;
@@ -288,9 +293,18 @@ public class DTWorker
 
         double memoryFraction = Double.valueOf(context.getProps().getProperty("guagua.data.memoryFraction", "0.6"));
         LOG.info("Max heap memory: {}, fraction: {}", Runtime.getRuntime().maxMemory(), memoryFraction);
-        this.trainingData = new MemoryLimitedList<Data>((long) (Runtime.getRuntime().maxMemory() * memoryFraction),
-                new LinkedList<Data>());
 
+        double validationRate = this.modelConfig.getCrossValidationRate();
+        if(Double.compare(validationRate, 0d) != 0) {
+            this.trainingData = new MemoryLimitedList<Data>(
+                    (long) (Runtime.getRuntime().maxMemory() * memoryFraction * (1 - validationRate)),
+                    new LinkedList<Data>());
+            this.validationData = new MemoryLimitedList<Data>(
+                    (long) (Runtime.getRuntime().maxMemory() * memoryFraction * validationRate), new LinkedList<Data>());
+        } else {
+            this.trainingData = new MemoryLimitedList<Data>((long) (Runtime.getRuntime().maxMemory() * memoryFraction),
+                    new LinkedList<Data>());
+        }
         int[] inputOutputIndex = DTrainUtils.getNumericAndCategoricalInputAndOutputCounts(this.columnConfigList);
         this.numericInputCount = inputOutputIndex[0];
         this.categoricalInputCount = inputOutputIndex[1];
@@ -359,7 +373,7 @@ public class DTWorker
 
         Map<Integer, NodeStats> statistics = initTodoNodeStats(todoNodes);
 
-        double squareError = 0d;
+        double trainError = 0d, validationError = 0d;
         // renew random seed
         if(this.isGBDT && !this.gbdtSampleWithReplacement && lastMasterResult.isSwitchToNextTree()) {
             this.random = new Random();
@@ -371,7 +385,7 @@ public class DTWorker
                     Node predictNode = predictNodeIndex(treeNode.getNode(), data);
                     if(predictNode.getPredict() != null) {
                         // only update when not in first node, for treeNode, no predict statistics at that time
-                        squareError += loss.computeError((float) (predictNode.getPredict().getPredict()), data.label);
+                        trainError += loss.computeError((float) (predictNode.getPredict().getPredict()), data.label);
                     }
                 }
             }
@@ -403,10 +417,60 @@ public class DTWorker
                 }
                 Node predictNode = predictNodeIndex(trees.get(currTreeIndex).getNode(), data);
                 if(currTreeIndex >= 1) {
-                    squareError += loss.computeError(data.predict, data.label);
+                    trainError += loss.computeError(data.predict, data.label);
                 } else {
                     if(predictNode.getPredict() != null) {
-                        squareError += loss.computeError(((float) predictNode.getPredict().getPredict()), data.label);
+                        trainError += loss.computeError(((float) predictNode.getPredict().getPredict()), data.label);
+                    }
+                }
+            }
+        }
+        if(validationData != null) {
+            for(Data data: this.validationData) {
+                if(this.isRF) {
+                    for(TreeNode treeNode: trees) {
+                        Node predictNode = predictNodeIndex(treeNode.getNode(), data);
+                        if(predictNode.getPredict() != null) {
+                            // only update when not in first node, for treeNode, no predict statistics at that time
+                            validationError += loss.computeError((float) (predictNode.getPredict().getPredict()),
+                                    data.label);
+                        }
+                    }
+                }
+
+                if(this.isGBDT) {
+                    int currTreeIndex = trees.size() - 1;
+                    if(lastMasterResult.isSwitchToNextTree()) {
+                        if(currTreeIndex >= 1) {
+                            Node node = trees.get(currTreeIndex - 1).getNode();
+                            Node predictNode = predictNodeIndex(node, data);
+                            if(predictNode.getPredict() != null) {
+                                double predict = predictNode.getPredict().getPredict();
+                                if(currTreeIndex == 1) {
+                                    data.predict = (float) predict;
+                                } else {
+                                    data.predict += (float) (this.learningRate * predict);
+                                }
+                                data.output = -1f * loss.computeGradient(data.predict, data.label);
+                            }
+                            if(!this.gbdtSampleWithReplacement) {
+                                // renew next subsample rate
+                                if(random.nextDouble() <= modelConfig.getTrain().getBaggingSampleRate()) {
+                                    data.subsampleWeights[currTreeIndex] = 1f;
+                                } else {
+                                    data.subsampleWeights[currTreeIndex] = 0f;
+                                }
+                            }
+                        }
+                    }
+                    Node predictNode = predictNodeIndex(trees.get(currTreeIndex).getNode(), data);
+                    if(currTreeIndex >= 1) {
+                        validationError += loss.computeError(data.predict, data.label);
+                    } else {
+                        if(predictNode.getPredict() != null) {
+                            validationError += loss.computeError(((float) predictNode.getPredict().getPredict()),
+                                    data.label);
+                        }
                     }
                 }
             }
@@ -524,8 +588,9 @@ public class DTWorker
             rCnt += 1;
         }
 
-        LOG.info("worker count is {}, error is {}, and stats size is {}.", count, squareError, statistics.size());
-        return new DTWorkerParams(count, squareError, statistics);
+        LOG.info("worker count is {}, error is {}, and stats size is {}.", count, trainError, statistics.size());
+        return new DTWorkerParams(trainingData.size(), (this.validationData == null ? 0L : this.validationData.size()),
+                trainError, validationError, statistics);
     }
 
     private Map<Integer, NodeStats> initTodoNodeStats(Map<Integer, TreeNode> todoNodes) {
@@ -560,6 +625,17 @@ public class DTWorker
     protected void postLoad(WorkerContext<DTMasterParams, DTWorkerParams> context) {
         // need to switch state for read
         this.trainingData.switchState();
+        if(validationData != null) {
+            this.validationData.switchState();
+        }
+        LOG.info("    - # Records of the Master Data Set: {}.", this.count);
+        LOG.info("    - Bagging Sample Rate: {}.", this.modelConfig.getBaggingSampleRate());
+        LOG.info("    - Bagging With Replacement: {}.", this.modelConfig.isBaggingWithReplacement());
+        LOG.info("        - Cross Validation Rate: {}.", this.modelConfig.getCrossValidationRate());
+        LOG.info("        - # Records of the Training Set: {}.", this.trainingData.size());
+        if(validationData != null) {
+            LOG.info("        - # Records of the Validation Set: {}.", this.validationData.size());
+        }
     }
 
     private List<Integer> getAllValidFeatures() {
@@ -641,10 +717,19 @@ public class DTWorker
             LOG.info("Read {} records.", this.count);
         }
 
+        double baggingSampleRate = this.modelConfig.getBaggingSampleRate();
+        // if fixInitialInput = false, we only compare random value with baggingSampleRate to avoid parsing data.
+        // if fixInitialInput = true, we should use hashcode after parsing.
+        if(!modelConfig.isFixInitialInput() && Double.compare(Math.random(), baggingSampleRate) >= 0) {
+            return;
+        }
+
+        // hashcode for fixed input split in train and validation
+        long hashcode = 0;
+
         float[] numericInputs = new float[this.numericInputCount];
         String[] categoricalInputs = new String[this.categoricalInputCount];
         float ideal = 0f;
-
         float significance = 1f;
         // use guava Splitter to iterate only once
         // use NNConstants.NN_DEFAULT_COLUMN_SEPARATOR to replace getModelConfig().getDataSetDelimiter(), super follows
@@ -656,7 +741,7 @@ public class DTWorker
             // no idea about why NaN in input data, we should process it as missing value TODO , according to norm type
             floatValue = (Float.isNaN(floatValue) || Double.isNaN(floatValue)) ? 0f : floatValue;
             if(index == this.columnConfigList.size()) {
-             // check here to avoid bad performance in failed NumberFormatUtils.getFloat(input, 1f)
+                // check here to avoid bad performance in failed NumberFormatUtils.getFloat(input, 1f)
                 significance = input.length() == 0 ? 1f : NumberFormatUtils.getFloat(input, 1f);
                 // the last field is significance, break here
                 break;
@@ -672,6 +757,7 @@ public class DTWorker
                             if(columnConfig.isNumerical()) {
                                 numericInputs[numericInputsIndex] = floatValue;
                                 this.numericInputIndexMap.put(columnConfig.getColumnNum(), numericInputsIndex);
+                                hashcode = hashcode * 31 + Double.valueOf(floatValue).hashCode();
                                 numericInputsIndex += 1;
                             } else if(columnConfig.isCategorical()) {
                                 if(input == null || input.length() == 0) {
@@ -681,6 +767,7 @@ public class DTWorker
                                     categoricalInputs[categoricalInputsIndex] = input;
                                 }
                                 this.categoricalInputIndexMap.put(columnConfig.getColumnNum(), categoricalInputsIndex);
+                                hashcode = hashcode * 31 + categoricalInputs[categoricalInputsIndex].hashCode();
                                 categoricalInputsIndex += 1;
                             }
                         }
@@ -691,6 +778,7 @@ public class DTWorker
                             if(columnConfig.isNumerical()) {
                                 numericInputs[numericInputsIndex] = floatValue;
                                 this.numericInputIndexMap.put(columnConfig.getColumnNum(), numericInputsIndex);
+                                hashcode = hashcode * 31 + Double.valueOf(floatValue).hashCode();
                                 numericInputsIndex += 1;
                             } else if(columnConfig.isCategorical()) {
                                 if(input == null || input.length() == 0) {
@@ -700,6 +788,7 @@ public class DTWorker
                                     categoricalInputs[categoricalInputsIndex] = input;
                                 }
                                 this.categoricalInputIndexMap.put(columnConfig.getColumnNum(), categoricalInputsIndex);
+                                hashcode = hashcode * 31 + categoricalInputs[categoricalInputsIndex].hashCode();
                                 categoricalInputsIndex += 1;
                             }
                         }
@@ -708,6 +797,13 @@ public class DTWorker
             }
             index += 1;
         }
+
+        // if fixInitialInput = true, we should use hashcode to sample.
+        long longBaggingSampleRate = Double.valueOf(baggingSampleRate * 100).longValue();
+        if(this.modelConfig.isFixInitialInput() && hashcode % 100 >= longBaggingSampleRate) {
+            return;
+        }
+        this.sampleCount += 1;
 
         if(this.isOneVsAll) {
             // if one vs all, update target value according to index of target
@@ -724,7 +820,26 @@ public class DTWorker
         if(isNeedFailOver && this.isGBDT) {
             recoverGBTData(context, output, predict, data);
         }
-        this.trainingData.append(data);
+
+        double validationRate = this.modelConfig.getCrossValidationRate();
+        if(Double.compare(validationRate, 0d) != 0) {
+            if(this.modelConfig.isFixInitialInput()) {
+                long longValidation = Double.valueOf(validationRate * 100).longValue();
+                if(hashcode % 100 >= longValidation) {
+                    this.trainingData.append(data);
+                } else {
+                    this.validationData.append(data);
+                }
+            } else {
+                if(random.nextDouble() >= validationRate) {
+                    this.trainingData.append(data);
+                } else {
+                    this.validationData.append(data);
+                }
+            }
+        } else {
+            this.trainingData.append(data);
+        }
     }
 
     private void recoverGBTData(WorkerContext<DTMasterParams, DTWorkerParams> context, float output, float predict,

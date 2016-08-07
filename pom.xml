@@ -12,7 +12,7 @@
         <rpmDisabled>true</rpmDisabled>
         <maven.build.timestamp.format>yyyy-MM-dd HH:mm:ss</maven.build.timestamp.format>
         <powermock.version>1.5.1</powermock.version>
-        <guagua.version>0.7.3</guagua.version>
+        <guagua.version>0.8.0-SNAPSHOT</guagua.version>
     </properties>
     <scm>
         <developerConnection>scm:git:https://github.com/shifuml/shifu.git</developerConnection>

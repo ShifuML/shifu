@@ -111,38 +111,49 @@ public class DTOutput extends BasicMasterInterceptor<DTMasterParams, DTWorkerPar
             // first iteration is used for training preparation
             return;
         }
-        double error = context.getMasterResult().getSquareError() / context.getMasterResult().getCount();
+        double trainError = context.getMasterResult().getTrainError() / context.getMasterResult().getTrainCount();
+        double validationError = context.getMasterResult().getValidationCount() == 0L ? 0d : context.getMasterResult()
+                .getValidationError() / context.getMasterResult().getValidationCount();
         String info = "";
         if(this.isGBDT) {
             int treeSize = 0;
             if(context.getMasterResult().isSwitchToNextTree() || context.getMasterResult().isHalt()) {
                 treeSize = context.getMasterResult().isSwitchToNextTree() ? (context.getMasterResult().getTrees()
                         .size() - 1) : (context.getMasterResult().getTrees().size());
-                info = new StringBuilder(200).append("    Trainer ").append(this.trainerId).append(" Iteration #")
-                        .append(currentIteration - 1).append(" Squared Train Error: ")
-                        .append(String.format("%.15f", error)).append("; Tree ").append(treeSize)
-                        .append(" (starting from 1)  is finished building. \n").toString();
+                info = new StringBuilder(200).append("Trainer ").append(this.trainerId).append(" Iteration #")
+                        .append(currentIteration - 1).append(" Train Error: ")
+                        .append(String.format("%.10f", trainError)).append(" Validation Error: ")
+                        .append(validationError == 0d ? "N/A" : String.format("%.10f", validationError))
+                        .append("; Tree ").append(treeSize).append(" (starting from 1)  is finished. \n")
+                        .toString();
             } else {
                 int treeIndex = context.getMasterResult().getTrees().size() - 1;
                 int nextDepth = context.getMasterResult().getTreeDepth().get(treeIndex);
-                info = new StringBuilder(200).append("    Trainer ").append(this.trainerId).append(" Iteration #")
-                        .append(currentIteration - 1).append(" Squared Train Error: ")
-                        .append(error == 0d ? "N/A" : String.format("%.15f", error)).append("; will work on depth ")
-                        .append(nextDepth).append(" \n").toString();
+                info = new StringBuilder(200).append("Trainer ").append(this.trainerId).append(" Iteration #")
+                        .append(currentIteration - 1).append(" Train Error: ")
+                        .append(trainError == 0d ? "N/A" : String.format("%.10f", trainError))
+                        .append(" Validation Error: ")
+                        .append(validationError == 0d ? "N/A" : String.format("%.10f", validationError))
+                        .append("; will work on depth ").append(nextDepth).append(" \n").toString();
             }
         }
 
         if(this.isRF) {
-            if(error != 0d) {
+            if(trainError != 0d) {
                 List<Integer> treeDepth = context.getMasterResult().getTreeDepth();
                 if(treeDepth.size() == 0) {
-                    info = new StringBuilder(200).append("    Trainer ").append(this.trainerId).append(" Iteration #")
-                            .append(currentIteration - 1).append(" Squared Train Error: ")
-                            .append(error == 0d ? "N/A" : String.format("%.15f", error)).append("\n").toString();
+                    info = new StringBuilder(200).append("Trainer ").append(this.trainerId).append(" Iteration #")
+                            .append(currentIteration - 1).append(" Train Error: ")
+                            .append(trainError == 0d ? "N/A" : String.format("%.10f", trainError))
+                            .append(" Validation Error: ")
+                            .append(validationError == 0d ? "N/A" : String.format("%.10f", validationError))
+                            .append("\n").toString();
                 } else {
-                    info = new StringBuilder(200).append("    Trainer ").append(this.trainerId).append(" Iteration #")
-                            .append(currentIteration - 1).append(" Squared Train Error: ")
-                            .append(error == 0d ? "N/A" : String.format("%.15f", error))
+                    info = new StringBuilder(200).append("Trainer ").append(this.trainerId).append(" Iteration #")
+                            .append(currentIteration - 1).append(" Train Error: ")
+                            .append(trainError == 0d ? "N/A" : String.format("%.10f", trainError))
+                            .append(" Validation Error: ")
+                            .append(validationError == 0d ? "N/A" : String.format("%.10f", validationError))
                             .append("; will work on depth ").append(toListString(treeDepth)).append("\n").toString();
                 }
             }
