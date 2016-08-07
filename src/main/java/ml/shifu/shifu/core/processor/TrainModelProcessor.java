@@ -296,8 +296,8 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
         }
 
         if(modelConfig.isClassification() && modelConfig.getTrain().isOneVsAll()
-                && !CommonUtils.isDesicionTreeAlgorithm(modelConfig.getAlgorithm())) {
-            throw new IllegalArgumentException("Only GBT and RF support OneVsAll multiple classification.");
+                && !CommonUtils.isDesicionTreeAlgorithm(alg) && !NNConstants.NN_ALG_NAME.equalsIgnoreCase(alg)) {
+            throw new IllegalArgumentException("Only GBT and RF and NN support OneVsAll multiple classification.");
         }
 
         if(super.getModelConfig().getDataSet().getSource() != SourceType.HDFS) {

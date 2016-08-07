@@ -35,6 +35,7 @@ import ml.shifu.shifu.container.obj.ModelConfig;
 import ml.shifu.shifu.container.obj.PerformanceResult;
 import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
 import ml.shifu.shifu.core.dtrain.CommonConstants;
+import ml.shifu.shifu.core.dtrain.nn.NNConstants;
 import ml.shifu.shifu.core.eval.AreaUnderCurve;
 import ml.shifu.shifu.exception.ShifuErrorCode;
 import ml.shifu.shifu.exception.ShifuException;
@@ -411,9 +412,9 @@ public class ConfusionMatrix {
                             maxScore = maxVotes = tagCounts[i];
                         }
                     }
-                } else if(CommonUtils.isDesicionTreeAlgorithm(modelConfig.getAlgorithm())
-                        && modelConfig.getTrain().isOneVsAll()) {
-                    // for RF classification
+                } else if((CommonUtils.isDesicionTreeAlgorithm(modelConfig.getAlgorithm()) || NNConstants.NN_ALG_NAME
+                        .equalsIgnoreCase(modelConfig.getAlgorithm())) && modelConfig.getTrain().isOneVsAll()) {
+                    // for RF & NN OneVsAll classification
                     for(int i = this.multiClassScore1Index; i < raw.length; i++) {
                         double dd = NumberFormatUtils.getDouble(raw[i], 0d);
                         if(dd > maxScore) {
