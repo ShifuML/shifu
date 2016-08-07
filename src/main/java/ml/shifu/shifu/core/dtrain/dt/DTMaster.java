@@ -173,8 +173,8 @@ public class DTMaster extends AbstractMasterComputable<DTMasterParams, DTWorkerP
         }
         boolean isFirst = false;
         Map<Integer, NodeStats> nodeStatsMap = null;
-        double squareError = 0d;
-        long count = 0L;
+        double trainError = 0d, validationError = 0d;
+        long trainCount = 0L, validationCount = 0L;
         for(DTWorkerParams params: context.getWorkerResults()) {
             if(!isFirst) {
                 isFirst = true;
@@ -186,12 +186,15 @@ public class DTMaster extends AbstractMasterComputable<DTMasterParams, DTWorkerP
                     mergeNodeStats(resultNodeStats, currNodeStatsmap.get(entry.getKey()));
                 }
             }
-            squareError += params.getSquareError();
+            trainError += params.getTrainError();
+            validationError += params.getValidationError();
             if(this.isRF) {
-                count += params.getCount() * this.treeNum;
+                trainCount += params.getTrainCount() * this.treeNum;
+                validationCount += params.getValidationCount() * this.treeNum;
             }
             if(this.isGBDT) {
-                count += params.getCount();
+                trainCount += params.getTrainCount();
+                validationCount += params.getValidationCount();
             }
         }
         for(Entry<Integer, NodeStats> entry: nodeStatsMap.entrySet()) {
@@ -254,7 +257,7 @@ public class DTMaster extends AbstractMasterComputable<DTMasterParams, DTWorkerP
         }
 
         Map<Integer, TreeNode> todoNodes = new HashMap<Integer, TreeNode>();
-        DTMasterParams masterParams = new DTMasterParams(count, squareError);
+        DTMasterParams masterParams = new DTMasterParams(trainCount, trainError, validationCount, validationError);
         if(queue.isEmpty()) {
             if(this.isGBDT) {
                 Node treeNode = this.trees.get(this.trees.size() - 1).getNode();

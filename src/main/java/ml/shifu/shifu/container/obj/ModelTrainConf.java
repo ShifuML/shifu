@@ -43,7 +43,7 @@ public class ModelTrainConf {
     public static enum MultipleClassification {
         NATIVE, // means using NN regression or RF classification, not one vs all or one vs one
         ONEVSALL, ONVVSREST, // the same as ONEVSALL
-        ONVVSONE;
+        ONVVSONE; // ONEVSONE is not impl yet.
 
         /**
          * Get {@link MultipleClassification} by string, case can be ignored.

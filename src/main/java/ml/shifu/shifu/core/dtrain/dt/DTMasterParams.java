@@ -47,14 +47,24 @@ public class DTMasterParams extends HaltBytable {
     private Map<Integer, TreeNode> todoNodes;
 
     /**
-     * Sum of counts accumulated by workers.
+     * Sum of training counts accumulated by workers.
      */
-    private long count;
+    private long trainCount;
 
     /**
-     * Sum of error accumulated by workers.
+     * Sum of validation counts accumulated by workers.
      */
-    private double squareError;
+    private long validationCount;
+
+    /**
+     * Sum of train error accumulated by workers.
+     */
+    private double trainError;
+
+    /**
+     * Sum of validation error accumulated by workers.
+     */
+    private double validationError;
 
     /**
      * For GBDT only, in GBDT, this means move compute to next tree.
@@ -69,9 +79,11 @@ public class DTMasterParams extends HaltBytable {
     public DTMasterParams() {
     }
 
-    public DTMasterParams(long count, double squareError) {
-        this.count = count;
-        this.setSquareError(squareError);
+    public DTMasterParams(long trainCount, double trainError, long validationCount, double validationError) {
+        this.trainCount = trainCount;
+        this.trainError = trainError;
+        this.validationCount = validationCount;
+        this.validationError = validationError;
     }
 
     public DTMasterParams(List<TreeNode> trees, Map<Integer, TreeNode> todoNodes) {
@@ -111,8 +123,10 @@ public class DTMasterParams extends HaltBytable {
 
     @Override
     public void doWrite(DataOutput out) throws IOException {
-        out.writeLong(count);
-        out.writeDouble(squareError);
+        out.writeLong(trainCount);
+        out.writeLong(validationCount);
+        out.writeDouble(trainError);
+        out.writeDouble(validationError);
         out.writeBoolean(this.isSwitchToNextTree);
 
         assert trees != null;
@@ -135,8 +149,10 @@ public class DTMasterParams extends HaltBytable {
 
     @Override
     public void doReadFields(DataInput in) throws IOException {
-        this.count = in.readLong();
-        this.squareError = in.readDouble();
+        this.trainCount = in.readLong();
+        this.validationCount = in.readLong();
+        this.trainError = in.readDouble();
+        this.validationError = in.readDouble();
         this.isSwitchToNextTree = in.readBoolean();
 
         int treeNum = in.readInt();
@@ -160,33 +176,46 @@ public class DTMasterParams extends HaltBytable {
     }
 
     /**
-     * @return the count
+     * @return the trainCount
      */
-    public long getCount() {
-        return count;
+    public long getTrainCount() {
+        return trainCount;
     }
 
     /**
-     * @param count
-     *            the count to set
+     * @return the validationCount
      */
-    public void setCount(long count) {
-        this.count = count;
+    public long getValidationCount() {
+        return validationCount;
+    }
+
+    /**
+     * @param trainCount the trainCount to set
+     */
+    public void setTrainCount(long trainCount) {
+        this.trainCount = trainCount;
+    }
+
+    /**
+     * @param validationCount the validationCount to set
+     */
+    public void setValidationCount(long validationCount) {
+        this.validationCount = validationCount;
     }
 
     /**
      * @return the squareError
      */
-    public double getSquareError() {
-        return squareError;
+    public double getTrainError() {
+        return trainError;
     }
 
     /**
      * @param squareError
      *            the squareError to set
      */
-    public void setSquareError(double squareError) {
-        this.squareError = squareError;
+    public void setTrainError(double squareError) {
+        this.trainError = squareError;
     }
 
     /**
@@ -217,6 +246,21 @@ public class DTMasterParams extends HaltBytable {
      */
     public void setTreeDepth(List<Integer> treeDepth) {
         this.treeDepth = treeDepth;
+    }
+
+    /**
+     * @return the validationError
+     */
+    public double getValidationError() {
+        return validationError;
+    }
+
+    /**
+     * @param validationError
+     *            the validationError to set
+     */
+    public void setValidationError(double validationError) {
+        this.validationError = validationError;
     }
 
 }
