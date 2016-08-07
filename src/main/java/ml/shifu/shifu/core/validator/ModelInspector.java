@@ -144,10 +144,11 @@ public class ModelInspector {
             }
 
             if(modelConfig.isClassification() && modelConfig.getTrain().isOneVsAll()) {
-                if(!CommonUtils.isDesicionTreeAlgorithm(modelConfig.getAlgorithm())) {
+                if(!CommonUtils.isDesicionTreeAlgorithm(modelConfig.getAlgorithm())
+                        && !modelConfig.getAlgorithm().equalsIgnoreCase("nn")) {
                     ValidateResult tmpResult = new ValidateResult(true);
                     tmpResult
-                            .addCause("OneVSAll multiple classification is only effective in gradient boosted trees (GBT) or random forest (rf) training method.");
+                            .addCause("OneVSAll multiple classification is only effective in gradient boosted trees (GBT) or random forest (RF) or Neural Network (NN) training method.");
                     result = ValidateResult.mergeResult(result, tmpResult);
                 }
             }
@@ -499,11 +500,26 @@ public class ModelInspector {
         }
 
         if(modelConfig.isClassification() && train.isOneVsAll()
-                && !CommonUtils.isDesicionTreeAlgorithm(train.getAlgorithm())) {
+                && !CommonUtils.isDesicionTreeAlgorithm(train.getAlgorithm())
+                && !train.getAlgorithm().equalsIgnoreCase("nn")) {
             ValidateResult tmpResult = new ValidateResult(true);
             tmpResult.setStatus(false);
-            tmpResult.getCauses().add("'one vs all' or 'one vs rest' is only enabled with 'RF' or 'gbt' algorithm");
+            tmpResult.getCauses().add(
+                    "'one vs all' or 'one vs rest' is only enabled with 'RF' or 'GBT' or 'NN' algorithm");
             result = ValidateResult.mergeResult(result, tmpResult);
+        }
+
+        if(modelConfig.isClassification() && train.getMultiClassifyMethod() == MultipleClassification.NATIVE
+                && train.getAlgorithm().equalsIgnoreCase(CommonConstants.RF_ALG_NAME)) {
+            Object impurity = train.getParams().get("Impurity");
+            if(impurity != null && !"entropy".equalsIgnoreCase(impurity.toString())
+                    && !"gini".equalsIgnoreCase(impurity.toString())) {
+                ValidateResult tmpResult = new ValidateResult(true);
+                tmpResult.setStatus(false);
+                tmpResult.getCauses().add(
+                        "Impurity should be in [entropy,gini] if native mutiple classification in RF.");
+                result = ValidateResult.mergeResult(result, tmpResult);
+            }
         }
 
         if(train.getAlgorithm().equalsIgnoreCase("nn")) {

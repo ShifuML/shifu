@@ -254,8 +254,9 @@ public class NNMaster extends AbstractMasterComputable<NNParams, NNParams> {
 
         int[] inputAndOutput = DTrainUtils.getInputOutputCandidateCounts(this.columnConfigList);
         int inputNodeCount = inputAndOutput[0] == 0 ? inputAndOutput[2] : inputAndOutput[0];
-        int outputNodeCount = modelConfig.isRegression() ? inputAndOutput[1] : modelConfig.getTags().size();
-
+        // if is one vs all classification, outputNodeCount is set to 1
+        int outputNodeCount = modelConfig.isRegression() ? inputAndOutput[1]
+                : (modelConfig.getTrain().isOneVsAll() ? inputAndOutput[1] : modelConfig.getTags().size());
         int numLayers = (Integer) this.modelConfig.getParams().get(NNTrainer.NUM_HIDDEN_LAYERS);
         List<String> actFunc = (List<String>) this.modelConfig.getParams().get(NNTrainer.ACTIVATION_FUNC);
         List<Integer> hiddenNodeList = (List<Integer>) this.modelConfig.getParams().get(NNTrainer.NUM_HIDDEN_NODES);
