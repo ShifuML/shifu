@@ -195,7 +195,7 @@ public class DTOutput extends BasicMasterInterceptor<DTMasterParams, DTWorkerPar
     @Override
     public void postApplication(MasterContext<DTMasterParams, DTWorkerParams> context) {
         List<TreeNode> trees = context.getMasterResult().getTrees();
-        LOG.info("final trees", trees.toString());
+        LOG.debug("final trees", trees.toString());
         Path out = new Path(context.getProps().getProperty(CommonConstants.GUAGUA_OUTPUT));
         writeModelToFileSystem(trees, out);
     }
