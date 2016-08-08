@@ -38,6 +38,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
+import ml.shifu.guagua.ComputableMonitor;
 import ml.shifu.guagua.hadoop.io.GuaguaLineRecordReader;
 import ml.shifu.guagua.hadoop.io.GuaguaWritableAdapter;
 import ml.shifu.guagua.io.Bytable;
@@ -90,6 +91,7 @@ import com.google.common.base.Splitter;
  * 
  * @author Zhang David (pengzhang@paypal.com)
  */
+@ComputableMonitor(timeUnit = TimeUnit.SECONDS, duration = 300)
 public class DTWorker
         extends
         AbstractWorkerComputable<DTMasterParams, DTWorkerParams, GuaguaWritableAdapter<LongWritable>, GuaguaWritableAdapter<Text>> {

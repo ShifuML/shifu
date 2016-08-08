@@ -16,7 +16,9 @@
 package ml.shifu.shifu.core.dtrain.nn;
 
 import java.io.IOException;
+import java.util.concurrent.TimeUnit;
 
+import ml.shifu.guagua.ComputableMonitor;
 import ml.shifu.guagua.hadoop.io.GuaguaLineRecordReader;
 import ml.shifu.guagua.hadoop.io.GuaguaWritableAdapter;
 import ml.shifu.guagua.io.GuaguaFileSplit;
@@ -42,6 +44,7 @@ import org.apache.hadoop.io.Text;
  * <p>
  * {@link NNWorker} is to load data with text format.
  */
+@ComputableMonitor(timeUnit = TimeUnit.SECONDS, duration = 300)
 public class NNWorker extends AbstractNNWorker<Text> {
 
     @Override
