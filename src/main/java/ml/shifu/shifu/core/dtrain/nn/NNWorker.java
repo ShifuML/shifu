@@ -44,7 +44,7 @@ import org.apache.hadoop.io.Text;
  * <p>
  * {@link NNWorker} is to load data with text format.
  */
-@ComputableMonitor(timeUnit = TimeUnit.SECONDS, duration = 300)
+@ComputableMonitor(timeUnit = TimeUnit.SECONDS, duration = 240)
 public class NNWorker extends AbstractNNWorker<Text> {
 
     @Override
