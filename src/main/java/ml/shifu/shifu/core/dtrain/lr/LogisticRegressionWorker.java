@@ -66,7 +66,7 @@ import com.google.common.base.Splitter;
  * <p>
  * L1 and l2 regulations are supported by configuration: RegularizedConstant in model params of ModelConfig.json.
  */
-@ComputableMonitor(timeUnit = TimeUnit.SECONDS, duration = 300)
+@ComputableMonitor(timeUnit = TimeUnit.SECONDS, duration = 240)
 public class LogisticRegressionWorker
         extends
         AbstractWorkerComputable<LogisticRegressionParams, LogisticRegressionParams, GuaguaWritableAdapter<LongWritable>, GuaguaWritableAdapter<Text>> {
