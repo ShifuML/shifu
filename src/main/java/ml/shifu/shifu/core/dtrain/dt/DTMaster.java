@@ -39,6 +39,7 @@ import ml.shifu.shifu.core.alg.NNTrainer;
 import ml.shifu.shifu.core.dtrain.CommonConstants;
 import ml.shifu.shifu.core.dtrain.DTrainUtils;
 import ml.shifu.shifu.core.dtrain.dt.DTWorkerParams.NodeStats;
+import ml.shifu.shifu.core.dtrain.gs.GridSearch;
 import ml.shifu.shifu.util.CommonUtils;
 
 import org.slf4j.Logger;
@@ -483,28 +484,36 @@ public class DTMaster extends AbstractMasterComputable<DTMasterParams, DTWorkerP
         this.inputNum = inputOutputIndex[0] + inputOutputIndex[1];
         this.isAfterVarSelect = inputOutputIndex[3] == 1 ? true : false;
         this.allFeatures = this.getAllFeatureList(columnConfigList, isAfterVarSelect);
+        
+        int trainerId = Integer.valueOf(context.getProps().getProperty(CommonConstants.SHIFU_TRAINER_ID, "0"));
+        GridSearch gs = new GridSearch(modelConfig.getTrain().getParams());
+        Map<String, Object> validParams = this.modelConfig.getTrain().getParams();
+        if(gs.hasHyperParam()) {
+            validParams = gs.getParams(trainerId);
+            LOG.info("Start grid search master with params: {}", validParams);
+        }
         // tree related parameters initialization
-        this.featureSubsetStrategy = FeatureSubsetStrategy.of(this.modelConfig.getTrain().getParams()
+        this.featureSubsetStrategy = FeatureSubsetStrategy.of(validParams
                 .get("FeatureSubsetStrategy").toString());
-        this.maxDepth = Integer.valueOf(this.modelConfig.getTrain().getParams().get("MaxDepth").toString());
+        this.maxDepth = Integer.valueOf(validParams.get("MaxDepth").toString());
         assert this.maxDepth > 0 && this.maxDepth <= 20;
-        this.maxStatsMemory = Long.valueOf(this.modelConfig.getTrain().getParams().get("MaxStatsMemoryMB").toString()) * 1024 * 1024;
+        this.maxStatsMemory = Long.valueOf(validParams.get("MaxStatsMemoryMB").toString()) * 1024 * 1024;
         // assert this.maxStatsMemory <= Math.min(Runtime.getRuntime().maxMemory() * 0.6, 800 * 1024 * 1024L);
-        this.treeNum = Integer.valueOf(this.modelConfig.getTrain().getParams().get("TreeNum").toString());;
+        this.treeNum = Integer.valueOf(validParams.get("TreeNum").toString());;
         this.isRF = ALGORITHM.RF.toString().equalsIgnoreCase(modelConfig.getAlgorithm());
         this.isGBDT = ALGORITHM.GBT.toString().equalsIgnoreCase(modelConfig.getAlgorithm());
         if(this.isGBDT) {
             // learning rate only effective in gbdt
-            this.learningRate = Double.valueOf(this.modelConfig.getParams().get(NNTrainer.LEARNING_RATE).toString());
+            this.learningRate = Double.valueOf(validParams.get(NNTrainer.LEARNING_RATE).toString());
         }
-        String imStr = this.modelConfig.getTrain().getParams().get("Impurity").toString();
+        String imStr = validParams.get("Impurity").toString();
         int numClasses = 2;
         if(this.modelConfig.isClassification()) {
             numClasses = this.modelConfig.getTags().size();
         }
 
-        int minInstancesPerNode = Integer.valueOf(this.modelConfig.getParams().get("MinInstancesPerNode").toString());
-        double minInfoGain = Double.valueOf(this.modelConfig.getParams().get("MinInfoGain").toString());
+        int minInstancesPerNode = Integer.valueOf(validParams.get("MinInstancesPerNode").toString());
+        double minInfoGain = Double.valueOf(validParams.get("MinInfoGain").toString());
         if(imStr.equalsIgnoreCase("entropy")) {
             impurity = new Entropy(numClasses, minInstancesPerNode, minInfoGain);
         } else if(imStr.equalsIgnoreCase("gini")) {
