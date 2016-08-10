@@ -70,6 +70,7 @@ import ml.shifu.shifu.util.CommonUtils;
 import ml.shifu.shifu.util.Constants;
 import ml.shifu.shifu.util.Environment;
 import ml.shifu.shifu.util.HDFSUtils;
+import ml.shifu.shifu.util.JSONUtils;
 
 import org.antlr.runtime.RecognitionException;
 import org.apache.commons.collections.CollectionUtils;
@@ -521,10 +522,13 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
         }
 
         if(gs.hasHyperParam()) {
+            LOG.info("Original grid search params: {}", modelConfig.getParams());
             Map<String, Object> params = findBestParams(sourceType, fileSystem, gs);
             for(Entry<String, Object> entry: params.entrySet()) {
                 modelConfig.getParams().put(entry.getKey(), entry.getValue());
             }
+            // update ModelConfig.json
+            JSONUtils.writeValue(new File("ModelConfig.json"), modelConfig);
             LOG.info("Grid search on distributed training finished in {}ms.", System.currentTimeMillis() - start);
         }
     }
