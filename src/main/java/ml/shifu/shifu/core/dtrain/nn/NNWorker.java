@@ -16,7 +16,9 @@
 package ml.shifu.shifu.core.dtrain.nn;
 
 import java.io.IOException;
+import java.util.concurrent.TimeUnit;
 
+import ml.shifu.guagua.ComputableMonitor;
 import ml.shifu.guagua.hadoop.io.GuaguaLineRecordReader;
 import ml.shifu.guagua.hadoop.io.GuaguaWritableAdapter;
 import ml.shifu.guagua.io.GuaguaFileSplit;
@@ -42,6 +44,7 @@ import org.apache.hadoop.io.Text;
  * <p>
  * {@link NNWorker} is to load data with text format.
  */
+@ComputableMonitor(timeUnit = TimeUnit.SECONDS, duration = 240)
 public class NNWorker extends AbstractNNWorker<Text> {
 
     @Override
@@ -91,8 +94,15 @@ public class NNWorker extends AbstractNNWorker<Text> {
                     if(modelConfig.isRegression()) {
                         ideal[outputIndex++] = floatValue;
                     } else {
-                        int ideaIndex = (int) floatValue;
-                        ideal[ideaIndex] = 1f;
+                        if(modelConfig.getTrain().isOneVsAll()) {
+                            // if one vs all, set correlated idea value according to trainerId which means in trainer
+                            // with id 0, target 0 is treated with 1, other are 0. Such target value are set to index of
+                            // tags like [0, 1, 2, 3] compared with ["a", "b", "c", "d"]
+                            ideal[outputIndex++] = Float.compare(floatValue, trainerId) == 0 ? 1f : 0f;
+                        } else {
+                            int ideaIndex = (int) floatValue;
+                            ideal[ideaIndex] = 1f;
+                        }
                     }
                 } else {
                     if(super.inputNodeCount == super.candidateCount) {

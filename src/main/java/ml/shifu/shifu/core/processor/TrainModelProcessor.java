@@ -34,6 +34,7 @@ import ml.shifu.guagua.mapreduce.GuaguaMapReduceConstants;
 import ml.shifu.shifu.actor.AkkaSystemExecutor;
 import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.container.obj.ModelBasicConf.RunMode;
+import ml.shifu.shifu.container.obj.ModelTrainConf.MultipleClassification;
 import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
 import ml.shifu.shifu.core.AbstractTrainer;
 import ml.shifu.shifu.core.alg.LogisticRegressionTrainer;
@@ -286,10 +287,17 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
                     "Currently we only support NN, LR, RF(RandomForest) and GBDT(Gradient Boost Desicion Tree) distributed training.");
         }
 
-        if(LogisticRegressionContants.LR_ALG_NAME.equalsIgnoreCase(alg)
-                || CommonConstants.GBT_ALG_NAME.equalsIgnoreCase(alg) && modelConfig.isClassification()) {
+        if((LogisticRegressionContants.LR_ALG_NAME.equalsIgnoreCase(alg) || CommonConstants.GBT_ALG_NAME
+                .equalsIgnoreCase(alg))
+                && modelConfig.isClassification()
+                && modelConfig.getTrain().getMultiClassifyMethod() == MultipleClassification.NATIVE) {
             throw new IllegalArgumentException(
-                    "Distributed LR, GBDT(Gradient Boost Desicion Tree) only support binary classification, multiple classification is not supported.");
+                    "Distributed LR, GBDT(Gradient Boost Desicion Tree) only support binary classification, native multiple classification is not supported.");
+        }
+
+        if(modelConfig.isClassification() && modelConfig.getTrain().isOneVsAll()
+                && !CommonUtils.isDesicionTreeAlgorithm(alg) && !NNConstants.NN_ALG_NAME.equalsIgnoreCase(alg)) {
+            throw new IllegalArgumentException("Only GBT and RF and NN support OneVsAll multiple classification.");
         }
 
         if(super.getModelConfig().getDataSet().getSource() != SourceType.HDFS) {

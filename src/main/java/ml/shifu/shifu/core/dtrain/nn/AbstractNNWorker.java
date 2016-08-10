@@ -111,6 +111,11 @@ public abstract class AbstractNNWorker<VALUE extends Writable> extends
     protected int candidateCount;
 
     /**
+     * Trainer id used to tag bagging training job, starting from 0, 1, 2 ...
+     */
+    protected int trainerId = 0;
+
+    /**
      * input record size, inc one by one.
      */
     protected long count;
@@ -230,8 +235,12 @@ public abstract class AbstractNNWorker<VALUE extends Writable> extends
 
         int[] inputOutputIndex = DTrainUtils.getInputOutputCandidateCounts(this.columnConfigList);
         this.inputNodeCount = inputOutputIndex[0] == 0 ? inputOutputIndex[2] : inputOutputIndex[0];
-        this.outputNodeCount = modelConfig.isRegression() ? inputOutputIndex[1] : modelConfig.getTags().size();
+        // if is one vs all classification, outputNodeCount is set to 1
+        this.outputNodeCount = modelConfig.isRegression() ? inputOutputIndex[1]
+                : (modelConfig.getTrain().isOneVsAll() ? inputOutputIndex[1] : modelConfig.getTags().size());
         this.candidateCount = inputOutputIndex[2];
+
+        this.trainerId = Integer.valueOf(context.getProps().getProperty(CommonConstants.SHIFU_TRAINER_ID, "0"));
 
         this.isDry = Boolean.TRUE.toString().equalsIgnoreCase(
                 context.getProps().getProperty(CommonConstants.SHIFU_DRY_DTRAIN));

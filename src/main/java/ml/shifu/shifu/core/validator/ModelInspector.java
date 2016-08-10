@@ -31,6 +31,7 @@ import ml.shifu.shifu.container.obj.ModelNormalizeConf.NormType;
 import ml.shifu.shifu.container.obj.ModelStatsConf.BinningAlgorithm;
 import ml.shifu.shifu.container.obj.ModelStatsConf.BinningMethod;
 import ml.shifu.shifu.container.obj.ModelTrainConf;
+import ml.shifu.shifu.container.obj.ModelTrainConf.MultipleClassification;
 import ml.shifu.shifu.container.obj.ModelVarSelectConf;
 import ml.shifu.shifu.container.obj.RawSourceData;
 import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
@@ -127,28 +128,31 @@ public class ModelInspector {
                 // add validation to avoid user to make mistake
                 result = ValidateResult.mergeResult(result, checkColumnConf(modelConfig));
             }
-            if(modelConfig.isClassification()) {
-                if(!"nn".equalsIgnoreCase((modelConfig.getTrain().getAlgorithm()))
-                        && !CommonConstants.RF_ALG_NAME.equalsIgnoreCase(modelConfig.getTrain().getAlgorithm())) {
-                    ValidateResult tmpResult = new ValidateResult(true);
-                    tmpResult
-                            .addCause("Multiple classification is only effective in neural network (nn) or random forest (rf) training method.");
-                    result = ValidateResult.mergeResult(result, tmpResult);
-                }
-            }
         } else if(ModelStep.NORMALIZE.equals(modelStep)) {
             result = ValidateResult.mergeResult(result, checkNormSetting(modelConfig, modelConfig.getNormalize()));
         } else if(ModelStep.TRAIN.equals(modelStep)) {
             result = ValidateResult.mergeResult(result, checkTrainSetting(modelConfig, modelConfig.getTrain()));
-            if(modelConfig.isClassification()) {
+            if(modelConfig.isClassification()
+                    && modelConfig.getTrain().getMultiClassifyMethod() == MultipleClassification.NATIVE) {
                 if(!"nn".equalsIgnoreCase((modelConfig.getTrain().getAlgorithm()))
                         && !CommonConstants.RF_ALG_NAME.equalsIgnoreCase(modelConfig.getTrain().getAlgorithm())) {
                     ValidateResult tmpResult = new ValidateResult(true);
                     tmpResult
-                            .addCause("Multiple classification is only effective in neural network (nn) or random forest (rf) training method.");
+                            .addCause("Native multiple classification is only effective in neural network (nn) or random forest (rf) training method.");
                     result = ValidateResult.mergeResult(result, tmpResult);
                 }
             }
+
+            if(modelConfig.isClassification() && modelConfig.getTrain().isOneVsAll()) {
+                if(!CommonUtils.isDesicionTreeAlgorithm(modelConfig.getAlgorithm())
+                        && !modelConfig.getAlgorithm().equalsIgnoreCase("nn")) {
+                    ValidateResult tmpResult = new ValidateResult(true);
+                    tmpResult
+                            .addCause("OneVSAll multiple classification is only effective in gradient boosted trees (GBT) or random forest (RF) or Neural Network (NN) training method.");
+                    result = ValidateResult.mergeResult(result, tmpResult);
+                }
+            }
+
         } else if(ModelStep.POSTTRAIN.equals(modelStep)) {
             // TODO
         } else if(ModelStep.EVAL.equals(modelStep)) {
@@ -199,7 +203,6 @@ public class ModelInspector {
     private ValidateResult checkColumnConf(ModelConfig modelConfig) throws IOException {
         ValidateResult result = new ValidateResult(true);
 
-        
         if(StringUtils.isBlank(modelConfig.getTargetColumnName())) {
             result.addCause("The target column name is null or empty.");
         } else {
@@ -497,11 +500,26 @@ public class ModelInspector {
         }
 
         if(modelConfig.isClassification() && train.isOneVsAll()
-                && !CommonUtils.isDesicionTreeAlgorithm(train.getAlgorithm())) {
+                && !CommonUtils.isDesicionTreeAlgorithm(train.getAlgorithm())
+                && !train.getAlgorithm().equalsIgnoreCase("nn")) {
             ValidateResult tmpResult = new ValidateResult(true);
             tmpResult.setStatus(false);
-            tmpResult.getCauses().add("'one vs all' or 'one vs rest' is only enabled with 'RF' or 'gbt' algorithm");
+            tmpResult.getCauses().add(
+                    "'one vs all' or 'one vs rest' is only enabled with 'RF' or 'GBT' or 'NN' algorithm");
             result = ValidateResult.mergeResult(result, tmpResult);
+        }
+
+        if(modelConfig.isClassification() && train.getMultiClassifyMethod() == MultipleClassification.NATIVE
+                && train.getAlgorithm().equalsIgnoreCase(CommonConstants.RF_ALG_NAME)) {
+            Object impurity = train.getParams().get("Impurity");
+            if(impurity != null && !"entropy".equalsIgnoreCase(impurity.toString())
+                    && !"gini".equalsIgnoreCase(impurity.toString())) {
+                ValidateResult tmpResult = new ValidateResult(true);
+                tmpResult.setStatus(false);
+                tmpResult.getCauses().add(
+                        "Impurity should be in [entropy,gini] if native mutiple classification in RF.");
+                result = ValidateResult.mergeResult(result, tmpResult);
+            }
         }
 
         if(train.getAlgorithm().equalsIgnoreCase("nn")) {
