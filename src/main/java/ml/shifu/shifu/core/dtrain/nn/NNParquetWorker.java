@@ -136,7 +136,21 @@ public class NNParquetWorker extends AbstractNNWorker<Tuple> {
                 } else {
                     ColumnConfig columnConfig = super.columnConfigList.get(columnIndex);
                     if(columnConfig != null && columnConfig.isTarget()) {
-                        ideal[outputIndex++] = floatValue;
+                        if(modelConfig.isRegression()) {
+                            ideal[outputIndex++] = floatValue;
+                        } else {
+                            if(modelConfig.getTrain().isOneVsAll()) {
+                                // if one vs all, set correlated idea value according to trainerId which means in
+                                // trainer
+                                // with id 0, target 0 is treated with 1, other are 0. Such target value are set to
+                                // index of
+                                // tags like [0, 1, 2, 3] compared with ["a", "b", "c", "d"]
+                                ideal[outputIndex++] = Float.compare(floatValue, trainerId) == 0 ? 1f : 0f;
+                            } else {
+                                int ideaIndex = (int) floatValue;
+                                ideal[ideaIndex] = 1f;
+                            }
+                        }
                     } else {
                         if(super.inputNodeCount == super.candidateCount) {
                             // no variable selected, good candidate but not meta and not target choosed

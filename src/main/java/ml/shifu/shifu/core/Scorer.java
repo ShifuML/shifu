@@ -147,6 +147,9 @@ public class Scorer {
                 MLData score = network.compute(pair.getInput());
                 if(modelConfig != null && modelConfig.isRegression()) {
                     scores.add(toScore(score.getData(0)));
+                } else if(modelConfig.isClassification() && modelConfig.getTrain().isOneVsAll()) {
+                    // if one vs all classification
+                    scores.add(toScore(score.getData(0)));
                 } else {
                     double[] outputs = score.getData();
                     for(double d: outputs) {
@@ -181,7 +184,7 @@ public class Scorer {
                 if(modelConfig.isClassification() && !modelConfig.getTrain().isOneVsAll()) {
                     double[] scoreArray = score.getData();
                     for(double sc: scoreArray) {
-                        scores.add((int)sc);
+                        scores.add((int) sc);
                     }
                 } else {
                     // if one vs all consider
