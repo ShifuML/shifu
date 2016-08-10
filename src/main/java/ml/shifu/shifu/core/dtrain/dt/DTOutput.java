@@ -28,6 +28,7 @@ import ml.shifu.shifu.container.obj.ModelTrainConf.ALGORITHM;
 import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
 import ml.shifu.shifu.core.dtrain.CommonConstants;
 import ml.shifu.shifu.core.dtrain.DTrainUtils;
+import ml.shifu.shifu.core.dtrain.gs.GridSearch;
 import ml.shifu.shifu.util.CommonUtils;
 
 import org.apache.hadoop.conf.Configuration;
@@ -75,6 +76,11 @@ public class DTOutput extends BasicMasterInterceptor<DTMasterParams, DTWorkerPar
      * from previous tree.
      */
     private boolean isGBDT = false;
+
+    /**
+     * If for grid search, store validation error besides model files.
+     */
+    private boolean isGsMode;
 
     @Override
     public void preApplication(MasterContext<DTMasterParams, DTWorkerParams> context) {
@@ -124,8 +130,7 @@ public class DTOutput extends BasicMasterInterceptor<DTMasterParams, DTWorkerPar
                         .append(currentIteration - 1).append(" Train Error: ")
                         .append(String.format("%.10f", trainError)).append(" Validation Error: ")
                         .append(validationError == 0d ? "N/A" : String.format("%.10f", validationError))
-                        .append("; Tree ").append(treeSize).append(" (starting from 1)  is finished. \n")
-                        .toString();
+                        .append("; Tree ").append(treeSize).append(" (starting from 1)  is finished. \n").toString();
             } else {
                 int treeIndex = context.getMasterResult().getTrees().size() - 1;
                 int nextDepth = context.getMasterResult().getTreeDepth().get(treeIndex);
@@ -198,6 +203,24 @@ public class DTOutput extends BasicMasterInterceptor<DTMasterParams, DTWorkerPar
         LOG.debug("final trees", trees.toString());
         Path out = new Path(context.getProps().getProperty(CommonConstants.GUAGUA_OUTPUT));
         writeModelToFileSystem(trees, out);
+        if(this.isGsMode) {
+            Path valErrOutput = new Path(context.getProps().getProperty(CommonConstants.GS_VALIDATION_ERROR));
+            writeValErrorToFileSystem(context.getMasterResult().getValidationError()
+                    / context.getMasterResult().getValidationCount(), valErrOutput);
+        }
+    }
+
+    private void writeValErrorToFileSystem(double valError, Path out) {
+        FSDataOutputStream fos = null;
+        try {
+            fos = FileSystem.get(new Configuration()).create(out);
+            LOG.info("Writing valerror to {}", out);
+            fos.write((valError + "").getBytes("UTF-8"));
+        } catch (IOException e) {
+            LOG.error("Error in writing output.", e);
+        } finally {
+            IOUtils.closeStream(fos);
+        }
     }
 
     private void writeModelToFileSystem(List<TreeNode> trees, Path out) {
@@ -230,6 +253,8 @@ public class DTOutput extends BasicMasterInterceptor<DTMasterParams, DTWorkerPar
         if(isInit.compareAndSet(false, true)) {
             loadConfigFiles(context.getProps());
             this.trainerId = context.getProps().getProperty(CommonConstants.SHIFU_TRAINER_ID);
+            GridSearch gs = new GridSearch(modelConfig.getTrain().getParams());
+            this.isGsMode = gs.hasHyperParam();
             this.tmpModelsFolder = context.getProps().getProperty(CommonConstants.SHIFU_TMP_MODELS_FOLDER);
             this.isRF = ALGORITHM.RF.toString().equalsIgnoreCase(modelConfig.getAlgorithm());
             this.isGBDT = ALGORITHM.GBT.toString().equalsIgnoreCase(modelConfig.getAlgorithm());

@@ -15,17 +15,6 @@
  */
 package ml.shifu.shifu.container.meta;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.math.DoubleMath;
-
-import ml.shifu.shifu.container.obj.*;
-import ml.shifu.shifu.util.Constants;
-
-import org.apache.commons.collections.CollectionUtils;
-import org.apache.commons.lang.ArrayUtils;
-import org.apache.commons.lang.StringUtils;
-
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
@@ -35,6 +24,27 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Set;
+
+import ml.shifu.shifu.container.obj.EvalConfig;
+import ml.shifu.shifu.container.obj.ModelBasicConf;
+import ml.shifu.shifu.container.obj.ModelConfig;
+import ml.shifu.shifu.container.obj.ModelNormalizeConf;
+import ml.shifu.shifu.container.obj.ModelSourceDataConf;
+import ml.shifu.shifu.container.obj.ModelStatsConf;
+import ml.shifu.shifu.container.obj.ModelTrainConf;
+import ml.shifu.shifu.container.obj.ModelVarSelectConf;
+import ml.shifu.shifu.core.dtrain.gs.GridSearch;
+import ml.shifu.shifu.util.Constants;
+
+import org.apache.commons.collections.CollectionUtils;
+import org.apache.commons.lang.ArrayUtils;
+import org.apache.commons.lang.StringUtils;
+
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.collect.Sets;
+import com.google.common.math.DoubleMath;
 
 /**
  * MetaFactory class
@@ -124,6 +134,8 @@ public class MetaFactory {
     public static ValidateResult validate(ModelConfig modelConfig) throws Exception {
         ValidateResult result = new ValidateResult(true);
 
+        GridSearch gs = new GridSearch(modelConfig.getTrain().getParams());
+
         Class<?> cls = modelConfig.getClass();
         Field[] fields = cls.getDeclaredFields();
 
@@ -135,10 +147,10 @@ public class MetaFactory {
                 if(value instanceof List) {
                     List<?> objList = (List<?>) value;
                     for(Object obj: objList) {
-                        encapsulateResult(result, iterateCheck(field.getName(), obj));
+                        encapsulateResult(result, iterateCheck(gs.hasHyperParam(), field.getName(), obj));
                     }
                 } else {
-                    encapsulateResult(result, iterateCheck(field.getName(), value));
+                    encapsulateResult(result, iterateCheck(gs.hasHyperParam(), field.getName(), value));
                 }
             }
         }
@@ -157,7 +169,7 @@ public class MetaFactory {
      * @throws Exception
      */
     public static ValidateResult validate(ModelBasicConf basic) throws Exception {
-        return iterateCheck(BASIC_TAG, basic);
+        return iterateCheck(false, BASIC_TAG, basic);
     }
 
     /**
@@ -171,7 +183,7 @@ public class MetaFactory {
      * @throws Exception
      */
     public static ValidateResult validate(ModelSourceDataConf sourceData) throws Exception {
-        return iterateCheck(DATASET_TAG, sourceData);
+        return iterateCheck(false, DATASET_TAG, sourceData);
     }
 
     /**
@@ -185,7 +197,7 @@ public class MetaFactory {
      * @throws Exception
      */
     public static ValidateResult validate(ModelStatsConf stats) throws Exception {
-        return iterateCheck(STATS_TAG, stats);
+        return iterateCheck(false, STATS_TAG, stats);
     }
 
     /**
@@ -199,7 +211,7 @@ public class MetaFactory {
      * @throws Exception
      */
     public static ValidateResult validate(ModelVarSelectConf varselect) throws Exception {
-        return iterateCheck(VARSELECT_TAG, varselect);
+        return iterateCheck(false, VARSELECT_TAG, varselect);
     }
 
     /**
@@ -213,7 +225,7 @@ public class MetaFactory {
      * @throws Exception
      */
     public static ValidateResult validate(ModelNormalizeConf normalizer) throws Exception {
-        return iterateCheck(NORMALIZE_TAG, normalizer);
+        return iterateCheck(false, NORMALIZE_TAG, normalizer);
     }
 
     /**
@@ -227,7 +239,7 @@ public class MetaFactory {
      * @throws Exception
      */
     public static ValidateResult validate(ModelTrainConf train) throws Exception {
-        return iterateCheck(TRAIN_TAG, train);
+        return iterateCheck(false, TRAIN_TAG, train);
     }
 
     /**
@@ -261,12 +273,14 @@ public class MetaFactory {
      * @throws Exception
      */
     public static ValidateResult validate(EvalConfig eval) throws Exception {
-        return iterateCheck(EVALS_TAG, eval);
+        return iterateCheck(false, EVALS_TAG, eval);
     }
 
     /**
      * Iterate each property of Object, get the value and validate
      * 
+     * @param isGridSearch
+     *            - if grid search, ignore validation in train#params as they are set all as list
      * @param ptag
      *            - the prefix of key to search @MetaItem
      * @param obj
@@ -276,7 +290,7 @@ public class MetaFactory {
      *         Or the ValidateResult.status will be false, ValidateResult.causes will contain the reasons
      * @throws Exception
      */
-    public static ValidateResult iterateCheck(String ptag, Object obj) throws Exception {
+    public static ValidateResult iterateCheck(boolean isGridSearch, String ptag, Object obj) throws Exception {
         ValidateResult result = new ValidateResult(true);
         if(obj == null) {
             return result;
@@ -296,7 +310,7 @@ public class MetaFactory {
                 Method method = cls.getMethod("get" + getMethodName(field.getName()));
                 Object value = method.invoke(obj);
 
-                encapsulateResult(result, validate(ptag + ITEM_KEY_SEPERATOR + field.getName(), value));
+                encapsulateResult(result, validate(isGridSearch, ptag + ITEM_KEY_SEPERATOR + field.getName(), value));
             }
         }
 
@@ -313,9 +327,26 @@ public class MetaFactory {
         return false;
     }
 
+    static Set<String> filterSet = Sets.newHashSet(new String[] { "NumHiddenLayers", "ActivationFunc",
+            "NumHiddenNodes", "LearningRate", "RegularizedConstant", "L1orL2", "MaxDepth", "MinInstancesPerNode",
+            "MinInfoGain", "MaxStatsMemoryMB", "TreeNum", "Impurity", "FeatureSubsetStrategy", "Loss", "LearningDecay",
+            "Propagation", "SampleWithReplacement", "Kernel", "Const", "Gamma" });
+
+    // ugly code for grid search
+    private static boolean filterOut(String itemKey) {
+        String str = itemKey;
+        if(str.contains("#")) {
+            String[] strList = str.split("#");
+            str = strList[strList.length - 1];
+        }
+        return filterSet.contains(str);
+    }
+
     /**
      * Validate the input value. Find the @MetaItem from warehouse, and do the validation
      * 
+     * @param isGridSearch
+     *            - if grid search, ignore validation in train#params as they are set all as list
      * @param itemKey
      *            - the key to locate MetaItem
      * @param itemValue
@@ -324,8 +355,12 @@ public class MetaFactory {
      *         or return the cause - String
      * @throws Exception
      */
-    public static String validate(String itemKey, Object itemValue) throws Exception {
+    public static String validate(boolean isGridSearch, String itemKey, Object itemValue) throws Exception {
         MetaItem itemMeta = itemsWareHouse.get(itemKey);
+
+        if(isGridSearch && filterOut(itemKey)) {
+            return VALIDATE_OK;
+        }
 
         if(itemMeta == null) {
             return itemKey + " - not found meta info.";
@@ -405,12 +440,12 @@ public class MetaFactory {
 
                 for(Object obj: valueList) {
                     if(itemMeta.getElementType().equals("object")) {
-                        ValidateResult result = iterateCheck(itemKey, obj);
+                        ValidateResult result = iterateCheck(isGridSearch, itemKey, obj);
                         if(!result.getStatus()) {
                             return result.getCauses().get(0);
                         }
                     } else {
-                        String validateStr = validate(itemKey + ITEM_KEY_SEPERATOR + DUMMY, obj);
+                        String validateStr = validate(isGridSearch, itemKey + ITEM_KEY_SEPERATOR + DUMMY, obj);
                         if(!validateStr.equals(VALIDATE_OK)) {
                             return validateStr;
                         }
@@ -428,7 +463,7 @@ public class MetaFactory {
                     String key = entry.getKey();
                     Object value = entry.getValue();
 
-                    String validateStr = validate(itemKey + ITEM_KEY_SEPERATOR + key, value);
+                    String validateStr = validate(isGridSearch, itemKey + ITEM_KEY_SEPERATOR + key, value);
                     if(!validateStr.equals(VALIDATE_OK)) {
                         return validateStr;
                     }

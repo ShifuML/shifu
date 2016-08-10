@@ -37,6 +37,7 @@ import ml.shifu.shifu.container.obj.RawSourceData;
 import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
 import ml.shifu.shifu.core.alg.NNTrainer;
 import ml.shifu.shifu.core.dtrain.CommonConstants;
+import ml.shifu.shifu.core.dtrain.gs.GridSearch;
 import ml.shifu.shifu.fs.ShifuFileUtils;
 import ml.shifu.shifu.util.CommonUtils;
 
@@ -522,154 +523,157 @@ public class ModelInspector {
             }
         }
 
-        if(train.getAlgorithm().equalsIgnoreCase("nn")) {
-            Map<String, Object> params = train.getParams();
-            int layerCnt = (Integer) params.get(NNTrainer.NUM_HIDDEN_LAYERS);
-            if(layerCnt < 0) {
-                ValidateResult tmpResult = new ValidateResult(true);
-                tmpResult.setStatus(false);
-                tmpResult.getCauses().add("The number of hidden layers should be >= 0 in train configuration");
-                result = ValidateResult.mergeResult(result, tmpResult);
-            }
-
-            List<Integer> hiddenNode = (List<Integer>) params.get(NNTrainer.NUM_HIDDEN_NODES);
-            List<String> activateFucs = (List<String>) params.get(NNTrainer.ACTIVATION_FUNC);
-
-            if(hiddenNode.size() != activateFucs.size() || layerCnt != activateFucs.size()) {
-                ValidateResult tmpResult = new ValidateResult(true);
-                tmpResult.setStatus(false);
-                tmpResult.getCauses().add(
-                        NNTrainer.NUM_HIDDEN_LAYERS + "/SIZE(" + NNTrainer.NUM_HIDDEN_NODES + ")" + "/SIZE("
-                                + NNTrainer.ACTIVATION_FUNC + ")" + " should be equal in train configuration");
-                result = ValidateResult.mergeResult(result, tmpResult);
-            }
-
-            Double learningRate = Double.valueOf(params.get(NNTrainer.LEARNING_RATE).toString());
-            if(learningRate != null && (learningRate.compareTo(Double.valueOf(0)) <= 0)) {
-                ValidateResult tmpResult = new ValidateResult(true);
-                tmpResult.setStatus(false);
-                tmpResult.getCauses().add("Learning rate should be larger than 0.");
-                result = ValidateResult.mergeResult(result, tmpResult);
-            }
-
-            Object learningDecayO = params.get("LearningDecay");
-            if(learningDecayO != null) {
-                Double learningDecay = Double.valueOf(learningDecayO.toString());
-                if(learningDecay != null
-                        && ((learningDecay.compareTo(Double.valueOf(0)) < 0) || (learningDecay.compareTo(Double
-                                .valueOf(1)) >= 0))) {
+        GridSearch gs = new GridSearch(train.getParams());
+        // such parameter validation only in regression and not grid search mode
+        if(modelConfig.isRegression() && !gs.hasHyperParam()) {
+            if(train.getAlgorithm().equalsIgnoreCase("nn")) {
+                Map<String, Object> params = train.getParams();
+                int layerCnt = (Integer) params.get(NNTrainer.NUM_HIDDEN_LAYERS);
+                if(layerCnt < 0) {
                     ValidateResult tmpResult = new ValidateResult(true);
                     tmpResult.setStatus(false);
-                    tmpResult.getCauses().add("Learning decay should be in [0, 1) if set.");
+                    tmpResult.getCauses().add("The number of hidden layers should be >= 0 in train configuration");
                     result = ValidateResult.mergeResult(result, tmpResult);
                 }
-            }
-        }
 
-        if(train.getAlgorithm().equalsIgnoreCase(CommonConstants.GBT_ALG_NAME)
-                || train.getAlgorithm().equalsIgnoreCase(CommonConstants.RF_ALG_NAME)) {
-            Map<String, Object> params = train.getParams();
-            if(train.getAlgorithm().equalsIgnoreCase(CommonConstants.GBT_ALG_NAME)) {
-                Object loss = params.get("Loss");
-                if(loss != null && !"log".equalsIgnoreCase(loss.toString())
-                        && !"squared".equalsIgnoreCase(loss.toString())
-                        && !"absolute".equalsIgnoreCase(loss.toString())) {
+                List<Integer> hiddenNode = (List<Integer>) params.get(NNTrainer.NUM_HIDDEN_NODES);
+                List<String> activateFucs = (List<String>) params.get(NNTrainer.ACTIVATION_FUNC);
+
+                if(hiddenNode.size() != activateFucs.size() || layerCnt != activateFucs.size()) {
                     ValidateResult tmpResult = new ValidateResult(true);
                     tmpResult.setStatus(false);
-                    tmpResult.getCauses().add("Loss should be in [log,squared,absolute].");
+                    tmpResult.getCauses().add(
+                            NNTrainer.NUM_HIDDEN_LAYERS + "/SIZE(" + NNTrainer.NUM_HIDDEN_NODES + ")" + "/SIZE("
+                                    + NNTrainer.ACTIVATION_FUNC + ")" + " should be equal in train configuration");
                     result = ValidateResult.mergeResult(result, tmpResult);
                 }
-            }
 
-            Object maxDepthObj = params.get("MaxDepth");
-            if(maxDepthObj != null) {
-                int maxDepth = Integer.valueOf(maxDepthObj.toString());
-                if(maxDepth <= 0 || maxDepth > 20) {
+                Double learningRate = Double.valueOf(params.get(NNTrainer.LEARNING_RATE).toString());
+                if(learningRate != null && (learningRate.compareTo(Double.valueOf(0)) <= 0)) {
                     ValidateResult tmpResult = new ValidateResult(true);
                     tmpResult.setStatus(false);
-                    tmpResult.getCauses().add("MaxDepth should in [1, 20].");
+                    tmpResult.getCauses().add("Learning rate should be larger than 0.");
                     result = ValidateResult.mergeResult(result, tmpResult);
                 }
-            }
 
-            Object maxStatsMemoryMBObj = params.get("MaxStatsMemoryMB");
-            if(maxStatsMemoryMBObj != null) {
-                int maxStatsMemoryMB = Integer.valueOf(maxStatsMemoryMBObj.toString());
-                if(maxStatsMemoryMB <= 0) {
-                    ValidateResult tmpResult = new ValidateResult(true);
-                    tmpResult.setStatus(false);
-                    tmpResult.getCauses().add("MaxStatsMemoryMB should > 0.");
-                    result = ValidateResult.mergeResult(result, tmpResult);
-                }
-            }
-
-            if(train.getAlgorithm().equalsIgnoreCase(CommonConstants.GBT_ALG_NAME)) {
-                Object learningRateObj = params.get(NNTrainer.LEARNING_RATE);
-                if(learningRateObj != null) {
-                    Double learningRate = Double.valueOf(learningRateObj.toString());
-                    if(learningRate != null && (learningRate.compareTo(Double.valueOf(0)) <= 0)) {
+                Object learningDecayO = params.get("LearningDecay");
+                if(learningDecayO != null) {
+                    Double learningDecay = Double.valueOf(learningDecayO.toString());
+                    if(learningDecay != null
+                            && ((learningDecay.compareTo(Double.valueOf(0)) < 0) || (learningDecay.compareTo(Double
+                                    .valueOf(1)) >= 0))) {
                         ValidateResult tmpResult = new ValidateResult(true);
                         tmpResult.setStatus(false);
-                        tmpResult.getCauses().add("Learning rate should be larger than 0.");
+                        tmpResult.getCauses().add("Learning decay should be in [0, 1) if set.");
                         result = ValidateResult.mergeResult(result, tmpResult);
                     }
                 }
             }
 
-            Object minInstancesPerNodeObj = params.get("MinInstancesPerNode");
-            if(minInstancesPerNodeObj != null) {
-                int minInstancesPerNode = Integer.valueOf(minInstancesPerNodeObj.toString());
-                if(minInstancesPerNode <= 0) {
-                    ValidateResult tmpResult = new ValidateResult(true);
-                    tmpResult.setStatus(false);
-                    tmpResult.getCauses().add("MinInstancesPerNode should > 0.");
-                    result = ValidateResult.mergeResult(result, tmpResult);
+            if(train.getAlgorithm().equalsIgnoreCase(CommonConstants.GBT_ALG_NAME)
+                    || train.getAlgorithm().equalsIgnoreCase(CommonConstants.RF_ALG_NAME)) {
+                Map<String, Object> params = train.getParams();
+                if(train.getAlgorithm().equalsIgnoreCase(CommonConstants.GBT_ALG_NAME)) {
+                    Object loss = params.get("Loss");
+                    if(loss != null && !"log".equalsIgnoreCase(loss.toString())
+                            && !"squared".equalsIgnoreCase(loss.toString())
+                            && !"absolute".equalsIgnoreCase(loss.toString())) {
+                        ValidateResult tmpResult = new ValidateResult(true);
+                        tmpResult.setStatus(false);
+                        tmpResult.getCauses().add("Loss should be in [log,squared,absolute].");
+                        result = ValidateResult.mergeResult(result, tmpResult);
+                    }
+                }
+
+                Object maxDepthObj = params.get("MaxDepth");
+                if(maxDepthObj != null) {
+                    int maxDepth = Integer.valueOf(maxDepthObj.toString());
+                    if(maxDepth <= 0 || maxDepth > 20) {
+                        ValidateResult tmpResult = new ValidateResult(true);
+                        tmpResult.setStatus(false);
+                        tmpResult.getCauses().add("MaxDepth should in [1, 20].");
+                        result = ValidateResult.mergeResult(result, tmpResult);
+                    }
+                }
+
+                Object maxStatsMemoryMBObj = params.get("MaxStatsMemoryMB");
+                if(maxStatsMemoryMBObj != null) {
+                    int maxStatsMemoryMB = Integer.valueOf(maxStatsMemoryMBObj.toString());
+                    if(maxStatsMemoryMB <= 0) {
+                        ValidateResult tmpResult = new ValidateResult(true);
+                        tmpResult.setStatus(false);
+                        tmpResult.getCauses().add("MaxStatsMemoryMB should > 0.");
+                        result = ValidateResult.mergeResult(result, tmpResult);
+                    }
+                }
+
+                if(train.getAlgorithm().equalsIgnoreCase(CommonConstants.GBT_ALG_NAME)) {
+                    Object learningRateObj = params.get(NNTrainer.LEARNING_RATE);
+                    if(learningRateObj != null) {
+                        Double learningRate = Double.valueOf(learningRateObj.toString());
+                        if(learningRate != null && (learningRate.compareTo(Double.valueOf(0)) <= 0)) {
+                            ValidateResult tmpResult = new ValidateResult(true);
+                            tmpResult.setStatus(false);
+                            tmpResult.getCauses().add("Learning rate should be larger than 0.");
+                            result = ValidateResult.mergeResult(result, tmpResult);
+                        }
+                    }
+                }
+
+                Object minInstancesPerNodeObj = params.get("MinInstancesPerNode");
+                if(minInstancesPerNodeObj != null) {
+                    int minInstancesPerNode = Integer.valueOf(minInstancesPerNodeObj.toString());
+                    if(minInstancesPerNode <= 0) {
+                        ValidateResult tmpResult = new ValidateResult(true);
+                        tmpResult.setStatus(false);
+                        tmpResult.getCauses().add("MinInstancesPerNode should > 0.");
+                        result = ValidateResult.mergeResult(result, tmpResult);
+                    }
+                }
+
+                Object treeNumObj = params.get("TreeNum");
+                if(treeNumObj != null) {
+                    int treeNum = Integer.valueOf(treeNumObj.toString());
+                    if(treeNum <= 0 || treeNum > 200) {
+                        ValidateResult tmpResult = new ValidateResult(true);
+                        tmpResult.setStatus(false);
+                        tmpResult.getCauses().add("TreeNum should be in [1, 200].");
+                        result = ValidateResult.mergeResult(result, tmpResult);
+                    }
+                }
+
+                Object minInfoGainObj = params.get("MinInfoGain");
+                if(minInfoGainObj != null) {
+                    Double minInfoGain = Double.valueOf(minInfoGainObj.toString());
+                    if(minInfoGain != null && (minInfoGain.compareTo(Double.valueOf(0)) < 0)) {
+                        ValidateResult tmpResult = new ValidateResult(true);
+                        tmpResult.setStatus(false);
+                        tmpResult.getCauses().add("MinInfoGain should be >= 0.");
+                        result = ValidateResult.mergeResult(result, tmpResult);
+                    }
+                }
+
+                Object impurityObj = params.get("Impurity");
+                if(train.getAlgorithm().equalsIgnoreCase(CommonConstants.GBT_ALG_NAME)) {
+                    if(impurityObj != null && !"variance".equalsIgnoreCase(impurityObj.toString())) {
+                        ValidateResult tmpResult = new ValidateResult(true);
+                        tmpResult.setStatus(false);
+                        tmpResult.getCauses().add("GBDT only supports 'variance' impurity type.");
+                        result = ValidateResult.mergeResult(result, tmpResult);
+                    }
+                }
+
+                if(train.getAlgorithm().equalsIgnoreCase(CommonConstants.RF_ALG_NAME)) {
+                    if(impurityObj != null && !"entropy".equalsIgnoreCase(impurityObj.toString())
+                            && !"variance".equalsIgnoreCase(impurityObj.toString())
+                            && !"gini".equalsIgnoreCase(impurityObj.toString())) {
+                        ValidateResult tmpResult = new ValidateResult(true);
+                        tmpResult.setStatus(false);
+                        tmpResult.getCauses().add("RF supports 'variance|entropy|gini' impurity types.");
+                        result = ValidateResult.mergeResult(result, tmpResult);
+                    }
                 }
             }
-
-            Object treeNumObj = params.get("TreeNum");
-            if(treeNumObj != null) {
-                int treeNum = Integer.valueOf(treeNumObj.toString());
-                if(treeNum <= 0 || treeNum > 200) {
-                    ValidateResult tmpResult = new ValidateResult(true);
-                    tmpResult.setStatus(false);
-                    tmpResult.getCauses().add("TreeNum should be in [1, 200].");
-                    result = ValidateResult.mergeResult(result, tmpResult);
-                }
-            }
-
-            Object minInfoGainObj = params.get("MinInfoGain");
-            if(minInfoGainObj != null) {
-                Double minInfoGain = Double.valueOf(minInfoGainObj.toString());
-                if(minInfoGain != null && (minInfoGain.compareTo(Double.valueOf(0)) < 0)) {
-                    ValidateResult tmpResult = new ValidateResult(true);
-                    tmpResult.setStatus(false);
-                    tmpResult.getCauses().add("MinInfoGain should be >= 0.");
-                    result = ValidateResult.mergeResult(result, tmpResult);
-                }
-            }
-
-            Object impurityObj = params.get("Impurity");
-            if(train.getAlgorithm().equalsIgnoreCase(CommonConstants.GBT_ALG_NAME)) {
-                if(impurityObj != null && !"variance".equalsIgnoreCase(impurityObj.toString())) {
-                    ValidateResult tmpResult = new ValidateResult(true);
-                    tmpResult.setStatus(false);
-                    tmpResult.getCauses().add("GBDT only supports 'variance' impurity type.");
-                    result = ValidateResult.mergeResult(result, tmpResult);
-                }
-            }
-
-            if(train.getAlgorithm().equalsIgnoreCase(CommonConstants.RF_ALG_NAME)) {
-                if(impurityObj != null && !"entropy".equalsIgnoreCase(impurityObj.toString())
-                        && !"variance".equalsIgnoreCase(impurityObj.toString())
-                        && !"gini".equalsIgnoreCase(impurityObj.toString())) {
-                    ValidateResult tmpResult = new ValidateResult(true);
-                    tmpResult.setStatus(false);
-                    tmpResult.getCauses().add("RF supports 'variance|entropy|gini' impurity types.");
-                    result = ValidateResult.mergeResult(result, tmpResult);
-                }
-            }
-
         }
         return result;
     }

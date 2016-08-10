@@ -363,6 +363,10 @@ public class PathFinder {
     public String getModelsPath(SourceType sourceType) {
         return getPathBySourceType(new Path(Constants.MODELS), sourceType);
     }
+    
+    public String getValErrorPath(SourceType sourceType) {
+        return getPathBySourceType(new Path(Constants.TMP, "valerr"), sourceType);
+    }
 
     /**
      * Get the path of models

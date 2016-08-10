@@ -17,6 +17,7 @@ package ml.shifu.shifu.core.dtrain.nn;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.Map;
 import java.util.Properties;
 
 import ml.shifu.guagua.GuaguaRuntimeException;
@@ -32,6 +33,7 @@ import ml.shifu.shifu.core.dtrain.CommonConstants;
 import ml.shifu.shifu.core.dtrain.DTrainUtils;
 import ml.shifu.shifu.core.dtrain.RegulationLevel;
 import ml.shifu.shifu.core.dtrain.Weight;
+import ml.shifu.shifu.core.dtrain.gs.GridSearch;
 import ml.shifu.shifu.fs.ShifuFileUtils;
 import ml.shifu.shifu.util.CommonUtils;
 
@@ -117,6 +119,11 @@ public class NNMaster extends AbstractMasterComputable<NNParams, NNParams> {
      */
     private ConvergeJudger judger = new ConvergeJudger();
 
+    /**
+     * Valid params specially for grid search
+     */
+    private Map<String, Object> validParams;
+
     @Override
     public NNParams doCompute(MasterContext<NNParams, NNParams> context) {
         if(context.isFirstIteration()) {
@@ -173,7 +180,7 @@ public class NNMaster extends AbstractMasterComputable<NNParams, NNParams> {
             this.learningRate = this.rawLearningRate;
             this.weightCalculator = new Weight(this.globalNNParams.getGradients().length,
                     this.globalNNParams.getTrainSize(), learningRate, propagation, this.regularizedConstant,
-                    RegulationLevel.to(this.modelConfig.getParams().get(CommonConstants.REG_LEVEL_KEY)));
+                    RegulationLevel.to(this.validParams.get(CommonConstants.REG_LEVEL_KEY)));
         } else {
             this.learningRate = this.learningRate * (1.0d - this.learningDecay);
             // without learningDecay Parameter using sqrt(iteration number) to decrease learning rate
@@ -257,9 +264,9 @@ public class NNMaster extends AbstractMasterComputable<NNParams, NNParams> {
         // if is one vs all classification, outputNodeCount is set to 1
         int outputNodeCount = modelConfig.isRegression() ? inputAndOutput[1]
                 : (modelConfig.getTrain().isOneVsAll() ? inputAndOutput[1] : modelConfig.getTags().size());
-        int numLayers = (Integer) this.modelConfig.getParams().get(NNTrainer.NUM_HIDDEN_LAYERS);
-        List<String> actFunc = (List<String>) this.modelConfig.getParams().get(NNTrainer.ACTIVATION_FUNC);
-        List<Integer> hiddenNodeList = (List<Integer>) this.modelConfig.getParams().get(NNTrainer.NUM_HIDDEN_NODES);
+        int numLayers = (Integer) validParams.get(NNTrainer.NUM_HIDDEN_LAYERS);
+        List<String> actFunc = (List<String>) validParams.get(NNTrainer.ACTIVATION_FUNC);
+        List<Integer> hiddenNodeList = (List<Integer>) validParams.get(NNTrainer.NUM_HIDDEN_NODES);
 
         BasicNetwork network = DTrainUtils.generateNetwork(inputNodeCount, outputNodeCount, numLayers, actFunc,
                 hiddenNodeList);
@@ -284,26 +291,34 @@ public class NNMaster extends AbstractMasterComputable<NNParams, NNParams> {
 
             this.columnConfigList = CommonUtils.loadColumnConfigList(
                     props.getProperty(CommonConstants.SHIFU_COLUMN_CONFIG), sourceType);
-            Object pObject = this.modelConfig.getParams().get(NNTrainer.PROPAGATION);
-            this.propagation = pObject == null ? "Q" : (String) pObject;
-            this.rawLearningRate = Double.valueOf(this.modelConfig.getParams().get(NNTrainer.LEARNING_RATE).toString());
-            Object learningDecayO = this.modelConfig.getParams().get("LearningDecay");
-            if(learningDecayO != null) {
-                this.learningDecay = Double.valueOf(learningDecayO.toString());
-            }
-            LOG.info("learningDecay in master is :{}", learningDecay);
-
-            Double threshold = this.modelConfig.getTrain().getConvergenceThreshold();
-            this.convergenceThreshold = threshold == null ? 0d : threshold.doubleValue();
-            LOG.info("Convergence threshold in master is :{}", this.convergenceThreshold);
-
-            this.isContinuousEnabled = Boolean.TRUE.toString().equalsIgnoreCase(
-                    context.getProps().getProperty(NNConstants.NN_CONTINUOUS_TRAINING));
-            Object rconstant = this.modelConfig.getParams().get(CommonConstants.LR_REGULARIZED_CONSTANT);
-            this.regularizedConstant = NumberFormatUtils.getDouble(rconstant == null ? "" : rconstant.toString(), 0d);
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
+
+        int trainerId = Integer.valueOf(context.getProps().getProperty(CommonConstants.SHIFU_TRAINER_ID, "0"));
+        GridSearch gs = new GridSearch(modelConfig.getTrain().getParams());
+        validParams = this.modelConfig.getTrain().getParams();
+        if(gs.hasHyperParam()) {
+            validParams = gs.getParams(trainerId);
+            LOG.info("Start grid search master with params: {}", validParams);
+        }
+        Object pObject = validParams.get(NNTrainer.PROPAGATION);
+        this.propagation = pObject == null ? "Q" : (String) pObject;
+        this.rawLearningRate = Double.valueOf(validParams.get(NNTrainer.LEARNING_RATE).toString());
+        Object learningDecayO = validParams.get("LearningDecay");
+        if(learningDecayO != null) {
+            this.learningDecay = Double.valueOf(learningDecayO.toString());
+        }
+        LOG.info("learningDecay in master is :{}", learningDecay);
+
+        Double threshold = this.modelConfig.getTrain().getConvergenceThreshold();
+        this.convergenceThreshold = threshold == null ? 0d : threshold.doubleValue();
+        LOG.info("Convergence threshold in master is :{}", this.convergenceThreshold);
+
+        this.isContinuousEnabled = Boolean.TRUE.toString().equalsIgnoreCase(
+                context.getProps().getProperty(NNConstants.NN_CONTINUOUS_TRAINING));
+        Object rconstant = validParams.get(CommonConstants.LR_REGULARIZED_CONSTANT);
+        this.regularizedConstant = NumberFormatUtils.getDouble(rconstant == null ? "" : rconstant.toString(), 0d);
 
         // recover master states here is globalNNParams
         // not init but not first iteration, first recover from last master result set from guagua

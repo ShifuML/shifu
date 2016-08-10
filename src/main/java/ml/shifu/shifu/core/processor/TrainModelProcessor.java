@@ -15,6 +15,7 @@
  */
 package ml.shifu.shifu.core.processor;
 
+import java.io.BufferedReader;
 import java.io.ByteArrayOutputStream;
 import java.io.DataOutputStream;
 import java.io.File;
@@ -25,6 +26,7 @@ import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Scanner;
 
 import ml.shifu.guagua.GuaguaConstants;
@@ -47,6 +49,7 @@ import ml.shifu.shifu.core.dtrain.dt.DTMasterParams;
 import ml.shifu.shifu.core.dtrain.dt.DTOutput;
 import ml.shifu.shifu.core.dtrain.dt.DTWorker;
 import ml.shifu.shifu.core.dtrain.dt.DTWorkerParams;
+import ml.shifu.shifu.core.dtrain.gs.GridSearch;
 import ml.shifu.shifu.core.dtrain.lr.LogisticRegressionContants;
 import ml.shifu.shifu.core.dtrain.lr.LogisticRegressionMaster;
 import ml.shifu.shifu.core.dtrain.lr.LogisticRegressionOutput;
@@ -67,6 +70,7 @@ import ml.shifu.shifu.util.CommonUtils;
 import ml.shifu.shifu.util.Constants;
 import ml.shifu.shifu.util.Environment;
 import ml.shifu.shifu.util.HDFSUtils;
+import ml.shifu.shifu.util.JSONUtils;
 
 import org.antlr.runtime.RecognitionException;
 import org.apache.commons.collections.CollectionUtils;
@@ -323,6 +327,19 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
                             + super.getPathFinder().getNormalizedDataPath()
                             + " is parquet format. Please keep isParquet and re-run norm again or change isParquet directly to true.");
         }
+
+        GridSearch gridSearch = new GridSearch(modelConfig.getTrain().getParams());
+        if(!NNConstants.NN_ALG_NAME.equalsIgnoreCase(alg) && !CommonUtils.isDesicionTreeAlgorithm(alg)
+                && gridSearch.hasHyperParam()) {
+            // if grid search but not NN, not RF, not GBT
+            throw new IllegalArgumentException("Grid search only supports NN, GBT and RF algorithms");
+        }
+
+        if(gridSearch.hasHyperParam() && super.getModelConfig().getDataSet().getSource() != SourceType.HDFS
+                && modelConfig.isDistributedRunMode()) {
+            // if grid search but not mapred/dist run mode, not hdfs raw data set
+            throw new IllegalArgumentException("Grid search only supports NN, GBT and RF algorithms");
+        }
     }
 
     protected void runDistributedTrain() throws IOException, InterruptedException, ClassNotFoundException {
@@ -334,7 +351,9 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
 
         final List<String> args = new ArrayList<String>();
 
-        prepareCommonParams(args, sourceType);
+        GridSearch gs = new GridSearch(modelConfig.getTrain().getParams());
+
+        prepareCommonParams(gs.hasHyperParam(), args, sourceType);
 
         String alg = super.getModelConfig().getTrain().getAlgorithm();
 
@@ -398,77 +417,155 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
         } else {
             guaguaClient = new GuaguaMapReduceClient();
         }
+
+        // TODO, make it configurable, refactor logic in below,
+        int parallelNum = 5;
+        int parallelGroups = gs.hasHyperParam() ? (gs.getFlattenParams().size() % parallelNum == 0 ? gs
+                .getFlattenParams().size() / parallelNum : gs.getFlattenParams().size() / parallelNum + 1) : 1;
         List<String> progressLogList = new ArrayList<String>(baggingNum);
         boolean isOneJobNotContinuous = false;
-        for(int i = 0; i < baggingNum; i++) {
-            List<String> localArgs = new ArrayList<String>(args);
-            // set name for each bagging job.
-            localArgs.add("-n");
-            localArgs.add(String.format("Shifu Master-Workers %s Training Iteration: %s id:%s", alg, super
-                    .getModelConfig().getModelSetName(), i));
-            LOG.info("Start trainer with id: {}", i);
-            String modelName = getModelName(i);
-            Path modelPath = fileSystem.makeQualified(new Path(super.getPathFinder().getModelsPath(sourceType),
-                    modelName));
-            // check if job is continunous training, this can be set multiple times and we only get last one
-            boolean isContinous = checkContinuousTraining(fileSystem, localArgs, modelPath);
-            if(isContinous && CommonUtils.isDesicionTreeAlgorithm(modelConfig.getAlgorithm())) {
-                isContinous = false;
-                LOG.warn("RF & GBDT do not support continuous training");
+        for(int j = 0; j < parallelGroups; j++) {
+            int currBags = baggingNum;
+            if(gs.hasHyperParam()) {
+                if(j == parallelGroups - 1) {
+                    currBags = gs.getFlattenParams().size() % parallelNum == 0 ? parallelNum : gs.getFlattenParams()
+                            .size() % parallelNum;
+                } else {
+                    currBags = parallelNum;
+                }
             }
-            if(!isContinous && !isOneJobNotContinuous) {
-                isOneJobNotContinuous = true;
-                // delete all old models if not continous
-                String srcModelPath = super.getPathFinder().getModelsPath(sourceType);
-                String mvModelPath = srcModelPath + "_" + System.currentTimeMillis();
-                LOG.info("Old model path has been moved to {}", mvModelPath);
-                fileSystem.rename(new Path(srcModelPath), new Path(mvModelPath));
-                fileSystem.mkdirs(new Path(srcModelPath));
-                FileSystem.getLocal(conf).delete(new Path(super.getPathFinder().getModelsPath(SourceType.LOCAL)), true);
-            }
-            localArgs.add(String.format(CommonConstants.MAPREDUCE_PARAM_FORMAT, CommonConstants.GUAGUA_OUTPUT,
-                    modelPath.toString()));
-            localArgs.add(String.format(CommonConstants.MAPREDUCE_PARAM_FORMAT, CommonConstants.SHIFU_TRAINER_ID,
-                    String.valueOf(i)));
-            final String progressLogFile = getProgressLogFile(i);
-            progressLogList.add(progressLogFile);
-            localArgs.add(String.format(CommonConstants.MAPREDUCE_PARAM_FORMAT,
-                    CommonConstants.SHIFU_DTRAIN_PROGRESS_FILE, progressLogFile));
-            String hdpVersion = HDPUtils.getHdpVersionForHDP224();
-            if(StringUtils.isNotBlank(hdpVersion)) {
-                localArgs.add(String.format(CommonConstants.MAPREDUCE_PARAM_FORMAT, "hdp.version", hdpVersion));
-                HDPUtils.addFileToClassPath(HDPUtils.findContainingFile("hdfs-site.xml"), conf);
-                HDPUtils.addFileToClassPath(HDPUtils.findContainingFile("core-site.xml"), conf);
-                HDPUtils.addFileToClassPath(HDPUtils.findContainingFile("mapred-site.xml"), conf);
-                HDPUtils.addFileToClassPath(HDPUtils.findContainingFile("yarn-site.xml"), conf);
-            }
+            for(int k = 0; k < currBags; k++) {
+                int i = j * parallelNum + k;
+                if(gs.hasHyperParam()) {
+                    LOG.info("Start the {}th grid search job with params: {}", i, gs.getParams(i));
+                }
+                List<String> localArgs = new ArrayList<String>(args);
+                // set name for each bagging job.
+                localArgs.add("-n");
+                localArgs.add(String.format("Shifu Master-Workers %s Training Iteration: %s id:%s", alg, super
+                        .getModelConfig().getModelSetName(), i));
+                LOG.info("Start trainer with id: {}", i);
+                String modelName = getModelName(i);
+                Path modelPath = fileSystem.makeQualified(new Path(super.getPathFinder().getModelsPath(sourceType),
+                        modelName));
+                // check if job is continunous training, this can be set multiple times and we only get last one
+                boolean isContinous = checkContinuousTraining(fileSystem, localArgs, modelPath);
+                if(isContinous && CommonUtils.isDesicionTreeAlgorithm(modelConfig.getAlgorithm())) {
+                    isContinous = false;
+                    LOG.warn("RF & GBDT do not support continuous training");
+                }
+                // of course gs not support continuous model training
+                if(gs.hasHyperParam()) {
+                    isContinous = false;
+                }
+                if(!isContinous && !isOneJobNotContinuous) {
+                    isOneJobNotContinuous = true;
+                    // delete all old models if not continous
+                    String srcModelPath = super.getPathFinder().getModelsPath(sourceType);
+                    String mvModelPath = srcModelPath + "_" + System.currentTimeMillis();
+                    LOG.info("Old model path has been moved to {}", mvModelPath);
+                    fileSystem.rename(new Path(srcModelPath), new Path(mvModelPath));
+                    fileSystem.mkdirs(new Path(srcModelPath));
+                    FileSystem.getLocal(conf).delete(new Path(super.getPathFinder().getModelsPath(SourceType.LOCAL)),
+                            true);
+                }
+                localArgs.add(String.format(CommonConstants.MAPREDUCE_PARAM_FORMAT, CommonConstants.GUAGUA_OUTPUT,
+                        modelPath.toString()));
+                if(gs.hasHyperParam()) {
+                    Path valErrPath = fileSystem.makeQualified(new Path(super.getPathFinder().getValErrorPath(
+                            sourceType), "val_error_" + i));
+                    localArgs.add(String.format(CommonConstants.MAPREDUCE_PARAM_FORMAT,
+                            CommonConstants.GS_VALIDATION_ERROR, valErrPath.toString()));
+                }
+                localArgs.add(String.format(CommonConstants.MAPREDUCE_PARAM_FORMAT, CommonConstants.SHIFU_TRAINER_ID,
+                        String.valueOf(i)));
+                final String progressLogFile = getProgressLogFile(i);
+                progressLogList.add(progressLogFile);
+                localArgs.add(String.format(CommonConstants.MAPREDUCE_PARAM_FORMAT,
+                        CommonConstants.SHIFU_DTRAIN_PROGRESS_FILE, progressLogFile));
+                String hdpVersion = HDPUtils.getHdpVersionForHDP224();
+                if(StringUtils.isNotBlank(hdpVersion)) {
+                    localArgs.add(String.format(CommonConstants.MAPREDUCE_PARAM_FORMAT, "hdp.version", hdpVersion));
+                    HDPUtils.addFileToClassPath(HDPUtils.findContainingFile("hdfs-site.xml"), conf);
+                    HDPUtils.addFileToClassPath(HDPUtils.findContainingFile("core-site.xml"), conf);
+                    HDPUtils.addFileToClassPath(HDPUtils.findContainingFile("mapred-site.xml"), conf);
+                    HDPUtils.addFileToClassPath(HDPUtils.findContainingFile("yarn-site.xml"), conf);
+                }
 
+                if(isParallel) {
+                    guaguaClient.addJob(localArgs.toArray(new String[0]));
+                } else {
+                    TailThread tailThread = startTailThread(new String[] { progressLogFile });
+                    guaguaClient.createJob(localArgs.toArray(new String[0])).waitForCompletion(true);
+                    stopTailThread(tailThread);
+                }
+            }
             if(isParallel) {
-                guaguaClient.addJob(localArgs.toArray(new String[0]));
-            } else {
-                TailThread tailThread = startTailThread(new String[] { progressLogFile });
-                guaguaClient.createJob(localArgs.toArray(new String[0])).waitForCompletion(true);
+                TailThread tailThread = startTailThread(progressLogList.toArray(new String[0]));
+                guaguaClient.run();
                 stopTailThread(tailThread);
             }
+
+            if(!gs.hasHyperParam()) {
+                // copy model files at last.
+                for(int i = 0; i < baggingNum; i++) {
+                    String modelName = getModelName(i);
+                    Path modelPath = fileSystem.makeQualified(new Path(super.getPathFinder().getModelsPath(sourceType),
+                            modelName));
+                    copyModelToLocal(modelName, modelPath, sourceType);
+                }
+
+                // copy temp model files
+                copyTmpModelsToLocal(tmpModelsPath, sourceType);
+                LOG.info("Distributed training finished in {}ms.", System.currentTimeMillis() - start);
+            }
         }
 
-        if(isParallel) {
-            TailThread tailThread = startTailThread(progressLogList.toArray(new String[0]));
-            guaguaClient.run();
-            stopTailThread(tailThread);
+        if(gs.hasHyperParam()) {
+            LOG.info("Original grid search params: {}", modelConfig.getParams());
+            Map<String, Object> params = findBestParams(sourceType, fileSystem, gs);
+            for(Entry<String, Object> entry: params.entrySet()) {
+                modelConfig.getParams().put(entry.getKey(), entry.getValue());
+            }
+            // update ModelConfig.json
+            JSONUtils.writeValue(new File("ModelConfig.json"), modelConfig);
+            LOG.info("Grid search on distributed training finished in {}ms.", System.currentTimeMillis() - start);
         }
+    }
 
-        // copy model files at last.
-        for(int i = 0; i < baggingNum; i++) {
-            String modelName = getModelName(i);
-            Path modelPath = fileSystem.makeQualified(new Path(super.getPathFinder().getModelsPath(sourceType),
-                    modelName));
-            copyModelToLocal(modelName, modelPath, sourceType);
+    private Map<String, Object> findBestParams(SourceType sourceType, FileSystem fileSystem, GridSearch gs)
+            throws IOException {
+        // read validationerror and find the best one update ModelConfig.
+        double minValErr = Double.MAX_VALUE;
+        int minIndex = -1;
+        for(int i = 0; i < gs.getFlattenParams().size(); i++) {
+            Path valErrPath = fileSystem.makeQualified(new Path(super.getPathFinder().getValErrorPath(sourceType),
+                    "val_error_" + i));
+            if(ShifuFileUtils.isFileExists(valErrPath.toString(), sourceType)) {
+                double valErr;
+                BufferedReader reader = null;
+                try {
+                    reader = ShifuFileUtils.getReader(valErrPath.toString(), sourceType);
+                    String valErrStr = reader.readLine().toString();
+                    LOG.debug("valErrStr is {}", valErrStr);
+                    valErr = Double.valueOf(valErrStr);
+                } catch (NumberFormatException e) {
+                    LOG.warn("Parse val error failed, ignore such error. Message: {}", e.getMessage());
+                    continue;
+                } finally {
+                    reader.close();
+                }
+                if(valErr < minValErr) {
+                    minValErr = valErr;
+                    minIndex = i;
+                }
+            }
         }
-
-        // copy temp model files
-        copyTmpModelsToLocal(tmpModelsPath, sourceType);
-        LOG.info("Distributed training finished in {}ms.", System.currentTimeMillis() - start);
+        Map<String, Object> params = gs.getParams(minIndex);
+        LOG.info(
+                "The {} params is selected by grid search with params {}, please use it and set it in ModelConfig.json.",
+                minIndex, params);
+        return params;
     }
 
     static String serializeRequiredFieldList(RequiredFieldList requiredFieldList) {
@@ -602,7 +699,7 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
                 NNOutput.class.getName()));
     }
 
-    private void prepareCommonParams(final List<String> args, final SourceType sourceType) {
+    private void prepareCommonParams(boolean isGsMode, final List<String> args, final SourceType sourceType) {
         args.add("-libjars");
         addRuntimeJars(args);
 
@@ -630,7 +727,8 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
         args.add("-c");
         int numTrainEpoches = super.getModelConfig().getTrain().getNumTrainEpochs();
         // only for NN varselect, use half of epochs for sensitivity analysis
-        if(NNConstants.NN_ALG_NAME.equalsIgnoreCase(alg) && this.isForVarSelect()
+        // if for gs mode, half of iterations are used
+        if(NNConstants.NN_ALG_NAME.equalsIgnoreCase(alg) && (this.isForVarSelect() || isGsMode)
                 && numTrainEpoches >= VAR_SELECT_TRAINING_DECAY_EPOCHES_THRESHOLD) {
             numTrainEpoches = numTrainEpoches / 2;
         }
@@ -701,9 +799,9 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
                     GuaguaConstants.GUAGUA_SPLIT_MAX_COMBINED_SPLIT_SIZE,
                     Environment.getProperty(GuaguaConstants.GUAGUA_SPLIT_MAX_COMBINED_SPLIT_SIZE, "268435456")));
         }
-        // special tuning parameters for shifu, 0.99 means each iteation master wait for 99% workers and then can go to
+        // special tuning parameters for shifu, 0.98 means each iteation master wait for 98% workers and then can go to
         // next iteration.
-        args.add(String.format(CommonConstants.MAPREDUCE_PARAM_FORMAT, GuaguaConstants.GUAGUA_MIN_WORKERS_RATIO, 0.99));
+        args.add(String.format(CommonConstants.MAPREDUCE_PARAM_FORMAT, GuaguaConstants.GUAGUA_MIN_WORKERS_RATIO, 0.98));
         // 2 seconds if waiting over 10, consider 99% workers; these two can be overrided in shifuconfig
         args.add(String.format(CommonConstants.MAPREDUCE_PARAM_FORMAT, GuaguaConstants.GUAGUA_MIN_WORKERS_TIMEOUT,
                 2 * 1000L));

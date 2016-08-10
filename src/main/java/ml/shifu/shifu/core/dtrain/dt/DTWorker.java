@@ -56,6 +56,7 @@ import ml.shifu.shifu.core.alg.NNTrainer;
 import ml.shifu.shifu.core.dtrain.CommonConstants;
 import ml.shifu.shifu.core.dtrain.DTrainUtils;
 import ml.shifu.shifu.core.dtrain.dt.DTWorkerParams.NodeStats;
+import ml.shifu.shifu.core.dtrain.gs.GridSearch;
 import ml.shifu.shifu.util.CommonUtils;
 
 import org.apache.commons.math3.distribution.PoissonDistribution;
@@ -291,7 +292,14 @@ public class DTWorker
         this.trainerId = Integer.valueOf(context.getProps().getProperty(CommonConstants.SHIFU_TRAINER_ID, "0"));
         this.isOneVsAll = modelConfig.isClassification() && modelConfig.getTrain().isOneVsAll();
 
-        this.treeNum = Integer.valueOf(this.modelConfig.getTrain().getParams().get("TreeNum").toString());;
+        GridSearch gs = new GridSearch(modelConfig.getTrain().getParams());
+        Map<String, Object> validParams = this.modelConfig.getTrain().getParams();
+        if(gs.hasHyperParam()) {
+            validParams = gs.getParams(this.trainerId);
+            LOG.info("Start grid search worker with params: {}", validParams);
+        }
+
+        this.treeNum = Integer.valueOf(validParams.get("TreeNum").toString());;
 
         double memoryFraction = Double.valueOf(context.getProps().getProperty("guagua.data.memoryFraction", "0.6"));
         LOG.info("Max heap memory: {}, fraction: {}", Runtime.getRuntime().maxMemory(), memoryFraction);
@@ -319,9 +327,9 @@ public class DTWorker
         }
 
         int numClasses = this.modelConfig.isClassification() ? this.modelConfig.getTags().size() : 2;
-        String imStr = this.modelConfig.getTrain().getParams().get("Impurity").toString();
-        int minInstancesPerNode = Integer.valueOf(this.modelConfig.getParams().get("MinInstancesPerNode").toString());
-        double minInfoGain = Double.valueOf(this.modelConfig.getParams().get("MinInfoGain").toString());
+        String imStr = validParams.get("Impurity").toString();
+        int minInstancesPerNode = Integer.valueOf(validParams.get("MinInstancesPerNode").toString());
+        double minInfoGain = Double.valueOf(validParams.get("MinInfoGain").toString());
         if(imStr.equalsIgnoreCase("entropy")) {
             impurity = new Entropy(numClasses, minInstancesPerNode, minInfoGain);
         } else if(imStr.equalsIgnoreCase("gini")) {
@@ -333,7 +341,7 @@ public class DTWorker
         this.isRF = ALGORITHM.RF.toString().equalsIgnoreCase(modelConfig.getAlgorithm());
         this.isGBDT = ALGORITHM.GBT.toString().equalsIgnoreCase(modelConfig.getAlgorithm());
 
-        String lossStr = this.modelConfig.getTrain().getParams().get("Loss").toString();
+        String lossStr = validParams.get("Loss").toString();
         if(lossStr.equalsIgnoreCase("log")) {
             this.loss = new LogLoss();
         } else if(lossStr.equalsIgnoreCase("absolute")) {
@@ -343,8 +351,8 @@ public class DTWorker
         }
 
         if(this.isGBDT) {
-            this.learningRate = Double.valueOf(this.modelConfig.getParams().get(NNTrainer.LEARNING_RATE).toString());
-            Object swrObj = this.modelConfig.getParams().get("SampleWithReplacement");
+            this.learningRate = Double.valueOf(validParams.get(NNTrainer.LEARNING_RATE).toString());
+            Object swrObj = validParams.get("SampleWithReplacement");
             if(swrObj != null) {
                 this.gbdtSampleWithReplacement = Boolean.TRUE.toString().equalsIgnoreCase(swrObj.toString());
             }
