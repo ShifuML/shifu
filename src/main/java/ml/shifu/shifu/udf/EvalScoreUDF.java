@@ -168,8 +168,8 @@ public class EvalScoreUDF extends AbstractTrainerUDF<Tuple> {
             return;
         }
         // TODO default weight here = 1 ? or throw exceptions
-        double dWeight = 1;
-        if(weight.length() != 0) {
+        double dWeight = 1.0;
+        if(StringUtils.isNotBlank(weight)) {
             try {
                 dWeight = Double.parseDouble(weight);
             } catch (Exception e) {
