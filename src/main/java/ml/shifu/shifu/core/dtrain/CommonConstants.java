@@ -48,5 +48,8 @@ public interface CommonConstants {
     public static final String RF_ALG_NAME = "RF";
 
     public static final String GBT_ALG_NAME = "GBT";
+    
+    public static final String GS_VALIDATION_ERROR = "gridsearch.validation.error";
+
 
 }

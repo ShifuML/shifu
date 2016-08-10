@@ -17,6 +17,7 @@ package ml.shifu.shifu.core.dtrain.nn;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.Map;
 import java.util.Properties;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -29,6 +30,7 @@ import ml.shifu.shifu.core.alg.NNTrainer;
 import ml.shifu.shifu.core.dtrain.CommonConstants;
 import ml.shifu.shifu.core.dtrain.DTrainUtils;
 import ml.shifu.shifu.core.dtrain.dataset.PersistBasicFloatNetwork;
+import ml.shifu.shifu.core.dtrain.gs.GridSearch;
 import ml.shifu.shifu.util.CommonUtils;
 
 import org.apache.hadoop.conf.Configuration;
@@ -95,6 +97,13 @@ public class NNOutput extends BasicMasterInterceptor<NNParams, NNParams> {
      * {@link #postApplication(MasterContext)}.
      */
     private FSDataOutputStream progressOutput = null;
+
+    /**
+     * If for gs mode, write valid error to output
+     */
+    private GridSearch gridSearch;
+
+    private Map<String, Object> validParams;
 
     @Override
     public void preApplication(MasterContext<NNParams, NNParams> context) {
@@ -171,6 +180,24 @@ public class NNOutput extends BasicMasterInterceptor<NNParams, NNParams> {
             Path out = new Path(context.getProps().getProperty(CommonConstants.GUAGUA_OUTPUT));
             writeModelWeightsToFileSystem(optimizeddWeights, out);
         }
+
+        if(this.gridSearch.hasHyperParam()) {
+            Path valErrOutput = new Path(context.getProps().getProperty(CommonConstants.GS_VALIDATION_ERROR));
+            writeValErrorToFileSystem(context.getMasterResult().getTestError(), valErrOutput);
+        }
+    }
+
+    private void writeValErrorToFileSystem(double valError, Path out) {
+        FSDataOutputStream fos = null;
+        try {
+            fos = FileSystem.get(new Configuration()).create(out);
+            LOG.info("Writing valerror to {}", out);
+            fos.write((valError + "").getBytes("UTF-8"));
+        } catch (IOException e) {
+            LOG.error("Error in writing output.", e);
+        } finally {
+            IOUtils.closeStream(fos);
+        }
     }
 
     /**
@@ -190,9 +217,15 @@ public class NNOutput extends BasicMasterInterceptor<NNParams, NNParams> {
         }
         if(isInit.compareAndSet(false, true)) {
             loadConfigFiles(context.getProps());
-            initNetwork();
             this.trainerId = context.getProps().getProperty(CommonConstants.SHIFU_TRAINER_ID);
             this.tmpModelsFolder = context.getProps().getProperty(CommonConstants.SHIFU_TMP_MODELS_FOLDER);
+            gridSearch = new GridSearch(modelConfig.getTrain().getParams());
+            validParams = this.modelConfig.getTrain().getParams();
+            if(gridSearch.hasHyperParam()) {
+                validParams = gridSearch.getParams(Integer.parseInt(trainerId));
+                LOG.info("Start grid search in nn output with params: {}", validParams);
+            }
+            initNetwork();
         }
 
         try {
@@ -227,9 +260,9 @@ public class NNOutput extends BasicMasterInterceptor<NNParams, NNParams> {
         // if is one vs all classification, outputNodeCount is set to 1
         int outputNodeCount = modelConfig.isRegression() ? inputOutputIndex[1]
                 : (modelConfig.getTrain().isOneVsAll() ? inputOutputIndex[1] : modelConfig.getTags().size());
-        int numLayers = (Integer) getModelConfig().getParams().get(NNTrainer.NUM_HIDDEN_LAYERS);
-        List<String> actFunc = (List<String>) getModelConfig().getParams().get(NNTrainer.ACTIVATION_FUNC);
-        List<Integer> hiddenNodeList = (List<Integer>) getModelConfig().getParams().get(NNTrainer.NUM_HIDDEN_NODES);
+        int numLayers = (Integer) validParams.get(NNTrainer.NUM_HIDDEN_LAYERS);
+        List<String> actFunc = (List<String>) validParams.get(NNTrainer.ACTIVATION_FUNC);
+        List<Integer> hiddenNodeList = (List<Integer>) validParams.get(NNTrainer.NUM_HIDDEN_NODES);
 
         this.network = DTrainUtils.generateNetwork(inputNodeCount, outputNodeCount, numLayers, actFunc, hiddenNodeList,
                 false);
