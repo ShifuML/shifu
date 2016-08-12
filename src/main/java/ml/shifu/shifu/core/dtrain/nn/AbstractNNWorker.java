@@ -44,6 +44,7 @@ import ml.shifu.shifu.core.dtrain.gs.GridSearch;
 import ml.shifu.shifu.util.CommonUtils;
 
 import org.apache.commons.lang.math.RandomUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.math3.distribution.PoissonDistribution;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.LongWritable;
@@ -422,12 +423,23 @@ public abstract class AbstractNNWorker<VALUE extends Writable> extends
         LOG.info("        - # Records of the Training Set: {}.", this.trainingData.getRecordCount());
         LOG.info("        - # Records of the Validation Set: {}.", this.testingData.getRecordCount());
     }
+    
+    protected void addDataPairToDataSet(long hashcode, FloatMLDataPair pair) {
+        addDataPairToDataSet(hashcode,pair,false);
+    }
 
     /**
      * Add data pair to data set according to setting parameters. Still set hashCode to long to make double and long
      * friendly.
      */
-    protected void addDataPairToDataSet(long hashcode, FloatMLDataPair pair) {
+    protected void addDataPairToDataSet(long hashcode, FloatMLDataPair pair,boolean isTesting) {
+        if(isTesting) {
+            this.testingData.add(pair);
+            return;
+        } else if(StringUtils.isNotBlank(modelConfig.getValidationDataSetRawPath()) && (!isTesting)) {
+            this.trainingData.add(pair);
+            return;
+        }
         double crossValidationRate = this.modelConfig.getCrossValidationRate();
         if(this.modelConfig.isFixInitialInput()) {
             long longCrossValidation = Double.valueOf(crossValidationRate * 100).longValue();
