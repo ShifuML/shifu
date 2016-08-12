@@ -66,6 +66,10 @@
                 "type": "text",
                 "directive": "input"
             }, {
+                "name": "validationDataPath",
+                "type": "text",
+                "directive": "input"
+            }, {
                 "name": "dataDelimiter",
                 "type": "text",
                 "directive": "input",
@@ -669,6 +673,10 @@
                         ]
                     }, {
                         "name": "dataPath",
+                        "type": "text",
+                        "directive": "input"
+                    },{
+                        "name": "testDataPath",
                         "type": "text",
                         "directive": "input"
                     }, {

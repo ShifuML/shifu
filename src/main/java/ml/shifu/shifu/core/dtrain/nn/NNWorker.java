@@ -132,7 +132,11 @@ public class NNWorker extends AbstractNNWorker<Text> {
         } else {
             pair.setSignificance(significance);
         }
-        addDataPairToDataSet(hashcode, pair);
+        boolean isTesting = false;
+        if(workerContext.getAttachment()!=null&&workerContext.getAttachment() instanceof Boolean){
+            isTesting = (Boolean)workerContext.getAttachment();
+        }
+        addDataPairToDataSet(hashcode, pair,isTesting);
     }
 
     /*

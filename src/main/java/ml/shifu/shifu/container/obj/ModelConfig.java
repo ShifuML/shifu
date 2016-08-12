@@ -473,6 +473,11 @@ public class ModelConfig {
     public String getDataSetRawPath() {
         return dataSet.getDataPath();
     }
+    
+    @JsonIgnore
+    public String getValidationDataSetRawPath() {
+        return dataSet.getValidationDataPath();
+    }
 
     @JsonIgnore
     public boolean isVariableStoreEnabled() {
