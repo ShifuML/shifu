@@ -62,6 +62,7 @@ import ml.shifu.shifu.exception.ShifuErrorCode;
 import ml.shifu.shifu.exception.ShifuException;
 import ml.shifu.shifu.fs.ShifuFileUtils;
 import ml.shifu.shifu.guagua.GuaguaParquetMapReduceClient;
+import ml.shifu.shifu.guagua.ShifuInputFormat;
 import ml.shifu.shifu.util.CommonUtils;
 import ml.shifu.shifu.util.Constants;
 import ml.shifu.shifu.util.Environment;
@@ -425,7 +426,9 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
                 HDPUtils.addFileToClassPath(HDPUtils.findContainingFile("mapred-site.xml"), conf);
                 HDPUtils.addFileToClassPath(HDPUtils.findContainingFile("yarn-site.xml"), conf);
             }
-
+            
+            LOG.info("job_parameter:"+localArgs.toString());
+            
             if(isParallel) {
                 guaguaClient.addJob(localArgs.toArray(new String[0]));
             } else {
@@ -592,6 +595,11 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
         args.add("-i");
         args.add(ShifuFileUtils.getFileSystemBySourceType(sourceType)
                 .makeQualified(new Path(super.getPathFinder().getNormalizedDataPath())).toString());
+        
+        if(StringUtils.isNotBlank(modelConfig.getValidationDataSetRawPath())) {
+            args.add("-inputformat");
+            args.add(ShifuInputFormat.class.getName());
+        }
 
         String zkServers = Environment.getProperty(Environment.ZOO_KEEPER_SERVERS);
         if(StringUtils.isEmpty(zkServers)) {
@@ -621,6 +629,9 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
 
         args.add(String.valueOf(numTrainEpoches));
 
+        args.add(String.format(CommonConstants.MAPREDUCE_PARAM_FORMAT, "shifu.crossValidation.dir",
+                ShifuFileUtils.getFileSystemBySourceType(sourceType).
+                makeQualified(new Path(super.getPathFinder().getNormalizedValidationDataPath(sourceType))).toString()));
         args.add(String.format(CommonConstants.MAPREDUCE_PARAM_FORMAT, NNConstants.MAPRED_JOB_QUEUE_NAME,
                 Environment.getProperty(Environment.HADOOP_JOB_QUEUE, Constants.DEFAULT_JOB_QUEUE)));
         args.add(String.format(

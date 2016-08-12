@@ -37,6 +37,7 @@ import ml.shifu.shifu.core.dtrain.CommonConstants;
 import ml.shifu.shifu.core.dtrain.DTrainUtils;
 import ml.shifu.shifu.util.CommonUtils;
 
+import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.math3.distribution.PoissonDistribution;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Text;
@@ -351,7 +352,11 @@ public class LogisticRegressionWorker
             // Double.compare(ideal[0], 1d) == 0 means positive tags; sample + 1 to avoid sample count to 0
             significance *= (this.upSampleRng.sample() + 1);
         }
-        this.addDataPairToDataSet(hashcode, new Data(inputData, outputData, significance));
+        boolean isTesting = false;
+        if(context.getAttachment()!=null&&context.getAttachment() instanceof Boolean){
+            isTesting = (Boolean)context.getAttachment();
+        }
+        this.addDataPairToDataSet(hashcode,new Data(inputData, outputData, significance),isTesting);
     }
 
     private void loadConfigFiles(final Properties props) {
@@ -371,7 +376,15 @@ public class LogisticRegressionWorker
      * Add data pair to data set according to setting parameters. Still set hashCode to long to make double and long
      * friendly.
      */
-    private void addDataPairToDataSet(long hashcode, Data record) {
+    private void addDataPairToDataSet(long hashcode,Data record,boolean isTesting) {
+        if(isTesting) {
+            this.testingData.append(record);
+            return;
+        } else if(StringUtils.isNotBlank(modelConfig.getValidationDataSetRawPath()) && (!isTesting)) {
+            this.trainingData.append(record);
+            return;
+        }
+        LOG.info("wrong_branch");
         double crossValidationRate = this.modelConfig.getCrossValidationRate();
         if(this.modelConfig.isFixInitialInput()) {
             long longCrossValidation = Double.valueOf(crossValidationRate * 100).longValue();
