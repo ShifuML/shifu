@@ -68,8 +68,7 @@ import com.google.common.base.Splitter;
  * L1 and l2 regulations are supported by configuration: RegularizedConstant in model params of ModelConfig.json.
  */
 @ComputableMonitor(timeUnit = TimeUnit.SECONDS, duration = 240)
-public class LogisticRegressionWorker
-        extends
+public class LogisticRegressionWorker extends
         AbstractWorkerComputable<LogisticRegressionParams, LogisticRegressionParams, GuaguaWritableAdapter<LongWritable>, GuaguaWritableAdapter<Text>> {
 
     private static final Logger LOG = LoggerFactory.getLogger(LogisticRegressionWorker.class);
@@ -145,6 +144,11 @@ public class LogisticRegressionWorker
      */
     protected PoissonDistribution upSampleRng = null;
 
+    /**
+     * Indicates if there are cross validation data sets.
+     */
+    protected boolean isCrossValidation = false;
+
     protected boolean isUpSampleEnabled() {
         return this.upSampleRng != null;
     }
@@ -161,6 +165,7 @@ public class LogisticRegressionWorker
         this.inputNum = inputOutputIndex[0] == 0 ? inputOutputIndex[2] : inputOutputIndex[0];
         this.outputNum = inputOutputIndex[1];
         this.candidateNum = inputOutputIndex[2];
+        this.isCrossValidation = StringUtils.isNotBlank(modelConfig.getValidationDataSetRawPath());
         if(this.inputNum == 0) {
             throw new IllegalStateException("No any variables are selected, please try variable select step firstly.");
         }
@@ -176,11 +181,11 @@ public class LogisticRegressionWorker
         double crossValidationRate = this.modelConfig.getCrossValidationRate();
         String tmpFolder = context.getProps().getProperty("guagua.data.tmpfolder", "tmp");
         this.trainingData = new BytableMemoryDiskList<Data>(
-                (long) (Runtime.getRuntime().maxMemory() * memoryFraction * (1 - crossValidationRate)), tmpFolder
-                        + File.separator + "train-" + System.currentTimeMillis(), Data.class.getName());
+                (long) (Runtime.getRuntime().maxMemory() * memoryFraction * (1 - crossValidationRate)),
+                tmpFolder + File.separator + "train-" + System.currentTimeMillis(), Data.class.getName());
         this.testingData = new BytableMemoryDiskList<Data>(
-                (long) (Runtime.getRuntime().maxMemory() * memoryFraction * crossValidationRate), tmpFolder
-                        + File.separator + "test-" + System.currentTimeMillis(), Data.class.getName());
+                (long) (Runtime.getRuntime().maxMemory() * memoryFraction * crossValidationRate),
+                tmpFolder + File.separator + "test-" + System.currentTimeMillis(), Data.class.getName());
         // cannot find a good place to close these two data set, using Shutdown hook
         Runtime.getRuntime().addShutdownHook(new Thread(new Runnable() {
             @Override
@@ -192,7 +197,8 @@ public class LogisticRegressionWorker
     }
 
     @Override
-    public LogisticRegressionParams doCompute(WorkerContext<LogisticRegressionParams, LogisticRegressionParams> context) {
+    public LogisticRegressionParams doCompute(
+            WorkerContext<LogisticRegressionParams, LogisticRegressionParams> context) {
         if(context.isFirstIteration()) {
             return new LogisticRegressionParams();
         } else {
@@ -231,10 +237,10 @@ public class LogisticRegressionWorker
                 double error = result - data.outputs[0];
                 testingFinalError += caculateMSEError(error);
             }
-            LOG.info("Iteration {} training data with error {}", context.getCurrentIteration(), trainingFinalError
-                    / trainingSize);
-            LOG.info("Iteration {} testing data with error {}", context.getCurrentIteration(), testingFinalError
-                    / testingSize);
+            LOG.info("Iteration {} training data with error {}", context.getCurrentIteration(),
+                    trainingFinalError / trainingSize);
+            LOG.info("Iteration {} testing data with error {}", context.getCurrentIteration(),
+                    testingFinalError / testingSize);
             return new LogisticRegressionParams(gradients, trainingFinalError, testingFinalError, trainingSize,
                     testingSize);
         }
@@ -358,20 +364,20 @@ public class LogisticRegressionWorker
             significance *= (this.upSampleRng.sample() + 1);
         }
         boolean isTesting = false;
-        if(context.getAttachment()!=null&&context.getAttachment() instanceof Boolean){
-            isTesting = (Boolean)context.getAttachment();
+        if(context.getAttachment() != null && context.getAttachment() instanceof Boolean) {
+            isTesting = (Boolean) context.getAttachment();
         }
-        this.addDataPairToDataSet(hashcode,new Data(inputData, outputData, significance),isTesting);
+        this.addDataPairToDataSet(hashcode, new Data(inputData, outputData, significance), isTesting);
     }
 
     private void loadConfigFiles(final Properties props) {
         try {
-            SourceType sourceType = SourceType.valueOf(props.getProperty(CommonConstants.MODELSET_SOURCE_TYPE,
-                    SourceType.HDFS.toString()));
+            SourceType sourceType = SourceType
+                    .valueOf(props.getProperty(CommonConstants.MODELSET_SOURCE_TYPE, SourceType.HDFS.toString()));
             this.modelConfig = CommonUtils.loadModelConfig(props.getProperty(CommonConstants.SHIFU_MODEL_CONFIG),
                     sourceType);
-            this.columnConfigList = CommonUtils.loadColumnConfigList(
-                    props.getProperty(CommonConstants.SHIFU_COLUMN_CONFIG), sourceType);
+            this.columnConfigList = CommonUtils
+                    .loadColumnConfigList(props.getProperty(CommonConstants.SHIFU_COLUMN_CONFIG), sourceType);
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
@@ -381,15 +387,14 @@ public class LogisticRegressionWorker
      * Add data pair to data set according to setting parameters. Still set hashCode to long to make double and long
      * friendly.
      */
-    private void addDataPairToDataSet(long hashcode,Data record,boolean isTesting) {
+    private void addDataPairToDataSet(long hashcode, Data record, boolean isTesting) {
         if(isTesting) {
             this.testingData.append(record);
             return;
-        } else if(StringUtils.isNotBlank(modelConfig.getValidationDataSetRawPath()) && (!isTesting)) {
+        } else if(this.isCrossValidation && (!isTesting)) {
             this.trainingData.append(record);
             return;
         }
-        LOG.info("wrong_branch");
         double crossValidationRate = this.modelConfig.getCrossValidationRate();
         if(this.modelConfig.isFixInitialInput()) {
             long longCrossValidation = Double.valueOf(crossValidationRate * 100).longValue();

@@ -24,6 +24,7 @@ import org.slf4j.LoggerFactory;
 
 import ml.shifu.guagua.hadoop.io.GuaguaInputSplit;
 import ml.shifu.guagua.mapreduce.GuaguaInputFormat;
+import ml.shifu.shifu.core.dtrain.CommonConstants;
 
 public class ShifuInputFormat extends GuaguaInputFormat {
 
@@ -221,7 +222,7 @@ public class ShifuInputFormat extends GuaguaInputFormat {
     }
 
     public static Path[] getInputPaths(JobContext context) {
-        String dirs = context.getConfiguration().get("shifu.crossValidation.dir", "");
+        String dirs = context.getConfiguration().get(CommonConstants.CROSS_VALIDATION_DIR, "");
         LOG.info("crossValidation_dir:"+dirs);
         String[] list = StringUtils.split(dirs);
         Path[] result = new Path[list.length];
