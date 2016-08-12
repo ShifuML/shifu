@@ -137,6 +137,12 @@ public class PigExecutor {
             pigServer = new PigServer(ExecType.LOCAL);
         }
 
+        for(Map.Entry<Object, Object> entry: Environment.getProperties().entrySet()) {
+            if(CommonUtils.isHadoopConfigurationInjected(entry.getKey().toString())) {
+                pigServer.getPigContext().getProperties().put(entry.getKey(), entry.getValue());
+            }
+        }
+
         Map<String, String> pigParamsMap = CommonUtils.getPigParamMap(modelConfig, sourceType);
         if(paramsMap != null) {
             pigParamsMap.putAll(paramsMap);

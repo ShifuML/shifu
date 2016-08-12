@@ -211,7 +211,8 @@
                     {"label": "SPDTI", "value": "SPDTI"},
                     {"label": "SPDT", "value": "SPDT"},
                     {"label": "MunroPat", "value": "MunroPat"},
-                    {"label": "MunroPatI", "value": "MunroPatI"}
+                    {"label": "MunroPatI", "value": "MunroPatI"},
+                    {"label": "Dynamic Binning", "value":"DynamicBinning"}
                 ]
             }, {
                 "name": "psiColumnName",
@@ -472,7 +473,7 @@
                     {"label": "Support Vector Machine", "value":"SVM"},
                     {"label": "Decision Tree", "value":"DT"},
                     {"label": "Random Forest", "value":"RF"},
-                    {"label": "Gradient Boost Decision Tree", "value":"GBDT"}
+                    {"label": "Gradient Boost Decision Tree", "value":"GBT"}
                 ]
             }, {
                 "name": "params",
@@ -552,6 +553,11 @@
                         "directive": "input",
                         "defval" : 256
                     }, {
+                        "name" : "TreeNum",
+                        "type" : "number",
+                        "directive": "input",
+                        "defval" : 5
+                    }, {
                         "name" : "Impurity",
                         "type" : "text",
                         "directive": "select",
@@ -602,6 +608,11 @@
                             {"label": "Resilient Propagation", "value":"R"},
                             {"label": "Scaled Conjugate Gradient", "value":"S"}
                         ]
+                    }, {
+                        "name": "SampleWithReplacement",
+                        "type": "boolean",
+                        "directive": "input",
+                        "defval": false
                     } , {
                         "name" : "Kernel",
                         "type" : "text",

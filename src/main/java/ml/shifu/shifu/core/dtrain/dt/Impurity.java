@@ -349,7 +349,7 @@ class Entropy extends Impurity {
     @Override
     public void featureUpdate(double[] featuerStatistic, int binIndex, float label, float significance, float weight) {
         // label + 0.1f to avoid 0.99999f is converted to 0
-        featuerStatistic[binIndex * super.statsSize + (int) (label + 0.1f)] += significance * weight;
+        featuerStatistic[binIndex * super.statsSize + (int) (label + 0.000001f)] += significance * weight;
     }
 
     private double log2(double x) {
@@ -503,7 +503,7 @@ class Gini extends Impurity {
     @Override
     public void featureUpdate(double[] featuerStatistic, int binIndex, float label, float significance, float weight) {
         // label + 0.1f to avoid 0.99999f is converted to 0
-        featuerStatistic[binIndex * super.statsSize + (int) (label + 0.1f)] += significance * weight;
+        featuerStatistic[binIndex * super.statsSize + (int) (label + 0.000001f)] += significance * weight;
     }
 
 }

@@ -612,7 +612,7 @@ public final class CommonUtils {
                 br = new BufferedReader(new InputStreamReader(stream));
                 return LR.loadFromString(br.readLine());
             } else if(modelPath.getName().endsWith(CommonConstants.RF_ALG_NAME.toLowerCase())
-                    || modelPath.getName().endsWith(CommonConstants.GBDT_ALG_NAME.toLowerCase())) {
+                    || modelPath.getName().endsWith(CommonConstants.GBT_ALG_NAME.toLowerCase())) {
                 return TreeModel.loadFromStream(stream, modelConfig, columnConfigList);
             } else {
                 return BasicML.class.cast(EncogDirectoryPersistence.loadObject(stream));
@@ -989,7 +989,12 @@ public final class CommonUtils {
     }
 
     public static boolean isDesicionTreeAlgorithm(String alg) {
-        return CommonConstants.RF_ALG_NAME.equalsIgnoreCase(alg) || CommonConstants.GBDT_ALG_NAME.equalsIgnoreCase(alg);
+        return CommonConstants.RF_ALG_NAME.equalsIgnoreCase(alg) || CommonConstants.GBT_ALG_NAME.equalsIgnoreCase(alg);
+    }
+
+    public static boolean isHadoopConfigurationInjected(String key) {
+        return key.startsWith("nn") || key.startsWith("guagua") || key.startsWith("shifu") || key.startsWith("mapred")
+                || key.startsWith("io") || key.startsWith("hadoop") || key.startsWith("yarn");
     }
 
     /**

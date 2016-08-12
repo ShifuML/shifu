@@ -124,7 +124,7 @@ public class BasicModelProcessor {
      * 
      * @throws IOException
      */
-    protected void saveModelConfig() throws IOException {
+    public void saveModelConfig() throws IOException {
         log.info("Saving ModelConfig...");
         JSONUtils.writeValue(new File(pathFinder.getModelConfigPath(SourceType.LOCAL)), modelConfig);
     }
@@ -134,7 +134,7 @@ public class BasicModelProcessor {
      * 
      * @throws IOException
      */
-    protected void saveColumnConfigListAndColumnStats(boolean columnStats) throws IOException {
+    public void saveColumnConfigListAndColumnStats(boolean columnStats) throws IOException {
         log.info("Saving ColumnConfig...");
         JSONUtils.writeValue(new File(pathFinder.getColumnConfigPath(SourceType.LOCAL)), columnConfigList);
     }
@@ -171,7 +171,7 @@ public class BasicModelProcessor {
      * 
      * @param scanners
      */
-    protected void closeScanners(List<Scanner> scanners) {
+    public void closeScanners(List<Scanner> scanners) {
         if(CollectionUtils.isNotEmpty(scanners)) {
             for(Scanner scanner: scanners) {
                 scanner.close();
@@ -187,7 +187,7 @@ public class BasicModelProcessor {
      * @return
      * @throws IOException
      */
-    protected boolean syncDataToHdfs(SourceType sourceType) throws IOException {
+    public boolean syncDataToHdfs(SourceType sourceType) throws IOException {
         if(SourceType.HDFS.equals(sourceType)) {
             CommonUtils.copyConfFromLocalToHDFS(modelConfig);
             return true;
@@ -312,7 +312,7 @@ public class BasicModelProcessor {
                 modelConfig.setParams(param);
                 saveModelConfig();
             }
-        } else if(alg.equalsIgnoreCase("GBDT")) {
+        } else if(alg.equalsIgnoreCase("GBT")) {
             if(!param.containsKey("FeatureSubsetStrategy")) {
                 param = new LinkedHashMap<String, Object>();
 

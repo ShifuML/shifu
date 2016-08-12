@@ -29,11 +29,12 @@ public class WoeLocalTransformCreator extends ZscoreLocalTransformCreator {
      *            - ColumnConfig for numerical variable
      * @param cutoff
      *            - cutoff of normalization
+     * @param normType
+     *            - the normalization method that is used to generate DerivedField
      * @return DerivedField for variable
      */
-    protected List<DerivedField> createNumericalDerivedField(ColumnConfig config, double cutoff) {
-        ModelNormalizeConf.NormType normType = this.modelConfig.getNormalizeType();
-
+    @Override
+    protected List<DerivedField> createNumericalDerivedField(ColumnConfig config, double cutoff, ModelNormalizeConf.NormType normType) {
         List<Double> binWoeList = (normType.equals(ModelNormalizeConf.NormType.WOE) ? config.getBinCountWoe() : config
                 .getBinWeightedWoe());
         List<Double> binBoundaryList = config.getBinBoundary();
@@ -45,7 +46,13 @@ public class WoeLocalTransformCreator extends ZscoreLocalTransformCreator {
             Interval interval = new Interval();
 
             if(i == 0) {
-                interval.withClosure(Interval.Closure.OPEN_OPEN).withRightMargin(binBoundaryList.get(i + 1));
+                if ( binBoundaryList.size() == 1 ) {
+                    interval.withClosure(Interval.Closure.OPEN_OPEN)
+                            .withLeftMargin(Double.NEGATIVE_INFINITY)
+                            .withRightMargin(Double.POSITIVE_INFINITY);
+                } else {
+                    interval.withClosure(Interval.Closure.OPEN_OPEN).withRightMargin(binBoundaryList.get(i + 1));
+                }
             } else if(i == binBoundaryList.size() - 1) {
                 interval.withClosure(Interval.Closure.CLOSED_OPEN).withLeftMargin(binBoundaryList.get(i));
             } else {
@@ -61,16 +68,14 @@ public class WoeLocalTransformCreator extends ZscoreLocalTransformCreator {
         discretize
                 .withDataType(DataType.DOUBLE)
                 .withField(FieldName.create(config.getColumnName()))
-                .withMapMissingTo(
-                        Normalizer.normalize(config, null, cutoff, this.modelConfig.getNormalizeType()).toString())
-                .withDefaultValue(
-                        Normalizer.normalize(config, null, cutoff, this.modelConfig.getNormalizeType()).toString())
+                .withMapMissingTo(Normalizer.normalize(config, null, cutoff, normType).toString())
+                .withDefaultValue(Normalizer.normalize(config, null, cutoff, normType).toString())
                 .withDiscretizeBins(discretizeBinList);
 
         // derived field name is consisted of FieldName and "_zscl"
         List<DerivedField> derivedFields = new ArrayList<DerivedField>();
         derivedFields.add(new DerivedField(OpType.CONTINUOUS, DataType.DOUBLE).withName(
-                FieldName.create(genPmmlColumnName(config.getColumnName()))).withExpression(discretize));
+                FieldName.create(genPmmlColumnName(config.getColumnName(), normType))).withExpression(discretize));
         return derivedFields;
     }
 }

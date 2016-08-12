@@ -257,11 +257,21 @@ public class DTMaster extends AbstractMasterComputable<DTMasterParams, DTWorkerP
         DTMasterParams masterParams = new DTMasterParams(count, squareError);
         if(queue.isEmpty()) {
             if(this.isGBDT) {
+                Node treeNode = this.trees.get(this.trees.size() - 1).getNode();
                 if(this.trees.size() == this.treeNum) {
                     masterParams.setHalt(true);
                     LOG.info("Queue is empty, training is stopped in iteration {}.", context.getCurrentIteration());
+                } else if(treeNode.getLeft() == null && treeNode.getRight() == null) {
+                    // if very good performance, here can be some issues, say you'd like to get 5 trees, but in the 2nd
+                    // tree, you get one perfect tree, no need continue but warn users about such issue: set
+                    // BaggingSampleRate not to 1 can solve such issue to avoid overfit
+                    masterParams.setHalt(true);
+                    LOG.warn(
+                            "Tree is learned 100% well, there must be overfit here, please tune BaggingSampleRate, training is stopped in iteration {}.",
+                            context.getCurrentIteration());
                 } else {
                     TreeNode newRootNode = new TreeNode(this.trees.size(), new Node(Node.ROOT_INDEX));
+                    LOG.info("The {} tree is to be built.", this.trees.size());
                     this.trees.add(newRootNode);
                     newRootNode.setFeatures(getSubsamplingFeatures(this.featureSubsetStrategy));
                     // only one node
@@ -451,9 +461,9 @@ public class DTMaster extends AbstractMasterComputable<DTMasterParams, DTWorkerP
         assert this.maxDepth > 0 && this.maxDepth <= 20;
         this.maxStatsMemory = Long.valueOf(this.modelConfig.getTrain().getParams().get("MaxStatsMemoryMB").toString()) * 1024 * 1024;
         // assert this.maxStatsMemory <= Math.min(Runtime.getRuntime().maxMemory() * 0.6, 800 * 1024 * 1024L);
-        this.treeNum = this.modelConfig.getTrain().getBaggingNum();
+        this.treeNum = Integer.valueOf(this.modelConfig.getTrain().getParams().get("TreeNum").toString());;
         this.isRF = ALGORITHM.RF.toString().equalsIgnoreCase(modelConfig.getAlgorithm());
-        this.isGBDT = ALGORITHM.GBDT.toString().equalsIgnoreCase(modelConfig.getAlgorithm());
+        this.isGBDT = ALGORITHM.GBT.toString().equalsIgnoreCase(modelConfig.getAlgorithm());
         if(this.isGBDT) {
             // learning rate only effective in gbdt
             this.learningRate = Double.valueOf(this.modelConfig.getParams().get(NNTrainer.LEARNING_RATE).toString());
@@ -473,10 +483,11 @@ public class DTMaster extends AbstractMasterComputable<DTMasterParams, DTWorkerP
         } else {
             impurity = new Variance(minInstancesPerNode, minInfoGain);
         }
-        LOG.info("Master init params: isAfterVarSel={}, featureSubsetStrategy={}, maxDepth={}, maxStatsMemory={}, "
-                + "treeNum={}, impurity={}, workerNumber={}, minInstancesPerNode={}, minInfoGain={}", isAfterVarSelect,
-                featureSubsetStrategy, maxDepth, maxStatsMemory, treeNum, imStr, this.workerNumber,
-                minInstancesPerNode, minInfoGain);
+        LOG.info(
+                "Master init params: isAfterVarSel={}, featureSubsetStrategy={}, maxDepth={}, maxStatsMemory={}, "
+                        + "treeNum={}, impurity={}, workerNumber={}, minInstancesPerNode={}, minInfoGain={}, isRF={}, isGBDT={}",
+                isAfterVarSelect, featureSubsetStrategy, maxDepth, maxStatsMemory, treeNum, imStr, this.workerNumber,
+                minInstancesPerNode, minInfoGain, this.isRF, this.isGBDT);
         this.queue = new LinkedList<TreeNode>();
 
         // initialize trees

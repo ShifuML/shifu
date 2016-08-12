@@ -35,7 +35,7 @@ import ml.shifu.shifu.core.alg.SVMTrainer;
 public class ModelTrainConf {
 
     public static enum ALGORITHM {
-        NN, LR, SVM, DT, RF, GBDT
+        NN, LR, SVM, DT, RF, GBT
     }
 
     private Integer baggingNum = Integer.valueOf(5);
@@ -195,7 +195,7 @@ public class ModelTrainConf {
             params.put("MaxStatsMemoryMB", 256);
             params.put("Impurity", "variance");
             params.put("Loss", "squared");
-        } else if(ALGORITHM.GBDT.equals(alg)) {
+        } else if(ALGORITHM.GBT.equals(alg)) {
             params.put("FeatureSubsetStrategy", "ALL");
             params.put("MaxDepth", 10);
             params.put("MinInstancesPerNode", 1);
