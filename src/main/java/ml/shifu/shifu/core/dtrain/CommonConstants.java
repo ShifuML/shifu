@@ -51,5 +51,6 @@ public interface CommonConstants {
     
     public static final String GS_VALIDATION_ERROR = "gridsearch.validation.error";
 
+    public static final String SHIFU_TRAIN_BAGGING_INPARALLEL = "shifu.train.bagging.inparallel";
 
 }
