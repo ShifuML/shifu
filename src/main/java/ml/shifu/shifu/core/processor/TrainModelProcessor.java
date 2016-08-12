@@ -744,7 +744,7 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
 
         args.add(String.valueOf(numTrainEpoches));
 
-        args.add(String.format(CommonConstants.MAPREDUCE_PARAM_FORMAT, "shifu.crossValidation.dir",
+        args.add(String.format(CommonConstants.MAPREDUCE_PARAM_FORMAT, CommonConstants.CROSS_VALIDATION_DIR,
                 ShifuFileUtils.getFileSystemBySourceType(sourceType).
                 makeQualified(new Path(super.getPathFinder().getNormalizedValidationDataPath(sourceType))).toString()));
         args.add(String.format(CommonConstants.MAPREDUCE_PARAM_FORMAT, NNConstants.MAPRED_JOB_QUEUE_NAME,

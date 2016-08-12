@@ -50,6 +50,8 @@ public interface CommonConstants {
     public static final String GBT_ALG_NAME = "GBT";
     
     public static final String GS_VALIDATION_ERROR = "gridsearch.validation.error";
+    
+    public static final String CROSS_VALIDATION_DIR = "shifu.crossValidation.dir";
 
 
 }

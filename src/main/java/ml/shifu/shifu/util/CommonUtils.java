@@ -82,7 +82,6 @@ import ml.shifu.shifu.exception.ShifuErrorCode;
 import ml.shifu.shifu.exception.ShifuException;
 import ml.shifu.shifu.fs.PathFinder;
 import ml.shifu.shifu.fs.ShifuFileUtils;
-import parquet.Log;
 
 /**
  * {@link CommonUtils} is used to for almost all kinds of utility function in this framework.
@@ -784,7 +783,6 @@ public final class CommonUtils {
         pigParamMap.put(Constants.PATH_JAR, pathFinder.getJarPath());
 
         pigParamMap.put(Constants.PATH_RAW_DATA, modelConfig.getDataSetRawPath());
-        log.info("raw_data:"+modelConfig.getDataSetRawPath());
         pigParamMap.put(Constants.PATH_NORMALIZED_DATA, pathFinder.getNormalizedDataPath(sourceType));
         pigParamMap.put(Constants.PATH_PRE_TRAINING_STATS, pathFinder.getPreTrainingStatsPath(sourceType));
         pigParamMap.put(Constants.PATH_STATS_BINNING_INFO, pathFinder.getUpdatedBinningInfoPath(sourceType));
