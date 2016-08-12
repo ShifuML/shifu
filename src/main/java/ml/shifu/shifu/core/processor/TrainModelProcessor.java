@@ -418,10 +418,15 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
             guaguaClient = new GuaguaMapReduceClient();
         }
 
-        // TODO, make it configurable, refactor logic in below,
-        int parallelNum = 5;
-        int parallelGroups = gs.hasHyperParam() ? (gs.getFlattenParams().size() % parallelNum == 0 ? gs
-                .getFlattenParams().size() / parallelNum : gs.getFlattenParams().size() / parallelNum + 1) : 1;
+        int parallelNum = Integer
+                .parseInt(Environment.getProperty(CommonConstants.SHIFU_TRAIN_BAGGING_INPARALLEL, "5"));
+        int parallelGroups = 1;
+        if(gs.hasHyperParam()) {
+            parallelGroups = (gs.getFlattenParams().size() % parallelNum == 0 ? gs.getFlattenParams().size()
+                    / parallelNum : gs.getFlattenParams().size() / parallelNum + 1);
+        } else {
+            parallelGroups = baggingNum % parallelNum == 0 ? baggingNum / parallelNum : baggingNum / parallelNum + 1;
+        }
         List<String> progressLogList = new ArrayList<String>(baggingNum);
         boolean isOneJobNotContinuous = false;
         for(int j = 0; j < parallelGroups; j++) {
@@ -430,6 +435,12 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
                 if(j == parallelGroups - 1) {
                     currBags = gs.getFlattenParams().size() % parallelNum == 0 ? parallelNum : gs.getFlattenParams()
                             .size() % parallelNum;
+                } else {
+                    currBags = parallelNum;
+                }
+            } else {
+                if(j == parallelGroups - 1) {
+                    currBags = baggingNum % parallelNum == 0 ? parallelNum : baggingNum % parallelNum;
                 } else {
                     currBags = parallelNum;
                 }
@@ -505,30 +516,33 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
                 guaguaClient.run();
                 stopTailThread(tailThread);
             }
+        }
 
-            if(!gs.hasHyperParam()) {
-                // copy model files at last.
-                for(int i = 0; i < baggingNum; i++) {
-                    String modelName = getModelName(i);
-                    Path modelPath = fileSystem.makeQualified(new Path(super.getPathFinder().getModelsPath(sourceType),
-                            modelName));
-                    copyModelToLocal(modelName, modelPath, sourceType);
-                }
-
-                // copy temp model files
-                copyTmpModelsToLocal(tmpModelsPath, sourceType);
-                LOG.info("Distributed training finished in {}ms.", System.currentTimeMillis() - start);
+        // copy all models to local after all jobs are finished
+        if(!gs.hasHyperParam()) {
+            // copy model files at last.
+            for(int i = 0; i < baggingNum; i++) {
+                String modelName = getModelName(i);
+                Path modelPath = fileSystem.makeQualified(new Path(super.getPathFinder().getModelsPath(sourceType),
+                        modelName));
+                copyModelToLocal(modelName, modelPath, sourceType);
             }
+
+            // copy temp model files
+            copyTmpModelsToLocal(tmpModelsPath, sourceType);
+            LOG.info("Distributed training finished in {}ms.", System.currentTimeMillis() - start);
         }
 
         if(gs.hasHyperParam()) {
+            // select the best parameter composite in grid search
             LOG.info("Original grid search params: {}", modelConfig.getParams());
             Map<String, Object> params = findBestParams(sourceType, fileSystem, gs);
             for(Entry<String, Object> entry: params.entrySet()) {
                 modelConfig.getParams().put(entry.getKey(), entry.getValue());
             }
+            super.pathFinder.getModelConfigPath(SourceType.LOCAL);
             // update ModelConfig.json
-            JSONUtils.writeValue(new File("ModelConfig.json"), modelConfig);
+            JSONUtils.writeValue(new File(super.pathFinder.getModelConfigPath(SourceType.LOCAL)), modelConfig);
             LOG.info("Grid search on distributed training finished in {}ms.", System.currentTimeMillis() - start);
         }
     }
