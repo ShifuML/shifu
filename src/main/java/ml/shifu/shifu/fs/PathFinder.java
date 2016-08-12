@@ -268,9 +268,9 @@ public class PathFinder {
     }
     
     /**
-     * Get the path of normalized data
+     * Get the path of normalized cross validation data
      * 
-     * @return path of normalized data
+     * @return path of normalized cross validation data
      */
     public String getNormalizedValidationDataPath() {
         return getNormalizedValidationDataPath(modelConfig.getDataSet().getSource());
