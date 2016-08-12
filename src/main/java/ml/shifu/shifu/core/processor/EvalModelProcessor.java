@@ -384,7 +384,8 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
             names.add(config.getColumnName());
         }
 
-        if(!names.contains(evalConfig.getDataSet().getTargetColumnName())) {
+        if(StringUtils.isNotBlank(evalConfig.getDataSet().getTargetColumnName())
+                && !names.contains(evalConfig.getDataSet().getTargetColumnName())) {
             throw new IllegalArgumentException("target column " + evalConfig.getDataSet().getTargetColumnName()
                     + " in eval " + evalConfig.getName() + " does not exist.");
         }
