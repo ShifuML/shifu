@@ -200,6 +200,12 @@ public class DTWorker
      */
     private Loss loss = null;
 
+    /**
+     * By default in GBDT, sample with replacement is enabled, but looks sometimes good performance with replacement &
+     * GBDT
+     */
+    private boolean gbdtSampleWithReplacement = true;
+
     @Override
     public void initRecordReader(GuaguaFileSplit fileSplit) throws IOException {
         super.setRecordReader(new GuaguaLineRecordReader(fileSplit));
@@ -228,7 +234,7 @@ public class DTWorker
             throw new RuntimeException(e);
         }
 
-        this.treeNum = this.modelConfig.getTrain().getBaggingNum();
+        this.treeNum = Integer.valueOf(this.modelConfig.getTrain().getParams().get("TreeNum").toString());;
 
         double memoryFraction = Double.valueOf(context.getProps().getProperty("guagua.data.memoryFraction", "0.6"));
         LOG.info("Max heap memory: {}, fraction: {}", Runtime.getRuntime().maxMemory(), memoryFraction);
@@ -260,7 +266,7 @@ public class DTWorker
         }
 
         this.isRF = ALGORITHM.RF.toString().equalsIgnoreCase(modelConfig.getAlgorithm());
-        this.isGBDT = ALGORITHM.GBDT.toString().equals(modelConfig.getAlgorithm());
+        this.isGBDT = ALGORITHM.GBT.toString().equalsIgnoreCase(modelConfig.getAlgorithm());
 
         String lossStr = this.modelConfig.getTrain().getParams().get("Loss").toString();
         if(lossStr.equalsIgnoreCase("log")) {
@@ -273,7 +279,15 @@ public class DTWorker
 
         if(this.isGBDT) {
             this.learningRate = Double.valueOf(this.modelConfig.getParams().get(NNTrainer.LEARNING_RATE).toString());
+            Object swrObj = this.modelConfig.getParams().get("SampleWithReplacement");
+            if(swrObj != null) {
+                this.gbdtSampleWithReplacement = Boolean.TRUE.toString().equalsIgnoreCase(swrObj.toString());
+            }
         }
+        LOG.info(
+                "Worker init params:isAfterVarSel={}, treeNum={}, impurity={}, loss={}, learningRate={}, gbdtSampleWithReplacement={}, isRF={}, isGBDT={}",
+                isAfterVarSelect, treeNum, impurity.getClass().getName(), loss.getClass().getName(), this.learningRate,
+                this.gbdtSampleWithReplacement, this.isRF, this.isGBDT);
     }
 
     /*
@@ -321,6 +335,10 @@ public class DTWorker
 
         double squareError = 0d;
         List<Integer> nodeIndexes = new ArrayList<Integer>(trees.size());
+        // renew random seed
+        if(this.isGBDT && !this.gbdtSampleWithReplacement && lastMasterResult.isSwitchToNextTree()) {
+            this.random = new Random();
+        }
         for(Data data: this.trainingData) {
             nodeIndexes.clear();
             if(this.isRF) {
@@ -328,7 +346,7 @@ public class DTWorker
                     Node predictNode = predictNodeIndex(treeNode.getNode(), data);
                     if(predictNode.getPredict() != null) {
                         // only update when not in first node, for treeNode, no predict statistics at that time
-                        squareError += loss.computeError((float) (predictNode.getPredict().getPredict()), data.output);
+                        squareError += loss.computeError((float) (predictNode.getPredict().getPredict()), data.label);
                     }
                     int predictNodeIndex = predictNode.getId();
                     nodeIndexes.add(predictNodeIndex);
@@ -339,20 +357,37 @@ public class DTWorker
                 int currTreeIndex = trees.size() - 1;
                 if(lastMasterResult.isSwitchToNextTree()) {
                     if(currTreeIndex >= 1) {
-                        double predict = predictNodeIndex(trees.get(currTreeIndex - 1).getNode(), data).getPredict()
-                                .getPredict();
-                        if(currTreeIndex == 1) {
-                            data.predict = (float) predict;
-                        } else {
-                            data.predict += (float) (this.learningRate * predict);
+                        Node node = trees.get(currTreeIndex - 1).getNode();
+                        Node predictNode = predictNodeIndex(node, data);
+                        if(predictNode.getPredict() != null) {
+                            double predict = predictNode.getPredict().getPredict();
+                            if(currTreeIndex == 1) {
+                                data.predict = (float) predict;
+                            } else {
+                                data.predict += (float) (this.learningRate * predict);
+                            }
+                            data.output = -1f * loss.computeGradient(data.predict, data.label);
                         }
-                        data.output = -loss.computeGradient(data.predict, data.label);
+                        if(!this.gbdtSampleWithReplacement) {
+                            // renew next subsample rate
+                            if(random.nextDouble() <= modelConfig.getTrain().getBaggingSampleRate()) {
+                                data.subsampleWeights[currTreeIndex] = 1f;
+                            } else {
+                                data.subsampleWeights[currTreeIndex] = 0f;
+                            }
+                        }
                     }
                 }
                 Node predictNode = predictNodeIndex(trees.get(currTreeIndex).getNode(), data);
                 int predictNodeIndex = predictNode.getId();
                 nodeIndexes.add(predictNodeIndex);
-                squareError += loss.computeError(data.predict, data.label);
+                if(currTreeIndex >= 1) {
+                    squareError += loss.computeError(data.predict, data.label);
+                } else {
+                    if(predictNode.getPredict() != null) {
+                        squareError += loss.computeError(((float) predictNode.getPredict().getPredict()), data.label);
+                    }
+                }
             }
 
             for(Map.Entry<Integer, TreeNode> entry: todoNodes.entrySet()) {
@@ -556,13 +591,20 @@ public class DTWorker
         }
 
         float[] sampleWeights;
-        if(this.treeNum == 1) {
+        if(this.treeNum == 1 || (this.isGBDT && !this.gbdtSampleWithReplacement)) {
+            // if tree == 1 or GBDT, don't use with replacement sampling; for GBDT, every time is one tree
+            sampleWeights = new float[this.treeNum];
             if(random.nextDouble() <= modelConfig.getTrain().getBaggingSampleRate()) {
-                sampleWeights = new float[] { 1.0f };
+                sampleWeights[0] = 1f;
             } else {
-                sampleWeights = new float[] { 0.0f };
+                sampleWeights[0] = 0f;
+            }
+            // others just do init, such value will be replaced after the previous tree is built well
+            for(int i = 1; i < sampleWeights.length; i++) {
+                sampleWeights[i] = 1f;
             }
         } else {
+            // if gbdt and gbdtSampleWithReplacement = true, still sampling with replacement
             sampleWeights = new float[this.treeNum];
             for(int i = 0; i < sampleWeights.length; i++) {
                 sampleWeights[i] = this.rng[i].sample();
@@ -580,16 +622,20 @@ public class DTWorker
             if(lastMasterResult != null) {
                 List<TreeNode> trees = lastMasterResult.getTrees();
                 if(trees.size() > 1) {
-                    for(int i = 0; i < trees.size() - 1; i++) {
+                    // if isSwitchToNextTree == false, iterate all trees except current one to get new predict and
+                    // output value; if isSwitchToNextTree == true, iterate all trees except current two trees.
+                    // the last tree is a root node, the tree with index size-2 will be called in doCompute method
+                    int iterLen = lastMasterResult.isSwitchToNextTree() ? trees.size() - 2 : trees.size() - 1;
+                    for(int i = 0; i < iterLen; i++) {
                         TreeNode currTree = trees.get(i);
                         if(i == 0) {
                             double oldPredict = predictNodeIndex(currTree.getNode(), data).getPredict().getPredict();
                             predict = (float) oldPredict;
-                            output = -loss.computeGradient(predict, data.label);
+                            output = -1f * loss.computeGradient(predict, data.label);
                         } else {
                             double oldPredict = predictNodeIndex(currTree.getNode(), data).getPredict().getPredict();
                             predict += (float) (this.learningRate * oldPredict);
-                            output = -loss.computeGradient(predict, data.label);
+                            output = -1f * loss.computeGradient(predict, data.label);
                         }
                     }
                     data.output = output;

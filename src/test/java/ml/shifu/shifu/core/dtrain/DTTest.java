@@ -26,8 +26,6 @@ import ml.shifu.shifu.core.dtrain.dt.DTMasterParams;
 import ml.shifu.shifu.core.dtrain.dt.DTWorker;
 import ml.shifu.shifu.core.dtrain.dt.DTWorkerParams;
 
-import org.testng.annotations.Test;
-
 /**
  * TODO
  * 
@@ -35,7 +33,7 @@ import org.testng.annotations.Test;
  */
 public class DTTest {
 
-    @Test
+    //@Test
     public void testDtApp() throws IOException {
         Properties props = new Properties();
         props.setProperty(GuaguaConstants.MASTER_COMPUTABLE_CLASS, DTMaster.class.getName());

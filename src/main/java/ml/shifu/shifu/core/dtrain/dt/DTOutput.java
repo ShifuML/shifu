@@ -99,13 +99,22 @@ public class DTOutput extends BasicMasterInterceptor<DTMasterParams, DTWorkerPar
             return;
         }
         double error = context.getMasterResult().getSquareError() / context.getMasterResult().getCount();
+        String info = "";
+        if(context.getMasterResult().isSwitchToNextTree() || context.getMasterResult().isHalt()) {
+            info = new StringBuilder(200).append("    Trainer ").append(this.trainerId).append(" Iteration #")
+                    .append(currentIteration - 1).append(" Tree(starting from 1) ")
+                    .append(context.getMasterResult().getTrees().size() - 1).append(" is finished building. \n")
+                    .toString();
+        }
         if(error != 0d) {
-            String progress = new StringBuilder(200).append("    Trainer ").append(this.trainerId)
-                    .append(" Iteration #").append(currentIteration - 1).append(" Squared Train Error: ").append(error)
-                    .append("\n").toString();
+            info = new StringBuilder(200).append("    Trainer ").append(this.trainerId).append(" Iteration #")
+                    .append(currentIteration - 1).append(" Squared Train Error: ").append(error).append("\n")
+                    .append(info).toString();
+        }
+        if(info.length() > 0) {
             try {
-                LOG.debug("Writing progress results to {} {}", context.getCurrentIteration(), progress.toString());
-                this.progressOutput.write(progress.getBytes("UTF-8"));
+                LOG.debug("Writing progress results to {} {}", context.getCurrentIteration(), info.toString());
+                this.progressOutput.write(info.getBytes("UTF-8"));
                 this.progressOutput.flush();
                 this.progressOutput.sync();
             } catch (IOException e) {

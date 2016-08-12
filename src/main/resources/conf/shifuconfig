@@ -20,9 +20,22 @@ mapreduce.job.max.split.locations=100
 # disable map output compress because some issue for snappy config in our clusters
 mapreduce.map.output.compress=false
 
+# how to control how many mappers when training models
+# If there are too many small files after normalization, set it to true
+# It will try to merge multi small files in mapper and reduce the number of mappers
+# guagua.split.combinable=true
+
+# It will control the max combined split size for each mapper.
+# Sometimes mapper will timeout for loading data, if there are too much data for mapper
+# This option can limit the records for each mapper
+# guagua.split.maxCombinedSplitSize=256000000
+
 # set to 15mins (default 10mins)
 mapreduce.task.timeout=900000
 
+# set default zk in client machine by default it is false and in master node
+guagua.zk.embedbed.isInClient=true
+
 ## tunning for rf, in rf, tree models are stored in master memory, if two many models, please tune such parameters 
-# mapreduce.map.memory.mb=3072
-# mapreduce.map.java.opts="-Xms2G -Xmx2G -server -XX:MaxPermSize=512M -XX:PermSize=512M -XX:+UseParallelGC -XX:+UseParallelOldGC -XX:ParallelGCThreads=8 -verbose:gc -XX:+PrintGCDetails -XX:+PrintGCTimeStamps"
+mapreduce.map.memory.mb=4096
+mapreduce.map.java.opts=-Xms3G -Xmx3G -server -XX:MaxPermSize=256M -XX:PermSize=256M -XX:+UseParallelGC -XX:+UseParallelOldGC -XX:ParallelGCThreads=8 -verbose:gc -XX:+PrintGCDetails -XX:+PrintGCTimeStamps

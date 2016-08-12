@@ -31,7 +31,6 @@ DEFINE IsDataFilterOut  ml.shifu.shifu.udf.PurifyDataUDF('$source_type', '$path_
 DEFINE IsToBinningData  ml.shifu.shifu.udf.FilterBinningDataUDF('$source_type', '$path_model_config', '$path_column_config');
 DEFINE GenBinningData   ml.shifu.shifu.udf.BinningDataUDF('$source_type', '$path_model_config', '$path_column_config');
 DEFINE AddColumnNum     ml.shifu.shifu.udf.AddColumnNumAndFilterUDF('$source_type', '$path_model_config', '$path_column_config', 'false', 'false');
-DEFINE CalculateStats   ml.shifu.shifu.udf.CalculateNewStatsUDF('$source_type', '$path_model_config', '$path_column_config');
 
 -- load and purify data
 data = LOAD '$path_raw_data' USING PigStorage('$delimiter');
