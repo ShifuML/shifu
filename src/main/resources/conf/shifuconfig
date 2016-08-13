@@ -45,3 +45,6 @@ mapreduce.map.java.opts=-Xms3G -Xmx3G -server -XX:MaxPermSize=256M -XX:PermSize=
 
 ## each round how many jobs can be running, if bagging is 10, two rounds of bagging with each one 5 guagua jobs 
 shifu.train.bagging.inparallel=5
+
+## if number of hyper parameter composite over such threshold, random search will be enabled. 
+shifu.gridsearch.threshold=30
