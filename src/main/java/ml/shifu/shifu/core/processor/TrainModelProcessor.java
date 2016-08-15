@@ -66,6 +66,7 @@ import ml.shifu.shifu.exception.ShifuErrorCode;
 import ml.shifu.shifu.exception.ShifuException;
 import ml.shifu.shifu.fs.ShifuFileUtils;
 import ml.shifu.shifu.guagua.GuaguaParquetMapReduceClient;
+import ml.shifu.shifu.guagua.ShifuInputFormat;
 import ml.shifu.shifu.util.CommonUtils;
 import ml.shifu.shifu.util.Constants;
 import ml.shifu.shifu.util.Environment;
@@ -510,7 +511,8 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
                     guaguaClient.createJob(localArgs.toArray(new String[0])).waitForCompletion(true);
                     stopTailThread(tailThread);
                 }
-            }
+            }            
+            
             if(isParallel) {
                 TailThread tailThread = startTailThread(progressLogList.toArray(new String[0]));
                 guaguaClient.run();
@@ -721,6 +723,11 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
         args.add("-i");
         args.add(ShifuFileUtils.getFileSystemBySourceType(sourceType)
                 .makeQualified(new Path(super.getPathFinder().getNormalizedDataPath())).toString());
+        
+        if(StringUtils.isNotBlank(modelConfig.getValidationDataSetRawPath())) {
+            args.add("-inputformat");
+            args.add(ShifuInputFormat.class.getName());
+        }
 
         String zkServers = Environment.getProperty(Environment.ZOO_KEEPER_SERVERS);
         if(StringUtils.isEmpty(zkServers)) {
@@ -752,6 +759,9 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
 
         args.add(String.valueOf(numTrainEpoches));
 
+        args.add(String.format(CommonConstants.MAPREDUCE_PARAM_FORMAT, CommonConstants.CROSS_VALIDATION_DIR,
+                ShifuFileUtils.getFileSystemBySourceType(sourceType).
+                makeQualified(new Path(super.getPathFinder().getNormalizedValidationDataPath(sourceType))).toString()));
         args.add(String.format(CommonConstants.MAPREDUCE_PARAM_FORMAT, NNConstants.MAPRED_JOB_QUEUE_NAME,
                 Environment.getProperty(Environment.HADOOP_JOB_QUEUE, Constants.DEFAULT_JOB_QUEUE)));
         args.add(String.format(

@@ -332,6 +332,7 @@ public class NormalizeModelProcessor extends BasicModelProcessor implements Proc
         SourceType sourceType = modelConfig.getDataSet().getSource();
 
         ShifuFileUtils.deleteFile(pathFinder.getNormalizedDataPath(), sourceType);
+        ShifuFileUtils.deleteFile(pathFinder.getNormalizedValidationDataPath(), sourceType);
         ShifuFileUtils.deleteFile(pathFinder.getSelectedRawDataPath(), sourceType);
 
         Map<String, String> paramsMap = new HashMap<String, String>();
@@ -355,7 +356,14 @@ public class NormalizeModelProcessor extends BasicModelProcessor implements Proc
                 }
                 normPigPath = pathFinder.getAbsolutePath("scripts/Normalize.pig");
             }
+            paramsMap.put(Constants.IS_COMPRESS, "true");
             PigExecutor.getExecutor().submitJob(modelConfig, normPigPath, paramsMap);
+            if(StringUtils.isNotBlank(modelConfig.getValidationDataSetRawPath())) {
+                paramsMap.put(Constants.IS_COMPRESS, "false");
+                paramsMap.put(Constants.PATH_RAW_DATA, modelConfig.getValidationDataSetRawPath());
+                paramsMap.put(Constants.PATH_NORMALIZED_DATA, pathFinder.getNormalizedValidationDataPath());
+                PigExecutor.getExecutor().submitJob(modelConfig, normPigPath, paramsMap);
+            }
         } catch (IOException e) {
             throw new ShifuException(ShifuErrorCode.ERROR_RUNNING_PIG_JOB, e);
         } catch (Throwable e) {
