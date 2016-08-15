@@ -266,6 +266,15 @@ public class PathFinder {
     public String getNormalizedDataPath() {
         return getNormalizedDataPath(modelConfig.getDataSet().getSource());
     }
+    
+    /**
+     * Get the path of normalized cross validation data
+     * 
+     * @return path of normalized cross validation data
+     */
+    public String getNormalizedValidationDataPath() {
+        return getNormalizedValidationDataPath(modelConfig.getDataSet().getSource());
+    }
 
     /**
      * Get the path of normalized data
@@ -280,6 +289,24 @@ public class PathFinder {
 
         if(StringUtils.isBlank(normalizedDataPath)) {
             return getPathBySourceType(new Path(Constants.TMP, Constants.NORMALIZED_DATA), sourceType);
+        } else {
+            return new Path(normalizedDataPath).toString();
+        }
+    }
+    
+    /**
+     * Get the path of validation normalized data
+     * 
+     * @param sourceType
+     *            - Local/HDFS
+     * @return path of normalized data
+     */
+    public String getNormalizedValidationDataPath(SourceType sourceType) {
+        String normalizedDataPath = getPreferPath(modelConfig.getTrain().getCustomPaths(),
+                Constants.KEY_NORMALIZED_VALIDATION_DATA_PATH);
+
+        if(StringUtils.isBlank(normalizedDataPath)) {
+            return getPathBySourceType(new Path(Constants.TMP, Constants.NORMALIZED_VALIDATION_DATA), sourceType);
         } else {
             return new Path(normalizedDataPath).toString();
         }

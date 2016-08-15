@@ -58,6 +58,7 @@ public interface Constants {
     public static final String PATH_NORMALIZED_DATA = "pathNormalizedData";
     public static final String PATH_RAW_DATA = "path_raw_data";
     public static final String PATH_JAR = "path_jar";
+    public static final String IS_COMPRESS = "is_compress";
 
     public static final String STATS_SAMPLE_RATE = "statsSampleRate";
     public static final String WITH_SCORE = "with_score";
@@ -120,6 +121,7 @@ public interface Constants {
     public static final String PRE_TRAINING_STATS = "PreTrainingStats";
     public static final String SELECTED_RAW_DATA = "SelectedRawData";
     public static final String NORMALIZED_DATA = "NormalizedData";
+    public static final String NORMALIZED_VALIDATION_DATA = "NormalizedValidationData";
     public static final String TRAIN_SCORES = "TrainScores";
     public static final String BIN_AVG_SCORE = "BinAvgScore";
     public static final String CORRELATION_PATH = "CorrelationPath";
@@ -130,6 +132,7 @@ public interface Constants {
     public static final String KEY_PRE_PSI_PATH = "StatsPSIPath";
     public static final String KEY_SELECTED_RAW_DATA_PATH = "selectedRawDataPath";
     public static final String KEY_NORMALIZED_DATA_PATH = "normalizedDataPath";
+    public static final String KEY_NORMALIZED_VALIDATION_DATA_PATH = "normalizedValidationDataPath";
     public static final String KEY_VARSLECT_STATS_PATH = "varSelectStatsPath";
     public static final String KEY_TRAIN_SCORES_PATH = "trainScoresPath";
     public static final String KEY_BIN_AVG_SCORE_PATH = "binAvgScorePath";
