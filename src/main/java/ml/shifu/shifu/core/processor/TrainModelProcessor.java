@@ -537,6 +537,7 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
             // select the best parameter composite in grid search
             LOG.info("Original grid search params: {}", modelConfig.getParams());
             Map<String, Object> params = findBestParams(sourceType, fileSystem, gs);
+            // TODO, copy top 5 models for evaluation? (no need further train)
             for(Entry<String, Object> entry: params.entrySet()) {
                 modelConfig.getParams().put(entry.getKey(), entry.getValue());
             }
