@@ -97,9 +97,8 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
         }
 
         // do data sampling. Unselected data or data with invalid tag will be filtered out.
-        boolean isNotSampled = DataSampler.isNotSampled(modelConfig.isRegression(), super.tagSet,
-                super.posTagSet, super.negTagSet, modelConfig.getNormalizeSampleRate(),
-                modelConfig.isNormalizeSampleNegOnly(), rawTag);
+        boolean isNotSampled = DataSampler.isNotSampled(modelConfig.isRegression(), super.tagSet, super.posTagSet,
+                super.negTagSet, modelConfig.getNormalizeSampleRate(), modelConfig.isNormalizeSampleNegOnly(), rawTag);
         if(isNotSampled) {
             return null;
         }
