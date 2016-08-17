@@ -634,10 +634,10 @@ public class ModelInspector {
                 Object treeNumObj = params.get("TreeNum");
                 if(treeNumObj != null) {
                     int treeNum = Integer.valueOf(treeNumObj.toString());
-                    if(treeNum <= 0 || treeNum > 200) {
+                    if(treeNum <= 0 || treeNum > 2000) {
                         ValidateResult tmpResult = new ValidateResult(true);
                         tmpResult.setStatus(false);
-                        tmpResult.getCauses().add("TreeNum should be in [1, 200].");
+                        tmpResult.getCauses().add("TreeNum should be in [1, 2000].");
                         result = ValidateResult.mergeResult(result, tmpResult);
                     }
                 }
