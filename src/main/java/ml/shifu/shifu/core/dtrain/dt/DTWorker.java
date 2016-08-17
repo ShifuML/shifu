@@ -59,6 +59,7 @@ import ml.shifu.shifu.core.dtrain.dt.DTWorkerParams.NodeStats;
 import ml.shifu.shifu.core.dtrain.gs.GridSearch;
 import ml.shifu.shifu.util.CommonUtils;
 
+import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.math3.distribution.PoissonDistribution;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Text;
@@ -244,6 +245,12 @@ public class DTWorker
      * Worker thread count used as multiple threading to get node status
      */
     private int workerThreadCount;
+    
+    /**
+     * Indicates if there are cross validation data sets.
+     */
+    protected boolean isCrossValidation = false;
+
 
     @Override
     public void initRecordReader(GuaguaFileSplit fileSplit) throws IOException {
@@ -320,6 +327,7 @@ public class DTWorker
         this.categoricalInputCount = inputOutputIndex[1];
         this.outputNodeCount = modelConfig.isRegression() ? inputOutputIndex[2] : modelConfig.getTags().size();
         this.isAfterVarSelect = inputOutputIndex[3] == 1 ? true : false;
+        this.isCrossValidation = StringUtils.isNotBlank(modelConfig.getValidationDataSetRawPath());
 
         this.rng = new PoissonDistribution[treeNum];
         for(int i = 0; i < treeNum; i++) {
@@ -830,7 +838,21 @@ public class DTWorker
         if(isNeedFailOver && this.isGBDT) {
             recoverGBTData(context, output, predict, data);
         }
-
+        boolean isTesting = false;
+        if(context.getAttachment() != null && context.getAttachment() instanceof Boolean) {
+            isTesting = (Boolean) context.getAttachment();
+        }
+        this.addDataPairToDataSet(hashcode,data,isTesting);
+    }
+    
+    protected void addDataPairToDataSet(long hashcode, Data data, boolean isTesting) {
+        if(isTesting) {
+            this.validationData.append(data);
+            return;
+        } else if(this.isCrossValidation && (!isTesting)) {
+            this.trainingData.append(data);
+            return;
+        }
         double validationRate = this.modelConfig.getCrossValidationRate();
         if(Double.compare(validationRate, 0d) != 0) {
             if(this.modelConfig.isFixInitialInput()) {
