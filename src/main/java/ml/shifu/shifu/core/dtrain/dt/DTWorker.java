@@ -680,6 +680,16 @@ public class DTWorker
             throw new IllegalArgumentException();
         }
 
+        // the last bin if positive infinity
+        if(value == Float.POSITIVE_INFINITY) {
+            return binBoundary.size() - 1;
+        }
+
+        // the first bin if negative infinity
+        if(value == Float.NEGATIVE_INFINITY) {
+            return 0;
+        }
+
         int low = 0, high = binBoundary.size() - 1;
         while(low <= high) {
             int mid = (low + high) >>> 1;
