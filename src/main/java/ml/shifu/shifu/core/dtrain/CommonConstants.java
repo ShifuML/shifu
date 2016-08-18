@@ -55,4 +55,6 @@ public interface CommonConstants {
 
     public static final String SHIFU_TRAIN_BAGGING_INPARALLEL = "shifu.train.bagging.inparallel";
 
+    public static final String CONTINUOUS_TRAINING = "shifu.continuous.training";
+
 }

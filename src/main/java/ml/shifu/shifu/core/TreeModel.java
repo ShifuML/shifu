@@ -15,11 +15,6 @@
  */
 package ml.shifu.shifu.core;
 
-import org.encog.ml.BasicML;
-import org.encog.ml.MLRegression;
-import org.encog.ml.data.MLData;
-import org.encog.ml.data.basic.BasicMLData;
-
 import java.io.DataInputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -30,13 +25,17 @@ import java.util.Map;
 
 import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.container.obj.ModelConfig;
-import ml.shifu.shifu.core.alg.NNTrainer;
 import ml.shifu.shifu.core.dtrain.CommonConstants;
 import ml.shifu.shifu.core.dtrain.DTrainUtils;
 import ml.shifu.shifu.core.dtrain.dt.Node;
 import ml.shifu.shifu.core.dtrain.dt.Split;
 import ml.shifu.shifu.core.dtrain.dt.TreeNode;
 import ml.shifu.shifu.util.CommonUtils;
+
+import org.encog.ml.BasicML;
+import org.encog.ml.MLRegression;
+import org.encog.ml.data.MLData;
+import org.encog.ml.data.basic.BasicMLData;
 
 /**
  * {@link TreeModel} is to load Random Forest or Gradient Boosted Decision Tree models.
@@ -67,6 +66,10 @@ public class TreeModel extends BasicML implements MLRegression {
 
     private boolean isClassification = false;
 
+    private String algorithm;
+
+    private String lossStr;
+
     public TreeModel(List<TreeNode> trees, List<Double> weights, boolean isGBDT, List<ColumnConfig> columnConfigList) {
         this.trees = trees;
         this.weights = weights;
@@ -96,7 +99,7 @@ public class TreeModel extends BasicML implements MLRegression {
     }
 
     public TreeModel(List<TreeNode> trees, List<Double> weights, boolean isGBDT, List<ColumnConfig> columnConfigList,
-            Map<Integer, Integer> columnMapping, boolean isClassfication) {
+            Map<Integer, Integer> columnMapping, boolean isClassfication, String algorithm, String lossStr) {
         this.trees = trees;
         this.weights = weights;
         assert trees != null && weights != null && trees.size() == weights.size();
@@ -105,6 +108,8 @@ public class TreeModel extends BasicML implements MLRegression {
         this.inputNode = columnMapping.size();
         this.isGBDT = isGBDT;
         this.isClassification = isClassfication;
+        this.algorithm = algorithm;
+        this.lossStr = lossStr;
     }
 
     @Override
@@ -188,17 +193,29 @@ public class TreeModel extends BasicML implements MLRegression {
         // No need implementation
     }
 
-    public static TreeModel loadFromStream(InputStream input, ModelConfig modelConfig,
-            List<ColumnConfig> columnConfigList) throws IOException {
+    public static TreeModel loadFromStream(InputStream input, List<ColumnConfig> columnConfigList) throws IOException {
         DataInputStream dis = new DataInputStream(input);
+        int len = dis.readInt();
+        byte[] bytes = new byte[len];
+        for(int i = 0; i < bytes.length; i++) {
+            bytes[i] = dis.readByte();
+        }
+        String algorithm = new String(bytes, "UTF-8");
+        double learningRate = dis.readDouble();
+        len = dis.readInt();
+        bytes = new byte[len];
+        for(int i = 0; i < bytes.length; i++) {
+            bytes[i] = dis.readByte();
+        }
+        String lossStr = new String(bytes, "UTF-8");
+        boolean isClassification = dis.readBoolean();
+        boolean isOneVsAll = dis.readBoolean();
         int treeNum = dis.readInt();
         List<TreeNode> trees = new ArrayList<TreeNode>(treeNum);
-        String algorithm = modelConfig.getAlgorithm();
         List<Double> weights = new ArrayList<Double>(treeNum);
         for(int i = 0; i < treeNum; i++) {
             TreeNode treeNode = new TreeNode();
             treeNode.readFields(dis);
-            double learningRate = Double.valueOf(modelConfig.getParams().get(NNTrainer.LEARNING_RATE).toString());
             trees.add(treeNode);
             if(CommonConstants.RF_ALG_NAME.equalsIgnoreCase(algorithm)) {
                 weights.add(1d);
@@ -233,8 +250,7 @@ public class TreeModel extends BasicML implements MLRegression {
         }
 
         return new TreeModel(trees, weights, CommonConstants.GBT_ALG_NAME.equalsIgnoreCase(algorithm),
-                columnConfigList, columnMapping, modelConfig.isClassification()
-                        && !modelConfig.getTrain().isOneVsAll());
+                columnConfigList, columnMapping, isClassification && !isOneVsAll, algorithm, lossStr);
         // if one vs all, even multiple classification, treated as regression
     }
 
@@ -292,4 +308,35 @@ public class TreeModel extends BasicML implements MLRegression {
     public void setClassfication(boolean isClassfication) {
         this.isClassification = isClassfication;
     }
+
+    /**
+     * @return the algorithm
+     */
+    public String getAlgorithm() {
+        return algorithm;
+    }
+
+    /**
+     * @return the lossStr
+     */
+    public String getLossStr() {
+        return lossStr;
+    }
+
+    /**
+     * @param algorithm
+     *            the algorithm to set
+     */
+    public void setAlgorithm(String algorithm) {
+        this.algorithm = algorithm;
+    }
+
+    /**
+     * @param lossStr
+     *            the lossStr to set
+     */
+    public void setLossStr(String lossStr) {
+        this.lossStr = lossStr;
+    }
+
 }

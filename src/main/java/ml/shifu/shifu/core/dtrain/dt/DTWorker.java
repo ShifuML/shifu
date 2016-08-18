@@ -245,6 +245,11 @@ public class DTWorker
      */
     private int workerThreadCount;
 
+    /**
+     * Whether to enable continuous model training based on existing models.
+     */
+    private boolean isContinuousEnabled;
+
     @Override
     public void initRecordReader(GuaguaFileSplit fileSplit) throws IOException {
         super.setRecordReader(new GuaguaLineRecordReader(fileSplit));
@@ -274,6 +279,9 @@ public class DTWorker
             }
         }
 
+        this.isContinuousEnabled = Boolean.TRUE.toString().equalsIgnoreCase(
+                context.getProps().getProperty(CommonConstants.CONTINUOUS_TRAINING));
+
         this.workerThreadCount = modelConfig.getTrain().getWorkerThreadCount();
         this.threadPool = Executors.newFixedThreadPool(this.workerThreadCount);
         // enable shut down logic
@@ -299,7 +307,7 @@ public class DTWorker
             LOG.info("Start grid search worker with params: {}", validParams);
         }
 
-        this.treeNum = Integer.valueOf(validParams.get("TreeNum").toString());;
+        this.treeNum = Integer.valueOf(validParams.get("TreeNum").toString());
 
         double memoryFraction = Double.valueOf(context.getProps().getProperty("guagua.data.memoryFraction", "0.6"));
         LOG.info("Max heap memory: {}, fraction: {}", Runtime.getRuntime().maxMemory(), memoryFraction);
@@ -334,6 +342,8 @@ public class DTWorker
             impurity = new Entropy(numClasses, minInstancesPerNode, minInfoGain);
         } else if(imStr.equalsIgnoreCase("gini")) {
             impurity = new Gini(numClasses, minInstancesPerNode, minInfoGain);
+        } else if(imStr.equalsIgnoreCase("friedmanmse")) {
+            impurity = new FriedmanMSE(minInstancesPerNode, minInfoGain);
         } else {
             impurity = new Variance(minInstancesPerNode, minInfoGain);
         }
@@ -401,36 +411,42 @@ public class DTWorker
             }
 
             if(this.isGBDT) {
-                int currTreeIndex = trees.size() - 1;
-                if(lastMasterResult.isSwitchToNextTree()) {
-                    if(currTreeIndex >= 1) {
-                        Node node = trees.get(currTreeIndex - 1).getNode();
-                        Node predictNode = predictNodeIndex(node, data);
-                        if(predictNode.getPredict() != null) {
-                            double predict = predictNode.getPredict().getPredict();
-                            if(currTreeIndex == 1) {
-                                data.predict = (float) predict;
-                            } else {
-                                data.predict += (float) (this.learningRate * predict);
+                if(this.isContinuousEnabled && lastMasterResult.isContinuousRunningStart()) {
+                    recoverGBTData(context, data.output, data.predict, data);
+                    trainError += loss.computeError(data.predict, data.label);
+                } else {
+                    int currTreeIndex = trees.size() - 1;
+                    if(lastMasterResult.isSwitchToNextTree()) {
+                        if(currTreeIndex >= 1) {
+                            Node node = trees.get(currTreeIndex - 1).getNode();
+                            Node predictNode = predictNodeIndex(node, data);
+                            if(predictNode.getPredict() != null) {
+                                double predict = predictNode.getPredict().getPredict();
+                                if(currTreeIndex == 1) {
+                                    data.predict = (float) predict;
+                                } else {
+                                    data.predict += (float) (this.learningRate * predict);
+                                }
+                                data.output = -1f * loss.computeGradient(data.predict, data.label);
                             }
-                            data.output = -1f * loss.computeGradient(data.predict, data.label);
-                        }
-                        if(!this.gbdtSampleWithReplacement) {
-                            // renew next subsample rate
-                            if(random.nextDouble() <= modelConfig.getTrain().getBaggingSampleRate()) {
-                                data.subsampleWeights[currTreeIndex] = 1f;
-                            } else {
-                                data.subsampleWeights[currTreeIndex] = 0f;
+                            if(!this.gbdtSampleWithReplacement) {
+                                // renew next subsample rate
+                                if(random.nextDouble() <= modelConfig.getTrain().getBaggingSampleRate()) {
+                                    data.subsampleWeights[currTreeIndex % data.subsampleWeights.length] = 1f;
+                                } else {
+                                    data.subsampleWeights[currTreeIndex % data.subsampleWeights.length] = 0f;
+                                }
                             }
                         }
                     }
-                }
-                Node predictNode = predictNodeIndex(trees.get(currTreeIndex).getNode(), data);
-                if(currTreeIndex >= 1) {
-                    trainError += loss.computeError(data.predict, data.label);
-                } else {
-                    if(predictNode.getPredict() != null) {
-                        trainError += loss.computeError(((float) predictNode.getPredict().getPredict()), data.label);
+                    Node predictNode = predictNodeIndex(trees.get(currTreeIndex).getNode(), data);
+                    if(currTreeIndex >= 1) {
+                        trainError += loss.computeError(data.predict, data.label);
+                    } else {
+                        if(predictNode.getPredict() != null) {
+                            trainError += loss
+                                    .computeError(((float) predictNode.getPredict().getPredict()), data.label);
+                        }
                     }
                 }
             }
@@ -449,37 +465,42 @@ public class DTWorker
                 }
 
                 if(this.isGBDT) {
-                    int currTreeIndex = trees.size() - 1;
-                    if(lastMasterResult.isSwitchToNextTree()) {
-                        if(currTreeIndex >= 1) {
-                            Node node = trees.get(currTreeIndex - 1).getNode();
-                            Node predictNode = predictNodeIndex(node, data);
-                            if(predictNode.getPredict() != null) {
-                                double predict = predictNode.getPredict().getPredict();
-                                if(currTreeIndex == 1) {
-                                    data.predict = (float) predict;
-                                } else {
-                                    data.predict += (float) (this.learningRate * predict);
+                    if(this.isContinuousEnabled && lastMasterResult.isContinuousRunningStart()) {
+                        recoverGBTData(context, data.output, data.predict, data);
+                        validationError += loss.computeError(data.predict, data.label);
+                    } else {
+                        int currTreeIndex = trees.size() - 1;
+                        if(lastMasterResult.isSwitchToNextTree()) {
+                            if(currTreeIndex >= 1) {
+                                Node node = trees.get(currTreeIndex - 1).getNode();
+                                Node predictNode = predictNodeIndex(node, data);
+                                if(predictNode.getPredict() != null) {
+                                    double predict = predictNode.getPredict().getPredict();
+                                    if(currTreeIndex == 1) {
+                                        data.predict = (float) predict;
+                                    } else {
+                                        data.predict += (float) (this.learningRate * predict);
+                                    }
+                                    data.output = -1f * loss.computeGradient(data.predict, data.label);
                                 }
-                                data.output = -1f * loss.computeGradient(data.predict, data.label);
-                            }
-                            if(!this.gbdtSampleWithReplacement) {
-                                // renew next subsample rate
-                                if(random.nextDouble() <= modelConfig.getTrain().getBaggingSampleRate()) {
-                                    data.subsampleWeights[currTreeIndex] = 1f;
-                                } else {
-                                    data.subsampleWeights[currTreeIndex] = 0f;
+                                if(!this.gbdtSampleWithReplacement) {
+                                    // renew next subsample rate
+                                    if(random.nextDouble() <= modelConfig.getTrain().getBaggingSampleRate()) {
+                                        data.subsampleWeights[currTreeIndex % data.subsampleWeights.length] = 1f;
+                                    } else {
+                                        data.subsampleWeights[currTreeIndex % data.subsampleWeights.length] = 0f;
+                                    }
                                 }
                             }
                         }
-                    }
-                    Node predictNode = predictNodeIndex(trees.get(currTreeIndex).getNode(), data);
-                    if(currTreeIndex >= 1) {
-                        validationError += loss.computeError(data.predict, data.label);
-                    } else {
-                        if(predictNode.getPredict() != null) {
-                            validationError += loss.computeError(((float) predictNode.getPredict().getPredict()),
-                                    data.label);
+                        Node predictNode = predictNodeIndex(trees.get(currTreeIndex).getNode(), data);
+                        if(currTreeIndex >= 1) {
+                            validationError += loss.computeError(data.predict, data.label);
+                        } else {
+                            if(predictNode.getPredict() != null) {
+                                validationError += loss.computeError(((float) predictNode.getPredict().getPredict()),
+                                        data.label);
+                            }
                         }
                     }
                 }
@@ -556,7 +577,7 @@ public class DTWorker
                                     ColumnConfig config = DTWorker.this.columnConfigList.get(columnNum);
                                     double[] featuerStatistic = localStatistics.get(entry.getKey())
                                             .getFeatureStatistics().get(columnNum);
-                                    float weight = data.subsampleWeights[treeId];
+                                    float weight = data.subsampleWeights[treeId % data.subsampleWeights.length];
                                     if(config.isNumerical()) {
                                         float value = data.numericInputs[DTWorker.this.numericInputIndexMap
                                                 .get(columnNum)];
