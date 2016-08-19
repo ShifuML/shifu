@@ -26,8 +26,8 @@ SET mapred.reduce.slowstart.completed.maps 0.6;
 SET mapred.map.tasks.speculative.execution true;
 SET mapred.reduce.tasks.speculative.execution true;
 -- compress outputs
-SET mapred.output.compress true;
-SET mapreduce.output.fileoutputformat.compress true;
+SET mapred.output.compress $is_compress;
+SET mapreduce.output.fileoutputformat.compress $is_compress;
 SET mapred.map.output.compress.codec org.apache.hadoop.io.compress.GzipCodec;
 SET mapreduce.output.fileoutputformat.compress.codec org.apache.hadoop.io.compress.GzipCodec;
 SET mapreduce.output.fileoutputformat.compress.type block;

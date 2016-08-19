@@ -27,6 +27,7 @@ import java.util.Queue;
 import java.util.Random;
 
 import ml.shifu.guagua.GuaguaConstants;
+import ml.shifu.guagua.GuaguaRuntimeException;
 import ml.shifu.guagua.master.AbstractMasterComputable;
 import ml.shifu.guagua.master.MasterComputable;
 import ml.shifu.guagua.master.MasterContext;
@@ -35,13 +36,16 @@ import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.container.obj.ModelConfig;
 import ml.shifu.shifu.container.obj.ModelTrainConf.ALGORITHM;
 import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
+import ml.shifu.shifu.core.TreeModel;
 import ml.shifu.shifu.core.alg.NNTrainer;
 import ml.shifu.shifu.core.dtrain.CommonConstants;
 import ml.shifu.shifu.core.dtrain.DTrainUtils;
 import ml.shifu.shifu.core.dtrain.dt.DTWorkerParams.NodeStats;
 import ml.shifu.shifu.core.dtrain.gs.GridSearch;
+import ml.shifu.shifu.fs.ShifuFileUtils;
 import ml.shifu.shifu.util.CommonUtils;
 
+import org.apache.hadoop.fs.Path;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -138,6 +142,26 @@ public class DTMaster extends AbstractMasterComputable<DTMasterParams, DTWorkerP
     @SuppressWarnings("unused")
     private double learningRate;
 
+    /**
+     * How many workers, this is used for memeory usage
+     */
+    private int workerNumber;
+
+    /**
+     * Input features numbers
+     */
+    private int inputNum;
+
+    /**
+     * Cache all features
+     */
+    private List<Integer> allFeatures;
+
+    /**
+     * Whether to enable continuous model training based on existing models.
+     */
+    private boolean isContinuousEnabled = false;
+
     // ############################################################################################################
     // ## There parts are states, for fail over such instances should be recovered in {@link #init(MasterContext)}
     // ############################################################################################################
@@ -153,19 +177,10 @@ public class DTMaster extends AbstractMasterComputable<DTMasterParams, DTWorkerP
     private Queue<TreeNode> queue;
 
     /**
-     * How many workers, this is used for memeory usage
+     * If continuous model training, update this to existing tree size, by default is 0, no any impact on existing
+     * process.
      */
-    private int workerNumber;
-
-    /**
-     * Input features numbers
-     */
-    private int inputNum;
-
-    /**
-     * Cache all features
-     */
-    private List<Integer> allFeatures;
+    private int existingTreeSize = 0;
 
     @Override
     public DTMasterParams doCompute(MasterContext<DTMasterParams, DTWorkerParams> context) {
@@ -262,7 +277,7 @@ public class DTMaster extends AbstractMasterComputable<DTMasterParams, DTWorkerP
         if(queue.isEmpty()) {
             if(this.isGBDT) {
                 Node treeNode = this.trees.get(this.trees.size() - 1).getNode();
-                if(this.trees.size() == this.treeNum) {
+                if(this.trees.size() == this.treeNum + this.existingTreeSize) {
                     masterParams.setHalt(true);
                     LOG.info("Queue is empty, training is stopped in iteration {}.", context.getCurrentIteration());
                 } else if(treeNode.getLeft() == null && treeNode.getRight() == null) {
@@ -292,7 +307,7 @@ public class DTMaster extends AbstractMasterComputable<DTMasterParams, DTWorkerP
             int nodeIndexInGroup = 0;
             long currMem = 0L;
             List<Integer> depthList = new ArrayList<Integer>();
-            for(int i = 0; i < this.treeNum; i++) {
+            for(int i = 0; i < this.trees.size(); i++) {
                 // -1 means not work on
                 depthList.add(-1);
             }
@@ -382,11 +397,29 @@ public class DTMaster extends AbstractMasterComputable<DTMasterParams, DTWorkerP
         Map<Integer, TreeNode> todoNodes = new HashMap<Integer, TreeNode>(treeNum, 1.0f);
         int nodeIndexInGroup = 0;
         List<Integer> depthList = new ArrayList<Integer>();
-        for(int i = 0; i < this.treeNum; i++) {
-            depthList.add(-1);
-        }
-        for(TreeNode treeNode: trees) {
+        DTMasterParams masterParams = new DTMasterParams(trees, todoNodes);
+        if(isRF || (isGBDT && !isContinuousEnabled)) {
+            for(int i = 0; i < this.treeNum; i++) {
+                depthList.add(-1);
+            }
+            for(TreeNode treeNode: trees) {
+                List<Integer> features = getSubsamplingFeatures(this.featureSubsetStrategy);
+                treeNode.setFeatures(features);
+                todoNodes.put(nodeIndexInGroup, treeNode);
+                int treeId = treeNode.getTreeId();
+                int oldDepth = depthList.get(treeId);
+                int currDepth = Node.indexToLevel(treeNode.getNode().getId());
+                if(currDepth > oldDepth) {
+                    depthList.set(treeId, currDepth);
+                }
+                nodeIndexInGroup += 1;
+            }
+        } else if(isGBDT && isContinuousEnabled) {
+            for(int i = 0; i < this.trees.size(); i++) {
+                depthList.add(-1);
+            }
             List<Integer> features = getSubsamplingFeatures(this.featureSubsetStrategy);
+            TreeNode treeNode = trees.get(trees.size() - 1);
             treeNode.setFeatures(features);
             todoNodes.put(nodeIndexInGroup, treeNode);
             int treeId = treeNode.getTreeId();
@@ -396,8 +429,9 @@ public class DTMaster extends AbstractMasterComputable<DTMasterParams, DTWorkerP
                 depthList.set(treeId, currDepth);
             }
             nodeIndexInGroup += 1;
+            masterParams.setContinuousRunningStart(true);
+            masterParams.setSwitchToNextTree(true);
         }
-        DTMasterParams masterParams = new DTMasterParams(trees, todoNodes);
         masterParams.setTreeDepth(depthList);
         return masterParams;
     }
@@ -484,7 +518,7 @@ public class DTMaster extends AbstractMasterComputable<DTMasterParams, DTWorkerP
         this.inputNum = inputOutputIndex[0] + inputOutputIndex[1];
         this.isAfterVarSelect = inputOutputIndex[3] == 1 ? true : false;
         this.allFeatures = this.getAllFeatureList(columnConfigList, isAfterVarSelect);
-        
+
         int trainerId = Integer.valueOf(context.getProps().getProperty(CommonConstants.SHIFU_TRAINER_ID, "0"));
         GridSearch gs = new GridSearch(modelConfig.getTrain().getParams());
         Map<String, Object> validParams = this.modelConfig.getTrain().getParams();
@@ -493,8 +527,7 @@ public class DTMaster extends AbstractMasterComputable<DTMasterParams, DTWorkerP
             LOG.info("Start grid search master with params: {}", validParams);
         }
         // tree related parameters initialization
-        this.featureSubsetStrategy = FeatureSubsetStrategy.of(validParams
-                .get("FeatureSubsetStrategy").toString());
+        this.featureSubsetStrategy = FeatureSubsetStrategy.of(validParams.get("FeatureSubsetStrategy").toString());
         this.maxDepth = Integer.valueOf(validParams.get("MaxDepth").toString());
         assert this.maxDepth > 0 && this.maxDepth <= 20;
         this.maxStatsMemory = Long.valueOf(validParams.get("MaxStatsMemoryMB").toString()) * 1024 * 1024;
@@ -521,11 +554,15 @@ public class DTMaster extends AbstractMasterComputable<DTMasterParams, DTWorkerP
         } else {
             impurity = new Variance(minInstancesPerNode, minInfoGain);
         }
-        LOG.info(
-                "Master init params: isAfterVarSel={}, featureSubsetStrategy={}, maxDepth={}, maxStatsMemory={}, "
-                        + "treeNum={}, impurity={}, workerNumber={}, minInstancesPerNode={}, minInfoGain={}, isRF={}, isGBDT={}",
-                isAfterVarSelect, featureSubsetStrategy, maxDepth, maxStatsMemory, treeNum, imStr, this.workerNumber,
-                minInstancesPerNode, minInfoGain, this.isRF, this.isGBDT);
+
+        this.isContinuousEnabled = Boolean.TRUE.toString().equalsIgnoreCase(
+                context.getProps().getProperty(CommonConstants.CONTINUOUS_TRAINING));
+
+        LOG.info("Master init params: isAfterVarSel={}, featureSubsetStrategy={}, maxDepth={}, maxStatsMemory={}, "
+                + "treeNum={}, impurity={}, workerNumber={}, minInstancesPerNode={}, minInfoGain={}, isRF={}, "
+                + "isGBDT={}, isContinuousEnabled={}", isAfterVarSelect, featureSubsetStrategy, maxDepth,
+                maxStatsMemory, treeNum, imStr, this.workerNumber, minInstancesPerNode, minInfoGain, this.isRF,
+                this.isGBDT, this.isContinuousEnabled);
         this.queue = new LinkedList<TreeNode>();
 
         // initialize trees
@@ -538,9 +575,31 @@ public class DTMaster extends AbstractMasterComputable<DTMasterParams, DTWorkerP
                 }
             }
             if(this.isGBDT) {
-                this.trees = new ArrayList<TreeNode>(treeNum);
-                // for GBDT, initialize the first tree. trees are trained sequentially
-                this.trees.add(new TreeNode(0, new Node(Node.ROOT_INDEX)));
+                if(isContinuousEnabled) {
+                    TreeModel existingModel;
+                    try {
+                        Path modelPath = new Path(context.getProps().getProperty(CommonConstants.GUAGUA_OUTPUT));
+                        existingModel = (TreeModel) CommonUtils.loadModel(modelConfig, columnConfigList, modelPath,
+                                ShifuFileUtils.getFileSystemBySourceType(this.modelConfig.getDataSet().getSource()));
+                        if(existingModel == null) {
+                            this.trees = new ArrayList<TreeNode>(treeNum);
+                            this.trees.add(new TreeNode(0, new Node(Node.ROOT_INDEX)));
+                            LOG.info("Starting to train model from scratch.");
+                        } else {
+                            this.trees = existingModel.getTrees();
+                            this.existingTreeSize = this.trees.size();
+                            this.trees.add(new TreeNode(this.existingTreeSize, new Node(Node.ROOT_INDEX)));
+                            LOG.info("Starting to train model from existing model {} with existing trees {}.",
+                                    modelPath, existingTreeSize);
+                        }
+                    } catch (IOException e) {
+                        throw new GuaguaRuntimeException(e);
+                    }
+                } else {
+                    this.trees = new ArrayList<TreeNode>(treeNum);
+                    // for GBDT, initialize the first tree. trees are trained sequentially
+                    this.trees.add(new TreeNode(0, new Node(Node.ROOT_INDEX)));
+                }
             }
         } else {
             this.trees = context.getMasterResult().getTrees();

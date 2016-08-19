@@ -66,6 +66,10 @@
                 "type": "text",
                 "directive": "input"
             }, {
+                "name": "validationDataPath",
+                "type": "text",
+                "directive": "input"
+            }, {
                 "name": "dataDelimiter",
                 "type": "text",
                 "directive": "input",
@@ -570,6 +574,7 @@
                         "defval" : "variance",
                         "options": [
                             {"label": "Variance", "value":"variance"},
+                            {"label": "FriedmanMSE", "value":"friedmanmse"},
                             {"label": "Entropy", "value":"entropy"},
                             {"label": "Gini", "value":"gini"}
                         ]
@@ -690,6 +695,10 @@
                         ]
                     }, {
                         "name": "dataPath",
+                        "type": "text",
+                        "directive": "input"
+                    },{
+                        "name": "testDataPath",
                         "type": "text",
                         "directive": "input"
                     }, {

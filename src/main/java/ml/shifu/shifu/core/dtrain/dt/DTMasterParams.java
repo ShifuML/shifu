@@ -76,6 +76,11 @@ public class DTMasterParams extends HaltBytable {
      */
     private List<Integer> treeDepth = new ArrayList<Integer>();
 
+    /**
+     * If it is continuous running at first iteration in master
+     */
+    private boolean isContinuousRunningStart = false;
+
     public DTMasterParams() {
     }
 
@@ -145,6 +150,7 @@ public class DTMasterParams extends HaltBytable {
                 node.getValue().write(out);
             }
         }
+        out.writeBoolean(isContinuousRunningStart);
     }
 
     @Override
@@ -173,6 +179,7 @@ public class DTMasterParams extends HaltBytable {
                 todoNodes.put(key, treeNode);
             }
         }
+        this.isContinuousRunningStart = in.readBoolean();
     }
 
     /**
@@ -190,14 +197,16 @@ public class DTMasterParams extends HaltBytable {
     }
 
     /**
-     * @param trainCount the trainCount to set
+     * @param trainCount
+     *            the trainCount to set
      */
     public void setTrainCount(long trainCount) {
         this.trainCount = trainCount;
     }
 
     /**
-     * @param validationCount the validationCount to set
+     * @param validationCount
+     *            the validationCount to set
      */
     public void setValidationCount(long validationCount) {
         this.validationCount = validationCount;
@@ -261,6 +270,21 @@ public class DTMasterParams extends HaltBytable {
      */
     public void setValidationError(double validationError) {
         this.validationError = validationError;
+    }
+
+    /**
+     * @return the isContinuousRunningStart
+     */
+    public boolean isContinuousRunningStart() {
+        return isContinuousRunningStart;
+    }
+
+    /**
+     * @param isContinuousRunningStart
+     *            the isContinuousRunningStart to set
+     */
+    public void setContinuousRunningStart(boolean isContinuousRunningStart) {
+        this.isContinuousRunningStart = isContinuousRunningStart;
     }
 
 }

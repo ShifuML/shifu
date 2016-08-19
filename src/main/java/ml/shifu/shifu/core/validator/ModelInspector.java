@@ -634,10 +634,10 @@ public class ModelInspector {
                 Object treeNumObj = params.get("TreeNum");
                 if(treeNumObj != null) {
                     int treeNum = Integer.valueOf(treeNumObj.toString());
-                    if(treeNum <= 0 || treeNum > 200) {
+                    if(treeNum <= 0 || treeNum > 2000) {
                         ValidateResult tmpResult = new ValidateResult(true);
                         tmpResult.setStatus(false);
-                        tmpResult.getCauses().add("TreeNum should be in [1, 200].");
+                        tmpResult.getCauses().add("TreeNum should be in [1, 2000].");
                         result = ValidateResult.mergeResult(result, tmpResult);
                     }
                 }
@@ -655,7 +655,8 @@ public class ModelInspector {
 
                 Object impurityObj = params.get("Impurity");
                 if(train.getAlgorithm().equalsIgnoreCase(CommonConstants.GBT_ALG_NAME)) {
-                    if(impurityObj != null && !"variance".equalsIgnoreCase(impurityObj.toString())) {
+                    if(impurityObj != null && !"variance".equalsIgnoreCase(impurityObj.toString())
+                            && !"friedmanmse".equalsIgnoreCase(impurityObj.toString())) {
                         ValidateResult tmpResult = new ValidateResult(true);
                         tmpResult.setStatus(false);
                         tmpResult.getCauses().add("GBDT only supports 'variance' impurity type.");
@@ -664,7 +665,8 @@ public class ModelInspector {
                 }
 
                 if(train.getAlgorithm().equalsIgnoreCase(CommonConstants.RF_ALG_NAME)) {
-                    if(impurityObj != null && !"entropy".equalsIgnoreCase(impurityObj.toString())
+                    if(impurityObj != null && !"friedmanmse".equalsIgnoreCase(impurityObj.toString())
+                            && !"entropy".equalsIgnoreCase(impurityObj.toString())
                             && !"variance".equalsIgnoreCase(impurityObj.toString())
                             && !"gini".equalsIgnoreCase(impurityObj.toString())) {
                         ValidateResult tmpResult = new ValidateResult(true);

@@ -18,6 +18,7 @@ package ml.shifu.shifu.core.dtrain.dt;
 import java.io.IOException;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.Properties;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -26,6 +27,7 @@ import ml.shifu.guagua.master.MasterContext;
 import ml.shifu.shifu.container.obj.ModelConfig;
 import ml.shifu.shifu.container.obj.ModelTrainConf.ALGORITHM;
 import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
+import ml.shifu.shifu.core.alg.NNTrainer;
 import ml.shifu.shifu.core.dtrain.CommonConstants;
 import ml.shifu.shifu.core.dtrain.DTrainUtils;
 import ml.shifu.shifu.core.dtrain.gs.GridSearch;
@@ -81,6 +83,11 @@ public class DTOutput extends BasicMasterInterceptor<DTMasterParams, DTWorkerPar
      * If for grid search, store validation error besides model files.
      */
     private boolean isGsMode;
+
+    /**
+     * Valid training parameters including grid search
+     */
+    private Map<String, Object> validParams;
 
     @Override
     public void preApplication(MasterContext<DTMasterParams, DTWorkerParams> context) {
@@ -228,6 +235,21 @@ public class DTOutput extends BasicMasterInterceptor<DTMasterParams, DTWorkerPar
         try {
             fos = FileSystem.get(new Configuration()).create(out);
             LOG.info("Writing results to {}", out);
+            byte[] bytes = modelConfig.getAlgorithm().getBytes("UTF-8");
+            fos.writeInt(bytes.length);
+            for(byte b: bytes) {
+                fos.writeByte(b);
+            }
+            double learningRate = Double.valueOf(validParams.get(NNTrainer.LEARNING_RATE).toString());
+            fos.writeDouble(learningRate);
+            bytes = this.validParams.get("Loss").toString().getBytes("UTF-8");
+            fos.writeInt(bytes.length);
+            for(byte b: bytes) {
+                fos.writeByte(b);
+            }
+            fos.writeBoolean(this.modelConfig.isClassification());
+            fos.writeBoolean(this.modelConfig.getTrain().isOneVsAll());
+
             int treeLength = trees.size();
             fos.writeInt(treeLength);
             for(TreeNode treeNode: trees) {
@@ -255,6 +277,12 @@ public class DTOutput extends BasicMasterInterceptor<DTMasterParams, DTWorkerPar
             this.trainerId = context.getProps().getProperty(CommonConstants.SHIFU_TRAINER_ID);
             GridSearch gs = new GridSearch(modelConfig.getTrain().getParams());
             this.isGsMode = gs.hasHyperParam();
+
+            this.validParams = modelConfig.getParams();
+            if(isGsMode) {
+                this.validParams = gs.getParams(Integer.parseInt(trainerId));
+            }
+
             this.tmpModelsFolder = context.getProps().getProperty(CommonConstants.SHIFU_TMP_MODELS_FOLDER);
             this.isRF = ALGORITHM.RF.toString().equalsIgnoreCase(modelConfig.getAlgorithm());
             this.isGBDT = ALGORITHM.GBT.toString().equalsIgnoreCase(modelConfig.getAlgorithm());

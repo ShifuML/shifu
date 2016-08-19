@@ -316,7 +316,7 @@ public class NNMaster extends AbstractMasterComputable<NNParams, NNParams> {
         LOG.info("Convergence threshold in master is :{}", this.convergenceThreshold);
 
         this.isContinuousEnabled = Boolean.TRUE.toString().equalsIgnoreCase(
-                context.getProps().getProperty(NNConstants.NN_CONTINUOUS_TRAINING));
+                context.getProps().getProperty(CommonConstants.CONTINUOUS_TRAINING));
         Object rconstant = validParams.get(CommonConstants.LR_REGULARIZED_CONSTANT);
         this.regularizedConstant = NumberFormatUtils.getDouble(rconstant == null ? "" : rconstant.toString(), 0d);
 

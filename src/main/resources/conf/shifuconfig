@@ -42,3 +42,9 @@ guagua.computation.time.threshold=120000
 ## tunning for rf, in rf, tree models are stored in master memory, if two many models, please tune such parameters 
 mapreduce.map.memory.mb=4096
 mapreduce.map.java.opts=-Xms3G -Xmx3G -server -XX:MaxPermSize=256M -XX:PermSize=256M -XX:+UseParallelGC -XX:+UseParallelOldGC -XX:ParallelGCThreads=8 -verbose:gc -XX:+PrintGCDetails -XX:+PrintGCTimeStamps
+
+## each round how many jobs can be running, if bagging is 10, two rounds of bagging with each one 5 guagua jobs 
+shifu.train.bagging.inparallel=5
+
+## if number of hyper parameter composite over such threshold, random search will be enabled. 
+shifu.gridsearch.threshold=30
