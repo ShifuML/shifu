@@ -38,6 +38,8 @@ public class RawSourceData implements Cloneable {
     private SourceType source = SourceType.LOCAL;
 
     private String dataPath;
+    
+    private String validationDataPath;
 
     private String dataDelimiter = "|";
 
@@ -99,6 +101,14 @@ public class RawSourceData implements Cloneable {
 
     public void setDataPath(String dataPath) {
         this.dataPath = dataPath;
+    }
+    
+    public String getValidationDataPath() {
+        return validationDataPath;
+    }
+
+    public void setValidationDataPath(String validationDataPath) {
+        this.validationDataPath = validationDataPath;
     }
 
     public String getDataDelimiter() {

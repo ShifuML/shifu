@@ -615,7 +615,7 @@ public final class CommonUtils {
                 return LR.loadFromString(br.readLine());
             } else if(modelPath.getName().endsWith(CommonConstants.RF_ALG_NAME.toLowerCase())
                     || modelPath.getName().endsWith(CommonConstants.GBT_ALG_NAME.toLowerCase())) {
-                return TreeModel.loadFromStream(stream, modelConfig, columnConfigList);
+                return TreeModel.loadFromStream(stream, columnConfigList);
             } else {
                 return BasicML.class.cast(EncogDirectoryPersistence.loadObject(stream));
             }
@@ -765,6 +765,7 @@ public final class CommonUtils {
         return rawDataMap;
     }
 
+
     /**
      * Return all parameters for pig execution.
      * 
@@ -780,8 +781,8 @@ public final class CommonUtils {
         Map<String, String> pigParamMap = new HashMap<String, String>();
         pigParamMap.put(Constants.NUM_PARALLEL, Environment.getInt(Environment.HADOOP_NUM_PARALLEL, 400).toString());
         pigParamMap.put(Constants.PATH_JAR, pathFinder.getJarPath());
-        pigParamMap.put(Constants.PATH_RAW_DATA, modelConfig.getDataSetRawPath());
 
+        pigParamMap.put(Constants.PATH_RAW_DATA, modelConfig.getDataSetRawPath());
         pigParamMap.put(Constants.PATH_NORMALIZED_DATA, pathFinder.getNormalizedDataPath(sourceType));
         pigParamMap.put(Constants.PATH_PRE_TRAINING_STATS, pathFinder.getPreTrainingStatsPath(sourceType));
         pigParamMap.put(Constants.PATH_STATS_BINNING_INFO, pathFinder.getUpdatedBinningInfoPath(sourceType));

@@ -67,7 +67,8 @@ public class NNWorker extends AbstractNNWorker<Text> {
 
         if(super.isDry) {
             // dry train, use empty data.
-            addDataPairToDataSet(0, new BasicFloatMLDataPair(new BasicFloatMLData(inputs), new BasicFloatMLData(ideal)));
+            addDataPairToDataSet(0,
+                    new BasicFloatMLDataPair(new BasicFloatMLData(inputs), new BasicFloatMLData(ideal)));
             return;
         }
 
@@ -143,7 +144,11 @@ public class NNWorker extends AbstractNNWorker<Text> {
         } else {
             pair.setSignificance(significance);
         }
-        addDataPairToDataSet(hashcode, pair);
+        boolean isTesting = false;
+        if(workerContext.getAttachment() != null && workerContext.getAttachment() instanceof Boolean) {
+            isTesting = (Boolean) workerContext.getAttachment();
+        }
+        addDataPairToDataSet(hashcode, pair, isTesting);
     }
 
     /*

@@ -39,6 +39,7 @@ import ml.shifu.shifu.container.obj.ModelBasicConf.RunMode;
 import ml.shifu.shifu.container.obj.ModelTrainConf.MultipleClassification;
 import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
 import ml.shifu.shifu.core.AbstractTrainer;
+import ml.shifu.shifu.core.TreeModel;
 import ml.shifu.shifu.core.alg.LogisticRegressionTrainer;
 import ml.shifu.shifu.core.alg.NNTrainer;
 import ml.shifu.shifu.core.alg.SVMTrainer;
@@ -66,6 +67,7 @@ import ml.shifu.shifu.exception.ShifuErrorCode;
 import ml.shifu.shifu.exception.ShifuException;
 import ml.shifu.shifu.fs.ShifuFileUtils;
 import ml.shifu.shifu.guagua.GuaguaParquetMapReduceClient;
+import ml.shifu.shifu.guagua.ShifuInputFormat;
 import ml.shifu.shifu.util.CommonUtils;
 import ml.shifu.shifu.util.Constants;
 import ml.shifu.shifu.util.Environment;
@@ -418,10 +420,15 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
             guaguaClient = new GuaguaMapReduceClient();
         }
 
-        // TODO, make it configurable, refactor logic in below,
-        int parallelNum = 5;
-        int parallelGroups = gs.hasHyperParam() ? (gs.getFlattenParams().size() % parallelNum == 0 ? gs
-                .getFlattenParams().size() / parallelNum : gs.getFlattenParams().size() / parallelNum + 1) : 1;
+        int parallelNum = Integer
+                .parseInt(Environment.getProperty(CommonConstants.SHIFU_TRAIN_BAGGING_INPARALLEL, "5"));
+        int parallelGroups = 1;
+        if(gs.hasHyperParam()) {
+            parallelGroups = (gs.getFlattenParams().size() % parallelNum == 0 ? gs.getFlattenParams().size()
+                    / parallelNum : gs.getFlattenParams().size() / parallelNum + 1);
+        } else {
+            parallelGroups = baggingNum % parallelNum == 0 ? baggingNum / parallelNum : baggingNum / parallelNum + 1;
+        }
         List<String> progressLogList = new ArrayList<String>(baggingNum);
         boolean isOneJobNotContinuous = false;
         for(int j = 0; j < parallelGroups; j++) {
@@ -430,6 +437,12 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
                 if(j == parallelGroups - 1) {
                     currBags = gs.getFlattenParams().size() % parallelNum == 0 ? parallelNum : gs.getFlattenParams()
                             .size() % parallelNum;
+                } else {
+                    currBags = parallelNum;
+                }
+            } else {
+                if(j == parallelGroups - 1) {
+                    currBags = baggingNum % parallelNum == 0 ? parallelNum : baggingNum % parallelNum;
                 } else {
                     currBags = parallelNum;
                 }
@@ -450,9 +463,9 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
                         modelName));
                 // check if job is continunous training, this can be set multiple times and we only get last one
                 boolean isContinous = checkContinuousTraining(fileSystem, localArgs, modelPath);
-                if(isContinous && CommonUtils.isDesicionTreeAlgorithm(modelConfig.getAlgorithm())) {
+                if(isContinous && CommonConstants.RF_ALG_NAME.equalsIgnoreCase(modelConfig.getAlgorithm())) {
                     isContinous = false;
-                    LOG.warn("RF & GBDT do not support continuous training");
+                    LOG.warn("RF does not support continuous training");
                 }
                 // of course gs not support continuous model training
                 if(gs.hasHyperParam()) {
@@ -500,35 +513,40 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
                     stopTailThread(tailThread);
                 }
             }
+
             if(isParallel) {
                 TailThread tailThread = startTailThread(progressLogList.toArray(new String[0]));
                 guaguaClient.run();
                 stopTailThread(tailThread);
             }
+        }
 
-            if(!gs.hasHyperParam()) {
-                // copy model files at last.
-                for(int i = 0; i < baggingNum; i++) {
-                    String modelName = getModelName(i);
-                    Path modelPath = fileSystem.makeQualified(new Path(super.getPathFinder().getModelsPath(sourceType),
-                            modelName));
-                    copyModelToLocal(modelName, modelPath, sourceType);
-                }
-
-                // copy temp model files
-                copyTmpModelsToLocal(tmpModelsPath, sourceType);
-                LOG.info("Distributed training finished in {}ms.", System.currentTimeMillis() - start);
+        // copy all models to local after all jobs are finished
+        if(!gs.hasHyperParam()) {
+            // copy model files at last.
+            for(int i = 0; i < baggingNum; i++) {
+                String modelName = getModelName(i);
+                Path modelPath = fileSystem.makeQualified(new Path(super.getPathFinder().getModelsPath(sourceType),
+                        modelName));
+                copyModelToLocal(modelName, modelPath, sourceType);
             }
+
+            // copy temp model files
+            copyTmpModelsToLocal(tmpModelsPath, sourceType);
+            LOG.info("Distributed training finished in {}ms.", System.currentTimeMillis() - start);
         }
 
         if(gs.hasHyperParam()) {
+            // select the best parameter composite in grid search
             LOG.info("Original grid search params: {}", modelConfig.getParams());
             Map<String, Object> params = findBestParams(sourceType, fileSystem, gs);
+            // TODO, copy top 5 models for evaluation? (no need further train)
             for(Entry<String, Object> entry: params.entrySet()) {
                 modelConfig.getParams().put(entry.getKey(), entry.getValue());
             }
+            super.pathFinder.getModelConfigPath(SourceType.LOCAL);
             // update ModelConfig.json
-            JSONUtils.writeValue(new File("ModelConfig.json"), modelConfig);
+            JSONUtils.writeValue(new File(super.pathFinder.getModelConfigPath(SourceType.LOCAL)), modelConfig);
             LOG.info("Grid search on distributed training finished in {}ms.", System.currentTimeMillis() - start);
         }
     }
@@ -587,18 +605,35 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
             } else if(!fileSystem.exists(modelPath)) {
                 finalContinuous = false;
                 LOG.info("No existing model, model training will start from scratch.");
-            } else if(!inputOutputModelCheckSuccess(fileSystem, modelPath)) {
+            } else if(NNConstants.NN_ALG_NAME.equalsIgnoreCase(modelConfig.getAlgorithm())
+                    && !inputOutputModelCheckSuccess(fileSystem, modelPath)) {
                 // TODO hidden layer size and activation functions should also be validated
                 finalContinuous = false;
                 LOG.warn("Model input and output settings are not consistent with input and output columns settings, "
                         + "model training will start from scratch.");
+            } else if(CommonConstants.GBT_ALG_NAME.equalsIgnoreCase(modelConfig.getAlgorithm())) {
+                TreeModel model = (TreeModel) CommonUtils.loadModel(this.modelConfig, this.columnConfigList, modelPath,
+                        fileSystem);
+                if(!model.getAlgorithm().equalsIgnoreCase(modelConfig.getAlgorithm())) {
+                    finalContinuous = false;
+                    LOG.warn("Only GBT supports continuous training, while not GBT, will start from scratch");
+                } else if(!model.getLossStr().equalsIgnoreCase(
+                        this.modelConfig.getTrain().getParams().get("Loss").toString())) {
+                    finalContinuous = false;
+                    LOG.warn("Loss is changed, continuous training is disabled, will start from scratch");
+                } else {
+                    finalContinuous = true;
+                }
+            } else if(CommonConstants.RF_ALG_NAME.equalsIgnoreCase(modelConfig.getAlgorithm())) {
+                finalContinuous = false;
+                LOG.warn("RF doesn't support continuous training");
             } else {
                 finalContinuous = true;
             }
         } else {
             finalContinuous = false;
         }
-        localArgs.add(String.format(CommonConstants.MAPREDUCE_PARAM_FORMAT, NNConstants.NN_CONTINUOUS_TRAINING,
+        localArgs.add(String.format(CommonConstants.MAPREDUCE_PARAM_FORMAT, CommonConstants.CONTINUOUS_TRAINING,
                 finalContinuous));
         return finalContinuous;
     }
@@ -707,6 +742,11 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
         args.add(ShifuFileUtils.getFileSystemBySourceType(sourceType)
                 .makeQualified(new Path(super.getPathFinder().getNormalizedDataPath())).toString());
 
+        if(StringUtils.isNotBlank(modelConfig.getValidationDataSetRawPath())) {
+            args.add("-inputformat");
+            args.add(ShifuInputFormat.class.getName());
+        }
+
         String zkServers = Environment.getProperty(Environment.ZOO_KEEPER_SERVERS);
         if(StringUtils.isEmpty(zkServers)) {
             LOG.warn("No specified zookeeper settings from zookeeperServers in shifuConfig file, Guagua will set embeded zookeeper server in client process or master node. For fail-over zookeeper applications, specified zookeeper servers are strongly recommended.");
@@ -737,6 +777,12 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
 
         args.add(String.valueOf(numTrainEpoches));
 
+        args.add(String.format(
+                CommonConstants.MAPREDUCE_PARAM_FORMAT,
+                CommonConstants.CROSS_VALIDATION_DIR,
+                ShifuFileUtils.getFileSystemBySourceType(sourceType)
+                        .makeQualified(new Path(super.getPathFinder().getNormalizedValidationDataPath(sourceType)))
+                        .toString()));
         args.add(String.format(CommonConstants.MAPREDUCE_PARAM_FORMAT, NNConstants.MAPRED_JOB_QUEUE_NAME,
                 Environment.getProperty(Environment.HADOOP_JOB_QUEUE, Constants.DEFAULT_JOB_QUEUE)));
         args.add(String.format(
