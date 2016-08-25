@@ -77,6 +77,8 @@ public class ShifuCLI {
 
     private static final String CMD_EXPORT = "export";
 
+    private static final String RESET = "reset";
+
     // for evaluation
     private static final String LIST = "list";
     private static final String DELETE = "delete";
@@ -176,7 +178,7 @@ public class ShifuCLI {
                     }
                 } else if(args[0].equals(VARSELECT_CMD) || args[0].equals(VARSEL_CMD)) {
                     // variable selected step
-                    status = selectModelVar();
+                    status = selectModelVar(cmd.hasOption(RESET));
                     if(status == 0) {
                         log.info("Do model set variables selection successfully. Please continue next step by using 'shifu train'.");
                     } else {
@@ -351,8 +353,8 @@ public class ShifuCLI {
      * @throws Exception
      * @throws ShifuException
      */
-    public static int selectModelVar() throws Exception {
-        VarSelectModelProcessor p = new VarSelectModelProcessor();
+    public static int selectModelVar(boolean isToReset) throws Exception {
+        VarSelectModelProcessor p = new VarSelectModelProcessor(isToReset);
         return p.run();
     }
 
@@ -531,6 +533,9 @@ public class ShifuCLI {
                 .withDescription("Init model").create(INIT_CMD_MODEL);
         Option opt_concise = OptionBuilder.hasArg(false)
                 .withDescription("Export concise PMML").create(EXPORT_CONCISE);
+        Option opt_reset = OptionBuilder.hasArg(false)
+                .withDescription("Reset all variables to finalSelect = false").create(RESET);
+
 
         Option opt_list = OptionBuilder.hasArg(false).create(LIST);
         Option opt_delete = OptionBuilder.hasArg().create(DELETE);
@@ -551,6 +556,7 @@ public class ShifuCLI {
         opts.addOption(opt_debug);
         opts.addOption(opt_model);
         opts.addOption(opt_concise);
+        opts.addOption(opt_reset);
 
         opts.addOption(opt_list);
         opts.addOption(opt_delete);
@@ -572,7 +578,7 @@ public class ShifuCLI {
         System.out.println("\tnew <ModelSetName> [-t <NN|LR|SVM|DT>]  Create a new model set.");
         System.out.println("\tinit                                    Create initial ColumnConfig.json and upload to HDFS.");
         System.out.println("\tstats                                   Calculate statistics on HDFS and update local ColumnConfig.json.");
-        System.out.println("\tvarselect/varsel                        Variable selection, will update finalSelect in ColumnConfig.json.");
+        System.out.println("\tvarselect/varsel [-reset]               Variable selection, will update finalSelect in ColumnConfig.json.");
         System.out.println("\tnormalize/norm                          Normalize the columns with finalSelect as true.");
         System.out.println("\ttrain [-dry]                            Train the model with the normalized data.");
         System.out.println("\tposttrain                               Post-process data after training models.");
