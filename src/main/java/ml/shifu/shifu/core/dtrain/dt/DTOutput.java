@@ -125,7 +125,7 @@ public class DTOutput extends BasicMasterInterceptor<DTMasterParams, DTWorkerPar
             return;
         }
         double trainError = context.getMasterResult().getTrainError() / context.getMasterResult().getTrainCount();
-        double validationError = context.getMasterResult().getValidationCount() == 0L ? 0d : context.getMasterResult()
+        double validationError = context.getMasterResult().getValidationCount() == 0d ? 0d : context.getMasterResult()
                 .getValidationError() / context.getMasterResult().getValidationCount();
         String info = "";
         if(this.isGBDT) {

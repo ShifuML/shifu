@@ -394,6 +394,7 @@ public class DTWorker
         Map<Integer, NodeStats> statistics = initTodoNodeStats(todoNodes);
 
         double trainError = 0d, validationError = 0d;
+        double weightedTrainCount = 0d, weightedValidationCount = 0d;
         // renew random seed
         if(this.isGBDT && !this.gbdtSampleWithReplacement && lastMasterResult.isSwitchToNextTree()) {
             this.random = new Random();
@@ -405,7 +406,9 @@ public class DTWorker
                     Node predictNode = predictNodeIndex(treeNode.getNode(), data);
                     if(predictNode.getPredict() != null) {
                         // only update when not in first node, for treeNode, no predict statistics at that time
-                        trainError += loss.computeError((float) (predictNode.getPredict().getPredict()), data.label);
+                        trainError += data.significance
+                                * loss.computeError((float) (predictNode.getPredict().getPredict()), data.label);
+                        weightedTrainCount += data.significance;
                     }
                 }
             }
@@ -413,7 +416,8 @@ public class DTWorker
             if(this.isGBDT) {
                 if(this.isContinuousEnabled && lastMasterResult.isContinuousRunningStart()) {
                     recoverGBTData(context, data.output, data.predict, data);
-                    trainError += loss.computeError(data.predict, data.label);
+                    trainError += data.significance * loss.computeError(data.predict, data.label);
+                    weightedTrainCount += data.significance;
                 } else {
                     int currTreeIndex = trees.size() - 1;
                     if(lastMasterResult.isSwitchToNextTree()) {
@@ -441,11 +445,13 @@ public class DTWorker
                     }
                     Node predictNode = predictNodeIndex(trees.get(currTreeIndex).getNode(), data);
                     if(currTreeIndex >= 1) {
-                        trainError += loss.computeError(data.predict, data.label);
+                        trainError += data.significance * loss.computeError(data.predict, data.label);
+                        weightedTrainCount += data.significance;
                     } else {
                         if(predictNode.getPredict() != null) {
-                            trainError += loss
-                                    .computeError(((float) predictNode.getPredict().getPredict()), data.label);
+                            trainError += data.significance
+                                    * loss.computeError(((float) predictNode.getPredict().getPredict()), data.label);
+                            weightedTrainCount += data.significance;
                         }
                     }
                 }
@@ -458,8 +464,9 @@ public class DTWorker
                         Node predictNode = predictNodeIndex(treeNode.getNode(), data);
                         if(predictNode.getPredict() != null) {
                             // only update when not in first node, for treeNode, no predict statistics at that time
-                            validationError += loss.computeError((float) (predictNode.getPredict().getPredict()),
-                                    data.label);
+                            validationError += data.significance
+                                    * loss.computeError((float) (predictNode.getPredict().getPredict()), data.label);
+                            weightedValidationCount += data.significance;
                         }
                     }
                 }
@@ -467,7 +474,8 @@ public class DTWorker
                 if(this.isGBDT) {
                     if(this.isContinuousEnabled && lastMasterResult.isContinuousRunningStart()) {
                         recoverGBTData(context, data.output, data.predict, data);
-                        validationError += loss.computeError(data.predict, data.label);
+                        validationError += data.significance * loss.computeError(data.predict, data.label);
+                        weightedValidationCount += data.significance;
                     } else {
                         int currTreeIndex = trees.size() - 1;
                         if(lastMasterResult.isSwitchToNextTree()) {
@@ -495,11 +503,14 @@ public class DTWorker
                         }
                         Node predictNode = predictNodeIndex(trees.get(currTreeIndex).getNode(), data);
                         if(currTreeIndex >= 1) {
-                            validationError += loss.computeError(data.predict, data.label);
+                            validationError += data.significance * loss.computeError(data.predict, data.label);
+                            weightedValidationCount += data.significance;
+
                         } else {
                             if(predictNode.getPredict() != null) {
-                                validationError += loss.computeError(((float) predictNode.getPredict().getPredict()),
-                                        data.label);
+                                validationError += data.significance
+                                        * loss.computeError(((float) predictNode.getPredict().getPredict()), data.label);
+                                weightedValidationCount += data.significance;
                             }
                         }
                     }
@@ -620,8 +631,7 @@ public class DTWorker
         }
 
         LOG.info("worker count is {}, error is {}, and stats size is {}.", count, trainError, statistics.size());
-        return new DTWorkerParams(trainingData.size(), (this.validationData == null ? 0L : this.validationData.size()),
-                trainError, validationError, statistics);
+        return new DTWorkerParams(weightedTrainCount, weightedValidationCount, trainError, validationError, statistics);
     }
 
     private Map<Integer, NodeStats> initTodoNodeStats(Map<Integer, TreeNode> todoNodes) {
