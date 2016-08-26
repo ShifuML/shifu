@@ -577,6 +577,7 @@ public class ModelInspector {
                     Object loss = params.get("Loss");
                     if(loss != null && !"log".equalsIgnoreCase(loss.toString())
                             && !"squared".equalsIgnoreCase(loss.toString())
+                            && !"halfgradsquared".equalsIgnoreCase(loss.toString())
                             && !"absolute".equalsIgnoreCase(loss.toString())) {
                         ValidateResult tmpResult = new ValidateResult(true);
                         tmpResult.setStatus(false);

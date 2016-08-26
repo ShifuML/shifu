@@ -599,6 +599,7 @@
                         "defval" : "squared",
                         "options": [
                             {"label": "Squared", "value":"squared"},
+                            {"label": "HalfGradSquared", "value":"halfgradsquared"},
                             {"label": "Absolute", "value":"absolute"},
                             {"label": "Log", "value":"log"}
                         ]
