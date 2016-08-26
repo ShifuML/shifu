@@ -351,11 +351,14 @@ public class DTWorker
         this.isRF = ALGORITHM.RF.toString().equalsIgnoreCase(modelConfig.getAlgorithm());
         this.isGBDT = ALGORITHM.GBT.toString().equalsIgnoreCase(modelConfig.getAlgorithm());
 
+        // TODO, using reflection
         String lossStr = validParams.get("Loss").toString();
         if(lossStr.equalsIgnoreCase("log")) {
             this.loss = new LogLoss();
         } else if(lossStr.equalsIgnoreCase("absolute")) {
             this.loss = new AbsoluteLoss();
+        } else if(lossStr.equalsIgnoreCase("halfgradsquared")) {
+            this.loss = new HalfGradSquaredLoss();
         } else {
             this.loss = new SquaredLoss();
         }
@@ -505,7 +508,6 @@ public class DTWorker
                         if(currTreeIndex >= 1) {
                             validationError += data.significance * loss.computeError(data.predict, data.label);
                             weightedValidationCount += data.significance;
-
                         } else {
                             if(predictNode.getPredict() != null) {
                                 validationError += data.significance

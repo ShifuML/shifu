@@ -67,10 +67,11 @@
         "FeatureSubsetStrategy": "ALL",
         "MaxDepth": 8,
         "MaxStatsMemoryMB": 256,
-        "Impurity":"entropy",
+        "Impurity":"variance",
         "LearningRate": 0.1,
         "MinInstancesPerNode": 1,
         "MinInfoGain": 0.0,
+        "SampleWithReplacement" : true,
         "Loss": "squared"
     },
     "customPaths" : { }

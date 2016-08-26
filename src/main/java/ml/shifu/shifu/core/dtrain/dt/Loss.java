@@ -68,6 +68,20 @@ class SquaredLoss implements Loss {
 }
 
 /**
+ * Squared error is used to compute error. For gradient, half of gradient is using instead of 2 * (y-p).
+ * 
+ * @author Zhang David (pengzhang@paypal.com)
+ */
+class HalfGradSquaredLoss extends SquaredLoss {
+
+    @Override
+    public float computeGradient(float predict, float label) {
+        return (predict - label);
+    }
+
+}
+
+/**
  * Log function is used for {@link LogLoss}.
  * 
  * @author Zhang David (pengzhang@paypal.com)
