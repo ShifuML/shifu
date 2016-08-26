@@ -45,7 +45,12 @@ import ml.shifu.shifu.core.dtrain.gs.GridSearch;
 import ml.shifu.shifu.fs.ShifuFileUtils;
 import ml.shifu.shifu.util.CommonUtils;
 
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FSDataInputStream;
+import org.apache.hadoop.fs.FSDataOutputStream;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.io.IOUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -162,6 +167,36 @@ public class DTMaster extends AbstractMasterComputable<DTMasterParams, DTWorkerP
      */
     private boolean isContinuousEnabled = false;
 
+    /**
+     * If continuous model training, update this to existing tree size, by default is 0, no any impact on existing
+     * process.
+     */
+    private int existingTreeSize = 0;
+
+    /**
+     * Every checkpoint interval, do checkpoint to save {@link #trees} and {@link #queue} and MasterParams in that
+     * iteration.
+     */
+    private int checkpointInterval;
+
+    /**
+     * Checkpoint output HDFS file
+     */
+    private Path checkpointOutput;
+
+    /**
+     * Common conf to avoid new Configuration
+     */
+    private Configuration conf;
+
+    /**
+     * Checkpoint master params, if only recover queue in fail over, some todo nodes in master result will be ignored.
+     * This is used to recover whole stats of that iteration. In {@link #doCompute(MasterContext)}, check if
+     * {@link #cpMasterParams} is null, if not, directly return this one and send {@link #cpMasterParams} to null to
+     * avoid next iteration to send it again.
+     */
+    private DTMasterParams cpMasterParams;
+
     // ############################################################################################################
     // ## There parts are states, for fail over such instances should be recovered in {@link #init(MasterContext)}
     // ############################################################################################################
@@ -176,17 +211,19 @@ public class DTMaster extends AbstractMasterComputable<DTMasterParams, DTWorkerP
      */
     private Queue<TreeNode> queue;
 
-    /**
-     * If continuous model training, update this to existing tree size, by default is 0, no any impact on existing
-     * process.
-     */
-    private int existingTreeSize = 0;
-
     @Override
     public DTMasterParams doCompute(MasterContext<DTMasterParams, DTWorkerParams> context) {
         if(context.isFirstIteration()) {
             return buildInitialMasterParams();
         }
+
+        if(this.cpMasterParams != null) {
+            DTMasterParams tmpMasterParams = rebuildRecoverMastreResultDepthList();
+            // set it to null to avoid send it in next iteration
+            this.cpMasterParams = null;
+            return tmpMasterParams;
+        }
+
         boolean isFirst = false;
         Map<Integer, NodeStats> nodeStatsMap = null;
         double trainError = 0d, validationError = 0d;
@@ -328,7 +365,83 @@ public class DTMaster extends AbstractMasterComputable<DTMasterParams, DTWorkerP
             LOG.info("Todo node size is {}", todoNodes.size());
         }
         masterParams.setTrees(trees);
+        // before master result, do checkpoint according to n iteration set by user
+        doCheckPoint(context, masterParams);
         return masterParams;
+    }
+
+    private DTMasterParams rebuildRecoverMastreResultDepthList() {
+        DTMasterParams tmpMasterParams = this.cpMasterParams;
+        List<Integer> depthList = new ArrayList<Integer>();
+        if(isRF || (isGBDT && !isContinuousEnabled)) {
+            for(int i = 0; i < this.treeNum; i++) {
+                depthList.add(-1);
+            }
+        } else if(isGBDT && isContinuousEnabled) {
+            for(int i = 0; i < this.trees.size(); i++) {
+                depthList.add(-1);
+            }
+        }
+        for(Entry<Integer, TreeNode> entry: tmpMasterParams.getTodoNodes().entrySet()) {
+            int treeId = entry.getValue().getTreeId();
+            int oldDepth = depthList.get(treeId);
+            int currDepth = Node.indexToLevel(entry.getValue().getNode().getId());
+            if(currDepth > oldDepth) {
+                depthList.set(treeId, currDepth);
+            }
+        }
+        tmpMasterParams.setTreeDepth(depthList);
+        return tmpMasterParams;
+    }
+
+    /**
+     * Do checkpoint for master states, this is for master fail over
+     */
+    private void doCheckPoint(MasterContext<DTMasterParams, DTWorkerParams> context, final DTMasterParams masterParams) {
+        boolean isMasterFailOverEnabled = Boolean.TRUE.toString().equalsIgnoreCase(
+                context.getProps().getProperty("shifu.dt.master.failover", "true"));
+        if(!isMasterFailOverEnabled || context.getCurrentIteration() % this.checkpointInterval != 0) {
+            return;
+        }
+        LOG.info("Do checkpoint at hdfs file {}", this.checkpointOutput);
+        Thread cpPersistThread = new Thread(new Runnable() {
+            @Override
+            public void run() {
+                writeStatesToHdfs(DTMaster.this.checkpointOutput, masterParams);
+            }
+        }, "Master checkpoint thread");
+        cpPersistThread.setDaemon(true);
+        cpPersistThread.start();
+    }
+
+    /**
+     * Write {@link #trees}, {@link #queue} and MasterParams to HDFS.
+     */
+    private void writeStatesToHdfs(Path out, DTMasterParams masterParams) {
+        FSDataOutputStream fos = null;
+        try {
+            fos = FileSystem.get(conf).create(out);
+
+            // trees
+            int treeLength = trees.size();
+            fos.writeInt(treeLength);
+            for(TreeNode treeNode: trees) {
+                treeNode.write(fos);
+            }
+
+            // todo queue
+            fos.writeInt(this.queue.size());
+            for(TreeNode treeNode: this.queue) {
+                treeNode.write(fos);
+            }
+
+            // master result
+            masterParams.write(fos);
+        } catch (IOException e) {
+            LOG.error("Error in writing output.", e);
+        } finally {
+            IOUtils.closeStream(fos);
+        }
     }
 
     private void populateGainInfoToNode(Node doneNode, GainInfo maxGainInfo) {
@@ -494,8 +607,9 @@ public class DTMaster extends AbstractMasterComputable<DTMasterParams, DTWorkerP
         Properties props = context.getProps();
 
         // init model config and column config list at first
+        SourceType sourceType;
         try {
-            SourceType sourceType = SourceType.valueOf(props.getProperty(CommonConstants.MODELSET_SOURCE_TYPE,
+            sourceType = SourceType.valueOf(props.getProperty(CommonConstants.MODELSET_SOURCE_TYPE,
                     SourceType.HDFS.toString()));
             this.modelConfig = CommonUtils.loadModelConfig(props.getProperty(CommonConstants.SHIFU_MODEL_CONFIG),
                     sourceType);
@@ -550,6 +664,13 @@ public class DTMaster extends AbstractMasterComputable<DTMasterParams, DTWorkerP
             impurity = new Variance(minInstancesPerNode, minInfoGain);
         }
 
+        this.checkpointInterval = NumberFormatUtils.getInt(context.getProps().getProperty(
+                CommonConstants.SHIFU_DT_MASTER_CHECKPOINT_INTERVAL, "20"));
+        this.checkpointOutput = new Path(context.getProps().getProperty(
+                CommonConstants.SHIFU_DT_MASTER_CHECKPOINT_FOLDER, "tmp/cp_" + context.getAppId()));
+
+        this.conf = new Configuration();
+
         this.isContinuousEnabled = Boolean.TRUE.toString().equalsIgnoreCase(
                 context.getProps().getProperty(CommonConstants.CONTINUOUS_TRAINING));
 
@@ -597,8 +718,40 @@ public class DTMaster extends AbstractMasterComputable<DTMasterParams, DTWorkerP
                 }
             }
         } else {
-            this.trees = context.getMasterResult().getTrees();
-            // TODO recover state trees and queue here for fail-over
+            // recover all states once master is fail over
+            LOG.info("Recover master stats from cp file {}", this.checkpointOutput);
+            recoverMasterStats(sourceType);
+        }
+    }
+
+    private void recoverMasterStats(SourceType sourceType) {
+        FSDataInputStream stream = null;
+        FileSystem fs = ShifuFileUtils.getFileSystemBySourceType(sourceType);
+        try {
+            stream = fs.open(this.checkpointOutput);
+            int treeSize = stream.readInt();
+            this.trees = new ArrayList<TreeNode>(treeSize);
+            for(int i = 0; i < treeSize; i++) {
+                TreeNode treeNode = new TreeNode();
+                treeNode.readFields(stream);
+                this.trees.add(treeNode);
+            }
+
+            int queueSize = stream.readInt();
+            for(int i = 0; i < queueSize; i++) {
+                TreeNode treeNode = new TreeNode();
+                treeNode.readFields(stream);
+                this.queue.offer(treeNode);
+            }
+
+            this.cpMasterParams = new DTMasterParams();
+            this.cpMasterParams.readFields(stream);
+        } catch (IOException e) {
+            throw new GuaguaRuntimeException(e);
+        } finally {
+            if(stream != null) {
+                org.apache.commons.io.IOUtils.closeQuietly(stream);
+            }
         }
     }
 }
