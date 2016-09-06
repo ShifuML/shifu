@@ -765,7 +765,6 @@ public final class CommonUtils {
         return rawDataMap;
     }
 
-
     /**
      * Return all parameters for pig execution.
      * 

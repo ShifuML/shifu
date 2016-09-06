@@ -158,8 +158,8 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
                             log.debug("Not decimal format " + val + ", using default!");
                             normVal = Normalizer.defaultMissingValue(config);
                         }
+                        tuple.append(df.format(normVal));
                     }
-                    tuple.append(df.format(normVal));
                 } else {
                     // for multiple classification, binPosRate means rate of such category over all counts, reuse
                     // binPosRate for normalize
