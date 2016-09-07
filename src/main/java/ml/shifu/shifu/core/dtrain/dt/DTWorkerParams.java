@@ -275,6 +275,8 @@ public class DTWorkerParams extends HaltBytable implements Combinable<DTWorkerPa
 
         this.trainCount += that.trainCount;
         this.trainError += that.trainError;
+        this.validationCount += that.validationCount;
+        this.validationError += that.validationError;
 
         if(this.nodeStatsMap != null && that.nodeStatsMap != null) {
             for(Entry<Integer, NodeStats> entry: this.nodeStatsMap.entrySet()) {

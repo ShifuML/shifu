@@ -57,7 +57,7 @@ public class DTTest {
         driver.run();
     }
 
-    // @Test
+//     @Test
     public void testCamDtApp() throws IOException {
         Properties props = new Properties();
         props.setProperty(GuaguaConstants.MASTER_COMPUTABLE_CLASS, DTMaster.class.getName());
