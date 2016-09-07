@@ -453,7 +453,7 @@ public class DTWorker
                     } else {
                         if(predictNode.getPredict() != null) {
                             trainError += data.significance
-                                    * loss.computeError(((float) predictNode.getPredict().getPredict()), data.label);
+                                    * loss.computeError((float) (predictNode.getPredict().getPredict()), data.label);
                             weightedTrainCount += data.significance;
                         }
                     }
@@ -511,7 +511,7 @@ public class DTWorker
                         } else {
                             if(predictNode.getPredict() != null) {
                                 validationError += data.significance
-                                        * loss.computeError(((float) predictNode.getPredict().getPredict()), data.label);
+                                        * loss.computeError((float) (predictNode.getPredict().getPredict()), data.label);
                                 weightedValidationCount += data.significance;
                             }
                         }
@@ -927,15 +927,11 @@ public class DTWorker
         float[] sampleWeights;
         if(this.treeNum == 1 || (this.isGBDT && !this.gbdtSampleWithReplacement)) {
             // if tree == 1 or GBDT, don't use with replacement sampling; for GBDT, every time is one tree
-            sampleWeights = new float[this.treeNum];
+            sampleWeights = new float[1];
             if(random.nextDouble() <= modelConfig.getTrain().getBaggingSampleRate()) {
                 sampleWeights[0] = 1f;
             } else {
                 sampleWeights[0] = 0f;
-            }
-            // others just do init, such value will be replaced after the previous tree is built well
-            for(int i = 1; i < sampleWeights.length; i++) {
-                sampleWeights[i] = 1f;
             }
         } else {
             // if gbdt and gbdtSampleWithReplacement = true, still sampling with replacement
