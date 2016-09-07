@@ -165,8 +165,14 @@ public class TreeModel extends BasicML implements MLRegression {
                 nextNode = currNode.getRight();
             }
         } else if(columnConfig.isCategorical()) {
-            // value is category index + 0.1d is to avoid 0.9999999 converted to 0
-            String category = columnConfig.getBinCategory().get((int) (value + 0.1d));;
+            String category = null;
+            if(Double.compare(value, -1d) == 0) {
+                // missing value
+                category = "";
+            } else {
+                // value is category index + 0.1d is to avoid 0.9999999 converted to 0
+                category = columnConfig.getBinCategory().get((int) (value + 0.1d));
+            }
             if(split.getLeftCategories().contains(category)) {
                 nextNode = currNode.getLeft();
             } else {

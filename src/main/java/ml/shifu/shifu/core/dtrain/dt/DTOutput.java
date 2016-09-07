@@ -53,8 +53,14 @@ public class DTOutput extends BasicMasterInterceptor<DTMasterParams, DTWorkerPar
      */
     private ModelConfig modelConfig;
 
+    /**
+     * Id for current guagua job, starting from 0, 1, 2
+     */
     private String trainerId;
 
+    /**
+     * Tmp model folder to save tmp models
+     */
     private String tmpModelsFolder;
 
     /**
