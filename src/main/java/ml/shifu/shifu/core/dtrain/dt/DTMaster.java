@@ -367,6 +367,8 @@ public class DTMaster extends AbstractMasterComputable<DTMasterParams, DTWorkerP
         masterParams.setTrees(trees);
         // before master result, do checkpoint according to n iteration set by user
         doCheckPoint(context, masterParams);
+        LOG.info("weightedTrainCount {}, weightedValidationCount {}, trainError {}, validationError {}",
+                weightedTrainCount, weightedValidationCount, trainError, validationError);
         return masterParams;
     }
 

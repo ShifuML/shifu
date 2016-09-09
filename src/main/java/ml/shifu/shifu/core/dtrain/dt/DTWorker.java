@@ -329,11 +329,6 @@ public class DTWorker
         this.outputNodeCount = modelConfig.isRegression() ? inputOutputIndex[2] : modelConfig.getTags().size();
         this.isAfterVarSelect = inputOutputIndex[3] == 1 ? true : false;
 
-        this.rng = new PoissonDistribution[treeNum];
-        for(int i = 0; i < treeNum; i++) {
-            this.rng[i] = new PoissonDistribution(this.modelConfig.getTrain().getBaggingSampleRate());
-        }
-
         int numClasses = this.modelConfig.isClassification() ? this.modelConfig.getTags().size() : 2;
         String imStr = validParams.get("Impurity").toString();
         int minInstancesPerNode = Integer.valueOf(validParams.get("MinInstancesPerNode").toString());
@@ -370,6 +365,14 @@ public class DTWorker
                 this.gbdtSampleWithReplacement = Boolean.TRUE.toString().equalsIgnoreCase(swrObj.toString());
             }
         }
+
+        if(this.isRF || (this.isGBDT && this.gbdtSampleWithReplacement)) {
+            this.rng = new PoissonDistribution[treeNum];
+            for(int i = 0; i < treeNum; i++) {
+                this.rng[i] = new PoissonDistribution(this.modelConfig.getTrain().getBaggingSampleRate());
+            }
+        }
+
         LOG.info(
                 "Worker init params:isAfterVarSel={}, treeNum={}, impurity={}, loss={}, learningRate={}, gbdtSampleWithReplacement={}, isRF={}, isGBDT={}",
                 isAfterVarSelect, treeNum, impurity.getClass().getName(), loss.getClass().getName(), this.learningRate,
@@ -453,7 +456,7 @@ public class DTWorker
                     } else {
                         if(predictNode.getPredict() != null) {
                             trainError += data.significance
-                                    * loss.computeError(((float) predictNode.getPredict().getPredict()), data.label);
+                                    * loss.computeError((float) (predictNode.getPredict().getPredict()), data.label);
                             weightedTrainCount += data.significance;
                         }
                     }
@@ -511,7 +514,7 @@ public class DTWorker
                         } else {
                             if(predictNode.getPredict() != null) {
                                 validationError += data.significance
-                                        * loss.computeError(((float) predictNode.getPredict().getPredict()), data.label);
+                                        * loss.computeError((float) (predictNode.getPredict().getPredict()), data.label);
                                 weightedValidationCount += data.significance;
                             }
                         }
@@ -632,7 +635,10 @@ public class DTWorker
             rCnt += 1;
         }
 
-        LOG.info("worker count is {}, error is {}, and stats size is {}.", count, trainError, statistics.size());
+        LOG.info(
+                "worker count is {}, error is {}, and stats size is {}. weightedTrainCount {}, weightedValidationCount {}, trainError {}, validationError {}",
+                count, trainError, statistics.size(), weightedTrainCount, weightedValidationCount, trainError,
+                validationError);
         return new DTWorkerParams(weightedTrainCount, weightedValidationCount, trainError, validationError, statistics);
     }
 
@@ -927,15 +933,11 @@ public class DTWorker
         float[] sampleWeights;
         if(this.treeNum == 1 || (this.isGBDT && !this.gbdtSampleWithReplacement)) {
             // if tree == 1 or GBDT, don't use with replacement sampling; for GBDT, every time is one tree
-            sampleWeights = new float[this.treeNum];
+            sampleWeights = new float[1];
             if(random.nextDouble() <= modelConfig.getTrain().getBaggingSampleRate()) {
                 sampleWeights[0] = 1f;
             } else {
                 sampleWeights[0] = 0f;
-            }
-            // others just do init, such value will be replaced after the previous tree is built well
-            for(int i = 1; i < sampleWeights.length; i++) {
-                sampleWeights[i] = 1f;
             }
         } else {
             // if gbdt and gbdtSampleWithReplacement = true, still sampling with replacement

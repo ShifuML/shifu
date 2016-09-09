@@ -151,11 +151,18 @@ class Variance extends Impurity {
 
             Split split = null;
             if(config.isCategorical()) {
-                leftCategories.add(config.getBinCategory().get(i));
-                split = new Split(config.getColumnNum(), FeatureType.CATEGORICAL, 0d, leftCategories);
+                if(index >= config.getBinCategory().size()) {
+                    // missing value bin, all missing value will be replaced by empty string in norm step
+                    leftCategories.add("");
+                } else {
+                    leftCategories.add(config.getBinCategory().get(index));
+                }
+                // new hash set to copy a new one avoid share object issue
+                split = new Split(config.getColumnNum(), FeatureType.CATEGORICAL, 0d, new HashSet<String>(
+                        leftCategories));
             } else {
-                split = new Split(config.getColumnNum(), FeatureType.CONTINUOUS, config.getBinBoundary().get(i + 1),
-                        null);
+                split = new Split(config.getColumnNum(), FeatureType.CONTINUOUS,
+                        config.getBinBoundary().get(index + 1), null);
             }
 
             Predict leftPredict = new Predict(leftCount == 0d ? 0d : leftSum / leftCount);
@@ -274,11 +281,18 @@ class FriedmanMSE extends Variance {
 
             Split split = null;
             if(config.isCategorical()) {
-                leftCategories.add(config.getBinCategory().get(i));
-                split = new Split(config.getColumnNum(), FeatureType.CATEGORICAL, 0d, leftCategories);
+                if(index >= config.getBinCategory().size()) {
+                    // missing value bin, all missing value will be replaced by empty string in norm step
+                    leftCategories.add("");
+                } else {
+                    leftCategories.add(config.getBinCategory().get(index));
+                }
+                // new hash set to copy a new one avoid share object issue
+                split = new Split(config.getColumnNum(), FeatureType.CATEGORICAL, 0d, new HashSet<String>(
+                        leftCategories));
             } else {
-                split = new Split(config.getColumnNum(), FeatureType.CONTINUOUS, config.getBinBoundary().get(i + 1),
-                        null);
+                split = new Split(config.getColumnNum(), FeatureType.CONTINUOUS,
+                        config.getBinBoundary().get(index + 1), null);
             }
 
             Predict leftPredict = new Predict(leftCount == 0d ? 0d : leftSum / leftCount);
@@ -367,11 +381,18 @@ class Entropy extends Impurity {
 
             Split split = null;
             if(config.isCategorical()) {
-                leftCategories.add(config.getBinCategory().get(i));
-                split = new Split(config.getColumnNum(), FeatureType.CATEGORICAL, 0d, leftCategories);
+                if(index >= config.getBinCategory().size()) {
+                    // missing value bin, all missing value will be replaced by empty string in norm step
+                    leftCategories.add("");
+                } else {
+                    leftCategories.add(config.getBinCategory().get(index));
+                }
+                // new hash set to copy a new one avoid share object issue
+                split = new Split(config.getColumnNum(), FeatureType.CATEGORICAL, 0d, new HashSet<String>(
+                        leftCategories));
             } else {
-                split = new Split(config.getColumnNum(), FeatureType.CONTINUOUS, config.getBinBoundary().get(i + 1),
-                        null);
+                split = new Split(config.getColumnNum(), FeatureType.CONTINUOUS,
+                        config.getBinBoundary().get(index + 1), null);
             }
 
             internalGainList.add(new GainInfo(gain, info.impurity, predict, leftInfo.impurity, rightInfo.impurity,
@@ -481,7 +502,7 @@ class Gini extends Impurity {
             categoricalOrderList = getCategoricalOrderList(stats, stats.length / super.statsSize);
         }
 
-        InternalEntropyInfo info = getGiniInfo(statsByClasses);
+        InternalGiniInfo info = getGiniInfo(statsByClasses);
         // prob only effective in binary classes
         Predict predict = new Predict(info.sumAll == 0d ? 0d : statsByClasses[1] / info.sumAll,
                 info.indexOfLargestElement);
@@ -498,14 +519,14 @@ class Gini extends Impurity {
             for(int j = 0; j < leftStatByClasses.length; j++) {
                 leftStatByClasses[j] += stats[index * numClasses + j];
             }
-            InternalEntropyInfo leftInfo = getGiniInfo(leftStatByClasses);
+            InternalGiniInfo leftInfo = getGiniInfo(leftStatByClasses);
             Predict leftPredict = new Predict(leftInfo.sumAll == 0d ? 0d : leftStatByClasses[1] / leftInfo.sumAll,
                     leftInfo.indexOfLargestElement);
 
             for(int j = 0; j < leftStatByClasses.length; j++) {
                 rightStatByClasses[j] = statsByClasses[j] - leftStatByClasses[j];
             }
-            InternalEntropyInfo rightInfo = getGiniInfo(rightStatByClasses);
+            InternalGiniInfo rightInfo = getGiniInfo(rightStatByClasses);
 
             if(leftInfo.sumAll <= minInstancesPerNode || rightInfo.sumAll <= minInstancesPerNode) {
                 continue;
@@ -523,11 +544,18 @@ class Gini extends Impurity {
 
             Split split = null;
             if(config.isCategorical()) {
-                leftCategories.add(config.getBinCategory().get(i));
-                split = new Split(config.getColumnNum(), FeatureType.CATEGORICAL, 0d, leftCategories);
+                if(index >= config.getBinCategory().size()) {
+                    // missing value bin, all missing value will be replaced by empty string in norm step
+                    leftCategories.add("");
+                } else {
+                    leftCategories.add(config.getBinCategory().get(index));
+                }
+                // new hash set to copy a new one avoid share object issue
+                split = new Split(config.getColumnNum(), FeatureType.CATEGORICAL, 0d, new HashSet<String>(
+                        leftCategories));
             } else {
-                split = new Split(config.getColumnNum(), FeatureType.CONTINUOUS, config.getBinBoundary().get(i + 1),
-                        null);
+                split = new Split(config.getColumnNum(), FeatureType.CONTINUOUS,
+                        config.getBinBoundary().get(index + 1), null);
             }
 
             internalGainList.add(new GainInfo(gain, info.impurity, predict, leftInfo.impurity, rightInfo.impurity,
@@ -556,7 +584,7 @@ class Gini extends Impurity {
         return categoricalOrderList;
     }
 
-    private InternalEntropyInfo getGiniInfo(double[] statsByClasses) {
+    private InternalGiniInfo getGiniInfo(double[] statsByClasses) {
         double sumAll = 0;
         for(int i = 0; i < statsByClasses.length; i++) {
             sumAll += statsByClasses[i];
@@ -576,15 +604,15 @@ class Gini extends Impurity {
             }
         }
 
-        return new InternalEntropyInfo(sumAll, indexOfLargestElement, impurity);
+        return new InternalGiniInfo(sumAll, indexOfLargestElement, impurity);
     }
 
-    private static class InternalEntropyInfo {
+    private static class InternalGiniInfo {
         double sumAll;
         double indexOfLargestElement;
         double impurity;
 
-        public InternalEntropyInfo(double sumAll, double indexOfLargestElement, double impurity) {
+        public InternalGiniInfo(double sumAll, double indexOfLargestElement, double impurity) {
             this.sumAll = sumAll;
             this.indexOfLargestElement = indexOfLargestElement;
             this.impurity = impurity;
@@ -601,7 +629,6 @@ class Gini extends Impurity {
 
 class Pair {
     public Pair(int index, double value) {
-        super();
         this.index = index;
         this.value = value;
     }
