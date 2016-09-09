@@ -61,14 +61,16 @@ public class EqualPopulationBinningTest {
     
     @Test
     public void tesGussiantBinning() {
+        long startTs = System.currentTimeMillis();
         Random rd = new Random(System.currentTimeMillis());
         
         EqualPopulationBinning binning = new EqualPopulationBinning(10);
-        for ( int i = 0; i < 10000; i ++ ) {
-            binning.addData(Double.toString(rd.nextGaussian() % 1000));
+        for ( int i = 0; i < 1000; i ++ ) {
+            binning.addData(rd.nextGaussian() % 1000, rd.nextDouble() * 5.0);
         }
         
         System.out.println(binning.getDataBin());
+        System.out.println("spend " + (System.currentTimeMillis() - startTs) + " milliseconds to generate binnig.");
     }
     
     @Test
