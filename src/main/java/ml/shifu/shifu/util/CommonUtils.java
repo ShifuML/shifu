@@ -765,7 +765,6 @@ public final class CommonUtils {
         return rawDataMap;
     }
 
-
     /**
      * Return all parameters for pig execution.
      * 
@@ -946,7 +945,14 @@ public final class CommonUtils {
                     if(config != null && !config.isMeta() && !config.isTarget() && config.isFinalSelect()) {
                         String val = rawDataMap.get(key) == null ? null : rawDataMap.get(key).toString();
                         if(CommonUtils.isDesicionTreeAlgorithm(modelConfig.getAlgorithm()) && config.isCategorical()) {
-                            inputList.add(binCategoryMap.get(config.getColumnNum()).get(val == null ? "" : val) + 0d);
+                            Integer index = binCategoryMap.get(config.getColumnNum()).get(val == null ? "" : val);
+                            if(index == null) {
+                                // not in binCategories, should be missing value
+                                // -1 as missing value
+                                inputList.add(-1d);
+                            } else {
+                                inputList.add(index * 1d);
+                            }
                         } else {
                             inputList.add(computeNumericNormResult(modelConfig, cutoff, config, val));
                         }
@@ -955,7 +961,14 @@ public final class CommonUtils {
                     if(!config.isMeta() && !config.isTarget() && CommonUtils.isGoodCandidate(config)) {
                         String val = rawDataMap.get(key) == null ? null : rawDataMap.get(key).toString();
                         if(CommonUtils.isDesicionTreeAlgorithm(modelConfig.getAlgorithm()) && config.isCategorical()) {
-                            inputList.add(binCategoryMap.get(config.getColumnNum()).get(val == null ? "" : val) + 0d);
+                            Integer index = binCategoryMap.get(config.getColumnNum()).get(val == null ? "" : val);
+                            if(index == null) {
+                                // not in binCategories, should be missing value
+                                // -1 as missing value
+                                inputList.add(-1d);
+                            } else {
+                                inputList.add(index * 1d);
+                            }
                         } else {
                             inputList.add(computeNumericNormResult(modelConfig, cutoff, config, val));
                         }
