@@ -162,6 +162,11 @@ public abstract class AbstractNNWorker<VALUE extends Writable> extends
      * A instance from context properties which is from job configuration.
      */
     protected Properties props;
+    
+    /**
+     * Indicates if there are cross validation data sets.
+     */
+    protected boolean isCrossValidation = false;
 
     private Map<String, Object> validParams;
 
@@ -255,7 +260,7 @@ public abstract class AbstractNNWorker<VALUE extends Writable> extends
 
         this.isDry = Boolean.TRUE.toString().equalsIgnoreCase(
                 context.getProps().getProperty(CommonConstants.SHIFU_DRY_DTRAIN));
-
+        this.isCrossValidation = StringUtils.isNotBlank(modelConfig.getValidationDataSetRawPath());
         if(isOnDisk()) {
             LOG.info("NNWorker is loading data into disk.");
             try {
@@ -436,7 +441,7 @@ public abstract class AbstractNNWorker<VALUE extends Writable> extends
         if(isTesting) {
             this.testingData.add(pair);
             return;
-        } else if(StringUtils.isNotBlank(modelConfig.getValidationDataSetRawPath()) && (!isTesting)) {
+        } else if(this.isCrossValidation && (!isTesting)) {
             this.trainingData.add(pair);
             return;
         }
