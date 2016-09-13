@@ -49,7 +49,7 @@ import org.encog.ml.data.basic.BasicMLData;
  * @author Zhang David (pengzhang@paypal.com)
  */
 public class TreeModel extends BasicML implements MLRegression {
-
+    
     private static final long serialVersionUID = 1L;
 
     private List<ColumnConfig> columnConfigList;
@@ -255,9 +255,9 @@ public class TreeModel extends BasicML implements MLRegression {
             }
         }
 
+        // if one vs all, even multiple classification, treated as regression
         return new TreeModel(trees, weights, CommonConstants.GBT_ALG_NAME.equalsIgnoreCase(algorithm),
                 columnConfigList, columnMapping, isClassification && !isOneVsAll, algorithm, lossStr);
-        // if one vs all, even multiple classification, treated as regression
     }
 
     /*

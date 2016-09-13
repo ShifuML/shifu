@@ -845,9 +845,9 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
                     GuaguaConstants.GUAGUA_SPLIT_MAX_COMBINED_SPLIT_SIZE,
                     Environment.getProperty(GuaguaConstants.GUAGUA_SPLIT_MAX_COMBINED_SPLIT_SIZE, "268435456")));
         }
-        // special tuning parameters for shifu, 0.98 means each iteation master wait for 98% workers and then can go to
+        // special tuning parameters for shifu, 0.97 means each iteation master wait for 97% workers and then can go to
         // next iteration.
-        args.add(String.format(CommonConstants.MAPREDUCE_PARAM_FORMAT, GuaguaConstants.GUAGUA_MIN_WORKERS_RATIO, 0.98));
+        args.add(String.format(CommonConstants.MAPREDUCE_PARAM_FORMAT, GuaguaConstants.GUAGUA_MIN_WORKERS_RATIO, 0.97));
         // 2 seconds if waiting over 10, consider 99% workers; these two can be overrided in shifuconfig
         args.add(String.format(CommonConstants.MAPREDUCE_PARAM_FORMAT, GuaguaConstants.GUAGUA_MIN_WORKERS_TIMEOUT,
                 2 * 1000L));

@@ -1136,30 +1136,19 @@ public final class CommonUtils {
         }
 
         for(ColumnConfig config: columnConfigList) {
-            config.setColumnFlag(null);
-            config.setColumnType(ColumnType.N);
-
             String varName = config.getColumnName();
 
             if(targetColumnName.equals(varName)) {
                 config.setColumnFlag(ColumnFlag.Target);
                 config.setColumnType(null);
-            }
-
-            if(setMeta.contains(varName)) {
+            } else if(setMeta.contains(varName)) {
                 config.setColumnFlag(ColumnFlag.Meta);
                 config.setColumnType(null);
-            }
-
-            if(setForceRemove.contains(varName)) {
+            } else if(setForceRemove.contains(varName)) {
                 config.setColumnFlag(ColumnFlag.ForceRemove);
-            }
-
-            if(setForceSelect.contains(varName)) {
+            } else if(setForceSelect.contains(varName)) {
                 config.setColumnFlag(ColumnFlag.ForceSelect);
-            }
-
-            if(setCategorialColumns.contains(varName)) {
+            } else if(setCategorialColumns.contains(varName)) {
                 config.setColumnType(ColumnType.C);
             }
         }
