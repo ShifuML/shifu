@@ -48,3 +48,6 @@ shifu.train.bagging.inparallel=5
 
 ## if number of hyper parameter composite over such threshold, random search will be enabled. 
 shifu.gridsearch.threshold=30
+
+## set min worker done ratio in each guagua iteration step 
+guagua.min.workers.ratio=0.97

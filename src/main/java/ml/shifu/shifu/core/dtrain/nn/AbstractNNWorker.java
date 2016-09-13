@@ -149,12 +149,12 @@ public abstract class AbstractNNWorker<VALUE extends Writable> extends
     protected boolean poissonSampler;
 
     /**
-     * PoissonDistribution which is used for possion sampling for bagging with replacement.
+     * PoissonDistribution which is used for poisson sampling for bagging with replacement.
      */
     protected PoissonDistribution rng = null;
 
     /**
-     * PoissonDistribution which is used for up sampleing positive records.
+     * PoissonDistribution which is used for up sampling positive records.
      */
     protected PoissonDistribution upSampleRng = null;
 
