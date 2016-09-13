@@ -28,13 +28,15 @@ data = LOAD '$path_raw_data' USING PigStorage('$delimiter');
 
 -- not need to filtering
 data_cols = FOREACH data GENERATE $PSIColumn, AddColumnNum(*);
-data_cols = FILTER data_cols by $1 is not null;
+data_cols = FILTER data_cols BY $1 is not null;
 data_cols = FOREACH data_cols GENERATE $PSIColumn, FLATTEN($1);
 
 -- calculate counting number for each column and each psi bin
-population_info = foreach (group data_cols by ($PSIColumn, $1) PARALLEL $column_parallel) generate FLATTEN(PopulationCounter(*));
+population_info = FOREACH (group data_cols BY ($PSIColumn, $1) PARALLEL $column_parallel) GENERATE PopulationCounter(*) as counters;
 
 -- calculate the psi
+population_info = FILTER population_info BY counters is not null;
+population_info = FOREACH population_info GENERATE FLATTEN(counters);
 psi = foreach (group population_info by $0) generate FLATTEN(PSI(*));
 
 rmf $path_psi

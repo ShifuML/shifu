@@ -387,7 +387,7 @@ public class LogisticRegressionWorker extends
      * Add data pair to data set according to setting parameters. Still set hashCode to long to make double and long
      * friendly.
      */
-    private void addDataPairToDataSet(long hashcode, Data record, boolean isTesting) {
+    protected void addDataPairToDataSet(long hashcode, Data record, boolean isTesting) {
         if(isTesting) {
             this.testingData.append(record);
             return;
