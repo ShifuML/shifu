@@ -28,6 +28,7 @@ import org.encog.ml.BasicML;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 
@@ -89,7 +90,8 @@ public class ModelRunner {
      * @param stdDevCutoff
      *            - the standard deviation cutoff to normalize data
      */
-    public ModelRunner(ModelConfig modelConfig, List<ColumnConfig> columnConfigList, List<BasicML> models, double stdDevCutoff) {
+    public ModelRunner(ModelConfig modelConfig, List<ColumnConfig> columnConfigList, List<BasicML> models,
+            double stdDevCutoff) {
         this.columnConfigList = columnConfigList;
         this.modelConfig = modelConfig;
         this.scorer = new Scorer(models, columnConfigList, ALGORITHM.NN.name(), modelConfig, stdDevCutoff);
@@ -158,5 +160,9 @@ public class ModelRunner {
         scoreResult.setMedianScore(so.getMedianScore());
 
         return scoreResult;
+    }
+
+    public static void main(String[] args) {
+        System.out.println(Arrays.toString("abc".split("\\|")));
     }
 }
