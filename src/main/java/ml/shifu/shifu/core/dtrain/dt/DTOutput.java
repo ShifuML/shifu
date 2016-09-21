@@ -102,6 +102,7 @@ public class DTOutput extends BasicMasterInterceptor<DTMasterParams, DTWorkerPar
 
     @Override
     public void postIteration(final MasterContext<DTMasterParams, DTWorkerParams> context) {
+        long start = System.currentTimeMillis();
         // save tmp to hdfs according to raw trainer logic
         final int tmpModelFactor = DTrainUtils.tmpModelFactor(context.getTotalIteration());
         if(isRF) {
@@ -145,6 +146,7 @@ public class DTOutput extends BasicMasterInterceptor<DTMasterParams, DTWorkerPar
         }
 
         updateProgressLog(context);
+        LOG.info("DT output post iteration time is {}ms", (System.currentTimeMillis() - start));
     }
 
     @SuppressWarnings("deprecation")

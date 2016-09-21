@@ -81,15 +81,19 @@ public class EvalScoreUDF extends AbstractTrainerUDF<Tuple> {
                 this.headers[i] = i + "";
             }
         }
-
-        List<BasicML> models = CommonUtils.loadBasicModels(modelConfig, this.columnConfigList, evalConfig, evalConfig
-                .getDataSet().getSource());
-        modelRunner = new ModelRunner(modelConfig, columnConfigList, this.headers, evalConfig.getDataSet()
-                .getDataDelimiter(), models);
-        modelCnt = models.size();
+        // move model runner construction in exec to avoid OOM error in client side if model is too big like RF
     }
 
     public Tuple exec(Tuple input) throws IOException {
+        if(modelRunner == null) {
+            // here to initialize modelRunner, this is moved from constructor to here to avoid OOM in client side.
+            // UDF in pig client will be initialized to get some metadata issues
+            List<BasicML> models = CommonUtils.loadBasicModels(modelConfig, this.columnConfigList, evalConfig,
+                    evalConfig.getDataSet().getSource());
+            modelRunner = new ModelRunner(modelConfig, columnConfigList, this.headers, evalConfig.getDataSet()
+                    .getDataDelimiter(), models);
+            modelCnt = models.size();
+        }
         Map<String, String> rawDataMap = CommonUtils.convertDataIntoMap(input, this.headers);
         if(MapUtils.isEmpty(rawDataMap)) {
             return null;

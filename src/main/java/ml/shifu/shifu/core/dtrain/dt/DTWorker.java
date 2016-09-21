@@ -983,6 +983,7 @@ public class DTWorker
         private static final long serialVersionUID = 903201066309036170L;
 
         float[] numericInputs;
+        
         String[] categoricalInputs;
         /**
          * Original output label and not changed in GBDT
