@@ -17,14 +17,7 @@ package ml.shifu.shifu.core.processor;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.Scanner;
-import java.util.Set;
+import java.util.*;
 
 import ml.shifu.shifu.actor.AkkaSystemExecutor;
 import ml.shifu.shifu.container.obj.ColumnConfig;
@@ -38,6 +31,7 @@ import ml.shifu.shifu.exception.ShifuException;
 import ml.shifu.shifu.fs.PathFinder;
 import ml.shifu.shifu.fs.ShifuFileUtils;
 import ml.shifu.shifu.pig.PigExecutor;
+import ml.shifu.shifu.util.CommonUtils;
 import ml.shifu.shifu.util.Constants;
 
 import org.apache.commons.collections.CollectionUtils;
@@ -153,7 +147,7 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
     }
 
     /**
-     * @param evalName
+     * @param evalSetName
      */
     private void deleteEvalSet(String evalSetName) {
         EvalConfig evalConfig = modelConfig.getEvalConfigByName(evalSetName);
@@ -209,7 +203,7 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
     /**
      * run score only
      * 
-     * @param evalName
+     * @param evalSetList
      * @throws IOException
      */
     private void runScore(List<EvalConfig> evalSetList) throws IOException {
@@ -247,7 +241,7 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
     /**
      * run pig mode scoring
      * 
-     * @param config
+     * @param evalConfig
      * @throws IOException
      */
     @SuppressWarnings("deprecation")
@@ -375,25 +369,37 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
         }
     }
 
-    private void validateEvalColumnConfig(EvalConfig evalConfig) {
+    private void validateEvalColumnConfig(EvalConfig evalConfig) throws IOException {
         if(this.columnConfigList == null) {
             return;
         }
+
+        String[] evalColumnNames = CommonUtils.getHeaders(evalConfig.getDataSet().getHeaderPath(),
+                evalConfig.getDataSet().getHeaderDelimiter(),
+                evalConfig.getDataSet().getSource());
         Set<String> names = new HashSet<String>();
+        names.addAll(Arrays.asList(evalColumnNames));
+
         for(ColumnConfig config: this.columnConfigList) {
-            names.add(config.getColumnName());
+            if ( config.isFinalSelect() && !names.contains(config.getColumnName()) ) {
+                throw new IllegalArgumentException("Final selected column " + config.getColumnName()
+                        + " does not exist in - "
+                        + evalConfig.getDataSet().getHeaderPath());
+            }
         }
 
         if(StringUtils.isNotBlank(evalConfig.getDataSet().getTargetColumnName())
                 && !names.contains(evalConfig.getDataSet().getTargetColumnName())) {
-            throw new IllegalArgumentException("target column " + evalConfig.getDataSet().getTargetColumnName()
-                    + " in eval " + evalConfig.getName() + " does not exist.");
+            throw new IllegalArgumentException("Target column " + evalConfig.getDataSet().getTargetColumnName()
+                    + " does not exist in - "
+                    + evalConfig.getDataSet().getHeaderPath());
         }
 
         if(StringUtils.isNotBlank(evalConfig.getDataSet().getWeightColumnName())
                 && !names.contains(evalConfig.getDataSet().getWeightColumnName())) {
-            throw new IllegalArgumentException("weight column " + evalConfig.getDataSet().getWeightColumnName()
-                    + " in eval " + evalConfig.getName() + " does not exist.");
+            throw new IllegalArgumentException("Weight column " + evalConfig.getDataSet().getWeightColumnName()
+                    + " does not exist in - "
+                    + evalConfig.getDataSet().getHeaderPath());
         }
     }
 
@@ -455,10 +461,8 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
     /**
      * Running the performance matrices
      * 
-     * @param evalSetName
-     *            the name for evaluation
-     * @param scoreColumn
-     *            the performance score target
+     * @param evalSetList
+     *            EvalConfig list
      * @throws IOException
      */
     private void runPerformance(List<EvalConfig> evalSetList) throws IOException {
@@ -504,7 +508,7 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
     /**
      * Run confusion matrix
      * 
-     * @param EvalConfig
+     * @param config
      * @return List of ConfusionMatrixObject
      * @throws IOException
      */
