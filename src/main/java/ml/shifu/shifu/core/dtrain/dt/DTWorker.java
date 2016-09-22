@@ -224,7 +224,7 @@ public class DTWorker
      * By default in GBDT, sample with replacement is enabled, but looks sometimes good performance with replacement &
      * GBDT
      */
-    private boolean gbdtSampleWithReplacement = true;
+    private boolean gbdtSampleWithReplacement = false;
 
     /**
      * Trainer id used to tag bagging training job, starting from 0, 1, 2 ...
@@ -245,12 +245,11 @@ public class DTWorker
      * Worker thread count used as multiple threading to get node status
      */
     private int workerThreadCount;
-    
+
     /**
      * Indicates if there are cross validation data sets.
      */
     protected boolean isCrossValidation = false;
-
 
     /**
      * Whether to enable continuous model training based on existing models.
@@ -420,9 +419,17 @@ public class DTWorker
                     Node predictNode = predictNodeIndex(treeNode.getNode(), data);
                     if(predictNode.getPredict() != null) {
                         // only update when not in first node, for treeNode, no predict statistics at that time
-                        trainError += data.significance
-                                * loss.computeError((float) (predictNode.getPredict().getPredict()), data.label);
-                        weightedTrainCount += data.significance;
+                        float weight = data.subsampleWeights[treeNode.getTreeId()];
+                        if(Float.compare(weight, 0f) == 0) {
+                            // oob data, no need to do weighting
+                            validationError += data.significance
+                                    * loss.computeError((float) (predictNode.getPredict().getPredict()), data.label);
+                            weightedValidationCount += data.significance;
+                        } else {
+                            trainError += weight * data.significance
+                                    * loss.computeError((float) (predictNode.getPredict().getPredict()), data.label);
+                            weightedTrainCount += weight * data.significance;
+                        }
                     }
                 }
             }
@@ -891,9 +898,9 @@ public class DTWorker
         if(context.getAttachment() != null && context.getAttachment() instanceof Boolean) {
             isTesting = (Boolean) context.getAttachment();
         }
-        this.addDataPairToDataSet(hashcode,data,isTesting);
+        this.addDataPairToDataSet(hashcode, data, isTesting);
     }
-    
+
     protected void addDataPairToDataSet(long hashcode, Data data, boolean isTesting) {
         if(isTesting) {
             this.validationData.append(data);
@@ -983,7 +990,7 @@ public class DTWorker
         private static final long serialVersionUID = 903201066309036170L;
 
         float[] numericInputs;
-        
+
         String[] categoricalInputs;
         /**
          * Original output label and not changed in GBDT
