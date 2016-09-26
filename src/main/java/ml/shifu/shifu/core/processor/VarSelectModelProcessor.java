@@ -172,9 +172,16 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
     }
 
     public void resetAllFinalSelect() {
-        log.info("!!! Reset all variables finalSelect = true");
+        log.info("!!! Reset all variables finalSelect = false");
         for ( ColumnConfig columnConfig : this.columnConfigList ) {
             columnConfig.setFinalSelect(false);
+            columnConfig.setColumnFlag(null);
+        }
+
+        try {
+            CommonUtils.updateColumnConfigFlags(this.modelConfig, this.columnConfigList);
+        } catch (IOException e) {
+            log.error("Fail to update ColumnConfig.json flags.", e);
         }
     }
 
@@ -662,13 +669,13 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
         // here we do loop again as it is not bad for variables less than 100,000
         for(ColumnConfig config: columnConfigList) {
             // check ID-like variables
-            if(isIDLikeVariable(config) && !config.isForceSelect()) {
+            /*if(isIDLikeVariable(config) && !config.isForceSelect()) {
                 log.warn(
                         "Column {} is like an ID, set final select to false. If not, you can check it manually in ColumnConfig.json",
                         config.getColumnName());
                 config.setFinalSelect(false);
                 continue;
-            }
+            }*/
             if(isHighMissingRateColumn(config) && !config.isForceSelect()) {
                 log.warn(
                         "Column {} is with very high missing rate, set final select to false. If not, you can check it manually in ColumnConfig.json",
