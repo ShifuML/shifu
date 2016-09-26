@@ -218,7 +218,7 @@ public class DTMaster extends AbstractMasterComputable<DTMasterParams, DTWorkerP
         }
 
         if(this.cpMasterParams != null) {
-            DTMasterParams tmpMasterParams = rebuildRecoverMastreResultDepthList();
+            DTMasterParams tmpMasterParams = rebuildRecoverMasterResultDepthList();
             // set it to null to avoid send it in next iteration
             this.cpMasterParams = null;
             return tmpMasterParams;
@@ -283,7 +283,7 @@ public class DTMaster extends AbstractMasterComputable<DTMasterParams, DTWorkerP
                 if(!leftChildIsLeaf) {
                     this.queue.offer(new TreeNode(treeId, left));
                 } else {
-                    LOG.info("Left node {} in tree {} is set to leaf and not submitted to workers", leftIndex, treeId);
+                    LOG.debug("Left node {} in tree {} is set to leaf and not submitted to workers", leftIndex, treeId);
                 }
 
                 boolean rightChildIsLeaf = Node.indexToLevel(doneNode.getId()) + 1 == this.maxDepth
@@ -296,7 +296,7 @@ public class DTMaster extends AbstractMasterComputable<DTMasterParams, DTWorkerP
                 if(!rightChildIsLeaf) {
                     this.queue.offer(new TreeNode(treeId, right));
                 } else {
-                    LOG.info("Right node {} in tree {} is set to leaf and not submitted to workers", rightIndex, treeId);
+                    LOG.debug("Right node {} in tree {} is set to leaf and not submitted to workers", rightIndex, treeId);
                 }
             } else {
                 LOG.info("Done node {} in tree {} is final set to leaf", doneNode.getId(), treeId);
@@ -372,7 +372,7 @@ public class DTMaster extends AbstractMasterComputable<DTMasterParams, DTWorkerP
         return masterParams;
     }
 
-    private DTMasterParams rebuildRecoverMastreResultDepthList() {
+    private DTMasterParams rebuildRecoverMasterResultDepthList() {
         DTMasterParams tmpMasterParams = this.cpMasterParams;
         List<Integer> depthList = new ArrayList<Integer>();
         if(isRF || (isGBDT && !isContinuousEnabled)) {
