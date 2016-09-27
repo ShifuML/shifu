@@ -552,10 +552,29 @@ public final class CommonUtils {
      */
     public static List<BasicML> loadBasicModels(ModelConfig modelConfig, List<ColumnConfig> columnConfigList,
             EvalConfig evalConfig, SourceType sourceType) throws IOException {
+        List<BasicML> models = new ArrayList<BasicML>();
+        FileSystem fs = ShifuFileUtils.getFileSystemBySourceType(sourceType);
+
+        List<FileStatus> modelFileStats = locateBasicModels(modelConfig, columnConfigList, evalConfig, sourceType);
+        if (CollectionUtils.isNotEmpty(modelFileStats)) {
+            for (FileStatus f : modelFileStats) {
+                models.add(loadModel(modelConfig, columnConfigList, f.getPath(), fs));
+            }
+        }
+
+        return models;
+    }
+
+    public static int getBasicModelsCnt(ModelConfig modelConfig, List<ColumnConfig> columnConfigList,
+        EvalConfig evalConfig, SourceType sourceType) throws IOException  {
+        List<FileStatus> modelFileStats = locateBasicModels(modelConfig, columnConfigList, evalConfig, sourceType);
+        return (CollectionUtils.isEmpty(modelFileStats) ? 0 : modelFileStats.size());
+    }
+
+    public static List<FileStatus> locateBasicModels(ModelConfig modelConfig, List<ColumnConfig> columnConfigList,
+            EvalConfig evalConfig, SourceType sourceType) throws IOException {
         // we have to register PersistBasicFloatNetwork for loading such models
         PersistorRegistry.getInstance().add(new PersistBasicFloatNetwork());
-
-        FileSystem fs = ShifuFileUtils.getFileSystemBySourceType(sourceType);
 
         List<FileStatus> listStatus = findModels(modelConfig, evalConfig, sourceType);
         if(CollectionUtils.isEmpty(listStatus)) {
@@ -577,12 +596,7 @@ public final class CommonUtils {
             baggingModelSize = modelConfig.getTags().size();
         }
         listStatus = listStatus.size() <= baggingModelSize ? listStatus : listStatus.subList(0, baggingModelSize);
-
-        List<BasicML> models = new ArrayList<BasicML>(listStatus.size());
-        for(FileStatus f: listStatus) {
-            models.add(loadModel(modelConfig, columnConfigList, f.getPath(), fs));
-        }
-        return models;
+        return listStatus;
     }
 
     /**
