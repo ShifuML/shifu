@@ -609,25 +609,29 @@ public class DTWorker
                                     double[] featuerStatistic = localStatistics.get(entry.getKey())
                                             .getFeatureStatistics().get(columnNum);
                                     float weight = data.subsampleWeights[treeId % data.subsampleWeights.length];
-                                    if(config.isNumerical()) {
-                                        float value = data.numericInputs[DTWorker.this.numericInputIndexMap
-                                                .get(columnNum)];
-                                        int binIndex = getBinIndex(value, config.getBinBoundary());
-                                        DTWorker.this.impurity.featureUpdate(featuerStatistic, binIndex, data.output,
-                                                data.significance, weight);
-                                    } else if(config.isCategorical()) {
-                                        String category = data.categoricalInputs[DTWorker.this.categoricalInputIndexMap
-                                                .get(columnNum)];
-                                        Integer binIndex = DTWorker.this.categoryIndexMap.get(columnNum).get(category);
-                                        if(binIndex == null) {
-                                            // add to null bin which is the last one
-                                            binIndex = config.getBinCategory().size();
+                                    if(Float.compare(weight, 0f) != 0) {
+                                        // only compute weight is not 0
+                                        if(config.isNumerical()) {
+                                            float value = data.numericInputs[DTWorker.this.numericInputIndexMap
+                                                    .get(columnNum)];
+                                            int binIndex = getBinIndex(value, config.getBinBoundary());
+                                            DTWorker.this.impurity.featureUpdate(featuerStatistic, binIndex,
+                                                    data.output, data.significance, weight);
+                                        } else if(config.isCategorical()) {
+                                            String category = data.categoricalInputs[DTWorker.this.categoricalInputIndexMap
+                                                    .get(columnNum)];
+                                            Integer binIndex = DTWorker.this.categoryIndexMap.get(columnNum).get(
+                                                    category);
+                                            if(binIndex == null) {
+                                                // add to null bin which is the last one
+                                                binIndex = config.getBinCategory().size();
+                                            }
+                                            DTWorker.this.impurity.featureUpdate(featuerStatistic, binIndex,
+                                                    data.output, data.significance, weight);
+                                        } else {
+                                            throw new IllegalStateException(
+                                                    "Only numerical and categorical columns supported. ");
                                         }
-                                        DTWorker.this.impurity.featureUpdate(featuerStatistic, binIndex, data.output,
-                                                data.significance, weight);
-                                    } else {
-                                        throw new IllegalStateException(
-                                                "Only numerical and categorical columns supported. ");
                                     }
                                 }
                             }
