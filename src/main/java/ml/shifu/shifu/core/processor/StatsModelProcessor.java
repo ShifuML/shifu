@@ -20,6 +20,7 @@ import ml.shifu.shifu.core.processor.stats.*;
 import ml.shifu.shifu.core.validator.ModelInspector.ModelStep;
 import ml.shifu.shifu.exception.ShifuErrorCode;
 import ml.shifu.shifu.exception.ShifuException;
+import ml.shifu.shifu.util.CommonUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -39,6 +40,9 @@ public class StatsModelProcessor extends BasicModelProcessor implements Processo
         long start = System.currentTimeMillis();
         try {
             setUp(ModelStep.STATS);
+
+            // User may change variable type after `shifu init`
+            CommonUtils.updateColumnConfigFlags(this.modelConfig, this.columnConfigList);
 
             syncDataToHdfs(modelConfig.getDataSet().getSource());
 
