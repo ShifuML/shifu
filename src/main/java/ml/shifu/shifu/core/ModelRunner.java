@@ -15,22 +15,22 @@
  */
 package ml.shifu.shifu.core;
 
+import java.util.List;
+import java.util.Map;
+
 import ml.shifu.shifu.container.CaseScoreResult;
 import ml.shifu.shifu.container.ScoreObject;
 import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.container.obj.ModelConfig;
 import ml.shifu.shifu.container.obj.ModelTrainConf.ALGORITHM;
 import ml.shifu.shifu.util.CommonUtils;
+
 import org.apache.commons.collections.MapUtils;
 import org.apache.pig.backend.executionengine.ExecException;
 import org.apache.pig.data.Tuple;
 import org.encog.ml.BasicML;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import java.util.Arrays;
-import java.util.List;
-import java.util.Map;
 
 /**
  * ModelRunner class is to load the model and run the model for input data
@@ -162,7 +162,4 @@ public class ModelRunner {
         return scoreResult;
     }
 
-    public static void main(String[] args) {
-        System.out.println(Arrays.toString("abc".split("\\|")));
-    }
 }
