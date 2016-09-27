@@ -1148,7 +1148,10 @@ public final class CommonUtils {
                 config.setColumnFlag(ColumnFlag.ForceRemove);
             } else if(setForceSelect.contains(varName)) {
                 config.setColumnFlag(ColumnFlag.ForceSelect);
-            } else if(setCategorialColumns.contains(varName)) {
+            }
+
+            // variable type is not related with variable flag
+            if(setCategorialColumns.contains(varName)) {
                 config.setColumnType(ColumnType.C);
             }
         }
