@@ -473,8 +473,7 @@ public class DTMaster extends AbstractMasterComputable<DTMasterParams, DTWorkerP
             }
         }
         // times worker number to avoid oom in master, as combinable DTWorkerParams, use one third of worker number
-        // TODO, make it configuable
-        statsMem = statsMem * this.workerNumber / 3;
+        statsMem = statsMem * this.workerNumber / 2;
         return statsMem;
     }
 
