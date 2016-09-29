@@ -44,7 +44,6 @@ import ml.shifu.shifu.core.dtrain.gs.GridSearch;
 import ml.shifu.shifu.util.CommonUtils;
 
 import org.apache.commons.lang.math.RandomUtils;
-import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.math3.distribution.PoissonDistribution;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.LongWritable;
@@ -162,7 +161,7 @@ public abstract class AbstractNNWorker<VALUE extends Writable> extends
      * A instance from context properties which is from job configuration.
      */
     protected Properties props;
-    
+
     /**
      * Indicates if there are cross validation data sets.
      */
@@ -260,7 +259,8 @@ public abstract class AbstractNNWorker<VALUE extends Writable> extends
 
         this.isDry = Boolean.TRUE.toString().equalsIgnoreCase(
                 context.getProps().getProperty(CommonConstants.SHIFU_DRY_DTRAIN));
-        this.isCrossValidation = StringUtils.isNotBlank(modelConfig.getValidationDataSetRawPath());
+        this.isCrossValidation = (modelConfig.getValidationDataSetRawPath() != null && !"".equals(modelConfig
+                .getValidationDataSetRawPath()));
         if(isOnDisk()) {
             LOG.info("NNWorker is loading data into disk.");
             try {
@@ -428,16 +428,16 @@ public abstract class AbstractNNWorker<VALUE extends Writable> extends
         LOG.info("        - # Records of the Training Set: {}.", this.trainingData.getRecordCount());
         LOG.info("        - # Records of the Validation Set: {}.", this.testingData.getRecordCount());
     }
-    
+
     protected void addDataPairToDataSet(long hashcode, FloatMLDataPair pair) {
-        addDataPairToDataSet(hashcode,pair,false);
+        addDataPairToDataSet(hashcode, pair, false);
     }
 
     /**
      * Add data pair to data set according to setting parameters. Still set hashCode to long to make double and long
      * friendly.
      */
-    protected void addDataPairToDataSet(long hashcode, FloatMLDataPair pair,boolean isTesting) {
+    protected void addDataPairToDataSet(long hashcode, FloatMLDataPair pair, boolean isTesting) {
         if(isTesting) {
             this.testingData.add(pair);
             return;
