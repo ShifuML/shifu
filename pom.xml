@@ -3,7 +3,7 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>ml.shifu</groupId>
     <artifactId>shifu</artifactId>
-    <version>0.9.0-SNAPSHOT</version>
+    <version>0.9.0</version>
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <version.platform>2.0.0</version.platform>
@@ -18,7 +18,7 @@
         <developerConnection>scm:git:https://github.com/shifuml/shifu.git</developerConnection>
         <connection>scm:git:https://github.com/shifuml/shifu.git</connection>
         <url>https://github.com/shifuml/shifu.git</url>
-        <tag>shifu-0.9.0-SNAPSHOT</tag>
+        <tag>shifu-0.9.0</tag>
     </scm>
     <dependencies>
         <dependency>
