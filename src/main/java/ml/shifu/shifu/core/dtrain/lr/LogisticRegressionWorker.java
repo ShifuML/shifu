@@ -39,7 +39,6 @@ import ml.shifu.shifu.core.dtrain.CommonConstants;
 import ml.shifu.shifu.core.dtrain.DTrainUtils;
 import ml.shifu.shifu.util.CommonUtils;
 
-import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.math3.distribution.PoissonDistribution;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Text;
@@ -68,7 +67,8 @@ import com.google.common.base.Splitter;
  * L1 and l2 regulations are supported by configuration: RegularizedConstant in model params of ModelConfig.json.
  */
 @ComputableMonitor(timeUnit = TimeUnit.SECONDS, duration = 240)
-public class LogisticRegressionWorker extends
+public class LogisticRegressionWorker
+        extends
         AbstractWorkerComputable<LogisticRegressionParams, LogisticRegressionParams, GuaguaWritableAdapter<LongWritable>, GuaguaWritableAdapter<Text>> {
 
     private static final Logger LOG = LoggerFactory.getLogger(LogisticRegressionWorker.class);
@@ -165,7 +165,9 @@ public class LogisticRegressionWorker extends
         this.inputNum = inputOutputIndex[0] == 0 ? inputOutputIndex[2] : inputOutputIndex[0];
         this.outputNum = inputOutputIndex[1];
         this.candidateNum = inputOutputIndex[2];
-        this.isCrossValidation = StringUtils.isNotBlank(modelConfig.getValidationDataSetRawPath());
+        this.isCrossValidation = (modelConfig.getValidationDataSetRawPath() != null && !"".equals(modelConfig
+                .getValidationDataSetRawPath()));
+
         if(this.inputNum == 0) {
             throw new IllegalStateException("No any variables are selected, please try variable select step firstly.");
         }
@@ -181,11 +183,11 @@ public class LogisticRegressionWorker extends
         double crossValidationRate = this.modelConfig.getCrossValidationRate();
         String tmpFolder = context.getProps().getProperty("guagua.data.tmpfolder", "tmp");
         this.trainingData = new BytableMemoryDiskList<Data>(
-                (long) (Runtime.getRuntime().maxMemory() * memoryFraction * (1 - crossValidationRate)),
-                tmpFolder + File.separator + "train-" + System.currentTimeMillis(), Data.class.getName());
+                (long) (Runtime.getRuntime().maxMemory() * memoryFraction * (1 - crossValidationRate)), tmpFolder
+                        + File.separator + "train-" + System.currentTimeMillis(), Data.class.getName());
         this.testingData = new BytableMemoryDiskList<Data>(
-                (long) (Runtime.getRuntime().maxMemory() * memoryFraction * crossValidationRate),
-                tmpFolder + File.separator + "test-" + System.currentTimeMillis(), Data.class.getName());
+                (long) (Runtime.getRuntime().maxMemory() * memoryFraction * crossValidationRate), tmpFolder
+                        + File.separator + "test-" + System.currentTimeMillis(), Data.class.getName());
         // cannot find a good place to close these two data set, using Shutdown hook
         Runtime.getRuntime().addShutdownHook(new Thread(new Runnable() {
             @Override
@@ -197,8 +199,7 @@ public class LogisticRegressionWorker extends
     }
 
     @Override
-    public LogisticRegressionParams doCompute(
-            WorkerContext<LogisticRegressionParams, LogisticRegressionParams> context) {
+    public LogisticRegressionParams doCompute(WorkerContext<LogisticRegressionParams, LogisticRegressionParams> context) {
         if(context.isFirstIteration()) {
             return new LogisticRegressionParams();
         } else {
@@ -237,10 +238,10 @@ public class LogisticRegressionWorker extends
                 double error = result - data.outputs[0];
                 testingFinalError += caculateMSEError(error);
             }
-            LOG.info("Iteration {} training data with error {}", context.getCurrentIteration(),
-                    trainingFinalError / trainingSize);
-            LOG.info("Iteration {} testing data with error {}", context.getCurrentIteration(),
-                    testingFinalError / testingSize);
+            LOG.info("Iteration {} training data with error {}", context.getCurrentIteration(), trainingFinalError
+                    / trainingSize);
+            LOG.info("Iteration {} testing data with error {}", context.getCurrentIteration(), testingFinalError
+                    / testingSize);
             return new LogisticRegressionParams(gradients, trainingFinalError, testingFinalError, trainingSize,
                     testingSize);
         }
@@ -372,12 +373,12 @@ public class LogisticRegressionWorker extends
 
     private void loadConfigFiles(final Properties props) {
         try {
-            SourceType sourceType = SourceType
-                    .valueOf(props.getProperty(CommonConstants.MODELSET_SOURCE_TYPE, SourceType.HDFS.toString()));
+            SourceType sourceType = SourceType.valueOf(props.getProperty(CommonConstants.MODELSET_SOURCE_TYPE,
+                    SourceType.HDFS.toString()));
             this.modelConfig = CommonUtils.loadModelConfig(props.getProperty(CommonConstants.SHIFU_MODEL_CONFIG),
                     sourceType);
-            this.columnConfigList = CommonUtils
-                    .loadColumnConfigList(props.getProperty(CommonConstants.SHIFU_COLUMN_CONFIG), sourceType);
+            this.columnConfigList = CommonUtils.loadColumnConfigList(
+                    props.getProperty(CommonConstants.SHIFU_COLUMN_CONFIG), sourceType);
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
