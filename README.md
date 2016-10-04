@@ -1,8 +1,8 @@
-[<img src="images/logo/shifu.png" alt="Shifu" align="left">](http://shifu.ml)<div align="right">[![Build Status](https://travis-ci.org/ShifuML/shifu.svg?branch=master)](https://travis-ci.org/ShifuML/shifu)</div>
+[<img src="images/logo/shifu.png" alt="Shifu" align="left">](http://shifu.site)<div align="right">[![Build Status](https://travis-ci.org/ShifuML/shifu.svg?branch=master)](https://travis-ci.org/ShifuML/shifu)</div>
 
 ## Getting Started
 
-Please visit [shifu.ml](http://shifu.ml) for download infomation, installation instructions, and tutorials.
+Please visit [shifu.site](http://shifu.site) for download infomation, installation instructions, and tutorials.
 
 ## Conference
 
