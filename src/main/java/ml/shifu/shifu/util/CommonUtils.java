@@ -615,7 +615,7 @@ public final class CommonUtils {
                 return LR.loadFromString(br.readLine());
             } else if(modelPath.getName().endsWith(CommonConstants.RF_ALG_NAME.toLowerCase())
                     || modelPath.getName().endsWith(CommonConstants.GBT_ALG_NAME.toLowerCase())) {
-                return TreeModel.loadFromStream(stream, modelConfig, columnConfigList);
+                return TreeModel.loadFromStream(stream, columnConfigList);
             } else {
                 return BasicML.class.cast(EncogDirectoryPersistence.loadObject(stream));
             }
@@ -764,7 +764,6 @@ public final class CommonUtils {
         }
         return rawDataMap;
     }
-
 
     /**
      * Return all parameters for pig execution.
@@ -946,7 +945,14 @@ public final class CommonUtils {
                     if(config != null && !config.isMeta() && !config.isTarget() && config.isFinalSelect()) {
                         String val = rawDataMap.get(key) == null ? null : rawDataMap.get(key).toString();
                         if(CommonUtils.isDesicionTreeAlgorithm(modelConfig.getAlgorithm()) && config.isCategorical()) {
-                            inputList.add(binCategoryMap.get(config.getColumnNum()).get(val == null ? "" : val) + 0d);
+                            Integer index = binCategoryMap.get(config.getColumnNum()).get(val == null ? "" : val);
+                            if(index == null) {
+                                // not in binCategories, should be missing value
+                                // -1 as missing value
+                                inputList.add(-1d);
+                            } else {
+                                inputList.add(index * 1d);
+                            }
                         } else {
                             inputList.add(computeNumericNormResult(modelConfig, cutoff, config, val));
                         }
@@ -955,7 +961,14 @@ public final class CommonUtils {
                     if(!config.isMeta() && !config.isTarget() && CommonUtils.isGoodCandidate(config)) {
                         String val = rawDataMap.get(key) == null ? null : rawDataMap.get(key).toString();
                         if(CommonUtils.isDesicionTreeAlgorithm(modelConfig.getAlgorithm()) && config.isCategorical()) {
-                            inputList.add(binCategoryMap.get(config.getColumnNum()).get(val == null ? "" : val) + 0d);
+                            Integer index = binCategoryMap.get(config.getColumnNum()).get(val == null ? "" : val);
+                            if(index == null) {
+                                // not in binCategories, should be missing value
+                                // -1 as missing value
+                                inputList.add(-1d);
+                            } else {
+                                inputList.add(index * 1d);
+                            }
                         } else {
                             inputList.add(computeNumericNormResult(modelConfig, cutoff, config, val));
                         }
@@ -1123,30 +1136,19 @@ public final class CommonUtils {
         }
 
         for(ColumnConfig config: columnConfigList) {
-            config.setColumnFlag(null);
-            config.setColumnType(ColumnType.N);
-
             String varName = config.getColumnName();
 
             if(targetColumnName.equals(varName)) {
                 config.setColumnFlag(ColumnFlag.Target);
                 config.setColumnType(null);
-            }
-
-            if(setMeta.contains(varName)) {
+            } else if(setMeta.contains(varName)) {
                 config.setColumnFlag(ColumnFlag.Meta);
                 config.setColumnType(null);
-            }
-
-            if(setForceRemove.contains(varName)) {
+            } else if(setForceRemove.contains(varName)) {
                 config.setColumnFlag(ColumnFlag.ForceRemove);
-            }
-
-            if(setForceSelect.contains(varName)) {
+            } else if(setForceSelect.contains(varName)) {
                 config.setColumnFlag(ColumnFlag.ForceSelect);
-            }
-
-            if(setCategorialColumns.contains(varName)) {
+            } else if(setCategorialColumns.contains(varName)) {
                 config.setColumnType(ColumnType.C);
             }
         }
