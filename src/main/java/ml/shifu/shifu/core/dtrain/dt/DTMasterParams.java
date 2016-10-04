@@ -47,14 +47,14 @@ public class DTMasterParams extends HaltBytable {
     private Map<Integer, TreeNode> todoNodes;
 
     /**
-     * Sum of training counts accumulated by workers.
+     * Sum of weighted training counts accumulated by workers.
      */
-    private long trainCount;
+    private double trainCount;
 
     /**
-     * Sum of validation counts accumulated by workers.
+     * Sum of weighted validation counts accumulated by workers.
      */
-    private long validationCount;
+    private double validationCount;
 
     /**
      * Sum of train error accumulated by workers.
@@ -76,10 +76,15 @@ public class DTMasterParams extends HaltBytable {
      */
     private List<Integer> treeDepth = new ArrayList<Integer>();
 
+    /**
+     * If it is continuous running at first iteration in master
+     */
+    private boolean isContinuousRunningStart = false;
+
     public DTMasterParams() {
     }
 
-    public DTMasterParams(long trainCount, double trainError, long validationCount, double validationError) {
+    public DTMasterParams(double trainCount, double trainError, double validationCount, double validationError) {
         this.trainCount = trainCount;
         this.trainError = trainError;
         this.validationCount = validationCount;
@@ -123,8 +128,8 @@ public class DTMasterParams extends HaltBytable {
 
     @Override
     public void doWrite(DataOutput out) throws IOException {
-        out.writeLong(trainCount);
-        out.writeLong(validationCount);
+        out.writeDouble(trainCount);
+        out.writeDouble(validationCount);
         out.writeDouble(trainError);
         out.writeDouble(validationError);
         out.writeBoolean(this.isSwitchToNextTree);
@@ -145,12 +150,13 @@ public class DTMasterParams extends HaltBytable {
                 node.getValue().write(out);
             }
         }
+        out.writeBoolean(isContinuousRunningStart);
     }
 
     @Override
     public void doReadFields(DataInput in) throws IOException {
-        this.trainCount = in.readLong();
-        this.validationCount = in.readLong();
+        this.trainCount = in.readDouble();
+        this.validationCount = in.readDouble();
         this.trainError = in.readDouble();
         this.validationError = in.readDouble();
         this.isSwitchToNextTree = in.readBoolean();
@@ -173,33 +179,36 @@ public class DTMasterParams extends HaltBytable {
                 todoNodes.put(key, treeNode);
             }
         }
+        this.isContinuousRunningStart = in.readBoolean();
     }
 
     /**
      * @return the trainCount
      */
-    public long getTrainCount() {
+    public double getTrainCount() {
         return trainCount;
     }
 
     /**
      * @return the validationCount
      */
-    public long getValidationCount() {
+    public double getValidationCount() {
         return validationCount;
     }
 
     /**
-     * @param trainCount the trainCount to set
+     * @param trainCount
+     *            the trainCount to set
      */
-    public void setTrainCount(long trainCount) {
+    public void setTrainCount(double trainCount) {
         this.trainCount = trainCount;
     }
 
     /**
-     * @param validationCount the validationCount to set
+     * @param validationCount
+     *            the validationCount to set
      */
-    public void setValidationCount(long validationCount) {
+    public void setValidationCount(double validationCount) {
         this.validationCount = validationCount;
     }
 
@@ -261,6 +270,21 @@ public class DTMasterParams extends HaltBytable {
      */
     public void setValidationError(double validationError) {
         this.validationError = validationError;
+    }
+
+    /**
+     * @return the isContinuousRunningStart
+     */
+    public boolean isContinuousRunningStart() {
+        return isContinuousRunningStart;
+    }
+
+    /**
+     * @param isContinuousRunningStart
+     *            the isContinuousRunningStart to set
+     */
+    public void setContinuousRunningStart(boolean isContinuousRunningStart) {
+        this.isContinuousRunningStart = isContinuousRunningStart;
     }
 
 }

@@ -109,8 +109,7 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
 
         for(int i = 0; i < input.size(); i++) {
             ColumnConfig config = columnConfigList.get(i);
-            String val = (input.get(i) == null) ? "" : input.get(i).toString();
-
+            String val = (input.get(i) == null) ? "" : input.get(i).toString().trim();
             // load variables for weight calculating.
             if(weightExpr != null) {
                 weightContext.set(config.getColumnName(), val);
@@ -150,7 +149,14 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
                 if(CommonUtils.isDesicionTreeAlgorithm(this.alg)) {
                     Double normVal = 0d;
                     if(config.isCategorical()) {
-                        tuple.append(val);
+                        int index = config.getBinCategory().indexOf(val);
+                        if(index == -1) {
+                            // TODO use index to replace real category value, then in training only check index is OK
+                            // empty if missing value
+                            tuple.append("");
+                        } else {
+                            tuple.append(val);
+                        }
                     } else {
                         try {
                             normVal = Double.parseDouble(val);
@@ -158,8 +164,8 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
                             log.debug("Not decimal format " + val + ", using default!");
                             normVal = Normalizer.defaultMissingValue(config);
                         }
+                        tuple.append(df.format(normVal));
                     }
-                    tuple.append(df.format(normVal));
                 } else {
                     // for multiple classification, binPosRate means rate of such category over all counts, reuse
                     // binPosRate for normalize

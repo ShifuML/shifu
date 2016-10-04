@@ -71,7 +71,5 @@ public class NNConstants {
 
     public static final int DEFAULT_JOIN_TIME = 3000;
     
-    public static final String NN_CONTINUOUS_TRAINING = "nn.continuous.training";
-
     public static final double DEFAULT_SIGNIFICANCE_VALUE = 1.0;
 }

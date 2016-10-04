@@ -39,6 +39,7 @@ import ml.shifu.shifu.container.obj.ModelBasicConf.RunMode;
 import ml.shifu.shifu.container.obj.ModelTrainConf.MultipleClassification;
 import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
 import ml.shifu.shifu.core.AbstractTrainer;
+import ml.shifu.shifu.core.TreeModel;
 import ml.shifu.shifu.core.alg.LogisticRegressionTrainer;
 import ml.shifu.shifu.core.alg.NNTrainer;
 import ml.shifu.shifu.core.alg.SVMTrainer;
@@ -462,9 +463,9 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
                         modelName));
                 // check if job is continunous training, this can be set multiple times and we only get last one
                 boolean isContinous = checkContinuousTraining(fileSystem, localArgs, modelPath);
-                if(isContinous && CommonUtils.isDesicionTreeAlgorithm(modelConfig.getAlgorithm())) {
+                if(isContinous && CommonConstants.RF_ALG_NAME.equalsIgnoreCase(modelConfig.getAlgorithm())) {
                     isContinous = false;
-                    LOG.warn("RF & GBDT do not support continuous training");
+                    LOG.warn("RF does not support continuous training");
                 }
                 // of course gs not support continuous model training
                 if(gs.hasHyperParam()) {
@@ -511,8 +512,8 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
                     guaguaClient.createJob(localArgs.toArray(new String[0])).waitForCompletion(true);
                     stopTailThread(tailThread);
                 }
-            }            
-            
+            }
+
             if(isParallel) {
                 TailThread tailThread = startTailThread(progressLogList.toArray(new String[0]));
                 guaguaClient.run();
@@ -527,7 +528,12 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
                 String modelName = getModelName(i);
                 Path modelPath = fileSystem.makeQualified(new Path(super.getPathFinder().getModelsPath(sourceType),
                         modelName));
-                copyModelToLocal(modelName, modelPath, sourceType);
+                if(ShifuFileUtils.getFileSystemBySourceType(sourceType).exists(modelPath)) {
+                    copyModelToLocal(modelName, modelPath, sourceType);
+                } else {
+                    LOG.warn("Model {} isn't there, maybe job is failed, for bagging it can be ignored.",
+                            modelPath.toString());
+                }
             }
 
             // copy temp model files
@@ -604,18 +610,35 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
             } else if(!fileSystem.exists(modelPath)) {
                 finalContinuous = false;
                 LOG.info("No existing model, model training will start from scratch.");
-            } else if(!inputOutputModelCheckSuccess(fileSystem, modelPath)) {
+            } else if(NNConstants.NN_ALG_NAME.equalsIgnoreCase(modelConfig.getAlgorithm())
+                    && !inputOutputModelCheckSuccess(fileSystem, modelPath)) {
                 // TODO hidden layer size and activation functions should also be validated
                 finalContinuous = false;
                 LOG.warn("Model input and output settings are not consistent with input and output columns settings, "
                         + "model training will start from scratch.");
+            } else if(CommonConstants.GBT_ALG_NAME.equalsIgnoreCase(modelConfig.getAlgorithm())) {
+                TreeModel model = (TreeModel) CommonUtils.loadModel(this.modelConfig, this.columnConfigList, modelPath,
+                        fileSystem);
+                if(!model.getAlgorithm().equalsIgnoreCase(modelConfig.getAlgorithm())) {
+                    finalContinuous = false;
+                    LOG.warn("Only GBT supports continuous training, while not GBT, will start from scratch");
+                } else if(!model.getLossStr().equalsIgnoreCase(
+                        this.modelConfig.getTrain().getParams().get("Loss").toString())) {
+                    finalContinuous = false;
+                    LOG.warn("Loss is changed, continuous training is disabled, will start from scratch");
+                } else {
+                    finalContinuous = true;
+                }
+            } else if(CommonConstants.RF_ALG_NAME.equalsIgnoreCase(modelConfig.getAlgorithm())) {
+                finalContinuous = false;
+                LOG.warn("RF doesn't support continuous training");
             } else {
                 finalContinuous = true;
             }
         } else {
             finalContinuous = false;
         }
-        localArgs.add(String.format(CommonConstants.MAPREDUCE_PARAM_FORMAT, NNConstants.NN_CONTINUOUS_TRAINING,
+        localArgs.add(String.format(CommonConstants.MAPREDUCE_PARAM_FORMAT, CommonConstants.CONTINUOUS_TRAINING,
                 finalContinuous));
         return finalContinuous;
     }
@@ -723,7 +746,7 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
         args.add("-i");
         args.add(ShifuFileUtils.getFileSystemBySourceType(sourceType)
                 .makeQualified(new Path(super.getPathFinder().getNormalizedDataPath())).toString());
-        
+
         if(StringUtils.isNotBlank(modelConfig.getValidationDataSetRawPath())) {
             args.add("-inputformat");
             args.add(ShifuInputFormat.class.getName());
@@ -759,9 +782,12 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
 
         args.add(String.valueOf(numTrainEpoches));
 
-        args.add(String.format(CommonConstants.MAPREDUCE_PARAM_FORMAT, CommonConstants.CROSS_VALIDATION_DIR,
-                ShifuFileUtils.getFileSystemBySourceType(sourceType).
-                makeQualified(new Path(super.getPathFinder().getNormalizedValidationDataPath(sourceType))).toString()));
+        args.add(String.format(
+                CommonConstants.MAPREDUCE_PARAM_FORMAT,
+                CommonConstants.CROSS_VALIDATION_DIR,
+                ShifuFileUtils.getFileSystemBySourceType(sourceType)
+                        .makeQualified(new Path(super.getPathFinder().getNormalizedValidationDataPath(sourceType)))
+                        .toString()));
         args.add(String.format(CommonConstants.MAPREDUCE_PARAM_FORMAT, NNConstants.MAPRED_JOB_QUEUE_NAME,
                 Environment.getProperty(Environment.HADOOP_JOB_QUEUE, Constants.DEFAULT_JOB_QUEUE)));
         args.add(String.format(
@@ -824,9 +850,9 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
                     GuaguaConstants.GUAGUA_SPLIT_MAX_COMBINED_SPLIT_SIZE,
                     Environment.getProperty(GuaguaConstants.GUAGUA_SPLIT_MAX_COMBINED_SPLIT_SIZE, "268435456")));
         }
-        // special tuning parameters for shifu, 0.98 means each iteation master wait for 98% workers and then can go to
+        // special tuning parameters for shifu, 0.97 means each iteation master wait for 97% workers and then can go to
         // next iteration.
-        args.add(String.format(CommonConstants.MAPREDUCE_PARAM_FORMAT, GuaguaConstants.GUAGUA_MIN_WORKERS_RATIO, 0.98));
+        args.add(String.format(CommonConstants.MAPREDUCE_PARAM_FORMAT, GuaguaConstants.GUAGUA_MIN_WORKERS_RATIO, 0.97));
         // 2 seconds if waiting over 10, consider 99% workers; these two can be overrided in shifuconfig
         args.add(String.format(CommonConstants.MAPREDUCE_PARAM_FORMAT, GuaguaConstants.GUAGUA_MIN_WORKERS_TIMEOUT,
                 2 * 1000L));

@@ -42,14 +42,14 @@ import ml.shifu.guagua.io.HaltBytable;
 public class DTWorkerParams extends HaltBytable implements Combinable<DTWorkerParams> {
 
     /**
-     * # of training records per such worker.
+     * # of weighted training records per such worker.
      */
-    private long trainCount;
+    private double trainCount;
 
     /**
-     * # of training records per such worker.
+     * # of weighted training records per such worker.
      */
-    private long validationCount;
+    private double validationCount;
 
     /**
      * Train error for such worker and such iteration.
@@ -69,7 +69,7 @@ public class DTWorkerParams extends HaltBytable implements Combinable<DTWorkerPa
     public DTWorkerParams() {
     }
 
-    public DTWorkerParams(long trainCount, long validationCount, double trainError, double validationError,
+    public DTWorkerParams(double trainCount, double validationCount, double trainError, double validationError,
             Map<Integer, NodeStats> nodeStatsMap) {
         this.trainCount = trainCount;
         this.validationCount = validationCount;
@@ -80,8 +80,8 @@ public class DTWorkerParams extends HaltBytable implements Combinable<DTWorkerPa
 
     @Override
     public void doWrite(DataOutput out) throws IOException {
-        out.writeLong(trainCount);
-        out.writeLong(validationCount);
+        out.writeDouble(trainCount);
+        out.writeDouble(validationCount);
         out.writeDouble(trainError);
         out.writeDouble(validationError);
         if(nodeStatsMap == null) {
@@ -98,8 +98,8 @@ public class DTWorkerParams extends HaltBytable implements Combinable<DTWorkerPa
 
     @Override
     public void doReadFields(DataInput in) throws IOException {
-        this.trainCount = in.readLong();
-        this.validationCount = in.readLong();
+        this.trainCount = in.readDouble();
+        this.validationCount = in.readDouble();
         this.trainError = in.readDouble();
         this.validationError = in.readDouble();
         if(in.readBoolean()) {
@@ -275,6 +275,8 @@ public class DTWorkerParams extends HaltBytable implements Combinable<DTWorkerPa
 
         this.trainCount += that.trainCount;
         this.trainError += that.trainError;
+        this.validationCount += that.validationCount;
+        this.validationError += that.validationError;
 
         if(this.nodeStatsMap != null && that.nodeStatsMap != null) {
             for(Entry<Integer, NodeStats> entry: this.nodeStatsMap.entrySet()) {
@@ -314,14 +316,14 @@ public class DTWorkerParams extends HaltBytable implements Combinable<DTWorkerPa
     /**
      * @return the trainCount
      */
-    public long getTrainCount() {
+    public double getTrainCount() {
         return trainCount;
     }
 
     /**
      * @return the validationCount
      */
-    public long getValidationCount() {
+    public double getValidationCount() {
         return validationCount;
     }
 
@@ -329,7 +331,7 @@ public class DTWorkerParams extends HaltBytable implements Combinable<DTWorkerPa
      * @param trainCount
      *            the trainCount to set
      */
-    public void setTrainCount(long trainCount) {
+    public void setTrainCount(double trainCount) {
         this.trainCount = trainCount;
     }
 
@@ -337,7 +339,7 @@ public class DTWorkerParams extends HaltBytable implements Combinable<DTWorkerPa
      * @param validationCount
      *            the validationCount to set
      */
-    public void setValidationCount(long validationCount) {
+    public void setValidationCount(double validationCount) {
         this.validationCount = validationCount;
     }
 

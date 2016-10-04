@@ -136,6 +136,7 @@ public class Scorer {
 
         List<Integer> scores = new ArrayList<Integer>();
 
+        List<Integer> rfTreeSizeList = new ArrayList<Integer>();
         for(BasicML model: models) {
             if(model instanceof BasicNetwork) {
                 BasicNetwork network = (BasicNetwork) model;
@@ -175,12 +176,12 @@ public class Scorer {
                 MLData score = lr.compute(pair.getInput());
                 scores.add(toScore(score.getData(0)));
             } else if(model instanceof TreeModel) {
-                TreeModel rf = (TreeModel) model;
-                if(rf.getInputCount() != pair.getInput().size()) {
-                    throw new RuntimeException("GBDT and input size mismatch: rf Size = " + rf.getInputCount()
+                TreeModel tm = (TreeModel) model;
+                if(tm.getInputCount() != pair.getInput().size()) {
+                    throw new RuntimeException("GBDT and input size mismatch: rf Size = " + tm.getInputCount()
                             + "; Input Size = " + pair.getInput().size());
                 }
-                MLData score = rf.compute(pair.getInput());
+                MLData score = tm.compute(pair.getInput());
                 if(modelConfig.isClassification() && !modelConfig.getTrain().isOneVsAll()) {
                     double[] scoreArray = score.getData();
                     for(double sc: scoreArray) {
@@ -189,6 +190,10 @@ public class Scorer {
                 } else {
                     // if one vs all consider
                     scores.add(toScore(score.getData(0)));
+                }
+                // regression for RF
+                if(!tm.isClassfication() && !tm.isGBDT()) {
+                    rfTreeSizeList.add(tm.getTrees().size());
                 }
             } else {
                 throw new RuntimeException("unsupport models");
@@ -202,7 +207,7 @@ public class Scorer {
             return null;
         }
 
-        return new ScoreObject(scores, tag);
+        return new ScoreObject(scores, tag, rfTreeSizeList);
     }
 
     private Integer toScore(Double d) {

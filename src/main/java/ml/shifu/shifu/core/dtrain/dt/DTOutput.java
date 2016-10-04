@@ -18,6 +18,7 @@ package ml.shifu.shifu.core.dtrain.dt;
 import java.io.IOException;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.Properties;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -26,6 +27,7 @@ import ml.shifu.guagua.master.MasterContext;
 import ml.shifu.shifu.container.obj.ModelConfig;
 import ml.shifu.shifu.container.obj.ModelTrainConf.ALGORITHM;
 import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
+import ml.shifu.shifu.core.alg.NNTrainer;
 import ml.shifu.shifu.core.dtrain.CommonConstants;
 import ml.shifu.shifu.core.dtrain.DTrainUtils;
 import ml.shifu.shifu.core.dtrain.gs.GridSearch;
@@ -51,8 +53,14 @@ public class DTOutput extends BasicMasterInterceptor<DTMasterParams, DTWorkerPar
      */
     private ModelConfig modelConfig;
 
+    /**
+     * Id for current guagua job, starting from 0, 1, 2
+     */
     private String trainerId;
 
+    /**
+     * Tmp model folder to save tmp models
+     */
     private String tmpModelsFolder;
 
     /**
@@ -82,6 +90,11 @@ public class DTOutput extends BasicMasterInterceptor<DTMasterParams, DTWorkerPar
      */
     private boolean isGsMode;
 
+    /**
+     * Valid training parameters including grid search
+     */
+    private Map<String, Object> validParams;
+
     @Override
     public void preApplication(MasterContext<DTMasterParams, DTWorkerParams> context) {
         init(context);
@@ -89,25 +102,51 @@ public class DTOutput extends BasicMasterInterceptor<DTMasterParams, DTWorkerPar
 
     @Override
     public void postIteration(final MasterContext<DTMasterParams, DTWorkerParams> context) {
+        long start = System.currentTimeMillis();
         // save tmp to hdfs according to raw trainer logic
         final int tmpModelFactor = DTrainUtils.tmpModelFactor(context.getTotalIteration());
-        if(context.getCurrentIteration() % tmpModelFactor == 0) {
-            Thread tmpModelPersistThread = new Thread(new Runnable() {
-                @Override
-                public void run() {
-                    saveTmpModelToHDFS(context.getCurrentIteration(), context.getMasterResult().getTrees());
-                    // save model results for continue model training, if current job is failed, then next running
-                    // we can start from this point to save time.
-                    // another case for master recovery, if master is failed, read such checkpoint model
-                    Path out = new Path(context.getProps().getProperty(CommonConstants.GUAGUA_OUTPUT));
-                    writeModelToFileSystem(context.getMasterResult().getTrees(), out);
+        if(isRF) {
+            if(context.getCurrentIteration() % (tmpModelFactor * 2) == 0) {
+                Thread tmpModelPersistThread = new Thread(new Runnable() {
+                    @Override
+                    public void run() {
+                        saveTmpModelToHDFS(context.getCurrentIteration(), context.getMasterResult().getTrees());
+                        // save model results for continue model training, if current job is failed, then next running
+                        // we can start from this point to save time.
+                        // another case for master recovery, if master is failed, read such checkpoint model
+                        Path out = new Path(context.getProps().getProperty(CommonConstants.GUAGUA_OUTPUT));
+                        writeModelToFileSystem(context.getMasterResult().getTrees(), out);
+                    }
+                }, "saveTmpNNToHDFS thread");
+                tmpModelPersistThread.setDaemon(true);
+                tmpModelPersistThread.start();
+            }
+        } else if(isGBDT) {
+            // for gbdt, only store trees are all built well
+            if(context.getMasterResult().isSwitchToNextTree() && context.getMasterResult().getTrees().size() % 25 == 0) {
+                final List<TreeNode> trees = context.getMasterResult().getTrees();
+                if(trees.size() > 1) {
+                    Thread tmpModelPersistThread = new Thread(new Runnable() {
+                        @Override
+                        public void run() {
+                            // last one is newest one with only ROOT node, should be excluded
+                            List<TreeNode> subTrees = trees.subList(0, trees.size() - 1);
+                            saveTmpModelToHDFS(context.getCurrentIteration(), subTrees);
+                            // save model results for continue model training, if current job is failed, then next
+                            // running we can start from this point to save time.
+                            // another case for master recovery, if master is failed, read such checkpoint model
+                            Path out = new Path(context.getProps().getProperty(CommonConstants.GUAGUA_OUTPUT));
+                            writeModelToFileSystem(subTrees, out);
+                        }
+                    }, "saveTmpNNToHDFS thread");
+                    tmpModelPersistThread.setDaemon(true);
+                    tmpModelPersistThread.start();
                 }
-            }, "saveTmpNNToHDFS thread");
-            tmpModelPersistThread.setDaemon(true);
-            tmpModelPersistThread.start();
+            }
         }
 
         updateProgressLog(context);
+        LOG.info("DT output post iteration time is {}ms", (System.currentTimeMillis() - start));
     }
 
     @SuppressWarnings("deprecation")
@@ -118,7 +157,7 @@ public class DTOutput extends BasicMasterInterceptor<DTMasterParams, DTWorkerPar
             return;
         }
         double trainError = context.getMasterResult().getTrainError() / context.getMasterResult().getTrainCount();
-        double validationError = context.getMasterResult().getValidationCount() == 0L ? 0d : context.getMasterResult()
+        double validationError = context.getMasterResult().getValidationCount() == 0d ? 0d : context.getMasterResult()
                 .getValidationError() / context.getMasterResult().getValidationCount();
         String info = "";
         if(this.isGBDT) {
@@ -228,6 +267,21 @@ public class DTOutput extends BasicMasterInterceptor<DTMasterParams, DTWorkerPar
         try {
             fos = FileSystem.get(new Configuration()).create(out);
             LOG.info("Writing results to {}", out);
+            byte[] bytes = modelConfig.getAlgorithm().getBytes("UTF-8");
+            fos.writeInt(bytes.length);
+            for(byte b: bytes) {
+                fos.writeByte(b);
+            }
+            double learningRate = Double.valueOf(validParams.get(NNTrainer.LEARNING_RATE).toString());
+            fos.writeDouble(learningRate);
+            bytes = this.validParams.get("Loss").toString().getBytes("UTF-8");
+            fos.writeInt(bytes.length);
+            for(byte b: bytes) {
+                fos.writeByte(b);
+            }
+            fos.writeBoolean(this.modelConfig.isClassification());
+            fos.writeBoolean(this.modelConfig.getTrain().isOneVsAll());
+
             int treeLength = trees.size();
             fos.writeInt(treeLength);
             for(TreeNode treeNode: trees) {
@@ -255,6 +309,12 @@ public class DTOutput extends BasicMasterInterceptor<DTMasterParams, DTWorkerPar
             this.trainerId = context.getProps().getProperty(CommonConstants.SHIFU_TRAINER_ID);
             GridSearch gs = new GridSearch(modelConfig.getTrain().getParams());
             this.isGsMode = gs.hasHyperParam();
+
+            this.validParams = modelConfig.getParams();
+            if(isGsMode) {
+                this.validParams = gs.getParams(Integer.parseInt(trainerId));
+            }
+
             this.tmpModelsFolder = context.getProps().getProperty(CommonConstants.SHIFU_TMP_MODELS_FOLDER);
             this.isRF = ALGORITHM.RF.toString().equalsIgnoreCase(modelConfig.getAlgorithm());
             this.isGBDT = ALGORITHM.GBT.toString().equalsIgnoreCase(modelConfig.getAlgorithm());
