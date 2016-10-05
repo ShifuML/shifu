@@ -527,7 +527,12 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
                 String modelName = getModelName(i);
                 Path modelPath = fileSystem.makeQualified(new Path(super.getPathFinder().getModelsPath(sourceType),
                         modelName));
-                copyModelToLocal(modelName, modelPath, sourceType);
+                if(ShifuFileUtils.getFileSystemBySourceType(sourceType).exists(modelPath)) {
+                    copyModelToLocal(modelName, modelPath, sourceType);
+                } else {
+                    LOG.warn("Model {} isn't there, maybe job is failed, for bagging it can be ignored.",
+                            modelPath.toString());
+                }
             }
 
             // copy temp model files
