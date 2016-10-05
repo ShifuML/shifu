@@ -15,6 +15,39 @@
  */
  
 Shifu Change Log
+    
+Changes for Shifu-0.9.0
+    * Random Forest Enhancement
+        a) RF & GBDT Sort Categorical Features
+            https://github.com/ShifuML/shifu/issues/203
+        b) RF & GBDT Categorical Variables Unsorted Supported
+            https://github.com/ShifuML/shifu/issues/202
+    * Gradient Boosted Trees Enhancement
+        a) Master Fail Over
+            https://github.com/ShifuML/shifu/issues/227
+        b) GBT Support Continuous Model Training
+            https://github.com/ShifuML/shifu/issues/222
+        c) RF & GBDT Sort Categorical Features
+            https://github.com/ShifuML/shifu/issues/203
+        d) RF & GBDT Categorical Variables Unsorted Supported
+            https://github.com/ShifuML/shifu/issues/202
+    * Grid Search Support
+        a) NN Grid Search
+            https://github.com/ShifuML/shifu/issues/214
+        b) RF & GBDT Grid Search
+            https://github.com/ShifuML/shifu/issues/213
+    * Random Search Support
+        https://github.com/ShifuML/shifu/issues/234
+    * Multiple Classfication Enhancement
+        a) Add Random Forest Multiple Classfication
+            https://github.com/ShifuML/shifu/issues/235
+        b) Add OneVSAll Multiple Classfication for NN, RF and GBDT
+            https://github.com/ShifuML/shifu/issues/209
+    * Dynamic Binning Support
+        https://github.com/ShifuML/shifu/issues/236
+    * Others
+        a) https://github.com/ShifuML/shifu/issues/195
+        b) https://github.com/ShifuML/shifu/issues/229
 
 Changes for Shifu-0.2.8
     * Random Forest Support

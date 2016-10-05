@@ -15,11 +15,11 @@
  */
 package ml.shifu.shifu.container;
 
-import org.apache.commons.collections.CollectionUtils;
-
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+
+import org.apache.commons.collections.CollectionUtils;
 
 /**
  * Score object
@@ -37,12 +37,23 @@ public class ScoreObject {
     private Integer medianScore = 0;
 
     public ScoreObject(List<Integer> scores, Object tag) {
+        this(scores, tag, new ArrayList<Integer>());
+    }
 
+    public ScoreObject(List<Integer> scores, Object tag, List<Integer> modelSizeList) {
         this.scores = scores;
         this.tag = tag;
 
-        for (Integer score : scores) {
-            meanScore += score;
+        int modelSizeSum = 0;
+        for(int i = 0; i < scores.size(); i++) {
+            Integer score = scores.get(i);
+            // by default model size is 1 per each model
+            int modelSize = 1;
+            if(modelSizeList.size() > 0) {
+                modelSize = modelSizeList.get(i);
+            }
+            modelSizeSum += modelSize;
+            meanScore += score * modelSize;
             maxScore = Math.max(maxScore, score);
             minScore = Math.min(minScore, score);
         }
@@ -50,8 +61,8 @@ public class ScoreObject {
         List<Integer> tmpScoreList = new ArrayList<Integer>(scores);
         Collections.sort(tmpScoreList);
 
-        if (CollectionUtils.isNotEmpty(tmpScoreList)) {
-            meanScore /= scores.size();
+        if(CollectionUtils.isNotEmpty(tmpScoreList)) {
+            meanScore /= modelSizeSum;
             medianScore = tmpScoreList.get(scores.size() / 2);
         }
     }

@@ -59,7 +59,6 @@ import ml.shifu.shifu.core.dtrain.dt.DTWorkerParams.NodeStats;
 import ml.shifu.shifu.core.dtrain.gs.GridSearch;
 import ml.shifu.shifu.util.CommonUtils;
 
-import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.math3.distribution.PoissonDistribution;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Text;
@@ -334,7 +333,8 @@ public class DTWorker
         this.categoricalInputCount = inputOutputIndex[1];
         this.outputNodeCount = modelConfig.isRegression() ? inputOutputIndex[2] : modelConfig.getTags().size();
         this.isAfterVarSelect = inputOutputIndex[3] == 1 ? true : false;
-        this.isCrossValidation = StringUtils.isNotBlank(modelConfig.getValidationDataSetRawPath());
+        this.isCrossValidation = (modelConfig.getValidationDataSetRawPath() != null && !"".equals(modelConfig
+                .getValidationDataSetRawPath()));
 
         int numClasses = this.modelConfig.isClassification() ? this.modelConfig.getTags().size() : 2;
         String imStr = validParams.get("Impurity").toString();
@@ -609,25 +609,29 @@ public class DTWorker
                                     double[] featuerStatistic = localStatistics.get(entry.getKey())
                                             .getFeatureStatistics().get(columnNum);
                                     float weight = data.subsampleWeights[treeId % data.subsampleWeights.length];
-                                    if(config.isNumerical()) {
-                                        float value = data.numericInputs[DTWorker.this.numericInputIndexMap
-                                                .get(columnNum)];
-                                        int binIndex = getBinIndex(value, config.getBinBoundary());
-                                        DTWorker.this.impurity.featureUpdate(featuerStatistic, binIndex, data.output,
-                                                data.significance, weight);
-                                    } else if(config.isCategorical()) {
-                                        String category = data.categoricalInputs[DTWorker.this.categoricalInputIndexMap
-                                                .get(columnNum)];
-                                        Integer binIndex = DTWorker.this.categoryIndexMap.get(columnNum).get(category);
-                                        if(binIndex == null) {
-                                            // add to null bin which is the last one
-                                            binIndex = config.getBinCategory().size();
+                                    if(Float.compare(weight, 0f) != 0) {
+                                        // only compute weight is not 0
+                                        if(config.isNumerical()) {
+                                            float value = data.numericInputs[DTWorker.this.numericInputIndexMap
+                                                    .get(columnNum)];
+                                            int binIndex = getBinIndex(value, config.getBinBoundary());
+                                            DTWorker.this.impurity.featureUpdate(featuerStatistic, binIndex,
+                                                    data.output, data.significance, weight);
+                                        } else if(config.isCategorical()) {
+                                            String category = data.categoricalInputs[DTWorker.this.categoricalInputIndexMap
+                                                    .get(columnNum)];
+                                            Integer binIndex = DTWorker.this.categoryIndexMap.get(columnNum).get(
+                                                    category);
+                                            if(binIndex == null) {
+                                                // add to null bin which is the last one
+                                                binIndex = config.getBinCategory().size();
+                                            }
+                                            DTWorker.this.impurity.featureUpdate(featuerStatistic, binIndex,
+                                                    data.output, data.significance, weight);
+                                        } else {
+                                            throw new IllegalStateException(
+                                                    "Only numerical and categorical columns supported. ");
                                         }
-                                        DTWorker.this.impurity.featureUpdate(featuerStatistic, binIndex, data.output,
-                                                data.significance, weight);
-                                    } else {
-                                        throw new IllegalStateException(
-                                                "Only numerical and categorical columns supported. ");
                                     }
                                 }
                             }

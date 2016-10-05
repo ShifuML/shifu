@@ -472,7 +472,7 @@ public class DTMaster extends AbstractMasterComputable<DTMasterParams, DTWorkerP
                 statsMem += (config.getBinCategory().size() + 1) * this.impurity.getStatsSize() * 8L * 2;
             }
         }
-        // times worker number to avoid oom in master, as combinable DTWorkerParams, user half of worker number
+        // times worker number to avoid oom in master, as combinable DTWorkerParams, use one third of worker number
         statsMem = statsMem * this.workerNumber / 2;
         return statsMem;
     }
