@@ -55,9 +55,13 @@ data_cols = FOREACH data_cols GENERATE FLATTEN($0);
 
 -- prepare data and do binning
 data_binning_grp = GROUP data_cols BY $0;
-binning_info_small = FOREACH data_binning_grp GENERATE group, GenSmallBinningInfo(group, data_cols) as bins;
+binning_info_small = FOREACH data_binning_grp GENERATE FLATTEN(GenSmallBinningInfo(data_cols));
 
-data_binning_join = JOIN data_binning_grp BY group, binning_info_small BY group USING 'replicated';
-binning_info = FOREACH data_binning_join GENERATE FLATTEN(DynamicBinning(*));
+data_binning_join = JOIN data_cols BY $0, binning_info_small BY columnId;
+data_binning_join_grp = GROUP data_binning_join BY $0;
+binning_info = FOREACH data_binning_join_grp GENERATE FLATTEN(DynamicBinning(data_binning_join));
+
+-- data_binning_join = JOIN data_binning_grp BY group, binning_info_small BY columnId USING 'replicated';
+-- binning_info = FOREACH data_binning_join GENERATE FLATTEN(DynamicBinning(*));
 
 STORE binning_info INTO '$path_stats_binning_info' USING PigStorage('|', '-schema');

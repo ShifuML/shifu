@@ -57,7 +57,7 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
      * Step for evaluation
      */
     public enum EvalStep {
-        LIST, NEW, DELETE, RUN, PERF, SCORE, CONFMAT;
+        LIST, NEW, DELETE, RUN, PERF, SCORE, CONFMAT, NORM;
     }
 
     private String evalName = null;
@@ -120,6 +120,9 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
                     break;
                 case RUN:
                     runEval(getEvalConfigListFromInput());
+                    break;
+                case NORM:
+                    runNormalize(getEvalConfigListFromInput());
                     break;
                 case PERF:
                     runPerformance(getEvalConfigListFromInput());
@@ -239,6 +242,36 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
     }
 
     /**
+     * Run normalization against the evaluation data sets
+     * @param evalConfigList
+     */
+    private void runNormalize(List<EvalConfig> evalConfigList) throws IOException {
+        for ( EvalConfig evalConfig : evalConfigList ) {
+            runNormalize(evalConfig);
+        }
+    }
+
+    /**
+     * Run normalization against the evaluation data set
+     * @param evalConfig
+     */
+    private void runNormalize(EvalConfig evalConfig) throws IOException {
+        PathFinder pathFinder = new PathFinder(modelConfig);
+        String evalSetPath = pathFinder.getEvalSetPath(evalConfig, SourceType.LOCAL);
+        FileUtils.forceMkdir(new File(evalSetPath));
+        syncDataToHdfs(evalConfig.getDataSet().getSource());
+
+        switch(modelConfig.getBasic().getRunMode()) {
+            case DIST:
+            case MAPRED:
+                runPigNormalize(evalConfig);
+                break;
+            default:
+                break;
+        }
+    }
+
+    /**
      * run pig mode scoring
      * 
      * @param evalConfig
@@ -301,6 +334,38 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
                     / (Constants.EVAL_COUNTER_WEIGHT_SCALE * 1.0d);
             // only one pig job with such counters, break
             break;
+        }
+    }
+
+    /**
+     * Run pig code to normalize evaluation dataset
+     * @param evalConfig
+     * @throws IOException
+     */
+    private void runPigNormalize(EvalConfig evalConfig) throws IOException {
+        // clean up output directories
+        SourceType sourceType = evalConfig.getDataSet().getSource();
+
+        ShifuFileUtils.deleteFile(pathFinder.getEvalNormalizedPath(evalConfig), sourceType);
+
+        // prepare special parameters and execute pig
+        Map<String, String> paramsMap = new HashMap<String, String>();
+
+        paramsMap.put(Constants.SOURCE_TYPE, sourceType.toString());
+        paramsMap.put("pathEvalRawData", evalConfig.getDataSet().getDataPath());
+        paramsMap.put("pathEvalNormalized", pathFinder.getEvalNormalizedPath(evalConfig));
+        paramsMap.put("eval_set_name", evalConfig.getName());
+        paramsMap.put("delimiter", evalConfig.getDataSet().getDataDelimiter());
+
+        String pigScript = "scripts/EvalNorm.pig";
+
+        try {
+            PigExecutor.getExecutor().submitJob(modelConfig, pathFinder.getAbsolutePath(pigScript), paramsMap,
+                    evalConfig.getDataSet().getSource());
+        } catch (IOException e) {
+            throw new ShifuException(ShifuErrorCode.ERROR_RUNNING_PIG_JOB, e);
+        } catch (Throwable e) {
+            throw new RuntimeException(e);
         }
     }
 

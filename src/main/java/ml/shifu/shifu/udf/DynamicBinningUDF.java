@@ -28,42 +28,33 @@ public class DynamicBinningUDF extends AbstractTrainerUDF<Tuple> {
     @Override
     public Tuple exec(Tuple input) throws IOException {
 
-        if ( input == null || input.size() != 4 ) {
+        if ( input == null || input.size() != 1 ) {
             return null;
         }
 
-        Integer columnId = (Integer) input.get(0);
-        DataBag columnDataBag = (DataBag) input.get(1);
-        String binsData = (String) input.get(3);
+        Integer columnId = null;
+        ColumnConfig columnConfig = null;
+        String binsData = null;
 
-        if ( columnDataBag == null || binsData == null ) {
-            return null;
-        }
-
-        Tuple output = TupleFactory.getInstance().newTuple(2);
-        ColumnConfig columnConfig = super.columnConfigList.get(columnId);
-
-        output.set(0, columnId);
-        if ( columnConfig.isCategorical() ) {
-            output.set(1, binsData);
-        } else {
-            List<NumBinInfo> binInfoList = NumBinInfo.constructNumBinfo(binsData, AbstractBinning.FIELD_SEPARATOR);
-            updateNumBinInfo(columnDataBag, binInfoList);
-
-            DynamicBinning dynamicBinning = new DynamicBinning(binInfoList, modelConfig.getStats().getMaxNumBin());
-            List<Double> binFields = dynamicBinning.getDataBin();
-            output.set(1, StringUtils.join(binFields, CalculateStatsUDF.CATEGORY_VAL_SEPARATOR));
-        }
-
-        return output;
-    }
-
-    private void updateNumBinInfo(DataBag columnDataBag, List<NumBinInfo> binInfoList) throws ExecException {
         Set<String> missingValSet = new HashSet<String>(super.modelConfig.getMissingOrInvalidValues());
+        List<NumBinInfo> binInfoList = null;
 
+        DataBag columnDataBag = (DataBag) input.get(0);
         Iterator<Tuple> iterator = columnDataBag.iterator();
         while ( iterator.hasNext() ) {
             Tuple tuple = iterator.next();
+            if ( columnId == null ) {
+                columnId = (Integer) tuple.get(0);
+                columnConfig = super.columnConfigList.get(columnId);
+                binsData = (String) tuple.get(5);
+
+                if ( columnConfig.isCategorical() ) {
+                    break;
+                } else {
+                    binInfoList = NumBinInfo.constructNumBinfo(binsData, AbstractBinning.FIELD_SEPARATOR);
+                }
+            }
+
             String val = (String) tuple.get(1);
             Boolean isPositiveInst = (Boolean) tuple.get(2);
 
@@ -85,6 +76,19 @@ public class DynamicBinningUDF extends AbstractTrainerUDF<Tuple> {
                 numBinInfo.incInstCnt(isPositiveInst);
             }
         }
+
+        if ( binsData == null ) {
+            DynamicBinning dynamicBinning = new DynamicBinning(binInfoList, modelConfig.getStats().getMaxNumBin());
+            List<Double> binFields = dynamicBinning.getDataBin();
+            binsData = StringUtils.join(binFields, CalculateStatsUDF.CATEGORY_VAL_SEPARATOR);
+        }
+
+        Tuple output = TupleFactory.getInstance().newTuple(2);
+
+        output.set(0, columnId);
+        output.set(1, binsData);
+
+        return output;
     }
 
     public NumBinInfo binaryLocate(List<NumBinInfo> binInfoList, Double d) {
