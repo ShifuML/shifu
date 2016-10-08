@@ -178,6 +178,25 @@ public class PathFinder {
     }
 
     /**
+     * stats small bins path
+     * @return
+     */
+    public String getStatsSmallBins() {
+        return getStatsSmallBins(modelConfig.getDataSet().getSource());
+    }
+
+    /**
+     * Get stats small bins path
+     *
+     * @param sourceType
+     *          - Local/HDFS
+     * @return path of stats small-bin file
+     */
+    public String getStatsSmallBins(SourceType sourceType) {
+        return getPathBySourceType(new Path(Constants.TMP, Constants.STATS_SMALL_BINS), sourceType);
+    }
+
+    /**
      * Get post train out put path
      * 
      * @param sourceType
