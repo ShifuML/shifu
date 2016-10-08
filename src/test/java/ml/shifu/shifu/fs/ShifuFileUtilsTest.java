@@ -84,7 +84,7 @@ public class ShifuFileUtilsTest {
         Assert.assertTrue(file.exists());
     }
 
-//    @Test
+    @Test
     public void testIsFileExists() throws IOException {
         Assert.assertTrue(ShifuFileUtils.isFileExists("src/test/resources/example/wdbc/wdbcDataSet", SourceType.LOCAL));
         // Assert.assertTrue(ShifuFileUtils.isFileExists("src\\test\\resources\\example\\wdbc\\wdbcDataSet", SourceType.LOCAL));
@@ -93,7 +93,7 @@ public class ShifuFileUtilsTest {
         Assert.assertFalse(ShifuFileUtils.isFileExists("src/test/resources/example/wdbc/wdbcDataSet/wdbc.{not-exists,not-existsa,not-existsb}", SourceType.LOCAL));
     }
 
-//    @Test
+    @Test
     public void testExpandPath() throws IOException {
         File testDir = new File("test-dir");
         FileUtils.forceMkdir(testDir);
@@ -121,5 +121,11 @@ public class ShifuFileUtilsTest {
         Assert.assertEquals(0, filePathList.size());
 
         FileUtils.deleteDirectory(testDir);
+    }
+
+    @Test
+    public void testReadFilePartsIntoList() throws IOException {
+        List<String> lines = ShifuFileUtils.readFilePartsIntoList("src/test/resources/example/partfile", SourceType.LOCAL);
+        Assert.assertEquals(5, lines.size());
     }
 }

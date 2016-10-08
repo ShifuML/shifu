@@ -42,7 +42,7 @@ DEFINE IsDataFilterOut  ml.shifu.shifu.udf.PurifyDataUDF('$source_type', '$path_
 DEFINE AddColumnNum     ml.shifu.shifu.udf.AddColumnNumAndFilterUDF('$source_type', '$path_model_config', '$path_column_config', 'false');
 
 DEFINE GenSmallBinningInfo	ml.shifu.shifu.udf.GenSmallBinningInfoUDF('$source_type', '$path_model_config', '$path_column_config', '$histo_scale_factor');
-DEFINE DynamicBinning 		ml.shifu.shifu.udf.DynamicBinningUDF('$source_type', '$path_model_config', '$path_column_config');
+DEFINE DynamicBinning 		ml.shifu.shifu.udf.DynamicBinningUDF('$source_type', '$path_model_config', '$path_column_config', '$path_stats_small_bins');
 
 -- load and purify data
 data = LOAD '$path_raw_data' USING PigStorage('$delimiter');
@@ -57,11 +57,7 @@ data_cols = FOREACH data_cols GENERATE FLATTEN($0);
 data_binning_grp = GROUP data_cols BY $0;
 binning_info_small = FOREACH data_binning_grp GENERATE FLATTEN(GenSmallBinningInfo(data_cols));
 
-data_binning_join = JOIN data_cols BY $0, binning_info_small BY columnId;
-data_binning_join_grp = GROUP data_binning_join BY $0;
-binning_info = FOREACH data_binning_join_grp GENERATE FLATTEN(DynamicBinning(data_binning_join));
+STORE binning_info_small INTO '$path_stats_small_bins' USING PigStorage('\u0007', '-schema');
 
--- data_binning_join = JOIN data_binning_grp BY group, binning_info_small BY columnId USING 'replicated';
--- binning_info = FOREACH data_binning_join GENERATE FLATTEN(DynamicBinning(*));
-
+binning_info = FOREACH data_binning_grp GENERATE FLATTEN(DynamicBinning(data_cols));
 STORE binning_info INTO '$path_stats_binning_info' USING PigStorage('|', '-schema');

@@ -119,6 +119,7 @@ public interface Constants {
 
     public static final String AUTO_TYPE_PATH = "AutoTypePath";
     public static final String PRE_TRAINING_STATS = "PreTrainingStats";
+    public static final String STATS_SMALL_BINS = "StatsSmallBins";
     public static final String SELECTED_RAW_DATA = "SelectedRawData";
     public static final String NORMALIZED_DATA = "NormalizedData";
     public static final String NORMALIZED_VALIDATION_DATA = "NormalizedValidationData";
