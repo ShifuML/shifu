@@ -286,15 +286,14 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
 
     private void validateDistributedTrain() throws IOException {
         String alg = super.getModelConfig().getTrain().getAlgorithm();
-        if(!(NNConstants.NN_ALG_NAME.equalsIgnoreCase(alg)
-                || LogisticRegressionContants.LR_ALG_NAME.equalsIgnoreCase(alg) || CommonUtils
-                    .isDesicionTreeAlgorithm(alg))) {
+        if(!(NNConstants.NN_ALG_NAME.equalsIgnoreCase(alg) // NN algorithm
+                || LogisticRegressionContants.LR_ALG_NAME.equalsIgnoreCase(alg) // LR algorithm
+                || CommonUtils.isDesicionTreeAlgorithm(alg)) ) { // RF or GBT algortihm
             throw new IllegalArgumentException(
                     "Currently we only support NN, LR, RF(RandomForest) and GBDT(Gradient Boost Desicion Tree) distributed training.");
         }
 
-        if((LogisticRegressionContants.LR_ALG_NAME.equalsIgnoreCase(alg) || CommonConstants.GBT_ALG_NAME
-                .equalsIgnoreCase(alg))
+        if( (LogisticRegressionContants.LR_ALG_NAME.equalsIgnoreCase(alg) || CommonConstants.GBT_ALG_NAME.equalsIgnoreCase(alg))
                 && modelConfig.isClassification()
                 && modelConfig.getTrain().getMultiClassifyMethod() == MultipleClassification.NATIVE) {
             throw new IllegalArgumentException(

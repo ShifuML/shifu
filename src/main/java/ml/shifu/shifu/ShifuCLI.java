@@ -85,6 +85,7 @@ public class ShifuCLI {
     private static final String SCORE = "score";
     private static final String CONFMAT = "confmat";
     private static final String PERF = "perf";
+    private static final String NORM = "norm";
 
     private static final String SAVE = "save";
     private static final String SWITCH = "switch";
@@ -248,6 +249,8 @@ public class ShifuCLI {
                     } else if(cmd.hasOption(DELETE)) {
                         // delete some evaluation set
                         deleteEvalSet(cmd.getOptionValue(DELETE));
+                    } else if (cmd.hasOption(NORM)) {
+                        runEvalNorm(cmd.getOptionValue(NORM));
                     } else {
                         log.error("Invalid command, please check help message.");
                         printUsage();
@@ -442,6 +445,15 @@ public class ShifuCLI {
     }
 
     /**
+     * @param evalSetNames
+     * @return
+     */
+    private static int runEvalNorm(String evalSetNames) throws Exception {
+        EvalModelProcessor p = new EvalModelProcessor(EvalStep.NORM, evalSetNames);
+        return p.run();
+    }
+
+    /**
      * list all evaluation set
      * 
      * @throws Exception
@@ -542,6 +554,7 @@ public class ShifuCLI {
         Option opt_score = OptionBuilder.hasArg().create(SCORE);
         Option opt_confmat = OptionBuilder.hasArg().create(CONFMAT);
         Option opt_perf = OptionBuilder.hasArg().create(PERF);
+        Option opt_norm = OptionBuilder.hasArg().create(NORM);
 
         Option opt_save = OptionBuilder.hasArg(false).withDescription("save model").create(SAVE);
         Option opt_switch = OptionBuilder.hasArg(false).withDescription("switch model").create(SWITCH);
@@ -552,6 +565,7 @@ public class ShifuCLI {
         opts.addOption(opt_type);
         opts.addOption(opt_run);
         opts.addOption(opt_perf);
+        opts.addOption(opt_norm);
         opts.addOption(opt_dry);
         opts.addOption(opt_debug);
         opts.addOption(opt_model);
@@ -588,6 +602,7 @@ public class ShifuCLI {
         System.out.println("\teval -delete  <EvalSetName>             Delete an eval set.");
         System.out.println("\teval -run     <EvalSetName>             Run eval set evaluation.");
         System.out.println("\teval -score   <EvalSetName>             Scoring evaluation dataset.");
+        System.out.println("\teval -norm    <EvalSetName>             Normalize evaluation dataset.");
         System.out.println("\teval -confmat <EvalSetName>             Compute the TP/FP/TN/FN based on scoring");
         System.out.println("\teval -perf <EvalSetName>                Calculate the model performance based on confmat");
         System.out.println("\texport [-t pmml|columnstats] [-c]       Export model to PMML format or export ColumnConfig.");
