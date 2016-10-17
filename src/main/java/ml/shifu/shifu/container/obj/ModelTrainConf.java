@@ -191,7 +191,7 @@ public class ModelTrainConf {
         Map<String, Object> params = new HashMap<String, Object>();
 
         if(ALGORITHM.NN.equals(alg)) {
-            params.put(NNTrainer.PROPAGATION, "Q");
+            params.put(NNTrainer.PROPAGATION, "R");
             params.put(NNTrainer.LEARNING_RATE, 0.1);
             params.put(NNTrainer.NUM_HIDDEN_LAYERS, 1);
 

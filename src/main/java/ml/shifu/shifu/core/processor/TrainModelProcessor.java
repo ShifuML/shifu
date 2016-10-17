@@ -576,7 +576,9 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
                     LOG.warn("Parse val error failed, ignore such error. Message: {}", e.getMessage());
                     continue;
                 } finally {
-                    reader.close();
+                    if(reader != null) {
+                        reader.close();
+                    }
                 }
                 if(valErr < minValErr) {
                     minValErr = valErr;
