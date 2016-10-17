@@ -81,7 +81,10 @@ public class EvalScoreUDF extends AbstractTrainerUDF<Tuple> {
                 this.headers[i] = i + "";
             }
         }
+
         // move model runner construction in exec to avoid OOM error in client side if model is too big like RF
+        this.modelCnt = CommonUtils.getBasicModelsCnt(modelConfig, this.columnConfigList, evalConfig,
+                evalConfig.getDataSet().getSource());
     }
 
     public Tuple exec(Tuple input) throws IOException {

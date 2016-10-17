@@ -17,14 +17,7 @@ package ml.shifu.shifu.core.processor;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.Scanner;
-import java.util.Set;
+import java.util.*;
 
 import ml.shifu.shifu.actor.AkkaSystemExecutor;
 import ml.shifu.shifu.container.obj.ColumnConfig;
@@ -38,6 +31,7 @@ import ml.shifu.shifu.exception.ShifuException;
 import ml.shifu.shifu.fs.PathFinder;
 import ml.shifu.shifu.fs.ShifuFileUtils;
 import ml.shifu.shifu.pig.PigExecutor;
+import ml.shifu.shifu.util.CommonUtils;
 import ml.shifu.shifu.util.Constants;
 
 import org.apache.commons.collections.CollectionUtils;
@@ -63,7 +57,7 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
      * Step for evaluation
      */
     public enum EvalStep {
-        LIST, NEW, DELETE, RUN, PERF, SCORE, CONFMAT;
+        LIST, NEW, DELETE, RUN, PERF, SCORE, CONFMAT, NORM;
     }
 
     private String evalName = null;
@@ -127,6 +121,9 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
                 case RUN:
                     runEval(getEvalConfigListFromInput());
                     break;
+                case NORM:
+                    runNormalize(getEvalConfigListFromInput());
+                    break;
                 case PERF:
                     runPerformance(getEvalConfigListFromInput());
                     break;
@@ -153,7 +150,7 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
     }
 
     /**
-     * @param evalName
+     * @param evalSetName
      */
     private void deleteEvalSet(String evalSetName) {
         EvalConfig evalConfig = modelConfig.getEvalConfigByName(evalSetName);
@@ -209,7 +206,7 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
     /**
      * run score only
      * 
-     * @param evalName
+     * @param evalSetList
      * @throws IOException
      */
     private void runScore(List<EvalConfig> evalSetList) throws IOException {
@@ -245,9 +242,39 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
     }
 
     /**
+     * Run normalization against the evaluation data sets
+     * @param evalConfigList
+     */
+    private void runNormalize(List<EvalConfig> evalConfigList) throws IOException {
+        for ( EvalConfig evalConfig : evalConfigList ) {
+            runNormalize(evalConfig);
+        }
+    }
+
+    /**
+     * Run normalization against the evaluation data set
+     * @param evalConfig
+     */
+    private void runNormalize(EvalConfig evalConfig) throws IOException {
+        PathFinder pathFinder = new PathFinder(modelConfig);
+        String evalSetPath = pathFinder.getEvalSetPath(evalConfig, SourceType.LOCAL);
+        FileUtils.forceMkdir(new File(evalSetPath));
+        syncDataToHdfs(evalConfig.getDataSet().getSource());
+
+        switch(modelConfig.getBasic().getRunMode()) {
+            case DIST:
+            case MAPRED:
+                runPigNormalize(evalConfig);
+                break;
+            default:
+                break;
+        }
+    }
+
+    /**
      * run pig mode scoring
      * 
-     * @param config
+     * @param evalConfig
      * @throws IOException
      */
     @SuppressWarnings("deprecation")
@@ -307,6 +334,38 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
                     / (Constants.EVAL_COUNTER_WEIGHT_SCALE * 1.0d);
             // only one pig job with such counters, break
             break;
+        }
+    }
+
+    /**
+     * Run pig code to normalize evaluation dataset
+     * @param evalConfig
+     * @throws IOException
+     */
+    private void runPigNormalize(EvalConfig evalConfig) throws IOException {
+        // clean up output directories
+        SourceType sourceType = evalConfig.getDataSet().getSource();
+
+        ShifuFileUtils.deleteFile(pathFinder.getEvalNormalizedPath(evalConfig), sourceType);
+
+        // prepare special parameters and execute pig
+        Map<String, String> paramsMap = new HashMap<String, String>();
+
+        paramsMap.put(Constants.SOURCE_TYPE, sourceType.toString());
+        paramsMap.put("pathEvalRawData", evalConfig.getDataSet().getDataPath());
+        paramsMap.put("pathEvalNormalized", pathFinder.getEvalNormalizedPath(evalConfig));
+        paramsMap.put("eval_set_name", evalConfig.getName());
+        paramsMap.put("delimiter", evalConfig.getDataSet().getDataDelimiter());
+
+        String pigScript = "scripts/EvalNorm.pig";
+
+        try {
+            PigExecutor.getExecutor().submitJob(modelConfig, pathFinder.getAbsolutePath(pigScript), paramsMap,
+                    evalConfig.getDataSet().getSource());
+        } catch (IOException e) {
+            throw new ShifuException(ShifuErrorCode.ERROR_RUNNING_PIG_JOB, e);
+        } catch (Throwable e) {
+            throw new RuntimeException(e);
         }
     }
 
@@ -375,25 +434,37 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
         }
     }
 
-    private void validateEvalColumnConfig(EvalConfig evalConfig) {
+    private void validateEvalColumnConfig(EvalConfig evalConfig) throws IOException {
         if(this.columnConfigList == null) {
             return;
         }
+
+        String[] evalColumnNames = CommonUtils.getHeaders(evalConfig.getDataSet().getHeaderPath(),
+                evalConfig.getDataSet().getHeaderDelimiter(),
+                evalConfig.getDataSet().getSource());
         Set<String> names = new HashSet<String>();
+        names.addAll(Arrays.asList(evalColumnNames));
+
         for(ColumnConfig config: this.columnConfigList) {
-            names.add(config.getColumnName());
+            if ( config.isFinalSelect() && !names.contains(config.getColumnName()) ) {
+                throw new IllegalArgumentException("Final selected column " + config.getColumnName()
+                        + " does not exist in - "
+                        + evalConfig.getDataSet().getHeaderPath());
+            }
         }
 
         if(StringUtils.isNotBlank(evalConfig.getDataSet().getTargetColumnName())
                 && !names.contains(evalConfig.getDataSet().getTargetColumnName())) {
-            throw new IllegalArgumentException("target column " + evalConfig.getDataSet().getTargetColumnName()
-                    + " in eval " + evalConfig.getName() + " does not exist.");
+            throw new IllegalArgumentException("Target column " + evalConfig.getDataSet().getTargetColumnName()
+                    + " does not exist in - "
+                    + evalConfig.getDataSet().getHeaderPath());
         }
 
         if(StringUtils.isNotBlank(evalConfig.getDataSet().getWeightColumnName())
                 && !names.contains(evalConfig.getDataSet().getWeightColumnName())) {
-            throw new IllegalArgumentException("weight column " + evalConfig.getDataSet().getWeightColumnName()
-                    + " in eval " + evalConfig.getName() + " does not exist.");
+            throw new IllegalArgumentException("Weight column " + evalConfig.getDataSet().getWeightColumnName()
+                    + " does not exist in - "
+                    + evalConfig.getDataSet().getHeaderPath());
         }
     }
 
@@ -455,10 +526,8 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
     /**
      * Running the performance matrices
      * 
-     * @param evalSetName
-     *            the name for evaluation
-     * @param scoreColumn
-     *            the performance score target
+     * @param evalSetList
+     *            EvalConfig list
      * @throws IOException
      */
     private void runPerformance(List<EvalConfig> evalSetList) throws IOException {
@@ -504,7 +573,7 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
     /**
      * Run confusion matrix
      * 
-     * @param EvalConfig
+     * @param config
      * @return List of ConfusionMatrixObject
      * @throws IOException
      */
