@@ -611,10 +611,10 @@ public class DTMaster extends AbstractMasterComputable<DTMasterParams, DTWorkerP
         // init model config and column config list at first
         SourceType sourceType;
         try {
-            sourceType = SourceType.valueOf(props.getProperty(CommonConstants.MODELSET_SOURCE_TYPE,
-                    SourceType.HDFS.toString()));
-            this.modelConfig = CommonUtils.loadModelConfig(props.getProperty(CommonConstants.SHIFU_MODEL_CONFIG),
-                    sourceType);
+            sourceType = SourceType.valueOf(
+                    props.getProperty(CommonConstants.MODELSET_SOURCE_TYPE, SourceType.HDFS.toString()));
+            this.modelConfig = CommonUtils.loadModelConfig(
+                    props.getProperty(CommonConstants.SHIFU_MODEL_CONFIG), sourceType);
             this.columnConfigList = CommonUtils.loadColumnConfigList(
                     props.getProperty(CommonConstants.SHIFU_COLUMN_CONFIG), sourceType);
         } catch (IOException e) {
