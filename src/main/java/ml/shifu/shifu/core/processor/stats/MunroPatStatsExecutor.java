@@ -18,9 +18,8 @@ public class MunroPatStatsExecutor extends MapReducerStatsWorker {
 
     private static Logger log = LoggerFactory.getLogger(MunroPatStatsExecutor.class);
 
-    public MunroPatStatsExecutor(BasicModelProcessor processor,
-                                 ModelConfig modelConfig,
-                                 List<ColumnConfig> columnConfigList) {
+    public MunroPatStatsExecutor(BasicModelProcessor processor, ModelConfig modelConfig,
+            List<ColumnConfig> columnConfigList) {
         super(processor, modelConfig, columnConfigList);
     }
 
@@ -28,8 +27,8 @@ public class MunroPatStatsExecutor extends MapReducerStatsWorker {
     protected void runStatsPig(Map<String, String> paramsMap) throws Exception {
         log.info("Run MunroPat to stats ... ");
 
-        PigExecutor.getExecutor().submitJob(modelConfig, pathFinder.getAbsolutePath("scripts/Stats.pig"),
-                paramsMap);
+        PigExecutor.getExecutor().submitJob(modelConfig, pathFinder.getAbsolutePath("scripts/Stats.pig"), paramsMap,
+                modelConfig.getDataSet().getSource(), super.pathFinder);
     }
 
 }

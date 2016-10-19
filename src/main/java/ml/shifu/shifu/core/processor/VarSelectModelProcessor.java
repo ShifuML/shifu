@@ -708,6 +708,7 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
     /**
      * Check if column is ID-like.
      */
+    @SuppressWarnings("unused")
     private boolean isIDLikeVariable(ColumnConfig config) {
         Long distinctCount = config.getColumnStats().getDistinctCount();
         Long totalCount = config.getColumnStats().getTotalCount();

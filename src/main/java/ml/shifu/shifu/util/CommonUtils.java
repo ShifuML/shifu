@@ -556,8 +556,8 @@ public final class CommonUtils {
         FileSystem fs = ShifuFileUtils.getFileSystemBySourceType(sourceType);
 
         List<FileStatus> modelFileStats = locateBasicModels(modelConfig, columnConfigList, evalConfig, sourceType);
-        if (CollectionUtils.isNotEmpty(modelFileStats)) {
-            for (FileStatus f : modelFileStats) {
+        if(CollectionUtils.isNotEmpty(modelFileStats)) {
+            for(FileStatus f: modelFileStats) {
                 models.add(loadModel(modelConfig, columnConfigList, f.getPath(), fs));
             }
         }
@@ -566,7 +566,7 @@ public final class CommonUtils {
     }
 
     public static int getBasicModelsCnt(ModelConfig modelConfig, List<ColumnConfig> columnConfigList,
-        EvalConfig evalConfig, SourceType sourceType) throws IOException  {
+            EvalConfig evalConfig, SourceType sourceType) throws IOException {
         List<FileStatus> modelFileStats = locateBasicModels(modelConfig, columnConfigList, evalConfig, sourceType);
         return (CollectionUtils.isEmpty(modelFileStats) ? 0 : modelFileStats.size());
     }
@@ -791,6 +791,44 @@ public final class CommonUtils {
         }
         PathFinder pathFinder = new PathFinder(modelConfig);
 
+        Map<String, String> pigParamMap = new HashMap<String, String>();
+        pigParamMap.put(Constants.NUM_PARALLEL, Environment.getInt(Environment.HADOOP_NUM_PARALLEL, 400).toString());
+        pigParamMap.put(Constants.PATH_JAR, pathFinder.getJarPath());
+
+        pigParamMap.put(Constants.PATH_RAW_DATA, modelConfig.getDataSetRawPath());
+        pigParamMap.put(Constants.PATH_NORMALIZED_DATA, pathFinder.getNormalizedDataPath(sourceType));
+        pigParamMap.put(Constants.PATH_PRE_TRAINING_STATS, pathFinder.getPreTrainingStatsPath(sourceType));
+        pigParamMap.put(Constants.PATH_STATS_BINNING_INFO, pathFinder.getUpdatedBinningInfoPath(sourceType));
+        pigParamMap.put(Constants.PATH_STATS_PSI_INFO, pathFinder.getPSIInfoPath(sourceType));
+
+        pigParamMap.put(Constants.WITH_SCORE, Boolean.FALSE.toString());
+        pigParamMap.put(Constants.STATS_SAMPLE_RATE, modelConfig.getBinningSampleRate().toString());
+        pigParamMap.put(Constants.PATH_MODEL_CONFIG, pathFinder.getModelConfigPath(sourceType));
+        pigParamMap.put(Constants.PATH_COLUMN_CONFIG, pathFinder.getColumnConfigPath(sourceType));
+        pigParamMap.put(Constants.PATH_SELECTED_RAW_DATA, pathFinder.getSelectedRawDataPath(sourceType));
+        pigParamMap.put(Constants.PATH_BIN_AVG_SCORE, pathFinder.getBinAvgScorePath(sourceType));
+        pigParamMap.put(Constants.PATH_TRAIN_SCORE, pathFinder.getTrainScoresPath(sourceType));
+
+        pigParamMap.put(Constants.SOURCE_TYPE, sourceType.toString());
+        pigParamMap.put(Constants.JOB_QUEUE,
+                Environment.getProperty(Environment.HADOOP_JOB_QUEUE, Constants.DEFAULT_JOB_QUEUE));
+        return pigParamMap;
+    }
+
+    /**
+     * Return all parameters for pig execution.
+     * 
+     * @throws IllegalArgumentException
+     *             if modelConfig is null.
+     */
+    public static Map<String, String> getPigParamMap(ModelConfig modelConfig, SourceType sourceType,
+            PathFinder pathFinder) throws IOException {
+        if(modelConfig == null) {
+            throw new IllegalArgumentException("modelConfig should not be null.");
+        }
+        if(pathFinder == null) {
+            pathFinder = new PathFinder(modelConfig);
+        }
         Map<String, String> pigParamMap = new HashMap<String, String>();
         pigParamMap.put(Constants.NUM_PARALLEL, Environment.getInt(Environment.HADOOP_NUM_PARALLEL, 400).toString());
         pigParamMap.put(Constants.PATH_JAR, pathFinder.getJarPath());
