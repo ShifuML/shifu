@@ -47,6 +47,11 @@ public class PathFinder {
     private ModelConfig modelConfig;
 
     /**
+     * If not specified SHIFU_HOME env, some key configurations like pig path or lib path can be configured here
+     */
+    private Map<String, Object> otherConfigs;
+
+    /**
      * Constructor with valid parameter modelConfig
      * 
      * @throws IllegalArgumentException
@@ -60,6 +65,17 @@ public class PathFinder {
     }
 
     /**
+     * Constructor with valid parameter modelConfig
+     * 
+     * @throws IllegalArgumentException
+     *             if {@link #modelConfig} is null.
+     */
+    public PathFinder(ModelConfig modelConfig, Map<String, Object> otherConfigs) {
+        this(modelConfig);
+        this.otherConfigs = otherConfigs;
+    }
+
+    /**
      * Get absolute path with SHIFU_HOME env.
      * - if the path is already absolute path, just return
      * - or assume it is relative path to SHIFU_HOME
@@ -68,8 +84,13 @@ public class PathFinder {
      * @return absolute path
      */
     public String getAbsolutePath(String path) {
-        return (new Path(path)).isAbsolute() ? path : new Path(Environment.getProperty(Environment.SHIFU_HOME), path)
-                .toString();
+        String shifuHome = Environment.getProperty(Environment.SHIFU_HOME);
+        if(shifuHome == null || shifuHome.length() == 0) {
+            return new Path(this.otherConfigs.get("shifu.pig.scripts").toString(), path).toString();
+        } else {
+            return (new Path(path)).isAbsolute() ? path : new Path(Environment.getProperty(Environment.SHIFU_HOME),
+                    path).toString();
+        }
     }
 
     /**
@@ -79,7 +100,12 @@ public class PathFinder {
      * @return path of SHIFU dependent jars
      */
     public String getJarPath() {
-        return getAbsolutePath(SHIFU_JAR_PATH);
+        String shifuHome = Environment.getProperty(Environment.SHIFU_HOME);
+        if(shifuHome == null || shifuHome.length() == 0) {
+            return new Path(this.otherConfigs.get("shifu.pig.jars").toString(), SHIFU_JAR_PATH).toString();
+        } else {
+            return getAbsolutePath(SHIFU_JAR_PATH);
+        }
     }
 
     /**
@@ -179,6 +205,7 @@ public class PathFinder {
 
     /**
      * stats small bins path
+     * 
      * @return
      */
     public String getStatsSmallBins() {
@@ -187,9 +214,9 @@ public class PathFinder {
 
     /**
      * Get stats small bins path
-     *
+     * 
      * @param sourceType
-     *          - Local/HDFS
+     *            - Local/HDFS
      * @return path of stats small-bin file
      */
     public String getStatsSmallBins(SourceType sourceType) {
@@ -285,7 +312,7 @@ public class PathFinder {
     public String getNormalizedDataPath() {
         return getNormalizedDataPath(modelConfig.getDataSet().getSource());
     }
-    
+
     /**
      * Get the path of normalized cross validation data
      * 
@@ -312,7 +339,7 @@ public class PathFinder {
             return new Path(normalizedDataPath).toString();
         }
     }
-    
+
     /**
      * Get the path of validation normalized data
      * 
@@ -409,7 +436,7 @@ public class PathFinder {
     public String getModelsPath(SourceType sourceType) {
         return getPathBySourceType(new Path(Constants.MODELS), sourceType);
     }
-    
+
     public String getValErrorPath(SourceType sourceType) {
         return getPathBySourceType(new Path(Constants.TMP, "valerr"), sourceType);
     }
@@ -785,6 +812,13 @@ public class PathFinder {
         }
 
         return customPaths.get(key);
+    }
+
+    /**
+     * @return the otherConfigs
+     */
+    public Map<String, Object> getOtherConfigs() {
+        return otherConfigs;
     }
 
 }

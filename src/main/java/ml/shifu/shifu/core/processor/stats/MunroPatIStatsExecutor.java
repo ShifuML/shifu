@@ -18,9 +18,8 @@ public class MunroPatIStatsExecutor extends MapReducerStatsWorker {
 
     private static Logger log = LoggerFactory.getLogger(MunroPatIStatsExecutor.class);
 
-    public MunroPatIStatsExecutor(BasicModelProcessor processor,
-                                 ModelConfig modelConfig,
-                                 List<ColumnConfig> columnConfigList) {
+    public MunroPatIStatsExecutor(BasicModelProcessor processor, ModelConfig modelConfig,
+            List<ColumnConfig> columnConfigList) {
         super(processor, modelConfig, columnConfigList);
     }
 
@@ -31,8 +30,8 @@ public class MunroPatIStatsExecutor extends MapReducerStatsWorker {
         ShifuFileUtils.deleteFile(pathFinder.getUpdatedBinningInfoPath(modelConfig.getDataSet().getSource()),
                 modelConfig.getDataSet().getSource());
 
-        PigExecutor.getExecutor().submitJob(modelConfig,
-                pathFinder.getAbsolutePath("scripts/StatsMunroPatI.pig"), paramsMap);
+        PigExecutor.getExecutor().submitJob(modelConfig, pathFinder.getAbsolutePath("scripts/StatsMunroPatI.pig"),
+                paramsMap, modelConfig.getDataSet().getSource(), super.pathFinder);
 
         // update
         log.info("Updating binning info ...");
