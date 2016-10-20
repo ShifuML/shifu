@@ -1,9 +1,15 @@
 package ml.shifu.shifu.udf;
 
+import java.io.IOException;
+import java.io.InputStream;
+import java.util.List;
+import java.util.Random;
+import java.util.zip.GZIPInputStream;
+
 import ml.shifu.shifu.core.binning.DynamicBinningTest;
 import ml.shifu.shifu.core.binning.EqualIntervalBinning;
 import ml.shifu.shifu.core.binning.obj.NumBinInfo;
-import org.apache.commons.io.FileUtils;
+
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.pig.data.DataBag;
@@ -12,13 +18,6 @@ import org.apache.pig.data.Tuple;
 import org.apache.pig.data.TupleFactory;
 import org.testng.Assert;
 import org.testng.annotations.Test;
-
-import java.io.File;
-import java.io.IOException;
-import java.io.InputStream;
-import java.util.List;
-import java.util.Random;
-import java.util.zip.GZIPInputStream;
 
 /**
  * Created by zhanhu on 7/6/16.
