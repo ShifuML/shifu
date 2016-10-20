@@ -75,7 +75,7 @@ public class LogisticRegressionOutput extends
     /**
      * The best weights that we meet
      */
-    private double[] optimizeddWeights = null;
+    private double[] optimizedWeights = null;
 
     /**
      * Progress output stream which is used to write progress to that HDFS file. Should be closed in
@@ -101,7 +101,7 @@ public class LogisticRegressionOutput extends
         // save the weights according the error decreasing
         if(currentError < this.minTestError) {
             this.minTestError = currentError;
-            this.optimizeddWeights = context.getMasterResult().getParameters();
+            this.optimizedWeights = context.getMasterResult().getParameters();
         }
 
         // save tmp to hdfs according to raw trainer logic
@@ -110,6 +110,11 @@ public class LogisticRegressionOutput extends
                 @Override
                 public void run() {
                     saveTmpModelToHDFS(context.getCurrentIteration(), context.getMasterResult().getParameters());
+                    // save model results for continue model training, if current job is failed, then next running
+                    // we can start from this point to save time.
+                    // another case for master recovery, if master is failed, read such checkpoint model
+                    Path out = new Path(context.getProps().getProperty(CommonConstants.GUAGUA_OUTPUT));
+                    writeModelWeightsToFileSystem(optimizedWeights, out);
                 }
             }, "saveTmpModelToHDFS thread");
             tmpNNThread.setDaemon(true);
@@ -148,12 +153,12 @@ public class LogisticRegressionOutput extends
             return;
         }
 
-        if(optimizeddWeights == null) {
-            optimizeddWeights = context.getMasterResult().getParameters();
+        if(optimizedWeights == null) {
+            optimizedWeights = context.getMasterResult().getParameters();
         }
 
         Path out = new Path(context.getProps().getProperty(CommonConstants.GUAGUA_OUTPUT));
-        writeModelWeightsToFileSystem(optimizeddWeights, out);
+        writeModelWeightsToFileSystem(optimizedWeights, out);
     }
 
     /**
@@ -201,7 +206,7 @@ public class LogisticRegressionOutput extends
     }
 
     private void writeModelWeightsToFileSystem(double[] weights, Path out) {
-        if(weights==null || weights.length<=0){
+        if(weights == null || weights.length <= 0) {
             return;
         }
         FSDataOutputStream fos = null;
