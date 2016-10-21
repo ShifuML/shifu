@@ -57,7 +57,7 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
      * Step for evaluation
      */
     public enum EvalStep {
-        LIST, NEW, DELETE, RUN, PERF, SCORE, CONFMAT, NORM;
+        LIST, NEW, DELETE, RUN, PERF, SCORE, CONFMAT, NORM, GAINCHART;
     }
 
     private String evalName = null;
@@ -120,6 +120,9 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
                     break;
                 case RUN:
                     runEval(getEvalConfigListFromInput());
+                    break;
+                case GAINCHART:
+                    runGainChart(getEvalConfigListFromInput());
                     break;
                 case NORM:
                     runNormalize(getEvalConfigListFromInput());
@@ -243,16 +246,18 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
 
     /**
      * Run normalization against the evaluation data sets
+     * 
      * @param evalConfigList
      */
     private void runNormalize(List<EvalConfig> evalConfigList) throws IOException {
-        for ( EvalConfig evalConfig : evalConfigList ) {
+        for(EvalConfig evalConfig: evalConfigList) {
             runNormalize(evalConfig);
         }
     }
 
     /**
      * Run normalization against the evaluation data set
+     * 
      * @param evalConfig
      */
     private void runNormalize(EvalConfig evalConfig) throws IOException {
@@ -339,6 +344,7 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
 
     /**
      * Run pig code to normalize evaluation dataset
+     * 
      * @param evalConfig
      * @throws IOException
      */
@@ -428,10 +434,55 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
      * @throws IOException
      *             any exception in running pig evaluation or akka evaluation
      */
+    private void runGainChart(List<EvalConfig> evalSetList) throws IOException {
+        for(EvalConfig evalConfig: evalSetList) {
+            runGainChart(evalConfig);
+        }
+    }
+
+    /**
+     * Running evaluation entry function
+     * <p>
+     * this function will switch to pig or akka evaluation depends on the modelConfig running mode
+     * </p>
+     * 
+     * @throws IOException
+     *             any exception in running pig evaluation or akka evaluation
+     */
     private void runEval(List<EvalConfig> evalSetList) throws IOException {
         for(EvalConfig evalConfig: evalSetList) {
             runEval(evalConfig);
         }
+    }
+
+    /**
+     * Generate gain chart with highchart.js
+     * 
+     * @param evalConfig
+     * @throws IOException
+     */
+    private void runGainChart(EvalConfig evalConfig) throws IOException {
+        // create evalset home directory firstly in local file system
+        validateEvalColumnConfig(evalConfig);
+        PathFinder pathFinder = new PathFinder(modelConfig);
+        String evalSetPath = pathFinder.getEvalSetPath(evalConfig, SourceType.LOCAL);
+        FileUtils.forceMkdir(new File(evalSetPath));
+        syncDataToHdfs(evalConfig.getDataSet().getSource());
+
+        switch(modelConfig.getBasic().getRunMode()) {
+            case DIST:
+            case MAPRED:
+                runPigScore(evalConfig);
+                generateGainChart(evalConfig);
+                break;
+            case LOCAL:
+            default:
+                throw new RuntimeException("Local mode is not supported so far.");
+        }
+    }
+
+    private void generateGainChart(EvalConfig evalConfig) {
+
     }
 
     private void validateEvalColumnConfig(EvalConfig evalConfig) throws IOException {
@@ -439,32 +490,28 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
             return;
         }
 
-        String[] evalColumnNames = CommonUtils.getHeaders(evalConfig.getDataSet().getHeaderPath(),
-                evalConfig.getDataSet().getHeaderDelimiter(),
-                evalConfig.getDataSet().getSource());
+        String[] evalColumnNames = CommonUtils.getHeaders(evalConfig.getDataSet().getHeaderPath(), evalConfig
+                .getDataSet().getHeaderDelimiter(), evalConfig.getDataSet().getSource());
         Set<String> names = new HashSet<String>();
         names.addAll(Arrays.asList(evalColumnNames));
 
         for(ColumnConfig config: this.columnConfigList) {
-            if ( config.isFinalSelect() && !names.contains(config.getColumnName()) ) {
+            if(config.isFinalSelect() && !names.contains(config.getColumnName())) {
                 throw new IllegalArgumentException("Final selected column " + config.getColumnName()
-                        + " does not exist in - "
-                        + evalConfig.getDataSet().getHeaderPath());
+                        + " does not exist in - " + evalConfig.getDataSet().getHeaderPath());
             }
         }
 
         if(StringUtils.isNotBlank(evalConfig.getDataSet().getTargetColumnName())
                 && !names.contains(evalConfig.getDataSet().getTargetColumnName())) {
             throw new IllegalArgumentException("Target column " + evalConfig.getDataSet().getTargetColumnName()
-                    + " does not exist in - "
-                    + evalConfig.getDataSet().getHeaderPath());
+                    + " does not exist in - " + evalConfig.getDataSet().getHeaderPath());
         }
 
         if(StringUtils.isNotBlank(evalConfig.getDataSet().getWeightColumnName())
                 && !names.contains(evalConfig.getDataSet().getWeightColumnName())) {
             throw new IllegalArgumentException("Weight column " + evalConfig.getDataSet().getWeightColumnName()
-                    + " does not exist in - "
-                    + evalConfig.getDataSet().getHeaderPath());
+                    + " does not exist in - " + evalConfig.getDataSet().getHeaderPath());
         }
     }
 
