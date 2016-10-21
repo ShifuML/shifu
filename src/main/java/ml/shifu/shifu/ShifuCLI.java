@@ -165,7 +165,7 @@ public class ShifuCLI {
                     // stats step
                     status = calModelStats();
                     if(status == 0) {
-                        log.info("Do model set statistics successfully. Please continue next step by using 'shifu normalize or shifu norm'.");
+                        log.info("Do model set statistics successfully. Please continue next step by using 'shifu normalize or shifu norm'. For tree ensemble model, no need do norm, please continue next step by using 'shifu varsel'");
                     } else {
                         log.warn("Error in model set stats computation, please report issue on http:/github.com/shifuml/shifu/issues.");
                     }

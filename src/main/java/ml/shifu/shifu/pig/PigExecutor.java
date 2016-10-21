@@ -121,7 +121,6 @@ public class PigExecutor {
             } else {
                 log.info("Pig ExecType: MAPREDUCE");
                 pigServer = new PigServer(ExecType.MAPREDUCE);
-
             }
             String hdpVersion = HDPUtils.getHdpVersionForHDP224();
             if(StringUtils.isNotBlank(hdpVersion)) {
