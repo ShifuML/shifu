@@ -367,7 +367,7 @@ public class DTWorker
 
         if(this.isGBDT) {
             this.learningRate = Double.valueOf(validParams.get(NNTrainer.LEARNING_RATE).toString());
-            Object swrObj = validParams.get("SampleWithReplacement");
+            Object swrObj = validParams.get("GBTSampleWithReplacement");
             if(swrObj != null) {
                 this.gbdtSampleWithReplacement = Boolean.TRUE.toString().equalsIgnoreCase(swrObj.toString());
             }

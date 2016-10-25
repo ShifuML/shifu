@@ -116,7 +116,7 @@ public class Environment {
      * @return
      */
     public static void setProperty(String propertyName, String propertyValue) {
-        properties.put(SHIFU_HOME, propertyValue);
+        properties.put(propertyName, propertyValue);
     }
 
     /**

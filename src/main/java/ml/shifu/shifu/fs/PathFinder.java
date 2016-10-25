@@ -179,6 +179,7 @@ public class PathFinder {
 
     /**
      * stats small bins path
+     * 
      * @return
      */
     public String getStatsSmallBins() {
@@ -187,9 +188,9 @@ public class PathFinder {
 
     /**
      * Get stats small bins path
-     *
+     * 
      * @param sourceType
-     *          - Local/HDFS
+     *            - Local/HDFS
      * @return path of stats small-bin file
      */
     public String getStatsSmallBins(SourceType sourceType) {
@@ -285,7 +286,7 @@ public class PathFinder {
     public String getNormalizedDataPath() {
         return getNormalizedDataPath(modelConfig.getDataSet().getSource());
     }
-    
+
     /**
      * Get the path of normalized cross validation data
      * 
@@ -312,7 +313,51 @@ public class PathFinder {
             return new Path(normalizedDataPath).toString();
         }
     }
-    
+
+    public String getCleanedDataPath() {
+        return getCleanedDataPath(modelConfig.getDataSet().getSource());
+    }
+
+    /**
+     * Clean and filter raw data set for RF/GBT model inputs
+     * 
+     * @param sourceType
+     *            - Local/HDFS
+     * @return path of normalized data
+     */
+    public String getCleanedDataPath(SourceType sourceType) {
+        String normalizedDataPath = getPreferPath(modelConfig.getTrain().getCustomPaths(),
+                Constants.KEY_CLEANED_DATA_PATH);
+
+        if(StringUtils.isBlank(normalizedDataPath)) {
+            return getPathBySourceType(new Path(Constants.TMP, Constants.CLEANED_DATA), sourceType);
+        } else {
+            return new Path(normalizedDataPath).toString();
+        }
+    }
+
+    public String getCleanedValidationDataPath() {
+        return getCleanedValidationDataPath(modelConfig.getDataSet().getSource());
+    }
+
+    /**
+     * Clean and filter raw validation data set for RF/GBT model inputs
+     * 
+     * @param sourceType
+     *            - Local/HDFS
+     * @return path of normalized data
+     */
+    public String getCleanedValidationDataPath(SourceType sourceType) {
+        String normalizedDataPath = getPreferPath(modelConfig.getTrain().getCustomPaths(),
+                Constants.KEY_CLEANED_VALIDATION_DATA_PATH);
+
+        if(StringUtils.isBlank(normalizedDataPath)) {
+            return getPathBySourceType(new Path(Constants.TMP, Constants.CLEANED_VALIDATION_DATA), sourceType);
+        } else {
+            return new Path(normalizedDataPath).toString();
+        }
+    }
+
     /**
      * Get the path of validation normalized data
      * 
@@ -409,7 +454,7 @@ public class PathFinder {
     public String getModelsPath(SourceType sourceType) {
         return getPathBySourceType(new Path(Constants.MODELS), sourceType);
     }
-    
+
     public String getValErrorPath(SourceType sourceType) {
         return getPathBySourceType(new Path(Constants.TMP, "valerr"), sourceType);
     }
