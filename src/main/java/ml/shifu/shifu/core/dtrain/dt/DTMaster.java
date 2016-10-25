@@ -296,7 +296,8 @@ public class DTMaster extends AbstractMasterComputable<DTMasterParams, DTWorkerP
                 if(!rightChildIsLeaf) {
                     this.queue.offer(new TreeNode(treeId, right));
                 } else {
-                    LOG.debug("Right node {} in tree {} is set to leaf and not submitted to workers", rightIndex, treeId);
+                    LOG.debug("Right node {} in tree {} is set to leaf and not submitted to workers", rightIndex,
+                            treeId);
                 }
             } else {
                 LOG.info("Done node {} in tree {} is final set to leaf", doneNode.getId(), treeId);
@@ -611,10 +612,10 @@ public class DTMaster extends AbstractMasterComputable<DTMasterParams, DTWorkerP
         // init model config and column config list at first
         SourceType sourceType;
         try {
-            sourceType = SourceType.valueOf(
-                    props.getProperty(CommonConstants.MODELSET_SOURCE_TYPE, SourceType.HDFS.toString()));
-            this.modelConfig = CommonUtils.loadModelConfig(
-                    props.getProperty(CommonConstants.SHIFU_MODEL_CONFIG), sourceType);
+            sourceType = SourceType.valueOf(props.getProperty(CommonConstants.MODELSET_SOURCE_TYPE,
+                    SourceType.HDFS.toString()));
+            this.modelConfig = CommonUtils.loadModelConfig(props.getProperty(CommonConstants.SHIFU_MODEL_CONFIG),
+                    sourceType);
             this.columnConfigList = CommonUtils.loadColumnConfigList(
                     props.getProperty(CommonConstants.SHIFU_COLUMN_CONFIG), sourceType);
         } catch (IOException e) {
@@ -641,7 +642,13 @@ public class DTMaster extends AbstractMasterComputable<DTMasterParams, DTWorkerP
         this.featureSubsetStrategy = FeatureSubsetStrategy.of(validParams.get("FeatureSubsetStrategy").toString());
         this.maxDepth = Integer.valueOf(validParams.get("MaxDepth").toString());
         assert this.maxDepth > 0 && this.maxDepth <= 20;
-        this.maxStatsMemory = Long.valueOf(validParams.get("MaxStatsMemoryMB").toString()) * 1024 * 1024;
+        Object maxStatsMemoryMB = validParams.get("MaxStatsMemoryMB");
+        if(maxStatsMemoryMB != null) {
+            this.maxStatsMemory = Long.valueOf(validParams.get("MaxStatsMemoryMB").toString()) * 1024 * 1024;
+        } else {
+            // by default it is 1/3 of heap, about 1G setting in current Shifu
+            this.maxStatsMemory = Runtime.getRuntime().maxMemory() / 3L;
+        }
         // assert this.maxStatsMemory <= Math.min(Runtime.getRuntime().maxMemory() * 0.6, 800 * 1024 * 1024L);
         this.treeNum = Integer.valueOf(validParams.get("TreeNum").toString());;
         this.isRF = ALGORITHM.RF.toString().equalsIgnoreCase(modelConfig.getAlgorithm());

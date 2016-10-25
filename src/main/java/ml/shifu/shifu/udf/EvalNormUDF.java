@@ -43,6 +43,7 @@ public class EvalNormUDF extends AbstractTrainerUDF<Tuple> {
     /**
      * A simple weight exception validation: if over 5000 throw exceptions
      */
+    @SuppressWarnings("unused")
     private int weightExceptions;
 
     public EvalNormUDF(String source, String pathModelConfig, String pathColumnConfig, String evalSetName)

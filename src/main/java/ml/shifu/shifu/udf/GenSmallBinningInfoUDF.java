@@ -36,6 +36,7 @@ public class GenSmallBinningInfoUDF extends AbstractTrainerUDF<Tuple> {
 
         Integer columnId = null;
         ColumnConfig columnConfig = null;
+        @SuppressWarnings("rawtypes")
         AbstractBinning binning = null;
 
         DataBag dataBag = (DataBag) input.get(0);
@@ -72,6 +73,7 @@ public class GenSmallBinningInfoUDF extends AbstractTrainerUDF<Tuple> {
                 || (super.modelConfig.getBinningMethod().equals(ModelStatsConf.BinningMethod.EqualNegtive) && !isPostive );
     }
 
+    @SuppressWarnings("rawtypes")
     private AbstractBinning getBinningHandler(ColumnConfig columnConfig) {
         AbstractBinning binning = null;
         if ( columnConfig.isNumerical() ) {
