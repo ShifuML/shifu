@@ -6,6 +6,7 @@ import ml.shifu.shifu.core.binning.AbstractBinning;
 import ml.shifu.shifu.core.binning.DynamicBinning;
 import ml.shifu.shifu.core.binning.obj.NumBinInfo;
 import ml.shifu.shifu.fs.ShifuFileUtils;
+import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.pig.data.DataBag;
 import org.apache.pig.data.Tuple;
@@ -86,7 +87,7 @@ public class DynamicBinningUDF extends AbstractTrainerUDF<Tuple> {
             }
         }
 
-        if (binsData == null) {
+        if (binsData == null && CollectionUtils.isNotEmpty(binInfoList)) {
             DynamicBinning dynamicBinning = new DynamicBinning(binInfoList, modelConfig.getStats().getMaxNumBin());
             List<Double> binFields = dynamicBinning.getDataBin();
             binsData = StringUtils.join(binFields, CalculateStatsUDF.CATEGORY_VAL_SEPARATOR);
