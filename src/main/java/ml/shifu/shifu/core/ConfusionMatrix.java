@@ -37,6 +37,7 @@ import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
 import ml.shifu.shifu.core.dtrain.CommonConstants;
 import ml.shifu.shifu.core.dtrain.nn.NNConstants;
 import ml.shifu.shifu.core.eval.AreaUnderCurve;
+import ml.shifu.shifu.core.eval.GainChart;
 import ml.shifu.shifu.exception.ShifuErrorCode;
 import ml.shifu.shifu.exception.ShifuException;
 import ml.shifu.shifu.fs.PathFinder;
@@ -134,8 +135,16 @@ public class ConfusionMatrix {
     }
 
     public void bufferedComputeConfusionMatrixAndPerformance(long pigPosTags, long pigNegTags, double pigPosWeightTags,
-            double pigNegWeightTags, long records) throws IOException {
+            double pigNegWeightTags, long records, int maxScore, int minScore) throws IOException {
+        log.info("Max score is {}, min score is {}", maxScore, minScore);
+        
         PathFinder pathFinder = new PathFinder(modelConfig);
+        
+        if(!CommonConstants.GBT_ALG_NAME.equalsIgnoreCase(modelConfig.getTrain().getAlgorithm())){
+            // TODO, if not GBT model, NN/LR, are all 0-1000, only for GBT, maxScore and minScore may not be 1000 and 0
+            maxScore = 1000;
+            minScore = 0;
+        }
 
         SourceType sourceType = evalConfig.getDataSet().getSource();
 
@@ -335,6 +344,23 @@ public class ConfusionMatrix {
         } catch (IOException e) {
             IOUtils.closeQuietly(writer);
         }
+
+        String htmlGainChart = pathFinder.getEvalFilePath(evalConfig.getName(), evalConfig.getName()
+                + "_gainchart.html", SourceType.LOCAL);
+        log.info("Gain chart is generated in {}.", htmlGainChart);
+        GainChart gc = new GainChart();
+        gc.generateHtml(evalConfig, modelConfig, htmlGainChart, result);
+
+        String unitGainChartCsv = pathFinder.getEvalFilePath(evalConfig.getName(), evalConfig.getName()
+                + "_unit_wise_gainchart.csv", SourceType.LOCAL);
+        log.info("Unit-wise gain chart data is generated in {}.", unitGainChartCsv);
+        gc.generateCsv(evalConfig, modelConfig, unitGainChartCsv, result.gains);
+
+        String weightedGainChartCsv = pathFinder.getEvalFilePath(evalConfig.getName(), evalConfig.getName()
+                + "_weighted_gainchart.csv", SourceType.LOCAL);
+        log.info("Weighted gain chart data is generated in {}.", weightedGainChartCsv);
+        gc.generateCsv(evalConfig, modelConfig, weightedGainChartCsv, result.weightedGains);
+
         if(cnt == 0) {
             log.error("No score read, the EvalScore did not genernate or is null file");
             throw new ShifuException(ShifuErrorCode.ERROR_EVALSCORE);
