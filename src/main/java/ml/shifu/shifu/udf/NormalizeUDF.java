@@ -54,6 +54,10 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
     private Expression weightExpr;
     private JexlContext weightContext;
     private DecimalFormat df = new DecimalFormat("#.######");
+    
+    public static void main(String[] args) {
+        System.out.println(new DecimalFormat("#.###").format(128.458978));
+    }
 
     private String alg;
 

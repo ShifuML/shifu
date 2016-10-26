@@ -50,6 +50,10 @@ public class EvalScoreUDF extends AbstractTrainerUDF<Tuple> {
 
     private int modelCnt;
 
+    private int maxScore = Integer.MIN_VALUE;
+
+    private int minScore = Integer.MAX_VALUE;
+
     /**
      * A simple weight exception validation: if over 5000 throw exceptions
      */
@@ -83,8 +87,8 @@ public class EvalScoreUDF extends AbstractTrainerUDF<Tuple> {
         }
 
         // move model runner construction in exec to avoid OOM error in client side if model is too big like RF
-        this.modelCnt = CommonUtils.getBasicModelsCnt(modelConfig, this.columnConfigList, evalConfig,
-                evalConfig.getDataSet().getSource());
+        this.modelCnt = CommonUtils.getBasicModelsCnt(modelConfig, this.columnConfigList, evalConfig, evalConfig
+                .getDataSet().getSource());
     }
 
     public Tuple exec(Tuple input) throws IOException {
@@ -151,6 +155,15 @@ public class EvalScoreUDF extends AbstractTrainerUDF<Tuple> {
             for(Integer score: cs.getScores()) {
                 tuple.append(score);
             }
+
+            // get maxScore and minScore for such mapper or reducer
+            if(cs.getMedianScore() > maxScore) {
+                maxScore = cs.getMedianScore();
+            }
+
+            if(cs.getMedianScore() < minScore) {
+                minScore = cs.getMedianScore();
+            }
         } else {
             for(int i = 0; i < cs.getScores().size(); i++) {
                 tuple.append(cs.getScores().get(i));
@@ -166,6 +179,28 @@ public class EvalScoreUDF extends AbstractTrainerUDF<Tuple> {
         }
 
         return tuple;
+    }
+
+    @SuppressWarnings("deprecation")
+    @Override
+    public void finish() {
+        // SET MAX SCORE AND MIN SCORE as counter
+        if(isPigEnabled(Constants.SHIFU_GROUP_COUNTER, Constants.COUNTER_MAX_SCORE)) {
+            long maxValueInCounter = PigStatusReporter.getInstance()
+                    .getCounter(Constants.SHIFU_GROUP_COUNTER, Constants.COUNTER_MAX_SCORE).getValue();
+            if(maxValueInCounter < maxScore) {
+                PigStatusReporter.getInstance().getCounter(Constants.SHIFU_GROUP_COUNTER, Constants.COUNTER_MAX_SCORE)
+                        .setValue(maxScore);
+            }
+        }
+        if(isPigEnabled(Constants.SHIFU_GROUP_COUNTER, Constants.COUNTER_MIN_SCORE)) {
+            long minValueInCounter = PigStatusReporter.getInstance()
+                    .getCounter(Constants.SHIFU_GROUP_COUNTER, Constants.COUNTER_MIN_SCORE).getValue();
+            if(minValueInCounter > minScore) {
+                PigStatusReporter.getInstance().getCounter(Constants.SHIFU_GROUP_COUNTER, Constants.COUNTER_MIN_SCORE)
+                        .setValue(minScore);
+            }
+        }
     }
 
     @SuppressWarnings("deprecation")

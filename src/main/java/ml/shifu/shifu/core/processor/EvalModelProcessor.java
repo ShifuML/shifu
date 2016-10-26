@@ -72,6 +72,10 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
 
     private double pigNegWeightTags = 0d;
 
+    private int maxScore = 0;
+
+    private int minScore = 0;
+
     private long evalRecords = 0l;
 
     /**
@@ -337,6 +341,10 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
             this.pigNegWeightTags = jobStats.getHadoopCounters().getGroup(Constants.SHIFU_GROUP_COUNTER)
                     .getCounter(Constants.COUNTER_WNEGTAGS)
                     / (Constants.EVAL_COUNTER_WEIGHT_SCALE * 1.0d);
+            this.maxScore = (int) (jobStats.getHadoopCounters().getGroup(Constants.SHIFU_GROUP_COUNTER)
+                    .getCounter(Constants.COUNTER_MAX_SCORE));
+            this.minScore = (int) (jobStats.getHadoopCounters().getGroup(Constants.SHIFU_GROUP_COUNTER)
+                    .getCounter(Constants.COUNTER_MIN_SCORE));
             // only one pig job with such counters, break
             break;
         }
@@ -631,7 +639,8 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
             case MAPRED:
                 if(modelConfig.isRegression()) {
                     worker.bufferedComputeConfusionMatrixAndPerformance(this.pigPosTags, this.pigNegTags,
-                            this.pigPosWeightTags, this.pigNegWeightTags, this.evalRecords);
+                            this.pigPosWeightTags, this.pigNegWeightTags, this.evalRecords, this.maxScore,
+                            this.minScore);
                 } else {
                     worker.computeConfusionMatixForMultipleClassification(this.evalRecords);
                 }
