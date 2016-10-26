@@ -15,12 +15,15 @@
  */
 package ml.shifu.shifu.udf;
 
+import java.io.BufferedWriter;
+import java.io.File;
 import java.io.IOException;
 import java.util.List;
 import java.util.Map;
 
 import ml.shifu.shifu.container.CaseScoreResult;
 import ml.shifu.shifu.container.obj.EvalConfig;
+import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
 import ml.shifu.shifu.core.ModelRunner;
 import ml.shifu.shifu.fs.ShifuFileUtils;
 import ml.shifu.shifu.util.CommonUtils;
@@ -29,11 +32,15 @@ import ml.shifu.shifu.util.Constants;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.collections.MapUtils;
 import org.apache.commons.lang.StringUtils;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
 import org.apache.pig.data.DataType;
 import org.apache.pig.data.Tuple;
 import org.apache.pig.data.TupleFactory;
 import org.apache.pig.impl.logicalLayer.schema.Schema;
 import org.apache.pig.impl.logicalLayer.schema.Schema.FieldSchema;
+import org.apache.pig.impl.util.UDFContext;
 import org.apache.pig.tools.pigstats.PigStatusReporter;
 import org.encog.ml.BasicML;
 
@@ -181,24 +188,36 @@ public class EvalScoreUDF extends AbstractTrainerUDF<Tuple> {
         return tuple;
     }
 
-    @SuppressWarnings("deprecation")
     @Override
     public void finish() {
-        // SET MAX SCORE AND MIN SCORE as counter
-        if(isPigEnabled(Constants.SHIFU_GROUP_COUNTER, Constants.COUNTER_MAX_SCORE)) {
-            long maxValueInCounter = PigStatusReporter.getInstance()
-                    .getCounter(Constants.SHIFU_GROUP_COUNTER, Constants.COUNTER_MAX_SCORE).getValue();
-            if(maxValueInCounter < maxScore) {
-                PigStatusReporter.getInstance().getCounter(Constants.SHIFU_GROUP_COUNTER, Constants.COUNTER_MAX_SCORE)
-                        .setValue(maxScore);
-            }
+        if(modelConfig.isClassification()) {
+            return;
         }
-        if(isPigEnabled(Constants.SHIFU_GROUP_COUNTER, Constants.COUNTER_MIN_SCORE)) {
-            long minValueInCounter = PigStatusReporter.getInstance()
-                    .getCounter(Constants.SHIFU_GROUP_COUNTER, Constants.COUNTER_MIN_SCORE).getValue();
-            if(minValueInCounter > minScore) {
-                PigStatusReporter.getInstance().getCounter(Constants.SHIFU_GROUP_COUNTER, Constants.COUNTER_MIN_SCORE)
-                        .setValue(minScore);
+
+        // only for regression
+        BufferedWriter writer = null;
+        Configuration jobConf = UDFContext.getUDFContext().getJobConf();
+        String scoreOutput = jobConf.get(Constants.SHIFU_EVAL_MAXMIN_SCORE_OUTPUT);
+
+        log.debug("shifu.eval.maxmin.score.output is {}, job id is {}, task id is {}, attempt id is {}" + scoreOutput
+                + " " + jobConf.get("mapreduce.job.id") + " " + jobConf.get("mapreduce.task.id") + " "
+                + jobConf.get("mapreduce.task.partition") + " " + jobConf.get("mapreduce.task.attempt.id"));
+
+        try {
+            FileSystem fileSystem = FileSystem.get(jobConf);
+            fileSystem.mkdirs(new Path(scoreOutput));
+            String taskMaxMinScoreFile = scoreOutput + File.separator + "part-"
+                    + jobConf.get("mapreduce.task.attempt.id");
+            writer = ShifuFileUtils.getWriter(taskMaxMinScoreFile, SourceType.HDFS);
+            writer.write(maxScore + "," + minScore);
+        } catch (IOException e) {
+            log.error("error in finish", e);
+        } finally {
+            if(writer != null) {
+                try {
+                    writer.close();
+                } catch (IOException ignore) {
+                }
             }
         }
     }
