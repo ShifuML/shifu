@@ -214,4 +214,6 @@ public interface Constants {
 
     public static final String POST_TRAIN_OUTPUT_SCORE = "score";
 
+    public static final String SHIFU_EVAL_MAXMIN_SCORE_OUTPUT = "shifu.eval.maxmin.score.output";
+
 }
