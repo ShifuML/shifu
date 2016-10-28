@@ -211,7 +211,7 @@ public class GainChart {
             writer.write("\n");
             writer.write("});\n");
             writer.write("\n");
-            writer.write("</script");
+            writer.write("</script>\n");
             writer.write(GainChartTemplate.HIGHCHART_BASE_END);
         } finally {
             if(writer != null) {
