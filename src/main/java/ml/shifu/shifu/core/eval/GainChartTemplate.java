@@ -206,7 +206,7 @@ public class GainChartTemplate {
             .append("    $(ics[i]).toggleClass('show');").append("    $(ics[i]).toggleClass('hidden');")
             .append("    $(ics[i]).toggleClass('ls_chosen');").append("  };").toString();
 
-    public static String HIGHCHART_BASE_END = "    </div>\n" + "  </div>\n" + "</body>\n";
+    public static String HIGHCHART_BASE_END = "    </div>\n    </div>\n" + "  </div>\n" + "</body>\n";
 
     public static String HIGHCHART_TIPTABLE_HEAD = "<tr><th>line</th><th>&nbsp;catch&nbsp;</th><th>&nbsp;fpr&nbsp;</th>";
 
