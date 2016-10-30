@@ -122,6 +122,8 @@ public class UpdateBinningInfoMapper extends Mapper<LongWritable, Text, IntWrita
     private Set<String> tags;
     private Set<String> missingOrInvalidValues;
 
+    private int weightExceptions = 0;
+
     /**
      * Load model config and column config files.
      */
@@ -296,7 +298,16 @@ public class UpdateBinningInfoMapper extends Mapper<LongWritable, Text, IntWrita
             }
         }
 
-        Double weight = this.weightedColumnNum == -1 ? 1.0d : Double.valueOf(units[this.weightedColumnNum]);
+        Double weight = 1.0;
+        try {
+            weight = (this.weightedColumnNum == -1 ? 1.0d : Double.valueOf(units[this.weightedColumnNum]));
+        } catch (Exception e) {
+            weightExceptions += 1;
+            if(weightExceptions > 500) {
+                throw new IllegalStateException(
+                        "Please check weight column in eval, exceptional weight count is over 5000");
+            }
+        }
 
         // valid data process
         boolean isMissingValue = false;

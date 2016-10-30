@@ -268,6 +268,13 @@ public class ModelInspector {
                             .asList("Only SPDTI binning algorithm are supported with multiple classification.")));
 
         }
+
+        // maxNumBin should be less than Short.MAX_VALUE, larger maxNumBin need more computing and no meaningful.
+        if(modelConfig.getStats().getMaxNumBin() > Short.MAX_VALUE || modelConfig.getStats().getMaxNumBin() <= 0) {
+            result = ValidateResult.mergeResult(result,
+                    new ValidateResult(false, Arrays.asList("stats#maxNumBin should be in (0, 32767].")));
+
+        }
         return result;
     }
 

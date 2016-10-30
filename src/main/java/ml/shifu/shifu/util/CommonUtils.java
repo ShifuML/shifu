@@ -552,10 +552,29 @@ public final class CommonUtils {
      */
     public static List<BasicML> loadBasicModels(ModelConfig modelConfig, List<ColumnConfig> columnConfigList,
             EvalConfig evalConfig, SourceType sourceType) throws IOException {
+        List<BasicML> models = new ArrayList<BasicML>();
+        FileSystem fs = ShifuFileUtils.getFileSystemBySourceType(sourceType);
+
+        List<FileStatus> modelFileStats = locateBasicModels(modelConfig, columnConfigList, evalConfig, sourceType);
+        if (CollectionUtils.isNotEmpty(modelFileStats)) {
+            for (FileStatus f : modelFileStats) {
+                models.add(loadModel(modelConfig, columnConfigList, f.getPath(), fs));
+            }
+        }
+
+        return models;
+    }
+
+    public static int getBasicModelsCnt(ModelConfig modelConfig, List<ColumnConfig> columnConfigList,
+        EvalConfig evalConfig, SourceType sourceType) throws IOException  {
+        List<FileStatus> modelFileStats = locateBasicModels(modelConfig, columnConfigList, evalConfig, sourceType);
+        return (CollectionUtils.isEmpty(modelFileStats) ? 0 : modelFileStats.size());
+    }
+
+    public static List<FileStatus> locateBasicModels(ModelConfig modelConfig, List<ColumnConfig> columnConfigList,
+            EvalConfig evalConfig, SourceType sourceType) throws IOException {
         // we have to register PersistBasicFloatNetwork for loading such models
         PersistorRegistry.getInstance().add(new PersistBasicFloatNetwork());
-
-        FileSystem fs = ShifuFileUtils.getFileSystemBySourceType(sourceType);
 
         List<FileStatus> listStatus = findModels(modelConfig, evalConfig, sourceType);
         if(CollectionUtils.isEmpty(listStatus)) {
@@ -577,12 +596,7 @@ public final class CommonUtils {
             baggingModelSize = modelConfig.getTags().size();
         }
         listStatus = listStatus.size() <= baggingModelSize ? listStatus : listStatus.subList(0, baggingModelSize);
-
-        List<BasicML> models = new ArrayList<BasicML>(listStatus.size());
-        for(FileStatus f: listStatus) {
-            models.add(loadModel(modelConfig, columnConfigList, f.getPath(), fs));
-        }
-        return models;
+        return listStatus;
     }
 
     /**
@@ -783,6 +797,8 @@ public final class CommonUtils {
 
         pigParamMap.put(Constants.PATH_RAW_DATA, modelConfig.getDataSetRawPath());
         pigParamMap.put(Constants.PATH_NORMALIZED_DATA, pathFinder.getNormalizedDataPath(sourceType));
+        // default norm is not for clean, so set it to false, this will be overrided in Train#Norm for tree models
+        pigParamMap.put(Constants.IS_NORM_FOR_CLEAN, Boolean.FALSE.toString());
         pigParamMap.put(Constants.PATH_PRE_TRAINING_STATS, pathFinder.getPreTrainingStatsPath(sourceType));
         pigParamMap.put(Constants.PATH_STATS_BINNING_INFO, pathFinder.getUpdatedBinningInfoPath(sourceType));
         pigParamMap.put(Constants.PATH_STATS_PSI_INFO, pathFinder.getPSIInfoPath(sourceType));
@@ -1148,7 +1164,10 @@ public final class CommonUtils {
                 config.setColumnFlag(ColumnFlag.ForceRemove);
             } else if(setForceSelect.contains(varName)) {
                 config.setColumnFlag(ColumnFlag.ForceSelect);
-            } else if(setCategorialColumns.contains(varName)) {
+            }
+
+            // variable type is not related with variable flag
+            if(setCategorialColumns.contains(varName)) {
                 config.setColumnType(ColumnType.C);
             }
         }

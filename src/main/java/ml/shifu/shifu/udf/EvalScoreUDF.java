@@ -15,12 +15,15 @@
  */
 package ml.shifu.shifu.udf;
 
+import java.io.BufferedWriter;
+import java.io.File;
 import java.io.IOException;
 import java.util.List;
 import java.util.Map;
 
 import ml.shifu.shifu.container.CaseScoreResult;
 import ml.shifu.shifu.container.obj.EvalConfig;
+import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
 import ml.shifu.shifu.core.ModelRunner;
 import ml.shifu.shifu.fs.ShifuFileUtils;
 import ml.shifu.shifu.util.CommonUtils;
@@ -29,11 +32,15 @@ import ml.shifu.shifu.util.Constants;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.collections.MapUtils;
 import org.apache.commons.lang.StringUtils;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
 import org.apache.pig.data.DataType;
 import org.apache.pig.data.Tuple;
 import org.apache.pig.data.TupleFactory;
 import org.apache.pig.impl.logicalLayer.schema.Schema;
 import org.apache.pig.impl.logicalLayer.schema.Schema.FieldSchema;
+import org.apache.pig.impl.util.UDFContext;
 import org.apache.pig.tools.pigstats.PigStatusReporter;
 import org.encog.ml.BasicML;
 
@@ -49,6 +56,10 @@ public class EvalScoreUDF extends AbstractTrainerUDF<Tuple> {
     private String[] headers;
 
     private int modelCnt;
+
+    private int maxScore = Integer.MIN_VALUE;
+
+    private int minScore = Integer.MAX_VALUE;
 
     /**
      * A simple weight exception validation: if over 5000 throw exceptions
@@ -81,7 +92,10 @@ public class EvalScoreUDF extends AbstractTrainerUDF<Tuple> {
                 this.headers[i] = i + "";
             }
         }
+
         // move model runner construction in exec to avoid OOM error in client side if model is too big like RF
+        this.modelCnt = CommonUtils.getBasicModelsCnt(modelConfig, this.columnConfigList, evalConfig, evalConfig
+                .getDataSet().getSource());
     }
 
     public Tuple exec(Tuple input) throws IOException {
@@ -148,6 +162,15 @@ public class EvalScoreUDF extends AbstractTrainerUDF<Tuple> {
             for(Integer score: cs.getScores()) {
                 tuple.append(score);
             }
+
+            // get maxScore and minScore for such mapper or reducer
+            if(cs.getMedianScore() > maxScore) {
+                maxScore = cs.getMedianScore();
+            }
+
+            if(cs.getMedianScore() < minScore) {
+                minScore = cs.getMedianScore();
+            }
         } else {
             for(int i = 0; i < cs.getScores().size(); i++) {
                 tuple.append(cs.getScores().get(i));
@@ -163,6 +186,40 @@ public class EvalScoreUDF extends AbstractTrainerUDF<Tuple> {
         }
 
         return tuple;
+    }
+
+    @Override
+    public void finish() {
+        if(modelConfig.isClassification()) {
+            return;
+        }
+
+        // only for regression
+        BufferedWriter writer = null;
+        Configuration jobConf = UDFContext.getUDFContext().getJobConf();
+        String scoreOutput = jobConf.get(Constants.SHIFU_EVAL_MAXMIN_SCORE_OUTPUT);
+
+        log.debug("shifu.eval.maxmin.score.output is {}, job id is {}, task id is {}, attempt id is {}" + scoreOutput
+                + " " + jobConf.get("mapreduce.job.id") + " " + jobConf.get("mapreduce.task.id") + " "
+                + jobConf.get("mapreduce.task.partition") + " " + jobConf.get("mapreduce.task.attempt.id"));
+
+        try {
+            FileSystem fileSystem = FileSystem.get(jobConf);
+            fileSystem.mkdirs(new Path(scoreOutput));
+            String taskMaxMinScoreFile = scoreOutput + File.separator + "part-"
+                    + jobConf.get("mapreduce.task.attempt.id");
+            writer = ShifuFileUtils.getWriter(taskMaxMinScoreFile, SourceType.HDFS);
+            writer.write(maxScore + "," + minScore);
+        } catch (IOException e) {
+            log.error("error in finish", e);
+        } finally {
+            if(writer != null) {
+                try {
+                    writer.close();
+                } catch (IOException ignore) {
+                }
+            }
+        }
     }
 
     @SuppressWarnings("deprecation")

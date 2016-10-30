@@ -215,7 +215,7 @@ public final class DTrainUtils {
     }
 
     public static int tmpModelFactor(int epochs) {
-        return Math.max(epochs / 25, 10);
+        return Math.max(epochs / 25, 20);
     }
 
     /**

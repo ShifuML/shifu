@@ -19,6 +19,7 @@ import java.io.BufferedInputStream;
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 import java.util.ArrayList;
@@ -36,6 +37,7 @@ import ml.shifu.shifu.util.Constants;
 import ml.shifu.shifu.util.HDFSUtils;
 
 import org.apache.commons.compress.compressors.bzip2.BZip2CompressorInputStream;
+import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
@@ -43,6 +45,8 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathFilter;
+import org.apache.hadoop.io.compress.CompressionCodec;
+import org.apache.hadoop.io.compress.CompressionCodecFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -497,5 +501,39 @@ public class ShifuFileUtils {
         }
 
         return configList;
+    }
+
+    /**
+     * @param filePath
+     * @param sourceType
+     * @return
+     */
+    public static List<String> readFilePartsIntoList(String filePath, SourceType sourceType) throws IOException {
+        List<String> lines = new ArrayList<String>();
+
+        FileSystem fs = getFileSystemBySourceType(sourceType);
+
+        FileStatus[] fileStatsArr = fs.listStatus(new Path(filePath), new PathFilter() {
+            @Override
+            public boolean accept(Path path) {
+                return path.getName().startsWith("part");
+            }
+        });
+
+        CompressionCodecFactory compressionFactory = new CompressionCodecFactory(new Configuration());
+        for ( FileStatus fileStatus : fileStatsArr ) {
+            InputStream is = null;
+            CompressionCodec codec = compressionFactory.getCodec(fileStatus.getPath());
+            if ( codec != null ) {
+                is = codec.createInputStream(fs.open(fileStatus.getPath()));
+            } else {
+                is = fs.open(fileStatus.getPath());
+            }
+
+            lines.addAll(IOUtils.readLines(is));
+            IOUtils.closeQuietly(is);
+        }
+
+        return lines;
     }
 }
