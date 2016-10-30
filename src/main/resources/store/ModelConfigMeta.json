@@ -561,7 +561,7 @@
                         "name" : "MaxStatsMemoryMB",
                         "type" : "number",
                         "directive": "input",
-                        "defval" : 256
+                        "defval" : 512
                     }, {
                         "name" : "TreeNum",
                         "type" : "number",
@@ -621,7 +621,7 @@
                             {"label": "Scaled Conjugate Gradient", "value":"S"}
                         ]
                     }, {
-                        "name": "SampleWithReplacement",
+                        "name": "GBTSampleWithReplacement",
                         "type": "boolean",
                         "directive": "input",
                         "defval": false

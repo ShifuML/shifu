@@ -191,7 +191,7 @@ public class ModelTrainConf {
         Map<String, Object> params = new HashMap<String, Object>();
 
         if(ALGORITHM.NN.equals(alg)) {
-            params.put(NNTrainer.PROPAGATION, "Q");
+            params.put(NNTrainer.PROPAGATION, "R");
             params.put(NNTrainer.LEARNING_RATE, 0.1);
             params.put(NNTrainer.NUM_HIDDEN_LAYERS, 1);
 
@@ -202,8 +202,6 @@ public class ModelTrainConf {
             List<String> func = new ArrayList<String>();
             func.add("tanh");
             params.put(NNTrainer.ACTIVATION_FUNC, func);
-            // hide LearningDecay since confused for users
-            // params.put("LearningDecay", 0.0);
             params.put("RegularizedConstant", 0.0);
         } else if(ALGORITHM.SVM.equals(alg)) {
             params.put(SVMTrainer.SVM_KERNEL, "linear");
@@ -214,7 +212,6 @@ public class ModelTrainConf {
             params.put("MaxDepth", 10);
             params.put("MinInstancesPerNode", 1);
             params.put("MinInfoGain", 0.0);
-            params.put("MaxStatsMemoryMB", 512);
             params.put("Impurity", "variance");
             params.put("Loss", "squared");
             trainConf.setNumTrainEpochs(1000);
@@ -223,7 +220,6 @@ public class ModelTrainConf {
             params.put("MaxDepth", 10);
             params.put("MinInstancesPerNode", 1);
             params.put("MinInfoGain", 0.0);
-            params.put("MaxStatsMemoryMB", 512);
             params.put("Impurity", "variance");
             params.put(NNTrainer.LEARNING_RATE, 0.1);
             params.put("Loss", "squared");

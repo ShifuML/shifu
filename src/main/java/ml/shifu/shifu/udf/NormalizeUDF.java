@@ -54,11 +54,24 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
     private Expression weightExpr;
     private JexlContext weightContext;
     private DecimalFormat df = new DecimalFormat("#.######");
+    
+    public static void main(String[] args) {
+        System.out.println(new DecimalFormat("#.###").format(128.458978));
+    }
 
     private String alg;
 
+    // if current norm for only clean and not transform categorical and numeric value
+    private boolean isForClean = false;
+
     public NormalizeUDF(String source, String pathModelConfig, String pathColumnConfig) throws Exception {
+        this(source, pathModelConfig, pathColumnConfig, "false");
+    }
+
+    public NormalizeUDF(String source, String pathModelConfig, String pathColumnConfig, String isForClean)
+            throws Exception {
         super(source, pathModelConfig, pathColumnConfig);
+        this.isForClean = "true".equalsIgnoreCase(isForClean);
 
         log.debug("Initializing NormalizeUDF ... ");
 
@@ -146,7 +159,8 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
             if(!CommonUtils.isGoodCandidate(modelConfig.isRegression(), config)) {
                 tuple.append(null);
             } else {
-                if(CommonUtils.isDesicionTreeAlgorithm(this.alg)) {
+                if(this.isForClean) {
+                    // for RF/GBT model, only clean data, not real do norm data
                     Double normVal = 0d;
                     if(config.isCategorical()) {
                         int index = config.getBinCategory().indexOf(val);

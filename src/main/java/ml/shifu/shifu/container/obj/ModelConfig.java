@@ -194,9 +194,20 @@ public class ModelConfig {
         ModelTrainConf trainConf = new ModelTrainConf();
 
         trainConf.setAlgorithm(alg.name());
-        trainConf.setNumTrainEpochs(100);
         trainConf.setEpochsPerIteration(1);
         trainConf.setParams(ModelTrainConf.createParamsByAlg(alg, trainConf));
+        trainConf.setNumTrainEpochs(100);
+        if(ALGORITHM.NN.equals(alg)) {
+            trainConf.setNumTrainEpochs(200);
+        } else if(ALGORITHM.SVM.equals(alg)) {
+            trainConf.setNumTrainEpochs(100);
+        } else if(ALGORITHM.RF.equals(alg)) {
+            trainConf.setNumTrainEpochs(20000);
+        } else if(ALGORITHM.GBT.equals(alg)) {
+            trainConf.setNumTrainEpochs(20000);
+        } else if(ALGORITHM.LR.equals(alg)) {
+            trainConf.setNumTrainEpochs(100);
+        }
         trainConf.setBaggingWithReplacement(true);
         modelConfig.setTrain(trainConf);
 
@@ -473,7 +484,7 @@ public class ModelConfig {
     public String getDataSetRawPath() {
         return dataSet.getDataPath();
     }
-    
+
     @JsonIgnore
     public String getValidationDataSetRawPath() {
         return dataSet.getValidationDataPath();

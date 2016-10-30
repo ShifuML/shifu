@@ -90,7 +90,7 @@ public class NNOutput extends BasicMasterInterceptor<NNParams, NNParams> {
     /**
      * The best weights that we meet
      */
-    private double[] optimizeddWeights = null;
+    private double[] optimizedWeights = null;
 
     /**
      * Progress output stream which is used to write progress to that HDFS file. Should be closed in
@@ -123,7 +123,7 @@ public class NNOutput extends BasicMasterInterceptor<NNParams, NNParams> {
         // save the weights according the error decreasing
         if(currentError < this.minTestError) {
             this.minTestError = currentError;
-            this.optimizeddWeights = context.getMasterResult().getWeights();
+            this.optimizedWeights = context.getMasterResult().getWeights();
         }
 
         // save tmp to hdfs according to raw trainer logic
@@ -137,7 +137,7 @@ public class NNOutput extends BasicMasterInterceptor<NNParams, NNParams> {
                     // we can start from this point to save time.
                     // another case for master recovery, if master is failed, read such checkpoint model
                     Path out = new Path(context.getProps().getProperty(CommonConstants.GUAGUA_OUTPUT));
-                    writeModelWeightsToFileSystem(optimizeddWeights, out);
+                    writeModelWeightsToFileSystem(optimizedWeights, out);
                 }
             }, "saveTmpNNToHDFS thread");
             tmpNNThread.setDaemon(true);
@@ -176,9 +176,9 @@ public class NNOutput extends BasicMasterInterceptor<NNParams, NNParams> {
             return;
         }
 
-        if(optimizeddWeights != null) {
+        if(optimizedWeights != null) {
             Path out = new Path(context.getProps().getProperty(CommonConstants.GUAGUA_OUTPUT));
-            writeModelWeightsToFileSystem(optimizeddWeights, out);
+            writeModelWeightsToFileSystem(optimizedWeights, out);
         }
 
         if(this.gridSearch.hasHyperParam()) {

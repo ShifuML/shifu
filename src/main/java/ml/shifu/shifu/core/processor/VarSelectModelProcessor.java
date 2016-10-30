@@ -118,40 +118,45 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
         try {
             setUp(ModelStep.VARSELECT);
 
-            if ( isToReset ) {
+            if(isToReset) {
                 resetAllFinalSelect();
             } else {
-                validateNormalize();
+                String alg = super.getModelConfig().getTrain().getAlgorithm();
+                if(!CommonUtils.isDesicionTreeAlgorithm(alg)) {
+                    validateNormalize();
+                }
 
                 // sync to make sure load from hdfs config is consistent with local configuration
                 syncDataToHdfs(super.modelConfig.getDataSet().getSource());
 
                 VariableSelector selector = new VariableSelector(this.modelConfig, this.columnConfigList);
 
-                if (!modelConfig.getVarSelectWrapperEnabled()) {
-                    if (modelConfig.isRegression()) {
+                if(!modelConfig.getVarSelectWrapperEnabled()) {
+                    if(modelConfig.isRegression()) {
                         // Select by local KS, IV
                         CommonUtils.updateColumnConfigFlags(modelConfig, columnConfigList);
                         this.columnConfigList = selector.selectByFilter();
                     } else {
                         // multiple classification, select all candidate at first, TODO add SE for multi-classification
-                        for (ColumnConfig config : this.columnConfigList) {
-                            if (CommonUtils.isGoodCandidate(modelConfig.isRegression(), config)) {
+                        for(ColumnConfig config: this.columnConfigList) {
+                            if(CommonUtils.isGoodCandidate(modelConfig.isRegression(), config)) {
                                 config.setFinalSelect(true);
                             }
                         }
                     }
                 } else {
                     // wrapper method
-                    if (super.getModelConfig().getDataSet().getSource() == SourceType.HDFS
+                    if(super.getModelConfig().getDataSet().getSource() == SourceType.HDFS
                             && super.getModelConfig().isMapReduceRunMode()) {
-                        if (Constants.WRAPPER_BY_SE.equalsIgnoreCase(modelConfig.getVarSelect().getWrapperBy())
-                                || Constants.WRAPPER_BY_REMOVE.equalsIgnoreCase(modelConfig.getVarSelect().getWrapperBy())) {
+                        if(Constants.WRAPPER_BY_SE.equalsIgnoreCase(modelConfig.getVarSelect().getWrapperBy())
+                                || Constants.WRAPPER_BY_REMOVE.equalsIgnoreCase(modelConfig.getVarSelect()
+                                        .getWrapperBy())) {
                             // SE method supports remove and sensitivity se so far
                             validateDistributedWrapperVarSelect();
                             syncDataToHdfs(super.modelConfig.getDataSet().getSource());
                             distributedSEWrapper();
-                        } else if (Constants.WRAPPER_BY_VOTED.equalsIgnoreCase(modelConfig.getVarSelect().getWrapperBy())) {
+                        } else if(Constants.WRAPPER_BY_VOTED
+                                .equalsIgnoreCase(modelConfig.getVarSelect().getWrapperBy())) {
                             votedVariablesSelection();
                         }
                     } else {
@@ -172,9 +177,16 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
     }
 
     public void resetAllFinalSelect() {
-        log.info("!!! Reset all variables finalSelect = true");
-        for ( ColumnConfig columnConfig : this.columnConfigList ) {
+        log.info("!!! Reset all variables finalSelect = false");
+        for(ColumnConfig columnConfig: this.columnConfigList) {
             columnConfig.setFinalSelect(false);
+            columnConfig.setColumnFlag(null);
+        }
+
+        try {
+            CommonUtils.updateColumnConfigFlags(this.modelConfig, this.columnConfigList);
+        } catch (IOException e) {
+            log.error("Fail to update ColumnConfig.json flags.", e);
         }
     }
 
@@ -662,13 +674,15 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
         // here we do loop again as it is not bad for variables less than 100,000
         for(ColumnConfig config: columnConfigList) {
             // check ID-like variables
-            if(isIDLikeVariable(config) && !config.isForceSelect()) {
-                log.warn(
-                        "Column {} is like an ID, set final select to false. If not, you can check it manually in ColumnConfig.json",
-                        config.getColumnName());
-                config.setFinalSelect(false);
-                continue;
-            }
+            /*
+             * if(isIDLikeVariable(config) && !config.isForceSelect()) {
+             * log.warn(
+             * "Column {} is like an ID, set final select to false. If not, you can check it manually in ColumnConfig.json",
+             * config.getColumnName());
+             * config.setFinalSelect(false);
+             * continue;
+             * }
+             */
             if(isHighMissingRateColumn(config) && !config.isForceSelect()) {
                 log.warn(
                         "Column {} is with very high missing rate, set final select to false. If not, you can check it manually in ColumnConfig.json",
@@ -701,6 +715,7 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
     /**
      * Check if column is ID-like.
      */
+    @SuppressWarnings("unused")
     private boolean isIDLikeVariable(ColumnConfig config) {
         Long distinctCount = config.getColumnStats().getDistinctCount();
         Long totalCount = config.getColumnStats().getTotalCount();

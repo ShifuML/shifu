@@ -71,7 +71,7 @@
         "LearningRate": 0.1,
         "MinInstancesPerNode": 1,
         "MinInfoGain": 0.0,
-        "SampleWithReplacement" : true,
+        "GBTSampleWithReplacement" : true,
         "Loss": "squared"
     },
     "customPaths" : { }
