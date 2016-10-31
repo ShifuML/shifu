@@ -32,6 +32,8 @@ import java.util.Random;
 import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CompletionService;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorCompletionService;
 import java.util.concurrent.ExecutorService;
@@ -115,9 +117,9 @@ public class DTWorker
     private int treeNum;
 
     /**
-     * Basic numeric input count
+     * Basic input count for final-select variables or good candidates(if no any variables are selected)
      */
-    protected int numericInputCount;
+    protected int inputCount;
 
     /**
      * Basic categorical input count
@@ -178,19 +180,9 @@ public class DTWorker
             .trimResults();
 
     /**
-     * Index map in which column index and numeric input array index for fast location.
+     * Index map in which column index and data input array index for fast location.
      */
-    private Map<Integer, Integer> numericInputIndexMap = new HashMap<Integer, Integer>();
-
-    /**
-     * Index map in which column index and categorical input array index for fast location.
-     */
-    private Map<Integer, Integer> categoricalInputIndexMap = new HashMap<Integer, Integer>();
-
-    /**
-     * A map with internal BinCategory map which stores index per each category.
-     */
-    private Map<Integer, Map<String, Integer>> categoryIndexMap = new HashMap<Integer, Map<String, Integer>>();
+    private ConcurrentMap<Integer, Integer> inputIndexMap = new ConcurrentHashMap<Integer, Integer>();
 
     /**
      * Different {@link Impurity} for node, {@link Entropy} and {@link Gini} are mostly for classification,
@@ -264,24 +256,14 @@ public class DTWorker
     public void init(WorkerContext<DTMasterParams, DTWorkerParams> context) {
         Properties props = context.getProps();
         try {
-            SourceType sourceType = SourceType.valueOf(
-                    props.getProperty(CommonConstants.MODELSET_SOURCE_TYPE,SourceType.HDFS.toString()));
-            this.modelConfig = CommonUtils.loadModelConfig(
-                    props.getProperty(CommonConstants.SHIFU_MODEL_CONFIG),sourceType);
+            SourceType sourceType = SourceType.valueOf(props.getProperty(CommonConstants.MODELSET_SOURCE_TYPE,
+                    SourceType.HDFS.toString()));
+            this.modelConfig = CommonUtils.loadModelConfig(props.getProperty(CommonConstants.SHIFU_MODEL_CONFIG),
+                    sourceType);
             this.columnConfigList = CommonUtils.loadColumnConfigList(
                     props.getProperty(CommonConstants.SHIFU_COLUMN_CONFIG), sourceType);
         } catch (IOException e) {
             throw new RuntimeException(e);
-        }
-
-        for(ColumnConfig config: this.columnConfigList) {
-            if(config.isCategorical()) {
-                Map<String, Integer> categoryMap = new HashMap<String, Integer>();
-                for(int i = 0; i < config.getBinCategory().size(); i++) {
-                    categoryMap.put(config.getBinCategory().get(i), i);
-                }
-                this.categoryIndexMap.put(config.getColumnNum(), categoryMap);
-            }
         }
 
         this.isContinuousEnabled = Boolean.TRUE.toString().equalsIgnoreCase(
@@ -321,17 +303,19 @@ public class DTWorker
         if(Double.compare(validationRate, 0d) != 0) {
             this.trainingData = new MemoryLimitedList<Data>(
                     (long) (Runtime.getRuntime().maxMemory() * memoryFraction * (1 - validationRate)),
-                    new LinkedList<Data>());
+                    new ArrayList<Data>());
             this.validationData = new MemoryLimitedList<Data>(
-                    (long) (Runtime.getRuntime().maxMemory() * memoryFraction * validationRate), new LinkedList<Data>());
+                    (long) (Runtime.getRuntime().maxMemory() * memoryFraction * validationRate), new ArrayList<Data>());
         } else {
             this.trainingData = new MemoryLimitedList<Data>((long) (Runtime.getRuntime().maxMemory() * memoryFraction),
                     new LinkedList<Data>());
         }
         int[] inputOutputIndex = DTrainUtils.getNumericAndCategoricalInputAndOutputCounts(this.columnConfigList);
-        this.numericInputCount = inputOutputIndex[0];
-        this.categoricalInputCount = inputOutputIndex[1];
-        this.outputNodeCount = modelConfig.isRegression() ? inputOutputIndex[2] : modelConfig.getTags().size();
+        // numerical + categorical = # of all input
+        this.inputCount = inputOutputIndex[0] + inputOutputIndex[1];
+        // regression outputNodeCount is 1, binaryClassfication, it is 1, OneVsAll it is 1, Native classificaiton it is
+        // 1, with index of 0,1,2,3 denotes different classes
+        this.outputNodeCount = 1;
         this.isAfterVarSelect = inputOutputIndex[3] == 1 ? true : false;
         this.isCrossValidation = (modelConfig.getValidationDataSetRawPath() != null && !"".equals(modelConfig
                 .getValidationDataSetRawPath()));
@@ -605,33 +589,14 @@ public class DTWorker
                                     features = getAllValidFeatures();
                                 }
                                 for(Integer columnNum: features) {
-                                    ColumnConfig config = DTWorker.this.columnConfigList.get(columnNum);
                                     double[] featuerStatistic = localStatistics.get(entry.getKey())
                                             .getFeatureStatistics().get(columnNum);
                                     float weight = data.subsampleWeights[treeId % data.subsampleWeights.length];
                                     if(Float.compare(weight, 0f) != 0) {
                                         // only compute weight is not 0
-                                        if(config.isNumerical()) {
-                                            float value = data.numericInputs[DTWorker.this.numericInputIndexMap
-                                                    .get(columnNum)];
-                                            int binIndex = getBinIndex(value, config.getBinBoundary());
-                                            DTWorker.this.impurity.featureUpdate(featuerStatistic, binIndex,
-                                                    data.output, data.significance, weight);
-                                        } else if(config.isCategorical()) {
-                                            String category = data.categoricalInputs[DTWorker.this.categoricalInputIndexMap
-                                                    .get(columnNum)];
-                                            Integer binIndex = DTWorker.this.categoryIndexMap.get(columnNum).get(
-                                                    category);
-                                            if(binIndex == null) {
-                                                // add to null bin which is the last one
-                                                binIndex = config.getBinCategory().size();
-                                            }
-                                            DTWorker.this.impurity.featureUpdate(featuerStatistic, binIndex,
-                                                    data.output, data.significance, weight);
-                                        } else {
-                                            throw new IllegalStateException(
-                                                    "Only numerical and categorical columns supported. ");
-                                        }
+                                        short binIndex = data.inputs[DTWorker.this.inputIndexMap.get(columnNum)];
+                                        DTWorker.this.impurity.featureUpdate(featuerStatistic, binIndex, data.output,
+                                                data.significance, weight);
                                     }
                                 }
                             }
@@ -767,15 +732,20 @@ public class DTWorker
         ColumnConfig columnConfig = this.columnConfigList.get(split.getColumnNum());
 
         Node nextNode = null;
+        Integer inputIndex = this.inputIndexMap.get(split.getColumnNum());
         if(columnConfig.isNumerical()) {
-            float value = data.numericInputs[this.numericInputIndexMap.get(split.getColumnNum())];
-            if(value <= split.getThreshold()) {
+            short binIndex = data.inputs[inputIndex];
+            double valueToBinLowestValue = columnConfig.getBinBoundary().get(binIndex);
+            if(valueToBinLowestValue < split.getThreshold()) {
                 nextNode = currNode.getLeft();
             } else {
                 nextNode = currNode.getRight();
             }
         } else if(columnConfig.isCategorical()) {
-            String value = data.categoricalInputs[this.categoricalInputIndexMap.get(split.getColumnNum())];
+            String value = ""; // default is empty category
+            if(data.inputs[inputIndex] < columnConfig.getBinCategory().size()) {
+                value = columnConfig.getBinCategory().get(data.inputs[inputIndex]);
+            }
             if(split.getLeftCategories().contains(value)) {
                 nextNode = currNode.getLeft();
             } else {
@@ -805,19 +775,14 @@ public class DTWorker
         // hashcode for fixed input split in train and validation
         long hashcode = 0;
 
-        float[] numericInputs = new float[this.numericInputCount];
-        String[] categoricalInputs = new String[this.categoricalInputCount];
+        short[] inputs = new short[this.inputCount];
         float ideal = 0f;
         float significance = 1f;
         // use guava Splitter to iterate only once
         // use NNConstants.NN_DEFAULT_COLUMN_SEPARATOR to replace getModelConfig().getDataSetDelimiter(), super follows
         // the function in akka mode.
-        int index = 0, numericInputsIndex = 0, categoricalInputsIndex = 0;
+        int index = 0, inputIndex = 0;
         for(String input: DEFAULT_SPLITTER.split(currentValue.getWritable().toString())) {
-            // check here to avoid bad performance in failed NumberFormatUtils.getFloat(input, 0f)
-            float floatValue = input.length() == 0 ? 0f : NumberFormatUtils.getFloat(input, 0f);
-            // no idea about why NaN in input data, we should process it as missing value TODO , according to norm type
-            floatValue = (Float.isNaN(floatValue) || Double.isNaN(floatValue)) ? 0f : floatValue;
             if(index == this.columnConfigList.size()) {
                 // check here to avoid bad performance in failed NumberFormatUtils.getFloat(input, 1f)
                 significance = input.length() == 0 ? 1f : NumberFormatUtils.getFloat(input, 1f);
@@ -826,49 +791,51 @@ public class DTWorker
             } else {
                 ColumnConfig columnConfig = this.columnConfigList.get(index);
                 if(columnConfig != null && columnConfig.isTarget()) {
-                    ideal = floatValue;
+                    ideal = getFloatValue(input);
                 } else {
                     if(!isAfterVarSelect) {
                         // no variable selected, good candidate but not meta and not target chose
                         if(!columnConfig.isMeta() && !columnConfig.isTarget()
                                 && CommonUtils.isGoodCandidate(columnConfig)) {
                             if(columnConfig.isNumerical()) {
-                                numericInputs[numericInputsIndex] = floatValue;
-                                this.numericInputIndexMap.put(columnConfig.getColumnNum(), numericInputsIndex);
-                                hashcode = hashcode * 31 + Double.valueOf(floatValue).hashCode();
-                                numericInputsIndex += 1;
-                            } else if(columnConfig.isCategorical()) {
-                                if(input == null || input.length() == 0) {
-                                    // use empty to replace null categories
-                                    categoricalInputs[categoricalInputsIndex] = "";
-                                } else {
-                                    categoricalInputs[categoricalInputsIndex] = input;
+                                float floatValue = getFloatValue(input);
+                                // cast is safe as we limit max bin to Short.MAX_VALUE
+                                short binIndex = (short) getBinIndex(floatValue, columnConfig.getBinBoundary());
+                                inputs[inputIndex] = binIndex;
+                                if(!this.inputIndexMap.containsKey(columnConfig.getColumnNum())) {
+                                    this.inputIndexMap.put(columnConfig.getColumnNum(), inputIndex);
                                 }
-                                this.categoricalInputIndexMap.put(columnConfig.getColumnNum(), categoricalInputsIndex);
-                                hashcode = hashcode * 31 + categoricalInputs[categoricalInputsIndex].hashCode();
-                                categoricalInputsIndex += 1;
+                            } else if(columnConfig.isCategorical()) {
+                                short shortValue = Short.parseShort(input);
+                                inputs[inputIndex] = shortValue;
+                                if(!this.inputIndexMap.containsKey(columnConfig.getColumnNum())) {
+                                    this.inputIndexMap.put(columnConfig.getColumnNum(), inputIndex);
+                                }
                             }
+                            hashcode = hashcode * 31 + input.hashCode();
+                            inputIndex += 1;
                         }
                     } else {
                         // final select some variables but meta and target are not included
                         if(columnConfig != null && !columnConfig.isMeta() && !columnConfig.isTarget()
                                 && columnConfig.isFinalSelect()) {
                             if(columnConfig.isNumerical()) {
-                                numericInputs[numericInputsIndex] = floatValue;
-                                this.numericInputIndexMap.put(columnConfig.getColumnNum(), numericInputsIndex);
-                                hashcode = hashcode * 31 + Double.valueOf(floatValue).hashCode();
-                                numericInputsIndex += 1;
-                            } else if(columnConfig.isCategorical()) {
-                                if(input == null || input.length() == 0) {
-                                    // use empty to replace null categories
-                                    categoricalInputs[categoricalInputsIndex] = "";
-                                } else {
-                                    categoricalInputs[categoricalInputsIndex] = input;
+                                float floatValue = getFloatValue(input);
+                                // cast is safe as we limit max bin to Short.MAX_VALUE
+                                short binIndex = (short) getBinIndex(floatValue, columnConfig.getBinBoundary());
+                                inputs[inputIndex] = binIndex;
+                                if(!this.inputIndexMap.containsKey(columnConfig.getColumnNum())) {
+                                    this.inputIndexMap.put(columnConfig.getColumnNum(), inputIndex);
                                 }
-                                this.categoricalInputIndexMap.put(columnConfig.getColumnNum(), categoricalInputsIndex);
-                                hashcode = hashcode * 31 + categoricalInputs[categoricalInputsIndex].hashCode();
-                                categoricalInputsIndex += 1;
+                            } else if(columnConfig.isCategorical()) {
+                                short shortValue = Short.parseShort(input);
+                                inputs[inputIndex] = shortValue;
+                                if(!this.inputIndexMap.containsKey(columnConfig.getColumnNum())) {
+                                    this.inputIndexMap.put(columnConfig.getColumnNum(), inputIndex);
+                                }
                             }
+                            hashcode = hashcode * 31 + input.hashCode();
+                            inputIndex += 1;
                         }
                     }
                 }
@@ -891,7 +858,7 @@ public class DTWorker
         float output = ideal;
         float predict = ideal;
 
-        Data data = new Data(numericInputs, categoricalInputs, predict, output, output, significance, sampleWeights());
+        Data data = new Data(inputs, predict, output, output, significance, sampleWeights());
 
         boolean isNeedFailOver = !context.isFirstIteration();
         // recover for gbdt fail over
@@ -903,6 +870,18 @@ public class DTWorker
             isTesting = (Boolean) context.getAttachment();
         }
         this.addDataPairToDataSet(hashcode, data, isTesting);
+    }
+
+    /**
+     * @param input
+     * @return
+     */
+    private float getFloatValue(String input) {
+        // check here to avoid bad performance in failed NumberFormatUtils.getFloat(input, 0f)
+        float floatValue = input.length() == 0 ? 0f : NumberFormatUtils.getFloat(input, 0f);
+        // no idea about why NaN in input data, we should process it as missing value TODO , according to norm type
+        floatValue = (Float.isNaN(floatValue) || Double.isNaN(floatValue)) ? 0f : floatValue;
+        return floatValue;
     }
 
     protected void addDataPairToDataSet(long hashcode, Data data, boolean isTesting) {
@@ -993,9 +972,11 @@ public class DTWorker
 
         private static final long serialVersionUID = 903201066309036170L;
 
-        float[] numericInputs;
+        /**
+         * Inputs for bin index, short is using to compress
+         */
+        short[] inputs;
 
-        String[] categoricalInputs;
         /**
          * Original output label and not changed in GBDT
          */
@@ -1011,10 +992,9 @@ public class DTWorker
         public Data() {
         }
 
-        public Data(float[] numericInputs, String[] categoricalInputs, float predict, float output, float label,
-                float significance, float[] subsampleWeights) {
-            this.numericInputs = numericInputs;
-            this.categoricalInputs = categoricalInputs;
+        public Data(short[] inputs, float predict, float output, float label, float significance,
+                float[] subsampleWeights) {
+            this.inputs = inputs;
             this.predict = predict;
             this.output = output;
             this.label = label;
@@ -1024,14 +1004,9 @@ public class DTWorker
 
         @Override
         public void write(DataOutput out) throws IOException {
-            out.writeInt(numericInputs.length);
-            for(float input: numericInputs) {
-                out.writeFloat(input);
-            }
-
-            out.writeInt(categoricalInputs.length);
-            for(String input: categoricalInputs) {
-                out.writeUTF(input);
+            out.writeInt(inputs.length);
+            for(short input: inputs) {
+                out.writeShort(input);
             }
 
             out.writeFloat(output);
@@ -1049,15 +1024,9 @@ public class DTWorker
         @Override
         public void readFields(DataInput in) throws IOException {
             int iLen = in.readInt();
-            this.numericInputs = new float[iLen];
+            this.inputs = new short[iLen];
             for(int i = 0; i < iLen; i++) {
-                this.numericInputs[i] = in.readFloat();
-            }
-
-            int cLen = in.readInt();
-            this.categoricalInputs = new String[cLen];
-            for(int i = 0; i < cLen; i++) {
-                this.categoricalInputs[i] = in.readUTF();
+                this.inputs[i] = in.readShort();
             }
 
             this.output = in.readFloat();
@@ -1080,8 +1049,7 @@ public class DTWorker
          */
         @Override
         public String toString() {
-            return "Data [numericInputs=" + Arrays.toString(numericInputs) + ", categoricalInputs="
-                    + Arrays.toString(categoricalInputs) + ", label=" + label + ", output=" + output + ", predict="
+            return "Data [inputs=" + Arrays.toString(inputs) + ", label=" + label + ", output=" + output + ", predict="
                     + predict + ", significance=" + significance + ", subsampleWeights="
                     + Arrays.toString(subsampleWeights) + "]";
         }

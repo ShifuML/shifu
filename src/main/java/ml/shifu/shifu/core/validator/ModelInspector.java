@@ -603,6 +603,17 @@ public class ModelInspector {
                         result = ValidateResult.mergeResult(result, tmpResult);
                     }
                 }
+                
+                Object maxLeavesObj = params.get("MaxLeaves");
+                if(maxLeavesObj != null) {
+                    int maxLeaves = Integer.valueOf(maxLeavesObj.toString());
+                    if(maxLeaves <= 0 || maxLeaves > Integer.MAX_VALUE) {
+                        ValidateResult tmpResult = new ValidateResult(true);
+                        tmpResult.setStatus(false);
+                        tmpResult.getCauses().add("MaxLeaves should in [1, Integer.MAX_VALUE].");
+                        result = ValidateResult.mergeResult(result, tmpResult);
+                    }
+                }
 
                 Object maxStatsMemoryMBObj = params.get("MaxStatsMemoryMB");
                 if(maxStatsMemoryMBObj != null) {
