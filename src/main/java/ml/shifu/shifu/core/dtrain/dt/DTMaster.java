@@ -17,11 +17,13 @@ package ml.shifu.shifu.core.dtrain.dt;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.PriorityQueue;
 import java.util.Properties;
 import java.util.Queue;
 import java.util.Random;
@@ -113,6 +115,18 @@ public class DTMaster extends AbstractMasterComputable<DTMasterParams, DTWorkerP
      * Max depth of a tree, by default is 10
      */
     private int maxDepth;
+
+    /**
+     * Max leaves of a tree, by default is -1. If maxLeaves is set > 0, level-wise tree building is enabled no matter
+     * {@link #maxDepth} set to what value.
+     */
+    private int maxLeaves = -1;
+
+    /**
+     * maxLeaves >=, then isLeafWise set to true, else level-wise tree building.
+     */
+    @SuppressWarnings("unused")
+    private boolean isLeafWise = false;
 
     /**
      * Max stats memory to group nodes.
@@ -371,6 +385,28 @@ public class DTMaster extends AbstractMasterComputable<DTMasterParams, DTWorkerP
         LOG.info("weightedTrainCount {}, weightedValidationCount {}, trainError {}, validationError {}",
                 weightedTrainCount, weightedValidationCount, trainError, validationError);
         return masterParams;
+    }
+
+    public static void main(String[] args) {
+        Queue<Double> queue = new PriorityQueue<Double>(64, new Comparator<Double>() {
+
+            @Override
+            public int compare(Double o1, Double o2) {
+                return o2.compareTo(o1);
+            }
+        });
+        queue.add(10d);
+        queue.add(5d);
+        queue.add(12d);
+        queue.add(13d);
+        queue.add(6d);
+        queue.add(28d);
+        System.out.println(queue.poll());
+        System.out.println(queue.poll());
+        System.out.println(queue.poll());
+        System.out.println(queue.poll());
+        System.out.println(queue.poll());
+        System.out.println(queue.poll());
     }
 
     private DTMasterParams rebuildRecoverMasterResultDepthList() {
@@ -639,15 +675,36 @@ public class DTMaster extends AbstractMasterComputable<DTMasterParams, DTWorkerP
             LOG.info("Start grid search master with params: {}", validParams);
         }
         // tree related parameters initialization
-        this.featureSubsetStrategy = FeatureSubsetStrategy.of(validParams.get("FeatureSubsetStrategy").toString());
-        this.maxDepth = Integer.valueOf(validParams.get("MaxDepth").toString());
+        Object fssObj = validParams.get("FeatureSubsetStrategy");
+        if(fssObj != null) {
+            this.featureSubsetStrategy = FeatureSubsetStrategy.of(fssObj.toString());
+        } else {
+            this.featureSubsetStrategy = FeatureSubsetStrategy.TWOTHIRDS;
+        }
+
+        Object maxDepthObj = validParams.get("MaxDepth");
+        if(maxDepthObj != null) {
+            this.maxDepth = Integer.valueOf(maxDepthObj.toString());
+        } else {
+            this.maxDepth = 10;
+        }
+        Object maxLeavesObj = validParams.get("MaxLeaves");
+        if(maxLeavesObj != null) {
+            this.maxLeaves = Integer.valueOf(maxLeavesObj.toString());
+        } else {
+            this.maxLeaves = -1;
+        }
+        if(this.maxLeaves > 0) {
+            this.isLeafWise = true;
+        }
+
         assert this.maxDepth > 0 && this.maxDepth <= 20;
         Object maxStatsMemoryMB = validParams.get("MaxStatsMemoryMB");
         if(maxStatsMemoryMB != null) {
             this.maxStatsMemory = Long.valueOf(validParams.get("MaxStatsMemoryMB").toString()) * 1024 * 1024;
         } else {
-            // by default it is 1/3 of heap, about 1G setting in current Shifu
-            this.maxStatsMemory = Runtime.getRuntime().maxMemory() / 3L;
+            // by default it is 1/2 of heap, about 1.5G setting in current Shifu
+            this.maxStatsMemory = Runtime.getRuntime().maxMemory() / 2L;
         }
         // assert this.maxStatsMemory <= Math.min(Runtime.getRuntime().maxMemory() * 0.6, 800 * 1024 * 1024L);
         this.treeNum = Integer.valueOf(validParams.get("TreeNum").toString());;
@@ -657,6 +714,8 @@ public class DTMaster extends AbstractMasterComputable<DTMasterParams, DTWorkerP
             // learning rate only effective in gbdt
             this.learningRate = Double.valueOf(validParams.get(NNTrainer.LEARNING_RATE).toString());
         }
+
+        // FIXME add more validation for parameters in both master and worker
         String imStr = validParams.get("Impurity").toString();
         int numClasses = 2;
         if(this.modelConfig.isClassification()) {
@@ -688,7 +747,17 @@ public class DTMaster extends AbstractMasterComputable<DTMasterParams, DTWorkerP
                 + "isGBDT={}, isContinuousEnabled={}", isAfterVarSelect, featureSubsetStrategy, maxDepth,
                 maxStatsMemory, treeNum, imStr, this.workerNumber, minInstancesPerNode, minInfoGain, this.isRF,
                 this.isGBDT, this.isContinuousEnabled);
+
         this.queue = new LinkedList<TreeNode>();
+
+        // if(this.isLeafWise){
+        // this .queue = new PriorityQueue<TreeNode>(64, new Comparator<TreeNode>() {
+        // @Override
+        // public int compare(TreeNode o1, TreeNode o2) {
+        //
+        // }});
+        // }else {
+        // }
 
         // initialize trees
         if(context.isFirstIteration()) {

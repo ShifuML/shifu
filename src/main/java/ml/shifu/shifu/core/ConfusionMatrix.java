@@ -141,7 +141,7 @@ public class ConfusionMatrix {
         PathFinder pathFinder = new PathFinder(modelConfig);
 
         if(!CommonConstants.GBT_ALG_NAME.equalsIgnoreCase(modelConfig.getTrain().getAlgorithm())) {
-            // TODO, if not GBT model, NN/LR, are all 0-1000, only for GBT, maxScore and minScore may not be 1000 and 0
+            // if not GBT model, NN/LR, are all 0-1000, only for GBT, maxScore and minScore may not be 1000 and 0
             maxScore = 1000;
             minScore = 0;
         }
@@ -369,10 +369,36 @@ public class ConfusionMatrix {
         log.info("Unit-wise gain chart data is generated in {}.", unitGainChartCsv);
         gc.generateCsv(evalConfig, modelConfig, unitGainChartCsv, result.gains);
 
-        String weightedGainChartCsv = pathFinder.getEvalFilePath(evalConfig.getName(), evalConfig.getName()
-                + "_weighted_gainchart.csv", SourceType.LOCAL);
-        log.info("Weighted gain chart data is generated in {}.", weightedGainChartCsv);
-        gc.generateCsv(evalConfig, modelConfig, weightedGainChartCsv, result.weightedGains);
+        if(isWeight) {
+            String weightedGainChartCsv = pathFinder.getEvalFilePath(evalConfig.getName(), evalConfig.getName()
+                    + "_weighted_gainchart.csv", SourceType.LOCAL);
+            log.info("Weighted gain chart data is generated in {}.", weightedGainChartCsv);
+            gc.generateCsv(evalConfig, modelConfig, weightedGainChartCsv, result.weightedGains);
+        }
+
+        String prCsvFile = pathFinder.getEvalFilePath(evalConfig.getName(), evalConfig.getName() + "_unit_wise_pr.csv",
+                SourceType.LOCAL);
+        log.info("Unit-wise pr data is generated in {}.", prCsvFile);
+        gc.generateCsv(evalConfig, modelConfig, prCsvFile, result.pr);
+
+        if(isWeight) {
+            String weightedPrCsvFile = pathFinder.getEvalFilePath(evalConfig.getName(), evalConfig.getName()
+                    + "_weighted_pr.csv", SourceType.LOCAL);
+            log.info("Weighted pr data is generated in {}.", weightedPrCsvFile);
+            gc.generateCsv(evalConfig, modelConfig, weightedPrCsvFile, result.weightedPr);
+        }
+
+        String rocCsvFile = pathFinder.getEvalFilePath(evalConfig.getName(), evalConfig.getName()
+                + "_unit_wise_roc.csv", SourceType.LOCAL);
+        log.info("Unit-wise roc data is generated in {}.", rocCsvFile);
+        gc.generateCsv(evalConfig, modelConfig, rocCsvFile, result.roc);
+
+        if(isWeight) {
+            String weightedRocCsvFile = pathFinder.getEvalFilePath(evalConfig.getName(), evalConfig.getName()
+                    + "_weighted_roc.csv", SourceType.LOCAL);
+            log.info("Weighted roc data is generated in {}.", weightedRocCsvFile);
+            gc.generateCsv(evalConfig, modelConfig, weightedRocCsvFile, result.weightedRoc);
+        }
 
         String modelScoreGainChartCsv = pathFinder.getEvalFilePath(evalConfig.getName(), evalConfig.getName()
                 + "_modelscore_gainchart.csv", SourceType.LOCAL);

@@ -46,6 +46,16 @@
         </fileSet>
         <fileSet>
             <directory>${project.basedir}/src/test/resources/example</directory>
+            <includes>
+                <include>cancer-judgement/*/*/*</include>
+                <include>golf-game/*/*/*</include>
+                <include>income-estimation/*/*/*</include>
+                <include>labor-neg/*/*/*</include>
+                <include>labor-neg/*/*/*/*</include>
+                <include>logic-operation/*/*/*</include>
+                <include>monks-problem/*/*/*</include>
+                <include>wdbc/*/*</include>
+            </includes>
             <outputDirectory>/example</outputDirectory>
         </fileSet>
         <fileSet>

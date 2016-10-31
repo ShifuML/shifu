@@ -49,7 +49,7 @@ import org.encog.ml.data.basic.BasicMLData;
  * @author Zhang David (pengzhang@paypal.com)
  */
 public class TreeModel extends BasicML implements MLRegression {
-    
+
     private static final long serialVersionUID = 1L;
 
     private List<ColumnConfig> columnConfigList;
@@ -158,8 +158,10 @@ public class TreeModel extends BasicML implements MLRegression {
 
         Node nextNode = null;
         double value = data[this.columnMapping.get(split.getColumnNum())];
+
         if(columnConfig.isNumerical()) {
-            if(value <= split.getThreshold()) {
+            // value is real numeric value and no need to transform to binLowestValue
+            if(value < split.getThreshold()) {
                 nextNode = currNode.getLeft();
             } else {
                 nextNode = currNode.getRight();

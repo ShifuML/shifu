@@ -318,7 +318,7 @@ public class Node implements Bytable {
     public static int indexToLevel(int nodeIndex) {
         return Integer.numberOfTrailingZeros(Integer.highestOneBit(nodeIndex)) + 1;
     }
-
+    
     /**
      * @param isLeaf
      *            the isLeaf to set
