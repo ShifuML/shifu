@@ -55,7 +55,7 @@ public class VarSelStep extends Step<Void> {
         JSONUtils.writeValue(new File(pathFinder.getModelConfigPath(SourceType.LOCAL)), modelConfig);
         JSONUtils.writeValue(new File(pathFinder.getColumnConfigPath(SourceType.LOCAL)), columnConfigList);
 
-        VarSelectModelProcessor processor = new VarSelectModelProcessor();
+        VarSelectModelProcessor processor = new VarSelectModelProcessor(super.otherConfigs);
         try {
             processor.run();
         } catch (Exception e) {

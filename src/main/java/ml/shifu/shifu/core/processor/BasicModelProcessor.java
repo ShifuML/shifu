@@ -62,7 +62,7 @@ public class BasicModelProcessor {
     /**
      * If not specified SHIFU_HOME env, some key configurations like pig path or lib path can be configured here
      */
-    private Map<String, Object> otherConfigs;
+    protected Map<String, Object> otherConfigs;
 
     public BasicModelProcessor() {
     }
@@ -75,7 +75,7 @@ public class BasicModelProcessor {
             Map<String, Object> otherConfigs) {
         this.modelConfig = modelConfig;
         this.columnConfigList = columnConfigList;
-        this.otherConfigs = otherConfigs;
+        this.setOtherConfigs(otherConfigs);
         this.pathFinder = new PathFinder(modelConfig, otherConfigs);
     }
 
@@ -95,7 +95,7 @@ public class BasicModelProcessor {
         loadModelConfig();
         validateModelConfig(step);
 
-        pathFinder = new PathFinder(modelConfig, this.otherConfigs);
+        pathFinder = new PathFinder(modelConfig, this.getOtherConfigs());
 
         checkAlgorithmParam();
 
@@ -425,6 +425,20 @@ public class BasicModelProcessor {
                 writer.close();
             }
         }
+    }
+
+    /**
+     * @return the otherConfigs
+     */
+    public Map<String, Object> getOtherConfigs() {
+        return otherConfigs;
+    }
+
+    /**
+     * @param otherConfigs the otherConfigs to set
+     */
+    public void setOtherConfigs(Map<String, Object> otherConfigs) {
+        this.otherConfigs = otherConfigs;
     }
 
 }

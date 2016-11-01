@@ -56,7 +56,7 @@ public class EvaluateStep extends Step<Void> {
         JSONUtils.writeValue(new File(pathFinder.getModelConfigPath(SourceType.LOCAL)), modelConfig);
         JSONUtils.writeValue(new File(pathFinder.getColumnConfigPath(SourceType.LOCAL)), columnConfigList);
 
-        EvalModelProcessor processor = new EvalModelProcessor(EvalStep.RUN);
+        EvalModelProcessor processor = new EvalModelProcessor(EvalStep.RUN, super.otherConfigs);
         try {
             processor.run();
         } catch (Exception e) {
