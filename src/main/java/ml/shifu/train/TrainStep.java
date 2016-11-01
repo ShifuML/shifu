@@ -55,7 +55,7 @@ public class TrainStep extends Step<Void> {
         JSONUtils.writeValue(new File(pathFinder.getModelConfigPath(SourceType.LOCAL)), modelConfig);
         JSONUtils.writeValue(new File(pathFinder.getColumnConfigPath(SourceType.LOCAL)), columnConfigList);
 
-        TrainModelProcessor processor = new TrainModelProcessor();
+        TrainModelProcessor processor = new TrainModelProcessor(super.otherConfigs);
         try {
             processor.run();
         } catch (Exception e) {

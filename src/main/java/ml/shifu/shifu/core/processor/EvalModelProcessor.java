@@ -84,6 +84,11 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
         this.evalStep = step;
     }
 
+    public EvalModelProcessor(EvalStep step, Map<String, Object> otherConfigs) {
+        this.evalStep = step;
+        super.otherConfigs = otherConfigs;
+    }
+
     /**
      * Constructor
      * 
@@ -243,16 +248,18 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
 
     /**
      * Run normalization against the evaluation data sets
+     * 
      * @param evalConfigList
      */
     private void runNormalize(List<EvalConfig> evalConfigList) throws IOException {
-        for ( EvalConfig evalConfig : evalConfigList ) {
+        for(EvalConfig evalConfig: evalConfigList) {
             runNormalize(evalConfig);
         }
     }
 
     /**
      * Run normalization against the evaluation data set
+     * 
      * @param evalConfig
      */
     private void runNormalize(EvalConfig evalConfig) throws IOException {
@@ -304,7 +311,7 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
         }
         try {
             PigExecutor.getExecutor().submitJob(modelConfig, pathFinder.getAbsolutePath(pigScript), paramsMap,
-                    evalConfig.getDataSet().getSource());
+                    evalConfig.getDataSet().getSource(), super.pathFinder);
         } catch (IOException e) {
             throw new ShifuException(ShifuErrorCode.ERROR_RUNNING_PIG_JOB, e);
         } catch (Throwable e) {
@@ -339,6 +346,7 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
 
     /**
      * Run pig code to normalize evaluation dataset
+     * 
      * @param evalConfig
      * @throws IOException
      */
@@ -439,32 +447,28 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
             return;
         }
 
-        String[] evalColumnNames = CommonUtils.getHeaders(evalConfig.getDataSet().getHeaderPath(),
-                evalConfig.getDataSet().getHeaderDelimiter(),
-                evalConfig.getDataSet().getSource());
+        String[] evalColumnNames = CommonUtils.getHeaders(evalConfig.getDataSet().getHeaderPath(), evalConfig
+                .getDataSet().getHeaderDelimiter(), evalConfig.getDataSet().getSource());
         Set<String> names = new HashSet<String>();
         names.addAll(Arrays.asList(evalColumnNames));
 
         for(ColumnConfig config: this.columnConfigList) {
-            if ( config.isFinalSelect() && !names.contains(config.getColumnName()) ) {
+            if(config.isFinalSelect() && !names.contains(config.getColumnName())) {
                 throw new IllegalArgumentException("Final selected column " + config.getColumnName()
-                        + " does not exist in - "
-                        + evalConfig.getDataSet().getHeaderPath());
+                        + " does not exist in - " + evalConfig.getDataSet().getHeaderPath());
             }
         }
 
         if(StringUtils.isNotBlank(evalConfig.getDataSet().getTargetColumnName())
                 && !names.contains(evalConfig.getDataSet().getTargetColumnName())) {
             throw new IllegalArgumentException("Target column " + evalConfig.getDataSet().getTargetColumnName()
-                    + " does not exist in - "
-                    + evalConfig.getDataSet().getHeaderPath());
+                    + " does not exist in - " + evalConfig.getDataSet().getHeaderPath());
         }
 
         if(StringUtils.isNotBlank(evalConfig.getDataSet().getWeightColumnName())
                 && !names.contains(evalConfig.getDataSet().getWeightColumnName())) {
             throw new IllegalArgumentException("Weight column " + evalConfig.getDataSet().getWeightColumnName()
-                    + " does not exist in - "
-                    + evalConfig.getDataSet().getHeaderPath());
+                    + " does not exist in - " + evalConfig.getDataSet().getHeaderPath());
         }
     }
 
