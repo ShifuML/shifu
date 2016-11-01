@@ -81,7 +81,7 @@ import org.slf4j.LoggerFactory;
  * cannot be split which means training is stopped.
  * 
  * <p>
- * TODO In current {@link DTMaster}, there are states like {@link #trees} and {@link #queue} and cannot be updated.
+ * TODO In current {@link DTMaster}, there are states like {@link #trees} and {@link #toDoQueue} and cannot be updated.
  * Consider only one {@link MasterComputable} instance in one Guagua job. The down rate of such master small. To
  * consider master fail over, such states should all be recovered in {@link #init(MasterContext)}.
  * 
@@ -125,7 +125,6 @@ public class DTMaster extends AbstractMasterComputable<DTMasterParams, DTWorkerP
     /**
      * maxLeaves >=, then isLeafWise set to true, else level-wise tree building.
      */
-    @SuppressWarnings("unused")
     private boolean isLeafWise = false;
 
     /**
@@ -188,7 +187,7 @@ public class DTMaster extends AbstractMasterComputable<DTMasterParams, DTWorkerP
     private int existingTreeSize = 0;
 
     /**
-     * Every checkpoint interval, do checkpoint to save {@link #trees} and {@link #queue} and MasterParams in that
+     * Every checkpoint interval, do checkpoint to save {@link #trees} and {@link #toDoQueue} and MasterParams in that
      * iteration.
      */
     private int checkpointInterval;
@@ -211,6 +210,11 @@ public class DTMaster extends AbstractMasterComputable<DTMasterParams, DTWorkerP
      */
     private DTMasterParams cpMasterParams;
 
+    /**
+     * Max batch split size in leaf-wise tree growth.; This only works well when {@link #isLeafWise} = true.
+     */
+    private int maxBatchSplitSize = 16;
+
     // ############################################################################################################
     // ## There parts are states, for fail over such instances should be recovered in {@link #init(MasterContext)}
     // ############################################################################################################
@@ -221,9 +225,15 @@ public class DTMaster extends AbstractMasterComputable<DTMasterParams, DTWorkerP
     private List<TreeNode> trees;
 
     /**
+     * TreeNode with splits will be add to this queue and after that, split a batch of nodes at the same iteration; this
+     * only works well when {@link #isLeafWise} = true.
+     */
+    private Queue<TreeNode> toSplitQueue;
+
+    /**
      * TreeNodes needed to be collected statistics from workers.
      */
-    private Queue<TreeNode> queue;
+    private Queue<TreeNode> toDoQueue;
 
     @Override
     public DTMasterParams doCompute(MasterContext<DTMasterParams, DTWorkerParams> context) {
@@ -282,46 +292,36 @@ public class DTMaster extends AbstractMasterComputable<DTMasterParams, DTWorkerP
                 doneNode.setLeaf(true);
                 continue;
             }
-            populateGainInfoToNode(doneNode, maxGainInfo);
+            populateGainInfoToNode(treeId, doneNode, maxGainInfo);
 
-            boolean isLeaf = maxGainInfo.getGain() <= 0d || Node.indexToLevel(doneNode.getId()) == this.maxDepth;
-            doneNode.setLeaf(isLeaf);
-            if(!doneNode.isLeaf()) {
-                boolean leftChildIsLeaf = Node.indexToLevel(doneNode.getId()) + 1 == this.maxDepth
-                        || Double.compare(maxGainInfo.getLeftImpurity(), 0d) == 0;
-                // such node is just set into isLeaf to true, a new node is created with leaf flag but will be changed
-                // to final leaf in later iteration
-                int leftIndex = Node.leftIndex(doneNode.getId());
-                Node left = new Node(leftIndex, maxGainInfo.getLeftPredict(), maxGainInfo.getLeftImpurity(), true);
-                doneNode.setLeft(left);
-                if(!leftChildIsLeaf) {
-                    this.queue.offer(new TreeNode(treeId, left));
+            if(this.isLeafWise) {
+                boolean isNotSplit = maxGainInfo.getGain() <= 0d;
+                if(!isNotSplit) {
+                    this.toSplitQueue.offer(new TreeNode(treeId, doneNode));
                 } else {
-                    LOG.debug("Left node {} in tree {} is set to leaf and not submitted to workers", leftIndex, treeId);
-                }
-
-                boolean rightChildIsLeaf = Node.indexToLevel(doneNode.getId()) + 1 == this.maxDepth
-                        || Double.compare(maxGainInfo.getRightImpurity(), 0d) == 0;
-
-                // such node is just set into isLeaf to true
-                int rightIndex = Node.rightIndex(doneNode.getId());
-                Node right = new Node(rightIndex, maxGainInfo.getRightPredict(), maxGainInfo.getRightImpurity(), true);
-                doneNode.setRight(right);
-                if(!rightChildIsLeaf) {
-                    this.queue.offer(new TreeNode(treeId, right));
-                } else {
-                    LOG.debug("Right node {} in tree {} is set to leaf and not submitted to workers", rightIndex,
-                            treeId);
+                    LOG.info("Node {} in tree {} is not to be split", doneNode.getId(), treeId);
                 }
             } else {
-                LOG.info("Done node {} in tree {} is final set to leaf", doneNode.getId(), treeId);
+                boolean isLeaf = maxGainInfo.getGain() <= 0d || Node.indexToLevel(doneNode.getId()) == this.maxDepth;
+                doneNode.setLeaf(isLeaf);
+                // level-wise is to split node when stats is ready
+                splitNodeForLevelWisedTree(isLeaf, treeId, doneNode);
+            }
+        }
+
+        if(this.isLeafWise) {
+            // get node in toSplitQueue and split
+            int currSplitIndex = 0;
+            while(!toSplitQueue.isEmpty() && currSplitIndex < this.maxBatchSplitSize) {
+                TreeNode treeNode = this.toSplitQueue.poll();
+                splitNodeForLeafWisedTree(treeNode.getTreeId(), treeNode.getNode());
             }
         }
 
         Map<Integer, TreeNode> todoNodes = new HashMap<Integer, TreeNode>();
         DTMasterParams masterParams = new DTMasterParams(weightedTrainCount, trainError, weightedValidationCount,
                 validationError);
-        if(queue.isEmpty()) {
+        if(toDoQueue.isEmpty()) {
             if(this.isGBDT) {
                 Node treeNode = this.trees.get(this.trees.size() - 1).getNode();
                 if(this.trees.size() == this.treeNum + this.existingTreeSize) {
@@ -359,8 +359,8 @@ public class DTMaster extends AbstractMasterComputable<DTMasterParams, DTWorkerP
                 depthList.add(-1);
             }
 
-            while(!queue.isEmpty() && currMem <= this.maxStatsMemory) {
-                TreeNode node = this.queue.poll();
+            while(!toDoQueue.isEmpty() && currMem <= this.maxStatsMemory) {
+                TreeNode node = this.toDoQueue.poll();
                 int treeId = node.getTreeId();
                 int oldDepth = depthList.get(treeId);
                 int currDepth = Node.indexToLevel(node.getNode().getId());
@@ -387,26 +387,71 @@ public class DTMaster extends AbstractMasterComputable<DTMasterParams, DTWorkerP
         return masterParams;
     }
 
-    public static void main(String[] args) {
-        Queue<Double> queue = new PriorityQueue<Double>(64, new Comparator<Double>() {
+    /**
+     * Split node into left and right for leaf-wised tree growth, doneNode should be populated by
+     * {@link #populateGainInfoToNode(Node, GainInfo)}.
+     * 
+     */
+    private void splitNodeForLeafWisedTree(int treeId, Node doneNode) {
+        boolean isOverMaxLeaves = this.trees.get(treeId).getNodeNum() + 1 > this.maxLeaves;
+        boolean canSplit = !isOverMaxLeaves && Double.compare(doneNode.getLeftImpurity(), 0d) != 0;
+        // if can split left, at the same time create left and right node
+        if(canSplit) {
+            int leftIndex = Node.leftIndex(doneNode.getId());
+            Node left = new Node(leftIndex, doneNode.getLeftPredict(), doneNode.getLeftImpurity(), false);
+            doneNode.setLeft(left);
+            this.trees.get(treeId).incrNodeNum();
+            this.toDoQueue.offer(new TreeNode(treeId, left));
 
-            @Override
-            public int compare(Double o1, Double o2) {
-                return o2.compareTo(o1);
+            int rightIndex = Node.rightIndex(doneNode.getId());
+            Node right = new Node(rightIndex, doneNode.getRightPredict(), doneNode.getRightImpurity(), false);
+            doneNode.setRight(right);
+            this.trees.get(treeId).incrNodeNum();
+            this.toDoQueue.offer(new TreeNode(treeId, right));
+        }
+    }
+
+    /**
+     * Split node into left and right for level-wised tree growth, doneNode should be populated by
+     * {@link #populateGainInfoToNode(Node, GainInfo)}
+     */
+    private void splitNodeForLevelWisedTree(boolean isLeaf, int treeId, Node doneNode) {
+        if(!isLeaf) {
+            boolean leftChildIsLeaf = Node.indexToLevel(doneNode.getId()) + 1 == this.maxDepth
+                    || Double.compare(doneNode.getLeftImpurity(), 0d) == 0;
+            // such node is just set into isLeaf to true, a new node is created with leaf flag but will be
+            // changed
+            // to final leaf in later iteration
+            int leftIndex = Node.leftIndex(doneNode.getId());
+            Node left = new Node(leftIndex, doneNode.getLeftPredict(), doneNode.getLeftImpurity(), true);
+            doneNode.setLeft(left);
+            // update nodeNum
+            this.trees.get(treeId).incrNodeNum();
+
+            if(!leftChildIsLeaf) {
+                this.toDoQueue.offer(new TreeNode(treeId, left));
+            } else {
+                LOG.debug("Left node {} in tree {} is set to leaf and not submitted to workers", leftIndex, treeId);
             }
-        });
-        queue.add(10d);
-        queue.add(5d);
-        queue.add(12d);
-        queue.add(13d);
-        queue.add(6d);
-        queue.add(28d);
-        System.out.println(queue.poll());
-        System.out.println(queue.poll());
-        System.out.println(queue.poll());
-        System.out.println(queue.poll());
-        System.out.println(queue.poll());
-        System.out.println(queue.poll());
+
+            boolean rightChildIsLeaf = Node.indexToLevel(doneNode.getId()) + 1 == this.maxDepth
+                    || Double.compare(doneNode.getRightImpurity(), 0d) == 0;
+
+            // such node is just set into isLeaf to true
+            int rightIndex = Node.rightIndex(doneNode.getId());
+            Node right = new Node(rightIndex, doneNode.getRightPredict(), doneNode.getRightImpurity(), true);
+            doneNode.setRight(right);
+            // update nodeNum
+            this.trees.get(treeId).incrNodeNum();
+
+            if(!rightChildIsLeaf) {
+                this.toDoQueue.offer(new TreeNode(treeId, right));
+            } else {
+                LOG.debug("Right node {} in tree {} is set to leaf and not submitted to workers", rightIndex, treeId);
+            }
+        } else {
+            LOG.info("Done node {} in tree {} is final set to leaf", doneNode.getId(), treeId);
+        }
     }
 
     private DTMasterParams rebuildRecoverMasterResultDepthList() {
@@ -454,7 +499,7 @@ public class DTMaster extends AbstractMasterComputable<DTMasterParams, DTWorkerP
     }
 
     /**
-     * Write {@link #trees}, {@link #queue} and MasterParams to HDFS.
+     * Write {@link #trees}, {@link #toDoQueue} and MasterParams to HDFS.
      */
     private void writeStatesToHdfs(Path out, DTMasterParams masterParams) {
         FSDataOutputStream fos = null;
@@ -469,9 +514,16 @@ public class DTMaster extends AbstractMasterComputable<DTMasterParams, DTWorkerP
             }
 
             // todo queue
-            fos.writeInt(this.queue.size());
-            for(TreeNode treeNode: this.queue) {
+            fos.writeInt(this.toDoQueue.size());
+            for(TreeNode treeNode: this.toDoQueue) {
                 treeNode.write(fos);
+            }
+
+            if(this.isLeafWise && this.toSplitQueue != null) {
+                fos.writeInt(this.toSplitQueue.size());
+                for(TreeNode treeNode: this.toSplitQueue) {
+                    treeNode.write(fos);
+                }
             }
 
             // master result
@@ -483,7 +535,7 @@ public class DTMaster extends AbstractMasterComputable<DTMasterParams, DTWorkerP
         }
     }
 
-    private void populateGainInfoToNode(Node doneNode, GainInfo maxGainInfo) {
+    private void populateGainInfoToNode(int treeId, Node doneNode, GainInfo maxGainInfo) {
         doneNode.setPredict(maxGainInfo.getPredict());
         doneNode.setSplit(maxGainInfo.getSplit());
         doneNode.setGain(maxGainInfo.getGain());
@@ -492,6 +544,13 @@ public class DTMaster extends AbstractMasterComputable<DTMasterParams, DTWorkerP
         doneNode.setRightImpurity(maxGainInfo.getRightImpurity());
         doneNode.setLeftPredict(maxGainInfo.getLeftPredict());
         doneNode.setRightPredict(maxGainInfo.getRightPredict());
+
+        if(Node.isRootNode(doneNode)) {
+            this.trees.get(treeId).setRootWgtCnt(maxGainInfo.getWgtCnt());
+        } else {
+            double rootWgtCnt = this.trees.get(treeId).getRootWgtCnt();
+            doneNode.setWgtCntRatio(maxGainInfo.getWgtCnt() / rootWgtCnt);
+        }
     }
 
     private long getStatsMem(List<Integer> subsetFeatures) {
@@ -698,6 +757,14 @@ public class DTMaster extends AbstractMasterComputable<DTMasterParams, DTWorkerP
             this.isLeafWise = true;
         }
 
+        Object maxBatchSplitSizeObj = validParams.get("MaxBatchSplitSize");
+        if(maxBatchSplitSizeObj != null) {
+            this.maxBatchSplitSize = Integer.valueOf(maxBatchSplitSizeObj.toString());
+        } else {
+            // by default split 32 at most in a batch
+            this.maxBatchSplitSize = 32;
+        }
+
         assert this.maxDepth > 0 && this.maxDepth <= 20;
         Object maxStatsMemoryMB = validParams.get("MaxStatsMemoryMB");
         if(maxStatsMemoryMB != null) {
@@ -715,7 +782,6 @@ public class DTMaster extends AbstractMasterComputable<DTMasterParams, DTWorkerP
             this.learningRate = Double.valueOf(validParams.get(NNTrainer.LEARNING_RATE).toString());
         }
 
-        // FIXME add more validation for parameters in both master and worker
         String imStr = validParams.get("Impurity").toString();
         int numClasses = 2;
         if(this.modelConfig.isClassification()) {
@@ -748,17 +814,17 @@ public class DTMaster extends AbstractMasterComputable<DTMasterParams, DTWorkerP
                 maxStatsMemory, treeNum, imStr, this.workerNumber, minInstancesPerNode, minInfoGain, this.isRF,
                 this.isGBDT, this.isContinuousEnabled);
 
-        this.queue = new LinkedList<TreeNode>();
+        this.toDoQueue = new LinkedList<TreeNode>();
 
-        // if(this.isLeafWise){
-        // this .queue = new PriorityQueue<TreeNode>(64, new Comparator<TreeNode>() {
-        // @Override
-        // public int compare(TreeNode o1, TreeNode o2) {
-        //
-        // }});
-        // }else {
-        // }
-
+        if(this.isLeafWise) {
+            this.toSplitQueue = new PriorityQueue<TreeNode>(64, new Comparator<TreeNode>() {
+                @Override
+                public int compare(TreeNode o1, TreeNode o2) {
+                    return Double.compare(o2.getNode().getWgtCntRatio() * o2.getNode().getGain(), o1.getNode()
+                            .getWgtCntRatio() * o1.getNode().getGain());
+                }
+            });
+        }
         // initialize trees
         if(context.isFirstIteration()) {
             if(this.isRF) {
@@ -798,11 +864,11 @@ public class DTMaster extends AbstractMasterComputable<DTMasterParams, DTWorkerP
         } else {
             // recover all states once master is fail over
             LOG.info("Recover master stats from cp file {}", this.checkpointOutput);
-            recoverMasterStats(sourceType);
+            recoverMasterStatus(sourceType);
         }
     }
 
-    private void recoverMasterStats(SourceType sourceType) {
+    private void recoverMasterStatus(SourceType sourceType) {
         FSDataInputStream stream = null;
         FileSystem fs = ShifuFileUtils.getFileSystemBySourceType(sourceType);
         try {
@@ -819,7 +885,16 @@ public class DTMaster extends AbstractMasterComputable<DTMasterParams, DTWorkerP
             for(int i = 0; i < queueSize; i++) {
                 TreeNode treeNode = new TreeNode();
                 treeNode.readFields(stream);
-                this.queue.offer(treeNode);
+                this.toDoQueue.offer(treeNode);
+            }
+
+            if(this.isLeafWise && this.toSplitQueue != null) {
+                queueSize = stream.readInt();
+                for(int i = 0; i < queueSize; i++) {
+                    TreeNode treeNode = new TreeNode();
+                    treeNode.readFields(stream);
+                    this.toSplitQueue.offer(treeNode);
+                }
             }
 
             this.cpMasterParams = new DTMasterParams();

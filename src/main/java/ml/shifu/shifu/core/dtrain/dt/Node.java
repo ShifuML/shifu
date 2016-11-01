@@ -65,6 +65,11 @@ public class Node implements Bytable {
     private Predict predict;
 
     /**
+     * Ratio of # of weighted instances in such node over # of all weighted instances
+     */
+    private double wgtCntRatio;
+
+    /**
      * Gain for such node, such value can be computed from different {@link Impurity} like {@link Entropy},
      * {@link Variance}. Gain = impurity - leftWeight * leftImpurity - rightWeight * rightImpurity.
      */
@@ -318,7 +323,7 @@ public class Node implements Bytable {
     public static int indexToLevel(int nodeIndex) {
         return Integer.numberOfTrailingZeros(Integer.highestOneBit(nodeIndex)) + 1;
     }
-    
+
     /**
      * @param isLeaf
      *            the isLeaf to set
@@ -327,8 +332,15 @@ public class Node implements Bytable {
         this.isLeaf = isLeaf;
     }
 
-    public boolean isLeaf() {
+    boolean isLeaf() {
         return this.isLeaf;
+    }
+
+    /**
+     * Check if node is real for leaf. No matter the leaf flag, this will check whether left and right exist.
+     */
+    public boolean isRealLeaf() {
+        return this.left == null && this.right == null;
     }
 
     /**
@@ -375,6 +387,21 @@ public class Node implements Bytable {
         return id << 1;
     }
 
+    /**
+     * @return the wgtCnt
+     */
+    public double getWgtCntRatio() {
+        return wgtCntRatio;
+    }
+
+    /**
+     * @param wgtCnt
+     *            the wgtCnt to set
+     */
+    public void setWgtCntRatio(double wgtCntRatio) {
+        this.wgtCntRatio = wgtCntRatio;
+    }
+
     public static int rightIndex(int id) {
         return (id << 1) + 1;
     }
@@ -383,12 +410,17 @@ public class Node implements Bytable {
         return id >>> 1;
     }
 
+    public static boolean isRootNode(Node node) {
+        return node != null && node.getId() == ROOT_INDEX;
+    }
+
     @Override
     public void write(DataOutput out) throws IOException {
         out.writeInt(id);
         out.writeDouble(gain);
         out.writeDouble(impurity);
         out.writeBoolean(isLeaf);
+        out.writeDouble(wgtCntRatio);
 
         if(split == null) {
             out.writeBoolean(false);
@@ -425,6 +457,7 @@ public class Node implements Bytable {
         this.gain = in.readDouble();
         this.impurity = in.readDouble();
         this.isLeaf = in.readBoolean();
+        this.wgtCntRatio = in.readDouble();
 
         if(in.readBoolean()) {
             this.split = new Split();

@@ -725,7 +725,7 @@ public class DTWorker
     private Node predictNodeIndex(Node node, Data data) {
         Node currNode = node;
         Split split = currNode.getSplit();
-        if(split == null || currNode.isLeaf()) {
+        if(split == null || (currNode.getLeft() == null && currNode.getRight() == null)) {
             return currNode;
         }
 
@@ -753,7 +753,10 @@ public class DTWorker
             }
         }
 
-        assert nextNode != null;
+        if(nextNode == null) {
+            throw new IllegalStateException("NextNode with id is null, parent id is " + currNode.getId() + " left is "
+                    + currNode.getLeft() + " right is " + currNode.getRight());
+        }
         return predictNodeIndex(nextNode, data);
     }
 
