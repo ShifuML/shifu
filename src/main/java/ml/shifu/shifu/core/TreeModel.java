@@ -146,7 +146,7 @@ public class TreeModel extends BasicML implements MLRegression {
     private double predictNode(Node topNode, double[] data) {
         Node currNode = topNode;
         Split split = currNode.getSplit();
-        if(split == null || currNode.isLeaf()) {
+        if(split == null || currNode.isRealLeaf()) {
             if(this.isClassification) {
                 return currNode.getPredict().getClassValue();
             } else {

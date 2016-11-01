@@ -591,6 +591,13 @@ public class ModelInspector {
                         tmpResult.getCauses().add("Loss should be in [log,squared,absolute].");
                         result = ValidateResult.mergeResult(result, tmpResult);
                     }
+
+                    if(loss == null) {
+                        ValidateResult tmpResult = new ValidateResult(true);
+                        tmpResult.setStatus(false);
+                        tmpResult.getCauses().add("'Loss' parameter isn't be set in train#parameters in GBT training.");
+                        result = ValidateResult.mergeResult(result, tmpResult);
+                    }
                 }
 
                 Object maxDepthObj = params.get("MaxDepth");
@@ -603,7 +610,7 @@ public class ModelInspector {
                         result = ValidateResult.mergeResult(result, tmpResult);
                     }
                 }
-                
+
                 Object maxLeavesObj = params.get("MaxLeaves");
                 if(maxLeavesObj != null) {
                     int maxLeaves = Integer.valueOf(maxLeavesObj.toString());
@@ -613,6 +620,15 @@ public class ModelInspector {
                         tmpResult.getCauses().add("MaxLeaves should in [1, Integer.MAX_VALUE].");
                         result = ValidateResult.mergeResult(result, tmpResult);
                     }
+                }
+
+                if(maxDepthObj == null && maxLeavesObj == null) {
+                    ValidateResult tmpResult = new ValidateResult(true);
+                    tmpResult.setStatus(false);
+                    tmpResult
+                            .getCauses()
+                            .add("'MaxDepth' or 'MaxLeaves' parameters at least one of both should be set in train#parameters in GBT training.");
+                    result = ValidateResult.mergeResult(result, tmpResult);
                 }
 
                 Object maxStatsMemoryMBObj = params.get("MaxStatsMemoryMB");
@@ -636,6 +652,12 @@ public class ModelInspector {
                             tmpResult.getCauses().add("Learning rate should be larger than 0.");
                             result = ValidateResult.mergeResult(result, tmpResult);
                         }
+                    } else {
+                        ValidateResult tmpResult = new ValidateResult(true);
+                        tmpResult.setStatus(false);
+                        tmpResult.getCauses().add(
+                                "'LearningRate' parameter isn't be set in train#parameters in GBT training.");
+                        result = ValidateResult.mergeResult(result, tmpResult);
                     }
                 }
 
@@ -648,6 +670,12 @@ public class ModelInspector {
                         tmpResult.getCauses().add("MinInstancesPerNode should > 0.");
                         result = ValidateResult.mergeResult(result, tmpResult);
                     }
+                } else {
+                    ValidateResult tmpResult = new ValidateResult(true);
+                    tmpResult.setStatus(false);
+                    tmpResult.getCauses().add(
+                            "'MinInstancesPerNode' parameter isn't be set in train#parameters in GBT/RF training.");
+                    result = ValidateResult.mergeResult(result, tmpResult);
                 }
 
                 Object treeNumObj = params.get("TreeNum");
@@ -656,9 +684,15 @@ public class ModelInspector {
                     if(treeNum <= 0 || treeNum > 2000) {
                         ValidateResult tmpResult = new ValidateResult(true);
                         tmpResult.setStatus(false);
-                        tmpResult.getCauses().add("TreeNum should be in [1, 2000].");
+                        tmpResult.getCauses().add("TreeNum should be in [1, 5000].");
                         result = ValidateResult.mergeResult(result, tmpResult);
                     }
+                } else {
+                    ValidateResult tmpResult = new ValidateResult(true);
+                    tmpResult.setStatus(false);
+                    tmpResult.getCauses().add(
+                            "'TreeNum' parameter isn't be set in train#parameters in GBT/RF training.");
+                    result = ValidateResult.mergeResult(result, tmpResult);
                 }
 
                 Object minInfoGainObj = params.get("MinInfoGain");
@@ -670,6 +704,12 @@ public class ModelInspector {
                         tmpResult.getCauses().add("MinInfoGain should be >= 0.");
                         result = ValidateResult.mergeResult(result, tmpResult);
                     }
+                } else {
+                    ValidateResult tmpResult = new ValidateResult(true);
+                    tmpResult.setStatus(false);
+                    tmpResult.getCauses().add(
+                            "'MinInfoGain' parameter isn't be set in train#parameters in GBT/RF training.");
+                    result = ValidateResult.mergeResult(result, tmpResult);
                 }
 
                 Object impurityObj = params.get("Impurity");
@@ -681,6 +721,12 @@ public class ModelInspector {
                         tmpResult.getCauses().add("GBDT only supports 'variance' impurity type.");
                         result = ValidateResult.mergeResult(result, tmpResult);
                     }
+                } else {
+                    ValidateResult tmpResult = new ValidateResult(true);
+                    tmpResult.setStatus(false);
+                    tmpResult.getCauses().add(
+                            "'Impurity' parameter isn't be set in train#parameters in GBT/RF training.");
+                    result = ValidateResult.mergeResult(result, tmpResult);
                 }
 
                 if(train.getAlgorithm().equalsIgnoreCase(CommonConstants.RF_ALG_NAME)) {

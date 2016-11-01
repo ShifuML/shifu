@@ -553,6 +553,11 @@
                         "directive": "input",
                         "defval" : -1
                     }, {
+                        "name" : "MaxBatchSplitSize",
+                        "type" : "number",
+                        "directive": "input",
+                        "defval" : -1
+                    }, {
                         "name" : "MinInstancesPerNode",
                         "type" : "number",
                         "directive": "input",
