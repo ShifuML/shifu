@@ -45,4 +45,6 @@ public class PerformanceResult {
     public List<PerformanceObject> gains;
 
     public List<PerformanceObject> weightedGains;
+    
+    public List<PerformanceObject> modelScoreList;
 }

@@ -17,7 +17,16 @@ package ml.shifu.shifu.core.processor;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.Random;
+import java.util.Scanner;
+import java.util.Set;
 
 import ml.shifu.shifu.actor.AkkaSystemExecutor;
 import ml.shifu.shifu.container.obj.ColumnConfig;
@@ -71,6 +80,10 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
     private double pigPosWeightTags = 0d;
 
     private double pigNegWeightTags = 0d;
+
+    private int maxScore = Integer.MIN_VALUE;
+
+    private int minScore = Integer.MAX_VALUE;
 
     private long evalRecords = 0l;
 
@@ -304,12 +317,21 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
         paramsMap.put("columnIndex", evalConfig.getPerformanceScoreSelector().trim());
 
         String pigScript = "scripts/Eval.pig";
+        Map<String, String> confMap = new HashMap<String, String>();
+
+        // max min score folder
+        String maxMinScoreFolder = ShifuFileUtils
+                .getFileSystemBySourceType(sourceType)
+                .makeQualified(
+                        new Path("tmp" + File.separator + "maxmin_score_" + System.currentTimeMillis() + "_"
+                                + new Random().nextLong())).toString();
+        confMap.put(Constants.SHIFU_EVAL_MAXMIN_SCORE_OUTPUT, maxMinScoreFolder);
         if(modelConfig.isClassification()) {
             pigScript = "scripts/EvalScore.pig";
         }
         try {
             PigExecutor.getExecutor().submitJob(modelConfig, pathFinder.getAbsolutePath(pigScript), paramsMap,
-                    evalConfig.getDataSet().getSource());
+                    evalConfig.getDataSet().getSource(), confMap);
         } catch (IOException e) {
             throw new ShifuException(ShifuErrorCode.ERROR_RUNNING_PIG_JOB, e);
         } catch (Throwable e) {
@@ -337,8 +359,47 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
             this.pigNegWeightTags = jobStats.getHadoopCounters().getGroup(Constants.SHIFU_GROUP_COUNTER)
                     .getCounter(Constants.COUNTER_WNEGTAGS)
                     / (Constants.EVAL_COUNTER_WEIGHT_SCALE * 1.0d);
+
+            if(modelConfig.isRegression()){
+                locateMaxMinScoreFromFile(sourceType, maxMinScoreFolder);
+                ShifuFileUtils.deleteFile(maxMinScoreFolder, sourceType);
+            }
+
             // only one pig job with such counters, break
             break;
+        }
+    }
+
+    private void locateMaxMinScoreFromFile(SourceType sourceType, String maxMinScoreFolder) throws IOException {
+        List<Scanner> scanners = null;
+        try {
+            // here only works for 1 reducer
+            scanners = ShifuFileUtils.getDataScanners(maxMinScoreFolder, sourceType);
+            for(Scanner scanner: scanners) {
+                if(scanner.hasNext()) {
+                    String line = scanner.nextLine().trim();
+                    String[] splits = line.split(",");
+                    if(splits.length >= 2) {
+                        int localMaxScore = Integer.parseInt(splits[0]);
+                        if(maxScore < localMaxScore) {
+                            maxScore = localMaxScore;
+                        }
+
+                        int localMinScore = Integer.parseInt(splits[1]);
+                        if(minScore > localMinScore) {
+                            minScore = localMinScore;
+                        }
+                    }
+                }
+            }
+        } finally {
+            if(scanners != null) {
+                for(Scanner scanner: scanners) {
+                    if(scanner != null) {
+                        scanner.close();
+                    }
+                }
+            }
         }
     }
 
@@ -631,7 +692,8 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
             case MAPRED:
                 if(modelConfig.isRegression()) {
                     worker.bufferedComputeConfusionMatrixAndPerformance(this.pigPosTags, this.pigNegTags,
-                            this.pigPosWeightTags, this.pigNegWeightTags, this.evalRecords);
+                            this.pigPosWeightTags, this.pigNegWeightTags, this.evalRecords, this.maxScore,
+                            this.minScore);
                 } else {
                     worker.computeConfusionMatixForMultipleClassification(this.evalRecords);
                 }
