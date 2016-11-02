@@ -31,6 +31,7 @@ import ml.shifu.shifu.core.dtrain.dt.Node;
 import ml.shifu.shifu.core.dtrain.dt.Split;
 import ml.shifu.shifu.core.dtrain.dt.TreeNode;
 import ml.shifu.shifu.util.CommonUtils;
+import ml.shifu.shifu.util.Environment;
 
 import org.encog.ml.BasicML;
 import org.encog.ml.MLRegression;
@@ -70,7 +71,7 @@ public class TreeModel extends BasicML implements MLRegression {
 
     private String lossStr;
 
-    private boolean isCovertToProb = false;
+    private boolean isConvertToProb = false;
 
     public TreeModel(List<TreeNode> trees, List<Double> weights, boolean isGBDT, List<ColumnConfig> columnConfigList,
             Map<Integer, Integer> columnMapping, boolean isClassfication, String algorithm, String lossStr) {
@@ -79,7 +80,7 @@ public class TreeModel extends BasicML implements MLRegression {
 
     public TreeModel(List<TreeNode> trees, List<Double> weights, boolean isGBDT, List<ColumnConfig> columnConfigList,
             Map<Integer, Integer> columnMapping, boolean isClassfication, String algorithm, String lossStr,
-            boolean isCovertToProb) {
+            boolean isConvertToProb) {
         this.trees = trees;
         this.weights = weights;
         assert trees != null && weights != null && trees.size() == weights.size();
@@ -91,7 +92,7 @@ public class TreeModel extends BasicML implements MLRegression {
         this.algorithm = algorithm;
         this.lossStr = lossStr;
         // only works well in GBDT regression, onevsall is also treated as regression and isClassification is true
-        this.isCovertToProb = this.isGBDT && !this.isClassification && isCovertToProb;
+        this.isConvertToProb = this.isGBDT && !this.isClassification && isConvertToProb;
     }
 
     @Override
@@ -115,8 +116,8 @@ public class TreeModel extends BasicML implements MLRegression {
         } else {
             double finalPredict;
             if(this.isGBDT) {
-                if(this.isCovertToProb) {
-                    finalPredict = covertToProb(predictSum);
+                if(this.isConvertToProb) {
+                    finalPredict = convertToProb(predictSum);
                 } else {
                     finalPredict = predictSum;
                 }
@@ -129,9 +130,9 @@ public class TreeModel extends BasicML implements MLRegression {
         return result;
     }
 
-    private double covertToProb(double score) {
+    private double convertToProb(double score) {
         // sigmoid function to covert to [0, 1], TODO tune such function to get better [0, 1]
-        return 1 / (1 + Math.min(1.0E19, Math.exp(-(score - 2.0602792296384576d))));
+        return 1 / (1 + Math.min(1.0E19, Math.exp(-(score * 3 - 2.0602792296384576d))));
     }
 
     private double predictNode(Node topNode, double[] data) {
@@ -193,6 +194,11 @@ public class TreeModel extends BasicML implements MLRegression {
     }
 
     public static TreeModel loadFromStream(InputStream input, List<ColumnConfig> columnConfigList) throws IOException {
+        return loadFromStream(input, columnConfigList, false);
+    }
+
+    public static TreeModel loadFromStream(InputStream input, List<ColumnConfig> columnConfigList,
+            boolean isConvertToProb) throws IOException {
         DataInputStream dis = new DataInputStream(input);
         int len = dis.readInt();
         byte[] bytes = new byte[len];
@@ -250,7 +256,7 @@ public class TreeModel extends BasicML implements MLRegression {
 
         // if one vs all, even multiple classification, treated as regression
         return new TreeModel(trees, weights, CommonConstants.GBT_ALG_NAME.equalsIgnoreCase(algorithm),
-                columnConfigList, columnMapping, isClassification && !isOneVsAll, algorithm, lossStr);
+                columnConfigList, columnMapping, isClassification && !isOneVsAll, algorithm, lossStr, isConvertToProb);
     }
 
     /*

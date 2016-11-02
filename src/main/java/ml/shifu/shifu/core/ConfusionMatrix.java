@@ -44,6 +44,7 @@ import ml.shifu.shifu.fs.PathFinder;
 import ml.shifu.shifu.fs.ShifuFileUtils;
 import ml.shifu.shifu.util.CommonUtils;
 import ml.shifu.shifu.util.Constants;
+import ml.shifu.shifu.util.Environment;
 import ml.shifu.shifu.util.HDFSUtils;
 import ml.shifu.shifu.util.JSONUtils;
 
@@ -146,6 +147,13 @@ public class ConfusionMatrix {
             minScore = 0;
         }
 
+        boolean gbtConvertToProb = isGBTConvertToProb();
+        if(gbtConvertToProb) {
+            log.debug(" set max score to 1000,raw  max is {}, raw min is {}", maxScore, minScore);
+            maxScore = 1000;
+            minScore = 0;
+        }
+
         SourceType sourceType = evalConfig.getDataSet().getSource();
 
         List<Scanner> scanners = ShifuFileUtils.getDataScanners(pathFinder.getEvalScorePath(evalConfig, sourceType),
@@ -242,7 +250,8 @@ public class ConfusionMatrix {
                     }
                     continue;
                 }
-                if(cnt == 1 && CommonConstants.GBT_ALG_NAME.equalsIgnoreCase(modelConfig.getAlgorithm())) {
+                if(cnt == 1 && CommonConstants.GBT_ALG_NAME.equalsIgnoreCase(modelConfig.getAlgorithm())
+                        && !gbtConvertToProb) {
                     // for gbdt, the result maybe not in [0, 1], set first score to make the upper score bould clear
                     po.binLowestScore = score;
                 }
@@ -409,6 +418,11 @@ public class ConfusionMatrix {
             log.error("No score read, the EvalScore did not genernate or is null file");
             throw new ShifuException(ShifuErrorCode.ERROR_EVALSCORE);
         }
+    }
+
+    private boolean isGBTConvertToProb() {
+        return CommonConstants.GBT_ALG_NAME.equalsIgnoreCase(modelConfig.getTrain().getAlgorithm())
+                && evalConfig.getGbtConvertToProb();
     }
 
     @SuppressWarnings("deprecation")

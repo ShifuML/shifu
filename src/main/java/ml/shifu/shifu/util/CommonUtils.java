@@ -540,6 +540,21 @@ public final class CommonUtils {
         return low == 0 ? 0 : low - 1;
     }
 
+    public static List<BasicML> loadBasicModels(ModelConfig modelConfig, List<ColumnConfig> columnConfigList,
+            EvalConfig evalConfig, SourceType sourceType) throws IOException {
+        List<BasicML> models = new ArrayList<BasicML>();
+        FileSystem fs = ShifuFileUtils.getFileSystemBySourceType(sourceType);
+
+        List<FileStatus> modelFileStats = locateBasicModels(modelConfig, columnConfigList, evalConfig, sourceType);
+        if(CollectionUtils.isNotEmpty(modelFileStats)) {
+            for(FileStatus f: modelFileStats) {
+                models.add(loadModel(modelConfig, columnConfigList, f.getPath(), fs));
+            }
+        }
+
+        return models;
+    }
+
     /**
      * Load basic models from files.
      * 
@@ -551,14 +566,14 @@ public final class CommonUtils {
      *             if not HDFS or LOCAL source type or algorithm not supported.
      */
     public static List<BasicML> loadBasicModels(ModelConfig modelConfig, List<ColumnConfig> columnConfigList,
-            EvalConfig evalConfig, SourceType sourceType) throws IOException {
+            EvalConfig evalConfig, SourceType sourceType, boolean gbtConvertToProb) throws IOException {
         List<BasicML> models = new ArrayList<BasicML>();
         FileSystem fs = ShifuFileUtils.getFileSystemBySourceType(sourceType);
 
         List<FileStatus> modelFileStats = locateBasicModels(modelConfig, columnConfigList, evalConfig, sourceType);
-        if (CollectionUtils.isNotEmpty(modelFileStats)) {
-            for (FileStatus f : modelFileStats) {
-                models.add(loadModel(modelConfig, columnConfigList, f.getPath(), fs));
+        if(CollectionUtils.isNotEmpty(modelFileStats)) {
+            for(FileStatus f: modelFileStats) {
+                models.add(loadModel(modelConfig, columnConfigList, f.getPath(), fs, gbtConvertToProb));
             }
         }
 
@@ -566,7 +581,7 @@ public final class CommonUtils {
     }
 
     public static int getBasicModelsCnt(ModelConfig modelConfig, List<ColumnConfig> columnConfigList,
-        EvalConfig evalConfig, SourceType sourceType) throws IOException  {
+            EvalConfig evalConfig, SourceType sourceType) throws IOException {
         List<FileStatus> modelFileStats = locateBasicModels(modelConfig, columnConfigList, evalConfig, sourceType);
         return (CollectionUtils.isEmpty(modelFileStats) ? 0 : modelFileStats.size());
     }
@@ -599,6 +614,11 @@ public final class CommonUtils {
         return listStatus;
     }
 
+    public static BasicML loadModel(ModelConfig modelConfig, List<ColumnConfig> columnConfigList, Path modelPath,
+            FileSystem fs) throws IOException {
+        return loadModel(modelConfig, columnConfigList, modelPath, fs, false);
+    }
+
     /**
      * Loading model according to existing model path.
      * 
@@ -613,7 +633,7 @@ public final class CommonUtils {
      *             if any exception to load model object and cast to {@link BasicNetwork}
      */
     public static BasicML loadModel(ModelConfig modelConfig, List<ColumnConfig> columnConfigList, Path modelPath,
-            FileSystem fs) throws IOException {
+            FileSystem fs, boolean gbtConvertToProb) throws IOException {
         if(!fs.exists(modelPath)) {
             // no such existing model, return null.
             return null;
@@ -629,7 +649,7 @@ public final class CommonUtils {
                 return LR.loadFromString(br.readLine());
             } else if(modelPath.getName().endsWith(CommonConstants.RF_ALG_NAME.toLowerCase())
                     || modelPath.getName().endsWith(CommonConstants.GBT_ALG_NAME.toLowerCase())) {
-                return TreeModel.loadFromStream(stream, columnConfigList);
+                return TreeModel.loadFromStream(stream, columnConfigList, gbtConvertToProb);
             } else {
                 return BasicML.class.cast(EncogDirectoryPersistence.loadObject(stream));
             }
