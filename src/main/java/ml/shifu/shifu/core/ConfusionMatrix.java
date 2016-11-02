@@ -37,12 +37,14 @@ import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
 import ml.shifu.shifu.core.dtrain.CommonConstants;
 import ml.shifu.shifu.core.dtrain.nn.NNConstants;
 import ml.shifu.shifu.core.eval.AreaUnderCurve;
+import ml.shifu.shifu.core.eval.GainChart;
 import ml.shifu.shifu.exception.ShifuErrorCode;
 import ml.shifu.shifu.exception.ShifuException;
 import ml.shifu.shifu.fs.PathFinder;
 import ml.shifu.shifu.fs.ShifuFileUtils;
 import ml.shifu.shifu.util.CommonUtils;
 import ml.shifu.shifu.util.Constants;
+import ml.shifu.shifu.util.Environment;
 import ml.shifu.shifu.util.HDFSUtils;
 import ml.shifu.shifu.util.JSONUtils;
 
@@ -134,8 +136,23 @@ public class ConfusionMatrix {
     }
 
     public void bufferedComputeConfusionMatrixAndPerformance(long pigPosTags, long pigNegTags, double pigPosWeightTags,
-            double pigNegWeightTags, long records) throws IOException {
+            double pigNegWeightTags, long records, int maxScore, int minScore) throws IOException {
+        log.info("Max score is {}, min score is {}", maxScore, minScore);
+
         PathFinder pathFinder = new PathFinder(modelConfig);
+
+        if(!CommonConstants.GBT_ALG_NAME.equalsIgnoreCase(modelConfig.getTrain().getAlgorithm())) {
+            // if not GBT model, NN/LR, are all 0-1000, only for GBT, maxScore and minScore may not be 1000 and 0
+            maxScore = 1000;
+            minScore = 0;
+        }
+
+        boolean gbtConvertToProb = isGBTConvertToProb();
+        if(gbtConvertToProb) {
+            log.debug(" set max score to 1000,raw  max is {}, raw min is {}", maxScore, minScore);
+            maxScore = 1000;
+            minScore = 0;
+        }
 
         SourceType sourceType = evalConfig.getDataSet().getSource();
 
@@ -148,12 +165,16 @@ public class ConfusionMatrix {
         List<PerformanceObject> FPRList = new ArrayList<PerformanceObject>(numBucket + 1);
         List<PerformanceObject> catchRateList = new ArrayList<PerformanceObject>(numBucket + 1);
         List<PerformanceObject> gainList = new ArrayList<PerformanceObject>(numBucket + 1);
+        // bucketing model score
+        List<PerformanceObject> modelScoreList = new ArrayList<PerformanceObject>(numBucket + 1);
 
         List<PerformanceObject> FPRWeightList = new ArrayList<PerformanceObject>(numBucket + 1);
         List<PerformanceObject> catchRateWeightList = new ArrayList<PerformanceObject>(numBucket + 1);
         List<PerformanceObject> gainWeightList = new ArrayList<PerformanceObject>(numBucket + 1);
 
-        int fpBin = 1, tpBin = 1, gainBin = 1, fpWeightBin = 1, tpWeightBin = 1, gainWeightBin = 1;
+        double binScore = (maxScore - minScore) * 1d / numBucket;
+
+        int fpBin = 1, tpBin = 1, gainBin = 1, fpWeightBin = 1, tpWeightBin = 1, gainWeightBin = 1, modelScoreBin = 1;
         double binCapacity = 1.0 / numBucket;
         PerformanceObject po = null;
         int i = 0;
@@ -172,7 +193,7 @@ public class ConfusionMatrix {
         prevCmo.setWeightedFp(0.0);
         prevCmo.setWeightedFn(pigPosWeightTags);
         prevCmo.setWeightedTn(pigNegWeightTags);
-        prevCmo.setScore(1000);
+        prevCmo.setScore(maxScore);
 
         po = PerformanceEvaluator.setPerformanceObject(prevCmo);
         // hit rate == NaN
@@ -189,6 +210,7 @@ public class ConfusionMatrix {
         FPRWeightList.add(po);
         catchRateWeightList.add(po);
         gainWeightList.add(po);
+        modelScoreList.add(po);
         for(Scanner scanner: scanners) {
             while(scanner.hasNext()) {
                 if((++cnt) % 100000 == 0) {
@@ -228,7 +250,8 @@ public class ConfusionMatrix {
                     }
                     continue;
                 }
-                if(cnt == 1 && CommonConstants.GBT_ALG_NAME.equalsIgnoreCase(modelConfig.getAlgorithm())) {
+                if(cnt == 1 && CommonConstants.GBT_ALG_NAME.equalsIgnoreCase(modelConfig.getAlgorithm())
+                        && !gbtConvertToProb) {
                     // for gbdt, the result maybe not in [0, 1], set first score to make the upper score bould clear
                     po.binLowestScore = score;
                 }
@@ -285,6 +308,11 @@ public class ConfusionMatrix {
                     po.binNum = gainWeightBin++;
                     gainWeightList.add(po);
                 }
+
+                if((maxScore - (int) (modelScoreBin * binScore)) >= score) {
+                    po.binNum = modelScoreBin++;
+                    modelScoreList.add(po);
+                }
                 i++;
                 prevCmo = cmo;
             }
@@ -319,6 +347,7 @@ public class ConfusionMatrix {
         result.weightedRoc = FPRWeightList;
         result.gains = gainList;
         result.weightedGains = gainWeightList;
+        result.modelScoreList = modelScoreList;
 
         // Calculate area under curve
         result.areaUnderRoc = AreaUnderCurve.ofRoc(result.roc);
@@ -333,12 +362,67 @@ public class ConfusionMatrix {
                     .getSource()), evalConfig.getDataSet().getSource());
             JSONUtils.writeValue(writer, result);
         } catch (IOException e) {
+            log.error("error", e);
+        } finally {
             IOUtils.closeQuietly(writer);
         }
+
+        String htmlGainChart = pathFinder.getEvalFilePath(evalConfig.getName(), evalConfig.getName()
+                + "_gainchart.html", SourceType.LOCAL);
+        log.info("Gain chart is generated in {}.", htmlGainChart);
+        GainChart gc = new GainChart();
+        gc.generateHtml(evalConfig, modelConfig, htmlGainChart, result);
+
+        String unitGainChartCsv = pathFinder.getEvalFilePath(evalConfig.getName(), evalConfig.getName()
+                + "_unit_wise_gainchart.csv", SourceType.LOCAL);
+        log.info("Unit-wise gain chart data is generated in {}.", unitGainChartCsv);
+        gc.generateCsv(evalConfig, modelConfig, unitGainChartCsv, result.gains);
+
+        if(isWeight) {
+            String weightedGainChartCsv = pathFinder.getEvalFilePath(evalConfig.getName(), evalConfig.getName()
+                    + "_weighted_gainchart.csv", SourceType.LOCAL);
+            log.info("Weighted gain chart data is generated in {}.", weightedGainChartCsv);
+            gc.generateCsv(evalConfig, modelConfig, weightedGainChartCsv, result.weightedGains);
+        }
+
+        String prCsvFile = pathFinder.getEvalFilePath(evalConfig.getName(), evalConfig.getName() + "_unit_wise_pr.csv",
+                SourceType.LOCAL);
+        log.info("Unit-wise pr data is generated in {}.", prCsvFile);
+        gc.generateCsv(evalConfig, modelConfig, prCsvFile, result.pr);
+
+        if(isWeight) {
+            String weightedPrCsvFile = pathFinder.getEvalFilePath(evalConfig.getName(), evalConfig.getName()
+                    + "_weighted_pr.csv", SourceType.LOCAL);
+            log.info("Weighted pr data is generated in {}.", weightedPrCsvFile);
+            gc.generateCsv(evalConfig, modelConfig, weightedPrCsvFile, result.weightedPr);
+        }
+
+        String rocCsvFile = pathFinder.getEvalFilePath(evalConfig.getName(), evalConfig.getName()
+                + "_unit_wise_roc.csv", SourceType.LOCAL);
+        log.info("Unit-wise roc data is generated in {}.", rocCsvFile);
+        gc.generateCsv(evalConfig, modelConfig, rocCsvFile, result.roc);
+
+        if(isWeight) {
+            String weightedRocCsvFile = pathFinder.getEvalFilePath(evalConfig.getName(), evalConfig.getName()
+                    + "_weighted_roc.csv", SourceType.LOCAL);
+            log.info("Weighted roc data is generated in {}.", weightedRocCsvFile);
+            gc.generateCsv(evalConfig, modelConfig, weightedRocCsvFile, result.weightedRoc);
+        }
+
+        String modelScoreGainChartCsv = pathFinder.getEvalFilePath(evalConfig.getName(), evalConfig.getName()
+                + "_modelscore_gainchart.csv", SourceType.LOCAL);
+        log.info("Model score gain chart data is generated in {}.", modelScoreGainChartCsv);
+        gc.generateCsv(evalConfig, modelConfig, modelScoreGainChartCsv, result.modelScoreList);
+
         if(cnt == 0) {
             log.error("No score read, the EvalScore did not genernate or is null file");
             throw new ShifuException(ShifuErrorCode.ERROR_EVALSCORE);
         }
+    }
+
+    private boolean isGBTConvertToProb() {
+        return CommonConstants.GBT_ALG_NAME.equalsIgnoreCase(modelConfig.getTrain().getAlgorithm())
+                && evalConfig.getGbtConvertToProb();
     }
 
     @SuppressWarnings("deprecation")

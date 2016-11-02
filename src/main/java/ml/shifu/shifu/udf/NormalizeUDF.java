@@ -55,7 +55,9 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
     private JexlContext weightContext;
     private DecimalFormat df = new DecimalFormat("#.######");
 
-    private String alg;
+    public static enum WarnInNormalizeUDF {
+        INVALID_TAG;
+    };
 
     // if current norm for only clean and not transform categorical and numeric value
     private boolean isForClean = false;
@@ -85,8 +87,6 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
         this.tags = super.modelConfig.getSetTags();
 
         log.debug("NormalizeUDF Initialized");
-
-        this.alg = this.modelConfig.getAlgorithm();
     }
 
     @SuppressWarnings("deprecation")
@@ -127,12 +127,17 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
             // check tag type.
             if(tagColumnNum == i) {
                 if(modelConfig.isRegression()) {
-                    String tagType = tagTypeCheck(super.posTagSet, super.negTagSet, rawTag);
-                    if(tagType == null) {
+                    int type = 0;
+                    if(super.posTagSet.contains(rawTag)) {
+                        type = 1;
+                    } else if(super.negTagSet.contains(rawTag)) {
+                        type = 0;
+                    } else {
                         log.error("Invalid data! The target value is not listed - " + rawTag);
+                        warn("Invalid data! The target value is not listed - " + rawTag, WarnInNormalizeUDF.INVALID_TAG);
                         return null;
                     }
-                    tuple.append(tagType);
+                    tuple.append(type);
                 } else {
                     int index = -1;
                     for(int j = 0; j < tags.size(); j++) {
@@ -159,13 +164,14 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
                     // for RF/GBT model, only clean data, not real do norm data
                     Double normVal = 0d;
                     if(config.isCategorical()) {
+                        // TODO using HashSet instead of ArrayList
                         int index = config.getBinCategory().indexOf(val);
                         if(index == -1) {
-                            // TODO use index to replace real category value, then in training only check index is OK
-                            // empty if missing value
-                            tuple.append("");
+                            // set null/invalid value to last bin, for categorical features, last bin is for invalid
+                            // value. index is config.getBinCategory().size()
+                            tuple.append(config.getBinCategory().size());
                         } else {
-                            tuple.append(val);
+                            tuple.append(index);
                         }
                     } else {
                         try {
@@ -225,28 +231,6 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
         return weight;
     }
 
-    /**
-     * Check tag type.
-     * 
-     * @param posTags
-     *            - positive tag list.
-     * @param negTags
-     *            - negtive tag list.
-     * @param rawTag
-     *            - raw tag string
-     * @return tag type String. Return "1" for positive tag. Return "0" for negtive tag. Return null for invalid tag.
-     */
-    public String tagTypeCheck(Set<String> posTags, Set<String> negTags, String rawTag) {
-        String type = null;
-        if(posTags.contains(rawTag)) {
-            type = "1";
-        } else if(negTags.contains(rawTag)) {
-            type = "0";
-        }
-
-        return type;
-    }
-
     public Schema outputSchema(Schema input) {
         try {
             StringBuilder schemaStr = new StringBuilder();
@@ -254,13 +238,15 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
             for(ColumnConfig config: columnConfigList) {
                 if(!config.isMeta() && config.isNumerical()) {
                     schemaStr.append(config.getColumnName() + ":float" + ",");
+                } else if(config.isTarget()) {
+                    schemaStr.append(config.getColumnName() + ":int" + ",");
                 } else {
-                    if(config.isCategorical() && CommonUtils.isDesicionTreeAlgorithm(this.alg)) {
-                        schemaStr.append(config.getColumnName() + ":chararray" + ",");
-                    } else if(config.isCategorical()) {
-                        schemaStr.append(config.getColumnName() + ":float" + ",");
+                    if(config.isCategorical() && this.isForClean) {
+                        // clean data for DT algorithms, only store index, short is ok while Pig only have int type
+                        schemaStr.append(config.getColumnName() + ":int" + ",");
                     } else {
-                        schemaStr.append(config.getColumnName() + ":chararray" + ",");
+                        // for others, set to float, no matter LR/NN categorical or filter out feature with null
+                        schemaStr.append(config.getColumnName() + ":float" + ",");
                     }
                 }
             }

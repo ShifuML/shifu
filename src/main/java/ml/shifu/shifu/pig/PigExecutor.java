@@ -79,7 +79,12 @@ public class PigExecutor {
      */
     public void submitJob(ModelConfig modelConfig, String pigScriptPath, Map<String, String> paramsMap)
             throws IOException {
-        submitJob(modelConfig, pigScriptPath, paramsMap, modelConfig.getDataSet().getSource());
+        submitJob(modelConfig, pigScriptPath, paramsMap, modelConfig.getDataSet().getSource(), null);
+    }
+
+    public void submitJob(ModelConfig modelConfig, String pigScriptPath, Map<String, String> paramsMap,
+            SourceType sourceType) throws IOException {
+        submitJob(modelConfig, pigScriptPath, paramsMap, sourceType, null);
     }
 
     /**
@@ -97,7 +102,7 @@ public class PigExecutor {
      *             throw IOException when loading the parameter from @ModelConfig
      */
     public void submitJob(ModelConfig modelConfig, String pigScriptPath, Map<String, String> paramsMap,
-            SourceType sourceType) throws IOException {
+            SourceType sourceType, Map<String, String> confMap) throws IOException {
         // Run Pig Scripts
         PigServer pigServer;
 
@@ -138,6 +143,12 @@ public class PigExecutor {
 
         for(Map.Entry<Object, Object> entry: Environment.getProperties().entrySet()) {
             if(CommonUtils.isHadoopConfigurationInjected(entry.getKey().toString())) {
+                pigServer.getPigContext().getProperties().put(entry.getKey(), entry.getValue());
+            }
+        }
+
+        if(confMap != null) {
+            for(Map.Entry<String, String> entry: confMap.entrySet()) {
                 pigServer.getPigContext().getProperties().put(entry.getKey(), entry.getValue());
             }
         }

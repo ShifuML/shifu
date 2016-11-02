@@ -548,6 +548,16 @@
                         "directive": "input",
                         "defval" : 10
                     }, {
+                        "name" : "MaxLeaves",
+                        "type" : "number",
+                        "directive": "input",
+                        "defval" : -1
+                    }, {
+                        "name" : "MaxBatchSplitSize",
+                        "type" : "number",
+                        "directive": "input",
+                        "defval" : -1
+                    }, {
                         "name" : "MinInstancesPerNode",
                         "type" : "number",
                         "directive": "input",
@@ -763,6 +773,11 @@
                 "type" : "number",
                 "directive": "input",
                 "defval" : 10
+             }, { 
+                "name": "gbtConvertToProb",
+                "type": "boolean",
+                "directive": "input",
+                "defval": false
             }, {
                 "name" : "performanceScoreSelector",
                 "type" : "text",

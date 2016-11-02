@@ -199,6 +199,10 @@ public interface Constants {
     public static final long EVAL_COUNTER_WEIGHT_SCALE = 1000l;
 
     public static final String COUNTER_RECORDS = "RECORDS";
+    
+    public static final String COUNTER_MAX_SCORE = "MAX_SCORE";
+    
+    public static final String COUNTER_MIN_SCORE = "MIN_SCORE";
 
     public static final String SHIFU_VARSELECT_SE_OUTPUT_NAME = "se";
 
@@ -209,5 +213,7 @@ public interface Constants {
     public static final String COLUMN_META_FOLDER_NAME = "columns";
 
     public static final String POST_TRAIN_OUTPUT_SCORE = "score";
+
+    public static final String SHIFU_EVAL_MAXMIN_SCORE_OUTPUT = "shifu.eval.maxmin.score.output";
 
 }

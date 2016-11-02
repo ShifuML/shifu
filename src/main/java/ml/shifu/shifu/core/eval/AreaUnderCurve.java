@@ -27,7 +27,6 @@ import ml.shifu.shifu.container.PerformanceObject;
  * Class for computing area under curve.
  * 
  * @author xiaobzheng (zheng.xiaobin.roubao@gmail.com)
- *
  */
 public final class AreaUnderCurve {
     
@@ -47,7 +46,7 @@ public final class AreaUnderCurve {
      * @param x1 x-coordinate of first point.
      * @param y1 y-coordinate of first point.
      * @param x2 x-coordinate of second point.
-     * @param y2 y-coordinatey of second point.
+     * @param y2 y-coordinate of second point.
      * @return trapezoid area.
      */
     public static double trapezoid(double x1, double y1, double x2, double y2) {

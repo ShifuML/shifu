@@ -15,20 +15,22 @@
  */
 package ml.shifu.shifu.container.obj;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
-import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
-import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
-import ml.shifu.shifu.fs.PathFinder;
-import ml.shifu.shifu.util.CommonUtils;
-import ml.shifu.shifu.util.Constants;
-import org.apache.commons.lang.StringUtils;
-import org.apache.hadoop.fs.Path;
-
 import java.io.File;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+
+import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
+import ml.shifu.shifu.fs.PathFinder;
+import ml.shifu.shifu.util.CommonUtils;
+import ml.shifu.shifu.util.Constants;
+
+import org.apache.commons.lang.StringUtils;
+import org.apache.hadoop.fs.Path;
+
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
 /**
  * EvalConfig class
@@ -43,6 +45,8 @@ public class EvalConfig {
     private String performanceScoreSelector = "mean";
     private String scoreMetaColumnNameFile;
     private Map<String, String> customPaths;
+
+    private Boolean gbtConvertToProb = Boolean.FALSE;
 
     /**
      * Cache meta columns to a list to avoid reading this file for several times
@@ -165,6 +169,21 @@ public class EvalConfig {
 
     public void setCustomPaths(Map<String, String> customPaths) {
         this.customPaths = customPaths;
+    }
+
+    /**
+     * @return the gbtConvertToProb
+     */
+    public Boolean getGbtConvertToProb() {
+        return gbtConvertToProb;
+    }
+
+    /**
+     * @param gbtConvertToProb
+     *            the gbtConvertToProb to set
+     */
+    public void setGbtConvertToProb(Boolean gbtConvertToProb) {
+        this.gbtConvertToProb = gbtConvertToProb;
     }
 
 }
