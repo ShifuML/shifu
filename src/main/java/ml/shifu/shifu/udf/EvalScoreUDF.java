@@ -103,7 +103,7 @@ public class EvalScoreUDF extends AbstractTrainerUDF<Tuple> {
             // here to initialize modelRunner, this is moved from constructor to here to avoid OOM in client side.
             // UDF in pig client will be initialized to get some metadata issues
             List<BasicML> models = CommonUtils.loadBasicModels(modelConfig, this.columnConfigList, evalConfig,
-                    evalConfig.getDataSet().getSource());
+                    evalConfig.getDataSet().getSource(), evalConfig.getGbtConvertToProb());
             modelRunner = new ModelRunner(modelConfig, columnConfigList, this.headers, evalConfig.getDataSet()
                     .getDataDelimiter(), models);
             modelCnt = models.size();

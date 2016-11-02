@@ -773,6 +773,11 @@
                 "type" : "number",
                 "directive": "input",
                 "defval" : 10
+             }, { 
+                "name": "gbtConvertToProb",
+                "type": "boolean",
+                "directive": "input",
+                "defval": false
             }, {
                 "name" : "performanceScoreSelector",
                 "type" : "text",
