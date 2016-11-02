@@ -70,36 +70,16 @@ public class TreeModel extends BasicML implements MLRegression {
 
     private String lossStr;
 
-    public TreeModel(List<TreeNode> trees, List<Double> weights, boolean isGBDT, List<ColumnConfig> columnConfigList) {
-        this.trees = trees;
-        this.weights = weights;
-        assert trees != null && weights != null && trees.size() == weights.size();
-        this.isGBDT = isGBDT;
-        this.columnConfigList = columnConfigList;
-        this.columnMapping = new HashMap<Integer, Integer>(columnConfigList.size(), 1f);
-        int[] inputOutputIndex = DTrainUtils.getNumericAndCategoricalInputAndOutputCounts(this.columnConfigList);
-        boolean isAfterVarSelect = inputOutputIndex[3] == 1 ? true : false;
-        int index = 0;
-        for(int i = 0; i < columnConfigList.size(); i++) {
-            ColumnConfig columnConfig = columnConfigList.get(i);
-            if(isAfterVarSelect) {
-                if(!columnConfig.isMeta() && !columnConfig.isTarget() && CommonUtils.isGoodCandidate(columnConfig)) {
-                    this.columnMapping.put(columnConfig.getColumnNum(), index);
-                    index += 1;
-                }
-            } else {
-                if(columnConfig != null && !columnConfig.isMeta() && !columnConfig.isTarget()
-                        && columnConfig.isFinalSelect()) {
-                    this.columnMapping.put(columnConfig.getColumnNum(), index);
-                    index += 1;
-                }
-            }
-        }
-        this.inputNode = index;
-    }
+    private boolean isCovertToProb = false;
 
     public TreeModel(List<TreeNode> trees, List<Double> weights, boolean isGBDT, List<ColumnConfig> columnConfigList,
             Map<Integer, Integer> columnMapping, boolean isClassfication, String algorithm, String lossStr) {
+        this(trees, weights, isGBDT, columnConfigList, columnMapping, isClassfication, algorithm, lossStr, false);
+    }
+
+    public TreeModel(List<TreeNode> trees, List<Double> weights, boolean isGBDT, List<ColumnConfig> columnConfigList,
+            Map<Integer, Integer> columnMapping, boolean isClassfication, String algorithm, String lossStr,
+            boolean isCovertToProb) {
         this.trees = trees;
         this.weights = weights;
         assert trees != null && weights != null && trees.size() == weights.size();
@@ -110,6 +90,8 @@ public class TreeModel extends BasicML implements MLRegression {
         this.isClassification = isClassfication;
         this.algorithm = algorithm;
         this.lossStr = lossStr;
+        // only works well in GBDT regression, onevsall is also treated as regression and isClassification is true
+        this.isCovertToProb = this.isGBDT && !this.isClassification && isCovertToProb;
     }
 
     @Override
@@ -133,7 +115,11 @@ public class TreeModel extends BasicML implements MLRegression {
         } else {
             double finalPredict;
             if(this.isGBDT) {
-                finalPredict = predictSum;
+                if(this.isCovertToProb) {
+                    finalPredict = covertToProb(predictSum);
+                } else {
+                    finalPredict = predictSum;
+                }
             } else {
                 finalPredict = predictSum / weightSum;
             }
@@ -141,6 +127,11 @@ public class TreeModel extends BasicML implements MLRegression {
             result.setData(0, finalPredict);
         }
         return result;
+    }
+
+    private double covertToProb(double score) {
+        // sigmoid function to covert to [0, 1], TODO tune such function to get better [0, 1]
+        return 1 / (1 + Math.min(1.0E19, Math.exp(-(score - 2.0602792296384576d))));
     }
 
     private double predictNode(Node topNode, double[] data) {
