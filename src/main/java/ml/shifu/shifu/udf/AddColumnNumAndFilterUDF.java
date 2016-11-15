@@ -25,11 +25,9 @@ import ml.shifu.shifu.exception.ShifuErrorCode;
 import ml.shifu.shifu.exception.ShifuException;
 import ml.shifu.shifu.util.Constants;
 
-import org.apache.pig.data.BagFactory;
-import org.apache.pig.data.DataBag;
-import org.apache.pig.data.DataType;
-import org.apache.pig.data.Tuple;
-import org.apache.pig.data.TupleFactory;
+import org.apache.commons.lang.StringUtils;
+import org.apache.pig.backend.executionengine.ExecException;
+import org.apache.pig.data.*;
 import org.apache.pig.impl.logicalLayer.schema.Schema;
 import org.apache.pig.impl.logicalLayer.schema.Schema.FieldSchema;
 import org.apache.pig.tools.pigstats.PigStatusReporter;
@@ -46,11 +44,12 @@ import org.apache.pig.tools.pigstats.PigStatusReporter;
  */
 public class AddColumnNumAndFilterUDF extends AbstractTrainerUDF<DataBag> {
 
-    private static final int TOTAL_COLUMN_CNT   = 4;
+    private static final int TOTAL_COLUMN_CNT   = 5;
     private static final int COLUMN_ID_INDX     = 0;
     private static final int COLUMN_VAL_INDX    = 1;
     private static final int COLUMN_TAG_INDX    = 2;
     private static final int COLUMN_SEED_INDX   = 3;
+    private static final int COLUMN_WEIGHT_INDX = 4;
 
 
     private Random random = new Random(System.currentTimeMillis());
@@ -149,10 +148,32 @@ public class AddColumnNumAndFilterUDF extends AbstractTrainerUDF<DataBag> {
                 if(this.isAppendRandom) {
                     tuple.set(COLUMN_SEED_INDX, Math.abs(random.nextInt() % 300));
                 }
+
+                // get weight value
+                tuple.set(COLUMN_WEIGHT_INDX, getWeightValue(input));
+
                 bag.add(tuple);
             }
         }
         return bag;
+    }
+
+    private double getWeightValue(Tuple input){
+        double weight = 1.0;
+        if(StringUtils.isNotBlank(modelConfig.getWeightColumnName())) {
+            for(ColumnConfig columnConfig: columnConfigList) {
+                if(columnConfig.getColumnName().equalsIgnoreCase(modelConfig.getWeightColumnName().trim())) {
+                    int columnId = columnConfig.getColumnNum();
+                    try {
+                        weight = Double.parseDouble(((DataByteArray) input.get(columnId)).toString());
+                    } catch (ExecException ignore) {
+                    }
+                    break;
+                }
+            }
+        }
+
+        return weight;
     }
 
     @Override
@@ -176,17 +197,23 @@ public class AddColumnNumAndFilterUDF extends AbstractTrainerUDF<DataBag> {
     private boolean isValidRecord(boolean isBinary, boolean isPositive, ColumnConfig columnConfig) {
         if(isBinary) {
             return columnConfig != null
-                    && ( columnConfig.isCategorical()
-                        || modelConfig.getBinningAlgorithm().equals(ModelStatsConf.BinningAlgorithm.DynamicBinning)
-                        || modelConfig.getBinningMethod().equals(BinningMethod.EqualTotal)
-                        || modelConfig.getBinningMethod().equals(BinningMethod.EqualInterval)
-                        || (modelConfig.getBinningMethod().equals(BinningMethod.EqualPositive) && isPositive)
-                        || (modelConfig.getBinningMethod().equals(BinningMethod.EqualNegtive) && !isPositive));
+                    && (columnConfig.isCategorical()
+                    || modelConfig.getBinningAlgorithm().equals(ModelStatsConf.BinningAlgorithm.DynamicBinning)
+                    || modelConfig.getBinningMethod().equals(BinningMethod.EqualTotal)
+                    || modelConfig.getBinningMethod().equals(BinningMethod.EqualInterval)
+                    || (modelConfig.getBinningMethod().equals(BinningMethod.EqualPositive) && isPositive)
+                    || (modelConfig.getBinningMethod().equals(BinningMethod.EqualNegtive) && !isPositive)
+                    || modelConfig.getBinningMethod().equals(BinningMethod.WeightTotal)
+                    || modelConfig.getBinningMethod().equals(BinningMethod.WeightInterval)
+                    || (modelConfig.getBinningMethod().equals(BinningMethod.WeightPositive) && isPositive)
+                    || (modelConfig.getBinningMethod().equals(BinningMethod.WeightNegative) && !isPositive));
         } else {
             return columnConfig != null
                     && ( columnConfig.isCategorical()
-                        || modelConfig.getBinningMethod().equals(BinningMethod.EqualTotal)
-                        || modelConfig.getBinningMethod().equals(BinningMethod.EqualInterval));
+                    || modelConfig.getBinningMethod().equals(BinningMethod.EqualTotal)
+                    || modelConfig.getBinningMethod().equals(BinningMethod.EqualInterval)
+                    || modelConfig.getBinningMethod().equals(BinningMethod.WeightTotal)
+                    || modelConfig.getBinningMethod().equals(BinningMethod.WeightInterval));
         }
     }
 }

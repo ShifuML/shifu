@@ -170,7 +170,11 @@
                     {"label": "Equal Negative", "value":"EqualNegative"},
                     {"label": "Equal Positive", "value":"EqualPositive"},
                     {"label": "Equal Total", "value":"EqualTotal"},
-                    {"label": "Equal Interval", "value":"EqualInterval"}
+                    {"label": "Equal Interval", "value":"EqualInterval"},
+                    {"label": "Weight Negative", "value":"WeightNegative"},
+                    {"label": "Weight Positive", "value":"WeightPositive"},
+                    {"label": "Weight Total", "value":"WeightTotal"},
+                    {"label": "Weight Interval", "value":"WeightInterval"}
                 ]
             }, {
                 "name": "sampleRate",
