@@ -138,7 +138,7 @@ public class AddColumnNumUDF extends AbstractTrainerUDF<DataBag> {
                 if(columnConfig.getColumnName().equalsIgnoreCase(modelConfig.getWeightColumnName().trim())) {
                     int columnId = columnConfig.getColumnNum();
                     try {
-                        weight = Double.parseDouble(((DataByteArray) input.get(columnId)).toString());
+                        weight = Double.parseDouble(String.valueOf(input.get(columnId)));
                     } catch (ExecException ignore) {
                     }
                     break;
