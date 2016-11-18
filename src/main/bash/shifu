@@ -108,7 +108,7 @@ case "`uname`" in
     CYGWIN*) cygwin=true;;
 esac
 
-JAVA_OPTIONS=${SHIFU_OPTS:=-server -Xms1G -Xmx2G -XX:+UseParallelGC -XX:+UseParallelOldGC -XX:ParallelGCThreads=8 -verbose:gc -XX:+PrintGCDetails -XX:+PrintGCTimeStamps}
+JAVA_OPTIONS=${SHIFU_OPTS:=-server -Xms1G -Xmx2G}
 
 PIG_OPTIONS="${PIG_OPTIONS} -Dmapred.map.tasks.speculative.execution=true"
 PIG_OPTIONS="${PIG_OPTIONS} -Dmapred.reduce.tasks.speculative.execution=true"
