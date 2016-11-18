@@ -158,10 +158,10 @@ class Variance extends Impurity {
                     leftCategories.add(config.getBinCategory().get(index));
                 }
                 // new hash set to copy a new one avoid share object issue
-                split = new Split(config.getColumnNum(), FeatureType.CATEGORICAL, 0d, new HashSet<String>(
+                split = new Split(config.getColumnNum(),config.getColumnName(),  FeatureType.CATEGORICAL, 0d, new HashSet<String>(
                         leftCategories));
             } else {
-                split = new Split(config.getColumnNum(), FeatureType.CONTINUOUS,
+                split = new Split(config.getColumnNum(),config.getColumnName(),  FeatureType.CONTINUOUS,
                         config.getBinBoundary().get(index + 1), null);
             }
 
@@ -288,10 +288,10 @@ class FriedmanMSE extends Variance {
                     leftCategories.add(config.getBinCategory().get(index));
                 }
                 // new hash set to copy a new one avoid share object issue
-                split = new Split(config.getColumnNum(), FeatureType.CATEGORICAL, 0d, new HashSet<String>(
+                split = new Split(config.getColumnNum(),config.getColumnName(), FeatureType.CATEGORICAL, 0d, new HashSet<String>(
                         leftCategories));
             } else {
-                split = new Split(config.getColumnNum(), FeatureType.CONTINUOUS,
+                split = new Split(config.getColumnNum(),config.getColumnName(),  FeatureType.CONTINUOUS,
                         config.getBinBoundary().get(index + 1), null);
             }
 
@@ -388,10 +388,10 @@ class Entropy extends Impurity {
                     leftCategories.add(config.getBinCategory().get(index));
                 }
                 // new hash set to copy a new one avoid share object issue
-                split = new Split(config.getColumnNum(), FeatureType.CATEGORICAL, 0d, new HashSet<String>(
+                split = new Split(config.getColumnNum(), config.getColumnName(), FeatureType.CATEGORICAL, 0d, new HashSet<String>(
                         leftCategories));
             } else {
-                split = new Split(config.getColumnNum(), FeatureType.CONTINUOUS,
+                split = new Split(config.getColumnNum(),config.getColumnName(),  FeatureType.CONTINUOUS,
                         config.getBinBoundary().get(index + 1), null);
             }
 
@@ -551,10 +551,10 @@ class Gini extends Impurity {
                     leftCategories.add(config.getBinCategory().get(index));
                 }
                 // new hash set to copy a new one avoid share object issue
-                split = new Split(config.getColumnNum(), FeatureType.CATEGORICAL, 0d, new HashSet<String>(
+                split = new Split(config.getColumnNum(),config.getColumnName(),  FeatureType.CATEGORICAL, 0d, new HashSet<String>(
                         leftCategories));
             } else {
-                split = new Split(config.getColumnNum(), FeatureType.CONTINUOUS,
+                split = new Split(config.getColumnNum(),config.getColumnName(),  FeatureType.CONTINUOUS,
                         config.getBinBoundary().get(index + 1), null);
             }
 

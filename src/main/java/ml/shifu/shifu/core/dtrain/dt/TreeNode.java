@@ -19,7 +19,9 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import ml.shifu.guagua.io.Bytable;
 
@@ -147,6 +149,37 @@ public class TreeNode implements Bytable {
         this.treeId = in.readInt();
         this.node = new Node();
         this.node.readFields(in);
+    }
+    
+    public Map<Integer,org.apache.commons.lang3.tuple.Pair<String,Double>> computeFeatureImportance(){
+        Map<Integer,org.apache.commons.lang3.tuple.Pair<String,Double>> importances = new HashMap<Integer,org.apache.commons.lang3.tuple.Pair<String,Double>>();
+        preOrder(importances,node);
+        return null;
+    }
+    
+    private void preOrder(Map<Integer,org.apache.commons.lang3.tuple.Pair<String,Double>> importances,Node node){
+        if(node==null){
+            return;
+        }
+        computeImportance(importances,node);
+        preOrder(importances,node.getLeft());
+        preOrder(importances,node.getRight());
+    }
+    
+    private void computeImportance(Map<Integer,org.apache.commons.lang3.tuple.Pair<String,Double>> importances,Node node){
+        if(!node.isLeaf()){
+            int featureId = node.getSplit().getColumnNum();
+            String featureName = node.getSplit().getColumnName();
+            org.apache.commons.lang3.tuple.Pair<String,Double> value = org.apache.commons.lang3.tuple.Pair.of(featureName, node.getGain());
+            if(!importances.containsKey(featureId)){
+                importances.put(featureId, value);
+            }else{
+                double importance = importances.get(featureId).getRight();
+                importance+=node.getGain();
+                value.setValue(importance);
+                importances.put(featureId, value);
+            }
+        }
     }
 
     /* (non-Javadoc)

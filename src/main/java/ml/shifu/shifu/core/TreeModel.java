@@ -22,6 +22,13 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
+
+import org.apache.commons.lang3.tuple.Pair;
+import org.encog.ml.BasicML;
+import org.encog.ml.MLRegression;
+import org.encog.ml.data.MLData;
+import org.encog.ml.data.basic.BasicMLData;
 
 import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.container.obj.ModelConfig;
@@ -31,11 +38,6 @@ import ml.shifu.shifu.core.dtrain.dt.Node;
 import ml.shifu.shifu.core.dtrain.dt.Split;
 import ml.shifu.shifu.core.dtrain.dt.TreeNode;
 import ml.shifu.shifu.util.CommonUtils;
-
-import org.encog.ml.BasicML;
-import org.encog.ml.MLRegression;
-import org.encog.ml.data.MLData;
-import org.encog.ml.data.basic.BasicMLData;
 
 /**
  * {@link TreeModel} is to load Random Forest or Gradient Boosted Decision Tree models.
@@ -343,6 +345,26 @@ public class TreeModel extends BasicML implements MLRegression {
      */
     public void setLossStr(String lossStr) {
         this.lossStr = lossStr;
+    }
+    
+    public Map<Integer,Pair<String,Double>> getFeatureImportances(){
+        Map<Integer,Pair<String,Double>> importancesSum = new HashMap<Integer,Pair<String,Double>>();
+        int size = this.trees.size();
+        for(TreeNode tree:this.trees){
+            Map<Integer,Pair<String,Double>> subImportances = tree.computeFeatureImportance();
+            for(Entry<Integer,Pair<String,Double>> entry:subImportances.entrySet()){
+                Pair<String,Double> importance = entry.getValue();
+                if(!importancesSum.containsKey(entry.getKey())){
+                    importance.setValue(importance.getValue()/size);
+                    importancesSum.put(entry.getKey(), importance);
+                }else{
+                    Pair<String,Double> current = importancesSum.get(entry.getKey());
+                    current.setValue(current.getValue()+importance.getValue()/size);
+                    importancesSum.put(entry.getKey(), current);
+                }
+            }
+        }
+        return importancesSum;
     }
 
 }
