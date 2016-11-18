@@ -15,11 +15,42 @@
  */
 package ml.shifu.shifu.core.processor;
 
+import java.io.BufferedWriter;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Scanner;
+
+import org.apache.commons.collections.ListUtils;
+import org.apache.commons.compress.compressors.bzip2.BZip2CompressorInputStream;
+import org.apache.commons.io.IOUtils;
+import org.apache.commons.jexl2.JexlException;
+import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang3.tuple.Pair;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.io.LongWritable;
+import org.apache.hadoop.io.Text;
+import org.apache.hadoop.mapreduce.Job;
+import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
+import org.apache.hadoop.mapreduce.lib.map.MultithreadedMapper;
+import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
+import org.apache.hadoop.mapreduce.lib.output.MultipleOutputs;
+import org.apache.hadoop.mapreduce.lib.output.TextOutputFormat;
+import org.apache.hadoop.util.GenericOptionsParser;
+import org.apache.pig.impl.util.JarManager;
+import org.apache.zookeeper.ZooKeeper;
+import org.encog.ml.data.MLDataSet;
+import org.jboss.netty.bootstrap.ServerBootstrap;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.core.JsonParser;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.base.Splitter;
 
 import ml.shifu.guagua.GuaguaConstants;
 import ml.shifu.guagua.hadoop.util.HDPUtils;
@@ -28,6 +59,7 @@ import ml.shifu.guagua.mapreduce.GuaguaMapReduceConstants;
 import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
 import ml.shifu.shifu.core.AbstractTrainer;
+import ml.shifu.shifu.core.TreeModel;
 import ml.shifu.shifu.core.VariableSelector;
 import ml.shifu.shifu.core.alg.NNTrainer;
 import ml.shifu.shifu.core.dtrain.CommonConstants;
@@ -52,34 +84,6 @@ import ml.shifu.shifu.fs.ShifuFileUtils;
 import ml.shifu.shifu.util.CommonUtils;
 import ml.shifu.shifu.util.Constants;
 import ml.shifu.shifu.util.Environment;
-
-import org.apache.commons.collections.ListUtils;
-import org.apache.commons.compress.compressors.bzip2.BZip2CompressorInputStream;
-import org.apache.commons.jexl2.JexlException;
-import org.apache.commons.lang.StringUtils;
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FileStatus;
-import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.io.LongWritable;
-import org.apache.hadoop.io.Text;
-import org.apache.hadoop.mapreduce.Job;
-import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
-import org.apache.hadoop.mapreduce.lib.map.MultithreadedMapper;
-import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
-import org.apache.hadoop.mapreduce.lib.output.MultipleOutputs;
-import org.apache.hadoop.mapreduce.lib.output.TextOutputFormat;
-import org.apache.hadoop.util.GenericOptionsParser;
-import org.apache.pig.impl.util.JarManager;
-import org.apache.zookeeper.ZooKeeper;
-import org.encog.ml.data.MLDataSet;
-import org.jboss.netty.bootstrap.ServerBootstrap;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import com.fasterxml.jackson.annotation.JsonIgnore;
-import com.fasterxml.jackson.core.JsonParser;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.base.Splitter;
 
 /**
  * Variable selection processor, select the variable based on KS/IV value, or </p>
@@ -158,6 +162,26 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
                         } else if(Constants.WRAPPER_BY_VOTED
                                 .equalsIgnoreCase(modelConfig.getVarSelect().getWrapperBy())) {
                             votedVariablesSelection();
+                        }
+                        else if(Constants.WRAPPER_BY_FI.equalsIgnoreCase(modelConfig.getVarSelect().getWrapperBy())){
+                            if(alg.equals(CommonConstants.RF_ALG_NAME)||alg.equals(CommonConstants.GBT_ALG_NAME)){
+                                TreeModel model = (TreeModel) (CommonUtils.loadBasicModels(this.modelConfig, this.columnConfigList, null).get(0));
+                                Map<Integer,Pair<String,Double>> importances = model.getFeatureImportances();
+                                BufferedWriter writer =  ShifuFileUtils.getWriter(this.pathFinder.getModelSetPath(SourceType.LOCAL)+"/model0",SourceType.LOCAL);
+                                try{
+                                writer.write("column_id\tcolumn_name\timportance");
+                                writer.newLine();
+                                for(Map.Entry<Integer,Pair<String,Double>> entry:importances.entrySet()){
+                                    String content = entry.getKey()+"\t"+entry.getValue().getKey()+"\t"+entry.getValue().getValue();
+                                    writer.write(content);
+                                    writer.newLine();
+                                }
+                                writer.flush();
+                                }finally{
+                                    IOUtils.closeQuietly(writer);
+                                }
+                                
+                           }
                         }
                     } else {
                         // local wrapper mode: old

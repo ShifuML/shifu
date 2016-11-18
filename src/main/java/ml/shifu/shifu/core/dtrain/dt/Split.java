@@ -44,16 +44,19 @@ public class Split implements Bytable {
     private double threshold;
 
     private Set<String> leftCategories;
+    
+    private String columnName;
 
     public Split() {
     }
 
-    public Split(int featureIndex) {
+    public Split(int featureIndex,String featureName) {
         this.columnNum = featureIndex;
     }
 
-    public Split(int columnNum, FeatureType featureType, double threshold, Set<String> leftCategories) {
+    public Split(int columnNum,String columnName, FeatureType featureType, double threshold, Set<String> leftCategories) {
         this.columnNum = columnNum;
+        this.columnName = columnName;
         this.featureType = featureType;
         this.threshold = threshold;
         this.leftCategories = leftCategories;
@@ -64,6 +67,13 @@ public class Split implements Bytable {
      */
     public int getColumnNum() {
         return columnNum;
+    }
+    
+    /**
+     * @return the featureName
+     */
+    public String getColumnName() {
+        return columnName;
     }
 
     /**
@@ -109,6 +119,10 @@ public class Split implements Bytable {
      */
     public void setThreshold(double threshold) {
         this.threshold = threshold;
+    }
+    
+    public void setColumnName(String columnName) {
+        this.columnName = columnName;
     }
 
     /**

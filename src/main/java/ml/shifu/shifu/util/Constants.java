@@ -183,6 +183,8 @@ public interface Constants {
     public static final String WRAPPER_BY_SE = "SE";
 
     public static final String WRAPPER_BY_VOTED = "V";
+    
+    public static final String WRAPPER_BY_FI = "FI";
 
     public static final float SHIFU_DEFAULT_VARSELECT_WRAPPER_RATIO = 0.05f;
 

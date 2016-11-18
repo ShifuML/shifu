@@ -1,0 +1,961 @@
+[ {
+  "columnNum" : 0,
+  "columnName" : "id",
+  "version" : "0.2.0",
+  "columnType" : null,
+  "columnFlag" : "Meta",
+  "finalSelect" : false,
+  "columnStats" : {
+    "max" : null,
+    "min" : null,
+    "mean" : null,
+    "median" : null,
+    "totalCount" : null,
+    "missingCount" : null,
+    "stdDev" : null,
+    "missingPercentage" : null,
+    "ks" : null,
+    "iv" : null
+  },
+  "columnBinning" : {
+    "length" : 0,
+    "binBoundary" : null,
+    "binCategory" : null,
+    "binCountNeg" : null,
+    "binCountPos" : null,
+    "binPosRate" : null,
+    "binAvgScore" : null,
+    "binWeightedNeg" : null,
+    "binWeightedPos" : null
+  }
+}, {
+  "columnNum" : 1,
+  "columnName" : "diagnosis",
+  "version" : "0.2.0",
+  "columnType" : null,
+  "columnFlag" : "Target",
+  "finalSelect" : false,
+  "columnStats" : {
+    "max" : null,
+    "min" : null,
+    "mean" : null,
+    "median" : null,
+    "totalCount" : null,
+    "missingCount" : null,
+    "stdDev" : null,
+    "missingPercentage" : null,
+    "ks" : null,
+    "iv" : null
+  },
+  "columnBinning" : {
+    "length" : 0,
+    "binBoundary" : null,
+    "binCategory" : null,
+    "binCountNeg" : null,
+    "binCountPos" : null,
+    "binPosRate" : null,
+    "binAvgScore" : null,
+    "binWeightedNeg" : null,
+    "binWeightedPos" : null
+  }
+}, {
+  "columnNum" : 2,
+  "columnName" : "mean_radius",
+  "version" : "0.2.0",
+  "columnType" : "N",
+  "columnFlag" : null,
+  "finalSelect" : true,
+  "columnStats" : {
+    "max" : 28.11,
+    "min" : 6.981,
+    "mean" : 14.006767,
+    "median" : 13.0,
+    "totalCount" : 365,
+    "missingCount" : 0,
+    "stdDev" : 3.537251,
+    "missingPercentage" : 0.0,
+    "ks" : 70.976753,
+    "iv" : 10.37193
+  },
+  "columnBinning" : {
+    "length" : 10,
+    "binBoundary" : [ "-Infinity", 13.492407864951344, 14.504, 15.397, 16.15713664654969, 17.235, 18.066225669551756, 19.252, 20.186, 20.721 ],
+    "binCategory" : null,
+    "binCountNeg" : [ 179, 29, 15, 1, 4, 1, 0, 0, 0, 0 ],
+    "binCountPos" : [ 14, 13, 14, 13, 14, 14, 13, 14, 13, 14 ],
+    "binPosRate" : [ 0.07253886010362694, 0.30952380952380953, 0.4827586206896552, 0.9285714285714286, 0.7777777777777778, 0.9333333333333333, 1.0, 1.0, 1.0, 1.0 ],
+    "binAvgScore" : null,
+    "binWeightedNeg" : [ 179.0, 29.0, 15.0, 1.0, 4.0, 1.0, 0.0, 0.0, 0.0, 0.0 ],
+    "binWeightedPos" : [ 14.0, 13.0, 14.0, 13.0, 14.0, 14.0, 13.0, 14.0, 13.0, 14.0 ]
+  }
+}, {
+  "columnNum" : 3,
+  "columnName" : "mean_texture",
+  "version" : "0.2.0",
+  "columnType" : "N",
+  "columnFlag" : null,
+  "finalSelect" : true,
+  "columnStats" : {
+    "max" : 39.28,
+    "min" : 9.71,
+    "mean" : 19.251644,
+    "median" : 18.52,
+    "totalCount" : 365,
+    "missingCount" : 0,
+    "stdDev" : 4.48223,
+    "missingPercentage" : 0.0,
+    "ks" : 44.77588,
+    "iv" : 1.18491
+  },
+  "columnBinning" : {
+    "length" : 10,
+    "binBoundary" : [ "-Infinity", 17.133, 18.505, 19.384, 20.278000000000002, 21.295, 21.976999999999997, 23.054, 24.499, 26.804 ],
+    "binCategory" : null,
+    "binCountNeg" : [ 106, 42, 22, 14, 9, 10, 5, 2, 6, 13 ],
+    "binCountPos" : [ 14, 13, 14, 13, 14, 14, 13, 14, 13, 14 ],
+    "binPosRate" : [ 0.11666666666666667, 0.23636363636363636, 0.3888888888888889, 0.48148148148148145, 0.6086956521739131, 0.5833333333333334, 0.7222222222222222, 0.875, 0.6842105263157895, 0.5185185185185185 ],
+    "binAvgScore" : null,
+    "binWeightedNeg" : [ 106.0, 42.0, 22.0, 14.0, 9.0, 10.0, 5.0, 2.0, 6.0, 13.0 ],
+    "binWeightedPos" : [ 14.0, 13.0, 14.0, 13.0, 14.0, 14.0, 13.0, 14.0, 13.0, 14.0 ]
+  }
+}, {
+  "columnNum" : 4,
+  "columnName" : "mean_perimeter",
+  "version" : "0.2.0",
+  "columnType" : "N",
+  "columnFlag" : null,
+  "finalSelect" : true,
+  "columnStats" : {
+    "max" : 188.5,
+    "min" : 43.79,
+    "mean" : 91.084411,
+    "median" : 85.09,
+    "totalCount" : 365,
+    "missingCount" : 0,
+    "stdDev" : 24.265069,
+    "missingPercentage" : 0.0,
+    "ks" : 72.723478,
+    "iv" : 10.480852
+  },
+  "columnBinning" : {
+    "length" : 10,
+    "binBoundary" : [ "-Infinity", 87.789, 95.307, 102.53, 107.46, 112.9, 119.11999999999999, 126.99000000000001, 132.85894663844041, 137.86334368540005 ],
+    "binCategory" : null,
+    "binCountNeg" : [ 185, 27, 11, 4, 1, 1, 0, 0, 0, 0 ],
+    "binCountPos" : [ 14, 13, 14, 13, 14, 14, 13, 13, 15, 13 ],
+    "binPosRate" : [ 0.07035175879396985, 0.325, 0.56, 0.7647058823529411, 0.9333333333333333, 0.9333333333333333, 1.0, 1.0, 1.0, 1.0 ],
+    "binAvgScore" : null,
+    "binWeightedNeg" : [ 185.0, 27.0, 11.0, 4.0, 1.0, 1.0, 0.0, 0.0, 0.0, 0.0 ],
+    "binWeightedPos" : [ 14.0, 13.0, 14.0, 13.0, 14.0, 14.0, 13.0, 13.0, 15.0, 13.0 ]
+  }
+}, {
+  "columnNum" : 5,
+  "columnName" : "mean_area",
+  "version" : "0.2.0",
+  "columnType" : "N",
+  "columnFlag" : null,
+  "finalSelect" : true,
+  "columnStats" : {
+    "max" : 2499.0,
+    "min" : 143.5,
+    "mean" : 644.925479,
+    "median" : 530.6,
+    "totalCount" : 365,
+    "missingCount" : 0,
+    "stdDev" : 349.498295,
+    "missingPercentage" : 0.0,
+    "ks" : 70.976753,
+    "iv" : 10.364254
+  },
+  "columnBinning" : {
+    "length" : 10,
+    "binBoundary" : [ "-Infinity", 566.12, 653.54, 733.75, 809.54, 929.0999999999999, 1008.9999999999999, 1149.9, 1261.2, 1334.1000000000001 ],
+    "binCategory" : null,
+    "binCountNeg" : [ 182, 26, 15, 2, 3, 1, 0, 0, 0, 0 ],
+    "binCountPos" : [ 14, 13, 14, 13, 14, 14, 13, 14, 13, 14 ],
+    "binPosRate" : [ 0.07142857142857142, 0.3333333333333333, 0.4827586206896552, 0.8666666666666667, 0.8235294117647058, 0.9333333333333333, 1.0, 1.0, 1.0, 1.0 ],
+    "binAvgScore" : null,
+    "binWeightedNeg" : [ 182.0, 26.0, 15.0, 2.0, 3.0, 1.0, 0.0, 0.0, 0.0, 0.0 ],
+    "binWeightedPos" : [ 14.0, 13.0, 14.0, 13.0, 14.0, 14.0, 13.0, 14.0, 13.0, 14.0 ]
+  }
+}, {
+  "columnNum" : 6,
+  "columnName" : "mean_smoothness",
+  "version" : "0.2.0",
+  "columnType" : "N",
+  "columnFlag" : null,
+  "finalSelect" : false,
+  "columnStats" : {
+    "max" : 0.1634,
+    "min" : 0.05263,
+    "mean" : 0.096835,
+    "median" : 0.09586,
+    "totalCount" : 365,
+    "missingCount" : 0,
+    "stdDev" : 0.013868,
+    "missingPercentage" : 0.0,
+    "ks" : 32.735037,
+    "iv" : 0.602506
+  },
+  "columnBinning" : {
+    "length" : 10,
+    "binBoundary" : [ "-Infinity", 0.086823, 0.092594, 0.097161, 0.099659, 0.10255, 0.10503067197877274, 0.10841, 0.11395999999999999, 0.11699000000000001 ],
+    "binCategory" : null,
+    "binCountNeg" : [ 82, 33, 29, 15, 15, 13, 17, 10, 7, 8 ],
+    "binCountPos" : [ 14, 13, 14, 13, 14, 14, 13, 14, 13, 14 ],
+    "binPosRate" : [ 0.14583333333333334, 0.2826086956521739, 0.32558139534883723, 0.4642857142857143, 0.4827586206896552, 0.5185185185185185, 0.43333333333333335, 0.5833333333333334, 0.65, 0.6363636363636364 ],
+    "binAvgScore" : null,
+    "binWeightedNeg" : [ 82.0, 33.0, 29.0, 15.0, 15.0, 13.0, 17.0, 10.0, 7.0, 8.0 ],
+    "binWeightedPos" : [ 14.0, 13.0, 14.0, 13.0, 14.0, 14.0, 13.0, 14.0, 13.0, 14.0 ]
+  }
+}, {
+  "columnNum" : 7,
+  "columnName" : "mean_compactness",
+  "version" : "0.2.0",
+  "columnType" : "N",
+  "columnFlag" : null,
+  "finalSelect" : true,
+  "columnStats" : {
+    "max" : 0.3114,
+    "min" : 0.02344,
+    "mean" : 0.102392,
+    "median" : 0.08836,
+    "totalCount" : 365,
+    "missingCount" : 0,
+    "stdDev" : 0.051403,
+    "missingPercentage" : 0.0,
+    "ks" : 63.989854,
+    "iv" : 4.25882
+  },
+  "columnBinning" : {
+    "length" : 10,
+    "binBoundary" : [ "-Infinity", 0.085622, 0.1063, 0.11436, 0.12665, 0.13112426406871194, 0.14987999999999999, 0.16478, 0.18324, 0.20910117667420033 ],
+    "binCategory" : null,
+    "binCountNeg" : [ 159, 33, 7, 9, 7, 8, 2, 3, 0, 1 ],
+    "binCountPos" : [ 14, 13, 14, 13, 14, 14, 13, 14, 14, 13 ],
+    "binPosRate" : [ 0.08092485549132948, 0.2826086956521739, 0.6666666666666666, 0.5909090909090909, 0.6666666666666666, 0.6363636363636364, 0.8666666666666667, 0.8235294117647058, 1.0, 0.9285714285714286 ],
+    "binAvgScore" : null,
+    "binWeightedNeg" : [ 159.0, 33.0, 7.0, 9.0, 7.0, 8.0, 2.0, 3.0, 0.0, 1.0 ],
+    "binWeightedPos" : [ 14.0, 13.0, 14.0, 13.0, 14.0, 14.0, 13.0, 14.0, 14.0, 13.0 ]
+  }
+}, {
+  "columnNum" : 8,
+  "columnName" : "mean_concavity",
+  "version" : "0.2.0",
+  "columnType" : "N",
+  "columnFlag" : null,
+  "finalSelect" : true,
+  "columnStats" : {
+    "max" : 0.4108,
+    "min" : 0.0,
+    "mean" : 0.084586,
+    "median" : 0.05397,
+    "totalCount" : 365,
+    "missingCount" : 0,
+    "stdDev" : 0.076508,
+    "missingPercentage" : 0.0,
+    "ks" : 79.662214,
+    "iv" : 9.068052
+  },
+  "columnBinning" : {
+    "length" : 10,
+    "binBoundary" : [ "-Infinity", 0.084423, 0.099191, 0.11345, 0.13521, 0.15134999999999998, 0.16426, 0.17903, 0.2133901613323034, 0.24167 ],
+    "binCategory" : null,
+    "binCountNeg" : [ 206, 9, 7, 2, 0, 2, 0, 0, 1, 2 ],
+    "binCountPos" : [ 14, 13, 14, 13, 14, 14, 13, 14, 13, 14 ],
+    "binPosRate" : [ 0.06363636363636363, 0.5909090909090909, 0.6666666666666666, 0.8666666666666667, 1.0, 0.875, 1.0, 1.0, 0.9285714285714286, 0.875 ],
+    "binAvgScore" : null,
+    "binWeightedNeg" : [ 206.0, 9.0, 7.0, 2.0, 0.0, 2.0, 0.0, 0.0, 1.0, 2.0 ],
+    "binWeightedPos" : [ 14.0, 13.0, 14.0, 13.0, 14.0, 14.0, 13.0, 14.0, 13.0, 14.0 ]
+  }
+}, {
+  "columnNum" : 9,
+  "columnName" : "mean_concave_points",
+  "version" : "0.2.0",
+  "columnType" : "N",
+  "columnFlag" : null,
+  "finalSelect" : true,
+  "columnStats" : {
+    "max" : 0.1913,
+    "min" : 0.0,
+    "mean" : 0.047519,
+    "median" : 0.0316,
+    "totalCount" : 365,
+    "missingCount" : 0,
+    "stdDev" : 0.038015,
+    "missingPercentage" : 0.0,
+    "ks" : 84.465708,
+    "iv" : 13.097987
+  },
+  "columnBinning" : {
+    "length" : 10,
+    "binBoundary" : [ "-Infinity", 0.052633, 0.061523, 0.068646, 0.07928099999999999, 0.08628, 0.08924800000000001, 0.094923, 0.10606, 0.12785000000000002 ],
+    "binCategory" : null,
+    "binCountNeg" : [ 217, 7, 1, 3, 1, 0, 0, 0, 0, 0 ],
+    "binCountPos" : [ 14, 13, 14, 13, 14, 14, 13, 14, 13, 14 ],
+    "binPosRate" : [ 0.06060606060606061, 0.65, 0.9333333333333333, 0.8125, 0.9333333333333333, 1.0, 1.0, 1.0, 1.0, 1.0 ],
+    "binAvgScore" : null,
+    "binWeightedNeg" : [ 217.0, 7.0, 1.0, 3.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0 ],
+    "binWeightedPos" : [ 14.0, 13.0, 14.0, 13.0, 14.0, 14.0, 13.0, 14.0, 13.0, 14.0 ]
+  }
+}, {
+  "columnNum" : 10,
+  "columnName" : "mean_symmetry",
+  "version" : "0.2.0",
+  "columnType" : "N",
+  "columnFlag" : null,
+  "finalSelect" : false,
+  "columnStats" : {
+    "max" : 0.304,
+    "min" : 0.106,
+    "mean" : 0.181051,
+    "median" : 0.1788,
+    "totalCount" : 365,
+    "missingCount" : 0,
+    "stdDev" : 0.026757,
+    "missingPercentage" : 0.0,
+    "ks" : 25.998587,
+    "iv" : 0.466661
+  },
+  "columnBinning" : {
+    "length" : 10,
+    "binBoundary" : [ "-Infinity", 0.15864, 0.16967, 0.17681789327688083, 0.18138, 0.18841243556529821, 0.19433, 0.20183, 0.2127897366596101, 0.22317000000000004 ],
+    "binCategory" : null,
+    "binCountNeg" : [ 56, 49, 21, 16, 24, 17, 17, 16, 4, 9 ],
+    "binCountPos" : [ 14, 13, 13, 14, 14, 14, 13, 13, 14, 14 ],
+    "binPosRate" : [ 0.2, 0.20967741935483872, 0.38235294117647056, 0.4666666666666667, 0.3684210526315789, 0.45161290322580644, 0.43333333333333335, 0.4482758620689655, 0.7777777777777778, 0.6086956521739131 ],
+    "binAvgScore" : null,
+    "binWeightedNeg" : [ 56.0, 49.0, 21.0, 16.0, 24.0, 17.0, 17.0, 16.0, 4.0, 9.0 ],
+    "binWeightedPos" : [ 14.0, 13.0, 13.0, 14.0, 14.0, 14.0, 13.0, 13.0, 14.0, 14.0 ]
+  }
+}, {
+  "columnNum" : 11,
+  "columnName" : "mean_fractal_dimension",
+  "version" : "0.2.0",
+  "columnType" : "N",
+  "columnFlag" : null,
+  "finalSelect" : false,
+  "columnStats" : {
+    "max" : 0.09744,
+    "min" : 0.05044,
+    "mean" : 0.062841,
+    "median" : 0.06149,
+    "totalCount" : 365,
+    "missingCount" : 0,
+    "stdDev" : 0.00686,
+    "missingPercentage" : 0.0,
+    "ks" : 6.752504,
+    "iv" : 0.228519
+  },
+  "columnBinning" : {
+    "length" : 10,
+    "binBoundary" : [ "-Infinity", 0.054654, 0.056574, 0.05901, 0.060955, 0.062145, 0.06323699999999999, 0.065744, 0.068066, 0.073677 ],
+    "binCategory" : null,
+    "binCountNeg" : [ 10, 20, 42, 33, 22, 13, 35, 15, 27, 12 ],
+    "binCountPos" : [ 14, 13, 14, 13, 14, 14, 13, 14, 13, 14 ],
+    "binPosRate" : [ 0.5833333333333334, 0.3939393939393939, 0.25, 0.2826086956521739, 0.3888888888888889, 0.5185185185185185, 0.2708333333333333, 0.4827586206896552, 0.325, 0.5384615384615384 ],
+    "binAvgScore" : null,
+    "binWeightedNeg" : [ 10.0, 20.0, 42.0, 33.0, 22.0, 13.0, 35.0, 15.0, 27.0, 12.0 ],
+    "binWeightedPos" : [ 14.0, 13.0, 14.0, 13.0, 14.0, 14.0, 13.0, 14.0, 13.0, 14.0 ]
+  }
+}, {
+  "columnNum" : 12,
+  "columnName" : "std_radius",
+  "version" : "0.2.0",
+  "columnType" : "N",
+  "columnFlag" : null,
+  "finalSelect" : true,
+  "columnStats" : {
+    "max" : 2.873,
+    "min" : 0.1115,
+    "mean" : 0.401783,
+    "median" : 0.3163,
+    "totalCount" : 365,
+    "missingCount" : 0,
+    "stdDev" : 0.270211,
+    "missingPercentage" : 0.0,
+    "ks" : 59.809273,
+    "iv" : 6.056707
+  },
+  "columnBinning" : {
+    "length" : 10,
+    "binBoundary" : [ "-Infinity", 0.27879, 0.33435000000000004, 0.42332, 0.47078, 0.54775, 0.6016399999999998, 0.70243, 0.8170000000000001, 0.9944700000000001 ],
+    "binCategory" : null,
+    "binCountNeg" : [ 132, 30, 44, 9, 10, 1, 2, 0, 1, 0 ],
+    "binCountPos" : [ 14, 13, 14, 13, 14, 14, 13, 14, 13, 14 ],
+    "binPosRate" : [ 0.0958904109589041, 0.3023255813953488, 0.2413793103448276, 0.5909090909090909, 0.5833333333333334, 0.9333333333333333, 0.8666666666666667, 1.0, 0.9285714285714286, 1.0 ],
+    "binAvgScore" : null,
+    "binWeightedNeg" : [ 132.0, 30.0, 44.0, 9.0, 10.0, 1.0, 2.0, 0.0, 1.0, 0.0 ],
+    "binWeightedPos" : [ 14.0, 13.0, 14.0, 13.0, 14.0, 14.0, 13.0, 14.0, 13.0, 14.0 ]
+  }
+}, {
+  "columnNum" : 13,
+  "columnName" : "std_texture",
+  "version" : "0.2.0",
+  "columnType" : "N",
+  "columnFlag" : null,
+  "finalSelect" : false,
+  "columnStats" : {
+    "max" : 4.885,
+    "min" : 0.3602,
+    "mean" : 1.215699,
+    "median" : 1.075,
+    "totalCount" : 365,
+    "missingCount" : 0,
+    "stdDev" : 0.574159,
+    "missingPercentage" : 0.0,
+    "ks" : 9.404701,
+    "iv" : 0.141964
+  },
+  "columnBinning" : {
+    "length" : 10,
+    "binBoundary" : [ "-Infinity", 0.66554, 0.8373700000000001, 0.9182536798306424, 1.0113, 1.1025, 1.2133, 1.3296000000000001, 1.4775, 1.7303000000000004 ],
+    "binCategory" : null,
+    "binCountNeg" : [ 37, 30, 15, 17, 13, 15, 16, 23, 26, 37 ],
+    "binCountPos" : [ 14, 13, 14, 13, 14, 14, 13, 14, 13, 14 ],
+    "binPosRate" : [ 0.27450980392156865, 0.3023255813953488, 0.4827586206896552, 0.43333333333333335, 0.5185185185185185, 0.4827586206896552, 0.4482758620689655, 0.3783783783783784, 0.3333333333333333, 0.27450980392156865 ],
+    "binAvgScore" : null,
+    "binWeightedNeg" : [ 37.0, 30.0, 15.0, 17.0, 13.0, 15.0, 16.0, 23.0, 26.0, 37.0 ],
+    "binWeightedPos" : [ 14.0, 13.0, 14.0, 13.0, 14.0, 14.0, 13.0, 14.0, 13.0, 14.0 ]
+  }
+}, {
+  "columnNum" : 14,
+  "columnName" : "std_perimeter",
+  "version" : "0.2.0",
+  "columnType" : "N",
+  "columnFlag" : null,
+  "finalSelect" : true,
+  "columnStats" : {
+    "max" : 21.98,
+    "min" : 0.757,
+    "mean" : 2.812222,
+    "median" : 2.257,
+    "totalCount" : 365,
+    "missingCount" : 0,
+    "stdDev" : 1.924617,
+    "missingPercentage" : 0.0,
+    "ks" : 58.935911,
+    "iv" : 5.821191
+  },
+  "columnBinning" : {
+    "length" : 10,
+    "binBoundary" : [ "-Infinity", 1.9805, 2.4654000000000003, 2.913819359876409, 3.2624999999999997, 3.6425, 4.1596, 4.7172, 5.591399999999999, 7.215600000000001 ],
+    "binCategory" : null,
+    "binCountNeg" : [ 128, 49, 27, 11, 5, 7, 1, 1, 0, 0 ],
+    "binCountPos" : [ 14, 13, 14, 13, 14, 14, 13, 14, 13, 14 ],
+    "binPosRate" : [ 0.09859154929577464, 0.20967741935483872, 0.34146341463414637, 0.5416666666666666, 0.7368421052631579, 0.6666666666666666, 0.9285714285714286, 0.9333333333333333, 1.0, 1.0 ],
+    "binAvgScore" : null,
+    "binWeightedNeg" : [ 128.0, 49.0, 27.0, 11.0, 5.0, 7.0, 1.0, 1.0, 0.0, 0.0 ],
+    "binWeightedPos" : [ 14.0, 13.0, 14.0, 13.0, 14.0, 14.0, 13.0, 14.0, 13.0, 14.0 ]
+  }
+}, {
+  "columnNum" : 15,
+  "columnName" : "std_area",
+  "version" : "0.2.0",
+  "columnType" : "N",
+  "columnFlag" : null,
+  "finalSelect" : true,
+  "columnStats" : {
+    "max" : 525.6,
+    "min" : 7.228,
+    "mean" : 39.541277,
+    "median" : 23.04,
+    "totalCount" : 365,
+    "missingCount" : 0,
+    "stdDev" : 42.614086,
+    "missingPercentage" : 0.0,
+    "ks" : 70.540072,
+    "iv" : 12.012293
+  },
+  "columnBinning" : {
+    "length" : 10,
+    "binBoundary" : [ "-Infinity", 24.257, 31.680999999999997, 40.864999999999995, 48.99, 58.58, 71.648, 86.885, 100.85, 128.06000000000003 ],
+    "binCategory" : null,
+    "binCountNeg" : [ 171, 36, 14, 6, 2, 0, 0, 0, 0, 0 ],
+    "binCountPos" : [ 14, 13, 14, 13, 14, 14, 13, 14, 13, 14 ],
+    "binPosRate" : [ 0.07567567567567568, 0.2653061224489796, 0.5, 0.6842105263157895, 0.875, 1.0, 1.0, 1.0, 1.0, 1.0 ],
+    "binAvgScore" : null,
+    "binWeightedNeg" : [ 171.0, 36.0, 14.0, 6.0, 2.0, 0.0, 0.0, 0.0, 0.0, 0.0 ],
+    "binWeightedPos" : [ 14.0, 13.0, 14.0, 13.0, 14.0, 14.0, 13.0, 14.0, 13.0, 14.0 ]
+  }
+}, {
+  "columnNum" : 16,
+  "columnName" : "std_smoothness",
+  "version" : "0.2.0",
+  "columnType" : "N",
+  "columnFlag" : null,
+  "finalSelect" : false,
+  "columnStats" : {
+    "max" : 0.03113,
+    "min" : 0.001713,
+    "mean" : 0.007015,
+    "median" : 0.006369,
+    "totalCount" : 365,
+    "missingCount" : 0,
+    "stdDev" : 0.002983,
+    "missingPercentage" : 0.0,
+    "ks" : 13.957745,
+    "iv" : 0.250148
+  },
+  "columnBinning" : {
+    "length" : 10,
+    "binBoundary" : [ "-Infinity", 0.0044388, 0.0049001, 0.0053232999999999996, 0.0057252, 0.0061484999999999995, 0.006523, 0.0072064, 0.0080761, 0.0093158 ],
+    "binCategory" : null,
+    "binCountNeg" : [ 42, 9, 14, 15, 17, 11, 20, 34, 24, 43 ],
+    "binCountPos" : [ 14, 13, 14, 13, 14, 14, 13, 14, 13, 14 ],
+    "binPosRate" : [ 0.25, 0.5909090909090909, 0.5, 0.4642857142857143, 0.45161290322580644, 0.56, 0.3939393939393939, 0.2916666666666667, 0.35135135135135137, 0.24561403508771928 ],
+    "binAvgScore" : null,
+    "binWeightedNeg" : [ 42.0, 9.0, 14.0, 15.0, 17.0, 11.0, 20.0, 34.0, 24.0, 43.0 ],
+    "binWeightedPos" : [ 14.0, 13.0, 14.0, 13.0, 14.0, 14.0, 13.0, 14.0, 13.0, 14.0 ]
+  }
+}, {
+  "columnNum" : 17,
+  "columnName" : "std_compactness",
+  "version" : "0.2.0",
+  "columnType" : "N",
+  "columnFlag" : null,
+  "finalSelect" : true,
+  "columnStats" : {
+    "max" : 0.1354,
+    "min" : 0.003012,
+    "mean" : 0.024337,
+    "median" : 0.01906,
+    "totalCount" : 365,
+    "missingCount" : 0,
+    "stdDev" : 0.017055,
+    "missingPercentage" : 0.0,
+    "ks" : 43.465836,
+    "iv" : 1.105645
+  },
+  "columnBinning" : {
+    "length" : 10,
+    "binBoundary" : [ "-Infinity", 0.013982, 0.018944, 0.022581999999999998, 0.025623, 0.027796152236891497, 0.031267, 0.035944000000000004, 0.040898, 0.05601400000000001 ],
+    "binCategory" : null,
+    "binCountNeg" : [ 103, 42, 21, 14, 2, 11, 9, 7, 13, 7 ],
+    "binCountPos" : [ 14, 13, 14, 13, 14, 14, 13, 14, 13, 14 ],
+    "binPosRate" : [ 0.11965811965811966, 0.23636363636363636, 0.4, 0.48148148148148145, 0.875, 0.56, 0.5909090909090909, 0.6666666666666666, 0.5, 0.6666666666666666 ],
+    "binAvgScore" : null,
+    "binWeightedNeg" : [ 103.0, 42.0, 21.0, 14.0, 2.0, 11.0, 9.0, 7.0, 13.0, 7.0 ],
+    "binWeightedPos" : [ 14.0, 13.0, 14.0, 13.0, 14.0, 14.0, 13.0, 14.0, 13.0, 14.0 ]
+  }
+}, {
+  "columnNum" : 18,
+  "columnName" : "std_concavity",
+  "version" : "0.2.0",
+  "columnType" : "N",
+  "columnFlag" : null,
+  "finalSelect" : true,
+  "columnStats" : {
+    "max" : 0.396,
+    "min" : 0.0,
+    "mean" : 0.0303,
+    "median" : 0.02337,
+    "totalCount" : 365,
+    "missingCount" : 0,
+    "stdDev" : 0.032728,
+    "missingPercentage" : 0.0,
+    "ks" : 53.461341,
+    "iv" : 1.536009
+  },
+  "columnBinning" : {
+    "length" : 10,
+    "binBoundary" : [ "-Infinity", 0.020981, 0.025530999999999998, 0.027955, 0.031048, 0.035250000000000004, 0.040422, 0.046422, 0.05336, 0.065582 ],
+    "binCategory" : null,
+    "binCountNeg" : [ 146, 15, 10, 9, 13, 5, 9, 6, 6, 10 ],
+    "binCountPos" : [ 14, 13, 14, 13, 14, 14, 13, 14, 13, 14 ],
+    "binPosRate" : [ 0.0875, 0.4642857142857143, 0.5833333333333334, 0.5909090909090909, 0.5185185185185185, 0.7368421052631579, 0.5909090909090909, 0.7, 0.6842105263157895, 0.5833333333333334 ],
+    "binAvgScore" : null,
+    "binWeightedNeg" : [ 146.0, 15.0, 10.0, 9.0, 13.0, 5.0, 9.0, 6.0, 6.0, 10.0 ],
+    "binWeightedPos" : [ 14.0, 13.0, 14.0, 13.0, 14.0, 14.0, 13.0, 14.0, 13.0, 14.0 ]
+  }
+}, {
+  "columnNum" : 19,
+  "columnName" : "std_concave_points",
+  "version" : "0.2.0",
+  "columnType" : "N",
+  "columnFlag" : null,
+  "finalSelect" : true,
+  "columnStats" : {
+    "max" : 0.05279,
+    "min" : 0.0,
+    "mean" : 0.011334,
+    "median" : 0.01052,
+    "totalCount" : 365,
+    "missingCount" : 0,
+    "stdDev" : 0.00602,
+    "missingPercentage" : 0.0,
+    "ks" : 49.579373,
+    "iv" : 1.402434
+  },
+  "columnBinning" : {
+    "length" : 10,
+    "binBoundary" : [ "-Infinity", 0.0092229, 0.010815, 0.012006, 0.012874, 0.013995, 0.014949882332579968, 0.016068, 0.017446, 0.019899 ],
+    "binCategory" : null,
+    "binCountNeg" : [ 127, 32, 21, 6, 11, 4, 6, 5, 10, 7 ],
+    "binCountPos" : [ 14, 13, 14, 13, 14, 13, 14, 14, 13, 14 ],
+    "binPosRate" : [ 0.09929078014184398, 0.28888888888888886, 0.4, 0.6842105263157895, 0.56, 0.7647058823529411, 0.7, 0.7368421052631579, 0.5652173913043478, 0.6666666666666666 ],
+    "binAvgScore" : null,
+    "binWeightedNeg" : [ 127.0, 32.0, 21.0, 6.0, 11.0, 4.0, 6.0, 5.0, 10.0, 7.0 ],
+    "binWeightedPos" : [ 14.0, 13.0, 14.0, 13.0, 14.0, 13.0, 14.0, 14.0, 13.0, 14.0 ]
+  }
+}, {
+  "columnNum" : 20,
+  "columnName" : "std_symmetry",
+  "version" : "0.2.0",
+  "columnType" : "N",
+  "columnFlag" : null,
+  "finalSelect" : false,
+  "columnStats" : {
+    "max" : 0.06146,
+    "min" : 0.009947,
+    "mean" : 0.02051,
+    "median" : 0.01852,
+    "totalCount" : 365,
+    "missingCount" : 0,
+    "stdDev" : 0.008013,
+    "missingPercentage" : 0.0,
+    "ks" : 13.755459,
+    "iv" : 0.103473
+  },
+  "columnBinning" : {
+    "length" : 10,
+    "binBoundary" : [ "-Infinity", 0.012750999999999998, 0.013791, 0.014887, 0.015956891649440013, 0.01731, 0.018881, 0.020823, 0.023739, 0.028889000000000005 ],
+    "binCategory" : null,
+    "binCountNeg" : [ 17, 15, 14, 18, 19, 24, 35, 24, 32, 31 ],
+    "binCountPos" : [ 14, 13, 14, 14, 13, 14, 13, 14, 13, 14 ],
+    "binPosRate" : [ 0.45161290322580644, 0.4642857142857143, 0.5, 0.4375, 0.40625, 0.3684210526315789, 0.2708333333333333, 0.3684210526315789, 0.28888888888888886, 0.3111111111111111 ],
+    "binAvgScore" : null,
+    "binWeightedNeg" : [ 17.0, 15.0, 14.0, 18.0, 19.0, 24.0, 35.0, 24.0, 32.0, 31.0 ],
+    "binWeightedPos" : [ 14.0, 13.0, 14.0, 14.0, 13.0, 14.0, 13.0, 14.0, 13.0, 14.0 ]
+  }
+}, {
+  "columnNum" : 21,
+  "columnName" : "std_fractal_dimension",
+  "version" : "0.2.0",
+  "columnType" : "N",
+  "columnFlag" : null,
+  "finalSelect" : false,
+  "columnStats" : {
+    "max" : 0.02984,
+    "min" : 9.5E-4,
+    "mean" : 0.0037,
+    "median" : 0.003002,
+    "totalCount" : 365,
+    "missingCount" : 0,
+    "stdDev" : 0.002501,
+    "missingPercentage" : 0.0,
+    "ks" : 26.87195,
+    "iv" : 0.4406
+  },
+  "columnBinning" : {
+    "length" : 10,
+    "binBoundary" : [ "-Infinity", 0.001988, 0.002643, 0.00289150806661517, 0.0033824, 0.003752, 0.004111399999999999, 0.0045465, 0.0053301, 0.0061924 ],
+    "binCategory" : null,
+    "binCountNeg" : [ 54, 53, 12, 27, 16, 13, 8, 20, 8, 18 ],
+    "binCountPos" : [ 14, 13, 14, 13, 14, 14, 13, 14, 13, 14 ],
+    "binPosRate" : [ 0.20588235294117646, 0.19696969696969696, 0.5384615384615384, 0.325, 0.4666666666666667, 0.5185185185185185, 0.6190476190476191, 0.4117647058823529, 0.6190476190476191, 0.4375 ],
+    "binAvgScore" : null,
+    "binWeightedNeg" : [ 54.0, 53.0, 12.0, 27.0, 16.0, 13.0, 8.0, 20.0, 8.0, 18.0 ],
+    "binWeightedPos" : [ 14.0, 13.0, 14.0, 13.0, 14.0, 14.0, 13.0, 14.0, 13.0, 14.0 ]
+  }
+}, {
+  "columnNum" : 22,
+  "columnName" : "worst_radius",
+  "version" : "0.2.0",
+  "columnType" : "N",
+  "columnFlag" : null,
+  "finalSelect" : true,
+  "columnStats" : {
+    "max" : 33.13,
+    "min" : 7.93,
+    "mean" : 16.175477,
+    "median" : 14.73,
+    "totalCount" : 365,
+    "missingCount" : 0,
+    "stdDev" : 4.902346,
+    "missingPercentage" : 0.0,
+    "ks" : 79.662214,
+    "iv" : 12.969073
+  },
+  "columnBinning" : {
+    "length" : 10,
+    "binBoundary" : [ "-Infinity", 16.095, 17.209, 18.195999999999998, 19.551, 20.42, 22.326999999999998, 23.164, 24.316, 26.437 ],
+    "binCategory" : null,
+    "binCountNeg" : [ 206, 17, 4, 1, 1, 0, 0, 0, 0, 0 ],
+    "binCountPos" : [ 14, 13, 14, 13, 13, 15, 13, 14, 13, 14 ],
+    "binPosRate" : [ 0.06363636363636363, 0.43333333333333335, 0.7777777777777778, 0.9285714285714286, 0.9285714285714286, 1.0, 1.0, 1.0, 1.0, 1.0 ],
+    "binAvgScore" : null,
+    "binWeightedNeg" : [ 206.0, 17.0, 4.0, 1.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0 ],
+    "binWeightedPos" : [ 14.0, 13.0, 14.0, 13.0, 13.0, 15.0, 13.0, 14.0, 13.0, 14.0 ]
+  }
+}, {
+  "columnNum" : 23,
+  "columnName" : "worst_texture",
+  "version" : "0.2.0",
+  "columnType" : "N",
+  "columnFlag" : null,
+  "finalSelect" : true,
+  "columnStats" : {
+    "max" : 49.54,
+    "min" : 12.02,
+    "mean" : 25.582192,
+    "median" : 25.23,
+    "totalCount" : 365,
+    "missingCount" : 0,
+    "stdDev" : 6.408007,
+    "missingPercentage" : 0.0,
+    "ks" : 43.902517,
+    "iv" : 1.135206
+  },
+  "columnBinning" : {
+    "length" : 10,
+    "binBoundary" : [ "-Infinity", 22.151, 24.97, 26.032, 27.278091097699793, 28.335, 30.52, 31.581, 33.813, 36.666000000000004 ],
+    "binCategory" : null,
+    "binCountNeg" : [ 106, 40, 17, 20, 9, 15, 3, 7, 4, 8 ],
+    "binCountPos" : [ 14, 13, 14, 13, 14, 14, 13, 14, 13, 14 ],
+    "binPosRate" : [ 0.11666666666666667, 0.24528301886792453, 0.45161290322580644, 0.3939393939393939, 0.6086956521739131, 0.4827586206896552, 0.8125, 0.6666666666666666, 0.7647058823529411, 0.6363636363636364 ],
+    "binAvgScore" : null,
+    "binWeightedNeg" : [ 106.0, 40.0, 17.0, 20.0, 9.0, 15.0, 3.0, 7.0, 4.0, 8.0 ],
+    "binWeightedPos" : [ 14.0, 13.0, 14.0, 13.0, 14.0, 14.0, 13.0, 14.0, 13.0, 14.0 ]
+  }
+}, {
+  "columnNum" : 24,
+  "columnName" : "worst_perimeter",
+  "version" : "0.2.0",
+  "columnType" : "N",
+  "columnFlag" : null,
+  "finalSelect" : true,
+  "columnStats" : {
+    "max" : 229.3,
+    "min" : 50.41,
+    "mean" : 106.407479,
+    "median" : 94.44,
+    "totalCount" : 365,
+    "missingCount" : 0,
+    "stdDev" : 33.728104,
+    "missingPercentage" : 0.0,
+    "ks" : 81.84562,
+    "iv" : 14.725301
+  },
+  "columnBinning" : {
+    "length" : 10,
+    "binBoundary" : [ "-Infinity", 107.32, 113.87, 123.59, 129.27, 138.64999999999998, 146.57999999999998, 152.55395010584846, 161.49, 180.04 ],
+    "binCategory" : null,
+    "binCountNeg" : [ 211, 12, 5, 1, 0, 0, 0, 0, 0, 0 ],
+    "binCountPos" : [ 14, 13, 14, 13, 14, 14, 14, 13, 13, 14 ],
+    "binPosRate" : [ 0.06222222222222222, 0.52, 0.7368421052631579, 0.9285714285714286, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0 ],
+    "binAvgScore" : null,
+    "binWeightedNeg" : [ 211.0, 12.0, 5.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0 ],
+    "binWeightedPos" : [ 14.0, 13.0, 14.0, 13.0, 14.0, 14.0, 14.0, 13.0, 13.0, 14.0 ]
+  }
+}, {
+  "columnNum" : 25,
+  "columnName" : "worst_area",
+  "version" : "0.2.0",
+  "columnType" : "N",
+  "columnFlag" : null,
+  "finalSelect" : true,
+  "columnStats" : {
+    "max" : 3432.0,
+    "min" : 185.2,
+    "mean" : 873.583014,
+    "median" : 645.8,
+    "totalCount" : 365,
+    "missingCount" : 0,
+    "stdDev" : 571.00117,
+    "missingPercentage" : 0.0,
+    "ks" : 80.098895,
+    "iv" : 12.859328
+  },
+  "columnBinning" : {
+    "length" : 10,
+    "binBoundary" : [ "-Infinity", 787.91, 906.99, 1001.8199999999999, 1174.0, 1298.5, 1535.3, 1654.3, 1815.4, 2139.4000000000005 ],
+    "binCategory" : null,
+    "binCountNeg" : [ 207, 17, 2, 2, 1, 0, 0, 0, 0, 0 ],
+    "binCountPos" : [ 14, 13, 14, 13, 14, 14, 13, 14, 13, 14 ],
+    "binPosRate" : [ 0.06334841628959276, 0.43333333333333335, 0.875, 0.8666666666666667, 0.9333333333333333, 1.0, 1.0, 1.0, 1.0, 1.0 ],
+    "binAvgScore" : null,
+    "binWeightedNeg" : [ 207.0, 17.0, 2.0, 2.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0 ],
+    "binWeightedPos" : [ 14.0, 13.0, 14.0, 13.0, 14.0, 14.0, 13.0, 14.0, 13.0, 14.0 ]
+  }
+}, {
+  "columnNum" : 26,
+  "columnName" : "worst_smoothness",
+  "version" : "0.2.0",
+  "columnType" : "N",
+  "columnFlag" : null,
+  "finalSelect" : false,
+  "columnStats" : {
+    "max" : 0.2226,
+    "min" : 0.07117,
+    "mean" : 0.132596,
+    "median" : 0.1311,
+    "totalCount" : 365,
+    "missingCount" : 0,
+    "stdDev" : 0.022715,
+    "missingPercentage" : 0.0,
+    "ks" : 37.975212,
+    "iv" : 0.953731
+  },
+  "columnBinning" : {
+    "length" : 10,
+    "binBoundary" : [ "-Infinity", 0.11927, 0.12671, 0.13518, 0.13959, 0.14225, 0.1491134848680554, 0.15208, 0.16109, 0.17703000000000005 ],
+    "binCategory" : null,
+    "binCountNeg" : [ 91, 25, 40, 18, 10, 22, 3, 11, 6, 3 ],
+    "binCountPos" : [ 14, 13, 14, 13, 14, 15, 12, 14, 13, 14 ],
+    "binPosRate" : [ 0.13333333333333333, 0.34210526315789475, 0.25925925925925924, 0.41935483870967744, 0.5833333333333334, 0.40540540540540543, 0.8, 0.56, 0.6842105263157895, 0.8235294117647058 ],
+    "binAvgScore" : null,
+    "binWeightedNeg" : [ 91.0, 25.0, 40.0, 18.0, 10.0, 22.0, 3.0, 11.0, 6.0, 3.0 ],
+    "binWeightedPos" : [ 14.0, 13.0, 14.0, 13.0, 14.0, 15.0, 12.0, 14.0, 13.0, 14.0 ]
+  }
+}, {
+  "columnNum" : 27,
+  "columnName" : "worst_compactness",
+  "version" : "0.2.0",
+  "columnType" : "N",
+  "columnFlag" : null,
+  "finalSelect" : true,
+  "columnStats" : {
+    "max" : 1.058,
+    "min" : 0.02729,
+    "mean" : 0.249924,
+    "median" : 0.2053,
+    "totalCount" : 365,
+    "missingCount" : 0,
+    "stdDev" : 0.161276,
+    "missingPercentage" : 0.0,
+    "ks" : 58.312998,
+    "iv" : 5.817353
+  },
+  "columnBinning" : {
+    "length" : 10,
+    "binBoundary" : [ "-Infinity", 0.20015999999999998, 0.23221999999999998, 0.28135, 0.31316, 0.35550000000000004, 0.38633999999999996, 0.42139, 0.50592, 0.5953200000000001 ],
+    "binCategory" : null,
+    "binCountNeg" : [ 152, 27, 23, 11, 6, 4, 4, 2, 0, 0 ],
+    "binCountPos" : [ 14, 13, 14, 13, 14, 14, 13, 14, 13, 14 ],
+    "binPosRate" : [ 0.08433734939759036, 0.325, 0.3783783783783784, 0.5416666666666666, 0.7, 0.7777777777777778, 0.7647058823529411, 0.875, 1.0, 1.0 ],
+    "binAvgScore" : null,
+    "binWeightedNeg" : [ 152.0, 27.0, 23.0, 11.0, 6.0, 4.0, 4.0, 2.0, 0.0, 0.0 ],
+    "binWeightedPos" : [ 14.0, 13.0, 14.0, 13.0, 14.0, 14.0, 13.0, 14.0, 13.0, 14.0 ]
+  }
+}, {
+  "columnNum" : 28,
+  "columnName" : "worst_concavity",
+  "version" : "0.2.0",
+  "columnType" : "N",
+  "columnFlag" : null,
+  "finalSelect" : true,
+  "columnStats" : {
+    "max" : 1.252,
+    "min" : 0.0,
+    "mean" : 0.261592,
+    "median" : 0.2151,
+    "totalCount" : 365,
+    "missingCount" : 0,
+    "stdDev" : 0.211402,
+    "missingPercentage" : 0.0,
+    "ks" : 74.858721,
+    "iv" : 7.014608
+  },
+  "columnBinning" : {
+    "length" : 10,
+    "binBoundary" : [ "-Infinity", 0.26245999999999997, 0.31564, 0.33876, 0.37817999999999996, 0.40115, 0.43161, 0.502, 0.58396, 0.6871700000000001 ],
+    "binCategory" : null,
+    "binCountNeg" : [ 195, 12, 4, 10, 0, 1, 3, 0, 1, 3 ],
+    "binCountPos" : [ 14, 13, 14, 13, 14, 14, 13, 14, 13, 14 ],
+    "binPosRate" : [ 0.06698564593301436, 0.52, 0.7777777777777778, 0.5652173913043478, 1.0, 0.9333333333333333, 0.8125, 1.0, 0.9285714285714286, 0.8235294117647058 ],
+    "binAvgScore" : null,
+    "binWeightedNeg" : [ 195.0, 12.0, 4.0, 10.0, 0.0, 1.0, 3.0, 0.0, 1.0, 3.0 ],
+    "binWeightedPos" : [ 14.0, 13.0, 14.0, 13.0, 14.0, 14.0, 13.0, 14.0, 13.0, 14.0 ]
+  }
+}, {
+  "columnNum" : 29,
+  "columnName" : "worst_concave_points",
+  "version" : "0.2.0",
+  "columnType" : "N",
+  "columnFlag" : null,
+  "finalSelect" : true,
+  "columnStats" : {
+    "max" : 0.2903,
+    "min" : 0.0,
+    "mean" : 0.111505,
+    "median" : 0.09222,
+    "totalCount" : 365,
+    "missingCount" : 0,
+    "stdDev" : 0.066161,
+    "missingPercentage" : 0.0,
+    "ks" : 81.408939,
+    "iv" : 12.935984
+  },
+  "columnBinning" : {
+    "length" : 10,
+    "binBoundary" : [ "-Infinity", 0.1258, 0.14781, 0.1576, 0.16946999999999998, 0.17754999999999999, 0.19014, 0.20260999999999998, 0.21343, 0.23870000000000002 ],
+    "binCategory" : null,
+    "binCountNeg" : [ 210, 14, 3, 1, 1, 0, 0, 0, 0, 0 ],
+    "binCountPos" : [ 14, 13, 14, 13, 14, 14, 13, 14, 13, 14 ],
+    "binPosRate" : [ 0.0625, 0.48148148148148145, 0.8235294117647058, 0.9285714285714286, 0.9333333333333333, 1.0, 1.0, 1.0, 1.0, 1.0 ],
+    "binAvgScore" : null,
+    "binWeightedNeg" : [ 210.0, 14.0, 3.0, 1.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0 ],
+    "binWeightedPos" : [ 14.0, 13.0, 14.0, 13.0, 14.0, 14.0, 13.0, 14.0, 13.0, 14.0 ]
+  }
+}, {
+  "columnNum" : 30,
+  "columnName" : "worst_symmetry",
+  "version" : "0.2.0",
+  "columnType" : "N",
+  "columnFlag" : null,
+  "finalSelect" : false,
+  "columnStats" : {
+    "max" : 0.6638,
+    "min" : 0.1566,
+    "mean" : 0.289078,
+    "median" : 0.2812,
+    "totalCount" : 365,
+    "missingCount" : 0,
+    "stdDev" : 0.058865,
+    "missingPercentage" : 0.0,
+    "ks" : 31.675443,
+    "iv" : 1.075242
+  },
+  "columnBinning" : {
+    "length" : 10,
+    "binBoundary" : [ "-Infinity", 0.2482, 0.27165, 0.28138, 0.29460000000000003, 0.30635, 0.32525, 0.34353, 0.36936, 0.40849 ],
+    "binCategory" : null,
+    "binCountNeg" : [ 76, 42, 18, 20, 25, 28, 13, 5, 1, 1 ],
+    "binCountPos" : [ 14, 13, 14, 13, 14, 14, 13, 14, 13, 14 ],
+    "binPosRate" : [ 0.15555555555555556, 0.23636363636363636, 0.4375, 0.3939393939393939, 0.358974358974359, 0.3333333333333333, 0.5, 0.7368421052631579, 0.9285714285714286, 0.9333333333333333 ],
+    "binAvgScore" : null,
+    "binWeightedNeg" : [ 76.0, 42.0, 18.0, 20.0, 25.0, 28.0, 13.0, 5.0, 1.0, 1.0 ],
+    "binWeightedPos" : [ 14.0, 13.0, 14.0, 13.0, 14.0, 14.0, 13.0, 14.0, 13.0, 14.0 ]
+  }
+}, {
+  "columnNum" : 31,
+  "columnName" : "worst_fractal_dimension",
+  "version" : "0.2.0",
+  "columnType" : "N",
+  "columnFlag" : null,
+  "finalSelect" : false,
+  "columnStats" : {
+    "max" : 0.2075,
+    "min" : 0.05521,
+    "mean" : 0.083975,
+    "median" : 0.07919,
+    "totalCount" : 365,
+    "missingCount" : 0,
+    "stdDev" : 0.018438,
+    "missingPercentage" : 0.0,
+    "ks" : 34.279476,
+    "iv" : 0.738386
+  },
+  "columnBinning" : {
+    "length" : 10,
+    "binBoundary" : [ "-Infinity", 0.070622, 0.0759, 0.07966, 0.083487, 0.08974499999999999, 0.095235, 0.10163000000000001, 0.10713, 0.1222 ],
+    "binCategory" : null,
+    "binCountNeg" : [ 67, 39, 32, 26, 29, 14, 7, 7, 5, 3 ],
+    "binCountPos" : [ 14, 13, 14, 13, 14, 14, 13, 14, 13, 14 ],
+    "binPosRate" : [ 0.1728395061728395, 0.25, 0.30434782608695654, 0.3333333333333333, 0.32558139534883723, 0.5, 0.65, 0.6666666666666666, 0.7222222222222222, 0.8235294117647058 ],
+    "binAvgScore" : null,
+    "binWeightedNeg" : [ 67.0, 39.0, 32.0, 26.0, 29.0, 14.0, 7.0, 7.0, 5.0, 3.0 ],
+    "binWeightedPos" : [ 14.0, 13.0, 14.0, 13.0, 14.0, 14.0, 13.0, 14.0, 13.0, 14.0 ]
+  }
+} ]
