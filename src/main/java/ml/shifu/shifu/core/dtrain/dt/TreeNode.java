@@ -50,6 +50,17 @@ public class TreeNode implements Bytable {
     private Node node;
 
     /**
+     * nodeNum so far in the tree
+     */
+    private int nodeNum;
+
+    /**
+     * Store weighted cnt of root node (id = 1) for further computing, it is no meaning full it current node is not ROOT
+     * node
+     */
+    private double rootWgtCnt = -1;
+
+    /**
      * Sub-sampling features.
      */
     private List<Integer> features;
@@ -60,6 +71,13 @@ public class TreeNode implements Bytable {
     public TreeNode(int treeId, Node node) {
         this.treeId = treeId;
         this.node = node;
+        this.nodeNum = 1;
+    }
+
+    public TreeNode(int treeId, Node node, int nodeNum) {
+        this.treeId = treeId;
+        this.node = node;
+        this.nodeNum = nodeNum;
     }
 
     public TreeNode(int treeId, Node node, List<Integer> features) {
@@ -113,10 +131,53 @@ public class TreeNode implements Bytable {
         this.features = features;
     }
 
+    /**
+     * @return the nodeNum
+     */
+    public int getNodeNum() {
+        return nodeNum;
+    }
+
+    /**
+     * Increase node number
+     */
+    public void incrNodeNum() {
+        nodeNum += 1;
+    }
+
+    /**
+     * @param nodeNum
+     *            the nodeNum to set
+     */
+    public void setNodeNum(int nodeNum) {
+        this.nodeNum = nodeNum;
+    }
+
+    /**
+     * @return the rootWgtCnt
+     */
+    public double getRootWgtCnt() {
+        return rootWgtCnt;
+    }
+
+    /**
+     * @param rootWgtCnt
+     *            the rootWgtCnt to set
+     */
+    public void setRootWgtCnt(double rootWgtCnt) {
+        this.rootWgtCnt = rootWgtCnt;
+    }
+
     @Override
     public void write(DataOutput out) throws IOException {
         out.writeInt(treeId);
+        out.writeInt(nodeNum);
         this.node.write(out);
+
+        if(this.node.getId() == Node.ROOT_INDEX) {
+            out.writeDouble(this.rootWgtCnt);
+        }
+
         if(features == null) {
             out.writeInt(0);
         } else {
@@ -126,17 +187,27 @@ public class TreeNode implements Bytable {
             }
         }
     }
-    
+
     public void writeWithoutFeatures(DataOutput out) throws IOException {
         out.writeInt(treeId);
+        out.writeInt(nodeNum);
         this.node.write(out);
+
+        if(this.node.getId() == Node.ROOT_INDEX) {
+            out.writeDouble(this.rootWgtCnt);
+        }
     }
 
     @Override
     public void readFields(DataInput in) throws IOException {
         this.treeId = in.readInt();
+        this.nodeNum = in.readInt();
         this.node = new Node();
         this.node.readFields(in);
+
+        if(this.node.getId() == Node.ROOT_INDEX) {
+            this.rootWgtCnt = in.readDouble();
+        }
 
         int len = in.readInt();
         this.features = new ArrayList<Integer>();
@@ -144,11 +215,16 @@ public class TreeNode implements Bytable {
             this.features.add(in.readInt());
         }
     }
-    
+
     public void readFieldsWithoutFeatures(DataInput in) throws IOException {
         this.treeId = in.readInt();
+        this.nodeNum = in.readInt();
         this.node = new Node();
         this.node.readFields(in);
+
+        if(this.node.getId() == Node.ROOT_INDEX) {
+            this.rootWgtCnt = in.readDouble();
+        }
     }
     
     public Map<Integer,org.apache.commons.lang3.tuple.Pair<String,Double>> computeFeatureImportance(){
@@ -182,7 +258,9 @@ public class TreeNode implements Bytable {
         }
     }
 
-    /* (non-Javadoc)
+    /*
+     * (non-Javadoc)
+     * 
      * @see java.lang.Object#toString()
      */
     @Override
