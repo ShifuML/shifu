@@ -169,7 +169,7 @@ class Variance extends Impurity {
             Predict rightPredict = new Predict(rightCount == 0d ? 0d : rightSum / rightCount);
 
             internalGainList.add(new GainInfo(gain, impurity, predict, leftImpurity, rightImpurity, leftPredict,
-                    rightPredict, split));
+                    rightPredict, split, count));
         }
         return GainInfo.getGainInfoByMaxGain(internalGainList);
     }
@@ -299,7 +299,7 @@ class FriedmanMSE extends Variance {
             Predict rightPredict = new Predict(rightCount == 0d ? 0d : rightSum / rightCount);
 
             internalGainList.add(new GainInfo(gain, impurity, predict, leftImpurity, rightImpurity, leftPredict,
-                    rightPredict, split));
+                    rightPredict, split, count));
         }
         return GainInfo.getGainInfoByMaxGain(internalGainList);
     }
@@ -396,7 +396,7 @@ class Entropy extends Impurity {
             }
 
             internalGainList.add(new GainInfo(gain, info.impurity, predict, leftInfo.impurity, rightInfo.impurity,
-                    leftPredict, rightPredict, split));
+                    leftPredict, rightPredict, split, info.sumAll));
         }
         return GainInfo.getGainInfoByMaxGain(internalGainList);
     }
@@ -559,7 +559,7 @@ class Gini extends Impurity {
             }
 
             internalGainList.add(new GainInfo(gain, info.impurity, predict, leftInfo.impurity, rightInfo.impurity,
-                    leftPredict, rightPredict, split));
+                    leftPredict, rightPredict, split, info.sumAll));
         }
         return GainInfo.getGainInfoByMaxGain(internalGainList);
     }

@@ -38,10 +38,12 @@ public class GainInfo {
 
     private Predict rightPredict;
 
+    private double wgtCnt;
+
     private Split split;
 
     public GainInfo(double gain, double impurity, Predict predict, double leftImpurity, double rightImpurity,
-            Predict leftPredict, Predict rightPredict, Split split) {
+            Predict leftPredict, Predict rightPredict, Split split, double wgtCnt) {
         this.gain = gain;
         this.impurity = impurity;
         this.predict = predict;
@@ -50,6 +52,7 @@ public class GainInfo {
         this.leftPredict = leftPredict;
         this.rightPredict = rightPredict;
         this.split = split;
+        this.wgtCnt = wgtCnt;
     }
 
     /**
@@ -170,6 +173,21 @@ public class GainInfo {
      */
     public void setSplit(Split split) {
         this.split = split;
+    }
+
+    /**
+     * @return the wgtCnt
+     */
+    public double getWgtCnt() {
+        return wgtCnt;
+    }
+
+    /**
+     * @param wgtCnt
+     *            the wgtCnt to set
+     */
+    public void setWgtCnt(double wgtCnt) {
+        this.wgtCnt = wgtCnt;
     }
 
     public static GainInfo getGainInfoByMaxGain(List<GainInfo> gainList) {
