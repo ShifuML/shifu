@@ -43,7 +43,10 @@ public class Split implements Bytable {
 
     private double threshold;
 
-    private Set<String> leftCategories;
+    /**
+     * Indexes of left categories, list of categories will be saved in model files or in TreeModel
+     */
+    private Set<Integer> leftCategories;
 
     public Split() {
     }
@@ -52,7 +55,7 @@ public class Split implements Bytable {
         this.columnNum = featureIndex;
     }
 
-    public Split(int columnNum, FeatureType featureType, double threshold, Set<String> leftCategories) {
+    public Split(int columnNum, FeatureType featureType, double threshold, Set<Integer> leftCategories) {
         this.columnNum = columnNum;
         this.featureType = featureType;
         this.threshold = threshold;
@@ -83,7 +86,7 @@ public class Split implements Bytable {
     /**
      * @return the leftCategories
      */
-    public Set<String> getLeftCategories() {
+    public Set<Integer> getLeftCategories() {
         return leftCategories;
     }
 
@@ -115,7 +118,7 @@ public class Split implements Bytable {
      * @param leftCategories
      *            the leftCategories to set
      */
-    public void setLeftCategories(Set<String> leftCategories) {
+    public void setLeftCategories(Set<Integer> leftCategories) {
         this.leftCategories = leftCategories;
     }
 
@@ -127,18 +130,20 @@ public class Split implements Bytable {
             out.writeBoolean(false);
         } else {
             out.writeBoolean(true);
-            out.writeUTF(this.featureType.toString());
+            // use byte type to save space
+            out.writeByte(this.featureType.getByteType());
         }
 
-        if(leftCategories == null) {
-            out.writeInt(0);
-        } else {
-            out.writeInt(this.leftCategories.size());
-            for(String category: this.leftCategories) {
-                out.writeUTF(category);
+        if(this.featureType == FeatureType.CATEGORICAL) {
+            if(leftCategories == null) {
+                out.writeInt(0);
+            } else {
+                out.writeInt(this.leftCategories.size());
+                for(int categoryIndex: this.leftCategories) {
+                    out.writeInt(categoryIndex);
+                }
             }
         }
-
     }
 
     @Override
@@ -147,13 +152,17 @@ public class Split implements Bytable {
         this.threshold = in.readDouble();
 
         if(in.readBoolean()) {
-            this.featureType = FeatureType.of(in.readUTF());
+            this.featureType = FeatureType.of(in.readByte());
         }
 
-        int len = in.readInt();
-        this.leftCategories = new HashSet<String>();
-        for(int i = 0; i < len; i++) {
-            this.leftCategories.add(in.readUTF());
+        if(this.featureType == FeatureType.CATEGORICAL) {
+            int len = in.readInt();
+            if(len > 0) {
+                this.leftCategories = new HashSet<Integer>();
+                for(int i = 0; i < len; i++) {
+                    this.leftCategories.add(in.readInt());
+                }
+            }
         }
     }
 
