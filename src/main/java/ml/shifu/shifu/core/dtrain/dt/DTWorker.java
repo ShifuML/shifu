@@ -742,11 +742,14 @@ public class DTWorker
                 nextNode = currNode.getRight();
             }
         } else if(columnConfig.isCategorical()) {
-            String value = ""; // default is empty category
+            int indexValue = columnConfig.getBinCategory().size();
             if(data.inputs[inputIndex] < columnConfig.getBinCategory().size()) {
-                value = columnConfig.getBinCategory().get(data.inputs[inputIndex]);
+                indexValue = data.inputs[inputIndex];
+            } else {
+                // for invalid category, set to last one
+                indexValue = columnConfig.getBinCategory().size();
             }
-            if(split.getLeftCategories().contains(value)) {
+            if(split.getLeftCategories().contains(indexValue)) {
                 nextNode = currNode.getLeft();
             } else {
                 nextNode = currNode.getRight();
