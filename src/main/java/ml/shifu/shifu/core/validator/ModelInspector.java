@@ -256,7 +256,7 @@ public class ModelInspector {
 
         if(modelConfig.isClassification()
                 && (modelConfig.getBinningMethod() == BinningMethod.EqualPositive || modelConfig.getBinningMethod() == BinningMethod.EqualNegtive
-                || modelConfig.getBinningMethod() == BinningMethod.WeightPositive || modelConfig.getBinningMethod() == BinningMethod.WeightNegative)) {
+                || modelConfig.getBinningMethod() == BinningMethod.WeightEqualPositive || modelConfig.getBinningMethod() == BinningMethod.WeightEqualNegative)) {
             ValidateResult tmpResult = new ValidateResult(false,
                     Arrays.asList("Multiple classification cannot leverage EqualNegtive and EqualPositive binning."));
             result = ValidateResult.mergeResult(result, tmpResult);

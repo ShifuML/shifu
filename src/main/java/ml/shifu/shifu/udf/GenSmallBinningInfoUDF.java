@@ -71,10 +71,10 @@ public class GenSmallBinningInfoUDF extends AbstractTrainerUDF<Tuple> {
                 || modelConfig.getBinningMethod().equals(ModelStatsConf.BinningMethod.EqualInterval)
                 || (modelConfig.getBinningMethod().equals(ModelStatsConf.BinningMethod.EqualPositive) && isPostive)
                 || (modelConfig.getBinningMethod().equals(ModelStatsConf.BinningMethod.EqualNegtive) && !isPostive)
-                || modelConfig.getBinningMethod().equals(ModelStatsConf.BinningMethod.WeightTotal)
-                || modelConfig.getBinningMethod().equals(ModelStatsConf.BinningMethod.WeightInterval)
-                || (modelConfig.getBinningMethod().equals(ModelStatsConf.BinningMethod.WeightPositive) && isPostive)
-                || (modelConfig.getBinningMethod().equals(ModelStatsConf.BinningMethod.WeightNegative) && !isPostive);
+                || modelConfig.getBinningMethod().equals(ModelStatsConf.BinningMethod.WeightEqualTotal)
+                || modelConfig.getBinningMethod().equals(ModelStatsConf.BinningMethod.WeightEqualInterval)
+                || (modelConfig.getBinningMethod().equals(ModelStatsConf.BinningMethod.WeightEqualPositive) && isPostive)
+                || (modelConfig.getBinningMethod().equals(ModelStatsConf.BinningMethod.WeightEqualNegative) && !isPostive);
     }
 
     @SuppressWarnings("rawtypes")
