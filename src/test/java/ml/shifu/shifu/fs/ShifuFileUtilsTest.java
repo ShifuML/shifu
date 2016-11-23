@@ -115,10 +115,7 @@ public class ShifuFileUtilsTest {
 
         filePathList = ShifuFileUtils.expandPath("*-dir/*", SourceType.LOCAL);
         Assert.assertEquals(3, filePathList.size());
-        for(String fileName : filePathList){
-            System.out.println(fileName);
-        }
-        Assert.assertTrue(filePathList.get(0).contains("test-dir/tmp0"));
+        Assert.assertTrue(filePathList.get(0).contains("test-dir/tmp"));
 
         filePathList = ShifuFileUtils.expandPath("~", SourceType.LOCAL);
         Assert.assertEquals(0, filePathList.size());
