@@ -67,10 +67,14 @@ public class GenSmallBinningInfoUDF extends AbstractTrainerUDF<Tuple> {
 
     private boolean isToBinningVal(ColumnConfig columnConfig, Boolean isPostive) {
         return columnConfig.isCategorical()
-                || super.modelConfig.getBinningMethod().equals(ModelStatsConf.BinningMethod.EqualTotal)
-                || super.modelConfig.getBinningMethod().equals(ModelStatsConf.BinningMethod.EqualInterval)
-                || (super.modelConfig.getBinningMethod().equals(ModelStatsConf.BinningMethod.EqualPositive) && isPostive)
-                || (super.modelConfig.getBinningMethod().equals(ModelStatsConf.BinningMethod.EqualNegtive) && !isPostive );
+                || modelConfig.getBinningMethod().equals(ModelStatsConf.BinningMethod.EqualTotal)
+                || modelConfig.getBinningMethod().equals(ModelStatsConf.BinningMethod.EqualInterval)
+                || (modelConfig.getBinningMethod().equals(ModelStatsConf.BinningMethod.EqualPositive) && isPostive)
+                || (modelConfig.getBinningMethod().equals(ModelStatsConf.BinningMethod.EqualNegtive) && !isPostive)
+                || modelConfig.getBinningMethod().equals(ModelStatsConf.BinningMethod.WeightEqualTotal)
+                || modelConfig.getBinningMethod().equals(ModelStatsConf.BinningMethod.WeightEqualInterval)
+                || (modelConfig.getBinningMethod().equals(ModelStatsConf.BinningMethod.WeightEqualPositive) && isPostive)
+                || (modelConfig.getBinningMethod().equals(ModelStatsConf.BinningMethod.WeightEqualNegative) && !isPostive);
     }
 
     @SuppressWarnings("rawtypes")
