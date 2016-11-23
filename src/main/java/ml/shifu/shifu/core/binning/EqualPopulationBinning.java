@@ -135,8 +135,9 @@ public class EqualPopulationBinning extends AbstractBinning<Double> {
      * First of all the input string will be trimmed and check whether it is missing value or not
      * If it is missing value, the missing value count will +1
      * After that, the input string will be parsed into double. If it is not a double, invalid value count will +1
-     * 
-     * @see ml.shifu.shifu.core.binning.AbstractBinning#addData(java.lang.String, double)
+     *
+     * @param val, string type value
+     * @param wVal, frequency or weight of this value
      */
     public void addData(String val, double wVal) {
         String fval = StringUtils.trimToEmpty(val);
@@ -149,12 +150,10 @@ public class EqualPopulationBinning extends AbstractBinning<Double> {
                 super.incInvalidValCnt();
                 return;
             }
-
             process(dval, wVal);
         } else {
             super.incMissingValCnt();
         }
-
     }
     
     /**

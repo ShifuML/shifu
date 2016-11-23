@@ -46,6 +46,9 @@ public class AddColumnNumUDF extends AbstractTrainerUDF<DataBag> {
 
     protected Set<String> negTags;
 
+    private static final int INVALID_INDEX = -1;
+    private static int weightColumnId = INVALID_INDEX;
+
     private Random random = new Random(System.currentTimeMillis());
 
     public AddColumnNumUDF(String source, String pathModelConfig, String pathColumnConfig, String withScoreStr)
@@ -131,21 +134,33 @@ public class AddColumnNumUDF extends AbstractTrainerUDF<DataBag> {
         return bag;
     }
 
-    private double getWeightValue(Tuple input){
-        double weight = 1.0;
+    private int getWeightColumnId(){
+        if(weightColumnId != INVALID_INDEX){
+            return weightColumnId;
+        }
+
         if(StringUtils.isNotBlank(modelConfig.getWeightColumnName())) {
             for(ColumnConfig columnConfig: columnConfigList) {
                 if(columnConfig.getColumnName().equalsIgnoreCase(modelConfig.getWeightColumnName().trim())) {
-                    int columnId = columnConfig.getColumnNum();
-                    try {
-                        weight = Double.parseDouble(String.valueOf(input.get(columnId)));
-                    } catch (ExecException ignore) {
-                    }
-                    break;
+                    weightColumnId = columnConfig.getColumnNum();
+                    return weightColumnId;
                 }
             }
+            log.error("Weight column name " + modelConfig.getWeightColumnName() + " given not exist!");
         }
 
+        return INVALID_INDEX;
+    }
+
+    private double getWeightValue(Tuple input){
+        double weight = 1.0;
+        int columnId = getWeightColumnId();
+        if(columnId != INVALID_INDEX){
+            try {
+                weight = Double.parseDouble(String.valueOf(input.get(columnId)));
+            } catch (ExecException ignore) {
+            }
+        }
         return weight;
     }
 

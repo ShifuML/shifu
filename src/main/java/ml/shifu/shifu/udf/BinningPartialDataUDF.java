@@ -121,10 +121,10 @@ public class BinningPartialDataUDF extends AbstractTrainerUDF<String> {
     }
 
     private boolean isWeightBinningMethod(){
-        return modelConfig.getBinningMethod().equals(BinningMethod.WeightTotal)
-                || modelConfig.getBinningMethod().equals(BinningMethod.WeightInterval)
-                || modelConfig.getBinningMethod().equals(BinningMethod.WeightPositive)
-                || modelConfig.getBinningMethod().equals(BinningMethod.WeightNegative);
+        return modelConfig.getBinningMethod().equals(BinningMethod.WeightEqualTotal)
+                || modelConfig.getBinningMethod().equals(BinningMethod.WeightEqualInterval)
+                || modelConfig.getBinningMethod().equals(BinningMethod.WeightEqualPositive)
+                || modelConfig.getBinningMethod().equals(BinningMethod.WeightEqualNegative);
     }
 
     /**

@@ -51,6 +51,8 @@ public class AddColumnNumAndFilterUDF extends AbstractTrainerUDF<DataBag> {
     private static final int COLUMN_SEED_INDX   = 3;
     private static final int COLUMN_WEIGHT_INDX = 4;
 
+    private static final int INVALID_INDEX = -1;
+    private static int weightColumnId = INVALID_INDEX;
 
     private Random random = new Random(System.currentTimeMillis());
 
@@ -158,21 +160,33 @@ public class AddColumnNumAndFilterUDF extends AbstractTrainerUDF<DataBag> {
         return bag;
     }
 
-    private double getWeightValue(Tuple input){
-        double weight = 1.0;
+    private int getWeightColumnId(){
+        if(weightColumnId != INVALID_INDEX){
+            return weightColumnId;
+        }
+
         if(StringUtils.isNotBlank(modelConfig.getWeightColumnName())) {
             for(ColumnConfig columnConfig: columnConfigList) {
                 if(columnConfig.getColumnName().equalsIgnoreCase(modelConfig.getWeightColumnName().trim())) {
-                    int columnId = columnConfig.getColumnNum();
-                    try {
-                        weight = Double.parseDouble(((DataByteArray) input.get(columnId)).toString());
-                    } catch (ExecException ignore) {
-                    }
-                    break;
+                    weightColumnId = columnConfig.getColumnNum();
+                    return weightColumnId;
                 }
             }
+            log.error("Weight column name " + modelConfig.getWeightColumnName() + " given not exist!");
         }
 
+        return INVALID_INDEX;
+    }
+
+    private double getWeightValue(Tuple input){
+        double weight = 1.0;
+        int columnId = getWeightColumnId();
+        if(columnId != INVALID_INDEX){
+            try {
+                weight = Double.parseDouble(((DataByteArray) input.get(columnId)).toString());
+            } catch (ExecException ignore) {
+            }
+        }
         return weight;
     }
 
@@ -196,24 +210,28 @@ public class AddColumnNumAndFilterUDF extends AbstractTrainerUDF<DataBag> {
 
     private boolean isValidRecord(boolean isBinary, boolean isPositive, ColumnConfig columnConfig) {
         if(isBinary) {
-            return columnConfig != null
-                    && (columnConfig.isCategorical()
-                    || modelConfig.getBinningAlgorithm().equals(ModelStatsConf.BinningAlgorithm.DynamicBinning)
-                    || modelConfig.getBinningMethod().equals(BinningMethod.EqualTotal)
-                    || modelConfig.getBinningMethod().equals(BinningMethod.EqualInterval)
-                    || (modelConfig.getBinningMethod().equals(BinningMethod.EqualPositive) && isPositive)
-                    || (modelConfig.getBinningMethod().equals(BinningMethod.EqualNegtive) && !isPositive)
-                    || modelConfig.getBinningMethod().equals(BinningMethod.WeightTotal)
-                    || modelConfig.getBinningMethod().equals(BinningMethod.WeightInterval)
-                    || (modelConfig.getBinningMethod().equals(BinningMethod.WeightPositive) && isPositive)
-                    || (modelConfig.getBinningMethod().equals(BinningMethod.WeightNegative) && !isPositive));
+            return columnConfig != null && (columnConfig.isCategorical() || isValidBinningMethodForBinary(isPositive));
         } else {
-            return columnConfig != null
-                    && ( columnConfig.isCategorical()
-                    || modelConfig.getBinningMethod().equals(BinningMethod.EqualTotal)
-                    || modelConfig.getBinningMethod().equals(BinningMethod.EqualInterval)
-                    || modelConfig.getBinningMethod().equals(BinningMethod.WeightTotal)
-                    || modelConfig.getBinningMethod().equals(BinningMethod.WeightInterval));
+            return columnConfig != null && (columnConfig.isCategorical() || isValidBinningMethod());
         }
+    }
+
+    private boolean isValidBinningMethodForBinary(boolean isPositive){
+        return modelConfig.getBinningAlgorithm().equals(ModelStatsConf.BinningAlgorithm.DynamicBinning)
+                || modelConfig.getBinningMethod().equals(BinningMethod.EqualTotal)
+                || modelConfig.getBinningMethod().equals(BinningMethod.EqualInterval)
+                || (modelConfig.getBinningMethod().equals(BinningMethod.EqualPositive) && isPositive)
+                || (modelConfig.getBinningMethod().equals(BinningMethod.EqualNegtive) && !isPositive)
+                || modelConfig.getBinningMethod().equals(BinningMethod.WeightEqualTotal)
+                || modelConfig.getBinningMethod().equals(BinningMethod.WeightEqualInterval)
+                || (modelConfig.getBinningMethod().equals(BinningMethod.WeightEqualPositive) && isPositive)
+                || (modelConfig.getBinningMethod().equals(BinningMethod.WeightEqualNegative) && !isPositive);
+    }
+
+    private boolean isValidBinningMethod(){
+        return modelConfig.getBinningMethod().equals(BinningMethod.EqualTotal)
+                || modelConfig.getBinningMethod().equals(BinningMethod.EqualInterval)
+                || modelConfig.getBinningMethod().equals(BinningMethod.WeightEqualTotal)
+                || modelConfig.getBinningMethod().equals(BinningMethod.WeightEqualInterval);
     }
 }
