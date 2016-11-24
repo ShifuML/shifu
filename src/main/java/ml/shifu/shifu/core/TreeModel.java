@@ -53,17 +53,17 @@ public class TreeModel extends BasicML implements MLRegression {
     @Override
     public final MLData compute(final MLData input) {
         double[] data = input.getData();
-        return new BasicMLData(this.independentTreeModel.compute(data));
+        return new BasicMLData(this.getIndependentTreeModel().compute(data));
     }
 
     @Override
     public int getInputCount() {
-        return this.independentTreeModel.getInputNode();
+        return this.getIndependentTreeModel().getInputNode();
     }
 
     @Override
     public String toString() {
-        return this.independentTreeModel.getTrees().toString();
+        return this.getIndependentTreeModel().getTrees().toString();
     }
 
     @Override
@@ -100,23 +100,27 @@ public class TreeModel extends BasicML implements MLRegression {
     }
 
     public String getAlgorithm() {
-        return this.independentTreeModel.getAlgorithm();
+        return this.getIndependentTreeModel().getAlgorithm();
     }
 
     public String getLossStr() {
-        return this.independentTreeModel.getLossStr();
+        return this.getIndependentTreeModel().getLossStr();
     }
 
     public List<TreeNode> getTrees() {
-        return this.independentTreeModel.getTrees();
+        return this.getIndependentTreeModel().getTrees();
     }
 
     public boolean isGBDT() {
-        return this.independentTreeModel.isGBDT();
+        return this.getIndependentTreeModel().isGBDT();
     }
 
     public boolean isClassfication() {
-        return this.independentTreeModel.isClassification();
+        return this.getIndependentTreeModel().isClassification();
+    }
+
+    public IndependentTreeModel getIndependentTreeModel() {
+        return independentTreeModel;
     }
 
 }
