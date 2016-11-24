@@ -167,6 +167,8 @@ public class IndependentTreeModel {
      * @return if classification mode, return array of all scores of trees
      *         if regression of RF, return array with only one element which is avg score of all tree model scores
      *         if regression of GBT, return array with only one element which is score of the GBT model
+     * @throws IllegalArgumentException
+     *             if needed columns not in parameter dataMap
      */
     public final double[] compute(Map<String, Object> dataMap) {
         double predictSum = 0d;
@@ -260,6 +262,11 @@ public class IndependentTreeModel {
 
         Node nextNode = null;
         Object obj = dataMap.get(numNameMapping.get(split.getColumnNum()));
+
+        if(obj == null) {
+            throw new IllegalArgumentException("Current model need column " + numNameMapping.get(split.getColumnNum())
+                    + " but not found in dataMap, please check your input");
+        }
 
         if(split.getFeatureType().isNumerical()) {
             double value = 0d;

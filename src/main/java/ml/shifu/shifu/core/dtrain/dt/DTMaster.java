@@ -904,9 +904,7 @@ public class DTMaster extends AbstractMasterComputable<DTMasterParams, DTWorkerP
         } catch (IOException e) {
             throw new GuaguaRuntimeException(e);
         } finally {
-            if(stream != null) {
-                org.apache.commons.io.IOUtils.closeQuietly(stream);
-            }
+            org.apache.commons.io.IOUtils.closeQuietly(stream);
         }
     }
 }

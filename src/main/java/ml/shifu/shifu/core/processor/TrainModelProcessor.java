@@ -219,7 +219,7 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
 
         SourceType sourceType = modelConfig.getDataSet().getSource();
         String cleanedDataPath = super.pathFinder.getCleanedDataPath();
-        String needReGen = Environment.getProperty("shifu.tree.regeninput", Boolean.FALSE.toString());
+        String needReGen = Environment.getProperty("shifu.tree.regeninput", Boolean.TRUE.toString());
         if(ShifuFileUtils.isFileExists(cleanedDataPath, sourceType)
                 && Boolean.FALSE.toString().equalsIgnoreCase(needReGen)) {
             LOG.warn("For RF/GBT, training input in {} exists, no need to regenerate it.", cleanedDataPath);

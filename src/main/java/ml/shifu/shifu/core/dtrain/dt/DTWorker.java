@@ -812,7 +812,18 @@ public class DTWorker
                                     this.inputIndexMap.put(columnConfig.getColumnNum(), inputIndex);
                                 }
                             } else if(columnConfig.isCategorical()) {
-                                short shortValue = Short.parseShort(input);
+                                short shortValue = (short) (columnConfig.getBinCategory().size());
+                                if(input.length() == 0) {
+                                    // empty
+                                    shortValue = (short) (columnConfig.getBinCategory().size());
+                                } else {
+                                    // TODO change columnConfig.getBinCategory() to HashMap
+                                    shortValue = (short) (columnConfig.getBinCategory().indexOf(input));
+                                    if(shortValue == -1) {
+                                        // not found
+                                        shortValue = (short) (columnConfig.getBinCategory().size());
+                                    }
+                                }
                                 inputs[inputIndex] = shortValue;
                                 if(!this.inputIndexMap.containsKey(columnConfig.getColumnNum())) {
                                     this.inputIndexMap.put(columnConfig.getColumnNum(), inputIndex);
@@ -834,7 +845,19 @@ public class DTWorker
                                     this.inputIndexMap.put(columnConfig.getColumnNum(), inputIndex);
                                 }
                             } else if(columnConfig.isCategorical()) {
-                                short shortValue = Short.parseShort(input);
+                                // cast is safe as we limit max bin to Short.MAX_VALUE
+                                short shortValue = (short) (columnConfig.getBinCategory().size());
+                                if(input.length() == 0) {
+                                    // empty
+                                    shortValue = (short) (columnConfig.getBinCategory().size());
+                                } else {
+                                    // TODO change columnConfig.getBinCategory() to HashMap
+                                    shortValue = (short) (columnConfig.getBinCategory().indexOf(input));
+                                    if(shortValue == -1) {
+                                        // not found
+                                        shortValue = (short) (columnConfig.getBinCategory().size());
+                                    }
+                                }
                                 inputs[inputIndex] = shortValue;
                                 if(!this.inputIndexMap.containsKey(columnConfig.getColumnNum())) {
                                     this.inputIndexMap.put(columnConfig.getColumnNum(), inputIndex);
