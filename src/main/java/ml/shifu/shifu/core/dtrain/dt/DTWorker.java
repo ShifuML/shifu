@@ -247,6 +247,11 @@ public class DTWorker
      */
     private boolean isContinuousEnabled;
 
+    /**
+     * Mapping for (ColumnNum, Map(Category, CategoryIndex) for categorical feature
+     */
+    private Map<Integer, Map<String, Integer>> columnCategoryIndexMapping;
+
     @Override
     public void initRecordReader(GuaguaFileSplit fileSplit) throws IOException {
         super.setRecordReader(new GuaguaLineRecordReader(fileSplit));
@@ -264,6 +269,19 @@ public class DTWorker
                     props.getProperty(CommonConstants.SHIFU_COLUMN_CONFIG), sourceType);
         } catch (IOException e) {
             throw new RuntimeException(e);
+        }
+
+        this.columnCategoryIndexMapping = new HashMap<Integer, Map<String, Integer>>();
+        for(ColumnConfig config: this.columnConfigList) {
+            if(config.isCategorical()) {
+                if(config.getBinCategory() != null) {
+                    Map<String, Integer> tmpMap = new HashMap<String, Integer>();
+                    for(int i = 0; i < config.getBinCategory().size(); i++) {
+                        tmpMap.put(config.getBinCategory().get(i), i);
+                    }
+                    this.columnCategoryIndexMapping.put(config.getColumnNum(), tmpMap);
+                }
+            }
         }
 
         this.isContinuousEnabled = Boolean.TRUE.toString().equalsIgnoreCase(
@@ -817,8 +835,10 @@ public class DTWorker
                                     // empty
                                     shortValue = (short) (columnConfig.getBinCategory().size());
                                 } else {
-                                    // TODO change columnConfig.getBinCategory() to HashMap
-                                    shortValue = (short) (columnConfig.getBinCategory().indexOf(input));
+                                    // cast is safe as we limit max bin to Short.MAX_VALUE
+                                    int categoricalIndex = this.columnCategoryIndexMapping.get(
+                                            columnConfig.getColumnNum()).get(input);
+                                    shortValue = (short) (categoricalIndex);
                                     if(shortValue == -1) {
                                         // not found
                                         shortValue = (short) (columnConfig.getBinCategory().size());
@@ -851,8 +871,10 @@ public class DTWorker
                                     // empty
                                     shortValue = (short) (columnConfig.getBinCategory().size());
                                 } else {
-                                    // TODO change columnConfig.getBinCategory() to HashMap
-                                    shortValue = (short) (columnConfig.getBinCategory().indexOf(input));
+                                    // cast is safe as we limit max bin to Short.MAX_VALUE
+                                    int categoricalIndex = this.columnCategoryIndexMapping.get(
+                                            columnConfig.getColumnNum()).get(input);
+                                    shortValue = (short) (categoricalIndex);
                                     if(shortValue == -1) {
                                         // not found
                                         shortValue = (short) (columnConfig.getBinCategory().size());
