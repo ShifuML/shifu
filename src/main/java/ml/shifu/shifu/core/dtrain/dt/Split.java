@@ -137,6 +137,8 @@ public class Split implements Bytable {
     public void write(DataOutput out) throws IOException {
         out.writeInt(this.columnNum);
         out.writeDouble(this.threshold);
+        out.writeInt(this.columnName.getBytes().length);
+        out.write(this.columnName.getBytes());
         if(featureType == null) {
             out.writeBoolean(false);
         } else {
@@ -159,6 +161,10 @@ public class Split implements Bytable {
     public void readFields(DataInput in) throws IOException {
         this.columnNum = in.readInt();
         this.threshold = in.readDouble();
+        int nameLen = in.readInt();
+        byte[] name = new byte[nameLen];
+        in.readFully(name);
+        this.columnName = new String(name);
 
         if(in.readBoolean()) {
             this.featureType = FeatureType.of(in.readUTF());

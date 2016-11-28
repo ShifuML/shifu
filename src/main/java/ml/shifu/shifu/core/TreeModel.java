@@ -24,6 +24,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 
+import org.apache.commons.lang3.tuple.MutablePair;
 import org.apache.commons.lang3.tuple.Pair;
 import org.encog.ml.BasicML;
 import org.encog.ml.MLRegression;
@@ -38,7 +39,6 @@ import ml.shifu.shifu.core.dtrain.dt.Node;
 import ml.shifu.shifu.core.dtrain.dt.Split;
 import ml.shifu.shifu.core.dtrain.dt.TreeNode;
 import ml.shifu.shifu.util.CommonUtils;
-import ml.shifu.shifu.util.Environment;
 
 /**
  * {@link TreeModel} is to load Random Forest or Gradient Boosted Decision Tree models.
@@ -349,18 +349,18 @@ public class TreeModel extends BasicML implements MLRegression {
         this.lossStr = lossStr;
     }
     
-    public Map<Integer,Pair<String,Double>> getFeatureImportances(){
-        Map<Integer,Pair<String,Double>> importancesSum = new HashMap<Integer,Pair<String,Double>>();
+    public Map<Integer,MutablePair<String,Double>> getFeatureImportances(){
+        Map<Integer,MutablePair<String,Double>> importancesSum = new HashMap<Integer,MutablePair<String,Double>>();
         int size = this.trees.size();
         for(TreeNode tree:this.trees){
-            Map<Integer,Pair<String,Double>> subImportances = tree.computeFeatureImportance();
-            for(Entry<Integer,Pair<String,Double>> entry:subImportances.entrySet()){
-                Pair<String,Double> importance = entry.getValue();
+            Map<Integer,MutablePair<String,Double>> subImportances = tree.computeFeatureImportance();
+            for(Entry<Integer,MutablePair<String,Double>> entry:subImportances.entrySet()){
+                MutablePair<String,Double> importance = entry.getValue();
                 if(!importancesSum.containsKey(entry.getKey())){
                     importance.setValue(importance.getValue()/size);
                     importancesSum.put(entry.getKey(), importance);
                 }else{
-                    Pair<String,Double> current = importancesSum.get(entry.getKey());
+                    MutablePair<String,Double> current = importancesSum.get(entry.getKey());
                     current.setValue(current.getValue()+importance.getValue()/size);
                     importancesSum.put(entry.getKey(), current);
                 }

@@ -3,7 +3,10 @@ package ml.shifu.shifu.core.dtrain;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
 
+import org.apache.commons.lang3.tuple.MutablePair;
 import org.testng.annotations.BeforeClass;
 
 import ml.shifu.shifu.container.obj.ColumnConfig;
@@ -24,7 +27,10 @@ public class TreeModelTest {
     }
     
     public void FeatureImportancesTest(){
-        model.getFeatureImportances();
+        Map<Integer,MutablePair<String,Double>> importances = model.getFeatureImportances();
+        for(Entry<Integer,MutablePair<String,Double>> entry:importances.entrySet()){
+            System.out.println(entry.getKey()+" "+entry.getValue().getKey()+" "+entry.getValue().getValue());
+        }
     }
     
     public static void main(String[] args) throws IOException{
