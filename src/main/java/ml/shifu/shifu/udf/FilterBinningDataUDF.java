@@ -73,12 +73,18 @@ public class FilterBinningDataUDF extends AbstractTrainerUDF<Boolean> {
                     || modelConfig.getBinningMethod().equals(BinningMethod.EqualTotal)
                     || modelConfig.getBinningMethod().equals(BinningMethod.EqualInterval)
                     || (modelConfig.getBinningMethod().equals(BinningMethod.EqualPositive) && isPositive)
-                    || (modelConfig.getBinningMethod().equals(BinningMethod.EqualNegtive) && !isPositive) );
+                    || (modelConfig.getBinningMethod().equals(BinningMethod.EqualNegtive) && !isPositive)
+                    || modelConfig.getBinningMethod().equals(BinningMethod.WeightEqualTotal)
+                    || modelConfig.getBinningMethod().equals(BinningMethod.WeightEqualInterval)
+                    || (modelConfig.getBinningMethod().equals(BinningMethod.WeightEqualPositive) && isPositive)
+                    || (modelConfig.getBinningMethod().equals(BinningMethod.WeightEqualNegative) && !isPositive));
         } else {
             return columnConfig != null
                     && ( columnConfig.isCategorical()
                     || modelConfig.getBinningMethod().equals(BinningMethod.EqualTotal)
-                    || modelConfig.getBinningMethod().equals(BinningMethod.EqualInterval));
+                    || modelConfig.getBinningMethod().equals(BinningMethod.EqualInterval)
+                    || modelConfig.getBinningMethod().equals(BinningMethod.WeightEqualTotal)
+                    || modelConfig.getBinningMethod().equals(BinningMethod.WeightEqualInterval));
         }
     }
 }

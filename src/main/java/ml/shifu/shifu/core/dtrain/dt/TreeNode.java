@@ -63,6 +63,12 @@ public class TreeNode implements Bytable {
      */
     private List<Integer> features;
 
+    /**
+     * Learning rate for current model. This is very useful for GBT, since may be first 100 trees learning rate is 0.04,
+     * later it is changed to 0.03.
+     */
+    private double learningRate = 1d;
+
     public TreeNode() {
     }
 
@@ -70,18 +76,28 @@ public class TreeNode implements Bytable {
         this.treeId = treeId;
         this.node = node;
         this.nodeNum = 1;
+        this.learningRate = 1d;
     }
 
-    public TreeNode(int treeId, Node node, int nodeNum) {
+    public TreeNode(int treeId, Node node, double learningRate) {
+        this.treeId = treeId;
+        this.node = node;
+        this.nodeNum = 1;
+        this.learningRate = learningRate;
+    }
+
+    public TreeNode(int treeId, Node node, int nodeNum, double learningRate) {
         this.treeId = treeId;
         this.node = node;
         this.nodeNum = nodeNum;
+        this.learningRate = learningRate;
     }
 
-    public TreeNode(int treeId, Node node, List<Integer> features) {
+    public TreeNode(int treeId, Node node, List<Integer> features, double learningRate) {
         this.treeId = treeId;
         this.node = node;
         this.features = features;
+        this.learningRate = learningRate;
     }
 
     /**
@@ -166,11 +182,27 @@ public class TreeNode implements Bytable {
         this.rootWgtCnt = rootWgtCnt;
     }
 
+    /**
+     * @return the learningRate
+     */
+    public double getLearningRate() {
+        return learningRate;
+    }
+
+    /**
+     * @param learningRate
+     *            the learningRate to set
+     */
+    public void setLearningRate(double learningRate) {
+        this.learningRate = learningRate;
+    }
+
     @Override
     public void write(DataOutput out) throws IOException {
         out.writeInt(treeId);
         out.writeInt(nodeNum);
         this.node.write(out);
+        out.writeDouble(this.learningRate);
 
         if(this.node.getId() == Node.ROOT_INDEX) {
             out.writeDouble(this.rootWgtCnt);
@@ -190,6 +222,7 @@ public class TreeNode implements Bytable {
         out.writeInt(treeId);
         out.writeInt(nodeNum);
         this.node.write(out);
+        out.writeDouble(this.learningRate);
 
         if(this.node.getId() == Node.ROOT_INDEX) {
             out.writeDouble(this.rootWgtCnt);
@@ -202,6 +235,7 @@ public class TreeNode implements Bytable {
         this.nodeNum = in.readInt();
         this.node = new Node();
         this.node.readFields(in);
+        this.learningRate = in.readDouble();
 
         if(this.node.getId() == Node.ROOT_INDEX) {
             this.rootWgtCnt = in.readDouble();
@@ -219,6 +253,7 @@ public class TreeNode implements Bytable {
         this.nodeNum = in.readInt();
         this.node = new Node();
         this.node.readFields(in);
+        this.learningRate = in.readDouble();
 
         if(this.node.getId() == Node.ROOT_INDEX) {
             this.rootWgtCnt = in.readDouble();
@@ -234,5 +269,4 @@ public class TreeNode implements Bytable {
     public String toString() {
         return "TreeNode [treeId=" + treeId + ", node=" + node.getId() + ", features=" + features + "]";
     }
-
 }
