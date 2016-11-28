@@ -227,13 +227,13 @@ public class TreeNode implements Bytable {
         }
     }
     
-    public Map<Integer,org.apache.commons.lang3.tuple.Pair<String,Double>> computeFeatureImportance(){
-        Map<Integer,org.apache.commons.lang3.tuple.Pair<String,Double>> importances = new HashMap<Integer,org.apache.commons.lang3.tuple.Pair<String,Double>>();
+    public Map<Integer,org.apache.commons.lang3.tuple.MutablePair<String,Double>> computeFeatureImportance(){
+        Map<Integer,org.apache.commons.lang3.tuple.MutablePair<String,Double>> importances = new HashMap<Integer,org.apache.commons.lang3.tuple.MutablePair<String,Double>>();
         preOrder(importances,node);
-        return null;
+        return importances;
     }
     
-    private void preOrder(Map<Integer,org.apache.commons.lang3.tuple.Pair<String,Double>> importances,Node node){
+    private void preOrder(Map<Integer,org.apache.commons.lang3.tuple.MutablePair<String,Double>> importances,Node node){
         if(node==null){
             return;
         }
@@ -242,11 +242,11 @@ public class TreeNode implements Bytable {
         preOrder(importances,node.getRight());
     }
     
-    private void computeImportance(Map<Integer,org.apache.commons.lang3.tuple.Pair<String,Double>> importances,Node node){
+    private void computeImportance(Map<Integer,org.apache.commons.lang3.tuple.MutablePair<String,Double>> importances,Node node){
         if(!node.isLeaf()){
             int featureId = node.getSplit().getColumnNum();
             String featureName = node.getSplit().getColumnName();
-            org.apache.commons.lang3.tuple.Pair<String,Double> value = org.apache.commons.lang3.tuple.Pair.of(featureName, node.getGain());
+            org.apache.commons.lang3.tuple.MutablePair<String,Double> value = org.apache.commons.lang3.tuple.MutablePair.of(featureName, node.getGain());
             if(!importances.containsKey(featureId)){
                 importances.put(featureId, value);
             }else{
