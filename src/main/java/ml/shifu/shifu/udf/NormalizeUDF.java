@@ -166,18 +166,17 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
             } else {
                 if(this.isForClean) {
                     // for RF/GBT model, only clean data, not real do norm data
-                    Double normVal = 0d;
                     if(config.isCategorical()) {
                         // TODO using HashSet instead of ArrayList
                         int index = config.getBinCategory().indexOf(val);
                         if(index == -1) {
-                            // set null/invalid value to last bin, for categorical features, last bin is for invalid
-                            // value. index is config.getBinCategory().size()
-                            tuple.append(config.getBinCategory().size());
+                            // set to empty for invalid category
+                            tuple.append("");
                         } else {
-                            tuple.append(index);
+                            tuple.append(val);
                         }
                     } else {
+                        Double normVal = 0d;
                         try {
                             normVal = Double.parseDouble(val);
                         } catch (Exception e) {
@@ -249,7 +248,7 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
                 } else {
                     if(config.isCategorical() && this.isForClean) {
                         // clean data for DT algorithms, only store index, short is ok while Pig only have int type
-                        schemaStr.append(config.getColumnName() + ":int" + ",");
+                        schemaStr.append(config.getColumnName() + ":chararray" + ",");
                     } else {
                         // for others, set to float, no matter LR/NN categorical or filter out feature with null
                         schemaStr.append(config.getColumnName() + ":float" + ",");

@@ -255,7 +255,8 @@ public class ModelInspector {
         ValidateResult result = new ValidateResult(true);
 
         if(modelConfig.isClassification()
-                && (modelConfig.getBinningMethod() == BinningMethod.EqualPositive || modelConfig.getBinningMethod() == BinningMethod.EqualNegtive)) {
+                && (modelConfig.getBinningMethod() == BinningMethod.EqualPositive || modelConfig.getBinningMethod() == BinningMethod.EqualNegtive
+                || modelConfig.getBinningMethod() == BinningMethod.WeightEqualPositive || modelConfig.getBinningMethod() == BinningMethod.WeightEqualNegative)) {
             ValidateResult tmpResult = new ValidateResult(false,
                     Arrays.asList("Multiple classification cannot leverage EqualNegtive and EqualPositive binning."));
             result = ValidateResult.mergeResult(result, tmpResult);
@@ -713,31 +714,33 @@ public class ModelInspector {
                 }
 
                 Object impurityObj = params.get("Impurity");
-                if(train.getAlgorithm().equalsIgnoreCase(CommonConstants.GBT_ALG_NAME)) {
-                    if(impurityObj != null && !"variance".equalsIgnoreCase(impurityObj.toString())
-                            && !"friedmanmse".equalsIgnoreCase(impurityObj.toString())) {
-                        ValidateResult tmpResult = new ValidateResult(true);
-                        tmpResult.setStatus(false);
-                        tmpResult.getCauses().add("GBDT only supports 'variance' impurity type.");
-                        result = ValidateResult.mergeResult(result, tmpResult);
-                    }
-                } else {
+                if(impurityObj == null) {
                     ValidateResult tmpResult = new ValidateResult(true);
                     tmpResult.setStatus(false);
                     tmpResult.getCauses().add(
-                            "'Impurity' parameter isn't be set in train#parameters in GBT/RF training.");
+                            "Impurity should be in null in RF/GBT algorithm.");
                     result = ValidateResult.mergeResult(result, tmpResult);
-                }
+                } else {
+                    if(train.getAlgorithm().equalsIgnoreCase(CommonConstants.GBT_ALG_NAME)) {
+                        if(impurityObj != null && !"variance".equalsIgnoreCase(impurityObj.toString())
+                                && !"friedmanmse".equalsIgnoreCase(impurityObj.toString())) {
+                            ValidateResult tmpResult = new ValidateResult(true);
+                            tmpResult.setStatus(false);
+                            tmpResult.getCauses().add("GBDT only supports 'variance' impurity type.");
+                            result = ValidateResult.mergeResult(result, tmpResult);
+                        }
+                    }
 
-                if(train.getAlgorithm().equalsIgnoreCase(CommonConstants.RF_ALG_NAME)) {
-                    if(impurityObj != null && !"friedmanmse".equalsIgnoreCase(impurityObj.toString())
-                            && !"entropy".equalsIgnoreCase(impurityObj.toString())
-                            && !"variance".equalsIgnoreCase(impurityObj.toString())
-                            && !"gini".equalsIgnoreCase(impurityObj.toString())) {
-                        ValidateResult tmpResult = new ValidateResult(true);
-                        tmpResult.setStatus(false);
-                        tmpResult.getCauses().add("RF supports 'variance|entropy|gini' impurity types.");
-                        result = ValidateResult.mergeResult(result, tmpResult);
+                    if(train.getAlgorithm().equalsIgnoreCase(CommonConstants.RF_ALG_NAME)) {
+                        if(impurityObj != null && !"friedmanmse".equalsIgnoreCase(impurityObj.toString())
+                                && !"entropy".equalsIgnoreCase(impurityObj.toString())
+                                && !"variance".equalsIgnoreCase(impurityObj.toString())
+                                && !"gini".equalsIgnoreCase(impurityObj.toString())) {
+                            ValidateResult tmpResult = new ValidateResult(true);
+                            tmpResult.setStatus(false);
+                            tmpResult.getCauses().add("RF supports 'variance|entropy|gini' impurity types.");
+                            result = ValidateResult.mergeResult(result, tmpResult);
+                        }
                     }
                 }
             }
