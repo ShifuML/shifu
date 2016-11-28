@@ -2,17 +2,13 @@ package ml.shifu.shifu.core.dtrain;
 
 import java.io.FileInputStream;
 import java.io.IOException;
-import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 
 import org.apache.commons.lang3.tuple.MutablePair;
 import org.testng.annotations.BeforeClass;
 
-import ml.shifu.shifu.container.obj.ColumnConfig;
-import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
 import ml.shifu.shifu.core.TreeModel;
-import ml.shifu.shifu.util.CommonUtils;
 
 public class TreeModelTest {
 
@@ -20,10 +16,10 @@ public class TreeModelTest {
     
     @BeforeClass
     public void setUp() throws IOException {
-        String modelPath = "src/test/resources/example/wdbc/wdbcModelSetLocal/models/model0.gbt";
+       // String modelPath = "src/test/resources/example/wdbc/wdbcModelSetLocal/models/model0.gbt";
+        String modelPath = "src/test/resources/example/model_cam.gbt";
         FileInputStream fi = new FileInputStream(modelPath);
-        List<ColumnConfig> columnConfigList = CommonUtils.loadColumnConfigList("src/test/resources/example/wdbc/wdbcModelSetLocal/ColumnConfig.json", SourceType.LOCAL);
-        model = TreeModel.loadFromStream(fi, columnConfigList);
+        model = TreeModel.loadFromStream(fi);
     }
     
     public void FeatureImportancesTest(){

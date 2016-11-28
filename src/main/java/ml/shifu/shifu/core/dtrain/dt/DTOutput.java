@@ -16,18 +16,20 @@
 package ml.shifu.shifu.core.dtrain.dt;
 
 import java.io.IOException;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Properties;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import ml.shifu.guagua.master.BasicMasterInterceptor;
 import ml.shifu.guagua.master.MasterContext;
+import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.container.obj.ModelConfig;
 import ml.shifu.shifu.container.obj.ModelTrainConf.ALGORITHM;
 import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
-import ml.shifu.shifu.core.alg.NNTrainer;
 import ml.shifu.shifu.core.dtrain.CommonConstants;
 import ml.shifu.shifu.core.dtrain.DTrainUtils;
 import ml.shifu.shifu.core.dtrain.gs.GridSearch;
@@ -94,6 +96,16 @@ public class DTOutput extends BasicMasterInterceptor<DTMasterParams, DTWorkerPar
      * Valid training parameters including grid search
      */
     private Map<String, Object> validParams;
+
+    /**
+     * ColumnConfig list reference
+     */
+    private List<ColumnConfig> columnConfigList;
+
+    /**
+     * input count
+     */
+    private int inputCount;
 
     @Override
     public void preApplication(MasterContext<DTMasterParams, DTWorkerParams> context) {
@@ -247,6 +259,7 @@ public class DTOutput extends BasicMasterInterceptor<DTMasterParams, DTWorkerPar
             writeValErrorToFileSystem(context.getMasterResult().getValidationError()
                     / context.getMasterResult().getValidationCount(), valErrOutput);
         }
+        IOUtils.closeStream(this.progressOutput);
     }
 
     private void writeValErrorToFileSystem(double valError, Path out) {
@@ -267,20 +280,44 @@ public class DTOutput extends BasicMasterInterceptor<DTMasterParams, DTWorkerPar
         try {
             fos = FileSystem.get(new Configuration()).create(out);
             LOG.info("Writing results to {}", out);
-            byte[] bytes = modelConfig.getAlgorithm().getBytes("UTF-8");
-            fos.writeInt(bytes.length);
-            for(byte b: bytes) {
-                fos.writeByte(b);
-            }
-            double learningRate = Double.valueOf(validParams.get(NNTrainer.LEARNING_RATE).toString());
-            fos.writeDouble(learningRate);
-            bytes = this.validParams.get("Loss").toString().getBytes("UTF-8");
-            fos.writeInt(bytes.length);
-            for(byte b: bytes) {
-                fos.writeByte(b);
-            }
+
+            fos.writeUTF(modelConfig.getAlgorithm());
+            fos.writeUTF(this.validParams.get("Loss").toString());
             fos.writeBoolean(this.modelConfig.isClassification());
             fos.writeBoolean(this.modelConfig.getTrain().isOneVsAll());
+            fos.writeInt(this.inputCount);
+
+            Map<Integer, String> columnIndexNameMapping = new HashMap<Integer, String>();
+            Map<Integer, List<String>> columnIndexCategoricalListMapping = new HashMap<Integer, List<String>>();
+            for(ColumnConfig columnConfig: this.columnConfigList) {
+                columnIndexNameMapping.put(columnConfig.getColumnNum(), columnConfig.getColumnName());
+                if(columnConfig.isCategorical()) {
+                    columnIndexCategoricalListMapping.put(columnConfig.getColumnNum(), columnConfig.getBinCategory());
+                }
+            }
+            // serialize columnIndexNameMapping
+            fos.writeInt(columnIndexNameMapping.size());
+            for(Entry<Integer, String> entry: columnIndexNameMapping.entrySet()) {
+                fos.writeInt(entry.getKey());
+                fos.writeUTF(entry.getValue());
+            }
+            // serialize columnIndexCategoricalListMapping
+            fos.writeInt(columnIndexCategoricalListMapping.size());
+            for(Entry<Integer, List<String>> entry: columnIndexCategoricalListMapping.entrySet()) {
+                fos.writeInt(entry.getKey());
+                List<String> categories = entry.getValue();
+                fos.writeInt(categories.size());
+                for(String category: categories) {
+                    fos.writeUTF(category);
+                }
+            }
+
+            Map<Integer, Integer> columnMapping = getColumnMapping();
+            fos.writeInt(columnMapping.size());
+            for(Entry<Integer, Integer> entry: columnMapping.entrySet()) {
+                fos.writeInt(entry.getKey());
+                fos.writeInt(entry.getValue());
+            }
 
             int treeLength = trees.size();
             fos.writeInt(treeLength);
@@ -292,6 +329,29 @@ public class DTOutput extends BasicMasterInterceptor<DTMasterParams, DTWorkerPar
         } finally {
             IOUtils.closeStream(fos);
         }
+    }
+
+    private Map<Integer, Integer> getColumnMapping() {
+        Map<Integer, Integer> columnMapping = new HashMap<Integer, Integer>(columnConfigList.size(), 1f);
+        int[] inputOutputIndex = DTrainUtils.getNumericAndCategoricalInputAndOutputCounts(columnConfigList);
+        boolean isAfterVarSelect = inputOutputIndex[3] == 1 ? true : false;
+        int index = 0;
+        for(int i = 0; i < columnConfigList.size(); i++) {
+            ColumnConfig columnConfig = columnConfigList.get(i);
+            if(!isAfterVarSelect) {
+                if(!columnConfig.isMeta() && !columnConfig.isTarget() && CommonUtils.isGoodCandidate(columnConfig)) {
+                    columnMapping.put(columnConfig.getColumnNum(), index);
+                    index += 1;
+                }
+            } else {
+                if(columnConfig != null && !columnConfig.isMeta() && !columnConfig.isTarget()
+                        && columnConfig.isFinalSelect()) {
+                    columnMapping.put(columnConfig.getColumnNum(), index);
+                    index += 1;
+                }
+            }
+        }
+        return columnMapping;
     }
 
     /**
@@ -318,14 +378,17 @@ public class DTOutput extends BasicMasterInterceptor<DTMasterParams, DTWorkerPar
             this.tmpModelsFolder = context.getProps().getProperty(CommonConstants.SHIFU_TMP_MODELS_FOLDER);
             this.isRF = ALGORITHM.RF.toString().equalsIgnoreCase(modelConfig.getAlgorithm());
             this.isGBDT = ALGORITHM.GBT.toString().equalsIgnoreCase(modelConfig.getAlgorithm());
+            int[] inputOutputIndex = DTrainUtils.getNumericAndCategoricalInputAndOutputCounts(this.columnConfigList);
+            // numerical + categorical = # of all input
+            this.inputCount = inputOutputIndex[0] + inputOutputIndex[1];
+            try {
+                Path progressLog = new Path(context.getProps().getProperty(CommonConstants.SHIFU_DTRAIN_PROGRESS_FILE));
+                this.progressOutput = FileSystem.get(new Configuration()).create(progressLog);
+            } catch (IOException e) {
+                LOG.error("Error in create progress log:", e);
+            }
         }
 
-        try {
-            Path progressLog = new Path(context.getProps().getProperty(CommonConstants.SHIFU_DTRAIN_PROGRESS_FILE));
-            this.progressOutput = FileSystem.get(new Configuration()).create(progressLog);
-        } catch (IOException e) {
-            LOG.error("Error in create progress log:", e);
-        }
     }
 
     /**
@@ -338,6 +401,8 @@ public class DTOutput extends BasicMasterInterceptor<DTMasterParams, DTWorkerPar
                     SourceType.HDFS.toString()));
             this.modelConfig = CommonUtils.loadModelConfig(props.getProperty(CommonConstants.SHIFU_MODEL_CONFIG),
                     sourceType);
+            this.columnConfigList = CommonUtils.loadColumnConfigList(
+                    props.getProperty(CommonConstants.SHIFU_COLUMN_CONFIG), sourceType);
         } catch (IOException e) {
             throw new RuntimeException(e);
         }

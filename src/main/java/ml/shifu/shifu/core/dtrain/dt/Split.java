@@ -43,20 +43,20 @@ public class Split implements Bytable {
 
     private double threshold;
 
-    private Set<String> leftCategories;
-    
-    private String columnName;
+    /**
+     * Indexes of left categories, list of categories will be saved in model files or in TreeModel
+     */
+    private Set<Integer> leftCategories;
 
     public Split() {
     }
 
-    public Split(int featureIndex,String featureName) {
+    public Split(int featureIndex) {
         this.columnNum = featureIndex;
     }
 
-    public Split(int columnNum,String columnName, FeatureType featureType, double threshold, Set<String> leftCategories) {
+    public Split(int columnNum, FeatureType featureType, double threshold, Set<Integer> leftCategories) {
         this.columnNum = columnNum;
-        this.columnName = columnName;
         this.featureType = featureType;
         this.threshold = threshold;
         this.leftCategories = leftCategories;
@@ -67,13 +67,6 @@ public class Split implements Bytable {
      */
     public int getColumnNum() {
         return columnNum;
-    }
-    
-    /**
-     * @return the featureName
-     */
-    public String getColumnName() {
-        return columnName;
     }
 
     /**
@@ -93,7 +86,7 @@ public class Split implements Bytable {
     /**
      * @return the leftCategories
      */
-    public Set<String> getLeftCategories() {
+    public Set<Integer> getLeftCategories() {
         return leftCategories;
     }
 
@@ -120,16 +113,12 @@ public class Split implements Bytable {
     public void setThreshold(double threshold) {
         this.threshold = threshold;
     }
-    
-    public void setColumnName(String columnName) {
-        this.columnName = columnName;
-    }
 
     /**
      * @param leftCategories
      *            the leftCategories to set
      */
-    public void setLeftCategories(Set<String> leftCategories) {
+    public void setLeftCategories(Set<Integer> leftCategories) {
         this.leftCategories = leftCategories;
     }
 
@@ -137,43 +126,43 @@ public class Split implements Bytable {
     public void write(DataOutput out) throws IOException {
         out.writeInt(this.columnNum);
         out.writeDouble(this.threshold);
-        out.writeInt(this.columnName.getBytes().length);
-        out.write(this.columnName.getBytes());
         if(featureType == null) {
             out.writeBoolean(false);
         } else {
             out.writeBoolean(true);
-            out.writeUTF(this.featureType.toString());
+            // use byte type to save space
+            out.writeByte(this.featureType.getByteType());
         }
 
-        if(leftCategories == null) {
-            out.writeInt(0);
-        } else {
-            out.writeInt(this.leftCategories.size());
-            for(String category: this.leftCategories) {
-                out.writeUTF(category);
+        if(this.featureType == FeatureType.CATEGORICAL) {
+            if(leftCategories == null) {
+                out.writeInt(0);
+            } else {
+                out.writeInt(this.leftCategories.size());
+                for(int categoryIndex: this.leftCategories) {
+                    out.writeInt(categoryIndex);
+                }
             }
         }
-
     }
 
     @Override
     public void readFields(DataInput in) throws IOException {
         this.columnNum = in.readInt();
         this.threshold = in.readDouble();
-        int nameLen = in.readInt();
-        byte[] name = new byte[nameLen];
-        in.readFully(name);
-        this.columnName = new String(name);
 
         if(in.readBoolean()) {
-            this.featureType = FeatureType.of(in.readUTF());
+            this.featureType = FeatureType.of(in.readByte());
         }
 
-        int len = in.readInt();
-        this.leftCategories = new HashSet<String>();
-        for(int i = 0; i < len; i++) {
-            this.leftCategories.add(in.readUTF());
+        if(this.featureType == FeatureType.CATEGORICAL) {
+            int len = in.readInt();
+            if(len > 0) {
+                this.leftCategories = new HashSet<Integer>();
+                for(int i = 0; i < len; i++) {
+                    this.leftCategories.add(in.readInt());
+                }
+            }
         }
     }
 

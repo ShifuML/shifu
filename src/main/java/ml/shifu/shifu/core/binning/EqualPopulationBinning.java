@@ -68,7 +68,7 @@ public class EqualPopulationBinning extends AbstractBinning<Double> {
 
     /**
      * Construct @EqualPopulationBinning with expected bin number
-     * 
+     *
      * @param binningNum
      */
     public EqualPopulationBinning(int binningNum) {
@@ -77,7 +77,7 @@ public class EqualPopulationBinning extends AbstractBinning<Double> {
 
     /**
      * Construct @EqualPopulationBinning with expected bin number and with histogram scale factor
-     * 
+     *
      * @param binningNum
      */
     public EqualPopulationBinning(int binningNum, int histogramScale) {
@@ -130,6 +130,32 @@ public class EqualPopulationBinning extends AbstractBinning<Double> {
 
     }
 
+    /**
+     * Add the value (in format of text) into histogram with weight.
+     * First of all the input string will be trimmed and check whether it is missing value or not
+     * If it is missing value, the missing value count will +1
+     * After that, the input string will be parsed into double. If it is not a double, invalid value count will +1
+     *
+     * @param val, string type value
+     * @param wVal, frequency or weight of this value
+     */
+    public void addData(String val, double wVal) {
+        String fval = StringUtils.trimToEmpty(val);
+        if(!isMissingVal(fval)) {
+            double dval = 0;
+            try {
+                dval = Double.parseDouble(fval);
+            } catch (NumberFormatException e) {
+                // not a number? just ignore
+                super.incInvalidValCnt();
+                return;
+            }
+            process(dval, wVal);
+        } else {
+            super.incMissingValCnt();
+        }
+    }
+    
     /**
      * Add a value into histogram with frequency 1.
      * 

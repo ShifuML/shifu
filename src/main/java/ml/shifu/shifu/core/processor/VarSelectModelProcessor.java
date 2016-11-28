@@ -27,6 +27,7 @@ import org.apache.commons.compress.compressors.bzip2.BZip2CompressorInputStream;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.jexl2.JexlException;
 import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang3.tuple.MutablePair;
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
@@ -164,14 +165,15 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
                             votedVariablesSelection();
                         }
                         else if(Constants.WRAPPER_BY_FI.equalsIgnoreCase(modelConfig.getVarSelect().getWrapperBy())){
-                            if(alg.equals(CommonConstants.RF_ALG_NAME)||alg.equals(CommonConstants.GBT_ALG_NAME)){
-                                TreeModel model = (TreeModel) (CommonUtils.loadBasicModels(this.modelConfig, this.columnConfigList, null).get(0));
-                                Map<Integer,Pair<String,Double>> importances = model.getFeatureImportances();
+                            
+                            
+                                TreeModel model = (TreeModel) (CommonUtils.loadBasicModels(this.modelConfig,null).get(0));
+                                Map<Integer,MutablePair<String,Double>> importances = model.getFeatureImportances();
                                 BufferedWriter writer =  ShifuFileUtils.getWriter(this.pathFinder.getModelSetPath(SourceType.LOCAL)+"/model0",SourceType.LOCAL);
                                 try{
                                 writer.write("column_id\tcolumn_name\timportance");
                                 writer.newLine();
-                                for(Map.Entry<Integer,Pair<String,Double>> entry:importances.entrySet()){
+                                for(Map.Entry<Integer,MutablePair<String,Double>> entry:importances.entrySet()){
                                     String content = entry.getKey()+"\t"+entry.getValue().getKey()+"\t"+entry.getValue().getValue();
                                     writer.write(content);
                                     writer.newLine();
@@ -180,8 +182,6 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
                                 }finally{
                                     IOUtils.closeQuietly(writer);
                                 }
-                                
-                           }
                         }
                     } else {
                         // local wrapper mode: old

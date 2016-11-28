@@ -247,6 +247,11 @@ public class DTWorker
      */
     private boolean isContinuousEnabled;
 
+    /**
+     * Mapping for (ColumnNum, Map(Category, CategoryIndex) for categorical feature
+     */
+    private Map<Integer, Map<String, Integer>> columnCategoryIndexMapping;
+
     @Override
     public void initRecordReader(GuaguaFileSplit fileSplit) throws IOException {
         super.setRecordReader(new GuaguaLineRecordReader(fileSplit));
@@ -264,6 +269,19 @@ public class DTWorker
                     props.getProperty(CommonConstants.SHIFU_COLUMN_CONFIG), sourceType);
         } catch (IOException e) {
             throw new RuntimeException(e);
+        }
+
+        this.columnCategoryIndexMapping = new HashMap<Integer, Map<String, Integer>>();
+        for(ColumnConfig config: this.columnConfigList) {
+            if(config.isCategorical()) {
+                if(config.getBinCategory() != null) {
+                    Map<String, Integer> tmpMap = new HashMap<String, Integer>();
+                    for(int i = 0; i < config.getBinCategory().size(); i++) {
+                        tmpMap.put(config.getBinCategory().get(i), i);
+                    }
+                    this.columnCategoryIndexMapping.put(config.getColumnNum(), tmpMap);
+                }
+            }
         }
 
         this.isContinuousEnabled = Boolean.TRUE.toString().equalsIgnoreCase(
@@ -742,11 +760,14 @@ public class DTWorker
                 nextNode = currNode.getRight();
             }
         } else if(columnConfig.isCategorical()) {
-            String value = ""; // default is empty category
+            int indexValue = columnConfig.getBinCategory().size();
             if(data.inputs[inputIndex] < columnConfig.getBinCategory().size()) {
-                value = columnConfig.getBinCategory().get(data.inputs[inputIndex]);
+                indexValue = data.inputs[inputIndex];
+            } else {
+                // for invalid category, set to last one
+                indexValue = columnConfig.getBinCategory().size();
             }
-            if(split.getLeftCategories().contains(value)) {
+            if(split.getLeftCategories().contains(indexValue)) {
                 nextNode = currNode.getLeft();
             } else {
                 nextNode = currNode.getRight();
@@ -809,7 +830,20 @@ public class DTWorker
                                     this.inputIndexMap.put(columnConfig.getColumnNum(), inputIndex);
                                 }
                             } else if(columnConfig.isCategorical()) {
-                                short shortValue = Short.parseShort(input);
+                                short shortValue = (short) (columnConfig.getBinCategory().size());
+                                if(input.length() == 0) {
+                                    // empty
+                                    shortValue = (short) (columnConfig.getBinCategory().size());
+                                } else {
+                                    // cast is safe as we limit max bin to Short.MAX_VALUE
+                                    int categoricalIndex = this.columnCategoryIndexMapping.get(
+                                            columnConfig.getColumnNum()).get(input);
+                                    shortValue = (short) (categoricalIndex);
+                                    if(shortValue == -1) {
+                                        // not found
+                                        shortValue = (short) (columnConfig.getBinCategory().size());
+                                    }
+                                }
                                 inputs[inputIndex] = shortValue;
                                 if(!this.inputIndexMap.containsKey(columnConfig.getColumnNum())) {
                                     this.inputIndexMap.put(columnConfig.getColumnNum(), inputIndex);
@@ -831,7 +865,21 @@ public class DTWorker
                                     this.inputIndexMap.put(columnConfig.getColumnNum(), inputIndex);
                                 }
                             } else if(columnConfig.isCategorical()) {
-                                short shortValue = Short.parseShort(input);
+                                // cast is safe as we limit max bin to Short.MAX_VALUE
+                                short shortValue = (short) (columnConfig.getBinCategory().size());
+                                if(input.length() == 0) {
+                                    // empty
+                                    shortValue = (short) (columnConfig.getBinCategory().size());
+                                } else {
+                                    // cast is safe as we limit max bin to Short.MAX_VALUE
+                                    int categoricalIndex = this.columnCategoryIndexMapping.get(
+                                            columnConfig.getColumnNum()).get(input);
+                                    shortValue = (short) (categoricalIndex);
+                                    if(shortValue == -1) {
+                                        // not found
+                                        shortValue = (short) (columnConfig.getBinCategory().size());
+                                    }
+                                }
                                 inputs[inputIndex] = shortValue;
                                 if(!this.inputIndexMap.containsKey(columnConfig.getColumnNum())) {
                                     this.inputIndexMap.put(columnConfig.getColumnNum(), inputIndex);

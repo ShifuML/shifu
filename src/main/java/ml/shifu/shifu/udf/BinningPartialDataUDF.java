@@ -104,8 +104,12 @@ public class BinningPartialDataUDF extends AbstractTrainerUDF<String> {
             }
 
             Object value = element.get(1);
-            if(value != null) {
-                binning.addData(value.toString());
+            if (value != null) {
+                if (isWeightBinningMethod() && binning instanceof EqualPopulationBinning) {
+                    ((EqualPopulationBinning) binning).addData(value.toString(), (Double) element.get(4));
+                } else {
+                    binning.addData(value.toString());
+                }
             }
         }
 
@@ -114,6 +118,13 @@ public class BinningPartialDataUDF extends AbstractTrainerUDF<String> {
         cleanUp();
 
         return binningObjStr;
+    }
+
+    private boolean isWeightBinningMethod(){
+        return modelConfig.getBinningMethod().equals(BinningMethod.WeightEqualTotal)
+                || modelConfig.getBinningMethod().equals(BinningMethod.WeightEqualInterval)
+                || modelConfig.getBinningMethod().equals(BinningMethod.WeightEqualPositive)
+                || modelConfig.getBinningMethod().equals(BinningMethod.WeightEqualNegative);
     }
 
     /**

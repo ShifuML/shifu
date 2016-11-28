@@ -157,7 +157,6 @@ public class DTMaster extends AbstractMasterComputable<DTMasterParams, DTWorkerP
     /**
      * Learning rate for GBDT.
      */
-    @SuppressWarnings("unused")
     private double learningRate;
 
     /**
@@ -336,7 +335,7 @@ public class DTMaster extends AbstractMasterComputable<DTMasterParams, DTWorkerP
                             "Tree is learned 100% well, there must be overfit here, please tune BaggingSampleRate, training is stopped in iteration {}.",
                             context.getCurrentIteration());
                 } else {
-                    TreeNode newRootNode = new TreeNode(this.trees.size(), new Node(Node.ROOT_INDEX));
+                    TreeNode newRootNode = new TreeNode(this.trees.size(), new Node(Node.ROOT_INDEX), this.learningRate);
                     LOG.info("The {} tree is to be built.", this.trees.size());
                     this.trees.add(newRootNode);
                     newRootNode.setFeatures(getSubsamplingFeatures(this.featureSubsetStrategy));
@@ -831,7 +830,7 @@ public class DTMaster extends AbstractMasterComputable<DTMasterParams, DTWorkerP
                 // for random forest, trees are trained in parallel
                 this.trees = new ArrayList<TreeNode>(treeNum);
                 for(int i = 0; i < treeNum; i++) {
-                    this.trees.add(new TreeNode(i, new Node(Node.ROOT_INDEX)));
+                    this.trees.add(new TreeNode(i, new Node(Node.ROOT_INDEX), 1d));
                 }
             }
             if(this.isGBDT) {
@@ -843,12 +842,15 @@ public class DTMaster extends AbstractMasterComputable<DTMasterParams, DTWorkerP
                                 ShifuFileUtils.getFileSystemBySourceType(this.modelConfig.getDataSet().getSource()));
                         if(existingModel == null) {
                             this.trees = new ArrayList<TreeNode>(treeNum);
-                            this.trees.add(new TreeNode(0, new Node(Node.ROOT_INDEX)));
+                            // first tree learning rate is 1
+                            this.trees.add(new TreeNode(0, new Node(Node.ROOT_INDEX), 1d));
                             LOG.info("Starting to train model from scratch.");
                         } else {
                             this.trees = existingModel.getTrees();
                             this.existingTreeSize = this.trees.size();
-                            this.trees.add(new TreeNode(this.existingTreeSize, new Node(Node.ROOT_INDEX)));
+                            // starting from existing models, first tree learning rate is current learning rate
+                            this.trees.add(new TreeNode(this.existingTreeSize, new Node(Node.ROOT_INDEX),
+                                    this.learningRate));
                             LOG.info("Starting to train model from existing model {} with existing trees {}.",
                                     modelPath, existingTreeSize);
                         }
@@ -857,8 +859,8 @@ public class DTMaster extends AbstractMasterComputable<DTMasterParams, DTWorkerP
                     }
                 } else {
                     this.trees = new ArrayList<TreeNode>(treeNum);
-                    // for GBDT, initialize the first tree. trees are trained sequentially
-                    this.trees.add(new TreeNode(0, new Node(Node.ROOT_INDEX)));
+                    // for GBDT, initialize the first tree. trees are trained sequentially,first tree learning rate is 1
+                    this.trees.add(new TreeNode(0, new Node(Node.ROOT_INDEX), 1.0d));
                 }
             }
         } else {
@@ -902,9 +904,7 @@ public class DTMaster extends AbstractMasterComputable<DTMasterParams, DTWorkerP
         } catch (IOException e) {
             throw new GuaguaRuntimeException(e);
         } finally {
-            if(stream != null) {
-                org.apache.commons.io.IOUtils.closeQuietly(stream);
-            }
+            org.apache.commons.io.IOUtils.closeQuietly(stream);
         }
     }
 }
