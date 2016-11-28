@@ -109,7 +109,7 @@ public class IndependentTreeModel {
             Map<Integer, Map<String, Integer>> columnCategoryIndexMapping, Map<Integer, Integer> columnNumIndexMapping,
             List<TreeNode> trees, List<Double> weights, boolean isGBDT, boolean isClassification,
             boolean isConvertToProb, String lossStr, String algorithm, int inputNode) {
-        this.setNumericalMeanMapping(numericalMeanMapping);
+        this.numericalMeanMapping = numericalMeanMapping;
         this.numNameMapping = numNameMapping;
         this.categoricalColumnNameNames = categoricalColumnNameNames;
         this.columnCategoryIndexMapping = columnCategoryIndexMapping;

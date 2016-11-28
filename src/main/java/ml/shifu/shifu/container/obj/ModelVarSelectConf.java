@@ -15,7 +15,9 @@
  */
 package ml.shifu.shifu.container.obj;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
 import java.util.Map;
 
@@ -41,6 +43,11 @@ public class ModelVarSelectConf {
     private Integer wrapperNum = Integer.valueOf(50);
     private Float wrapperRatio = Float.valueOf(0.05f);
     private String wrapperBy = "S";
+
+    /**
+     * For filterBy pareto mode, such epsilons are used in pareto sorting
+     */
+    private double[] epsilons;
 
     /**
      * If column missing rate is lower than this column, no matter what, whis column will be removed.
@@ -177,5 +184,22 @@ public class ModelVarSelectConf {
      */
     public void setMissingRateThreshold(Float missingRateThreshold) {
         this.missingRateThreshold = missingRateThreshold;
+    }
+
+    /**
+     * @return the epsilons
+     */
+    @JsonIgnore
+    public double[] getEpsilons() {
+        return epsilons;
+    }
+
+    /**
+     * @param epsilons
+     *            the epsilons to set
+     */
+    @JsonProperty
+    public void setEpsilons(double[] epsilons) {
+        this.epsilons = epsilons;
     }
 }
