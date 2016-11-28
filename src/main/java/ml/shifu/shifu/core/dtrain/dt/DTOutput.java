@@ -135,8 +135,9 @@ public class DTOutput extends BasicMasterInterceptor<DTMasterParams, DTWorkerPar
             }
         } else if(isGBDT) {
             // for gbdt, only store trees are all built well
-            if(context.getMasterResult().isSwitchToNextTree() && context.getMasterResult().getTrees().size() % 25 == 0) {
-                final List<TreeNode> trees = context.getMasterResult().getTrees();
+            if(context.getMasterResult().isSwitchToNextTree()
+                    && context.getMasterResult().getTmpTrees().size() % 25 == 0) {
+                final List<TreeNode> trees = context.getMasterResult().getTmpTrees();
                 if(trees.size() > 1) {
                     Thread tmpModelPersistThread = new Thread(new Runnable() {
                         @Override
@@ -175,16 +176,15 @@ public class DTOutput extends BasicMasterInterceptor<DTMasterParams, DTWorkerPar
         if(this.isGBDT) {
             int treeSize = 0;
             if(context.getMasterResult().isSwitchToNextTree() || context.getMasterResult().isHalt()) {
-                treeSize = context.getMasterResult().isSwitchToNextTree() ? (context.getMasterResult().getTrees()
-                        .size() - 1) : (context.getMasterResult().getTrees().size());
+                treeSize = context.getMasterResult().isSwitchToNextTree() ? (context.getMasterResult().getTmpTrees()
+                        .size() - 1) : (context.getMasterResult().getTmpTrees().size());
                 info = new StringBuilder(200).append("Trainer ").append(this.trainerId).append(" Iteration #")
                         .append(currentIteration - 1).append(" Train Error: ")
                         .append(String.format("%.10f", trainError)).append(" Validation Error: ")
                         .append(validationError == 0d ? "N/A" : String.format("%.10f", validationError))
                         .append("; Tree ").append(treeSize).append(" (starting from 1)  is finished. \n").toString();
             } else {
-                int treeIndex = context.getMasterResult().getTrees().size() - 1;
-                int nextDepth = context.getMasterResult().getTreeDepth().get(treeIndex);
+                int nextDepth = context.getMasterResult().getTreeDepth().get(0);
                 info = new StringBuilder(200).append("Trainer ").append(this.trainerId).append(" Iteration #")
                         .append(currentIteration - 1).append(" Train Error: ")
                         .append(trainError == 0d ? "N/A" : String.format("%.10f", trainError))
@@ -251,6 +251,9 @@ public class DTOutput extends BasicMasterInterceptor<DTMasterParams, DTWorkerPar
     @Override
     public void postApplication(MasterContext<DTMasterParams, DTWorkerParams> context) {
         List<TreeNode> trees = context.getMasterResult().getTrees();
+        if(this.isGBDT) {
+            trees = context.getMasterResult().getTmpTrees();
+        }
         LOG.debug("final trees", trees.toString());
         Path out = new Path(context.getProps().getProperty(CommonConstants.GUAGUA_OUTPUT));
         writeModelToFileSystem(trees, out);
@@ -289,11 +292,23 @@ public class DTOutput extends BasicMasterInterceptor<DTMasterParams, DTWorkerPar
 
             Map<Integer, String> columnIndexNameMapping = new HashMap<Integer, String>();
             Map<Integer, List<String>> columnIndexCategoricalListMapping = new HashMap<Integer, List<String>>();
+            Map<Integer, Double> numericalMeanMapping = new HashMap<Integer, Double>();
             for(ColumnConfig columnConfig: this.columnConfigList) {
                 columnIndexNameMapping.put(columnConfig.getColumnNum(), columnConfig.getColumnName());
                 if(columnConfig.isCategorical()) {
                     columnIndexCategoricalListMapping.put(columnConfig.getColumnNum(), columnConfig.getBinCategory());
                 }
+
+                if(columnConfig.isNumerical()) {
+                    numericalMeanMapping.put(columnConfig.getColumnNum(), columnConfig.getMean());
+                }
+            }
+
+            // serialize numericalMeanMapping
+            fos.writeInt(numericalMeanMapping.size());
+            for(Entry<Integer, Double> entry: numericalMeanMapping.entrySet()) {
+                fos.writeInt(entry.getKey());
+                fos.writeDouble(entry.getValue());
             }
             // serialize columnIndexNameMapping
             fos.writeInt(columnIndexNameMapping.size());

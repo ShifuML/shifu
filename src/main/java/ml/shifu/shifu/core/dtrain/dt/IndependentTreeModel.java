@@ -99,11 +99,17 @@ public class IndependentTreeModel {
      */
     private int inputNode;
 
-    public IndependentTreeModel(Map<Integer, String> numNameMapping,
+    /**
+     * For numerical columns, mean value is used for null replacement
+     */
+    private Map<Integer, Double> numericalMeanMapping;
+
+    public IndependentTreeModel(Map<Integer, Double> numericalMeanMapping, Map<Integer, String> numNameMapping,
             Map<Integer, List<String>> categoricalColumnNameNames,
             Map<Integer, Map<String, Integer>> columnCategoryIndexMapping, Map<Integer, Integer> columnNumIndexMapping,
             List<TreeNode> trees, List<Double> weights, boolean isGBDT, boolean isClassification,
             boolean isConvertToProb, String lossStr, String algorithm, int inputNode) {
+        this.setNumericalMeanMapping(numericalMeanMapping);
         this.numNameMapping = numNameMapping;
         this.categoricalColumnNameNames = categoricalColumnNameNames;
         this.columnCategoryIndexMapping = columnCategoryIndexMapping;
@@ -263,6 +269,8 @@ public class IndependentTreeModel {
         Node nextNode = null;
         Object obj = dataMap.get(numNameMapping.get(split.getColumnNum()));
 
+        // how to denote null value for real case, if it is null, should we directly use mean value not throw
+        // exception??
         if(obj == null) {
             throw new IllegalArgumentException("Current model need column " + numNameMapping.get(split.getColumnNum())
                     + " but not found in dataMap, please check your input");
@@ -274,6 +282,11 @@ public class IndependentTreeModel {
                 value = ((Double) obj).doubleValue();
             } else {
                 value = Double.parseDouble(obj.toString());
+            }
+
+            // replace by default mean value
+            if(Double.isNaN(value)) {
+                value = this.numericalMeanMapping.get(split.getColumnNum());
             }
 
             // value is real numeric value and no need to transform to binLowestValue
@@ -505,9 +518,16 @@ public class IndependentTreeModel {
         boolean isOneVsAll = dis.readBoolean();
         int inputNode = dis.readInt();
 
+        Map<Integer, Double> numericalMeanMapping = new HashMap<Integer, Double>();
         Map<Integer, String> columnIndexNameMapping = new HashMap<Integer, String>();
         Map<String, Integer> columnNameIndexMapping = new HashMap<String, Integer>();
         int size = dis.readInt();
+        for(int i = 0; i < size; i++) {
+            int columnIndex = dis.readInt();
+            double mean = dis.readDouble();
+            numericalMeanMapping.put(columnIndex, mean);
+        }
+        size = dis.readInt();
         for(int i = 0; i < size; i++) {
             int columnIndex = dis.readInt();
             String columnName = dis.readUTF();
@@ -549,9 +569,25 @@ public class IndependentTreeModel {
         }
 
         // if one vs all, even multiple classification, treated as regression
-        return new IndependentTreeModel(columnIndexNameMapping, categoricalColumnNameNames, columnCategoryIndexMapping,
-                columnMapping, trees, weights, CommonConstants.GBT_ALG_NAME.equalsIgnoreCase(algorithm),
-                isClassification && !isOneVsAll, isConvertToProb, lossStr, algorithm, inputNode);
+        return new IndependentTreeModel(numericalMeanMapping, columnIndexNameMapping, categoricalColumnNameNames,
+                columnCategoryIndexMapping, columnMapping, trees, weights,
+                CommonConstants.GBT_ALG_NAME.equalsIgnoreCase(algorithm), isClassification && !isOneVsAll,
+                isConvertToProb, lossStr, algorithm, inputNode);
+    }
+
+    /**
+     * @return the numericalMeanMapping
+     */
+    public Map<Integer, Double> getNumericalMeanMapping() {
+        return numericalMeanMapping;
+    }
+
+    /**
+     * @param numericalMeanMapping
+     *            the numericalMeanMapping to set
+     */
+    public void setNumericalMeanMapping(Map<Integer, Double> numericalMeanMapping) {
+        this.numericalMeanMapping = numericalMeanMapping;
     }
 
 }

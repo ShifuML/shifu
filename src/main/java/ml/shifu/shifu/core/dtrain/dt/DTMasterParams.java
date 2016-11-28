@@ -81,6 +81,17 @@ public class DTMasterParams extends HaltBytable {
      */
     private boolean isContinuousRunningStart = false;
 
+    /**
+     * Check if it is the first tree
+     */
+    private boolean isFirstTree = false;
+
+    /**
+     * Tmp trees and reference from DTMaster#trees, which cannot and will not be serialized from master worker
+     * iteration, only for DTOutput reference
+     */
+    private List<TreeNode> tmpTrees;
+
     public DTMasterParams() {
     }
 
@@ -151,6 +162,7 @@ public class DTMasterParams extends HaltBytable {
             }
         }
         out.writeBoolean(isContinuousRunningStart);
+        out.writeBoolean(isFirstTree);
     }
 
     @Override
@@ -180,6 +192,7 @@ public class DTMasterParams extends HaltBytable {
             }
         }
         this.isContinuousRunningStart = in.readBoolean();
+        this.isFirstTree = in.readBoolean();
     }
 
     /**
@@ -285,6 +298,36 @@ public class DTMasterParams extends HaltBytable {
      */
     public void setContinuousRunningStart(boolean isContinuousRunningStart) {
         this.isContinuousRunningStart = isContinuousRunningStart;
+    }
+
+    /**
+     * @return the tmpTrees
+     */
+    public List<TreeNode> getTmpTrees() {
+        return tmpTrees;
+    }
+
+    /**
+     * @param tmpTrees
+     *            the tmpTrees to set
+     */
+    public void setTmpTrees(List<TreeNode> tmpTrees) {
+        this.tmpTrees = tmpTrees;
+    }
+
+    /**
+     * @return the isFirstTree
+     */
+    public boolean isFirstTree() {
+        return isFirstTree;
+    }
+
+    /**
+     * @param isFirstTree
+     *            the isFirstTree to set
+     */
+    public void setFirstTree(boolean isFirstTree) {
+        this.isFirstTree = isFirstTree;
     }
 
 }
