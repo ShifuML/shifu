@@ -116,7 +116,7 @@ class Variance extends Impurity {
         double leftCount = 0d, leftSum = 0d, leftSumSquare = 0d;
         double rightCount = 0d, rightSum = 0d, rightSumSquare = 0d;
         List<GainInfo> internalGainList = new ArrayList<GainInfo>();
-        Set<String> leftCategories = config.isCategorical() ? new HashSet<String>() : null;
+        Set<Integer> leftCategories = config.isCategorical() ? new HashSet<Integer>() : null;
 
         List<Pair> categoricalOrderList = null;
         if(config.isCategorical()) {
@@ -153,15 +153,15 @@ class Variance extends Impurity {
             if(config.isCategorical()) {
                 if(index >= config.getBinCategory().size()) {
                     // missing value bin, all missing value will be replaced by empty string in norm step
-                    leftCategories.add("");
+                    leftCategories.add(config.getBinCategory().size());
                 } else {
-                    leftCategories.add(config.getBinCategory().get(index));
+                    leftCategories.add(index);
                 }
                 // new hash set to copy a new one avoid share object issue
-                split = new Split(config.getColumnNum(),config.getColumnName(),  FeatureType.CATEGORICAL, 0d, new HashSet<String>(
+                split = new Split(config.getColumnNum(), FeatureType.CATEGORICAL, 0d, new HashSet<Integer>(
                         leftCategories));
             } else {
-                split = new Split(config.getColumnNum(),config.getColumnName(),  FeatureType.CONTINUOUS,
+                split = new Split(config.getColumnNum(), FeatureType.CONTINUOUS,
                         config.getBinBoundary().get(index + 1), null);
             }
 
@@ -246,7 +246,7 @@ class FriedmanMSE extends Variance {
         double leftCount = 0d, leftSum = 0d, leftSumSquare = 0d;
         double rightCount = 0d, rightSum = 0d, rightSumSquare = 0d;
         List<GainInfo> internalGainList = new ArrayList<GainInfo>();
-        Set<String> leftCategories = config.isCategorical() ? new HashSet<String>() : null;
+        Set<Integer> leftCategories = config.isCategorical() ? new HashSet<Integer>() : null;
 
         List<Pair> categoricalOrderList = null;
         if(config.isCategorical()) {
@@ -283,15 +283,15 @@ class FriedmanMSE extends Variance {
             if(config.isCategorical()) {
                 if(index >= config.getBinCategory().size()) {
                     // missing value bin, all missing value will be replaced by empty string in norm step
-                    leftCategories.add("");
+                    leftCategories.add(config.getBinCategory().size());
                 } else {
-                    leftCategories.add(config.getBinCategory().get(index));
+                    leftCategories.add(index);
                 }
                 // new hash set to copy a new one avoid share object issue
-                split = new Split(config.getColumnNum(),config.getColumnName(), FeatureType.CATEGORICAL, 0d, new HashSet<String>(
+                split = new Split(config.getColumnNum(), FeatureType.CATEGORICAL, 0d, new HashSet<Integer>(
                         leftCategories));
             } else {
-                split = new Split(config.getColumnNum(),config.getColumnName(),  FeatureType.CONTINUOUS,
+                split = new Split(config.getColumnNum(), FeatureType.CONTINUOUS,
                         config.getBinBoundary().get(index + 1), null);
             }
 
@@ -345,7 +345,7 @@ class Entropy extends Impurity {
         double[] leftStatByClasses = new double[numClasses];
         double[] rightStatByClasses = new double[numClasses];
         List<GainInfo> internalGainList = new ArrayList<GainInfo>();
-        Set<String> leftCategories = config.isCategorical() ? new HashSet<String>() : null;
+        Set<Integer> leftCategories = config.isCategorical() ? new HashSet<Integer>() : null;
         for(int i = 0; i < (stats.length / numClasses - 1); i++) {
             int index = i;
             if(config.isCategorical()) {
@@ -383,15 +383,15 @@ class Entropy extends Impurity {
             if(config.isCategorical()) {
                 if(index >= config.getBinCategory().size()) {
                     // missing value bin, all missing value will be replaced by empty string in norm step
-                    leftCategories.add("");
+                    leftCategories.add(config.getBinCategory().size());
                 } else {
-                    leftCategories.add(config.getBinCategory().get(index));
+                    leftCategories.add(index);
                 }
                 // new hash set to copy a new one avoid share object issue
-                split = new Split(config.getColumnNum(), config.getColumnName(), FeatureType.CATEGORICAL, 0d, new HashSet<String>(
+                split = new Split(config.getColumnNum(), FeatureType.CATEGORICAL, 0d, new HashSet<Integer>(
                         leftCategories));
             } else {
-                split = new Split(config.getColumnNum(),config.getColumnName(),  FeatureType.CONTINUOUS,
+                split = new Split(config.getColumnNum(), FeatureType.CONTINUOUS,
                         config.getBinBoundary().get(index + 1), null);
             }
 
@@ -510,7 +510,7 @@ class Gini extends Impurity {
         double[] leftStatByClasses = new double[numClasses];
         double[] rightStatByClasses = new double[numClasses];
         List<GainInfo> internalGainList = new ArrayList<GainInfo>();
-        Set<String> leftCategories = config.isCategorical() ? new HashSet<String>() : null;
+        Set<Integer> leftCategories = config.isCategorical() ? new HashSet<Integer>() : null;
         for(int i = 0; i < (stats.length / numClasses - 1); i++) {
             int index = i;
             if(config.isCategorical()) {
@@ -546,15 +546,15 @@ class Gini extends Impurity {
             if(config.isCategorical()) {
                 if(index >= config.getBinCategory().size()) {
                     // missing value bin, all missing value will be replaced by empty string in norm step
-                    leftCategories.add("");
+                    leftCategories.add(config.getBinCategory().size());
                 } else {
-                    leftCategories.add(config.getBinCategory().get(index));
+                    leftCategories.add(index);
                 }
                 // new hash set to copy a new one avoid share object issue
-                split = new Split(config.getColumnNum(),config.getColumnName(),  FeatureType.CATEGORICAL, 0d, new HashSet<String>(
+                split = new Split(config.getColumnNum(), FeatureType.CATEGORICAL, 0d, new HashSet<Integer>(
                         leftCategories));
             } else {
-                split = new Split(config.getColumnNum(),config.getColumnName(),  FeatureType.CONTINUOUS,
+                split = new Split(config.getColumnNum(), FeatureType.CONTINUOUS,
                         config.getBinBoundary().get(index + 1), null);
             }
 

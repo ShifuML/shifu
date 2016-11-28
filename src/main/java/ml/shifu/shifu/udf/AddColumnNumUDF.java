@@ -25,11 +25,9 @@ import ml.shifu.shifu.exception.ShifuErrorCode;
 import ml.shifu.shifu.exception.ShifuException;
 import ml.shifu.shifu.util.Constants;
 
-import org.apache.pig.data.BagFactory;
-import org.apache.pig.data.DataBag;
-import org.apache.pig.data.DataType;
-import org.apache.pig.data.Tuple;
-import org.apache.pig.data.TupleFactory;
+import org.apache.commons.lang.StringUtils;
+import org.apache.pig.backend.executionengine.ExecException;
+import org.apache.pig.data.*;
 import org.apache.pig.impl.logicalLayer.schema.Schema;
 import org.apache.pig.impl.logicalLayer.schema.Schema.FieldSchema;
 import org.apache.pig.tools.pigstats.PigStatusReporter;
@@ -47,6 +45,9 @@ import org.apache.pig.tools.pigstats.PigStatusReporter;
 public class AddColumnNumUDF extends AbstractTrainerUDF<DataBag> {
 
     protected Set<String> negTags;
+
+    private static final int INVALID_INDEX = -1;
+    private static int weightColumnId = INVALID_INDEX;
 
     private Random random = new Random(System.currentTimeMillis());
 
@@ -101,7 +102,7 @@ public class AddColumnNumUDF extends AbstractTrainerUDF<DataBag> {
         for(int i = 0; i < size; i++) {
             ColumnConfig config = columnConfigList.get(i);
             if(config.isCandidate()) {
-                Tuple tuple = tupleFactory.newTuple(4);
+                Tuple tuple = tupleFactory.newTuple(5);
                 tuple.set(0, i);
 
                 // Set Data
@@ -124,11 +125,43 @@ public class AddColumnNumUDF extends AbstractTrainerUDF<DataBag> {
                 // add random seed for distribution
                 tuple.set(3, Math.abs(random.nextInt() % 300));
 
+                // get weight value
+                tuple.set(4, getWeightValue(input));
                 bag.add(tuple);
             }
         }
 
         return bag;
+    }
+
+    private int getWeightColumnId(){
+        if(weightColumnId != INVALID_INDEX){
+            return weightColumnId;
+        }
+
+        if(StringUtils.isNotBlank(modelConfig.getWeightColumnName())) {
+            for(ColumnConfig columnConfig: columnConfigList) {
+                if(columnConfig.getColumnName().equalsIgnoreCase(modelConfig.getWeightColumnName().trim())) {
+                    weightColumnId = columnConfig.getColumnNum();
+                    return weightColumnId;
+                }
+            }
+            log.error("Weight column name " + modelConfig.getWeightColumnName() + " given not exist!");
+        }
+
+        return INVALID_INDEX;
+    }
+
+    private double getWeightValue(Tuple input){
+        double weight = 1.0;
+        int columnId = getWeightColumnId();
+        if(columnId != INVALID_INDEX){
+            try {
+                weight = Double.parseDouble(String.valueOf(input.get(columnId)));
+            } catch (ExecException ignore) {
+            }
+        }
+        return weight;
     }
 
     @Override
