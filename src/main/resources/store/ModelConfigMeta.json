@@ -252,13 +252,18 @@
                 "type": "number",
                 "directive": "input"
             }, {
+                "name": "epsilons",
+                "type": "numberarray",
+                "directive": "input"
+            }, {
                 "name": "filterBy",
                 "type": "text",
                 "directive": "select",
                 "options": [
                     {"label": "KS", "value":"ks"},
                     {"label": "Information Value", "value":"iv"},
-                    {"label": "Mixed KS and IV", "value":"mix"}
+                    {"label": "Mixed KS and IV", "value":"mix"},
+                    {"label": "Epsilon-nondominated sort", "value":"pareto"}
                 ]
             }, {
                 "name": "votedVariablesSelection",
