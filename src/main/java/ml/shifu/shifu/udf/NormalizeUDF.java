@@ -158,7 +158,11 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
 
             // append normalize data.
             if(!CommonUtils.isGoodCandidate(modelConfig.isRegression(), config)) {
-                tuple.append(null);
+                if ( config.isMeta() ) {
+                    tuple.append(val);
+                } else {
+                    tuple.append(null);
+                }
             } else {
                 if(this.isForClean) {
                     // for RF/GBT model, only clean data, not real do norm data
@@ -236,7 +240,9 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
             StringBuilder schemaStr = new StringBuilder();
             schemaStr.append("Normalized:Tuple(");
             for(ColumnConfig config: columnConfigList) {
-                if(!config.isMeta() && config.isNumerical()) {
+                if ( config.isMeta() ) {
+                    schemaStr.append(config.getColumnName() + ":chararray" + ",");
+                } else if (!config.isMeta() && config.isNumerical()) {
                     schemaStr.append(config.getColumnName() + ":float" + ",");
                 } else if(config.isTarget()) {
                     schemaStr.append(config.getColumnName() + ":int" + ",");
