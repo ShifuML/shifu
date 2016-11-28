@@ -1,0 +1,63 @@
+{
+  "uidColumnName" : "txnId",
+  "modelTrainConfList" : [ {
+    "baggingNum" : 5,
+    "baggingWithReplacement" : true,
+    "baggingSampleRate" : 1.0,
+    "validSetRate" : 0.2,
+    "numTrainEpochs" : 200,
+    "epochsPerIteration" : 1,
+    "trainOnDisk" : false,
+    "isContinuous" : false,
+    "workerThreadCount" : 4,
+    "algorithm" : "NN",
+    "params" : {
+      "NumHiddenLayers" : 1,
+      "ActivationFunc" : [ "tanh" ],
+      "NumHiddenNodes" : [ 50 ],
+      "RegularizedConstant" : 0.0,
+      "LearningRate" : 0.1,
+      "Propagation" : "R"
+    },
+    "customPaths" : { }
+  }, {
+    "baggingNum" : 5,
+    "baggingWithReplacement" : true,
+    "baggingSampleRate" : 1.0,
+    "validSetRate" : 0.2,
+    "numTrainEpochs" : 20000,
+    "epochsPerIteration" : 1,
+    "trainOnDisk" : false,
+    "isContinuous" : false,
+    "workerThreadCount" : 4,
+    "algorithm" : "GBT",
+    "params" : {
+      "Loss" : "squared",
+      "MaxDepth" : 10,
+      "MinInfoGain" : 0.0,
+      "Impurity" : "variance",
+      "MinInstancesPerNode" : 1,
+      "LearningRate" : 0.1,
+      "FeatureSubsetStrategy" : "TWOTHIRDS"
+    },
+    "customPaths" : { }
+  } ],
+  "fusionModelTrainConf" : {
+    "baggingNum" : 5,
+    "baggingWithReplacement" : true,
+    "baggingSampleRate" : 1.0,
+    "validSetRate" : 0.2,
+    "numTrainEpochs" : 100,
+    "epochsPerIteration" : 1,
+    "trainOnDisk" : false,
+    "isContinuous" : false,
+    "workerThreadCount" : 4,
+    "algorithm" : "LR",
+    "params" : {
+      "RegularizedConstant" : 0.0,
+      "L1orL2" : "NONE",
+      "LearningRate" : 0.1
+    },
+    "customPaths" : { }
+  }
+}

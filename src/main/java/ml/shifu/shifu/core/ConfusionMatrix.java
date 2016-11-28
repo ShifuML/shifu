@@ -287,7 +287,9 @@ public class ConfusionMatrix {
                 }
 
                 // prevent 99%
-                if((double) (i + 1) / records >= gainBin * binCapacity) {
+                // if((double) (i + 1) / records >= gainBin * binCapacity) {
+                double validRecordCnt = (double) (i + 1);
+                if ( validRecordCnt / (pigPosTags + pigNegTags) >= gainBin * binCapacity ) {
                     po.binNum = gainBin++;
                     gainList.add(po);
                 }

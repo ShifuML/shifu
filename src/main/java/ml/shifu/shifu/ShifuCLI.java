@@ -77,6 +77,8 @@ public class ShifuCLI {
 
     private static final String CMD_EXPORT = "export";
 
+    private static final String CMD_COMBO = "combo";
+
     private static final String RESET = "reset";
 
     // for evaluation
@@ -192,6 +194,14 @@ public class ShifuCLI {
                         log.info("Do model set training successfully. Please continue next step by using 'shifu posttrain' or if no need posttrain you can go through with 'shifu eval'.");
                     } else {
                         log.info("Do model training with error, please check error message or report issue.");
+                    }
+                } else if(args[0].equals(CMD_COMBO)) {
+                    if ( cmd.getOptionValue(MODELSET_CMD_NEW) != null ) {
+                        createNewCombo(cmd.getOptionValue(MODELSET_CMD_NEW));
+                    } else if ( cmd.hasOption(EVAL_CMD_RUN) ) {
+
+                    } else if ( cmd.hasOption(EVAL_CMD) ) {
+
                     }
                 } else if(args[0].equals(POSTTRAIN_CMD)) {
                     // post train step
@@ -547,7 +557,6 @@ public class ShifuCLI {
                 .withDescription("Export concise PMML").create(EXPORT_CONCISE);
         Option opt_reset = OptionBuilder.hasArg(false)
                 .withDescription("Reset all variables to finalSelect = false").create(RESET);
-
 
         Option opt_list = OptionBuilder.hasArg(false).create(LIST);
         Option opt_delete = OptionBuilder.hasArg().create(DELETE);

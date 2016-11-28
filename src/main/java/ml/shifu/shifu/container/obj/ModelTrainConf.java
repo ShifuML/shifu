@@ -345,4 +345,21 @@ public class ModelTrainConf {
         return this.multiClassifyMethod == MultipleClassification.ONEVSALL
                 || this.multiClassifyMethod == MultipleClassification.ONVVSREST;
     }
+
+    @Override
+    public boolean equals(Object obj) {
+        if ( obj == null || !(obj instanceof ModelTrainConf) ) {
+            return false;
+        }
+
+        ModelTrainConf other = (ModelTrainConf) obj;
+        if ( this == other ) {
+            return true;
+        }
+
+        return this.algorithm.equals(other.getAlgorithm())
+                && this.baggingNum.equals(other.getBaggingNum())
+                && this.getNumTrainEpochs().equals(other.getNumTrainEpochs())
+                && this.validSetRate.equals(other.getValidSetRate());
+    }
 }
