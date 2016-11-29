@@ -19,6 +19,7 @@ Shifu provides a simple command-line interface for each step of the model buildi
 * Variable normalization
 * Distributed variable selection based on sensitivity analysis
 * Distributed neural network model training
+* Distributed tree ensemble model training
 * Post training analysis & model evaluation
 
 Shifu’s fast Hadoop-based, distributed neural network training can reduce model training time from days to hours on TB data sets. Shifu integrates with Pig workflows on Hadoop, and Shifu-trained models can be integrated into production code with a simple Java API. Shifu leverages Pig, Akka, Encog and other open source projects.
