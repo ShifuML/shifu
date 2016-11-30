@@ -32,7 +32,6 @@ import org.encog.ml.MLRegression;
 import org.encog.ml.data.MLData;
 import org.encog.ml.data.basic.BasicMLData;
 
-import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.container.obj.ModelConfig;
 import ml.shifu.shifu.core.dtrain.dt.IndependentTreeModel;
 import ml.shifu.shifu.core.dtrain.dt.TreeNode;
@@ -141,10 +140,10 @@ public class TreeModel extends BasicML implements MLRegression {
                 }
             }
         }
-        return sortByValue(importancesSum, false);
+        return importancesSum;
     }
 
-    private static Map<Integer, MutablePair<String, Double>> sortByValue(
+    public static Map<Integer, MutablePair<String, Double>> sortByValue(
             Map<Integer, MutablePair<String, Double>> unsortMap, final boolean order) {
         List<Entry<Integer, MutablePair<String, Double>>> list = new LinkedList<Entry<Integer, MutablePair<String, Double>>>(
                 unsortMap.entrySet());
