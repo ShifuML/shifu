@@ -17,17 +17,24 @@ package ml.shifu.shifu.core;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
 
-import ml.shifu.shifu.container.obj.ColumnConfig;
-import ml.shifu.shifu.container.obj.ModelConfig;
-import ml.shifu.shifu.core.dtrain.dt.IndependentTreeModel;
-import ml.shifu.shifu.core.dtrain.dt.TreeNode;
-
+import org.apache.commons.lang3.tuple.MutablePair;
 import org.encog.ml.BasicML;
 import org.encog.ml.MLRegression;
 import org.encog.ml.data.MLData;
 import org.encog.ml.data.basic.BasicMLData;
+
+import ml.shifu.shifu.container.obj.ModelConfig;
+import ml.shifu.shifu.core.dtrain.dt.IndependentTreeModel;
+import ml.shifu.shifu.core.dtrain.dt.TreeNode;
 
 /**
  * {@link TreeModel} is to load Random Forest or Gradient Boosted Decision Tree models.
@@ -69,15 +76,6 @@ public class TreeModel extends BasicML implements MLRegression {
     @Override
     public void updateProperties() {
         // No need implementation
-    }
-
-    public static TreeModel loadFromStream(InputStream input, List<ColumnConfig> columnConfigList) throws IOException {
-        return loadFromStream(input, columnConfigList, false);
-    }
-
-    public static TreeModel loadFromStream(InputStream input, List<ColumnConfig> columnConfigList,
-            boolean isConvertToProb) throws IOException {
-        return new TreeModel(IndependentTreeModel.loadFromStream(input, isConvertToProb));
     }
 
     public static TreeModel loadFromStream(InputStream input) throws IOException {
@@ -123,4 +121,47 @@ public class TreeModel extends BasicML implements MLRegression {
         return independentTreeModel;
     }
 
+    public Map<Integer, MutablePair<String, Double>> getFeatureImportances() {
+        Map<Integer, MutablePair<String, Double>> importancesSum = new HashMap<Integer, MutablePair<String, Double>>();
+        Map<Integer, String> nameMapping = this.getIndependentTreeModel().getNumNameMapping();
+        int size = this.getIndependentTreeModel().getTrees().size();
+        for(TreeNode tree: this.getIndependentTreeModel().getTrees()) {
+            Map<Integer, Double> subImportances = tree.computeFeatureImportance();
+            for(Entry<Integer, Double> entry: subImportances.entrySet()) {
+                String featureName = nameMapping.get(entry.getKey());
+                MutablePair<String, Double> importance = MutablePair.of(featureName, entry.getValue());
+                if(!importancesSum.containsKey(entry.getKey())) {
+                    importance.setValue(importance.getValue() / size);
+                    importancesSum.put(entry.getKey(), importance);
+                } else {
+                    MutablePair<String, Double> current = importancesSum.get(entry.getKey());
+                    current.setValue(current.getValue() + importance.getValue() / size);
+                    importancesSum.put(entry.getKey(), current);
+                }
+            }
+        }
+        return importancesSum;
+    }
+
+    public static Map<Integer, MutablePair<String, Double>> sortByValue(
+            Map<Integer, MutablePair<String, Double>> unsortMap, final boolean order) {
+        List<Entry<Integer, MutablePair<String, Double>>> list = new LinkedList<Entry<Integer, MutablePair<String, Double>>>(
+                unsortMap.entrySet());
+        Collections.sort(list, new Comparator<Entry<Integer, MutablePair<String, Double>>>() {
+            public int compare(Entry<Integer, MutablePair<String, Double>> o1,
+                    Entry<Integer, MutablePair<String, Double>> o2) {
+                if(order) {
+                    return o1.getValue().getValue().compareTo(o2.getValue().getValue());
+                } else {
+                    return o2.getValue().getValue().compareTo(o1.getValue().getValue());
+                }
+            }
+        });
+        // Maintaining insertion order with the help of LinkedList
+        Map<Integer, MutablePair<String, Double>> sortedMap = new LinkedHashMap<Integer, MutablePair<String, Double>>();
+        for(Entry<Integer, MutablePair<String, Double>> entry: list) {
+            sortedMap.put(entry.getKey(), entry.getValue());
+        }
+        return sortedMap;
+    }
 }

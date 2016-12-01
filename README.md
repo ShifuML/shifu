@@ -1,8 +1,10 @@
 [<img src="images/logo/shifu.png" alt="Shifu" align="left">](http://shifu.ml)<div align="right">[![Build Status](https://travis-ci.org/ShifuML/shifu.svg?branch=master)](https://travis-ci.org/ShifuML/shifu)</div>
 
+#
+
 ## Getting Started
 
-Please visit [shifu.ml](http://shifu.ml) for download infomation, installation instructions, and tutorials.
+Please visit [shifu.ml](http://shifu.ml) for download infomation, installation instructions, and our wiki page for current [tutorial](https://github.com/ShifuML/shifu/wiki/Tutorial---Build-Your-First-ML-Model).
 
 ## Conference
 
@@ -14,12 +16,15 @@ Shifu is an open-source, end-to-end machine learning and data mining framework b
 Shifu provides a simple command-line interface for each step of the model building process, including
 
 * Statistic calculation & variable selection to determine the most predictive variables in your data
-* Variable normalization
-* Distributed variable selection based on sensitivity analysis
-* Distributed neural network model training
+* [Variable normalization](https://github.com/ShifuML/shifu/wiki/Variable%20Transform%20in%20Shifu)
+* [Distributed variable selection based on sensitivity analysis](https://github.com/ShifuML/shifu/wiki/Variable%20Selection%20in%20Shifu)
+* [Distributed neural network model training](https://github.com/ShifuML/shifu/wiki/Distributed%20Neural%20Network%20Training%20in%20Shifu)
+* [Distributed tree ensemble model training](https://github.com/ShifuML/shifu/wiki/Distributed%20Tree%20Ensemble%20Model%20Training%20in%20Shifu)
 * Post training analysis & model evaluation
 
 Shifu’s fast Hadoop-based, distributed neural network training can reduce model training time from days to hours on TB data sets. Shifu integrates with Pig workflows on Hadoop, and Shifu-trained models can be integrated into production code with a simple Java API. Shifu leverages Pig, Akka, Encog and other open source projects.
+
+Model details about shifu can be found in our [wiki pages](https://github.com/ShifuML/shifu/wiki)
 
 ## Contributors
 

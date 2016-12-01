@@ -36,17 +36,16 @@ public class VarSelTest {
         List<ColumnConfig> columnConfigList = CommonUtils.loadColumnConfigList(
                 getClass().getResource("/camdttest/config/ColumnConfig.json").toString(), SourceType.LOCAL);
         VariableSelector vs = new VariableSelector(modelConfig, columnConfigList);
-         for(ColumnConfig columnConfig: columnConfigList) {
-         Double ks = columnConfig.getKs();
-         Double iv = columnConfig.getIv();
-         // System.out.println(columnConfig.getColumnNum() + "\t" + (ks == null ? 0d : ks) + "\t"
-         // + (iv == null ? 0d : iv));
-         }
+        // for(ColumnConfig columnConfig: columnConfigList) {
+        // Double ks = columnConfig.getKs();
+        // Double iv = columnConfig.getIv();
+        // System.out.println(columnConfig.getColumnNum() + "\t" + (ks == null ? 0d : ks) + "\t"
+        // + (iv == null ? 0d : iv));
+        // }
         List<Tuple> sortByParetoCC = vs.sortByParetoCC(columnConfigList);
         for(Tuple tuple: sortByParetoCC) {
             System.out.println(tuple.columnNum);
         }
-
     }
 
 }

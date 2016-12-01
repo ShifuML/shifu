@@ -831,5 +831,9 @@ public class PathFinder {
 
         return customPaths.get(key);
     }
+    
+    public String getLocalFeatureImportancePath() {
+        return "./featureImportance/all.fi"; 
+    }
 
 }
