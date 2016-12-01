@@ -12,7 +12,7 @@ public class ComboModelTrain {
 
     private String uidColumnName;
 
-    private List<ModelTrainConf> modelTrainConfList;
+    private List<VarTrainConf> varTrainConfList;
 
     private ModelTrainConf fusionModelTrainConf;
 
@@ -24,12 +24,12 @@ public class ComboModelTrain {
         this.uidColumnName = uidColumnName;
     }
 
-    public List<ModelTrainConf> getModelTrainConfList() {
-        return modelTrainConfList;
+    public List<VarTrainConf> getVarTrainConfList() {
+        return varTrainConfList;
     }
 
-    public void setModelTrainConfList(List<ModelTrainConf> modelTrainConfList) {
-        this.modelTrainConfList = modelTrainConfList;
+    public void setVarTrainConfList(List<VarTrainConf> varTrainConfList) {
+        this.varTrainConfList = varTrainConfList;
     }
 
     public ModelTrainConf getFusionModelTrainConf() {
@@ -53,26 +53,7 @@ public class ComboModelTrain {
 
         return uidColumnName.equals(other.getUidColumnName())
                 && fusionModelTrainConf.equals(other.getFusionModelTrainConf())
-                && compareTrainConfList(modelTrainConfList, other.getModelTrainConfList());
-    }
-
-    private boolean compareTrainConfList(List<ModelTrainConf> modelTrainConfList,
-                                         List<ModelTrainConf> otherModelTrainConfList) {
-        if ( modelTrainConfList == null && otherModelTrainConfList == null ) {
-            return true;
-        } else if ( (modelTrainConfList == null && otherModelTrainConfList != null)
-                || (modelTrainConfList != null && otherModelTrainConfList == null)
-                || modelTrainConfList.size() != otherModelTrainConfList.size() ) {
-            return false;
-        }
-
-        for ( int i = 0; i < modelTrainConfList.size(); i ++ ) {
-            if ( ! modelTrainConfList.get(i).equals(otherModelTrainConfList.get(i)) ) {
-                return false;
-            }
-        }
-
-        return true;
+                && ListUtils.isEqualList(varTrainConfList, other.getVarTrainConfList());
     }
 
 }

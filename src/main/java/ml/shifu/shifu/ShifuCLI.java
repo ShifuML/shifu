@@ -197,11 +197,11 @@ public class ShifuCLI {
                     }
                 } else if(args[0].equals(CMD_COMBO)) {
                     if ( cmd.getOptionValue(MODELSET_CMD_NEW) != null ) {
-                        createNewCombo(cmd.getOptionValue(MODELSET_CMD_NEW));
+                        // createNewCombo(cmd.getOptionValue(MODELSET_CMD_NEW));
                     } else if ( cmd.hasOption(EVAL_CMD_RUN) ) {
-
+                        //
                     } else if ( cmd.hasOption(EVAL_CMD) ) {
-
+                        //
                     }
                 } else if(args[0].equals(POSTTRAIN_CMD)) {
                     // post train step
