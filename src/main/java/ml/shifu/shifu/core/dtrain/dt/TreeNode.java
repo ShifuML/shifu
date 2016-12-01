@@ -19,7 +19,9 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import ml.shifu.guagua.io.Bytable;
 
@@ -257,6 +259,32 @@ public class TreeNode implements Bytable {
 
         if(this.node.getId() == Node.ROOT_INDEX) {
             this.rootWgtCnt = in.readDouble();
+        }
+    }
+    
+    public Map<Integer,Double> computeFeatureImportance(){
+        Map<Integer,Double> importances = new HashMap<Integer,Double>();
+        preOrder(importances,node);
+        return importances;
+    }
+    
+    private void preOrder(Map<Integer,Double> importances,Node node){
+        if(node==null){
+            return;
+        }
+        computeImportance(importances,node);
+        preOrder(importances,node.getLeft());
+        preOrder(importances,node.getRight());
+    }
+    
+    private void computeImportance(Map<Integer,Double> importances,Node node){
+        if(!node.isLeaf()){
+            int featureId = node.getSplit().getColumnNum();            
+            if(!importances.containsKey(featureId)){
+                importances.put(featureId, node.getGain());
+            }else{
+                importances.put(featureId, importances.get(featureId)+node.getGain());
+            }
         }
     }
 
