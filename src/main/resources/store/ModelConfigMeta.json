@@ -305,7 +305,8 @@
                     {"label": "Adding", "value":"A"},
                     {"label": "Removing", "value":"R"},
                     {"label": "Voted", "value":"V"},
-                    {"label": "Sensitivity", "value":"SE"}
+                    {"label": "Sensitivity", "value":"SE"},
+                    {"label": "Feature Importance", "value":"FI"}              
                 ]   
               }, {
                 "name": "params",

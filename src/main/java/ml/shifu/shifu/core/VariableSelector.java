@@ -176,10 +176,6 @@ public class VariableSelector {
 
         List<Tuple> newParetoList = sortByPareto(paretoList);
 
-        // for(Tuple tuple: newParetoList) {
-        // System.out.println(tuple.columnNum + " " + tuple.ks + " " + tuple.iv);
-        // }
-
         int expectedVarNum = Math.min(ksList.size(), this.modelConfig.getVarSelectFilterNum());
 
         ColumnConfig config = null;
