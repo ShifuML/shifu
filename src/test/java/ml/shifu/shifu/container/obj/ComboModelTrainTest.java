@@ -20,11 +20,11 @@ public class ComboModelTrainTest {
         ComboModelTrain inst = new ComboModelTrain();
 
         inst.setUidColumnName("txnId");
-        List<ModelTrainConf> modelTrainConfList = new ArrayList<ModelTrainConf>();
-        modelTrainConfList.add(createModelTrainConf(ModelTrainConf.ALGORITHM.NN));
-        modelTrainConfList.add(createModelTrainConf(ModelTrainConf.ALGORITHM.GBT));
+        List<VarTrainConf> varTrainConfList = new ArrayList<VarTrainConf>();
+        varTrainConfList.add(createVarTrainConf(ModelTrainConf.ALGORITHM.NN));
+        varTrainConfList.add(createVarTrainConf(ModelTrainConf.ALGORITHM.GBT));
 
-        inst.setModelTrainConfList(modelTrainConfList);
+        inst.setVarTrainConfList(varTrainConfList);
         inst.setFusionModelTrainConf(createModelTrainConf(ModelTrainConf.ALGORITHM.LR));
 
         JSONUtils.writeValue(new File("src/test/resources/example/combotrain/ComboTrain.json"), inst);
@@ -33,6 +33,13 @@ public class ComboModelTrainTest {
                 JSONUtils.readValue(new File("src/test/resources/example/combotrain/ComboTrain.json"),
                         ComboModelTrain.class);
         Assert.assertEquals(inst, anotherInst);
+    }
+
+    private VarTrainConf createVarTrainConf(ModelTrainConf.ALGORITHM alg) {
+        VarTrainConf varTrainConf = new VarTrainConf();
+        varTrainConf.setVariables(new ArrayList<String>());
+        varTrainConf.setModelTrainConf(createModelTrainConf(alg));
+        return varTrainConf;
     }
 
     private ModelTrainConf createModelTrainConf(ModelTrainConf.ALGORITHM alg) {
