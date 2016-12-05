@@ -261,29 +261,29 @@ public class TreeNode implements Bytable {
             this.rootWgtCnt = in.readDouble();
         }
     }
-    
-    public Map<Integer,Double> computeFeatureImportance(){
-        Map<Integer,Double> importances = new HashMap<Integer,Double>();
-        preOrder(importances,node);
+
+    public Map<Integer, Double> computeFeatureImportance() {
+        Map<Integer, Double> importances = new HashMap<Integer, Double>();
+        preOrder(importances, node);
         return importances;
     }
-    
-    private void preOrder(Map<Integer,Double> importances,Node node){
-        if(node==null){
+
+    private void preOrder(Map<Integer, Double> importances, Node node) {
+        if(node == null) {
             return;
         }
-        computeImportance(importances,node);
-        preOrder(importances,node.getLeft());
-        preOrder(importances,node.getRight());
+        computeImportance(importances, node);
+        preOrder(importances, node.getLeft());
+        preOrder(importances, node.getRight());
     }
-    
-    private void computeImportance(Map<Integer,Double> importances,Node node){
-        if(!node.isLeaf()){
-            int featureId = node.getSplit().getColumnNum();            
-            if(!importances.containsKey(featureId)){
+
+    private void computeImportance(Map<Integer, Double> importances, Node node) {
+        if(!node.isLeaf()) {
+            int featureId = node.getSplit().getColumnNum();
+            if(!importances.containsKey(featureId)) {
                 importances.put(featureId, node.getGain());
-            }else{
-                importances.put(featureId, importances.get(featureId)+node.getGain());
+            } else {
+                importances.put(featureId, importances.get(featureId) + node.getGain());
             }
         }
     }
