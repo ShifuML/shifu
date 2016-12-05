@@ -196,12 +196,20 @@ public class ShifuCLI {
                         log.info("Do model training with error, please check error message or report issue.");
                     }
                 } else if(args[0].equals(CMD_COMBO)) {
-                    if ( cmd.getOptionValue(MODELSET_CMD_NEW) != null ) {
+                    if ( cmd.hasOption(MODELSET_CMD_NEW) ) {
+                        String algorithms = cmd.getOptionValue(MODELSET_CMD_NEW);
+                        if ( StringUtils.isBlank(algorithms) ) {
+                            log.error("The algorithms list is empty. It should be combination of NN/LR/RF/GBT, delimited by ','");
+                        } else {
+                            log.info("Create sub-models for " + algorithms);
+                        }
                         // createNewCombo(cmd.getOptionValue(MODELSET_CMD_NEW));
                     } else if ( cmd.hasOption(EVAL_CMD_RUN) ) {
-                        //
+                        log.info("Run combo model.");
+                        // train combo models
                     } else if ( cmd.hasOption(EVAL_CMD) ) {
-                        //
+                        log.info("Eval combo model.");
+                        // eval combo model performance
                     }
                 } else if(args[0].equals(POSTTRAIN_CMD)) {
                     // post train step
@@ -545,7 +553,7 @@ public class ShifuCLI {
                 .withDescription("To create an eval set").create(NEW);
         Option opt_type = OptionBuilder.hasArg()
                 .withDescription("Specify model type").create(MODELSET_CMD_TYPE);
-        Option opt_run = OptionBuilder.hasArg()
+        Option opt_run = OptionBuilder
                 .withDescription("To run eval set").create(EVAL_CMD_RUN);
         Option opt_dry = OptionBuilder.hasArg(false)
                 .withDescription("Dry run the train").create(TRAIN_CMD_DRY);
@@ -564,6 +572,7 @@ public class ShifuCLI {
         Option opt_confmat = OptionBuilder.hasArg().create(CONFMAT);
         Option opt_perf = OptionBuilder.hasArg().create(PERF);
         Option opt_norm = OptionBuilder.hasArg().create(NORM);
+        Option opt_eval = OptionBuilder.hasArg(false).create(EVAL_CMD);
 
         Option opt_save = OptionBuilder.hasArg(false).withDescription("save model").create(SAVE);
         Option opt_switch = OptionBuilder.hasArg(false).withDescription("switch model").create(SWITCH);
@@ -580,6 +589,7 @@ public class ShifuCLI {
         opts.addOption(opt_model);
         opts.addOption(opt_concise);
         opts.addOption(opt_reset);
+        opts.addOption(opt_eval);
 
         opts.addOption(opt_list);
         opts.addOption(opt_delete);
@@ -615,6 +625,9 @@ public class ShifuCLI {
         System.out.println("\teval -confmat <EvalSetName>             Compute the TP/FP/TN/FN based on scoring");
         System.out.println("\teval -perf <EvalSetName>                Calculate the model performance based on confmat");
         System.out.println("\texport [-t pmml|columnstats] [-c]       Export model to PMML format or export ColumnConfig.");
+        System.out.println("\tcombo -new    <Algorithm List>          Create a combo model train. Algorithm lis should be NN,LR,RF,GBT,LR");
+        System.out.println("\tcombo -run                              Run Combo-Model train.");
+        System.out.println("\tcombo -eval                             Evaluate Combo-Model performance.");
         System.out.println("\tversion|v|-v|-version                   Print version of current package.");
         System.out.println("\thelp|h|-h|-help                         Help message.");
     }
