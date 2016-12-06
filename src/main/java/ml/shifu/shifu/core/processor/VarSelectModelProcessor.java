@@ -110,6 +110,10 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
         // default constructor
     }
 
+    public VarSelectModelProcessor(Map<String, Object> otherConfigs) {
+        super.otherConfigs = otherConfigs;
+    }
+
     public VarSelectModelProcessor(boolean isToReset) {
         this.isToReset = isToReset;
     }
@@ -158,8 +162,8 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
                     if(super.getModelConfig().getDataSet().getSource() == SourceType.HDFS
                             && super.getModelConfig().isMapReduceRunMode()) {
                         if(Constants.WRAPPER_BY_SE.equalsIgnoreCase(modelConfig.getVarSelect().getWrapperBy())
-                                || Constants.WRAPPER_BY_REMOVE
-                                        .equalsIgnoreCase(modelConfig.getVarSelect().getWrapperBy())) {
+                                || Constants.WRAPPER_BY_REMOVE.equalsIgnoreCase(modelConfig.getVarSelect()
+                                        .getWrapperBy())) {
                             // SE method supports remove and sensitivity se so far
                             validateDistributedWrapperVarSelect();
                             syncDataToHdfs(super.modelConfig.getDataSet().getSource());
