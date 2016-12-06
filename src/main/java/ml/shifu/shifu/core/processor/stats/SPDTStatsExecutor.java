@@ -17,17 +17,15 @@ public class SPDTStatsExecutor extends MapReducerStatsWorker {
 
     private static Logger log = LoggerFactory.getLogger(SPDTStatsExecutor.class);
 
-    public SPDTStatsExecutor(BasicModelProcessor processor,
-                                 ModelConfig modelConfig,
-                                 List<ColumnConfig> columnConfigList) {
+    public SPDTStatsExecutor(BasicModelProcessor processor, ModelConfig modelConfig, List<ColumnConfig> columnConfigList) {
         super(processor, modelConfig, columnConfigList);
     }
 
     @Override
     protected void runStatsPig(Map<String, String> paramsMap) throws Exception {
         log.info("Run SPDT to stats ... ");
-        PigExecutor.getExecutor().submitJob(modelConfig,
-                pathFinder.getAbsolutePath("scripts/PreTrainingStats.pig"), paramsMap);
+        PigExecutor.getExecutor().submitJob(modelConfig, pathFinder.getAbsolutePath("scripts/PreTrainingStats.pig"),
+                paramsMap, modelConfig.getDataSet().getSource(), super.pathFinder);
     }
 
 }

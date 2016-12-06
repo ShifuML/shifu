@@ -97,6 +97,11 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
         this.evalStep = step;
     }
 
+    public EvalModelProcessor(EvalStep step, Map<String, Object> otherConfigs) {
+        this.evalStep = step;
+        super.otherConfigs = otherConfigs;
+    }
+
     /**
      * Constructor
      * 
@@ -331,7 +336,7 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
         }
         try {
             PigExecutor.getExecutor().submitJob(modelConfig, pathFinder.getAbsolutePath(pigScript), paramsMap,
-                    evalConfig.getDataSet().getSource(), confMap);
+                    evalConfig.getDataSet().getSource(), confMap, super.pathFinder);
         } catch (IOException e) {
             throw new ShifuException(ShifuErrorCode.ERROR_RUNNING_PIG_JOB, e);
         } catch (Throwable e) {
@@ -360,7 +365,7 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
                     .getCounter(Constants.COUNTER_WNEGTAGS)
                     / (Constants.EVAL_COUNTER_WEIGHT_SCALE * 1.0d);
 
-            if(modelConfig.isRegression()){
+            if(modelConfig.isRegression()) {
                 locateMaxMinScoreFromFile(sourceType, maxMinScoreFolder);
                 ShifuFileUtils.deleteFile(maxMinScoreFolder, sourceType);
             }
