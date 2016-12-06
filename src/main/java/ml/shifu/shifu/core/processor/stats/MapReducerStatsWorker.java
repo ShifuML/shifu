@@ -62,7 +62,7 @@ public class MapReducerStatsWorker extends AbstractStatsExecutor {
     public MapReducerStatsWorker(BasicModelProcessor processor, ModelConfig modelConfig,
             List<ColumnConfig> columnConfigList) {
         super(processor, modelConfig, columnConfigList);
-        pathFinder = new PathFinder(this.modelConfig);
+        pathFinder = processor.getPathFinder();
     }
 
     @Override
@@ -111,8 +111,9 @@ public class MapReducerStatsWorker extends AbstractStatsExecutor {
         ShifuFileUtils.deleteFile(pathFinder.getUpdatedBinningInfoPath(modelConfig.getDataSet().getSource()),
                 modelConfig.getDataSet().getSource());
 
+        log.info("this.pathFinder.getOtherConfigs() => " + this.pathFinder.getOtherConfigs());
         PigExecutor.getExecutor().submitJob(modelConfig, pathFinder.getAbsolutePath("scripts/StatsSpdtI.pig"),
-                paramsMap);
+                paramsMap, modelConfig.getDataSet().getSource(), this.pathFinder);
         // update
         log.info("Updating binning info ...");
         updateBinningInfoWithMRJob();

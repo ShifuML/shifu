@@ -18,9 +18,8 @@ public class SPDTIStatsExecutor extends MapReducerStatsWorker {
 
     private static Logger log = LoggerFactory.getLogger(SPDTIStatsExecutor.class);
 
-    public SPDTIStatsExecutor(BasicModelProcessor processor,
-                             ModelConfig modelConfig,
-                             List<ColumnConfig> columnConfigList) {
+    public SPDTIStatsExecutor(BasicModelProcessor processor, ModelConfig modelConfig,
+            List<ColumnConfig> columnConfigList) {
         super(processor, modelConfig, columnConfigList);
     }
 
@@ -33,7 +32,7 @@ public class SPDTIStatsExecutor extends MapReducerStatsWorker {
                 modelConfig.getDataSet().getSource());
 
         PigExecutor.getExecutor().submitJob(modelConfig, pathFinder.getAbsolutePath("scripts/StatsSpdtI.pig"),
-                paramsMap);
+                paramsMap, modelConfig.getDataSet().getSource(), super.pathFinder);
 
         // update
         log.info("Updating binning info ...");

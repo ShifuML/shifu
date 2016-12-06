@@ -310,7 +310,8 @@ public class DTOutput extends BasicMasterInterceptor<DTMasterParams, DTWorkerPar
             fos.writeInt(numericalMeanMapping.keySet().size());
             for(Entry<Integer, Double> entry: numericalMeanMapping.entrySet()) {
                 fos.writeInt(entry.getKey());
-                fos.writeDouble(entry.getValue());
+                // for some feature, it is null mean value, it is not selected, just set to 0d to avoid NPE
+                fos.writeDouble(entry.getValue() == null ? 0d : entry.getValue());
             }
             // serialize columnIndexNameMapping
             fos.writeInt(columnIndexNameMapping.size());
@@ -321,11 +322,13 @@ public class DTOutput extends BasicMasterInterceptor<DTMasterParams, DTWorkerPar
             // serialize columnIndexCategoricalListMapping
             fos.writeInt(columnIndexCategoricalListMapping.size());
             for(Entry<Integer, List<String>> entry: columnIndexCategoricalListMapping.entrySet()) {
-                fos.writeInt(entry.getKey());
                 List<String> categories = entry.getValue();
-                fos.writeInt(categories.size());
-                for(String category: categories) {
-                    fos.writeUTF(category);
+                if(categories != null) {
+                    fos.writeInt(entry.getKey());
+                    fos.writeInt(categories.size());
+                    for(String category: categories) {
+                        fos.writeUTF(category);
+                    }
                 }
             }
 

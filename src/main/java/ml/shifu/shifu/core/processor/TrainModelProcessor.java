@@ -141,6 +141,10 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
     public TrainModelProcessor() {
     }
 
+    public TrainModelProcessor(Map<String, Object> otherConfigs) {
+        super.otherConfigs = otherConfigs;
+    }
+
     /**
      * Constructor
      * 
@@ -219,7 +223,7 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
 
         SourceType sourceType = modelConfig.getDataSet().getSource();
         String cleanedDataPath = super.pathFinder.getCleanedDataPath();
-        String needReGen = Environment.getProperty("shifu.tree.regeninput", Boolean.TRUE.toString());
+        String needReGen = Environment.getProperty("shifu.tree.regeninput", Boolean.FALSE.toString());
         if(ShifuFileUtils.isFileExists(cleanedDataPath, sourceType)
                 && Boolean.FALSE.toString().equalsIgnoreCase(needReGen)) {
             LOG.warn("For RF/GBT, training input in {} exists, no need to regenerate it.", cleanedDataPath);
@@ -245,12 +249,13 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
                 paramsMap.put(Constants.IS_COMPRESS, "true");
                 paramsMap.put(Constants.IS_NORM_FOR_CLEAN, "true");
                 paramsMap.put(Constants.PATH_NORMALIZED_DATA, pathFinder.getCleanedDataPath());
-                PigExecutor.getExecutor().submitJob(modelConfig, normPigPath, paramsMap);
+                PigExecutor.getExecutor().submitJob(modelConfig, normPigPath, paramsMap, sourceType, super.pathFinder);
                 if(StringUtils.isNotBlank(modelConfig.getValidationDataSetRawPath())) {
                     paramsMap.put(Constants.IS_COMPRESS, "false");
                     paramsMap.put(Constants.PATH_RAW_DATA, modelConfig.getValidationDataSetRawPath());
                     paramsMap.put(Constants.PATH_NORMALIZED_DATA, pathFinder.getCleanedValidationDataPath());
-                    PigExecutor.getExecutor().submitJob(modelConfig, normPigPath, paramsMap);
+                    PigExecutor.getExecutor().submitJob(modelConfig, normPigPath, paramsMap, sourceType,
+                            super.pathFinder);
                 }
             } catch (IOException e) {
                 throw new ShifuException(ShifuErrorCode.ERROR_RUNNING_PIG_JOB, e);
