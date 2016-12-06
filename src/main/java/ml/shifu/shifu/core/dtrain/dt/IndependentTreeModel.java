@@ -526,6 +526,7 @@ public class IndependentTreeModel {
             int columnIndex = dis.readInt();
             double mean = dis.readDouble();
             numericalMeanMapping.put(columnIndex, mean);
+            System.out.println(i + "th " + columnIndex + ":" + mean);
         }
         size = dis.readInt();
         for(int i = 0; i < size; i++) {
