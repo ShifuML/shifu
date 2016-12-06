@@ -20,19 +20,9 @@ import java.util.jar.JarFile;
 import java.util.jar.Manifest;
 
 import ml.shifu.shifu.container.obj.ModelTrainConf.ALGORITHM;
-import ml.shifu.shifu.core.processor.BasicModelProcessor;
-import ml.shifu.shifu.core.processor.CreateModelProcessor;
-import ml.shifu.shifu.core.processor.EvalModelProcessor;
+import ml.shifu.shifu.core.processor.*;
 import ml.shifu.shifu.core.processor.EvalModelProcessor.EvalStep;
-import ml.shifu.shifu.core.processor.ExportModelProcessor;
-import ml.shifu.shifu.core.processor.InitModelProcessor;
-import ml.shifu.shifu.core.processor.ManageModelProcessor;
 import ml.shifu.shifu.core.processor.ManageModelProcessor.ModelAction;
-import ml.shifu.shifu.core.processor.NormalizeModelProcessor;
-import ml.shifu.shifu.core.processor.PostTrainModelProcessor;
-import ml.shifu.shifu.core.processor.StatsModelProcessor;
-import ml.shifu.shifu.core.processor.TrainModelProcessor;
-import ml.shifu.shifu.core.processor.VarSelectModelProcessor;
 import ml.shifu.shifu.exception.ShifuException;
 import ml.shifu.shifu.util.Constants;
 
@@ -197,13 +187,10 @@ public class ShifuCLI {
                     }
                 } else if(args[0].equals(CMD_COMBO)) {
                     if ( cmd.hasOption(MODELSET_CMD_NEW) ) {
-                        String algorithms = cmd.getOptionValue(MODELSET_CMD_NEW);
-                        if ( StringUtils.isBlank(algorithms) ) {
-                            log.error("The algorithms list is empty. It should be combination of NN/LR/RF/GBT, delimited by ','");
-                        } else {
-                            log.info("Create sub-models for " + algorithms);
-                        }
-                        // createNewCombo(cmd.getOptionValue(MODELSET_CMD_NEW));
+                        log.info("Create new commbo model");
+                        status = createNewCombo(cmd.getOptionValue(MODELSET_CMD_NEW));
+                    } else if ( cmd.hasOption(INIT_CMD)) {
+
                     } else if ( cmd.hasOption(EVAL_CMD_RUN) ) {
                         log.info("Run combo model.");
                         // train combo models
@@ -348,6 +335,12 @@ public class ShifuCLI {
 
         CreateModelProcessor p = new CreateModelProcessor(modelSetName, modelAlg, description);
         return p.run();
+    }
+
+
+    private static int createNewCombo(String algorithms) throws Exception {
+        Processor processor = new ComboModelProcessor(ComboModelProcessor.ComboStep.NEW, algorithms);
+        return processor.run();
     }
 
     /**
@@ -573,6 +566,7 @@ public class ShifuCLI {
         Option opt_perf = OptionBuilder.hasArg().create(PERF);
         Option opt_norm = OptionBuilder.hasArg().create(NORM);
         Option opt_eval = OptionBuilder.hasArg(false).create(EVAL_CMD);
+        Option opt_init = OptionBuilder.hasArg(false).create(INIT_CMD);
 
         Option opt_save = OptionBuilder.hasArg(false).withDescription("save model").create(SAVE);
         Option opt_switch = OptionBuilder.hasArg(false).withDescription("switch model").create(SWITCH);
@@ -590,6 +584,7 @@ public class ShifuCLI {
         opts.addOption(opt_concise);
         opts.addOption(opt_reset);
         opts.addOption(opt_eval);
+        opts.addOption(opt_init);
 
         opts.addOption(opt_list);
         opts.addOption(opt_delete);

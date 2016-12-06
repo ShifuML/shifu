@@ -35,6 +35,8 @@ import ml.shifu.shifu.core.dtrain.DTrainUtils;
 import ml.shifu.shifu.core.dtrain.gs.GridSearch;
 import ml.shifu.shifu.util.CommonUtils;
 
+import org.apache.commons.collections.CollectionUtils;
+import org.apache.commons.collections.ListUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
@@ -295,17 +297,17 @@ public class DTOutput extends BasicMasterInterceptor<DTMasterParams, DTWorkerPar
             Map<Integer, Double> numericalMeanMapping = new HashMap<Integer, Double>();
             for(ColumnConfig columnConfig: this.columnConfigList) {
                 columnIndexNameMapping.put(columnConfig.getColumnNum(), columnConfig.getColumnName());
-                if(columnConfig.isCategorical()) {
+                if(columnConfig.isCategorical() && CollectionUtils.isNotEmpty(columnConfig.getBinBoundary()) ) {
                     columnIndexCategoricalListMapping.put(columnConfig.getColumnNum(), columnConfig.getBinCategory());
                 }
 
-                if(columnConfig.isNumerical()) {
+                if(columnConfig.isNumerical() && columnConfig.getMean() != null) {
                     numericalMeanMapping.put(columnConfig.getColumnNum(), columnConfig.getMean());
                 }
             }
 
             // serialize numericalMeanMapping
-            fos.writeInt(numericalMeanMapping.size());
+            fos.writeInt(numericalMeanMapping.keySet().size());
             for(Entry<Integer, Double> entry: numericalMeanMapping.entrySet()) {
                 fos.writeInt(entry.getKey());
                 fos.writeDouble(entry.getValue());
