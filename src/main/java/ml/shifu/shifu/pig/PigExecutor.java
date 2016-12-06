@@ -15,20 +15,21 @@
  */
 package ml.shifu.shifu.pig;
 
-import org.apache.commons.lang.StringUtils;
-import org.apache.pig.ExecType;
-import org.apache.pig.PigServer;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import java.io.IOException;
 import java.util.Map;
 
 import ml.shifu.guagua.hadoop.util.HDPUtils;
 import ml.shifu.shifu.container.obj.ModelConfig;
 import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
+import ml.shifu.shifu.fs.PathFinder;
 import ml.shifu.shifu.util.CommonUtils;
 import ml.shifu.shifu.util.Environment;
+
+import org.apache.commons.lang.StringUtils;
+import org.apache.pig.ExecType;
+import org.apache.pig.PigServer;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * PigExecutor class
@@ -87,6 +88,11 @@ public class PigExecutor {
         submitJob(modelConfig, pigScriptPath, paramsMap, sourceType, null);
     }
 
+    public void submitJob(ModelConfig modelConfig, String pigScriptPath, Map<String, String> paramsMap,
+            SourceType sourceType, PathFinder pathFinder) throws IOException {
+        submitJob(modelConfig, pigScriptPath, paramsMap, sourceType, null, pathFinder);
+    }
+
     /**
      * Run the pig, Local or MapReduce mode is decide by parameter @sourceTpe
      * 
@@ -102,7 +108,7 @@ public class PigExecutor {
      *             throw IOException when loading the parameter from @ModelConfig
      */
     public void submitJob(ModelConfig modelConfig, String pigScriptPath, Map<String, String> paramsMap,
-            SourceType sourceType, Map<String, String> confMap) throws IOException {
+            SourceType sourceType, Map<String, String> confMap, PathFinder pathFinder) throws IOException {
         // Run Pig Scripts
         PigServer pigServer;
 
@@ -153,7 +159,7 @@ public class PigExecutor {
             }
         }
 
-        Map<String, String> pigParamsMap = CommonUtils.getPigParamMap(modelConfig, sourceType);
+        Map<String, String> pigParamsMap = CommonUtils.getPigParamMap(modelConfig, sourceType, pathFinder);
         if(paramsMap != null) {
             pigParamsMap.putAll(paramsMap);
         }

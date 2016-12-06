@@ -26,7 +26,6 @@ public class DynamicBinningUDFTest {
 
     @Test
     public void testDynamicBinningUDFTest() throws IOException {
-
         DynamicBinningUDF inst = new DynamicBinningUDF("LOCAL",
                 "src/test/resources/example/cancer-judgement/ModelStore/ModelSet1/ModelConfig.json",
                 "src/test/resources/example/cancer-judgement/ModelStore/ModelSet1/ColumnConfig.json",
