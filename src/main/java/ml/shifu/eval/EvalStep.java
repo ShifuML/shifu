@@ -25,7 +25,6 @@ import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.container.obj.ModelConfig;
 import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
 import ml.shifu.shifu.core.processor.EvalModelProcessor;
-import ml.shifu.shifu.core.processor.EvalModelProcessor.EvalStep;
 import ml.shifu.shifu.core.validator.ModelInspector.ModelStep;
 import ml.shifu.shifu.util.JSONUtils;
 
@@ -33,15 +32,15 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * TODO
+ * Evaluation step which is to call {@link EvalModelProcessor}.
  * 
  * @author Zhang David (pengzhang@paypal.com)
  */
-public class EvaluateStep extends Step<Void> {
+public class EvalStep extends Step<Void> {
 
-    private final static Logger LOG = LoggerFactory.getLogger(EvaluateStep.class);
+    private final static Logger LOG = LoggerFactory.getLogger(EvalStep.class);
 
-    public EvaluateStep(ModelConfig modelConfig, List<ColumnConfig> columnConfigList, Map<String, Object> otherConfigs) {
+    public EvalStep(ModelConfig modelConfig, List<ColumnConfig> columnConfigList, Map<String, Object> otherConfigs) {
         super(ModelStep.TRAIN, modelConfig, columnConfigList, otherConfigs);
     }
 
@@ -56,7 +55,8 @@ public class EvaluateStep extends Step<Void> {
         JSONUtils.writeValue(new File(pathFinder.getModelConfigPath(SourceType.LOCAL)), modelConfig);
         JSONUtils.writeValue(new File(pathFinder.getColumnConfigPath(SourceType.LOCAL)), columnConfigList);
 
-        EvalModelProcessor processor = new EvalModelProcessor(EvalStep.RUN, super.otherConfigs);
+        EvalModelProcessor processor = new EvalModelProcessor(
+                ml.shifu.shifu.core.processor.EvalModelProcessor.EvalStep.RUN, super.otherConfigs);
         try {
             processor.run();
         } catch (Exception e) {
