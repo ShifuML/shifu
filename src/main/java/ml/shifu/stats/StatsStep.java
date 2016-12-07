@@ -43,7 +43,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * TODO
+ * Stats step for stats functions in SHiuf pipeline.
  * 
  * @author Zhang David (pengzhang@paypal.com)
  */

@@ -32,7 +32,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * TODO
+ * Train step which is to call Shifu training which is the same as {@link TrainModelProcessor}.
  * 
  * @author Zhang David (pengzhang@paypal.com)
  */
