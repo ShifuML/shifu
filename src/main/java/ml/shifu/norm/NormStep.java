@@ -99,6 +99,7 @@ public class NormStep extends Step<List<ColumnConfig>> {
                     normPigPath = pathFinder.getAbsolutePath("scripts/Normalize.pig");
                 }
                 paramsMap.put(Constants.IS_COMPRESS, "true");
+                paramsMap.put(Constants.IS_NORM_FOR_CLEAN, "false");
                 PigExecutor.getExecutor().submitJob(modelConfig, normPigPath, paramsMap,
                         modelConfig.getDataSet().getSource(), super.pathFinder);
                 if(StringUtils.isNotBlank(modelConfig.getValidationDataSetRawPath())) {
