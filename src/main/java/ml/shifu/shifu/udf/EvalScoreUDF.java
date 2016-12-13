@@ -131,7 +131,10 @@ public class EvalScoreUDF extends AbstractTrainerUDF<Tuple> {
          * }
          */
 
+        long startTime = System.currentTimeMillis();
         CaseScoreResult cs = modelRunner.compute(rawDataMap);
+        long runInterval = System.currentTimeMillis() - startTime;
+
         if(cs == null) {
             if(System.currentTimeMillis() % 50 == 0) {
                 log.warn("Get null result, for input: " + input.toDelimitedString("|"));
@@ -149,7 +152,7 @@ public class EvalScoreUDF extends AbstractTrainerUDF<Tuple> {
             weight = "1.0";
         }
 
-        incrementTagCounters(tag, weight);
+        incrementTagCounters(tag, weight, runInterval);
 
         tuple.append(weight);
 
@@ -190,6 +193,8 @@ public class EvalScoreUDF extends AbstractTrainerUDF<Tuple> {
 
     @Override
     public void finish() {
+        this.modelRunner.close();
+
         if(modelConfig.isClassification()) {
             return;
         }
@@ -223,7 +228,7 @@ public class EvalScoreUDF extends AbstractTrainerUDF<Tuple> {
     }
 
     @SuppressWarnings("deprecation")
-    private void incrementTagCounters(String tag, String weight) {
+    private void incrementTagCounters(String tag, String weight, long runModelInterval) {
         if(tag == null || weight == null) {
             log.warn("tag is empty " + tag + " or weight is empty " + weight);
             return;
@@ -246,6 +251,12 @@ public class EvalScoreUDF extends AbstractTrainerUDF<Tuple> {
             }
         }
         long weightLong = (long) (dWeight * Constants.EVAL_COUNTER_WEIGHT_SCALE);
+
+        // update model run time for stats
+        if(isPigEnabled(Constants.SHIFU_GROUP_COUNTER, Constants.TOTAL_MODEL_RUNTIME)) {
+            PigStatusReporter.getInstance().getCounter(Constants.SHIFU_GROUP_COUNTER, Constants.TOTAL_MODEL_RUNTIME)
+                    .increment(runModelInterval);
+        }
 
         if(isPigEnabled(Constants.SHIFU_GROUP_COUNTER, Constants.COUNTER_RECORDS)) {
             PigStatusReporter.getInstance().getCounter(Constants.SHIFU_GROUP_COUNTER, Constants.COUNTER_RECORDS)

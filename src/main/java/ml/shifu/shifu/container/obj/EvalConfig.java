@@ -46,7 +46,11 @@ public class EvalConfig {
     private String scoreMetaColumnNameFile;
     private Map<String, String> customPaths;
 
-    private Boolean gbtConvertToProb = Boolean.FALSE;
+    /**
+     * For typical 0-1 binary regression, this is set to be true, while for other regression, better to set it to false
+     * as normal regression.
+     */
+    private Boolean gbtConvertToProb = Boolean.TRUE;
 
     /**
      * Cache meta columns to a list to avoid reading this file for several times

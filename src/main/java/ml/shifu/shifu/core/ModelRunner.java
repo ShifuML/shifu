@@ -35,11 +35,16 @@ import org.slf4j.LoggerFactory;
 /**
  * ModelRunner class is to load the model and run the model for input data
  * Currently it provides three API: one for UDF input - tuple, one for String input, one for map
- * <p/>
+ * 
+ * <p>
  * The output result for ModelRunnder is @CaseScoreResult. In the result, not only max/min/average score will be stored,
  * but also Map of raw input
- * <p/>
+ * 
+ * <p>
  * If the elements in the input is not equal with the length of header[], it will return null
+ * 
+ * <p>
+ * {@link #close()} must be called at caller to release resources.
  */
 public class ModelRunner {
 
@@ -160,6 +165,13 @@ public class ModelRunner {
         scoreResult.setMedianScore(so.getMedianScore());
 
         return scoreResult;
+    }
+
+    /**
+     * Cleaning the thread pool resources, must be called at last.
+     */
+    public void close() {
+        this.scorer.close();
     }
 
 }

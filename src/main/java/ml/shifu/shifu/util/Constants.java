@@ -65,6 +65,7 @@ public interface Constants {
     public static final String WITH_SCORE = "with_score";
     public static final String SOURCE_TYPE = "source_type";
     public static final String NUM_PARALLEL = "num_parallel";
+    public static final String DATASET_NAME = "data_set";
 
     public static final String DERIVED = "derived_";
 
@@ -183,7 +184,7 @@ public interface Constants {
     public static final String WRAPPER_BY_SE = "SE";
 
     public static final String WRAPPER_BY_VOTED = "V";
-    
+
     public static final String WRAPPER_BY_FI = "FI";
 
     public static final float SHIFU_DEFAULT_VARSELECT_WRAPPER_RATIO = 0.05f;
@@ -201,9 +202,11 @@ public interface Constants {
     public static final long EVAL_COUNTER_WEIGHT_SCALE = 1000l;
 
     public static final String COUNTER_RECORDS = "RECORDS";
-    
+
+    public static final String TOTAL_MODEL_RUNTIME = "TOTAL_MODEL_RUNTIME";
+
     public static final String COUNTER_MAX_SCORE = "MAX_SCORE";
-    
+
     public static final String COUNTER_MIN_SCORE = "MIN_SCORE";
 
     public static final String SHIFU_VARSELECT_SE_OUTPUT_NAME = "se";

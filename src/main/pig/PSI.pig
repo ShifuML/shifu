@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-SET job.name 'shifu PSI calculator';
+SET job.name 'Shifu PSI calculator: $data_set';
 SET mapred.map.tasks.speculative.execution true;
 SET mapred.reduce.tasks.speculative.execution true;
 SET mapred.job.queue.name $queue_name;

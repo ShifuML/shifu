@@ -787,7 +787,7 @@
                 "name": "gbtConvertToProb",
                 "type": "boolean",
                 "directive": "input",
-                "defval": false
+                "defval": true
             }, {
                 "name" : "performanceScoreSelector",
                 "type" : "text",
