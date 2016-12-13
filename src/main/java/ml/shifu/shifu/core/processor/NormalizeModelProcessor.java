@@ -357,6 +357,7 @@ public class NormalizeModelProcessor extends BasicModelProcessor implements Proc
                 normPigPath = pathFinder.getAbsolutePath("scripts/Normalize.pig");
             }
             paramsMap.put(Constants.IS_COMPRESS, "true");
+            paramsMap.put(Constants.IS_NORM_FOR_CLEAN, "false");
             PigExecutor.getExecutor().submitJob(modelConfig, normPigPath, paramsMap);
             if(StringUtils.isNotBlank(modelConfig.getValidationDataSetRawPath())) {
                 paramsMap.put(Constants.IS_COMPRESS, "false");
