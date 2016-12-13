@@ -28,8 +28,7 @@ import ml.shifu.guagua.io.Bytable;
  * 
  * <p>
  * For continuous feature, only a double threshold can be used to split a variable into two splits. While for
- * categorical features, we only store left node category list, check if in left category list to determince which
- * split.
+ * categorical features, we only store left node category list, check if in left category list to determine which split.
  * 
  * @author Zhang David (pengzhang@paypal.com)
  * 

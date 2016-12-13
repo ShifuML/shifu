@@ -649,7 +649,7 @@ public final class CommonUtils {
                 return LR.loadFromString(br.readLine());
             } else if(modelPath.getName().endsWith(CommonConstants.RF_ALG_NAME.toLowerCase())
                     || modelPath.getName().endsWith(CommonConstants.GBT_ALG_NAME.toLowerCase())) {
-                return TreeModel.loadFromStream(stream,gbtConvertToProb);
+                return TreeModel.loadFromStream(stream, gbtConvertToProb);
             } else {
                 return BasicML.class.cast(EncogDirectoryPersistence.loadObject(stream));
             }
@@ -872,6 +872,7 @@ public final class CommonUtils {
         pigParamMap.put(Constants.SOURCE_TYPE, sourceType.toString());
         pigParamMap.put(Constants.JOB_QUEUE,
                 Environment.getProperty(Environment.HADOOP_JOB_QUEUE, Constants.DEFAULT_JOB_QUEUE));
+        pigParamMap.put(Constants.DATASET_NAME, modelConfig.getBasic().getName());
         return pigParamMap;
     }
 

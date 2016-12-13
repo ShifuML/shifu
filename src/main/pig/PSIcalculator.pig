@@ -15,7 +15,7 @@
  */
 
 -- This is a tool to calculate the PSI from another dataset
-SET job.name 'shifu PSI calculator';
+SET job.name 'Shifu PSI calculator: $data_set';
 SET mapred.map.tasks.speculative.execution true;
 SET mapred.reduce.tasks.speculative.execution true;
 SET mapred.job.queue.name $queue_name;
