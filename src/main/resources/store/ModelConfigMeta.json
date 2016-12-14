@@ -74,7 +74,7 @@
                 "type": "text",
                 "directive": "input",
                 "defval": "|",
-                "maxLength": 1,
+                "maxLength": 20,
                 "minLength": 1
             }, {
                 "name": "headerPath",
@@ -84,9 +84,7 @@
                 "name": "headerDelimiter",
                 "type": "text",
                 "directive": "input",
-                "defval": "|",
-                "maxLength": 1,
-                "minLength": 1
+                "defval": "|"
             }, {
                 "name": "filterExpressions",
                 "type": "text",
@@ -727,7 +725,7 @@
                         "type": "text",
                         "directive": "input",
                         "defval": "|",
-                        "maxLength": 1,
+                        "maxLength": 20,
                         "minLength": 1
                     }, {
                         "name": "headerPath",
@@ -737,9 +735,7 @@
                         "name": "headerDelimiter",
                         "type": "text",
                         "directive": "input",
-                        "defval": "|",
-                        "maxLength": 1,
-                        "minLength": 1
+                        "defval": "|"
                     }, {
                         "name": "filterExpressions",
                         "type": "text",
@@ -787,7 +783,7 @@
                 "name": "gbtConvertToProb",
                 "type": "boolean",
                 "directive": "input",
-                "defval": false
+                "defval": true
             }, {
                 "name" : "performanceScoreSelector",
                 "type" : "text",

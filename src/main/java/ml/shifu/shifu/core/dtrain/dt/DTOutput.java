@@ -180,17 +180,26 @@ public class DTOutput extends BasicMasterInterceptor<DTMasterParams, DTWorkerPar
             if(context.getMasterResult().isSwitchToNextTree() || context.getMasterResult().isHalt()) {
                 treeSize = context.getMasterResult().isSwitchToNextTree() ? (context.getMasterResult().getTmpTrees()
                         .size() - 1) : (context.getMasterResult().getTmpTrees().size());
-                info = new StringBuilder(200).append("Trainer ").append(this.trainerId).append(" Iteration #")
-                        .append(currentIteration - 1).append(" Train Error: ")
-                        .append(String.format("%.10f", trainError)).append(" Validation Error: ")
+                info = new StringBuilder(200)
+                        .append("Trainer ")
+                        .append(this.trainerId)
+                        .append(" Iteration #")
+                        .append(currentIteration - 1)
+                        .append(" Train Error: ")
+                        .append((Double.isNaN(trainError) || trainError == 0d) ? "N/A" : String.format("%.10f",
+                                trainError)).append(" Validation Error: ")
                         .append(validationError == 0d ? "N/A" : String.format("%.10f", validationError))
-                        .append("; Tree ").append(treeSize).append(" (starting from 1)  is finished. \n").toString();
+                        .append("; Tree ").append(treeSize).append(" is finished. \n").toString();
             } else {
                 int nextDepth = context.getMasterResult().getTreeDepth().get(0);
-                info = new StringBuilder(200).append("Trainer ").append(this.trainerId).append(" Iteration #")
-                        .append(currentIteration - 1).append(" Train Error: ")
-                        .append(trainError == 0d ? "N/A" : String.format("%.10f", trainError))
-                        .append(" Validation Error: ")
+                info = new StringBuilder(200)
+                        .append("Trainer ")
+                        .append(this.trainerId)
+                        .append(" Iteration #")
+                        .append(currentIteration - 1)
+                        .append(" Train Error: ")
+                        .append((Double.isNaN(trainError) || trainError == 0d) ? "N/A" : String.format("%.10f",
+                                trainError)).append(" Validation Error: ")
                         .append(validationError == 0d ? "N/A" : String.format("%.10f", validationError))
                         .append("; will work on depth ").append(nextDepth).append(" \n").toString();
             }

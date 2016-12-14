@@ -145,7 +145,7 @@ public class InitModelProcessor extends BasicModelProcessor implements Processor
                 if(cateOn) {
                     if(distinctCount < modelConfig.getDataSet().getAutoTypeThreshold().longValue()) {
                         String[] items = data.items;
-                        if(is01Variable(distinctCount, items)) {
+                        if(isBinaryVariable(distinctCount, items)) {
                             log.info(
                                     "Column {} with index {} is set to numeric type because of 0-1 variable. Distinct count {}, items {}.",
                                     columnConfig.getColumnName(), columnConfig.getColumnNum(), distinctCount,
@@ -175,7 +175,7 @@ public class InitModelProcessor extends BasicModelProcessor implements Processor
         return cateCount;
     }
 
-    private boolean is01Variable(long distinctCount, String[] items) {
+    private boolean isBinaryVariable(long distinctCount, String[] items) {
         if(distinctCount != 2) {
             return false;
         }
@@ -393,12 +393,20 @@ public class InitModelProcessor extends BasicModelProcessor implements Processor
             fields = CommonUtils.getHeaders(modelConfig.getHeaderPath(), modelConfig.getHeaderDelimiter(), modelConfig
                     .getDataSet().getSource());
         } else {
-            log.warn("No header path is provided, we will try to read first line and detect schema.");
-            log.warn("Schema in ColumnConfig.json are named as  index 0, 1, 2, 3 ...");
-            log.warn("Please make sure weight column and tag column are also taking index as name.");
-            fields = CommonUtils.takeFirstLine(modelConfig.getDataSetRawPath(), modelConfig.getHeaderDelimiter(),
+            fields = CommonUtils.takeFirstLine(modelConfig.getDataSetRawPath(), StringUtils.isBlank(modelConfig
+                    .getHeaderDelimiter()) ? modelConfig.getDataSetDelimiter() : modelConfig.getHeaderDelimiter(),
                     modelConfig.getDataSet().getSource());
-            isSchemaProvided = false;
+            if(StringUtils.join(fields, "").contains(modelConfig.getTargetColumnName())) {
+                // if first line contains target column name, we guess it is csv format and first line is header.
+                isSchemaProvided = true;
+                log.warn("No header path is provided, we will try to read first line and detect schema.");
+                log.warn("Schema in ColumnConfig.json are named as first line of data set path.");
+            } else {
+                isSchemaProvided = false;
+                log.warn("No header path is provided, we will try to read first line and detect schema.");
+                log.warn("Schema in ColumnConfig.json are named as  index 0, 1, 2, 3 ...");
+                log.warn("Please make sure weight column and tag column are also taking index as name.");
+            }
         }
 
         columnConfigList = new ArrayList<ColumnConfig>();
@@ -424,12 +432,20 @@ public class InitModelProcessor extends BasicModelProcessor implements Processor
 
         if(!hasTarget) {
             log.error("Target is not valid: " + modelConfig.getTargetColumnName());
-            log.error("Please check your header file {} and your header delimiter {}", modelConfig.getHeaderPath(),
-                    modelConfig.getHeaderDelimiter());
+            if(StringUtils.isNotBlank(modelConfig.getHeaderPath())) {
+                log.error("Please check your first line of data set file {}", modelConfig.getDataSetRawPath());
+            } else {
+                log.error("Please check your header file {} and your header delimiter {}", modelConfig.getHeaderPath(),
+                        modelConfig.getHeaderDelimiter());
+            }
             return 1;
         }
 
         return 0;
+    }
+
+    public static void main(String[] args) {
+        System.out.println(StringUtils.join(new String[] { "a", "b", "c" }, ""));
     }
 
     static class Data {

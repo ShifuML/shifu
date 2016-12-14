@@ -28,8 +28,7 @@ import ml.shifu.guagua.io.Bytable;
  * 
  * <p>
  * For continuous feature, only a double threshold can be used to split a variable into two splits. While for
- * categorical features, we only store left node category list, check if in left category list to determince which
- * split.
+ * categorical features, we only store left node category list, check if in left category list to determine which split.
  * 
  * @author Zhang David (pengzhang@paypal.com)
  * 
@@ -37,25 +36,31 @@ import ml.shifu.guagua.io.Bytable;
  */
 public class Split implements Bytable {
 
+    /**
+     * Column number in ColumnConfig.json
+     */
     private int columnNum;
 
+    /**
+     * CONTINUOUS or CATEGORICAL, should not be null
+     */
     private FeatureType featureType;
 
+    /**
+     * For CONTINUOUS feature, this should be valid value to split feature
+     */
     private double threshold;
 
     /**
-     * Indexes of left categories, list of categories will be saved in model files or in TreeModel
+     * Indexes of left categories, list of categories will be saved in model files or in TreeModel， Change to short type
+     * to save space, short is safe so far as max bin size is limit to Short.MAX_VALUE.
      */
-    private Set<Integer> leftCategories;
+    private Set<Short> leftCategories;
 
     public Split() {
     }
 
-    public Split(int featureIndex) {
-        this.columnNum = featureIndex;
-    }
-
-    public Split(int columnNum, FeatureType featureType, double threshold, Set<Integer> leftCategories) {
+    public Split(int columnNum, FeatureType featureType, double threshold, Set<Short> leftCategories) {
         this.columnNum = columnNum;
         this.featureType = featureType;
         this.threshold = threshold;
@@ -86,7 +91,7 @@ public class Split implements Bytable {
     /**
      * @return the leftCategories
      */
-    public Set<Integer> getLeftCategories() {
+    public Set<Short> getLeftCategories() {
         return leftCategories;
     }
 
@@ -118,51 +123,51 @@ public class Split implements Bytable {
      * @param leftCategories
      *            the leftCategories to set
      */
-    public void setLeftCategories(Set<Integer> leftCategories) {
+    public void setLeftCategories(Set<Short> leftCategories) {
         this.leftCategories = leftCategories;
     }
 
     @Override
     public void write(DataOutput out) throws IOException {
         out.writeInt(this.columnNum);
-        out.writeDouble(this.threshold);
-        if(featureType == null) {
-            out.writeBoolean(false);
-        } else {
-            out.writeBoolean(true);
-            // use byte type to save space
-            out.writeByte(this.featureType.getByteType());
-        }
+        // use byte type to save space, should not be null
+        out.writeByte(this.featureType.getByteType());
 
-        if(this.featureType == FeatureType.CATEGORICAL) {
-            if(leftCategories == null) {
-                out.writeInt(0);
-            } else {
-                out.writeInt(this.leftCategories.size());
-                for(int categoryIndex: this.leftCategories) {
-                    out.writeInt(categoryIndex);
+        switch(this.featureType) {
+            case CATEGORICAL:
+                if(leftCategories == null) {
+                    out.writeInt(0);
+                } else {
+                    out.writeInt(this.leftCategories.size());
+                    for(short categoryIndex: this.leftCategories) {
+                        out.writeShort(categoryIndex);
+                    }
                 }
-            }
+                break;
+            case CONTINUOUS:
+                out.writeDouble(this.threshold);
+                break;
         }
     }
 
     @Override
     public void readFields(DataInput in) throws IOException {
         this.columnNum = in.readInt();
-        this.threshold = in.readDouble();
+        this.featureType = FeatureType.of(in.readByte());
 
-        if(in.readBoolean()) {
-            this.featureType = FeatureType.of(in.readByte());
-        }
-
-        if(this.featureType == FeatureType.CATEGORICAL) {
-            int len = in.readInt();
-            if(len > 0) {
-                this.leftCategories = new HashSet<Integer>();
-                for(int i = 0; i < len; i++) {
-                    this.leftCategories.add(in.readInt());
+        switch(this.featureType) {
+            case CATEGORICAL:
+                int len = in.readInt();
+                if(len > 0) {
+                    this.leftCategories = new HashSet<Short>();
+                    for(int i = 0; i < len; i++) {
+                        this.leftCategories.add(in.readShort());
+                    }
                 }
-            }
+                break;
+            case CONTINUOUS:
+                this.threshold = in.readDouble();
+                break;
         }
     }
 

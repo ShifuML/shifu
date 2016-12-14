@@ -25,6 +25,7 @@ import ml.shifu.common.Step;
 import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.container.obj.ModelConfig;
 import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
+import ml.shifu.shifu.core.processor.NormalizeModelProcessor;
 import ml.shifu.shifu.core.validator.ModelInspector.ModelStep;
 import ml.shifu.shifu.exception.ShifuErrorCode;
 import ml.shifu.shifu.exception.ShifuException;
@@ -39,7 +40,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * TODO
+ * Norm step includes some normalization functions and almost the same as {@link NormalizeModelProcessor}.
  * 
  * @author Zhang David (pengzhang@paypal.com)
  */
@@ -98,6 +99,7 @@ public class NormStep extends Step<List<ColumnConfig>> {
                     normPigPath = pathFinder.getAbsolutePath("scripts/Normalize.pig");
                 }
                 paramsMap.put(Constants.IS_COMPRESS, "true");
+                paramsMap.put(Constants.IS_NORM_FOR_CLEAN, "false");
                 PigExecutor.getExecutor().submitJob(modelConfig, normPigPath, paramsMap,
                         modelConfig.getDataSet().getSource(), super.pathFinder);
                 if(StringUtils.isNotBlank(modelConfig.getValidationDataSetRawPath())) {

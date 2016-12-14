@@ -32,7 +32,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * TODO
+ * Variable selection step to call {@link VarSelectModelProcessor}.
  * 
  * @author Zhang David (pengzhang@paypal.com)
  */
