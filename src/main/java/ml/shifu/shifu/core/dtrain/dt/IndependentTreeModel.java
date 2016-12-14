@@ -236,13 +236,13 @@ public class IndependentTreeModel {
                 nextNode = currNode.getRight();
             }
         } else if(split.getFeatureType().isCategorical()) {
-            int indexValue = -1;
+            short indexValue = -1;
             if(Double.compare(value, 0d) < 0
                     || Double.compare(value, categoricalColumnNameNames.get(split.getColumnNum()).size()) >= 0) {
-                indexValue = categoricalColumnNameNames.get(split.getColumnNum()).size();
+                indexValue = (short) (categoricalColumnNameNames.get(split.getColumnNum()).size());
             } else {
                 // value is category index + 0.1d is to avoid 0.9999999 converted to 0
-                indexValue = (int) (value + 0.1d);
+                indexValue = (short) (value + 0.1d);
             }
             if(split.getLeftCategories().contains(indexValue)) {
                 nextNode = currNode.getLeft();
@@ -308,7 +308,7 @@ public class IndependentTreeModel {
                 }
                 indexValue = intIndex * 1d;
             }
-            if(split.getLeftCategories().contains((int) (indexValue + 0.1d))) {
+            if(split.getLeftCategories().contains((short) (indexValue + 0.1d))) {
                 nextNode = currNode.getLeft();
             } else {
                 nextNode = currNode.getRight();

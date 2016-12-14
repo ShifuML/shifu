@@ -116,7 +116,7 @@ class Variance extends Impurity {
         double leftCount = 0d, leftSum = 0d, leftSumSquare = 0d;
         double rightCount = 0d, rightSum = 0d, rightSumSquare = 0d;
         List<GainInfo> internalGainList = new ArrayList<GainInfo>();
-        Set<Integer> leftCategories = config.isCategorical() ? new HashSet<Integer>() : null;
+        Set<Short> leftCategories = config.isCategorical() ? new HashSet<Short>() : null;
 
         List<Pair> categoricalOrderList = null;
         if(config.isCategorical()) {
@@ -151,15 +151,16 @@ class Variance extends Impurity {
 
             Split split = null;
             if(config.isCategorical()) {
+                // cast to short is safe as we limit max bin size to Short.MAX_VALUE while may be not good for scale
                 if(index >= config.getBinCategory().size()) {
                     // missing value bin, all missing value will be replaced by empty string in norm step
-                    leftCategories.add(config.getBinCategory().size());
+                    leftCategories.add((short) (config.getBinCategory().size()));
                 } else {
-                    leftCategories.add(index);
+                    leftCategories.add((short) index);
                 }
                 // new hash set to copy a new one avoid share object issue
-                split = new Split(config.getColumnNum(), FeatureType.CATEGORICAL, 0d, new HashSet<Integer>(
-                        leftCategories));
+                split = new Split(config.getColumnNum(), FeatureType.CATEGORICAL, 0d,
+                        new HashSet<Short>(leftCategories));
             } else {
                 split = new Split(config.getColumnNum(), FeatureType.CONTINUOUS,
                         config.getBinBoundary().get(index + 1), null);
@@ -246,7 +247,7 @@ class FriedmanMSE extends Variance {
         double leftCount = 0d, leftSum = 0d, leftSumSquare = 0d;
         double rightCount = 0d, rightSum = 0d, rightSumSquare = 0d;
         List<GainInfo> internalGainList = new ArrayList<GainInfo>();
-        Set<Integer> leftCategories = config.isCategorical() ? new HashSet<Integer>() : null;
+        Set<Short> leftCategories = config.isCategorical() ? new HashSet<Short>() : null;
 
         List<Pair> categoricalOrderList = null;
         if(config.isCategorical()) {
@@ -281,15 +282,16 @@ class FriedmanMSE extends Variance {
 
             Split split = null;
             if(config.isCategorical()) {
+                // cast to short is safe as we limit max bin size to Short.MAX_VALUE while may be not good for scale
                 if(index >= config.getBinCategory().size()) {
                     // missing value bin, all missing value will be replaced by empty string in norm step
-                    leftCategories.add(config.getBinCategory().size());
+                    leftCategories.add((short) (config.getBinCategory().size()));
                 } else {
-                    leftCategories.add(index);
+                    leftCategories.add((short) index);
                 }
                 // new hash set to copy a new one avoid share object issue
-                split = new Split(config.getColumnNum(), FeatureType.CATEGORICAL, 0d, new HashSet<Integer>(
-                        leftCategories));
+                split = new Split(config.getColumnNum(), FeatureType.CATEGORICAL, 0d,
+                        new HashSet<Short>(leftCategories));
             } else {
                 split = new Split(config.getColumnNum(), FeatureType.CONTINUOUS,
                         config.getBinBoundary().get(index + 1), null);
@@ -340,12 +342,12 @@ class Entropy extends Impurity {
         InternalEntropyInfo info = getEntropyInterInfo(statsByClasses);
         // prob only effective in binary classes
         Predict predict = new Predict(info.sumAll == 0d ? 0d : (statsByClasses[1] / info.sumAll),
-                info.indexOfLargestElement);
+                (byte) info.indexOfLargestElement);
 
         double[] leftStatByClasses = new double[numClasses];
         double[] rightStatByClasses = new double[numClasses];
         List<GainInfo> internalGainList = new ArrayList<GainInfo>();
-        Set<Integer> leftCategories = config.isCategorical() ? new HashSet<Integer>() : null;
+        Set<Short> leftCategories = config.isCategorical() ? new HashSet<Short>() : null;
         for(int i = 0; i < (stats.length / numClasses - 1); i++) {
             int index = i;
             if(config.isCategorical()) {
@@ -356,7 +358,7 @@ class Entropy extends Impurity {
             }
             InternalEntropyInfo leftInfo = getEntropyInterInfo(leftStatByClasses);
             Predict leftPredict = new Predict(leftInfo.sumAll == 0d ? 0d : (leftStatByClasses[1] / leftInfo.sumAll),
-                    leftInfo.indexOfLargestElement);
+                    (byte) leftInfo.indexOfLargestElement);
 
             for(int j = 0; j < leftStatByClasses.length; j++) {
                 rightStatByClasses[j] = statsByClasses[j] - leftStatByClasses[j];
@@ -369,7 +371,7 @@ class Entropy extends Impurity {
 
             Predict rightPredict = new Predict(
                     rightInfo.sumAll == 0d ? 0d : (rightStatByClasses[1] / rightInfo.sumAll),
-                    rightInfo.indexOfLargestElement);
+                    (byte) rightInfo.indexOfLargestElement);
 
             double leftWeight = info.sumAll == 0d ? 0d : (leftInfo.sumAll / info.sumAll);
             double rightWeight = info.sumAll == 0d ? 0d : (rightInfo.sumAll / info.sumAll);
@@ -383,13 +385,13 @@ class Entropy extends Impurity {
             if(config.isCategorical()) {
                 if(index >= config.getBinCategory().size()) {
                     // missing value bin, all missing value will be replaced by empty string in norm step
-                    leftCategories.add(config.getBinCategory().size());
+                    leftCategories.add((short) (config.getBinCategory().size()));
                 } else {
-                    leftCategories.add(index);
+                    leftCategories.add((short) index);
                 }
                 // new hash set to copy a new one avoid share object issue
-                split = new Split(config.getColumnNum(), FeatureType.CATEGORICAL, 0d, new HashSet<Integer>(
-                        leftCategories));
+                split = new Split(config.getColumnNum(), FeatureType.CATEGORICAL, 0d,
+                        new HashSet<Short>(leftCategories));
             } else {
                 split = new Split(config.getColumnNum(), FeatureType.CONTINUOUS,
                         config.getBinBoundary().get(index + 1), null);
@@ -505,12 +507,12 @@ class Gini extends Impurity {
         InternalGiniInfo info = getGiniInfo(statsByClasses);
         // prob only effective in binary classes
         Predict predict = new Predict(info.sumAll == 0d ? 0d : statsByClasses[1] / info.sumAll,
-                info.indexOfLargestElement);
+                (byte) info.indexOfLargestElement);
 
         double[] leftStatByClasses = new double[numClasses];
         double[] rightStatByClasses = new double[numClasses];
         List<GainInfo> internalGainList = new ArrayList<GainInfo>();
-        Set<Integer> leftCategories = config.isCategorical() ? new HashSet<Integer>() : null;
+        Set<Short> leftCategories = config.isCategorical() ? new HashSet<Short>() : null;
         for(int i = 0; i < (stats.length / numClasses - 1); i++) {
             int index = i;
             if(config.isCategorical()) {
@@ -521,7 +523,7 @@ class Gini extends Impurity {
             }
             InternalGiniInfo leftInfo = getGiniInfo(leftStatByClasses);
             Predict leftPredict = new Predict(leftInfo.sumAll == 0d ? 0d : leftStatByClasses[1] / leftInfo.sumAll,
-                    leftInfo.indexOfLargestElement);
+                    (byte) leftInfo.indexOfLargestElement);
 
             for(int j = 0; j < leftStatByClasses.length; j++) {
                 rightStatByClasses[j] = statsByClasses[j] - leftStatByClasses[j];
@@ -533,7 +535,7 @@ class Gini extends Impurity {
             }
 
             Predict rightPredict = new Predict(rightInfo.sumAll == 0d ? 0d : rightStatByClasses[1] / rightInfo.sumAll,
-                    rightInfo.indexOfLargestElement);
+                    (byte)rightInfo.indexOfLargestElement);
 
             double leftWeight = info.sumAll == 0d ? 0d : (leftInfo.sumAll / info.sumAll);
             double rightWeight = info.sumAll == 0d ? 0d : (rightInfo.sumAll / info.sumAll);
@@ -544,15 +546,16 @@ class Gini extends Impurity {
 
             Split split = null;
             if(config.isCategorical()) {
+                // cast to short is safe as we limit max bin size to Short.MAX_VALUE while may be not good for scale
                 if(index >= config.getBinCategory().size()) {
                     // missing value bin, all missing value will be replaced by empty string in norm step
-                    leftCategories.add(config.getBinCategory().size());
+                    leftCategories.add((short) (config.getBinCategory().size()));
                 } else {
-                    leftCategories.add(index);
+                    leftCategories.add((short) index);
                 }
                 // new hash set to copy a new one avoid share object issue
-                split = new Split(config.getColumnNum(), FeatureType.CATEGORICAL, 0d, new HashSet<Integer>(
-                        leftCategories));
+                split = new Split(config.getColumnNum(), FeatureType.CATEGORICAL, 0d,
+                        new HashSet<Short>(leftCategories));
             } else {
                 split = new Split(config.getColumnNum(), FeatureType.CONTINUOUS,
                         config.getBinBoundary().get(index + 1), null);

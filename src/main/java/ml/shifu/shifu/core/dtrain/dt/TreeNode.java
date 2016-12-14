@@ -201,14 +201,7 @@ public class TreeNode implements Bytable {
 
     @Override
     public void write(DataOutput out) throws IOException {
-        out.writeInt(treeId);
-        out.writeInt(nodeNum);
-        this.node.write(out);
-        out.writeDouble(this.learningRate);
-
-        if(this.node.getId() == Node.ROOT_INDEX) {
-            out.writeDouble(this.rootWgtCnt);
-        }
+        this.writeWithoutFeatures(out);
 
         if(features == null) {
             out.writeInt(0);
@@ -233,15 +226,7 @@ public class TreeNode implements Bytable {
 
     @Override
     public void readFields(DataInput in) throws IOException {
-        this.treeId = in.readInt();
-        this.nodeNum = in.readInt();
-        this.node = new Node();
-        this.node.readFields(in);
-        this.learningRate = in.readDouble();
-
-        if(this.node.getId() == Node.ROOT_INDEX) {
-            this.rootWgtCnt = in.readDouble();
-        }
+        this.readFieldsWithoutFeatures(in);
 
         int len = in.readInt();
         this.features = new ArrayList<Integer>();
@@ -278,7 +263,7 @@ public class TreeNode implements Bytable {
     }
 
     private void computeImportance(Map<Integer, Double> importances, Node node) {
-        if(!node.isLeaf()) {
+        if(!node.isRealLeaf()) {
             int featureId = node.getSplit().getColumnNum();
             if(!importances.containsKey(featureId)) {
                 importances.put(featureId, node.getGain());

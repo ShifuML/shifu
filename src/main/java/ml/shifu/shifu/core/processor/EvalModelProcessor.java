@@ -556,8 +556,31 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
             return;
         }
 
-        String[] evalColumnNames = CommonUtils.getHeaders(evalConfig.getDataSet().getHeaderPath(), evalConfig
-                .getDataSet().getHeaderDelimiter(), evalConfig.getDataSet().getSource());
+        String[] evalColumnNames = null;
+
+        if(StringUtils.isNotBlank(evalConfig.getDataSet().getHeaderPath())) {
+            evalColumnNames = CommonUtils.getHeaders(evalConfig.getDataSet().getHeaderPath(), evalConfig.getDataSet()
+                    .getHeaderDelimiter(), evalConfig.getDataSet().getSource());
+        } else {
+            String delimiter = StringUtils.isBlank(evalConfig.getDataSet().getHeaderDelimiter()) ? evalConfig
+                    .getDataSet().getDataDelimiter() : evalConfig.getDataSet().getHeaderDelimiter();
+            String[] fields = CommonUtils.takeFirstLine(evalConfig.getDataSet().getDataPath(), delimiter, evalConfig
+                    .getDataSet().getSource());
+            if(StringUtils.join(fields, "").contains(modelConfig.getTargetColumnName())) {
+                evalColumnNames = fields;
+                log.warn("No header path is provided, we will try to read first line and detect schema.");
+                log.warn("Schema in ColumnConfig.json are named as first line of data set path.");
+            } else {
+                log.warn("No header path is provided, we will try to read first line and detect schema.");
+                log.warn("Schema in ColumnConfig.json are named as  index 0, 1, 2, 3 ...");
+                log.warn("Please make sure weight column and tag column are also taking index as name.");
+                evalColumnNames = new String[fields.length];
+                for(int i = 0; i < fields.length; i++) {
+                    evalColumnNames[i] = i + "";
+                }
+            }
+        }
+
         Set<String> names = new HashSet<String>();
         names.addAll(Arrays.asList(evalColumnNames));
 
