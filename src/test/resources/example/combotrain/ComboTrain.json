@@ -38,11 +38,12 @@
       "algorithm" : "GBT",
       "params" : {
         "Impurity" : "variance",
-        "MaxDepth" : 10,
-        "LearningRate" : 0.1,
+        "MaxDepth" : 7,
+        "LearningRate" : 0.05,
         "FeatureSubsetStrategy" : "TWOTHIRDS",
         "Loss" : "squared",
-        "MinInstancesPerNode" : 1,
+        "TreeNum" : "100",
+        "MinInstancesPerNode" : 5,
         "MinInfoGain" : 0.0
       },
       "customPaths" : { }

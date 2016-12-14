@@ -869,4 +869,15 @@ public class PathFinder {
         return otherConfigs;
     }
 
+    public String getSubModelsAssembleTrainData() {
+        return getPathBySourceType(
+                new Path(Constants.TMP, "AssembleTrainData"),
+                this.modelConfig.getDataSet().getSource());
+    }
+
+    public String getSubModelsAssembleEvalData(String evalName, SourceType sourceType) {
+        return getPathBySourceType(
+                new Path(Constants.TMP, evalName + "AssembleEvalData"),
+                sourceType);
+    }
 }

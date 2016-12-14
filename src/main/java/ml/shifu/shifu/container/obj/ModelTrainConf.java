@@ -364,4 +364,27 @@ public class ModelTrainConf {
                 && this.getNumTrainEpochs().equals(other.getNumTrainEpochs())
                 && this.validSetRate.equals(other.getValidSetRate());
     }
+
+    @Override
+    public ModelTrainConf clone() {
+        ModelTrainConf other = new ModelTrainConf();
+        other.setAlgorithm(algorithm);
+        other.setBaggingNum(baggingNum);
+        other.setBaggingSampleRate(baggingSampleRate);
+        other.setConvergenceThreshold(convergenceThreshold);
+        if ( customPaths != null ) {
+            other.setCustomPaths(new HashMap<String, String>(customPaths));
+        }
+        other.setEpochsPerIteration(epochsPerIteration);
+        other.setFixInitInput(fixInitInput);
+        other.setIsContinuous(isContinuous);
+        other.setMultiClassifyMethod(multiClassifyMethod);
+        other.setNumTrainEpochs(numTrainEpochs);
+        other.setParams(new HashMap<String, Object>(params));
+        other.setTrainOnDisk(trainOnDisk);
+        other.setUpSampleWeight(upSampleWeight);
+        other.setValidSetRate(validSetRate);
+        other.setWorkerThreadCount(workerThreadCount);
+        return other;
+    }
 }

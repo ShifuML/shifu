@@ -140,4 +140,20 @@ public class ModelStatsConf {
     public void setPsiColumnName(String psiColumnName) {
         this.psiColumnName = psiColumnName;
     }
+
+    @Override
+    public ModelStatsConf clone() {
+        ModelStatsConf other = new ModelStatsConf();
+        other.setBinningAlgorithm(binningAlgorithm);
+        other.setBinningAutoTypeEnable(binningAutoTypeEnable);
+        other.setBinningAutoTypeThreshold(binningAutoTypeThreshold);
+        other.setBinningMergeEnable(binningMergeEnable);
+        other.setBinningMethod(binningMethod);
+        other.setMaxNumBin(maxNumBin);
+        other.setNumericalValueThreshold(numericalValueThreshold);
+        other.setPsiColumnName(psiColumnName);
+        other.setSampleNegOnly(sampleNegOnly);
+        other.setSampleRate(sampleRate);
+        return other;
+    }
 }
