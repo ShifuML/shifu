@@ -19,6 +19,13 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.Callable;
+import java.util.concurrent.CompletionService;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorCompletionService;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 
 import ml.shifu.shifu.container.ScoreObject;
 import ml.shifu.shifu.container.obj.ColumnConfig;
@@ -58,7 +65,10 @@ public class Scorer {
      */
     private Map<Integer, Map<String, Integer>> binCategoryMap = new HashMap<Integer, Map<String, Integer>>();
 
-    private Map<Integer, Integer> columnMapping;
+    /**
+     * Run model in parallel. Size is # of models.
+     */
+    private ExecutorService threadPool;
 
     public Scorer(List<BasicML> models, List<ColumnConfig> columnConfigList, String algorithm, ModelConfig modelConfig) {
         this(models, columnConfigList, algorithm, modelConfig, 4.0d);
@@ -100,26 +110,34 @@ public class Scorer {
             }
         }
 
-        if(columnConfigList != null) {
-            this.columnMapping = new HashMap<Integer, Integer>(columnConfigList.size(), 1f);
-            int[] inputOutputIndex = DTrainUtils.getNumericAndCategoricalInputAndOutputCounts(this.columnConfigList);
-            boolean isAfterVarSelect = inputOutputIndex[3] == 1 ? true : false;
-            int index = 0;
-            for(int i = 0; i < columnConfigList.size(); i++) {
-                ColumnConfig columnConfig = columnConfigList.get(i);
-                if(!isAfterVarSelect) {
-                    if(!columnConfig.isMeta() && !columnConfig.isTarget() && CommonUtils.isGoodCandidate(columnConfig)) {
-                        this.columnMapping.put(columnConfig.getColumnNum(), index);
-                        index += 1;
-                    }
-                } else {
-                    if(columnConfig != null && !columnConfig.isMeta() && !columnConfig.isTarget()
-                            && columnConfig.isFinalSelect()) {
-                        this.columnMapping.put(columnConfig.getColumnNum(), index);
-                        index += 1;
-                    }
+        this.threadPool = Executors.newFixedThreadPool(Math.min(Runtime.getRuntime().availableProcessors(),
+                models.size()));
+
+        // add a shutdown hook as a safe guard if some one not call close
+        Runtime.getRuntime().addShutdownHook(new Thread(new Runnable() {
+            @Override
+            public void run() {
+                // shut down thread pool
+                Scorer.this.threadPool.shutdownNow();
+                try {
+                    Scorer.this.threadPool.awaitTermination(2, TimeUnit.SECONDS);
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
                 }
             }
+        }));
+    }
+
+    /**
+     * Cleaning the thread pool resources, must be called at last.
+     */
+    public void close() {
+        // shut down thread pool
+        this.threadPool.shutdownNow();
+        try {
+            this.threadPool.awaitTermination(2, TimeUnit.SECONDS);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
         }
     }
 
@@ -129,23 +147,88 @@ public class Scorer {
         return score(pair, rawDataMap);
     }
 
-    public ScoreObject score(MLDataPair pair, Map<String, String> rawDataMap) {
+    public ScoreObject score(final MLDataPair pair, Map<String, String> rawDataMap) {
         if(pair == null) {
             return null;
         }
 
         List<Integer> scores = new ArrayList<Integer>();
 
+        CompletionService<MLData> completionService = new ExecutorCompletionService<MLData>(this.threadPool);
+
         List<Integer> rfTreeSizeList = new ArrayList<Integer>();
-        for(BasicML model: models) {
+        for(final BasicML model: models) {
+            // TODO, check if no need 'if' condition and refactor two if for loops please
             if(model instanceof BasicNetwork) {
-                BasicNetwork network = (BasicNetwork) model;
+                final BasicNetwork network = (BasicNetwork) model;
                 if(network.getInputCount() != pair.getInput().size()) {
                     log.error("Network and input size mismatch: Network Size = " + network.getInputCount()
                             + "; Input Size = " + pair.getInput().size());
                     continue;
                 }
-                MLData score = network.compute(pair.getInput());
+                completionService.submit(new Callable<MLData>() {
+                    @Override
+                    public MLData call() throws Exception {
+                        return network.compute(pair.getInput());
+                    }
+                });
+            } else if(model instanceof SVM) {
+                final SVM svm = (SVM) model;
+                if(svm.getInputCount() != pair.getInput().size()) {
+                    log.error("SVM and input size mismatch: SVM Size = " + svm.getInputCount() + "; Input Size = "
+                            + pair.getInput().size());
+                    continue;
+                }
+                completionService.submit(new Callable<MLData>() {
+                    @Override
+                    public MLData call() throws Exception {
+                        return svm.compute(pair.getInput());
+                    }
+                });
+            } else if(model instanceof LR) {
+                final LR lr = (LR) model;
+                if(lr.getInputCount() != pair.getInput().size()) {
+                    log.error("LR and input size mismatch: LR Size = " + lr.getInputCount() + "; Input Size = "
+                            + pair.getInput().size());
+                    continue;
+                }
+                completionService.submit(new Callable<MLData>() {
+                    @Override
+                    public MLData call() throws Exception {
+                        return lr.compute(pair.getInput());
+                    }
+                });
+            } else if(model instanceof TreeModel) {
+                final TreeModel tm = (TreeModel) model;
+                if(tm.getInputCount() != pair.getInput().size()) {
+                    throw new RuntimeException("GBDT and input size mismatch: rf Size = " + tm.getInputCount()
+                            + "; Input Size = " + pair.getInput().size());
+                }
+                completionService.submit(new Callable<MLData>() {
+                    @Override
+                    public MLData call() throws Exception {
+                        MLData result = tm.compute(pair.getInput());
+                        return result;
+                    }
+                });
+            } else {
+                throw new RuntimeException("unsupport models");
+            }
+        }
+
+        int rCnt = 0;
+        while(rCnt < this.models.size()) {
+            MLData score = null;
+            try {
+                score = completionService.take().get();
+            } catch (ExecutionException e) {
+                throw new RuntimeException(e);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
+            BasicML model = this.models.get(rCnt);
+
+            if(model instanceof BasicNetwork) {
                 if(modelConfig != null && modelConfig.isRegression()) {
                     scores.add(toScore(score.getData(0)));
                 } else if(modelConfig.isClassification() && modelConfig.getTrain().isOneVsAll()) {
@@ -158,30 +241,10 @@ public class Scorer {
                     }
                 }
             } else if(model instanceof SVM) {
-                SVM svm = (SVM) model;
-                if(svm.getInputCount() != pair.getInput().size()) {
-                    log.error("SVM and input size mismatch: SVM Size = " + svm.getInputCount() + "; Input Size = "
-                            + pair.getInput().size());
-                    continue;
-                }
-                MLData score = svm.compute(pair.getInput());
                 scores.add(toScore(score.getData(0)));
             } else if(model instanceof LR) {
-                LR lr = (LR) model;
-                if(lr.getInputCount() != pair.getInput().size()) {
-                    log.error("LR and input size mismatch: LR Size = " + lr.getInputCount() + "; Input Size = "
-                            + pair.getInput().size());
-                    continue;
-                }
-                MLData score = lr.compute(pair.getInput());
                 scores.add(toScore(score.getData(0)));
             } else if(model instanceof TreeModel) {
-                TreeModel tm = (TreeModel) model;
-                if(tm.getInputCount() != pair.getInput().size()) {
-                    throw new RuntimeException("GBDT and input size mismatch: rf Size = " + tm.getInputCount()
-                            + "; Input Size = " + pair.getInput().size());
-                }
-                MLData score = tm.compute(pair.getInput());
                 if(modelConfig.isClassification() && !modelConfig.getTrain().isOneVsAll()) {
                     double[] scoreArray = score.getData();
                     for(double sc: scoreArray) {
@@ -191,6 +254,7 @@ public class Scorer {
                     // if one vs all consider
                     scores.add(toScore(score.getData(0)));
                 }
+                final TreeModel tm = (TreeModel) model;
                 // regression for RF
                 if(!tm.isClassfication() && !tm.isGBDT()) {
                     rfTreeSizeList.add(tm.getTrees().size());
@@ -198,6 +262,8 @@ public class Scorer {
             } else {
                 throw new RuntimeException("unsupport models");
             }
+
+            rCnt += 1;
         }
 
         Integer tag = (int) pair.getIdeal().getData(0);

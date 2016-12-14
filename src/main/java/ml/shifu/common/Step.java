@@ -36,6 +36,12 @@ import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+/**
+ * Abstract {@link Step} for all shifu stages. {@link Step} contains basic loading and validation for ModelConfg and
+ * ColumnConfig.
+ * 
+ * @author Zhang David (pengzhang@paypal.com)
+ */
 public abstract class Step<STEP_RESULT> {
 
     private final static Logger LOG = LoggerFactory.getLogger(Step.class);

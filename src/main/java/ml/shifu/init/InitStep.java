@@ -31,7 +31,7 @@ import ml.shifu.shifu.core.validator.ModelInspector.ModelStep;
 import ml.shifu.shifu.util.CommonUtils;
 
 /**
- * TODO
+ * Init Step in Shifu to call ColumnConfig initialization.
  * 
  * @author Zhang David (pengzhang@paypal.com)
  */

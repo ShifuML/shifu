@@ -21,7 +21,7 @@ SET pig.exec.reducers.bytes.per.reducer 536870912;
 SET mapred.job.queue.name $queue_name;
 SET mapred.task.timeout 1200000;
 
-SET job.name 'Shifu Statistic';
+SET job.name 'Shifu Statistic: $data_set';
 SET io.sort.mb 500;
 
 SET mapred.child.java.opts '-Xmx1G -server -XX:+UseParNewGC -XX:+UseConcMarkSweepGC -XX:CMSInitiatingOccupancyFraction=70';
