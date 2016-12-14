@@ -151,9 +151,6 @@ public class AddColumnNumAndFilterUDF extends AbstractTrainerUDF<DataBag> {
                     tuple.set(COLUMN_SEED_INDX, Math.abs(random.nextInt() % 300));
                 }
 
-                // get weight value
-                tuple.set(COLUMN_WEIGHT_INDX, getWeightValue(input));
-
                 bag.add(tuple);
             }
         }
@@ -183,7 +180,7 @@ public class AddColumnNumAndFilterUDF extends AbstractTrainerUDF<DataBag> {
         int columnId = getWeightColumnId();
         if(columnId != INVALID_INDEX){
             try {
-                weight = Double.parseDouble(((DataByteArray) input.get(columnId)).toString());
+                weight = Double.parseDouble(input.get(columnId).toString());
             } catch (ExecException ignore) {
             }
         }

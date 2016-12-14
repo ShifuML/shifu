@@ -38,6 +38,7 @@ import ml.shifu.shifu.util.Constants;
 import ml.shifu.shifu.util.Environment;
 
 import org.apache.commons.collections.CollectionUtils;
+import org.apache.commons.collections.ListUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.fs.Path;
 
@@ -701,6 +702,25 @@ public class ModelConfig {
         int result = 1;
         result = prime * result + ((basic == null) ? 0 : basic.hashCode());
         return result;
+    }
+
+    @Override
+    public ModelConfig clone() {
+        ModelConfig other = new ModelConfig();
+        other.setBasic(basic.clone());
+        other.setDataSet(dataSet.clone());
+        other.setStats(stats.clone());
+        other.setVarSelect(varSelect.clone());
+        other.setNormalize(normalize.clone());
+        other.setTrain(train.clone());
+
+        List<EvalConfig> evalConfigs = new ArrayList<EvalConfig>();
+        for ( EvalConfig evalConfig : this.evals ) {
+            evalConfigs.add(evalConfig.clone());
+        }
+        other.setEvals(evalConfigs);
+
+        return other;
     }
 
 }

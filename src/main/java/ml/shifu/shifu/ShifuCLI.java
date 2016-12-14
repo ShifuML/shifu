@@ -187,16 +187,19 @@ public class ShifuCLI {
                     }
                 } else if(args[0].equals(CMD_COMBO)) {
                     if ( cmd.hasOption(MODELSET_CMD_NEW) ) {
-                        log.info("Create new commbo model");
+                        log.info("Create new commbo models");
                         status = createNewCombo(cmd.getOptionValue(MODELSET_CMD_NEW));
                     } else if ( cmd.hasOption(INIT_CMD)) {
-
+                        log.info("Init commbo models");
+                        status = initComboModels();
                     } else if ( cmd.hasOption(EVAL_CMD_RUN) ) {
                         log.info("Run combo model.");
+                        status = runComboModels();
                         // train combo models
                     } else if ( cmd.hasOption(EVAL_CMD) ) {
                         log.info("Eval combo model.");
                         // eval combo model performance
+                        status = evalComboModels();
                     }
                 } else if(args[0].equals(POSTTRAIN_CMD)) {
                     // post train step
@@ -340,6 +343,21 @@ public class ShifuCLI {
 
     private static int createNewCombo(String algorithms) throws Exception {
         Processor processor = new ComboModelProcessor(ComboModelProcessor.ComboStep.NEW, algorithms);
+        return processor.run();
+    }
+
+    private static int initComboModels() throws Exception {
+        Processor processor = new ComboModelProcessor(ComboModelProcessor.ComboStep.INIT);
+        return processor.run();
+    }
+
+    private static int runComboModels() throws Exception {
+        Processor processor = new ComboModelProcessor(ComboModelProcessor.ComboStep.RUN);
+        return processor.run();
+    }
+
+    private static int evalComboModels() throws Exception {
+        Processor processor = new ComboModelProcessor(ComboModelProcessor.ComboStep.EVAL);
         return processor.run();
     }
 
@@ -621,6 +639,7 @@ public class ShifuCLI {
         System.out.println("\teval -perf <EvalSetName>                Calculate the model performance based on confmat");
         System.out.println("\texport [-t pmml|columnstats] [-c]       Export model to PMML format or export ColumnConfig.");
         System.out.println("\tcombo -new    <Algorithm List>          Create a combo model train. Algorithm lis should be NN,LR,RF,GBT,LR");
+        System.out.println("\tcombo -init                             Generate sub-models.");
         System.out.println("\tcombo -run                              Run Combo-Model train.");
         System.out.println("\tcombo -eval                             Evaluate Combo-Model performance.");
         System.out.println("\tversion|v|-v|-version                   Print version of current package.");
