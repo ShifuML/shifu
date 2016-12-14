@@ -330,11 +330,12 @@ public class DTMaster extends AbstractMasterComputable<DTMasterParams, DTWorkerP
                 validationError);
         if(toDoQueue.isEmpty()) {
             if(this.isGBDT) {
-                Node treeNode = this.trees.get(this.trees.size() - 1).getNode();
+                TreeNode treeNode = this.trees.get(this.trees.size() - 1);
+                Node node = treeNode.getNode();
                 if(this.trees.size() == this.treeNum + this.existingTreeSize) {
                     masterParams.setHalt(true);
                     LOG.info("Queue is empty, training is stopped in iteration {}.", context.getCurrentIteration());
-                } else if(treeNode.getLeft() == null && treeNode.getRight() == null) {
+                } else if(node.getLeft() == null && node.getRight() == null) {
                     // if very good performance, here can be some issues, say you'd like to get 5 trees, but in the 2nd
                     // tree, you get one perfect tree, no need continue but warn users about such issue: set
                     // BaggingSampleRate not to 1 can solve such issue to avoid overfit
@@ -345,6 +346,8 @@ public class DTMaster extends AbstractMasterComputable<DTMasterParams, DTWorkerP
                 } else {
                     // set first tree to true even after ROOT node is set in next tree
                     masterParams.setFirstTree(this.trees.size() == 1);
+                    // finish current tree, no need features information
+                    treeNode.setFeatures(null);
                     TreeNode newRootNode = new TreeNode(this.trees.size(), new Node(Node.ROOT_INDEX), this.learningRate);
                     LOG.info("The {} tree is to be built.", this.trees.size());
                     this.trees.add(newRootNode);
@@ -437,13 +440,15 @@ public class DTMaster extends AbstractMasterComputable<DTMasterParams, DTWorkerP
         // if can split left, at the same time create left and right node
         if(canSplit) {
             int leftIndex = Node.leftIndex(doneNode.getId());
-            Node left = new Node(leftIndex, doneNode.getLeftPredict(), doneNode.getLeftImpurity(), false);
+            Node left = new Node(leftIndex, doneNode.getLeftPredict(), doneNode.getLeftImpurity(), true);
+
             doneNode.setLeft(left);
             this.trees.get(treeId).incrNodeNum();
             this.toDoQueue.offer(new TreeNode(treeId, left));
 
             int rightIndex = Node.rightIndex(doneNode.getId());
-            Node right = new Node(rightIndex, doneNode.getRightPredict(), doneNode.getRightImpurity(), false);
+            Node right = new Node(rightIndex, doneNode.getRightPredict(), doneNode.getRightImpurity(), true);
+
             doneNode.setRight(right);
             this.trees.get(treeId).incrNodeNum();
             this.toDoQueue.offer(new TreeNode(treeId, right));
@@ -459,8 +464,7 @@ public class DTMaster extends AbstractMasterComputable<DTMasterParams, DTWorkerP
             boolean leftChildIsLeaf = Node.indexToLevel(doneNode.getId()) + 1 == this.maxDepth
                     || Double.compare(doneNode.getLeftImpurity(), 0d) == 0;
             // such node is just set into isLeaf to true, a new node is created with leaf flag but will be
-            // changed
-            // to final leaf in later iteration
+            // changed to final leaf in later iteration
             int leftIndex = Node.leftIndex(doneNode.getId());
             Node left = new Node(leftIndex, doneNode.getLeftPredict(), doneNode.getLeftImpurity(), true);
             doneNode.setLeft(left);
@@ -479,6 +483,7 @@ public class DTMaster extends AbstractMasterComputable<DTMasterParams, DTWorkerP
             // such node is just set into isLeaf to true
             int rightIndex = Node.rightIndex(doneNode.getId());
             Node right = new Node(rightIndex, doneNode.getRightPredict(), doneNode.getRightImpurity(), true);
+
             doneNode.setRight(right);
             // update nodeNum
             this.trees.get(treeId).incrNodeNum();

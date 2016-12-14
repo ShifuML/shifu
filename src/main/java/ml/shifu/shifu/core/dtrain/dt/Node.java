@@ -139,21 +139,21 @@ public class Node implements Bytable {
         this.impurity = impurity;
     }
 
-    public Node(int id, Split split, Node left, Node right, Predict predict, double gain, double impurity,
-            Predict leftPredict, double leftImpurity, Predict rightPredict, double rightImpurity, boolean isLeaf) {
-        this.id = id;
-        this.split = split;
-        this.left = left;
-        this.right = right;
-        this.predict = predict;
-        this.gain = gain;
-        this.impurity = impurity;
-        this.leftPredict = leftPredict;
-        this.leftImpurity = leftImpurity;
-        this.rightPredict = rightPredict;
-        this.rightImpurity = rightImpurity;
-        this.isLeaf = isLeaf;
-    }
+    // public Node(int id, Split split, Node left, Node right, Predict predict, double gain, double impurity,
+    // Predict leftPredict, double leftImpurity, Predict rightPredict, double rightImpurity, boolean isLeaf) {
+    // this.id = id;
+    // this.split = split;
+    // this.left = left;
+    // this.right = right;
+    // this.predict = predict;
+    // this.gain = gain;
+    // this.impurity = impurity;
+    // this.leftPredict = leftPredict;
+    // this.leftImpurity = leftImpurity;
+    // this.rightPredict = rightPredict;
+    // this.rightImpurity = rightImpurity;
+    // this.isLeaf = isLeaf;
+    // }
 
     /**
      * @return the id
@@ -417,10 +417,10 @@ public class Node implements Bytable {
     @Override
     public void write(DataOutput out) throws IOException {
         out.writeInt(id);
-        out.writeDouble(gain);
-        out.writeDouble(impurity);
-        out.writeBoolean(isLeaf);
-        out.writeDouble(wgtCntRatio);
+
+        // cast to float to save space
+        out.writeFloat((float) gain);
+        out.writeFloat((float) wgtCntRatio);
 
         if(split == null) {
             out.writeBoolean(false);
@@ -429,11 +429,18 @@ public class Node implements Bytable {
             split.write(out);
         }
 
-        if(predict == null) {
-            out.writeBoolean(false);
-        } else {
-            out.writeBoolean(true);
-            predict.write(out);
+        // only store needed predict info
+        boolean isInSplit = !isRealLeaf()
+                && ((this.left != null && this.left.getSplit() == null) || (this.right != null && this.right.getSplit() == null));
+        boolean isStorePredict = isRealLeaf() || isInSplit;
+        out.writeBoolean(isStorePredict);
+        if(isStorePredict) {
+            if(predict == null) {
+                out.writeBoolean(false);
+            } else {
+                out.writeBoolean(true);
+                predict.write(out);
+            }
         }
 
         if(left == null) {
@@ -454,19 +461,20 @@ public class Node implements Bytable {
     @Override
     public void readFields(DataInput in) throws IOException {
         this.id = in.readInt();
-        this.gain = in.readDouble();
-        this.impurity = in.readDouble();
-        this.isLeaf = in.readBoolean();
-        this.wgtCntRatio = in.readDouble();
+        this.gain = in.readFloat();
+        this.wgtCntRatio = in.readFloat();
 
         if(in.readBoolean()) {
             this.split = new Split();
             this.split.readFields(in);
         }
 
-        if(in.readBoolean()) {
-            this.predict = new Predict();
-            this.predict.readFields(in);
+        boolean isStorePredict = in.readBoolean();
+        if(isStorePredict) {
+            if(in.readBoolean()) {
+                this.predict = new Predict();
+                this.predict.readFields(in);
+            }
         }
 
         if(in.readBoolean()) {
@@ -487,4 +495,14 @@ public class Node implements Bytable {
                 + leftImpurity + ", rightPredict=" + rightPredict + ", rightImpurity=" + rightImpurity + "]";
     }
 
+    public String toTree() {
+        String str = "[id=" + id + ", split=" + split + ", predict=" + predict + "]\n";
+        if(this.left != null) {
+            str += this.left.toTree();
+        }
+        if(this.right != null) {
+            str += this.right.toTree();
+        }
+        return str;
+    }
 }

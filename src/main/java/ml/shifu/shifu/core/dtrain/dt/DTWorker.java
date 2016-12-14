@@ -475,10 +475,11 @@ public class DTWorker
             this.random = new Random();
         }
 
+        int iii = 0, iiii = 0;
         for(Data data: this.trainingData) {
             if(this.isRF) {
                 for(TreeNode treeNode: trees) {
-                    Node predictNode = predictNodeIndex(treeNode.getNode(), data);
+                    Node predictNode = predictNodeIndex(treeNode.getNode(), data, true);
                     if(predictNode.getPredict() != null) {
                         // only update when not in first node, for treeNode, no predict statistics at that time
                         float weight = data.subsampleWeights[treeNode.getTreeId()];
@@ -510,12 +511,25 @@ public class DTWorker
                         recoverGBTData(context, data.output, data.predict, data, true);
                     }
                     int currTreeIndex = trees.size() - 1;
+
+                    if(iii++ < 20) {
+                        LOG.debug("DEBUGDEBUG1: start currTreeIndex");
+                    }
                     if(lastMasterResult.isSwitchToNextTree()) {
                         if(currTreeIndex >= 1) {
                             Node node = trees.get(currTreeIndex - 1).getNode();
-                            Node predictNode = predictNodeIndex(node, data);
+                            if(iiii++ < 1) {
+                                LOG.debug("DEBUG: CURR tree is {}", node.toTree());
+                            }
+                            Node predictNode = predictNodeIndex(node, data, false);
+                            if(iii++ < 20) {
+                                LOG.debug("DEBUGDEBUG2: start predictNode is : {}, {}, {}", predictNode.getId(),
+                                        predictNode.getPredict(), trees.get(currTreeIndex - 1).getTreeId());
+                            }
                             if(predictNode.getPredict() != null) {
                                 double predict = predictNode.getPredict().getPredict();
+                                // first tree logic, master must set it to first tree even second tree with ROOT is
+                                // sending
                                 if(context.getLastMasterResult().isFirstTree()) {
                                     data.predict = (float) predict;
                                 } else {
@@ -533,16 +547,24 @@ public class DTWorker
                             }
                         }
                     }
-                    Node predictNode = predictNodeIndex(trees.get(currTreeIndex).getNode(), data);
-                    if(!context.getLastMasterResult().isFirstTree()) {
-                        trainError += data.significance * loss.computeError(data.predict, data.label);
-                        weightedTrainCount += data.significance;
-                    } else {
+                    if(context.getLastMasterResult().isFirstTree() && !lastMasterResult.isSwitchToNextTree()) {
+                        Node currTree = trees.get(currTreeIndex).getNode();
+                        if(iiii++ < 1) {
+                            LOG.debug("debug: CURR tree is {}", currTree.toTree());
+                        }
+                        Node predictNode = predictNodeIndex(currTree, data, true);
+                        if(iii++ < 20) {
+                            LOG.debug("DEBUGDEBUG3: start predictNode is : {}, {}, {}", predictNode.getId(),
+                                    predictNode.getPredict(), trees.get(currTreeIndex).getTreeId());
+                        }
                         if(predictNode.getPredict() != null) {
                             trainError += data.significance
                                     * loss.computeError((float) (predictNode.getPredict().getPredict()), data.label);
                             weightedTrainCount += data.significance;
                         }
+                    } else {
+                        trainError += data.significance * loss.computeError(data.predict, data.label);
+                        weightedTrainCount += data.significance;
                     }
                 }
             }
@@ -552,7 +574,7 @@ public class DTWorker
             for(Data data: this.validationData) {
                 if(this.isRF) {
                     for(TreeNode treeNode: trees) {
-                        Node predictNode = predictNodeIndex(treeNode.getNode(), data);
+                        Node predictNode = predictNodeIndex(treeNode.getNode(), data, true);
                         if(predictNode.getPredict() != null) {
                             // only update when not in first node, for treeNode, no predict statistics at that time
                             validationError += data.significance
@@ -579,7 +601,7 @@ public class DTWorker
                         if(lastMasterResult.isSwitchToNextTree()) {
                             if(currTreeIndex >= 1) {
                                 Node node = trees.get(currTreeIndex - 1).getNode();
-                                Node predictNode = predictNodeIndex(node, data);
+                                Node predictNode = predictNodeIndex(node, data, false);
                                 if(predictNode.getPredict() != null) {
                                     double predict = predictNode.getPredict().getPredict();
                                     if(context.getLastMasterResult().isFirstTree()) {
@@ -599,16 +621,16 @@ public class DTWorker
                                 }
                             }
                         }
-                        Node predictNode = predictNodeIndex(trees.get(currTreeIndex).getNode(), data);
-                        if(!context.getLastMasterResult().isFirstTree()) {
-                            validationError += data.significance * loss.computeError(data.predict, data.label);
-                            weightedValidationCount += data.significance;
-                        } else {
+                        if(context.getLastMasterResult().isFirstTree() && !lastMasterResult.isSwitchToNextTree()) {
+                            Node predictNode = predictNodeIndex(trees.get(currTreeIndex).getNode(), data, true);
                             if(predictNode.getPredict() != null) {
                                 validationError += data.significance
                                         * loss.computeError((float) (predictNode.getPredict().getPredict()), data.label);
                                 weightedValidationCount += data.significance;
                             }
+                        } else {
+                            validationError += data.significance * loss.computeError(data.predict, data.label);
+                            weightedValidationCount += data.significance;
                         }
                     }
                 }
@@ -658,14 +680,14 @@ public class DTWorker
                         nodeIndexes.clear();
                         if(DTWorker.this.isRF) {
                             for(TreeNode treeNode: trees) {
-                                Node predictNode = predictNodeIndex(treeNode.getNode(), data);
+                                Node predictNode = predictNodeIndex(treeNode.getNode(), data, false);
                                 nodeIndexes.add(predictNode.getId());
                             }
                         }
 
                         if(DTWorker.this.isGBDT) {
                             int currTreeIndex = trees.size() - 1;
-                            Node predictNode = predictNodeIndex(trees.get(currTreeIndex).getNode(), data);
+                            Node predictNode = predictNodeIndex(trees.get(currTreeIndex).getNode(), data, false);
                             // update node index
                             nodeIndexes.add(predictNode.getId());
                         }
@@ -821,10 +843,14 @@ public class DTWorker
         return -1;
     }
 
-    private Node predictNodeIndex(Node node, Data data) {
+    private Node predictNodeIndex(Node node, Data data, boolean isForErr) {
         Node currNode = node;
         Split split = currNode.getSplit();
-        if(split == null || (currNode.getLeft() == null && currNode.getRight() == null)) {
+        boolean isInSplit = !currNode.isRealLeaf()
+                && ((currNode.getLeft() != null && currNode.getLeft().getSplit() == null) || (currNode.getRight() != null && currNode
+                        .getRight().getSplit() == null));
+
+        if((isForErr && isInSplit) || (split == null || (currNode.getLeft() == null && currNode.getRight() == null))) {
             return currNode;
         }
 
@@ -841,12 +867,12 @@ public class DTWorker
                 nextNode = currNode.getRight();
             }
         } else if(columnConfig.isCategorical()) {
-            int indexValue = columnConfig.getBinCategory().size();
-            if(data.inputs[inputIndex] < columnConfig.getBinCategory().size()) {
+            short indexValue = (short) (columnConfig.getBinCategory().size());
+            if(data.inputs[inputIndex] < (short) (columnConfig.getBinCategory().size())) {
                 indexValue = data.inputs[inputIndex];
             } else {
                 // for invalid category, set to last one
-                indexValue = columnConfig.getBinCategory().size();
+                indexValue = (short) (columnConfig.getBinCategory().size());
             }
             if(split.getLeftCategories().contains(indexValue)) {
                 nextNode = currNode.getLeft();
@@ -859,7 +885,7 @@ public class DTWorker
             throw new IllegalStateException("NextNode with id is null, parent id is " + currNode.getId() + " left is "
                     + currNode.getLeft() + " right is " + currNode.getRight());
         }
-        return predictNodeIndex(nextNode, data);
+        return predictNodeIndex(nextNode, data, isForErr);
     }
 
     @Override
@@ -1067,11 +1093,11 @@ public class DTWorker
             for(int i = 0; i < iterLen; i++) {
                 TreeNode currTree = trees.get(i);
                 if(i == 0) {
-                    double oldPredict = predictNodeIndex(currTree.getNode(), data).getPredict().getPredict();
+                    double oldPredict = predictNodeIndex(currTree.getNode(), data, false).getPredict().getPredict();
                     predict = (float) oldPredict;
                     output = -1f * loss.computeGradient(predict, data.label);
                 } else {
-                    double oldPredict = predictNodeIndex(currTree.getNode(), data).getPredict().getPredict();
+                    double oldPredict = predictNodeIndex(currTree.getNode(), data, false).getPredict().getPredict();
                     predict += (float) (this.learningRate * oldPredict);
                     output = -1f * loss.computeGradient(predict, data.label);
                 }
