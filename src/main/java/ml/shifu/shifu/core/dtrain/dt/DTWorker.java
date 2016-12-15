@@ -846,11 +846,9 @@ public class DTWorker
     private Node predictNodeIndex(Node node, Data data, boolean isForErr) {
         Node currNode = node;
         Split split = currNode.getSplit();
-        boolean isInSplit = !currNode.isRealLeaf()
-                && ((currNode.getLeft() != null && currNode.getLeft().getSplit() == null) || (currNode.getRight() != null && currNode
-                        .getRight().getSplit() == null));
 
-        if((isForErr && isInSplit) || (split == null || (currNode.getLeft() == null && currNode.getRight() == null))) {
+        // if is leaf
+        if(split == null || (currNode.getLeft() == null && currNode.getRight() == null)) {
             return currNode;
         }
 

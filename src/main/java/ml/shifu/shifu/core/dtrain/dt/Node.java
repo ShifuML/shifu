@@ -430,11 +430,9 @@ public class Node implements Bytable {
         }
 
         // only store needed predict info
-        boolean isInSplit = !isRealLeaf()
-                && ((this.left != null && this.left.getSplit() == null) || (this.right != null && this.right.getSplit() == null));
-        boolean isStorePredict = isRealLeaf() || isInSplit;
-        out.writeBoolean(isStorePredict);
-        if(isStorePredict) {
+        boolean isRealLeaf = isRealLeaf();
+        out.writeBoolean(isRealLeaf);
+        if(isRealLeaf) {
             if(predict == null) {
                 out.writeBoolean(false);
             } else {
@@ -469,8 +467,8 @@ public class Node implements Bytable {
             this.split.readFields(in);
         }
 
-        boolean isStorePredict = in.readBoolean();
-        if(isStorePredict) {
+        boolean isRealLeaf = in.readBoolean();
+        if(isRealLeaf) {
             if(in.readBoolean()) {
                 this.predict = new Predict();
                 this.predict.readFields(in);

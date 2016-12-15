@@ -67,8 +67,7 @@ public class DataPrepareWorker extends AbstractWorkerActor {
     public DataPrepareWorker(ModelConfig modelConfig, List<ColumnConfig> columnConfigList, ActorRef parentActorRef,
             ActorRef nextActorRef) throws IOException {
         super(modelConfig, columnConfigList, parentActorRef, nextActorRef);
-        trainDataHeader = CommonUtils.getHeaders(modelConfig.getHeaderPath(), modelConfig.getHeaderDelimiter(),
-                modelConfig.getDataSet().getSource());
+        trainDataHeader = CommonUtils.getFinalHeaders(modelConfig);
     }
 
     /**
