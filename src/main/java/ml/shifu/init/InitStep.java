@@ -62,12 +62,20 @@ public class InitStep extends Step<List<ColumnConfig>> {
             fields = CommonUtils.getHeaders(modelConfig.getHeaderPath(), modelConfig.getHeaderDelimiter(), modelConfig
                     .getDataSet().getSource());
         } else {
-            LOG.warn("No header path is provided, we will try to read first line and detect schema.");
-            LOG.warn("Schema in ColumnConfig.json are named as  index 0, 1, 2, 3 ...");
-            LOG.warn("Please make sure weight column and tag column are also taking index as name.");
-            fields = CommonUtils.takeFirstLine(modelConfig.getDataSetRawPath(), modelConfig.getHeaderDelimiter(),
+            fields = CommonUtils.takeFirstLine(modelConfig.getDataSetRawPath(), StringUtils.isBlank(modelConfig
+                    .getHeaderDelimiter()) ? modelConfig.getDataSetDelimiter() : modelConfig.getHeaderDelimiter(),
                     modelConfig.getDataSet().getSource());
-            isSchemaProvided = false;
+            if(StringUtils.join(fields, "").contains(modelConfig.getTargetColumnName())) {
+                // if first line contains target column name, we guess it is csv format and first line is header.
+                isSchemaProvided = true;
+                LOG.warn("No header path is provided, we will try to read first line and detect schema.");
+                LOG.warn("Schema in ColumnConfig.json are named as first line of data set path.");
+            } else {
+                isSchemaProvided = false;
+                LOG.warn("No header path is provided, we will try to read first line and detect schema.");
+                LOG.warn("Schema in ColumnConfig.json are named as  index 0, 1, 2, 3 ...");
+                LOG.warn("Please make sure weight column and tag column are also taking index as name.");
+            }
         }
 
         columnConfigList = new ArrayList<ColumnConfig>();
