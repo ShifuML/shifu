@@ -70,7 +70,7 @@ public class ColumnFile {
             if ( this.varsMapping.containsKey(var) ) {
                 fields.add(var + " as " + this.varsMapping.get(var));
             } else {
-                fields.add(var);
+                fields.add(var + " as " + var);
             }
         }
         return StringUtils.join(fields, ",");

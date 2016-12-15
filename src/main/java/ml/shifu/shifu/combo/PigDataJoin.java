@@ -23,6 +23,9 @@ public class PigDataJoin {
 
     public void join(String uidColumnName, String outputPath, List<ColumnFile> columnFileList) throws IOException {
         String pigCode = genPigJoinCode(uidColumnName, outputPath, columnFileList);
+        LOG.debug("\n" + pigCode);
+
+        // Run pig code to merge data
         PigExecutor.getExecutor().submitJob(RawSourceData.SourceType.HDFS, pigCode);
     }
 
@@ -42,15 +45,16 @@ public class PigDataJoin {
                     writeLine(writer, relation + " = foreach " + relation + " generate " + columnFile.genFieldSelector() + ";");
                 } else {
                     writeLine(writer, relation + " = foreach " + relation + " generate "
-                            + uidColumnName + ", "
-                            + columnFile.genFieldSelector() + ";");
+                            + uidColumnName + " as " + uidColumnName
+                            + ", " + columnFile.genFieldSelector() + ";");
                 }
                 relations.add(relation);
             }
 
             writeLine(writer, "result = group " + genGroupByClauses(relations, uidColumnName) + ";");
             writeLine(writer, "result = foreach result generate " + genFlattenClauses(relations) + ";");
-            writeLine(writer, "result = foreach result generate " + genRenameClauses(columnFileList, relations));
+            writeLine(writer, "result = foreach result generate " + genRenameClauses(columnFileList, relations) + ";");
+            writeLine(writer, "rmf " + outputPath + ";");
             writeLine(writer, "store result into '" + outputPath + "' using PigStorage('|', '-schema');");
         } catch (IOException e) {
             LOG.error("Fail to generate pig code for data merge.", e);

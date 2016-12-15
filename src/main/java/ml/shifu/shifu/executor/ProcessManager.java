@@ -1,12 +1,10 @@
 package ml.shifu.shifu.executor;
 
+import org.apache.commons.io.IOUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.BufferedReader;
-import java.io.File;
-import java.io.IOException;
-import java.io.InputStreamReader;
+import java.io.*;
 
 public class ProcessManager {
 
@@ -31,13 +29,59 @@ public class ProcessManager {
         processBuilder.redirectErrorStream(true);
         Process process = processBuilder.start();
 
-        BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
-        String line = null;
-        while ( (line = reader.readLine()) != null ) {
-            LOG.info("{} > {}", currentDir, line);
+        LogThread logThread = new LogThread(process, process.getInputStream(), currentDir);
+        logThread.start();
+
+        try {
+            process.waitFor();
+        } catch (InterruptedException e) {
+            process.destroy();
+        } finally {
+            logThread.setToQuit(true);
         }
 
         LOG.info("Under {} directory, finish run `{}`", currentDir, args);
         return process.exitValue();
+    }
+
+    public static class LogThread extends Thread {
+
+        private Process process;
+        private InputStream inputStream;
+        private String currentDir;
+
+        private volatile boolean isToQuit = false;
+
+        public LogThread(Process process, InputStream inputStream, String currentDir) {
+            this.process = process;
+            this.inputStream = inputStream;
+            this.currentDir = currentDir;
+        }
+
+        public void setToQuit(boolean toQuit) {
+            isToQuit = toQuit;
+        }
+
+        @Override
+        public void run() {
+            BufferedReader reader = null;
+
+            try {
+                reader = new BufferedReader(new InputStreamReader(inputStream));
+
+                String line = null;
+                while ( !isToQuit ) {
+                    line = reader.readLine();
+                    if ( line != null ) {
+                        LOG.info("{} > {}", currentDir, line);
+                    }
+                }
+            } catch (Exception e) {
+                LOG.error("Error occurred when log Processor output.", e);
+            } finally {
+                IOUtils.closeQuietly(reader);
+            }
+
+        }
     }
 }

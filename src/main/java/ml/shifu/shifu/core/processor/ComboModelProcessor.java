@@ -6,6 +6,7 @@ import ml.shifu.shifu.container.obj.*;
 import ml.shifu.shifu.core.validator.ModelInspector;
 import ml.shifu.shifu.executor.ExecutorManager;
 import ml.shifu.shifu.executor.ProcessManager;
+import ml.shifu.shifu.fs.PathFinder;
 import ml.shifu.shifu.util.CommonUtils;
 import ml.shifu.shifu.util.Constants;
 import ml.shifu.shifu.util.JSONUtils;
@@ -60,6 +61,11 @@ public class ComboModelProcessor extends BasicModelProcessor implements Processo
 
         setUp(ModelInspector.ModelStep.COMBO);
 
+        if ( (status = validate()) > 0 ) {
+            LOG.error("Validation Fail.");
+            return status;
+        }
+
         switch (comboStep) {
             case NEW:
                 status = createNewCombo();
@@ -87,13 +93,12 @@ public class ComboModelProcessor extends BasicModelProcessor implements Processo
         this.excutorManager.forceShutDown();
     }
 
+    /**
+     * Create ComboTrain.json according algorithm list.
+     * ModelTrain configuration is set from template.
+     * @return
+     */
     private int createNewCombo() {
-        int status = validate(algorithms);
-        if (status > 0) {
-            LOG.error("Fail to validate combo algorithms - {}.", algorithms);
-            return status;
-        }
-
         ComboModelTrain comboModelTrain = new ComboModelTrain();
         comboModelTrain.setUidColumnName("");
 
@@ -105,12 +110,16 @@ public class ComboModelProcessor extends BasicModelProcessor implements Processo
 
         comboModelTrain.setFusionModelTrainConf(createModelTrainConf(this.comboAlgs.get(this.comboAlgs.size() - 1)));
 
-        status = saveComboTrain(comboModelTrain);
-
-        return status;
+        return saveComboTrain(comboModelTrain);
     }
 
 
+    /**
+     * Create folder for sub-models, and create related files for sub-models.
+     * All settings in sub-model will use parent model as reference.
+     * @return
+     * @throws IOException
+     */
     private int initComboModels() throws IOException {
         if (this.comboModelTrain == null) {
             LOG.error("ComboModelTrain doesn't exists.");
@@ -162,7 +171,7 @@ public class ComboModelProcessor extends BasicModelProcessor implements Processo
                         subModelName,
                         evalConfig.getName() + ".score.meta",
                         evalConfig.getScoreMetaColumnNameFile(),
-                        this.comboModelTrain.getUidColumnName());
+                        this.genEvalScoreMetaVars(null));
                 evalConfig.setScoreMetaColumnNameFile(scoreMetaFileName);
             }
 
@@ -174,7 +183,7 @@ public class ComboModelProcessor extends BasicModelProcessor implements Processo
                     subModelName,
                     trainEval.getName() + ".score.meta",
                     null,
-                    this.comboModelTrain.getUidColumnName());
+                    this.genEvalScoreMetaVars(this.modelConfig.getDataSet().getWeightColumnName()));
             trainEval.setScoreMetaColumnNameFile(scoreMetaFileName);
             // add train data as evaluation set, this is for assemble model
             subModelConfig.getEvals().add(trainEval);
@@ -198,7 +207,7 @@ public class ComboModelProcessor extends BasicModelProcessor implements Processo
                 assembleModelName,
                 assembleModelName + ".forceselect",
                 null,
-                subModelNames);
+                CommonUtils.genPigFieldName(subModelNames));
         assembleModelConfig.getVarSelect().setForceSelectColumnNameFile(forceSelectNames);
         assembleModelConfig.getVarSelect().setForceEnable(true);
         assembleModelConfig.getVarSelect().setFilterNum(subModelNames.length);
@@ -219,7 +228,7 @@ public class ComboModelProcessor extends BasicModelProcessor implements Processo
                     assembleModelName,
                     evalConfig.getName() + ".score.meta",
                     evalConfig.getScoreMetaColumnNameFile(),
-                    this.comboModelTrain.getUidColumnName());
+                    this.genEvalScoreMetaVars(null));
             evalConfig.setScoreMetaColumnNameFile(scoreMetaFileName);
         }
 
@@ -230,6 +239,15 @@ public class ComboModelProcessor extends BasicModelProcessor implements Processo
         return 0;
     }
 
+    /**
+     * Start to train combo models
+     *      1) train sub-models and evaluate sub-model train-eval set (train data as evaluation data)
+     *      2) join train-eval set output for training assemble model
+     *      3) train assemble model
+     * @return status of execution
+     *      0 - success
+     *      others - fail
+     */
     public int runComboModels() {
         // 1. train sub models and evaluate sub models using training data
         int status = 0;
@@ -242,9 +260,9 @@ public class ComboModelProcessor extends BasicModelProcessor implements Processo
         }
         this.excutorManager.submitTasksAndWaitFinish(tasks);
 
-        // 3. merge all train-evaluation data and prepare it as training data for assemble model
+        // 2. merge all train-evaluation data and prepare it as training data for assemble model
 
-        // 3.1 prepare the data and information for data merge
+        // 2.1 prepare the data and information for data merge
         LOG.info("Start to merge train-evaluation data for assemble model.");
         String assembleTrainData = this.pathFinder.getSubModelsAssembleTrainData();
         DataMerger merger = new DataMerger(this.modelConfig.getBasic().getRunMode(),
@@ -258,32 +276,39 @@ public class ComboModelProcessor extends BasicModelProcessor implements Processo
             return 1;
         }
 
-        // 3.2 run the data merge
-        try {
+        // 2.2 run the data merge
+       try {
             merger.doMerge();
         } catch (IOException e) {
             LOG.error("Fail to merge the data.", e);
             return 1;
         }
 
-        // 4. run the assemble model
-        // 4.1 set the train data and header for assemble model
+        // 3. run the assemble model
+        // 3.1 set the train data and header for assemble model
         try {
             ModelConfig assembleModelConfig = CommonUtils.loadModelConfig(
                     genAssembleModelName(this.modelConfig.getModelSetName()) + File.separator + Constants.MODEL_CONFIG_JSON_FILE_NAME,
                     RawSourceData.SourceType.LOCAL);
             assembleModelConfig.getDataSet().setHeaderDelimiter("|");
-            File file = new File(this.pathFinder.getSubModelsAssembleTrainData() + File.separator + ".header");
-            assembleModelConfig.getDataSet().setHeaderPath(file.getAbsolutePath());
-
             assembleModelConfig.getDataSet().setDataDelimiter("|");
-            file = new File(this.pathFinder.getSubModelsAssembleTrainData());
-            assembleModelConfig.getDataSet().setDataPath(file.getAbsolutePath());
+
+            if ( ModelBasicConf.RunMode.LOCAL.equals(this.modelConfig.getBasic().getRunMode()) ) {
+                File file = new File(assembleTrainData+ File.separator + ".pig_header");
+                assembleModelConfig.getDataSet().setHeaderPath(file.getAbsolutePath());
+                file = new File(assembleTrainData);
+                assembleModelConfig.getDataSet().setDataPath(file.getAbsolutePath());
+            } else {
+                assembleModelConfig.getDataSet().setHeaderPath(assembleTrainData + File.separator + ".pig_header");
+                assembleModelConfig.getDataSet().setDataPath(assembleTrainData);
+            }
+
             saveModelConfig(genAssembleModelName(this.modelConfig.getModelSetName()), assembleModelConfig);
         } catch (IOException e) {
             LOG.error("Fail to ModelConfig for assemble model.", e);
             return 1;
         }
+
         // 4.2 run the whole process for assemble model
         try {
             ProcessManager.runShellProcess(genAssembleModelName(this.modelConfig.getModelSetName()),
@@ -303,6 +328,14 @@ public class ComboModelProcessor extends BasicModelProcessor implements Processo
         return status;
     }
 
+    /**
+     * Evaluate the Combo model performance
+     *      1. Evaluate all evaluation sets in sub models;
+     *      2. Join the evaluation result data for assemble model;
+     *      3. Run evaluation for assemble model
+     * @return
+     * @throws IOException
+     */
     private int evalComboModels() throws IOException {
         int status = 0;
 
@@ -329,20 +362,19 @@ public class ComboModelProcessor extends BasicModelProcessor implements Processo
 
             dataMerger.addColumnFileList(genSubModelEvalColumnFiles(evalConfig.getName()));
 
-            // 3 run the data merge
+            // 2.1 run the data merge
             tasks.add(new Runnable() {
                 @Override
                 public void run() {
                     try {
                         dataMerger.doMerge();
                     } catch (IOException e) {
-                        LOG.error("Fail to merge the data.");
+                        LOG.error("Fail to merge the data.", e);
                     }
                 }
             });
 
-            // 4. run the assemble model
-            // 4.1 set the train data and header for assemble model
+            // 2.2 set the train data and header for assemble model
             EvalConfig assembleEvalConfig = getEvalConfigByName(assembleModelConfig, evalConfig.getName());
             assembleEvalConfig.getDataSet().setHeaderDelimiter("|");
             assembleEvalConfig.getDataSet().setDataDelimiter("|");
@@ -362,7 +394,7 @@ public class ComboModelProcessor extends BasicModelProcessor implements Processo
 
         saveModelConfig(genAssembleModelName(this.modelConfig.getModelSetName()), assembleModelConfig);
 
-        // 4.2 run the whole process for assemble model
+        // 3. run assemble model evaluation
         try {
             ProcessManager.runShellProcess(genAssembleModelName(this.modelConfig.getModelSetName()),
                     new String[][]{
@@ -377,7 +409,6 @@ public class ComboModelProcessor extends BasicModelProcessor implements Processo
         return status;
     }
 
-
     private List<ColumnFile> genSubModelEvalColumnFiles(String evalName) throws IOException {
         List<ColumnFile> columnFiles = new ArrayList<ColumnFile>();
 
@@ -391,15 +422,22 @@ public class ComboModelProcessor extends BasicModelProcessor implements Processo
             EvalConfig evalConfig = getEvalConfigByName(subModelConfig, evalName);
 
             Map<String, String> varsMapping = new HashMap<String, String>();
-            varsMapping.put(SCORE_FIELD, subModelName);
+            varsMapping.put(SCORE_FIELD, CommonUtils.genPigFieldName(subModelName));
             String[] selectedVars = null;
             if (i == 0) {
-                selectedVars = new String[]{this.comboModelTrain.getUidColumnName(),
-                        this.modelConfig.getTargetColumnName(), SCORE_FIELD};
+                if ( StringUtils.isNotBlank(evalConfig.getDataSet().getWeightColumnName()) ) {
+                    selectedVars = new String[]{this.comboModelTrain.getUidColumnName(),
+                            this.modelConfig.getTargetColumnName(), SCORE_FIELD,
+                            evalConfig.getDataSet().getWeightColumnName()};
+                } else {
+                    selectedVars = new String[]{this.comboModelTrain.getUidColumnName(),
+                            this.modelConfig.getTargetColumnName(), SCORE_FIELD};
+                }
             } else {
                 selectedVars = new String[]{SCORE_FIELD};
             }
-            String evalDataPath = getEvalDataPath(subModelName, evalConfig);
+
+            String evalDataPath = getEvalDataPath(subModelConfig, evalConfig);
             LOG.info("Include data - {} ...", evalDataPath);
             columnFiles.add(new ColumnFile(evalDataPath,
                     genEvalFileType(this.modelConfig.getBasic().getRunMode()), "|",
@@ -409,20 +447,17 @@ public class ComboModelProcessor extends BasicModelProcessor implements Processo
         return columnFiles;
     }
 
-    private String getEvalDataPath(String modelName, EvalConfig evalConfig) {
+    private String getEvalDataPath(ModelConfig subModelConfig, EvalConfig evalConfig) {
+        PathFinder pathFinder = new PathFinder(subModelConfig);
+        String evalDataPath = pathFinder.getEvalScorePath(evalConfig);
+
+        // if it is local, and the sub-model name as directory
         if (RawSourceData.SourceType.LOCAL.equals(evalConfig.getDataSet().getSource())) {
-            return modelName
-                    + File.separator + "evals"
-                    + File.separator + evalConfig.getName()
-                    + File.separator + "EvalScore";
-        } else if (RawSourceData.SourceType.HDFS.equals(evalConfig.getDataSet().getSource())) {
-            return "ModelSets"
-                    + "/" + modelName
-                    + "/" + evalConfig.getName()
-                    + "/" + "EvalScore";
+            evalDataPath = subModelConfig.getModelSetName()
+                    + File.separator + evalDataPath;
         }
 
-        return null;
+        return evalDataPath;
     }
 
     private EvalConfig getEvalConfigByName(ModelConfig mconfig, String name) {
@@ -472,6 +507,21 @@ public class ComboModelProcessor extends BasicModelProcessor implements Processo
         }
 
         return tasks;
+    }
+
+
+    private int validate() {
+        if ( ComboStep.NEW.equals(this.comboStep) ) {
+            return validate(this.algorithms);
+        } else {
+            File comboTrainFile = new File(Constants.COMBO_CONFIG_JSON_FILE_NAME);
+            if ( !comboTrainFile.exists() ) {
+                LOG.error("{} doesn't exist. Please run `shifu combo -new <algorithms>` firstly.",
+                        Constants.COMBO_CONFIG_JSON_FILE_NAME);
+                return 1;
+            }
+        }
+        return 0;
     }
 
     private int validate(String algorithms) {
@@ -538,16 +588,44 @@ public class ComboModelProcessor extends BasicModelProcessor implements Processo
                 ColumnFile.FileType.PIGSTORAGE : ColumnFile.FileType.CSV);
     }
 
+    /**
+     * Append weight column, if not blank, with uid column as score meta data.
+     * @param weightColumnName
+     * @return
+     */
+    private String[] genEvalScoreMetaVars(String weightColumnName) {
+        if ( StringUtils.isNotBlank(weightColumnName) ) {
+            return new String[]{this.comboModelTrain.getUidColumnName(), weightColumnName};
+        } else {
+            return new String[]{this.comboModelTrain.getUidColumnName()};
+        }
+    }
+
+    /**
+     * Generate sub model name
+     * @param i - sequence to keep unique
+     * @param varTrainConf
+     * @return
+     */
     private String genSubModelName(int i, VarTrainConf varTrainConf) {
         return this.modelConfig.getBasic().getName()
                 + "_" + varTrainConf.getModelTrainConf().getAlgorithm()
                 + "_" + i;
     }
 
+    /**
+     * Generate assembel model name
+     * @param modelName
+     * @return
+     */
     private String genAssembleModelName(String modelName) {
         return modelName + "_assemble";
     }
 
+    /**
+     * Generate train data evaluation set name
+     * @return
+     */
     private String genEvalTrainName() {
         return "EvalTrain";
     }

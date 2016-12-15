@@ -442,6 +442,7 @@ public class ShifuCLI {
      * @throws Exception
      */
     public static int runEvalSet(String evalSetName, boolean isDryRun) throws Exception {
+        log.info("Run evaluation set with {}", evalSetName);
         EvalModelProcessor p = new EvalModelProcessor(EvalStep.RUN, evalSetName);
         return p.run();
     }
@@ -564,7 +565,7 @@ public class ShifuCLI {
                 .withDescription("To create an eval set").create(NEW);
         Option opt_type = OptionBuilder.hasArg()
                 .withDescription("Specify model type").create(MODELSET_CMD_TYPE);
-        Option opt_run = OptionBuilder
+        Option opt_run = OptionBuilder.hasOptionalArg()
                 .withDescription("To run eval set").create(EVAL_CMD_RUN);
         Option opt_dry = OptionBuilder.hasArg(false)
                 .withDescription("Dry run the train").create(TRAIN_CMD_DRY);
