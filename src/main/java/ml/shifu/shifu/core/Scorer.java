@@ -31,8 +31,10 @@ import ml.shifu.shifu.container.ScoreObject;
 import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.container.obj.ModelConfig;
 import ml.shifu.shifu.core.dtrain.DTrainUtils;
+import ml.shifu.shifu.executor.ExecutorManager;
 import ml.shifu.shifu.util.CommonUtils;
 
+import org.apache.commons.collections.CollectionUtils;
 import org.encog.ml.BasicML;
 import org.encog.ml.data.MLData;
 import org.encog.ml.data.MLDataPair;
@@ -68,7 +70,7 @@ public class Scorer {
     /**
      * Run model in parallel. Size is # of models.
      */
-    private ExecutorService threadPool;
+    private ExecutorManager<MLData> executorManager;
 
     public Scorer(List<BasicML> models, List<ColumnConfig> columnConfigList, String algorithm, ModelConfig modelConfig) {
         this(models, columnConfigList, algorithm, modelConfig, 4.0d);
@@ -110,20 +112,14 @@ public class Scorer {
             }
         }
 
-        this.threadPool = Executors.newFixedThreadPool(Math.min(Runtime.getRuntime().availableProcessors(),
-                models.size()));
+        this.executorManager = new ExecutorManager<MLData>(
+                Math.min(Runtime.getRuntime().availableProcessors(), models.size()));
 
         // add a shutdown hook as a safe guard if some one not call close
         Runtime.getRuntime().addShutdownHook(new Thread(new Runnable() {
             @Override
             public void run() {
-                // shut down thread pool
-                Scorer.this.threadPool.shutdownNow();
-                try {
-                    Scorer.this.threadPool.awaitTermination(2, TimeUnit.SECONDS);
-                } catch (InterruptedException e) {
-                    Thread.currentThread().interrupt();
-                }
+                Scorer.this.executorManager.forceShutDown();
             }
         }));
     }
@@ -132,13 +128,7 @@ public class Scorer {
      * Cleaning the thread pool resources, must be called at last.
      */
     public void close() {
-        // shut down thread pool
-        this.threadPool.shutdownNow();
-        try {
-            this.threadPool.awaitTermination(2, TimeUnit.SECONDS);
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-        }
+        this.executorManager.forceShutDown();
     }
 
     public ScoreObject score(Map<String, String> rawDataMap) {
@@ -152,11 +142,7 @@ public class Scorer {
             return null;
         }
 
-        List<Integer> scores = new ArrayList<Integer>();
-
-        CompletionService<MLData> completionService = new ExecutorCompletionService<MLData>(this.threadPool);
-
-        List<Integer> rfTreeSizeList = new ArrayList<Integer>();
+        List<Callable<MLData>> tasks = new ArrayList<Callable<MLData>>();
         for(final BasicML model: models) {
             // TODO, check if no need 'if' condition and refactor two if for loops please
             if(model instanceof BasicNetwork) {
@@ -166,7 +152,7 @@ public class Scorer {
                             + "; Input Size = " + pair.getInput().size());
                     continue;
                 }
-                completionService.submit(new Callable<MLData>() {
+                tasks.add(new Callable<MLData>() {
                     @Override
                     public MLData call() throws Exception {
                         return network.compute(pair.getInput());
@@ -179,7 +165,7 @@ public class Scorer {
                             + pair.getInput().size());
                     continue;
                 }
-                completionService.submit(new Callable<MLData>() {
+                tasks.add(new Callable<MLData>() {
                     @Override
                     public MLData call() throws Exception {
                         return svm.compute(pair.getInput());
@@ -192,7 +178,7 @@ public class Scorer {
                             + pair.getInput().size());
                     continue;
                 }
-                completionService.submit(new Callable<MLData>() {
+                tasks.add(new Callable<MLData>() {
                     @Override
                     public MLData call() throws Exception {
                         return lr.compute(pair.getInput());
@@ -204,7 +190,7 @@ public class Scorer {
                     throw new RuntimeException("GBDT and input size mismatch: rf Size = " + tm.getInputCount()
                             + "; Input Size = " + pair.getInput().size());
                 }
-                completionService.submit(new Callable<MLData>() {
+                tasks.add(new Callable<MLData>() {
                     @Override
                     public MLData call() throws Exception {
                         MLData result = tm.compute(pair.getInput());
@@ -216,54 +202,50 @@ public class Scorer {
             }
         }
 
-        int rCnt = 0;
-        while(rCnt < this.models.size()) {
-            MLData score = null;
-            try {
-                score = completionService.take().get();
-            } catch (ExecutionException e) {
-                throw new RuntimeException(e);
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-            }
-            BasicML model = this.models.get(rCnt);
+        List<Integer> scores = new ArrayList<Integer>();
+        List<Integer> rfTreeSizeList = new ArrayList<Integer>();
 
-            if(model instanceof BasicNetwork) {
-                if(modelConfig != null && modelConfig.isRegression()) {
-                    scores.add(toScore(score.getData(0)));
-                } else if(modelConfig.isClassification() && modelConfig.getTrain().isOneVsAll()) {
-                    // if one vs all classification
-                    scores.add(toScore(score.getData(0)));
-                } else {
-                    double[] outputs = score.getData();
-                    for(double d: outputs) {
-                        scores.add(toScore(d));
-                    }
-                }
-            } else if(model instanceof SVM) {
-                scores.add(toScore(score.getData(0)));
-            } else if(model instanceof LR) {
-                scores.add(toScore(score.getData(0)));
-            } else if(model instanceof TreeModel) {
-                if(modelConfig.isClassification() && !modelConfig.getTrain().isOneVsAll()) {
-                    double[] scoreArray = score.getData();
-                    for(double sc: scoreArray) {
-                        scores.add((int) sc);
-                    }
-                } else {
-                    // if one vs all consider
-                    scores.add(toScore(score.getData(0)));
-                }
-                final TreeModel tm = (TreeModel) model;
-                // regression for RF
-                if(!tm.isClassfication() && !tm.isGBDT()) {
-                    rfTreeSizeList.add(tm.getTrees().size());
-                }
-            } else {
-                throw new RuntimeException("unsupport models");
-            }
+        if ( CollectionUtils.isNotEmpty(tasks) ) {
+            List<MLData> modelResults = this.executorManager.submitTasksAndWaitResults(tasks);
+            for (int i = 0; i < this.models.size(); i++) {
+                BasicML model = this.models.get(i);
+                MLData score = modelResults.get(i);
 
-            rCnt += 1;
+                if (model instanceof BasicNetwork) {
+                    if (modelConfig != null && modelConfig.isRegression()) {
+                        scores.add(toScore(score.getData(0)));
+                    } else if (modelConfig.isClassification() && modelConfig.getTrain().isOneVsAll()) {
+                        // if one vs all classification
+                        scores.add(toScore(score.getData(0)));
+                    } else {
+                        double[] outputs = score.getData();
+                        for (double d : outputs) {
+                            scores.add(toScore(d));
+                        }
+                    }
+                } else if (model instanceof SVM) {
+                    scores.add(toScore(score.getData(0)));
+                } else if (model instanceof LR) {
+                    scores.add(toScore(score.getData(0)));
+                } else if (model instanceof TreeModel) {
+                    if (modelConfig.isClassification() && !modelConfig.getTrain().isOneVsAll()) {
+                        double[] scoreArray = score.getData();
+                        for (double sc : scoreArray) {
+                            scores.add((int) sc);
+                        }
+                    } else {
+                        // if one vs all consider
+                        scores.add(toScore(score.getData(0)));
+                    }
+                    final TreeModel tm = (TreeModel) model;
+                    // regression for RF
+                    if (!tm.isClassfication() && !tm.isGBDT()) {
+                        rfTreeSizeList.add(tm.getTrees().size());
+                    }
+                } else {
+                    throw new RuntimeException("unsupport models");
+                }
+            }
         }
 
         Integer tag = (int) pair.getIdeal().getData(0);
