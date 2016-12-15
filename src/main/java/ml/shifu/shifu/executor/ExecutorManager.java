@@ -1,5 +1,6 @@
 package ml.shifu.shifu.executor;
 
+import ml.shifu.shifu.util.Environment;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -14,7 +15,9 @@ public class ExecutorManager {
 
     private static Logger LOG = LoggerFactory.getLogger(ExecutorManager.class);
 
-    private ExecutorService executorService = Executors.newFixedThreadPool(10);
+    private ExecutorService executorService = Executors.newFixedThreadPool(
+            Environment.getInt("shifu.combo.thread.parallel", 10)
+    );
 
     public void submitTasksAndWaitFinish(List<Runnable> tasks) {
         List<Future<?>> futureList = new ArrayList<Future<?>>(tasks.size());
