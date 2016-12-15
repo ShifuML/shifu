@@ -10,6 +10,7 @@ import org.apache.hadoop.mapreduce.lib.input.FileSplit;
 /**
  * Created by zhanhu on 12/13/16.
  */
+//TODO
 public class DataJoinMapReducer {
 
     public static class DJMapper extends Mapper<LongWritable, Text, Text, ArrayWritable> {

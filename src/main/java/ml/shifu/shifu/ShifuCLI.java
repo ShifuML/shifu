@@ -200,6 +200,9 @@ public class ShifuCLI {
                         log.info("Eval combo model.");
                         // eval combo model performance
                         status = evalComboModels();
+                    } else {
+                        log.error("Invalid command usage.");
+                        printUsage();
                     }
                 } else if(args[0].equals(POSTTRAIN_CMD)) {
                     // post train step
@@ -338,27 +341,6 @@ public class ShifuCLI {
 
         CreateModelProcessor p = new CreateModelProcessor(modelSetName, modelAlg, description);
         return p.run();
-    }
-
-
-    private static int createNewCombo(String algorithms) throws Exception {
-        Processor processor = new ComboModelProcessor(ComboModelProcessor.ComboStep.NEW, algorithms);
-        return processor.run();
-    }
-
-    private static int initComboModels() throws Exception {
-        Processor processor = new ComboModelProcessor(ComboModelProcessor.ComboStep.INIT);
-        return processor.run();
-    }
-
-    private static int runComboModels() throws Exception {
-        Processor processor = new ComboModelProcessor(ComboModelProcessor.ComboStep.RUN);
-        return processor.run();
-    }
-
-    private static int evalComboModels() throws Exception {
-        Processor processor = new ComboModelProcessor(ComboModelProcessor.ComboStep.EVAL);
-        return processor.run();
     }
 
     /**
@@ -524,6 +506,48 @@ public class ShifuCLI {
     public static int exportModel(String type, boolean isConcise) throws Exception {
         ExportModelProcessor p = new ExportModelProcessor(type, isConcise);
         return p.run();
+    }
+
+    /**
+     * create ComboTrain.json, when user provide the algorithms to combo
+     * @param algorithms
+     * @return
+     * @throws Exception
+     */
+    private static int createNewCombo(String algorithms) throws Exception {
+        Processor processor = new ComboModelProcessor(ComboModelProcessor.ComboStep.NEW, algorithms);
+        return processor.run();
+    }
+
+    /**
+     * create each sub-models, assemble model and generate corresponding configurations
+     * @return
+     * @throws Exception
+     */
+    private static int initComboModels() throws Exception {
+        Processor processor = new ComboModelProcessor(ComboModelProcessor.ComboStep.INIT);
+        return processor.run();
+    }
+
+    /**
+     * train each sub-models, and use train data as evaluation set to generate model score.
+     *      And join the evaluation result to train assemble model
+     * @return
+     * @throws Exception
+     */
+    private static int runComboModels() throws Exception {
+        Processor processor = new ComboModelProcessor(ComboModelProcessor.ComboStep.RUN);
+        return processor.run();
+    }
+
+    /**
+     * evaluate each sub-models, join data and evaluate assemble model
+     * @return
+     * @throws Exception
+     */
+    private static int evalComboModels() throws Exception {
+        Processor processor = new ComboModelProcessor(ComboModelProcessor.ComboStep.EVAL);
+        return processor.run();
     }
 
     /**

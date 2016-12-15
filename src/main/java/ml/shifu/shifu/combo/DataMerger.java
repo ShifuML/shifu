@@ -1,13 +1,10 @@
 package ml.shifu.shifu.combo;
 
 import ml.shifu.shifu.container.obj.ModelBasicConf;
-import ml.shifu.shifu.container.obj.ModelConfig;
 import ml.shifu.shifu.exception.ShifuErrorCode;
 import ml.shifu.shifu.exception.ShifuException;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang.StringUtils;
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.mapreduce.Job;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -29,6 +26,9 @@ public class DataMerger {
     private String joinColumnName;
     private String outputDataPath;
 
+    /**
+     * ColumnFile list to merge
+     */
     private List<ColumnFile> columnFileList;
 
     public DataMerger(ModelBasicConf.RunMode runMode, String joinColumnName, String outputDataPath) {
@@ -48,10 +48,12 @@ public class DataMerger {
 
     public boolean doMerge() throws IOException {
         if ( ModelBasicConf.RunMode.LOCAL.equals(runMode) ) {
+            // do local data merge
             genOutputHeader();
             mergeData();
         } else if ( ModelBasicConf.RunMode.MAPRED.equals(runMode)
                 || ModelBasicConf.RunMode.DIST.equals(runMode) ) {
+            // use pig to do data merge
             runMapReduceToMerge();
         } else {
             throw new ShifuException(ShifuErrorCode.ERROR_UNSUPPORT_MODE);

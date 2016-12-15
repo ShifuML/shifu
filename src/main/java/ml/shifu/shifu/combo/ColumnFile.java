@@ -14,10 +14,29 @@ public class ColumnFile {
 
     private static Logger LOG = LoggerFactory.getLogger(ColumnFile.class);
 
+    /**
+     * file location
+     */
     private String filePath;
+
+    /**
+     * file type, CSV format or PigStorage file
+     */
     private FileType fileType;
+
+    /**
+     * file delimiter
+     */
     private String delimiter;
+
+    /**
+     * variables list that will be selected
+     */
     private String[] selectedVars;
+
+    /**
+     * variable mapping, from variable name to output variable name
+     */
     private Map<String, String> varsMapping;
 
     public ColumnFile(String filePath,
@@ -52,6 +71,10 @@ public class ColumnFile {
         return selectedVars;
     }
 
+    /**
+     * generate output variables after mapping
+     * @return
+     */
     public List<String> getOutputVarNames() {
         List<String> outputVarNames = new ArrayList<String>();
         for ( String var : selectedVars ) {
@@ -64,6 +87,10 @@ public class ColumnFile {
         return outputVarNames;
     }
 
+    /**
+     * generate the fields projector for selected variables
+     * @return
+     */
     public String genFieldSelector() {
         List<String> fields = new ArrayList<String>();
         for ( String var : selectedVars ) {
@@ -76,13 +103,19 @@ public class ColumnFile {
         return StringUtils.join(fields, ",");
     }
 
+    /**
+     * Load data into memory, only selected data.
+     * The output format is <key, selected-variables>
+     * @param keyName
+     * @return
+     */
     public Map<String,List<String>> loadSelectedData(String keyName) {
         LOG.info("Load data from {}:{} by key {}.", fileType, filePath, keyName);
 
         Map<String,List<String>> selectedData = new HashMap<String, List<String>>();
 
         if ( FileType.CSV.equals(fileType) ) {
-            CvsFile cvsFile = new CvsFile(filePath, delimiter);
+            CsvFile cvsFile = new CsvFile(filePath, delimiter);
             for ( Map<String, String> records : cvsFile ) {
                 String key = records.get(keyName);
                 if ( key != null ) {
@@ -99,8 +132,13 @@ public class ColumnFile {
         return selectedData;
     }
 
-    public boolean hasSelectedVar(String uidColumnName) {
-        return ArrayUtils.contains(selectedVars, uidColumnName);
+    /**
+     * Check the selected variables contain some variable
+     * @param varName
+     * @return
+     */
+    public boolean hasSelectedVar(String varName) {
+        return ArrayUtils.contains(selectedVars, varName);
     }
 
     public static enum FileType {

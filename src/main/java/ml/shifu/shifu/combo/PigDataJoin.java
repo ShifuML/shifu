@@ -29,6 +29,15 @@ public class PigDataJoin {
         PigExecutor.getExecutor().submitJob(RawSourceData.SourceType.HDFS, pigCode);
     }
 
+    /**
+     * Generate pig code for data merge
+     *
+     * @param uidColumnName  - the column to join
+     * @param outputPath     - the output path for joined file
+     * @param columnFileList
+     * @return
+     * @throws IOException
+     */
     public String genPigJoinCode(String uidColumnName, String outputPath, List<ColumnFile> columnFileList)
             throws IOException {
         ByteArrayOutputStream byos = new ByteArrayOutputStream();
@@ -67,31 +76,50 @@ public class PigDataJoin {
         return byos.toString();
     }
 
+    /**
+     * Generate group by clauses
+     *
+     * @param relations     - Relation list
+     * @param uidColumnName - join columnName
+     * @return - pig group list
+     */
     private String genGroupByClauses(List<String> relations, String uidColumnName) {
         List<String> groupByClauses = new ArrayList<String>();
-        for ( String relation : relations ) {
-            groupByClauses.add( relation + " by " + uidColumnName);
+        for (String relation : relations) {
+            groupByClauses.add(relation + " by " + uidColumnName);
         }
         return StringUtils.join(groupByClauses, ",");
     }
 
+    /**
+     * Generate flatten clauses
+     *
+     * @param relations
+     * @return - pig flatten list
+     */
     private String genFlattenClauses(List<String> relations) {
         List<String> flattenClauses = new ArrayList<String>();
-        for ( String relation : relations ) {
+        for (String relation : relations) {
             flattenClauses.add("FLATTEN(" + relation + ")");
         }
         return StringUtils.join(flattenClauses, ",");
     }
 
-
+    /**
+     * Generate fields rename clauses
+     *
+     * @param columnFileList
+     * @param relations
+     * @return - pig rename(as) list
+     */
     private String genRenameClauses(List<ColumnFile> columnFileList, List<String> relations) {
         List<String> renameClauses = new ArrayList<String>();
-        for ( int i = 0; i < columnFileList.size(); i ++ ) {
+        for (int i = 0; i < columnFileList.size(); i++) {
             ColumnFile columnFile = columnFileList.get(i);
             String relation = relations.get(i);
 
             List<String> outputVars = columnFile.getOutputVarNames();
-            for ( String var : outputVars ) {
+            for (String var : outputVars) {
                 renameClauses.add(relation + "::" + var + " as " + var);
             }
         }
@@ -99,6 +127,13 @@ public class PigDataJoin {
         return StringUtils.join(renameClauses, ",");
     }
 
+    /**
+     * Write line with "\n"
+     *
+     * @param writer
+     * @param line
+     * @throws IOException
+     */
     private void writeLine(BufferedWriter writer, String line) throws IOException {
         writer.write(line);
         writer.newLine();

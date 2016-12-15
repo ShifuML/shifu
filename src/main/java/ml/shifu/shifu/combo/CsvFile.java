@@ -13,15 +13,16 @@ import java.util.Iterator;
 import java.util.Map;
 
 /**
+ * Implement CsvFile as iterator
  * Created by zhanhu on 12/10/16.
  */
-public class CvsFile implements Iterable<Map<String, String>>{
-    private static Logger LOG = LoggerFactory.getLogger(CvsFile.class);
+public class CsvFile implements Iterable<Map<String, String>>{
+    private static Logger LOG = LoggerFactory.getLogger(CsvFile.class);
 
     private String filePath;
     private String delimiter;
 
-    public CvsFile(String filePath, String delimiter) {
+    public CsvFile(String filePath, String delimiter) {
         this.filePath = filePath;
         this.delimiter = delimiter;
     }
