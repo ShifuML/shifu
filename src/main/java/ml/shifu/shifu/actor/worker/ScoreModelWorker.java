@@ -75,8 +75,7 @@ public class ScoreModelWorker extends AbstractWorkerActor {
                 .getSource());
 
         // load the header for evaluation data
-        header = CommonUtils.getHeaders(evalConfig.getDataSet().getHeaderPath(), evalConfig.getDataSet()
-                .getHeaderDelimiter(), evalConfig.getDataSet().getSource());
+        header = CommonUtils.getFinalHeaders(evalConfig);
 
         writeScoreHeader();
 

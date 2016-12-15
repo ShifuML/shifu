@@ -57,15 +57,10 @@ public class RunModelWorker extends AbstractWorkerActor {
         if(null == evalConfig || null == evalConfig.getDataSet().getHeaderPath()
                 || null == evalConfig.getDataSet().getHeaderDelimiter()) {
 
-            header = CommonUtils.getHeaders(modelConfig.getDataSet().getHeaderPath(), modelConfig.getDataSet()
-                    .getHeaderDelimiter(), modelConfig.getDataSet().getSource());
-
+            header = CommonUtils.getFinalHeaders(modelConfig);
             delimiter = modelConfig.getDataSetDelimiter();
-
         } else {
-            header = CommonUtils.getHeaders(evalConfig.getDataSet().getHeaderPath(), evalConfig.getDataSet()
-                    .getHeaderDelimiter(), evalConfig.getDataSet().getSource());
-
+            header = CommonUtils.getFinalHeaders(evalConfig);
             delimiter = evalConfig.getDataSet().getDataDelimiter();
         }
 
