@@ -114,10 +114,8 @@ public class FeatureImportanceMapper extends Mapper<LongWritable, Text, IntWrita
         this.outputValue = new DoubleWritable();
 
         this.tags = new HashSet<String>(modelConfig.getFlattenTags());
-        SourceType sourceType = this.modelConfig.getDataSet().getSource();
 
-        this.headers = CommonUtils.getHeaders(this.modelConfig.getDataSet().getHeaderPath(), this.modelConfig
-                .getDataSet().getDataDelimiter(), sourceType);
+        this.headers = CommonUtils.getFinalHeaders(modelConfig);
 
         this.initFeatureStats();
     }

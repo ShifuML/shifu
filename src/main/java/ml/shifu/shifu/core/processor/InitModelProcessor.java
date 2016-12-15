@@ -381,6 +381,7 @@ public class InitModelProcessor extends BasicModelProcessor implements Processor
         }
     }
 
+
     /**
      * initialize the columnConfig file
      * 

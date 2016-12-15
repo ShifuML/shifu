@@ -290,6 +290,68 @@ public final class CommonUtils {
         });
     }
 
+    public static String[] getFinalHeaders(ModelConfig modelConfig) throws IOException {
+        String[] fields = null;
+        boolean isSchemaProvided = true;
+        if(StringUtils.isNotBlank(modelConfig.getHeaderPath())) {
+            fields = CommonUtils.getHeaders(modelConfig.getHeaderPath(), modelConfig.getHeaderDelimiter(), modelConfig
+                    .getDataSet().getSource());
+        } else {
+            fields = CommonUtils.takeFirstLine(modelConfig.getDataSetRawPath(), StringUtils.isBlank(modelConfig
+                    .getHeaderDelimiter()) ? modelConfig.getDataSetDelimiter() : modelConfig.getHeaderDelimiter(),
+                    modelConfig.getDataSet().getSource());
+            if(StringUtils.join(fields, "").contains(modelConfig.getTargetColumnName())) {
+                // if first line contains target column name, we guess it is csv format and first line is header.
+                isSchemaProvided = true;
+                log.warn("No header path is provided, we will try to read first line and detect schema.");
+                log.warn("Schema in ColumnConfig.json are named as first line of data set path.");
+            } else {
+                isSchemaProvided = false;
+                log.warn("No header path is provided, we will try to read first line and detect schema.");
+                log.warn("Schema in ColumnConfig.json are named as  index 0, 1, 2, 3 ...");
+                log.warn("Please make sure weight column and tag column are also taking index as name.");
+            }
+        }
+
+        for(int i = 0; i < fields.length; i++) {
+            if(!isSchemaProvided) {
+                fields[i] = i + "";
+            }
+        }
+        return fields;
+    }
+
+    public static String[] getFinalHeaders(EvalConfig evalConfig) throws IOException {
+        String[] fields = null;
+        boolean isSchemaProvided = true;
+        if(StringUtils.isNotBlank(evalConfig.getDataSet().getHeaderPath())) {
+            fields = CommonUtils.getHeaders(evalConfig.getDataSet().getHeaderPath(), evalConfig.getDataSet()
+                    .getHeaderDelimiter(), evalConfig.getDataSet().getSource());
+        } else {
+            fields = CommonUtils.takeFirstLine(evalConfig.getDataSet().getDataPath(), StringUtils.isBlank(evalConfig
+                    .getDataSet().getHeaderDelimiter()) ? evalConfig.getDataSet().getDataDelimiter() : evalConfig
+                    .getDataSet().getHeaderDelimiter(), evalConfig.getDataSet().getSource());
+            if(StringUtils.join(fields, "").contains(evalConfig.getDataSet().getTargetColumnName())) {
+                // if first line contains target column name, we guess it is csv format and first line is header.
+                isSchemaProvided = true;
+                log.warn("No header path is provided, we will try to read first line and detect schema.");
+                log.warn("Schema in ColumnConfig.json are named as first line of data set path.");
+            } else {
+                isSchemaProvided = false;
+                log.warn("No header path is provided, we will try to read first line and detect schema.");
+                log.warn("Schema in ColumnConfig.json are named as  index 0, 1, 2, 3 ...");
+                log.warn("Please make sure weight column and tag column are also taking index as name.");
+            }
+        }
+
+        for(int i = 0; i < fields.length; i++) {
+            if(!isSchemaProvided) {
+                fields[i] = i + "";
+            }
+        }
+        return fields;
+    }
+
     /**
      * Return header column list from header file.
      * 

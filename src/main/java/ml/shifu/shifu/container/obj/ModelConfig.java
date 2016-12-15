@@ -533,14 +533,16 @@ public class ModelConfig {
 
     @JsonIgnore
     public List<String> getMetaColumnNames() throws IOException {
-        return CommonUtils.readConfFileIntoList(dataSet.getMetaColumnNameFile(), SourceType.LOCAL,
-                this.getHeaderDelimiter());
+        String delimiter = StringUtils.isBlank(this.getHeaderDelimiter()) ? this.getDataSetDelimiter() : this
+                .getHeaderDelimiter();
+        return CommonUtils.readConfFileIntoList(dataSet.getMetaColumnNameFile(), SourceType.LOCAL, delimiter);
     }
 
     @JsonIgnore
     public List<String> getCategoricalColumnNames() throws IOException {
-        return CommonUtils.readConfFileIntoList(dataSet.getCategoricalColumnNameFile(), SourceType.LOCAL,
-                this.getHeaderDelimiter());
+        String delimiter = StringUtils.isBlank(this.getHeaderDelimiter()) ? this.getDataSetDelimiter() : this
+                .getHeaderDelimiter();
+        return CommonUtils.readConfFileIntoList(dataSet.getCategoricalColumnNameFile(), SourceType.LOCAL, delimiter);
     }
 
     @JsonIgnore
