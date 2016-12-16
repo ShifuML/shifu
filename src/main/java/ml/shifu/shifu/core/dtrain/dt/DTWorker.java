@@ -940,10 +940,14 @@ public class DTWorker
                                     // empty
                                     shortValue = (short) (columnConfig.getBinCategory().size());
                                 } else {
-                                    // cast is safe as we limit max bin to Short.MAX_VALUE
-                                    int categoricalIndex = this.columnCategoryIndexMapping.get(
+                                    Integer categoricalIndex = this.columnCategoryIndexMapping.get(
                                             columnConfig.getColumnNum()).get(input);
-                                    shortValue = (short) (categoricalIndex);
+                                    if(categoricalIndex == null) {
+                                        shortValue = -1; // invalid category, set to -1 for last index
+                                    } else {
+                                        // cast is safe as we limit max bin to Short.MAX_VALUE
+                                        shortValue = (short) (categoricalIndex.intValue());
+                                    }
                                     if(shortValue == -1) {
                                         // not found
                                         shortValue = (short) (columnConfig.getBinCategory().size());
@@ -976,10 +980,14 @@ public class DTWorker
                                     // empty
                                     shortValue = (short) (columnConfig.getBinCategory().size());
                                 } else {
-                                    // cast is safe as we limit max bin to Short.MAX_VALUE
-                                    int categoricalIndex = this.columnCategoryIndexMapping.get(
+                                    Integer categoricalIndex = this.columnCategoryIndexMapping.get(
                                             columnConfig.getColumnNum()).get(input);
-                                    shortValue = (short) (categoricalIndex);
+                                    if(categoricalIndex == null) {
+                                        shortValue = -1; // invalid category, set to -1 for last index
+                                    } else {
+                                        // cast is safe as we limit max bin to Short.MAX_VALUE
+                                        shortValue = (short) (categoricalIndex.intValue());
+                                    }
                                     if(shortValue == -1) {
                                         // not found
                                         shortValue = (short) (columnConfig.getBinCategory().size());
