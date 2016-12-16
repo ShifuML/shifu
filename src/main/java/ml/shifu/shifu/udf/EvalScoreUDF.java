@@ -87,7 +87,10 @@ public class EvalScoreUDF extends AbstractTrainerUDF<Tuple> {
             String[] fields = CommonUtils.takeFirstLine(evalConfig.getDataSet().getDataPath(), delimiter, evalConfig
                     .getDataSet().getSource());
             if(StringUtils.join(fields, "").contains(modelConfig.getTargetColumnName())) {
-                this.headers = fields;
+                this.headers = new String[fields.length];
+                for(int i = 0; i < fields.length; i++) {
+                    this.headers[i] = CommonUtils.getRelativePigHeaderColumnName(fields[i]);
+                }
                 log.warn("No header path is provided, we will try to read first line and detect schema.");
                 log.warn("Schema in ColumnConfig.json are named as first line of data set path.");
             } else {

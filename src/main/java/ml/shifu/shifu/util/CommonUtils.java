@@ -316,6 +316,8 @@ public final class CommonUtils {
         for(int i = 0; i < fields.length; i++) {
             if(!isSchemaProvided) {
                 fields[i] = i + "";
+            } else {
+                fields[i] = getRelativePigHeaderColumnName(fields[i]);
             }
         }
         return fields;
@@ -347,6 +349,8 @@ public final class CommonUtils {
         for(int i = 0; i < fields.length; i++) {
             if(!isSchemaProvided) {
                 fields[i] = i + "";
+            } else {
+                fields[i] = getRelativePigHeaderColumnName(fields[i]);
             }
         }
         return fields;
@@ -1600,12 +1604,12 @@ public final class CommonUtils {
     };
 
     public static String genPigFieldName(String name) {
-        return ((name != null) ? name.replace('-', '_'): null);
+        return ((name != null) ? name.replace('-', '_') : null);
     }
 
     public static String[] genPigFieldName(String[] names) {
         String[] pigScoreNames = new String[names.length];
-        for ( int i = 0; i < names.length; i ++ ) {
+        for(int i = 0; i < names.length; i++) {
             pigScoreNames[i] = genPigFieldName(names[i]);
         }
         return pigScoreNames;
