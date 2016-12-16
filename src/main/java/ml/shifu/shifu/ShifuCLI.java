@@ -20,19 +20,9 @@ import java.util.jar.JarFile;
 import java.util.jar.Manifest;
 
 import ml.shifu.shifu.container.obj.ModelTrainConf.ALGORITHM;
-import ml.shifu.shifu.core.processor.BasicModelProcessor;
-import ml.shifu.shifu.core.processor.CreateModelProcessor;
-import ml.shifu.shifu.core.processor.EvalModelProcessor;
+import ml.shifu.shifu.core.processor.*;
 import ml.shifu.shifu.core.processor.EvalModelProcessor.EvalStep;
-import ml.shifu.shifu.core.processor.ExportModelProcessor;
-import ml.shifu.shifu.core.processor.InitModelProcessor;
-import ml.shifu.shifu.core.processor.ManageModelProcessor;
 import ml.shifu.shifu.core.processor.ManageModelProcessor.ModelAction;
-import ml.shifu.shifu.core.processor.NormalizeModelProcessor;
-import ml.shifu.shifu.core.processor.PostTrainModelProcessor;
-import ml.shifu.shifu.core.processor.StatsModelProcessor;
-import ml.shifu.shifu.core.processor.TrainModelProcessor;
-import ml.shifu.shifu.core.processor.VarSelectModelProcessor;
 import ml.shifu.shifu.exception.ShifuException;
 import ml.shifu.shifu.util.Constants;
 
@@ -76,6 +66,8 @@ public class ShifuCLI {
     private static final String NEW = "new";
 
     private static final String CMD_EXPORT = "export";
+
+    private static final String CMD_COMBO = "combo";
 
     private static final String RESET = "reset";
 
@@ -192,6 +184,25 @@ public class ShifuCLI {
                         log.info("Do model set training successfully. Please continue next step by using 'shifu posttrain' or if no need posttrain you can go through with 'shifu eval'.");
                     } else {
                         log.info("Do model training with error, please check error message or report issue.");
+                    }
+                } else if(args[0].equals(CMD_COMBO)) {
+                    if ( cmd.hasOption(MODELSET_CMD_NEW) ) {
+                        log.info("Create new commbo models");
+                        status = createNewCombo(cmd.getOptionValue(MODELSET_CMD_NEW));
+                    } else if ( cmd.hasOption(INIT_CMD)) {
+                        log.info("Init commbo models");
+                        status = initComboModels();
+                    } else if ( cmd.hasOption(EVAL_CMD_RUN) ) {
+                        log.info("Run combo model.");
+                        status = runComboModels();
+                        // train combo models
+                    } else if ( cmd.hasOption(EVAL_CMD) ) {
+                        log.info("Eval combo model.");
+                        // eval combo model performance
+                        status = evalComboModels();
+                    } else {
+                        log.error("Invalid command usage.");
+                        printUsage();
                     }
                 } else if(args[0].equals(POSTTRAIN_CMD)) {
                     // post train step
@@ -413,6 +424,7 @@ public class ShifuCLI {
      * @throws Exception
      */
     public static int runEvalSet(String evalSetName, boolean isDryRun) throws Exception {
+        log.info("Run evaluation set with {}", evalSetName);
         EvalModelProcessor p = new EvalModelProcessor(EvalStep.RUN, evalSetName);
         return p.run();
     }
@@ -497,6 +509,48 @@ public class ShifuCLI {
     }
 
     /**
+     * create ComboTrain.json, when user provide the algorithms to combo
+     * @param algorithms
+     * @return
+     * @throws Exception
+     */
+    private static int createNewCombo(String algorithms) throws Exception {
+        Processor processor = new ComboModelProcessor(ComboModelProcessor.ComboStep.NEW, algorithms);
+        return processor.run();
+    }
+
+    /**
+     * create each sub-models, assemble model and generate corresponding configurations
+     * @return
+     * @throws Exception
+     */
+    private static int initComboModels() throws Exception {
+        Processor processor = new ComboModelProcessor(ComboModelProcessor.ComboStep.INIT);
+        return processor.run();
+    }
+
+    /**
+     * train each sub-models, and use train data as evaluation set to generate model score.
+     *      And join the evaluation result to train assemble model
+     * @return
+     * @throws Exception
+     */
+    private static int runComboModels() throws Exception {
+        Processor processor = new ComboModelProcessor(ComboModelProcessor.ComboStep.RUN);
+        return processor.run();
+    }
+
+    /**
+     * evaluate each sub-models, join data and evaluate assemble model
+     * @return
+     * @throws Exception
+     */
+    private static int evalComboModels() throws Exception {
+        Processor processor = new ComboModelProcessor(ComboModelProcessor.ComboStep.EVAL);
+        return processor.run();
+    }
+
+    /**
      * Load and test ModelConfig
      * 
      * @throws Exception
@@ -535,7 +589,7 @@ public class ShifuCLI {
                 .withDescription("To create an eval set").create(NEW);
         Option opt_type = OptionBuilder.hasArg()
                 .withDescription("Specify model type").create(MODELSET_CMD_TYPE);
-        Option opt_run = OptionBuilder.hasArg()
+        Option opt_run = OptionBuilder.hasOptionalArg()
                 .withDescription("To run eval set").create(EVAL_CMD_RUN);
         Option opt_dry = OptionBuilder.hasArg(false)
                 .withDescription("Dry run the train").create(TRAIN_CMD_DRY);
@@ -548,13 +602,14 @@ public class ShifuCLI {
         Option opt_reset = OptionBuilder.hasArg(false)
                 .withDescription("Reset all variables to finalSelect = false").create(RESET);
 
-
         Option opt_list = OptionBuilder.hasArg(false).create(LIST);
         Option opt_delete = OptionBuilder.hasArg().create(DELETE);
         Option opt_score = OptionBuilder.hasArg().create(SCORE);
         Option opt_confmat = OptionBuilder.hasArg().create(CONFMAT);
         Option opt_perf = OptionBuilder.hasArg().create(PERF);
         Option opt_norm = OptionBuilder.hasArg().create(NORM);
+        Option opt_eval = OptionBuilder.hasArg(false).create(EVAL_CMD);
+        Option opt_init = OptionBuilder.hasArg(false).create(INIT_CMD);
 
         Option opt_save = OptionBuilder.hasArg(false).withDescription("save model").create(SAVE);
         Option opt_switch = OptionBuilder.hasArg(false).withDescription("switch model").create(SWITCH);
@@ -571,6 +626,8 @@ public class ShifuCLI {
         opts.addOption(opt_model);
         opts.addOption(opt_concise);
         opts.addOption(opt_reset);
+        opts.addOption(opt_eval);
+        opts.addOption(opt_init);
 
         opts.addOption(opt_list);
         opts.addOption(opt_delete);
@@ -606,6 +663,10 @@ public class ShifuCLI {
         System.out.println("\teval -confmat <EvalSetName>             Compute the TP/FP/TN/FN based on scoring");
         System.out.println("\teval -perf <EvalSetName>                Calculate the model performance based on confmat");
         System.out.println("\texport [-t pmml|columnstats] [-c]       Export model to PMML format or export ColumnConfig.");
+        System.out.println("\tcombo -new    <Algorithm List>          Create a combo model train. Algorithm lis should be NN,LR,RF,GBT,LR");
+        System.out.println("\tcombo -init                             Generate sub-models.");
+        System.out.println("\tcombo -run                              Run Combo-Model train.");
+        System.out.println("\tcombo -eval                             Evaluate Combo-Model performance.");
         System.out.println("\tversion|v|-v|-version                   Print version of current package.");
         System.out.println("\thelp|h|-h|-help                         Help message.");
     }

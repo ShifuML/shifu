@@ -34,9 +34,7 @@ public class SouceTypeDeserializer extends JsonDeserializer<SourceType> {
      * @see com.fasterxml.jackson.databind.JsonDeserializer#deserialize(com.fasterxml.jackson.core.JsonParser, com.fasterxml.jackson.databind.DeserializationContext)
      */
     @Override
-    public SourceType deserialize(
-            JsonParser jp, DeserializationContext ctxt) throws IOException,
-            JsonProcessingException {
+    public SourceType deserialize(JsonParser jp, DeserializationContext context) throws IOException {
         ObjectCodec oc = jp.getCodec();
         JsonNode node = oc.readTree(jp);
 

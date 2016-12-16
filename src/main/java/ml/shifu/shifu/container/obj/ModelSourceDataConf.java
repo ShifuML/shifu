@@ -17,6 +17,8 @@ package ml.shifu.shifu.container.obj;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
+import java.util.ArrayList;
+
 /**
  * ModelSourceDataConf class
  */
@@ -48,4 +50,24 @@ public class ModelSourceDataConf extends RawSourceData {
         return super.clone();
     }
 
+    @Override
+    public ModelSourceDataConf clone() {
+        ModelSourceDataConf other = new ModelSourceDataConf();
+
+        other.setSource(this.getSource());
+        other.setDataPath(this.getDataPath());
+        other.setDataDelimiter(this.getDataDelimiter());
+        other.setHeaderPath(this.getHeaderPath());
+        other.setHeaderDelimiter(this.getHeaderDelimiter());
+        other.setFilterExpressions(this.getFilterExpressions());
+
+        other.setTargetColumnName(this.getTargetColumnName());
+        other.setPosTags(new ArrayList<String>(this.getPosTags()));
+        other.setNegTags(new ArrayList<String>(this.getNegTags()));
+        other.setMissingOrInvalidValues(this.getMissingOrInvalidValues());
+
+        other.setCategoricalColumnNameFile(categoricalColumnNameFile);
+        other.setMetaColumnNameFile(metaColumnNameFile);
+        return other;
+    }
 }

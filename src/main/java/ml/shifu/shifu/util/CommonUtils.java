@@ -1598,4 +1598,16 @@ public final class CommonUtils {
             return !name.startsWith("_") && !name.startsWith(".");
         }
     };
+
+    public static String genPigFieldName(String name) {
+        return ((name != null) ? name.replace('-', '_'): null);
+    }
+
+    public static String[] genPigFieldName(String[] names) {
+        String[] pigScoreNames = new String[names.length];
+        for ( int i = 0; i < names.length; i ++ ) {
+            pigScoreNames[i] = genPigFieldName(names[i]);
+        }
+        return pigScoreNames;
+    }
 }

@@ -347,4 +347,44 @@ public class ModelTrainConf {
         return this.multiClassifyMethod == MultipleClassification.ONEVSALL
                 || this.multiClassifyMethod == MultipleClassification.ONVVSREST;
     }
+
+    @Override
+    public boolean equals(Object obj) {
+        if ( obj == null || !(obj instanceof ModelTrainConf) ) {
+            return false;
+        }
+
+        ModelTrainConf other = (ModelTrainConf) obj;
+        if ( this == other ) {
+            return true;
+        }
+
+        return this.algorithm.equals(other.getAlgorithm())
+                && this.baggingNum.equals(other.getBaggingNum())
+                && this.getNumTrainEpochs().equals(other.getNumTrainEpochs())
+                && this.validSetRate.equals(other.getValidSetRate());
+    }
+
+    @Override
+    public ModelTrainConf clone() {
+        ModelTrainConf other = new ModelTrainConf();
+        other.setAlgorithm(algorithm);
+        other.setBaggingNum(baggingNum);
+        other.setBaggingSampleRate(baggingSampleRate);
+        other.setConvergenceThreshold(convergenceThreshold);
+        if ( customPaths != null ) {
+            other.setCustomPaths(new HashMap<String, String>(customPaths));
+        }
+        other.setEpochsPerIteration(epochsPerIteration);
+        other.setFixInitInput(fixInitInput);
+        other.setIsContinuous(isContinuous);
+        other.setMultiClassifyMethod(multiClassifyMethod);
+        other.setNumTrainEpochs(numTrainEpochs);
+        other.setParams(new HashMap<String, Object>(params));
+        other.setTrainOnDisk(trainOnDisk);
+        other.setUpSampleWeight(upSampleWeight);
+        other.setValidSetRate(validSetRate);
+        other.setWorkerThreadCount(workerThreadCount);
+        return other;
+    }
 }

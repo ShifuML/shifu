@@ -30,6 +30,8 @@ public interface Constants {
 
     public static final String MODEL_CONFIG_JSON_FILE_NAME = "ModelConfig.json";
 
+    public static final String COMBO_CONFIG_JSON_FILE_NAME = "ComboTrain.json";
+
     public static final String COLUMN_STATS_CSV_FILE_NAME = "ColumnStats.csv";
 
     public static final String MODEL_SETS = "ModelSets";
@@ -110,6 +112,9 @@ public interface Constants {
     public static final String KEY_SCORE_PATH = "scorePath";
     public static final String KEY_PERFORMANCE_PATH = "performancePath";
     public static final String KEY_CONFUSION_MATRIX_PATH = "confusionMatrixPath";
+
+    public static final String COMBO_EVAL_TRAIN = "EvalTrain";
+    public static final String COMBO_ASSEMBLE = "assemble";
 
     public static final String BIN_BOUNDRY_DELIMITER = "\u0001";
 

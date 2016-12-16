@@ -869,4 +869,27 @@ public class PathFinder {
         return otherConfigs;
     }
 
+    /**
+     * Get the train data path for assemble model
+     * @return - train data path for assemble model
+     */
+    public String getSubModelsAssembleTrainData() {
+        return getPathBySourceType(
+                new Path(Constants.TMP, "AssembleTrainData"),
+                this.modelConfig.getDataSet().getSource());
+    }
+
+    /**
+     * Get the eval data path for assemble model
+     * @param evalName
+     *      - evalset name
+     * @param sourceType
+     *      - Local/HDFS
+     * @return - eval data path for assemble model
+     */
+    public String getSubModelsAssembleEvalData(String evalName, SourceType sourceType) {
+        return getPathBySourceType(
+                new Path(Constants.TMP, evalName + "AssembleEvalData"),
+                sourceType);
+    }
 }
