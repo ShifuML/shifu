@@ -207,6 +207,11 @@ public class Scorer {
 
         if ( CollectionUtils.isNotEmpty(tasks) ) {
             List<MLData> modelResults = this.executorManager.submitTasksAndWaitResults(tasks);
+            if ( CollectionUtils.isEmpty(modelResults) || modelResults.size() != this.models.size() ) {
+                log.error("Get empty model results or model results size doesn't match with models size.");
+                return null;
+            }
+
             for (int i = 0; i < this.models.size(); i++) {
                 BasicML model = this.models.get(i);
                 MLData score = modelResults.get(i);
