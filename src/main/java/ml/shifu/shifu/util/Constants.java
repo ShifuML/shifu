@@ -226,4 +226,8 @@ public interface Constants {
 
     public static final String SHIFU_EVAL_MAXMIN_SCORE_OUTPUT = "shifu.eval.maxmin.score.output";
 
+    public static final String SHIFU_DTRAIN_PARALLEL = "shifu.dtrain.parallel";
+
+    public static final String SHIFU_TMPMODEL_COPYTOLOCAL = "shifu.tmpmodel.copytolocal";
+
 }

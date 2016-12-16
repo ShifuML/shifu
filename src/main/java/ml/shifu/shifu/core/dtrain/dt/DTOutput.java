@@ -108,6 +108,11 @@ public class DTOutput extends BasicMasterInterceptor<DTMasterParams, DTWorkerPar
      */
     private int inputCount;
 
+    /**
+     * Number of trees for both RF and GBDT
+     */
+    private Integer treeNum;
+
     @Override
     public void preApplication(MasterContext<DTMasterParams, DTWorkerParams> context) {
         init(context);
@@ -123,12 +128,13 @@ public class DTOutput extends BasicMasterInterceptor<DTMasterParams, DTWorkerPar
                 Thread tmpModelPersistThread = new Thread(new Runnable() {
                     @Override
                     public void run() {
-                        saveTmpModelToHDFS(context.getCurrentIteration(), context.getMasterResult().getTrees());
                         // save model results for continue model training, if current job is failed, then next running
                         // we can start from this point to save time.
                         // another case for master recovery, if master is failed, read such checkpoint model
                         Path out = new Path(context.getProps().getProperty(CommonConstants.GUAGUA_OUTPUT));
                         writeModelToFileSystem(context.getMasterResult().getTrees(), out);
+
+                        saveTmpModelToHDFS(context.getCurrentIteration(), context.getMasterResult().getTrees());
                     }
                 }, "saveTmpNNToHDFS thread");
                 tmpModelPersistThread.setDaemon(true);
@@ -137,20 +143,20 @@ public class DTOutput extends BasicMasterInterceptor<DTMasterParams, DTWorkerPar
         } else if(isGBDT) {
             // for gbdt, only store trees are all built well
             if(context.getMasterResult().isSwitchToNextTree()
-                    && context.getMasterResult().getTmpTrees().size() % 25 == 0) {
+                    && context.getMasterResult().getTmpTrees().size() % (this.treeNum / 10) == 0) {
                 final List<TreeNode> trees = context.getMasterResult().getTmpTrees();
                 if(trees.size() > 1) {
                     Thread tmpModelPersistThread = new Thread(new Runnable() {
                         @Override
                         public void run() {
-                            // last one is newest one with only ROOT node, should be excluded
                             List<TreeNode> subTrees = trees.subList(0, trees.size() - 1);
-                            saveTmpModelToHDFS(context.getCurrentIteration(), subTrees);
                             // save model results for continue model training, if current job is failed, then next
                             // running we can start from this point to save time.
                             // another case for master recovery, if master is failed, read such checkpoint model
                             Path out = new Path(context.getProps().getProperty(CommonConstants.GUAGUA_OUTPUT));
                             writeModelToFileSystem(subTrees, out);
+                            // last one is newest one with only ROOT node, should be excluded
+                            saveTmpModelToHDFS(context.getCurrentIteration(), subTrees);
                         }
                     }, "saveTmpNNToHDFS thread");
                     tmpModelPersistThread.setDaemon(true);
@@ -415,6 +421,7 @@ public class DTOutput extends BasicMasterInterceptor<DTMasterParams, DTWorkerPar
             } catch (IOException e) {
                 LOG.error("Error in create progress log:", e);
             }
+            this.treeNum = Integer.valueOf(validParams.get("TreeNum").toString());;
         }
 
     }

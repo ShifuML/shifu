@@ -126,8 +126,6 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
 
     public static final String SHIFU_DEFAULT_DTRAIN_PARALLEL = "true";
 
-    public static final String SHIFU_DTRAIN_PARALLEL = "shifu.dtrain.parallel";
-
     private boolean isDryTrain, isDebug;
     private List<AbstractTrainer> trainers;
 
@@ -440,7 +438,7 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
         long start = System.currentTimeMillis();
         LOG.info("Distributed trainning with baggingNum: {}", baggingNum);
         boolean isParallel = Boolean.valueOf(
-                Environment.getProperty(SHIFU_DTRAIN_PARALLEL, SHIFU_DEFAULT_DTRAIN_PARALLEL)).booleanValue();
+                Environment.getProperty(Constants.SHIFU_DTRAIN_PARALLEL, SHIFU_DEFAULT_DTRAIN_PARALLEL)).booleanValue();
         GuaguaMapReduceClient guaguaClient;
         if(modelConfig.getNormalize().getIsParquet()) {
             guaguaClient = new GuaguaParquetMapReduceClient();
@@ -599,8 +597,20 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
                 }
             }
 
-            // copy temp model files
-            copyTmpModelsToLocal(tmpModelsPath, sourceType);
+            // copy temp model files, for RF/GBT, not to copy tmp models because of larger space needed, for others by
+            // default copy tmp models to local
+            boolean copyTmpModelsToLocal = Boolean.TRUE.toString().equalsIgnoreCase(
+                    Environment.getProperty(Constants.SHIFU_TMPMODEL_COPYTOLOCAL, "true"));
+            if(CommonUtils.isDesicionTreeAlgorithm(modelConfig.getAlgorithm())) {
+                copyTmpModelsToLocal = Boolean.TRUE.toString().equalsIgnoreCase(
+                        Environment.getProperty(Constants.SHIFU_TMPMODEL_COPYTOLOCAL, "false"));
+            }
+
+            if(copyTmpModelsToLocal) {
+                copyTmpModelsToLocal(tmpModelsPath, sourceType);
+            } else {
+                LOG.info("Tmp models are not coied into local, please find them in hdfs path: {}", tmpModelsPath);
+            }
             LOG.info("Distributed training finished in {}ms.", System.currentTimeMillis() - start);
         }
 
