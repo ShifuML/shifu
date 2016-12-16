@@ -1,13 +1,18 @@
 package ml.shifu.shifu.executor;
 
-import ml.shifu.shifu.util.Environment;
-import org.encog.ml.data.MLData;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.*;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
+
+import ml.shifu.shifu.util.Environment;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Created by zhanhu on 12/12/16.
@@ -26,6 +31,7 @@ public class ExecutorManager<T> {
         this.executorService = Executors.newFixedThreadPool(threadPoolSize);
     }
 
+    @SuppressWarnings("rawtypes")
     public void submitTasksAndWaitFinish(List<Runnable> tasks) {
         List<Future<?>> futureList = new ArrayList<Future<?>>(tasks.size());
         for ( Runnable task : tasks ) {

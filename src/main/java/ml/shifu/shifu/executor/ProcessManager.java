@@ -46,6 +46,7 @@ public class ProcessManager {
 
     public static class LogThread extends Thread {
 
+        @SuppressWarnings("unused")
         private Process process;
         private InputStream inputStream;
         private String currentDir;

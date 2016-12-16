@@ -1,18 +1,8 @@
 package ml.shifu.shifu.core;
 
-import org.apache.commons.io.IOUtils;
-import org.testng.annotations.Test;
-
 import java.io.IOException;
-import java.io.InputStream;
-import java.net.URL;
-import java.net.URLClassLoader;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.zip.ZipEntry;
-import java.util.zip.ZipFile;
-import java.util.zip.ZipInputStream;
+
+import org.testng.annotations.Test;
 
 /**
  * Created by zhanhu on 11/10/16.

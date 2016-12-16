@@ -1,6 +1,5 @@
 package ml.shifu.shifu.container.obj;
 
-import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.collections.ListUtils;
 
 import java.util.List;
