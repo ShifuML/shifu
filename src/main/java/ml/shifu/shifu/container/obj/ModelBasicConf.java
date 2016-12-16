@@ -156,4 +156,19 @@ public class ModelBasicConf {
         this.postTrainOn = postTrainOn;
     }
 
+    @Override
+    public ModelBasicConf clone() {
+        ModelBasicConf other = new ModelBasicConf();
+        other.setName(name);
+        other.setAuthor(author);
+        other.setDescription(description);
+        other.setRunMode(runMode);
+        other.setVersion(version);
+        other.setPostTrainOn(postTrainOn);
+        if ( customPaths != null ) {
+            other.setCustomPaths(new HashMap<String, String>(customPaths));
+        }
+        return other;
+    }
+
 }

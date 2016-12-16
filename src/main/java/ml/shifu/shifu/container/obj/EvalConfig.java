@@ -190,4 +190,16 @@ public class EvalConfig {
         this.gbtConvertToProb = gbtConvertToProb;
     }
 
+    @Override
+    public EvalConfig clone() {
+        EvalConfig other = new EvalConfig();
+        other.setCustomPaths(new HashMap<String, String>(customPaths));
+        other.setDataSet(dataSet.clone());
+        other.setGbtConvertToProb(gbtConvertToProb);
+        other.setName(name);
+        other.setPerformanceBucketNum(performanceBucketNum);
+        other.setPerformanceScoreSelector(performanceScoreSelector);
+        other.setScoreMetaColumnNameFile(scoreMetaColumnNameFile);
+        return other;
+    }
 }

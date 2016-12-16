@@ -52,3 +52,6 @@ shifu.gridsearch.threshold=30
 
 ## set min worker done ratio in each guagua iteration step 
 guagua.min.workers.ratio=0.97
+
+## the hadoop capacity may limit parallel number, add this parameter for hadoop performance tunning
+# shifu.combo.thread.parallel = 5

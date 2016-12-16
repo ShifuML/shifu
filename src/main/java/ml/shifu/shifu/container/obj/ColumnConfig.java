@@ -20,6 +20,7 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import ml.shifu.shifu.util.Constants;
 
 import java.io.Serializable;
+import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 
@@ -512,5 +513,20 @@ public class ColumnConfig {
                 return b.getIv().compareTo(a.getIv());
             }
         }
+    }
+
+    @Override
+    public ColumnConfig clone() {
+        ColumnConfig other = new ColumnConfig();
+        other.setColumnName(columnName);
+        other.setColumnNum(columnNum);
+        other.setVersion(version);
+        other.setColumnType(columnType);
+        other.setColumnFlag(columnFlag);
+        other.setFinalSelect(finalSelect);
+        other.setColumnStats(columnStats);
+        other.setColumnBinning(columnBinning);
+        other.setCorrArray(corrArray);
+        return other;
     }
 }
