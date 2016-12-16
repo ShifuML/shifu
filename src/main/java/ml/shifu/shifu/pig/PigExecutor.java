@@ -29,7 +29,6 @@ import ml.shifu.shifu.util.Environment;
 import org.apache.commons.lang.StringUtils;
 import org.apache.pig.ExecType;
 import org.apache.pig.PigServer;
-import org.apache.pig.backend.executionengine.ExecException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

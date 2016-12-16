@@ -36,7 +36,6 @@ import ml.shifu.shifu.core.dtrain.gs.GridSearch;
 import ml.shifu.shifu.util.CommonUtils;
 
 import org.apache.commons.collections.CollectionUtils;
-import org.apache.commons.collections.ListUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
@@ -306,7 +305,7 @@ public class DTOutput extends BasicMasterInterceptor<DTMasterParams, DTWorkerPar
             Map<Integer, Double> numericalMeanMapping = new HashMap<Integer, Double>();
             for(ColumnConfig columnConfig: this.columnConfigList) {
                 columnIndexNameMapping.put(columnConfig.getColumnNum(), columnConfig.getColumnName());
-                if(columnConfig.isCategorical() && CollectionUtils.isNotEmpty(columnConfig.getBinCategory()) ) {
+                if(columnConfig.isCategorical() && CollectionUtils.isNotEmpty(columnConfig.getBinCategory())) {
                     columnIndexCategoricalListMapping.put(columnConfig.getColumnNum(), columnConfig.getBinCategory());
                 }
 
@@ -316,7 +315,7 @@ public class DTOutput extends BasicMasterInterceptor<DTMasterParams, DTWorkerPar
             }
 
             // serialize numericalMeanMapping
-            fos.writeInt(numericalMeanMapping.keySet().size());
+            fos.writeInt(numericalMeanMapping.size());
             for(Entry<Integer, Double> entry: numericalMeanMapping.entrySet()) {
                 fos.writeInt(entry.getKey());
                 // for some feature, it is null mean value, it is not selected, just set to 0d to avoid NPE

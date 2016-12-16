@@ -1,8 +1,25 @@
 package ml.shifu.shifu.core.processor;
 
+import java.io.File;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+
 import ml.shifu.shifu.combo.ColumnFile;
 import ml.shifu.shifu.combo.DataMerger;
-import ml.shifu.shifu.container.obj.*;
+import ml.shifu.shifu.container.obj.ColumnConfig;
+import ml.shifu.shifu.container.obj.ComboModelTrain;
+import ml.shifu.shifu.container.obj.EvalConfig;
+import ml.shifu.shifu.container.obj.ModelBasicConf;
+import ml.shifu.shifu.container.obj.ModelConfig;
+import ml.shifu.shifu.container.obj.ModelTrainConf;
+import ml.shifu.shifu.container.obj.RawSourceData;
+import ml.shifu.shifu.container.obj.VarTrainConf;
 import ml.shifu.shifu.core.validator.ModelInspector;
 import ml.shifu.shifu.executor.ExecutorManager;
 import ml.shifu.shifu.executor.ProcessManager;
@@ -10,17 +27,12 @@ import ml.shifu.shifu.fs.PathFinder;
 import ml.shifu.shifu.util.CommonUtils;
 import ml.shifu.shifu.util.Constants;
 import ml.shifu.shifu.util.JSONUtils;
+
 import org.apache.commons.collections.CollectionUtils;
-import org.apache.commons.collections.map.HashedMap;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import java.io.File;
-import java.io.FileWriter;
-import java.io.IOException;
-import java.util.*;
 
 /**
  * Created by zhanhu on 12/5/16.
@@ -42,7 +54,7 @@ public class ComboModelProcessor extends BasicModelProcessor implements Processo
     private List<ModelTrainConf.ALGORITHM> comboAlgs;
     private ComboModelTrain comboModelTrain;
 
-    private ExecutorManager excutorManager = new ExecutorManager();
+    private ExecutorManager<Object> excutorManager = new ExecutorManager<Object>();
 
     public ComboModelProcessor(ComboStep comboStep) {
         this.comboStep = comboStep;
@@ -142,7 +154,7 @@ public class ComboModelProcessor extends BasicModelProcessor implements Processo
             ModelConfig subModelConfig = this.modelConfig.clone();
             subModelConfig.getBasic().setName(subModelName);
             subModelConfig.setTrain(varTrainConf.getModelTrainConf());
-            subModelConfig.getTrain().setCustomPaths(new HashedMap());
+            subModelConfig.getTrain().setCustomPaths(new HashMap<String, String>());
 
             // 2.1) set normalized data path
             String normalizedPath = pathFinder.getNormalizedDataPath();

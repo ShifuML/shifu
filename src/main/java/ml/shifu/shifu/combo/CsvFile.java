@@ -1,22 +1,22 @@
 package ml.shifu.shifu.combo;
 
-import org.apache.commons.collections.map.HashedMap;
+import java.io.BufferedReader;
+import java.io.FileReader;
+import java.io.IOException;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.Map;
+
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.BufferedReader;
-import java.io.FileReader;
-import java.io.IOException;
-import java.util.Iterator;
-import java.util.Map;
-
 /**
  * Implement CsvFile as iterator
  * Created by zhanhu on 12/10/16.
  */
-public class CsvFile implements Iterable<Map<String, String>>{
+public class CsvFile implements Iterable<Map<String, String>> {
     private static Logger LOG = LoggerFactory.getLogger(CsvFile.class);
 
     private String filePath;
@@ -45,7 +45,7 @@ public class CsvFile implements Iterable<Map<String, String>>{
             try {
                 open(filePath);
             } catch (Exception e) {
-                LOG.error("Fail to open file - {}.", filePath,  e);
+                LOG.error("Fail to open file - {}.", filePath, e);
             }
         }
 
@@ -57,9 +57,9 @@ public class CsvFile implements Iterable<Map<String, String>>{
 
         @Override
         public boolean hasNext() {
-            if ( nextLine != null ) {
+            if(nextLine != null) {
                 return true;
-            } else if ( isFinished ) {
+            } else if(isFinished) {
                 return false;
             } else {
                 try {
@@ -68,7 +68,7 @@ public class CsvFile implements Iterable<Map<String, String>>{
                     nextLine = null;
                 }
 
-                if ( nextLine == null ) {
+                if(nextLine == null) {
                     isFinished = true;
                     IOUtils.closeQuietly(reader);
                     return false;
@@ -80,13 +80,13 @@ public class CsvFile implements Iterable<Map<String, String>>{
 
         @Override
         public Map<String, String> next() {
-            if ( ! hasNext() ) {
+            if(!hasNext()) {
                 return null;
             }
 
             String[] vars = StringUtils.split(nextLine, delimiter);
-            Map<String, String> varMap = new HashedMap();
-            for ( int i = 0; i < this.header.length; i ++ ) {
+            Map<String, String> varMap = new HashMap<String, String>();
+            for(int i = 0; i < this.header.length; i++) {
                 varMap.put(this.header[i], vars[i]);
             }
 

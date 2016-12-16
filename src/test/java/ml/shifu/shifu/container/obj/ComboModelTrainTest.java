@@ -1,14 +1,14 @@
 package ml.shifu.shifu.container.obj;
 
-import ml.shifu.shifu.util.CommonUtils;
-import ml.shifu.shifu.util.JSONUtils;
-import org.testng.Assert;
-import org.testng.annotations.Test;
-
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+
+import ml.shifu.shifu.util.JSONUtils;
+
+import org.testng.Assert;
+import org.testng.annotations.Test;
 
 /**
  * Created by zhanhu on 11/18/16.
