@@ -106,7 +106,8 @@ public class BinningPartialDataUDF extends AbstractTrainerUDF<String> {
             Object value = element.get(1);
             if (value != null) {
                 if (isWeightBinningMethod() && binning instanceof EqualPopulationBinning) {
-                    ((EqualPopulationBinning) binning).addData(value.toString(), (Double) element.get(4));
+                    ((EqualPopulationBinning) binning).addData(value.toString(),
+                            (Double) element.get(AddColumnNumUDF.COLUMN_WEIGHT_INDX));
                 } else {
                     binning.addData(value.toString());
                 }

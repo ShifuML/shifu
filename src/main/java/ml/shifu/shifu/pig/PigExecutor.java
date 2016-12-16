@@ -15,6 +15,7 @@
  */
 package ml.shifu.shifu.pig;
 
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.util.Map;
 
@@ -28,6 +29,7 @@ import ml.shifu.shifu.util.Environment;
 import org.apache.commons.lang.StringUtils;
 import org.apache.pig.ExecType;
 import org.apache.pig.PigServer;
+import org.apache.pig.backend.executionengine.ExecException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -110,7 +112,36 @@ public class PigExecutor {
     public void submitJob(ModelConfig modelConfig, String pigScriptPath, Map<String, String> paramsMap,
             SourceType sourceType, Map<String, String> confMap, PathFinder pathFinder) throws IOException {
         // Run Pig Scripts
-        PigServer pigServer;
+        PigServer pigServer = createPigServer(sourceType);
+
+        for(Map.Entry<Object, Object> entry: Environment.getProperties().entrySet()) {
+            if(CommonUtils.isHadoopConfigurationInjected(entry.getKey().toString())) {
+                pigServer.getPigContext().getProperties().put(entry.getKey(), entry.getValue());
+            }
+        }
+
+        if(confMap != null) {
+            for(Map.Entry<String, String> entry: confMap.entrySet()) {
+                pigServer.getPigContext().getProperties().put(entry.getKey(), entry.getValue());
+            }
+        }
+
+        Map<String, String> pigParamsMap = CommonUtils.getPigParamMap(modelConfig, sourceType, pathFinder);
+        if(paramsMap != null) {
+            pigParamsMap.putAll(paramsMap);
+        }
+
+        log.debug("Pig submit parameters: {}", pigParamsMap);
+        pigServer.registerScript(pigScriptPath, pigParamsMap);
+    }
+
+    public void submitJob(SourceType sourceType, String pigScripts) throws IOException {
+        PigServer pigServer = createPigServer(sourceType);
+        pigServer.registerScript(new ByteArrayInputStream(pigScripts.getBytes()));
+    }
+
+    private PigServer createPigServer(SourceType sourceType) throws IOException {
+        PigServer pigServer = null;
 
         if(SourceType.HDFS.equals(sourceType)) {
             if(Environment.getProperty("shifu.pig.exectype", "MAPREDUCE").toLowerCase().equals("tez")) {
@@ -147,25 +178,7 @@ public class PigExecutor {
             pigServer = new PigServer(ExecType.LOCAL);
         }
 
-        for(Map.Entry<Object, Object> entry: Environment.getProperties().entrySet()) {
-            if(CommonUtils.isHadoopConfigurationInjected(entry.getKey().toString())) {
-                pigServer.getPigContext().getProperties().put(entry.getKey(), entry.getValue());
-            }
-        }
-
-        if(confMap != null) {
-            for(Map.Entry<String, String> entry: confMap.entrySet()) {
-                pigServer.getPigContext().getProperties().put(entry.getKey(), entry.getValue());
-            }
-        }
-
-        Map<String, String> pigParamsMap = CommonUtils.getPigParamMap(modelConfig, sourceType, pathFinder);
-        if(paramsMap != null) {
-            pigParamsMap.putAll(paramsMap);
-        }
-
-        log.debug("Pig submit parameters: {}", pigParamsMap);
-        pigServer.registerScript(pigScriptPath, pigParamsMap);
+        return pigServer;
     }
 
     /**

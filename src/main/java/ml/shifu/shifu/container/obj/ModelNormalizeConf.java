@@ -20,6 +20,8 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 
+import java.util.HashMap;
+
 /**
  * ModelNormalizeConf class
  */
@@ -118,12 +120,23 @@ public class ModelNormalizeConf {
     }
 
     /**
-     * @param corrlation
-     *            the corrlation to set
+     * @param correlation
+     *            the correlation to set
      */
     @JsonProperty
     public void setCorrelation(Correlation correlation) {
         this.correlation = correlation;
     }
 
+    @Override
+    public ModelNormalizeConf clone() {
+        ModelNormalizeConf other = new ModelNormalizeConf();
+        other.setNormType(normType);
+        other.setSampleRate(sampleRate);
+        other.setSampleNegOnly(sampleNegOnly);
+        other.setStdDevCutOff(stdDevCutOff);
+        other.setIsParquet(isParquet);
+        other.setCorrelation(correlation);
+        return other;
+    }
 }
