@@ -14,12 +14,12 @@
       "workerThreadCount" : 4,
       "algorithm" : "NN",
       "params" : {
-        "NumHiddenLayers" : 1,
-        "ActivationFunc" : [ "tanh" ],
-        "NumHiddenNodes" : [ 50 ],
-        "RegularizedConstant" : 0.0,
+        "Propagation" : "R",
         "LearningRate" : 0.1,
-        "Propagation" : "R"
+        "NumHiddenNodes" : [ 50 ],
+        "NumHiddenLayers" : 1,
+        "RegularizedConstant" : 0.0,
+        "ActivationFunc" : [ "tanh" ]
       },
       "customPaths" : { }
     }
@@ -37,14 +37,14 @@
       "workerThreadCount" : 4,
       "algorithm" : "GBT",
       "params" : {
-        "Loss" : "squared",
-        "MaxDepth" : 7,
-        "MinInfoGain" : 0.0,
-        "TreeNum" : "100",
         "Impurity" : "variance",
-        "MinInstancesPerNode" : 5,
+        "MaxDepth" : 7,
         "LearningRate" : 0.05,
-        "FeatureSubsetStrategy" : "TWOTHIRDS"
+        "FeatureSubsetStrategy" : "TWOTHIRDS",
+        "Loss" : "squared",
+        "TreeNum" : "100",
+        "MinInstancesPerNode" : 5,
+        "MinInfoGain" : 0.0
       },
       "customPaths" : { }
     }
@@ -61,9 +61,9 @@
     "workerThreadCount" : 4,
     "algorithm" : "LR",
     "params" : {
+      "LearningRate" : 0.1,
       "RegularizedConstant" : 0.0,
-      "L1orL2" : "NONE",
-      "LearningRate" : 0.1
+      "L1orL2" : "NONE"
     },
     "customPaths" : { }
   }
