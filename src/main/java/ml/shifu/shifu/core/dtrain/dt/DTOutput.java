@@ -306,7 +306,7 @@ public class DTOutput extends BasicMasterInterceptor<DTMasterParams, DTWorkerPar
             Map<Integer, Double> numericalMeanMapping = new HashMap<Integer, Double>();
             for(ColumnConfig columnConfig: this.columnConfigList) {
                 columnIndexNameMapping.put(columnConfig.getColumnNum(), columnConfig.getColumnName());
-                if(columnConfig.isCategorical() && CollectionUtils.isNotEmpty(columnConfig.getBinBoundary()) ) {
+                if(columnConfig.isCategorical() && CollectionUtils.isNotEmpty(columnConfig.getBinCategory()) ) {
                     columnIndexCategoricalListMapping.put(columnConfig.getColumnNum(), columnConfig.getBinCategory());
                 }
 
