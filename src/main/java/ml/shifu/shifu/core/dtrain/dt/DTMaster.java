@@ -234,6 +234,10 @@ public class DTMaster extends AbstractMasterComputable<DTMasterParams, DTWorkerP
      */
     private Queue<TreeNode> toDoQueue;
 
+    private DTEarlyStopDecider dtEarlyStopDecider;
+
+    private boolean earlyStopEnabled;
+
     @Override
     public DTMasterParams doCompute(MasterContext<DTMasterParams, DTWorkerParams> context) {
         if(context.isFirstIteration()) {
@@ -328,6 +332,13 @@ public class DTMaster extends AbstractMasterComputable<DTMasterParams, DTWorkerP
         Map<Integer, TreeNode> todoNodes = new HashMap<Integer, TreeNode>();
         DTMasterParams masterParams = new DTMasterParams(weightedTrainCount, trainError, weightedValidationCount,
                 validationError);
+
+        // Add  early Stop Feature for GBT
+        if(this.earlyStopEnabled && this.isGBDT && dtEarlyStopDecider.add(trainError, validationError)){
+            masterParams.setHalt(true);
+            LOG.info("Early stop identified, training is stopped in iteration {}.", context.getCurrentIteration());
+        }
+
         if(toDoQueue.isEmpty()) {
             if(this.isGBDT) {
                 TreeNode treeNode = this.trees.get(this.trees.size() - 1);
@@ -895,6 +906,12 @@ public class DTMaster extends AbstractMasterComputable<DTMasterParams, DTWorkerP
                 this.isGBDT, this.isContinuousEnabled);
 
         this.toDoQueue = new LinkedList<TreeNode>();
+
+        this.earlyStopEnabled = Boolean.valueOf(validParams.get("EnableEarlyStop").toString());
+
+        if(this.earlyStopEnabled){
+            this.dtEarlyStopDecider = new DTEarlyStopDecider(this.maxDepth);
+        }
 
         if(this.isLeafWise) {
             this.toSplitQueue = new PriorityQueue<TreeNode>(64, new Comparator<TreeNode>() {
