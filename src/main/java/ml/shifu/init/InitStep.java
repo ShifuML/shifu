@@ -83,7 +83,7 @@ public class InitStep extends Step<List<ColumnConfig>> {
             ColumnConfig config = new ColumnConfig();
             config.setColumnNum(i);
             if(isSchemaProvided) {
-                config.setColumnName(fields[i]);
+                config.setColumnName(CommonUtils.getRelativePigHeaderColumnName(fields[i]));
             } else {
                 config.setColumnName(i + "");
             }
