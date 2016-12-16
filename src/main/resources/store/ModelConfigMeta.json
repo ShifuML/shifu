@@ -611,6 +611,11 @@
                             {"label": "LOG2", "value":"log2"}
                         ]
                     }, {
+                        "name" : "EnableEarlyStop",
+                        "type": "boolean",
+                        "directive": "checkbox",
+                        "defval": true
+                    }, {
                         "name" : "Loss",
                         "type" : "text",
                         "directive": "select",
