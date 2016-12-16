@@ -14,6 +14,51 @@
         <powermock.version>1.5.1</powermock.version>
         <guagua.version>0.7.4</guagua.version>
     </properties>
+    <url>https://github.com/ShifuML/shifu/</url>
+    <licenses>
+        <license>
+            <name>The Apache Software License, Version 2.0</name>
+            <url>http://www.apache.org/licenses/LICENSE-2.0.txt</url>
+        </license>
+    </licenses>
+    <developers>
+        <developer>
+            <name>Zhang David (Zhang Pengshan)</name>
+            <email>pengzhang@paypal.com</email>
+            <organization>PayPal</organization>
+            <organizationUrl>http://www.paypal.com</organizationUrl>
+        </developer>
+        <developer>
+            <name>Hu Zhanghao</name>
+            <organization>PayPal</organization>
+            <organizationUrl>http://www.paypal.com</organizationUrl>
+        </developer>
+        <developer>
+            <name>Jastrebski Grahame</name>
+            <organization>PayPal</organization>
+            <organizationUrl>http://www.paypal.com</organizationUrl>
+        </developer>
+        <developer>
+            <name>Li Lavar</name>
+            <organization>PayPal</organization>
+            <organizationUrl>http://www.paypal.com</organizationUrl>
+        </developer>
+        <developer>
+            <name>Liu Mark</name>
+            <organization>PayPal</organization>
+            <organizationUrl>http://www.paypal.com</organizationUrl>
+        </developer>
+        <developer>
+            <name>Zhong Xin</name>
+            <organization>PayPal</organization>
+            <organizationUrl>http://www.paypal.com</organizationUrl>
+        </developer>
+        <developer>
+            <name>Zhang Simon</name>
+            <organization>PayPal</organization>
+            <organizationUrl>http://www.paypal.com</organizationUrl>
+        </developer>
+    </developers>
     <scm>
         <developerConnection>scm:git:https://github.com/shifuml/shifu.git</developerConnection>
         <connection>scm:git:https://github.com/shifuml/shifu.git</connection>
