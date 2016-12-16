@@ -180,6 +180,10 @@ case ${COMMAND} in
         sanity_check
         java ${JAVA_OPTIONS} -classpath ${CLASSPATH} ${CLASS} "$@"
         ;;
+    "combo")
+    	sanity_check
+    	java ${JAVA_OPTIONS} -classpath ${CLASSPATH} ${CLASS} "$@"
+    	;;
     "syncUp")
         sanity_check
         java ${JAVA_OPTIONS} -classpath ${CLASSPATH} ${CLASS} "$@"

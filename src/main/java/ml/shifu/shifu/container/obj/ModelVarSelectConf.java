@@ -19,6 +19,8 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
+import java.util.Arrays;
+import java.util.HashMap;
 import java.util.Map;
 
 /**
@@ -201,5 +203,29 @@ public class ModelVarSelectConf {
     @JsonProperty
     public void setEpsilons(double[] epsilons) {
         this.epsilons = epsilons;
+    }
+
+    @Override
+    public ModelVarSelectConf clone() {
+        ModelVarSelectConf other = new ModelVarSelectConf();
+        if ( epsilons != null ) {
+            other.setEpsilons(Arrays.copyOf(epsilons, epsilons.length));
+        }
+        other.setFilterBy(filterBy);
+        other.setFilterBySE(filterBySE);
+        other.setFilterEnable(filterEnable);
+        other.setFilterNum(filterNum);
+        other.setForceEnable(forceEnable);
+        other.setForceRemoveColumnNameFile(forceRemoveColumnNameFile);
+        other.setForceSelectColumnNameFile(forceSelectColumnNameFile);
+        other.setMissingRateThreshold(missingRateThreshold);
+        if ( params != null ) {
+            other.setParams(new HashMap<String, Object>(params));
+        }
+        other.setWrapperBy(wrapperBy);
+        other.setWrapperEnabled(wrapperEnabled);
+        other.setWrapperNum(wrapperNum);
+        other.setWrapperRatio(wrapperRatio);
+        return other;
     }
 }
