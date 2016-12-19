@@ -15,10 +15,6 @@
  */
 package ml.shifu.shifu.container.obj;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
-import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
-import com.fasterxml.jackson.annotation.JsonProperty;
-
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -28,6 +24,11 @@ import ml.shifu.shifu.core.alg.LogisticRegressionTrainer;
 import ml.shifu.shifu.core.alg.NNTrainer;
 import ml.shifu.shifu.core.alg.SVMTrainer;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+
 /**
  * ModelTrainConf class
  */
@@ -36,6 +37,25 @@ public class ModelTrainConf {
 
     public static enum ALGORITHM {
         NN, LR, SVM, DT, RF, GBT
+    }
+
+    @JsonDeserialize(using = MultipleClassificationDeserializer.class)
+    public static enum MultipleClassification {
+        NATIVE, // means using NN regression or RF classification, not one vs all or one vs one
+        ONEVSALL, ONVVSREST, // the same as ONEVSALL
+        ONVVSONE; // ONEVSONE is not impl yet.
+
+        /**
+         * Get {@link MultipleClassification} by string, case can be ignored.
+         */
+        public static MultipleClassification of(String strategy) {
+            for(MultipleClassification element: values()) {
+                if(element.toString().equalsIgnoreCase(strategy)) {
+                    return element;
+                }
+            }
+            throw new IllegalArgumentException("cannot find such enum in MULTIPLE_CLASSIFICATION");
+        }
     }
 
     private Integer baggingNum = Integer.valueOf(5);
@@ -63,6 +83,8 @@ public class ModelTrainConf {
     private Map<String, Object> params;
 
     private Map<String, String> customPaths;
+
+    private MultipleClassification multiClassifyMethod = MultipleClassification.NATIVE;
 
     public ModelTrainConf() {
         customPaths = new HashMap<String, String>(1);
@@ -165,7 +187,7 @@ public class ModelTrainConf {
      * @param alg
      * @return
      */
-    public static Map<String, Object> createParamsByAlg(ALGORITHM alg) {
+    public static Map<String, Object> createParamsByAlg(ALGORITHM alg, ModelTrainConf trainConf) {
         Map<String, Object> params = new HashMap<String, Object>();
 
         if(ALGORITHM.NN.equals(alg)) {
@@ -180,7 +202,7 @@ public class ModelTrainConf {
             List<String> func = new ArrayList<String>();
             func.add("tanh");
             params.put(NNTrainer.ACTIVATION_FUNC, func);
-            // hide LearningDecay since confused for users 
+            // hide LearningDecay since confused for users
             // params.put("LearningDecay", 0.0);
             params.put("RegularizedConstant", 0.0);
         } else if(ALGORITHM.SVM.equals(alg)) {
@@ -188,22 +210,24 @@ public class ModelTrainConf {
             params.put(SVMTrainer.SVM_GAMMA, 1.0);
             params.put(SVMTrainer.SVM_CONST, 1.0);
         } else if(ALGORITHM.RF.equals(alg)) {
-            params.put("FeatureSubsetStrategy", "ALL");
+            params.put("FeatureSubsetStrategy", "TWOTHIRDS");
             params.put("MaxDepth", 10);
             params.put("MinInstancesPerNode", 1);
             params.put("MinInfoGain", 0.0);
-            params.put("MaxStatsMemoryMB", 256);
+            params.put("MaxStatsMemoryMB", 512);
             params.put("Impurity", "variance");
             params.put("Loss", "squared");
+            trainConf.setNumTrainEpochs(1000);
         } else if(ALGORITHM.GBT.equals(alg)) {
-            params.put("FeatureSubsetStrategy", "ALL");
+            params.put("FeatureSubsetStrategy", "TWOTHIRDS");
             params.put("MaxDepth", 10);
             params.put("MinInstancesPerNode", 1);
             params.put("MinInfoGain", 0.0);
-            params.put("MaxStatsMemoryMB", 256);
+            params.put("MaxStatsMemoryMB", 512);
             params.put("Impurity", "variance");
             params.put(NNTrainer.LEARNING_RATE, 0.1);
             params.put("Loss", "squared");
+            trainConf.setNumTrainEpochs(1000);
         } else if(ALGORITHM.LR.equals(alg)) {
             params.put(LogisticRegressionTrainer.LEARNING_RATE, 0.1);
             params.put("RegularizedConstant", 0.0);
@@ -303,4 +327,26 @@ public class ModelTrainConf {
         this.upSampleWeight = upSampleWeight;
     }
 
+    /**
+     * @return the multiClassifyMethod
+     */
+    @JsonIgnore
+    public MultipleClassification getMultiClassifyMethod() {
+        return multiClassifyMethod;
+    }
+
+    /**
+     * @param multiClassifyMethod
+     *            the multiClassifyMethod to set
+     */
+    @JsonProperty
+    public void setMultiClassifyMethod(MultipleClassification multiClassifyMethod) {
+        this.multiClassifyMethod = multiClassifyMethod;
+    }
+
+    @JsonIgnore
+    public boolean isOneVsAll() {
+        return this.multiClassifyMethod == MultipleClassification.ONEVSALL
+                || this.multiClassifyMethod == MultipleClassification.ONVVSREST;
+    }
 }

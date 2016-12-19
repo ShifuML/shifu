@@ -18,6 +18,7 @@ package ml.shifu.shifu.core.dtrain.nn;
 import java.io.File;
 import java.io.IOException;
 import java.util.List;
+import java.util.Map;
 import java.util.Properties;
 
 import ml.shifu.guagua.GuaguaRuntimeException;
@@ -39,6 +40,7 @@ import ml.shifu.shifu.core.dtrain.dataset.FloatFlatNetwork;
 import ml.shifu.shifu.core.dtrain.dataset.FloatMLDataPair;
 import ml.shifu.shifu.core.dtrain.dataset.FloatMLDataSet;
 import ml.shifu.shifu.core.dtrain.dataset.MemoryDiskFloatMLDataSet;
+import ml.shifu.shifu.core.dtrain.gs.GridSearch;
 import ml.shifu.shifu.util.CommonUtils;
 
 import org.apache.commons.lang.math.RandomUtils;
@@ -66,7 +68,8 @@ public abstract class AbstractNNWorker<VALUE extends Writable> extends
     /**
      * Default splitter used to split input record. Use one instance to prevent more news in Splitter.on.
      */
-    protected static final Splitter DEFAULT_SPLITTER = Splitter.on(CommonConstants.DEFAULT_COLUMN_SEPARATOR);
+    protected static final Splitter DEFAULT_SPLITTER = Splitter.on(CommonConstants.DEFAULT_COLUMN_SEPARATOR)
+            .trimResults();
 
     /**
      * Training data set
@@ -110,6 +113,11 @@ public abstract class AbstractNNWorker<VALUE extends Writable> extends
     protected int candidateCount;
 
     /**
+     * Trainer id used to tag bagging training job, starting from 0, 1, 2 ...
+     */
+    protected int trainerId = 0;
+
+    /**
      * input record size, inc one by one.
      */
     protected long count;
@@ -140,12 +148,12 @@ public abstract class AbstractNNWorker<VALUE extends Writable> extends
     protected boolean poissonSampler;
 
     /**
-     * PoissonDistribution which is used for possion sampling for bagging with replacement.
+     * PoissonDistribution which is used for poisson sampling for bagging with replacement.
      */
     protected PoissonDistribution rng = null;
 
     /**
-     * PoissonDistribution which is used for up sampleing positive records.
+     * PoissonDistribution which is used for up sampling positive records.
      */
     protected PoissonDistribution upSampleRng = null;
 
@@ -153,6 +161,13 @@ public abstract class AbstractNNWorker<VALUE extends Writable> extends
      * A instance from context properties which is from job configuration.
      */
     protected Properties props;
+
+    /**
+     * Indicates if there are cross validation data sets.
+     */
+    protected boolean isCrossValidation = false;
+
+    private Map<String, Object> validParams;
 
     protected boolean isUpSampleEnabled() {
         return this.upSampleRng != null;
@@ -214,6 +229,14 @@ public abstract class AbstractNNWorker<VALUE extends Writable> extends
 
         loadConfigFiles(context.getProps());
 
+        this.trainerId = Integer.valueOf(context.getProps().getProperty(CommonConstants.SHIFU_TRAINER_ID, "0"));
+        GridSearch gs = new GridSearch(modelConfig.getTrain().getParams());
+        this.validParams = this.modelConfig.getTrain().getParams();
+        if(gs.hasHyperParam()) {
+            this.validParams = gs.getParams(trainerId);
+            LOG.info("Start grid search master with params: {}", validParams);
+        }
+
         this.poissonSampler = Boolean.TRUE.toString().equalsIgnoreCase(
                 context.getProps().getProperty(NNConstants.NN_POISON_SAMPLER));
         this.rng = new PoissonDistribution(1.0d);
@@ -229,13 +252,15 @@ public abstract class AbstractNNWorker<VALUE extends Writable> extends
 
         int[] inputOutputIndex = DTrainUtils.getInputOutputCandidateCounts(this.columnConfigList);
         this.inputNodeCount = inputOutputIndex[0] == 0 ? inputOutputIndex[2] : inputOutputIndex[0];
-        this.outputNodeCount = modelConfig.isBinaryClassification() ? inputOutputIndex[1] : modelConfig.getTags()
-                .size();
+        // if is one vs all classification, outputNodeCount is set to 1
+        this.outputNodeCount = modelConfig.isRegression() ? inputOutputIndex[1]
+                : (modelConfig.getTrain().isOneVsAll() ? inputOutputIndex[1] : modelConfig.getTags().size());
         this.candidateCount = inputOutputIndex[2];
 
         this.isDry = Boolean.TRUE.toString().equalsIgnoreCase(
                 context.getProps().getProperty(CommonConstants.SHIFU_DRY_DTRAIN));
-
+        this.isCrossValidation = (modelConfig.getValidationDataSetRawPath() != null && !"".equals(modelConfig
+                .getValidationDataSetRawPath()));
         if(isOnDisk()) {
             LOG.info("NNWorker is loading data into disk.");
             try {
@@ -351,9 +376,9 @@ public abstract class AbstractNNWorker<VALUE extends Writable> extends
 
     @SuppressWarnings("unchecked")
     private void initGradient(FloatMLDataSet training, FloatMLDataSet testing, double[] weights, boolean isCrossOver) {
-        int numLayers = (Integer) getModelConfig().getParams().get(NNTrainer.NUM_HIDDEN_LAYERS);
-        List<String> actFunc = (List<String>) getModelConfig().getParams().get(NNTrainer.ACTIVATION_FUNC);
-        List<Integer> hiddenNodeList = (List<Integer>) getModelConfig().getParams().get(NNTrainer.NUM_HIDDEN_NODES);
+        int numLayers = (Integer) this.validParams.get(NNTrainer.NUM_HIDDEN_LAYERS);
+        List<String> actFunc = (List<String>) this.validParams.get(NNTrainer.ACTIVATION_FUNC);
+        List<Integer> hiddenNodeList = (List<Integer>) this.validParams.get(NNTrainer.NUM_HIDDEN_NODES);
 
         BasicNetwork network = DTrainUtils.generateNetwork(this.inputNodeCount, this.outputNodeCount, numLayers,
                 actFunc, hiddenNodeList, false);
@@ -404,11 +429,22 @@ public abstract class AbstractNNWorker<VALUE extends Writable> extends
         LOG.info("        - # Records of the Validation Set: {}.", this.testingData.getRecordCount());
     }
 
+    protected void addDataPairToDataSet(long hashcode, FloatMLDataPair pair) {
+        addDataPairToDataSet(hashcode, pair, false);
+    }
+
     /**
      * Add data pair to data set according to setting parameters. Still set hashCode to long to make double and long
      * friendly.
      */
-    protected void addDataPairToDataSet(long hashcode, FloatMLDataPair pair) {
+    protected void addDataPairToDataSet(long hashcode, FloatMLDataPair pair, boolean isTesting) {
+        if(isTesting) {
+            this.testingData.add(pair);
+            return;
+        } else if(this.isCrossValidation && (!isTesting)) {
+            this.trainingData.add(pair);
+            return;
+        }
         double crossValidationRate = this.modelConfig.getCrossValidationRate();
         if(this.modelConfig.isFixInitialInput()) {
             long longCrossValidation = Double.valueOf(crossValidationRate * 100).longValue();

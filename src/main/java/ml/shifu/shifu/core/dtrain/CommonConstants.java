@@ -49,4 +49,16 @@ public interface CommonConstants {
 
     public static final String GBT_ALG_NAME = "GBT";
 
+    public static final String GS_VALIDATION_ERROR = "gridsearch.validation.error";
+
+    public static final String CROSS_VALIDATION_DIR = "shifu.crossValidation.dir";
+
+    public static final String SHIFU_TRAIN_BAGGING_INPARALLEL = "shifu.train.bagging.inparallel";
+
+    public static final String CONTINUOUS_TRAINING = "shifu.continuous.training";
+
+    public static final String SHIFU_DT_MASTER_CHECKPOINT_INTERVAL = "shifu.dt.master.checkpoint.interval";
+    
+    public static final String SHIFU_DT_MASTER_CHECKPOINT_FOLDER = "shifu.dt.master.checkpoint.folder";
+
 }

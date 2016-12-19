@@ -26,14 +26,16 @@ import ml.shifu.shifu.core.dtrain.dt.DTMasterParams;
 import ml.shifu.shifu.core.dtrain.dt.DTWorker;
 import ml.shifu.shifu.core.dtrain.dt.DTWorkerParams;
 
+//import org.testng.annotations.Test;
+
 /**
- * TODO
+ * RF & GBT d-train logic change
  * 
  * @author Zhang David (pengzhang@paypal.com)
  */
 public class DTTest {
 
-    //@Test
+    // @Test
     public void testDtApp() throws IOException {
         Properties props = new Properties();
         props.setProperty(GuaguaConstants.MASTER_COMPUTABLE_CLASS, DTMaster.class.getName());
@@ -48,6 +50,28 @@ public class DTTest {
                 getClass().getResource("/dttest/config/ColumnConfig.json").toString());
 
         props.setProperty(GuaguaConstants.GUAGUA_INPUT_DIR, getClass().getResource("/dttest/data/").toString());
+
+        GuaguaUnitDriver<DTMasterParams, DTWorkerParams> driver = new GuaguaMRUnitDriver<DTMasterParams, DTWorkerParams>(
+                props);
+
+        driver.run();
+    }
+
+    // @Test
+    public void testCamDtApp() throws IOException {
+        Properties props = new Properties();
+        props.setProperty(GuaguaConstants.MASTER_COMPUTABLE_CLASS, DTMaster.class.getName());
+        props.setProperty(GuaguaConstants.WORKER_COMPUTABLE_CLASS, DTWorker.class.getName());
+        props.setProperty(GuaguaConstants.GUAGUA_ITERATION_COUNT, "20");
+        props.setProperty(GuaguaConstants.GUAGUA_MASTER_RESULT_CLASS, DTMasterParams.class.getName());
+        props.setProperty(GuaguaConstants.GUAGUA_WORKER_RESULT_CLASS, DTWorkerParams.class.getName());
+        props.setProperty(CommonConstants.MODELSET_SOURCE_TYPE, "LOCAL");
+        props.setProperty(CommonConstants.SHIFU_MODEL_CONFIG,
+                getClass().getResource("/camdttest/config/ModelConfig.json").toString());
+        props.setProperty(CommonConstants.SHIFU_COLUMN_CONFIG,
+                getClass().getResource("/camdttest/config/ColumnConfig.json").toString());
+
+        props.setProperty(GuaguaConstants.GUAGUA_INPUT_DIR, getClass().getResource("/camdttest/data/").toString());
 
         GuaguaUnitDriver<DTMasterParams, DTWorkerParams> driver = new GuaguaMRUnitDriver<DTMasterParams, DTWorkerParams>(
                 props);

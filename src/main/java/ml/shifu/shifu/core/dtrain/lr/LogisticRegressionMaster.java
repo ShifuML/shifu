@@ -38,7 +38,6 @@ import ml.shifu.shifu.core.dtrain.CommonConstants;
 import ml.shifu.shifu.core.dtrain.DTrainUtils;
 import ml.shifu.shifu.core.dtrain.RegulationLevel;
 import ml.shifu.shifu.core.dtrain.Weight;
-import ml.shifu.shifu.core.dtrain.nn.NNConstants;
 import ml.shifu.shifu.fs.ShifuFileUtils;
 import ml.shifu.shifu.util.CommonUtils;
 
@@ -145,8 +144,8 @@ public class LogisticRegressionMaster extends
         this.regularizedConstant = NumberFormatUtils.getDouble(rconstant == null ? "" : rconstant.toString(), 0d);
         
         this.isContinuousEnabled = Boolean.TRUE.toString().equalsIgnoreCase(
-                context.getProps().getProperty(NNConstants.NN_CONTINUOUS_TRAINING));
-        LOG.info("continuousEnabled:.", this.isContinuousEnabled);
+                context.getProps().getProperty(CommonConstants.CONTINUOUS_TRAINING));
+        LOG.info("continuousEnabled: {}", this.isContinuousEnabled);
 
 
         // not initialized and not first iteration, should be fault tolerence, recover state in LogisticRegressionMaster

@@ -60,7 +60,7 @@ public class NNParquetWorker extends AbstractNNWorker<Tuple> {
         this.initFieldList();
 
         super.count += 1;
-        if((super.count) % 100000 == 0) {
+        if((super.count) % 2000 == 0) {
             LOG.info("Read {} records.", super.count);
         }
 
@@ -102,19 +102,22 @@ public class NNParquetWorker extends AbstractNNWorker<Tuple> {
                 if(element instanceof Float) {
                     floatValue = (Float) element;
                 } else {
-                    floatValue = NumberFormatUtils.getFloat(element.toString().trim(), 0f);
+                    // check here to avoid bad performance in failed NumberFormatUtils.getFloat(input, 0f)
+                    floatValue = element.toString().length() == 0 ? 0f : NumberFormatUtils.getFloat(element.toString(),
+                            0f);
                 }
             }
             // no idea about why NaN in input data, we should process it as missing value TODO , according to norm type
-            if(Double.isNaN(floatValue)) {
-                floatValue = 0f;
-            }
+            floatValue = (Float.isNaN(floatValue) || Double.isNaN(floatValue)) ? 0f : floatValue;
+
             if(index == (super.inputNodeCount + super.outputNodeCount)) {
                 assert element != null;
                 if(element != null && element instanceof Float) {
                     significance = (Float) element;
                 } else {
-                    significance = NumberFormatUtils.getFloat(element.toString().trim(), 1f);;
+                    // check here to avoid bad performance in failed NumberFormatUtils.getFloat(input, 0f)
+                    significance = element.toString().length() == 0 ? 1f : NumberFormatUtils.getFloat(
+                            element.toString(), 1f);
                 }
                 // break here if we reach weight column which is last column
                 break;
@@ -125,13 +128,29 @@ public class NNParquetWorker extends AbstractNNWorker<Tuple> {
                     if(element != null && element instanceof Float) {
                         significance = (Float) element;
                     } else {
-                        significance = NumberFormatUtils.getFloat(element.toString().trim(), 1f);;
+                        // check here to avoid bad performance in failed NumberFormatUtils.getFloat(input, 0f)
+                        significance = element.toString().length() == 0 ? 1f : NumberFormatUtils.getFloat(
+                                element.toString(), 1f);
                     }
                     break;
                 } else {
                     ColumnConfig columnConfig = super.columnConfigList.get(columnIndex);
                     if(columnConfig != null && columnConfig.isTarget()) {
-                        ideal[outputIndex++] = floatValue;
+                        if(modelConfig.isRegression()) {
+                            ideal[outputIndex++] = floatValue;
+                        } else {
+                            if(modelConfig.getTrain().isOneVsAll()) {
+                                // if one vs all, set correlated idea value according to trainerId which means in
+                                // trainer
+                                // with id 0, target 0 is treated with 1, other are 0. Such target value are set to
+                                // index of
+                                // tags like [0, 1, 2, 3] compared with ["a", "b", "c", "d"]
+                                ideal[outputIndex++] = Float.compare(floatValue, trainerId) == 0 ? 1f : 0f;
+                            } else {
+                                int ideaIndex = (int) floatValue;
+                                ideal[ideaIndex] = 1f;
+                            }
+                        }
                     } else {
                         if(super.inputNodeCount == super.candidateCount) {
                             // no variable selected, good candidate but not meta and not target choosed
@@ -164,7 +183,7 @@ public class NNParquetWorker extends AbstractNNWorker<Tuple> {
         super.sampleCount += 1;
 
         FloatMLDataPair pair = new BasicFloatMLDataPair(new BasicFloatMLData(inputs), new BasicFloatMLData(ideal));
-        if(modelConfig.isBinaryClassification() && isUpSampleEnabled() && Double.compare(ideal[0], 1d) == 0) {
+        if(modelConfig.isRegression() && isUpSampleEnabled() && Double.compare(ideal[0], 1d) == 0) {
             // Double.compare(ideal[0], 1d) == 0 means positive tags; sample + 1 to avoid sample count to 0
             pair.setSignificance(significance * (super.upSampleRng.sample() + 1));
         } else {

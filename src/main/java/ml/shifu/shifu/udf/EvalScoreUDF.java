@@ -50,6 +50,11 @@ public class EvalScoreUDF extends AbstractTrainerUDF<Tuple> {
 
     private int modelCnt;
 
+    /**
+     * A simple weight exception validation: if over 5000 throw exceptions
+     */
+    private int weightExceptions;
+
     public EvalScoreUDF(String source, String pathModelConfig, String pathColumnConfig, String evalSetName)
             throws IOException {
         super(source, pathModelConfig, pathColumnConfig);
@@ -76,15 +81,19 @@ public class EvalScoreUDF extends AbstractTrainerUDF<Tuple> {
                 this.headers[i] = i + "";
             }
         }
-
-        List<BasicML> models = CommonUtils.loadBasicModels(modelConfig, this.columnConfigList, evalConfig, evalConfig
-                .getDataSet().getSource());
-        modelRunner = new ModelRunner(modelConfig, columnConfigList, this.headers, evalConfig.getDataSet()
-                .getDataDelimiter(), models);
-        modelCnt = models.size();
+        // move model runner construction in exec to avoid OOM error in client side if model is too big like RF
     }
 
     public Tuple exec(Tuple input) throws IOException {
+        if(modelRunner == null) {
+            // here to initialize modelRunner, this is moved from constructor to here to avoid OOM in client side.
+            // UDF in pig client will be initialized to get some metadata issues
+            List<BasicML> models = CommonUtils.loadBasicModels(modelConfig, this.columnConfigList, evalConfig,
+                    evalConfig.getDataSet().getSource());
+            modelRunner = new ModelRunner(modelConfig, columnConfigList, this.headers, evalConfig.getDataSet()
+                    .getDataDelimiter(), models);
+            modelCnt = models.size();
+        }
         Map<String, String> rawDataMap = CommonUtils.convertDataIntoMap(input, this.headers);
         if(MapUtils.isEmpty(rawDataMap)) {
             return null;
@@ -95,16 +104,18 @@ public class EvalScoreUDF extends AbstractTrainerUDF<Tuple> {
         // filter invalid tag record out
         // disable the tag check, since there is no bad tag in eval data set
         // and user just want to score the data, but don't run performance evaluation
-        /*if(!tagSet.contains(tag)) {
-            if(System.currentTimeMillis() % 100 == 0) {
-                log.warn("Invalid tag: " + tag);
-            }
-            if(isPigEnabled(Constants.SHIFU_GROUP_COUNTER, "INVALID_TAG")) {
-                PigStatusReporter.getInstance().getCounter(Constants.SHIFU_GROUP_COUNTER, Constants.COUNTER_RECORDS)
-                        .increment(1);
-            }
-            return null;
-        }*/
+        /*
+         * if(!tagSet.contains(tag)) {
+         * if(System.currentTimeMillis() % 100 == 0) {
+         * log.warn("Invalid tag: " + tag);
+         * }
+         * if(isPigEnabled(Constants.SHIFU_GROUP_COUNTER, "INVALID_TAG")) {
+         * PigStatusReporter.getInstance().getCounter(Constants.SHIFU_GROUP_COUNTER, Constants.COUNTER_RECORDS)
+         * .increment(1);
+         * }
+         * return null;
+         * }
+         */
 
         CaseScoreResult cs = modelRunner.compute(rawDataMap);
         if(cs == null) {
@@ -128,7 +139,7 @@ public class EvalScoreUDF extends AbstractTrainerUDF<Tuple> {
 
         tuple.append(weight);
 
-        if(modelConfig.isBinaryClassification()) {
+        if(modelConfig.isRegression()) {
             tuple.append(cs.getAvgScore());
             tuple.append(cs.getMaxScore());
             tuple.append(cs.getMinScore());
@@ -156,7 +167,28 @@ public class EvalScoreUDF extends AbstractTrainerUDF<Tuple> {
 
     @SuppressWarnings("deprecation")
     private void incrementTagCounters(String tag, String weight) {
-        long weightLong = (long) (Double.parseDouble(weight) * Constants.EVAL_COUNTER_WEIGHT_SCALE);
+        if(tag == null || weight == null) {
+            log.warn("tag is empty " + tag + " or weight is empty " + weight);
+            return;
+        }
+        // TODO default weight here = 1 ? or throw exceptions
+        double dWeight = 1.0;
+        if(StringUtils.isNotBlank(weight)) {
+            try {
+                dWeight = Double.parseDouble(weight);
+            } catch (Exception e) {
+                if(isPigEnabled(Constants.SHIFU_GROUP_COUNTER, "weight_exceptions")) {
+                    PigStatusReporter.getInstance().getCounter(Constants.SHIFU_GROUP_COUNTER, "weight_exceptions")
+                            .increment(1);
+                }
+                weightExceptions += 1;
+                if(weightExceptions > 5000) {
+                    throw new IllegalStateException(
+                            "Please check weight column in eval, exceptional weight count is over 5000");
+                }
+            }
+        }
+        long weightLong = (long) (dWeight * Constants.EVAL_COUNTER_WEIGHT_SCALE);
 
         if(isPigEnabled(Constants.SHIFU_GROUP_COUNTER, Constants.COUNTER_RECORDS)) {
             PigStatusReporter.getInstance().getCounter(Constants.SHIFU_GROUP_COUNTER, Constants.COUNTER_RECORDS)
@@ -199,7 +231,7 @@ public class EvalScoreUDF extends AbstractTrainerUDF<Tuple> {
                     : evalConfig.getDataSet().getWeightColumnName();
             tupleSchema.add(new FieldSchema(SCHEMA_PREFIX + weightName, DataType.CHARARRAY));
 
-            if(modelConfig.isBinaryClassification()) {
+            if(modelConfig.isRegression()) {
                 tupleSchema.add(new FieldSchema(SCHEMA_PREFIX + "mean", DataType.INTEGER));
                 tupleSchema.add(new FieldSchema(SCHEMA_PREFIX + "max", DataType.INTEGER));
                 tupleSchema.add(new FieldSchema(SCHEMA_PREFIX + "min", DataType.INTEGER));

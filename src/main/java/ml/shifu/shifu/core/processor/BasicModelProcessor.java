@@ -43,6 +43,7 @@ import ml.shifu.shifu.util.Environment;
 import ml.shifu.shifu.util.JSONUtils;
 
 import org.apache.commons.collections.CollectionUtils;
+import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -85,12 +86,12 @@ public class BasicModelProcessor {
                 break;
             default:
                 loadColumnConfig();
-                validateColumnNameUnique();
+                validateColumnConfig();
                 break;
         }
     }
 
-    private void validateColumnNameUnique() {
+    private void validateColumnConfig() {
         if(this.columnConfigList == null) {
             return;
         }
@@ -101,6 +102,17 @@ public class BasicModelProcessor {
                         config.getColumnName());
             }
             names.add(config.getColumnName());
+        }
+
+        if(!names.contains(modelConfig.getTargetColumnName())) {
+            throw new IllegalArgumentException("target column " + modelConfig.getTargetColumnName()
+                    + " does not exist.");
+        }
+
+        if(StringUtils.isNotBlank(modelConfig.getWeightColumnName())
+                && !names.contains(modelConfig.getWeightColumnName())) {
+            throw new IllegalArgumentException("weight column " + modelConfig.getWeightColumnName()
+                    + " does not exist.");
         }
     }
 

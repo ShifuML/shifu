@@ -21,7 +21,9 @@ import java.io.File;
 import java.io.IOException;
 import java.util.List;
 import java.util.Properties;
+import java.util.concurrent.TimeUnit;
 
+import ml.shifu.guagua.ComputableMonitor;
 import ml.shifu.guagua.hadoop.io.GuaguaLineRecordReader;
 import ml.shifu.guagua.hadoop.io.GuaguaWritableAdapter;
 import ml.shifu.guagua.io.Bytable;
@@ -64,6 +66,7 @@ import com.google.common.base.Splitter;
  * <p>
  * L1 and l2 regulations are supported by configuration: RegularizedConstant in model params of ModelConfig.json.
  */
+@ComputableMonitor(timeUnit = TimeUnit.SECONDS, duration = 240)
 public class LogisticRegressionWorker
         extends
         AbstractWorkerComputable<LogisticRegressionParams, LogisticRegressionParams, GuaguaWritableAdapter<LongWritable>, GuaguaWritableAdapter<Text>> {
@@ -141,6 +144,11 @@ public class LogisticRegressionWorker
      */
     protected PoissonDistribution upSampleRng = null;
 
+    /**
+     * Indicates if there are cross validation data sets.
+     */
+    protected boolean isCrossValidation = false;
+
     protected boolean isUpSampleEnabled() {
         return this.upSampleRng != null;
     }
@@ -157,6 +165,9 @@ public class LogisticRegressionWorker
         this.inputNum = inputOutputIndex[0] == 0 ? inputOutputIndex[2] : inputOutputIndex[0];
         this.outputNum = inputOutputIndex[1];
         this.candidateNum = inputOutputIndex[2];
+        this.isCrossValidation = (modelConfig.getValidationDataSetRawPath() != null && !"".equals(modelConfig
+                .getValidationDataSetRawPath()));
+
         if(this.inputNum == 0) {
             throw new IllegalStateException("No any variables are selected, please try variable select step firstly.");
         }
@@ -304,13 +315,15 @@ public class LogisticRegressionWorker
         long hashcode = 0;
         double significance = CommonConstants.DEFAULT_SIGNIFICANCE_VALUE;
         for(String unit: splitter.split(line)) {
-            float floatValue = NumberFormatUtils.getFloat(unit.trim(), 0f);
+            // check here to avoid bad performance in failed NumberFormatUtils.getFloat(input, 0f)
+            float floatValue = unit.length() == 0 ? 0f : NumberFormatUtils.getFloat(unit, 0f);
             // no idea about why NaN in input data, we should process it as missing value TODO , according to norm type
-            if(Double.isNaN(floatValue)) {
-                floatValue = 0f;
-            }
+            floatValue = (Float.isNaN(floatValue) || Double.isNaN(floatValue)) ? 0f : floatValue;
+
             if(index == this.columnConfigList.size()) {
-                significance = NumberFormatUtils.getDouble(unit.trim(), 1.0d);
+                // check here to avoid bad performance in failed NumberFormatUtils.getDouble(input, 1)
+                significance = unit.length() == 0 ? 1f : NumberFormatUtils.getDouble(unit, 1d);
+                // the last field is significance, break here
                 break;
             } else {
                 ColumnConfig columnConfig = this.columnConfigList.get(index);
@@ -347,11 +360,15 @@ public class LogisticRegressionWorker
 
         this.sampleCount += 1;
 
-        if(modelConfig.isBinaryClassification() && isUpSampleEnabled() && Double.compare(outputData[0], 1d) == 0) {
+        if(modelConfig.isRegression() && isUpSampleEnabled() && Double.compare(outputData[0], 1d) == 0) {
             // Double.compare(ideal[0], 1d) == 0 means positive tags; sample + 1 to avoid sample count to 0
             significance *= (this.upSampleRng.sample() + 1);
         }
-        this.addDataPairToDataSet(hashcode, new Data(inputData, outputData, significance));
+        boolean isTesting = false;
+        if(context.getAttachment() != null && context.getAttachment() instanceof Boolean) {
+            isTesting = (Boolean) context.getAttachment();
+        }
+        this.addDataPairToDataSet(hashcode, new Data(inputData, outputData, significance), isTesting);
     }
 
     private void loadConfigFiles(final Properties props) {
@@ -371,7 +388,14 @@ public class LogisticRegressionWorker
      * Add data pair to data set according to setting parameters. Still set hashCode to long to make double and long
      * friendly.
      */
-    private void addDataPairToDataSet(long hashcode, Data record) {
+    protected void addDataPairToDataSet(long hashcode, Data record, boolean isTesting) {
+        if(isTesting) {
+            this.testingData.append(record);
+            return;
+        } else if(this.isCrossValidation && (!isTesting)) {
+            this.trainingData.append(record);
+            return;
+        }
         double crossValidationRate = this.modelConfig.getCrossValidationRate();
         if(this.modelConfig.isFixInitialInput()) {
             long longCrossValidation = Double.valueOf(crossValidationRate * 100).longValue();

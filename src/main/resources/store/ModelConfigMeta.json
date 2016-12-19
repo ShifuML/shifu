@@ -66,6 +66,10 @@
                 "type": "text",
                 "directive": "input"
             }, {
+                "name": "validationDataPath",
+                "type": "text",
+                "directive": "input"
+            }, {
                 "name": "dataDelimiter",
                 "type": "text",
                 "directive": "input",
@@ -432,7 +436,6 @@
                 "type": "text",
                 "directive": "input",
                 "defval" : ""
-
             }, {
                 "name": "epochsPerIteration",
                 "type": "number",
@@ -453,6 +456,17 @@
                 "type": "number",
                 "directive":"input",
                 "defval": 4
+            }, {
+                "name": "multiClassifyMethod",
+                "type": "text",
+                "directive": "select",
+                "defval" : "NONE",
+                "options": [
+                    {"label":"NATIVE", "value":"NATIVE"},
+                    {"label":"ONEVSALL", "value":"ONEVSALL"},
+                    {"label":"ONVVSREST", "value":"ONVVSREST"},
+                    {"label":"ONVVSONE", "value":"ONVVSONE"}
+                ]
             }, {
                 "name": "upSampleWeight",
                 "type": "number",
@@ -560,6 +574,7 @@
                         "defval" : "variance",
                         "options": [
                             {"label": "Variance", "value":"variance"},
+                            {"label": "FriedmanMSE", "value":"friedmanmse"},
                             {"label": "Entropy", "value":"entropy"},
                             {"label": "Gini", "value":"gini"}
                         ]
@@ -584,6 +599,7 @@
                         "defval" : "squared",
                         "options": [
                             {"label": "Squared", "value":"squared"},
+                            {"label": "HalfGradSquared", "value":"halfgradsquared"},
                             {"label": "Absolute", "value":"absolute"},
                             {"label": "Log", "value":"log"}
                         ]
@@ -680,6 +696,10 @@
                         ]
                     }, {
                         "name": "dataPath",
+                        "type": "text",
+                        "directive": "input"
+                    },{
+                        "name": "testDataPath",
                         "type": "text",
                         "directive": "input"
                     }, {

@@ -31,11 +31,13 @@ import ml.shifu.shifu.container.obj.ModelNormalizeConf.NormType;
 import ml.shifu.shifu.container.obj.ModelStatsConf.BinningAlgorithm;
 import ml.shifu.shifu.container.obj.ModelStatsConf.BinningMethod;
 import ml.shifu.shifu.container.obj.ModelTrainConf;
+import ml.shifu.shifu.container.obj.ModelTrainConf.MultipleClassification;
 import ml.shifu.shifu.container.obj.ModelVarSelectConf;
 import ml.shifu.shifu.container.obj.RawSourceData;
 import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
 import ml.shifu.shifu.core.alg.NNTrainer;
 import ml.shifu.shifu.core.dtrain.CommonConstants;
+import ml.shifu.shifu.core.dtrain.gs.GridSearch;
 import ml.shifu.shifu.fs.ShifuFileUtils;
 import ml.shifu.shifu.util.CommonUtils;
 
@@ -93,7 +95,7 @@ public class ModelInspector {
             return result;
         }
 
-        if(modelConfig.isMultiClassification()) {
+        if(modelConfig.isClassification()) {
             if(modelConfig.getBasic().getRunMode() == RunMode.LOCAL
                     || modelConfig.getDataSet().getSource() == SourceType.LOCAL) {
                 ValidateResult tmpResult = new ValidateResult(true);
@@ -127,26 +129,31 @@ public class ModelInspector {
                 // add validation to avoid user to make mistake
                 result = ValidateResult.mergeResult(result, checkColumnConf(modelConfig));
             }
-            if(modelConfig.isMultiClassification()) {
-                if(!"nn".equalsIgnoreCase((modelConfig.getTrain().getAlgorithm()))) {
-                    ValidateResult tmpResult = new ValidateResult(true);
-                    tmpResult
-                            .addCause("Multiple classification is only effective in neural network (nn) training method.");
-                    result = ValidateResult.mergeResult(result, tmpResult);
-                }
-            }
         } else if(ModelStep.NORMALIZE.equals(modelStep)) {
             result = ValidateResult.mergeResult(result, checkNormSetting(modelConfig, modelConfig.getNormalize()));
         } else if(ModelStep.TRAIN.equals(modelStep)) {
-            result = ValidateResult.mergeResult(result, checkTrainSetting(modelConfig.getTrain()));
-            if(modelConfig.isMultiClassification()) {
-                if(!"nn".equalsIgnoreCase((modelConfig.getTrain().getAlgorithm()))) {
+            result = ValidateResult.mergeResult(result, checkTrainSetting(modelConfig, modelConfig.getTrain()));
+            if(modelConfig.isClassification()
+                    && modelConfig.getTrain().getMultiClassifyMethod() == MultipleClassification.NATIVE) {
+                if(!"nn".equalsIgnoreCase((modelConfig.getTrain().getAlgorithm()))
+                        && !CommonConstants.RF_ALG_NAME.equalsIgnoreCase(modelConfig.getTrain().getAlgorithm())) {
                     ValidateResult tmpResult = new ValidateResult(true);
                     tmpResult
-                            .addCause("Multiple classification is only effective in neural network (nn) training method.");
+                            .addCause("Native multiple classification is only effective in neural network (nn) or random forest (rf) training method.");
                     result = ValidateResult.mergeResult(result, tmpResult);
                 }
             }
+
+            if(modelConfig.isClassification() && modelConfig.getTrain().isOneVsAll()) {
+                if(!CommonUtils.isDesicionTreeAlgorithm(modelConfig.getAlgorithm())
+                        && !modelConfig.getAlgorithm().equalsIgnoreCase("nn")) {
+                    ValidateResult tmpResult = new ValidateResult(true);
+                    tmpResult
+                            .addCause("OneVSAll multiple classification is only effective in gradient boosted trees (GBT) or random forest (RF) or Neural Network (NN) training method.");
+                    result = ValidateResult.mergeResult(result, tmpResult);
+                }
+            }
+
         } else if(ModelStep.POSTTRAIN.equals(modelStep)) {
             // TODO
         } else if(ModelStep.EVAL.equals(modelStep)) {
@@ -247,20 +254,17 @@ public class ModelInspector {
     private ValidateResult checkStatsConf(ModelConfig modelConfig) throws IOException {
         ValidateResult result = new ValidateResult(true);
 
-        if(modelConfig.isMultiClassification()
+        if(modelConfig.isClassification()
                 && (modelConfig.getBinningMethod() == BinningMethod.EqualPositive || modelConfig.getBinningMethod() == BinningMethod.EqualNegtive)) {
-            result = ValidateResult
-                    .mergeResult(
-                            result,
-                            new ValidateResult(
-                                    true,
-                                    Arrays.asList("Multiple classification cannot leverage EqualNegtive and EqualPositive binning.")));
+            ValidateResult tmpResult = new ValidateResult(false,
+                    Arrays.asList("Multiple classification cannot leverage EqualNegtive and EqualPositive binning."));
+            result = ValidateResult.mergeResult(result, tmpResult);
         }
 
-        if(modelConfig.isMultiClassification() && modelConfig.getBinningAlgorithm() != BinningAlgorithm.SPDTI) {
+        if(modelConfig.isClassification() && modelConfig.getBinningAlgorithm() != BinningAlgorithm.SPDTI) {
             result = ValidateResult.mergeResult(
                     result,
-                    new ValidateResult(true, Arrays
+                    new ValidateResult(false, Arrays
                             .asList("Only SPDTI binning algorithm are supported with multiple classification.")));
 
         }
@@ -297,11 +301,11 @@ public class ModelInspector {
             }
         }
 
-        if(modelConfig.isMultiClassification()) {
+        if(modelConfig.isClassification()) {
             if(varSelect.getWrapperEnabled()) {
                 result = ValidateResult.mergeResult(
                         result,
-                        new ValidateResult(true, Arrays
+                        new ValidateResult(false, Arrays
                                 .asList("Multiple classification is not enabled for wrapperBy variable selection.")));
             }
         }
@@ -421,7 +425,7 @@ public class ModelInspector {
                 || modelConfig.getNormalize().getNormType() == NormType.OLD_ZSCALE
                 || modelConfig.getNormalize().getNormType() == NormType.OLD_ZSCORE;
 
-        if(modelConfig.isMultiClassification() && !isZScore) {
+        if(modelConfig.isClassification() && !isZScore) {
             ValidateResult tmpResult = new ValidateResult(false);
             tmpResult.getCauses().add("NormType 'ZSCALE|ZSCORE' is the only norm type for multiple classification.");
             result = ValidateResult.mergeResult(result, tmpResult);
@@ -441,7 +445,7 @@ public class ModelInspector {
      * @return @ValidateResult
      */
     @SuppressWarnings("unchecked")
-    private ValidateResult checkTrainSetting(ModelTrainConf train) {
+    private ValidateResult checkTrainSetting(ModelConfig modelConfig, ModelTrainConf train) {
         ValidateResult result = new ValidateResult(true);
 
         if(train.getBaggingNum() == null || train.getBaggingNum() < 0) {
@@ -492,158 +496,187 @@ public class ModelInspector {
         if(train.getConvergenceThreshold() != null && train.getConvergenceThreshold().compareTo(0.0) < 0) {
             ValidateResult tmpResult = new ValidateResult(true);
             tmpResult.setStatus(false);
-            tmpResult.getCauses().add("'threshold' should be large than or equal to 0.0 if set.");
+            tmpResult.getCauses().add("'threshold' should be larger than or equal to 0.0 if set.");
             result = ValidateResult.mergeResult(result, tmpResult);
         }
 
-        if(train.getAlgorithm().equalsIgnoreCase("nn")) {
-            Map<String, Object> params = train.getParams();
-            int layerCnt = (Integer) params.get(NNTrainer.NUM_HIDDEN_LAYERS);
-            if(layerCnt < 0) {
-                ValidateResult tmpResult = new ValidateResult(true);
-                tmpResult.setStatus(false);
-                tmpResult.getCauses().add("The number of hidden layers should be >= 0 in train configuration");
-                result = ValidateResult.mergeResult(result, tmpResult);
-            }
+        if(modelConfig.isClassification() && train.isOneVsAll()
+                && !CommonUtils.isDesicionTreeAlgorithm(train.getAlgorithm())
+                && !train.getAlgorithm().equalsIgnoreCase("nn")) {
+            ValidateResult tmpResult = new ValidateResult(true);
+            tmpResult.setStatus(false);
+            tmpResult.getCauses().add(
+                    "'one vs all' or 'one vs rest' is only enabled with 'RF' or 'GBT' or 'NN' algorithm");
+            result = ValidateResult.mergeResult(result, tmpResult);
+        }
 
-            List<Integer> hiddenNode = (List<Integer>) params.get(NNTrainer.NUM_HIDDEN_NODES);
-            List<String> activateFucs = (List<String>) params.get(NNTrainer.ACTIVATION_FUNC);
-
-            if(hiddenNode.size() != activateFucs.size() || layerCnt != activateFucs.size()) {
+        if(modelConfig.isClassification() && train.getMultiClassifyMethod() == MultipleClassification.NATIVE
+                && train.getAlgorithm().equalsIgnoreCase(CommonConstants.RF_ALG_NAME)) {
+            Object impurity = train.getParams().get("Impurity");
+            if(impurity != null && !"entropy".equalsIgnoreCase(impurity.toString())
+                    && !"gini".equalsIgnoreCase(impurity.toString())) {
                 ValidateResult tmpResult = new ValidateResult(true);
                 tmpResult.setStatus(false);
                 tmpResult.getCauses().add(
-                        NNTrainer.NUM_HIDDEN_LAYERS + "/SIZE(" + NNTrainer.NUM_HIDDEN_NODES + ")" + "/SIZE("
-                                + NNTrainer.ACTIVATION_FUNC + ")" + " should be equal in train configuration");
+                        "Impurity should be in [entropy,gini] if native mutiple classification in RF.");
                 result = ValidateResult.mergeResult(result, tmpResult);
-            }
-
-            Double learningRate = Double.valueOf(params.get(NNTrainer.LEARNING_RATE).toString());
-            if(learningRate != null && (learningRate.compareTo(Double.valueOf(0)) <= 0)) {
-                ValidateResult tmpResult = new ValidateResult(true);
-                tmpResult.setStatus(false);
-                tmpResult.getCauses().add("Learning rate should be larger than 0.");
-                result = ValidateResult.mergeResult(result, tmpResult);
-            }
-
-            Object learningDecayO = params.get("LearningDecay");
-            if(learningDecayO != null) {
-                Double learningDecay = Double.valueOf(learningDecayO.toString());
-                if(learningDecay != null
-                        && ((learningDecay.compareTo(Double.valueOf(0)) < 0) || (learningDecay.compareTo(Double
-                                .valueOf(1)) >= 0))) {
-                    ValidateResult tmpResult = new ValidateResult(true);
-                    tmpResult.setStatus(false);
-                    tmpResult.getCauses().add("Learning decay should be in [0, 1) if set.");
-                    result = ValidateResult.mergeResult(result, tmpResult);
-                }
             }
         }
 
-        if(train.getAlgorithm().equalsIgnoreCase(CommonConstants.GBT_ALG_NAME)
-                || train.getAlgorithm().equalsIgnoreCase(CommonConstants.RF_ALG_NAME)) {
-            Map<String, Object> params = train.getParams();
-            if(train.getAlgorithm().equalsIgnoreCase(CommonConstants.GBT_ALG_NAME)) {
-                Object loss = params.get("Loss");
-                if(loss != null && !"log".equalsIgnoreCase(loss.toString())
-                        && !"squared".equalsIgnoreCase(loss.toString())
-                        && !"absolute".equalsIgnoreCase(loss.toString())) {
+        GridSearch gs = new GridSearch(train.getParams());
+        // such parameter validation only in regression and not grid search mode
+        if(modelConfig.isRegression() && !gs.hasHyperParam()) {
+            if(train.getAlgorithm().equalsIgnoreCase("nn")) {
+                Map<String, Object> params = train.getParams();
+                int layerCnt = (Integer) params.get(NNTrainer.NUM_HIDDEN_LAYERS);
+                if(layerCnt < 0) {
                     ValidateResult tmpResult = new ValidateResult(true);
                     tmpResult.setStatus(false);
-                    tmpResult.getCauses().add("Loss should be in [log,squared,absolute].");
+                    tmpResult.getCauses().add("The number of hidden layers should be >= 0 in train configuration");
                     result = ValidateResult.mergeResult(result, tmpResult);
                 }
-            }
 
-            Object maxDepthObj = params.get("MaxDepth");
-            if(maxDepthObj != null) {
-                int maxDepth = Integer.valueOf(maxDepthObj.toString());
-                if(maxDepth <= 0 || maxDepth > 20) {
+                List<Integer> hiddenNode = (List<Integer>) params.get(NNTrainer.NUM_HIDDEN_NODES);
+                List<String> activateFucs = (List<String>) params.get(NNTrainer.ACTIVATION_FUNC);
+
+                if(hiddenNode.size() != activateFucs.size() || layerCnt != activateFucs.size()) {
                     ValidateResult tmpResult = new ValidateResult(true);
                     tmpResult.setStatus(false);
-                    tmpResult.getCauses().add("MaxDepth should in [1, 20].");
+                    tmpResult.getCauses().add(
+                            NNTrainer.NUM_HIDDEN_LAYERS + "/SIZE(" + NNTrainer.NUM_HIDDEN_NODES + ")" + "/SIZE("
+                                    + NNTrainer.ACTIVATION_FUNC + ")" + " should be equal in train configuration");
                     result = ValidateResult.mergeResult(result, tmpResult);
                 }
-            }
 
-            Object maxStatsMemoryMBObj = params.get("MaxStatsMemoryMB");
-            if(maxStatsMemoryMBObj != null) {
-                int maxStatsMemoryMB = Integer.valueOf(maxStatsMemoryMBObj.toString());
-                if(maxStatsMemoryMB <= 0) {
+                Double learningRate = Double.valueOf(params.get(NNTrainer.LEARNING_RATE).toString());
+                if(learningRate != null && (learningRate.compareTo(Double.valueOf(0)) <= 0)) {
                     ValidateResult tmpResult = new ValidateResult(true);
                     tmpResult.setStatus(false);
-                    tmpResult.getCauses().add("MaxStatsMemoryMB should > 0.");
+                    tmpResult.getCauses().add("Learning rate should be larger than 0.");
                     result = ValidateResult.mergeResult(result, tmpResult);
                 }
-            }
 
-            if(train.getAlgorithm().equalsIgnoreCase(CommonConstants.GBT_ALG_NAME)) {
-                Object learningRateObj = params.get(NNTrainer.LEARNING_RATE);
-                if(learningRateObj != null) {
-                    Double learningRate = Double.valueOf(learningRateObj.toString());
-                    if(learningRate != null && (learningRate.compareTo(Double.valueOf(0)) <= 0)) {
+                Object learningDecayO = params.get("LearningDecay");
+                if(learningDecayO != null) {
+                    Double learningDecay = Double.valueOf(learningDecayO.toString());
+                    if(learningDecay != null
+                            && ((learningDecay.compareTo(Double.valueOf(0)) < 0) || (learningDecay.compareTo(Double
+                                    .valueOf(1)) >= 0))) {
                         ValidateResult tmpResult = new ValidateResult(true);
                         tmpResult.setStatus(false);
-                        tmpResult.getCauses().add("Learning rate should be larger than 0.");
+                        tmpResult.getCauses().add("Learning decay should be in [0, 1) if set.");
                         result = ValidateResult.mergeResult(result, tmpResult);
                     }
                 }
             }
 
-            Object minInstancesPerNodeObj = params.get("MinInstancesPerNode");
-            if(minInstancesPerNodeObj != null) {
-                int minInstancesPerNode = Integer.valueOf(minInstancesPerNodeObj.toString());
-                if(minInstancesPerNode <= 0) {
-                    ValidateResult tmpResult = new ValidateResult(true);
-                    tmpResult.setStatus(false);
-                    tmpResult.getCauses().add("MinInstancesPerNode should > 0.");
-                    result = ValidateResult.mergeResult(result, tmpResult);
+            if(train.getAlgorithm().equalsIgnoreCase(CommonConstants.GBT_ALG_NAME)
+                    || train.getAlgorithm().equalsIgnoreCase(CommonConstants.RF_ALG_NAME)) {
+                Map<String, Object> params = train.getParams();
+                if(train.getAlgorithm().equalsIgnoreCase(CommonConstants.GBT_ALG_NAME)) {
+                    Object loss = params.get("Loss");
+                    if(loss != null && !"log".equalsIgnoreCase(loss.toString())
+                            && !"squared".equalsIgnoreCase(loss.toString())
+                            && !"halfgradsquared".equalsIgnoreCase(loss.toString())
+                            && !"absolute".equalsIgnoreCase(loss.toString())) {
+                        ValidateResult tmpResult = new ValidateResult(true);
+                        tmpResult.setStatus(false);
+                        tmpResult.getCauses().add("Loss should be in [log,squared,absolute].");
+                        result = ValidateResult.mergeResult(result, tmpResult);
+                    }
                 }
-            }
-            
-            Object treeNumObj = params.get("TreeNum");
-            if(treeNumObj != null) {
-                int treeNum = Integer.valueOf(treeNumObj.toString());
-                if(treeNum <= 0 || treeNum > 200) {
-                    ValidateResult tmpResult = new ValidateResult(true);
-                    tmpResult.setStatus(false);
-                    tmpResult.getCauses().add("TreeNum should be in [1, 200].");
-                    result = ValidateResult.mergeResult(result, tmpResult);
-                }
-            }
 
-            Object minInfoGainObj = params.get("MinInfoGain");
-            if(minInfoGainObj != null) {
-                Double minInfoGain = Double.valueOf(minInfoGainObj.toString());
-                if(minInfoGain != null && (minInfoGain.compareTo(Double.valueOf(0)) < 0)) {
-                    ValidateResult tmpResult = new ValidateResult(true);
-                    tmpResult.setStatus(false);
-                    tmpResult.getCauses().add("MinInfoGain should be >= 0.");
-                    result = ValidateResult.mergeResult(result, tmpResult);
+                Object maxDepthObj = params.get("MaxDepth");
+                if(maxDepthObj != null) {
+                    int maxDepth = Integer.valueOf(maxDepthObj.toString());
+                    if(maxDepth <= 0 || maxDepth > 20) {
+                        ValidateResult tmpResult = new ValidateResult(true);
+                        tmpResult.setStatus(false);
+                        tmpResult.getCauses().add("MaxDepth should in [1, 20].");
+                        result = ValidateResult.mergeResult(result, tmpResult);
+                    }
+                }
+
+                Object maxStatsMemoryMBObj = params.get("MaxStatsMemoryMB");
+                if(maxStatsMemoryMBObj != null) {
+                    int maxStatsMemoryMB = Integer.valueOf(maxStatsMemoryMBObj.toString());
+                    if(maxStatsMemoryMB <= 0) {
+                        ValidateResult tmpResult = new ValidateResult(true);
+                        tmpResult.setStatus(false);
+                        tmpResult.getCauses().add("MaxStatsMemoryMB should > 0.");
+                        result = ValidateResult.mergeResult(result, tmpResult);
+                    }
+                }
+
+                if(train.getAlgorithm().equalsIgnoreCase(CommonConstants.GBT_ALG_NAME)) {
+                    Object learningRateObj = params.get(NNTrainer.LEARNING_RATE);
+                    if(learningRateObj != null) {
+                        Double learningRate = Double.valueOf(learningRateObj.toString());
+                        if(learningRate != null && (learningRate.compareTo(Double.valueOf(0)) <= 0)) {
+                            ValidateResult tmpResult = new ValidateResult(true);
+                            tmpResult.setStatus(false);
+                            tmpResult.getCauses().add("Learning rate should be larger than 0.");
+                            result = ValidateResult.mergeResult(result, tmpResult);
+                        }
+                    }
+                }
+
+                Object minInstancesPerNodeObj = params.get("MinInstancesPerNode");
+                if(minInstancesPerNodeObj != null) {
+                    int minInstancesPerNode = Integer.valueOf(minInstancesPerNodeObj.toString());
+                    if(minInstancesPerNode <= 0) {
+                        ValidateResult tmpResult = new ValidateResult(true);
+                        tmpResult.setStatus(false);
+                        tmpResult.getCauses().add("MinInstancesPerNode should > 0.");
+                        result = ValidateResult.mergeResult(result, tmpResult);
+                    }
+                }
+
+                Object treeNumObj = params.get("TreeNum");
+                if(treeNumObj != null) {
+                    int treeNum = Integer.valueOf(treeNumObj.toString());
+                    if(treeNum <= 0 || treeNum > 2000) {
+                        ValidateResult tmpResult = new ValidateResult(true);
+                        tmpResult.setStatus(false);
+                        tmpResult.getCauses().add("TreeNum should be in [1, 2000].");
+                        result = ValidateResult.mergeResult(result, tmpResult);
+                    }
+                }
+
+                Object minInfoGainObj = params.get("MinInfoGain");
+                if(minInfoGainObj != null) {
+                    Double minInfoGain = Double.valueOf(minInfoGainObj.toString());
+                    if(minInfoGain != null && (minInfoGain.compareTo(Double.valueOf(0)) < 0)) {
+                        ValidateResult tmpResult = new ValidateResult(true);
+                        tmpResult.setStatus(false);
+                        tmpResult.getCauses().add("MinInfoGain should be >= 0.");
+                        result = ValidateResult.mergeResult(result, tmpResult);
+                    }
+                }
+
+                Object impurityObj = params.get("Impurity");
+                if(train.getAlgorithm().equalsIgnoreCase(CommonConstants.GBT_ALG_NAME)) {
+                    if(impurityObj != null && !"variance".equalsIgnoreCase(impurityObj.toString())
+                            && !"friedmanmse".equalsIgnoreCase(impurityObj.toString())) {
+                        ValidateResult tmpResult = new ValidateResult(true);
+                        tmpResult.setStatus(false);
+                        tmpResult.getCauses().add("GBDT only supports 'variance' impurity type.");
+                        result = ValidateResult.mergeResult(result, tmpResult);
+                    }
+                }
+
+                if(train.getAlgorithm().equalsIgnoreCase(CommonConstants.RF_ALG_NAME)) {
+                    if(impurityObj != null && !"friedmanmse".equalsIgnoreCase(impurityObj.toString())
+                            && !"entropy".equalsIgnoreCase(impurityObj.toString())
+                            && !"variance".equalsIgnoreCase(impurityObj.toString())
+                            && !"gini".equalsIgnoreCase(impurityObj.toString())) {
+                        ValidateResult tmpResult = new ValidateResult(true);
+                        tmpResult.setStatus(false);
+                        tmpResult.getCauses().add("RF supports 'variance|entropy|gini' impurity types.");
+                        result = ValidateResult.mergeResult(result, tmpResult);
+                    }
                 }
             }
-
-            Object impurityObj = params.get("Impurity");
-            if(train.getAlgorithm().equalsIgnoreCase(CommonConstants.GBT_ALG_NAME)) {
-                if(impurityObj != null && !"variance".equalsIgnoreCase(impurityObj.toString())) {
-                    ValidateResult tmpResult = new ValidateResult(true);
-                    tmpResult.setStatus(false);
-                    tmpResult.getCauses().add("GBDT only supports 'variance' impurity type.");
-                    result = ValidateResult.mergeResult(result, tmpResult);
-                }
-            }
-
-            if(train.getAlgorithm().equalsIgnoreCase(CommonConstants.RF_ALG_NAME)) {
-                if(impurityObj != null && !"entropy".equalsIgnoreCase(impurityObj.toString())
-                        && !"variance".equalsIgnoreCase(impurityObj.toString())
-                        && !"gini".equalsIgnoreCase(impurityObj.toString())) {
-                    ValidateResult tmpResult = new ValidateResult(true);
-                    tmpResult.setStatus(false);
-                    tmpResult.getCauses().add("RF supports 'variance|entropy|gini' impurity types.");
-                    result = ValidateResult.mergeResult(result, tmpResult);
-                }
-            }
-
         }
         return result;
     }

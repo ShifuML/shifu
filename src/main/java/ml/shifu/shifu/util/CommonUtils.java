@@ -573,6 +573,9 @@ public final class CommonUtils {
 
         // added in shifu 0.2.5 to slice models not belonging to last training
         int baggingModelSize = modelConfig.getTrain().getBaggingNum();
+        if(modelConfig.isClassification() && modelConfig.getTrain().isOneVsAll()) {
+            baggingModelSize = modelConfig.getTags().size();
+        }
         listStatus = listStatus.size() <= baggingModelSize ? listStatus : listStatus.subList(0, baggingModelSize);
 
         List<BasicML> models = new ArrayList<BasicML>(listStatus.size());
@@ -612,7 +615,7 @@ public final class CommonUtils {
                 return LR.loadFromString(br.readLine());
             } else if(modelPath.getName().endsWith(CommonConstants.RF_ALG_NAME.toLowerCase())
                     || modelPath.getName().endsWith(CommonConstants.GBT_ALG_NAME.toLowerCase())) {
-                return TreeModel.loadFromStream(stream, modelConfig, columnConfigList);
+                return TreeModel.loadFromStream(stream, columnConfigList);
             } else {
                 return BasicML.class.cast(EncogDirectoryPersistence.loadObject(stream));
             }
@@ -777,8 +780,8 @@ public final class CommonUtils {
         Map<String, String> pigParamMap = new HashMap<String, String>();
         pigParamMap.put(Constants.NUM_PARALLEL, Environment.getInt(Environment.HADOOP_NUM_PARALLEL, 400).toString());
         pigParamMap.put(Constants.PATH_JAR, pathFinder.getJarPath());
-        pigParamMap.put(Constants.PATH_RAW_DATA, modelConfig.getDataSetRawPath());
 
+        pigParamMap.put(Constants.PATH_RAW_DATA, modelConfig.getDataSetRawPath());
         pigParamMap.put(Constants.PATH_NORMALIZED_DATA, pathFinder.getNormalizedDataPath(sourceType));
         pigParamMap.put(Constants.PATH_PRE_TRAINING_STATS, pathFinder.getPreTrainingStatsPath(sourceType));
         pigParamMap.put(Constants.PATH_STATS_BINNING_INFO, pathFinder.getUpdatedBinningInfoPath(sourceType));
@@ -942,7 +945,14 @@ public final class CommonUtils {
                     if(config != null && !config.isMeta() && !config.isTarget() && config.isFinalSelect()) {
                         String val = rawDataMap.get(key) == null ? null : rawDataMap.get(key).toString();
                         if(CommonUtils.isDesicionTreeAlgorithm(modelConfig.getAlgorithm()) && config.isCategorical()) {
-                            inputList.add(binCategoryMap.get(config.getColumnNum()).get(val == null ? "" : val) + 0d);
+                            Integer index = binCategoryMap.get(config.getColumnNum()).get(val == null ? "" : val);
+                            if(index == null) {
+                                // not in binCategories, should be missing value
+                                // -1 as missing value
+                                inputList.add(-1d);
+                            } else {
+                                inputList.add(index * 1d);
+                            }
                         } else {
                             inputList.add(computeNumericNormResult(modelConfig, cutoff, config, val));
                         }
@@ -951,7 +961,14 @@ public final class CommonUtils {
                     if(!config.isMeta() && !config.isTarget() && CommonUtils.isGoodCandidate(config)) {
                         String val = rawDataMap.get(key) == null ? null : rawDataMap.get(key).toString();
                         if(CommonUtils.isDesicionTreeAlgorithm(modelConfig.getAlgorithm()) && config.isCategorical()) {
-                            inputList.add(binCategoryMap.get(config.getColumnNum()).get(val == null ? "" : val) + 0d);
+                            Integer index = binCategoryMap.get(config.getColumnNum()).get(val == null ? "" : val);
+                            if(index == null) {
+                                // not in binCategories, should be missing value
+                                // -1 as missing value
+                                inputList.add(-1d);
+                            } else {
+                                inputList.add(index * 1d);
+                            }
                         } else {
                             inputList.add(computeNumericNormResult(modelConfig, cutoff, config, val));
                         }
@@ -1119,30 +1136,19 @@ public final class CommonUtils {
         }
 
         for(ColumnConfig config: columnConfigList) {
-            config.setColumnFlag(null);
-            config.setColumnType(ColumnType.N);
-
             String varName = config.getColumnName();
 
             if(targetColumnName.equals(varName)) {
                 config.setColumnFlag(ColumnFlag.Target);
                 config.setColumnType(null);
-            }
-
-            if(setMeta.contains(varName)) {
+            } else if(setMeta.contains(varName)) {
                 config.setColumnFlag(ColumnFlag.Meta);
                 config.setColumnType(null);
-            }
-
-            if(setForceRemove.contains(varName)) {
+            } else if(setForceRemove.contains(varName)) {
                 config.setColumnFlag(ColumnFlag.ForceRemove);
-            }
-
-            if(setForceSelect.contains(varName)) {
+            } else if(setForceSelect.contains(varName)) {
                 config.setColumnFlag(ColumnFlag.ForceSelect);
-            }
-
-            if(setCategorialColumns.contains(varName)) {
+            } else if(setCategorialColumns.contains(varName)) {
                 config.setColumnType(ColumnType.C);
             }
         }

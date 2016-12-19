@@ -30,7 +30,7 @@ import ml.shifu.guagua.io.HaltBytable;
  * Worker result return to master.
  * 
  * <p>
- * The first part is for error collections: {@link #count} and {@link #squareError}.
+ * The first part is for error collections: {@link #trainCount} and {@link #trainError}.
  * 
  * <p>
  * {@link #nodeStatsMap} includes node statistics for each node, key is node group index id from master.
@@ -42,14 +42,24 @@ import ml.shifu.guagua.io.HaltBytable;
 public class DTWorkerParams extends HaltBytable implements Combinable<DTWorkerParams> {
 
     /**
-     * # of records per such worker.
+     * # of weighted training records per such worker.
      */
-    private long count;
+    private double trainCount;
 
     /**
-     * Error for such worker and such iteration.
+     * # of weighted training records per such worker.
      */
-    private double squareError;
+    private double validationCount;
+
+    /**
+     * Train error for such worker and such iteration.
+     */
+    private double trainError;
+
+    /**
+     * Validation error for such worker and such iteration.
+     */
+    private double validationError;
 
     /**
      * Node statistic map including node group index and node stats object.
@@ -59,16 +69,21 @@ public class DTWorkerParams extends HaltBytable implements Combinable<DTWorkerPa
     public DTWorkerParams() {
     }
 
-    public DTWorkerParams(long count, double squareError, Map<Integer, NodeStats> nodeStatsMap) {
-        this.count = count;
-        this.squareError = squareError;
+    public DTWorkerParams(double trainCount, double validationCount, double trainError, double validationError,
+            Map<Integer, NodeStats> nodeStatsMap) {
+        this.trainCount = trainCount;
+        this.validationCount = validationCount;
+        this.trainError = trainError;
+        this.validationError = validationError;
         this.nodeStatsMap = nodeStatsMap;
     }
 
     @Override
     public void doWrite(DataOutput out) throws IOException {
-        out.writeLong(count);
-        out.writeDouble(squareError);
+        out.writeDouble(trainCount);
+        out.writeDouble(validationCount);
+        out.writeDouble(trainError);
+        out.writeDouble(validationError);
         if(nodeStatsMap == null) {
             out.writeBoolean(false);
         } else {
@@ -83,8 +98,10 @@ public class DTWorkerParams extends HaltBytable implements Combinable<DTWorkerPa
 
     @Override
     public void doReadFields(DataInput in) throws IOException {
-        this.count = in.readLong();
-        this.squareError = in.readDouble();
+        this.trainCount = in.readDouble();
+        this.validationCount = in.readDouble();
+        this.trainError = in.readDouble();
+        this.validationError = in.readDouble();
         if(in.readBoolean()) {
             this.nodeStatsMap = new HashMap<Integer, NodeStats>();
             int len = in.readInt();
@@ -113,38 +130,23 @@ public class DTWorkerParams extends HaltBytable implements Combinable<DTWorkerPa
     }
 
     /**
-     * @return the count
-     */
-    public long getCount() {
-        return count;
-    }
-
-    /**
      * @return the squareError
      */
-    public double getSquareError() {
-        return squareError;
-    }
-
-    /**
-     * @param count
-     *            the count to set
-     */
-    public void setCount(long count) {
-        this.count = count;
+    public double getTrainError() {
+        return trainError;
     }
 
     /**
      * @param squareError
      *            the squareError to set
      */
-    public void setSquareError(double squareError) {
-        this.squareError = squareError;
+    public void setTrainError(double squareError) {
+        this.trainError = squareError;
     }
 
     @Override
     public String toString() {
-        return "DTWorkerParams [count=" + count + ", squareError=" + squareError + ", nodeStatsMap=" + nodeStatsMap
+        return "DTWorkerParams [count=" + trainCount + ", trainError=" + trainError + ", nodeStatsMap=" + nodeStatsMap
                 + "]";
     }
 
@@ -271,8 +273,10 @@ public class DTWorkerParams extends HaltBytable implements Combinable<DTWorkerPa
     public DTWorkerParams combine(DTWorkerParams that) {
         assert that != null;
 
-        this.count += that.count;
-        this.squareError += that.squareError;
+        this.trainCount += that.trainCount;
+        this.trainError += that.trainError;
+        this.validationCount += that.validationCount;
+        this.validationError += that.validationError;
 
         if(this.nodeStatsMap != null && that.nodeStatsMap != null) {
             for(Entry<Integer, NodeStats> entry: this.nodeStatsMap.entrySet()) {
@@ -292,6 +296,51 @@ public class DTWorkerParams extends HaltBytable implements Combinable<DTWorkerPa
         }
 
         return this;
+    }
+
+    /**
+     * @return the validationError
+     */
+    public double getValidationError() {
+        return validationError;
+    }
+
+    /**
+     * @param validationError
+     *            the validationError to set
+     */
+    public void setValidationError(double validationError) {
+        this.validationError = validationError;
+    }
+
+    /**
+     * @return the trainCount
+     */
+    public double getTrainCount() {
+        return trainCount;
+    }
+
+    /**
+     * @return the validationCount
+     */
+    public double getValidationCount() {
+        return validationCount;
+    }
+
+    /**
+     * @param trainCount
+     *            the trainCount to set
+     */
+    public void setTrainCount(double trainCount) {
+        this.trainCount = trainCount;
+    }
+
+    /**
+     * @param validationCount
+     *            the validationCount to set
+     */
+    public void setValidationCount(double validationCount) {
+        this.validationCount = validationCount;
     }
 
 }

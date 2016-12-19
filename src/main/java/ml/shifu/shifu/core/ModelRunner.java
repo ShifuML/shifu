@@ -15,21 +15,22 @@
  */
 package ml.shifu.shifu.core;
 
+import java.util.List;
+import java.util.Map;
+
 import ml.shifu.shifu.container.CaseScoreResult;
 import ml.shifu.shifu.container.ScoreObject;
 import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.container.obj.ModelConfig;
 import ml.shifu.shifu.container.obj.ModelTrainConf.ALGORITHM;
 import ml.shifu.shifu.util.CommonUtils;
+
 import org.apache.commons.collections.MapUtils;
 import org.apache.pig.backend.executionengine.ExecException;
 import org.apache.pig.data.Tuple;
 import org.encog.ml.BasicML;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import java.util.List;
-import java.util.Map;
 
 /**
  * ModelRunner class is to load the model and run the model for input data
@@ -89,7 +90,8 @@ public class ModelRunner {
      * @param stdDevCutoff
      *            - the standard deviation cutoff to normalize data
      */
-    public ModelRunner(ModelConfig modelConfig, List<ColumnConfig> columnConfigList, List<BasicML> models, double stdDevCutoff) {
+    public ModelRunner(ModelConfig modelConfig, List<ColumnConfig> columnConfigList, List<BasicML> models,
+            double stdDevCutoff) {
         this.columnConfigList = columnConfigList;
         this.modelConfig = modelConfig;
         this.scorer = new Scorer(models, columnConfigList, ALGORITHM.NN.name(), modelConfig, stdDevCutoff);
@@ -159,4 +161,5 @@ public class ModelRunner {
 
         return scoreResult;
     }
+
 }

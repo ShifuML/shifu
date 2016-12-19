@@ -59,9 +59,8 @@ public class MapReducerStatsWorker extends AbstractStatsExecutor {
     private static Logger log = LoggerFactory.getLogger(MapReducerStatsWorker.class);
     protected PathFinder pathFinder = null;
 
-    public MapReducerStatsWorker(BasicModelProcessor processor,
-                                 ModelConfig modelConfig,
-                                 List<ColumnConfig> columnConfigList) {
+    public MapReducerStatsWorker(BasicModelProcessor processor, ModelConfig modelConfig,
+            List<ColumnConfig> columnConfigList) {
         super(processor, modelConfig, columnConfigList);
         pathFinder = new PathFinder(this.modelConfig);
     }
@@ -73,7 +72,7 @@ public class MapReducerStatsWorker extends AbstractStatsExecutor {
         ShifuFileUtils.deleteFile(pathFinder.getPreTrainingStatsPath(), modelConfig.getDataSet().getSource());
         Map<String, String> paramsMap = new HashMap<String, String>();
         paramsMap.put("delimiter", CommonUtils.escapePigString(modelConfig.getDataSetDelimiter()));
-        if (columnConfigList.size() <= 1000) {
+        if(columnConfigList.size() <= 1000) {
             paramsMap.put("column_parallel", Integer.toString(columnConfigList.size() / 5));
         } else {
             paramsMap.put("column_parallel", Integer.toString(columnConfigList.size() / 4));
@@ -129,8 +128,8 @@ public class MapReducerStatsWorker extends AbstractStatsExecutor {
             scanners = ShifuFileUtils.getDataScanners(pathFinder.getUpdatedBinningInfoPath(source), source);
             writer = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(new File(filePath)),
                     Charset.forName("UTF-8")));
-            for (Scanner scanner : scanners) {
-                while (scanner.hasNextLine()) {
+            for(Scanner scanner: scanners) {
+                while(scanner.hasNextLine()) {
                     String line = scanner.nextLine();
                     writer.write(line + "\n");
                 }
@@ -152,8 +151,10 @@ public class MapReducerStatsWorker extends AbstractStatsExecutor {
         job.setMapOutputKeyClass(IntWritable.class);
         job.setMapOutputValueClass(BinningInfoWritable.class);
         job.setInputFormatClass(CombineInputFormat.class);
-        FileInputFormat.setInputPaths(job, ShifuFileUtils.getFileSystemBySourceType(source)
-                .makeQualified(new Path(super.modelConfig.getDataSetRawPath())));
+        FileInputFormat.setInputPaths(
+                job,
+                ShifuFileUtils.getFileSystemBySourceType(source).makeQualified(
+                        new Path(super.modelConfig.getDataSetRawPath())));
 
         job.setReducerClass(UpdateBinningInfoReducer.class);
         job.setNumReduceTasks(1);
@@ -168,16 +169,17 @@ public class MapReducerStatsWorker extends AbstractStatsExecutor {
         ShifuFileUtils.deleteFile(preTrainingInfo, source);
 
         // submit job
-        if (!job.waitForCompletion(true)) {
+        if(!job.waitForCompletion(true)) {
             FileUtils.deleteQuietly(new File(filePath));
             throw new RuntimeException("MapReduce Job Updateing Binning Info failed.");
         }
         FileUtils.deleteQuietly(new File(filePath));
     }
 
-    private void prepareJobConf(RawSourceData.SourceType source, Configuration conf, String filePath) throws IOException {
+    private void prepareJobConf(RawSourceData.SourceType source, Configuration conf, String filePath)
+            throws IOException {
         // add jars to hadoop mapper and reducer
-        new GenericOptionsParser(conf, new String[]{"-libjars", addRuntimeJars(), "-files", filePath});
+        new GenericOptionsParser(conf, new String[] { "-libjars", addRuntimeJars(), "-files", filePath });
 
         conf.setBoolean(CombineInputFormat.SHIFU_VS_SPLIT_COMBINABLE, true);
 
@@ -186,10 +188,12 @@ public class MapReducerStatsWorker extends AbstractStatsExecutor {
 
         conf.setBoolean(GuaguaMapReduceConstants.MAPRED_MAP_TASKS_SPECULATIVE_EXECUTION, true);
         conf.setBoolean(GuaguaMapReduceConstants.MAPRED_REDUCE_TASKS_SPECULATIVE_EXECUTION, true);
-        conf.set(Constants.SHIFU_MODEL_CONFIG,
+        conf.set(
+                Constants.SHIFU_MODEL_CONFIG,
                 ShifuFileUtils.getFileSystemBySourceType(source)
                         .makeQualified(new Path(this.pathFinder.getModelConfigPath(source))).toString());
-        conf.set(Constants.SHIFU_COLUMN_CONFIG,
+        conf.set(
+                Constants.SHIFU_COLUMN_CONFIG,
                 ShifuFileUtils.getFileSystemBySourceType(source)
                         .makeQualified(new Path(this.pathFinder.getColumnConfigPath(source))).toString());
         conf.set(NNConstants.MAPRED_JOB_QUEUE_NAME, Environment.getProperty(Environment.HADOOP_JOB_QUEUE, "default"));
@@ -201,7 +205,7 @@ public class MapReducerStatsWorker extends AbstractStatsExecutor {
                 Environment.getProperty("mapred.reduce.slowstart.completed.maps", "0.8"));
 
         String hdpVersion = HDPUtils.getHdpVersionForHDP224();
-        if (StringUtils.isNotBlank(hdpVersion)) {
+        if(StringUtils.isNotBlank(hdpVersion)) {
             // for hdp 2.2.4, hdp.version should be set and configuration files should be add to container class path
             conf.set("hdp.version", hdpVersion);
             HDPUtils.addFileToClassPath(HDPUtils.findContainingFile("hdfs-site.xml"), conf);
@@ -211,11 +215,9 @@ public class MapReducerStatsWorker extends AbstractStatsExecutor {
         }
 
         // one can set guagua conf in shifuconfig
-        for (Map.Entry<Object, Object> entry : Environment.getProperties().entrySet()) {
-            if (entry.getKey().toString().startsWith("nn")
-                    || entry.getKey().toString().startsWith("guagua")
-                    || entry.getKey().toString().startsWith("shifu")
-                    || entry.getKey().toString().startsWith("mapred")) {
+        for(Map.Entry<Object, Object> entry: Environment.getProperties().entrySet()) {
+            if(entry.getKey().toString().startsWith("nn") || entry.getKey().toString().startsWith("guagua")
+                    || entry.getKey().toString().startsWith("shifu") || entry.getKey().toString().startsWith("mapred")) {
                 conf.set(entry.getKey().toString(), entry.getValue().toString());
             }
         }
@@ -254,13 +256,13 @@ public class MapReducerStatsWorker extends AbstractStatsExecutor {
 
     /**
      * update the max/min/mean/std/binning information from stats step
-     *
+     * 
      * @throws IOException
      */
     public void updateColumnConfigWithPreTrainingStats() throws IOException {
         List<Scanner> scanners = ShifuFileUtils.getDataScanners(pathFinder.getPreTrainingStatsPath(), modelConfig
                 .getDataSet().getSource());
-        for (Scanner scanner : scanners) {
+        for(Scanner scanner: scanners) {
             scanStatsResult(scanner);
         }
 
@@ -270,18 +272,18 @@ public class MapReducerStatsWorker extends AbstractStatsExecutor {
 
     /**
      * Scan the stats result and save them into column configure
-     *
+     * 
      * @param scanner
      */
     private void scanStatsResult(Scanner scanner) {
-        while (scanner.hasNextLine()) {
+        while(scanner.hasNextLine()) {
             String[] raw = scanner.nextLine().trim().split("\\|");
 
-            if (raw.length == 1) {
+            if(raw.length == 1) {
                 continue;
             }
 
-            if (raw.length < 25) {
+            if(raw.length < 25) {
                 log.info("The stats data has " + raw.length + " fields.");
                 log.info("The stats data is - " + Arrays.toString(raw));
             }
@@ -290,7 +292,7 @@ public class MapReducerStatsWorker extends AbstractStatsExecutor {
             try {
                 ColumnConfig config = this.columnConfigList.get(columnNum);
 
-                if (config.isCategorical()) {
+                if(config.isCategorical()) {
                     String binCategory = Base64Utils.base64Decode(raw[1]);
                     config.setBinCategory(CommonUtils.stringToStringList(binCategory,
                             CalculateStatsUDF.CATEGORY_VAL_SEPARATOR));
@@ -310,7 +312,7 @@ public class MapReducerStatsWorker extends AbstractStatsExecutor {
                 config.setStdDev(parseDouble(raw[11], Double.NaN));
 
                 // magic?
-                if (raw[12].equals("N")) {
+                if(raw[12].equals("N")) {
                     config.setColumnType(ColumnConfig.ColumnType.N);
                 } else {
                     config.setColumnType(ColumnConfig.ColumnType.C);
@@ -331,10 +333,10 @@ public class MapReducerStatsWorker extends AbstractStatsExecutor {
                 config.getColumnBinning().setBinCountWoe(CommonUtils.stringToDoubleList(raw[23]));
                 config.getColumnBinning().setBinWeightedWoe(CommonUtils.stringToDoubleList(raw[24]));
                 // TODO magic code?
-                if (raw.length >= 26) {
+                if(raw.length >= 26) {
                     config.getColumnStats().setSkewness(parseDouble(raw[25]));
                 }
-                if (raw.length >= 27) {
+                if(raw.length >= 27) {
                     config.getColumnStats().setKurtosis(parseDouble(raw[26]));
                 }
             } catch (Exception e) {
@@ -371,13 +373,12 @@ public class MapReducerStatsWorker extends AbstractStatsExecutor {
 
     /**
      * Calculate the PSI
-     *
+     * 
      * @throws IOException
      */
     private void runPSI() throws IOException {
-        log.info("Run PSI to use {} to compute the PSI ", modelConfig.getPsiColumnName());
-
         if(StringUtils.isNotEmpty(modelConfig.getPsiColumnName())) {
+            log.info("Run PSI to use {} to compute the PSI ", modelConfig.getPsiColumnName());
             ColumnConfig columnConfig = CommonUtils.findColumnConfigByName(columnConfigList,
                     modelConfig.getPsiColumnName());
 
@@ -396,8 +397,8 @@ public class MapReducerStatsWorker extends AbstractStatsExecutor {
 
             PigExecutor.getExecutor().submitJob(modelConfig, pathFinder.getAbsolutePath("scripts/PSI.pig"), paramsMap);
 
-            List<Scanner> scanners = ShifuFileUtils.getDataScanners(pathFinder.getPSIInfoPath(),
-                    modelConfig.getDataSet().getSource());
+            List<Scanner> scanners = ShifuFileUtils.getDataScanners(pathFinder.getPSIInfoPath(), modelConfig
+                    .getDataSet().getSource());
 
             for(Scanner scanner: scanners) {
                 while(scanner.hasNext()) {
@@ -407,16 +408,15 @@ public class MapReducerStatsWorker extends AbstractStatsExecutor {
                         int columnNum = Integer.parseInt(output[0]);
                         ColumnConfig config = this.columnConfigList.get(columnNum);
                         config.setPSI(Double.parseDouble(output[1]));
-                        config.setUnitStats(
-                                Arrays.asList(StringUtils.split(output[2], CalculateStatsUDF.CATEGORY_VAL_SEPARATOR)));
+                        config.setUnitStats(Arrays.asList(StringUtils.split(output[2],
+                                CalculateStatsUDF.CATEGORY_VAL_SEPARATOR)));
                     } catch (Exception e) {
                         log.error("error in parsing", e);
                     }
 
                 }
             }
+            log.info("Run PSI - done.");
         }
-
-        log.info("Run PSI - done.");
     }
 }

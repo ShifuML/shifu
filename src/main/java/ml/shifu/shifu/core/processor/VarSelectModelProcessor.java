@@ -95,6 +95,16 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
 
     private final static Logger log = LoggerFactory.getLogger(VarSelectModelProcessor.class);
 
+    private boolean isToReset = false;
+
+    public VarSelectModelProcessor() {
+        // default constructor
+    }
+
+    public VarSelectModelProcessor(boolean isToReset) {
+        this.isToReset = isToReset;
+    }
+
     @SuppressWarnings("unused")
     private static final double BAD_IV_THRESHOLD = 0.02d;
 
@@ -108,42 +118,46 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
         try {
             setUp(ModelStep.VARSELECT);
 
-            validateNormalize();
+            if ( isToReset ) {
+                resetAllFinalSelect();
+            } else {
+                validateNormalize();
 
-            // sync to make sure load from hdfs config is consistent with local configuration
-            syncDataToHdfs(super.modelConfig.getDataSet().getSource());
+                // sync to make sure load from hdfs config is consistent with local configuration
+                syncDataToHdfs(super.modelConfig.getDataSet().getSource());
 
-            VariableSelector selector = new VariableSelector(this.modelConfig, this.columnConfigList);
+                VariableSelector selector = new VariableSelector(this.modelConfig, this.columnConfigList);
 
-            if(!modelConfig.getVarSelectWrapperEnabled()) {
-                if(modelConfig.isBinaryClassification()) {
-                    // Select by local KS, IV
-                    CommonUtils.updateColumnConfigFlags(modelConfig, columnConfigList);
-                    this.columnConfigList = selector.selectByFilter();
-                } else {
-                    // multiple classification, select all candidate at first, TODO add SE for multi-classification
-                    for(ColumnConfig config: this.columnConfigList) {
-                        if(CommonUtils.isGoodCandidate(modelConfig.isBinaryClassification(), config)) {
-                            config.setFinalSelect(true);
+                if (!modelConfig.getVarSelectWrapperEnabled()) {
+                    if (modelConfig.isRegression()) {
+                        // Select by local KS, IV
+                        CommonUtils.updateColumnConfigFlags(modelConfig, columnConfigList);
+                        this.columnConfigList = selector.selectByFilter();
+                    } else {
+                        // multiple classification, select all candidate at first, TODO add SE for multi-classification
+                        for (ColumnConfig config : this.columnConfigList) {
+                            if (CommonUtils.isGoodCandidate(modelConfig.isRegression(), config)) {
+                                config.setFinalSelect(true);
+                            }
                         }
                     }
-                }
-            } else {
-                // wrapper method
-                if(super.getModelConfig().getDataSet().getSource() == SourceType.HDFS
-                        && super.getModelConfig().isMapReduceRunMode()) {
-                    if(Constants.WRAPPER_BY_SE.equalsIgnoreCase(modelConfig.getVarSelect().getWrapperBy())
-                            || Constants.WRAPPER_BY_REMOVE.equalsIgnoreCase(modelConfig.getVarSelect().getWrapperBy())) {
-                        // SE method supports remove and sensitivity se so far
-                        validateDistributedWrapperVarSelect();
-                        syncDataToHdfs(super.modelConfig.getDataSet().getSource());
-                        distributedSEWrapper();
-                    } else if(Constants.WRAPPER_BY_VOTED.equalsIgnoreCase(modelConfig.getVarSelect().getWrapperBy())) {
-                        votedVariablesSelection();
-                    }
                 } else {
-                    // local wrapper mode: old
-                    wrapper(selector);
+                    // wrapper method
+                    if (super.getModelConfig().getDataSet().getSource() == SourceType.HDFS
+                            && super.getModelConfig().isMapReduceRunMode()) {
+                        if (Constants.WRAPPER_BY_SE.equalsIgnoreCase(modelConfig.getVarSelect().getWrapperBy())
+                                || Constants.WRAPPER_BY_REMOVE.equalsIgnoreCase(modelConfig.getVarSelect().getWrapperBy())) {
+                            // SE method supports remove and sensitivity se so far
+                            validateDistributedWrapperVarSelect();
+                            syncDataToHdfs(super.modelConfig.getDataSet().getSource());
+                            distributedSEWrapper();
+                        } else if (Constants.WRAPPER_BY_VOTED.equalsIgnoreCase(modelConfig.getVarSelect().getWrapperBy())) {
+                            votedVariablesSelection();
+                        }
+                    } else {
+                        // local wrapper mode: old
+                        wrapper(selector);
+                    }
                 }
             }
 
@@ -155,6 +169,13 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
         }
         log.info("Step Finished: varselect with {} ms", (System.currentTimeMillis() - start));
         return 0;
+    }
+
+    public void resetAllFinalSelect() {
+        log.info("!!! Reset all variables finalSelect = true");
+        for ( ColumnConfig columnConfig : this.columnConfigList ) {
+            columnConfig.setFinalSelect(false);
+        }
     }
 
     private void validateNormalize() throws IOException {

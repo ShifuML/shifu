@@ -145,7 +145,7 @@ public class EqualPopulationBinning extends AbstractBinning<Double> {
      * @param val
      * @param frequency
      */
-    public void addData(double val, int frequency) {
+    public void addData(double val, double frequency) {
         process(val, frequency);
     }
 
@@ -191,10 +191,10 @@ public class EqualPopulationBinning extends AbstractBinning<Double> {
             return binBorders;
         }
 
-        int totalCnt = getTotalInHistogram();
+        double totalCnt = getTotalInHistogram();
         LinkNode<HistogramUnit> currStartPos = null;
         for(int j = 1; j < toBinningNum; j++) {
-            double s = (double) (j * totalCnt) / toBinningNum;
+            double s = (j * totalCnt) / toBinningNum;
             LinkNode<HistogramUnit> pos = locateHistogram(s, currStartPos);
             if(pos == null || pos == currStartPos) {
                 continue;
@@ -250,8 +250,8 @@ public class EqualPopulationBinning extends AbstractBinning<Double> {
      * 
      * @return
      */
-    private int getTotalInHistogram() {
-        int total = 0;
+    private double getTotalInHistogram() {
+        double total = 0;
 
         LinkNode<HistogramUnit> tmp = this.header;
         while(tmp != null) {
@@ -348,7 +348,7 @@ public class EqualPopulationBinning extends AbstractBinning<Double> {
      * @param dval
      * @param frequency
      */
-    private void process(double dval, int frequency) {
+    private void process(double dval, double frequency) {
         LinkNode<HistogramUnit> node = new LinkNode<HistogramUnit>(new HistogramUnit(dval, frequency));
         if(this.tail == null && this.maxHistogramUnitCnt > 1) {
             this.header = node;
@@ -533,9 +533,9 @@ public class EqualPopulationBinning extends AbstractBinning<Double> {
      */
     public static class HistogramUnit implements Comparable<HistogramUnit> {
         private double hval;
-        private int hcnt;
+        private double hcnt;
 
-        public HistogramUnit(double hval, int hcnt) {
+        public HistogramUnit(double hval, double hcnt) {
             this.hval = hval;
             this.hcnt = hcnt;
         }
@@ -548,11 +548,11 @@ public class EqualPopulationBinning extends AbstractBinning<Double> {
             this.hval = hval;
         }
 
-        public int getHcnt() {
+        public double getHcnt() {
             return hcnt;
         }
 
-        public void setHcnt(int hcnt) {
+        public void setHcnt(double hcnt) {
             this.hcnt = hcnt;
         }
 
@@ -609,7 +609,7 @@ public class EqualPopulationBinning extends AbstractBinning<Double> {
          * @return
          */
         public String objToString() {
-            return Double.toString(hval) + Character.toString(PAIR_SEPARATOR) + Integer.toString(hcnt);
+            return Double.toString(hval) + Character.toString(PAIR_SEPARATOR) + Double.toString(hcnt);
         }
 
         /**
@@ -620,7 +620,7 @@ public class EqualPopulationBinning extends AbstractBinning<Double> {
          */
         public static HistogramUnit stringToObj(String histogramStr) {
             String[] fields = StringUtils.split(histogramStr, PAIR_SEPARATOR);
-            return new HistogramUnit(Double.parseDouble(fields[0]), Integer.parseInt(fields[1]));
+            return new HistogramUnit(Double.parseDouble(fields[0]), Double.parseDouble(fields[1]));
         }
 
     }

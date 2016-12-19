@@ -3,7 +3,7 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>ml.shifu</groupId>
     <artifactId>shifu</artifactId>
-    <version>0.2.8</version>
+    <version>0.9.0</version>
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <version.platform>2.0.0</version.platform>
@@ -12,13 +12,13 @@
         <rpmDisabled>true</rpmDisabled>
         <maven.build.timestamp.format>yyyy-MM-dd HH:mm:ss</maven.build.timestamp.format>
         <powermock.version>1.5.1</powermock.version>
-        <guagua.version>0.7.3</guagua.version>
+        <guagua.version>0.7.4</guagua.version>
     </properties>
     <scm>
         <developerConnection>scm:git:https://github.com/shifuml/shifu.git</developerConnection>
         <connection>scm:git:https://github.com/shifuml/shifu.git</connection>
         <url>https://github.com/shifuml/shifu.git</url>
-        <tag>shifu-0.2.8</tag>
+        <tag>shifu-0.9.0</tag>
     </scm>
     <dependencies>
         <dependency>

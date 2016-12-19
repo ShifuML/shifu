@@ -196,7 +196,7 @@ public class ModelConfig {
         trainConf.setAlgorithm(alg.name());
         trainConf.setNumTrainEpochs(100);
         trainConf.setEpochsPerIteration(1);
-        trainConf.setParams(ModelTrainConf.createParamsByAlg(alg));
+        trainConf.setParams(ModelTrainConf.createParamsByAlg(alg, trainConf));
         trainConf.setBaggingWithReplacement(true);
         modelConfig.setTrain(trainConf);
 
@@ -268,12 +268,12 @@ public class ModelConfig {
     }
 
     @JsonIgnore
-    public boolean isBinaryClassification() {
+    public boolean isRegression() {
         return (CollectionUtils.isNotEmpty(dataSet.getPosTags()) && CollectionUtils.isNotEmpty(dataSet.getNegTags()));
     }
 
     @JsonIgnore
-    public boolean isMultiClassification() {
+    public boolean isClassification() {
         return (CollectionUtils.isNotEmpty(dataSet.getPosTags()) && CollectionUtils.isEmpty(dataSet.getNegTags()))
                 || (CollectionUtils.isEmpty(dataSet.getPosTags()) && CollectionUtils.isNotEmpty(dataSet.getNegTags()));
     }
@@ -472,6 +472,11 @@ public class ModelConfig {
     @JsonIgnore
     public String getDataSetRawPath() {
         return dataSet.getDataPath();
+    }
+    
+    @JsonIgnore
+    public String getValidationDataSetRawPath() {
+        return dataSet.getValidationDataPath();
     }
 
     @JsonIgnore

@@ -47,26 +47,48 @@ public class DTMasterParams extends HaltBytable {
     private Map<Integer, TreeNode> todoNodes;
 
     /**
-     * Sum of counts accumulated by workers.
+     * Sum of weighted training counts accumulated by workers.
      */
-    private long count;
+    private double trainCount;
 
     /**
-     * Sum of error accumulated by workers.
+     * Sum of weighted validation counts accumulated by workers.
      */
-    private double squareError;
+    private double validationCount;
+
+    /**
+     * Sum of train error accumulated by workers.
+     */
+    private double trainError;
+
+    /**
+     * Sum of validation error accumulated by workers.
+     */
+    private double validationError;
 
     /**
      * For GBDT only, in GBDT, this means move compute to next tree.
      */
     private boolean isSwitchToNextTree = false;
 
+    /**
+     * Tree depth per tree index which is used to show on each iteration.
+     */
+    private List<Integer> treeDepth = new ArrayList<Integer>();
+
+    /**
+     * If it is continuous running at first iteration in master
+     */
+    private boolean isContinuousRunningStart = false;
+
     public DTMasterParams() {
     }
 
-    public DTMasterParams(long count, double squareError) {
-        this.count = count;
-        this.setSquareError(squareError);
+    public DTMasterParams(double trainCount, double trainError, double validationCount, double validationError) {
+        this.trainCount = trainCount;
+        this.trainError = trainError;
+        this.validationCount = validationCount;
+        this.validationError = validationError;
     }
 
     public DTMasterParams(List<TreeNode> trees, Map<Integer, TreeNode> todoNodes) {
@@ -106,8 +128,10 @@ public class DTMasterParams extends HaltBytable {
 
     @Override
     public void doWrite(DataOutput out) throws IOException {
-        out.writeLong(count);
-        out.writeDouble(squareError);
+        out.writeDouble(trainCount);
+        out.writeDouble(validationCount);
+        out.writeDouble(trainError);
+        out.writeDouble(validationError);
         out.writeBoolean(this.isSwitchToNextTree);
 
         assert trees != null;
@@ -126,12 +150,15 @@ public class DTMasterParams extends HaltBytable {
                 node.getValue().write(out);
             }
         }
+        out.writeBoolean(isContinuousRunningStart);
     }
 
     @Override
     public void doReadFields(DataInput in) throws IOException {
-        this.count = in.readLong();
-        this.squareError = in.readDouble();
+        this.trainCount = in.readDouble();
+        this.validationCount = in.readDouble();
+        this.trainError = in.readDouble();
+        this.validationError = in.readDouble();
         this.isSwitchToNextTree = in.readBoolean();
 
         int treeNum = in.readInt();
@@ -152,36 +179,52 @@ public class DTMasterParams extends HaltBytable {
                 todoNodes.put(key, treeNode);
             }
         }
+        this.isContinuousRunningStart = in.readBoolean();
     }
 
     /**
-     * @return the count
+     * @return the trainCount
      */
-    public long getCount() {
-        return count;
+    public double getTrainCount() {
+        return trainCount;
     }
 
     /**
-     * @param count
-     *            the count to set
+     * @return the validationCount
      */
-    public void setCount(long count) {
-        this.count = count;
+    public double getValidationCount() {
+        return validationCount;
+    }
+
+    /**
+     * @param trainCount
+     *            the trainCount to set
+     */
+    public void setTrainCount(double trainCount) {
+        this.trainCount = trainCount;
+    }
+
+    /**
+     * @param validationCount
+     *            the validationCount to set
+     */
+    public void setValidationCount(double validationCount) {
+        this.validationCount = validationCount;
     }
 
     /**
      * @return the squareError
      */
-    public double getSquareError() {
-        return squareError;
+    public double getTrainError() {
+        return trainError;
     }
 
     /**
      * @param squareError
      *            the squareError to set
      */
-    public void setSquareError(double squareError) {
-        this.squareError = squareError;
+    public void setTrainError(double squareError) {
+        this.trainError = squareError;
     }
 
     /**
@@ -198,4 +241,50 @@ public class DTMasterParams extends HaltBytable {
     public void setSwitchToNextTree(boolean isSwitchToNextTree) {
         this.isSwitchToNextTree = isSwitchToNextTree;
     }
+
+    /**
+     * @return the treeDepth
+     */
+    public List<Integer> getTreeDepth() {
+        return treeDepth;
+    }
+
+    /**
+     * @param treeDepth
+     *            the treeDepth to set
+     */
+    public void setTreeDepth(List<Integer> treeDepth) {
+        this.treeDepth = treeDepth;
+    }
+
+    /**
+     * @return the validationError
+     */
+    public double getValidationError() {
+        return validationError;
+    }
+
+    /**
+     * @param validationError
+     *            the validationError to set
+     */
+    public void setValidationError(double validationError) {
+        this.validationError = validationError;
+    }
+
+    /**
+     * @return the isContinuousRunningStart
+     */
+    public boolean isContinuousRunningStart() {
+        return isContinuousRunningStart;
+    }
+
+    /**
+     * @param isContinuousRunningStart
+     *            the isContinuousRunningStart to set
+     */
+    public void setContinuousRunningStart(boolean isContinuousRunningStart) {
+        this.isContinuousRunningStart = isContinuousRunningStart;
+    }
+
 }

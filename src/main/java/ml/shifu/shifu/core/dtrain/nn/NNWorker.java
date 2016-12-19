@@ -16,7 +16,9 @@
 package ml.shifu.shifu.core.dtrain.nn;
 
 import java.io.IOException;
+import java.util.concurrent.TimeUnit;
 
+import ml.shifu.guagua.ComputableMonitor;
 import ml.shifu.guagua.hadoop.io.GuaguaLineRecordReader;
 import ml.shifu.guagua.hadoop.io.GuaguaWritableAdapter;
 import ml.shifu.guagua.io.GuaguaFileSplit;
@@ -42,13 +44,14 @@ import org.apache.hadoop.io.Text;
  * <p>
  * {@link NNWorker} is to load data with text format.
  */
+@ComputableMonitor(timeUnit = TimeUnit.SECONDS, duration = 240)
 public class NNWorker extends AbstractNNWorker<Text> {
 
     @Override
     public void load(GuaguaWritableAdapter<LongWritable> currentKey, GuaguaWritableAdapter<Text> currentValue,
             WorkerContext<NNParams, NNParams> workerContext) {
         super.count += 1;
-        if((super.count) % 100000 == 0) {
+        if((super.count) % 5000 == 0) {
             LOG.info("Read {} records.", super.count);
         }
 
@@ -64,7 +67,8 @@ public class NNWorker extends AbstractNNWorker<Text> {
 
         if(super.isDry) {
             // dry train, use empty data.
-            addDataPairToDataSet(0, new BasicFloatMLDataPair(new BasicFloatMLData(inputs), new BasicFloatMLData(ideal)));
+            addDataPairToDataSet(0,
+                    new BasicFloatMLDataPair(new BasicFloatMLData(inputs), new BasicFloatMLData(ideal)));
             return;
         }
 
@@ -75,23 +79,31 @@ public class NNWorker extends AbstractNNWorker<Text> {
         // the function in akka mode.
         int index = 0, inputsIndex = 0, outputIndex = 0;
         for(String input: DEFAULT_SPLITTER.split(currentValue.getWritable().toString())) {
-            float floatValue = NumberFormatUtils.getFloat(input.trim(), 0f);
+            // check here to avoid bad performance in failed NumberFormatUtils.getFloat(input, 0f)
+            float floatValue = input.length() == 0 ? 0f : NumberFormatUtils.getFloat(input, 0f);
             // no idea about why NaN in input data, we should process it as missing value TODO , according to norm type
-            if(Float.isNaN(floatValue) || Double.isNaN(floatValue)) {
-                floatValue = 0f;
-            }
+            floatValue = (Float.isNaN(floatValue) || Double.isNaN(floatValue)) ? 0f : floatValue;
+
             if(index == super.columnConfigList.size()) {
-                significance = NumberFormatUtils.getFloat(input, 1f);
+                // check here to avoid bad performance in failed NumberFormatUtils.getFloat(input, 1f)
+                significance = input.length() == 0 ? 1f : NumberFormatUtils.getFloat(input, 1f);
                 // the last field is significance, break here
                 break;
             } else {
                 ColumnConfig columnConfig = super.columnConfigList.get(index);
                 if(columnConfig != null && columnConfig.isTarget()) {
-                    if(modelConfig.isBinaryClassification()) {
+                    if(modelConfig.isRegression()) {
                         ideal[outputIndex++] = floatValue;
                     } else {
-                        int ideaIndex = (int) floatValue;
-                        ideal[ideaIndex] = 1f;
+                        if(modelConfig.getTrain().isOneVsAll()) {
+                            // if one vs all, set correlated idea value according to trainerId which means in trainer
+                            // with id 0, target 0 is treated with 1, other are 0. Such target value are set to index of
+                            // tags like [0, 1, 2, 3] compared with ["a", "b", "c", "d"]
+                            ideal[outputIndex++] = Float.compare(floatValue, trainerId) == 0 ? 1f : 0f;
+                        } else {
+                            int ideaIndex = (int) floatValue;
+                            ideal[ideaIndex] = 1f;
+                        }
                     }
                 } else {
                     if(super.inputNodeCount == super.candidateCount) {
@@ -126,13 +138,17 @@ public class NNWorker extends AbstractNNWorker<Text> {
 
         FloatMLDataPair pair = new BasicFloatMLDataPair(new BasicFloatMLData(inputs), new BasicFloatMLData(ideal));
 
-        if(modelConfig.isBinaryClassification() && isUpSampleEnabled() && Double.compare(ideal[0], 1d) == 0) {
+        if(modelConfig.isRegression() && isUpSampleEnabled() && Double.compare(ideal[0], 1d) == 0) {
             // Double.compare(ideal[0], 1d) == 0 means positive tags; sample + 1 to avoid sample count to 0
             pair.setSignificance(significance * (super.upSampleRng.sample() + 1));
         } else {
             pair.setSignificance(significance);
         }
-        addDataPairToDataSet(hashcode, pair);
+        boolean isTesting = false;
+        if(workerContext.getAttachment() != null && workerContext.getAttachment() instanceof Boolean) {
+            isTesting = (Boolean) workerContext.getAttachment();
+        }
+        addDataPairToDataSet(hashcode, pair, isTesting);
     }
 
     /*

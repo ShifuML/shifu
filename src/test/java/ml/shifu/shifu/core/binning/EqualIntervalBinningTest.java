@@ -86,6 +86,7 @@ public class EqualIntervalBinningTest {
         }
 
         List<Double> boundaries = inst.getDataBin();
+        System.out.println(boundaries);
         Assert.assertEquals(1001, boundaries.size());
 
         IOUtils.closeQuietly(gzis);
