@@ -99,18 +99,19 @@ public class InitModelProcessor extends BasicModelProcessor implements Processor
 
             syncDataToHdfs(modelConfig.getDataSet().getSource());
 
-            Map<Integer, Data> distinctCountMap = null;
+            Map<Integer, Data> countInfoMap = null;
             if(autoTypeEnableCondition()) {
-                distinctCountMap = getApproxDistinctCountByMRJob();
+                countInfoMap = getCountInfoByMRJob();
             }
 
-            if(autoTypeEnableCondition() && distinctCountMap != null) {
-                if(modelConfig.getDataSet().getAutoTypeThreshold() <= 0) {
+            if(autoTypeEnableCondition() && countInfoMap != null) {
+                if(modelConfig.getDataSet().getAutoTypeThreshold() < 0) {
                     log.info("Auto type detection is on but threshold <= 0, only compute distinct count but not detect "
                             + "categorical columns.");
-                    setCategoricalColumnsAndDistinctAccount(distinctCountMap, false, true);
+                    int cateCount = setCategoricalColumnsByCountInfo(countInfoMap, true);
+                    log.info("Automatically check {} variables to categorical type.", cateCount);
                 } else {
-                    int cateCount = setCategoricalColumnsAndDistinctAccount(distinctCountMap, true, true);
+                    int cateCount = setCategoricalColumnsAndDistinctAccount(countInfoMap, true, true);
                     log.info("Automatically check {} variables to categorical type.", cateCount);
                 }
             }
@@ -132,6 +133,36 @@ public class InitModelProcessor extends BasicModelProcessor implements Processor
         return modelConfig.isMapReduceRunMode() && modelConfig.getDataSet().getAutoType();
     }
 
+    private int setCategoricalColumnsByCountInfo(Map<Integer, Data> distinctCountMap, boolean distinctOn) {
+        int cateCount = 0;
+        for(ColumnConfig columnConfig: columnConfigList) {
+            Data data = distinctCountMap.get(columnConfig.getColumnNum());
+            if(data == null) {
+                continue;
+            }
+            long distinctCount = data.distinctCount;
+            if(distinctOn) {
+                columnConfig.getColumnStats().setDistinctCount(distinctCount);
+            }
+
+            long count = data.count;
+            long invalidCount = data.invalidCount;
+            long validNumCount = data.validNumcount;
+            double numRatio = validNumCount * 1d / (count - invalidCount);
+            if(numRatio > 0.97d) {
+                columnConfig.setColumnType(ColumnType.N);
+                log.info("Column {} with index {} is set to numeric type because of enough double values.",
+                        columnConfig.getColumnName(), columnConfig.getColumnNum());
+            } else {
+                cateCount += 1;
+                columnConfig.setColumnType(ColumnType.C);
+                log.info("Column {} with index {} is set to categorical type because of not enough double values.",
+                        columnConfig.getColumnName(), columnConfig.getColumnNum());
+            }
+        }
+        return cateCount;
+    }
+
     private int setCategoricalColumnsAndDistinctAccount(Map<Integer, Data> distinctCountMap, boolean cateOn,
             boolean distinctOn) {
         int cateCount = 0;
@@ -140,31 +171,28 @@ public class InitModelProcessor extends BasicModelProcessor implements Processor
             if(data == null) {
                 continue;
             }
-            Long distinctCount = data.count;
-            if(distinctCount != null && modelConfig.getDataSet().getAutoTypeThreshold() != null) {
+            Long distinctCount = data.distinctCount;
+            // disable auto type threshold
+            if(distinctCount != null) {
                 if(cateOn) {
-                    if(distinctCount < modelConfig.getDataSet().getAutoTypeThreshold().longValue()) {
-                        String[] items = data.items;
-                        if(isBinaryVariable(distinctCount, items)) {
-                            log.info(
-                                    "Column {} with index {} is set to numeric type because of 0-1 variable. Distinct count {}, items {}.",
-                                    columnConfig.getColumnName(), columnConfig.getColumnNum(), distinctCount,
-                                    Arrays.toString(items));
-                            columnConfig.setColumnType(ColumnType.N);
-                        } else if(isDoubleFrequentVariable(distinctCount, items)) {
-                            log.info(
-                                    "Column {} with index {} is set to numeric type because of all sampled items are double(including blank). Distinct count {}, items {}.",
-                                    columnConfig.getColumnName(), columnConfig.getColumnNum(), distinctCount,
-                                    Arrays.toString(items));
-                            columnConfig.setColumnType(ColumnType.N);
-                        } else {
-                            columnConfig.setColumnType(ColumnType.C);
-                            cateCount += 1;
-                            log.info(
-                                    "Column {} with index {} is set to categorical type according to auto type checking: distinct count {}, threshold {}.",
-                                    columnConfig.getColumnName(), columnConfig.getColumnNum(), distinctCount,
-                                    modelConfig.getDataSet().getAutoTypeThreshold());
-                        }
+                    String[] items = data.items;
+                    if(isBinaryVariable(distinctCount, items)) {
+                        log.info(
+                                "Column {} with index {} is set to numeric type because of 0-1 variable. Distinct count {}, items {}.",
+                                columnConfig.getColumnName(), columnConfig.getColumnNum(), distinctCount,
+                                Arrays.toString(items));
+                        columnConfig.setColumnType(ColumnType.N);
+                    } else if(isDoubleFrequentVariable(distinctCount, items)) {
+                        log.info(
+                                "Column {} with index {} is set to numeric type because of all sampled items are double(including blank). Distinct count {}.",
+                                columnConfig.getColumnName(), columnConfig.getColumnNum(), distinctCount);
+                        columnConfig.setColumnType(ColumnType.N);
+                    } else {
+                        columnConfig.setColumnType(ColumnType.C);
+                        cateCount += 1;
+                        log.info(
+                                "Column {} with index {} is set to categorical type according to auto type checking: distinct count {}.",
+                                columnConfig.getColumnName(), columnConfig.getColumnNum(), distinctCount);
                     }
                 }
                 if(distinctOn) {
@@ -198,37 +226,19 @@ public class InitModelProcessor extends BasicModelProcessor implements Processor
     }
 
     private boolean isDoubleFrequentVariable(long distinctCount, String[] items) {
-        int doubleNotInfSize = 0;
-        boolean isExistNotEmptyAndNotNumberItem = false;
+        int doubleCount = 0, blankCount = 0;
         for(String string: items) {
-            boolean isDouble = false;
-            boolean isInt = false;
             try {
                 Double.parseDouble(string);
-                isDouble = true;
+                doubleCount += 1;
             } catch (NumberFormatException e) {
-                isDouble = false;
-                if(StringUtils.isNotBlank(string)) {
-                    isExistNotEmptyAndNotNumberItem = true;
+                if(StringUtils.isBlank(string)) {
+                    blankCount += 0;
                 }
             }
-            try {
-                Integer.parseInt(string);
-                isInt = true;
-            } catch (NumberFormatException e) {
-                isInt = false;
-            }
-            if(isDouble && !isInt) {
-                doubleNotInfSize += 1;
-            }
         }
 
-        if(doubleNotInfSize == items.length
-                || (doubleNotInfSize == items.length - 1 && !isExistNotEmptyAndNotNumberItem)) {
-            return true;
-        }
-
-        return false;
+        return (doubleCount + blankCount) == items.length;
     }
 
     // OptionsParser doesn't to support *.jar currently.
@@ -264,8 +274,7 @@ public class InitModelProcessor extends BasicModelProcessor implements Processor
         return StringUtils.join(jars, NNConstants.LIB_JAR_SEPARATOR);
     }
 
-    private Map<Integer, Data> getApproxDistinctCountByMRJob() throws IOException, InterruptedException,
-            ClassNotFoundException {
+    private Map<Integer, Data> getCountInfoByMRJob() throws IOException, InterruptedException, ClassNotFoundException {
         SourceType source = this.modelConfig.getDataSet().getSource();
         Configuration conf = new Configuration();
 
@@ -335,13 +344,23 @@ public class InitModelProcessor extends BasicModelProcessor implements Processor
 
         // submit job
         if(job.waitForCompletion(true)) {
-            return getDistinctCountMap(source, autoTypePath);
+            long totalValidCount = job.getCounters().findCounter(Constants.SHIFU_GROUP_COUNTER, "TOTAL_VALID_COUNT")
+                    .getValue();
+            long invalidTagCount = job.getCounters().findCounter(Constants.SHIFU_GROUP_COUNTER, "INVALID_TAG")
+                    .getValue();
+            long filterOut = job.getCounters().findCounter(Constants.SHIFU_GROUP_COUNTER, "FILTER_OUT_COUNT")
+                    .getValue();
+
+            log.info("Total valid records {}, invalid tag records {}, filter out records {}", totalValidCount,
+                    invalidTagCount, filterOut);
+            return getCountInfoMap(source, autoTypePath);
         } else {
             throw new RuntimeException("MapReduce Job Auto Type Distinct Count failed.");
         }
+
     }
 
-    private Map<Integer, Data> getDistinctCountMap(SourceType source, String autoTypePath) throws IOException {
+    private Map<Integer, Data> getCountInfoMap(SourceType source, String autoTypePath) throws IOException {
         String outputFilePattern = autoTypePath + Path.SEPARATOR + "part-*";
         if(!ShifuFileUtils.isFileExists(outputFilePattern, source)) {
             throw new RuntimeException("Auto type checking output file not exist.");
@@ -365,8 +384,10 @@ public class InitModelProcessor extends BasicModelProcessor implements Processor
                     String[] splits1 = str.split(TAB_STR);
                     String[] splits2 = splits1[1].split(":");
 
-                    distinctCountMap.put(Integer.valueOf(splits1[0]),
-                            new Data(Long.valueOf(splits2[0]), splits2[1].split(",")));
+                    distinctCountMap.put(
+                            Integer.valueOf(splits1[0]),
+                            new Data(Long.valueOf(splits2[0]), Long.valueOf(splits2[1]), Long.valueOf(splits2[2]), Long
+                                    .valueOf(splits2[3]), splits2[4].split(",")));
                 }
             }
             return distinctCountMap;
@@ -444,17 +465,23 @@ public class InitModelProcessor extends BasicModelProcessor implements Processor
         return 0;
     }
 
-    public static void main(String[] args) {
-        System.out.println(StringUtils.join(new String[] { "a", "b", "c" }, ""));
-    }
-
     static class Data {
-        public Data(long count, String[] items) {
+
+        public Data(long count, long invalidCount, long validNumCount, long distinctCount, String[] items) {
             this.count = count;
+            this.invalidCount = invalidCount;
+            this.validNumcount = validNumCount;
+            this.distinctCount = distinctCount;
             this.items = items;
         }
 
         private final long count;
+
+        private final long invalidCount;
+
+        private final long validNumcount;
+
+        private final long distinctCount;
 
         private final String[] items;
     }
