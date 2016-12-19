@@ -38,7 +38,7 @@ public class RawSourceData implements Cloneable {
     private SourceType source = SourceType.LOCAL;
 
     private String dataPath;
-    
+
     private String validationDataPath;
 
     private String dataDelimiter = "|";
@@ -67,7 +67,10 @@ public class RawSourceData implements Cloneable {
 
     /**
      * To change it to 0 instead of 250 because 0-1 columns shouldn't be set to categorical.
+     * 
+     * @deprecated no need set it to do auto typing.
      */
+    @Deprecated
     private Integer autoTypeThreshold = 0;
 
     /**
@@ -102,7 +105,7 @@ public class RawSourceData implements Cloneable {
     public void setDataPath(String dataPath) {
         this.dataPath = dataPath;
     }
-    
+
     public String getValidationDataPath() {
         return validationDataPath;
     }

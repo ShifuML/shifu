@@ -79,6 +79,11 @@ public class AutoTypeDistinctCountMapper extends Mapper<LongWritable, Text, IntW
     // cache tags in set for search
     private Set<String> tags;
 
+    /**
+     * Missing or invalid values
+     */
+    private Set<String> missingOrInvalidValues;
+
     private void loadConfigFiles(final Context context) {
         try {
             SourceType sourceType = SourceType.valueOf(context.getConfiguration().get(
@@ -105,6 +110,8 @@ public class AutoTypeDistinctCountMapper extends Mapper<LongWritable, Text, IntW
         this.outputKey = new IntWritable();
 
         this.tags = new HashSet<String>(modelConfig.getFlattenTags());
+
+        this.missingOrInvalidValues = new HashSet<String>(this.modelConfig.getDataSet().getMissingOrInvalidValues());
     }
 
     /**
@@ -131,8 +138,11 @@ public class AutoTypeDistinctCountMapper extends Mapper<LongWritable, Text, IntW
             LOG.warn("Empty input.");
             return;
         }
+        
+        context.getCounter(Constants.SHIFU_GROUP_COUNTER, "TOTAL_VALID_COUNT").increment(1L);
 
         if(!this.dataPurifier.isFilterOut(valueStr)) {
+            context.getCounter(Constants.SHIFU_GROUP_COUNTER, "FILTER_OUT_COUNT").increment(1L);
             return;
         }
 
@@ -150,16 +160,12 @@ public class AutoTypeDistinctCountMapper extends Mapper<LongWritable, Text, IntW
 
         int i = 0;
         for(String unit: units) {
-            if(unit == null || this.modelConfig.getDataSet().getMissingOrInvalidValues().contains(unit.toLowerCase())) {
-                i++;
-                continue;
-            }
             CountAndFrequentItems countAndFrequentItems = this.variableCountMap.get(i);
             if(countAndFrequentItems == null) {
                 countAndFrequentItems = new CountAndFrequentItems();
                 this.variableCountMap.put(i, countAndFrequentItems);
             }
-            countAndFrequentItems.offer(unit);
+            countAndFrequentItems.offer(this.missingOrInvalidValues, unit);
             i++;
         }
     }
@@ -173,7 +179,8 @@ public class AutoTypeDistinctCountMapper extends Mapper<LongWritable, Text, IntW
             this.outputKey.set(entry.getKey());
             byte[] bytes = entry.getValue().hyper.getBytes();
             Set<String> frequentItems = entry.getValue().frequentItems;
-            context.write(this.outputKey, new CountAndFrequentItemsWritable(bytes, frequentItems));
+            context.write(this.outputKey, new CountAndFrequentItemsWritable(entry.getValue().count,
+                    entry.getValue().invalidCount, entry.getValue().validNumCount, bytes, frequentItems));
         }
     }
 
@@ -183,8 +190,29 @@ public class AutoTypeDistinctCountMapper extends Mapper<LongWritable, Text, IntW
 
         private final Set<String> frequentItems = new HashSet<String>();
 
-        public void offer(String unit) {
+        private long count;
+
+        private long invalidCount;
+
+        private long validNumCount;
+
+        public void offer(Set<String> missingorInvalidValues, String unit) {
+            count += 1;
+
+            if(unit == null || missingorInvalidValues.contains(unit.toLowerCase())) {
+                invalidCount += 1;
+                return;
+            }
+
             hyper.offer(unit);
+
+            try {
+                Double.parseDouble(unit);
+                validNumCount += 1;
+            } catch (NumberFormatException e) {
+                // ignore as only do stats on validNumCount
+            }
+
             if(frequentItems.size() <= CountAndFrequentItemsWritable.FREQUET_ITEM_MAX_SIZE
                     && !frequentItems.contains(unit)) {
                 frequentItems.add(unit);

@@ -40,7 +40,11 @@ public class AutoTypeDistinctCountReducer extends
             throws IOException, InterruptedException {
         HyperLogLogPlus hyperLogLogPlus = null;
         Set<String> fis = new HashSet<String>();
+        long count = 0, invalidCount = 0, validNumCount = 0;
         for(CountAndFrequentItemsWritable cfiw: values) {
+            count += cfiw.getCount();
+            invalidCount += cfiw.getInvalidCount();
+            validNumCount += cfiw.getValidNumCount();
             fis.addAll(cfiw.getFrequetItems());
             if(hyperLogLogPlus == null) {
                 hyperLogLogPlus = HyperLogLogPlus.Builder.build(cfiw.getHyperBytes());
@@ -54,7 +58,8 @@ public class AutoTypeDistinctCountReducer extends
             }
         }
 
-        outputValue.set(hyperLogLogPlus.cardinality() + ":" + limitedFrequentItems(fis));
+        outputValue.set(count + ":" + invalidCount + ":" + validNumCount + ":" + hyperLogLogPlus.cardinality() + ":"
+                + limitedFrequentItems(fis));
         context.write(key, outputValue);
     }
 

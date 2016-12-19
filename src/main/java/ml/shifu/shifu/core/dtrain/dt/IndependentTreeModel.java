@@ -210,7 +210,7 @@ public class IndependentTreeModel {
      * Covert score to probability value which are in [0, 1], for GBT regression, scores can not be [0, 1].
      */
     protected double convertToProb(double score) {
-        // sigmoid function to covert to [0, 1], TODO, how to make it configuable by users
+        // sigmoid function to covert to [0, 1], TODO, how to make it configuable for users
         return 1 / (1 + Math.min(1.0E19, Math.exp(-score)));
     }
 
