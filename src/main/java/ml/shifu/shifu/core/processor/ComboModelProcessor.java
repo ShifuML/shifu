@@ -512,6 +512,7 @@ public class ComboModelProcessor extends BasicModelProcessor implements Processo
      * @param evalSetName
      * @return
      */
+    @SuppressWarnings({ "rawtypes", "unchecked" })
     private Callable<Integer> createTrainAndEvalTasks(final String subModelName, final String evalSetName) {
         return new Callable() {
             @Override
