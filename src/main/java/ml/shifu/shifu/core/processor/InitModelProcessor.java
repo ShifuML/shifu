@@ -382,7 +382,7 @@ public class InitModelProcessor extends BasicModelProcessor implements Processor
                 str = scanner.nextLine().trim();
                 if(str.contains(TAB_STR)) {
                     String[] splits1 = str.split(TAB_STR);
-                    String[] splits2 = splits1[1].split(":");
+                    String[] splits2 = splits1[1].split(":", -1);
 
                     distinctCountMap.put(
                             Integer.valueOf(splits1[0]),
