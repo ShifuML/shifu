@@ -382,8 +382,11 @@ public class MapReducerStatsWorker extends AbstractStatsExecutor {
             ColumnConfig columnConfig = CommonUtils.findColumnConfigByName(columnConfigList,
                     modelConfig.getPsiColumnName());
 
-            if(columnConfig == null || !columnConfig.isMeta()) {
-                log.warn("Unable to use the PSI column name specify in ModelConfig to compute PSI");
+            //FIXME support categorical variable to compute PSI
+            if (columnConfig == null || (!columnConfig.isMeta() && !columnConfig.isCategorical())) {
+                log.warn("Unable to use the PSI column {} specify in ModelConfig to compute PSI",
+                        columnConfig == null ? "Name" : columnConfig.getColumnName());
+                log.warn("Your PSI column is not a Meta Flag, or not a categorical variable");
                 return;
             }
 

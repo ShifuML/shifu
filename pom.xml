@@ -25,6 +25,12 @@
             <groupId>jline</groupId>
             <artifactId>jline</artifactId>
             <version>0.9.9</version>
+            <exclusions>
+                <exclusion>
+                    <artifactId>junit</artifactId>
+                    <groupId>junit</groupId>
+                </exclusion>
+            </exclusions>
         </dependency>
         <dependency>
             <groupId>org.antlr</groupId>
