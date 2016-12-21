@@ -7,6 +7,7 @@ import ml.shifu.shifu.container.obj.ModelConfig;
 import ml.shifu.shifu.container.obj.ModelNormalizeConf;
 import ml.shifu.shifu.container.obj.ModelTrainConf;
 import ml.shifu.shifu.core.pmml.PMMLTranslator;
+import ml.shifu.shifu.core.pmml.GBTPMMLTranslator;
 import ml.shifu.shifu.core.pmml.builder.creator.AbstractPmmlElementCreator;
 import ml.shifu.shifu.core.pmml.builder.creator.AbstractSpecifCreator;
 import ml.shifu.shifu.core.pmml.builder.impl.*;
@@ -32,6 +33,13 @@ public class PMMLConstructorFactory {
         } else if (ModelTrainConf.ALGORITHM.LR.name().equalsIgnoreCase(modelConfig.getTrain().getAlgorithm())) {
             modelCreator = new RegressionPmmlModelCreator(modelConfig, columnConfigList, isConcise);
             specifCreator = new RegressionSpecifCreator();
+        } else if(ModelTrainConf.ALGORITHM.GBT.name().equalsIgnoreCase(modelConfig.getTrain().getAlgorithm())) {
+            GBTPmmlCreator gbtmodelCreator = new GBTPmmlCreator(modelConfig, columnConfigList);
+            AbstractPmmlElementCreator<DataDictionary> dataDictionaryCreator =
+                new DataDictionaryCreator(modelConfig, columnConfigList);
+            AbstractPmmlElementCreator<MiningSchema> miningSchemaCreator =
+                new TreeModelMiningSchemaCreator(modelConfig, columnConfigList);
+            return new GBTPMMLTranslator(gbtmodelCreator, dataDictionaryCreator, miningSchemaCreator);
         } else {
             throw new RuntimeException("Model not supported: " + modelConfig.getTrain().getAlgorithm());
         }
