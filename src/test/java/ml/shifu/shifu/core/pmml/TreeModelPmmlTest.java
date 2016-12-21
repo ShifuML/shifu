@@ -23,7 +23,6 @@ import java.util.Map;
 import java.util.Map.Entry;
 
 import ml.shifu.shifu.core.dtrain.dt.IndependentTreeModel;
-import ml.shifu.shifu.core.dtrain.dt.TreeNode;
 
 import org.apache.commons.io.IOUtils;
 import org.dmg.pmml.FieldName;
@@ -31,17 +30,17 @@ import org.dmg.pmml.PMML;
 import org.jpmml.evaluator.ClassificationMap;
 import org.jpmml.evaluator.FieldValue;
 import org.jpmml.evaluator.MiningModelEvaluator;
+import org.testng.annotations.Test;
 
 public class TreeModelPmmlTest {
 
-    // @Test
+    @Test
     public void testTreeModel() throws Exception {
         InputStream is = null;
         try {
             is = new FileInputStream("src/test/resources/dttest/model/model-5.gbt");
             IndependentTreeModel model = IndependentTreeModel.loadFromStream(is);
-            @SuppressWarnings("unused")
-            List<TreeNode> trees = model.getTrees();
+            // List<TreeNode> trees = model.getTrees();
             // for(TreeNode treeNode: trees) {
             // System.out.println(treeNode.getNode().toTree());
             // }
@@ -79,12 +78,10 @@ public class TreeModelPmmlTest {
     }
 
     @SuppressWarnings("unchecked")
-    // @Test
+    @Test
     public void testTreeModelPMML() throws Exception {
         PMML pmml = PMMLUtils.loadPMML("src/test/resources/dttest/model/model-5.pmml");
         MiningModelEvaluator evaluator = new MiningModelEvaluator(pmml);
-
-        System.out.println(evaluator.getActiveFields());
 
         List<Map<FieldName, FieldValue>> input = CsvUtil.load(evaluator, "src/test/resources/dttest/data/tmdata-1.csv",
                 "\\|");

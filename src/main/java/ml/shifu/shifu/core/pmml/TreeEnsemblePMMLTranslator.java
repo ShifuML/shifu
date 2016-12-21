@@ -1,27 +1,25 @@
 package ml.shifu.shifu.core.pmml;
 
-import ml.shifu.shifu.core.pmml.builder.creator.AbstractPmmlElementCreator;
-import ml.shifu.shifu.core.pmml.builder.creator.AbstractSpecifCreator;
-import ml.shifu.shifu.core.pmml.builder.impl.GBTPmmlCreator;
-
-import org.dmg.pmml.DataDictionary;
-import org.dmg.pmml.LocalTransformations;
-import org.dmg.pmml.MiningSchema;
-import org.dmg.pmml.Model;
-import org.dmg.pmml.ModelStats;
-import org.dmg.pmml.PMML;
-import org.encog.ml.BasicML;
-import ml.shifu.shifu.core.TreeModel;
-
 import java.util.List;
 
-public class GBTPMMLTranslator extends PMMLTranslator {
+import ml.shifu.shifu.core.TreeModel;
+import ml.shifu.shifu.core.pmml.builder.creator.AbstractPmmlElementCreator;
+import ml.shifu.shifu.core.pmml.builder.impl.TreeEnsemblePmmlCreator;
+
+import org.dmg.pmml.DataDictionary;
+import org.dmg.pmml.MiningSchema;
+import org.dmg.pmml.Model;
+import org.dmg.pmml.PMML;
+import org.encog.ml.BasicML;
+
+public class TreeEnsemblePMMLTranslator extends PMMLTranslator {
         
-    private GBTPmmlCreator modelCreator;
+    private TreeEnsemblePmmlCreator modelCreator;
     private AbstractPmmlElementCreator<DataDictionary> dataDictionaryCreator;
+    @SuppressWarnings("unused")
     private AbstractPmmlElementCreator<MiningSchema> miningSchemaCreator;
 
-    public GBTPMMLTranslator(GBTPmmlCreator modelCreator,
+    public TreeEnsemblePMMLTranslator(TreeEnsemblePmmlCreator modelCreator,
                           AbstractPmmlElementCreator<DataDictionary> dataDictionaryCreator,
                           AbstractPmmlElementCreator<MiningSchema> miningSchemaCreator) {
         super();
