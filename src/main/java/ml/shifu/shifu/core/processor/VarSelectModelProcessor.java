@@ -196,7 +196,9 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
                             }
                             mergedResult = this.mergeImportanceList(importanceList);
                             this.writeFeatureImportance(mergedResult);
-                            this.postProcessFIVarSelect(mergedResult);
+                            if(super.modelConfig.getVarSelect().getFilterBySE()) {
+                                this.postProcessFIVarSelect(mergedResult);
+                            }
                         }
 
                     } else {
@@ -664,10 +666,6 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
     private void postProcessFIVarSelect(Map<Integer, MutablePair<String, Double>> importances) {
         int selectCnt = 0;
         for(ColumnConfig config: super.columnConfigList) {
-            if(config.isFinalSelect()) {
-                config.setFinalSelect(false);
-            }
-
             // enable ForceSelect
             if(config.isForceSelect()) {
                 config.setFinalSelect(true);
