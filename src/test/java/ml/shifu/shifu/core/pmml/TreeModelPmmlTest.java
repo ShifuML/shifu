@@ -40,10 +40,6 @@ public class TreeModelPmmlTest {
         try {
             is = new FileInputStream("src/test/resources/dttest/model/model-5.gbt");
             IndependentTreeModel model = IndependentTreeModel.loadFromStream(is);
-            // List<TreeNode> trees = model.getTrees();
-            // for(TreeNode treeNode: trees) {
-            // System.out.println(treeNode.getNode().toTree());
-            // }
             PMML pmml = PMMLUtils.loadPMML("src/test/resources/dttest/model/model-5.pmml");
             MiningModelEvaluator evaluator = new MiningModelEvaluator(pmml);
             List<Map<FieldName, FieldValue>> input = CsvUtil.load(evaluator,

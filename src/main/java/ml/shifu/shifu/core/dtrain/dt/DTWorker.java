@@ -866,7 +866,7 @@ public class DTWorker
             }
         } else if(columnConfig.isCategorical()) {
             short indexValue = (short) (columnConfig.getBinCategory().size());
-            if(data.inputs[inputIndex] < (short) (columnConfig.getBinCategory().size())) {
+            if(data.inputs[inputIndex] >= 0 && data.inputs[inputIndex] < (short) (columnConfig.getBinCategory().size())) {
                 indexValue = data.inputs[inputIndex];
             } else {
                 // for invalid category, set to last one
