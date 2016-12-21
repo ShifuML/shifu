@@ -7,7 +7,7 @@ import ml.shifu.shifu.container.obj.ModelConfig;
 import ml.shifu.shifu.container.obj.ModelNormalizeConf;
 import ml.shifu.shifu.container.obj.ModelTrainConf;
 import ml.shifu.shifu.core.pmml.PMMLTranslator;
-import ml.shifu.shifu.core.pmml.GBTPMMLTranslator;
+import ml.shifu.shifu.core.pmml.TreeEnsemblePMMLTranslator;
 import ml.shifu.shifu.core.pmml.builder.creator.AbstractPmmlElementCreator;
 import ml.shifu.shifu.core.pmml.builder.creator.AbstractSpecifCreator;
 import ml.shifu.shifu.core.pmml.builder.impl.*;
@@ -27,50 +27,45 @@ public class PMMLConstructorFactory {
 
         AbstractPmmlElementCreator<Model> modelCreator = null;
         AbstractSpecifCreator specifCreator = null;
-        if (ModelTrainConf.ALGORITHM.NN.name().equalsIgnoreCase(modelConfig.getTrain().getAlgorithm())) {
+        if(ModelTrainConf.ALGORITHM.NN.name().equalsIgnoreCase(modelConfig.getTrain().getAlgorithm())) {
             modelCreator = new NNPmmlModelCreator(modelConfig, columnConfigList, isConcise);
             specifCreator = new NNSpecifCreator();
-        } else if (ModelTrainConf.ALGORITHM.LR.name().equalsIgnoreCase(modelConfig.getTrain().getAlgorithm())) {
+        } else if(ModelTrainConf.ALGORITHM.LR.name().equalsIgnoreCase(modelConfig.getTrain().getAlgorithm())) {
             modelCreator = new RegressionPmmlModelCreator(modelConfig, columnConfigList, isConcise);
             specifCreator = new RegressionSpecifCreator();
-        } else if(ModelTrainConf.ALGORITHM.GBT.name().equalsIgnoreCase(modelConfig.getTrain().getAlgorithm())) {
-            GBTPmmlCreator gbtmodelCreator = new GBTPmmlCreator(modelConfig, columnConfigList);
-            AbstractPmmlElementCreator<DataDictionary> dataDictionaryCreator =
-                new DataDictionaryCreator(modelConfig, columnConfigList);
-            AbstractPmmlElementCreator<MiningSchema> miningSchemaCreator =
-                new TreeModelMiningSchemaCreator(modelConfig, columnConfigList);
-            return new GBTPMMLTranslator(gbtmodelCreator, dataDictionaryCreator, miningSchemaCreator);
+        } else if(ModelTrainConf.ALGORITHM.GBT.name().equalsIgnoreCase(modelConfig.getTrain().getAlgorithm())
+                || ModelTrainConf.ALGORITHM.RF.name().equalsIgnoreCase(modelConfig.getTrain().getAlgorithm())) {
+            TreeEnsemblePmmlCreator gbtmodelCreator = new TreeEnsemblePmmlCreator(modelConfig, columnConfigList);
+            AbstractPmmlElementCreator<DataDictionary> dataDictionaryCreator = new DataDictionaryCreator(modelConfig,
+                    columnConfigList);
+            AbstractPmmlElementCreator<MiningSchema> miningSchemaCreator = new TreeModelMiningSchemaCreator(
+                    modelConfig, columnConfigList);
+            return new TreeEnsemblePMMLTranslator(gbtmodelCreator, dataDictionaryCreator, miningSchemaCreator);
         } else {
             throw new RuntimeException("Model not supported: " + modelConfig.getTrain().getAlgorithm());
         }
 
-        AbstractPmmlElementCreator<DataDictionary> dataDictionaryCreator =
-                new DataDictionaryCreator(modelConfig, columnConfigList, isConcise);
+        AbstractPmmlElementCreator<DataDictionary> dataDictionaryCreator = new DataDictionaryCreator(modelConfig,
+                columnConfigList, isConcise);
 
+        AbstractPmmlElementCreator<MiningSchema> miningSchemaCreator = new MiningSchemaCreator(modelConfig,
+                columnConfigList, isConcise);
 
-        AbstractPmmlElementCreator<MiningSchema> miningSchemaCreator =
-                new MiningSchemaCreator(modelConfig, columnConfigList, isConcise);
-
-        AbstractPmmlElementCreator<ModelStats> modelStatsCreator =
-                new ModelStatsCreator(modelConfig, columnConfigList, isConcise);
+        AbstractPmmlElementCreator<ModelStats> modelStatsCreator = new ModelStatsCreator(modelConfig, columnConfigList,
+                isConcise);
 
         AbstractPmmlElementCreator<LocalTransformations> localTransformationsCreator = null;
         ModelNormalizeConf.NormType normType = modelConfig.getNormalizeType();
-        if ( normType.equals(ModelNormalizeConf.NormType.WOE)
-                || normType.equals(ModelNormalizeConf.NormType.WEIGHT_WOE) ) {
+        if(normType.equals(ModelNormalizeConf.NormType.WOE) || normType.equals(ModelNormalizeConf.NormType.WEIGHT_WOE)) {
             localTransformationsCreator = new WoeLocalTransformCreator(modelConfig, columnConfigList, isConcise);
-        } else if ( normType.equals(ModelNormalizeConf.NormType.WOE_ZSCORE) ) {
-            localTransformationsCreator
-                    = new WoeZscoreLocalTransformCreator(modelConfig, columnConfigList, isConcise, false);
+        } else if(normType.equals(ModelNormalizeConf.NormType.WOE_ZSCORE)) {
+            localTransformationsCreator = new WoeZscoreLocalTransformCreator(modelConfig, columnConfigList, isConcise,
+                    false);
         } else {
             localTransformationsCreator = new ZscoreLocalTransformCreator(modelConfig, columnConfigList, isConcise);
         }
 
-        return new PMMLTranslator(modelCreator,
-                dataDictionaryCreator,
-                miningSchemaCreator,
-                modelStatsCreator,
-                localTransformationsCreator,
-                specifCreator);
+        return new PMMLTranslator(modelCreator, dataDictionaryCreator, miningSchemaCreator, modelStatsCreator,
+                localTransformationsCreator, specifCreator);
     }
 }
