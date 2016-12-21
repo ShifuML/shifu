@@ -64,13 +64,6 @@ public class NNParquetWorker extends AbstractNNWorker<Tuple> {
             LOG.info("Read {} records.", super.count);
         }
 
-        double baggingSampleRate = super.modelConfig.getBaggingSampleRate();
-        // if fixInitialInput = false, we only compare random value with baggingSampleRate to avoid parsing data.
-        // if fixInitialInput = true, we should use hash code after parsing.
-        if(!super.modelConfig.isFixInitialInput() && Double.compare(Math.random(), baggingSampleRate) >= 0) {
-            return;
-        }
-
         float[] inputs = new float[super.inputNodeCount];
         float[] ideal = new float[super.outputNodeCount];
 
@@ -175,9 +168,29 @@ public class NNParquetWorker extends AbstractNNWorker<Tuple> {
         }
 
         // if fixInitialInput = true, we should use hashcode to sample.
+        double baggingSampleRate = super.modelConfig.getBaggingSampleRate();
+        // if fixInitialInput = false, we only compare random value with baggingSampleRate to avoid parsing data.
+        // if fixInitialInput = true, we should use hash code after parsing.
+        if(!super.modelConfig.isFixInitialInput() && Double.compare(Math.random(), baggingSampleRate) >= 0) {
+            // for negative tags, do sampleNegOnly logic
+            if(modelConfig.getTrain().getSampleNegOnly()) {
+                if(modelConfig.isRegression() && Double.compare(ideal[0] + 0d, 0d) == 0) {
+                    return;
+                }
+            } else {
+                return;// normal sampling
+            }
+        }
         long longBaggingSampleRate = Double.valueOf(baggingSampleRate * 100).longValue();
         if(super.modelConfig.isFixInitialInput() && hashcode % 100 >= longBaggingSampleRate) {
-            return;
+            // for negative tags, do sampleNegOnly logic
+            if(modelConfig.getTrain().getSampleNegOnly()) {
+                if(modelConfig.isRegression() && Double.compare(ideal[0] + 0d, 0d) == 0) {
+                    return;
+                }
+            } else {
+                return;// normal sampling
+            }
         }
 
         super.sampleCount += 1;

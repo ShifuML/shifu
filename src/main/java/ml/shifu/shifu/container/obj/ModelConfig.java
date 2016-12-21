@@ -431,7 +431,7 @@ public class ModelConfig {
     }
 
     @JsonIgnore
-    public Double getCrossValidationRate() {
+    public Double getValidSetRate() {
         return train.getValidSetRate();
     }
 

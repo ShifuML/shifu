@@ -15,28 +15,84 @@
  */
 package ml.shifu.shifu.core.pmml;
 
+import java.io.FileInputStream;
+import java.io.InputStream;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 
+import ml.shifu.shifu.core.dtrain.dt.IndependentTreeModel;
+import ml.shifu.shifu.core.dtrain.dt.TreeNode;
+
+import org.apache.commons.io.IOUtils;
 import org.dmg.pmml.FieldName;
 import org.dmg.pmml.PMML;
 import org.jpmml.evaluator.ClassificationMap;
 import org.jpmml.evaluator.FieldValue;
-import org.jpmml.evaluator.TreeModelEvaluator;
+import org.jpmml.evaluator.MiningModelEvaluator;
 
 public class TreeModelPmmlTest {
 
-    @SuppressWarnings("unchecked")
-    public void testTreeModelPMML() throws Exception {
-        PMML pmml = PMMLUtils.loadPMML(getClass().getResource("/dttest/test/gbt.pmml").toString());
-        TreeModelEvaluator evaluator = new TreeModelEvaluator(pmml);
+    // @Test
+    public void testTreeModel() throws Exception {
+        InputStream is = null;
+        try {
+            is = new FileInputStream("src/test/resources/dttest/model/model-5.gbt");
+            IndependentTreeModel model = IndependentTreeModel.loadFromStream(is);
+            @SuppressWarnings("unused")
+            List<TreeNode> trees = model.getTrees();
+            // for(TreeNode treeNode: trees) {
+            // System.out.println(treeNode.getNode().toTree());
+            // }
+            PMML pmml = PMMLUtils.loadPMML("src/test/resources/dttest/model/model-5.pmml");
+            MiningModelEvaluator evaluator = new MiningModelEvaluator(pmml);
+            List<Map<FieldName, FieldValue>> input = CsvUtil.load(evaluator,
+                    "src/test/resources/dttest/data/tmdata-1.csv", "\\|");
 
-        List<Map<FieldName, FieldValue>> input = CsvUtil.load(evaluator,
-                getClass().getResource("/dttest/test/tmdata.csv").toString(), "|");
+            for(Map<FieldName, FieldValue> map: input) {
+                Map<String, Object> newMap = new HashMap<String, Object>();
+                for(Entry<FieldName, FieldValue> entry: map.entrySet()) {
+                    FieldName key = entry.getKey();
+                    FieldValue value = entry.getValue();
+
+                    switch(value.getOpType()) {
+                        case CONTINUOUS:
+                            newMap.put(key.getValue(), Double.parseDouble(value.getValue().toString()));
+                            break;
+                        case CATEGORICAL:
+                            newMap.put(key.getValue(), value.getValue().toString());
+                            break;
+                    }
+                }
+                double[] results = model.compute(newMap);
+                System.out.println(newMap);
+                System.out.println(results[0] * 1000);
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+            throw e;
+        } finally {
+            IOUtils.closeQuietly(is);
+        }
+
+    }
+
+    @SuppressWarnings("unchecked")
+    // @Test
+    public void testTreeModelPMML() throws Exception {
+        PMML pmml = PMMLUtils.loadPMML("src/test/resources/dttest/model/model-5.pmml");
+        MiningModelEvaluator evaluator = new MiningModelEvaluator(pmml);
+
+        System.out.println(evaluator.getActiveFields());
+
+        List<Map<FieldName, FieldValue>> input = CsvUtil.load(evaluator, "src/test/resources/dttest/data/tmdata-1.csv",
+                "\\|");
 
         for(Map<FieldName, FieldValue> maps: input) {
             switch(evaluator.getModel().getFunctionName()) {
                 case REGRESSION:
+                    System.out.println(maps);
                     Map<FieldName, Double> regressionTerm = (Map<FieldName, Double>) evaluator.evaluate(maps);
                     for(Map.Entry<FieldName, Double> entry: regressionTerm.entrySet())
                         System.out.println(entry.getValue() * 1000);

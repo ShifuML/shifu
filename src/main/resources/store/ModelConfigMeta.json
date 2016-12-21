@@ -420,6 +420,11 @@
                 "directive": "input",
                 "defval": 0.2
             }, {
+                "name": "sampleNegOnly",
+                "type": "boolean",
+                "directive": "checkbox",
+                "defval" : false
+            }, {
                 "name": "trainOnDisk",
                 "type": "boolean",
                 "directive": "checkbox",
