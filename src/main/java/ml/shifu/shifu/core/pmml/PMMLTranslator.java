@@ -49,6 +49,9 @@ public class PMMLTranslator {
         this.specifCreator = specifCreator;
     }
 
+    public PMMLTranslator() {
+    }
+
     public PMML build(BasicML basicML) {
         PMML pmml = new PMML();
 
