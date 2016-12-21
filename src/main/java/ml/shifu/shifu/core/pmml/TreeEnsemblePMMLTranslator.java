@@ -1,27 +1,40 @@
+/*
+ * Copyright [2013-2016] PayPal Software Foundation
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package ml.shifu.shifu.core.pmml;
-
-import ml.shifu.shifu.core.pmml.builder.creator.AbstractPmmlElementCreator;
-import ml.shifu.shifu.core.pmml.builder.creator.AbstractSpecifCreator;
-import ml.shifu.shifu.core.pmml.builder.impl.GBTPmmlCreator;
-
-import org.dmg.pmml.DataDictionary;
-import org.dmg.pmml.LocalTransformations;
-import org.dmg.pmml.MiningSchema;
-import org.dmg.pmml.Model;
-import org.dmg.pmml.ModelStats;
-import org.dmg.pmml.PMML;
-import org.encog.ml.BasicML;
-import ml.shifu.shifu.core.TreeModel;
 
 import java.util.List;
 
-public class GBTPMMLTranslator extends PMMLTranslator {
+import ml.shifu.shifu.core.TreeModel;
+import ml.shifu.shifu.core.pmml.builder.creator.AbstractPmmlElementCreator;
+import ml.shifu.shifu.core.pmml.builder.impl.TreeEnsemblePmmlCreator;
+
+import org.dmg.pmml.DataDictionary;
+import org.dmg.pmml.MiningSchema;
+import org.dmg.pmml.Model;
+import org.dmg.pmml.PMML;
+import org.encog.ml.BasicML;
+
+public class TreeEnsemblePMMLTranslator extends PMMLTranslator {
         
-    private GBTPmmlCreator modelCreator;
+    private TreeEnsemblePmmlCreator modelCreator;
     private AbstractPmmlElementCreator<DataDictionary> dataDictionaryCreator;
+    @SuppressWarnings("unused")
     private AbstractPmmlElementCreator<MiningSchema> miningSchemaCreator;
 
-    public GBTPMMLTranslator(GBTPmmlCreator modelCreator,
+    public TreeEnsemblePMMLTranslator(TreeEnsemblePmmlCreator modelCreator,
                           AbstractPmmlElementCreator<DataDictionary> dataDictionaryCreator,
                           AbstractPmmlElementCreator<MiningSchema> miningSchemaCreator) {
         super();

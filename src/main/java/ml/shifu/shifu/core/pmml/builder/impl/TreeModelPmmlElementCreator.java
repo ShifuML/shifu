@@ -1,25 +1,22 @@
 package ml.shifu.shifu.core.pmml.builder.impl;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.container.obj.ModelConfig;
-import ml.shifu.shifu.core.pmml.builder.creator.AbstractPmmlElementCreator;
 import ml.shifu.shifu.core.dtrain.dt.IndependentTreeModel;
-import org.dmg.pmml.FieldName;
-import org.dmg.pmml.FieldUsageType;
-import org.dmg.pmml.MiningField;
-import org.dmg.pmml.MiningSchema;
-import org.dmg.pmml.MiningFunctionType;
-import org.dmg.pmml.Node;
-import org.dmg.pmml.Targets;
+import ml.shifu.shifu.core.pmml.builder.creator.AbstractPmmlElementCreator;
 
+import org.dmg.pmml.FieldName;
+import org.dmg.pmml.MiningFunctionType;
+import org.dmg.pmml.MissingValueStrategyType;
 import org.dmg.pmml.Model;
+import org.dmg.pmml.Node;
+import org.dmg.pmml.OpType;
 import org.dmg.pmml.Target;
 import org.dmg.pmml.TargetValue;
-import org.dmg.pmml.OpType;
-import org.dmg.pmml.MissingValueStrategyType;
-
-import java.util.List;
-import java.util.ArrayList;
+import org.dmg.pmml.Targets;
 
 public class TreeModelPmmlElementCreator extends AbstractPmmlElementCreator<Model> {
     

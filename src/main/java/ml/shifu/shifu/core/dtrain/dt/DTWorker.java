@@ -344,7 +344,7 @@ public class DTWorker
         double memoryFraction = Double.valueOf(context.getProps().getProperty("guagua.data.memoryFraction", "0.6"));
         LOG.info("Max heap memory: {}, fraction: {}", Runtime.getRuntime().maxMemory(), memoryFraction);
 
-        double validationRate = this.modelConfig.getCrossValidationRate();
+        double validationRate = this.modelConfig.getValidSetRate();
         if(Double.compare(validationRate, 0d) != 0) {
             this.trainingData = new MemoryLimitedList<Data>(
                     (long) (Runtime.getRuntime().maxMemory() * memoryFraction * (1 - validationRate)),
@@ -785,7 +785,7 @@ public class DTWorker
         LOG.info("    - # Records of the Master Data Set: {}.", this.count);
         LOG.info("    - Bagging Sample Rate: {}.", this.modelConfig.getBaggingSampleRate());
         LOG.info("    - Bagging With Replacement: {}.", this.modelConfig.isBaggingWithReplacement());
-        LOG.info("        - Cross Validation Rate: {}.", this.modelConfig.getCrossValidationRate());
+        LOG.info("        - Cross Validation Rate: {}.", this.modelConfig.getValidSetRate());
         LOG.info("        - # Records of the Training Set: {}.", this.trainingData.size());
         if(validationData != null) {
             LOG.info("        - # Records of the Validation Set: {}.", this.validationData.size());
@@ -866,7 +866,7 @@ public class DTWorker
             }
         } else if(columnConfig.isCategorical()) {
             short indexValue = (short) (columnConfig.getBinCategory().size());
-            if(data.inputs[inputIndex] < (short) (columnConfig.getBinCategory().size())) {
+            if(data.inputs[inputIndex] >= 0 && data.inputs[inputIndex] < (short) (columnConfig.getBinCategory().size())) {
                 indexValue = data.inputs[inputIndex];
             } else {
                 // for invalid category, set to last one
@@ -892,13 +892,6 @@ public class DTWorker
         this.count += 1;
         if((this.count) % 5000 == 0) {
             LOG.info("Read {} records.", this.count);
-        }
-
-        double baggingSampleRate = this.modelConfig.getBaggingSampleRate();
-        // if fixInitialInput = false, we only compare random value with baggingSampleRate to avoid parsing data.
-        // if fixInitialInput = true, we should use hashcode after parsing.
-        if(!modelConfig.isFixInitialInput() && Double.compare(Math.random(), baggingSampleRate) >= 0) {
-            return;
         }
 
         // hashcode for fixed input split in train and validation
@@ -1007,10 +1000,30 @@ public class DTWorker
             index += 1;
         }
 
+        double baggingSampleRate = this.modelConfig.getBaggingSampleRate();
+        // if fixInitialInput = false, we only compare random value with baggingSampleRate to avoid parsing data.
+        // if fixInitialInput = true, we should use hashcode after parsing.
+        if(!modelConfig.isFixInitialInput() && Double.compare(Math.random(), baggingSampleRate) >= 0) {
+            // for negative tags, do sampleNegOnly logic
+            if(modelConfig.getTrain().getSampleNegOnly()) {
+                if(modelConfig.isRegression() && Double.compare(ideal + 0d, 0d) == 0) {
+                    return;
+                }
+            } else {
+                return;// normal sampling
+            }
+        }
         // if fixInitialInput = true, we should use hashcode to sample.
         long longBaggingSampleRate = Double.valueOf(baggingSampleRate * 100).longValue();
         if(this.modelConfig.isFixInitialInput() && hashcode % 100 >= longBaggingSampleRate) {
-            return;
+            // for negative tags, do sampleNegOnly logic
+            if(modelConfig.getTrain().getSampleNegOnly()) {
+                if(modelConfig.isRegression() && Double.compare(ideal + 0d, 0d) == 0) {
+                    return;
+                }
+            } else {
+                return;// normal sampling
+            }
         }
         this.sampleCount += 1;
 
@@ -1057,7 +1070,7 @@ public class DTWorker
             this.trainingData.append(data);
             return;
         }
-        double validationRate = this.modelConfig.getCrossValidationRate();
+        double validationRate = this.modelConfig.getValidSetRate();
         if(Double.compare(validationRate, 0d) != 0) {
             if(this.modelConfig.isFixInitialInput()) {
                 long longValidation = Double.valueOf(validationRate * 100).longValue();
