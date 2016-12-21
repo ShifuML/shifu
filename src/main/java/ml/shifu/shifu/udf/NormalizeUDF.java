@@ -105,11 +105,15 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
             return null;
         }
 
-        // do data sampling. Unselected data or data with invalid tag will be filtered out.
-        boolean isNotSampled = DataSampler.isNotSampled(modelConfig.isRegression(), super.tagSet, super.posTagSet,
-                super.negTagSet, modelConfig.getNormalizeSampleRate(), modelConfig.isNormalizeSampleNegOnly(), rawTag);
-        if(isNotSampled) {
-            return null;
+        // data sampling only for normalization, for data cleaning, shouldn't do data sampling
+        if(!this.isForClean) {
+            // do data sampling. Unselected data or data with invalid tag will be filtered out.
+            boolean isNotSampled = DataSampler.isNotSampled(modelConfig.isRegression(), super.tagSet, super.posTagSet,
+                    super.negTagSet, modelConfig.getNormalizeSampleRate(), modelConfig.isNormalizeSampleNegOnly(),
+                    rawTag);
+            if(isNotSampled) {
+                return null;
+            }
         }
 
         // append tuple with tag, normalized value.
@@ -158,7 +162,7 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
 
             // append normalize data.
             if(!CommonUtils.isGoodCandidate(modelConfig.isRegression(), config)) {
-                if ( config.isMeta() ) {
+                if(config.isMeta()) {
                     tuple.append(val);
                 } else {
                     tuple.append(null);
@@ -239,9 +243,9 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
             StringBuilder schemaStr = new StringBuilder();
             schemaStr.append("Normalized:Tuple(");
             for(ColumnConfig config: columnConfigList) {
-                if ( config.isMeta() ) {
+                if(config.isMeta()) {
                     schemaStr.append(config.getColumnName() + ":chararray" + ",");
-                } else if (!config.isMeta() && config.isNumerical()) {
+                } else if(!config.isMeta() && config.isNumerical()) {
                     schemaStr.append(config.getColumnName() + ":float" + ",");
                 } else if(config.isTarget()) {
                     schemaStr.append(config.getColumnName() + ":int" + ",");

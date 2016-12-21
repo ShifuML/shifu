@@ -126,7 +126,7 @@ public abstract class AbstractTrainer {
         this.trainerID = trainerID;
         this.dryRun = dryRun;
 
-        crossValidationRate = this.modelConfig.getCrossValidationRate();
+        crossValidationRate = this.modelConfig.getValidSetRate();
         if (crossValidationRate == null) {
             crossValidationRate = 0.2;
         }
