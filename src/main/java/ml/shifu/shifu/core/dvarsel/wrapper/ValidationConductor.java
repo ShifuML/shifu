@@ -53,7 +53,7 @@ public class ValidationConductor {
         MLDataSet testingData = new BasicMLDataSet();
 
         this.trainingDataSet.generateValidateData(this.workingColumnSet,
-                this.modelConfig.getCrossValidationRate(),
+                this.modelConfig.getValidSetRate(),
                 trainingData,
                 testingData);
 
