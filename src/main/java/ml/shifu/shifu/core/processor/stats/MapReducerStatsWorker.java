@@ -383,8 +383,11 @@ public class MapReducerStatsWorker extends AbstractStatsExecutor {
             ColumnConfig columnConfig = CommonUtils.findColumnConfigByName(columnConfigList,
                     modelConfig.getPsiColumnName());
 
-            if(columnConfig == null || !columnConfig.isMeta()) {
-                log.warn("Unable to use the PSI column name specify in ModelConfig to compute PSI");
+            if(columnConfig == null || (!columnConfig.isMeta() && !columnConfig.isCategorical())) {
+                log.warn("Unable to use the PSI column {} specify in ModelConfig to compute PSI\n" +
+                                "neither meta nor categorical type",
+                        columnConfig != null ? columnConfig.getColumnName() : "unknown");
+
                 return;
             }
 
