@@ -101,7 +101,7 @@ public class TreeNodePmmlElementCreator extends AbstractPmmlElementCreator<org.d
             List<String> valueList = treeModel.getCategoricalColumnNameNames().get(columnConfig.getColumnNum());
             for(Short sh: childCategories) {
                 if(sh >= valueList.size()) {
-                    arrayStr.append(" \" \"");
+                    arrayStr.append(" \"\"");
                     continue;
                 }
                 String s = valueList.get(sh);
