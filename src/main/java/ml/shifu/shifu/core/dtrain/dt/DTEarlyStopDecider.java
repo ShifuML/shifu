@@ -15,7 +15,6 @@
  */
 package ml.shifu.shifu.core.dtrain.dt;
 
-import org.apache.commons.math3.analysis.function.Min;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -87,7 +86,7 @@ public class DTEarlyStopDecider {
         trainErrorDecider = new MinAverageDecider(this.treeDepth, this.treeDepth * this.magicNumber) {
             @Override
             public boolean getDecide() {
-                return this.gain < this.maxGain / 100;
+                return this.gain < this.maxGain / 1000;
             }
         };
 
