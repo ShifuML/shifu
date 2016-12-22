@@ -142,7 +142,7 @@ public class DTOutput extends BasicMasterInterceptor<DTMasterParams, DTWorkerPar
             }
         } else if(isGBDT) {
             // for gbdt, only store trees are all built well
-            if(context.getMasterResult().isSwitchToNextTree()
+            if(this.treeNum >= 10 && context.getMasterResult().isSwitchToNextTree()
                     && context.getMasterResult().getTmpTrees().size() % (this.treeNum / 10) == 0) {
                 final List<TreeNode> trees = context.getMasterResult().getTmpTrees();
                 if(trees.size() > 1) {
@@ -299,7 +299,8 @@ public class DTOutput extends BasicMasterInterceptor<DTMasterParams, DTWorkerPar
         try {
             fos = FileSystem.get(new Configuration()).create(out);
             LOG.info("Writing results to {}", out);
-
+            // version
+            fos.writeInt(CommonConstants.TREE_FORMAT_VERSION);
             fos.writeUTF(modelConfig.getAlgorithm());
             fos.writeUTF(this.validParams.get("Loss").toString());
             fos.writeBoolean(this.modelConfig.isClassification());

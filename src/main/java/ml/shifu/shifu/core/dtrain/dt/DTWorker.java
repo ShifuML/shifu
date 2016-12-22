@@ -872,10 +872,25 @@ public class DTWorker
                 // for invalid category, set to last one
                 indexValue = (short) (columnConfig.getBinCategory().size());
             }
-            if(split.getLeftCategories().contains(indexValue)) {
+            if(split.getLeftOrRightCategories().contains(indexValue)) {
                 nextNode = currNode.getLeft();
             } else {
                 nextNode = currNode.getRight();
+            }
+
+            Set<Short> childCategories = split.getLeftOrRightCategories();
+            if(split.isLeft()) {
+                if(childCategories.contains(indexValue)) {
+                    nextNode = currNode.getLeft();
+                } else {
+                    nextNode = currNode.getRight();
+                }
+            } else {
+                if(childCategories.contains(indexValue)) {
+                    nextNode = currNode.getRight();
+                } else {
+                    nextNode = currNode.getLeft();
+                }
             }
         }
 
