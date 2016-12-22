@@ -236,7 +236,7 @@ public class DTMaster extends AbstractMasterComputable<DTMasterParams, DTWorkerP
 
     private DTEarlyStopDecider dtEarlyStopDecider;
 
-    private boolean earlyStopEnabled;
+    private boolean earlyStopEnabled = false;
 
     @Override
     public DTMasterParams doCompute(MasterContext<DTMasterParams, DTWorkerParams> context) {
@@ -907,7 +907,9 @@ public class DTMaster extends AbstractMasterComputable<DTMasterParams, DTWorkerP
 
         this.toDoQueue = new LinkedList<TreeNode>();
 
-        this.earlyStopEnabled = Boolean.valueOf(validParams.get("EnableEarlyStop").toString());
+        if(validParams.containsKey("EnableEarlyStop")){
+            this.earlyStopEnabled = Boolean.valueOf(validParams.get("EnableEarlyStop").toString());
+        }
 
         if(this.earlyStopEnabled){
             this.dtEarlyStopDecider = new DTEarlyStopDecider(this.maxDepth);
