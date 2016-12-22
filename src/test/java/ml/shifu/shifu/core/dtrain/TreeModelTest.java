@@ -16,7 +16,7 @@ public class TreeModelTest {
 
     @BeforeClass
     public void setUp() throws IOException {
-        String modelPath = "src/test/resources/example/model_cam.gbt";
+        String modelPath = "src/test/resources/dttest/model/model_cam.gbt";
         FileInputStream fi = new FileInputStream(modelPath);
         model = TreeModel.loadFromStream(fi);
     }

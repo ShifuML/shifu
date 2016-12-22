@@ -22,6 +22,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import ml.shifu.shifu.core.dtrain.CommonConstants;
 
@@ -100,6 +101,10 @@ public class IndependentTreeModel {
     private int inputNode;
 
     /**
+     * Model version
+     */
+    private int version;
+    /**
      * For numerical columns, mean value is used for null replacement
      */
     private Map<Integer, Double> numericalMeanMapping;
@@ -108,7 +113,7 @@ public class IndependentTreeModel {
             Map<Integer, List<String>> categoricalColumnNameNames,
             Map<Integer, Map<String, Integer>> columnCategoryIndexMapping, Map<Integer, Integer> columnNumIndexMapping,
             List<TreeNode> trees, List<Double> weights, boolean isGBDT, boolean isClassification,
-            boolean isConvertToProb, String lossStr, String algorithm, int inputNode) {
+            boolean isConvertToProb, String lossStr, String algorithm, int inputNode, int version) {
         this.numericalMeanMapping = numericalMeanMapping;
         this.numNameMapping = numNameMapping;
         this.categoricalColumnNameNames = categoricalColumnNameNames;
@@ -122,6 +127,7 @@ public class IndependentTreeModel {
         this.lossStr = lossStr;
         this.algorithm = algorithm;
         this.inputNode = inputNode;
+        this.version = version;
     }
 
     /**
@@ -207,9 +213,10 @@ public class IndependentTreeModel {
     }
 
     /**
-     * Covert score to probability value which are in [0, 1], for GBT regression, scores can not be [0, 1].
+     * Covert score to probability value which are in [0, 1], for GBT regression, scores can not be [0, 1]. Round scoure
+     * to 1.0E19 to avoid NaN in final return result.
      */
-    protected double convertToProb(double score) {
+    public double convertToProb(double score) {
         // sigmoid function to covert to [0, 1], TODO, how to make it configuable for users
         return 1 / (1 + Math.min(1.0E19, Math.exp(-score)));
     }
@@ -241,13 +248,22 @@ public class IndependentTreeModel {
                     || Double.compare(value, categoricalColumnNameNames.get(split.getColumnNum()).size()) >= 0) {
                 indexValue = (short) (categoricalColumnNameNames.get(split.getColumnNum()).size());
             } else {
-                // value is category index + 0.1d is to avoid 0.9999999 converted to 0
+                // value is category index + 0.1d is to avoid 0.9999999 converted to 0, is there?
                 indexValue = (short) (value + 0.1d);
             }
-            if(split.getLeftCategories().contains(indexValue)) {
-                nextNode = currNode.getLeft();
+            Set<Short> childCategories = split.getLeftOrRightCategories();
+            if(split.isLeft()) {
+                if(childCategories.contains(indexValue)) {
+                    nextNode = currNode.getLeft();
+                } else {
+                    nextNode = currNode.getRight();
+                }
             } else {
-                nextNode = currNode.getRight();
+                if(childCategories.contains(indexValue)) {
+                    nextNode = currNode.getRight();
+                } else {
+                    nextNode = currNode.getLeft();
+                }
             }
         }
 
@@ -273,7 +289,7 @@ public class IndependentTreeModel {
         // exception??
         if(obj == null) {
             throw new IllegalArgumentException("Current model need column " + numNameMapping.get(split.getColumnNum())
-                    + " but not found in dataMap, please check your input");
+                    + " but not found in dataMap, please check your input.");
         }
 
         if(split.getFeatureType().isNumerical()) {
@@ -281,7 +297,12 @@ public class IndependentTreeModel {
             if(obj instanceof Double) {
                 value = ((Double) obj).doubleValue();
             } else {
-                value = Double.parseDouble(obj.toString());
+                try {
+                    value = Double.parseDouble(obj.toString());
+                } catch (NumberFormatException e) {
+                    // not valid double value for numerical feature, using default value
+                    value = this.numericalMeanMapping.get(split.getColumnNum());
+                }
             }
 
             // replace by default mean value
@@ -308,10 +329,20 @@ public class IndependentTreeModel {
                 }
                 indexValue = intIndex * 1d;
             }
-            if(split.getLeftCategories().contains((short) (indexValue + 0.1d))) {
-                nextNode = currNode.getLeft();
+            short roundIndexValue = (short) (indexValue + 0.1d);
+            Set<Short> childCategories = split.getLeftOrRightCategories();
+            if(split.isLeft()) {
+                if(childCategories.contains(roundIndexValue)) {
+                    nextNode = currNode.getLeft();
+                } else {
+                    nextNode = currNode.getRight();
+                }
             } else {
-                nextNode = currNode.getRight();
+                if(childCategories.contains(roundIndexValue)) {
+                    nextNode = currNode.getRight();
+                } else {
+                    nextNode = currNode.getLeft();
+                }
             }
         }
 
@@ -512,6 +543,7 @@ public class IndependentTreeModel {
     public static IndependentTreeModel loadFromStream(InputStream input, boolean isConvertToProb) throws IOException {
         DataInputStream dis = new DataInputStream(input);
 
+        int version = dis.readInt();
         String algorithm = dis.readUTF();
         String lossStr = dis.readUTF();
         boolean isClassification = dis.readBoolean();
@@ -572,7 +604,7 @@ public class IndependentTreeModel {
         return new IndependentTreeModel(numericalMeanMapping, columnIndexNameMapping, categoricalColumnNameNames,
                 columnCategoryIndexMapping, columnMapping, trees, weights,
                 CommonConstants.GBT_ALG_NAME.equalsIgnoreCase(algorithm), isClassification && !isOneVsAll,
-                isConvertToProb, lossStr, algorithm, inputNode);
+                isConvertToProb, lossStr, algorithm, inputNode, version);
     }
 
     /**
@@ -588,6 +620,21 @@ public class IndependentTreeModel {
      */
     public void setNumericalMeanMapping(Map<Integer, Double> numericalMeanMapping) {
         this.numericalMeanMapping = numericalMeanMapping;
+    }
+
+    /**
+     * @return the version
+     */
+    public int getVersion() {
+        return version;
+    }
+
+    /**
+     * @param version
+     *            the version to set
+     */
+    public void setVersion(int version) {
+        this.version = version;
     }
 
 }

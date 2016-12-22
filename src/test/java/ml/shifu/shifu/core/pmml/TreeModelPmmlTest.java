@@ -27,13 +27,13 @@ import ml.shifu.shifu.core.dtrain.dt.IndependentTreeModel;
 import org.apache.commons.io.IOUtils;
 import org.dmg.pmml.FieldName;
 import org.dmg.pmml.PMML;
-import org.jpmml.evaluator.ClassificationMap;
 import org.jpmml.evaluator.FieldValue;
 import org.jpmml.evaluator.MiningModelEvaluator;
 import org.testng.annotations.Test;
 
 public class TreeModelPmmlTest {
 
+    @SuppressWarnings("unchecked")
     @Test
     public void testTreeModel() throws Exception {
         InputStream is = null;
@@ -43,10 +43,14 @@ public class TreeModelPmmlTest {
             PMML pmml = PMMLUtils.loadPMML("src/test/resources/dttest/model/model-5.pmml");
             MiningModelEvaluator evaluator = new MiningModelEvaluator(pmml);
             List<Map<FieldName, FieldValue>> input = CsvUtil.load(evaluator,
-                    "src/test/resources/dttest/data/tmdata-1.csv", "\\|");
+                    "src/test/resources/dttest/data/tmdata.csv", "\\|");
 
             for(Map<FieldName, FieldValue> map: input) {
                 Map<String, Object> newMap = new HashMap<String, Object>();
+                Map<FieldName, Double> regressionTerm = (Map<FieldName, Double>) evaluator.evaluate(map);
+                for(Map.Entry<FieldName, Double> entry: regressionTerm.entrySet()) {
+                    System.out.println(entry.getValue() * 1000);
+                }
                 for(Entry<FieldName, FieldValue> entry: map.entrySet()) {
                     FieldName key = entry.getKey();
                     FieldValue value = entry.getValue();
@@ -61,45 +65,42 @@ public class TreeModelPmmlTest {
                     }
                 }
                 double[] results = model.compute(newMap);
-                System.out.println(newMap);
                 System.out.println(results[0] * 1000);
+                System.out.println("-----------------------------------------------------");
             }
-        } catch (Exception e) {
-            e.printStackTrace();
-            throw e;
         } finally {
             IOUtils.closeQuietly(is);
         }
-
     }
 
-    @SuppressWarnings("unchecked")
-    @Test
-    public void testTreeModelPMML() throws Exception {
-        PMML pmml = PMMLUtils.loadPMML("src/test/resources/dttest/model/model-5.pmml");
-        MiningModelEvaluator evaluator = new MiningModelEvaluator(pmml);
-
-        List<Map<FieldName, FieldValue>> input = CsvUtil.load(evaluator, "src/test/resources/dttest/data/tmdata-1.csv",
-                "\\|");
-
-        for(Map<FieldName, FieldValue> maps: input) {
-            switch(evaluator.getModel().getFunctionName()) {
-                case REGRESSION:
-                    System.out.println(maps);
-                    Map<FieldName, Double> regressionTerm = (Map<FieldName, Double>) evaluator.evaluate(maps);
-                    for(Map.Entry<FieldName, Double> entry: regressionTerm.entrySet())
-                        System.out.println(entry.getValue() * 1000);
-                    break;
-                case CLASSIFICATION:
-                    Map<FieldName, ClassificationMap<String>> classificationTerm = (Map<FieldName, ClassificationMap<String>>) evaluator
-                            .evaluate(maps);
-                    for(ClassificationMap<String> cMap: classificationTerm.values()) {
-                        for(Map.Entry<String, Double> entry: cMap.entrySet())
-                            System.out.println(entry.getValue() * 1000);
-                    }
-                    break;
-            }
-        }
-    }
+    // @SuppressWarnings("unchecked")
+    // @Test
+    // public void testTreeModelPMML() throws Exception {
+    // PMML pmml = PMMLUtils.loadPMML("src/test/resources/dttest/model/model-5.pmml");
+    // MiningModelEvaluator evaluator = new MiningModelEvaluator(pmml);
+    //
+    // List<Map<FieldName, FieldValue>> input = CsvUtil.load(evaluator, "src/test/resources/dttest/data/tmdata-1.csv",
+    // "\\|");
+    //
+    // for(Map<FieldName, FieldValue> maps: input) {
+    // switch(evaluator.getModel().getFunctionName()) {
+    // case REGRESSION:
+    // System.out.println(maps);
+    // Map<FieldName, Double> regressionTerm = (Map<FieldName, Double>) evaluator.evaluate(maps);
+    // for(Map.Entry<FieldName, Double> entry: regressionTerm.entrySet())
+    // System.out.println(entry.getValue() * 1000);
+    // break;
+    // case CLASSIFICATION:
+    // Map<FieldName, ClassificationMap<String>> classificationTerm = (Map<FieldName, ClassificationMap<String>>)
+    // evaluator
+    // .evaluate(maps);
+    // for(ClassificationMap<String> cMap: classificationTerm.values()) {
+    // for(Map.Entry<String, Double> entry: cMap.entrySet())
+    // System.out.println(entry.getValue() * 1000);
+    // }
+    // break;
+    // }
+    // }
+    // }
 
 }
