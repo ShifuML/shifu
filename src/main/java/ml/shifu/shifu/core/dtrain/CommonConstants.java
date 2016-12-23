@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright [2012-2015] PayPal Software Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");

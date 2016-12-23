@@ -23,7 +23,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Iterator;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -62,6 +61,7 @@ import ml.shifu.shifu.core.dtrain.DTrainUtils;
 import ml.shifu.shifu.core.dtrain.dt.DTWorkerParams.NodeStats;
 import ml.shifu.shifu.core.dtrain.gs.GridSearch;
 import ml.shifu.shifu.fs.ShifuFileUtils;
+import ml.shifu.shifu.util.ClassUtils;
 import ml.shifu.shifu.util.CommonUtils;
 
 import org.apache.commons.math3.distribution.PoissonDistribution;
@@ -353,7 +353,7 @@ public class DTWorker
                     (long) (Runtime.getRuntime().maxMemory() * memoryFraction * validationRate), new ArrayList<Data>());
         } else {
             this.trainingData = new MemoryLimitedList<Data>((long) (Runtime.getRuntime().maxMemory() * memoryFraction),
-                    new LinkedList<Data>());
+                    new ArrayList<Data>());
         }
         int[] inputOutputIndex = DTrainUtils.getNumericAndCategoricalInputAndOutputCounts(this.columnConfigList);
         // numerical + categorical = # of all input
@@ -382,7 +382,6 @@ public class DTWorker
         this.isRF = ALGORITHM.RF.toString().equalsIgnoreCase(modelConfig.getAlgorithm());
         this.isGBDT = ALGORITHM.GBT.toString().equalsIgnoreCase(modelConfig.getAlgorithm());
 
-        // TODO, using reflection
         String lossStr = validParams.get("Loss").toString();
         if(lossStr.equalsIgnoreCase("log")) {
             this.loss = new LogLoss();
@@ -390,8 +389,15 @@ public class DTWorker
             this.loss = new AbsoluteLoss();
         } else if(lossStr.equalsIgnoreCase("halfgradsquared")) {
             this.loss = new HalfGradSquaredLoss();
-        } else {
+        } else if(lossStr.equalsIgnoreCase("squared")) {
             this.loss = new SquaredLoss();
+        } else {
+            try {
+                this.loss = (Loss) ClassUtils.newInstance(Class.forName(lossStr));
+            } catch (ClassNotFoundException e) {
+                LOG.warn("Class not found for {}, using default SquaredLoss", lossStr);
+                this.loss = new SquaredLoss();
+            }
         }
 
         if(this.isGBDT) {
