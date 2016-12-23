@@ -65,14 +65,6 @@ public class Split implements Bytable {
     public Split() {
     }
 
-//    public Split(int columnNum, FeatureType featureType, double threshold, Set<Short> leftOrRightCategories) {
-//        this.columnNum = columnNum;
-//        this.featureType = featureType;
-//        this.threshold = threshold;
-//        this.isLeft = true;
-//        this.leftOrRightCategories = leftOrRightCategories;
-//    }
-
     public Split(int columnNum, FeatureType featureType, double threshold, boolean isLeft,
             Set<Short> leftOrRightCategories) {
         this.columnNum = columnNum;
@@ -158,10 +150,6 @@ public class Split implements Bytable {
                     if(leftOrRightCategories instanceof Bytable) {
                         ((Bytable) leftOrRightCategories).write(out);
                     }
-                    // out.writeInt(this.leftCategories.size());
-                    // for(short categoryIndex: this.leftCategories) {
-                    // out.writeShort(categoryIndex);
-                    // }
                 }
                 break;
             case CONTINUOUS:
@@ -185,29 +173,11 @@ public class Split implements Bytable {
                     leftOrRightCategories = new SimpleBitSet<Short>();
                     ((Bytable) leftOrRightCategories).readFields(in);
                 }
-                // int len = in.readInt();
-                // if(len > 0) {
-                // this.leftCategories = new SimpleBitSet<Short>();
-                // for(int i = 0; i < len; i++) {
-                // this.leftCategories.add(in.readShort());
-                // }
-                // }
                 break;
             case CONTINUOUS:
                 this.threshold = in.readDouble();
                 break;
         }
-    }
-
-    /*
-     * (non-Javadoc)
-     * 
-     * @see java.lang.Object#toString()
-     */
-    @Override
-    public String toString() {
-        return "Split [featureIndex=" + columnNum + ", featureType=" + featureType + ", threshold=" + threshold
-                + ", leftCategories=" + leftOrRightCategories + "]";
     }
 
     /**
@@ -223,6 +193,17 @@ public class Split implements Bytable {
      */
     public void setLeft(boolean isLeft) {
         this.isLeft = isLeft;
+    }
+
+    /*
+     * (non-Javadoc)
+     * 
+     * @see java.lang.Object#toString()
+     */
+    @Override
+    public String toString() {
+        return "Split [featureIndex=" + columnNum + ", featureType=" + featureType + ", threshold=" + threshold
+                + ", leftCategories=" + leftOrRightCategories + "]";
     }
 
 }

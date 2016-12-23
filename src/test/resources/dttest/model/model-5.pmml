@@ -1920,15 +1920,15 @@
                     <Node id="1">
                         <True/>
                         <Node id="2">
-                            <SimplePredicate field="max_cross4wRtAtoCcBadAcc_02" operator="lessOrEqual" value="0.1333"/>
+                            <SimplePredicate field="max_cross4wRtAtoCcBadAcc_02" operator="lessThan" value="0.1333"/>
                             <Node id="4">
-<SimplePredicate field="cp20wRtDolAtoBadTxn_02" operator="lessOrEqual" value="0.0013"/>
+<SimplePredicate field="cp20wRtDolAtoBadTxn_02" operator="lessThan" value="0.0013"/>
 <Node id="8">
-    <SimplePredicate field="ip20wRtCcBadAcc_02" operator="lessOrEqual" value="0.0714"/>
+    <SimplePredicate field="ip20wRtCcBadAcc_02" operator="lessThan" value="0.0714"/>
     <Node id="16">
-        <SimplePredicate field="vid_addcc_cnt_dk_20" operator="lessOrEqual" value="6.76605492369877"/>
+        <SimplePredicate field="vid_addcc_cnt_dk_20" operator="lessThan" value="6.76605492369877"/>
         <Node id="32">
-            <SimplePredicate field="alias_n_added_14" operator="lessOrEqual" value="1.0"/>
+            <SimplePredicate field="alias_n_added_14" operator="lessThan" value="1.0"/>
             <Node id="64" score="0.0036341588826562235">
                 <SimpleSetPredicate field="networks_v3_sndr_tier" booleanOperator="isNotIn">
                     <Array type="real">bad BAD_3</Array>
@@ -1941,7 +1941,7 @@
             </Node>
         </Node>
         <Node id="33">
-            <SimplePredicate field="alias_n_added_14" operator="greaterThan" value="1.0"/>
+            <SimplePredicate field="alias_n_added_14" operator="greaterOrEqual" value="1.0"/>
             <Node id="66" score="0.018437393257133828">
                 <SimpleSetPredicate field="ARS_v2_beacon_lat_ratio_to_net_3d_worst" booleanOperator="isNotIn">
                     <Array type="real">ULT MOBILE</Array>
@@ -1955,9 +1955,9 @@
         </Node>
     </Node>
     <Node id="17">
-        <SimplePredicate field="vid_addcc_cnt_dk_20" operator="greaterThan" value="6.76605492369877"/>
+        <SimplePredicate field="vid_addcc_cnt_dk_20" operator="greaterOrEqual" value="6.76605492369877"/>
         <Node id="34">
-            <SimplePredicate field="acct_ccauth_cvv_m_dk_160" operator="lessOrEqual" value="0.99998784729606"/>
+            <SimplePredicate field="acct_ccauth_cvv_m_dk_160" operator="lessThan" value="0.99998784729606"/>
             <Node id="68" score="0.12011698211667214">
                 <SimpleSetPredicate field="ARS_v40_tx_vertical" booleanOperator="isIn">
                     <Array type="real">get-rich services-other accounting travel education photography software memorabilia non-profit cosmetics office-supplies tickets law consulting arts-n-craft printing NO_COUNTERPARTY health variety adults food-n-drink &quot;&quot;</Array>
@@ -1970,7 +1970,7 @@
             </Node>
         </Node>
         <Node id="35">
-            <SimplePredicate field="acct_ccauth_cvv_m_dk_160" operator="greaterThan" value="0.99998784729606"/>
+            <SimplePredicate field="acct_ccauth_cvv_m_dk_160" operator="greaterOrEqual" value="0.99998784729606"/>
             <Node id="70" score="0.1366596242434936">
                 <SimpleSetPredicate field="wuser_s_primary_residence" booleanOperator="isNotIn">
                     <Array type="real">VN DZ DO ES EG TW RO QA AW AZ AL AN TR BF BG SV SA MK MD MY MN PE ZA ID IE IL IT JP</Array>
@@ -1985,32 +1985,32 @@
     </Node>
 </Node>
 <Node id="9">
-    <SimplePredicate field="ip20wRtCcBadAcc_02" operator="greaterThan" value="0.0714"/>
+    <SimplePredicate field="ip20wRtCcBadAcc_02" operator="greaterOrEqual" value="0.0714"/>
     <Node id="18">
-        <SimplePredicate field="max_cross20wRtAtoCcBadTxn_02" operator="lessOrEqual" value="0.2658"/>
+        <SimplePredicate field="max_cross20wRtAtoCcBadTxn_02" operator="lessThan" value="0.2658"/>
         <Node id="36">
-            <SimplePredicate field="ARS_v36_ip_signup_cnt_cmn" operator="lessOrEqual" value="4.0"/>
+            <SimplePredicate field="ARS_v36_ip_signup_cnt_cmn" operator="lessThan" value="4.0"/>
             <Node id="72" score="0.05546542556987311">
-                <SimplePredicate field="vid_signup_cnt_dk_20" operator="lessOrEqual" value="3.920301019367741"/>
+                <SimplePredicate field="vid_signup_cnt_dk_20" operator="lessThan" value="3.920301019367741"/>
             </Node>
             <Node id="73" score="0.8947284656642567">
-                <SimplePredicate field="vid_signup_cnt_dk_20" operator="greaterThan" value="3.920301019367741"/>
+                <SimplePredicate field="vid_signup_cnt_dk_20" operator="greaterOrEqual" value="3.920301019367741"/>
             </Node>
         </Node>
         <Node id="37">
-            <SimplePredicate field="ARS_v36_ip_signup_cnt_cmn" operator="greaterThan" value="4.0"/>
+            <SimplePredicate field="ARS_v36_ip_signup_cnt_cmn" operator="greaterOrEqual" value="4.0"/>
             <Node id="74" score="0.22529710482250526">
-                <SimplePredicate field="r_ratio_max_dk_320" operator="lessOrEqual" value="0.9963034575903028"/>
+                <SimplePredicate field="r_ratio_max_dk_320" operator="lessThan" value="0.9963034575903028"/>
             </Node>
             <Node id="75" score="0.7583486895488758">
-                <SimplePredicate field="r_ratio_max_dk_320" operator="greaterThan" value="0.9963034575903028"/>
+                <SimplePredicate field="r_ratio_max_dk_320" operator="greaterOrEqual" value="0.9963034575903028"/>
             </Node>
         </Node>
     </Node>
     <Node id="19">
-        <SimplePredicate field="max_cross20wRtAtoCcBadTxn_02" operator="greaterThan" value="0.2658"/>
+        <SimplePredicate field="max_cross20wRtAtoCcBadTxn_02" operator="greaterOrEqual" value="0.2658"/>
         <Node id="38">
-            <SimplePredicate field="vid_ratio_20w_allbad_dol_02" operator="lessOrEqual" value="4.92880673179427"/>
+            <SimplePredicate field="vid_ratio_20w_allbad_dol_02" operator="lessThan" value="4.92880673179427"/>
             <Node id="76" score="0.16848126204456626">
                 <SimpleSetPredicate field="dy_s_ip_cnty" booleanOperator="isNotIn">
                     <Array type="real">fi fr gr ec dk ee tt tw ua es tn tr bg cz se si cr sa cl rs ru re ar al ps pl pk lu lt mg mk mt ni ke kw kz ht hu ir</Array>
@@ -2023,7 +2023,7 @@
             </Node>
         </Node>
         <Node id="39">
-            <SimplePredicate field="vid_ratio_20w_allbad_dol_02" operator="greaterThan" value="4.92880673179427"/>
+            <SimplePredicate field="vid_ratio_20w_allbad_dol_02" operator="greaterOrEqual" value="4.92880673179427"/>
             <Node id="78" score="0.1778317093308989">
                 <SimpleSetPredicate field="ARS_v35_ph_indicative" booleanOperator="isIn">
                     <Array type="real">FIXED_GEO_MATCH MOBILE_GEO_MATCH</Array>
@@ -2039,45 +2039,45 @@
 </Node>
                             </Node>
                             <Node id="5">
-<SimplePredicate field="cp20wRtDolAtoBadTxn_02" operator="greaterThan" value="0.0013"/>
+<SimplePredicate field="cp20wRtDolAtoBadTxn_02" operator="greaterOrEqual" value="0.0013"/>
 <Node id="10">
     <SimpleSetPredicate field="ARS_v2_beacon_lat_ratio_to_net_3d_worst" booleanOperator="isNotIn">
         <Array type="real">ULT MOBILE</Array>
     </SimpleSetPredicate>
     <Node id="20">
-        <SimplePredicate field="max_cross20wRtAtoCcBadTxn_02" operator="lessOrEqual" value="0.1449"/>
+        <SimplePredicate field="max_cross20wRtAtoCcBadTxn_02" operator="lessThan" value="0.1449"/>
         <Node id="40">
-            <SimplePredicate field="vid_signup_cnt_dk_20" operator="lessOrEqual" value="3.920301019367741"/>
+            <SimplePredicate field="vid_signup_cnt_dk_20" operator="lessThan" value="3.920301019367741"/>
             <Node id="80" score="0.04304535959787698">
-                <SimplePredicate field="networks_v3_sndr_score" operator="lessOrEqual" value="0.144"/>
+                <SimplePredicate field="networks_v3_sndr_score" operator="lessThan" value="0.144"/>
             </Node>
             <Node id="81" score="0.491147542419724">
-                <SimplePredicate field="networks_v3_sndr_score" operator="greaterThan" value="0.144"/>
+                <SimplePredicate field="networks_v3_sndr_score" operator="greaterOrEqual" value="0.144"/>
             </Node>
         </Node>
         <Node id="41">
-            <SimplePredicate field="vid_signup_cnt_dk_20" operator="greaterThan" value="3.920301019367741"/>
+            <SimplePredicate field="vid_signup_cnt_dk_20" operator="greaterOrEqual" value="3.920301019367741"/>
             <Node id="82" score="0.49308241259523783">
-                <SimplePredicate field="CcbincntysrRvrpcntysrRtRstBadSumAmt112d_03" operator="lessOrEqual" value="0.0031"/>
+                <SimplePredicate field="CcbincntysrRvrpcntysrRtRstBadSumAmt112d_03" operator="lessThan" value="0.0031"/>
             </Node>
             <Node id="83" score="0.8931634751632408">
-                <SimplePredicate field="CcbincntysrRvrpcntysrRtRstBadSumAmt112d_03" operator="greaterThan" value="0.0031"/>
+                <SimplePredicate field="CcbincntysrRvrpcntysrRtRstBadSumAmt112d_03" operator="greaterOrEqual" value="0.0031"/>
             </Node>
         </Node>
     </Node>
     <Node id="21">
-        <SimplePredicate field="max_cross20wRtAtoCcBadTxn_02" operator="greaterThan" value="0.1449"/>
+        <SimplePredicate field="max_cross20wRtAtoCcBadTxn_02" operator="greaterOrEqual" value="0.1449"/>
         <Node id="42">
-            <SimplePredicate field="cp20wRtAtoBadTxn_02" operator="lessOrEqual" value="0.0163"/>
+            <SimplePredicate field="cp20wRtAtoBadTxn_02" operator="lessThan" value="0.0163"/>
             <Node id="84" score="0.364007575311471">
-                <SimplePredicate field="snr_ratio_20w_ato_dol_02" operator="lessOrEqual" value="3.7883647265360314"/>
+                <SimplePredicate field="snr_ratio_20w_ato_dol_02" operator="lessThan" value="3.7883647265360314"/>
             </Node>
             <Node id="85" score="0.7011546716167862">
-                <SimplePredicate field="snr_ratio_20w_ato_dol_02" operator="greaterThan" value="3.7883647265360314"/>
+                <SimplePredicate field="snr_ratio_20w_ato_dol_02" operator="greaterOrEqual" value="3.7883647265360314"/>
             </Node>
         </Node>
         <Node id="43">
-            <SimplePredicate field="cp20wRtAtoBadTxn_02" operator="greaterThan" value="0.0163"/>
+            <SimplePredicate field="cp20wRtAtoBadTxn_02" operator="greaterOrEqual" value="0.0163"/>
             <Node id="86" score="0.14611667807918832">
                 <SimpleSetPredicate field="dy_c_ip_cnty" booleanOperator="isNotIn">
                     <Array type="real">ge fi fr vn uy do eg ua es bm sv sk cz cy si co cn rs ro at al ae ps lv md mk my ng ni kz id is it in</Array>
@@ -2104,10 +2104,10 @@
                 <Array type="real">FR QA AE BY SG CO MD MA MN PH PK ZA HN IL IT JP KR KZ</Array>
             </SimpleSetPredicate>
             <Node id="88" score="0.04436224166578307">
-                <SimplePredicate field="alias_n_added_30" operator="lessOrEqual" value="1.0"/>
+                <SimplePredicate field="alias_n_added_30" operator="lessThan" value="1.0"/>
             </Node>
             <Node id="89" score="0.3377641231193383">
-                <SimplePredicate field="alias_n_added_30" operator="greaterThan" value="1.0"/>
+                <SimplePredicate field="alias_n_added_30" operator="greaterOrEqual" value="1.0"/>
             </Node>
         </Node>
         <Node id="45">
@@ -2115,10 +2115,10 @@
                 <Array type="real">FR QA AE BY SG CO MD MA MN PH PK ZA HN IL IT JP KR KZ</Array>
             </SimpleSetPredicate>
             <Node id="90" score="0.25196696617355474">
-                <SimplePredicate field="vid_addcc_cnt_dk_20" operator="lessOrEqual" value="2.2310686092462E-10"/>
+                <SimplePredicate field="vid_addcc_cnt_dk_20" operator="lessThan" value="2.2310686092462E-10"/>
             </Node>
             <Node id="91" score="0.8495107970378816">
-                <SimplePredicate field="vid_addcc_cnt_dk_20" operator="greaterThan" value="2.2310686092462E-10"/>
+                <SimplePredicate field="vid_addcc_cnt_dk_20" operator="greaterOrEqual" value="2.2310686092462E-10"/>
             </Node>
         </Node>
     </Node>
@@ -2131,10 +2131,10 @@
                 <Array type="real">KOSHER NO_COUNTERPARTY SUPER_KOSHER</Array>
             </SimpleSetPredicate>
             <Node id="92" score="0.19173650574472606">
-                <SimplePredicate field="vid_ccauth_cvv_ns_dk_2" operator="lessOrEqual" value="0.9991670137924583"/>
+                <SimplePredicate field="vid_ccauth_cvv_ns_dk_2" operator="lessThan" value="0.9991670137924583"/>
             </Node>
             <Node id="93" score="0.9552779531844781">
-                <SimplePredicate field="vid_ccauth_cvv_ns_dk_2" operator="greaterThan" value="0.9991670137924583"/>
+                <SimplePredicate field="vid_ccauth_cvv_ns_dk_2" operator="greaterOrEqual" value="0.9991670137924583"/>
             </Node>
         </Node>
         <Node id="47">
@@ -2142,10 +2142,10 @@
                 <Array type="real">KOSHER NO_COUNTERPARTY SUPER_KOSHER</Array>
             </SimpleSetPredicate>
             <Node id="94" score="0.5526760560013728">
-                <SimplePredicate field="s_outstd_iach_amt" operator="lessOrEqual" value="44051.0"/>
+                <SimplePredicate field="s_outstd_iach_amt" operator="lessThan" value="44051.0"/>
             </Node>
             <Node id="95" score="0.918702691768843">
-                <SimplePredicate field="s_outstd_iach_amt" operator="greaterThan" value="44051.0"/>
+                <SimplePredicate field="s_outstd_iach_amt" operator="greaterOrEqual" value="44051.0"/>
             </Node>
         </Node>
     </Node>
@@ -2153,36 +2153,36 @@
                             </Node>
                         </Node>
                         <Node id="3">
-                            <SimplePredicate field="max_cross4wRtAtoCcBadAcc_02" operator="greaterThan" value="0.1333"/>
+                            <SimplePredicate field="max_cross4wRtAtoCcBadAcc_02" operator="greaterOrEqual" value="0.1333"/>
                             <Node id="6">
-<SimplePredicate field="max_cross20wRtAtoCcBadTxn_02" operator="lessOrEqual" value="0.1449"/>
+<SimplePredicate field="max_cross20wRtAtoCcBadTxn_02" operator="lessThan" value="0.1449"/>
 <Node id="12">
     <SimpleSetPredicate field="ARS_v40_seller_ti" booleanOperator="isNotIn">
         <Array type="real">computer-hardware fashion jewelry groupon garden-equip cameras cellphones music-videos NO_COUNTERPARTY NO_DATA toys electronics</Array>
     </SimpleSetPredicate>
     <Node id="24">
-        <SimplePredicate field="ARS_v36_ip_signup_cnt_24h" operator="lessOrEqual" value="3.0"/>
+        <SimplePredicate field="ARS_v36_ip_signup_cnt_24h" operator="lessThan" value="3.0"/>
         <Node id="48">
-            <SimplePredicate field="max_cp20wRtDolAtoCcBadTxn_02" operator="lessOrEqual" value="0.0087"/>
+            <SimplePredicate field="max_cp20wRtDolAtoCcBadTxn_02" operator="lessThan" value="0.0087"/>
             <Node id="96" score="0.0704077333964124">
-                <SimplePredicate field="issuer_deny_cnt_pct" operator="lessOrEqual" value="0.444"/>
+                <SimplePredicate field="issuer_deny_cnt_pct" operator="lessThan" value="0.444"/>
             </Node>
             <Node id="97" score="0.576893675585891">
-                <SimplePredicate field="issuer_deny_cnt_pct" operator="greaterThan" value="0.444"/>
+                <SimplePredicate field="issuer_deny_cnt_pct" operator="greaterOrEqual" value="0.444"/>
             </Node>
         </Node>
         <Node id="49">
-            <SimplePredicate field="max_cp20wRtDolAtoCcBadTxn_02" operator="greaterThan" value="0.0087"/>
+            <SimplePredicate field="max_cp20wRtDolAtoCcBadTxn_02" operator="greaterOrEqual" value="0.0087"/>
             <Node id="98" score="0.1413727358382691">
-                <SimplePredicate field="ARS_v31_ato_classifier_confidence" operator="lessOrEqual" value="0.3123563483401875"/>
+                <SimplePredicate field="ARS_v31_ato_classifier_confidence" operator="lessThan" value="0.3123563483401875"/>
             </Node>
             <Node id="99" score="0.4934873788289096">
-                <SimplePredicate field="ARS_v31_ato_classifier_confidence" operator="greaterThan" value="0.3123563483401875"/>
+                <SimplePredicate field="ARS_v31_ato_classifier_confidence" operator="greaterOrEqual" value="0.3123563483401875"/>
             </Node>
         </Node>
     </Node>
     <Node id="25">
-        <SimplePredicate field="ARS_v36_ip_signup_cnt_24h" operator="greaterThan" value="3.0"/>
+        <SimplePredicate field="ARS_v36_ip_signup_cnt_24h" operator="greaterOrEqual" value="3.0"/>
         <Node id="50">
             <SimpleSetPredicate field="ARS_v40_tx_vertical" booleanOperator="isNotIn">
                 <Array type="real">website-services computer-hardware cosmetics office-supplies tickets garden-equip houseware cellphones printing music-videos variety event-planner NO_DATA toys music-instruments food-n-drink pet-supplies</Array>
@@ -2203,10 +2203,10 @@
                 <Array type="real">website-services computer-hardware cosmetics office-supplies tickets garden-equip houseware cellphones printing music-videos variety event-planner NO_DATA toys music-instruments food-n-drink pet-supplies</Array>
             </SimpleSetPredicate>
             <Node id="102" score="0.5688318644321384">
-                <SimplePredicate field="ratio_scntry_state_avg_good" operator="lessOrEqual" value="2.2349057901251546"/>
+                <SimplePredicate field="ratio_scntry_state_avg_good" operator="lessThan" value="2.2349057901251546"/>
             </Node>
             <Node id="103" score="1.0">
-                <SimplePredicate field="ratio_scntry_state_avg_good" operator="greaterThan" value="2.2349057901251546"/>
+                <SimplePredicate field="ratio_scntry_state_avg_good" operator="greaterOrEqual" value="2.2349057901251546"/>
             </Node>
         </Node>
     </Node>
@@ -2216,9 +2216,9 @@
         <Array type="real">computer-hardware fashion jewelry groupon garden-equip cameras cellphones music-videos NO_COUNTERPARTY NO_DATA toys electronics</Array>
     </SimpleSetPredicate>
     <Node id="26">
-        <SimplePredicate field="max_cross4wRtAtoCcBadTxn_02" operator="lessOrEqual" value="0.4082"/>
+        <SimplePredicate field="max_cross4wRtAtoCcBadTxn_02" operator="lessThan" value="0.4082"/>
         <Node id="52">
-            <SimplePredicate field="sender_person_asset_entity_first_success_transaction_date" operator="lessOrEqual" value="1.4447196E9"/>
+            <SimplePredicate field="sender_person_asset_entity_first_success_transaction_date" operator="lessThan" value="1.4447196E9"/>
             <Node id="104" score="0.016271686086594704">
                 <SimpleSetPredicate field="shipping_country" booleanOperator="isNotIn">
                     <Array type="real">EC FI MT NL PH KE</Array>
@@ -2231,28 +2231,28 @@
             </Node>
         </Node>
         <Node id="53">
-            <SimplePredicate field="sender_person_asset_entity_first_success_transaction_date" operator="greaterThan" value="1.4447196E9"/>
+            <SimplePredicate field="sender_person_asset_entity_first_success_transaction_date" operator="greaterOrEqual" value="1.4447196E9"/>
             <Node id="106" score="0.21254633809869716">
-                <SimplePredicate field="seller_tran_br_cnt_cc" operator="lessOrEqual" value="0.001"/>
+                <SimplePredicate field="seller_tran_br_cnt_cc" operator="lessThan" value="0.001"/>
             </Node>
             <Node id="107" score="0.5043876982768023">
-                <SimplePredicate field="seller_tran_br_cnt_cc" operator="greaterThan" value="0.001"/>
+                <SimplePredicate field="seller_tran_br_cnt_cc" operator="greaterOrEqual" value="0.001"/>
             </Node>
         </Node>
     </Node>
     <Node id="27">
-        <SimplePredicate field="max_cross4wRtAtoCcBadTxn_02" operator="greaterThan" value="0.4082"/>
+        <SimplePredicate field="max_cross4wRtAtoCcBadTxn_02" operator="greaterOrEqual" value="0.4082"/>
         <Node id="54">
-            <SimplePredicate field="snr_ratio_20w_ato_dol_02" operator="lessOrEqual" value="2.5191755059191463"/>
+            <SimplePredicate field="snr_ratio_20w_ato_dol_02" operator="lessThan" value="2.5191755059191463"/>
             <Node id="108" score="0.11164568342100475">
-                <SimplePredicate field="ARS_v31_ato_classifier_confidence" operator="lessOrEqual" value="0.05035984738520946"/>
+                <SimplePredicate field="ARS_v31_ato_classifier_confidence" operator="lessThan" value="0.05035984738520946"/>
             </Node>
             <Node id="109" score="0.5374791578347117">
-                <SimplePredicate field="ARS_v31_ato_classifier_confidence" operator="greaterThan" value="0.05035984738520946"/>
+                <SimplePredicate field="ARS_v31_ato_classifier_confidence" operator="greaterOrEqual" value="0.05035984738520946"/>
             </Node>
         </Node>
         <Node id="55">
-            <SimplePredicate field="snr_ratio_20w_ato_dol_02" operator="greaterThan" value="2.5191755059191463"/>
+            <SimplePredicate field="snr_ratio_20w_ato_dol_02" operator="greaterOrEqual" value="2.5191755059191463"/>
             <Node id="110" score="0.044327871990415935">
                 <SimpleSetPredicate field="wuser_s_primary_residence" booleanOperator="isNotIn">
                     <Array type="real">EC DZ DO DE DK US UG ES TT TW GB FR FI GR AT QA AU BR TH C2 RS RU CH CO SA LV MA MX MY MN NG NL NZ NO IE IL IT JP &quot;&quot;</Array>
@@ -2268,24 +2268,24 @@
 </Node>
                             </Node>
                             <Node id="7">
-<SimplePredicate field="max_cross20wRtAtoCcBadTxn_02" operator="greaterThan" value="0.1449"/>
+<SimplePredicate field="max_cross20wRtAtoCcBadTxn_02" operator="greaterOrEqual" value="0.1449"/>
 <Node id="14">
     <SimpleSetPredicate field="ARS_v40_tx_vertical" booleanOperator="isIn">
         <Array type="real">website-services gaming accounting travel education furniture baby-products cameras books consulting houseware arts-n-craft auto-parts printing variety sports-equip adults toys food-n-drink pet-supplies</Array>
     </SimpleSetPredicate>
     <Node id="28">
-        <SimplePredicate field="EdSnrpcntyRtRstBadCntTxn112d_03" operator="lessOrEqual" value="0.0015"/>
+        <SimplePredicate field="EdSnrpcntyRtRstBadCntTxn112d_03" operator="lessThan" value="0.0015"/>
         <Node id="56">
-            <SimplePredicate field="ratio_scntry_state_avg_good" operator="lessOrEqual" value="8.23366752029641"/>
+            <SimplePredicate field="ratio_scntry_state_avg_good" operator="lessThan" value="8.23366752029641"/>
             <Node id="112" score="0.31158684444310547">
-                <SimplePredicate field="ratio_seller_avg_good" operator="lessOrEqual" value="3.6746811746811745"/>
+                <SimplePredicate field="ratio_seller_avg_good" operator="lessThan" value="3.6746811746811745"/>
             </Node>
             <Node id="113" score="0.7267504892914101">
-                <SimplePredicate field="ratio_seller_avg_good" operator="greaterThan" value="3.6746811746811745"/>
+                <SimplePredicate field="ratio_seller_avg_good" operator="greaterOrEqual" value="3.6746811746811745"/>
             </Node>
         </Node>
         <Node id="57">
-            <SimplePredicate field="ratio_scntry_state_avg_good" operator="greaterThan" value="8.23366752029641"/>
+            <SimplePredicate field="ratio_scntry_state_avg_good" operator="greaterOrEqual" value="8.23366752029641"/>
             <Node id="114" score="0.03650534723808304">
                 <SimpleSetPredicate field="ARS_v40_tx_vertical" booleanOperator="isNotIn">
                     <Array type="real">website-services travel education baby-products houseware sports-equip food-n-drink</Array>
@@ -2299,16 +2299,16 @@
         </Node>
     </Node>
     <Node id="29">
-        <SimplePredicate field="EdSnrpcntyRtRstBadCntTxn112d_03" operator="greaterThan" value="0.0015"/>
+        <SimplePredicate field="EdSnrpcntyRtRstBadCntTxn112d_03" operator="greaterOrEqual" value="0.0015"/>
         <Node id="58">
             <SimpleSetPredicate field="shipping_country" booleanOperator="isNotIn">
                 <Array type="real">EC VN DZ DO DE DK US UA ES TW GB FR FM GR RO AT AU AE AL BR TH CA TR BG SV BH BE C2 CZ SE SG CO CL LT MD MX MY NL NZ NO PH PE ZA HR HU ID IE IL IN IT JP JO KW KZ &quot;&quot;</Array>
             </SimpleSetPredicate>
             <Node id="116" score="0.00857302923948994">
-                <SimplePredicate field="LclhrMnCntTxn30d_02" operator="lessOrEqual" value="265276.1667"/>
+                <SimplePredicate field="LclhrMnCntTxn30d_02" operator="lessThan" value="265276.1667"/>
             </Node>
             <Node id="117" score="0.8423098835933144">
-                <SimplePredicate field="LclhrMnCntTxn30d_02" operator="greaterThan" value="265276.1667"/>
+                <SimplePredicate field="LclhrMnCntTxn30d_02" operator="greaterOrEqual" value="265276.1667"/>
             </Node>
         </Node>
         <Node id="59">
@@ -2341,10 +2341,10 @@
                 <Array type="real">gr uy eu uk us es ca br bg sg ar ae ** pk hn ie it</Array>
             </SimpleSetPredicate>
             <Node id="120" score="0.06749379873039982">
-                <SimplePredicate field="acct_min_dk_20" operator="lessOrEqual" value="41.6271033468118"/>
+                <SimplePredicate field="acct_min_dk_20" operator="lessThan" value="41.6271033468118"/>
             </Node>
             <Node id="121" score="0.6369669948384747">
-                <SimplePredicate field="acct_min_dk_20" operator="greaterThan" value="41.6271033468118"/>
+                <SimplePredicate field="acct_min_dk_20" operator="greaterOrEqual" value="41.6271033468118"/>
             </Node>
         </Node>
         <Node id="61">
@@ -2352,10 +2352,10 @@
                 <Array type="real">gr uy eu uk us es ca br bg sg ar ae ** pk hn ie it</Array>
             </SimpleSetPredicate>
             <Node id="122" score="0.8827488805544678">
-                <SimplePredicate field="CatRtDclCntTxn112d_03" operator="lessOrEqual" value="0.0183"/>
+                <SimplePredicate field="CatRtDclCntTxn112d_03" operator="lessThan" value="0.0183"/>
             </Node>
             <Node id="123" score="0.13117455388945604">
-                <SimplePredicate field="CatRtDclCntTxn112d_03" operator="greaterThan" value="0.0183"/>
+                <SimplePredicate field="CatRtDclCntTxn112d_03" operator="greaterOrEqual" value="0.0183"/>
             </Node>
         </Node>
     </Node>
@@ -2364,7 +2364,7 @@
             <Array type="real">EC DZ DO DE DK US ES EG EE TT TW GE GF GB FR FI GR GI RE RO AT AR AU AZ AG AL BY BR CA SV BE C2 BJ BM SE SG SK RS RU CH SA CL LV LU LT MK MU MY MQ NG NI NL NZ NO PL PH PE HK ZA ID ZW IE IL IS IT JP JM KE KW KZ</Array>
         </SimpleSetPredicate>
         <Node id="62">
-            <SimplePredicate field="vid20wMnDolBadPerTxn_02" operator="lessOrEqual" value="85.8716"/>
+            <SimplePredicate field="vid20wMnDolBadPerTxn_02" operator="lessThan" value="85.8716"/>
             <Node id="124" score="0.1586570269689322">
                 <SimpleSetPredicate field="ARS_v35_ph_indicative" booleanOperator="isIn">
                     <Array type="real">TWO_GEO_MATCH MOBILE_GEO_MATCH</Array>
@@ -2377,12 +2377,12 @@
             </Node>
         </Node>
         <Node id="63">
-            <SimplePredicate field="vid20wMnDolBadPerTxn_02" operator="greaterThan" value="85.8716"/>
+            <SimplePredicate field="vid20wMnDolBadPerTxn_02" operator="greaterOrEqual" value="85.8716"/>
             <Node id="126" score="0.6638883584697154">
-                <SimplePredicate field="snr_ratio_20w_ato_dol_02" operator="lessOrEqual" value="1.60408109139071"/>
+                <SimplePredicate field="snr_ratio_20w_ato_dol_02" operator="lessThan" value="1.60408109139071"/>
             </Node>
             <Node id="127" score="0.9205230080724486">
-                <SimplePredicate field="snr_ratio_20w_ato_dol_02" operator="greaterThan" value="1.60408109139071"/>
+                <SimplePredicate field="snr_ratio_20w_ato_dol_02" operator="greaterOrEqual" value="1.60408109139071"/>
             </Node>
         </Node>
     </Node>
@@ -3034,36 +3034,36 @@
                     <Node id="1">
                         <True/>
                         <Node id="2">
-                            <SimplePredicate field="ed_ratio_1w_appr_dol_02" operator="lessOrEqual" value="8.852735028991402"/>
+                            <SimplePredicate field="ed_ratio_1w_appr_dol_02" operator="lessThan" value="8.852735028991402"/>
                             <Node id="4">
-<SimplePredicate field="added_cc_lt_14_v2" operator="lessOrEqual" value="2.0"/>
+<SimplePredicate field="added_cc_lt_14_v2" operator="lessThan" value="2.0"/>
 <Node id="8">
-    <SimplePredicate field="vid_attempt_p2p_cnt_dk_20" operator="lessOrEqual" value="5.9924352034546695"/>
+    <SimplePredicate field="vid_attempt_p2p_cnt_dk_20" operator="lessThan" value="5.9924352034546695"/>
     <Node id="16">
-        <SimplePredicate field="CcbinhmcSnrpcntyRtCbBadCntSndr112d_03" operator="lessOrEqual" value="0.0968"/>
+        <SimplePredicate field="CcbinhmcSnrpcntyRtCbBadCntSndr112d_03" operator="lessThan" value="0.0968"/>
         <Node id="32">
-            <SimplePredicate field="has_bad_vid_cb" operator="lessOrEqual" value="1.0"/>
+            <SimplePredicate field="has_bad_vid_cb" operator="lessThan" value="1.0"/>
             <Node id="64" score="-0.015768707237883286">
-                <SimplePredicate field="has_bad_email_cb" operator="lessOrEqual" value="1.0"/>
+                <SimplePredicate field="has_bad_email_cb" operator="lessThan" value="1.0"/>
             </Node>
             <Node id="65" score="0.08604408271894119">
-                <SimplePredicate field="has_bad_email_cb" operator="greaterThan" value="1.0"/>
+                <SimplePredicate field="has_bad_email_cb" operator="greaterOrEqual" value="1.0"/>
             </Node>
         </Node>
         <Node id="33">
-            <SimplePredicate field="has_bad_vid_cb" operator="greaterThan" value="1.0"/>
+            <SimplePredicate field="has_bad_vid_cb" operator="greaterOrEqual" value="1.0"/>
             <Node id="66" score="0.06690823300993753">
-                <SimplePredicate field="S_ALIAS_N_ADDED_3" operator="lessOrEqual" value="1.0"/>
+                <SimplePredicate field="S_ALIAS_N_ADDED_3" operator="lessThan" value="1.0"/>
             </Node>
             <Node id="67" score="0.481563802513687">
-                <SimplePredicate field="S_ALIAS_N_ADDED_3" operator="greaterThan" value="1.0"/>
+                <SimplePredicate field="S_ALIAS_N_ADDED_3" operator="greaterOrEqual" value="1.0"/>
             </Node>
         </Node>
     </Node>
     <Node id="17">
-        <SimplePredicate field="CcbinhmcSnrpcntyRtCbBadCntSndr112d_03" operator="greaterThan" value="0.0968"/>
+        <SimplePredicate field="CcbinhmcSnrpcntyRtCbBadCntSndr112d_03" operator="greaterOrEqual" value="0.0968"/>
         <Node id="34">
-            <SimplePredicate field="S_CC_D_SINCE_OLDEST_CHG" operator="lessOrEqual" value="7.0"/>
+            <SimplePredicate field="S_CC_D_SINCE_OLDEST_CHG" operator="lessThan" value="7.0"/>
             <Node id="68" score="0.5348992599136485">
                 <SimpleSetPredicate field="dy_s_ip_cnty" booleanOperator="isNotIn">
                     <Array type="real">ge fi dz do tw ua bo cy se si cn rs ru ro az al ps no pk lv ma me mo mt ng ni kz hr hu hk it &quot;&quot;</Array>
@@ -3076,22 +3076,22 @@
             </Node>
         </Node>
         <Node id="35">
-            <SimplePredicate field="S_CC_D_SINCE_OLDEST_CHG" operator="greaterThan" value="7.0"/>
+            <SimplePredicate field="S_CC_D_SINCE_OLDEST_CHG" operator="greaterOrEqual" value="7.0"/>
             <Node id="70" score="0.03137105675409013">
-                <SimplePredicate field="s_mp_amt_dk_5" operator="lessOrEqual" value="7113.405795305552"/>
+                <SimplePredicate field="s_mp_amt_dk_5" operator="lessThan" value="7113.405795305552"/>
             </Node>
             <Node id="71" score="0.9431035674029473">
-                <SimplePredicate field="s_mp_amt_dk_5" operator="greaterThan" value="7113.405795305552"/>
+                <SimplePredicate field="s_mp_amt_dk_5" operator="greaterOrEqual" value="7113.405795305552"/>
             </Node>
         </Node>
     </Node>
 </Node>
 <Node id="9">
-    <SimplePredicate field="vid_attempt_p2p_cnt_dk_20" operator="greaterThan" value="5.9924352034546695"/>
+    <SimplePredicate field="vid_attempt_p2p_cnt_dk_20" operator="greaterOrEqual" value="5.9924352034546695"/>
     <Node id="18">
-        <SimplePredicate field="vid_ccauth_cvv_m_dk_2" operator="lessOrEqual" value="0.7367139751383992"/>
+        <SimplePredicate field="vid_ccauth_cvv_m_dk_2" operator="lessThan" value="0.7367139751383992"/>
         <Node id="36">
-            <SimplePredicate field="cc_d_since_oldest" operator="lessOrEqual" value="55.0"/>
+            <SimplePredicate field="cc_d_since_oldest" operator="lessThan" value="55.0"/>
             <Node id="72" score="0.2742255569370089">
                 <SimpleSetPredicate field="ARS_v2_e_un_indicative" booleanOperator="isIn">
                     <Array type="real">NAME_MATCH CRAPPY</Array>
@@ -3104,28 +3104,28 @@
             </Node>
         </Node>
         <Node id="37">
-            <SimplePredicate field="cc_d_since_oldest" operator="greaterThan" value="55.0"/>
+            <SimplePredicate field="cc_d_since_oldest" operator="greaterOrEqual" value="55.0"/>
             <Node id="74" score="0.03272370039670506">
-                <SimplePredicate field="account_mof" operator="lessOrEqual" value="61.0"/>
+                <SimplePredicate field="account_mof" operator="lessThan" value="61.0"/>
             </Node>
             <Node id="75" score="0.828514966717658">
-                <SimplePredicate field="account_mof" operator="greaterThan" value="61.0"/>
+                <SimplePredicate field="account_mof" operator="greaterOrEqual" value="61.0"/>
             </Node>
         </Node>
     </Node>
     <Node id="19">
-        <SimplePredicate field="vid_ccauth_cvv_m_dk_2" operator="greaterThan" value="0.7367139751383992"/>
+        <SimplePredicate field="vid_ccauth_cvv_m_dk_2" operator="greaterOrEqual" value="0.7367139751383992"/>
         <Node id="38">
-            <SimplePredicate field="vid_ccauth_cvv_m_dk_160" operator="lessOrEqual" value="0.9999375019530843"/>
+            <SimplePredicate field="vid_ccauth_cvv_m_dk_160" operator="lessThan" value="0.9999375019530843"/>
             <Node id="76" score="1.4782805696387578">
-                <SimplePredicate field="s_outstd_iach_amt" operator="lessOrEqual" value="44051.0"/>
+                <SimplePredicate field="s_outstd_iach_amt" operator="lessThan" value="44051.0"/>
             </Node>
             <Node id="77" score="0.1978311157206636">
-                <SimplePredicate field="s_outstd_iach_amt" operator="greaterThan" value="44051.0"/>
+                <SimplePredicate field="s_outstd_iach_amt" operator="greaterOrEqual" value="44051.0"/>
             </Node>
         </Node>
         <Node id="39">
-            <SimplePredicate field="vid_ccauth_cvv_m_dk_160" operator="greaterThan" value="0.9999375019530843"/>
+            <SimplePredicate field="vid_ccauth_cvv_m_dk_160" operator="greaterOrEqual" value="0.9999375019530843"/>
             <Node id="78" score="0.2004798043386418">
                 <SimpleSetPredicate field="ip_country" booleanOperator="isNotIn">
                     <Array type="real">gh ua ca tr th bg bd se rs au pt pr no ma mu nl ie</Array>
@@ -3141,7 +3141,7 @@
 </Node>
                             </Node>
                             <Node id="5">
-<SimplePredicate field="added_cc_lt_14_v2" operator="greaterThan" value="2.0"/>
+<SimplePredicate field="added_cc_lt_14_v2" operator="greaterOrEqual" value="2.0"/>
 <Node id="10">
     <SimpleSetPredicate field="dy_c_ip_cnty" booleanOperator="isNotIn">
         <Array type="real">dz ec de uy do tt tw tn br sv bb cv cn rs at al ps pk ma mo mq mx jm ke kz lc ht hn ie</Array>
@@ -3151,7 +3151,7 @@
             <Array type="real">DZ DO VA DE DK ES EG EE TT TW GD GF FR FO GP AT AZ AD AG AO BR TR BO C2 SC SE RS MA MX MN NL NU HN IE IL JM KE KZ</Array>
         </SimpleSetPredicate>
         <Node id="40">
-            <SimplePredicate field="num_address_states" operator="lessOrEqual" value="4.0"/>
+            <SimplePredicate field="num_address_states" operator="lessThan" value="4.0"/>
             <Node id="80" score="0.03382962991662696">
                 <SimpleSetPredicate field="ARS_v2_cc_bin_ctry_match_worst" booleanOperator="isNotIn">
                     <Array type="real">NO_MATCH</Array>
@@ -3164,7 +3164,7 @@
             </Node>
         </Node>
         <Node id="41">
-            <SimplePredicate field="num_address_states" operator="greaterThan" value="4.0"/>
+            <SimplePredicate field="num_address_states" operator="greaterOrEqual" value="4.0"/>
             <Node id="82" score="0.22003420101279939">
                 <SimpleSetPredicate field="ARS_v21_ip_similarity_best" booleanOperator="isIn">
                     <Array type="real">MED GOOD</Array>
@@ -3182,21 +3182,21 @@
             <Array type="real">DZ DO VA DE DK ES EG EE TT TW GD GF FR FO GP AT AZ AD AG AO BR TR BO C2 SC SE RS MA MX MN NL NU HN IE IL JM KE KZ</Array>
         </SimpleSetPredicate>
         <Node id="42">
-            <SimplePredicate field="max_cross20wRtAtoCcBadAcc_02" operator="lessOrEqual" value="0.01"/>
+            <SimplePredicate field="max_cross20wRtAtoCcBadAcc_02" operator="lessThan" value="0.01"/>
             <Node id="84" score="0.11910441125635314">
-                <SimplePredicate field="s_cnt_dk_10" operator="lessOrEqual" value="0.99371428274081"/>
+                <SimplePredicate field="s_cnt_dk_10" operator="lessThan" value="0.99371428274081"/>
             </Node>
             <Node id="85" score="0.5981457421049071">
-                <SimplePredicate field="s_cnt_dk_10" operator="greaterThan" value="0.99371428274081"/>
+                <SimplePredicate field="s_cnt_dk_10" operator="greaterOrEqual" value="0.99371428274081"/>
             </Node>
         </Node>
         <Node id="43">
-            <SimplePredicate field="max_cross20wRtAtoCcBadAcc_02" operator="greaterThan" value="0.01"/>
+            <SimplePredicate field="max_cross20wRtAtoCcBadAcc_02" operator="greaterOrEqual" value="0.01"/>
             <Node id="86" score="1.0359254141130345">
-                <SimplePredicate field="asp1_cnt_cb_rate" operator="lessOrEqual" value="0.0"/>
+                <SimplePredicate field="asp1_cnt_cb_rate" operator="lessThan" value="0.0"/>
             </Node>
             <Node id="87" score="0.47138397161372664">
-                <SimplePredicate field="asp1_cnt_cb_rate" operator="greaterThan" value="0.0"/>
+                <SimplePredicate field="asp1_cnt_cb_rate" operator="greaterOrEqual" value="0.0"/>
             </Node>
         </Node>
     </Node>
@@ -3206,18 +3206,18 @@
         <Array type="real">dz ec de uy do tt tw tn br sv bb cv cn rs at al ps pk ma mo mq mx jm ke kz lc ht hn ie</Array>
     </SimpleSetPredicate>
     <Node id="22">
-        <SimplePredicate field="max_cross4wRtDolAtoCcBadTxn_02" operator="lessOrEqual" value="0.0072"/>
+        <SimplePredicate field="max_cross4wRtDolAtoCcBadTxn_02" operator="lessThan" value="0.0072"/>
         <Node id="44">
-            <SimplePredicate field="cc_n_failed_verification" operator="lessOrEqual" value="4.0"/>
+            <SimplePredicate field="cc_n_failed_verification" operator="lessThan" value="4.0"/>
             <Node id="88" score="0.12920210707512506">
-                <SimplePredicate field="ip_addcc_cnt_dk_2" operator="lessOrEqual" value="1.5887586168616072"/>
+                <SimplePredicate field="ip_addcc_cnt_dk_2" operator="lessThan" value="1.5887586168616072"/>
             </Node>
             <Node id="89" score="0.3927451967370378">
-                <SimplePredicate field="ip_addcc_cnt_dk_2" operator="greaterThan" value="1.5887586168616072"/>
+                <SimplePredicate field="ip_addcc_cnt_dk_2" operator="greaterOrEqual" value="1.5887586168616072"/>
             </Node>
         </Node>
         <Node id="45">
-            <SimplePredicate field="cc_n_failed_verification" operator="greaterThan" value="4.0"/>
+            <SimplePredicate field="cc_n_failed_verification" operator="greaterOrEqual" value="4.0"/>
             <Node id="90" score="0.7732390476690241">
                 <SimpleSetPredicate field="billing_cntry" booleanOperator="isNotIn">
                     <Array type="real">DZ VE DO DE UY US ES EE TT TW FR GP AR AW AU PT AE AL PY BR TR C2 RS CR MA NG NI HN IL JO JM KE KY &quot;&quot;</Array>
@@ -3231,18 +3231,18 @@
         </Node>
     </Node>
     <Node id="23">
-        <SimplePredicate field="max_cross4wRtDolAtoCcBadTxn_02" operator="greaterThan" value="0.0072"/>
+        <SimplePredicate field="max_cross4wRtDolAtoCcBadTxn_02" operator="greaterOrEqual" value="0.0072"/>
         <Node id="46">
-            <SimplePredicate field="s_cc_d_since_oldest" operator="lessOrEqual" value="1.0"/>
+            <SimplePredicate field="s_cc_d_since_oldest" operator="lessThan" value="1.0"/>
             <Node id="92" score="1.1196470892888948">
-                <SimplePredicate field="max_cross4wRtAtoCcBadTxn_02" operator="lessOrEqual" value="0.1"/>
+                <SimplePredicate field="max_cross4wRtAtoCcBadTxn_02" operator="lessThan" value="0.1"/>
             </Node>
             <Node id="93" score="0.4384382846758364">
-                <SimplePredicate field="max_cross4wRtAtoCcBadTxn_02" operator="greaterThan" value="0.1"/>
+                <SimplePredicate field="max_cross4wRtAtoCcBadTxn_02" operator="greaterOrEqual" value="0.1"/>
             </Node>
         </Node>
         <Node id="47">
-            <SimplePredicate field="s_cc_d_since_oldest" operator="greaterThan" value="1.0"/>
+            <SimplePredicate field="s_cc_d_since_oldest" operator="greaterOrEqual" value="1.0"/>
             <Node id="94" score="0.13339096243781834">
                 <SimpleSetPredicate field="wuser_s_primary_residence" booleanOperator="isNotIn">
                     <Array type="real">EC DZ VE DO DE TT FR GT GP AU AL AN BR CA TR SV BO CY CO LT MX NG NO PL PE HN ID IE IT JP KE KN KY</Array>
@@ -3259,45 +3259,45 @@
                             </Node>
                         </Node>
                         <Node id="3">
-                            <SimplePredicate field="ed_ratio_1w_appr_dol_02" operator="greaterThan" value="8.852735028991402"/>
+                            <SimplePredicate field="ed_ratio_1w_appr_dol_02" operator="greaterOrEqual" value="8.852735028991402"/>
                             <Node id="6">
 <SimpleSetPredicate field="ARS_v40_ad_verf_chains" booleanOperator="isNotIn">
     <Array type="real">NO_CHAIN_SHIP_MISMATCH_BILL</Array>
 </SimpleSetPredicate>
 <Node id="12">
-    <SimplePredicate field="SnrpcntysrRvrpcntysrRtCcBadSumAmt112d_03" operator="lessOrEqual" value="0.0889"/>
+    <SimplePredicate field="SnrpcntysrRvrpcntysrRtCcBadSumAmt112d_03" operator="lessThan" value="0.0889"/>
     <Node id="24">
-        <SimplePredicate field="sender_person_asset_entity_first_success_transaction_date" operator="lessOrEqual" value="1.4351292E9"/>
+        <SimplePredicate field="sender_person_asset_entity_first_success_transaction_date" operator="lessThan" value="1.4351292E9"/>
         <Node id="48">
-            <SimplePredicate field="cp20wRtAtoBadAcc_02" operator="lessOrEqual" value="2.0E-4"/>
+            <SimplePredicate field="cp20wRtAtoBadAcc_02" operator="lessThan" value="2.0E-4"/>
             <Node id="96" score="-0.011943529535750314">
-                <SimplePredicate field="acct_ccauth_cvv_ns_dk_2" operator="lessOrEqual" value="25.026302854871243"/>
+                <SimplePredicate field="acct_ccauth_cvv_ns_dk_2" operator="lessThan" value="25.026302854871243"/>
             </Node>
             <Node id="97" score="1.9917257036346276">
-                <SimplePredicate field="acct_ccauth_cvv_ns_dk_2" operator="greaterThan" value="25.026302854871243"/>
+                <SimplePredicate field="acct_ccauth_cvv_ns_dk_2" operator="greaterOrEqual" value="25.026302854871243"/>
             </Node>
         </Node>
         <Node id="49">
-            <SimplePredicate field="cp20wRtAtoBadAcc_02" operator="greaterThan" value="2.0E-4"/>
+            <SimplePredicate field="cp20wRtAtoBadAcc_02" operator="greaterOrEqual" value="2.0E-4"/>
             <Node id="98" score="-0.04943464385947981">
-                <SimplePredicate field="asp1_cnt_rest_rate" operator="lessOrEqual" value="0.007"/>
+                <SimplePredicate field="asp1_cnt_rest_rate" operator="lessThan" value="0.007"/>
             </Node>
             <Node id="99" score="0.7291778294042751">
-                <SimplePredicate field="asp1_cnt_rest_rate" operator="greaterThan" value="0.007"/>
+                <SimplePredicate field="asp1_cnt_rest_rate" operator="greaterOrEqual" value="0.007"/>
             </Node>
         </Node>
     </Node>
     <Node id="25">
-        <SimplePredicate field="sender_person_asset_entity_first_success_transaction_date" operator="greaterThan" value="1.4351292E9"/>
+        <SimplePredicate field="sender_person_asset_entity_first_success_transaction_date" operator="greaterOrEqual" value="1.4351292E9"/>
         <Node id="50">
             <SimpleSetPredicate field="ARS_v40_tx_vertical" booleanOperator="isNotIn">
                 <Array type="real">computer-hardware fashion gaming jewelry memorabilia office-supplies tickets cameras cellphones music-videos NO_COUNTERPARTY NO_DATA adults toys nutritional-supp electronics &quot;&quot;</Array>
             </SimpleSetPredicate>
             <Node id="100" score="-0.002720609093872706">
-                <SimplePredicate field="RvrSnrpcntyRvrpcntyCatRtRstBadSumAmt112d_03" operator="lessOrEqual" value="0.1087"/>
+                <SimplePredicate field="RvrSnrpcntyRvrpcntyCatRtRstBadSumAmt112d_03" operator="lessThan" value="0.1087"/>
             </Node>
             <Node id="101" score="0.33119009304911584">
-                <SimplePredicate field="RvrSnrpcntyRvrpcntyCatRtRstBadSumAmt112d_03" operator="greaterThan" value="0.1087"/>
+                <SimplePredicate field="RvrSnrpcntyRvrpcntyCatRtRstBadSumAmt112d_03" operator="greaterOrEqual" value="0.1087"/>
             </Node>
         </Node>
         <Node id="51">
@@ -3305,55 +3305,55 @@
                 <Array type="real">computer-hardware fashion gaming jewelry memorabilia office-supplies tickets cameras cellphones music-videos NO_COUNTERPARTY NO_DATA adults toys nutritional-supp electronics &quot;&quot;</Array>
             </SimpleSetPredicate>
             <Node id="102" score="0.04955266931910979">
-                <SimplePredicate field="CcbincntyIpcntyRvrpcntyRtCcBadCntSndr112d_03" operator="lessOrEqual" value="0.0029"/>
+                <SimplePredicate field="CcbincntyIpcntyRvrpcntyRtCcBadCntSndr112d_03" operator="lessThan" value="0.0029"/>
             </Node>
             <Node id="103" score="0.1787817111603012">
-                <SimplePredicate field="CcbincntyIpcntyRvrpcntyRtCcBadCntSndr112d_03" operator="greaterThan" value="0.0029"/>
+                <SimplePredicate field="CcbincntyIpcntyRvrpcntyRtCcBadCntSndr112d_03" operator="greaterOrEqual" value="0.0029"/>
             </Node>
         </Node>
     </Node>
 </Node>
 <Node id="13">
-    <SimplePredicate field="SnrpcntysrRvrpcntysrRtCcBadSumAmt112d_03" operator="greaterThan" value="0.0889"/>
+    <SimplePredicate field="SnrpcntysrRvrpcntysrRtCcBadSumAmt112d_03" operator="greaterOrEqual" value="0.0889"/>
     <Node id="26">
-        <SimplePredicate field="CcbincntyIpcntyRvrpcntyRtRstBadCntSndr112d_03" operator="lessOrEqual" value="0.0187"/>
+        <SimplePredicate field="CcbincntyIpcntyRvrpcntyRtRstBadCntSndr112d_03" operator="lessThan" value="0.0187"/>
         <Node id="52">
-            <SimplePredicate field="cp20wMnDolAppPerTxn_02" operator="lessOrEqual" value="59.4808"/>
+            <SimplePredicate field="cp20wMnDolAppPerTxn_02" operator="lessThan" value="59.4808"/>
             <Node id="104" score="1.6386779807095297">
-                <SimplePredicate field="num_addresses" operator="lessOrEqual" value="2.0"/>
+                <SimplePredicate field="num_addresses" operator="lessThan" value="2.0"/>
             </Node>
             <Node id="105" score="0.18701766430078648">
-                <SimplePredicate field="num_addresses" operator="greaterThan" value="2.0"/>
+                <SimplePredicate field="num_addresses" operator="greaterOrEqual" value="2.0"/>
             </Node>
         </Node>
         <Node id="53">
-            <SimplePredicate field="cp20wMnDolAppPerTxn_02" operator="greaterThan" value="59.4808"/>
+            <SimplePredicate field="cp20wMnDolAppPerTxn_02" operator="greaterOrEqual" value="59.4808"/>
             <Node id="106" score="1.174272582486852">
-                <SimplePredicate field="CcbincntyIpcntyRvrpcntynCbBadMnAmt112d_03" operator="lessOrEqual" value="47.2585"/>
+                <SimplePredicate field="CcbincntyIpcntyRvrpcntynCbBadMnAmt112d_03" operator="lessThan" value="47.2585"/>
             </Node>
             <Node id="107" score="0.06027838070316535">
-                <SimplePredicate field="CcbincntyIpcntyRvrpcntynCbBadMnAmt112d_03" operator="greaterThan" value="47.2585"/>
+                <SimplePredicate field="CcbincntyIpcntyRvrpcntynCbBadMnAmt112d_03" operator="greaterOrEqual" value="47.2585"/>
             </Node>
         </Node>
     </Node>
     <Node id="27">
-        <SimplePredicate field="CcbincntyIpcntyRvrpcntyRtRstBadCntSndr112d_03" operator="greaterThan" value="0.0187"/>
+        <SimplePredicate field="CcbincntyIpcntyRvrpcntyRtRstBadCntSndr112d_03" operator="greaterOrEqual" value="0.0187"/>
         <Node id="54">
-            <SimplePredicate field="ip20wRtCcBadTxn_02" operator="lessOrEqual" value="0.093"/>
+            <SimplePredicate field="ip20wRtCcBadTxn_02" operator="lessThan" value="0.093"/>
             <Node id="108" score="1.6622083234049823">
-                <SimplePredicate field="ip_signup_num_acct_240h" operator="lessOrEqual" value="7.0"/>
+                <SimplePredicate field="ip_signup_num_acct_240h" operator="lessThan" value="7.0"/>
             </Node>
             <Node id="109" score="0.4931257269766547">
-                <SimplePredicate field="ip_signup_num_acct_240h" operator="greaterThan" value="7.0"/>
+                <SimplePredicate field="ip_signup_num_acct_240h" operator="greaterOrEqual" value="7.0"/>
             </Node>
         </Node>
         <Node id="55">
-            <SimplePredicate field="ip20wRtCcBadTxn_02" operator="greaterThan" value="0.093"/>
+            <SimplePredicate field="ip20wRtCcBadTxn_02" operator="greaterOrEqual" value="0.093"/>
             <Node id="110" score="0.5342741797257192">
-                <SimplePredicate field="dy_c_timestamp" operator="lessOrEqual" value="1.430187094E9"/>
+                <SimplePredicate field="dy_c_timestamp" operator="lessThan" value="1.430187094E9"/>
             </Node>
             <Node id="111" score="-1.4023093453590787">
-                <SimplePredicate field="dy_c_timestamp" operator="greaterThan" value="1.430187094E9"/>
+                <SimplePredicate field="dy_c_timestamp" operator="greaterOrEqual" value="1.430187094E9"/>
             </Node>
         </Node>
     </Node>
@@ -3364,63 +3364,63 @@
     <Array type="real">NO_CHAIN_SHIP_MISMATCH_BILL</Array>
 </SimpleSetPredicate>
 <Node id="14">
-    <SimplePredicate field="ib_amt_cb_rate" operator="lessOrEqual" value="0.018"/>
+    <SimplePredicate field="ib_amt_cb_rate" operator="lessThan" value="0.018"/>
     <Node id="28">
-        <SimplePredicate field="alias_n_added_1" operator="lessOrEqual" value="1.0"/>
+        <SimplePredicate field="alias_n_added_1" operator="lessThan" value="1.0"/>
         <Node id="56">
-            <SimplePredicate field="num_address_states" operator="lessOrEqual" value="8.0"/>
+            <SimplePredicate field="num_address_states" operator="lessThan" value="8.0"/>
             <Node id="112" score="0.03461129437198549">
-                <SimplePredicate field="ed20wRtDolCcBadTxn_02" operator="lessOrEqual" value="0.0285"/>
+                <SimplePredicate field="ed20wRtDolCcBadTxn_02" operator="lessThan" value="0.0285"/>
             </Node>
             <Node id="113" score="1.3045717140501794">
-                <SimplePredicate field="ed20wRtDolCcBadTxn_02" operator="greaterThan" value="0.0285"/>
+                <SimplePredicate field="ed20wRtDolCcBadTxn_02" operator="greaterOrEqual" value="0.0285"/>
             </Node>
         </Node>
         <Node id="57">
-            <SimplePredicate field="num_address_states" operator="greaterThan" value="8.0"/>
+            <SimplePredicate field="num_address_states" operator="greaterOrEqual" value="8.0"/>
             <Node id="114" score="0.005531972359746041">
-                <SimplePredicate field="added_cc_lt_14_v2" operator="lessOrEqual" value="2.0"/>
+                <SimplePredicate field="added_cc_lt_14_v2" operator="lessThan" value="2.0"/>
             </Node>
             <Node id="115" score="1.977545697781364">
-                <SimplePredicate field="added_cc_lt_14_v2" operator="greaterThan" value="2.0"/>
+                <SimplePredicate field="added_cc_lt_14_v2" operator="greaterOrEqual" value="2.0"/>
             </Node>
         </Node>
     </Node>
     <Node id="29">
-        <SimplePredicate field="alias_n_added_1" operator="greaterThan" value="1.0"/>
+        <SimplePredicate field="alias_n_added_1" operator="greaterOrEqual" value="1.0"/>
         <Node id="58">
-            <SimplePredicate field="CatnRstBadMnAmt112d_03" operator="lessOrEqual" value="38.6586"/>
+            <SimplePredicate field="CatnRstBadMnAmt112d_03" operator="lessThan" value="38.6586"/>
             <Node id="116" score="0.6039933173908683">
-                <SimplePredicate field="LclhrIpasnRtAtoBadTxn90d_02" operator="lessOrEqual" value="0.0028"/>
+                <SimplePredicate field="LclhrIpasnRtAtoBadTxn90d_02" operator="lessThan" value="0.0028"/>
             </Node>
             <Node id="117" score="1.7963063007244244">
-                <SimplePredicate field="LclhrIpasnRtAtoBadTxn90d_02" operator="greaterThan" value="0.0028"/>
+                <SimplePredicate field="LclhrIpasnRtAtoBadTxn90d_02" operator="greaterOrEqual" value="0.0028"/>
             </Node>
         </Node>
         <Node id="59">
-            <SimplePredicate field="CatnRstBadMnAmt112d_03" operator="greaterThan" value="38.6586"/>
+            <SimplePredicate field="CatnRstBadMnAmt112d_03" operator="greaterOrEqual" value="38.6586"/>
             <Node id="118" score="0.18394953062311203">
-                <SimplePredicate field="ed20wRtDolAtoBadTxn_02" operator="lessOrEqual" value="0.0027"/>
+                <SimplePredicate field="ed20wRtDolAtoBadTxn_02" operator="lessThan" value="0.0027"/>
             </Node>
             <Node id="119" score="0.8328783908186796">
-                <SimplePredicate field="ed20wRtDolAtoBadTxn_02" operator="greaterThan" value="0.0027"/>
+                <SimplePredicate field="ed20wRtDolAtoBadTxn_02" operator="greaterOrEqual" value="0.0027"/>
             </Node>
         </Node>
     </Node>
 </Node>
 <Node id="15">
-    <SimplePredicate field="ib_amt_cb_rate" operator="greaterThan" value="0.018"/>
+    <SimplePredicate field="ib_amt_cb_rate" operator="greaterOrEqual" value="0.018"/>
     <Node id="30">
-        <SimplePredicate field="count_bad_name_mrch" operator="lessOrEqual" value="2.0"/>
+        <SimplePredicate field="count_bad_name_mrch" operator="lessThan" value="2.0"/>
         <Node id="60">
             <SimpleSetPredicate field="dy_s_ip_cnty" booleanOperator="isNotIn">
                 <Array type="real">fr de eu uk us &quot;&quot;</Array>
             </SimpleSetPredicate>
             <Node id="120" score="-0.07712770301892072">
-                <SimplePredicate field="ipr20wRtDclAcc_02" operator="lessOrEqual" value="0.0333"/>
+                <SimplePredicate field="ipr20wRtDclAcc_02" operator="lessThan" value="0.0333"/>
             </Node>
             <Node id="121" score="1.0985583335594988">
-                <SimplePredicate field="ipr20wRtDclAcc_02" operator="greaterThan" value="0.0333"/>
+                <SimplePredicate field="ipr20wRtDclAcc_02" operator="greaterOrEqual" value="0.0333"/>
             </Node>
         </Node>
         <Node id="61">
@@ -3428,31 +3428,31 @@
                 <Array type="real">fr de eu uk us &quot;&quot;</Array>
             </SimpleSetPredicate>
             <Node id="122" score="0.14643866792844992">
-                <SimplePredicate field="ARS_v31_ato_classifier_confidence" operator="lessOrEqual" value="0.011919993838106753"/>
+                <SimplePredicate field="ARS_v31_ato_classifier_confidence" operator="lessThan" value="0.011919993838106753"/>
             </Node>
             <Node id="123" score="1.8599870158587117">
-                <SimplePredicate field="ARS_v31_ato_classifier_confidence" operator="greaterThan" value="0.011919993838106753"/>
+                <SimplePredicate field="ARS_v31_ato_classifier_confidence" operator="greaterOrEqual" value="0.011919993838106753"/>
             </Node>
         </Node>
     </Node>
     <Node id="31">
-        <SimplePredicate field="count_bad_name_mrch" operator="greaterThan" value="2.0"/>
+        <SimplePredicate field="count_bad_name_mrch" operator="greaterOrEqual" value="2.0"/>
         <Node id="62">
-            <SimplePredicate field="c_pmts_rcvd_num" operator="lessOrEqual" value="212.0"/>
+            <SimplePredicate field="c_pmts_rcvd_num" operator="lessThan" value="212.0"/>
             <Node id="124" score="1.9367929730217044">
-                <SimplePredicate field="acct_ccauth_avs_pm_dk_160" operator="lessOrEqual" value="0.9997778024673"/>
+                <SimplePredicate field="acct_ccauth_avs_pm_dk_160" operator="lessThan" value="0.9997778024673"/>
             </Node>
             <Node id="125" score="0.9912246697705884">
-                <SimplePredicate field="acct_ccauth_avs_pm_dk_160" operator="greaterThan" value="0.9997778024673"/>
+                <SimplePredicate field="acct_ccauth_avs_pm_dk_160" operator="greaterOrEqual" value="0.9997778024673"/>
             </Node>
         </Node>
         <Node id="63">
-            <SimplePredicate field="c_pmts_rcvd_num" operator="greaterThan" value="212.0"/>
+            <SimplePredicate field="c_pmts_rcvd_num" operator="greaterOrEqual" value="212.0"/>
             <Node id="126" score="1.9148339428956382">
-                <SimplePredicate field="ARS_v35_counterparty_account_age" operator="lessOrEqual" value="434.1021875"/>
+                <SimplePredicate field="ARS_v35_counterparty_account_age" operator="lessThan" value="434.1021875"/>
             </Node>
             <Node id="127" score="0.2305094530085171">
-                <SimplePredicate field="ARS_v35_counterparty_account_age" operator="greaterThan" value="434.1021875"/>
+                <SimplePredicate field="ARS_v35_counterparty_account_age" operator="greaterOrEqual" value="434.1021875"/>
             </Node>
         </Node>
     </Node>
@@ -4104,15 +4104,15 @@
                     <Node id="1">
                         <True/>
                         <Node id="2">
-                            <SimplePredicate field="snr_ratio_20w_ato_dol_02" operator="lessOrEqual" value="3.7883647265360314"/>
+                            <SimplePredicate field="snr_ratio_20w_ato_dol_02" operator="lessThan" value="3.7883647265360314"/>
                             <Node id="4">
-<SimplePredicate field="acct_attempt_p2p_cnt_dk_20" operator="lessOrEqual" value="7.983051188683154"/>
+<SimplePredicate field="acct_attempt_p2p_cnt_dk_20" operator="lessThan" value="7.983051188683154"/>
 <Node id="8">
-    <SimplePredicate field="added_cc_lt_14_v2" operator="lessOrEqual" value="3.0"/>
+    <SimplePredicate field="added_cc_lt_14_v2" operator="lessThan" value="3.0"/>
     <Node id="16">
-        <SimplePredicate field="Bad_rate_ccbin" operator="lessOrEqual" value="0.18"/>
+        <SimplePredicate field="Bad_rate_ccbin" operator="lessThan" value="0.18"/>
         <Node id="32">
-            <SimplePredicate field="cp20wRtDolAtoBadTxn_02" operator="lessOrEqual" value="0.0013"/>
+            <SimplePredicate field="cp20wRtDolAtoBadTxn_02" operator="lessThan" value="0.0013"/>
             <Node id="64" score="-0.009252812442390294">
                 <SimpleSetPredicate field="ARS_v40_ship_bill_syntax_match" booleanOperator="isNotIn">
                     <Array type="real">LINE_MATCH_ZIP_MISMATCH LINE_PARTIAL_ZIP_MISMATCH ALL_MISMATCH</Array>
@@ -4125,19 +4125,19 @@
             </Node>
         </Node>
         <Node id="33">
-            <SimplePredicate field="cp20wRtDolAtoBadTxn_02" operator="greaterThan" value="0.0013"/>
+            <SimplePredicate field="cp20wRtDolAtoBadTxn_02" operator="greaterOrEqual" value="0.0013"/>
             <Node id="66" score="-0.008876583829405739">
-                <SimplePredicate field="primarycc_d_snc_1st_charge" operator="lessOrEqual" value="13.0"/>
+                <SimplePredicate field="primarycc_d_snc_1st_charge" operator="lessThan" value="13.0"/>
             </Node>
             <Node id="67" score="-0.0616669103605677">
-                <SimplePredicate field="primarycc_d_snc_1st_charge" operator="greaterThan" value="13.0"/>
+                <SimplePredicate field="primarycc_d_snc_1st_charge" operator="greaterOrEqual" value="13.0"/>
             </Node>
         </Node>
     </Node>
     <Node id="17">
-        <SimplePredicate field="Bad_rate_ccbin" operator="greaterThan" value="0.18"/>
+        <SimplePredicate field="Bad_rate_ccbin" operator="greaterOrEqual" value="0.18"/>
         <Node id="34">
-            <SimplePredicate field="acct_ccauth_avs_ns_dk_2" operator="lessOrEqual" value="3.3863065657881856E-10"/>
+            <SimplePredicate field="acct_ccauth_avs_ns_dk_2" operator="lessThan" value="3.3863065657881856E-10"/>
             <Node id="68" score="0.0142563568988936">
                 <SimpleSetPredicate field="billing_cntry" booleanOperator="isNotIn">
                     <Array type="real">VE DO DE DK UA ES EG TW GT GR GI AZ AG AE BW SV BH SZ SI RS CO CL LV LT MK MD NI NL NO PE PA IL JP KR KZ &quot;&quot;</Array>
@@ -4150,7 +4150,7 @@
             </Node>
         </Node>
         <Node id="35">
-            <SimplePredicate field="acct_ccauth_avs_ns_dk_2" operator="greaterThan" value="3.3863065657881856E-10"/>
+            <SimplePredicate field="acct_ccauth_avs_ns_dk_2" operator="greaterOrEqual" value="3.3863065657881856E-10"/>
             <Node id="70" score="0.5897589791091332">
                 <SimpleSetPredicate field="shipping_country" booleanOperator="isNotIn">
                     <Array type="real">DZ VE US UA FI GT AZ BA AE AL BY BR TN TR BH BE BO C2 SE CS RS RU CR CO CN LV LT MK MD MA MY MN NI NZ PL PH HK HU ID IL JP JO KH KE KR</Array>
@@ -4165,9 +4165,9 @@
     </Node>
 </Node>
 <Node id="9">
-    <SimplePredicate field="added_cc_lt_14_v2" operator="greaterThan" value="3.0"/>
+    <SimplePredicate field="added_cc_lt_14_v2" operator="greaterOrEqual" value="3.0"/>
     <Node id="18">
-        <SimplePredicate field="num_address_states" operator="lessOrEqual" value="7.0"/>
+        <SimplePredicate field="num_address_states" operator="lessThan" value="7.0"/>
         <Node id="36">
             <SimpleSetPredicate field="ip_country" booleanOperator="isNotIn">
                 <Array type="real">fi fr UK gi gt gp vi vn de uy dk do eu eg tt tw ua es tn tr br bm sv bb be cz cv si cr cm cn rs ch re qa al ps ** pl ph pk lv lt ly md ma me mk mq mv mu mx ng nl jm kh ke kz ht hu hn iq il</Array>
@@ -4188,24 +4188,24 @@
                 <Array type="real">fi fr UK gi gt gp vi vn de uy dk do eu eg tt tw ua es tn tr br bm sv bb be cz cv si cr cm cn rs ch re qa al ps ** pl ph pk lv lt ly md ma me mk mq mv mu mx ng nl jm kh ke kz ht hu hn iq il</Array>
             </SimpleSetPredicate>
             <Node id="74" score="0.3999284463167486">
-                <SimplePredicate field="added_cc_lt_14_v2" operator="lessOrEqual" value="4.0"/>
+                <SimplePredicate field="added_cc_lt_14_v2" operator="lessThan" value="4.0"/>
             </Node>
             <Node id="75" score="0.8310018419522616">
-                <SimplePredicate field="added_cc_lt_14_v2" operator="greaterThan" value="4.0"/>
+                <SimplePredicate field="added_cc_lt_14_v2" operator="greaterOrEqual" value="4.0"/>
             </Node>
         </Node>
     </Node>
     <Node id="19">
-        <SimplePredicate field="num_address_states" operator="greaterThan" value="7.0"/>
+        <SimplePredicate field="num_address_states" operator="greaterOrEqual" value="7.0"/>
         <Node id="38">
             <SimpleSetPredicate field="dy_c_ip_cnty" booleanOperator="isNotIn">
                 <Array type="real">fr vn ec de ve do us eg tw es ca tr th sv se cl ro at ** pe pl ph lv ma mx ht hu hk id it &quot;&quot;</Array>
             </SimpleSetPredicate>
             <Node id="76" score="0.10097386820266158">
-                <SimplePredicate field="xb_cnt_cb_rate" operator="lessOrEqual" value="0.001"/>
+                <SimplePredicate field="xb_cnt_cb_rate" operator="lessThan" value="0.001"/>
             </Node>
             <Node id="77" score="1.413471384654031">
-                <SimplePredicate field="xb_cnt_cb_rate" operator="greaterThan" value="0.001"/>
+                <SimplePredicate field="xb_cnt_cb_rate" operator="greaterOrEqual" value="0.001"/>
             </Node>
         </Node>
         <Node id="39">
@@ -4213,30 +4213,30 @@
                 <Array type="real">fr vn ec de ve do us eg tw es ca tr th sv se cl ro at ** pe pl ph lv ma mx ht hu hk id it &quot;&quot;</Array>
             </SimpleSetPredicate>
             <Node id="78" score="0.9732633699822654">
-                <SimplePredicate field="ip_mp_diff_avg_dk_20" operator="lessOrEqual" value="203.05719110197515"/>
+                <SimplePredicate field="ip_mp_diff_avg_dk_20" operator="lessThan" value="203.05719110197515"/>
             </Node>
             <Node id="79" score="1.7431966229818583">
-                <SimplePredicate field="ip_mp_diff_avg_dk_20" operator="greaterThan" value="203.05719110197515"/>
+                <SimplePredicate field="ip_mp_diff_avg_dk_20" operator="greaterOrEqual" value="203.05719110197515"/>
             </Node>
         </Node>
     </Node>
 </Node>
                             </Node>
                             <Node id="5">
-<SimplePredicate field="acct_attempt_p2p_cnt_dk_20" operator="greaterThan" value="7.983051188683154"/>
+<SimplePredicate field="acct_attempt_p2p_cnt_dk_20" operator="greaterOrEqual" value="7.983051188683154"/>
 <Node id="10">
-    <SimplePredicate field="acct_login_cnt_dk_40" operator="lessOrEqual" value="1.9995222692873016"/>
+    <SimplePredicate field="acct_login_cnt_dk_40" operator="lessThan" value="1.9995222692873016"/>
     <Node id="20">
-        <SimplePredicate field="acct_cc_s_cnt_dk_40" operator="lessOrEqual" value="4.0611838551753E-10"/>
+        <SimplePredicate field="acct_cc_s_cnt_dk_40" operator="lessThan" value="4.0611838551753E-10"/>
         <Node id="40">
             <SimpleSetPredicate field="networks_v3_sndr_tier" booleanOperator="isIn">
                 <Array type="real">BAD_2 GUEST BAD_3 GOOD_2</Array>
             </SimpleSetPredicate>
             <Node id="80" score="0.9482295653985278">
-                <SimplePredicate field="cp_zscr_20w_appr_pertxn_02" operator="lessOrEqual" value="1.1427939518610406"/>
+                <SimplePredicate field="cp_zscr_20w_appr_pertxn_02" operator="lessThan" value="1.1427939518610406"/>
             </Node>
             <Node id="81" score="1.6117171936597892">
-                <SimplePredicate field="cp_zscr_20w_appr_pertxn_02" operator="greaterThan" value="1.1427939518610406"/>
+                <SimplePredicate field="cp_zscr_20w_appr_pertxn_02" operator="greaterOrEqual" value="1.1427939518610406"/>
             </Node>
         </Node>
         <Node id="41">
@@ -4244,26 +4244,26 @@
                 <Array type="real">BAD_2 GUEST BAD_3 GOOD_2</Array>
             </SimpleSetPredicate>
             <Node id="82" score="1.6509010786577603">
-                <SimplePredicate field="cp_ratio_1w_appr_dol_02" operator="lessOrEqual" value="8.35551682563178"/>
+                <SimplePredicate field="cp_ratio_1w_appr_dol_02" operator="lessThan" value="8.35551682563178"/>
             </Node>
             <Node id="83" score="0.45322940535942585">
-                <SimplePredicate field="cp_ratio_1w_appr_dol_02" operator="greaterThan" value="8.35551682563178"/>
+                <SimplePredicate field="cp_ratio_1w_appr_dol_02" operator="greaterOrEqual" value="8.35551682563178"/>
             </Node>
         </Node>
     </Node>
     <Node id="21">
-        <SimplePredicate field="acct_cc_s_cnt_dk_40" operator="greaterThan" value="4.0611838551753E-10"/>
+        <SimplePredicate field="acct_cc_s_cnt_dk_40" operator="greaterOrEqual" value="4.0611838551753E-10"/>
         <Node id="42">
-            <SimplePredicate field="ARS_AccountConsistencyNumeric" operator="lessOrEqual" value="5.293619409437733E-4"/>
+            <SimplePredicate field="ARS_AccountConsistencyNumeric" operator="lessThan" value="5.293619409437733E-4"/>
             <Node id="84" score="0.2590466900842915">
-                <SimplePredicate field="Declined_asp_ccbin" operator="lessOrEqual" value="6216.7595"/>
+                <SimplePredicate field="Declined_asp_ccbin" operator="lessThan" value="6216.7595"/>
             </Node>
             <Node id="85" score="1.6642173342198963">
-                <SimplePredicate field="Declined_asp_ccbin" operator="greaterThan" value="6216.7595"/>
+                <SimplePredicate field="Declined_asp_ccbin" operator="greaterOrEqual" value="6216.7595"/>
             </Node>
         </Node>
         <Node id="43">
-            <SimplePredicate field="ARS_AccountConsistencyNumeric" operator="greaterThan" value="5.293619409437733E-4"/>
+            <SimplePredicate field="ARS_AccountConsistencyNumeric" operator="greaterOrEqual" value="5.293619409437733E-4"/>
             <Node id="86" score="0.032832120150418614">
                 <SimpleSetPredicate field="ARS_CounterPartyConsistencyEnum" booleanOperator="isNotIn">
                     <Array type="real">LOW_CONSISTENCY</Array>
@@ -4278,11 +4278,11 @@
     </Node>
 </Node>
 <Node id="11">
-    <SimplePredicate field="acct_login_cnt_dk_40" operator="greaterThan" value="1.9995222692873016"/>
+    <SimplePredicate field="acct_login_cnt_dk_40" operator="greaterOrEqual" value="1.9995222692873016"/>
     <Node id="22">
-        <SimplePredicate field="s_cc_d_since_oldest" operator="lessOrEqual" value="55.0"/>
+        <SimplePredicate field="s_cc_d_since_oldest" operator="lessThan" value="55.0"/>
         <Node id="44">
-            <SimplePredicate field="ipr1wMnDolCcBadPerTxn_02" operator="lessOrEqual" value="131.3459"/>
+            <SimplePredicate field="ipr1wMnDolCcBadPerTxn_02" operator="lessThan" value="131.3459"/>
             <Node id="88" score="0.10281514399033913">
                 <SimpleSetPredicate field="primaryach_country" booleanOperator="isNotIn">
                     <Array type="real">ID IE AT NL TH GB NO FR &quot;&quot;</Array>
@@ -4295,7 +4295,7 @@
             </Node>
         </Node>
         <Node id="45">
-            <SimplePredicate field="ipr1wMnDolCcBadPerTxn_02" operator="greaterThan" value="131.3459"/>
+            <SimplePredicate field="ipr1wMnDolCcBadPerTxn_02" operator="greaterOrEqual" value="131.3459"/>
             <Node id="90" score="0.23632430675290667">
                 <SimpleSetPredicate field="dy_s_ip_cnty" booleanOperator="isNotIn">
                     <Array type="real">fr de ve eu uk us tw es ca cn rs au no ** ph pk mu mx my nl id it</Array>
@@ -4309,23 +4309,23 @@
         </Node>
     </Node>
     <Node id="23">
-        <SimplePredicate field="s_cc_d_since_oldest" operator="greaterThan" value="55.0"/>
+        <SimplePredicate field="s_cc_d_since_oldest" operator="greaterOrEqual" value="55.0"/>
         <Node id="46">
-            <SimplePredicate field="r_ratio_avg_dk_160" operator="lessOrEqual" value="9.41117652452893"/>
+            <SimplePredicate field="r_ratio_avg_dk_160" operator="lessThan" value="9.41117652452893"/>
             <Node id="92" score="0.01362374954181448">
-                <SimplePredicate field="S_CC_D_SINCE_OLDEST_CHG" operator="lessOrEqual" value="1964.0"/>
+                <SimplePredicate field="S_CC_D_SINCE_OLDEST_CHG" operator="lessThan" value="1964.0"/>
             </Node>
             <Node id="93" score="1.847760271467753">
-                <SimplePredicate field="S_CC_D_SINCE_OLDEST_CHG" operator="greaterThan" value="1964.0"/>
+                <SimplePredicate field="S_CC_D_SINCE_OLDEST_CHG" operator="greaterOrEqual" value="1964.0"/>
             </Node>
         </Node>
         <Node id="47">
-            <SimplePredicate field="r_ratio_avg_dk_160" operator="greaterThan" value="9.41117652452893"/>
+            <SimplePredicate field="r_ratio_avg_dk_160" operator="greaterOrEqual" value="9.41117652452893"/>
             <Node id="94" score="1.9892758551167713">
-                <SimplePredicate field="acct_ccauth_avs_m_dk_160" operator="lessOrEqual" value="3.974684598026374"/>
+                <SimplePredicate field="acct_ccauth_avs_m_dk_160" operator="lessThan" value="3.974684598026374"/>
             </Node>
             <Node id="95" score="-0.006708491900387932">
-                <SimplePredicate field="acct_ccauth_avs_m_dk_160" operator="greaterThan" value="3.974684598026374"/>
+                <SimplePredicate field="acct_ccauth_avs_m_dk_160" operator="greaterOrEqual" value="3.974684598026374"/>
             </Node>
         </Node>
     </Node>
@@ -4333,24 +4333,24 @@
                             </Node>
                         </Node>
                         <Node id="3">
-                            <SimplePredicate field="snr_ratio_20w_ato_dol_02" operator="greaterThan" value="3.7883647265360314"/>
+                            <SimplePredicate field="snr_ratio_20w_ato_dol_02" operator="greaterOrEqual" value="3.7883647265360314"/>
                             <Node id="6">
-<SimplePredicate field="seller_tran_br_amt_all" operator="lessOrEqual" value="0.001"/>
+<SimplePredicate field="seller_tran_br_amt_all" operator="lessThan" value="0.001"/>
 <Node id="12">
-    <SimplePredicate field="industry2_tran_avg_good" operator="lessOrEqual" value="8529.77"/>
+    <SimplePredicate field="industry2_tran_avg_good" operator="lessThan" value="8529.77"/>
     <Node id="24">
-        <SimplePredicate field="EdSnrpcntyRtCcBadSumAmt112d_03" operator="lessOrEqual" value="0.017"/>
+        <SimplePredicate field="EdSnrpcntyRtCcBadSumAmt112d_03" operator="lessThan" value="0.017"/>
         <Node id="48">
-            <SimplePredicate field="CcbincntyIpcntyRvrpcntyRtCbBadSumAmt112d_03" operator="lessOrEqual" value="0.0849"/>
+            <SimplePredicate field="CcbincntyIpcntyRvrpcntyRtCbBadSumAmt112d_03" operator="lessThan" value="0.0849"/>
             <Node id="96" score="0.014449251280650218">
-                <SimplePredicate field="email_numofnumeric" operator="lessOrEqual" value="1.0"/>
+                <SimplePredicate field="email_numofnumeric" operator="lessThan" value="1.0"/>
             </Node>
             <Node id="97" score="0.0957813292341424">
-                <SimplePredicate field="email_numofnumeric" operator="greaterThan" value="1.0"/>
+                <SimplePredicate field="email_numofnumeric" operator="greaterOrEqual" value="1.0"/>
             </Node>
         </Node>
         <Node id="49">
-            <SimplePredicate field="CcbincntyIpcntyRvrpcntyRtCbBadSumAmt112d_03" operator="greaterThan" value="0.0849"/>
+            <SimplePredicate field="CcbincntyIpcntyRvrpcntyRtCbBadSumAmt112d_03" operator="greaterOrEqual" value="0.0849"/>
             <Node id="98" score="0.1234535627640382">
                 <SimpleSetPredicate field="primary_residence" booleanOperator="isNotIn">
                     <Array type="real">VN DK US UA GB RO AT AR AU PT CA TR BE SE SK RS SA LV MK HN IE IT</Array>
@@ -4364,16 +4364,16 @@
         </Node>
     </Node>
     <Node id="25">
-        <SimplePredicate field="EdSnrpcntyRtCcBadSumAmt112d_03" operator="greaterThan" value="0.017"/>
+        <SimplePredicate field="EdSnrpcntyRtCcBadSumAmt112d_03" operator="greaterOrEqual" value="0.017"/>
         <Node id="50">
             <SimpleSetPredicate field="ARS_v40_ebay_item_kosherness" booleanOperator="isNotIn">
                 <Array type="real">SUPER_RISKY RISKY NEUTRAL &quot;&quot;</Array>
             </SimpleSetPredicate>
             <Node id="100" score="0.17723021982941703">
-                <SimplePredicate field="asp2_cnt_rest_rate" operator="lessOrEqual" value="0.002"/>
+                <SimplePredicate field="asp2_cnt_rest_rate" operator="lessThan" value="0.002"/>
             </Node>
             <Node id="101" score="1.6252212486799986">
-                <SimplePredicate field="asp2_cnt_rest_rate" operator="greaterThan" value="0.002"/>
+                <SimplePredicate field="asp2_cnt_rest_rate" operator="greaterOrEqual" value="0.002"/>
             </Node>
         </Node>
         <Node id="51">
@@ -4394,9 +4394,9 @@
     </Node>
 </Node>
 <Node id="13">
-    <SimplePredicate field="industry2_tran_avg_good" operator="greaterThan" value="8529.77"/>
+    <SimplePredicate field="industry2_tran_avg_good" operator="greaterOrEqual" value="8529.77"/>
     <Node id="26">
-        <SimplePredicate field="CcbinhmcSnrpcntyRtRstBadCntTxn112d_03" operator="lessOrEqual" value="0.1"/>
+        <SimplePredicate field="CcbinhmcSnrpcntyRtRstBadCntTxn112d_03" operator="lessThan" value="0.1"/>
         <Node id="52">
             <SimpleSetPredicate field="ip_country" booleanOperator="isNotIn">
                 <Array type="real">gy gh vg uz eg ua tr tg bs bd sa am ps ly md mn mu na ng ht</Array>
@@ -4417,24 +4417,24 @@
                 <Array type="real">gy gh vg uz eg ua tr tg bs bd sa am ps ly md mn mu na ng ht</Array>
             </SimpleSetPredicate>
             <Node id="106" score="1.0056955272333232">
-                <SimplePredicate field="bin_cntry_dec_decline_rate" operator="lessOrEqual" value="0.058"/>
+                <SimplePredicate field="bin_cntry_dec_decline_rate" operator="lessThan" value="0.058"/>
             </Node>
             <Node id="107" score="0.08395013638065711">
-                <SimplePredicate field="bin_cntry_dec_decline_rate" operator="greaterThan" value="0.058"/>
+                <SimplePredicate field="bin_cntry_dec_decline_rate" operator="greaterOrEqual" value="0.058"/>
             </Node>
         </Node>
     </Node>
     <Node id="27">
-        <SimplePredicate field="CcbinhmcSnrpcntyRtRstBadCntTxn112d_03" operator="greaterThan" value="0.1"/>
+        <SimplePredicate field="CcbinhmcSnrpcntyRtRstBadCntTxn112d_03" operator="greaterOrEqual" value="0.1"/>
         <Node id="54">
             <SimpleSetPredicate field="ARS_v40_seller_ti" booleanOperator="isNotIn">
                 <Array type="real">computer-hardware fashion gaming jewelry accounting memorabilia airlines houseware cellphones health coins NO_DATA food-n-drink electronics</Array>
             </SimpleSetPredicate>
             <Node id="108" score="0.09328616753541251">
-                <SimplePredicate field="acct_ccauth_cvv_m_dk_80" operator="lessOrEqual" value="1.0543810042633324"/>
+                <SimplePredicate field="acct_ccauth_cvv_m_dk_80" operator="lessThan" value="1.0543810042633324"/>
             </Node>
             <Node id="109" score="1.4823137661805375">
-                <SimplePredicate field="acct_ccauth_cvv_m_dk_80" operator="greaterThan" value="1.0543810042633324"/>
+                <SimplePredicate field="acct_ccauth_cvv_m_dk_80" operator="greaterOrEqual" value="1.0543810042633324"/>
             </Node>
         </Node>
         <Node id="55">
@@ -4442,34 +4442,34 @@
                 <Array type="real">computer-hardware fashion gaming jewelry accounting memorabilia airlines houseware cellphones health coins NO_DATA food-n-drink electronics</Array>
             </SimpleSetPredicate>
             <Node id="110" score="1.9058785212536744">
-                <SimplePredicate field="SnrpcntysrRvrpcntysrRtCcBadCntSndr112d_03" operator="lessOrEqual" value="0.0079"/>
+                <SimplePredicate field="SnrpcntysrRvrpcntysrRtCcBadCntSndr112d_03" operator="lessThan" value="0.0079"/>
             </Node>
             <Node id="111" score="0.5278592513542225">
-                <SimplePredicate field="SnrpcntysrRvrpcntysrRtCcBadCntSndr112d_03" operator="greaterThan" value="0.0079"/>
+                <SimplePredicate field="SnrpcntysrRvrpcntysrRtCcBadCntSndr112d_03" operator="greaterOrEqual" value="0.0079"/>
             </Node>
         </Node>
     </Node>
 </Node>
                             </Node>
                             <Node id="7">
-<SimplePredicate field="seller_tran_br_amt_all" operator="greaterThan" value="0.001"/>
+<SimplePredicate field="seller_tran_br_amt_all" operator="greaterOrEqual" value="0.001"/>
 <Node id="14">
-    <SimplePredicate field="SnripcntysrRvrpcntysrRtCbBadCntTxn112d_03" operator="lessOrEqual" value="0.0045"/>
+    <SimplePredicate field="SnripcntysrRvrpcntysrRtCbBadCntTxn112d_03" operator="lessThan" value="0.0045"/>
     <Node id="28">
         <SimpleSetPredicate field="ARS_v40_ship_bill_syntax_match" booleanOperator="isNotIn">
             <Array type="real">LINE_MATCH_ZIP_MISMATCH NO_BILL_AD LINE_PARTIAL_NO_ZIP LINE_PARTIAL_ZIP_MISMATCH ALL_MISMATCH</Array>
         </SimpleSetPredicate>
         <Node id="56">
-            <SimplePredicate field="EdSnrpcntyRtRstBadCntSndr112d_03" operator="lessOrEqual" value="0.0028"/>
+            <SimplePredicate field="EdSnrpcntyRtRstBadCntSndr112d_03" operator="lessThan" value="0.0028"/>
             <Node id="112" score="0.0532326958872922">
-                <SimplePredicate field="CcbinhmcSnrpcntyRtRstBadCntTxn112d_03" operator="lessOrEqual" value="0.0278"/>
+                <SimplePredicate field="CcbinhmcSnrpcntyRtRstBadCntTxn112d_03" operator="lessThan" value="0.0278"/>
             </Node>
             <Node id="113" score="1.1348547928668944">
-                <SimplePredicate field="CcbinhmcSnrpcntyRtRstBadCntTxn112d_03" operator="greaterThan" value="0.0278"/>
+                <SimplePredicate field="CcbinhmcSnrpcntyRtRstBadCntTxn112d_03" operator="greaterOrEqual" value="0.0278"/>
             </Node>
         </Node>
         <Node id="57">
-            <SimplePredicate field="EdSnrpcntyRtRstBadCntSndr112d_03" operator="greaterThan" value="0.0028"/>
+            <SimplePredicate field="EdSnrpcntyRtRstBadCntSndr112d_03" operator="greaterOrEqual" value="0.0028"/>
             <Node id="114" score="0.3114888355725858">
                 <SimpleSetPredicate field="primary_residence" booleanOperator="isNotIn">
                     <Array type="real">UG ES FR GT RO AT AW AZ TN BM CZ SE SM RU MK MT NA NO PL PA HK ZA HN KZ LC LK</Array>
@@ -4491,10 +4491,10 @@
                 <Array type="real">jewelry airlines office-supplies tickets garden-equip sports-equip</Array>
             </SimpleSetPredicate>
             <Node id="116" score="0.19546228850972275">
-                <SimplePredicate field="ed20wRtDolCcBadTxn_02" operator="lessOrEqual" value="0.0059"/>
+                <SimplePredicate field="ed20wRtDolCcBadTxn_02" operator="lessThan" value="0.0059"/>
             </Node>
             <Node id="117" score="0.6647511853093802">
-                <SimplePredicate field="ed20wRtDolCcBadTxn_02" operator="greaterThan" value="0.0059"/>
+                <SimplePredicate field="ed20wRtDolCcBadTxn_02" operator="greaterOrEqual" value="0.0059"/>
             </Node>
         </Node>
         <Node id="59">
@@ -4502,27 +4502,27 @@
                 <Array type="real">jewelry airlines office-supplies tickets garden-equip sports-equip</Array>
             </SimpleSetPredicate>
             <Node id="118" score="1.432870024438647">
-                <SimplePredicate field="avg_cb_cc_asp" operator="lessOrEqual" value="0.5"/>
+                <SimplePredicate field="avg_cb_cc_asp" operator="lessThan" value="0.5"/>
             </Node>
             <Node id="119" score="0.49463908192108497">
-                <SimplePredicate field="avg_cb_cc_asp" operator="greaterThan" value="0.5"/>
+                <SimplePredicate field="avg_cb_cc_asp" operator="greaterOrEqual" value="0.5"/>
             </Node>
         </Node>
     </Node>
 </Node>
 <Node id="15">
-    <SimplePredicate field="SnripcntysrRvrpcntysrRtCbBadCntTxn112d_03" operator="greaterThan" value="0.0045"/>
+    <SimplePredicate field="SnripcntysrRvrpcntysrRtCbBadCntTxn112d_03" operator="greaterOrEqual" value="0.0045"/>
     <Node id="30">
-        <SimplePredicate field="c_pmts_rcvd_num" operator="lessOrEqual" value="21.0"/>
+        <SimplePredicate field="c_pmts_rcvd_num" operator="lessThan" value="21.0"/>
         <Node id="60">
             <SimpleSetPredicate field="dy_s_ip_cnty" booleanOperator="isNotIn">
                 <Array type="real">gp eu ug us tr bs bn bm sv cn ch re au ae pe pk lt md ke hr</Array>
             </SimpleSetPredicate>
             <Node id="120" score="0.06731980075762246">
-                <SimplePredicate field="acct_ms_cc_cnt_dk_160" operator="lessOrEqual" value="0.9996521388513908"/>
+                <SimplePredicate field="acct_ms_cc_cnt_dk_160" operator="lessThan" value="0.9996521388513908"/>
             </Node>
             <Node id="121" score="0.5730163248039015">
-                <SimplePredicate field="acct_ms_cc_cnt_dk_160" operator="greaterThan" value="0.9996521388513908"/>
+                <SimplePredicate field="acct_ms_cc_cnt_dk_160" operator="greaterOrEqual" value="0.9996521388513908"/>
             </Node>
         </Node>
         <Node id="61">
@@ -4530,24 +4530,24 @@
                 <Array type="real">gp eu ug us tr bs bn bm sv cn ch re au ae pe pk lt md ke hr</Array>
             </SimpleSetPredicate>
             <Node id="122" score="0.0026524350197496814">
-                <SimplePredicate field="sender_person_asset_entity_first_success_transaction_date" operator="lessOrEqual" value="1.3645404E9"/>
+                <SimplePredicate field="sender_person_asset_entity_first_success_transaction_date" operator="lessThan" value="1.3645404E9"/>
             </Node>
             <Node id="123" score="0.8711718349829428">
-                <SimplePredicate field="sender_person_asset_entity_first_success_transaction_date" operator="greaterThan" value="1.3645404E9"/>
+                <SimplePredicate field="sender_person_asset_entity_first_success_transaction_date" operator="greaterOrEqual" value="1.3645404E9"/>
             </Node>
         </Node>
     </Node>
     <Node id="31">
-        <SimplePredicate field="c_pmts_rcvd_num" operator="greaterThan" value="21.0"/>
+        <SimplePredicate field="c_pmts_rcvd_num" operator="greaterOrEqual" value="21.0"/>
         <Node id="62">
             <SimpleSetPredicate field="shipping_country" booleanOperator="isNotIn">
                 <Array type="real">DZ VG DO FR GR GP AU AE BY BR BD BE CZ CO SA MG MA MY NI PL PH PK ID JO KH KZ</Array>
             </SimpleSetPredicate>
             <Node id="124" score="0.1069116945882875">
-                <SimplePredicate field="SnrpcntysrRvrpcntysrRtCcBadSumAmt112d_03" operator="lessOrEqual" value="0.0889"/>
+                <SimplePredicate field="SnrpcntysrRvrpcntysrRtCcBadSumAmt112d_03" operator="lessThan" value="0.0889"/>
             </Node>
             <Node id="125" score="0.9543370227376354">
-                <SimplePredicate field="SnrpcntysrRvrpcntysrRtCcBadSumAmt112d_03" operator="greaterThan" value="0.0889"/>
+                <SimplePredicate field="SnrpcntysrRvrpcntysrRtCcBadSumAmt112d_03" operator="greaterOrEqual" value="0.0889"/>
             </Node>
         </Node>
         <Node id="63">
@@ -5214,34 +5214,34 @@
                     <Node id="1">
                         <True/>
                         <Node id="2">
-                            <SimplePredicate field="snr_ratio_20w_ato_dol_02" operator="lessOrEqual" value="2.5191755059191463"/>
+                            <SimplePredicate field="snr_ratio_20w_ato_dol_02" operator="lessThan" value="2.5191755059191463"/>
                             <Node id="4">
-<SimplePredicate field="ARS_v36_cc_new_bin_cnt_last_60d" operator="lessOrEqual" value="8.0"/>
+<SimplePredicate field="ARS_v36_cc_new_bin_cnt_last_60d" operator="lessThan" value="8.0"/>
 <Node id="8">
-    <SimplePredicate field="acct_attempt_p2p_amt_dk_20" operator="lessOrEqual" value="10294.708304232727"/>
+    <SimplePredicate field="acct_attempt_p2p_amt_dk_20" operator="lessThan" value="10294.708304232727"/>
     <Node id="16">
-        <SimplePredicate field="added_cc_lt_14_v2" operator="lessOrEqual" value="3.0"/>
+        <SimplePredicate field="added_cc_lt_14_v2" operator="lessThan" value="3.0"/>
         <Node id="32">
-            <SimplePredicate field="Bad_rate_ccbin" operator="lessOrEqual" value="0.18"/>
+            <SimplePredicate field="Bad_rate_ccbin" operator="lessThan" value="0.18"/>
             <Node id="64" score="-0.00902682206322096">
-                <SimplePredicate field="cp20wRtAtoBadTxn_02" operator="lessOrEqual" value="6.0E-4"/>
+                <SimplePredicate field="cp20wRtAtoBadTxn_02" operator="lessThan" value="6.0E-4"/>
             </Node>
             <Node id="65" score="-0.03225357018718202">
-                <SimplePredicate field="cp20wRtAtoBadTxn_02" operator="greaterThan" value="6.0E-4"/>
+                <SimplePredicate field="cp20wRtAtoBadTxn_02" operator="greaterOrEqual" value="6.0E-4"/>
             </Node>
         </Node>
         <Node id="33">
-            <SimplePredicate field="Bad_rate_ccbin" operator="greaterThan" value="0.18"/>
+            <SimplePredicate field="Bad_rate_ccbin" operator="greaterOrEqual" value="0.18"/>
             <Node id="66" score="0.0887554154207555">
-                <SimplePredicate field="acct_addcc_cnt_dk_160" operator="lessOrEqual" value="0.16772424821721"/>
+                <SimplePredicate field="acct_addcc_cnt_dk_160" operator="lessThan" value="0.16772424821721"/>
             </Node>
             <Node id="67" score="0.8424833061836126">
-                <SimplePredicate field="acct_addcc_cnt_dk_160" operator="greaterThan" value="0.16772424821721"/>
+                <SimplePredicate field="acct_addcc_cnt_dk_160" operator="greaterOrEqual" value="0.16772424821721"/>
             </Node>
         </Node>
     </Node>
     <Node id="17">
-        <SimplePredicate field="added_cc_lt_14_v2" operator="greaterThan" value="3.0"/>
+        <SimplePredicate field="added_cc_lt_14_v2" operator="greaterOrEqual" value="3.0"/>
         <Node id="34">
             <SimpleSetPredicate field="billing_cntry" booleanOperator="isNotIn">
                 <Array type="real">VN DZ DO DE DK UG UA ES EG TT GB AW AG AL BR TN SV BB BE BJ BM CZ SC CV SI CR LV MD MA MV MX MN MQ NI NL PL ZA HN IL IS JM KH KE KN KY KZ</Array>
@@ -5262,20 +5262,20 @@
                 <Array type="real">VN DZ DO DE DK UG UA ES EG TT GB AW AG AL BR TN SV BB BE BJ BM CZ SC CV SI CR LV MD MA MV MX MN MQ NI NL PL ZA HN IL IS JM KH KE KN KY KZ</Array>
             </SimpleSetPredicate>
             <Node id="70" score="0.5752095871689913">
-                <SimplePredicate field="acct_ms_max_dk_20" operator="lessOrEqual" value="42359.745825581165"/>
+                <SimplePredicate field="acct_ms_max_dk_20" operator="lessThan" value="42359.745825581165"/>
             </Node>
             <Node id="71" score="1.714371782945089">
-                <SimplePredicate field="acct_ms_max_dk_20" operator="greaterThan" value="42359.745825581165"/>
+                <SimplePredicate field="acct_ms_max_dk_20" operator="greaterOrEqual" value="42359.745825581165"/>
             </Node>
         </Node>
     </Node>
 </Node>
 <Node id="9">
-    <SimplePredicate field="acct_attempt_p2p_amt_dk_20" operator="greaterThan" value="10294.708304232727"/>
+    <SimplePredicate field="acct_attempt_p2p_amt_dk_20" operator="greaterOrEqual" value="10294.708304232727"/>
     <Node id="18">
-        <SimplePredicate field="s_pmts_sent_count" operator="lessOrEqual" value="1.0"/>
+        <SimplePredicate field="s_pmts_sent_count" operator="lessThan" value="1.0"/>
         <Node id="36">
-            <SimplePredicate field="acct_attempt_p2p_cnt_dk_20" operator="lessOrEqual" value="3.9014494842583782"/>
+            <SimplePredicate field="acct_attempt_p2p_cnt_dk_20" operator="lessThan" value="3.9014494842583782"/>
             <Node id="72" score="0.07063945650397453">
                 <SimpleSetPredicate field="ip_country" booleanOperator="isNotIn">
                     <Array type="real">ge fi UK gh uy dk eu eg ee bs bm bd cz cy se co cm cn ch re at pt ph lu lt mq jm kz hr ie in</Array>
@@ -5288,46 +5288,46 @@
             </Node>
         </Node>
         <Node id="37">
-            <SimplePredicate field="acct_attempt_p2p_cnt_dk_20" operator="greaterThan" value="3.9014494842583782"/>
+            <SimplePredicate field="acct_attempt_p2p_cnt_dk_20" operator="greaterOrEqual" value="3.9014494842583782"/>
             <Node id="74" score="1.3906050653289677">
-                <SimplePredicate field="acct_login_cnt_dk_40" operator="lessOrEqual" value="1.9665002747972664"/>
+                <SimplePredicate field="acct_login_cnt_dk_40" operator="lessThan" value="1.9665002747972664"/>
             </Node>
             <Node id="75" score="0.561783204298672">
-                <SimplePredicate field="acct_login_cnt_dk_40" operator="greaterThan" value="1.9665002747972664"/>
+                <SimplePredicate field="acct_login_cnt_dk_40" operator="greaterOrEqual" value="1.9665002747972664"/>
             </Node>
         </Node>
     </Node>
     <Node id="19">
-        <SimplePredicate field="s_pmts_sent_count" operator="greaterThan" value="1.0"/>
+        <SimplePredicate field="s_pmts_sent_count" operator="greaterOrEqual" value="1.0"/>
         <Node id="38">
-            <SimplePredicate field="vid_amt_dk_20" operator="lessOrEqual" value="444687.54506004887"/>
+            <SimplePredicate field="vid_amt_dk_20" operator="lessThan" value="444687.54506004887"/>
             <Node id="76" score="0.23174844321878293">
-                <SimplePredicate field="s_c_diff_dof" operator="lessOrEqual" value="79.0"/>
+                <SimplePredicate field="s_c_diff_dof" operator="lessThan" value="79.0"/>
             </Node>
             <Node id="77" score="0.023602293956904996">
-                <SimplePredicate field="s_c_diff_dof" operator="greaterThan" value="79.0"/>
+                <SimplePredicate field="s_c_diff_dof" operator="greaterOrEqual" value="79.0"/>
             </Node>
         </Node>
         <Node id="39">
-            <SimplePredicate field="vid_amt_dk_20" operator="greaterThan" value="444687.54506004887"/>
+            <SimplePredicate field="vid_amt_dk_20" operator="greaterOrEqual" value="444687.54506004887"/>
             <Node id="78" score="-0.004970663196846496">
-                <SimplePredicate field="ratio_edomain_avg_bad" operator="lessOrEqual" value="6.217534109392124"/>
+                <SimplePredicate field="ratio_edomain_avg_bad" operator="lessThan" value="6.217534109392124"/>
             </Node>
             <Node id="79" score="1.905311878119164">
-                <SimplePredicate field="ratio_edomain_avg_bad" operator="greaterThan" value="6.217534109392124"/>
+                <SimplePredicate field="ratio_edomain_avg_bad" operator="greaterOrEqual" value="6.217534109392124"/>
             </Node>
         </Node>
     </Node>
 </Node>
                             </Node>
                             <Node id="5">
-<SimplePredicate field="ARS_v36_cc_new_bin_cnt_last_60d" operator="greaterThan" value="8.0"/>
+<SimplePredicate field="ARS_v36_cc_new_bin_cnt_last_60d" operator="greaterOrEqual" value="8.0"/>
 <Node id="10">
-    <SimplePredicate field="counterparty_business_account_spoof_rcvr_sum" operator="lessOrEqual" value="447.38"/>
+    <SimplePredicate field="counterparty_business_account_spoof_rcvr_sum" operator="lessThan" value="447.38"/>
     <Node id="20">
-        <SimplePredicate field="cc_pct_failed_verification" operator="lessOrEqual" value="0.45454545454545453"/>
+        <SimplePredicate field="cc_pct_failed_verification" operator="lessThan" value="0.45454545454545453"/>
         <Node id="40">
-            <SimplePredicate field="num_address_states" operator="lessOrEqual" value="6.0"/>
+            <SimplePredicate field="num_address_states" operator="lessThan" value="6.0"/>
             <Node id="80" score="-0.07248978854967382">
                 <SimpleSetPredicate field="ARS_v40_seller_ti" booleanOperator="isNotIn">
                     <Array type="real">computer-hardware gaming cosmetics office-supplies cellphones auto-parts health toys</Array>
@@ -5340,7 +5340,7 @@
             </Node>
         </Node>
         <Node id="41">
-            <SimplePredicate field="num_address_states" operator="greaterThan" value="6.0"/>
+            <SimplePredicate field="num_address_states" operator="greaterOrEqual" value="6.0"/>
             <Node id="82" score="0.2476455005601692">
                 <SimpleSetPredicate field="ARS_v31_ip_country_match" booleanOperator="isIn">
                     <Array type="real">NO_NEW_CTRY_MATCH_SINGLE_CTRY_ACCT</Array>
@@ -5354,16 +5354,16 @@
         </Node>
     </Node>
     <Node id="21">
-        <SimplePredicate field="cc_pct_failed_verification" operator="greaterThan" value="0.45454545454545453"/>
+        <SimplePredicate field="cc_pct_failed_verification" operator="greaterOrEqual" value="0.45454545454545453"/>
         <Node id="42">
             <SimpleSetPredicate field="dy_s_ip_cnty" booleanOperator="isNotIn">
                 <Array type="real">fi fr gt ec vn de do eu uk us eg tt tw ua es tn tr br th cz si cr co cn sa ch ru ro ar au pt ps pl pk ma mn mu mx nl kz hr hn it in</Array>
             </SimpleSetPredicate>
             <Node id="84" score="0.12850565043868378">
-                <SimplePredicate field="added_address_lt_7" operator="lessOrEqual" value="4.0"/>
+                <SimplePredicate field="added_address_lt_7" operator="lessThan" value="4.0"/>
             </Node>
             <Node id="85" score="1.5115492366587628">
-                <SimplePredicate field="added_address_lt_7" operator="greaterThan" value="4.0"/>
+                <SimplePredicate field="added_address_lt_7" operator="greaterOrEqual" value="4.0"/>
             </Node>
         </Node>
         <Node id="43">
@@ -5371,27 +5371,27 @@
                 <Array type="real">fi fr gt ec vn de do eu uk us eg tt tw ua es tn tr br th cz si cr co cn sa ch ru ro ar au pt ps pl pk ma mn mu mx nl kz hr hn it in</Array>
             </SimpleSetPredicate>
             <Node id="86" score="0.8694008104629624">
-                <SimplePredicate field="vid_login_cnt_dk_20" operator="lessOrEqual" value="2.0353240695622477"/>
+                <SimplePredicate field="vid_login_cnt_dk_20" operator="lessThan" value="2.0353240695622477"/>
             </Node>
             <Node id="87" score="1.7154835275767242">
-                <SimplePredicate field="vid_login_cnt_dk_20" operator="greaterThan" value="2.0353240695622477"/>
+                <SimplePredicate field="vid_login_cnt_dk_20" operator="greaterOrEqual" value="2.0353240695622477"/>
             </Node>
         </Node>
     </Node>
 </Node>
 <Node id="11">
-    <SimplePredicate field="counterparty_business_account_spoof_rcvr_sum" operator="greaterThan" value="447.38"/>
+    <SimplePredicate field="counterparty_business_account_spoof_rcvr_sum" operator="greaterOrEqual" value="447.38"/>
     <Node id="22">
-        <SimplePredicate field="ratio_bin_cntry_avg_good" operator="lessOrEqual" value="2.523537868292333"/>
+        <SimplePredicate field="ratio_bin_cntry_avg_good" operator="lessThan" value="2.523537868292333"/>
         <Node id="44">
             <SimpleSetPredicate field="ip_country" booleanOperator="isNotIn">
                 <Array type="real">fr gt vn de do eu tt ua es tr th bg se cr cn sa cl rs ch ru ro ar au ps ** ph pk ma mu my ke kw kz ht hk hn it il</Array>
             </SimpleSetPredicate>
             <Node id="88" score="-0.10887546333607094">
-                <SimplePredicate field="CcbincntysrRvrpcntysrRtCbBadSumAmt112d_03" operator="lessOrEqual" value="0.0013"/>
+                <SimplePredicate field="CcbincntysrRvrpcntysrRtCbBadSumAmt112d_03" operator="lessThan" value="0.0013"/>
             </Node>
             <Node id="89" score="0.8310445291691682">
-                <SimplePredicate field="CcbincntysrRvrpcntysrRtCbBadSumAmt112d_03" operator="greaterThan" value="0.0013"/>
+                <SimplePredicate field="CcbincntysrRvrpcntysrRtCbBadSumAmt112d_03" operator="greaterOrEqual" value="0.0013"/>
             </Node>
         </Node>
         <Node id="45">
@@ -5399,24 +5399,24 @@
                 <Array type="real">fr gt vn de do eu tt ua es tr th bg se cr cn sa cl rs ch ru ro ar au ps ** ph pk ma mu my ke kw kz ht hk hn it il</Array>
             </SimpleSetPredicate>
             <Node id="90" score="1.6072316301779803">
-                <SimplePredicate field="RvrSnrpcntyRvrpcntyCatRtRstBadSumAmt112d_03" operator="lessOrEqual" value="0.0031"/>
+                <SimplePredicate field="RvrSnrpcntyRvrpcntyCatRtRstBadSumAmt112d_03" operator="lessThan" value="0.0031"/>
             </Node>
             <Node id="91" score="0.8384585922155842">
-                <SimplePredicate field="RvrSnrpcntyRvrpcntyCatRtRstBadSumAmt112d_03" operator="greaterThan" value="0.0031"/>
+                <SimplePredicate field="RvrSnrpcntyRvrpcntyCatRtRstBadSumAmt112d_03" operator="greaterOrEqual" value="0.0031"/>
             </Node>
         </Node>
     </Node>
     <Node id="23">
-        <SimplePredicate field="ratio_bin_cntry_avg_good" operator="greaterThan" value="2.523537868292333"/>
+        <SimplePredicate field="ratio_bin_cntry_avg_good" operator="greaterOrEqual" value="2.523537868292333"/>
         <Node id="46">
             <SimpleSetPredicate field="dy_c_ip_cnty" booleanOperator="isIn">
                 <Array type="real">de eu us ph nl ke hk</Array>
             </SimpleSetPredicate>
             <Node id="92" score="1.1596592102157637">
-                <SimplePredicate field="CcbinhmcSnrpcntyRstBadMnAmt112d_03" operator="lessOrEqual" value="21.9137"/>
+                <SimplePredicate field="CcbinhmcSnrpcntyRstBadMnAmt112d_03" operator="lessThan" value="21.9137"/>
             </Node>
             <Node id="93" score="1.6266144047470046">
-                <SimplePredicate field="CcbinhmcSnrpcntyRstBadMnAmt112d_03" operator="greaterThan" value="21.9137"/>
+                <SimplePredicate field="CcbinhmcSnrpcntyRstBadMnAmt112d_03" operator="greaterOrEqual" value="21.9137"/>
             </Node>
         </Node>
         <Node id="47">
@@ -5439,9 +5439,9 @@
                             </Node>
                         </Node>
                         <Node id="3">
-                            <SimplePredicate field="snr_ratio_20w_ato_dol_02" operator="greaterThan" value="2.5191755059191463"/>
+                            <SimplePredicate field="snr_ratio_20w_ato_dol_02" operator="greaterOrEqual" value="2.5191755059191463"/>
                             <Node id="6">
-<SimplePredicate field="seller_tran_br_amt_all" operator="lessOrEqual" value="0.001"/>
+<SimplePredicate field="seller_tran_br_amt_all" operator="lessThan" value="0.001"/>
 <Node id="12">
     <SimpleSetPredicate field="ARS_v40_ebay_item_kosherness" booleanOperator="isNotIn">
         <Array type="real">SUPER_RISKY RISKY NEUTRAL</Array>
@@ -5455,10 +5455,10 @@
                 <Array type="real">LINE_MATCH_ZIP_MISMATCH LINE_MATCH_ZIP_SIMILAR LINE_PARTIAL_ZIP_MISMATCH ALL_MISMATCH &quot;&quot;</Array>
             </SimpleSetPredicate>
             <Node id="96" score="-0.01352553814215179">
-                <SimplePredicate field="CcbincntysrRvrpcntysrRtCbBadSumAmt112d_03" operator="lessOrEqual" value="0.0039"/>
+                <SimplePredicate field="CcbincntysrRvrpcntysrRtCbBadSumAmt112d_03" operator="lessThan" value="0.0039"/>
             </Node>
             <Node id="97" score="0.024592210957320934">
-                <SimplePredicate field="CcbincntysrRvrpcntysrRtCbBadSumAmt112d_03" operator="greaterThan" value="0.0039"/>
+                <SimplePredicate field="CcbincntysrRvrpcntysrRtCbBadSumAmt112d_03" operator="greaterOrEqual" value="0.0039"/>
             </Node>
         </Node>
         <Node id="49">
@@ -5518,7 +5518,7 @@
         <Array type="real">SUPER_RISKY RISKY NEUTRAL</Array>
     </SimpleSetPredicate>
     <Node id="26">
-        <SimplePredicate field="EdSnrpcntyRtCcBadSumAmt112d_03" operator="lessOrEqual" value="0.017"/>
+        <SimplePredicate field="EdSnrpcntyRtCcBadSumAmt112d_03" operator="lessThan" value="0.017"/>
         <Node id="52">
             <SimpleSetPredicate field="shipping_country" booleanOperator="isNotIn">
                 <Array type="real">DZ VE DO EG TZ RO AZ AE AL TN CS RS CR CO MD MA MX MN MQ HN JO KZ LK</Array>
@@ -5551,45 +5551,45 @@
         </Node>
     </Node>
     <Node id="27">
-        <SimplePredicate field="EdSnrpcntyRtCcBadSumAmt112d_03" operator="greaterThan" value="0.017"/>
+        <SimplePredicate field="EdSnrpcntyRtCcBadSumAmt112d_03" operator="greaterOrEqual" value="0.017"/>
         <Node id="54">
-            <SimplePredicate field="CcbinhmcSnrpcntyCbBadMnAmt112d_03" operator="lessOrEqual" value="582.7433"/>
+            <SimplePredicate field="CcbinhmcSnrpcntyCbBadMnAmt112d_03" operator="lessThan" value="582.7433"/>
             <Node id="108" score="0.3789888583535917">
-                <SimplePredicate field="ip_signup_cnt_dk_320" operator="lessOrEqual" value="1.9993895864854518"/>
+                <SimplePredicate field="ip_signup_cnt_dk_320" operator="lessThan" value="1.9993895864854518"/>
             </Node>
             <Node id="109" score="1.030744745015344">
-                <SimplePredicate field="ip_signup_cnt_dk_320" operator="greaterThan" value="1.9993895864854518"/>
+                <SimplePredicate field="ip_signup_cnt_dk_320" operator="greaterOrEqual" value="1.9993895864854518"/>
             </Node>
         </Node>
         <Node id="55">
-            <SimplePredicate field="CcbinhmcSnrpcntyCbBadMnAmt112d_03" operator="greaterThan" value="582.7433"/>
+            <SimplePredicate field="CcbinhmcSnrpcntyCbBadMnAmt112d_03" operator="greaterOrEqual" value="582.7433"/>
             <Node id="110" score="1.7556314590889646">
-                <SimplePredicate field="SnrpcntysrRvrpcntysrnRstBadMnAmt112d_03" operator="lessOrEqual" value="110.0737"/>
+                <SimplePredicate field="SnrpcntysrRvrpcntysrnRstBadMnAmt112d_03" operator="lessThan" value="110.0737"/>
             </Node>
             <Node id="111" score="0.09829442138967129">
-                <SimplePredicate field="SnrpcntysrRvrpcntysrnRstBadMnAmt112d_03" operator="greaterThan" value="110.0737"/>
+                <SimplePredicate field="SnrpcntysrRvrpcntysrnRstBadMnAmt112d_03" operator="greaterOrEqual" value="110.0737"/>
             </Node>
         </Node>
     </Node>
 </Node>
                             </Node>
                             <Node id="7">
-<SimplePredicate field="seller_tran_br_amt_all" operator="greaterThan" value="0.001"/>
+<SimplePredicate field="seller_tran_br_amt_all" operator="greaterOrEqual" value="0.001"/>
 <Node id="14">
-    <SimplePredicate field="asn_br_gm" operator="lessOrEqual" value="0.011819059243233237"/>
+    <SimplePredicate field="asn_br_gm" operator="lessThan" value="0.011819059243233237"/>
     <Node id="28">
-        <SimplePredicate field="ed20wRtDolCcBadTxn_02" operator="lessOrEqual" value="0.0082"/>
+        <SimplePredicate field="ed20wRtDolCcBadTxn_02" operator="lessThan" value="0.0082"/>
         <Node id="56">
-            <SimplePredicate field="CcbincntysrRvrpcntysrRtCbBadSumAmt112d_03" operator="lessOrEqual" value="0.0274"/>
+            <SimplePredicate field="CcbincntysrRvrpcntysrRtCbBadSumAmt112d_03" operator="lessThan" value="0.0274"/>
             <Node id="112" score="0.0682589406203768">
-                <SimplePredicate field="num_address_states" operator="lessOrEqual" value="8.0"/>
+                <SimplePredicate field="num_address_states" operator="lessThan" value="8.0"/>
             </Node>
             <Node id="113" score="1.4022026830947325">
-                <SimplePredicate field="num_address_states" operator="greaterThan" value="8.0"/>
+                <SimplePredicate field="num_address_states" operator="greaterOrEqual" value="8.0"/>
             </Node>
         </Node>
         <Node id="57">
-            <SimplePredicate field="CcbincntysrRvrpcntysrRtCbBadSumAmt112d_03" operator="greaterThan" value="0.0274"/>
+            <SimplePredicate field="CcbincntysrRvrpcntysrRtCbBadSumAmt112d_03" operator="greaterOrEqual" value="0.0274"/>
             <Node id="114" score="0.020938530058921004">
                 <SimpleSetPredicate field="dy_s_ip_cnty" booleanOperator="isNotIn">
                     <Array type="real">fr de eu us tw th co cn ch ro au pt pk lt mk mu my ke kw</Array>
@@ -5603,16 +5603,16 @@
         </Node>
     </Node>
     <Node id="29">
-        <SimplePredicate field="ed20wRtDolCcBadTxn_02" operator="greaterThan" value="0.0082"/>
+        <SimplePredicate field="ed20wRtDolCcBadTxn_02" operator="greaterOrEqual" value="0.0082"/>
         <Node id="58">
             <SimpleSetPredicate field="ARS_v40_tx_vertical" booleanOperator="isNotIn">
                 <Array type="real">jewelry photography groupon garden-equip coins nutritional-supp</Array>
             </SimpleSetPredicate>
             <Node id="116" score="-0.03921013338559546">
-                <SimplePredicate field="sender_person_asset_entity_first_success_transaction_date" operator="lessOrEqual" value="1.4349564E9"/>
+                <SimplePredicate field="sender_person_asset_entity_first_success_transaction_date" operator="lessThan" value="1.4349564E9"/>
             </Node>
             <Node id="117" score="0.44325135895214174">
-                <SimplePredicate field="sender_person_asset_entity_first_success_transaction_date" operator="greaterThan" value="1.4349564E9"/>
+                <SimplePredicate field="sender_person_asset_entity_first_success_transaction_date" operator="greaterOrEqual" value="1.4349564E9"/>
             </Node>
         </Node>
         <Node id="59">
@@ -5620,22 +5620,22 @@
                 <Array type="real">jewelry photography groupon garden-equip coins nutritional-supp</Array>
             </SimpleSetPredicate>
             <Node id="118" score="1.5825032217745774">
-                <SimplePredicate field="ARS_v36_ip_sec_from_last_updt" operator="lessOrEqual" value="18252.0"/>
+                <SimplePredicate field="ARS_v36_ip_sec_from_last_updt" operator="lessThan" value="18252.0"/>
             </Node>
             <Node id="119" score="0.06234094591096284">
-                <SimplePredicate field="ARS_v36_ip_sec_from_last_updt" operator="greaterThan" value="18252.0"/>
+                <SimplePredicate field="ARS_v36_ip_sec_from_last_updt" operator="greaterOrEqual" value="18252.0"/>
             </Node>
         </Node>
     </Node>
 </Node>
 <Node id="15">
-    <SimplePredicate field="asn_br_gm" operator="greaterThan" value="0.011819059243233237"/>
+    <SimplePredicate field="asn_br_gm" operator="greaterOrEqual" value="0.011819059243233237"/>
     <Node id="30">
         <SimpleSetPredicate field="ARS_v40_ship_bill_syntax_match" booleanOperator="isNotIn">
             <Array type="real">LINE_MISMATCH_ZIP_SIMILAR LINE_MATCH_ZIP_SIMILAR LINE_PARTIAL_ZIP_SIMILAR LINE_MISMATCH_NO_ZIP LINE_PARTIAL_ZIP_MISMATCH ALL_MISMATCH</Array>
         </SimpleSetPredicate>
         <Node id="60">
-            <SimplePredicate field="LclhrIpasnRtCcBadAmt90d_02" operator="lessOrEqual" value="0.0022"/>
+            <SimplePredicate field="LclhrIpasnRtCcBadAmt90d_02" operator="lessThan" value="0.0022"/>
             <Node id="120" score="0.1636357692670284">
                 <SimpleSetPredicate field="ARS_v40_tx_vertical" booleanOperator="isNotIn">
                     <Array type="real">computer-hardware tickets garden-equip cameras houseware music-videos coins toys</Array>
@@ -5648,7 +5648,7 @@
             </Node>
         </Node>
         <Node id="61">
-            <SimplePredicate field="LclhrIpasnRtCcBadAmt90d_02" operator="greaterThan" value="0.0022"/>
+            <SimplePredicate field="LclhrIpasnRtCcBadAmt90d_02" operator="greaterOrEqual" value="0.0022"/>
             <Node id="122" score="-0.06288310443655917">
                 <SimpleSetPredicate field="billing_cntry" booleanOperator="isNotIn">
                     <Array type="real">DZ DO DE DK US ES GB FR AR AU AM BR TH CA BZ BG BE SG CH CL MD MA MY NA NZ NO HU IE IL IT JM KH KZ</Array>
@@ -5666,7 +5666,7 @@
             <Array type="real">LINE_MISMATCH_ZIP_SIMILAR LINE_MATCH_ZIP_SIMILAR LINE_PARTIAL_ZIP_SIMILAR LINE_MISMATCH_NO_ZIP LINE_PARTIAL_ZIP_MISMATCH ALL_MISMATCH</Array>
         </SimpleSetPredicate>
         <Node id="62">
-            <SimplePredicate field="ratio_true_industry_avg_good" operator="lessOrEqual" value="16.8801988175349"/>
+            <SimplePredicate field="ratio_true_industry_avg_good" operator="lessThan" value="16.8801988175349"/>
             <Node id="124" score="0.11880985889742128">
                 <SimpleSetPredicate field="shipping_country" booleanOperator="isNotIn">
                     <Array type="real">DZ DK US ES TW AU AE AL BR SG RU RW CO SA JO</Array>
@@ -5679,7 +5679,7 @@
             </Node>
         </Node>
         <Node id="63">
-            <SimplePredicate field="ratio_true_industry_avg_good" operator="greaterThan" value="16.8801988175349"/>
+            <SimplePredicate field="ratio_true_industry_avg_good" operator="greaterOrEqual" value="16.8801988175349"/>
             <Node id="126" score="0.7545470041254259">
                 <SimpleSetPredicate field="ARS_v2_ip_bin_ctry_score_worst" booleanOperator="isIn">
                     <Array type="real">EVIL MED</Array>
@@ -6340,22 +6340,22 @@
                     <Node id="1">
                         <True/>
                         <Node id="2">
-                            <SimplePredicate field="vid_ratio_20w_allbad_dol_02" operator="lessOrEqual" value="4.92880673179427"/>
+                            <SimplePredicate field="vid_ratio_20w_allbad_dol_02" operator="lessThan" value="4.92880673179427"/>
                             <Node id="4">
-<SimplePredicate field="vid_attempt_p2p_cnt_dk_20" operator="lessOrEqual" value="3.952456532429356"/>
+<SimplePredicate field="vid_attempt_p2p_cnt_dk_20" operator="lessThan" value="3.952456532429356"/>
 <Node id="8">
-    <SimplePredicate field="has_bad_vid_cb" operator="lessOrEqual" value="1.0"/>
+    <SimplePredicate field="has_bad_vid_cb" operator="lessThan" value="1.0"/>
     <Node id="16">
-        <SimplePredicate field="Bad_rate_ccbin" operator="lessOrEqual" value="0.0704"/>
+        <SimplePredicate field="Bad_rate_ccbin" operator="lessThan" value="0.0704"/>
         <Node id="32">
             <SimpleSetPredicate field="shipping_country" booleanOperator="isNotIn">
                 <Array type="real">EC VN DZ DO UZ UA WS GY GH RO AZ AG AE AL BY BR TN BD CS RS CN SB LS MG MK ML MD MA MX MN MS NR PN PK PA ID JO JM KI KH KE KZ LB</Array>
             </SimpleSetPredicate>
             <Node id="64" score="-0.008364415948594365">
-                <SimplePredicate field="cp20wRtDolAtoBadTxn_02" operator="lessOrEqual" value="0.0013"/>
+                <SimplePredicate field="cp20wRtDolAtoBadTxn_02" operator="lessThan" value="0.0013"/>
             </Node>
             <Node id="65" score="-0.04019838773670645">
-                <SimplePredicate field="cp20wRtDolAtoBadTxn_02" operator="greaterThan" value="0.0013"/>
+                <SimplePredicate field="cp20wRtDolAtoBadTxn_02" operator="greaterOrEqual" value="0.0013"/>
             </Node>
         </Node>
         <Node id="33">
@@ -6375,16 +6375,16 @@
         </Node>
     </Node>
     <Node id="17">
-        <SimplePredicate field="Bad_rate_ccbin" operator="greaterThan" value="0.0704"/>
+        <SimplePredicate field="Bad_rate_ccbin" operator="greaterOrEqual" value="0.0704"/>
         <Node id="34">
             <SimpleSetPredicate field="ip_country" booleanOperator="isNotIn">
                 <Array type="real">gt ec do eg ee tt ua tn tr bo bg sv cy se cr co cm cn rs ru ro re az ba al pt ps om pe pk lv lt ly ma me mk mo mq mt mu ni jm kh ke lb hr ht &quot;&quot;</Array>
             </SimpleSetPredicate>
             <Node id="68" score="0.03993016947162195">
-                <SimplePredicate field="acct_ccauth_avs_ns_dk_2" operator="lessOrEqual" value="0.99515068496774"/>
+                <SimplePredicate field="acct_ccauth_avs_ns_dk_2" operator="lessThan" value="0.99515068496774"/>
             </Node>
             <Node id="69" score="0.5710423511259959">
-                <SimplePredicate field="acct_ccauth_avs_ns_dk_2" operator="greaterThan" value="0.99515068496774"/>
+                <SimplePredicate field="acct_ccauth_avs_ns_dk_2" operator="greaterOrEqual" value="0.99515068496774"/>
             </Node>
         </Node>
         <Node id="35">
@@ -6405,7 +6405,7 @@
     </Node>
 </Node>
 <Node id="9">
-    <SimplePredicate field="has_bad_vid_cb" operator="greaterThan" value="1.0"/>
+    <SimplePredicate field="has_bad_vid_cb" operator="greaterOrEqual" value="1.0"/>
     <Node id="18">
         <SimpleSetPredicate field="ARS_v2_acct_e_add_event_within_10_days" booleanOperator="isNotIn">
             <Array type="real">ALL_FREE ANY_OLD_DOM &quot;&quot;</Array>
@@ -6415,10 +6415,10 @@
                 <Array type="real">EC VE DO EG TT GY GP AR PT AN BR TH TR SV BM CM CL ME MK MU MX NI NZ PE PF HN ID IL JM KG KE &quot;&quot;</Array>
             </SimpleSetPredicate>
             <Node id="72" score="0.07563096412016304">
-                <SimplePredicate field="cc_n_credit" operator="lessOrEqual" value="4.0"/>
+                <SimplePredicate field="cc_n_credit" operator="lessThan" value="4.0"/>
             </Node>
             <Node id="73" score="0.6841639726875468">
-                <SimplePredicate field="cc_n_credit" operator="greaterThan" value="4.0"/>
+                <SimplePredicate field="cc_n_credit" operator="greaterOrEqual" value="4.0"/>
             </Node>
         </Node>
         <Node id="37">
@@ -6426,10 +6426,10 @@
                 <Array type="real">EC VE DO EG TT GY GP AR PT AN BR TH TR SV BM CM CL ME MK MU MX NI NZ PE PF HN ID IL JM KG KE &quot;&quot;</Array>
             </SimpleSetPredicate>
             <Node id="74" score="0.2499069229660342">
-                <SimplePredicate field="s_max_dk_20" operator="lessOrEqual" value="203.75081897497918"/>
+                <SimplePredicate field="s_max_dk_20" operator="lessThan" value="203.75081897497918"/>
             </Node>
             <Node id="75" score="0.7996602470578801">
-                <SimplePredicate field="s_max_dk_20" operator="greaterThan" value="203.75081897497918"/>
+                <SimplePredicate field="s_max_dk_20" operator="greaterOrEqual" value="203.75081897497918"/>
             </Node>
         </Node>
     </Node>
@@ -6457,21 +6457,21 @@
                 <Array type="real">ge fi fr gy gr dz vn ec uy br th bn bj sv sk sr cz cm ch re at am pt ae pr ps pl pk lv lu lt ma me mk mt mu mx my nc ni jo kh ke kw kz lc hr ht za ie zm it il</Array>
             </SimpleSetPredicate>
             <Node id="78" score="0.8968801438958167">
-                <SimplePredicate field="counterparty_person_account_mc_rcvr_sum" operator="lessOrEqual" value="42267.47"/>
+                <SimplePredicate field="counterparty_person_account_mc_rcvr_sum" operator="lessThan" value="42267.47"/>
             </Node>
             <Node id="79" score="1.4011861534799874">
-                <SimplePredicate field="counterparty_person_account_mc_rcvr_sum" operator="greaterThan" value="42267.47"/>
+                <SimplePredicate field="counterparty_person_account_mc_rcvr_sum" operator="greaterOrEqual" value="42267.47"/>
             </Node>
         </Node>
     </Node>
 </Node>
                             </Node>
                             <Node id="5">
-<SimplePredicate field="vid_attempt_p2p_cnt_dk_20" operator="greaterThan" value="3.952456532429356"/>
+<SimplePredicate field="vid_attempt_p2p_cnt_dk_20" operator="greaterOrEqual" value="3.952456532429356"/>
 <Node id="10">
-    <SimplePredicate field="s_cc_d_since_oldest" operator="lessOrEqual" value="6.0"/>
+    <SimplePredicate field="s_cc_d_since_oldest" operator="lessThan" value="6.0"/>
     <Node id="20">
-        <SimplePredicate field="max_cross4wRtDclAcc_02" operator="lessOrEqual" value="0.0091"/>
+        <SimplePredicate field="max_cross4wRtDclAcc_02" operator="lessThan" value="0.0091"/>
         <Node id="40">
             <SimpleSetPredicate field="primary_residence" booleanOperator="isNotIn">
                 <Array type="real">DE DK US EE GB FR FI RO PT CA BE SK CH LV LT IS IT JP</Array>
@@ -6492,24 +6492,24 @@
                 <Array type="real">DE DK US EE GB FR FI RO PT CA BE SK CH LV LT IS IT JP</Array>
             </SimpleSetPredicate>
             <Node id="82" score="1.2411398208149926">
-                <SimplePredicate field="vid_ccauth_cvv_m_dk_320" operator="lessOrEqual" value="1.99554316767269"/>
+                <SimplePredicate field="vid_ccauth_cvv_m_dk_320" operator="lessThan" value="1.99554316767269"/>
             </Node>
             <Node id="83" score="0.3652623243546903">
-                <SimplePredicate field="vid_ccauth_cvv_m_dk_320" operator="greaterThan" value="1.99554316767269"/>
+                <SimplePredicate field="vid_ccauth_cvv_m_dk_320" operator="greaterOrEqual" value="1.99554316767269"/>
             </Node>
         </Node>
     </Node>
     <Node id="21">
-        <SimplePredicate field="max_cross4wRtDclAcc_02" operator="greaterThan" value="0.0091"/>
+        <SimplePredicate field="max_cross4wRtDclAcc_02" operator="greaterOrEqual" value="0.0091"/>
         <Node id="42">
             <SimpleSetPredicate field="primary_residence" booleanOperator="isNotIn">
                 <Array type="real">DK ES GB FR FI GR RO BG CZ SE CH LT NL NO HR ID IE IT</Array>
             </SimpleSetPredicate>
             <Node id="84" score="0.21591084947736006">
-                <SimplePredicate field="EdSnrpcntyRtRstBadSumAmt112d_03" operator="lessOrEqual" value="0.0179"/>
+                <SimplePredicate field="EdSnrpcntyRtRstBadSumAmt112d_03" operator="lessThan" value="0.0179"/>
             </Node>
             <Node id="85" score="1.3401198524026228">
-                <SimplePredicate field="EdSnrpcntyRtRstBadSumAmt112d_03" operator="greaterThan" value="0.0179"/>
+                <SimplePredicate field="EdSnrpcntyRtRstBadSumAmt112d_03" operator="greaterOrEqual" value="0.0179"/>
             </Node>
         </Node>
         <Node id="43">
@@ -6530,32 +6530,32 @@
     </Node>
 </Node>
 <Node id="11">
-    <SimplePredicate field="s_cc_d_since_oldest" operator="greaterThan" value="6.0"/>
+    <SimplePredicate field="s_cc_d_since_oldest" operator="greaterOrEqual" value="6.0"/>
     <Node id="22">
-        <SimplePredicate field="SnrpcntysrRvrpcntysrnRstBadMnAmt112d_03" operator="lessOrEqual" value="158.0232"/>
+        <SimplePredicate field="SnrpcntysrRvrpcntysrnRstBadMnAmt112d_03" operator="lessThan" value="158.0232"/>
         <Node id="44">
-            <SimplePredicate field="CcbincntyRtCbBadCntTxn112d_03" operator="lessOrEqual" value="0.0172"/>
+            <SimplePredicate field="CcbincntyRtCbBadCntTxn112d_03" operator="lessThan" value="0.0172"/>
             <Node id="88" score="0.07450670267985059">
-                <SimplePredicate field="ip20wRtDolCcBadTxn_02" operator="lessOrEqual" value="0.2126"/>
+                <SimplePredicate field="ip20wRtDolCcBadTxn_02" operator="lessThan" value="0.2126"/>
             </Node>
             <Node id="89" score="0.9627092574314942">
-                <SimplePredicate field="ip20wRtDolCcBadTxn_02" operator="greaterThan" value="0.2126"/>
+                <SimplePredicate field="ip20wRtDolCcBadTxn_02" operator="greaterOrEqual" value="0.2126"/>
             </Node>
         </Node>
         <Node id="45">
-            <SimplePredicate field="CcbincntyRtCbBadCntTxn112d_03" operator="greaterThan" value="0.0172"/>
+            <SimplePredicate field="CcbincntyRtCbBadCntTxn112d_03" operator="greaterOrEqual" value="0.0172"/>
             <Node id="90" score="-0.031550568640772075">
-                <SimplePredicate field="ip_mp_diff_max_dk_20" operator="lessOrEqual" value="-1995.0"/>
+                <SimplePredicate field="ip_mp_diff_max_dk_20" operator="lessThan" value="-1995.0"/>
             </Node>
             <Node id="91" score="1.916224975699353">
-                <SimplePredicate field="ip_mp_diff_max_dk_20" operator="greaterThan" value="-1995.0"/>
+                <SimplePredicate field="ip_mp_diff_max_dk_20" operator="greaterOrEqual" value="-1995.0"/>
             </Node>
         </Node>
     </Node>
     <Node id="23">
-        <SimplePredicate field="SnrpcntysrRvrpcntysrnRstBadMnAmt112d_03" operator="greaterThan" value="158.0232"/>
+        <SimplePredicate field="SnrpcntysrRvrpcntysrnRstBadMnAmt112d_03" operator="greaterOrEqual" value="158.0232"/>
         <Node id="46">
-            <SimplePredicate field="num_address_states" operator="lessOrEqual" value="1.0"/>
+            <SimplePredicate field="num_address_states" operator="lessThan" value="1.0"/>
             <Node id="92" score="1.6616865147510829">
                 <SimpleSetPredicate field="dy_c_ip_cnty" booleanOperator="isIn">
                     <Array type="real">us</Array>
@@ -6568,12 +6568,12 @@
             </Node>
         </Node>
         <Node id="47">
-            <SimplePredicate field="num_address_states" operator="greaterThan" value="1.0"/>
+            <SimplePredicate field="num_address_states" operator="greaterOrEqual" value="1.0"/>
             <Node id="94" score="-0.07003062370973553">
-                <SimplePredicate field="rcvr_diff_auth_amt_dk_20" operator="lessOrEqual" value="900.0"/>
+                <SimplePredicate field="rcvr_diff_auth_amt_dk_20" operator="lessThan" value="900.0"/>
             </Node>
             <Node id="95" score="0.6632588780206367">
-                <SimplePredicate field="rcvr_diff_auth_amt_dk_20" operator="greaterThan" value="900.0"/>
+                <SimplePredicate field="rcvr_diff_auth_amt_dk_20" operator="greaterOrEqual" value="900.0"/>
             </Node>
         </Node>
     </Node>
@@ -6581,24 +6581,24 @@
                             </Node>
                         </Node>
                         <Node id="3">
-                            <SimplePredicate field="vid_ratio_20w_allbad_dol_02" operator="greaterThan" value="4.92880673179427"/>
+                            <SimplePredicate field="vid_ratio_20w_allbad_dol_02" operator="greaterOrEqual" value="4.92880673179427"/>
                             <Node id="6">
-<SimplePredicate field="industry2_tran_avg_good" operator="lessOrEqual" value="8529.77"/>
+<SimplePredicate field="industry2_tran_avg_good" operator="lessThan" value="8529.77"/>
 <Node id="12">
-    <SimplePredicate field="ed20wRtDolCcBadTxn_02" operator="lessOrEqual" value="0.0082"/>
+    <SimplePredicate field="ed20wRtDolCcBadTxn_02" operator="lessThan" value="0.0082"/>
     <Node id="24">
-        <SimplePredicate field="asn_br_gm" operator="lessOrEqual" value="0.011819059243233237"/>
+        <SimplePredicate field="asn_br_gm" operator="lessThan" value="0.011819059243233237"/>
         <Node id="48">
-            <SimplePredicate field="CcbincntyIpcntyRvrpcntyRtCbBadSumAmt112d_03" operator="lessOrEqual" value="0.0291"/>
+            <SimplePredicate field="CcbincntyIpcntyRvrpcntyRtCbBadSumAmt112d_03" operator="lessThan" value="0.0291"/>
             <Node id="96" score="0.08926490017647572">
-                <SimplePredicate field="alias_min_dof" operator="lessOrEqual" value="6.0"/>
+                <SimplePredicate field="alias_min_dof" operator="lessThan" value="6.0"/>
             </Node>
             <Node id="97" score="0.002952323187385013">
-                <SimplePredicate field="alias_min_dof" operator="greaterThan" value="6.0"/>
+                <SimplePredicate field="alias_min_dof" operator="greaterOrEqual" value="6.0"/>
             </Node>
         </Node>
         <Node id="49">
-            <SimplePredicate field="CcbincntyIpcntyRvrpcntyRtCbBadSumAmt112d_03" operator="greaterThan" value="0.0291"/>
+            <SimplePredicate field="CcbincntyIpcntyRvrpcntyRtCbBadSumAmt112d_03" operator="greaterOrEqual" value="0.0291"/>
             <Node id="98" score="0.1259561442552241">
                 <SimpleSetPredicate field="dy_s_ip_cnty" booleanOperator="isNotIn">
                     <Array type="real">gt gr dk ug us tr cr co rs ch at ae pk lv ma my kz zm</Array>
@@ -6612,9 +6612,9 @@
         </Node>
     </Node>
     <Node id="25">
-        <SimplePredicate field="asn_br_gm" operator="greaterThan" value="0.011819059243233237"/>
+        <SimplePredicate field="asn_br_gm" operator="greaterOrEqual" value="0.011819059243233237"/>
         <Node id="50">
-            <SimplePredicate field="billing_shipping_zip_match" operator="lessOrEqual" value="1.0"/>
+            <SimplePredicate field="billing_shipping_zip_match" operator="lessThan" value="1.0"/>
             <Node id="100" score="0.002960480491176536">
                 <SimpleSetPredicate field="primary_residence" booleanOperator="isNotIn">
                     <Array type="real">DZ DO US UA ES GB FR AT AR AU BR CA TR BE RW NL NZ NO HK IL IT JO KW KZ</Array>
@@ -6627,38 +6627,38 @@
             </Node>
         </Node>
         <Node id="51">
-            <SimplePredicate field="billing_shipping_zip_match" operator="greaterThan" value="1.0"/>
+            <SimplePredicate field="billing_shipping_zip_match" operator="greaterOrEqual" value="1.0"/>
             <Node id="102" score="0.6405489895823683">
-                <SimplePredicate field="alias_min_dof" operator="lessOrEqual" value="3.0"/>
+                <SimplePredicate field="alias_min_dof" operator="lessThan" value="3.0"/>
             </Node>
             <Node id="103" score="0.025520417884210486">
-                <SimplePredicate field="alias_min_dof" operator="greaterThan" value="3.0"/>
+                <SimplePredicate field="alias_min_dof" operator="greaterOrEqual" value="3.0"/>
             </Node>
         </Node>
     </Node>
 </Node>
 <Node id="13">
-    <SimplePredicate field="ed20wRtDolCcBadTxn_02" operator="greaterThan" value="0.0082"/>
+    <SimplePredicate field="ed20wRtDolCcBadTxn_02" operator="greaterOrEqual" value="0.0082"/>
     <Node id="26">
         <SimpleSetPredicate field="primary_residence" booleanOperator="isNotIn">
             <Array type="real">DZ VC DK TT FR GR GP RO AT AZ AL AO BS TH CA BZ TR SV BM CZ SI CO LV MK MA MU MT NL PE ZA HR ZW JO KH KW KZ</Array>
         </SimpleSetPredicate>
         <Node id="52">
-            <SimplePredicate field="ip_addcc_cnt_dk_2" operator="lessOrEqual" value="1.5887586168616072"/>
+            <SimplePredicate field="ip_addcc_cnt_dk_2" operator="lessThan" value="1.5887586168616072"/>
             <Node id="104" score="0.15139586085794152">
-                <SimplePredicate field="ARS_v35_ato_classifier_non_dg_confidence" operator="lessOrEqual" value="0.2447489957065647"/>
+                <SimplePredicate field="ARS_v35_ato_classifier_non_dg_confidence" operator="lessThan" value="0.2447489957065647"/>
             </Node>
             <Node id="105" score="0.3991367522274024">
-                <SimplePredicate field="ARS_v35_ato_classifier_non_dg_confidence" operator="greaterThan" value="0.2447489957065647"/>
+                <SimplePredicate field="ARS_v35_ato_classifier_non_dg_confidence" operator="greaterOrEqual" value="0.2447489957065647"/>
             </Node>
         </Node>
         <Node id="53">
-            <SimplePredicate field="ip_addcc_cnt_dk_2" operator="greaterThan" value="1.5887586168616072"/>
+            <SimplePredicate field="ip_addcc_cnt_dk_2" operator="greaterOrEqual" value="1.5887586168616072"/>
             <Node id="106" score="0.47715980615131426">
-                <SimplePredicate field="CatRtRstBadSumAmt112d_03" operator="lessOrEqual" value="0.0052"/>
+                <SimplePredicate field="CatRtRstBadSumAmt112d_03" operator="lessThan" value="0.0052"/>
             </Node>
             <Node id="107" score="1.1565004728666124">
-                <SimplePredicate field="CatRtRstBadSumAmt112d_03" operator="greaterThan" value="0.0052"/>
+                <SimplePredicate field="CatRtRstBadSumAmt112d_03" operator="greaterOrEqual" value="0.0052"/>
             </Node>
         </Node>
     </Node>
@@ -6671,10 +6671,10 @@
                 <Array type="real">NO_EVENTS MULTI_SAME_NAME</Array>
             </SimpleSetPredicate>
             <Node id="108" score="0.10888682813420383">
-                <SimplePredicate field="ARS_v3_ip_ad_dist_best_numeric" operator="lessOrEqual" value="1272.02828946637"/>
+                <SimplePredicate field="ARS_v3_ip_ad_dist_best_numeric" operator="lessThan" value="1272.02828946637"/>
             </Node>
             <Node id="109" score="1.7982729900288899">
-                <SimplePredicate field="ARS_v3_ip_ad_dist_best_numeric" operator="greaterThan" value="1272.02828946637"/>
+                <SimplePredicate field="ARS_v3_ip_ad_dist_best_numeric" operator="greaterOrEqual" value="1272.02828946637"/>
             </Node>
         </Node>
         <Node id="55">
@@ -6682,34 +6682,34 @@
                 <Array type="real">NO_EVENTS MULTI_SAME_NAME</Array>
             </SimpleSetPredicate>
             <Node id="110" score="1.3305704279670705">
-                <SimplePredicate field="CcbincntyIpcntyRvrpcntyCcBadMnAmt112d_03" operator="lessOrEqual" value="170.2999"/>
+                <SimplePredicate field="CcbincntyIpcntyRvrpcntyCcBadMnAmt112d_03" operator="lessThan" value="170.2999"/>
             </Node>
             <Node id="111" score="0.5539791996021014">
-                <SimplePredicate field="CcbincntyIpcntyRvrpcntyCcBadMnAmt112d_03" operator="greaterThan" value="170.2999"/>
+                <SimplePredicate field="CcbincntyIpcntyRvrpcntyCcBadMnAmt112d_03" operator="greaterOrEqual" value="170.2999"/>
             </Node>
         </Node>
     </Node>
 </Node>
                             </Node>
                             <Node id="7">
-<SimplePredicate field="industry2_tran_avg_good" operator="greaterThan" value="8529.77"/>
+<SimplePredicate field="industry2_tran_avg_good" operator="greaterOrEqual" value="8529.77"/>
 <Node id="14">
     <SimpleSetPredicate field="networks_v3_rcvr_tier" booleanOperator="isNotIn">
         <Array type="real">BAD_2 BAD_3</Array>
     </SimpleSetPredicate>
     <Node id="28">
-        <SimplePredicate field="ed20wRtDolCcBadTxn_02" operator="lessOrEqual" value="0.0082"/>
+        <SimplePredicate field="ed20wRtDolCcBadTxn_02" operator="lessThan" value="0.0082"/>
         <Node id="56">
-            <SimplePredicate field="seller_tran_avg_good" operator="lessOrEqual" value="1850.1"/>
+            <SimplePredicate field="seller_tran_avg_good" operator="lessThan" value="1850.1"/>
             <Node id="112" score="1.8236052489182564">
-                <SimplePredicate field="ARS_v35_counterparty_account_age" operator="lessOrEqual" value="54.7974884259259"/>
+                <SimplePredicate field="ARS_v35_counterparty_account_age" operator="lessThan" value="54.7974884259259"/>
             </Node>
             <Node id="113" score="0.01165469042106883">
-                <SimplePredicate field="ARS_v35_counterparty_account_age" operator="greaterThan" value="54.7974884259259"/>
+                <SimplePredicate field="ARS_v35_counterparty_account_age" operator="greaterOrEqual" value="54.7974884259259"/>
             </Node>
         </Node>
         <Node id="57">
-            <SimplePredicate field="seller_tran_avg_good" operator="greaterThan" value="1850.1"/>
+            <SimplePredicate field="seller_tran_avg_good" operator="greaterOrEqual" value="1850.1"/>
             <Node id="114" score="-0.007616326627375398">
                 <SimpleSetPredicate field="shipping_country" booleanOperator="isNotIn">
                     <Array type="real">VG DO ET EG TZ GE GF AL TJ BT SM CN MK MA PK KE KZ LI LK</Array>
@@ -6723,23 +6723,23 @@
         </Node>
     </Node>
     <Node id="29">
-        <SimplePredicate field="ed20wRtDolCcBadTxn_02" operator="greaterThan" value="0.0082"/>
+        <SimplePredicate field="ed20wRtDolCcBadTxn_02" operator="greaterOrEqual" value="0.0082"/>
         <Node id="58">
-            <SimplePredicate field="cb_amt_rate" operator="lessOrEqual" value="5.0E-4"/>
+            <SimplePredicate field="cb_amt_rate" operator="lessThan" value="5.0E-4"/>
             <Node id="116" score="0.019537212398790044">
-                <SimplePredicate field="ebay_flag" operator="lessOrEqual" value="1.0"/>
+                <SimplePredicate field="ebay_flag" operator="lessThan" value="1.0"/>
             </Node>
             <Node id="117" score="0.3857317238541503">
-                <SimplePredicate field="ebay_flag" operator="greaterThan" value="1.0"/>
+                <SimplePredicate field="ebay_flag" operator="greaterOrEqual" value="1.0"/>
             </Node>
         </Node>
         <Node id="59">
-            <SimplePredicate field="cb_amt_rate" operator="greaterThan" value="5.0E-4"/>
+            <SimplePredicate field="cb_amt_rate" operator="greaterOrEqual" value="5.0E-4"/>
             <Node id="118" score="0.2981821667872334">
-                <SimplePredicate field="dy_c_timestamp" operator="lessOrEqual" value="1.440590917E9"/>
+                <SimplePredicate field="dy_c_timestamp" operator="lessThan" value="1.440590917E9"/>
             </Node>
             <Node id="119" score="1.6969715567990589">
-                <SimplePredicate field="dy_c_timestamp" operator="greaterThan" value="1.440590917E9"/>
+                <SimplePredicate field="dy_c_timestamp" operator="greaterOrEqual" value="1.440590917E9"/>
             </Node>
         </Node>
     </Node>
@@ -6749,16 +6749,16 @@
         <Array type="real">BAD_2 BAD_3</Array>
     </SimpleSetPredicate>
     <Node id="30">
-        <SimplePredicate field="avg_cb_cc_asp" operator="lessOrEqual" value="4.922"/>
+        <SimplePredicate field="avg_cb_cc_asp" operator="lessThan" value="4.922"/>
         <Node id="60">
             <SimpleSetPredicate field="ARS_v40_tx_vertical" booleanOperator="isNotIn">
                 <Array type="real">groupon tickets printing nutritional-supp electronics</Array>
             </SimpleSetPredicate>
             <Node id="120" score="0.010766694311635317">
-                <SimplePredicate field="vid_ccauth_avs_pm_dk_2" operator="lessOrEqual" value="0.19357633787423564"/>
+                <SimplePredicate field="vid_ccauth_avs_pm_dk_2" operator="lessThan" value="0.19357633787423564"/>
             </Node>
             <Node id="121" score="1.9416895307371895">
-                <SimplePredicate field="vid_ccauth_avs_pm_dk_2" operator="greaterThan" value="0.19357633787423564"/>
+                <SimplePredicate field="vid_ccauth_avs_pm_dk_2" operator="greaterOrEqual" value="0.19357633787423564"/>
             </Node>
         </Node>
         <Node id="61">
@@ -6766,15 +6766,15 @@
                 <Array type="real">groupon tickets printing nutritional-supp electronics</Array>
             </SimpleSetPredicate>
             <Node id="122" score="1.9500742574696348">
-                <SimplePredicate field="num_addresses" operator="lessOrEqual" value="2.0"/>
+                <SimplePredicate field="num_addresses" operator="lessThan" value="2.0"/>
             </Node>
             <Node id="123" score="0.15748238022622846">
-                <SimplePredicate field="num_addresses" operator="greaterThan" value="2.0"/>
+                <SimplePredicate field="num_addresses" operator="greaterOrEqual" value="2.0"/>
             </Node>
         </Node>
     </Node>
     <Node id="31">
-        <SimplePredicate field="avg_cb_cc_asp" operator="greaterThan" value="4.922"/>
+        <SimplePredicate field="avg_cb_cc_asp" operator="greaterOrEqual" value="4.922"/>
         <Node id="62">
             <SimpleSetPredicate field="ip_country" booleanOperator="isNotIn">
                 <Array type="real">fr UK tw ro ** ph hk</Array>
