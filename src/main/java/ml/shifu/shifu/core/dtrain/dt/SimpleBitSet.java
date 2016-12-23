@@ -87,9 +87,6 @@ class SimpleBitSet<T> implements Set<T>, Bytable {
             throw new IllegalArgumentException("Input is not a number");
         }
         int intValue = ((Number) e).intValue();
-        // if(intValue >= this.words.length * 8) {
-        // words = Arrays.copyOf(words, Math.max(2 * words.length, intValue / 8));
-        // }
         int byteIndex = wordIndex(intValue);
         while(byteIndex >= this.words.length) {
             words = Arrays.copyOf(words, 2 * words.length);
@@ -151,17 +148,6 @@ class SimpleBitSet<T> implements Set<T>, Bytable {
         }
     }
 
-    @Override
-    public String toString() {
-        List<Short> shortList = new ArrayList<Short>();
-        for(int i = 0; i < words.length * 8; i++) {
-            if(contains((short) i)) {
-                shortList.add((short) i);
-            }
-        }
-        return "SimpleBitSet [" + shortList.toString() + "]";
-    }
-
     @SuppressWarnings({ "unchecked", "rawtypes" })
     @Override
     public Iterator<T> iterator() {
@@ -179,41 +165,15 @@ class SimpleBitSet<T> implements Set<T>, Bytable {
         throw new UnsupportedOperationException();
     }
 
-    public static void main(String[] args) {
-        SimpleBitSet<Short> sbs = new SimpleBitSet<Short>(2);
-
-        sbs.add((short) 1);
-        sbs.add((short) 2);
-        sbs.add((short) 3);
-        sbs.add((short) 4);
-        sbs.add((short) 5);
-        sbs.add((short) 6);
-        sbs.add((short) 7);
-        sbs.add((short) 8);
-        sbs.add((short) 9);
-        sbs.add((short) 10);
-        sbs.add((short) 1);
-        sbs.add((short) 2);
-        sbs.add((short) 1);
-        sbs.add((short) 255);
-
-        System.out.println(sbs.contains(1));
-        System.out.println(sbs.contains(2));
-        System.out.println(sbs.contains(8));
-        System.out.println(sbs.contains(0));
-        System.out.println(sbs.contains(12));
-        System.out.println(sbs.contains((short) 1));
-        System.out.println(sbs.contains((short) 255));
-        System.out.println(sbs.contains((short) 258));
-
-        System.out.println(sbs.toString());
-        System.out.println("----------------------");
-
-        Iterator<Short> it = sbs.iterator();
-        while(it.hasNext()) {
-            System.out.println(it.next());
+    @Override
+    public String toString() {
+        List<Short> shortList = new ArrayList<Short>();
+        for(int i = 0; i < words.length * 8; i++) {
+            if(contains((short) i)) {
+                shortList.add((short) i);
+            }
         }
-
+        return "SimpleBitSet [" + shortList.toString() + "]";
     }
 
 }

@@ -72,7 +72,6 @@ public class TreeNodePmmlElementCreator extends AbstractPmmlElementCreator<org.d
     }
 
     public org.dmg.pmml.Node convert(Node node, boolean isLeft, Split split) {
-
         org.dmg.pmml.Node pmmlNode = new org.dmg.pmml.Node();
         pmmlNode.setId(String.valueOf(node.getId()));
         if(node.getPredict() != null) {
@@ -87,9 +86,9 @@ public class TreeNodePmmlElementCreator extends AbstractPmmlElementCreator<org.d
             p.setValue(String.valueOf(split.getThreshold()));
             p.setField(new FieldName(columnConfig.getColumnName()));
             if(isLeft) {
-                p.setOperator(SimplePredicate.Operator.fromValue("lessOrEqual"));
+                p.setOperator(SimplePredicate.Operator.fromValue("lessThan"));
             } else {
-                p.setOperator(SimplePredicate.Operator.fromValue("greaterThan"));
+                p.setOperator(SimplePredicate.Operator.fromValue("greaterOrEqual"));
             }
             predicate = p;
         } else if(columnConfig.isCategorical()) {
