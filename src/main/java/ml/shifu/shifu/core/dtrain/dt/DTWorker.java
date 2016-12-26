@@ -481,7 +481,6 @@ public class DTWorker
             this.random = new Random();
         }
 
-        int iii = 0, iiii = 0;
         for(Data data: this.trainingData) {
             if(this.isRF) {
                 for(TreeNode treeNode: trees) {
@@ -518,20 +517,10 @@ public class DTWorker
                     }
                     int currTreeIndex = trees.size() - 1;
 
-                    if(iii++ < 20) {
-                        LOG.debug("DEBUGDEBUG1: start currTreeIndex");
-                    }
                     if(lastMasterResult.isSwitchToNextTree()) {
                         if(currTreeIndex >= 1) {
                             Node node = trees.get(currTreeIndex - 1).getNode();
-                            if(iiii++ < 1) {
-                                LOG.debug("DEBUG: CURR tree is {}", node.toTree());
-                            }
                             Node predictNode = predictNodeIndex(node, data, false);
-                            if(iii++ < 20) {
-                                LOG.debug("DEBUGDEBUG2: start predictNode is : {}, {}, {}", predictNode.getId(),
-                                        predictNode.getPredict(), trees.get(currTreeIndex - 1).getTreeId());
-                            }
                             if(predictNode.getPredict() != null) {
                                 double predict = predictNode.getPredict().getPredict();
                                 // first tree logic, master must set it to first tree even second tree with ROOT is
@@ -555,14 +544,7 @@ public class DTWorker
                     }
                     if(context.getLastMasterResult().isFirstTree() && !lastMasterResult.isSwitchToNextTree()) {
                         Node currTree = trees.get(currTreeIndex).getNode();
-                        if(iiii++ < 1) {
-                            LOG.debug("debug: CURR tree is {}", currTree.toTree());
-                        }
                         Node predictNode = predictNodeIndex(currTree, data, true);
-                        if(iii++ < 20) {
-                            LOG.debug("DEBUGDEBUG3: start predictNode is : {}, {}, {}", predictNode.getId(),
-                                    predictNode.getPredict(), trees.get(currTreeIndex).getTreeId());
-                        }
                         if(predictNode.getPredict() != null) {
                             trainError += data.significance
                                     * loss.computeError((float) (predictNode.getPredict().getPredict()), data.label);
