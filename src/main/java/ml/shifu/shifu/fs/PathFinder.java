@@ -108,15 +108,8 @@ public class PathFinder {
             // return absolute path which is in shifu-*.jar
             return path;
         } else {
-            String pathStr = (new Path(path)).isAbsolute() ? path : new Path(
-                    Environment.getProperty(Environment.SHIFU_HOME), path).toString();
-            File file = new File(pathStr);
-            if(file.exists()) {
-                return pathStr;
-            } else {
-                // return absolute path which is in shifu-*.jar
-                return path;
-            }
+            return (new Path(path)).isAbsolute() ? path : new Path(Environment.getProperty(Environment.SHIFU_HOME),
+                    path).toString();
         }
     }
 
