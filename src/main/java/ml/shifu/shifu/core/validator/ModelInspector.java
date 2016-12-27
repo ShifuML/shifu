@@ -309,15 +309,6 @@ public class ModelInspector {
             }
         }
 
-        if(modelConfig.isClassification()) {
-            if(varSelect.getWrapperEnabled()) {
-                result = ValidateResult.mergeResult(
-                        result,
-                        new ValidateResult(false, Arrays
-                                .asList("Multiple classification is not enabled for wrapperBy variable selection.")));
-            }
-        }
-
         return result;
     }
 
