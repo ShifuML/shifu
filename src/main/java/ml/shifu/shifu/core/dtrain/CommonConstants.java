@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright [2012-2015] PayPal Software Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -43,8 +43,6 @@ public interface CommonConstants {
 
     public static final String DEFAULT_COLUMN_SEPARATOR = "|";
 
-    // public static final String DT_ALG_NAME = "DT";
-
     public static final String RF_ALG_NAME = "RF";
 
     public static final String GBT_ALG_NAME = "GBT";
@@ -60,5 +58,7 @@ public interface CommonConstants {
     public static final String SHIFU_DT_MASTER_CHECKPOINT_INTERVAL = "shifu.dt.master.checkpoint.interval";
     
     public static final String SHIFU_DT_MASTER_CHECKPOINT_FOLDER = "shifu.dt.master.checkpoint.folder";
+    
+    public static final int TREE_FORMAT_VERSION = 1;
 
 }

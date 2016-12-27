@@ -16,6 +16,7 @@
 package ml.shifu.shifu.core.dtrain.nn;
 
 import java.io.IOException;
+import java.util.BitSet;
 import java.util.concurrent.TimeUnit;
 
 import ml.shifu.guagua.ComputableMonitor;
@@ -172,6 +173,15 @@ public class NNWorker extends AbstractNNWorker<Text> {
     @Override
     public void initRecordReader(GuaguaFileSplit fileSplit) throws IOException {
         super.setRecordReader(new GuaguaLineRecordReader(fileSplit));
+    }
+    
+    public static void main(String[] args) {
+        BitSet bs = new BitSet(20);
+        bs.set(1);
+        System.out.println(bs.get(1));
+        System.out.println(bs.get(20));
+        System.out.println(bs.size());
+        System.out.println(bs.get(25));
     }
 
 }
