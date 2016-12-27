@@ -183,7 +183,7 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
                 }
             } else {
                 // append normalize data. exclude data clean, for data cleaning, no need check good or bad candidate
-                if(CommonUtils.isGoodCandidate(modelConfig.isRegression(), config)) {
+                if(!CommonUtils.isGoodCandidate(modelConfig.isRegression(), config)) {
                     if(config.isMeta()) {
                         tuple.append(val);
                     } else {
