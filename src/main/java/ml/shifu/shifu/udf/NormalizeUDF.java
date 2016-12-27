@@ -160,34 +160,34 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
                 continue;
             }
 
-            // append normalize data.
-            if(!CommonUtils.isGoodCandidate(modelConfig.isRegression(), config)) {
-                if(config.isMeta()) {
-                    tuple.append(val);
+            if(this.isForClean) {
+                // for RF/GBT model, only clean data, not real do norm data
+                if(config.isCategorical()) {
+                    // TODO using HashSet instead of ArrayList
+                    int index = config.getBinCategory().indexOf(val);
+                    if(index == -1) {
+                        // set to empty for invalid category
+                        tuple.append("");
+                    } else {
+                        tuple.append(val);
+                    }
                 } else {
-                    tuple.append(null);
+                    Double normVal = 0d;
+                    try {
+                        normVal = Double.parseDouble(val);
+                    } catch (Exception e) {
+                        log.debug("Not decimal format " + val + ", using default!");
+                        normVal = Normalizer.defaultMissingValue(config);
+                    }
+                    tuple.append(df.format(normVal));
                 }
             } else {
-                if(this.isForClean) {
-                    // for RF/GBT model, only clean data, not real do norm data
-                    if(config.isCategorical()) {
-                        // TODO using HashSet instead of ArrayList
-                        int index = config.getBinCategory().indexOf(val);
-                        if(index == -1) {
-                            // set to empty for invalid category
-                            tuple.append("");
-                        } else {
-                            tuple.append(val);
-                        }
+                // append normalize data. exclude data clean, for data cleaning, no need check good or bad candidate
+                if(CommonUtils.isGoodCandidate(modelConfig.isRegression(), config)) {
+                    if(config.isMeta()) {
+                        tuple.append(val);
                     } else {
-                        Double normVal = 0d;
-                        try {
-                            normVal = Double.parseDouble(val);
-                        } catch (Exception e) {
-                            log.debug("Not decimal format " + val + ", using default!");
-                            normVal = Normalizer.defaultMissingValue(config);
-                        }
-                        tuple.append(df.format(normVal));
+                        tuple.append(null);
                     }
                 } else {
                     // for multiple classification, binPosRate means rate of such category over all counts, reuse
