@@ -87,7 +87,7 @@ public class PathFinder {
     public String getScriptPath(String path) {
         String shifuHome = Environment.getProperty(Environment.SHIFU_HOME);
         if(shifuHome == null || shifuHome.length() == 0) {
-            // return absolute path which is in shifu-*.jar
+            // return relative path which is in shifu-*.jar
             return path;
         } else {
             String pathStr = (new Path(path)).isAbsolute() ? path : new Path(
@@ -96,7 +96,7 @@ public class PathFinder {
             if(file.exists()) {
                 return pathStr;
             } else {
-                // return absolute path which is in shifu-*.jar
+                // return arguly path which is in shifu-*.jar
                 return path;
             }
         }
