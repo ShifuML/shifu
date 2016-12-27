@@ -100,45 +100,6 @@ public class ModelVarSelectConf {
     public void setFilterBy(String filterBy) {
         this.filterBy = filterBy;
     }
-
-//    public Boolean getWrapperEnabled() {
-//        return wrapperEnabled;
-//    }
-//
-//    public void setWrapperEnabled(Boolean wrapperEnabled) {
-//        this.wrapperEnabled = wrapperEnabled;
-//    }
-//
-//    public Integer getWrapperNum() {
-//        return wrapperNum;
-//    }
-//
-//    public void setWrapperNum(Integer wrapperNum) {
-//        this.wrapperNum = wrapperNum;
-//    }
-//
-//    public String getWrapperBy() {
-//        return wrapperBy;
-//    }
-//
-//    public void setWrapperBy(String wrapperBy) {
-//        this.wrapperBy = wrapperBy;
-//    }
-
-//    /**
-//     * @return the wrapperRatio
-//     */
-//    public Float getWrapperRatio() {
-//        return wrapperRatio;
-//    }
-//
-//    /**
-//     * @param wrapperRatio
-//     *            the wrapperRatio to set
-//     */
-//    public void setWrapperRatio(Float wrapperRatio) {
-//        this.wrapperRatio = wrapperRatio;
-//    }
     
     /**
      * @return the filterOutRatio
@@ -204,6 +165,7 @@ public class ModelVarSelectConf {
         other.setFilterBy(filterBy);
         other.setFilterEnable(filterEnable);
         other.setForceEnable(forceEnable);
+        other.setFilterNum(filterNum);
         other.setForceRemoveColumnNameFile(forceRemoveColumnNameFile);
         other.setForceSelectColumnNameFile(forceSelectColumnNameFile);
         other.setMissingRateThreshold(missingRateThreshold);
