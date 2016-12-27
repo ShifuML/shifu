@@ -127,7 +127,7 @@ public class MapReducerStatsWorker extends AbstractStatsExecutor {
                 modelConfig.getDataSet().getSource());
 
         log.info("this.pathFinder.getOtherConfigs() => " + this.pathFinder.getOtherConfigs());
-        PigExecutor.getExecutor().submitJob(modelConfig, pathFinder.getAbsolutePath("scripts/StatsSpdtI.pig"),
+        PigExecutor.getExecutor().submitJob(modelConfig, pathFinder.getScriptPath("scripts/StatsSpdtI.pig"),
                 paramsMap, modelConfig.getDataSet().getSource(), this.pathFinder);
         // update
         log.info("Updating binning info ...");
@@ -414,7 +414,7 @@ public class MapReducerStatsWorker extends AbstractStatsExecutor {
             paramsMap.put("column_parallel", Integer.toString(columnConfigList.size() / 10));
             paramsMap.put("value_index", "2");
 
-            PigExecutor.getExecutor().submitJob(modelConfig, pathFinder.getAbsolutePath("scripts/PSI.pig"), paramsMap);
+            PigExecutor.getExecutor().submitJob(modelConfig, pathFinder.getScriptPath("scripts/PSI.pig"), paramsMap);
 
             List<Scanner> scanners = ShifuFileUtils.getDataScanners(pathFinder.getPSIInfoPath(), modelConfig
                     .getDataSet().getSource());

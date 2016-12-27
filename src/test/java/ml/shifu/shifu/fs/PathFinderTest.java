@@ -69,8 +69,8 @@ public class PathFinderTest {
     public void testGetAbsolutePath() {
         Environment.setProperty(Environment.SHIFU_HOME, ".");
 
-        Assert.assertEquals(pathFinder.getAbsolutePath("test"), "test");
-        Assert.assertEquals(pathFinder.getAbsolutePath("/test"), "/test");
+        Assert.assertEquals(pathFinder.getScriptPath("test"), "test");
+        Assert.assertEquals(pathFinder.getScriptPath("/test"), "/test");
     }
 
     @Test

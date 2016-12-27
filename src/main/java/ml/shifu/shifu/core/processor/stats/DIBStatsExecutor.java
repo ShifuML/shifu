@@ -54,7 +54,7 @@ public class DIBStatsExecutor extends MapReducerStatsWorker {
         paramsMap.put("histo_scale_factor", Integer.toString(1000));
         paramsMap.put("path_stats_small_bins", pathFinder.getStatsSmallBins());
 
-        PigExecutor.getExecutor().submitJob(modelConfig, pathFinder.getAbsolutePath("scripts/StatsDynamicBinning.pig"),
+        PigExecutor.getExecutor().submitJob(modelConfig, pathFinder.getScriptPath("scripts/StatsDynamicBinning.pig"),
                 paramsMap, modelConfig.getDataSet().getSource(), super.pathFinder);
 
         // update
