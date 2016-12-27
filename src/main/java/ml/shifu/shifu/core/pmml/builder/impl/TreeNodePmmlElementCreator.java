@@ -71,9 +71,9 @@ public class TreeNodePmmlElementCreator extends AbstractPmmlElementCreator<org.d
                 p.setValue(String.valueOf(split.getThreshold()));
                 p.setField(new FieldName(columnConfig.getColumnName()));
                 if(isLeft) {
-                    p.setOperator(SimplePredicate.Operator.fromValue("lessOrEqual"));
+                    p.setOperator(SimplePredicate.Operator.fromValue("lessThan"));
                 } else {
-                    p.setOperator(SimplePredicate.Operator.fromValue("greaterThan"));
+                    p.setOperator(SimplePredicate.Operator.fromValue("greaterOrEqual"));
                 }
                 predicate = p;
            } else if(columnConfig.isCategorical()) {
@@ -85,7 +85,7 @@ public class TreeNodePmmlElementCreator extends AbstractPmmlElementCreator<org.d
                List<String> valueList = treeModel.getCategoricalColumnNameNames().get(columnConfig.getColumnNum());
                for(Short sh : leftCategories) {
                     if(sh >= valueList.size()) {
-                        arrayStr.append("\" \"");
+                        arrayStr.append(" \"\"");
                         continue;
                     }
                     String s = valueList.get(sh);    
