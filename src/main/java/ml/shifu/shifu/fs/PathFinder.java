@@ -27,6 +27,7 @@ import ml.shifu.shifu.util.Environment;
 import org.apache.commons.lang.NotImplementedException;
 import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.fs.Path;
+import org.apache.pig.impl.util.JarManager;
 
 /**
  * <p/>
@@ -83,13 +84,39 @@ public class PathFinder {
      * @param path
      * @return absolute path
      */
+    public String getScriptPath(String path) {
+        String shifuHome = Environment.getProperty(Environment.SHIFU_HOME);
+        if(shifuHome == null || shifuHome.length() == 0) {
+            // return absolute path which is in shifu-*.jar
+            return path;
+        } else {
+            String pathStr = (new Path(path)).isAbsolute() ? path : new Path(
+                    Environment.getProperty(Environment.SHIFU_HOME), path).toString();
+            File file = new File(pathStr);
+            if(file.exists()) {
+                return pathStr;
+            } else {
+                // return absolute path which is in shifu-*.jar
+                return path;
+            }
+        }
+    }
+
     public String getAbsolutePath(String path) {
         String shifuHome = Environment.getProperty(Environment.SHIFU_HOME);
         if(shifuHome == null || shifuHome.length() == 0) {
-            return new Path(this.otherConfigs.get("shifu.pig.scripts").toString(), path).toString();
+            // return absolute path which is in shifu-*.jar
+            return path;
         } else {
-            return (new Path(path)).isAbsolute() ? path : new Path(Environment.getProperty(Environment.SHIFU_HOME),
-                    path).toString();
+            String pathStr = (new Path(path)).isAbsolute() ? path : new Path(
+                    Environment.getProperty(Environment.SHIFU_HOME), path).toString();
+            File file = new File(pathStr);
+            if(file.exists()) {
+                return pathStr;
+            } else {
+                // return absolute path which is in shifu-*.jar
+                return path;
+            }
         }
     }
 
@@ -102,9 +129,15 @@ public class PathFinder {
     public String getJarPath() {
         String shifuHome = Environment.getProperty(Environment.SHIFU_HOME);
         if(shifuHome == null || shifuHome.length() == 0) {
-            return new Path(this.otherConfigs.get("shifu.pig.jars").toString(), SHIFU_JAR_PATH).toString();
+            return new Path(JarManager.findContainingJar(PathFinder.class)).toString();
         } else {
-            return getAbsolutePath(SHIFU_JAR_PATH);
+            // very ugly to check if it is outside jar
+            try {
+                Class.forName("ml.shifu.dtrain.DTrainRequestProcessor");
+                return new Path(JarManager.findContainingJar(PathFinder.class)).toString();
+            } catch (ClassNotFoundException e) {
+                return getAbsolutePath(SHIFU_JAR_PATH);
+            }
         }
     }
 
@@ -857,9 +890,9 @@ public class PathFinder {
 
         return customPaths.get(key);
     }
-    
+
     public String getLocalFeatureImportancePath() {
-        return "./featureImportance/all.fi"; 
+        return "./featureImportance/all.fi";
     }
 
     /**
@@ -871,25 +904,24 @@ public class PathFinder {
 
     /**
      * Get the train data path for assemble model
+     * 
      * @return - train data path for assemble model
      */
     public String getSubModelsAssembleTrainData() {
-        return getPathBySourceType(
-                new Path(Constants.TMP, "AssembleTrainData"),
-                this.modelConfig.getDataSet().getSource());
+        return getPathBySourceType(new Path(Constants.TMP, "AssembleTrainData"), this.modelConfig.getDataSet()
+                .getSource());
     }
 
     /**
      * Get the eval data path for assemble model
+     * 
      * @param evalName
-     *      - evalset name
+     *            - evalset name
      * @param sourceType
-     *      - Local/HDFS
+     *            - Local/HDFS
      * @return - eval data path for assemble model
      */
     public String getSubModelsAssembleEvalData(String evalName, SourceType sourceType) {
-        return getPathBySourceType(
-                new Path(Constants.TMP, evalName + "AssembleEvalData"),
-                sourceType);
+        return getPathBySourceType(new Path(Constants.TMP, evalName + "AssembleEvalData"), sourceType);
     }
 }
