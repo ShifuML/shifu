@@ -23,7 +23,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Iterator;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -62,6 +61,7 @@ import ml.shifu.shifu.core.dtrain.DTrainUtils;
 import ml.shifu.shifu.core.dtrain.dt.DTWorkerParams.NodeStats;
 import ml.shifu.shifu.core.dtrain.gs.GridSearch;
 import ml.shifu.shifu.fs.ShifuFileUtils;
+import ml.shifu.shifu.util.ClassUtils;
 import ml.shifu.shifu.util.CommonUtils;
 
 import org.apache.commons.math3.distribution.PoissonDistribution;
@@ -353,7 +353,7 @@ public class DTWorker
                     (long) (Runtime.getRuntime().maxMemory() * memoryFraction * validationRate), new ArrayList<Data>());
         } else {
             this.trainingData = new MemoryLimitedList<Data>((long) (Runtime.getRuntime().maxMemory() * memoryFraction),
-                    new LinkedList<Data>());
+                    new ArrayList<Data>());
         }
         int[] inputOutputIndex = DTrainUtils.getNumericAndCategoricalInputAndOutputCounts(this.columnConfigList);
         // numerical + categorical = # of all input
@@ -382,7 +382,6 @@ public class DTWorker
         this.isRF = ALGORITHM.RF.toString().equalsIgnoreCase(modelConfig.getAlgorithm());
         this.isGBDT = ALGORITHM.GBT.toString().equalsIgnoreCase(modelConfig.getAlgorithm());
 
-        // TODO, using reflection
         String lossStr = validParams.get("Loss").toString();
         if(lossStr.equalsIgnoreCase("log")) {
             this.loss = new LogLoss();
@@ -390,8 +389,15 @@ public class DTWorker
             this.loss = new AbsoluteLoss();
         } else if(lossStr.equalsIgnoreCase("halfgradsquared")) {
             this.loss = new HalfGradSquaredLoss();
-        } else {
+        } else if(lossStr.equalsIgnoreCase("squared")) {
             this.loss = new SquaredLoss();
+        } else {
+            try {
+                this.loss = (Loss) ClassUtils.newInstance(Class.forName(lossStr));
+            } catch (ClassNotFoundException e) {
+                LOG.warn("Class not found for {}, using default SquaredLoss", lossStr);
+                this.loss = new SquaredLoss();
+            }
         }
 
         if(this.isGBDT) {
@@ -475,7 +481,6 @@ public class DTWorker
             this.random = new Random();
         }
 
-        int iii = 0, iiii = 0;
         for(Data data: this.trainingData) {
             if(this.isRF) {
                 for(TreeNode treeNode: trees) {
@@ -512,20 +517,10 @@ public class DTWorker
                     }
                     int currTreeIndex = trees.size() - 1;
 
-                    if(iii++ < 20) {
-                        LOG.debug("DEBUGDEBUG1: start currTreeIndex");
-                    }
                     if(lastMasterResult.isSwitchToNextTree()) {
                         if(currTreeIndex >= 1) {
                             Node node = trees.get(currTreeIndex - 1).getNode();
-                            if(iiii++ < 1) {
-                                LOG.debug("DEBUG: CURR tree is {}", node.toTree());
-                            }
                             Node predictNode = predictNodeIndex(node, data, false);
-                            if(iii++ < 20) {
-                                LOG.debug("DEBUGDEBUG2: start predictNode is : {}, {}, {}", predictNode.getId(),
-                                        predictNode.getPredict(), trees.get(currTreeIndex - 1).getTreeId());
-                            }
                             if(predictNode.getPredict() != null) {
                                 double predict = predictNode.getPredict().getPredict();
                                 // first tree logic, master must set it to first tree even second tree with ROOT is
@@ -549,14 +544,7 @@ public class DTWorker
                     }
                     if(context.getLastMasterResult().isFirstTree() && !lastMasterResult.isSwitchToNextTree()) {
                         Node currTree = trees.get(currTreeIndex).getNode();
-                        if(iiii++ < 1) {
-                            LOG.debug("debug: CURR tree is {}", currTree.toTree());
-                        }
                         Node predictNode = predictNodeIndex(currTree, data, true);
-                        if(iii++ < 20) {
-                            LOG.debug("DEBUGDEBUG3: start predictNode is : {}, {}, {}", predictNode.getId(),
-                                    predictNode.getPredict(), trees.get(currTreeIndex).getTreeId());
-                        }
                         if(predictNode.getPredict() != null) {
                             trainError += data.significance
                                     * loss.computeError((float) (predictNode.getPredict().getPredict()), data.label);
@@ -872,10 +860,25 @@ public class DTWorker
                 // for invalid category, set to last one
                 indexValue = (short) (columnConfig.getBinCategory().size());
             }
-            if(split.getLeftCategories().contains(indexValue)) {
+            if(split.getLeftOrRightCategories().contains(indexValue)) {
                 nextNode = currNode.getLeft();
             } else {
                 nextNode = currNode.getRight();
+            }
+
+            Set<Short> childCategories = split.getLeftOrRightCategories();
+            if(split.isLeft()) {
+                if(childCategories.contains(indexValue)) {
+                    nextNode = currNode.getLeft();
+                } else {
+                    nextNode = currNode.getRight();
+                }
+            } else {
+                if(childCategories.contains(indexValue)) {
+                    nextNode = currNode.getRight();
+                } else {
+                    nextNode = currNode.getLeft();
+                }
             }
         }
 
