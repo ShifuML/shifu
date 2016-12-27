@@ -15,28 +15,18 @@
  */
 package ml.shifu.shifu.core;
 
-import org.encog.ml.data.MLDataPair;
-import org.encog.ml.data.MLDataSet;
-import org.encog.ml.data.basic.BasicMLData;
-import org.encog.ml.data.basic.BasicMLDataPair;
-import org.encog.ml.data.basic.BasicMLDataSet;
-import org.encog.neural.networks.BasicNetwork;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
-import java.util.Set;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.container.obj.ColumnConfig.ColumnConfigComparator;
 import ml.shifu.shifu.container.obj.ModelConfig;
-import ml.shifu.shifu.core.alg.NNTrainer;
+import ml.shifu.shifu.core.dtrain.DTrainUtils;
 import ml.shifu.shifu.util.CommonUtils;
 
 /**
@@ -102,17 +92,28 @@ public class VariableSelector {
                     + "]";
         }
     }
+    
+    public static void setFilterNumberByFilterOutRatio(ModelConfig modelConfig,List<ColumnConfig> columnConfigList){
+        //if user already set filter number then ignore filter out ratio
+        if(modelConfig.getVarSelectFilterNum()>0){
+            return;
+        }
+        int[] inputOutputIndex = DTrainUtils.getInputOutputCandidateCounts(columnConfigList);
+        log.info("inputOutputIndex:"+inputOutputIndex[0]+" "+inputOutputIndex[1]+" "+inputOutputIndex[2]);
+        int inputNodeCount = inputOutputIndex[0] == 0 ? inputOutputIndex[2] : inputOutputIndex[0];
+        log.info("inputNodeCount:"+inputNodeCount);
+        Float filterOutRatio = modelConfig.getVarSelect().getFilterOutRatio();
+        int targetCnt = (int) (inputNodeCount * (1.0f - filterOutRatio));
+        log.info("target_num:"+targetCnt);
+        modelConfig.getVarSelect().setFilterNum(targetCnt);
+    }
 
     // return the list of selected column nums
     public List<ColumnConfig> selectByFilter() {
         log.info("    - Method: Filter");
 
-        for(ColumnConfig config: this.columnConfigList) {
-            config.setFinalSelect(false);
-        }
-
         int ptrKs = 0, ptrIv = 0, ptrPareto = 0, cntByForce = 0;
-
+        VariableSelector.setFilterNumberByFilterOutRatio(this.modelConfig, this.columnConfigList);
         log.info("Start Variable Selection...");
         log.info("\t VarSelectEnabled: " + modelConfig.getVarSelectFilterEnabled());
         log.info("\t VarSelectBy: " + modelConfig.getVarSelectFilterBy());
@@ -176,8 +177,13 @@ public class VariableSelector {
 
         List<Tuple> newParetoList = sortByPareto(paretoList);
 
-        int expectedVarNum = Math.min(ksList.size(), this.modelConfig.getVarSelectFilterNum());
-
+        int expectedVarNum = Math.min(ksList.size(), modelConfig.getVarSelectFilterNum());
+        log.info("expectedNum:"+expectedVarNum);
+        for(ColumnConfig columnConfig: this.columnConfigList) {
+            if(columnConfig.isFinalSelect()) {
+                columnConfig.setFinalSelect(false);
+            }
+        }
         ColumnConfig config = null;
         while(cntSelected < expectedVarNum) {
             if(key.equalsIgnoreCase("ks")) {
@@ -395,155 +401,4 @@ public class VariableSelector {
         return sortByPareto(tuples);
     }
 
-    public List<ColumnConfig> selectByWrapper(NNTrainer trainer) {
-        log.info("\t - Method: Wrapper");
-
-        BasicNetwork network = trainer.getNetwork();
-        Double baseMSE = trainer.getBaseMSE();
-        MLDataSet validSet = trainer.getValidSet();
-
-        List<ColumnConfig> candidateList = new ArrayList<ColumnConfig>();
-
-        for(ColumnConfig config: columnConfigList) {
-            if(config.isFinalSelect() == true) {
-                candidateList.add(config);
-            }
-        }
-
-        log.info("\t - Candidate ColumnConfig Size: " + candidateList.size());
-        log.info("\t - Validation DataSet Size: " + validSet.getInputSize());
-        if(candidateList.size() == 0) {
-            throw new RuntimeException(
-                    "No candidates. Run '$ shifu varselect -filter' first or manually set variables as finalSelect.");
-        } else if(candidateList.size() != validSet.getInputSize()) {
-            throw new RuntimeException("ColumnConfig and data mismatch.");
-        }
-
-        int size = candidateList.size();
-
-        if(modelConfig.getVarSelectWrapperBy().equalsIgnoreCase("A")) {
-            log.info("\t - By Adding Most Significant Variables");
-            int iterations = modelConfig.getVarSelectWrapperNum();
-            Set<Integer> selected = new HashSet<Integer>();
-
-            for(int n = 1; n <= iterations; n++) {
-                double maxDiffMSE = Double.NEGATIVE_INFINITY;
-                int maxDiffMSEColumn = -1;
-
-                log.info("\t Iteration #" + n);
-
-                for(int i = 0; i < size; i++) {
-                    if(selected.contains(i)) {
-                        continue;
-                    }
-
-                    Double mse = getMSE(network, validSet, selected, i);
-                    if(mse - baseMSE > maxDiffMSE) {
-                        maxDiffMSE = mse - baseMSE;
-                        maxDiffMSEColumn = i;
-                    }
-                }
-
-                selected.add(maxDiffMSEColumn);
-                log.info("\t Selected Variable: " + candidateList.get(maxDiffMSEColumn).getColumnName());
-                log.info("\t MSE: " + maxDiffMSE);
-            }
-
-            for(ColumnConfig config: columnConfigList) {
-                config.setFinalSelect(false);
-            }
-
-            for(Integer i: selected) {
-                columnConfigList.get(candidateList.get(i).getColumnNum()).setFinalSelect(true);
-            }
-
-        } else if(modelConfig.getVarSelectWrapperBy().equalsIgnoreCase("R")) {
-            log.info("\t - By Removing Least Significant Variables");
-            int iterations = candidateList.size() - modelConfig.getVarSelectWrapperNum();
-            Set<Integer> removed = new HashSet<Integer>();
-
-            for(int n = 1; n <= iterations; n++) {
-                double minDiffMSE = Double.POSITIVE_INFINITY;
-
-                int minDiffMSEColumn = -1;
-
-                log.info("\t Iteration #" + n);
-
-                for(int i = 0; i < size; i++) {
-                    if(removed.contains(i)) {
-                        continue;
-                    }
-
-                    Double mse = getMSE(network, validSet, removed, i);
-                    if(Math.abs(mse - baseMSE) < minDiffMSE) {
-                        minDiffMSE = Math.abs(mse - baseMSE);
-                        minDiffMSEColumn = i;
-                    }
-                }
-
-                removed.add(minDiffMSEColumn);
-                log.info("\t Removed: Variable: " + candidateList.get(minDiffMSEColumn).getColumnName());
-                log.info("\t MSE: " + minDiffMSE);
-            }
-            for(Integer i: removed) {
-                columnConfigList.get(candidateList.get(i).getColumnNum()).setFinalSelect(false);
-            }
-
-        } else if(modelConfig.getVarSelectWrapperBy().equalsIgnoreCase("S")) {
-            log.info("\t - Simplified Wrapper Method");
-
-            Map<Integer, Double> mseMap = new HashMap<Integer, Double>();
-
-            for(int i = 0; i < size; i++) {
-                mseMap.put(i, getMSE(network, validSet, null, i));
-            }
-
-            List<Map.Entry<Integer, Double>> entryList = CommonUtils.getEntriesSortedByValues(mseMap);
-            int numVars = modelConfig.getVarSelectWrapperNum();
-
-            for(ColumnConfig config: columnConfigList) {
-                config.setFinalSelect(false);
-            }
-
-            int entryListSize = entryList.size();
-            if(numVars > entryListSize) {
-                numVars = entryListSize;
-            }
-
-            for(int i = 0; i < numVars; i++) {
-                Map.Entry<Integer, Double> entry = entryList.get(entryListSize - i - 1);
-                ColumnConfig config = candidateList.get(entry.getKey());
-                log.info(config.getColumnName() + ": " + entry.getValue());
-                columnConfigList.get(config.getColumnNum()).setFinalSelect(true);
-            }
-        } else {
-            log.error("Invalid Wrapper Method. Choose from 'A', 'R' or 'S'");
-        }
-
-        return columnConfigList;
-    }
-
-    private Double getMSE(BasicNetwork network, MLDataSet validSet, Set<Integer> clamped, Integer clamping) {
-        MLDataSet tmpSet = new BasicMLDataSet();
-        for(MLDataPair validPair: validSet) {
-            // Make a copy of validPair
-            double[] input = validPair.getInputArray().clone();
-            double[] ideal = validPair.getIdealArray().clone();
-
-            // Set one variable to mean(normalized);
-            input[clamping] = 0;
-
-            // Set selected variables to mean;
-            if(clamped != null) {
-                for(Integer k: clamped) {
-                    input[k] = 0;
-                }
-            }
-
-            // Add to tmp Set
-            tmpSet.add(new BasicMLDataPair(new BasicMLData(input), new BasicMLData(ideal)));
-        }
-
-        return AbstractTrainer.calculateMSE(network, tmpSet);
-    }
 }
