@@ -86,17 +86,17 @@ public class NormStep extends Step<List<ColumnConfig>> {
                 String normPigPath = null;
                 if(modelConfig.getNormalize().getIsParquet()) {
                     if(modelConfig.getBasic().getPostTrainOn()) {
-                        normPigPath = pathFinder.getAbsolutePath("scripts/NormalizeWithParquetAndPostTrain.pig");
+                        normPigPath = pathFinder.getScriptPath("scripts/NormalizeWithParquetAndPostTrain.pig");
                     } else {
                         LOG.info("Post train is disabled by 'postTrainOn=false'.");
-                        normPigPath = pathFinder.getAbsolutePath("scripts/NormalizeWithParquet.pig");
+                        normPigPath = pathFinder.getScriptPath("scripts/NormalizeWithParquet.pig");
                     }
                 } else {
                     if(modelConfig.getBasic().getPostTrainOn()) {
                         // this condition is for comment, no matter post train enabled or not, only norm results will be
                         // stored since new post train solution
                     }
-                    normPigPath = pathFinder.getAbsolutePath("scripts/Normalize.pig");
+                    normPigPath = pathFinder.getScriptPath("scripts/Normalize.pig");
                 }
                 paramsMap.put(Constants.IS_COMPRESS, "true");
                 paramsMap.put(Constants.IS_NORM_FOR_CLEAN, "false");

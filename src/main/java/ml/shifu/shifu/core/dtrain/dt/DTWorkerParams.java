@@ -18,7 +18,9 @@ package ml.shifu.shifu.core.dtrain.dt;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.Map;
 import java.util.Map.Entry;
 
@@ -264,8 +266,28 @@ public class DTWorkerParams extends HaltBytable implements Combinable<DTWorkerPa
          */
         @Override
         public String toString() {
-            return "NodeStats [nodeId=" + nodeId + ", treeId=" + treeId + ", featureStatistics=" + featureStatistics
-                    + "]";
+            return "NodeStats [nodeId=" + nodeId + ", treeId=" + treeId + ", featureStatistics="
+                    + toString(featureStatistics) + "]";
+        }
+
+        private String toString(Map<Integer, double[]> featureStatistics) {
+            Iterator<Map.Entry<Integer, double[]>> i = featureStatistics.entrySet().iterator();
+            if(!i.hasNext())
+                return "{}";
+
+            StringBuilder sb = new StringBuilder();
+            sb.append('{');
+            for(;;) {
+                Map.Entry<Integer, double[]> e = i.next();
+                Integer key = e.getKey();
+                double[] value = e.getValue();
+                sb.append(key);
+                sb.append('=');
+                sb.append(Arrays.toString(value));
+                if(!i.hasNext())
+                    return sb.append('}').toString();
+                sb.append(", ");
+            }
         }
     }
 
