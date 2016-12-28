@@ -1,3 +1,18 @@
+/*
+ * Copyright [2012-2014] PayPal Software Foundation
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package ml.shifu.shifu.core.dtrain.dt;
 
 import org.apache.log4j.BasicConfigurator;
@@ -43,6 +58,7 @@ public class DTEarlyStopDeciderTest {
             trainErrorList.add(Double.valueOf(info[0]));
             validationErrorList.add(Double.valueOf(info[1]));
         }
+        scanner.close();
     }
 
     @Test
@@ -53,7 +69,7 @@ public class DTEarlyStopDeciderTest {
         int iteration = 0;
         while (iteration ++ < trainErrorList.size()){
             if(dtEarlyStopDecider.add(trainErrorList.get(iteration), validationErrorList.get(iteration))){
-                LOG.info("Iteration " + iteration + " stop!");
+                LOG.info("Iteration {} stop!", iteration);
                 break;
             }
         }

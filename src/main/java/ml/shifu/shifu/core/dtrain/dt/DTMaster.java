@@ -234,8 +234,14 @@ public class DTMaster extends AbstractMasterComputable<DTMasterParams, DTWorkerP
      */
     private Queue<TreeNode> toDoQueue;
 
+    /**
+     * DTEarlyStopDecider will decide automatic whether it need further training,  this only for GBDT.
+     */
     private DTEarlyStopDecider dtEarlyStopDecider;
 
+    /**
+     * If earlyStopEnabled is true, the early stop feature will be enabled
+     */
     private boolean earlyStopEnabled = false;
 
     @Override
@@ -336,7 +342,10 @@ public class DTMaster extends AbstractMasterComputable<DTMasterParams, DTWorkerP
         // Add  early Stop Feature for GBT
         if(this.earlyStopEnabled && this.isGBDT && dtEarlyStopDecider.add(trainError, validationError)){
             masterParams.setHalt(true);
+            LOG.info("weightedTrainCount {}, weightedValidationCount {}, trainError {}, validationError {}",
+                    weightedTrainCount, weightedValidationCount, trainError, validationError);
             LOG.info("Early stop identified, training is stopped in iteration {}.", context.getCurrentIteration());
+            return masterParams;
         }
 
         if(toDoQueue.isEmpty()) {

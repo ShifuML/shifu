@@ -47,19 +47,20 @@ import org.slf4j.LoggerFactory;
  *
  * @author haifwu
  */
-public class DTEarlyStopDecider {
+class DTEarlyStopDecider {
+
     private static final Logger LOG = LoggerFactory.getLogger(DTEarlyStopDecider.class);
+    /**
+     * if 3 times continue reach the stop requirements, decider will make stop decision
+     */
+    private static final int magicNumber = 3;
     /**
      * Max Depth of a tree
      */
     private int treeDepth;
     /**
-     * "3 and out"
-     */
-    private static final int magicNumber = 3;
-    /**
-     * trainErrorDecider return a positive signal or negative sign whether it worth further loop according to the
-     * current iteration gain.
+     * {@link #trainErrorDecider}, return a positive signal or negative sign whether it worth further loop according to
+     * the current iteration gain.
      */
     private MinAverageDecider trainErrorDecider;
 
@@ -112,7 +113,7 @@ public class DTEarlyStopDecider {
         if (trainErrorDecideReady) {
             if(trainErrorDecider.getDecide()){
                 this.trainGainContinueLowerCount += 1;
-                LOG.warn("Continue " + this.trainGainContinueLowerCount + " positive sign for not worth more iteration!");
+                LOG.warn("Continue {} positive sign for not worth more iteration!", this.trainGainContinueLowerCount);
             } else {
                 this.trainGainContinueLowerCount = 0;
             }
@@ -121,7 +122,7 @@ public class DTEarlyStopDecider {
         if (validationDecideReady) {
             if(validationErrorDecider.getDecide()){
                 this.validationGainContinueNegCount += 1;
-                LOG.warn("Continue " + this.validationGainContinueNegCount + " positive sign for not worth more iteration!");
+                LOG.warn("Continue {} positive sign for not worth more iteration!", this.validationGainContinueNegCount);
             } else {
                 this.validationGainContinueNegCount = 0;
             }
@@ -131,32 +132,26 @@ public class DTEarlyStopDecider {
     }
 
     private boolean canStop() {
-        if (this.validationGainContinueNegCount >= magicNumber) {
-            return true;
-        }
-        if (this.trainGainContinueLowerCount >= magicNumber) {
-            return true;
-        }
-        return false;
+        return this.validationGainContinueNegCount >= magicNumber || this.trainGainContinueLowerCount >= magicNumber;
     }
 
-    abstract class MinAverageDecider {
+    static abstract class MinAverageDecider {
         /**
          * minQueue to get the minimal value of a queue size values
          */
         private final ThreadLocal<MinQueue> minQueue;
         /**
-         * averageQueue, insert with recursive average value into the queue, and get iteration gain
-         */
-        private AverageQueue averageQueue;
-        /**
          * Max gain so far
          */
-        protected double maxGain;
+        double maxGain;
         /**
          * Current gain
          */
-        protected double gain;
+        double gain;
+        /**
+         * averageQueue, insert with recursive average value into the queue, and get iteration gain
+         */
+        private AverageQueue averageQueue;
 
         MinAverageDecider(int minQueueNum, int averageQueueNum) {
             minQueue = new ThreadLocal<MinQueue>();
@@ -167,20 +162,21 @@ public class DTEarlyStopDecider {
 
         /**
          * Add a value into the decider
+         *
          * @param element the value to insert to the decide
          * @return true if new gain generated, and decide is ready to get
          */
         public boolean add(double element) {
-            if (this.minQueue.get().add(element) == false) {
+            if (!this.minQueue.get().add(element)) {
                 return false;
             }
             double minValue = this.minQueue.get().getQueueMin();
-            LOG.debug("MinQueue is full, get min value: " + element);
-            if (this.averageQueue.add(element) == false) {
+            LOG.debug("MinQueue is full, get min value: {}", element);
+            if (!this.averageQueue.add(element)) {
                 return false;
             }
             this.gain = this.averageQueue.getGain();
-            LOG.debug("Average Queue is full, get gain value: " + this.gain);
+            LOG.debug("Average Queue is full, get gain value: {}", this.gain);
             if (this.gain > this.maxGain) {
                 this.maxGain = this.gain;
             }
@@ -191,9 +187,9 @@ public class DTEarlyStopDecider {
     }
 
     /**
-     *  Generate minimal value of each {@link #capacity} values.
+     * Generate minimal value of each {@link #capacity} values.
      */
-    private class MinQueue {
+    private static class MinQueue {
         /**
          * total element in current queue
          */
@@ -219,6 +215,7 @@ public class DTEarlyStopDecider {
 
         /**
          * Add an element to the queue
+         *
          * @param element the value to add
          * @return true if the queue is full, and ready to generate the minimal value of this window
          */
@@ -228,14 +225,12 @@ public class DTEarlyStopDecider {
             }
             this.size += 1;
 
-            if (this.size >= this.capacity) {
-                return true;
-            }
-            return false;
+            return this.size >= this.capacity;
         }
 
         /**
          * Get the minimal value in the queue. Should be called when the queue is full.
+         *
          * @return the value of the minimal value of the queue
          */
         double getQueueMin() {
@@ -248,7 +243,7 @@ public class DTEarlyStopDecider {
     /**
      * Generate recursive average value gain.
      */
-    private class AverageQueue {
+    private static class AverageQueue {
         /**
          * The max capacity of this queue
          */
@@ -275,6 +270,7 @@ public class DTEarlyStopDecider {
 
         /**
          * Add element into the queue
+         *
          * @param element the element inset into the queue
          * @return false if the queue is not reach {@link #capacity} yet, else true
          */
@@ -296,6 +292,7 @@ public class DTEarlyStopDecider {
 
         /**
          * Get the iteration gain of current insert value
+         *
          * @return the iteration gain of the current value
          */
         double getGain() {
