@@ -51,7 +51,7 @@ public class UpdateBinningInfoReducer extends Reducer<IntWritable, BinningInfoWr
 
     private final static Logger LOG = LoggerFactory.getLogger(UpdateBinningInfoReducer.class);
 
-    private static final int MAX_CATEGORICAL_BINC_COUNT = 4000;
+    private static final int MAX_CATEGORICAL_BINC_COUNT = 5000;
 
     private static final double EPS = 1e-6;
 

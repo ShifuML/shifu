@@ -15,6 +15,7 @@
  */
 package ml.shifu.shifu.core.dtrain.dt;
 
+import java.io.BufferedInputStream;
 import java.io.DataInputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -23,6 +24,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.zip.GZIPInputStream;
 
 import ml.shifu.shifu.core.dtrain.CommonConstants;
 
@@ -541,7 +543,23 @@ public class IndependentTreeModel {
      * Load model instance from stream like model0.gbt or model0.rf, user can specify isConvertToProb parameter
      */
     public static IndependentTreeModel loadFromStream(InputStream input, boolean isConvertToProb) throws IOException {
-        DataInputStream dis = new DataInputStream(input);
+        DataInputStream dis = null;
+        // check if gzip or not
+        try {
+            byte[] header = new byte[2];
+            BufferedInputStream bis = new BufferedInputStream(input);
+            bis.mark(2);
+            int result = bis.read(header);
+            bis.reset();
+            int ss = (header[0] & 0xff) | ((header[1] & 0xff) << 8);
+            if(result != -1 && ss == GZIPInputStream.GZIP_MAGIC) {
+                dis = new DataInputStream(new GZIPInputStream(bis));
+            } else {
+                dis = new DataInputStream(bis);
+            }
+        } catch (java.io.IOException e) {
+            dis = new DataInputStream(input);
+        }
 
         int version = dis.readInt();
         String algorithm = dis.readUTF();
