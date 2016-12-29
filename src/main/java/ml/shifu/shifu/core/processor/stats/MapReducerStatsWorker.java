@@ -127,8 +127,8 @@ public class MapReducerStatsWorker extends AbstractStatsExecutor {
                 modelConfig.getDataSet().getSource());
 
         log.info("this.pathFinder.getOtherConfigs() => " + this.pathFinder.getOtherConfigs());
-        PigExecutor.getExecutor().submitJob(modelConfig, pathFinder.getScriptPath("scripts/StatsSpdtI.pig"),
-                paramsMap, modelConfig.getDataSet().getSource(), this.pathFinder);
+        PigExecutor.getExecutor().submitJob(modelConfig, pathFinder.getScriptPath("scripts/StatsSpdtI.pig"), paramsMap,
+                modelConfig.getDataSet().getSource(), this.pathFinder);
         // update
         log.info("Updating binning info ...");
         updateBinningInfoWithMRJob();
@@ -356,8 +356,8 @@ public class MapReducerStatsWorker extends AbstractStatsExecutor {
                     config.getColumnStats().setKurtosis(parseDouble(raw[26]));
                 }
             } catch (Exception e) {
-                log.error(String.format("Fail to process following column : %s name: %s error: %s", columnNum,
-                        this.columnConfigList.get(columnNum).getColumnName(), e.getMessage()), e);
+                log.error(String.format("Fail to process following column : %s name: %s error: %s ::: %s", columnNum,
+                        this.columnConfigList.get(columnNum).getColumnName(), e.getMessage()), e, Arrays.toString(raw));
                 continue;
             }
         }
@@ -399,9 +399,9 @@ public class MapReducerStatsWorker extends AbstractStatsExecutor {
                     modelConfig.getPsiColumnName());
 
             if(columnConfig == null || (!columnConfig.isMeta() && !columnConfig.isCategorical())) {
-                log.warn("Unable to use the PSI column {} specify in ModelConfig to compute PSI\n" +
-                                "neither meta nor categorical type",
-                        columnConfig != null ? columnConfig.getColumnName() : "unknown");
+                log.warn("Unable to use the PSI column {} specify in ModelConfig to compute PSI\n"
+                        + "neither meta nor categorical type", columnConfig != null ? columnConfig.getColumnName()
+                        : "unknown");
 
                 return;
             }
