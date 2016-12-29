@@ -99,12 +99,9 @@ public class VariableSelector {
             return;
         }
         int[] inputOutputIndex = DTrainUtils.getInputOutputCandidateCounts(columnConfigList);
-        log.info("inputOutputIndex:"+inputOutputIndex[0]+" "+inputOutputIndex[1]+" "+inputOutputIndex[2]);
         int inputNodeCount = inputOutputIndex[0] == 0 ? inputOutputIndex[2] : inputOutputIndex[0];
-        log.info("inputNodeCount:"+inputNodeCount);
         Float filterOutRatio = modelConfig.getVarSelect().getFilterOutRatio();
         int targetCnt = (int) (inputNodeCount * (1.0f - filterOutRatio));
-        log.info("target_num:"+targetCnt);
         modelConfig.getVarSelect().setFilterNum(targetCnt);
     }
 

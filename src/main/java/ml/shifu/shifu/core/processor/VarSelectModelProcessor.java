@@ -199,7 +199,6 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
         }
         List<Map<Integer, MutablePair<String, Double>>> importanceList = new ArrayList<Map<Integer, MutablePair<String, Double>>>();
         Map<Integer, MutablePair<String, Double>> mergedResult = null;
-        log.info("num of models:" + models.size());
         for(BasicML basicModel: models) {
             if(basicModel instanceof TreeModel) {
                 TreeModel model = (TreeModel) basicModel;
