@@ -15,6 +15,7 @@
  */
 package ml.shifu.shifu.core.dtrain.dt;
 
+import java.io.DataOutputStream;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -23,6 +24,7 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Properties;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.zip.GZIPOutputStream;
 
 import ml.shifu.guagua.master.BasicMasterInterceptor;
 import ml.shifu.guagua.master.MasterContext;
@@ -295,9 +297,10 @@ public class DTOutput extends BasicMasterInterceptor<DTMasterParams, DTWorkerPar
     }
 
     private void writeModelToFileSystem(List<TreeNode> trees, Path out) {
-        FSDataOutputStream fos = null;
+        DataOutputStream fos = null;
+        
         try {
-            fos = FileSystem.get(new Configuration()).create(out);
+            fos = new DataOutputStream(new GZIPOutputStream(FileSystem.get(new Configuration()).create(out)));
             LOG.info("Writing results to {}", out);
             // version
             fos.writeInt(CommonConstants.TREE_FORMAT_VERSION);
