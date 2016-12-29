@@ -232,8 +232,7 @@ public class MapReducerStatsWorker extends AbstractStatsExecutor {
 
         // one can set guagua conf in shifuconfig
         for(Map.Entry<Object, Object> entry: Environment.getProperties().entrySet()) {
-            if(entry.getKey().toString().startsWith("nn") || entry.getKey().toString().startsWith("guagua")
-                    || entry.getKey().toString().startsWith("shifu") || entry.getKey().toString().startsWith("mapred")) {
+            if(CommonUtils.isHadoopConfigurationInjected(entry.getKey().toString())) {
                 conf.set(entry.getKey().toString(), entry.getValue().toString());
             }
         }
@@ -356,8 +355,8 @@ public class MapReducerStatsWorker extends AbstractStatsExecutor {
                     config.getColumnStats().setKurtosis(parseDouble(raw[26]));
                 }
             } catch (Exception e) {
-                log.error(String.format("Fail to process following column : %s name: %s error: %s ::: %s", columnNum,
-                        this.columnConfigList.get(columnNum).getColumnName(), e.getMessage()), e, Arrays.toString(raw));
+                log.error(String.format("Fail to process following column : %s name: %s error: %s", columnNum,
+                        this.columnConfigList.get(columnNum).getColumnName(), e.getMessage()), e);
                 continue;
             }
         }
