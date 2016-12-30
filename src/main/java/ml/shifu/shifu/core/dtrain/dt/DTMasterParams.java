@@ -30,7 +30,14 @@ import ml.shifu.guagua.io.HaltBytable;
  * 
  * <p>
  * Every iteration, tree root nodes {@link #trees} are transferred to avoid maintain such updated trees in workers.
- * TODO, consider add cache in worker computable instance to avoid a big tree transferred from master each time.
+ * 
+ * <p>
+ * Every time for Random Forest, all {@link #trees} will be transfered to workers. While for GBDT, only current tree
+ * will be transfered to workers. Worker recover from checkpoint trees in each iteration from worker.
+ * 
+ * <p>
+ * {@link #tmpTrees} is transient and only for GBDT, in {@link DTOutput}, {@link #tmpTrees} is used to save model to
+ * HDFS while not sent to workers.
  * 
  * @author Zhang David (pengzhang@paypal.com)
  */
@@ -88,7 +95,7 @@ public class DTMasterParams extends HaltBytable {
 
     /**
      * Tmp trees and reference from DTMaster#trees, which cannot and will not be serialized from master worker
-     * iteration, only for DTOutput reference
+     * iteration, only for DTOutput reference.
      */
     private List<TreeNode> tmpTrees;
 
