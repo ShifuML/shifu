@@ -145,7 +145,7 @@ public class DTOutput extends BasicMasterInterceptor<DTMasterParams, DTWorkerPar
         } else if(isGBDT) {
             // for gbdt, only store trees are all built well
             if(this.treeNum >= 10 && context.getMasterResult().isSwitchToNextTree()
-                    && context.getMasterResult().getTmpTrees().size() % (this.treeNum / 10) == 0) {
+                    && (context.getMasterResult().getTmpTrees().size() - 1) % (this.treeNum / 10) == 0) {
                 final List<TreeNode> trees = context.getMasterResult().getTmpTrees();
                 if(trees.size() > 1) {
                     Thread tmpModelPersistThread = new Thread(new Runnable() {
@@ -158,7 +158,7 @@ public class DTOutput extends BasicMasterInterceptor<DTMasterParams, DTWorkerPar
                             Path out = new Path(context.getProps().getProperty(CommonConstants.GUAGUA_OUTPUT));
                             writeModelToFileSystem(subTrees, out);
                             // last one is newest one with only ROOT node, should be excluded
-                            saveTmpModelToHDFS(context.getCurrentIteration(), subTrees);
+                            saveTmpModelToHDFS(subTrees.size(), subTrees);
                         }
                     }, "saveTmpNNToHDFS thread");
                     tmpModelPersistThread.setDaemon(true);
@@ -298,10 +298,11 @@ public class DTOutput extends BasicMasterInterceptor<DTMasterParams, DTWorkerPar
 
     private void writeModelToFileSystem(List<TreeNode> trees, Path out) {
         DataOutputStream fos = null;
-        
+
         try {
-            fos = new DataOutputStream(new GZIPOutputStream(FileSystem.get(new Configuration()).create(out)));
-            LOG.info("Writing results to {}", out);
+             fos = new DataOutputStream(new GZIPOutputStream(FileSystem.get(new Configuration()).create(out)));
+//            fos = new DataOutputStream(FileSystem.get(new Configuration()).create(out));
+            LOG.info("Writing  {} trees to {}.", trees.size(), out);
             // version
             fos.writeInt(CommonConstants.TREE_FORMAT_VERSION);
             fos.writeUTF(modelConfig.getAlgorithm());
