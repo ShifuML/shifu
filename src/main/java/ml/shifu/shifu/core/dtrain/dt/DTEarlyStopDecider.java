@@ -19,32 +19,26 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * {@link DTEarlyStopDecider} will monitor the train error and validation error in the training process. When it
+ * {@link DTEarlyStopDecider} monitor the train error and validation error in the training process. When it
  * identified if the training is over fit or the effort is not worth more training loop, method {@link #add} will
  * return true.
  * <p>
- * {@link MinAverageDecider}
- * 1, Filter Algorithm
- * After I tried several well-known filter algorithm, it all not as good as I want. I tried plot these data by python,
- * and found these training error data varies in loop by tree depth. On the other hand, we have a tendency to get the
- * minimal training error, So I divided these error data into different window by the size of tree depth. And for each
- * window picks the minimum value as the value represent value.
+ * {@link MinAverageDecider} 1, Filter Algorithm After I tried several well-known filter algorithm, it all not as good
+ * as I want. I tried plot these data by python, and found these training error data varies in loop by tree depth. On
+ * the other hand, we have a tendency to get the minimal training error, So I divided these error data into different
+ * window by the size of tree depth. And for each window picks the minimum value as the value represent value.
  * <p>
  * Basic on the upper sample values, I adopt a further more filter algorithm: Recursive filtering. Use the average of
  * the last queue size value as the value for the new value and insert into the queue for further operation.
  * <p>
- * 2, Iteration Gain
- * Iteration gain is the reduce value of the error for each loop.
+ * 2, Iteration Gain Iteration gain is the reduce value of the error for each loop.
  * <p>
+ * {@link #canStop()} 1, Identify the training is over fit When the validation iteration gain is negative for continue 3
+ * times, we consider this algorithm is over fitted.
  * <p>
- * {@link #canStop()}
- * 1, Identify the training is over fit
- * When the validation iteration gain is negative for continue 3 times, we consider this algorithm is over fitted.
- * <p>
- * 2, Identify not worth more training iteration
- * If the iteration gain is less than one tenth of the max gain value for continue 3 times, we consider it worth no more
- * iteration.
- *
+ * 2, Identify not worth more training iteration If the iteration gain is less than one tenth of the max gain value for
+ * continue 3 times, we consider it worth no more iteration.
+ * 
  * @author haifwu
  */
 class DTEarlyStopDecider {
@@ -53,7 +47,7 @@ class DTEarlyStopDecider {
     /**
      * if 3 times continue reach the stop requirements, decider will make stop decision
      */
-    private static final int magicNumber = 3;
+    private static final int MAGIC_NUMBER = 3;
     /**
      * Max Depth of a tree
      */
@@ -78,20 +72,20 @@ class DTEarlyStopDecider {
     private int validationGainContinueNegCount;
 
     public DTEarlyStopDecider(int treeDepth) {
-        if (treeDepth <= 0) {
+        if(treeDepth <= 0) {
             throw new IllegalArgumentException("Tree num should not be less or equal than zero!");
         }
 
         this.treeDepth = treeDepth;
 
-        trainErrorDecider = new MinAverageDecider(this.treeDepth, this.treeDepth * this.magicNumber) {
+        trainErrorDecider = new MinAverageDecider(this.treeDepth, this.treeDepth * MAGIC_NUMBER) {
             @Override
             public boolean getDecide() {
                 return this.gain < this.maxGain / 1000;
             }
         };
 
-        validationErrorDecider = new MinAverageDecider(this.treeDepth, this.treeDepth * this.magicNumber) {
+        validationErrorDecider = new MinAverageDecider(this.treeDepth, this.treeDepth * MAGIC_NUMBER) {
             @Override
             public boolean getDecide() {
                 return this.gain < 0;
@@ -101,17 +95,19 @@ class DTEarlyStopDecider {
 
     /**
      * Add new iteration's train error and validation error into the decider.
-     *
-     * @param trainError training error
-     * @param validationError validation error
+     * 
+     * @param trainError
+     *            training error
+     * @param validationError
+     *            validation error
      * @return true if no more iteration needed, else false
      */
     public boolean add(double trainError, double validationError) {
         boolean trainErrorDecideReady = this.trainErrorDecider.add(trainError);
         boolean validationDecideReady = this.validationErrorDecider.add(validationError);
 
-        if (trainErrorDecideReady) {
-            if(trainErrorDecider.getDecide()){
+        if(trainErrorDecideReady) {
+            if(trainErrorDecider.getDecide()) {
                 this.trainGainContinueLowerCount += 1;
                 LOG.warn("Continue {} positive sign for not worth more iteration!", this.trainGainContinueLowerCount);
             } else {
@@ -119,8 +115,8 @@ class DTEarlyStopDecider {
             }
         }
 
-        if (validationDecideReady) {
-            if(validationErrorDecider.getDecide()){
+        if(validationDecideReady) {
+            if(validationErrorDecider.getDecide()) {
                 this.validationGainContinueNegCount += 1;
                 LOG.warn("Continue {} positive sign for not worth more iteration!", this.validationGainContinueNegCount);
             } else {
@@ -132,7 +128,7 @@ class DTEarlyStopDecider {
     }
 
     private boolean canStop() {
-        return this.validationGainContinueNegCount >= magicNumber || this.trainGainContinueLowerCount >= magicNumber;
+        return this.validationGainContinueNegCount >= MAGIC_NUMBER || this.trainGainContinueLowerCount >= MAGIC_NUMBER;
     }
 
     static abstract class MinAverageDecider {
@@ -162,22 +158,22 @@ class DTEarlyStopDecider {
 
         /**
          * Add a value into the decider
-         *
-         * @param element the value to insert to the decide
+         * 
+         * @param element
+         *            the value to insert to the decide
          * @return true if new gain generated, and decide is ready to get
          */
         public boolean add(double element) {
-            if (!this.minQueue.get().add(element)) {
+            if(!this.minQueue.get().add(element)) {
                 return false;
             }
-            double minValue = this.minQueue.get().getQueueMin();
             LOG.debug("MinQueue is full, get min value: {}", element);
-            if (!this.averageQueue.add(element)) {
+            if(!this.averageQueue.add(element)) {
                 return false;
             }
             this.gain = this.averageQueue.getGain();
             LOG.debug("Average Queue is full, get gain value: {}", this.gain);
-            if (this.gain > this.maxGain) {
+            if(this.gain > this.maxGain) {
                 this.maxGain = this.gain;
             }
             return true;
@@ -215,12 +211,13 @@ class DTEarlyStopDecider {
 
         /**
          * Add an element to the queue
-         *
-         * @param element the value to add
+         * 
+         * @param element
+         *            the value to add
          * @return true if the queue is full, and ready to generate the minimal value of this window
          */
         public boolean add(double element) {
-            if (element < this.min) {
+            if(element < this.min) {
                 this.min = element;
             }
             this.size += 1;
@@ -230,9 +227,10 @@ class DTEarlyStopDecider {
 
         /**
          * Get the minimal value in the queue. Should be called when the queue is full.
-         *
+         * 
          * @return the value of the minimal value of the queue
          */
+        @SuppressWarnings("unused")
         double getQueueMin() {
             double queueMin = this.min;
             this.clear();
@@ -270,14 +268,15 @@ class DTEarlyStopDecider {
 
         /**
          * Add element into the queue
-         *
-         * @param element the element inset into the queue
+         * 
+         * @param element
+         *            the element inset into the queue
          * @return false if the queue is not reach {@link #capacity} yet, else true
          */
         public boolean add(double element) {
             int index = (int) this.totalCount % this.capacity;
             this.totalCount += 1;
-            if (this.totalCount <= this.capacity) {
+            if(this.totalCount <= this.capacity) {
                 // Before queue full, we calculate the sum value by add new value
                 this.sum += element;
                 this.queueArray[index] = this.sum / this.totalCount;
@@ -292,7 +291,7 @@ class DTEarlyStopDecider {
 
         /**
          * Get the iteration gain of current insert value
-         *
+         * 
          * @return the iteration gain of the current value
          */
         double getGain() {

@@ -869,7 +869,6 @@ public class DTMaster extends AbstractMasterComputable<DTMasterParams, DTWorkerP
         }
 
         // assert this.maxStatsMemory <= Math.min(Runtime.getRuntime().maxMemory() * 0.6, 800 * 1024 * 1024L);
-        // todo # of trees
         this.treeNum = Integer.valueOf(validParams.get("TreeNum").toString());;
         this.isRF = ALGORITHM.RF.toString().equalsIgnoreCase(modelConfig.getAlgorithm());
         this.isGBDT = ALGORITHM.GBT.toString().equalsIgnoreCase(modelConfig.getAlgorithm());

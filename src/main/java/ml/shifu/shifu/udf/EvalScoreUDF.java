@@ -142,9 +142,9 @@ public class EvalScoreUDF extends AbstractTrainerUDF<Tuple> {
          * }
          */
 
-        long startTime = System.currentTimeMillis();
+        long startTime = System.nanoTime();
         CaseScoreResult cs = modelRunner.compute(rawDataMap);
-        long runInterval = System.currentTimeMillis() - startTime;
+        long runInterval = (System.nanoTime() - startTime) / 1000L;
 
         if(cs == null) {
             if(System.currentTimeMillis() % 50 == 0) {
