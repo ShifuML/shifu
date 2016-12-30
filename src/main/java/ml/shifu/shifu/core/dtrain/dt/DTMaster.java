@@ -237,13 +237,13 @@ public class DTMaster extends AbstractMasterComputable<DTMasterParams, DTWorkerP
     /**
      * DTEarlyStopDecider will decide automatic whether it need further training,  this only for GBDT.
      */
-    @SuppressWarnings("unused")
-    private DTEarlyStopDecider dtEarlyStopDecider;
+//    @SuppressWarnings("unused")
+//    private DTEarlyStopDecider dtEarlyStopDecider;
 
     /**
      * If earlyStopEnabled is true, the early stop feature will be enabled
      */
-    private boolean earlyStopEnabled = false;
+//    private boolean earlyStopEnabled = false;
 
     @Override
     public DTMasterParams doCompute(MasterContext<DTMasterParams, DTWorkerParams> context) {
@@ -916,13 +916,13 @@ public class DTMaster extends AbstractMasterComputable<DTMasterParams, DTWorkerP
 
         this.toDoQueue = new LinkedList<TreeNode>();
 
-        if(validParams.containsKey("EnableEarlyStop")){
-            this.earlyStopEnabled = Boolean.valueOf(validParams.get("EnableEarlyStop").toString());
-        }
-
-        if(this.earlyStopEnabled){
-            this.dtEarlyStopDecider = new DTEarlyStopDecider(this.maxDepth);
-        }
+//        if(validParams.containsKey("EnableEarlyStop")){
+//            this.earlyStopEnabled = Boolean.valueOf(validParams.get("EnableEarlyStop").toString());
+//        }
+//
+//        if(this.earlyStopEnabled){
+//            this.dtEarlyStopDecider = new DTEarlyStopDecider(this.maxDepth);
+//        }
 
         if(this.isLeafWise) {
             this.toSplitQueue = new PriorityQueue<TreeNode>(64, new Comparator<TreeNode>() {
