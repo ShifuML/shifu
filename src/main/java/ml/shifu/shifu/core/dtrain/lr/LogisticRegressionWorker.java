@@ -180,7 +180,7 @@ public class LogisticRegressionWorker
         }
         double memoryFraction = Double.valueOf(context.getProps().getProperty("guagua.data.memoryFraction", "0.6"));
         LOG.info("Max heap memory: {}, fraction: {}", Runtime.getRuntime().maxMemory(), memoryFraction);
-        double crossValidationRate = this.modelConfig.getCrossValidationRate();
+        double crossValidationRate = this.modelConfig.getValidSetRate();
         String tmpFolder = context.getProps().getProperty("guagua.data.tmpfolder", "tmp");
         this.trainingData = new BytableMemoryDiskList<Data>(
                 (long) (Runtime.getRuntime().maxMemory() * memoryFraction * (1 - crossValidationRate)), tmpFolder
@@ -290,7 +290,7 @@ public class LogisticRegressionWorker
         LOG.info("    - # Records of the Master Data Set: {}.", this.count);
         LOG.info("    - Bagging Sample Rate: {}.", this.modelConfig.getBaggingSampleRate());
         LOG.info("    - Bagging With Replacement: {}.", this.modelConfig.isBaggingWithReplacement());
-        LOG.info("        - Cross Validation Rate: {}.", this.modelConfig.getCrossValidationRate());
+        LOG.info("        - Cross Validation Rate: {}.", this.modelConfig.getValidSetRate());
         LOG.info("        - # Records of the Training Set: {}.", this.trainingData.size());
         LOG.info("        - # Records of the Validation Set: {}.", this.testingData.size());
     }
@@ -301,12 +301,6 @@ public class LogisticRegressionWorker
         ++this.count;
         if((this.count) % 100000 == 0) {
             LOG.info("Read {} records.", this.count);
-        }
-        double baggingSampleRate = this.modelConfig.getBaggingSampleRate();
-        // if fixInitialInput = false, we only compare random value with baggingSampleRate to avoid parsing data.
-        // if fixInitialInput = true, we should use hashcode after parsing.
-        if(!this.modelConfig.isFixInitialInput() && Double.compare(Math.random(), baggingSampleRate) >= 0) {
-            return;
         }
         String line = currentValue.getWritable().toString();
         float[] inputData = new float[inputNum];
@@ -352,10 +346,30 @@ public class LogisticRegressionWorker
             index += 1;
         }
 
+        // if fixInitialInput = false, we only compare random value with baggingSampleRate to avoid parsing data.
+        // if fixInitialInput = true, we should use hashcode after parsing.
+        double baggingSampleRate = this.modelConfig.getBaggingSampleRate();
+        if(!this.modelConfig.isFixInitialInput() && Double.compare(Math.random(), baggingSampleRate) >= 0) {
+            // for negative tags, do sampleNegOnly logic
+            if(modelConfig.getTrain().getSampleNegOnly()) {
+                if(modelConfig.isRegression() && Double.compare(outputData[0] + 0d, 0d) == 0) {
+                    return;
+                }
+            } else {
+                return;// normal sampling
+            }
+        }
         // if fixInitialInput = true, we should use hashcode to sample.
         long longBaggingSampleRate = Double.valueOf(baggingSampleRate * 100).longValue();
         if(modelConfig.isFixInitialInput() && hashcode % 100 >= longBaggingSampleRate) {
-            return;
+            // for negative tags, do sampleNegOnly logic
+            if(modelConfig.getTrain().getSampleNegOnly()) {
+                if(modelConfig.isRegression() && Double.compare(outputData[0] + 0d, 0d) == 0) {
+                    return;
+                }
+            } else {
+                return;// normal sampling
+            }
         }
 
         this.sampleCount += 1;
@@ -396,7 +410,7 @@ public class LogisticRegressionWorker
             this.trainingData.append(record);
             return;
         }
-        double crossValidationRate = this.modelConfig.getCrossValidationRate();
+        double crossValidationRate = this.modelConfig.getValidSetRate();
         if(this.modelConfig.isFixInitialInput()) {
             long longCrossValidation = Double.valueOf(crossValidationRate * 100).longValue();
             if(hashcode % 100 < longCrossValidation) {

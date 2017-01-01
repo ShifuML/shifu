@@ -23,7 +23,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Iterator;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -62,6 +61,7 @@ import ml.shifu.shifu.core.dtrain.DTrainUtils;
 import ml.shifu.shifu.core.dtrain.dt.DTWorkerParams.NodeStats;
 import ml.shifu.shifu.core.dtrain.gs.GridSearch;
 import ml.shifu.shifu.fs.ShifuFileUtils;
+import ml.shifu.shifu.util.ClassUtils;
 import ml.shifu.shifu.util.CommonUtils;
 
 import org.apache.commons.math3.distribution.PoissonDistribution;
@@ -344,7 +344,7 @@ public class DTWorker
         double memoryFraction = Double.valueOf(context.getProps().getProperty("guagua.data.memoryFraction", "0.6"));
         LOG.info("Max heap memory: {}, fraction: {}", Runtime.getRuntime().maxMemory(), memoryFraction);
 
-        double validationRate = this.modelConfig.getCrossValidationRate();
+        double validationRate = this.modelConfig.getValidSetRate();
         if(Double.compare(validationRate, 0d) != 0) {
             this.trainingData = new MemoryLimitedList<Data>(
                     (long) (Runtime.getRuntime().maxMemory() * memoryFraction * (1 - validationRate)),
@@ -353,7 +353,7 @@ public class DTWorker
                     (long) (Runtime.getRuntime().maxMemory() * memoryFraction * validationRate), new ArrayList<Data>());
         } else {
             this.trainingData = new MemoryLimitedList<Data>((long) (Runtime.getRuntime().maxMemory() * memoryFraction),
-                    new LinkedList<Data>());
+                    new ArrayList<Data>());
         }
         int[] inputOutputIndex = DTrainUtils.getNumericAndCategoricalInputAndOutputCounts(this.columnConfigList);
         // numerical + categorical = # of all input
@@ -382,7 +382,6 @@ public class DTWorker
         this.isRF = ALGORITHM.RF.toString().equalsIgnoreCase(modelConfig.getAlgorithm());
         this.isGBDT = ALGORITHM.GBT.toString().equalsIgnoreCase(modelConfig.getAlgorithm());
 
-        // TODO, using reflection
         String lossStr = validParams.get("Loss").toString();
         if(lossStr.equalsIgnoreCase("log")) {
             this.loss = new LogLoss();
@@ -390,8 +389,15 @@ public class DTWorker
             this.loss = new AbsoluteLoss();
         } else if(lossStr.equalsIgnoreCase("halfgradsquared")) {
             this.loss = new HalfGradSquaredLoss();
-        } else {
+        } else if(lossStr.equalsIgnoreCase("squared")) {
             this.loss = new SquaredLoss();
+        } else {
+            try {
+                this.loss = (Loss) ClassUtils.newInstance(Class.forName(lossStr));
+            } catch (ClassNotFoundException e) {
+                LOG.warn("Class not found for {}, using default SquaredLoss", lossStr);
+                this.loss = new SquaredLoss();
+            }
         }
 
         if(this.isGBDT) {
@@ -475,7 +481,6 @@ public class DTWorker
             this.random = new Random();
         }
 
-        int iii = 0, iiii = 0;
         for(Data data: this.trainingData) {
             if(this.isRF) {
                 for(TreeNode treeNode: trees) {
@@ -512,20 +517,10 @@ public class DTWorker
                     }
                     int currTreeIndex = trees.size() - 1;
 
-                    if(iii++ < 20) {
-                        LOG.debug("DEBUGDEBUG1: start currTreeIndex");
-                    }
                     if(lastMasterResult.isSwitchToNextTree()) {
                         if(currTreeIndex >= 1) {
                             Node node = trees.get(currTreeIndex - 1).getNode();
-                            if(iiii++ < 1) {
-                                LOG.debug("DEBUG: CURR tree is {}", node.toTree());
-                            }
                             Node predictNode = predictNodeIndex(node, data, false);
-                            if(iii++ < 20) {
-                                LOG.debug("DEBUGDEBUG2: start predictNode is : {}, {}, {}", predictNode.getId(),
-                                        predictNode.getPredict(), trees.get(currTreeIndex - 1).getTreeId());
-                            }
                             if(predictNode.getPredict() != null) {
                                 double predict = predictNode.getPredict().getPredict();
                                 // first tree logic, master must set it to first tree even second tree with ROOT is
@@ -547,16 +542,10 @@ public class DTWorker
                             }
                         }
                     }
+
                     if(context.getLastMasterResult().isFirstTree() && !lastMasterResult.isSwitchToNextTree()) {
                         Node currTree = trees.get(currTreeIndex).getNode();
-                        if(iiii++ < 1) {
-                            LOG.debug("debug: CURR tree is {}", currTree.toTree());
-                        }
                         Node predictNode = predictNodeIndex(currTree, data, true);
-                        if(iii++ < 20) {
-                            LOG.debug("DEBUGDEBUG3: start predictNode is : {}, {}, {}", predictNode.getId(),
-                                    predictNode.getPredict(), trees.get(currTreeIndex).getTreeId());
-                        }
                         if(predictNode.getPredict() != null) {
                             trainError += data.significance
                                     * loss.computeError((float) (predictNode.getPredict().getPredict()), data.label);
@@ -785,7 +774,7 @@ public class DTWorker
         LOG.info("    - # Records of the Master Data Set: {}.", this.count);
         LOG.info("    - Bagging Sample Rate: {}.", this.modelConfig.getBaggingSampleRate());
         LOG.info("    - Bagging With Replacement: {}.", this.modelConfig.isBaggingWithReplacement());
-        LOG.info("        - Cross Validation Rate: {}.", this.modelConfig.getCrossValidationRate());
+        LOG.info("        - Cross Validation Rate: {}.", this.modelConfig.getValidSetRate());
         LOG.info("        - # Records of the Training Set: {}.", this.trainingData.size());
         if(validationData != null) {
             LOG.info("        - # Records of the Validation Set: {}.", this.validationData.size());
@@ -866,16 +855,31 @@ public class DTWorker
             }
         } else if(columnConfig.isCategorical()) {
             short indexValue = (short) (columnConfig.getBinCategory().size());
-            if(data.inputs[inputIndex] < (short) (columnConfig.getBinCategory().size())) {
+            if(data.inputs[inputIndex] >= 0 && data.inputs[inputIndex] < (short) (columnConfig.getBinCategory().size())) {
                 indexValue = data.inputs[inputIndex];
             } else {
                 // for invalid category, set to last one
                 indexValue = (short) (columnConfig.getBinCategory().size());
             }
-            if(split.getLeftCategories().contains(indexValue)) {
+            if(split.getLeftOrRightCategories().contains(indexValue)) {
                 nextNode = currNode.getLeft();
             } else {
                 nextNode = currNode.getRight();
+            }
+
+            Set<Short> childCategories = split.getLeftOrRightCategories();
+            if(split.isLeft()) {
+                if(childCategories.contains(indexValue)) {
+                    nextNode = currNode.getLeft();
+                } else {
+                    nextNode = currNode.getRight();
+                }
+            } else {
+                if(childCategories.contains(indexValue)) {
+                    nextNode = currNode.getRight();
+                } else {
+                    nextNode = currNode.getLeft();
+                }
             }
         }
 
@@ -892,13 +896,6 @@ public class DTWorker
         this.count += 1;
         if((this.count) % 5000 == 0) {
             LOG.info("Read {} records.", this.count);
-        }
-
-        double baggingSampleRate = this.modelConfig.getBaggingSampleRate();
-        // if fixInitialInput = false, we only compare random value with baggingSampleRate to avoid parsing data.
-        // if fixInitialInput = true, we should use hashcode after parsing.
-        if(!modelConfig.isFixInitialInput() && Double.compare(Math.random(), baggingSampleRate) >= 0) {
-            return;
         }
 
         // hashcode for fixed input split in train and validation
@@ -1007,10 +1004,30 @@ public class DTWorker
             index += 1;
         }
 
+        double baggingSampleRate = this.modelConfig.getBaggingSampleRate();
+        // if fixInitialInput = false, we only compare random value with baggingSampleRate to avoid parsing data.
+        // if fixInitialInput = true, we should use hashcode after parsing.
+        if(!modelConfig.isFixInitialInput() && Double.compare(Math.random(), baggingSampleRate) >= 0) {
+            // for negative tags, do sampleNegOnly logic
+            if(modelConfig.getTrain().getSampleNegOnly()) {
+                if(modelConfig.isRegression() && Double.compare(ideal + 0d, 0d) == 0) {
+                    return;
+                }
+            } else {
+                return;// normal sampling
+            }
+        }
         // if fixInitialInput = true, we should use hashcode to sample.
         long longBaggingSampleRate = Double.valueOf(baggingSampleRate * 100).longValue();
         if(this.modelConfig.isFixInitialInput() && hashcode % 100 >= longBaggingSampleRate) {
-            return;
+            // for negative tags, do sampleNegOnly logic
+            if(modelConfig.getTrain().getSampleNegOnly()) {
+                if(modelConfig.isRegression() && Double.compare(ideal + 0d, 0d) == 0) {
+                    return;
+                }
+            } else {
+                return;// normal sampling
+            }
         }
         this.sampleCount += 1;
 
@@ -1057,7 +1074,7 @@ public class DTWorker
             this.trainingData.append(data);
             return;
         }
-        double validationRate = this.modelConfig.getCrossValidationRate();
+        double validationRate = this.modelConfig.getValidSetRate();
         if(Double.compare(validationRate, 0d) != 0) {
             if(this.modelConfig.isFixInitialInput()) {
                 long longValidation = Double.valueOf(validationRate * 100).longValue();

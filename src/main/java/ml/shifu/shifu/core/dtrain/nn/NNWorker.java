@@ -16,6 +16,7 @@
 package ml.shifu.shifu.core.dtrain.nn;
 
 import java.io.IOException;
+import java.util.BitSet;
 import java.util.concurrent.TimeUnit;
 
 import ml.shifu.guagua.ComputableMonitor;
@@ -55,20 +56,12 @@ public class NNWorker extends AbstractNNWorker<Text> {
             LOG.info("Read {} records.", super.count);
         }
 
-        double baggingSampleRate = super.modelConfig.getBaggingSampleRate();
-        // if fixInitialInput = false, we only compare random value with baggingSampleRate to avoid parsing data.
-        // if fixInitialInput = true, we should use hashcode after parsing.
-        if(!super.modelConfig.isFixInitialInput() && Double.compare(Math.random(), baggingSampleRate) >= 0) {
-            return;
-        }
-
         float[] inputs = new float[super.inputNodeCount];
         float[] ideal = new float[super.outputNodeCount];
 
         if(super.isDry) {
             // dry train, use empty data.
-            addDataPairToDataSet(0,
-                    new BasicFloatMLDataPair(new BasicFloatMLData(inputs), new BasicFloatMLData(ideal)));
+            addDataPairToDataSet(0, new BasicFloatMLDataPair(new BasicFloatMLData(inputs), new BasicFloatMLData(ideal)));
             return;
         }
 
@@ -128,12 +121,33 @@ public class NNWorker extends AbstractNNWorker<Text> {
             index += 1;
         }
 
+        // if fixInitialInput = false, we only compare random value with baggingSampleRate to avoid parsing data.
+        // if fixInitialInput = true, we should use hashcode after parsing.
+        double baggingSampleRate = super.modelConfig.getBaggingSampleRate();
+        if(!super.modelConfig.isFixInitialInput() && Double.compare(Math.random(), baggingSampleRate) >= 0) {
+            // for negative tags, do sampleNegOnly logic
+            if(modelConfig.getTrain().getSampleNegOnly()) {
+                if(modelConfig.isRegression() && Double.compare(ideal[0] + 0d, 0d) == 0) {
+                    return;
+                }
+            } else {
+                return;// normal sampling
+            }
+        }
         // if fixInitialInput = true, we should use hashcode to sample.
         long longBaggingSampleRate = Double.valueOf(baggingSampleRate * 100).longValue();
         if(super.modelConfig.isFixInitialInput() && hashcode % 100 >= longBaggingSampleRate) {
-            return;
+            // for negative tags, do sampleNegOnly logic
+            if(modelConfig.getTrain().getSampleNegOnly()) {
+                if(modelConfig.isRegression() && Double.compare(ideal[0] + 0d, 0d) == 0) {
+                    return;
+                }
+            } else {
+                return;// normal sampling
+            }
         }
 
+        // count stats after sampling
         super.sampleCount += 1;
 
         FloatMLDataPair pair = new BasicFloatMLDataPair(new BasicFloatMLData(inputs), new BasicFloatMLData(ideal));
@@ -159,6 +173,15 @@ public class NNWorker extends AbstractNNWorker<Text> {
     @Override
     public void initRecordReader(GuaguaFileSplit fileSplit) throws IOException {
         super.setRecordReader(new GuaguaLineRecordReader(fileSplit));
+    }
+    
+    public static void main(String[] args) {
+        BitSet bs = new BitSet(20);
+        bs.set(1);
+        System.out.println(bs.get(1));
+        System.out.println(bs.get(20));
+        System.out.println(bs.size());
+        System.out.println(bs.get(25));
     }
 
 }

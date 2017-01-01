@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright [2012-2014] PayPal Software Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -786,6 +786,10 @@ public final class CommonUtils {
         }
     }
 
+    public static List<BasicML> loadBasicModels(final String modelsPath, final ALGORITHM alg) throws IOException {
+        return loadBasicModels(modelsPath, alg, false);
+    }
+
     /**
      * Load neural network models from specified file path
      * 
@@ -795,7 +799,8 @@ public final class CommonUtils {
      * @throws IOException
      *             - throw exception when loading model files
      */
-    public static List<BasicML> loadBasicModels(final String modelsPath, final ALGORITHM alg) throws IOException {
+    public static List<BasicML> loadBasicModels(final String modelsPath, final ALGORITHM alg, boolean isConvertToProb)
+            throws IOException {
         if(modelsPath == null || alg == null || ALGORITHM.DT.equals(alg)) {
             throw new IllegalArgumentException("The model path shouldn't be null");
         }
@@ -831,6 +836,8 @@ public final class CommonUtils {
                         models.add(BasicML.class.cast(EncogDirectoryPersistence.loadObject(is)));
                     } else if(ALGORITHM.LR.equals(alg)) {
                         models.add(LR.loadFromStream(is));
+                    } else if(ALGORITHM.GBT.equals(alg) || ALGORITHM.RF.equals(alg)) {
+                        models.add(TreeModel.loadFromStream(is, isConvertToProb));
                     }
                 } finally {
                     IOUtils.closeQuietly(is);
@@ -879,6 +886,7 @@ public final class CommonUtils {
 
         Map<String, String> pigParamMap = new HashMap<String, String>();
         pigParamMap.put(Constants.NUM_PARALLEL, Environment.getInt(Environment.HADOOP_NUM_PARALLEL, 400).toString());
+        log.info("jar path is {}", pathFinder.getJarPath());
         pigParamMap.put(Constants.PATH_JAR, pathFinder.getJarPath());
 
         pigParamMap.put(Constants.PATH_RAW_DATA, modelConfig.getDataSetRawPath());
@@ -919,6 +927,7 @@ public final class CommonUtils {
         }
         Map<String, String> pigParamMap = new HashMap<String, String>();
         pigParamMap.put(Constants.NUM_PARALLEL, Environment.getInt(Environment.HADOOP_NUM_PARALLEL, 400).toString());
+        log.info("jar path is {}", pathFinder.getJarPath());
         pigParamMap.put(Constants.PATH_JAR, pathFinder.getJarPath());
 
         pigParamMap.put(Constants.PATH_RAW_DATA, modelConfig.getDataSetRawPath());

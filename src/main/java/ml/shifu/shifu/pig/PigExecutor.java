@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright [2012-2014] PayPal Software Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -16,6 +16,7 @@
 package ml.shifu.shifu.pig;
 
 import java.io.ByteArrayInputStream;
+import java.io.File;
 import java.io.IOException;
 import java.util.Map;
 
@@ -131,7 +132,14 @@ public class PigExecutor {
         }
 
         log.debug("Pig submit parameters: {}", pigParamsMap);
-        pigServer.registerScript(pigScriptPath, pigParamsMap);
+        if(new File(pigScriptPath).isAbsolute()) {
+            log.info("absolute path is {}", pigScriptPath);
+            pigServer.registerScript(pigScriptPath, pigParamsMap);
+        } else {
+            log.info("relative path is {}", pigScriptPath);
+            pigServer.registerScript(PigExecutor.class.getClassLoader().getResourceAsStream(pigScriptPath),
+                    pigParamsMap);
+        }
     }
 
     public void submitJob(SourceType sourceType, String pigScripts) throws IOException {

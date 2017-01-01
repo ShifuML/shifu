@@ -18,7 +18,6 @@ package ml.shifu.shifu.core.dtrain.dt;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
-import java.util.HashSet;
 import java.util.Set;
 
 import ml.shifu.guagua.io.Bytable;
@@ -52,19 +51,27 @@ public class Split implements Bytable {
     private double threshold;
 
     /**
-     * Indexes of left categories, list of categories will be saved in model files or in TreeModel， Change to short type
-     * to save space, short is safe so far as max bin size is limit to Short.MAX_VALUE.
+     * For categorical feature, if isLeft = true, {@link #leftOrRightCategories} stores left categories. If false,
+     * {@link #leftOrRightCategories} stores right categories.
      */
-    private Set<Short> leftCategories;
+    private boolean isLeft = true;;
+
+    /**
+     * Indexes of left categories or right categories, list of categories will be saved in model files or in
+     * TreeModel as short indexes to save space, short is safe so far as max bin size is limit to Short.MAX_VALUE.
+     */
+    private Set<Short> leftOrRightCategories;
 
     public Split() {
     }
 
-    public Split(int columnNum, FeatureType featureType, double threshold, Set<Short> leftCategories) {
+    public Split(int columnNum, FeatureType featureType, double threshold, boolean isLeft,
+            Set<Short> leftOrRightCategories) {
         this.columnNum = columnNum;
         this.featureType = featureType;
         this.threshold = threshold;
-        this.leftCategories = leftCategories;
+        this.isLeft = isLeft;
+        this.leftOrRightCategories = leftOrRightCategories;
     }
 
     /**
@@ -91,8 +98,8 @@ public class Split implements Bytable {
     /**
      * @return the leftCategories
      */
-    public Set<Short> getLeftCategories() {
-        return leftCategories;
+    public Set<Short> getLeftOrRightCategories() {
+        return leftOrRightCategories;
     }
 
     /**
@@ -123,8 +130,8 @@ public class Split implements Bytable {
      * @param leftCategories
      *            the leftCategories to set
      */
-    public void setLeftCategories(Set<Short> leftCategories) {
-        this.leftCategories = leftCategories;
+    public void setLeftOrRightCategories(Set<Short> leftCategories) {
+        this.leftOrRightCategories = leftCategories;
     }
 
     @Override
@@ -135,12 +142,13 @@ public class Split implements Bytable {
 
         switch(this.featureType) {
             case CATEGORICAL:
-                if(leftCategories == null) {
-                    out.writeInt(0);
+                out.writeBoolean(this.isLeft);
+                if(leftOrRightCategories == null) {
+                    out.writeBoolean(true);
                 } else {
-                    out.writeInt(this.leftCategories.size());
-                    for(short categoryIndex: this.leftCategories) {
-                        out.writeShort(categoryIndex);
+                    out.writeBoolean(false);
+                    if(leftOrRightCategories instanceof Bytable) {
+                        ((Bytable) leftOrRightCategories).write(out);
                     }
                 }
                 break;
@@ -157,18 +165,34 @@ public class Split implements Bytable {
 
         switch(this.featureType) {
             case CATEGORICAL:
-                int len = in.readInt();
-                if(len > 0) {
-                    this.leftCategories = new HashSet<Short>();
-                    for(int i = 0; i < len; i++) {
-                        this.leftCategories.add(in.readShort());
-                    }
+                this.isLeft = in.readBoolean();
+                boolean isNull = in.readBoolean();
+                if(isNull) {
+                    leftOrRightCategories = null;
+                } else {
+                    leftOrRightCategories = new SimpleBitSet<Short>();
+                    ((Bytable) leftOrRightCategories).readFields(in);
                 }
                 break;
             case CONTINUOUS:
                 this.threshold = in.readDouble();
                 break;
         }
+    }
+
+    /**
+     * @return the isLeft
+     */
+    public boolean isLeft() {
+        return isLeft;
+    }
+
+    /**
+     * @param isLeft
+     *            the isLeft to set
+     */
+    public void setLeft(boolean isLeft) {
+        this.isLeft = isLeft;
     }
 
     /*
@@ -179,7 +203,7 @@ public class Split implements Bytable {
     @Override
     public String toString() {
         return "Split [featureIndex=" + columnNum + ", featureType=" + featureType + ", threshold=" + threshold
-                + ", leftCategories=" + leftCategories + "]";
+                + ", leftCategories=" + leftOrRightCategories + "]";
     }
 
 }
