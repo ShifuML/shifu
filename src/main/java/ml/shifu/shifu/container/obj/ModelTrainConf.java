@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright [2012-2014] PayPal Software Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -66,6 +66,11 @@ public class ModelTrainConf {
     private Double convergenceThreshold = Double.valueOf(0.0);
     private Integer numTrainEpochs = Integer.valueOf(100);
     private Integer epochsPerIteration = Integer.valueOf(1);
+    
+    /**
+     * Only sample negative records out
+     */
+    private Boolean sampleNegOnly = Boolean.FALSE;
 
     private Boolean trainOnDisk = Boolean.FALSE;
     private Boolean fixInitInput = Boolean.FALSE;
@@ -237,6 +242,7 @@ public class ModelTrainConf {
     /**
      * @return the epochsPerIteration
      */
+    @JsonIgnore
     public Integer getEpochsPerIteration() {
         return epochsPerIteration;
     }
@@ -245,6 +251,7 @@ public class ModelTrainConf {
      * @param epochsPerIteration
      *            the epochsPerIteration to set
      */
+    @JsonProperty
     public void setEpochsPerIteration(Integer epochsPerIteration) {
         this.epochsPerIteration = epochsPerIteration;
     }
@@ -363,6 +370,22 @@ public class ModelTrainConf {
                 && this.baggingNum.equals(other.getBaggingNum())
                 && this.getNumTrainEpochs().equals(other.getNumTrainEpochs())
                 && this.validSetRate.equals(other.getValidSetRate());
+    }
+
+    /**
+     * @return the sampleNegOnly
+     */
+    @JsonIgnore
+    public Boolean getSampleNegOnly() {
+        return sampleNegOnly;
+    }
+
+    /**
+     * @param sampleNegOnly the sampleNegOnly to set
+     */
+    @JsonProperty
+    public void setSampleNegOnly(Boolean sampleNegOnly) {
+        this.sampleNegOnly = sampleNegOnly;
     }
 
     @Override

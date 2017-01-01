@@ -68,8 +68,14 @@ public class NNOutput extends BasicMasterInterceptor<NNParams, NNParams> {
      */
     private BasicNetwork network;
 
+    /**
+     * Trainer id in bagging jobs
+     */
     private String trainerId;
 
+    /**
+     * Save model to tmp hdfs folder
+     */
     private String tmpModelsFolder;
 
     /**
@@ -103,6 +109,9 @@ public class NNOutput extends BasicMasterInterceptor<NNParams, NNParams> {
      */
     private GridSearch gridSearch;
 
+    /**
+     * Valid model parameters which is unified for both normal training and grid search.
+     */
     private Map<String, Object> validParams;
 
     @Override

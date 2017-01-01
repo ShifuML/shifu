@@ -420,6 +420,11 @@
                 "directive": "input",
                 "defval": 0.2
             }, {
+                "name": "sampleNegOnly",
+                "type": "boolean",
+                "directive": "checkbox",
+                "defval" : false
+            }, {
                 "name": "trainOnDisk",
                 "type": "boolean",
                 "directive": "checkbox",
@@ -610,6 +615,11 @@
                             {"label": "SQRT", "value":"sqrt"},
                             {"label": "LOG2", "value":"log2"}
                         ]
+                    }, {
+                        "name" : "EnableEarlyStop",
+                        "type": "boolean",
+                        "directive": "checkbox",
+                        "defval": false
                     }, {
                         "name" : "Loss",
                         "type" : "text",

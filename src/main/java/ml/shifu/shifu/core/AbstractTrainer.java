@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright [2012-2014] PayPal Software Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -126,7 +126,7 @@ public abstract class AbstractTrainer {
         this.trainerID = trainerID;
         this.dryRun = dryRun;
 
-        crossValidationRate = this.modelConfig.getCrossValidationRate();
+        crossValidationRate = this.modelConfig.getValidSetRate();
         if (crossValidationRate == null) {
             crossValidationRate = 0.2;
         }

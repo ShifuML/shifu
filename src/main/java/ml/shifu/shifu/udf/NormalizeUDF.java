@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright [2012-2014] PayPal Software Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -105,11 +105,15 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
             return null;
         }
 
-        // do data sampling. Unselected data or data with invalid tag will be filtered out.
-        boolean isNotSampled = DataSampler.isNotSampled(modelConfig.isRegression(), super.tagSet, super.posTagSet,
-                super.negTagSet, modelConfig.getNormalizeSampleRate(), modelConfig.isNormalizeSampleNegOnly(), rawTag);
-        if(isNotSampled) {
-            return null;
+        // data sampling only for normalization, for data cleaning, shouldn't do data sampling
+        if(!this.isForClean) {
+            // do data sampling. Unselected data or data with invalid tag will be filtered out.
+            boolean isNotSampled = DataSampler.isNotSampled(modelConfig.isRegression(), super.tagSet, super.posTagSet,
+                    super.negTagSet, modelConfig.getNormalizeSampleRate(), modelConfig.isNormalizeSampleNegOnly(),
+                    rawTag);
+            if(isNotSampled) {
+                return null;
+            }
         }
 
         // append tuple with tag, normalized value.
@@ -156,34 +160,34 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
                 continue;
             }
 
-            // append normalize data.
-            if(!CommonUtils.isGoodCandidate(modelConfig.isRegression(), config)) {
-                if ( config.isMeta() ) {
-                    tuple.append(val);
+            if(this.isForClean) {
+                // for RF/GBT model, only clean data, not real do norm data
+                if(config.isCategorical()) {
+                    // TODO using HashSet instead of ArrayList
+                    int index = config.getBinCategory().indexOf(val);
+                    if(index == -1) {
+                        // set to empty for invalid category
+                        tuple.append("");
+                    } else {
+                        tuple.append(val);
+                    }
                 } else {
-                    tuple.append(null);
+                    Double normVal = 0d;
+                    try {
+                        normVal = Double.parseDouble(val);
+                    } catch (Exception e) {
+                        log.debug("Not decimal format " + val + ", using default!");
+                        normVal = Normalizer.defaultMissingValue(config);
+                    }
+                    tuple.append(df.format(normVal));
                 }
             } else {
-                if(this.isForClean) {
-                    // for RF/GBT model, only clean data, not real do norm data
-                    if(config.isCategorical()) {
-                        // TODO using HashSet instead of ArrayList
-                        int index = config.getBinCategory().indexOf(val);
-                        if(index == -1) {
-                            // set to empty for invalid category
-                            tuple.append("");
-                        } else {
-                            tuple.append(val);
-                        }
+                // append normalize data. exclude data clean, for data cleaning, no need check good or bad candidate
+                if(!CommonUtils.isGoodCandidate(modelConfig.isRegression(), config)) {
+                    if(config.isMeta()) {
+                        tuple.append(val);
                     } else {
-                        Double normVal = 0d;
-                        try {
-                            normVal = Double.parseDouble(val);
-                        } catch (Exception e) {
-                            log.debug("Not decimal format " + val + ", using default!");
-                            normVal = Normalizer.defaultMissingValue(config);
-                        }
-                        tuple.append(df.format(normVal));
+                        tuple.append(null);
                     }
                 } else {
                     // for multiple classification, binPosRate means rate of such category over all counts, reuse
@@ -239,9 +243,9 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
             StringBuilder schemaStr = new StringBuilder();
             schemaStr.append("Normalized:Tuple(");
             for(ColumnConfig config: columnConfigList) {
-                if ( config.isMeta() ) {
+                if(config.isMeta()) {
                     schemaStr.append(config.getColumnName() + ":chararray" + ",");
-                } else if (!config.isMeta() && config.isNumerical()) {
+                } else if(!config.isMeta() && config.isNumerical()) {
                     schemaStr.append(config.getColumnName() + ":float" + ",");
                 } else if(config.isTarget()) {
                     schemaStr.append(config.getColumnName() + ":int" + ",");

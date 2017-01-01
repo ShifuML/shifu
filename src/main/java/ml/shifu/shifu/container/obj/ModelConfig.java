@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright [2012-2014] PayPal Software Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -431,7 +431,7 @@ public class ModelConfig {
     }
 
     @JsonIgnore
-    public Double getCrossValidationRate() {
+    public Double getValidSetRate() {
         return train.getValidSetRate();
     }
 

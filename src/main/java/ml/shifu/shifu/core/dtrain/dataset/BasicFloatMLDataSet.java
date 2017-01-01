@@ -245,13 +245,11 @@ public class BasicFloatMLDataSet implements Serializable, FloatMLDataSet, Clonea
      */
     @Override
     public final void getRecord(final long index, final FloatMLDataPair pair) {
-
         final FloatMLDataPair source = this.data.get((int) index);
         pair.setInputArray(source.getInputArray());
         if(pair.getIdealArray() != null) {
             pair.setIdealArray(source.getIdealArray());
         }
-
     }
 
     /**

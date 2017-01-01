@@ -1,3 +1,18 @@
+/*
+ * Copyright [2013-2015] PayPal Software Foundation
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package ml.shifu.shifu.core.processor.stats;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
@@ -112,8 +127,8 @@ public class MapReducerStatsWorker extends AbstractStatsExecutor {
                 modelConfig.getDataSet().getSource());
 
         log.info("this.pathFinder.getOtherConfigs() => " + this.pathFinder.getOtherConfigs());
-        PigExecutor.getExecutor().submitJob(modelConfig, pathFinder.getAbsolutePath("scripts/StatsSpdtI.pig"),
-                paramsMap, modelConfig.getDataSet().getSource(), this.pathFinder);
+        PigExecutor.getExecutor().submitJob(modelConfig, pathFinder.getScriptPath("scripts/StatsSpdtI.pig"), paramsMap,
+                modelConfig.getDataSet().getSource(), this.pathFinder);
         // update
         log.info("Updating binning info ...");
         updateBinningInfoWithMRJob();
@@ -217,8 +232,7 @@ public class MapReducerStatsWorker extends AbstractStatsExecutor {
 
         // one can set guagua conf in shifuconfig
         for(Map.Entry<Object, Object> entry: Environment.getProperties().entrySet()) {
-            if(entry.getKey().toString().startsWith("nn") || entry.getKey().toString().startsWith("guagua")
-                    || entry.getKey().toString().startsWith("shifu") || entry.getKey().toString().startsWith("mapred")) {
+            if(CommonUtils.isHadoopConfigurationInjected(entry.getKey().toString())) {
                 conf.set(entry.getKey().toString(), entry.getValue().toString());
             }
         }
@@ -383,8 +397,11 @@ public class MapReducerStatsWorker extends AbstractStatsExecutor {
             ColumnConfig columnConfig = CommonUtils.findColumnConfigByName(columnConfigList,
                     modelConfig.getPsiColumnName());
 
-            if(columnConfig == null || !columnConfig.isMeta()) {
-                log.warn("Unable to use the PSI column name specify in ModelConfig to compute PSI");
+            if(columnConfig == null || (!columnConfig.isMeta() && !columnConfig.isCategorical())) {
+                log.warn("Unable to use the PSI column {} specify in ModelConfig to compute PSI\n"
+                        + "neither meta nor categorical type", columnConfig != null ? columnConfig.getColumnName()
+                        : "unknown");
+
                 return;
             }
 
@@ -396,7 +413,7 @@ public class MapReducerStatsWorker extends AbstractStatsExecutor {
             paramsMap.put("column_parallel", Integer.toString(columnConfigList.size() / 10));
             paramsMap.put("value_index", "2");
 
-            PigExecutor.getExecutor().submitJob(modelConfig, pathFinder.getAbsolutePath("scripts/PSI.pig"), paramsMap);
+            PigExecutor.getExecutor().submitJob(modelConfig, pathFinder.getScriptPath("scripts/PSI.pig"), paramsMap);
 
             List<Scanner> scanners = ShifuFileUtils.getDataScanners(pathFinder.getPSIInfoPath(), modelConfig
                     .getDataSet().getSource());
