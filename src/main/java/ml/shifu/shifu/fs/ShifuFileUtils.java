@@ -31,6 +31,7 @@ import java.util.zip.GZIPInputStream;
 
 import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.container.obj.EvalConfig;
+import ml.shifu.shifu.container.obj.RawSourceData;
 import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
 import ml.shifu.shifu.util.CommonUtils;
 import ml.shifu.shifu.util.Constants;
@@ -45,6 +46,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathFilter;
+import org.apache.hadoop.io.SortedMapWritable;
 import org.apache.hadoop.io.compress.CompressionCodec;
 import org.apache.hadoop.io.compress.CompressionCodecFactory;
 import org.slf4j.Logger;
@@ -512,13 +514,7 @@ public class ShifuFileUtils {
         List<String> lines = new ArrayList<String>();
 
         FileSystem fs = getFileSystemBySourceType(sourceType);
-
-        FileStatus[] fileStatsArr = fs.listStatus(new Path(filePath), new PathFilter() {
-            @Override
-            public boolean accept(Path path) {
-                return path.getName().startsWith("part");
-            }
-        });
+        FileStatus[] fileStatsArr = getFilePartStatus(filePath, sourceType);
 
         CompressionCodecFactory compressionFactory = new CompressionCodecFactory(new Configuration());
         for ( FileStatus fileStatus : fileStatsArr ) {
@@ -536,4 +532,33 @@ public class ShifuFileUtils {
 
         return lines;
     }
+
+    public static FileStatus[] getFilePartStatus(String filePath, SourceType sourceType) throws IOException {
+        FileSystem fs = getFileSystemBySourceType(sourceType);
+
+        FileStatus[] fileStatsArr = fs.listStatus(new Path(filePath), new PathFilter() {
+            @Override
+            public boolean accept(Path path) {
+                return path.getName().startsWith("part");
+            }
+        });
+
+        return fileStatsArr;
+    }
+
+    public static int getFilePartCount(String filePath, SourceType sourceType) throws IOException {
+        FileStatus[] fileStatsArr = getFilePartStatus(filePath, sourceType);
+        return fileStatsArr.length;
+    }
+
+    public static long getFileOrDirectorySize(String filePath, SourceType sourceType) throws IOException {
+        long size = 0;
+
+        FileStatus[] fileStatsArr = getFilePartStatus(filePath, sourceType);
+        for ( FileStatus fileStats : fileStatsArr ) {
+            size += fileStats.getLen();
+        }
+        return size;
+    }
+
 }

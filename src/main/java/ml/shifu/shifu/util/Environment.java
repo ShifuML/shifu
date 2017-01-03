@@ -155,6 +155,29 @@ public class Environment {
     }
 
     /**
+     * Get property as Long value
+     *
+     * @param propertyName
+     * @return
+     */
+    public static Long getLong(String propertyName) {
+        String propertyValue = getProperty(propertyName);
+        return (propertyValue == null) ? null : Long.valueOf(propertyValue);
+    }
+
+    /**
+     * Get property as Integer value, if null return default value
+     *
+     * @param propertyName
+     * @param defValue
+     * @return
+     */
+    public static Long getLong(String propertyName, Long defValue) {
+        String propertyValue = getProperty(propertyName);
+        return (propertyValue == null) ? defValue : Long.valueOf(propertyValue);
+    }
+
+    /**
      * Check the system type is Windows or not
      * 
      * @param osName
