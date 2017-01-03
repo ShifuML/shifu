@@ -414,6 +414,7 @@ public class NormalizeModelProcessor extends BasicModelProcessor implements Proc
         }
 
         int shuffleSize = getDataShuffleSize(source);
+        log.info("Try to shuffle data into - {} parts.", shuffleSize);
         conf.set(Constants.SHIFU_NORM_SHUFFLE_SIZE , Integer.toString(shuffleSize));
 
         Job job = Job.getInstance(conf, "Shifu: Shuffling normalized data - " + this.modelConfig.getModelSetName());
@@ -423,7 +424,7 @@ public class NormalizeModelProcessor extends BasicModelProcessor implements Proc
         job.setMapOutputKeyClass(IntWritable.class);
         job.setMapOutputValueClass(Text.class);
 
-        job.setPartitionerClass(KeyFieldBasedPartitioner.class);
+        job.setPartitionerClass(DataShuffle.KvalPartitioner.class);
 
         job.setReducerClass(DataShuffle.ShuffleReducer.class);
         job.setOutputKeyClass(NullWritable.class);
