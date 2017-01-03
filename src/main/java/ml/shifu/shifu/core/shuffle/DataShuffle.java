@@ -6,6 +6,7 @@ import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.NullWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.Mapper;
+import org.apache.hadoop.mapreduce.Partitioner;
 import org.apache.hadoop.mapreduce.Reducer;
 
 import java.io.IOException;
@@ -42,5 +43,12 @@ public class DataShuffle {
             }
         }
 
+    }
+
+    public static class KvalPartitioner extends Partitioner<IntWritable, Text> {
+        @Override
+        public int getPartition(IntWritable key, Text text, int numReduceTasks) {
+            return key.get() % numReduceTasks;
+        }
     }
 }

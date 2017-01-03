@@ -196,7 +196,7 @@ public class ShifuCLI {
                         status = initComboModels();
                     } else if ( cmd.hasOption(EVAL_CMD_RUN) ) {
                         log.info("Run combo model.");
-                        status = runComboModels();
+                        status = runComboModels(opts.hasOption(SHUFFLE));
                         // train combo models
                     } else if ( cmd.hasOption(EVAL_CMD) ) {
                         log.info("Eval combo model.");
@@ -546,8 +546,9 @@ public class ShifuCLI {
      * @return
      * @throws Exception
      */
-    private static int runComboModels() throws Exception {
-        Processor processor = new ComboModelProcessor(ComboModelProcessor.ComboStep.RUN);
+    private static int runComboModels(boolean isToShuffleData) throws Exception {
+        ComboModelProcessor processor = new ComboModelProcessor(ComboModelProcessor.ComboStep.RUN);
+        processor.setToShuffleData(isToShuffleData);
         return processor.run();
     }
 
