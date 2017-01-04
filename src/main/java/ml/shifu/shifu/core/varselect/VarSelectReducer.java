@@ -45,11 +45,11 @@ import org.slf4j.LoggerFactory;
  * 
  * <p>
  * In {@link #cleanup(org.apache.hadoop.mapreduce.Reducer.Context)}, variables with MSE will be sorted according to
- * variable wrapper type. According to {@link #wrapperRatio} setting, only variables in that range will be written into
+ * variable wrapper type. According to {@link #filterOutRatio} setting, only variables in that range will be written into
  * HDFS.
  * 
  * <p>
- * {@link #wrapperRatio} means each time we need remove how many percentage of variables. A ratio is better than a fixed
+ * {@link #filterOutRatio} means each time we need remove how many percentage of variables. A ratio is better than a fixed
  * number. Since each time we reduce variables which number is also decreased. Say 100 variables, wrapperRatio is 0.05.
  * First time we remove 100*0.05 = 5 variables, second time 95 * 0.05 variables will be removed.
  * 
@@ -82,7 +82,12 @@ public class VarSelectReducer extends Reducer<LongWritable, ColumnInfo, Text, Te
      * a ratio. For example, 100 variables, using ratio 0.05, first time select 95 variables, next as candidates are
      * decreasing, next time it is still 0.05, but only 4 variables are removed.
      */
-    private float wrapperRatio;
+    private float filterOutRatio;
+    
+    /**
+     * Explicit set number of variables to be selected,this overwrites filterOutRatio
+     */
+    private int filterNum;
 
     /**
      * Prevent too many new objects for output key.
@@ -100,9 +105,9 @@ public class VarSelectReducer extends Reducer<LongWritable, ColumnInfo, Text, Te
     private final static Text OUTPUT_VALUE = new Text("");
 
     /**
-     * Wrapper by adding(A), removing(R) or sensitivity(SE).
+     * Wrapper by sensitivity by target(ST) or sensitivity(SE).
      */
-    private String wrapperBy;
+    private String filterBy;
 
     /**
      * Multiple outputs to write se report in HDFS.
@@ -131,12 +136,14 @@ public class VarSelectReducer extends Reducer<LongWritable, ColumnInfo, Text, Te
         loadConfigFiles(context);
         int[] inputOutputIndex = DTrainUtils.getInputOutputCandidateCounts(this.columnConfigList);
         this.inputNodeCount = inputOutputIndex[0] == 0 ? inputOutputIndex[2] : inputOutputIndex[0];
-        this.wrapperRatio = context.getConfiguration().getFloat(Constants.SHIFU_VARSELECT_WRAPPER_RATIO,
-                Constants.SHIFU_DEFAULT_VARSELECT_WRAPPER_RATIO);
+        this.filterOutRatio = context.getConfiguration().getFloat(Constants.SHIFU_VARSELECT_FILTEROUT_RATIO,
+                Constants.SHIFU_DEFAULT_VARSELECT_FILTEROUT_RATIO);
+        this.filterNum = context.getConfiguration().getInt(Constants.SHIFU_VARSELECT_FILTER_NUM,
+                Constants.SHIFU_DEFAULT_VARSELECT_FILTER_NUM);
         this.outputKey = new Text();
         this.outputValue = new Text();
-        this.wrapperBy = context.getConfiguration()
-                .get(Constants.SHIFU_VARSELECT_WRAPPER_TYPE, Constants.WRAPPER_BY_SE);
+        this.filterBy = context.getConfiguration()
+                .get(Constants.SHIFU_VARSELECT_FILTEROUT_TYPE, Constants.FILTER_BY_SE);
         this.mos = new MultipleOutputs<Text, Text>(context);
     }
 
@@ -173,15 +180,17 @@ public class VarSelectReducer extends Reducer<LongWritable, ColumnInfo, Text, Te
 
         LOG.debug("Final Results:{}", this.results);
 
-        int candidates = 0;
-        if(Constants.WRAPPER_BY_REMOVE.equalsIgnoreCase(this.wrapperBy)
-                || Constants.WRAPPER_BY_SE.equalsIgnoreCase(this.wrapperBy)) {
-            candidates = (int) (this.inputNodeCount * (1.0f - this.wrapperRatio));
-        } else {
-            // wrapper by A
-            candidates = (int) (this.inputNodeCount * (this.wrapperRatio));
+        int candidates = this.filterNum;
+        if(candidates <= 0) {
+            if(Constants.FILTER_BY_ST.equalsIgnoreCase(this.filterBy)
+                    || Constants.FILTER_BY_SE.equalsIgnoreCase(this.filterBy)) {
+                candidates = (int) (this.inputNodeCount * (1.0f - this.filterOutRatio));
+            } else {
+                // wrapper by A
+                candidates = (int) (this.inputNodeCount * (this.filterOutRatio));
+            }
         }
-
+        
         for(int i = 0; i < this.results.size(); i++) {
             Pair pair = this.results.get(i);
             this.outputKey.set(pair.key + "");
