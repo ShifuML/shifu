@@ -15,11 +15,6 @@
  */
 package ml.shifu.shifu.core.dtrain.dt;
 
-import java.io.File;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Scanner;
-
 import org.apache.log4j.BasicConfigurator;
 import org.apache.log4j.Level;
 import org.apache.log4j.LogManager;
@@ -29,13 +24,17 @@ import org.testng.Assert;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 
+import java.io.File;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Scanner;
+
 /**
  * Created by haifwu on 2016/12/16.
  */
 public class DTEarlyStopDeciderTest {
     private static final Logger LOG = LoggerFactory.getLogger(DTEarlyStopDeciderTest.class);
 
-    private List<Double> trainErrorList = new ArrayList<Double>();
     private List<Double> validationErrorList = new ArrayList<Double>();
     private final static String DATA_FILE_NAME = "dttest/data/trainError.dat";
 
@@ -50,12 +49,7 @@ public class DTEarlyStopDeciderTest {
         Scanner scanner = new Scanner(file);
         while(scanner.hasNext()) {
             String line = scanner.nextLine();
-            String[] info = line.split("\\t");
-            if(info.length != 2) {
-                LOG.error("Wrong format of line: " + line);
-            }
-            trainErrorList.add(Double.valueOf(info[0]));
-            validationErrorList.add(Double.valueOf(info[1]));
+            validationErrorList.add(Double.valueOf(line));
         }
         scanner.close();
     }
@@ -63,17 +57,16 @@ public class DTEarlyStopDeciderTest {
     @Test
     public void testAdd() throws Exception {
         DTEarlyStopDecider dtEarlyStopDecider = new DTEarlyStopDecider(6);
-        Assert.assertEquals(trainErrorList.size(), validationErrorList.size());
 
         int iteration = 0;
-        while(iteration++ < trainErrorList.size()) {
-            if(dtEarlyStopDecider.add(trainErrorList.get(iteration), validationErrorList.get(iteration))) {
+        while(iteration++ < validationErrorList.size()) {
+            if(dtEarlyStopDecider.add(validationErrorList.get(iteration))) {
                 LOG.info("Iteration {} stop!", iteration);
                 break;
             }
         }
 
-        Assert.assertNotSame(iteration, trainErrorList.size());
+        Assert.assertNotSame(iteration, validationErrorList.size());
     }
 
 }

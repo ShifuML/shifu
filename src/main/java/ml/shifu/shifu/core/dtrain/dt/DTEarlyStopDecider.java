@@ -44,32 +44,31 @@ import org.slf4j.LoggerFactory;
 class DTEarlyStopDecider {
 
     private static final Logger LOG = LoggerFactory.getLogger(DTEarlyStopDecider.class);
+    
     /**
      * if 3 times continue reach the stop requirements, decider will make stop decision
      */
     private static final int MAGIC_NUMBER = 3;
+
+    /**
+     * Threshhold value to stop iteration
+     */
+    private static final double NEARLY_ZERO = 0.000001;
+    
     /**
      * Max Depth of a tree
      */
     private int treeDepth;
-    /**
-     * {@link #trainErrorDecider}, return a positive signal or negative sign whether it worth further loop according to
-     * the current iteration gain.
-     */
-    private MinAverageDecider trainErrorDecider;
 
     /**
-     * validationErrorDecider return a positive or negative sign whether training is over fitted.
+     * {@link #validationErrorDecider}, return a positive or negative sign whether training is over fitted.
      */
     private MinAverageDecider validationErrorDecider;
-    /**
-     * Continue count of positive sign not worth further iteration
-     */
-    private int trainGainContinueLowerCount;
+    
     /**
      * Continue count of positive sign over fit
      */
-    private int validationGainContinueNegCount;
+    private int validationGainContinueNearZeroCount;
 
     public DTEarlyStopDecider(int treeDepth) {
         if(treeDepth <= 0) {
@@ -78,17 +77,10 @@ class DTEarlyStopDecider {
 
         this.treeDepth = treeDepth;
 
-        trainErrorDecider = new MinAverageDecider(this.treeDepth, this.treeDepth * MAGIC_NUMBER) {
-            @Override
-            public boolean getDecide() {
-                return this.gain < this.maxGain / 1000;
-            }
-        };
-
         validationErrorDecider = new MinAverageDecider(this.treeDepth, this.treeDepth * MAGIC_NUMBER) {
             @Override
             public boolean getDecide() {
-                return this.gain < 0;
+                return this.gain < NEARLY_ZERO;
             }
         };
     }
@@ -96,31 +88,20 @@ class DTEarlyStopDecider {
     /**
      * Add new iteration's train error and validation error into the decider.
      * 
-     * @param trainError
-     *            training error
      * @param validationError
      *            validation error
      * @return true if no more iteration needed, else false
      */
-    public boolean add(double trainError, double validationError) {
-        boolean trainErrorDecideReady = this.trainErrorDecider.add(trainError);
-        boolean validationDecideReady = this.validationErrorDecider.add(validationError);
+    public boolean add(double validationError) {
 
-        if(trainErrorDecideReady) {
-            if(trainErrorDecider.getDecide()) {
-                this.trainGainContinueLowerCount += 1;
-                LOG.warn("Continue {} positive sign for not worth more iteration!", this.trainGainContinueLowerCount);
-            } else {
-                this.trainGainContinueLowerCount = 0;
-            }
-        }
+        boolean validationDecideReady = this.validationErrorDecider.add(validationError);
 
         if(validationDecideReady) {
             if(validationErrorDecider.getDecide()) {
-                this.validationGainContinueNegCount += 1;
-                LOG.warn("Continue {} positive sign for not worth more iteration!", this.validationGainContinueNegCount);
+                this.validationGainContinueNearZeroCount += 1;
+                LOG.warn("Continue {} positive sign for not worth more iteration!", this.validationGainContinueNearZeroCount);
             } else {
-                this.validationGainContinueNegCount = 0;
+                this.validationGainContinueNearZeroCount = 0;
             }
         }
 
@@ -128,22 +109,26 @@ class DTEarlyStopDecider {
     }
 
     private boolean canStop() {
-        return this.validationGainContinueNegCount >= MAGIC_NUMBER || this.trainGainContinueLowerCount >= MAGIC_NUMBER;
+        return this.validationGainContinueNearZeroCount >= MAGIC_NUMBER;
     }
 
     static abstract class MinAverageDecider {
+
         /**
          * minQueue to get the minimal value of a queue size values
          */
         private final ThreadLocal<MinQueue> minQueue;
+
         /**
          * Max gain so far
          */
         double maxGain;
+
         /**
          * Current gain
          */
         double gain;
+
         /**
          * averageQueue, insert with recursive average value into the queue, and get iteration gain
          */
@@ -186,14 +171,17 @@ class DTEarlyStopDecider {
      * Generate minimal value of each {@link #capacity} values.
      */
     private static class MinQueue {
+
         /**
          * total element in current queue
          */
         private int size;
+
         /**
          * min value in current queue
          */
         private double min;
+
         /**
          * max capacity of the queue
          */
@@ -242,18 +230,22 @@ class DTEarlyStopDecider {
      * Generate recursive average value gain.
      */
     private static class AverageQueue {
+
         /**
          * The max capacity of this queue
          */
         private int capacity;
+
         /**
          * Array to store values in the queue
          */
         private double[] queueArray;
+
         /**
          * Total count of value have into queue
          */
         private long totalCount;
+
         /**
          * Total sum of value in queue
          */
