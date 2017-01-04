@@ -126,9 +126,9 @@ public class VarSelectMapper extends Mapper<LongWritable, Text, LongWritable, Co
     private LongWritable outputKey;
 
     /**
-     * Wrapper by adding(A), removing(R) or sensitivity(SE).
+     * Filter by sensitivity by target(ST) or sensitivity(SE).
      */
-    private String wrapperBy;
+    private String filterBy;
 
     /**
      * A counter to count # of records in current mapper.
@@ -168,8 +168,8 @@ public class VarSelectMapper extends Mapper<LongWritable, Text, LongWritable, Co
     protected void setup(Context context) throws IOException, InterruptedException {
         loadConfigFiles(context);
         loadModel();
-        this.wrapperBy = context.getConfiguration()
-                .get(Constants.SHIFU_VARSELECT_WRAPPER_TYPE, Constants.WRAPPER_BY_SE);
+        this.filterBy = context.getConfiguration()
+                .get(Constants.SHIFU_VARSELECT_FILTEROUT_TYPE, Constants.FILTER_BY_SE);
         int[] inputOutputIndex = DTrainUtils.getInputOutputCandidateCounts(this.columnConfigList);
         this.inputNodeCount = inputOutputIndex[0] == 0 ? inputOutputIndex[2] : inputOutputIndex[0];
         this.candidateCount = inputOutputIndex[2];
@@ -216,7 +216,7 @@ public class VarSelectMapper extends Mapper<LongWritable, Text, LongWritable, Co
 
         double oldValue = 0.0d;
         double candidateModelScore = 0d;
-        if(Constants.WRAPPER_BY_SE.equalsIgnoreCase(this.wrapperBy)) {
+        if(Constants.FILTER_BY_SE.equalsIgnoreCase(this.filterBy)) {
             candidateModelScore = this.model.compute(new BasicMLData(inputs)).getData()[0];
         }
 
@@ -249,8 +249,7 @@ public class VarSelectMapper extends Mapper<LongWritable, Text, LongWritable, Co
             double currentModelScore = seColResult.getScore();
 
             double diff = 0d;
-            if(Constants.WRAPPER_BY_ADD.equalsIgnoreCase(this.wrapperBy)
-                    || Constants.WRAPPER_BY_REMOVE.equalsIgnoreCase(this.wrapperBy)) {
+            if(Constants.FILTER_BY_ST.equalsIgnoreCase(this.filterBy)) {
                 diff = this.outputs[0] - currentModelScore;
             } else {
                 // SE

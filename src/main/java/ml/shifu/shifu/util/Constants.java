@@ -169,11 +169,13 @@ public interface Constants {
 
     public static final String SHIFU_MODELSET_SOURCE_TYPE = "shifu.modelset.source.type";
 
-    public static final String SHIFU_VARSELECT_WRAPPER_RATIO = "shifu.varselect.wrapper.ratio";
+    public static final String SHIFU_VARSELECT_FILTEROUT_RATIO = "shifu.varselect.filterout.ratio";
+    
+    public static final String SHIFU_VARSELECT_FILTER_NUM = "shifu.varselect.filter.num";
 
-    public static final String SHIFU_VARSELECT_WRAPPER_NUM = "shifu.varselect.wrapper.num";
+    //public static final String SHIFU_VARSELECT_WRAPPER_NUM = "shifu.varselect.wrapper.num";
 
-    public static final String SHIFU_VARSELECT_WRAPPER_TYPE = "shifu.varselect.wrapper.type";
+    public static final String SHIFU_VARSELECT_FILTEROUT_TYPE = "shifu.varselect.filterout.type";
 
     public static final String SHIFU_DEFAULT_VARSEL_SE_MULTI = "false";
 
@@ -183,17 +185,27 @@ public interface Constants {
 
     public static final int SHIFU_DEFAULT_VARSEL_SE_MULTI_THREAD = 4;
 
-    public static final String WRAPPER_BY_REMOVE = "R";
+    public static final String FILTER_BY_ST = "ST";
 
-    public static final String WRAPPER_BY_ADD = "A";
+    public static final String FILTER_BY_SE = "SE";
 
-    public static final String WRAPPER_BY_SE = "SE";
+    public static final String FILTER_BY_VOTED = "V";
 
-    public static final String WRAPPER_BY_VOTED = "V";
+    public static final String FILTER_BY_FI = "FI";
+    
+    public static final String FILTER_BY_KS = "KS";
 
-    public static final String WRAPPER_BY_FI = "FI";
+    public static final String FILTER_BY_IV = "IV";
 
-    public static final float SHIFU_DEFAULT_VARSELECT_WRAPPER_RATIO = 0.05f;
+    public static final String FILTER_BY_MIX = "MIX";
+    
+    public static final String FILTER_BY_PARETO = "PARETO";
+
+
+
+    public static final float SHIFU_DEFAULT_VARSELECT_FILTEROUT_RATIO = 0.05f;
+    
+    public static final int SHIFU_DEFAULT_VARSELECT_FILTER_NUM = -1;
 
     public static final String COUNTER_WNEGTAGS = "WNEGTAGS";
 
