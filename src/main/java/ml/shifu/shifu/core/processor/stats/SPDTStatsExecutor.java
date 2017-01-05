@@ -39,7 +39,7 @@ public class SPDTStatsExecutor extends MapReducerStatsWorker {
     @Override
     protected void runStatsPig(Map<String, String> paramsMap) throws Exception {
         log.info("Run SPDT to stats ... ");
-        PigExecutor.getExecutor().submitJob(modelConfig, pathFinder.getAbsolutePath("scripts/PreTrainingStats.pig"),
+        PigExecutor.getExecutor().submitJob(modelConfig, pathFinder.getScriptPath("scripts/PreTrainingStats.pig"),
                 paramsMap, modelConfig.getDataSet().getSource(), super.pathFinder);
     }
 

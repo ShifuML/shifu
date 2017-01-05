@@ -886,6 +886,7 @@ public final class CommonUtils {
 
         Map<String, String> pigParamMap = new HashMap<String, String>();
         pigParamMap.put(Constants.NUM_PARALLEL, Environment.getInt(Environment.HADOOP_NUM_PARALLEL, 400).toString());
+        log.info("jar path is {}", pathFinder.getJarPath());
         pigParamMap.put(Constants.PATH_JAR, pathFinder.getJarPath());
 
         pigParamMap.put(Constants.PATH_RAW_DATA, modelConfig.getDataSetRawPath());
@@ -926,6 +927,7 @@ public final class CommonUtils {
         }
         Map<String, String> pigParamMap = new HashMap<String, String>();
         pigParamMap.put(Constants.NUM_PARALLEL, Environment.getInt(Environment.HADOOP_NUM_PARALLEL, 400).toString());
+        log.info("jar path is {}", pathFinder.getJarPath());
         pigParamMap.put(Constants.PATH_JAR, pathFinder.getJarPath());
 
         pigParamMap.put(Constants.PATH_RAW_DATA, modelConfig.getDataSetRawPath());

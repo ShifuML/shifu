@@ -46,7 +46,7 @@ public class SPDTIStatsExecutor extends MapReducerStatsWorker {
         ShifuFileUtils.deleteFile(pathFinder.getUpdatedBinningInfoPath(modelConfig.getDataSet().getSource()),
                 modelConfig.getDataSet().getSource());
 
-        PigExecutor.getExecutor().submitJob(modelConfig, pathFinder.getAbsolutePath("scripts/StatsSpdtI.pig"),
+        PigExecutor.getExecutor().submitJob(modelConfig, pathFinder.getScriptPath("scripts/StatsSpdtI.pig"),
                 paramsMap, modelConfig.getDataSet().getSource(), super.pathFinder);
 
         // update

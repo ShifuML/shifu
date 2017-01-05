@@ -242,7 +242,7 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
             paramsMap.put("delimiter", CommonUtils.escapePigString(modelConfig.getDataSetDelimiter()));
 
             try {
-                String normPigPath = pathFinder.getAbsolutePath("scripts/Normalize.pig");
+                String normPigPath = pathFinder.getScriptPath("scripts/Normalize.pig");
 
                 paramsMap.put(Constants.IS_COMPRESS, "true");
                 paramsMap.put(Constants.IS_NORM_FOR_CLEAN, "true");

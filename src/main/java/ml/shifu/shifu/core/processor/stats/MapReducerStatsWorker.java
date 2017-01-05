@@ -127,8 +127,8 @@ public class MapReducerStatsWorker extends AbstractStatsExecutor {
                 modelConfig.getDataSet().getSource());
 
         log.info("this.pathFinder.getOtherConfigs() => " + this.pathFinder.getOtherConfigs());
-        PigExecutor.getExecutor().submitJob(modelConfig, pathFinder.getAbsolutePath("scripts/StatsSpdtI.pig"),
-                paramsMap, modelConfig.getDataSet().getSource(), this.pathFinder);
+        PigExecutor.getExecutor().submitJob(modelConfig, pathFinder.getScriptPath("scripts/StatsSpdtI.pig"), paramsMap,
+                modelConfig.getDataSet().getSource(), this.pathFinder);
         // update
         log.info("Updating binning info ...");
         updateBinningInfoWithMRJob();
@@ -232,8 +232,7 @@ public class MapReducerStatsWorker extends AbstractStatsExecutor {
 
         // one can set guagua conf in shifuconfig
         for(Map.Entry<Object, Object> entry: Environment.getProperties().entrySet()) {
-            if(entry.getKey().toString().startsWith("nn") || entry.getKey().toString().startsWith("guagua")
-                    || entry.getKey().toString().startsWith("shifu") || entry.getKey().toString().startsWith("mapred")) {
+            if(CommonUtils.isHadoopConfigurationInjected(entry.getKey().toString())) {
                 conf.set(entry.getKey().toString(), entry.getValue().toString());
             }
         }
@@ -399,9 +398,9 @@ public class MapReducerStatsWorker extends AbstractStatsExecutor {
                     modelConfig.getPsiColumnName());
 
             if(columnConfig == null || (!columnConfig.isMeta() && !columnConfig.isCategorical())) {
-                log.warn("Unable to use the PSI column {} specify in ModelConfig to compute PSI\n" +
-                                "neither meta nor categorical type",
-                        columnConfig != null ? columnConfig.getColumnName() : "unknown");
+                log.warn("Unable to use the PSI column {} specify in ModelConfig to compute PSI\n"
+                        + "neither meta nor categorical type", columnConfig != null ? columnConfig.getColumnName()
+                        : "unknown");
 
                 return;
             }
@@ -414,7 +413,7 @@ public class MapReducerStatsWorker extends AbstractStatsExecutor {
             paramsMap.put("column_parallel", Integer.toString(columnConfigList.size() / 10));
             paramsMap.put("value_index", "2");
 
-            PigExecutor.getExecutor().submitJob(modelConfig, pathFinder.getAbsolutePath("scripts/PSI.pig"), paramsMap);
+            PigExecutor.getExecutor().submitJob(modelConfig, pathFinder.getScriptPath("scripts/PSI.pig"), paramsMap);
 
             List<Scanner> scanners = ShifuFileUtils.getDataScanners(pathFinder.getPSIInfoPath(), modelConfig
                     .getDataSet().getSource());

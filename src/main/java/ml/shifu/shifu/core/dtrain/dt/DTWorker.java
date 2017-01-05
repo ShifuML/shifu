@@ -542,6 +542,7 @@ public class DTWorker
                             }
                         }
                     }
+
                     if(context.getLastMasterResult().isFirstTree() && !lastMasterResult.isSwitchToNextTree()) {
                         Node currTree = trees.get(currTreeIndex).getNode();
                         Node predictNode = predictNodeIndex(currTree, data, true);

@@ -184,7 +184,8 @@ public class ModelConfig {
                 + Constants.DEFAULT_FORCEREMOVE_COLUMN_FILE).toString(), SourceType.LOCAL);
         varselect.setForceRemoveColumnNameFile(Constants.COLUMN_META_FOLDER_NAME + File.separator
                 + Constants.DEFAULT_FORCEREMOVE_COLUMN_FILE);
-        varselect.setFilterBySE(Boolean.TRUE);
+        varselect.setFilterEnable(Boolean.TRUE);
+        varselect.setFilterNum(200);
         modelConfig.setVarSelect(varselect);
 
         // build normalize info
@@ -526,11 +527,6 @@ public class ModelConfig {
     }
 
     @JsonIgnore
-    public Boolean getVarSelectWrapperEnabled() {
-        return varSelect.getWrapperEnabled();
-    }
-
-    @JsonIgnore
     public List<String> getMetaColumnNames() throws IOException {
         String delimiter = StringUtils.isBlank(this.getHeaderDelimiter()) ? this.getDataSetDelimiter() : this
                 .getHeaderDelimiter();
@@ -565,29 +561,19 @@ public class ModelConfig {
     }
 
     @JsonIgnore
-    public Integer getVarSelectFilterNum() {
-        return varSelect.getFilterNum();
-    }
-
-    @JsonIgnore
     public String getVarSelectFilterBy() {
         return varSelect.getFilterBy();
+    }
+    
+    @JsonIgnore
+    public Integer getVarSelectFilterNum() {
+        return varSelect.getFilterNum();
     }
 
     @JsonIgnore
     public boolean isCategoricalDisabled() {
         // there is no settings now, always enable
         return false;
-    }
-
-    @JsonIgnore
-    public String getVarSelectWrapperBy() {
-        return varSelect.getWrapperBy();
-    }
-
-    @JsonIgnore
-    public int getVarSelectWrapperNum() {
-        return varSelect.getWrapperNum();
     }
 
     @JsonIgnore

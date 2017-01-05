@@ -124,7 +124,7 @@ public class TreeNodePmmlElementCreator extends AbstractPmmlElementCreator<org.d
                     }
                 }
             }
-            Array array = new Array(arrayStr.toString().trim(), Array.Type.fromValue("real"));
+            Array array = new Array(arrayStr.toString().trim(), Array.Type.fromValue("string"));
             p.setArray(array);
             if(isLeft) {
                 if(split.isLeft()) {
