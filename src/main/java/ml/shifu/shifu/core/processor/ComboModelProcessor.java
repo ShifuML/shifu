@@ -532,7 +532,6 @@ public class ComboModelProcessor extends BasicModelProcessor implements Processo
      * @param evalSetName
      * @return
      */
-    @SuppressWarnings({ "rawtypes", "unchecked" })
     private Callable<Integer> createTrainAndEvalTasks(final String subModelName, final String evalSetName) throws IOException {
         if (this.isToShuffleData) { // don't use parent's normalized data
             ModelConfig subModelConfig = CommonUtils.loadModelConfig(
@@ -831,6 +830,7 @@ public class ComboModelProcessor extends BasicModelProcessor implements Processo
         if (CollectionUtils.isNotEmpty(taskResults)) {
             for (Integer result : taskResults) {
                 if (result == null || result != 0) {
+                    LOG.error("Found some abnormal result - {}", result);
                     return true;
                 }
             }
