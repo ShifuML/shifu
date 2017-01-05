@@ -250,6 +250,11 @@
                 "type": "number",
                 "directive": "input"
             }, {
+                "name": "filterOutRatio",
+                "type": "number",
+                "directive": "input",
+                "defval" : 0.05
+            }, {
                 "name": "epsilons",
                 "type": "numberarray",
                 "directive": "input"
@@ -261,7 +266,11 @@
                     {"label": "KS", "value":"ks"},
                     {"label": "Information Value", "value":"iv"},
                     {"label": "Mixed KS and IV", "value":"mix"},
-                    {"label": "Epsilon-nondominated sort", "value":"pareto"}
+                    {"label": "Epsilon-nondominated sort", "value":"pareto"},
+                    {"label": "Sensitivity comparing with temporarily trained model", "value":"SE"},
+                    {"label": "Sensitivity comparing with training data target", "value":"ST"},
+                    {"label": "Voted", "value":"V"},                  
+                    {"label": "Feature Importance(only valid for tree models)", "value":"FI"}                    
                 ]
             }, {
                 "name": "votedVariablesSelection",
@@ -269,44 +278,11 @@
                 "directive": "checkbox",
                 "defval": false
             }, {
-                "name": "wrapperEnabled",
-                "type": "boolean",
-                "directive": "checkbox",
-                "defval" : false
-            }, {
-                "name": "filterBySE",
-                "type": "boolean",
-                "directive": "checkbox",
-                "defval" : true
-            }, {
-                "name": "wrapperNum",
-                "type": "number",
-                "directive": "input",
-                "defval" : 50
-            }, {
-                "name": "wrapperRatio",
-                "type": "number",
-                "directive": "input",
-                "defval" : 0.05
-            }, {
                 "name": "missingRateThreshold",
                 "type": "number",
                 "directive": "input",
                 "defval" : 0.5
             }, {
-                "name": "wrapperBy",
-                "type": "text",
-                "directive": "select",
-                "defval" : "S",
-                "options": [
-                    {"label": "Simple Sorting", "value":"S"},
-                    {"label": "Adding", "value":"A"},
-                    {"label": "Removing", "value":"R"},
-                    {"label": "Voted", "value":"V"},
-                    {"label": "Sensitivity", "value":"SE"},
-                    {"label": "Feature Importance", "value":"FI"}              
-                ]   
-              }, {
                 "name": "params",
                 "type": "map",
                 "directive": "input",
@@ -615,6 +591,11 @@
                             {"label": "SQRT", "value":"sqrt"},
                             {"label": "LOG2", "value":"log2"}
                         ]
+                    }, {
+                        "name" : "EnableEarlyStop",
+                        "type": "boolean",
+                        "directive": "checkbox",
+                        "defval": false
                     }, {
                         "name" : "Loss",
                         "type" : "text",

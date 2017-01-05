@@ -45,7 +45,7 @@ public class MunroPatIStatsExecutor extends MapReducerStatsWorker {
         ShifuFileUtils.deleteFile(pathFinder.getUpdatedBinningInfoPath(modelConfig.getDataSet().getSource()),
                 modelConfig.getDataSet().getSource());
 
-        PigExecutor.getExecutor().submitJob(modelConfig, pathFinder.getAbsolutePath("scripts/StatsMunroPatI.pig"),
+        PigExecutor.getExecutor().submitJob(modelConfig, pathFinder.getScriptPath("scripts/StatsMunroPatI.pig"),
                 paramsMap, modelConfig.getDataSet().getSource(), super.pathFinder);
 
         // update

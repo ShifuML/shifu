@@ -42,7 +42,7 @@ public class MunroPatStatsExecutor extends MapReducerStatsWorker {
     protected void runStatsPig(Map<String, String> paramsMap) throws Exception {
         log.info("Run MunroPat to stats ... ");
 
-        PigExecutor.getExecutor().submitJob(modelConfig, pathFinder.getAbsolutePath("scripts/Stats.pig"), paramsMap,
+        PigExecutor.getExecutor().submitJob(modelConfig, pathFinder.getScriptPath("scripts/Stats.pig"), paramsMap,
                 modelConfig.getDataSet().getSource(), super.pathFinder);
     }
 

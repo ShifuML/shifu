@@ -234,6 +234,17 @@ public class DTMaster extends AbstractMasterComputable<DTMasterParams, DTWorkerP
      */
     private Queue<TreeNode> toDoQueue;
 
+    /**
+     * DTEarlyStopDecider will decide automatic whether it need further training,  this only for GBDT.
+     */
+//    @SuppressWarnings("unused")
+//    private DTEarlyStopDecider dtEarlyStopDecider;
+
+    /**
+     * If earlyStopEnabled is true, the early stop feature will be enabled
+     */
+//    private boolean earlyStopEnabled = false;
+
     @Override
     public DTMasterParams doCompute(MasterContext<DTMasterParams, DTWorkerParams> context) {
         if(context.isFirstIteration()) {
@@ -328,6 +339,16 @@ public class DTMaster extends AbstractMasterComputable<DTMasterParams, DTWorkerP
         Map<Integer, TreeNode> todoNodes = new HashMap<Integer, TreeNode>();
         DTMasterParams masterParams = new DTMasterParams(weightedTrainCount, trainError, weightedValidationCount,
                 validationError);
+
+        // Add  early Stop Feature for GBT
+//        if(this.earlyStopEnabled && this.isGBDT && dtEarlyStopDecider.add(trainError, validationError)){
+//            masterParams.setHalt(true);
+//            LOG.info("weightedTrainCount {}, weightedValidationCount {}, trainError {}, validationError {}",
+//                    weightedTrainCount, weightedValidationCount, trainError, validationError);
+//            LOG.info("Early stop identified, training is stopped in iteration {}.", context.getCurrentIteration());
+//            return masterParams;
+//        }
+
         if(toDoQueue.isEmpty()) {
             if(this.isGBDT) {
                 TreeNode treeNode = this.trees.get(this.trees.size() - 1);
@@ -849,7 +870,6 @@ public class DTMaster extends AbstractMasterComputable<DTMasterParams, DTWorkerP
         }
 
         // assert this.maxStatsMemory <= Math.min(Runtime.getRuntime().maxMemory() * 0.6, 800 * 1024 * 1024L);
-        // todo # of trees
         this.treeNum = Integer.valueOf(validParams.get("TreeNum").toString());;
         this.isRF = ALGORITHM.RF.toString().equalsIgnoreCase(modelConfig.getAlgorithm());
         this.isGBDT = ALGORITHM.GBT.toString().equalsIgnoreCase(modelConfig.getAlgorithm());
@@ -895,6 +915,14 @@ public class DTMaster extends AbstractMasterComputable<DTMasterParams, DTWorkerP
                 this.isGBDT, this.isContinuousEnabled);
 
         this.toDoQueue = new LinkedList<TreeNode>();
+
+//        if(validParams.containsKey("EnableEarlyStop")){
+//            this.earlyStopEnabled = Boolean.valueOf(validParams.get("EnableEarlyStop").toString());
+//        }
+//
+//        if(this.earlyStopEnabled){
+//            this.dtEarlyStopDecider = new DTEarlyStopDecider(this.maxDepth);
+//        }
 
         if(this.isLeafWise) {
             this.toSplitQueue = new PriorityQueue<TreeNode>(64, new Comparator<TreeNode>() {

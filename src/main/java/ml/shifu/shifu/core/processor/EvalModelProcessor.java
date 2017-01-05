@@ -335,7 +335,7 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
             pigScript = "scripts/EvalScore.pig";
         }
         try {
-            PigExecutor.getExecutor().submitJob(modelConfig, pathFinder.getAbsolutePath(pigScript), paramsMap,
+            PigExecutor.getExecutor().submitJob(modelConfig, pathFinder.getScriptPath(pigScript), paramsMap,
                     evalConfig.getDataSet().getSource(), confMap, super.pathFinder);
         } catch (IOException e) {
             throw new ShifuException(ShifuErrorCode.ERROR_RUNNING_PIG_JOB, e);
@@ -349,11 +349,12 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
             JobStats jobStats = iter.next();
             this.evalRecords = jobStats.getHadoopCounters().getGroup(Constants.SHIFU_GROUP_COUNTER)
                     .getCounter(Constants.COUNTER_RECORDS);
-            log.info("evalRecords:" + evalRecords);
+            log.info("Total valid eval records is : {}", evalRecords);
             // If no basic record counter, check next one
             if(this.evalRecords == 0L) {
                 continue;
             }
+
             this.pigPosTags = jobStats.getHadoopCounters().getGroup(Constants.SHIFU_GROUP_COUNTER)
                     .getCounter(Constants.COUNTER_POSTAGS);
             this.pigNegTags = jobStats.getHadoopCounters().getGroup(Constants.SHIFU_GROUP_COUNTER)
@@ -364,6 +365,11 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
             this.pigNegWeightTags = jobStats.getHadoopCounters().getGroup(Constants.SHIFU_GROUP_COUNTER)
                     .getCounter(Constants.COUNTER_WNEGTAGS)
                     / (Constants.EVAL_COUNTER_WEIGHT_SCALE * 1.0d);
+
+            long totalRunTime = jobStats.getHadoopCounters().getGroup(Constants.SHIFU_GROUP_COUNTER)
+                    .getCounter(Constants.TOTAL_MODEL_RUNTIME);
+
+            log.info("Avg SLA for eval model scoring is {} micro seconds", totalRunTime / this.evalRecords);
 
             if(modelConfig.isRegression()) {
                 locateMaxMinScoreFromFile(sourceType, maxMinScoreFolder);
@@ -432,7 +438,7 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
         String pigScript = "scripts/EvalNorm.pig";
 
         try {
-            PigExecutor.getExecutor().submitJob(modelConfig, pathFinder.getAbsolutePath(pigScript), paramsMap,
+            PigExecutor.getExecutor().submitJob(modelConfig, pathFinder.getScriptPath(pigScript), paramsMap,
                     evalConfig.getDataSet().getSource());
         } catch (IOException e) {
             throw new ShifuException(ShifuErrorCode.ERROR_RUNNING_PIG_JOB, e);
