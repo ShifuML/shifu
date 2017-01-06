@@ -25,12 +25,13 @@ import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 
 import java.io.File;
+import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Scanner;
 
 /**
- * Created by haifwu on 2016/12/16.
+ * @author Wu Devin (wuhaifengdhu@163.com)
  */
 public class DTEarlyStopDeciderTest {
     private static final Logger LOG = LoggerFactory.getLogger(DTEarlyStopDeciderTest.class);
@@ -44,22 +45,27 @@ public class DTEarlyStopDeciderTest {
         BasicConfigurator.configure();
         LogManager.getRootLogger().setLevel(Level.DEBUG);
         ClassLoader classLoader = getClass().getClassLoader();
-        File file = new File(this.getClass().getClassLoader().getResource(DATA_FILE_NAME).getFile());
-
-        Scanner scanner = new Scanner(file);
-        while(scanner.hasNext()) {
-            String line = scanner.nextLine();
-            validationErrorList.add(Double.valueOf(line));
+        URL resource = this.getClass().getClassLoader().getResource(DATA_FILE_NAME);
+        if(resource != null){
+            File file = new File(resource.getFile());
+            Scanner scanner = new Scanner(file);
+            while(scanner.hasNext()) {
+                String line = scanner.nextLine();
+                validationErrorList.add(Double.valueOf(line));
+            }
+            scanner.close();
+        } else {
+            LOG.error("Resource file {} not exist!", DATA_FILE_NAME);
         }
-        scanner.close();
     }
 
     @Test
     public void testAdd() throws Exception {
         DTEarlyStopDecider dtEarlyStopDecider = new DTEarlyStopDecider(6);
+        LOG.info("Total iteration size: {}", validationErrorList.size());
 
         int iteration = 0;
-        while(iteration++ < validationErrorList.size()) {
+        for(; iteration < validationErrorList.size(); iteration ++) {
             if(dtEarlyStopDecider.add(validationErrorList.get(iteration))) {
                 LOG.info("Iteration {} stop!", iteration);
                 break;
@@ -69,4 +75,20 @@ public class DTEarlyStopDeciderTest {
         Assert.assertNotSame(iteration, validationErrorList.size());
     }
 
+    @Test
+    public void testGetCurrentAverageValue(){
+        DTEarlyStopDecider dtEarlyStopDecider = new DTEarlyStopDecider(6);
+        LOG.info("Total iteration size: {}", validationErrorList.size());
+
+        int iteration = 0;
+        for(; iteration < validationErrorList.size(); iteration ++) {
+            if(dtEarlyStopDecider.add(validationErrorList.get(iteration))) {
+                LOG.info("Iteration {} stop!", iteration);
+                break;
+            }
+            LOG.info("iteration {}: {}==> average value {}", iteration, validationErrorList.get(iteration), dtEarlyStopDecider.getCurrentAverageValue());
+        }
+
+        Assert.assertNotSame(iteration, validationErrorList.size());
+    }
 }
