@@ -56,12 +56,7 @@ class DTEarlyStopDecider {
     private static final double NEARLY_ZERO = 0.000001;
     
     /**
-     * Max Depth of a tree
-     */
-    private int treeDepth;
-
-    /**
-     * {@link #validationErrorDecider}, return a positive or negative sign whether training is over fitted.
+     * Make decision when iteration, return a positive or negative sign whether training is over fitted.
      */
     private MinAverageDecider validationErrorDecider;
     
@@ -70,19 +65,27 @@ class DTEarlyStopDecider {
      */
     private int validationGainContinueNearZeroCount;
 
-    public DTEarlyStopDecider(int treeDepth) {
+    /**
+     * count restart times
+     */
+    private int restartCount;
+
+    /**
+     * Average queue to return the average value of the latest 10 or 20 evaluation errors
+     */
+    private AverageQueue averageQueue;
+
+    DTEarlyStopDecider(int treeDepth) {
+
         if(treeDepth <= 0) {
             throw new IllegalArgumentException("Tree num should not be less or equal than zero!");
         }
 
-        this.treeDepth = treeDepth;
+        this.validationErrorDecider = new MinAverageDecider(treeDepth * MAGIC_NUMBER, treeDepth);
 
-        validationErrorDecider = new MinAverageDecider(this.treeDepth, this.treeDepth * MAGIC_NUMBER) {
-            @Override
-            public boolean getDecide() {
-                return this.gain < NEARLY_ZERO;
-            }
-        };
+        this.averageQueue = new AverageQueue(treeDepth);
+
+        this.restartCount = 0;
     }
 
     /**
@@ -100,45 +103,56 @@ class DTEarlyStopDecider {
             if(validationErrorDecider.getDecide()) {
                 this.validationGainContinueNearZeroCount += 1;
                 LOG.warn("Continue {} positive sign for not worth more iteration!", this.validationGainContinueNearZeroCount);
+                if(this.validationGainContinueNearZeroCount >= MAGIC_NUMBER){
+                    this.validationErrorDecider.restart();
+                    this.restartCount += 1;
+                    this.validationGainContinueNearZeroCount = 0;
+                    LOG.warn("Restart! Total restart times {}", this.restartCount);
+                }
             } else {
                 this.validationGainContinueNearZeroCount = 0;
             }
         }
 
+        // average queue for compute latest 10 or 20 iterations average value
+        this.averageQueue.add(validationError);
+
         return canStop();
     }
 
-    private boolean canStop() {
-        return this.validationGainContinueNearZeroCount >= MAGIC_NUMBER;
+    /**
+     *  Get current average evaluation error of last 10 or 20 iterations
+     *
+     * @return average evaluation error
+     */
+    double getCurrentAverageValue(){
+        return this.averageQueue.getAverage();
     }
 
-    static abstract class MinAverageDecider {
+    private boolean canStop() {
+        return this.restartCount >= MAGIC_NUMBER;
+    }
+
+    static class MinAverageDecider {
 
         /**
          * minQueue to get the minimal value of a queue size values
          */
-        private final ThreadLocal<MinQueue> minQueue;
-
-        /**
-         * Max gain so far
-         */
-        double maxGain;
-
-        /**
-         * Current gain
-         */
-        double gain;
+        private final MinQueue minQueue;
 
         /**
          * averageQueue, insert with recursive average value into the queue, and get iteration gain
          */
-        private AverageQueue averageQueue;
+        private final AverageQueue averageQueue;
+
+        /**
+         * Current gain
+         */
+        private double gain;
 
         MinAverageDecider(int minQueueNum, int averageQueueNum) {
-            minQueue = new ThreadLocal<MinQueue>();
-            this.minQueue.set(new MinQueue(minQueueNum));
+            this.minQueue = new MinQueue(minQueueNum);
             this.averageQueue = new AverageQueue(averageQueueNum);
-            this.maxGain = 0;
         }
 
         /**
@@ -149,22 +163,27 @@ class DTEarlyStopDecider {
          * @return true if new gain generated, and decide is ready to get
          */
         public boolean add(double element) {
-            if(!this.minQueue.get().add(element)) {
+            if(!this.minQueue.add(element)) {
                 return false;
             }
-            LOG.debug("MinQueue is full, get min value: {}", element);
-            if(!this.averageQueue.add(element)) {
+            double minValue = this.minQueue.getQueueMin();
+            LOG.debug("MinQueue is full, get min value: {}", minValue);
+            if(!this.averageQueue.add(minValue)) {
                 return false;
             }
             this.gain = this.averageQueue.getGain();
             LOG.debug("Average Queue is full, get gain value: {}", this.gain);
-            if(this.gain > this.maxGain) {
-                this.maxGain = this.gain;
-            }
             return true;
         }
 
-        public abstract boolean getDecide();
+        boolean getDecide(){
+            return this.gain < NEARLY_ZERO;
+        }
+
+        void restart(){
+            this.minQueue.restart();
+            this.averageQueue.restart();
+        }
     }
 
     /**
@@ -189,12 +208,12 @@ class DTEarlyStopDecider {
 
         MinQueue(int capacity) {
             this.capacity = capacity;
-            this.clear();
+            this.restart();
         }
 
-        private void clear() {
+        private void restart() {
             this.min = Double.MAX_VALUE;
-            this.size = 0;
+            this.size = -1;
         }
 
         /**
@@ -218,10 +237,9 @@ class DTEarlyStopDecider {
          * 
          * @return the value of the minimal value of the queue
          */
-        @SuppressWarnings("unused")
         double getQueueMin() {
             double queueMin = this.min;
-            this.clear();
+            this.restart();
             return queueMin;
         }
     }
@@ -254,6 +272,10 @@ class DTEarlyStopDecider {
         AverageQueue(int capacity) {
             this.capacity = capacity;
             this.queueArray = new double[this.capacity];
+            this.restart();
+        }
+
+        void restart(){
             this.totalCount = 0;
             this.sum = 0;
         }
@@ -290,6 +312,16 @@ class DTEarlyStopDecider {
             int curIndex = (int) (this.totalCount - 1) % this.capacity;
             int lastIndex = (int) (this.totalCount - 2) % this.capacity;
             return this.queueArray[lastIndex] - this.queueArray[curIndex];
+        }
+
+        /**
+         *  get the latest average value in the queue
+         *
+         * @return average value
+         */
+        public double getAverage(){
+            int curIndex = (int) (this.totalCount - 1) % this.capacity;
+            return this.queueArray[curIndex];
         }
     }
 }
