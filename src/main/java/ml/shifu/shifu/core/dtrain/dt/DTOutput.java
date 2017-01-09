@@ -302,7 +302,7 @@ public class DTOutput extends BasicMasterInterceptor<DTMasterParams, DTWorkerPar
         try {
              fos = new DataOutputStream(new GZIPOutputStream(FileSystem.get(new Configuration()).create(out)));
 //            fos = new DataOutputStream(FileSystem.get(new Configuration()).create(out));
-            LOG.info("Writing  {} trees to {}.", trees.size(), out);
+            LOG.info("Writing {} trees to {}.", trees.size(), out);
             // version
             fos.writeInt(CommonConstants.TREE_FORMAT_VERSION);
             fos.writeUTF(modelConfig.getAlgorithm());

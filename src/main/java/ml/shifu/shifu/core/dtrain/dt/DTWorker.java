@@ -484,6 +484,10 @@ public class DTWorker
         for(Data data: this.trainingData) {
             if(this.isRF) {
                 for(TreeNode treeNode: trees) {
+                    if(treeNode.getNode().getId() == Node.INVALID_INDEX) {
+                        continue;
+                    }
+
                     Node predictNode = predictNodeIndex(treeNode.getNode(), data, true);
                     if(predictNode.getPredict() != null) {
                         // only update when not in first node, for treeNode, no predict statistics at that time
@@ -563,6 +567,9 @@ public class DTWorker
             for(Data data: this.validationData) {
                 if(this.isRF) {
                     for(TreeNode treeNode: trees) {
+                        if(treeNode.getNode().getId() == Node.INVALID_INDEX) {
+                            continue;
+                        }
                         Node predictNode = predictNodeIndex(treeNode.getNode(), data, true);
                         if(predictNode.getPredict() != null) {
                             // only update when not in first node, for treeNode, no predict statistics at that time
@@ -669,8 +676,12 @@ public class DTWorker
                         nodeIndexes.clear();
                         if(DTWorker.this.isRF) {
                             for(TreeNode treeNode: trees) {
-                                Node predictNode = predictNodeIndex(treeNode.getNode(), data, false);
-                                nodeIndexes.add(predictNode.getId());
+                                if(treeNode.getNode().getId() == Node.INVALID_INDEX) {
+                                    nodeIndexes.add(Node.INVALID_INDEX);
+                                } else {
+                                    Node predictNode = predictNodeIndex(treeNode.getNode(), data, false);
+                                    nodeIndexes.add(predictNode.getId());
+                                }
                             }
                         }
 
