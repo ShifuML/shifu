@@ -1158,7 +1158,8 @@ public final class CommonUtils {
 
     public static boolean isHadoopConfigurationInjected(String key) {
         return key.startsWith("nn") || key.startsWith("guagua") || key.startsWith("shifu") || key.startsWith("mapred")
-                || key.startsWith("io") || key.startsWith("hadoop") || key.startsWith("yarn");
+                || key.startsWith("io") || key.startsWith("hadoop") || key.startsWith("yarn") || key.startsWith("pig")
+                || key.startsWith("hive") || key.startsWith("job");
     }
 
     /**
