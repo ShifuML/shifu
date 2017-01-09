@@ -133,10 +133,10 @@ public class PigExecutor {
 
         log.debug("Pig submit parameters: {}", pigParamsMap);
         if(new File(pigScriptPath).isAbsolute()) {
-            log.info("absolute path is {}", pigScriptPath);
+            log.info("Pig script absolute path is {}", pigScriptPath);
             pigServer.registerScript(pigScriptPath, pigParamsMap);
         } else {
-            log.info("relative path is {}", pigScriptPath);
+            log.info("Pig script relative path is {}", pigScriptPath);
             pigServer.registerScript(PigExecutor.class.getClassLoader().getResourceAsStream(pigScriptPath),
                     pigParamsMap);
         }
