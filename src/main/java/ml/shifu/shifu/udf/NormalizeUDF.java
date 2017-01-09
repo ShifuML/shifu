@@ -163,11 +163,15 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
             if(this.isForClean) {
                 // for RF/GBT model, only clean data, not real do norm data
                 if(config.isCategorical()) {
-                    // TODO using HashSet instead of ArrayList
-                    int index = config.getBinCategory().indexOf(val);
-                    if(index == -1) {
-                        // set to empty for invalid category
-                        tuple.append("");
+                    if(config.getBinCategory() != null) {
+                        // TODO using HashSet instead of ArrayList
+                        int index = config.getBinCategory().indexOf(val);
+                        if(index == -1) {
+                            // set to empty for invalid category
+                            tuple.append("");
+                        } else {
+                            tuple.append(val);
+                        }
                     } else {
                         tuple.append(val);
                     }
