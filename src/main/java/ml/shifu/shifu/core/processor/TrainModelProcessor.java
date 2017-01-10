@@ -222,11 +222,15 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
         SourceType sourceType = modelConfig.getDataSet().getSource();
         String cleanedDataPath = super.pathFinder.getCleanedDataPath();
         String needReGen = Environment.getProperty("shifu.tree.regeninput", Boolean.FALSE.toString());
-        if(ShifuFileUtils.isFileExists(cleanedDataPath, sourceType)
-                && Boolean.FALSE.toString().equalsIgnoreCase(needReGen)) {
-            LOG.warn("For RF/GBT, training input in {} exists, no need to regenerate it.", cleanedDataPath);
-            LOG.warn("Need regen it, please set shifu.tree.regeninput in shifuconfig to true.");
-        } else {
+
+        // 1. shifu.tree.regeninput = true, no matter what, will regen;
+        // 2. if cleanedDataPath does not exist, generate clean data for tree ensemble model training
+        // 3. if validationDataPath is not blank and cleanedValidationDataPath does not exist, generate clean data for
+        // tree ensemble model training
+        if(Boolean.TRUE.toString().equalsIgnoreCase(needReGen)
+                || !ShifuFileUtils.isFileExists(cleanedDataPath, sourceType)
+                || (StringUtils.isNotBlank(modelConfig.getValidationDataSetRawPath()) && !ShifuFileUtils.isFileExists(
+                        pathFinder.getCleanedValidationDataPath(), sourceType))) {
             LOG.info("Start to generate clean data for tree molde ... ");
             if(ShifuFileUtils.isFileExists(cleanedDataPath, sourceType)) {
                 ShifuFileUtils.deleteFile(cleanedDataPath, sourceType);
@@ -261,6 +265,10 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
                 throw new RuntimeException(e);
             }
             LOG.info("Generate clean data for tree molde successful.");
+        } else {
+            // no need regen data
+            LOG.warn("For RF/GBT, training input in {} exists, no need to regenerate it.", cleanedDataPath);
+            LOG.warn("Need regen it, please set shifu.tree.regeninput in shifuconfig to true.");
         }
     }
 
@@ -609,7 +617,7 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
             if(copyTmpModelsToLocal) {
                 copyTmpModelsToLocal(tmpModelsPath, sourceType);
             } else {
-                LOG.info("Tmp models are not coied into local, please find them in hdfs path: {}", tmpModelsPath);
+                LOG.info("Tmp models are not copied into local, please find them in hdfs path: {}", tmpModelsPath);
             }
             LOG.info("Distributed training finished in {}ms.", System.currentTimeMillis() - start);
         }

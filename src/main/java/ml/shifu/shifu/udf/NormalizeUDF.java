@@ -94,6 +94,10 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
         if(input == null || input.size() == 0) {
             return null;
         }
+        // update total valid count
+        if(isPigEnabled(Constants.SHIFU_GROUP_COUNTER, "TOTAL_VALID_COUNT")) {
+            PigStatusReporter.getInstance().getCounter(Constants.SHIFU_GROUP_COUNTER, "TOTAL_VALID_COUNT").increment(1);
+        }
 
         final String rawTag = input.get(tagColumnNum).toString();
 
@@ -163,11 +167,15 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
             if(this.isForClean) {
                 // for RF/GBT model, only clean data, not real do norm data
                 if(config.isCategorical()) {
-                    // TODO using HashSet instead of ArrayList
-                    int index = config.getBinCategory().indexOf(val);
-                    if(index == -1) {
-                        // set to empty for invalid category
-                        tuple.append("");
+                    if(config.getBinCategory() != null) {
+                        // TODO using HashSet instead of ArrayList
+                        int index = config.getBinCategory().indexOf(val);
+                        if(index == -1) {
+                            // set to empty for invalid category
+                            tuple.append("");
+                        } else {
+                            tuple.append(val);
+                        }
                     } else {
                         tuple.append(val);
                     }
