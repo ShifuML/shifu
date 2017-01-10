@@ -53,6 +53,7 @@ public class ComboModelProcessor extends BasicModelProcessor implements Processo
 
     private ComboStep comboStep;
     private String algorithms;
+    private boolean isToShuffleData;
 
     private List<ModelTrainConf.ALGORITHM> comboAlgs;
     private ComboModelTrain comboModelTrain;
@@ -101,6 +102,10 @@ public class ComboModelProcessor extends BasicModelProcessor implements Processo
 
         clearUp(ModelInspector.ModelStep.COMBO);
         return status;
+    }
+
+    public void setToShuffleData(boolean toShuffleData) {
+        isToShuffleData = toShuffleData;
     }
 
     @Override
@@ -266,7 +271,7 @@ public class ComboModelProcessor extends BasicModelProcessor implements Processo
      * 0 - success
      * others - fail
      */
-    public int runComboModels() {
+    public int runComboModels() throws IOException {
         // 1. train sub models and evaluate sub models using training data
         int status = 0;
 
@@ -527,16 +532,31 @@ public class ComboModelProcessor extends BasicModelProcessor implements Processo
      * @param evalSetName
      * @return
      */
-    @SuppressWarnings({ "rawtypes", "unchecked" })
-    private Callable<Integer> createTrainAndEvalTasks(final String subModelName, final String evalSetName) {
+    private Callable<Integer> createTrainAndEvalTasks(final String subModelName, final String evalSetName) throws IOException {
+        if (this.isToShuffleData) { // don't use parent's normalized data
+            ModelConfig subModelConfig = CommonUtils.loadModelConfig(
+                    subModelName + File.separator + Constants.MODEL_CONFIG_JSON_FILE_NAME,
+                    RawSourceData.SourceType.LOCAL);
+            subModelConfig.getTrain().setCustomPaths(null);
+            saveModelConfig(subModelName, subModelConfig);
+        }
+
         return new Callable() {
             @Override
             public Integer call() {
                 try {
-                    return ProcessManager.runShellProcess(subModelName, new String[][]{
-                            new String[]{"shifu", "train"},
-                            new String[]{"shifu", "eval", "-score", evalSetName}
-                    });
+                    if ( isToShuffleData ) {
+                        return ProcessManager.runShellProcess(subModelName, new String[][]{
+                                new String[]{"shifu", "norm", "-shuffle"},
+                                new String[]{"shifu", "train"},
+                                new String[]{"shifu", "eval", "-score", evalSetName}
+                        });
+                    } else {
+                        return ProcessManager.runShellProcess(subModelName, new String[][]{
+                                new String[]{"shifu", "train"},
+                                new String[]{"shifu", "eval", "-score", evalSetName}
+                        });
+                    }
                 } catch (IOException e) {
                     LOG.error("Fail to run commands.", e);
                     return 1;
@@ -810,6 +830,7 @@ public class ComboModelProcessor extends BasicModelProcessor implements Processo
         if (CollectionUtils.isNotEmpty(taskResults)) {
             for (Integer result : taskResults) {
                 if (result == null || result != 0) {
+                    LOG.error("Found some abnormal result - {}", result);
                     return true;
                 }
             }

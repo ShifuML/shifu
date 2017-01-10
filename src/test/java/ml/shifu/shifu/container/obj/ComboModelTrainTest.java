@@ -15,15 +15,16 @@
  */
 package ml.shifu.shifu.container.obj;
 
+import ml.shifu.shifu.util.JSONUtils;
+import org.apache.commons.io.FileUtils;
+import org.testng.Assert;
+import org.testng.annotations.AfterClass;
+import org.testng.annotations.Test;
+
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
-
-import ml.shifu.shifu.util.JSONUtils;
-
-import org.testng.Assert;
-import org.testng.annotations.Test;
 
 /**
  * Created by zhanhu on 11/18/16.
@@ -64,19 +65,25 @@ public class ComboModelTrainTest {
         trainConf.setEpochsPerIteration(1);
         trainConf.setParams(ModelTrainConf.createParamsByAlg(alg, trainConf));
         trainConf.setNumTrainEpochs(100);
-        if(ModelTrainConf.ALGORITHM.NN.equals(alg)) {
+        if (ModelTrainConf.ALGORITHM.NN.equals(alg)) {
             trainConf.setNumTrainEpochs(200);
-        } else if(ModelTrainConf.ALGORITHM.SVM.equals(alg)) {
+        } else if (ModelTrainConf.ALGORITHM.SVM.equals(alg)) {
             trainConf.setNumTrainEpochs(100);
-        } else if(ModelTrainConf.ALGORITHM.RF.equals(alg)) {
+        } else if (ModelTrainConf.ALGORITHM.RF.equals(alg)) {
             trainConf.setNumTrainEpochs(20000);
-        } else if(ModelTrainConf.ALGORITHM.GBT.equals(alg)) {
+        } else if (ModelTrainConf.ALGORITHM.GBT.equals(alg)) {
             trainConf.setNumTrainEpochs(20000);
-        } else if(ModelTrainConf.ALGORITHM.LR.equals(alg)) {
+        } else if (ModelTrainConf.ALGORITHM.LR.equals(alg)) {
             trainConf.setNumTrainEpochs(100);
         }
         trainConf.setBaggingWithReplacement(true);
 
         return trainConf;
     }
+
+    @AfterClass
+    public void cleanup() {
+        FileUtils.deleteQuietly(new File("src/test/resources/example/combotrain/ComboTrain.json"));
+    }
+
 }
