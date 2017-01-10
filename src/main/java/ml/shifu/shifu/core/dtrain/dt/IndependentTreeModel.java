@@ -173,16 +173,26 @@ public class IndependentTreeModel {
     }
 
     /**
-     * Given dataMap with format (columnName, value), compute score values of tree model
+     * Given {@code dataMap} with format (columnName, value), compute score values of tree model.
+     * 
+     * <p>
+     * No any alert or exception if your {@code dataMap} doesn't contain features included in the model, such case will
+     * be treated as missing value case. Please make sure feature names in keys of {@code dataMap} are consistent with
+     * names in model.
+     * 
+     * <p>
+     * In {@code dataMap}, numerical value can be (String, Double) format or (String, String) format, they will all be
+     * parsed to Double; categorical value are all converted to (String, String). If value not in our categorical list,
+     * it will also be treated missing value.
      * 
      * @param dataMap
-     *            dataMap for (columnName, value), numeric value can be double/String, categorical feature can be
-     *            int(index) or category value.
+     *            {@code dataMap} for (columnName, value), numeric value can be double/String, categorical feature can
+     *            be
+     *            int(index) or category value. if not set or set to null, such feature will be treated as missing
+     *            value. For numerical value, if it cannot be parsed successfully, it will also be treated as missing.
      * @return if classification mode, return array of all scores of trees
-     *         if regression of RF, return array with only one element which is avg score of all tree model scores
+     *         if regression of RF, return array with only one element which is average score of all tree model scores
      *         if regression of GBT, return array with only one element which is score of the GBT model
-     * @throws IllegalArgumentException
-     *             if needed columns not in parameter dataMap
      */
     public final double[] compute(Map<String, Object> dataMap) {
         double predictSum = 0d;
@@ -287,27 +297,25 @@ public class IndependentTreeModel {
         Node nextNode = null;
         Object obj = dataMap.get(numNameMapping.get(split.getColumnNum()));
 
-        // how to denote null value for real case, if it is null, should we directly use mean value not throw
-        // exception??
-        if(obj == null) {
-            throw new IllegalArgumentException("Current model need column " + numNameMapping.get(split.getColumnNum())
-                    + " but not found in dataMap, please check your input.");
-        }
-
         if(split.getFeatureType().isNumerical()) {
             double value = 0d;
-            if(obj instanceof Double) {
-                value = ((Double) obj).doubleValue();
+            if(obj == null) {
+                // no matter set it to null or not set it in dataMap, it will be treated as missing value
+                value = this.numericalMeanMapping.get(split.getColumnNum());
             } else {
-                try {
-                    value = Double.parseDouble(obj.toString());
-                } catch (NumberFormatException e) {
-                    // not valid double value for numerical feature, using default value
-                    value = this.numericalMeanMapping.get(split.getColumnNum());
+                if(obj instanceof Double) {
+                    value = ((Double) obj).doubleValue();
+                } else {
+                    try {
+                        value = Double.parseDouble(obj.toString());
+                    } catch (NumberFormatException e) {
+                        // not valid double value for numerical feature, using default value
+                        value = this.numericalMeanMapping.get(split.getColumnNum());
+                    }
                 }
             }
 
-            // replace by default mean value
+            // replace NaN by default mean value
             if(Double.isNaN(value)) {
                 value = this.numericalMeanMapping.get(split.getColumnNum());
             }
@@ -320,17 +328,24 @@ public class IndependentTreeModel {
             }
         } else if(split.getFeatureType().isCategorical()) {
             double indexValue = -1d;
-            if(obj instanceof Number) {
-                indexValue = ((Number) obj).doubleValue();
+            if(obj == null) {
+                // no matter set it to null or not set it in dataMap, it will be treated as missing value, last one is
+                // missing value category
+                indexValue = categoricalColumnNameNames.get(split.getColumnNum()).size();
             } else {
-                Integer intIndex = columnCategoryIndexMapping.get(split.getColumnNum()).get(obj.toString());
-                if(intIndex == null || intIndex < 0
-                        || intIndex >= categoricalColumnNameNames.get(split.getColumnNum()).size()) {
-                    // last one is for invalid category
-                    intIndex = categoricalColumnNameNames.get(split.getColumnNum()).size();
+                if(obj instanceof Number) {
+                    indexValue = ((Number) obj).doubleValue();
+                } else {
+                    Integer intIndex = columnCategoryIndexMapping.get(split.getColumnNum()).get(obj.toString());
+                    if(intIndex == null || intIndex < 0
+                            || intIndex >= categoricalColumnNameNames.get(split.getColumnNum()).size()) {
+                        // last one is for invalid category
+                        intIndex = categoricalColumnNameNames.get(split.getColumnNum()).size();
+                    }
+                    indexValue = intIndex * 1d;
                 }
-                indexValue = intIndex * 1d;
             }
+            // for some cases in 0.99999999d, do a round check
             short roundIndexValue = (short) (indexValue + 0.1d);
             Set<Short> childCategories = split.getLeftOrRightCategories();
             if(split.isLeft()) {
