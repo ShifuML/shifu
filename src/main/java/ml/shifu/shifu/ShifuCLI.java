@@ -84,6 +84,8 @@ public class ShifuCLI {
     private static final String EVAL_MODEL = "model";
     private static final String SHOW = "show";
 
+    private static final String SHUFFLE = "shuffle";
+
     static private final Logger log = LoggerFactory.getLogger(ShifuCLI.class);
 
     /**
@@ -163,7 +165,7 @@ public class ShifuCLI {
                     }
                 } else if(args[0].equals(NORMALIZE_CMD) || args[0].equals(NORM_CMD)) {
                     // normalize step
-                    status = normalizeTrainData();
+                    status = normalizeTrainData(cmd.hasOption(SHUFFLE));
                     if(status == 0) {
                         log.info("Do model set normalization successfully. Please continue next step by using 'shifu varselect or shifu varsel'.");
                     } else {
@@ -194,7 +196,7 @@ public class ShifuCLI {
                         status = initComboModels();
                     } else if ( cmd.hasOption(EVAL_CMD_RUN) ) {
                         log.info("Run combo model.");
-                        status = runComboModels();
+                        status = runComboModels(opts.hasOption(SHUFFLE));
                         // train combo models
                     } else if ( cmd.hasOption(EVAL_CMD) ) {
                         log.info("Eval combo model.");
@@ -374,11 +376,20 @@ public class ShifuCLI {
 
     /**
      * Normalize the training data
-     * 
+     *
      * @throws Exception
      */
     public static int normalizeTrainData() throws Exception {
-        NormalizeModelProcessor p = new NormalizeModelProcessor();
+        return normalizeTrainData(false);
+    }
+
+    /**
+     * Normalize the training data
+     *
+     * @throws Exception
+     */
+    public static int normalizeTrainData(boolean isToShuffleData) throws Exception {
+        NormalizeModelProcessor p = new NormalizeModelProcessor(isToShuffleData);
         return p.run();
     }
 
@@ -535,8 +546,9 @@ public class ShifuCLI {
      * @return
      * @throws Exception
      */
-    private static int runComboModels() throws Exception {
-        Processor processor = new ComboModelProcessor(ComboModelProcessor.ComboStep.RUN);
+    private static int runComboModels(boolean isToShuffleData) throws Exception {
+        ComboModelProcessor processor = new ComboModelProcessor(ComboModelProcessor.ComboStep.RUN);
+        processor.setToShuffleData(isToShuffleData);
         return processor.run();
     }
 
@@ -601,6 +613,8 @@ public class ShifuCLI {
                 .withDescription("Export concise PMML").create(EXPORT_CONCISE);
         Option opt_reset = OptionBuilder.hasArg(false)
                 .withDescription("Reset all variables to finalSelect = false").create(RESET);
+        Option opt_shuffle = OptionBuilder.hasArg(false)
+                .withDescription("Shuffle data after normalization").create(SHUFFLE);
 
         Option opt_list = OptionBuilder.hasArg(false).create(LIST);
         Option opt_delete = OptionBuilder.hasArg().create(DELETE);
@@ -628,6 +642,7 @@ public class ShifuCLI {
         opts.addOption(opt_reset);
         opts.addOption(opt_eval);
         opts.addOption(opt_init);
+        opts.addOption(opt_shuffle);
 
         opts.addOption(opt_list);
         opts.addOption(opt_delete);
@@ -650,7 +665,7 @@ public class ShifuCLI {
         System.out.println("\tinit                                    Create initial ColumnConfig.json and upload to HDFS.");
         System.out.println("\tstats                                   Calculate statistics on HDFS and update local ColumnConfig.json.");
         System.out.println("\tvarselect/varsel [-reset]               Variable selection, will update finalSelect in ColumnConfig.json.");
-        System.out.println("\tnormalize/norm                          Normalize the columns with finalSelect as true.");
+        System.out.println("\tnormalize/norm [-shuffle]               Normalize the columns with finalSelect as true.");
         System.out.println("\ttrain [-dry]                            Train the model with the normalized data.");
         System.out.println("\tposttrain                               Post-process data after training models.");
         System.out.println("\teval                                    Run all eval sets.");

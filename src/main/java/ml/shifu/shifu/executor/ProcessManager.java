@@ -35,7 +35,7 @@ public class ProcessManager {
             }
         }
 
-        return 1;
+        return status;
     }
 
     public static int runShellProcess(String currentDir, String[] args) throws IOException {
