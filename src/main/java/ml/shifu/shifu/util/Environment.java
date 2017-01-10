@@ -98,7 +98,7 @@ public class Environment {
         // check /etc/shifuconfig, if exists, load it
         loadProperties(properties, File.separator + "etc" + File.separator + "shifuconfig");
 
-        // check <user-home>/.shifuconfig, if exists, load it
+        // check /<user-home>/.shifuconfig, if exists, load it
         String userHome = System.getProperty("user.home");
         loadProperties(properties, userHome + File.separator + ".shifuconfig");
     }

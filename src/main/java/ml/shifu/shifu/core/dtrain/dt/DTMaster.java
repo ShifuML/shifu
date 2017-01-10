@@ -235,15 +235,15 @@ public class DTMaster extends AbstractMasterComputable<DTMasterParams, DTWorkerP
     private Queue<TreeNode> toDoQueue;
 
     /**
-     * DTEarlyStopDecider will decide automatic whether it need further training,  this only for GBDT.
+     * DTEarlyStopDecider will decide automatic whether it need further training, this only for GBDT.
      */
-//    @SuppressWarnings("unused")
-//    private DTEarlyStopDecider dtEarlyStopDecider;
+    // @SuppressWarnings("unused")
+    // private DTEarlyStopDecider dtEarlyStopDecider;
 
     /**
      * If earlyStopEnabled is true, the early stop feature will be enabled
      */
-//    private boolean earlyStopEnabled = false;
+    // private boolean earlyStopEnabled = false;
 
     @Override
     public DTMasterParams doCompute(MasterContext<DTMasterParams, DTWorkerParams> context) {
@@ -340,14 +340,14 @@ public class DTMaster extends AbstractMasterComputable<DTMasterParams, DTWorkerP
         DTMasterParams masterParams = new DTMasterParams(weightedTrainCount, trainError, weightedValidationCount,
                 validationError);
 
-        // Add  early Stop Feature for GBT
-//        if(this.earlyStopEnabled && this.isGBDT && dtEarlyStopDecider.add(trainError, validationError)){
-//            masterParams.setHalt(true);
-//            LOG.info("weightedTrainCount {}, weightedValidationCount {}, trainError {}, validationError {}",
-//                    weightedTrainCount, weightedValidationCount, trainError, validationError);
-//            LOG.info("Early stop identified, training is stopped in iteration {}.", context.getCurrentIteration());
-//            return masterParams;
-//        }
+        // Add early Stop Feature for GBT
+        // if(this.earlyStopEnabled && this.isGBDT && dtEarlyStopDecider.add(trainError, validationError)){
+        // masterParams.setHalt(true);
+        // LOG.info("weightedTrainCount {}, weightedValidationCount {}, trainError {}, validationError {}",
+        // weightedTrainCount, weightedValidationCount, trainError, validationError);
+        // LOG.info("Early stop identified, training is stopped in iteration {}.", context.getCurrentIteration());
+        // return masterParams;
+        // }
 
         if(toDoQueue.isEmpty()) {
             if(this.isGBDT) {
@@ -437,7 +437,26 @@ public class DTMaster extends AbstractMasterComputable<DTMasterParams, DTWorkerP
         }
 
         if(this.isRF) {
-            masterParams.setTrees(trees);
+            // for rf, reset trees sent to workers for only trees with todo nodes, this saves message space. While
+            // elements in todoTrees are also the same reference in this.trees, reuse the same object to save memory.
+            if(masterParams.getTreeDepth().size() == this.trees.size()) {
+                // if normal iteration
+                List<TreeNode> todoTrees = new ArrayList<TreeNode>();
+                for(int i = 0; i < trees.size(); i++) {
+                    if(masterParams.getTreeDepth().get(i) >= 0) {
+                        // such tree in current iteration treeDepth is not -1, add it to todoTrees.
+                        todoTrees.add(trees.get(i));
+                    } else {
+                        // mock a TreeNode instance to make sure no surprise in further serialization. In fact
+                        // meaningless.
+                        todoTrees.add(new TreeNode(i, new Node(Node.INVALID_INDEX), 1d));
+                    }
+                }
+                masterParams.setTrees(todoTrees);
+            } else {
+                // if last iteration without maxDepthList
+                masterParams.setTrees(trees);
+            }
         }
         if(this.isGBDT) {
             // set tmp trees to DTOutput
@@ -916,13 +935,13 @@ public class DTMaster extends AbstractMasterComputable<DTMasterParams, DTWorkerP
 
         this.toDoQueue = new LinkedList<TreeNode>();
 
-//        if(validParams.containsKey("EnableEarlyStop")){
-//            this.earlyStopEnabled = Boolean.valueOf(validParams.get("EnableEarlyStop").toString());
-//        }
-//
-//        if(this.earlyStopEnabled){
-//            this.dtEarlyStopDecider = new DTEarlyStopDecider(this.maxDepth);
-//        }
+        // if(validParams.containsKey("EnableEarlyStop")){
+        // this.earlyStopEnabled = Boolean.valueOf(validParams.get("EnableEarlyStop").toString());
+        // }
+        //
+        // if(this.earlyStopEnabled){
+        // this.dtEarlyStopDecider = new DTEarlyStopDecider(this.maxDepth);
+        // }
 
         if(this.isLeafWise) {
             this.toSplitQueue = new PriorityQueue<TreeNode>(64, new Comparator<TreeNode>() {

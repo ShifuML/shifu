@@ -279,8 +279,11 @@ public class UpdateBinningInfoMapper extends Mapper<LongWritable, Text, IntWrita
             LOG.warn("Empty input.");
             return;
         }
+        
+        context.getCounter(Constants.SHIFU_GROUP_COUNTER, "TOTAL_VALID_COUNT").increment(1L);
 
         if(!this.dataPurifier.isFilterOut(valueStr)) {
+            context.getCounter(Constants.SHIFU_GROUP_COUNTER, "FILTER_OUT_COUNT").increment(1L);
             return;
         }
 
@@ -290,10 +293,12 @@ public class UpdateBinningInfoMapper extends Mapper<LongWritable, Text, IntWrita
 
         if(modelConfig.isRegression()) {
             if(tag == null || (!posTags.contains(tag) && !negTags.contains(tag))) {
+                context.getCounter(Constants.SHIFU_GROUP_COUNTER, "INVALID_TAG").increment(1L);
                 return;
             }
         } else {
             if(tag == null || (!tags.contains(tag))) {
+                context.getCounter(Constants.SHIFU_GROUP_COUNTER, "INVALID_TAG").increment(1L);
                 return;
             }
         }

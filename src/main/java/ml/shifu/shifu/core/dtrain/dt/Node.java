@@ -106,7 +106,15 @@ public class Node implements Bytable {
      */
     private boolean isLeaf;
 
+    /**
+     * Default root index is 1. Others are 2, 3, 4, 5 ...
+     */
     public static final int ROOT_INDEX = 1;
+
+    /**
+     * If node with such index, means such node is invalid.
+     */
+    public static final int INVALID_INDEX = -1;
 
     public Node() {
         this(ROOT_INDEX);

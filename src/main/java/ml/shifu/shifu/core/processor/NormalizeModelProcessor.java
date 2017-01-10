@@ -55,9 +55,10 @@ import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.mapreduce.lib.output.TextOutputFormat;
-import org.apache.hadoop.mapreduce.lib.partition.KeyFieldBasedPartitioner;
 import org.apache.hadoop.util.GenericOptionsParser;
 import org.apache.pig.impl.util.JarManager;
+import org.apache.pig.tools.pigstats.JobStats;
+import org.apache.pig.tools.pigstats.PigStats;
 import org.encog.ml.data.MLDataSet;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -340,6 +341,7 @@ public class NormalizeModelProcessor extends BasicModelProcessor implements Proc
      * 
      * @throws IOException
      */
+    @SuppressWarnings("deprecation")
     private void runPigNormalize() throws IOException {
         SourceType sourceType = modelConfig.getDataSet().getSource();
 
@@ -371,6 +373,31 @@ public class NormalizeModelProcessor extends BasicModelProcessor implements Proc
             paramsMap.put(Constants.IS_COMPRESS, "true");
             paramsMap.put(Constants.IS_NORM_FOR_CLEAN, "false");
             PigExecutor.getExecutor().submitJob(modelConfig, normPigPath, paramsMap);
+
+            Iterator<JobStats> iter = PigStats.get().getJobGraph().iterator();
+
+            while(iter.hasNext()) {
+                JobStats jobStats = iter.next();
+                long totalValidCount = jobStats.getHadoopCounters().getGroup(Constants.SHIFU_GROUP_COUNTER)
+                        .getCounter("TOTAL_VALID_COUNT");
+                // If no basic record counter, check next one
+                if(totalValidCount == 0L) {
+                    continue;
+                }
+                long invalidTagCount = jobStats.getHadoopCounters().getGroup(Constants.SHIFU_GROUP_COUNTER)
+                        .getCounter("INVALID_TAG");
+
+                log.info("Total valid records {} after filtering, invalid tag records {}.", totalValidCount,
+                        invalidTagCount);
+
+                if(totalValidCount > 0L && invalidTagCount * 1d / totalValidCount >= 0.8d) {
+                    log.error("Too many invalid tags, please check you configuration on positive tags and negative tags.");
+                }
+
+                // only one pig job with such counters, break
+                break;
+            }
+
             if(StringUtils.isNotBlank(modelConfig.getValidationDataSetRawPath())) {
                 paramsMap.put(Constants.IS_COMPRESS, "false");
                 paramsMap.put(Constants.PATH_RAW_DATA, modelConfig.getValidationDataSetRawPath());

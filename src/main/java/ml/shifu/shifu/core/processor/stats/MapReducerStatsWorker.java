@@ -188,6 +188,20 @@ public class MapReducerStatsWorker extends AbstractStatsExecutor {
         if(!job.waitForCompletion(true)) {
             FileUtils.deleteQuietly(new File(filePath));
             throw new RuntimeException("MapReduce Job Updateing Binning Info failed.");
+        } else {
+            long totalValidCount = job.getCounters().findCounter(Constants.SHIFU_GROUP_COUNTER, "TOTAL_VALID_COUNT")
+                    .getValue();
+            long invalidTagCount = job.getCounters().findCounter(Constants.SHIFU_GROUP_COUNTER, "INVALID_TAG")
+                    .getValue();
+            long filterOut = job.getCounters().findCounter(Constants.SHIFU_GROUP_COUNTER, "FILTER_OUT_COUNT")
+                    .getValue();
+
+            log.info("Total valid records {}, invalid tag records {}, filter out records {}", totalValidCount,
+                    invalidTagCount, filterOut);
+
+            if(totalValidCount > 0L && invalidTagCount * 1d / totalValidCount >= 0.8d) {
+                log.error("Too many invalid tags, please check you configuration on positive tags and negative tags.");
+            }
         }
         FileUtils.deleteQuietly(new File(filePath));
     }
