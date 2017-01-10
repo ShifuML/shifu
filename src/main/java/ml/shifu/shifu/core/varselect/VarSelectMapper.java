@@ -17,6 +17,7 @@ package ml.shifu.shifu.core.varselect;
 
 import com.google.common.base.Splitter;
 
+import ml.shifu.shifu.executor.ExecutorManager;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.Mapper;
@@ -26,10 +27,12 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.concurrent.Callable;
 
 import ml.shifu.guagua.util.NumberFormatUtils;
 import ml.shifu.shifu.container.obj.ColumnConfig;
@@ -132,6 +135,8 @@ public class VarSelectMapper extends Mapper<LongWritable, Text, LongWritable, Co
      */
     private long recordCount;
 
+    private ExecutorManager<SEColResult> executorManager;
+
     /**
      * Load all configurations for modelConfig and columnConfigList from source type.
      */
@@ -173,6 +178,7 @@ public class VarSelectMapper extends Mapper<LongWritable, Text, LongWritable, Co
         this.columnIndexes = new long[this.inputNodeCount];
         this.inputsMLData = new BasicMLData(this.inputNodeCount);
         this.outputKey = new LongWritable();
+        this.executorManager = new ExecutorManager<SEColResult>();
     }
 
     @Override
@@ -209,18 +215,38 @@ public class VarSelectMapper extends Mapper<LongWritable, Text, LongWritable, Co
         }
 
         double oldValue = 0.0d;
-
-        this.inputsMLData.setData(this.inputs);
-
         double candidateModelScore = 0d;
         if(Constants.FILTER_BY_SE.equalsIgnoreCase(this.filterBy)) {
             candidateModelScore = this.model.compute(new BasicMLData(inputs)).getData()[0];
         }
+
+        List<Callable<SEColResult>> tasks = new ArrayList<Callable<SEColResult>>();
+
         for(int i = 0; i < this.inputs.length; i++) {
             oldValue = this.inputs[i];
             this.inputs[i] = 0d;
-            this.inputsMLData.setData(this.inputs);
-            double currentModelScore = this.model.compute(new BasicMLData(inputs)).getData()[0];
+
+            final double[] seInputs = new double[this.inputs.length];
+            System.arraycopy(this.inputs, 0, seInputs, 0, this.inputs.length);
+
+            final int columnId = i;
+            Callable<SEColResult> task = new Callable<SEColResult>() {
+                @Override
+                public SEColResult call() throws Exception {
+                    SEColResult seColResult = new SEColResult();
+                    seColResult.setColumnId(columnId);
+                    seColResult.setScore(model.compute(new BasicMLData(seInputs)).getData()[0]);
+                    return seColResult;
+                }
+            };
+            tasks.add(task);
+            this.inputs[i] = oldValue;
+        }
+
+        List<SEColResult> results = this.executorManager.submitTasksAndWaitResults(tasks);
+
+        for ( SEColResult seColResult : results) {
+            double currentModelScore = seColResult.getScore();
 
             double diff = 0d;
             if(Constants.FILTER_BY_ST.equalsIgnoreCase(this.filterBy)) {
@@ -229,7 +255,7 @@ public class VarSelectMapper extends Mapper<LongWritable, Text, LongWritable, Co
                 // SE
                 diff = candidateModelScore - currentModelScore;
             }
-            ColumnInfo columnInfo = this.results.get(this.columnIndexes[i]);
+            ColumnInfo columnInfo = this.results.get(this.columnIndexes[seColResult.getColumnId()]);
 
             if(columnInfo == null) {
                 columnInfo = new ColumnInfo();
@@ -239,8 +265,11 @@ public class VarSelectMapper extends Mapper<LongWritable, Text, LongWritable, Co
                 columnInfo.setSumScoreDiff(columnInfo.getSumScoreDiff() + Math.abs(diff));
                 columnInfo.setSumSquareScoreDiff(columnInfo.getSumSquareScoreDiff() + power2(diff));
             }
-            this.results.put(this.columnIndexes[i], columnInfo);
-            this.inputs[i] = oldValue;
+            this.results.put(this.columnIndexes[seColResult.getColumnId()], columnInfo);
+        }
+
+        if ( this.recordCount % 1000 == 0) {
+            LOG.info("Finish to process {} records.", this.recordCount);
         }
     }
 
@@ -249,6 +278,7 @@ public class VarSelectMapper extends Mapper<LongWritable, Text, LongWritable, Co
      */
     @Override
     protected void cleanup(Context context) throws IOException, InterruptedException {
+        LOG.info("Start to generate final results: {}", results.size());
         for(Entry<Long, ColumnInfo> entry: results.entrySet()) {
             this.outputKey.set(entry.getKey());
             // value is sumValue, not sumValue/(number of records)
@@ -256,11 +286,32 @@ public class VarSelectMapper extends Mapper<LongWritable, Text, LongWritable, Co
             columnInfo.setCount(this.recordCount);
             context.write(this.outputKey, columnInfo);
         }
-        LOG.debug("Final results: {}", results);
+        LOG.info("Final results: {}", results.size());
+        this.executorManager.forceShutDown();
     }
 
     private double power2(double data) {
         return data * data;
     }
 
+    private static class SEColResult {
+        private int columnId;
+        private double score;
+
+        public int getColumnId() {
+            return columnId;
+        }
+
+        public void setColumnId(int columnId) {
+            this.columnId = columnId;
+        }
+
+        public double getScore() {
+            return score;
+        }
+
+        public void setScore(double score) {
+            this.score = score;
+        }
+    }
 }

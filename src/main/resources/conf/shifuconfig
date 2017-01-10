@@ -55,3 +55,9 @@ guagua.min.workers.ratio=0.97
 
 ## the hadoop capacity may limit parallel number, add this parameter for hadoop performance tunning
 # shifu.combo.thread.parallel = 5
+
+## control the behavior of normalized data
+# how many parts of normalized data that will generate
+# shifu.norm.shuffle.size = 100
+# the preferred normalized data size per part
+# shifu.norm.prefer.part.size = 256000000
