@@ -353,6 +353,11 @@ public class InitModelProcessor extends BasicModelProcessor implements Processor
 
             log.info("Total valid records {}, invalid tag records {}, filter out records {}", totalValidCount,
                     invalidTagCount, filterOut);
+
+            if(totalValidCount > 0L && invalidTagCount * 1d / totalValidCount >= 0.8d) {
+                log.error("Too many invalid tags, please check you configuration on positive tags and negative tags.");
+            }
+
             return getCountInfoMap(source, autoTypePath);
         } else {
             throw new RuntimeException("MapReduce Job Auto Type Distinct Count failed.");

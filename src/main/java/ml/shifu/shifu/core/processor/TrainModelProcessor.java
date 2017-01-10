@@ -617,7 +617,7 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
             if(copyTmpModelsToLocal) {
                 copyTmpModelsToLocal(tmpModelsPath, sourceType);
             } else {
-                LOG.info("Tmp models are not coied into local, please find them in hdfs path: {}", tmpModelsPath);
+                LOG.info("Tmp models are not copied into local, please find them in hdfs path: {}", tmpModelsPath);
             }
             LOG.info("Distributed training finished in {}ms.", System.currentTimeMillis() - start);
         }
