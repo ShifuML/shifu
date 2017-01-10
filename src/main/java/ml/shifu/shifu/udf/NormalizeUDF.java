@@ -94,6 +94,10 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
         if(input == null || input.size() == 0) {
             return null;
         }
+        // update total valid count
+        if(isPigEnabled(Constants.SHIFU_GROUP_COUNTER, "TOTAL_VALID_COUNT")) {
+            PigStatusReporter.getInstance().getCounter(Constants.SHIFU_GROUP_COUNTER, "TOTAL_VALID_COUNT").increment(1);
+        }
 
         final String rawTag = input.get(tagColumnNum).toString();
 

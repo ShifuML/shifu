@@ -29,8 +29,9 @@ import org.dmg.pmml.FieldName;
 import org.dmg.pmml.PMML;
 import org.jpmml.evaluator.FieldValue;
 import org.jpmml.evaluator.MiningModelEvaluator;
-import org.junit.Assert;
 import org.testng.annotations.Test;
+
+import static org.testng.Assert.assertTrue;
 
 public class TreeModelPmmlTest {
 
@@ -68,7 +69,7 @@ public class TreeModelPmmlTest {
                 }
                 double[] results = model.compute(newMap);
                 double ownScore = results[0] * 1000;
-                Assert.assertTrue(Math.abs(pmmlScore - ownScore) <= 1);
+                org.testng.Assert.assertTrue(Math.abs(pmmlScore - ownScore) <= 1);
             }
         } finally {
             IOUtils.closeQuietly(is);

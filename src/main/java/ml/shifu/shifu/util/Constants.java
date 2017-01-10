@@ -132,6 +132,7 @@ public interface Constants {
     public static final String CLEANED_DATA = "CleanedData";
     public static final String NORMALIZED_VALIDATION_DATA = "NormalizedValidationData";
     public static final String CLEANED_VALIDATION_DATA = "CleanedValidationData";
+    public static final String SHUFFLED_NORM_DATA = "ShuffledNormData";
 
     public static final String TRAIN_SCORES = "TrainScores";
     public static final String BIN_AVG_SCORE = "BinAvgScore";
@@ -241,5 +242,9 @@ public interface Constants {
     public static final String SHIFU_DTRAIN_PARALLEL = "shifu.dtrain.parallel";
 
     public static final String SHIFU_TMPMODEL_COPYTOLOCAL = "shifu.tmpmodel.copytolocal";
+
+    public static final String SHIFU_NORM_SHUFFLE_SIZE = "shifu.norm.shuffle.size";
+
+    public static final String SHIFU_NORM_PREFER_PART_SIZE = "shifu.norm.prefer.part.size";
 
 }
