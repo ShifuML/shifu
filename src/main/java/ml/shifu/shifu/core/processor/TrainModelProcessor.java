@@ -219,6 +219,30 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
             return;
         }
 
+        // check if binBoundaries and binCategories are good and log error
+        for(ColumnConfig columnConfig: columnConfigList) {
+            if(columnConfig.isFinalSelect() && !columnConfig.isTarget() && !columnConfig.isMeta()) {
+                if(columnConfig.isNumerical() && columnConfig.getBinBoundary() == null) {
+                    throw new IllegalArgumentException("Final select " + columnConfig.getColumnName()
+                            + "column but binBoundary in ColumnConfig.json is null.");
+                }
+
+                if(columnConfig.isNumerical() && columnConfig.getBinBoundary().size() <= 1) {
+                    LOG.warn("Column {} with only one or zero element in binBounday, such column will be ignored in  tree model training.");
+                }
+
+                if(columnConfig.isCategorical() && columnConfig.getBinCategory() == null) {
+                    throw new IllegalArgumentException("Final select " + columnConfig.getColumnName()
+                            + "column but binCategory in ColumnConfig.json is null.");
+                }
+
+                if(columnConfig.isCategorical() && columnConfig.getBinCategory().size() <= 0) {
+                    LOG.warn("Column {} with only zero element in binCategory, such column will be ignored in  tree model training.");
+                }
+            }
+        }
+
+        // run cleaning data logic for model input
         SourceType sourceType = modelConfig.getDataSet().getSource();
         String cleanedDataPath = super.pathFinder.getCleanedDataPath();
         String needReGen = Environment.getProperty("shifu.tree.regeninput", Boolean.FALSE.toString());

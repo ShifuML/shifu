@@ -797,11 +797,21 @@ public class DTWorker
         for(ColumnConfig config: columnConfigList) {
             if(isAfterVarSelect) {
                 if(config.isFinalSelect() && !config.isTarget() && !config.isMeta()) {
-                    features.add(config.getColumnNum());
+                    // only select numerical feature with getBinBoundary().size() larger than 1
+                    // or categorical feature with getBinCategory().size() larger than 0
+                    if((config.isNumerical() && config.getBinBoundary().size() > 1)
+                            || (config.isCategorical() && config.getBinCategory().size() > 0)) {
+                        features.add(config.getColumnNum());
+                    }
                 }
             } else {
                 if(!config.isMeta() && !config.isTarget() && CommonUtils.isGoodCandidate(config)) {
-                    features.add(config.getColumnNum());
+                    // only select numerical feature with getBinBoundary().size() larger than 1
+                    // or categorical feature with getBinCategory().size() larger than 0
+                    if((config.isNumerical() && config.getBinBoundary().size() > 1)
+                            || (config.isCategorical() && config.getBinCategory().size() > 0)) {
+                        features.add(config.getColumnNum());
+                    }
                 }
             }
         }
