@@ -15,19 +15,18 @@
  */
 package ml.shifu.shifu.fs;
 
-import java.io.File;
-import java.util.Map;
-
 import ml.shifu.shifu.container.obj.EvalConfig;
 import ml.shifu.shifu.container.obj.ModelConfig;
 import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
 import ml.shifu.shifu.util.Constants;
 import ml.shifu.shifu.util.Environment;
-
 import org.apache.commons.lang.NotImplementedException;
 import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.fs.Path;
 import org.apache.pig.impl.util.JarManager;
+
+import java.io.File;
+import java.util.Map;
 
 /**
  * <p/>
@@ -916,5 +915,13 @@ public class PathFinder {
      */
     public String getSubModelsAssembleEvalData(String evalName, SourceType sourceType) {
         return getPathBySourceType(new Path(Constants.TMP, evalName + "AssembleEvalData"), sourceType);
+    }
+
+    public String getShuffleDataPath() {
+        return getShuffleDataPath(modelConfig.getDataSet().getSource());
+    }
+
+    private String getShuffleDataPath(SourceType sourceType) {
+        return getPathBySourceType(new Path(Constants.TMP, Constants.SHUFFLED_NORM_DATA), sourceType);
     }
 }

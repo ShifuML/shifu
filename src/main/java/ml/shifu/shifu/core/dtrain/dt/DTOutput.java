@@ -192,7 +192,7 @@ public class DTOutput extends BasicMasterInterceptor<DTMasterParams, DTWorkerPar
                         .append(this.trainerId)
                         .append(" Iteration #")
                         .append(currentIteration - 1)
-                        .append(" Train Error: ")
+                        .append(" Training Error: ")
                         .append((Double.isNaN(trainError) || trainError == 0d) ? "N/A" : String.format("%.10f",
                                 trainError)).append(" Validation Error: ")
                         .append(validationError == 0d ? "N/A" : String.format("%.10f", validationError))
@@ -204,7 +204,7 @@ public class DTOutput extends BasicMasterInterceptor<DTMasterParams, DTWorkerPar
                         .append(this.trainerId)
                         .append(" Iteration #")
                         .append(currentIteration - 1)
-                        .append(" Train Error: ")
+                        .append(" Training Error: ")
                         .append((Double.isNaN(trainError) || trainError == 0d) ? "N/A" : String.format("%.10f",
                                 trainError)).append(" Validation Error: ")
                         .append(validationError == 0d ? "N/A" : String.format("%.10f", validationError))
@@ -217,14 +217,14 @@ public class DTOutput extends BasicMasterInterceptor<DTMasterParams, DTWorkerPar
                 List<Integer> treeDepth = context.getMasterResult().getTreeDepth();
                 if(treeDepth.size() == 0) {
                     info = new StringBuilder(200).append("Trainer ").append(this.trainerId).append(" Iteration #")
-                            .append(currentIteration - 1).append(" Train Error: ")
+                            .append(currentIteration - 1).append(" Training Error: ")
                             .append(trainError == 0d ? "N/A" : String.format("%.10f", trainError))
                             .append(" Validation Error: ")
                             .append(validationError == 0d ? "N/A" : String.format("%.10f", validationError))
                             .append("\n").toString();
                 } else {
                     info = new StringBuilder(200).append("Trainer ").append(this.trainerId).append(" Iteration #")
-                            .append(currentIteration - 1).append(" Train Error: ")
+                            .append(currentIteration - 1).append(" Training Error: ")
                             .append(trainError == 0d ? "N/A" : String.format("%.10f", trainError))
                             .append(" Validation Error: ")
                             .append(validationError == 0d ? "N/A" : String.format("%.10f", validationError))
@@ -300,8 +300,7 @@ public class DTOutput extends BasicMasterInterceptor<DTMasterParams, DTWorkerPar
         DataOutputStream fos = null;
 
         try {
-             fos = new DataOutputStream(new GZIPOutputStream(FileSystem.get(new Configuration()).create(out)));
-//            fos = new DataOutputStream(FileSystem.get(new Configuration()).create(out));
+            fos = new DataOutputStream(new GZIPOutputStream(FileSystem.get(new Configuration()).create(out)));
             LOG.info("Writing {} trees to {}.", trees.size(), out);
             // version
             fos.writeInt(CommonConstants.TREE_FORMAT_VERSION);
