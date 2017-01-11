@@ -96,7 +96,7 @@ public class CsvFile implements Iterable<Map<String, String>> {
                 return null;
             }
 
-            String[] vars = StringUtils.split(nextLine, delimiter);
+            String[] vars = StringUtils.splitPreserveAllTokens(nextLine, delimiter);
             Map<String, String> varMap = new HashMap<String, String>();
             for(int i = 0; i < this.header.length; i++) {
                 varMap.put(this.header[i], vars[i]);
