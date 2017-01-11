@@ -36,7 +36,7 @@ public class CsvFile implements Iterable<Map<String, String>> {
     }
 
     public String[] getColumnNames() {
-        return Arrays.copyOf(this.iterator.getHeader(), 0);
+        return Arrays.copyOf(this.iterator.getHeader(), this.iterator.getHeader().length);
     }
 
     @Override
