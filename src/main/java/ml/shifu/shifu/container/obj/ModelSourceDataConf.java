@@ -60,6 +60,7 @@ public class ModelSourceDataConf extends RawSourceData {
         other.setHeaderPath(this.getHeaderPath());
         other.setHeaderDelimiter(this.getHeaderDelimiter());
         other.setFilterExpressions(this.getFilterExpressions());
+        other.setWeightColumnName(this.getWeightColumnName());
 
         other.setTargetColumnName(this.getTargetColumnName());
         other.setPosTags(new ArrayList<String>(this.getPosTags()));

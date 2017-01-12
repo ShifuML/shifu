@@ -260,4 +260,8 @@ public class Scorer {
     private Integer toScore(Double d) {
         return (int) Math.round(d * 1000);
     }
+
+    public int getModelCnt() {
+        return ((models != null) ? this.models.size() : 0);
+    }
 }
