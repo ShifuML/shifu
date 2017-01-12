@@ -106,12 +106,20 @@ public class DTMaster extends AbstractMasterComputable<DTMasterParams, DTWorkerP
     private int treeNum;
 
     /**
-     * Feature sub sampling strategy: ALL, HALF, ONETHIRD
+     * Feature sub sampling strategy, this is combined with {@link #featureSubsetRate}, if
+     * {@link #featureSubsetStrategy} is null, use {@link #featureSubsetRate}. Otherwise use
+     * {@link #featureSubsetStrategy}.
      */
     private FeatureSubsetStrategy featureSubsetStrategy = FeatureSubsetStrategy.ALL;
 
     /**
-     * Max depth of a tree, by default is 10
+     * FeatureSubsetStrategy in train#params can be set to double or text, if double, use current double value but
+     * {@link #featureSubsetStrategy} is set to null.
+     */
+    private double featureSubsetRate;
+
+    /**
+     * Max depth of a tree, by default is 10.
      */
     private int maxDepth;
 
@@ -372,7 +380,7 @@ public class DTMaster extends AbstractMasterComputable<DTMasterParams, DTWorkerP
                     TreeNode newRootNode = new TreeNode(this.trees.size(), new Node(Node.ROOT_INDEX), this.learningRate);
                     LOG.info("The {} tree is to be built.", this.trees.size());
                     this.trees.add(newRootNode);
-                    newRootNode.setFeatures(getSubsamplingFeatures(this.featureSubsetStrategy));
+                    newRootNode.setFeatures(getSubsamplingFeatures(this.featureSubsetStrategy, this.featureSubsetRate));
                     // only one node
                     todoNodes.put(0, newRootNode);
                     masterParams.setTodoNodes(todoNodes);
@@ -412,7 +420,8 @@ public class DTMaster extends AbstractMasterComputable<DTMasterParams, DTWorkerP
                     }
                 }
 
-                List<Integer> subsetFeatures = getSubsamplingFeatures(featureSubsetStrategy);
+                List<Integer> subsetFeatures = getSubsamplingFeatures(this.featureSubsetStrategy,
+                        this.featureSubsetRate);
                 node.setFeatures(subsetFeatures);
                 currMem += getStatsMem(subsetFeatures);
                 todoNodes.put(nodeIndexInGroup, node);
@@ -576,11 +585,16 @@ public class DTMaster extends AbstractMasterComputable<DTMasterParams, DTWorkerP
         // return;
         // }
         LOG.info("Do checkpoint at hdfs file {}", this.checkpointOutput);
+        final Queue<TreeNode> finalTodoQueue = this.toDoQueue;
+        final Queue<TreeNode> finalToSplitQueue = this.toSplitQueue;
+        final boolean finalIsLeaf = this.isLeafWise;
+        final List<TreeNode> finalTrees = this.trees;
         Thread cpPersistThread = new Thread(new Runnable() {
             @Override
             public void run() {
                 long start = System.currentTimeMillis();
-                writeStatesToHdfs(DTMaster.this.checkpointOutput, masterParams);
+                writeStatesToHdfs(DTMaster.this.checkpointOutput, masterParams, finalTrees, finalIsLeaf,
+                        finalTodoQueue, finalToSplitQueue);
                 LOG.info("Do checkpoint at iteration {} with run time {}", context.getCurrentIteration(),
                         (System.currentTimeMillis() - start));
             }
@@ -592,7 +606,8 @@ public class DTMaster extends AbstractMasterComputable<DTMasterParams, DTWorkerP
     /**
      * Write {@link #trees}, {@link #toDoQueue} and MasterParams to HDFS.
      */
-    private void writeStatesToHdfs(Path out, DTMasterParams masterParams) {
+    private void writeStatesToHdfs(Path out, DTMasterParams masterParams, List<TreeNode> trees, boolean isLeafWise,
+            Queue<TreeNode> toDoQueue, Queue<TreeNode> toSplitQueue) {
         FSDataOutputStream fos = null;
         try {
             fos = FileSystem.get(conf).create(out);
@@ -605,14 +620,14 @@ public class DTMaster extends AbstractMasterComputable<DTMasterParams, DTWorkerP
             }
 
             // todo queue
-            fos.writeInt(this.toDoQueue.size());
-            for(TreeNode treeNode: this.toDoQueue) {
+            fos.writeInt(toDoQueue.size());
+            for(TreeNode treeNode: toDoQueue) {
                 treeNode.write(fos);
             }
 
-            if(this.isLeafWise && this.toSplitQueue != null) {
-                fos.writeInt(this.toSplitQueue.size());
-                for(TreeNode treeNode: this.toSplitQueue) {
+            if(isLeafWise && toSplitQueue != null) {
+                fos.writeInt(toSplitQueue.size());
+                for(TreeNode treeNode: toSplitQueue) {
                     treeNode.write(fos);
                 }
             }
@@ -701,7 +716,7 @@ public class DTMaster extends AbstractMasterComputable<DTMasterParams, DTWorkerP
                 depthList.add(-1);
             }
             for(TreeNode treeNode: trees) {
-                List<Integer> features = getSubsamplingFeatures(this.featureSubsetStrategy);
+                List<Integer> features = getSubsamplingFeatures(this.featureSubsetStrategy, this.featureSubsetRate);
                 treeNode.setFeatures(features);
                 todoNodes.put(nodeIndexInGroup, treeNode);
                 int treeId = treeNode.getTreeId();
@@ -717,7 +732,7 @@ public class DTMaster extends AbstractMasterComputable<DTMasterParams, DTWorkerP
         } else if(isGBDT) {
             // for gbdt, only store depth of last tree
             depthList.add(-1);
-            List<Integer> features = getSubsamplingFeatures(this.featureSubsetStrategy);
+            List<Integer> features = getSubsamplingFeatures(this.featureSubsetStrategy, this.featureSubsetRate);
             TreeNode treeNode = trees.get(trees.size() - 1); // only for last tree
             treeNode.setFeatures(features);
             todoNodes.put(nodeIndexInGroup, treeNode);
@@ -745,29 +760,33 @@ public class DTMaster extends AbstractMasterComputable<DTMasterParams, DTWorkerP
         return masterParams;
     }
 
-    private List<Integer> getSubsamplingFeatures(FeatureSubsetStrategy featureSubsetStrategy) {
-        switch(featureSubsetStrategy) {
-            case HALF:
-                return sampleFeaturesForNodeStats(this.allFeatures, this.allFeatures.size() / 2);
-            case ONETHIRD:
-                return sampleFeaturesForNodeStats(this.allFeatures, this.allFeatures.size() / 3);
-            case TWOTHIRDS:
-                return sampleFeaturesForNodeStats(this.allFeatures, this.allFeatures.size() * 2 / 3);
-            case SQRT:
-                return sampleFeaturesForNodeStats(this.allFeatures,
-                        (int) (this.allFeatures.size() * Math.sqrt(this.inputNum) / this.inputNum));
-            case LOG2:
-                return sampleFeaturesForNodeStats(this.allFeatures,
-                        (int) (this.allFeatures.size() * Math.log(this.inputNum) / Math.log(2) / this.inputNum));
-            case AUTO:
-                if(this.treeNum > 1) {
+    private List<Integer> getSubsamplingFeatures(FeatureSubsetStrategy featureSubsetStrategy, double featureSubsetRate) {
+        if(featureSubsetStrategy == null) {
+            return sampleFeaturesForNodeStats(this.allFeatures, (int) (this.allFeatures.size() * featureSubsetRate));
+        } else {
+            switch(featureSubsetStrategy) {
+                case HALF:
                     return sampleFeaturesForNodeStats(this.allFeatures, this.allFeatures.size() / 2);
-                } else {
+                case ONETHIRD:
+                    return sampleFeaturesForNodeStats(this.allFeatures, this.allFeatures.size() / 3);
+                case TWOTHIRDS:
+                    return sampleFeaturesForNodeStats(this.allFeatures, this.allFeatures.size() * 2 / 3);
+                case SQRT:
+                    return sampleFeaturesForNodeStats(this.allFeatures,
+                            (int) (this.allFeatures.size() * Math.sqrt(this.inputNum) / this.inputNum));
+                case LOG2:
+                    return sampleFeaturesForNodeStats(this.allFeatures,
+                            (int) (this.allFeatures.size() * Math.log(this.inputNum) / Math.log(2) / this.inputNum));
+                case AUTO:
+                    if(this.treeNum > 1) {
+                        return sampleFeaturesForNodeStats(this.allFeatures, this.allFeatures.size() / 2);
+                    } else {
+                        return new ArrayList<Integer>();
+                    }
+                case ALL:
+                default:
                     return new ArrayList<Integer>();
-                }
-            case ALL:
-            default:
-                return new ArrayList<Integer>();
+            }
         }
     }
 
@@ -852,9 +871,17 @@ public class DTMaster extends AbstractMasterComputable<DTMasterParams, DTWorkerP
         // tree related parameters initialization
         Object fssObj = validParams.get("FeatureSubsetStrategy");
         if(fssObj != null) {
-            this.featureSubsetStrategy = FeatureSubsetStrategy.of(fssObj.toString());
+            try {
+                this.featureSubsetRate = Double.parseDouble(fssObj.toString());
+                // no need validate featureSubsetRate is in (0,1], as already validated in ModelInspector
+                this.featureSubsetStrategy = null;
+            } catch (NumberFormatException ee) {
+                this.featureSubsetStrategy = FeatureSubsetStrategy.of(fssObj.toString());
+            }
         } else {
+            LOG.warn("FeatureSubsetStrategy is not set, set to TWOTHRIDS by default in DTMaster.");
             this.featureSubsetStrategy = FeatureSubsetStrategy.TWOTHIRDS;
+            this.featureSubsetRate = 0;
         }
 
         // max depth
@@ -937,11 +964,12 @@ public class DTMaster extends AbstractMasterComputable<DTMasterParams, DTWorkerP
         this.isContinuousEnabled = Boolean.TRUE.toString().equalsIgnoreCase(
                 context.getProps().getProperty(CommonConstants.CONTINUOUS_TRAINING));
 
-        LOG.info("Master init params: isAfterVarSel={}, featureSubsetStrategy={}, maxDepth={}, maxStatsMemory={}, "
-                + "treeNum={}, impurity={}, workerNumber={}, minInstancesPerNode={}, minInfoGain={}, isRF={}, "
-                + "isGBDT={}, isContinuousEnabled={}", isAfterVarSelect, featureSubsetStrategy, maxDepth,
-                maxStatsMemory, treeNum, imStr, this.workerNumber, minInstancesPerNode, minInfoGain, this.isRF,
-                this.isGBDT, this.isContinuousEnabled);
+        LOG.info(
+                "Master init params: isAfterVarSel={}, featureSubsetStrategy={}, featureSubsetRate={} maxDepth={}, maxStatsMemory={}, "
+                        + "treeNum={}, impurity={}, workerNumber={}, minInstancesPerNode={}, minInfoGain={}, isRF={}, "
+                        + "isGBDT={}, isContinuousEnabled={}", isAfterVarSelect, featureSubsetStrategy,
+                this.featureSubsetRate, maxDepth, maxStatsMemory, treeNum, imStr, this.workerNumber,
+                minInstancesPerNode, minInfoGain, this.isRF, this.isGBDT, this.isContinuousEnabled);
 
         this.toDoQueue = new LinkedList<TreeNode>();
 

@@ -255,7 +255,7 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
                 || !ShifuFileUtils.isFileExists(cleanedDataPath, sourceType)
                 || (StringUtils.isNotBlank(modelConfig.getValidationDataSetRawPath()) && !ShifuFileUtils.isFileExists(
                         pathFinder.getCleanedValidationDataPath(), sourceType))) {
-            LOG.info("Start to generate clean data for tree molde ... ");
+            LOG.info("Start to generate clean data for tree model ... ");
             if(ShifuFileUtils.isFileExists(cleanedDataPath, sourceType)) {
                 ShifuFileUtils.deleteFile(cleanedDataPath, sourceType);
             }
@@ -288,7 +288,7 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
             } catch (Throwable e) {
                 throw new RuntimeException(e);
             }
-            LOG.info("Generate clean data for tree molde successful.");
+            LOG.info("Generate clean data for tree model successful.");
         } else {
             // no need regen data
             LOG.warn("For RF/GBT, training input in {} exists, no need to regenerate it.", cleanedDataPath);
@@ -889,6 +889,12 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
         if(NNConstants.NN_ALG_NAME.equalsIgnoreCase(alg) && (this.isForVarSelect() || isGsMode)
                 && numTrainEpoches >= VAR_SELECT_TRAINING_DECAY_EPOCHES_THRESHOLD) {
             numTrainEpoches = numTrainEpoches / 2;
+        }
+
+        // if GBDT or RF, such iteration should be extended to make sure all trees will be executed successfully without
+        // maxIteration limitation
+        if(CommonUtils.isDesicionTreeAlgorithm(alg) || numTrainEpoches <= 20000) {
+            numTrainEpoches = 20000;
         }
         // the reason to add 1 is that the first iteration in implementation is used for training preparation.
         numTrainEpoches = numTrainEpoches + 1;

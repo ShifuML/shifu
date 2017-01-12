@@ -541,7 +541,7 @@ public class ComboModelProcessor extends BasicModelProcessor implements Processo
             saveModelConfig(subModelName, subModelConfig);
         }
 
-        return new Callable() {
+        return new Callable<Integer>() {
             @Override
             public Integer call() {
                 try {
