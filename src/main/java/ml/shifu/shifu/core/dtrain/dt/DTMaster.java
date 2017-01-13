@@ -335,7 +335,9 @@ public class DTMaster extends AbstractMasterComputable<DTMasterParams, DTWorkerP
         Map<Integer, TreeNode> todoNodes = new HashMap<Integer, TreeNode>();
         double averageValidationError = validationError;
         if(this.dtEarlyStopDecider != null){
-            averageValidationError = dtEarlyStopDecider.getCurrentAverageValue();
+            // TODO random forest support
+            this.dtEarlyStopDecider.add(validationError);
+            averageValidationError = this.dtEarlyStopDecider.getCurrentAverageValue();
         }
         DTMasterParams masterParams = new DTMasterParams(weightedTrainCount, trainError, weightedValidationCount,
                 averageValidationError);
@@ -355,7 +357,7 @@ public class DTMaster extends AbstractMasterComputable<DTMasterParams, DTWorkerP
                     LOG.warn(
                             "Tree is learned 100% well, there must be overfit here, please tune BaggingSampleRate, training is stopped in iteration {}.",
                             context.getCurrentIteration());
-                } else if(this.dtEarlyStopDecider != null && this.dtEarlyStopDecider.add(validationError)) {
+                } else if(this.dtEarlyStopDecider != null && this.dtEarlyStopDecider.canStop()) {
                     masterParams.setHalt(true);
                     LOG.info("Early stop identified, training is stopped in iteration {}.", context.getCurrentIteration());
                 } else {
