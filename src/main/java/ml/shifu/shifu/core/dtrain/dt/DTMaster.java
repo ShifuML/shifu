@@ -58,32 +58,26 @@ import org.slf4j.LoggerFactory;
 
 /**
  * Random forest and gradient boost decision tree {@link MasterComputable} implementation.
- * 
  * <p>
  * {@link #isRF} and {@link #isGBDT} are for RF or GBDT checking, by default RF is trained.
- * 
  * <p>
  * Each iteration, update node statistics and determine best split which is used for tree node split. Besides node
  * statistics, error and count info are also collected for client display.
- * 
  * <p>
  * Each iteration, new node group with nodes in limited estimated memory consumption are sent out to all workers for
  * feature statistics.
- * 
  * <p>
  * For gradient boost decision tree, each time a tree is updated and if one tree is finalized, then start a new tree.
  * Both random forest and gradient boost decision trees are all stored in {@link #trees}.
- * 
  * <p>
  * Terminal condition: for random forest, just to collect all nodes in all trees from all workers. Terminal condition is
  * all trees cannot be split. If one tree cannot be split with threshold count and meaningful impurity, one tree if
  * finalized and stopped update. For gradient boost decision tree, each time only one tree is trained, if last tree
  * cannot be split, training is stopped.
- * 
  * <p>
  * In current {@link DTMaster}, there are states like {@link #trees} and {@link #toDoQueue}. All stats can be recovered
  * once master is done. Such states are checkpointed to HDFS for fault tolerence.
- * 
+ *
  * @author Zhang David (pengzhang@paypal.com)
  */
 public class DTMaster extends AbstractMasterComputable<DTMasterParams, DTWorkerParams> {
@@ -246,13 +240,7 @@ public class DTMaster extends AbstractMasterComputable<DTMasterParams, DTWorkerP
     /**
      * DTEarlyStopDecider will decide automatic whether it need further training, this only for GBDT.
      */
-    // @SuppressWarnings("unused")
-    // private DTEarlyStopDecider dtEarlyStopDecider;
-
-    /**
-     * If earlyStopEnabled is true, the early stop feature will be enabled
-     */
-    // private boolean earlyStopEnabled = false;
+    private DTEarlyStopDecider dtEarlyStopDecider;
 
     @Override
     public DTMasterParams doCompute(MasterContext<DTMasterParams, DTWorkerParams> context) {
@@ -346,17 +334,14 @@ public class DTMaster extends AbstractMasterComputable<DTMasterParams, DTWorkerP
         }
 
         Map<Integer, TreeNode> todoNodes = new HashMap<Integer, TreeNode>();
+        double averageValidationError = validationError;
+        if(this.dtEarlyStopDecider != null){
+            // TODO random forest support
+            this.dtEarlyStopDecider.add(validationError);
+            averageValidationError = this.dtEarlyStopDecider.getCurrentAverageValue();
+        }
         DTMasterParams masterParams = new DTMasterParams(weightedTrainCount, trainError, weightedValidationCount,
-                validationError);
-
-        // Add early Stop Feature for GBT
-        // if(this.earlyStopEnabled && this.isGBDT && dtEarlyStopDecider.add(trainError, validationError)){
-        // masterParams.setHalt(true);
-        // LOG.info("weightedTrainCount {}, weightedValidationCount {}, trainError {}, validationError {}",
-        // weightedTrainCount, weightedValidationCount, trainError, validationError);
-        // LOG.info("Early stop identified, training is stopped in iteration {}.", context.getCurrentIteration());
-        // return masterParams;
-        // }
+                averageValidationError);
 
         if(toDoQueue.isEmpty()) {
             if(this.isGBDT) {
@@ -373,6 +358,9 @@ public class DTMaster extends AbstractMasterComputable<DTMasterParams, DTWorkerP
                     LOG.warn(
                             "Tree is learned 100% well, there must be overfit here, please tune BaggingSampleRate, training is stopped in iteration {}.",
                             context.getCurrentIteration());
+                } else if(this.dtEarlyStopDecider != null && this.dtEarlyStopDecider.canStop()) {
+                    masterParams.setHalt(true);
+                    LOG.info("Early stop identified, training is stopped in iteration {}.", context.getCurrentIteration());
                 } else {
                     // set first tree to true even after ROOT node is set in next tree
                     masterParams.setFirstTree(this.trees.size() == 1);
@@ -927,7 +915,7 @@ public class DTMaster extends AbstractMasterComputable<DTMasterParams, DTWorkerP
         }
 
         // assert this.maxStatsMemory <= Math.min(Runtime.getRuntime().maxMemory() * 0.6, 800 * 1024 * 1024L);
-        this.treeNum = Integer.valueOf(validParams.get("TreeNum").toString());;
+        this.treeNum = Integer.valueOf(validParams.get("TreeNum").toString());
         this.isRF = ALGORITHM.RF.toString().equalsIgnoreCase(modelConfig.getAlgorithm());
         this.isGBDT = ALGORITHM.GBT.toString().equalsIgnoreCase(modelConfig.getAlgorithm());
         if(this.isGBDT) {
@@ -974,13 +962,9 @@ public class DTMaster extends AbstractMasterComputable<DTMasterParams, DTWorkerP
 
         this.toDoQueue = new LinkedList<TreeNode>();
 
-        // if(validParams.containsKey("EnableEarlyStop")){
-        // this.earlyStopEnabled = Boolean.valueOf(validParams.get("EnableEarlyStop").toString());
-        // }
-        //
-        // if(this.earlyStopEnabled){
-        // this.dtEarlyStopDecider = new DTEarlyStopDecider(this.maxDepth);
-        // }
+        if(validParams.containsKey("EnableEarlyStop") && Boolean.valueOf(validParams.get("EnableEarlyStop").toString())) {
+            this.dtEarlyStopDecider = new DTEarlyStopDecider(this.maxDepth);
+        }
 
         if(this.isLeafWise) {
             this.toSplitQueue = new PriorityQueue<TreeNode>(64, new Comparator<TreeNode>() {

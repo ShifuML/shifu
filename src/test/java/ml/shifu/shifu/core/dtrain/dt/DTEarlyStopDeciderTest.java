@@ -15,11 +15,6 @@
  */
 package ml.shifu.shifu.core.dtrain.dt;
 
-import java.io.File;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Scanner;
-
 import org.apache.log4j.BasicConfigurator;
 import org.apache.log4j.Level;
 import org.apache.log4j.LogManager;
@@ -29,13 +24,18 @@ import org.testng.Assert;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 
+import java.io.File;
+import java.net.URL;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Scanner;
+
 /**
- * Created by haifwu on 2016/12/16.
+ * @author Wu Devin (wuhaifengdhu@163.com)
  */
 public class DTEarlyStopDeciderTest {
     private static final Logger LOG = LoggerFactory.getLogger(DTEarlyStopDeciderTest.class);
 
-    private List<Double> trainErrorList = new ArrayList<Double>();
     private List<Double> validationErrorList = new ArrayList<Double>();
     private final static String DATA_FILE_NAME = "dttest/data/trainError.dat";
 
@@ -45,35 +45,51 @@ public class DTEarlyStopDeciderTest {
         BasicConfigurator.configure();
         LogManager.getRootLogger().setLevel(Level.DEBUG);
         ClassLoader classLoader = getClass().getClassLoader();
-        File file = new File(this.getClass().getClassLoader().getResource(DATA_FILE_NAME).getFile());
-
-        Scanner scanner = new Scanner(file);
-        while(scanner.hasNext()) {
-            String line = scanner.nextLine();
-            String[] info = line.split("\\t");
-            if(info.length != 2) {
-                LOG.error("Wrong format of line: " + line);
+        URL resource = this.getClass().getClassLoader().getResource(DATA_FILE_NAME);
+        if(resource != null){
+            File file = new File(resource.getFile());
+            Scanner scanner = new Scanner(file);
+            while(scanner.hasNext()) {
+                String line = scanner.nextLine();
+                this.validationErrorList.add(Double.valueOf(line));
             }
-            trainErrorList.add(Double.valueOf(info[0]));
-            validationErrorList.add(Double.valueOf(info[1]));
+            scanner.close();
+        } else {
+            LOG.error("Resource file {} not exist!", DATA_FILE_NAME);
         }
-        scanner.close();
     }
 
     @Test
     public void testAdd() throws Exception {
         DTEarlyStopDecider dtEarlyStopDecider = new DTEarlyStopDecider(6);
-        Assert.assertEquals(trainErrorList.size(), validationErrorList.size());
+        LOG.info("Total iteration size: {}", this.validationErrorList.size());
 
         int iteration = 0;
-        while(iteration++ < trainErrorList.size()) {
-            if(dtEarlyStopDecider.add(trainErrorList.get(iteration), validationErrorList.get(iteration))) {
+        for(; iteration < this.validationErrorList.size(); iteration ++) {
+            if(dtEarlyStopDecider.add(this.validationErrorList.get(iteration))) {
                 LOG.info("Iteration {} stop!", iteration);
                 break;
             }
         }
 
-        Assert.assertNotSame(iteration, trainErrorList.size());
+        Assert.assertNotSame(iteration, this.validationErrorList.size());
     }
 
+    @Test
+    public void testGetCurrentAverageValue(){
+        DTEarlyStopDecider dtEarlyStopDecider = new DTEarlyStopDecider(6);
+        LOG.info("Total iteration size: {}", this.validationErrorList.size());
+
+        int iteration = 0;
+        for(; iteration < this.validationErrorList.size(); iteration ++) {
+            if(dtEarlyStopDecider.add(this.validationErrorList.get(iteration))) {
+                LOG.info("Iteration {} stop!", iteration);
+                break;
+            }
+            LOG.info("iteration {}: {}==> average value {}", iteration, this.validationErrorList.get(iteration), 
+                    dtEarlyStopDecider.getCurrentAverageValue());
+        }
+
+        Assert.assertNotSame(iteration, this.validationErrorList.size());
+    }
 }
