@@ -581,15 +581,8 @@
                         "name" : "FeatureSubsetStrategy",
                         "type" : "text",
                         "directive": "select",
-                        "defval" : "all",
+                        "defval" : "half",
                         "options": [
-                            {"label": "ALL", "value":"all"},
-                            {"label": "HALF", "value":"half"},
-                            {"label": "ONETHIRD", "value":"onethird"},
-                            {"label": "TWOTHIRDS", "value":"twothirds"},
-                            {"label": "AUTO", "value":"auto"},
-                            {"label": "SQRT", "value":"sqrt"},
-                            {"label": "LOG2", "value":"log2"}
                         ]
                     }, {
                         "name" : "EnableEarlyStop",

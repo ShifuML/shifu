@@ -37,6 +37,7 @@ import ml.shifu.shifu.container.obj.RawSourceData;
 import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
 import ml.shifu.shifu.core.alg.NNTrainer;
 import ml.shifu.shifu.core.dtrain.CommonConstants;
+import ml.shifu.shifu.core.dtrain.dt.FeatureSubsetStrategy;
 import ml.shifu.shifu.core.dtrain.gs.GridSearch;
 import ml.shifu.shifu.fs.ShifuFileUtils;
 import ml.shifu.shifu.util.CommonUtils;
@@ -255,8 +256,10 @@ public class ModelInspector {
         ValidateResult result = new ValidateResult(true);
 
         if(modelConfig.isClassification()
-                && (modelConfig.getBinningMethod() == BinningMethod.EqualPositive || modelConfig.getBinningMethod() == BinningMethod.EqualNegtive
-                || modelConfig.getBinningMethod() == BinningMethod.WeightEqualPositive || modelConfig.getBinningMethod() == BinningMethod.WeightEqualNegative)) {
+                && (modelConfig.getBinningMethod() == BinningMethod.EqualPositive
+                        || modelConfig.getBinningMethod() == BinningMethod.EqualNegtive
+                        || modelConfig.getBinningMethod() == BinningMethod.WeightEqualPositive || modelConfig
+                        .getBinningMethod() == BinningMethod.WeightEqualNegative)) {
             ValidateResult tmpResult = new ValidateResult(false,
                     Arrays.asList("Multiple classification cannot leverage EqualNegtive and EqualPositive binning."));
             result = ValidateResult.mergeResult(result, tmpResult);
@@ -708,8 +711,7 @@ public class ModelInspector {
                 if(impurityObj == null) {
                     ValidateResult tmpResult = new ValidateResult(true);
                     tmpResult.setStatus(false);
-                    tmpResult.getCauses().add(
-                            "Impurity should be in null in RF/GBT algorithm.");
+                    tmpResult.getCauses().add("Impurity is not set in RF/GBT algorithm.");
                     result = ValidateResult.mergeResult(result, tmpResult);
                 } else {
                     if(train.getAlgorithm().equalsIgnoreCase(CommonConstants.GBT_ALG_NAME)) {
@@ -731,6 +733,45 @@ public class ModelInspector {
                             tmpResult.setStatus(false);
                             tmpResult.getCauses().add("RF supports 'variance|entropy|gini' impurity types.");
                             result = ValidateResult.mergeResult(result, tmpResult);
+                        }
+                    }
+                }
+
+                Object fssObj = params.get("FeatureSubsetStrategy");
+                if(fssObj == null) {
+                    ValidateResult tmpResult = new ValidateResult(true);
+                    tmpResult.setStatus(false);
+                    tmpResult.getCauses().add("FeatureSubsetStrategy is not set in RF/GBT algorithm.");
+                    result = ValidateResult.mergeResult(result, tmpResult);
+                } else {
+                    boolean isNumber = false;
+                    double doubleFss = 0;
+                    try {
+                        doubleFss = Double.parseDouble(fssObj.toString());
+                        isNumber = true;
+                    } catch (Exception e) {
+                        isNumber = false;
+                    }
+
+                    if(isNumber && (doubleFss <= 0d || doubleFss > 1d)) {
+                        ValidateResult tmpResult = new ValidateResult(true);
+                        tmpResult.setStatus(false);
+                        tmpResult.getCauses().add("FeatureSubsetStrategy if double should be in (0, 1]");
+                    } else {
+                        boolean fssInEnum = false;
+                        for(FeatureSubsetStrategy fss: FeatureSubsetStrategy.values()) {
+                            if(fss.toString().equalsIgnoreCase(fssObj.toString())) {
+                                fssInEnum = true;
+                                break;
+                            }
+                        }
+
+                        if(!fssInEnum) {
+                            ValidateResult tmpResult = new ValidateResult(true);
+                            tmpResult.setStatus(false);
+                            tmpResult
+                                    .getCauses()
+                                    .add("FeatureSubsetStrategy if string should be in ['ALL', 'HALF', 'ONETHIRD' , 'TWOTHIRDS' , 'AUTO' , 'SQRT' , 'LOG2']");
                         }
                     }
                 }
