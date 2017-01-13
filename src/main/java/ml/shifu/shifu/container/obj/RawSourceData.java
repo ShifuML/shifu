@@ -194,6 +194,7 @@ public class RawSourceData implements Cloneable {
         copy.setHeaderPath(headerPath);
         copy.setHeaderDelimiter(headerDelimiter);
         copy.setFilterExpressions(filterExpressions);
+        copy.setWeightColumnName(weightColumnName);
 
         copy.setTargetColumnName(targetColumnName);
         copy.setPosTags(new ArrayList<String>(posTags));
