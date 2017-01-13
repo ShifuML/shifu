@@ -713,11 +713,11 @@ public class ComboModelProcessor extends BasicModelProcessor implements Processo
      * @return
      */
     private String[] genEvalScoreMetaVars(String weightColumnName) {
-        if (StringUtils.isNotBlank(weightColumnName)) {
-            return new String[]{this.comboModelTrain.getUidColumnName(), weightColumnName};
-        } else {
+        //if (StringUtils.isNotBlank(weightColumnName)) {
+        //    return new String[]{this.comboModelTrain.getUidColumnName(), weightColumnName};
+        //} else {
             return new String[]{this.comboModelTrain.getUidColumnName()};
-        }
+        //}
     }
 
     /**
