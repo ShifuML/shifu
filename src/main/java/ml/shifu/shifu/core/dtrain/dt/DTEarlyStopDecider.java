@@ -43,7 +43,7 @@ import org.slf4j.LoggerFactory;
  */
 class DTEarlyStopDecider {
 
-    private static final Logger LOG = LoggerFactory.getLogger(DTEarlyStopDecider.class);
+    static final Logger LOG = LoggerFactory.getLogger(DTEarlyStopDecider.class);
     
     /**
      * if 3 times continue reach the stop requirements, decider will make stop decision
@@ -51,7 +51,7 @@ class DTEarlyStopDecider {
     private static final int MAGIC_NUMBER = 3;
 
     /**
-     * Threshhold value to stop iteration
+     * Threshold value to stop iteration
      */
     private static final double NEARLY_ZERO = 0.000001;
     
@@ -76,7 +76,6 @@ class DTEarlyStopDecider {
     private AverageQueue averageQueue;
 
     DTEarlyStopDecider(int treeDepth) {
-
         if(treeDepth <= 0) {
             throw new IllegalArgumentException("Tree num should not be less or equal than zero!");
         }
@@ -96,13 +95,13 @@ class DTEarlyStopDecider {
      * @return true if no more iteration needed, else false
      */
     public boolean add(double validationError) {
-
         boolean validationDecideReady = this.validationErrorDecider.add(validationError);
 
         if(validationDecideReady) {
-            if(validationErrorDecider.getDecide()) {
+            if(this.validationErrorDecider.getDecide()) {
                 this.validationGainContinueNearZeroCount += 1;
-                LOG.warn("Continue {} positive sign for not worth more iteration!", this.validationGainContinueNearZeroCount);
+                LOG.warn("Continue {} positive sign for not worth more iteration!", 
+                        this.validationGainContinueNearZeroCount);
                 if(this.validationGainContinueNearZeroCount >= MAGIC_NUMBER){
                     this.validationErrorDecider.restart();
                     this.restartCount += 1;
@@ -129,7 +128,12 @@ class DTEarlyStopDecider {
         return this.averageQueue.getAverage();
     }
 
-    private boolean canStop() {
+    /**
+     *  Get current status is ready to stop or not
+     *
+     * @return True if now ready to stop, else False
+     */
+    boolean canStop() {
         return this.restartCount >= MAGIC_NUMBER;
     }
 
@@ -211,7 +215,7 @@ class DTEarlyStopDecider {
             this.restart();
         }
 
-        private void restart() {
+        void restart() {
             this.min = Double.MAX_VALUE;
             this.size = -1;
         }

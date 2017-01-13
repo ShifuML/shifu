@@ -51,7 +51,7 @@ public class DTEarlyStopDeciderTest {
             Scanner scanner = new Scanner(file);
             while(scanner.hasNext()) {
                 String line = scanner.nextLine();
-                validationErrorList.add(Double.valueOf(line));
+                this.validationErrorList.add(Double.valueOf(line));
             }
             scanner.close();
         } else {
@@ -62,33 +62,34 @@ public class DTEarlyStopDeciderTest {
     @Test
     public void testAdd() throws Exception {
         DTEarlyStopDecider dtEarlyStopDecider = new DTEarlyStopDecider(6);
-        LOG.info("Total iteration size: {}", validationErrorList.size());
+        LOG.info("Total iteration size: {}", this.validationErrorList.size());
 
         int iteration = 0;
-        for(; iteration < validationErrorList.size(); iteration ++) {
-            if(dtEarlyStopDecider.add(validationErrorList.get(iteration))) {
+        for(; iteration < this.validationErrorList.size(); iteration ++) {
+            if(dtEarlyStopDecider.add(this.validationErrorList.get(iteration))) {
                 LOG.info("Iteration {} stop!", iteration);
                 break;
             }
         }
 
-        Assert.assertNotSame(iteration, validationErrorList.size());
+        Assert.assertNotSame(iteration, this.validationErrorList.size());
     }
 
     @Test
     public void testGetCurrentAverageValue(){
         DTEarlyStopDecider dtEarlyStopDecider = new DTEarlyStopDecider(6);
-        LOG.info("Total iteration size: {}", validationErrorList.size());
+        LOG.info("Total iteration size: {}", this.validationErrorList.size());
 
         int iteration = 0;
-        for(; iteration < validationErrorList.size(); iteration ++) {
-            if(dtEarlyStopDecider.add(validationErrorList.get(iteration))) {
+        for(; iteration < this.validationErrorList.size(); iteration ++) {
+            if(dtEarlyStopDecider.add(this.validationErrorList.get(iteration))) {
                 LOG.info("Iteration {} stop!", iteration);
                 break;
             }
-            LOG.info("iteration {}: {}==> average value {}", iteration, validationErrorList.get(iteration), dtEarlyStopDecider.getCurrentAverageValue());
+            LOG.info("iteration {}: {}==> average value {}", iteration, this.validationErrorList.get(iteration), 
+                    dtEarlyStopDecider.getCurrentAverageValue());
         }
 
-        Assert.assertNotSame(iteration, validationErrorList.size());
+        Assert.assertNotSame(iteration, this.validationErrorList.size());
     }
 }
