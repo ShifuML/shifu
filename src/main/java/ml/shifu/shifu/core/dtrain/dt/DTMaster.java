@@ -207,6 +207,7 @@ public class DTMaster extends AbstractMasterComputable<DTMasterParams, DTWorkerP
     /**
      * Common conf to avoid new Configuration
      */
+    @SuppressWarnings("unused")
     private Configuration conf;
 
     /**
@@ -610,7 +611,7 @@ public class DTMaster extends AbstractMasterComputable<DTMasterParams, DTWorkerP
             Queue<TreeNode> toDoQueue, Queue<TreeNode> toSplitQueue) {
         FSDataOutputStream fos = null;
         try {
-            fos = FileSystem.get(conf).create(out);
+            fos = FileSystem.get(new Configuration()).create(out);
 
             // trees
             int treeLength = trees.size();

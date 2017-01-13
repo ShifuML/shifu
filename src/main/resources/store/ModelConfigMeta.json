@@ -411,6 +411,11 @@
                 "directive": "input",
                 "defval": false
             }, {
+                "name": "stratifiedSample",
+                "type": "boolean",
+                "directive": "checkbox",
+                "defval": false
+            }, {
                 "name": "numTrainEpochs",
                 "type": "number",
                 "directive": "input",

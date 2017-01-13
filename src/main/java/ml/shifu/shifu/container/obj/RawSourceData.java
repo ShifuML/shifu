@@ -67,10 +67,7 @@ public class RawSourceData implements Cloneable {
 
     /**
      * To change it to 0 instead of 250 because 0-1 columns shouldn't be set to categorical.
-     * 
-     * @deprecated no need set it to do auto typing.
      */
-    @Deprecated
     private Integer autoTypeThreshold = 0;
 
     /**

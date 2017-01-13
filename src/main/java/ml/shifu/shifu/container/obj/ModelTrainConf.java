@@ -74,6 +74,8 @@ public class ModelTrainConf {
 
     private Boolean trainOnDisk = Boolean.FALSE;
     private Boolean fixInitInput = Boolean.FALSE;
+    private Boolean stratifiedSample = Boolean.FALSE;
+
 
     private Boolean isContinuous = Boolean.FALSE;
 
@@ -409,5 +411,21 @@ public class ModelTrainConf {
         other.setValidSetRate(validSetRate);
         other.setWorkerThreadCount(workerThreadCount);
         return other;
+    }
+
+    /**
+     * @return the stratifiedSampling
+     */
+    @JsonIgnore
+    public Boolean getStratifiedSample() {
+        return stratifiedSample;
+    }
+
+    /**
+     * @param stratifiedSampling the stratifiedSampling to set
+     */
+    @JsonProperty
+    public void setStratifiedSample(Boolean stratifiedSample) {
+        this.stratifiedSample = stratifiedSample;
     }
 }
