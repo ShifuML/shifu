@@ -15,26 +15,23 @@
  */
 package ml.shifu.shifu.core.pmml;
 
+import java.io.IOException;
 import java.util.jar.JarFile;
 import java.util.jar.Manifest;
-import java.io.IOException;
 
 import ml.shifu.shifu.core.pmml.builder.creator.AbstractPmmlElementCreator;
 import ml.shifu.shifu.core.pmml.builder.creator.AbstractSpecifCreator;
 
+import org.apache.pig.impl.util.JarManager;
+import org.dmg.pmml.Application;
 import org.dmg.pmml.DataDictionary;
+import org.dmg.pmml.Header;
 import org.dmg.pmml.LocalTransformations;
 import org.dmg.pmml.MiningSchema;
 import org.dmg.pmml.Model;
 import org.dmg.pmml.ModelStats;
 import org.dmg.pmml.PMML;
 import org.encog.ml.BasicML;
-import org.dmg.pmml.Application;
-import org.dmg.pmml.Header;
-import org.encog.ml.BasicML;
-
-import org.apache.pig.impl.util.JarManager;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -95,7 +92,6 @@ public class PMMLTranslator {
             jar = new JarFile(findContainingJar);
             final Manifest manifest = jar.getManifest();
 
-            String vendor = manifest.getMainAttributes().getValue("vendor");
             String version = manifest.getMainAttributes().getValue("version");
             application.setVersion(version);
         } catch (Exception e) {
