@@ -124,6 +124,8 @@ public class UpdateBinningInfoMapper extends Mapper<LongWritable, Text, IntWrita
 
     private int weightExceptions = 0;
 
+    private boolean isThrowforWeightException;
+
     /**
      * Load model config and column config files.
      */
@@ -167,6 +169,9 @@ public class UpdateBinningInfoMapper extends Mapper<LongWritable, Text, IntWrita
         this.tags = new HashSet<String>(modelConfig.getFlattenTags());
 
         this.missingOrInvalidValues = new HashSet<String>(this.modelConfig.getDataSet().getMissingOrInvalidValues());
+
+        this.isThrowforWeightException = "true".equalsIgnoreCase(context.getConfiguration().get(
+                "shifu.weight.exception", "false"));
 
         LOG.debug("Column binning info: {}", this.columnBinningInfo);
     }
@@ -279,7 +284,7 @@ public class UpdateBinningInfoMapper extends Mapper<LongWritable, Text, IntWrita
             LOG.warn("Empty input.");
             return;
         }
-        
+
         context.getCounter(Constants.SHIFU_GROUP_COUNTER, "TOTAL_VALID_COUNT").increment(1L);
 
         if(!this.dataPurifier.isFilterOut(valueStr)) {
@@ -308,7 +313,8 @@ public class UpdateBinningInfoMapper extends Mapper<LongWritable, Text, IntWrita
             weight = (this.weightedColumnNum == -1 ? 1.0d : Double.valueOf(units[this.weightedColumnNum]));
         } catch (Exception e) {
             weightExceptions += 1;
-            if(weightExceptions > 500) {
+            context.getCounter(Constants.SHIFU_GROUP_COUNTER, "WEIGHT_EXCEPTION").increment(1L);
+            if(weightExceptions > 5000 && this.isThrowforWeightException) {
                 throw new IllegalStateException(
                         "Please check weight column in eval, exceptional weight count is over 5000");
             }

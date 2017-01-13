@@ -138,7 +138,7 @@ public class AutoTypeDistinctCountMapper extends Mapper<LongWritable, Text, IntW
             LOG.warn("Empty input.");
             return;
         }
-        
+
         context.getCounter(Constants.SHIFU_GROUP_COUNTER, "TOTAL_VALID_COUNT").increment(1L);
 
         if(!this.dataPurifier.isFilterOut(valueStr)) {
@@ -151,7 +151,7 @@ public class AutoTypeDistinctCountMapper extends Mapper<LongWritable, Text, IntW
         String tag = units[this.tagColumnNum];
 
         if(!this.tags.contains(tag)) {
-            if(System.currentTimeMillis() % 20 == 0) {
+            if(System.currentTimeMillis() % 50 == 0L) {
                 LOG.warn("Data with invalid tag is ignored in distinct count computing, invalid tag: {}.", tag);
             }
             context.getCounter(Constants.SHIFU_GROUP_COUNTER, "INVALID_TAG").increment(1L);

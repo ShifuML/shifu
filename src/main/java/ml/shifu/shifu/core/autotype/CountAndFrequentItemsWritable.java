@@ -72,6 +72,9 @@ public class CountAndFrequentItemsWritable implements Writable {
 
     public CountAndFrequentItemsWritable(long count, long invalidCount, long validNumCount, byte[] hyperBytes,
             Set<String> frequetItems) {
+        this.count = count;
+        this.invalidCount = invalidCount;
+        this.validNumCount = validNumCount;
         this.hyperBytes = hyperBytes;
         this.frequetItems = frequetItems;
     }

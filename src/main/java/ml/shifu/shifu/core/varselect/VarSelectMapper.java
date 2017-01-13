@@ -118,6 +118,7 @@ public class VarSelectMapper extends Mapper<LongWritable, Text, LongWritable, Co
     /**
      * Input MLData instance to save new.
      */
+    @SuppressWarnings("unused")
     private BasicMLData inputsMLData;
 
     /**

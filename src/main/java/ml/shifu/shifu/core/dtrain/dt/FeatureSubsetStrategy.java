@@ -29,7 +29,7 @@ public enum FeatureSubsetStrategy {
     AUTO, /* tree num = 1, ALL, else ONETHIRD */
     SQRT, /* math.sqrt features */
     LOG2; /* math.log2 features */
-
+    
     /**
      * Get {@link FeatureSubsetStrategy} by string, case can be ignored.
      */
