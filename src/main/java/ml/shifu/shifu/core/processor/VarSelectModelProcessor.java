@@ -672,6 +672,7 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
         List<Integer> candidateColumnIdList = new ArrayList<Integer>();
         candidateColumnIdList.addAll(importances.keySet());
         int i = 0;
+        int candidateCount = candidateColumnIdList.size();
         // try to select another (targetCnt - selectCnt) variables, but we need to exclude those
         // force-selected variables
         for(ColumnConfig columnConfig: this.columnConfigList) {
@@ -680,6 +681,10 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
             }
         }
         while(selectCnt < targetCnt && i < targetCnt) {
+            if(i>=candidateCount){
+                log.warn("Var select finish due to feature importance count {} is less than target var count {}",candidateCount,targetCnt);
+                break;
+            }
             Integer columnId = candidateColumnIdList.get(i++);
             ColumnConfig columnConfig = this.columnConfigList.get(columnId);
             if(!columnConfig.isForceSelect() && !columnConfig.isForceRemove()) {
