@@ -893,7 +893,7 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
 
         // if GBDT or RF, such iteration should be extended to make sure all trees will be executed successfully without
         // maxIteration limitation
-        if(CommonUtils.isDesicionTreeAlgorithm(alg) || numTrainEpoches <= 20000) {
+        if(CommonUtils.isDesicionTreeAlgorithm(alg) && numTrainEpoches <= 20000) {
             numTrainEpoches = 20000;
         }
         // the reason to add 1 is that the first iteration in implementation is used for training preparation.
