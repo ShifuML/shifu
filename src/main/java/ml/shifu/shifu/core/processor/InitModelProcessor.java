@@ -105,7 +105,7 @@ public class InitModelProcessor extends BasicModelProcessor implements Processor
             }
 
             if(autoTypeEnableCondition() && countInfoMap != null) {
-                if(modelConfig.getDataSet().getAutoTypeThreshold() < 0) {
+                if(modelConfig.getDataSet().getAutoTypeThreshold() <= 0) {
                     log.info("Auto type detection is on but threshold <= 0, only compute distinct count but not detect "
                             + "categorical columns.");
                     int cateCount = setCategoricalColumnsByCountInfo(countInfoMap, true);
@@ -145,19 +145,27 @@ public class InitModelProcessor extends BasicModelProcessor implements Processor
                 columnConfig.getColumnStats().setDistinctCount(distinctCount);
             }
 
-            long count = data.count;
-            long invalidCount = data.invalidCount;
-            long validNumCount = data.validNumcount;
-            double numRatio = validNumCount * 1d / (count - invalidCount);
-            if(numRatio > 0.97d) {
-                columnConfig.setColumnType(ColumnType.N);
-                log.info("Column {} with index {} is set to numeric type because of enough double values.",
-                        columnConfig.getColumnName(), columnConfig.getColumnNum());
-            } else {
-                cateCount += 1;
-                columnConfig.setColumnType(ColumnType.C);
-                log.info("Column {} with index {} is set to categorical type because of not enough double values.",
-                        columnConfig.getColumnName(), columnConfig.getColumnNum());
+            // only update categorical feature when autoTypeThreshold > 0, by default it is 0
+            if(modelConfig.getDataSet().getAutoTypeThreshold() > 0) {
+                long count = data.count;
+                long invalidCount = data.invalidCount;
+                long validNumCount = data.validNumcount;
+                double numRatio = validNumCount * 1d / (count - invalidCount);
+                // if already categorical by user in categorical.column.names file, no need to do and set
+                // if numerical, check and set it
+                if(!columnConfig.isCategorical()) {
+                    if(numRatio > modelConfig.getDataSet().getAutoTypeThreshold() / 100d) {
+                        columnConfig.setColumnType(ColumnType.N);
+                        log.info("Column {} with index {} is set to numeric type because of enough double values.",
+                                columnConfig.getColumnName(), columnConfig.getColumnNum());
+                    } else {
+                        cateCount += 1;
+                        columnConfig.setColumnType(ColumnType.C);
+                        log.info(
+                                "Column {} with index {} is set to categorical type because of not enough double values.",
+                                columnConfig.getColumnName(), columnConfig.getColumnNum());
+                    }
+                }
             }
         }
         return cateCount;

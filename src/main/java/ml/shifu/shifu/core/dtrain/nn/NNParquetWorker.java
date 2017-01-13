@@ -167,35 +167,27 @@ public class NNParquetWorker extends AbstractNNWorker<Tuple> {
             index += 1;
         }
 
-        // if fixInitialInput = true, we should use hashcode to sample.
-        double baggingSampleRate = super.modelConfig.getBaggingSampleRate();
-        // if fixInitialInput = false, we only compare random value with baggingSampleRate to avoid parsing data.
-        // if fixInitialInput = true, we should use hash code after parsing.
-        if(!super.modelConfig.isFixInitialInput() && Double.compare(Math.random(), baggingSampleRate) >= 0) {
-            // for negative tags, do sampleNegOnly logic
-            if(modelConfig.getTrain().getSampleNegOnly()) {
-                if(modelConfig.isRegression() && Double.compare(ideal[0] + 0d, 0d) == 0) {
-                    return;
-                }
-            } else {
-                return;// normal sampling
-            }
+        // if only sample negative, no matter bagging or replacement, do sampling here.
+        if(modelConfig.getTrain().getSampleNegOnly() // sample negative enabled
+                && (modelConfig.isRegression() || (modelConfig.isClassification() && modelConfig.getTrain()
+                        .isOneVsAll())) // regression or onevsall
+                && Double.compare(ideal[0] + 0.01d, 0d) == 0 // negative record
+                && (!this.modelConfig.isFixInitialInput() && Double.compare(Math.random(),
+                        this.modelConfig.getBaggingSampleRate()) >= 0)) {
+            return;
         }
-        long longBaggingSampleRate = Double.valueOf(baggingSampleRate * 100).longValue();
-        if(super.modelConfig.isFixInitialInput() && hashcode % 100 >= longBaggingSampleRate) {
-            // for negative tags, do sampleNegOnly logic
-            if(modelConfig.getTrain().getSampleNegOnly()) {
-                if(modelConfig.isRegression() && Double.compare(ideal[0] + 0d, 0d) == 0) {
-                    return;
-                }
-            } else {
-                return;// normal sampling
-            }
+        if(modelConfig.getTrain().getSampleNegOnly()// sample negative enabled
+                && (modelConfig.isRegression() || (modelConfig.isClassification() && modelConfig.getTrain()
+                        .isOneVsAll()))// regression or onevsall
+                && (Double.compare(ideal[0] + 0.01d, 0d) == 0 // negative record
+                        && this.modelConfig.isFixInitialInput() && hashcode % 100 >= Double.valueOf(
+                        this.modelConfig.getBaggingSampleRate() * 100).longValue())) {
+            return;
         }
-
-        super.sampleCount += 1;
 
         FloatMLDataPair pair = new BasicFloatMLDataPair(new BasicFloatMLData(inputs), new BasicFloatMLData(ideal));
+
+        // up sampling logic
         if(modelConfig.isRegression() && isUpSampleEnabled() && Double.compare(ideal[0], 1d) == 0) {
             // Double.compare(ideal[0], 1d) == 0 means positive tags; sample + 1 to avoid sample count to 0
             pair.setSignificance(significance * (super.upSampleRng.sample() + 1));
@@ -203,7 +195,27 @@ public class NNParquetWorker extends AbstractNNWorker<Tuple> {
             pair.setSignificance(significance);
         }
 
-        addDataPairToDataSet(hashcode, pair);
+        boolean isValidation = false;
+        if(workerContext.getAttachment() != null && workerContext.getAttachment() instanceof Boolean) {
+            isValidation = (Boolean) workerContext.getAttachment();
+        }
+
+        boolean isInTraining = addDataPairToDataSet(hashcode, pair, isValidation);
+
+        // do bagging sampling only for training data，
+        if(isInTraining) {
+            float subsampleWeights = sampleWeights(pair.getIdealArray()[0]);
+            if(isPositive(pair.getIdealArray()[0])) {
+                this.positiveSelectedTrainCount += subsampleWeights * 1L;
+            } else {
+                this.negativeSelectedTrainCount += subsampleWeights * 1L;
+            }
+            // set weights to significance, if 0, significance will be 0, that is bagging sampling
+            pair.setSignificance(pair.getSignificance() * subsampleWeights);
+        } else {
+            // for validation data, according bagging sampling logic, we may need to sampling validation data set, while
+            // validation data set are only used to compute validation error, not to do real sampling is ok.
+        }
     }
 
     private void initFieldList() {

@@ -164,6 +164,38 @@ public class DTWorker
     protected long sampleCount;
 
     /**
+     * Positive count in training data list, only be effective in 0-1 regression or onevsall classification
+     */
+    protected long positiveTrainCount;
+
+    /**
+     * Positive count in training data list and being selected in training, only be effective in 0-1 regression or
+     * onevsall classification
+     */
+    protected long positiveSelectedTrainCount;
+
+    /**
+     * Negative count in training data list , only be effective in 0-1 regression or onevsall classification
+     */
+    protected long negativeTrainCount;
+
+    /**
+     * Negative count in training data list and being selected, only be effective in 0-1 regression or onevsall
+     * classification
+     */
+    protected long negativeSelectedTrainCount;
+
+    /**
+     * Positive count in validation data list, only be effective in 0-1 regression or onevsall classification
+     */
+    protected long positiveValidationCount;
+
+    /**
+     * Negative count in validation data list, only be effective in 0-1 regression or onevsall classification
+     */
+    protected long negativeValidationCount;
+
+    /**
      * Training data set with only in memory because for GBDT data will be changed in later iterations.
      */
     private volatile MemoryLimitedList<Data> trainingData;
@@ -176,12 +208,26 @@ public class DTWorker
     /**
      * PoissonDistribution which is used for poission sampling for bagging with replacement.
      */
-    protected PoissonDistribution[] rng = null;
+    // protected PoissonDistribution[] rng = null;
+
+    private Map<Integer, PoissonDistribution[]> baggingRngMap = new HashMap<Integer, PoissonDistribution[]>();
 
     /**
      * If tree number = 1, no need bagging with replacement.
      */
-    private Random random = new Random();
+    // private Random random = new Random();
+
+    /**
+     * Construct a bagging random map for different classes. For stratified sampling, this is useful for each class
+     * sampling.
+     */
+    private Map<Integer, Random> baggingRandomMap = new HashMap<Integer, Random>();
+
+    /**
+     * Construct a validation random map for different classes. For stratified sampling, this is useful for each class
+     * sampling.
+     */
+    private Map<Integer, Random> validationRandomMap = new HashMap<Integer, Random>();
 
     /**
      * Default splitter used to split input record. Use one instance to prevent more news in Splitter.on.
@@ -248,9 +294,9 @@ public class DTWorker
     private int workerThreadCount;
 
     /**
-     * Indicates if there are cross validation data sets.
+     * Indicates if validation are set by users for validationDataPath, not random picking
      */
-    protected boolean isCrossValidation = false;
+    protected boolean isManualValidation = false;
 
     /**
      * Whether to enable continuous model training based on existing models.
@@ -277,6 +323,11 @@ public class DTWorker
      * such falg should reset to false
      */
     private boolean isNeedRecoverGBDTPredict = false;
+
+    /**
+     * If stratified sampling or random sampling
+     */
+    private boolean isStratifiedSampling = false;
 
     @Override
     public void initRecordReader(GuaguaFileSplit fileSplit) throws IOException {
@@ -362,7 +413,7 @@ public class DTWorker
         // 1, with index of 0,1,2,3 denotes different classes
         this.outputNodeCount = 1;
         this.isAfterVarSelect = inputOutputIndex[3] == 1 ? true : false;
-        this.isCrossValidation = (modelConfig.getValidationDataSetRawPath() != null && !"".equals(modelConfig
+        this.isManualValidation = (modelConfig.getValidationDataSetRawPath() != null && !"".equals(modelConfig
                 .getValidationDataSetRawPath()));
 
         int numClasses = this.modelConfig.isClassification() ? this.modelConfig.getTags().size() : 2;
@@ -408,20 +459,21 @@ public class DTWorker
             }
         }
 
-        if(this.isRF || (this.isGBDT && this.gbdtSampleWithReplacement)) {
-            this.rng = new PoissonDistribution[treeNum];
-            for(int i = 0; i < treeNum; i++) {
-                this.rng[i] = new PoissonDistribution(this.modelConfig.getTrain().getBaggingSampleRate());
-            }
-        }
+        this.isStratifiedSampling = this.modelConfig.getTrain().getStratifiedSample();
+        // if(this.isRF || (this.isGBDT && this.gbdtSampleWithReplacement)) {
+        // this.rng = new PoissonDistribution[treeNum];
+        // for(int i = 0; i < treeNum; i++) {
+        // this.rng[i] = new PoissonDistribution(this.modelConfig.getTrain().getBaggingSampleRate());
+        // }
+        // }
 
         this.checkpointOutput = new Path(context.getProps().getProperty(
                 CommonConstants.SHIFU_DT_MASTER_CHECKPOINT_FOLDER, "tmp/cp_" + context.getAppId()));
 
         LOG.info(
-                "Worker init params:isAfterVarSel={}, treeNum={}, impurity={}, loss={}, learningRate={}, gbdtSampleWithReplacement={}, isRF={}, isGBDT={}",
+                "Worker init params:isAfterVarSel={}, treeNum={}, impurity={}, loss={}, learningRate={}, gbdtSampleWithReplacement={}, isRF={}, isGBDT={}, isStratifiedSampling={}",
                 isAfterVarSelect, treeNum, impurity.getClass().getName(), loss.getClass().getName(), this.learningRate,
-                this.gbdtSampleWithReplacement, this.isRF, this.isGBDT);
+                this.gbdtSampleWithReplacement, this.isRF, this.isGBDT, this.isStratifiedSampling);
 
         // for fail over, load existing trees
         if(!context.isFirstIteration()) {
@@ -478,7 +530,7 @@ public class DTWorker
         double weightedTrainCount = 0d, weightedValidationCount = 0d;
         // renew random seed
         if(this.isGBDT && !this.gbdtSampleWithReplacement && lastMasterResult.isSwitchToNextTree()) {
-            this.random = new Random();
+            this.baggingRandomMap = new HashMap<Integer, Random>();
         }
 
         for(Data data: this.trainingData) {
@@ -536,8 +588,23 @@ public class DTWorker
                                 }
                                 data.output = -1f * loss.computeGradient(data.predict, data.label);
                             }
+                            // if not sampling with replacement in gbdt, renew bagging sample rate in next tree
                             if(!this.gbdtSampleWithReplacement) {
-                                // renew next subsample rate
+                                Random random = null;
+                                int classValue = (int) (data.label + 0.01f);
+                                if(this.isStratifiedSampling) {
+                                    random = baggingRandomMap.get(classValue);
+                                    if(random == null) {
+                                        random = new Random();
+                                        baggingRandomMap.put(classValue, random);
+                                    }
+                                } else {
+                                    random = baggingRandomMap.get(0);
+                                    if(random == null) {
+                                        random = new Random();
+                                        baggingRandomMap.put(0, random);
+                                    }
+                                }
                                 if(random.nextDouble() <= modelConfig.getTrain().getBaggingSampleRate()) {
                                     data.subsampleWeights[currTreeIndex % data.subsampleWeights.length] = 1f;
                                 } else {
@@ -607,14 +674,6 @@ public class DTWorker
                                     }
                                     data.output = -1f * loss.computeGradient(data.predict, data.label);
                                 }
-                                if(!this.gbdtSampleWithReplacement) {
-                                    // renew next subsample rate
-                                    if(random.nextDouble() <= modelConfig.getTrain().getBaggingSampleRate()) {
-                                        data.subsampleWeights[currTreeIndex % data.subsampleWeights.length] = 1f;
-                                    } else {
-                                        data.subsampleWeights[currTreeIndex % data.subsampleWeights.length] = 0f;
-                                    }
-                                }
                             }
                         }
                         if(context.getLastMasterResult().isFirstTree() && !lastMasterResult.isSwitchToNextTree()) {
@@ -647,7 +706,7 @@ public class DTWorker
         int roundNodeNumer = treeNodeEntrySet.size() / this.workerThreadCount;
         int modeNodeNumber = treeNodeEntrySet.size() % this.workerThreadCount;
         int realThreadCount = 0;
-        LOG.info("while todo size {}", todoNodes.size());
+        LOG.debug("while todo size {}", todoNodes.size());
         for(int i = 0; i < this.workerThreadCount; i++) {
             final Map<Integer, TreeNode> localTodoNodes = new HashMap<Integer, TreeNode>();
             final Map<Integer, NodeStats> localStatistics = new HashMap<Integer, DTWorkerParams.NodeStats>();
@@ -662,7 +721,7 @@ public class DTWorker
                 localStatistics.put(tmpTreeNode.getKey(), statistics.get(tmpTreeNode.getKey()));
                 modeNodeNumber -= 1;
             }
-            LOG.info("thread {} todo size {} stats size {} ", i, localTodoNodes.size(), localStatistics.size());
+            LOG.info("Thread {} todo size {} stats size {} ", i, localTodoNodes.size(), localStatistics.size());
 
             if(localTodoNodes.size() == 0) {
                 continue;
@@ -787,8 +846,21 @@ public class DTWorker
         LOG.info("    - Bagging With Replacement: {}.", this.modelConfig.isBaggingWithReplacement());
         LOG.info("        - Cross Validation Rate: {}.", this.modelConfig.getValidSetRate());
         LOG.info("        - # Records of the Training Set: {}.", this.trainingData.size());
+        if(modelConfig.isRegression() || modelConfig.getTrain().isOneVsAll()) {
+            LOG.info("        - # Positive Bagging Selected Records of the Training Set: {}.",
+                    this.positiveSelectedTrainCount);
+            LOG.info("        - # Negative Bagging Selected Records of the Training Set: {}.",
+                    this.negativeSelectedTrainCount);
+            LOG.info("        - # Positive Raw Records of the Training Set: {}.", this.positiveTrainCount);
+            LOG.info("        - # Negative Raw Records of the Training Set: {}.", this.negativeTrainCount);
+        }
+
         if(validationData != null) {
             LOG.info("        - # Records of the Validation Set: {}.", this.validationData.size());
+            if(modelConfig.isRegression() || modelConfig.getTrain().isOneVsAll()) {
+                LOG.info("        - # Positive Records of the Validation Set: {}.", this.positiveValidationCount);
+                LOG.info("        - # Negative Records of the Validation Set: {}.", this.negativeValidationCount);
+            }
         }
     }
 
@@ -1025,58 +1097,56 @@ public class DTWorker
             index += 1;
         }
 
-        double baggingSampleRate = this.modelConfig.getBaggingSampleRate();
-        // if fixInitialInput = false, we only compare random value with baggingSampleRate to avoid parsing data.
-        // if fixInitialInput = true, we should use hashcode after parsing.
-        if(!modelConfig.isFixInitialInput() && Double.compare(Math.random(), baggingSampleRate) >= 0) {
-            // for negative tags, do sampleNegOnly logic
-            if(modelConfig.getTrain().getSampleNegOnly()) {
-                if(modelConfig.isRegression() && Double.compare(ideal + 0d, 0d) == 0) {
-                    return;
-                }
-            } else {
-                return;// normal sampling
-            }
-        }
-        // if fixInitialInput = true, we should use hashcode to sample.
-        long longBaggingSampleRate = Double.valueOf(baggingSampleRate * 100).longValue();
-        if(this.modelConfig.isFixInitialInput() && hashcode % 100 >= longBaggingSampleRate) {
-            // for negative tags, do sampleNegOnly logic
-            if(modelConfig.getTrain().getSampleNegOnly()) {
-                if(modelConfig.isRegression() && Double.compare(ideal + 0d, 0d) == 0) {
-                    return;
-                }
-            } else {
-                return;// normal sampling
-            }
-        }
-        this.sampleCount += 1;
-
         if(this.isOneVsAll) {
             // if one vs all, update target value according to index of target
             ideal = updateOneVsAllTargetValue(ideal);
         }
 
+        // if only sample negative, no matter bagging or replacement, do sampling here.
+        if(modelConfig.getTrain().getSampleNegOnly() // sample negative enabled
+                && (modelConfig.isRegression() || (modelConfig.isClassification() && modelConfig.getTrain()
+                        .isOneVsAll())) // regression or onevsall
+                && Double.compare(ideal + 0.01d, 0d) == 0 // negative record
+                && (!this.modelConfig.isFixInitialInput() && Double.compare(Math.random(),
+                        this.modelConfig.getBaggingSampleRate()) >= 0)) {
+            return;
+        }
+        if(modelConfig.getTrain().getSampleNegOnly()// sample negative enabled
+                && (modelConfig.isRegression() || (modelConfig.isClassification() && modelConfig.getTrain()
+                        .isOneVsAll()))// regression or onevsall
+                && (Double.compare(ideal + 0.01d, 0d) == 0 // negative record
+                        && this.modelConfig.isFixInitialInput() && hashcode % 100 >= Double.valueOf(
+                        this.modelConfig.getBaggingSampleRate() * 100).longValue())) {
+            return;
+        }
+
         float output = ideal;
         float predict = ideal;
 
-        Data data = new Data(inputs, predict, output, output, significance, sampleWeights());
+        Data data = new Data(inputs, predict, output, output, significance);
 
-        // boolean isNeedFailOver = !context.isFirstIteration();
-        // // recover for gbdt fail over
-        // if(isNeedFailOver && this.isGBDT) {
-        // recoverGBTData(context, output, predict, data, true);
-        // }
-
-        // if(this.isContinuousEnabled && context.isFirstIteration() && this.isGBDT) {
-        // recoverGBTData(context, output, predict, data, false);
-        // }
-
-        boolean isTesting = false;
+        boolean isValidation = false;
         if(context.getAttachment() != null && context.getAttachment() instanceof Boolean) {
-            isTesting = (Boolean) context.getAttachment();
+            isValidation = (Boolean) context.getAttachment();
         }
-        this.addDataPairToDataSet(hashcode, data, isTesting);
+
+        // split into validation and training data set according to validation rate
+        boolean isInTraining = this.addDataPairToDataSet(hashcode, data, isValidation);
+
+        // do bagging sampling only for training data，
+        if(isInTraining) {
+            data.subsampleWeights = sampleWeights(data.label);
+            // for training data, compute real selected training data according to baggingSampleRate
+            // if gbdt, only the 1st sampling value is used, if rf, use the 1st to denote some information, no need all
+            if(isPositive(data.label)) {
+                this.positiveSelectedTrainCount += data.subsampleWeights[0] * 1L;
+            } else {
+                this.negativeSelectedTrainCount += data.subsampleWeights[0] * 1L;
+            }
+        } else {
+            // for validation data, according bagging sampling logic, we may need to sampling validation data set, while
+            // validation data set are only used to compute validation error, not to do real sampling is ok.
+        }
     }
 
     private float getFloatValue(String input) {
@@ -1087,32 +1157,85 @@ public class DTWorker
         return floatValue;
     }
 
-    protected void addDataPairToDataSet(long hashcode, Data data, boolean isTesting) {
-        if(isTesting) {
-            this.validationData.append(data);
-            return;
-        } else if(this.isCrossValidation && (!isTesting)) {
-            this.trainingData.append(data);
-            return;
-        }
-        double validationRate = this.modelConfig.getValidSetRate();
-        if(Double.compare(validationRate, 0d) != 0) {
-            if(this.modelConfig.isFixInitialInput()) {
-                long longValidation = Double.valueOf(validationRate * 100).longValue();
-                if(hashcode % 100 >= longValidation) {
-                    this.trainingData.append(data);
+    private boolean isPositive(float value) {
+        return Float.compare(1f, value) == 0 ? true : false;
+    }
+
+    /**
+     * Add to training set or validation set according to validation rate.
+     * 
+     * @return if in training, training is true, others are false.
+     */
+    protected boolean addDataPairToDataSet(long hashcode, Data data, boolean isValidation) {
+        if(this.isManualValidation) {
+            if(isValidation) {
+                this.validationData.append(data);
+                if(isPositive(data.label)) {
+                    this.positiveValidationCount += 1L;
                 } else {
-                    this.validationData.append(data);
+                    this.negativeValidationCount += 1L;
                 }
+                return false;
             } else {
-                if(random.nextDouble() >= validationRate) {
-                    this.trainingData.append(data);
+                this.trainingData.append(data);
+                if(isPositive(data.label)) {
+                    this.positiveTrainCount += 1L;
                 } else {
-                    this.validationData.append(data);
+                    this.negativeTrainCount += 1L;
                 }
+                return true;
             }
         } else {
-            this.trainingData.append(data);
+            if(Double.compare(this.modelConfig.getValidSetRate(), 0d) != 0) {
+                int classValue = (int) (data.label + 0.01f);
+                Random random = null;
+                if(this.isStratifiedSampling) {
+                    // each class use one random instance
+                    random = validationRandomMap.get(classValue);
+                    if(random == null) {
+                        random = new Random();
+                        this.validationRandomMap.put(classValue, random);
+                    }
+                } else {
+                    // all data use one random instance
+                    random = validationRandomMap.get(0);
+                    if(random == null) {
+                        random = new Random();
+                        this.validationRandomMap.put(0, random);
+                    }
+                }
+
+                // for fix initial input, if hashcode% 100 over validRate * 100, training
+                // not fixed initial input, if random value >= validRate, training.
+                if((this.modelConfig.isFixInitialInput() && hashcode % 100 >= Double.valueOf(
+                        this.modelConfig.getValidSetRate() * 100).longValue())
+                        || (!this.modelConfig.isFixInitialInput() && random.nextDouble() >= this.modelConfig
+                                .getValidSetRate())) {
+                    this.trainingData.append(data);
+                    if(isPositive(data.label)) {
+                        this.positiveTrainCount += 1L;
+                    } else {
+                        this.negativeTrainCount += 1L;
+                    }
+                    return true;
+                } else {
+                    this.validationData.append(data);
+                    if(isPositive(data.label)) {
+                        this.positiveValidationCount += 1L;
+                    } else {
+                        this.negativeValidationCount += 1L;
+                    }
+                    return false;
+                }
+            } else {
+                this.trainingData.append(data);
+                if(isPositive(data.label)) {
+                    this.positiveTrainCount += 1L;
+                } else {
+                    this.negativeTrainCount += 1L;
+                }
+                return true;
+            }
         }
     }
 
@@ -1176,12 +1299,29 @@ public class DTWorker
         return trees;
     }
 
-    private float[] sampleWeights() {
-        float[] sampleWeights;
+    private float[] sampleWeights(float label) {
+        float[] sampleWeights = null;
+        double sampleRate = modelConfig.getTrain().getSampleNegOnly() ? 1d : modelConfig.getTrain()
+                .getBaggingSampleRate();
+        int classValue = (int) (label + 0.01f);
         if(this.treeNum == 1 || (this.isGBDT && !this.gbdtSampleWithReplacement)) {
             // if tree == 1 or GBDT, don't use with replacement sampling; for GBDT, every time is one tree
             sampleWeights = new float[1];
-            if(random.nextDouble() <= modelConfig.getTrain().getBaggingSampleRate()) {
+            Random random = null;
+            if(this.isStratifiedSampling) {
+                random = baggingRandomMap.get(classValue);
+                if(random == null) {
+                    random = new Random();
+                    baggingRandomMap.put(classValue, random);
+                }
+            } else {
+                random = baggingRandomMap.get(0);
+                if(random == null) {
+                    random = new Random();
+                    baggingRandomMap.put(0, random);
+                }
+            }
+            if(random.nextDouble() <= sampleRate) {
                 sampleWeights[0] = 1f;
             } else {
                 sampleWeights[0] = 0f;
@@ -1189,8 +1329,30 @@ public class DTWorker
         } else {
             // if gbdt and gbdtSampleWithReplacement = true, still sampling with replacement
             sampleWeights = new float[this.treeNum];
-            for(int i = 0; i < sampleWeights.length; i++) {
-                sampleWeights[i] = this.rng[i].sample();
+            if(this.isStratifiedSampling) {
+                PoissonDistribution[] rng = this.baggingRngMap.get(classValue);
+                if(rng == null) {
+                    rng = new PoissonDistribution[treeNum];
+                    for(int i = 0; i < treeNum; i++) {
+                        rng[i] = new PoissonDistribution(sampleRate);
+                    }
+                    this.baggingRngMap.put(classValue, rng);
+                }
+                for(int i = 0; i < sampleWeights.length; i++) {
+                    sampleWeights[i] = rng[i].sample();
+                }
+            } else {
+                PoissonDistribution[] rng = this.baggingRngMap.get(0);
+                if(rng == null) {
+                    rng = new PoissonDistribution[treeNum];
+                    for(int i = 0; i < treeNum; i++) {
+                        rng[i] = new PoissonDistribution(sampleRate);
+                    }
+                    this.baggingRngMap.put(0, rng);
+                }
+                for(int i = 0; i < sampleWeights.length; i++) {
+                    sampleWeights[i] = rng[i].sample();
+                }
             }
         }
         return sampleWeights;
@@ -1216,6 +1378,7 @@ public class DTWorker
          * Original output label and not changed in GBDT
          */
         float label;
+
         /**
          * Output label and maybe changed in GBDT
          */
@@ -1225,6 +1388,15 @@ public class DTWorker
         float[] subsampleWeights = new float[] { 1.0f };
 
         public Data() {
+            this.label = 0;
+        }
+
+        public Data(short[] inputs, float predict, float output, float label, float significance) {
+            this.inputs = inputs;
+            this.predict = predict;
+            this.output = output;
+            this.label = label;
+            this.significance = significance;
         }
 
         public Data(short[] inputs, float predict, float output, float label, float significance,
