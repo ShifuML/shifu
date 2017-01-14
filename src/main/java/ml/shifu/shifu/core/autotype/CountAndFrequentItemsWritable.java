@@ -35,7 +35,8 @@ import org.apache.hadoop.io.Writable;
  */
 public class CountAndFrequentItemsWritable implements Writable {
 
-    static final int FREQUET_ITEM_MAX_SIZE = 20;
+    public static final int FREQUET_ITEM_MAX_SIZE = 20;
+
     /**
      * Serializing form for HyperLogLogPlus instance.
      */

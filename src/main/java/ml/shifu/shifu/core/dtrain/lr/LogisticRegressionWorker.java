@@ -19,8 +19,11 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.File;
 import java.io.IOException;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Properties;
+import java.util.Random;
 import java.util.concurrent.TimeUnit;
 
 import ml.shifu.guagua.ComputableMonitor;
@@ -107,7 +110,7 @@ public class LogisticRegressionWorker
     /**
      * Testing data set.
      */
-    private BytableMemoryDiskList<Data> testingData;
+    private BytableMemoryDiskList<Data> validationData;
 
     /**
      * Training data set.
@@ -147,7 +150,62 @@ public class LogisticRegressionWorker
     /**
      * Indicates if there are cross validation data sets.
      */
-    protected boolean isCrossValidation = false;
+    protected boolean isSpecificValidation = false;
+
+    /**
+     * If stratified sampling or random sampling
+     */
+    protected boolean isStratifiedSampling = false;
+
+    /**
+     * Positive count in training data list, only be effective in 0-1 regression or onevsall classification
+     */
+    protected long positiveTrainCount;
+
+    /**
+     * Positive count in training data list and being selected in training, only be effective in 0-1 regression or
+     * onevsall classification
+     */
+    protected long positiveSelectedTrainCount;
+
+    /**
+     * Negative count in training data list , only be effective in 0-1 regression or onevsall classification
+     */
+    protected long negativeTrainCount;
+
+    /**
+     * Negative count in training data list and being selected, only be effective in 0-1 regression or onevsall
+     * classification
+     */
+    protected long negativeSelectedTrainCount;
+
+    /**
+     * Positive count in validation data list, only be effective in 0-1 regression or onevsall classification
+     */
+    protected long positiveValidationCount;
+
+    /**
+     * Negative count in validation data list, only be effective in 0-1 regression or onevsall classification
+     */
+    protected long negativeValidationCount;
+
+    /**
+     * PoissonDistribution which is used for poission sampling for bagging with replacement.
+     */
+
+    protected Map<Integer, PoissonDistribution> baggingRngMap = new HashMap<Integer, PoissonDistribution>();
+
+    /**
+     * Construct a bagging random map for different classes. For stratified sampling, this is useful for each class
+     * sampling.
+     */
+    protected Map<Integer, Random> baggingRandomMap = new HashMap<Integer, Random>();
+
+    /**
+     * Construct a validation random map for different classes. For stratified sampling, this is useful for each class
+     * sampling.
+     */
+    protected Map<Integer, Random> validationRandomMap = new HashMap<Integer, Random>();
 
     protected boolean isUpSampleEnabled() {
         return this.upSampleRng != null;
@@ -165,8 +223,9 @@ public class LogisticRegressionWorker
         this.inputNum = inputOutputIndex[0] == 0 ? inputOutputIndex[2] : inputOutputIndex[0];
         this.outputNum = inputOutputIndex[1];
         this.candidateNum = inputOutputIndex[2];
-        this.isCrossValidation = (modelConfig.getValidationDataSetRawPath() != null && !"".equals(modelConfig
+        this.isSpecificValidation = (modelConfig.getValidationDataSetRawPath() != null && !"".equals(modelConfig
                 .getValidationDataSetRawPath()));
+        this.isStratifiedSampling = this.modelConfig.getTrain().getStratifiedSample();
 
         if(this.inputNum == 0) {
             throw new IllegalStateException("No any variables are selected, please try variable select step firstly.");
@@ -185,14 +244,14 @@ public class LogisticRegressionWorker
         this.trainingData = new BytableMemoryDiskList<Data>(
                 (long) (Runtime.getRuntime().maxMemory() * memoryFraction * (1 - crossValidationRate)), tmpFolder
                         + File.separator + "train-" + System.currentTimeMillis(), Data.class.getName());
-        this.testingData = new BytableMemoryDiskList<Data>(
+        this.validationData = new BytableMemoryDiskList<Data>(
                 (long) (Runtime.getRuntime().maxMemory() * memoryFraction * crossValidationRate), tmpFolder
                         + File.separator + "test-" + System.currentTimeMillis(), Data.class.getName());
         // cannot find a good place to close these two data set, using Shutdown hook
         Runtime.getRuntime().addShutdownHook(new Thread(new Runnable() {
             @Override
             public void run() {
-                LogisticRegressionWorker.this.testingData.close();
+                LogisticRegressionWorker.this.validationData.close();
                 LogisticRegressionWorker.this.trainingData.close();
             }
         }));
@@ -208,7 +267,7 @@ public class LogisticRegressionWorker
             double trainingFinalError = 0.0d;
             double testingFinalError = 0.0d;
             long trainingSize = this.trainingData.size();
-            long testingSize = this.testingData.size();
+            long testingSize = this.validationData.size();
             this.trainingData.reOpen();
             for(Data data: trainingData) {
                 double result = sigmoid(data.inputs, this.weights);
@@ -230,10 +289,10 @@ public class LogisticRegressionWorker
                 }
             }
 
-            this.testingData.reOpen();
+            this.validationData.reOpen();
             // TODO here we should use current weights+gradients to compute testing error, so far it is for last error
             // computing.
-            for(Data data: testingData) {
+            for(Data data: validationData) {
                 double result = sigmoid(data.inputs, this.weights);
                 double error = result - data.outputs[0];
                 testingFinalError += caculateMSEError(error);
@@ -286,13 +345,29 @@ public class LogisticRegressionWorker
     @Override
     protected void postLoad(WorkerContext<LogisticRegressionParams, LogisticRegressionParams> context) {
         this.trainingData.switchState();
-        this.testingData.switchState();
+        this.validationData.switchState();
+
         LOG.info("    - # Records of the Master Data Set: {}.", this.count);
         LOG.info("    - Bagging Sample Rate: {}.", this.modelConfig.getBaggingSampleRate());
         LOG.info("    - Bagging With Replacement: {}.", this.modelConfig.isBaggingWithReplacement());
         LOG.info("        - Cross Validation Rate: {}.", this.modelConfig.getValidSetRate());
         LOG.info("        - # Records of the Training Set: {}.", this.trainingData.size());
-        LOG.info("        - # Records of the Validation Set: {}.", this.testingData.size());
+        if(modelConfig.isRegression() || modelConfig.getTrain().isOneVsAll()) {
+            LOG.info("        - # Positive Bagging Selected Records of the Training Set: {}.",
+                    this.positiveSelectedTrainCount);
+            LOG.info("        - # Negative Bagging Selected Records of the Training Set: {}.",
+                    this.negativeSelectedTrainCount);
+            LOG.info("        - # Positive Raw Records of the Training Set: {}.", this.positiveTrainCount);
+            LOG.info("        - # Negative Raw Records of the Training Set: {}.", this.negativeTrainCount);
+        }
+
+        if(validationData != null) {
+            LOG.info("        - # Records of the Validation Set: {}.", this.validationData.size());
+            if(modelConfig.isRegression() || modelConfig.getTrain().isOneVsAll()) {
+                LOG.info("        - # Positive Records of the Validation Set: {}.", this.positiveValidationCount);
+                LOG.info("        - # Negative Records of the Validation Set: {}.", this.negativeValidationCount);
+            }
+        }
     }
 
     @Override
@@ -346,43 +421,98 @@ public class LogisticRegressionWorker
             index += 1;
         }
 
-        // if fixInitialInput = false, we only compare random value with baggingSampleRate to avoid parsing data.
-        // if fixInitialInput = true, we should use hashcode after parsing.
-        double baggingSampleRate = this.modelConfig.getBaggingSampleRate();
-        if(!this.modelConfig.isFixInitialInput() && Double.compare(Math.random(), baggingSampleRate) >= 0) {
-            // for negative tags, do sampleNegOnly logic
-            if(modelConfig.getTrain().getSampleNegOnly()) {
-                if(modelConfig.isRegression() && Double.compare(outputData[0] + 0d, 0d) == 0) {
-                    return;
-                }
-            } else {
-                return;// normal sampling
-            }
+        // if only sample negative, no matter bagging or replacement, do sampling here.
+        if(modelConfig.getTrain().getSampleNegOnly() // sample negative enabled
+                && (modelConfig.isRegression() || (modelConfig.isClassification() && modelConfig.getTrain()
+                        .isOneVsAll())) // regression or onevsall
+                && Double.compare(outputData[0] + 0.01d, 0d) == 0 // negative record
+                && (!this.modelConfig.isFixInitialInput() && Double.compare(Math.random(),
+                        this.modelConfig.getBaggingSampleRate()) >= 0)) {
+            return;
         }
-        // if fixInitialInput = true, we should use hashcode to sample.
-        long longBaggingSampleRate = Double.valueOf(baggingSampleRate * 100).longValue();
-        if(modelConfig.isFixInitialInput() && hashcode % 100 >= longBaggingSampleRate) {
-            // for negative tags, do sampleNegOnly logic
-            if(modelConfig.getTrain().getSampleNegOnly()) {
-                if(modelConfig.isRegression() && Double.compare(outputData[0] + 0d, 0d) == 0) {
-                    return;
-                }
-            } else {
-                return;// normal sampling
-            }
+        if(modelConfig.getTrain().getSampleNegOnly()// sample negative enabled
+                && (modelConfig.isRegression() || (modelConfig.isClassification() && modelConfig.getTrain()
+                        .isOneVsAll()))// regression or onevsall
+                && (Double.compare(outputData[0] + 0.01d, 0d) == 0 // negative record
+                        && this.modelConfig.isFixInitialInput() && hashcode % 100 >= Double.valueOf(
+                        this.modelConfig.getBaggingSampleRate() * 100).longValue())) {
+            return;
         }
 
-        this.sampleCount += 1;
+        Data data = new Data(inputData, outputData, significance);
 
+        // up sampling logic, just add more weights while bagging sampling rate is still not changed
         if(modelConfig.isRegression() && isUpSampleEnabled() && Double.compare(outputData[0], 1d) == 0) {
-            // Double.compare(ideal[0], 1d) == 0 means positive tags; sample + 1 to avoid sample count to 0
-            significance *= (this.upSampleRng.sample() + 1);
+            // Double.compare(ideal[0], 1d) == 0 means positive tags; sample + 1 to avoids sample count to 0
+            data.setSignificance(data.significance * (this.upSampleRng.sample() + 1));
         }
-        boolean isTesting = false;
+
+        boolean isValidation = false;
         if(context.getAttachment() != null && context.getAttachment() instanceof Boolean) {
-            isTesting = (Boolean) context.getAttachment();
+            isValidation = (Boolean) context.getAttachment();
         }
-        this.addDataPairToDataSet(hashcode, new Data(inputData, outputData, significance), isTesting);
+
+        boolean isInTraining = addDataPairToDataSet(hashcode, data, isValidation);
+
+        // do bagging sampling only for training data，
+        if(isInTraining) {
+            float subsampleWeights = sampleWeights(outputData[0]);
+            if(isPositive(outputData[0])) {
+                this.positiveSelectedTrainCount += subsampleWeights * 1L;
+            } else {
+                this.negativeSelectedTrainCount += subsampleWeights * 1L;
+            }
+            // set weights to significance, if 0, significance will be 0, that is bagging sampling
+            data.setSignificance(data.significance * subsampleWeights);
+        } else {
+            // for validation data, according bagging sampling logic, we may need to sampling validation data set, while
+            // validation data set are only used to compute validation error, not to do real sampling is ok.
+        }
+    }
+
+    protected float sampleWeights(float label) {
+        float sampleWeights = 1f;
+        double sampleRate = modelConfig.getTrain().getSampleNegOnly() ? 1d : modelConfig.getTrain()
+                .getBaggingSampleRate();
+        int classValue = (int) (label + 0.01f);
+        if(modelConfig.isBaggingWithReplacement()) {
+            Random random = null;
+            if(this.isStratifiedSampling) {
+                random = baggingRandomMap.get(classValue);
+                if(random == null) {
+                    random = new Random();
+                    baggingRandomMap.put(classValue, random);
+                }
+            } else {
+                random = baggingRandomMap.get(0);
+                if(random == null) {
+                    random = new Random();
+                    baggingRandomMap.put(0, random);
+                }
+            }
+            if(random.nextDouble() <= sampleRate) {
+                sampleWeights = 1f;
+            } else {
+                sampleWeights = 0f;
+            }
+        } else {
+            if(this.isStratifiedSampling) {
+                PoissonDistribution rng = this.baggingRngMap.get(classValue);
+                if(rng == null) {
+                    rng = new PoissonDistribution(sampleRate);
+                    this.baggingRngMap.put(classValue, rng);
+                }
+                sampleWeights = rng.sample();
+            } else {
+                PoissonDistribution rng = this.baggingRngMap.get(0);
+                if(rng == null) {
+                    rng = new PoissonDistribution(sampleRate);
+                    this.baggingRngMap.put(0, rng);
+                }
+                sampleWeights = rng.sample();
+            }
+        }
+        return sampleWeights;
     }
 
     private void loadConfigFiles(final Properties props) {
@@ -398,52 +528,85 @@ public class LogisticRegressionWorker
         }
     }
 
-    /**
-     * Add data pair to data set according to setting parameters. Still set hashCode to long to make double and long
-     * friendly.
-     */
-    protected void addDataPairToDataSet(long hashcode, Data record, boolean isTesting) {
-        if(isTesting) {
-            this.testingData.append(record);
-            return;
-        } else if(this.isCrossValidation && (!isTesting)) {
-            this.trainingData.append(record);
-            return;
-        }
-        double crossValidationRate = this.modelConfig.getValidSetRate();
-        if(this.modelConfig.isFixInitialInput()) {
-            long longCrossValidation = Double.valueOf(crossValidationRate * 100).longValue();
-            if(hashcode % 100 < longCrossValidation) {
-                this.testingData.append(record);
-            } else {
-                this.trainingData.append(record);
-            }
-        } else {
-            double random = Math.random();
-            if(this.modelConfig.isBaggingWithReplacement()) {
-                int count = rng.sample();
-                if(count > 0) {
-                    record.setSignificance(record.significance * count);
-                    if(Double.compare(random, crossValidationRate) < 0) {
-                        this.testingData.append(record);
-                    } else {
-                        this.trainingData.append(record);
-                    }
-                }
-            } else {
-                addDataPairToDataSet(record, crossValidationRate, random);
-            }
-        }
+    protected boolean isPositive(float value) {
+        return Float.compare(1f, value) == 0 ? true : false;
     }
 
     /**
-     * Add data pair to data set according to random number compare with crossValidationRate.
+     * Add to training set or validation set according to validation rate.
+     * 
+     * @return if in training, training is true, others are false.
      */
-    private void addDataPairToDataSet(Data record, double crossValidationRate, double random) {
-        if(Double.compare(random, crossValidationRate) < 0) {
-            this.testingData.append(record);
+    protected boolean addDataPairToDataSet(long hashcode, Data data, boolean isValidation) {
+        if(this.isSpecificValidation) {
+            if(isValidation) {
+                this.validationData.append(data);
+                if(isPositive(data.outputs[0])) {
+                    this.positiveValidationCount += 1L;
+                } else {
+                    this.negativeValidationCount += 1L;
+                }
+                return false;
+            } else {
+                this.trainingData.append(data);
+                if(isPositive(data.outputs[0])) {
+                    this.positiveTrainCount += 1L;
+                } else {
+                    this.negativeTrainCount += 1L;
+                }
+                return true;
+            }
         } else {
-            this.trainingData.append(record);
+            if(Double.compare(this.modelConfig.getValidSetRate(), 0d) != 0) {
+                int classValue = (int) (data.outputs[0] + 0.01f);
+                Random random = null;
+                if(this.isStratifiedSampling) {
+                    // each class use one random instance
+                    random = validationRandomMap.get(classValue);
+                    if(random == null) {
+                        random = new Random();
+                        this.validationRandomMap.put(classValue, random);
+                    }
+                } else {
+                    // all data use one random instance
+                    random = validationRandomMap.get(0);
+                    if(random == null) {
+                        random = new Random();
+                        this.validationRandomMap.put(0, random);
+                    }
+                }
+
+                // for fix initial input, if hashcode% 100 over validRate * 100, training
+                // not fixed initial input, if random value >= validRate, training.
+                if((this.modelConfig.isFixInitialInput() && hashcode % 100 >= Double.valueOf(
+                        this.modelConfig.getValidSetRate() * 100).longValue())
+                        || (!this.modelConfig.isFixInitialInput() && random.nextDouble() >= this.modelConfig
+                                .getValidSetRate())) {
+                    this.trainingData.append(data);
+                    if(isPositive(data.outputs[0])) {
+                        this.positiveTrainCount += 1L;
+                    } else {
+                        this.negativeTrainCount += 1L;
+                    }
+                    return true;
+                } else {
+                    this.validationData.append(data);
+                    if(isPositive(data.outputs[0])) {
+                        this.positiveValidationCount += 1L;
+                    } else {
+                        this.negativeValidationCount += 1L;
+                    }
+                    return false;
+                }
+            } else {
+                this.trainingData.append(data);
+                if(isPositive(data.outputs[0])) {
+                    this.positiveTrainCount += 1L;
+                } else {
+                    this.negativeTrainCount += 1L;
+                }
+                return true;
+            }
         }
     }
 

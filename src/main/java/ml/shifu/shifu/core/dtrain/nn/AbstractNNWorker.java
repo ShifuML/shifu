@@ -548,51 +548,6 @@ public abstract class AbstractNNWorker<VALUE extends Writable> extends
         addDataPairToDataSet(hashcode, pair, false);
     }
 
-    // /**
-    // * Add data pair to data set according to setting parameters. Still set hashCode to long to make double and long
-    // * friendly.
-    // */
-    // protected void addDataPairToDataSet(long hashcode, FloatMLDataPair pair, boolean isTesting) {
-    // if(isTesting) {
-    // this.validationData.add(pair);
-    // return;
-    // } else if(this.isSpecificValidation && (!isTesting)) {
-    // this.trainingData.add(pair);
-    // return;
-    // }
-    //
-    // double validationRate = this.modelConfig.getValidSetRate();
-    // if(this.modelConfig.isFixInitialInput()) {
-    // long longValidation = Double.valueOf(validationRate * 100).longValue();
-    // if(hashcode % 100 < longValidation) {
-    // this.validationData.add(pair);
-    // } else {
-    // this.trainingData.add(pair);
-    // }
-    // } else {
-    // double random = Math.random();
-    // if(this.poissonSampler && this.modelConfig.isBaggingWithReplacement()) {
-    // int count = rng.sample();
-    // if(count > 0) {
-    // pair.setSignificance(pair.getSignificance() * count);
-    // if(Double.compare(random, validationRate) < 0) {
-    // this.validationData.add(pair);
-    // } else {
-    // this.trainingData.add(pair);
-    // }
-    // }
-    // } else {
-    // // old for compatible, set nn.poison.sampler.enable to false in shifuconfig can set bagging with
-    // // replacement to old
-    // if(isBaggingReplacementTrigged(random)) {
-    // mockRandomRepeatData(validationRate, random);
-    // } else {
-    // addDataPairToDataSet(pair, validationRate, random);
-    // }
-    // }
-    // }
-    // }
-
     protected boolean isPositive(float value) {
         return Float.compare(1f, value) == 0 ? true : false;
     }

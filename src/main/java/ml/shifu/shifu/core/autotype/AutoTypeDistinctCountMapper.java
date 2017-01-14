@@ -62,7 +62,7 @@ public class AutoTypeDistinctCountMapper extends Mapper<LongWritable, Text, IntW
     private IntWritable outputKey;
 
     /**
-     * TODO using approximate method to estimate real frequent items and store into this map
+     * Using approximate method to estimate real frequent items and store into this map
      */
     private Map<Integer, CountAndFrequentItems> variableCountMap;
 
@@ -184,7 +184,7 @@ public class AutoTypeDistinctCountMapper extends Mapper<LongWritable, Text, IntW
         }
     }
 
-    private static class CountAndFrequentItems {
+    public static class CountAndFrequentItems {
 
         private final HyperLogLogPlus hyper = new HyperLogLogPlus(8);;
 
@@ -218,5 +218,50 @@ public class AutoTypeDistinctCountMapper extends Mapper<LongWritable, Text, IntW
                 frequentItems.add(unit);
             }
         }
+
+        /**
+         * @return the hyper
+         */
+        public HyperLogLogPlus getHyper() {
+            return hyper;
+        }
+
+        /**
+         * @return the frequentItems
+         */
+        public Set<String> getFrequentItems() {
+            return frequentItems;
+        }
+
+        /**
+         * @return the count
+         */
+        public long getCount() {
+            return count;
+        }
+
+        /**
+         * @return the invalidCount
+         */
+        public long getInvalidCount() {
+            return invalidCount;
+        }
+
+        /**
+         * @return the validNumCount
+         */
+        public long getValidNumCount() {
+            return validNumCount;
+        }
+
+        /* (non-Javadoc)
+         * @see java.lang.Object#toString()
+         */
+        @Override
+        public String toString() {
+            return "CountAndFrequentItems [hyper=" + hyper + ", frequentItems=" + frequentItems + ", count=" + count
+                    + ", invalidCount=" + invalidCount + ", validNumCount=" + validNumCount + "]";
+        }
+        
     }
 }

@@ -40,67 +40,63 @@ import org.slf4j.LoggerFactory;
 public class TreeEnsemblePMMLTranslator extends PMMLTranslator {
 
     private static final Logger LOG = LoggerFactory.getLogger(TreeEnsemblePMMLTranslator.class);
-        
+
     private TreeEnsemblePmmlCreator modelCreator;
     private AbstractPmmlElementCreator<DataDictionary> dataDictionaryCreator;
     @SuppressWarnings("unused")
     private AbstractPmmlElementCreator<MiningSchema> miningSchemaCreator;
 
     public TreeEnsemblePMMLTranslator(TreeEnsemblePmmlCreator modelCreator,
-                          AbstractPmmlElementCreator<DataDictionary> dataDictionaryCreator,
-                          AbstractPmmlElementCreator<MiningSchema> miningSchemaCreator) {
+            AbstractPmmlElementCreator<DataDictionary> dataDictionaryCreator,
+            AbstractPmmlElementCreator<MiningSchema> miningSchemaCreator) {
         super();
         this.modelCreator = modelCreator;
         this.dataDictionaryCreator = dataDictionaryCreator;
         this.miningSchemaCreator = miningSchemaCreator;
     }
+
     public PMML build(BasicML basicML) {
-            PMML pmml = new PMML();
+        PMML pmml = new PMML();
 
-            Header header = new Header();
-            pmml.setHeader(header);
-            header.setCopyright(
-            " Copyright [2013-2016] PayPal Software Foundation\n" +
-            "\n" +
-            " Licensed under the Apache License, Version 2.0 (the \"License\");\n" +
-            " you may not use this file except in compliance with the License.\n" +
-            " You may obtain a copy of the License at\n" +
-            "\n" +
-            "    http://www.apache.org/licenses/LICENSE-2.0\n" +
-            "\n" +
-            " Unless required by applicable law or agreed to in writing, software\n" +
-            " distributed under the License is distributed on an \"AS IS\" BASIS,\n" +
-            " WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n" +
-            " See the License for the specific language governing permissions and\n" +
-            " limitations under the License.\n");
-            Application application = new Application();
-            header.setApplication(application);
+        Header header = new Header();
+        pmml.setHeader(header);
+        header.setCopyright(" Copyright [2013-2016] PayPal Software Foundation\n" + "\n"
+                + " Licensed under the Apache License, Version 2.0 (the \"License\");\n"
+                + " you may not use this file except in compliance with the License.\n"
+                + " You may obtain a copy of the License at\n" + "\n"
+                + "    http://www.apache.org/licenses/LICENSE-2.0\n" + "\n"
+                + " Unless required by applicable law or agreed to in writing, software\n"
+                + " distributed under the License is distributed on an \"AS IS\" BASIS,\n"
+                + " WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n"
+                + " See the License for the specific language governing permissions and\n"
+                + " limitations under the License.\n");
+        Application application = new Application();
+        header.setApplication(application);
 
-            application.setName("shifu");
-            String findContainingJar = JarManager.findContainingJar(TreeEnsemblePMMLTranslator.class);
-            JarFile jar = null;
-            try {
-                jar = new JarFile(findContainingJar);
-                final Manifest manifest = jar.getManifest();
-
-                String vendor = manifest.getMainAttributes().getValue("vendor");
-                String version = manifest.getMainAttributes().getValue("version");
-                application.setVersion(version);
-            } catch (Exception e) {
-                LOG.warn(e.getMessage());
-            } finally {
-                if(jar != null) {
-                    try {
-                        jar.close();
-                    } catch (IOException e) {
-                        LOG.warn(e.getMessage());
-                    }
+        String findContainingJar = JarManager.findContainingJar(TreeEnsemblePMMLTranslator.class);
+        JarFile jar = null;
+        try {
+            jar = new JarFile(findContainingJar);
+            final Manifest manifest = jar.getManifest();
+            String vendor = manifest.getMainAttributes().getValue("vendor");
+            application.setName(vendor);
+            String version = manifest.getMainAttributes().getValue("version");
+            application.setVersion(version);
+        } catch (Exception e) {
+            LOG.warn(e.getMessage());
+        } finally {
+            if(jar != null) {
+                try {
+                    jar.close();
+                } catch (IOException e) {
+                    LOG.warn(e.getMessage());
                 }
             }
-            pmml.setDataDictionary(dataDictionaryCreator.build());
-            List<Model> models = pmml.getModels();
-            Model miningModel = modelCreator.convert(((TreeModel)basicML).getIndependentTreeModel());
-            models.add(miningModel);
-            return pmml;
+        }
+        pmml.setDataDictionary(dataDictionaryCreator.build());
+        List<Model> models = pmml.getModels();
+        Model miningModel = modelCreator.convert(((TreeModel) basicML).getIndependentTreeModel());
+        models.add(miningModel);
+        return pmml;
     }
 }

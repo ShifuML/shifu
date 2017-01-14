@@ -38,6 +38,7 @@ public class ColumnStats {
      */
     private Long distinctCount;
     private Long missingCount;
+    private Long validNumCount;
     private Double stdDev;
     private Double missingPercentage;
     private Double woe;
@@ -263,5 +264,19 @@ public class ColumnStats {
      */
     public void setUnitStats(List<String> unitStats) {
         this.unitStats = unitStats;
+    }
+
+    /**
+     * @return the validNumCount
+     */
+    public Long getValidNumCount() {
+        return validNumCount;
+    }
+
+    /**
+     * @param validNumCount the validNumCount to set
+     */
+    public void setValidNumCount(Long validNumCount) {
+        this.validNumCount = validNumCount;
     }
 }

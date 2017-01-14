@@ -56,6 +56,8 @@ public class ColumnConfig {
     private ColumnBinning columnBinning = new ColumnBinning();
 
     private List<Double> corrArray;
+    
+    private List<String> sampleValues;
 
     /**
      * ---------------------------------------------------------------------------
@@ -527,5 +529,19 @@ public class ColumnConfig {
         other.setColumnBinning(columnBinning);
         other.setCorrArray(corrArray);
         return other;
+    }
+
+    /**
+     * @return the sampleValues
+     */
+    public List<String> getSampleValues() {
+        return sampleValues;
+    }
+
+    /**
+     * @param sampleValues the sampleValues to set
+     */
+    public void setSampleValues(List<String> sampleValues) {
+        this.sampleValues = sampleValues;
     }
 }
