@@ -63,7 +63,7 @@ public class RawSourceData implements Cloneable {
     /**
      * Change it to true by default to compute distinct value for later variable selection.
      */
-    private Boolean autoType = Boolean.TRUE;
+    private Boolean autoType = Boolean.FALSE;
 
     /**
      * To change it to 0 instead of 250 because 0-1 columns shouldn't be set to categorical.

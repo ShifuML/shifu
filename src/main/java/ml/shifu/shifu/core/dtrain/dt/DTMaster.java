@@ -77,7 +77,7 @@ import org.slf4j.LoggerFactory;
  * <p>
  * In current {@link DTMaster}, there are states like {@link #trees} and {@link #toDoQueue}. All stats can be recovered
  * once master is done. Such states are checkpointed to HDFS for fault tolerence.
- *
+ * 
  * @author Zhang David (pengzhang@paypal.com)
  */
 public class DTMaster extends AbstractMasterComputable<DTMasterParams, DTWorkerParams> {
@@ -217,6 +217,11 @@ public class DTMaster extends AbstractMasterComputable<DTMasterParams, DTWorkerP
      */
     private int maxBatchSplitSize = 16;
 
+    /**
+     * DTEarlyStopDecider will decide automatic whether it need further training, this only for GBDT.
+     */
+    private DTEarlyStopDecider dtEarlyStopDecider;
+
     // ############################################################################################################
     // ## There parts are states, for fail over such instances should be recovered in {@link #init(MasterContext)}
     // ############################################################################################################
@@ -236,11 +241,6 @@ public class DTMaster extends AbstractMasterComputable<DTMasterParams, DTWorkerP
      * TreeNodes needed to be collected statistics from workers.
      */
     private Queue<TreeNode> toDoQueue;
-
-    /**
-     * DTEarlyStopDecider will decide automatic whether it need further training, this only for GBDT.
-     */
-    private DTEarlyStopDecider dtEarlyStopDecider;
 
     @Override
     public DTMasterParams doCompute(MasterContext<DTMasterParams, DTWorkerParams> context) {
@@ -335,7 +335,7 @@ public class DTMaster extends AbstractMasterComputable<DTMasterParams, DTWorkerP
 
         Map<Integer, TreeNode> todoNodes = new HashMap<Integer, TreeNode>();
         double averageValidationError = validationError;
-        if(this.dtEarlyStopDecider != null){
+        if(this.dtEarlyStopDecider != null) {
             // TODO random forest support
             this.dtEarlyStopDecider.add(validationError);
             averageValidationError = this.dtEarlyStopDecider.getCurrentAverageValue();
@@ -360,7 +360,8 @@ public class DTMaster extends AbstractMasterComputable<DTMasterParams, DTWorkerP
                             context.getCurrentIteration());
                 } else if(this.dtEarlyStopDecider != null && this.dtEarlyStopDecider.canStop()) {
                     masterParams.setHalt(true);
-                    LOG.info("Early stop identified, training is stopped in iteration {}.", context.getCurrentIteration());
+                    LOG.info("Early stop identified, training is stopped in iteration {}.",
+                            context.getCurrentIteration());
                 } else {
                     // set first tree to true even after ROOT node is set in next tree
                     masterParams.setFirstTree(this.trees.size() == 1);
@@ -568,11 +569,6 @@ public class DTMaster extends AbstractMasterComputable<DTMasterParams, DTWorkerP
      */
     private void doCheckPoint(final MasterContext<DTMasterParams, DTWorkerParams> context,
             final DTMasterParams masterParams) {
-        // boolean isMasterFailOverEnabled = Boolean.TRUE.toString().equalsIgnoreCase(
-        // context.getProps().getProperty("shifu.dt.master.failover", "true"));
-        // if(!isMasterFailOverEnabled || context.getCurrentIteration() % this.checkpointInterval != 0) {
-        // return;
-        // }
         LOG.info("Do checkpoint at hdfs file {}", this.checkpointOutput);
         final Queue<TreeNode> finalTodoQueue = this.toDoQueue;
         final Queue<TreeNode> finalToSplitQueue = this.toSplitQueue;

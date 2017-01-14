@@ -42,6 +42,8 @@ import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.container.obj.ModelConfig;
 import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
 import ml.shifu.shifu.core.DataPurifier;
+import ml.shifu.shifu.core.autotype.AutoTypeDistinctCountMapper.CountAndFrequentItems;
+import ml.shifu.shifu.core.autotype.CountAndFrequentItemsWritable;
 import ml.shifu.shifu.util.CommonUtils;
 import ml.shifu.shifu.util.Constants;
 
@@ -116,6 +118,11 @@ public class UpdateBinningInfoMapper extends Mapper<LongWritable, Text, IntWrita
      */
     private Map<Integer, Map<String, Integer>> categoricalBinMap;
 
+    /**
+     * Using approximate method to estimate real frequent items and store into this map
+     */
+    private Map<Integer, CountAndFrequentItems> variableCountMap;
+
     // cache tags in set for search
     private Set<String> posTags;
     private Set<String> negTags;
@@ -163,6 +170,8 @@ public class UpdateBinningInfoMapper extends Mapper<LongWritable, Text, IntWrita
         loadColumnBinningInfo();
 
         this.outputKey = new IntWritable();
+
+        this.variableCountMap = new HashMap<Integer, CountAndFrequentItems>();
 
         this.posTags = new HashSet<String>(modelConfig.getPosTags());
         this.negTags = new HashSet<String>(modelConfig.getNegTags());
@@ -326,9 +335,18 @@ public class UpdateBinningInfoMapper extends Mapper<LongWritable, Text, IntWrita
 
         for(int i = 0; i < units.length; i++) {
             ColumnConfig columnConfig = this.columnConfigList.get(i);
+
+            CountAndFrequentItems countAndFrequentItems = this.variableCountMap.get(i);
+            if(countAndFrequentItems == null) {
+                countAndFrequentItems = new CountAndFrequentItems();
+                this.variableCountMap.put(i, countAndFrequentItems);
+            }
+            countAndFrequentItems.offer(this.missingOrInvalidValues, units[i]);
+
             if(columnConfig.isMeta() || columnConfig.isTarget()) {
                 continue;
             }
+
             isMissingValue = false;
             isInvalidValue = false;
 
@@ -454,8 +472,18 @@ public class UpdateBinningInfoMapper extends Mapper<LongWritable, Text, IntWrita
     @Override
     protected void cleanup(Context context) throws IOException, InterruptedException {
         LOG.debug("Column binning info: {}", this.columnBinningInfo);
+        LOG.debug("Column count info: {}", this.variableCountMap);
 
         for(Map.Entry<Integer, BinningInfoWritable> entry: this.columnBinningInfo.entrySet()) {
+            CountAndFrequentItems cfi = this.variableCountMap.get(entry.getKey());
+            if(cfi != null) {
+                entry.getValue().setCfiw(
+                        new CountAndFrequentItemsWritable(cfi.getCount(), cfi.getInvalidCount(),
+                                cfi.getValidNumCount(), cfi.getHyper().getBytes(), cfi.getFrequentItems()));
+            } else {
+                LOG.info("cci is null for column {}", entry.getKey());
+            }
+
             this.outputKey.set(entry.getKey());
             context.write(this.outputKey, entry.getValue());
         }

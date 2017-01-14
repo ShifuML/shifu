@@ -15,6 +15,7 @@
  */
 package ml.shifu.shifu.core.processor.stats;
 
+import com.clearspring.analytics.stream.cardinality.HyperLogLogPlus;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -195,12 +196,14 @@ public class MapReducerStatsWorker extends AbstractStatsExecutor {
                     .getValue();
             long filterOut = job.getCounters().findCounter(Constants.SHIFU_GROUP_COUNTER, "FILTER_OUT_COUNT")
                     .getValue();
-
-            log.info("Total valid records {}, invalid tag records {}, filter out records {}", totalValidCount,
-                    invalidTagCount, filterOut);
+            long weightExceptions = job.getCounters().findCounter(Constants.SHIFU_GROUP_COUNTER, "WEIGHT_EXCEPTION")
+                    .getValue();
+            log.info(
+                    "Total valid records {}, invalid tag records {}, filter out records {}, weight exception records {}",
+                    totalValidCount, invalidTagCount, filterOut, weightExceptions);
 
             if(totalValidCount > 0L && invalidTagCount * 1d / totalValidCount >= 0.8d) {
-                log.error("Too many invalid tags, please check you configuration on positive tags and negative tags.");
+                log.warn("Too many invalid tags, please check you configuration on positive tags and negative tags.");
             }
         }
         FileUtils.deleteQuietly(new File(filePath));
@@ -279,6 +282,8 @@ public class MapReducerStatsWorker extends AbstractStatsExecutor {
         jars.add(JarManager.findContainingJar(JsonParser.class));
         // jackson-annotations-*.jar
         jars.add(JarManager.findContainingJar(JsonIgnore.class));
+        // stream-llib-*.jar
+        jars.add(JarManager.findContainingJar(HyperLogLogPlus.class));
 
         return StringUtils.join(jars, NNConstants.LIB_JAR_SEPARATOR);
     }
@@ -367,6 +372,18 @@ public class MapReducerStatsWorker extends AbstractStatsExecutor {
                 }
                 if(raw.length >= 27) {
                     config.getColumnStats().setKurtosis(parseDouble(raw[26]));
+                }
+                if(raw.length >= 30) {
+                    config.getColumnStats().setValidNumCount(parseLong(raw[29]));
+                }
+                if(raw.length >= 31) {
+                    config.getColumnStats().setDistinctCount(parseLong(raw[30]));
+                }
+                if(raw.length >= 32) {
+                    if(raw[31] != null) {
+                        List<String> sampleValues = Arrays.asList(raw[31].split(","));
+                        config.setSampleValues(sampleValues);
+                    }
                 }
             } catch (Exception e) {
                 log.error(String.format("Fail to process following column : %s name: %s error: %s", columnNum,

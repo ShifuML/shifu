@@ -20,6 +20,7 @@ import ml.shifu.shifu.container.obj.ModelConfig;
 import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
 import ml.shifu.shifu.core.ColumnStatsCalculator;
 import ml.shifu.shifu.core.ColumnStatsCalculator.ColumnMetrics;
+import ml.shifu.shifu.core.autotype.CountAndFrequentItemsWritable;
 import ml.shifu.shifu.udf.CalculateStatsUDF;
 import ml.shifu.shifu.util.Base64Utils;
 import ml.shifu.shifu.util.CommonUtils;
@@ -32,10 +33,16 @@ import org.apache.hadoop.mapreduce.Reducer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.clearspring.analytics.stream.cardinality.CardinalityMergeException;
+import com.clearspring.analytics.stream.cardinality.HyperLogLogPlus;
+
 import java.io.IOException;
 import java.text.DecimalFormat;
 import java.util.Arrays;
+import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
+import java.util.Set;
 
 /**
  * Collect all statistics together in reducer.
@@ -131,8 +138,27 @@ public class UpdateBinningInfoReducer extends Reducer<IntWritable, BinningInfoWr
 
         ColumnConfig columnConfig = this.columnConfigList.get(key.get());
 
+        HyperLogLogPlus hyperLogLogPlus = null;
+        Set<String> fis = new HashSet<String>();
+        long totalCount = 0, invalidCount = 0, validNumCount = 0;
         int binSize = 0;
         for(BinningInfoWritable info: values) {
+            CountAndFrequentItemsWritable cfiw = info.getCfiw();
+            totalCount += cfiw.getCount();
+            invalidCount += cfiw.getInvalidCount();
+            validNumCount += cfiw.getValidNumCount();
+            fis.addAll(cfiw.getFrequetItems());
+            if(hyperLogLogPlus == null) {
+                hyperLogLogPlus = HyperLogLogPlus.Builder.build(cfiw.getHyperBytes());
+            } else {
+                try {
+                    hyperLogLogPlus = (HyperLogLogPlus) hyperLogLogPlus.merge(HyperLogLogPlus.Builder.build(cfiw
+                            .getHyperBytes()));
+                } catch (CardinalityMergeException e) {
+                    throw new RuntimeException(e);
+                }
+            }
+
             if(info.isNumeric() && binBoundaryList == null) {
                 binBoundaryList = info.getBinBoundaries();
                 binSize = binBoundaryList.size();
@@ -290,12 +316,32 @@ public class UpdateBinningInfoReducer extends Reducer<IntWritable, BinningInfoWr
                 .append(Constants.DEFAULT_DELIMITER)
                 .append(columnWeightMetrics == null ? Arrays.toString(new double[binSize + 1]) : columnWeightMetrics
                         .getBinningWoe().toString()).append(Constants.DEFAULT_DELIMITER).append(skewness)
-                .append(Constants.DEFAULT_DELIMITER).append(kurtosis);
+                .append(Constants.DEFAULT_DELIMITER).append(kurtosis).append(Constants.DEFAULT_DELIMITER)
+                .append(totalCount).append(Constants.DEFAULT_DELIMITER).append(invalidCount)
+                .append(Constants.DEFAULT_DELIMITER).append(validNumCount).append(Constants.DEFAULT_DELIMITER)
+                .append(hyperLogLogPlus.cardinality()).append(Constants.DEFAULT_DELIMITER)
+                .append(limitedFrequentItems(fis));
 
         outputValue.set(sb.toString());
         context.write(NullWritable.get(), outputValue);
         sb.delete(0, sb.length());
         LOG.debug("Time:{}", (System.currentTimeMillis() - start));
+    }
+
+    private static String limitedFrequentItems(Set<String> fis) {
+        StringBuilder sb = new StringBuilder(200);
+        int size = Math.min(fis.size(), CountAndFrequentItemsWritable.FREQUET_ITEM_MAX_SIZE * 10);
+        Iterator<String> iterator = fis.iterator();
+        int i = 0;
+        while(i < size) {
+            String next = iterator.next().replaceAll(Constants.DEFAULT_DELIMITER, " ").replace(",", " ");
+            sb.append(next);
+            if(i != size - 1) {
+                sb.append(",");
+            }
+            i += 1;
+        }
+        return sb.toString();
     }
 
     private double[] computePosRate(long[] binCountPos, long[] binCountNeg) {
