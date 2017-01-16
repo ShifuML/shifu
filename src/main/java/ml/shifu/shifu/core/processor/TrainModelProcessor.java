@@ -468,7 +468,8 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
         }
 
         boolean isKFoldCV = false;
-        if(modelConfig.getTrain().getNumKFold() > 0) {
+        Integer kCrossValidation = this.modelConfig.getTrain().getNumKFold();
+        if(kCrossValidation != null && kCrossValidation > 0) {
             isKFoldCV = true;
             baggingNum = modelConfig.getTrain().getNumKFold();
             if(baggingNum != super.getModelConfig().getBaggingNum()) {
@@ -556,7 +557,7 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
                 if(gs.hasHyperParam()) {
                     LOG.info("Start the {}th grid search job with params: {}", i, gs.getParams(i));
                 } else if(isKFoldCV) {
-                    LOG.info("Start the {}th k-fold cross validation job with params.");
+                    LOG.info("Start the {}th k-fold cross validation job with params.", i);
                 }
                 List<String> localArgs = new ArrayList<String>(args);
                 // set name for each bagging job.
@@ -627,12 +628,6 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
                 guaguaClient.run();
                 stopTailThread(tailThread);
             }
-        }
-
-        boolean isKFoldCV = false;
-        Integer kCrossValidation = this.modelConfig.getTrain().getNumKFold();
-        if(kCrossValidation != null && kCrossValidation > 0) {
-            isKFoldCV = true;
         }
 
         if(isKFoldCV) {
