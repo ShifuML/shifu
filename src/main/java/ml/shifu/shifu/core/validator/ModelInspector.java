@@ -457,6 +457,13 @@ public class ModelInspector {
             result = ValidateResult.mergeResult(result, tmpResult);
         }
 
+        if(train.getNumKFold() != null && train.getNumKFold() > 20) {
+            ValidateResult tmpResult = new ValidateResult(true);
+            tmpResult.setStatus(false);
+            tmpResult.getCauses().add("numKFold should be in (0, 20] or <=0 (not dp k-crossValidation)");
+            result = ValidateResult.mergeResult(result, tmpResult);
+        }
+
         if(train.getBaggingSampleRate() == null || train.getBaggingSampleRate().compareTo(Double.valueOf(0)) <= 0
                 || train.getBaggingSampleRate().compareTo(Double.valueOf(1)) > 0) {
             ValidateResult tmpResult = new ValidateResult(true);

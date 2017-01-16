@@ -83,6 +83,8 @@ public class LogisticRegressionOutput extends
      */
     private FSDataOutputStream progressOutput = null;
 
+    private boolean isKFoldCV;
+
     @Override
     public void preApplication(MasterContext<LogisticRegressionParams, LogisticRegressionParams> context) {
         init(context);
@@ -132,8 +134,9 @@ public class LogisticRegressionOutput extends
             return;
         }
         String progress = new StringBuilder(200).append("    Trainer ").append(this.trainerId).append(" Epoch #")
-                .append(currentIteration - 1).append(" Training Error:").append(context.getMasterResult().getTrainError())
-                .append(" Validation Error:").append(context.getMasterResult().getTestError()).append("\n").toString();
+                .append(currentIteration - 1).append(" Training Error:")
+                .append(context.getMasterResult().getTrainError()).append(" Validation Error:")
+                .append(context.getMasterResult().getTestError()).append("\n").toString();
         try {
             LOG.debug("Writing progress results to {} {}", context.getCurrentIteration(), progress.toString());
             this.progressOutput.write(progress.getBytes("UTF-8"));
@@ -159,6 +162,24 @@ public class LogisticRegressionOutput extends
 
         Path out = new Path(context.getProps().getProperty(CommonConstants.GUAGUA_OUTPUT));
         writeModelWeightsToFileSystem(optimizedWeights, out);
+        if(this.isKFoldCV) {
+            Path valErrOutput = new Path(context.getProps().getProperty(CommonConstants.GS_VALIDATION_ERROR));
+            writeValErrorToFileSystem(context.getMasterResult().getTestError(), valErrOutput);
+        }
+        IOUtils.closeStream(this.progressOutput);
+    }
+
+    private void writeValErrorToFileSystem(double valError, Path out) {
+        FSDataOutputStream fos = null;
+        try {
+            fos = FileSystem.get(new Configuration()).create(out);
+            LOG.info("Writing valerror to {}", out);
+            fos.write((valError + "").getBytes("UTF-8"));
+        } catch (IOException e) {
+            LOG.error("Error in writing output.", e);
+        } finally {
+            IOUtils.closeStream(fos);
+        }
     }
 
     /**
@@ -180,6 +201,10 @@ public class LogisticRegressionOutput extends
             loadConfigFiles(context.getProps());
             this.trainerId = context.getProps().getProperty(CommonConstants.SHIFU_TRAINER_ID);
             this.tmpModelsFolder = context.getProps().getProperty(CommonConstants.SHIFU_TMP_MODELS_FOLDER);
+            Integer kCrossValidation = this.modelConfig.getTrain().getNumKFold();
+            if(kCrossValidation != null && kCrossValidation > 0) {
+                isKFoldCV = true;
+            }
         }
 
         try {

@@ -329,6 +329,11 @@ public class DTWorker
      */
     private boolean isStratifiedSampling = false;
 
+    /**
+     * If k-fold cross validation
+     */
+    private boolean isKFoldCV;
+
     @Override
     public void initRecordReader(GuaguaFileSplit fileSplit) throws IOException {
         super.setRecordReader(new GuaguaLineRecordReader(fileSplit));
@@ -360,6 +365,11 @@ public class DTWorker
                     this.columnCategoryIndexMapping.put(config.getColumnNum(), tmpMap);
                 }
             }
+        }
+
+        Integer kCrossValidation = this.modelConfig.getTrain().getNumKFold();
+        if(kCrossValidation != null && kCrossValidation > 0) {
+            isKFoldCV = true;
         }
 
         this.isContinuousEnabled = Boolean.TRUE.toString().equalsIgnoreCase(
@@ -460,20 +470,15 @@ public class DTWorker
         }
 
         this.isStratifiedSampling = this.modelConfig.getTrain().getStratifiedSample();
-        // if(this.isRF || (this.isGBDT && this.gbdtSampleWithReplacement)) {
-        // this.rng = new PoissonDistribution[treeNum];
-        // for(int i = 0; i < treeNum; i++) {
-        // this.rng[i] = new PoissonDistribution(this.modelConfig.getTrain().getBaggingSampleRate());
-        // }
-        // }
 
         this.checkpointOutput = new Path(context.getProps().getProperty(
                 CommonConstants.SHIFU_DT_MASTER_CHECKPOINT_FOLDER, "tmp/cp_" + context.getAppId()));
 
         LOG.info(
-                "Worker init params:isAfterVarSel={}, treeNum={}, impurity={}, loss={}, learningRate={}, gbdtSampleWithReplacement={}, isRF={}, isGBDT={}, isStratifiedSampling={}",
+                "Worker init params:isAfterVarSel={}, treeNum={}, impurity={}, loss={}, learningRate={}, gbdtSampleWithReplacement={}, isRF={}, isGBDT={}, isStratifiedSampling={}, isKFoldCV={}, kCrossValidation={}",
                 isAfterVarSelect, treeNum, impurity.getClass().getName(), loss.getClass().getName(), this.learningRate,
-                this.gbdtSampleWithReplacement, this.isRF, this.isGBDT, this.isStratifiedSampling);
+                this.gbdtSampleWithReplacement, this.isRF, this.isGBDT, this.isStratifiedSampling, this.isKFoldCV,
+                kCrossValidation);
 
         // for fail over, load existing trees
         if(!context.isFirstIteration()) {
@@ -1167,6 +1172,27 @@ public class DTWorker
      * @return if in training, training is true, others are false.
      */
     protected boolean addDataPairToDataSet(long hashcode, Data data, boolean isValidation) {
+        if(this.isKFoldCV) {
+            int k = this.modelConfig.getTrain().getNumKFold();
+            if(hashcode % k == this.trainerId) {
+                this.validationData.append(data);
+                if(isPositive(data.label)) {
+                    this.positiveValidationCount += 1L;
+                } else {
+                    this.negativeValidationCount += 1L;
+                }
+                return false;
+            } else {
+                this.trainingData.append(data);
+                if(isPositive(data.label)) {
+                    this.positiveTrainCount += 1L;
+                } else {
+                    this.negativeTrainCount += 1L;
+                }
+                return true;
+            }
+        }
+
         if(this.isManualValidation) {
             if(isValidation) {
                 this.validationData.append(data);
@@ -1301,7 +1327,8 @@ public class DTWorker
 
     private float[] sampleWeights(float label) {
         float[] sampleWeights = null;
-        double sampleRate = modelConfig.getTrain().getSampleNegOnly() ? 1d : modelConfig.getTrain()
+        // sample negative or kFoldCV, sample rate is 1d
+        double sampleRate = (modelConfig.getTrain().getSampleNegOnly() || this.isKFoldCV) ? 1d : modelConfig.getTrain()
                 .getBaggingSampleRate();
         int classValue = (int) (label + 0.01f);
         if(this.treeNum == 1 || (this.isGBDT && !this.gbdtSampleWithReplacement)) {

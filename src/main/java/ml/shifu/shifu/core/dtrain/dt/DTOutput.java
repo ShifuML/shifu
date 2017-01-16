@@ -115,6 +115,11 @@ public class DTOutput extends BasicMasterInterceptor<DTMasterParams, DTWorkerPar
      */
     private Integer treeNum;
 
+    /**
+     * If k-fold cross validation
+     */
+    private boolean isKFoldCV;
+
     @Override
     public void preApplication(MasterContext<DTMasterParams, DTWorkerParams> context) {
         init(context);
@@ -275,7 +280,7 @@ public class DTOutput extends BasicMasterInterceptor<DTMasterParams, DTWorkerPar
         LOG.debug("final trees", trees.toString());
         Path out = new Path(context.getProps().getProperty(CommonConstants.GUAGUA_OUTPUT));
         writeModelToFileSystem(trees, out);
-        if(this.isGsMode) {
+        if(this.isGsMode || this.isKFoldCV) {
             Path valErrOutput = new Path(context.getProps().getProperty(CommonConstants.GS_VALIDATION_ERROR));
             writeValErrorToFileSystem(context.getMasterResult().getValidationError()
                     / context.getMasterResult().getValidationCount(), valErrOutput);
@@ -411,6 +416,11 @@ public class DTOutput extends BasicMasterInterceptor<DTMasterParams, DTWorkerPar
             this.validParams = modelConfig.getParams();
             if(isGsMode) {
                 this.validParams = gs.getParams(Integer.parseInt(trainerId));
+            }
+
+            Integer kCrossValidation = this.modelConfig.getTrain().getNumKFold();
+            if(kCrossValidation != null && kCrossValidation > 0) {
+                isKFoldCV = true;
             }
 
             this.tmpModelsFolder = context.getProps().getProperty(CommonConstants.SHIFU_TMP_MODELS_FOLDER);

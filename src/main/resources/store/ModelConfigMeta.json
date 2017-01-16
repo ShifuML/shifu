@@ -406,6 +406,11 @@
                 "directive": "checkbox",
                 "defval": false
             }, {
+                "name": "numKFold",
+                "type": "number",
+                "directive": "input",
+                "defval" : -1
+            }, {
                 "name": "fixInitInput",
                 "type": "boolean",
                 "directive": "input",

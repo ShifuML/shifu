@@ -224,6 +224,11 @@ public abstract class AbstractNNWorker<VALUE extends Writable> extends
      */
     protected Map<Integer, Random> validationRandomMap = new HashMap<Integer, Random>();
 
+    /**
+     * If k-fold cross validation
+     */
+    private boolean isKFoldCV;
+
     protected boolean isUpSampleEnabled() {
         return this.upSampleRng != null;
     }
@@ -290,6 +295,11 @@ public abstract class AbstractNNWorker<VALUE extends Writable> extends
         if(gs.hasHyperParam()) {
             this.validParams = gs.getParams(trainerId);
             LOG.info("Start grid search master with params: {}", validParams);
+        }
+
+        Integer kCrossValidation = this.modelConfig.getTrain().getNumKFold();
+        if(kCrossValidation != null && kCrossValidation > 0) {
+            isKFoldCV = true;
         }
 
         this.poissonSampler = Boolean.TRUE.toString().equalsIgnoreCase(
@@ -501,7 +511,8 @@ public abstract class AbstractNNWorker<VALUE extends Writable> extends
 
     protected float sampleWeights(float label) {
         float sampleWeights = 1f;
-        double sampleRate = modelConfig.getTrain().getSampleNegOnly() ? 1d : modelConfig.getTrain()
+        // sample negative or kFoldCV, sample rate is 1d
+        double sampleRate = (modelConfig.getTrain().getSampleNegOnly() || this.isKFoldCV) ? 1d : modelConfig.getTrain()
                 .getBaggingSampleRate();
         int classValue = (int) (label + 0.01f);
         if(modelConfig.isBaggingWithReplacement()) {
@@ -558,6 +569,27 @@ public abstract class AbstractNNWorker<VALUE extends Writable> extends
      * @return if in training, training is true, others are false.
      */
     protected boolean addDataPairToDataSet(long hashcode, FloatMLDataPair pair, boolean isValidation) {
+        if(this.isKFoldCV) {
+            int k = this.modelConfig.getTrain().getNumKFold();
+            if(hashcode % k == this.trainerId) {
+                this.validationData.add(pair);
+                if(isPositive(pair.getIdealArray()[0])) {
+                    this.positiveValidationCount += 1L;
+                } else {
+                    this.negativeValidationCount += 1L;
+                }
+                return false;
+            } else {
+                this.trainingData.add(pair);
+                if(isPositive(pair.getIdealArray()[0])) {
+                    this.positiveTrainCount += 1L;
+                } else {
+                    this.negativeTrainCount += 1L;
+                }
+                return true;
+            }
+        }
+
         if(this.isSpecificValidation) {
             if(isValidation) {
                 this.validationData.add(pair);

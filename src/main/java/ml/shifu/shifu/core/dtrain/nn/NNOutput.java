@@ -114,6 +114,8 @@ public class NNOutput extends BasicMasterInterceptor<NNParams, NNParams> {
      */
     private Map<String, Object> validParams;
 
+    private boolean isKFoldCV;
+
     @Override
     public void preApplication(MasterContext<NNParams, NNParams> context) {
         init(context);
@@ -164,8 +166,9 @@ public class NNOutput extends BasicMasterInterceptor<NNParams, NNParams> {
             return;
         }
         String progress = new StringBuilder(200).append("    Trainer ").append(this.trainerId).append(" Epoch #")
-                .append(currentIteration - 1).append(" Training Error:").append(context.getMasterResult().getTrainError())
-                .append(" Validation Error:").append(context.getMasterResult().getTestError()).append("\n").toString();
+                .append(currentIteration - 1).append(" Training Error:")
+                .append(context.getMasterResult().getTrainError()).append(" Validation Error:")
+                .append(context.getMasterResult().getTestError()).append("\n").toString();
         try {
             LOG.debug("Writing progress results to {} {}", context.getCurrentIteration(), progress.toString());
             this.progressOutput.write(progress.getBytes("UTF-8"));
@@ -190,7 +193,7 @@ public class NNOutput extends BasicMasterInterceptor<NNParams, NNParams> {
             writeModelWeightsToFileSystem(optimizedWeights, out);
         }
 
-        if(this.gridSearch.hasHyperParam()) {
+        if(this.gridSearch.hasHyperParam() || this.isKFoldCV) {
             Path valErrOutput = new Path(context.getProps().getProperty(CommonConstants.GS_VALIDATION_ERROR));
             writeValErrorToFileSystem(context.getMasterResult().getTestError(), valErrOutput);
         }
@@ -233,6 +236,10 @@ public class NNOutput extends BasicMasterInterceptor<NNParams, NNParams> {
             if(gridSearch.hasHyperParam()) {
                 validParams = gridSearch.getParams(Integer.parseInt(trainerId));
                 LOG.info("Start grid search in nn output with params: {}", validParams);
+            }
+            Integer kCrossValidation = this.modelConfig.getTrain().getNumKFold();
+            if(kCrossValidation != null && kCrossValidation > 0) {
+                isKFoldCV = true;
             }
             initNetwork();
         }

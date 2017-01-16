@@ -467,6 +467,15 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
             }
         }
 
+        if(modelConfig.getTrain().getNumKFold() > 0) {
+            baggingNum = modelConfig.getTrain().getNumKFold();
+            if(baggingNum != super.getModelConfig().getBaggingNum()) {
+                LOG.warn(
+                        "'train:baggingNum' is set to {} because of k-fold cross validation is enabled by 'numKFold' not -1.",
+                        baggingNum);
+            }
+        }
+
         long start = System.currentTimeMillis();
         LOG.info("Distributed trainning with baggingNum: {}", baggingNum);
         boolean isParallel = Boolean.valueOf(
@@ -614,39 +623,22 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
             }
         }
 
-        // copy all models to local after all jobs are finished
-        if(!gs.hasHyperParam()) {
-            // copy model files at last.
-            for(int i = 0; i < baggingNum; i++) {
-                String modelName = getModelName(i);
-                Path modelPath = fileSystem.makeQualified(new Path(super.getPathFinder().getModelsPath(sourceType),
-                        modelName));
-                if(ShifuFileUtils.getFileSystemBySourceType(sourceType).exists(modelPath)) {
-                    copyModelToLocal(modelName, modelPath, sourceType);
-                } else {
-                    LOG.warn("Model {} isn't there, maybe job is failed, for bagging it can be ignored.",
-                            modelPath.toString());
-                }
-            }
-
-            // copy temp model files, for RF/GBT, not to copy tmp models because of larger space needed, for others by
-            // default copy tmp models to local
-            boolean copyTmpModelsToLocal = Boolean.TRUE.toString().equalsIgnoreCase(
-                    Environment.getProperty(Constants.SHIFU_TMPMODEL_COPYTOLOCAL, "true"));
-            if(CommonUtils.isDesicionTreeAlgorithm(modelConfig.getAlgorithm())) {
-                copyTmpModelsToLocal = Boolean.TRUE.toString().equalsIgnoreCase(
-                        Environment.getProperty(Constants.SHIFU_TMPMODEL_COPYTOLOCAL, "false"));
-            }
-
-            if(copyTmpModelsToLocal) {
-                copyTmpModelsToLocal(tmpModelsPath, sourceType);
-            } else {
-                LOG.info("Tmp models are not copied into local, please find them in hdfs path: {}", tmpModelsPath);
-            }
-            LOG.info("Distributed training finished in {}ms.", System.currentTimeMillis() - start);
+        boolean isKFoldCV = false;
+        Integer kCrossValidation = this.modelConfig.getTrain().getNumKFold();
+        if(kCrossValidation != null && kCrossValidation > 0) {
+            isKFoldCV = true;
         }
 
-        if(gs.hasHyperParam()) {
+        if(isKFoldCV) {
+            List<Double> valErrs = readAllValidationErrors(sourceType, fileSystem, kCrossValidation);
+            double sum = 0d;
+            for(Double err: valErrs) {
+                sum += err;
+            }
+            LOG.info("Average validation error for current k-fold cross validation is {}.", sum / valErrs.size());
+            LOG.info("K-fold cross validation on distributed training finished in {}ms.", System.currentTimeMillis()
+                    - start);
+        } else if(gs.hasHyperParam()) {
             // select the best parameter composite in grid search
             LOG.info("Original grid search params: {}", modelConfig.getParams());
             Map<String, Object> params = findBestParams(sourceType, fileSystem, gs);
@@ -658,12 +650,45 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
             // update ModelConfig.json
             JSONUtils.writeValue(new File(super.pathFinder.getModelConfigPath(SourceType.LOCAL)), modelConfig);
             LOG.info("Grid search on distributed training finished in {}ms.", System.currentTimeMillis() - start);
+        } else {
+            // copy all models to local after all jobs are finished
+            if(!gs.hasHyperParam()) {
+                // copy model files at last.
+                for(int i = 0; i < baggingNum; i++) {
+                    String modelName = getModelName(i);
+                    Path modelPath = fileSystem.makeQualified(new Path(super.getPathFinder().getModelsPath(sourceType),
+                            modelName));
+                    if(ShifuFileUtils.getFileSystemBySourceType(sourceType).exists(modelPath)) {
+                        copyModelToLocal(modelName, modelPath, sourceType);
+                    } else {
+                        LOG.warn("Model {} isn't there, maybe job is failed, for bagging it can be ignored.",
+                                modelPath.toString());
+                    }
+                }
+
+                // copy temp model files, for RF/GBT, not to copy tmp models because of larger space needed, for others
+                // by
+                // default copy tmp models to local
+                boolean copyTmpModelsToLocal = Boolean.TRUE.toString().equalsIgnoreCase(
+                        Environment.getProperty(Constants.SHIFU_TMPMODEL_COPYTOLOCAL, "true"));
+                if(CommonUtils.isDesicionTreeAlgorithm(modelConfig.getAlgorithm())) {
+                    copyTmpModelsToLocal = Boolean.TRUE.toString().equalsIgnoreCase(
+                            Environment.getProperty(Constants.SHIFU_TMPMODEL_COPYTOLOCAL, "false"));
+                }
+
+                if(copyTmpModelsToLocal) {
+                    copyTmpModelsToLocal(tmpModelsPath, sourceType);
+                } else {
+                    LOG.info("Tmp models are not copied into local, please find them in hdfs path: {}", tmpModelsPath);
+                }
+                LOG.info("Distributed training finished in {}ms.", System.currentTimeMillis() - start);
+            }
         }
     }
 
     private Map<String, Object> findBestParams(SourceType sourceType, FileSystem fileSystem, GridSearch gs)
             throws IOException {
-        // read validationerror and find the best one update ModelConfig.
+        // read validation error and find the best one update ModelConfig.
         double minValErr = Double.MAX_VALUE;
         int minIndex = -1;
         for(int i = 0; i < gs.getFlattenParams().size(); i++) {
@@ -696,6 +721,34 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
                 "The {} params is selected by grid search with params {}, please use it and set it in ModelConfig.json.",
                 minIndex, params);
         return params;
+    }
+
+    private List<Double> readAllValidationErrors(SourceType sourceType, FileSystem fileSystem, int k)
+            throws IOException {
+        List<Double> valErrs = new ArrayList<Double>();
+        for(int i = 0; i < k; i++) {
+            Path valErrPath = fileSystem.makeQualified(new Path(super.getPathFinder().getValErrorPath(sourceType),
+                    "val_error_" + i));
+            if(ShifuFileUtils.isFileExists(valErrPath.toString(), sourceType)) {
+                double valErr;
+                BufferedReader reader = null;
+                try {
+                    reader = ShifuFileUtils.getReader(valErrPath.toString(), sourceType);
+                    String valErrStr = reader.readLine().toString();
+                    LOG.debug("valErrStr is {}", valErrStr);
+                    valErr = Double.valueOf(valErrStr);
+                    valErrs.add(valErr);
+                } catch (NumberFormatException e) {
+                    LOG.warn("Parse val error failed, ignore such error. Message: {}", e.getMessage());
+                    continue;
+                } finally {
+                    if(reader != null) {
+                        reader.close();
+                    }
+                }
+            }
+        }
+        return valErrs;
     }
 
     static String serializeRequiredFieldList(RequiredFieldList requiredFieldList) {
