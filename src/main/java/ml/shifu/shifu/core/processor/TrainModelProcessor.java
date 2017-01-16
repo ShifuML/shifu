@@ -467,7 +467,9 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
             }
         }
 
+        boolean isKFoldCV = false;
         if(modelConfig.getTrain().getNumKFold() > 0) {
+            isKFoldCV = ture;
             baggingNum = modelConfig.getTrain().getNumKFold();
             if(baggingNum != super.getModelConfig().getBaggingNum()) {
                 LOG.warn(
@@ -553,6 +555,8 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
                 int i = j * parallelNum + k;
                 if(gs.hasHyperParam()) {
                     LOG.info("Start the {}th grid search job with params: {}", i, gs.getParams(i));
+                } else if(isKFoldCV) {
+                    LOG.info("Start the {}th k-fold cross validation job with params.");
                 }
                 List<String> localArgs = new ArrayList<String>(args);
                 // set name for each bagging job.
@@ -569,8 +573,9 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
                     isContinous = false;
                     LOG.warn("RF does not support continuous training");
                 }
-                // of course gs not support continuous model training
-                if(gs.hasHyperParam()) {
+                // of course gs not support continuous model training, k-fold cross validation is not continous model
+                // training
+                if(gs.hasHyperParam() || isKFoldCV) {
                     isContinous = false;
                 }
                 if(!isContinous && !isOneJobNotContinuous) {
@@ -586,7 +591,8 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
                 }
                 localArgs.add(String.format(CommonConstants.MAPREDUCE_PARAM_FORMAT, CommonConstants.GUAGUA_OUTPUT,
                         modelPath.toString()));
-                if(gs.hasHyperParam()) {
+                if(gs.hasHyperParam() || isKFoldCV) {
+                    // k-fold cv need val error
                     Path valErrPath = fileSystem.makeQualified(new Path(super.getPathFinder().getValErrorPath(
                             sourceType), "val_error_" + i));
                     localArgs.add(String.format(CommonConstants.MAPREDUCE_PARAM_FORMAT,

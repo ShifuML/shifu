@@ -222,6 +222,11 @@ public class DTMaster extends AbstractMasterComputable<DTMasterParams, DTWorkerP
      */
     private DTEarlyStopDecider dtEarlyStopDecider;
 
+    /**
+     * If early stop is enabled or not, by default false.
+     */
+    private boolean enableEarlyStop = false;
+
     // ############################################################################################################
     // ## There parts are states, for fail over such instances should be recovered in {@link #init(MasterContext)}
     // ############################################################################################################
@@ -335,7 +340,7 @@ public class DTMaster extends AbstractMasterComputable<DTMasterParams, DTWorkerP
 
         Map<Integer, TreeNode> todoNodes = new HashMap<Integer, TreeNode>();
         double averageValidationError = validationError;
-        if(this.dtEarlyStopDecider != null) {
+        if(this.isGBDT && this.dtEarlyStopDecider != null) {
             // TODO random forest support
             this.dtEarlyStopDecider.add(validationError);
             averageValidationError = this.dtEarlyStopDecider.getCurrentAverageValue();
@@ -358,7 +363,8 @@ public class DTMaster extends AbstractMasterComputable<DTMasterParams, DTWorkerP
                     LOG.warn(
                             "Tree is learned 100% well, there must be overfit here, please tune BaggingSampleRate, training is stopped in iteration {}.",
                             context.getCurrentIteration());
-                } else if(this.dtEarlyStopDecider != null && this.dtEarlyStopDecider.canStop()) {
+                } else if(this.dtEarlyStopDecider != null
+                        && (this.enableEarlyStop && this.dtEarlyStopDecider.canStop())) {
                     masterParams.setHalt(true);
                     LOG.info("Early stop identified, training is stopped in iteration {}.",
                             context.getCurrentIteration());
@@ -958,8 +964,10 @@ public class DTMaster extends AbstractMasterComputable<DTMasterParams, DTWorkerP
 
         this.toDoQueue = new LinkedList<TreeNode>();
 
-        if(validParams.containsKey("EnableEarlyStop") && Boolean.valueOf(validParams.get("EnableEarlyStop").toString())) {
-            this.dtEarlyStopDecider = new DTEarlyStopDecider(this.maxDepth);
+        this.dtEarlyStopDecider = new DTEarlyStopDecider(this.maxDepth);
+        if(validParams.containsKey("EnableEarlyStop")
+                && Boolean.valueOf(validParams.get("EnableEarlyStop").toString().toLowerCase())) {
+            this.enableEarlyStop = true;
         }
 
         if(this.isLeafWise) {
