@@ -356,7 +356,6 @@ public class DTWorker
         this.columnCategoryIndexMapping = new HashMap<Integer, Map<String, Integer>>();
         for(ColumnConfig config: this.columnConfigList) {
             if(config.isCategorical()) {
-                ;
                 if(config.getBinCategory() != null) {
                     Map<String, Integer> tmpMap = new HashMap<String, Integer>();
                     for(int i = 0; i < config.getBinCategory().size(); i++) {
@@ -943,8 +942,10 @@ public class DTWorker
 
         Node nextNode = null;
         Integer inputIndex = this.inputIndexMap.get(split.getColumnNum());
+        short value = 0;
         if(columnConfig.isNumerical()) {
             short binIndex = data.inputs[inputIndex];
+            value = binIndex;
             double valueToBinLowestValue = columnConfig.getBinBoundary().get(binIndex);
             if(valueToBinLowestValue < split.getThreshold()) {
                 nextNode = currNode.getLeft();
@@ -953,6 +954,7 @@ public class DTWorker
             }
         } else if(columnConfig.isCategorical()) {
             short indexValue = (short) (columnConfig.getBinCategory().size());
+            value = indexValue;
             if(data.inputs[inputIndex] >= 0 && data.inputs[inputIndex] < (short) (columnConfig.getBinCategory().size())) {
                 indexValue = data.inputs[inputIndex];
             } else {
@@ -982,8 +984,9 @@ public class DTWorker
         }
 
         if(nextNode == null) {
-            throw new IllegalStateException("NextNode with id is null, parent id is " + currNode.getId() + " left is "
-                    + currNode.getLeft() + " right is " + currNode.getRight());
+            throw new IllegalStateException("NextNode is null, parent id is " + currNode.getId() + "; parent split is "
+                    + split + "; left is " + currNode.getLeft() + "; right is " + currNode.getRight() + "; value is "
+                    + value);
         }
         return predictNodeIndex(nextNode, data, isForErr);
     }
