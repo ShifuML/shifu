@@ -340,7 +340,7 @@ public class DTMaster extends AbstractMasterComputable<DTMasterParams, DTWorkerP
 
         Map<Integer, TreeNode> todoNodes = new HashMap<Integer, TreeNode>();
         double averageValidationError = validationError;
-        if(this.isGBDT && this.dtEarlyStopDecider != null) {
+        if(this.isGBDT && this.dtEarlyStopDecider != null && validationError > 0) {
             // TODO random forest support
             this.dtEarlyStopDecider.add(validationError);
             averageValidationError = this.dtEarlyStopDecider.getCurrentAverageValue();
