@@ -469,7 +469,7 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
 
         boolean isKFoldCV = false;
         if(modelConfig.getTrain().getNumKFold() > 0) {
-            isKFoldCV = ture;
+            isKFoldCV = true;
             baggingNum = modelConfig.getTrain().getNumKFold();
             if(baggingNum != super.getModelConfig().getBaggingNum()) {
                 LOG.warn(
