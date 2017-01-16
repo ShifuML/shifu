@@ -82,6 +82,8 @@ public class ModelTrainConf {
     private Boolean isCrossOver = Boolean.FALSE;
 
     private Integer workerThreadCount = 4;
+    
+    private Integer numKFold = -1;
 
     private Double upSampleWeight = Double.valueOf(1d);
 
@@ -427,5 +429,21 @@ public class ModelTrainConf {
     @JsonProperty
     public void setStratifiedSample(Boolean stratifiedSample) {
         this.stratifiedSample = stratifiedSample;
+    }
+
+    /**
+     * @return the kCrossValidation
+     */
+    @JsonIgnore
+    public Integer getNumKFold() {
+        return numKFold;
+    }
+
+    /**
+     * @param kCrossValidation the kCrossValidation to set
+     */
+    @JsonProperty
+    public void setNumKFold(Integer numKFold) {
+        this.numKFold = numKFold;
     }
 }

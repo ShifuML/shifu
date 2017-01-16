@@ -334,7 +334,7 @@ public class UpdateBinningInfoReducer extends Reducer<IntWritable, BinningInfoWr
         Iterator<String> iterator = fis.iterator();
         int i = 0;
         while(i < size) {
-            String next = iterator.next().replaceAll(Constants.DEFAULT_DELIMITER, " ").replace(",", " ");
+            String next = iterator.next().replaceAll("\\" + Constants.DEFAULT_DELIMITER, " ").replace(",", " ");
             sb.append(next);
             if(i != size - 1) {
                 sb.append(",");

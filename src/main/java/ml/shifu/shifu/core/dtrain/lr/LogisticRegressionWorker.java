@@ -207,6 +207,16 @@ public class LogisticRegressionWorker
      */
     protected Map<Integer, Random> validationRandomMap = new HashMap<Integer, Random>();
 
+    /**
+     * Trainer id used to tag bagging training job, starting from 0, 1, 2 ...
+     */
+    private Integer trainerId;
+
+    /**
+     * If k-fold cross validation
+     */
+    private boolean isKFoldCV;
+
     protected boolean isUpSampleEnabled() {
         return this.upSampleRng != null;
     }
@@ -226,6 +236,11 @@ public class LogisticRegressionWorker
         this.isSpecificValidation = (modelConfig.getValidationDataSetRawPath() != null && !"".equals(modelConfig
                 .getValidationDataSetRawPath()));
         this.isStratifiedSampling = this.modelConfig.getTrain().getStratifiedSample();
+        this.trainerId = Integer.valueOf(context.getProps().getProperty(CommonConstants.SHIFU_TRAINER_ID, "0"));
+        Integer kCrossValidation = this.modelConfig.getTrain().getNumKFold();
+        if(kCrossValidation != null && kCrossValidation > 0) {
+            isKFoldCV = true;
+        }
 
         if(this.inputNum == 0) {
             throw new IllegalStateException("No any variables are selected, please try variable select step firstly.");
@@ -472,7 +487,8 @@ public class LogisticRegressionWorker
 
     protected float sampleWeights(float label) {
         float sampleWeights = 1f;
-        double sampleRate = modelConfig.getTrain().getSampleNegOnly() ? 1d : modelConfig.getTrain()
+        // sample negative or kFoldCV, sample rate is 1d
+        double sampleRate = (modelConfig.getTrain().getSampleNegOnly() || this.isKFoldCV) ? 1d : modelConfig.getTrain()
                 .getBaggingSampleRate();
         int classValue = (int) (label + 0.01f);
         if(modelConfig.isBaggingWithReplacement()) {
@@ -538,6 +554,27 @@ public class LogisticRegressionWorker
      * @return if in training, training is true, others are false.
      */
     protected boolean addDataPairToDataSet(long hashcode, Data data, boolean isValidation) {
+        if(this.isKFoldCV) {
+            int k = this.modelConfig.getTrain().getNumKFold();
+            if(hashcode % k == this.trainerId) {
+                this.validationData.append(data);
+                if(isPositive(data.outputs[0])) {
+                    this.positiveValidationCount += 1L;
+                } else {
+                    this.negativeValidationCount += 1L;
+                }
+                return false;
+            } else {
+                this.trainingData.append(data);
+                if(isPositive(data.outputs[0])) {
+                    this.positiveTrainCount += 1L;
+                } else {
+                    this.negativeTrainCount += 1L;
+                }
+                return true;
+            }
+        }
+
         if(this.isSpecificValidation) {
             if(isValidation) {
                 this.validationData.append(data);
