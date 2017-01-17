@@ -378,22 +378,24 @@ public class NormalizeModelProcessor extends BasicModelProcessor implements Proc
 
             while(iter.hasNext()) {
                 JobStats jobStats = iter.next();
-                long totalValidCount = jobStats.getHadoopCounters().getGroup(Constants.SHIFU_GROUP_COUNTER)
-                        .getCounter("TOTAL_VALID_COUNT");
-                // If no basic record counter, check next one
-                if(totalValidCount == 0L) {
-                    continue;
+                if (jobStats.getHadoopCounters() != null &&
+                        jobStats.getHadoopCounters().getGroup(Constants.SHIFU_GROUP_COUNTER) != null ) {
+                    long totalValidCount = jobStats.getHadoopCounters().getGroup(Constants.SHIFU_GROUP_COUNTER)
+                            .getCounter("TOTAL_VALID_COUNT");
+                    // If no basic record counter, check next one
+                    if (totalValidCount == 0L) {
+                        continue;
+                    }
+                    long invalidTagCount = jobStats.getHadoopCounters().getGroup(Constants.SHIFU_GROUP_COUNTER)
+                            .getCounter("INVALID_TAG");
+
+                    log.info("Total valid records {} after filtering, invalid tag records {}.", totalValidCount,
+                            invalidTagCount);
+
+                    if (totalValidCount > 0L && invalidTagCount * 1d / totalValidCount >= 0.8d) {
+                        log.error("Too many invalid tags, please check you configuration on positive tags and negative tags.");
+                    }
                 }
-                long invalidTagCount = jobStats.getHadoopCounters().getGroup(Constants.SHIFU_GROUP_COUNTER)
-                        .getCounter("INVALID_TAG");
-
-                log.info("Total valid records {} after filtering, invalid tag records {}.", totalValidCount,
-                        invalidTagCount);
-
-                if(totalValidCount > 0L && invalidTagCount * 1d / totalValidCount >= 0.8d) {
-                    log.error("Too many invalid tags, please check you configuration on positive tags and negative tags.");
-                }
-
                 // only one pig job with such counters, break
                 break;
             }
