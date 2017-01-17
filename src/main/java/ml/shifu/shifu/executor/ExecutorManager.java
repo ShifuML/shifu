@@ -16,6 +16,8 @@
 package ml.shifu.shifu.executor;
 
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
@@ -89,6 +91,60 @@ public class ExecutorManager<T> {
         return results;
     }
 
+    public List<Integer> submitTasksAndRetryIfFail(List<Callable<Integer>> tasks, int maxRetryTimes) {
+        List<Integer> results = new ArrayList<Integer>(tasks.size());
+
+        int[] taskLeftTryTimes = new int[tasks.size()];
+        Arrays.fill(taskLeftTryTimes, maxRetryTimes);
+
+        List<TaskFuture> taskFutures = new ArrayList<TaskFuture>();
+        for ( int i = 0; i < tasks.size(); i ++ ) {
+            Callable<Integer> task = tasks.get(i);
+            Future<Integer> future = executorService.submit(task);
+            taskFutures.add(new TaskFuture(i, future));
+        }
+
+        Iterator<TaskFuture> iterator = taskFutures.iterator();
+        while ( iterator.hasNext() ) {
+            TaskFuture tf = iterator.next();
+            try {
+                Integer res = tf.getFuture().get();
+                if ( res == null || res != 1 ) {
+                    if ( ! retryTask(tf, tasks, taskFutures, taskLeftTryTimes, maxRetryTimes) ) {
+                        results.set(tf.getTaskId(), res);
+                    }
+                } else {
+                    results.set(tf.getTaskId(), res);
+                }
+            } catch (InterruptedException e) {
+                // don't retry, for it may be shutting down
+            } catch (ExecutionException e) {
+                if ( ! retryTask(tf, tasks, taskFutures, taskLeftTryTimes, maxRetryTimes) ) {
+                    results.set(tf.getTaskId(), 1);
+                }
+            }
+        }
+        return results;
+    }
+
+    private boolean retryTask(TaskFuture tf,
+                              List<Callable<Integer>> tasks,
+                              List<TaskFuture> taskFutures,
+                              int[] taskLeftTryTimes, int maxRetryTimes) {
+        taskLeftTryTimes[tf.getTaskId()] --;
+        if ( taskLeftTryTimes[tf.getTaskId()] > 0 ) {
+            int taskId = tf.getTaskId();
+            Callable<Integer> task = tasks.get(taskId);
+            Future<Integer> future = executorService.submit(task);
+            taskFutures.add(new TaskFuture(taskId, future));
+            LOG.warn("Retry task - {} with {}-th times.", taskId,
+                    (maxRetryTimes - taskLeftTryTimes[tf.getTaskId()]));
+            return true;
+        } else {
+            return false;
+        }
+    }
+
     public void graceShutDown() {
         this.executorService.shutdown();
         try {
@@ -107,4 +163,21 @@ public class ExecutorManager<T> {
         }
     }
 
+    public static class TaskFuture {
+        private int taskId;
+        private Future<Integer> future;
+
+        public TaskFuture(int taskId, Future<Integer> future) {
+            this.taskId = taskId;
+            this.future = future;
+        }
+
+        public int getTaskId() {
+            return taskId;
+        }
+
+        public Future<Integer> getFuture() {
+            return future;
+        }
+    }
 }
