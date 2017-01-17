@@ -19,12 +19,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
-import java.util.concurrent.Callable;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.*;
 
 import ml.shifu.shifu.util.Environment;
 
@@ -104,12 +99,13 @@ public class ExecutorManager<T> {
             taskFutures.add(new TaskFuture(i, future));
         }
 
-        Iterator<TaskFuture> iterator = taskFutures.iterator();
-        while ( iterator.hasNext() ) {
-            TaskFuture tf = iterator.next();
+        int size = taskFutures.size();
+        int i = 0;
+        while ( i < size ) {
+            TaskFuture tf = taskFutures.get(i);
             try {
                 Integer res = tf.getFuture().get();
-                if ( res == null || res != 1 ) {
+                if ( res == null || res != 0 ) {
                     if ( ! retryTask(tf, tasks, taskFutures, taskLeftTryTimes, maxRetryTimes) ) {
                         results.set(tf.getTaskId(), res);
                     }
@@ -123,7 +119,11 @@ public class ExecutorManager<T> {
                     results.set(tf.getTaskId(), 1);
                 }
             }
+
+            i ++;
+            size = taskFutures.size();
         }
+
         return results;
     }
 
