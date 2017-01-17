@@ -24,6 +24,7 @@ import ml.shifu.shifu.executor.ProcessManager;
 import ml.shifu.shifu.fs.PathFinder;
 import ml.shifu.shifu.util.CommonUtils;
 import ml.shifu.shifu.util.Constants;
+import ml.shifu.shifu.util.Environment;
 import ml.shifu.shifu.util.JSONUtils;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.io.FileUtils;
@@ -54,6 +55,7 @@ public class ComboModelProcessor extends BasicModelProcessor implements Processo
     private ComboStep comboStep;
     private String algorithms;
     private boolean isToShuffleData;
+    private int comboMaxRetryTimes = 3;
 
     private List<ModelTrainConf.ALGORITHM> comboAlgs;
     private ComboModelTrain comboModelTrain;
@@ -67,6 +69,7 @@ public class ComboModelProcessor extends BasicModelProcessor implements Processo
     public ComboModelProcessor(ComboStep comboStep, String algorithms) {
         this(comboStep);
         this.algorithms = algorithms;
+        this.comboMaxRetryTimes = Environment.getInt("shifu.combo.max.retry", 3);
     }
 
     @Override
@@ -281,7 +284,7 @@ public class ComboModelProcessor extends BasicModelProcessor implements Processo
             String subModelName = genSubModelName(i, varTrainConf);
             tasks.add(createTrainAndEvalTasks(subModelName, genEvalTrainName()));
         }
-        if (hasFailTaskResults(this.excutorManager.submitTasksAndWaitResults(tasks))) {
+        if (hasFailTaskResults(this.excutorManager.submitTasksAndRetryIfFail(tasks, this.comboMaxRetryTimes))) {
             LOG.error("There are errors when training and evaluating sub-models. Please check log.");
             return 1;
         }
@@ -291,7 +294,7 @@ public class ComboModelProcessor extends BasicModelProcessor implements Processo
         // 2.1 prepare the data and information for data merge
         LOG.info("Start to merge train-evaluation data for assemble model.");
         String assembleTrainData = this.pathFinder.getSubModelsAssembleTrainData();
-        DataMerger merger = new DataMerger(this.modelConfig.getBasic().getRunMode(),
+        final DataMerger merger = new DataMerger(this.modelConfig.getBasic().getRunMode(),
                 this.comboModelTrain.getUidColumnName(), assembleTrainData);
 
         String evalName = genEvalTrainName();
@@ -303,10 +306,20 @@ public class ComboModelProcessor extends BasicModelProcessor implements Processo
         }
 
         // 2.2 run the data merge
-        try {
-            merger.doMerge();
-        } catch (IOException e) {
-            LOG.error("Fail to merge the data.", e);
+        tasks.clear();
+        tasks.add(new Callable<Integer>() {
+            @Override
+            public Integer call() throws Exception {
+                try {
+                    return (merger.doMerge() ? 0 : 1);
+                } catch (IOException e) {
+                    LOG.error("Fail to merge the data.", e);
+                    return 1;
+                }
+            }
+        });
+        if (hasFailTaskResults(this.excutorManager.submitTasksAndRetryIfFail(tasks, this.comboMaxRetryTimes))) {
+            LOG.error("There are errors when merging data. Please check log.");
             return 1;
         }
 
@@ -337,17 +350,22 @@ public class ComboModelProcessor extends BasicModelProcessor implements Processo
         }
 
         // 4.2 run the whole process for assemble model
-        try {
-            status = ProcessManager.runShellProcess(genAssembleModelName(this.modelConfig.getModelSetName()),
-                    new String[][]{
-                            new String[]{"shifu", "init"},
-                            new String[]{"shifu", "stats"},
-                            new String[]{"shifu", "norm"},
-                            new String[]{"shifu", "varsel"},
-                            new String[]{"shifu", "train"}
-                    });
-        } catch (IOException e) {
-            LOG.error("Fail to run assemble model.", e);
+        tasks.clear();
+        tasks.add(new Callable<Integer>() {
+            @Override
+            public Integer call() throws Exception {
+                return ProcessManager.runShellProcess(genAssembleModelName(modelConfig.getModelSetName()),
+                        new String[][]{
+                                new String[]{"shifu", "init"},
+                                new String[]{"shifu", "stats"},
+                                new String[]{"shifu", "norm"},
+                                new String[]{"shifu", "varsel"},
+                                new String[]{"shifu", "train"}
+                        });
+            }
+        });
+        if (hasFailTaskResults(this.excutorManager.submitTasksAndRetryIfFail(tasks, this.comboMaxRetryTimes))) {
+            LOG.error("Errors when running assemble model. Please check log.");
             status = 1;
         }
 
@@ -371,7 +389,7 @@ public class ComboModelProcessor extends BasicModelProcessor implements Processo
         List<Callable<Integer>> tasks = new ArrayList<Callable<Integer>>();
         for (EvalConfig evalConfig : this.modelConfig.getEvals()) {
             tasks.addAll(createEvaluateTasks(evalConfig.getName()));
-            if (hasFailTaskResults(this.excutorManager.submitTasksAndWaitResults(tasks))) {
+            if (hasFailTaskResults(this.excutorManager.submitTasksAndRetryIfFail(tasks, this.comboMaxRetryTimes))) {
                 LOG.error("Error occurred when evaluate sub-models. Please check log!");
                 return 1;
             }
@@ -422,7 +440,7 @@ public class ComboModelProcessor extends BasicModelProcessor implements Processo
             }
         }
 
-        if (hasFailTaskResults(this.excutorManager.submitTasksAndWaitResults(tasks))) {
+        if (hasFailTaskResults(this.excutorManager.submitTasksAndRetryIfFail(tasks, this.comboMaxRetryTimes))) {
             LOG.error("Error occurred when joining evaluation result. Please check log!");
             return 1;
         }
@@ -430,13 +448,18 @@ public class ComboModelProcessor extends BasicModelProcessor implements Processo
         saveModelConfig(genAssembleModelName(this.modelConfig.getModelSetName()), assembleModelConfig);
 
         // 3. run assemble model evaluation
-        try {
-            status = ProcessManager.runShellProcess(genAssembleModelName(this.modelConfig.getModelSetName()),
-                    new String[][]{
-                            new String[]{"shifu", "eval"}
-                    });
-        } catch (IOException e) {
-            LOG.error("Fail to run assemble model.", e);
+        tasks.clear();
+        tasks.add(new Callable<Integer>() {
+            @Override
+            public Integer call() throws Exception {
+                return ProcessManager.runShellProcess(genAssembleModelName(modelConfig.getModelSetName()),
+                        new String[][]{
+                                new String[]{"shifu", "eval"}
+                        });
+            }
+        });
+        if (hasFailTaskResults(this.excutorManager.submitTasksAndRetryIfFail(tasks, this.comboMaxRetryTimes))) {
+            LOG.error("Errors when running assemble model. Please check log.");
             status = 1;
         }
 
