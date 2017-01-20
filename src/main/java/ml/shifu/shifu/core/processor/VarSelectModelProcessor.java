@@ -135,13 +135,6 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
             log.info("Reset all selections data including type,final select etc!");
             resetAllFinalSelect();
         }
-        if(this.modelConfig.getVarSelectFilterNum()>0){
-            for(ColumnConfig columnConfig: this.columnConfigList) {
-                if(columnConfig.isFinalSelect()) {
-                    columnConfig.setFinalSelect(false);
-                }
-            }
-        }
         // sync to make sure load from hdfs config is consistent with local configuration
         syncDataToHdfs(super.modelConfig.getDataSet().getSource());
     }
@@ -190,12 +183,15 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
     }
     
     private void selectByFeatureImportance() throws Exception{
-        List<BasicML> models = CommonUtils.loadBasicModels(this.modelConfig, this.columnConfigList,
-                null);
+        List<BasicML> models = null;
+        if(!super.modelConfig.getVarSelect().getFilterEnable()) {
+            models = CommonUtils.loadBasicModels(this.modelConfig, this.columnConfigList,null);
+        }
         if(models == null || models.size() < 1) {
             TrainModelProcessor trainModelProcessor = new TrainModelProcessor();
             trainModelProcessor.setForVarSelect(true);
             trainModelProcessor.run();
+            models = CommonUtils.loadBasicModels(this.modelConfig, this.columnConfigList,null);
         }
         List<Map<Integer, MutablePair<String, Double>>> importanceList = new ArrayList<Map<Integer, MutablePair<String, Double>>>();
         Map<Integer, MutablePair<String, Double>> mergedResult = null;
@@ -640,6 +636,7 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
             throw new IllegalArgumentException("WrapperRatio should be in (0, 1).");
         }
         conf.setFloat(Constants.SHIFU_VARSELECT_FILTEROUT_RATIO, filterOutRatio);
+        conf.setInt(Constants.SHIFU_VARSELECT_FILTER_NUM, this.modelConfig.getVarSelectFilterNum());
         String hdpVersion = HDPUtils.getHdpVersionForHDP224();
         if(StringUtils.isNotBlank(hdpVersion)) {
             // for hdp 2.2.4, hdp.version should be set and configuration files should be add to container class path
@@ -736,9 +733,14 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
             }
 
             int i = 0;
+            int candidateCount = candidateColumnIdList.size();
             // try to select another (targetCnt - selectCnt) variables, but we need to exclude those
             // force-selected variables
             while(selectCnt < targetCnt && i < targetCnt) {
+                if(i>=candidateCount){
+                    log.warn("Var select finish due candidate column {} is less than target var count {}",candidateCount,targetCnt);
+                    break;
+                }
                 Integer columnId = candidateColumnIdList.get(i++);
                 ColumnConfig columnConfig = this.columnConfigList.get(columnId);
                 if(!columnConfig.isForceSelect() && !columnConfig.isForceRemove()) {
