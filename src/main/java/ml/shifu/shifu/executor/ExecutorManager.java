@@ -97,6 +97,7 @@ public class ExecutorManager<T> {
             Callable<Integer> task = tasks.get(i);
             Future<Integer> future = executorService.submit(task);
             taskFutures.add(new TaskFuture(i, future));
+            results.add(null);
         }
 
         int size = taskFutures.size();
