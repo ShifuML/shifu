@@ -192,7 +192,7 @@ public class ScoreModelWorker extends AbstractWorkerActor {
         }
 
         // append meta data
-        List<String> metaColumns = evalConfig.getScoreMetaColumns(modelConfig);
+        List<String> metaColumns = evalConfig.getAllMetaColumns(modelConfig);
         if(CollectionUtils.isNotEmpty(metaColumns)) {
             for(String columnName: metaColumns) {
                 buf.append("|" + columnName);

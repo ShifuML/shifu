@@ -16,6 +16,7 @@
 package ml.shifu.shifu.util;
 
 import java.io.BufferedReader;
+import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FilenameFilter;
@@ -61,6 +62,7 @@ import org.apache.commons.collections.Predicate;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang.ArrayUtils;
 import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang3.tuple.MutablePair;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -181,6 +183,10 @@ public final class CommonUtils {
 
             if(StringUtils.isNotBlank(evalConfig.getScoreMetaColumnNameFile())) {
                 hdfs.copyFromLocalFile(new Path(evalConfig.getScoreMetaColumnNameFile()),
+                        new Path(pathFinder.getEvalSetPath(evalConfig)));
+            }
+            if(StringUtils.isNotBlank(evalConfig.getDataSet().getMetaColumnNameFile())) {
+                hdfs.copyFromLocalFile(new Path(evalConfig.getDataSet().getMetaColumnNameFile()),
                         new Path(pathFinder.getEvalSetPath(evalConfig)));
             }
         }
@@ -577,7 +583,7 @@ public final class CommonUtils {
 
         return loadBasicModels(modelConfig, columnConfigList, evalConfig, modelConfig.getDataSet().getSource());
     }
-
+    
     /**
      * Get bin index by binary search. The last bin in <code>binBoundary</code> is missing value bin.
      */
@@ -1566,8 +1572,7 @@ public final class CommonUtils {
     /**
      * Return first line split string array. This is used to detect data schema.
      */
-    public static String[] takeFirstLine(String dataSetRawPath, String delimeter, SourceType source)
-            throws IOException {
+    public static String[] takeFirstLine(String dataSetRawPath, String delimeter, SourceType source) throws IOException {
         if(dataSetRawPath == null || delimeter == null || source == null) {
             throw new IllegalArgumentException("Input parameters should not be null.");
         }
@@ -1682,4 +1687,62 @@ public final class CommonUtils {
         }
         return pigScoreNames;
     }
+
+    public static Map<Integer, MutablePair<String, Double>> computeTreeModelFeatureImportance(List<BasicML> models) {
+        List<Map<Integer, MutablePair<String, Double>>> importanceList = new ArrayList<Map<Integer, MutablePair<String, Double>>>();
+        for(BasicML basicModel: models) {
+            if(basicModel instanceof TreeModel) {
+                TreeModel model = (TreeModel) basicModel;
+                Map<Integer, MutablePair<String, Double>> importances = model.getFeatureImportances();
+                importanceList.add(importances);
+            }
+        }
+        if(importanceList.size() < 1) {
+            throw new IllegalArgumentException("Feature importance calculation abort due to no tree model found!!");
+        }
+        return mergeImportanceList(importanceList);
+    }
+
+    private static Map<Integer, MutablePair<String, Double>> mergeImportanceList(
+            List<Map<Integer, MutablePair<String, Double>>> list) {
+        Map<Integer, MutablePair<String, Double>> finalResult = new HashMap<Integer, MutablePair<String, Double>>();
+        int size = list.size();
+        for(Map<Integer, MutablePair<String, Double>> item: list) {
+            for(Entry<Integer, MutablePair<String, Double>> entry: item.entrySet()) {
+                if(!finalResult.containsKey(entry.getKey())) {
+                    MutablePair<String, Double> value = MutablePair.of(entry.getValue().getKey(), entry.getValue()
+                            .getValue() / size);
+                    finalResult.put(entry.getKey(), value);
+                } else {
+                    MutablePair<String, Double> current = finalResult.get(entry.getKey());
+                    double entryValue = entry.getValue().getValue();
+                    current.setValue(current.getValue() + entryValue / size);
+                    finalResult.put(entry.getKey(), current);
+                }
+            }
+        }
+        return TreeModel.sortByValue(finalResult, false);
+    }
+
+    public static void writeFeatureImportance(String fiPath, Map<Integer, MutablePair<String, Double>> importances)
+            throws IOException {
+        ShifuFileUtils.createFileIfNotExists(fiPath, SourceType.LOCAL);
+        BufferedWriter writer = null;
+        log.info("Writing feature importances to file {}", fiPath);
+        try {
+            writer = ShifuFileUtils.getWriter(fiPath, SourceType.LOCAL);
+            writer.write("column_id\t\tcolumn_name\t\timportance");
+            writer.newLine();
+            for(Map.Entry<Integer, MutablePair<String, Double>> entry: importances.entrySet()) {
+                String content = entry.getKey() + "\t\t" + entry.getValue().getKey() + "\t\t"
+                        + entry.getValue().getValue();
+                writer.write(content);
+                writer.newLine();
+            }
+            writer.flush();
+        } finally {
+            IOUtils.closeQuietly(writer);
+        }
+    }
+
 }

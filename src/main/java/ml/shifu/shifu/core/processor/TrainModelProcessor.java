@@ -82,6 +82,7 @@ import org.apache.commons.collections.ListUtils;
 import org.apache.commons.compress.compressors.bzip2.BZip2CompressorInputStream;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang3.tuple.MutablePair;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileSystem;
@@ -94,6 +95,7 @@ import org.apache.pig.impl.PigContext;
 import org.apache.pig.impl.util.JarManager;
 import org.apache.pig.impl.util.ObjectSerializer;
 import org.apache.zookeeper.ZooKeeper;
+import org.encog.ml.BasicML;
 import org.encog.ml.MLInputOutput;
 import org.encog.ml.data.MLDataSet;
 import org.jboss.netty.bootstrap.ServerBootstrap;
@@ -668,13 +670,18 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
                 }
 
                 // copy temp model files, for RF/GBT, not to copy tmp models because of larger space needed, for others
-                // by
-                // default copy tmp models to local
+                // by default copy tmp models to local
                 boolean copyTmpModelsToLocal = Boolean.TRUE.toString().equalsIgnoreCase(
                         Environment.getProperty(Constants.SHIFU_TMPMODEL_COPYTOLOCAL, "true"));
                 if(CommonUtils.isDesicionTreeAlgorithm(modelConfig.getAlgorithm())) {
                     copyTmpModelsToLocal = Boolean.TRUE.toString().equalsIgnoreCase(
                             Environment.getProperty(Constants.SHIFU_TMPMODEL_COPYTOLOCAL, "false"));
+                    List<BasicML> models = CommonUtils.loadBasicModels(this.modelConfig, this.columnConfigList, null);
+                    // compute feature importance and write to local file after models are trained
+                    Map<Integer, MutablePair<String, Double>> featureImportances = CommonUtils
+                            .computeTreeModelFeatureImportance(models);
+                    CommonUtils.writeFeatureImportance(this.pathFinder.getLocalFeatureImportancePath(),
+                            featureImportances);
                 }
 
                 if(copyTmpModelsToLocal) {
@@ -1029,11 +1036,21 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
         } else {
             args.add(String.format(CommonConstants.MAPREDUCE_PARAM_FORMAT, GuaguaConstants.GUAGUA_SPLIT_COMBINABLE,
                     Environment.getProperty(GuaguaConstants.GUAGUA_SPLIT_COMBINABLE, "true")));
-            // set to 512M to save mappers, sometimes maybe OOM, users should tune guagua.split.maxCombinedSplitSize in
-            // shifuconfig
+            // set to dynamic to save mappers, sometimes maybe OOM, users should tune guagua.split.maxCombinedSplitSize
+            // in shifuconfig; by default it is 256M, consider in some cases user selects only a half of features, this
+            // number should be 512M
+            int[] inputOutputIndex = DTrainUtils.getInputOutputCandidateCounts(this.columnConfigList);
+            int inputCount = inputOutputIndex[0] == 0 ? inputOutputIndex[2] : inputOutputIndex[0];
+            int candidateCount = inputOutputIndex[2];
+            long maxCombineSize = 268435456; // default 256M
+            maxCombineSize = Double.valueOf((maxCombineSize * 1d * (candidateCount * 1d / inputCount))).longValue();
+            LOG.info(
+                    "Dynamic worker size is tuned to {}. If not good for # of workers, configure it in SHIFU_HOME/conf/shifuconfig::guagua.split.maxCombinedSplitSize",
+                    maxCombineSize);
             args.add(String.format(CommonConstants.MAPREDUCE_PARAM_FORMAT,
                     GuaguaConstants.GUAGUA_SPLIT_MAX_COMBINED_SPLIT_SIZE,
-                    Environment.getProperty(GuaguaConstants.GUAGUA_SPLIT_MAX_COMBINED_SPLIT_SIZE, "268435456")));
+                    Environment.getProperty(GuaguaConstants.GUAGUA_SPLIT_MAX_COMBINED_SPLIT_SIZE, maxCombineSize + "")));
+
         }
         // special tuning parameters for shifu, 0.97 means each iteation master wait for 97% workers and then can go to
         // next iteration.
