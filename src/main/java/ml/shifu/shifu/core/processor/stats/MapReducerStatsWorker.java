@@ -112,14 +112,62 @@ public class MapReducerStatsWorker extends AbstractStatsExecutor {
         // update column config
         updateColumnConfigWithPreTrainingStats();
 
+        // check categorical columns and numerical columns and warning
+        checkNumericalAndCategoricalColumns();
+
         // save it to local/hdfs
         processor.saveColumnConfigListAndColumnStats(true);
+
+        if(StringUtils.isNotEmpty(modelConfig.getPsiColumnName())) {
+            runPSI();
+            processor.saveColumnConfigListAndColumnStats(true);
+        }
+
         processor.syncDataToHdfs(modelConfig.getDataSet().getSource());
 
-        runPSI();
-        processor.saveColumnConfigListAndColumnStats(true);
-
         return true;
+    }
+
+    /**
+     * According to sample values and distinct count in each column, check if user set wrong for numerical and
+     * categorical features. Only warning message are output to console for user to check.
+     */
+    private void checkNumericalAndCategoricalColumns() {
+        for(ColumnConfig config: this.columnConfigList) {
+            if(config != null && !config.isMeta() && !config.isTarget()) {
+                List<String> sampleValues = config.getSampleValues();
+                if(config.isNumerical() && sampleValues != null) {
+                    int nums = numberCount(sampleValues);
+                    if((nums * 1d / sampleValues.size()) < 0.5d) {
+                        log.warn(
+                                "Column {} with index {} is set to numrical but numbers are less than 50% in ColumnConfig::SampleValues, please check if it is numerical feature.",
+                                config.getColumnName(), config.getColumnNum());
+                    }
+                }
+
+                if(config.isCategorical() && sampleValues != null) {
+                    int nums = numberCount(sampleValues);
+                    if((nums * 1d / sampleValues.size()) > 0.95d && config.getColumnStats().getDistinctCount() != null
+                            && config.getColumnStats().getDistinctCount() > 5000) {
+                        log.warn(
+                                "Column {} with index {} is set to categorical but numbers are more than 95% in ColumnConfig::SampleValues and distinct count is over 5000, please check if it is categorical feature.",
+                                config.getColumnName(), config.getColumnNum());
+                    }
+                }
+            }
+        }
+    }
+
+    private int numberCount(List<String> sampleValues) {
+        int numbers = 0;
+        for(String str: sampleValues) {
+            try {
+                Double.parseDouble(str);
+                numbers += 1;
+            } catch (Exception ignore) {
+            }
+        }
+        return numbers;
     }
 
     protected void runStatsPig(Map<String, String> paramsMap) throws Exception {
@@ -423,49 +471,47 @@ public class MapReducerStatsWorker extends AbstractStatsExecutor {
      * @throws IOException
      */
     private void runPSI() throws IOException {
-        if(StringUtils.isNotEmpty(modelConfig.getPsiColumnName())) {
-            log.info("Run PSI to use {} to compute the PSI ", modelConfig.getPsiColumnName());
-            ColumnConfig columnConfig = CommonUtils.findColumnConfigByName(columnConfigList,
-                    modelConfig.getPsiColumnName());
+        log.info("Run PSI to use {} to compute the PSI ", modelConfig.getPsiColumnName());
+        ColumnConfig columnConfig = CommonUtils
+                .findColumnConfigByName(columnConfigList, modelConfig.getPsiColumnName());
 
-            if(columnConfig == null || (!columnConfig.isMeta() && !columnConfig.isCategorical())) {
-                log.warn("Unable to use the PSI column {} specify in ModelConfig to compute PSI\n"
-                        + "neither meta nor categorical type", columnConfig != null ? columnConfig.getColumnName()
-                        : "unknown");
+        if(columnConfig == null || (!columnConfig.isMeta() && !columnConfig.isCategorical())) {
+            log.warn("Unable to use the PSI column {} specify in ModelConfig to compute PSI\n"
+                    + "neither meta nor categorical type", columnConfig != null ? columnConfig.getColumnName()
+                    : "unknown");
 
-                return;
-            }
-
-            log.info("Start to use {} to compute the PSI ", columnConfig.getColumnName());
-
-            Map<String, String> paramsMap = new HashMap<String, String>();
-            paramsMap.put("delimiter", CommonUtils.escapePigString(modelConfig.getDataSetDelimiter()));
-            paramsMap.put("PSIColumn", modelConfig.getPsiColumnName().trim());
-            paramsMap.put("column_parallel", Integer.toString(columnConfigList.size() / 10));
-            paramsMap.put("value_index", "2");
-
-            PigExecutor.getExecutor().submitJob(modelConfig, pathFinder.getScriptPath("scripts/PSI.pig"), paramsMap);
-
-            List<Scanner> scanners = ShifuFileUtils.getDataScanners(pathFinder.getPSIInfoPath(), modelConfig
-                    .getDataSet().getSource());
-
-            for(Scanner scanner: scanners) {
-                while(scanner.hasNext()) {
-                    String[] output = scanner.nextLine().trim().split("\\|");
-
-                    try {
-                        int columnNum = Integer.parseInt(output[0]);
-                        ColumnConfig config = this.columnConfigList.get(columnNum);
-                        config.setPSI(Double.parseDouble(output[1]));
-                        config.setUnitStats(Arrays.asList(StringUtils.split(output[2],
-                                CalculateStatsUDF.CATEGORY_VAL_SEPARATOR)));
-                    } catch (Exception e) {
-                        log.error("error in parsing", e);
-                    }
-
-                }
-            }
-            log.info("Run PSI - done.");
+            return;
         }
+
+        log.info("Start to use {} to compute the PSI ", columnConfig.getColumnName());
+
+        Map<String, String> paramsMap = new HashMap<String, String>();
+        paramsMap.put("delimiter", CommonUtils.escapePigString(modelConfig.getDataSetDelimiter()));
+        paramsMap.put("PSIColumn", modelConfig.getPsiColumnName().trim());
+        paramsMap.put("column_parallel", Integer.toString(columnConfigList.size() / 10));
+        paramsMap.put("value_index", "2");
+
+        PigExecutor.getExecutor().submitJob(modelConfig, pathFinder.getScriptPath("scripts/PSI.pig"), paramsMap);
+
+        List<Scanner> scanners = ShifuFileUtils.getDataScanners(pathFinder.getPSIInfoPath(), modelConfig.getDataSet()
+                .getSource());
+
+        for(Scanner scanner: scanners) {
+            while(scanner.hasNext()) {
+                String[] output = scanner.nextLine().trim().split("\\|");
+
+                try {
+                    int columnNum = Integer.parseInt(output[0]);
+                    ColumnConfig config = this.columnConfigList.get(columnNum);
+                    config.setPSI(Double.parseDouble(output[1]));
+                    config.setUnitStats(Arrays.asList(StringUtils.split(output[2],
+                            CalculateStatsUDF.CATEGORY_VAL_SEPARATOR)));
+                } catch (Exception e) {
+                    log.error("error in parsing", e);
+                }
+
+            }
+        }
+        log.info("Run PSI - done.");
     }
 }

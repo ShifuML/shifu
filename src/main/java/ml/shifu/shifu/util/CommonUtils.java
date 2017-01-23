@@ -15,33 +15,6 @@
  */
 package ml.shifu.shifu.util;
 
-import com.google.common.base.Function;
-import com.google.common.base.Splitter;
-import com.google.common.collect.Collections2;
-import com.google.common.collect.Lists;
-
-import org.apache.commons.collections.CollectionUtils;
-import org.apache.commons.collections.Predicate;
-import org.apache.commons.io.IOUtils;
-import org.apache.commons.lang.ArrayUtils;
-import org.apache.commons.lang.StringUtils;
-import org.apache.hadoop.fs.FSDataInputStream;
-import org.apache.hadoop.fs.FileStatus;
-import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.PathFilter;
-import org.apache.pig.backend.executionengine.ExecException;
-import org.apache.pig.data.Tuple;
-import org.encog.ml.BasicML;
-import org.encog.ml.data.MLDataPair;
-import org.encog.ml.data.basic.BasicMLData;
-import org.encog.ml.data.basic.BasicMLDataPair;
-import org.encog.neural.networks.BasicNetwork;
-import org.encog.persist.EncogDirectoryPersistence;
-import org.encog.persist.PersistorRegistry;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileInputStream;
@@ -82,6 +55,33 @@ import ml.shifu.shifu.exception.ShifuErrorCode;
 import ml.shifu.shifu.exception.ShifuException;
 import ml.shifu.shifu.fs.PathFinder;
 import ml.shifu.shifu.fs.ShifuFileUtils;
+
+import org.apache.commons.collections.CollectionUtils;
+import org.apache.commons.collections.Predicate;
+import org.apache.commons.io.IOUtils;
+import org.apache.commons.lang.ArrayUtils;
+import org.apache.commons.lang.StringUtils;
+import org.apache.hadoop.fs.FSDataInputStream;
+import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.PathFilter;
+import org.apache.pig.backend.executionengine.ExecException;
+import org.apache.pig.data.Tuple;
+import org.encog.ml.BasicML;
+import org.encog.ml.data.MLDataPair;
+import org.encog.ml.data.basic.BasicMLData;
+import org.encog.ml.data.basic.BasicMLDataPair;
+import org.encog.neural.networks.BasicNetwork;
+import org.encog.persist.EncogDirectoryPersistence;
+import org.encog.persist.PersistorRegistry;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import com.google.common.base.Function;
+import com.google.common.base.Splitter;
+import com.google.common.collect.Collections2;
+import com.google.common.collect.Lists;
 
 /**
  * {@link CommonUtils} is used to for almost all kinds of utility function in this framework.
@@ -1566,9 +1566,9 @@ public final class CommonUtils {
     /**
      * Return first line split string array. This is used to detect data schema.
      */
-    public static String[] takeFirstLine(String dataSetRawPath, String headerDelimiter, SourceType source)
+    public static String[] takeFirstLine(String dataSetRawPath, String delimeter, SourceType source)
             throws IOException {
-        if(dataSetRawPath == null || headerDelimiter == null || source == null) {
+        if(dataSetRawPath == null || delimeter == null || source == null) {
             throw new IllegalArgumentException("Input parameters should not be null.");
         }
 
@@ -1595,7 +1595,7 @@ public final class CommonUtils {
             String firstLine = reader.readLine();
             if(firstLine != null && firstLine.length() > 0) {
                 List<String> list = new ArrayList<String>();
-                for(String unit: Splitter.on(headerDelimiter).split(firstLine)) {
+                for(String unit: Splitter.on(delimeter).split(firstLine)) {
                     list.add(unit);
                 }
                 return list.toArray(new String[0]);
@@ -1604,6 +1604,64 @@ public final class CommonUtils {
             IOUtils.closeQuietly(reader);
         }
         return new String[0];
+    }
+
+    /**
+     * Return first line split string array. This is used to detect data schema.
+     */
+    public static String[][] takeFirstTwoLines(String dataSetRawPath, String delimiter, SourceType source)
+            throws IOException {
+        if(dataSetRawPath == null || delimiter == null || source == null) {
+            throw new IllegalArgumentException("Input parameters should not be null.");
+        }
+
+        String firstValidFile = null;
+        if(ShifuFileUtils.isDir(dataSetRawPath, source)) {
+            FileSystem fs = ShifuFileUtils.getFileSystemBySourceType(source);
+            FileStatus[] globStatus = fs.globStatus(new Path(dataSetRawPath), HIDDEN_FILE_FILTER);
+            if(globStatus == null || globStatus.length == 0) {
+                throw new IllegalArgumentException("No files founded in " + dataSetRawPath);
+            } else {
+                FileStatus[] listStatus = fs.listStatus(globStatus[0].getPath(), HIDDEN_FILE_FILTER);
+                if(listStatus == null || listStatus.length == 0) {
+                    throw new IllegalArgumentException("No files founded in " + globStatus[0].getPath());
+                }
+                firstValidFile = listStatus[0].getPath().toString();
+            }
+        } else {
+            firstValidFile = dataSetRawPath;
+        }
+
+        BufferedReader reader = null;
+        try {
+            reader = ShifuFileUtils.getReader(firstValidFile, source);
+
+            String firstLine = reader.readLine();
+            String[] firstArray = null;
+            if(firstLine != null && firstLine.length() > 0) {
+                List<String> list = new ArrayList<String>();
+                for(String unit: Splitter.on(delimiter).split(firstLine)) {
+                    list.add(unit);
+                }
+                firstArray = list.toArray(new String[0]);
+            }
+
+            String secondLine = reader.readLine();
+            String[] secondArray = null;
+            if(secondLine != null && secondLine.length() > 0) {
+                List<String> list = new ArrayList<String>();
+                for(String unit: Splitter.on(delimiter).split(secondLine)) {
+                    list.add(unit);
+                }
+                secondArray = list.toArray(new String[0]);
+            }
+            String[][] results = new String[2][];
+            results[0] = firstArray;
+            results[1] = secondArray;
+            return results;
+        } finally {
+            IOUtils.closeQuietly(reader);
+        }
     }
 
     private static final PathFilter HIDDEN_FILE_FILTER = new PathFilter() {
