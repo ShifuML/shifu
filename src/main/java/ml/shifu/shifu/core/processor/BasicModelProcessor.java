@@ -117,6 +117,9 @@ public class BasicModelProcessor {
         }
         Set<String> names = new HashSet<String>();
         for(ColumnConfig config: this.columnConfigList) {
+            if(StringUtils.isEmpty(config.getColumnName())) {
+                throw new IllegalArgumentException("Empry column name, please check your header file.");
+            }
             if(names.contains(config.getColumnName())) {
                 log.warn("Duplicated {} in ColumnConfig.json file, later one will be append index to make it unique.",
                         config.getColumnName());
@@ -435,7 +438,8 @@ public class BasicModelProcessor {
     }
 
     /**
-     * @param otherConfigs the otherConfigs to set
+     * @param otherConfigs
+     *            the otherConfigs to set
      */
     public void setOtherConfigs(Map<String, Object> otherConfigs) {
         this.otherConfigs = otherConfigs;

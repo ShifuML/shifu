@@ -205,8 +205,8 @@ public class EvalScoreUDF extends AbstractTrainerUDF<Tuple> {
     @Override
     public void finish() {
         // Since the modelRunner is initialized in execution, if there is no records for this reducer,
-        ///   the modelRunner may not initialized. It will cause NullPointerException
-        if ( this.modelRunner != null ) {
+        // / the modelRunner may not initialized. It will cause NullPointerException
+        if(this.modelRunner != null) {
             this.modelRunner.close();
         }
 

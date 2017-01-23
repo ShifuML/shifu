@@ -942,6 +942,10 @@ public class DTWorker
 
         Node nextNode = null;
         Integer inputIndex = this.inputIndexMap.get(split.getColumnNum());
+        if(inputIndex == null) {
+            throw new IllegalStateException("InputIndex should not be null: Split is " + split + ", inputIndexMap is "
+                    + this.inputIndexMap + ", data is " + data);
+        }
         short value = 0;
         if(columnConfig.isNumerical()) {
             short binIndex = data.inputs[inputIndex];

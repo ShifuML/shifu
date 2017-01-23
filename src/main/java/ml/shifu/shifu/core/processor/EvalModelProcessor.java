@@ -139,9 +139,6 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
                 case RUN:
                     runEval(getEvalConfigListFromInput());
                     break;
-                case GAINCHART:
-                    runGainChart(getEvalConfigListFromInput());
-                    break;
                 case NORM:
                     runNormalize(getEvalConfigListFromInput());
                     break;
@@ -506,55 +503,10 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
      * @throws IOException
      *             any exception in running pig evaluation or akka evaluation
      */
-    private void runGainChart(List<EvalConfig> evalSetList) throws IOException {
-        for(EvalConfig evalConfig: evalSetList) {
-            runGainChart(evalConfig);
-        }
-    }
-
-    /**
-     * Running evaluation entry function
-     * <p>
-     * this function will switch to pig or akka evaluation depends on the modelConfig running mode
-     * </p>
-     * 
-     * @throws IOException
-     *             any exception in running pig evaluation or akka evaluation
-     */
     private void runEval(List<EvalConfig> evalSetList) throws IOException {
         for(EvalConfig evalConfig: evalSetList) {
             runEval(evalConfig);
         }
-    }
-
-    /**
-     * Generate gain chart with highchart.js
-     * 
-     * @param evalConfig
-     * @throws IOException
-     */
-    private void runGainChart(EvalConfig evalConfig) throws IOException {
-        // create evalset home directory firstly in local file system
-        validateEvalColumnConfig(evalConfig);
-        PathFinder pathFinder = new PathFinder(modelConfig);
-        String evalSetPath = pathFinder.getEvalSetPath(evalConfig, SourceType.LOCAL);
-        FileUtils.forceMkdir(new File(evalSetPath));
-        syncDataToHdfs(evalConfig.getDataSet().getSource());
-
-        switch(modelConfig.getBasic().getRunMode()) {
-            case DIST:
-            case MAPRED:
-                runPigScore(evalConfig);
-                generateGainChart(evalConfig);
-                break;
-            case LOCAL:
-            default:
-                throw new RuntimeException("Local mode is not supported so far.");
-        }
-    }
-
-    private void generateGainChart(EvalConfig evalConfig) {
-
     }
 
     private void validateEvalColumnConfig(EvalConfig evalConfig) throws IOException {
@@ -572,7 +524,16 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
                     .getDataSet().getDataDelimiter() : evalConfig.getDataSet().getHeaderDelimiter();
             String[] fields = CommonUtils.takeFirstLine(evalConfig.getDataSet().getDataPath(), delimiter, evalConfig
                     .getDataSet().getSource());
+            // if first line contains target column name, we guess it is csv format and first line is header.
             if(StringUtils.join(fields, "").contains(modelConfig.getTargetColumnName())) {
+                // first line of data meaning second line in data files excluding first header line
+                String[] dataInFirstLine = CommonUtils.takeFirstTwoLines(evalConfig.getDataSet().getDataPath(),
+                        delimiter, evalConfig.getDataSet().getSource())[1];
+                if(dataInFirstLine != null && fields.length != dataInFirstLine.length) {
+                    throw new IllegalArgumentException(
+                            "Eval header length and eval data length are not consistent, please check you header setting and data set setting in eval.");
+                }
+
                 evalColumnNames = new String[fields.length];
                 for(int i = 0; i < fields.length; i++) {
                     evalColumnNames[i] = CommonUtils.getRelativePigHeaderColumnName(fields[i]);
