@@ -61,6 +61,7 @@ public class PigDataJoin {
             }
 
             writeLine(writer, "result = group " + genGroupByClauses(relations, uidColumnName) + ";");
+            writeLine(writer, "result = filter result by " + genFilterSizeClauses(relations) + ";");
             writeLine(writer, "result = foreach result generate " + genFlattenClauses(relations) + ";");
             writeLine(writer, "result = foreach result generate " + genRenameClauses(columnFileList, relations) + ";");
             writeLine(writer, "rmf " + outputPath + ";");
@@ -74,6 +75,20 @@ public class PigDataJoin {
         }
 
         return byos.toString();
+    }
+
+    /**
+     * Generate filter by size clauses
+     *
+     * @param relations
+     * @return
+     */
+    private String genFilterSizeClauses(List<String> relations) {
+        List<String> filterByClauses = new ArrayList<String>();
+        for (String relation : relations) {
+            filterByClauses.add("SIZE(" + relation + ") == 1");
+        }
+        return StringUtils.join(filterByClauses, " and ");
     }
 
     /**

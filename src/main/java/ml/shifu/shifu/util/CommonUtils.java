@@ -1589,10 +1589,13 @@ public final class CommonUtils {
             firstValidFile = dataSetRawPath;
         }
 
+        log.info("The first valid file is - {}", firstValidFile);
+
         BufferedReader reader = null;
         try {
             reader = ShifuFileUtils.getReader(firstValidFile, source);
             String firstLine = reader.readLine();
+            log.debug("The first line is - {}", firstLine);
             if(firstLine != null && firstLine.length() > 0) {
                 List<String> list = new ArrayList<String>();
                 for(String unit: Splitter.on(delimeter).split(firstLine)) {
@@ -1600,6 +1603,8 @@ public final class CommonUtils {
                 }
                 return list.toArray(new String[0]);
             }
+        } catch ( Exception e) {
+            log.error("Fail to read first line of file.", e);
         } finally {
             IOUtils.closeQuietly(reader);
         }
