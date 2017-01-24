@@ -65,7 +65,7 @@ public class AddColumnNumAndFilterUDF extends AddColumnNumUDF {
 
         int size = input.size();
 
-        if (size == 0 || input.size() < this.columnConfigList.size()) {
+        if (size == 0 || input.size() != this.columnConfigList.size() ) {
             log.info("the input size - " + input.size() + ", while column size - " + columnConfigList.size());
             throw new ShifuException(ShifuErrorCode.ERROR_NO_EQUAL_COLCONFIG);
         }

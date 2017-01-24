@@ -122,7 +122,7 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
 
     private final static Logger LOG = LoggerFactory.getLogger(TrainModelProcessor.class);
 
-    private static final int VAR_SELECT_TRAINING_DECAY_EPOCHES_THRESHOLD = 200;
+    private static final int VAR_SELECT_TRAINING_DECAY_EPOCHES_THRESHOLD = 400;
 
     public static final String SHIFU_DEFAULT_DTRAIN_PARALLEL = "true";
 
@@ -961,6 +961,8 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
         }
         // the reason to add 1 is that the first iteration in implementation is used for training preparation.
         numTrainEpoches = numTrainEpoches + 1;
+
+        LOG.info("Number of train epoches is set to {}.", numTrainEpoches);
 
         args.add(String.valueOf(numTrainEpoches));
 

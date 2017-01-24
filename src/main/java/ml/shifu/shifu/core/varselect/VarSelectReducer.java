@@ -45,13 +45,13 @@ import org.slf4j.LoggerFactory;
  * 
  * <p>
  * In {@link #cleanup(org.apache.hadoop.mapreduce.Reducer.Context)}, variables with MSE will be sorted according to
- * variable wrapper type. According to {@link #filterOutRatio} setting, only variables in that range will be written into
- * HDFS.
+ * variable wrapper type. According to {@link #filterOutRatio} setting, only variables in that range will be written
+ * into HDFS.
  * 
  * <p>
- * {@link #filterOutRatio} means each time we need remove how many percentage of variables. A ratio is better than a fixed
- * number. Since each time we reduce variables which number is also decreased. Say 100 variables, wrapperRatio is 0.05.
- * First time we remove 100*0.05 = 5 variables, second time 95 * 0.05 variables will be removed.
+ * {@link #filterOutRatio} means each time we need remove how many percentage of variables. A ratio is better than a
+ * fixed number. Since each time we reduce variables which number is also decreased. Say 100 variables, wrapperRatio is
+ * 0.05. First time we remove 100*0.05 = 5 variables, second time 95 * 0.05 variables will be removed.
  * 
  * <p>
  * TODO Add mean value, not only MSE value; Write mean and MSE to files for later analysis.
@@ -83,7 +83,7 @@ public class VarSelectReducer extends Reducer<LongWritable, ColumnInfo, Text, Te
      * decreasing, next time it is still 0.05, but only 4 variables are removed.
      */
     private float filterOutRatio;
-    
+
     /**
      * Explicit set number of variables to be selected,this overwrites filterOutRatio
      */
@@ -190,7 +190,7 @@ public class VarSelectReducer extends Reducer<LongWritable, ColumnInfo, Text, Te
                 candidates = (int) (this.inputNodeCount * (this.filterOutRatio));
             }
         }
-        
+
         for(int i = 0; i < this.results.size(); i++) {
             Pair pair = this.results.get(i);
             this.outputKey.set(pair.key + "");
