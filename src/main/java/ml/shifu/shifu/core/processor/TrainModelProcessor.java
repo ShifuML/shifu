@@ -166,6 +166,8 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
      */
     @Override
     public int run() throws Exception {
+        int status = 0;
+
         if(!this.isForVarSelect()) {
             LOG.info("Step Start: train");
         }
@@ -187,7 +189,7 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
                     validateDistributedTrain();
                     syncDataToHdfs(super.modelConfig.getDataSet().getSource());
                     checkAndCleanDataForTreeModels();
-                    runDistributedTrain();
+                    status = runDistributedTrain();
                     break;
                 case LOCAL:
                 default:
@@ -200,12 +202,13 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
             clearUp(ModelStep.TRAIN);
         } catch (Exception e) {
             LOG.error("Error:", e);
-            return -1;
+            return 1;
         }
         if(!this.isForVarSelect()) {
             LOG.info("Step Finished: train with {} ms", (System.currentTimeMillis() - start));
         }
-        return 0;
+
+        return status;
     }
 
     /**
@@ -437,8 +440,9 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
         }
     }
 
-    protected void runDistributedTrain() throws IOException, InterruptedException, ClassNotFoundException {
+    protected int runDistributedTrain() throws IOException, InterruptedException, ClassNotFoundException {
         LOG.info("Started {} d-training.", isDryTrain ? "dry" : "");
+        int status = 0;
 
         Configuration conf = new Configuration();
 
@@ -664,12 +668,12 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
                     } else {
                         LOG.warn("Model {} isn't there, maybe job is failed, for bagging it can be ignored.",
                                 modelPath.toString());
+                        status = 1;
                     }
                 }
 
                 // copy temp model files, for RF/GBT, not to copy tmp models because of larger space needed, for others
-                // by
-                // default copy tmp models to local
+                // by default copy tmp models to local
                 boolean copyTmpModelsToLocal = Boolean.TRUE.toString().equalsIgnoreCase(
                         Environment.getProperty(Constants.SHIFU_TMPMODEL_COPYTOLOCAL, "true"));
                 if(CommonUtils.isDesicionTreeAlgorithm(modelConfig.getAlgorithm())) {
@@ -685,6 +689,11 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
                 LOG.info("Distributed training finished in {}ms.", System.currentTimeMillis() - start);
             }
         }
+
+        if ( status != 0 ) {
+            LOG.error("Error may occurred. There is no model generated. Please check!");
+        }
+        return status;
     }
 
     private Map<String, Object> findBestParams(SourceType sourceType, FileSystem fileSystem, GridSearch gs)
