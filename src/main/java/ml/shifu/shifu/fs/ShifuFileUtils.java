@@ -40,11 +40,7 @@ import org.apache.commons.compress.compressors.bzip2.BZip2CompressorInputStream;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FileStatus;
-import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.FileUtil;
-import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.PathFilter;
+import org.apache.hadoop.fs.*;
 import org.apache.hadoop.io.compress.CompressionCodec;
 import org.apache.hadoop.io.compress.CompressionCodecFactory;
 import org.slf4j.Logger;
@@ -172,7 +168,8 @@ public class ShifuFileUtils {
      */
     public static BufferedReader getReader(String path, SourceType sourceType) throws IOException {
         try {
-            return new BufferedReader(new InputStreamReader(getFileSystemBySourceType(sourceType).open(new Path(path)),
+            return new BufferedReader(new InputStreamReader(
+                    getCompressInputStream(getFileSystemBySourceType(sourceType).open(new Path(path)), new Path(path)),
                     Constants.DEFAULT_CHARSET));
         } catch (IOException e) {
             // To manual fix a issue that FileSystem is closed exceptionally. Here we renew a FileSystem object to make
@@ -186,6 +183,17 @@ public class ShifuFileUtils {
                 }
             }
             throw e;
+        }
+    }
+
+    private static InputStream getCompressInputStream(FSDataInputStream fdis, Path path) throws IOException {
+        String name = path.getName();
+        if ( name.toLowerCase().endsWith(".gz") ) {
+            return new GZIPInputStream(fdis);
+        } else if ( name.toLowerCase().endsWith(".bz2") ) {
+            return new BZip2CompressorInputStream(fdis);
+        } else {
+            return fdis;
         }
     }
 
