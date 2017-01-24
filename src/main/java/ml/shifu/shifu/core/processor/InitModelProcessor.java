@@ -426,6 +426,12 @@ public class InitModelProcessor extends BasicModelProcessor implements Processor
         if(StringUtils.isNotBlank(modelConfig.getHeaderPath())) {
             fields = CommonUtils.getHeaders(modelConfig.getHeaderPath(), modelConfig.getHeaderDelimiter(), modelConfig
                     .getDataSet().getSource());
+            String[] dataInFirstLine = CommonUtils.takeFirstLine(modelConfig.getDataSetRawPath(),
+                    modelConfig.getDataSetDelimiter(), modelConfig.getDataSet().getSource());
+            if(fields.length != dataInFirstLine.length) {
+                throw new IllegalArgumentException(
+                        "Header length and data length are not consistent, please check you header setting and data set setting.");
+            }
         } else {
             fields = CommonUtils.takeFirstLine(modelConfig.getDataSetRawPath(), StringUtils.isBlank(modelConfig
                     .getHeaderDelimiter()) ? modelConfig.getDataSetDelimiter() : modelConfig.getHeaderDelimiter(),
@@ -433,6 +439,16 @@ public class InitModelProcessor extends BasicModelProcessor implements Processor
             if(StringUtils.join(fields, "").contains(modelConfig.getTargetColumnName())) {
                 // if first line contains target column name, we guess it is csv format and first line is header.
                 isSchemaProvided = true;
+                // first line of data meaning second line in data files excluding first header line
+                String[] dataInFirstLine = CommonUtils.takeFirstTwoLines(modelConfig.getDataSetRawPath(),
+                        StringUtils.isBlank(modelConfig.getHeaderDelimiter()) ? modelConfig.getDataSetDelimiter()
+                                : modelConfig.getHeaderDelimiter(), modelConfig.getDataSet().getSource())[1];
+
+                if(dataInFirstLine != null && fields.length != dataInFirstLine.length) {
+                    throw new IllegalArgumentException(
+                            "Header length and data length are not consistent, please check you header setting and data set setting.");
+                }
+
                 log.warn("No header path is provided, we will try to read first line and detect schema.");
                 log.warn("Schema in ColumnConfig.json are named as first line of data set path.");
             } else {

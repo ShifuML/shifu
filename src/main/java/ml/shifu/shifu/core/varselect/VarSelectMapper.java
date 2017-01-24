@@ -246,7 +246,7 @@ public class VarSelectMapper extends Mapper<LongWritable, Text, LongWritable, Co
 
         List<SEColResult> results = this.executorManager.submitTasksAndWaitResults(tasks);
 
-        for ( SEColResult seColResult : results) {
+        for(SEColResult seColResult: results) {
             double currentModelScore = seColResult.getScore();
 
             double diff = 0d;
@@ -269,7 +269,7 @@ public class VarSelectMapper extends Mapper<LongWritable, Text, LongWritable, Co
             this.results.put(this.columnIndexes[seColResult.getColumnId()], columnInfo);
         }
 
-        if ( this.recordCount % 1000 == 0) {
+        if(this.recordCount % 1000 == 0) {
             LOG.info("Finish to process {} records.", this.recordCount);
         }
     }

@@ -167,8 +167,8 @@ public class NNOutput extends BasicMasterInterceptor<NNParams, NNParams> {
         }
         String progress = new StringBuilder(200).append("    Trainer ").append(this.trainerId).append(" Epoch #")
                 .append(currentIteration - 1).append(" Training Error:")
-                .append(context.getMasterResult().getTrainError()).append(" Validation Error:")
-                .append(context.getMasterResult().getTestError()).append("\n").toString();
+                .append(String.format("%.10f", context.getMasterResult().getTrainError())).append(" Validation Error:")
+                .append(String.format("%.10f", context.getMasterResult().getTestError())).append("\n").toString();
         try {
             LOG.debug("Writing progress results to {} {}", context.getCurrentIteration(), progress.toString());
             this.progressOutput.write(progress.getBytes("UTF-8"));
