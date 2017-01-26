@@ -22,11 +22,13 @@ import ml.shifu.shifu.core.validator.ModelInspector;
 import ml.shifu.shifu.executor.ExecutorManager;
 import ml.shifu.shifu.executor.ProcessManager;
 import ml.shifu.shifu.fs.PathFinder;
+import ml.shifu.shifu.fs.ShifuFileUtils;
 import ml.shifu.shifu.util.CommonUtils;
 import ml.shifu.shifu.util.Constants;
 import ml.shifu.shifu.util.Environment;
 import ml.shifu.shifu.util.JSONUtils;
 import org.apache.commons.collections.CollectionUtils;
+import org.apache.commons.collections.ListUtils;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
@@ -55,6 +57,7 @@ public class ComboModelProcessor extends BasicModelProcessor implements Processo
     private ComboStep comboStep;
     private String algorithms;
     private boolean isToShuffleData;
+    private boolean isToResume;
     private int comboMaxRetryTimes = 3;
 
     private List<ModelTrainConf.ALGORITHM> comboAlgs;
@@ -108,7 +111,11 @@ public class ComboModelProcessor extends BasicModelProcessor implements Processo
     }
 
     public void setToShuffleData(boolean toShuffleData) {
-        isToShuffleData = toShuffleData;
+        this.isToShuffleData = toShuffleData;
+    }
+
+    public void setToResume(boolean toResume) {
+        this.isToResume = toResume;
     }
 
     @Override
@@ -282,7 +289,10 @@ public class ComboModelProcessor extends BasicModelProcessor implements Processo
         for (int i = 0; i < this.comboModelTrain.getVarTrainConfList().size(); i++) {
             VarTrainConf varTrainConf = this.comboModelTrain.getVarTrainConfList().get(i);
             String subModelName = genSubModelName(i, varTrainConf);
-            tasks.add(createTrainAndEvalTasks(subModelName, genEvalTrainName()));
+            Callable<Integer> task = createTrainAndEvalTasks(subModelName, genEvalTrainName());
+            if ( task != null ) {
+                tasks.add(task);
+            }
         }
         if (hasFailTaskResults(this.excutorManager.submitTasksAndRetryIfFail(tasks, this.comboMaxRetryTimes))) {
             LOG.error("There are errors when training and evaluating sub-models. Please check log.");
@@ -294,33 +304,35 @@ public class ComboModelProcessor extends BasicModelProcessor implements Processo
         // 2.1 prepare the data and information for data merge
         LOG.info("Start to merge train-evaluation data for assemble model.");
         String assembleTrainData = this.pathFinder.getSubModelsAssembleTrainData();
-        final DataMerger merger = new DataMerger(this.modelConfig.getBasic().getRunMode(),
-                this.comboModelTrain.getUidColumnName(), assembleTrainData);
+        if ( !isToResume || !ShifuFileUtils.isFileExists(assembleTrainData, modelConfig.getDataSet().getSource())) {
+            final DataMerger merger = new DataMerger(this.modelConfig.getBasic().getRunMode(),
+                    this.comboModelTrain.getUidColumnName(), assembleTrainData);
 
-        String evalName = genEvalTrainName();
-        try {
-            merger.addColumnFileList(genSubModelEvalColumnFiles(evalName));
-        } catch (IOException e) {
-            LOG.error("Fatal error - fail to add column files to merge.", e);
-            return 1;
-        }
-
-        // 2.2 run the data merge
-        tasks.clear();
-        tasks.add(new Callable<Integer>() {
-            @Override
-            public Integer call() throws Exception {
-                try {
-                    return (merger.doMerge() ? 0 : 1);
-                } catch (IOException e) {
-                    LOG.error("Fail to merge the data.", e);
-                    return 1;
-                }
+            String evalName = genEvalTrainName();
+            try {
+                merger.addColumnFileList(genSubModelEvalColumnFiles(evalName));
+            } catch (IOException e) {
+                LOG.error("Fatal error - fail to add column files to merge.", e);
+                return 1;
             }
-        });
-        if (hasFailTaskResults(this.excutorManager.submitTasksAndRetryIfFail(tasks, this.comboMaxRetryTimes))) {
-            LOG.error("There are errors when merging data. Please check log.");
-            return 1;
+
+            // 2.2 run the data merge
+            tasks.clear();
+            tasks.add(new Callable<Integer>() {
+                @Override
+                public Integer call() throws Exception {
+                    try {
+                        return (merger.doMerge() ? 0 : 1);
+                    } catch (IOException e) {
+                        LOG.error("Fail to merge the data.", e);
+                        return 1;
+                    }
+                }
+            });
+            if (hasFailTaskResults(this.excutorManager.submitTasksAndRetryIfFail(tasks, this.comboMaxRetryTimes))) {
+                LOG.error("There are errors when merging data. Please check log.");
+                return 1;
+            }
         }
 
         // 3. run the assemble model
@@ -556,36 +568,76 @@ public class ComboModelProcessor extends BasicModelProcessor implements Processo
      * @return
      */
     private Callable<Integer> createTrainAndEvalTasks(final String subModelName, final String evalSetName) throws IOException {
+        ModelConfig subModelConfig = CommonUtils.loadModelConfig(
+                subModelName + File.separator + Constants.MODEL_CONFIG_JSON_FILE_NAME,
+                RawSourceData.SourceType.LOCAL);
         if (this.isToShuffleData) { // don't use parent's normalized data
-            ModelConfig subModelConfig = CommonUtils.loadModelConfig(
-                    subModelName + File.separator + Constants.MODEL_CONFIG_JSON_FILE_NAME,
-                    RawSourceData.SourceType.LOCAL);
             subModelConfig.getTrain().setCustomPaths(null);
             saveModelConfig(subModelName, subModelConfig);
         }
 
-        return new Callable<Integer>() {
-            @Override
-            public Integer call() {
-                try {
-                    if ( isToShuffleData ) {
-                        return ProcessManager.runShellProcess(subModelName, new String[][]{
-                                new String[]{"shifu", "norm", "-shuffle"},
-                                new String[]{"shifu", "train"},
-                                new String[]{"shifu", "eval", "-score", evalSetName}
-                        });
-                    } else {
-                        return ProcessManager.runShellProcess(subModelName, new String[][]{
-                                new String[]{"shifu", "train"},
-                                new String[]{"shifu", "eval", "-score", evalSetName}
-                        });
+        if ( this.isToResume ) {
+            List<String[]> commands = new ArrayList<String[]>();
+
+            PathFinder pathFinder = new PathFinder(subModelConfig);
+            EvalConfig evalConfig = subModelConfig.getEvalConfigByName(evalSetName);
+            String evalScorePath = pathFinder.getEvalScorePath(evalConfig);
+            if ( !ShifuFileUtils.isFileExists(evalScorePath, evalConfig.getDataSet().getSource()) ) {
+                commands.add(new String[]{"shifu", "eval", "-score", evalSetName});
+                String modelsPath = pathFinder.getModelsPath(RawSourceData.SourceType.LOCAL);
+                if (!ShifuFileUtils.isFileExists(modelsPath, RawSourceData.SourceType.LOCAL)) {
+                    commands.add(new String[]{"shifu", "train"});
+
+                    if (isToShuffleData) {
+                        commands.add(new String[]{"shifu", "norm", "-shuffle"});
                     }
-                } catch (IOException e) {
-                    LOG.error("Fail to run commands.", e);
-                    return 1;
                 }
+
+                if (CollectionUtils.isNotEmpty(commands)) {
+                    Collections.reverse(commands);
+                    final String[][] processes = commands.toArray(new String[][]{});
+                    return new Callable<Integer>() {
+                        @Override
+                        public Integer call() {
+                            try {
+                                return ProcessManager.runShellProcess(subModelName, processes);
+                            } catch (IOException e) {
+                                LOG.error("Fail to run commands.", e);
+                                return 1;
+                            }
+                        }
+                    };
+                } else {
+                    return null;
+                }
+            } else {
+                LOG.info("EvalTrain already exsits. Ignore to train and eval task for {}", subModelName);
             }
-        };
+            return  null;
+        } else {
+            return new Callable<Integer>() {
+                @Override
+                public Integer call() {
+                    try {
+                        if (isToShuffleData) {
+                            return ProcessManager.runShellProcess(subModelName, new String[][]{
+                                    new String[]{"shifu", "norm", "-shuffle"},
+                                    new String[]{"shifu", "train"},
+                                    new String[]{"shifu", "eval", "-score", evalSetName}
+                            });
+                        } else {
+                            return ProcessManager.runShellProcess(subModelName, new String[][]{
+                                    new String[]{"shifu", "train"},
+                                    new String[]{"shifu", "eval", "-score", evalSetName}
+                            });
+                        }
+                    } catch (IOException e) {
+                        LOG.error("Fail to run commands.", e);
+                        return 1;
+                    }
+                }
+            };
+        }
     }
 
     /**
