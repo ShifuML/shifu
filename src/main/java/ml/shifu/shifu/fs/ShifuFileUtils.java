@@ -45,6 +45,7 @@ import org.apache.hadoop.io.compress.CompressionCodec;
 import org.apache.hadoop.io.compress.CompressionCodecFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.xerial.snappy.SnappyInputStream;
 
 /**
  * ShifuFileUtils class encapsulate the file system interface from other components.
@@ -192,6 +193,8 @@ public class ShifuFileUtils {
             return new GZIPInputStream(fdis);
         } else if ( name.toLowerCase().endsWith(".bz2") ) {
             return new BZip2CompressorInputStream(fdis);
+        } else if ( name.toLowerCase().endsWith(".snappy") ) {
+            return new SnappyInputStream(fdis);
         } else {
             return fdis;
         }

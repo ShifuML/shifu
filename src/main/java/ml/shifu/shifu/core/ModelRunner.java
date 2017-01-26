@@ -15,17 +15,21 @@
  */
 package ml.shifu.shifu.core;
 
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.TreeMap;
 
 import ml.shifu.shifu.container.CaseScoreResult;
 import ml.shifu.shifu.container.ScoreObject;
 import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.container.obj.ModelConfig;
 import ml.shifu.shifu.container.obj.ModelTrainConf.ALGORITHM;
+import ml.shifu.shifu.core.model.ModelSpec;
 import ml.shifu.shifu.util.CommonUtils;
 
 import org.apache.commons.collections.MapUtils;
+import org.apache.commons.collections.OrderedMap;
 import org.apache.pig.backend.executionengine.ExecException;
 import org.apache.pig.data.Tuple;
 import org.encog.ml.BasicML;
@@ -56,6 +60,7 @@ public class ModelRunner {
     private String[] header;
     private String dataDelimiter;
     private Scorer scorer;
+    private Map<String, Scorer> subScorers;
 
     public ModelRunner(ModelConfig modelConfig, List<ColumnConfig> columnConfigList, String[] header,
             String dataDelimiter, List<BasicML> models) {
@@ -153,18 +158,76 @@ public class ModelRunner {
     public CaseScoreResult compute(Map<String, String> rawDataMap) {
         CaseScoreResult scoreResult = new CaseScoreResult();
 
-        ScoreObject so = scorer.score(rawDataMap);
-        if(so == null) {
-            return null;
+        if ( this.scorer != null ) {
+            ScoreObject so = scorer.score(rawDataMap);
+            if (so == null) {
+                return null;
+            }
+
+            scoreResult.setScores(so.getScores());
+            scoreResult.setMaxScore(so.getMaxScore());
+            scoreResult.setMinScore(so.getMinScore());
+            scoreResult.setAvgScore(so.getMeanScore());
+            scoreResult.setMedianScore(so.getMedianScore());
         }
 
-        scoreResult.setScores(so.getScores());
-        scoreResult.setMaxScore(so.getMaxScore());
-        scoreResult.setMinScore(so.getMinScore());
-        scoreResult.setAvgScore(so.getMeanScore());
-        scoreResult.setMedianScore(so.getMedianScore());
+        if ( MapUtils.isNotEmpty(this.subScorers) ) {
+            Iterator<Map.Entry<String, Scorer>> iterator = this.subScorers.entrySet().iterator();
+            while (iterator.hasNext()) {
+                Map.Entry<String, Scorer> entry = iterator.next();
+                String modelName = entry.getKey();
+                ScoreObject so = scorer.score(rawDataMap);
+                if ( so != null ) {
+                    scoreResult.addSubModelScore(modelName, so);
+                }
+            }
+        }
 
         return scoreResult;
+    }
+
+    /**
+     * add @ModelSpec as sub-model. Create scorer for sub-model
+     * @param modelSpec
+     *          - model spec for sub model
+     */
+    public void addSubModels(ModelSpec modelSpec) {
+        if ( this.subScorers == null ) {
+            this.subScorers = new TreeMap<String, Scorer>();
+        }
+
+        this.subScorers.put(modelSpec.getModelName(),
+                new Scorer(modelSpec.getModels(), this.columnConfigList,
+                        modelSpec.getAlgorithm().name(), this.modelConfig, this.modelConfig.getNormalizeStdDevCutOff()));
+
+    }
+
+    /**
+     * Get the models count of current model
+     * @return
+     *          - model count
+     */
+    public int getModelsCnt() {
+        return (this.scorer == null ? 0 : this.scorer.getModelCnt());
+    }
+
+    /**
+     * Get the models count of sub-models
+     * @return
+     *          - model count of sub-models
+     */
+    public Map<String, Integer> getSubModelsCnt() {
+        if ( MapUtils.isNotEmpty(this.subScorers) ) {
+            Map<String, Integer> subModelsCnt = new TreeMap<String, Integer>();
+            Iterator<Map.Entry<String, Scorer>> iterator = this.subScorers.entrySet().iterator();
+            while(iterator.hasNext()) {
+                Map.Entry<String, Scorer> entry = iterator.next();
+                subModelsCnt.put(entry.getKey(), entry.getValue().getModelCnt());
+            }
+            return subModelsCnt;
+        } else {
+            return null;
+        }
     }
 
     /**
