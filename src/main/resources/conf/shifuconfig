@@ -56,6 +56,9 @@ guagua.min.workers.ratio=0.97
 ## the hadoop capacity may limit parallel number, add this parameter for hadoop performance tunning
 # shifu.combo.thread.parallel = 5
 
+## the max retry times for when executing combo jobs
+# shifu.combo.max.retry = 3
+
 ## control the behavior of normalized data
 # how many parts of normalized data that will generate
 # shifu.norm.shuffle.size = 100
