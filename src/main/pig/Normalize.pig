@@ -25,12 +25,15 @@ SET mapred.child.ulimit 2.5G;
 SET mapred.reduce.slowstart.completed.maps 0.6;
 SET mapred.map.tasks.speculative.execution true;
 SET mapred.reduce.tasks.speculative.execution true;
+SET mapreduce.map.speculative true;
+SET mapreduce.reduce.speculative true;
 -- compress outputs
 SET mapred.output.compress $is_compress;
 SET mapreduce.output.fileoutputformat.compress $is_compress;
 SET mapred.map.output.compress.codec org.apache.hadoop.io.compress.GzipCodec;
 SET mapreduce.output.fileoutputformat.compress.codec org.apache.hadoop.io.compress.GzipCodec;
 SET mapreduce.output.fileoutputformat.compress.type block;
+
 
 DEFINE IsDataFilterOut  ml.shifu.shifu.udf.PurifyDataUDF('$source_type', '$path_model_config', '$path_column_config');
 DEFINE Normalize        ml.shifu.shifu.udf.NormalizeUDF('$source_type', '$path_model_config', '$path_column_config', '$is_norm_for_clean');
