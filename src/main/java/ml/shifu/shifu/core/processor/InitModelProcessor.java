@@ -432,7 +432,9 @@ public class InitModelProcessor extends BasicModelProcessor implements Processor
                     modelConfig.getDataSetDelimiter(), modelConfig.getDataSet().getSource());
             if(fields.length != dataInFirstLine.length) {
                 throw new IllegalArgumentException(
-                        "Header length and data length are not consistent, please check you header setting and data set setting.");
+                        "Header length and data length are not consistent - head length " + fields.length
+                                + ", while data length " + dataInFirstLine.length
+                                + ", please check you header setting and data set setting.");
             }
         } else {
             fields = CommonUtils.takeFirstLine(modelConfig.getDataSetRawPath(), StringUtils.isBlank(modelConfig
