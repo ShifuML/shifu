@@ -884,9 +884,9 @@ public class PathFinder {
     }
 
     public String getLocalFeatureImportancePath() {
-        return "./featureImportance/all.fi";
+        return getPathBySourceType(new Path("featureImportance/all.fi"), SourceType.LOCAL);
     }
-
+    
     /**
      * @return the otherConfigs
      */

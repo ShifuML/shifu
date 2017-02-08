@@ -1,5 +1,5 @@
 /*
- * Copyright [2012-2014] PayPal Software Foundation
+ * Copyright [2013-2016] PayPal Software Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -54,29 +54,27 @@ public class EvalNormUDF extends AbstractTrainerUDF<Tuple> {
 
         // create model runner
         if(StringUtils.isNotBlank(evalConfig.getDataSet().getHeaderPath())) {
-            this.headers = CommonUtils.getHeaders(
-                    evalConfig.getDataSet().getHeaderPath(),
-                    evalConfig.getDataSet().getHeaderDelimiter(),
-                    evalConfig.getDataSet().getSource());
+            this.headers = CommonUtils.getHeaders(evalConfig.getDataSet().getHeaderPath(), evalConfig.getDataSet()
+                    .getHeaderDelimiter(), evalConfig.getDataSet().getSource());
 
             Set<String> evalNamesSet = new HashSet<String>(Arrays.asList(this.headers));
             this.outputNames = new ArrayList<String>();
 
-            if ( StringUtils.isNotBlank(evalConfig.getDataSet().getTargetColumnName()) ) {
+            if(StringUtils.isNotBlank(evalConfig.getDataSet().getTargetColumnName())) {
                 outputNames.add(evalConfig.getDataSet().getTargetColumnName());
             } else {
                 outputNames.add(modelConfig.getWeightColumnName());
             }
 
-            if ( StringUtils.isNotBlank(evalConfig.getDataSet().getWeightColumnName()) ) {
+            if(StringUtils.isNotBlank(evalConfig.getDataSet().getWeightColumnName())) {
                 outputNames.add(evalConfig.getDataSet().getWeightColumnName());
             } else {
                 outputNames.add(SCHEMA_PREFIX + "weight");
             }
 
-            for (ColumnConfig columnConfig : this.columnConfigList) {
-                if ( columnConfig.isFinalSelect() ) {
-                    if ( !evalNamesSet.contains(columnConfig.getColumnName()) ) {
+            for(ColumnConfig columnConfig: this.columnConfigList) {
+                if(columnConfig.isFinalSelect()) {
+                    if(!evalNamesSet.contains(columnConfig.getColumnName())) {
                         log.error("FinalSelect variable - " + columnConfig.getColumnName()
                                 + " couldn't be found in eval dataset!");
                         throw new RuntimeException("FinalSelect variable - " + columnConfig.getColumnName()
@@ -96,17 +94,16 @@ public class EvalNormUDF extends AbstractTrainerUDF<Tuple> {
         Map<String, String> rawDataMap = CommonUtils.convertDataIntoMap(input, this.headers);
 
         Tuple tuple = TupleFactory.getInstance().newTuple(this.outputNames.size());
-        for ( int i = 0; i < this.outputNames.size(); i ++ ) {
+        for(int i = 0; i < this.outputNames.size(); i++) {
             String name = this.outputNames.get(i);
             String raw = rawDataMap.get(name);
-            if ( i == 0 ) {
+            if(i == 0) {
                 tuple.set(i, raw);
-            } else if ( i == 1 ) {
+            } else if(i == 1) {
                 tuple.set(i, (StringUtils.isEmpty(raw) ? "1.0" : raw));
             } else {
                 ColumnConfig columnConfig = CommonUtils.findColumnConfigByName(this.columnConfigList, name);
-                Double value = Normalizer.normalize(columnConfig, raw,
-                        this.modelConfig.getNormalizeStdDevCutOff(),
+                Double value = Normalizer.normalize(columnConfig, raw, this.modelConfig.getNormalizeStdDevCutOff(),
                         this.modelConfig.getNormalizeType());
                 tuple.set(i, value);
             }
@@ -121,9 +118,9 @@ public class EvalNormUDF extends AbstractTrainerUDF<Tuple> {
     public Schema outputSchema(Schema input) {
         try {
             Schema tupleSchema = new Schema();
-            for ( int i = 0; i < this.outputNames.size(); i ++ ) {
+            for(int i = 0; i < this.outputNames.size(); i++) {
                 String name = this.outputNames.get(i);
-                if ( i < 2 ) {
+                if(i < 2) {
                     tupleSchema.add(new FieldSchema(name, DataType.CHARARRAY));
                 } else {
                     tupleSchema.add(new FieldSchema(name, DataType.DOUBLE));

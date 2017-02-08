@@ -15,18 +15,44 @@
  */
 package ml.shifu.shifu.core.processor;
 
-import java.io.BufferedWriter;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
 import java.util.Scanner;
+
+import ml.shifu.guagua.GuaguaConstants;
+import ml.shifu.guagua.hadoop.util.HDPUtils;
+import ml.shifu.guagua.mapreduce.GuaguaMapReduceClient;
+import ml.shifu.guagua.mapreduce.GuaguaMapReduceConstants;
+import ml.shifu.shifu.container.obj.ColumnConfig;
+import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
+import ml.shifu.shifu.core.VariableSelector;
+import ml.shifu.shifu.core.dtrain.CommonConstants;
+import ml.shifu.shifu.core.dtrain.nn.NNConstants;
+import ml.shifu.shifu.core.dvarsel.VarSelMaster;
+import ml.shifu.shifu.core.dvarsel.VarSelMasterResult;
+import ml.shifu.shifu.core.dvarsel.VarSelOutput;
+import ml.shifu.shifu.core.dvarsel.VarSelWorker;
+import ml.shifu.shifu.core.dvarsel.VarSelWorkerResult;
+import ml.shifu.shifu.core.dvarsel.wrapper.CandidateGenerator;
+import ml.shifu.shifu.core.dvarsel.wrapper.WrapperMasterConductor;
+import ml.shifu.shifu.core.dvarsel.wrapper.WrapperWorkerConductor;
+import ml.shifu.shifu.core.mr.input.CombineInputFormat;
+import ml.shifu.shifu.core.validator.ModelInspector.ModelStep;
+import ml.shifu.shifu.core.varselect.ColumnInfo;
+import ml.shifu.shifu.core.varselect.VarSelectMapper;
+import ml.shifu.shifu.core.varselect.VarSelectReducer;
+import ml.shifu.shifu.exception.ShifuErrorCode;
+import ml.shifu.shifu.exception.ShifuException;
+import ml.shifu.shifu.fs.PathFinder;
+import ml.shifu.shifu.fs.ShifuFileUtils;
+import ml.shifu.shifu.util.CommonUtils;
+import ml.shifu.shifu.util.Constants;
+import ml.shifu.shifu.util.Environment;
 
 import org.apache.commons.collections.ListUtils;
 import org.apache.commons.compress.compressors.bzip2.BZip2CompressorInputStream;
-import org.apache.commons.io.IOUtils;
 import org.apache.commons.jexl2.JexlException;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.lang3.tuple.MutablePair;
@@ -54,37 +80,6 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Splitter;
-
-import ml.shifu.guagua.GuaguaConstants;
-import ml.shifu.guagua.hadoop.util.HDPUtils;
-import ml.shifu.guagua.mapreduce.GuaguaMapReduceClient;
-import ml.shifu.guagua.mapreduce.GuaguaMapReduceConstants;
-import ml.shifu.shifu.container.obj.ColumnConfig;
-import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
-import ml.shifu.shifu.core.TreeModel;
-import ml.shifu.shifu.core.VariableSelector;
-import ml.shifu.shifu.core.dtrain.CommonConstants;
-import ml.shifu.shifu.core.dtrain.nn.NNConstants;
-import ml.shifu.shifu.core.dvarsel.VarSelMaster;
-import ml.shifu.shifu.core.dvarsel.VarSelMasterResult;
-import ml.shifu.shifu.core.dvarsel.VarSelOutput;
-import ml.shifu.shifu.core.dvarsel.VarSelWorker;
-import ml.shifu.shifu.core.dvarsel.VarSelWorkerResult;
-import ml.shifu.shifu.core.dvarsel.wrapper.CandidateGenerator;
-import ml.shifu.shifu.core.dvarsel.wrapper.WrapperMasterConductor;
-import ml.shifu.shifu.core.dvarsel.wrapper.WrapperWorkerConductor;
-import ml.shifu.shifu.core.mr.input.CombineInputFormat;
-import ml.shifu.shifu.core.validator.ModelInspector.ModelStep;
-import ml.shifu.shifu.core.varselect.ColumnInfo;
-import ml.shifu.shifu.core.varselect.VarSelectMapper;
-import ml.shifu.shifu.core.varselect.VarSelectReducer;
-import ml.shifu.shifu.exception.ShifuErrorCode;
-import ml.shifu.shifu.exception.ShifuException;
-import ml.shifu.shifu.fs.PathFinder;
-import ml.shifu.shifu.fs.ShifuFileUtils;
-import ml.shifu.shifu.util.CommonUtils;
-import ml.shifu.shifu.util.Constants;
-import ml.shifu.shifu.util.Environment;
 
 /**
  * Variable selection processor, select the variable based on KS/IV value, or
@@ -196,63 +191,13 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
             trainModelProcessor.run();
             models = CommonUtils.loadBasicModels(this.modelConfig, this.columnConfigList, null);
         }
-        List<Map<Integer, MutablePair<String, Double>>> importanceList = new ArrayList<Map<Integer, MutablePair<String, Double>>>();
-        Map<Integer, MutablePair<String, Double>> mergedResult = null;
-        for(BasicML basicModel: models) {
-            if(basicModel instanceof TreeModel) {
-                TreeModel model = (TreeModel) basicModel;
-                Map<Integer, MutablePair<String, Double>> importances = model.getFeatureImportances();
-                importanceList.add(importances);
-            }
-        }
-        if(importanceList.size() < 1) {
-            throw new IllegalArgumentException("Feature importance calculation abort due to no tree model found!!");
-        }
-        mergedResult = this.mergeImportanceList(importanceList);
-        this.writeFeatureImportance(mergedResult);
+
+        // compute feature importance and write to local file
+        Map<Integer, MutablePair<String, Double>> featureImportances = CommonUtils
+                .computeTreeModelFeatureImportance(models);
+        CommonUtils.writeFeatureImportance(this.pathFinder.getLocalFeatureImportancePath(), featureImportances);
         if(super.modelConfig.getVarSelect().getFilterEnable()) {
-            this.postProcessFIVarSelect(mergedResult);
-        }
-    }
-
-    private Map<Integer, MutablePair<String, Double>> mergeImportanceList(
-            List<Map<Integer, MutablePair<String, Double>>> list) {
-        Map<Integer, MutablePair<String, Double>> finalResult = new HashMap<Integer, MutablePair<String, Double>>();
-        int size = list.size();
-        for(Map<Integer, MutablePair<String, Double>> item: list) {
-            for(Entry<Integer, MutablePair<String, Double>> entry: item.entrySet()) {
-                if(!finalResult.containsKey(entry.getKey())) {
-                    MutablePair<String, Double> value = MutablePair.of(entry.getValue().getKey(), entry.getValue()
-                            .getValue() / size);
-                    finalResult.put(entry.getKey(), value);
-                } else {
-                    MutablePair<String, Double> current = finalResult.get(entry.getKey());
-                    double entryValue = entry.getValue().getValue();
-                    current.setValue(current.getValue() + entryValue / size);
-                    finalResult.put(entry.getKey(), current);
-                }
-            }
-        }
-        return TreeModel.sortByValue(finalResult, false);
-    }
-
-    private void writeFeatureImportance(Map<Integer, MutablePair<String, Double>> importances) throws IOException {
-        ShifuFileUtils.createFileIfNotExists(this.pathFinder.getLocalFeatureImportancePath(), SourceType.LOCAL);
-        BufferedWriter writer = ShifuFileUtils.getWriter(this.pathFinder.getLocalFeatureImportancePath(),
-                SourceType.LOCAL);
-        log.info("Writing feature importances to file " + this.pathFinder.getLocalFeatureImportancePath());
-        try {
-            writer.write("column_id\t\tcolumn_name\t\timportance");
-            writer.newLine();
-            for(Map.Entry<Integer, MutablePair<String, Double>> entry: importances.entrySet()) {
-                String content = entry.getKey() + "\t\t" + entry.getValue().getKey() + "\t\t"
-                        + entry.getValue().getValue();
-                writer.write(content);
-                writer.newLine();
-            }
-            writer.flush();
-        } finally {
-            IOUtils.closeQuietly(writer);
+            this.postProcessFIVarSelect(featureImportances);
         }
     }
 
@@ -618,6 +563,8 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
 
         conf.setBoolean(GuaguaMapReduceConstants.MAPRED_MAP_TASKS_SPECULATIVE_EXECUTION, true);
         conf.setBoolean(GuaguaMapReduceConstants.MAPRED_REDUCE_TASKS_SPECULATIVE_EXECUTION, true);
+        conf.setBoolean(GuaguaMapReduceConstants.MAPREDUCE_MAP_SPECULATIVE, true);
+        conf.setBoolean(GuaguaMapReduceConstants.MAPREDUCE_REDUCE_SPECULATIVE, true);
         conf.set(
                 Constants.SHIFU_MODEL_CONFIG,
                 ShifuFileUtils.getFileSystemBySourceType(source)

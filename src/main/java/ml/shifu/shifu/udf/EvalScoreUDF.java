@@ -213,7 +213,7 @@ public class EvalScoreUDF extends AbstractTrainerUDF<Tuple> {
         }
 
         // append meta data
-        List<String> metaColumns = evalConfig.getScoreMetaColumns(modelConfig);
+        List<String> metaColumns = evalConfig.getAllMetaColumns(modelConfig);
         if(CollectionUtils.isNotEmpty(metaColumns)) {
             for(String meta: metaColumns) {
                 tuple.append(rawDataMap.get(meta));
@@ -274,7 +274,8 @@ public class EvalScoreUDF extends AbstractTrainerUDF<Tuple> {
             return;
         }
 
-        // only for regression
+        // only for regression, in some cases like gbdt, it's regression score is not in [0,1], to do eval performance,
+        // max and min score should be collected to set bounds.
         BufferedWriter writer = null;
         Configuration jobConf = UDFContext.getUDFContext().getJobConf();
         String scoreOutput = jobConf.get(Constants.SHIFU_EVAL_MAXMIN_SCORE_OUTPUT);
@@ -308,7 +309,6 @@ public class EvalScoreUDF extends AbstractTrainerUDF<Tuple> {
             log.warn("tag is empty " + tag + " or weight is empty " + weight);
             return;
         }
-        // TODO default weight here = 1 ? or throw exceptions
         double dWeight = 1.0;
         if(StringUtils.isNotBlank(weight)) {
             try {
