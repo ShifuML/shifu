@@ -15,29 +15,10 @@
  */
 package ml.shifu.shifu.util;
 
-import java.io.BufferedReader;
-import java.io.BufferedWriter;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FilenameFilter;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.io.Reader;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Map;
-import java.util.Map.Entry;
-import java.util.Set;
-
+import com.google.common.base.Function;
+import com.google.common.base.Splitter;
+import com.google.common.collect.Collections2;
+import com.google.common.collect.Lists;
 import ml.shifu.guagua.GuaguaRuntimeException;
 import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.container.obj.ColumnConfig.ColumnFlag;
@@ -52,22 +33,19 @@ import ml.shifu.shifu.core.TreeModel;
 import ml.shifu.shifu.core.dtrain.CommonConstants;
 import ml.shifu.shifu.core.dtrain.dataset.PersistBasicFloatNetwork;
 import ml.shifu.shifu.core.dtrain.lr.LogisticRegressionContants;
+import ml.shifu.shifu.core.model.ModelSpec;
 import ml.shifu.shifu.exception.ShifuErrorCode;
 import ml.shifu.shifu.exception.ShifuException;
 import ml.shifu.shifu.fs.PathFinder;
 import ml.shifu.shifu.fs.ShifuFileUtils;
-
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.collections.Predicate;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang.ArrayUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.lang3.tuple.MutablePair;
-import org.apache.hadoop.fs.FSDataInputStream;
-import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.fs.*;
 import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.PathFilter;
 import org.apache.pig.backend.executionengine.ExecException;
 import org.apache.pig.data.Tuple;
 import org.encog.ml.BasicML;
@@ -80,10 +58,9 @@ import org.encog.persist.PersistorRegistry;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.google.common.base.Function;
-import com.google.common.base.Splitter;
-import com.google.common.collect.Collections2;
-import com.google.common.collect.Lists;
+import java.io.*;
+import java.util.*;
+import java.util.Map.Entry;
 
 /**
  * {@link CommonUtils} is used to for almost all kinds of utility function in this framework.
@@ -777,6 +754,132 @@ public final class CommonUtils {
         }
 
         return fileList;
+    }
+
+    public static List<ModelSpec> loadSubModels(ModelConfig modelConfig, List<ColumnConfig> columnConfigList,
+        EvalConfig evalConfig, SourceType sourceType, Boolean gbtConvertToProb) {
+        List<ModelSpec> modelSpecs = new ArrayList<ModelSpec>();
+        FileSystem fs = ShifuFileUtils.getFileSystemBySourceType(sourceType);
+
+        // we have to register PersistBasicFloatNetwork for loading such models
+        PersistorRegistry.getInstance().add(new PersistBasicFloatNetwork());
+        PathFinder pathFinder = new PathFinder(modelConfig);
+        String modelsPath = null;
+
+        if ( evalConfig == null || StringUtils.isEmpty(evalConfig.getModelsPath()) ) {
+            modelsPath = pathFinder.getModelsPath(sourceType);
+        } else {
+            modelsPath = evalConfig.getModelsPath();
+        }
+
+        try {
+            FileStatus[] fsArr = fs.listStatus(new Path(modelsPath));
+            for ( FileStatus fileStatus :  fsArr ) {
+                if ( fileStatus.isDirectory() ) {
+                    ModelSpec modelSpec = loadSubModelSpec(modelConfig, columnConfigList,
+                            fileStatus, sourceType, gbtConvertToProb);
+                    if ( modelSpec != null) {
+                        modelSpecs.add(modelSpec);
+                    }
+                }
+            }
+        } catch (IOException e) {
+            log.error("Error occurred when loading sub-models.", e);
+        }
+
+        return modelSpecs;
+    }
+
+    private static ModelSpec loadSubModelSpec(ModelConfig modelConfig, List<ColumnConfig> columnConfigList,
+            FileStatus fileStatus, SourceType sourceType, Boolean gbtConvertToProb) throws IOException {
+        FileSystem fs = ShifuFileUtils.getFileSystemBySourceType(sourceType);
+
+        String subModelName = fileStatus.getPath().getName();
+        List<FileStatus> modelFileStats = new ArrayList<FileStatus>();
+        ALGORITHM algorithm = getModelsAlgAndSpecFiles(fileStatus, sourceType, modelFileStats);
+
+        ModelSpec modelSpec = null;
+        if ( CollectionUtils.isNotEmpty(modelFileStats) ) {
+            Collections.sort(modelFileStats, new Comparator<FileStatus>() {
+                @Override
+                public int compare(FileStatus fa, FileStatus fb) {
+                    return fa.getPath().getName().compareTo(fb.getPath().getName());
+                }
+            });
+            List<BasicML> models = new ArrayList<BasicML>();
+            for(FileStatus f: modelFileStats) {
+                models.add(loadModel(modelConfig, columnConfigList, f.getPath(), fs, gbtConvertToProb));
+            }
+            modelSpec = new ModelSpec(subModelName, algorithm, models);
+        }
+
+        return modelSpec;
+    }
+
+    public static ALGORITHM getModelsAlgAndSpecFiles(FileStatus fileStatus,
+            SourceType sourceType, List<FileStatus> modelFileStats) throws IOException {
+        assert modelFileStats != null;
+
+        FileSystem fs = ShifuFileUtils.getFileSystemBySourceType(sourceType);
+        ALGORITHM algorithm = null;
+
+        FileStatus[] fileStatsArr = fs.listStatus(fileStatus.getPath());
+        if ( fileStatsArr != null ) {
+            for ( FileStatus fls : fileStatsArr ) {
+                if ( !fls.isDirectory() ) {
+                    String fileName = fls.getPath().getName();
+
+                    if ( algorithm == null ) {
+                        if ( fileName.endsWith("." + ALGORITHM.NN.name().toLowerCase()) ) {
+                            algorithm = ALGORITHM.NN;
+                        } else if ( fileName.endsWith("." + ALGORITHM.LR.name().toLowerCase()) ) {
+                            algorithm = ALGORITHM.LR;
+                        } else if ( fileName.endsWith("." + ALGORITHM.GBT.name().toLowerCase()) ) {
+                            algorithm = ALGORITHM.GBT;
+                        }
+                    }
+
+                    if ( algorithm != null && fileName.endsWith("." + algorithm.name().toLowerCase()) ) {
+                        modelFileStats.add(fls);
+                    }
+                }
+            }
+        }
+
+        return algorithm;
+    }
+
+    public static Map<String, Integer> getSubModelsCnt(ModelConfig modelConfig, List<ColumnConfig> columnConfigList,
+            EvalConfig evalConfig, SourceType sourceType) throws IOException {
+        FileSystem fs = ShifuFileUtils.getFileSystemBySourceType(sourceType);
+        PathFinder pathFinder = new PathFinder(modelConfig);
+
+        String modelsPath = null;
+
+        if ( evalConfig == null || StringUtils.isEmpty(evalConfig.getModelsPath()) ) {
+            modelsPath = pathFinder.getModelsPath(sourceType);
+        } else {
+            modelsPath = evalConfig.getModelsPath();
+        }
+
+        Map<String, Integer> subModelsCnt = new TreeMap<String, Integer>();
+
+        try {
+            FileStatus[] fsArr = fs.listStatus(new Path(modelsPath));
+            for ( FileStatus fileStatus :  fsArr ) {
+                if ( fileStatus.isDirectory() ) {
+                    List<FileStatus> subModelSpecFiles = new ArrayList<FileStatus>();
+                    getModelsAlgAndSpecFiles(fileStatus, sourceType, subModelSpecFiles);
+                    if ( CollectionUtils.isNotEmpty(subModelSpecFiles) ) {
+                        subModelsCnt.put(fileStatus.getPath().getName(), subModelSpecFiles.size());
+                    }
+                }
+            }
+        } catch (IOException e) {
+            log.error("Error occurred when finnding sub-models.", e);
+        }
+
+        return subModelsCnt;
     }
 
     public static class FileSuffixPathFilter implements PathFilter {

@@ -61,6 +61,7 @@ public class PigDataJoin {
             }
 
             writeLine(writer, "result = group " + genGroupByClauses(relations, uidColumnName) + ";");
+            writeLine(writer, "result = foreach result " + genLimitClauses(relations, uidColumnName) + ";");
             writeLine(writer, "result = filter result by " + genFilterSizeClauses(relations) + ";");
             writeLine(writer, "result = foreach result generate " + genFlattenClauses(relations) + ";");
             writeLine(writer, "result = foreach result generate " + genRenameClauses(columnFileList, relations) + ";");
@@ -104,6 +105,26 @@ public class PigDataJoin {
             groupByClauses.add(relation + " by " + uidColumnName);
         }
         return StringUtils.join(groupByClauses, ",");
+    }
+
+    /**
+     * Generate limit 1 clause after group-by
+     *
+     * @param relations - Relation list
+     * @param uidColumnName - join column Name
+     * @return pig limit list
+     */
+    private String genLimitClauses(List<String> relations, String uidColumnName) {
+        List<String> limitsClauses = new ArrayList<String>();
+        for (String relation : relations) {
+            limitsClauses.add(relation + " = limit " + relation + " 1");
+        }
+
+        StringBuffer buf = new StringBuffer();
+        buf.append("generate group," + StringUtils.join(relations, ","));
+        limitsClauses.add(buf.toString());
+
+        return "{ " + StringUtils.join(limitsClauses, ";") + "; }";
     }
 
     /**

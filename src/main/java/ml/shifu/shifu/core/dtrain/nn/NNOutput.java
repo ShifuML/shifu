@@ -31,6 +31,7 @@ import ml.shifu.shifu.core.dtrain.CommonConstants;
 import ml.shifu.shifu.core.dtrain.DTrainUtils;
 import ml.shifu.shifu.core.dtrain.dataset.PersistBasicFloatNetwork;
 import ml.shifu.shifu.core.dtrain.gs.GridSearch;
+import ml.shifu.shifu.fs.ShifuFileUtils;
 import ml.shifu.shifu.util.CommonUtils;
 
 import org.apache.hadoop.conf.Configuration;
@@ -246,7 +247,13 @@ public class NNOutput extends BasicMasterInterceptor<NNParams, NNParams> {
 
         try {
             Path progressLog = new Path(context.getProps().getProperty(CommonConstants.SHIFU_DTRAIN_PROGRESS_FILE));
-            this.progressOutput = FileSystem.get(new Configuration()).create(progressLog);
+            // if the progressLog already exists, that because the master failed, and fail-over
+            // we need to append the log, so that client console can get refreshed. Or console will appear stuck.
+            if (ShifuFileUtils.isFileExists(progressLog, SourceType.HDFS)) {
+                this.progressOutput = FileSystem.get(new Configuration()).append(progressLog);
+            } else {
+                this.progressOutput = FileSystem.get(new Configuration()).create(progressLog);
+            }
         } catch (IOException e) {
             LOG.error("Error in create progress log:", e);
         }
