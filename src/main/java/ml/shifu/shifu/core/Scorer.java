@@ -15,19 +15,12 @@
  */
 package ml.shifu.shifu.core;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.concurrent.Callable;
-
 import ml.shifu.shifu.container.ScoreObject;
 import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.container.obj.ModelConfig;
 import ml.shifu.shifu.core.dtrain.DTrainUtils;
 import ml.shifu.shifu.executor.ExecutorManager;
 import ml.shifu.shifu.util.CommonUtils;
-
 import org.apache.commons.collections.CollectionUtils;
 import org.encog.ml.BasicML;
 import org.encog.ml.data.MLData;
@@ -37,12 +30,19 @@ import org.encog.neural.networks.BasicNetwork;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.Callable;
+
 /**
  * Scorer, calculate the score for a specify input
  */
 public class Scorer {
 
     private static Logger log = LoggerFactory.getLogger(Scorer.class);
+    public static final int DEFAULT_SCORE_SCALE = 1000;
 
     private String alg;
 
@@ -50,6 +50,7 @@ public class Scorer {
     private List<ColumnConfig> columnConfigList;
     private double cutoff = 4.0d;
     private ModelConfig modelConfig;
+    private int scale = DEFAULT_SCORE_SCALE;
 
     /**
      * No any variables set to finalSelect=true, we should take all candidate variables as inputs.
@@ -72,7 +73,6 @@ public class Scorer {
 
     public Scorer(List<BasicML> models, List<ColumnConfig> columnConfigList, String algorithm, ModelConfig modelConfig,
             Double cutoff) {
-
         if(modelConfig == null) {
             throw new IllegalArgumentException("modelConfig should not be null");
         }
@@ -258,10 +258,20 @@ public class Scorer {
     }
 
     private Integer toScore(Double d) {
-        return (int) Math.round(d * 1000);
+        return (int) Math.round(d * scale);
     }
 
     public int getModelCnt() {
         return ((models != null) ? this.models.size() : 0);
+    }
+
+    public int getScale() {
+        return scale;
+    }
+
+    public void setScale(int scale) {
+        if ( scale > 0 ) {
+            this.scale = scale;
+        }
     }
 }
