@@ -899,7 +899,10 @@ public class DTWorker
      */
     public static int getBinIndex(float value, List<Double> binBoundary) {
         if(binBoundary.size() <= 1) {
-            throw new IllegalArgumentException();
+            // feature with binBoundary.size() <= 1 will not be send to worker, while such feature is still loading into
+            // memory, just return the first bin index to avoid exception, while actually such feature isn't used in
+            // GBT/RF.
+            return 0;
         }
 
         // the last bin if positive infinity

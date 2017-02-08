@@ -233,7 +233,9 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
                 }
 
                 if(columnConfig.isNumerical() && columnConfig.getBinBoundary().size() <= 1) {
-                    LOG.warn("Column {} with only one or zero element in binBounday, such column will be ignored in  tree model training.");
+                    LOG.warn(
+                            "Column {} {} with only one or zero element in binBounday, such column will be ignored in tree model training.",
+                            columnConfig.getColumnNum(), columnConfig.getColumnName());
                 }
 
                 if(columnConfig.isCategorical() && columnConfig.getBinCategory() == null) {
@@ -242,7 +244,9 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
                 }
 
                 if(columnConfig.isCategorical() && columnConfig.getBinCategory().size() <= 0) {
-                    LOG.warn("Column {} with only zero element in binCategory, such column will be ignored in  tree model training.");
+                    LOG.warn(
+                            "Column {} {} with only zero element in binCategory, such column will be ignored in tree model training.",
+                            columnConfig.getColumnNum(), columnConfig.getColumnName());
                 }
             }
         }
@@ -698,7 +702,7 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
             }
         }
 
-        if ( status != 0 ) {
+        if(status != 0) {
             LOG.error("Error may occurred. There is no model generated. Please check!");
         }
         return status;
