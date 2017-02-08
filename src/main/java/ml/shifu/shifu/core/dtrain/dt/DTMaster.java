@@ -171,7 +171,7 @@ public class DTMaster extends AbstractMasterComputable<DTMasterParams, DTWorkerP
     private int inputNum;
 
     /**
-     * Cache all features
+     * Cache all features with feature index for searching
      */
     private List<Integer> allFeatures;
 
@@ -226,6 +226,8 @@ public class DTMaster extends AbstractMasterComputable<DTMasterParams, DTWorkerP
      * If early stop is enabled or not, by default false.
      */
     private boolean enableEarlyStop = false;
+
+    private Random featureSamplingRandom = new Random();
 
     // ############################################################################################################
     // ## There parts are states, for fail over such instances should be recovered in {@link #init(MasterContext)}
@@ -653,7 +655,7 @@ public class DTMaster extends AbstractMasterComputable<DTMasterParams, DTWorkerP
         long statsMem = 0L;
         List<Integer> tempFeatures = subsetFeatures;
         if(subsetFeatures.size() == 0) {
-            tempFeatures = getAllValidFeatures();
+            tempFeatures = getAllFeatureList(this.columnConfigList, this.isAfterVarSelect);
         }
         for(Integer columnNum: tempFeatures) {
             ColumnConfig config = this.columnConfigList.get(columnNum);
@@ -667,22 +669,6 @@ public class DTMaster extends AbstractMasterComputable<DTMasterParams, DTWorkerP
         // times worker number to avoid oom in master, as combinable DTWorkerParams, use one third of worker number
         statsMem = statsMem * this.workerNumber / 2;
         return statsMem;
-    }
-
-    private List<Integer> getAllValidFeatures() {
-        List<Integer> features = new ArrayList<Integer>();
-        for(ColumnConfig config: columnConfigList) {
-            if(isAfterVarSelect) {
-                if(config.isFinalSelect() && !config.isTarget() && !config.isMeta()) {
-                    features.add(config.getColumnNum());
-                }
-            } else {
-                if(!config.isMeta() && !config.isTarget() && CommonUtils.isGoodCandidate(config)) {
-                    features.add(config.getColumnNum());
-                }
-            }
-        }
-        return features;
     }
 
     private void mergeNodeStats(NodeStats resultNodeStats, NodeStats nodeStats) {
@@ -812,9 +798,8 @@ public class DTMaster extends AbstractMasterComputable<DTMasterParams, DTWorkerP
             features.add(allFeatures.get(i));
         }
 
-        Random random = new Random();
         for(int i = sample; i < allFeatures.size(); i++) {
-            int replacementIndex = (int) (random.nextDouble() * i);
+            int replacementIndex = (int) (featureSamplingRandom.nextDouble() * i);
             if(replacementIndex >= 0 && replacementIndex < sample) {
                 features.set(replacementIndex, allFeatures.get(i));
             }
@@ -1019,7 +1004,7 @@ public class DTMaster extends AbstractMasterComputable<DTMasterParams, DTWorkerP
             }
         } else {
             // recover all states once master is fail over
-            LOG.info("Recover master stats from cp file {}", this.checkpointOutput);
+            LOG.info("Recover master status from checkpoint file {}", this.checkpointOutput);
             recoverMasterStatus(sourceType);
         }
     }
