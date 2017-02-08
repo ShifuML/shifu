@@ -500,10 +500,10 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
                 postProcess4SEVarSelect(source, varSelectMSEOutputPath);
             } else {
                 log.info("Only print sensitivity analysis report.");
-                log.info(
-                        "Sensitivity analysis report is in {}/{}-* file(s) with format 'column_index\tcolumn_name\tmean\trms\tvariance'.",
-                        varSelectMSEOutputPath, Constants.SHIFU_VARSELECT_SE_OUTPUT_NAME);
             }
+            log.info(
+                    "Sensitivity analysis report is in {}/{}-* file(s) with format 'column_index\tcolumn_name\tmean\trms\tvariance'.",
+                    varSelectMSEOutputPath, Constants.SHIFU_VARSELECT_SE_OUTPUT_NAME);
         } else {
             log.error("VarSelect SE hadoop job is failed, please re-try varselect step.");
         }
