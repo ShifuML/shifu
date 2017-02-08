@@ -406,8 +406,23 @@ public class ShifuFileUtils {
      *             - if any I/O exception in processing
      */
     public static boolean isFileExists(String path, SourceType sourceType) throws IOException {
+        return isFileExists(new Path(path), sourceType);
+    }
+
+    /**
+     * According to SourceType to check whether file exists.
+     *
+     * @param path
+     *            - @Path of source file
+     * @param sourceType
+     *            - local/hdfs
+     * @return - true if file exists, or false
+     * @throws IOException
+     *             - if any I/O exception in processing
+     */
+    public static boolean isFileExists(Path path, SourceType sourceType) throws IOException {
         FileSystem fs = getFileSystemBySourceType(sourceType);
-        FileStatus[] fileStatusArr = fs.globStatus(new Path(path));
+        FileStatus[] fileStatusArr = fs.globStatus(path);
         return !(fileStatusArr == null || fileStatusArr.length == 0);
     }
 
