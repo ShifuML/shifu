@@ -230,6 +230,9 @@ public class ModelRunner {
         }
     }
 
+    public void setScoreScale(int scale) {
+        this.scorer.setScale(scale);
+    }
     /**
      * Cleaning the thread pool resources, must be called at last.
      */

@@ -247,4 +247,6 @@ public interface Constants {
 
     public static final String SHIFU_NORM_PREFER_PART_SIZE = "shifu.norm.prefer.part.size";
 
+    public static final String SHIFU_SCORE_SCALE = "shifu.score.scale";
+
 }

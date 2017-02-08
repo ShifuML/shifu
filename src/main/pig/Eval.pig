@@ -27,8 +27,8 @@ SET mapred.reduce.tasks.speculative.execution true;
 SET mapreduce.map.speculative true;
 SET mapreduce.reduce.speculative true;
 
-DEFINE IsDataFilterOut          ml.shifu.shifu.udf.PurifyDataUDF('$source_type', '$path_model_config', '$path_column_config', '$eval_set_name');
-DEFINE EvalScore                ml.shifu.shifu.udf.EvalScoreUDF('$source_type', '$path_model_config', '$path_column_config', '$eval_set_name');
+DEFINE IsDataFilterOut  ml.shifu.shifu.udf.PurifyDataUDF('$source_type', '$path_model_config', '$path_column_config', '$eval_set_name');
+DEFINE EvalScore        ml.shifu.shifu.udf.EvalScoreUDF('$source_type', '$path_model_config', '$path_column_config', '$eval_set_name', '$scale');
 
 raw = LOAD '$pathEvalRawData' USING PigStorage('$delimiter', '-noschema');
 raw = FILTER raw BY IsDataFilterOut(*);

@@ -15,22 +15,15 @@
  */
 package ml.shifu.shifu.udf;
 
-import java.io.BufferedWriter;
-import java.io.File;
-import java.io.IOException;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-
 import ml.shifu.shifu.container.CaseScoreResult;
 import ml.shifu.shifu.container.obj.EvalConfig;
 import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
 import ml.shifu.shifu.core.ModelRunner;
+import ml.shifu.shifu.core.Scorer;
 import ml.shifu.shifu.core.model.ModelSpec;
 import ml.shifu.shifu.fs.ShifuFileUtils;
 import ml.shifu.shifu.util.CommonUtils;
 import ml.shifu.shifu.util.Constants;
-
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.collections.MapUtils;
 import org.apache.commons.lang.StringUtils;
@@ -45,6 +38,13 @@ import org.apache.pig.impl.logicalLayer.schema.Schema.FieldSchema;
 import org.apache.pig.impl.util.UDFContext;
 import org.apache.pig.tools.pigstats.PigStatusReporter;
 import org.encog.ml.BasicML;
+
+import java.io.BufferedWriter;
+import java.io.File;
+import java.io.IOException;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
 
 /**
  * Calculate the score for each evaluation data
@@ -62,6 +62,7 @@ public class EvalScoreUDF extends AbstractTrainerUDF<Tuple> {
 
     private Map<String, Integer> subModelsCnt;
     private int modelCnt;
+    private String scale;
 
     /**
      * A simple weight exception validation: if over 5000 throw exceptions
@@ -70,6 +71,11 @@ public class EvalScoreUDF extends AbstractTrainerUDF<Tuple> {
 
     public EvalScoreUDF(String source, String pathModelConfig, String pathColumnConfig, String evalSetName)
             throws IOException {
+        this(source, pathModelConfig, pathColumnConfig, evalSetName, Integer.toString(Scorer.DEFAULT_SCORE_SCALE));
+    }
+
+    public EvalScoreUDF(String source, String pathModelConfig, String pathColumnConfig, String evalSetName,
+                        String scale) throws IOException {
         super(source, pathModelConfig, pathColumnConfig);
 
         evalConfig = modelConfig.getEvalConfigByName(evalSetName);
@@ -111,6 +117,8 @@ public class EvalScoreUDF extends AbstractTrainerUDF<Tuple> {
                 .getDataSet().getSource());
         this.subModelsCnt = CommonUtils.getSubModelsCnt(modelConfig, this.columnConfigList, evalConfig, evalConfig
                 .getDataSet().getSource());
+
+        this.scale = scale;
     }
 
     public Tuple exec(Tuple input) throws IOException {
@@ -132,6 +140,7 @@ public class EvalScoreUDF extends AbstractTrainerUDF<Tuple> {
             }
 
             this.modelCnt = models.size();
+            this.modelRunner.setScoreScale(Integer.parseInt(this.scale));
         }
 
         Map<String, String> rawDataMap = CommonUtils.convertDataIntoMap(input, this.headers);
