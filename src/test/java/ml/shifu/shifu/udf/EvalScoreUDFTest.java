@@ -85,6 +85,22 @@ public class EvalScoreUDFTest {
         Assert.assertEquals("{EvalScore: (shifu::diagnosis: chararray,shifu::weight: chararray,shifu::mean: int,shifu::max: int,shifu::min: int,shifu::median: int,shifu::model0: int,shifu::model1: int,shifu::model2: int,shifu::model3: int,shifu::model4: int)}", instance.outputSchema(null).toString());
     }
 
+    @Test
+    public void testExecScale() throws IOException {
+        EvalScoreUDF scaleInst = new EvalScoreUDF("LOCAL",
+                "src/test/resources/example/cancer-judgement/ModelStore/ModelSet1/ModelConfig.json",
+                "src/test/resources/example/cancer-judgement/ModelStore/ModelSet1/ColumnConfig.json",
+                "EvalA", "1000000000");
+
+        Tuple input = TupleFactory.getInstance().newTuple(31);
+        for (int i = 0; i < 31; i++) {
+            input.set(i, 1);
+        }
+        input.set(0, "M");
+
+        Assert.assertEquals("(M,1.0,42431529,74243477,5347464,35996827,35996827,30754354,74243477,65815525,5347464)", scaleInst.exec(input).toString());
+    }
+
     @AfterClass
     public void clearUp() throws IOException {
         FileUtils.deleteDirectory(tmpModels);

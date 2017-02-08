@@ -85,6 +85,7 @@ public class ShifuCLI {
     private static final String SHOW = "show";
 
     private static final String SHUFFLE = "shuffle";
+    private static final String RESUME = "resume";
 
     static private final Logger log = LoggerFactory.getLogger(ShifuCLI.class);
 
@@ -195,13 +196,14 @@ public class ShifuCLI {
                         log.info("Init commbo models");
                         status = initComboModels();
                     } else if ( cmd.hasOption(EVAL_CMD_RUN) ) {
-                        log.info("Run combo model.");
-                        status = runComboModels(opts.hasOption(SHUFFLE));
+                        log.info("Run combo model - with toShuffle: {}, with toResume: {}",
+                                opts.hasOption(SHUFFLE), opts.hasOption(RESUME));
+                        status = runComboModels(cmd.hasOption(SHUFFLE), cmd.hasOption(RESUME));
                         // train combo models
                     } else if ( cmd.hasOption(EVAL_CMD) ) {
                         log.info("Eval combo model.");
                         // eval combo model performance
-                        status = evalComboModels();
+                        status = evalComboModels(cmd.hasOption(RESUME));
                     } else {
                         log.error("Invalid command usage.");
                         printUsage();
@@ -546,9 +548,10 @@ public class ShifuCLI {
      * @return
      * @throws Exception
      */
-    private static int runComboModels(boolean isToShuffleData) throws Exception {
+    private static int runComboModels(boolean isToShuffleData, boolean isToResume) throws Exception {
         ComboModelProcessor processor = new ComboModelProcessor(ComboModelProcessor.ComboStep.RUN);
         processor.setToShuffleData(isToShuffleData);
+        processor.setToResume(isToResume);
         return processor.run();
     }
 
@@ -557,8 +560,9 @@ public class ShifuCLI {
      * @return
      * @throws Exception
      */
-    private static int evalComboModels() throws Exception {
-        Processor processor = new ComboModelProcessor(ComboModelProcessor.ComboStep.EVAL);
+    private static int evalComboModels(boolean isToResume) throws Exception {
+        ComboModelProcessor processor = new ComboModelProcessor(ComboModelProcessor.ComboStep.EVAL);
+        processor.setToResume(isToResume);
         return processor.run();
     }
 
@@ -615,6 +619,8 @@ public class ShifuCLI {
                 .withDescription("Reset all variables to finalSelect = false").create(RESET);
         Option opt_shuffle = OptionBuilder.hasArg(false)
                 .withDescription("Shuffle data after normalization").create(SHUFFLE);
+        Option opt_resume = OptionBuilder.hasArg(false)
+                .withDescription("Resume combo model training.").create(RESUME);
 
         Option opt_list = OptionBuilder.hasArg(false).create(LIST);
         Option opt_delete = OptionBuilder.hasArg().create(DELETE);
@@ -643,6 +649,7 @@ public class ShifuCLI {
         opts.addOption(opt_eval);
         opts.addOption(opt_init);
         opts.addOption(opt_shuffle);
+        opts.addOption(opt_resume);
 
         opts.addOption(opt_list);
         opts.addOption(opt_delete);
@@ -680,8 +687,8 @@ public class ShifuCLI {
         System.out.println("\texport [-t pmml|columnstats] [-c]       Export model to PMML format or export ColumnConfig.");
         System.out.println("\tcombo -new    <Algorithm List>          Create a combo model train. Algorithm lis should be NN,LR,RF,GBT,LR");
         System.out.println("\tcombo -init                             Generate sub-models.");
-        System.out.println("\tcombo -run                              Run Combo-Model train.");
-        System.out.println("\tcombo -eval                             Evaluate Combo-Model performance.");
+        System.out.println("\tcombo -run [-shuffle] [-resume]         Run Combo-Model train.");
+        System.out.println("\tcombo -eval [-resume]                   Evaluate Combo-Model performance.");
         System.out.println("\tversion|v|-v|-version                   Print version of current package.");
         System.out.println("\thelp|h|-h|-help                         Help message.");
     }

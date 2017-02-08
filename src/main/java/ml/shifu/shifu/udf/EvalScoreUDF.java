@@ -15,20 +15,15 @@
  */
 package ml.shifu.shifu.udf;
 
-import java.io.BufferedWriter;
-import java.io.File;
-import java.io.IOException;
-import java.util.List;
-import java.util.Map;
-
 import ml.shifu.shifu.container.CaseScoreResult;
 import ml.shifu.shifu.container.obj.EvalConfig;
 import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
 import ml.shifu.shifu.core.ModelRunner;
+import ml.shifu.shifu.core.Scorer;
+import ml.shifu.shifu.core.model.ModelSpec;
 import ml.shifu.shifu.fs.ShifuFileUtils;
 import ml.shifu.shifu.util.CommonUtils;
 import ml.shifu.shifu.util.Constants;
-
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.collections.MapUtils;
 import org.apache.commons.lang.StringUtils;
@@ -44,6 +39,13 @@ import org.apache.pig.impl.util.UDFContext;
 import org.apache.pig.tools.pigstats.PigStatusReporter;
 import org.encog.ml.BasicML;
 
+import java.io.BufferedWriter;
+import java.io.File;
+import java.io.IOException;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+
 /**
  * Calculate the score for each evaluation data
  */
@@ -55,11 +57,12 @@ public class EvalScoreUDF extends AbstractTrainerUDF<Tuple> {
     private ModelRunner modelRunner;
     private String[] headers;
 
-    private int modelCnt;
-
     private int maxScore = Integer.MIN_VALUE;
-
     private int minScore = Integer.MAX_VALUE;
+
+    private Map<String, Integer> subModelsCnt;
+    private int modelCnt;
+    private String scale;
 
     /**
      * A simple weight exception validation: if over 5000 throw exceptions
@@ -68,6 +71,11 @@ public class EvalScoreUDF extends AbstractTrainerUDF<Tuple> {
 
     public EvalScoreUDF(String source, String pathModelConfig, String pathColumnConfig, String evalSetName)
             throws IOException {
+        this(source, pathModelConfig, pathColumnConfig, evalSetName, Integer.toString(Scorer.DEFAULT_SCORE_SCALE));
+    }
+
+    public EvalScoreUDF(String source, String pathModelConfig, String pathColumnConfig, String evalSetName,
+                        String scale) throws IOException {
         super(source, pathModelConfig, pathColumnConfig);
 
         evalConfig = modelConfig.getEvalConfigByName(evalSetName);
@@ -107,18 +115,34 @@ public class EvalScoreUDF extends AbstractTrainerUDF<Tuple> {
         // move model runner construction in exec to avoid OOM error in client side if model is too big like RF
         this.modelCnt = CommonUtils.getBasicModelsCnt(modelConfig, this.columnConfigList, evalConfig, evalConfig
                 .getDataSet().getSource());
+        this.subModelsCnt = CommonUtils.getSubModelsCnt(modelConfig, this.columnConfigList, evalConfig, evalConfig
+                .getDataSet().getSource());
+
+        this.scale = scale;
     }
 
     public Tuple exec(Tuple input) throws IOException {
-        if(modelRunner == null) {
+        if(this. modelRunner == null) {
             // here to initialize modelRunner, this is moved from constructor to here to avoid OOM in client side.
             // UDF in pig client will be initialized to get some metadata issues
             List<BasicML> models = CommonUtils.loadBasicModels(modelConfig, this.columnConfigList, evalConfig,
-                    evalConfig.getDataSet().getSource(), evalConfig.getGbtConvertToProb());
-            modelRunner = new ModelRunner(modelConfig, columnConfigList, this.headers, evalConfig.getDataSet()
+                     evalConfig.getDataSet().getSource(), evalConfig.getGbtConvertToProb());
+            this.modelRunner = new ModelRunner(modelConfig, columnConfigList, this.headers, evalConfig.getDataSet()
                     .getDataDelimiter(), models);
-            modelCnt = models.size();
+
+            List<ModelSpec> subModels = CommonUtils.loadSubModels(modelConfig, this.columnConfigList, evalConfig,
+                    evalConfig.getDataSet().getSource(), evalConfig.getGbtConvertToProb());
+            if ( CollectionUtils.isNotEmpty(subModels) ) {
+                for ( ModelSpec modelSpec : subModels ) {
+                    this.modelRunner.addSubModels(modelSpec);
+                    this.subModelsCnt.put(modelSpec.getModelName(), modelSpec.getModels().size());
+                }
+            }
+
+            this.modelCnt = models.size();
+            this.modelRunner.setScoreScale(Integer.parseInt(this.scale));
         }
+
         Map<String, String> rawDataMap = CommonUtils.convertDataIntoMap(input, this.headers);
         if(MapUtils.isEmpty(rawDataMap)) {
             return null;
@@ -165,29 +189,35 @@ public class EvalScoreUDF extends AbstractTrainerUDF<Tuple> {
 
         incrementTagCounters(tag, weight, runInterval);
 
+        Map<String, CaseScoreResult> subModelScores = cs.getSubModelScores();
+
         tuple.append(weight);
 
         if(modelConfig.isRegression()) {
-            tuple.append(cs.getAvgScore());
-            tuple.append(cs.getMaxScore());
-            tuple.append(cs.getMinScore());
-            tuple.append(cs.getMedianScore());
-
-            for(Integer score: cs.getScores()) {
-                tuple.append(score);
+            if ( CollectionUtils.isNotEmpty(cs.getScores()) ) {
+                appendModelScore(tuple, cs, true);
             }
 
-            // get maxScore and minScore for such mapper or reducer
-            if(cs.getMedianScore() > maxScore) {
-                maxScore = cs.getMedianScore();
-            }
-
-            if(cs.getMedianScore() < minScore) {
-                minScore = cs.getMedianScore();
+            if ( MapUtils.isNotEmpty(subModelScores) ) {
+                Iterator<Map.Entry<String, CaseScoreResult>> iterator = subModelScores.entrySet().iterator();
+                while ( iterator.hasNext() ) {
+                    Map.Entry<String, CaseScoreResult> entry = iterator.next();
+                    CaseScoreResult subCs = entry.getValue();
+                    appendModelScore(tuple, subCs, false);
+                }
             }
         } else {
-            for(int i = 0; i < cs.getScores().size(); i++) {
-                tuple.append(cs.getScores().get(i));
+            if ( CollectionUtils.isNotEmpty(cs.getScores()) ) {
+                appendSimpleScore(tuple, cs);
+            }
+
+            if ( MapUtils.isNotEmpty(subModelScores) ) {
+                Iterator<Map.Entry<String, CaseScoreResult>> iterator = subModelScores.entrySet().iterator();
+                while ( iterator.hasNext() ) {
+                    Map.Entry<String, CaseScoreResult> entry = iterator.next();
+                    CaseScoreResult subCs = entry.getValue();
+                    appendSimpleScore(tuple, subCs);
+                }
             }
         }
 
@@ -200,6 +230,45 @@ public class EvalScoreUDF extends AbstractTrainerUDF<Tuple> {
         }
 
         return tuple;
+    }
+
+    /**
+     * Append model scores (average, max, min, median, and scores) into tuple
+     * @param tuple - Tuple to append
+     * @param cs - CaseScoreResult
+     * @param toGetMaxMin - to check max/min or not
+     */
+    private void appendModelScore(Tuple tuple, CaseScoreResult cs, boolean toGetMaxMin) {
+        tuple.append(cs.getAvgScore());
+        tuple.append(cs.getMaxScore());
+        tuple.append(cs.getMinScore());
+        tuple.append(cs.getMedianScore());
+
+        for (Integer score : cs.getScores()) {
+            tuple.append(score);
+        }
+
+        if ( toGetMaxMin ) {
+            // get maxScore and minScore for such mapper or reducer
+            if (cs.getMedianScore() > maxScore) {
+                maxScore = cs.getMedianScore();
+            }
+
+            if (cs.getMedianScore() < minScore) {
+                minScore = cs.getMedianScore();
+            }
+        }
+    }
+
+    /**
+     * Append model scores into tuple
+     * @param tuple - Tuple to append
+     * @param cs - CaseScoreResult
+     */
+    private void appendSimpleScore(Tuple tuple, CaseScoreResult cs) {
+        for (int i = 0; i < cs.getScores().size(); i++) {
+            tuple.append(cs.getScores().get(i));
+        }
     }
 
     @Override
@@ -315,17 +384,35 @@ public class EvalScoreUDF extends AbstractTrainerUDF<Tuple> {
             tupleSchema.add(new FieldSchema(SCHEMA_PREFIX + weightName, DataType.CHARARRAY));
 
             if(modelConfig.isRegression()) {
-                tupleSchema.add(new FieldSchema(SCHEMA_PREFIX + "mean", DataType.INTEGER));
-                tupleSchema.add(new FieldSchema(SCHEMA_PREFIX + "max", DataType.INTEGER));
-                tupleSchema.add(new FieldSchema(SCHEMA_PREFIX + "min", DataType.INTEGER));
-                tupleSchema.add(new FieldSchema(SCHEMA_PREFIX + "median", DataType.INTEGER));
-                for(int i = 0; i < modelCnt; i++) {
-                    tupleSchema.add(new FieldSchema(SCHEMA_PREFIX + "model" + i, DataType.INTEGER));
+                if ( this.modelCnt > 0 ) {
+                    addModelSchema(tupleSchema, this.modelCnt, "");
+                }
+
+                if ( MapUtils.isNotEmpty(this.subModelsCnt) ) {
+                    Iterator<Map.Entry<String, Integer>> iterator = this.subModelsCnt.entrySet().iterator();
+                    while ( iterator.hasNext() ) {
+                        Map.Entry<String, Integer> entry = iterator.next();
+                        String modelName = entry.getKey();
+                        Integer smCnt = entry.getValue();
+                        if ( smCnt > 0 ) {
+                            addModelSchema(tupleSchema, smCnt, modelName);
+                        }
+                    }
                 }
             } else {
-                for(int i = 0; i < modelCnt; i++) {
-                    for(int j = 0; j < modelConfig.getTags().size(); j++) {
-                        tupleSchema.add(new FieldSchema(SCHEMA_PREFIX + "model_" + i + "_tag_" + j, DataType.INTEGER));
+                if ( this.modelCnt > 0 ) {
+                    addModelTagSchema(tupleSchema, modelCnt, "");
+                }
+
+                if ( MapUtils.isNotEmpty(this.subModelsCnt) ) {
+                    Iterator<Map.Entry<String, Integer>> iterator = this.subModelsCnt.entrySet().iterator();
+                    while ( iterator.hasNext() ) {
+                        Map.Entry<String, Integer> entry = iterator.next();
+                        String modelName = entry.getKey();
+                        Integer smCnt = entry.getValue();
+                        if ( smCnt > 0 ) {
+                            addModelTagSchema(tupleSchema, smCnt, modelName);
+                        }
                     }
                 }
             }
@@ -342,6 +429,49 @@ public class EvalScoreUDF extends AbstractTrainerUDF<Tuple> {
             log.error("Error in outputSchema", e);
             return null;
         }
+    }
+
+    /**
+     * Add model(Regression) schema into tuple schema, if the modelCount > 0
+     * @param tupleSchema - schema for Tuple
+     * @param modelCount - model count
+     * @param modelName - model name
+     */
+    private void addModelSchema(Schema tupleSchema, Integer modelCount, String modelName) {
+        if ( modelCount > 0 ) {
+            tupleSchema.add(new FieldSchema(SCHEMA_PREFIX + addModelNameToField(modelName, "mean"), DataType.INTEGER));
+            tupleSchema.add(new FieldSchema(SCHEMA_PREFIX + addModelNameToField(modelName, "max"), DataType.INTEGER));
+            tupleSchema.add(new FieldSchema(SCHEMA_PREFIX + addModelNameToField(modelName, "min"), DataType.INTEGER));
+            tupleSchema.add(new FieldSchema(SCHEMA_PREFIX + addModelNameToField(modelName, "median"), DataType.INTEGER));
+            for (int i = 0; i < modelCount; i++) {
+                tupleSchema.add(new FieldSchema(SCHEMA_PREFIX + addModelNameToField(modelName, "model" + i), DataType.INTEGER));
+            }
+        }
+    }
+
+    /**
+     * Add model(Classification) schema into tuple schema, if the modelCount > 0
+     * @param tupleSchema  - schema for Tuple
+     * @param modelCount - model count
+     * @param modelName - model name
+     */
+    private void addModelTagSchema(Schema tupleSchema, Integer modelCount, String modelName) {
+        for(int i = 0; i < modelCount; i++) {
+            for (int j = 0; j < modelConfig.getTags().size(); j++) {
+                tupleSchema.add(new FieldSchema(
+                        SCHEMA_PREFIX + addModelNameToField(modelName, "model_" + i + "_tag_" + j), DataType.INTEGER));
+            }
+        }
+    }
+
+    /**
+     * Add model name as the namespace of field
+     * @param modelName - model name
+     * @param field - field name
+     * @return - tuple name with namespace
+     */
+    private String addModelNameToField(String modelName, String field) {
+        return (StringUtils.isBlank(modelName) ?  field : modelName + "::" + field);
     }
 
 }
