@@ -73,18 +73,6 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
 
     private EvalStep evalStep;
 
-    private long pigPosTags = 0l;
-
-    private long pigNegTags = 0l;
-
-    private double pigPosWeightTags = 0d;
-
-    private double pigNegWeightTags = 0d;
-
-    private int maxScore = Integer.MIN_VALUE;
-
-    private int minScore = Integer.MAX_VALUE;
-
     private long evalRecords = 0l;
 
     /**
@@ -298,7 +286,7 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
      * @throws IOException
      */
     @SuppressWarnings("deprecation")
-    private void runPigScore(EvalConfig evalConfig) throws IOException {
+    private ScoreStatus runPigScore(EvalConfig evalConfig) throws IOException {
         // clean up output directories
         SourceType sourceType = evalConfig.getDataSet().getSource();
 
@@ -344,42 +332,50 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
 
         while(iter.hasNext()) {
             JobStats jobStats = iter.next();
-            this.evalRecords = jobStats.getHadoopCounters().getGroup(Constants.SHIFU_GROUP_COUNTER)
+            long evalRecords = jobStats.getHadoopCounters().getGroup(Constants.SHIFU_GROUP_COUNTER)
                     .getCounter(Constants.COUNTER_RECORDS);
             log.info("Total valid eval records is : {}", evalRecords);
             // If no basic record counter, check next one
-            if(this.evalRecords == 0L) {
+            if(evalRecords == 0L) {
                 continue;
             }
+            this.evalRecords = evalRecords;
 
-            this.pigPosTags = jobStats.getHadoopCounters().getGroup(Constants.SHIFU_GROUP_COUNTER)
+            long pigPosTags = jobStats.getHadoopCounters().getGroup(Constants.SHIFU_GROUP_COUNTER)
                     .getCounter(Constants.COUNTER_POSTAGS);
-            this.pigNegTags = jobStats.getHadoopCounters().getGroup(Constants.SHIFU_GROUP_COUNTER)
+            long pigNegTags = jobStats.getHadoopCounters().getGroup(Constants.SHIFU_GROUP_COUNTER)
                     .getCounter(Constants.COUNTER_NEGTAGS);
-            this.pigPosWeightTags = jobStats.getHadoopCounters().getGroup(Constants.SHIFU_GROUP_COUNTER)
+            double pigPosWeightTags = jobStats.getHadoopCounters().getGroup(Constants.SHIFU_GROUP_COUNTER)
                     .getCounter(Constants.COUNTER_WPOSTAGS)
                     / (Constants.EVAL_COUNTER_WEIGHT_SCALE * 1.0d);
-            this.pigNegWeightTags = jobStats.getHadoopCounters().getGroup(Constants.SHIFU_GROUP_COUNTER)
+            double pigNegWeightTags = jobStats.getHadoopCounters().getGroup(Constants.SHIFU_GROUP_COUNTER)
                     .getCounter(Constants.COUNTER_WNEGTAGS)
                     / (Constants.EVAL_COUNTER_WEIGHT_SCALE * 1.0d);
 
             long totalRunTime = jobStats.getHadoopCounters().getGroup(Constants.SHIFU_GROUP_COUNTER)
                     .getCounter(Constants.TOTAL_MODEL_RUNTIME);
 
-            log.info("Avg SLA for eval model scoring is {} micro seconds", totalRunTime / this.evalRecords);
+            log.info("Avg SLA for eval model scoring is {} micro seconds", totalRunTime / evalRecords);
 
+            int maxScore = Integer.MIN_VALUE;
+            int minScore = Integer.MAX_VALUE;
             if(modelConfig.isRegression()) {
-                locateMaxMinScoreFromFile(sourceType, maxMinScoreFolder);
+                int[] maxMinScores = locateMaxMinScoreFromFile(sourceType, maxMinScoreFolder);
+                maxScore = maxMinScores[0];
+                minScore = maxMinScores[1];
                 ShifuFileUtils.deleteFile(maxMinScoreFolder, sourceType);
             }
-
-            // only one pig job with such counters, break
-            break;
+            // only one pig job with such counters, return
+            return new ScoreStatus(pigPosTags, pigNegTags, pigPosWeightTags, pigNegWeightTags, maxScore, minScore,
+                    evalRecords);
         }
+        return null;
     }
 
-    private void locateMaxMinScoreFromFile(SourceType sourceType, String maxMinScoreFolder) throws IOException {
+    private int[] locateMaxMinScoreFromFile(SourceType sourceType, String maxMinScoreFolder) throws IOException {
         List<Scanner> scanners = null;
+        int maxScore = Integer.MIN_VALUE;
+        int minScore = Integer.MAX_VALUE;
         try {
             // here only works for 1 reducer
             scanners = ShifuFileUtils.getDataScanners(maxMinScoreFolder, sourceType);
@@ -409,6 +405,7 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
                 }
             }
         }
+        return new int[] { maxScore, minScore };
     }
 
     /**
@@ -458,7 +455,7 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
         AkkaSystemExecutor.getExecutor().submitModelEvalJob(modelConfig,
                 ShifuFileUtils.searchColumnConfig(config, this.columnConfigList), config, scanners);
 
-        // TODO A bug here in local mode
+        // FIXME A bug here in local mode, compute eval records please
         // this.evalRecords = ...;
         closeScanners(scanners);
     }
@@ -610,9 +607,9 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
      *             any exception in delete the old tmp files
      */
     private void runPigEval(EvalConfig evalConfig) throws IOException {
-        runPigScore(evalConfig);
+        ScoreStatus ss = runPigScore(evalConfig);
         // TODO code refacter because of several magic numbers and not good name functions ...
-        runConfusionMatrix(evalConfig);
+        runConfusionMatrix(evalConfig, ss);
     }
 
     /**
@@ -683,15 +680,15 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
      * @return List of ConfusionMatrixObject
      * @throws IOException
      */
-    private void runConfusionMatrix(EvalConfig config) throws IOException {
+    private void runConfusionMatrix(EvalConfig config, ScoreStatus ss) throws IOException {
         ConfusionMatrix worker = new ConfusionMatrix(modelConfig, config);
         switch(modelConfig.getBasic().getRunMode()) {
             case DIST:
             case MAPRED:
                 if(modelConfig.isRegression()) {
-                    worker.bufferedComputeConfusionMatrixAndPerformance(this.pigPosTags, this.pigNegTags,
-                            this.pigPosWeightTags, this.pigNegWeightTags, this.evalRecords, this.maxScore,
-                            this.minScore);
+                    worker.bufferedComputeConfusionMatrixAndPerformance(ss.pigPosTags, ss.pigNegTags,
+                            ss.pigPosWeightTags, ss.pigNegWeightTags, ss.evalRecords, ss.maxScore,
+                            ss.minScore);
                 } else {
                     worker.computeConfusionMatixForMultipleClassification(this.evalRecords);
                 }
@@ -701,4 +698,44 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
                 break;
         }
     }
+
+    /**
+     * Run confusion matrix
+     * 
+     * @param config
+     * @return List of ConfusionMatrixObject
+     * @throws IOException
+     */
+    private void runConfusionMatrix(EvalConfig config) throws IOException {
+        runConfusionMatrix(config, null);
+    }
+
+    private static class ScoreStatus {
+
+        public long pigPosTags = 0l;
+
+        public long pigNegTags = 0l;
+
+        public double pigPosWeightTags = 0d;
+
+        public double pigNegWeightTags = 0d;
+
+        public int maxScore = Integer.MIN_VALUE;
+
+        public int minScore = Integer.MAX_VALUE;
+
+        public long evalRecords = 0l;
+
+        public ScoreStatus(long pigPosTags, long pigNegTags, double pigPosWeightTags, double pigNegWeightTags,
+                int maxScore, int minScore, long evalRecords) {
+            this.pigPosTags = pigPosTags;
+            this.pigNegTags = pigNegTags;
+            this.pigPosWeightTags = pigPosWeightTags;
+            this.pigNegWeightTags = pigNegWeightTags;
+            this.maxScore = maxScore;
+            this.minScore = minScore;
+            this.evalRecords = evalRecords;
+        }
+    }
+
 }
