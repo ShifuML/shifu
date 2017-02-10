@@ -962,8 +962,7 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
         // only for NN varselect, use half of epochs for sensitivity analysis
         // if for gs mode, half of iterations are used
         LOG.info("this.isForVarSelect() - {}, isGsMode - {}", this.isForVarSelect(), isGsMode);
-        if(NNConstants.NN_ALG_NAME.equalsIgnoreCase(alg)
-                && (this.isForVarSelect() || isGsMode)
+        if(NNConstants.NN_ALG_NAME.equalsIgnoreCase(alg) && (this.isForVarSelect() || isGsMode)
                 && numTrainEpoches >= VAR_SELECT_TRAINING_DECAY_EPOCHES_THRESHOLD) {
             numTrainEpoches = numTrainEpoches / 2;
         }
@@ -1052,21 +1051,26 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
         } else {
             args.add(String.format(CommonConstants.MAPREDUCE_PARAM_FORMAT, GuaguaConstants.GUAGUA_SPLIT_COMBINABLE,
                     Environment.getProperty(GuaguaConstants.GUAGUA_SPLIT_COMBINABLE, "true")));
+            // TODO some issues here for dynamic tuning, disable it
             // set to dynamic to save mappers, sometimes maybe OOM, users should tune guagua.split.maxCombinedSplitSize
             // in shifuconfig; by default it is 256M, consider in some cases user selects only a half of features, this
             // number should be 512M
-            int[] inputOutputIndex = DTrainUtils.getInputOutputCandidateCounts(this.columnConfigList);
-            int inputCount = inputOutputIndex[0] == 0 ? inputOutputIndex[2] : inputOutputIndex[0];
-            int candidateCount = inputOutputIndex[2];
-            long maxCombineSize = 268435456; // default 256M
-            maxCombineSize = Double.valueOf((maxCombineSize * 1d * (candidateCount * 1d / inputCount))).longValue();
-            LOG.info(
-                    "Dynamic worker size is tuned to {}. If not good for # of workers, configure it in SHIFU_HOME/conf/shifuconfig::guagua.split.maxCombinedSplitSize",
-                    maxCombineSize);
+            // int[] inputOutputIndex = DTrainUtils.getInputOutputCandidateCounts(this.columnConfigList);
+            // int inputCount = inputOutputIndex[0] == 0 ? inputOutputIndex[2] : inputOutputIndex[0];
+            // int candidateCount = inputOutputIndex[2];
+            // long maxCombineSize = 268435456; // default 256M
+            // maxCombineSize = Double.valueOf((maxCombineSize * 1d * (candidateCount * 1d / inputCount))).longValue();
+            // LOG.info(
+            // "Dynamic worker size is tuned to {}. If not good for # of workers, configure it in SHIFU_HOME/conf/shifuconfig::guagua.split.maxCombinedSplitSize",
+            // maxCombineSize);
+            // args.add(String.format(CommonConstants.MAPREDUCE_PARAM_FORMAT,
+            // GuaguaConstants.GUAGUA_SPLIT_MAX_COMBINED_SPLIT_SIZE,
+            // Environment.getProperty(GuaguaConstants.GUAGUA_SPLIT_MAX_COMBINED_SPLIT_SIZE, maxCombineSize + "")));
+
+            // set to default 256m
             args.add(String.format(CommonConstants.MAPREDUCE_PARAM_FORMAT,
                     GuaguaConstants.GUAGUA_SPLIT_MAX_COMBINED_SPLIT_SIZE,
-                    Environment.getProperty(GuaguaConstants.GUAGUA_SPLIT_MAX_COMBINED_SPLIT_SIZE, maxCombineSize + "")));
-
+                    Environment.getProperty(GuaguaConstants.GUAGUA_SPLIT_MAX_COMBINED_SPLIT_SIZE, 268435456 + "")));
         }
         // special tuning parameters for shifu, 0.97 means each iteation master wait for 97% workers and then can go to
         // next iteration.
