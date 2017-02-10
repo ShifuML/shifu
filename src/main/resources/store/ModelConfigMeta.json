@@ -663,6 +663,18 @@
                         "type" : "text",
                         "directive": "input"
                     }, {
+                        "name" : "normalizedValidationDataPath",
+                        "type" : "text",
+                        "directive": "input"
+                    }, {
+                        "name" : "cleanedDataPath",
+                        "type" : "text",
+                        "directive": "input"
+                    }, {
+                        "name" : "cleanedValidationDataPath",
+                        "type" : "text",
+                        "directive": "input"
+                    }, {
                         "name" : "selectedRawDataPath",
                         "type" : "text",
                         "directive": "input"

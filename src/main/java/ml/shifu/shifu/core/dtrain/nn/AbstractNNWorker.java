@@ -321,6 +321,7 @@ public abstract class AbstractNNWorker<VALUE extends Writable> extends
         this.outputNodeCount = modelConfig.isRegression() ? inputOutputIndex[1]
                 : (modelConfig.getTrain().isOneVsAll() ? inputOutputIndex[1] : modelConfig.getTags().size());
         this.candidateCount = inputOutputIndex[2];
+        LOG.info("Input count {}, output count {}, candidate count {}", inputNodeCount, outputNodeCount, candidateCount);
 
         this.isDry = Boolean.TRUE.toString().equalsIgnoreCase(
                 context.getProps().getProperty(CommonConstants.SHIFU_DRY_DTRAIN));
