@@ -104,7 +104,7 @@ import com.google.common.base.Splitter;
  * 
  * @author Zhang David (pengzhang@paypal.com)
  */
-@ComputableMonitor(timeUnit = TimeUnit.SECONDS, duration = 240)
+@ComputableMonitor(timeUnit = TimeUnit.SECONDS, duration = 300)
 public class DTWorker
         extends
         AbstractWorkerComputable<DTMasterParams, DTWorkerParams, GuaguaWritableAdapter<LongWritable>, GuaguaWritableAdapter<Text>> {

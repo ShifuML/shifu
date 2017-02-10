@@ -173,8 +173,6 @@ public interface Constants {
 
     public static final String SHIFU_VARSELECT_FILTER_NUM = "shifu.varselect.filter.num";
 
-    // public static final String SHIFU_VARSELECT_WRAPPER_NUM = "shifu.varselect.wrapper.num";
-
     public static final String SHIFU_VARSELECT_FILTEROUT_TYPE = "shifu.varselect.filterout.type";
 
     public static final String SHIFU_DEFAULT_VARSEL_SE_MULTI = "true";
