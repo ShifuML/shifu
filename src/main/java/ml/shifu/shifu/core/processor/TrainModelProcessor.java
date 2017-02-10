@@ -961,7 +961,9 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
         int numTrainEpoches = super.getModelConfig().getTrain().getNumTrainEpochs();
         // only for NN varselect, use half of epochs for sensitivity analysis
         // if for gs mode, half of iterations are used
-        if(NNConstants.NN_ALG_NAME.equalsIgnoreCase(alg) && (this.isForVarSelect() || isGsMode)
+        LOG.info("this.isForVarSelect() - {}, isGsMode - {}", this.isForVarSelect(), isGsMode);
+        if(NNConstants.NN_ALG_NAME.equalsIgnoreCase(alg)
+                && (this.isForVarSelect() || isGsMode)
                 && numTrainEpoches >= VAR_SELECT_TRAINING_DECAY_EPOCHES_THRESHOLD) {
             numTrainEpoches = numTrainEpoches / 2;
         }
