@@ -64,3 +64,6 @@ guagua.min.workers.ratio=0.97
 # shifu.norm.shuffle.size = 100
 # the preferred normalized data size per part
 # shifu.norm.prefer.part.size = 256000000
+
+# the precision of model scores
+# shifu.score.scale = 1000
