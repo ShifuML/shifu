@@ -122,20 +122,6 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
         }
     }
 
-    private void prepareSelect() throws Exception {
-        setUp(ModelStep.VARSELECT);
-        validateParameters();
-        // reset all selections if user specify or select by absolute number
-        if(isToReset) {
-            log.info("Reset all selections data including type,final select etc!");
-            resetAllFinalSelect();
-        }
-        // sync to make sure load from hdfs config is consistent with local configuration
-        syncDataToHdfs(super.modelConfig.getDataSet().getSource());
-    }
-
-    // private boolean is
-
     /**
      * Run for the variable selection
      */
@@ -144,29 +130,47 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
         log.info("Step Start: varselect");
         long start = System.currentTimeMillis();
         try {
-            prepareSelect();
-            if(modelConfig.isRegression()) {
-                VariableSelector selector = new VariableSelector(this.modelConfig, this.columnConfigList);
-                String filterBy = this.modelConfig.getVarSelectFilterBy();
-                if(filterBy.equalsIgnoreCase(Constants.FILTER_BY_KS)
-                        || filterBy.equalsIgnoreCase(Constants.FILTER_BY_IV)
-                        || filterBy.equalsIgnoreCase(Constants.FILTER_BY_PARETO)
-                        || filterBy.equalsIgnoreCase(Constants.FILTER_BY_MIX)) {
-                    CommonUtils.updateColumnConfigFlags(modelConfig, columnConfigList);
-                    this.columnConfigList = selector.selectByFilter();
-                } else if(filterBy.equalsIgnoreCase(Constants.FILTER_BY_FI)) {
-                    selectByFeatureImportance();
-                } else if(filterBy.equalsIgnoreCase(Constants.FILTER_BY_SE)
-                        || filterBy.equalsIgnoreCase(Constants.FILTER_BY_ST)) {
-                    distributedSEWrapper();
-                } else if(filterBy.equalsIgnoreCase(Constants.FILTER_BY_VOTED)) {
-                    votedVariablesSelection();
-                }
+            setUp(ModelStep.VARSELECT);
+            validateParameters();
+            // reset all selections if user specify or select by absolute number
+            if(isToReset) {
+                log.info("Reset all selections data including type final select etc!");
+                resetAllFinalSelect();
             } else {
-                // multiple classification, select all candidate at first, TODO add SE for multi-classification
-                for(ColumnConfig config: this.columnConfigList) {
-                    if(CommonUtils.isGoodCandidate(modelConfig.isRegression(), config)) {
-                        config.setFinalSelect(true);
+                // sync to make sure load from hdfs config is consistent with local configuration
+                syncDataToHdfs(super.modelConfig.getDataSet().getSource());
+
+                if(modelConfig.isRegression()) {
+                    VariableSelector selector = new VariableSelector(this.modelConfig, this.columnConfigList);
+                    String filterBy = this.modelConfig.getVarSelectFilterBy();
+                    if(filterBy.equalsIgnoreCase(Constants.FILTER_BY_KS)
+                            || filterBy.equalsIgnoreCase(Constants.FILTER_BY_IV)
+                            || filterBy.equalsIgnoreCase(Constants.FILTER_BY_PARETO)
+                            || filterBy.equalsIgnoreCase(Constants.FILTER_BY_MIX)) {
+                        CommonUtils.updateColumnConfigFlags(modelConfig, columnConfigList);
+                        this.columnConfigList = selector.selectByFilter();
+                    } else if(filterBy.equalsIgnoreCase(Constants.FILTER_BY_FI)) {
+                        if(!CommonUtils.isDesicionTreeAlgorithm(modelConfig.getAlgorithm())) {
+                            throw new IllegalArgumentException(
+                                    "Filter by FI only works well in GBT/RF. Please check your modelconfig::train.");
+                        }
+                        selectByFeatureImportance();
+                    } else if(filterBy.equalsIgnoreCase(Constants.FILTER_BY_SE)
+                            || filterBy.equalsIgnoreCase(Constants.FILTER_BY_ST)) {
+                        if(!Constants.NN.equalsIgnoreCase(modelConfig.getAlgorithm())) {
+                            throw new IllegalArgumentException(
+                                    "Filter by SE/ST only works well in NN. Please check your modelconfig::train.");
+                        }
+                        distributedSEWrapper();
+                    } else if(filterBy.equalsIgnoreCase(Constants.FILTER_BY_VOTED)) {
+                        votedVariablesSelection();
+                    }
+                } else {
+                    // multiple classification, select all candidate at first, TODO add SE for multi-classification
+                    for(ColumnConfig config: this.columnConfigList) {
+                        if(CommonUtils.isGoodCandidate(modelConfig.isRegression(), config)) {
+                            config.setFinalSelect(true);
+                        }
                     }
                 }
             }
@@ -507,7 +511,6 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
         } else {
             log.error("VarSelect SE hadoop job is failed, please re-try varselect step.");
         }
-
     }
 
     private Job createSEMapReduceJob(SourceType source, Configuration conf, String varSelectMSEOutputPath)
@@ -533,7 +536,6 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
         } else {
             job.setMapperClass(VarSelectMapper.class);
         }
-
         job.setMapOutputKeyClass(LongWritable.class);
         job.setMapOutputValueClass(ColumnInfo.class);
         job.setInputFormatClass(CombineInputFormat.class);
@@ -559,8 +561,6 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
         // add jars to hadoop mapper and reducer
         new GenericOptionsParser(conf, new String[] { "-libjars", addRuntimeJars() });
 
-        conf.setBoolean(CombineInputFormat.SHIFU_VS_SPLIT_COMBINABLE, true);
-
         conf.setBoolean(GuaguaMapReduceConstants.MAPRED_MAP_TASKS_SPECULATIVE_EXECUTION, true);
         conf.setBoolean(GuaguaMapReduceConstants.MAPRED_REDUCE_TASKS_SPECULATIVE_EXECUTION, true);
         conf.setBoolean(GuaguaMapReduceConstants.MAPREDUCE_MAP_SPECULATIVE, true);
@@ -582,6 +582,7 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
         conf.setBoolean(CombineInputFormat.SHIFU_VS_SPLIT_COMBINABLE, false);
         conf.set("mapred.reduce.slowstart.completed.maps",
                 Environment.getProperty("mapred.reduce.slowstart.completed.maps", "0.9"));
+        conf.set(Constants.SHIFU_VARSELECT_FILTEROUT_TYPE, modelConfig.getVarSelectFilterBy());
 
         Float filterOutRatio = this.modelConfig.getVarSelect().getFilterOutRatio();
         if(filterOutRatio == null) {
@@ -726,7 +727,9 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
 
     @Override
     protected void clearUp(ModelStep step) throws IOException {
-        autoVarSelCondition();
+        if(!isToReset) {
+            autoVarSelCondition();
+        }
         try {
             this.saveColumnConfigListAndColumnStats(true);
         } catch (Exception e) {
@@ -741,12 +744,12 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
     private void autoVarSelCondition() {
         // here we do loop again as it is not bad for variables less than 100,000
         for(ColumnConfig config: columnConfigList) {
-            if(isHighMissingRateColumn(config) && !config.isForceSelect()) {
+            if(!config.isTarget() && !config.isMeta() && !config.isForceSelect() && config.isFinalSelect()
+                    && isHighMissingRateColumn(config)) {
                 log.warn(
                         "Column {} is with very high missing rate, set final select to false. If not, you can check it manually in ColumnConfig.json",
                         config.getColumnName());
                 config.setFinalSelect(false);
-                continue;
             }
         }
     }
