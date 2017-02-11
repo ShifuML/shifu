@@ -78,7 +78,7 @@ public class DataNormalizeWorker extends AbstractWorkerActor {
     /**
      * Normalize the list training data from List<String> to List<Double>
      * 
-     * @param rfList
+     * @param rawDataList
      * @return the data after normalization
      */
     private List<List<Double>> normalizeData(List<String> rawDataList) {
@@ -109,7 +109,7 @@ public class DataNormalizeWorker extends AbstractWorkerActor {
             return null;
         }
 
-        String tag = rfs[this.targetColumnNum];
+        String tag = CommonUtils.trimTag(rfs[this.targetColumnNum]);
 
         boolean isNotSampled = DataSampler.isNotSampled(modelConfig.getPosTags(), modelConfig.getNegTags(),
                 modelConfig.getNormalizeSampleRate(), modelConfig.isNormalizeSampleNegOnly(), tag);

@@ -161,7 +161,7 @@ public class VarSelWorker
         }
         String record = currentValue.getWritable().toString();
         String[] fields = CommonUtils.split(record, this.modelConfig.getDataSetDelimiter());
-        String tag = StringUtils.trim(fields[this.targetColumnId]);
+        String tag = CommonUtils.trimTag(fields[this.targetColumnId]);
 
         if(this.dataPurifier.isFilterOut(record) && isPosOrNegTag(this.modelConfig, tag)) {
             this.totalRecordCount++;

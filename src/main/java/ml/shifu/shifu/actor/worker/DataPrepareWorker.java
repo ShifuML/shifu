@@ -110,6 +110,7 @@ public class DataPrepareWorker extends AbstractWorkerActor {
 
             for(Map.Entry<Integer, List<ValueObject>> entry: columnVoListMap.entrySet()) {
                 Integer columnNum = entry.getKey();
+                log.info("send {} with {} value object", columnNum, entry.getValue().size());
                 columnNumToActorMap.get(columnNum).tell(
                         new StatsValueObjectMessage(totalMsgCnt, columnNum, entry.getValue(), rt.getMissingMap()
                                 .containsKey(columnNum) ? rt.getMissingMap().get(columnNum) : 0, rt.getTotal()),
@@ -195,7 +196,7 @@ public class DataPrepareWorker extends AbstractWorkerActor {
                 throw new ShifuException(ShifuErrorCode.ERROR_NO_EQUAL_COLCONFIG);
             }
 
-            String tag = raw[targetColumnNum];
+            String tag = CommonUtils.trimTag(raw[targetColumnNum]);
 
             if(modelConfig.isBinningSampleNegOnly()) {
                 if(modelConfig.getNegTags().contains(tag) && random.nextDouble() > sampleRate) {
@@ -261,7 +262,7 @@ public class DataPrepareWorker extends AbstractWorkerActor {
                     vo.setWeight(1.0);
                 }
 
-                vo.setTag(raw[targetColumnNum]);
+                vo.setTag(tag);
 
                 List<ValueObject> voList = columnVoListMap.get(i);
                 if(voList == null) {
