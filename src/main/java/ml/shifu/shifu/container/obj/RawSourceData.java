@@ -23,6 +23,8 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.google.common.collect.Lists;
+import ml.shifu.shifu.util.CommonUtils;
+import org.apache.commons.collections.CollectionUtils;
 
 /**
  * SourceData class
@@ -169,7 +171,7 @@ public class RawSourceData implements Cloneable {
     }
 
     public void setPosTags(List<String> posTags) {
-        this.posTags = posTags;
+        this.posTags = trimTags(posTags);
     }
 
     public List<String> getNegTags() {
@@ -177,7 +179,19 @@ public class RawSourceData implements Cloneable {
     }
 
     public void setNegTags(List<String> negTags) {
-        this.negTags = negTags;
+        this.negTags = trimTags(negTags);
+    }
+
+    private List<String> trimTags(List<String> tags) {
+        if ( tags != null ) {
+            List<String> trimmedTags = new ArrayList<String>();
+            for (String tag : tags) {
+                trimmedTags.add(CommonUtils.trimTag(tag));
+            }
+            return trimmedTags;
+        } else {
+            return null;
+        }
     }
 
     @Override
