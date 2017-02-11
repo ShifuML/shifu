@@ -21,6 +21,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang.math.NumberUtils;
 import org.apache.hadoop.fs.FileStatus;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -477,6 +478,25 @@ public class CommonUtilsTest {
         Assert.assertEquals(CommonUtils.getBinIndex(binBoundary, 0.00010), 0);
         Assert.assertEquals(CommonUtils.getBinIndex(binBoundary, 5D), 8);
 
+    }
+
+    @Test
+    public void trimNumber() {
+        Assert.assertEquals(CommonUtils.trimTag("1000"), "1000");
+        Assert.assertEquals(CommonUtils.trimTag("1.000"), "1");
+        Assert.assertEquals(CommonUtils.trimTag("1."), "1");
+        Assert.assertEquals(CommonUtils.trimTag("0.0000"), "0");
+        Assert.assertEquals(CommonUtils.trimTag("1.03400"), "1.034");
+        Assert.assertEquals(CommonUtils.trimTag("1.034001"), "1.034001");
+        Assert.assertEquals(CommonUtils.trimTag(".0000"), "0");
+        Assert.assertEquals(CommonUtils.trimTag(".00001"), "0.00001");
+        Assert.assertEquals(CommonUtils.trimTag(".M0001"), ".M0001");
+        Assert.assertEquals(CommonUtils.trimTag("M."), "M.");
+        Assert.assertEquals(CommonUtils.trimTag(".L"), ".L");
+        Assert.assertEquals(CommonUtils.trimTag(" .L  "), ".L");
+        Assert.assertEquals(CommonUtils.trimTag(" "), "");
+        Assert.assertEquals(CommonUtils.trimTag(null), "");
+        Assert.assertEquals(CommonUtils.trimTag("1.0B"), "1.0B");
     }
 
     @AfterClass

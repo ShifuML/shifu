@@ -89,7 +89,7 @@ public class NormalizeParquetUDF extends AbstractTrainerUDF<Tuple> {
         }
 
         // do data sampling. Unselected data or data with invalid tag will be filtered out.
-        final String rawTag = input.get(tagColumnNum).toString();
+        final String rawTag = CommonUtils.trimTag(input.get(tagColumnNum).toString());
         boolean isNotSampled = DataSampler.isNotSampled(posTags, negTags, modelConfig.getNormalizeSampleRate(),
                 modelConfig.isNormalizeSampleNegOnly(), rawTag);
         if(isNotSampled) {

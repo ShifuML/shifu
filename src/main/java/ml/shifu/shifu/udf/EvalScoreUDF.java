@@ -148,7 +148,7 @@ public class EvalScoreUDF extends AbstractTrainerUDF<Tuple> {
             return null;
         }
 
-        String tag = rawDataMap.get(modelConfig.getTargetColumnName(evalConfig));
+        String tag = CommonUtils.trimTag(rawDataMap.get(modelConfig.getTargetColumnName(evalConfig)));
 
         // filter invalid tag record out
         // disable the tag check, since there is no bad tag in eval data set
@@ -178,7 +178,7 @@ public class EvalScoreUDF extends AbstractTrainerUDF<Tuple> {
         }
 
         Tuple tuple = TupleFactory.getInstance().newTuple();
-        tuple.append(StringUtils.trimToEmpty(tag));
+        tuple.append(tag);
 
         String weight = null;
         if(StringUtils.isNotBlank(evalConfig.getDataSet().getWeightColumnName())) {

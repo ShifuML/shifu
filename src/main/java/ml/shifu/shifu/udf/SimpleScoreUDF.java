@@ -70,7 +70,7 @@ public class SimpleScoreUDF extends AbstractTrainerUDF<Integer> {
             return null;
         }
 
-        String tag = rawDataMap.get(targetColumnName);
+        String tag = CommonUtils.trimTag(rawDataMap.get(targetColumnName));
         if(!(negTags.contains(tag) || posTags.contains(tag))) {
             // invalid record
             log.error("Detected invalid record. Its tag is - " + tag);
