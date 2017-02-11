@@ -703,7 +703,7 @@ public class ConfusionMatrix {
                     continue;
                 }
 
-                String tag = raw[targetColumnIndex];
+                String tag = CommonUtils.trimTag(raw[targetColumnIndex]);
                 if(StringUtils.isBlank(tag)) {
                     if(rd.nextDouble() < 0.01) {
                         log.warn("Empty target value!!");

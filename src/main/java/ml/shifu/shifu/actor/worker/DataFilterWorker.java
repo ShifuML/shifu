@@ -68,7 +68,7 @@ public class DataFilterWorker extends AbstractWorkerActor {
      * @param modelConfig
      * @param columnConfigList
      * @param parentActorRef
-     * @param modelRunRef
+     * @param nextActorRef
      * @param evalConfig
      * @throws IOException
      */

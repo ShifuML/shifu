@@ -18,6 +18,7 @@ package ml.shifu.shifu.udf;
 import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.exception.ShifuErrorCode;
 import ml.shifu.shifu.exception.ShifuException;
+import ml.shifu.shifu.util.CommonUtils;
 import ml.shifu.shifu.util.Constants;
 import org.apache.commons.lang.StringUtils;
 import org.apache.pig.data.*;
@@ -92,7 +93,7 @@ public class AddColumnNumUDF extends AbstractTrainerUDF<DataBag> {
             throw new ShifuException(ShifuErrorCode.ERROR_NO_TARGET_COLUMN);
         }
 
-        String tag = input.get(tagColumnNum).toString();
+        String tag = CommonUtils.trimTag(input.get(tagColumnNum).toString());
 
         // filter out tag not in setting tagging list
         if(!super.tagSet.contains(tag)) {

@@ -109,8 +109,8 @@ public class ScoreModelWorker extends AbstractWorkerActor {
                         .getDataSet().getDataDelimiter(), header);
 
                 // get the tag
-                String tag = rawDataMap.get(modelConfig.getTargetColumnName(evalConfig));
-                buf.append(StringUtils.trimToEmpty(tag));
+                String tag = CommonUtils.trimTag(rawDataMap.get(modelConfig.getTargetColumnName(evalConfig)));
+                buf.append(tag);
 
                 // append weight column value
                 if(StringUtils.isNotBlank(evalConfig.getDataSet().getWeightColumnName())) {
