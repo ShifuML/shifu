@@ -561,7 +561,7 @@ public final class CommonUtils {
 
         return loadBasicModels(modelConfig, columnConfigList, evalConfig, modelConfig.getDataSet().getSource());
     }
-    
+
     /**
      * Get bin index by binary search. The last bin in <code>binBoundary</code> is missing value bin.
      */
@@ -1714,7 +1714,7 @@ public final class CommonUtils {
                 }
                 return list.toArray(new String[0]);
             }
-        } catch ( Exception e) {
+        } catch (Exception e) {
             log.error("Fail to read first line of file.", e);
         } finally {
             IOUtils.closeQuietly(reader);
@@ -1723,7 +1723,8 @@ public final class CommonUtils {
     }
 
     /**
-     * Return first line split string array. This is used to detect data schema.
+     * Return first two lines split string array. This is used to detect data schema and check if data schema is the
+     * same as data.
      */
     public static String[][] takeFirstTwoLines(String dataSetRawPath, String delimiter, SourceType source)
             throws IOException {

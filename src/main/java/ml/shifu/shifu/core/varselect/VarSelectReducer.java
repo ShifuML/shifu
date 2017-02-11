@@ -145,6 +145,7 @@ public class VarSelectReducer extends Reducer<LongWritable, ColumnInfo, Text, Te
         this.filterBy = context.getConfiguration()
                 .get(Constants.SHIFU_VARSELECT_FILTEROUT_TYPE, Constants.FILTER_BY_SE);
         this.mos = new MultipleOutputs<Text, Text>(context);
+        LOG.info("FilterBy is {}, filterOutRatio is {}, filterNum is {}", filterBy, filterOutRatio, filterNum);
     }
 
     @Override
@@ -190,6 +191,8 @@ public class VarSelectReducer extends Reducer<LongWritable, ColumnInfo, Text, Te
                 candidates = (int) (this.inputNodeCount * (this.filterOutRatio));
             }
         }
+
+        LOG.info("Candidates count is {}", candidates);
 
         for(int i = 0; i < this.results.size(); i++) {
             Pair pair = this.results.get(i);
