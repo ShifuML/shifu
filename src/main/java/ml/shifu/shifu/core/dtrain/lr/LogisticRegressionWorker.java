@@ -407,6 +407,12 @@ public class LogisticRegressionWorker
             if(index == this.columnConfigList.size()) {
                 // check here to avoid bad performance in failed NumberFormatUtils.getDouble(input, 1)
                 significance = unit.length() == 0 ? 1f : NumberFormatUtils.getDouble(unit, 1d);
+                // if invalid weight, set it to 1f and warning in log
+                if(Double.compare(significance, 0d) < 0) {
+                    LOG.warn("The {} record in current worker weight {} is less than 0f, it is invalid, set it to 1.",
+                            count, significance);
+                    significance = 1d;
+                }
                 // the last field is significance, break here
                 break;
             } else {

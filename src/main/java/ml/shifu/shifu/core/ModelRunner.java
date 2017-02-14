@@ -29,7 +29,6 @@ import ml.shifu.shifu.core.model.ModelSpec;
 import ml.shifu.shifu.util.CommonUtils;
 
 import org.apache.commons.collections.MapUtils;
-import org.apache.commons.collections.OrderedMap;
 import org.apache.pig.backend.executionengine.ExecException;
 import org.apache.pig.data.Tuple;
 import org.encog.ml.BasicML;
