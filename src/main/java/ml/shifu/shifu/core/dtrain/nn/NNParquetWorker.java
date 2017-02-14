@@ -112,6 +112,12 @@ public class NNParquetWorker extends AbstractNNWorker<Tuple> {
                     significance = element.toString().length() == 0 ? 1f : NumberFormatUtils.getFloat(
                             element.toString(), 1f);
                 }
+                // if invalid weight, set it to 1f and warning in log
+                if(Float.compare(significance, 0f) < 0) {
+                    LOG.warn("The {} record in current worker weight {} is less than 0f, it is invalid, set it to 1.",
+                            count, significance);
+                    significance = 1f;
+                }
                 // break here if we reach weight column which is last column
                 break;
             } else {

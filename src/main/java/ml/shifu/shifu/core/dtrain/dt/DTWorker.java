@@ -213,11 +213,6 @@ public class DTWorker
     private Map<Integer, PoissonDistribution[]> baggingRngMap = new HashMap<Integer, PoissonDistribution[]>();
 
     /**
-     * If tree number = 1, no need bagging with replacement.
-     */
-    // private Random random = new Random();
-
-    /**
      * Construct a bagging random map for different classes. For stratified sampling, this is useful for each class
      * sampling.
      */
@@ -1020,6 +1015,12 @@ public class DTWorker
             if(index == this.columnConfigList.size()) {
                 // check here to avoid bad performance in failed NumberFormatUtils.getFloat(input, 1f)
                 significance = input.length() == 0 ? 1f : NumberFormatUtils.getFloat(input, 1f);
+                // if invalid weight, set it to 1f and warning in log
+                if(Float.compare(significance, 0f) < 0) {
+                    LOG.warn("The {} record in current worker weight {} is less than 0f, it is invalid, set it to 1.",
+                            count, significance);
+                    significance = 1f;
+                }
                 // the last field is significance, break here
                 break;
             } else {
