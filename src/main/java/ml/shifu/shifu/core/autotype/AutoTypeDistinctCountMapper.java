@@ -148,7 +148,7 @@ public class AutoTypeDistinctCountMapper extends Mapper<LongWritable, Text, IntW
 
         String[] units = CommonUtils.split(valueStr, this.modelConfig.getDataSetDelimiter());
         // tagColumnNum should be in units array, if not IndexOutofBoundException
-        String tag = units[this.tagColumnNum];
+        String tag = CommonUtils.trimTag(units[this.tagColumnNum]);
 
         if(!this.tags.contains(tag)) {
             if(System.currentTimeMillis() % 50 == 0L) {

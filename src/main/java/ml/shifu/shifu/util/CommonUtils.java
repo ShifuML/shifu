@@ -43,6 +43,7 @@ import org.apache.commons.collections.Predicate;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang.ArrayUtils;
 import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang.math.NumberUtils;
 import org.apache.commons.lang3.tuple.MutablePair;
 import org.apache.hadoop.fs.*;
 import org.apache.hadoop.fs.FileSystem;
@@ -642,7 +643,9 @@ public final class CommonUtils {
 
         List<FileStatus> listStatus = findModels(modelConfig, evalConfig, sourceType);
         if(CollectionUtils.isEmpty(listStatus)) {
-            throw new ShifuException(ShifuErrorCode.ERROR_MODEL_FILE_NOT_FOUND);
+            // throw new ShifuException(ShifuErrorCode.ERROR_MODEL_FILE_NOT_FOUND);
+            // disable exception, since we there maybe sub-models
+            return listStatus;
         }
 
         // to avoid the *unix and windows file list order
@@ -1851,6 +1854,34 @@ public final class CommonUtils {
             writer.flush();
         } finally {
             IOUtils.closeQuietly(writer);
+        }
+    }
+
+    public static String trimTag(String tag) {
+        if ( NumberUtils.isNumber(tag) ) {
+            tag = tag.trim();
+            int firstPeriodPos = -1;
+            int firstDeleteZero = -1;
+            boolean hasMetNonZero = false;
+            for ( int i = tag.length(); i > 0; i -- ) {
+                if ( (tag.charAt(i - 1) == '0' || tag.charAt(i - 1) == '.')
+                        && !hasMetNonZero ) {
+                    firstDeleteZero = i - 1;
+                }
+
+                if ( tag.charAt(i - 1) != '0' ) {
+                    hasMetNonZero = true;
+                }
+
+                if ( tag.charAt(i - 1) == '.') {
+                    firstPeriodPos = i - 1;
+                }
+            }
+
+            String result = (firstDeleteZero >=0  && firstPeriodPos >= 0) ? tag.substring(0, firstDeleteZero) : tag;
+            return (firstPeriodPos == 0) ? "0" + result : result;
+        } else {
+            return StringUtils.trimToEmpty(tag);
         }
     }
 

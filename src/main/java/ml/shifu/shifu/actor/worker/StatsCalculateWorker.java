@@ -103,6 +103,7 @@ public class StatsCalculateWorker extends AbstractWorkerActor {
 
         // Binning
         Binning binning = new Binning(modelConfig.getPosTags(), modelConfig.getNegTags(), dataType, valueObjList);
+        log.info("posTags - {}, negTags - {}, first example tag - {}", modelConfig.getPosTags(), modelConfig.getNegTags(), valueObjList.get(0).getTag());
         binning.setMaxNumOfBins(modelConfig.getBinningExpectedNum());
         binning.setBinningMethod(modelConfig.getBinningMethod());
         binning.setAutoTypeThreshold(modelConfig.getAutoTypeThreshold());
