@@ -20,6 +20,7 @@ import ml.shifu.shifu.container.obj.ModelStatsConf;
 import ml.shifu.shifu.container.obj.ModelStatsConf.BinningMethod;
 import ml.shifu.shifu.exception.ShifuErrorCode;
 import ml.shifu.shifu.exception.ShifuException;
+import ml.shifu.shifu.util.CommonUtils;
 import ml.shifu.shifu.util.Constants;
 import org.apache.pig.data.*;
 import org.apache.pig.impl.logicalLayer.schema.Schema;
@@ -74,7 +75,7 @@ public class AddColumnNumAndFilterUDF extends AddColumnNumUDF {
             throw new ShifuException(ShifuErrorCode.ERROR_NO_TARGET_COLUMN);
         }
 
-        String tag = input.get(tagColumnNum).toString();
+        String tag = CommonUtils.trimTag(input.get(tagColumnNum).toString());
 
         // filter out tag not in setting tagging list
         if (!super.tagSet.contains(tag)) {
@@ -99,7 +100,6 @@ public class AddColumnNumAndFilterUDF extends AddColumnNumUDF {
             ColumnConfig config = columnConfigList.get(i);
             if (config.isCandidate()) {
                 boolean isPositive = false;
-                ;
                 if (modelConfig.isRegression()) {
                     if (super.posTagSet.contains(tag)) {
                         isPositive = true;

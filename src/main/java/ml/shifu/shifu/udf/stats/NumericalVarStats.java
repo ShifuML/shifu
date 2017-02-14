@@ -105,7 +105,7 @@ public class NumericalVarStats extends AbstractVarStats {
             }
 
             Object value = element.get(1);
-            String tag = (String) element.get(2);
+            String tag = CommonUtils.trimTag((String) element.get(2));
             Double weight = (Double) element.get(3);
 
             double colVal = 0.0;

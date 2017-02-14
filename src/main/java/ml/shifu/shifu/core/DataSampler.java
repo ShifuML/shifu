@@ -19,6 +19,7 @@ import java.util.List;
 import java.util.Random;
 import java.util.Set;
 
+import ml.shifu.shifu.util.CommonUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -48,7 +49,7 @@ public class DataSampler {
      */
     public static List<Object> filter(Integer targetColumnNum, List<String> posTags, List<String> negTags,
             List<Object> data, Double sampleRate, Boolean sampleNegOnly) {
-        String tag = data.get(targetColumnNum).toString();
+        String tag = CommonUtils.trimTag(data.get(targetColumnNum).toString());
 
         if(isNotSampled(posTags, negTags, sampleRate, sampleNegOnly, tag)) {
             return null;
@@ -68,14 +69,14 @@ public class DataSampler {
      * @param posTags
      * @param negTags
      * @param fields
-     * @param normalizeSampleRate
-     * @param normalizeSampleNegOnly
+     * @param sampleRate
+     * @param sampleNegOnly
      * @return true - if the data should be filtered out
      *         false - if the data should not be filtered out
      */
     public static boolean filter(int targetColumnNum, List<String> posTags, List<String> negTags, String[] fields,
             double sampleRate, boolean sampleNegOnly) {
-        String tag = fields[targetColumnNum];
+        String tag = CommonUtils.trimTag(fields[targetColumnNum]);
         return isNotSampled(posTags, negTags, sampleRate, sampleNegOnly, tag);
     }
 
