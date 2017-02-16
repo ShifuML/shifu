@@ -30,6 +30,7 @@ import ml.shifu.shifu.core.dtrain.dataset.BasicFloatMLDataPair;
 import ml.shifu.shifu.core.dtrain.dataset.FloatMLDataPair;
 import ml.shifu.shifu.util.CommonUtils;
 
+import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Text;
 
@@ -77,6 +78,14 @@ public class NNWorker extends AbstractNNWorker<Text> {
             floatValue = (Float.isNaN(floatValue) || Double.isNaN(floatValue)) ? 0f : floatValue;
 
             if(index == super.columnConfigList.size()) {
+                // do we need to check if not weighted directly set to 1f; if such logic non-weight at first, then
+                // weight, how to process???
+                if(StringUtils.isBlank(modelConfig.getWeightColumnName())) {
+                    significance = 1f;
+                    // break here if we reach weight column which is last column
+                    break;
+                }
+
                 // check here to avoid bad performance in failed NumberFormatUtils.getFloat(input, 1f)
                 significance = input.length() == 0 ? 1f : NumberFormatUtils.getFloat(input, 1f);
                 // if invalid weight, set it to 1f and warning in log

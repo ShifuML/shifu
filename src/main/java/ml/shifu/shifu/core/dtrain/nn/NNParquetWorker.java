@@ -29,6 +29,7 @@ import ml.shifu.shifu.core.dtrain.dataset.FloatMLDataPair;
 import ml.shifu.shifu.guagua.GuaguaParquetRecordReader;
 import ml.shifu.shifu.util.CommonUtils;
 
+import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.pig.LoadPushDown.RequiredFieldList;
@@ -104,6 +105,14 @@ public class NNParquetWorker extends AbstractNNWorker<Tuple> {
             floatValue = (Float.isNaN(floatValue) || Double.isNaN(floatValue)) ? 0f : floatValue;
 
             if(index == (super.inputNodeCount + super.outputNodeCount)) {
+                // do we need to check if not weighted directly set to 1f; if such logic non-weight at first, then
+                // weight, how to process???
+                if(StringUtils.isBlank(modelConfig.getWeightColumnName())) {
+                    significance = 1f;
+                    // break here if we reach weight column which is last column
+                    break;
+                }
+
                 assert element != null;
                 if(element != null && element instanceof Float) {
                     significance = (Float) element;
