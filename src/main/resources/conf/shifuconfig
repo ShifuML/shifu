@@ -15,7 +15,7 @@ localNumParallel=6
 recordCntPerMessage=100000
 
 # fix a bug on hdp 2.4.1 by default mapreduce.job.max.split.locations is 10
-mapreduce.job.max.split.locations=100
+mapreduce.job.max.split.locations=5000
 
 # disable map output compress because some issue for snappy config in our clusters
 mapreduce.map.output.compress=false
