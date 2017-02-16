@@ -104,7 +104,7 @@ public class NormalizeModelProcessor extends BasicModelProcessor implements Proc
                         saveColumnConfigListAndColumnStats(false);
                     }
 
-                    if ( this.isToShuffleData ) {
+                    if(this.isToShuffleData) {
                         // shuffling normalized data, to make data random
                         runMapReduceShuffleData();
                     }
@@ -167,7 +167,7 @@ public class NormalizeModelProcessor extends BasicModelProcessor implements Proc
         conf.setBoolean(GuaguaMapReduceConstants.MAPRED_MAP_TASKS_SPECULATIVE_EXECUTION, true);
         conf.setBoolean(GuaguaMapReduceConstants.MAPRED_REDUCE_TASKS_SPECULATIVE_EXECUTION, true);
         conf.set(NNConstants.MAPRED_JOB_QUEUE_NAME, Environment.getProperty(Environment.HADOOP_JOB_QUEUE, "default"));
-        conf.setInt(GuaguaMapReduceConstants.MAPREDUCE_JOB_MAX_SPLIT_LOCATIONS, 100);
+        conf.setInt(GuaguaMapReduceConstants.MAPREDUCE_JOB_MAX_SPLIT_LOCATIONS, 500);
         conf.set(
                 Constants.SHIFU_MODEL_CONFIG,
                 ShifuFileUtils.getFileSystemBySourceType(source)
@@ -180,6 +180,7 @@ public class NormalizeModelProcessor extends BasicModelProcessor implements Proc
 
         conf.set("mapred.reduce.slowstart.completed.maps",
                 Environment.getProperty("mapred.reduce.slowstart.completed.maps", "0.9"));
+
         String hdpVersion = HDPUtils.getHdpVersionForHDP224();
         if(StringUtils.isNotBlank(hdpVersion)) {
             // for hdp 2.2.4, hdp.version should be set and configuration files should be add to container class path
@@ -379,12 +380,12 @@ public class NormalizeModelProcessor extends BasicModelProcessor implements Proc
 
             while(iter.hasNext()) {
                 JobStats jobStats = iter.next();
-                if (jobStats.getHadoopCounters() != null &&
-                        jobStats.getHadoopCounters().getGroup(Constants.SHIFU_GROUP_COUNTER) != null ) {
+                if(jobStats.getHadoopCounters() != null
+                        && jobStats.getHadoopCounters().getGroup(Constants.SHIFU_GROUP_COUNTER) != null) {
                     long totalValidCount = jobStats.getHadoopCounters().getGroup(Constants.SHIFU_GROUP_COUNTER)
                             .getCounter("TOTAL_VALID_COUNT");
                     // If no basic record counter, check next one
-                    if (totalValidCount == 0L) {
+                    if(totalValidCount == 0L) {
                         continue;
                     }
                     long invalidTagCount = jobStats.getHadoopCounters().getGroup(Constants.SHIFU_GROUP_COUNTER)
@@ -393,7 +394,7 @@ public class NormalizeModelProcessor extends BasicModelProcessor implements Proc
                     log.info("Total valid records {} after filtering, invalid tag records {}.", totalValidCount,
                             invalidTagCount);
 
-                    if (totalValidCount > 0L && invalidTagCount * 1d / totalValidCount >= 0.8d) {
+                    if(totalValidCount > 0L && invalidTagCount * 1d / totalValidCount >= 0.8d) {
                         log.error("Too many invalid tags, please check you configuration on positive tags and negative tags.");
                     }
                 }
@@ -447,7 +448,7 @@ public class NormalizeModelProcessor extends BasicModelProcessor implements Proc
 
         int shuffleSize = getDataShuffleSize(source);
         log.info("Try to shuffle data into - {} parts.", shuffleSize);
-        conf.set(Constants.SHIFU_NORM_SHUFFLE_SIZE , Integer.toString(shuffleSize));
+        conf.set(Constants.SHIFU_NORM_SHUFFLE_SIZE, Integer.toString(shuffleSize));
 
         Job job = Job.getInstance(conf, "Shifu: Shuffling normalized data - " + this.modelConfig.getModelSetName());
         job.setJarByClass(getClass());
@@ -471,8 +472,7 @@ public class NormalizeModelProcessor extends BasicModelProcessor implements Proc
 
         // submit job
         if(job.waitForCompletion(true)) {
-            ShifuFileUtils.copy(this.pathFinder.getShuffleDataPath(),
-                    this.pathFinder.getNormalizedDataPath(), source);
+            ShifuFileUtils.copy(this.pathFinder.getShuffleDataPath(), this.pathFinder.getNormalizedDataPath(), source);
         } else {
             throw new RuntimeException("MapReduce Correlation Computing Job failed.");
         }
@@ -481,16 +481,16 @@ public class NormalizeModelProcessor extends BasicModelProcessor implements Proc
     private int getDataShuffleSize(SourceType sourceType) throws IOException {
         // if user set fixed data shuffle size, then use it
         Integer fsize = Environment.getInt(Constants.SHIFU_NORM_SHUFFLE_SIZE);
-        if ( fsize != null ) {
+        if(fsize != null) {
             return fsize;
         }
 
         // calculate data shuffle size based on user's prefer
         Long preferPartSize = Environment.getLong(Constants.SHIFU_NORM_PREFER_PART_SIZE);
-        Long actualFileSize = ShifuFileUtils.getFileOrDirectorySize(
-                this.pathFinder.getNormalizedDataPath(), sourceType);
+        Long actualFileSize = ShifuFileUtils
+                .getFileOrDirectorySize(this.pathFinder.getNormalizedDataPath(), sourceType);
 
-        if ( preferPartSize != null && actualFileSize != null && preferPartSize != 0) {
+        if(preferPartSize != null && actualFileSize != null && preferPartSize != 0) {
             int dataShuffleSize = (int) (actualFileSize / preferPartSize);
             return ((actualFileSize % preferPartSize == 0) ? dataShuffleSize : (dataShuffleSize + 1));
         } else {
