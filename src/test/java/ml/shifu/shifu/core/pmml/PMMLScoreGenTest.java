@@ -6,7 +6,6 @@ import org.dmg.pmml.PMML;
 import org.jpmml.evaluator.ClassificationMap;
 import org.jpmml.evaluator.FieldValue;
 import org.jpmml.evaluator.NeuralNetworkEvaluator;
-import org.testng.annotations.Test;
 
 import java.util.List;
 import java.util.Map;
@@ -31,6 +30,7 @@ public class PMMLScoreGenTest {
         }
     }
 
+    @SuppressWarnings("unchecked")
     private int runPmmlModel(NeuralNetworkEvaluator evaluator, Map<FieldName, FieldValue> rawInput) {
         switch (evaluator.getModel().getFunctionName()) {
             case REGRESSION:
