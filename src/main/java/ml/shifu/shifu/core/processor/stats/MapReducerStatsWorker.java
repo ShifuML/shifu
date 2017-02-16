@@ -263,6 +263,7 @@ public class MapReducerStatsWorker extends AbstractStatsExecutor {
         new GenericOptionsParser(conf, new String[] { "-libjars", addRuntimeJars(), "-files", filePath });
 
         conf.setBoolean(CombineInputFormat.SHIFU_VS_SPLIT_COMBINABLE, true);
+        conf.setBoolean(FileInputFormat.INPUT_DIR_RECURSIVE, true);
 
         conf.set(Constants.SHIFU_STATS_EXLCUDE_MISSING,
                 Environment.getProperty(Constants.SHIFU_STATS_EXLCUDE_MISSING, "true"));

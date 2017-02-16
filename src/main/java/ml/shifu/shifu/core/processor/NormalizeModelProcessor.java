@@ -191,6 +191,7 @@ public class NormalizeModelProcessor extends BasicModelProcessor implements Proc
         }
 
         conf.setBoolean(CombineInputFormat.SHIFU_VS_SPLIT_COMBINABLE, true);
+        conf.setBoolean(FileInputFormat.INPUT_DIR_RECURSIVE, true);
 
         // one can set guagua conf in shifuconfig
         for(Map.Entry<Object, Object> entry: Environment.getProperties().entrySet()) {
