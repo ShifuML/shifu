@@ -760,7 +760,7 @@ public final class CommonUtils {
     }
 
     public static List<ModelSpec> loadSubModels(ModelConfig modelConfig, List<ColumnConfig> columnConfigList,
-        EvalConfig evalConfig, SourceType sourceType, Boolean gbtConvertToProb) {
+            EvalConfig evalConfig, SourceType sourceType, Boolean gbtConvertToProb) {
         List<ModelSpec> modelSpecs = new ArrayList<ModelSpec>();
         FileSystem fs = ShifuFileUtils.getFileSystemBySourceType(sourceType);
 
@@ -769,7 +769,7 @@ public final class CommonUtils {
         PathFinder pathFinder = new PathFinder(modelConfig);
         String modelsPath = null;
 
-        if ( evalConfig == null || StringUtils.isEmpty(evalConfig.getModelsPath()) ) {
+        if(evalConfig == null || StringUtils.isEmpty(evalConfig.getModelsPath())) {
             modelsPath = pathFinder.getModelsPath(sourceType);
         } else {
             modelsPath = evalConfig.getModelsPath();
@@ -777,11 +777,11 @@ public final class CommonUtils {
 
         try {
             FileStatus[] fsArr = fs.listStatus(new Path(modelsPath));
-            for ( FileStatus fileStatus :  fsArr ) {
-                if ( fileStatus.isDirectory() ) {
-                    ModelSpec modelSpec = loadSubModelSpec(modelConfig, columnConfigList,
-                            fileStatus, sourceType, gbtConvertToProb);
-                    if ( modelSpec != null) {
+            for(FileStatus fileStatus: fsArr) {
+                if(fileStatus.isDirectory()) {
+                    ModelSpec modelSpec = loadSubModelSpec(modelConfig, columnConfigList, fileStatus, sourceType,
+                            gbtConvertToProb);
+                    if(modelSpec != null) {
                         modelSpecs.add(modelSpec);
                     }
                 }
@@ -802,7 +802,7 @@ public final class CommonUtils {
         ALGORITHM algorithm = getModelsAlgAndSpecFiles(fileStatus, sourceType, modelFileStats);
 
         ModelSpec modelSpec = null;
-        if ( CollectionUtils.isNotEmpty(modelFileStats) ) {
+        if(CollectionUtils.isNotEmpty(modelFileStats)) {
             Collections.sort(modelFileStats, new Comparator<FileStatus>() {
                 @Override
                 public int compare(FileStatus fa, FileStatus fb) {
@@ -819,30 +819,30 @@ public final class CommonUtils {
         return modelSpec;
     }
 
-    public static ALGORITHM getModelsAlgAndSpecFiles(FileStatus fileStatus,
-            SourceType sourceType, List<FileStatus> modelFileStats) throws IOException {
+    public static ALGORITHM getModelsAlgAndSpecFiles(FileStatus fileStatus, SourceType sourceType,
+            List<FileStatus> modelFileStats) throws IOException {
         assert modelFileStats != null;
 
         FileSystem fs = ShifuFileUtils.getFileSystemBySourceType(sourceType);
         ALGORITHM algorithm = null;
 
         FileStatus[] fileStatsArr = fs.listStatus(fileStatus.getPath());
-        if ( fileStatsArr != null ) {
-            for ( FileStatus fls : fileStatsArr ) {
-                if ( !fls.isDirectory() ) {
+        if(fileStatsArr != null) {
+            for(FileStatus fls: fileStatsArr) {
+                if(!fls.isDirectory()) {
                     String fileName = fls.getPath().getName();
 
-                    if ( algorithm == null ) {
-                        if ( fileName.endsWith("." + ALGORITHM.NN.name().toLowerCase()) ) {
+                    if(algorithm == null) {
+                        if(fileName.endsWith("." + ALGORITHM.NN.name().toLowerCase())) {
                             algorithm = ALGORITHM.NN;
-                        } else if ( fileName.endsWith("." + ALGORITHM.LR.name().toLowerCase()) ) {
+                        } else if(fileName.endsWith("." + ALGORITHM.LR.name().toLowerCase())) {
                             algorithm = ALGORITHM.LR;
-                        } else if ( fileName.endsWith("." + ALGORITHM.GBT.name().toLowerCase()) ) {
+                        } else if(fileName.endsWith("." + ALGORITHM.GBT.name().toLowerCase())) {
                             algorithm = ALGORITHM.GBT;
                         }
                     }
 
-                    if ( algorithm != null && fileName.endsWith("." + algorithm.name().toLowerCase()) ) {
+                    if(algorithm != null && fileName.endsWith("." + algorithm.name().toLowerCase())) {
                         modelFileStats.add(fls);
                     }
                 }
@@ -859,7 +859,7 @@ public final class CommonUtils {
 
         String modelsPath = null;
 
-        if ( evalConfig == null || StringUtils.isEmpty(evalConfig.getModelsPath()) ) {
+        if(evalConfig == null || StringUtils.isEmpty(evalConfig.getModelsPath())) {
             modelsPath = pathFinder.getModelsPath(sourceType);
         } else {
             modelsPath = evalConfig.getModelsPath();
@@ -869,11 +869,11 @@ public final class CommonUtils {
 
         try {
             FileStatus[] fsArr = fs.listStatus(new Path(modelsPath));
-            for ( FileStatus fileStatus :  fsArr ) {
-                if ( fileStatus.isDirectory() ) {
+            for(FileStatus fileStatus: fsArr) {
+                if(fileStatus.isDirectory()) {
                     List<FileStatus> subModelSpecFiles = new ArrayList<FileStatus>();
                     getModelsAlgAndSpecFiles(fileStatus, sourceType, subModelSpecFiles);
-                    if ( CollectionUtils.isNotEmpty(subModelSpecFiles) ) {
+                    if(CollectionUtils.isNotEmpty(subModelSpecFiles)) {
                         subModelsCnt.put(fileStatus.getPath().getName(), subModelSpecFiles.size());
                     }
                 }
@@ -1684,22 +1684,23 @@ public final class CommonUtils {
         }
 
         String firstValidFile = null;
-        if(ShifuFileUtils.isDir(dataSetRawPath, source)) {
-            FileSystem fs = ShifuFileUtils.getFileSystemBySourceType(source);
-            FileStatus[] globStatus = fs.globStatus(new Path(dataSetRawPath), HIDDEN_FILE_FILTER);
-            if(globStatus == null || globStatus.length == 0) {
-                throw new IllegalArgumentException("No files founded in " + dataSetRawPath);
-            } else {
-                FileStatus[] listStatus = fs.listStatus(globStatus[0].getPath(), HIDDEN_FILE_FILTER);
-                if(listStatus == null || listStatus.length == 0) {
-                    throw new IllegalArgumentException("No files founded in " + globStatus[0].getPath());
-                }
-                firstValidFile = listStatus[0].getPath().toString();
-            }
+        FileSystem fs = ShifuFileUtils.getFileSystemBySourceType(source);
+        FileStatus[] globStatus = fs.globStatus(new Path(dataSetRawPath), HIDDEN_FILE_FILTER);
+        if(globStatus == null || globStatus.length == 0) {
+            throw new IllegalArgumentException("No files founded in " + dataSetRawPath);
         } else {
-            firstValidFile = dataSetRawPath;
+            FileStatus[] listStatus = fs.listStatus(globStatus[0].getPath(), HIDDEN_FILE_FILTER);
+            if(listStatus == null || listStatus.length == 0) {
+                throw new IllegalArgumentException("No files founded in " + globStatus[0].getPath());
+            }
+            Arrays.sort(listStatus, new Comparator<FileStatus>() {
+                @Override
+                public int compare(FileStatus o1, FileStatus o2) {
+                    return o1.getPath().toString().compareTo(o2.getPath().toString());
+                }
+            });
+            firstValidFile = listStatus[0].getPath().toString();
         }
-
         log.info("The first valid file is - {}", firstValidFile);
 
         BufferedReader reader = null;
@@ -1733,21 +1734,18 @@ public final class CommonUtils {
         }
 
         String firstValidFile = null;
-        if(ShifuFileUtils.isDir(dataSetRawPath, source)) {
-            FileSystem fs = ShifuFileUtils.getFileSystemBySourceType(source);
-            FileStatus[] globStatus = fs.globStatus(new Path(dataSetRawPath), HIDDEN_FILE_FILTER);
-            if(globStatus == null || globStatus.length == 0) {
-                throw new IllegalArgumentException("No files founded in " + dataSetRawPath);
-            } else {
-                FileStatus[] listStatus = fs.listStatus(globStatus[0].getPath(), HIDDEN_FILE_FILTER);
-                if(listStatus == null || listStatus.length == 0) {
-                    throw new IllegalArgumentException("No files founded in " + globStatus[0].getPath());
-                }
-                firstValidFile = listStatus[0].getPath().toString();
-            }
+        FileSystem fs = ShifuFileUtils.getFileSystemBySourceType(source);
+        FileStatus[] globStatus = fs.globStatus(new Path(dataSetRawPath), HIDDEN_FILE_FILTER);
+        if(globStatus == null || globStatus.length == 0) {
+            throw new IllegalArgumentException("No files founded in " + dataSetRawPath);
         } else {
-            firstValidFile = dataSetRawPath;
+            FileStatus[] listStatus = fs.listStatus(globStatus[0].getPath(), HIDDEN_FILE_FILTER);
+            if(listStatus == null || listStatus.length == 0) {
+                throw new IllegalArgumentException("No files founded in " + globStatus[0].getPath());
+            }
+            firstValidFile = listStatus[0].getPath().toString();
         }
+        log.info("The first valid file is - {}", firstValidFile);
 
         BufferedReader reader = null;
         try {
@@ -1858,27 +1856,26 @@ public final class CommonUtils {
     }
 
     public static String trimTag(String tag) {
-        if ( NumberUtils.isNumber(tag) ) {
+        if(NumberUtils.isNumber(tag)) {
             tag = tag.trim();
             int firstPeriodPos = -1;
             int firstDeleteZero = -1;
             boolean hasMetNonZero = false;
-            for ( int i = tag.length(); i > 0; i -- ) {
-                if ( (tag.charAt(i - 1) == '0' || tag.charAt(i - 1) == '.')
-                        && !hasMetNonZero ) {
+            for(int i = tag.length(); i > 0; i--) {
+                if((tag.charAt(i - 1) == '0' || tag.charAt(i - 1) == '.') && !hasMetNonZero) {
                     firstDeleteZero = i - 1;
                 }
 
-                if ( tag.charAt(i - 1) != '0' ) {
+                if(tag.charAt(i - 1) != '0') {
                     hasMetNonZero = true;
                 }
 
-                if ( tag.charAt(i - 1) == '.') {
+                if(tag.charAt(i - 1) == '.') {
                     firstPeriodPos = i - 1;
                 }
             }
 
-            String result = (firstDeleteZero >=0  && firstPeriodPos >= 0) ? tag.substring(0, firstDeleteZero) : tag;
+            String result = (firstDeleteZero >= 0 && firstPeriodPos >= 0) ? tag.substring(0, firstDeleteZero) : tag;
             return (firstPeriodPos == 0) ? "0" + result : result;
         } else {
             return StringUtils.trimToEmpty(tag);
