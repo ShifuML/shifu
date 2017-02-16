@@ -24,7 +24,6 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.google.common.collect.Lists;
 import ml.shifu.shifu.util.CommonUtils;
-import org.apache.commons.collections.CollectionUtils;
 
 /**
  * SourceData class

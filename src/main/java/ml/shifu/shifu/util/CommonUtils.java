@@ -1699,7 +1699,7 @@ public final class CommonUtils {
                     return o1.getPath().toString().compareTo(o2.getPath().toString());
                 }
             });
-            firstValidFile = listStatus[0].getPath().toString();
+            firstValidFile = findFirstNonEmptyFile(listStatus);
         }
         log.info("The first valid file is - {}", firstValidFile);
 
@@ -1743,7 +1743,13 @@ public final class CommonUtils {
             if(listStatus == null || listStatus.length == 0) {
                 throw new IllegalArgumentException("No files founded in " + globStatus[0].getPath());
             }
-            firstValidFile = listStatus[0].getPath().toString();
+            Arrays.sort(listStatus, new Comparator<FileStatus>() {
+                @Override
+                public int compare(FileStatus o1, FileStatus o2) {
+                    return o1.getPath().toString().compareTo(o2.getPath().toString());
+                }
+            });
+            firstValidFile = findFirstNonEmptyFile(listStatus);
         }
         log.info("The first valid file is - {}", firstValidFile);
 
@@ -1777,6 +1783,16 @@ public final class CommonUtils {
         } finally {
             IOUtils.closeQuietly(reader);
         }
+    }
+
+    private static String findFirstNonEmptyFile(FileStatus[] listStatus) {
+        for(FileStatus fileStatus: listStatus) {
+            if(fileStatus.getLen() > 1024L) {
+                // flatten file it is 0, gz empty file len is 20, to make it safe, use 1024
+                return fileStatus.getPath().toString();
+            }
+        }
+        return null;
     }
 
     private static final PathFilter HIDDEN_FILE_FILTER = new PathFilter() {
