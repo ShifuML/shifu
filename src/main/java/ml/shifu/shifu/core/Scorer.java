@@ -98,6 +98,10 @@ public class Scorer {
                 if(columnConfig.isCategorical()) {
                     Map<String, Integer> map = new HashMap<String, Integer>();
                     List<String> categories = columnConfig.getBinCategory();
+                    if(categories == null){
+                        // null may be from non final select feature, can be ignored
+                        continue;
+                    }
                     for(int i = 0; i < categories.size(); i++) {
                         map.put(categories.get(i) == null ? "" : categories.get(i), i);
                     }

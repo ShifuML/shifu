@@ -1689,17 +1689,24 @@ public final class CommonUtils {
         if(globStatus == null || globStatus.length == 0) {
             throw new IllegalArgumentException("No files founded in " + dataSetRawPath);
         } else {
-            FileStatus[] listStatus = fs.listStatus(globStatus[0].getPath(), HIDDEN_FILE_FILTER);
-            if(listStatus == null || listStatus.length == 0) {
-                throw new IllegalArgumentException("No files founded in " + globStatus[0].getPath());
-            }
-            Arrays.sort(listStatus, new Comparator<FileStatus>() {
-                @Override
-                public int compare(FileStatus o1, FileStatus o2) {
-                    return o1.getPath().toString().compareTo(o2.getPath().toString());
+            for(FileStatus fileStatus: globStatus) {
+                RemoteIterator<LocatedFileStatus> iterator = fs.listFiles(fileStatus.getPath(), true);
+                while(iterator.hasNext()) {
+                    LocatedFileStatus lfs = iterator.next();
+                    String name = lfs.getPath().getName();
+                    if(name.startsWith("_") || name.startsWith(".")) {
+                        // hidden files,
+                        continue;
+                    }
+                    if(lfs.getLen() > 1024L) {
+                        firstValidFile = lfs.getPath().toString();
+                        break;
+                    }
                 }
-            });
-            firstValidFile = findFirstNonEmptyFile(listStatus);
+                if(StringUtils.isNotBlank(firstValidFile)) {
+                    break;
+                }
+            }
         }
         log.info("The first valid file is - {}", firstValidFile);
 
@@ -1739,17 +1746,24 @@ public final class CommonUtils {
         if(globStatus == null || globStatus.length == 0) {
             throw new IllegalArgumentException("No files founded in " + dataSetRawPath);
         } else {
-            FileStatus[] listStatus = fs.listStatus(globStatus[0].getPath(), HIDDEN_FILE_FILTER);
-            if(listStatus == null || listStatus.length == 0) {
-                throw new IllegalArgumentException("No files founded in " + globStatus[0].getPath());
-            }
-            Arrays.sort(listStatus, new Comparator<FileStatus>() {
-                @Override
-                public int compare(FileStatus o1, FileStatus o2) {
-                    return o1.getPath().toString().compareTo(o2.getPath().toString());
+            for(FileStatus fileStatus: globStatus) {
+                RemoteIterator<LocatedFileStatus> iterator = fs.listFiles(fileStatus.getPath(), true);
+                while(iterator.hasNext()) {
+                    LocatedFileStatus lfs = iterator.next();
+                    String name = lfs.getPath().getName();
+                    if(name.startsWith("_") || name.startsWith(".")) {
+                        // hidden files,
+                        continue;
+                    }
+                    if(lfs.getLen() > 1024L) {
+                        firstValidFile = lfs.getPath().toString();
+                        break;
+                    }
                 }
-            });
-            firstValidFile = findFirstNonEmptyFile(listStatus);
+                if(StringUtils.isNotBlank(firstValidFile)) {
+                    break;
+                }
+            }
         }
         log.info("The first valid file is - {}", firstValidFile);
 
@@ -1783,16 +1797,6 @@ public final class CommonUtils {
         } finally {
             IOUtils.closeQuietly(reader);
         }
-    }
-
-    private static String findFirstNonEmptyFile(FileStatus[] listStatus) {
-        for(FileStatus fileStatus: listStatus) {
-            if(fileStatus.getLen() > 1024L) {
-                // flatten file it is 0, gz empty file len is 20, to make it safe, use 1024
-                return fileStatus.getPath().toString();
-            }
-        }
-        return null;
     }
 
     private static final PathFilter HIDDEN_FILE_FILTER = new PathFilter() {
