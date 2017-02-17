@@ -1051,7 +1051,6 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
         } else {
             args.add(String.format(CommonConstants.MAPREDUCE_PARAM_FORMAT, GuaguaConstants.GUAGUA_SPLIT_COMBINABLE,
                     Environment.getProperty(GuaguaConstants.GUAGUA_SPLIT_COMBINABLE, "true")));
-            // TODO some issues here for dynamic tuning, disable it
             // set to dynamic to save mappers, sometimes maybe OOM, users should tune guagua.split.maxCombinedSplitSize
             // in shifuconfig; by default it is 256M, consider in some cases user selects only a half of features, this
             // number should be 512M
@@ -1069,11 +1068,6 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
             args.add(String.format(CommonConstants.MAPREDUCE_PARAM_FORMAT,
                     GuaguaConstants.GUAGUA_SPLIT_MAX_COMBINED_SPLIT_SIZE,
                     Environment.getProperty(GuaguaConstants.GUAGUA_SPLIT_MAX_COMBINED_SPLIT_SIZE, maxCombineSize + "")));
-
-            // set to default 256m
-            // args.add(String.format(CommonConstants.MAPREDUCE_PARAM_FORMAT,
-            // GuaguaConstants.GUAGUA_SPLIT_MAX_COMBINED_SPLIT_SIZE,
-            // Environment.getProperty(GuaguaConstants.GUAGUA_SPLIT_MAX_COMBINED_SPLIT_SIZE, 268435456 + "")));
         }
         // special tuning parameters for shifu, 0.97 means each iteation master wait for 97% workers and then can go to
         // next iteration.
