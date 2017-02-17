@@ -579,12 +579,22 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
                 Path modelPath = fileSystem.makeQualified(new Path(super.getPathFinder().getModelsPath(sourceType),
                         modelName));
                 // check if job is continunous training, this can be set multiple times and we only get last one
-                boolean isContinous = checkContinuousTraining(fileSystem, localArgs, modelPath);
-                if(isContinous && CommonConstants.RF_ALG_NAME.equalsIgnoreCase(modelConfig.getAlgorithm())) {
+                boolean isContinous = false;
+                if(gs.hasHyperParam()) {
                     isContinous = false;
-                    LOG.warn("RF does not support continuous training");
+                } else {
+                    int intContinuous = checkContinuousTraining(fileSystem, localArgs, modelPath);
+                    if(intContinuous == -1) {
+                        LOG.warn(
+                                "Model with index {} with size of trees is over treeNum, such training will not be started.",
+                                i);
+                        continue;
+                    } else {
+                        isContinous = (intContinuous == 1);
+                    }
                 }
-                // of course gs not support continuous model training, k-fold cross validation is not continous model
+
+                // of course gs not support continuous model training, k-fold cross validation is not continuous model
                 // training
                 if(gs.hasHyperParam() || isKFoldCV) {
                     isContinous = false;
@@ -781,47 +791,57 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
         }
     }
 
-    private boolean checkContinuousTraining(FileSystem fileSystem, List<String> localArgs, Path modelPath)
+    /*
+     * Return 1, continuous training, 0, not continuous training, -1 GBT existing trees is over treeNum
+     */
+    private int checkContinuousTraining(FileSystem fileSystem, List<String> localArgs, Path modelPath)
             throws IOException {
-        boolean finalContinuous = false;
+        int finalContinuous = 0;
         if(Boolean.TRUE.toString().equals(this.modelConfig.getTrain().getIsContinuous().toString())) {
             // if varselect d-training or no such existing models, directly to disable continuous training.
             if(this.isForVarSelect) {
-                finalContinuous = false;
+                finalContinuous = 0;
                 LOG.warn("For varSelect step, continous model training is always disabled.");
             } else if(!fileSystem.exists(modelPath)) {
-                finalContinuous = false;
+                finalContinuous = 0;
                 LOG.info("No existing model, model training will start from scratch.");
             } else if(NNConstants.NN_ALG_NAME.equalsIgnoreCase(modelConfig.getAlgorithm())
                     && !inputOutputModelCheckSuccess(fileSystem, modelPath)) {
                 // TODO hidden layer size and activation functions should also be validated
-                finalContinuous = false;
+                finalContinuous = 0;
                 LOG.warn("Model input and output settings are not consistent with input and output columns settings, "
                         + "model training will start from scratch.");
             } else if(CommonConstants.GBT_ALG_NAME.equalsIgnoreCase(modelConfig.getAlgorithm())) {
                 TreeModel model = (TreeModel) CommonUtils.loadModel(this.modelConfig, this.columnConfigList, modelPath,
                         fileSystem);
+
                 if(!model.getAlgorithm().equalsIgnoreCase(modelConfig.getAlgorithm())) {
-                    finalContinuous = false;
+                    finalContinuous = 0;
                     LOG.warn("Only GBT supports continuous training, while not GBT, will start from scratch");
                 } else if(!model.getLossStr().equalsIgnoreCase(
                         this.modelConfig.getTrain().getParams().get("Loss").toString())) {
-                    finalContinuous = false;
+                    finalContinuous = 0;
                     LOG.warn("Loss is changed, continuous training is disabled, will start from scratch");
+                } else if(model.getTrees().size() == 0) {
+                    finalContinuous = 0;
+                } else if(model.getTrees().size() >= Integer.valueOf(modelConfig.getTrain().getParams().get("TreeNum")
+                        .toString())) {
+                    // if over TreeNum, return -1;
+                    finalContinuous = -1;
                 } else {
-                    finalContinuous = true;
+                    finalContinuous = 1;
                 }
             } else if(CommonConstants.RF_ALG_NAME.equalsIgnoreCase(modelConfig.getAlgorithm())) {
-                finalContinuous = false;
+                finalContinuous = 0;
                 LOG.warn("RF doesn't support continuous training");
             } else {
-                finalContinuous = true;
+                finalContinuous = 1;
             }
         } else {
-            finalContinuous = false;
+            finalContinuous = 0;
         }
         localArgs.add(String.format(CommonConstants.MAPREDUCE_PARAM_FORMAT, CommonConstants.CONTINUOUS_TRAINING,
-                finalContinuous));
+                finalContinuous == 1 ? "true" : "false"));
         return finalContinuous;
     }
 
