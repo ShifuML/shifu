@@ -353,7 +353,7 @@ public class DTMaster extends AbstractMasterComputable<DTMasterParams, DTWorkerP
             if(this.isGBDT) {
                 TreeNode treeNode = this.trees.get(this.trees.size() - 1);
                 Node node = treeNode.getNode();
-                if(this.trees.size() == this.treeNum + this.existingTreeSize) {
+                if( this.trees.size() + this.existingTreeSize >= this.treeNum ) {
                     masterParams.setHalt(true);
                     LOG.info("Queue is empty, training is stopped in iteration {}.", context.getCurrentIteration());
                 } else if(node.getLeft() == null && node.getRight() == null) {
