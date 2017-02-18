@@ -42,7 +42,7 @@ import org.apache.pig.parser.ParserException;
  * BinningDataUDF class
  * 
  * @author zhanhu
- * @Oct 27, 2014
+ * Oct 27, 2014
  * 
  */
 public class BinningDataUDF extends AbstractTrainerUDF<Tuple> {

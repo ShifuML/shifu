@@ -78,7 +78,7 @@ public class DataNormalizeWorker extends AbstractWorkerActor {
     /**
      * Normalize the list training data from List<String> to List<Double>
      * 
-     * @param rawDataList
+     * @param rawDataList - raw data list to normalize
      * @return the data after normalization
      */
     private List<List<Double>> normalizeData(List<String> rawDataList) {
@@ -172,7 +172,7 @@ public class DataNormalizeWorker extends AbstractWorkerActor {
     /**
      * Create expressions for multi weight settings
      * 
-     * @param weightExprList
+     * @param weightExprList - weight expression list
      * @return weight expression map
      */
     protected Map<Expression, Double> createExpressionMap(List<WeightAmplifier> weightExprList) {
@@ -192,7 +192,7 @@ public class DataNormalizeWorker extends AbstractWorkerActor {
     /**
      * Create the expression for weight setting
      * 
-     * @param weightAmplifier
+     * @param weightAmplifier - weight amplifier expression
      * @return expression for weight amplifier
      */
     private Expression createExpression(String weightAmplifier) {

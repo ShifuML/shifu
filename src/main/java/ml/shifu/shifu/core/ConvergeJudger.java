@@ -24,8 +24,11 @@ package ml.shifu.shifu.core;
 public class ConvergeJudger {
     
     /**
-     * Compare threshold and error, if error <= threshold then return true, else false.
-     * 
+     * Compare threshold and error, if error &lt;= threshold then return true, else false.
+     *
+     * @param error - current error
+     * @param threshold - the threshold for converge judge
+     *
      * @return threshold and error compare result.
      */
     public boolean judge(double error, double threshold) {

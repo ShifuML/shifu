@@ -31,7 +31,7 @@ import org.apache.pig.data.DataBag;
 /**
  * AbstractVarStats class
  * 
- * @Nov 3, 2014
+ * Nov 3, 2014
  *
  */
 public abstract class AbstractVarStats {
@@ -87,10 +87,11 @@ public abstract class AbstractVarStats {
         
         binCountArr[binNum] = cnt;
     }
-    
+
     /**
-     * @param binCountArr
+     * @param binWeightCountArr
      * @param binNum
+     * @param weight
      */
     protected void increaseInstCnt(Double[] binWeightCountArr, int binNum, double weight) {
         Double weightCount = binWeightCountArr[binNum];
@@ -103,10 +104,6 @@ public abstract class AbstractVarStats {
         binWeightCountArr[binNum] = weightCount;
     }
     
-    
-    /**
-     * @param columnConfig
-     */
     protected void calculateBinPosRateAndAvgScore() {
         List<Double> binPositiveRate = new ArrayList<Double>();
         

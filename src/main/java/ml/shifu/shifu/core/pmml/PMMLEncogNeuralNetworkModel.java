@@ -28,7 +28,7 @@ import java.util.List;
 /**
  * The class that converts an Encog NeuralNetwork to a PMML RegressionModel.
  * This class extends the abstract class
- * PMMLModelBuilder<pmml.RegressionModel,Encog.NeuralNetwork>.
+ * PMMLModelBuilder&lt;pmml.RegressionModel,Encog.NeuralNetwork&gt;.
  */
 public class PMMLEncogNeuralNetworkModel
         implements
@@ -37,10 +37,10 @@ public class PMMLEncogNeuralNetworkModel
     private FlatNetwork network;
 
     /**
-     * <p/>
+     * <p>
      * The function which converts an Encog NeuralNetwork to a PMML
      * NeuralNetwork Model.
-     * <p/>
+     *
      * This function reads the weights from the Encog NeuralNetwork model and
      * assign them to the corresponding connections of Neurons in PMML model.
      *

@@ -37,7 +37,7 @@ import org.slf4j.LoggerFactory;
 /**
  * CategoricalVarStats class
  * 
- * @Nov 3, 2014
+ * Nov 3, 2014
  * 
  */
 public class CategoricalVarStats extends AbstractVarStats {

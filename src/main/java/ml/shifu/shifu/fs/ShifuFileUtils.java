@@ -50,7 +50,7 @@ import org.xerial.snappy.SnappyInputStream;
 /**
  * ShifuFileUtils class encapsulate the file system interface from other components.
  * It provides the functions that for all kinds of file operation.
- * <p/>
+ *
  * Caller need to pass the file path and @SourceType to do file operation
  */
 public class ShifuFileUtils {
@@ -141,7 +141,7 @@ public class ShifuFileUtils {
 
     /**
      * Get buffered reader with <code>{@link Constants#DEFAULT_CHARSET}</code> for specified file
-     * <p/>
+     *
      * !!! Warning: reader instance should be closed by caller.
      * 
      * @param sourceFile
@@ -156,7 +156,7 @@ public class ShifuFileUtils {
 
     /**
      * Get buffered reader with <code>{@link Constants#DEFAULT_CHARSET}</code> for specified file
-     * <p/>
+     *
      * !!! Warning: reader instance should be closed by caller.
      * 
      * @param path

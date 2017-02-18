@@ -22,7 +22,7 @@ import java.util.List;
 /**
  * ColumnStats class is stats collection for Column
  * If the Column type is categorical, the max/min field will be null
- * <p/>
+ *
  * ks/iv will be used for variable selection
  */
 @JsonIgnoreProperties(ignoreUnknown = true)
@@ -260,7 +260,7 @@ public class ColumnStats {
 
     /**
      *
-     * @param unitStats
+     * @param unitStats - unitStats to set
      */
     public void setUnitStats(List<String> unitStats) {
         this.unitStats = unitStats;

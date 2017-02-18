@@ -92,6 +92,7 @@ public class CandidateGenerator {
 
     /**
      * Init random seeds
+     * @return CandidatePopulation
      */
     public CandidatePopulation initSeeds() {
         CandidatePopulation seeds = new CandidatePopulation(iteratorSeedCount);

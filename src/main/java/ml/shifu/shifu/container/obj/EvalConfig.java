@@ -111,8 +111,9 @@ public class EvalConfig {
     }
 
     /**
-     * @return
-     * @throws IOException
+     * @param modelConfig ModelConfig
+     * @return list meta columns for scoring
+     * @throws IOException - error occurred when reading meta columns from file
      */
     @JsonIgnore
     public List<String> getScoreMetaColumns(ModelConfig modelConfig) throws IOException {

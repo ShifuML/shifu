@@ -83,12 +83,11 @@ import com.google.common.base.Splitter;
 
 /**
  * Variable selection processor, select the variable based on KS/IV value, or
- * </p>
- * 
+ *
  * <p>
  * Selection variable based on the wrapper training processor.
- * 
- * <p>
+ * </p>
+ *
  * For sensitive variable selection, each time wrapperRatio percent of variables will be removed. If continue do
  * variable selection, continue to run varselect command. Current design will do variable selection continuously.
  */

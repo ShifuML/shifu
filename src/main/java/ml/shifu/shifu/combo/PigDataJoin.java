@@ -34,9 +34,9 @@ public class PigDataJoin {
      *
      * @param uidColumnName  - the column to join
      * @param outputPath     - the output path for joined file
-     * @param columnFileList
-     * @return
-     * @throws IOException
+     * @param columnFileList - column files to join
+     * @return code for data join
+     * @throws IOException - any error occur
      */
     public String genPigJoinCode(String uidColumnName, String outputPath, List<ColumnFile> columnFileList)
             throws IOException {
@@ -81,8 +81,8 @@ public class PigDataJoin {
     /**
      * Generate filter by size clauses
      *
-     * @param relations
-     * @return
+     * @param relations - relations for filter
+     * @return pig filter sentence
      */
     private String genFilterSizeClauses(List<String> relations) {
         List<String> filterByClauses = new ArrayList<String>();
@@ -130,7 +130,7 @@ public class PigDataJoin {
     /**
      * Generate flatten clauses
      *
-     * @param relations
+     * @param relations - relations for flatten
      * @return - pig flatten list
      */
     private String genFlattenClauses(List<String> relations) {
@@ -144,8 +144,8 @@ public class PigDataJoin {
     /**
      * Generate fields rename clauses
      *
-     * @param columnFileList
-     * @param relations
+     * @param columnFileList - column files
+     * @param relations - relations for rename
      * @return - pig rename(as) list
      */
     private String genRenameClauses(List<ColumnFile> columnFileList, List<String> relations) {
@@ -166,9 +166,9 @@ public class PigDataJoin {
     /**
      * Write line with "\n"
      *
-     * @param writer
-     * @param line
-     * @throws IOException
+     * @param writer - writer
+     * @param line - output text
+     * @throws IOException - any error occur
      */
     private void writeLine(BufferedWriter writer, String line) throws IOException {
         writer.write(line);

@@ -106,10 +106,10 @@ public abstract class Step<STEP_RESULT> {
     }
 
     /**
-     * validate the modelconfig if it's well written.
-     * 
-     * @return
-     * @throws Exception
+     * validate the ModelConfig if it's well written.
+     * @param modelConfig - ModelConfig to validate
+     * @param step - current step user is running
+     * @throws Exception - throw exception when loading configuration
      */
     protected void validateModelConfig(ModelConfig modelConfig, ModelStep step) throws Exception {
         ValidateResult result = new ValidateResult(false);

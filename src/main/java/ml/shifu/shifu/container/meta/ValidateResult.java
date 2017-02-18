@@ -91,8 +91,8 @@ public class ValidateResult {
      * The status of total result will be false, if there is one false.
      * The total result will contain all causes
      *
-     * @param resultA
-     * @param resultB
+     * @param resultA - one result to merge
+     * @param resultB - one result to merge
      * @return result after merge
      */
     public static ValidateResult mergeResult(ValidateResult resultA, ValidateResult resultB) {

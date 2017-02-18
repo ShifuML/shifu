@@ -206,6 +206,7 @@ public class AkkaSystemExecutor {
      *
      * @param modelConfig      - configuration for model
      * @param columnConfigList - configurations for columns
+     * @param evalConfig       - configuration for evaluation
      * @param scanners         - scanners of evaluation data
      */
     public void submitModelEvalJob(final ModelConfig modelConfig, final List<ColumnConfig> columnConfigList, final EvalConfig evalConfig, List<Scanner> scanners) {

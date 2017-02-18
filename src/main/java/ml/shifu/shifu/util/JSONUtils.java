@@ -23,10 +23,10 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.*;
 
 /**
- * <p/>
+ * <p>
  * {@link JSONUtils} is a unified entry for all json format serialization and de-serialization.
- * <p/>
- * <p/>
+ * </p>
+ *
  * ObjectMapper instance is stored into ThreadLocal object to make sure thread safety.
  */
 public class JSONUtils {

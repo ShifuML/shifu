@@ -42,12 +42,15 @@ import org.slf4j.LoggerFactory;
  * <p>
  * The output result for ModelRunnder is @CaseScoreResult. In the result, not only max/min/average score will be stored,
  * but also Map of raw input
- * 
+ * </p>
+ *
  * <p>
  * If the elements in the input is not equal with the length of header[], it will return null
- * 
+ * </p>
+ *
  * <p>
  * {@link #close()} must be called at caller to release resources.
+ * </p>
  */
 public class ModelRunner {
 
@@ -73,11 +76,13 @@ public class ModelRunner {
 
     /**
      * Constructor for Integration API, if user use this constructor to construct @ModelRunner,
-     * only compute(Map<String, String> rawDataMap) is supported to call.
+     * only compute(Map&lt;String, String&gt; rawDataMap) is supported to call.
      * That means client is responsible for preparing the input data map.
-     * <p/>
+     *
      * Notice, the Standard deviation Cutoff will be default - Normalizer.STD_DEV_CUTOFF
-     * 
+     *
+     * @param modelConfig
+     *          - ModelConfig for model runner
      * @param columnConfigList
      *            - @ColumnConfig list for Model
      * @param models
@@ -89,9 +94,11 @@ public class ModelRunner {
 
     /**
      * Constructor for Integration API, if user use this constructor to construct @ModelRunner,
-     * only compute(Map<String, String> rawDataMap) is supported to call.
+     * only compute(Map&lt;String, String&gt; rawDataMap) is supported to call.
      * That means client is responsible for preparing the input data map.
-     * 
+     *
+     * @param modelConfig
+     *          - ModelConfig for model runner
      * @param columnConfigList
      *            - @ColumnConfig list for Model
      * @param models
@@ -110,8 +117,9 @@ public class ModelRunner {
      * Run model to compute score for inputData
      * 
      * @param inputData
-     *            - the whole original input data as String
-     * @return @CaseScoreResult
+     *          - the whole original input data as String
+     * @return
+     *          - CaseScoreResult
      */
     public CaseScoreResult compute(String inputData) {
         if(dataDelimiter == null || header == null) {
@@ -131,8 +139,11 @@ public class ModelRunner {
      * Run model to compute score for input tuple
      * 
      * @param tuple
-     *            - the whole original input data as @Tuple
-     * @return @CaseScoreResult
+     *          - the whole original input data as @Tuple
+     * @return
+     *          - CaseScoreResult
+     * @throws ExecException - exception when compute
+     *
      */
     public CaseScoreResult compute(Tuple tuple) throws ExecException {
         if(header == null) {
@@ -151,8 +162,9 @@ public class ModelRunner {
      * Run model to compute score for input data map
      * 
      * @param rawDataMap
-     *            - the whole original input data as map
-     * @return @CaseScoreResult
+     *          - the whole original input data as map
+     * @return
+     *          - CaseScoreResult
      */
     public CaseScoreResult compute(Map<String, String> rawDataMap) {
         CaseScoreResult scoreResult = new CaseScoreResult();

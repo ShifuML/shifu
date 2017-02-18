@@ -36,10 +36,10 @@ public final class AreaUnderCurve {
     
     /**
      * Compute the area under the line connecting the two input points by the trapezoidal rule. The point 
-     * is stored as two <tt>double</tt> value which refer to x-coordinate and y-coordinate respectively.
+     * is stored as two &lt;tt&gt;double&lt;/tt&gt;value which refer to x-coordinate and y-coordinate respectively.
      * 
      * <p>
-     * Note: <tt>x2</tt> is considered to be no less than <tt>x1</tt>, so that <tt>(x2 - x1) >= 0</tt>
+     * Note: &lt;tt&gt;x2&lt;/tt&gt; is considered to be no less than &lt;tt&gt;x1&lt;/tt&gt;, so that &lt;tt&gt;(x2 - x1) &gt;= 0&lt;/tt&gt;
      * and the return value is always a nonnegative
      * </p>
      * 

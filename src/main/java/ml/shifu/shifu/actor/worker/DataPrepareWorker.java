@@ -58,11 +58,11 @@ public class DataPrepareWorker extends AbstractWorkerActor {
     private int weightedColumnNum = -1;
 
     /**
-     * @param modelConfig
-     * @param columnConfigList
-     * @param parentActorRef
-     * @param columnNumToActorMap
-     * @throws IOException
+     * @param modelConfig - ModelConfig
+     * @param columnConfigList  - ColumnConfig list for model
+     * @param parentActorRef - parent actor
+     * @param nextActorRef - child actor
+     * @throws IOException - any error occur
      */
     public DataPrepareWorker(ModelConfig modelConfig, List<ColumnConfig> columnConfigList, ActorRef parentActorRef,
             ActorRef nextActorRef) throws IOException {
@@ -71,11 +71,11 @@ public class DataPrepareWorker extends AbstractWorkerActor {
     }
 
     /**
-     * @param modelConfig
-     * @param columnConfigList
-     * @param parentActorRef
-     * @param columnNumToActorMap
-     * @throws IOException
+     * @param modelConfig - ModelConfig
+     * @param columnConfigList  - ColumnConfig list for model
+     * @param parentActorRef - parent actor
+     * @param columnNumToActorMap - column number to actor map
+     * @throws IOException - any error occur
      */
     public DataPrepareWorker(ModelConfig modelConfig, List<ColumnConfig> columnConfigList, ActorRef parentActorRef,
             Map<Integer, ActorRef> columnNumToActorMap) throws IOException {
@@ -320,7 +320,7 @@ public class DataPrepareWorker extends AbstractWorkerActor {
     /**
      * Convert model result data into column-based
      * 
-     * @param evalDataList
+     * @param scoreResultList
      *            evaluation result list
      * @param columnScoreListMap
      *            (column-id, List<ColumnScoreObject>)

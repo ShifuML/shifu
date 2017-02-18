@@ -40,7 +40,7 @@ import ml.shifu.shifu.core.dtrain.dt.TreeNode;
  * {@link TreeModel} is to load Random Forest or Gradient Boosted Decision Tree models.
  * 
  * <p>
- * {@link #loadFromStream(InputStream, ModelConfig, List)} can be used to read serialized models.
+ * {@link #loadFromStream(InputStream)} can be used to read serialized models.
  * 
  * <p>
  * TODO, make trees computing in parallel

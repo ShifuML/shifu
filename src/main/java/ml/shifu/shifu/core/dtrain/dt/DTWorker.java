@@ -82,27 +82,32 @@ import com.google.common.base.Splitter;
  * <p>
  * Random forest and gradient boost decision tree are all supported in such worker. For RF, just to collect statistics
  * for nodes from master. For GBDT, extra label and predict updated in each iteration.
- * 
+ * </p>
+ *
  * <p>
  * For GBDT, loaded data instances will also be changed for predict and label. Which means such data can only be stored
  * into memory. To store predict and label in GBDT, In {@link Data} predict and label are all set even with RF. Data are
  * stored as float types to save memory consumption.
- * 
+ * </p>
+ *
  * <p>
  * For GBDT, when a new tree is transferred to worker, data predict and label are all updated and such value can be
  * covered according to trees and learning rate.
- * 
+ * </p>
+ *
  * <p>
- * For RF, bagging with replacement are enabled by {@link PoissonDistribution} fields {@link #rng}.
- * 
+ * For RF, bagging with replacement are enabled by {@link PoissonDistribution} fields {@link #baggingRngMap}.
+ * </p>
+ *
  * <p>
  * Weighted training are supported in our RF and GBDT impl, in such worker, data.significance is weight set from input.
  * If no weight, such value is set to 1.
- * 
+ * </p>
+ *
  * <p>
  * Bin index is stored in each {@link Data} object as short to save memory, especially for categorical features, memory
  * is saved a lot.
- * 
+ * </p>
  * @author Zhang David (pengzhang@paypal.com)
  */
 @ComputableMonitor(timeUnit = TimeUnit.SECONDS, duration = 300)
@@ -149,7 +154,7 @@ public class DTWorker
     protected int outputNodeCount;
 
     /**
-     * {@link #candidateCount} is used to check if no variable is selected. If {@link #inputNodeCount} equals
+     * {@link #candidateCount} is used to check if no variable is selected. If {@link #inputCount} equals
      * {@link #candidateCount}, which means no column is selected or all columns are selected.
      */
     protected int candidateCount;
@@ -892,6 +897,9 @@ public class DTWorker
 
     /**
      * 'binBoundary' is ArrayList in fact, so we can use get method. ["-Infinity", 1d, 4d, ....]
+     * @param value - value to seach
+     * @param binBoundary - bin boundaries
+     * @return bin index of @value
      */
     public static int getBinIndex(float value, List<Double> binBoundary) {
         if(binBoundary.size() <= 1) {
@@ -1186,7 +1194,9 @@ public class DTWorker
 
     /**
      * Add to training set or validation set according to validation rate.
-     * 
+     * @param hashcode - record hashcode
+     * @param data - data to add
+     * @param isValidation - is validation data or not
      * @return if in training, training is true, others are false.
      */
     protected boolean addDataPairToDataSet(long hashcode, Data data, boolean isValidation) {

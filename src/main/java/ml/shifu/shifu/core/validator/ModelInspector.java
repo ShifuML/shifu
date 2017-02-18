@@ -49,11 +49,13 @@ import org.slf4j.LoggerFactory;
 
 /**
  * ModelInspector class is to do Safety Testing for model.
- * <p/>
+ *
  * Safety Testing include: 1. validate the @ModelConfig against its meta data
- * 
- * @links{src/main/resources/store/ModelConfigMeta.json 2. check source data for training and evaluation 3. check the
- *                                                      prerequisite for each step
+ *
+ * see ModelConfigMeta.json
+ *
+ * 2. check source data for training and evaluation
+ * 3. check the prerequisite for each step
  */
 public class ModelInspector {
 

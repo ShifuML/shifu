@@ -47,7 +47,7 @@ import java.util.List;
  * ExportModelProcessor class
  * 
  * @author zhanhu
- * @Nov 6, 2014
+ * Date Nov 6, 2014
  */
 public class ExportModelProcessor extends BasicModelProcessor implements Processor {
 

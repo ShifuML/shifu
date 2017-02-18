@@ -28,7 +28,8 @@ import org.encog.neural.networks.BasicNetwork;
 
 /**
  * {@link Gradient} is copied from Encog framework. The reason is that we original Gradient don't pop up
- * {@link #gradients} outside. While we need gradients accumulated into {@link NNMaster} to update NN weights.
+ * {@link #gradients} outside. While we need gradients accumulated into
+ * {@link ml.shifu.shifu.core.dtrain.nn.NNMaster} to update NN weights.
  */
 public class Gradient {
 
@@ -137,14 +138,13 @@ public class Gradient {
      * 
      * @param theNetwork
      *            The network to train.
-     * @param theOwner
-     *            The owner that is doing the training.
      * @param theTraining
-     *            The training data.
-     * @param theLow
-     *            The low index to use in the training data.
-     * @param theHigh
-     *            The high index to use in the training data.
+     *            The owner that is doing the training.
+     * @param theTesting
+     *            The test data.
+     * @param flatSpot -
+     * @param ef - error function
+     * @param isCrossOver -
      */
     public Gradient(final FlatNetwork theNetwork, final MLDataSet theTraining, final MLDataSet theTesting,
             final double[] flatSpot, ErrorFunction ef, boolean isCrossOver) {
@@ -270,9 +270,7 @@ public class Gradient {
     /**
      * Calculate the error for this neural network. The error is calculated
      * using root-mean-square(RMS).
-     * 
-     * @param data
-     *            The training set.
+     *
      * @return The error percentage.
      */
     public final double calculateError() {

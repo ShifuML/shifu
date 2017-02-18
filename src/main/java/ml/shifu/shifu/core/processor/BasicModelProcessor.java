@@ -141,7 +141,7 @@ public class BasicModelProcessor {
 
     /**
      * The post-logic after running
-     * </p>
+     * <p>
      * copy file to hdfs if SourceType is HDFS
      * </p>
      * 
@@ -177,8 +177,7 @@ public class BasicModelProcessor {
     /**
      * validate the modelconfig if it's well written.
      * 
-     * @return
-     * @throws Exception
+     * @throws Exception if validate fail
      */
     protected void validateModelConfig(ModelStep modelStep) throws Exception {
         ValidateResult result = new ValidateResult(false);
@@ -216,10 +215,10 @@ public class BasicModelProcessor {
 
     /**
      * Sync data into HDFS if necessary:
-     * RunMode == pig && SourceType == HDFS
+     * RunMode == pig and SourceType == HDFS
      * 
      * @param sourceType
-     * @return
+     * @return true if sync the data, or false
      * @throws IOException
      */
     public boolean syncDataToHdfs(SourceType sourceType) throws IOException {
@@ -282,10 +281,9 @@ public class BasicModelProcessor {
     /**
      * check algorithm parameter
      * 
-     * @throws Exception
-     *             </p>
-     *             modelConfig is not loaded or</p>
-     *             save ModelConfig.json file error </p>
+     * @throws Exception - if the algorithm is supported yet
+     *      <p>modelConfig is not loaded or</p>
+     *      <p>save ModelConfig.json file error </p>
      */
     public void checkAlgorithmParam() throws Exception {
 

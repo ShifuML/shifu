@@ -102,8 +102,7 @@ public final class HDFSUtils {
     /**
      * Get local FileSystem
      * 
-     * @throws IOException
-     *             if any IOException to retrieve local file system.
+     * Throw ShifuException, if any IOException to retrieve local file system.
      */
     public static FileSystem getLocalFS() {
         if(lfs == null) {

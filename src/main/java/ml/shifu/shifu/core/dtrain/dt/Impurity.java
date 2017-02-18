@@ -55,13 +55,21 @@ public abstract class Impurity {
 
     /**
      * Compute impurity by feature statistics. Stats array are for all bins.
+     * @param stats - statistics to compute gain info
+     * @param confg - ColumnConfig
+     * @return GainInfo for this column
      */
     public abstract GainInfo computeImpurity(double[] stats, ColumnConfig confg);
 
     /**
      * Update bin stats value per feature.
+     * @param featureStatistic -feature statistic
+     * @param binIndex - bin index
+     * @param label - label
+     * @param significance - significance for record
+     * @param weight - weight
      */
-    public abstract void featureUpdate(double[] featuerStatistic, int binIndex, float label, float significance,
+    public abstract void featureUpdate(double[] featureStatistic, int binIndex, float label, float significance,
             float weight);
 
     /**

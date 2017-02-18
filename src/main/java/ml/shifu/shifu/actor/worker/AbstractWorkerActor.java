@@ -28,7 +28,7 @@ import java.util.List;
  * AbstractWorkerActor class is the abstract class for all worker actor
  * Each work actor contains its parent actor and next actor, so that it can send result
  * to where. and it can also send message to parent directly, when exception happened.
- * <p/>
+ *
  * Notice, if the worker actor is the last step of whole loop, its next actor will be the same as its parent actor
  */
 public abstract class AbstractWorkerActor extends AbstractActor {
@@ -37,8 +37,12 @@ public abstract class AbstractWorkerActor extends AbstractActor {
     protected ActorRef nextActorRef;
 
     /**
-     * @param modelConfig
-     * @param columnConfigList
+     * Constructor
+     *
+     * @param modelConfig - ModelConfig
+     * @param columnConfigList - ColumnConfig list
+     * @param parentActorRef - parent actor reference
+     * @param nextActorRef - child actor reference
      */
     public AbstractWorkerActor(
             ModelConfig modelConfig,
@@ -66,6 +70,7 @@ public abstract class AbstractWorkerActor extends AbstractActor {
      * The method to handle message
      *
      * @param message - received message
+     * @throws Exception - exceptions when handling message
      */
     public abstract void handleMsg(Object message) throws Exception;
 }

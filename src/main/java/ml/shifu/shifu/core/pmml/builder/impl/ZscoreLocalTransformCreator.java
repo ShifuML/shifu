@@ -151,7 +151,7 @@ public class ZscoreLocalTransformCreator extends AbstractPmmlElementCreator<Loca
      * Convert column name into PMML format(with normalization)
      *
      * @param columnName
-     * @parm normType
+     * @param normType
      * @return - PMML standard column name
      */
     protected String genPmmlColumnName(String columnName, ModelNormalizeConf.NormType normType) {

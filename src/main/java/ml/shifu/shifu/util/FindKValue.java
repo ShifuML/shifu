@@ -19,8 +19,8 @@ import java.util.Comparator;
 import java.util.List;
 
 /**
- * Find the k largest number in List,
- * <p/>
+ * Find the k largest number in List.
+ *
  * Warning: this FindKValue would change the order of list
  */
 public class FindKValue {

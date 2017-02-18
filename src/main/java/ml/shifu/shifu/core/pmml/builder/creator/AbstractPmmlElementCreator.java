@@ -45,10 +45,10 @@ public abstract class AbstractPmmlElementCreator<T> {
 
     /**
      * Get @OpType from ColumnConfig
-     * Meta Column -> ORDINAL
-     * Target Column -> CATEGORICAL
-     * Categorical Column -> CATEGORICAL
-     * Numerical Column -> CONTINUOUS
+     * Meta Column vs. ORDINAL
+     * Target Column vs. CATEGORICAL
+     * Categorical Column vs. CATEGORICAL
+     * Numerical Column vs. CONTINUOUS
      *
      * @param columnConfig
      *            - ColumnConfig for variable
@@ -66,8 +66,8 @@ public abstract class AbstractPmmlElementCreator<T> {
 
     /**
      * Get DataType from OpType
-     * CONTINUOUS -> DOUBLE
-     * Other -> STRING
+     * CONTINUOUS vs. DOUBLE
+     * Other vs. STRING
      *
      * @param optype
      *            OpType

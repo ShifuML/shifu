@@ -566,7 +566,9 @@ public abstract class AbstractNNWorker<VALUE extends Writable> extends
 
     /**
      * Add to training set or validation set according to validation rate.
-     * 
+     * @param hashcode - hash code for data
+     * @param pair - data pair to add
+     * @param isValidation - is validation set or not
      * @return if in training, training is true, others are false.
      */
     protected boolean addDataPairToDataSet(long hashcode, FloatMLDataPair pair, boolean isValidation) {

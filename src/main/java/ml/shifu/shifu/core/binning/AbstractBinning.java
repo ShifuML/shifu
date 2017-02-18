@@ -32,7 +32,7 @@ import org.apache.commons.lang.StringUtils;
 /**
  * AbstractBinning class
  * 
- * @Oct 20, 2014
+ * Oct 20, 2014
  *
  */
 public abstract class AbstractBinning<T> {
@@ -45,7 +45,7 @@ public abstract class AbstractBinning<T> {
     public static final char PAIR_SEPARATOR = '\u0003';
     
     /**
-     * Missing data count && invalid data count
+     * Missing data count &amp;&amp; invalid data count
      */
     protected int missingValCnt = 0;
     protected int invalidValCnt = 0;
@@ -67,7 +67,7 @@ public abstract class AbstractBinning<T> {
     
     /**
      * Constructor with expected bin number
-     * @param binningNum
+     * @param binningNum - bin number to expect
      */
     public AbstractBinning(int binningNum) {
         this(binningNum, null);
@@ -75,8 +75,8 @@ public abstract class AbstractBinning<T> {
     
     /**
      * Constructor with expected bin number and expected missing values
-     * @param binningNum
-     * @param missingValList
+     * @param binningNum - bin number to expect
+     * @param missingValList - missing value list
      */
     public AbstractBinning(int binningNum, List<String> missingValList) {
         this.expectedBinningNum = binningNum;
@@ -92,7 +92,7 @@ public abstract class AbstractBinning<T> {
     
     /**
      * Get value missing count
-     * @return
+     * @return missing value count
      */
     public int getMissingValCnt() {
         return missingValCnt;
@@ -100,7 +100,7 @@ public abstract class AbstractBinning<T> {
 
     /**
      * Get invalid value count
-     * @return
+     * @return invalid value count
      */
     public int getInvalidValCnt() {
         return invalidValCnt;
@@ -108,20 +108,20 @@ public abstract class AbstractBinning<T> {
     
     /**
      * Add data into bin generator
-     * @param val
+     * @param val - value to add
      */
     public abstract void addData(String val);
     /**
      * Generate the bin boundary or bin category
-     * @return
+     * @return bin boundaries
      */
     public abstract List<T> getDataBin();
     
 
     /**
      * Check some value is missing value or not
-     * @param val
-     * @return
+     * @param val - value to test
+     * @return - is missing value or not
      */
     protected boolean isMissingVal(String val) {
         return missingValSet.contains(val);
@@ -143,7 +143,7 @@ public abstract class AbstractBinning<T> {
     
     /**
      * Merge another binning info to this. Currently for the expected bin number, the max value will be used.
-     * @param another
+     * @param another - another binning to merge
      */
     public void mergeBin(AbstractBinning<?> another) {
         this.expectedBinningNum = Math.max(this.expectedBinningNum, another.expectedBinningNum);
@@ -161,7 +161,7 @@ public abstract class AbstractBinning<T> {
     
     /**
      * convert @AbstractBinning to String
-     * @return
+     * @param objValStr String format of Binning Object
      */
     protected void stringToObj(String objValStr) {
         String[] objStrArr = objValStr.split(Character.toString(FIELD_SEPARATOR), -1);
@@ -187,7 +187,7 @@ public abstract class AbstractBinning<T> {
     
     /**
      * convert @AbstractBinning to String
-     * @return
+     * @return String format of Object
      */
     public String objToString() {
         List<String> strList = new ArrayList<String>();

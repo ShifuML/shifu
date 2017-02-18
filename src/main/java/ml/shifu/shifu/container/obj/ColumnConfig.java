@@ -61,12 +61,15 @@ public class ColumnConfig {
 
     /**
      * ---------------------------------------------------------------------------
-     * <p/>
+     * <p>
      * Auto-Gen methods
-     * <p/>
+     * </p>
      * ---------------------------------------------------------------------------
      */
 
+    /**
+     * @return columnNum
+     */
     public Integer getColumnNum() {
         return columnNum;
     }
@@ -132,7 +135,7 @@ public class ColumnConfig {
      */
 
     /**
-     * @return
+     * @return column is target or not
      */
     @JsonIgnore
     public boolean isTarget() {
@@ -140,7 +143,7 @@ public class ColumnConfig {
     }
 
     /**
-     * @return
+     * @return column is candidate variable or not
      */
     @JsonIgnore
     public boolean isCandidate() {
@@ -149,7 +152,7 @@ public class ColumnConfig {
     }
 
     /**
-     * @return
+     * @return column is numerical variable or not
      */
     @JsonIgnore
     public boolean isNumerical() {
@@ -157,7 +160,7 @@ public class ColumnConfig {
     }
 
     /**
-     * @return
+     * @return column is categorical or not
      */
     @JsonIgnore
     public boolean isCategorical() {
@@ -165,7 +168,7 @@ public class ColumnConfig {
     }
 
     /**
-     * @return
+     * @return column is meta or not
      */
     @JsonIgnore
     public boolean isMeta() {
@@ -173,7 +176,7 @@ public class ColumnConfig {
     }
 
     /**
-     * @return
+     * @return column is force-removed or not
      */
     @JsonIgnore
     public boolean isForceRemove() {
@@ -181,7 +184,7 @@ public class ColumnConfig {
     }
 
     /**
-     * @return
+     * @return column is force-selected or not
      */
     @JsonIgnore
     public boolean isForceSelect() {
@@ -189,7 +192,7 @@ public class ColumnConfig {
     }
 
     /**
-     * @return
+     * @return bin number
      */
     @JsonIgnore
     public int getBinLength() {
@@ -197,7 +200,7 @@ public class ColumnConfig {
     }
 
     /**
-     * @return
+     * @return bin boundary for numerical variable
      */
     @JsonIgnore
     public List<Double> getBinBoundary() {
@@ -205,7 +208,7 @@ public class ColumnConfig {
     }
 
     /**
-     * @return
+     * @return bin category for categorical variable
      */
     @JsonIgnore
     public List<String> getBinCategory() {
@@ -213,7 +216,7 @@ public class ColumnConfig {
     }
 
     /**
-     * @return
+     * @return negative instance count on each bin
      */
     @JsonIgnore
     public List<Integer> getBinCountNeg() {
@@ -221,7 +224,7 @@ public class ColumnConfig {
     }
 
     /**
-     * @return
+     * @return positive instance count on each bin
      */
     @JsonIgnore
     public List<Integer> getBinCountPos() {
@@ -229,7 +232,7 @@ public class ColumnConfig {
     }
 
     /**
-     * @return
+     * @return positive rate on each bin
      */
     @JsonIgnore
     public List<Double> getBinPosRate() {
@@ -237,7 +240,7 @@ public class ColumnConfig {
     }
 
     /**
-     * @return
+     * @return average score on each bin
      */
     @JsonIgnore
     public List<Integer> getBinAvgScore() {
@@ -245,7 +248,7 @@ public class ColumnConfig {
     }
 
     /**
-     * @return binCountWoe
+     * @return count WOE on each bin
      */
     @JsonIgnore
     public List<Double> getBinCountWoe() {
@@ -253,7 +256,7 @@ public class ColumnConfig {
     }
 
     /**
-     * @return binWeightedWoe
+     * @return weighted WOE on each bin
      */
     @JsonIgnore
     public List<Double> getBinWeightedWoe() {
@@ -261,14 +264,14 @@ public class ColumnConfig {
     }
 
     /**
-     * @param length
+     * @param length - length to set
      */
     public void setBinLength(int length) {
         columnBinning.setLength(length);
     }
 
     /**
-     * @param binBoundary
+     * @param binBoundary - binBoundary to set
      */
     public void setBinBoundary(List<Double> binBoundary) {
         columnBinning.setBinBoundary(binBoundary);
@@ -276,7 +279,7 @@ public class ColumnConfig {
     }
 
     /**
-     * @param binCategory
+     * @param binCategory - binCategory to set
      */
     public void setBinCategory(List<String> binCategory) {
         columnBinning.setBinCategory(binCategory);
@@ -284,35 +287,35 @@ public class ColumnConfig {
     }
 
     /**
-     * @param binCountNeg
+     * @param binCountNeg - binCountNeg to set
      */
     public void setBinCountNeg(List<Integer> binCountNeg) {
         columnBinning.setBinCountNeg(binCountNeg);
     }
 
     /**
-     * @param binCountPos
+     * @param binCountPos - binCountPos to set
      */
     public void setBinCountPos(List<Integer> binCountPos) {
         columnBinning.setBinCountPos(binCountPos);
     }
 
     /**
-     * @param binPosRate
+     * @param binPosRate - binPosRate to set
      */
     public void setBinPosCaseRate(List<Double> binPosRate) {
         columnBinning.setBinPosRate(binPosRate);
     }
 
     /**
-     * @param binAvgScore
+     * @param binAvgScore - binAvgScore to set
      */
     public void setBinAvgScore(List<Integer> binAvgScore) {
         columnBinning.setBinAvgScore(binAvgScore);
     }
 
     /**
-     * @return
+     * @return ks
      */
     @JsonIgnore
     public Double getKs() {
@@ -320,7 +323,7 @@ public class ColumnConfig {
     }
 
     /**
-     * @return
+     * @return iv
      */
     @JsonIgnore
     public Double getIv() {
@@ -328,7 +331,7 @@ public class ColumnConfig {
     }
 
     /**
-     * @return
+     * @return mean
      */
     @JsonIgnore
     public Double getMean() {
@@ -336,7 +339,7 @@ public class ColumnConfig {
     }
 
     /**
-     * @return
+     * @return stdDev
      */
     @JsonIgnore
     public Double getStdDev() {
@@ -364,42 +367,42 @@ public class ColumnConfig {
     }
 
     /**
-     * @param ks
+     * @param ks - ks to set
      */
     public void setKs(double ks) {
         columnStats.setKs(ks);
     }
 
     /**
-     * @param iv
+     * @param iv - iv to set
      */
     public void setIv(double iv) {
         columnStats.setIv(iv);
     }
 
     /**
-     * @param max
+     * @param max - max to set
      */
     public void setMax(Double max) {
         columnStats.setMax(max);
     }
 
     /**
-     * @param min
+     * @param min - min to set
      */
     public void setMin(Double min) {
         columnStats.setMin(min);
     }
 
     /**
-     * @param mean
+     * @param mean - mean to set
      */
     public void setMean(Double mean) {
         columnStats.setMean(mean);
     }
 
     /**
-     * @param stdDev
+     * @param stdDev - stdDev to set
      */
     public void setStdDev(Double stdDev) {
         columnStats.setStdDev(stdDev);

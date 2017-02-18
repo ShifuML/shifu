@@ -73,7 +73,7 @@ public class ColumnFile {
 
     /**
      * generate output variables after mapping
-     * @return
+     * @return list output variable names
      */
     public List<String> getOutputVarNames() {
         List<String> outputVarNames = new ArrayList<String>();
@@ -89,7 +89,7 @@ public class ColumnFile {
 
     /**
      * generate the fields projector for selected variables
-     * @return
+     * @return pig field selector
      */
     public String genFieldSelector() {
         List<String> fields = new ArrayList<String>();
@@ -105,9 +105,9 @@ public class ColumnFile {
 
     /**
      * Load data into memory, only selected data.
-     * The output format is <key, selected-variables>
-     * @param keyName
-     * @return
+     * The output format is &lt;key, selected-variables&gt;
+     * @param keyName the key field for records
+     * @return - &lt;key, selected-variables&gt;
      */
     public Map<String,List<String>> loadSelectedData(String keyName) {
         LOG.info("Load data from {}:{} by key {}.", fileType, filePath, keyName);
@@ -134,8 +134,8 @@ public class ColumnFile {
 
     /**
      * Check the selected variables contain some variable
-     * @param varName
-     * @return
+     * @param varName - variable name to check
+     * @return - whether the variable selected or not
      */
     public boolean hasSelectedVar(String varName) {
         return ArrayUtils.contains(selectedVars, varName);

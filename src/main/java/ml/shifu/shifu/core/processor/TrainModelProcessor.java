@@ -176,6 +176,7 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
         long start = System.currentTimeMillis();
         try {
             setUp(ModelStep.TRAIN);
+            CommonUtils.updateColumnConfigFlags(this.modelConfig, this.columnConfigList);
 
             if(isDebug) {
                 File file = new File(LOGS);

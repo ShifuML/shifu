@@ -23,7 +23,7 @@ import org.dmg.pmml.*;
 /**
  * The class that converts an LR model to a PMML RegressionModel.
  * This class extends the abstract class
- * PMMLModelBuilder<pmml.RegressionModel,LR>.
+ * PMMLModelBuilder&lt;pmml.RegressionModel,LR&gt;.
  */
 public class PMMLLRModelBuilder
         implements

@@ -27,7 +27,7 @@ import java.util.List;
  * AbstractActor class
  * Abstract Actor is parent class of all kinds of work actor. It will contains the @ModelConfig and
  *
- * @ColumnConfig list for its sub-class, it also try to find the column number of the target column
+ * @see ColumnConfig list for its sub-class, it also try to find the column number of the target column
  */
 public abstract class AbstractActor extends UntypedActor {
     private static Logger log = LoggerFactory.getLogger(AbstractActor.class);

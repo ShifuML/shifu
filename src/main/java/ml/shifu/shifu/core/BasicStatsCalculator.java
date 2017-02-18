@@ -47,8 +47,8 @@ public class BasicStatsCalculator {
     /**
      * Constructor
      *
-     * @param voList
-     * @param threshold
+     * @param voList - value object for calculating stats
+     * @param threshold - threshold for variable value
      */
     public BasicStatsCalculator(List<ValueObject> voList, Double threshold) {
         this.voList = voList;

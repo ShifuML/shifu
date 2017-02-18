@@ -47,6 +47,8 @@ public class ModelTrainConf {
 
         /**
          * Get {@link MultipleClassification} by string, case can be ignored.
+         * @param strategy - name for multi-classification
+         * @return {@link MultipleClassification}
          */
         public static MultipleClassification of(String strategy) {
             for(MultipleClassification element: values()) {
@@ -193,8 +195,9 @@ public class ModelTrainConf {
     }
 
     /**
-     * @param alg
-     * @return
+     * @param alg - algorithm to build model
+     * @param trainConf - configuration for training model
+     * @return parameters for model training
      */
     public static Map<String, Object> createParamsByAlg(ALGORITHM alg, ModelTrainConf trainConf) {
         Map<String, Object> params = new HashMap<String, Object>();
@@ -424,7 +427,7 @@ public class ModelTrainConf {
     }
 
     /**
-     * @param stratifiedSampling the stratifiedSampling to set
+     * @param stratifiedSample the stratifiedSampling to set
      */
     @JsonProperty
     public void setStratifiedSample(Boolean stratifiedSample) {
@@ -440,7 +443,7 @@ public class ModelTrainConf {
     }
 
     /**
-     * @param kCrossValidation the kCrossValidation to set
+     * @param numKFold the kCrossValidation to set
      */
     @JsonProperty
     public void setNumKFold(Integer numKFold) {

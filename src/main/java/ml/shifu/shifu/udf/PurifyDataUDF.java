@@ -16,6 +16,7 @@
 package ml.shifu.shifu.udf;
 
 import ml.shifu.shifu.container.obj.EvalConfig;
+import ml.shifu.shifu.container.obj.ModelConfig;
 import ml.shifu.shifu.core.DataPurifier;
 import ml.shifu.shifu.util.Constants;
 
@@ -26,9 +27,10 @@ import java.io.IOException;
 
 /**
  * PurifyDataUDF class purify the data for training and evaluation.
- * The setting for purify is in in @ModelConfig.dataSet.filterExpressions or
- * 
- * @EvalConfig.dataSet.filterExpressions
+ * The setting for purify is in
+ * @see ModelConfig dataSet:filterExpressions
+ * or
+ * @see EvalConfig dataSet:filterExpressions
  */
 public class PurifyDataUDF extends AbstractTrainerUDF<Boolean> {
 

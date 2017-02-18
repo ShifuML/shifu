@@ -34,7 +34,6 @@ import java.util.Random;
 import java.util.Set;
 
 /**
- * <pre>
  * AddColumnNumUDF class is to convert tuple of row data into bag of column data
  * Its structure is like
  *    {

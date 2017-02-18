@@ -26,28 +26,31 @@ import ml.shifu.shifu.util.SizeEstimator;
  * <p>
  * With this data set, element is added firstly in memory, if over {@link #maxByteSize} then element will be added into
  * disk.
- * 
+ * </p>
+ *
  * <p>
  * This data set provide a very important feature to make in memory computing more stable. Even for some cases no enough
  * memory, memory and disk will be leveraged together to accelerate computing.
- * 
+ * </p>
+ *
  * <p>
  * Example almost same as {@link BufferedFloatMLDataSet}:
- * 
- * <pre>
+ * </p>
+ *
+ * <p>
  * MemoryDiskMLDataSet dataSet = new MemoryDiskFloatMLDataSet(400, "a.txt");
  * dataSet.beginLoad(10, 1);
  * dataSet.add(pair);
  * dataSet.endLoad();
  * 
- * Iterator<MLDataPair> iterator = dataSet.iterator();
+ * Iterator&lt;MLDataPair&gt; iterator = dataSet.iterator();
  * while(iterator.hasNext()) {
  *     FloatMLDataPair next = iterator.next();
  *     ...
  * }
  * 
  * dataSet.close();
- * </pre>
+ * </p>
  * 
  * @author Zhang David (pengzhang@paypal.com)
  */
@@ -100,6 +103,9 @@ public class MemoryDiskFloatMLDataSet implements FloatMLDataSet {
 
     /**
      * Constructor with {@link #fileName}, {@link #inputCount} and {@link #outputCount}
+     * @param fileName - file name
+     * @param inputCount - input count
+     * @param outputCount - output count
      */
     public MemoryDiskFloatMLDataSet(String fileName, int inputCount, int outputCount) {
         this.memoryDataSet = new BasicFloatMLDataSet();
@@ -110,6 +116,8 @@ public class MemoryDiskFloatMLDataSet implements FloatMLDataSet {
 
     /**
      * Constructor with {@link #maxByteSize} and {@link #fileName}
+     * @param maxByteSize - max byte size to hold in memory
+     * @param fileName - file name
      */
     public MemoryDiskFloatMLDataSet(long maxByteSize, String fileName) {
         this.maxByteSize = maxByteSize;
@@ -118,7 +126,12 @@ public class MemoryDiskFloatMLDataSet implements FloatMLDataSet {
     }
 
     /**
+     *
      * Constructor with {@link #maxByteSize}, {@link #fileName}, {@link #inputCount} and {@link #outputCount}.
+     * @param maxByteSize - max byte size to hold in memory
+     * @param fileName - file name
+     * @param inputCount - input count
+     * @param outputCount - output count
      */
     public MemoryDiskFloatMLDataSet(long maxByteSize, String fileName, int inputCount, int outputCount) {
         this.maxByteSize = maxByteSize;
@@ -154,9 +167,8 @@ public class MemoryDiskFloatMLDataSet implements FloatMLDataSet {
         }
     }
 
-    /*
-     * (non-Javadoc)
-     * 
+    /**
+     * @return iterator for data
      * @see java.lang.Iterable#iterator()
      */
     @Override
@@ -217,9 +229,8 @@ public class MemoryDiskFloatMLDataSet implements FloatMLDataSet {
         };
     }
 
-    /*
-     * (non-Javadoc)
-     * 
+    /**
+     * @return output size
      * @see org.encog.ml.data.MLDataSet#getIdealSize()
      */
     @Override
@@ -227,9 +238,8 @@ public class MemoryDiskFloatMLDataSet implements FloatMLDataSet {
         return this.outputCount;
     }
 
-    /*
-     * (non-Javadoc)
-     * 
+    /**
+     * @return input size
      * @see org.encog.ml.data.MLDataSet#getInputSize()
      */
     @Override

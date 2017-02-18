@@ -61,10 +61,6 @@ public class PostTrainActor extends AbstractActor {
     private int resultCnt;
     private int expectedResultCnt;
 
-    /**
-     * @param modelConfig
-     * @param columnConfigList
-     */
     public PostTrainActor(final ModelConfig modelConfig, final List<ColumnConfig> columnConfigList, final AkkaExecStatus akkaStatus) {
         super(modelConfig, columnConfigList, akkaStatus);
 

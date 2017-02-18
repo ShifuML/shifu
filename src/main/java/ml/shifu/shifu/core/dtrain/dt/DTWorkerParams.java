@@ -198,8 +198,8 @@ public class DTWorkerParams extends HaltBytable implements Combinable<DTWorkerPa
         }
 
         /**
-         * @param treeIndex
-         *            the treeIndex to set
+         * @param treeId
+         *            the treeId to set
          */
         public void setTreeId(int treeId) {
             this.treeId = treeId;

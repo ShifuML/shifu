@@ -29,8 +29,7 @@ import java.io.IOException;
 
 /**
  * BinningMethodDeserializer class
- *
- * @param <T>
+ * Template &lt;T&gt;
  */
 public class BinningMethodDeserializer extends JsonDeserializer<BinningMethod> {
 

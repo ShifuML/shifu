@@ -62,9 +62,10 @@ public class LogisticRegressionTrainer extends AbstractTrainer {
 
     /**
      * {@inheritDoc}
-     * </p>
+     * <p>
      * no <code>regularization</code>
      * </p>
+     * <p>
      * Regular will be provide later
      * </p>
      *

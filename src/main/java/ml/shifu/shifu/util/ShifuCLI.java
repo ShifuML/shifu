@@ -95,8 +95,6 @@ public class ShifuCLI {
 
     /**
      * Main entry for the whole framework.
-     * 
-     * @throws IOException
      */
     public static void main(String[] args) {
         // invalid input and help options

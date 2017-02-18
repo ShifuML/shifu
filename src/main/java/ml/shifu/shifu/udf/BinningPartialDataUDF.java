@@ -36,7 +36,7 @@ import org.apache.pig.impl.logicalLayer.schema.Schema;
 /**
  * GenBinningDataUDF class
  * 
- * @Nov 11, 2014
+ * Nov 11, 2014
  * 
  */
 public class BinningPartialDataUDF extends AbstractTrainerUDF<String> {

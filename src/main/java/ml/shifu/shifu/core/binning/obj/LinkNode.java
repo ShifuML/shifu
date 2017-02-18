@@ -20,7 +20,7 @@ package ml.shifu.shifu.core.binning.obj;
 /**
  * LinkNode class
  * 
- * @Nov 19, 2014
+ * Nov 19, 2014
  *
  */
 public class LinkNode<T> {

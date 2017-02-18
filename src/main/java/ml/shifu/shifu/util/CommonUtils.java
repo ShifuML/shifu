@@ -198,7 +198,7 @@ public final class CommonUtils {
     }
 
     /**
-     * Load reason code map and change it to column->resonCode map.
+     * Load reason code map and change it to column-&gt;resonCode map.
      * 
      * @throws IOException
      *             if any IO exception in parsing json.
@@ -1578,7 +1578,7 @@ public final class CommonUtils {
     }
 
     /**
-     * Convert data into <key, value> map. The @inputData is String of a record, which is delimited by @delimiter
+     * Convert data into &lt;key, value&gt; map. The @inputData is String of a record, which is delimited by @delimiter
      * If fields in @inputData is not equal @header size, return null
      * 
      * @param inputData
@@ -1587,7 +1587,7 @@ public final class CommonUtils {
      *            - the delimiter of the input data
      * @param header
      *            - the column names for all the input data
-     * @return <key, value> map for the record
+     * @return &lt;key, value&gt; map for the record
      */
     public static Map<String, String> convertDataIntoMap(String inputData, String delimiter, String[] header) {
         String[] input = CommonUtils.split(inputData, delimiter);
@@ -1609,14 +1609,14 @@ public final class CommonUtils {
     }
 
     /**
-     * Convert tuple record into <key, value> map. The @tuple is Tuple for a record
+     * Convert tuple record into &lt;key, value&gt; map. The @tuple is Tuple for a record
      * If @tuple size is not equal @header size, return null
      * 
      * @param tuple
      *            - Tuple of a record
      * @param header
      *            - the column names for all the input data
-     * @return <key, value> map for the record
+     * @return &lt;key, value&gt; map for the record
      * @throws ExecException
      *             - throw exception when operating tuple
      */

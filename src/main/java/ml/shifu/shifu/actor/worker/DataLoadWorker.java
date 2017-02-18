@@ -48,7 +48,7 @@ import com.google.common.base.Splitter;
 
 /**
  * DataLoadWorker class is used to load data from all kinds of source.
- * Its input is data scanner. The output are usually List<String>
+ * Its input is data scanner. The output are usually List&lt;String&gt;
  */
 public class DataLoadWorker extends AbstractWorkerActor {
 
@@ -135,9 +135,11 @@ public class DataLoadWorker extends AbstractWorkerActor {
     }
 
     /**
-     * @param totalMsgCnt
+     * @param streamId
+     * @param totalStreamCnt
      * @param scanner
-     * @param int1
+     * @param recordCntPerMsg
+     * @return
      */
     private long splitDataIntoMultiMessages(int streamId, int totalStreamCnt, Scanner scanner, int recordCntPerMsg) {
         long recordCnt = 0;
@@ -170,7 +172,7 @@ public class DataLoadWorker extends AbstractWorkerActor {
      * 
      * @param scanner
      *            - input partition
-     * @return List<String>
+     * @return List&lt;String&gt;
      */
     public List<String> readDataIntoList(Scanner scanner) {
         List<String> rawDataList = new LinkedList<String>();
@@ -197,7 +199,7 @@ public class DataLoadWorker extends AbstractWorkerActor {
      *            - input partition
      * @param isDryRun
      *            - is for test running?
-     * @return List<MLDataPair>
+     * @return List&lt;MLDataPair&gt;
      */
     public List<MLDataPair> readTrainingData(Scanner scanner, boolean isDryRun) {
         List<MLDataPair> mlDataPairList = new ArrayList<MLDataPair>();

@@ -17,9 +17,10 @@ package ml.shifu.shifu.core.dtrain;
 
 /**
  * {@link Weight} is used to update NN weights according to propagation option. Which is also copied from Encog.
- * <p/>
- * <p/>
+ *
+ * <p>
  * We'd like to reuse code from Encog but unfortunately the methods are private:(.
+ * </p>
  */
 public class Weight {
     /**

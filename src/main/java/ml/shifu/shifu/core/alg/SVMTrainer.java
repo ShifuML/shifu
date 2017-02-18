@@ -67,9 +67,9 @@ public class SVMTrainer extends AbstractTrainer {
     /**
      * SVMTrainer Constructor
      *
-     * @param modelConfig
-     * @param trainerID
-     * @param dryRun
+     * @param modelConfig - ModelConfig
+     * @param trainerID - trainer id
+     * @param dryRun - dryRun is for testing purpose
      */
     public SVMTrainer(ModelConfig modelConfig, int trainerID, Boolean dryRun) {
         super(modelConfig, trainerID, dryRun);

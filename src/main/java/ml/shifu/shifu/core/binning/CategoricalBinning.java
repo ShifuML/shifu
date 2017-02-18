@@ -31,7 +31,7 @@ import org.slf4j.LoggerFactory;
 /**
  * CategoricalBinning class
  * 
- * @Oct 20, 2014
+ * Oct 20, 2014
  *
  */
 public class CategoricalBinning extends AbstractBinning<String> {
@@ -49,7 +49,7 @@ public class CategoricalBinning extends AbstractBinning<String> {
     /**
      * Constructor with expected bin number. 
      * For categorical variable, the binningNum won't be used
-     * @param binningNum
+     * @param binningNum - ignored for categorical variable
      */
     public CategoricalBinning(int binningNum) {
         this(binningNum, null);
@@ -58,8 +58,8 @@ public class CategoricalBinning extends AbstractBinning<String> {
     /**
      * Constructor with expected bin number and missing value list
      * For categorical variable, the binningNum won't be used
-     * @param binningNum
-     * @param missingValList
+     * @param binningNum - ignored for categorical variable
+     * @param missingValList - missing value list
      */
     public CategoricalBinning(int binningNum, List<String> missingValList) {
         super(binningNum, missingValList);
@@ -117,7 +117,6 @@ public class CategoricalBinning extends AbstractBinning<String> {
     
     /**
      * convert @CategoricalBinning to String
-     * @return
      */
     protected void stringToObj(String objValStr) {
         super.stringToObj(objValStr);
@@ -142,7 +141,7 @@ public class CategoricalBinning extends AbstractBinning<String> {
     
     /**
      * convert @CategoricalBinning to String
-     * @return
+     * @return String of this
      */
     public String objToString() {
         return super.objToString() 

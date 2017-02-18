@@ -115,9 +115,9 @@ public abstract class AbstractTrainer {
     /**
      * Constructor
      *
-     * @param modelConfig
-     * @param trainerID
-     * @param dryRun
+     * @param modelConfig - ModelConfig
+     * @param trainerID - id of trainer
+     * @param dryRun - true just for testing
      */
     public AbstractTrainer(ModelConfig modelConfig, int trainerID, Boolean dryRun) {
         this.random = new Random(System.currentTimeMillis() + trainerID);
@@ -142,8 +142,8 @@ public abstract class AbstractTrainer {
     /**
      * Set up the training dataset and validation dataset
      *
-     * @param masterDataSet
-     * @throws IOException
+     * @param masterDataSet - data set to model training
+     * @throws IOException - if fail to load data
      */
     public void setDataSet(MLDataSet masterDataSet) throws IOException {
         log.info("Setting Data Set...");
@@ -325,7 +325,7 @@ public abstract class AbstractTrainer {
     /**
      * set the training option, M/D
      *
-     * @param trainingOption
+     * @param trainingOption memory or disk
      */
     public void setTrainingOption(String trainingOption) {
         this.trainingOption = trainingOption;
@@ -343,11 +343,11 @@ public abstract class AbstractTrainer {
     /**
      * load/save the sampling data from pre-initialization file
      *
-     * @param sampleSize
-     * @param masterSize
-     * @param replaceable
+     * @param sampleSize - sample size
+     * @param masterSize - whole data size
+     * @param replaceable - is replaceable when sampling
      * @return the list, the indexed of sampling data
-     * @throws IOException
+     * @throws IOException - any error when sampling data
      */
     private List<Integer> loadSampleInput(int sampleSize, int masterSize, boolean replaceable) throws IOException {
         List<Integer> list = null;
@@ -390,9 +390,9 @@ public abstract class AbstractTrainer {
     /**
      * randomizer the input data
      *
-     * @param sampleSize
-     * @param masterSize
-     * @param replaceable
+     * @param sampleSize - sample size
+     * @param masterSize - whole data size
+     * @param replaceable - is replaceable when sampling
      * @return the list of input
      */
     private List<Integer> randomSetSampleIndex(int sampleSize, int masterSize, boolean replaceable) {
@@ -414,7 +414,7 @@ public abstract class AbstractTrainer {
     /**
      * reset the weights in trainer
      *
-     * @param classifier
+     * @param classifier - network to reset
      */
     public void resetParams(BasicML classifier) {
         if (modelConfig.isFixInitialInput()) {
@@ -428,16 +428,16 @@ public abstract class AbstractTrainer {
 
     /**
      * A training start function, and print the training error and validation errors
-     * @return
-     * @throws IOException
+     * @return train status
+     * @throws IOException - exception when training model
      */
     public abstract double train() throws IOException;
 
     /**
      * non-synchronously version update error
      *
-     * @param network
-     * @param dataSet
+     * @param network - model network
+     * @param dataSet - data set for evaluation
      * @return the standard error
      */
     public static Double calculateMSE(BasicNetwork network, MLDataSet dataSet) {

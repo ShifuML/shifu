@@ -346,6 +346,7 @@ public class Node implements Bytable {
 
     /**
      * Check if node is real for leaf. No matter the leaf flag, this will check whether left and right exist.
+     * @return is real leaf or not
      */
     public boolean isRealLeaf() {
         return this.left == null && this.right == null;
@@ -396,15 +397,15 @@ public class Node implements Bytable {
     }
 
     /**
-     * @return the wgtCnt
+     * @return the wgtCntRatio
      */
     public double getWgtCntRatio() {
         return wgtCntRatio;
     }
 
     /**
-     * @param wgtCnt
-     *            the wgtCnt to set
+     * @param wgtCntRatio
+     *            the wgtCntRatio to set
      */
     public void setWgtCntRatio(double wgtCntRatio) {
         this.wgtCntRatio = wgtCntRatio;

@@ -36,7 +36,7 @@ import java.util.List;
  * DataFilterWorker class is to filter data by setting.
  * It do filtering by the setting in @ModelConfig.dataSet.filterExpressions or
  *
- * @EvalConfig.dataSet.filterExpressions
+ * @see EvalConfig#dataSet filterExpressions
  */
 public class DataFilterWorker extends AbstractWorkerActor {
 
@@ -47,11 +47,11 @@ public class DataFilterWorker extends AbstractWorkerActor {
     /**
      * Create data filter worker for training data
      *
-     * @param modelConfig
-     * @param columnConfigList
-     * @param parentActorRef
-     * @param nextActorRef
-     * @throws IOException
+     * @param modelConfig - ModelConfig
+     * @param columnConfigList - ColumnConfig list for model
+     * @param parentActorRef - parent actor
+     * @param nextActorRef - child actor
+     * @throws IOException - any error occur
      */
     public DataFilterWorker(
             ModelConfig modelConfig,
@@ -65,12 +65,12 @@ public class DataFilterWorker extends AbstractWorkerActor {
     /**
      * Create data filter worker for evaluation data
      *
-     * @param modelConfig
-     * @param columnConfigList
-     * @param parentActorRef
-     * @param nextActorRef
-     * @param evalConfig
-     * @throws IOException
+     * @param modelConfig - ModelConfig
+     * @param columnConfigList  - ColumnConfig list for model
+     * @param parentActorRef - parent actor
+     * @param nextActorRef - child actor
+     * @param evalConfig - EvalConfig to run filter
+     * @throws IOException - any error occur
      */
     public DataFilterWorker(
             ModelConfig modelConfig,

@@ -25,7 +25,7 @@ import org.apache.commons.codec.binary.Base64;
 /**
  * Base64Utils class
  * 
- * @Nov 18, 2014
+ * Nov 18, 2014
  * 
  */
 public class Base64Utils {

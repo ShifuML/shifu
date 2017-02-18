@@ -35,7 +35,7 @@ import org.apache.pig.impl.logicalLayer.schema.Schema.FieldSchema;
 /**
  * MergeBinningDataUDF class
  * 
- * @Nov 11, 2014
+ * Nov 11, 2014
  * 
  */
 public class BinningDataMergeUDF extends AbstractTrainerUDF<Tuple> {

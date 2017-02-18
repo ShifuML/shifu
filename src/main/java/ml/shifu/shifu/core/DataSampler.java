@@ -38,12 +38,12 @@ public class DataSampler {
      * - or target tag is not in positive tag list or negative tag list
      * - or not be sampled
      * 
-     * @param targetColumnNum
-     * @param posTags
-     * @param negTags
-     * @param data
-     * @param sampleRate
-     * @param sampleNegOnly
+     * @param targetColumnNum - target column number
+     * @param posTags - positive tags
+     * @param negTags - negative tags
+     * @param data - data to filter
+     * @param sampleRate - sample rate
+     * @param sampleNegOnly - only sample negative instances or both
      * @return null - if the data should be filtered out
      *         data itself - if the data should not be filtered out
      */
@@ -64,13 +64,13 @@ public class DataSampler {
      * - the target value is invalid
      * - or target tag is not in positive tag list or negative tag list
      * - or not be sampled
-     * 
-     * @param targetColumnNum
-     * @param posTags
-     * @param negTags
-     * @param fields
-     * @param sampleRate
-     * @param sampleNegOnly
+     *
+     * @param targetColumnNum - target column number
+     * @param posTags - positive tags
+     * @param negTags - negative tags
+     * @param fields - data fields to filter
+     * @param sampleRate - sample rate
+     * @param sampleNegOnly - only sample negative instances or both
      * @return true - if the data should be filtered out
      *         false - if the data should not be filtered out
      */
@@ -83,12 +83,12 @@ public class DataSampler {
     /**
      * To decide whether the data should be filtered out or not. Both unselected data or invalid tag will be
      * filtered out.
-     * 
-     * @param posTags
-     * @param negTags
-     * @param sampleRate
-     * @param sampleNegOnly
-     * @param tag
+     *
+     * @param posTags - positive tags
+     * @param negTags - negative tags
+     * @param sampleRate - sample rate
+     * @param sampleNegOnly - only sample negative instances or both
+     * @param tag - instance tag
      * @return true - if the data should be filtered out
      *         false - if the data should not be filtered out
      */

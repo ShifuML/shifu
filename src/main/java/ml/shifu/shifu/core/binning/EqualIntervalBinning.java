@@ -25,7 +25,7 @@ import org.apache.commons.lang.StringUtils;
 /**
  * EqualIntervalBinning class
  * 
- * @Oct 20, 2014
+ * Oct 20, 2014
  *
  */
 public class EqualIntervalBinning extends AbstractBinning<Double> {
@@ -40,7 +40,7 @@ public class EqualIntervalBinning extends AbstractBinning<Double> {
     
     /**
      * Constructor with expected bin number
-     * @param binningNum
+     * @param binningNum - bin number to expect
      */
     public EqualIntervalBinning(int binningNum) {
         this(binningNum, null);
@@ -48,7 +48,8 @@ public class EqualIntervalBinning extends AbstractBinning<Double> {
     
     /**
      * Constructor with expected bin number and missing value list
-     * @param binningNum
+     * @param binningNum - how many bins that want to generate
+     * @param missingValList - value list treat as missing values
      */
     public EqualIntervalBinning(int binningNum, List<String> missingValList) {
         super(binningNum, missingValList);
@@ -138,7 +139,6 @@ public class EqualIntervalBinning extends AbstractBinning<Double> {
     
     /**
      * convert @EqualIntervalBinning to String
-     * @return
      */
     protected void stringToObj(String objValStr) {
         super.stringToObj(objValStr);
@@ -150,7 +150,7 @@ public class EqualIntervalBinning extends AbstractBinning<Double> {
     
     /**
      * convert @EqualIntervalBinning to String
-     * @return
+     * @return String format of Object
      */
     public String objToString() {
         return super.objToString() 

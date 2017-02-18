@@ -58,9 +58,10 @@ public class TrainModelActor extends AbstractActor {
     private int resultCnt;
 
     /**
-     * @param modelConfig
-     * @param columnConfigList
-     * @param trainers
+     * @param modelConfig - ModelConfig
+     * @param columnConfigList - ColumnConfig list
+     * @param akkaStatus - status of akka
+     * @param trainers - trainers to run
      */
     public TrainModelActor(final ModelConfig modelConfig, final List<ColumnConfig> columnConfigList, final AkkaExecStatus akkaStatus, final List<AbstractTrainer> trainers) {
         super(modelConfig, columnConfigList, akkaStatus);

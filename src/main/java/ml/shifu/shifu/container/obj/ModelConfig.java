@@ -293,6 +293,7 @@ public class ModelConfig {
     /**
      * Flattened tags for multiple classification. '1', '2|3' will be flattened to '1', '2', '3'. While '2' and '3' are
      * combined to one class.
+     * @return all tags as list
      */
     @JsonIgnore
     public List<String> getFlattenTags() {

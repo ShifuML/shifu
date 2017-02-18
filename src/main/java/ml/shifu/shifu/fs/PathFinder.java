@@ -29,11 +29,11 @@ import java.io.File;
 import java.util.Map;
 
 /**
- * <p/>
+ * <p>
  * {@link PathFinder} is used to obtain all files which can be used in our framework. Some are used for training,
  * evaling, performance ...
- * <p/>
- * <p/>
+ * </p>
+ *
  * {@link #modelConfig} should be passed as parameter in constructor
  */
 public class PathFinder {
@@ -618,7 +618,7 @@ public class PathFinder {
     }
 
     /**
-     * Get evaluation set home directory, something like <Model>/eval/<evalName>
+     * Get evaluation set home directory, something like &lt;Model&gt;/eval/&lt;evalName&gt;
      * 
      * @param evalConfig
      *            - EvalConfig to find
@@ -631,7 +631,7 @@ public class PathFinder {
     }
 
     /**
-     * Get evaluation set home directory, something like <Model>/eval/<evalName>
+     * Get evaluation set home directory, something like &lt;Model&gt;/eval/&lt;evalName&gt;
      * 
      * @param evalName
      *            - evalset name to find

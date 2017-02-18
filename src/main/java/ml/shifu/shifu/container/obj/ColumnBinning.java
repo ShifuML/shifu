@@ -22,9 +22,10 @@ import java.util.List;
 /**
  * ColumnBinning class represents the information of BINNING.
  * Usually the BINNING information will be used to calculate KS/IV, or reason code in evaluation.
- * <p/>
+ * <p>
  * Please note for numerical variables, @binCategory will be null, but for categorical variables @binBoundary will be
  * null. The @binLength will equal size of @binBoundary or size of @binCategory.
+ * </p>
  */
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class ColumnBinning {

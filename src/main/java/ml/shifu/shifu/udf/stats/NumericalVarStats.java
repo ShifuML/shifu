@@ -37,7 +37,7 @@ import org.slf4j.LoggerFactory;
 /**
  * NumericalVarStats class
  * 
- * @Nov 3, 2014
+ * Nov 3, 2014
  * 
  */
 public class NumericalVarStats extends AbstractVarStats {

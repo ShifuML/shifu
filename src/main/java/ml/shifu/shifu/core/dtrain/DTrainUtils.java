@@ -82,6 +82,7 @@ public final class DTrainUtils {
 
     /**
      * Check tmp dir for data set to store. If not exist, create it firstly.
+     * @return path of temp dir
      */
     private static Path getTmpDir() throws IOException {
         // If the Constants.TMP is absolute folder, there may be some conflicts for two jobs.
@@ -96,7 +97,8 @@ public final class DTrainUtils {
 
     /**
      * Return testing file to store training data, if exists, delete it firstly.
-     * 
+     *
+     * @return path of testing file
      * @throws IOException
      *             if any exception on local fs operations.
      * @throws RuntimeException
@@ -115,7 +117,8 @@ public final class DTrainUtils {
 
     /**
      * Return training file to store training data, if exists, delete it firstly.
-     * 
+     *
+     * @return - path for training file
      * @throws IOException
      *             if any exception on local fs operations.
      * @throws RuntimeException
@@ -138,7 +141,10 @@ public final class DTrainUtils {
      * <p>
      * If number of column in final-select is 0, which means to select all non meta and non target columns. So the input
      * number is set to all candidates.
-     * 
+     *
+     * @param columnConfigList - ColumnConfig list
+     * @return input and output candidate counts
+     *
      * @throws NullPointerException
      *             if columnConfigList or ColumnConfig object in columnConfigList is null.
      */
@@ -169,7 +175,11 @@ public final class DTrainUtils {
      * <p>
      * If number of column in final-select is 0, which means to select all non meta and non target columns. So the input
      * number is set to all candidates.
-     * 
+     * </p>
+     *
+     * @param columnConfigList - ColumnConfig list that is used to build network input
+     * @return numeric and categorical input nodes number
+     *
      * @throws NullPointerException
      *             if columnConfigList or ColumnConfig object in columnConfigList is null.
      */
@@ -220,6 +230,13 @@ public final class DTrainUtils {
 
     /**
      * Generate basic NN network object
+     * @param in - network in
+     * @param out - network out
+     * @param numLayers - number of hidden layers
+     * @param actFunc - active functions for each layer
+     * @param hiddenNodeList - hidden nodes for each layer
+     * @param isRandomizeWeights - generate random weights or not
+     * @return network built
      */
     public static BasicNetwork generateNetwork(int in, int out, int numLayers, List<String> actFunc,
             List<Integer> hiddenNodeList, boolean isRandomizeWeights) {
@@ -264,6 +281,12 @@ public final class DTrainUtils {
 
     /**
      * Generate basic NN network object
+     * @param in - input count for network
+     * @param out - output count for network
+     * @param numLayers - number of layers
+     * @param actFunc - activate functions for each layer
+     * @param hiddenNodeList - hidden nodes for each layer
+     * @return initialized network
      */
     public static BasicNetwork generateNetwork(int in, int out, int numLayers, List<String> actFunc,
             List<Integer> hiddenNodeList) {

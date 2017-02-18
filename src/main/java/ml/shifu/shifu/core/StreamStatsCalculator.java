@@ -26,7 +26,7 @@ import org.slf4j.LoggerFactory;
  * StreamStatsCalculator class
  * 
  * @author zhanhu
- * @Oct 28, 2014
+ * Oct 28, 2014
  * 
  */
 public class StreamStatsCalculator {
@@ -53,8 +53,7 @@ public class StreamStatsCalculator {
     /**
      * Constructor
      * 
-     * @param voList
-     * @param threshold
+     * @param threshold - threshold for calculating stats
      */
     public StreamStatsCalculator(Double threshold) {
         this.threshold = threshold;

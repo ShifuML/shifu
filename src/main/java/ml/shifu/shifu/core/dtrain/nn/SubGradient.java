@@ -152,14 +152,21 @@ public class SubGradient implements Callable<double[]> {
      * 
      * @param theNetwork
      *            The network to train.
-     * @param theOwner
+     * @param theNetwork
      *            The owner that is doing the training.
      * @param theTraining
      *            The training data.
-     * @param theLow
+     * @param trainLow
      *            The low index to use in the training data.
-     * @param theHigh
+     * @param trainHigh
      *            The high index to use in the training data.
+     * @param theTesting - testing data set
+     * @param testLow - test low index
+     * @param testHigh - test high index
+     * @param flatSpot -
+     * @param ef - error function
+     * @param isCrossOver -
+     * @param owner -
      */
     public SubGradient(final FloatFlatNetwork theNetwork, final FloatMLDataSet theTraining, long trainLow, long trainHigh,
             final FloatMLDataSet theTesting, long testLow, long testHigh, final double[] flatSpot, ErrorFunction ef,
@@ -308,7 +315,7 @@ public class SubGradient implements Callable<double[]> {
      * Calculate the error for this neural network. The error is calculated
      * using root-mean-square(RMS).
      * 
-     * @param data
+     * @param ec
      *            The training set.
      * @return The error percentage.
      */

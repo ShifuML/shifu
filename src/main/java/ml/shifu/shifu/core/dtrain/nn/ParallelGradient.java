@@ -35,7 +35,7 @@ import org.slf4j.LoggerFactory;
 
 /**
  * {@link ParallelGradient} is copied from Encog framework. The reason is that we original Gradient don't pop up
- * {@link #gradients} outside. While we need gradients accumulated into {@link NNMaster} to update NN weights.
+ * gradient outside. While we need gradients accumulated into {@link NNMaster} to update NN weights.
  */
 public class ParallelGradient {
 
@@ -103,14 +103,13 @@ public class ParallelGradient {
      * 
      * @param theNetwork
      *            The network to train.
-     * @param theOwner
-     *            The owner that is doing the training.
      * @param theTraining
-     *            The training data.
-     * @param theLow
-     *            The low index to use in the training data.
-     * @param theHigh
-     *            The high index to use in the training data.
+     *            The owner that is doing the training.
+     * @param theTesting - data set for testing
+     * @param flatSpot -
+     * @param ef - error function
+     * @param isCrossOver - is cross over
+     * @param threadCount - thread count
      */
     public ParallelGradient(final FloatFlatNetwork theNetwork, final FloatMLDataSet theTraining, final FloatMLDataSet theTesting,
             final double[] flatSpot, ErrorFunction ef, boolean isCrossOver, int threadCount) {

@@ -26,13 +26,15 @@ import org.slf4j.LoggerFactory;
 
 /**
  * Normalizer
+ * <p>
+ * formula:<code>norm_result = (value - means) / stdev</code>
  * </p>
- * formula:
- * </p> <code>norm_result = (value - means) / stdev</code> </p>
- * <p/>
+ *
+ * <p>
  * The stdDevCutOff should be setting, by default it's 4
  * </p>
- * <p/>
+ *
+ * <p>
  * The <code>value</code> should less than mean + stdDevCutOff * stdev
  * </p>
  * and larger than mean - stdDevCutOff * stdev
@@ -56,7 +58,7 @@ public class Normalizer {
      * stdDevCutOff will be STD_DEV_CUTOFF
      * 
      * @param config
-     * @ColumnConfig to create normalizer
+     *          ColumnConfig to create normalizer
      */
     public Normalizer(ColumnConfig config) {
         this(config, NormalizeMethod.ZScore, STD_DEV_CUTOFF);
@@ -67,9 +69,9 @@ public class Normalizer {
      * stdDevCutOff will be STD_DEV_CUTOFF
      * 
      * @param config
-     * @ColumnConfig to create normalizer
+     *          ColumnConfig to create normalizer
      * @param method
-     *            NormalizMethod to use
+     *          NormalizMethod to use
      */
     public Normalizer(ColumnConfig config, NormalizeMethod method) {
         this(config, method, STD_DEV_CUTOFF);
@@ -80,9 +82,9 @@ public class Normalizer {
      * NormalizeMethod method will be NormalizeMethod.ZScore
      * 
      * @param config
-     * @ColumnConfig to create normalizer
+     *          ColumnConfig to create normalizer
      * @param cutoff
-     *            stand_dev_cutoff to use
+     *          stand_dev_cutoff to use
      */
     public Normalizer(ColumnConfig config, Double cutoff) {
         this(config, NormalizeMethod.ZScore, STD_DEV_CUTOFF);
@@ -93,11 +95,11 @@ public class Normalizer {
      * NormalizeMethod method will be NormalizeMethod.ZScore
      * 
      * @param config
-     * @ColumnConfig to create normalizer
+     *          ColumnConfig to create normalizer
      * @param method
-     *            NormalizMethod to use
+     *          NormalizMethod to use
      * @param cutoff
-     *            stand_dev_cutoff to use
+     *          stand_dev_cutoff to use
      */
     public Normalizer(ColumnConfig config, NormalizeMethod method, Double cutoff) {
         this.config = config;
@@ -108,7 +110,7 @@ public class Normalizer {
     /**
      * Normalize the input data for column
      * 
-     * @param raw
+     * @param raw - raw input for normalization
      * @return normalized value
      */
     public Double normalize(String raw) {
@@ -119,9 +121,9 @@ public class Normalizer {
      * Normalize the raw file, according the @ColumnConfig info
      * 
      * @param config
-     * @ColumnConfig to normalize data
+     *          ColumnConfig to normalize data
      * @param raw
-     *            raw input data
+     *          raw input data
      * @return normalized value
      */
     public static Double normalize(ColumnConfig config, String raw) {
@@ -132,11 +134,11 @@ public class Normalizer {
      * Normalize the raw file, according the @ColumnConfig info and normalized method
      * 
      * @param config
-     * @ColumnConfig to normalize data
+     *          ColumnConfig to normalize data
      * @param raw
-     *            raw input data
+     *          raw input data
      * @param method
-     *            the method used to do normalization
+     *          the method used to do normalization
      * @return normalized value
      */
     public static Double normalize(ColumnConfig config, String raw, NormalizeMethod method) {
@@ -147,11 +149,11 @@ public class Normalizer {
      * Normalize the raw file, according the @ColumnConfig info and standard deviation cutoff
      * 
      * @param config
-     * @ColumnConfig to normalize data
+     *          ColumnConfig to normalize data
      * @param raw
-     *            raw input data
+     *          raw input data
      * @param stdDevCutoff
-     *            the standard deviation cutoff to use
+     *          the standard deviation cutoff to use
      * @return normalized value
      */
     public static Double normalize(ColumnConfig config, String raw, double stdDevCutoff) {
@@ -162,13 +164,13 @@ public class Normalizer {
      * Normalize the raw file, according the @ColumnConfig info, normalized method and standard deviation cutoff
      * 
      * @param config
-     * @ColumnConfig to normalize data
+     *          ColumnConfig to normalize data
      * @param raw
-     *            raw input data
+     *          raw input data
      * @param method
-     *            the method used to do normalization
+     *          the method used to do normalization
      * @param stdDevCutoff
-     *            the standard deviation cutoff to use
+     *          the standard deviation cutoff to use
      * @return normalized value
      */
     public static Double normalize(ColumnConfig config, String raw, NormalizeMethod method, double stdDevCutoff) {
@@ -190,9 +192,9 @@ public class Normalizer {
      * Compute the normalized data for @NormalizeMethod.MaxMin
      * 
      * @param config
-     * @ColumnConfig info
+     *          ColumnConfig info
      * @param raw
-     *            input column value
+     *          input column value
      * @return normalized value for MaxMin method
      */
     private static Double getMaxMinScore(ColumnConfig config, String raw) {
@@ -251,11 +253,11 @@ public class Normalizer {
      * Compute the normalized data for @NormalizeMethod.Zscore
      * 
      * @param config
-     * @ColumnConfig info
+     *          ColumnConfig info
      * @param raw
-     *            input column value
+     *          input column value
      * @param cutoff
-     *            standard deviation cut off
+     *          standard deviation cut off
      * @return normalized value for ZScore method.
      */
     private static Double zScoreNormalize(ColumnConfig config, String raw, Double cutoff) {
@@ -268,9 +270,9 @@ public class Normalizer {
      * Parse raw value based on ColumnConfig.
      * 
      * @param config
-     * @ColumnConfig info
+     *          ColumnConfig info
      * @param raw
-     *            input column value
+     *          input column value
      * @return parsed raw value. For categorical type, return BinPosRate. For numerical type, return
      *         corresponding double value. For missing data, return default value using
      *         {@link Normalizer#defaultMissingValue}.
@@ -301,7 +303,7 @@ public class Normalizer {
      * Get the default value for missing data.
      * 
      * @param config
-     * @ColumnConfig info
+     *          ColumnConfig info
      * @return default value for missing data. Now simply return Mean value. If mean is null then return 0.
      */
     public static double defaultMissingValue(ColumnConfig config) {
@@ -313,11 +315,11 @@ public class Normalizer {
      * Compute the normalized data for Woe Score.
      * 
      * @param config
-     * @ColumnConfig info
+     *          ColumnConfig info
      * @param raw
-     *            input column value
+     *          input column value
      * @param isWeightedNorm
-     *            if use weighted woe
+     *          if use weighted woe
      * @return normalized value for Woe method. For missing value, we return the value in last bin. Since the last
      *         bin refers to the missing value bin.
      */
@@ -337,13 +339,13 @@ public class Normalizer {
      * to compute zscore of woe.
      * 
      * @param config
-     * @ColumnConfig info
+     *          ColumnConfig info
      * @param raw
-     *            input column value
+     *          input column value
      * @param cutoff
-     *            standard deviation cut off
+     *          standard deviation cut off
      * @param isWeightedNorm
-     *            if use weighted woe
+     *          if use weighted woe
      * @return normalized value for woe zscore method.
      */
     private static Double woeZScoreNormalize(ColumnConfig config, String raw, Double cutoff, boolean isWeightedNorm) {
@@ -358,13 +360,13 @@ public class Normalizer {
      * for categorical data while use weight woe normalize when isWeightedNorm is true.
      * 
      * @param config
-     * @ColumnConfig info
+     *          ColumnConfig info
      * @param raw
-     *            input column value
+     *          input column value
      * @param cutoff
-     *            standard deviation cut off
+     *          standard deviation cut off
      * @param isWeightedNorm
-     *            if use weighted woe
+     *          if use weighted woe
      * @return normalized value for hybrid method.
      */
     private static Double hybridNormalize(ColumnConfig config, String raw, Double cutoff, boolean isWeightedNorm) {

@@ -39,11 +39,12 @@ public class RunModelWorker extends AbstractWorkerActor {
     private ModelRunner modelRunner;
 
     /**
-     * @param modelConfig
-     * @param columnConfigList
-     * @param parentActorRef
-     * @param nextActorRef
-     * @throws IOException
+     * @param modelConfig - ModelConfig
+     * @param columnConfigList  - ColumnConfig list for model
+     * @param evalConfig - EvalConfig for running model
+     * @param parentActorRef - parent actor
+     * @param nextActorRef - child actor
+     * @throws IOException - any error occur
      */
     public RunModelWorker(ModelConfig modelConfig, List<ColumnConfig> columnConfigList, EvalConfig evalConfig,
             ActorRef parentActorRef, ActorRef nextActorRef) throws IOException {

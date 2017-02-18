@@ -565,7 +565,9 @@ public class LogisticRegressionWorker
 
     /**
      * Add to training set or validation set according to validation rate.
-     * 
+     * @param hashcode - hash code for data
+     * @param data - data to add
+     * @param isValidation - is validation set or not
      * @return if in training, training is true, others are false.
      */
     protected boolean addDataPairToDataSet(long hashcode, Data data, boolean isValidation) {

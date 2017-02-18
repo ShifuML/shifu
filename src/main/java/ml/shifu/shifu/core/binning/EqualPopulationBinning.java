@@ -29,7 +29,7 @@ import org.slf4j.LoggerFactory;
 /**
  * EqualPopulationBinning class
  * 
- * @Oct 22, 2014
+ * Oct 22, 2014
  * 
  */
 public class EqualPopulationBinning extends AbstractBinning<Double> {
@@ -69,7 +69,7 @@ public class EqualPopulationBinning extends AbstractBinning<Double> {
     /**
      * Construct @EqualPopulationBinning with expected bin number
      *
-     * @param binningNum
+     * @param binningNum - bin numbers that want to have
      */
     public EqualPopulationBinning(int binningNum) {
         this(binningNum, null);
@@ -78,7 +78,8 @@ public class EqualPopulationBinning extends AbstractBinning<Double> {
     /**
      * Construct @EqualPopulationBinning with expected bin number and with histogram scale factor
      *
-     * @param binningNum
+     * @param binningNum - bin numbers that want to have
+     * @param histogramScale - scale factor to build histogram
      */
     public EqualPopulationBinning(int binningNum, int histogramScale) {
         this(binningNum, null);
@@ -89,8 +90,8 @@ public class EqualPopulationBinning extends AbstractBinning<Double> {
      * Construct @@EqualPopulationBinning with expected bin number and
      * values list that would be treated as missing value
      * 
-     * @param binningNum
-     * @param missingValList
+     * @param binningNum - bin numbers that want to have
+     * @param missingValList - value list that should be treated as missing values
      */
     public EqualPopulationBinning(int binningNum, List<String> missingValList) {
         super(binningNum);
@@ -106,7 +107,8 @@ public class EqualPopulationBinning extends AbstractBinning<Double> {
      * First of all the input string will be trimmed and check whether it is missing value or not
      * If it is missing value, the missing value count will +1
      * After that, the input string will be parsed into double. If it is not a double, invalid value count will +1
-     * 
+     *
+     * @param val - value(String format) to add
      * @see ml.shifu.shifu.core.binning.AbstractBinning#addData(java.lang.String)
      */
     @Override
@@ -159,7 +161,7 @@ public class EqualPopulationBinning extends AbstractBinning<Double> {
     /**
      * Add a value into histogram with frequency 1.
      * 
-     * @param val
+     * @param val - value to add
      */
     public void addData(double val) {
         process(val, 1);
@@ -168,16 +170,17 @@ public class EqualPopulationBinning extends AbstractBinning<Double> {
     /**
      * Add a value into histogram with frequency.
      * 
-     * @param val
-     * @param frequency
+     * @param val - value to add
+     * @param frequency - frequency
      */
     public void addData(double val, double frequency) {
         process(val, frequency);
     }
 
-    /*
+    /**
      * Generate data bin by expected bin number
-     * 
+     *
+     * @return bin boundaries
      * @see ml.shifu.shifu.core.binning.AbstractBinning#getDataBin()
      */
     @Override
@@ -188,7 +191,7 @@ public class EqualPopulationBinning extends AbstractBinning<Double> {
     /**
      * Get the median value in the histogram
      * 
-     * @return
+     * @return - the median value fo data
      */
     public Double getMedian() {
         List<Double> dataBinning = getDataBin(2);
@@ -202,8 +205,8 @@ public class EqualPopulationBinning extends AbstractBinning<Double> {
     /**
      * Generate data bin by expected bin number
      * 
-     * @param toBinningNum
-     * @return
+     * @param toBinningNum - how many bin num that want to generate
+     * @return - bin boundaries
      */
     private List<Double> getDataBin(int toBinningNum) {
         List<Double> binBorders = new ArrayList<Double>();
@@ -258,7 +261,7 @@ public class EqualPopulationBinning extends AbstractBinning<Double> {
     }
 
     /**
-     * @param binBorders
+     * @param binBorders - the bin boundaries of histogram
      */
     private void convertHistogramUnitIntoBin(List<Double> binBorders) {
         LinkNode<HistogramUnit> tmp = this.header;
@@ -274,7 +277,7 @@ public class EqualPopulationBinning extends AbstractBinning<Double> {
     /**
      * Get the total value count in histogram
      * 
-     * @return
+     * @return total frequency of histogram
      */
     private double getTotalInHistogram() {
         double total = 0;
@@ -291,9 +294,9 @@ public class EqualPopulationBinning extends AbstractBinning<Double> {
     /**
      * Locate histogram unit with just less than s, from some histogram unit
      * 
-     * @param s
-     * @param startPos
-     * @return
+     * @param s - the value of histogram
+     * @param startPos - start position for search
+     * @return - HistogramUnit that have value of s
      */
     private LinkNode<HistogramUnit> locateHistogram(double s, LinkNode<HistogramUnit> startPos) {
         while(startPos != this.tail) {
@@ -320,8 +323,8 @@ public class EqualPopulationBinning extends AbstractBinning<Double> {
     /**
      * Sum the histogram's frequency whose value less than or equal some value
      * 
-     * @param hval
-     * @return
+     * @param hval - the value point in histogram
+     * @return - sum of frequency from (-Infinity - hval]
      */
     private double sum(double hval) {
         LinkNode<HistogramUnit> posHistogramUnit = null;
@@ -371,8 +374,8 @@ public class EqualPopulationBinning extends AbstractBinning<Double> {
     /**
      * Process the histogram with value and frequency
      * 
-     * @param dval
-     * @param frequency
+     * @param dval - value of histogram
+     * @param frequency - frequency of histogram
      */
     private void process(double dval, double frequency) {
         LinkNode<HistogramUnit> node = new LinkNode<HistogramUnit>(new HistogramUnit(dval, frequency));
@@ -390,7 +393,7 @@ public class EqualPopulationBinning extends AbstractBinning<Double> {
      * Meanwhile it will try to keep the histogram as most @maxHistogramUnitCnt
      * So when inserting one node in, the method will try to find the place to insert as well as minimum interval
      * 
-     * @param node
+     * @param node - node to insert
      */
     private void insertWithTrim(LinkNode<HistogramUnit> node) {
         LinkNode<HistogramUnit> insertOpsUnit = null;
@@ -475,8 +478,8 @@ public class EqualPopulationBinning extends AbstractBinning<Double> {
     }
 
     /**
-     * @param currNode
-     * @param nextNode
+     * @param currNode - current node
+     * @param nextNode - next node
      */
     private void removeCurrentNode(LinkNode<HistogramUnit> currNode, LinkNode<HistogramUnit> nextNode) {
         // remove current node
@@ -490,9 +493,8 @@ public class EqualPopulationBinning extends AbstractBinning<Double> {
         }
     }
 
-    /*
-     * (non-Javadoc)
-     * 
+    /**
+     * @param another - AbstractBinning to merge
      * @see ml.shifu.shifu.core.binning.AbstractBinning#mergeBin(ml.shifu.shifu.core.binning.AbstractBinning)
      */
     @Override
@@ -510,8 +512,7 @@ public class EqualPopulationBinning extends AbstractBinning<Double> {
 
     /**
      * convert @EqualIntervalBinning to String
-     * 
-     * @return
+     * @param objValStr - String form of properties
      */
     protected void stringToObj(String objValStr) {
         super.stringToObj(objValStr);
@@ -533,7 +534,7 @@ public class EqualPopulationBinning extends AbstractBinning<Double> {
     /**
      * convert @EqualIntervalBinning to String
      * 
-     * @return
+     * @return String form of EqualIntervalBinning
      */
     public String objToString() {
         List<String> histogramStrList = new ArrayList<String>();
@@ -554,7 +555,7 @@ public class EqualPopulationBinning extends AbstractBinning<Double> {
      * 
      * HistogramUnit class is the unit for histogram
      * 
-     * @Nov 19, 2014
+     * Nov 19, 2014
      * 
      */
     public static class HistogramUnit implements Comparable<HistogramUnit> {
@@ -582,9 +583,9 @@ public class EqualPopulationBinning extends AbstractBinning<Double> {
             this.hcnt = hcnt;
         }
 
-        /*
-         * (non-Javadoc)
-         * 
+        /**
+         * @param another - HistogramUnit to compare
+         * @return value to decide order
          * @see java.lang.Comparable#compareTo(java.lang.Object)
          */
         @Override
@@ -592,9 +593,8 @@ public class EqualPopulationBinning extends AbstractBinning<Double> {
             return Double.compare(hval, another.getHval());
         }
 
-        /*
-         * (non-Javadoc)
-         * 
+        /**
+         * @return hash code
          * @see java.lang.Object#hashCode()
          */
         @Override
@@ -607,9 +607,10 @@ public class EqualPopulationBinning extends AbstractBinning<Double> {
             return result;
         }
 
-        /*
-         * (non-Javadoc)
-         * 
+        /**
+         * @param obj - Object to compare
+         * @return equal or not
+         *
          * @see java.lang.Object#equals(java.lang.Object)
          */
         @Override
@@ -632,7 +633,7 @@ public class EqualPopulationBinning extends AbstractBinning<Double> {
         /**
          * convert @HistogramUnit object to String
          * 
-         * @return
+         * @return String form of HistogramUnit
          */
         public String objToString() {
             return Double.toString(hval) + Character.toString(PAIR_SEPARATOR) + Double.toString(hcnt);
@@ -641,8 +642,8 @@ public class EqualPopulationBinning extends AbstractBinning<Double> {
         /**
          * Constructor @HistogramUnit from String
          * 
-         * @param histogramStr
-         * @return
+         * @param histogramStr - String of histogram to recover histogram unit
+         * @return - HistogramUnit built from the string
          */
         public static HistogramUnit stringToObj(String histogramStr) {
             String[] fields = StringUtils.split(histogramStr, PAIR_SEPARATOR);
