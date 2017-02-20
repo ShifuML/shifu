@@ -1416,6 +1416,8 @@ public final class CommonUtils {
             // variable type is not related with variable flag
             if(setCategorialColumns.contains(varName)) {
                 config.setColumnType(ColumnType.C);
+            } else {
+                config.setColumnType(ColumnType.N);
             }
         }
     }

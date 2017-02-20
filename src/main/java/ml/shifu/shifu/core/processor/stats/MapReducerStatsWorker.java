@@ -381,8 +381,10 @@ public class MapReducerStatsWorker extends AbstractStatsExecutor {
                     String binCategory = Base64Utils.base64Decode(raw[1]);
                     config.setBinCategory(CommonUtils.stringToStringList(binCategory,
                             CalculateStatsUDF.CATEGORY_VAL_SEPARATOR));
+                    config.setBinBoundary(null);
                 } else {
                     config.setBinBoundary(CommonUtils.stringToDoubleList(raw[1]));
+                    config.setBinCategory(null);
                 }
                 config.setBinCountNeg(CommonUtils.stringToIntegerList(raw[2]));
                 config.setBinCountPos(CommonUtils.stringToIntegerList(raw[3]));

@@ -209,8 +209,8 @@ public class UpdateBinningInfoReducer extends Reducer<IntWritable, BinningInfoWr
         String binBounString = null;
 
         if(columnConfig.isCategorical()) {
-            if(binCategories.size() == 0 || binCategories.size() > MAX_CATEGORICAL_BINC_COUNT) {
-                LOG.warn("Column {} {} with invalid bin boundary size.", key.get(), columnConfig.getColumnName(),
+            if(binCategories.size() < 0 || binCategories.size() > MAX_CATEGORICAL_BINC_COUNT) {
+                LOG.warn("Column {} {} with invalid bin category size.", key.get(), columnConfig.getColumnName(),
                         binCategories.size());
                 return;
             }
