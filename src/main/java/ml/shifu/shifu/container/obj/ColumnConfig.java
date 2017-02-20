@@ -56,7 +56,7 @@ public class ColumnConfig {
     private ColumnBinning columnBinning = new ColumnBinning();
 
     private List<Double> corrArray;
-    
+
     private List<String> sampleValues;
 
     /**
@@ -272,7 +272,7 @@ public class ColumnConfig {
      */
     public void setBinBoundary(List<Double> binBoundary) {
         columnBinning.setBinBoundary(binBoundary);
-        columnBinning.setLength(binBoundary.size());
+        columnBinning.setLength(binBoundary == null ? 0 : binBoundary.size());
     }
 
     /**
@@ -280,7 +280,7 @@ public class ColumnConfig {
      */
     public void setBinCategory(List<String> binCategory) {
         columnBinning.setBinCategory(binCategory);
-        columnBinning.setLength(binCategory.size());
+        columnBinning.setLength(binCategory == null ? 0 : binCategory.size());
     }
 
     /**
@@ -488,7 +488,8 @@ public class ColumnConfig {
     }
 
     /**
-     * @param corrArray the corrArray to set
+     * @param corrArray
+     *            the corrArray to set
      */
     public void setCorrArray(List<Double> corrArray) {
         this.corrArray = corrArray;
@@ -539,7 +540,8 @@ public class ColumnConfig {
     }
 
     /**
-     * @param sampleValues the sampleValues to set
+     * @param sampleValues
+     *            the sampleValues to set
      */
     public void setSampleValues(List<String> sampleValues) {
         this.sampleValues = sampleValues;

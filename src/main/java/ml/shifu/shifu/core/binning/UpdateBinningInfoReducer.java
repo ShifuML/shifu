@@ -15,6 +15,14 @@
  */
 package ml.shifu.shifu.core.binning;
 
+import java.io.IOException;
+import java.text.DecimalFormat;
+import java.util.Arrays;
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Set;
+
 import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.container.obj.ModelConfig;
 import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
@@ -25,6 +33,7 @@ import ml.shifu.shifu.udf.CalculateStatsUDF;
 import ml.shifu.shifu.util.Base64Utils;
 import ml.shifu.shifu.util.CommonUtils;
 import ml.shifu.shifu.util.Constants;
+
 import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.NullWritable;
@@ -35,14 +44,6 @@ import org.slf4j.LoggerFactory;
 
 import com.clearspring.analytics.stream.cardinality.CardinalityMergeException;
 import com.clearspring.analytics.stream.cardinality.HyperLogLogPlus;
-
-import java.io.IOException;
-import java.text.DecimalFormat;
-import java.util.Arrays;
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Set;
 
 /**
  * Collect all statistics together in reducer.
@@ -281,17 +282,17 @@ public class UpdateBinningInfoReducer extends Reducer<IntWritable, BinningInfoWr
                 .append(Constants.DEFAULT_DELIMITER)
                 .append(columnWeightMetrics == null ? "" : df.format(columnWeightMetrics.getIv()))
                 .append(Constants.DEFAULT_DELIMITER)
-                .append(df.format(max))
+                .append(columnConfig.isCategorical() ? "NaN" : df.format(max))
                 .append(Constants.DEFAULT_DELIMITER)
-                .append(df.format(min))
+                .append(columnConfig.isCategorical() ? "NaN" : df.format(min))
                 .append(Constants.DEFAULT_DELIMITER)
-                .append(df.format(mean))
+                .append(columnConfig.isCategorical() ? "NaN" : df.format(mean))
                 .append(Constants.DEFAULT_DELIMITER)
-                .append(df.format(stdDev))
+                .append(columnConfig.isCategorical() ? "NaN" : df.format(stdDev))
                 .append(Constants.DEFAULT_DELIMITER)
                 .append(columnConfig.isCategorical() ? "C" : "N")
                 .append(Constants.DEFAULT_DELIMITER)
-                .append(df.format(mean))
+                .append(columnConfig.isCategorical() ? "NaN" : df.format(mean))
                 .append(Constants.DEFAULT_DELIMITER)
                 .append(missingCount)
                 .append(Constants.DEFAULT_DELIMITER)

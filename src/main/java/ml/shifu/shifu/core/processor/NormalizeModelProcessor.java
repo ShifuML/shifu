@@ -214,7 +214,7 @@ public class NormalizeModelProcessor extends BasicModelProcessor implements Proc
         job.setJarByClass(getClass());
 
         boolean isMultipleThreading = Boolean.TRUE.toString().equalsIgnoreCase(
-                Environment.getProperty(Constants.SHIFU_CORRELATION_MULTI, "false"));
+                Environment.getProperty(Constants.SHIFU_CORRELATION_MULTI, "true"));
         if(isMultipleThreading) {
             job.setMapperClass(MultithreadedMapper.class);
             MultithreadedMapper.setMapperClass(job, CorrelationMapper.class);
