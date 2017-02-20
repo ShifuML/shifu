@@ -15,16 +15,6 @@
  */
 package ml.shifu.shifu.core.binning;
 
-import com.google.common.base.Splitter;
-
-import org.apache.commons.lang.StringUtils;
-import org.apache.hadoop.io.IntWritable;
-import org.apache.hadoop.io.LongWritable;
-import org.apache.hadoop.io.Text;
-import org.apache.hadoop.mapreduce.Mapper;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import java.io.BufferedReader;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
@@ -46,6 +36,16 @@ import ml.shifu.shifu.core.autotype.AutoTypeDistinctCountMapper.CountAndFrequent
 import ml.shifu.shifu.core.autotype.CountAndFrequentItemsWritable;
 import ml.shifu.shifu.util.CommonUtils;
 import ml.shifu.shifu.util.Constants;
+
+import org.apache.commons.lang.StringUtils;
+import org.apache.hadoop.io.IntWritable;
+import org.apache.hadoop.io.LongWritable;
+import org.apache.hadoop.io.Text;
+import org.apache.hadoop.mapreduce.Mapper;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import com.google.common.base.Splitter;
 
 /**
  * {@link UpdateBinningInfoMapper} is a mapper to update local data statistics given bin boundary list.
@@ -106,7 +106,7 @@ public class UpdateBinningInfoMapper extends Mapper<LongWritable, Text, IntWrita
     /**
      * Bin boundary list splitter.
      */
-    private Splitter BIN_BOUNDARY_SPLITTER = Splitter.on(Constants.BIN_BOUNDRY_DELIMITER).trimResults();
+    private static Splitter BIN_BOUNDARY_SPLITTER = Splitter.on(Constants.BIN_BOUNDRY_DELIMITER).trimResults();
 
     /**
      * Output key cache to avoid new operation.
@@ -197,7 +197,7 @@ public class UpdateBinningInfoMapper extends Mapper<LongWritable, Text, IntWrita
             while(line != null && line.length() != 0) {
                 LOG.debug("line is {}", line);
                 // here just use String.split for just two columns
-                String[] cols = line.trim().split(Constants.DEFAULT_ESCAPE_DELIMITER);
+                String[] cols = CommonUtils.split(line.trim(), Constants.DEFAULT_DELIMITER);
                 if(cols != null && cols.length >= 2) {
                     Integer columnNum = Integer.parseInt(cols[0]);
                     BinningInfoWritable binningInfo = new BinningInfoWritable();
@@ -221,9 +221,11 @@ public class UpdateBinningInfoMapper extends Mapper<LongWritable, Text, IntWrita
                             this.categoricalBinMap.put(columnNum, map);
                         }
                         int index = 0;
-                        for(String startElement: BIN_BOUNDARY_SPLITTER.split(cols[1])) {
-                            list.add(startElement);
-                            map.put(startElement, index++);
+                        if(!StringUtils.isBlank(cols[1])) {
+                            for(String startElement: BIN_BOUNDARY_SPLITTER.split(cols[1])) {
+                                list.add(startElement);
+                                map.put(startElement, index++);
+                            }
                         }
                         binningInfo.setBinCategories(list);
                         binSize = list.size();
@@ -239,7 +241,7 @@ public class UpdateBinningInfoMapper extends Mapper<LongWritable, Text, IntWrita
 
                     double[] binWeightNeg = new double[binSize + 1];
                     binningInfo.setBinWeightNeg(binWeightNeg);
-
+                    LOG.info("column num {}  and info {}", columnNum, binningInfo);
                     this.columnBinningInfo.put(columnNum, binningInfo);
                 }
                 line = reader.readLine();
