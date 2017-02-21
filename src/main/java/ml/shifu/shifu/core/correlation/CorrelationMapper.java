@@ -247,7 +247,7 @@ public class CorrelationMapper extends Mapper<LongWritable, Text, IntWritable, C
                 }
                 if(columnConfig.isCategorical()) {
                     if(columnConfig.getBinCategory() == null) {
-                        if(System.currentTimeMillis() % 50L == 0) {
+                        if(System.currentTimeMillis() % 100L == 0) {
                             LOG.warn("Column "
                                     + columnConfig.getColumnName()
                                     + " with null binCategory but is not meta or target column, set to 0d for correlation.");
