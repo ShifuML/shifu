@@ -307,8 +307,8 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
         paramsMap.put("eval_set_name", evalConfig.getName());
         paramsMap.put("delimiter", evalConfig.getDataSet().getDataDelimiter());
         paramsMap.put("columnIndex", evalConfig.getPerformanceScoreSelector().trim());
-        paramsMap.put("scale", Environment.getProperty(Constants.SHIFU_SCORE_SCALE,
-                Integer.toString(Scorer.DEFAULT_SCORE_SCALE)));
+        paramsMap.put("scale",
+                Environment.getProperty(Constants.SHIFU_SCORE_SCALE, Integer.toString(Scorer.DEFAULT_SCORE_SCALE)));
 
         String pigScript = "scripts/Eval.pig";
         Map<String, String> confMap = new HashMap<String, String>();
@@ -518,8 +518,10 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
         String[] evalColumnNames = null;
 
         if(StringUtils.isNotBlank(evalConfig.getDataSet().getHeaderPath())) {
-            evalColumnNames = CommonUtils.getHeaders(evalConfig.getDataSet().getHeaderPath(), evalConfig.getDataSet()
-                    .getHeaderDelimiter(), evalConfig.getDataSet().getSource());
+            String delimiter = StringUtils.isBlank(evalConfig.getDataSet().getHeaderDelimiter()) ? evalConfig
+                    .getDataSet().getDataDelimiter() : evalConfig.getDataSet().getHeaderDelimiter();
+            evalColumnNames = CommonUtils.getHeaders(evalConfig.getDataSet().getHeaderPath(), delimiter, evalConfig
+                    .getDataSet().getSource());
         } else {
             String delimiter = StringUtils.isBlank(evalConfig.getDataSet().getHeaderDelimiter()) ? evalConfig
                     .getDataSet().getDataDelimiter() : evalConfig.getDataSet().getHeaderDelimiter();
@@ -691,8 +693,7 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
             case MAPRED:
                 if(modelConfig.isRegression()) {
                     worker.bufferedComputeConfusionMatrixAndPerformance(ss.pigPosTags, ss.pigNegTags,
-                            ss.pigPosWeightTags, ss.pigNegWeightTags, ss.evalRecords, ss.maxScore,
-                            ss.minScore);
+                            ss.pigPosWeightTags, ss.pigNegWeightTags, ss.evalRecords, ss.maxScore, ss.minScore);
                 } else {
                     worker.computeConfusionMatixForMultipleClassification(this.evalRecords);
                 }
