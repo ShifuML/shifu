@@ -121,7 +121,8 @@ public class EvalConfig {
                         File file = new File(scoreMetaColumnNameFile);
                         path = new Path(pathFinder.getEvalSetPath(this), file.getName()).toString();
                         scoreMetaColumns = CommonUtils.readConfFileIntoList(path, dataSet.getSource(),
-                                dataSet.getHeaderDelimiter());
+                                StringUtils.isBlank(dataSet.getHeaderDelimiter()) ? dataSet.getDataDelimiter()
+                                        : dataSet.getHeaderDelimiter());
                     }
                 }
             }
@@ -141,7 +142,8 @@ public class EvalConfig {
                         File file = new File(scoreMetaColumnNameFile);
                         path = new Path(pathFinder.getEvalSetPath(this), file.getName()).toString();
                         scoreMetaColumns = CommonUtils.readConfFileIntoList(path, dataSet.getSource(),
-                                dataSet.getHeaderDelimiter());
+                                StringUtils.isBlank(dataSet.getHeaderDelimiter()) ? dataSet.getDataDelimiter()
+                                        : dataSet.getHeaderDelimiter());
                         metaColumns = scoreMetaColumns;
                     }
 
@@ -152,7 +154,9 @@ public class EvalConfig {
                             rawMetaPath = new Path(pathFinder.getEvalSetPath(this), file.getName()).toString();
                         }
                         List<String> rawMetaColumns = CommonUtils.readConfFileIntoList(rawMetaPath,
-                                dataSet.getSource(), dataSet.getHeaderDelimiter());
+                                dataSet.getSource(),
+                                StringUtils.isBlank(dataSet.getHeaderDelimiter()) ? dataSet.getDataDelimiter()
+                                        : dataSet.getHeaderDelimiter());
                         if(metaColumns != null) {
                             for(String column: rawMetaColumns) {
                                 if(!metaColumns.contains(column)) {

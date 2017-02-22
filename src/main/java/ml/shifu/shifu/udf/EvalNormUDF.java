@@ -54,8 +54,34 @@ public class EvalNormUDF extends AbstractTrainerUDF<Tuple> {
 
         // create model runner
         if(StringUtils.isNotBlank(evalConfig.getDataSet().getHeaderPath())) {
-            this.headers = CommonUtils.getHeaders(evalConfig.getDataSet().getHeaderPath(), evalConfig.getDataSet()
-                    .getHeaderDelimiter(), evalConfig.getDataSet().getSource());
+            // get headers
+            if(StringUtils.isNotBlank(evalConfig.getDataSet().getHeaderPath())) {
+                String delimiter = StringUtils.isBlank(evalConfig.getDataSet().getHeaderDelimiter()) ? evalConfig
+                        .getDataSet().getDataDelimiter() : evalConfig.getDataSet().getHeaderDelimiter();
+                this.headers = CommonUtils.getHeaders(evalConfig.getDataSet().getHeaderPath(), delimiter, evalConfig
+                        .getDataSet().getSource());
+            } else {
+                String delimiter = StringUtils.isBlank(evalConfig.getDataSet().getHeaderDelimiter()) ? evalConfig
+                        .getDataSet().getDataDelimiter() : evalConfig.getDataSet().getHeaderDelimiter();
+                String[] fields = CommonUtils.takeFirstLine(evalConfig.getDataSet().getDataPath(), delimiter,
+                        evalConfig.getDataSet().getSource());
+                if(StringUtils.join(fields, "").contains(modelConfig.getTargetColumnName())) {
+                    this.headers = new String[fields.length];
+                    for(int i = 0; i < fields.length; i++) {
+                        this.headers[i] = CommonUtils.getRelativePigHeaderColumnName(fields[i]);
+                    }
+                    log.warn("No header path is provided, we will try to read first line and detect schema.");
+                    log.warn("Schema in ColumnConfig.json are named as first line of data set path.");
+                } else {
+                    log.warn("No header path is provided, we will try to read first line and detect schema.");
+                    log.warn("Schema in ColumnConfig.json are named as  index 0, 1, 2, 3 ...");
+                    log.warn("Please make sure weight column and tag column are also taking index as name.");
+                    this.headers = new String[fields.length];
+                    for(int i = 0; i < fields.length; i++) {
+                        this.headers[i] = i + "";
+                    }
+                }
+            }
 
             Set<String> evalNamesSet = new HashSet<String>(Arrays.asList(this.headers));
             this.outputNames = new ArrayList<String>();
