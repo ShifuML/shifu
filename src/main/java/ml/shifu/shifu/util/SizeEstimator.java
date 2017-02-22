@@ -96,7 +96,7 @@ public final class SizeEstimator {
         }
     }
 
-    /**
+    /*
      * Cached information about each class. We remember two things: the "shell size" of the class (size of all
      * non-static fields plus the java.lang.Object size), and any fields that are pointers to objects.
      */
@@ -110,7 +110,7 @@ public final class SizeEstimator {
         private final List<Field> pointerFields;
     }
 
-    /**
+    /*
      * The state of an ongoing size estimation. Contains a stack of objects to visit as well as an IdentityHashMap of
      * visited objects, and provides utility methods for enqueueing new objects to visit.
      */
@@ -159,7 +159,7 @@ public final class SizeEstimator {
         }
     }
 
-    /**
+    /*
      * Estimate size of one object instance.
      */
     public static long estimate(Object obj) {
@@ -262,7 +262,7 @@ public final class SizeEstimator {
         }
     }
 
-    /**
+    /*
      * Get or compute the ClassInfo for a given class.
      */
     private static ClassInfo getClassInfo(Class<?> cls) {

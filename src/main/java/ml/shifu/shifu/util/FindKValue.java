@@ -20,18 +20,18 @@ import java.util.List;
 
 /**
  * Find the k largest number in List,
- * <p/>
+ * <p>
  * Warning: this FindKValue would change the order of list
  */
 public class FindKValue {
 
     public static <T> T find(List<T> values, int k, Comparator<T> comparator) {
 
-        if (values == null || values.size() <= k) {
+        if(values == null || values.size() <= k) {
             return null;
         }
 
-        if (values.size() == 1) {
+        if(values.size() == 1) {
             return values.get(0);
         }
 
@@ -42,9 +42,10 @@ public class FindKValue {
 
         int pivotIndex = partition(values, comparator, low, high);
 
-        if (pivotIndex == k) return values.get(pivotIndex);
+        if(pivotIndex == k)
+            return values.get(pivotIndex);
 
-        if (pivotIndex < k) {
+        if(pivotIndex < k) {
             return quickfind(values, k, comparator, pivotIndex + 1, high);
         } else {
             return quickfind(values, k, comparator, low, pivotIndex - 1);
@@ -55,10 +56,10 @@ public class FindKValue {
         T pivot = values.get(low);
         int i = low;
 
-        for (int j = (low + 1); j <= high; j++) {
-            if (comparator.compare(values.get(j), pivot) <= 0) {
+        for(int j = (low + 1); j <= high; j++) {
+            if(comparator.compare(values.get(j), pivot) <= 0) {
                 i++;
-                if (i < j) {
+                if(i < j) {
                     exchange(values, i, j);
                 }
             }

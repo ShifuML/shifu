@@ -115,7 +115,7 @@ public class GuaguaParquetRecordReader implements
         }
     }
 
-    /**
+    /*
      * Build context through reflection to make sure code compatible between hadoop 1 and hadoop 2
      */
     private TaskAttemptContext buildContext() {
@@ -155,7 +155,7 @@ public class GuaguaParquetRecordReader implements
         }
     }
 
-    /**
+    /*
      * Returns a non-null Filter, which is a wrapper around either a
      * FilterPredicate, an UnboundRecordFilter, or a no-op filter.
      */
@@ -185,9 +185,12 @@ public class GuaguaParquetRecordReader implements
         }
     }
 
-    /**
+    /*
+     * Return read support instance
+     * 
      * @param configuration
-     *            to find the configuration for the read support
+     * to find the configuration for the read support
+     * 
      * @return the configured read support
      */
     @SuppressWarnings("unchecked")
@@ -203,9 +206,12 @@ public class GuaguaParquetRecordReader implements
         return clazz;
     }
 
-    /**
+    /*
+     * Return read support instance
+     * 
      * @param readSupportClass
-     *            to instantiate
+     * to instantiate
+     * 
      * @return the configured read support
      */
     static <T> ReadSupport<T> getReadSupportInstance(Class<? extends ReadSupport<T>> readSupportClass) {

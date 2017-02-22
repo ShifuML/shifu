@@ -98,9 +98,8 @@ public abstract class AbstractTrainerUDF<T> extends EvalFunc<T> {
     public AbstractTrainerUDF(String source, String pathColumnConfig) throws IOException {
         this(source, null, pathColumnConfig);
     }
-    
 
-    /**
+    /*
      * Check whether is a pig environment, for example, in unit test, PigStatusReporter.getInstance() is null
      */
     @SuppressWarnings("deprecation")

@@ -42,17 +42,9 @@ import org.apache.pig.parser.ParserException;
  * BinningDataUDF class
  * 
  * @author zhanhu
- * @Oct 27, 2014
- * 
  */
 public class BinningDataUDF extends AbstractTrainerUDF<Tuple> {
 
-    /**
-     * @param source
-     * @param pathModelConfig
-     * @param pathColumnConfig
-     * @throws IOException
-     */
     public BinningDataUDF(String source, String pathModelConfig, String pathColumnConfig) throws IOException {
         super(source, pathModelConfig, pathColumnConfig);
     }

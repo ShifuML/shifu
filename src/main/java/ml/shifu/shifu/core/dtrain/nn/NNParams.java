@@ -26,11 +26,11 @@ import ml.shifu.shifu.core.dtrain.DTrainUtils;
 
 /**
  * NNParams are used to save NN model info which can also be stored into ZooKeeper.
- * <p/>
- * <p/>
+ * 
+ * <p>
  * {@link #weights} is used to set model weights which is used to transfer info from master to workers.
- * <p/>
- * <p/>
+ * 
+ * <p>
  * {@link #gradients} is used to accumulate all workers' gradients together in master and then use the accumulated
  * gradients to update weights.
  */

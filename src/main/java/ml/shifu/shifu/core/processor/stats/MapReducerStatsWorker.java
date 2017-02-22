@@ -343,6 +343,7 @@ public class MapReducerStatsWorker extends AbstractStatsExecutor {
      * update the max/min/mean/std/binning information from stats step
      * 
      * @throws IOException
+     *             in stats processing from hdfs files
      */
     public void updateColumnConfigWithPreTrainingStats() throws IOException {
         List<Scanner> scanners = ShifuFileUtils.getDataScanners(pathFinder.getPreTrainingStatsPath(), modelConfig
@@ -359,6 +360,7 @@ public class MapReducerStatsWorker extends AbstractStatsExecutor {
      * Scan the stats result and save them into column configure
      * 
      * @param scanner
+     *            the scanners to be read
      */
     private void scanStatsResult(Scanner scanner) {
         while(scanner.hasNextLine()) {
@@ -474,6 +476,7 @@ public class MapReducerStatsWorker extends AbstractStatsExecutor {
      * Calculate the PSI
      * 
      * @throws IOException
+     *             in scanners read exception
      */
     private void runPSI() throws IOException {
         log.info("Run PSI to use {} to compute the PSI ", modelConfig.getPsiColumnName());

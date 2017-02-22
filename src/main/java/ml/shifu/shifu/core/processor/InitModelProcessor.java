@@ -79,7 +79,7 @@ public class InitModelProcessor extends BasicModelProcessor implements Processor
     /**
      * runner for init the model
      * 
-     * @throws Exception
+     * @throws Exception in init step running
      */
     @Override
     public int run() throws Exception {

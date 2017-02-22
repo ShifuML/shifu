@@ -23,14 +23,11 @@ import org.dmg.pmml.*;
 /**
  * The class that converts an LR model to a PMML RegressionModel.
  * This class extends the abstract class
- * PMMLModelBuilder<pmml.RegressionModel,LR>.
+ * PMMLModelBuilder(pmml.RegressionModel,LR).
  */
-public class PMMLLRModelBuilder
-        implements
-        PMMLModelBuilder<org.dmg.pmml.RegressionModel, ml.shifu.shifu.core.LR> {
+public class PMMLLRModelBuilder implements PMMLModelBuilder<org.dmg.pmml.RegressionModel, ml.shifu.shifu.core.LR> {
 
-    public org.dmg.pmml.RegressionModel adaptMLModelToPMML(
-            ml.shifu.shifu.core.LR lr,
+    public org.dmg.pmml.RegressionModel adaptMLModelToPMML(ml.shifu.shifu.core.LR lr,
             org.dmg.pmml.RegressionModel pmmlModel) {
         pmmlModel.setNormalizationMethod(RegressionNormalizationMethodType.LOGIT);
         pmmlModel.setFunctionName(MiningFunctionType.REGRESSION);
@@ -40,35 +37,29 @@ public class PMMLLRModelBuilder
         List<DerivedField> df = lt.getDerivedFields();
 
         HashMap<FieldName, FieldName> miningTransformMap = new HashMap<FieldName, FieldName>();
-        for (DerivedField dField : df) {
+        for(DerivedField dField: df) {
             // Apply z-scale normalization on numerical variables
-            if (dField.getExpression() instanceof NormContinuous) {
-                miningTransformMap.put(
-                        ((NormContinuous) dField.getExpression()).getField(),
-                        dField.getName());
+            if(dField.getExpression() instanceof NormContinuous) {
+                miningTransformMap.put(((NormContinuous) dField.getExpression()).getField(), dField.getName());
             }
             // Apply bin map on categorical variables
-            else if (dField.getExpression() instanceof MapValues) {
-                miningTransformMap.put(
-                        ((MapValues) dField.getExpression()).getFieldColumnPairs().get(0).getField(),
+            else if(dField.getExpression() instanceof MapValues) {
+                miningTransformMap.put(((MapValues) dField.getExpression()).getFieldColumnPairs().get(0).getField(),
                         dField.getName());
-            }
-            else if (dField.getExpression() instanceof Discretize ) {
-                miningTransformMap.put(
-                        ((Discretize) dField.getExpression()).getField(),
-                        dField.getName());
+            } else if(dField.getExpression() instanceof Discretize) {
+                miningTransformMap.put(((Discretize) dField.getExpression()).getField(), dField.getName());
             }
         }
 
         List<MiningField> miningList = pmmlModel.getMiningSchema().getMiningFields();
         int index = 0;
-        for (int i = 0; i < miningList.size(); i++) {
+        for(int i = 0; i < miningList.size(); i++) {
             MiningField mField = miningList.get(i);
-            if (mField.getUsageType() != FieldUsageType.ACTIVE)
+            if(mField.getUsageType() != FieldUsageType.ACTIVE)
                 continue;
             FieldName mFieldName = mField.getName();
             FieldName fName = mFieldName;
-            while (miningTransformMap.containsKey(fName)) {
+            while(miningTransformMap.containsKey(fName)) {
                 fName = miningTransformMap.get(fName);
             }
 

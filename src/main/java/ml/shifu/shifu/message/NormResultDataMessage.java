@@ -26,10 +26,6 @@ public class NormResultDataMessage {
     private List<String> selectDataList;
     private List<List<Double>> normalizedDataList;
 
-    /**
-     * @param targetMsgCnt
-     * @param normalizedDataList
-     */
     public NormResultDataMessage(int targetMsgCnt, List<String> selectDataList, List<List<Double>> normalizedDataList) {
         this.targetMsgCnt = targetMsgCnt;
         this.selectDataList = selectDataList;

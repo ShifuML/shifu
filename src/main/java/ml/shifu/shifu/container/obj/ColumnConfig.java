@@ -59,11 +59,9 @@ public class ColumnConfig {
 
     private List<String> sampleValues;
 
-    /**
+    /*
      * ---------------------------------------------------------------------------
-     * <p/>
      * Auto-Gen methods
-     * <p/>
      * ---------------------------------------------------------------------------
      */
 
@@ -123,7 +121,7 @@ public class ColumnConfig {
         this.columnBinning = columnBinning;
     }
 
-    /**
+    /*
      * ---------------------------------------------------------------------------
      * 
      * Capsulated methods for easy usage
@@ -131,213 +129,132 @@ public class ColumnConfig {
      * ---------------------------------------------------------------------------
      */
 
-    /**
-     * @return
-     */
     @JsonIgnore
     public boolean isTarget() {
         return ColumnFlag.Target.equals(columnFlag);
     }
 
-    /**
-     * @return
-     */
     @JsonIgnore
     public boolean isCandidate() {
         return !ColumnFlag.ForceRemove.equals(columnFlag) && !ColumnFlag.Meta.equals(columnFlag)
                 && !ColumnFlag.Target.equals(columnFlag);
     }
 
-    /**
-     * @return
-     */
     @JsonIgnore
     public boolean isNumerical() {
         return columnType == ColumnType.N;
     }
 
-    /**
-     * @return
-     */
     @JsonIgnore
     public boolean isCategorical() {
         return columnType == ColumnType.C;
     }
 
-    /**
-     * @return
-     */
     @JsonIgnore
     public boolean isMeta() {
         return ColumnFlag.Meta == (columnFlag);
     }
 
-    /**
-     * @return
-     */
     @JsonIgnore
     public boolean isForceRemove() {
         return ColumnFlag.ForceRemove == (columnFlag);
     }
 
-    /**
-     * @return
-     */
     @JsonIgnore
     public boolean isForceSelect() {
         return ColumnFlag.ForceSelect == (columnFlag);
     }
 
-    /**
-     * @return
-     */
     @JsonIgnore
     public int getBinLength() {
         return columnBinning.getLength();
     }
 
-    /**
-     * @return
-     */
     @JsonIgnore
     public List<Double> getBinBoundary() {
         return columnBinning.getBinBoundary();
     }
 
-    /**
-     * @return
-     */
     @JsonIgnore
     public List<String> getBinCategory() {
         return columnBinning.getBinCategory();
     }
 
-    /**
-     * @return
-     */
     @JsonIgnore
     public List<Integer> getBinCountNeg() {
         return columnBinning.getBinCountNeg();
     }
 
-    /**
-     * @return
-     */
     @JsonIgnore
     public List<Integer> getBinCountPos() {
         return columnBinning.getBinCountPos();
     }
 
-    /**
-     * @return
-     */
     @JsonIgnore
     public List<Double> getBinPosRate() {
         return columnBinning.getBinPosRate();
     }
 
-    /**
-     * @return
-     */
     @JsonIgnore
     public List<Integer> getBinAvgScore() {
         return columnBinning.getBinAvgScore();
     }
 
-    /**
-     * @return binCountWoe
-     */
     @JsonIgnore
     public List<Double> getBinCountWoe() {
         return columnBinning.getBinCountWoe();
     }
 
-    /**
-     * @return binWeightedWoe
-     */
     @JsonIgnore
     public List<Double> getBinWeightedWoe() {
         return columnBinning.getBinWeightedWoe();
     }
 
-    /**
-     * @param length
-     */
     public void setBinLength(int length) {
         columnBinning.setLength(length);
     }
 
-    /**
-     * @param binBoundary
-     */
     public void setBinBoundary(List<Double> binBoundary) {
         columnBinning.setBinBoundary(binBoundary);
         columnBinning.setLength(binBoundary == null ? 0 : binBoundary.size());
     }
 
-    /**
-     * @param binCategory
-     */
     public void setBinCategory(List<String> binCategory) {
         columnBinning.setBinCategory(binCategory);
         columnBinning.setLength(binCategory == null ? 0 : binCategory.size());
     }
 
-    /**
-     * @param binCountNeg
-     */
     public void setBinCountNeg(List<Integer> binCountNeg) {
         columnBinning.setBinCountNeg(binCountNeg);
     }
 
-    /**
-     * @param binCountPos
-     */
     public void setBinCountPos(List<Integer> binCountPos) {
         columnBinning.setBinCountPos(binCountPos);
     }
 
-    /**
-     * @param binPosRate
-     */
     public void setBinPosCaseRate(List<Double> binPosRate) {
         columnBinning.setBinPosRate(binPosRate);
     }
 
-    /**
-     * @param binAvgScore
-     */
     public void setBinAvgScore(List<Integer> binAvgScore) {
         columnBinning.setBinAvgScore(binAvgScore);
     }
 
-    /**
-     * @return
-     */
     @JsonIgnore
     public Double getKs() {
         return columnStats.getKs();
     }
 
-    /**
-     * @return
-     */
     @JsonIgnore
     public Double getIv() {
         return columnStats.getIv();
     }
 
-    /**
-     * @return
-     */
     @JsonIgnore
     public Double getMean() {
         return columnStats.getMean();
     }
 
-    /**
-     * @return
-     */
     @JsonIgnore
     public Double getStdDev() {
         return columnStats.getStdDev();
@@ -363,44 +280,26 @@ public class ColumnConfig {
         return columnStats.getMissingPercentage();
     }
 
-    /**
-     * @param ks
-     */
     public void setKs(double ks) {
         columnStats.setKs(ks);
     }
 
-    /**
-     * @param iv
-     */
     public void setIv(double iv) {
         columnStats.setIv(iv);
     }
 
-    /**
-     * @param max
-     */
     public void setMax(Double max) {
         columnStats.setMax(max);
     }
 
-    /**
-     * @param min
-     */
     public void setMin(Double min) {
         columnStats.setMin(min);
     }
 
-    /**
-     * @param mean
-     */
     public void setMean(Double mean) {
         columnStats.setMean(mean);
     }
 
-    /**
-     * @param stdDev
-     */
     public void setStdDev(Double stdDev) {
         columnStats.setStdDev(stdDev);
     }
