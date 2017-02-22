@@ -30,57 +30,54 @@ import org.slf4j.LoggerFactory;
 
 /**
  * CategoricalBinning class
- * 
- * @Oct 20, 2014
- *
  */
 public class CategoricalBinning extends AbstractBinning<String> {
-    
+
     private final static Logger log = LoggerFactory.getLogger(CategoricalBinning.class);
 
     private boolean isValid = true;
     private Set<String> categoricalVals;
-    
+
     /**
      * Empty constructor : it is just for bin merging
      */
-    protected CategoricalBinning(){}
-    
-    /**
-     * Constructor with expected bin number. 
+    protected CategoricalBinning() {
+    }
+
+    /*
+     * Constructor with expected bin number.
      * For categorical variable, the binningNum won't be used
-     * @param binningNum
      */
     public CategoricalBinning(int binningNum) {
         this(binningNum, null);
     }
 
-    /**
+    /*
      * Constructor with expected bin number and missing value list
      * For categorical variable, the binningNum won't be used
-     * @param binningNum
-     * @param missingValList
      */
     public CategoricalBinning(int binningNum, List<String> missingValList) {
         super(binningNum, missingValList);
         this.categoricalVals = new HashSet<String>();
     }
 
-    /* (non-Javadoc)
-      * Add the string into value set
+    /*
+     * (non-Javadoc)
+     * Add the string into value set
      * First of all the input string will be trimmed and check whether it is missing value or not
      * If it is missing value, the missing value count will +1
+     * 
      * @see ml.shifu.shifu.core.binning.AbstractBinning#addData(java.lang.Object)
      */
     @Override
     public void addData(String val) {
         String fval = StringUtils.trimToEmpty(val);
-        if ( !isMissingVal(fval) ) {
-            if ( isValid ) {
+        if(!isMissingVal(fval)) {
+            if(isValid) {
                 categoricalVals.add(fval);
             }
 
-            if ( categoricalVals.size() > CalculateNewStatsUDF.MAX_CATEGORICAL_BINC_COUNT ) {
+            if(categoricalVals.size() > CalculateNewStatsUDF.MAX_CATEGORICAL_BINC_COUNT) {
                 isValid = false;
                 categoricalVals.clear();
             }
@@ -89,7 +86,9 @@ public class CategoricalBinning extends AbstractBinning<String> {
         }
     }
 
-    /* (non-Javadoc)
+    /*
+     * (non-Javadoc)
+     * 
      * @see ml.shifu.shifu.core.binning.AbstractBinning#getDataBin()
      */
     @Override
@@ -99,7 +98,9 @@ public class CategoricalBinning extends AbstractBinning<String> {
         return binningVals;
     }
 
-    /* (non-Javadoc)
+    /*
+     * (non-Javadoc)
+     * 
      * @see ml.shifu.shifu.core.binning.AbstractBinning#mergeBin(ml.shifu.shifu.core.binning.AbstractBinning)
      */
     @Override
@@ -108,48 +109,43 @@ public class CategoricalBinning extends AbstractBinning<String> {
         super.mergeBin(another);
 
         this.isValid = (this.isValid && binning.isValid);
-        if ( this.isValid ) {
+        if(this.isValid) {
             this.categoricalVals.addAll(binning.categoricalVals);
         } else {
             this.categoricalVals.clear();
         }
     }
-    
+
     /**
      * convert @CategoricalBinning to String
-     * @return
      */
     protected void stringToObj(String objValStr) {
         super.stringToObj(objValStr);
 
-        if ( categoricalVals == null ) {
+        if(categoricalVals == null) {
             categoricalVals = new HashSet<String>();
         } else {
             categoricalVals.clear();
         }
-        
+
         String[] objStrArr = objValStr.split(Character.toString(FIELD_SEPARATOR), -1);
         this.isValid = Boolean.valueOf(objStrArr[4]);
-        if ( objStrArr.length > 5 && StringUtils.isNotBlank(objStrArr[5]) ) {
+        if(objStrArr.length > 5 && StringUtils.isNotBlank(objStrArr[5])) {
             String[] elements = objStrArr[5].split(Character.toString(SETLIST_SEPARATOR), -1);
-            for ( String element : elements ) {
+            for(String element: elements) {
                 categoricalVals.add(element);
             }
         } else {
             log.warn("Empty categorical bin - " + objValStr);
         }
     }
-    
-    /**
+
+    /*
      * convert @CategoricalBinning to String
-     * @return
      */
     public String objToString() {
-        return super.objToString() 
-                + Character.toString(FIELD_SEPARATOR)
-                + Boolean.toString(isValid)
-                + Character.toString(FIELD_SEPARATOR)
-                + StringUtils.join(categoricalVals, SETLIST_SEPARATOR);
+        return super.objToString() + Character.toString(FIELD_SEPARATOR) + Boolean.toString(isValid)
+                + Character.toString(FIELD_SEPARATOR) + StringUtils.join(categoricalVals, SETLIST_SEPARATOR);
     }
 
 }

@@ -83,7 +83,6 @@ import com.google.common.base.Splitter;
 
 /**
  * Variable selection processor, select the variable based on KS/IV value, or
- * </p>
  * 
  * <p>
  * Selection variable based on the wrapper training processor.

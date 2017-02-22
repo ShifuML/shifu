@@ -106,6 +106,10 @@ public class PigExecutor {
      *            - additional parameters for pig script
      * @param sourceType
      *            - the mode run pig: pig-local/pig-hdfs
+     * @param confMap
+     *            the configuration map instance
+     * @param pathFinder
+     *            the path finder
      * @throws IOException
      *             throw IOException when loading the parameter from @ModelConfig
      */
@@ -191,6 +195,8 @@ public class PigExecutor {
     /**
      * Check if tez version is ok to run. In hdp 2.4.0.2.1.2.0-402, with such error 'NoClassDefFoundError:
      * org/apache/tez/runtime/library/input/OrderedGroupedKVInput'
+     * 
+     * @return if is tez running
      */
     private boolean isTezRunnable() {
         boolean isTezRunnable = true;

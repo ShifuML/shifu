@@ -24,49 +24,51 @@ import org.apache.commons.lang.StringUtils;
 
 /**
  * EqualIntervalBinning class
- * 
- * @Oct 20, 2014
- *
  */
 public class EqualIntervalBinning extends AbstractBinning<Double> {
-    
+
     private double maxVal = -Double.MAX_VALUE;
     private double minVal = Double.MAX_VALUE;
 
-    /**
-     * Empty constructor : it is just for bin merging
-     */
-    protected EqualIntervalBinning() {}
-    
+    protected EqualIntervalBinning() {
+    }
+
     /**
      * Constructor with expected bin number
+     * 
      * @param binningNum
+     *            the binningNum
      */
     public EqualIntervalBinning(int binningNum) {
         this(binningNum, null);
     }
-    
+
     /**
      * Constructor with expected bin number and missing value list
+     * 
      * @param binningNum
+     *            the binningNum
+     * @param missingValList
+     *            the missing value list
      */
     public EqualIntervalBinning(int binningNum, List<String> missingValList) {
         super(binningNum, missingValList);
     }
 
-    /* 
-     * Add the value (in format of text) into histogram with frequency 1. 
+    /*
+     * Add the value (in format of text) into histogram with frequency 1.
      * First of all the input string will be trimmed and check whether it is missing value or not
      * If it is missing value, the missing value count will +1
-     * After that, the input string will be parsed into double. If it is not a double, invalid value count will +1 
+     * After that, the input string will be parsed into double. If it is not a double, invalid value count will +1
+     * 
      * @see ml.shifu.shifu.core.binning.AbstractBinning#addData(java.lang.Object)
      */
     @Override
     public void addData(String val) {
         String fval = StringUtils.trimToEmpty(val);
-        if ( !isMissingVal(fval) ) {
+        if(!isMissingVal(fval)) {
             double dval = 0;
-            
+
             try {
                 dval = Double.parseDouble(fval);
             } catch (NumberFormatException e) {
@@ -81,65 +83,66 @@ public class EqualIntervalBinning extends AbstractBinning<Double> {
         }
     }
 
-    /* (non-Javadoc)
+    /*
+     * (non-Javadoc)
+     * 
      * @see ml.shifu.shifu.core.binning.AbstractBinning#getDataBin()
      */
     @Override
     public List<Double> getDataBin() {
         List<Double> binBorders = new ArrayList<Double>();
-        if ( maxVal < minVal ) {
+        if(maxVal < minVal) {
             // no data, just return empty
             return binBorders;
         }
-        
+
         double delta = (maxVal - minVal) * 0.0005;
         double startVal = minVal - delta;
         double endVal = maxVal + delta;
-        
+
         double binInterval = (endVal - startVal) / super.expectedBinningNum;
         double val = startVal;
-        for ( int i = 0; i < super.expectedBinningNum; i ++ ) {
+        for(int i = 0; i < super.expectedBinningNum; i++) {
             binBorders.add(val);
             val = val + binInterval;
         }
-        
+
         binBorders.add(endVal);
-        
+
         return binBorders;
     }
 
     /**
      * Process the new incoming data
+     * 
      * @param dval
+     *            double value to be processed
      */
     private void process(double dval) {
-        if ( dval < this.minVal ) {
+        if(dval < this.minVal) {
             this.minVal = dval;
         }
-        
-        if ( dval > this.maxVal ) {
+
+        if(dval > this.maxVal) {
             this.maxVal = dval;
         }
     }
-    
 
-    /* (non-Javadoc)
+    /*
+     * (non-Javadoc)
+     * 
      * @see ml.shifu.shifu.core.binning.AbstractBinning#mergeBin(ml.shifu.shifu.core.binning.AbstractBinning)
      */
     @Override
     public void mergeBin(AbstractBinning<?> another) {
         EqualIntervalBinning binning = (EqualIntervalBinning) another;
-        
+
         super.mergeBin(another);
-        
+
         process(binning.minVal);
         process(binning.maxVal);
     }
-    
-    /**
-     * convert @EqualIntervalBinning to String
-     * @return
-     */
+
     protected void stringToObj(String objValStr) {
         super.stringToObj(objValStr);
 
@@ -147,16 +150,9 @@ public class EqualIntervalBinning extends AbstractBinning<Double> {
         maxVal = Double.parseDouble(objStrArr[4]);
         minVal = Double.parseDouble(objStrArr[5]);
     }
-    
-    /**
-     * convert @EqualIntervalBinning to String
-     * @return
-     */
+
     public String objToString() {
-        return super.objToString() 
-                + Character.toString(FIELD_SEPARATOR) 
-                + Double.toString(maxVal)
-                + Character.toString(FIELD_SEPARATOR) 
-                + Double.toString(minVal);
+        return super.objToString() + Character.toString(FIELD_SEPARATOR) + Double.toString(maxVal)
+                + Character.toString(FIELD_SEPARATOR) + Double.toString(minVal);
     }
 }

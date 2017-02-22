@@ -41,7 +41,7 @@ import org.slf4j.LoggerFactory;
  * This is a global accumulation, reducer number in current MapReduce job should be set to 1.
  * 
  * <p>
- * Input type is <ColumnId, Iterable<MSE>> from all mapper tasks.
+ * Input type is (ColumnId, Iterable(MSE)) from all mapper tasks.
  * 
  * <p>
  * In {@link #cleanup(org.apache.hadoop.mapreduce.Reducer.Context)}, variables with MSE will be sorted according to

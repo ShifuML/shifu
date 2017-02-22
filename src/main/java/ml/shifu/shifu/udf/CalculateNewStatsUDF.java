@@ -36,9 +36,6 @@ import ml.shifu.shifu.util.Base64Utils;
 
 /**
  * CalculateNewStatsUDF class
- * 
- * @Oct 27, 2014
- * 
  */
 public class CalculateNewStatsUDF extends AbstractTrainerUDF<Tuple> {
 

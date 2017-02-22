@@ -367,10 +367,8 @@ public class VariableSelector {
         }
     }
 
-    /**
-     * TODO
-     */
     public List<Tuple> sortByPareto(List<Tuple> paretoList) {
+        // TODO
         if(this.epsilonArray == null) {
             this.epsilonArray = new double[] { 0.01d, 0.05d };
         }

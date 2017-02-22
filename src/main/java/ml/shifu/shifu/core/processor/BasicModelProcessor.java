@@ -85,6 +85,7 @@ public class BasicModelProcessor {
      * @param step
      *            Shifu running step
      * @throws Exception
+     *             any exception in setup
      */
     protected void setUp(ModelStep step) throws Exception {
         if(hasInitialized()) {
@@ -141,9 +142,8 @@ public class BasicModelProcessor {
 
     /**
      * The post-logic after running
-     * </p>
+     * <p>
      * copy file to hdfs if SourceType is HDFS
-     * </p>
      * 
      * @param step
      *            Shifu running step
@@ -158,6 +158,7 @@ public class BasicModelProcessor {
      * save Model Config
      * 
      * @throws IOException
+     *             an exception in saving model config
      */
     public void saveModelConfig() throws IOException {
         log.info("Saving ModelConfig...");
@@ -167,7 +168,10 @@ public class BasicModelProcessor {
     /**
      * save the Column Config
      * 
+     * @param columnStats
+     *            if saev column status
      * @throws IOException
+     *             an exception in saving column config
      */
     public void saveColumnConfigListAndColumnStats(boolean columnStats) throws IOException {
         log.info("Saving ColumnConfig...");
@@ -177,8 +181,10 @@ public class BasicModelProcessor {
     /**
      * validate the modelconfig if it's well written.
      * 
-     * @return
+     * @param modelStep
+     *            the model step
      * @throws Exception
+     *             any exception in validation
      */
     protected void validateModelConfig(ModelStep modelStep) throws Exception {
         ValidateResult result = new ValidateResult(false);
@@ -205,6 +211,7 @@ public class BasicModelProcessor {
      * Close all scanners
      * 
      * @param scanners
+     *            the scanners
      */
     public void closeScanners(List<Scanner> scanners) {
         if(CollectionUtils.isNotEmpty(scanners)) {
@@ -216,11 +223,13 @@ public class BasicModelProcessor {
 
     /**
      * Sync data into HDFS if necessary:
-     * RunMode == pig && SourceType == HDFS
+     * RunMode == pig and SourceType == HDFS
      * 
      * @param sourceType
-     * @return
+     *            source type
+     * @return if sync in hdfs or not
      * @throws IOException
+     *             any exception in file system io
      */
     public boolean syncDataToHdfs(SourceType sourceType) throws IOException {
         if(SourceType.HDFS.equals(sourceType)) {
@@ -231,13 +240,6 @@ public class BasicModelProcessor {
         return false;
     }
 
-    /**
-     * copy model configuration file
-     * 
-     * @param sourcePath
-     * @param targetPath
-     * @throws IOException
-     */
     public void copyModelFiles(String sourcePath, String targetPath) throws IOException {
         loadModelConfig(sourcePath + File.separator + "ModelConfig.json", SourceType.LOCAL);
         File targetFile = new File(targetPath);
@@ -283,9 +285,7 @@ public class BasicModelProcessor {
      * check algorithm parameter
      * 
      * @throws Exception
-     *             </p>
-     *             modelConfig is not loaded or</p>
-     *             save ModelConfig.json file error </p>
+     *             modelConfig is not loaded or save ModelConfig.json file error
      */
     public void checkAlgorithmParam() throws Exception {
 
@@ -371,6 +371,7 @@ public class BasicModelProcessor {
      * load Model Config method
      * 
      * @throws IOException
+     *             in load model config
      */
     private void loadModelConfig() throws IOException {
         modelConfig = CommonUtils.loadModelConfig();
@@ -380,6 +381,7 @@ public class BasicModelProcessor {
      * load Model Config method
      * 
      * @throws IOException
+     *             in load model config
      */
     private void loadModelConfig(String pathToModel, SourceType source) throws IOException {
         modelConfig = CommonUtils.loadModelConfig(pathToModel, source);
@@ -389,6 +391,7 @@ public class BasicModelProcessor {
      * load Column Config
      * 
      * @throws IOException
+     *             in load column config
      */
     private void loadColumnConfig() throws IOException {
         columnConfigList = CommonUtils.loadColumnConfigList();
@@ -408,7 +411,9 @@ public class BasicModelProcessor {
      * create HEAD file contain the workspace
      * 
      * @param modelName
+     *            model name
      * @throws IOException
+     *             any exception in create header
      */
     protected void createHead(String modelName) throws IOException {
         File header = new File(modelName == null ? "" : modelName + "/.HEAD");

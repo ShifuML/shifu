@@ -56,7 +56,7 @@ public class CombineInputFormat extends TextInputFormat {
 
     public static final String SHIFU_VS_SPLIT_COMBINABLE = "shifu.vs.split.combinable";
 
-    /**
+    /*
      * Splitter building logic including master setting, also includes combining input feature like Pig.
      */
     @Override
@@ -86,7 +86,7 @@ public class CombineInputFormat extends TextInputFormat {
         return newSplits;
     }
 
-    /**
+    /*
      * Copy from pig implementation, need to check this code logic.
      */
     protected List<InputSplit> getFinalCombineSplits(List<InputSplit> newSplits, long combineSize) throws IOException {
@@ -108,7 +108,7 @@ public class CombineInputFormat extends TextInputFormat {
         return newSplits;
     }
 
-    /**
+    /*
      * Generate the list of files and make them into FileSplits.
      */
     protected List<InputSplit> getCommonSplits(JobContext job) throws IOException {
@@ -470,6 +470,10 @@ public class CombineInputFormat extends TextInputFormat {
 
     /**
      * Whether it is not pig or hadoop meta output file.
+     * 
+     * @param path
+     *            the checked path
+     * @return if it is pig or hadoop meta file
      */
     protected boolean isPigOrHadoopMetaFile(Path path) {
         return path.toString().indexOf(HADOOP_SUCCESS) >= 0 || path.toString().indexOf(PIG_HEADER) >= 0

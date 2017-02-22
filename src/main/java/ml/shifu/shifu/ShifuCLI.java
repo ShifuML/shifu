@@ -89,11 +89,6 @@ public class ShifuCLI {
 
     static private final Logger log = LoggerFactory.getLogger(ShifuCLI.class);
 
-    /**
-     * Main entry for the whole framework.
-     * 
-     * @throws IOException
-     */
     public static void main(String[] args) {
         // invalid input and help options
         if(args.length < 1 || (isHelpOption(args[0]))) {
@@ -294,37 +289,29 @@ public class ShifuCLI {
         }
     }
 
-    /**
+    /*
      * switch model - switch the current model to</p>
-     * <p/>
+     * <p>
      * <li>master if it's not current model existing</li>
      * <li><code>modelName</code> if you already save it with name <code>modelName</code></li>
-     * <p/>
+     * <p>
      * then create a new branch with naming <code>newModelSetName</code>
-     * 
-     * @param newModelSetName
-     * @throws Exception
      */
     private static void switchCurrentModel(String newModelSetName) throws Exception {
         ManageModelProcessor p = new ManageModelProcessor(ModelAction.SWITCH, newModelSetName);
         p.run();
     }
 
-    /**
+    /*
      * save model - save current mode or save to a specially name <code>newModelSetName</code>
-     * 
-     * @param newModelSetName
-     * @throws Exception
      */
     private static void saveCurrentModel(String newModelSetName) throws Exception {
         ManageModelProcessor p = new ManageModelProcessor(ModelAction.SAVE, newModelSetName);
         p.run();
     }
 
-    /**
+    /*
      * Create new model - create directory and ModelConfig for the model
-     * 
-     * @throws Exception
      */
     public static int createNewModel(String modelSetName, String modelType, String description) throws Exception {
         ALGORITHM modelAlg = null;
@@ -347,17 +334,15 @@ public class ShifuCLI {
         return p.run();
     }
 
-    /**
+    /*
      * Load the column definition and do the training data purification
-     * 
-     * @throws Exception
      */
     public static int initializeModel() throws Exception {
         InitModelProcessor processor = new InitModelProcessor();
         return processor.run();
     }
 
-    /**
+    /*
      * Calculate variables stats for model - ks/iv/mean/max/min
      */
     public static int calModelStats() throws Exception {
@@ -365,189 +350,106 @@ public class ShifuCLI {
         return p.run();
     }
 
-    /**
+    /*
      * Select variables for model
-     * 
-     * @throws Exception
-     * @throws ShifuException
      */
     public static int selectModelVar(boolean isToReset) throws Exception {
         VarSelectModelProcessor p = new VarSelectModelProcessor(isToReset);
         return p.run();
     }
 
-    /**
+    /*
      * Normalize the training data
-     *
-     * @throws Exception
      */
     public static int normalizeTrainData() throws Exception {
         return normalizeTrainData(false);
     }
 
-    /**
+    /*
      * Normalize the training data
-     *
-     * @throws Exception
      */
     public static int normalizeTrainData(boolean isToShuffleData) throws Exception {
         NormalizeModelProcessor p = new NormalizeModelProcessor(isToShuffleData);
         return p.run();
     }
 
-    /**
-     * Train model
-     * 
-     * @throws Exception
-     */
     public static int trainModel(boolean isDryTrain, boolean isDebug) throws Exception {
         TrainModelProcessor p = new TrainModelProcessor(isDryTrain, isDebug);
         return p.run();
     }
 
-    /**
-     * Run post-train step
-     */
     public static int postTrainModel() throws Exception {
         PostTrainModelProcessor p = new PostTrainModelProcessor();
         return p.run();
     }
 
-    /**
-     * Create new evalset
-     * 
-     * @throws Exception
-     */
     public static int createNewEvalSet(String evalSetName) throws Exception {
         EvalModelProcessor p = new EvalModelProcessor(EvalStep.NEW, evalSetName);
         return p.run();
     }
 
-    /**
-     * Run the evalset to test the model with isDry switch
-     */
     public static int runEvalSet(boolean isDryRun) throws Exception {
         EvalModelProcessor p = new EvalModelProcessor(EvalStep.RUN);
         return p.run();
     }
 
-    /**
-     * @param evalSetName
-     * @param isDryRun
-     * @throws Exception
-     */
     public static int runEvalSet(String evalSetName, boolean isDryRun) throws Exception {
         log.info("Run evaluation set with {}", evalSetName);
         EvalModelProcessor p = new EvalModelProcessor(EvalStep.RUN, evalSetName);
         return p.run();
     }
 
-    /**
-     * @param evalSetNames
-     * @throws Exception
-     */
     public static int runEvalScore(String evalSetNames) throws Exception {
         EvalModelProcessor p = new EvalModelProcessor(EvalStep.SCORE, evalSetNames);
         return p.run();
     }
 
-    /**
-     * @param evalSetNames
-     * @throws Exception
-     */
     private static int runEvalConfMat(String evalSetNames) throws Exception {
         EvalModelProcessor p = new EvalModelProcessor(EvalStep.CONFMAT, evalSetNames);
         return p.run();
     }
 
-    /**
-     * @param evalSetNames
-     * @throws Exception
-     */
     private static int runEvalPerf(String evalSetNames) throws Exception {
         EvalModelProcessor p = new EvalModelProcessor(EvalStep.PERF, evalSetNames);
         return p.run();
     }
 
-    /**
-     * @param evalSetNames
-     * @return
-     */
     private static int runEvalNorm(String evalSetNames) throws Exception {
         EvalModelProcessor p = new EvalModelProcessor(EvalStep.NORM, evalSetNames);
         return p.run();
     }
 
-    /**
-     * list all evaluation set
-     * 
-     * @throws Exception
-     */
     private static int listEvalSet() throws Exception {
         EvalModelProcessor p = new EvalModelProcessor(EvalStep.LIST);
         return p.run();
     }
 
-    /**
-     * delete some evaluation set
-     * 
-     * @param evalSetName
-     * @throws Exception
-     */
     private static int deleteEvalSet(String evalSetName) throws Exception {
         EvalModelProcessor p = new EvalModelProcessor(EvalStep.DELETE, evalSetName);
         return p.run();
     }
 
-    /**
-     * create a new model from existing model
-     * 
-     * @throws ShifuException
-     */
     private static void copyModel(String[] cmdArgs) throws IOException, ShifuException {
         BasicModelProcessor p = new BasicModelProcessor();
 
         p.copyModelFiles(cmdArgs[0], cmdArgs[1]);
     }
 
-    /**
-     * export Shifu model into other format, i.e. PMML
-     * 
-     * @param type
-     * @throws Exception
-     */
     public static int exportModel(String type, boolean isConcise) throws Exception {
         ExportModelProcessor p = new ExportModelProcessor(type, isConcise);
         return p.run();
     }
 
-    /**
-     * create ComboTrain.json, when user provide the algorithms to combo
-     * @param algorithms
-     * @return
-     * @throws Exception
-     */
     private static int createNewCombo(String algorithms) throws Exception {
         Processor processor = new ComboModelProcessor(ComboModelProcessor.ComboStep.NEW, algorithms);
         return processor.run();
     }
 
-    /**
-     * create each sub-models, assemble model and generate corresponding configurations
-     * @return
-     * @throws Exception
-     */
     private static int initComboModels() throws Exception {
         Processor processor = new ComboModelProcessor(ComboModelProcessor.ComboStep.INIT);
         return processor.run();
     }
 
-    /**
-     * train each sub-models, and use train data as evaluation set to generate model score.
-     *      And join the evaluation result to train assemble model
-     * @return
-     * @throws Exception
-     */
     private static int runComboModels(boolean isToShuffleData, boolean isToResume) throws Exception {
         ComboModelProcessor processor = new ComboModelProcessor(ComboModelProcessor.ComboStep.RUN);
         processor.setToShuffleData(isToShuffleData);
@@ -555,22 +457,12 @@ public class ShifuCLI {
         return processor.run();
     }
 
-    /**
-     * evaluate each sub-models, join data and evaluate assemble model
-     * @return
-     * @throws Exception
-     */
     private static int evalComboModels(boolean isToResume) throws Exception {
         ComboModelProcessor processor = new ComboModelProcessor(ComboModelProcessor.ComboStep.EVAL);
         processor.setToResume(isToResume);
         return processor.run();
     }
 
-    /**
-     * Load and test ModelConfig
-     * 
-     * @throws Exception
-     */
     private static void initializeModelParam() throws Exception {
         InitModelProcessor p = new InitModelProcessor();
         p.checkAlgorithmParam();
@@ -592,9 +484,6 @@ public class ShifuCLI {
                         modelName));
     }
 
-    /**
-     * Build the usage option for parameter check
-     */
     @SuppressWarnings("static-access")
     private static Options buildModelSetOptions(String[] args) {
         Options opts = new Options();
@@ -662,7 +551,7 @@ public class ShifuCLI {
         return opts;
     }
 
-    /**
+    /*
      * print usage
      */
     private static void printUsage() {
@@ -727,13 +616,6 @@ public class ShifuCLI {
         }
     }
 
-    /**
-     * check the argument is for listing version or not
-     * 
-     * @param arg
-     *            input option
-     * @return true - if arg is v/version/-v/-version, or return false
-     */
     private static boolean isVersionOption(String arg) {
         return arg.equalsIgnoreCase("v")
                 || arg.equalsIgnoreCase("version")
@@ -741,12 +623,6 @@ public class ShifuCLI {
                 || arg.equalsIgnoreCase("-v");
     }
 
-    /**
-     * check the argument is for listing help info or not
-     * 
-     * @param str
-     * @return true - if arg is h/-h/help/-help, or return false
-     */
     private static boolean isHelpOption(String str) {
         return "h".equalsIgnoreCase(str)
                 || "-h".equalsIgnoreCase(str)
@@ -754,11 +630,6 @@ public class ShifuCLI {
                 || "-help".equalsIgnoreCase(str);
     }
 
-    /**
-     * print exception and contact message, then quit program
-     * 
-     * @param e
-     */
     private static void exceptionExit(Exception e) {
         log.error("Error in running, please check the stack, msg:" + e.toString(), e);
         System.err.println(Constants.CONTACT_MESSAGE);

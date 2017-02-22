@@ -38,6 +38,7 @@ import java.io.IOException;
  *         (column-id, column-value, column-tag, column-score)
  *         ...
  * }
+ * </pre>
  */
 public class AddColumnNumAndFilterUDF extends AddColumnNumUDF {
 

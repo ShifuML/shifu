@@ -36,20 +36,12 @@ import org.slf4j.LoggerFactory;
 
 /**
  * CategoricalVarStats class
- * 
- * @Nov 3, 2014
- * 
  */
 public class CategoricalVarStats extends AbstractVarStats {
 
     private static Logger log = LoggerFactory.getLogger(CategoricalVarStats.class);
     private Map<String, Integer> categoricalBinMap;
 
-    /**
-     * @param modelConfig
-     * @param columnConfig
-     * @param valueThreshold
-     */
     public CategoricalVarStats(ModelConfig modelConfig, ColumnConfig columnConfig, Double valueThreshold) {
         super(modelConfig, columnConfig, valueThreshold);
     }

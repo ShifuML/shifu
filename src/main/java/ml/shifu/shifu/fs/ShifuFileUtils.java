@@ -50,8 +50,8 @@ import org.xerial.snappy.SnappyInputStream;
 /**
  * ShifuFileUtils class encapsulate the file system interface from other components.
  * It provides the functions that for all kinds of file operation.
- * <p/>
- * Caller need to pass the file path and @SourceType to do file operation
+ * <p>
+ * Caller need to pass the file path and SourceType to do file operation
  */
 public class ShifuFileUtils {
 
@@ -101,6 +101,7 @@ public class ShifuFileUtils {
      *            - local/hdfs
      * @return operation status
      * @throws IOException
+     *             any io exception
      */
     public static boolean createDirIfNotExists(String path, SourceType sourceType) throws IOException {
         return getFileSystemBySourceType(sourceType).mkdirs(new Path(path));
@@ -141,7 +142,7 @@ public class ShifuFileUtils {
 
     /**
      * Get buffered reader with <code>{@link Constants#DEFAULT_CHARSET}</code> for specified file
-     * <p/>
+     * <p>
      * !!! Warning: reader instance should be closed by caller.
      * 
      * @param sourceFile
@@ -156,7 +157,7 @@ public class ShifuFileUtils {
 
     /**
      * Get buffered reader with <code>{@link Constants#DEFAULT_CHARSET}</code> for specified file
-     * <p/>
+     * <p>
      * !!! Warning: reader instance should be closed by caller.
      * 
      * @param path
@@ -169,8 +170,8 @@ public class ShifuFileUtils {
      */
     public static BufferedReader getReader(String path, SourceType sourceType) throws IOException {
         try {
-            return new BufferedReader(new InputStreamReader(
-                    getCompressInputStream(getFileSystemBySourceType(sourceType).open(new Path(path)), new Path(path)),
+            return new BufferedReader(new InputStreamReader(getCompressInputStream(
+                    getFileSystemBySourceType(sourceType).open(new Path(path)), new Path(path)),
                     Constants.DEFAULT_CHARSET));
         } catch (IOException e) {
             // To manual fix a issue that FileSystem is closed exceptionally. Here we renew a FileSystem object to make
@@ -189,11 +190,11 @@ public class ShifuFileUtils {
 
     private static InputStream getCompressInputStream(FSDataInputStream fdis, Path path) throws IOException {
         String name = path.getName();
-        if ( name.toLowerCase().endsWith(".gz") ) {
+        if(name.toLowerCase().endsWith(".gz")) {
             return new GZIPInputStream(fdis);
-        } else if ( name.toLowerCase().endsWith(".bz2") ) {
+        } else if(name.toLowerCase().endsWith(".bz2")) {
             return new BZip2CompressorInputStream(fdis);
-        } else if ( name.toLowerCase().endsWith(".snappy") ) {
+        } else if(name.toLowerCase().endsWith(".snappy")) {
             return new SnappyInputStream(fdis);
         } else {
             return fdis;
@@ -241,6 +242,8 @@ public class ShifuFileUtils {
      *            - file path to get the scanner
      * @param sourceType
      *            - local/hdfs
+     * @param pathFilter
+     *            the path filter
      * @return scanners for specified path
      * @throws IOException
      *             - if any I/O exception in processing
@@ -411,7 +414,7 @@ public class ShifuFileUtils {
 
     /**
      * According to SourceType to check whether file exists.
-     *
+     * 
      * @param path
      *            - @Path of source file
      * @param sourceType
@@ -529,11 +532,6 @@ public class ShifuFileUtils {
         return configList;
     }
 
-    /**
-     * @param filePath
-     * @param sourceType
-     * @return
-     */
     public static List<String> readFilePartsIntoList(String filePath, SourceType sourceType) throws IOException {
         List<String> lines = new ArrayList<String>();
 
@@ -541,10 +539,10 @@ public class ShifuFileUtils {
         FileStatus[] fileStatsArr = getFilePartStatus(filePath, sourceType);
 
         CompressionCodecFactory compressionFactory = new CompressionCodecFactory(new Configuration());
-        for ( FileStatus fileStatus : fileStatsArr ) {
+        for(FileStatus fileStatus: fileStatsArr) {
             InputStream is = null;
             CompressionCodec codec = compressionFactory.getCodec(fileStatus.getPath());
-            if ( codec != null ) {
+            if(codec != null) {
                 is = codec.createInputStream(fs.open(fileStatus.getPath()));
             } else {
                 is = fs.open(fileStatus.getPath());
@@ -579,7 +577,7 @@ public class ShifuFileUtils {
         long size = 0;
 
         FileStatus[] fileStatsArr = getFilePartStatus(filePath, sourceType);
-        for ( FileStatus fileStats : fileStatsArr ) {
+        for(FileStatus fileStats: fileStatsArr) {
             size += fileStats.getLen();
         }
         return size;

@@ -42,6 +42,7 @@ import java.util.Set;
  *         (column-id, column-value, column-tag, column-score)
  *         ...
  * }
+ * </pre>
  */
 public class AddColumnNumUDF extends AbstractTrainerUDF<DataBag> {
 

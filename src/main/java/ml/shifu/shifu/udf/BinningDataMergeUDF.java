@@ -34,18 +34,9 @@ import org.apache.pig.impl.logicalLayer.schema.Schema.FieldSchema;
 
 /**
  * MergeBinningDataUDF class
- * 
- * @Nov 11, 2014
- * 
  */
 public class BinningDataMergeUDF extends AbstractTrainerUDF<Tuple> {
 
-    /**
-     * @param source
-     * @param pathModelConfig
-     * @param pathColumnConfig
-     * @throws IOException
-     */
     public BinningDataMergeUDF(String source, String pathModelConfig, String pathColumnConfig) throws IOException {
         super(source, pathModelConfig, pathColumnConfig);
     }
