@@ -186,6 +186,7 @@ public class Binning {
      * setter, the max bins
      * 
      * @param numBins
+     *            the numBins
      */
     public void setMaxNumOfBins(int numBins) {
         this.expectNumBins = numBins;
@@ -195,6 +196,7 @@ public class Binning {
      * setter, the binning method
      * 
      * @param binningMethod
+     *            the binningMethod
      */
     public void setBinningMethod(BinningMethod binningMethod) {
         this.binningMethod = binningMethod;
@@ -204,6 +206,7 @@ public class Binning {
      * Set the the max size of auto type threshold
      * 
      * @param autoTypeThreshold
+     *            the autoTypeThreshold
      */
     public void setAutoTypeThreshold(Integer autoTypeThreshold) {
         this.autoTypeThreshold = autoTypeThreshold;
@@ -211,10 +214,9 @@ public class Binning {
 
     /**
      * Numerical: Raw to Value Conversion happens before Binning
-     * </p>
+     * <p>
      * Categorical: Raw to Value Conversion happens after Binning
-     * </p>
-     * <p/>
+     * <p>
      * Start binning method
      */
     public void doBinning() {
@@ -647,10 +649,8 @@ public class Binning {
         return dataType;
     }
 
-    /**
+    /*
      * set the merge flag
-     * 
-     * @param mergeEnabled
      */
     public void setMergeEnabled(Boolean mergeEnabled) {
         this.mergeEnabled = mergeEnabled;

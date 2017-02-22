@@ -30,7 +30,6 @@ import java.io.IOException;
 import java.util.List;
 import java.util.Scanner;
 
-
 /**
  * AkkaSystemExecutor class
  * The executor for AKKA system. It's singleton.
@@ -42,13 +41,13 @@ public class AkkaSystemExecutor {
 
     private ActorSystem actorSystem;
 
-    // singleton 
+    // singleton
     private AkkaSystemExecutor() {
     }
 
     /**
      * Get executor for AKKA System
-     *
+     * 
      * @return - executor
      */
     public static AkkaSystemExecutor getExecutor() {
@@ -61,13 +60,16 @@ public class AkkaSystemExecutor {
      * - Binning of value range
      * - max/min/average
      * - ks/iv
-     *
-     * @param modelConfig      - configuration for model
-     * @param columnConfigList - configurations for columns
-     * @param scanners         - scanners of training data
+     * 
+     * @param modelConfig
+     *            - configuration for model
+     * @param columnConfigList
+     *            - configurations for columns
+     * @param scanners
+     *            - scanners of training data
      */
     public void submitStatsCalJob(final ModelConfig modelConfig, final List<ColumnConfig> columnConfigList,
-                                  List<Scanner> scanners) {
+            List<Scanner> scanners) {
         actorSystem = ActorSystem.create("ShifuActorSystem");
         final AkkaExecStatus akkaStatus = new AkkaExecStatus(true);
 
@@ -89,13 +91,16 @@ public class AkkaSystemExecutor {
 
     /**
      * Submit job to normalize training data
-     *
-     * @param modelConfig      - configuration for model
-     * @param columnConfigList - configurations for columns
-     * @param scanners         - scanners of training data
+     * 
+     * @param modelConfig
+     *            - configuration for model
+     * @param columnConfigList
+     *            - configurations for columns
+     * @param scanners
+     *            - scanners of training data
      */
     public void submitNormalizeJob(final ModelConfig modelConfig, final List<ColumnConfig> columnConfigList,
-                                   List<Scanner> scanners) {
+            List<Scanner> scanners) {
         actorSystem = ActorSystem.create("ShifuActorSystem");
         final AkkaExecStatus akkaStatus = new AkkaExecStatus(true);
 
@@ -117,14 +122,18 @@ public class AkkaSystemExecutor {
 
     /**
      * Submit job to training model
-     *
-     * @param modelConfig      - configuration for model
-     * @param columnConfigList - configurations for columns
-     * @param scanners         - scanners of normalized training data
-     * @param trainers         - model trainer
+     * 
+     * @param modelConfig
+     *            - configuration for model
+     * @param columnConfigList
+     *            - configurations for columns
+     * @param scanners
+     *            - scanners of normalized training data
+     * @param trainers
+     *            - model trainer
      */
     public void submitModelTrainJob(final ModelConfig modelConfig, final List<ColumnConfig> columnConfigList,
-                                    List<Scanner> scanners, final List<AbstractTrainer> trainers) {
+            List<Scanner> scanners, final List<AbstractTrainer> trainers) {
         actorSystem = ActorSystem.create("ShifuActorSystem");
         final AkkaExecStatus akkaStatus = new AkkaExecStatus(true);
 
@@ -146,14 +155,18 @@ public class AkkaSystemExecutor {
 
     /**
      * Submit job to training decision-tree model
-     *
-     * @param modelConfig      - configuration for model
-     * @param columnConfigList - configurations for columns
-     * @param scanners         - scanners of normalized training data
-     * @param trainers         - model trainer
+     * 
+     * @param modelConfig
+     *            - configuration for model
+     * @param columnConfigList
+     *            - configurations for columns
+     * @param scanners
+     *            - scanners of normalized training data
+     * @param trainers
+     *            - model trainer
      */
     public void submitDecisionTreeTrainJob(final ModelConfig modelConfig, final List<ColumnConfig> columnConfigList,
-                                           List<Scanner> scanners, final List<AbstractTrainer> trainers) {
+            List<Scanner> scanners, final List<AbstractTrainer> trainers) {
         actorSystem = ActorSystem.create("ShifuActorSystem");
         final AkkaExecStatus akkaStatus = new AkkaExecStatus(true);
 
@@ -175,13 +188,16 @@ public class AkkaSystemExecutor {
 
     /**
      * Submit job to post-train the model
-     *
-     * @param modelConfig      - configuration for model
-     * @param columnConfigList - configurations for columns
-     * @param scanners         - scanners of select data that are normalized
+     * 
+     * @param modelConfig
+     *            - configuration for model
+     * @param columnConfigList
+     *            - configurations for columns
+     * @param scanners
+     *            - scanners of select data that are normalized
      */
     public void submitPostTrainJob(final ModelConfig modelConfig, final List<ColumnConfig> columnConfigList,
-                                   List<Scanner> scanners) {
+            List<Scanner> scanners) {
         actorSystem = ActorSystem.create("ShifuActorSystem");
         final AkkaExecStatus akkaStatus = new AkkaExecStatus(true);
 
@@ -203,12 +219,18 @@ public class AkkaSystemExecutor {
 
     /**
      * Submit job to run model evaluation
-     *
-     * @param modelConfig      - configuration for model
-     * @param columnConfigList - configurations for columns
-     * @param scanners         - scanners of evaluation data
+     * 
+     * @param modelConfig
+     *            - configuration for model
+     * @param columnConfigList
+     *            - configurations for columns
+     * @param evalConfig
+     *            the eval config instance
+     * @param scanners
+     *            - scanners of evaluation data
      */
-    public void submitModelEvalJob(final ModelConfig modelConfig, final List<ColumnConfig> columnConfigList, final EvalConfig evalConfig, List<Scanner> scanners) {
+    public void submitModelEvalJob(final ModelConfig modelConfig, final List<ColumnConfig> columnConfigList,
+            final EvalConfig evalConfig, List<Scanner> scanners) {
         actorSystem = ActorSystem.create("ShifuActorSystem");
         final AkkaExecStatus akkaStatus = new AkkaExecStatus(true);
 
@@ -230,11 +252,11 @@ public class AkkaSystemExecutor {
 
     /**
      * check the execute status of AKKA, if there is any Exceptions, wrap it with ShifuException and throw it
-     *
+     * 
      * @param akkaStatus
      */
     private void checkAkkaStatus(final AkkaExecStatus akkaStatus) {
-        if (!akkaStatus.getStatus()) {
+        if(!akkaStatus.getStatus()) {
             throw new ShifuException(ShifuErrorCode.ERROR_AKKA_EXECUTE_EXCEPTION, akkaStatus.getException());
         }
     }

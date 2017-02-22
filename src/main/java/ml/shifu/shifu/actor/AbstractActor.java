@@ -26,8 +26,9 @@ import java.util.List;
 /**
  * AbstractActor class
  * Abstract Actor is parent class of all kinds of work actor. It will contains the @ModelConfig and
- *
- * @ColumnConfig list for its sub-class, it also try to find the column number of the target column
+ * 
+ * <p>
+ * ColumnConfig list for its sub-class, it also try to find the column number of the target column
  */
 public abstract class AbstractActor extends UntypedActor {
     private static Logger log = LoggerFactory.getLogger(AbstractActor.class);
@@ -38,13 +39,14 @@ public abstract class AbstractActor extends UntypedActor {
 
     protected int targetColumnNum = -1;
 
-    public AbstractActor(final ModelConfig modelConfig, final List<ColumnConfig> columnConfigList, AkkaExecStatus akkaStatus) {
+    public AbstractActor(final ModelConfig modelConfig, final List<ColumnConfig> columnConfigList,
+            AkkaExecStatus akkaStatus) {
         this.modelConfig = modelConfig;
         this.columnConfigList = columnConfigList;
         this.akkaStatus = akkaStatus;
 
-        for (ColumnConfig config : columnConfigList) {
-            if (config.isTarget()) {
+        for(ColumnConfig config: columnConfigList) {
+            if(config.isTarget()) {
                 targetColumnNum = config.getColumnNum();
                 log.debug("Target Column Name: " + config.getColumnName());
                 log.debug("Target Column Num: " + targetColumnNum);
@@ -52,7 +54,7 @@ public abstract class AbstractActor extends UntypedActor {
             }
         }
 
-        if (targetColumnNum == -1) {
+        if(targetColumnNum == -1) {
             throw new RuntimeException("No Valid Target.");
         }
     }
@@ -60,8 +62,9 @@ public abstract class AbstractActor extends UntypedActor {
     /**
      * If exception occurs in ActorSystem execution, set the AKKA status to false.
      * And put the exception into @AkkaExecStatus, this is for result checking
-     *
-     * @param exception - exception occurred in execution
+     * 
+     * @param exception
+     *            - exception occurred in execution
      */
     public void addExceptionIntoCondition(Exception exception) {
         akkaStatus.setStatus(false);

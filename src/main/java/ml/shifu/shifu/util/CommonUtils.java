@@ -19,7 +19,6 @@ import com.google.common.base.Function;
 import com.google.common.base.Splitter;
 import com.google.common.collect.Collections2;
 import com.google.common.collect.Lists;
-import ml.shifu.guagua.GuaguaRuntimeException;
 import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.container.obj.ColumnConfig.ColumnFlag;
 import ml.shifu.shifu.container.obj.ColumnConfig.ColumnType;
@@ -53,7 +52,6 @@ import org.encog.ml.BasicML;
 import org.encog.ml.data.MLDataPair;
 import org.encog.ml.data.basic.BasicMLData;
 import org.encog.ml.data.basic.BasicMLDataPair;
-import org.encog.neural.networks.BasicNetwork;
 import org.encog.persist.EncogDirectoryPersistence;
 import org.encog.persist.PersistorRegistry;
 import org.slf4j.Logger;
@@ -76,9 +74,12 @@ public final class CommonUtils {
 
     private static final Logger log = LoggerFactory.getLogger(CommonUtils.class);
 
-    /**
+    /*
      * Sync up all local configuration files to HDFS.
      * 
+     * @param modelConfig
+     *            the model config
+     * @return if copy successful
      * @throws IOException
      *             If any exception on HDFS IO or local IO.
      * @throws NullPointerException
@@ -136,12 +137,8 @@ public final class CommonUtils {
         return true;
     }
 
-    /**
+    /*
      * Sync-up the evalulation data into HDFS
-     * 
-     * @param modelConfig
-     * @param evalName
-     * @throws IOException
      */
     @SuppressWarnings("deprecation")
     public static void copyEvalDataFromLocalToHDFS(ModelConfig modelConfig, String evalName) throws IOException {
@@ -170,14 +167,14 @@ public final class CommonUtils {
         }
     }
 
-    /**
+    /*
      * Load ModelConfig from local json ModelConfig.json file.
      */
     public static ModelConfig loadModelConfig() throws IOException {
         return loadModelConfig(Constants.LOCAL_MODEL_CONFIG_JSON, SourceType.LOCAL);
     }
 
-    /**
+    /*
      * Load model configuration from the path and the source type.
      * 
      * @throws IOException
@@ -197,8 +194,8 @@ public final class CommonUtils {
         }
     }
 
-    /**
-     * Load reason code map and change it to column->resonCode map.
+    /*
+     * Load reason code map and change it to column &gt; resonCode map.
      * 
      * @throws IOException
      *             if any IO exception in parsing json.
@@ -220,7 +217,7 @@ public final class CommonUtils {
         return reasonCodeMap;
     }
 
-    /**
+    /*
      * Load JSON instance
      * 
      * @throws IOException
@@ -240,7 +237,7 @@ public final class CommonUtils {
         }
     }
 
-    /**
+    /*
      * Load column configuration list.
      * 
      * @throws IOException
@@ -250,7 +247,7 @@ public final class CommonUtils {
         return loadColumnConfigList(Constants.LOCAL_COLUMN_CONFIG_JSON, SourceType.LOCAL);
     }
 
-    /**
+    /*
      * Load column configuration list.
      * 
      * @throws IOException
@@ -262,7 +259,7 @@ public final class CommonUtils {
         return Arrays.asList(loadJSON(path, sourceType, ColumnConfig[].class));
     }
 
-    /**
+    /*
      * Return final selected column collection.
      */
     public static Collection<ColumnConfig> getFinalSelectColumnConfigList(Collection<ColumnConfig> columnConfigList) {
@@ -340,7 +337,7 @@ public final class CommonUtils {
         return fields;
     }
 
-    /**
+    /*
      * Return header column list from header file.
      * 
      * @throws IOException
@@ -354,7 +351,7 @@ public final class CommonUtils {
         return getHeaders(pathHeader, delimiter, sourceType, false);
     }
 
-    /**
+    /*
      * Return header column array from header file.
      * 
      * @throws IOException
@@ -411,7 +408,7 @@ public final class CommonUtils {
         return headerList.toArray(new String[0]);
     }
 
-    /**
+    /*
      * Get full column name from pig header. For example, one column is a::b, return a_b. If b, return b.
      */
     public static String getFullPigHeaderColumnName(String raw) {
@@ -419,7 +416,7 @@ public final class CommonUtils {
         // return raw;
     }
 
-    /**
+    /*
      * Get relative column name from pig header. For example, one column is a::b, return b. If b, return b.
      * 
      * @throws NullPointerException
@@ -430,7 +427,7 @@ public final class CommonUtils {
         return position >= 0 ? raw.substring(position + Constants.PIG_COLUMN_SEPARATOR.length()) : raw;
     }
 
-    /**
+    /*
      * Given a column value, return bin list index. Return 0 for Category because of index 0 is started from
      * NEGATIVE_INFINITY.
      * 
@@ -462,7 +459,7 @@ public final class CommonUtils {
         }
     }
 
-    /**
+    /*
      * Return the real bin number for one value. As the first bin value is NEGATIVE_INFINITY, invalid index is 0, not
      * -1.
      * 
@@ -484,7 +481,7 @@ public final class CommonUtils {
         return n;
     }
 
-    /**
+    /*
      * Common split function to ignore special character like '|'. It's better to return a list while many calls in our
      * framework using string[].
      * 
@@ -495,7 +492,7 @@ public final class CommonUtils {
         return splitAndReturnList(raw, delimiter).toArray(new String[0]);
     }
 
-    /**
+    /*
      * Common split function to ignore special character like '|'.
      * 
      * @throws IllegalArgumentException
@@ -513,7 +510,7 @@ public final class CommonUtils {
         return headerList;
     }
 
-    /**
+    /*
      * Get target column.
      * 
      * @throws IllegalArgumentException
@@ -538,7 +535,7 @@ public final class CommonUtils {
         return cc.getColumnNum();
     }
 
-    /**
+    /*
      * Load basic models from files.
      * 
      * @throws IOException
@@ -562,7 +559,7 @@ public final class CommonUtils {
         return loadBasicModels(modelConfig, columnConfigList, evalConfig, modelConfig.getDataSet().getSource());
     }
 
-    /**
+    /*
      * Get bin index by binary search. The last bin in <code>binBoundary</code> is missing value bin.
      */
     public static int getBinIndex(List<Double> binBoundary, Double dVal) {
@@ -605,7 +602,7 @@ public final class CommonUtils {
         return models;
     }
 
-    /**
+    /*
      * Load basic models from files.
      * 
      * @throws IOException
@@ -671,7 +668,7 @@ public final class CommonUtils {
         return loadModel(modelConfig, columnConfigList, modelPath, fs, false);
     }
 
-    /**
+    /*
      * Loading model according to existing model path.
      * 
      * @param modelPath
@@ -718,7 +715,7 @@ public final class CommonUtils {
         }
     }
 
-    /**
+    /*
      * Find the model files for some @ModelConfig. There is a little tricky about this function.
      * If @EvalConfig is specified, try to load the models according setting in @EvalConfig,
      * or if @EvalConfig is null or ModelsPath is blank, Shifu will try to load models under `models`
@@ -902,7 +899,7 @@ public final class CommonUtils {
         return loadBasicModels(modelsPath, alg, false);
     }
 
-    /**
+    /*
      * Load neural network models from specified file path
      * 
      * @param modelsPath
@@ -962,7 +959,7 @@ public final class CommonUtils {
         }
     }
 
-    /**
+    /*
      * Return one HashMap Object contains keys in the first parameter, values in the second parameter. Before calling
      * this method, you should be aware that headers should be unique.
      * 
@@ -984,7 +981,7 @@ public final class CommonUtils {
         return rawDataMap;
     }
 
-    /**
+    /*
      * Return all parameters for pig execution.
      * 
      * @throws IllegalArgumentException
@@ -1023,7 +1020,7 @@ public final class CommonUtils {
         return pigParamMap;
     }
 
-    /**
+    /*
      * Return all parameters for pig execution.
      * 
      * @throws IllegalArgumentException
@@ -1063,7 +1060,7 @@ public final class CommonUtils {
         return pigParamMap;
     }
 
-    /**
+    /*
      * Change list str to List object with double type.
      * 
      * @throws IllegalArgumentException
@@ -1099,7 +1096,7 @@ public final class CommonUtils {
         }
     }
 
-    /**
+    /*
      * Change list str to List object with integer type.
      * 
      * @throws IllegalArgumentException
@@ -1115,7 +1112,7 @@ public final class CommonUtils {
         });
     }
 
-    /**
+    /*
      * Change list str to List object with string type.
      * 
      * @throws IllegalArgumentException
@@ -1131,7 +1128,7 @@ public final class CommonUtils {
         });
     }
 
-    /**
+    /*
      * Change list str to List object with string type.
      * 
      * @throws IllegalArgumentException
@@ -1147,7 +1144,7 @@ public final class CommonUtils {
         });
     }
 
-    /**
+    /*
      * Return map entries sorted by value.
      */
     public static <K, V extends Comparable<V>> List<Map.Entry<K, V>> getEntriesSortedByValues(Map<K, V> map) {
@@ -1163,7 +1160,7 @@ public final class CommonUtils {
         return entries;
     }
 
-    /**
+    /*
      * Assemble map data to Encog standard input format with default cut off value.
      * 
      * @throws NullPointerException
@@ -1176,7 +1173,7 @@ public final class CommonUtils {
         return assembleDataPair(modelConfig, columnConfigList, rawDataMap, Constants.DEFAULT_CUT_OFF);
     }
 
-    /**
+    /*
      * Assemble map data to Encog standard input format. If no variable selected(noVarSel = true), all candidate
      * variables will be selected.
      * 
@@ -1274,7 +1271,7 @@ public final class CommonUtils {
                 || key.startsWith("hive") || key.startsWith("job");
     }
 
-    /**
+    /*
      * Assemble map data to Encog standard input format.
      * 
      * @throws NullPointerException
@@ -1317,14 +1314,14 @@ public final class CommonUtils {
         return new BasicMLDataPair(new BasicMLData(input), new BasicMLData(ideal));
     }
 
-    /**
+    /*
      * Expanding score by expandingFactor
      */
     public static long getExpandingScore(double d, int expandingFactor) {
         return Math.round(d * expandingFactor);
     }
 
-    /**
+    /*
      * Return column name string with 'derived_' started
      * 
      * @throws NullPointerException
@@ -1341,7 +1338,7 @@ public final class CommonUtils {
         return derivedColumnNames;
     }
 
-    /**
+    /*
      * Get the file separator regex
      * 
      * @return "/" - if the OS is Linux
@@ -1355,7 +1352,7 @@ public final class CommonUtils {
         }
     }
 
-    /**
+    /*
      * Update target, listMeta, listForceSelect, listForceRemove
      * 
      * @throws IOException
@@ -1422,7 +1419,7 @@ public final class CommonUtils {
         }
     }
 
-    /**
+    /*
      * To check whether there is targetColumn in columns or not
      * 
      * @return true - if the columns contains targetColumn, or false
@@ -1441,7 +1438,7 @@ public final class CommonUtils {
         return false;
     }
 
-    /**
+    /*
      * Returns the element if it is in both collections.
      * - return null if any collection is null or empty
      * - return null if no element exists in both collections
@@ -1469,7 +1466,7 @@ public final class CommonUtils {
         return null;
     }
 
-    /**
+    /*
      * Escape the delimiter for Pig.... Since the Pig doesn't support invisible character
      * 
      * @param delimiter
@@ -1494,12 +1491,6 @@ public final class CommonUtils {
         return buf.toString();
     }
 
-    /**
-     * @param columnConfFile
-     * @param delimiter
-     * @return
-     * @throws IOException
-     */
     public static List<String> readConfFileIntoList(String columnConfFile, SourceType sourceType, String delimiter)
             throws IOException {
         List<String> columnNameList = new ArrayList<String>();
@@ -1534,11 +1525,8 @@ public final class CommonUtils {
         return columnNameList;
     }
 
-    /**
+    /*
      * Generate seat info for selected column in @columnConfigList
-     * 
-     * @param columnConfigList
-     * @return
      */
     public static Map<String, Integer> generateColumnSeatMap(List<ColumnConfig> columnConfigList) {
         List<ColumnConfig> selectedColumnList = new ArrayList<ColumnConfig>();
@@ -1563,12 +1551,8 @@ public final class CommonUtils {
         return columnSeatMap;
     }
 
-    /**
+    /*
      * Find the @ColumnConfig according the column name
-     * 
-     * @param columnConfigList
-     * @param columnName
-     * @return
      */
     public static ColumnConfig findColumnConfigByName(List<ColumnConfig> columnConfigList, String columnName) {
         for(ColumnConfig columnConfig: columnConfigList) {
@@ -1580,8 +1564,8 @@ public final class CommonUtils {
     }
 
     /**
-     * Convert data into <key, value> map. The @inputData is String of a record, which is delimited by @delimiter
-     * If fields in @inputData is not equal @header size, return null
+     * Convert data into (key, value) map. The inputData is String of a record, which is delimited by delimiter
+     * If fields in inputData is not equal header size, return null
      * 
      * @param inputData
      *            - String of a record
@@ -1589,7 +1573,7 @@ public final class CommonUtils {
      *            - the delimiter of the input data
      * @param header
      *            - the column names for all the input data
-     * @return <key, value> map for the record
+     * @return (key, value) map for the record
      */
     public static Map<String, String> convertDataIntoMap(String inputData, String delimiter, String[] header) {
         String[] input = CommonUtils.split(inputData, delimiter);
@@ -1611,14 +1595,14 @@ public final class CommonUtils {
     }
 
     /**
-     * Convert tuple record into <key, value> map. The @tuple is Tuple for a record
+     * Convert tuple record into (key, value) map. The @tuple is Tuple for a record
      * If @tuple size is not equal @header size, return null
      * 
      * @param tuple
      *            - Tuple of a record
      * @param header
      *            - the column names for all the input data
-     * @return <key, value> map for the record
+     * @return (key, value) map for the record
      * @throws ExecException
      *             - throw exception when operating tuple
      */
@@ -1677,7 +1661,7 @@ public final class CommonUtils {
                         .isNumerical() && columnConfig.getBinBoundary() != null && columnConfig.getBinBoundary().size() > 1)));
     }
 
-    /**
+    /*
      * Return first line split string array. This is used to detect data schema.
      */
     public static String[] takeFirstLine(String dataSetRawPath, String delimeter, SourceType source) throws IOException {
@@ -1732,7 +1716,7 @@ public final class CommonUtils {
         return new String[0];
     }
 
-    /**
+    /*
      * Return first two lines split string array. This is used to detect data schema and check if data schema is the
      * same as data.
      */

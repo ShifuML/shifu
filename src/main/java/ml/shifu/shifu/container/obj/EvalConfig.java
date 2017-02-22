@@ -110,10 +110,6 @@ public class EvalConfig {
         return ((customPaths == null) ? null : customPaths.get(Constants.KEY_CONFUSION_MATRIX_PATH));
     }
 
-    /**
-     * @return
-     * @throws IOException
-     */
     @JsonIgnore
     public List<String> getScoreMetaColumns(ModelConfig modelConfig) throws IOException {
         if(scoreMetaColumns == null) {

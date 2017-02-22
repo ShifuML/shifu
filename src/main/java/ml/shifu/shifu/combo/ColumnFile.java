@@ -39,11 +39,8 @@ public class ColumnFile {
      */
     private Map<String, String> varsMapping;
 
-    public ColumnFile(String filePath,
-                      FileType fileType,
-                      String delimiter,
-                      String[] selectedVars,
-                      Map<String, String> varsMapping) {
+    public ColumnFile(String filePath, FileType fileType, String delimiter, String[] selectedVars,
+            Map<String, String> varsMapping) {
         this.filePath = filePath;
         this.fileType = fileType;
         this.delimiter = delimiter;
@@ -71,14 +68,13 @@ public class ColumnFile {
         return selectedVars;
     }
 
-    /**
+    /*
      * generate output variables after mapping
-     * @return
      */
     public List<String> getOutputVarNames() {
         List<String> outputVarNames = new ArrayList<String>();
-        for ( String var : selectedVars ) {
-            if ( this.varsMapping.containsKey(var) ) {
+        for(String var: selectedVars) {
+            if(this.varsMapping.containsKey(var)) {
                 outputVarNames.add(this.varsMapping.get(var));
             } else {
                 outputVarNames.add(var);
@@ -87,14 +83,13 @@ public class ColumnFile {
         return outputVarNames;
     }
 
-    /**
+    /*
      * generate the fields projector for selected variables
-     * @return
      */
     public String genFieldSelector() {
         List<String> fields = new ArrayList<String>();
-        for ( String var : selectedVars ) {
-            if ( this.varsMapping.containsKey(var) ) {
+        for(String var: selectedVars) {
+            if(this.varsMapping.containsKey(var)) {
                 fields.add(var + " as " + this.varsMapping.get(var));
             } else {
                 fields.add(var + " as " + var);
@@ -103,24 +98,31 @@ public class ColumnFile {
         return StringUtils.join(fields, ",");
     }
 
+    /*
+     * Load data into memory, only selected data.
+     * The output format is (key, selected-variables)
+     * 
+     */
     /**
      * Load data into memory, only selected data.
-     * The output format is <key, selected-variables>
+     * The output format is (key, selected-variables)
+     * 
      * @param keyName
-     * @return
+     *            the key name
+     * @return map results
      */
-    public Map<String,List<String>> loadSelectedData(String keyName) {
+    public Map<String, List<String>> loadSelectedData(String keyName) {
         LOG.info("Load data from {}:{} by key {}.", fileType, filePath, keyName);
 
-        Map<String,List<String>> selectedData = new HashMap<String, List<String>>();
+        Map<String, List<String>> selectedData = new HashMap<String, List<String>>();
 
-        if ( FileType.CSV.equals(fileType) ) {
+        if(FileType.CSV.equals(fileType)) {
             CsvFile cvsFile = new CsvFile(filePath, delimiter);
-            for ( Map<String, String> records : cvsFile ) {
+            for(Map<String, String> records: cvsFile) {
                 String key = records.get(keyName);
-                if ( key != null ) {
+                if(key != null) {
                     List<String> vars = new ArrayList<String>();
-                    for ( String varName : selectedVars ) {
+                    for(String varName: selectedVars) {
                         vars.add(records.get(varName));
                     }
                     selectedData.put(key, vars);
@@ -132,10 +134,8 @@ public class ColumnFile {
         return selectedData;
     }
 
-    /**
+    /*
      * Check the selected variables contain some variable
-     * @param varName
-     * @return
      */
     public boolean hasSelectedVar(String varName) {
         return ArrayUtils.contains(selectedVars, varName);

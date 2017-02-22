@@ -275,11 +275,8 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
         }
     }
 
-    /**
+    /*
      * Create expressions for multi weight settings
-     * 
-     * @param weightExprList
-     * @return weight expression map
      */
     protected Map<Expression, Double> createExpressionMap(List<WeightAmplifier> weightExprList) {
         Map<Expression, Double> ewMap = new HashMap<Expression, Double>();
@@ -295,11 +292,8 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
         return ewMap;
     }
 
-    /**
+    /*
      * Create the expression for weight setting
-     * 
-     * @param weightAmplifier
-     * @return expression for weight amplifier
      */
     private Expression createExpression(String weightAmplifier) {
         if(StringUtils.isNotBlank(weightAmplifier)) {

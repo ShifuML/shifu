@@ -151,7 +151,7 @@ public class NormalizeParquetUDF extends AbstractTrainerUDF<Tuple> {
         return tuple;
     }
 
-    /**
+    /*
      * Evaluate weight expression based on the variables context.
      * 
      * @param expr
@@ -184,7 +184,7 @@ public class NormalizeParquetUDF extends AbstractTrainerUDF<Tuple> {
         return weight;
     }
 
-    /**
+    /*
      * Check tag type.
      * 
      * @param posTags
@@ -231,11 +231,8 @@ public class NormalizeParquetUDF extends AbstractTrainerUDF<Tuple> {
         }
     }
 
-    /**
+    /*
      * Create expressions for multi weight settings
-     * 
-     * @param weightExprList
-     * @return weight expression map
      */
     protected Map<Expression, Double> createExpressionMap(List<WeightAmplifier> weightExprList) {
         Map<Expression, Double> ewMap = new HashMap<Expression, Double>();
@@ -251,11 +248,8 @@ public class NormalizeParquetUDF extends AbstractTrainerUDF<Tuple> {
         return ewMap;
     }
 
-    /**
+    /*
      * Create the expression for weight setting
-     * 
-     * @param weightAmplifier
-     * @return expression for weight amplifier
      */
     private Expression createExpression(String weightAmplifier) {
         if(StringUtils.isNotBlank(weightAmplifier)) {

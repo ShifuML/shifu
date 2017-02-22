@@ -227,6 +227,10 @@ public class IndependentTreeModel {
     /**
      * Covert score to probability value which are in [0, 1], for GBT regression, scores can not be [0, 1]. Round scoure
      * to 1.0E19 to avoid NaN in final return result.
+     * 
+     * @param score
+     *            the raw score
+     * @return score after change
      */
     public double convertToProb(double score) {
         // sigmoid function to covert to [0, 1], TODO, how to make it configuable for users
@@ -549,13 +553,27 @@ public class IndependentTreeModel {
 
     /**
      * Load model instance from stream like model0.gbt or model0.rf, by default not to convert gbt score to [0, 1]
+     * 
+     * @param input
+     *            the input stream
+     * @return the tree model instance
+     * @throws IOException
+     *             any exception in load input stream
      */
     public static IndependentTreeModel loadFromStream(InputStream input) throws IOException {
         return loadFromStream(input, false);
     }
 
     /**
-     * Load model instance from stream like model0.gbt or model0.rf, user can specify isConvertToProb parameter
+     * Load model instance from stream like model0.gbt or model0.rf, by default not to convert gbt score to [0, 1]
+     * 
+     * @param input
+     *            the input stream
+     * @param isConvertToProb
+     *            if convert to prob
+     * @return the tree model instance
+     * @throws IOException
+     *             any exception in load input stream
      */
     public static IndependentTreeModel loadFromStream(InputStream input, boolean isConvertToProb) throws IOException {
         DataInputStream dis = null;

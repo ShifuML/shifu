@@ -1179,6 +1179,7 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
      * 
      * @param i
      *            index for model name
+     * @return the ith model name
      */
     public String getModelName(int i) {
         String alg = super.getModelConfig().getTrain().getAlgorithm();

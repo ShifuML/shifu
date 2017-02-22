@@ -90,9 +90,6 @@ public class CandidateGenerator {
         return expectIterationCount;
     }
 
-    /**
-     * Init random seeds
-     */
     public CandidatePopulation initSeeds() {
         CandidatePopulation seeds = new CandidatePopulation(iteratorSeedCount);
         for (int seedIndex = 0; seedIndex < iteratorSeedCount; seedIndex++) {
