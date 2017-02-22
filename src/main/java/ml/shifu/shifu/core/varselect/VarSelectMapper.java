@@ -251,7 +251,7 @@ public class VarSelectMapper extends Mapper<LongWritable, Text, LongWritable, Co
     }
 
     /**
-     * Write all column->MSE pairs to output.
+     * Write all column-&gt;MSE pairs to output.
      */
     @Override
     protected void cleanup(Context context) throws IOException, InterruptedException {

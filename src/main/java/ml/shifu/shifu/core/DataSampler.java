@@ -39,11 +39,17 @@ public class DataSampler {
      * - or not be sampled
      * 
      * @param targetColumnNum
+     *            the target column
      * @param posTags
+     *            posTags
      * @param negTags
+     *            negTags
      * @param data
+     *            data
      * @param sampleRate
+     *            sampleRate
      * @param sampleNegOnly
+     *            sampleNegOnly
      * @return null - if the data should be filtered out
      *         data itself - if the data should not be filtered out
      */
@@ -66,11 +72,17 @@ public class DataSampler {
      * - or not be sampled
      * 
      * @param targetColumnNum
+     *            the target column
      * @param posTags
+     *            posTags
      * @param negTags
+     *            negTags
      * @param fields
+     *            fields
      * @param sampleRate
+     *            sampleRate
      * @param sampleNegOnly
+     *            sampleNegOnly
      * @return true - if the data should be filtered out
      *         false - if the data should not be filtered out
      */
@@ -85,10 +97,15 @@ public class DataSampler {
      * filtered out.
      * 
      * @param posTags
+     *            posTags
      * @param negTags
+     *            negTags
      * @param sampleRate
+     *            sampleRate
      * @param sampleNegOnly
+     *            sampleNegOnly
      * @param tag
+     *            tag
      * @return true - if the data should be filtered out
      *         false - if the data should not be filtered out
      */

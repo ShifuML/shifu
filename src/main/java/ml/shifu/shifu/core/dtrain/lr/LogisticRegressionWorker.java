@@ -257,12 +257,23 @@ public class LogisticRegressionWorker
         LOG.info("Max heap memory: {}, fraction: {}", Runtime.getRuntime().maxMemory(), memoryFraction);
         double crossValidationRate = this.modelConfig.getValidSetRate();
         String tmpFolder = context.getProps().getProperty("guagua.data.tmpfolder", "tmp");
-        this.trainingData = new BytableMemoryDiskList<Data>(
-                (long) (Runtime.getRuntime().maxMemory() * memoryFraction * (1 - crossValidationRate)), tmpFolder
-                        + File.separator + "train-" + System.currentTimeMillis(), Data.class.getName());
-        this.validationData = new BytableMemoryDiskList<Data>(
-                (long) (Runtime.getRuntime().maxMemory() * memoryFraction * crossValidationRate), tmpFolder
-                        + File.separator + "test-" + System.currentTimeMillis(), Data.class.getName());
+
+        if(StringUtils.isNotBlank(modelConfig.getValidationDataSetRawPath())) {
+            // fixed 0.6 and 0.4 of max memory for trainingData and validationData
+            this.trainingData = new BytableMemoryDiskList<Data>((long) (Runtime.getRuntime().maxMemory()
+                    * memoryFraction * 0.6), tmpFolder + File.separator + "train-" + System.currentTimeMillis(),
+                    Data.class.getName());
+            this.validationData = new BytableMemoryDiskList<Data>((long) (Runtime.getRuntime().maxMemory()
+                    * memoryFraction * 0.4), tmpFolder + File.separator + "test-" + System.currentTimeMillis(),
+                    Data.class.getName());
+        } else {
+            this.trainingData = new BytableMemoryDiskList<Data>((long) (Runtime.getRuntime().maxMemory()
+                    * memoryFraction * (1 - crossValidationRate)), tmpFolder + File.separator + "train-"
+                    + System.currentTimeMillis(), Data.class.getName());
+            this.validationData = new BytableMemoryDiskList<Data>((long) (Runtime.getRuntime().maxMemory()
+                    * memoryFraction * crossValidationRate), tmpFolder + File.separator + "test-"
+                    + System.currentTimeMillis(), Data.class.getName());
+        }
         // cannot find a good place to close these two data set, using Shutdown hook
         Runtime.getRuntime().addShutdownHook(new Thread(new Runnable() {
             @Override
@@ -566,6 +577,12 @@ public class LogisticRegressionWorker
     /**
      * Add to training set or validation set according to validation rate.
      * 
+     * @param hashcode
+     *            the hash code of the data
+     * @param data
+     *            data instance
+     * @param isValidation
+     *            if it is validation
      * @return if in training, training is true, others are false.
      */
     protected boolean addDataPairToDataSet(long hashcode, Data data, boolean isValidation) {

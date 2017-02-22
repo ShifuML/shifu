@@ -32,6 +32,10 @@ public enum FeatureSubsetStrategy {
     
     /**
      * Get {@link FeatureSubsetStrategy} by string, case can be ignored.
+     * 
+     * @param strategy
+     *            the stragy
+     * @return the strategy of {@link FeatureSubsetStrategy}
      */
     public static FeatureSubsetStrategy of(String strategy) {
         for(FeatureSubsetStrategy element: values()) {

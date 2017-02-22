@@ -97,6 +97,7 @@ public final class DTrainUtils {
     /**
      * Return testing file to store training data, if exists, delete it firstly.
      * 
+     * @return the testing file path
      * @throws IOException
      *             if any exception on local fs operations.
      * @throws RuntimeException
@@ -116,6 +117,7 @@ public final class DTrainUtils {
     /**
      * Return training file to store training data, if exists, delete it firstly.
      * 
+     * @return the training file path
      * @throws IOException
      *             if any exception on local fs operations.
      * @throws RuntimeException
@@ -139,6 +141,9 @@ public final class DTrainUtils {
      * If number of column in final-select is 0, which means to select all non meta and non target columns. So the input
      * number is set to all candidates.
      * 
+     * @param columnConfigList
+     *            the column config list
+     * @return [input, output, candidate]
      * @throws NullPointerException
      *             if columnConfigList or ColumnConfig object in columnConfigList is null.
      */
@@ -170,6 +175,9 @@ public final class DTrainUtils {
      * If number of column in final-select is 0, which means to select all non meta and non target columns. So the input
      * number is set to all candidates.
      * 
+     * @param columnConfigList
+     *            the column config list
+     * @return [input, output, candidate]
      * @throws NullPointerException
      *             if columnConfigList or ColumnConfig object in columnConfigList is null.
      */
@@ -218,9 +226,6 @@ public final class DTrainUtils {
         return Math.max(epochs / 25, 20);
     }
 
-    /**
-     * Generate basic NN network object
-     */
     public static BasicNetwork generateNetwork(int in, int out, int numLayers, List<String> actFunc,
             List<Integer> hiddenNodeList, boolean isRandomizeWeights) {
         final BasicFloatNetwork network = new BasicFloatNetwork();
@@ -262,9 +267,6 @@ public final class DTrainUtils {
         return network;
     }
 
-    /**
-     * Generate basic NN network object
-     */
     public static BasicNetwork generateNetwork(int in, int out, int numLayers, List<String> actFunc,
             List<Integer> hiddenNodeList) {
         return generateNetwork(in, out, numLayers, actFunc, hiddenNodeList, true);

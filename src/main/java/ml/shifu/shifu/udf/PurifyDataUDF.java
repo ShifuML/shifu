@@ -27,31 +27,16 @@ import java.io.IOException;
 /**
  * PurifyDataUDF class purify the data for training and evaluation.
  * The setting for purify is in in @ModelConfig.dataSet.filterExpressions or
- * 
- * @EvalConfig.dataSet.filterExpressions
  */
 public class PurifyDataUDF extends AbstractTrainerUDF<Boolean> {
 
     private DataPurifier dataPurifier;
 
-    /**
-     * @param source
-     * @param pathModelConfig
-     * @param pathColumnConfig
-     * @throws IOException
-     */
     public PurifyDataUDF(String source, String pathModelConfig, String pathColumnConfig) throws IOException {
         super(source, pathModelConfig, pathColumnConfig);
         dataPurifier = new DataPurifier(modelConfig);
     }
 
-    /**
-     * @param source
-     * @param pathModelConfig
-     * @param pathColumnConfig
-     * @param evalSetName
-     * @throws IOException
-     */
     public PurifyDataUDF(String source, String pathModelConfig, String pathColumnConfig, String evalSetName)
             throws IOException {
         super(source, pathModelConfig, pathColumnConfig);

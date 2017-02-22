@@ -147,23 +147,9 @@ public class SubGradient implements Callable<double[]> {
 
     private double[] doubleIdeal;
 
-    /**
-     * Construct a gradient worker.
-     * 
-     * @param theNetwork
-     *            The network to train.
-     * @param theOwner
-     *            The owner that is doing the training.
-     * @param theTraining
-     *            The training data.
-     * @param theLow
-     *            The low index to use in the training data.
-     * @param theHigh
-     *            The high index to use in the training data.
-     */
-    public SubGradient(final FloatFlatNetwork theNetwork, final FloatMLDataSet theTraining, long trainLow, long trainHigh,
-            final FloatMLDataSet theTesting, long testLow, long testHigh, final double[] flatSpot, ErrorFunction ef,
-            boolean isCrossOver, ParallelGradient owner) {
+    public SubGradient(final FloatFlatNetwork theNetwork, final FloatMLDataSet theTraining, long trainLow,
+            long trainHigh, final FloatMLDataSet theTesting, long testLow, long testHigh, final double[] flatSpot,
+            ErrorFunction ef, boolean isCrossOver, ParallelGradient owner) {
         this.network = theNetwork;
         this.training = theTraining;
         this.trainLow = trainLow;
@@ -308,8 +294,8 @@ public class SubGradient implements Callable<double[]> {
      * Calculate the error for this neural network. The error is calculated
      * using root-mean-square(RMS).
      * 
-     * @param data
-     *            The training set.
+     * @param ec
+     *            The error computation logic
      * @return The error percentage.
      */
     public final double calculateError(ErrorCalculation ec) {
@@ -386,7 +372,7 @@ public class SubGradient implements Callable<double[]> {
     }
 
     public void setParams(BasicFloatNetwork network) {
-        this.setNetwork((FloatFlatNetwork)network.getFlat());
+        this.setNetwork((FloatFlatNetwork) network.getFlat());
         this.weights = network.getFlat().getWeights();
     }
 

@@ -93,7 +93,7 @@ import com.google.common.base.Splitter;
  * covered according to trees and learning rate.
  * 
  * <p>
- * For RF, bagging with replacement are enabled by {@link PoissonDistribution} fields {@link #rng}.
+ * For RF, bagging with replacement are enabled by {@link PoissonDistribution}.
  * 
  * <p>
  * Weighted training are supported in our RF and GBDT impl, in such worker, data.significance is weight set from input.
@@ -142,17 +142,6 @@ public class DTWorker
      * are selected and should be set to all good candidate variables.
      */
     private boolean isAfterVarSelect = true;
-
-    /**
-     * Basic output node count for NN model
-     */
-    protected int outputNodeCount;
-
-    /**
-     * {@link #candidateCount} is used to check if no variable is selected. If {@link #inputNodeCount} equals
-     * {@link #candidateCount}, which means no column is selected or all columns are selected.
-     */
-    protected int candidateCount;
 
     /**
      * input record size, inc one by one.
@@ -401,22 +390,29 @@ public class DTWorker
         LOG.info("Max heap memory: {}, fraction: {}", Runtime.getRuntime().maxMemory(), memoryFraction);
 
         double validationRate = this.modelConfig.getValidSetRate();
-        if(Double.compare(validationRate, 0d) != 0) {
+        if(StringUtils.isNotBlank(modelConfig.getValidationDataSetRawPath())) {
+            // fixed 0.6 and 0.4 of max memory for trainingData and validationData
             this.trainingData = new MemoryLimitedList<Data>(
-                    (long) (Runtime.getRuntime().maxMemory() * memoryFraction * (1 - validationRate)),
-                    new ArrayList<Data>());
+                    (long) (Runtime.getRuntime().maxMemory() * memoryFraction * 0.6), new ArrayList<Data>());
             this.validationData = new MemoryLimitedList<Data>(
-                    (long) (Runtime.getRuntime().maxMemory() * memoryFraction * validationRate), new ArrayList<Data>());
+                    (long) (Runtime.getRuntime().maxMemory() * memoryFraction * 0.4), new ArrayList<Data>());
         } else {
-            this.trainingData = new MemoryLimitedList<Data>((long) (Runtime.getRuntime().maxMemory() * memoryFraction),
-                    new ArrayList<Data>());
+            if(Double.compare(validationRate, 0d) != 0) {
+                this.trainingData = new MemoryLimitedList<Data>((long) (Runtime.getRuntime().maxMemory()
+                        * memoryFraction * (1 - validationRate)), new ArrayList<Data>());
+                this.validationData = new MemoryLimitedList<Data>((long) (Runtime.getRuntime().maxMemory()
+                        * memoryFraction * validationRate), new ArrayList<Data>());
+            } else {
+                this.trainingData = new MemoryLimitedList<Data>(
+                        (long) (Runtime.getRuntime().maxMemory() * memoryFraction), new ArrayList<Data>());
+            }
         }
+
         int[] inputOutputIndex = DTrainUtils.getNumericAndCategoricalInputAndOutputCounts(this.columnConfigList);
         // numerical + categorical = # of all input
         this.inputCount = inputOutputIndex[0] + inputOutputIndex[1];
         // regression outputNodeCount is 1, binaryClassfication, it is 1, OneVsAll it is 1, Native classificaiton it is
         // 1, with index of 0,1,2,3 denotes different classes
-        this.outputNodeCount = 1;
         this.isAfterVarSelect = inputOutputIndex[3] == 1 ? true : false;
         this.isManualValidation = (modelConfig.getValidationDataSetRawPath() != null && !"".equals(modelConfig
                 .getValidationDataSetRawPath()));
@@ -900,6 +896,12 @@ public class DTWorker
 
     /**
      * 'binBoundary' is ArrayList in fact, so we can use get method. ["-Infinity", 1d, 4d, ....]
+     * 
+     * @param value
+     *            the value to be checked
+     * @param binBoundary
+     *            the bin boundary list
+     * @return the index in which bin
      */
     public static int getBinIndex(float value, List<Double> binBoundary) {
         if(binBoundary.size() <= 1) {
@@ -1195,6 +1197,12 @@ public class DTWorker
     /**
      * Add to training set or validation set according to validation rate.
      * 
+     * @param hashcode
+     *            the hash code of the data
+     * @param data
+     *            data instance
+     * @param isValidation
+     *            if it is validation
      * @return if in training, training is true, others are false.
      */
     protected boolean addDataPairToDataSet(long hashcode, Data data, boolean isValidation) {

@@ -29,17 +29,9 @@ import org.apache.pig.data.Tuple;
  * FilterBinningDataUDF class
  * 
  * @author zhanhu
- * @Oct 27, 2014
- * 
  */
 public class FilterBinningDataUDF extends AbstractTrainerUDF<Boolean> {
 
-    /**
-     * @param source
-     * @param pathModelConfig
-     * @param pathColumnConfig
-     * @throws IOException
-     */
     public FilterBinningDataUDF(String source, String pathModelConfig, String pathColumnConfig) throws IOException {
         super(source, pathModelConfig, pathColumnConfig);
     }

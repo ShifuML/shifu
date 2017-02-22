@@ -44,21 +44,12 @@ public class BasicStatsCalculator {
     private Double threshold = 1e6;
     private Double EPS = 1e-6;
 
-    /**
-     * Constructor
-     *
-     * @param voList
-     * @param threshold
-     */
     public BasicStatsCalculator(List<ValueObject> voList, Double threshold) {
         this.voList = voList;
         this.threshold = threshold;
         calculateStats();
     }
 
-    /**
-     * Calculator
-     */
     private void calculateStats() {
         sum = 0.0;
         squaredSum = 0.0;

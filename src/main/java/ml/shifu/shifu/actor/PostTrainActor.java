@@ -43,7 +43,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Scanner;
 
-
 /**
  * PostTrainActor class do the post train for models. Post-Train is used the
  * training data to evaluate the models: calculate the score, and the binning range
@@ -61,10 +60,6 @@ public class PostTrainActor extends AbstractActor {
     private int resultCnt;
     private int expectedResultCnt;
 
-    /**
-     * @param modelConfig
-     * @param columnConfigList
-     */
     public PostTrainActor(final ModelConfig modelConfig, final List<ColumnConfig> columnConfigList, final AkkaExecStatus akkaStatus) {
         super(modelConfig, columnConfigList, akkaStatus);
 

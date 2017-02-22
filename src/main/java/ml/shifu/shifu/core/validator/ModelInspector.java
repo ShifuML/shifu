@@ -49,11 +49,11 @@ import org.slf4j.LoggerFactory;
 
 /**
  * ModelInspector class is to do Safety Testing for model.
- * <p/>
- * Safety Testing include: 1. validate the @ModelConfig against its meta data
  * 
- * @links{src/main/resources/store/ModelConfigMeta.json 2. check source data for training and evaluation 3. check the
- *                                                      prerequisite for each step
+ * <p>
+ * Safety Testing include: 1. validate the ModelConfig against its meta data
+ * src/main/resources/store/ModelConfigMeta.json 2. check source data for training and evaluation 3. check the
+ * prerequisite for each step
  */
 public class ModelInspector {
 
@@ -89,6 +89,7 @@ public class ModelInspector {
      *         if everything is OK, the status of ValidateResult is TRUE
      *         else the status of ValidateResult is FALSE, and the reasons will in the clauses of ValidateResult
      * @throws Exception
+     *             any exception in validation
      */
     public ValidateResult probe(ModelConfig modelConfig, ModelStep modelStep) throws Exception {
         ValidateResult result = checkMeta(modelConfig);

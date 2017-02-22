@@ -26,21 +26,20 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 
+import ml.shifu.shifu.core.dtrain.dt.IndependentTreeModel;
+import ml.shifu.shifu.core.dtrain.dt.TreeNode;
+
 import org.apache.commons.lang3.tuple.MutablePair;
 import org.encog.ml.BasicML;
 import org.encog.ml.MLRegression;
 import org.encog.ml.data.MLData;
 import org.encog.ml.data.basic.BasicMLData;
 
-import ml.shifu.shifu.container.obj.ModelConfig;
-import ml.shifu.shifu.core.dtrain.dt.IndependentTreeModel;
-import ml.shifu.shifu.core.dtrain.dt.TreeNode;
-
 /**
  * {@link TreeModel} is to load Random Forest or Gradient Boosted Decision Tree models.
  * 
  * <p>
- * {@link #loadFromStream(InputStream, ModelConfig, List)} can be used to read serialized models.
+ * {@link #loadFromStream(InputStream, boolean)} can be used to read serialized models.
  * 
  * <p>
  * TODO, make trees computing in parallel

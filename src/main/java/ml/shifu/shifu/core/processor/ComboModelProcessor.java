@@ -96,12 +96,12 @@ public class ComboModelProcessor extends BasicModelProcessor implements Processo
 
         setUp(ModelInspector.ModelStep.COMBO);
 
-        if ((status = validate()) > 0) {
+        if((status = validate()) > 0) {
             LOG.error("Validation Fail.");
             return status;
         }
 
-        switch (comboStep) {
+        switch(comboStep) {
             case NEW:
                 status = createNewCombo();
                 break;
@@ -139,15 +139,15 @@ public class ComboModelProcessor extends BasicModelProcessor implements Processo
     /**
      * Create ComboTrain.json according algorithm list.
      * ModelTrain configuration is set from template.
-     *
-     * @return
+     * 
+     * @return if create new combo successful
      */
     private int createNewCombo() {
         ComboModelTrain comboModelTrain = new ComboModelTrain();
         comboModelTrain.setUidColumnName("");
 
         List<VarTrainConf> varTrainConfList = new ArrayList<VarTrainConf>(this.comboAlgs.size() - 1);
-        for (int i = 0; i < this.comboAlgs.size() - 1; i++) {
+        for(int i = 0; i < this.comboAlgs.size() - 1; i++) {
             varTrainConfList.add(createVarTrainConf(this.comboAlgs.get(i)));
         }
         comboModelTrain.setVarTrainConfList(varTrainConfList);
@@ -157,23 +157,22 @@ public class ComboModelProcessor extends BasicModelProcessor implements Processo
         return saveComboTrain(comboModelTrain);
     }
 
-
     /**
      * Create folder for sub-models, and create related files for sub-models.
      * All settings in sub-model will use parent model as reference.
-     *
+     * 
      * @return
      * @throws IOException
      */
     private int initComboModels() throws IOException {
-        if (this.comboModelTrain == null) {
+        if(this.comboModelTrain == null) {
             LOG.error("ComboModelTrain doesn't exists.");
             return 1;
         }
 
         String[] subModelNames = new String[this.comboModelTrain.getVarTrainConfList().size()];
 
-        for (int i = 0; i < this.comboModelTrain.getVarTrainConfList().size(); i++) {
+        for(int i = 0; i < this.comboModelTrain.getVarTrainConfList().size(); i++) {
             VarTrainConf varTrainConf = this.comboModelTrain.getVarTrainConfList().get(i);
             String subModelName = genSubModelName(i, varTrainConf);
 
@@ -191,32 +190,29 @@ public class ComboModelProcessor extends BasicModelProcessor implements Processo
 
             // 2.1) set normalized data path
             String normalizedPath = pathFinder.getNormalizedDataPath();
-            if (RawSourceData.SourceType.LOCAL.equals(modelConfig.getDataSet().getSource())) {
+            if(RawSourceData.SourceType.LOCAL.equals(modelConfig.getDataSet().getSource())) {
                 normalizedPath = new File(normalizedPath).getAbsolutePath();
             }
             subModelConfig.getTrain().getCustomPaths().put(Constants.KEY_NORMALIZED_DATA_PATH, normalizedPath);
 
             // 2.2) update selected variables, if user want to use different variables list for sub-models
             List<ColumnConfig> columnConfigs = this.columnConfigList;
-            if (CollectionUtils.isNotEmpty(varTrainConf.getVariables())) {
+            if(CollectionUtils.isNotEmpty(varTrainConf.getVariables())) {
                 Set<String> selectedVars = new HashSet<String>(varTrainConf.getVariables());
 
                 columnConfigs = cloneColumnConfigs(this.columnConfigList);
-                for (ColumnConfig columnConfig : columnConfigs) {
+                for(ColumnConfig columnConfig: columnConfigs) {
                     columnConfig.setFinalSelect(false);
-                    if (selectedVars.contains(columnConfig.getColumnName())) {
+                    if(selectedVars.contains(columnConfig.getColumnName())) {
                         columnConfig.setFinalSelect(true);
                     }
                 }
             }
 
             // 2.3) update evaluation set to add uid column as meta
-            for (EvalConfig evalConfig : subModelConfig.getEvals()) {
-                String scoreMetaFileName = createModelNamesFile(
-                        subModelName,
-                        evalConfig.getName() + ".score.meta",
-                        evalConfig.getScoreMetaColumnNameFile(),
-                        this.genEvalScoreMetaVars(null));
+            for(EvalConfig evalConfig: subModelConfig.getEvals()) {
+                String scoreMetaFileName = createModelNamesFile(subModelName, evalConfig.getName() + ".score.meta",
+                        evalConfig.getScoreMetaColumnNameFile(), this.genEvalScoreMetaVars(null));
                 evalConfig.setScoreMetaColumnNameFile(scoreMetaFileName);
             }
 
@@ -224,10 +220,7 @@ public class ComboModelProcessor extends BasicModelProcessor implements Processo
             EvalConfig trainEval = new EvalConfig();
             trainEval.setName(genEvalTrainName());
             trainEval.setDataSet(subModelConfig.getDataSet().cloneRawSourceData());
-            String scoreMetaFileName = createModelNamesFile(
-                    subModelName,
-                    trainEval.getName() + ".score.meta",
-                    null,
+            String scoreMetaFileName = createModelNamesFile(subModelName, trainEval.getName() + ".score.meta", null,
                     this.genEvalScoreMetaVars(this.modelConfig.getDataSet().getWeightColumnName()));
             trainEval.setScoreMetaColumnNameFile(scoreMetaFileName);
             // add train data as evaluation set, this is for assemble model
@@ -248,10 +241,7 @@ public class ComboModelProcessor extends BasicModelProcessor implements Processo
         assembleModelConfig.getVarSelect().setForceRemoveColumnNameFile(null);
 
         // create force selects file
-        String forceSelectNames = createModelNamesFile(
-                assembleModelName,
-                assembleModelName + ".forceselect",
-                null,
+        String forceSelectNames = createModelNamesFile(assembleModelName, assembleModelName + ".forceselect", null,
                 CommonUtils.genPigFieldName(subModelNames));
         assembleModelConfig.getVarSelect().setForceSelectColumnNameFile(forceSelectNames);
         assembleModelConfig.getVarSelect().setForceEnable(true);
@@ -259,21 +249,15 @@ public class ComboModelProcessor extends BasicModelProcessor implements Processo
         assembleModelConfig.getVarSelect().setFilterEnable(true);
 
         // create metas file
-        String metaColumnNames = createModelNamesFile(
-                assembleModelName,
-                assembleModelName + ".meta",
-                null,
+        String metaColumnNames = createModelNamesFile(assembleModelName, assembleModelName + ".meta", null,
                 this.comboModelTrain.getUidColumnName());
         assembleModelConfig.getDataSet().setMetaColumnNameFile(metaColumnNames);
         assembleModelConfig.setTrain(this.comboModelTrain.getFusionModelTrainConf());
 
         // update evaluation set to add uid column as meta
-        for (EvalConfig evalConfig : assembleModelConfig.getEvals()) {
-            String scoreMetaFileName = createModelNamesFile(
-                    assembleModelName,
-                    evalConfig.getName() + ".score.meta",
-                    evalConfig.getScoreMetaColumnNameFile(),
-                    this.genEvalScoreMetaVars(null));
+        for(EvalConfig evalConfig: assembleModelConfig.getEvals()) {
+            String scoreMetaFileName = createModelNamesFile(assembleModelName, evalConfig.getName() + ".score.meta",
+                    evalConfig.getScoreMetaColumnNameFile(), this.genEvalScoreMetaVars(null));
             evalConfig.setScoreMetaColumnNameFile(scoreMetaFileName);
         }
 
@@ -289,25 +273,28 @@ public class ComboModelProcessor extends BasicModelProcessor implements Processo
      * 1) train sub-models and evaluate sub-model train-eval set (train data as evaluation data)
      * 2) join train-eval set output for training assemble model
      * 3) train assemble model
-     *
+     * 
      * @return status of execution
-     * 0 - success
-     * others - fail
+     *         0 - success
+     *         others - fail
+     * 
+     * @throws IOException
+     *             any io exception
      */
     public int runComboModels() throws IOException {
         // 1. train sub models and evaluate sub models using training data
         int status = 0;
 
         List<Callable<Integer>> tasks = new ArrayList<Callable<Integer>>();
-        for (int i = 0; i < this.comboModelTrain.getVarTrainConfList().size(); i++) {
+        for(int i = 0; i < this.comboModelTrain.getVarTrainConfList().size(); i++) {
             VarTrainConf varTrainConf = this.comboModelTrain.getVarTrainConfList().get(i);
             String subModelName = genSubModelName(i, varTrainConf);
             Callable<Integer> task = createTrainAndEvalTasks(subModelName, genEvalTrainName());
-            if ( task != null ) {
+            if(task != null) {
                 tasks.add(task);
             }
         }
-        if (hasFailTaskResults(this.excutorManager.submitTasksAndRetryIfFail(tasks, this.comboMaxRetryTimes))) {
+        if(hasFailTaskResults(this.excutorManager.submitTasksAndRetryIfFail(tasks, this.comboMaxRetryTimes))) {
             LOG.error("There are errors when training and evaluating sub-models. Please check log.");
             return 1;
         }
@@ -317,7 +304,7 @@ public class ComboModelProcessor extends BasicModelProcessor implements Processo
         // 2.1 prepare the data and information for data merge
         LOG.info("Start to merge train-evaluation data for assemble model.");
         String assembleTrainData = this.pathFinder.getSubModelsAssembleTrainData();
-        if ( !isToResume || !ShifuFileUtils.isFileExists(assembleTrainData, modelConfig.getDataSet().getSource())) {
+        if(!isToResume || !ShifuFileUtils.isFileExists(assembleTrainData, modelConfig.getDataSet().getSource())) {
             final DataMerger merger = new DataMerger(this.modelConfig.getBasic().getRunMode(),
                     this.comboModelTrain.getUidColumnName(), assembleTrainData);
 
@@ -342,7 +329,7 @@ public class ComboModelProcessor extends BasicModelProcessor implements Processo
                     }
                 }
             });
-            if (hasFailTaskResults(this.excutorManager.submitTasksAndRetryIfFail(tasks, this.comboMaxRetryTimes))) {
+            if(hasFailTaskResults(this.excutorManager.submitTasksAndRetryIfFail(tasks, this.comboMaxRetryTimes))) {
                 LOG.error("There are errors when merging data. Please check log.");
                 return 1;
             }
@@ -352,13 +339,12 @@ public class ComboModelProcessor extends BasicModelProcessor implements Processo
         // 3.1 set the train data and header for assemble model
         try {
             ModelConfig assembleModelConfig = CommonUtils.loadModelConfig(
-                    genAssembleModelName(this.modelConfig.getModelSetName())
-                            + File.separator + Constants.MODEL_CONFIG_JSON_FILE_NAME,
-                    RawSourceData.SourceType.LOCAL);
+                    genAssembleModelName(this.modelConfig.getModelSetName()) + File.separator
+                            + Constants.MODEL_CONFIG_JSON_FILE_NAME, RawSourceData.SourceType.LOCAL);
             assembleModelConfig.getDataSet().setHeaderDelimiter("|");
             assembleModelConfig.getDataSet().setDataDelimiter("|");
 
-            if (ModelBasicConf.RunMode.LOCAL.equals(this.modelConfig.getBasic().getRunMode())) {
+            if(ModelBasicConf.RunMode.LOCAL.equals(this.modelConfig.getBasic().getRunMode())) {
                 File file = new File(assembleTrainData + File.separator + ".pig_header");
                 assembleModelConfig.getDataSet().setHeaderPath(file.getAbsolutePath());
                 file = new File(assembleTrainData);
@@ -380,16 +366,12 @@ public class ComboModelProcessor extends BasicModelProcessor implements Processo
             @Override
             public Integer call() throws Exception {
                 return ProcessManager.runShellProcess(genAssembleModelName(modelConfig.getModelSetName()),
-                        new String[][]{
-                                new String[]{"shifu", "init"},
-                                new String[]{"shifu", "stats"},
-                                new String[]{"shifu", "norm"},
-                                new String[]{"shifu", "varsel"},
-                                new String[]{"shifu", "train"}
-                        });
+                        new String[][] { new String[] { "shifu", "init" }, new String[] { "shifu", "stats" },
+                                new String[] { "shifu", "norm" }, new String[] { "shifu", "varsel" },
+                                new String[] { "shifu", "train" } });
             }
         });
-        if (hasFailTaskResults(this.excutorManager.submitTasksAndRetryIfFail(tasks, this.comboMaxRetryTimes))) {
+        if(hasFailTaskResults(this.excutorManager.submitTasksAndRetryIfFail(tasks, this.comboMaxRetryTimes))) {
             LOG.error("Errors when running assemble model. Please check log.");
             status = 1;
         }
@@ -403,7 +385,7 @@ public class ComboModelProcessor extends BasicModelProcessor implements Processo
      * 1. Evaluate all evaluation sets in sub models;
      * 2. Join the evaluation result data for assemble model;
      * 3. Run evaluation for assemble model
-     *
+     * 
      * @return
      * @throws IOException
      */
@@ -412,9 +394,9 @@ public class ComboModelProcessor extends BasicModelProcessor implements Processo
 
         // 1. For all sub-models, evaluate all evaluation sets except training data set
         List<Callable<Integer>> tasks = new ArrayList<Callable<Integer>>();
-        for (EvalConfig evalConfig : this.modelConfig.getEvals()) {
+        for(EvalConfig evalConfig: this.modelConfig.getEvals()) {
             tasks.addAll(createEvaluateTasks(evalConfig.getName()));
-            if (hasFailTaskResults(this.excutorManager.submitTasksAndRetryIfFail(tasks, this.comboMaxRetryTimes))) {
+            if(hasFailTaskResults(this.excutorManager.submitTasksAndRetryIfFail(tasks, this.comboMaxRetryTimes))) {
                 LOG.error("Error occurred when evaluate sub-models. Please check log!");
                 return 1;
             }
@@ -423,14 +405,13 @@ public class ComboModelProcessor extends BasicModelProcessor implements Processo
 
         // 2. Join evaluation data sets for assemble model
         ModelConfig assembleModelConfig = CommonUtils.loadModelConfig(
-                genAssembleModelName(this.modelConfig.getModelSetName())
-                        + File.separator + Constants.MODEL_CONFIG_JSON_FILE_NAME,
-                RawSourceData.SourceType.LOCAL);
+                genAssembleModelName(this.modelConfig.getModelSetName()) + File.separator
+                        + Constants.MODEL_CONFIG_JSON_FILE_NAME, RawSourceData.SourceType.LOCAL);
 
         // clear old tasks before adding new tasks
-        for (EvalConfig evalConfig : this.modelConfig.getEvals()) {
-            String assembleEvalData = this.pathFinder.getSubModelsAssembleEvalData(
-                    evalConfig.getName(), evalConfig.getDataSet().getSource());
+        for(EvalConfig evalConfig: this.modelConfig.getEvals()) {
+            String assembleEvalData = this.pathFinder.getSubModelsAssembleEvalData(evalConfig.getName(), evalConfig
+                    .getDataSet().getSource());
             final DataMerger dataMerger = new DataMerger(this.modelConfig.getBasic().getRunMode(),
                     this.comboModelTrain.getUidColumnName(), assembleEvalData);
 
@@ -454,7 +435,7 @@ public class ComboModelProcessor extends BasicModelProcessor implements Processo
             assembleEvalConfig.getDataSet().setHeaderDelimiter("|");
             assembleEvalConfig.getDataSet().setDataDelimiter("|");
 
-            if (ModelBasicConf.RunMode.LOCAL.equals(this.modelConfig.getBasic().getRunMode())) {
+            if(ModelBasicConf.RunMode.LOCAL.equals(this.modelConfig.getBasic().getRunMode())) {
                 File file = new File(assembleEvalData + File.separator + ".pig_header");
                 assembleEvalConfig.getDataSet().setHeaderPath(file.getAbsolutePath());
                 file = new File(assembleEvalData);
@@ -465,7 +446,7 @@ public class ComboModelProcessor extends BasicModelProcessor implements Processo
             }
         }
 
-        if (hasFailTaskResults(this.excutorManager.submitTasksAndRetryIfFail(tasks, this.comboMaxRetryTimes))) {
+        if(hasFailTaskResults(this.excutorManager.submitTasksAndRetryIfFail(tasks, this.comboMaxRetryTimes))) {
             LOG.error("Error occurred when joining evaluation result. Please check log!");
             return 1;
         }
@@ -478,12 +459,10 @@ public class ComboModelProcessor extends BasicModelProcessor implements Processo
             @Override
             public Integer call() throws Exception {
                 return ProcessManager.runShellProcess(genAssembleModelName(modelConfig.getModelSetName()),
-                        new String[][]{
-                                new String[]{"shifu", "eval"}
-                        });
+                        new String[][] { new String[] { "shifu", "eval" } });
             }
         });
-        if (hasFailTaskResults(this.excutorManager.submitTasksAndRetryIfFail(tasks, this.comboMaxRetryTimes))) {
+        if(hasFailTaskResults(this.excutorManager.submitTasksAndRetryIfFail(tasks, this.comboMaxRetryTimes))) {
             LOG.error("Errors when running assemble model. Please check log.");
             status = 1;
         }
@@ -494,7 +473,7 @@ public class ComboModelProcessor extends BasicModelProcessor implements Processo
 
     /**
      * iterate all evaluation sets and generate ColumnFiles for data join
-     *
+     * 
      * @param evalName
      * @return - ColumnFiles for some @evalName in all sub-models
      * @throws IOException
@@ -502,36 +481,34 @@ public class ComboModelProcessor extends BasicModelProcessor implements Processo
     private List<ColumnFile> genSubModelEvalColumnFiles(String evalName) throws IOException {
         List<ColumnFile> columnFiles = new ArrayList<ColumnFile>();
 
-        for (int i = 0; i < this.comboModelTrain.getVarTrainConfList().size(); i++) {
+        for(int i = 0; i < this.comboModelTrain.getVarTrainConfList().size(); i++) {
             VarTrainConf varTrainConf = this.comboModelTrain.getVarTrainConfList().get(i);
 
             String subModelName = genSubModelName(i, varTrainConf);
-            ModelConfig subModelConfig = CommonUtils.loadModelConfig(
-                    subModelName + File.separator + Constants.MODEL_CONFIG_JSON_FILE_NAME,
-                    RawSourceData.SourceType.LOCAL);
+            ModelConfig subModelConfig = CommonUtils.loadModelConfig(subModelName + File.separator
+                    + Constants.MODEL_CONFIG_JSON_FILE_NAME, RawSourceData.SourceType.LOCAL);
             EvalConfig evalConfig = getEvalConfigByName(subModelConfig, evalName);
 
             Map<String, String> varsMapping = new HashMap<String, String>();
             varsMapping.put(SCORE_FIELD, CommonUtils.genPigFieldName(subModelName));
             String[] selectedVars = null;
-            if (i == 0) {
-                if (StringUtils.isNotBlank(evalConfig.getDataSet().getWeightColumnName())) {
-                    selectedVars = new String[]{this.comboModelTrain.getUidColumnName(),
+            if(i == 0) {
+                if(StringUtils.isNotBlank(evalConfig.getDataSet().getWeightColumnName())) {
+                    selectedVars = new String[] { this.comboModelTrain.getUidColumnName(),
                             this.modelConfig.getTargetColumnName(), SCORE_FIELD,
-                            evalConfig.getDataSet().getWeightColumnName()};
+                            evalConfig.getDataSet().getWeightColumnName() };
                 } else {
-                    selectedVars = new String[]{this.comboModelTrain.getUidColumnName(),
-                            this.modelConfig.getTargetColumnName(), SCORE_FIELD};
+                    selectedVars = new String[] { this.comboModelTrain.getUidColumnName(),
+                            this.modelConfig.getTargetColumnName(), SCORE_FIELD };
                 }
             } else {
-                selectedVars = new String[]{SCORE_FIELD};
+                selectedVars = new String[] { SCORE_FIELD };
             }
 
             String evalDataPath = getEvalDataPath(subModelConfig, evalConfig);
             LOG.info("Include data - {} ...", evalDataPath);
-            columnFiles.add(new ColumnFile(evalDataPath,
-                    genEvalFileType(this.modelConfig.getBasic().getRunMode()), "|",
-                    selectedVars, varsMapping));
+            columnFiles.add(new ColumnFile(evalDataPath, genEvalFileType(this.modelConfig.getBasic().getRunMode()),
+                    "|", selectedVars, varsMapping));
         }
 
         return columnFiles;
@@ -539,8 +516,9 @@ public class ComboModelProcessor extends BasicModelProcessor implements Processo
 
     /**
      * get the eval data path for sub model
-     *
-     * @param subModelConfig - @ModelConfig for sub model
+     * 
+     * @param subModelConfig
+     *            - @ModelConfig for sub model
      * @param evalConfig
      * @return
      */
@@ -549,9 +527,8 @@ public class ComboModelProcessor extends BasicModelProcessor implements Processo
         String evalDataPath = pathFinder.getEvalScorePath(evalConfig);
 
         // if it is local, and the sub-model name as directory
-        if (RawSourceData.SourceType.LOCAL.equals(evalConfig.getDataSet().getSource())) {
-            evalDataPath = subModelConfig.getModelSetName()
-                    + File.separator + evalDataPath;
+        if(RawSourceData.SourceType.LOCAL.equals(evalConfig.getDataSet().getSource())) {
+            evalDataPath = subModelConfig.getModelSetName() + File.separator + evalDataPath;
         }
 
         return evalDataPath;
@@ -559,14 +536,14 @@ public class ComboModelProcessor extends BasicModelProcessor implements Processo
 
     /**
      * get @EvalConfig from @ModelConfig by evalset name
-     *
+     * 
      * @param mconfig
      * @param name
      * @return
      */
     private EvalConfig getEvalConfigByName(ModelConfig mconfig, String name) {
-        for (EvalConfig evalConfig : mconfig.getEvals()) {
-            if (evalConfig.getName().equalsIgnoreCase(name)) {
+        for(EvalConfig evalConfig: mconfig.getEvals()) {
+            if(evalConfig.getName().equalsIgnoreCase(name)) {
                 return evalConfig;
             }
         }
@@ -575,40 +552,40 @@ public class ComboModelProcessor extends BasicModelProcessor implements Processo
 
     /**
      * Create train and eval task for sub-model
-     *
+     * 
      * @param subModelName
      * @param evalSetName
      * @return
      */
-    private Callable<Integer> createTrainAndEvalTasks(final String subModelName, final String evalSetName) throws IOException {
-        ModelConfig subModelConfig = CommonUtils.loadModelConfig(
-                subModelName + File.separator + Constants.MODEL_CONFIG_JSON_FILE_NAME,
-                RawSourceData.SourceType.LOCAL);
-        if (this.isToShuffleData) { // don't use parent's normalized data
+    private Callable<Integer> createTrainAndEvalTasks(final String subModelName, final String evalSetName)
+            throws IOException {
+        ModelConfig subModelConfig = CommonUtils.loadModelConfig(subModelName + File.separator
+                + Constants.MODEL_CONFIG_JSON_FILE_NAME, RawSourceData.SourceType.LOCAL);
+        if(this.isToShuffleData) { // don't use parent's normalized data
             subModelConfig.getTrain().setCustomPaths(null);
             saveModelConfig(subModelName, subModelConfig);
         }
 
-        if ( this.isToResume ) {
+        if(this.isToResume) {
             List<String[]> commands = new ArrayList<String[]>();
 
             PathFinder pathFinder = new PathFinder(subModelConfig);
             EvalConfig evalConfig = subModelConfig.getEvalConfigByName(evalSetName);
             String evalScorePath = pathFinder.getEvalScorePath(evalConfig);
-            if ( !ShifuFileUtils.isFileExists(evalScorePath, evalConfig.getDataSet().getSource()) ) {
-                commands.add(new String[]{"shifu", "eval", "-score", evalSetName});
+            if(!ShifuFileUtils.isFileExists(evalScorePath, evalConfig.getDataSet().getSource())) {
+                commands.add(new String[] { "shifu", "eval", "-score", evalSetName });
                 String modelsPath = pathFinder.getModelsPath(RawSourceData.SourceType.LOCAL);
-                if (!ShifuFileUtils.isFileExists(modelsPath, RawSourceData.SourceType.LOCAL)) {
-                    commands.add(new String[]{"shifu", "train"});
+                if(!ShifuFileUtils.isFileExists(modelsPath, RawSourceData.SourceType.LOCAL)) {
+                    commands.add(new String[] { "shifu", "train" });
 
-                    if (isToShuffleData) {
-                        commands.add(new String[]{"shifu", "norm", "-shuffle"});
+                    if(isToShuffleData) {
+                        commands.add(new String[] { "shifu", "norm", "-shuffle" });
                     }
                 }
 
-                if (CollectionUtils.isNotEmpty(commands)) {
+                if(CollectionUtils.isNotEmpty(commands)) {
                     Collections.reverse(commands);
-                    final String[][] processes = commands.toArray(new String[][]{});
+                    final String[][] processes = commands.toArray(new String[][] {});
                     return new Callable<Integer>() {
                         @Override
                         public Integer call() {
@@ -626,23 +603,20 @@ public class ComboModelProcessor extends BasicModelProcessor implements Processo
             } else {
                 LOG.info("EvalTrain already exsits. Ignore to train and eval task for {}", subModelName);
             }
-            return  null;
+            return null;
         } else {
             return new Callable<Integer>() {
                 @Override
                 public Integer call() {
                     try {
-                        if (isToShuffleData) {
-                            return ProcessManager.runShellProcess(subModelName, new String[][]{
-                                    new String[]{"shifu", "norm", "-shuffle"},
-                                    new String[]{"shifu", "train"},
-                                    new String[]{"shifu", "eval", "-score", evalSetName}
-                            });
+                        if(isToShuffleData) {
+                            return ProcessManager.runShellProcess(subModelName, new String[][] {
+                                    new String[] { "shifu", "norm", "-shuffle" }, new String[] { "shifu", "train" },
+                                    new String[] { "shifu", "eval", "-score", evalSetName } });
                         } else {
-                            return ProcessManager.runShellProcess(subModelName, new String[][]{
-                                    new String[]{"shifu", "train"},
-                                    new String[]{"shifu", "eval", "-score", evalSetName}
-                            });
+                            return ProcessManager.runShellProcess(subModelName, new String[][] {
+                                    new String[] { "shifu", "train" },
+                                    new String[] { "shifu", "eval", "-score", evalSetName } });
                         }
                     } catch (IOException e) {
                         LOG.error("Fail to run commands.", e);
@@ -655,15 +629,16 @@ public class ComboModelProcessor extends BasicModelProcessor implements Processo
 
     /**
      * Create evaluation tasks for all sub-models
-     *
-     * @param evalName - the evalset to evaluate
+     * 
+     * @param evalName
+     *            - the evalset to evaluate
      * @return
      * @throws IOException
      */
     private List<Callable<Integer>> createEvaluateTasks(final String evalName) throws IOException {
         List<Callable<Integer>> tasks = new ArrayList<Callable<Integer>>();
 
-        for (int i = 0; i < this.comboModelTrain.getVarTrainConfList().size(); i++) {
+        for(int i = 0; i < this.comboModelTrain.getVarTrainConfList().size(); i++) {
             VarTrainConf varTrainConf = this.comboModelTrain.getVarTrainConfList().get(i);
             final String subModelName = genSubModelName(i, varTrainConf);
 
@@ -671,9 +646,8 @@ public class ComboModelProcessor extends BasicModelProcessor implements Processo
                 @Override
                 public Integer call() {
                     try {
-                        return ProcessManager.runShellProcess(subModelName, new String[][]{
-                                new String[]{"shifu", "eval", "-run", evalName}
-                        });
+                        return ProcessManager.runShellProcess(subModelName, new String[][] { new String[] { "shifu",
+                                "eval", "-run", evalName } });
                     } catch (IOException e) {
                         LOG.error("Fail to run commands.", e);
                         return 1;
@@ -687,16 +661,16 @@ public class ComboModelProcessor extends BasicModelProcessor implements Processo
 
     /**
      * Shifu combo processor validation
-     *
+     * 
      * @return 0 - success
-     * other - fail
+     *         other - fail
      */
     private int validate() {
-        if (ComboStep.NEW.equals(this.comboStep)) {
+        if(ComboStep.NEW.equals(this.comboStep)) {
             return validate(this.algorithms);
         } else {
             File comboTrainFile = new File(Constants.COMBO_CONFIG_JSON_FILE_NAME);
-            if (!comboTrainFile.exists()) {
+            if(!comboTrainFile.exists()) {
                 LOG.error("{} doesn't exist. Please run `shifu combo -new <algorithms>` firstly.",
                         Constants.COMBO_CONFIG_JSON_FILE_NAME);
                 return 1;
@@ -707,28 +681,29 @@ public class ComboModelProcessor extends BasicModelProcessor implements Processo
 
     /**
      * Validate the algorithms from user's input
-     *
-     * @param algorithms - algorithm list that user want to combo
+     * 
+     * @param algorithms
+     *            - algorithm list that user want to combo
      * @return 0 - success
-     * other - fail
+     *         other - fail
      */
     private int validate(String algorithms) {
-        if (StringUtils.isBlank(algorithms)) {
+        if(StringUtils.isBlank(algorithms)) {
             LOG.error("The combo algorithms should not be empty");
             return 1;
         }
 
         String[] algs = algorithms.split(ALG_DELIMITER);
-        if (algs.length < 3) {
+        if(algs.length < 3) {
             LOG.error("At least, you should have 2 basic algorithms, and 1 assembling algorithm.");
             return 2;
         }
 
         this.comboAlgs = new ArrayList<ModelTrainConf.ALGORITHM>();
-        for (String alg : algs) {
+        for(String alg: algs) {
             try {
                 ModelTrainConf.ALGORITHM algorithm = ModelTrainConf.ALGORITHM.valueOf(alg);
-                if (algorithm == null) {
+                if(algorithm == null) {
                     LOG.error("Unsupported algorithm - {}", alg);
                     return 3;
                 }
@@ -743,8 +718,9 @@ public class ComboModelProcessor extends BasicModelProcessor implements Processo
 
     /**
      * Create @VarTrainConf according the @ModelTrainConf.ALGORITHM
-     *
-     * @param alg - the algorithm, see @ModelTrainConf.ALGORITHM
+     * 
+     * @param alg
+     *            - the algorithm, see @ModelTrainConf.ALGORITHM
      * @return
      */
     private VarTrainConf createVarTrainConf(ModelTrainConf.ALGORITHM alg) {
@@ -756,8 +732,9 @@ public class ComboModelProcessor extends BasicModelProcessor implements Processo
 
     /**
      * Create @ModelTrainConf according the @ModelTrainConf.ALGORITHM
-     *
-     * @param alg - the algorithm, see @ModelTrainConf.ALGORITHM
+     * 
+     * @param alg
+     *            - the algorithm, see @ModelTrainConf.ALGORITHM
      * @return
      */
     private ModelTrainConf createModelTrainConf(ModelTrainConf.ALGORITHM alg) {
@@ -767,15 +744,15 @@ public class ComboModelProcessor extends BasicModelProcessor implements Processo
         trainConf.setEpochsPerIteration(1);
         trainConf.setParams(ModelTrainConf.createParamsByAlg(alg, trainConf));
         trainConf.setNumTrainEpochs(100);
-        if (ModelTrainConf.ALGORITHM.NN.equals(alg)) {
+        if(ModelTrainConf.ALGORITHM.NN.equals(alg)) {
             trainConf.setNumTrainEpochs(200);
-        } else if (ModelTrainConf.ALGORITHM.SVM.equals(alg)) {
+        } else if(ModelTrainConf.ALGORITHM.SVM.equals(alg)) {
             trainConf.setNumTrainEpochs(100);
-        } else if (ModelTrainConf.ALGORITHM.RF.equals(alg)) {
+        } else if(ModelTrainConf.ALGORITHM.RF.equals(alg)) {
             trainConf.setNumTrainEpochs(20000);
-        } else if (ModelTrainConf.ALGORITHM.GBT.equals(alg)) {
+        } else if(ModelTrainConf.ALGORITHM.GBT.equals(alg)) {
             trainConf.setNumTrainEpochs(20000);
-        } else if (ModelTrainConf.ALGORITHM.LR.equals(alg)) {
+        } else if(ModelTrainConf.ALGORITHM.LR.equals(alg)) {
             trainConf.setNumTrainEpochs(100);
         }
         trainConf.setBaggingWithReplacement(true);
@@ -785,45 +762,44 @@ public class ComboModelProcessor extends BasicModelProcessor implements Processo
 
     /**
      * Get evaluation output file format
-     *
+     * 
      * @param runMode
      * @return
      */
     private ColumnFile.FileType genEvalFileType(ModelBasicConf.RunMode runMode) {
-        return (ModelBasicConf.RunMode.MAPRED.equals(runMode) ?
-                ColumnFile.FileType.PIGSTORAGE : ColumnFile.FileType.CSV);
+        return (ModelBasicConf.RunMode.MAPRED.equals(runMode) ? ColumnFile.FileType.PIGSTORAGE
+                : ColumnFile.FileType.CSV);
     }
 
     /**
      * Append weight column, if not blank, with uid column as score meta data.
-     *
+     * 
      * @param weightColumnName
      * @return
      */
     private String[] genEvalScoreMetaVars(String weightColumnName) {
-        //if (StringUtils.isNotBlank(weightColumnName)) {
-        //    return new String[]{this.comboModelTrain.getUidColumnName(), weightColumnName};
-        //} else {
-            return new String[]{this.comboModelTrain.getUidColumnName()};
-        //}
+        // if (StringUtils.isNotBlank(weightColumnName)) {
+        // return new String[]{this.comboModelTrain.getUidColumnName(), weightColumnName};
+        // } else {
+        return new String[] { this.comboModelTrain.getUidColumnName() };
+        // }
     }
 
     /**
      * Generate sub model name
-     *
-     * @param i            - sequence to keep unique
+     * 
+     * @param i
+     *            - sequence to keep unique
      * @param varTrainConf
      * @return
      */
     private String genSubModelName(int i, VarTrainConf varTrainConf) {
-        return this.modelConfig.getBasic().getName()
-                + "_" + varTrainConf.getModelTrainConf().getAlgorithm()
-                + "_" + i;
+        return this.modelConfig.getBasic().getName() + "_" + varTrainConf.getModelTrainConf().getAlgorithm() + "_" + i;
     }
 
     /**
      * Generate assembel model name
-     *
+     * 
      * @param modelName
      * @return
      */
@@ -833,7 +809,7 @@ public class ComboModelProcessor extends BasicModelProcessor implements Processo
 
     /**
      * Generate train data evaluation set name
-     *
+     * 
      * @return
      */
     private String genEvalTrainName() {
@@ -842,7 +818,7 @@ public class ComboModelProcessor extends BasicModelProcessor implements Processo
 
     /**
      * Save ComboTrain.json into local directory
-     *
+     * 
      * @param comboModelTrain
      * @return
      */
@@ -858,7 +834,7 @@ public class ComboModelProcessor extends BasicModelProcessor implements Processo
 
     /**
      * Load ComboModelTrain from ComboTrain.json
-     *
+     * 
      * @return
      */
     private ComboModelTrain loadComboTrain() {
@@ -872,13 +848,13 @@ public class ComboModelProcessor extends BasicModelProcessor implements Processo
 
     /**
      * Clone @ColumnConfig list for sub-models
-     *
+     * 
      * @param columnConfigList
      * @return
      */
     private List<ColumnConfig> cloneColumnConfigs(List<ColumnConfig> columnConfigList) {
         List<ColumnConfig> columnConfigs = new ArrayList<ColumnConfig>();
-        for (ColumnConfig columnConfig : columnConfigList) {
+        for(ColumnConfig columnConfig: columnConfigList) {
             columnConfigs.add(columnConfig.clone());
         }
         return columnConfigs;
@@ -886,8 +862,9 @@ public class ComboModelProcessor extends BasicModelProcessor implements Processo
 
     /**
      * Save ModelConfig into some folder
-     *
-     * @param folder      - folder to host ModelConfig.json
+     * 
+     * @param folder
+     *            - folder to host ModelConfig.json
      * @param modelConfig
      * @throws IOException
      */
@@ -897,8 +874,9 @@ public class ComboModelProcessor extends BasicModelProcessor implements Processo
 
     /**
      * Save ColumnConfig list into some folder
-     *
-     * @param folder        - folder to host ColumnConfig.json
+     * 
+     * @param folder
+     *            - folder to host ColumnConfig.json
      * @param columnConfigs
      * @throws IOException
      */
@@ -906,18 +884,17 @@ public class ComboModelProcessor extends BasicModelProcessor implements Processo
         JSONUtils.writeValue(new File(folder + File.separator + Constants.COLUMN_CONFIG_JSON_FILE_NAME), columnConfigs);
     }
 
-
     /**
      * Check whether there is any fail results in the list
-     *
+     * 
      * @param taskResults
      * @return true - there is any fail result
-     * false - no fail task
+     *         false - no fail task
      */
     private boolean hasFailTaskResults(List<Integer> taskResults) {
-        if (CollectionUtils.isNotEmpty(taskResults)) {
-            for (Integer result : taskResults) {
-                if (result == null || result != 0) {
+        if(CollectionUtils.isNotEmpty(taskResults)) {
+            for(Integer result: taskResults) {
+                if(result == null || result != 0) {
                     LOG.error("Found some abnormal result - {}", result);
                     return true;
                 }
@@ -930,7 +907,7 @@ public class ComboModelProcessor extends BasicModelProcessor implements Processo
      * Create configuration file for sub-model
      * if the configuration for parent model exists, it will copy that parent configuration firstly
      * and append new content.
-     *
+     * 
      * @param subModelName
      * @param namesPrefix
      * @param parentNamesFile
@@ -938,23 +915,20 @@ public class ComboModelProcessor extends BasicModelProcessor implements Processo
      * @return
      * @throws IOException
      */
-    private String createModelNamesFile(
-            String subModelName,
-            String namesPrefix,
-            String parentNamesFile,
+    private String createModelNamesFile(String subModelName, String namesPrefix, String parentNamesFile,
             String... varNames) throws IOException {
         String modelNamesCfg = namesPrefix + ".names";
         File mnFile = new File(subModelName + File.separator + modelNamesCfg);
 
         // copy existing meta file
-        if (StringUtils.isNotBlank(parentNamesFile)) {
+        if(StringUtils.isNotBlank(parentNamesFile)) {
             FileUtils.copyFile(new File(parentNamesFile), mnFile);
         }
 
         // append uid column as meta
         FileWriter writer = new FileWriter(mnFile);
         try {
-            for (String var : varNames) {
+            for(String var: varNames) {
                 writer.append(var + "\n");
             }
         } catch (IOException e) {

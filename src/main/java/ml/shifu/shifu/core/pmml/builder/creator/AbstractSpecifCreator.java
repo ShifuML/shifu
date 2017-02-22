@@ -32,7 +32,7 @@ public abstract class AbstractSpecifCreator {
     /**
      * Create the normalized output for model, since the final score should be 0 ~ 1000, instead of 0.o ~ 1.0
      *
-     * @return @Output for model
+     * @return output for model
      */
     protected Output createNormalizedOutput() {
         Output output = new Output();
@@ -60,7 +60,7 @@ public abstract class AbstractSpecifCreator {
      *            - data type
      * @param feature
      *            - result feature type
-     * @return @OutputField
+     * @return OutputField
      */
     protected OutputField createOutputField(String fieldName, OpType opType, DataType dataType, ResultFeatureType feature) {
         OutputField outputField = new OutputField();
@@ -74,7 +74,7 @@ public abstract class AbstractSpecifCreator {
     /**
      * Create the apply expression for final output, the function is "round"
      *
-     * @return @Apply
+     * @return Apply
      */
     protected Apply createApplyFunc() {
         Apply apply = new Apply();
