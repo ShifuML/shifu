@@ -45,6 +45,7 @@ import ml.shifu.shifu.core.dtrain.dataset.MemoryDiskFloatMLDataSet;
 import ml.shifu.shifu.core.dtrain.gs.GridSearch;
 import ml.shifu.shifu.util.CommonUtils;
 
+import org.apache.commons.lang.StringUtils;
 import org.apache.commons.lang.math.RandomUtils;
 import org.apache.commons.math3.distribution.PoissonDistribution;
 import org.apache.hadoop.fs.Path;
@@ -350,10 +351,19 @@ public abstract class AbstractNNWorker<VALUE extends Writable> extends
             LOG.info("Max heap memory: {}, fraction: {}", Runtime.getRuntime().maxMemory(), memoryFraction);
             double crossValidationRate = this.modelConfig.getValidSetRate();
             try {
-                this.trainingData = new MemoryDiskFloatMLDataSet((long) (memoryStoreSize * (1 - crossValidationRate)),
-                        DTrainUtils.getTrainingFile().toString(), this.inputNodeCount, this.outputNodeCount);
-                this.validationData = new MemoryDiskFloatMLDataSet((long) (memoryStoreSize * crossValidationRate),
-                        DTrainUtils.getTestingFile().toString(), this.inputNodeCount, this.outputNodeCount);
+                if(StringUtils.isNotBlank(modelConfig.getValidationDataSetRawPath())) {
+                    // fixed 0.6 and 0.4 of max memory for trainingData and validationData
+                    this.trainingData = new MemoryDiskFloatMLDataSet((long) (memoryStoreSize * 0.6), DTrainUtils
+                            .getTrainingFile().toString(), this.inputNodeCount, this.outputNodeCount);
+                    this.validationData = new MemoryDiskFloatMLDataSet((long) (memoryStoreSize * 0.4), DTrainUtils
+                            .getTestingFile().toString(), this.inputNodeCount, this.outputNodeCount);
+                } else {
+                    this.trainingData = new MemoryDiskFloatMLDataSet(
+                            (long) (memoryStoreSize * (1 - crossValidationRate)), DTrainUtils.getTrainingFile()
+                                    .toString(), this.inputNodeCount, this.outputNodeCount);
+                    this.validationData = new MemoryDiskFloatMLDataSet((long) (memoryStoreSize * crossValidationRate),
+                            DTrainUtils.getTestingFile().toString(), this.inputNodeCount, this.outputNodeCount);
+                }
                 // cannot find a good place to close these two data set, using Shutdown hook
                 Runtime.getRuntime().addShutdownHook(new Thread(new Runnable() {
                     @Override
