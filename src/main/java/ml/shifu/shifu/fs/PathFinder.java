@@ -900,6 +900,6 @@ public class PathFinder {
     }
 
     private String getShuffleDataPath(SourceType sourceType) {
-        return getPathBySourceType(new Path(Constants.TMP, Constants.SHUFFLED_NORM_DATA), sourceType);
+        return getPathBySourceType(new Path(Constants.TMP, Constants.SHUFFLED_DATA_PATH), sourceType);
     }
 }
