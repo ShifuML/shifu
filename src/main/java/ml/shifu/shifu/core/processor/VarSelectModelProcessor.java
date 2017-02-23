@@ -97,6 +97,7 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
     private final static Logger log = LoggerFactory.getLogger(VarSelectModelProcessor.class);
 
     private boolean isToReset = false;
+    private boolean isToList = false;
 
     public VarSelectModelProcessor() {
         // default constructor
@@ -122,6 +123,10 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
         }
     }
 
+    public void setToList(boolean toList) {
+        isToList = toList;
+    }
+
     /**
      * Run for the variable selection
      */
@@ -133,9 +138,17 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
             setUp(ModelStep.VARSELECT);
             validateParameters();
             // reset all selections if user specify or select by absolute number
-            if(isToReset) {
+            if (isToReset) {
                 log.info("Reset all selections data including type final select etc!");
                 resetAllFinalSelect();
+            } else if (isToList) {
+                log.info("Below variables are selected - ");
+                for ( ColumnConfig columnConfig : this.columnConfigList ) {
+                    if ( columnConfig.isFinalSelect() ) {
+                        log.info(columnConfig.getColumnName());
+                    }
+                }
+                log.info("-----  Done -----");
             } else {
                 // sync to make sure load from hdfs config is consistent with local configuration
                 syncDataToHdfs(super.modelConfig.getDataSet().getSource());

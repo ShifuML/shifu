@@ -169,7 +169,7 @@ public class ShifuCLI {
                     }
                 } else if(args[0].equals(VARSELECT_CMD) || args[0].equals(VARSEL_CMD)) {
                     // variable selected step
-                    status = selectModelVar(cmd.hasOption(RESET));
+                    status = selectModelVar(cmd.hasOption(RESET), cmd.hasOption(LIST));
                     if(status == 0) {
                         log.info("Do model set variables selection successfully. Please continue next step by using 'shifu train'.");
                     } else {
@@ -353,8 +353,9 @@ public class ShifuCLI {
     /*
      * Select variables for model
      */
-    public static int selectModelVar(boolean isToReset) throws Exception {
+    public static int selectModelVar(boolean isToReset, boolean isToList) throws Exception {
         VarSelectModelProcessor p = new VarSelectModelProcessor(isToReset);
+        p.setToList(isToList);
         return p.run();
     }
 
@@ -561,7 +562,7 @@ public class ShifuCLI {
         System.out.println("\tnew <ModelSetName> [-t <NN|LR|SVM|DT>]  Create a new model set.");
         System.out.println("\tinit                                    Create initial ColumnConfig.json and upload to HDFS.");
         System.out.println("\tstats                                   Calculate statistics on HDFS and update local ColumnConfig.json.");
-        System.out.println("\tvarselect/varsel [-reset]               Variable selection, will update finalSelect in ColumnConfig.json.");
+        System.out.println("\tvarselect/varsel [-reset] [-list]       Variable selection, will update finalSelect in ColumnConfig.json.");
         System.out.println("\tnormalize/norm [-shuffle]               Normalize the columns with finalSelect as true.");
         System.out.println("\ttrain [-dry] [-shuffle]                 Train the model with the normalized data.");
         System.out.println("\tposttrain                               Post-process data after training models.");
