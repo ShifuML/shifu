@@ -148,7 +148,7 @@ public class ShifuCLITest {
         FileUtils.copyFile(originColumn, tmpColumn);
 
         long timestamp = tmpColumn.lastModified();
-        ShifuCLI.selectModelVar(false);
+        ShifuCLI.selectModelVar(false, false);
         Assert.assertTrue(tmpColumn.lastModified() > timestamp);
 
         FileUtils.deleteQuietly(tmpModel);
@@ -229,7 +229,7 @@ public class ShifuCLITest {
         ShifuCLI.initializeModel();
         ShifuCLI.calModelStats();
         ShifuCLI.normalizeTrainData();
-        ShifuCLI.selectModelVar(false);
+        ShifuCLI.selectModelVar(false, false);
         ShifuCLI.postTrainModel();
         Assert.assertTrue(tmpColumn.lastModified() > timestamp);
 
