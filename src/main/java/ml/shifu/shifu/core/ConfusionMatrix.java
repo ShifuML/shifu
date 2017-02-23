@@ -113,10 +113,6 @@ public class ConfusionMatrix {
         multiClassModelCnt = (evalScoreHeader.length - multiClassScore1Index) / modelConfig.getTags().size();
     }
 
-    /**
-     * @return
-     * @throws IOException
-     */
     private String[] getEvalScoreHeader() throws IOException {
         PathFinder pathFinder = new PathFinder(modelConfig);
         SourceType sourceType = evalConfig.getDataSet().getSource();

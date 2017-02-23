@@ -52,8 +52,10 @@ public class MunroPatBinning extends AbstractBinning<Double> {
     /**
      * set min/max, merge same bins
      * In a very skewed data array, this one may not be well performed
+     * 
      * @param bins
-     * @return
+     *            input bins
+     * @return merged bins
      */
     private List<Double> binMerge(List<Double> bins) {
         List<Double> newBins = new ArrayList<Double>();

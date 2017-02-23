@@ -74,19 +74,19 @@ public final class CommonUtils {
 
     private static final Logger log = LoggerFactory.getLogger(CommonUtils.class);
 
-    /*
+    /**
      * Sync up all local configuration files to HDFS.
      * 
      * @param modelConfig
-     * the model config
+     *            the model config
      * 
      * @return if copy successful
      * 
      * @throws IOException
-     * If any exception on HDFS IO or local IO.
+     *             If any exception on HDFS IO or local IO.
      * 
      * @throws NullPointerException
-     * If parameter {@code modelConfig} is null
+     *             If parameter {@code modelConfig} is null
      */
     public static boolean copyConfFromLocalToHDFS(ModelConfig modelConfig) throws IOException {
         FileSystem hdfs = HDFSUtils.getFS();
@@ -140,7 +140,7 @@ public final class CommonUtils {
         return true;
     }
 
-    /*
+    /**
      * Sync-up the evalulation data into HDFS
      */
     @SuppressWarnings("deprecation")
@@ -170,21 +170,30 @@ public final class CommonUtils {
         }
     }
 
-    /*
+    /**
      * Load ModelConfig from local json ModelConfig.json file.
+     * 
+     * @return model config instance from default model config file
+     * @throws IOException
+     *             any io exception to load file
      */
     public static ModelConfig loadModelConfig() throws IOException {
         return loadModelConfig(Constants.LOCAL_MODEL_CONFIG_JSON, SourceType.LOCAL);
     }
 
-    /*
+    /**
      * Load model configuration from the path and the source type.
      * 
+     * @param path
+     *            model file path
+     * @param sourceType
+     *            source type of model file
+     * @return model config instance
      * @throws IOException
-     * if any IO exception in parsing json.
+     *             if any IO exception in parsing json.
      * 
      * @throws IllegalArgumentException
-     * if {@code path} is null or empty, if sourceType is null.
+     *             if {@code path} is null or empty, if sourceType is null.
      */
     public static ModelConfig loadModelConfig(String path, SourceType sourceType) throws IOException {
         return loadJSON(path, sourceType, ModelConfig.class);
@@ -198,14 +207,19 @@ public final class CommonUtils {
         }
     }
 
-    /*
+    /**
      * Load reason code map and change it to column &gt; resonCode map.
      * 
+     * @param path
+     *            reason code path
+     * @param sourceType
+     *            source type of file
+     * @return reason code map
      * @throws IOException
-     * if any IO exception in parsing json.
+     *             if any IO exception in parsing json.
      * 
      * @throws IllegalArgumentException
-     * if {@code path} is null or empty, if sourceType is null.
+     *             if {@code path} is null or empty, if sourceType is null.
      */
     public static Map<String, String> loadAndFlattenReasonCodeMap(String path, SourceType sourceType)
             throws IOException {
@@ -222,14 +236,21 @@ public final class CommonUtils {
         return reasonCodeMap;
     }
 
-    /*
+    /**
      * Load JSON instance
      * 
+     * @param path
+     *            file path
+     * @param sourceType
+     *            source type: hdfs or local
+     * @param clazz
+     *            class of instance
+     * @return instance from json file
      * @throws IOException
-     * if any IO exception in parsing json.
+     *             if any IO exception in parsing json.
      * 
      * @throws IllegalArgumentException
-     * if {@code path} is null or empty, if sourceType is null.
+     *             if {@code path} is null or empty, if sourceType is null.
      */
     public static <T> T loadJSON(String path, SourceType sourceType, Class<T> clazz) throws IOException {
         checkPathAndMode(path, sourceType);
@@ -243,31 +264,40 @@ public final class CommonUtils {
         }
     }
 
-    /*
+    /**
      * Load column configuration list.
      * 
+     * @return column config list
      * @throws IOException
-     * if any IO exception in parsing json.
+     *             if any IO exception in parsing json.
      */
     public static List<ColumnConfig> loadColumnConfigList() throws IOException {
         return loadColumnConfigList(Constants.LOCAL_COLUMN_CONFIG_JSON, SourceType.LOCAL);
     }
 
-    /*
+    /**
      * Load column configuration list.
      * 
+     * @param path
+     *            file path
+     * @param sourceType
+     *            source type: hdfs or local
+     * @return column config list
      * @throws IOException
-     * if any IO exception in parsing json.
-     * 
+     *             if any IO exception in parsing json.
      * @throws IllegalArgumentException
-     * if {@code path} is null or empty, if sourceType is null.
+     *             if {@code path} is null or empty, if sourceType is null.
      */
     public static List<ColumnConfig> loadColumnConfigList(String path, SourceType sourceType) throws IOException {
         return Arrays.asList(loadJSON(path, sourceType, ColumnConfig[].class));
     }
 
-    /*
+    /**
      * Return final selected column collection.
+     * 
+     * @param columnConfigList
+     *            column config list
+     * @return collection of column config list for final select is true
      */
     public static Collection<ColumnConfig> getFinalSelectColumnConfigList(Collection<ColumnConfig> columnConfigList) {
         return Collections2.filter(columnConfigList, new com.google.common.base.Predicate<ColumnConfig>() {
@@ -346,33 +376,49 @@ public final class CommonUtils {
         return fields;
     }
 
-    /*
+    /**
      * Return header column list from header file.
      * 
+     * @param pathHeader
+     *            header path
+     * @param delimiter
+     *            the delimiter of headers
+     * @param sourceType
+     *            source type: hdfs or local
+     * @return headers array
      * @throws IOException
-     * if any IO exception in reading file.
+     *             if any IO exception in reading file.
      * 
      * @throws IllegalArgumentException
-     * if sourceType is null, if pathHeader is null or empty, if delimiter is null or empty.
+     *             if sourceType is null, if pathHeader is null or empty, if delimiter is null or empty.
      * 
      * @throws RuntimeException
-     * if first line of pathHeader is null or empty.
+     *             if first line of pathHeader is null or empty.
      */
     public static String[] getHeaders(String pathHeader, String delimiter, SourceType sourceType) throws IOException {
         return getHeaders(pathHeader, delimiter, sourceType, false);
     }
 
-    /*
+    /**
      * Return header column array from header file.
      * 
+     * @param pathHeader
+     *            header path
+     * @param delimiter
+     *            the delimiter of headers
+     * @param sourceType
+     *            source type: hdfs or local
+     * @param isFull
+     *            if full header name including name space
+     * @return headers array
      * @throws IOException
-     * if any IO exception in reading file.
+     *             if any IO exception in reading file.
      * 
      * @throws IllegalArgumentException
-     * if sourceType is null, if pathHeader is null or empty, if delimiter is null or empty.
+     *             if sourceType is null, if pathHeader is null or empty, if delimiter is null or empty.
      * 
      * @throws RuntimeException
-     * if first line of pathHeader is null or empty.
+     *             if first line of pathHeader is null or empty.
      */
     public static String[] getHeaders(String pathHeader, String delimiter, SourceType sourceType, boolean isFull)
             throws IOException {
@@ -421,34 +467,45 @@ public final class CommonUtils {
         return headerList.toArray(new String[0]);
     }
 
-    /*
+    /**
      * Get full column name from pig header. For example, one column is a::b, return a_b. If b, return b.
+     * 
+     * @param raw
+     *            raw name
+     * @return full name including namespace
      */
     public static String getFullPigHeaderColumnName(String raw) {
         return raw == null ? raw : raw.replaceAll(Constants.PIG_COLUMN_SEPARATOR, Constants.PIG_FULL_COLUMN_SEPARATOR);
-        // return raw;
     }
 
-    /*
+    /**
      * Get relative column name from pig header. For example, one column is a::b, return b. If b, return b.
      * 
+     * @param raw
+     *            raw name
+     * @return relative name including namespace
      * @throws NullPointerException
-     * if parameter raw is null.
+     *             if parameter raw is null.
      */
     public static String getRelativePigHeaderColumnName(String raw) {
         int position = raw.lastIndexOf(Constants.PIG_COLUMN_SEPARATOR);
         return position >= 0 ? raw.substring(position + Constants.PIG_COLUMN_SEPARATOR.length()) : raw;
     }
 
-    /*
+    /**
      * Given a column value, return bin list index. Return 0 for Category because of index 0 is started from
      * NEGATIVE_INFINITY.
      * 
+     * @param columnConfig
+     *            column config
+     * @param columnVal
+     *            value of the column
+     * @return bin index of than value
      * @throws IllegalArgumentException
-     * if input is null or empty.
+     *             if input is null or empty.
      * 
      * @throws NumberFormatException
-     * if columnVal does not contain a parsable number.
+     *             if columnVal does not contain a parsable number.
      */
     public static int getBinNum(ColumnConfig columnConfig, String columnVal) {
         if(columnConfig.isCategorical()) {
@@ -473,15 +530,18 @@ public final class CommonUtils {
         }
     }
 
-    /*
+    /**
      * Return the real bin number for one value. As the first bin value is NEGATIVE_INFINITY, invalid index is 0, not
      * -1.
      * 
      * @param binBoundary
-     * bin boundary list which should be sorted.
+     *            bin boundary list which should be sorted.
+     * @param value
+     *            value of column
+     * @return bin index
      * 
      * @throws IllegalArgumentException
-     * if binBoundary is null or empty.
+     *             if binBoundary is null or empty.
      */
     @SuppressWarnings("unused")
     private static int getNumericBinNum(List<Double> binBoundary, double value) {
@@ -496,22 +556,33 @@ public final class CommonUtils {
         return n;
     }
 
-    /*
+    /**
      * Common split function to ignore special character like '|'. It's better to return a list while many calls in our
      * framework using string[].
      * 
+     * @param raw
+     *            raw string
+     * @param delimiter
+     *            the delimeter to split the string
+     * @return array of split Strings
+     * 
      * @throws IllegalArgumentException
-     * {@code raw} and {@code delimiter} is null or empty.
+     *             {@code raw} and {@code delimiter} is null or empty.
      */
     public static String[] split(String raw, String delimiter) {
         return splitAndReturnList(raw, delimiter).toArray(new String[0]);
     }
 
-    /*
+    /**
      * Common split function to ignore special character like '|'.
      * 
+     * @param raw
+     *            raw string
+     * @param delimiter
+     *            the delimeter to split the string
+     * @return list of split Strings
      * @throws IllegalArgumentException
-     * {@code raw} and {@code delimiter} is null or empty.
+     *             {@code raw} and {@code delimiter} is null or empty.
      */
     public static List<String> splitAndReturnList(String raw, String delimiter) {
         if(StringUtils.isEmpty(raw) || StringUtils.isEmpty(delimiter)) {
@@ -525,14 +596,16 @@ public final class CommonUtils {
         return headerList;
     }
 
-    /*
+    /**
      * Get target column.
      * 
+     * @param columnConfigList
+     *            column config list
      * @throws IllegalArgumentException
-     * if columnConfigList is null or empty.
+     *             if columnConfigList is null or empty.
      * 
      * @throws IllegalStateException
-     * if no target column can be found.
+     *             if no target column can be found.
      */
     public static Integer getTargetColumnNum(List<ColumnConfig> columnConfigList) {
         if(CollectionUtils.isEmpty(columnConfigList)) {
@@ -551,17 +624,23 @@ public final class CommonUtils {
         return cc.getColumnNum();
     }
 
-    /*
+    /**
      * Load basic models from files.
      * 
+     * @param modelConfig
+     * @param columnConfigList
+     *            column config list
+     * @param evalConfig
+     *            eval config instance
+     * @return the list of models
      * @throws IOException
-     * if any IO exception in reading model file.
+     *             if any IO exception in reading model file.
      * 
      * @throws IllegalArgumentException
-     * if {@code modelConfig} is, if invalid model algorithm .
+     *             if {@code modelConfig} is, if invalid model algorithm .
      * 
      * @throws IllegalStateException
-     * if not HDFS or LOCAL source type or algorithm not supported.
+     *             if not HDFS or LOCAL source type or algorithm not supported.
      */
     public static List<BasicML> loadBasicModels(ModelConfig modelConfig, List<ColumnConfig> columnConfigList,
             EvalConfig evalConfig) throws IOException {
@@ -577,8 +656,14 @@ public final class CommonUtils {
         return loadBasicModels(modelConfig, columnConfigList, evalConfig, modelConfig.getDataSet().getSource());
     }
 
-    /*
+    /**
      * Get bin index by binary search. The last bin in <code>binBoundary</code> is missing value bin.
+     * 
+     * @param binBoundary
+     *            bin boundary list which should be sorted.
+     * @param dVal
+     *            value of column
+     * @return bin index
      */
     public static int getBinIndex(List<Double> binBoundary, Double dVal) {
         assert binBoundary != null && binBoundary.size() > 0;
@@ -620,17 +705,28 @@ public final class CommonUtils {
         return models;
     }
 
-    /*
+    /**
      * Load basic models from files.
      * 
+     * @param modelConfig
+     *            model config
+     * @param columnConfigList
+     *            list of column config
+     * @param evalConfig
+     *            eval confg
+     * @param sourceType
+     *            source type
+     * @param gbtConvertToProb
+     *            convert gbt score to prob or not
+     * @return list of models
      * @throws IOException
-     * if any IO exception in reading model file.
+     *             if any IO exception in reading model file.
      * 
      * @throws IllegalArgumentException
-     * if {@code modelConfig} is, if invalid model algorithm .
+     *             if {@code modelConfig} is, if invalid model algorithm .
      * 
      * @throws IllegalStateException
-     * if not HDFS or LOCAL source type or algorithm not supported.
+     *             if not HDFS or LOCAL source type or algorithm not supported.
      */
     public static List<BasicML> loadBasicModels(ModelConfig modelConfig, List<ColumnConfig> columnConfigList,
             EvalConfig evalConfig, SourceType sourceType, boolean gbtConvertToProb) throws IOException {
@@ -688,22 +784,26 @@ public final class CommonUtils {
         return loadModel(modelConfig, columnConfigList, modelPath, fs, false);
     }
 
-    /*
+    /**
      * Loading model according to existing model path.
      * 
+     * @param modelConfig
+     *            model config
+     * @param columnConfigList
+     *            list of column config
      * @param modelPath
-     * the path to store model
-     * 
+     *            the path to store model
      * @param fs
-     * file system used to store model
-     * 
+     *            file system used to store model
+     * @param gbtConvertToProb
+     *            convert gbt score to prob or not
      * @return model object or null if no modelPath file,
      * 
      * @throws IOException
-     * if loading file for any IOException
+     *             if loading file for any IOException
      * 
      * @throws GuaguaRuntimeException
-     * if any exception to load model object and cast to {@link BasicNetwork}
+     *             if any exception to load model object and cast to BasicNetwork
      */
     public static BasicML loadModel(ModelConfig modelConfig, List<ColumnConfig> columnConfigList, Path modelPath,
             FileSystem fs, boolean gbtConvertToProb) throws IOException {
@@ -739,24 +839,25 @@ public final class CommonUtils {
         }
     }
 
-    /*
+    /**
      * Find the model files for some @ModelConfig. There is a little tricky about this function.
      * If @EvalConfig is specified, try to load the models according setting in @EvalConfig,
      * or if @EvalConfig is null or ModelsPath is blank, Shifu will try to load models under `models`
      * directory
      * 
      * @param modelConfig
-     * - @ModelConfig, need this, since the model file may exist in HDFS
+     *            - @ModelConfig, need this, since the model file may exist in HDFS
      * 
      * @param evalConfig
-     * - @EvalConfig, maybe null
+     *            - @EvalConfig, maybe null
      * 
      * @param sourceType
-     * - Where is file system
+     *            - Where is file system
      * 
      * @return - @FileStatus array for all found models
      * 
      * @throws IOException
+     *             io exception to load files
      */
     public static List<FileStatus> findModels(ModelConfig modelConfig, EvalConfig evalConfig, SourceType sourceType)
             throws IOException {
@@ -927,16 +1028,19 @@ public final class CommonUtils {
         return loadBasicModels(modelsPath, alg, false);
     }
 
-    /*
+    /**
      * Load neural network models from specified file path
      * 
      * @param modelsPath
-     * - a file or directory that contains .nn files
-     * 
+     *            - a file or directory that contains .nn files
+     * @param alg
+     *            the algorithm
+     * @param isConvertToProb
+     *            if convert to prob for gbt model
      * @return - a list of @BasicML
      * 
      * @throws IOException
-     * - throw exception when loading model files
+     *             - throw exception when loading model files
      */
     public static List<BasicML> loadBasicModels(final String modelsPath, final ALGORITHM alg, boolean isConvertToProb)
             throws IOException {
@@ -989,15 +1093,15 @@ public final class CommonUtils {
         }
     }
 
-    /*
+    /**
      * Return one HashMap Object contains keys in the first parameter, values in the second parameter. Before calling
      * this method, you should be aware that headers should be unique.
      * 
      * @throws IllegalArgumentException
-     * if lengths of two arrays are not the same.
+     *             if lengths of two arrays are not the same.
      * 
      * @throws NullPointerException
-     * if header or data is null.
+     *             if header or data is null.
      */
     public static Map<String, String> getRawDataMap(String[] header, String[] data) {
         if(header.length != data.length) {
@@ -1012,11 +1116,18 @@ public final class CommonUtils {
         return rawDataMap;
     }
 
-    /*
+    /**
      * Return all parameters for pig execution.
      * 
+     * @param modelConfig
+     *            model config
+     * @param sourceType
+     *            source type
+     * @return map of configurations
+     * @throws IOException
+     *             any io exception
      * @throws IllegalArgumentException
-     * if modelConfig is null.
+     *             if modelConfig is null.
      */
     public static Map<String, String> getPigParamMap(ModelConfig modelConfig, SourceType sourceType) throws IOException {
         if(modelConfig == null) {
@@ -1051,11 +1162,20 @@ public final class CommonUtils {
         return pigParamMap;
     }
 
-    /*
+    /**
      * Return all parameters for pig execution.
      * 
+     * @param modelConfig
+     *            model config
+     * @param sourceType
+     *            source type
+     * @param pathFinder
+     *            path finder instance
+     * @return map of configurations
+     * @throws IOException
+     *             any io exception
      * @throws IllegalArgumentException
-     * if modelConfig is null.
+     *             if modelConfig is null.
      */
     public static Map<String, String> getPigParamMap(ModelConfig modelConfig, SourceType sourceType,
             PathFinder pathFinder) throws IOException {
@@ -1091,11 +1211,14 @@ public final class CommonUtils {
         return pigParamMap;
     }
 
-    /*
+    /**
      * Change list str to List object with double type.
      * 
+     * @param str
+     *            str to be split
+     * @return list of double
      * @throws IllegalArgumentException
-     * if str is not a valid list str: [1,2].
+     *             if str is not a valid list str.
      */
     public static List<Double> stringToDoubleList(String str) {
         List<String> list = checkAndReturnSplitCollections(str);
@@ -1127,11 +1250,14 @@ public final class CommonUtils {
         }
     }
 
-    /*
-     * Change list str to List object with integer type.
+    /**
+     * Change list str to List object with int type.
      * 
+     * @param str
+     *            str to be split
+     * @return list of int
      * @throws IllegalArgumentException
-     * if str is not a valid list str.
+     *             if str is not a valid list str.
      */
     public static List<Integer> stringToIntegerList(String str) {
         List<String> list = checkAndReturnSplitCollections(str);
@@ -1143,11 +1269,14 @@ public final class CommonUtils {
         });
     }
 
-    /*
+    /**
      * Change list str to List object with string type.
      * 
+     * @param str
+     *            str to be split
+     * @return list of string
      * @throws IllegalArgumentException
-     * if str is not a valid list str.
+     *             if str is not a valid list str.
      */
     public static List<String> stringToStringList(String str) {
         List<String> list = checkAndReturnSplitCollections(str);
@@ -1159,11 +1288,16 @@ public final class CommonUtils {
         });
     }
 
-    /*
+    /**
      * Change list str to List object with string type.
      * 
+     * @param str
+     *            str to be split
+     * @param separator
+     *            the separator
+     * @return list of string
      * @throws IllegalArgumentException
-     * if str is not a valid list str.
+     *             if str is not a valid list str.
      */
     public static List<String> stringToStringList(String str, char separator) {
         List<String> list = checkAndReturnSplitCollections(str, separator);
@@ -1191,29 +1325,47 @@ public final class CommonUtils {
         return entries;
     }
 
-    /*
+    /**
      * Assemble map data to Encog standard input format with default cut off value.
      * 
+     * @param modelConfig
+     *            model config instance
+     * @param columnConfigList
+     *            column config list
+     * @param rawDataMap
+     *            raw data
+     * @return data pair instance
      * @throws NullPointerException
-     * if input is null
-     * 
+     *             if input is null
      * @throws NumberFormatException
-     * if column value is not number format.
+     *             if column value is not number format.
      */
     public static MLDataPair assembleDataPair(ModelConfig modelConfig, List<ColumnConfig> columnConfigList,
             Map<String, ? extends Object> rawDataMap) {
         return assembleDataPair(modelConfig, columnConfigList, rawDataMap, Constants.DEFAULT_CUT_OFF);
     }
 
-    /*
+    /**
      * Assemble map data to Encog standard input format. If no variable selected(noVarSel = true), all candidate
      * variables will be selected.
      * 
+     * @param binCategoryMap
+     *            categorical map
+     * @param noVarSel
+     *            if after var select
+     * @param modelConfig
+     *            model config instance
+     * @param columnConfigList
+     *            column config list
+     * @param rawDataMap
+     *            raw data
+     * @param cutoff
+     *            cut off value
+     * @return data pair instance
      * @throws NullPointerException
-     * if input is null
-     * 
+     *             if input is null
      * @throws NumberFormatException
-     * if column value is not number format.
+     *             if column value is not number format.
      */
     public static MLDataPair assembleDataPair(Map<Integer, Map<String, Integer>> binCategoryMap, boolean noVarSel,
             ModelConfig modelConfig, List<ColumnConfig> columnConfigList, Map<String, ? extends Object> rawDataMap,
@@ -1304,14 +1456,14 @@ public final class CommonUtils {
                 || key.startsWith("hive") || key.startsWith("job");
     }
 
-    /*
+    /**
      * Assemble map data to Encog standard input format.
      * 
      * @throws NullPointerException
-     * if input is null
+     *             if input is null
      * 
      * @throws NumberFormatException
-     * if column value is not number format.
+     *             if column value is not number format.
      */
     public static MLDataPair assembleDataPair(ModelConfig modelConfig, List<ColumnConfig> columnConfigList,
             Map<String, ? extends Object> rawDataMap, double cutoff) {
@@ -1355,11 +1507,14 @@ public final class CommonUtils {
         return Math.round(d * expandingFactor);
     }
 
-    /*
+    /**
      * Return column name string with 'derived_' started
      * 
+     * @param columnConfigList
+     *            list of column config
+     * @return list of column names
      * @throws NullPointerException
-     * if modelConfig is null or columnConfigList is null.
+     *             if modelConfig is null or columnConfigList is null.
      */
     public static List<String> getDerivedColumnNames(List<ColumnConfig> columnConfigList) {
         List<String> derivedColumnNames = new ArrayList<String>();
@@ -1372,11 +1527,11 @@ public final class CommonUtils {
         return derivedColumnNames;
     }
 
-    /*
+    /**
      * Get the file separator regex
      * 
      * @return "/" - if the OS is Linux
-     * "\\\\" - if the OS is Windows
+     *         "\\\\" - if the OS is Windows
      */
     public static String getPathSeparatorRegx() {
         if(File.separator.equals(Constants.SLASH)) {
@@ -1386,13 +1541,18 @@ public final class CommonUtils {
         }
     }
 
-    /*
+    /**
      * Update target, listMeta, listForceSelect, listForceRemove
      * 
+     * @param modelConfig
+     *            model config list
+     * @param columnConfigList
+     *            the column config list
      * @throws IOException
+     *             any io exception
      * 
      * @throws IllegalArgumentException
-     * if modelConfig is null or columnConfigList is null.
+     *             if modelConfig is null or columnConfigList is null.
      */
     public static void updateColumnConfigFlags(ModelConfig modelConfig, List<ColumnConfig> columnConfigList)
             throws IOException {
@@ -1454,18 +1614,23 @@ public final class CommonUtils {
         }
     }
 
-    /*
+    /**
      * To check whether there is targetColumn in columns or not
+     * 
+     * @param columns
+     *            column array
+     * @param targetColumn
+     *            target column
      * 
      * @return true - if the columns contains targetColumn, or false
      */
-    public static boolean isColumnExists(String[] columns, String targetColunm) {
-        if(ArrayUtils.isEmpty(columns) || StringUtils.isBlank(targetColunm)) {
+    public static boolean isColumnExists(String[] columns, String targetColumn) {
+        if(ArrayUtils.isEmpty(columns) || StringUtils.isBlank(targetColumn)) {
             return false;
         }
 
         for(int i = 0; i < columns.length; i++) {
-            if(columns[i] != null && columns[i].equalsIgnoreCase(targetColunm)) {
+            if(columns[i] != null && columns[i].equalsIgnoreCase(targetColumn)) {
                 return true;
             }
         }
@@ -1473,19 +1638,19 @@ public final class CommonUtils {
         return false;
     }
 
-    /*
+    /**
      * Returns the element if it is in both collections.
      * - return null if any collection is null or empty
      * - return null if no element exists in both collections
      * 
      * @param leftCol
-     * - left collection
+     *            - left collection
      * 
      * @param rightCol
-     * - right collection
+     *            - right collection
      * 
      * @return First element that are found in both collections
-     * null if no elements in both collection or any collection is null or empty
+     *         null if no elements in both collection or any collection is null or empty
      */
     public static <T> T containsAny(Collection<T> leftCol, Collection<T> rightCol) {
         if(CollectionUtils.isEmpty(leftCol) || CollectionUtils.isEmpty(rightCol)) {
@@ -1503,12 +1668,11 @@ public final class CommonUtils {
         return null;
     }
 
-    /*
+    /**
      * Escape the delimiter for Pig.... Since the Pig doesn't support invisible character
      * 
      * @param delimiter
-     * - the original delimiter
-     * 
+     *            - the original delimiter
      * @return the delimiter after escape
      */
     public static String escapePigString(String delimiter) {
@@ -1563,9 +1727,6 @@ public final class CommonUtils {
         return columnNameList;
     }
 
-    /*
-     * Generate seat info for selected column in @columnConfigList
-     */
     public static Map<String, Integer> generateColumnSeatMap(List<ColumnConfig> columnConfigList) {
         List<ColumnConfig> selectedColumnList = new ArrayList<ColumnConfig>();
         for(ColumnConfig columnConfig: columnConfigList) {
@@ -1589,8 +1750,14 @@ public final class CommonUtils {
         return columnSeatMap;
     }
 
-    /*
+    /**
      * Find the @ColumnConfig according the column name
+     * 
+     * @param columnConfigList
+     *            list of column config
+     * @param columnName
+     *            the column name
+     * @return column config instance
      */
     public static ColumnConfig findColumnConfigByName(List<ColumnConfig> columnConfigList, String columnName) {
         for(ColumnConfig columnConfig: columnConfigList) {
@@ -1699,8 +1866,18 @@ public final class CommonUtils {
                         .isNumerical() && columnConfig.getBinBoundary() != null && columnConfig.getBinBoundary().size() > 1)));
     }
 
-    /*
+    /**
      * Return first line split string array. This is used to detect data schema.
+     * 
+     * @param dataSetRawPath
+     *            raw data path
+     * @param delimeter
+     *            the delimiter
+     * @param source
+     *            source type
+     * @return the first two lines
+     * @throws IOException
+     *             any io exception
      */
     public static String[] takeFirstLine(String dataSetRawPath, String delimeter, SourceType source) throws IOException {
         if(dataSetRawPath == null || delimeter == null || source == null) {
@@ -1754,9 +1931,20 @@ public final class CommonUtils {
         return new String[0];
     }
 
-    /*
-     * Return first two lines split string array. This is used to detect data schema and check if data schema is the
+    /**
+     * Return first two lines split string array. This is used to detect data schema and check if data
+     * schema is the
      * same as data.
+     * 
+     * @param dataSetRawPath
+     *            raw data path
+     * @param delimiter
+     *            the delimiter
+     * @param source
+     *            source type
+     * @return the first two lines
+     * @throws IOException
+     *             any io exception
      */
     public static String[][] takeFirstTwoLines(String dataSetRawPath, String delimiter, SourceType source)
             throws IOException {

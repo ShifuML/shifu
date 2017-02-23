@@ -220,7 +220,7 @@ public class Normalizer {
      * @param cutoff
      *            standard deviation cut off
      * @param type
-     *            normalization type. {@link ModelNormalizeConf.NormType}
+     *            normalization type of ModelNormalizeConf.NormType
      * @return normalized value. If normType parameter is invalid, then the ZSCALE will be used as default.
      */
     public static Double normalize(ColumnConfig config, String raw, Double cutoff, ModelNormalizeConf.NormType type) {

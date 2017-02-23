@@ -185,8 +185,8 @@ public class Scorer {
             } else if(model instanceof TreeModel) {
                 final TreeModel tm = (TreeModel) model;
                 if(tm.getInputCount() != pair.getInput().size()) {
-                    throw new RuntimeException("GBDT and input size mismatch: rf Size = " + tm.getInputCount()
-                            + "; Input Size = " + pair.getInput().size());
+                    throw new RuntimeException("GBDT and input size mismatch: tm input Size = " + tm.getInputCount()
+                            + "; data input Size = " + pair.getInput().size());
                 }
                 tasks.add(new Callable<MLData>() {
                     @Override
