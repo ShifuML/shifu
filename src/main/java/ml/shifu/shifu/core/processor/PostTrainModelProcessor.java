@@ -382,6 +382,7 @@ public class PostTrainModelProcessor extends BasicModelProcessor implements Proc
      * run pig post train
      * 
      * @throws IOException
+     *             for any io exception
      */
     @SuppressWarnings("unused")
     private void runPigPostTrain() throws IOException {
@@ -414,6 +415,7 @@ public class PostTrainModelProcessor extends BasicModelProcessor implements Proc
      * run akka post train
      * 
      * @throws IOException
+     *             for any io exception
      */
     private void runAkkaPostTrain() throws IOException {
         SourceType sourceType = modelConfig.getDataSet().getSource();
@@ -431,8 +433,10 @@ public class PostTrainModelProcessor extends BasicModelProcessor implements Proc
      * read the binary average score and update them into column list
      * 
      * @param columnConfigList
-     * @return
+     *            input column config list
+     * @return updated column config list
      * @throws IOException
+     *             for any io exception
      */
     private List<ColumnConfig> updateColumnConfigWithBinAvgScore(List<ColumnConfig> columnConfigList)
             throws IOException {

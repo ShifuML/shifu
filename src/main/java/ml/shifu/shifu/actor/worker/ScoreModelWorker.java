@@ -155,10 +155,6 @@ public class ScoreModelWorker extends AbstractWorkerActor {
         }
     }
 
-    /**
-     * @param resultMap2
-     * @return
-     */
     private boolean hasAllMessageResult(Map<Integer, StreamBulletin> resultMsgMap) {
         Iterator<Entry<Integer, StreamBulletin>> iterator = resultMsgMap.entrySet().iterator();
         while(iterator.hasNext()) {
@@ -174,6 +170,7 @@ public class ScoreModelWorker extends AbstractWorkerActor {
      * Write the file header for score file
      * 
      * @throws IOException
+     *             if any ip exception
      */
     private void writeScoreHeader() throws IOException {
         StringBuilder buf = new StringBuilder();

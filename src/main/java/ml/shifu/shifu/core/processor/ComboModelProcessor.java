@@ -161,8 +161,9 @@ public class ComboModelProcessor extends BasicModelProcessor implements Processo
      * Create folder for sub-models, and create related files for sub-models.
      * All settings in sub-model will use parent model as reference.
      * 
-     * @return
+     * @return 0 successful, otherwise failed
      * @throws IOException
+     *             any io exception
      */
     private int initComboModels() throws IOException {
         if(this.comboModelTrain == null) {
@@ -386,8 +387,9 @@ public class ComboModelProcessor extends BasicModelProcessor implements Processo
      * 2. Join the evaluation result data for assemble model;
      * 3. Run evaluation for assemble model
      * 
-     * @return
+     * @return 0 success, otherwise failed
      * @throws IOException
+     *             any io exception
      */
     private int evalComboModels() throws IOException {
         int status = 0;
@@ -520,7 +522,8 @@ public class ComboModelProcessor extends BasicModelProcessor implements Processo
      * @param subModelConfig
      *            - @ModelConfig for sub model
      * @param evalConfig
-     * @return
+     *            eval config
+     * @return eval data path
      */
     private String getEvalDataPath(ModelConfig subModelConfig, EvalConfig evalConfig) {
         PathFinder pathFinder = new PathFinder(subModelConfig);
@@ -538,8 +541,10 @@ public class ComboModelProcessor extends BasicModelProcessor implements Processo
      * get @EvalConfig from @ModelConfig by evalset name
      * 
      * @param mconfig
+     *            model config
      * @param name
-     * @return
+     *            eval name
+     * @return eval config instance
      */
     private EvalConfig getEvalConfigByName(ModelConfig mconfig, String name) {
         for(EvalConfig evalConfig: mconfig.getEvals()) {
@@ -554,8 +559,10 @@ public class ComboModelProcessor extends BasicModelProcessor implements Processo
      * Create train and eval task for sub-model
      * 
      * @param subModelName
+     *            sub model name
      * @param evalSetName
-     * @return
+     *            eval set name
+     * @return callable instance
      */
     private Callable<Integer> createTrainAndEvalTasks(final String subModelName, final String evalSetName)
             throws IOException {
@@ -632,8 +639,9 @@ public class ComboModelProcessor extends BasicModelProcessor implements Processo
      * 
      * @param evalName
      *            - the evalset to evaluate
-     * @return
+     * @return list of callable instance
      * @throws IOException
+     *             any io exception
      */
     private List<Callable<Integer>> createEvaluateTasks(final String evalName) throws IOException {
         List<Callable<Integer>> tasks = new ArrayList<Callable<Integer>>();
@@ -721,7 +729,7 @@ public class ComboModelProcessor extends BasicModelProcessor implements Processo
      * 
      * @param alg
      *            - the algorithm, see @ModelTrainConf.ALGORITHM
-     * @return
+     * @return train config instance
      */
     private VarTrainConf createVarTrainConf(ModelTrainConf.ALGORITHM alg) {
         VarTrainConf varTrainConf = new VarTrainConf();
@@ -735,7 +743,7 @@ public class ComboModelProcessor extends BasicModelProcessor implements Processo
      * 
      * @param alg
      *            - the algorithm, see @ModelTrainConf.ALGORITHM
-     * @return
+     * @return train config instance
      */
     private ModelTrainConf createModelTrainConf(ModelTrainConf.ALGORITHM alg) {
         ModelTrainConf trainConf = new ModelTrainConf();
@@ -764,7 +772,8 @@ public class ComboModelProcessor extends BasicModelProcessor implements Processo
      * Get evaluation output file format
      * 
      * @param runMode
-     * @return
+     *            run mode
+     * @return file type
      */
     private ColumnFile.FileType genEvalFileType(ModelBasicConf.RunMode runMode) {
         return (ModelBasicConf.RunMode.MAPRED.equals(runMode) ? ColumnFile.FileType.PIGSTORAGE
@@ -775,7 +784,8 @@ public class ComboModelProcessor extends BasicModelProcessor implements Processo
      * Append weight column, if not blank, with uid column as score meta data.
      * 
      * @param weightColumnName
-     * @return
+     *            weight column name
+     * @return eval meta vars
      */
     private String[] genEvalScoreMetaVars(String weightColumnName) {
         // if (StringUtils.isNotBlank(weightColumnName)) {
@@ -791,7 +801,8 @@ public class ComboModelProcessor extends BasicModelProcessor implements Processo
      * @param i
      *            - sequence to keep unique
      * @param varTrainConf
-     * @return
+     *            train config
+     * @return sub model name
      */
     private String genSubModelName(int i, VarTrainConf varTrainConf) {
         return this.modelConfig.getBasic().getName() + "_" + varTrainConf.getModelTrainConf().getAlgorithm() + "_" + i;
@@ -801,7 +812,8 @@ public class ComboModelProcessor extends BasicModelProcessor implements Processo
      * Generate assembel model name
      * 
      * @param modelName
-     * @return
+     *            model name
+     * @return assemble model bane
      */
     private String genAssembleModelName(String modelName) {
         return modelName + "_" + Constants.COMBO_ASSEMBLE;
@@ -810,7 +822,7 @@ public class ComboModelProcessor extends BasicModelProcessor implements Processo
     /**
      * Generate train data evaluation set name
      * 
-     * @return
+     * @return eval train name
      */
     private String genEvalTrainName() {
         return Constants.COMBO_EVAL_TRAIN;
@@ -820,7 +832,8 @@ public class ComboModelProcessor extends BasicModelProcessor implements Processo
      * Save ComboTrain.json into local directory
      * 
      * @param comboModelTrain
-     * @return
+     *            combo model train instance
+     * @return 0 success, otherwise failed
      */
     private int saveComboTrain(ComboModelTrain comboModelTrain) {
         try {
@@ -835,7 +848,7 @@ public class ComboModelProcessor extends BasicModelProcessor implements Processo
     /**
      * Load ComboModelTrain from ComboTrain.json
      * 
-     * @return
+     * @return combo model train instance, null if exception
      */
     private ComboModelTrain loadComboTrain() {
         try {
@@ -850,7 +863,8 @@ public class ComboModelProcessor extends BasicModelProcessor implements Processo
      * Clone @ColumnConfig list for sub-models
      * 
      * @param columnConfigList
-     * @return
+     *            column config list
+     * @return cloned column config list
      */
     private List<ColumnConfig> cloneColumnConfigs(List<ColumnConfig> columnConfigList) {
         List<ColumnConfig> columnConfigs = new ArrayList<ColumnConfig>();
@@ -866,7 +880,9 @@ public class ComboModelProcessor extends BasicModelProcessor implements Processo
      * @param folder
      *            - folder to host ModelConfig.json
      * @param modelConfig
+     *            model config instance
      * @throws IOException
+     *             any io exception
      */
     private void saveModelConfig(String folder, ModelConfig modelConfig) throws IOException {
         JSONUtils.writeValue(new File(folder + File.separator + Constants.MODEL_CONFIG_JSON_FILE_NAME), modelConfig);
@@ -878,7 +894,9 @@ public class ComboModelProcessor extends BasicModelProcessor implements Processo
      * @param folder
      *            - folder to host ColumnConfig.json
      * @param columnConfigs
+     *            column config list
      * @throws IOException
+     *             any io exception
      */
     private void saveColumnConfigList(String folder, List<ColumnConfig> columnConfigs) throws IOException {
         JSONUtils.writeValue(new File(folder + File.separator + Constants.COLUMN_CONFIG_JSON_FILE_NAME), columnConfigs);
@@ -909,11 +927,16 @@ public class ComboModelProcessor extends BasicModelProcessor implements Processo
      * and append new content.
      * 
      * @param subModelName
+     *            sub model name
      * @param namesPrefix
+     *            prefix of name
      * @param parentNamesFile
+     *            parent names of files
      * @param varNames
-     * @return
+     *            var names
+     * @return model file name
      * @throws IOException
+     *             any io exception
      */
     private String createModelNamesFile(String subModelName, String namesPrefix, String parentNamesFile,
             String... varNames) throws IOException {

@@ -85,8 +85,8 @@ import com.google.common.base.Splitter;
  * 
  * <p>
  * For GBDT, loaded data instances will also be changed for predict and label. Which means such data can only be stored
- * into memory. To store predict and label in GBDT, In {@link Data} predict and label are all set even with RF. Data are
- * stored as float types to save memory consumption.
+ * into memory. To store predict and label in GBDT, In Data predict and label are all set even with RF. Data are stored
+ * as float types to save memory consumption.
  * 
  * <p>
  * For GBDT, when a new tree is transferred to worker, data predict and label are all updated and such value can be
@@ -100,8 +100,8 @@ import com.google.common.base.Splitter;
  * If no weight, such value is set to 1.
  * 
  * <p>
- * Bin index is stored in each {@link Data} object as short to save memory, especially for categorical features, memory
- * is saved a lot.
+ * Bin index is stored in each Data object as short to save memory, especially for categorical features, memory is saved
+ * a lot.
  * 
  * @author Zhang David (pengzhang@paypal.com)
  */
