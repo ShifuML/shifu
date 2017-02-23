@@ -39,6 +39,7 @@ import ml.shifu.shifu.util.CommonUtils;
 import ml.shifu.shifu.util.Constants;
 import ml.shifu.shifu.util.Environment;
 
+import ml.shifu.shifu.util.updater.ColumnConfigUpdater;
 import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.collections.Predicate;
 import org.apache.commons.compress.compressors.bzip2.BZip2CompressorInputStream;
@@ -95,8 +96,7 @@ public class InitModelProcessor extends BasicModelProcessor implements Processor
                 return status;
             }
 
-            saveColumnConfigListAndColumnStats(false);
-
+            saveColumnConfigList();
             syncDataToHdfs(modelConfig.getDataSet().getSource());
 
             Map<Integer, Data> countInfoMap = null;
@@ -115,9 +115,9 @@ public class InitModelProcessor extends BasicModelProcessor implements Processor
                     log.info("Automatically check {} variables to categorical type.", cateCount);
                 }
             }
-            // save ColumnConfig list into file
-            saveColumnConfigListAndColumnStats(false);
 
+            // save ColumnConfig list into file
+            saveColumnConfigList();
             syncDataToHdfs(modelConfig.getDataSet().getSource());
 
             clearUp(ModelStep.INIT);
@@ -476,7 +476,7 @@ public class InitModelProcessor extends BasicModelProcessor implements Processor
             columnConfigList.add(config);
         }
 
-        CommonUtils.updateColumnConfigFlags(modelConfig, columnConfigList);
+        ColumnConfigUpdater.updateColumnConfigFlags(modelConfig, columnConfigList, ModelStep.INIT);
 
         boolean hasTarget = false;
         for(ColumnConfig config: columnConfigList) {

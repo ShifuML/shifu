@@ -36,6 +36,7 @@ import ml.shifu.shifu.core.correlation.CorrelationWritable;
 import ml.shifu.shifu.core.dtrain.nn.NNConstants;
 import ml.shifu.shifu.core.mr.input.CombineInputFormat;
 import ml.shifu.shifu.core.shuffle.DataShuffle;
+import ml.shifu.shifu.core.shuffle.MapReduceShuffle;
 import ml.shifu.shifu.core.validator.ModelInspector.ModelStep;
 import ml.shifu.shifu.exception.ShifuErrorCode;
 import ml.shifu.shifu.exception.ShifuException;
@@ -109,12 +110,13 @@ public class NormalizeModelProcessor extends BasicModelProcessor implements Proc
 
                     if(isCorrOn()) {
                         runCorrMapReduceJob();
-                        saveColumnConfigListAndColumnStats(false);
+                        saveColumnConfigList();
                     }
 
                     if(this.isToShuffleData) {
                         // shuffling normalized data, to make data random
-                        runMapReduceShuffleData();
+                        MapReduceShuffle shuffler = new MapReduceShuffle(this.modelConfig);
+                        shuffler.run(this.pathFinder.getNormalizedDataPath());
                     }
                     break;
                 case LOCAL:
@@ -439,86 +441,4 @@ public class NormalizeModelProcessor extends BasicModelProcessor implements Proc
         }
     }
 
-    private void runMapReduceShuffleData() throws IOException, ClassNotFoundException, InterruptedException {
-        SourceType source = this.modelConfig.getDataSet().getSource();
-        Configuration conf = new Configuration();
-
-        // add jars to hadoop mapper and reducer
-        new GenericOptionsParser(conf, new String[] { "-libjars", addRuntimeJars() });
-
-        conf.setBoolean(GuaguaMapReduceConstants.MAPRED_MAP_TASKS_SPECULATIVE_EXECUTION, true);
-        conf.setBoolean(GuaguaMapReduceConstants.MAPRED_REDUCE_TASKS_SPECULATIVE_EXECUTION, true);
-        conf.setBoolean(GuaguaMapReduceConstants.MAPREDUCE_MAP_SPECULATIVE, true);
-        conf.setBoolean(GuaguaMapReduceConstants.MAPREDUCE_REDUCE_SPECULATIVE, true);
-        conf.set(NNConstants.MAPRED_JOB_QUEUE_NAME, Environment.getProperty(Environment.HADOOP_JOB_QUEUE, "default"));
-        conf.setInt(GuaguaMapReduceConstants.MAPREDUCE_JOB_MAX_SPLIT_LOCATIONS, 100);
-
-        String hdpVersion = HDPUtils.getHdpVersionForHDP224();
-        if(StringUtils.isNotBlank(hdpVersion)) {
-            // for hdp 2.2.4, hdp.version should be set and configuration files should be add to container class path
-            conf.set("hdp.version", hdpVersion);
-            HDPUtils.addFileToClassPath(HDPUtils.findContainingFile("hdfs-site.xml"), conf);
-            HDPUtils.addFileToClassPath(HDPUtils.findContainingFile("core-site.xml"), conf);
-            HDPUtils.addFileToClassPath(HDPUtils.findContainingFile("mapred-site.xml"), conf);
-            HDPUtils.addFileToClassPath(HDPUtils.findContainingFile("yarn-site.xml"), conf);
-        }
-
-        // one can set guagua conf in shifuconfig
-        for(Map.Entry<Object, Object> entry: Environment.getProperties().entrySet()) {
-            if(CommonUtils.isHadoopConfigurationInjected(entry.getKey().toString())) {
-                conf.set(entry.getKey().toString(), entry.getValue().toString());
-            }
-        }
-
-        int shuffleSize = getDataShuffleSize(source);
-        log.info("Try to shuffle data into - {} parts.", shuffleSize);
-        conf.set(Constants.SHIFU_NORM_SHUFFLE_SIZE, Integer.toString(shuffleSize));
-
-        Job job = Job.getInstance(conf, "Shifu: Shuffling normalized data - " + this.modelConfig.getModelSetName());
-        job.setJarByClass(getClass());
-        job.setMapperClass(DataShuffle.ShuffleMapper.class);
-
-        job.setMapOutputKeyClass(IntWritable.class);
-        job.setMapOutputValueClass(Text.class);
-
-        job.setPartitionerClass(DataShuffle.KvalPartitioner.class);
-
-        job.setReducerClass(DataShuffle.ShuffleReducer.class);
-        job.setOutputKeyClass(NullWritable.class);
-        job.setOutputValueClass(Text.class);
-        job.setNumReduceTasks(shuffleSize);
-
-        FileInputFormat.setInputPaths(job, this.pathFinder.getNormalizedDataPath());
-        FileOutputFormat.setOutputPath(job, new Path(this.pathFinder.getShuffleDataPath()));
-
-        // clean output firstly
-        ShifuFileUtils.deleteFile(this.pathFinder.getShuffleDataPath(), source);
-
-        // submit job
-        if(job.waitForCompletion(true)) {
-            ShifuFileUtils.copy(this.pathFinder.getShuffleDataPath(), this.pathFinder.getNormalizedDataPath(), source);
-        } else {
-            throw new RuntimeException("MapReduce Correlation Computing Job failed.");
-        }
-    }
-
-    private int getDataShuffleSize(SourceType sourceType) throws IOException {
-        // if user set fixed data shuffle size, then use it
-        Integer fsize = Environment.getInt(Constants.SHIFU_NORM_SHUFFLE_SIZE);
-        if(fsize != null) {
-            return fsize;
-        }
-
-        // calculate data shuffle size based on user's prefer
-        Long preferPartSize = Environment.getLong(Constants.SHIFU_NORM_PREFER_PART_SIZE);
-        Long actualFileSize = ShifuFileUtils
-                .getFileOrDirectorySize(this.pathFinder.getNormalizedDataPath(), sourceType);
-
-        if(preferPartSize != null && actualFileSize != null && preferPartSize != 0) {
-            int dataShuffleSize = (int) (actualFileSize / preferPartSize);
-            return ((actualFileSize % preferPartSize == 0) ? dataShuffleSize : (dataShuffleSize + 1));
-        } else {
-            return ShifuFileUtils.getFilePartCount(this.pathFinder.getNormalizedDataPath(), sourceType);
-        }
-    }
 }

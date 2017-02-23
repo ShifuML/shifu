@@ -196,7 +196,7 @@ public class ShifuCLITest {
         ShifuCLI.normalizeTrainData();
 
         // run train
-        ShifuCLI.trainModel(false, false);
+        ShifuCLI.trainModel(false, false, false);
 
         File modelFile = new File("models/model0.nn");
         Assert.assertTrue(modelFile.exists());
