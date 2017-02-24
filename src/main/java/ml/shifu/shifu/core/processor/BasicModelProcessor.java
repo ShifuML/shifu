@@ -42,6 +42,7 @@ import ml.shifu.shifu.util.Constants;
 import ml.shifu.shifu.util.Environment;
 import ml.shifu.shifu.util.JSONUtils;
 
+import ml.shifu.shifu.util.updater.ColumnConfigUpdater;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
@@ -108,6 +109,10 @@ public class BasicModelProcessor {
             default:
                 loadColumnConfig();
                 validateColumnConfig();
+
+                // update ColumnConfig and save to disk
+                ColumnConfigUpdater.updateColumnConfigFlags(modelConfig, columnConfigList, step);
+                saveColumnConfigList();
                 break;
         }
     }
@@ -167,13 +172,10 @@ public class BasicModelProcessor {
 
     /**
      * save the Column Config
-     * 
-     * @param columnStats
-     *            if saev column status
      * @throws IOException
-     *             an exception in saving column config
+     *      an exception in saving column config
      */
-    public void saveColumnConfigListAndColumnStats(boolean columnStats) throws IOException {
+    public void saveColumnConfigList() throws IOException {
         log.info("Saving ColumnConfig...");
         JSONUtils.writeValue(new File(pathFinder.getColumnConfigPath(SourceType.LOCAL)), columnConfigList);
     }

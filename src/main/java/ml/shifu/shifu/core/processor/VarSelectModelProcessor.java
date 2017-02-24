@@ -51,6 +51,7 @@ import ml.shifu.shifu.util.CommonUtils;
 import ml.shifu.shifu.util.Constants;
 import ml.shifu.shifu.util.Environment;
 
+import ml.shifu.shifu.util.updater.ColumnConfigUpdater;
 import org.apache.commons.collections.ListUtils;
 import org.apache.commons.compress.compressors.bzip2.BZip2CompressorInputStream;
 import org.apache.commons.jexl2.JexlException;
@@ -96,6 +97,7 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
     private final static Logger log = LoggerFactory.getLogger(VarSelectModelProcessor.class);
 
     private boolean isToReset = false;
+    private boolean isToList = false;
 
     public VarSelectModelProcessor() {
         // default constructor
@@ -121,6 +123,10 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
         }
     }
 
+    public void setToList(boolean toList) {
+        isToList = toList;
+    }
+
     /**
      * Run for the variable selection
      */
@@ -132,9 +138,17 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
             setUp(ModelStep.VARSELECT);
             validateParameters();
             // reset all selections if user specify or select by absolute number
-            if(isToReset) {
+            if (isToReset) {
                 log.info("Reset all selections data including type final select etc!");
                 resetAllFinalSelect();
+            } else if (isToList) {
+                log.info("Below variables are selected - ");
+                for ( ColumnConfig columnConfig : this.columnConfigList ) {
+                    if ( columnConfig.isFinalSelect() ) {
+                        log.info(columnConfig.getColumnName());
+                    }
+                }
+                log.info("-----  Done -----");
             } else {
                 // sync to make sure load from hdfs config is consistent with local configuration
                 syncDataToHdfs(super.modelConfig.getDataSet().getSource());
@@ -146,7 +160,6 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
                             || filterBy.equalsIgnoreCase(Constants.FILTER_BY_IV)
                             || filterBy.equalsIgnoreCase(Constants.FILTER_BY_PARETO)
                             || filterBy.equalsIgnoreCase(Constants.FILTER_BY_MIX)) {
-                        CommonUtils.updateColumnConfigFlags(modelConfig, columnConfigList);
                         this.columnConfigList = selector.selectByFilter();
                     } else if(filterBy.equalsIgnoreCase(Constants.FILTER_BY_FI)) {
                         if(!CommonUtils.isDesicionTreeAlgorithm(modelConfig.getAlgorithm())) {
@@ -212,7 +225,7 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
         }
 
         try {
-            CommonUtils.updateColumnConfigFlags(this.modelConfig, this.columnConfigList);
+            ColumnConfigUpdater.updateColumnConfigFlags(this.modelConfig, this.columnConfigList, ModelStep.VARSELECT);
         } catch (IOException e) {
             log.error("Fail to update ColumnConfig.json flags.", e);
         }
@@ -310,7 +323,7 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
                 this.columnConfigList.get(id).setFinalSelect(Boolean.TRUE);
             }
 
-            super.saveColumnConfigListAndColumnStats(false);
+            super.saveColumnConfigList();
 
         } catch (IOException e) {
             e.printStackTrace();
@@ -733,7 +746,7 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
             autoVarSelCondition();
         }
         try {
-            this.saveColumnConfigListAndColumnStats(true);
+            this.saveColumnConfigList();
         } catch (Exception e) {
             throw new ShifuException(ShifuErrorCode.ERROR_WRITE_COLCONFIG, e);
         }
