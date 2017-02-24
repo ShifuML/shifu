@@ -1595,7 +1595,6 @@ public final class CommonUtils {
 
             if(targetColumnName.equals(varName)) {
                 config.setColumnFlag(ColumnFlag.Target);
-                config.setColumnType(null);
             } else if(setMeta.contains(varName)) {
                 config.setColumnFlag(ColumnFlag.Meta);
                 config.setColumnType(null);
@@ -1605,8 +1604,10 @@ public final class CommonUtils {
                 config.setColumnFlag(ColumnFlag.ForceSelect);
             }
 
-            // variable type is not related with variable flag
-            if(setCategorialColumns.contains(varName)) {
+            if(targetColumnName.equals(varName)) {
+                // target column is set to categorical column
+                config.setColumnType(ColumnType.C);
+            } else if(setCategorialColumns.contains(varName)) {
                 config.setColumnType(ColumnType.C);
             } else {
                 config.setColumnType(ColumnType.N);
