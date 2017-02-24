@@ -160,10 +160,6 @@ public final class CommonUtils {
                 hdfs.copyFromLocalFile(new Path(evalConfig.getScoreMetaColumnNameFile()),
                         new Path(pathFinder.getEvalSetPath(evalConfig)));
             }
-            if(StringUtils.isNotBlank(evalConfig.getDataSet().getMetaColumnNameFile())) {
-                hdfs.copyFromLocalFile(new Path(evalConfig.getDataSet().getMetaColumnNameFile()),
-                        new Path(pathFinder.getEvalSetPath(evalConfig)));
-            }
         }
     }
 

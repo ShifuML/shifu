@@ -137,31 +137,11 @@ public class EvalConfig {
                     PathFinder pathFinder = new PathFinder(modelConfig);
                     List<String> scoreMetaColumns = null;
                     if(StringUtils.isNotBlank(scoreMetaColumnNameFile) && SourceType.HDFS.equals(dataSet.getSource())) {
-                        String path = scoreMetaColumnNameFile;
                         File file = new File(scoreMetaColumnNameFile);
-                        path = new Path(pathFinder.getEvalSetPath(this), file.getName()).toString();
+                        String path = new Path(pathFinder.getEvalSetPath(this), file.getName()).toString();
                         scoreMetaColumns = CommonUtils.readConfFileIntoList(path, dataSet.getSource(),
                                 dataSet.getHeaderDelimiter());
                         metaColumns = scoreMetaColumns;
-                    }
-
-                    if(StringUtils.isNotBlank(dataSet.getMetaColumnNameFile())) {
-                        String rawMetaPath = dataSet.getMetaColumnNameFile();
-                        if(StringUtils.isNotBlank(rawMetaPath) && SourceType.HDFS.equals(dataSet.getSource())) {
-                            File file = new File(rawMetaPath);
-                            rawMetaPath = new Path(pathFinder.getEvalSetPath(this), file.getName()).toString();
-                        }
-                        List<String> rawMetaColumns = CommonUtils.readConfFileIntoList(rawMetaPath,
-                                dataSet.getSource(), dataSet.getHeaderDelimiter());
-                        if(metaColumns != null) {
-                            for(String column: rawMetaColumns) {
-                                if(!metaColumns.contains(column)) {
-                                    metaColumns.add(column);
-                                }
-                            }
-                        } else {
-                            metaColumns = rawMetaColumns;
-                        }
                     }
                 }
             }
