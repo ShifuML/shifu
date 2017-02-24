@@ -32,7 +32,6 @@ import ml.shifu.shifu.container.obj.ModelStatsConf.BinningAlgorithm;
 import ml.shifu.shifu.container.obj.ModelStatsConf.BinningMethod;
 import ml.shifu.shifu.container.obj.ModelTrainConf.ALGORITHM;
 import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
-import ml.shifu.shifu.core.processor.VarSelectModelProcessor;
 import ml.shifu.shifu.fs.ShifuFileUtils;
 import ml.shifu.shifu.util.CommonUtils;
 import ml.shifu.shifu.util.Constants;
@@ -55,7 +54,7 @@ import com.google.common.collect.Lists;
 public class ModelConfig {
 
     @JsonIgnore
-    private final static Logger LOG = LoggerFactory.getLogger(VarSelectModelProcessor.class);
+    private final static Logger LOG = LoggerFactory.getLogger(ModelConfig.class);
 
     private ModelBasicConf basic = new ModelBasicConf();
 
