@@ -142,6 +142,9 @@ public final class CommonUtils {
 
     /**
      * Sync-up the evalulation data into HDFS
+     * @param modelConfig - ModelConfig
+     * @param evalName eval name in ModelConfig
+     * @throws IOException - error occur when copying data
      */
     @SuppressWarnings("deprecation")
     public static void copyEvalDataFromLocalToHDFS(ModelConfig modelConfig, String evalName) throws IOException {
@@ -161,10 +164,6 @@ public final class CommonUtils {
 
             if(StringUtils.isNotBlank(evalConfig.getScoreMetaColumnNameFile())) {
                 hdfs.copyFromLocalFile(new Path(evalConfig.getScoreMetaColumnNameFile()),
-                        new Path(pathFinder.getEvalSetPath(evalConfig)));
-            }
-            if(StringUtils.isNotBlank(evalConfig.getDataSet().getMetaColumnNameFile())) {
-                hdfs.copyFromLocalFile(new Path(evalConfig.getDataSet().getMetaColumnNameFile()),
                         new Path(pathFinder.getEvalSetPath(evalConfig)));
             }
         }
@@ -245,6 +244,8 @@ public final class CommonUtils {
      *            source type: hdfs or local
      * @param clazz
      *            class of instance
+     * @param <T>
+     *            class type to load
      * @return instance from json file
      * @throws IOException
      *             if any IO exception in parsing json.
@@ -601,6 +602,7 @@ public final class CommonUtils {
      * 
      * @param columnConfigList
      *            column config list
+     * @return target column index
      * @throws IllegalArgumentException
      *             if columnConfigList is null or empty.
      * 
@@ -628,6 +630,7 @@ public final class CommonUtils {
      * Load basic models from files.
      * 
      * @param modelConfig
+     *            ModelConfig
      * @param columnConfigList
      *            column config list
      * @param evalConfig
@@ -801,9 +804,6 @@ public final class CommonUtils {
      * 
      * @throws IOException
      *             if loading file for any IOException
-     * 
-     * @throws GuaguaRuntimeException
-     *             if any exception to load model object and cast to BasicNetwork
      */
     public static BasicML loadModel(ModelConfig modelConfig, List<ColumnConfig> columnConfigList, Path modelPath,
             FileSystem fs, boolean gbtConvertToProb) throws IOException {
@@ -1096,12 +1096,10 @@ public final class CommonUtils {
     /**
      * Return one HashMap Object contains keys in the first parameter, values in the second parameter. Before calling
      * this method, you should be aware that headers should be unique.
-     * 
-     * @throws IllegalArgumentException
-     *             if lengths of two arrays are not the same.
-     * 
-     * @throws NullPointerException
-     *             if header or data is null.
+     *
+     * @param header - header that contains column name
+     * @param data - raw data
+     * @return key-value map for variable
      */
     public static Map<String, String> getRawDataMap(String[] header, String[] data) {
         if(header.length != data.length) {
@@ -1458,12 +1456,17 @@ public final class CommonUtils {
 
     /**
      * Assemble map data to Encog standard input format.
-     * 
-     * @throws NullPointerException
-     *             if input is null
-     * 
-     * @throws NumberFormatException
-     *             if column value is not number format.
+     *
+     * @param modelConfig
+     *          - ModelConfig
+     * @param columnConfigList
+     *          - ColumnConfig list
+     * @param rawDataMap
+     *          - raw input key-value map
+     * @param cutoff
+     *          - cutoff value when normalization
+     * @return
+     *          - input data pair for neural network
      */
     public static MLDataPair assembleDataPair(ModelConfig modelConfig, List<ColumnConfig> columnConfigList,
             Map<String, ? extends Object> rawDataMap, double cutoff) {
@@ -1649,7 +1652,8 @@ public final class CommonUtils {
      * 
      * @param rightCol
      *            - right collection
-     * 
+     * @param <T>
+     *            - collection type
      * @return First element that are found in both collections
      *         null if no elements in both collection or any collection is null or empty
      */
