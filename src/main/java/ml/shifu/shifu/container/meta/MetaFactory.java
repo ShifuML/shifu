@@ -141,6 +141,10 @@ public class MetaFactory {
         Field[] fields = cls.getDeclaredFields();
 
         for(Field field: fields) {
+            // skip log instance
+            if(field.getName().equalsIgnoreCase("log") || field.getName().equalsIgnoreCase("logger")) {
+                continue;
+            }
             if(!field.isSynthetic()) {
                 Method method = cls.getMethod("get" + getMethodName(field.getName()));
                 Object value = method.invoke(modelConfig);

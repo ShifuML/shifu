@@ -324,11 +324,9 @@ public class NormalizeModelProcessor extends BasicModelProcessor implements Proc
                 || super.modelConfig.getNormalize().getNormType() == NormType.ZSCORE
                 || super.modelConfig.getNormalize().getNormType() == NormType.OLD_ZSCALE
                 || super.modelConfig.getNormalize().getNormType() == NormType.OLD_ZSCORE;
-        return super.modelConfig.isMapReduceRunMode()
-        // Only set correlation for not none
-                && !(super.modelConfig.getNormalize().getCorrelation() == Correlation.None)
-                // only works in zscore (numerical variables) and bad rate (categorical variables)
-                && isZScore;
+        // NormPearson only works with zscore, while pearson works for all norm mode
+        return (super.modelConfig.isMapReduceRunMode() && isZScore && super.modelConfig.getNormalize().getCorrelation() == Correlation.NormPearson)
+                || (super.modelConfig.isMapReduceRunMode() && super.modelConfig.getNormalize().getCorrelation() == Correlation.Pearson);
     }
 
     /**

@@ -116,35 +116,34 @@ public class AddColumnNumUDF extends AbstractTrainerUDF<DataBag> {
         }
 
         for(int i = 0; i < size; i++) {
-            ColumnConfig config = columnConfigList.get(i);
-            if(config.isCandidate()) {
-                Tuple tuple = tupleFactory.newTuple(TOTAL_COLUMN_CNT);
-                tuple.set(COLUMN_ID_INDX, i);
+            // if(config.isCandidate()) {
+            Tuple tuple = tupleFactory.newTuple(TOTAL_COLUMN_CNT);
+            tuple.set(COLUMN_ID_INDX, i);
 
-                // Set Data
-                tuple.set(COLUMN_VAL_INDX, input.get(i) == null ? null : input.get(i).toString());
+            // Set Data
+            tuple.set(COLUMN_VAL_INDX, input.get(i) == null ? null : input.get(i).toString());
 
-                if(modelConfig.isRegression()) {
-                    // Set Tag
-                    if(super.posTagSet.contains(tag)) {
-                        tuple.set(COLUMN_TAG_INDX, true);
-                    }
-
-                    if(super.negTagSet.contains(tag)) {
-                        tuple.set(COLUMN_TAG_INDX, false);
-                    }
-                } else {
-                    // a mock for multiple classification
+            if(modelConfig.isRegression()) {
+                // Set Tag
+                if(super.posTagSet.contains(tag)) {
                     tuple.set(COLUMN_TAG_INDX, true);
                 }
 
-                // add random seed for distribution
-                tuple.set(COLUMN_SEED_INDX, Math.abs(random.nextInt() % 300));
-
-                // get weight value
-                tuple.set(COLUMN_WEIGHT_INDX, getWeightColumnVal(input));
-                bag.add(tuple);
+                if(super.negTagSet.contains(tag)) {
+                    tuple.set(COLUMN_TAG_INDX, false);
+                }
+            } else {
+                // a mock for multiple classification
+                tuple.set(COLUMN_TAG_INDX, true);
             }
+
+            // add random seed for distribution
+            tuple.set(COLUMN_SEED_INDX, Math.abs(random.nextInt() % 300));
+
+            // get weight value
+            tuple.set(COLUMN_WEIGHT_INDX, getWeightColumnVal(input));
+            bag.add(tuple);
+            // }
         }
 
         return bag;
@@ -156,6 +155,13 @@ public class AddColumnNumUDF extends AbstractTrainerUDF<DataBag> {
         if(this.weightColumnId != INVALID_INDEX) {
             try {
                 weight = Double.parseDouble(input.get(this.weightColumnId).toString());
+                if(weight < 0d) {
+                    LOG.warn("weight column is less than 0.");
+                    if(isPigEnabled(Constants.SHIFU_GROUP_COUNTER, "INVALID_WEIGHT_RECORDS")) {
+                        PigStatusReporter.getInstance()
+                                .getCounter(Constants.SHIFU_GROUP_COUNTER, "INVALID_WEIGHT_RECORDS").increment(1);
+                    }
+                }
             } catch (Exception e) {
                 LOG.warn("weight column is not numerical or null.");
                 if(isPigEnabled(Constants.SHIFU_GROUP_COUNTER, "INVALID_WEIGHT_RECORDS")) {

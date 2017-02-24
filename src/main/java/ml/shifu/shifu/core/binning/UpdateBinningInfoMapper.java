@@ -322,6 +322,14 @@ public class UpdateBinningInfoMapper extends Mapper<LongWritable, Text, IntWrita
         Double weight = 1.0;
         try {
             weight = (this.weightedColumnNum == -1 ? 1.0d : Double.valueOf(units[this.weightedColumnNum]));
+            if(weight < 0) {
+                weightExceptions += 1;
+                context.getCounter(Constants.SHIFU_GROUP_COUNTER, "WEIGHT_EXCEPTION").increment(1L);
+                if(weightExceptions > 5000 && this.isThrowforWeightException) {
+                    throw new IllegalStateException(
+                            "Please check weight column in eval, exceptional weight count is over 5000");
+                }
+            }
         } catch (Exception e) {
             weightExceptions += 1;
             context.getCounter(Constants.SHIFU_GROUP_COUNTER, "WEIGHT_EXCEPTION").increment(1L);
@@ -345,9 +353,10 @@ public class UpdateBinningInfoMapper extends Mapper<LongWritable, Text, IntWrita
             }
             countAndFrequentItems.offer(this.missingOrInvalidValues, units[i]);
 
-            if(columnConfig.isMeta() || columnConfig.isTarget()) {
-                continue;
-            }
+            // meta and target is not skipped, commeted out
+            // if(columnConfig.isMeta() || columnConfig.isTarget()) {
+            // continue;
+            // }
 
             isMissingValue = false;
             isInvalidValue = false;

@@ -426,7 +426,7 @@ public class EvalScoreUDF extends AbstractTrainerUDF<Tuple> {
                 }
             }
 
-            List<String> metaColumns = evalConfig.getScoreMetaColumns(modelConfig);
+            List<String> metaColumns = evalConfig.getAllMetaColumns(modelConfig);
             if(CollectionUtils.isNotEmpty(metaColumns)) {
                 for(String columnName: metaColumns) {
                     tupleSchema.add(new FieldSchema(columnName, DataType.CHARARRAY));
