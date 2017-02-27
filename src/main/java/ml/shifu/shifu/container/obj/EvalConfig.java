@@ -15,22 +15,18 @@
  */
 package ml.shifu.shifu.container.obj;
 
-import java.io.File;
-import java.io.IOException;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-
-import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import ml.shifu.shifu.fs.PathFinder;
 import ml.shifu.shifu.util.CommonUtils;
 import ml.shifu.shifu.util.Constants;
-
 import org.apache.commons.lang.StringUtils;
-import org.apache.hadoop.fs.Path;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
-import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 /**
  * EvalConfig class
@@ -113,15 +109,14 @@ public class EvalConfig {
     @JsonIgnore
     public List<String> getScoreMetaColumns(ModelConfig modelConfig) throws IOException {
         if(scoreMetaColumns == null) {
-            synchronized(this) {
-                if(scoreMetaColumns == null) {
+            synchronized (this) {
+                if (scoreMetaColumns == null) {
                     PathFinder pathFinder = new PathFinder(modelConfig);
-                    if(StringUtils.isNotBlank(scoreMetaColumnNameFile) && SourceType.HDFS.equals(dataSet.getSource())) {
-                        String path = scoreMetaColumnNameFile;
-                        File file = new File(scoreMetaColumnNameFile);
-                        path = new Path(pathFinder.getEvalSetPath(this), file.getName()).toString();
-                        scoreMetaColumns = CommonUtils.readConfFileIntoList(path, dataSet.getSource(),
-                                dataSet.getHeaderDelimiter());
+                    if ( StringUtils.isNotBlank(scoreMetaColumnNameFile) ) {
+                        String delimiter = StringUtils.isBlank(dataSet.getHeaderDelimiter())
+                                ? dataSet.getDataDelimiter() : dataSet.getHeaderDelimiter();
+                        String path = pathFinder.getEvalFilePath(this.name, scoreMetaColumnNameFile, dataSet.getSource());
+                        scoreMetaColumns = CommonUtils.readConfFileIntoList(path, dataSet.getSource(), delimiter);
                     }
                 }
             }
@@ -135,13 +130,25 @@ public class EvalConfig {
             synchronized(this) {
                 if(metaColumns == null) {
                     PathFinder pathFinder = new PathFinder(modelConfig);
-                    List<String> scoreMetaColumns = null;
-                    if(StringUtils.isNotBlank(scoreMetaColumnNameFile) && SourceType.HDFS.equals(dataSet.getSource())) {
-                        File file = new File(scoreMetaColumnNameFile);
-                        String path = new Path(pathFinder.getEvalSetPath(this), file.getName()).toString();
-                        scoreMetaColumns = CommonUtils.readConfFileIntoList(path, dataSet.getSource(),
-                                dataSet.getHeaderDelimiter());
-                        metaColumns = scoreMetaColumns;
+                    List<String> scoreMetaColumns = getScoreMetaColumns(modelConfig);
+                    if ( scoreMetaColumns != null ) {
+                        this.metaColumns = new ArrayList<String>(scoreMetaColumns);
+                    }
+
+                    if(StringUtils.isNotBlank(dataSet.getMetaColumnNameFile())) {
+                        String delimiter = StringUtils.isBlank(dataSet.getHeaderDelimiter())
+                                ? dataSet.getDataDelimiter() : dataSet.getHeaderDelimiter();
+                        String path = pathFinder.getEvalFilePath(this.name, dataSet.getMetaColumnNameFile(), dataSet.getSource());
+                        List<String> rawMetaColumns = CommonUtils.readConfFileIntoList(path, dataSet.getSource(), delimiter);
+                        if(metaColumns != null) {
+                            for(String column: rawMetaColumns) {
+                                if(!metaColumns.contains(column)) {
+                                    metaColumns.add(column);
+                                }
+                            }
+                        } else {
+                            metaColumns = rawMetaColumns;
+                        }
                     }
                 }
             }
