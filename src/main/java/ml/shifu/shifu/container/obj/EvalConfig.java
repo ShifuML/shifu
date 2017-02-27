@@ -116,19 +116,12 @@ public class EvalConfig {
             synchronized(this) {
                 if(scoreMetaColumns == null) {
                     PathFinder pathFinder = new PathFinder(modelConfig);
-                    String delimiter = StringUtils.isBlank(dataSet.getHeaderDelimiter()) ? dataSet.getDataDelimiter()
-                            : dataSet.getHeaderDelimiter();
-                    // TODO if scoreMetaColumnNameFile is not set, default meta column should be used
                     if(StringUtils.isNotBlank(scoreMetaColumnNameFile) && SourceType.HDFS.equals(dataSet.getSource())) {
                         String path = scoreMetaColumnNameFile;
                         File file = new File(scoreMetaColumnNameFile);
                         path = new Path(pathFinder.getEvalSetPath(this), file.getName()).toString();
-                        scoreMetaColumns = CommonUtils.readConfFileIntoList(path, dataSet.getSource(), delimiter);
-                    } else if(StringUtils.isNotBlank(scoreMetaColumnNameFile)
-                            && SourceType.LOCAL.equals(dataSet.getSource())) {
-                        // local mode, direct read
-                        scoreMetaColumns = CommonUtils.readConfFileIntoList(scoreMetaColumnNameFile,
-                                dataSet.getSource(), delimiter);
+                        scoreMetaColumns = CommonUtils.readConfFileIntoList(path, dataSet.getSource(),
+                                dataSet.getHeaderDelimiter());
                     }
                 }
             }
@@ -143,44 +136,12 @@ public class EvalConfig {
                 if(metaColumns == null) {
                     PathFinder pathFinder = new PathFinder(modelConfig);
                     List<String> scoreMetaColumns = null;
-                    String delimiter = StringUtils.isBlank(dataSet.getHeaderDelimiter()) ? dataSet.getDataDelimiter()
-                            : dataSet.getHeaderDelimiter();
-                    // TODO if scoreMetaColumnNameFile is not set, default meta column should be used
                     if(StringUtils.isNotBlank(scoreMetaColumnNameFile) && SourceType.HDFS.equals(dataSet.getSource())) {
-                        String path = scoreMetaColumnNameFile;
                         File file = new File(scoreMetaColumnNameFile);
-                        path = new Path(pathFinder.getEvalSetPath(this), file.getName()).toString();
-                        scoreMetaColumns = CommonUtils.readConfFileIntoList(path, dataSet.getSource(), delimiter);
+                        String path = new Path(pathFinder.getEvalSetPath(this), file.getName()).toString();
+                        scoreMetaColumns = CommonUtils.readConfFileIntoList(path, dataSet.getSource(),
+                                dataSet.getHeaderDelimiter());
                         metaColumns = scoreMetaColumns;
-                    } else if(StringUtils.isNotBlank(scoreMetaColumnNameFile)
-                            && SourceType.LOCAL.equals(dataSet.getSource())) {
-                        // local mode, direct read
-                        scoreMetaColumns = CommonUtils.readConfFileIntoList(scoreMetaColumnNameFile,
-                                dataSet.getSource(), delimiter);
-                        metaColumns = scoreMetaColumns;
-                    }
-
-                    if(StringUtils.isNotBlank(dataSet.getMetaColumnNameFile())) {
-                        String rawMetaPath = dataSet.getMetaColumnNameFile();
-                        List<String> rawMetaColumns = null;
-                        if(StringUtils.isNotBlank(rawMetaPath) && SourceType.HDFS.equals(dataSet.getSource())) {
-                            File file = new File(rawMetaPath);
-                            rawMetaPath = new Path(pathFinder.getEvalSetPath(this), file.getName()).toString();
-                            rawMetaColumns = CommonUtils.readConfFileIntoList(rawMetaPath, dataSet.getSource(),
-                                    delimiter);
-                        } else if(StringUtils.isNotBlank(rawMetaPath) && SourceType.LOCAL.equals(dataSet.getSource())) {
-                            rawMetaColumns = CommonUtils.readConfFileIntoList(rawMetaPath, dataSet.getSource(),
-                                    delimiter);
-                        }
-                        if(metaColumns != null) {
-                            for(String column: rawMetaColumns) {
-                                if(!metaColumns.contains(column)) {
-                                    metaColumns.add(column);
-                                }
-                            }
-                        } else {
-                            metaColumns = rawMetaColumns;
-                        }
                     }
                 }
             }

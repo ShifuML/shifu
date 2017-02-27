@@ -68,7 +68,7 @@ public class AddColumnNumUDFTest {
         tuple.set(0, "M");
 
         DataBag dataBag = instance.exec(tuple);
-        Assert.assertEquals(30, dataBag.size());
+        Assert.assertEquals(31, dataBag.size());
 
         Assert.assertEquals(dataBag.iterator().next().size(), 5);
     }
