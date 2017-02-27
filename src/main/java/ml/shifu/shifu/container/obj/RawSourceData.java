@@ -71,6 +71,8 @@ public class RawSourceData implements Cloneable {
      */
     private Integer autoTypeThreshold = 0;
 
+    private String metaColumnNameFile;
+
     /**
      * @return the autoTypeThreshold
      */
@@ -188,6 +190,15 @@ public class RawSourceData implements Cloneable {
         }
     }
 
+    public String getMetaColumnNameFile() {
+        return metaColumnNameFile;
+    }
+
+    public void setMetaColumnNameFile(String metaColumnNameFile) {
+        this.metaColumnNameFile = metaColumnNameFile;
+    }
+
+
     @Override
     public RawSourceData clone() {
         RawSourceData copy = new RawSourceData();
@@ -204,6 +215,8 @@ public class RawSourceData implements Cloneable {
         copy.setPosTags(new ArrayList<String>(posTags));
         copy.setNegTags(new ArrayList<String>(negTags));
         copy.setMissingOrInvalidValues(missingOrInvalidValues);
+        copy.setMetaColumnNameFile(metaColumnNameFile);
+
         return copy;
     }
 

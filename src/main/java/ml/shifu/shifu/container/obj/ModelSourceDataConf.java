@@ -25,17 +25,7 @@ import java.util.ArrayList;
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class ModelSourceDataConf extends RawSourceData {
 
-    private String metaColumnNameFile;
-
     private String categoricalColumnNameFile;
-
-    public String getMetaColumnNameFile() {
-        return metaColumnNameFile;
-    }
-
-    public void setMetaColumnNameFile(String metaColumnNameFile) {
-        this.metaColumnNameFile = metaColumnNameFile;
-    }
 
     public String getCategoricalColumnNameFile() {
         return categoricalColumnNameFile;
@@ -68,7 +58,8 @@ public class ModelSourceDataConf extends RawSourceData {
         other.setMissingOrInvalidValues(this.getMissingOrInvalidValues());
 
         other.setCategoricalColumnNameFile(categoricalColumnNameFile);
-        other.setMetaColumnNameFile(metaColumnNameFile);
+        other.setMetaColumnNameFile(this.getMetaColumnNameFile());
+
         return other;
     }
 }
