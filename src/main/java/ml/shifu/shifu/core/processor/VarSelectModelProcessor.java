@@ -156,9 +156,10 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
                         selectByFeatureImportance();
                     } else if(filterBy.equalsIgnoreCase(Constants.FILTER_BY_SE)
                             || filterBy.equalsIgnoreCase(Constants.FILTER_BY_ST)) {
-                        if(!Constants.NN.equalsIgnoreCase(modelConfig.getAlgorithm())) {
+                        if(!Constants.NN.equalsIgnoreCase(modelConfig.getAlgorithm())
+                                && !Constants.LR.equalsIgnoreCase(modelConfig.getAlgorithm())) {
                             throw new IllegalArgumentException(
-                                    "Filter by SE/ST only works well in NN. Please check your modelconfig::train.");
+                                    "Filter by SE/ST only works well in NN/LR. Please check your modelconfig::train.");
                         }
                         distributedSEWrapper();
                     } else if(filterBy.equalsIgnoreCase(Constants.FILTER_BY_VOTED)) {
