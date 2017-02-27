@@ -72,11 +72,6 @@ public class RawSourceData implements Cloneable {
     private Integer autoTypeThreshold = 0;
 
     /**
-     * Meta data file: 
-     */
-    private String metaColumnNameFile;
-
-    /**
      * @return the autoTypeThreshold
      */
     @JsonIgnore
@@ -195,13 +190,7 @@ public class RawSourceData implements Cloneable {
 
     @Override
     public RawSourceData clone() {
-        RawSourceData copy = null;
-        try {
-            copy = (RawSourceData) super.clone();
-        } catch (CloneNotSupportedException e) {
-            // This should never happen
-            throw new InternalError(e.toString());
-        }
+        RawSourceData copy = new RawSourceData();
 
         copy.setSource(source);
         copy.setDataPath(dataPath);
@@ -250,20 +239,4 @@ public class RawSourceData implements Cloneable {
         this.autoType = autoType;
     }
 
-    /**
-     * @return the metaColumnNameFile
-     */
-    @JsonIgnore
-    public String getMetaColumnNameFile() {
-        return metaColumnNameFile;
-    }
-
-    /**
-     * @param metaColumnNameFile
-     *            the metaColumnNameFile to set
-     */
-    @JsonProperty
-    public void setMetaColumnNameFile(String metaColumnNameFile) {
-        this.metaColumnNameFile = metaColumnNameFile;
-    }
 }
