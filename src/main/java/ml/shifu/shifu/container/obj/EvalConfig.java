@@ -17,11 +17,15 @@ package ml.shifu.shifu.container.obj;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
 import ml.shifu.shifu.fs.PathFinder;
 import ml.shifu.shifu.util.CommonUtils;
 import ml.shifu.shifu.util.Constants;
+import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang.StringUtils;
+import org.apache.hadoop.fs.Path;
 
+import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -111,11 +115,16 @@ public class EvalConfig {
         if(scoreMetaColumns == null) {
             synchronized (this) {
                 if (scoreMetaColumns == null) {
-                    PathFinder pathFinder = new PathFinder(modelConfig);
                     if ( StringUtils.isNotBlank(scoreMetaColumnNameFile) ) {
+                        String path = scoreMetaColumnNameFile;
+                        if ( SourceType.HDFS.equals(dataSet.getSource()) ) {
+                            PathFinder pathFinder = new PathFinder(modelConfig);
+                            File file = new File(scoreMetaColumnNameFile);
+                            path = new Path(pathFinder.getEvalSetPath(this), file.getName()).toString();
+                        }
+
                         String delimiter = StringUtils.isBlank(dataSet.getHeaderDelimiter())
                                 ? dataSet.getDataDelimiter() : dataSet.getHeaderDelimiter();
-                        String path = pathFinder.getEvalFilePath(this.name, scoreMetaColumnNameFile, dataSet.getSource());
                         scoreMetaColumns = CommonUtils.readConfFileIntoList(path, dataSet.getSource(), delimiter);
                     }
                 }
@@ -129,18 +138,24 @@ public class EvalConfig {
         if(metaColumns == null) {
             synchronized(this) {
                 if(metaColumns == null) {
-                    PathFinder pathFinder = new PathFinder(modelConfig);
                     List<String> scoreMetaColumns = getScoreMetaColumns(modelConfig);
                     if ( scoreMetaColumns != null ) {
                         this.metaColumns = new ArrayList<String>(scoreMetaColumns);
                     }
 
-                    if(StringUtils.isNotBlank(dataSet.getMetaColumnNameFile())) {
+                    String metaColumnNameFile = dataSet.getMetaColumnNameFile();
+                    if(StringUtils.isNotBlank(metaColumnNameFile)) {
+                        String path = metaColumnNameFile;
+                        if ( SourceType.HDFS.equals(dataSet.getSource()) ) {
+                            PathFinder pathFinder = new PathFinder(modelConfig);
+                            File file = new File(metaColumnNameFile);
+                            path = new Path(pathFinder.getEvalSetPath(this), file.getName()).toString();
+                        }
+
                         String delimiter = StringUtils.isBlank(dataSet.getHeaderDelimiter())
                                 ? dataSet.getDataDelimiter() : dataSet.getHeaderDelimiter();
-                        String path = pathFinder.getEvalFilePath(this.name, dataSet.getMetaColumnNameFile(), dataSet.getSource());
                         List<String> rawMetaColumns = CommonUtils.readConfFileIntoList(path, dataSet.getSource(), delimiter);
-                        if(metaColumns != null) {
+                        if( CollectionUtils.isNotEmpty(metaColumns) ) {
                             for(String column: rawMetaColumns) {
                                 if(!metaColumns.contains(column)) {
                                     metaColumns.add(column);
