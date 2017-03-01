@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright [2012-2014] PayPal Software Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -23,12 +23,11 @@ import ml.shifu.shifu.message.ExceptionMessage;
 
 import java.util.List;
 
-
 /**
  * AbstractWorkerActor class is the abstract class for all worker actor
  * Each work actor contains its parent actor and next actor, so that it can send result
  * to where. and it can also send message to parent directly, when exception happened.
- * <p/>
+ * <p>
  * Notice, if the worker actor is the last step of whole loop, its next actor will be the same as its parent actor
  */
 public abstract class AbstractWorkerActor extends AbstractActor {
@@ -36,21 +35,16 @@ public abstract class AbstractWorkerActor extends AbstractActor {
     protected ActorRef parentActorRef;
     protected ActorRef nextActorRef;
 
-    /**
-     * @param modelConfig
-     * @param columnConfigList
-     */
-    public AbstractWorkerActor(
-            ModelConfig modelConfig,
-            List<ColumnConfig> columnConfigList,
-            ActorRef parentActorRef,
+    public AbstractWorkerActor(ModelConfig modelConfig, List<ColumnConfig> columnConfigList, ActorRef parentActorRef,
             ActorRef nextActorRef) {
         super(modelConfig, columnConfigList, null);
         this.parentActorRef = parentActorRef;
         this.nextActorRef = nextActorRef;
     }
 
-    /* (non-Javadoc)
+    /*
+     * (non-Javadoc)
+     * 
      * @see akka.actor.UntypedActor#onReceive(java.lang.Object)
      */
     @Override
@@ -64,8 +58,12 @@ public abstract class AbstractWorkerActor extends AbstractActor {
 
     /**
      * The method to handle message
-     *
-     * @param message - received message
+     * 
+     * @param message
+     *            - received message
+     * 
+     * @throws Exception
+     *             if any exception
      */
     public abstract void handleMsg(Object message) throws Exception;
 }

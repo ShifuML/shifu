@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright [2012-2014] PayPal Software Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -30,6 +30,8 @@ public interface Constants {
 
     public static final String MODEL_CONFIG_JSON_FILE_NAME = "ModelConfig.json";
 
+    public static final String COMBO_CONFIG_JSON_FILE_NAME = "ComboTrain.json";
+
     public static final String COLUMN_STATS_CSV_FILE_NAME = "ColumnStats.csv";
 
     public static final String MODEL_SETS = "ModelSets";
@@ -59,11 +61,13 @@ public interface Constants {
     public static final String PATH_RAW_DATA = "path_raw_data";
     public static final String PATH_JAR = "path_jar";
     public static final String IS_COMPRESS = "is_compress";
+    public static final String IS_NORM_FOR_CLEAN = "is_norm_for_clean";
 
     public static final String STATS_SAMPLE_RATE = "statsSampleRate";
     public static final String WITH_SCORE = "with_score";
     public static final String SOURCE_TYPE = "source_type";
     public static final String NUM_PARALLEL = "num_parallel";
+    public static final String DATASET_NAME = "data_set";
 
     public static final String DERIVED = "derived_";
 
@@ -109,6 +113,9 @@ public interface Constants {
     public static final String KEY_PERFORMANCE_PATH = "performancePath";
     public static final String KEY_CONFUSION_MATRIX_PATH = "confusionMatrixPath";
 
+    public static final String COMBO_EVAL_TRAIN = "EvalTrain";
+    public static final String COMBO_ASSEMBLE = "assemble";
+
     public static final String BIN_BOUNDRY_DELIMITER = "\u0001";
 
     public static final String DEFAULT_ESCAPE_DELIMITER = "\\|";
@@ -119,9 +126,14 @@ public interface Constants {
 
     public static final String AUTO_TYPE_PATH = "AutoTypePath";
     public static final String PRE_TRAINING_STATS = "PreTrainingStats";
+    public static final String STATS_SMALL_BINS = "StatsSmallBins";
     public static final String SELECTED_RAW_DATA = "SelectedRawData";
     public static final String NORMALIZED_DATA = "NormalizedData";
+    public static final String CLEANED_DATA = "CleanedData";
     public static final String NORMALIZED_VALIDATION_DATA = "NormalizedValidationData";
+    public static final String CLEANED_VALIDATION_DATA = "CleanedValidationData";
+    public static final String SHUFFLED_NORM_DATA = "ShuffledNormData";
+
     public static final String TRAIN_SCORES = "TrainScores";
     public static final String BIN_AVG_SCORE = "BinAvgScore";
     public static final String CORRELATION_PATH = "CorrelationPath";
@@ -132,7 +144,10 @@ public interface Constants {
     public static final String KEY_PRE_PSI_PATH = "StatsPSIPath";
     public static final String KEY_SELECTED_RAW_DATA_PATH = "selectedRawDataPath";
     public static final String KEY_NORMALIZED_DATA_PATH = "normalizedDataPath";
+    public static final String KEY_CLEANED_DATA_PATH = "cleanedDataPath";
     public static final String KEY_NORMALIZED_VALIDATION_DATA_PATH = "normalizedValidationDataPath";
+    public static final String KEY_CLEANED_VALIDATION_DATA_PATH = "cleanedValidationDataPath";
+
     public static final String KEY_VARSLECT_STATS_PATH = "varSelectStatsPath";
     public static final String KEY_TRAIN_SCORES_PATH = "trainScoresPath";
     public static final String KEY_BIN_AVG_SCORE_PATH = "binAvgScorePath";
@@ -154,29 +169,39 @@ public interface Constants {
 
     public static final String SHIFU_MODELSET_SOURCE_TYPE = "shifu.modelset.source.type";
 
-    public static final String SHIFU_VARSELECT_WRAPPER_RATIO = "shifu.varselect.wrapper.ratio";
+    public static final String SHIFU_VARSELECT_FILTEROUT_RATIO = "shifu.varselect.filterout.ratio";
 
-    public static final String SHIFU_VARSELECT_WRAPPER_NUM = "shifu.varselect.wrapper.num";
+    public static final String SHIFU_VARSELECT_FILTER_NUM = "shifu.varselect.filter.num";
 
-    public static final String SHIFU_VARSELECT_WRAPPER_TYPE = "shifu.varselect.wrapper.type";
+    public static final String SHIFU_VARSELECT_FILTEROUT_TYPE = "shifu.varselect.filterout.type";
 
-    public static final String SHIFU_DEFAULT_VARSEL_SE_MULTI = "false";
+    public static final String SHIFU_DEFAULT_VARSEL_SE_MULTI = "true";
 
     public static final String SHIFU_VARSEL_SE_MULTI = "shifu.varsel.se.multi";
 
     public static final String SHIFU_VARSEL_SE_MULTI_THREAD = "shifu.varsel.se.multi.thread";
 
-    public static final int SHIFU_DEFAULT_VARSEL_SE_MULTI_THREAD = 4;
+    public static final int SHIFU_DEFAULT_VARSEL_SE_MULTI_THREAD = 6;
 
-    public static final String WRAPPER_BY_REMOVE = "R";
+    public static final String FILTER_BY_ST = "ST";
 
-    public static final String WRAPPER_BY_ADD = "A";
+    public static final String FILTER_BY_SE = "SE";
 
-    public static final String WRAPPER_BY_SE = "SE";
+    public static final String FILTER_BY_VOTED = "V";
 
-    public static final String WRAPPER_BY_VOTED = "V";
+    public static final String FILTER_BY_FI = "FI";
 
-    public static final float SHIFU_DEFAULT_VARSELECT_WRAPPER_RATIO = 0.05f;
+    public static final String FILTER_BY_KS = "KS";
+
+    public static final String FILTER_BY_IV = "IV";
+
+    public static final String FILTER_BY_MIX = "MIX";
+
+    public static final String FILTER_BY_PARETO = "PARETO";
+
+    public static final float SHIFU_DEFAULT_VARSELECT_FILTEROUT_RATIO = 0.05f;
+
+    public static final int SHIFU_DEFAULT_VARSELECT_FILTER_NUM = -1;
 
     public static final String COUNTER_WNEGTAGS = "WNEGTAGS";
 
@@ -192,6 +217,12 @@ public interface Constants {
 
     public static final String COUNTER_RECORDS = "RECORDS";
 
+    public static final String TOTAL_MODEL_RUNTIME = "TOTAL_MODEL_RUNTIME";
+
+    public static final String COUNTER_MAX_SCORE = "MAX_SCORE";
+
+    public static final String COUNTER_MIN_SCORE = "MIN_SCORE";
+
     public static final String SHIFU_VARSELECT_SE_OUTPUT_NAME = "se";
 
     public static final String DEFAULT_CHARSET = "UTF-8";
@@ -201,5 +232,21 @@ public interface Constants {
     public static final String COLUMN_META_FOLDER_NAME = "columns";
 
     public static final String POST_TRAIN_OUTPUT_SCORE = "score";
+
+    public static final String SHIFU_EVAL_MAXMIN_SCORE_OUTPUT = "shifu.eval.maxmin.score.output";
+
+    public static final String SHIFU_DTRAIN_PARALLEL = "shifu.dtrain.parallel";
+
+    public static final String SHIFU_TMPMODEL_COPYTOLOCAL = "shifu.tmpmodel.copytolocal";
+
+    public static final String SHIFU_NORM_SHUFFLE_SIZE = "shifu.norm.shuffle.size";
+
+    public static final String SHIFU_NORM_PREFER_PART_SIZE = "shifu.norm.prefer.part.size";
+
+    public static final String SHIFU_SCORE_SCALE = "shifu.score.scale";
+
+    public static final String SHIFU_CORRELATION_MULTI_THREADS = "shifu.correlation.multi.threads";
+
+    public static final String SHIFU_CORRELATION_MULTI = "shifu.correlation.multi";
 
 }

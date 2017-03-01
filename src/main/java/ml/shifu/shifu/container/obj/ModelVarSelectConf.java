@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright [2012-2014] PayPal Software Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -15,8 +15,14 @@
  */
 package ml.shifu.shifu.container.obj;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
+import ml.shifu.shifu.util.Constants;
+
+import java.util.Arrays;
+import java.util.HashMap;
 import java.util.Map;
 
 /**
@@ -32,25 +38,18 @@ public class ModelVarSelectConf {
 
     // settings for variable selection
     private Boolean filterEnable = Boolean.TRUE;
-    private Integer filterNum = Integer.valueOf(200);
+    private Integer filterNum = Integer.valueOf(Constants.SHIFU_DEFAULT_VARSELECT_FILTER_NUM);
     private String filterBy = "KS";
-
-    // wrapper method for variable selection
-    // don't open those options to user
-    private Boolean wrapperEnabled = Boolean.FALSE;
-    private Integer wrapperNum = Integer.valueOf(50);
-    private Float wrapperRatio = Float.valueOf(0.05f);
-    private String wrapperBy = "S";
+    private Float filterOutRatio = Float.valueOf(Constants.SHIFU_DEFAULT_VARSELECT_FILTEROUT_RATIO);
+    /**
+     * For filterBy pareto mode, such epsilons are used in pareto sorting
+     */
+    private double[] epsilons;
 
     /**
      * If column missing rate is lower than this column, no matter what, whis column will be removed.
      */
     private Float missingRateThreshold = 0.98f;
-
-    /**
-     * Do var select by SE or only print se report.
-     */
-    private Boolean filterBySE = Boolean.TRUE;
 
     private Map<String, Object> params;
 
@@ -101,44 +100,20 @@ public class ModelVarSelectConf {
     public void setFilterBy(String filterBy) {
         this.filterBy = filterBy;
     }
-
-    public Boolean getWrapperEnabled() {
-        return wrapperEnabled;
-    }
-
-    public void setWrapperEnabled(Boolean wrapperEnabled) {
-        this.wrapperEnabled = wrapperEnabled;
-    }
-
-    public Integer getWrapperNum() {
-        return wrapperNum;
-    }
-
-    public void setWrapperNum(Integer wrapperNum) {
-        this.wrapperNum = wrapperNum;
-    }
-
-    public String getWrapperBy() {
-        return wrapperBy;
-    }
-
-    public void setWrapperBy(String wrapperBy) {
-        this.wrapperBy = wrapperBy;
+    
+    /**
+     * @return the filterOutRatio
+     */
+    public Float getFilterOutRatio() {
+        return filterOutRatio;
     }
 
     /**
-     * @return the wrapperRatio
+     * @param filterOutRatio
+     *            the filterOutRatio to set
      */
-    public Float getWrapperRatio() {
-        return wrapperRatio;
-    }
-
-    /**
-     * @param wrapperRatio
-     *            the wrapperRatio to set
-     */
-    public void setWrapperRatio(Float wrapperRatio) {
-        this.wrapperRatio = wrapperRatio;
+    public void setFilerOutRatio(Float filterOutRatio) {
+        this.filterOutRatio = filterOutRatio;
     }
 
     public Map<String, Object> getParams() {
@@ -147,21 +122,6 @@ public class ModelVarSelectConf {
 
     public void setParams(Map<String, Object> params) {
         this.params = params;
-    }
-
-    /**
-     * @return the filterBySE
-     */
-    public Boolean getFilterBySE() {
-        return filterBySE;
-    }
-
-    /**
-     * @param filterBySE
-     *            the filterBySE to set
-     */
-    public void setFilterBySE(Boolean filterBySE) {
-        this.filterBySE = filterBySE;
     }
 
     /**
@@ -177,5 +137,42 @@ public class ModelVarSelectConf {
      */
     public void setMissingRateThreshold(Float missingRateThreshold) {
         this.missingRateThreshold = missingRateThreshold;
+    }
+
+    /**
+     * @return the epsilons
+     */
+    @JsonIgnore
+    public double[] getEpsilons() {
+        return epsilons;
+    }
+
+    /**
+     * @param epsilons
+     *            the epsilons to set
+     */
+    @JsonProperty
+    public void setEpsilons(double[] epsilons) {
+        this.epsilons = epsilons;
+    }
+
+    @Override
+    public ModelVarSelectConf clone() {
+        ModelVarSelectConf other = new ModelVarSelectConf();
+        if ( epsilons != null ) {
+            other.setEpsilons(Arrays.copyOf(epsilons, epsilons.length));
+        }
+        other.setFilterBy(filterBy);
+        other.setFilterEnable(filterEnable);
+        other.setForceEnable(forceEnable);
+        other.setFilterNum(filterNum);
+        other.setForceRemoveColumnNameFile(forceRemoveColumnNameFile);
+        other.setForceSelectColumnNameFile(forceSelectColumnNameFile);
+        other.setMissingRateThreshold(missingRateThreshold);
+        if ( params != null ) {
+            other.setParams(new HashMap<String, Object>(params));
+        }
+        other.setFilerOutRatio(filterOutRatio);
+        return other;
     }
 }

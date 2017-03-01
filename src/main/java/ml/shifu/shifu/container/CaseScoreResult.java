@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright [2012-2014] PayPal Software Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -16,6 +16,8 @@
 package ml.shifu.shifu.container;
 
 import java.util.List;
+import java.util.Map;
+import java.util.TreeMap;
 
 /**
  * CaseScoreResult class
@@ -28,6 +30,8 @@ public class CaseScoreResult {
     private int minScore;
     private int avgScore;
     private int medianScore;
+
+    private Map<String, CaseScoreResult> subModelScores;
 
     public CaseScoreResult() {
         super();
@@ -87,4 +91,22 @@ public class CaseScoreResult {
         this.inputData = inputData;
     }
 
+    public void addSubModelScore(String modelName, ScoreObject so) {
+        if ( this.subModelScores == null ) {
+            this.subModelScores = new TreeMap<String, CaseScoreResult>();
+        }
+
+        CaseScoreResult scoreResult = new CaseScoreResult();
+        scoreResult.setScores(so.getScores());
+        scoreResult.setMaxScore(so.getMaxScore());
+        scoreResult.setMinScore(so.getMinScore());
+        scoreResult.setAvgScore(so.getMeanScore());
+        scoreResult.setMedianScore(so.getMedianScore());
+
+        this.subModelScores.put(modelName, scoreResult);
+    }
+
+    public Map<String, CaseScoreResult> getSubModelScores() {
+        return subModelScores;
+    }
 }

@@ -1,3 +1,18 @@
+/*
+ * Copyright [2013-2015] PayPal Software Foundation
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package ml.shifu.shifu.guagua;
 
 import java.io.IOException;
@@ -59,7 +74,7 @@ public class ShifuInputFormat extends GuaguaInputFormat {
     public List<InputSplit> getSplits(JobContext job) throws IOException {
         List<InputSplit> newSplits = super.getSplits(job);
         String testDirs = job.getConfiguration().get("shifu.crossValidation.dir", "");
-        LOG.info("corssValidation.dir:" + testDirs);
+        LOG.info("Validation dir is {};", testDirs);
         if(org.apache.commons.lang.StringUtils.isNotBlank(testDirs)) {
             this.addCrossValidationDataset(newSplits, job);
         }
@@ -78,7 +93,7 @@ public class ShifuInputFormat extends GuaguaInputFormat {
     }
 
     protected List<List<FileSplit>> getCrossValidationSplits(JobContext job, int count) throws IOException {
-        LOG.info("Split validation with count: {}", count);
+        LOG.debug("Split validation with count: {}", count);
         List<FileStatus> files = listCrossValidationStatus(job);
         List<FileSplit> current = new ArrayList<FileSplit>();
         List<List<FileSplit>> validationList = new ArrayList<List<FileSplit>>();
@@ -127,7 +142,7 @@ public class ShifuInputFormat extends GuaguaInputFormat {
             validationList.add(current);
         }
 
-        LOG.info("Total # of validationList: {}", validationList.size());
+        LOG.debug("Total # of validationList: {}", validationList.size());
         return validationList;
     }
 
@@ -154,8 +169,8 @@ public class ShifuInputFormat extends GuaguaInputFormat {
             }
             guaguaInput.setExtensions(validationFlags);
         }
-        LOG.info("training_size:" + trainingSplit.size());
-        LOG.info("validation_size:" + csSplits.size());
+        LOG.info("Training input split size is: {}.", trainingSplit.size());
+        LOG.info("Validation input split size is {}.", csSplits.size());
     }
 
     @SuppressWarnings("deprecation")

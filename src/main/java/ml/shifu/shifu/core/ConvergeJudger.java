@@ -16,16 +16,20 @@
 package ml.shifu.shifu.core;
 
 /**
- * Class for training convergence judging. 
+ * Class for training convergence judging.
  * 
  * @author xiaobzheng (zheng.xiaobin.roubao@gmail.com)
  */
 
 public class ConvergeJudger {
-    
+
     /**
-     * Compare threshold and error, if error <= threshold then return true, else false.
+     * Compare threshold and error, if error &lt;= threshold then return true, else false.
      * 
+     * @param error
+     *            the error
+     * @param threshold
+     *            the threshold
      * @return threshold and error compare result.
      */
     public boolean judge(double error, double threshold) {

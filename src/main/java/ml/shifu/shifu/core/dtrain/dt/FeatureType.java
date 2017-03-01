@@ -21,7 +21,25 @@ package ml.shifu.shifu.core.dtrain.dt;
  * @author Zhang David (pengzhang@paypal.com)
  */
 public enum FeatureType {
-    CONTINUOUS, CATEGORICAL;
+
+    CONTINUOUS((byte) 1), CATEGORICAL((byte) 2);
+
+    /**
+     * byte type for saving space
+     */
+    private final byte byteType;
+
+    private FeatureType(byte byteType) {
+        this.byteType = byteType;
+    }
+
+    public boolean isNumerical() {
+        return byteType == CONTINUOUS.getByteType();
+    }
+
+    public boolean isCategorical() {
+        return byteType == CATEGORICAL.getByteType();
+    }
 
     public static FeatureType of(String featureType) {
         for(FeatureType ft: values()) {
@@ -31,4 +49,21 @@ public enum FeatureType {
         }
         throw new IllegalArgumentException("Cannot find FeatureType " + featureType);
     }
+
+    public static FeatureType of(byte byteType) {
+        for(FeatureType ft: values()) {
+            if(ft.getByteType() == byteType) {
+                return ft;
+            }
+        }
+        throw new IllegalArgumentException("Cannot find byte of FeatureType for " + byteType);
+    }
+
+    /**
+     * @return the byteType
+     */
+    public byte getByteType() {
+        return byteType;
+    }
+
 }

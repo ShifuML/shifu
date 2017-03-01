@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright [2012-2014] PayPal Software Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -20,19 +20,9 @@ import java.util.jar.JarFile;
 import java.util.jar.Manifest;
 
 import ml.shifu.shifu.container.obj.ModelTrainConf.ALGORITHM;
-import ml.shifu.shifu.core.processor.BasicModelProcessor;
-import ml.shifu.shifu.core.processor.CreateModelProcessor;
-import ml.shifu.shifu.core.processor.EvalModelProcessor;
+import ml.shifu.shifu.core.processor.*;
 import ml.shifu.shifu.core.processor.EvalModelProcessor.EvalStep;
-import ml.shifu.shifu.core.processor.ExportModelProcessor;
-import ml.shifu.shifu.core.processor.InitModelProcessor;
-import ml.shifu.shifu.core.processor.ManageModelProcessor;
 import ml.shifu.shifu.core.processor.ManageModelProcessor.ModelAction;
-import ml.shifu.shifu.core.processor.NormalizeModelProcessor;
-import ml.shifu.shifu.core.processor.PostTrainModelProcessor;
-import ml.shifu.shifu.core.processor.StatsModelProcessor;
-import ml.shifu.shifu.core.processor.TrainModelProcessor;
-import ml.shifu.shifu.core.processor.VarSelectModelProcessor;
 import ml.shifu.shifu.exception.ShifuException;
 import ml.shifu.shifu.util.Constants;
 
@@ -77,6 +67,8 @@ public class ShifuCLI {
 
     private static final String CMD_EXPORT = "export";
 
+    private static final String CMD_COMBO = "combo";
+
     private static final String RESET = "reset";
 
     // for evaluation
@@ -85,19 +77,18 @@ public class ShifuCLI {
     private static final String SCORE = "score";
     private static final String CONFMAT = "confmat";
     private static final String PERF = "perf";
+    private static final String NORM = "norm";
 
     private static final String SAVE = "save";
     private static final String SWITCH = "switch";
     private static final String EVAL_MODEL = "model";
     private static final String SHOW = "show";
 
+    private static final String SHUFFLE = "shuffle";
+    private static final String RESUME = "resume";
+
     static private final Logger log = LoggerFactory.getLogger(ShifuCLI.class);
 
-    /**
-     * Main entry for the whole framework.
-     * 
-     * @throws IOException
-     */
     public static void main(String[] args) {
         // invalid input and help options
         if(args.length < 1 || (isHelpOption(args[0]))) {
@@ -164,13 +155,13 @@ public class ShifuCLI {
                     // stats step
                     status = calModelStats();
                     if(status == 0) {
-                        log.info("Do model set statistics successfully. Please continue next step by using 'shifu normalize or shifu norm'.");
+                        log.info("Do model set statistics successfully. Please continue next step by using 'shifu normalize or shifu norm'. For tree ensemble model, no need do norm, please continue next step by using 'shifu varsel'");
                     } else {
                         log.warn("Error in model set stats computation, please report issue on http:/github.com/shifuml/shifu/issues.");
                     }
                 } else if(args[0].equals(NORMALIZE_CMD) || args[0].equals(NORM_CMD)) {
                     // normalize step
-                    status = normalizeTrainData();
+                    status = normalizeTrainData(cmd.hasOption(SHUFFLE));
                     if(status == 0) {
                         log.info("Do model set normalization successfully. Please continue next step by using 'shifu varselect or shifu varsel'.");
                     } else {
@@ -191,6 +182,26 @@ public class ShifuCLI {
                         log.info("Do model set training successfully. Please continue next step by using 'shifu posttrain' or if no need posttrain you can go through with 'shifu eval'.");
                     } else {
                         log.info("Do model training with error, please check error message or report issue.");
+                    }
+                } else if(args[0].equals(CMD_COMBO)) {
+                    if ( cmd.hasOption(MODELSET_CMD_NEW) ) {
+                        log.info("Create new commbo models");
+                        status = createNewCombo(cmd.getOptionValue(MODELSET_CMD_NEW));
+                    } else if ( cmd.hasOption(INIT_CMD)) {
+                        log.info("Init commbo models");
+                        status = initComboModels();
+                    } else if ( cmd.hasOption(EVAL_CMD_RUN) ) {
+                        log.info("Run combo model - with toShuffle: {}, with toResume: {}",
+                                opts.hasOption(SHUFFLE), opts.hasOption(RESUME));
+                        status = runComboModels(cmd.hasOption(SHUFFLE), cmd.hasOption(RESUME));
+                        // train combo models
+                    } else if ( cmd.hasOption(EVAL_CMD) ) {
+                        log.info("Eval combo model.");
+                        // eval combo model performance
+                        status = evalComboModels(cmd.hasOption(RESUME));
+                    } else {
+                        log.error("Invalid command usage.");
+                        printUsage();
                     }
                 } else if(args[0].equals(POSTTRAIN_CMD)) {
                     // post train step
@@ -248,6 +259,8 @@ public class ShifuCLI {
                     } else if(cmd.hasOption(DELETE)) {
                         // delete some evaluation set
                         deleteEvalSet(cmd.getOptionValue(DELETE));
+                    } else if (cmd.hasOption(NORM)) {
+                        runEvalNorm(cmd.getOptionValue(NORM));
                     } else {
                         log.error("Invalid command, please check help message.");
                         printUsage();
@@ -276,37 +289,29 @@ public class ShifuCLI {
         }
     }
 
-    /**
+    /*
      * switch model - switch the current model to</p>
-     * <p/>
+     * <p>
      * <li>master if it's not current model existing</li>
      * <li><code>modelName</code> if you already save it with name <code>modelName</code></li>
-     * <p/>
+     * <p>
      * then create a new branch with naming <code>newModelSetName</code>
-     * 
-     * @param newModelSetName
-     * @throws Exception
      */
     private static void switchCurrentModel(String newModelSetName) throws Exception {
         ManageModelProcessor p = new ManageModelProcessor(ModelAction.SWITCH, newModelSetName);
         p.run();
     }
 
-    /**
+    /*
      * save model - save current mode or save to a specially name <code>newModelSetName</code>
-     * 
-     * @param newModelSetName
-     * @throws Exception
      */
     private static void saveCurrentModel(String newModelSetName) throws Exception {
         ManageModelProcessor p = new ManageModelProcessor(ModelAction.SAVE, newModelSetName);
         p.run();
     }
 
-    /**
+    /*
      * Create new model - create directory and ModelConfig for the model
-     * 
-     * @throws Exception
      */
     public static int createNewModel(String modelSetName, String modelType, String description) throws Exception {
         ALGORITHM modelAlg = null;
@@ -329,17 +334,15 @@ public class ShifuCLI {
         return p.run();
     }
 
-    /**
+    /*
      * Load the column definition and do the training data purification
-     * 
-     * @throws Exception
      */
     public static int initializeModel() throws Exception {
         InitModelProcessor processor = new InitModelProcessor();
         return processor.run();
     }
 
-    /**
+    /*
      * Calculate variables stats for model - ks/iv/mean/max/min
      */
     public static int calModelStats() throws Exception {
@@ -347,148 +350,119 @@ public class ShifuCLI {
         return p.run();
     }
 
-    /**
+    /*
      * Select variables for model
-     * 
-     * @throws Exception
-     * @throws ShifuException
      */
     public static int selectModelVar(boolean isToReset) throws Exception {
         VarSelectModelProcessor p = new VarSelectModelProcessor(isToReset);
         return p.run();
     }
 
-    /**
+    /*
      * Normalize the training data
-     * 
-     * @throws Exception
      */
     public static int normalizeTrainData() throws Exception {
-        NormalizeModelProcessor p = new NormalizeModelProcessor();
+        return normalizeTrainData(false);
+    }
+
+    /*
+     * Normalize the training data
+     */
+    public static int normalizeTrainData(boolean isToShuffleData) throws Exception {
+        NormalizeModelProcessor p = new NormalizeModelProcessor(isToShuffleData);
         return p.run();
     }
 
-    /**
-     * Train model
-     * 
-     * @throws Exception
-     */
     public static int trainModel(boolean isDryTrain, boolean isDebug) throws Exception {
         TrainModelProcessor p = new TrainModelProcessor(isDryTrain, isDebug);
         return p.run();
     }
 
-    /**
-     * Run post-train step
-     */
     public static int postTrainModel() throws Exception {
         PostTrainModelProcessor p = new PostTrainModelProcessor();
         return p.run();
     }
 
-    /**
-     * Create new evalset
-     * 
-     * @throws Exception
-     */
     public static int createNewEvalSet(String evalSetName) throws Exception {
         EvalModelProcessor p = new EvalModelProcessor(EvalStep.NEW, evalSetName);
         return p.run();
     }
 
-    /**
-     * Run the evalset to test the model with isDry switch
-     */
     public static int runEvalSet(boolean isDryRun) throws Exception {
         EvalModelProcessor p = new EvalModelProcessor(EvalStep.RUN);
         return p.run();
     }
 
-    /**
-     * @param evalSetName
-     * @param isDryRun
-     * @throws Exception
-     */
     public static int runEvalSet(String evalSetName, boolean isDryRun) throws Exception {
+        log.info("Run evaluation set with {}", evalSetName);
         EvalModelProcessor p = new EvalModelProcessor(EvalStep.RUN, evalSetName);
         return p.run();
     }
 
-    /**
-     * @param evalSetNames
-     * @throws Exception
-     */
     public static int runEvalScore(String evalSetNames) throws Exception {
         EvalModelProcessor p = new EvalModelProcessor(EvalStep.SCORE, evalSetNames);
         return p.run();
     }
 
-    /**
-     * @param evalSetNames
-     * @throws Exception
-     */
     private static int runEvalConfMat(String evalSetNames) throws Exception {
         EvalModelProcessor p = new EvalModelProcessor(EvalStep.CONFMAT, evalSetNames);
         return p.run();
     }
 
-    /**
-     * @param evalSetNames
-     * @throws Exception
-     */
     private static int runEvalPerf(String evalSetNames) throws Exception {
         EvalModelProcessor p = new EvalModelProcessor(EvalStep.PERF, evalSetNames);
         return p.run();
     }
 
-    /**
-     * list all evaluation set
-     * 
-     * @throws Exception
-     */
+    private static int runEvalNorm(String evalSetNames) throws Exception {
+        EvalModelProcessor p = new EvalModelProcessor(EvalStep.NORM, evalSetNames);
+        return p.run();
+    }
+
     private static int listEvalSet() throws Exception {
         EvalModelProcessor p = new EvalModelProcessor(EvalStep.LIST);
         return p.run();
     }
 
-    /**
-     * delete some evaluation set
-     * 
-     * @param evalSetName
-     * @throws Exception
-     */
     private static int deleteEvalSet(String evalSetName) throws Exception {
         EvalModelProcessor p = new EvalModelProcessor(EvalStep.DELETE, evalSetName);
         return p.run();
     }
 
-    /**
-     * create a new model from existing model
-     * 
-     * @throws ShifuException
-     */
     private static void copyModel(String[] cmdArgs) throws IOException, ShifuException {
         BasicModelProcessor p = new BasicModelProcessor();
 
         p.copyModelFiles(cmdArgs[0], cmdArgs[1]);
     }
 
-    /**
-     * export Shifu model into other format, i.e. PMML
-     * 
-     * @param type
-     * @throws Exception
-     */
     public static int exportModel(String type, boolean isConcise) throws Exception {
         ExportModelProcessor p = new ExportModelProcessor(type, isConcise);
         return p.run();
     }
 
-    /**
-     * Load and test ModelConfig
-     * 
-     * @throws Exception
-     */
+    private static int createNewCombo(String algorithms) throws Exception {
+        Processor processor = new ComboModelProcessor(ComboModelProcessor.ComboStep.NEW, algorithms);
+        return processor.run();
+    }
+
+    private static int initComboModels() throws Exception {
+        Processor processor = new ComboModelProcessor(ComboModelProcessor.ComboStep.INIT);
+        return processor.run();
+    }
+
+    private static int runComboModels(boolean isToShuffleData, boolean isToResume) throws Exception {
+        ComboModelProcessor processor = new ComboModelProcessor(ComboModelProcessor.ComboStep.RUN);
+        processor.setToShuffleData(isToShuffleData);
+        processor.setToResume(isToResume);
+        return processor.run();
+    }
+
+    private static int evalComboModels(boolean isToResume) throws Exception {
+        ComboModelProcessor processor = new ComboModelProcessor(ComboModelProcessor.ComboStep.EVAL);
+        processor.setToResume(isToResume);
+        return processor.run();
+    }
+
     private static void initializeModelParam() throws Exception {
         InitModelProcessor p = new InitModelProcessor();
         p.checkAlgorithmParam();
@@ -510,9 +484,6 @@ public class ShifuCLI {
                         modelName));
     }
 
-    /**
-     * Build the usage option for parameter check
-     */
     @SuppressWarnings("static-access")
     private static Options buildModelSetOptions(String[] args) {
         Options opts = new Options();
@@ -523,7 +494,7 @@ public class ShifuCLI {
                 .withDescription("To create an eval set").create(NEW);
         Option opt_type = OptionBuilder.hasArg()
                 .withDescription("Specify model type").create(MODELSET_CMD_TYPE);
-        Option opt_run = OptionBuilder.hasArg()
+        Option opt_run = OptionBuilder.hasOptionalArg()
                 .withDescription("To run eval set").create(EVAL_CMD_RUN);
         Option opt_dry = OptionBuilder.hasArg(false)
                 .withDescription("Dry run the train").create(TRAIN_CMD_DRY);
@@ -535,13 +506,19 @@ public class ShifuCLI {
                 .withDescription("Export concise PMML").create(EXPORT_CONCISE);
         Option opt_reset = OptionBuilder.hasArg(false)
                 .withDescription("Reset all variables to finalSelect = false").create(RESET);
-
+        Option opt_shuffle = OptionBuilder.hasArg(false)
+                .withDescription("Shuffle data after normalization").create(SHUFFLE);
+        Option opt_resume = OptionBuilder.hasArg(false)
+                .withDescription("Resume combo model training.").create(RESUME);
 
         Option opt_list = OptionBuilder.hasArg(false).create(LIST);
         Option opt_delete = OptionBuilder.hasArg().create(DELETE);
         Option opt_score = OptionBuilder.hasArg().create(SCORE);
         Option opt_confmat = OptionBuilder.hasArg().create(CONFMAT);
         Option opt_perf = OptionBuilder.hasArg().create(PERF);
+        Option opt_norm = OptionBuilder.hasArg().create(NORM);
+        Option opt_eval = OptionBuilder.hasArg(false).create(EVAL_CMD);
+        Option opt_init = OptionBuilder.hasArg(false).create(INIT_CMD);
 
         Option opt_save = OptionBuilder.hasArg(false).withDescription("save model").create(SAVE);
         Option opt_switch = OptionBuilder.hasArg(false).withDescription("switch model").create(SWITCH);
@@ -552,11 +529,16 @@ public class ShifuCLI {
         opts.addOption(opt_type);
         opts.addOption(opt_run);
         opts.addOption(opt_perf);
+        opts.addOption(opt_norm);
         opts.addOption(opt_dry);
         opts.addOption(opt_debug);
         opts.addOption(opt_model);
         opts.addOption(opt_concise);
         opts.addOption(opt_reset);
+        opts.addOption(opt_eval);
+        opts.addOption(opt_init);
+        opts.addOption(opt_shuffle);
+        opts.addOption(opt_resume);
 
         opts.addOption(opt_list);
         opts.addOption(opt_delete);
@@ -569,7 +551,7 @@ public class ShifuCLI {
         return opts;
     }
 
-    /**
+    /*
      * print usage
      */
     private static void printUsage() {
@@ -579,7 +561,7 @@ public class ShifuCLI {
         System.out.println("\tinit                                    Create initial ColumnConfig.json and upload to HDFS.");
         System.out.println("\tstats                                   Calculate statistics on HDFS and update local ColumnConfig.json.");
         System.out.println("\tvarselect/varsel [-reset]               Variable selection, will update finalSelect in ColumnConfig.json.");
-        System.out.println("\tnormalize/norm                          Normalize the columns with finalSelect as true.");
+        System.out.println("\tnormalize/norm [-shuffle]               Normalize the columns with finalSelect as true.");
         System.out.println("\ttrain [-dry]                            Train the model with the normalized data.");
         System.out.println("\tposttrain                               Post-process data after training models.");
         System.out.println("\teval                                    Run all eval sets.");
@@ -588,9 +570,14 @@ public class ShifuCLI {
         System.out.println("\teval -delete  <EvalSetName>             Delete an eval set.");
         System.out.println("\teval -run     <EvalSetName>             Run eval set evaluation.");
         System.out.println("\teval -score   <EvalSetName>             Scoring evaluation dataset.");
+        System.out.println("\teval -norm    <EvalSetName>             Normalize evaluation dataset.");
         System.out.println("\teval -confmat <EvalSetName>             Compute the TP/FP/TN/FN based on scoring");
         System.out.println("\teval -perf <EvalSetName>                Calculate the model performance based on confmat");
         System.out.println("\texport [-t pmml|columnstats] [-c]       Export model to PMML format or export ColumnConfig.");
+        System.out.println("\tcombo -new    <Algorithm List>          Create a combo model train. Algorithm lis should be NN,LR,RF,GBT,LR");
+        System.out.println("\tcombo -init                             Generate sub-models.");
+        System.out.println("\tcombo -run [-shuffle] [-resume]         Run Combo-Model train.");
+        System.out.println("\tcombo -eval [-resume]                   Evaluate Combo-Model performance.");
         System.out.println("\tversion|v|-v|-version                   Print version of current package.");
         System.out.println("\thelp|h|-h|-help                         Help message.");
     }
@@ -629,13 +616,6 @@ public class ShifuCLI {
         }
     }
 
-    /**
-     * check the argument is for listing version or not
-     * 
-     * @param arg
-     *            input option
-     * @return true - if arg is v/version/-v/-version, or return false
-     */
     private static boolean isVersionOption(String arg) {
         return arg.equalsIgnoreCase("v")
                 || arg.equalsIgnoreCase("version")
@@ -643,12 +623,6 @@ public class ShifuCLI {
                 || arg.equalsIgnoreCase("-v");
     }
 
-    /**
-     * check the argument is for listing help info or not
-     * 
-     * @param str
-     * @return true - if arg is h/-h/help/-help, or return false
-     */
     private static boolean isHelpOption(String str) {
         return "h".equalsIgnoreCase(str)
                 || "-h".equalsIgnoreCase(str)
@@ -656,11 +630,6 @@ public class ShifuCLI {
                 || "-help".equalsIgnoreCase(str);
     }
 
-    /**
-     * print exception and contact message, then quit program
-     * 
-     * @param e
-     */
     private static void exceptionExit(Exception e) {
         log.error("Error in running, please check the stack, msg:" + e.toString(), e);
         System.err.println(Constants.CONTACT_MESSAGE);

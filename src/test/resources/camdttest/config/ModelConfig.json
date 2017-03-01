@@ -1,6 +1,6 @@
 {
   "basic" : {
-    "name" : "cam2015-d",
+    "name" : "cam2015-n",
     "author" : "pengzhang",
     "description" : "Created at 2016-08-14 21:01:17",
     "version" : "0.2.0",
@@ -66,15 +66,16 @@
     "workerThreadCount" : 4,
     "algorithm" : "GBT",
     "params" : {
-      "TreeNum" : 100,
-      "FeatureSubsetStrategy" : "HALF",
+      "TreeNum" : 10,
+      "FeatureSubsetStrategy" : "ONETHIRD",
       "MaxDepth" : 7,
+      "MaxLeaves" : 128,
+      "MaxBatchSplitSize" : 32,
       "MaxStatsMemoryMB" : 1600,
       "Impurity" : "variance",
-      "LearningRate" : 0.08,
+      "LearningRate" : 0.04,
       "MinInstancesPerNode" : 5,
       "MinInfoGain" : 0.0,
-      "SampleWithReplacement" : false,
       "Loss" : "squared"
     },
     "customPaths" : {}
@@ -96,7 +97,7 @@
       "metaColumnNameFile" : "columns/meta.column.names",
       "categoricalColumnNameFile" : "columns/categorical.column.names"
     },
-    "performanceBucketNum" : 100,
+    "performanceBucketNum" : 1000,
     "performanceScoreSelector" : "mean",
     "scoreMetaColumnNameFile" : "columns/Eval1score.meta.column.names",
     "customPaths" : { }

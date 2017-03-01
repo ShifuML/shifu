@@ -65,6 +65,11 @@ public class Node implements Bytable {
     private Predict predict;
 
     /**
+     * Ratio of # of weighted instances in such node over # of all weighted instances
+     */
+    private double wgtCntRatio;
+
+    /**
      * Gain for such node, such value can be computed from different {@link Impurity} like {@link Entropy},
      * {@link Variance}. Gain = impurity - leftWeight * leftImpurity - rightWeight * rightImpurity.
      */
@@ -101,7 +106,15 @@ public class Node implements Bytable {
      */
     private boolean isLeaf;
 
+    /**
+     * Default root index is 1. Others are 2, 3, 4, 5 ...
+     */
     public static final int ROOT_INDEX = 1;
+
+    /**
+     * If node with such index, means such node is invalid.
+     */
+    public static final int INVALID_INDEX = -1;
 
     public Node() {
         this(ROOT_INDEX);
@@ -134,21 +147,21 @@ public class Node implements Bytable {
         this.impurity = impurity;
     }
 
-    public Node(int id, Split split, Node left, Node right, Predict predict, double gain, double impurity,
-            Predict leftPredict, double leftImpurity, Predict rightPredict, double rightImpurity, boolean isLeaf) {
-        this.id = id;
-        this.split = split;
-        this.left = left;
-        this.right = right;
-        this.predict = predict;
-        this.gain = gain;
-        this.impurity = impurity;
-        this.leftPredict = leftPredict;
-        this.leftImpurity = leftImpurity;
-        this.rightPredict = rightPredict;
-        this.rightImpurity = rightImpurity;
-        this.isLeaf = isLeaf;
-    }
+    // public Node(int id, Split split, Node left, Node right, Predict predict, double gain, double impurity,
+    // Predict leftPredict, double leftImpurity, Predict rightPredict, double rightImpurity, boolean isLeaf) {
+    // this.id = id;
+    // this.split = split;
+    // this.left = left;
+    // this.right = right;
+    // this.predict = predict;
+    // this.gain = gain;
+    // this.impurity = impurity;
+    // this.leftPredict = leftPredict;
+    // this.leftImpurity = leftImpurity;
+    // this.rightPredict = rightPredict;
+    // this.rightImpurity = rightImpurity;
+    // this.isLeaf = isLeaf;
+    // }
 
     /**
      * @return the id
@@ -327,8 +340,17 @@ public class Node implements Bytable {
         this.isLeaf = isLeaf;
     }
 
-    public boolean isLeaf() {
+    boolean isLeaf() {
         return this.isLeaf;
+    }
+
+    /**
+     * Check if node is real for leaf. No matter the leaf flag, this will check whether left and right exist.
+     * 
+     * @return if it is real leaf node
+     */
+    public boolean isRealLeaf() {
+        return this.left == null && this.right == null;
     }
 
     /**
@@ -375,6 +397,21 @@ public class Node implements Bytable {
         return id << 1;
     }
 
+    /**
+     * @return the wgtCnt
+     */
+    public double getWgtCntRatio() {
+        return wgtCntRatio;
+    }
+
+    /**
+     * @param wgtCntRatio
+     *            the wgtCntRatio to set
+     */
+    public void setWgtCntRatio(double wgtCntRatio) {
+        this.wgtCntRatio = wgtCntRatio;
+    }
+
     public static int rightIndex(int id) {
         return (id << 1) + 1;
     }
@@ -383,12 +420,17 @@ public class Node implements Bytable {
         return id >>> 1;
     }
 
+    public static boolean isRootNode(Node node) {
+        return node != null && node.getId() == ROOT_INDEX;
+    }
+
     @Override
     public void write(DataOutput out) throws IOException {
         out.writeInt(id);
-        out.writeDouble(gain);
-        out.writeDouble(impurity);
-        out.writeBoolean(isLeaf);
+
+        // cast to float to save space
+        out.writeFloat((float) gain);
+        out.writeFloat((float) wgtCntRatio);
 
         if(split == null) {
             out.writeBoolean(false);
@@ -397,11 +439,16 @@ public class Node implements Bytable {
             split.write(out);
         }
 
-        if(predict == null) {
-            out.writeBoolean(false);
-        } else {
-            out.writeBoolean(true);
-            predict.write(out);
+        // only store needed predict info
+        boolean isRealLeaf = isRealLeaf();
+        out.writeBoolean(isRealLeaf);
+        if(isRealLeaf) {
+            if(predict == null) {
+                out.writeBoolean(false);
+            } else {
+                out.writeBoolean(true);
+                predict.write(out);
+            }
         }
 
         if(left == null) {
@@ -422,18 +469,20 @@ public class Node implements Bytable {
     @Override
     public void readFields(DataInput in) throws IOException {
         this.id = in.readInt();
-        this.gain = in.readDouble();
-        this.impurity = in.readDouble();
-        this.isLeaf = in.readBoolean();
+        this.gain = in.readFloat();
+        this.wgtCntRatio = in.readFloat();
 
         if(in.readBoolean()) {
             this.split = new Split();
             this.split.readFields(in);
         }
 
-        if(in.readBoolean()) {
-            this.predict = new Predict();
-            this.predict.readFields(in);
+        boolean isRealLeaf = in.readBoolean();
+        if(isRealLeaf) {
+            if(in.readBoolean()) {
+                this.predict = new Predict();
+                this.predict.readFields(in);
+            }
         }
 
         if(in.readBoolean()) {
@@ -454,4 +503,14 @@ public class Node implements Bytable {
                 + leftImpurity + ", rightPredict=" + rightPredict + ", rightImpurity=" + rightImpurity + "]";
     }
 
+    public String toTree() {
+        String str = "[id=" + id + ", split=" + split + ", predict=" + predict + "]\n";
+        if(this.left != null) {
+            str += this.left.toTree();
+        }
+        if(this.right != null) {
+            str += this.right.toTree();
+        }
+        return str;
+    }
 }

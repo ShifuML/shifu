@@ -33,9 +33,6 @@ public class FloatNeuralStructure extends NeuralStructure {
 
     private static final long serialVersionUID = 7662087479144051670L;
 
-    /**
-     * @param network
-     */
     public FloatNeuralStructure(BasicNetwork network) {
         super(network);
     }

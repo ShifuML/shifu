@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright [2012-2014] PayPal Software Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -79,7 +79,7 @@ public class InitModelProcessor extends BasicModelProcessor implements Processor
     /**
      * runner for init the model
      * 
-     * @throws Exception
+     * @throws Exception in init step running
      */
     @Override
     public int run() throws Exception {
@@ -99,18 +99,19 @@ public class InitModelProcessor extends BasicModelProcessor implements Processor
 
             syncDataToHdfs(modelConfig.getDataSet().getSource());
 
-            Map<Integer, Data> distinctCountMap = null;
+            Map<Integer, Data> countInfoMap = null;
             if(autoTypeEnableCondition()) {
-                distinctCountMap = getApproxDistinctCountByMRJob();
+                countInfoMap = getCountInfoByMRJob();
             }
 
-            if(autoTypeEnableCondition() && distinctCountMap != null) {
+            if(autoTypeEnableCondition() && countInfoMap != null) {
                 if(modelConfig.getDataSet().getAutoTypeThreshold() <= 0) {
                     log.info("Auto type detection is on but threshold <= 0, only compute distinct count but not detect "
                             + "categorical columns.");
-                    setCategoricalColumnsAndDistinctAccount(distinctCountMap, false, true);
+                    int cateCount = setCategoricalColumnsByCountInfo(countInfoMap, true);
+                    log.info("Automatically check {} variables to categorical type.", cateCount);
                 } else {
-                    int cateCount = setCategoricalColumnsAndDistinctAccount(distinctCountMap, true, true);
+                    int cateCount = setCategoricalColumnsAndDistinctAccount(countInfoMap, true, true);
                     log.info("Automatically check {} variables to categorical type.", cateCount);
                 }
             }
@@ -132,6 +133,44 @@ public class InitModelProcessor extends BasicModelProcessor implements Processor
         return modelConfig.isMapReduceRunMode() && modelConfig.getDataSet().getAutoType();
     }
 
+    private int setCategoricalColumnsByCountInfo(Map<Integer, Data> distinctCountMap, boolean distinctOn) {
+        int cateCount = 0;
+        for(ColumnConfig columnConfig: columnConfigList) {
+            Data data = distinctCountMap.get(columnConfig.getColumnNum());
+            if(data == null) {
+                continue;
+            }
+            long distinctCount = data.distinctCount;
+            if(distinctOn) {
+                columnConfig.getColumnStats().setDistinctCount(distinctCount);
+            }
+
+            // only update categorical feature when autoTypeThreshold > 0, by default it is 0
+            if(modelConfig.getDataSet().getAutoTypeThreshold() > 0) {
+                long count = data.count;
+                long invalidCount = data.invalidCount;
+                long validNumCount = data.validNumcount;
+                double numRatio = validNumCount * 1d / (count - invalidCount);
+                // if already categorical by user in categorical.column.names file, no need to do and set
+                // if numerical, check and set it
+                if(!columnConfig.isCategorical()) {
+                    if(numRatio > modelConfig.getDataSet().getAutoTypeThreshold() / 100d) {
+                        columnConfig.setColumnType(ColumnType.N);
+                        log.info("Column {} with index {} is set to numeric type because of enough double values.",
+                                columnConfig.getColumnName(), columnConfig.getColumnNum());
+                    } else {
+                        cateCount += 1;
+                        columnConfig.setColumnType(ColumnType.C);
+                        log.info(
+                                "Column {} with index {} is set to categorical type because of not enough double values.",
+                                columnConfig.getColumnName(), columnConfig.getColumnNum());
+                    }
+                }
+            }
+        }
+        return cateCount;
+    }
+
     private int setCategoricalColumnsAndDistinctAccount(Map<Integer, Data> distinctCountMap, boolean cateOn,
             boolean distinctOn) {
         int cateCount = 0;
@@ -140,31 +179,28 @@ public class InitModelProcessor extends BasicModelProcessor implements Processor
             if(data == null) {
                 continue;
             }
-            Long distinctCount = data.count;
-            if(distinctCount != null && modelConfig.getDataSet().getAutoTypeThreshold() != null) {
+            Long distinctCount = data.distinctCount;
+            // disable auto type threshold
+            if(distinctCount != null) {
                 if(cateOn) {
-                    if(distinctCount < modelConfig.getDataSet().getAutoTypeThreshold().longValue()) {
-                        String[] items = data.items;
-                        if(is01Variable(distinctCount, items)) {
-                            log.info(
-                                    "Column {} with index {} is set to numeric type because of 0-1 variable. Distinct count {}, items {}.",
-                                    columnConfig.getColumnName(), columnConfig.getColumnNum(), distinctCount,
-                                    Arrays.toString(items));
-                            columnConfig.setColumnType(ColumnType.N);
-                        } else if(isDoubleFrequentVariable(distinctCount, items)) {
-                            log.info(
-                                    "Column {} with index {} is set to numeric type because of all sampled items are double(including blank). Distinct count {}, items {}.",
-                                    columnConfig.getColumnName(), columnConfig.getColumnNum(), distinctCount,
-                                    Arrays.toString(items));
-                            columnConfig.setColumnType(ColumnType.N);
-                        } else {
-                            columnConfig.setColumnType(ColumnType.C);
-                            cateCount += 1;
-                            log.info(
-                                    "Column {} with index {} is set to categorical type according to auto type checking: distinct count {}, threshold {}.",
-                                    columnConfig.getColumnName(), columnConfig.getColumnNum(), distinctCount,
-                                    modelConfig.getDataSet().getAutoTypeThreshold());
-                        }
+                    String[] items = data.items;
+                    if(isBinaryVariable(distinctCount, items)) {
+                        log.info(
+                                "Column {} with index {} is set to numeric type because of 0-1 variable. Distinct count {}, items {}.",
+                                columnConfig.getColumnName(), columnConfig.getColumnNum(), distinctCount,
+                                Arrays.toString(items));
+                        columnConfig.setColumnType(ColumnType.N);
+                    } else if(isDoubleFrequentVariable(distinctCount, items)) {
+                        log.info(
+                                "Column {} with index {} is set to numeric type because of all sampled items are double(including blank). Distinct count {}.",
+                                columnConfig.getColumnName(), columnConfig.getColumnNum(), distinctCount);
+                        columnConfig.setColumnType(ColumnType.N);
+                    } else {
+                        columnConfig.setColumnType(ColumnType.C);
+                        cateCount += 1;
+                        log.info(
+                                "Column {} with index {} is set to categorical type according to auto type checking: distinct count {}.",
+                                columnConfig.getColumnName(), columnConfig.getColumnNum(), distinctCount);
                     }
                 }
                 if(distinctOn) {
@@ -175,7 +211,7 @@ public class InitModelProcessor extends BasicModelProcessor implements Processor
         return cateCount;
     }
 
-    private boolean is01Variable(long distinctCount, String[] items) {
+    private boolean isBinaryVariable(long distinctCount, String[] items) {
         if(distinctCount != 2) {
             return false;
         }
@@ -198,37 +234,19 @@ public class InitModelProcessor extends BasicModelProcessor implements Processor
     }
 
     private boolean isDoubleFrequentVariable(long distinctCount, String[] items) {
-        int doubleNotInfSize = 0;
-        boolean isExistNotEmptyAndNotNumberItem = false;
+        int doubleCount = 0, blankCount = 0;
         for(String string: items) {
-            boolean isDouble = false;
-            boolean isInt = false;
             try {
                 Double.parseDouble(string);
-                isDouble = true;
+                doubleCount += 1;
             } catch (NumberFormatException e) {
-                isDouble = false;
-                if(StringUtils.isNotBlank(string)) {
-                    isExistNotEmptyAndNotNumberItem = true;
+                if(StringUtils.isBlank(string)) {
+                    blankCount += 0;
                 }
             }
-            try {
-                Integer.parseInt(string);
-                isInt = true;
-            } catch (NumberFormatException e) {
-                isInt = false;
-            }
-            if(isDouble && !isInt) {
-                doubleNotInfSize += 1;
-            }
         }
 
-        if(doubleNotInfSize == items.length
-                || (doubleNotInfSize == items.length - 1 && !isExistNotEmptyAndNotNumberItem)) {
-            return true;
-        }
-
-        return false;
+        return (doubleCount + blankCount) == items.length;
     }
 
     // OptionsParser doesn't to support *.jar currently.
@@ -264,8 +282,7 @@ public class InitModelProcessor extends BasicModelProcessor implements Processor
         return StringUtils.join(jars, NNConstants.LIB_JAR_SEPARATOR);
     }
 
-    private Map<Integer, Data> getApproxDistinctCountByMRJob() throws IOException, InterruptedException,
-            ClassNotFoundException {
+    private Map<Integer, Data> getCountInfoByMRJob() throws IOException, InterruptedException, ClassNotFoundException {
         SourceType source = this.modelConfig.getDataSet().getSource();
         Configuration conf = new Configuration();
 
@@ -274,8 +291,10 @@ public class InitModelProcessor extends BasicModelProcessor implements Processor
 
         conf.setBoolean(GuaguaMapReduceConstants.MAPRED_MAP_TASKS_SPECULATIVE_EXECUTION, true);
         conf.setBoolean(GuaguaMapReduceConstants.MAPRED_REDUCE_TASKS_SPECULATIVE_EXECUTION, true);
+        conf.setBoolean(GuaguaMapReduceConstants.MAPREDUCE_MAP_SPECULATIVE, true);
+        conf.setBoolean(GuaguaMapReduceConstants.MAPREDUCE_REDUCE_SPECULATIVE, true);
         conf.set(NNConstants.MAPRED_JOB_QUEUE_NAME, Environment.getProperty(Environment.HADOOP_JOB_QUEUE, "default"));
-        conf.setInt(GuaguaMapReduceConstants.MAPREDUCE_JOB_MAX_SPLIT_LOCATIONS, 100);
+        conf.setInt(GuaguaMapReduceConstants.MAPREDUCE_JOB_MAX_SPLIT_LOCATIONS, 5000);
         conf.set(
                 Constants.SHIFU_MODEL_CONFIG,
                 ShifuFileUtils.getFileSystemBySourceType(source)
@@ -299,6 +318,7 @@ public class InitModelProcessor extends BasicModelProcessor implements Processor
         }
 
         conf.setBoolean(CombineInputFormat.SHIFU_VS_SPLIT_COMBINABLE, true);
+        conf.setBoolean(FileInputFormat.INPUT_DIR_RECURSIVE, true);
 
         // one can set guagua conf in shifuconfig
         for(Map.Entry<Object, Object> entry: Environment.getProperties().entrySet()) {
@@ -335,13 +355,28 @@ public class InitModelProcessor extends BasicModelProcessor implements Processor
 
         // submit job
         if(job.waitForCompletion(true)) {
-            return getDistinctCountMap(source, autoTypePath);
+            long totalValidCount = job.getCounters().findCounter(Constants.SHIFU_GROUP_COUNTER, "TOTAL_VALID_COUNT")
+                    .getValue();
+            long invalidTagCount = job.getCounters().findCounter(Constants.SHIFU_GROUP_COUNTER, "INVALID_TAG")
+                    .getValue();
+            long filterOut = job.getCounters().findCounter(Constants.SHIFU_GROUP_COUNTER, "FILTER_OUT_COUNT")
+                    .getValue();
+
+            log.info("Total valid records {}, invalid tag records {}, filter out records {}", totalValidCount,
+                    invalidTagCount, filterOut);
+
+            if(totalValidCount > 0L && invalidTagCount * 1d / totalValidCount >= 0.8d) {
+                log.error("Too many invalid tags, please check you configuration on positive tags and negative tags.");
+            }
+
+            return getCountInfoMap(source, autoTypePath);
         } else {
             throw new RuntimeException("MapReduce Job Auto Type Distinct Count failed.");
         }
+
     }
 
-    private Map<Integer, Data> getDistinctCountMap(SourceType source, String autoTypePath) throws IOException {
+    private Map<Integer, Data> getCountInfoMap(SourceType source, String autoTypePath) throws IOException {
         String outputFilePattern = autoTypePath + Path.SEPARATOR + "part-*";
         if(!ShifuFileUtils.isFileExists(outputFilePattern, source)) {
             throw new RuntimeException("Auto type checking output file not exist.");
@@ -363,10 +398,12 @@ public class InitModelProcessor extends BasicModelProcessor implements Processor
                 str = scanner.nextLine().trim();
                 if(str.contains(TAB_STR)) {
                     String[] splits1 = str.split(TAB_STR);
-                    String[] splits2 = splits1[1].split(":");
+                    String[] splits2 = splits1[1].split(":", -1);
 
-                    distinctCountMap.put(Integer.valueOf(splits1[0]),
-                            new Data(Long.valueOf(splits2[0]), splits2[1].split(",")));
+                    distinctCountMap.put(
+                            Integer.valueOf(splits1[0]),
+                            new Data(Long.valueOf(splits2[0]), Long.valueOf(splits2[1]), Long.valueOf(splits2[2]), Long
+                                    .valueOf(splits2[3]), splits2[4].split(",")));
                 }
             }
             return distinctCountMap;
@@ -392,13 +429,39 @@ public class InitModelProcessor extends BasicModelProcessor implements Processor
         if(StringUtils.isNotBlank(modelConfig.getHeaderPath())) {
             fields = CommonUtils.getHeaders(modelConfig.getHeaderPath(), modelConfig.getHeaderDelimiter(), modelConfig
                     .getDataSet().getSource());
+            String[] dataInFirstLine = CommonUtils.takeFirstLine(modelConfig.getDataSetRawPath(),
+                    modelConfig.getDataSetDelimiter(), modelConfig.getDataSet().getSource());
+            if(fields.length != dataInFirstLine.length) {
+                throw new IllegalArgumentException(
+                        "Header length and data length are not consistent - head length " + fields.length
+                                + ", while data length " + dataInFirstLine.length
+                                + ", please check you header setting and data set setting.");
+            }
         } else {
-            log.warn("No header path is provided, we will try to read first line and detect schema.");
-            log.warn("Schema in ColumnConfig.json are named as  index 0, 1, 2, 3 ...");
-            log.warn("Please make sure weight column and tag column are also taking index as name.");
-            fields = CommonUtils.takeFirstLine(modelConfig.getDataSetRawPath(), modelConfig.getHeaderDelimiter(),
+            fields = CommonUtils.takeFirstLine(modelConfig.getDataSetRawPath(), StringUtils.isBlank(modelConfig
+                    .getHeaderDelimiter()) ? modelConfig.getDataSetDelimiter() : modelConfig.getHeaderDelimiter(),
                     modelConfig.getDataSet().getSource());
-            isSchemaProvided = false;
+            if(StringUtils.join(fields, "").contains(modelConfig.getTargetColumnName())) {
+                // if first line contains target column name, we guess it is csv format and first line is header.
+                isSchemaProvided = true;
+                // first line of data meaning second line in data files excluding first header line
+                String[] dataInFirstLine = CommonUtils.takeFirstTwoLines(modelConfig.getDataSetRawPath(),
+                        StringUtils.isBlank(modelConfig.getHeaderDelimiter()) ? modelConfig.getDataSetDelimiter()
+                                : modelConfig.getHeaderDelimiter(), modelConfig.getDataSet().getSource())[1];
+
+                if(dataInFirstLine != null && fields.length != dataInFirstLine.length) {
+                    throw new IllegalArgumentException(
+                            "Header length and data length are not consistent, please check you header setting and data set setting.");
+                }
+
+                log.warn("No header path is provided, we will try to read first line and detect schema.");
+                log.warn("Schema in ColumnConfig.json are named as first line of data set path.");
+            } else {
+                isSchemaProvided = false;
+                log.warn("No header path is provided, we will try to read first line and detect schema.");
+                log.warn("Schema in ColumnConfig.json are named as  index 0, 1, 2, 3 ...");
+                log.warn("Please make sure weight column and tag column are also taking index as name.");
+            }
         }
 
         columnConfigList = new ArrayList<ColumnConfig>();
@@ -406,7 +469,7 @@ public class InitModelProcessor extends BasicModelProcessor implements Processor
             ColumnConfig config = new ColumnConfig();
             config.setColumnNum(i);
             if(isSchemaProvided) {
-                config.setColumnName(fields[i]);
+                config.setColumnName(CommonUtils.getRelativePigHeaderColumnName(fields[i]));
             } else {
                 config.setColumnName(i + "");
             }
@@ -424,8 +487,12 @@ public class InitModelProcessor extends BasicModelProcessor implements Processor
 
         if(!hasTarget) {
             log.error("Target is not valid: " + modelConfig.getTargetColumnName());
-            log.error("Please check your header file {} and your header delimiter {}", modelConfig.getHeaderPath(),
-                    modelConfig.getHeaderDelimiter());
+            if(StringUtils.isNotBlank(modelConfig.getHeaderPath())) {
+                log.error("Please check your first line of data set file {}", modelConfig.getDataSetRawPath());
+            } else {
+                log.error("Please check your header file {} and your header delimiter {}", modelConfig.getHeaderPath(),
+                        modelConfig.getHeaderDelimiter());
+            }
             return 1;
         }
 
@@ -433,12 +500,22 @@ public class InitModelProcessor extends BasicModelProcessor implements Processor
     }
 
     static class Data {
-        public Data(long count, String[] items) {
+
+        public Data(long count, long invalidCount, long validNumCount, long distinctCount, String[] items) {
             this.count = count;
+            this.invalidCount = invalidCount;
+            this.validNumcount = validNumCount;
+            this.distinctCount = distinctCount;
             this.items = items;
         }
 
         private final long count;
+
+        private final long invalidCount;
+
+        private final long validNumcount;
+
+        private final long distinctCount;
 
         private final String[] items;
     }

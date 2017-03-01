@@ -1,5 +1,5 @@
-/**
- * Copyright [2012-2014] PayPal Software Foundation
+/*
+ * Copyright [2013-2016] PayPal Software Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -33,9 +33,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-
 public class PMMLUtils {
-
 
     public static List<Extension> createExtensions(Map<String, String> extensionMap) {
         List<Extension> extensions = new ArrayList<Extension>();
@@ -52,8 +50,8 @@ public class PMMLUtils {
     }
 
     public static Extension getExtension(List<Extension> extensions, String key) {
-        for (Extension extension : extensions) {
-            if (key.equals(extension.getName())) {
+        for(Extension extension: extensions) {
+            if(key.equals(extension.getName())) {
                 return extension;
             }
         }
@@ -62,8 +60,8 @@ public class PMMLUtils {
     }
 
     public static UnivariateStats getUnivariateStatsByFieldName(ModelStats modelStats, FieldName fieldName) {
-        for (UnivariateStats univariateStats : modelStats.getUnivariateStats()) {
-            if (univariateStats.getField().equals(fieldName)) {
+        for(UnivariateStats univariateStats: modelStats.getUnivariateStats()) {
+            if(univariateStats.getField().equals(fieldName)) {
                 return univariateStats;
             }
         }
@@ -71,7 +69,6 @@ public class PMMLUtils {
         throw new RuntimeException("No UnivariateStats for field: " + fieldName);
 
     }
-
 
     public static void savePMML(PMML pmml, String path) {
         OutputStream os = null;
@@ -88,21 +85,21 @@ public class PMMLUtils {
 
     public static PMML loadPMML(String path) throws Exception {
         InputStream is = null;
-
         try {
             is = new FileInputStream(path);
             InputSource source = new InputSource(is);
             SAXSource transformedSource = ImportFilter.apply(source);
             return JAXBUtil.unmarshalPMML(transformedSource);
-
         } catch (Exception e) {
             e.printStackTrace();
             throw e;
+        } finally {
+            IOUtils.closeQuietly(is);
         }
     }
 
     public static DataType getDefaultDataTypeByOpType(OpType optype) {
-        if (optype.equals(OpType.CONTINUOUS)) {
+        if(optype.equals(OpType.CONTINUOUS)) {
             return DataType.DOUBLE;
         } else {
             return DataType.STRING;
@@ -110,7 +107,7 @@ public class PMMLUtils {
     }
 
     public static Model createModelByType(String name) {
-        if (name.equalsIgnoreCase("NeuralNetwork")) {
+        if(name.equalsIgnoreCase("NeuralNetwork")) {
             return new NeuralNetwork();
         } else {
             throw new RuntimeException("Model not supported: " + name);
@@ -119,8 +116,8 @@ public class PMMLUtils {
     }
 
     public static Model getModelByName(PMML pmml, String name) {
-        for (Model model : pmml.getModels()) {
-            if (model.getModelName().equals(name)) {
+        for(Model model: pmml.getModels()) {
+            if(model.getModelName().equals(name)) {
                 return model;
             }
         }
@@ -130,9 +127,9 @@ public class PMMLUtils {
 
     public static Integer getTargetFieldNumByName(DataDictionary dataDictionary, String name) {
         int size = dataDictionary.getNumberOfFields();
-        for (int i = 0; i < size; i++) {
+        for(int i = 0; i < size; i++) {
             DataField dataField = dataDictionary.getDataFields().get(i);
-            if (dataField.getName().getValue().equals(name)) {
+            if(dataField.getName().getValue().equals(name)) {
                 return i;
             }
         }
@@ -144,7 +141,7 @@ public class PMMLUtils {
         Map<FieldName, Integer> fieldNumMap = new HashMap<FieldName, Integer>();
         int size = dataDictionary.getNumberOfFields();
 
-        for (int i = 0; i < size; i++) {
+        for(int i = 0; i < size; i++) {
             DataField dataField = dataDictionary.getDataFields().get(i);
             fieldNumMap.put(dataField.getName(), i);
         }
@@ -155,7 +152,7 @@ public class PMMLUtils {
 
         Map<FieldName, DerivedField> derivedFieldMap = new HashMap<FieldName, DerivedField>();
 
-        for (DerivedField derivedField : localTransformations.getDerivedFields()) {
+        for(DerivedField derivedField: localTransformations.getDerivedFields()) {
             derivedFieldMap.put(derivedField.getName(), derivedField);
         }
 
@@ -165,7 +162,7 @@ public class PMMLUtils {
     public static Map<FieldName, MiningField> getMiningFieldMap(MiningSchema miningSchema) {
         Map<FieldName, MiningField> miningFieldMap = new HashMap<FieldName, MiningField>();
 
-        for (MiningField miningField : miningSchema.getMiningFields()) {
+        for(MiningField miningField: miningSchema.getMiningFields()) {
             miningFieldMap.put(miningField.getName(), miningField);
         }
 
@@ -175,8 +172,8 @@ public class PMMLUtils {
     public static Integer getNumActiveMiningFields(MiningSchema miningSchema) {
 
         Integer cnt = 0;
-        for (MiningField miningField : miningSchema.getMiningFields()) {
-            if (miningField.getUsageType().equals(FieldUsageType.ACTIVE)) {
+        for(MiningField miningField: miningSchema.getMiningFields()) {
+            if(miningField.getUsageType().equals(FieldUsageType.ACTIVE)) {
                 cnt += 1;
             }
         }
@@ -187,8 +184,8 @@ public class PMMLUtils {
     public static Integer getNumTargetMiningFields(MiningSchema miningSchema) {
 
         Integer cnt = 0;
-        for (MiningField miningField : miningSchema.getMiningFields()) {
-            if (miningField.getUsageType().equals(FieldUsageType.TARGET)) {
+        for(MiningField miningField: miningSchema.getMiningFields()) {
+            if(miningField.getUsageType().equals(FieldUsageType.TARGET)) {
                 cnt += 1;
             }
         }

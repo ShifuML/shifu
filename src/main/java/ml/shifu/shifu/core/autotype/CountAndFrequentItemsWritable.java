@@ -35,7 +35,8 @@ import org.apache.hadoop.io.Writable;
  */
 public class CountAndFrequentItemsWritable implements Writable {
 
-    static final int FREQUET_ITEM_MAX_SIZE = 20;
+    public static final int FREQUET_ITEM_MAX_SIZE = 20;
+
     /**
      * Serializing form for HyperLogLogPlus instance.
      */
@@ -47,12 +48,81 @@ public class CountAndFrequentItemsWritable implements Writable {
      */
     private Set<String> frequetItems;
 
+    /**
+     * Total input count per each feature in current mapper
+     */
+    private long count;
+
+    /**
+     * Total invalid count set by missing or invalid values per each feature in current mapper
+     */
+    private long invalidCount;
+
+    /**
+     * Total valid number count per each feature in current mapper
+     */
+    private long validNumCount;
+
     public CountAndFrequentItemsWritable() {
     }
 
     public CountAndFrequentItemsWritable(byte[] hyperBytes, Set<String> frequetItems) {
         this.hyperBytes = hyperBytes;
         this.frequetItems = frequetItems;
+    }
+
+    public CountAndFrequentItemsWritable(long count, long invalidCount, long validNumCount, byte[] hyperBytes,
+            Set<String> frequetItems) {
+        this.count = count;
+        this.invalidCount = invalidCount;
+        this.validNumCount = validNumCount;
+        this.hyperBytes = hyperBytes;
+        this.frequetItems = frequetItems;
+    }
+
+    /**
+     * @return the count
+     */
+    public long getCount() {
+        return count;
+    }
+
+    /**
+     * @return the invalidCount
+     */
+    public long getInvalidCount() {
+        return invalidCount;
+    }
+
+    /**
+     * @return the validNumCount
+     */
+    public long getValidNumCount() {
+        return validNumCount;
+    }
+
+    /**
+     * @param count
+     *            the count to set
+     */
+    public void setCount(long count) {
+        this.count = count;
+    }
+
+    /**
+     * @param invalidCount
+     *            the invalidCount to set
+     */
+    public void setInvalidCount(long invalidCount) {
+        this.invalidCount = invalidCount;
+    }
+
+    /**
+     * @param validNumCount
+     *            the validNumCount to set
+     */
+    public void setValidNumCount(long validNumCount) {
+        this.validNumCount = validNumCount;
     }
 
     /*
@@ -62,6 +132,10 @@ public class CountAndFrequentItemsWritable implements Writable {
      */
     @Override
     public void write(DataOutput out) throws IOException {
+        out.writeLong(this.count);
+        out.writeLong(this.invalidCount);
+        out.writeLong(this.validNumCount);
+
         if(hyperBytes == null) {
             out.writeInt(0);
         } else {
@@ -97,6 +171,10 @@ public class CountAndFrequentItemsWritable implements Writable {
      */
     @Override
     public void readFields(DataInput in) throws IOException {
+        this.count = in.readLong();
+        this.invalidCount = in.readLong();
+        this.validNumCount = in.readLong();
+
         int len = in.readInt();
         hyperBytes = new byte[len];
         if(len != 0) {

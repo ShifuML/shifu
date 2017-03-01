@@ -247,8 +247,13 @@ public class CorrelationMapper extends Mapper<LongWritable, Text, IntWritable, C
                 }
                 if(columnConfig.isCategorical()) {
                     if(columnConfig.getBinCategory() == null) {
-                        throw new IllegalStateException("Column " + columnConfig.getColumnName()
-                                + " with null binCategory but is not meta or target column.");
+                        if(System.currentTimeMillis() % 100L == 0) {
+                            LOG.warn("Column "
+                                    + columnConfig.getColumnName()
+                                    + " with null binCategory but is not meta or target column, set to 0d for correlation.");
+                        }
+                        dValues[i] = 0d;
+                        continue;
                     }
                     int index = -1;
                     if(units[i] != null) {

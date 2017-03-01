@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright [2012-2014] PayPal Software Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -17,40 +17,26 @@ package ml.shifu.shifu.udf;
 
 import ml.shifu.shifu.container.obj.EvalConfig;
 import ml.shifu.shifu.core.DataPurifier;
+import ml.shifu.shifu.util.Constants;
+
 import org.apache.pig.data.Tuple;
+import org.apache.pig.tools.pigstats.PigStatusReporter;
 
 import java.io.IOException;
-
 
 /**
  * PurifyDataUDF class purify the data for training and evaluation.
  * The setting for purify is in in @ModelConfig.dataSet.filterExpressions or
- *
- * @EvalConfig.dataSet.filterExpressions
  */
 public class PurifyDataUDF extends AbstractTrainerUDF<Boolean> {
 
     private DataPurifier dataPurifier;
 
-    /**
-     * @param source
-     * @param pathModelConfig
-     * @param pathColumnConfig
-     * @throws IOException
-     */
-    public PurifyDataUDF(String source, String pathModelConfig, String pathColumnConfig)
-            throws IOException {
+    public PurifyDataUDF(String source, String pathModelConfig, String pathColumnConfig) throws IOException {
         super(source, pathModelConfig, pathColumnConfig);
         dataPurifier = new DataPurifier(modelConfig);
     }
 
-    /**
-     * @param source
-     * @param pathModelConfig
-     * @param pathColumnConfig
-     * @param evalSetName
-     * @throws IOException
-     */
     public PurifyDataUDF(String source, String pathModelConfig, String pathColumnConfig, String evalSetName)
             throws IOException {
         super(source, pathModelConfig, pathColumnConfig);
@@ -58,12 +44,27 @@ public class PurifyDataUDF extends AbstractTrainerUDF<Boolean> {
         dataPurifier = new DataPurifier(evalConfig);
     }
 
-    /* (non-Javadoc)
+    /*
+     * (non-Javadoc)
+     * 
      * @see org.apache.pig.EvalFunc#exec(org.apache.pig.data.Tuple)
      */
+    @SuppressWarnings("deprecation")
     @Override
     public Boolean exec(Tuple input) throws IOException {
-        return dataPurifier.isFilterOut(input);
+        // update model run time for stats
+        if(isPigEnabled(Constants.SHIFU_GROUP_COUNTER, "TOTAL_VALID_COUNT")) {
+            PigStatusReporter.getInstance().getCounter(Constants.SHIFU_GROUP_COUNTER, "TOTAL_VALID_COUNT").increment(1);
+        }
+        Boolean filterOut = dataPurifier.isFilterOut(input);
+        if(filterOut != null && filterOut) {
+            // update model run time for stats
+            if(isPigEnabled(Constants.SHIFU_GROUP_COUNTER, "FILTER_OUT_COUNT")) {
+                PigStatusReporter.getInstance().getCounter(Constants.SHIFU_GROUP_COUNTER, "FILTER_OUT_COUNT")
+                        .increment(1);
+            }
+        }
+        return filterOut;
     }
 
 }

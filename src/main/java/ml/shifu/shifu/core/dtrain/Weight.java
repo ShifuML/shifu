@@ -17,8 +17,8 @@ package ml.shifu.shifu.core.dtrain;
 
 /**
  * {@link Weight} is used to update NN weights according to propagation option. Which is also copied from Encog.
- * <p/>
- * <p/>
+ * 
+ * <p>
  * We'd like to reuse code from Encog but unfortunately the methods are private:(.
  */
 public class Weight {
@@ -210,7 +210,7 @@ public class Weight {
             delta = Math.max(delta, DTrainUtils.DELTA_MIN);
             this.updateValues[index] = delta;
             weightChange = -this.lastDelta[index];
-            // set the previous gradent to zero so that there will be no
+            // set the previous gradient to zero so that there will be no
             // adjustment the next iteration
             lastGradient[index] = 0;
         } else if(change == 0) {

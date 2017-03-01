@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright [2012-2014] PayPal Software Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -118,12 +118,23 @@ public class ModelNormalizeConf {
     }
 
     /**
-     * @param corrlation
-     *            the corrlation to set
+     * @param correlation
+     *            the correlation to set
      */
     @JsonProperty
     public void setCorrelation(Correlation correlation) {
         this.correlation = correlation;
     }
 
+    @Override
+    public ModelNormalizeConf clone() {
+        ModelNormalizeConf other = new ModelNormalizeConf();
+        other.setNormType(normType);
+        other.setSampleRate(sampleRate);
+        other.setSampleNegOnly(sampleNegOnly);
+        other.setStdDevCutOff(stdDevCutOff);
+        other.setIsParquet(isParquet);
+        other.setCorrelation(correlation);
+        return other;
+    }
 }

@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright [2012-2014] PayPal Software Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -23,10 +23,9 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.*;
 
 /**
- * <p/>
  * {@link JSONUtils} is a unified entry for all json format serialization and de-serialization.
- * <p/>
- * <p/>
+ * 
+ * <p>
  * ObjectMapper instance is stored into ThreadLocal object to make sure thread safety.
  */
 public class JSONUtils {

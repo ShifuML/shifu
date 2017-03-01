@@ -15,16 +15,6 @@
  */
 package ml.shifu.shifu.core.binning;
 
-import com.google.common.base.Splitter;
-
-import org.apache.commons.lang.StringUtils;
-import org.apache.hadoop.io.IntWritable;
-import org.apache.hadoop.io.LongWritable;
-import org.apache.hadoop.io.Text;
-import org.apache.hadoop.mapreduce.Mapper;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import java.io.BufferedReader;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
@@ -42,8 +32,20 @@ import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.container.obj.ModelConfig;
 import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
 import ml.shifu.shifu.core.DataPurifier;
+import ml.shifu.shifu.core.autotype.AutoTypeDistinctCountMapper.CountAndFrequentItems;
+import ml.shifu.shifu.core.autotype.CountAndFrequentItemsWritable;
 import ml.shifu.shifu.util.CommonUtils;
 import ml.shifu.shifu.util.Constants;
+
+import org.apache.commons.lang.StringUtils;
+import org.apache.hadoop.io.IntWritable;
+import org.apache.hadoop.io.LongWritable;
+import org.apache.hadoop.io.Text;
+import org.apache.hadoop.mapreduce.Mapper;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import com.google.common.base.Splitter;
 
 /**
  * {@link UpdateBinningInfoMapper} is a mapper to update local data statistics given bin boundary list.
@@ -104,7 +106,7 @@ public class UpdateBinningInfoMapper extends Mapper<LongWritable, Text, IntWrita
     /**
      * Bin boundary list splitter.
      */
-    private Splitter BIN_BOUNDARY_SPLITTER = Splitter.on(Constants.BIN_BOUNDRY_DELIMITER).trimResults();
+    private static Splitter BIN_BOUNDARY_SPLITTER = Splitter.on(Constants.BIN_BOUNDRY_DELIMITER).trimResults();
 
     /**
      * Output key cache to avoid new operation.
@@ -116,11 +118,20 @@ public class UpdateBinningInfoMapper extends Mapper<LongWritable, Text, IntWrita
      */
     private Map<Integer, Map<String, Integer>> categoricalBinMap;
 
+    /**
+     * Using approximate method to estimate real frequent items and store into this map
+     */
+    private Map<Integer, CountAndFrequentItems> variableCountMap;
+
     // cache tags in set for search
     private Set<String> posTags;
     private Set<String> negTags;
     private Set<String> tags;
     private Set<String> missingOrInvalidValues;
+
+    private int weightExceptions = 0;
+
+    private boolean isThrowforWeightException;
 
     /**
      * Load model config and column config files.
@@ -160,11 +171,16 @@ public class UpdateBinningInfoMapper extends Mapper<LongWritable, Text, IntWrita
 
         this.outputKey = new IntWritable();
 
+        this.variableCountMap = new HashMap<Integer, CountAndFrequentItems>();
+
         this.posTags = new HashSet<String>(modelConfig.getPosTags());
         this.negTags = new HashSet<String>(modelConfig.getNegTags());
         this.tags = new HashSet<String>(modelConfig.getFlattenTags());
 
         this.missingOrInvalidValues = new HashSet<String>(this.modelConfig.getDataSet().getMissingOrInvalidValues());
+
+        this.isThrowforWeightException = "true".equalsIgnoreCase(context.getConfiguration().get(
+                "shifu.weight.exception", "false"));
 
         LOG.debug("Column binning info: {}", this.columnBinningInfo);
     }
@@ -181,7 +197,7 @@ public class UpdateBinningInfoMapper extends Mapper<LongWritable, Text, IntWrita
             while(line != null && line.length() != 0) {
                 LOG.debug("line is {}", line);
                 // here just use String.split for just two columns
-                String[] cols = line.trim().split(Constants.DEFAULT_ESCAPE_DELIMITER);
+                String[] cols = CommonUtils.split(line.trim(), Constants.DEFAULT_DELIMITER);
                 if(cols != null && cols.length >= 2) {
                     Integer columnNum = Integer.parseInt(cols[0]);
                     BinningInfoWritable binningInfo = new BinningInfoWritable();
@@ -205,9 +221,11 @@ public class UpdateBinningInfoMapper extends Mapper<LongWritable, Text, IntWrita
                             this.categoricalBinMap.put(columnNum, map);
                         }
                         int index = 0;
-                        for(String startElement: BIN_BOUNDARY_SPLITTER.split(cols[1])) {
-                            list.add(startElement);
-                            map.put(startElement, index++);
+                        if(!StringUtils.isBlank(cols[1])) {
+                            for(String startElement: BIN_BOUNDARY_SPLITTER.split(cols[1])) {
+                                list.add(startElement);
+                                map.put(startElement, index++);
+                            }
                         }
                         binningInfo.setBinCategories(list);
                         binSize = list.size();
@@ -223,7 +241,7 @@ public class UpdateBinningInfoMapper extends Mapper<LongWritable, Text, IntWrita
 
                     double[] binWeightNeg = new double[binSize + 1];
                     binningInfo.setBinWeightNeg(binWeightNeg);
-
+                    LOG.info("column num {}  and info {}", columnNum, binningInfo);
                     this.columnBinningInfo.put(columnNum, binningInfo);
                 }
                 line = reader.readLine();
@@ -278,25 +296,48 @@ public class UpdateBinningInfoMapper extends Mapper<LongWritable, Text, IntWrita
             return;
         }
 
+        context.getCounter(Constants.SHIFU_GROUP_COUNTER, "TOTAL_VALID_COUNT").increment(1L);
+
         if(!this.dataPurifier.isFilterOut(valueStr)) {
+            context.getCounter(Constants.SHIFU_GROUP_COUNTER, "FILTER_OUT_COUNT").increment(1L);
             return;
         }
 
         String[] units = CommonUtils.split(valueStr, this.dataSetDelimiter);
         // tagColumnNum should be in units array, if not IndexOutofBoundException
-        String tag = units[this.tagColumnNum];
+        String tag = CommonUtils.trimTag(units[this.tagColumnNum]);
 
         if(modelConfig.isRegression()) {
             if(tag == null || (!posTags.contains(tag) && !negTags.contains(tag))) {
+                context.getCounter(Constants.SHIFU_GROUP_COUNTER, "INVALID_TAG").increment(1L);
                 return;
             }
         } else {
             if(tag == null || (!tags.contains(tag))) {
+                context.getCounter(Constants.SHIFU_GROUP_COUNTER, "INVALID_TAG").increment(1L);
                 return;
             }
         }
 
-        Double weight = this.weightedColumnNum == -1 ? 1.0d : Double.valueOf(units[this.weightedColumnNum]);
+        Double weight = 1.0;
+        try {
+            weight = (this.weightedColumnNum == -1 ? 1.0d : Double.valueOf(units[this.weightedColumnNum]));
+            if(weight < 0) {
+                weightExceptions += 1;
+                context.getCounter(Constants.SHIFU_GROUP_COUNTER, "WEIGHT_EXCEPTION").increment(1L);
+                if(weightExceptions > 5000 && this.isThrowforWeightException) {
+                    throw new IllegalStateException(
+                            "Please check weight column in eval, exceptional weight count is over 5000");
+                }
+            }
+        } catch (Exception e) {
+            weightExceptions += 1;
+            context.getCounter(Constants.SHIFU_GROUP_COUNTER, "WEIGHT_EXCEPTION").increment(1L);
+            if(weightExceptions > 5000 && this.isThrowforWeightException) {
+                throw new IllegalStateException(
+                        "Please check weight column in eval, exceptional weight count is over 5000");
+            }
+        }
 
         // valid data process
         boolean isMissingValue = false;
@@ -304,9 +345,19 @@ public class UpdateBinningInfoMapper extends Mapper<LongWritable, Text, IntWrita
 
         for(int i = 0; i < units.length; i++) {
             ColumnConfig columnConfig = this.columnConfigList.get(i);
-            if(columnConfig.isMeta() || columnConfig.isTarget()) {
-                continue;
+
+            CountAndFrequentItems countAndFrequentItems = this.variableCountMap.get(i);
+            if(countAndFrequentItems == null) {
+                countAndFrequentItems = new CountAndFrequentItems();
+                this.variableCountMap.put(i, countAndFrequentItems);
             }
+            countAndFrequentItems.offer(this.missingOrInvalidValues, units[i]);
+
+            // meta and target is not skipped, commeted out
+            // if(columnConfig.isMeta() || columnConfig.isTarget()) {
+            // continue;
+            // }
+
             isMissingValue = false;
             isInvalidValue = false;
 
@@ -432,8 +483,18 @@ public class UpdateBinningInfoMapper extends Mapper<LongWritable, Text, IntWrita
     @Override
     protected void cleanup(Context context) throws IOException, InterruptedException {
         LOG.debug("Column binning info: {}", this.columnBinningInfo);
+        LOG.debug("Column count info: {}", this.variableCountMap);
 
         for(Map.Entry<Integer, BinningInfoWritable> entry: this.columnBinningInfo.entrySet()) {
+            CountAndFrequentItems cfi = this.variableCountMap.get(entry.getKey());
+            if(cfi != null) {
+                entry.getValue().setCfiw(
+                        new CountAndFrequentItemsWritable(cfi.getCount(), cfi.getInvalidCount(),
+                                cfi.getValidNumCount(), cfi.getHyper().getBytes(), cfi.getFrequentItems()));
+            } else {
+                LOG.info("cci is null for column {}", entry.getKey());
+            }
+
             this.outputKey.set(entry.getKey());
             context.write(this.outputKey, entry.getValue());
         }

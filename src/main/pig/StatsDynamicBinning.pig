@@ -21,7 +21,7 @@ SET pig.exec.reducers.bytes.per.reducer 536870912;
 SET mapred.job.queue.name $queue_name;
 SET mapred.task.timeout 1200000;
 
-SET job.name 'Shifu Statistic';
+SET job.name 'Shifu Statistic: $data_set';
 SET io.sort.mb 500;
 
 SET mapred.child.java.opts '-Xmx1G -server -XX:+UseParNewGC -XX:+UseConcMarkSweepGC -XX:CMSInitiatingOccupancyFraction=70';
@@ -42,7 +42,7 @@ DEFINE IsDataFilterOut  ml.shifu.shifu.udf.PurifyDataUDF('$source_type', '$path_
 DEFINE AddColumnNum     ml.shifu.shifu.udf.AddColumnNumAndFilterUDF('$source_type', '$path_model_config', '$path_column_config', 'false');
 
 DEFINE GenSmallBinningInfo	ml.shifu.shifu.udf.GenSmallBinningInfoUDF('$source_type', '$path_model_config', '$path_column_config', '$histo_scale_factor');
-DEFINE DynamicBinning 		ml.shifu.shifu.udf.DynamicBinningUDF('$source_type', '$path_model_config', '$path_column_config');
+DEFINE DynamicBinning 		ml.shifu.shifu.udf.DynamicBinningUDF('$source_type', '$path_model_config', '$path_column_config', '$path_stats_small_bins');
 
 -- load and purify data
 data = LOAD '$path_raw_data' USING PigStorage('$delimiter');
@@ -55,9 +55,9 @@ data_cols = FOREACH data_cols GENERATE FLATTEN($0);
 
 -- prepare data and do binning
 data_binning_grp = GROUP data_cols BY $0;
-binning_info_small = FOREACH data_binning_grp GENERATE group, GenSmallBinningInfo(group, data_cols) as bins;
+binning_info_small = FOREACH data_binning_grp GENERATE FLATTEN(GenSmallBinningInfo(data_cols));
 
-data_binning_join = JOIN data_binning_grp BY group, binning_info_small BY group USING 'replicated';
-binning_info = FOREACH data_binning_join GENERATE FLATTEN(DynamicBinning(*));
+STORE binning_info_small INTO '$path_stats_small_bins' USING PigStorage('\u0007', '-schema');
 
+binning_info = FOREACH data_binning_grp GENERATE FLATTEN(DynamicBinning(data_cols));
 STORE binning_info INTO '$path_stats_binning_info' USING PigStorage('|', '-schema');

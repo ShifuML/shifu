@@ -129,8 +129,8 @@ public class PostTrainMapper extends Mapper<LongWritable, Text, IntWritable, Fea
         SourceType sourceType = this.modelConfig.getDataSet().getSource();
 
         List<BasicML> models = CommonUtils.loadBasicModels(modelConfig, columnConfigList, null, sourceType);
-        this.headers = CommonUtils.getHeaders(this.modelConfig.getDataSet().getHeaderPath(), this.modelConfig
-                .getDataSet().getDataDelimiter(), sourceType);
+
+        this.headers = CommonUtils.getFinalHeaders(modelConfig);
         this.modelRunner = new ModelRunner(modelConfig, columnConfigList, this.headers,
                 modelConfig.getDataSetDelimiter(), models);
 
@@ -191,7 +191,7 @@ public class PostTrainMapper extends Mapper<LongWritable, Text, IntWritable, Fea
 
         String[] units = CommonUtils.split(valueStr, this.modelConfig.getDataSetDelimiter());
         // tagColumnNum should be in units array, if not IndexOutofBoundException
-        String tag = units[this.tagColumnNum];
+        String tag = CommonUtils.trimTag(units[this.tagColumnNum]);
 
         if(!this.tags.contains(tag)) {
             if(System.currentTimeMillis() % 20 == 0) {

@@ -66,7 +66,7 @@ public interface FloatMLDataSet extends Iterable<FloatMLDataPair> {
      * no ideal output is provided. Note: not all implemenations support the add
      * methods.
      * 
-     * @param data1
+     * @param data
      *            The data item to be added.
      */
     void add(FloatMLData data);

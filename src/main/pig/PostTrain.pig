@@ -18,13 +18,15 @@ REGISTER $path_jar;
 SET pig.exec.reducers.max 999;
 SET pig.exec.reducers.bytes.per.reducer 536870912;
 SET mapred.job.queue.name $queue_name;
-SET job.name 'Shifu Post-train';
+SET job.name 'Shifu Post-train: $data_set';
 SET io.sort.mb 500;
 SET mapred.child.java.opts -Xmx1G;
 SET mapred.child.ulimit 2.5G;
 SET mapred.reduce.slowstart.completed.maps 0.6;
 SET mapred.map.tasks.speculative.execution true;
 SET mapred.reduce.tasks.speculative.execution true;
+SET mapreduce.map.speculative true;
+SET mapreduce.reduce.speculative true;
 
 DEFINE SimpleScore              ml.shifu.shifu.udf.SimpleScoreUDF('$source_type', '$path_model_config', '$path_column_config', '$pathHeader', '$pathDelimiter');
 DEFINE FullScore                ml.shifu.shifu.udf.FullScoreUDF('$source_type', '$path_model_config', '$path_column_config', '$pathHeader', '$pathDelimiter');

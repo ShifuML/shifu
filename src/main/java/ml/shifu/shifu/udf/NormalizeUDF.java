@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright [2012-2014] PayPal Software Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -55,10 +55,21 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
     private JexlContext weightContext;
     private DecimalFormat df = new DecimalFormat("#.######");
 
-    private String alg;
+    public static enum WarnInNormalizeUDF {
+        INVALID_TAG;
+    };
+
+    // if current norm for only clean and not transform categorical and numeric value
+    private boolean isForClean = false;
 
     public NormalizeUDF(String source, String pathModelConfig, String pathColumnConfig) throws Exception {
+        this(source, pathModelConfig, pathColumnConfig, "false");
+    }
+
+    public NormalizeUDF(String source, String pathModelConfig, String pathColumnConfig, String isForClean)
+            throws Exception {
         super(source, pathModelConfig, pathColumnConfig);
+        this.isForClean = "true".equalsIgnoreCase(isForClean);
 
         log.debug("Initializing NormalizeUDF ... ");
 
@@ -76,8 +87,6 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
         this.tags = super.modelConfig.getSetTags();
 
         log.debug("NormalizeUDF Initialized");
-
-        this.alg = this.modelConfig.getAlgorithm();
     }
 
     @SuppressWarnings("deprecation")
@@ -85,8 +94,12 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
         if(input == null || input.size() == 0) {
             return null;
         }
+        // update total valid count
+        if(isPigEnabled(Constants.SHIFU_GROUP_COUNTER, "TOTAL_VALID_COUNT")) {
+            PigStatusReporter.getInstance().getCounter(Constants.SHIFU_GROUP_COUNTER, "TOTAL_VALID_COUNT").increment(1);
+        }
 
-        final String rawTag = input.get(tagColumnNum).toString();
+        final String rawTag = CommonUtils.trimTag(input.get(tagColumnNum).toString());
 
         // make sure all invalid tag record are filter out
         if(!super.tagSet.contains(rawTag)) {
@@ -96,11 +109,15 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
             return null;
         }
 
-        // do data sampling. Unselected data or data with invalid tag will be filtered out.
-        boolean isNotSampled = DataSampler.isNotSampled(modelConfig.isRegression(), super.tagSet, super.posTagSet,
-                super.negTagSet, modelConfig.getNormalizeSampleRate(), modelConfig.isNormalizeSampleNegOnly(), rawTag);
-        if(isNotSampled) {
-            return null;
+        // data sampling only for normalization, for data cleaning, shouldn't do data sampling
+        if(!this.isForClean) {
+            // do data sampling. Unselected data or data with invalid tag will be filtered out.
+            boolean isNotSampled = DataSampler.isNotSampled(modelConfig.isRegression(), super.tagSet, super.posTagSet,
+                    super.negTagSet, modelConfig.getNormalizeSampleRate(), modelConfig.isNormalizeSampleNegOnly(),
+                    rawTag);
+            if(isNotSampled) {
+                return null;
+            }
         }
 
         // append tuple with tag, normalized value.
@@ -118,12 +135,17 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
             // check tag type.
             if(tagColumnNum == i) {
                 if(modelConfig.isRegression()) {
-                    String tagType = tagTypeCheck(super.posTagSet, super.negTagSet, rawTag);
-                    if(tagType == null) {
+                    int type = 0;
+                    if(super.posTagSet.contains(rawTag)) {
+                        type = 1;
+                    } else if(super.negTagSet.contains(rawTag)) {
+                        type = 0;
+                    } else {
                         log.error("Invalid data! The target value is not listed - " + rawTag);
+                        warn("Invalid data! The target value is not listed - " + rawTag, WarnInNormalizeUDF.INVALID_TAG);
                         return null;
                     }
-                    tuple.append(tagType);
+                    tuple.append(type);
                 } else {
                     int index = -1;
                     for(int j = 0; j < tags.size(); j++) {
@@ -142,29 +164,38 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
                 continue;
             }
 
-            // append normalize data.
-            if(!CommonUtils.isGoodCandidate(modelConfig.isRegression(), config)) {
-                tuple.append(null);
-            } else {
-                if(CommonUtils.isDesicionTreeAlgorithm(this.alg)) {
-                    Double normVal = 0d;
-                    if(config.isCategorical()) {
+            if(this.isForClean) {
+                // for RF/GBT model, only clean data, not real do norm data
+                if(config.isCategorical()) {
+                    if(config.getBinCategory() != null) {
+                        // TODO using HashSet instead of ArrayList
                         int index = config.getBinCategory().indexOf(val);
                         if(index == -1) {
-                            // TODO use index to replace real category value, then in training only check index is OK
-                            // empty if missing value
+                            // set to empty for invalid category
                             tuple.append("");
                         } else {
                             tuple.append(val);
                         }
                     } else {
-                        try {
-                            normVal = Double.parseDouble(val);
-                        } catch (Exception e) {
-                            log.debug("Not decimal format " + val + ", using default!");
-                            normVal = Normalizer.defaultMissingValue(config);
-                        }
-                        tuple.append(df.format(normVal));
+                        tuple.append(val);
+                    }
+                } else {
+                    Double normVal = 0d;
+                    try {
+                        normVal = Double.parseDouble(val);
+                    } catch (Exception e) {
+                        log.debug("Not decimal format " + val + ", using default!");
+                        normVal = Normalizer.defaultMissingValue(config);
+                    }
+                    tuple.append(df.format(normVal));
+                }
+            } else {
+                // append normalize data. exclude data clean, for data cleaning, no need check good or bad candidate
+                if(!CommonUtils.isGoodCandidate(modelConfig.isRegression(), config)) {
+                    if(config.isMeta()) {
+                        tuple.append(val);
+                    } else {
+                        tuple.append(null);
                     }
                 } else {
                     // for multiple classification, binPosRate means rate of such category over all counts, reuse
@@ -215,42 +246,24 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
         return weight;
     }
 
-    /**
-     * Check tag type.
-     * 
-     * @param posTags
-     *            - positive tag list.
-     * @param negTags
-     *            - negtive tag list.
-     * @param rawTag
-     *            - raw tag string
-     * @return tag type String. Return "1" for positive tag. Return "0" for negtive tag. Return null for invalid tag.
-     */
-    public String tagTypeCheck(Set<String> posTags, Set<String> negTags, String rawTag) {
-        String type = null;
-        if(posTags.contains(rawTag)) {
-            type = "1";
-        } else if(negTags.contains(rawTag)) {
-            type = "0";
-        }
-
-        return type;
-    }
-
     public Schema outputSchema(Schema input) {
         try {
             StringBuilder schemaStr = new StringBuilder();
             schemaStr.append("Normalized:Tuple(");
             for(ColumnConfig config: columnConfigList) {
-                if(!config.isMeta() && config.isNumerical()) {
+                if(config.isMeta()) {
+                    schemaStr.append(config.getColumnName() + ":chararray" + ",");
+                } else if(!config.isMeta() && config.isNumerical()) {
                     schemaStr.append(config.getColumnName() + ":float" + ",");
+                } else if(config.isTarget()) {
+                    schemaStr.append(config.getColumnName() + ":int" + ",");
                 } else {
-                    if(config.isCategorical() && CommonUtils.isDesicionTreeAlgorithm(this.alg)) {
+                    if(config.isCategorical() && this.isForClean) {
+                        // clean data for DT algorithms, only store index, short is ok while Pig only have int type
                         schemaStr.append(config.getColumnName() + ":chararray" + ",");
-                    } else if(config.isCategorical()) {
-                        schemaStr.append(config.getColumnName() + ":float" + ",");
                     } else {
-                        schemaStr.append(config.getColumnName() + ":chararray" + ",");
+                        // for others, set to float, no matter LR/NN categorical or filter out feature with null
+                        schemaStr.append(config.getColumnName() + ":float" + ",");
                     }
                 }
             }
@@ -262,11 +275,8 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
         }
     }
 
-    /**
+    /*
      * Create expressions for multi weight settings
-     * 
-     * @param weightExprList
-     * @return weight expression map
      */
     protected Map<Expression, Double> createExpressionMap(List<WeightAmplifier> weightExprList) {
         Map<Expression, Double> ewMap = new HashMap<Expression, Double>();
@@ -282,11 +292,8 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
         return ewMap;
     }
 
-    /**
+    /*
      * Create the expression for weight setting
-     * 
-     * @param weightAmplifier
-     * @return expression for weight amplifier
      */
     private Expression createExpression(String weightAmplifier) {
         if(StringUtils.isNotBlank(weightAmplifier)) {

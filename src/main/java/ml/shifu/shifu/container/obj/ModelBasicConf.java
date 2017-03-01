@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright [2012-2014] PayPal Software Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -154,6 +154,21 @@ public class ModelBasicConf {
      */
     public void setPostTrainOn(Boolean postTrainOn) {
         this.postTrainOn = postTrainOn;
+    }
+
+    @Override
+    public ModelBasicConf clone() {
+        ModelBasicConf other = new ModelBasicConf();
+        other.setName(name);
+        other.setAuthor(author);
+        other.setDescription(description);
+        other.setRunMode(runMode);
+        other.setVersion(version);
+        other.setPostTrainOn(postTrainOn);
+        if ( customPaths != null ) {
+            other.setCustomPaths(new HashMap<String, String>(customPaths));
+        }
+        return other;
     }
 
 }

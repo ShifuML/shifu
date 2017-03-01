@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright [2012-2014] PayPal Software Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -29,11 +29,6 @@ public class ShifuException extends RuntimeException {
      */
     private ShifuErrorCode error = null;
 
-    /**
-     * Constructor
-     *
-     * @param code
-     */
     public ShifuException(ShifuErrorCode code) {
         super();
         setError(code);
@@ -44,24 +39,11 @@ public class ShifuException extends RuntimeException {
         this.setError(code);
     }
 
-    /**
-     * Constructor
-     *
-     * @param code
-     * @param msg
-     */
     public ShifuException(ShifuErrorCode code, String msg) {
         super(msg);
         this.setError(code);
     }
 
-    /**
-     * Constructor
-     *
-     * @param code
-     * @param e
-     * @param msg
-     */
     public ShifuException(ShifuErrorCode code, Exception e, String msg) {
         super(msg, e);
         this.setError(code);

@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright [2012-2014] PayPal Software Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -37,6 +37,7 @@ import ml.shifu.shifu.container.obj.RawSourceData;
 import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
 import ml.shifu.shifu.core.alg.NNTrainer;
 import ml.shifu.shifu.core.dtrain.CommonConstants;
+import ml.shifu.shifu.core.dtrain.dt.FeatureSubsetStrategy;
 import ml.shifu.shifu.core.dtrain.gs.GridSearch;
 import ml.shifu.shifu.fs.ShifuFileUtils;
 import ml.shifu.shifu.util.CommonUtils;
@@ -48,18 +49,18 @@ import org.slf4j.LoggerFactory;
 
 /**
  * ModelInspector class is to do Safety Testing for model.
- * <p/>
- * Safety Testing include: 1. validate the @ModelConfig against its meta data
  * 
- * @links{src/main/resources/store/ModelConfigMeta.json 2. check source data for training and evaluation 3. check the
- *                                                      prerequisite for each step
+ * <p>
+ * Safety Testing include: 1. validate the ModelConfig against its meta data
+ * src/main/resources/store/ModelConfigMeta.json 2. check source data for training and evaluation 3. check the
+ * prerequisite for each step
  */
 public class ModelInspector {
 
     private static final Logger LOG = LoggerFactory.getLogger(ModelInspector.class);
 
     public static enum ModelStep {
-        INIT, STATS, VARSELECT, NORMALIZE, TRAIN, POSTTRAIN, EVAL, EXPORT
+        INIT, STATS, VARSELECT, NORMALIZE, TRAIN, POSTTRAIN, EVAL, EXPORT, COMBO
     }
 
     private static ModelInspector instance = new ModelInspector();
@@ -88,6 +89,7 @@ public class ModelInspector {
      *         if everything is OK, the status of ValidateResult is TRUE
      *         else the status of ValidateResult is FALSE, and the reasons will in the clauses of ValidateResult
      * @throws Exception
+     *             any exception in validation
      */
     public ValidateResult probe(ModelConfig modelConfig, ModelStep modelStep) throws Exception {
         ValidateResult result = checkMeta(modelConfig);
@@ -255,7 +257,10 @@ public class ModelInspector {
         ValidateResult result = new ValidateResult(true);
 
         if(modelConfig.isClassification()
-                && (modelConfig.getBinningMethod() == BinningMethod.EqualPositive || modelConfig.getBinningMethod() == BinningMethod.EqualNegtive)) {
+                && (modelConfig.getBinningMethod() == BinningMethod.EqualPositive
+                        || modelConfig.getBinningMethod() == BinningMethod.EqualNegtive
+                        || modelConfig.getBinningMethod() == BinningMethod.WeightEqualPositive || modelConfig
+                        .getBinningMethod() == BinningMethod.WeightEqualNegative)) {
             ValidateResult tmpResult = new ValidateResult(false,
                     Arrays.asList("Multiple classification cannot leverage EqualNegtive and EqualPositive binning."));
             result = ValidateResult.mergeResult(result, tmpResult);
@@ -266,6 +271,13 @@ public class ModelInspector {
                     result,
                     new ValidateResult(false, Arrays
                             .asList("Only SPDTI binning algorithm are supported with multiple classification.")));
+
+        }
+
+        // maxNumBin should be less than Short.MAX_VALUE, larger maxNumBin need more computing and no meaningful.
+        if(modelConfig.getStats().getMaxNumBin() > Short.MAX_VALUE || modelConfig.getStats().getMaxNumBin() <= 0) {
+            result = ValidateResult.mergeResult(result,
+                    new ValidateResult(false, Arrays.asList("stats#maxNumBin should be in (0, 32767].")));
 
         }
         return result;
@@ -298,15 +310,6 @@ public class ModelInspector {
                         result,
                         checkFile(varSelect.getForceSelectColumnNameFile(), SourceType.LOCAL,
                                 "forceSelect columns configuration"));
-            }
-        }
-
-        if(modelConfig.isClassification()) {
-            if(varSelect.getWrapperEnabled()) {
-                result = ValidateResult.mergeResult(
-                        result,
-                        new ValidateResult(false, Arrays
-                                .asList("Multiple classification is not enabled for wrapperBy variable selection.")));
             }
         }
 
@@ -455,6 +458,13 @@ public class ModelInspector {
             result = ValidateResult.mergeResult(result, tmpResult);
         }
 
+        if(train.getNumKFold() != null && train.getNumKFold() > 20) {
+            ValidateResult tmpResult = new ValidateResult(true);
+            tmpResult.setStatus(false);
+            tmpResult.getCauses().add("numKFold should be in (0, 20] or <=0 (not dp k-crossValidation)");
+            result = ValidateResult.mergeResult(result, tmpResult);
+        }
+
         if(train.getBaggingSampleRate() == null || train.getBaggingSampleRate().compareTo(Double.valueOf(0)) <= 0
                 || train.getBaggingSampleRate().compareTo(Double.valueOf(1)) > 0) {
             ValidateResult tmpResult = new ValidateResult(true);
@@ -584,6 +594,13 @@ public class ModelInspector {
                         tmpResult.getCauses().add("Loss should be in [log,squared,absolute].");
                         result = ValidateResult.mergeResult(result, tmpResult);
                     }
+
+                    if(loss == null) {
+                        ValidateResult tmpResult = new ValidateResult(true);
+                        tmpResult.setStatus(false);
+                        tmpResult.getCauses().add("'Loss' parameter isn't be set in train#parameters in GBT training.");
+                        result = ValidateResult.mergeResult(result, tmpResult);
+                    }
                 }
 
                 Object maxDepthObj = params.get("MaxDepth");
@@ -595,6 +612,26 @@ public class ModelInspector {
                         tmpResult.getCauses().add("MaxDepth should in [1, 20].");
                         result = ValidateResult.mergeResult(result, tmpResult);
                     }
+                }
+
+                Object maxLeavesObj = params.get("MaxLeaves");
+                if(maxLeavesObj != null) {
+                    int maxLeaves = Integer.valueOf(maxLeavesObj.toString());
+                    if(maxLeaves <= 0 || maxLeaves > Integer.MAX_VALUE) {
+                        ValidateResult tmpResult = new ValidateResult(true);
+                        tmpResult.setStatus(false);
+                        tmpResult.getCauses().add("MaxLeaves should in [1, Integer.MAX_VALUE].");
+                        result = ValidateResult.mergeResult(result, tmpResult);
+                    }
+                }
+
+                if(maxDepthObj == null && maxLeavesObj == null) {
+                    ValidateResult tmpResult = new ValidateResult(true);
+                    tmpResult.setStatus(false);
+                    tmpResult
+                            .getCauses()
+                            .add("'MaxDepth' or 'MaxLeaves' parameters at least one of both should be set in train#parameters in GBT training.");
+                    result = ValidateResult.mergeResult(result, tmpResult);
                 }
 
                 Object maxStatsMemoryMBObj = params.get("MaxStatsMemoryMB");
@@ -618,6 +655,12 @@ public class ModelInspector {
                             tmpResult.getCauses().add("Learning rate should be larger than 0.");
                             result = ValidateResult.mergeResult(result, tmpResult);
                         }
+                    } else {
+                        ValidateResult tmpResult = new ValidateResult(true);
+                        tmpResult.setStatus(false);
+                        tmpResult.getCauses().add(
+                                "'LearningRate' parameter isn't be set in train#parameters in GBT training.");
+                        result = ValidateResult.mergeResult(result, tmpResult);
                     }
                 }
 
@@ -630,17 +673,29 @@ public class ModelInspector {
                         tmpResult.getCauses().add("MinInstancesPerNode should > 0.");
                         result = ValidateResult.mergeResult(result, tmpResult);
                     }
+                } else {
+                    ValidateResult tmpResult = new ValidateResult(true);
+                    tmpResult.setStatus(false);
+                    tmpResult.getCauses().add(
+                            "'MinInstancesPerNode' parameter isn't be set in train#parameters in GBT/RF training.");
+                    result = ValidateResult.mergeResult(result, tmpResult);
                 }
 
                 Object treeNumObj = params.get("TreeNum");
                 if(treeNumObj != null) {
                     int treeNum = Integer.valueOf(treeNumObj.toString());
-                    if(treeNum <= 0 || treeNum > 2000) {
+                    if(treeNum <= 0 || treeNum > 10000) {
                         ValidateResult tmpResult = new ValidateResult(true);
                         tmpResult.setStatus(false);
-                        tmpResult.getCauses().add("TreeNum should be in [1, 2000].");
+                        tmpResult.getCauses().add("TreeNum should be in [1, 10000].");
                         result = ValidateResult.mergeResult(result, tmpResult);
                     }
+                } else {
+                    ValidateResult tmpResult = new ValidateResult(true);
+                    tmpResult.setStatus(false);
+                    tmpResult.getCauses().add(
+                            "'TreeNum' parameter isn't be set in train#parameters in GBT/RF training.");
+                    result = ValidateResult.mergeResult(result, tmpResult);
                 }
 
                 Object minInfoGainObj = params.get("MinInfoGain");
@@ -652,28 +707,80 @@ public class ModelInspector {
                         tmpResult.getCauses().add("MinInfoGain should be >= 0.");
                         result = ValidateResult.mergeResult(result, tmpResult);
                     }
+                } else {
+                    ValidateResult tmpResult = new ValidateResult(true);
+                    tmpResult.setStatus(false);
+                    tmpResult.getCauses().add(
+                            "'MinInfoGain' parameter isn't be set in train#parameters in GBT/RF training.");
+                    result = ValidateResult.mergeResult(result, tmpResult);
                 }
 
                 Object impurityObj = params.get("Impurity");
-                if(train.getAlgorithm().equalsIgnoreCase(CommonConstants.GBT_ALG_NAME)) {
-                    if(impurityObj != null && !"variance".equalsIgnoreCase(impurityObj.toString())
-                            && !"friedmanmse".equalsIgnoreCase(impurityObj.toString())) {
-                        ValidateResult tmpResult = new ValidateResult(true);
-                        tmpResult.setStatus(false);
-                        tmpResult.getCauses().add("GBDT only supports 'variance' impurity type.");
-                        result = ValidateResult.mergeResult(result, tmpResult);
+                if(impurityObj == null) {
+                    ValidateResult tmpResult = new ValidateResult(true);
+                    tmpResult.setStatus(false);
+                    tmpResult.getCauses().add("Impurity is not set in RF/GBT algorithm.");
+                    result = ValidateResult.mergeResult(result, tmpResult);
+                } else {
+                    if(train.getAlgorithm().equalsIgnoreCase(CommonConstants.GBT_ALG_NAME)) {
+                        if(impurityObj != null && !"variance".equalsIgnoreCase(impurityObj.toString())
+                                && !"friedmanmse".equalsIgnoreCase(impurityObj.toString())) {
+                            ValidateResult tmpResult = new ValidateResult(true);
+                            tmpResult.setStatus(false);
+                            tmpResult.getCauses().add("GBDT only supports 'variance' impurity type.");
+                            result = ValidateResult.mergeResult(result, tmpResult);
+                        }
+                    }
+
+                    if(train.getAlgorithm().equalsIgnoreCase(CommonConstants.RF_ALG_NAME)) {
+                        if(impurityObj != null && !"friedmanmse".equalsIgnoreCase(impurityObj.toString())
+                                && !"entropy".equalsIgnoreCase(impurityObj.toString())
+                                && !"variance".equalsIgnoreCase(impurityObj.toString())
+                                && !"gini".equalsIgnoreCase(impurityObj.toString())) {
+                            ValidateResult tmpResult = new ValidateResult(true);
+                            tmpResult.setStatus(false);
+                            tmpResult.getCauses().add("RF supports 'variance|entropy|gini' impurity types.");
+                            result = ValidateResult.mergeResult(result, tmpResult);
+                        }
                     }
                 }
 
-                if(train.getAlgorithm().equalsIgnoreCase(CommonConstants.RF_ALG_NAME)) {
-                    if(impurityObj != null && !"friedmanmse".equalsIgnoreCase(impurityObj.toString())
-                            && !"entropy".equalsIgnoreCase(impurityObj.toString())
-                            && !"variance".equalsIgnoreCase(impurityObj.toString())
-                            && !"gini".equalsIgnoreCase(impurityObj.toString())) {
+                Object fssObj = params.get("FeatureSubsetStrategy");
+                if(fssObj == null) {
+                    ValidateResult tmpResult = new ValidateResult(true);
+                    tmpResult.setStatus(false);
+                    tmpResult.getCauses().add("FeatureSubsetStrategy is not set in RF/GBT algorithm.");
+                    result = ValidateResult.mergeResult(result, tmpResult);
+                } else {
+                    boolean isNumber = false;
+                    double doubleFss = 0;
+                    try {
+                        doubleFss = Double.parseDouble(fssObj.toString());
+                        isNumber = true;
+                    } catch (Exception e) {
+                        isNumber = false;
+                    }
+
+                    if(isNumber && (doubleFss <= 0d || doubleFss > 1d)) {
                         ValidateResult tmpResult = new ValidateResult(true);
                         tmpResult.setStatus(false);
-                        tmpResult.getCauses().add("RF supports 'variance|entropy|gini' impurity types.");
-                        result = ValidateResult.mergeResult(result, tmpResult);
+                        tmpResult.getCauses().add("FeatureSubsetStrategy if double should be in (0, 1]");
+                    } else {
+                        boolean fssInEnum = false;
+                        for(FeatureSubsetStrategy fss: FeatureSubsetStrategy.values()) {
+                            if(fss.toString().equalsIgnoreCase(fssObj.toString())) {
+                                fssInEnum = true;
+                                break;
+                            }
+                        }
+
+                        if(!fssInEnum) {
+                            ValidateResult tmpResult = new ValidateResult(true);
+                            tmpResult.setStatus(false);
+                            tmpResult
+                                    .getCauses()
+                                    .add("FeatureSubsetStrategy if string should be in ['ALL', 'HALF', 'ONETHIRD' , 'TWOTHIRDS' , 'AUTO' , 'SQRT' , 'LOG2']");
+                        }
                     }
                 }
             }

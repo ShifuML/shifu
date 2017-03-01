@@ -40,7 +40,7 @@ import ml.shifu.shifu.util.SizeEstimator;
  * dataSet.add(pair);
  * dataSet.endLoad();
  * 
- * Iterator<MLDataPair> iterator = dataSet.iterator();
+ * Iterator iterator = dataSet.iterator();
  * while(iterator.hasNext()) {
  *     FloatMLDataPair next = iterator.next();
  *     ...
@@ -100,6 +100,13 @@ public class MemoryDiskFloatMLDataSet implements FloatMLDataSet {
 
     /**
      * Constructor with {@link #fileName}, {@link #inputCount} and {@link #outputCount}
+     * 
+     * @param fileName
+     *            the fileName
+     * @param inputCount
+     *            the inputCount
+     * @param outputCount
+     *            the inputCount
      */
     public MemoryDiskFloatMLDataSet(String fileName, int inputCount, int outputCount) {
         this.memoryDataSet = new BasicFloatMLDataSet();
@@ -110,6 +117,11 @@ public class MemoryDiskFloatMLDataSet implements FloatMLDataSet {
 
     /**
      * Constructor with {@link #maxByteSize} and {@link #fileName}
+     * 
+     * @param maxByteSize
+     *            the maxByteSize
+     * @param fileName
+     *            the fileName
      */
     public MemoryDiskFloatMLDataSet(long maxByteSize, String fileName) {
         this.maxByteSize = maxByteSize;
@@ -119,6 +131,15 @@ public class MemoryDiskFloatMLDataSet implements FloatMLDataSet {
 
     /**
      * Constructor with {@link #maxByteSize}, {@link #fileName}, {@link #inputCount} and {@link #outputCount}.
+     * 
+     * @param maxByteSize
+     *            the maxByteSize
+     * @param fileName
+     *            the fileName
+     * @param inputCount
+     *            the inputCount
+     * @param outputCount
+     *            the inputCount
      */
     public MemoryDiskFloatMLDataSet(long maxByteSize, String fileName, int inputCount, int outputCount) {
         this.maxByteSize = maxByteSize;

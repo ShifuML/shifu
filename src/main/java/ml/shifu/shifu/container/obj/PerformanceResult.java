@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright [2012-2014] PayPal Software Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -45,4 +45,6 @@ public class PerformanceResult {
     public List<PerformanceObject> gains;
 
     public List<PerformanceObject> weightedGains;
+    
+    public List<PerformanceObject> modelScoreList;
 }

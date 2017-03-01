@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright [2012-2014] PayPal Software Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -39,7 +39,6 @@ import java.io.IOException;
 import java.util.List;
 import java.util.Scanner;
 
-
 /**
  * TrainModelActor class use the normalized data to train models.
  * The output is models. They(more than one model could be generated in one train round) are
@@ -57,11 +56,6 @@ public class TrainModelActor extends AbstractActor {
     private boolean isDryRun;
     private int resultCnt;
 
-    /**
-     * @param modelConfig
-     * @param columnConfigList
-     * @param trainers
-     */
     public TrainModelActor(final ModelConfig modelConfig, final List<ColumnConfig> columnConfigList, final AkkaExecStatus akkaStatus, final List<AbstractTrainer> trainers) {
         super(modelConfig, columnConfigList, akkaStatus);
         log.info("Creating Master Actor ...");
