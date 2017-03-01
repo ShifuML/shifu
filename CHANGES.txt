@@ -15,7 +15,66 @@
  */
  
 Shifu Change Log
-    
+
+Changes for Shifu-0.10.0
+    * Tree Ensemble Model Improvement
+        a) Speed GBT Training
+            https://github.com/ShifuML/shifu/issues/252
+        b) Auto Skip Features with only One Bin 
+            https://github.com/ShifuML/shifu/issues/276
+        c) Cover GBT Regression Score To Probability 
+            https://github.com/ShifuML/shifu/issues/254
+        d) Add Early Stop Feature for GBT
+            https://github.com/ShifuML/shifu/issues/230
+        e) By Default Disable Tmp Model Output in NN and GBT, RF
+            https://github.com/ShifuML/shifu/issues/231
+        f) GBT & RF PMML Support
+            https://github.com/ShifuML/shifu/issues/232
+        g) Grid Search: Compute validation error on latest 10 or 20 iterations 
+            https://github.com/ShifuML/shifu/issues/233
+        h) Missing Value Processing in Tree Model
+            https://github.com/ShifuML/shifu/issues/239
+        i) Make Tree Model Without Dependency 
+            https://github.com/ShifuML/shifu/issues/253
+        j) Compress Tree Model by Gzip to Save Size
+            https://github.com/ShifuML/shifu/issues/272
+    * Train Step Improvement
+        a) Sampling Logic Change in Training
+            https://github.com/ShifuML/shifu/issues/310
+        b) Add Stratified Sampling in Training Step
+            https://github.com/ShifuML/shifu/issues/311
+        c) Add Cross Validation in Train Step
+            https://github.com/ShifuML/shifu/issues/312
+        d) Guagua Job Failed Improvement
+            https://github.com/ShifuML/shifu/issues/237
+        e) Disable Tmp Model Output in NN and GBT, RF
+            https://github.com/ShifuML/shifu/issues/231
+        f) Support Redo Training Without Weight after Weighted Norm
+            https://github.com/ShifuML/shifu/issues/315
+    * VarSel Step Improvement
+        a) Refine VarSel Configurations
+            https://github.com/ShifuML/shifu/issues/262
+        b) Enable Multiple Threading in Sensitivity Analysis
+            https://github.com/ShifuML/shifu/issues/213
+        c) Add Feature Importance for Tree Model VarSelect
+            https://github.com/ShifuML/shifu/issues/218
+    * Stats Step Improvement
+        a) Add More Stats in Stats Step
+            https://github.com/ShifuML/shifu/issues/313
+        b) Change Distinct Count Computing from Init to Stats
+            https://github.com/ShifuML/shifu/issues/314
+        c) Bugs & Others
+            1) Default meta/categorical file support
+            2) Bug in stats on bad feature type
+            3) Add more stats on each MR job like number of filter records.
+    * Others
+        a) Eval Step Improvement
+            https://github.com/ShifuML/shifu/issues/150
+        b) CSV Format File Support
+            https://github.com/ShifuML/shifu/issues/258
+        c) Combo Model Training (Beta)
+            https://github.com/ShifuML/shifu/issues/316
+
 Changes for Shifu-0.9.0
     * Random Forest Enhancement
         a) RF & GBDT Sort Categorical Features
