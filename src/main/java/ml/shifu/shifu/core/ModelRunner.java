@@ -181,7 +181,8 @@ public class ModelRunner {
             while(iterator.hasNext()) {
                 Map.Entry<String, Scorer> entry = iterator.next();
                 String modelName = entry.getKey();
-                ScoreObject so = scorer.score(rawDataMap);
+                Scorer subScorer = entry.getValue();
+                ScoreObject so = subScorer.score(rawDataMap);
                 if(so != null) {
                     scoreResult.addSubModelScore(modelName, so);
                 }
