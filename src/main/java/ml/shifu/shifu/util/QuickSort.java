@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright [2012-2014] PayPal Software Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -25,36 +25,38 @@ import java.util.List;
  */
 public class QuickSort {
 
-    /**
+    /*
      * sort data by @Comparator
-     *
-     * @param values     - list of data
-     * @param comparator
+     * 
+     * @param values - list of data
+     * 
+     * @param comparator the comparator
      */
     public static <T> void sort(List<T> values, Comparator<T> comparator) {
-        if (CollectionUtils.isEmpty(values)) {
+        if(CollectionUtils.isEmpty(values)) {
             return;
         }
 
         quicksort(values, comparator, 0, values.size() - 1);
     }
 
-    /**
+    /*
      * sort the data that implements Comparable
-     *
-     * @param values - list of data
+     * 
+     * @param values
+     *            - list of data
      */
     public static <T extends Comparable<T>> void sort(List<T> values) {
-        if (CollectionUtils.isEmpty(values)) {
+        if(CollectionUtils.isEmpty(values)) {
             return;
         }
 
         quicksort(values, 0, values.size() - 1);
     }
 
-    /**
+    /*
      * quick in-place sort
-     *
+     * 
      * @param values
      */
     private static <T> void quicksort(List<T> values, Comparator<T> comparator, int low, int high) {
@@ -63,19 +65,19 @@ public class QuickSort {
         T pivot = values.get(low + (high - low) / 2);
 
         // divide into two parts by pivot
-        while (i <= j) {
+        while(i <= j) {
             // from the left to find the first element that greater than pivot
-            while (comparator.compare(pivot, values.get(i)) > 0) {
+            while(comparator.compare(pivot, values.get(i)) > 0) {
                 i++;
             }
 
             // form the right to find the first element that less than pivot
-            while (comparator.compare(pivot, values.get(j)) < 0) {
+            while(comparator.compare(pivot, values.get(j)) < 0) {
                 j--;
             }
 
             // Wowo, we found those two elements, exchange them
-            if (i <= j) {
+            if(i <= j) {
                 exchange(values, i, j);
                 i++;
                 j--;
@@ -83,19 +85,19 @@ public class QuickSort {
         }
 
         // have data on the left, sort it
-        if (low < j) {
+        if(low < j) {
             quicksort(values, comparator, low, j);
         }
 
         // have data on the right, sort it
-        if (i < high) {
+        if(i < high) {
             quicksort(values, comparator, i, high);
         }
     }
 
-    /**
+    /*
      * quick in-place sort
-     *
+     * 
      * @param values
      */
     private static <T extends Comparable<T>> void quicksort(List<T> values, int low, int high) {
@@ -104,19 +106,19 @@ public class QuickSort {
         T pivot = values.get(low + (high - low) / 2);
 
         // divide into two parts by pivot
-        while (i <= j) {
+        while(i <= j) {
             // from the left to find the first element that greater than pivot
-            while (pivot.compareTo(values.get(i)) > 0) {
+            while(pivot.compareTo(values.get(i)) > 0) {
                 i++;
             }
 
             // form the right to find the first element that less than pivot
-            while (pivot.compareTo(values.get(j)) < 0) {
+            while(pivot.compareTo(values.get(j)) < 0) {
                 j--;
             }
 
             // Wowo, we found those two elements, exchange them
-            if (i <= j) {
+            if(i <= j) {
                 exchange(values, i, j);
                 i++;
                 j--;
@@ -124,17 +126,17 @@ public class QuickSort {
         }
 
         // have data on the left, sort it
-        if (low < j) {
+        if(low < j) {
             quicksort(values, low, j);
         }
 
         // have data on the right, sort it
-        if (i < high) {
+        if(i < high) {
             quicksort(values, i, high);
         }
     }
 
-    /**
+    /*
      * exchange two elements in list
      */
     private static <T> void exchange(List<T> values, int i, int j) {

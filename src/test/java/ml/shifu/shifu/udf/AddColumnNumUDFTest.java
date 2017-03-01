@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright [2012-2014] PayPal Software Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -68,8 +68,8 @@ public class AddColumnNumUDFTest {
         tuple.set(0, "M");
 
         DataBag dataBag = instance.exec(tuple);
-        Assert.assertEquals(30, dataBag.size());
+        Assert.assertEquals(31, dataBag.size());
 
-        Assert.assertEquals(dataBag.iterator().next().size(), 4);
+        Assert.assertEquals(dataBag.iterator().next().size(), 5);
     }
 }

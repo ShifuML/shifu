@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright [2012-2014] PayPal Software Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -39,23 +39,20 @@ public class CalculateReasonCodeUDF extends AbstractTrainerUDF<Tuple> {
     private Map<String, String> reasonCodeMap;
     private String[] headers;
 
-    public CalculateReasonCodeUDF(String source, String pathModelConfig, String pathColumnConfig, String evalSetName) throws Exception {
+    public CalculateReasonCodeUDF(String source, String pathModelConfig, String pathColumnConfig, String evalSetName)
+            throws Exception {
         super(source, pathModelConfig, pathColumnConfig);
 
         EvalConfig evalConfig = modelConfig.getEvalConfigByName(evalSetName);
 
         SourceType sourceType = evalConfig.getDataSet().getSource();
-        //CommonUtils.determineSource(modelConfig.getRunConf().getRunMode(),
-        //evalConfig.getDataSet().getSource());
+        // CommonUtils.determineSource(modelConfig.getRunConf().getRunMode(),
+        // evalConfig.getDataSet().getSource());
         PathFinder pathFinder = new PathFinder(modelConfig);
-        reasonCodeMap = CommonUtils.loadAndFlattenReasonCodeMap(
-                pathFinder.getReasonCodeMapPath(sourceType),
-                sourceType);
+        reasonCodeMap = CommonUtils
+                .loadAndFlattenReasonCodeMap(pathFinder.getReasonCodeMapPath(sourceType), sourceType);
 
-        headers = CommonUtils.getHeaders(
-                evalConfig.getDataSet().getHeaderPath(),
-                evalConfig.getDataSet().getHeaderDelimiter(),
-                evalConfig.getDataSet().getSource());
+        headers = CommonUtils.getFinalHeaders(evalConfig);
 
         log.debug("The length of header is: " + headers.length);
     }
@@ -63,27 +60,27 @@ public class CalculateReasonCodeUDF extends AbstractTrainerUDF<Tuple> {
     public Tuple exec(Tuple input) throws IOException {
         Tuple result = TupleFactory.getInstance().newTuple();
 
-        if (input == null || input.size() == 0 || headers.length == 0 || input.size() != headers.length) {
+        if(input == null || input.size() == 0 || headers.length == 0 || input.size() != headers.length) {
             return null;
         }
 
         Map<String, String> rawDataMap = new HashMap<String, String>();
 
         try {
-            for (int i = 0; i < headers.length; i++) {
+            for(int i = 0; i < headers.length; i++) {
                 Object t = input.get(i);
-                if (t == null) {
+                if(t == null) {
                     continue;
                 }
                 rawDataMap.put(headers[i], t.toString());
-                //log.info(headers[i] + ", " + t.toString());
+                // log.info(headers[i] + ", " + t.toString());
             }
         } catch (Exception e) {
             e.printStackTrace();
             return null;
         }
 
-        //result.append(rawDataMap.toString());
+        // result.append(rawDataMap.toString());
         SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
 
         Reasoner reasoner = new Reasoner(this.reasonCodeMap);
@@ -98,8 +95,8 @@ public class CalculateReasonCodeUDF extends AbstractTrainerUDF<Tuple> {
         List<String> reasons = reasoner.getReasonCodes();
 
         try {
-            if (reasons != null) {
-                for (String reason : reasons) {
+            if(reasons != null) {
+                for(String reason: reasons) {
                     result.append(reason);
                 }
             } else {
@@ -113,7 +110,7 @@ public class CalculateReasonCodeUDF extends AbstractTrainerUDF<Tuple> {
     }
 
     public Schema outputSchema(Schema input) {
-        //Utils.getSchemaFromString(schemaString)
+        // Utils.getSchemaFromString(schemaString)
         return null;
     }
 

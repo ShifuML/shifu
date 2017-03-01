@@ -28,9 +28,6 @@ import org.slf4j.LoggerFactory;
 
 /**
  * EqualPopulationBinning class
- * 
- * @Oct 22, 2014
- * 
  */
 public class EqualPopulationBinning extends AbstractBinning<Double> {
 
@@ -70,6 +67,7 @@ public class EqualPopulationBinning extends AbstractBinning<Double> {
      * Construct @EqualPopulationBinning with expected bin number
      * 
      * @param binningNum
+     *            the binningNum
      */
     public EqualPopulationBinning(int binningNum) {
         this(binningNum, null);
@@ -79,6 +77,9 @@ public class EqualPopulationBinning extends AbstractBinning<Double> {
      * Construct @EqualPopulationBinning with expected bin number and with histogram scale factor
      * 
      * @param binningNum
+     *            the binningNum
+     * @param histogramScale
+     *            the histogram scale
      */
     public EqualPopulationBinning(int binningNum, int histogramScale) {
         this(binningNum, null);
@@ -90,7 +91,9 @@ public class EqualPopulationBinning extends AbstractBinning<Double> {
      * values list that would be treated as missing value
      * 
      * @param binningNum
+     *            the binningNum
      * @param missingValList
+     *            the missingValList
      */
     public EqualPopulationBinning(int binningNum, List<String> missingValList) {
         super(binningNum);
@@ -131,9 +134,38 @@ public class EqualPopulationBinning extends AbstractBinning<Double> {
     }
 
     /**
+     * Add the value (in format of text) into histogram with weight.
+     * First of all the input string will be trimmed and check whether it is missing value or not
+     * If it is missing value, the missing value count will +1
+     * After that, the input string will be parsed into double. If it is not a double, invalid value count will +1
+     * 
+     * @param val
+     *            , string type value
+     * @param wVal
+     *            , frequency or weight of this value
+     */
+    public void addData(String val, double wVal) {
+        String fval = StringUtils.trimToEmpty(val);
+        if(!isMissingVal(fval)) {
+            double dval = 0;
+            try {
+                dval = Double.parseDouble(fval);
+            } catch (NumberFormatException e) {
+                // not a number? just ignore
+                super.incInvalidValCnt();
+                return;
+            }
+            process(dval, wVal);
+        } else {
+            super.incMissingValCnt();
+        }
+    }
+
+    /**
      * Add a value into histogram with frequency 1.
      * 
      * @param val
+     *            the value to be added
      */
     public void addData(double val) {
         process(val, 1);
@@ -143,7 +175,9 @@ public class EqualPopulationBinning extends AbstractBinning<Double> {
      * Add a value into histogram with frequency.
      * 
      * @param val
+     *            the value to be added
      * @param frequency
+     *            the weight
      */
     public void addData(double val, double frequency) {
         process(val, frequency);
@@ -162,7 +196,7 @@ public class EqualPopulationBinning extends AbstractBinning<Double> {
     /**
      * Get the median value in the histogram
      * 
-     * @return
+     * @return median value
      */
     public Double getMedian() {
         List<Double> dataBinning = getDataBin(2);
@@ -177,7 +211,8 @@ public class EqualPopulationBinning extends AbstractBinning<Double> {
      * Generate data bin by expected bin number
      * 
      * @param toBinningNum
-     * @return
+     *            toBinningNum
+     * @return list of data binning
      */
     private List<Double> getDataBin(int toBinningNum) {
         List<Double> binBorders = new ArrayList<Double>();
@@ -231,9 +266,6 @@ public class EqualPopulationBinning extends AbstractBinning<Double> {
         return binBorders;
     }
 
-    /**
-     * @param binBorders
-     */
     private void convertHistogramUnitIntoBin(List<Double> binBorders) {
         LinkNode<HistogramUnit> tmp = this.header;
         while(tmp != this.tail) {
@@ -248,7 +280,7 @@ public class EqualPopulationBinning extends AbstractBinning<Double> {
     /**
      * Get the total value count in histogram
      * 
-     * @return
+     * @return total hosto value
      */
     private double getTotalInHistogram() {
         double total = 0;
@@ -266,8 +298,10 @@ public class EqualPopulationBinning extends AbstractBinning<Double> {
      * Locate histogram unit with just less than s, from some histogram unit
      * 
      * @param s
+     *            the s value
      * @param startPos
-     * @return
+     *            start pos
+     * @return next node
      */
     private LinkNode<HistogramUnit> locateHistogram(double s, LinkNode<HistogramUnit> startPos) {
         while(startPos != this.tail) {
@@ -295,7 +329,8 @@ public class EqualPopulationBinning extends AbstractBinning<Double> {
      * Sum the histogram's frequency whose value less than or equal some value
      * 
      * @param hval
-     * @return
+     *            the h value
+     * @return current sum
      */
     private double sum(double hval) {
         LinkNode<HistogramUnit> posHistogramUnit = null;
@@ -346,7 +381,9 @@ public class EqualPopulationBinning extends AbstractBinning<Double> {
      * Process the histogram with value and frequency
      * 
      * @param dval
+     *            the d value
      * @param frequency
+     *            the weight
      */
     private void process(double dval, double frequency) {
         LinkNode<HistogramUnit> node = new LinkNode<HistogramUnit>(new HistogramUnit(dval, frequency));
@@ -365,6 +402,7 @@ public class EqualPopulationBinning extends AbstractBinning<Double> {
      * So when inserting one node in, the method will try to find the place to insert as well as minimum interval
      * 
      * @param node
+     *            current node
      */
     private void insertWithTrim(LinkNode<HistogramUnit> node) {
         LinkNode<HistogramUnit> insertOpsUnit = null;
@@ -448,10 +486,6 @@ public class EqualPopulationBinning extends AbstractBinning<Double> {
         }
     }
 
-    /**
-     * @param currNode
-     * @param nextNode
-     */
     private void removeCurrentNode(LinkNode<HistogramUnit> currNode, LinkNode<HistogramUnit> nextNode) {
         // remove current node
         if(currNode == this.header) {
@@ -464,11 +498,6 @@ public class EqualPopulationBinning extends AbstractBinning<Double> {
         }
     }
 
-    /*
-     * (non-Javadoc)
-     * 
-     * @see ml.shifu.shifu.core.binning.AbstractBinning#mergeBin(ml.shifu.shifu.core.binning.AbstractBinning)
-     */
     @Override
     public void mergeBin(AbstractBinning<?> another) {
         EqualPopulationBinning binning = (EqualPopulationBinning) another;
@@ -482,11 +511,6 @@ public class EqualPopulationBinning extends AbstractBinning<Double> {
         }
     }
 
-    /**
-     * convert @EqualIntervalBinning to String
-     * 
-     * @return
-     */
     protected void stringToObj(String objValStr) {
         super.stringToObj(objValStr);
 
@@ -504,11 +528,6 @@ public class EqualPopulationBinning extends AbstractBinning<Double> {
         }
     }
 
-    /**
-     * convert @EqualIntervalBinning to String
-     * 
-     * @return
-     */
     public String objToString() {
         List<String> histogramStrList = new ArrayList<String>();
 
@@ -525,11 +544,7 @@ public class EqualPopulationBinning extends AbstractBinning<Double> {
     }
 
     /**
-     * 
      * HistogramUnit class is the unit for histogram
-     * 
-     * @Nov 19, 2014
-     * 
      */
     public static class HistogramUnit implements Comparable<HistogramUnit> {
         private double hval;
@@ -603,31 +618,15 @@ public class EqualPopulationBinning extends AbstractBinning<Double> {
             return "[" + hval + ", " + hcnt + "]";
         }
 
-        /**
-         * convert @HistogramUnit object to String
-         * 
-         * @return
-         */
         public String objToString() {
             return Double.toString(hval) + Character.toString(PAIR_SEPARATOR) + Double.toString(hcnt);
         }
 
-        /**
-         * Constructor @HistogramUnit from String
-         * 
-         * @param histogramStr
-         * @return
-         */
         public static HistogramUnit stringToObj(String histogramStr) {
             String[] fields = StringUtils.split(histogramStr, PAIR_SEPARATOR);
             return new HistogramUnit(Double.parseDouble(fields[0]), Double.parseDouble(fields[1]));
         }
 
-    }
-
-    public static void main(String[] args) {
-        double aa = 1.0 / (1.0 + 10E20);
-        System.out.println(aa);
     }
 
 }

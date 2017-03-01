@@ -18,7 +18,6 @@ package ml.shifu.shifu.core.dtrain.dt;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
@@ -56,11 +55,28 @@ public abstract class Impurity {
 
     /**
      * Compute impurity by feature statistics. Stats array are for all bins.
+     * 
+     * @param stats
+     *            the stats array
+     * @param confg
+     *            column config instance
+     * @return gain info based on stats
      */
     public abstract GainInfo computeImpurity(double[] stats, ColumnConfig confg);
 
     /**
      * Update bin stats value per feature.
+     * 
+     * @param featuerStatistic
+     *            the stats array
+     * @param binIndex
+     *            the bin index
+     * @param label
+     *            the label
+     * @param significance
+     *            the signifincance
+     * @param weight
+     *            the weight
      */
     public abstract void featureUpdate(double[] featuerStatistic, int binIndex, float label, float significance,
             float weight);
@@ -116,7 +132,8 @@ class Variance extends Impurity {
         double leftCount = 0d, leftSum = 0d, leftSumSquare = 0d;
         double rightCount = 0d, rightSum = 0d, rightSumSquare = 0d;
         List<GainInfo> internalGainList = new ArrayList<GainInfo>();
-        Set<String> leftCategories = config.isCategorical() ? new HashSet<String>() : null;
+        Set<Short> leftCategories = config.isCategorical() ? new SimpleBitSet<Short>(config.getBinCategory().size() + 1)
+                : null;
 
         List<Pair> categoricalOrderList = null;
         if(config.isCategorical()) {
@@ -124,6 +141,7 @@ class Variance extends Impurity {
             categoricalOrderList = getCategoricalOrderList(stats, binSize);
         }
 
+        int leftCategorySetSize = 0;
         for(int i = 0; i < (binSize - 1); i++) {
             int index = i;
             if(config.isCategorical()) {
@@ -151,25 +169,43 @@ class Variance extends Impurity {
 
             Split split = null;
             if(config.isCategorical()) {
+                // cast to short is safe as we limit max bin size to Short.MAX_VALUE while may be not good for scale
                 if(index >= config.getBinCategory().size()) {
                     // missing value bin, all missing value will be replaced by empty string in norm step
-                    leftCategories.add("");
+                    leftCategories.add((short) (config.getBinCategory().size()));
                 } else {
-                    leftCategories.add(config.getBinCategory().get(index));
+                    leftCategories.add((short) index);
                 }
+
+                leftCategorySetSize += 1;
+
+                boolean isLeft = true;
+                Set<Short> rightCategories = null;
+                if(config.getBinCategory().size() + 1 <= leftCategorySetSize * 2) {
+                    // too many in left, use right;
+                    isLeft = false;
+                    rightCategories = new SimpleBitSet<Short>(config.getBinCategory().size() + 1);
+                    for(short j = 0; j < (config.getBinCategory().size() + 1); j++) {
+                        if(!leftCategories.contains(j)) {
+                            rightCategories.add(j);
+                        }
+                    }
+                }
+
                 // new hash set to copy a new one avoid share object issue
-                split = new Split(config.getColumnNum(), FeatureType.CATEGORICAL, 0d, new HashSet<String>(
-                        leftCategories));
+                split = new Split(config.getColumnNum(), FeatureType.CATEGORICAL, 0d, isLeft, new SimpleBitSet<Short>(
+                        config.getBinCategory().size() + 1, (SimpleBitSet<Short>) (isLeft ? leftCategories
+                                : rightCategories)));
             } else {
                 split = new Split(config.getColumnNum(), FeatureType.CONTINUOUS,
-                        config.getBinBoundary().get(index + 1), null);
+                        config.getBinBoundary().get(index + 1), false, null);
             }
 
             Predict leftPredict = new Predict(leftCount == 0d ? 0d : leftSum / leftCount);
             Predict rightPredict = new Predict(rightCount == 0d ? 0d : rightSum / rightCount);
 
             internalGainList.add(new GainInfo(gain, impurity, predict, leftImpurity, rightImpurity, leftPredict,
-                    rightPredict, split));
+                    rightPredict, split, count));
         }
         return GainInfo.getGainInfoByMaxGain(internalGainList);
     }
@@ -246,7 +282,8 @@ class FriedmanMSE extends Variance {
         double leftCount = 0d, leftSum = 0d, leftSumSquare = 0d;
         double rightCount = 0d, rightSum = 0d, rightSumSquare = 0d;
         List<GainInfo> internalGainList = new ArrayList<GainInfo>();
-        Set<String> leftCategories = config.isCategorical() ? new HashSet<String>() : null;
+        Set<Short> leftCategories = config.isCategorical() ? new SimpleBitSet<Short>(config.getBinCategory().size() + 1)
+                : null;
 
         List<Pair> categoricalOrderList = null;
         if(config.isCategorical()) {
@@ -254,6 +291,7 @@ class FriedmanMSE extends Variance {
             categoricalOrderList = getCategoricalOrderList(stats, binSize);
         }
 
+        int leftCategorySetSize = 0;
         for(int i = 0; i < (binSize - 1); i++) {
             int index = i;
             if(config.isCategorical()) {
@@ -281,25 +319,43 @@ class FriedmanMSE extends Variance {
 
             Split split = null;
             if(config.isCategorical()) {
+                // cast to short is safe as we limit max bin size to Short.MAX_VALUE while may be not good for scale
                 if(index >= config.getBinCategory().size()) {
                     // missing value bin, all missing value will be replaced by empty string in norm step
-                    leftCategories.add("");
+                    leftCategories.add((short) (config.getBinCategory().size()));
                 } else {
-                    leftCategories.add(config.getBinCategory().get(index));
+                    leftCategories.add((short) index);
                 }
+
+                leftCategorySetSize += 1;
+
+                boolean isLeft = true;
+                Set<Short> rightCategories = null;
+                if(config.getBinCategory().size() + 1 <= leftCategorySetSize * 2) {
+                    // too many in left, use right;
+                    isLeft = false;
+                    rightCategories = new SimpleBitSet<Short>(config.getBinCategory().size() + 1);
+                    for(short j = 0; j < (config.getBinCategory().size() + 1); j++) {
+                        if(!leftCategories.contains(j)) {
+                            rightCategories.add(j);
+                        }
+                    }
+                }
+
                 // new hash set to copy a new one avoid share object issue
-                split = new Split(config.getColumnNum(), FeatureType.CATEGORICAL, 0d, new HashSet<String>(
-                        leftCategories));
+                split = new Split(config.getColumnNum(), FeatureType.CATEGORICAL, 0d, isLeft, new SimpleBitSet<Short>(
+                        config.getBinCategory().size() + 1, (SimpleBitSet<Short>) (isLeft ? leftCategories
+                                : rightCategories)));
             } else {
                 split = new Split(config.getColumnNum(), FeatureType.CONTINUOUS,
-                        config.getBinBoundary().get(index + 1), null);
+                        config.getBinBoundary().get(index + 1), false, null);
             }
 
             Predict leftPredict = new Predict(leftCount == 0d ? 0d : leftSum / leftCount);
             Predict rightPredict = new Predict(rightCount == 0d ? 0d : rightSum / rightCount);
 
             internalGainList.add(new GainInfo(gain, impurity, predict, leftImpurity, rightImpurity, leftPredict,
-                    rightPredict, split));
+                    rightPredict, split, count));
         }
         return GainInfo.getGainInfoByMaxGain(internalGainList);
     }
@@ -340,12 +396,15 @@ class Entropy extends Impurity {
         InternalEntropyInfo info = getEntropyInterInfo(statsByClasses);
         // prob only effective in binary classes
         Predict predict = new Predict(info.sumAll == 0d ? 0d : (statsByClasses[1] / info.sumAll),
-                info.indexOfLargestElement);
+                (byte) info.indexOfLargestElement);
 
         double[] leftStatByClasses = new double[numClasses];
         double[] rightStatByClasses = new double[numClasses];
         List<GainInfo> internalGainList = new ArrayList<GainInfo>();
-        Set<String> leftCategories = config.isCategorical() ? new HashSet<String>() : null;
+        Set<Short> leftCategories = config.isCategorical() ? new SimpleBitSet<Short>(config.getBinCategory().size() + 1)
+                : null;
+
+        int leftCategorySetSize = 0;
         for(int i = 0; i < (stats.length / numClasses - 1); i++) {
             int index = i;
             if(config.isCategorical()) {
@@ -356,7 +415,7 @@ class Entropy extends Impurity {
             }
             InternalEntropyInfo leftInfo = getEntropyInterInfo(leftStatByClasses);
             Predict leftPredict = new Predict(leftInfo.sumAll == 0d ? 0d : (leftStatByClasses[1] / leftInfo.sumAll),
-                    leftInfo.indexOfLargestElement);
+                    (byte) leftInfo.indexOfLargestElement);
 
             for(int j = 0; j < leftStatByClasses.length; j++) {
                 rightStatByClasses[j] = statsByClasses[j] - leftStatByClasses[j];
@@ -369,7 +428,7 @@ class Entropy extends Impurity {
 
             Predict rightPredict = new Predict(
                     rightInfo.sumAll == 0d ? 0d : (rightStatByClasses[1] / rightInfo.sumAll),
-                    rightInfo.indexOfLargestElement);
+                    (byte) rightInfo.indexOfLargestElement);
 
             double leftWeight = info.sumAll == 0d ? 0d : (leftInfo.sumAll / info.sumAll);
             double rightWeight = info.sumAll == 0d ? 0d : (rightInfo.sumAll / info.sumAll);
@@ -383,20 +442,37 @@ class Entropy extends Impurity {
             if(config.isCategorical()) {
                 if(index >= config.getBinCategory().size()) {
                     // missing value bin, all missing value will be replaced by empty string in norm step
-                    leftCategories.add("");
+                    leftCategories.add((short) (config.getBinCategory().size()));
                 } else {
-                    leftCategories.add(config.getBinCategory().get(index));
+                    leftCategories.add((short) index);
                 }
+
+                leftCategorySetSize += 1;
+
+                boolean isLeft = true;
+                Set<Short> rightCategories = null;
+                if(config.getBinCategory().size() + 1 <= leftCategorySetSize * 2) {
+                    // too many in left, use right;
+                    isLeft = false;
+                    rightCategories = new SimpleBitSet<Short>(config.getBinCategory().size() + 1);
+                    for(short j = 0; j < (config.getBinCategory().size() + 1); j++) {
+                        if(!leftCategories.contains(j)) {
+                            rightCategories.add(j);
+                        }
+                    }
+                }
+
                 // new hash set to copy a new one avoid share object issue
-                split = new Split(config.getColumnNum(), FeatureType.CATEGORICAL, 0d, new HashSet<String>(
-                        leftCategories));
+                split = new Split(config.getColumnNum(), FeatureType.CATEGORICAL, 0d, isLeft, new SimpleBitSet<Short>(
+                        config.getBinCategory().size() + 1, (SimpleBitSet<Short>) (isLeft ? leftCategories
+                                : rightCategories)));
             } else {
                 split = new Split(config.getColumnNum(), FeatureType.CONTINUOUS,
-                        config.getBinBoundary().get(index + 1), null);
+                        config.getBinBoundary().get(index + 1), false, null);
             }
 
             internalGainList.add(new GainInfo(gain, info.impurity, predict, leftInfo.impurity, rightInfo.impurity,
-                    leftPredict, rightPredict, split));
+                    leftPredict, rightPredict, split, info.sumAll));
         }
         return GainInfo.getGainInfoByMaxGain(internalGainList);
     }
@@ -505,12 +581,15 @@ class Gini extends Impurity {
         InternalGiniInfo info = getGiniInfo(statsByClasses);
         // prob only effective in binary classes
         Predict predict = new Predict(info.sumAll == 0d ? 0d : statsByClasses[1] / info.sumAll,
-                info.indexOfLargestElement);
+                (byte) info.indexOfLargestElement);
 
         double[] leftStatByClasses = new double[numClasses];
         double[] rightStatByClasses = new double[numClasses];
         List<GainInfo> internalGainList = new ArrayList<GainInfo>();
-        Set<String> leftCategories = config.isCategorical() ? new HashSet<String>() : null;
+        Set<Short> leftCategories = config.isCategorical() ? new SimpleBitSet<Short>(config.getBinCategory().size() + 1)
+                : null;
+
+        int leftCategorySetSize = 0;
         for(int i = 0; i < (stats.length / numClasses - 1); i++) {
             int index = i;
             if(config.isCategorical()) {
@@ -521,7 +600,7 @@ class Gini extends Impurity {
             }
             InternalGiniInfo leftInfo = getGiniInfo(leftStatByClasses);
             Predict leftPredict = new Predict(leftInfo.sumAll == 0d ? 0d : leftStatByClasses[1] / leftInfo.sumAll,
-                    leftInfo.indexOfLargestElement);
+                    (byte) leftInfo.indexOfLargestElement);
 
             for(int j = 0; j < leftStatByClasses.length; j++) {
                 rightStatByClasses[j] = statsByClasses[j] - leftStatByClasses[j];
@@ -533,7 +612,7 @@ class Gini extends Impurity {
             }
 
             Predict rightPredict = new Predict(rightInfo.sumAll == 0d ? 0d : rightStatByClasses[1] / rightInfo.sumAll,
-                    rightInfo.indexOfLargestElement);
+                    (byte) rightInfo.indexOfLargestElement);
 
             double leftWeight = info.sumAll == 0d ? 0d : (leftInfo.sumAll / info.sumAll);
             double rightWeight = info.sumAll == 0d ? 0d : (rightInfo.sumAll / info.sumAll);
@@ -544,22 +623,40 @@ class Gini extends Impurity {
 
             Split split = null;
             if(config.isCategorical()) {
+                // cast to short is safe as we limit max bin size to Short.MAX_VALUE while may be not good for scale
                 if(index >= config.getBinCategory().size()) {
                     // missing value bin, all missing value will be replaced by empty string in norm step
-                    leftCategories.add("");
+                    leftCategories.add((short) (config.getBinCategory().size()));
                 } else {
-                    leftCategories.add(config.getBinCategory().get(index));
+                    leftCategories.add((short) index);
                 }
+
+                leftCategorySetSize += 1;
+
+                boolean isLeft = true;
+                Set<Short> rightCategories = null;
+                if(config.getBinCategory().size() + 1 <= leftCategorySetSize * 2) {
+                    // too many in left, use right;
+                    isLeft = false;
+                    rightCategories = new SimpleBitSet<Short>(config.getBinCategory().size() + 1);
+                    for(short j = 0; j < (config.getBinCategory().size() + 1); j++) {
+                        if(!leftCategories.contains(j)) {
+                            rightCategories.add(j);
+                        }
+                    }
+                }
+
                 // new hash set to copy a new one avoid share object issue
-                split = new Split(config.getColumnNum(), FeatureType.CATEGORICAL, 0d, new HashSet<String>(
-                        leftCategories));
+                split = new Split(config.getColumnNum(), FeatureType.CATEGORICAL, 0d, isLeft, new SimpleBitSet<Short>(
+                        config.getBinCategory().size() + 1, (SimpleBitSet<Short>) (isLeft ? leftCategories
+                                : rightCategories)));
             } else {
                 split = new Split(config.getColumnNum(), FeatureType.CONTINUOUS,
-                        config.getBinBoundary().get(index + 1), null);
+                        config.getBinBoundary().get(index + 1), false, null);
             }
 
             internalGainList.add(new GainInfo(gain, info.impurity, predict, leftInfo.impurity, rightInfo.impurity,
-                    leftPredict, rightPredict, split));
+                    leftPredict, rightPredict, split, info.sumAll));
         }
         return GainInfo.getGainInfoByMaxGain(internalGainList);
     }

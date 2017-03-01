@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright [2012-2014] PayPal Software Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -45,7 +45,7 @@ public class ModelTrainConf {
         ONEVSALL, ONVVSREST, // the same as ONEVSALL
         ONVVSONE; // ONEVSONE is not impl yet.
 
-        /**
+        /*
          * Get {@link MultipleClassification} by string, case can be ignored.
          */
         public static MultipleClassification of(String strategy) {
@@ -67,14 +67,22 @@ public class ModelTrainConf {
     private Integer numTrainEpochs = Integer.valueOf(100);
     private Integer epochsPerIteration = Integer.valueOf(1);
 
+    /**
+     * Only sample negative records out
+     */
+    private Boolean sampleNegOnly = Boolean.FALSE;
+
     private Boolean trainOnDisk = Boolean.FALSE;
     private Boolean fixInitInput = Boolean.FALSE;
+    private Boolean stratifiedSample = Boolean.FALSE;
 
     private Boolean isContinuous = Boolean.FALSE;
 
     private Boolean isCrossOver = Boolean.FALSE;
 
     private Integer workerThreadCount = 4;
+
+    private Integer numKFold = -1;
 
     private Double upSampleWeight = Double.valueOf(1d);
 
@@ -183,15 +191,11 @@ public class ModelTrainConf {
         this.customPaths = customPaths;
     }
 
-    /**
-     * @param alg
-     * @return
-     */
     public static Map<String, Object> createParamsByAlg(ALGORITHM alg, ModelTrainConf trainConf) {
         Map<String, Object> params = new HashMap<String, Object>();
 
         if(ALGORITHM.NN.equals(alg)) {
-            params.put(NNTrainer.PROPAGATION, "Q");
+            params.put(NNTrainer.PROPAGATION, "R");
             params.put(NNTrainer.LEARNING_RATE, 0.1);
             params.put(NNTrainer.NUM_HIDDEN_LAYERS, 1);
 
@@ -202,30 +206,28 @@ public class ModelTrainConf {
             List<String> func = new ArrayList<String>();
             func.add("tanh");
             params.put(NNTrainer.ACTIVATION_FUNC, func);
-            // hide LearningDecay since confused for users
-            // params.put("LearningDecay", 0.0);
             params.put("RegularizedConstant", 0.0);
         } else if(ALGORITHM.SVM.equals(alg)) {
             params.put(SVMTrainer.SVM_KERNEL, "linear");
             params.put(SVMTrainer.SVM_GAMMA, 1.0);
             params.put(SVMTrainer.SVM_CONST, 1.0);
         } else if(ALGORITHM.RF.equals(alg)) {
+            params.put("TreeNum", "10");
             params.put("FeatureSubsetStrategy", "TWOTHIRDS");
             params.put("MaxDepth", 10);
             params.put("MinInstancesPerNode", 1);
             params.put("MinInfoGain", 0.0);
-            params.put("MaxStatsMemoryMB", 512);
             params.put("Impurity", "variance");
             params.put("Loss", "squared");
             trainConf.setNumTrainEpochs(1000);
         } else if(ALGORITHM.GBT.equals(alg)) {
+            params.put("TreeNum", "100");
             params.put("FeatureSubsetStrategy", "TWOTHIRDS");
-            params.put("MaxDepth", 10);
-            params.put("MinInstancesPerNode", 1);
+            params.put("MaxDepth", 7);
+            params.put("MinInstancesPerNode", 5);
             params.put("MinInfoGain", 0.0);
-            params.put("MaxStatsMemoryMB", 512);
             params.put("Impurity", "variance");
-            params.put(NNTrainer.LEARNING_RATE, 0.1);
+            params.put(NNTrainer.LEARNING_RATE, 0.05);
             params.put("Loss", "squared");
             trainConf.setNumTrainEpochs(1000);
         } else if(ALGORITHM.LR.equals(alg)) {
@@ -239,6 +241,7 @@ public class ModelTrainConf {
     /**
      * @return the epochsPerIteration
      */
+    @JsonIgnore
     public Integer getEpochsPerIteration() {
         return epochsPerIteration;
     }
@@ -247,6 +250,7 @@ public class ModelTrainConf {
      * @param epochsPerIteration
      *            the epochsPerIteration to set
      */
+    @JsonProperty
     public void setEpochsPerIteration(Integer epochsPerIteration) {
         this.epochsPerIteration = epochsPerIteration;
     }
@@ -348,5 +352,95 @@ public class ModelTrainConf {
     public boolean isOneVsAll() {
         return this.multiClassifyMethod == MultipleClassification.ONEVSALL
                 || this.multiClassifyMethod == MultipleClassification.ONVVSREST;
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        if(obj == null || !(obj instanceof ModelTrainConf)) {
+            return false;
+        }
+
+        ModelTrainConf other = (ModelTrainConf) obj;
+        if(this == other) {
+            return true;
+        }
+
+        return this.algorithm.equals(other.getAlgorithm()) && this.baggingNum.equals(other.getBaggingNum())
+                && this.getNumTrainEpochs().equals(other.getNumTrainEpochs())
+                && this.validSetRate.equals(other.getValidSetRate());
+    }
+
+    /**
+     * @return the sampleNegOnly
+     */
+    @JsonIgnore
+    public Boolean getSampleNegOnly() {
+        return sampleNegOnly;
+    }
+
+    /**
+     * @param sampleNegOnly
+     *            the sampleNegOnly to set
+     */
+    @JsonProperty
+    public void setSampleNegOnly(Boolean sampleNegOnly) {
+        this.sampleNegOnly = sampleNegOnly;
+    }
+
+    @Override
+    public ModelTrainConf clone() {
+        ModelTrainConf other = new ModelTrainConf();
+        other.setAlgorithm(algorithm);
+        other.setBaggingNum(baggingNum);
+        other.setBaggingSampleRate(baggingSampleRate);
+        other.setConvergenceThreshold(convergenceThreshold);
+        if(customPaths != null) {
+            other.setCustomPaths(new HashMap<String, String>(customPaths));
+        }
+        other.setEpochsPerIteration(epochsPerIteration);
+        other.setFixInitInput(fixInitInput);
+        other.setIsContinuous(isContinuous);
+        other.setMultiClassifyMethod(multiClassifyMethod);
+        other.setNumTrainEpochs(numTrainEpochs);
+        other.setParams(new HashMap<String, Object>(params));
+        other.setTrainOnDisk(trainOnDisk);
+        other.setUpSampleWeight(upSampleWeight);
+        other.setValidSetRate(validSetRate);
+        other.setWorkerThreadCount(workerThreadCount);
+        return other;
+    }
+
+    /**
+     * @return the stratifiedSample
+     */
+    @JsonIgnore
+    public Boolean getStratifiedSample() {
+        return stratifiedSample;
+    }
+
+    /**
+     * @param stratifiedSample
+     *            the stratifiedSampling to set
+     */
+    @JsonProperty
+    public void setStratifiedSample(Boolean stratifiedSample) {
+        this.stratifiedSample = stratifiedSample;
+    }
+
+    /**
+     * @return the numKFold
+     */
+    @JsonIgnore
+    public Integer getNumKFold() {
+        return numKFold;
+    }
+
+    /**
+     * @param numKFold
+     *            the numKFold to set
+     */
+    @JsonProperty
+    public void setNumKFold(Integer numKFold) {
+        this.numKFold = numKFold;
     }
 }

@@ -31,6 +31,7 @@ import ml.shifu.shifu.core.dtrain.CommonConstants;
 import ml.shifu.shifu.core.dtrain.DTrainUtils;
 import ml.shifu.shifu.core.dtrain.dataset.PersistBasicFloatNetwork;
 import ml.shifu.shifu.core.dtrain.gs.GridSearch;
+import ml.shifu.shifu.fs.ShifuFileUtils;
 import ml.shifu.shifu.util.CommonUtils;
 
 import org.apache.hadoop.conf.Configuration;
@@ -68,8 +69,14 @@ public class NNOutput extends BasicMasterInterceptor<NNParams, NNParams> {
      */
     private BasicNetwork network;
 
+    /**
+     * Trainer id in bagging jobs
+     */
     private String trainerId;
 
+    /**
+     * Save model to tmp hdfs folder
+     */
     private String tmpModelsFolder;
 
     /**
@@ -90,7 +97,7 @@ public class NNOutput extends BasicMasterInterceptor<NNParams, NNParams> {
     /**
      * The best weights that we meet
      */
-    private double[] optimizeddWeights = null;
+    private double[] optimizedWeights = null;
 
     /**
      * Progress output stream which is used to write progress to that HDFS file. Should be closed in
@@ -103,7 +110,12 @@ public class NNOutput extends BasicMasterInterceptor<NNParams, NNParams> {
      */
     private GridSearch gridSearch;
 
+    /**
+     * Valid model parameters which is unified for both normal training and grid search.
+     */
     private Map<String, Object> validParams;
+
+    private boolean isKFoldCV;
 
     @Override
     public void preApplication(MasterContext<NNParams, NNParams> context) {
@@ -123,7 +135,7 @@ public class NNOutput extends BasicMasterInterceptor<NNParams, NNParams> {
         // save the weights according the error decreasing
         if(currentError < this.minTestError) {
             this.minTestError = currentError;
-            this.optimizeddWeights = context.getMasterResult().getWeights();
+            this.optimizedWeights = context.getMasterResult().getWeights();
         }
 
         // save tmp to hdfs according to raw trainer logic
@@ -137,7 +149,7 @@ public class NNOutput extends BasicMasterInterceptor<NNParams, NNParams> {
                     // we can start from this point to save time.
                     // another case for master recovery, if master is failed, read such checkpoint model
                     Path out = new Path(context.getProps().getProperty(CommonConstants.GUAGUA_OUTPUT));
-                    writeModelWeightsToFileSystem(optimizeddWeights, out);
+                    writeModelWeightsToFileSystem(optimizedWeights, out);
                 }
             }, "saveTmpNNToHDFS thread");
             tmpNNThread.setDaemon(true);
@@ -155,8 +167,9 @@ public class NNOutput extends BasicMasterInterceptor<NNParams, NNParams> {
             return;
         }
         String progress = new StringBuilder(200).append("    Trainer ").append(this.trainerId).append(" Epoch #")
-                .append(currentIteration - 1).append(" Train Error:").append(context.getMasterResult().getTrainError())
-                .append(" Validation Error:").append(context.getMasterResult().getTestError()).append("\n").toString();
+                .append(currentIteration - 1).append(" Training Error:")
+                .append(String.format("%.10f", context.getMasterResult().getTrainError())).append(" Validation Error:")
+                .append(String.format("%.10f", context.getMasterResult().getTestError())).append("\n").toString();
         try {
             LOG.debug("Writing progress results to {} {}", context.getCurrentIteration(), progress.toString());
             this.progressOutput.write(progress.getBytes("UTF-8"));
@@ -176,12 +189,12 @@ public class NNOutput extends BasicMasterInterceptor<NNParams, NNParams> {
             return;
         }
 
-        if(optimizeddWeights != null) {
+        if(optimizedWeights != null) {
             Path out = new Path(context.getProps().getProperty(CommonConstants.GUAGUA_OUTPUT));
-            writeModelWeightsToFileSystem(optimizeddWeights, out);
+            writeModelWeightsToFileSystem(optimizedWeights, out);
         }
 
-        if(this.gridSearch.hasHyperParam()) {
+        if(this.gridSearch.hasHyperParam() || this.isKFoldCV) {
             Path valErrOutput = new Path(context.getProps().getProperty(CommonConstants.GS_VALIDATION_ERROR));
             writeValErrorToFileSystem(context.getMasterResult().getTestError(), valErrOutput);
         }
@@ -225,12 +238,22 @@ public class NNOutput extends BasicMasterInterceptor<NNParams, NNParams> {
                 validParams = gridSearch.getParams(Integer.parseInt(trainerId));
                 LOG.info("Start grid search in nn output with params: {}", validParams);
             }
+            Integer kCrossValidation = this.modelConfig.getTrain().getNumKFold();
+            if(kCrossValidation != null && kCrossValidation > 0) {
+                isKFoldCV = true;
+            }
             initNetwork();
         }
 
         try {
             Path progressLog = new Path(context.getProps().getProperty(CommonConstants.SHIFU_DTRAIN_PROGRESS_FILE));
-            this.progressOutput = FileSystem.get(new Configuration()).create(progressLog);
+            // if the progressLog already exists, that because the master failed, and fail-over
+            // we need to append the log, so that client console can get refreshed. Or console will appear stuck.
+            if (ShifuFileUtils.isFileExists(progressLog, SourceType.HDFS)) {
+                this.progressOutput = FileSystem.get(new Configuration()).append(progressLog);
+            } else {
+                this.progressOutput = FileSystem.get(new Configuration()).create(progressLog);
+            }
         } catch (IOException e) {
             LOG.error("Error in create progress log:", e);
         }

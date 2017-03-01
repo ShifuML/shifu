@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright [2012-2014] PayPal Software Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -15,20 +15,23 @@
  */
 package ml.shifu.shifu.pig;
 
-import org.apache.commons.lang.StringUtils;
-import org.apache.pig.ExecType;
-import org.apache.pig.PigServer;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
+import java.io.ByteArrayInputStream;
+import java.io.File;
 import java.io.IOException;
 import java.util.Map;
 
 import ml.shifu.guagua.hadoop.util.HDPUtils;
 import ml.shifu.shifu.container.obj.ModelConfig;
 import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
+import ml.shifu.shifu.fs.PathFinder;
 import ml.shifu.shifu.util.CommonUtils;
 import ml.shifu.shifu.util.Environment;
+
+import org.apache.commons.lang.StringUtils;
+import org.apache.pig.ExecType;
+import org.apache.pig.PigServer;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * PigExecutor class
@@ -79,7 +82,17 @@ public class PigExecutor {
      */
     public void submitJob(ModelConfig modelConfig, String pigScriptPath, Map<String, String> paramsMap)
             throws IOException {
-        submitJob(modelConfig, pigScriptPath, paramsMap, modelConfig.getDataSet().getSource());
+        submitJob(modelConfig, pigScriptPath, paramsMap, modelConfig.getDataSet().getSource(), null);
+    }
+
+    public void submitJob(ModelConfig modelConfig, String pigScriptPath, Map<String, String> paramsMap,
+            SourceType sourceType) throws IOException {
+        submitJob(modelConfig, pigScriptPath, paramsMap, sourceType, null);
+    }
+
+    public void submitJob(ModelConfig modelConfig, String pigScriptPath, Map<String, String> paramsMap,
+            SourceType sourceType, PathFinder pathFinder) throws IOException {
+        submitJob(modelConfig, pigScriptPath, paramsMap, sourceType, null, pathFinder);
     }
 
     /**
@@ -93,13 +106,53 @@ public class PigExecutor {
      *            - additional parameters for pig script
      * @param sourceType
      *            - the mode run pig: pig-local/pig-hdfs
+     * @param confMap
+     *            the configuration map instance
+     * @param pathFinder
+     *            the path finder
      * @throws IOException
      *             throw IOException when loading the parameter from @ModelConfig
      */
     public void submitJob(ModelConfig modelConfig, String pigScriptPath, Map<String, String> paramsMap,
-            SourceType sourceType) throws IOException {
+            SourceType sourceType, Map<String, String> confMap, PathFinder pathFinder) throws IOException {
         // Run Pig Scripts
-        PigServer pigServer;
+        PigServer pigServer = createPigServer(sourceType);
+
+        for(Map.Entry<Object, Object> entry: Environment.getProperties().entrySet()) {
+            if(CommonUtils.isHadoopConfigurationInjected(entry.getKey().toString())) {
+                pigServer.getPigContext().getProperties().put(entry.getKey(), entry.getValue());
+            }
+        }
+
+        if(confMap != null) {
+            for(Map.Entry<String, String> entry: confMap.entrySet()) {
+                pigServer.getPigContext().getProperties().put(entry.getKey(), entry.getValue());
+            }
+        }
+
+        Map<String, String> pigParamsMap = CommonUtils.getPigParamMap(modelConfig, sourceType, pathFinder);
+        if(paramsMap != null) {
+            pigParamsMap.putAll(paramsMap);
+        }
+
+        log.debug("Pig submit parameters: {}", pigParamsMap);
+        if(new File(pigScriptPath).isAbsolute()) {
+            log.info("Pig script absolute path is {}", pigScriptPath);
+            pigServer.registerScript(pigScriptPath, pigParamsMap);
+        } else {
+            log.info("Pig script relative path is {}", pigScriptPath);
+            pigServer.registerScript(PigExecutor.class.getClassLoader().getResourceAsStream(pigScriptPath),
+                    pigParamsMap);
+        }
+    }
+
+    public void submitJob(SourceType sourceType, String pigScripts) throws IOException {
+        PigServer pigServer = createPigServer(sourceType);
+        pigServer.registerScript(new ByteArrayInputStream(pigScripts.getBytes()));
+    }
+
+    private PigServer createPigServer(SourceType sourceType) throws IOException {
+        PigServer pigServer = null;
 
         if(SourceType.HDFS.equals(sourceType)) {
             if(Environment.getProperty("shifu.pig.exectype", "MAPREDUCE").toLowerCase().equals("tez")) {
@@ -121,7 +174,6 @@ public class PigExecutor {
             } else {
                 log.info("Pig ExecType: MAPREDUCE");
                 pigServer = new PigServer(ExecType.MAPREDUCE);
-
             }
             String hdpVersion = HDPUtils.getHdpVersionForHDP224();
             if(StringUtils.isNotBlank(hdpVersion)) {
@@ -137,24 +189,14 @@ public class PigExecutor {
             pigServer = new PigServer(ExecType.LOCAL);
         }
 
-        for(Map.Entry<Object, Object> entry: Environment.getProperties().entrySet()) {
-            if(CommonUtils.isHadoopConfigurationInjected(entry.getKey().toString())) {
-                pigServer.getPigContext().getProperties().put(entry.getKey(), entry.getValue());
-            }
-        }
-
-        Map<String, String> pigParamsMap = CommonUtils.getPigParamMap(modelConfig, sourceType);
-        if(paramsMap != null) {
-            pigParamsMap.putAll(paramsMap);
-        }
-
-        log.debug("Pig submit parameters: {}", pigParamsMap);
-        pigServer.registerScript(pigScriptPath, pigParamsMap);
+        return pigServer;
     }
 
     /**
      * Check if tez version is ok to run. In hdp 2.4.0.2.1.2.0-402, with such error 'NoClassDefFoundError:
      * org/apache/tez/runtime/library/input/OrderedGroupedKVInput'
+     * 
+     * @return if is tez running
      */
     private boolean isTezRunnable() {
         boolean isTezRunnable = true;

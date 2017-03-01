@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright [2012-2014] PayPal Software Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -130,6 +130,7 @@ public class MetaFactory {
      *         If all items are OK, the ValidateResult.status will be true;
      *         Or the ValidateResult.status will be false, ValidateResult.causes will contain the reasons
      * @throws Exception
+     *             any exception in validaiton
      */
     public static ValidateResult validate(ModelConfig modelConfig) throws Exception {
         ValidateResult result = new ValidateResult(true);
@@ -140,6 +141,10 @@ public class MetaFactory {
         Field[] fields = cls.getDeclaredFields();
 
         for(Field field: fields) {
+            // skip log instance
+            if(field.getName().equalsIgnoreCase("log") || field.getName().equalsIgnoreCase("logger")) {
+                continue;
+            }
             if(!field.isSynthetic()) {
                 Method method = cls.getMethod("get" + getMethodName(field.getName()));
                 Object value = method.invoke(modelConfig);
@@ -167,6 +172,7 @@ public class MetaFactory {
      *         If all items are OK, the ValidateResult.status will be true;
      *         Or the ValidateResult.status will be false, ValidateResult.causes will contain the reasons
      * @throws Exception
+     *             any exception in validaiton
      */
     public static ValidateResult validate(ModelBasicConf basic) throws Exception {
         return iterateCheck(false, BASIC_TAG, basic);
@@ -181,6 +187,7 @@ public class MetaFactory {
      *         If all items are OK, the ValidateResult.status will be true;
      *         Or the ValidateResult.status will be false, ValidateResult.causes will contain the reasons
      * @throws Exception
+     *             any exception in validaiton
      */
     public static ValidateResult validate(ModelSourceDataConf sourceData) throws Exception {
         return iterateCheck(false, DATASET_TAG, sourceData);
@@ -195,6 +202,7 @@ public class MetaFactory {
      *         If all items are OK, the ValidateResult.status will be true;
      *         Or the ValidateResult.status will be false, ValidateResult.causes will contain the reasons
      * @throws Exception
+     *             any exception in validaiton
      */
     public static ValidateResult validate(ModelStatsConf stats) throws Exception {
         return iterateCheck(false, STATS_TAG, stats);
@@ -209,6 +217,7 @@ public class MetaFactory {
      *         If all items are OK, the ValidateResult.status will be true;
      *         Or the ValidateResult.status will be false, ValidateResult.causes will contain the reasons
      * @throws Exception
+     *             any exception in validaiton
      */
     public static ValidateResult validate(ModelVarSelectConf varselect) throws Exception {
         return iterateCheck(false, VARSELECT_TAG, varselect);
@@ -223,6 +232,7 @@ public class MetaFactory {
      *         If all items are OK, the ValidateResult.status will be true;
      *         Or the ValidateResult.status will be false, ValidateResult.causes will contain the reasons
      * @throws Exception
+     *             any exception in validaiton
      */
     public static ValidateResult validate(ModelNormalizeConf normalizer) throws Exception {
         return iterateCheck(false, NORMALIZE_TAG, normalizer);
@@ -237,13 +247,14 @@ public class MetaFactory {
      *         If all items are OK, the ValidateResult.status will be true;
      *         Or the ValidateResult.status will be false, ValidateResult.causes will contain the reasons
      * @throws Exception
+     *             any exception in validaiton
      */
     public static ValidateResult validate(ModelTrainConf train) throws Exception {
         return iterateCheck(false, TRAIN_TAG, train);
     }
 
     /**
-     * Validate the List<EvalConfig> object, to make sure each item follow the constrain
+     * Validate the List(EvalConfig) object, to make sure each item follow the constrain
      * 
      * @param evalList
      *            - object list to validate
@@ -251,6 +262,7 @@ public class MetaFactory {
      *         If all items are OK, the ValidateResult.status will be true;
      *         Or the ValidateResult.status will be false, ValidateResult.causes will contain the reasons
      * @throws Exception
+     *             any exception in validaiton
      */
     public static ValidateResult validate(List<EvalConfig> evalList) throws Exception {
         ValidateResult result = new ValidateResult(true);
@@ -271,6 +283,7 @@ public class MetaFactory {
      *         If all items are OK, the ValidateResult.status will be true;
      *         Or the ValidateResult.status will be false, ValidateResult.causes will contain the reasons
      * @throws Exception
+     *             any exception in validaiton
      */
     public static ValidateResult validate(EvalConfig eval) throws Exception {
         return iterateCheck(false, EVALS_TAG, eval);
@@ -289,6 +302,7 @@ public class MetaFactory {
      *         If all items are OK, the ValidateResult.status will be true;
      *         Or the ValidateResult.status will be false, ValidateResult.causes will contain the reasons
      * @throws Exception
+     *             any exception in validaiton
      */
     public static ValidateResult iterateCheck(boolean isGridSearch, String ptag, Object obj) throws Exception {
         ValidateResult result = new ValidateResult(true);
@@ -354,6 +368,7 @@ public class MetaFactory {
      * @return if validate OK, return "OK"
      *         or return the cause - String
      * @throws Exception
+     *             any exception in validaiton
      */
     public static String validate(boolean isGridSearch, String itemKey, Object itemValue) throws Exception {
         MetaItem itemMeta = itemsWareHouse.get(itemKey);
@@ -558,7 +573,9 @@ public class MetaFactory {
      * The total result will contain all causes
      * 
      * @param totalResult
+     *            the total result
      * @param result
+     *            the current result
      */
     private static void encapsulateResult(ValidateResult totalResult, ValidateResult result) {
         totalResult.setStatus(totalResult.getStatus() && result.getStatus());
@@ -569,6 +586,7 @@ public class MetaFactory {
      * Get the method-style name of the property. (UPPER the first character:))
      * 
      * @param fieldName
+     *            the field name
      * @return first character Upper style
      */
     private static String getMethodName(String fieldName) {

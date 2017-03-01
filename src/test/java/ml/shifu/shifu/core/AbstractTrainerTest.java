@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright [2012-2014] PayPal Software Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -73,11 +73,11 @@ public class AbstractTrainerTest {
         trainer.setDataSet(set);
 
         Assert.assertTrue(trainer.getTrainSet().getRecordCount() <= (1 - modelConfig
-                .getCrossValidationRate())
+                .getValidSetRate())
                 * modelConfig.getBaggingSampleRate()
                 * set.getRecordCount() * 1.05);
         Assert.assertTrue(trainer.getTrainSet().getRecordCount() >= (1 - modelConfig
-                .getCrossValidationRate())
+                .getValidSetRate())
                 * modelConfig.getBaggingSampleRate()
                 * set.getRecordCount() * 0.95);
 
@@ -86,11 +86,11 @@ public class AbstractTrainerTest {
         trainer.setDataSet(set);
 
         Assert.assertTrue(trainer.getTrainSet().getRecordCount() <= (1 - modelConfig
-                .getCrossValidationRate())
+                .getValidSetRate())
                 * modelConfig.getBaggingSampleRate()
                 * set.getRecordCount() * 1.05);
         Assert.assertTrue(trainer.getTrainSet().getRecordCount() >= (1 - modelConfig
-                .getCrossValidationRate())
+                .getValidSetRate())
                 * modelConfig.getBaggingSampleRate()
                 * set.getRecordCount() * 0.95);
 
@@ -100,11 +100,11 @@ public class AbstractTrainerTest {
         trainer.setDataSet(set);
 
         Assert.assertTrue(trainer.getTrainSet().getRecordCount() <= (1 - modelConfig
-                .getCrossValidationRate())
+                .getValidSetRate())
                 * modelConfig.getBaggingSampleRate()
                 * set.getRecordCount() * 1.05);
         Assert.assertTrue(trainer.getTrainSet().getRecordCount() >= (1 - modelConfig
-                .getCrossValidationRate())
+                .getValidSetRate())
                 * modelConfig.getBaggingSampleRate()
                 * set.getRecordCount() * 0.95);
 

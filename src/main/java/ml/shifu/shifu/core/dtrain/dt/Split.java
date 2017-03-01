@@ -18,7 +18,6 @@ package ml.shifu.shifu.core.dtrain.dt;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
-import java.util.HashSet;
 import java.util.Set;
 
 import ml.shifu.guagua.io.Bytable;
@@ -28,8 +27,7 @@ import ml.shifu.guagua.io.Bytable;
  * 
  * <p>
  * For continuous feature, only a double threshold can be used to split a variable into two splits. While for
- * categorical features, we only store left node category list, check if in left category list to determince which
- * split.
+ * categorical features, we only store left node category list, check if in left category list to determine which split.
  * 
  * @author Zhang David (pengzhang@paypal.com)
  * 
@@ -37,26 +35,43 @@ import ml.shifu.guagua.io.Bytable;
  */
 public class Split implements Bytable {
 
+    /**
+     * Column number in ColumnConfig.json
+     */
     private int columnNum;
 
+    /**
+     * CONTINUOUS or CATEGORICAL, should not be null
+     */
     private FeatureType featureType;
 
+    /**
+     * For CONTINUOUS feature, this should be valid value to split feature
+     */
     private double threshold;
 
-    private Set<String> leftCategories;
+    /**
+     * For categorical feature, if isLeft = true, {@link #leftOrRightCategories} stores left categories. If false,
+     * {@link #leftOrRightCategories} stores right categories.
+     */
+    private boolean isLeft = true;;
+
+    /**
+     * Indexes of left categories or right categories, list of categories will be saved in model files or in
+     * TreeModel as short indexes to save space, short is safe so far as max bin size is limit to Short.MAX_VALUE.
+     */
+    private Set<Short> leftOrRightCategories;
 
     public Split() {
     }
 
-    public Split(int featureIndex) {
-        this.columnNum = featureIndex;
-    }
-
-    public Split(int columnNum, FeatureType featureType, double threshold, Set<String> leftCategories) {
+    public Split(int columnNum, FeatureType featureType, double threshold, boolean isLeft,
+            Set<Short> leftOrRightCategories) {
         this.columnNum = columnNum;
         this.featureType = featureType;
         this.threshold = threshold;
-        this.leftCategories = leftCategories;
+        this.isLeft = isLeft;
+        this.leftOrRightCategories = leftOrRightCategories;
     }
 
     /**
@@ -83,8 +98,8 @@ public class Split implements Bytable {
     /**
      * @return the leftCategories
      */
-    public Set<String> getLeftCategories() {
-        return leftCategories;
+    public Set<Short> getLeftOrRightCategories() {
+        return leftOrRightCategories;
     }
 
     /**
@@ -115,46 +130,69 @@ public class Split implements Bytable {
      * @param leftCategories
      *            the leftCategories to set
      */
-    public void setLeftCategories(Set<String> leftCategories) {
-        this.leftCategories = leftCategories;
+    public void setLeftOrRightCategories(Set<Short> leftCategories) {
+        this.leftOrRightCategories = leftCategories;
     }
 
     @Override
     public void write(DataOutput out) throws IOException {
         out.writeInt(this.columnNum);
-        out.writeDouble(this.threshold);
-        if(featureType == null) {
-            out.writeBoolean(false);
-        } else {
-            out.writeBoolean(true);
-            out.writeUTF(this.featureType.toString());
-        }
+        // use byte type to save space, should not be null
+        out.writeByte(this.featureType.getByteType());
 
-        if(leftCategories == null) {
-            out.writeInt(0);
-        } else {
-            out.writeInt(this.leftCategories.size());
-            for(String category: this.leftCategories) {
-                out.writeUTF(category);
-            }
+        switch(this.featureType) {
+            case CATEGORICAL:
+                out.writeBoolean(this.isLeft);
+                if(leftOrRightCategories == null) {
+                    out.writeBoolean(true);
+                } else {
+                    out.writeBoolean(false);
+                    if(leftOrRightCategories instanceof Bytable) {
+                        ((Bytable) leftOrRightCategories).write(out);
+                    }
+                }
+                break;
+            case CONTINUOUS:
+                out.writeDouble(this.threshold);
+                break;
         }
-
     }
 
     @Override
     public void readFields(DataInput in) throws IOException {
         this.columnNum = in.readInt();
-        this.threshold = in.readDouble();
+        this.featureType = FeatureType.of(in.readByte());
 
-        if(in.readBoolean()) {
-            this.featureType = FeatureType.of(in.readUTF());
+        switch(this.featureType) {
+            case CATEGORICAL:
+                this.isLeft = in.readBoolean();
+                boolean isNull = in.readBoolean();
+                if(isNull) {
+                    leftOrRightCategories = null;
+                } else {
+                    leftOrRightCategories = new SimpleBitSet<Short>();
+                    ((Bytable) leftOrRightCategories).readFields(in);
+                }
+                break;
+            case CONTINUOUS:
+                this.threshold = in.readDouble();
+                break;
         }
+    }
 
-        int len = in.readInt();
-        this.leftCategories = new HashSet<String>();
-        for(int i = 0; i < len; i++) {
-            this.leftCategories.add(in.readUTF());
-        }
+    /**
+     * @return the isLeft
+     */
+    public boolean isLeft() {
+        return isLeft;
+    }
+
+    /**
+     * @param isLeft
+     *            the isLeft to set
+     */
+    public void setLeft(boolean isLeft) {
+        this.isLeft = isLeft;
     }
 
     /*
@@ -165,7 +203,7 @@ public class Split implements Bytable {
     @Override
     public String toString() {
         return "Split [featureIndex=" + columnNum + ", featureType=" + featureType + ", threshold=" + threshold
-                + ", leftCategories=" + leftCategories + "]";
+                + ", leftCategories=" + leftOrRightCategories + "]";
     }
 
 }

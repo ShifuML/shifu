@@ -26,6 +26,7 @@ import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.container.obj.ModelConfig;
 import ml.shifu.shifu.udf.CalculateStatsUDF;
 
+import ml.shifu.shifu.util.CommonUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.pig.backend.executionengine.ExecException;
 import org.apache.pig.data.DataBag;
@@ -35,20 +36,12 @@ import org.slf4j.LoggerFactory;
 
 /**
  * CategoricalVarStats class
- * 
- * @Nov 3, 2014
- * 
  */
 public class CategoricalVarStats extends AbstractVarStats {
 
     private static Logger log = LoggerFactory.getLogger(CategoricalVarStats.class);
     private Map<String, Integer> categoricalBinMap;
 
-    /**
-     * @param modelConfig
-     * @param columnConfig
-     * @param valueThreshold
-     */
     public CategoricalVarStats(ModelConfig modelConfig, ColumnConfig columnConfig, Double valueThreshold) {
         super(modelConfig, columnConfig, valueThreshold);
     }
@@ -104,7 +97,7 @@ public class CategoricalVarStats extends AbstractVarStats {
             }
 
             Object value = element.get(1);
-            String tag = (String) element.get(2);
+            String tag = CommonUtils.trimTag((String) element.get(2));
             Double weight = (Double) element.get(3);
 
             int binNum = 0;

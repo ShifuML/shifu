@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright [2012-2014] PayPal Software Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -75,8 +75,7 @@ public class ScoreModelWorker extends AbstractWorkerActor {
                 .getSource());
 
         // load the header for evaluation data
-        header = CommonUtils.getHeaders(evalConfig.getDataSet().getHeaderPath(), evalConfig.getDataSet()
-                .getHeaderDelimiter(), evalConfig.getDataSet().getSource());
+        header = CommonUtils.getFinalHeaders(evalConfig);
 
         writeScoreHeader();
 
@@ -110,8 +109,8 @@ public class ScoreModelWorker extends AbstractWorkerActor {
                         .getDataSet().getDataDelimiter(), header);
 
                 // get the tag
-                String tag = rawDataMap.get(modelConfig.getTargetColumnName(evalConfig));
-                buf.append(StringUtils.trimToEmpty(tag));
+                String tag = CommonUtils.trimTag(rawDataMap.get(modelConfig.getTargetColumnName(evalConfig)));
+                buf.append(tag);
 
                 // append weight column value
                 if(StringUtils.isNotBlank(evalConfig.getDataSet().getWeightColumnName())) {
@@ -156,10 +155,6 @@ public class ScoreModelWorker extends AbstractWorkerActor {
         }
     }
 
-    /**
-     * @param resultMap2
-     * @return
-     */
     private boolean hasAllMessageResult(Map<Integer, StreamBulletin> resultMsgMap) {
         Iterator<Entry<Integer, StreamBulletin>> iterator = resultMsgMap.entrySet().iterator();
         while(iterator.hasNext()) {
@@ -175,6 +170,7 @@ public class ScoreModelWorker extends AbstractWorkerActor {
      * Write the file header for score file
      * 
      * @throws IOException
+     *             if any ip exception
      */
     private void writeScoreHeader() throws IOException {
         StringBuilder buf = new StringBuilder();
@@ -193,7 +189,7 @@ public class ScoreModelWorker extends AbstractWorkerActor {
         }
 
         // append meta data
-        List<String> metaColumns = evalConfig.getScoreMetaColumns(modelConfig);
+        List<String> metaColumns = evalConfig.getAllMetaColumns(modelConfig);
         if(CollectionUtils.isNotEmpty(metaColumns)) {
             for(String columnName: metaColumns) {
                 buf.append("|" + columnName);

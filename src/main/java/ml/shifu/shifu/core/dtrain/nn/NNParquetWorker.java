@@ -29,6 +29,7 @@ import ml.shifu.shifu.core.dtrain.dataset.FloatMLDataPair;
 import ml.shifu.shifu.guagua.GuaguaParquetRecordReader;
 import ml.shifu.shifu.util.CommonUtils;
 
+import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.pig.LoadPushDown.RequiredFieldList;
@@ -62,13 +63,6 @@ public class NNParquetWorker extends AbstractNNWorker<Tuple> {
         super.count += 1;
         if((super.count) % 2000 == 0) {
             LOG.info("Read {} records.", super.count);
-        }
-
-        double baggingSampleRate = super.modelConfig.getBaggingSampleRate();
-        // if fixInitialInput = false, we only compare random value with baggingSampleRate to avoid parsing data.
-        // if fixInitialInput = true, we should use hash code after parsing.
-        if(!super.modelConfig.isFixInitialInput() && Double.compare(Math.random(), baggingSampleRate) >= 0) {
-            return;
         }
 
         float[] inputs = new float[super.inputNodeCount];
@@ -111,6 +105,14 @@ public class NNParquetWorker extends AbstractNNWorker<Tuple> {
             floatValue = (Float.isNaN(floatValue) || Double.isNaN(floatValue)) ? 0f : floatValue;
 
             if(index == (super.inputNodeCount + super.outputNodeCount)) {
+                // do we need to check if not weighted directly set to 1f; if such logic non-weight at first, then
+                // weight, how to process???
+                if(StringUtils.isBlank(modelConfig.getWeightColumnName())) {
+                    significance = 1f;
+                    // break here if we reach weight column which is last column
+                    break;
+                }
+
                 assert element != null;
                 if(element != null && element instanceof Float) {
                     significance = (Float) element;
@@ -118,6 +120,12 @@ public class NNParquetWorker extends AbstractNNWorker<Tuple> {
                     // check here to avoid bad performance in failed NumberFormatUtils.getFloat(input, 0f)
                     significance = element.toString().length() == 0 ? 1f : NumberFormatUtils.getFloat(
                             element.toString(), 1f);
+                }
+                // if invalid weight, set it to 1f and warning in log
+                if(Float.compare(significance, 0f) < 0) {
+                    LOG.warn("The {} record in current worker weight {} is less than 0f, it is invalid, set it to 1.",
+                            count, significance);
+                    significance = 1f;
                 }
                 // break here if we reach weight column which is last column
                 break;
@@ -174,15 +182,27 @@ public class NNParquetWorker extends AbstractNNWorker<Tuple> {
             index += 1;
         }
 
-        // if fixInitialInput = true, we should use hashcode to sample.
-        long longBaggingSampleRate = Double.valueOf(baggingSampleRate * 100).longValue();
-        if(super.modelConfig.isFixInitialInput() && hashcode % 100 >= longBaggingSampleRate) {
+        // if only sample negative, no matter bagging or replacement, do sampling here.
+        if(modelConfig.getTrain().getSampleNegOnly() // sample negative enabled
+                && (modelConfig.isRegression() || (modelConfig.isClassification() && modelConfig.getTrain()
+                        .isOneVsAll())) // regression or onevsall
+                && Double.compare(ideal[0] + 0.01d, 0d) == 0 // negative record
+                && (!this.modelConfig.isFixInitialInput() && Double.compare(Math.random(),
+                        this.modelConfig.getBaggingSampleRate()) >= 0)) {
+            return;
+        }
+        if(modelConfig.getTrain().getSampleNegOnly()// sample negative enabled
+                && (modelConfig.isRegression() || (modelConfig.isClassification() && modelConfig.getTrain()
+                        .isOneVsAll()))// regression or onevsall
+                && (Double.compare(ideal[0] + 0.01d, 0d) == 0 // negative record
+                        && this.modelConfig.isFixInitialInput() && hashcode % 100 >= Double.valueOf(
+                        this.modelConfig.getBaggingSampleRate() * 100).longValue())) {
             return;
         }
 
-        super.sampleCount += 1;
-
         FloatMLDataPair pair = new BasicFloatMLDataPair(new BasicFloatMLData(inputs), new BasicFloatMLData(ideal));
+
+        // up sampling logic
         if(modelConfig.isRegression() && isUpSampleEnabled() && Double.compare(ideal[0], 1d) == 0) {
             // Double.compare(ideal[0], 1d) == 0 means positive tags; sample + 1 to avoid sample count to 0
             pair.setSignificance(significance * (super.upSampleRng.sample() + 1));
@@ -190,7 +210,27 @@ public class NNParquetWorker extends AbstractNNWorker<Tuple> {
             pair.setSignificance(significance);
         }
 
-        addDataPairToDataSet(hashcode, pair);
+        boolean isValidation = false;
+        if(workerContext.getAttachment() != null && workerContext.getAttachment() instanceof Boolean) {
+            isValidation = (Boolean) workerContext.getAttachment();
+        }
+
+        boolean isInTraining = addDataPairToDataSet(hashcode, pair, isValidation);
+
+        // do bagging sampling only for training data，
+        if(isInTraining) {
+            float subsampleWeights = sampleWeights(pair.getIdealArray()[0]);
+            if(isPositive(pair.getIdealArray()[0])) {
+                this.positiveSelectedTrainCount += subsampleWeights * 1L;
+            } else {
+                this.negativeSelectedTrainCount += subsampleWeights * 1L;
+            }
+            // set weights to significance, if 0, significance will be 0, that is bagging sampling
+            pair.setSignificance(pair.getSignificance() * subsampleWeights);
+        } else {
+            // for validation data, according bagging sampling logic, we may need to sampling validation data set, while
+            // validation data set are only used to compute validation error, not to do real sampling is ok.
+        }
     }
 
     private void initFieldList() {

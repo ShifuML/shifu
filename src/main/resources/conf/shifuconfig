@@ -15,7 +15,7 @@ localNumParallel=6
 recordCntPerMessage=100000
 
 # fix a bug on hdp 2.4.1 by default mapreduce.job.max.split.locations is 10
-mapreduce.job.max.split.locations=100
+mapreduce.job.max.split.locations=5000
 
 # disable map output compress because some issue for snappy config in our clusters
 mapreduce.map.output.compress=false
@@ -33,15 +33,16 @@ mapreduce.map.output.compress=false
 # set to 15mins (default 10mins)
 mapreduce.task.timeout=900000
 
-# set default zk in client machine by default it is false and in master node
+# set default zk in client machine by default it is false and in master node, if set it to false, zk will be sstarted in 
+# master task. Please tune memory to make sure enough memory in master zookeeper process.
 guagua.zk.embedbed.isInClient=true
 
 # if over such threshold three times, kill worker; by default is 60000, change it to 120000 to avoid failures
 guagua.computation.time.threshold=120000
 
 ## tunning for rf, in rf, tree models are stored in master memory, if two many models, please tune such parameters 
-mapreduce.map.memory.mb=4096
-mapreduce.map.java.opts=-Xms3G -Xmx3G -server -XX:MaxPermSize=128M -XX:PermSize=128M -XX:+UseParallelGC -XX:+UseParallelOldGC -XX:ParallelGCThreads=8 -verbose:gc -XX:+PrintGCDetails -XX:+PrintGCTimeStamps
+mapreduce.map.memory.mb=2400
+mapreduce.map.java.opts=-Xms2G -Xmx2G -server -XX:MaxPermSize=128M -XX:PermSize=64M -XX:+UseParallelGC -XX:+UseParallelOldGC -XX:ParallelGCThreads=8 -verbose:gc -XX:+PrintGCDetails -XX:+PrintGCTimeStamps
 
 ## each round how many jobs can be running, if bagging is 10, two rounds of bagging with each one 5 guagua jobs 
 shifu.train.bagging.inparallel=5
@@ -51,3 +52,18 @@ shifu.gridsearch.threshold=30
 
 ## set min worker done ratio in each guagua iteration step 
 guagua.min.workers.ratio=0.97
+
+## the hadoop capacity may limit parallel number, add this parameter for hadoop performance tunning
+# shifu.combo.thread.parallel = 5
+
+## the max retry times for when executing combo jobs
+# shifu.combo.max.retry = 3
+
+## control the behavior of normalized data
+# how many parts of normalized data that will generate
+# shifu.norm.shuffle.size = 100
+# the preferred normalized data size per part
+# shifu.norm.prefer.part.size = 256000000
+
+# the precision of model scores
+# shifu.score.scale = 1000

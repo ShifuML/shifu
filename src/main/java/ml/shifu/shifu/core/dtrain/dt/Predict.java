@@ -35,9 +35,9 @@ public class Predict implements Bytable {
     private double predict;
 
     /**
-     * Classification result, only for classification.
+     * Classification result, only for classification. Byte is ok for index of classes. No more than 127 classes
      */
-    private double classValue;
+    private byte classValue;
 
     public Predict() {
     }
@@ -46,7 +46,7 @@ public class Predict implements Bytable {
         this.predict = predict;
     }
 
-    public Predict(double predict, double classValue) {
+    public Predict(double predict, byte classValue) {
         this.predict = predict;
         this.classValue = classValue;
     }
@@ -61,20 +61,20 @@ public class Predict implements Bytable {
     /**
      * @return the prob
      */
-    public double getClassValue() {
+    public byte getClassValue() {
         return classValue;
     }
 
     @Override
     public void write(DataOutput out) throws IOException {
         out.writeDouble(predict);
-        out.writeDouble(classValue);
+        out.writeByte(classValue);
     }
 
     @Override
     public void readFields(DataInput in) throws IOException {
         predict = in.readDouble();
-        classValue = in.readDouble();
+        classValue = in.readByte();
     }
 
     @Override

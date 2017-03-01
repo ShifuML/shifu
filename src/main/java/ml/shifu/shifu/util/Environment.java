@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright [2012-2014] PayPal Software Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -80,15 +80,13 @@ public class Environment {
         }
     }
 
-    /**
+    /*
      * Load properties from
      * 1. ${SHIFU_HOME}/conf/shifuconfig
      * 2. /etc/shifuconfig
      * 3. ~/.shifuconfig
      * 
      * Provide function to reload
-     * 
-     * @throws IOException
      */
     public static void loadShifuConfig() throws IOException {
         // check ${SHIFU_HOME}/conf/shifuconfig, if exists, load it
@@ -98,60 +96,60 @@ public class Environment {
         // check /etc/shifuconfig, if exists, load it
         loadProperties(properties, File.separator + "etc" + File.separator + "shifuconfig");
 
-        // check <user-home>/.shifuconfig, if exists, load it
+        // check /<user-home>/.shifuconfig, if exists, load it
         String userHome = System.getProperty("user.home");
         loadProperties(properties, userHome + File.separator + ".shifuconfig");
     }
 
-    /**
+    /*
      * Get global property by property name
      */
     public static String getProperty(String propertyName) {
         return properties.getProperty(propertyName);
     }
 
-    /**
-     * @param propertyName
-     * @param propertyValue
-     * @return
-     */
     public static void setProperty(String propertyName, String propertyValue) {
-        properties.put(SHIFU_HOME, propertyValue);
+        properties.put(propertyName, propertyValue);
     }
 
-    /**
+    /*
      * Get property, if null return default value
-     * 
-     * @param propertyName
-     * @param defValue
-     * @return
      */
     public static String getProperty(String propertyName, String defValue) {
         String propertyValue = getProperty(propertyName);
         return (propertyValue == null) ? defValue : propertyValue;
     }
 
-    /**
+    /*
      * Get property as Integer value
-     * 
-     * @param propertyName
-     * @return
      */
     public static Integer getInt(String propertyName) {
         String propertyValue = getProperty(propertyName);
         return (propertyValue == null) ? null : Integer.valueOf(propertyValue);
     }
 
-    /**
+    /*
      * Get property as Integer value, if null return default value
-     * 
-     * @param propertyName
-     * @param defValue
-     * @return
      */
     public static Integer getInt(String propertyName, Integer defValue) {
         String propertyValue = getProperty(propertyName);
         return (propertyValue == null) ? defValue : Integer.valueOf(propertyValue);
+    }
+
+    /*
+     * Get property as Long value
+     */
+    public static Long getLong(String propertyName) {
+        String propertyValue = getProperty(propertyName);
+        return (propertyValue == null) ? null : Long.valueOf(propertyValue);
+    }
+
+    /*
+     * Get property as Integer value, if null return default value
+     */
+    public static Long getLong(String propertyName, Long defValue) {
+        String propertyValue = getProperty(propertyName);
+        return (propertyValue == null) ? defValue : Long.valueOf(propertyValue);
     }
 
     /**
@@ -173,18 +171,12 @@ public class Environment {
      * @return true if it is windows, or return false
      */
     private static boolean isUnix(String osName) {
-        return (osName.indexOf(UNIX_SUFFIX_1) >= 0
-                || osName.indexOf(UNIX_SUFFIX_2) >= 0
-                || osName.indexOf(UNIX_SUFFIX_3) > 0)
-                || osName.indexOf(UNIX_SUFFIX_4) >=0 ;
+        return (osName.indexOf(UNIX_SUFFIX_1) >= 0 || osName.indexOf(UNIX_SUFFIX_2) >= 0 || osName
+                .indexOf(UNIX_SUFFIX_3) > 0) || osName.indexOf(UNIX_SUFFIX_4) >= 0;
     }
 
-    /**
+    /*
      * Load shifuconfig into properties
-     * 
-     * @param props
-     * @param fileName
-     * @throws IOException
      */
     private static void loadProperties(Properties props, String fileName) throws IOException {
         File configFile = new File(fileName);
@@ -201,7 +193,7 @@ public class Environment {
         }
     }
 
-    /**
+    /*
      * Get copied properties to make others can read them and send useful info to others like guagua framework.
      */
     public static Properties getProperties() {

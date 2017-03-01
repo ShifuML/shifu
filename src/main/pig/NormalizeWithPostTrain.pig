@@ -18,13 +18,15 @@ REGISTER $path_jar;
 SET pig.exec.reducers.max 999;
 SET pig.exec.reducers.bytes.per.reducer 536870912;
 SET mapred.job.queue.name $queue_name;
-SET job.name 'Shifu Normalize';
+SET job.name 'Shifu Normalize: $data_set';
 SET io.sort.mb 500;
 SET mapred.child.java.opts -Xmx1G;
 SET mapred.child.ulimit 2.5G;
 SET mapred.reduce.slowstart.completed.maps 0.6;
 SET mapred.map.tasks.speculative.execution true;
 SET mapred.reduce.tasks.speculative.execution true;
+SET mapreduce.map.speculative true;
+SET mapreduce.reduce.speculative true;
 -- compress outputs
 SET mapred.output.compress true;
 SET mapreduce.output.fileoutputformat.compress true;

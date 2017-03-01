@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright [2012-2014] PayPal Software Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -15,25 +15,24 @@
  */
 package ml.shifu.shifu.fs;
 
-import java.io.File;
-import java.util.Map;
-
 import ml.shifu.shifu.container.obj.EvalConfig;
 import ml.shifu.shifu.container.obj.ModelConfig;
 import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
 import ml.shifu.shifu.util.Constants;
 import ml.shifu.shifu.util.Environment;
-
 import org.apache.commons.lang.NotImplementedException;
 import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.fs.Path;
+import org.apache.pig.impl.util.JarManager;
+
+import java.io.File;
+import java.util.Map;
 
 /**
- * <p/>
  * {@link PathFinder} is used to obtain all files which can be used in our framework. Some are used for training,
  * evaling, performance ...
- * <p/>
- * <p/>
+ * 
+ * <p>
  * {@link #modelConfig} should be passed as parameter in constructor
  */
 public class PathFinder {
@@ -47,8 +46,15 @@ public class PathFinder {
     private ModelConfig modelConfig;
 
     /**
+     * If not specified SHIFU_HOME env, some key configurations like pig path or lib path can be configured here
+     */
+    private Map<String, Object> otherConfigs;
+
+    /**
      * Constructor with valid parameter modelConfig
      * 
+     * @param modelConfig
+     *            the model config
      * @throws IllegalArgumentException
      *             if {@link #modelConfig} is null.
      */
@@ -60,16 +66,56 @@ public class PathFinder {
     }
 
     /**
+     * Constructor with valid parameter modelConfig
+     * 
+     * @param modelConfig
+     *            - modelConfig to find
+     * @param otherConfigs
+     *            other configuration parameters
+     * @throws IllegalArgumentException
+     *             if {@link #modelConfig} is null.
+     */
+    public PathFinder(ModelConfig modelConfig, Map<String, Object> otherConfigs) {
+        this(modelConfig);
+        this.otherConfigs = otherConfigs;
+    }
+
+    /**
      * Get absolute path with SHIFU_HOME env.
      * - if the path is already absolute path, just return
      * - or assume it is relative path to SHIFU_HOME
      * 
      * @param path
-     * @return absolute path
+     *            the given path
+     * @return absolute path the absolute path
      */
+    public String getScriptPath(String path) {
+        String shifuHome = Environment.getProperty(Environment.SHIFU_HOME);
+        if(shifuHome == null || shifuHome.length() == 0) {
+            // return relative path which is in shifu-*.jar
+            return path;
+        } else {
+            String pathStr = (new Path(path)).isAbsolute() ? path : new Path(
+                    Environment.getProperty(Environment.SHIFU_HOME), path).toString();
+            File file = new File(pathStr);
+            if(file.exists()) {
+                return pathStr;
+            } else {
+                // return arguly path which is in shifu-*.jar
+                return path;
+            }
+        }
+    }
+
     public String getAbsolutePath(String path) {
-        return (new Path(path)).isAbsolute() ? path : new Path(Environment.getProperty(Environment.SHIFU_HOME), path)
-                .toString();
+        String shifuHome = Environment.getProperty(Environment.SHIFU_HOME);
+        if(shifuHome == null || shifuHome.length() == 0) {
+            // return absolute path which is in shifu-*.jar
+            return path;
+        } else {
+            return (new Path(path)).isAbsolute() ? path : new Path(Environment.getProperty(Environment.SHIFU_HOME),
+                    path).toString();
+        }
     }
 
     /**
@@ -79,7 +125,18 @@ public class PathFinder {
      * @return path of SHIFU dependent jars
      */
     public String getJarPath() {
-        return getAbsolutePath(SHIFU_JAR_PATH);
+        String shifuHome = Environment.getProperty(Environment.SHIFU_HOME);
+        if(shifuHome == null || shifuHome.length() == 0) {
+            return new Path(JarManager.findContainingJar(PathFinder.class)).toString();
+        } else {
+            // very ugly to check if it is outside jar
+            try {
+                Class.forName("ml.shifu.dtrain.DTrainRequestProcessor");
+                return new Path(JarManager.findContainingJar(PathFinder.class)).toString();
+            } catch (ClassNotFoundException e) {
+                return getAbsolutePath(SHIFU_JAR_PATH);
+            }
+        }
     }
 
     /**
@@ -142,9 +199,6 @@ public class PathFinder {
         return getPathBySourceType(Constants.COLUMN_CONFIG_JSON_FILE_NAME, sourceType);
     }
 
-    /**
-     * Get the file path for column csv stats.
-     */
     public String getLocalColumnStatsPath() {
         return getPathBySourceType(Constants.COLUMN_META_FOLDER_NAME + File.separator
                 + Constants.COLUMN_STATS_CSV_FILE_NAME, SourceType.LOCAL);
@@ -175,6 +229,21 @@ public class PathFinder {
         } else {
             return new Path(preTrainingStatsPath).toString();
         }
+    }
+
+    public String getStatsSmallBins() {
+        return getStatsSmallBins(modelConfig.getDataSet().getSource());
+    }
+
+    /**
+     * Get stats small bins path
+     * 
+     * @param sourceType
+     *            - Local/HDFS
+     * @return path of stats small-bin file
+     */
+    public String getStatsSmallBins(SourceType sourceType) {
+        return getPathBySourceType(new Path(Constants.TMP, Constants.STATS_SMALL_BINS), sourceType);
     }
 
     /**
@@ -266,7 +335,7 @@ public class PathFinder {
     public String getNormalizedDataPath() {
         return getNormalizedDataPath(modelConfig.getDataSet().getSource());
     }
-    
+
     /**
      * Get the path of normalized cross validation data
      * 
@@ -293,7 +362,51 @@ public class PathFinder {
             return new Path(normalizedDataPath).toString();
         }
     }
-    
+
+    public String getCleanedDataPath() {
+        return getCleanedDataPath(modelConfig.getDataSet().getSource());
+    }
+
+    /**
+     * Clean and filter raw data set for RF/GBT model inputs
+     * 
+     * @param sourceType
+     *            - Local/HDFS
+     * @return path of normalized data
+     */
+    public String getCleanedDataPath(SourceType sourceType) {
+        String normalizedDataPath = getPreferPath(modelConfig.getTrain().getCustomPaths(),
+                Constants.KEY_CLEANED_DATA_PATH);
+
+        if(StringUtils.isBlank(normalizedDataPath)) {
+            return getPathBySourceType(new Path(Constants.TMP, Constants.CLEANED_DATA), sourceType);
+        } else {
+            return new Path(normalizedDataPath).toString();
+        }
+    }
+
+    public String getCleanedValidationDataPath() {
+        return getCleanedValidationDataPath(modelConfig.getDataSet().getSource());
+    }
+
+    /**
+     * Clean and filter raw validation data set for RF/GBT model inputs
+     * 
+     * @param sourceType
+     *            - Local/HDFS
+     * @return path of normalized data
+     */
+    public String getCleanedValidationDataPath(SourceType sourceType) {
+        String normalizedDataPath = getPreferPath(modelConfig.getTrain().getCustomPaths(),
+                Constants.KEY_CLEANED_VALIDATION_DATA_PATH);
+
+        if(StringUtils.isBlank(normalizedDataPath)) {
+            return getPathBySourceType(new Path(Constants.TMP, Constants.CLEANED_VALIDATION_DATA), sourceType);
+        } else {
+            return new Path(normalizedDataPath).toString();
+        }
+    }
+
     /**
      * Get the path of validation normalized data
      * 
@@ -347,19 +460,10 @@ public class PathFinder {
         }
     }
 
-    /**
-     * 
-     * @return
-     */
     public String getPSIInfoPath() {
         return this.getPSIInfoPath(modelConfig.getDataSet().getSource());
     }
 
-    /**
-     * 
-     * @param sourceType
-     * @return
-     */
     public String getPSIInfoPath(SourceType sourceType) {
         String preTrainPath = getPreferPath(modelConfig.getTrain().getCustomPaths(), Constants.KEY_PRE_PSI_PATH);
 
@@ -390,7 +494,7 @@ public class PathFinder {
     public String getModelsPath(SourceType sourceType) {
         return getPathBySourceType(new Path(Constants.MODELS), sourceType);
     }
-    
+
     public String getValErrorPath(SourceType sourceType) {
         return getPathBySourceType(new Path(Constants.TMP, "valerr"), sourceType);
     }
@@ -411,10 +515,6 @@ public class PathFinder {
         return getPathBySourceType(new Path(Constants.VarSels), sourceType);
     }
 
-    /**
-     * @param sourceType
-     * @return
-     */
     public String getModelVersion(SourceType sourceType) {
         switch(sourceType) {
             case LOCAL:
@@ -496,6 +596,7 @@ public class PathFinder {
      * Get evaluation set home directory
      * 
      * @param evalConfig
+     *            - EvalConfig to find
      * @return path of evaluation set home directory
      */
     public String getEvalSetPath(EvalConfig evalConfig) {
@@ -503,7 +604,7 @@ public class PathFinder {
     }
 
     /**
-     * Get evaluation set home directory, something like <Model>/eval/<evalName>
+     * Get evaluation set home directory, something like Model/eval/evalName)
      * 
      * @param evalConfig
      *            - EvalConfig to find
@@ -516,7 +617,7 @@ public class PathFinder {
     }
 
     /**
-     * Get evaluation set home directory, something like <Model>/eval/<evalName>
+     * Get evaluation set home directory, something like eval name
      * 
      * @param evalName
      *            - evalset name to find
@@ -532,6 +633,7 @@ public class PathFinder {
      * Get the path of evaluation normalized data
      * 
      * @param evalConfig
+     *            - EvalConfig to find
      * @return path of evaluation normalized data
      */
     public String getEvalNormalizedPath(EvalConfig evalConfig) {
@@ -555,6 +657,7 @@ public class PathFinder {
      * Get the path of evaluation score
      * 
      * @param evalConfig
+     *            - EvalConfig to find
      * @return path of evaluation score
      */
     public String getEvalScorePath(EvalConfig evalConfig) {
@@ -617,6 +720,7 @@ public class PathFinder {
      * Get the path of evaluation set performance
      * 
      * @param evalConfig
+     *            - EvalConfig to find
      * @return path of evaluation set performance
      */
     public String getEvalPerformancePath(EvalConfig evalConfig) {
@@ -641,13 +745,6 @@ public class PathFinder {
         }
     }
 
-    /**
-     * Get path for evaluation matrix
-     * 
-     * @param evalConfig
-     * @param sourceType
-     * @return
-     */
     public String getEvalMatrixPath(EvalConfig evalConfig, SourceType sourceType) {
         String evalMatrixPath = getPreferPath(evalConfig.getCustomPaths(), Constants.KEY_CONFUSION_MATRIX_PATH);
         if(StringUtils.isBlank(evalMatrixPath)) {
@@ -677,10 +774,6 @@ public class PathFinder {
                 .toString();
     }
 
-    /**
-     * @param sourceType
-     * @return
-     */
     public String getModelSetPath(SourceType sourceType) {
         switch(sourceType) {
             case LOCAL:
@@ -768,4 +861,45 @@ public class PathFinder {
         return customPaths.get(key);
     }
 
+    public String getLocalFeatureImportancePath() {
+        return getPathBySourceType(new Path("featureImportance/all.fi"), SourceType.LOCAL);
+    }
+
+    /**
+     * @return the otherConfigs
+     */
+    public Map<String, Object> getOtherConfigs() {
+        return otherConfigs;
+    }
+
+    /**
+     * Get the train data path for assemble model
+     * 
+     * @return - train data path for assemble model
+     */
+    public String getSubModelsAssembleTrainData() {
+        return getPathBySourceType(new Path(Constants.TMP, "AssembleTrainData"), this.modelConfig.getDataSet()
+                .getSource());
+    }
+
+    /**
+     * Get the eval data path for assemble model
+     * 
+     * @param evalName
+     *            - evalset name
+     * @param sourceType
+     *            - Local/HDFS
+     * @return - eval data path for assemble model
+     */
+    public String getSubModelsAssembleEvalData(String evalName, SourceType sourceType) {
+        return getPathBySourceType(new Path(Constants.TMP, evalName + "AssembleEvalData"), sourceType);
+    }
+
+    public String getShuffleDataPath() {
+        return getShuffleDataPath(modelConfig.getDataSet().getSource());
+    }
+
+    private String getShuffleDataPath(SourceType sourceType) {
+        return getPathBySourceType(new Path(Constants.TMP, Constants.SHUFFLED_NORM_DATA), sourceType);
+    }
 }

@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright [2012-2014] PayPal Software Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -17,23 +17,15 @@ package ml.shifu.shifu.container.obj;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
+import java.util.ArrayList;
+
 /**
  * ModelSourceDataConf class
  */
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class ModelSourceDataConf extends RawSourceData {
 
-    private String metaColumnNameFile;
-
     private String categoricalColumnNameFile;
-
-    public String getMetaColumnNameFile() {
-        return metaColumnNameFile;
-    }
-
-    public void setMetaColumnNameFile(String metaColumnNameFile) {
-        this.metaColumnNameFile = metaColumnNameFile;
-    }
 
     public String getCategoricalColumnNameFile() {
         return categoricalColumnNameFile;
@@ -48,4 +40,26 @@ public class ModelSourceDataConf extends RawSourceData {
         return super.clone();
     }
 
+    @Override
+    public ModelSourceDataConf clone() {
+        ModelSourceDataConf other = new ModelSourceDataConf();
+
+        other.setSource(this.getSource());
+        other.setDataPath(this.getDataPath());
+        other.setDataDelimiter(this.getDataDelimiter());
+        other.setHeaderPath(this.getHeaderPath());
+        other.setHeaderDelimiter(this.getHeaderDelimiter());
+        other.setFilterExpressions(this.getFilterExpressions());
+        other.setWeightColumnName(this.getWeightColumnName());
+
+        other.setTargetColumnName(this.getTargetColumnName());
+        other.setPosTags(new ArrayList<String>(this.getPosTags()));
+        other.setNegTags(new ArrayList<String>(this.getNegTags()));
+        other.setMissingOrInvalidValues(this.getMissingOrInvalidValues());
+
+        other.setCategoricalColumnNameFile(categoricalColumnNameFile);
+        other.setMetaColumnNameFile(this.getMetaColumnNameFile());
+
+        return other;
+    }
 }

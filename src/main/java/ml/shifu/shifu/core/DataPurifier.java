@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright [2012-2014] PayPal Software Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -30,7 +30,6 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 
-
 /**
  * DataPurifier class
  */
@@ -44,54 +43,50 @@ public class DataPurifier {
     private ShifuMapContext jc = new ShifuMapContext();
 
     public DataPurifier(ModelConfig modelConfig) throws IOException {
-        if (StringUtils.isNotBlank(modelConfig.getFilterExpressions())) {
+        if(StringUtils.isNotBlank(modelConfig.getFilterExpressions())) {
             JexlEngine jexl = new JexlEngine();
             try {
                 dataFilterExpr = jexl.createExpression(modelConfig.getFilterExpressions());
             } catch (JexlException e) {
-                log.error("The expression is {} is invalid, please use correct expression.", modelConfig.getFilterExpressions());
+                log.error("The expression is {} is invalid, please use correct expression.",
+                        modelConfig.getFilterExpressions());
                 dataFilterExpr = null;
             }
-            headers = CommonUtils.getHeaders(
-                    modelConfig.getHeaderPath(),
-                    modelConfig.getHeaderDelimiter(),
-                    modelConfig.getDataSet().getSource());
+            this.headers = CommonUtils.getFinalHeaders(modelConfig);
             dataDelimiter = modelConfig.getDataSetDelimiter();
         }
     }
 
     public DataPurifier(EvalConfig evalConfig) throws IOException {
-        if (StringUtils.isNotBlank(evalConfig.getDataSet().getFilterExpressions())) {
+        if(StringUtils.isNotBlank(evalConfig.getDataSet().getFilterExpressions())) {
             JexlEngine jexl = new JexlEngine();
             try {
                 dataFilterExpr = jexl.createExpression(evalConfig.getDataSet().getFilterExpressions());
             } catch (JexlException e) {
-                log.error("The expression is {} is invalid, please use correct expression.", evalConfig.getDataSet().getFilterExpressions());
+                log.error("The expression is {} is invalid, please use correct expression.", evalConfig.getDataSet()
+                        .getFilterExpressions());
                 dataFilterExpr = null;
             }
 
-            headers = CommonUtils.getHeaders(
-                    evalConfig.getDataSet().getHeaderPath(),
-                    evalConfig.getDataSet().getHeaderDelimiter(),
-                    evalConfig.getDataSet().getSource());
+            headers = CommonUtils.getFinalHeaders(evalConfig);
             dataDelimiter = evalConfig.getDataSet().getDataDelimiter();
         }
     }
 
     public Boolean isFilterOut(String record) {
-        if (dataFilterExpr == null) {
+        if(dataFilterExpr == null) {
             return true;
         }
 
         String[] fields = CommonUtils.split(record, dataDelimiter);
-        if (fields == null || fields.length != headers.length) {
+        if(fields == null || fields.length != headers.length) {
             // illegal format data, just skip
             return false;
         }
 
         jc.clear();
 
-        for (int i = 0; i < fields.length; i++) {
+        for(int i = 0; i < fields.length; i++) {
             jc.set(headers[i], ((fields[i] == null) ? "" : fields[i].toString()));
         }
 
@@ -100,11 +95,11 @@ public class DataPurifier {
 
         try {
             retObj = dataFilterExpr.evaluate(jc);
-        } catch ( Throwable e ) {
+        } catch (Throwable e) {
             log.debug("Error occurred when trying to evaluate", dataFilterExpr.toString(), e);
         }
 
-        if (retObj != null && retObj instanceof Boolean) {
+        if(retObj != null && retObj instanceof Boolean) {
             result = (Boolean) retObj;
         }
 
@@ -112,18 +107,18 @@ public class DataPurifier {
     }
 
     public Boolean isFilterOut(Tuple input) throws ExecException {
-        if (dataFilterExpr == null) {
+        if(dataFilterExpr == null) {
             return true;
         }
 
-        if (input == null || input.size() != headers.length) {
+        if(input == null || input.size() != headers.length) {
             // illegal format data, just skip
             return false;
         }
 
         jc.clear();
 
-        for (int i = 0; i < input.size(); i++) {
+        for(int i = 0; i < input.size(); i++) {
             jc.set(headers[i], ((input.get(i) == null) ? null : input.get(i).toString()));
         }
 
@@ -131,11 +126,11 @@ public class DataPurifier {
         Object retObj = null;
         try {
             retObj = dataFilterExpr.evaluate(jc);
-        } catch ( Throwable e ) {
+        } catch (Throwable e) {
             log.debug("Error occurred when trying to evaluate", dataFilterExpr.toString(), e);
         }
 
-        if (retObj != null && retObj instanceof Boolean) {
+        if(retObj != null && retObj instanceof Boolean) {
             result = (Boolean) retObj;
         }
 
@@ -149,7 +144,7 @@ public class DataPurifier {
         }
 
         public void clear() {
-            if (super.map != null) {
+            if(super.map != null) {
                 map.clear();
             }
         }

@@ -74,7 +74,7 @@
                 "type": "text",
                 "directive": "input",
                 "defval": "|",
-                "maxLength": 1,
+                "maxLength": 20,
                 "minLength": 1
             }, {
                 "name": "headerPath",
@@ -84,9 +84,7 @@
                 "name": "headerDelimiter",
                 "type": "text",
                 "directive": "input",
-                "defval": "|",
-                "maxLength": 1,
-                "minLength": 1
+                "defval": "|"
             }, {
                 "name": "filterExpressions",
                 "type": "text",
@@ -170,7 +168,11 @@
                     {"label": "Equal Negative", "value":"EqualNegative"},
                     {"label": "Equal Positive", "value":"EqualPositive"},
                     {"label": "Equal Total", "value":"EqualTotal"},
-                    {"label": "Equal Interval", "value":"EqualInterval"}
+                    {"label": "Equal Interval", "value":"EqualInterval"},
+                    {"label": "Weight Equal Negative", "value":"WeightEqualNegative"},
+                    {"label": "Weight Equal Positive", "value":"WeightEqualPositive"},
+                    {"label": "Weight Equal Total", "value":"WeightEqualTotal"},
+                    {"label": "Weight Equal Interval", "value":"WeightEqualInterval"}
                 ]
             }, {
                 "name": "sampleRate",
@@ -248,13 +250,27 @@
                 "type": "number",
                 "directive": "input"
             }, {
+                "name": "filterOutRatio",
+                "type": "number",
+                "directive": "input",
+                "defval" : 0.05
+            }, {
+                "name": "epsilons",
+                "type": "numberarray",
+                "directive": "input"
+            }, {
                 "name": "filterBy",
                 "type": "text",
                 "directive": "select",
                 "options": [
                     {"label": "KS", "value":"ks"},
                     {"label": "Information Value", "value":"iv"},
-                    {"label": "Mixed KS and IV", "value":"mix"}
+                    {"label": "Mixed KS and IV", "value":"mix"},
+                    {"label": "Epsilon-nondominated sort", "value":"pareto"},
+                    {"label": "Sensitivity comparing with temporarily trained model", "value":"SE"},
+                    {"label": "Sensitivity comparing with training data target", "value":"ST"},
+                    {"label": "Voted", "value":"V"},                  
+                    {"label": "Feature Importance(only valid for tree models)", "value":"FI"}                    
                 ]
             }, {
                 "name": "votedVariablesSelection",
@@ -262,43 +278,11 @@
                 "directive": "checkbox",
                 "defval": false
             }, {
-                "name": "wrapperEnabled",
-                "type": "boolean",
-                "directive": "checkbox",
-                "defval" : false
-            }, {
-                "name": "filterBySE",
-                "type": "boolean",
-                "directive": "checkbox",
-                "defval" : true
-            }, {
-                "name": "wrapperNum",
-                "type": "number",
-                "directive": "input",
-                "defval" : 50
-            }, {
-                "name": "wrapperRatio",
-                "type": "number",
-                "directive": "input",
-                "defval" : 0.05
-            }, {
                 "name": "missingRateThreshold",
                 "type": "number",
                 "directive": "input",
                 "defval" : 0.5
             }, {
-                "name": "wrapperBy",
-                "type": "text",
-                "directive": "select",
-                "defval" : "S",
-                "options": [
-                    {"label": "Simple Sorting", "value":"S"},
-                    {"label": "Adding", "value":"A"},
-                    {"label": "Removing", "value":"R"},
-                    {"label": "Voted", "value":"V"},
-                    {"label": "Sensitivity", "value":"SE"}
-                ]   
-              }, {
                 "name": "params",
                 "type": "map",
                 "directive": "input",
@@ -412,14 +396,29 @@
                 "directive": "input",
                 "defval": 0.2
             }, {
+                "name": "sampleNegOnly",
+                "type": "boolean",
+                "directive": "checkbox",
+                "defval" : false
+            }, {
                 "name": "trainOnDisk",
                 "type": "boolean",
                 "directive": "checkbox",
                 "defval": false
             }, {
+                "name": "numKFold",
+                "type": "number",
+                "directive": "input",
+                "defval" : -1
+            }, {
                 "name": "fixInitInput",
                 "type": "boolean",
                 "directive": "input",
+                "defval": false
+            }, {
+                "name": "stratifiedSample",
+                "type": "boolean",
+                "directive": "checkbox",
                 "defval": false
             }, {
                 "name": "numTrainEpochs",
@@ -548,6 +547,16 @@
                         "directive": "input",
                         "defval" : 10
                     }, {
+                        "name" : "MaxLeaves",
+                        "type" : "number",
+                        "directive": "input",
+                        "defval" : -1
+                    }, {
+                        "name" : "MaxBatchSplitSize",
+                        "type" : "number",
+                        "directive": "input",
+                        "defval" : -1
+                    }, {
                         "name" : "MinInstancesPerNode",
                         "type" : "number",
                         "directive": "input",
@@ -561,7 +570,7 @@
                         "name" : "MaxStatsMemoryMB",
                         "type" : "number",
                         "directive": "input",
-                        "defval" : 256
+                        "defval" : 512
                     }, {
                         "name" : "TreeNum",
                         "type" : "number",
@@ -582,16 +591,14 @@
                         "name" : "FeatureSubsetStrategy",
                         "type" : "text",
                         "directive": "select",
-                        "defval" : "all",
+                        "defval" : "half",
                         "options": [
-                            {"label": "ALL", "value":"all"},
-                            {"label": "HALF", "value":"half"},
-                            {"label": "ONETHIRD", "value":"onethird"},
-                            {"label": "TWOTHIRDS", "value":"twothirds"},
-                            {"label": "AUTO", "value":"auto"},
-                            {"label": "SQRT", "value":"sqrt"},
-                            {"label": "LOG2", "value":"log2"}
                         ]
+                    }, {
+                        "name" : "EnableEarlyStop",
+                        "type": "boolean",
+                        "directive": "checkbox",
+                        "defval": false
                     }, {
                         "name" : "Loss",
                         "type" : "text",
@@ -621,7 +628,7 @@
                             {"label": "Scaled Conjugate Gradient", "value":"S"}
                         ]
                     }, {
-                        "name": "SampleWithReplacement",
+                        "name": "GBTSampleWithReplacement",
                         "type": "boolean",
                         "directive": "input",
                         "defval": false
@@ -653,6 +660,18 @@
                         "directive": "input"
                     }, {
                         "name" : "normalizedDataPath",
+                        "type" : "text",
+                        "directive": "input"
+                    }, {
+                        "name" : "normalizedValidationDataPath",
+                        "type" : "text",
+                        "directive": "input"
+                    }, {
+                        "name" : "cleanedDataPath",
+                        "type" : "text",
+                        "directive": "input"
+                    }, {
+                        "name" : "cleanedValidationDataPath",
                         "type" : "text",
                         "directive": "input"
                     }, {
@@ -707,7 +726,7 @@
                         "type": "text",
                         "directive": "input",
                         "defval": "|",
-                        "maxLength": 1,
+                        "maxLength": 20,
                         "minLength": 1
                     }, {
                         "name": "headerPath",
@@ -717,9 +736,7 @@
                         "name": "headerDelimiter",
                         "type": "text",
                         "directive": "input",
-                        "defval": "|",
-                        "maxLength": 1,
-                        "minLength": 1
+                        "defval": "|"
                     }, {
                         "name": "filterExpressions",
                         "type": "text",
@@ -763,6 +780,11 @@
                 "type" : "number",
                 "directive": "input",
                 "defval" : 10
+             }, { 
+                "name": "gbtConvertToProb",
+                "type": "boolean",
+                "directive": "input",
+                "defval": true
             }, {
                 "name" : "performanceScoreSelector",
                 "type" : "text",

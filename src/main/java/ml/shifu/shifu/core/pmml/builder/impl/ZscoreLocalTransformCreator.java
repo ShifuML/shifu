@@ -1,3 +1,18 @@
+/*
+ * Copyright [2013-2016] PayPal Software Foundation
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package ml.shifu.shifu.core.pmml.builder.impl;
 
 import java.util.ArrayList;
@@ -51,26 +66,30 @@ public class ZscoreLocalTransformCreator extends AbstractPmmlElementCreator<Loca
     @Override
     public LocalTransformations build() {
         LocalTransformations localTransformations = new LocalTransformations();
-        for (ColumnConfig config : columnConfigList) {
-            if (config.isFinalSelect()) {
+        for(ColumnConfig config: columnConfigList) {
+            if(config.isFinalSelect()) {
                 double cutoff = modelConfig.getNormalizeStdDevCutOff();
-                localTransformations.withDerivedFields(config.isCategorical() ?
-                        createCategoricalDerivedField(config, cutoff, modelConfig.getNormalizeType())
-                            : createNumericalDerivedField(config, cutoff, modelConfig.getNormalizeType()));
+                localTransformations.withDerivedFields(config.isCategorical() ? createCategoricalDerivedField(config,
+                        cutoff, modelConfig.getNormalizeType()) : createNumericalDerivedField(config, cutoff,
+                        modelConfig.getNormalizeType()));
             }
         }
         return localTransformations;
     }
 
     /**
-     * Create @DerivedField for categorical variable
-     *
-     * @param config - ColumnConfig for categorical variable
-     * @param cutoff - cutoff for normalization
-     * @param normType - the normalization method that is used to generate DerivedField
+     * Create DerivedField for categorical variable
+     * 
+     * @param config
+     *            - ColumnConfig for categorical variable
+     * @param cutoff
+     *            - cutoff for normalization
+     * @param normType
+     *            - the normalization method that is used to generate DerivedField
      * @return DerivedField for variable
      */
-    protected List<DerivedField> createCategoricalDerivedField(ColumnConfig config, double cutoff, ModelNormalizeConf.NormType normType) {
+    protected List<DerivedField> createCategoricalDerivedField(ColumnConfig config, double cutoff,
+            ModelNormalizeConf.NormType normType) {
         Document document = null;
         try {
             document = DocumentBuilderFactory.newInstance().newDocumentBuilder().newDocument();
@@ -79,11 +98,12 @@ public class ZscoreLocalTransformCreator extends AbstractPmmlElementCreator<Loca
             throw new RuntimeException("Fail to create document node.", e);
         }
 
-        String defaultValue = Normalizer.normalize(config, "doesn't exist at all...by paypal", cutoff, normType).toString();
+        String defaultValue = Normalizer.normalize(config, "doesn't exist at all...by paypal", cutoff, normType)
+                .toString();
         String missingValue = Normalizer.normalize(config, null, cutoff, normType).toString();
 
         InlineTable inlineTable = new InlineTable();
-        for (int i = 0; i < config.getBinCategory().size(); i++) {
+        for(int i = 0; i < config.getBinCategory().size(); i++) {
             String cval = config.getBinCategory().get(i);
             String dval = Normalizer.normalize(config, cval, cutoff, normType).toString();
 
@@ -96,12 +116,9 @@ public class ZscoreLocalTransformCreator extends AbstractPmmlElementCreator<Loca
             inlineTable.withRows(new Row().withContent(origin).withContent(out));
         }
 
-        MapValues mapValues = new MapValues("out")
-                .withDataType(DataType.DOUBLE)
-                .withDefaultValue(defaultValue)
+        MapValues mapValues = new MapValues("out").withDataType(DataType.DOUBLE).withDefaultValue(defaultValue)
                 .withFieldColumnPairs(new FieldColumnPair(new FieldName(config.getColumnName()), ELEMENT_ORIGIN))
-                .withInlineTable(inlineTable)
-                .withMapMissingTo(missingValue);
+                .withInlineTable(inlineTable).withMapMissingTo(missingValue);
 
         List<DerivedField> derivedFields = new ArrayList<DerivedField>();
         derivedFields.add(new DerivedField(OpType.CONTINUOUS, DataType.DOUBLE).withName(
@@ -111,13 +128,17 @@ public class ZscoreLocalTransformCreator extends AbstractPmmlElementCreator<Loca
 
     /**
      * Create @DerivedField for numerical variable
-     *
-     * @param config - ColumnConfig for numerical variable
-     * @param cutoff - cutoff of normalization
-     * @param normType - the normalization method that is used to generate DerivedField
+     * 
+     * @param config
+     *            - ColumnConfig for numerical variable
+     * @param cutoff
+     *            - cutoff of normalization
+     * @param normType
+     *            - the normalization method that is used to generate DerivedField
      * @return DerivedField for variable
      */
-    protected List<DerivedField> createNumericalDerivedField(ColumnConfig config, double cutoff, ModelNormalizeConf.NormType normType) {
+    protected List<DerivedField> createNumericalDerivedField(ColumnConfig config, double cutoff,
+            ModelNormalizeConf.NormType normType) {
         // added capping logic to linearNorm
         LinearNorm from = new LinearNorm().withOrig(config.getMean() - config.getStdDev() * cutoff).withNorm(-cutoff);
         LinearNorm to = new LinearNorm().withOrig(config.getMean() + config.getStdDev() * cutoff).withNorm(cutoff);
@@ -134,9 +155,11 @@ public class ZscoreLocalTransformCreator extends AbstractPmmlElementCreator<Loca
 
     /**
      * Convert column name into PMML format(with normalization)
-     *
+     * 
      * @param columnName
-     * @parm normType
+     *            the column name
+     * @param normType
+     *            the norm type
      * @return - PMML standard column name
      */
     protected String genPmmlColumnName(String columnName, ModelNormalizeConf.NormType normType) {
