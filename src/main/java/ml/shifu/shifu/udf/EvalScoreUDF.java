@@ -84,35 +84,8 @@ public class EvalScoreUDF extends AbstractTrainerUDF<Tuple> {
             // renew columnConfig
             this.columnConfigList = ShifuFileUtils.searchColumnConfig(evalConfig, columnConfigList);
         }
-
-        // get headers
-        if(StringUtils.isNotBlank(evalConfig.getDataSet().getHeaderPath())) {
-            String delimiter = StringUtils.isBlank(evalConfig.getDataSet().getHeaderDelimiter()) ? evalConfig
-                    .getDataSet().getDataDelimiter() : evalConfig.getDataSet().getHeaderDelimiter();
-            this.headers = CommonUtils.getHeaders(evalConfig.getDataSet().getHeaderPath(), delimiter, evalConfig
-                    .getDataSet().getSource());
-        } else {
-            String delimiter = StringUtils.isBlank(evalConfig.getDataSet().getHeaderDelimiter()) ? evalConfig
-                    .getDataSet().getDataDelimiter() : evalConfig.getDataSet().getHeaderDelimiter();
-            String[] fields = CommonUtils.takeFirstLine(evalConfig.getDataSet().getDataPath(), delimiter, evalConfig
-                    .getDataSet().getSource());
-            if(StringUtils.join(fields, "").contains(modelConfig.getTargetColumnName())) {
-                this.headers = new String[fields.length];
-                for(int i = 0; i < fields.length; i++) {
-                    this.headers[i] = CommonUtils.getRelativePigHeaderColumnName(fields[i]);
-                }
-                log.warn("No header path is provided, we will try to read first line and detect schema.");
-                log.warn("Schema in ColumnConfig.json are named as first line of data set path.");
-            } else {
-                log.warn("No header path is provided, we will try to read first line and detect schema.");
-                log.warn("Schema in ColumnConfig.json are named as  index 0, 1, 2, 3 ...");
-                log.warn("Please make sure weight column and tag column are also taking index as name.");
-                this.headers = new String[fields.length];
-                for(int i = 0; i < fields.length; i++) {
-                    this.headers[i] = i + "";
-                }
-            }
-        }
+        
+        this.headers = CommonUtils.getFinalHeaders(evalConfig);
 
         // move model runner construction in exec to avoid OOM error in client side if model is too big like RF
         this.modelCnt = CommonUtils.getBasicModelsCnt(modelConfig, this.columnConfigList, evalConfig, evalConfig
