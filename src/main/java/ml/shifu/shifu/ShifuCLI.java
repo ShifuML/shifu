@@ -557,12 +557,12 @@ public class ShifuCLI {
     private static void printUsage() {
         System.out.println("Usage: shifu COMMAND");
         System.out.println("where COMMAND is one of:");
-        System.out.println("\tnew <ModelSetName> [-t <NN|LR|SVM|DT>]  Create a new model set.");
+        System.out.println("\tnew <ModelSetName> [-t <NN|LR|RF|GBT>]  Create a new model set.");
         System.out.println("\tinit                                    Create initial ColumnConfig.json and upload to HDFS.");
         System.out.println("\tstats                                   Calculate statistics on HDFS and update local ColumnConfig.json.");
         System.out.println("\tvarselect/varsel [-reset]               Variable selection, will update finalSelect in ColumnConfig.json.");
         System.out.println("\tnormalize/norm [-shuffle]               Normalize the columns with finalSelect as true.");
-        System.out.println("\ttrain [-dry]                            Train the model with the normalized data.");
+        System.out.println("\ttrain                                   Train the model with the normalized data.");
         System.out.println("\tposttrain                               Post-process data after training models.");
         System.out.println("\teval                                    Run all eval sets.");
         System.out.println("\teval -list                              Lis all eval set.");
