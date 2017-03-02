@@ -238,7 +238,6 @@ public class ShifuCLI {
                         runEvalSet(cmd.getOptionValue(EVAL_CMD_RUN), cmd.hasOption(TRAIN_CMD_DRY));
                         log.info("Finish run eval performance with eval set {}.", cmd.getOptionValue(EVAL_CMD_RUN));
                     } else if(cmd.hasOption(SCORE)) {
-
                         // run score
                         runEvalScore(cmd.getOptionValue(SCORE));
                         log.info("Finish run score with eval set {}.", cmd.getOptionValue(SCORE));
