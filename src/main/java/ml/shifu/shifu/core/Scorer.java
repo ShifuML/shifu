@@ -87,31 +87,25 @@ public class Scorer {
             int[] inputOutputIndex = DTrainUtils.getInputOutputCandidateCounts(this.columnConfigList);
             int inputNodeCount = inputOutputIndex[0] == 0 ? inputOutputIndex[2] : inputOutputIndex[0];
             int candidateCount = inputOutputIndex[2];
-            if(inputNodeCount == candidateCount) {
-                this.noVarSelect = true;
-            } else {
-                this.noVarSelect = false;
-            }
+            this.noVarSelect = (inputNodeCount == candidateCount);
         }
-        if(CommonUtils.isDesicionTreeAlgorithm(alg)) {
-            for(ColumnConfig columnConfig: columnConfigList) {
-                if(columnConfig.isCategorical()) {
-                    Map<String, Integer> map = new HashMap<String, Integer>();
-                    List<String> categories = columnConfig.getBinCategory();
-                    if(categories == null){
-                        // null may be from non final select feature, can be ignored
-                        continue;
-                    }
+
+        // compute binCategoryMap for all algorithm while only be used in
+        for(ColumnConfig columnConfig: columnConfigList) {
+            if(columnConfig.isCategorical()) {
+                Map<String, Integer> map = new HashMap<String, Integer>();
+                List<String> categories = columnConfig.getBinCategory();
+                if(categories != null) {
                     for(int i = 0; i < categories.size(); i++) {
                         map.put(categories.get(i) == null ? "" : categories.get(i), i);
                     }
-                    this.binCategoryMap.put(columnConfig.getColumnNum(), map);
                 }
+                this.binCategoryMap.put(columnConfig.getColumnNum(), map);
             }
         }
 
-        this.executorManager = new ExecutorManager<MLData>(
-                Math.min(Runtime.getRuntime().availableProcessors(), models.size()));
+        this.executorManager = new ExecutorManager<MLData>(Math.min(Runtime.getRuntime().availableProcessors(),
+                models.size()));
 
         // add a shutdown hook as a safe guard if some one not call close
         Runtime.getRuntime().addShutdownHook(new Thread(new Runnable() {
@@ -131,7 +125,7 @@ public class Scorer {
 
     public ScoreObject score(Map<String, String> rawDataMap) {
         MLDataPair pair = CommonUtils.assembleDataPair(binCategoryMap, noVarSelect, modelConfig, columnConfigList,
-                rawDataMap, cutoff);
+                rawDataMap, cutoff, alg);
         return score(pair, rawDataMap);
     }
 
@@ -203,37 +197,37 @@ public class Scorer {
         List<Integer> scores = new ArrayList<Integer>();
         List<Integer> rfTreeSizeList = new ArrayList<Integer>();
 
-        if ( CollectionUtils.isNotEmpty(tasks) ) {
+        if(CollectionUtils.isNotEmpty(tasks)) {
             List<MLData> modelResults = this.executorManager.submitTasksAndWaitResults(tasks);
-            if ( CollectionUtils.isEmpty(modelResults) || modelResults.size() != this.models.size() ) {
+            if(CollectionUtils.isEmpty(modelResults) || modelResults.size() != this.models.size()) {
                 log.error("Get empty model results or model results size doesn't match with models size.");
                 return null;
             }
 
-            for (int i = 0; i < this.models.size(); i++) {
+            for(int i = 0; i < this.models.size(); i++) {
                 BasicML model = this.models.get(i);
                 MLData score = modelResults.get(i);
 
-                if (model instanceof BasicNetwork) {
-                    if (modelConfig != null && modelConfig.isRegression()) {
+                if(model instanceof BasicNetwork) {
+                    if(modelConfig != null && modelConfig.isRegression()) {
                         scores.add(toScore(score.getData(0)));
-                    } else if (modelConfig.isClassification() && modelConfig.getTrain().isOneVsAll()) {
+                    } else if(modelConfig.isClassification() && modelConfig.getTrain().isOneVsAll()) {
                         // if one vs all classification
                         scores.add(toScore(score.getData(0)));
                     } else {
                         double[] outputs = score.getData();
-                        for (double d : outputs) {
+                        for(double d: outputs) {
                             scores.add(toScore(d));
                         }
                     }
-                } else if (model instanceof SVM) {
+                } else if(model instanceof SVM) {
                     scores.add(toScore(score.getData(0)));
-                } else if (model instanceof LR) {
+                } else if(model instanceof LR) {
                     scores.add(toScore(score.getData(0)));
-                } else if (model instanceof TreeModel) {
-                    if (modelConfig.isClassification() && !modelConfig.getTrain().isOneVsAll()) {
+                } else if(model instanceof TreeModel) {
+                    if(modelConfig.isClassification() && !modelConfig.getTrain().isOneVsAll()) {
                         double[] scoreArray = score.getData();
-                        for (double sc : scoreArray) {
+                        for(double sc: scoreArray) {
                             scores.add((int) sc);
                         }
                     } else {
@@ -242,7 +236,7 @@ public class Scorer {
                     }
                     final TreeModel tm = (TreeModel) model;
                     // regression for RF
-                    if (!tm.isClassfication() && !tm.isGBDT()) {
+                    if(!tm.isClassfication() && !tm.isGBDT()) {
                         rfTreeSizeList.add(tm.getTrees().size());
                     }
                 } else {
@@ -274,7 +268,7 @@ public class Scorer {
     }
 
     public void setScale(int scale) {
-        if ( scale > 0 ) {
+        if(scale > 0) {
             this.scale = scale;
         }
     }

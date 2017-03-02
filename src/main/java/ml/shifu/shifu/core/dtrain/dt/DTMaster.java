@@ -831,7 +831,7 @@ public class DTMaster extends AbstractMasterComputable<DTMasterParams, DTWorkerP
         // check if variables are set final selected
         int[] inputOutputIndex = DTrainUtils.getNumericAndCategoricalInputAndOutputCounts(this.columnConfigList);
         this.inputNum = inputOutputIndex[0] + inputOutputIndex[1];
-        this.isAfterVarSelect = inputOutputIndex[3] == 1 ? true : false;
+        this.isAfterVarSelect = (inputOutputIndex[3] == 1);
         // cache all feature list for sampling features
         this.allFeatures = this.getAllFeatureList(columnConfigList, isAfterVarSelect);
 

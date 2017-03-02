@@ -142,9 +142,13 @@ public final class CommonUtils {
 
     /**
      * Sync-up the evalulation data into HDFS
-     * @param modelConfig - ModelConfig
-     * @param evalName eval name in ModelConfig
-     * @throws IOException - error occur when copying data
+     * 
+     * @param modelConfig
+     *            - ModelConfig
+     * @param evalName
+     *            eval name in ModelConfig
+     * @throws IOException
+     *             - error occur when copying data
      */
     @SuppressWarnings("deprecation")
     public static void copyEvalDataFromLocalToHDFS(ModelConfig modelConfig, String evalName) throws IOException {
@@ -168,7 +172,7 @@ public final class CommonUtils {
             }
 
             // sync evaluation meta.column.file to hdfs
-            if( StringUtils.isNotBlank(evalConfig.getDataSet().getMetaColumnNameFile()) ) {
+            if(StringUtils.isNotBlank(evalConfig.getDataSet().getMetaColumnNameFile())) {
                 hdfs.copyFromLocalFile(new Path(evalConfig.getDataSet().getMetaColumnNameFile()),
                         new Path(pathFinder.getEvalSetPath(evalConfig)));
             }
@@ -1102,9 +1106,11 @@ public final class CommonUtils {
     /**
      * Return one HashMap Object contains keys in the first parameter, values in the second parameter. Before calling
      * this method, you should be aware that headers should be unique.
-     *
-     * @param header - header that contains column name
-     * @param data - raw data
+     * 
+     * @param header
+     *            - header that contains column name
+     * @param data
+     *            - raw data
      * @return key-value map for variable
      */
     public static Map<String, String> getRawDataMap(String[] header, String[] data) {
@@ -1365,6 +1371,8 @@ public final class CommonUtils {
      *            raw data
      * @param cutoff
      *            cut off value
+     * @param alg
+     *            algorithm used in model
      * @return data pair instance
      * @throws NullPointerException
      *             if input is null
@@ -1373,7 +1381,7 @@ public final class CommonUtils {
      */
     public static MLDataPair assembleDataPair(Map<Integer, Map<String, Integer>> binCategoryMap, boolean noVarSel,
             ModelConfig modelConfig, List<ColumnConfig> columnConfigList, Map<String, ? extends Object> rawDataMap,
-            double cutoff) {
+            double cutoff, String alg) {
         double[] ideal = { Constants.DEFAULT_IDEAL_VALUE };
 
         List<Double> inputList = new ArrayList<Double>();
@@ -1392,7 +1400,7 @@ public final class CommonUtils {
                 if(!noVarSel) {
                     if(config != null && !config.isMeta() && !config.isTarget() && config.isFinalSelect()) {
                         String val = rawDataMap.get(key) == null ? null : rawDataMap.get(key).toString();
-                        if(CommonUtils.isDesicionTreeAlgorithm(modelConfig.getAlgorithm()) && config.isCategorical()) {
+                        if(CommonUtils.isDesicionTreeAlgorithm(alg) && config.isCategorical()) {
                             Integer index = binCategoryMap.get(config.getColumnNum()).get(val == null ? "" : val);
                             if(index == null) {
                                 // not in binCategories, should be missing value
@@ -1408,7 +1416,7 @@ public final class CommonUtils {
                 } else {
                     if(!config.isMeta() && !config.isTarget() && CommonUtils.isGoodCandidate(config)) {
                         String val = rawDataMap.get(key) == null ? null : rawDataMap.get(key).toString();
-                        if(CommonUtils.isDesicionTreeAlgorithm(modelConfig.getAlgorithm()) && config.isCategorical()) {
+                        if(CommonUtils.isDesicionTreeAlgorithm(alg) && config.isCategorical()) {
                             Integer index = binCategoryMap.get(config.getColumnNum()).get(val == null ? "" : val);
                             if(index == null) {
                                 // not in binCategories, should be missing value
@@ -1462,17 +1470,17 @@ public final class CommonUtils {
 
     /**
      * Assemble map data to Encog standard input format.
-     *
+     * 
      * @param modelConfig
-     *          - ModelConfig
+     *            - ModelConfig
      * @param columnConfigList
-     *          - ColumnConfig list
+     *            - ColumnConfig list
      * @param rawDataMap
-     *          - raw input key-value map
+     *            - raw input key-value map
      * @param cutoff
-     *          - cutoff value when normalization
+     *            - cutoff value when normalization
      * @return
-     *          - input data pair for neural network
+     *         - input data pair for neural network
      */
     public static MLDataPair assembleDataPair(ModelConfig modelConfig, List<ColumnConfig> columnConfigList,
             Map<String, ? extends Object> rawDataMap, double cutoff) {
@@ -1604,11 +1612,13 @@ public final class CommonUtils {
 
             if(targetColumnName.equals(varName)) {
                 config.setColumnFlag(ColumnFlag.Target);
+                config.setFinalSelect(false); // reset final select
             } else if(setMeta.contains(varName)) {
                 config.setColumnFlag(ColumnFlag.Meta);
-                config.setColumnType(null);
+                config.setFinalSelect(false); // reset final select
             } else if(setForceRemove.contains(varName)) {
                 config.setColumnFlag(ColumnFlag.ForceRemove);
+                config.setFinalSelect(false); // reset final select
             } else if(setForceSelect.contains(varName)) {
                 config.setColumnFlag(ColumnFlag.ForceSelect);
             }
