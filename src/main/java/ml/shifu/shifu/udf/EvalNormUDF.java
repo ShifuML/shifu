@@ -68,17 +68,17 @@ public class EvalNormUDF extends AbstractTrainerUDF<Tuple> {
 
         // 1. target at first
         if(StringUtils.isNotBlank(evalConfig.getDataSet().getTargetColumnName())) {
-            outputNames.add(SCHEMA_PREFIX + evalConfig.getDataSet().getTargetColumnName());
+            outputNames.add(evalConfig.getDataSet().getTargetColumnName());
 
         } else {
-            outputNames.add(SCHEMA_PREFIX + modelConfig.getTargetColumnName());
+            outputNames.add(modelConfig.getTargetColumnName());
         }
 
         // 2. weight column
         if(StringUtils.isNotBlank(evalConfig.getDataSet().getWeightColumnName())) {
-            outputNames.add(SCHEMA_PREFIX + evalConfig.getDataSet().getWeightColumnName());
+            outputNames.add(evalConfig.getDataSet().getWeightColumnName());
         } else {
-            outputNames.add(SCHEMA_PREFIX + "weight");
+            outputNames.add("weight");
         }
 
         // 3. do populate columnConfigMap at first
