@@ -35,6 +35,7 @@ import java.util.*;
  */
 public class EvalNormUDF extends AbstractTrainerUDF<Tuple> {
 
+    @SuppressWarnings("unused")
     private static final String SCHEMA_PREFIX = "eval::";
 
     private EvalConfig evalConfig;

@@ -91,16 +91,18 @@ public class Scorer {
         }
 
         // compute binCategoryMap for all algorithm while only be used in
-        for(ColumnConfig columnConfig: columnConfigList) {
-            if(columnConfig.isCategorical()) {
-                Map<String, Integer> map = new HashMap<String, Integer>();
-                List<String> categories = columnConfig.getBinCategory();
-                if(categories != null) {
-                    for(int i = 0; i < categories.size(); i++) {
-                        map.put(categories.get(i) == null ? "" : categories.get(i), i);
+        if(this.columnConfigList != null) {
+            for(ColumnConfig columnConfig: this.columnConfigList) {
+                if(columnConfig.isCategorical()) {
+                    Map<String, Integer> map = new HashMap<String, Integer>();
+                    List<String> categories = columnConfig.getBinCategory();
+                    if(categories != null) {
+                        for(int i = 0; i < categories.size(); i++) {
+                            map.put(categories.get(i) == null ? "" : categories.get(i), i);
+                        }
                     }
+                    this.binCategoryMap.put(columnConfig.getColumnNum(), map);
                 }
-                this.binCategoryMap.put(columnConfig.getColumnNum(), map);
             }
         }
 
