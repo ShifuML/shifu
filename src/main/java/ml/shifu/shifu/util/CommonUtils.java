@@ -1574,6 +1574,7 @@ public final class CommonUtils {
     public static void updateColumnConfigFlags(ModelConfig modelConfig, List<ColumnConfig> columnConfigList)
             throws IOException {
         String targetColumnName = CommonUtils.getRelativePigHeaderColumnName(modelConfig.getTargetColumnName());
+        String weightColumnName = CommonUtils.getRelativePigHeaderColumnName(modelConfig.getWeightColumnName());
 
         Set<String> setCategorialColumns = new HashSet<String>();
         if(CollectionUtils.isNotEmpty(modelConfig.getCategoricalColumnNames())) {
@@ -1610,7 +1611,10 @@ public final class CommonUtils {
         for(ColumnConfig config: columnConfigList) {
             String varName = config.getColumnName();
 
-            if(targetColumnName.equals(varName)) {
+            if(weightColumnName.equals(varName)) {
+                config.setColumnFlag(ColumnFlag.Weight);
+                config.setFinalSelect(false); // reset final select
+            } else if(targetColumnName.equals(varName)) {
                 config.setColumnFlag(ColumnFlag.Target);
                 config.setFinalSelect(false); // reset final select
             } else if(setMeta.contains(varName)) {
@@ -1623,7 +1627,10 @@ public final class CommonUtils {
                 config.setColumnFlag(ColumnFlag.ForceSelect);
             }
 
-            if(targetColumnName.equals(varName)) {
+            if(weightColumnName.equals(varName)) {
+                // weight column is numerical
+                config.setColumnType(ColumnType.N);
+            } else if(targetColumnName.equals(varName)) {
                 // target column is set to categorical column
                 config.setColumnType(ColumnType.C);
             } else if(setCategorialColumns.contains(varName)) {

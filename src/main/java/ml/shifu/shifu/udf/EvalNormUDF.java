@@ -70,7 +70,6 @@ public class EvalNormUDF extends AbstractTrainerUDF<Tuple> {
         // 1. target at first
         if(StringUtils.isNotBlank(evalConfig.getDataSet().getTargetColumnName())) {
             outputNames.add(evalConfig.getDataSet().getTargetColumnName());
-
         } else {
             outputNames.add(modelConfig.getTargetColumnName());
         }
@@ -91,8 +90,10 @@ public class EvalNormUDF extends AbstractTrainerUDF<Tuple> {
         List<String> allMetaColumns = evalConfig.getAllMetaColumns(modelConfig);
         for(String meta: allMetaColumns) {
             if(evalNamesSet.contains(meta)) {
-                outputNames.add(meta);
-                validMetaSize += 1;
+                if(!outputNames.contains(meta)) {
+                    outputNames.add(meta);
+                    validMetaSize += 1;
+                }
             } else {
                 throw new RuntimeException("Meta variable - " + meta + " couldn't be found in eval dataset!");
             }
