@@ -108,7 +108,6 @@ public class ScorerTest {
 
     @Test
     public void scoreTest() {
-
         List<ColumnConfig> list = new ArrayList<ColumnConfig>();
         ColumnConfig col = new ColumnConfig();
         col.setColumnType(ColumnType.N);
