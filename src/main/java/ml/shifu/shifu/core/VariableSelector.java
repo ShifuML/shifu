@@ -138,7 +138,7 @@ public class VariableSelector {
                     cntByForce++;
                 }
             } else if(config.isMeta() || config.isTarget()) {
-                log.info("\t Skip meta or target column: " + config.getColumnName());
+                log.info("\t Skip meta, weight or target column: " + config.getColumnName());
             } else if(!CommonUtils.isGoodCandidate(config)) {
                 log.info("\t Incomplete info(please check KS, IV, Mean, or StdDev fields): " + config.getColumnName());
             } else if((config.isCategorical() && !modelConfig.isCategoricalDisabled()) || config.isNumerical()) {

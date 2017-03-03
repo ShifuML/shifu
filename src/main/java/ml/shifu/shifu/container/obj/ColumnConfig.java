@@ -31,8 +31,9 @@ import java.util.List;
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class ColumnConfig {
 
+    // add weight column and weight column is treated the same as meta
     public static enum ColumnFlag {
-        ForceSelect, ForceRemove, Meta, Target
+        ForceSelect, ForceRemove, Meta, Target, Weight
     }
 
     public static enum ColumnType {
@@ -130,14 +131,18 @@ public class ColumnConfig {
      */
 
     @JsonIgnore
+    public boolean isWeight() {
+        return ColumnFlag.Weight == columnFlag;
+    }
+
+    @JsonIgnore
     public boolean isTarget() {
         return ColumnFlag.Target.equals(columnFlag);
     }
 
     @JsonIgnore
     public boolean isCandidate() {
-        return !ColumnFlag.ForceRemove.equals(columnFlag) && !ColumnFlag.Meta.equals(columnFlag)
-                && !ColumnFlag.Target.equals(columnFlag);
+        return !isForceRemove() && !isMeta() && !isTarget();
     }
 
     @JsonIgnore
@@ -150,9 +155,10 @@ public class ColumnConfig {
         return columnType == ColumnType.C;
     }
 
+    // weigt column is also treated as meta column
     @JsonIgnore
     public boolean isMeta() {
-        return ColumnFlag.Meta == (columnFlag);
+        return ColumnFlag.Meta == columnFlag || ColumnFlag.Weight == columnFlag;
     }
 
     @JsonIgnore
