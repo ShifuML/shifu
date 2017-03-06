@@ -116,11 +116,11 @@ public class MapReducerStatsWorker extends AbstractStatsExecutor {
         checkNumericalAndCategoricalColumns();
 
         // save it to local/hdfs
-        processor.saveColumnConfigListAndColumnStats(true);
+        processor.saveColumnConfigList();
 
         if(StringUtils.isNotEmpty(modelConfig.getPsiColumnName())) {
             runPSI();
-            processor.saveColumnConfigListAndColumnStats(true);
+            processor.saveColumnConfigList();
         }
 
         processor.syncDataToHdfs(modelConfig.getDataSet().getSource());
