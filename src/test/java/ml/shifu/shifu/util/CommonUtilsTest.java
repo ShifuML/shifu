@@ -19,6 +19,8 @@ import com.fasterxml.jackson.core.JsonGenerationException;
 import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
+import ml.shifu.shifu.core.validator.ModelInspector;
+import ml.shifu.shifu.util.updater.ColumnConfigUpdater;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.fs.FileStatus;
@@ -305,7 +307,6 @@ public class CommonUtilsTest {
         ModelConfig config = ModelConfig.createInitModelConfig("test", ALGORITHM.NN, "test");
 
         config.getDataSet().setMetaColumnNameFile("./conf/meta_column_conf.txt");
-        ;
         config.getVarSelect().setForceRemoveColumnNameFile("./conf/remove_column_list.txt");
         List<ColumnConfig> list = new ArrayList<ColumnConfig>();
 
@@ -321,7 +322,7 @@ public class CommonUtilsTest {
         e.setColumnName("d");
         list.add(e);
 
-        CommonUtils.updateColumnConfigFlags(config, list);
+        ColumnConfigUpdater.updateColumnConfigFlags(config, list, ModelInspector.ModelStep.VARSELECT);
 
         Assert.assertTrue(list.get(0).isMeta());
     }

@@ -39,6 +39,7 @@ import ml.shifu.shifu.exception.ShifuException;
 import ml.shifu.shifu.util.CommonUtils;
 import ml.shifu.shifu.util.JSONUtils;
 
+import ml.shifu.shifu.util.updater.ColumnConfigUpdater;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -67,7 +68,7 @@ public class StatsStep extends Step<List<ColumnConfig>> {
         try {
 
             // User may change variable type after `shifu init`
-            CommonUtils.updateColumnConfigFlags(this.modelConfig, this.columnConfigList);
+            ColumnConfigUpdater.updateColumnConfigFlags(this.modelConfig, this.columnConfigList, ModelStep.STATS);
 
             LOG.info("Saving ModelConfig, ColumnConfig and then upload to HDFS ...");
             JSONUtils.writeValue(new File(pathFinder.getModelConfigPath(SourceType.LOCAL)), modelConfig);

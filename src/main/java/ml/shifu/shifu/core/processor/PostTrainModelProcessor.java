@@ -155,7 +155,7 @@ public class PostTrainModelProcessor extends BasicModelProcessor implements Proc
 
         ShifuFileUtils.deleteFile(new Path(postTrainOutputPath, "part-r-00000*").toString(), source);
 
-        saveColumnConfigListAndColumnStats(false);
+        saveColumnConfigList();
 
         if(super.modelConfig.getBasic().getPostTrainOn() != null && super.modelConfig.getBasic().getPostTrainOn()) {
             syncDataToHdfs(modelConfig.getDataSet().getSource());
@@ -408,7 +408,7 @@ public class PostTrainModelProcessor extends BasicModelProcessor implements Proc
 
         // Sync Down
         columnConfigList = updateColumnConfigWithBinAvgScore(columnConfigList);
-        saveColumnConfigListAndColumnStats(false);
+        saveColumnConfigList();
     }
 
     /**

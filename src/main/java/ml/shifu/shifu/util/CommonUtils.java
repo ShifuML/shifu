@@ -20,8 +20,6 @@ import com.google.common.base.Splitter;
 import com.google.common.collect.Collections2;
 import com.google.common.collect.Lists;
 import ml.shifu.shifu.container.obj.ColumnConfig;
-import ml.shifu.shifu.container.obj.ColumnConfig.ColumnFlag;
-import ml.shifu.shifu.container.obj.ColumnConfig.ColumnType;
 import ml.shifu.shifu.container.obj.EvalConfig;
 import ml.shifu.shifu.container.obj.ModelConfig;
 import ml.shifu.shifu.container.obj.ModelTrainConf.ALGORITHM;
@@ -1555,82 +1553,6 @@ public final class CommonUtils {
             return File.separator;
         } else {
             return Constants.BACK_SLASH + File.separator;
-        }
-    }
-
-    /**
-     * Update target, listMeta, listForceSelect, listForceRemove
-     * 
-     * @param modelConfig
-     *            model config list
-     * @param columnConfigList
-     *            the column config list
-     * @throws IOException
-     *             any io exception
-     * 
-     * @throws IllegalArgumentException
-     *             if modelConfig is null or columnConfigList is null.
-     */
-    public static void updateColumnConfigFlags(ModelConfig modelConfig, List<ColumnConfig> columnConfigList)
-            throws IOException {
-        String targetColumnName = CommonUtils.getRelativePigHeaderColumnName(modelConfig.getTargetColumnName());
-
-        Set<String> setCategorialColumns = new HashSet<String>();
-        if(CollectionUtils.isNotEmpty(modelConfig.getCategoricalColumnNames())) {
-            for(String column: modelConfig.getCategoricalColumnNames()) {
-                setCategorialColumns.add(CommonUtils.getRelativePigHeaderColumnName(column));
-            }
-        }
-
-        Set<String> setMeta = new HashSet<String>();
-        if(CollectionUtils.isNotEmpty(modelConfig.getMetaColumnNames())) {
-            for(String meta: modelConfig.getMetaColumnNames()) {
-                setMeta.add(CommonUtils.getRelativePigHeaderColumnName(meta));
-            }
-        }
-
-        Set<String> setForceRemove = new HashSet<String>();
-        if(Boolean.TRUE.equals(modelConfig.getVarSelect().getForceEnable())
-                && CollectionUtils.isNotEmpty(modelConfig.getListForceRemove())) {
-            // if we need to update force remove, only and if one the force is enabled
-            for(String forceRemoveName: modelConfig.getListForceRemove()) {
-                setForceRemove.add(CommonUtils.getRelativePigHeaderColumnName(forceRemoveName));
-            }
-        }
-
-        Set<String> setForceSelect = new HashSet<String>(512);
-        if(Boolean.TRUE.equals(modelConfig.getVarSelect().getForceEnable())
-                && CollectionUtils.isNotEmpty(modelConfig.getListForceSelect())) {
-            // if we need to update force select, only and if one the force is enabled
-            for(String forceSelectName: modelConfig.getListForceSelect()) {
-                setForceSelect.add(CommonUtils.getRelativePigHeaderColumnName(forceSelectName));
-            }
-        }
-
-        for(ColumnConfig config: columnConfigList) {
-            String varName = config.getColumnName();
-
-            if(targetColumnName.equals(varName)) {
-                config.setColumnFlag(ColumnFlag.Target);
-                config.setFinalSelect(false); // reset final select
-            } else if(setMeta.contains(varName)) {
-                config.setColumnFlag(ColumnFlag.Meta);
-                config.setFinalSelect(false); // reset final select
-            } else if(setForceRemove.contains(varName)) {
-                config.setColumnFlag(ColumnFlag.ForceRemove);
-                config.setFinalSelect(false); // reset final select
-            } else if(setForceSelect.contains(varName)) {
-                config.setColumnFlag(ColumnFlag.ForceSelect);
-            }
-
-            if(targetColumnName.equals(varName)) {
-                // target column is set to categorical column
-                config.setColumnType(ColumnType.C);
-            } else if(setCategorialColumns.contains(varName)) {
-                config.setColumnType(ColumnType.C);
-            } else {
-                config.setColumnType(ColumnType.N);
-            }
         }
     }
 
