@@ -41,11 +41,6 @@ public class StatsModelProcessor extends BasicModelProcessor implements Processo
         try {
             setUp(ModelStep.STATS);
 
-            // User may change variable type after `shifu init`
-            CommonUtils.updateColumnConfigFlags(this.modelConfig, this.columnConfigList);
-            // after read forceSelet/forceRemove/categorical refresh local ColumnConfig.json
-            saveColumnConfigListAndColumnStats(false);
-
             // resync ModelConfig.json/ColumnConfig.json to HDFS
             syncDataToHdfs(modelConfig.getDataSet().getSource());
 
