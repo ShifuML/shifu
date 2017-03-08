@@ -692,10 +692,18 @@ public class DTWorker
             LOG.debug("Compute val error time is {}ms", TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - start));
         }
 
+        if(this.isGBDT) {
+            // reset trees to null to save memory
+            this.recoverTrees = null;
+            if(this.isNeedRecoverGBDTPredict) {
+                // no need recover again
+                this.isNeedRecoverGBDTPredict = false;
+            }
+        }
+
         if(this.isGBDT && this.isNeedRecoverGBDTPredict) {
             // no need recover again
             this.isNeedRecoverGBDTPredict = false;
-            this.recoverTrees = null;
         }
 
         start = System.nanoTime();

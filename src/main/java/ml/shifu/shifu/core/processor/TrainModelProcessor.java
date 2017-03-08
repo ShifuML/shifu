@@ -63,6 +63,7 @@ import ml.shifu.shifu.core.dtrain.nn.NNOutput;
 import ml.shifu.shifu.core.dtrain.nn.NNParams;
 import ml.shifu.shifu.core.dtrain.nn.NNParquetWorker;
 import ml.shifu.shifu.core.dtrain.nn.NNWorker;
+import ml.shifu.shifu.core.shuffle.MapReduceShuffle;
 import ml.shifu.shifu.core.validator.ModelInspector.ModelStep;
 import ml.shifu.shifu.exception.ShifuErrorCode;
 import ml.shifu.shifu.exception.ShifuException;
@@ -137,6 +138,8 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
      * If for variable selection, only using bagging number 1 to train only one model.
      */
     private boolean isForVarSelect;
+
+    private boolean isToShuffle = false;
 
     public TrainModelProcessor() {
     }
@@ -296,6 +299,17 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
                 throw new ShifuException(ShifuErrorCode.ERROR_RUNNING_PIG_JOB, e);
             } catch (Throwable e) {
                 throw new RuntimeException(e);
+            }
+
+            if ( this.isToShuffle ) {
+                MapReduceShuffle shuffler = new MapReduceShuffle(this.modelConfig);
+                try {
+                    shuffler.run(pathFinder.getCleanedDataPath());
+                } catch (ClassNotFoundException e) {
+                    throw new RuntimeException("Fail to shuffle the cleaned data.", e);
+                } catch (InterruptedException e) {
+                    throw new RuntimeException("Fail to shuffle the cleaned data.", e);
+                }
             }
             LOG.info("Generate clean data for tree model successful.");
         } else {
@@ -1214,6 +1228,10 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
 
     public void setDebug(boolean isDebug) {
         this.isDebug = isDebug;
+    }
+
+    public void setToShuffle(boolean toShuffle) {
+        isToShuffle = toShuffle;
     }
 
     /**
