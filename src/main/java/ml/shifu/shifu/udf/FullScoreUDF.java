@@ -61,7 +61,7 @@ public class FullScoreUDF extends AbstractTrainerUDF<Tuple> {
         tuple.append(cs.getMaxScore());
         tuple.append(cs.getMinScore());
 
-        for(Integer score: cs.getScores()) {
+        for(double score: cs.getScores()) {
             tuple.append(score);
         }
 

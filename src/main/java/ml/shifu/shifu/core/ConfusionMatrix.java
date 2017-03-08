@@ -44,6 +44,7 @@ import ml.shifu.shifu.fs.PathFinder;
 import ml.shifu.shifu.fs.ShifuFileUtils;
 import ml.shifu.shifu.util.CommonUtils;
 import ml.shifu.shifu.util.Constants;
+import ml.shifu.shifu.util.Environment;
 import ml.shifu.shifu.util.HDFSUtils;
 import ml.shifu.shifu.util.JSONUtils;
 
@@ -131,22 +132,24 @@ public class ConfusionMatrix {
     }
 
     public void bufferedComputeConfusionMatrixAndPerformance(long pigPosTags, long pigNegTags, double pigPosWeightTags,
-            double pigNegWeightTags, long records, int maxScore, int minScore) throws IOException {
+            double pigNegWeightTags, long records, double maxScore, double minScore) throws IOException {
         log.info("Max score is {}, min score is {}", maxScore, minScore);
 
         PathFinder pathFinder = new PathFinder(modelConfig);
 
         if(!CommonConstants.GBT_ALG_NAME.equalsIgnoreCase(modelConfig.getTrain().getAlgorithm())) {
             // if not GBT model, NN/LR, are all 0-1000, only for GBT, maxScore and minScore may not be 1000 and 0
-            maxScore = 1000;
-            minScore = 0;
+            maxScore = 1d * Double.parseDouble(Environment.getProperty(Constants.SHIFU_SCORE_SCALE,
+                    Double.toString(Scorer.DEFAULT_SCORE_SCALE)));
+            minScore = 0d;
         }
 
         boolean gbtConvertToProb = isGBTConvertToProb();
         if(gbtConvertToProb) {
             log.debug(" set max score to 1000,raw  max is {}, raw min is {}", maxScore, minScore);
-            maxScore = 1000;
-            minScore = 0;
+            maxScore = 1d * Double.parseDouble(Environment.getProperty(Constants.SHIFU_SCORE_SCALE,
+                    Double.toString(Scorer.DEFAULT_SCORE_SCALE)));
+            minScore = 0d;
         }
 
         SourceType sourceType = evalConfig.getDataSet().getSource();
@@ -285,7 +288,7 @@ public class ConfusionMatrix {
                 // prevent 99%
                 // if((double) (i + 1) / records >= gainBin * binCapacity) {
                 double validRecordCnt = (double) (i + 1);
-                if ( validRecordCnt / (pigPosTags + pigNegTags) >= gainBin * binCapacity ) {
+                if(validRecordCnt / (pigPosTags + pigNegTags) >= gainBin * binCapacity) {
                     po.binNum = gainBin++;
                     gainList.add(po);
                 }

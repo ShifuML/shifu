@@ -227,7 +227,20 @@ public class DTMaster extends AbstractMasterComputable<DTMasterParams, DTWorkerP
      */
     private boolean enableEarlyStop = false;
 
+    /**
+     * Validation tolerance which is for early stop, by default it is 0d which means early stop is not enabled.
+     */
+    private double validationTolerance = 0d;
+
+    /**
+     * Random generator for get sampling features per each iteration.
+     */
     private Random featureSamplingRandom = new Random();
+
+    /**
+     * The best validation error for error computing
+     */
+    private double bestValidationError = Double.MAX_VALUE;
 
     // ############################################################################################################
     // ## There parts are states, for fail over such instances should be recovered in {@link #init(MasterContext)}
@@ -341,13 +354,30 @@ public class DTMaster extends AbstractMasterComputable<DTMasterParams, DTWorkerP
         }
 
         Map<Integer, TreeNode> todoNodes = new HashMap<Integer, TreeNode>();
-        double averageValidationError = validationError;
-        if(this.isGBDT && this.dtEarlyStopDecider != null && validationError > 0) {
-            this.dtEarlyStopDecider.add(validationError);
+        double averageValidationError = validationError / weightedValidationCount;
+        if(this.isGBDT && this.dtEarlyStopDecider != null && averageValidationError > 0) {
+            this.dtEarlyStopDecider.add(averageValidationError);
             averageValidationError = this.dtEarlyStopDecider.getCurrentAverageValue();
         }
+
+        boolean vtTriggered = false;
+        // if validationTolerance == 0d, means vt check is not enabled
+        if(validationTolerance > 0d
+                && Math.abs(this.bestValidationError - averageValidationError) < this.validationTolerance
+                        * averageValidationError) {
+            LOG.info("Debug: bestValidationError {}, averageValidationError {}, validationTolerance {}",
+                    bestValidationError, averageValidationError, validationTolerance);
+            vtTriggered = true;
+        }
+
+        if(averageValidationError < this.bestValidationError) {
+            this.bestValidationError = averageValidationError;
+        }
+
+        // validation error is averageValidationError * weightedValidationCount because of here averageValidationError
+        // is divided by validation count.
         DTMasterParams masterParams = new DTMasterParams(weightedTrainCount, trainError, weightedValidationCount,
-                averageValidationError);
+                averageValidationError * weightedValidationCount);
 
         if(toDoQueue.isEmpty()) {
             if(this.isGBDT) {
@@ -370,6 +400,9 @@ public class DTMaster extends AbstractMasterComputable<DTMasterParams, DTWorkerP
                     masterParams.setHalt(true);
                     LOG.info("Early stop identified, training is stopped in iteration {}.",
                             context.getCurrentIteration());
+                } else if(vtTriggered) {
+                    LOG.info("Early stop training by validation tolerance.");
+                    masterParams.setHalt(true);
                 } else {
                     // set first tree to true even after ROOT node is set in next tree
                     masterParams.setFirstTree(this.trees.size() == 1);
@@ -844,6 +877,21 @@ public class DTMaster extends AbstractMasterComputable<DTMasterParams, DTWorkerP
             LOG.info("Start grid search master with params: {}", validParams);
         }
 
+        Object vtObj = validParams.get("ValidationTolerance");
+        if(vtObj != null) {
+            try {
+                validationTolerance = Double.parseDouble(vtObj.toString());
+                LOG.warn("Validation by tolerance is enabled with value {}.", validationTolerance);
+            } catch (NumberFormatException ee) {
+                validationTolerance = 0d;
+                LOG.warn(
+                        "Validation by tolerance isn't enabled because of non numerical value of ValidationTolerance: {}.",
+                        vtObj);
+            }
+        } else {
+            LOG.warn("Validation by tolerance isn't enabled.");
+        }
+
         // tree related parameters initialization
         Object fssObj = validParams.get("FeatureSubsetStrategy");
         if(fssObj != null) {
@@ -940,20 +988,21 @@ public class DTMaster extends AbstractMasterComputable<DTMasterParams, DTWorkerP
         this.isContinuousEnabled = Boolean.TRUE.toString().equalsIgnoreCase(
                 context.getProps().getProperty(CommonConstants.CONTINUOUS_TRAINING));
 
-        LOG.info(
-                "Master init params: isAfterVarSel={}, featureSubsetStrategy={}, featureSubsetRate={} maxDepth={}, maxStatsMemory={}, "
-                        + "treeNum={}, impurity={}, workerNumber={}, minInstancesPerNode={}, minInfoGain={}, isRF={}, "
-                        + "isGBDT={}, isContinuousEnabled={}", isAfterVarSelect, featureSubsetStrategy,
-                this.featureSubsetRate, maxDepth, maxStatsMemory, treeNum, imStr, this.workerNumber,
-                minInstancesPerNode, minInfoGain, this.isRF, this.isGBDT, this.isContinuousEnabled);
-
-        this.toDoQueue = new LinkedList<TreeNode>();
-
         this.dtEarlyStopDecider = new DTEarlyStopDecider(this.maxDepth);
         if(validParams.containsKey("EnableEarlyStop")
                 && Boolean.valueOf(validParams.get("EnableEarlyStop").toString().toLowerCase())) {
             this.enableEarlyStop = true;
         }
+
+        LOG.info(
+                "Master init params: isAfterVarSel={}, featureSubsetStrategy={}, featureSubsetRate={} maxDepth={}, maxStatsMemory={}, "
+                        + "treeNum={}, impurity={}, workerNumber={}, minInstancesPerNode={}, minInfoGain={}, isRF={}, "
+                        + "isGBDT={}, isContinuousEnabled={}, enableEarlyStop={}.", isAfterVarSelect,
+                featureSubsetStrategy, this.featureSubsetRate, maxDepth, maxStatsMemory, treeNum, imStr,
+                this.workerNumber, minInstancesPerNode, minInfoGain, this.isRF, this.isGBDT, this.isContinuousEnabled,
+                this.enableEarlyStop);
+
+        this.toDoQueue = new LinkedList<TreeNode>();
 
         if(this.isLeafWise) {
             this.toSplitQueue = new PriorityQueue<TreeNode>(64, new Comparator<TreeNode>() {

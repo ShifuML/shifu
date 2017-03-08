@@ -126,7 +126,7 @@ public class ScoreModelWorker extends AbstractWorkerActor {
                 buf.append("|" + csResult.getMedianScore());
 
                 // score
-                for(Integer score: csResult.getScores()) {
+                for(Double score: csResult.getScores()) {
                     buf.append("|" + score);
                 }
 

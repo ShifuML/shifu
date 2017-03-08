@@ -361,10 +361,10 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
 
             log.info("Avg SLA for eval model scoring is {} micro seconds", totalRunTime / evalRecords);
 
-            int maxScore = Integer.MIN_VALUE;
-            int minScore = Integer.MAX_VALUE;
+            double maxScore = Integer.MIN_VALUE;
+            double minScore = Integer.MAX_VALUE;
             if(modelConfig.isRegression()) {
-                int[] maxMinScores = locateMaxMinScoreFromFile(sourceType, maxMinScoreFolder);
+                double[] maxMinScores = locateMaxMinScoreFromFile(sourceType, maxMinScoreFolder);
                 maxScore = maxMinScores[0];
                 minScore = maxMinScores[1];
                 ShifuFileUtils.deleteFile(maxMinScoreFolder, sourceType);
@@ -376,10 +376,10 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
         return null;
     }
 
-    private int[] locateMaxMinScoreFromFile(SourceType sourceType, String maxMinScoreFolder) throws IOException {
+    private double[] locateMaxMinScoreFromFile(SourceType sourceType, String maxMinScoreFolder) throws IOException {
         List<Scanner> scanners = null;
-        int maxScore = Integer.MIN_VALUE;
-        int minScore = Integer.MAX_VALUE;
+        double maxScore = Double.MIN_VALUE;
+        double minScore = Double.MAX_VALUE;
         try {
             // here only works for 1 reducer
             scanners = ShifuFileUtils.getDataScanners(maxMinScoreFolder, sourceType);
@@ -388,12 +388,12 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
                     String line = scanner.nextLine().trim();
                     String[] splits = line.split(",");
                     if(splits.length >= 2) {
-                        int localMaxScore = Integer.parseInt(splits[0]);
+                        double localMaxScore = Double.parseDouble(splits[0]);
                         if(maxScore < localMaxScore) {
                             maxScore = localMaxScore;
                         }
 
-                        int localMinScore = Integer.parseInt(splits[1]);
+                        Double localMinScore = Double.parseDouble(splits[1]);
                         if(minScore > localMinScore) {
                             minScore = localMinScore;
                         }
@@ -409,7 +409,7 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
                 }
             }
         }
-        return new int[] { maxScore, minScore };
+        return new double[] { maxScore, minScore };
     }
 
     /**
@@ -725,14 +725,14 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
 
         public double pigNegWeightTags = 0d;
 
-        public int maxScore = Integer.MIN_VALUE;
+        public double maxScore = Integer.MIN_VALUE;
 
-        public int minScore = Integer.MAX_VALUE;
+        public double minScore = Integer.MAX_VALUE;
 
         public long evalRecords = 0l;
 
         public ScoreStatus(long pigPosTags, long pigNegTags, double pigPosWeightTags, double pigNegWeightTags,
-                int maxScore, int minScore, long evalRecords) {
+                double maxScore, double minScore, long evalRecords) {
             this.pigPosTags = pigPosTags;
             this.pigNegTags = pigNegTags;
             this.pigPosWeightTags = pigPosWeightTags;

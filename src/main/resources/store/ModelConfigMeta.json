@@ -616,6 +616,11 @@
                         "directive": "input",
                         "defval" : 0.01
                     }, {
+                        "name" : "ValidationTolerance",
+                        "type" : "number",
+                        "directive": "input",
+                        "defval" : 0
+                    }, {
                         "name" : "Propagation",
                         "type" : "text",
                         "directive": "select",

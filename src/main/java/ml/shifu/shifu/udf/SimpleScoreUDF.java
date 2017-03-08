@@ -31,7 +31,7 @@ import java.util.Map;
 /**
  * SimpleScoreUDF class calculate the average score for evaluation data
  */
-public class SimpleScoreUDF extends AbstractTrainerUDF<Integer> {
+public class SimpleScoreUDF extends AbstractTrainerUDF<Double> {
 
     private String targetColumnName;
     private List<String> negTags;
@@ -58,7 +58,7 @@ public class SimpleScoreUDF extends AbstractTrainerUDF<Integer> {
         posTags = modelConfig.getPosTags();
     }
 
-    public Integer exec(Tuple input) throws IOException {
+    public Double exec(Tuple input) throws IOException {
         CaseScoreResult cs = modelRunner.compute(input);
         if(cs == null) {
             log.error("Get null result.");
