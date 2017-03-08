@@ -18,6 +18,7 @@ package ml.shifu.shifu.core;
 import java.io.BufferedWriter;
 import java.io.IOException;
 import java.io.Writer;
+import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
@@ -137,18 +138,20 @@ public class ConfusionMatrix {
 
         PathFinder pathFinder = new PathFinder(modelConfig);
 
+        double scoreScale = Double.parseDouble(Environment.getProperty(Constants.SHIFU_SCORE_SCALE,
+                Double.toString(Scorer.DEFAULT_SCORE_SCALE)));
         if(!CommonConstants.GBT_ALG_NAME.equalsIgnoreCase(modelConfig.getTrain().getAlgorithm())) {
             // if not GBT model, NN/LR, are all 0-1000, only for GBT, maxScore and minScore may not be 1000 and 0
-            maxScore = 1d * Double.parseDouble(Environment.getProperty(Constants.SHIFU_SCORE_SCALE,
-                    Double.toString(Scorer.DEFAULT_SCORE_SCALE)));
+            maxScore = 1d * scoreScale;
             minScore = 0d;
         }
+
+        DecimalFormat scoreFormat = new DecimalFormat("#.######");
 
         boolean gbtConvertToProb = isGBTConvertToProb();
         if(gbtConvertToProb) {
             log.debug(" set max score to 1000,raw  max is {}, raw min is {}", maxScore, minScore);
-            maxScore = 1d * Double.parseDouble(Environment.getProperty(Constants.SHIFU_SCORE_SCALE,
-                    Double.toString(Scorer.DEFAULT_SCORE_SCALE)));
+            maxScore = 1d * scoreScale;
             minScore = 0d;
         }
 
@@ -251,12 +254,11 @@ public class ConfusionMatrix {
                 if(cnt == 1 && CommonConstants.GBT_ALG_NAME.equalsIgnoreCase(modelConfig.getAlgorithm())
                         && !gbtConvertToProb) {
                     // for gbdt, the result maybe not in [0, 1], set first score to make the upper score bould clear
-                    po.binLowestScore = score;
+                    po.binLowestScore = Double.parseDouble(scoreFormat.format(score));
                 }
 
                 ConfusionMatrixObject cmo = new ConfusionMatrixObject(prevCmo);
 
-                // TODO enable scaling factor
                 if(posTags.contains(tag)) {
                     // Positive Instance
                     cmo.setTp(cmo.getTp() + 1);
