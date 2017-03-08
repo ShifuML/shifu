@@ -132,7 +132,7 @@ public interface Constants {
     public static final String CLEANED_DATA = "CleanedData";
     public static final String NORMALIZED_VALIDATION_DATA = "NormalizedValidationData";
     public static final String CLEANED_VALIDATION_DATA = "CleanedValidationData";
-    public static final String SHUFFLED_NORM_DATA = "ShuffledNormData";
+    public static final String SHUFFLED_DATA_PATH = "ShuffledData";
 
     public static final String TRAIN_SCORES = "TrainScores";
     public static final String BIN_AVG_SCORE = "BinAvgScore";

@@ -20,6 +20,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
+import ml.shifu.shifu.util.updater.ColumnConfigUpdater;
 import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -106,7 +107,7 @@ public class InitStep extends Step<List<ColumnConfig>> {
             columnConfigList.add(config);
         }
 
-        CommonUtils.updateColumnConfigFlags(modelConfig, columnConfigList);
+        ColumnConfigUpdater.updateColumnConfigFlags(modelConfig, columnConfigList, ModelStep.INIT);
 
         boolean hasTarget = false;
         for(ColumnConfig config: columnConfigList) {
