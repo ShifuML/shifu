@@ -130,7 +130,7 @@ public class ScorerTest {
         MLDataPair pair = new BasicMLDataPair(new BasicMLData(input), new BasicMLData(ideal));
 
         ScoreObject o = s.score(pair, null);
-        List<Integer> scores = o.getScores();
+        List<Double> scores = o.getScores();
 
         Assert.assertTrue(scores.get(0) > 400);
         Assert.assertTrue(scores.get(1) == 1000);

@@ -57,8 +57,8 @@ public class EvalScoreUDF extends AbstractTrainerUDF<Tuple> {
     private ModelRunner modelRunner;
     private String[] headers;
 
-    private int maxScore = Integer.MIN_VALUE;
-    private int minScore = Integer.MAX_VALUE;
+    private double maxScore = Double.MIN_VALUE;
+    private double minScore = Double.MAX_VALUE;
 
     private Map<String, Integer> subModelsCnt;
     private int modelCnt;
@@ -84,7 +84,7 @@ public class EvalScoreUDF extends AbstractTrainerUDF<Tuple> {
             // renew columnConfig
             this.columnConfigList = ShifuFileUtils.searchColumnConfig(evalConfig, columnConfigList);
         }
-        
+
         this.headers = CommonUtils.getFinalHeaders(evalConfig);
 
         // move model runner construction in exec to avoid OOM error in client side if model is too big like RF
@@ -223,7 +223,7 @@ public class EvalScoreUDF extends AbstractTrainerUDF<Tuple> {
         tuple.append(cs.getMinScore());
         tuple.append(cs.getMedianScore());
 
-        for(Integer score: cs.getScores()) {
+        for(double score: cs.getScores()) {
             tuple.append(score);
         }
 
@@ -425,14 +425,13 @@ public class EvalScoreUDF extends AbstractTrainerUDF<Tuple> {
      */
     private void addModelSchema(Schema tupleSchema, Integer modelCount, String modelName) {
         if(modelCount > 0) {
-            tupleSchema.add(new FieldSchema(SCHEMA_PREFIX + addModelNameToField(modelName, "mean"), DataType.INTEGER));
-            tupleSchema.add(new FieldSchema(SCHEMA_PREFIX + addModelNameToField(modelName, "max"), DataType.INTEGER));
-            tupleSchema.add(new FieldSchema(SCHEMA_PREFIX + addModelNameToField(modelName, "min"), DataType.INTEGER));
-            tupleSchema
-                    .add(new FieldSchema(SCHEMA_PREFIX + addModelNameToField(modelName, "median"), DataType.INTEGER));
+            tupleSchema.add(new FieldSchema(SCHEMA_PREFIX + addModelNameToField(modelName, "mean"), DataType.DOUBLE));
+            tupleSchema.add(new FieldSchema(SCHEMA_PREFIX + addModelNameToField(modelName, "max"), DataType.DOUBLE));
+            tupleSchema.add(new FieldSchema(SCHEMA_PREFIX + addModelNameToField(modelName, "min"), DataType.DOUBLE));
+            tupleSchema.add(new FieldSchema(SCHEMA_PREFIX + addModelNameToField(modelName, "median"), DataType.DOUBLE));
             for(int i = 0; i < modelCount; i++) {
                 tupleSchema.add(new FieldSchema(SCHEMA_PREFIX + addModelNameToField(modelName, "model" + i),
-                        DataType.INTEGER));
+                        DataType.DOUBLE));
             }
         }
     }

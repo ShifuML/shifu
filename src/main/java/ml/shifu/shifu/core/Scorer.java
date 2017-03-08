@@ -196,7 +196,7 @@ public class Scorer {
             }
         }
 
-        List<Integer> scores = new ArrayList<Integer>();
+        List<Double> scores = new ArrayList<Double>();
         List<Integer> rfTreeSizeList = new ArrayList<Integer>();
 
         if(CollectionUtils.isNotEmpty(tasks)) {
@@ -230,7 +230,7 @@ public class Scorer {
                     if(modelConfig.isClassification() && !modelConfig.getTrain().isOneVsAll()) {
                         double[] scoreArray = score.getData();
                         for(double sc: scoreArray) {
-                            scores.add((int) sc);
+                            scores.add(sc);
                         }
                     } else {
                         // if one vs all consider
@@ -257,8 +257,8 @@ public class Scorer {
         return new ScoreObject(scores, tag, rfTreeSizeList);
     }
 
-    private Integer toScore(Double d) {
-        return (int) Math.round(d * scale);
+    private double toScore(Double d) {
+        return d * scale;
     }
 
     public int getModelCnt() {

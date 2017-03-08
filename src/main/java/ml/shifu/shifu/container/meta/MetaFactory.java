@@ -344,7 +344,8 @@ public class MetaFactory {
     static Set<String> filterSet = Sets.newHashSet(new String[] { "NumHiddenLayers", "ActivationFunc",
             "NumHiddenNodes", "LearningRate", "RegularizedConstant", "L1orL2", "MaxDepth", "MinInstancesPerNode",
             "MinInfoGain", "MaxStatsMemoryMB", "TreeNum", "Impurity", "FeatureSubsetStrategy", "Loss", "LearningDecay",
-            "Propagation", "SampleWithReplacement", "Kernel", "Const", "Gamma" });
+            "Propagation", "GBTSampleWithReplacement", "Kernel", "Const", "Gamma", "EnableEarlyStop",
+            "ValidationTolerance", "MaxLeaves", "MaxBatchSplitSize" });
 
     // ugly code for grid search
     private static boolean filterOut(String itemKey) {

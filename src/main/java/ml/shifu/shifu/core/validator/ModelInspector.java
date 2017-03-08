@@ -614,6 +614,17 @@ public class ModelInspector {
                     }
                 }
 
+                Object vtObj = params.get("ValidationTolerance");
+                if(vtObj != null) {
+                    double validationTolerance = Double.valueOf(vtObj.toString());
+                    if(validationTolerance < 0d || validationTolerance >= 1d) {
+                        ValidateResult tmpResult = new ValidateResult(true);
+                        tmpResult.setStatus(false);
+                        tmpResult.getCauses().add("ValidationTolerance should in [0, 1).");
+                        result = ValidateResult.mergeResult(result, tmpResult);
+                    }
+                }
+
                 Object maxLeavesObj = params.get("MaxLeaves");
                 if(maxLeavesObj != null) {
                     int maxLeaves = Integer.valueOf(maxLeavesObj.toString());

@@ -433,9 +433,10 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
         }
 
         GridSearch gridSearch = new GridSearch(modelConfig.getTrain().getParams());
-        if(!NNConstants.NN_ALG_NAME.equalsIgnoreCase(alg) && !CommonUtils.isDesicionTreeAlgorithm(alg)
+        if(!LogisticRegressionContants.LR_ALG_NAME.equalsIgnoreCase(alg)
+                && !NNConstants.NN_ALG_NAME.equalsIgnoreCase(alg) && !CommonUtils.isDesicionTreeAlgorithm(alg)
                 && gridSearch.hasHyperParam()) {
-            // if grid search but not NN, not RF, not GBT
+            // if grid search but not NN, not RF, not GBT, not LR
             throw new IllegalArgumentException("Grid search only supports NN, GBT and RF algorithms");
         }
 

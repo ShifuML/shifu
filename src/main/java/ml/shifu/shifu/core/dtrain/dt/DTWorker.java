@@ -529,6 +529,7 @@ public class DTWorker
             this.baggingRandomMap = new HashMap<Integer, Random>();
         }
 
+        long start = System.nanoTime();
         for(Data data: this.trainingData) {
             if(this.isRF) {
                 for(TreeNode treeNode: trees) {
@@ -625,8 +626,10 @@ public class DTWorker
                 }
             }
         }
+        LOG.debug("Compute train error time is {}ms", TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - start));
 
         if(validationData != null) {
+            start = System.nanoTime();
             for(Data data: this.validationData) {
                 if(this.isRF) {
                     for(TreeNode treeNode: trees) {
@@ -686,6 +689,7 @@ public class DTWorker
                     }
                 }
             }
+            LOG.debug("Compute val error time is {}ms", TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - start));
         }
 
         if(this.isGBDT && this.isNeedRecoverGBDTPredict) {
@@ -694,6 +698,7 @@ public class DTWorker
             this.recoverTrees = null;
         }
 
+        start = System.nanoTime();
         CompletionService<Map<Integer, NodeStats>> completionService = new ExecutorCompletionService<Map<Integer, NodeStats>>(
                 this.threadPool);
 
@@ -794,6 +799,7 @@ public class DTWorker
             }
             rCnt += 1;
         }
+        LOG.debug("Compute stats time is {}ms", TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - start));
 
         LOG.info(
                 "worker count is {}, error is {}, and stats size is {}. weightedTrainCount {}, weightedValidationCount {}, trainError {}, validationError {}",
