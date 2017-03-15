@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright [2012-2014] PayPal Software Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -18,6 +18,7 @@ package ml.shifu.shifu.core.processor;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Scanner;
@@ -34,6 +35,7 @@ import ml.shifu.shifu.core.correlation.CorrelationReducer;
 import ml.shifu.shifu.core.correlation.CorrelationWritable;
 import ml.shifu.shifu.core.dtrain.nn.NNConstants;
 import ml.shifu.shifu.core.mr.input.CombineInputFormat;
+import ml.shifu.shifu.core.shuffle.MapReduceShuffle;
 import ml.shifu.shifu.core.validator.ModelInspector.ModelStep;
 import ml.shifu.shifu.exception.ShifuErrorCode;
 import ml.shifu.shifu.exception.ShifuException;
@@ -55,10 +57,13 @@ import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
+import org.apache.hadoop.mapreduce.lib.map.MultithreadedMapper;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.mapreduce.lib.output.TextOutputFormat;
 import org.apache.hadoop.util.GenericOptionsParser;
 import org.apache.pig.impl.util.JarManager;
+import org.apache.pig.tools.pigstats.JobStats;
+import org.apache.pig.tools.pigstats.PigStats;
 import org.encog.ml.data.MLDataSet;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -74,6 +79,16 @@ import com.google.common.base.Splitter;
 public class NormalizeModelProcessor extends BasicModelProcessor implements Processor {
 
     private final static Logger log = LoggerFactory.getLogger(NormalizeModelProcessor.class);
+
+    private boolean isToShuffleData = false;
+
+    public NormalizeModelProcessor() {
+        this(false);
+    }
+
+    public NormalizeModelProcessor(boolean isToShuffleData) {
+        this.isToShuffleData = isToShuffleData;
+    }
 
     /**
      * runner for normalization data
@@ -93,7 +108,13 @@ public class NormalizeModelProcessor extends BasicModelProcessor implements Proc
 
                     if(isCorrOn()) {
                         runCorrMapReduceJob();
-                        saveColumnConfigListAndColumnStats(false);
+                        saveColumnConfigList();
+                    }
+
+                    if(this.isToShuffleData) {
+                        // shuffling normalized data, to make data random
+                        MapReduceShuffle shuffler = new MapReduceShuffle(this.modelConfig);
+                        shuffler.run(this.pathFinder.getNormalizedDataPath());
                     }
                     break;
                 case LOCAL:
@@ -154,7 +175,7 @@ public class NormalizeModelProcessor extends BasicModelProcessor implements Proc
         conf.setBoolean(GuaguaMapReduceConstants.MAPRED_MAP_TASKS_SPECULATIVE_EXECUTION, true);
         conf.setBoolean(GuaguaMapReduceConstants.MAPRED_REDUCE_TASKS_SPECULATIVE_EXECUTION, true);
         conf.set(NNConstants.MAPRED_JOB_QUEUE_NAME, Environment.getProperty(Environment.HADOOP_JOB_QUEUE, "default"));
-        conf.setInt(GuaguaMapReduceConstants.MAPREDUCE_JOB_MAX_SPLIT_LOCATIONS, 100);
+        conf.setInt(GuaguaMapReduceConstants.MAPREDUCE_JOB_MAX_SPLIT_LOCATIONS, 5000);
         conf.set(
                 Constants.SHIFU_MODEL_CONFIG,
                 ShifuFileUtils.getFileSystemBySourceType(source)
@@ -167,6 +188,7 @@ public class NormalizeModelProcessor extends BasicModelProcessor implements Proc
 
         conf.set("mapred.reduce.slowstart.completed.maps",
                 Environment.getProperty("mapred.reduce.slowstart.completed.maps", "0.9"));
+
         String hdpVersion = HDPUtils.getHdpVersionForHDP224();
         if(StringUtils.isNotBlank(hdpVersion)) {
             // for hdp 2.2.4, hdp.version should be set and configuration files should be add to container class path
@@ -178,6 +200,7 @@ public class NormalizeModelProcessor extends BasicModelProcessor implements Proc
         }
 
         conf.setBoolean(CombineInputFormat.SHIFU_VS_SPLIT_COMBINABLE, true);
+        conf.setBoolean("mapreduce.input.fileinputformat.input.dir.recursive", true);
 
         // one can set guagua conf in shifuconfig
         for(Map.Entry<Object, Object> entry: Environment.getProperties().entrySet()) {
@@ -189,7 +212,23 @@ public class NormalizeModelProcessor extends BasicModelProcessor implements Proc
         @SuppressWarnings("deprecation")
         Job job = new Job(conf, "Shifu: Correlation Computing Job : " + this.modelConfig.getModelSetName());
         job.setJarByClass(getClass());
-        job.setMapperClass(CorrelationMapper.class);
+
+        boolean isMultipleThreading = Boolean.TRUE.toString().equalsIgnoreCase(
+                Environment.getProperty(Constants.SHIFU_CORRELATION_MULTI, "true"));
+        if(isMultipleThreading) {
+            job.setMapperClass(MultithreadedMapper.class);
+            MultithreadedMapper.setMapperClass(job, CorrelationMapper.class);
+            int threads;
+            try {
+                threads = Integer.parseInt(Environment.getProperty(Constants.SHIFU_CORRELATION_MULTI_THREADS, "6"));
+            } catch (Exception e) {
+                log.warn("'shifu.correlation.multi.threads' should be a int value, set default value: {}", 6);
+                threads = 6;
+            }
+            MultithreadedMapper.setNumberOfThreads(job, threads);
+        } else {
+            job.setMapperClass(CorrelationMapper.class);
+        }
 
         job.setMapOutputKeyClass(IntWritable.class);
         job.setMapOutputValueClass(CorrelationWritable.class);
@@ -285,11 +324,9 @@ public class NormalizeModelProcessor extends BasicModelProcessor implements Proc
                 || super.modelConfig.getNormalize().getNormType() == NormType.ZSCORE
                 || super.modelConfig.getNormalize().getNormType() == NormType.OLD_ZSCALE
                 || super.modelConfig.getNormalize().getNormType() == NormType.OLD_ZSCORE;
-        return super.modelConfig.isMapReduceRunMode()
-        // Only set correlation for not none
-                && !(super.modelConfig.getNormalize().getCorrelation() == Correlation.None)
-                // only works in zscore (numerical variables) and bad rate (categorical variables)
-                && isZScore;
+        // NormPearson only works with zscore, while pearson works for all norm mode
+        return (super.modelConfig.isMapReduceRunMode() && isZScore && super.modelConfig.getNormalize().getCorrelation() == Correlation.NormPearson)
+                || (super.modelConfig.isMapReduceRunMode() && super.modelConfig.getNormalize().getCorrelation() == Correlation.Pearson);
     }
 
     /**
@@ -328,6 +365,7 @@ public class NormalizeModelProcessor extends BasicModelProcessor implements Proc
      * 
      * @throws IOException
      */
+    @SuppressWarnings("deprecation")
     private void runPigNormalize() throws IOException {
         SourceType sourceType = modelConfig.getDataSet().getSource();
 
@@ -344,21 +382,48 @@ public class NormalizeModelProcessor extends BasicModelProcessor implements Proc
             String normPigPath = null;
             if(modelConfig.getNormalize().getIsParquet()) {
                 if(modelConfig.getBasic().getPostTrainOn()) {
-                    normPigPath = pathFinder.getAbsolutePath("scripts/NormalizeWithParquetAndPostTrain.pig");
+                    normPigPath = pathFinder.getScriptPath("scripts/NormalizeWithParquetAndPostTrain.pig");
                 } else {
                     log.info("Post train is disabled by 'postTrainOn=false'.");
-                    normPigPath = pathFinder.getAbsolutePath("scripts/NormalizeWithParquet.pig");
+                    normPigPath = pathFinder.getScriptPath("scripts/NormalizeWithParquet.pig");
                 }
             } else {
                 if(modelConfig.getBasic().getPostTrainOn()) {
                     // this condition is for comment, no matter post train enabled or not, only norm results will be
                     // stored since new post train solution
                 }
-                normPigPath = pathFinder.getAbsolutePath("scripts/Normalize.pig");
+                normPigPath = pathFinder.getScriptPath("scripts/Normalize.pig");
             }
             paramsMap.put(Constants.IS_COMPRESS, "true");
             paramsMap.put(Constants.IS_NORM_FOR_CLEAN, "false");
             PigExecutor.getExecutor().submitJob(modelConfig, normPigPath, paramsMap);
+
+            Iterator<JobStats> iter = PigStats.get().getJobGraph().iterator();
+
+            while(iter.hasNext()) {
+                JobStats jobStats = iter.next();
+                if(jobStats.getHadoopCounters() != null
+                        && jobStats.getHadoopCounters().getGroup(Constants.SHIFU_GROUP_COUNTER) != null) {
+                    long totalValidCount = jobStats.getHadoopCounters().getGroup(Constants.SHIFU_GROUP_COUNTER)
+                            .getCounter("TOTAL_VALID_COUNT");
+                    // If no basic record counter, check next one
+                    if(totalValidCount == 0L) {
+                        continue;
+                    }
+                    long invalidTagCount = jobStats.getHadoopCounters().getGroup(Constants.SHIFU_GROUP_COUNTER)
+                            .getCounter("INVALID_TAG");
+
+                    log.info("Total valid records {} after filtering, invalid tag records {}.", totalValidCount,
+                            invalidTagCount);
+
+                    if(totalValidCount > 0L && invalidTagCount * 1d / totalValidCount >= 0.8d) {
+                        log.error("Too many invalid tags, please check you configuration on positive tags and negative tags.");
+                    }
+                }
+                // only one pig job with such counters, break
+                break;
+            }
+
             if(StringUtils.isNotBlank(modelConfig.getValidationDataSetRawPath())) {
                 paramsMap.put(Constants.IS_COMPRESS, "false");
                 paramsMap.put(Constants.PATH_RAW_DATA, modelConfig.getValidationDataSetRawPath());

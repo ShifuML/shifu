@@ -27,7 +27,9 @@ import ml.shifu.shifu.container.obj.ModelConfig;
 import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
 import ml.shifu.shifu.core.dtrain.CommonConstants;
 import ml.shifu.shifu.core.dtrain.DTrainUtils;
+import ml.shifu.shifu.core.dtrain.gs.GridSearch;
 //import ml.shifu.shifu.core.dtrain.nn.NNConstants;
+import ml.shifu.shifu.fs.ShifuFileUtils;
 import ml.shifu.shifu.util.CommonUtils;
 
 import org.apache.hadoop.conf.Configuration;
@@ -83,6 +85,16 @@ public class LogisticRegressionOutput extends
      */
     private FSDataOutputStream progressOutput = null;
 
+    /**
+     * If current mode is cross validation
+     */
+    private boolean isKFoldCV;
+
+    /**
+     * If current mode is grid search
+     */
+    private boolean isGsMode;
+
     @Override
     public void preApplication(MasterContext<LogisticRegressionParams, LogisticRegressionParams> context) {
         init(context);
@@ -132,8 +144,9 @@ public class LogisticRegressionOutput extends
             return;
         }
         String progress = new StringBuilder(200).append("    Trainer ").append(this.trainerId).append(" Epoch #")
-                .append(currentIteration - 1).append(" Train Error:").append(context.getMasterResult().getTrainError())
-                .append(" Validation Error:").append(context.getMasterResult().getTestError()).append("\n").toString();
+                .append(currentIteration - 1).append(" Training Error:")
+                .append(context.getMasterResult().getTrainError()).append(" Validation Error:")
+                .append(context.getMasterResult().getTestError()).append("\n").toString();
         try {
             LOG.debug("Writing progress results to {} {}", context.getCurrentIteration(), progress.toString());
             this.progressOutput.write(progress.getBytes("UTF-8"));
@@ -159,6 +172,24 @@ public class LogisticRegressionOutput extends
 
         Path out = new Path(context.getProps().getProperty(CommonConstants.GUAGUA_OUTPUT));
         writeModelWeightsToFileSystem(optimizedWeights, out);
+        if(this.isKFoldCV || this.isGsMode) {
+            Path valErrOutput = new Path(context.getProps().getProperty(CommonConstants.GS_VALIDATION_ERROR));
+            writeValErrorToFileSystem(context.getMasterResult().getTestError(), valErrOutput);
+        }
+        IOUtils.closeStream(this.progressOutput);
+    }
+
+    private void writeValErrorToFileSystem(double valError, Path out) {
+        FSDataOutputStream fos = null;
+        try {
+            fos = FileSystem.get(new Configuration()).create(out);
+            LOG.info("Writing valerror to {}", out);
+            fos.write((valError + "").getBytes("UTF-8"));
+        } catch (IOException e) {
+            LOG.error("Error in writing output.", e);
+        } finally {
+            IOUtils.closeStream(fos);
+        }
     }
 
     /**
@@ -180,11 +211,24 @@ public class LogisticRegressionOutput extends
             loadConfigFiles(context.getProps());
             this.trainerId = context.getProps().getProperty(CommonConstants.SHIFU_TRAINER_ID);
             this.tmpModelsFolder = context.getProps().getProperty(CommonConstants.SHIFU_TMP_MODELS_FOLDER);
+            Integer kCrossValidation = this.modelConfig.getTrain().getNumKFold();
+            if(kCrossValidation != null && kCrossValidation > 0) {
+                isKFoldCV = true;
+            }
+
+            GridSearch gs = new GridSearch(modelConfig.getTrain().getParams());
+            this.isGsMode = gs.hasHyperParam();
         }
 
         try {
             Path progressLog = new Path(context.getProps().getProperty(CommonConstants.SHIFU_DTRAIN_PROGRESS_FILE));
-            this.progressOutput = FileSystem.get(new Configuration()).create(progressLog);
+            // if the progressLog already exists, that because the master failed, and fail-over
+            // we need to append the log, so that client console can get refreshed. Or console will appear stuck.
+            if(ShifuFileUtils.isFileExists(progressLog, SourceType.HDFS)) {
+                this.progressOutput = FileSystem.get(new Configuration()).append(progressLog);
+            } else {
+                this.progressOutput = FileSystem.get(new Configuration()).create(progressLog);
+            }
         } catch (IOException e) {
             LOG.error("Error in create progress log:", e);
         }

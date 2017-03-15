@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright [2012-2014] PayPal Software Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -40,21 +40,18 @@ import org.apache.commons.compress.compressors.bzip2.BZip2CompressorInputStream;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FileStatus;
-import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.FileUtil;
-import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.PathFilter;
+import org.apache.hadoop.fs.*;
 import org.apache.hadoop.io.compress.CompressionCodec;
 import org.apache.hadoop.io.compress.CompressionCodecFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.xerial.snappy.SnappyInputStream;
 
 /**
  * ShifuFileUtils class encapsulate the file system interface from other components.
  * It provides the functions that for all kinds of file operation.
- * <p/>
- * Caller need to pass the file path and @SourceType to do file operation
+ * <p>
+ * Caller need to pass the file path and SourceType to do file operation
  */
 public class ShifuFileUtils {
 
@@ -104,6 +101,7 @@ public class ShifuFileUtils {
      *            - local/hdfs
      * @return operation status
      * @throws IOException
+     *             any io exception
      */
     public static boolean createDirIfNotExists(String path, SourceType sourceType) throws IOException {
         return getFileSystemBySourceType(sourceType).mkdirs(new Path(path));
@@ -144,7 +142,7 @@ public class ShifuFileUtils {
 
     /**
      * Get buffered reader with <code>{@link Constants#DEFAULT_CHARSET}</code> for specified file
-     * <p/>
+     * <p>
      * !!! Warning: reader instance should be closed by caller.
      * 
      * @param sourceFile
@@ -159,7 +157,7 @@ public class ShifuFileUtils {
 
     /**
      * Get buffered reader with <code>{@link Constants#DEFAULT_CHARSET}</code> for specified file
-     * <p/>
+     * <p>
      * !!! Warning: reader instance should be closed by caller.
      * 
      * @param path
@@ -172,7 +170,8 @@ public class ShifuFileUtils {
      */
     public static BufferedReader getReader(String path, SourceType sourceType) throws IOException {
         try {
-            return new BufferedReader(new InputStreamReader(getFileSystemBySourceType(sourceType).open(new Path(path)),
+            return new BufferedReader(new InputStreamReader(getCompressInputStream(
+                    getFileSystemBySourceType(sourceType).open(new Path(path)), new Path(path)),
                     Constants.DEFAULT_CHARSET));
         } catch (IOException e) {
             // To manual fix a issue that FileSystem is closed exceptionally. Here we renew a FileSystem object to make
@@ -186,6 +185,19 @@ public class ShifuFileUtils {
                 }
             }
             throw e;
+        }
+    }
+
+    private static InputStream getCompressInputStream(FSDataInputStream fdis, Path path) throws IOException {
+        String name = path.getName();
+        if(name.toLowerCase().endsWith(".gz")) {
+            return new GZIPInputStream(fdis);
+        } else if(name.toLowerCase().endsWith(".bz2")) {
+            return new BZip2CompressorInputStream(fdis);
+        } else if(name.toLowerCase().endsWith(".snappy")) {
+            return new SnappyInputStream(fdis);
+        } else {
+            return fdis;
         }
     }
 
@@ -230,6 +242,8 @@ public class ShifuFileUtils {
      *            - file path to get the scanner
      * @param sourceType
      *            - local/hdfs
+     * @param pathFilter
+     *            the path filter
      * @return scanners for specified path
      * @throws IOException
      *             - if any I/O exception in processing
@@ -395,8 +409,23 @@ public class ShifuFileUtils {
      *             - if any I/O exception in processing
      */
     public static boolean isFileExists(String path, SourceType sourceType) throws IOException {
+        return isFileExists(new Path(path), sourceType);
+    }
+
+    /**
+     * According to SourceType to check whether file exists.
+     * 
+     * @param path
+     *            - @Path of source file
+     * @param sourceType
+     *            - local/hdfs
+     * @return - true if file exists, or false
+     * @throws IOException
+     *             - if any I/O exception in processing
+     */
+    public static boolean isFileExists(Path path, SourceType sourceType) throws IOException {
         FileSystem fs = getFileSystemBySourceType(sourceType);
-        FileStatus[] fileStatusArr = fs.globStatus(new Path(path));
+        FileStatus[] fileStatusArr = fs.globStatus(path);
         return !(fileStatusArr == null || fileStatusArr.length == 0);
     }
 
@@ -503,28 +532,17 @@ public class ShifuFileUtils {
         return configList;
     }
 
-    /**
-     * @param filePath
-     * @param sourceType
-     * @return
-     */
     public static List<String> readFilePartsIntoList(String filePath, SourceType sourceType) throws IOException {
         List<String> lines = new ArrayList<String>();
 
         FileSystem fs = getFileSystemBySourceType(sourceType);
-
-        FileStatus[] fileStatsArr = fs.listStatus(new Path(filePath), new PathFilter() {
-            @Override
-            public boolean accept(Path path) {
-                return path.getName().startsWith("part");
-            }
-        });
+        FileStatus[] fileStatsArr = getFilePartStatus(filePath, sourceType);
 
         CompressionCodecFactory compressionFactory = new CompressionCodecFactory(new Configuration());
-        for ( FileStatus fileStatus : fileStatsArr ) {
+        for(FileStatus fileStatus: fileStatsArr) {
             InputStream is = null;
             CompressionCodec codec = compressionFactory.getCodec(fileStatus.getPath());
-            if ( codec != null ) {
+            if(codec != null) {
                 is = codec.createInputStream(fs.open(fileStatus.getPath()));
             } else {
                 is = fs.open(fileStatus.getPath());
@@ -536,4 +554,33 @@ public class ShifuFileUtils {
 
         return lines;
     }
+
+    public static FileStatus[] getFilePartStatus(String filePath, SourceType sourceType) throws IOException {
+        FileSystem fs = getFileSystemBySourceType(sourceType);
+
+        FileStatus[] fileStatsArr = fs.listStatus(new Path(filePath), new PathFilter() {
+            @Override
+            public boolean accept(Path path) {
+                return path.getName().startsWith("part");
+            }
+        });
+
+        return fileStatsArr;
+    }
+
+    public static int getFilePartCount(String filePath, SourceType sourceType) throws IOException {
+        FileStatus[] fileStatsArr = getFilePartStatus(filePath, sourceType);
+        return fileStatsArr.length;
+    }
+
+    public static long getFileOrDirectorySize(String filePath, SourceType sourceType) throws IOException {
+        long size = 0;
+
+        FileStatus[] fileStatsArr = getFilePartStatus(filePath, sourceType);
+        for(FileStatus fileStats: fileStatsArr) {
+            size += fileStats.getLen();
+        }
+        return size;
+    }
+
 }

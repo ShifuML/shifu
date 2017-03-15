@@ -106,10 +106,17 @@ public abstract class Step<STEP_RESULT> {
     }
 
     /**
-     * validate the modelconfig if it's well written.
+     * Validate the modelconfig if it's well written.
+     */
+    /**
+     * Validate the modelconfig if it's well written.
      * 
-     * @return
+     * @param modelConfig
+     *            the model config
+     * @param step
+     *            step in Shifu
      * @throws Exception
+     *             any exception in validation
      */
     protected void validateModelConfig(ModelConfig modelConfig, ModelStep step) throws Exception {
         ValidateResult result = new ValidateResult(false);
@@ -243,5 +250,5 @@ public abstract class Step<STEP_RESULT> {
     public ModelStep getStep() {
         return step;
     }
-
+    
 }

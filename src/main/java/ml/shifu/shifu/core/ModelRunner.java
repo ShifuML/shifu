@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright [2012-2014] PayPal Software Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -15,14 +15,17 @@
  */
 package ml.shifu.shifu.core;
 
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.TreeMap;
 
 import ml.shifu.shifu.container.CaseScoreResult;
 import ml.shifu.shifu.container.ScoreObject;
 import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.container.obj.ModelConfig;
 import ml.shifu.shifu.container.obj.ModelTrainConf.ALGORITHM;
+import ml.shifu.shifu.core.model.ModelSpec;
 import ml.shifu.shifu.util.CommonUtils;
 
 import org.apache.commons.collections.MapUtils;
@@ -56,6 +59,7 @@ public class ModelRunner {
     private String[] header;
     private String dataDelimiter;
     private Scorer scorer;
+    private Map<String, Scorer> subScorers;
 
     public ModelRunner(ModelConfig modelConfig, List<ColumnConfig> columnConfigList, String[] header,
             String dataDelimiter, List<BasicML> models) {
@@ -69,11 +73,13 @@ public class ModelRunner {
 
     /**
      * Constructor for Integration API, if user use this constructor to construct @ModelRunner,
-     * only compute(Map<String, String> rawDataMap) is supported to call.
+     * only compute(Map(String, String) rawDataMap) is supported to call.
      * That means client is responsible for preparing the input data map.
-     * <p/>
+     * <p>
      * Notice, the Standard deviation Cutoff will be default - Normalizer.STD_DEV_CUTOFF
      * 
+     * @param modelConfig
+     *            model config
      * @param columnConfigList
      *            - @ColumnConfig list for Model
      * @param models
@@ -85,9 +91,11 @@ public class ModelRunner {
 
     /**
      * Constructor for Integration API, if user use this constructor to construct @ModelRunner,
-     * only compute(Map<String, String> rawDataMap) is supported to call.
+     * only compute(Map(String, String) rawDataMap) is supported to call.
      * That means client is responsible for preparing the input data map.
      * 
+     * @param modelConfig
+     *            the modelconfig
      * @param columnConfigList
      *            - @ColumnConfig list for Model
      * @param models
@@ -107,7 +115,7 @@ public class ModelRunner {
      * 
      * @param inputData
      *            - the whole original input data as String
-     * @return @CaseScoreResult
+     * @return CaseScoreResult
      */
     public CaseScoreResult compute(String inputData) {
         if(dataDelimiter == null || header == null) {
@@ -128,7 +136,9 @@ public class ModelRunner {
      * 
      * @param tuple
      *            - the whole original input data as @Tuple
-     * @return @CaseScoreResult
+     * @return CaseScoreResult
+     * @throws ExecException
+     *             exec exception in computing model score
      */
     public CaseScoreResult compute(Tuple tuple) throws ExecException {
         if(header == null) {
@@ -148,23 +158,88 @@ public class ModelRunner {
      * 
      * @param rawDataMap
      *            - the whole original input data as map
-     * @return @CaseScoreResult
+     * @return CaseScoreResult
      */
     public CaseScoreResult compute(Map<String, String> rawDataMap) {
         CaseScoreResult scoreResult = new CaseScoreResult();
 
-        ScoreObject so = scorer.score(rawDataMap);
-        if(so == null) {
-            return null;
+        if(this.scorer != null) {
+            ScoreObject so = scorer.score(rawDataMap);
+            if(so == null) {
+                return null;
+            }
+
+            scoreResult.setScores(so.getScores());
+            scoreResult.setMaxScore(so.getMaxScore());
+            scoreResult.setMinScore(so.getMinScore());
+            scoreResult.setAvgScore(so.getMeanScore());
+            scoreResult.setMedianScore(so.getMedianScore());
         }
 
-        scoreResult.setScores(so.getScores());
-        scoreResult.setMaxScore(so.getMaxScore());
-        scoreResult.setMinScore(so.getMinScore());
-        scoreResult.setAvgScore(so.getMeanScore());
-        scoreResult.setMedianScore(so.getMedianScore());
+        if(MapUtils.isNotEmpty(this.subScorers)) {
+            Iterator<Map.Entry<String, Scorer>> iterator = this.subScorers.entrySet().iterator();
+            while(iterator.hasNext()) {
+                Map.Entry<String, Scorer> entry = iterator.next();
+                String modelName = entry.getKey();
+                Scorer subScorer = entry.getValue();
+                ScoreObject so = subScorer.score(rawDataMap);
+                if(so != null) {
+                    scoreResult.addSubModelScore(modelName, so);
+                }
+            }
+        }
 
         return scoreResult;
+    }
+
+    /**
+     * add @ModelSpec as sub-model. Create scorer for sub-model
+     * 
+     * @param modelSpec
+     *            - model spec for sub model
+     */
+    public void addSubModels(ModelSpec modelSpec) {
+        if(this.subScorers == null) {
+            this.subScorers = new TreeMap<String, Scorer>();
+        }
+
+        this.subScorers.put(modelSpec.getModelName(), new Scorer(modelSpec.getModels(), this.columnConfigList,
+                modelSpec.getAlgorithm().name(), this.modelConfig, this.modelConfig.getNormalizeStdDevCutOff()));
+
+    }
+
+    /**
+     * Get the models count of current model
+     * 
+     * @return
+     *         - model count
+     */
+    public int getModelsCnt() {
+        return (this.scorer == null ? 0 : this.scorer.getModelCnt());
+    }
+
+    /**
+     * Get the models count of sub-models
+     * 
+     * @return
+     *         - model count of sub-models
+     */
+    public Map<String, Integer> getSubModelsCnt() {
+        if(MapUtils.isNotEmpty(this.subScorers)) {
+            Map<String, Integer> subModelsCnt = new TreeMap<String, Integer>();
+            Iterator<Map.Entry<String, Scorer>> iterator = this.subScorers.entrySet().iterator();
+            while(iterator.hasNext()) {
+                Map.Entry<String, Scorer> entry = iterator.next();
+                subModelsCnt.put(entry.getKey(), entry.getValue().getModelCnt());
+            }
+            return subModelsCnt;
+        } else {
+            return null;
+        }
+    }
+
+    public void setScoreScale(int scale) {
+        this.scorer.setScale(scale);
     }
 
     /**

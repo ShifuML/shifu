@@ -15,6 +15,8 @@
  */
 package ml.shifu.shifu.core.binning;
 
+import ml.shifu.shifu.core.autotype.CountAndFrequentItemsWritable;
+
 import org.apache.hadoop.io.Writable;
 
 import java.io.DataInput;
@@ -63,6 +65,8 @@ public class BinningInfoWritable implements Writable {
     private long totalCount = 0L;
 
     private double[] xMultiY = null;
+
+    private CountAndFrequentItemsWritable cfiw = new CountAndFrequentItemsWritable();
 
     /**
      * @return the binBoundaries
@@ -335,6 +339,8 @@ public class BinningInfoWritable implements Writable {
             }
             // xMultiY computation is in the reducer computation
         }
+
+        this.cfiw.write(out);
     }
 
     @Override
@@ -400,6 +406,9 @@ public class BinningInfoWritable implements Writable {
                 this.binCategories.add(new String(bytes, Charset.forName("UTF-8")));
             }
         }
+
+        this.cfiw = new CountAndFrequentItemsWritable();
+        this.cfiw.readFields(in);
     }
 
     /**
@@ -445,6 +454,21 @@ public class BinningInfoWritable implements Writable {
      */
     public void setxMultiY(double[] xMultiY) {
         this.xMultiY = xMultiY;
+    }
+
+    /**
+     * @return the cfiw
+     */
+    public CountAndFrequentItemsWritable getCfiw() {
+        return cfiw;
+    }
+
+    /**
+     * @param cfiw
+     *            the cfiw to set
+     */
+    public void setCfiw(CountAndFrequentItemsWritable cfiw) {
+        this.cfiw = cfiw;
     }
 
     /*

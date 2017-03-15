@@ -30,9 +30,6 @@ import org.apache.pig.data.DataBag;
 
 /**
  * AbstractVarStats class
- * 
- * @Nov 3, 2014
- *
  */
 public abstract class AbstractVarStats {
     
@@ -55,28 +52,18 @@ public abstract class AbstractVarStats {
         this.binning = new EqualPopulationBinning(modelConfig.getStats().getMaxNumBin());
     }
     
-    /**
-     * @param arr
-     */
     protected void initializeZeroArr(Integer[] arr) {
         for ( int i = 0; i < arr.length; i ++ ) {
             arr[i] = Integer.valueOf(0);
         }
     }
     
-    /**
-     * @param arr
-     */
     protected void initializeZeroArr(Double[] arr) {
         for ( int i = 0; i < arr.length; i ++ ) {
             arr[i] = Double.valueOf(0.0);
         }
     }
     
-    /**
-     * @param binCountArr
-     * @param binNum
-     */
     protected void increaseInstCnt(Integer[] binCountArr, int binNum) {
         Integer cnt = binCountArr[binNum];
         if ( cnt == null ) {
@@ -88,10 +75,6 @@ public abstract class AbstractVarStats {
         binCountArr[binNum] = cnt;
     }
     
-    /**
-     * @param binCountArr
-     * @param binNum
-     */
     protected void increaseInstCnt(Double[] binWeightCountArr, int binNum, double weight) {
         Double weightCount = binWeightCountArr[binNum];
         if ( weightCount == null ) {
@@ -104,9 +87,6 @@ public abstract class AbstractVarStats {
     }
     
     
-    /**
-     * @param columnConfig
-     */
     protected void calculateBinPosRateAndAvgScore() {
         List<Double> binPositiveRate = new ArrayList<Double>();
         

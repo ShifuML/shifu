@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright [2012-2014] PayPal Software Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -17,7 +17,6 @@ package ml.shifu.shifu.util;
 
 import ml.shifu.shifu.exception.ShifuErrorCode;
 import ml.shifu.shifu.exception.ShifuException;
-import ml.shifu.shifu.fs.ShifuFileUtils;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
@@ -52,7 +51,7 @@ public final class HDFSUtils {
         // prevent new HDFSUtils();
     }
 
-    /**
+    /*
      * Get HDFS FileSystem
      */
     public static FileSystem getFS() {
@@ -76,7 +75,7 @@ public final class HDFSUtils {
         return hdfs;
     }
 
-    /**
+    /*
      * Sometimes FileSystem will be close in NodeManger while no reason about that so far. Here we add a renew method to
      * create a new FileSystem instance. This should be package level but ShifuFileUtils is not in the same package.
      * 
@@ -99,11 +98,8 @@ public final class HDFSUtils {
         return hdfs;
     }
 
-    /**
+    /*
      * Get local FileSystem
-     * 
-     * @throws IOException
-     *             if any IOException to retrieve local file system.
      */
     public static FileSystem getLocalFS() {
         if(lfs == null) {

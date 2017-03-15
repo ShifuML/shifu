@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright [2012-2014] PayPal Software Foundation
  * <p/>
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -20,7 +20,6 @@ import ml.shifu.shifu.core.processor.stats.*;
 import ml.shifu.shifu.core.validator.ModelInspector.ModelStep;
 import ml.shifu.shifu.exception.ShifuErrorCode;
 import ml.shifu.shifu.exception.ShifuException;
-import ml.shifu.shifu.util.CommonUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -41,9 +40,7 @@ public class StatsModelProcessor extends BasicModelProcessor implements Processo
         try {
             setUp(ModelStep.STATS);
 
-            // User may change variable type after `shifu init`
-            CommonUtils.updateColumnConfigFlags(this.modelConfig, this.columnConfigList);
-
+            // resync ModelConfig.json/ColumnConfig.json to HDFS
             syncDataToHdfs(modelConfig.getDataSet().getSource());
 
             AbstractStatsExecutor statsExecutor = null;

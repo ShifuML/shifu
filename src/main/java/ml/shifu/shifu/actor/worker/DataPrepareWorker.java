@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright [2012-2014] PayPal Software Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -57,26 +57,12 @@ public class DataPrepareWorker extends AbstractWorkerActor {
 
     private int weightedColumnNum = -1;
 
-    /**
-     * @param modelConfig
-     * @param columnConfigList
-     * @param parentActorRef
-     * @param columnNumToActorMap
-     * @throws IOException
-     */
     public DataPrepareWorker(ModelConfig modelConfig, List<ColumnConfig> columnConfigList, ActorRef parentActorRef,
             ActorRef nextActorRef) throws IOException {
         super(modelConfig, columnConfigList, parentActorRef, nextActorRef);
         trainDataHeader = CommonUtils.getFinalHeaders(modelConfig);
     }
 
-    /**
-     * @param modelConfig
-     * @param columnConfigList
-     * @param parentActorRef
-     * @param columnNumToActorMap
-     * @throws IOException
-     */
     public DataPrepareWorker(ModelConfig modelConfig, List<ColumnConfig> columnConfigList, ActorRef parentActorRef,
             Map<Integer, ActorRef> columnNumToActorMap) throws IOException {
         this(modelConfig, columnConfigList, parentActorRef, (ActorRef) null);
@@ -110,6 +96,7 @@ public class DataPrepareWorker extends AbstractWorkerActor {
 
             for(Map.Entry<Integer, List<ValueObject>> entry: columnVoListMap.entrySet()) {
                 Integer columnNum = entry.getKey();
+                log.info("send {} with {} value object", columnNum, entry.getValue().size());
                 columnNumToActorMap.get(columnNum).tell(
                         new StatsValueObjectMessage(totalMsgCnt, columnNum, entry.getValue(), rt.getMissingMap()
                                 .containsKey(columnNum) ? rt.getMissingMap().get(columnNum) : 0, rt.getTotal()),
@@ -131,7 +118,7 @@ public class DataPrepareWorker extends AbstractWorkerActor {
 
     }
 
-    /**
+    /*
      * Create the Map<ColumnID, List<ValueObject>> to prepare the data for calculating stats of each column
      * If the input message doesn't contain any data, the actor won't send message into next-actor who is waiting the
      * message.
@@ -149,7 +136,7 @@ public class DataPrepareWorker extends AbstractWorkerActor {
         return columnVoListMap;
     }
 
-    /**
+    /*
      * Create the Map<ColumnID, List<ColumnScore>> to prepare the data for calculating average score of each column
      * If the input message doesn't contain any data, the actor won't send message into next-actor who is waiting the
      * message.
@@ -167,7 +154,7 @@ public class DataPrepareWorker extends AbstractWorkerActor {
         return columnScoreListMap;
     }
 
-    /**
+    /*
      * Convert raw data into @ValueObject for calculating stats
      * 
      * @param rawDataList
@@ -195,7 +182,7 @@ public class DataPrepareWorker extends AbstractWorkerActor {
                 throw new ShifuException(ShifuErrorCode.ERROR_NO_EQUAL_COLCONFIG);
             }
 
-            String tag = raw[targetColumnNum];
+            String tag = CommonUtils.trimTag(raw[targetColumnNum]);
 
             if(modelConfig.isBinningSampleNegOnly()) {
                 if(modelConfig.getNegTags().contains(tag) && random.nextDouble() > sampleRate) {
@@ -261,7 +248,7 @@ public class DataPrepareWorker extends AbstractWorkerActor {
                     vo.setWeight(1.0);
                 }
 
-                vo.setTag(raw[targetColumnNum]);
+                vo.setTag(tag);
 
                 List<ValueObject> voList = columnVoListMap.get(i);
                 if(voList == null) {
@@ -316,7 +303,7 @@ public class DataPrepareWorker extends AbstractWorkerActor {
         }
     }
 
-    /**
+    /*
      * Convert model result data into column-based
      * 
      * @param evalDataList

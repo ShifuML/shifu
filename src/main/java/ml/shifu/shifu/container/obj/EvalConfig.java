@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright [2012-2014] PayPal Software Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -15,22 +15,22 @@
  */
 package ml.shifu.shifu.container.obj;
 
-import java.io.File;
-import java.io.IOException;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
 import ml.shifu.shifu.fs.PathFinder;
 import ml.shifu.shifu.util.CommonUtils;
 import ml.shifu.shifu.util.Constants;
-
+import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.fs.Path;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
-import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import java.io.File;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 /**
  * EvalConfig class
@@ -57,6 +57,12 @@ public class EvalConfig {
      */
     @JsonIgnore
     private volatile List<String> metaColumns = null;
+
+    /**
+     * Cache raw score meta columns to avoid reading file several times
+     */
+    @JsonIgnore
+    private volatile List<String> scoreMetaColumns = null;
 
     public EvalConfig() {
         customPaths = new HashMap<String, String>(1);
@@ -104,23 +110,61 @@ public class EvalConfig {
         return ((customPaths == null) ? null : customPaths.get(Constants.KEY_CONFUSION_MATRIX_PATH));
     }
 
-    /**
-     * @return
-     * @throws IOException
-     */
     @JsonIgnore
     public List<String> getScoreMetaColumns(ModelConfig modelConfig) throws IOException {
+        if(scoreMetaColumns == null) {
+            synchronized (this) {
+                if (scoreMetaColumns == null) {
+                    if ( StringUtils.isNotBlank(scoreMetaColumnNameFile) ) {
+                        String path = scoreMetaColumnNameFile;
+                        if ( SourceType.HDFS.equals(dataSet.getSource()) ) {
+                            PathFinder pathFinder = new PathFinder(modelConfig);
+                            File file = new File(scoreMetaColumnNameFile);
+                            path = new Path(pathFinder.getEvalSetPath(this), file.getName()).toString();
+                        }
+
+                        String delimiter = StringUtils.isBlank(dataSet.getHeaderDelimiter())
+                                ? dataSet.getDataDelimiter() : dataSet.getHeaderDelimiter();
+                        scoreMetaColumns = CommonUtils.readConfFileIntoList(path, dataSet.getSource(), delimiter);
+                    }
+                }
+            }
+        }
+        return scoreMetaColumns;
+    }
+
+    @JsonIgnore
+    public List<String> getAllMetaColumns(ModelConfig modelConfig) throws IOException {
         if(metaColumns == null) {
             synchronized(this) {
                 if(metaColumns == null) {
-                    String path = scoreMetaColumnNameFile;
-                    if(StringUtils.isNotBlank(scoreMetaColumnNameFile) && SourceType.HDFS.equals(dataSet.getSource())) {
-                        PathFinder pathFinder = new PathFinder(modelConfig);
-                        File file = new File(scoreMetaColumnNameFile);
-                        path = new Path(pathFinder.getEvalSetPath(this), file.getName()).toString();
+                    List<String> scoreMetaColumns = getScoreMetaColumns(modelConfig);
+                    if ( scoreMetaColumns != null ) {
+                        this.metaColumns = new ArrayList<String>(scoreMetaColumns);
                     }
-                    metaColumns = CommonUtils.readConfFileIntoList(path, dataSet.getSource(),
-                            dataSet.getHeaderDelimiter());
+
+                    String metaColumnNameFile = dataSet.getMetaColumnNameFile();
+                    if(StringUtils.isNotBlank(metaColumnNameFile)) {
+                        String path = metaColumnNameFile;
+                        if ( SourceType.HDFS.equals(dataSet.getSource()) ) {
+                            PathFinder pathFinder = new PathFinder(modelConfig);
+                            File file = new File(metaColumnNameFile);
+                            path = new Path(pathFinder.getEvalSetPath(this), file.getName()).toString();
+                        }
+
+                        String delimiter = StringUtils.isBlank(dataSet.getHeaderDelimiter())
+                                ? dataSet.getDataDelimiter() : dataSet.getHeaderDelimiter();
+                        List<String> rawMetaColumns = CommonUtils.readConfFileIntoList(path, dataSet.getSource(), delimiter);
+                        if( CollectionUtils.isNotEmpty(metaColumns) ) {
+                            for(String column: rawMetaColumns) {
+                                if(!metaColumns.contains(column)) {
+                                    metaColumns.add(column);
+                                }
+                            }
+                        } else {
+                            metaColumns = rawMetaColumns;
+                        }
+                    }
                 }
             }
         }

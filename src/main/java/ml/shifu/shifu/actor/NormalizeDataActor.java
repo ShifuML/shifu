@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright [2012-2014] PayPal Software Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -48,7 +48,7 @@ import akka.routing.RoundRobinRouter;
  * NormalizeDataActor class normalize the the training data.
  * Not all training data will be normalized. Actually there is an option - `baggingSampleRate`
  * in @ModelConfig, it will control how many percentage will be normalized.
- * <p/>
+ * <p>
  * The raw data which is normalized, is also will be stored.
  */
 public class NormalizeDataActor extends AbstractActor {

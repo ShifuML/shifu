@@ -16,6 +16,8 @@
 SET job.name 'Shifu PSI calculator: $data_set';
 SET mapred.map.tasks.speculative.execution true;
 SET mapred.reduce.tasks.speculative.execution true;
+SET mapreduce.map.speculative true;
+SET mapreduce.reduce.speculative true;
 SET mapred.job.queue.name $queue_name;
 
 REGISTER $path_jar;

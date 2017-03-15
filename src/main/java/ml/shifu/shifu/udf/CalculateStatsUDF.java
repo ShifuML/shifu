@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright [2012-2014] PayPal Software Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -22,6 +22,7 @@ import ml.shifu.shifu.core.Binning.BinningDataType;
 import ml.shifu.shifu.core.ColumnStatsCalculator;
 import ml.shifu.shifu.core.ColumnStatsCalculator.ColumnMetrics;
 
+import ml.shifu.shifu.util.CommonUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.pig.data.DataBag;
 import org.apache.pig.data.Tuple;
@@ -130,7 +131,7 @@ public class CalculateStatsUDF extends AbstractTrainerUDF<Tuple> {
             // do not need to catch exception, see AddColumnNumUDF which have already normalized the weight value
             vo.setWeight(Double.valueOf(t.get(2).toString()));
 
-            vo.setTag(t.get(1).toString());
+            vo.setTag(CommonUtils.trimTag(t.get(1).toString()));
             // vo.setScore(Double.valueOf(t.get(2).toString()));
             voList.add(vo);
         }

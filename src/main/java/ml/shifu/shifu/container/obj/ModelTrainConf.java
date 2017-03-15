@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright [2012-2014] PayPal Software Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -45,7 +45,7 @@ public class ModelTrainConf {
         ONEVSALL, ONVVSREST, // the same as ONEVSALL
         ONVVSONE; // ONEVSONE is not impl yet.
 
-        /**
+        /*
          * Get {@link MultipleClassification} by string, case can be ignored.
          */
         public static MultipleClassification of(String strategy) {
@@ -67,14 +67,22 @@ public class ModelTrainConf {
     private Integer numTrainEpochs = Integer.valueOf(100);
     private Integer epochsPerIteration = Integer.valueOf(1);
 
+    /**
+     * Only sample negative records out
+     */
+    private Boolean sampleNegOnly = Boolean.FALSE;
+
     private Boolean trainOnDisk = Boolean.FALSE;
     private Boolean fixInitInput = Boolean.FALSE;
+    private Boolean stratifiedSample = Boolean.FALSE;
 
     private Boolean isContinuous = Boolean.FALSE;
 
     private Boolean isCrossOver = Boolean.FALSE;
 
     private Integer workerThreadCount = 4;
+
+    private Integer numKFold = -1;
 
     private Double upSampleWeight = Double.valueOf(1d);
 
@@ -183,10 +191,6 @@ public class ModelTrainConf {
         this.customPaths = customPaths;
     }
 
-    /**
-     * @param alg
-     * @return
-     */
     public static Map<String, Object> createParamsByAlg(ALGORITHM alg, ModelTrainConf trainConf) {
         Map<String, Object> params = new HashMap<String, Object>();
 
@@ -237,6 +241,7 @@ public class ModelTrainConf {
     /**
      * @return the epochsPerIteration
      */
+    @JsonIgnore
     public Integer getEpochsPerIteration() {
         return epochsPerIteration;
     }
@@ -245,6 +250,7 @@ public class ModelTrainConf {
      * @param epochsPerIteration
      *            the epochsPerIteration to set
      */
+    @JsonProperty
     public void setEpochsPerIteration(Integer epochsPerIteration) {
         this.epochsPerIteration = epochsPerIteration;
     }
@@ -350,19 +356,35 @@ public class ModelTrainConf {
 
     @Override
     public boolean equals(Object obj) {
-        if ( obj == null || !(obj instanceof ModelTrainConf) ) {
+        if(obj == null || !(obj instanceof ModelTrainConf)) {
             return false;
         }
 
         ModelTrainConf other = (ModelTrainConf) obj;
-        if ( this == other ) {
+        if(this == other) {
             return true;
         }
 
-        return this.algorithm.equals(other.getAlgorithm())
-                && this.baggingNum.equals(other.getBaggingNum())
+        return this.algorithm.equals(other.getAlgorithm()) && this.baggingNum.equals(other.getBaggingNum())
                 && this.getNumTrainEpochs().equals(other.getNumTrainEpochs())
                 && this.validSetRate.equals(other.getValidSetRate());
+    }
+
+    /**
+     * @return the sampleNegOnly
+     */
+    @JsonIgnore
+    public Boolean getSampleNegOnly() {
+        return sampleNegOnly;
+    }
+
+    /**
+     * @param sampleNegOnly
+     *            the sampleNegOnly to set
+     */
+    @JsonProperty
+    public void setSampleNegOnly(Boolean sampleNegOnly) {
+        this.sampleNegOnly = sampleNegOnly;
     }
 
     @Override
@@ -372,7 +394,7 @@ public class ModelTrainConf {
         other.setBaggingNum(baggingNum);
         other.setBaggingSampleRate(baggingSampleRate);
         other.setConvergenceThreshold(convergenceThreshold);
-        if ( customPaths != null ) {
+        if(customPaths != null) {
             other.setCustomPaths(new HashMap<String, String>(customPaths));
         }
         other.setEpochsPerIteration(epochsPerIteration);
@@ -386,5 +408,39 @@ public class ModelTrainConf {
         other.setValidSetRate(validSetRate);
         other.setWorkerThreadCount(workerThreadCount);
         return other;
+    }
+
+    /**
+     * @return the stratifiedSample
+     */
+    @JsonIgnore
+    public Boolean getStratifiedSample() {
+        return stratifiedSample;
+    }
+
+    /**
+     * @param stratifiedSample
+     *            the stratifiedSampling to set
+     */
+    @JsonProperty
+    public void setStratifiedSample(Boolean stratifiedSample) {
+        this.stratifiedSample = stratifiedSample;
+    }
+
+    /**
+     * @return the numKFold
+     */
+    @JsonIgnore
+    public Integer getNumKFold() {
+        return numKFold;
+    }
+
+    /**
+     * @param numKFold
+     *            the numKFold to set
+     */
+    @JsonProperty
+    public void setNumKFold(Integer numKFold) {
+        this.numKFold = numKFold;
     }
 }

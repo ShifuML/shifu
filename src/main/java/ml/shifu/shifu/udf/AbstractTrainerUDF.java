@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright [2012-2014] PayPal Software Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -98,9 +98,8 @@ public abstract class AbstractTrainerUDF<T> extends EvalFunc<T> {
     public AbstractTrainerUDF(String source, String pathColumnConfig) throws IOException {
         this(source, null, pathColumnConfig);
     }
-    
 
-    /**
+    /*
      * Check whether is a pig environment, for example, in unit test, PigStatusReporter.getInstance() is null
      */
     @SuppressWarnings("deprecation")

@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright [2012-2014] PayPal Software Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -24,10 +24,10 @@ public class ColumnScoreObject {
 
     private int columnNum;
     private String columnVal;
-    private List<Integer> scores;
-    private int maxScore;
-    private int minScore;
-    private int avgScore;
+    private List<Double> scores;
+    private double maxScore;
+    private double minScore;
+    private double avgScore;
 
     public ColumnScoreObject(int columnNum, String columnVal) {
         super();
@@ -51,35 +51,35 @@ public class ColumnScoreObject {
         this.columnVal = columnVal;
     }
 
-    public List<Integer> getScores() {
+    public List<Double> getScores() {
         return scores;
     }
 
-    public void setScores(List<Integer> scores) {
+    public void setScores(List<Double> scores) {
         this.scores = scores;
     }
 
-    public int getMaxScore() {
+    public double getMaxScore() {
         return maxScore;
     }
 
-    public void setMaxScore(int maxScore) {
+    public void setMaxScore(double maxScore) {
         this.maxScore = maxScore;
     }
 
-    public int getMinScore() {
+    public double getMinScore() {
         return minScore;
     }
 
-    public void setMinScore(int minScore) {
+    public void setMinScore(double minScore) {
         this.minScore = minScore;
     }
 
-    public int getAvgScore() {
+    public double getAvgScore() {
         return avgScore;
     }
 
-    public void setAvgScore(int avgScore) {
+    public void setAvgScore(double avgScore) {
         this.avgScore = avgScore;
     }
 

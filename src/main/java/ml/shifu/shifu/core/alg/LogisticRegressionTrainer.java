@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright [2012-2014] PayPal Software Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -34,7 +34,6 @@ import org.slf4j.LoggerFactory;
 import java.io.File;
 import java.io.IOException;
 
-
 /**
  * Implementation of AbstractTrainer for LogisticRegression
  */
@@ -45,12 +44,12 @@ public class LogisticRegressionTrainer extends AbstractTrainer {
     public static final String LEARNING_RATE = "LearningRate";
 
     private BasicNetwork classifier;
-   
+
     /**
      * Convergence judger instance for convergence criteria checking.
      */
     private ConvergeJudger judger = new ConvergeJudger();
-    
+
     public LogisticRegressionTrainer(ModelConfig modelConfig, int trainerID, Boolean dryRun) {
         super(modelConfig, trainerID, dryRun);
 
@@ -62,13 +61,14 @@ public class LogisticRegressionTrainer extends AbstractTrainer {
 
     /**
      * {@inheritDoc}
-     * </p>
+     * <p>
      * no <code>regularization</code>
-     * </p>
+     * <p>
      * Regular will be provide later
-     * </p>
-     *
-     * @throws IOException e
+     * <p>
+     * 
+     * @throws IOException
+     *             e
      */
     @Override
     public double train() throws IOException {
@@ -83,40 +83,40 @@ public class LogisticRegressionTrainer extends AbstractTrainer {
         classifier.addLayer(new BasicLayer(new ActivationSigmoid(), false, trainSet.getIdealSize()));
         classifier.getStructure().finalizeStructure();
 
-        //resetParams(classifier);
+        // resetParams(classifier);
         classifier.reset();
 
-        //Propagation mlTrain = getMLTrain();
-        Propagation propagation = new QuickPropagation(classifier, trainSet, (Double) modelConfig.getParams().get("LearningRate"));
+        // Propagation mlTrain = getMLTrain();
+        Propagation propagation = new QuickPropagation(classifier, trainSet, (Double) modelConfig.getParams().get(
+                "LearningRate"));
         int epochs = modelConfig.getNumTrainEpochs();
 
         // Get convergence threshold from modelConfig.
-        double threshold = modelConfig.getTrain().getConvergenceThreshold() == null ? 0.0
-                : modelConfig.getTrain().getConvergenceThreshold().doubleValue();
+        double threshold = modelConfig.getTrain().getConvergenceThreshold() == null ? 0.0 : modelConfig.getTrain()
+                .getConvergenceThreshold().doubleValue();
         String formatedThreshold = df.format(threshold);
-        
+
         LOG.info("Using " + (Double) modelConfig.getParams().get("LearningRate") + " training rate");
 
-        for (int i = 0; i < epochs; i++) {
+        for(int i = 0; i < epochs; i++) {
 
             propagation.iteration();
             double trainError = propagation.getError();
             double validError = classifier.calculateError(this.validSet);
 
-            LOG.info("Epoch #" + (i + 1) + " Train Error:"
-                    + df.format(trainError) + " Validation Error:"
+            LOG.info("Epoch #" + (i + 1) + " Train Error:" + df.format(trainError) + " Validation Error:"
                     + df.format(validError));
 
             // Convergence judging.
             double avgErr = (trainError + validError) / 2;
 
-            if (judger.judge(avgErr, threshold)) {
-                LOG.info("Trainer-{}> Epoch #{} converged! Average Error: {}, Threshold: {}"
-                        ,trainerID, (i + 1), df.format(avgErr), formatedThreshold);
+            if(judger.judge(avgErr, threshold)) {
+                LOG.info("Trainer-{}> Epoch #{} converged! Average Error: {}, Threshold: {}", trainerID, (i + 1),
+                        df.format(avgErr), formatedThreshold);
                 break;
             } else {
-                LOG.info("Trainer-{}> Epoch #{} Average Error: {}, Threshold: {}"
-                        , trainerID, (i + 1), df.format(avgErr), formatedThreshold);
+                LOG.info("Trainer-{}> Epoch #{} Average Error: {}, Threshold: {}", trainerID, (i + 1),
+                        df.format(avgErr), formatedThreshold);
             }
         }
         propagation.finishTraining();
@@ -130,7 +130,7 @@ public class LogisticRegressionTrainer extends AbstractTrainer {
 
     private void saveLR() throws IOException {
         File folder = new File("./models");
-        if (!folder.exists()) {
+        if(!folder.exists()) {
             FileUtils.forceMkdir(folder);
         }
         EncogDirectoryPersistence.saveObject(new File("./models/model" + this.trainerID + ".lr"), classifier);

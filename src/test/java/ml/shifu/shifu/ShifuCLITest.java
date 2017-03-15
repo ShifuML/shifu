@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright [2012-2014] PayPal Software Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -15,19 +15,11 @@
  */
 package ml.shifu.shifu;
 
-import java.io.BufferedReader;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.IOException;
-import java.io.InputStreamReader;
-import java.util.Arrays;
-
 import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
 import ml.shifu.shifu.fs.ShifuFileUtils;
 import ml.shifu.shifu.util.CommonUtils;
 import ml.shifu.shifu.util.Constants;
 import ml.shifu.shifu.util.Environment;
-
 import org.apache.commons.io.FileUtils;
 import org.easymock.EasyMock;
 import org.powermock.api.easymock.PowerMock;
@@ -38,6 +30,9 @@ import org.testng.annotations.AfterTest;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.ObjectFactory;
 import org.testng.annotations.Test;
+
+import java.io.*;
+import java.util.Arrays;
 
 /**
  * ManagerTest class
@@ -153,7 +148,7 @@ public class ShifuCLITest {
         FileUtils.copyFile(originColumn, tmpColumn);
 
         long timestamp = tmpColumn.lastModified();
-        ShifuCLI.selectModelVar(false);
+        ShifuCLI.selectModelVar(false, false);
         Assert.assertTrue(tmpColumn.lastModified() > timestamp);
 
         FileUtils.deleteQuietly(tmpModel);
@@ -201,7 +196,7 @@ public class ShifuCLITest {
         ShifuCLI.normalizeTrainData();
 
         // run train
-        ShifuCLI.trainModel(false, false);
+        ShifuCLI.trainModel(false, false, false);
 
         File modelFile = new File("models/model0.nn");
         Assert.assertTrue(modelFile.exists());
@@ -234,7 +229,7 @@ public class ShifuCLITest {
         ShifuCLI.initializeModel();
         ShifuCLI.calModelStats();
         ShifuCLI.normalizeTrainData();
-        ShifuCLI.selectModelVar(false);
+        ShifuCLI.selectModelVar(false, false);
         ShifuCLI.postTrainModel();
         Assert.assertTrue(tmpColumn.lastModified() > timestamp);
 

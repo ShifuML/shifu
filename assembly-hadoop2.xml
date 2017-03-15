@@ -95,6 +95,7 @@
             </includes>
             <excludes>
                 <exclude>*-sources.jar</exclude>
+                <exclude>*-javadoc.jar</exclude>
             </excludes>
         </fileSet>
     </fileSets>
@@ -116,6 +117,7 @@
                 <include>*:commons-logging:*</include>
                 <include>*:commons-net:*</include>
                 <include>*:commons-math3:*</include>
+                <include>*:commons-lang3:*</include>
                 <include>*:config:*</include>
                 <include>*:encog-core:*</include>
                 <include>*:guagua-core:*</include>

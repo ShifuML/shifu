@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright [2012-2014] PayPal Software Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -37,6 +37,7 @@ import ml.shifu.shifu.container.obj.RawSourceData;
 import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
 import ml.shifu.shifu.core.alg.NNTrainer;
 import ml.shifu.shifu.core.dtrain.CommonConstants;
+import ml.shifu.shifu.core.dtrain.dt.FeatureSubsetStrategy;
 import ml.shifu.shifu.core.dtrain.gs.GridSearch;
 import ml.shifu.shifu.fs.ShifuFileUtils;
 import ml.shifu.shifu.util.CommonUtils;
@@ -48,11 +49,11 @@ import org.slf4j.LoggerFactory;
 
 /**
  * ModelInspector class is to do Safety Testing for model.
- * <p/>
- * Safety Testing include: 1. validate the @ModelConfig against its meta data
  * 
- * @links{src/main/resources/store/ModelConfigMeta.json 2. check source data for training and evaluation 3. check the
- *                                                      prerequisite for each step
+ * <p>
+ * Safety Testing include: 1. validate the ModelConfig against its meta data
+ * src/main/resources/store/ModelConfigMeta.json 2. check source data for training and evaluation 3. check the
+ * prerequisite for each step
  */
 public class ModelInspector {
 
@@ -88,6 +89,7 @@ public class ModelInspector {
      *         if everything is OK, the status of ValidateResult is TRUE
      *         else the status of ValidateResult is FALSE, and the reasons will in the clauses of ValidateResult
      * @throws Exception
+     *             any exception in validation
      */
     public ValidateResult probe(ModelConfig modelConfig, ModelStep modelStep) throws Exception {
         ValidateResult result = checkMeta(modelConfig);
@@ -255,8 +257,10 @@ public class ModelInspector {
         ValidateResult result = new ValidateResult(true);
 
         if(modelConfig.isClassification()
-                && (modelConfig.getBinningMethod() == BinningMethod.EqualPositive || modelConfig.getBinningMethod() == BinningMethod.EqualNegtive
-                || modelConfig.getBinningMethod() == BinningMethod.WeightEqualPositive || modelConfig.getBinningMethod() == BinningMethod.WeightEqualNegative)) {
+                && (modelConfig.getBinningMethod() == BinningMethod.EqualPositive
+                        || modelConfig.getBinningMethod() == BinningMethod.EqualNegtive
+                        || modelConfig.getBinningMethod() == BinningMethod.WeightEqualPositive || modelConfig
+                        .getBinningMethod() == BinningMethod.WeightEqualNegative)) {
             ValidateResult tmpResult = new ValidateResult(false,
                     Arrays.asList("Multiple classification cannot leverage EqualNegtive and EqualPositive binning."));
             result = ValidateResult.mergeResult(result, tmpResult);
@@ -306,15 +310,6 @@ public class ModelInspector {
                         result,
                         checkFile(varSelect.getForceSelectColumnNameFile(), SourceType.LOCAL,
                                 "forceSelect columns configuration"));
-            }
-        }
-
-        if(modelConfig.isClassification()) {
-            if(varSelect.getWrapperEnabled()) {
-                result = ValidateResult.mergeResult(
-                        result,
-                        new ValidateResult(false, Arrays
-                                .asList("Multiple classification is not enabled for wrapperBy variable selection.")));
             }
         }
 
@@ -460,6 +455,13 @@ public class ModelInspector {
             ValidateResult tmpResult = new ValidateResult(true);
             tmpResult.setStatus(false);
             tmpResult.getCauses().add("Bagging number should be greater than zero in train configuration");
+            result = ValidateResult.mergeResult(result, tmpResult);
+        }
+
+        if(train.getNumKFold() != null && train.getNumKFold() > 20) {
+            ValidateResult tmpResult = new ValidateResult(true);
+            tmpResult.setStatus(false);
+            tmpResult.getCauses().add("numKFold should be in (0, 20] or <=0 (not dp k-crossValidation)");
             result = ValidateResult.mergeResult(result, tmpResult);
         }
 
@@ -612,6 +614,17 @@ public class ModelInspector {
                     }
                 }
 
+                Object vtObj = params.get("ValidationTolerance");
+                if(vtObj != null) {
+                    double validationTolerance = Double.valueOf(vtObj.toString());
+                    if(validationTolerance < 0d || validationTolerance >= 1d) {
+                        ValidateResult tmpResult = new ValidateResult(true);
+                        tmpResult.setStatus(false);
+                        tmpResult.getCauses().add("ValidationTolerance should in [0, 1).");
+                        result = ValidateResult.mergeResult(result, tmpResult);
+                    }
+                }
+
                 Object maxLeavesObj = params.get("MaxLeaves");
                 if(maxLeavesObj != null) {
                     int maxLeaves = Integer.valueOf(maxLeavesObj.toString());
@@ -682,10 +695,10 @@ public class ModelInspector {
                 Object treeNumObj = params.get("TreeNum");
                 if(treeNumObj != null) {
                     int treeNum = Integer.valueOf(treeNumObj.toString());
-                    if(treeNum <= 0 || treeNum > 2000) {
+                    if(treeNum <= 0 || treeNum > 10000) {
                         ValidateResult tmpResult = new ValidateResult(true);
                         tmpResult.setStatus(false);
-                        tmpResult.getCauses().add("TreeNum should be in [1, 5000].");
+                        tmpResult.getCauses().add("TreeNum should be in [1, 10000].");
                         result = ValidateResult.mergeResult(result, tmpResult);
                     }
                 } else {
@@ -717,8 +730,7 @@ public class ModelInspector {
                 if(impurityObj == null) {
                     ValidateResult tmpResult = new ValidateResult(true);
                     tmpResult.setStatus(false);
-                    tmpResult.getCauses().add(
-                            "Impurity should be in null in RF/GBT algorithm.");
+                    tmpResult.getCauses().add("Impurity is not set in RF/GBT algorithm.");
                     result = ValidateResult.mergeResult(result, tmpResult);
                 } else {
                     if(train.getAlgorithm().equalsIgnoreCase(CommonConstants.GBT_ALG_NAME)) {
@@ -740,6 +752,45 @@ public class ModelInspector {
                             tmpResult.setStatus(false);
                             tmpResult.getCauses().add("RF supports 'variance|entropy|gini' impurity types.");
                             result = ValidateResult.mergeResult(result, tmpResult);
+                        }
+                    }
+                }
+
+                Object fssObj = params.get("FeatureSubsetStrategy");
+                if(fssObj == null) {
+                    ValidateResult tmpResult = new ValidateResult(true);
+                    tmpResult.setStatus(false);
+                    tmpResult.getCauses().add("FeatureSubsetStrategy is not set in RF/GBT algorithm.");
+                    result = ValidateResult.mergeResult(result, tmpResult);
+                } else {
+                    boolean isNumber = false;
+                    double doubleFss = 0;
+                    try {
+                        doubleFss = Double.parseDouble(fssObj.toString());
+                        isNumber = true;
+                    } catch (Exception e) {
+                        isNumber = false;
+                    }
+
+                    if(isNumber && (doubleFss <= 0d || doubleFss > 1d)) {
+                        ValidateResult tmpResult = new ValidateResult(true);
+                        tmpResult.setStatus(false);
+                        tmpResult.getCauses().add("FeatureSubsetStrategy if double should be in (0, 1]");
+                    } else {
+                        boolean fssInEnum = false;
+                        for(FeatureSubsetStrategy fss: FeatureSubsetStrategy.values()) {
+                            if(fss.toString().equalsIgnoreCase(fssObj.toString())) {
+                                fssInEnum = true;
+                                break;
+                            }
+                        }
+
+                        if(!fssInEnum) {
+                            ValidateResult tmpResult = new ValidateResult(true);
+                            tmpResult.setStatus(false);
+                            tmpResult
+                                    .getCauses()
+                                    .add("FeatureSubsetStrategy if string should be in ['ALL', 'HALF', 'ONETHIRD' , 'TWOTHIRDS' , 'AUTO' , 'SQRT' , 'LOG2']");
                         }
                     }
                 }

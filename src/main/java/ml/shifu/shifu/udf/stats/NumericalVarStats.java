@@ -36,19 +36,11 @@ import org.slf4j.LoggerFactory;
 
 /**
  * NumericalVarStats class
- * 
- * @Nov 3, 2014
- * 
  */
 public class NumericalVarStats extends AbstractVarStats {
 
     private static Logger log = LoggerFactory.getLogger(NumericalVarStats.class);
 
-    /**
-     * @param modelConfig
-     * @param columnConfig
-     * @param valueThreshold
-     */
     public NumericalVarStats(ModelConfig modelConfig, ColumnConfig columnConfig, Double valueThreshold) {
         super(modelConfig, columnConfig, valueThreshold);
     }
@@ -105,7 +97,7 @@ public class NumericalVarStats extends AbstractVarStats {
             }
 
             Object value = element.get(1);
-            String tag = (String) element.get(2);
+            String tag = CommonUtils.trimTag((String) element.get(2));
             Double weight = (Double) element.get(3);
 
             double colVal = 0.0;

@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright [2012-2014] PayPal Software Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -18,6 +18,7 @@ package ml.shifu.shifu.core;
 import java.io.BufferedWriter;
 import java.io.IOException;
 import java.io.Writer;
+import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
@@ -44,6 +45,7 @@ import ml.shifu.shifu.fs.PathFinder;
 import ml.shifu.shifu.fs.ShifuFileUtils;
 import ml.shifu.shifu.util.CommonUtils;
 import ml.shifu.shifu.util.Constants;
+import ml.shifu.shifu.util.Environment;
 import ml.shifu.shifu.util.HDFSUtils;
 import ml.shifu.shifu.util.JSONUtils;
 
@@ -113,10 +115,6 @@ public class ConfusionMatrix {
         multiClassModelCnt = (evalScoreHeader.length - multiClassScore1Index) / modelConfig.getTags().size();
     }
 
-    /**
-     * @return
-     * @throws IOException
-     */
     private String[] getEvalScoreHeader() throws IOException {
         PathFinder pathFinder = new PathFinder(modelConfig);
         SourceType sourceType = evalConfig.getDataSet().getSource();
@@ -135,22 +133,26 @@ public class ConfusionMatrix {
     }
 
     public void bufferedComputeConfusionMatrixAndPerformance(long pigPosTags, long pigNegTags, double pigPosWeightTags,
-            double pigNegWeightTags, long records, int maxScore, int minScore) throws IOException {
+            double pigNegWeightTags, long records, double maxScore, double minScore) throws IOException {
         log.info("Max score is {}, min score is {}", maxScore, minScore);
 
         PathFinder pathFinder = new PathFinder(modelConfig);
 
+        double scoreScale = Double.parseDouble(Environment.getProperty(Constants.SHIFU_SCORE_SCALE,
+                Double.toString(Scorer.DEFAULT_SCORE_SCALE)));
         if(!CommonConstants.GBT_ALG_NAME.equalsIgnoreCase(modelConfig.getTrain().getAlgorithm())) {
             // if not GBT model, NN/LR, are all 0-1000, only for GBT, maxScore and minScore may not be 1000 and 0
-            maxScore = 1000;
-            minScore = 0;
+            maxScore = 1d * scoreScale;
+            minScore = 0d;
         }
+
+        DecimalFormat scoreFormat = new DecimalFormat("#.######");
 
         boolean gbtConvertToProb = isGBTConvertToProb();
         if(gbtConvertToProb) {
             log.debug(" set max score to 1000,raw  max is {}, raw min is {}", maxScore, minScore);
-            maxScore = 1000;
-            minScore = 0;
+            maxScore = 1d * scoreScale;
+            minScore = 0d;
         }
 
         SourceType sourceType = evalConfig.getDataSet().getSource();
@@ -252,12 +254,11 @@ public class ConfusionMatrix {
                 if(cnt == 1 && CommonConstants.GBT_ALG_NAME.equalsIgnoreCase(modelConfig.getAlgorithm())
                         && !gbtConvertToProb) {
                     // for gbdt, the result maybe not in [0, 1], set first score to make the upper score bould clear
-                    po.binLowestScore = score;
+                    po.binLowestScore = Double.parseDouble(scoreFormat.format(score));
                 }
 
                 ConfusionMatrixObject cmo = new ConfusionMatrixObject(prevCmo);
 
-                // TODO enable scaling factor
                 if(posTags.contains(tag)) {
                     // Positive Instance
                     cmo.setTp(cmo.getTp() + 1);
@@ -289,7 +290,7 @@ public class ConfusionMatrix {
                 // prevent 99%
                 // if((double) (i + 1) / records >= gainBin * binCapacity) {
                 double validRecordCnt = (double) (i + 1);
-                if ( validRecordCnt / (pigPosTags + pigNegTags) >= gainBin * binCapacity ) {
+                if(validRecordCnt / (pigPosTags + pigNegTags) >= gainBin * binCapacity) {
                     po.binNum = gainBin++;
                     gainList.add(po);
                 }
@@ -703,7 +704,7 @@ public class ConfusionMatrix {
                     continue;
                 }
 
-                String tag = raw[targetColumnIndex];
+                String tag = CommonUtils.trimTag(raw[targetColumnIndex]);
                 if(StringUtils.isBlank(tag)) {
                     if(rd.nextDouble() < 0.01) {
                         log.warn("Empty target value!!");

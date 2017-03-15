@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright [2012-2014] PayPal Software Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -112,13 +112,6 @@ public abstract class AbstractTrainer {
      */
     protected PathFinder pathFinder = null;
 
-    /**
-     * Constructor
-     *
-     * @param modelConfig
-     * @param trainerID
-     * @param dryRun
-     */
     public AbstractTrainer(ModelConfig modelConfig, int trainerID, Boolean dryRun) {
         this.random = new Random(System.currentTimeMillis() + trainerID);
 
@@ -126,7 +119,7 @@ public abstract class AbstractTrainer {
         this.trainerID = trainerID;
         this.dryRun = dryRun;
 
-        crossValidationRate = this.modelConfig.getCrossValidationRate();
+        crossValidationRate = this.modelConfig.getValidSetRate();
         if (crossValidationRate == null) {
             crossValidationRate = 0.2;
         }
@@ -139,11 +132,8 @@ public abstract class AbstractTrainer {
         pathFinder = new PathFinder(modelConfig);
     }
 
-    /**
+    /*
      * Set up the training dataset and validation dataset
-     *
-     * @param masterDataSet
-     * @throws IOException
      */
     public void setDataSet(MLDataSet masterDataSet) throws IOException {
         log.info("Setting Data Set...");
@@ -322,10 +312,8 @@ public abstract class AbstractTrainer {
         return (int) validSet.getRecordCount();
     }
 
-    /**
+    /*
      * set the training option, M/D
-     *
-     * @param trainingOption
      */
     public void setTrainingOption(String trainingOption) {
         this.trainingOption = trainingOption;
@@ -340,14 +328,8 @@ public abstract class AbstractTrainer {
         return validSet;
     }
 
-    /**
+    /*
      * load/save the sampling data from pre-initialization file
-     *
-     * @param sampleSize
-     * @param masterSize
-     * @param replaceable
-     * @return the list, the indexed of sampling data
-     * @throws IOException
      */
     private List<Integer> loadSampleInput(int sampleSize, int masterSize, boolean replaceable) throws IOException {
         List<Integer> list = null;
@@ -387,13 +369,8 @@ public abstract class AbstractTrainer {
         return list;
     }
 
-    /**
+    /*
      * randomizer the input data
-     *
-     * @param sampleSize
-     * @param masterSize
-     * @param replaceable
-     * @return the list of input
      */
     private List<Integer> randomSetSampleIndex(int sampleSize, int masterSize, boolean replaceable) {
         List<Integer> list = new ArrayList<Integer>();
@@ -411,10 +388,8 @@ public abstract class AbstractTrainer {
         return list;
     }
 
-    /**
+    /*
      * reset the weights in trainer
-     *
-     * @param classifier
      */
     public void resetParams(BasicML classifier) {
         if (modelConfig.isFixInitialInput()) {
@@ -426,18 +401,14 @@ public abstract class AbstractTrainer {
         }
     }
 
-    /**
+    /*
      * A training start function, and print the training error and validation errors
-     * @return
-     * @throws IOException
      */
     public abstract double train() throws IOException;
 
-    /**
+    /*
      * non-synchronously version update error
      *
-     * @param network
-     * @param dataSet
      * @return the standard error
      */
     public static Double calculateMSE(BasicNetwork network, MLDataSet dataSet) {

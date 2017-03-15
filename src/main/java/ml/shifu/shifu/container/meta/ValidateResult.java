@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright [2012-2014] PayPal Software Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -58,18 +58,18 @@ public class ValidateResult {
     }
 
     public void addCause(String reasonStr) {
-        if (causes == null) {
+        if(causes == null) {
             causes = new ArrayList<String>();
         }
 
-        if (StringUtils.isNotBlank(reasonStr)) {
+        if(StringUtils.isNotBlank(reasonStr)) {
             status = false;
             causes.add(reasonStr);
         }
     }
 
     public boolean clearCause() {
-        if (causes != null) {
+        if(causes != null) {
             causes.clear();
         }
 
@@ -79,7 +79,7 @@ public class ValidateResult {
 
     @Override
     public String toString() {
-        if (status) {
+        if(status) {
             return "[true]";
         } else {
             return "[false, " + causes.get(0) + "]";
@@ -90,9 +90,11 @@ public class ValidateResult {
      * Merge validation results together.
      * The status of total result will be false, if there is one false.
      * The total result will contain all causes
-     *
+     * 
      * @param resultA
+     *            the resultA
      * @param resultB
+     *            the resultB
      * @return result after merge
      */
     public static ValidateResult mergeResult(ValidateResult resultA, ValidateResult resultB) {

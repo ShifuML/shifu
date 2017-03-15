@@ -15,41 +15,62 @@
  */
 package ml.shifu.shifu.core.pmml;
 
+import java.io.FileInputStream;
+import java.io.InputStream;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 
+import ml.shifu.shifu.core.dtrain.dt.IndependentTreeModel;
+
+import org.apache.commons.io.IOUtils;
 import org.dmg.pmml.FieldName;
 import org.dmg.pmml.PMML;
-import org.jpmml.evaluator.ClassificationMap;
 import org.jpmml.evaluator.FieldValue;
-import org.jpmml.evaluator.TreeModelEvaluator;
+import org.jpmml.evaluator.MiningModelEvaluator;
+import org.testng.annotations.Test;
 
 public class TreeModelPmmlTest {
 
     @SuppressWarnings("unchecked")
-    public void testTreeModelPMML() throws Exception {
-        PMML pmml = PMMLUtils.loadPMML(getClass().getResource("/dttest/test/gbt.pmml").toString());
-        TreeModelEvaluator evaluator = new TreeModelEvaluator(pmml);
+    @Test
+    public void testTreeModel() throws Exception {
+        InputStream is = null;
+        try {
+            is = new FileInputStream("src/test/resources/dttest/model/model-5.gbt");
+            IndependentTreeModel model = IndependentTreeModel.loadFromStream(is);
+            PMML pmml = PMMLUtils.loadPMML("src/test/resources/dttest/model/model-5.pmml");
+            MiningModelEvaluator evaluator = new MiningModelEvaluator(pmml);
+            List<Map<FieldName, FieldValue>> input = CsvUtil.load(evaluator,
+                    "src/test/resources/dttest/data/tmdata.csv", "\\|");
 
-        List<Map<FieldName, FieldValue>> input = CsvUtil.load(evaluator,
-                getClass().getResource("/dttest/test/tmdata.csv").toString(), "|");
+            for(Map<FieldName, FieldValue> map: input) {
+                Map<String, Object> newMap = new HashMap<String, Object>();
+                Map<FieldName, Double> regressionTerm = (Map<FieldName, Double>) evaluator.evaluate(map);
+                double pmmlScore = 0d;
+                for(Map.Entry<FieldName, Double> entry: regressionTerm.entrySet()) {
+                    pmmlScore = entry.getValue() * 1000;
+                }
+                for(Entry<FieldName, FieldValue> entry: map.entrySet()) {
+                    FieldName key = entry.getKey();
+                    FieldValue value = entry.getValue();
 
-        for(Map<FieldName, FieldValue> maps: input) {
-            switch(evaluator.getModel().getFunctionName()) {
-                case REGRESSION:
-                    Map<FieldName, Double> regressionTerm = (Map<FieldName, Double>) evaluator.evaluate(maps);
-                    for(Map.Entry<FieldName, Double> entry: regressionTerm.entrySet())
-                        System.out.println(entry.getValue() * 1000);
-                    break;
-                case CLASSIFICATION:
-                    Map<FieldName, ClassificationMap<String>> classificationTerm = (Map<FieldName, ClassificationMap<String>>) evaluator
-                            .evaluate(maps);
-                    for(ClassificationMap<String> cMap: classificationTerm.values()) {
-                        for(Map.Entry<String, Double> entry: cMap.entrySet())
-                            System.out.println(entry.getValue() * 1000);
+                    switch(value.getOpType()) {
+                        case CONTINUOUS:
+                            newMap.put(key.getValue(), Double.parseDouble(value.getValue().toString()));
+                            break;
+                        case CATEGORICAL:
+                            newMap.put(key.getValue(), value.getValue().toString());
+                            break;
                     }
-                    break;
+                }
+                double[] results = model.compute(newMap);
+                double ownScore = results[0] * 1000;
+                org.testng.Assert.assertTrue(Math.abs(pmmlScore - ownScore) <= 1);
             }
+        } finally {
+            IOUtils.closeQuietly(is);
         }
     }
 

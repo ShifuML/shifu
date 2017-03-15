@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright [2012-2014] PayPal Software Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -16,6 +16,7 @@
 package ml.shifu.shifu.pig;
 
 import java.io.ByteArrayInputStream;
+import java.io.File;
 import java.io.IOException;
 import java.util.Map;
 
@@ -105,6 +106,10 @@ public class PigExecutor {
      *            - additional parameters for pig script
      * @param sourceType
      *            - the mode run pig: pig-local/pig-hdfs
+     * @param confMap
+     *            the configuration map instance
+     * @param pathFinder
+     *            the path finder
      * @throws IOException
      *             throw IOException when loading the parameter from @ModelConfig
      */
@@ -131,7 +136,14 @@ public class PigExecutor {
         }
 
         log.debug("Pig submit parameters: {}", pigParamsMap);
-        pigServer.registerScript(pigScriptPath, pigParamsMap);
+        if(new File(pigScriptPath).isAbsolute()) {
+            log.info("Pig script absolute path is {}", pigScriptPath);
+            pigServer.registerScript(pigScriptPath, pigParamsMap);
+        } else {
+            log.info("Pig script relative path is {}", pigScriptPath);
+            pigServer.registerScript(PigExecutor.class.getClassLoader().getResourceAsStream(pigScriptPath),
+                    pigParamsMap);
+        }
     }
 
     public void submitJob(SourceType sourceType, String pigScripts) throws IOException {
@@ -183,6 +195,8 @@ public class PigExecutor {
     /**
      * Check if tez version is ok to run. In hdp 2.4.0.2.1.2.0-402, with such error 'NoClassDefFoundError:
      * org/apache/tez/runtime/library/input/OrderedGroupedKVInput'
+     * 
+     * @return if is tez running
      */
     private boolean isTezRunnable() {
         boolean isTezRunnable = true;

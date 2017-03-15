@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright [2012-2014] PayPal Software Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -27,26 +27,26 @@ import org.apache.commons.collections.CollectionUtils;
 public class ScoreObject {
 
     // Inputs
-    private List<Integer> scores;
+    private List<Double> scores;
     private Object tag;
 
     // Derived
-    private Integer meanScore = 0;
-    private Integer maxScore = -Integer.MAX_VALUE;
-    private Integer minScore = Integer.MAX_VALUE;
-    private Integer medianScore = 0;
+    private double meanScore = 0;
+    private double maxScore = -Integer.MAX_VALUE;
+    private double minScore = Integer.MAX_VALUE;
+    private double medianScore = 0;
 
-    public ScoreObject(List<Integer> scores, Object tag) {
+    public ScoreObject(List<Double> scores, Object tag) {
         this(scores, tag, new ArrayList<Integer>());
     }
 
-    public ScoreObject(List<Integer> scores, Object tag, List<Integer> modelSizeList) {
+    public ScoreObject(List<Double> scores, Object tag, List<Integer> modelSizeList) {
         this.scores = scores;
         this.tag = tag;
 
         int modelSizeSum = 0;
         for(int i = 0; i < scores.size(); i++) {
-            Integer score = scores.get(i);
+            Double score = scores.get(i);
             // by default model size is 1 per each model
             int modelSize = 1;
             if(modelSizeList.size() > 0) {
@@ -58,7 +58,7 @@ public class ScoreObject {
             minScore = Math.min(minScore, score);
         }
 
-        List<Integer> tmpScoreList = new ArrayList<Integer>(scores);
+        List<Double> tmpScoreList = new ArrayList<Double>(scores);
         Collections.sort(tmpScoreList);
 
         if(CollectionUtils.isNotEmpty(tmpScoreList)) {
@@ -67,11 +67,11 @@ public class ScoreObject {
         }
     }
 
-    public List<Integer> getScores() {
+    public List<Double> getScores() {
         return scores;
     }
 
-    public void setScores(List<Integer> scores) {
+    public void setScores(List<Double> scores) {
         this.scores = scores;
     }
 
@@ -83,35 +83,35 @@ public class ScoreObject {
         this.tag = tag;
     }
 
-    public Integer getMaxScore() {
+    public double getMaxScore() {
         return maxScore;
     }
 
-    public void setMaxScore(Integer maxScore) {
+    public void setMaxScore(double maxScore) {
         this.maxScore = maxScore;
     }
 
-    public Integer getMinScore() {
+    public double getMinScore() {
         return minScore;
     }
 
-    public void setMinScore(Integer minScore) {
+    public void setMinScore(double minScore) {
         this.minScore = minScore;
     }
 
-    public Integer getMedianScore() {
+    public double getMedianScore() {
         return medianScore;
     }
 
-    public void setMedianScore(Integer medianScore) {
+    public void setMedianScore(double medianScore) {
         this.medianScore = medianScore;
     }
 
-    public Integer getMeanScore() {
+    public double getMeanScore() {
         return meanScore;
     }
 
-    public void setMeanScore(Integer meanScore) {
+    public void setMeanScore(double meanScore) {
         this.meanScore = meanScore;
     }
 

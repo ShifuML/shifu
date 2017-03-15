@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright [2012-2014] PayPal Software Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -15,25 +15,17 @@
  */
 package ml.shifu.shifu.core;
 
+import java.io.IOException;
+import java.util.List;
+
 import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.container.obj.ModelConfig;
 import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
-import ml.shifu.shifu.core.alg.NNTrainer;
 import ml.shifu.shifu.util.CommonUtils;
-import org.encog.ml.data.MLDataPair;
-import org.encog.ml.data.MLDataSet;
-import org.encog.ml.data.basic.BasicMLData;
-import org.encog.ml.data.basic.BasicMLDataPair;
-import org.encog.ml.data.basic.BasicMLDataSet;
+
 import org.testng.Assert;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.Test;
-
-import java.io.IOException;
-import java.util.Date;
-import java.util.List;
-import java.util.Random;
-
 
 public class VariableSelectorTest {
 
@@ -76,73 +68,73 @@ public class VariableSelectorTest {
         Assert.assertEquals(i, modelConfig.getVarSelectFilterNum());
     }
 
-    @Test
-    public void testGetMSE() throws IOException {
-        Random random = new Random(new Date().getTime());
-
-        double[] input = new double[modelConfig.getVarSelectFilterNum()];
-        MLDataSet set = new BasicMLDataSet();
-        for (int j = 0; j < 100; j++) {
-            for (int i = 0; i < modelConfig.getVarSelectFilterNum(); i++) {
-                input[i] = random.nextDouble();
-            }
-
-            double[] ideal = new double[1];
-            ideal[0] = random.nextInt(2);
-            MLDataPair pair = new BasicMLDataPair(new BasicMLData(input),
-                    new BasicMLData(ideal));
-
-            set.add(pair);
-        }
-
-        NNTrainer trainer = new NNTrainer(modelConfig, 0, false);
-        trainer.setBaseMSE(100.);
-        trainer.setDataSet(set);
-        trainer.buildNetwork();
-
-        //case 1
-        modelConfig.getVarSelect().setWrapperBy("S");
-        VariableSelector selector = new VariableSelector(modelConfig, columnConfigList);
-        selector.selectByFilter();
-        trainer.setBaseMSE(100.);
-        selector.selectByWrapper(trainer);
-
-        int selectedNum = 0;
-        for (ColumnConfig config : columnConfigList) {
-            if (config.isFinalSelect()) {
-                selectedNum++;
-            }
-        }
-        Assert.assertEquals(selectedNum, 20);
-
-        //case 2
-        modelConfig.getVarSelect().setWrapperBy("A");
-        modelConfig.getVarSelect().setWrapperNum(20);
-        selector = new VariableSelector(modelConfig, columnConfigList);
-        trainer.setBaseMSE(100.);
-        selector.selectByWrapper(trainer);
-
-        selectedNum = 0;
-        for (ColumnConfig config : columnConfigList) {
-            if (config.isFinalSelect()) {
-                selectedNum++;
-            }
-        }
-        Assert.assertEquals(selectedNum, 20);
-
-        //case 3
-        modelConfig.getVarSelect().setWrapperBy("R");
-        modelConfig.getVarSelect().setWrapperNum(20);
-        selector = new VariableSelector(modelConfig, columnConfigList);
-        trainer.setBaseMSE(100.);
-        selector.selectByWrapper(trainer);
-        selectedNum = 0;
-        for (ColumnConfig config : columnConfigList) {
-            if (config.isFinalSelect()) {
-                selectedNum++;
-            }
-        }
-        Assert.assertEquals(selectedNum, 20);
-    }
+//    @Test
+//    public void testGetMSE() throws IOException {
+//        Random random = new Random(new Date().getTime());
+//
+//        double[] input = new double[modelConfig.getVarSelectFilterNum()];
+//        MLDataSet set = new BasicMLDataSet();
+//        for (int j = 0; j < 100; j++) {
+//            for (int i = 0; i < modelConfig.getVarSelectFilterNum(); i++) {
+//                input[i] = random.nextDouble();
+//            }
+//
+//            double[] ideal = new double[1];
+//            ideal[0] = random.nextInt(2);
+//            MLDataPair pair = new BasicMLDataPair(new BasicMLData(input),
+//                    new BasicMLData(ideal));
+//
+//            set.add(pair);
+//        }
+//
+//        NNTrainer trainer = new NNTrainer(modelConfig, 0, false);
+//        trainer.setBaseMSE(100.);
+//        trainer.setDataSet(set);
+//        trainer.buildNetwork();
+//
+//        //case 1
+//        modelConfig.getVarSelect().setWrapperBy("S");
+//        VariableSelector selector = new VariableSelector(modelConfig, columnConfigList);
+//        selector.selectByFilter();
+//        trainer.setBaseMSE(100.);
+//        selector.selectByWrapper(trainer);
+//
+//        int selectedNum = 0;
+//        for (ColumnConfig config : columnConfigList) {
+//            if (config.isFinalSelect()) {
+//                selectedNum++;
+//            }
+//        }
+//        Assert.assertEquals(selectedNum, 20);
+//
+//        //case 2
+//        modelConfig.getVarSelect().setWrapperBy("A");
+//        modelConfig.getVarSelect().setWrapperNum(20);
+//        selector = new VariableSelector(modelConfig, columnConfigList);
+//        trainer.setBaseMSE(100.);
+//        selector.selectByWrapper(trainer);
+//
+//        selectedNum = 0;
+//        for (ColumnConfig config : columnConfigList) {
+//            if (config.isFinalSelect()) {
+//                selectedNum++;
+//            }
+//        }
+//        Assert.assertEquals(selectedNum, 20);
+//
+//        //case 3
+//        modelConfig.getVarSelect().setWrapperBy("R");
+//        modelConfig.getVarSelect().setWrapperNum(20);
+//        selector = new VariableSelector(modelConfig, columnConfigList);
+//        trainer.setBaseMSE(100.);
+//        selector.selectByWrapper(trainer);
+//        selectedNum = 0;
+//        for (ColumnConfig config : columnConfigList) {
+//            if (config.isFinalSelect()) {
+//                selectedNum++;
+//            }
+//        }
+//        Assert.assertEquals(selectedNum, 20);
+//    }
 
 }

@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright [2012-2014] PayPal Software Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -15,34 +15,8 @@
  */
 package ml.shifu.shifu.util;
 
-import com.google.common.base.Function;
-import com.google.common.base.Splitter;
-import com.google.common.collect.Collections2;
-import com.google.common.collect.Lists;
-
-import org.apache.commons.collections.CollectionUtils;
-import org.apache.commons.collections.Predicate;
-import org.apache.commons.io.IOUtils;
-import org.apache.commons.lang.ArrayUtils;
-import org.apache.commons.lang.StringUtils;
-import org.apache.hadoop.fs.FSDataInputStream;
-import org.apache.hadoop.fs.FileStatus;
-import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.PathFilter;
-import org.apache.pig.backend.executionengine.ExecException;
-import org.apache.pig.data.Tuple;
-import org.encog.ml.BasicML;
-import org.encog.ml.data.MLDataPair;
-import org.encog.ml.data.basic.BasicMLData;
-import org.encog.ml.data.basic.BasicMLDataPair;
-import org.encog.neural.networks.BasicNetwork;
-import org.encog.persist.EncogDirectoryPersistence;
-import org.encog.persist.PersistorRegistry;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import java.io.BufferedReader;
+import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FilenameFilter;
@@ -63,8 +37,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
+import java.util.TreeMap;
 
-import ml.shifu.guagua.GuaguaRuntimeException;
 import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.container.obj.ColumnConfig.ColumnFlag;
 import ml.shifu.shifu.container.obj.ColumnConfig.ColumnType;
@@ -78,10 +52,41 @@ import ml.shifu.shifu.core.TreeModel;
 import ml.shifu.shifu.core.dtrain.CommonConstants;
 import ml.shifu.shifu.core.dtrain.dataset.PersistBasicFloatNetwork;
 import ml.shifu.shifu.core.dtrain.lr.LogisticRegressionContants;
+import ml.shifu.shifu.core.model.ModelSpec;
 import ml.shifu.shifu.exception.ShifuErrorCode;
 import ml.shifu.shifu.exception.ShifuException;
 import ml.shifu.shifu.fs.PathFinder;
 import ml.shifu.shifu.fs.ShifuFileUtils;
+
+import org.apache.commons.collections.CollectionUtils;
+import org.apache.commons.collections.Predicate;
+import org.apache.commons.io.IOUtils;
+import org.apache.commons.lang.ArrayUtils;
+import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang.math.NumberUtils;
+import org.apache.commons.lang3.tuple.MutablePair;
+import org.apache.hadoop.fs.FSDataInputStream;
+import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.LocatedFileStatus;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.PathFilter;
+import org.apache.hadoop.fs.RemoteIterator;
+import org.apache.pig.backend.executionengine.ExecException;
+import org.apache.pig.data.Tuple;
+import org.encog.ml.BasicML;
+import org.encog.ml.data.MLDataPair;
+import org.encog.ml.data.basic.BasicMLData;
+import org.encog.ml.data.basic.BasicMLDataPair;
+import org.encog.persist.EncogDirectoryPersistence;
+import org.encog.persist.PersistorRegistry;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import com.google.common.base.Function;
+import com.google.common.base.Splitter;
+import com.google.common.collect.Collections2;
+import com.google.common.collect.Lists;
 
 /**
  * {@link CommonUtils} is used to for almost all kinds of utility function in this framework.
@@ -99,8 +104,14 @@ public final class CommonUtils {
     /**
      * Sync up all local configuration files to HDFS.
      * 
+     * @param modelConfig
+     *            the model config
+     * 
+     * @return if copy successful
+     * 
      * @throws IOException
      *             If any exception on HDFS IO or local IO.
+     * 
      * @throws NullPointerException
      *             If parameter {@code modelConfig} is null
      */
@@ -160,8 +171,11 @@ public final class CommonUtils {
      * Sync-up the evalulation data into HDFS
      * 
      * @param modelConfig
+     *            - ModelConfig
      * @param evalName
+     *            eval name in ModelConfig
      * @throws IOException
+     *             - error occur when copying data
      */
     @SuppressWarnings("deprecation")
     public static void copyEvalDataFromLocalToHDFS(ModelConfig modelConfig, String evalName) throws IOException {
@@ -183,11 +197,21 @@ public final class CommonUtils {
                 hdfs.copyFromLocalFile(new Path(evalConfig.getScoreMetaColumnNameFile()),
                         new Path(pathFinder.getEvalSetPath(evalConfig)));
             }
+
+            // sync evaluation meta.column.file to hdfs
+            if(StringUtils.isNotBlank(evalConfig.getDataSet().getMetaColumnNameFile())) {
+                hdfs.copyFromLocalFile(new Path(evalConfig.getDataSet().getMetaColumnNameFile()),
+                        new Path(pathFinder.getEvalSetPath(evalConfig)));
+            }
         }
     }
 
     /**
      * Load ModelConfig from local json ModelConfig.json file.
+     * 
+     * @return model config instance from default model config file
+     * @throws IOException
+     *             any io exception to load file
      */
     public static ModelConfig loadModelConfig() throws IOException {
         return loadModelConfig(Constants.LOCAL_MODEL_CONFIG_JSON, SourceType.LOCAL);
@@ -196,8 +220,14 @@ public final class CommonUtils {
     /**
      * Load model configuration from the path and the source type.
      * 
+     * @param path
+     *            model file path
+     * @param sourceType
+     *            source type of model file
+     * @return model config instance
      * @throws IOException
      *             if any IO exception in parsing json.
+     * 
      * @throws IllegalArgumentException
      *             if {@code path} is null or empty, if sourceType is null.
      */
@@ -214,10 +244,16 @@ public final class CommonUtils {
     }
 
     /**
-     * Load reason code map and change it to column->resonCode map.
+     * Load reason code map and change it to column &gt; resonCode map.
      * 
+     * @param path
+     *            reason code path
+     * @param sourceType
+     *            source type of file
+     * @return reason code map
      * @throws IOException
      *             if any IO exception in parsing json.
+     * 
      * @throws IllegalArgumentException
      *             if {@code path} is null or empty, if sourceType is null.
      */
@@ -239,8 +275,18 @@ public final class CommonUtils {
     /**
      * Load JSON instance
      * 
+     * @param path
+     *            file path
+     * @param sourceType
+     *            source type: hdfs or local
+     * @param clazz
+     *            class of instance
+     * @param <T>
+     *            class type to load
+     * @return instance from json file
      * @throws IOException
      *             if any IO exception in parsing json.
+     * 
      * @throws IllegalArgumentException
      *             if {@code path} is null or empty, if sourceType is null.
      */
@@ -259,6 +305,7 @@ public final class CommonUtils {
     /**
      * Load column configuration list.
      * 
+     * @return column config list
      * @throws IOException
      *             if any IO exception in parsing json.
      */
@@ -269,6 +316,11 @@ public final class CommonUtils {
     /**
      * Load column configuration list.
      * 
+     * @param path
+     *            file path
+     * @param sourceType
+     *            source type: hdfs or local
+     * @return column config list
      * @throws IOException
      *             if any IO exception in parsing json.
      * @throws IllegalArgumentException
@@ -280,6 +332,10 @@ public final class CommonUtils {
 
     /**
      * Return final selected column collection.
+     * 
+     * @param columnConfigList
+     *            column config list
+     * @return collection of column config list for final select is true
      */
     public static Collection<ColumnConfig> getFinalSelectColumnConfigList(Collection<ColumnConfig> columnConfigList) {
         return Collections2.filter(columnConfigList, new com.google.common.base.Predicate<ColumnConfig>() {
@@ -327,8 +383,10 @@ public final class CommonUtils {
         String[] fields = null;
         boolean isSchemaProvided = true;
         if(StringUtils.isNotBlank(evalConfig.getDataSet().getHeaderPath())) {
-            fields = CommonUtils.getHeaders(evalConfig.getDataSet().getHeaderPath(), evalConfig.getDataSet()
-                    .getHeaderDelimiter(), evalConfig.getDataSet().getSource());
+            String delimiter = StringUtils.isBlank(evalConfig.getDataSet().getHeaderDelimiter()) ? evalConfig
+                    .getDataSet().getDataDelimiter() : evalConfig.getDataSet().getHeaderDelimiter();
+            fields = CommonUtils.getHeaders(evalConfig.getDataSet().getHeaderPath(), delimiter, evalConfig.getDataSet()
+                    .getSource());
         } else {
             fields = CommonUtils.takeFirstLine(evalConfig.getDataSet().getDataPath(), StringUtils.isBlank(evalConfig
                     .getDataSet().getHeaderDelimiter()) ? evalConfig.getDataSet().getDataDelimiter() : evalConfig
@@ -359,10 +417,19 @@ public final class CommonUtils {
     /**
      * Return header column list from header file.
      * 
+     * @param pathHeader
+     *            header path
+     * @param delimiter
+     *            the delimiter of headers
+     * @param sourceType
+     *            source type: hdfs or local
+     * @return headers array
      * @throws IOException
      *             if any IO exception in reading file.
+     * 
      * @throws IllegalArgumentException
      *             if sourceType is null, if pathHeader is null or empty, if delimiter is null or empty.
+     * 
      * @throws RuntimeException
      *             if first line of pathHeader is null or empty.
      */
@@ -373,10 +440,21 @@ public final class CommonUtils {
     /**
      * Return header column array from header file.
      * 
+     * @param pathHeader
+     *            header path
+     * @param delimiter
+     *            the delimiter of headers
+     * @param sourceType
+     *            source type: hdfs or local
+     * @param isFull
+     *            if full header name including name space
+     * @return headers array
      * @throws IOException
      *             if any IO exception in reading file.
+     * 
      * @throws IllegalArgumentException
      *             if sourceType is null, if pathHeader is null or empty, if delimiter is null or empty.
+     * 
      * @throws RuntimeException
      *             if first line of pathHeader is null or empty.
      */
@@ -429,15 +507,21 @@ public final class CommonUtils {
 
     /**
      * Get full column name from pig header. For example, one column is a::b, return a_b. If b, return b.
+     * 
+     * @param raw
+     *            raw name
+     * @return full name including namespace
      */
     public static String getFullPigHeaderColumnName(String raw) {
         return raw == null ? raw : raw.replaceAll(Constants.PIG_COLUMN_SEPARATOR, Constants.PIG_FULL_COLUMN_SEPARATOR);
-        // return raw;
     }
 
     /**
      * Get relative column name from pig header. For example, one column is a::b, return b. If b, return b.
      * 
+     * @param raw
+     *            raw name
+     * @return relative name including namespace
      * @throws NullPointerException
      *             if parameter raw is null.
      */
@@ -450,8 +534,14 @@ public final class CommonUtils {
      * Given a column value, return bin list index. Return 0 for Category because of index 0 is started from
      * NEGATIVE_INFINITY.
      * 
+     * @param columnConfig
+     *            column config
+     * @param columnVal
+     *            value of the column
+     * @return bin index of than value
      * @throws IllegalArgumentException
      *             if input is null or empty.
+     * 
      * @throws NumberFormatException
      *             if columnVal does not contain a parsable number.
      */
@@ -484,6 +574,10 @@ public final class CommonUtils {
      * 
      * @param binBoundary
      *            bin boundary list which should be sorted.
+     * @param value
+     *            value of column
+     * @return bin index
+     * 
      * @throws IllegalArgumentException
      *             if binBoundary is null or empty.
      */
@@ -504,6 +598,12 @@ public final class CommonUtils {
      * Common split function to ignore special character like '|'. It's better to return a list while many calls in our
      * framework using string[].
      * 
+     * @param raw
+     *            raw string
+     * @param delimiter
+     *            the delimeter to split the string
+     * @return array of split Strings
+     * 
      * @throws IllegalArgumentException
      *             {@code raw} and {@code delimiter} is null or empty.
      */
@@ -514,6 +614,11 @@ public final class CommonUtils {
     /**
      * Common split function to ignore special character like '|'.
      * 
+     * @param raw
+     *            raw string
+     * @param delimiter
+     *            the delimeter to split the string
+     * @return list of split Strings
      * @throws IllegalArgumentException
      *             {@code raw} and {@code delimiter} is null or empty.
      */
@@ -532,8 +637,12 @@ public final class CommonUtils {
     /**
      * Get target column.
      * 
+     * @param columnConfigList
+     *            column config list
+     * @return target column index
      * @throws IllegalArgumentException
      *             if columnConfigList is null or empty.
+     * 
      * @throws IllegalStateException
      *             if no target column can be found.
      */
@@ -557,10 +666,19 @@ public final class CommonUtils {
     /**
      * Load basic models from files.
      * 
+     * @param modelConfig
+     *            ModelConfig
+     * @param columnConfigList
+     *            column config list
+     * @param evalConfig
+     *            eval config instance
+     * @return the list of models
      * @throws IOException
      *             if any IO exception in reading model file.
+     * 
      * @throws IllegalArgumentException
      *             if {@code modelConfig} is, if invalid model algorithm .
+     * 
      * @throws IllegalStateException
      *             if not HDFS or LOCAL source type or algorithm not supported.
      */
@@ -580,6 +698,12 @@ public final class CommonUtils {
 
     /**
      * Get bin index by binary search. The last bin in <code>binBoundary</code> is missing value bin.
+     * 
+     * @param binBoundary
+     *            bin boundary list which should be sorted.
+     * @param dVal
+     *            value of column
+     * @return bin index
      */
     public static int getBinIndex(List<Double> binBoundary, Double dVal) {
         assert binBoundary != null && binBoundary.size() > 0;
@@ -624,10 +748,23 @@ public final class CommonUtils {
     /**
      * Load basic models from files.
      * 
+     * @param modelConfig
+     *            model config
+     * @param columnConfigList
+     *            list of column config
+     * @param evalConfig
+     *            eval confg
+     * @param sourceType
+     *            source type
+     * @param gbtConvertToProb
+     *            convert gbt score to prob or not
+     * @return list of models
      * @throws IOException
      *             if any IO exception in reading model file.
+     * 
      * @throws IllegalArgumentException
      *             if {@code modelConfig} is, if invalid model algorithm .
+     * 
      * @throws IllegalStateException
      *             if not HDFS or LOCAL source type or algorithm not supported.
      */
@@ -659,7 +796,9 @@ public final class CommonUtils {
 
         List<FileStatus> listStatus = findModels(modelConfig, evalConfig, sourceType);
         if(CollectionUtils.isEmpty(listStatus)) {
-            throw new ShifuException(ShifuErrorCode.ERROR_MODEL_FILE_NOT_FOUND);
+            // throw new ShifuException(ShifuErrorCode.ERROR_MODEL_FILE_NOT_FOUND);
+            // disable exception, since we there maybe sub-models
+            return listStatus;
         }
 
         // to avoid the *unix and windows file list order
@@ -688,15 +827,20 @@ public final class CommonUtils {
     /**
      * Loading model according to existing model path.
      * 
+     * @param modelConfig
+     *            model config
+     * @param columnConfigList
+     *            list of column config
      * @param modelPath
      *            the path to store model
      * @param fs
      *            file system used to store model
+     * @param gbtConvertToProb
+     *            convert gbt score to prob or not
      * @return model object or null if no modelPath file,
+     * 
      * @throws IOException
      *             if loading file for any IOException
-     * @throws GuaguaRuntimeException
-     *             if any exception to load model object and cast to {@link BasicNetwork}
      */
     public static BasicML loadModel(ModelConfig modelConfig, List<ColumnConfig> columnConfigList, Path modelPath,
             FileSystem fs, boolean gbtConvertToProb) throws IOException {
@@ -740,12 +884,17 @@ public final class CommonUtils {
      * 
      * @param modelConfig
      *            - @ModelConfig, need this, since the model file may exist in HDFS
+     * 
      * @param evalConfig
      *            - @EvalConfig, maybe null
+     * 
      * @param sourceType
      *            - Where is file system
+     * 
      * @return - @FileStatus array for all found models
+     * 
      * @throws IOException
+     *             io exception to load files
      */
     public static List<FileStatus> findModels(ModelConfig modelConfig, EvalConfig evalConfig, SourceType sourceType)
             throws IOException {
@@ -773,6 +922,132 @@ public final class CommonUtils {
         return fileList;
     }
 
+    public static List<ModelSpec> loadSubModels(ModelConfig modelConfig, List<ColumnConfig> columnConfigList,
+            EvalConfig evalConfig, SourceType sourceType, Boolean gbtConvertToProb) {
+        List<ModelSpec> modelSpecs = new ArrayList<ModelSpec>();
+        FileSystem fs = ShifuFileUtils.getFileSystemBySourceType(sourceType);
+
+        // we have to register PersistBasicFloatNetwork for loading such models
+        PersistorRegistry.getInstance().add(new PersistBasicFloatNetwork());
+        PathFinder pathFinder = new PathFinder(modelConfig);
+        String modelsPath = null;
+
+        if(evalConfig == null || StringUtils.isEmpty(evalConfig.getModelsPath())) {
+            modelsPath = pathFinder.getModelsPath(sourceType);
+        } else {
+            modelsPath = evalConfig.getModelsPath();
+        }
+
+        try {
+            FileStatus[] fsArr = fs.listStatus(new Path(modelsPath));
+            for(FileStatus fileStatus: fsArr) {
+                if(fileStatus.isDirectory()) {
+                    ModelSpec modelSpec = loadSubModelSpec(modelConfig, columnConfigList, fileStatus, sourceType,
+                            gbtConvertToProb);
+                    if(modelSpec != null) {
+                        modelSpecs.add(modelSpec);
+                    }
+                }
+            }
+        } catch (IOException e) {
+            log.error("Error occurred when loading sub-models.", e);
+        }
+
+        return modelSpecs;
+    }
+
+    private static ModelSpec loadSubModelSpec(ModelConfig modelConfig, List<ColumnConfig> columnConfigList,
+            FileStatus fileStatus, SourceType sourceType, Boolean gbtConvertToProb) throws IOException {
+        FileSystem fs = ShifuFileUtils.getFileSystemBySourceType(sourceType);
+
+        String subModelName = fileStatus.getPath().getName();
+        List<FileStatus> modelFileStats = new ArrayList<FileStatus>();
+        ALGORITHM algorithm = getModelsAlgAndSpecFiles(fileStatus, sourceType, modelFileStats);
+
+        ModelSpec modelSpec = null;
+        if(CollectionUtils.isNotEmpty(modelFileStats)) {
+            Collections.sort(modelFileStats, new Comparator<FileStatus>() {
+                @Override
+                public int compare(FileStatus fa, FileStatus fb) {
+                    return fa.getPath().getName().compareTo(fb.getPath().getName());
+                }
+            });
+            List<BasicML> models = new ArrayList<BasicML>();
+            for(FileStatus f: modelFileStats) {
+                models.add(loadModel(modelConfig, columnConfigList, f.getPath(), fs, gbtConvertToProb));
+            }
+            modelSpec = new ModelSpec(subModelName, algorithm, models);
+        }
+
+        return modelSpec;
+    }
+
+    public static ALGORITHM getModelsAlgAndSpecFiles(FileStatus fileStatus, SourceType sourceType,
+            List<FileStatus> modelFileStats) throws IOException {
+        assert modelFileStats != null;
+
+        FileSystem fs = ShifuFileUtils.getFileSystemBySourceType(sourceType);
+        ALGORITHM algorithm = null;
+
+        FileStatus[] fileStatsArr = fs.listStatus(fileStatus.getPath());
+        if(fileStatsArr != null) {
+            for(FileStatus fls: fileStatsArr) {
+                if(!fls.isDirectory()) {
+                    String fileName = fls.getPath().getName();
+
+                    if(algorithm == null) {
+                        if(fileName.endsWith("." + ALGORITHM.NN.name().toLowerCase())) {
+                            algorithm = ALGORITHM.NN;
+                        } else if(fileName.endsWith("." + ALGORITHM.LR.name().toLowerCase())) {
+                            algorithm = ALGORITHM.LR;
+                        } else if(fileName.endsWith("." + ALGORITHM.GBT.name().toLowerCase())) {
+                            algorithm = ALGORITHM.GBT;
+                        }
+                    }
+
+                    if(algorithm != null && fileName.endsWith("." + algorithm.name().toLowerCase())) {
+                        modelFileStats.add(fls);
+                    }
+                }
+            }
+        }
+
+        return algorithm;
+    }
+
+    public static Map<String, Integer> getSubModelsCnt(ModelConfig modelConfig, List<ColumnConfig> columnConfigList,
+            EvalConfig evalConfig, SourceType sourceType) throws IOException {
+        FileSystem fs = ShifuFileUtils.getFileSystemBySourceType(sourceType);
+        PathFinder pathFinder = new PathFinder(modelConfig);
+
+        String modelsPath = null;
+
+        if(evalConfig == null || StringUtils.isEmpty(evalConfig.getModelsPath())) {
+            modelsPath = pathFinder.getModelsPath(sourceType);
+        } else {
+            modelsPath = evalConfig.getModelsPath();
+        }
+
+        Map<String, Integer> subModelsCnt = new TreeMap<String, Integer>();
+
+        try {
+            FileStatus[] fsArr = fs.listStatus(new Path(modelsPath));
+            for(FileStatus fileStatus: fsArr) {
+                if(fileStatus.isDirectory()) {
+                    List<FileStatus> subModelSpecFiles = new ArrayList<FileStatus>();
+                    getModelsAlgAndSpecFiles(fileStatus, sourceType, subModelSpecFiles);
+                    if(CollectionUtils.isNotEmpty(subModelSpecFiles)) {
+                        subModelsCnt.put(fileStatus.getPath().getName(), subModelSpecFiles.size());
+                    }
+                }
+            }
+        } catch (IOException e) {
+            log.error("Error occurred when finnding sub-models.", e);
+        }
+
+        return subModelsCnt;
+    }
+
     public static class FileSuffixPathFilter implements PathFilter {
         private String fileSuffix;
 
@@ -786,16 +1061,26 @@ public final class CommonUtils {
         }
     }
 
+    public static List<BasicML> loadBasicModels(final String modelsPath, final ALGORITHM alg) throws IOException {
+        return loadBasicModels(modelsPath, alg, false);
+    }
+
     /**
      * Load neural network models from specified file path
      * 
      * @param modelsPath
      *            - a file or directory that contains .nn files
+     * @param alg
+     *            the algorithm
+     * @param isConvertToProb
+     *            if convert to prob for gbt model
      * @return - a list of @BasicML
+     * 
      * @throws IOException
      *             - throw exception when loading model files
      */
-    public static List<BasicML> loadBasicModels(final String modelsPath, final ALGORITHM alg) throws IOException {
+    public static List<BasicML> loadBasicModels(final String modelsPath, final ALGORITHM alg, boolean isConvertToProb)
+            throws IOException {
         if(modelsPath == null || alg == null || ALGORITHM.DT.equals(alg)) {
             throw new IllegalArgumentException("The model path shouldn't be null");
         }
@@ -831,6 +1116,8 @@ public final class CommonUtils {
                         models.add(BasicML.class.cast(EncogDirectoryPersistence.loadObject(is)));
                     } else if(ALGORITHM.LR.equals(alg)) {
                         models.add(LR.loadFromStream(is));
+                    } else if(ALGORITHM.GBT.equals(alg) || ALGORITHM.RF.equals(alg)) {
+                        models.add(TreeModel.loadFromStream(is, isConvertToProb));
                     }
                 } finally {
                     IOUtils.closeQuietly(is);
@@ -847,10 +1134,11 @@ public final class CommonUtils {
      * Return one HashMap Object contains keys in the first parameter, values in the second parameter. Before calling
      * this method, you should be aware that headers should be unique.
      * 
-     * @throws IllegalArgumentException
-     *             if lengths of two arrays are not the same.
-     * @throws NullPointerException
-     *             if header or data is null.
+     * @param header
+     *            - header that contains column name
+     * @param data
+     *            - raw data
+     * @return key-value map for variable
      */
     public static Map<String, String> getRawDataMap(String[] header, String[] data) {
         if(header.length != data.length) {
@@ -868,6 +1156,13 @@ public final class CommonUtils {
     /**
      * Return all parameters for pig execution.
      * 
+     * @param modelConfig
+     *            model config
+     * @param sourceType
+     *            source type
+     * @return map of configurations
+     * @throws IOException
+     *             any io exception
      * @throws IllegalArgumentException
      *             if modelConfig is null.
      */
@@ -879,6 +1174,7 @@ public final class CommonUtils {
 
         Map<String, String> pigParamMap = new HashMap<String, String>();
         pigParamMap.put(Constants.NUM_PARALLEL, Environment.getInt(Environment.HADOOP_NUM_PARALLEL, 400).toString());
+        log.info("jar path is {}", pathFinder.getJarPath());
         pigParamMap.put(Constants.PATH_JAR, pathFinder.getJarPath());
 
         pigParamMap.put(Constants.PATH_RAW_DATA, modelConfig.getDataSetRawPath());
@@ -906,6 +1202,15 @@ public final class CommonUtils {
     /**
      * Return all parameters for pig execution.
      * 
+     * @param modelConfig
+     *            model config
+     * @param sourceType
+     *            source type
+     * @param pathFinder
+     *            path finder instance
+     * @return map of configurations
+     * @throws IOException
+     *             any io exception
      * @throws IllegalArgumentException
      *             if modelConfig is null.
      */
@@ -919,6 +1224,7 @@ public final class CommonUtils {
         }
         Map<String, String> pigParamMap = new HashMap<String, String>();
         pigParamMap.put(Constants.NUM_PARALLEL, Environment.getInt(Environment.HADOOP_NUM_PARALLEL, 400).toString());
+        log.info("jar path is {}", pathFinder.getJarPath());
         pigParamMap.put(Constants.PATH_JAR, pathFinder.getJarPath());
 
         pigParamMap.put(Constants.PATH_RAW_DATA, modelConfig.getDataSetRawPath());
@@ -945,8 +1251,11 @@ public final class CommonUtils {
     /**
      * Change list str to List object with double type.
      * 
+     * @param str
+     *            str to be split
+     * @return list of double
      * @throws IllegalArgumentException
-     *             if str is not a valid list str: [1,2].
+     *             if str is not a valid list str.
      */
     public static List<Double> stringToDoubleList(String str) {
         List<String> list = checkAndReturnSplitCollections(str);
@@ -979,8 +1288,11 @@ public final class CommonUtils {
     }
 
     /**
-     * Change list str to List object with integer type.
+     * Change list str to List object with int type.
      * 
+     * @param str
+     *            str to be split
+     * @return list of int
      * @throws IllegalArgumentException
      *             if str is not a valid list str.
      */
@@ -997,6 +1309,9 @@ public final class CommonUtils {
     /**
      * Change list str to List object with string type.
      * 
+     * @param str
+     *            str to be split
+     * @return list of string
      * @throws IllegalArgumentException
      *             if str is not a valid list str.
      */
@@ -1013,6 +1328,11 @@ public final class CommonUtils {
     /**
      * Change list str to List object with string type.
      * 
+     * @param str
+     *            str to be split
+     * @param separator
+     *            the separator
+     * @return list of string
      * @throws IllegalArgumentException
      *             if str is not a valid list str.
      */
@@ -1026,7 +1346,7 @@ public final class CommonUtils {
         });
     }
 
-    /**
+    /*
      * Return map entries sorted by value.
      */
     public static <K, V extends Comparable<V>> List<Map.Entry<K, V>> getEntriesSortedByValues(Map<K, V> map) {
@@ -1045,6 +1365,13 @@ public final class CommonUtils {
     /**
      * Assemble map data to Encog standard input format with default cut off value.
      * 
+     * @param modelConfig
+     *            model config instance
+     * @param columnConfigList
+     *            column config list
+     * @param rawDataMap
+     *            raw data
+     * @return data pair instance
      * @throws NullPointerException
      *             if input is null
      * @throws NumberFormatException
@@ -1059,6 +1386,21 @@ public final class CommonUtils {
      * Assemble map data to Encog standard input format. If no variable selected(noVarSel = true), all candidate
      * variables will be selected.
      * 
+     * @param binCategoryMap
+     *            categorical map
+     * @param noVarSel
+     *            if after var select
+     * @param modelConfig
+     *            model config instance
+     * @param columnConfigList
+     *            column config list
+     * @param rawDataMap
+     *            raw data
+     * @param cutoff
+     *            cut off value
+     * @param alg
+     *            algorithm used in model
+     * @return data pair instance
      * @throws NullPointerException
      *             if input is null
      * @throws NumberFormatException
@@ -1066,7 +1408,7 @@ public final class CommonUtils {
      */
     public static MLDataPair assembleDataPair(Map<Integer, Map<String, Integer>> binCategoryMap, boolean noVarSel,
             ModelConfig modelConfig, List<ColumnConfig> columnConfigList, Map<String, ? extends Object> rawDataMap,
-            double cutoff) {
+            double cutoff, String alg) {
         double[] ideal = { Constants.DEFAULT_IDEAL_VALUE };
 
         List<Double> inputList = new ArrayList<Double>();
@@ -1085,7 +1427,7 @@ public final class CommonUtils {
                 if(!noVarSel) {
                     if(config != null && !config.isMeta() && !config.isTarget() && config.isFinalSelect()) {
                         String val = rawDataMap.get(key) == null ? null : rawDataMap.get(key).toString();
-                        if(CommonUtils.isDesicionTreeAlgorithm(modelConfig.getAlgorithm()) && config.isCategorical()) {
+                        if(CommonUtils.isDesicionTreeAlgorithm(alg) && config.isCategorical()) {
                             Integer index = binCategoryMap.get(config.getColumnNum()).get(val == null ? "" : val);
                             if(index == null) {
                                 // not in binCategories, should be missing value
@@ -1101,7 +1443,7 @@ public final class CommonUtils {
                 } else {
                     if(!config.isMeta() && !config.isTarget() && CommonUtils.isGoodCandidate(config)) {
                         String val = rawDataMap.get(key) == null ? null : rawDataMap.get(key).toString();
-                        if(CommonUtils.isDesicionTreeAlgorithm(modelConfig.getAlgorithm()) && config.isCategorical()) {
+                        if(CommonUtils.isDesicionTreeAlgorithm(alg) && config.isCategorical()) {
                             Integer index = binCategoryMap.get(config.getColumnNum()).get(val == null ? "" : val);
                             if(index == null) {
                                 // not in binCategories, should be missing value
@@ -1149,16 +1491,23 @@ public final class CommonUtils {
 
     public static boolean isHadoopConfigurationInjected(String key) {
         return key.startsWith("nn") || key.startsWith("guagua") || key.startsWith("shifu") || key.startsWith("mapred")
-                || key.startsWith("io") || key.startsWith("hadoop") || key.startsWith("yarn");
+                || key.startsWith("io") || key.startsWith("hadoop") || key.startsWith("yarn") || key.startsWith("pig")
+                || key.startsWith("hive") || key.startsWith("job");
     }
 
     /**
      * Assemble map data to Encog standard input format.
      * 
-     * @throws NullPointerException
-     *             if input is null
-     * @throws NumberFormatException
-     *             if column value is not number format.
+     * @param modelConfig
+     *            - ModelConfig
+     * @param columnConfigList
+     *            - ColumnConfig list
+     * @param rawDataMap
+     *            - raw input key-value map
+     * @param cutoff
+     *            - cutoff value when normalization
+     * @return
+     *         - input data pair for neural network
      */
     public static MLDataPair assembleDataPair(ModelConfig modelConfig, List<ColumnConfig> columnConfigList,
             Map<String, ? extends Object> rawDataMap, double cutoff) {
@@ -1195,7 +1544,7 @@ public final class CommonUtils {
         return new BasicMLDataPair(new BasicMLData(input), new BasicMLData(ideal));
     }
 
-    /**
+    /*
      * Expanding score by expandingFactor
      */
     public static long getExpandingScore(double d, int expandingFactor) {
@@ -1205,6 +1554,9 @@ public final class CommonUtils {
     /**
      * Return column name string with 'derived_' started
      * 
+     * @param columnConfigList
+     *            list of column config
+     * @return list of column names
      * @throws NullPointerException
      *             if modelConfig is null or columnConfigList is null.
      */
@@ -1236,13 +1588,20 @@ public final class CommonUtils {
     /**
      * Update target, listMeta, listForceSelect, listForceRemove
      * 
+     * @param modelConfig
+     *            model config list
+     * @param columnConfigList
+     *            the column config list
      * @throws IOException
+     *             any io exception
+     * 
      * @throws IllegalArgumentException
      *             if modelConfig is null or columnConfigList is null.
      */
     public static void updateColumnConfigFlags(ModelConfig modelConfig, List<ColumnConfig> columnConfigList)
             throws IOException {
         String targetColumnName = CommonUtils.getRelativePigHeaderColumnName(modelConfig.getTargetColumnName());
+        String weightColumnName = CommonUtils.getRelativePigHeaderColumnName(modelConfig.getWeightColumnName());
 
         Set<String> setCategorialColumns = new HashSet<String>();
         if(CollectionUtils.isNotEmpty(modelConfig.getCategoricalColumnNames())) {
@@ -1279,21 +1638,32 @@ public final class CommonUtils {
         for(ColumnConfig config: columnConfigList) {
             String varName = config.getColumnName();
 
-            if(targetColumnName.equals(varName)) {
+            if(weightColumnName.equals(varName)) {
+                config.setColumnFlag(ColumnFlag.Weight);
+                config.setFinalSelect(false); // reset final select
+            } else if(targetColumnName.equals(varName)) {
                 config.setColumnFlag(ColumnFlag.Target);
-                config.setColumnType(null);
+                config.setFinalSelect(false); // reset final select
             } else if(setMeta.contains(varName)) {
                 config.setColumnFlag(ColumnFlag.Meta);
-                config.setColumnType(null);
+                config.setFinalSelect(false); // reset final select
             } else if(setForceRemove.contains(varName)) {
                 config.setColumnFlag(ColumnFlag.ForceRemove);
+                config.setFinalSelect(false); // reset final select
             } else if(setForceSelect.contains(varName)) {
                 config.setColumnFlag(ColumnFlag.ForceSelect);
             }
 
-            // variable type is not related with variable flag
-            if(setCategorialColumns.contains(varName)) {
+            if(weightColumnName.equals(varName)) {
+                // weight column is numerical
+                config.setColumnType(ColumnType.N);
+            } else if(targetColumnName.equals(varName)) {
+                // target column is set to categorical column
                 config.setColumnType(ColumnType.C);
+            } else if(setCategorialColumns.contains(varName)) {
+                config.setColumnType(ColumnType.C);
+            } else {
+                config.setColumnType(ColumnType.N);
             }
         }
     }
@@ -1301,15 +1671,20 @@ public final class CommonUtils {
     /**
      * To check whether there is targetColumn in columns or not
      * 
+     * @param columns
+     *            column array
+     * @param targetColumn
+     *            target column
+     * 
      * @return true - if the columns contains targetColumn, or false
      */
-    public static boolean isColumnExists(String[] columns, String targetColunm) {
-        if(ArrayUtils.isEmpty(columns) || StringUtils.isBlank(targetColunm)) {
+    public static boolean isColumnExists(String[] columns, String targetColumn) {
+        if(ArrayUtils.isEmpty(columns) || StringUtils.isBlank(targetColumn)) {
             return false;
         }
 
         for(int i = 0; i < columns.length; i++) {
-            if(columns[i] != null && columns[i].equalsIgnoreCase(targetColunm)) {
+            if(columns[i] != null && columns[i].equalsIgnoreCase(targetColumn)) {
                 return true;
             }
         }
@@ -1324,8 +1699,11 @@ public final class CommonUtils {
      * 
      * @param leftCol
      *            - left collection
+     * 
      * @param rightCol
      *            - right collection
+     * @param <T>
+     *            - collection type
      * @return First element that are found in both collections
      *         null if no elements in both collection or any collection is null or empty
      */
@@ -1370,12 +1748,6 @@ public final class CommonUtils {
         return buf.toString();
     }
 
-    /**
-     * @param columnConfFile
-     * @param delimiter
-     * @return
-     * @throws IOException
-     */
     public static List<String> readConfFileIntoList(String columnConfFile, SourceType sourceType, String delimiter)
             throws IOException {
         List<String> columnNameList = new ArrayList<String>();
@@ -1410,12 +1782,6 @@ public final class CommonUtils {
         return columnNameList;
     }
 
-    /**
-     * Generate seat info for selected column in @columnConfigList
-     * 
-     * @param columnConfigList
-     * @return
-     */
     public static Map<String, Integer> generateColumnSeatMap(List<ColumnConfig> columnConfigList) {
         List<ColumnConfig> selectedColumnList = new ArrayList<ColumnConfig>();
         for(ColumnConfig columnConfig: columnConfigList) {
@@ -1443,8 +1809,10 @@ public final class CommonUtils {
      * Find the @ColumnConfig according the column name
      * 
      * @param columnConfigList
+     *            list of column config
      * @param columnName
-     * @return
+     *            the column name
+     * @return column config instance
      */
     public static ColumnConfig findColumnConfigByName(List<ColumnConfig> columnConfigList, String columnName) {
         for(ColumnConfig columnConfig: columnConfigList) {
@@ -1456,8 +1824,8 @@ public final class CommonUtils {
     }
 
     /**
-     * Convert data into <key, value> map. The @inputData is String of a record, which is delimited by @delimiter
-     * If fields in @inputData is not equal @header size, return null
+     * Convert data into (key, value) map. The inputData is String of a record, which is delimited by delimiter
+     * If fields in inputData is not equal header size, return null
      * 
      * @param inputData
      *            - String of a record
@@ -1465,7 +1833,7 @@ public final class CommonUtils {
      *            - the delimiter of the input data
      * @param header
      *            - the column names for all the input data
-     * @return <key, value> map for the record
+     * @return (key, value) map for the record
      */
     public static Map<String, String> convertDataIntoMap(String inputData, String delimiter, String[] header) {
         String[] input = CommonUtils.split(inputData, delimiter);
@@ -1487,14 +1855,14 @@ public final class CommonUtils {
     }
 
     /**
-     * Convert tuple record into <key, value> map. The @tuple is Tuple for a record
+     * Convert tuple record into (key, value) map. The @tuple is Tuple for a record
      * If @tuple size is not equal @header size, return null
      * 
      * @param tuple
      *            - Tuple of a record
      * @param header
      *            - the column names for all the input data
-     * @return <key, value> map for the record
+     * @return (key, value) map for the record
      * @throws ExecException
      *             - throw exception when operating tuple
      */
@@ -1555,45 +1923,147 @@ public final class CommonUtils {
 
     /**
      * Return first line split string array. This is used to detect data schema.
+     * 
+     * @param dataSetRawPath
+     *            raw data path
+     * @param delimeter
+     *            the delimiter
+     * @param source
+     *            source type
+     * @return the first two lines
+     * @throws IOException
+     *             any io exception
      */
-    public static String[] takeFirstLine(String dataSetRawPath, String headerDelimiter, SourceType source)
-            throws IOException {
-        if(dataSetRawPath == null || headerDelimiter == null || source == null) {
+    public static String[] takeFirstLine(String dataSetRawPath, String delimeter, SourceType source) throws IOException {
+        if(dataSetRawPath == null || delimeter == null || source == null) {
             throw new IllegalArgumentException("Input parameters should not be null.");
         }
 
         String firstValidFile = null;
-        if(ShifuFileUtils.isDir(dataSetRawPath, source)) {
-            FileSystem fs = ShifuFileUtils.getFileSystemBySourceType(source);
-            FileStatus[] globStatus = fs.globStatus(new Path(dataSetRawPath), HIDDEN_FILE_FILTER);
-            if(globStatus == null || globStatus.length == 0) {
-                throw new IllegalArgumentException("No files founded in " + dataSetRawPath);
-            } else {
-                FileStatus[] listStatus = fs.listStatus(globStatus[0].getPath(), HIDDEN_FILE_FILTER);
-                if(listStatus == null || listStatus.length == 0) {
-                    throw new IllegalArgumentException("No files founded in " + globStatus[0].getPath());
-                }
-                firstValidFile = listStatus[0].getPath().toString();
-            }
+        FileSystem fs = ShifuFileUtils.getFileSystemBySourceType(source);
+        FileStatus[] globStatus = fs.globStatus(new Path(dataSetRawPath), HIDDEN_FILE_FILTER);
+        if(globStatus == null || globStatus.length == 0) {
+            throw new IllegalArgumentException("No files founded in " + dataSetRawPath);
         } else {
-            firstValidFile = dataSetRawPath;
+            for(FileStatus fileStatus: globStatus) {
+                RemoteIterator<LocatedFileStatus> iterator = fs.listFiles(fileStatus.getPath(), true);
+                while(iterator.hasNext()) {
+                    LocatedFileStatus lfs = iterator.next();
+                    String name = lfs.getPath().getName();
+                    if(name.startsWith("_") || name.startsWith(".")) {
+                        // hidden files,
+                        continue;
+                    }
+                    if(lfs.getLen() > 1024L) {
+                        firstValidFile = lfs.getPath().toString();
+                        break;
+                    }
+                }
+                if(StringUtils.isNotBlank(firstValidFile)) {
+                    break;
+                }
+            }
         }
+        log.info("The first valid file is - {}", firstValidFile);
 
         BufferedReader reader = null;
         try {
             reader = ShifuFileUtils.getReader(firstValidFile, source);
             String firstLine = reader.readLine();
+            log.debug("The first line is - {}", firstLine);
             if(firstLine != null && firstLine.length() > 0) {
                 List<String> list = new ArrayList<String>();
-                for(String unit: Splitter.on(headerDelimiter).split(firstLine)) {
+                for(String unit: Splitter.on(delimeter).split(firstLine)) {
                     list.add(unit);
                 }
                 return list.toArray(new String[0]);
             }
+        } catch (Exception e) {
+            log.error("Fail to read first line of file.", e);
         } finally {
             IOUtils.closeQuietly(reader);
         }
         return new String[0];
+    }
+
+    /**
+     * Return first two lines split string array. This is used to detect data schema and check if data
+     * schema is the
+     * same as data.
+     * 
+     * @param dataSetRawPath
+     *            raw data path
+     * @param delimiter
+     *            the delimiter
+     * @param source
+     *            source type
+     * @return the first two lines
+     * @throws IOException
+     *             any io exception
+     */
+    public static String[][] takeFirstTwoLines(String dataSetRawPath, String delimiter, SourceType source)
+            throws IOException {
+        if(dataSetRawPath == null || delimiter == null || source == null) {
+            throw new IllegalArgumentException("Input parameters should not be null.");
+        }
+
+        String firstValidFile = null;
+        FileSystem fs = ShifuFileUtils.getFileSystemBySourceType(source);
+        FileStatus[] globStatus = fs.globStatus(new Path(dataSetRawPath), HIDDEN_FILE_FILTER);
+        if(globStatus == null || globStatus.length == 0) {
+            throw new IllegalArgumentException("No files founded in " + dataSetRawPath);
+        } else {
+            for(FileStatus fileStatus: globStatus) {
+                RemoteIterator<LocatedFileStatus> iterator = fs.listFiles(fileStatus.getPath(), true);
+                while(iterator.hasNext()) {
+                    LocatedFileStatus lfs = iterator.next();
+                    String name = lfs.getPath().getName();
+                    if(name.startsWith("_") || name.startsWith(".")) {
+                        // hidden files,
+                        continue;
+                    }
+                    if(lfs.getLen() > 1024L) {
+                        firstValidFile = lfs.getPath().toString();
+                        break;
+                    }
+                }
+                if(StringUtils.isNotBlank(firstValidFile)) {
+                    break;
+                }
+            }
+        }
+        log.info("The first valid file is - {}", firstValidFile);
+
+        BufferedReader reader = null;
+        try {
+            reader = ShifuFileUtils.getReader(firstValidFile, source);
+
+            String firstLine = reader.readLine();
+            String[] firstArray = null;
+            if(firstLine != null && firstLine.length() > 0) {
+                List<String> list = new ArrayList<String>();
+                for(String unit: Splitter.on(delimiter).split(firstLine)) {
+                    list.add(unit);
+                }
+                firstArray = list.toArray(new String[0]);
+            }
+
+            String secondLine = reader.readLine();
+            String[] secondArray = null;
+            if(secondLine != null && secondLine.length() > 0) {
+                List<String> list = new ArrayList<String>();
+                for(String unit: Splitter.on(delimiter).split(secondLine)) {
+                    list.add(unit);
+                }
+                secondArray = list.toArray(new String[0]);
+            }
+            String[][] results = new String[2][];
+            results[0] = firstArray;
+            results[1] = secondArray;
+            return results;
+        } finally {
+            IOUtils.closeQuietly(reader);
+        }
     }
 
     private static final PathFilter HIDDEN_FILE_FILTER = new PathFilter() {
@@ -1614,4 +2084,89 @@ public final class CommonUtils {
         }
         return pigScoreNames;
     }
+
+    public static Map<Integer, MutablePair<String, Double>> computeTreeModelFeatureImportance(List<BasicML> models) {
+        List<Map<Integer, MutablePair<String, Double>>> importanceList = new ArrayList<Map<Integer, MutablePair<String, Double>>>();
+        for(BasicML basicModel: models) {
+            if(basicModel instanceof TreeModel) {
+                TreeModel model = (TreeModel) basicModel;
+                Map<Integer, MutablePair<String, Double>> importances = model.getFeatureImportances();
+                importanceList.add(importances);
+            }
+        }
+        if(importanceList.size() < 1) {
+            throw new IllegalArgumentException("Feature importance calculation abort due to no tree model found!!");
+        }
+        return mergeImportanceList(importanceList);
+    }
+
+    private static Map<Integer, MutablePair<String, Double>> mergeImportanceList(
+            List<Map<Integer, MutablePair<String, Double>>> list) {
+        Map<Integer, MutablePair<String, Double>> finalResult = new HashMap<Integer, MutablePair<String, Double>>();
+        int size = list.size();
+        for(Map<Integer, MutablePair<String, Double>> item: list) {
+            for(Entry<Integer, MutablePair<String, Double>> entry: item.entrySet()) {
+                if(!finalResult.containsKey(entry.getKey())) {
+                    MutablePair<String, Double> value = MutablePair.of(entry.getValue().getKey(), entry.getValue()
+                            .getValue() / size);
+                    finalResult.put(entry.getKey(), value);
+                } else {
+                    MutablePair<String, Double> current = finalResult.get(entry.getKey());
+                    double entryValue = entry.getValue().getValue();
+                    current.setValue(current.getValue() + entryValue / size);
+                    finalResult.put(entry.getKey(), current);
+                }
+            }
+        }
+        return TreeModel.sortByValue(finalResult, false);
+    }
+
+    public static void writeFeatureImportance(String fiPath, Map<Integer, MutablePair<String, Double>> importances)
+            throws IOException {
+        ShifuFileUtils.createFileIfNotExists(fiPath, SourceType.LOCAL);
+        BufferedWriter writer = null;
+        log.info("Writing feature importances to file {}", fiPath);
+        try {
+            writer = ShifuFileUtils.getWriter(fiPath, SourceType.LOCAL);
+            writer.write("column_id\t\tcolumn_name\t\timportance");
+            writer.newLine();
+            for(Map.Entry<Integer, MutablePair<String, Double>> entry: importances.entrySet()) {
+                String content = entry.getKey() + "\t\t" + entry.getValue().getKey() + "\t\t"
+                        + entry.getValue().getValue();
+                writer.write(content);
+                writer.newLine();
+            }
+            writer.flush();
+        } finally {
+            IOUtils.closeQuietly(writer);
+        }
+    }
+
+    public static String trimTag(String tag) {
+        if(NumberUtils.isNumber(tag)) {
+            tag = tag.trim();
+            int firstPeriodPos = -1;
+            int firstDeleteZero = -1;
+            boolean hasMetNonZero = false;
+            for(int i = tag.length(); i > 0; i--) {
+                if((tag.charAt(i - 1) == '0' || tag.charAt(i - 1) == '.') && !hasMetNonZero) {
+                    firstDeleteZero = i - 1;
+                }
+
+                if(tag.charAt(i - 1) != '0') {
+                    hasMetNonZero = true;
+                }
+
+                if(tag.charAt(i - 1) == '.') {
+                    firstPeriodPos = i - 1;
+                }
+            }
+
+            String result = (firstDeleteZero >= 0 && firstPeriodPos >= 0) ? tag.substring(0, firstDeleteZero) : tag;
+            return (firstPeriodPos == 0) ? "0" + result : result;
+        } else {
+            return StringUtils.trimToEmpty(tag);
+        }
+    }
+
 }

@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright [2012-2014] PayPal Software Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -69,8 +69,8 @@ public class PathFinderTest {
     public void testGetAbsolutePath() {
         Environment.setProperty(Environment.SHIFU_HOME, ".");
 
-        Assert.assertEquals(pathFinder.getAbsolutePath("test"), "test");
-        Assert.assertEquals(pathFinder.getAbsolutePath("/test"), "/test");
+        Assert.assertEquals(pathFinder.getScriptPath("test"), "test");
+        Assert.assertEquals(pathFinder.getScriptPath("/test"), "/test");
     }
 
     @Test

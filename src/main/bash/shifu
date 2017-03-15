@@ -118,7 +118,7 @@ PIG_OPTIONS="${PIG_OPTIONS} -Dmapreduce.child.ulimit=2194304"
 PIG_OPTIONS="${PIG_OPTIONS} -Dmapreduce.child.java.opts=-Xmx1G"
 PIG_OPTIONS="${PIG_OPTIONS} -m PigConfig.conf"
 
-CLASSPATH=`find ${SHIFU_HOME}/lib -name "*.jar" | xargs | sed 's/ /:/g'`
+CLASSPATH=`find ${SHIFU_HOME}/lib -name "*.jar" | grep -v javadoc | xargs | sed 's/ /:/g'`
 
 # ---------------- HADOOP Environment Detection -----------------------------
 HADOOP_ROOT=`find_hadoop_root`

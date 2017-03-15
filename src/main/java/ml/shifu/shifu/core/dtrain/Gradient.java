@@ -17,6 +17,8 @@ package ml.shifu.shifu.core.dtrain;
 
 import java.util.Arrays;
 
+import ml.shifu.shifu.core.dtrain.nn.NNMaster;
+
 import org.encog.engine.network.activation.ActivationFunction;
 import org.encog.mathutil.error.ErrorCalculation;
 import org.encog.ml.data.MLDataPair;
@@ -28,7 +30,7 @@ import org.encog.neural.networks.BasicNetwork;
 
 /**
  * {@link Gradient} is copied from Encog framework. The reason is that we original Gradient don't pop up
- * {@link #gradients} outside. While we need gradients accumulated into {@link NNMaster} to update NN weights.
+ * gradients outside. While we need gradients accumulated into {@link NNMaster} to update NN weights.
  */
 public class Gradient {
 
@@ -132,20 +134,6 @@ public class Gradient {
      */
     private final ErrorFunction errorFunction;
 
-    /**
-     * Construct a gradient worker.
-     * 
-     * @param theNetwork
-     *            The network to train.
-     * @param theOwner
-     *            The owner that is doing the training.
-     * @param theTraining
-     *            The training data.
-     * @param theLow
-     *            The low index to use in the training data.
-     * @param theHigh
-     *            The high index to use in the training data.
-     */
     public Gradient(final FlatNetwork theNetwork, final MLDataSet theTraining, final MLDataSet theTesting,
             final double[] flatSpot, ErrorFunction ef, boolean isCrossOver) {
         this.network = theNetwork;
@@ -271,8 +259,6 @@ public class Gradient {
      * Calculate the error for this neural network. The error is calculated
      * using root-mean-square(RMS).
      * 
-     * @param data
-     *            The training set.
      * @return The error percentage.
      */
     public final double calculateError() {

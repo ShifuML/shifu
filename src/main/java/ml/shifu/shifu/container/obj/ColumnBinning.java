@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright [2012-2014] PayPal Software Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -22,7 +22,7 @@ import java.util.List;
 /**
  * ColumnBinning class represents the information of BINNING.
  * Usually the BINNING information will be used to calculate KS/IV, or reason code in evaluation.
- * <p/>
+ * <p>
  * Please note for numerical variables, @binCategory will be null, but for categorical variables @binBoundary will be
  * null. The @binLength will equal size of @binBoundary or size of @binCategory.
  */
@@ -126,7 +126,8 @@ public class ColumnBinning {
     }
 
     /**
-     * @param binCountWoe the binCountWoe to set
+     * @param binCountWoe
+     *            the binCountWoe to set
      */
     public void setBinCountWoe(List<Double> binCountWoe) {
         this.binCountWoe = binCountWoe;
@@ -140,7 +141,8 @@ public class ColumnBinning {
     }
 
     /**
-     * @param binWeightedWoe the binWeightedWoe to set
+     * @param binWeightedWoe
+     *            the binWeightedWoe to set
      */
     public void setBinWeightedWoe(List<Double> binWeightedWoe) {
         this.binWeightedWoe = binWeightedWoe;
