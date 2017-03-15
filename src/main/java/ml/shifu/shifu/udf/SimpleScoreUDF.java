@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright [2012-2014] PayPal Software Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -31,7 +31,7 @@ import java.util.Map;
 /**
  * SimpleScoreUDF class calculate the average score for evaluation data
  */
-public class SimpleScoreUDF extends AbstractTrainerUDF<Integer> {
+public class SimpleScoreUDF extends AbstractTrainerUDF<Double> {
 
     private String targetColumnName;
     private List<String> negTags;
@@ -58,7 +58,7 @@ public class SimpleScoreUDF extends AbstractTrainerUDF<Integer> {
         posTags = modelConfig.getPosTags();
     }
 
-    public Integer exec(Tuple input) throws IOException {
+    public Double exec(Tuple input) throws IOException {
         CaseScoreResult cs = modelRunner.compute(input);
         if(cs == null) {
             log.error("Get null result.");
@@ -70,7 +70,7 @@ public class SimpleScoreUDF extends AbstractTrainerUDF<Integer> {
             return null;
         }
 
-        String tag = rawDataMap.get(targetColumnName);
+        String tag = CommonUtils.trimTag(rawDataMap.get(targetColumnName));
         if(!(negTags.contains(tag) || posTags.contains(tag))) {
             // invalid record
             log.error("Detected invalid record. Its tag is - " + tag);

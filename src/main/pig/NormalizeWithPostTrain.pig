@@ -25,6 +25,8 @@ SET mapred.child.ulimit 2.5G;
 SET mapred.reduce.slowstart.completed.maps 0.6;
 SET mapred.map.tasks.speculative.execution true;
 SET mapred.reduce.tasks.speculative.execution true;
+SET mapreduce.map.speculative true;
+SET mapreduce.reduce.speculative true;
 -- compress outputs
 SET mapred.output.compress true;
 SET mapreduce.output.fileoutputformat.compress true;

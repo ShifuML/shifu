@@ -58,28 +58,22 @@ import org.slf4j.LoggerFactory;
 
 /**
  * Random forest and gradient boost decision tree {@link MasterComputable} implementation.
- * 
  * <p>
  * {@link #isRF} and {@link #isGBDT} are for RF or GBDT checking, by default RF is trained.
- * 
  * <p>
  * Each iteration, update node statistics and determine best split which is used for tree node split. Besides node
  * statistics, error and count info are also collected for client display.
- * 
  * <p>
  * Each iteration, new node group with nodes in limited estimated memory consumption are sent out to all workers for
  * feature statistics.
- * 
  * <p>
  * For gradient boost decision tree, each time a tree is updated and if one tree is finalized, then start a new tree.
  * Both random forest and gradient boost decision trees are all stored in {@link #trees}.
- * 
  * <p>
  * Terminal condition: for random forest, just to collect all nodes in all trees from all workers. Terminal condition is
  * all trees cannot be split. If one tree cannot be split with threshold count and meaningful impurity, one tree if
  * finalized and stopped update. For gradient boost decision tree, each time only one tree is trained, if last tree
  * cannot be split, training is stopped.
- * 
  * <p>
  * In current {@link DTMaster}, there are states like {@link #trees} and {@link #toDoQueue}. All stats can be recovered
  * once master is done. Such states are checkpointed to HDFS for fault tolerence.
@@ -106,12 +100,20 @@ public class DTMaster extends AbstractMasterComputable<DTMasterParams, DTWorkerP
     private int treeNum;
 
     /**
-     * Feature sub sampling strategy: ALL, HALF, ONETHIRD
+     * Feature sub sampling strategy, this is combined with {@link #featureSubsetRate}, if
+     * {@link #featureSubsetStrategy} is null, use {@link #featureSubsetRate}. Otherwise use
+     * {@link #featureSubsetStrategy}.
      */
     private FeatureSubsetStrategy featureSubsetStrategy = FeatureSubsetStrategy.ALL;
 
     /**
-     * Max depth of a tree, by default is 10
+     * FeatureSubsetStrategy in train#params can be set to double or text, if double, use current double value but
+     * {@link #featureSubsetStrategy} is set to null.
+     */
+    private double featureSubsetRate;
+
+    /**
+     * Max depth of a tree, by default is 10.
      */
     private int maxDepth;
 
@@ -122,7 +124,7 @@ public class DTMaster extends AbstractMasterComputable<DTMasterParams, DTWorkerP
     private int maxLeaves = -1;
 
     /**
-     * maxLeaves >=, then isLeafWise set to true, else level-wise tree building.
+     * maxLeaves >= -1, then isLeafWise set to true, else level-wise tree building.
      */
     private boolean isLeafWise = false;
 
@@ -169,7 +171,7 @@ public class DTMaster extends AbstractMasterComputable<DTMasterParams, DTWorkerP
     private int inputNum;
 
     /**
-     * Cache all features
+     * Cache all features with feature index for searching
      */
     private List<Integer> allFeatures;
 
@@ -199,6 +201,7 @@ public class DTMaster extends AbstractMasterComputable<DTMasterParams, DTWorkerP
     /**
      * Common conf to avoid new Configuration
      */
+    @SuppressWarnings("unused")
     private Configuration conf;
 
     /**
@@ -213,6 +216,31 @@ public class DTMaster extends AbstractMasterComputable<DTMasterParams, DTWorkerP
      * Max batch split size in leaf-wise tree growth.; This only works well when {@link #isLeafWise} = true.
      */
     private int maxBatchSplitSize = 16;
+
+    /**
+     * DTEarlyStopDecider will decide automatic whether it need further training, this only for GBDT.
+     */
+    private DTEarlyStopDecider dtEarlyStopDecider;
+
+    /**
+     * If early stop is enabled or not, by default false.
+     */
+    private boolean enableEarlyStop = false;
+
+    /**
+     * Validation tolerance which is for early stop, by default it is 0d which means early stop is not enabled.
+     */
+    private double validationTolerance = 0d;
+
+    /**
+     * Random generator for get sampling features per each iteration.
+     */
+    private Random featureSamplingRandom = new Random();
+
+    /**
+     * The best validation error for error computing
+     */
+    private double bestValidationError = Double.MAX_VALUE;
 
     // ############################################################################################################
     // ## There parts are states, for fail over such instances should be recovered in {@link #init(MasterContext)}
@@ -326,13 +354,37 @@ public class DTMaster extends AbstractMasterComputable<DTMasterParams, DTWorkerP
         }
 
         Map<Integer, TreeNode> todoNodes = new HashMap<Integer, TreeNode>();
+        double averageValidationError = validationError / weightedValidationCount;
+        if(this.isGBDT && this.dtEarlyStopDecider != null && averageValidationError > 0) {
+            this.dtEarlyStopDecider.add(averageValidationError);
+            averageValidationError = this.dtEarlyStopDecider.getCurrentAverageValue();
+        }
+
+        boolean vtTriggered = false;
+        // if validationTolerance == 0d, means vt check is not enabled
+        if(validationTolerance > 0d
+                && Math.abs(this.bestValidationError - averageValidationError) < this.validationTolerance
+                        * averageValidationError) {
+            LOG.info("Debug: bestValidationError {}, averageValidationError {}, validationTolerance {}",
+                    bestValidationError, averageValidationError, validationTolerance);
+            vtTriggered = true;
+        }
+
+        if(averageValidationError < this.bestValidationError) {
+            this.bestValidationError = averageValidationError;
+        }
+
+        // validation error is averageValidationError * weightedValidationCount because of here averageValidationError
+        // is divided by validation count.
         DTMasterParams masterParams = new DTMasterParams(weightedTrainCount, trainError, weightedValidationCount,
-                validationError);
+                averageValidationError * weightedValidationCount);
+
         if(toDoQueue.isEmpty()) {
             if(this.isGBDT) {
                 TreeNode treeNode = this.trees.get(this.trees.size() - 1);
                 Node node = treeNode.getNode();
-                if(this.trees.size() == this.treeNum + this.existingTreeSize) {
+                if(this.trees.size() >= this.treeNum) {
+                    // if all trees including trees read from existing model over treeNum, stop the whole process.
                     masterParams.setHalt(true);
                     LOG.info("Queue is empty, training is stopped in iteration {}.", context.getCurrentIteration());
                 } else if(node.getLeft() == null && node.getRight() == null) {
@@ -343,6 +395,14 @@ public class DTMaster extends AbstractMasterComputable<DTMasterParams, DTWorkerP
                     LOG.warn(
                             "Tree is learned 100% well, there must be overfit here, please tune BaggingSampleRate, training is stopped in iteration {}.",
                             context.getCurrentIteration());
+                } else if(this.dtEarlyStopDecider != null
+                        && (this.enableEarlyStop && this.dtEarlyStopDecider.canStop())) {
+                    masterParams.setHalt(true);
+                    LOG.info("Early stop identified, training is stopped in iteration {}.",
+                            context.getCurrentIteration());
+                } else if(vtTriggered) {
+                    LOG.info("Early stop training by validation tolerance.");
+                    masterParams.setHalt(true);
                 } else {
                     // set first tree to true even after ROOT node is set in next tree
                     masterParams.setFirstTree(this.trees.size() == 1);
@@ -351,7 +411,7 @@ public class DTMaster extends AbstractMasterComputable<DTMasterParams, DTWorkerP
                     TreeNode newRootNode = new TreeNode(this.trees.size(), new Node(Node.ROOT_INDEX), this.learningRate);
                     LOG.info("The {} tree is to be built.", this.trees.size());
                     this.trees.add(newRootNode);
-                    newRootNode.setFeatures(getSubsamplingFeatures(this.featureSubsetStrategy));
+                    newRootNode.setFeatures(getSubsamplingFeatures(this.featureSubsetStrategy, this.featureSubsetRate));
                     // only one node
                     todoNodes.put(0, newRootNode);
                     masterParams.setTodoNodes(todoNodes);
@@ -391,7 +451,8 @@ public class DTMaster extends AbstractMasterComputable<DTMasterParams, DTWorkerP
                     }
                 }
 
-                List<Integer> subsetFeatures = getSubsamplingFeatures(featureSubsetStrategy);
+                List<Integer> subsetFeatures = getSubsamplingFeatures(this.featureSubsetStrategy,
+                        this.featureSubsetRate);
                 node.setFeatures(subsetFeatures);
                 currMem += getStatsMem(subsetFeatures);
                 todoNodes.put(nodeIndexInGroup, node);
@@ -416,7 +477,26 @@ public class DTMaster extends AbstractMasterComputable<DTMasterParams, DTWorkerP
         }
 
         if(this.isRF) {
-            masterParams.setTrees(trees);
+            // for rf, reset trees sent to workers for only trees with todo nodes, this saves message space. While
+            // elements in todoTrees are also the same reference in this.trees, reuse the same object to save memory.
+            if(masterParams.getTreeDepth().size() == this.trees.size()) {
+                // if normal iteration
+                List<TreeNode> todoTrees = new ArrayList<TreeNode>();
+                for(int i = 0; i < trees.size(); i++) {
+                    if(masterParams.getTreeDepth().get(i) >= 0) {
+                        // such tree in current iteration treeDepth is not -1, add it to todoTrees.
+                        todoTrees.add(trees.get(i));
+                    } else {
+                        // mock a TreeNode instance to make sure no surprise in further serialization. In fact
+                        // meaningless.
+                        todoTrees.add(new TreeNode(i, new Node(Node.INVALID_INDEX), 1d));
+                    }
+                }
+                masterParams.setTrees(todoTrees);
+            } else {
+                // if last iteration without maxDepthList
+                masterParams.setTrees(trees);
+            }
         }
         if(this.isGBDT) {
             // set tmp trees to DTOutput
@@ -530,17 +610,17 @@ public class DTMaster extends AbstractMasterComputable<DTMasterParams, DTWorkerP
      */
     private void doCheckPoint(final MasterContext<DTMasterParams, DTWorkerParams> context,
             final DTMasterParams masterParams) {
-        // boolean isMasterFailOverEnabled = Boolean.TRUE.toString().equalsIgnoreCase(
-        // context.getProps().getProperty("shifu.dt.master.failover", "true"));
-        // if(!isMasterFailOverEnabled || context.getCurrentIteration() % this.checkpointInterval != 0) {
-        // return;
-        // }
         LOG.info("Do checkpoint at hdfs file {}", this.checkpointOutput);
+        final Queue<TreeNode> finalTodoQueue = this.toDoQueue;
+        final Queue<TreeNode> finalToSplitQueue = this.toSplitQueue;
+        final boolean finalIsLeaf = this.isLeafWise;
+        final List<TreeNode> finalTrees = this.trees;
         Thread cpPersistThread = new Thread(new Runnable() {
             @Override
             public void run() {
                 long start = System.currentTimeMillis();
-                writeStatesToHdfs(DTMaster.this.checkpointOutput, masterParams);
+                writeStatesToHdfs(DTMaster.this.checkpointOutput, masterParams, finalTrees, finalIsLeaf,
+                        finalTodoQueue, finalToSplitQueue);
                 LOG.info("Do checkpoint at iteration {} with run time {}", context.getCurrentIteration(),
                         (System.currentTimeMillis() - start));
             }
@@ -552,10 +632,11 @@ public class DTMaster extends AbstractMasterComputable<DTMasterParams, DTWorkerP
     /**
      * Write {@link #trees}, {@link #toDoQueue} and MasterParams to HDFS.
      */
-    private void writeStatesToHdfs(Path out, DTMasterParams masterParams) {
+    private void writeStatesToHdfs(Path out, DTMasterParams masterParams, List<TreeNode> trees, boolean isLeafWise,
+            Queue<TreeNode> toDoQueue, Queue<TreeNode> toSplitQueue) {
         FSDataOutputStream fos = null;
         try {
-            fos = FileSystem.get(conf).create(out);
+            fos = FileSystem.get(new Configuration()).create(out);
 
             // trees
             int treeLength = trees.size();
@@ -565,14 +646,14 @@ public class DTMaster extends AbstractMasterComputable<DTMasterParams, DTWorkerP
             }
 
             // todo queue
-            fos.writeInt(this.toDoQueue.size());
-            for(TreeNode treeNode: this.toDoQueue) {
+            fos.writeInt(toDoQueue.size());
+            for(TreeNode treeNode: toDoQueue) {
                 treeNode.write(fos);
             }
 
-            if(this.isLeafWise && this.toSplitQueue != null) {
-                fos.writeInt(this.toSplitQueue.size());
-                for(TreeNode treeNode: this.toSplitQueue) {
+            if(isLeafWise && toSplitQueue != null) {
+                fos.writeInt(toSplitQueue.size());
+                for(TreeNode treeNode: toSplitQueue) {
                     treeNode.write(fos);
                 }
             }
@@ -608,7 +689,7 @@ public class DTMaster extends AbstractMasterComputable<DTMasterParams, DTWorkerP
         long statsMem = 0L;
         List<Integer> tempFeatures = subsetFeatures;
         if(subsetFeatures.size() == 0) {
-            tempFeatures = getAllValidFeatures();
+            tempFeatures = getAllFeatureList(this.columnConfigList, this.isAfterVarSelect);
         }
         for(Integer columnNum: tempFeatures) {
             ColumnConfig config = this.columnConfigList.get(columnNum);
@@ -622,22 +703,6 @@ public class DTMaster extends AbstractMasterComputable<DTMasterParams, DTWorkerP
         // times worker number to avoid oom in master, as combinable DTWorkerParams, use one third of worker number
         statsMem = statsMem * this.workerNumber / 2;
         return statsMem;
-    }
-
-    private List<Integer> getAllValidFeatures() {
-        List<Integer> features = new ArrayList<Integer>();
-        for(ColumnConfig config: columnConfigList) {
-            if(isAfterVarSelect) {
-                if(config.isFinalSelect() && !config.isTarget() && !config.isMeta()) {
-                    features.add(config.getColumnNum());
-                }
-            } else {
-                if(!config.isMeta() && !config.isTarget() && CommonUtils.isGoodCandidate(config)) {
-                    features.add(config.getColumnNum());
-                }
-            }
-        }
-        return features;
     }
 
     private void mergeNodeStats(NodeStats resultNodeStats, NodeStats nodeStats) {
@@ -661,7 +726,7 @@ public class DTMaster extends AbstractMasterComputable<DTMasterParams, DTWorkerP
                 depthList.add(-1);
             }
             for(TreeNode treeNode: trees) {
-                List<Integer> features = getSubsamplingFeatures(this.featureSubsetStrategy);
+                List<Integer> features = getSubsamplingFeatures(this.featureSubsetStrategy, this.featureSubsetRate);
                 treeNode.setFeatures(features);
                 todoNodes.put(nodeIndexInGroup, treeNode);
                 int treeId = treeNode.getTreeId();
@@ -677,7 +742,7 @@ public class DTMaster extends AbstractMasterComputable<DTMasterParams, DTWorkerP
         } else if(isGBDT) {
             // for gbdt, only store depth of last tree
             depthList.add(-1);
-            List<Integer> features = getSubsamplingFeatures(this.featureSubsetStrategy);
+            List<Integer> features = getSubsamplingFeatures(this.featureSubsetStrategy, this.featureSubsetRate);
             TreeNode treeNode = trees.get(trees.size() - 1); // only for last tree
             treeNode.setFeatures(features);
             todoNodes.put(nodeIndexInGroup, treeNode);
@@ -705,29 +770,33 @@ public class DTMaster extends AbstractMasterComputable<DTMasterParams, DTWorkerP
         return masterParams;
     }
 
-    private List<Integer> getSubsamplingFeatures(FeatureSubsetStrategy featureSubsetStrategy) {
-        switch(featureSubsetStrategy) {
-            case HALF:
-                return sampleFeaturesForNodeStats(this.allFeatures, this.allFeatures.size() / 2);
-            case ONETHIRD:
-                return sampleFeaturesForNodeStats(this.allFeatures, this.allFeatures.size() / 3);
-            case TWOTHIRDS:
-                return sampleFeaturesForNodeStats(this.allFeatures, this.allFeatures.size() * 2 / 3);
-            case SQRT:
-                return sampleFeaturesForNodeStats(this.allFeatures,
-                        (int) (this.allFeatures.size() * Math.sqrt(this.inputNum) / this.inputNum));
-            case LOG2:
-                return sampleFeaturesForNodeStats(this.allFeatures,
-                        (int) (this.allFeatures.size() * Math.log(this.inputNum) / Math.log(2) / this.inputNum));
-            case AUTO:
-                if(this.treeNum > 1) {
+    private List<Integer> getSubsamplingFeatures(FeatureSubsetStrategy featureSubsetStrategy, double featureSubsetRate) {
+        if(featureSubsetStrategy == null) {
+            return sampleFeaturesForNodeStats(this.allFeatures, (int) (this.allFeatures.size() * featureSubsetRate));
+        } else {
+            switch(featureSubsetStrategy) {
+                case HALF:
                     return sampleFeaturesForNodeStats(this.allFeatures, this.allFeatures.size() / 2);
-                } else {
+                case ONETHIRD:
+                    return sampleFeaturesForNodeStats(this.allFeatures, this.allFeatures.size() / 3);
+                case TWOTHIRDS:
+                    return sampleFeaturesForNodeStats(this.allFeatures, this.allFeatures.size() * 2 / 3);
+                case SQRT:
+                    return sampleFeaturesForNodeStats(this.allFeatures,
+                            (int) (this.allFeatures.size() * Math.sqrt(this.inputNum) / this.inputNum));
+                case LOG2:
+                    return sampleFeaturesForNodeStats(this.allFeatures,
+                            (int) (this.allFeatures.size() * Math.log(this.inputNum) / Math.log(2) / this.inputNum));
+                case AUTO:
+                    if(this.treeNum > 1) {
+                        return sampleFeaturesForNodeStats(this.allFeatures, this.allFeatures.size() / 2);
+                    } else {
+                        return new ArrayList<Integer>();
+                    }
+                case ALL:
+                default:
                     return new ArrayList<Integer>();
-                }
-            case ALL:
-            default:
-                return new ArrayList<Integer>();
+            }
         }
     }
 
@@ -736,11 +805,21 @@ public class DTMaster extends AbstractMasterComputable<DTMasterParams, DTWorkerP
         for(ColumnConfig config: columnConfigList) {
             if(isAfterVarSelect) {
                 if(config.isFinalSelect() && !config.isTarget() && !config.isMeta()) {
-                    features.add(config.getColumnNum());
+                    // only select numerical feature with getBinBoundary().size() larger than 1
+                    // or categorical feature with getBinCategory().size() larger than 0
+                    if((config.isNumerical() && config.getBinBoundary().size() > 1)
+                            || (config.isCategorical() && config.getBinCategory().size() > 0)) {
+                        features.add(config.getColumnNum());
+                    }
                 }
             } else {
                 if(!config.isMeta() && !config.isTarget() && CommonUtils.isGoodCandidate(config)) {
-                    features.add(config.getColumnNum());
+                    // only select numerical feature with getBinBoundary().size() larger than 1
+                    // or categorical feature with getBinCategory().size() larger than 0
+                    if((config.isNumerical() && config.getBinBoundary().size() > 1)
+                            || (config.isCategorical() && config.getBinCategory().size() > 0)) {
+                        features.add(config.getColumnNum());
+                    }
                 }
             }
         }
@@ -753,9 +832,8 @@ public class DTMaster extends AbstractMasterComputable<DTMasterParams, DTWorkerP
             features.add(allFeatures.get(i));
         }
 
-        Random random = new Random();
         for(int i = sample; i < allFeatures.size(); i++) {
-            int replacementIndex = (int) (random.nextDouble() * i);
+            int replacementIndex = (int) (featureSamplingRandom.nextDouble() * i);
             if(replacementIndex >= 0 && replacementIndex < sample) {
                 features.set(replacementIndex, allFeatures.get(i));
             }
@@ -786,7 +864,7 @@ public class DTMaster extends AbstractMasterComputable<DTMasterParams, DTWorkerP
         // check if variables are set final selected
         int[] inputOutputIndex = DTrainUtils.getNumericAndCategoricalInputAndOutputCounts(this.columnConfigList);
         this.inputNum = inputOutputIndex[0] + inputOutputIndex[1];
-        this.isAfterVarSelect = inputOutputIndex[3] == 1 ? true : false;
+        this.isAfterVarSelect = (inputOutputIndex[3] == 1);
         // cache all feature list for sampling features
         this.allFeatures = this.getAllFeatureList(columnConfigList, isAfterVarSelect);
 
@@ -799,12 +877,35 @@ public class DTMaster extends AbstractMasterComputable<DTMasterParams, DTWorkerP
             LOG.info("Start grid search master with params: {}", validParams);
         }
 
+        Object vtObj = validParams.get("ValidationTolerance");
+        if(vtObj != null) {
+            try {
+                validationTolerance = Double.parseDouble(vtObj.toString());
+                LOG.warn("Validation by tolerance is enabled with value {}.", validationTolerance);
+            } catch (NumberFormatException ee) {
+                validationTolerance = 0d;
+                LOG.warn(
+                        "Validation by tolerance isn't enabled because of non numerical value of ValidationTolerance: {}.",
+                        vtObj);
+            }
+        } else {
+            LOG.warn("Validation by tolerance isn't enabled.");
+        }
+
         // tree related parameters initialization
         Object fssObj = validParams.get("FeatureSubsetStrategy");
         if(fssObj != null) {
-            this.featureSubsetStrategy = FeatureSubsetStrategy.of(fssObj.toString());
+            try {
+                this.featureSubsetRate = Double.parseDouble(fssObj.toString());
+                // no need validate featureSubsetRate is in (0,1], as already validated in ModelInspector
+                this.featureSubsetStrategy = null;
+            } catch (NumberFormatException ee) {
+                this.featureSubsetStrategy = FeatureSubsetStrategy.of(fssObj.toString());
+            }
         } else {
+            LOG.warn("FeatureSubsetStrategy is not set, set to TWOTHRIDS by default in DTMaster.");
             this.featureSubsetStrategy = FeatureSubsetStrategy.TWOTHIRDS;
+            this.featureSubsetRate = 0;
         }
 
         // max depth
@@ -849,8 +950,7 @@ public class DTMaster extends AbstractMasterComputable<DTMasterParams, DTWorkerP
         }
 
         // assert this.maxStatsMemory <= Math.min(Runtime.getRuntime().maxMemory() * 0.6, 800 * 1024 * 1024L);
-        // todo # of trees
-        this.treeNum = Integer.valueOf(validParams.get("TreeNum").toString());;
+        this.treeNum = Integer.valueOf(validParams.get("TreeNum").toString());
         this.isRF = ALGORITHM.RF.toString().equalsIgnoreCase(modelConfig.getAlgorithm());
         this.isGBDT = ALGORITHM.GBT.toString().equalsIgnoreCase(modelConfig.getAlgorithm());
         if(this.isGBDT) {
@@ -888,11 +988,19 @@ public class DTMaster extends AbstractMasterComputable<DTMasterParams, DTWorkerP
         this.isContinuousEnabled = Boolean.TRUE.toString().equalsIgnoreCase(
                 context.getProps().getProperty(CommonConstants.CONTINUOUS_TRAINING));
 
-        LOG.info("Master init params: isAfterVarSel={}, featureSubsetStrategy={}, maxDepth={}, maxStatsMemory={}, "
-                + "treeNum={}, impurity={}, workerNumber={}, minInstancesPerNode={}, minInfoGain={}, isRF={}, "
-                + "isGBDT={}, isContinuousEnabled={}", isAfterVarSelect, featureSubsetStrategy, maxDepth,
-                maxStatsMemory, treeNum, imStr, this.workerNumber, minInstancesPerNode, minInfoGain, this.isRF,
-                this.isGBDT, this.isContinuousEnabled);
+        this.dtEarlyStopDecider = new DTEarlyStopDecider(this.maxDepth);
+        if(validParams.containsKey("EnableEarlyStop")
+                && Boolean.valueOf(validParams.get("EnableEarlyStop").toString().toLowerCase())) {
+            this.enableEarlyStop = true;
+        }
+
+        LOG.info(
+                "Master init params: isAfterVarSel={}, featureSubsetStrategy={}, featureSubsetRate={} maxDepth={}, maxStatsMemory={}, "
+                        + "treeNum={}, impurity={}, workerNumber={}, minInstancesPerNode={}, minInfoGain={}, isRF={}, "
+                        + "isGBDT={}, isContinuousEnabled={}, enableEarlyStop={}.", isAfterVarSelect,
+                featureSubsetStrategy, this.featureSubsetRate, maxDepth, maxStatsMemory, treeNum, imStr,
+                this.workerNumber, minInstancesPerNode, minInfoGain, this.isRF, this.isGBDT, this.isContinuousEnabled,
+                this.enableEarlyStop);
 
         this.toDoQueue = new LinkedList<TreeNode>();
 
@@ -946,7 +1054,7 @@ public class DTMaster extends AbstractMasterComputable<DTMasterParams, DTWorkerP
             }
         } else {
             // recover all states once master is fail over
-            LOG.info("Recover master stats from cp file {}", this.checkpointOutput);
+            LOG.info("Recover master status from checkpoint file {}", this.checkpointOutput);
             recoverMasterStatus(sourceType);
         }
     }

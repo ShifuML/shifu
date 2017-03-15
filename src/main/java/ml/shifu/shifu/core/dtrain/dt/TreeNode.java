@@ -117,8 +117,8 @@ public class TreeNode implements Bytable {
     }
 
     /**
-     * @param treeIndex
-     *            the treeIndex to set
+     * @param treeId
+     *            the treeId to set
      */
     public void setTreeId(int treeId) {
         this.treeId = treeId;

@@ -16,6 +16,7 @@
 package ml.shifu.shifu.core.dtrain.nn;
 
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
@@ -124,6 +125,16 @@ public class NNMaster extends AbstractMasterComputable<NNParams, NNParams> {
      */
     private Map<String, Object> validParams;
 
+    /**
+     * Validation tolerance which is for early stop, by default it is 0d which means early stop is not enabled.
+     */
+    private double validationTolerance = 0d;
+
+    /**
+     * The best validation error for error computing
+     */
+    private double bestValidationError = Double.MAX_VALUE;
+
     @Override
     public NNParams doCompute(MasterContext<NNParams, NNParams> context) {
         if(context.isFirstIteration()) {
@@ -189,14 +200,38 @@ public class NNMaster extends AbstractMasterComputable<NNParams, NNParams> {
             this.weightCalculator.setNumTrainSize(this.globalNNParams.getTrainSize());
         }
 
+        double[] oldWeights = Arrays.copyOf(this.globalNNParams.getWeights(), this.globalNNParams.getWeights().length);
+
         // use last weights and current gradients to calculate
         double[] weights = this.weightCalculator.calculateWeights(this.globalNNParams.getWeights(),
                 this.globalNNParams.getGradients());
 
         this.globalNNParams.setWeights(weights);
 
+        // average error
         double currentTestError = totalTestError / totalWorkerCount;
         double currentTrainError = totalTrainError / totalWorkerCount;
+
+        boolean vtTriggered = false;
+        // if validationTolerance == 0d, means vt check is not enabled
+        if(validationTolerance > 0d) {
+            double weightSumSquare = 0d;
+            double diffWeightSumSquare = 0d;
+            for(int i = 0; i < weights.length; i++) {
+                weightSumSquare += Math.pow(weights[i], 2);
+                diffWeightSumSquare += Math.pow(weights[i] - oldWeights[i], 2);
+            }
+            if(Math.pow(diffWeightSumSquare, 0.5) < this.validationTolerance
+                    * Math.max(Math.pow(weightSumSquare, 0.5), 1d)) {
+                LOG.info("Debug: diffWeightSumSquare {}, weightSumSquare {}, validationTolerance {}",
+                        Math.pow(diffWeightSumSquare, 0.5), Math.pow(weightSumSquare, 0.5), validationTolerance);
+                vtTriggered = true;
+            }
+        }
+
+        if(currentTestError < this.bestValidationError) {
+            this.bestValidationError = currentTestError;
+        }
 
         LOG.info("NNMaster compute iteration {} ( avg train error {}, avg validation error {} )", new Object[] {
                 context.getCurrentIteration(), currentTrainError, currentTestError });
@@ -215,11 +250,11 @@ public class NNMaster extends AbstractMasterComputable<NNParams, NNParams> {
         LOG.info("NNMaster compute iteration {} average error: {}, threshold: {}", context.getCurrentIteration(),
                 avgErr, convergenceThreshold);
 
-        if(judger.judge(avgErr, convergenceThreshold)) {
+        if(judger.judge(avgErr, convergenceThreshold) || vtTriggered) {
             LOG.info("NNMaster compute iteration {} converged !", context.getCurrentIteration());
             params.setHalt(true);
         } else {
-            LOG.info("NNMaster compute iteration {} not converged yet !", context.getCurrentIteration());
+            LOG.debug("NNMaster compute iteration {} not converged yet !", context.getCurrentIteration());
         }
 
         return params;
@@ -302,6 +337,22 @@ public class NNMaster extends AbstractMasterComputable<NNParams, NNParams> {
             validParams = gs.getParams(trainerId);
             LOG.info("Start grid search master with params: {}", validParams);
         }
+
+        Object vtObj = validParams.get("ValidationTolerance");
+        if(vtObj != null) {
+            try {
+                validationTolerance = Double.parseDouble(vtObj.toString());
+                LOG.warn("Validation by tolerance is enabled with value {}.", validationTolerance);
+            } catch (NumberFormatException ee) {
+                validationTolerance = 0d;
+                LOG.warn(
+                        "Validation by tolerance isn't enabled because of non numerical value of ValidationTolerance: {}.",
+                        vtObj);
+            }
+        } else {
+            LOG.info("Validation by tolerance isn't enabled.");
+        }
+
         Object pObject = validParams.get(NNTrainer.PROPAGATION);
         this.propagation = pObject == null ? "Q" : (String) pObject;
         this.rawLearningRate = Double.valueOf(validParams.get(NNTrainer.LEARNING_RATE).toString());

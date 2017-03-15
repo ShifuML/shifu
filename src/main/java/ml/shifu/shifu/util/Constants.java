@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright [2012-2014] PayPal Software Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -132,6 +132,7 @@ public interface Constants {
     public static final String CLEANED_DATA = "CleanedData";
     public static final String NORMALIZED_VALIDATION_DATA = "NormalizedValidationData";
     public static final String CLEANED_VALIDATION_DATA = "CleanedValidationData";
+    public static final String SHUFFLED_DATA_PATH = "ShuffledData";
 
     public static final String TRAIN_SCORES = "TrainScores";
     public static final String BIN_AVG_SCORE = "BinAvgScore";
@@ -168,31 +169,39 @@ public interface Constants {
 
     public static final String SHIFU_MODELSET_SOURCE_TYPE = "shifu.modelset.source.type";
 
-    public static final String SHIFU_VARSELECT_WRAPPER_RATIO = "shifu.varselect.wrapper.ratio";
+    public static final String SHIFU_VARSELECT_FILTEROUT_RATIO = "shifu.varselect.filterout.ratio";
 
-    public static final String SHIFU_VARSELECT_WRAPPER_NUM = "shifu.varselect.wrapper.num";
+    public static final String SHIFU_VARSELECT_FILTER_NUM = "shifu.varselect.filter.num";
 
-    public static final String SHIFU_VARSELECT_WRAPPER_TYPE = "shifu.varselect.wrapper.type";
+    public static final String SHIFU_VARSELECT_FILTEROUT_TYPE = "shifu.varselect.filterout.type";
 
-    public static final String SHIFU_DEFAULT_VARSEL_SE_MULTI = "false";
+    public static final String SHIFU_DEFAULT_VARSEL_SE_MULTI = "true";
 
     public static final String SHIFU_VARSEL_SE_MULTI = "shifu.varsel.se.multi";
 
     public static final String SHIFU_VARSEL_SE_MULTI_THREAD = "shifu.varsel.se.multi.thread";
 
-    public static final int SHIFU_DEFAULT_VARSEL_SE_MULTI_THREAD = 4;
+    public static final int SHIFU_DEFAULT_VARSEL_SE_MULTI_THREAD = 6;
 
-    public static final String WRAPPER_BY_REMOVE = "R";
+    public static final String FILTER_BY_ST = "ST";
 
-    public static final String WRAPPER_BY_ADD = "A";
+    public static final String FILTER_BY_SE = "SE";
 
-    public static final String WRAPPER_BY_SE = "SE";
+    public static final String FILTER_BY_VOTED = "V";
 
-    public static final String WRAPPER_BY_VOTED = "V";
+    public static final String FILTER_BY_FI = "FI";
 
-    public static final String WRAPPER_BY_FI = "FI";
+    public static final String FILTER_BY_KS = "KS";
 
-    public static final float SHIFU_DEFAULT_VARSELECT_WRAPPER_RATIO = 0.05f;
+    public static final String FILTER_BY_IV = "IV";
+
+    public static final String FILTER_BY_MIX = "MIX";
+
+    public static final String FILTER_BY_PARETO = "PARETO";
+
+    public static final float SHIFU_DEFAULT_VARSELECT_FILTEROUT_RATIO = 0.05f;
+
+    public static final int SHIFU_DEFAULT_VARSELECT_FILTER_NUM = -1;
 
     public static final String COUNTER_WNEGTAGS = "WNEGTAGS";
 
@@ -229,5 +238,15 @@ public interface Constants {
     public static final String SHIFU_DTRAIN_PARALLEL = "shifu.dtrain.parallel";
 
     public static final String SHIFU_TMPMODEL_COPYTOLOCAL = "shifu.tmpmodel.copytolocal";
+
+    public static final String SHIFU_NORM_SHUFFLE_SIZE = "shifu.norm.shuffle.size";
+
+    public static final String SHIFU_NORM_PREFER_PART_SIZE = "shifu.norm.prefer.part.size";
+
+    public static final String SHIFU_SCORE_SCALE = "shifu.score.scale";
+
+    public static final String SHIFU_CORRELATION_MULTI_THREADS = "shifu.correlation.multi.threads";
+
+    public static final String SHIFU_CORRELATION_MULTI = "shifu.correlation.multi";
 
 }

@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright [2012-2014] PayPal Software Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -47,8 +47,11 @@ public class CreateModelProcessor extends BasicModelProcessor implements Process
      * Constructor, giving a model and a model description to initialize a model configuration
      * 
      * @param modelSetName
+     *            the model set name
      * @param modelAlg
+     *            the algorithm
      * @param description
+     *            the description
      */
     public CreateModelProcessor(String modelSetName, ALGORITHM modelAlg, String description) {
         this.name = modelSetName;

@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright [2012-2014] PayPal Software Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -19,6 +19,8 @@ import com.fasterxml.jackson.core.JsonGenerationException;
 import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
+import ml.shifu.shifu.core.validator.ModelInspector;
+import ml.shifu.shifu.util.updater.ColumnConfigUpdater;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.fs.FileStatus;
@@ -305,7 +307,6 @@ public class CommonUtilsTest {
         ModelConfig config = ModelConfig.createInitModelConfig("test", ALGORITHM.NN, "test");
 
         config.getDataSet().setMetaColumnNameFile("./conf/meta_column_conf.txt");
-        ;
         config.getVarSelect().setForceRemoveColumnNameFile("./conf/remove_column_list.txt");
         List<ColumnConfig> list = new ArrayList<ColumnConfig>();
 
@@ -321,7 +322,7 @@ public class CommonUtilsTest {
         e.setColumnName("d");
         list.add(e);
 
-        CommonUtils.updateColumnConfigFlags(config, list);
+        ColumnConfigUpdater.updateColumnConfigFlags(config, list, ModelInspector.ModelStep.VARSELECT);
 
         Assert.assertTrue(list.get(0).isMeta());
     }
@@ -477,6 +478,25 @@ public class CommonUtilsTest {
         Assert.assertEquals(CommonUtils.getBinIndex(binBoundary, 0.00010), 0);
         Assert.assertEquals(CommonUtils.getBinIndex(binBoundary, 5D), 8);
 
+    }
+
+    @Test
+    public void trimNumber() {
+        Assert.assertEquals(CommonUtils.trimTag("1000"), "1000");
+        Assert.assertEquals(CommonUtils.trimTag("1.000"), "1");
+        Assert.assertEquals(CommonUtils.trimTag("1."), "1");
+        Assert.assertEquals(CommonUtils.trimTag("0.0000"), "0");
+        Assert.assertEquals(CommonUtils.trimTag("1.03400"), "1.034");
+        Assert.assertEquals(CommonUtils.trimTag("1.034001"), "1.034001");
+        Assert.assertEquals(CommonUtils.trimTag(".0000"), "0");
+        Assert.assertEquals(CommonUtils.trimTag(".00001"), "0.00001");
+        Assert.assertEquals(CommonUtils.trimTag(".M0001"), ".M0001");
+        Assert.assertEquals(CommonUtils.trimTag("M."), "M.");
+        Assert.assertEquals(CommonUtils.trimTag(".L"), ".L");
+        Assert.assertEquals(CommonUtils.trimTag(" .L  "), ".L");
+        Assert.assertEquals(CommonUtils.trimTag(" "), "");
+        Assert.assertEquals(CommonUtils.trimTag(null), "");
+        Assert.assertEquals(CommonUtils.trimTag("1.0B"), "1.0B");
     }
 
     @AfterClass

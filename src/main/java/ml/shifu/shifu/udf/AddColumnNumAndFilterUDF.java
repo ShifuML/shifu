@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright [2012-2014] PayPal Software Foundation
  * <p/>
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -20,6 +20,7 @@ import ml.shifu.shifu.container.obj.ModelStatsConf;
 import ml.shifu.shifu.container.obj.ModelStatsConf.BinningMethod;
 import ml.shifu.shifu.exception.ShifuErrorCode;
 import ml.shifu.shifu.exception.ShifuException;
+import ml.shifu.shifu.util.CommonUtils;
 import ml.shifu.shifu.util.Constants;
 import org.apache.pig.data.*;
 import org.apache.pig.impl.logicalLayer.schema.Schema;
@@ -37,6 +38,7 @@ import java.io.IOException;
  *         (column-id, column-value, column-tag, column-score)
  *         ...
  * }
+ * </pre>
  */
 public class AddColumnNumAndFilterUDF extends AddColumnNumUDF {
 
@@ -48,7 +50,7 @@ public class AddColumnNumAndFilterUDF extends AddColumnNumUDF {
     }
 
     public AddColumnNumAndFilterUDF(String source, String pathModelConfig, String pathColumnConfig,
-                                    String withScoreStr, String isAppendRandom) throws Exception {
+            String withScoreStr, String isAppendRandom) throws Exception {
         super(source, pathModelConfig, pathColumnConfig, withScoreStr);
         this.isAppendRandom = Boolean.TRUE.toString().equalsIgnoreCase(isAppendRandom);
     }
@@ -59,90 +61,90 @@ public class AddColumnNumAndFilterUDF extends AddColumnNumUDF {
         DataBag bag = BagFactory.getInstance().newDefaultBag();
         TupleFactory tupleFactory = TupleFactory.getInstance();
 
-        if (input == null) {
+        if(input == null) {
             return null;
         }
 
         int size = input.size();
 
-        if (size == 0 || input.size() < this.columnConfigList.size()) {
+        if(size == 0 || input.size() != this.columnConfigList.size()) {
             log.info("the input size - " + input.size() + ", while column size - " + columnConfigList.size());
             throw new ShifuException(ShifuErrorCode.ERROR_NO_EQUAL_COLCONFIG);
         }
 
-        if (input.get(tagColumnNum) == null) {
+        if(input.get(tagColumnNum) == null) {
             throw new ShifuException(ShifuErrorCode.ERROR_NO_TARGET_COLUMN);
         }
 
-        String tag = input.get(tagColumnNum).toString();
+        String tag = CommonUtils.trimTag(input.get(tagColumnNum).toString());
 
         // filter out tag not in setting tagging list
-        if (!super.tagSet.contains(tag)) {
-            if (isPigEnabled(Constants.SHIFU_GROUP_COUNTER, "INVALID_TAG")) {
+        if(!super.tagSet.contains(tag)) {
+            if(isPigEnabled(Constants.SHIFU_GROUP_COUNTER, "INVALID_TAG")) {
                 PigStatusReporter.getInstance().getCounter(Constants.SHIFU_GROUP_COUNTER, "INVALID_TAG").increment(1);
             }
             return null;
         }
 
         Double rate = modelConfig.getBinningSampleRate();
-        if (modelConfig.isBinningSampleNegOnly()) {
-            if (super.negTagSet.contains(tag) && random.nextDouble() > rate) {
+        if(modelConfig.isBinningSampleNegOnly()) {
+            if(super.negTagSet.contains(tag) && random.nextDouble() > rate) {
                 return null;
             }
         } else {
-            if (random.nextDouble() > rate) {
+            if(random.nextDouble() > rate) {
                 return null;
             }
         }
 
-        for (int i = 0; i < size; i++) {
+        for(int i = 0; i < size; i++) {
             ColumnConfig config = columnConfigList.get(i);
-            if (config.isCandidate()) {
-                boolean isPositive = false;
-                ;
-                if (modelConfig.isRegression()) {
-                    if (super.posTagSet.contains(tag)) {
-                        isPositive = true;
-                    } else if (super.negTagSet.contains(tag)) {
-                        isPositive = false;
-                    } else {
-                        // not valid tag, just skip current record
-                        continue;
-                    }
-                }
-                if (!isValidRecord(modelConfig.isRegression(), isPositive, config)) {
+            // if (config.isCandidate()) {
+            // all columns can be stats
+            boolean isPositive = false;
+            if(modelConfig.isRegression()) {
+                if(super.posTagSet.contains(tag)) {
+                    isPositive = true;
+                } else if(super.negTagSet.contains(tag)) {
+                    isPositive = false;
+                } else {
+                    // not valid tag, just skip current record
                     continue;
                 }
-                Tuple tuple = tupleFactory.newTuple(TOTAL_COLUMN_CNT);
-                tuple.set(COLUMN_ID_INDX, i);
-                // Set Data
-                tuple.set(COLUMN_VAL_INDX, (input.get(i) == null ? null : input.get(i).toString()));
+            }
+            if(!isValidRecord(modelConfig.isRegression(), isPositive, config)) {
+                continue;
+            }
+            Tuple tuple = tupleFactory.newTuple(TOTAL_COLUMN_CNT);
+            tuple.set(COLUMN_ID_INDX, i);
+            // Set Data
+            tuple.set(COLUMN_VAL_INDX, (input.get(i) == null ? null : input.get(i).toString()));
 
-                if (modelConfig.isRegression()) {
-                    // Set Tag
-                    if (super.posTagSet.contains(tag)) {
-                        tuple.set(COLUMN_TAG_INDX, true);
-                    }
-
-                    if (super.negTagSet.contains(tag)) {
-                        tuple.set(COLUMN_TAG_INDX, false);
-                    }
-                } else {
-                    // a mock for multiple classification
+            if(modelConfig.isRegression()) {
+                // Set Tag
+                if(super.posTagSet.contains(tag)) {
                     tuple.set(COLUMN_TAG_INDX, true);
                 }
 
-                // get weight value
-                tuple.set(COLUMN_WEIGHT_INDX, getWeightColumnVal(input));
-
-                // add random seed for distribution for bigger mapper, 300 is not enough TODO
-                if (this.isAppendRandom) {
-                    tuple.set(COLUMN_SEED_INDX, Math.abs(random.nextInt() % 300));
+                if(super.negTagSet.contains(tag)) {
+                    tuple.set(COLUMN_TAG_INDX, false);
                 }
-
-                bag.add(tuple);
+            } else {
+                // a mock for multiple classification
+                tuple.set(COLUMN_TAG_INDX, true);
             }
+
+            // get weight value
+            tuple.set(COLUMN_WEIGHT_INDX, getWeightColumnVal(input));
+
+            // add random seed for distribution for bigger mapper, 300 is not enough TODO
+            if(this.isAppendRandom) {
+                tuple.set(COLUMN_SEED_INDX, Math.abs(random.nextInt() % 300));
+            }
+
+            bag.add(tuple);
         }
+        // }
         return bag;
     }
 
@@ -153,12 +155,12 @@ public class AddColumnNumAndFilterUDF extends AddColumnNumUDF {
             tupleSchema.add(new FieldSchema("columnId", DataType.INTEGER));
             tupleSchema.add(new FieldSchema("value", DataType.CHARARRAY));
             tupleSchema.add(new FieldSchema("tag", DataType.BOOLEAN));
-            if (this.isAppendRandom) {
+            if(this.isAppendRandom) {
                 tupleSchema.add(new FieldSchema("rand", DataType.INTEGER));
             }
             tupleSchema.add(new FieldSchema("weight", DataType.DOUBLE));
-            return new Schema(new Schema.FieldSchema("columnInfos",
-                    new Schema(new Schema.FieldSchema("columnInfo", tupleSchema, DataType.TUPLE)), DataType.BAG));
+            return new Schema(new Schema.FieldSchema("columnInfos", new Schema(new Schema.FieldSchema("columnInfo",
+                    tupleSchema, DataType.TUPLE)), DataType.BAG));
         } catch (IOException e) {
             log.error("Error in outputSchema", e);
             return null;
@@ -166,7 +168,7 @@ public class AddColumnNumAndFilterUDF extends AddColumnNumUDF {
     }
 
     private boolean isValidRecord(boolean isBinary, boolean isPositive, ColumnConfig columnConfig) {
-        if (isBinary) {
+        if(isBinary) {
             return columnConfig != null && (columnConfig.isCategorical() || isValidBinningMethodForBinary(isPositive));
         } else {
             return columnConfig != null && (columnConfig.isCategorical() || isValidBinningMethod());

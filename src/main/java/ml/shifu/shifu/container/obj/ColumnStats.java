@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright [2012-2014] PayPal Software Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -22,7 +22,7 @@ import java.util.List;
 /**
  * ColumnStats class is stats collection for Column
  * If the Column type is categorical, the max/min field will be null
- * <p/>
+ * <p>
  * ks/iv will be used for variable selection
  */
 @JsonIgnoreProperties(ignoreUnknown = true)
@@ -38,6 +38,7 @@ public class ColumnStats {
      */
     private Long distinctCount;
     private Long missingCount;
+    private Long validNumCount;
     private Double stdDev;
     private Double missingPercentage;
     private Double woe;
@@ -259,9 +260,23 @@ public class ColumnStats {
 
     /**
      *
-     * @param unitStats
+     * @param unitStats the unitStats
      */
     public void setUnitStats(List<String> unitStats) {
         this.unitStats = unitStats;
+    }
+
+    /**
+     * @return the validNumCount
+     */
+    public Long getValidNumCount() {
+        return validNumCount;
+    }
+
+    /**
+     * @param validNumCount the validNumCount to set
+     */
+    public void setValidNumCount(Long validNumCount) {
+        this.validNumCount = validNumCount;
     }
 }

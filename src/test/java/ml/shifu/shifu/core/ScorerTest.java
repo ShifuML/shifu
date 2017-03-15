@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright [2012-2014] PayPal Software Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -108,7 +108,6 @@ public class ScorerTest {
 
     @Test
     public void scoreTest() {
-
         List<ColumnConfig> list = new ArrayList<ColumnConfig>();
         ColumnConfig col = new ColumnConfig();
         col.setColumnType(ColumnType.N);
@@ -131,7 +130,7 @@ public class ScorerTest {
         MLDataPair pair = new BasicMLDataPair(new BasicMLData(input), new BasicMLData(ideal));
 
         ScoreObject o = s.score(pair, null);
-        List<Integer> scores = o.getScores();
+        List<Double> scores = o.getScores();
 
         Assert.assertTrue(scores.get(0) > 400);
         Assert.assertTrue(scores.get(1) == 1000);

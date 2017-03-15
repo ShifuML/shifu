@@ -1,5 +1,21 @@
+/*
+ * Copyright [2013-2015] PayPal Software Foundation
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package ml.shifu.shifu.core.processor.stats;
 
+import com.clearspring.analytics.stream.cardinality.HyperLogLogPlus;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -96,14 +112,62 @@ public class MapReducerStatsWorker extends AbstractStatsExecutor {
         // update column config
         updateColumnConfigWithPreTrainingStats();
 
+        // check categorical columns and numerical columns and warning
+        checkNumericalAndCategoricalColumns();
+
         // save it to local/hdfs
-        processor.saveColumnConfigListAndColumnStats(true);
+        processor.saveColumnConfigList();
+
+        if(StringUtils.isNotEmpty(modelConfig.getPsiColumnName())) {
+            runPSI();
+            processor.saveColumnConfigList();
+        }
+
         processor.syncDataToHdfs(modelConfig.getDataSet().getSource());
 
-        runPSI();
-        processor.saveColumnConfigListAndColumnStats(true);
-
         return true;
+    }
+
+    /**
+     * According to sample values and distinct count in each column, check if user set wrong for numerical and
+     * categorical features. Only warning message are output to console for user to check.
+     */
+    private void checkNumericalAndCategoricalColumns() {
+        for(ColumnConfig config: this.columnConfigList) {
+            if(config != null && !config.isMeta() && !config.isTarget()) {
+                List<String> sampleValues = config.getSampleValues();
+                if(config.isNumerical() && sampleValues != null) {
+                    int nums = numberCount(sampleValues);
+                    if((nums * 1d / sampleValues.size()) < 0.5d) {
+                        log.warn(
+                                "Column {} with index {} is set to numrical but numbers are less than 50% in ColumnConfig::SampleValues, please check if it is numerical feature.",
+                                config.getColumnName(), config.getColumnNum());
+                    }
+                }
+
+                if(config.isCategorical() && sampleValues != null) {
+                    int nums = numberCount(sampleValues);
+                    if((nums * 1d / sampleValues.size()) > 0.95d && config.getColumnStats().getDistinctCount() != null
+                            && config.getColumnStats().getDistinctCount() > 5000) {
+                        log.warn(
+                                "Column {} with index {} is set to categorical but numbers are more than 95% in ColumnConfig::SampleValues and distinct count is over 5000, please check if it is categorical feature.",
+                                config.getColumnName(), config.getColumnNum());
+                    }
+                }
+            }
+        }
+    }
+
+    private int numberCount(List<String> sampleValues) {
+        int numbers = 0;
+        for(String str: sampleValues) {
+            try {
+                Double.parseDouble(str);
+                numbers += 1;
+            } catch (Exception ignore) {
+            }
+        }
+        return numbers;
     }
 
     protected void runStatsPig(Map<String, String> paramsMap) throws Exception {
@@ -112,8 +176,8 @@ public class MapReducerStatsWorker extends AbstractStatsExecutor {
                 modelConfig.getDataSet().getSource());
 
         log.info("this.pathFinder.getOtherConfigs() => " + this.pathFinder.getOtherConfigs());
-        PigExecutor.getExecutor().submitJob(modelConfig, pathFinder.getAbsolutePath("scripts/StatsSpdtI.pig"),
-                paramsMap, modelConfig.getDataSet().getSource(), this.pathFinder);
+        PigExecutor.getExecutor().submitJob(modelConfig, pathFinder.getScriptPath("scripts/StatsSpdtI.pig"), paramsMap,
+                modelConfig.getDataSet().getSource(), this.pathFinder);
         // update
         log.info("Updating binning info ...");
         updateBinningInfoWithMRJob();
@@ -173,6 +237,22 @@ public class MapReducerStatsWorker extends AbstractStatsExecutor {
         if(!job.waitForCompletion(true)) {
             FileUtils.deleteQuietly(new File(filePath));
             throw new RuntimeException("MapReduce Job Updateing Binning Info failed.");
+        } else {
+            long totalValidCount = job.getCounters().findCounter(Constants.SHIFU_GROUP_COUNTER, "TOTAL_VALID_COUNT")
+                    .getValue();
+            long invalidTagCount = job.getCounters().findCounter(Constants.SHIFU_GROUP_COUNTER, "INVALID_TAG")
+                    .getValue();
+            long filterOut = job.getCounters().findCounter(Constants.SHIFU_GROUP_COUNTER, "FILTER_OUT_COUNT")
+                    .getValue();
+            long weightExceptions = job.getCounters().findCounter(Constants.SHIFU_GROUP_COUNTER, "WEIGHT_EXCEPTION")
+                    .getValue();
+            log.info(
+                    "Total valid records {}, invalid tag records {}, filter out records {}, weight exception records {}",
+                    totalValidCount, invalidTagCount, filterOut, weightExceptions);
+
+            if(totalValidCount > 0L && invalidTagCount * 1d / totalValidCount >= 0.8d) {
+                log.warn("Too many invalid tags, please check you configuration on positive tags and negative tags.");
+            }
         }
         FileUtils.deleteQuietly(new File(filePath));
     }
@@ -183,12 +263,15 @@ public class MapReducerStatsWorker extends AbstractStatsExecutor {
         new GenericOptionsParser(conf, new String[] { "-libjars", addRuntimeJars(), "-files", filePath });
 
         conf.setBoolean(CombineInputFormat.SHIFU_VS_SPLIT_COMBINABLE, true);
+        conf.setBoolean(FileInputFormat.INPUT_DIR_RECURSIVE, true);
 
         conf.set(Constants.SHIFU_STATS_EXLCUDE_MISSING,
                 Environment.getProperty(Constants.SHIFU_STATS_EXLCUDE_MISSING, "true"));
 
         conf.setBoolean(GuaguaMapReduceConstants.MAPRED_MAP_TASKS_SPECULATIVE_EXECUTION, true);
         conf.setBoolean(GuaguaMapReduceConstants.MAPRED_REDUCE_TASKS_SPECULATIVE_EXECUTION, true);
+        conf.setBoolean(GuaguaMapReduceConstants.MAPREDUCE_MAP_SPECULATIVE, true);
+        conf.setBoolean(GuaguaMapReduceConstants.MAPREDUCE_REDUCE_SPECULATIVE, true);
         conf.set(
                 Constants.SHIFU_MODEL_CONFIG,
                 ShifuFileUtils.getFileSystemBySourceType(source)
@@ -201,7 +284,7 @@ public class MapReducerStatsWorker extends AbstractStatsExecutor {
         conf.set(Constants.SHIFU_MODELSET_SOURCE_TYPE, source.toString());
 
         // set mapreduce.job.max.split.locations to 30 to suppress warnings
-        conf.setInt(GuaguaMapReduceConstants.MAPREDUCE_JOB_MAX_SPLIT_LOCATIONS, 100);
+        conf.setInt(GuaguaMapReduceConstants.MAPREDUCE_JOB_MAX_SPLIT_LOCATIONS, 5000);
         conf.set("mapred.reduce.slowstart.completed.maps",
                 Environment.getProperty("mapred.reduce.slowstart.completed.maps", "0.8"));
 
@@ -217,8 +300,7 @@ public class MapReducerStatsWorker extends AbstractStatsExecutor {
 
         // one can set guagua conf in shifuconfig
         for(Map.Entry<Object, Object> entry: Environment.getProperties().entrySet()) {
-            if(entry.getKey().toString().startsWith("nn") || entry.getKey().toString().startsWith("guagua")
-                    || entry.getKey().toString().startsWith("shifu") || entry.getKey().toString().startsWith("mapred")) {
+            if(CommonUtils.isHadoopConfigurationInjected(entry.getKey().toString())) {
                 conf.set(entry.getKey().toString(), entry.getValue().toString());
             }
         }
@@ -251,6 +333,8 @@ public class MapReducerStatsWorker extends AbstractStatsExecutor {
         jars.add(JarManager.findContainingJar(JsonParser.class));
         // jackson-annotations-*.jar
         jars.add(JarManager.findContainingJar(JsonIgnore.class));
+        // stream-llib-*.jar
+        jars.add(JarManager.findContainingJar(HyperLogLogPlus.class));
 
         return StringUtils.join(jars, NNConstants.LIB_JAR_SEPARATOR);
     }
@@ -259,6 +343,7 @@ public class MapReducerStatsWorker extends AbstractStatsExecutor {
      * update the max/min/mean/std/binning information from stats step
      * 
      * @throws IOException
+     *             in stats processing from hdfs files
      */
     public void updateColumnConfigWithPreTrainingStats() throws IOException {
         List<Scanner> scanners = ShifuFileUtils.getDataScanners(pathFinder.getPreTrainingStatsPath(), modelConfig
@@ -275,6 +360,7 @@ public class MapReducerStatsWorker extends AbstractStatsExecutor {
      * Scan the stats result and save them into column configure
      * 
      * @param scanner
+     *            the scanners to be read
      */
     private void scanStatsResult(Scanner scanner) {
         while(scanner.hasNextLine()) {
@@ -297,8 +383,10 @@ public class MapReducerStatsWorker extends AbstractStatsExecutor {
                     String binCategory = Base64Utils.base64Decode(raw[1]);
                     config.setBinCategory(CommonUtils.stringToStringList(binCategory,
                             CalculateStatsUDF.CATEGORY_VAL_SEPARATOR));
+                    config.setBinBoundary(null);
                 } else {
                     config.setBinBoundary(CommonUtils.stringToDoubleList(raw[1]));
+                    config.setBinCategory(null);
                 }
                 config.setBinCountNeg(CommonUtils.stringToIntegerList(raw[2]));
                 config.setBinCountPos(CommonUtils.stringToIntegerList(raw[3]));
@@ -340,6 +428,18 @@ public class MapReducerStatsWorker extends AbstractStatsExecutor {
                 if(raw.length >= 27) {
                     config.getColumnStats().setKurtosis(parseDouble(raw[26]));
                 }
+                if(raw.length >= 30) {
+                    config.getColumnStats().setValidNumCount(parseLong(raw[29]));
+                }
+                if(raw.length >= 31) {
+                    config.getColumnStats().setDistinctCount(parseLong(raw[30]));
+                }
+                if(raw.length >= 32) {
+                    if(raw[31] != null) {
+                        List<String> sampleValues = Arrays.asList(raw[31].split(","));
+                        config.setSampleValues(sampleValues);
+                    }
+                }
             } catch (Exception e) {
                 log.error(String.format("Fail to process following column : %s name: %s error: %s", columnNum,
                         this.columnConfigList.get(columnNum).getColumnName(), e.getMessage()), e);
@@ -376,51 +476,50 @@ public class MapReducerStatsWorker extends AbstractStatsExecutor {
      * Calculate the PSI
      * 
      * @throws IOException
+     *             in scanners read exception
      */
     private void runPSI() throws IOException {
-        if(StringUtils.isNotEmpty(modelConfig.getPsiColumnName())) {
-            log.info("Run PSI to use {} to compute the PSI ", modelConfig.getPsiColumnName());
-            ColumnConfig columnConfig = CommonUtils.findColumnConfigByName(columnConfigList,
-                    modelConfig.getPsiColumnName());
+        log.info("Run PSI to use {} to compute the PSI ", modelConfig.getPsiColumnName());
+        ColumnConfig columnConfig = CommonUtils
+                .findColumnConfigByName(columnConfigList, modelConfig.getPsiColumnName());
 
-            if(columnConfig == null || (!columnConfig.isMeta() && !columnConfig.isCategorical())) {
-                log.warn("Unable to use the PSI column {} specify in ModelConfig to compute PSI\n" +
-                                "neither meta nor categorical type",
-                        columnConfig != null ? columnConfig.getColumnName() : "unknown");
+        if(columnConfig == null || (!columnConfig.isMeta() && !columnConfig.isCategorical())) {
+            log.warn("Unable to use the PSI column {} specify in ModelConfig to compute PSI\n"
+                    + "neither meta nor categorical type", columnConfig != null ? columnConfig.getColumnName()
+                    : "unknown");
 
-                return;
-            }
-
-            log.info("Start to use {} to compute the PSI ", columnConfig.getColumnName());
-
-            Map<String, String> paramsMap = new HashMap<String, String>();
-            paramsMap.put("delimiter", CommonUtils.escapePigString(modelConfig.getDataSetDelimiter()));
-            paramsMap.put("PSIColumn", modelConfig.getPsiColumnName().trim());
-            paramsMap.put("column_parallel", Integer.toString(columnConfigList.size() / 10));
-            paramsMap.put("value_index", "2");
-
-            PigExecutor.getExecutor().submitJob(modelConfig, pathFinder.getAbsolutePath("scripts/PSI.pig"), paramsMap);
-
-            List<Scanner> scanners = ShifuFileUtils.getDataScanners(pathFinder.getPSIInfoPath(), modelConfig
-                    .getDataSet().getSource());
-
-            for(Scanner scanner: scanners) {
-                while(scanner.hasNext()) {
-                    String[] output = scanner.nextLine().trim().split("\\|");
-
-                    try {
-                        int columnNum = Integer.parseInt(output[0]);
-                        ColumnConfig config = this.columnConfigList.get(columnNum);
-                        config.setPSI(Double.parseDouble(output[1]));
-                        config.setUnitStats(Arrays.asList(StringUtils.split(output[2],
-                                CalculateStatsUDF.CATEGORY_VAL_SEPARATOR)));
-                    } catch (Exception e) {
-                        log.error("error in parsing", e);
-                    }
-
-                }
-            }
-            log.info("Run PSI - done.");
+            return;
         }
+
+        log.info("Start to use {} to compute the PSI ", columnConfig.getColumnName());
+
+        Map<String, String> paramsMap = new HashMap<String, String>();
+        paramsMap.put("delimiter", CommonUtils.escapePigString(modelConfig.getDataSetDelimiter()));
+        paramsMap.put("PSIColumn", modelConfig.getPsiColumnName().trim());
+        paramsMap.put("column_parallel", Integer.toString(columnConfigList.size() / 10));
+        paramsMap.put("value_index", "2");
+
+        PigExecutor.getExecutor().submitJob(modelConfig, pathFinder.getScriptPath("scripts/PSI.pig"), paramsMap);
+
+        List<Scanner> scanners = ShifuFileUtils.getDataScanners(pathFinder.getPSIInfoPath(), modelConfig.getDataSet()
+                .getSource());
+
+        for(Scanner scanner: scanners) {
+            while(scanner.hasNext()) {
+                String[] output = scanner.nextLine().trim().split("\\|");
+
+                try {
+                    int columnNum = Integer.parseInt(output[0]);
+                    ColumnConfig config = this.columnConfigList.get(columnNum);
+                    config.setPSI(Double.parseDouble(output[1]));
+                    config.setUnitStats(Arrays.asList(StringUtils.split(output[2],
+                            CalculateStatsUDF.CATEGORY_VAL_SEPARATOR)));
+                } catch (Exception e) {
+                    log.error("error in parsing", e);
+                }
+
+            }
+        }
+        log.info("Run PSI - done.");
     }
 }

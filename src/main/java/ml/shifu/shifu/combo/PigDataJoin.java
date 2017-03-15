@@ -29,13 +29,17 @@ public class PigDataJoin {
         PigExecutor.getExecutor().submitJob(RawSourceData.SourceType.HDFS, pigCode);
     }
 
-    /**
+    /*
      * Generate pig code for data merge
-     *
-     * @param uidColumnName  - the column to join
-     * @param outputPath     - the output path for joined file
+     * 
+     * @param uidColumnName - the column to join
+     * 
+     * @param outputPath - the output path for joined file
+     * 
      * @param columnFileList
+     * 
      * @return
+     * 
      * @throws IOException
      */
     public String genPigJoinCode(String uidColumnName, String outputPath, List<ColumnFile> columnFileList)
@@ -47,20 +51,23 @@ public class PigDataJoin {
             List<String> relations = new ArrayList<String>();
 
             int i = 0;
-            for (ColumnFile columnFile : columnFileList) {
+            for(ColumnFile columnFile: columnFileList) {
                 String relation = DATA_PREFIX + (i++);
-                writeLine(writer, relation + " = load '" + columnFile.getFilePath() + "' using PigStorage('|', '-schema');");
-                if (columnFile.hasSelectedVar(uidColumnName)) {
-                    writeLine(writer, relation + " = foreach " + relation + " generate " + columnFile.genFieldSelector() + ";");
+                writeLine(writer, relation + " = load '" + columnFile.getFilePath()
+                        + "' using PigStorage('|', '-schema');");
+                if(columnFile.hasSelectedVar(uidColumnName)) {
+                    writeLine(writer,
+                            relation + " = foreach " + relation + " generate " + columnFile.genFieldSelector() + ";");
                 } else {
-                    writeLine(writer, relation + " = foreach " + relation + " generate "
-                            + uidColumnName + " as " + uidColumnName
-                            + ", " + columnFile.genFieldSelector() + ";");
+                    writeLine(writer, relation + " = foreach " + relation + " generate " + uidColumnName + " as "
+                            + uidColumnName + ", " + columnFile.genFieldSelector() + ";");
                 }
                 relations.add(relation);
             }
 
             writeLine(writer, "result = group " + genGroupByClauses(relations, uidColumnName) + ";");
+            writeLine(writer, "result = foreach result " + genLimitClauses(relations, uidColumnName) + ";");
+            writeLine(writer, "result = filter result by " + genFilterSizeClauses(relations) + ";");
             writeLine(writer, "result = foreach result generate " + genFlattenClauses(relations) + ";");
             writeLine(writer, "result = foreach result generate " + genRenameClauses(columnFileList, relations) + ";");
             writeLine(writer, "rmf " + outputPath + ";");
@@ -76,50 +83,88 @@ public class PigDataJoin {
         return byos.toString();
     }
 
-    /**
+    /*
+     * Generate filter by size clauses
+     */
+    private String genFilterSizeClauses(List<String> relations) {
+        List<String> filterByClauses = new ArrayList<String>();
+        for(String relation: relations) {
+            filterByClauses.add("SIZE(" + relation + ") == 1");
+        }
+        return StringUtils.join(filterByClauses, " and ");
+    }
+
+    /*
      * Generate group by clauses
-     *
-     * @param relations     - Relation list
+     * 
+     * @param relations - Relation list
+     * 
      * @param uidColumnName - join columnName
+     * 
      * @return - pig group list
      */
     private String genGroupByClauses(List<String> relations, String uidColumnName) {
         List<String> groupByClauses = new ArrayList<String>();
-        for (String relation : relations) {
+        for(String relation: relations) {
             groupByClauses.add(relation + " by " + uidColumnName);
         }
         return StringUtils.join(groupByClauses, ",");
     }
 
-    /**
+    /*
+     * Generate limit 1 clause after group-by
+     * 
+     * @param relations - Relation list
+     * 
+     * @param uidColumnName - join column Name
+     * 
+     * @return pig limit list
+     */
+    private String genLimitClauses(List<String> relations, String uidColumnName) {
+        List<String> limitsClauses = new ArrayList<String>();
+        for(String relation: relations) {
+            limitsClauses.add(relation + " = limit " + relation + " 1");
+        }
+
+        StringBuffer buf = new StringBuffer();
+        buf.append("generate group," + StringUtils.join(relations, ","));
+        limitsClauses.add(buf.toString());
+
+        return "{ " + StringUtils.join(limitsClauses, ";") + "; }";
+    }
+
+    /*
      * Generate flatten clauses
-     *
+     * 
      * @param relations
+     * 
      * @return - pig flatten list
      */
     private String genFlattenClauses(List<String> relations) {
         List<String> flattenClauses = new ArrayList<String>();
-        for (String relation : relations) {
+        for(String relation: relations) {
             flattenClauses.add("FLATTEN(" + relation + ")");
         }
         return StringUtils.join(flattenClauses, ",");
     }
 
-    /**
+    /*
      * Generate fields rename clauses
-     *
+     * 
      * @param columnFileList
+     * 
      * @param relations
+     * 
      * @return - pig rename(as) list
      */
     private String genRenameClauses(List<ColumnFile> columnFileList, List<String> relations) {
         List<String> renameClauses = new ArrayList<String>();
-        for (int i = 0; i < columnFileList.size(); i++) {
+        for(int i = 0; i < columnFileList.size(); i++) {
             ColumnFile columnFile = columnFileList.get(i);
             String relation = relations.get(i);
 
             List<String> outputVars = columnFile.getOutputVarNames();
-            for (String var : outputVars) {
+            for(String var: outputVars) {
                 renameClauses.add(relation + "::" + var + " as " + var);
             }
         }
@@ -127,11 +172,13 @@ public class PigDataJoin {
         return StringUtils.join(renameClauses, ",");
     }
 
-    /**
+    /*
      * Write line with "\n"
-     *
+     * 
      * @param writer
+     * 
      * @param line
+     * 
      * @throws IOException
      */
     private void writeLine(BufferedWriter writer, String line) throws IOException {

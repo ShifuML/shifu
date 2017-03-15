@@ -15,6 +15,7 @@
  */
 package ml.shifu.shifu.core.dtrain.dt;
 
+import java.io.DataOutputStream;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -23,6 +24,7 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Properties;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.zip.GZIPOutputStream;
 
 import ml.shifu.guagua.master.BasicMasterInterceptor;
 import ml.shifu.guagua.master.MasterContext;
@@ -33,6 +35,7 @@ import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
 import ml.shifu.shifu.core.dtrain.CommonConstants;
 import ml.shifu.shifu.core.dtrain.DTrainUtils;
 import ml.shifu.shifu.core.dtrain.gs.GridSearch;
+import ml.shifu.shifu.fs.ShifuFileUtils;
 import ml.shifu.shifu.util.CommonUtils;
 
 import org.apache.commons.collections.CollectionUtils;
@@ -113,6 +116,11 @@ public class DTOutput extends BasicMasterInterceptor<DTMasterParams, DTWorkerPar
      */
     private Integer treeNum;
 
+    /**
+     * If k-fold cross validation
+     */
+    private boolean isKFoldCV;
+
     @Override
     public void preApplication(MasterContext<DTMasterParams, DTWorkerParams> context) {
         init(context);
@@ -142,8 +150,8 @@ public class DTOutput extends BasicMasterInterceptor<DTMasterParams, DTWorkerPar
             }
         } else if(isGBDT) {
             // for gbdt, only store trees are all built well
-            if(context.getMasterResult().isSwitchToNextTree()
-                    && context.getMasterResult().getTmpTrees().size() % (this.treeNum / 10) == 0) {
+            if(this.treeNum >= 10 && context.getMasterResult().isSwitchToNextTree()
+                    && (context.getMasterResult().getTmpTrees().size() - 1) % (this.treeNum / 10) == 0) {
                 final List<TreeNode> trees = context.getMasterResult().getTmpTrees();
                 if(trees.size() > 1) {
                     Thread tmpModelPersistThread = new Thread(new Runnable() {
@@ -156,7 +164,7 @@ public class DTOutput extends BasicMasterInterceptor<DTMasterParams, DTWorkerPar
                             Path out = new Path(context.getProps().getProperty(CommonConstants.GUAGUA_OUTPUT));
                             writeModelToFileSystem(subTrees, out);
                             // last one is newest one with only ROOT node, should be excluded
-                            saveTmpModelToHDFS(context.getCurrentIteration(), subTrees);
+                            saveTmpModelToHDFS(subTrees.size(), subTrees);
                         }
                     }, "saveTmpNNToHDFS thread");
                     tmpModelPersistThread.setDaemon(true);
@@ -190,7 +198,7 @@ public class DTOutput extends BasicMasterInterceptor<DTMasterParams, DTWorkerPar
                         .append(this.trainerId)
                         .append(" Iteration #")
                         .append(currentIteration - 1)
-                        .append(" Train Error: ")
+                        .append(" Training Error: ")
                         .append((Double.isNaN(trainError) || trainError == 0d) ? "N/A" : String.format("%.10f",
                                 trainError)).append(" Validation Error: ")
                         .append(validationError == 0d ? "N/A" : String.format("%.10f", validationError))
@@ -202,7 +210,7 @@ public class DTOutput extends BasicMasterInterceptor<DTMasterParams, DTWorkerPar
                         .append(this.trainerId)
                         .append(" Iteration #")
                         .append(currentIteration - 1)
-                        .append(" Train Error: ")
+                        .append(" Training Error: ")
                         .append((Double.isNaN(trainError) || trainError == 0d) ? "N/A" : String.format("%.10f",
                                 trainError)).append(" Validation Error: ")
                         .append(validationError == 0d ? "N/A" : String.format("%.10f", validationError))
@@ -215,14 +223,14 @@ public class DTOutput extends BasicMasterInterceptor<DTMasterParams, DTWorkerPar
                 List<Integer> treeDepth = context.getMasterResult().getTreeDepth();
                 if(treeDepth.size() == 0) {
                     info = new StringBuilder(200).append("Trainer ").append(this.trainerId).append(" Iteration #")
-                            .append(currentIteration - 1).append(" Train Error: ")
+                            .append(currentIteration - 1).append(" Training Error: ")
                             .append(trainError == 0d ? "N/A" : String.format("%.10f", trainError))
                             .append(" Validation Error: ")
                             .append(validationError == 0d ? "N/A" : String.format("%.10f", validationError))
                             .append("\n").toString();
                 } else {
                     info = new StringBuilder(200).append("Trainer ").append(this.trainerId).append(" Iteration #")
-                            .append(currentIteration - 1).append(" Train Error: ")
+                            .append(currentIteration - 1).append(" Training Error: ")
                             .append(trainError == 0d ? "N/A" : String.format("%.10f", trainError))
                             .append(" Validation Error: ")
                             .append(validationError == 0d ? "N/A" : String.format("%.10f", validationError))
@@ -273,7 +281,7 @@ public class DTOutput extends BasicMasterInterceptor<DTMasterParams, DTWorkerPar
         LOG.debug("final trees", trees.toString());
         Path out = new Path(context.getProps().getProperty(CommonConstants.GUAGUA_OUTPUT));
         writeModelToFileSystem(trees, out);
-        if(this.isGsMode) {
+        if(this.isGsMode || this.isKFoldCV) {
             Path valErrOutput = new Path(context.getProps().getProperty(CommonConstants.GS_VALIDATION_ERROR));
             writeValErrorToFileSystem(context.getMasterResult().getValidationError()
                     / context.getMasterResult().getValidationCount(), valErrOutput);
@@ -295,11 +303,13 @@ public class DTOutput extends BasicMasterInterceptor<DTMasterParams, DTWorkerPar
     }
 
     private void writeModelToFileSystem(List<TreeNode> trees, Path out) {
-        FSDataOutputStream fos = null;
-        try {
-            fos = FileSystem.get(new Configuration()).create(out);
-            LOG.info("Writing results to {}", out);
+        DataOutputStream fos = null;
 
+        try {
+            fos = new DataOutputStream(new GZIPOutputStream(FileSystem.get(new Configuration()).create(out)));
+            LOG.info("Writing {} trees to {}.", trees.size(), out);
+            // version
+            fos.writeInt(CommonConstants.TREE_FORMAT_VERSION);
             fos.writeUTF(modelConfig.getAlgorithm());
             fos.writeUTF(this.validParams.get("Loss").toString());
             fos.writeBoolean(this.modelConfig.isClassification());
@@ -409,6 +419,11 @@ public class DTOutput extends BasicMasterInterceptor<DTMasterParams, DTWorkerPar
                 this.validParams = gs.getParams(Integer.parseInt(trainerId));
             }
 
+            Integer kCrossValidation = this.modelConfig.getTrain().getNumKFold();
+            if(kCrossValidation != null && kCrossValidation > 0) {
+                isKFoldCV = true;
+            }
+
             this.tmpModelsFolder = context.getProps().getProperty(CommonConstants.SHIFU_TMP_MODELS_FOLDER);
             this.isRF = ALGORITHM.RF.toString().equalsIgnoreCase(modelConfig.getAlgorithm());
             this.isGBDT = ALGORITHM.GBT.toString().equalsIgnoreCase(modelConfig.getAlgorithm());
@@ -417,7 +432,13 @@ public class DTOutput extends BasicMasterInterceptor<DTMasterParams, DTWorkerPar
             this.inputCount = inputOutputIndex[0] + inputOutputIndex[1];
             try {
                 Path progressLog = new Path(context.getProps().getProperty(CommonConstants.SHIFU_DTRAIN_PROGRESS_FILE));
-                this.progressOutput = FileSystem.get(new Configuration()).create(progressLog);
+                // if the progressLog already exists, that because the master failed, and fail-over
+                // we need to append the log, so that client console can get refreshed. Or console will appear stuck.
+                if (ShifuFileUtils.isFileExists(progressLog, SourceType.HDFS)) {
+                    this.progressOutput = FileSystem.get(new Configuration()).append(progressLog);
+                } else {
+                    this.progressOutput = FileSystem.get(new Configuration()).create(progressLog);
+                }
             } catch (IOException e) {
                 LOG.error("Error in create progress log:", e);
             }

@@ -35,7 +35,8 @@ import org.apache.hadoop.io.Writable;
  */
 public class CountAndFrequentItemsWritable implements Writable {
 
-    static final int FREQUET_ITEM_MAX_SIZE = 20;
+    public static final int FREQUET_ITEM_MAX_SIZE = 20;
+
     /**
      * Serializing form for HyperLogLogPlus instance.
      */
@@ -72,6 +73,9 @@ public class CountAndFrequentItemsWritable implements Writable {
 
     public CountAndFrequentItemsWritable(long count, long invalidCount, long validNumCount, byte[] hyperBytes,
             Set<String> frequetItems) {
+        this.count = count;
+        this.invalidCount = invalidCount;
+        this.validNumCount = validNumCount;
         this.hyperBytes = hyperBytes;
         this.frequetItems = frequetItems;
     }

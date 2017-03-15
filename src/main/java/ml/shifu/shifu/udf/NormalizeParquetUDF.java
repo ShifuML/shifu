@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright [2012-2014] PayPal Software Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -89,7 +89,7 @@ public class NormalizeParquetUDF extends AbstractTrainerUDF<Tuple> {
         }
 
         // do data sampling. Unselected data or data with invalid tag will be filtered out.
-        final String rawTag = input.get(tagColumnNum).toString();
+        final String rawTag = CommonUtils.trimTag(input.get(tagColumnNum).toString());
         boolean isNotSampled = DataSampler.isNotSampled(posTags, negTags, modelConfig.getNormalizeSampleRate(),
                 modelConfig.isNormalizeSampleNegOnly(), rawTag);
         if(isNotSampled) {
@@ -151,7 +151,7 @@ public class NormalizeParquetUDF extends AbstractTrainerUDF<Tuple> {
         return tuple;
     }
 
-    /**
+    /*
      * Evaluate weight expression based on the variables context.
      * 
      * @param expr
@@ -184,7 +184,7 @@ public class NormalizeParquetUDF extends AbstractTrainerUDF<Tuple> {
         return weight;
     }
 
-    /**
+    /*
      * Check tag type.
      * 
      * @param posTags
@@ -231,11 +231,8 @@ public class NormalizeParquetUDF extends AbstractTrainerUDF<Tuple> {
         }
     }
 
-    /**
+    /*
      * Create expressions for multi weight settings
-     * 
-     * @param weightExprList
-     * @return weight expression map
      */
     protected Map<Expression, Double> createExpressionMap(List<WeightAmplifier> weightExprList) {
         Map<Expression, Double> ewMap = new HashMap<Expression, Double>();
@@ -251,11 +248,8 @@ public class NormalizeParquetUDF extends AbstractTrainerUDF<Tuple> {
         return ewMap;
     }
 
-    /**
+    /*
      * Create the expression for weight setting
-     * 
-     * @param weightAmplifier
-     * @return expression for weight amplifier
      */
     private Expression createExpression(String weightAmplifier) {
         if(StringUtils.isNotBlank(weightAmplifier)) {

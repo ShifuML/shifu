@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright [2012-2014] PayPal Software Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.google.common.collect.Lists;
+import ml.shifu.shifu.util.CommonUtils;
 
 /**
  * SourceData class
@@ -63,15 +64,14 @@ public class RawSourceData implements Cloneable {
     /**
      * Change it to true by default to compute distinct value for later variable selection.
      */
-    private Boolean autoType = Boolean.TRUE;
+    private Boolean autoType = Boolean.FALSE;
 
     /**
      * To change it to 0 instead of 250 because 0-1 columns shouldn't be set to categorical.
-     * 
-     * @deprecated no need set it to do auto typing.
      */
-    @Deprecated
     private Integer autoTypeThreshold = 0;
+
+    private String metaColumnNameFile;
 
     /**
      * @return the autoTypeThreshold
@@ -167,7 +167,7 @@ public class RawSourceData implements Cloneable {
     }
 
     public void setPosTags(List<String> posTags) {
-        this.posTags = posTags;
+        this.posTags = trimTags(posTags);
     }
 
     public List<String> getNegTags() {
@@ -175,18 +175,33 @@ public class RawSourceData implements Cloneable {
     }
 
     public void setNegTags(List<String> negTags) {
-        this.negTags = negTags;
+        this.negTags = trimTags(negTags);
     }
+
+    private List<String> trimTags(List<String> tags) {
+        if ( tags != null ) {
+            List<String> trimmedTags = new ArrayList<String>();
+            for (String tag : tags) {
+                trimmedTags.add(CommonUtils.trimTag(tag));
+            }
+            return trimmedTags;
+        } else {
+            return null;
+        }
+    }
+
+    public String getMetaColumnNameFile() {
+        return metaColumnNameFile;
+    }
+
+    public void setMetaColumnNameFile(String metaColumnNameFile) {
+        this.metaColumnNameFile = metaColumnNameFile;
+    }
+
 
     @Override
     public RawSourceData clone() {
-        RawSourceData copy = null;
-        try {
-            copy = (RawSourceData) super.clone();
-        } catch (CloneNotSupportedException e) {
-            // This should never happen
-            throw new InternalError(e.toString());
-        }
+        RawSourceData copy = new RawSourceData();
 
         copy.setSource(source);
         copy.setDataPath(dataPath);
@@ -194,11 +209,14 @@ public class RawSourceData implements Cloneable {
         copy.setHeaderPath(headerPath);
         copy.setHeaderDelimiter(headerDelimiter);
         copy.setFilterExpressions(filterExpressions);
+        copy.setWeightColumnName(weightColumnName);
 
         copy.setTargetColumnName(targetColumnName);
         copy.setPosTags(new ArrayList<String>(posTags));
         copy.setNegTags(new ArrayList<String>(negTags));
         copy.setMissingOrInvalidValues(missingOrInvalidValues);
+        copy.setMetaColumnNameFile(metaColumnNameFile);
+
         return copy;
     }
 
@@ -233,4 +251,5 @@ public class RawSourceData implements Cloneable {
     public void setAutoType(Boolean autoType) {
         this.autoType = autoType;
     }
+
 }

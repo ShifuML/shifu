@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright [2012-2014] PayPal Software Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -40,6 +40,8 @@ import ml.shifu.shifu.util.Environment;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.fs.Path;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
@@ -50,6 +52,9 @@ import com.google.common.collect.Lists;
  */
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class ModelConfig {
+
+    @JsonIgnore
+    private final static Logger LOG = LoggerFactory.getLogger(ModelConfig.class);
 
     private ModelBasicConf basic = new ModelBasicConf();
 
@@ -184,7 +189,8 @@ public class ModelConfig {
                 + Constants.DEFAULT_FORCEREMOVE_COLUMN_FILE).toString(), SourceType.LOCAL);
         varselect.setForceRemoveColumnNameFile(Constants.COLUMN_META_FOLDER_NAME + File.separator
                 + Constants.DEFAULT_FORCEREMOVE_COLUMN_FILE);
-        varselect.setFilterBySE(Boolean.TRUE);
+        varselect.setFilterEnable(Boolean.TRUE);
+        varselect.setFilterNum(200);
         modelConfig.setVarSelect(varselect);
 
         // build normalize info
@@ -222,12 +228,19 @@ public class ModelConfig {
         evalSet.setHeaderPath(new File(Environment.getProperty(Environment.SHIFU_HOME), File.separator + "example"
                 + File.separator + "cancer-judgement" + File.separator + "DataStore" + File.separator + "EvalSet1"
                 + File.separator + ".pig_header").toString());
+        // create empty <ModelName>/<EvalSetName>.meta.column.names
+        String namesFilePath = Constants.COLUMN_META_FOLDER_NAME + File.separator
+                + evalConfig.getName() + "." + Constants.DEFAULT_META_COLUMN_FILE;
+        ShifuFileUtils.createFileIfNotExists(new Path(modelName, namesFilePath).toString(), SourceType.LOCAL);
+        evalSet.setMetaColumnNameFile(namesFilePath);
         evalConfig.setDataSet(evalSet);
+
         // create empty <ModelName>/<EvalSetName>Score.meta.column.names
-        ShifuFileUtils.createFileIfNotExists(new Path(modelName, Constants.COLUMN_META_FOLDER_NAME + File.separator
-                + evalConfig.getName() + Constants.DEFAULT_EVALSCORE_META_COLUMN_FILE).toString(), SourceType.LOCAL);
-        evalConfig.setScoreMetaColumnNameFile(Constants.COLUMN_META_FOLDER_NAME + File.separator + evalConfig.getName()
-                + Constants.DEFAULT_EVALSCORE_META_COLUMN_FILE);
+        namesFilePath = Constants.COLUMN_META_FOLDER_NAME + File.separator
+                + evalConfig.getName() + Constants.DEFAULT_EVALSCORE_META_COLUMN_FILE;
+        ShifuFileUtils.createFileIfNotExists(new Path(modelName, namesFilePath).toString(), SourceType.LOCAL);
+        evalConfig.setScoreMetaColumnNameFile(namesFilePath);
+
         modelConfig.getEvals().add(evalConfig);
 
         return modelConfig;
@@ -289,7 +302,7 @@ public class ModelConfig {
                 || (CollectionUtils.isEmpty(dataSet.getPosTags()) && CollectionUtils.isNotEmpty(dataSet.getNegTags()));
     }
 
-    /**
+    /*
      * Flattened tags for multiple classification. '1', '2|3' will be flattened to '1', '2', '3'. While '2' and '3' are
      * combined to one class.
      */
@@ -431,7 +444,7 @@ public class ModelConfig {
     }
 
     @JsonIgnore
-    public Double getCrossValidationRate() {
+    public Double getValidSetRate() {
         return train.getValidSetRate();
     }
 
@@ -526,22 +539,50 @@ public class ModelConfig {
     }
 
     @JsonIgnore
-    public Boolean getVarSelectWrapperEnabled() {
-        return varSelect.getWrapperEnabled();
-    }
-
-    @JsonIgnore
     public List<String> getMetaColumnNames() throws IOException {
         String delimiter = StringUtils.isBlank(this.getHeaderDelimiter()) ? this.getDataSetDelimiter() : this
                 .getHeaderDelimiter();
-        return CommonUtils.readConfFileIntoList(dataSet.getMetaColumnNameFile(), SourceType.LOCAL, delimiter);
+        String metaColumnNameFile = dataSet.getMetaColumnNameFile();
+        if(StringUtils.isBlank(metaColumnNameFile)) {
+            String defaultMetaColumnFileName = Constants.COLUMN_META_FOLDER_NAME + File.separator
+                    + Constants.DEFAULT_META_COLUMN_FILE;
+            if(ShifuFileUtils.isFileExists(defaultMetaColumnFileName, SourceType.LOCAL)) {
+                metaColumnNameFile = defaultMetaColumnFileName;
+                LOG.warn(
+                        "'dataSet::metaColumnNameFile' is not set while default metaColumnNameFile: {} is found, default meta file will be used.",
+                        defaultMetaColumnFileName);
+            } else {
+                LOG.warn(
+                        "'dataSet::metaColumnNameFile' is not set and default metaColumnNameFile: {} is not found, no meta config files, please check and set meta config file in 'dataSet::metaColumnNameFile'.",
+                        defaultMetaColumnFileName);
+                return new ArrayList<String>();
+            }
+        }
+        return CommonUtils.readConfFileIntoList(metaColumnNameFile, SourceType.LOCAL, delimiter);
     }
 
     @JsonIgnore
     public List<String> getCategoricalColumnNames() throws IOException {
         String delimiter = StringUtils.isBlank(this.getHeaderDelimiter()) ? this.getDataSetDelimiter() : this
                 .getHeaderDelimiter();
-        return CommonUtils.readConfFileIntoList(dataSet.getCategoricalColumnNameFile(), SourceType.LOCAL, delimiter);
+
+        String categoricalColumnNameFile = dataSet.getCategoricalColumnNameFile();
+        if(StringUtils.isBlank(categoricalColumnNameFile)) {
+            String defaultCategoricalColumnNameFile = Constants.COLUMN_META_FOLDER_NAME + File.separator
+                    + Constants.DEFAULT_CATEGORICAL_COLUMN_FILE;
+            if(ShifuFileUtils.isFileExists(defaultCategoricalColumnNameFile, SourceType.LOCAL)) {
+                categoricalColumnNameFile = defaultCategoricalColumnNameFile;
+                LOG.warn(
+                        "'dataSet::categoricalColumnNameFile' is not set while default categoricalColumnNameFile: {} is found, default categorical file will be used.",
+                        defaultCategoricalColumnNameFile);
+            } else {
+                LOG.warn(
+                        "'dataSet::categoricalColumnNameFile' is not set and default categoricalColumnNameFile: {} is not found, no categorical config files, please check and set categorical config file in 'dataSet::categoricalColumnNameFile'.",
+                        defaultCategoricalColumnNameFile);
+                return new ArrayList<String>();
+            }
+        }
+        return CommonUtils.readConfFileIntoList(categoricalColumnNameFile, SourceType.LOCAL, delimiter);
     }
 
     @JsonIgnore
@@ -565,29 +606,19 @@ public class ModelConfig {
     }
 
     @JsonIgnore
-    public Integer getVarSelectFilterNum() {
-        return varSelect.getFilterNum();
+    public String getVarSelectFilterBy() {
+        return varSelect.getFilterBy();
     }
 
     @JsonIgnore
-    public String getVarSelectFilterBy() {
-        return varSelect.getFilterBy();
+    public Integer getVarSelectFilterNum() {
+        return varSelect.getFilterNum();
     }
 
     @JsonIgnore
     public boolean isCategoricalDisabled() {
         // there is no settings now, always enable
         return false;
-    }
-
-    @JsonIgnore
-    public String getVarSelectWrapperBy() {
-        return varSelect.getWrapperBy();
-    }
-
-    @JsonIgnore
-    public int getVarSelectWrapperNum() {
-        return varSelect.getWrapperNum();
     }
 
     @JsonIgnore
@@ -602,14 +633,50 @@ public class ModelConfig {
 
     @JsonIgnore
     public List<String> getListForceRemove() throws IOException {
-        return CommonUtils.readConfFileIntoList(varSelect.getForceRemoveColumnNameFile(), SourceType.LOCAL,
-                this.getHeaderDelimiter());
+        String delimiter = StringUtils.isBlank(this.getHeaderDelimiter()) ? this.getDataSetDelimiter() : this
+                .getHeaderDelimiter();
+
+        String forceRemoveColumnNameFile = varSelect.getForceRemoveColumnNameFile();
+        if(StringUtils.isBlank(forceRemoveColumnNameFile)) {
+            String defaultForceRemoveColumnNameFile = Constants.COLUMN_META_FOLDER_NAME + File.separator
+                    + Constants.DEFAULT_FORCEREMOVE_COLUMN_FILE;
+            if(ShifuFileUtils.isFileExists(defaultForceRemoveColumnNameFile, SourceType.LOCAL)) {
+                forceRemoveColumnNameFile = defaultForceRemoveColumnNameFile;
+                LOG.warn(
+                        "'varSelect::forceRemoveColumnNameFile' is not set while default forceRemoveColumnNameFile: {} is found, default force-remove file will be used.",
+                        defaultForceRemoveColumnNameFile);
+            } else {
+                LOG.warn(
+                        "'varSelect::forceRemoveColumnNameFile' is not set and default forceRemoveColumnNameFile: {} is not found, no force-remove config files, please check and set force-select config file in 'varSelect::forceRemoveColumnNameFile'.",
+                        defaultForceRemoveColumnNameFile);
+                return new ArrayList<String>();
+            }
+        }
+        return CommonUtils.readConfFileIntoList(forceRemoveColumnNameFile, SourceType.LOCAL, delimiter);
     }
 
     @JsonIgnore
     public List<String> getListForceSelect() throws IOException {
-        return CommonUtils.readConfFileIntoList(varSelect.getForceSelectColumnNameFile(), SourceType.LOCAL,
-                this.getHeaderDelimiter());
+        String delimiter = StringUtils.isBlank(this.getHeaderDelimiter()) ? this.getDataSetDelimiter() : this
+                .getHeaderDelimiter();
+
+        String forceSelectColumnNameFile = varSelect.getForceSelectColumnNameFile();
+        if(StringUtils.isBlank(forceSelectColumnNameFile)) {
+            String defaultForceSelectColumnNameFile = Constants.COLUMN_META_FOLDER_NAME + File.separator
+                    + Constants.DEFAULT_FORCESELECT_COLUMN_FILE;
+            if(ShifuFileUtils.isFileExists(defaultForceSelectColumnNameFile, SourceType.LOCAL)) {
+                forceSelectColumnNameFile = defaultForceSelectColumnNameFile;
+                LOG.warn(
+                        "'varSelect::forceSelectColumnNameFile' is not set while default forceSelectColumnNameFile: {} is found, default force-select file will be used.",
+                        defaultForceSelectColumnNameFile);
+            } else {
+                LOG.warn(
+                        "'varSelect::forceSelectColumnNameFile' is not set and default forceSelectColumnNameFile: {} is not found, no force-select config files, please check and set force-select config file in 'varSelect::forceSelectColumnNameFile'.",
+                        defaultForceSelectColumnNameFile);
+                return new ArrayList<String>();
+            }
+        }
+        return CommonUtils.readConfFileIntoList(forceSelectColumnNameFile, SourceType.LOCAL, delimiter);
     }
 
     @JsonIgnore
@@ -716,7 +783,7 @@ public class ModelConfig {
         other.setTrain(train.clone());
 
         List<EvalConfig> evalConfigs = new ArrayList<EvalConfig>();
-        for ( EvalConfig evalConfig : this.evals ) {
+        for(EvalConfig evalConfig: this.evals) {
             evalConfigs.add(evalConfig.clone());
         }
         other.setEvals(evalConfigs);

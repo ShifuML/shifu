@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright [2012-2014] PayPal Software Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -75,10 +75,10 @@ public class DataNormalizeWorker extends AbstractWorkerActor {
         }
     }
 
-    /**
+    /*
      * Normalize the list training data from List<String> to List<Double>
      * 
-     * @param rfList
+     * @param rawDataList
      * @return the data after normalization
      */
     private List<List<Double>> normalizeData(List<String> rawDataList) {
@@ -109,7 +109,7 @@ public class DataNormalizeWorker extends AbstractWorkerActor {
             return null;
         }
 
-        String tag = rfs[this.targetColumnNum];
+        String tag = CommonUtils.trimTag(rfs[this.targetColumnNum]);
 
         boolean isNotSampled = DataSampler.isNotSampled(modelConfig.getPosTags(), modelConfig.getNegTags(),
                 modelConfig.getNormalizeSampleRate(), modelConfig.isNormalizeSampleNegOnly(), tag);
@@ -169,11 +169,8 @@ public class DataNormalizeWorker extends AbstractWorkerActor {
         return retDouList;
     }
 
-    /**
+    /*
      * Create expressions for multi weight settings
-     * 
-     * @param weightExprList
-     * @return weight expression map
      */
     protected Map<Expression, Double> createExpressionMap(List<WeightAmplifier> weightExprList) {
         Map<Expression, Double> ewMap = new HashMap<Expression, Double>();
@@ -189,11 +186,8 @@ public class DataNormalizeWorker extends AbstractWorkerActor {
         return ewMap;
     }
 
-    /**
+    /*
      * Create the expression for weight setting
-     * 
-     * @param weightAmplifier
-     * @return expression for weight amplifier
      */
     private Expression createExpression(String weightAmplifier) {
         if(StringUtils.isNotBlank(weightAmplifier)) {

@@ -26,11 +26,11 @@ import ml.shifu.shifu.core.dtrain.DTrainUtils;
 
 /**
  * NNParams are used to save NN model info which can also be stored into ZooKeeper.
- * <p/>
- * <p/>
+ * 
+ * <p>
  * {@link #weights} is used to set model weights which is used to transfer info from master to workers.
- * <p/>
- * <p/>
+ * 
+ * <p>
  * {@link #gradients} is used to accumulate all workers' gradients together in master and then use the accumulated
  * gradients to update weights.
  */
@@ -189,13 +189,6 @@ public class NNParams extends HaltBytable implements Combinable<NNParams> {
         this.wrCount = in.readInt();
     }
 
-    @Override
-    public String toString() {
-        return String.format("NNParams [testError=%s, trainError=%s, trainSize=%s, wrCount=%s, gSize=%s]",
-                this.testError, this.trainError, this.trainSize, this.getWrCount(),
-                this.gradients != null ? this.gradients.length : 0);
-    }
-
     /**
      * @return the count
      */
@@ -244,6 +237,13 @@ public class NNParams extends HaltBytable implements Combinable<NNParams> {
      */
     public void setWrCount(int wrCount) {
         this.wrCount = wrCount;
+    }
+
+    @Override
+    public String toString() {
+        return String.format("NNParams [testError=%s, trainError=%s, trainSize=%s, wrCount=%s, gSize=%s]",
+                this.testError, this.trainError, this.trainSize, this.getWrCount(),
+                this.gradients != null ? this.gradients.length : 0);
     }
 
 }

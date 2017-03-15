@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright [2012-2014] PayPal Software Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -165,6 +165,22 @@ public final class ColumnStatsCalculator {
 
     /**
      * From link {@literal <a href="http://www.itl.nist.gov/div898/handbook/eda/section3/eda35b.htm">Kurtosis</a>}
+     * 
+     * @param count
+     *            count
+     * @param mean
+     *            mean
+     * @param stdDev
+     *            stdDev
+     * @param sum
+     *            sum
+     * @param squaredSum
+     *            squaredSum
+     * @param tripleSum
+     *            tripleSum
+     * @param quarticSum
+     *            quarticSum
+     * @return Kurtosis value
      */
     public static double computeKurtosis(long count, double mean, double stdDev, double sum, double squaredSum,
             double tripleSum, double quarticSum) {
@@ -175,6 +191,20 @@ public final class ColumnStatsCalculator {
 
     /**
      * From link {@literal <a href="http://www.itl.nist.gov/div898/handbook/eda/section3/eda35b.htm">Skewness</a>}
+     * 
+     * @param count
+     *            count
+     * @param mean
+     *            mean
+     * @param stdDev
+     *            stdDev
+     * @param sum
+     *            sum
+     * @param squaredSum
+     *            squaredSum
+     * @param tripleSum
+     *            tripleSum
+     * @return skewness value
      */
     public static double computeSkewness(long count, double mean, double stdDev, double sum, double squaredSum,
             double tripleSum) {

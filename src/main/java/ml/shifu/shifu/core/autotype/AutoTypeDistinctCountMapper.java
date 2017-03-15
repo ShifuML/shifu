@@ -62,7 +62,7 @@ public class AutoTypeDistinctCountMapper extends Mapper<LongWritable, Text, IntW
     private IntWritable outputKey;
 
     /**
-     * TODO using approximate method to estimate real frequent items and store into this map
+     * Using approximate method to estimate real frequent items and store into this map
      */
     private Map<Integer, CountAndFrequentItems> variableCountMap;
 
@@ -138,7 +138,7 @@ public class AutoTypeDistinctCountMapper extends Mapper<LongWritable, Text, IntW
             LOG.warn("Empty input.");
             return;
         }
-        
+
         context.getCounter(Constants.SHIFU_GROUP_COUNTER, "TOTAL_VALID_COUNT").increment(1L);
 
         if(!this.dataPurifier.isFilterOut(valueStr)) {
@@ -148,10 +148,10 @@ public class AutoTypeDistinctCountMapper extends Mapper<LongWritable, Text, IntW
 
         String[] units = CommonUtils.split(valueStr, this.modelConfig.getDataSetDelimiter());
         // tagColumnNum should be in units array, if not IndexOutofBoundException
-        String tag = units[this.tagColumnNum];
+        String tag = CommonUtils.trimTag(units[this.tagColumnNum]);
 
         if(!this.tags.contains(tag)) {
-            if(System.currentTimeMillis() % 20 == 0) {
+            if(System.currentTimeMillis() % 50 == 0L) {
                 LOG.warn("Data with invalid tag is ignored in distinct count computing, invalid tag: {}.", tag);
             }
             context.getCounter(Constants.SHIFU_GROUP_COUNTER, "INVALID_TAG").increment(1L);
@@ -184,7 +184,7 @@ public class AutoTypeDistinctCountMapper extends Mapper<LongWritable, Text, IntW
         }
     }
 
-    private static class CountAndFrequentItems {
+    public static class CountAndFrequentItems {
 
         private final HyperLogLogPlus hyper = new HyperLogLogPlus(8);;
 
@@ -218,5 +218,50 @@ public class AutoTypeDistinctCountMapper extends Mapper<LongWritable, Text, IntW
                 frequentItems.add(unit);
             }
         }
+
+        /**
+         * @return the hyper
+         */
+        public HyperLogLogPlus getHyper() {
+            return hyper;
+        }
+
+        /**
+         * @return the frequentItems
+         */
+        public Set<String> getFrequentItems() {
+            return frequentItems;
+        }
+
+        /**
+         * @return the count
+         */
+        public long getCount() {
+            return count;
+        }
+
+        /**
+         * @return the invalidCount
+         */
+        public long getInvalidCount() {
+            return invalidCount;
+        }
+
+        /**
+         * @return the validNumCount
+         */
+        public long getValidNumCount() {
+            return validNumCount;
+        }
+
+        /* (non-Javadoc)
+         * @see java.lang.Object#toString()
+         */
+        @Override
+        public String toString() {
+            return "CountAndFrequentItems [hyper=" + hyper + ", frequentItems=" + frequentItems + ", count=" + count
+                    + ", invalidCount=" + invalidCount + ", validNumCount=" + validNumCount + "]";
+        }
+        
     }
 }

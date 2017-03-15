@@ -191,7 +191,7 @@ public class PostTrainMapper extends Mapper<LongWritable, Text, IntWritable, Fea
 
         String[] units = CommonUtils.split(valueStr, this.modelConfig.getDataSetDelimiter());
         // tagColumnNum should be in units array, if not IndexOutofBoundException
-        String tag = units[this.tagColumnNum];
+        String tag = CommonUtils.trimTag(units[this.tagColumnNum]);
 
         if(!this.tags.contains(tag)) {
             if(System.currentTimeMillis() % 20 == 0) {
@@ -208,7 +208,7 @@ public class PostTrainMapper extends Mapper<LongWritable, Text, IntWritable, Fea
         StringBuilder sb = new StringBuilder(500);
         sb.append(csr.getAvgScore()).append(Constants.DEFAULT_DELIMITER).append(csr.getMaxScore())
                 .append(Constants.DEFAULT_DELIMITER).append(csr.getMinScore()).append(Constants.DEFAULT_DELIMITER);
-        for(Integer score: csr.getScores()) {
+        for(Double score: csr.getScores()) {
             sb.append(score).append(Constants.DEFAULT_DELIMITER);
         }
         List<String> metaList = modelConfig.getMetaColumnNames();

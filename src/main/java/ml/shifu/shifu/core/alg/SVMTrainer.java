@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright [2012-2014] PayPal Software Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -32,7 +32,6 @@ import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 
-
 /**
  * Implementation of AbstractTrainer for support vector machine classification
  */
@@ -61,15 +60,18 @@ public class SVMTrainer extends AbstractTrainer {
         type.put("classification", SVMType.SupportVectorClassification);
         type.put("regresssion", SVMType.EpsilonSupportVectorRegression);
 
-        //kernel.put(KernelType.Precomputed, "")
+        // kernel.put(KernelType.Precomputed, "")
     }
 
     /**
      * SVMTrainer Constructor
-     *
+     * 
      * @param modelConfig
+     *            modelConfig
      * @param trainerID
+     *            trainerID
      * @param dryRun
+     *            dryRun
      */
     public SVMTrainer(ModelConfig modelConfig, int trainerID, Boolean dryRun) {
         super(modelConfig, trainerID, dryRun);
@@ -77,7 +79,7 @@ public class SVMTrainer extends AbstractTrainer {
 
     @Override
     public double train() throws IOException {
-        if (this.trainerID == 0) {
+        if(this.trainerID == 0) {
             log.info("Trainer #" + (this.trainerID + 1) + " Using SVM algorithm...");
         }
         encogTrain();
@@ -88,7 +90,8 @@ public class SVMTrainer extends AbstractTrainer {
      * Setup SVM
      */
     private void buildSVM() {
-        svm = new SVM(this.trainSet.getInputSize(), SVMType.SupportVectorClassification, kernel.get(modelConfig.getParams().get("Kernel")));
+        svm = new SVM(this.trainSet.getInputSize(), SVMType.SupportVectorClassification, kernel.get(modelConfig
+                .getParams().get("Kernel")));
     }
 
     /**
@@ -101,7 +104,7 @@ public class SVMTrainer extends AbstractTrainer {
         trainer.setC((Double) modelConfig.getParams().get("Const"));
         trainer.setGamma((Double) modelConfig.getParams().get("Gamma"));
 
-        if (this.trainerID == 0) {
+        if(this.trainerID == 0) {
             log.info("Using kenerl function " + svm.getKernelType());
         }
 
@@ -111,7 +114,7 @@ public class SVMTrainer extends AbstractTrainer {
 
         long second = 1000;
 
-        while (!runner.isFinish()) {
+        while(!runner.isFinish()) {
             try {
                 Thread.sleep(second);
                 log.info("Trainer #" + this.trainerID + " is running");
@@ -124,14 +127,15 @@ public class SVMTrainer extends AbstractTrainer {
 
         trainer = runner.trainer;
 
-        log.info("Train #" + this.trainerID + " Error: " + df.format(trainer.getError()) + " Validation Error:" + df.format(getValidSetError()));
+        log.info("Train #" + this.trainerID + " Error: " + df.format(trainer.getError()) + " Validation Error:"
+                + df.format(getValidSetError()));
 
         saveModel();
     }
 
     private void saveModel() {
         File folder = new File("./models");
-        if (!folder.exists()) {
+        if(!folder.exists()) {
             try {
                 FileUtils.forceMkdir(folder);
             } catch (IOException e) {
@@ -141,7 +145,6 @@ public class SVMTrainer extends AbstractTrainer {
         }
         EncogDirectoryPersistence.saveObject(new File("./models/model" + this.trainerID + ".svm"), svm);
     }
-
 
     public double getValidSetError() {
         return svm.calculateError(this.validSet);

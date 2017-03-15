@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright [2012-2014] PayPal Software Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -155,7 +155,7 @@ public class PostTrainModelProcessor extends BasicModelProcessor implements Proc
 
         ShifuFileUtils.deleteFile(new Path(postTrainOutputPath, "part-r-00000*").toString(), source);
 
-        saveColumnConfigListAndColumnStats(false);
+        saveColumnConfigList();
 
         if(super.modelConfig.getBasic().getPostTrainOn() != null && super.modelConfig.getBasic().getPostTrainOn()) {
             syncDataToHdfs(modelConfig.getDataSet().getSource());
@@ -230,6 +230,7 @@ public class PostTrainModelProcessor extends BasicModelProcessor implements Proc
         new GenericOptionsParser(conf, new String[] { "-libjars", addRuntimeJars() });
 
         conf.setBoolean(CombineInputFormat.SHIFU_VS_SPLIT_COMBINABLE, true);
+        conf.setBoolean("mapreduce.input.fileinputformat.input.dir.recursive", true);
 
         conf.set(Constants.SHIFU_STATS_EXLCUDE_MISSING,
                 Environment.getProperty(Constants.SHIFU_STATS_EXLCUDE_MISSING, "true"));
@@ -247,7 +248,8 @@ public class PostTrainModelProcessor extends BasicModelProcessor implements Proc
         conf.set(NNConstants.MAPRED_JOB_QUEUE_NAME, Environment.getProperty(Environment.HADOOP_JOB_QUEUE, "default"));
         conf.set(Constants.SHIFU_MODELSET_SOURCE_TYPE, source.toString());
         // set mapreduce.job.max.split.locations to 30 to suppress warnings
-        conf.setInt(GuaguaMapReduceConstants.MAPREDUCE_JOB_MAX_SPLIT_LOCATIONS, 100);
+        conf.setInt(GuaguaMapReduceConstants.MAPREDUCE_JOB_MAX_SPLIT_LOCATIONS, 5000);
+
         conf.set("mapred.reduce.slowstart.completed.maps",
                 Environment.getProperty("mapred.reduce.slowstart.completed.maps", "0.8"));
         String hdpVersion = HDPUtils.getHdpVersionForHDP224();
@@ -307,6 +309,7 @@ public class PostTrainModelProcessor extends BasicModelProcessor implements Proc
         new GenericOptionsParser(conf, new String[] { "-libjars", addRuntimeJars() });
 
         conf.setBoolean(CombineInputFormat.SHIFU_VS_SPLIT_COMBINABLE, true);
+        conf.setBoolean("mapreduce.input.fileinputformat.input.dir.recursive", true);
 
         conf.set(Constants.SHIFU_STATS_EXLCUDE_MISSING,
                 Environment.getProperty(Constants.SHIFU_STATS_EXLCUDE_MISSING, "true"));
@@ -324,7 +327,8 @@ public class PostTrainModelProcessor extends BasicModelProcessor implements Proc
         conf.set(NNConstants.MAPRED_JOB_QUEUE_NAME, Environment.getProperty(Environment.HADOOP_JOB_QUEUE, "default"));
         conf.set(Constants.SHIFU_MODELSET_SOURCE_TYPE, source.toString());
         // set mapreduce.job.max.split.locations to 30 to suppress warnings
-        conf.setInt(GuaguaMapReduceConstants.MAPREDUCE_JOB_MAX_SPLIT_LOCATIONS, 100);
+        conf.setInt(GuaguaMapReduceConstants.MAPREDUCE_JOB_MAX_SPLIT_LOCATIONS, 5000);
+
         conf.set("mapred.reduce.slowstart.completed.maps",
                 Environment.getProperty("mapred.reduce.slowstart.completed.maps", "0.8"));
         String hdpVersion = HDPUtils.getHdpVersionForHDP224();
@@ -378,6 +382,7 @@ public class PostTrainModelProcessor extends BasicModelProcessor implements Proc
      * run pig post train
      * 
      * @throws IOException
+     *             for any io exception
      */
     @SuppressWarnings("unused")
     private void runPigPostTrain() throws IOException {
@@ -393,7 +398,7 @@ public class PostTrainModelProcessor extends BasicModelProcessor implements Proc
         paramsMap.put("delimiter", CommonUtils.escapePigString(modelConfig.getDataSetDelimiter()));
 
         try {
-            PigExecutor.getExecutor().submitJob(modelConfig, pathFinder.getAbsolutePath("scripts/PostTrain.pig"),
+            PigExecutor.getExecutor().submitJob(modelConfig, pathFinder.getScriptPath("scripts/PostTrain.pig"),
                     paramsMap);
         } catch (IOException e) {
             throw new ShifuException(ShifuErrorCode.ERROR_RUNNING_PIG_JOB, e);
@@ -403,13 +408,14 @@ public class PostTrainModelProcessor extends BasicModelProcessor implements Proc
 
         // Sync Down
         columnConfigList = updateColumnConfigWithBinAvgScore(columnConfigList);
-        saveColumnConfigListAndColumnStats(false);
+        saveColumnConfigList();
     }
 
     /**
      * run akka post train
      * 
      * @throws IOException
+     *             for any io exception
      */
     private void runAkkaPostTrain() throws IOException {
         SourceType sourceType = modelConfig.getDataSet().getSource();
@@ -427,8 +433,10 @@ public class PostTrainModelProcessor extends BasicModelProcessor implements Proc
      * read the binary average score and update them into column list
      * 
      * @param columnConfigList
-     * @return
+     *            input column config list
+     * @return updated column config list
      * @throws IOException
+     *             for any io exception
      */
     private List<ColumnConfig> updateColumnConfigWithBinAvgScore(List<ColumnConfig> columnConfigList)
             throws IOException {

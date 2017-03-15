@@ -1,5 +1,5 @@
-/**
- * Copyright [2012-2014] PayPal Software Foundation
+/*
+ * Copyright [2013-2016] PayPal Software Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,6 +18,7 @@ package ml.shifu.shifu.udf;
 import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.container.obj.EvalConfig;
 import ml.shifu.shifu.core.Normalizer;
+import ml.shifu.shifu.core.dtrain.DTrainUtils;
 import ml.shifu.shifu.util.CommonUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.pig.data.DataType;
@@ -34,6 +35,7 @@ import java.util.*;
  */
 public class EvalNormUDF extends AbstractTrainerUDF<Tuple> {
 
+    @SuppressWarnings("unused")
     private static final String SCHEMA_PREFIX = "eval::";
 
     private EvalConfig evalConfig;
@@ -41,10 +43,14 @@ public class EvalNormUDF extends AbstractTrainerUDF<Tuple> {
     private List<String> outputNames;
 
     /**
-     * A simple weight exception validation: if over 5000 throw exceptions
+     * (name, column config) map for quick index
      */
-    @SuppressWarnings("unused")
-    private int weightExceptions;
+    private Map<String, ColumnConfig> columnConfigMap = new HashMap<String, ColumnConfig>();
+
+    /**
+     * Valid meta size which is in final output
+     */
+    private int validMetaSize = 0;
 
     public EvalNormUDF(String source, String pathModelConfig, String pathColumnConfig, String evalSetName)
             throws IOException {
@@ -52,43 +58,74 @@ public class EvalNormUDF extends AbstractTrainerUDF<Tuple> {
 
         evalConfig = modelConfig.getEvalConfigByName(evalSetName);
 
-        // create model runner
-        if(StringUtils.isNotBlank(evalConfig.getDataSet().getHeaderPath())) {
-            this.headers = CommonUtils.getHeaders(
-                    evalConfig.getDataSet().getHeaderPath(),
-                    evalConfig.getDataSet().getHeaderDelimiter(),
-                    evalConfig.getDataSet().getSource());
+        if(StringUtils.isBlank(evalConfig.getDataSet().getHeaderPath())) {
+            throw new RuntimeException("The evaluation data set header couldn't be empty!");
+        }
 
-            Set<String> evalNamesSet = new HashSet<String>(Arrays.asList(this.headers));
-            this.outputNames = new ArrayList<String>();
+        this.headers = CommonUtils.getFinalHeaders(evalConfig);
 
-            if ( StringUtils.isNotBlank(evalConfig.getDataSet().getTargetColumnName()) ) {
-                outputNames.add(evalConfig.getDataSet().getTargetColumnName());
+        Set<String> evalNamesSet = new HashSet<String>(Arrays.asList(this.headers));
+        this.outputNames = new ArrayList<String>();
+
+        // 1. target at first
+        if(StringUtils.isNotBlank(evalConfig.getDataSet().getTargetColumnName())) {
+            outputNames.add(evalConfig.getDataSet().getTargetColumnName());
+        } else {
+            outputNames.add(modelConfig.getTargetColumnName());
+        }
+
+        // 2. weight column
+        if(StringUtils.isNotBlank(evalConfig.getDataSet().getWeightColumnName())) {
+            outputNames.add(evalConfig.getDataSet().getWeightColumnName());
+        } else {
+            outputNames.add("weight");
+        }
+
+        // 3. do populate columnConfigMap at first
+        for(ColumnConfig columnConfig: this.columnConfigList) {
+            columnConfigMap.put(columnConfig.getColumnName(), columnConfig);
+        }
+
+        // 4. add meta columns
+        List<String> allMetaColumns = evalConfig.getAllMetaColumns(modelConfig);
+        for(String meta: allMetaColumns) {
+            if(evalNamesSet.contains(meta)) {
+                if(!outputNames.contains(meta)) {
+                    outputNames.add(meta);
+                    validMetaSize += 1;
+                }
             } else {
-                outputNames.add(modelConfig.getWeightColumnName());
+                throw new RuntimeException("Meta variable - " + meta + " couldn't be found in eval dataset!");
             }
+        }
 
-            if ( StringUtils.isNotBlank(evalConfig.getDataSet().getWeightColumnName()) ) {
-                outputNames.add(evalConfig.getDataSet().getWeightColumnName());
-            } else {
-                outputNames.add(SCHEMA_PREFIX + "weight");
-            }
-
-            for (ColumnConfig columnConfig : this.columnConfigList) {
-                if ( columnConfig.isFinalSelect() ) {
-                    if ( !evalNamesSet.contains(columnConfig.getColumnName()) ) {
-                        log.error("FinalSelect variable - " + columnConfig.getColumnName()
-                                + " couldn't be found in eval dataset!");
+        // 5. append real valid features
+        int[] inputOutputIndex = DTrainUtils.getNumericAndCategoricalInputAndOutputCounts(this.columnConfigList);
+        boolean isAfterVarSelect = (inputOutputIndex[3] == 1);
+        for(ColumnConfig columnConfig: this.columnConfigList) {
+            if(isAfterVarSelect) {
+                if(columnConfig.isFinalSelect() && (!columnConfig.isMeta() && !columnConfig.isTarget())) {
+                    if(evalNamesSet.contains(columnConfig.getColumnName())) {
+                        if(!outputNames.contains(columnConfig.getColumnName())) {
+                            outputNames.add(columnConfig.getColumnName());
+                        }
+                    } else {
                         throw new RuntimeException("FinalSelect variable - " + columnConfig.getColumnName()
                                 + " couldn't be found in eval dataset!");
+                    }
+                }
+            } else {
+                if(!columnConfig.isMeta() && !columnConfig.isTarget()) {
+                    if(evalNamesSet.contains(columnConfig.getColumnName())) {
+                        if(!outputNames.contains(columnConfig.getColumnName())) {
+                            outputNames.add(columnConfig.getColumnName());
+                        }
                     } else {
-                        outputNames.add(columnConfig.getColumnName());
+                        throw new RuntimeException("Variable - " + columnConfig.getColumnName()
+                                + " couldn't be found in eval dataset!");
                     }
                 }
             }
-        } else {
-            log.error("The header couldn't be empty!");
-            throw new RuntimeException("The evaluation data set header couldn't be empty!");
         }
     }
 
@@ -96,17 +133,19 @@ public class EvalNormUDF extends AbstractTrainerUDF<Tuple> {
         Map<String, String> rawDataMap = CommonUtils.convertDataIntoMap(input, this.headers);
 
         Tuple tuple = TupleFactory.getInstance().newTuple(this.outputNames.size());
-        for ( int i = 0; i < this.outputNames.size(); i ++ ) {
+        for(int i = 0; i < this.outputNames.size(); i++) {
             String name = this.outputNames.get(i);
             String raw = rawDataMap.get(name);
-            if ( i == 0 ) {
+            if(i == 0) {
                 tuple.set(i, raw);
-            } else if ( i == 1 ) {
-                tuple.set(i, (StringUtils.isEmpty(raw) ? "1.0" : raw));
+            } else if(i == 1) {
+                tuple.set(i, (StringUtils.isEmpty(raw) ? "1" : raw));
+            } else if(i > 1 && i < 2 + validMetaSize) {
+                // [2, 2 + validMetaSize) are meta columns
+                tuple.set(i, raw);
             } else {
-                ColumnConfig columnConfig = CommonUtils.findColumnConfigByName(this.columnConfigList, name);
-                Double value = Normalizer.normalize(columnConfig, raw,
-                        this.modelConfig.getNormalizeStdDevCutOff(),
+                ColumnConfig columnConfig = this.columnConfigMap.get(name);
+                Double value = Normalizer.normalize(columnConfig, raw, this.modelConfig.getNormalizeStdDevCutOff(),
                         this.modelConfig.getNormalizeType());
                 tuple.set(i, value);
             }
@@ -121,9 +160,10 @@ public class EvalNormUDF extends AbstractTrainerUDF<Tuple> {
     public Schema outputSchema(Schema input) {
         try {
             Schema tupleSchema = new Schema();
-            for ( int i = 0; i < this.outputNames.size(); i ++ ) {
+            for(int i = 0; i < this.outputNames.size(); i++) {
                 String name = this.outputNames.get(i);
-                if ( i < 2 ) {
+                if(i < 2 + validMetaSize) {
+                    // set target, weight and meta columns to string
                     tupleSchema.add(new FieldSchema(name, DataType.CHARARRAY));
                 } else {
                     tupleSchema.add(new FieldSchema(name, DataType.DOUBLE));

@@ -106,7 +106,15 @@ public class Node implements Bytable {
      */
     private boolean isLeaf;
 
+    /**
+     * Default root index is 1. Others are 2, 3, 4, 5 ...
+     */
     public static final int ROOT_INDEX = 1;
+
+    /**
+     * If node with such index, means such node is invalid.
+     */
+    public static final int INVALID_INDEX = -1;
 
     public Node() {
         this(ROOT_INDEX);
@@ -338,6 +346,8 @@ public class Node implements Bytable {
 
     /**
      * Check if node is real for leaf. No matter the leaf flag, this will check whether left and right exist.
+     * 
+     * @return if it is real leaf node
      */
     public boolean isRealLeaf() {
         return this.left == null && this.right == null;
@@ -395,8 +405,8 @@ public class Node implements Bytable {
     }
 
     /**
-     * @param wgtCnt
-     *            the wgtCnt to set
+     * @param wgtCntRatio
+     *            the wgtCntRatio to set
      */
     public void setWgtCntRatio(double wgtCntRatio) {
         this.wgtCntRatio = wgtCntRatio;
