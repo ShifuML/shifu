@@ -17,6 +17,9 @@ public class VarSelUpdater extends BasicUpdater {
     public void updateColumnConfig(ColumnConfig columnConfig) {
         String varName = columnConfig.getColumnName();
 
+        // set column flag to null, before reset it
+        columnConfig.setColumnFlag(null);
+
         if ( this.targetColumnName.equals(varName) ) {
             columnConfig.setColumnFlag(ColumnConfig.ColumnFlag.Target);
         } if (this.setMeta.contains(varName)) {
