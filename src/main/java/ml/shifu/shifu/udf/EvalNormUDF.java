@@ -15,17 +15,24 @@
  */
 package ml.shifu.shifu.udf;
 
+import ml.shifu.shifu.container.CaseScoreResult;
 import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.container.obj.EvalConfig;
+import ml.shifu.shifu.core.ModelRunner;
 import ml.shifu.shifu.core.Normalizer;
 import ml.shifu.shifu.core.dtrain.DTrainUtils;
+import ml.shifu.shifu.core.model.ModelSpec;
+import ml.shifu.shifu.core.pmml.builder.impl.ZscoreLocalTransformCreator;
 import ml.shifu.shifu.util.CommonUtils;
+import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.pig.data.DataType;
 import org.apache.pig.data.Tuple;
 import org.apache.pig.data.TupleFactory;
 import org.apache.pig.impl.logicalLayer.schema.Schema;
 import org.apache.pig.impl.logicalLayer.schema.Schema.FieldSchema;
+import org.dmg.pmml.LocalTransformations;
+import org.encog.ml.BasicML;
 
 import java.io.IOException;
 import java.util.*;
@@ -42,6 +49,12 @@ public class EvalNormUDF extends AbstractTrainerUDF<Tuple> {
     private String[] headers;
     private List<String> outputNames;
 
+    private String scoreName;
+    private int scIndex;
+
+    private ModelRunner modelRunner;
+    private String scale;
+
     /**
      * (name, column config) map for quick index
      */
@@ -52,7 +65,7 @@ public class EvalNormUDF extends AbstractTrainerUDF<Tuple> {
      */
     private int validMetaSize = 0;
 
-    public EvalNormUDF(String source, String pathModelConfig, String pathColumnConfig, String evalSetName)
+    public EvalNormUDF(String source, String pathModelConfig, String pathColumnConfig, String evalSetName, String scale)
             throws IOException {
         super(source, pathModelConfig, pathColumnConfig);
 
@@ -81,12 +94,7 @@ public class EvalNormUDF extends AbstractTrainerUDF<Tuple> {
             outputNames.add("weight");
         }
 
-        // 3. do populate columnConfigMap at first
-        for(ColumnConfig columnConfig: this.columnConfigList) {
-            columnConfigMap.put(columnConfig.getColumnName(), columnConfig);
-        }
-
-        // 4. add meta columns
+        // 3. add meta columns
         List<String> allMetaColumns = evalConfig.getAllMetaColumns(modelConfig);
         for(String meta: allMetaColumns) {
             if(evalNamesSet.contains(meta)) {
@@ -99,6 +107,15 @@ public class EvalNormUDF extends AbstractTrainerUDF<Tuple> {
             }
         }
 
+        // 4. do populate columnConfigMap at first
+        for(ColumnConfig columnConfig: this.columnConfigList) {
+            columnConfigMap.put(columnConfig.getColumnName(), columnConfig);
+            if ( columnConfig.isFinalSelect() && !outputNames.contains(columnConfig.getColumnName())) {
+                validMetaSize += 1;
+                outputNames.add(columnConfig.getColumnName());
+            }
+        }
+
         // 5. append real valid features
         int[] inputOutputIndex = DTrainUtils.getNumericAndCategoricalInputAndOutputCounts(this.columnConfigList);
         boolean isAfterVarSelect = (inputOutputIndex[3] == 1);
@@ -106,9 +123,7 @@ public class EvalNormUDF extends AbstractTrainerUDF<Tuple> {
             if(isAfterVarSelect) {
                 if(columnConfig.isFinalSelect() && (!columnConfig.isMeta() && !columnConfig.isTarget())) {
                     if(evalNamesSet.contains(columnConfig.getColumnName())) {
-                        if(!outputNames.contains(columnConfig.getColumnName())) {
-                            outputNames.add(columnConfig.getColumnName());
-                        }
+                        outputNames.add(columnConfig.getColumnName());
                     } else {
                         throw new RuntimeException("FinalSelect variable - " + columnConfig.getColumnName()
                                 + " couldn't be found in eval dataset!");
@@ -117,9 +132,10 @@ public class EvalNormUDF extends AbstractTrainerUDF<Tuple> {
             } else {
                 if(!columnConfig.isMeta() && !columnConfig.isTarget()) {
                     if(evalNamesSet.contains(columnConfig.getColumnName())) {
-                        if(!outputNames.contains(columnConfig.getColumnName())) {
-                            outputNames.add(columnConfig.getColumnName());
-                        }
+                        //if(!outputNames.contains(columnConfig.getColumnName())) {
+                            //outputNames.add(columnConfig.getColumnName());
+                        outputNames.add(columnConfig.getColumnName());
+                        //}
                     } else {
                         throw new RuntimeException("Variable - " + columnConfig.getColumnName()
                                 + " couldn't be found in eval dataset!");
@@ -127,12 +143,34 @@ public class EvalNormUDF extends AbstractTrainerUDF<Tuple> {
                 }
             }
         }
+
+        this.scoreName = this.evalConfig.getPerformanceScoreSelector();
+        if ( StringUtils.isBlank(this.scoreName) || this.scoreName.equalsIgnoreCase("mean")) {
+            this.scIndex = -1;
+        } else {
+            try {
+                this.scIndex = Integer.parseInt(this.scoreName.toLowerCase().replaceAll("model", ""));
+            } catch (Exception e) {
+                throw new RuntimeException("Invalid setting for performanceScoreSelector in EvalConfig - "
+                        + this.scoreName);            }
+        }
+        this.scale = scale;
     }
 
     public Tuple exec(Tuple input) throws IOException {
+        if(this.modelRunner == null) {
+            // here to initialize modelRunner, this is moved from constructor to here to avoid OOM in client side.
+            // UDF in pig client will be initialized to get some metadata issues
+            List<BasicML> models = CommonUtils.loadBasicModels(modelConfig, this.columnConfigList, evalConfig,
+                    evalConfig.getDataSet().getSource(), evalConfig.getGbtConvertToProb());
+            this.modelRunner = new ModelRunner(modelConfig, columnConfigList, this.headers, evalConfig.getDataSet()
+                    .getDataDelimiter(), models);
+            this.modelRunner.setScoreScale(Integer.parseInt(this.scale));
+        }
+
         Map<String, String> rawDataMap = CommonUtils.convertDataIntoMap(input, this.headers);
 
-        Tuple tuple = TupleFactory.getInstance().newTuple(this.outputNames.size());
+        Tuple tuple = TupleFactory.getInstance().newTuple(this.outputNames.size() + 1);
         for(int i = 0; i < this.outputNames.size(); i++) {
             String name = this.outputNames.get(i);
             String raw = rawDataMap.get(name);
@@ -151,6 +189,15 @@ public class EvalNormUDF extends AbstractTrainerUDF<Tuple> {
             }
         }
 
+        CaseScoreResult score = this.modelRunner.compute(rawDataMap);
+        if ( score == null ) {
+            tuple.set(this.outputNames.size(), -999.0);
+        } else if ( this.scIndex < 0 ) {
+            tuple.set(this.outputNames.size(), score.getAvgScore());
+        } else {
+            tuple.set(this.outputNames.size(), score.getScores().get(this.scIndex));
+        }
+
         return tuple;
     }
 
@@ -166,9 +213,12 @@ public class EvalNormUDF extends AbstractTrainerUDF<Tuple> {
                     // set target, weight and meta columns to string
                     tupleSchema.add(new FieldSchema(name, DataType.CHARARRAY));
                 } else {
-                    tupleSchema.add(new FieldSchema(name, DataType.DOUBLE));
+                    tupleSchema.add(new FieldSchema(
+                            ZscoreLocalTransformCreator.genPmmlColumnName(name, this.modelConfig.getNormalizeType()),
+                            DataType.DOUBLE));
                 }
             }
+            tupleSchema.add(new FieldSchema(this.scoreName, DataType.DOUBLE));
             return new Schema(new FieldSchema("EvalNorm", tupleSchema, DataType.TUPLE));
         } catch (IOException e) {
             log.error("Error in outputSchema", e);
