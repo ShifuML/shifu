@@ -271,7 +271,7 @@ public class Normalizer {
      * Don't normalize, but treat string to double value
      * @param config
      * @param raw
-     * @return
+     * @return double value
      */
     private static Double nonNormalize(ColumnConfig config, String raw) {
         double value = parseRawValue(config, raw);
