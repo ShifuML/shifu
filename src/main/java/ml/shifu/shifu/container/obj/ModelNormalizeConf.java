@@ -26,32 +26,12 @@ import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class ModelNormalizeConf {
 
-    /**
-     * Normalization type including ZSCALE, WOE, WEIGHT_WOE, HYBRID, WEIGHT_HYBRID.
-     */
-    @JsonDeserialize(using = NormTypeDeserializer.class)
-    public static enum NormType {
-        OLD_ZSCORE, OLD_ZSCALE, // the same one for user friendly
-        ZSCORE, ZSCALE, // the same one for user friendly
-        WOE, WEIGHT_WOE, HYBRID, WEIGHT_HYBRID, WOE_ZSCORE, WEIGHT_WOE_ZSCORE;
-    }
-
-    @JsonDeserialize(using = CorrelationDeserializer.class)
-    public static enum Correlation {
-        None, Pearson, NormPearson // Spearman mode isn't implemented as need sort all variables
-    }
-
     private Double stdDevCutOff = Double.valueOf(4.0);
     private Double sampleRate = Double.valueOf(1.0);
     private Boolean sampleNegOnly = Boolean.FALSE;
     private NormType normType = NormType.ZSCALE;
     private Boolean isParquet = Boolean.FALSE;
-
     private Correlation correlation = Correlation.None;
-
-    // move to RawSourceData
-    // private String weightAmplifier;
-    // private List<WeightAmplifier> weightAmplifier;
 
     public Double getStdDevCutOff() {
         return stdDevCutOff;
@@ -60,6 +40,10 @@ public class ModelNormalizeConf {
     public void setStdDevCutOff(Double stdDevCutOff) {
         this.stdDevCutOff = stdDevCutOff;
     }
+
+    // move to RawSourceData
+    // private String weightAmplifier;
+    // private List<WeightAmplifier> weightAmplifier;
 
     public Double getSampleRate() {
         return sampleRate;
@@ -136,5 +120,21 @@ public class ModelNormalizeConf {
         other.setIsParquet(isParquet);
         other.setCorrelation(correlation);
         return other;
+    }
+
+    /**
+     * Normalization type including ZSCALE, WOE, WEIGHT_WOE, HYBRID, WEIGHT_HYBRID.
+     */
+    @JsonDeserialize(using = NormTypeDeserializer.class)
+    public static enum NormType {
+        OLD_ZSCORE, OLD_ZSCALE, // the same one for user friendly
+        ZSCORE, ZSCALE, // the same one for user friendly
+        WOE, WEIGHT_WOE, HYBRID, WEIGHT_HYBRID, WOE_ZSCORE, WEIGHT_WOE_ZSCORE,
+        NONE // Not to normalize
+    }
+
+    @JsonDeserialize(using = CorrelationDeserializer.class)
+    public static enum Correlation {
+        None, Pearson, NormPearson // Spearman mode isn't implemented as need sort all variables
     }
 }

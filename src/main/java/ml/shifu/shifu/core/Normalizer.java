@@ -237,6 +237,8 @@ public class Normalizer {
                 return woeZScoreNormalize(config, raw, cutoff, false);
             case WEIGHT_WOE_ZSCORE:
                 return woeZScoreNormalize(config, raw, cutoff, true);
+            case NONE:
+                return nonNormalize(config, raw);
             case OLD_ZSCALE:
             case OLD_ZSCORE:
             case ZSCALE:
@@ -245,6 +247,7 @@ public class Normalizer {
                 return zScoreNormalize(config, raw, cutoff);
         }
     }
+
 
     /**
      * Compute the normalized data for @NormalizeMethod.Zscore
@@ -261,6 +264,18 @@ public class Normalizer {
         double stdDevCutOff = checkCutOff(cutoff);
         double value = parseRawValue(config, raw);
         return computeZScore(value, config.getMean(), config.getStdDev(), stdDevCutOff);
+    }
+
+
+    /**
+     * Don't normalize, but treat string to double value
+     * @param config
+     * @param raw
+     * @return
+     */
+    private static Double nonNormalize(ColumnConfig config, String raw) {
+        double value = parseRawValue(config, raw);
+        return value;
     }
 
     /**
