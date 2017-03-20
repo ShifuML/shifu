@@ -432,6 +432,8 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
         paramsMap.put("pathEvalNormalized", pathFinder.getEvalNormalizedPath(evalConfig));
         paramsMap.put("eval_set_name", evalConfig.getName());
         paramsMap.put("delimiter", evalConfig.getDataSet().getDataDelimiter());
+        paramsMap.put("scale",
+                Environment.getProperty(Constants.SHIFU_SCORE_SCALE, Integer.toString(Scorer.DEFAULT_SCORE_SCALE)));
 
         String pigScript = "scripts/EvalNorm.pig";
 
