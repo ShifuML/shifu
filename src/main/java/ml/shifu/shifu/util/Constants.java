@@ -248,5 +248,7 @@ public interface Constants {
     public static final String SHIFU_CORRELATION_MULTI_THREADS = "shifu.correlation.multi.threads";
 
     public static final String SHIFU_CORRELATION_MULTI = "shifu.correlation.multi";
+    
+    public static final String SHIFU_CURRENT_WORKING_DIR = "shifu.current.working.dir";
 
 }

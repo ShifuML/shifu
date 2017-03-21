@@ -115,11 +115,9 @@ public final class CommonUtils {
      * @throws NullPointerException
      *             If parameter {@code modelConfig} is null
      */
-    public static boolean copyConfFromLocalToHDFS(ModelConfig modelConfig) throws IOException {
+    public static boolean copyConfFromLocalToHDFS(ModelConfig modelConfig, PathFinder pathFinder) throws IOException {
         FileSystem hdfs = HDFSUtils.getFS();
         FileSystem localFs = HDFSUtils.getLocalFS();
-
-        PathFinder pathFinder = new PathFinder(modelConfig);
 
         Path pathModelSet = new Path(pathFinder.getModelSetPath(SourceType.HDFS));
         // don't check whether pathModelSet is exists, should be remove by user.
@@ -203,6 +201,14 @@ public final class CommonUtils {
                 hdfs.copyFromLocalFile(new Path(evalConfig.getDataSet().getMetaColumnNameFile()),
                         new Path(pathFinder.getEvalSetPath(evalConfig)));
             }
+        }
+    }
+
+    public static String getLocalModelSetPath(Map<String, Object> otherConfigs) {
+        if(otherConfigs != null && otherConfigs.get(Constants.SHIFU_CURRENT_WORKING_DIR) != null) {
+            return new Path(otherConfigs.get(Constants.SHIFU_CURRENT_WORKING_DIR).toString()).toString();
+        } else {
+            return new Path(".").toString();
         }
     }
 
