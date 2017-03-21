@@ -1126,7 +1126,7 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
     private void copyModelToLocal(String modelName, Path modelPath, SourceType sourceType) throws IOException {
         if(!this.isDryTrain()) {
             ShifuFileUtils.getFileSystemBySourceType(sourceType).copyToLocalFile(modelPath,
-                    new Path(Constants.MODELS, modelName));
+                    new Path(super.getPathFinder().getModelsPath(SourceType.LOCAL), modelName));
         }
     }
 

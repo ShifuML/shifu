@@ -813,7 +813,8 @@ public class PathFinder {
      * @return - the Path of local home directory
      */
     private Path getModelSetLocalPath() {
-        return new Path(".");
+        return otherConfigs.get(Constants.SHIFU_CURRENT_WORKING_DIR) != null ? new Path(otherConfigs.get(
+                Constants.SHIFU_CURRENT_WORKING_DIR).toString()) : new Path(".");
     }
 
     /**

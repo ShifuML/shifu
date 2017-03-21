@@ -41,10 +41,11 @@ import ml.shifu.shifu.util.CommonUtils;
 import ml.shifu.shifu.util.Constants;
 import ml.shifu.shifu.util.Environment;
 import ml.shifu.shifu.util.JSONUtils;
-
 import ml.shifu.shifu.util.updater.ColumnConfigUpdater;
+
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang.StringUtils;
+import org.apache.hadoop.fs.Path;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -76,7 +77,7 @@ public class BasicModelProcessor {
             Map<String, Object> otherConfigs) {
         this.modelConfig = modelConfig;
         this.columnConfigList = columnConfigList;
-        this.setOtherConfigs(otherConfigs);
+        this.otherConfigs = otherConfigs;
         this.pathFinder = new PathFinder(modelConfig, otherConfigs);
     }
 
@@ -172,8 +173,9 @@ public class BasicModelProcessor {
 
     /**
      * save the Column Config
+     * 
      * @throws IOException
-     *      an exception in saving column config
+     *             an exception in saving column config
      */
     public void saveColumnConfigList() throws IOException {
         log.info("Saving ColumnConfig...");
@@ -235,7 +237,7 @@ public class BasicModelProcessor {
      */
     public boolean syncDataToHdfs(SourceType sourceType) throws IOException {
         if(SourceType.HDFS.equals(sourceType)) {
-            CommonUtils.copyConfFromLocalToHDFS(modelConfig);
+            CommonUtils.copyConfFromLocalToHDFS(modelConfig, this.pathFinder);
             return true;
         }
 
@@ -376,7 +378,8 @@ public class BasicModelProcessor {
      *             in load model config
      */
     private void loadModelConfig() throws IOException {
-        modelConfig = CommonUtils.loadModelConfig();
+        modelConfig = CommonUtils.loadModelConfig(new Path(CommonUtils.getLocalModelSetPath(otherConfigs),
+                Constants.LOCAL_MODEL_CONFIG_JSON).toString(), SourceType.LOCAL);
     }
 
     /**
@@ -396,7 +399,8 @@ public class BasicModelProcessor {
      *             in load column config
      */
     private void loadColumnConfig() throws IOException {
-        columnConfigList = CommonUtils.loadColumnConfigList();
+        columnConfigList = CommonUtils.loadColumnConfigList(new Path(pathFinder.getModelSetPath(SourceType.LOCAL),
+                Constants.LOCAL_COLUMN_CONFIG_JSON).toString(), SourceType.LOCAL);
     }
 
     /**
