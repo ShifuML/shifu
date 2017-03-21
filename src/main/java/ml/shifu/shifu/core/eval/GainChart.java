@@ -220,6 +220,297 @@ public class GainChart {
         }
     }
 
+    public void generateHtml(EvalConfig evalConfig, ModelConfig modelConfig, String fileName,
+            List<PerformanceResult> results, List<String> names) throws IOException {
+        BufferedWriter writer = null;
+        try {
+            writer = ShifuFileUtils.getWriter(fileName, SourceType.LOCAL);
+
+            writer.write(GainChartTemplate.HIGHCHART_BASE_BEGIN);
+
+            writer.write(String.format(GainChartTemplate.HIGHCHART_BUTTON_PANEL_TEMPLATE_1, "Weighted Operation Point",
+                    "lst0", "Weighted Recall", "lst1", "Unit-wise Recall"));
+            writer.write(String.format(GainChartTemplate.HIGHCHART_BUTTON_PANEL_TEMPLATE_2,
+                    "Unit-wise Operation Point", "lst2", "Weighted Recall", "lst3", "Unit-wise Recall"));
+            writer.write(String.format(GainChartTemplate.HIGHCHART_BUTTON_PANEL_TEMPLATE_3, "Model Score", "lst4",
+                    "Weighted Recall", "lst5", "Unit-wise Recall"));
+
+            writer.write("      </div>\n");
+            writer.write("      <div class=\"col-sm-9 col-sm-offset-3 col-md-10 col-md-offset-2 main\">\n");
+            writer.write(String.format(GainChartTemplate.HIGHCHART_DIV, "container0"));
+            writer.write(String.format(GainChartTemplate.HIGHCHART_DIV, "container1"));
+            writer.write(String.format(GainChartTemplate.HIGHCHART_DIV, "container2"));
+            writer.write(String.format(GainChartTemplate.HIGHCHART_DIV, "container3"));
+            writer.write(String.format(GainChartTemplate.HIGHCHART_DIV, "container4"));
+            writer.write(String.format(GainChartTemplate.HIGHCHART_DIV, "container5"));
+
+            writer.write("<script>\n");
+            writer.write("\n");
+
+            for(int j = 0; j < results.size(); j++) {
+                PerformanceResult result = results.get(j);
+                writer.write("  var data_" + j + " = [\n");
+                for(int i = 0; i < result.weightedGains.size(); i++) {
+                    PerformanceObject po = result.weightedGains.get(i);
+                    writer.write(String.format(GainChartTemplate.DATA_FORMAT,
+                            GainChartTemplate.DF.format(po.weightedRecall * 100),
+                            GainChartTemplate.DF.format(po.weightedActionRate * 100),
+                            GainChartTemplate.DF.format(po.weightedActionRate * 100),
+                            GainChartTemplate.DF.format(po.weightedPrecision * 100),
+                            GainChartTemplate.DF.format(po.actionRate * 100),
+                            GainChartTemplate.DF.format(po.binLowestScore)));
+                    if(i != result.weightedGains.size() - 1) {
+                        writer.write(",");
+                    }
+                }
+                writer.write("  ];\n");
+                writer.write("\n");
+            }
+
+            for(int j = 0; j < results.size(); j++) {
+                PerformanceResult result = results.get(j);
+                writer.write("  var data_" + (results.size() + j) + " = [\n");
+                for(int i = 0; i < result.weightedGains.size(); i++) {
+                    PerformanceObject po = result.weightedGains.get(i);
+                    writer.write(String.format(GainChartTemplate.DATA_FORMAT,
+                            GainChartTemplate.DF.format(po.recall * 100),
+                            GainChartTemplate.DF.format(po.weightedActionRate * 100),
+                            GainChartTemplate.DF.format(po.weightedActionRate * 100),
+                            GainChartTemplate.DF.format(po.precision * 100),
+                            GainChartTemplate.DF.format(po.actionRate * 100),
+                            GainChartTemplate.DF.format(po.binLowestScore)));
+                    if(i != result.weightedGains.size() - 1) {
+                        writer.write(",");
+                    }
+                }
+                writer.write("  ];\n");
+                writer.write("\n");
+            }
+
+            for(int j = 0; j < results.size(); j++) {
+                PerformanceResult result = results.get(j);
+                writer.write("  var data_" + (2 * results.size() + j) + " = [\n");
+                for(int i = 0; i < result.gains.size(); i++) {
+                    PerformanceObject po = result.gains.get(i);
+                    writer.write(String.format(GainChartTemplate.DATA_FORMAT,
+                            GainChartTemplate.DF.format(po.weightedRecall * 100),
+                            GainChartTemplate.DF.format(po.actionRate * 100),
+                            GainChartTemplate.DF.format(po.weightedActionRate * 100),
+                            GainChartTemplate.DF.format(po.weightedPrecision * 100),
+                            GainChartTemplate.DF.format(po.actionRate * 100),
+                            GainChartTemplate.DF.format(po.binLowestScore)));
+                    if(i != result.gains.size() - 1) {
+                        writer.write(",");
+                    }
+                }
+                writer.write("  ];\n");
+                writer.write("\n");
+            }
+
+            for(int j = 0; j < results.size(); j++) {
+                PerformanceResult result = results.get(j);
+                writer.write("  var data_" + (3 * results.size() + j) + " = [\n");
+                for(int i = 0; i < result.gains.size(); i++) {
+                    PerformanceObject po = result.gains.get(i);
+                    writer.write(String.format(GainChartTemplate.DATA_FORMAT,
+                            GainChartTemplate.DF.format(po.recall * 100),
+                            GainChartTemplate.DF.format(po.actionRate * 100),
+                            GainChartTemplate.DF.format(po.weightedActionRate * 100),
+                            GainChartTemplate.DF.format(po.precision * 100),
+                            GainChartTemplate.DF.format(po.actionRate * 100),
+                            GainChartTemplate.DF.format(po.binLowestScore)));
+                    if(i != result.gains.size() - 1) {
+                        writer.write(",");
+                    }
+                }
+                writer.write("  ];\n");
+                writer.write("\n");
+            }
+
+            for(int j = 0; j < results.size(); j++) {
+                PerformanceResult result = results.get(j);
+                writer.write("  var data_" + (4 * results.size() + j) + " = [\n");
+                for(int i = 0; i < result.modelScoreList.size(); i++) {
+                    PerformanceObject po = result.modelScoreList.get(i);
+                    writer.write(String.format(GainChartTemplate.DATA_FORMAT,
+                            GainChartTemplate.DF.format(po.weightedRecall * 100),
+                            GainChartTemplate.DF.format(po.binLowestScore),
+                            GainChartTemplate.DF.format(po.weightedActionRate * 100),
+                            GainChartTemplate.DF.format(po.weightedPrecision * 100),
+                            GainChartTemplate.DF.format(po.actionRate * 100),
+                            GainChartTemplate.DF.format(po.binLowestScore)));
+                    if(i != result.modelScoreList.size() - 1) {
+                        writer.write(",");
+                    }
+                }
+                writer.write("  ];\n");
+                writer.write("\n");
+            }
+
+            for(int j = 0; j < results.size(); j++) {
+                PerformanceResult result = results.get(j);
+                writer.write("  var data_" + (5 * results.size() + j) + " = [\n");
+                for(int i = 0; i < result.modelScoreList.size(); i++) {
+                    PerformanceObject po = result.modelScoreList.get(i);
+                    writer.write(String.format(GainChartTemplate.DATA_FORMAT,
+                            GainChartTemplate.DF.format(po.recall * 100),
+                            GainChartTemplate.DF.format(po.binLowestScore),
+                            GainChartTemplate.DF.format(po.weightedActionRate * 100),
+                            GainChartTemplate.DF.format(po.precision * 100),
+                            GainChartTemplate.DF.format(po.actionRate * 100),
+                            GainChartTemplate.DF.format(po.binLowestScore)));
+                    if(i != result.modelScoreList.size() - 1) {
+                        writer.write(",");
+                    }
+                }
+                writer.write("  ];\n");
+                writer.write("\n");
+            }
+
+            writer.write("$(function () {\n");
+
+            writer.write(String.format(GainChartTemplate.HIGHCHART_CHART_TEMPLATE_PREFIX, "container0",
+                    "Weighted Recall", modelConfig.getBasic().getName(), "Weighted  Operation Point", "%", "false"));
+            int currIndex = 0;
+            writer.write("series: [");
+            for(int i = 0; i < results.size(); i++) {
+                writer.write("{");
+                writer.write("  data: data_" + (currIndex++) + ",");
+                writer.write("  name: '" + names.get(i) + "',");
+                writer.write("  turboThreshold:0");
+                writer.write("}");
+                if(i != results.size() - 1) {
+                    writer.write(",");
+                }
+            }
+            writer.write("]");
+            writer.write("});");
+            writer.write("\n");
+
+            writer.write(String.format(GainChartTemplate.HIGHCHART_CHART_TEMPLATE_PREFIX, "container1",
+                    "Unit-wise Recall", modelConfig.getBasic().getName(), "Weighted  Operation Point", "%", "false"));
+            writer.write("series: [");
+
+            for(int i = 0; i < results.size(); i++) {
+                writer.write("{");
+                writer.write("  data: data_" + (currIndex++) + ",");
+                writer.write("  name: '" + names.get(i) + "',");
+                writer.write("  turboThreshold:0");
+                writer.write("}");
+                if(i != results.size() - 1) {
+                    writer.write(",");
+                }
+            }
+            writer.write("]");
+            writer.write("});");
+
+            writer.write(String.format(GainChartTemplate.HIGHCHART_CHART_TEMPLATE_PREFIX, "container2",
+                    "Weighted Recall", modelConfig.getBasic().getName(), "Unit-wise  Operation Point", "%", "false"));
+            writer.write("series: [");
+
+            for(int i = 0; i < results.size(); i++) {
+                writer.write("{");
+                writer.write("  data: data_" + (currIndex++) + ",");
+                writer.write("  name: '" + names.get(i) + "',");
+                writer.write("  turboThreshold:0");
+                writer.write("}");
+                if(i != results.size() - 1) {
+                    writer.write(",");
+                }
+            }
+            writer.write("]");
+            writer.write("});");
+            writer.write("\n");
+
+            writer.write(String.format(GainChartTemplate.HIGHCHART_CHART_TEMPLATE_PREFIX, "container3",
+                    "Unit-wise Recall", modelConfig.getBasic().getName(), "Unit-wise  Operation Point", "%", "false"));
+            writer.write("series: [");
+
+            for(int i = 0; i < results.size(); i++) {
+                writer.write("{");
+                writer.write("  data: data_" + (currIndex++) + ",");
+                writer.write("  name: '" + names.get(i) + "',");
+                writer.write("  turboThreshold:0");
+                writer.write("}");
+                if(i != results.size() - 1) {
+                    writer.write(",");
+                }
+            }
+            writer.write("]");
+            writer.write("});");
+            writer.write("\n");
+
+            writer.write(String.format(GainChartTemplate.HIGHCHART_CHART_TEMPLATE_PREFIX, "container4",
+                    "Weighted Recall", modelConfig.getBasic().getName(), "Model Score", "", "true"));
+            writer.write("series: [");
+
+            for(int i = 0; i < results.size(); i++) {
+                writer.write("{");
+                writer.write("  data: data_" + (currIndex++) + ",");
+                writer.write("  name: '" + names.get(i) + "',");
+                writer.write("  turboThreshold:0");
+                writer.write("}");
+                if(i != results.size() - 1) {
+                    writer.write(",");
+                }
+            }
+            writer.write("]");
+            writer.write("});");
+            writer.write("\n");
+
+            writer.write(String.format(GainChartTemplate.HIGHCHART_CHART_TEMPLATE_PREFIX, "container5",
+                    "Unit-wise Recall", modelConfig.getBasic().getName(), "Model Score", "", "true"));
+            writer.write("series: [");
+
+            for(int i = 0; i < results.size(); i++) {
+                writer.write("{");
+                writer.write("  data: data_" + (currIndex++) + ",");
+                writer.write("  name: '" + names.get(i) + "',");
+                writer.write("  turboThreshold:0");
+                writer.write("}");
+                if(i != results.size() - 1) {
+                    writer.write(",");
+                }
+            }
+            writer.write("]");
+            writer.write("});");
+            writer.write("\n");
+
+            writer.write("});\n");
+            writer.write("\n");
+
+            writer.write("$(document).ready(function() {\n");
+            writer.write(String.format(GainChartTemplate.HIGHCHART_LIST_TOGGLE_TEMPLATE, "lst0", "container0", "lst0"));
+            writer.write("\n");
+            writer.write(String.format(GainChartTemplate.HIGHCHART_LIST_TOGGLE_TEMPLATE, "lst1", "container1", "lst1"));
+            writer.write("\n");
+            writer.write(String.format(GainChartTemplate.HIGHCHART_LIST_TOGGLE_TEMPLATE, "lst2", "container2", "lst2"));
+            writer.write("\n");
+            writer.write(String.format(GainChartTemplate.HIGHCHART_LIST_TOGGLE_TEMPLATE, "lst3", "container3", "lst3"));
+            writer.write("\n");
+            writer.write(String.format(GainChartTemplate.HIGHCHART_LIST_TOGGLE_TEMPLATE, "lst4", "container4", "lst4"));
+            writer.write("\n");
+            writer.write(String.format(GainChartTemplate.HIGHCHART_LIST_TOGGLE_TEMPLATE, "lst5", "container5", "lst5"));
+            writer.write("\n");
+            writer.write("  var ics = ['#container1','#container2', ,'#container4', ,'#container5'];\n");
+            writer.write("  var icl = ics.length;\n");
+            writer.write("  for (var i = 0; i < icl; i++) {\n");
+            writer.write("      $(ics[i]).toggleClass('show');\n");
+            writer.write("      $(ics[i]).toggleClass('hidden');\n");
+            writer.write("      $(ics[i]).toggleClass('ls_chosen');\n");
+            writer.write("  };\n");
+            writer.write("\n");
+            writer.write("});\n");
+            writer.write("\n");
+            writer.write("</script>\n");
+            writer.write(GainChartTemplate.HIGHCHART_BASE_END);
+        } finally {
+            if(writer != null) {
+                writer.close();
+            }
+        }
+    }
+
     public void generateCsv(EvalConfig evalConfig, ModelConfig modelConfig, String fileName,
             List<PerformanceObject> performanceList) throws IOException {
         BufferedWriter writer = null;

@@ -1638,6 +1638,9 @@ public final class CommonUtils {
         for(ColumnConfig config: columnConfigList) {
             String varName = config.getColumnName();
 
+            // reset it
+            config.setColumnFlag(null);
+
             if(weightColumnName.equals(varName)) {
                 config.setColumnFlag(ColumnFlag.Weight);
                 config.setFinalSelect(false); // reset final select

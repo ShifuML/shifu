@@ -669,6 +669,17 @@ public class PathFinder {
      * 
      * @param evalConfig
      *            - EvalConfig to find
+     * @return path of evaluation score
+     */
+    public String getEvalScorePath(EvalConfig evalConfig, String metaColumn) {
+        return new Path(getEvalScorePath(evalConfig, evalConfig.getDataSet().getSource()), metaColumn).toString();
+    }
+
+    /**
+     * Get the path of evaluation score
+     * 
+     * @param evalConfig
+     *            - EvalConfig to find
      * @param sourceType
      *            - Local/HDFS
      * @return path of evaluation score
@@ -714,6 +725,16 @@ public class PathFinder {
     public String getEvalScoreHeaderPath(EvalConfig evalConfig, SourceType sourceType) {
         String scorePath = getEvalScorePath(evalConfig, sourceType);
         return new Path(scorePath, Constants.PIG_HEADER).toString();
+    }
+
+    public String getEvalPerformancePath(EvalConfig evalConfig, String metaColumn) {
+        String evalPerformancePath = getPreferPath(evalConfig.getCustomPaths(), Constants.KEY_PERFORMANCE_PATH);
+        if(StringUtils.isBlank(evalPerformancePath)) {
+            return getEvalFilePath(evalConfig.getName(), metaColumn + Path.SEPARATOR + Constants.EVAL_PERFORMANCE,
+                    evalConfig.getDataSet().getSource());
+        } else {
+            return new Path(evalPerformancePath, metaColumn + Path.SEPARATOR + Constants.EVAL_PERFORMANCE).toString();
+        }
     }
 
     /**
