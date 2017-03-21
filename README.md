@@ -28,13 +28,14 @@ Model details about shifu can be found in our [wiki pages](https://github.com/Sh
 
 ## Contributors
 
- - Zhanghao Hu
- - Grahame Jastrebski
- - Lavar Li
- - Mark Liu
- - David Zhang
- - Xin Zhong
- - Simon Zhang
+ - Zhanghao Hu (zhanhu@paypal.com)
+ - Grahame Jastrebski (gjastrebski@paypal.com)
+ - Lavar Li (lulli@paypal.com)
+ - Mark Liu (yliu15@paypal.com)
+ - David Zhang (pengzhang@paypal.com)
+ - Xin Zhong (xinzhong@paypal.com)
+ - Simon Zhang (jzhang13@paypal.com)
+ - Sharma Nitin (nsharma1@paypal.com)
 
 ## Google Group
 

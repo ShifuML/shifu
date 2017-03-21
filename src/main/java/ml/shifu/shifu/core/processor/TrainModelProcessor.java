@@ -301,7 +301,7 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
                 throw new RuntimeException(e);
             }
 
-            if ( this.isToShuffle ) {
+            if(this.isToShuffle) {
                 MapReduceShuffle shuffler = new MapReduceShuffle(this.modelConfig);
                 try {
                     shuffler.run(pathFinder.getCleanedDataPath());
@@ -1293,6 +1293,11 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
         }
 
         private long dumpFromOffset(Path item, long offset) throws IOException {
+            if(!HDFSUtils.getFS().exists(item)) {
+                // if file is not there, just return initial offset and wait for it is created
+                return 0L;
+            }
+
             FSDataInputStream in;
             try {
                 in = HDFSUtils.getFS().open(item);
