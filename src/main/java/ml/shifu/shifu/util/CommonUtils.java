@@ -208,7 +208,7 @@ public final class CommonUtils {
         if(otherConfigs != null && otherConfigs.get(Constants.SHIFU_CURRENT_WORKING_DIR) != null) {
             return new Path(otherConfigs.get(Constants.SHIFU_CURRENT_WORKING_DIR).toString()).toString();
         } else {
-            return new Path(".").toString();
+            return ".";
         }
     }
 
