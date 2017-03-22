@@ -82,7 +82,7 @@ public class EvalScoreUDFTest {
 
     @Test
     public void testGetSchema() {
-        Assert.assertEquals("{EvalScore: (shifu::diagnosis: chararray,shifu::weight: chararray,shifu::mean: int,shifu::max: int,shifu::min: int,shifu::median: int,shifu::model0: int,shifu::model1: int,shifu::model2: int,shifu::model3: int,shifu::model4: int)}", instance.outputSchema(null).toString());
+        Assert.assertEquals("{EvalScore: (shifu::diagnosis: chararray,shifu::weight: chararray,shifu::mean: double,shifu::max: double,shifu::min: double,shifu::median: double,shifu::model0: double,shifu::model1: double,shifu::model2: double,shifu::model3: double,shifu::model4: double)}", instance.outputSchema(null).toString());
     }
 
     @Test
