@@ -132,18 +132,54 @@ public class ConfusionMatrix {
         return CommonUtils.getHeaders(pathHeader, "|", sourceType, false);
     }
 
-    public void bufferedComputeConfusionMatrixAndPerformance(long pigPosTags, long pigNegTags, double pigPosWeightTags,
-            double pigNegWeightTags, long records, double maxScore, double minScore) throws IOException {
-        log.info("Max score is {}, min score is {}", maxScore, minScore);
+    public PerformanceResult bufferedComputeConfusionMatrixAndPerformance(long pigPosTags, long pigNegTags,
+            double pigPosWeightTags, double pigNegWeightTags, long records, double maxScore, double minScore)
+            throws IOException {
+        PathFinder pathFinder = new PathFinder(modelConfig);
+        return bufferedComputeConfusionMatrixAndPerformance(pigPosTags, pigNegTags, pigPosWeightTags, pigNegWeightTags,
+                records, maxScore, minScore, pathFinder.getEvalScorePath(evalConfig),
+                pathFinder.getEvalPerformancePath(evalConfig, evalConfig.getDataSet().getSource()), true, true,
+                this.targetColumnIndex, this.scoreColumnIndex, this.weightColumnIndex, false);
+    }
 
+    public PerformanceResult bufferedComputeConfusionMatrixAndPerformance(long pigPosTags, long pigNegTags,
+            double pigPosWeightTags, double pigNegWeightTags, long records, double maxScore, double minScore,
+            boolean isPrint, boolean isGenerateChart, boolean isUseMaxMinScore) throws IOException {
+        PathFinder pathFinder = new PathFinder(modelConfig);
+        return bufferedComputeConfusionMatrixAndPerformance(pigPosTags, pigNegTags, pigPosWeightTags, pigNegWeightTags,
+                records, maxScore, minScore, pathFinder.getEvalScorePath(evalConfig),
+                pathFinder.getEvalPerformancePath(evalConfig, evalConfig.getDataSet().getSource()), true, true,
+                this.targetColumnIndex, this.scoreColumnIndex, this.weightColumnIndex, isUseMaxMinScore);
+    }
+
+    public PerformanceResult bufferedComputeConfusionMatrixAndPerformance(long pigPosTags, long pigNegTags,
+            double pigPosWeightTags, double pigNegWeightTags, long records, double maxScore, double minScore,
+            String scoreDataPath, String evalPerformancePath, boolean isPrint, boolean isGenerateChart,
+            boolean isUseMaxMinScore) throws IOException {
+        return bufferedComputeConfusionMatrixAndPerformance(pigPosTags, pigNegTags, pigPosWeightTags, pigNegWeightTags,
+                records, maxScore, minScore, scoreDataPath, evalPerformancePath, isPrint, isGenerateChart,
+                this.targetColumnIndex, this.scoreColumnIndex, this.weightColumnIndex, isUseMaxMinScore);
+    }
+
+    public PerformanceResult bufferedComputeConfusionMatrixAndPerformance(long pigPosTags, long pigNegTags,
+            double pigPosWeightTags, double pigNegWeightTags, long records, double maxPScore, double minPScore,
+            String scoreDataPath, String evalPerformancePath, boolean isPrint, boolean isGenerateChart,
+            int targetColumnIndex, int scoreColumnIndex, int weightColumnIndex, boolean isUseMaxMinScore)
+            throws IOException {
         PathFinder pathFinder = new PathFinder(modelConfig);
 
         double scoreScale = Double.parseDouble(Environment.getProperty(Constants.SHIFU_SCORE_SCALE,
                 Double.toString(Scorer.DEFAULT_SCORE_SCALE)));
+        double maxScore = 1000, minScore = 0;
         if(!CommonConstants.GBT_ALG_NAME.equalsIgnoreCase(modelConfig.getTrain().getAlgorithm())) {
             // if not GBT model, NN/LR, are all 0-1000, only for GBT, maxScore and minScore may not be 1000 and 0
             maxScore = 1d * scoreScale;
             minScore = 0d;
+        }
+
+        if(isUseMaxMinScore) {
+            maxScore = maxPScore * scoreScale;
+            minScore = minPScore;
         }
 
         DecimalFormat scoreFormat = new DecimalFormat("#.######");
@@ -156,9 +192,7 @@ public class ConfusionMatrix {
         }
 
         SourceType sourceType = evalConfig.getDataSet().getSource();
-
-        List<Scanner> scanners = ShifuFileUtils.getDataScanners(pathFinder.getEvalScorePath(evalConfig, sourceType),
-                sourceType);
+        List<Scanner> scanners = ShifuFileUtils.getDataScanners(scoreDataPath, sourceType);
 
         int numBucket = evalConfig.getPerformanceBucketNum();
         boolean isWeight = evalConfig.getDataSet().getWeightColumnName() != null;
@@ -233,9 +267,9 @@ public class ConfusionMatrix {
                     continue;
                 }
                 double weight = 1.0d;
-                if(this.weightColumnIndex > 0) {
+                if(weightColumnIndex > 0) {
                     try {
-                        weight = Double.parseDouble(raw[1]);
+                        weight = Double.parseDouble(raw[weightColumnIndex]);
                     } catch (NumberFormatException e) {
                         // Do nothing
                     }
@@ -305,13 +339,13 @@ public class ConfusionMatrix {
                     catchRateWeightList.add(po);
                 }
 
-                if((object.getWeightedTp() + object.getWeightedFp() + 1) / object.getWeightedTotal() >= gainWeightBin
+                if((object.getWeightedTp() + object.getWeightedFp()) / object.getWeightedTotal() >= gainWeightBin
                         * binCapacity) {
                     po.binNum = gainWeightBin++;
                     gainWeightList.add(po);
                 }
 
-                if((maxScore - (int) (modelScoreBin * binScore)) >= score) {
+                if((maxScore - (modelScoreBin * binScore)) >= score) {
                     po.binNum = modelScoreBin++;
                     modelScoreList.add(po);
                 }
@@ -322,22 +356,24 @@ public class ConfusionMatrix {
         }
         log.info("Totally loaded " + cnt + " records.");
 
-        PerformanceEvaluator.logResult(FPRList, "Bucketing False Positive Rate");
+        if(isPrint) {
+            PerformanceEvaluator.logResult(FPRList, "Bucketing False Positive Rate");
 
-        if(isWeight) {
-            PerformanceEvaluator.logResult(FPRWeightList, "Bucketing Weighted False Positive Rate");
-        }
+            if(isWeight) {
+                PerformanceEvaluator.logResult(FPRWeightList, "Bucketing Weighted False Positive Rate");
+            }
 
-        PerformanceEvaluator.logResult(catchRateList, "Bucketing Catch Rate");
+            PerformanceEvaluator.logResult(catchRateList, "Bucketing Catch Rate");
 
-        if(isWeight) {
-            PerformanceEvaluator.logResult(catchRateWeightList, "Bucketing Weighted Catch Rate");
-        }
+            if(isWeight) {
+                PerformanceEvaluator.logResult(catchRateWeightList, "Bucketing Weighted Catch Rate");
+            }
 
-        PerformanceEvaluator.logResult(gainList, "Bucketing Action rate");
+            PerformanceEvaluator.logResult(gainList, "Bucketing Action rate");
 
-        if(isWeight) {
-            PerformanceEvaluator.logResult(gainWeightList, "Bucketing Weighted action rate");
+            if(isWeight) {
+                PerformanceEvaluator.logResult(gainWeightList, "Bucketing Weighted action rate");
+            }
         }
 
         PerformanceResult result = new PerformanceResult();
@@ -356,12 +392,15 @@ public class ConfusionMatrix {
         result.weightedAreaUnderRoc = AreaUnderCurve.ofWeightedRoc(result.weightedRoc);
         result.areaUnderPr = AreaUnderCurve.ofPr(result.pr);
         result.weightedAreaUnderPr = AreaUnderCurve.ofWeightedPr(result.weightedPr);
-        PerformanceEvaluator.logAucResult(result, isWeight);
+        if(isPrint) {
+            PerformanceEvaluator.logAucResult(result, isWeight);
+        }
 
         Writer writer = null;
         try {
-            writer = ShifuFileUtils.getWriter(pathFinder.getEvalPerformancePath(evalConfig, evalConfig.getDataSet()
-                    .getSource()), evalConfig.getDataSet().getSource());
+            // writer = ShifuFileUtils.getWriter(pathFinder.getEvalPerformancePath(evalConfig, evalConfig.getDataSet()
+            // .getSource()), evalConfig.getDataSet().getSource());
+            writer = ShifuFileUtils.getWriter(evalPerformancePath, evalConfig.getDataSet().getSource());
             JSONUtils.writeValue(writer, result);
         } catch (IOException e) {
             log.error("error", e);
@@ -369,57 +408,60 @@ public class ConfusionMatrix {
             IOUtils.closeQuietly(writer);
         }
 
-        String htmlGainChart = pathFinder.getEvalFilePath(evalConfig.getName(), evalConfig.getName()
-                + "_gainchart.html", SourceType.LOCAL);
-        log.info("Gain chart is generated in {}.", htmlGainChart);
-        GainChart gc = new GainChart();
-        gc.generateHtml(evalConfig, modelConfig, htmlGainChart, result);
+        if(isGenerateChart) {
+            String htmlGainChart = pathFinder.getEvalFilePath(evalConfig.getName(), evalConfig.getName()
+                    + "_gainchart.html", SourceType.LOCAL);
+            log.info("Gain chart is generated in {}.", htmlGainChart);
+            GainChart gc = new GainChart();
+            gc.generateHtml(evalConfig, modelConfig, htmlGainChart, result);
 
-        String unitGainChartCsv = pathFinder.getEvalFilePath(evalConfig.getName(), evalConfig.getName()
-                + "_unit_wise_gainchart.csv", SourceType.LOCAL);
-        log.info("Unit-wise gain chart data is generated in {}.", unitGainChartCsv);
-        gc.generateCsv(evalConfig, modelConfig, unitGainChartCsv, result.gains);
+            String unitGainChartCsv = pathFinder.getEvalFilePath(evalConfig.getName(), evalConfig.getName()
+                    + "_unit_wise_gainchart.csv", SourceType.LOCAL);
+            log.info("Unit-wise gain chart data is generated in {}.", unitGainChartCsv);
+            gc.generateCsv(evalConfig, modelConfig, unitGainChartCsv, result.gains);
 
-        if(isWeight) {
-            String weightedGainChartCsv = pathFinder.getEvalFilePath(evalConfig.getName(), evalConfig.getName()
-                    + "_weighted_gainchart.csv", SourceType.LOCAL);
-            log.info("Weighted gain chart data is generated in {}.", weightedGainChartCsv);
-            gc.generateCsv(evalConfig, modelConfig, weightedGainChartCsv, result.weightedGains);
+            if(isWeight) {
+                String weightedGainChartCsv = pathFinder.getEvalFilePath(evalConfig.getName(), evalConfig.getName()
+                        + "_weighted_gainchart.csv", SourceType.LOCAL);
+                log.info("Weighted gain chart data is generated in {}.", weightedGainChartCsv);
+                gc.generateCsv(evalConfig, modelConfig, weightedGainChartCsv, result.weightedGains);
+            }
+
+            String prCsvFile = pathFinder.getEvalFilePath(evalConfig.getName(), evalConfig.getName()
+                    + "_unit_wise_pr.csv", SourceType.LOCAL);
+            log.info("Unit-wise pr data is generated in {}.", prCsvFile);
+            gc.generateCsv(evalConfig, modelConfig, prCsvFile, result.pr);
+
+            if(isWeight) {
+                String weightedPrCsvFile = pathFinder.getEvalFilePath(evalConfig.getName(), evalConfig.getName()
+                        + "_weighted_pr.csv", SourceType.LOCAL);
+                log.info("Weighted pr data is generated in {}.", weightedPrCsvFile);
+                gc.generateCsv(evalConfig, modelConfig, weightedPrCsvFile, result.weightedPr);
+            }
+
+            String rocCsvFile = pathFinder.getEvalFilePath(evalConfig.getName(), evalConfig.getName()
+                    + "_unit_wise_roc.csv", SourceType.LOCAL);
+            log.info("Unit-wise roc data is generated in {}.", rocCsvFile);
+            gc.generateCsv(evalConfig, modelConfig, rocCsvFile, result.roc);
+
+            if(isWeight) {
+                String weightedRocCsvFile = pathFinder.getEvalFilePath(evalConfig.getName(), evalConfig.getName()
+                        + "_weighted_roc.csv", SourceType.LOCAL);
+                log.info("Weighted roc data is generated in {}.", weightedRocCsvFile);
+                gc.generateCsv(evalConfig, modelConfig, weightedRocCsvFile, result.weightedRoc);
+            }
+
+            String modelScoreGainChartCsv = pathFinder.getEvalFilePath(evalConfig.getName(), evalConfig.getName()
+                    + "_modelscore_gainchart.csv", SourceType.LOCAL);
+            log.info("Model score gain chart data is generated in {}.", modelScoreGainChartCsv);
+            gc.generateCsv(evalConfig, modelConfig, modelScoreGainChartCsv, result.modelScoreList);
         }
-
-        String prCsvFile = pathFinder.getEvalFilePath(evalConfig.getName(), evalConfig.getName() + "_unit_wise_pr.csv",
-                SourceType.LOCAL);
-        log.info("Unit-wise pr data is generated in {}.", prCsvFile);
-        gc.generateCsv(evalConfig, modelConfig, prCsvFile, result.pr);
-
-        if(isWeight) {
-            String weightedPrCsvFile = pathFinder.getEvalFilePath(evalConfig.getName(), evalConfig.getName()
-                    + "_weighted_pr.csv", SourceType.LOCAL);
-            log.info("Weighted pr data is generated in {}.", weightedPrCsvFile);
-            gc.generateCsv(evalConfig, modelConfig, weightedPrCsvFile, result.weightedPr);
-        }
-
-        String rocCsvFile = pathFinder.getEvalFilePath(evalConfig.getName(), evalConfig.getName()
-                + "_unit_wise_roc.csv", SourceType.LOCAL);
-        log.info("Unit-wise roc data is generated in {}.", rocCsvFile);
-        gc.generateCsv(evalConfig, modelConfig, rocCsvFile, result.roc);
-
-        if(isWeight) {
-            String weightedRocCsvFile = pathFinder.getEvalFilePath(evalConfig.getName(), evalConfig.getName()
-                    + "_weighted_roc.csv", SourceType.LOCAL);
-            log.info("Weighted roc data is generated in {}.", weightedRocCsvFile);
-            gc.generateCsv(evalConfig, modelConfig, weightedRocCsvFile, result.weightedRoc);
-        }
-
-        String modelScoreGainChartCsv = pathFinder.getEvalFilePath(evalConfig.getName(), evalConfig.getName()
-                + "_modelscore_gainchart.csv", SourceType.LOCAL);
-        log.info("Model score gain chart data is generated in {}.", modelScoreGainChartCsv);
-        gc.generateCsv(evalConfig, modelConfig, modelScoreGainChartCsv, result.modelScoreList);
 
         if(cnt == 0) {
             log.error("No score read, the EvalScore did not genernate or is null file");
             throw new ShifuException(ShifuErrorCode.ERROR_EVALSCORE);
         }
+        return result;
     }
 
     private boolean isGBTConvertToProb() {
@@ -623,7 +665,7 @@ public class ConfusionMatrix {
                 }
 
                 double weight = 1.0d;
-                if(this.weightColumnIndex > 0) {
+                if(weightColumnIndex > 0) {
                     try {
                         weight = Double.parseDouble(raw[1]);
                     } catch (NumberFormatException e) {

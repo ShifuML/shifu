@@ -14,6 +14,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# HADOOP_HOME or HADOOP_ROOT
+# 
+# Shifu will check if current hadoop is installed well, if not installed well, please check and configure your HADOOP_HOME
+# or HADOOP_ROOT well.
+
 function sanity_check() {
     if [ ! -f ModelConfig.json ]; then
         echo "[Error] This is not a model set folder because no ModelConfig.json found in current folder, please change folder to your model set folder."
@@ -121,11 +126,17 @@ PIG_OPTIONS="${PIG_OPTIONS} -m PigConfig.conf"
 CLASSPATH=`find ${SHIFU_HOME}/lib -name "*.jar" | grep -v javadoc | xargs | sed 's/ /:/g'`
 
 # ---------------- HADOOP Environment Detection -----------------------------
-HADOOP_ROOT=`find_hadoop_root`
 if [ "${HADOOP_ROOT}" == "" ]; then
-    echo "Warning: No hadoop command in PATH env, you can only run Shifu in local mode."
+    if [ "${HADOOP_HOME}" == "" ]; then
+        HADOOP_ROOT="${HADOOP_HOME}"
+    else
+        HADOOP_ROOT=`find_hadoop_root`
+    fi
+    if [ "${HADOOP_ROOT}" == "" ]; then
+        echo "Warning: no HADOOP_HOME(please check) or hadoop is found, you can only run Shifu in local mode."
+    fi
 fi
-    
+
 if [ -e ${HADOOP_ROOT}/bin/hadoop ]; then
     HD_CLASSPATH=`${HADOOP_ROOT}/bin/hadoop classpath 2> /dev/null`
 else

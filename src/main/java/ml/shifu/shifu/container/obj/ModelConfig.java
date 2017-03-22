@@ -229,15 +229,15 @@ public class ModelConfig {
                 + File.separator + "cancer-judgement" + File.separator + "DataStore" + File.separator + "EvalSet1"
                 + File.separator + ".pig_header").toString());
         // create empty <ModelName>/<EvalSetName>.meta.column.names
-        String namesFilePath = Constants.COLUMN_META_FOLDER_NAME + File.separator
-                + evalConfig.getName() + "." + Constants.DEFAULT_META_COLUMN_FILE;
+        String namesFilePath = Constants.COLUMN_META_FOLDER_NAME + File.separator + evalConfig.getName() + "."
+                + Constants.DEFAULT_META_COLUMN_FILE;
         ShifuFileUtils.createFileIfNotExists(new Path(modelName, namesFilePath).toString(), SourceType.LOCAL);
         evalSet.setMetaColumnNameFile(namesFilePath);
         evalConfig.setDataSet(evalSet);
 
         // create empty <ModelName>/<EvalSetName>Score.meta.column.names
-        namesFilePath = Constants.COLUMN_META_FOLDER_NAME + File.separator
-                + evalConfig.getName() + Constants.DEFAULT_EVALSCORE_META_COLUMN_FILE;
+        namesFilePath = Constants.COLUMN_META_FOLDER_NAME + File.separator + evalConfig.getName()
+                + Constants.DEFAULT_EVALSCORE_META_COLUMN_FILE;
         ShifuFileUtils.createFileIfNotExists(new Path(modelName, namesFilePath).toString(), SourceType.LOCAL);
         evalConfig.setScoreMetaColumnNameFile(namesFilePath);
 
@@ -676,6 +676,7 @@ public class ModelConfig {
                 return new ArrayList<String>();
             }
         }
+
         return CommonUtils.readConfFileIntoList(forceSelectColumnNameFile, SourceType.LOCAL, delimiter);
     }
 
