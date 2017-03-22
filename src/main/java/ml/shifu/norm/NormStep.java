@@ -68,7 +68,7 @@ public class NormStep extends Step<List<ColumnConfig>> {
             JSONUtils.writeValue(new File(pathFinder.getColumnConfigPath(SourceType.LOCAL)), columnConfigList);
 
             if(SourceType.HDFS.equals(modelConfig.getDataSet().getSource())) {
-                CommonUtils.copyConfFromLocalToHDFS(modelConfig);
+                CommonUtils.copyConfFromLocalToHDFS(modelConfig, this.pathFinder);
             }
 
             SourceType sourceType = modelConfig.getDataSet().getSource();

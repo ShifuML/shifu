@@ -138,13 +138,13 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
             setUp(ModelStep.VARSELECT);
             validateParameters();
             // reset all selections if user specify or select by absolute number
-            if (isToReset) {
+            if(isToReset) {
                 log.info("Reset all selections data including type final select etc!");
                 resetAllFinalSelect();
-            } else if (isToList) {
+            } else if(isToList) {
                 log.info("Below variables are selected - ");
-                for ( ColumnConfig columnConfig : this.columnConfigList ) {
-                    if ( columnConfig.isFinalSelect() ) {
+                for(ColumnConfig columnConfig: this.columnConfigList) {
+                    if(columnConfig.isFinalSelect()) {
                         log.info(columnConfig.getColumnName());
                     }
                 }
@@ -160,6 +160,7 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
                             || filterBy.equalsIgnoreCase(Constants.FILTER_BY_IV)
                             || filterBy.equalsIgnoreCase(Constants.FILTER_BY_PARETO)
                             || filterBy.equalsIgnoreCase(Constants.FILTER_BY_MIX)) {
+                        CommonUtils.updateColumnConfigFlags(modelConfig, columnConfigList);
                         this.columnConfigList = selector.selectByFilter();
                     } else if(filterBy.equalsIgnoreCase(Constants.FILTER_BY_FI)) {
                         if(!CommonUtils.isDesicionTreeAlgorithm(modelConfig.getAlgorithm())) {

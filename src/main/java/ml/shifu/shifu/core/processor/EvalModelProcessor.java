@@ -31,6 +31,7 @@ import java.util.Set;
 import ml.shifu.shifu.actor.AkkaSystemExecutor;
 import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.container.obj.EvalConfig;
+import ml.shifu.shifu.container.obj.PerformanceResult;
 import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
 import ml.shifu.shifu.core.ConfusionMatrix;
 import ml.shifu.shifu.core.PerformanceEvaluator;
@@ -43,8 +44,8 @@ import ml.shifu.shifu.fs.ShifuFileUtils;
 import ml.shifu.shifu.pig.PigExecutor;
 import ml.shifu.shifu.util.CommonUtils;
 import ml.shifu.shifu.util.Constants;
-
 import ml.shifu.shifu.util.Environment;
+
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang.StringUtils;
@@ -153,13 +154,9 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
             return -1;
         }
         log.info("Step Finished: eval with {} ms", (System.currentTimeMillis() - start));
-
         return 0;
     }
 
-    /**
-     * @param evalSetName
-     */
     private void deleteEvalSet(String evalSetName) {
         EvalConfig evalConfig = modelConfig.getEvalConfigByName(evalSetName);
         if(evalConfig == null) {
@@ -175,9 +172,6 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
         }
     }
 
-    /**
-     *
-     */
     private void listEvalSet() {
         List<EvalConfig> evals = modelConfig.getEvals();
         if(CollectionUtils.isNotEmpty(evals)) {
@@ -214,8 +208,10 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
     /**
      * run score only
      * 
-     * @param evalSetList
+     * @param evalConfigList
+     *            eval config list
      * @throws IOException
+     *             any io exception
      */
     private void runScore(List<EvalConfig> evalSetList) throws IOException {
         for(EvalConfig config: evalSetList) {
@@ -224,10 +220,12 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
     }
 
     /**
-     * run score only
+     * Run score only
      * 
-     * @param config
+     * @param evalConfig
+     *            the eval config instance
      * @throws IOException
+     *             any io exception
      */
     private void runScore(EvalConfig config) throws IOException {
         // create evalset home directory firstly in local file system
@@ -253,6 +251,9 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
      * Run normalization against the evaluation data sets
      * 
      * @param evalConfigList
+     *            eval config list
+     * @throws IOException
+     *             any io exception
      */
     private void runNormalize(List<EvalConfig> evalConfigList) throws IOException {
         for(EvalConfig evalConfig: evalConfigList) {
@@ -264,6 +265,9 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
      * Run normalization against the evaluation data set
      * 
      * @param evalConfig
+     *            the eval config instance
+     * @throws IOException
+     *             any io exception
      */
     private void runNormalize(EvalConfig evalConfig) throws IOException {
         PathFinder pathFinder = new PathFinder(modelConfig);
@@ -285,7 +289,9 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
      * run pig mode scoring
      * 
      * @param evalConfig
+     *            the name for evaluation
      * @throws IOException
+     *             any io exception
      */
     @SuppressWarnings("deprecation")
     private ScoreStatus runPigScore(EvalConfig evalConfig) throws IOException {
@@ -367,6 +373,7 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
                 double[] maxMinScores = locateMaxMinScoreFromFile(sourceType, maxMinScoreFolder);
                 maxScore = maxMinScores[0];
                 minScore = maxMinScores[1];
+                log.info("Max score is {}, min score is {}", maxScore, minScore);
                 ShifuFileUtils.deleteFile(maxMinScoreFolder, sourceType);
             }
             // only one pig job with such counters, return
@@ -416,7 +423,9 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
      * Run pig code to normalize evaluation dataset
      * 
      * @param evalConfig
+     *            the name for evaluation
      * @throws IOException
+     *             any io exception
      */
     private void runPigNormalize(EvalConfig evalConfig) throws IOException {
         // clean up output directories
@@ -451,7 +460,9 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
      * run akka mode scoring
      * 
      * @param config
+     *            the name for evaluation
      * @throws IOException
+     *             any io exception
      */
     private void runAkkaScore(EvalConfig config) throws IOException {
         SourceType sourceType = config.getDataSet().getSource();
@@ -472,6 +483,7 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
      * @param name
      *            - the evaluation set name
      * @throws IOException
+     *             any io exception
      */
     private void createNewEval(String name) throws IOException {
         EvalConfig evalConfig = modelConfig.getEvalConfigByName(name);
@@ -583,7 +595,9 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
      * Run evaluation by @EvalConfig
      * 
      * @param evalConfig
+     *            the name for evaluation
      * @throws IOException
+     *             any io exception
      */
     private void runEval(EvalConfig evalConfig) throws IOException {
         // create evalset home directory firstly in local file system
@@ -616,8 +630,120 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
      */
     private void runPigEval(EvalConfig evalConfig) throws IOException {
         ScoreStatus ss = runPigScore(evalConfig);
-        // TODO code refacter because of several magic numbers and not good name functions ...
         runConfusionMatrix(evalConfig, ss);
+
+        // ScoreStatus ss = runPigScore(evalConfig);
+        //
+        // List<String> scoreMetaColumns = evalConfig.getScoreMetaColumns(modelConfig);
+        // if(scoreMetaColumns == null || scoreMetaColumns.isEmpty() || !modelConfig.isRegression()) {
+        // runConfusionMatrix(evalConfig, ss);
+        // return;
+        // }
+        //
+        // PerformanceResult challendgeModelPerformance = runConfusionMatrix(evalConfig, ss,
+        // pathFinder.getEvalScorePath(evalConfig), pathFinder.getEvalPerformancePath(evalConfig), false, false);
+        // List<PerformanceResult> prList = new ArrayList<PerformanceResult>();
+        // prList.add(challendgeModelPerformance);
+        //
+        // List<String> names = new ArrayList<String>();
+        // names.add(modelConfig.getBasic().getName() + "::" + evalConfig.getName());
+        // for(String metaScoreColumn: scoreMetaColumns) {
+        // if(StringUtils.isBlank(metaScoreColumn)) {
+        // continue;
+        // }
+        // names.add(metaScoreColumn);
+        // log.info("Meta score performance for {} started.", metaScoreColumn);
+        // ScoreStatus newScoreStatus = runPigMetaScore(evalConfig, metaScoreColumn);
+        // PerformanceResult championModelPerformance = runConfusionMatrix(evalConfig, newScoreStatus,
+        // pathFinder.getEvalScorePath(evalConfig, metaScoreColumn),
+        // pathFinder.getEvalPerformancePath(evalConfig, metaScoreColumn), false, false, 0, 1, 2);
+        // prList.add(championModelPerformance);
+        // }
+        // String htmlGainChart = pathFinder.getEvalFilePath(evalConfig.getName(), evalConfig.getName()
+        // + "_gainchart.html", SourceType.LOCAL);
+        // log.info("Gain chart is generated in {}.", htmlGainChart);
+        // new GainChart().generateHtml(evalConfig, modelConfig, htmlGainChart, prList, names);
+    }
+
+    @SuppressWarnings({ "deprecation", "unused" })
+    private ScoreStatus runPigMetaScore(EvalConfig evalConfig, String metaScore) throws IOException {
+        // clean up output directories
+        SourceType sourceType = evalConfig.getDataSet().getSource();
+
+        ShifuFileUtils.deleteFile(pathFinder.getEvalScorePath(evalConfig, metaScore), sourceType);
+
+        // prepare special parameters and execute pig
+        Map<String, String> paramsMap = new HashMap<String, String>();
+
+        paramsMap.put(Constants.SOURCE_TYPE, sourceType.toString());
+        paramsMap.put("pathEvalRawData", evalConfig.getDataSet().getDataPath());
+        paramsMap.put("pathSortScoreData", pathFinder.getEvalScorePath(evalConfig, metaScore));
+        paramsMap.put("eval_set_name", evalConfig.getName());
+        paramsMap.put("delimiter", evalConfig.getDataSet().getDataDelimiter());
+        paramsMap.put("column_name", metaScore);
+
+        String pigScript = "scripts/EvalScoreMetaSort.pig";
+        Map<String, String> confMap = new HashMap<String, String>();
+        // max min score folder
+        String maxMinScoreFolder = ShifuFileUtils
+                .getFileSystemBySourceType(sourceType)
+                .makeQualified(
+                        new Path("tmp" + File.separator + "maxmin_score_" + System.currentTimeMillis() + "_"
+                                + new Random().nextLong())).toString();
+        confMap.put(Constants.SHIFU_EVAL_MAXMIN_SCORE_OUTPUT, maxMinScoreFolder);
+
+        try {
+            PigExecutor.getExecutor().submitJob(modelConfig, pathFinder.getScriptPath(pigScript), paramsMap,
+                    evalConfig.getDataSet().getSource(), confMap, super.pathFinder);
+        } catch (IOException e) {
+            throw new ShifuException(ShifuErrorCode.ERROR_RUNNING_PIG_JOB, e);
+        } catch (Throwable e) {
+            throw new RuntimeException(e);
+        }
+
+        Iterator<JobStats> iter = PigStats.get().getJobGraph().iterator();
+
+        while(iter.hasNext()) {
+            JobStats jobStats = iter.next();
+            long evalRecords = jobStats.getHadoopCounters().getGroup(Constants.SHIFU_GROUP_COUNTER)
+                    .getCounter(Constants.COUNTER_RECORDS);
+            log.info("Total valid eval records is : {}", evalRecords);
+            // If no basic record counter, check next one
+            if(evalRecords == 0L) {
+                continue;
+            }
+            this.evalRecords = evalRecords;
+
+            long pigPosTags = jobStats.getHadoopCounters().getGroup(Constants.SHIFU_GROUP_COUNTER)
+                    .getCounter(Constants.COUNTER_POSTAGS);
+            long pigNegTags = jobStats.getHadoopCounters().getGroup(Constants.SHIFU_GROUP_COUNTER)
+                    .getCounter(Constants.COUNTER_NEGTAGS);
+            double pigPosWeightTags = jobStats.getHadoopCounters().getGroup(Constants.SHIFU_GROUP_COUNTER)
+                    .getCounter(Constants.COUNTER_WPOSTAGS)
+                    / (Constants.EVAL_COUNTER_WEIGHT_SCALE * 1.0d);
+            double pigNegWeightTags = jobStats.getHadoopCounters().getGroup(Constants.SHIFU_GROUP_COUNTER)
+                    .getCounter(Constants.COUNTER_WNEGTAGS)
+                    / (Constants.EVAL_COUNTER_WEIGHT_SCALE * 1.0d);
+
+            double maxScore = Integer.MIN_VALUE;
+            double minScore = Integer.MAX_VALUE;
+            if(modelConfig.isRegression()) {
+                double[] maxMinScores = locateMaxMinScoreFromFile(sourceType, maxMinScoreFolder);
+                maxScore = maxMinScores[0];
+                minScore = maxMinScores[1];
+                log.info("Max score is {}, min score is {}", maxScore, minScore);
+                ShifuFileUtils.deleteFile(maxMinScoreFolder, sourceType);
+            }
+
+            long badMetaScores = jobStats.getHadoopCounters().getGroup(Constants.SHIFU_GROUP_COUNTER)
+                    .getCounter("BAD_META_SCORE");
+            log.info("Eval records is {}; and bad meta score is {}.", evalRecords, badMetaScores);
+
+            // only one pig job with such counters, return
+            return new ScoreStatus(pigPosTags, pigNegTags, pigPosWeightTags, pigNegWeightTags, maxScore, minScore,
+                    evalRecords);
+        }
+        return null;
     }
 
     /**
@@ -653,6 +779,7 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
      * @param evalConfig
      *            the name for evaluation
      * @throws IOException
+     *             any io exception
      */
     private void runPerformance(EvalConfig evalConfig) throws IOException {
         PerformanceEvaluator perfEval = new PerformanceEvaluator(modelConfig, evalConfig);
@@ -674,6 +801,7 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
      * @param evalSetList
      *            a List of EvalConfig
      * @throws IOException
+     *             any io exception
      */
     private void runConfusionMatrix(List<EvalConfig> evalSetList) throws IOException {
         for(EvalConfig config: evalSetList) {
@@ -685,24 +813,58 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
      * Run confusion matrix
      * 
      * @param config
+     *            eval config
+     * @param ss
+     *            the score stats
      * @return List of ConfusionMatrixObject
      * @throws IOException
+     *             any io exception
      */
-    private void runConfusionMatrix(EvalConfig config, ScoreStatus ss) throws IOException {
+    private PerformanceResult runConfusionMatrix(EvalConfig config, ScoreStatus ss) throws IOException {
+        return runConfusionMatrix(config, ss, pathFinder.getEvalScorePath(config),
+                pathFinder.getEvalPerformancePath(config, config.getDataSet().getSource()), true, true);
+    }
+
+    private PerformanceResult runConfusionMatrix(EvalConfig config, ScoreStatus ss, String scoreDataPath,
+            String evalPerformancePath, boolean isPrint, boolean isGenerateChart) throws IOException {
         ConfusionMatrix worker = new ConfusionMatrix(modelConfig, config);
         switch(modelConfig.getBasic().getRunMode()) {
             case DIST:
             case MAPRED:
                 if(modelConfig.isRegression()) {
-                    worker.bufferedComputeConfusionMatrixAndPerformance(ss.pigPosTags, ss.pigNegTags,
-                            ss.pigPosWeightTags, ss.pigNegWeightTags, ss.evalRecords, ss.maxScore, ss.minScore);
+                    return worker.bufferedComputeConfusionMatrixAndPerformance(ss.pigPosTags, ss.pigNegTags,
+                            ss.pigPosWeightTags, ss.pigNegWeightTags, ss.evalRecords, ss.maxScore, ss.minScore,
+                            scoreDataPath, evalPerformancePath, isPrint, isGenerateChart, false);
                 } else {
                     worker.computeConfusionMatixForMultipleClassification(this.evalRecords);
+                    return null;
                 }
-                break;
             default:
                 worker.computeConfusionMatrix();
-                break;
+                return null;
+        }
+    }
+
+    @SuppressWarnings("unused")
+    private PerformanceResult runConfusionMatrix(EvalConfig config, ScoreStatus ss, String scoreDataPath,
+            String evalPerformancePath, boolean isPrint, boolean isGenerateChart, int targetColumnIndex,
+            int scoreColumnIndex, int weightColumnIndex) throws IOException {
+        ConfusionMatrix worker = new ConfusionMatrix(modelConfig, config);
+        switch(modelConfig.getBasic().getRunMode()) {
+            case DIST:
+            case MAPRED:
+                if(modelConfig.isRegression()) {
+                    return worker.bufferedComputeConfusionMatrixAndPerformance(ss.pigPosTags, ss.pigNegTags,
+                            ss.pigPosWeightTags, ss.pigNegWeightTags, ss.evalRecords, ss.maxScore, ss.minScore,
+                            scoreDataPath, evalPerformancePath, isPrint, isGenerateChart, targetColumnIndex,
+                            scoreColumnIndex, weightColumnIndex, true);
+                } else {
+                    worker.computeConfusionMatixForMultipleClassification(this.evalRecords);
+                    return null;
+                }
+            default:
+                worker.computeConfusionMatrix();
+                return null;
         }
     }
 
@@ -710,8 +872,10 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
      * Run confusion matrix
      * 
      * @param config
+     *            eval config
      * @return List of ConfusionMatrixObject
      * @throws IOException
+     *             any io exception
      */
     private void runConfusionMatrix(EvalConfig config) throws IOException {
         runConfusionMatrix(config, null);

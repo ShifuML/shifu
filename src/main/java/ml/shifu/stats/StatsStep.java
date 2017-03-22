@@ -75,7 +75,7 @@ public class StatsStep extends Step<List<ColumnConfig>> {
             JSONUtils.writeValue(new File(pathFinder.getColumnConfigPath(SourceType.LOCAL)), columnConfigList);
 
             if(SourceType.HDFS.equals(modelConfig.getDataSet().getSource())) {
-                CommonUtils.copyConfFromLocalToHDFS(modelConfig);
+                CommonUtils.copyConfFromLocalToHDFS(modelConfig, this.pathFinder);
             }
 
             AbstractStatsExecutor statsExecutor = null;
@@ -110,7 +110,7 @@ public class StatsStep extends Step<List<ColumnConfig>> {
             statsExecutor.doStats();
 
             if(SourceType.HDFS.equals(modelConfig.getDataSet().getSource())) {
-                CommonUtils.copyConfFromLocalToHDFS(modelConfig);
+                CommonUtils.copyConfFromLocalToHDFS(modelConfig, this.pathFinder);
             }
         } catch (Exception e) {
             LOG.error("Error:", e);
