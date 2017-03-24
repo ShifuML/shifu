@@ -772,7 +772,7 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
     }
 
     /**
-     * Check is high rate is very high.
+     * Check is missing rate is over threshold.
      */
     private boolean isHighMissingRateColumn(ColumnConfig config) {
         Double missingPercentage = config.getMissingPercentage();
