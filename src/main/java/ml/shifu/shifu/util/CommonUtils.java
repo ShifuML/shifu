@@ -699,7 +699,7 @@ public final class CommonUtils {
                     " invalid model algorithm %s.", modelConfig.getAlgorithm()));
         }
 
-        return loadBasicModels(modelConfig, columnConfigList, evalConfig, modelConfig.getDataSet().getSource());
+        return loadBasicModels(modelConfig, evalConfig, modelConfig.getDataSet().getSource());
     }
 
     /**
@@ -736,15 +736,15 @@ public final class CommonUtils {
         return low == 0 ? 0 : low - 1;
     }
 
-    public static List<BasicML> loadBasicModels(ModelConfig modelConfig, List<ColumnConfig> columnConfigList,
-            EvalConfig evalConfig, SourceType sourceType) throws IOException {
+    public static List<BasicML> loadBasicModels(ModelConfig modelConfig, EvalConfig evalConfig, SourceType sourceType)
+            throws IOException {
         List<BasicML> models = new ArrayList<BasicML>();
         FileSystem fs = ShifuFileUtils.getFileSystemBySourceType(sourceType);
 
-        List<FileStatus> modelFileStats = locateBasicModels(modelConfig, columnConfigList, evalConfig, sourceType);
+        List<FileStatus> modelFileStats = locateBasicModels(modelConfig, evalConfig, sourceType);
         if(CollectionUtils.isNotEmpty(modelFileStats)) {
             for(FileStatus f: modelFileStats) {
-                models.add(loadModel(modelConfig, columnConfigList, f.getPath(), fs));
+                models.add(loadModel(modelConfig, f.getPath(), fs));
             }
         }
 
@@ -756,8 +756,6 @@ public final class CommonUtils {
      * 
      * @param modelConfig
      *            model config
-     * @param columnConfigList
-     *            list of column config
      * @param evalConfig
      *            eval confg
      * @param sourceType
@@ -774,29 +772,29 @@ public final class CommonUtils {
      * @throws IllegalStateException
      *             if not HDFS or LOCAL source type or algorithm not supported.
      */
-    public static List<BasicML> loadBasicModels(ModelConfig modelConfig, List<ColumnConfig> columnConfigList,
-            EvalConfig evalConfig, SourceType sourceType, boolean gbtConvertToProb) throws IOException {
+    public static List<BasicML> loadBasicModels(ModelConfig modelConfig, EvalConfig evalConfig, SourceType sourceType,
+            boolean gbtConvertToProb) throws IOException {
         List<BasicML> models = new ArrayList<BasicML>();
         FileSystem fs = ShifuFileUtils.getFileSystemBySourceType(sourceType);
 
-        List<FileStatus> modelFileStats = locateBasicModels(modelConfig, columnConfigList, evalConfig, sourceType);
+        List<FileStatus> modelFileStats = locateBasicModels(modelConfig, evalConfig, sourceType);
         if(CollectionUtils.isNotEmpty(modelFileStats)) {
             for(FileStatus f: modelFileStats) {
-                models.add(loadModel(modelConfig, columnConfigList, f.getPath(), fs, gbtConvertToProb));
+                models.add(loadModel(modelConfig, f.getPath(), fs, gbtConvertToProb));
             }
         }
 
         return models;
     }
 
-    public static int getBasicModelsCnt(ModelConfig modelConfig, List<ColumnConfig> columnConfigList,
-            EvalConfig evalConfig, SourceType sourceType) throws IOException {
-        List<FileStatus> modelFileStats = locateBasicModels(modelConfig, columnConfigList, evalConfig, sourceType);
+    public static int getBasicModelsCnt(ModelConfig modelConfig, EvalConfig evalConfig, SourceType sourceType)
+            throws IOException {
+        List<FileStatus> modelFileStats = locateBasicModels(modelConfig, evalConfig, sourceType);
         return (CollectionUtils.isEmpty(modelFileStats) ? 0 : modelFileStats.size());
     }
 
-    public static List<FileStatus> locateBasicModels(ModelConfig modelConfig, List<ColumnConfig> columnConfigList,
-            EvalConfig evalConfig, SourceType sourceType) throws IOException {
+    public static List<FileStatus> locateBasicModels(ModelConfig modelConfig, EvalConfig evalConfig,
+            SourceType sourceType) throws IOException {
         // we have to register PersistBasicFloatNetwork for loading such models
         PersistorRegistry.getInstance().add(new PersistBasicFloatNetwork());
 
@@ -825,9 +823,8 @@ public final class CommonUtils {
         return listStatus;
     }
 
-    public static BasicML loadModel(ModelConfig modelConfig, List<ColumnConfig> columnConfigList, Path modelPath,
-            FileSystem fs) throws IOException {
-        return loadModel(modelConfig, columnConfigList, modelPath, fs, false);
+    public static BasicML loadModel(ModelConfig modelConfig, Path modelPath, FileSystem fs) throws IOException {
+        return loadModel(modelConfig, modelPath, fs, false);
     }
 
     /**
@@ -848,8 +845,8 @@ public final class CommonUtils {
      * @throws IOException
      *             if loading file for any IOException
      */
-    public static BasicML loadModel(ModelConfig modelConfig, List<ColumnConfig> columnConfigList, Path modelPath,
-            FileSystem fs, boolean gbtConvertToProb) throws IOException {
+    public static BasicML loadModel(ModelConfig modelConfig, Path modelPath, FileSystem fs, boolean gbtConvertToProb)
+            throws IOException {
         if(!fs.exists(modelPath)) {
             // no such existing model, return null.
             return null;
@@ -980,7 +977,7 @@ public final class CommonUtils {
             });
             List<BasicML> models = new ArrayList<BasicML>();
             for(FileStatus f: modelFileStats) {
-                models.add(loadModel(modelConfig, columnConfigList, f.getPath(), fs, gbtConvertToProb));
+                models.add(loadModel(modelConfig, f.getPath(), fs, gbtConvertToProb));
             }
             modelSpec = new ModelSpec(subModelName, algorithm, models);
         }

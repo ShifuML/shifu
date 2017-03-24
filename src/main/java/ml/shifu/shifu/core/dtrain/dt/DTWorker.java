@@ -96,12 +96,12 @@ import com.google.common.base.Splitter;
  * For RF, bagging with replacement are enabled by {@link PoissonDistribution}.
  * 
  * <p>
- * Weighted training are supported in our RF and GBDT impl, in such worker, data.significance is weight set from input.
- * If no weight, such value is set to 1.
+ * Weighted training are supported in our RF and GBDT impl, in such worker, data.significance is weight field set from
+ * input. If no weight, such value is set to 1.
  * 
  * <p>
  * Bin index is stored in each Data object as short to save memory, especially for categorical features, memory is saved
- * a lot.
+ * a lot from String to short. With short type, number of categories only limited in Short.MAX_VALUE.
  * 
  * @author Zhang David (pengzhang@paypal.com)
  */
@@ -487,7 +487,7 @@ public class DTWorker
             Path modelPath = new Path(context.getProps().getProperty(CommonConstants.GUAGUA_OUTPUT));
             TreeModel existingModel = null;
             try {
-                existingModel = (TreeModel) CommonUtils.loadModel(modelConfig, columnConfigList, modelPath,
+                existingModel = (TreeModel) CommonUtils.loadModel(modelConfig, modelPath,
                         ShifuFileUtils.getFileSystemBySourceType(this.modelConfig.getDataSet().getSource()));
             } catch (IOException e) {
                 LOG.error("Error in get existing model, will ignore and start from scratch", e);

@@ -1027,7 +1027,7 @@ public class DTMaster extends AbstractMasterComputable<DTMasterParams, DTWorkerP
                     TreeModel existingModel;
                     try {
                         Path modelPath = new Path(context.getProps().getProperty(CommonConstants.GUAGUA_OUTPUT));
-                        existingModel = (TreeModel) CommonUtils.loadModel(modelConfig, columnConfigList, modelPath,
+                        existingModel = (TreeModel) CommonUtils.loadModel(modelConfig, modelPath,
                                 ShifuFileUtils.getFileSystemBySourceType(this.modelConfig.getDataSet().getSource()));
                         if(existingModel == null) {
                             // null means no existing model file or model file is in wrong format

@@ -183,7 +183,7 @@ public class ScoreModelWorker extends AbstractWorkerActor {
 
         buf.append("|mean|max|min|median");
 
-        List<BasicML> models = CommonUtils.loadBasicModels(modelConfig, columnConfigList, evalConfig, SourceType.LOCAL);
+        List<BasicML> models = CommonUtils.loadBasicModels(modelConfig, evalConfig, SourceType.LOCAL);
         for(int i = 0; i < models.size(); i++) {
             buf.append("|model" + i);
         }

@@ -233,7 +233,7 @@ public class Scorer {
                             scores.add(sc);
                         }
                     } else {
-                        // if one vs all consider
+                        // if one vs all multiple classification or regression
                         scores.add(toScore(score.getData(0)));
                     }
                     final TreeModel tm = (TreeModel) model;

@@ -265,7 +265,7 @@ public class NNMaster extends AbstractMasterComputable<NNParams, NNParams> {
         NNParams params = null;
         try {
             Path modelPath = new Path(context.getProps().getProperty(CommonConstants.GUAGUA_OUTPUT));
-            BasicNetwork existingModel = (BasicNetwork) CommonUtils.loadModel(modelConfig, columnConfigList, modelPath,
+            BasicNetwork existingModel = (BasicNetwork) CommonUtils.loadModel(modelConfig, modelPath,
                     ShifuFileUtils.getFileSystemBySourceType(this.modelConfig.getDataSet().getSource()));
             if(existingModel == null) {
                 params = initWeights();

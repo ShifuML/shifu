@@ -80,6 +80,8 @@ public class ConfusionMatrix {
 
     private int multiClassModelCnt;
 
+    private int metaColumns;
+
     public ConfusionMatrix(ModelConfig modelConfig, EvalConfig evalConfig) throws IOException {
         this.modelConfig = modelConfig;
         this.evalConfig = evalConfig;
@@ -110,9 +112,15 @@ public class ConfusionMatrix {
 
         weightColumnIndex = ArrayUtils.indexOf(evalScoreHeader, evalConfig.getDataSet().getWeightColumnName());
 
-        // only works for multi classfication
-        multiClassScore1Index = targetColumnIndex + 2; // taget, weight, score1, score2
-        multiClassModelCnt = (evalScoreHeader.length - multiClassScore1Index) / modelConfig.getTags().size();
+        // only works for multi classification
+        multiClassScore1Index = targetColumnIndex + 2; // target, weight, score1, score2, this is hard code
+        multiClassModelCnt = CommonUtils
+                .getBasicModelsCnt(modelConfig, evalConfig, evalConfig.getDataSet().getSource());
+
+        /**
+         * Number of meta columns
+         */
+        metaColumns = evalConfig.getAllMetaColumns(modelConfig).size();
     }
 
     private String[] getEvalScoreHeader() throws IOException {
@@ -478,8 +486,6 @@ public class ConfusionMatrix {
                 sourceType);
         boolean isDir = ShifuFileUtils.isDir(pathFinder.getEvalScorePath(evalConfig, sourceType), sourceType);
         int cnt = 0;
-        Set<String> posTags = new HashSet<String>(modelConfig.getPosTags(evalConfig));
-        Set<String> negTags = new HashSet<String>(modelConfig.getNegTags(evalConfig));
         Set<String> tagSet = new HashSet<String>(modelConfig.getFlattenTags(modelConfig.getPosTags(evalConfig),
                 modelConfig.getNegTags(evalConfig)));
         // List<String> tags = modelConfig.getFlattenTags(modelConfig.getPosTags(evalConfig),
@@ -499,25 +505,16 @@ public class ConfusionMatrix {
                 String[] raw = scanner.nextLine().split("\\|");
 
                 if(!isDir && cnt == 1) {
-                    // if the evaluation score file is the local file, skip the first line since we add
+                    // if the evaluation score file is the local file, skip the first line since we add header in
                     continue;
                 }
 
                 String tag = raw[targetColumnIndex];
-                if(modelConfig.isRegression()) {
-                    if(StringUtils.isBlank(tag) || (!posTags.contains(tag) && !negTags.contains(tag))) {
-                        if(rd.nextDouble() < 0.01) {
-                            log.warn("Empty or invalid target value!!");
-                        }
-                        continue;
+                if(StringUtils.isBlank(tag) || !tagSet.contains(tag)) {
+                    if(rd.nextDouble() < 0.01) {
+                        log.warn("Empty or invalid target value!!");
                     }
-                } else {
-                    if(StringUtils.isBlank(tag) || !tagSet.contains(tag)) {
-                        if(rd.nextDouble() < 0.01) {
-                            log.warn("Empty or invalid target value!!");
-                        }
-                        continue;
-                    }
+                    continue;
                 }
 
                 double[] scores = new double[classes];
@@ -527,9 +524,9 @@ public class ConfusionMatrix {
 
                 if(CommonUtils.isDesicionTreeAlgorithm(modelConfig.getAlgorithm())
                         && !modelConfig.getTrain().isOneVsAll()) {
-                    // for RF classification
+                    // for RF native classification
                     double[] tagCounts = new double[tags.size()];
-                    for(int i = this.multiClassScore1Index; i < raw.length; i++) {
+                    for(int i = this.multiClassScore1Index; i < (raw.length - this.metaColumns); i++) {
                         double dd = NumberFormatUtils.getDouble(raw[i], 0d);
                         tagCounts[(int) dd] += 1d;
                     }
@@ -542,8 +539,8 @@ public class ConfusionMatrix {
                     }
                 } else if((CommonUtils.isDesicionTreeAlgorithm(modelConfig.getAlgorithm()) || NNConstants.NN_ALG_NAME
                         .equalsIgnoreCase(modelConfig.getAlgorithm())) && modelConfig.getTrain().isOneVsAll()) {
-                    // for RF & NN OneVsAll classification
-                    for(int i = this.multiClassScore1Index; i < raw.length; i++) {
+                    // for RF, GBT & NN OneVsAll classification
+                    for(int i = this.multiClassScore1Index; i < (classes + this.multiClassScore1Index); i++) {
                         double dd = NumberFormatUtils.getDouble(raw[i], 0d);
                         if(dd > maxScore) {
                             maxScore = dd;
@@ -551,7 +548,7 @@ public class ConfusionMatrix {
                         }
                     }
                 } else {
-                    // only for NN
+                    // only for NN & Native Multiple classification
                     // 1,2,3 4,5,6: 1,2,3 is model 0, 4,5,6 is model 1
                     for(int i = 0; i < classes; i++) {
                         for(int j = 0; j < multiClassModelCnt; j++) {
@@ -587,7 +584,7 @@ public class ConfusionMatrix {
         BufferedWriter writer = null;
         try {
             writer = ShifuFileUtils.getWriter(localEvalMatrixFile.toString(), SourceType.LOCAL);
-            writer.write("," + StringUtils.join(tags, ",") + "\n");
+            writer.write("\t," + StringUtils.join(tags, ",") + "\n");
             for(int i = 0; i < confusionMatrix.length; i++) {
                 StringBuilder sb = new StringBuilder(300);
                 sb.append(tags.get(i));
@@ -595,7 +592,7 @@ public class ConfusionMatrix {
                     sb.append(",").append(confusionMatrix[i][j]);
                 }
                 sb.append("\n");
-                writer.write(tags.get(i) + "," + sb.toString());
+                writer.write(sb.toString());
             }
         } finally {
             writer.close();
