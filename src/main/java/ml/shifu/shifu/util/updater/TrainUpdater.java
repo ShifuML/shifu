@@ -1,5 +1,6 @@
 package ml.shifu.shifu.util.updater;
 
+import ml.shifu.shifu.column.NSColumn;
 import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.container.obj.ModelConfig;
 
@@ -17,13 +18,13 @@ public class TrainUpdater extends BasicUpdater {
     public void updateColumnConfig(ColumnConfig columnConfig) {
         String varName = columnConfig.getColumnName();
 
-        if (this.setMeta.contains(varName)) {
+        if (this.setMeta.contains(new NSColumn(varName))) {
             columnConfig.setColumnFlag(ColumnConfig.ColumnFlag.Meta);
             columnConfig.setFinalSelect(false);
-        } else if (this.setForceRemove.contains(varName)) {
+        } else if (this.setForceRemove.contains(new NSColumn(varName))) {
             columnConfig.setColumnFlag(ColumnConfig.ColumnFlag.ForceRemove);
             columnConfig.setFinalSelect(false);
-        } else if (this.setForceSelect.contains(varName)) {
+        } else if (this.setForceSelect.contains(new NSColumn(varName))) {
             columnConfig.setColumnFlag(ColumnConfig.ColumnFlag.ForceSelect);
             columnConfig.setFinalSelect(true);
         }

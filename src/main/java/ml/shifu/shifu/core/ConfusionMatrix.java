@@ -28,6 +28,8 @@ import java.util.Scanner;
 import java.util.Set;
 
 import ml.shifu.guagua.util.NumberFormatUtils;
+import ml.shifu.shifu.column.NSColumn;
+import ml.shifu.shifu.column.NSColumnUtils;
 import ml.shifu.shifu.container.ConfusionMatrixObject;
 import ml.shifu.shifu.container.ModelResultObject;
 import ml.shifu.shifu.container.PerformanceObject;
@@ -95,24 +97,38 @@ public class ConfusionMatrix {
         }
 
         if(modelConfig.isRegression()) {
-            scoreColumnIndex = ArrayUtils.indexOf(evalScoreHeader, evalConfig.getPerformanceScoreSelector().trim());
+            scoreColumnIndex = getColumnIndex(evalScoreHeader,
+                    StringUtils.trimToEmpty(evalConfig.getPerformanceScoreSelector()));
             if(scoreColumnIndex < 0) {
                 // the score column is not found in the header of EvalScore
                 throw new ShifuException(ShifuErrorCode.ERROR_EVAL_SELECTOR_EMPTY);
             }
         }
 
-        targetColumnIndex = ArrayUtils.indexOf(evalScoreHeader, modelConfig.getTargetColumnName(evalConfig));
+        targetColumnIndex = getColumnIndex(evalScoreHeader,
+                StringUtils.trimToEmpty(modelConfig.getTargetColumnName(evalConfig)));
         if(targetColumnIndex < 0) {
             // the target column is not found in the header of EvalScore
             throw new ShifuException(ShifuErrorCode.ERROR_EVAL_TARGET_NOT_FOUND);
         }
 
-        weightColumnIndex = ArrayUtils.indexOf(evalScoreHeader, evalConfig.getDataSet().getWeightColumnName());
+        weightColumnIndex = getColumnIndex(evalScoreHeader,
+                StringUtils.trimToEmpty(evalConfig.getDataSet().getWeightColumnName()));
 
         // only works for multi classfication
         multiClassScore1Index = targetColumnIndex + 2; // taget, weight, score1, score2
         multiClassModelCnt = (evalScoreHeader.length - multiClassScore1Index) / modelConfig.getTags().size();
+    }
+
+    public int getColumnIndex(String[] headerColumns, String column) {
+        int columnIndex = -1;
+        for ( int i = 0; i < headerColumns.length; i ++ ) {
+            if (NSColumnUtils.isColumnEqual(headerColumns[i], column)) {
+                columnIndex = i;
+                break;
+            }
+        }
+        return columnIndex;
     }
 
     private String[] getEvalScoreHeader() throws IOException {
