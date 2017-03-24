@@ -17,6 +17,8 @@ package ml.shifu.shifu.udf;
 
 import ml.shifu.shifu.util.Environment;
 import org.apache.commons.io.FileUtils;
+import org.apache.commons.lang.StringUtils;
+import org.apache.pig.backend.executionengine.ExecException;
 import org.apache.pig.data.Tuple;
 import org.apache.pig.data.TupleFactory;
 import org.testng.Assert;
@@ -64,7 +66,7 @@ public class EvalScoreUDFTest {
         }
         input.set(0, "M");
 
-        Assert.assertEquals("(M,1.0,42,74,5,36,36,31,74,66,5)", instance.exec(input).toString());
+        check(instance.exec(input), StringUtils.split("M,1.0,42,74,5,35,35,30,74,65,5", ","));
     }
 
     @Test
@@ -77,12 +79,12 @@ public class EvalScoreUDFTest {
             input.set(i, fields[i]);
         }
 
-        Assert.assertEquals("(B,1.0,7,11,4,8,7,8,11,4,8)", instance.exec(input).toString());
+        check(instance.exec(input), StringUtils.split("B,1.0,7,11,3,8,6,8,11,3,8", ","));
     }
 
     @Test
     public void testGetSchema() {
-        Assert.assertEquals("{EvalScore: (shifu::diagnosis: chararray,shifu::weight: chararray,shifu::mean: int,shifu::max: int,shifu::min: int,shifu::median: int,shifu::model0: int,shifu::model1: int,shifu::model2: int,shifu::model3: int,shifu::model4: int)}", instance.outputSchema(null).toString());
+        Assert.assertEquals("{EvalScore: (shifu::diagnosis: chararray,shifu::weight: chararray,shifu::mean: double,shifu::max: double,shifu::min: double,shifu::median: double,shifu::model0: double,shifu::model1: double,shifu::model2: double,shifu::model3: double,shifu::model4: double)}", instance.outputSchema(null).toString());
     }
 
     @Test
@@ -98,7 +100,20 @@ public class EvalScoreUDFTest {
         }
         input.set(0, "M");
 
-        Assert.assertEquals("(M,1.0,42431529,74243477,5347464,35996827,35996827,30754354,74243477,65815525,5347464)", scaleInst.exec(input).toString());
+        check(scaleInst.exec(input), StringUtils.split("M,1.0,42431529,74243477,5347463,35996826,35996826,30754353,74243477,65815524,5347463", ","));
+    }
+
+
+    private void check(Tuple result, Object[] expectVals) throws ExecException {
+        for ( int i = 0; i < expectVals.length; i ++ ) {
+            Object obj = result.get(i);
+            String value = obj.toString();
+            if ( obj instanceof Double ) {
+                Double actualVal = (Double) obj;
+                value = Integer.toString(actualVal.intValue());
+            }
+            Assert.assertEquals(value, expectVals[i]);
+        }
     }
 
     @AfterClass
