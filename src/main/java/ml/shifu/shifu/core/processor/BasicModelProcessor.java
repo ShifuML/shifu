@@ -28,6 +28,7 @@ import java.util.Map;
 import java.util.Scanner;
 import java.util.Set;
 
+import ml.shifu.shifu.column.NSColumn;
 import ml.shifu.shifu.container.meta.ValidateResult;
 import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.container.obj.ModelConfig;
@@ -122,7 +123,7 @@ public class BasicModelProcessor {
         if(this.columnConfigList == null) {
             return;
         }
-        Set<String> names = new HashSet<String>();
+        Set<NSColumn> names = new HashSet<NSColumn>();
         for(ColumnConfig config: this.columnConfigList) {
             if(StringUtils.isEmpty(config.getColumnName())) {
                 throw new IllegalArgumentException("Empry column name, please check your header file.");
@@ -131,16 +132,16 @@ public class BasicModelProcessor {
                 log.warn("Duplicated {} in ColumnConfig.json file, later one will be append index to make it unique.",
                         config.getColumnName());
             }
-            names.add(config.getColumnName());
+            names.add(new NSColumn(config.getColumnName()));
         }
 
-        if(!names.contains(modelConfig.getTargetColumnName())) {
+        if(!names.contains(new NSColumn(modelConfig.getTargetColumnName()))) {
             throw new IllegalArgumentException("target column " + modelConfig.getTargetColumnName()
                     + " does not exist.");
         }
 
         if(StringUtils.isNotBlank(modelConfig.getWeightColumnName())
-                && !names.contains(modelConfig.getWeightColumnName())) {
+                && !names.contains(new NSColumn(modelConfig.getWeightColumnName()))) {
             throw new IllegalArgumentException("weight column " + modelConfig.getWeightColumnName()
                     + " does not exist.");
         }

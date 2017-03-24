@@ -29,6 +29,7 @@ import java.util.Scanner;
 import java.util.Set;
 
 import ml.shifu.shifu.actor.AkkaSystemExecutor;
+import ml.shifu.shifu.column.NSColumn;
 import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.container.obj.EvalConfig;
 import ml.shifu.shifu.container.obj.PerformanceResult;
@@ -568,24 +569,26 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
             }
         }
 
-        Set<String> names = new HashSet<String>();
-        names.addAll(Arrays.asList(evalColumnNames));
+        Set<NSColumn> names = new HashSet<NSColumn>();
+        for ( String evalColumnName : evalColumnNames ) {
+            names.add(new NSColumn(evalColumnName));
+        }
 
         for(ColumnConfig config: this.columnConfigList) {
-            if(config.isFinalSelect() && !names.contains(config.getColumnName())) {
+            if(config.isFinalSelect() && !names.contains(new NSColumn(config.getColumnName()))) {
                 throw new IllegalArgumentException("Final selected column " + config.getColumnName()
                         + " does not exist in - " + evalConfig.getDataSet().getHeaderPath());
             }
         }
 
         if(StringUtils.isNotBlank(evalConfig.getDataSet().getTargetColumnName())
-                && !names.contains(evalConfig.getDataSet().getTargetColumnName())) {
+                && !names.contains(new NSColumn(evalConfig.getDataSet().getTargetColumnName()))) {
             throw new IllegalArgumentException("Target column " + evalConfig.getDataSet().getTargetColumnName()
                     + " does not exist in - " + evalConfig.getDataSet().getHeaderPath());
         }
 
         if(StringUtils.isNotBlank(evalConfig.getDataSet().getWeightColumnName())
-                && !names.contains(evalConfig.getDataSet().getWeightColumnName())) {
+                && !names.contains(new NSColumn(evalConfig.getDataSet().getWeightColumnName()))) {
             throw new IllegalArgumentException("Weight column " + evalConfig.getDataSet().getWeightColumnName()
                     + " does not exist in - " + evalConfig.getDataSet().getHeaderPath());
         }
