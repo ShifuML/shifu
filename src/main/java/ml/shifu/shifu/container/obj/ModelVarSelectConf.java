@@ -33,14 +33,19 @@ public class ModelVarSelectConf {
 
     // for force select or force remove
     private Boolean forceEnable = Boolean.TRUE;
+
     private String forceSelectColumnNameFile;
+
     private String forceRemoveColumnNameFile;
 
     // settings for variable selection
     private Boolean filterEnable = Boolean.TRUE;
-    private Integer filterNum = Integer.valueOf(Constants.SHIFU_DEFAULT_VARSELECT_FILTER_NUM);
+
+    private Integer filterNum = Constants.SHIFU_DEFAULT_VARSELECT_FILTER_NUM;
+
     private String filterBy = "KS";
-    private Float filterOutRatio = Float.valueOf(Constants.SHIFU_DEFAULT_VARSELECT_FILTEROUT_RATIO);
+
+    private Float filterOutRatio = Constants.SHIFU_DEFAULT_VARSELECT_FILTEROUT_RATIO;
 
     /**
      * For filterBy pareto mode, such epsilons are used in pareto sorting

@@ -106,6 +106,7 @@ public class IndependentTreeModel {
      * Model version
      */
     private int version;
+
     /**
      * For numerical columns, mean value is used for null replacement
      */
