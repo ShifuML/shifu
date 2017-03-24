@@ -41,13 +41,14 @@ public class ModelVarSelectConf {
     private Integer filterNum = Integer.valueOf(Constants.SHIFU_DEFAULT_VARSELECT_FILTER_NUM);
     private String filterBy = "KS";
     private Float filterOutRatio = Float.valueOf(Constants.SHIFU_DEFAULT_VARSELECT_FILTEROUT_RATIO);
+
     /**
      * For filterBy pareto mode, such epsilons are used in pareto sorting
      */
     private double[] epsilons;
 
     /**
-     * If column missing rate is lower than this column, no matter what, whis column will be removed.
+     * If column missing rate is larger than this value, this column will be removed even it is set as 'FinalSelect'.
      */
     private Float missingRateThreshold = 0.98f;
 
@@ -100,7 +101,7 @@ public class ModelVarSelectConf {
     public void setFilterBy(String filterBy) {
         this.filterBy = filterBy;
     }
-    
+
     /**
      * @return the filterOutRatio
      */
@@ -159,7 +160,7 @@ public class ModelVarSelectConf {
     @Override
     public ModelVarSelectConf clone() {
         ModelVarSelectConf other = new ModelVarSelectConf();
-        if ( epsilons != null ) {
+        if(epsilons != null) {
             other.setEpsilons(Arrays.copyOf(epsilons, epsilons.length));
         }
         other.setFilterBy(filterBy);
@@ -169,7 +170,7 @@ public class ModelVarSelectConf {
         other.setForceRemoveColumnNameFile(forceRemoveColumnNameFile);
         other.setForceSelectColumnNameFile(forceSelectColumnNameFile);
         other.setMissingRateThreshold(missingRateThreshold);
-        if ( params != null ) {
+        if(params != null) {
             other.setParams(new HashMap<String, Object>(params));
         }
         other.setFilerOutRatio(filterOutRatio);
