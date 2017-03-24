@@ -39,6 +39,8 @@ import java.util.Map.Entry;
 import java.util.Set;
 import java.util.TreeMap;
 
+import ml.shifu.shifu.column.NSColumn;
+import ml.shifu.shifu.column.NSColumnUtils;
 import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.container.obj.ColumnConfig.ColumnFlag;
 import ml.shifu.shifu.container.obj.ColumnConfig.ColumnType;
@@ -494,12 +496,12 @@ public final class CommonUtils {
         Set<String> headerSet = new HashSet<String>();
         int index = 0;
         for(String str: Splitter.on(delimiter).split(pigHeaderStr)) {
-            String columnName;
-            if(isFull) {
+            String columnName = StringUtils.trimToEmpty(str);
+            /*if(isFull) {
                 columnName = getFullPigHeaderColumnName(str);
             } else {
                 columnName = getRelativePigHeaderColumnName(str);
-            }
+            }*/
 
             if(headerSet.contains(columnName)) {
                 columnName = columnName + "_" + index;
@@ -1412,6 +1414,11 @@ public final class CommonUtils {
     public static MLDataPair assembleDataPair(Map<Integer, Map<String, Integer>> binCategoryMap, boolean noVarSel,
             ModelConfig modelConfig, List<ColumnConfig> columnConfigList, Map<String, ? extends Object> rawDataMap,
             double cutoff, String alg) {
+        Map<NSColumn, Object> nsDataMap = new HashMap<NSColumn, Object>();
+        for ( String key : rawDataMap.keySet() ) {
+            nsDataMap.put(new NSColumn(key), rawDataMap.get(key));
+        }
+
         double[] ideal = { Constants.DEFAULT_IDEAL_VALUE };
 
         List<Double> inputList = new ArrayList<Double>();
@@ -1419,8 +1426,8 @@ public final class CommonUtils {
             if(config == null) {
                 continue;
             }
-            String key = config.getColumnName();
-            if(config.isFinalSelect() && !rawDataMap.containsKey(key)) {
+            NSColumn key = new NSColumn(config.getColumnName());
+            if(config.isFinalSelect() && !nsDataMap.containsKey(key)) {
                 throw new IllegalStateException(String.format("Variable Missing in Test Data: %s", key));
             }
 
@@ -1429,7 +1436,7 @@ public final class CommonUtils {
             } else {
                 if(!noVarSel) {
                     if(config != null && !config.isMeta() && !config.isTarget() && config.isFinalSelect()) {
-                        String val = rawDataMap.get(key) == null ? null : rawDataMap.get(key).toString();
+                        String val = nsDataMap.get(key) == null ? null : nsDataMap.get(key).toString();
                         if(CommonUtils.isDesicionTreeAlgorithm(alg) && config.isCategorical()) {
                             Integer index = binCategoryMap.get(config.getColumnNum()).get(val == null ? "" : val);
                             if(index == null) {
@@ -1445,7 +1452,7 @@ public final class CommonUtils {
                     }
                 } else {
                     if(!config.isMeta() && !config.isTarget() && CommonUtils.isGoodCandidate(config)) {
-                        String val = rawDataMap.get(key) == null ? null : rawDataMap.get(key).toString();
+                        String val = nsDataMap.get(key) == null ? null : nsDataMap.get(key).toString();
                         if(CommonUtils.isDesicionTreeAlgorithm(alg) && config.isCategorical()) {
                             Integer index = binCategoryMap.get(config.getColumnNum()).get(val == null ? "" : val);
                             if(index == null) {
@@ -1514,13 +1521,18 @@ public final class CommonUtils {
      */
     public static MLDataPair assembleDataPair(ModelConfig modelConfig, List<ColumnConfig> columnConfigList,
             Map<String, ? extends Object> rawDataMap, double cutoff) {
+        Map<NSColumn, Object> nsDataMap = new HashMap<NSColumn, Object>();
+        for ( String key : rawDataMap.keySet() ) {
+            nsDataMap.put(new NSColumn(key), rawDataMap.get(key));
+        }
+
         // if the tag is provided, ideal will be updated; otherwise it defaults to -1
         double[] ideal = { Constants.DEFAULT_IDEAL_VALUE };
 
         List<Double> inputList = new ArrayList<Double>();
         for(ColumnConfig config: columnConfigList) {
-            String key = config.getColumnName();
-            if(config.isFinalSelect() && !rawDataMap.containsKey(key)) {
+            NSColumn key = new NSColumn(config.getColumnName());
+            if(config.isFinalSelect() && !nsDataMap.containsKey(key)) {
                 throw new IllegalStateException(String.format("Variable Missing in Test Data: %s", key));
             }
 
@@ -1531,7 +1543,7 @@ public final class CommonUtils {
             } else if(config.isFinalSelect()) {
                 // add log for debug purpose
                 // log.info("key: " + key + ", raw_value " + rawDataMap.get(key).toString() + ", zscl_value: " +
-                String val = rawDataMap.get(key) == null ? null : rawDataMap.get(key).toString();
+                String val = nsDataMap.get(key) == null ? null : nsDataMap.get(key).toString();
                 Double normalizeValue = Normalizer.normalize(config, val, cutoff, modelConfig.getNormalizeType());
                 inputList.add(normalizeValue);
             }
@@ -1603,38 +1615,38 @@ public final class CommonUtils {
      */
     public static void updateColumnConfigFlags(ModelConfig modelConfig, List<ColumnConfig> columnConfigList)
             throws IOException {
-        String targetColumnName = CommonUtils.getRelativePigHeaderColumnName(modelConfig.getTargetColumnName());
-        String weightColumnName = CommonUtils.getRelativePigHeaderColumnName(modelConfig.getWeightColumnName());
+        String targetColumnName = modelConfig.getTargetColumnName();
+        String weightColumnName = modelConfig.getWeightColumnName();
 
-        Set<String> setCategorialColumns = new HashSet<String>();
+        Set<NSColumn> setCategorialColumns = new HashSet<NSColumn>();
         if(CollectionUtils.isNotEmpty(modelConfig.getCategoricalColumnNames())) {
             for(String column: modelConfig.getCategoricalColumnNames()) {
-                setCategorialColumns.add(CommonUtils.getRelativePigHeaderColumnName(column));
+                setCategorialColumns.add(new NSColumn(column));
             }
         }
 
-        Set<String> setMeta = new HashSet<String>();
+        Set<NSColumn> setMeta = new HashSet<NSColumn>();
         if(CollectionUtils.isNotEmpty(modelConfig.getMetaColumnNames())) {
             for(String meta: modelConfig.getMetaColumnNames()) {
-                setMeta.add(CommonUtils.getRelativePigHeaderColumnName(meta));
+                setMeta.add(new NSColumn(meta));
             }
         }
 
-        Set<String> setForceRemove = new HashSet<String>();
+        Set<NSColumn> setForceRemove = new HashSet<NSColumn>();
         if(Boolean.TRUE.equals(modelConfig.getVarSelect().getForceEnable())
                 && CollectionUtils.isNotEmpty(modelConfig.getListForceRemove())) {
             // if we need to update force remove, only and if one the force is enabled
             for(String forceRemoveName: modelConfig.getListForceRemove()) {
-                setForceRemove.add(CommonUtils.getRelativePigHeaderColumnName(forceRemoveName));
+                setForceRemove.add(new NSColumn(forceRemoveName));
             }
         }
 
-        Set<String> setForceSelect = new HashSet<String>(512);
+        Set<NSColumn> setForceSelect = new HashSet<NSColumn>(512);
         if(Boolean.TRUE.equals(modelConfig.getVarSelect().getForceEnable())
                 && CollectionUtils.isNotEmpty(modelConfig.getListForceSelect())) {
             // if we need to update force select, only and if one the force is enabled
             for(String forceSelectName: modelConfig.getListForceSelect()) {
-                setForceSelect.add(CommonUtils.getRelativePigHeaderColumnName(forceSelectName));
+                setForceSelect.add(new NSColumn(forceSelectName));
             }
         }
 
@@ -1644,29 +1656,29 @@ public final class CommonUtils {
             // reset it
             config.setColumnFlag(null);
 
-            if(weightColumnName.equals(varName)) {
+            if(NSColumnUtils.isColumnEqual(weightColumnName, varName)) {
                 config.setColumnFlag(ColumnFlag.Weight);
                 config.setFinalSelect(false); // reset final select
-            } else if(targetColumnName.equals(varName)) {
+            } else if(NSColumnUtils.isColumnEqual(targetColumnName, varName)) {
                 config.setColumnFlag(ColumnFlag.Target);
                 config.setFinalSelect(false); // reset final select
-            } else if(setMeta.contains(varName)) {
+            } else if(setMeta.contains(new NSColumn(varName))) {
                 config.setColumnFlag(ColumnFlag.Meta);
                 config.setFinalSelect(false); // reset final select
-            } else if(setForceRemove.contains(varName)) {
+            } else if(setForceRemove.contains(new NSColumn(varName))) {
                 config.setColumnFlag(ColumnFlag.ForceRemove);
                 config.setFinalSelect(false); // reset final select
-            } else if(setForceSelect.contains(varName)) {
+            } else if(setForceSelect.contains(new NSColumn(varName))) {
                 config.setColumnFlag(ColumnFlag.ForceSelect);
             }
 
-            if(weightColumnName.equals(varName)) {
+            if(NSColumnUtils.isColumnEqual(weightColumnName, varName)) {
                 // weight column is numerical
                 config.setColumnType(ColumnType.N);
-            } else if(targetColumnName.equals(varName)) {
+            } else if(NSColumnUtils.isColumnEqual(targetColumnName, varName)) {
                 // target column is set to categorical column
                 config.setColumnType(ColumnType.C);
-            } else if(setCategorialColumns.contains(varName)) {
+            } else if(setCategorialColumns.contains(new NSColumn(varName))) {
                 config.setColumnType(ColumnType.C);
             } else {
                 config.setColumnType(ColumnType.N);

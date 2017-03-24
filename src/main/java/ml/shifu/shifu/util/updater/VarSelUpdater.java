@@ -1,5 +1,7 @@
 package ml.shifu.shifu.util.updater;
 
+import ml.shifu.shifu.column.NSColumn;
+import ml.shifu.shifu.column.NSColumnUtils;
 import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.container.obj.ModelConfig;
 
@@ -19,14 +21,13 @@ public class VarSelUpdater extends BasicUpdater {
 
         // set column flag to null, before reset it
         columnConfig.setColumnFlag(null);
-
-        if ( this.targetColumnName.equals(varName) ) {
+        if (NSColumnUtils.isColumnEqual(this.targetColumnName, varName)) {
             columnConfig.setColumnFlag(ColumnConfig.ColumnFlag.Target);
-        } if (this.setMeta.contains(varName)) {
+        } if (this.setMeta.contains(new NSColumn(varName))) {
             columnConfig.setColumnFlag(ColumnConfig.ColumnFlag.Meta);
-        } else if (this.setForceRemove.contains(varName)) {
+        } else if (this.setForceRemove.contains(new NSColumn(varName))) {
             columnConfig.setColumnFlag(ColumnConfig.ColumnFlag.ForceRemove);
-        } else if (this.setForceSelect.contains(varName)) {
+        } else if (this.setForceSelect.contains(new NSColumn(varName))) {
             columnConfig.setColumnFlag(ColumnConfig.ColumnFlag.ForceSelect);
         }
     }
