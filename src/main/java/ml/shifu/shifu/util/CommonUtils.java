@@ -834,8 +834,6 @@ public final class CommonUtils {
      * 
      * @param modelConfig
      *            model config
-     * @param columnConfigList
-     *            list of column config
      * @param modelPath
      *            the path to store model
      * @param fs
@@ -967,7 +965,8 @@ public final class CommonUtils {
 
         String subModelName = fileStatus.getPath().getName();
         List<FileStatus> modelFileStats = new ArrayList<FileStatus>();
-        ALGORITHM algorithm = getModelsAlgAndSpecFiles(fileStatus, sourceType, modelFileStats);
+        FileStatus[] subConfigs = new FileStatus[2];
+        ALGORITHM algorithm = getModelsAlgAndSpecFiles(fileStatus, sourceType, modelFileStats, subConfigs);
 
         ModelSpec modelSpec = null;
         if(CollectionUtils.isNotEmpty(modelFileStats)) {
@@ -981,14 +980,24 @@ public final class CommonUtils {
             for(FileStatus f: modelFileStats) {
                 models.add(loadModel(modelConfig, f.getPath(), fs, gbtConvertToProb));
             }
-            modelSpec = new ModelSpec(subModelName, algorithm, models);
+
+            ModelConfig subModelConfig = modelConfig;
+            if ( subConfigs[0] != null ) {
+                subModelConfig = CommonUtils.loadModelConfig(subConfigs[0].getPath().toString(), sourceType);
+            }
+            List<ColumnConfig> subColumnConfigList = columnConfigList;
+            if ( subConfigs[1] != null ) {
+                subColumnConfigList = CommonUtils.loadColumnConfigList(subConfigs[1].getPath().toString(), sourceType);
+            }
+
+            modelSpec = new ModelSpec(subModelName, subModelConfig, subColumnConfigList, algorithm, models);
         }
 
         return modelSpec;
     }
 
     public static ALGORITHM getModelsAlgAndSpecFiles(FileStatus fileStatus, SourceType sourceType,
-            List<FileStatus> modelFileStats) throws IOException {
+            List<FileStatus> modelFileStats, FileStatus[] subConfigs) throws IOException {
         assert modelFileStats != null;
 
         FileSystem fs = ShifuFileUtils.getFileSystemBySourceType(sourceType);
@@ -1012,6 +1021,12 @@ public final class CommonUtils {
 
                     if(algorithm != null && fileName.endsWith("." + algorithm.name().toLowerCase())) {
                         modelFileStats.add(fls);
+                    }
+
+                    if ( fileName.equalsIgnoreCase(Constants.MODEL_CONFIG_JSON_FILE_NAME) ) {
+                        subConfigs[0] = fls;
+                    } else if ( fileName.equalsIgnoreCase(Constants.COLUMN_CONFIG_JSON_FILE_NAME) ) {
+                        subConfigs[1] = fls;
                     }
                 }
             }
@@ -1040,7 +1055,7 @@ public final class CommonUtils {
             for(FileStatus fileStatus: fsArr) {
                 if(fileStatus.isDirectory()) {
                     List<FileStatus> subModelSpecFiles = new ArrayList<FileStatus>();
-                    getModelsAlgAndSpecFiles(fileStatus, sourceType, subModelSpecFiles);
+                    getModelsAlgAndSpecFiles(fileStatus, sourceType, subModelSpecFiles, new FileStatus[2]);
                     if(CollectionUtils.isNotEmpty(subModelSpecFiles)) {
                         subModelsCnt.put(fileStatus.getPath().getName(), subModelSpecFiles.size());
                     }
