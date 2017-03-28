@@ -108,7 +108,8 @@ public final class CommonUtils {
      * 
      * @param modelConfig
      *            the model config
-     * 
+     * @param pathFinder
+     *            the path finder to locate file
      * @return if copy successful
      * 
      * @throws IOException
