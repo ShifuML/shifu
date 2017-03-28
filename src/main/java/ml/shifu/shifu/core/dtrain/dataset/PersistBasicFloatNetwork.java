@@ -37,7 +37,7 @@ import org.encog.util.csv.CSVFormat;
  * and only {@link #getPersistClassString()} is changed to 'BasicFloatNetwork'.
  * 
  * <p>
- * Because of all final methods in {@link PersistBasicNetwork}, we have to copy code while not take extention.
+ * Because of all final methods in {@link PersistBasicNetwork}, we have to copy code while not take extension.
  */
 public class PersistBasicFloatNetwork implements EncogPersistor {
 

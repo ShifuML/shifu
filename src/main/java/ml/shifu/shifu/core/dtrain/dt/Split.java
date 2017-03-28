@@ -134,6 +134,21 @@ public class Split implements Bytable {
         this.leftOrRightCategories = leftCategories;
     }
 
+    /**
+     * @return the isLeft
+     */
+    public boolean isLeft() {
+        return isLeft;
+    }
+
+    /**
+     * @param isLeft
+     *            the isLeft to set
+     */
+    public void setLeft(boolean isLeft) {
+        this.isLeft = isLeft;
+    }
+
     @Override
     public void write(DataOutput out) throws IOException {
         out.writeInt(this.columnNum);
@@ -180,26 +195,6 @@ public class Split implements Bytable {
         }
     }
 
-    /**
-     * @return the isLeft
-     */
-    public boolean isLeft() {
-        return isLeft;
-    }
-
-    /**
-     * @param isLeft
-     *            the isLeft to set
-     */
-    public void setLeft(boolean isLeft) {
-        this.isLeft = isLeft;
-    }
-
-    /*
-     * (non-Javadoc)
-     * 
-     * @see java.lang.Object#toString()
-     */
     @Override
     public String toString() {
         return "Split [featureIndex=" + columnNum + ", featureType=" + featureType + ", threshold=" + threshold

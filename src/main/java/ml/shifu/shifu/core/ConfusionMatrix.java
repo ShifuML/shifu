@@ -28,7 +28,6 @@ import java.util.Scanner;
 import java.util.Set;
 
 import ml.shifu.guagua.util.NumberFormatUtils;
-import ml.shifu.shifu.column.NSColumn;
 import ml.shifu.shifu.column.NSColumnUtils;
 import ml.shifu.shifu.container.ConfusionMatrixObject;
 import ml.shifu.shifu.container.ModelResultObject;
