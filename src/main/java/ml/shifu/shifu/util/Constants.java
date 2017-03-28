@@ -20,7 +20,7 @@ package ml.shifu.shifu.util;
  */
 public interface Constants {
 
-    public static final String version = "0.2.0";
+    public static final String version = "0.11.0";
 
     public static final String MODELS = "models";
 

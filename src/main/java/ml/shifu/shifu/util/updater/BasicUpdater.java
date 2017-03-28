@@ -5,7 +5,6 @@ import ml.shifu.shifu.column.NSColumnUtils;
 import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.container.obj.ModelConfig;
 import ml.shifu.shifu.core.validator.ModelInspector;
-import ml.shifu.shifu.util.CommonUtils;
 import org.apache.commons.collections.CollectionUtils;
 
 import java.io.IOException;
@@ -22,9 +21,11 @@ public class BasicUpdater {
     protected Set<NSColumn> setMeta;
     protected Set<NSColumn> setForceRemove;
     protected Set<NSColumn> setForceSelect;
+    protected String weightColumnName;
 
     public BasicUpdater(ModelConfig modelConfig) throws IOException {
         this.targetColumnName = modelConfig.getTargetColumnName();
+        this.weightColumnName = modelConfig.getWeightColumnName();
 
         this.setCategorialColumns = new HashSet<NSColumn>();
         if(CollectionUtils.isNotEmpty(modelConfig.getCategoricalColumnNames())) {
@@ -62,7 +63,8 @@ public class BasicUpdater {
     public void updateColumnConfig(ColumnConfig columnConfig) {
         String varName = columnConfig.getColumnName();
 
-        if ( NSColumnUtils.isColumnEqual(this.targetColumnName, varName) ) {
+        columnConfig.setColumnFlag(null);
+        if(NSColumnUtils.isColumnEqual(this.targetColumnName, varName)) {
             columnConfig.setColumnFlag(ColumnConfig.ColumnFlag.Target);
             columnConfig.setColumnType(null);
         } else if(this.setMeta.contains(new NSColumn(varName))) {
@@ -72,6 +74,9 @@ public class BasicUpdater {
             columnConfig.setColumnFlag(ColumnConfig.ColumnFlag.ForceRemove);
         } else if(this.setForceSelect.contains(new NSColumn(varName))) {
             columnConfig.setColumnFlag(ColumnConfig.ColumnFlag.ForceSelect);
+        } else if(NSColumnUtils.isColumnEqual(this.weightColumnName, varName)) {
+            columnConfig.setColumnFlag(ColumnConfig.ColumnFlag.Weight);
+            columnConfig.setColumnType(null);
         }
 
         // variable type is not related with variable flag
@@ -84,7 +89,7 @@ public class BasicUpdater {
 
     public static BasicUpdater getUpdater(ModelConfig modelConfig, ModelInspector.ModelStep step) throws IOException {
         BasicUpdater updater = null;
-        switch (step ) {
+        switch(step) {
             case INIT:
             case STATS:
                 updater = new BasicUpdater(modelConfig);

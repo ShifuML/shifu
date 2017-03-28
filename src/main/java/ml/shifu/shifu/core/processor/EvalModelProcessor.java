@@ -18,7 +18,6 @@ package ml.shifu.shifu.core.processor;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -570,7 +569,7 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
         }
 
         Set<NSColumn> names = new HashSet<NSColumn>();
-        for ( String evalColumnName : evalColumnNames ) {
+        for(String evalColumnName: evalColumnNames) {
             names.add(new NSColumn(evalColumnName));
         }
 
@@ -634,7 +633,7 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
     private void runPigEval(EvalConfig evalConfig) throws IOException {
         ScoreStatus ss = runPigScore(evalConfig);
         runConfusionMatrix(evalConfig, ss);
-
+        //
         // ScoreStatus ss = runPigScore(evalConfig);
         //
         // List<String> scoreMetaColumns = evalConfig.getScoreMetaColumns(modelConfig);

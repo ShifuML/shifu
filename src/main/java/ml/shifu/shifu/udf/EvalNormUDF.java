@@ -114,10 +114,6 @@ public class EvalNormUDF extends AbstractTrainerUDF<Tuple> {
         // 4. do populate columnConfigMap at first
         for(ColumnConfig columnConfig: this.columnConfigList) {
             columnConfigMap.put(columnConfig.getColumnName(), columnConfig);
-            if(columnConfig.isFinalSelect() && !outputNames.contains(columnConfig.getColumnName())) {
-                validMetaSize += 1;
-                outputNames.add(columnConfig.getColumnName());
-            }
         }
 
         // 5. append real valid features
@@ -127,7 +123,9 @@ public class EvalNormUDF extends AbstractTrainerUDF<Tuple> {
             if(isAfterVarSelect) {
                 if(columnConfig.isFinalSelect() && (!columnConfig.isMeta() && !columnConfig.isTarget())) {
                     if(evalNamesSet.contains(columnConfig.getColumnName())) {
-                        outputNames.add(columnConfig.getColumnName());
+                        if(!outputNames.contains(columnConfig.getColumnName())) {
+                            outputNames.add(columnConfig.getColumnName());
+                        }
                     } else {
                         throw new RuntimeException("FinalSelect variable - " + columnConfig.getColumnName()
                                 + " couldn't be found in eval dataset!");
@@ -136,10 +134,9 @@ public class EvalNormUDF extends AbstractTrainerUDF<Tuple> {
             } else {
                 if(!columnConfig.isMeta() && !columnConfig.isTarget()) {
                     if(evalNamesSet.contains(columnConfig.getColumnName())) {
-                        // if(!outputNames.contains(columnConfig.getColumnName())) {
-                        // outputNames.add(columnConfig.getColumnName());
-                        outputNames.add(columnConfig.getColumnName());
-                        // }
+                        if(!outputNames.contains(columnConfig.getColumnName())) {
+                            outputNames.add(columnConfig.getColumnName());
+                        }
                     } else {
                         throw new RuntimeException("Variable - " + columnConfig.getColumnName()
                                 + " couldn't be found in eval dataset!");
@@ -195,7 +192,7 @@ public class EvalNormUDF extends AbstractTrainerUDF<Tuple> {
         }
 
         CaseScoreResult score = this.modelRunner.compute(rawDataMap);
-        if(score == null) {
+        if(this.modelRunner == null || this.modelRunner.getModelsCnt() == 0 || score == null) {
             tuple.set(this.outputNames.size(), -999.0);
         } else if(this.scIndex < 0) {
             tuple.set(this.outputNames.size(), score.getAvgScore());
@@ -222,7 +219,8 @@ public class EvalNormUDF extends AbstractTrainerUDF<Tuple> {
                             this.modelConfig.getNormalizeType()), DataType.DOUBLE));
                 }
             }
-            tupleSchema.add(new FieldSchema(this.scoreName, DataType.DOUBLE));
+            tupleSchema.add(new FieldSchema(StringUtils.isBlank(this.scoreName) ? "default_score" : this.scoreName,
+                    DataType.DOUBLE));
             return new Schema(new FieldSchema("EvalNorm", tupleSchema, DataType.TUPLE));
         } catch (IOException e) {
             log.error("Error in outputSchema", e);
