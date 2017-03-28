@@ -162,7 +162,7 @@ public class PostTrainModelProcessor extends BasicModelProcessor implements Proc
             String output = super.getPathFinder().getPostTrainOutputPath(source);
             runMRFeatureImportanceJob(source, output);
             List<Integer> fss = getFeatureImportance(source, output);
-            log.info("Feature importance: {}", fss);
+            log.info("Feature importance list is: {}", fss);
         }
     }
 

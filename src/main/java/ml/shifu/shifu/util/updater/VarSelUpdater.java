@@ -21,14 +21,19 @@ public class VarSelUpdater extends BasicUpdater {
 
         // set column flag to null, before reset it
         columnConfig.setColumnFlag(null);
-        if (NSColumnUtils.isColumnEqual(this.targetColumnName, varName)) {
+        if(NSColumnUtils.isColumnEqual(this.targetColumnName, varName)) {
             columnConfig.setColumnFlag(ColumnConfig.ColumnFlag.Target);
-        } if (this.setMeta.contains(new NSColumn(varName))) {
+            columnConfig.setColumnType(null);
+        } else if(this.setMeta.contains(new NSColumn(varName))) {
             columnConfig.setColumnFlag(ColumnConfig.ColumnFlag.Meta);
-        } else if (this.setForceRemove.contains(new NSColumn(varName))) {
+            columnConfig.setColumnType(null);
+        } else if(this.setForceRemove.contains(new NSColumn(varName))) {
             columnConfig.setColumnFlag(ColumnConfig.ColumnFlag.ForceRemove);
-        } else if (this.setForceSelect.contains(new NSColumn(varName))) {
+        } else if(this.setForceSelect.contains(new NSColumn(varName))) {
             columnConfig.setColumnFlag(ColumnConfig.ColumnFlag.ForceSelect);
+        } else if(NSColumnUtils.isColumnEqual(this.weightColumnName, varName)) {
+            columnConfig.setColumnFlag(ColumnConfig.ColumnFlag.Weight);
+            columnConfig.setColumnType(null);
         }
     }
 

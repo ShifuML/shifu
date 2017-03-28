@@ -26,7 +26,7 @@ import java.util.Map;
 import ml.shifu.guagua.io.Bytable;
 
 /**
- * Wrapper node and tree index. With tree id and node in {@link TreeNode}.
+ * {@link TreeNode} is used to wrapper node and tree index. With tree id and node in {@link TreeNode}.
  * 
  * <p>
  * {@link #features} is for sub-sampling of such node. For feature sub-sampling, {@link FeatureSubsetStrategy} includes
@@ -61,7 +61,7 @@ public class TreeNode implements Bytable {
     private double rootWgtCnt = -1;
 
     /**
-     * Sub-sampling features.
+     * Sub-sampling features which is used in tree growth.
      */
     private List<Integer> features;
 
@@ -213,6 +213,14 @@ public class TreeNode implements Bytable {
         }
     }
 
+    /**
+     * This is serialization version to serialize TreeNode without sub-sampling features.
+     * 
+     * @param out
+     *            output stream
+     * @throws IOException
+     *             any io exception.
+     */
     public void writeWithoutFeatures(DataOutput out) throws IOException {
         out.writeInt(treeId);
         out.writeInt(nodeNum);
@@ -235,6 +243,14 @@ public class TreeNode implements Bytable {
         }
     }
 
+    /**
+     * This is serialization version to de-serialize TreeNode without sub-sampling features.
+     * 
+     * @param in
+     *            input stream
+     * @throws IOException
+     *             any io exception.
+     */
     public void readFieldsWithoutFeatures(DataInput in) throws IOException {
         this.treeId = in.readInt();
         this.nodeNum = in.readInt();
@@ -247,6 +263,11 @@ public class TreeNode implements Bytable {
         }
     }
 
+    /**
+     * Compute tree model feature importance.
+     * 
+     * @return a map with (column_id, feature_importance.)
+     */
     public Map<Integer, Double> computeFeatureImportance() {
         Map<Integer, Double> importances = new HashMap<Integer, Double>();
         preOrder(importances, node);
@@ -273,13 +294,9 @@ public class TreeNode implements Bytable {
         }
     }
 
-    /*
-     * (non-Javadoc)
-     * 
-     * @see java.lang.Object#toString()
-     */
     @Override
     public String toString() {
         return "TreeNode [treeId=" + treeId + ", node=" + node.getId() + ", features=" + features + "]";
     }
+
 }

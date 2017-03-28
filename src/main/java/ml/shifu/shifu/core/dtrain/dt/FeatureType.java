@@ -59,9 +59,6 @@ public enum FeatureType {
         throw new IllegalArgumentException("Cannot find byte of FeatureType for " + byteType);
     }
 
-    /**
-     * @return the byteType
-     */
     public byte getByteType() {
         return byteType;
     }
