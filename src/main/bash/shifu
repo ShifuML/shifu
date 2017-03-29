@@ -144,7 +144,11 @@ else
 fi
 
 if [ "${HD_CLASSPATH}" != "" ]; then
+    ## no need add slfloglib because hadoop classpath has
     CLASSPATH="${HD_CLASSPATH}:${CLASSPATH}"
+else
+   LOG_CLASSPATH=`find ${SHIFU_HOME}/slfloglib -name "*.jar" | grep -v javadoc | xargs | sed 's/ /:/g'`
+   CLASSPATH="${CLASSPATH}:${LOG_CLASSPATH}"
 fi
 
 CLASSPATH=`remove_duplicate_jars_func "${CLASSPATH}"`
