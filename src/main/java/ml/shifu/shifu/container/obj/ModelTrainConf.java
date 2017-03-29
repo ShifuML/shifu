@@ -125,28 +125,52 @@ public class ModelTrainConf {
     private Boolean fixInitInput = Boolean.FALSE;
 
     /**
-     * TODO
+     * Only works in regression, if enabled by true, both positive and negative records will be sampled independent.
      */
     private Boolean stratifiedSample = Boolean.FALSE;
 
+    /**
+     * If continue model training based on existing model in model path, this is like warm-start in scikit-learn.
+     */
     private Boolean isContinuous = Boolean.FALSE;
 
-    
+    /**
+     * Only works in NN and do swapping training, validation data in differnent epochs.
+     */
     private Boolean isCrossOver = Boolean.FALSE;
 
+    /**
+     * How many threads in each worker, this will enable multiple threading running in workers.
+     */
     private Integer workerThreadCount = 4;
 
+    /**
+     * If enabled by a value in (1 - 20], cross validation will be enabled. Jobs will be started to train according to
+     * k-fold training data. Final average validation error will be printed in console.
+     */
     private Integer numKFold = -1;
 
+    /**
+     * Up sampling for positive tags, this is to solve class imbalance.
+     */
     private Double upSampleWeight = Double.valueOf(1d);
 
+    /**
+     * Algorithm: LR, NN, RF, GBT
+     */
     private String algorithm = "NN";
 
+    /**
+     * Model params for training like learning rate, tree depth ...
+     */
     private Map<String, Object> params;
 
-    private Map<String, String> customPaths;
-
+    /**
+     * Multiple classification method: NATIVE or ONEVSALL(ONEVSREST)
+     */
     private MultipleClassification multiClassifyMethod = MultipleClassification.NATIVE;
+
+    private Map<String, String> customPaths;
 
     public ModelTrainConf() {
         customPaths = new HashMap<String, String>(1);

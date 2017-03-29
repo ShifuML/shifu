@@ -4,6 +4,7 @@ import ml.shifu.shifu.column.NSColumn;
 import ml.shifu.shifu.column.NSColumnUtils;
 import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.container.obj.ModelConfig;
+import ml.shifu.shifu.container.obj.ColumnConfig.ColumnType;
 import ml.shifu.shifu.core.validator.ModelInspector;
 import org.apache.commons.collections.CollectionUtils;
 
@@ -63,7 +64,9 @@ public class BasicUpdater {
     public void updateColumnConfig(ColumnConfig columnConfig) {
         String varName = columnConfig.getColumnName();
 
+        // reset flag at first
         columnConfig.setColumnFlag(null);
+
         if(NSColumnUtils.isColumnEqual(this.targetColumnName, varName)) {
             columnConfig.setColumnFlag(ColumnConfig.ColumnFlag.Target);
             columnConfig.setColumnType(null);
@@ -79,11 +82,17 @@ public class BasicUpdater {
             columnConfig.setColumnType(null);
         }
 
-        // variable type is not related with variable flag
-        if(this.setCategorialColumns.contains(new NSColumn(varName))) {
-            columnConfig.setColumnType(ColumnConfig.ColumnType.C);
+        if(NSColumnUtils.isColumnEqual(weightColumnName, varName)) {
+            // weight column is numerical
+            columnConfig.setColumnType(ColumnType.N);
+        } else if(NSColumnUtils.isColumnEqual(targetColumnName, varName)) {
+            // target column is set to categorical column
+            columnConfig.setColumnType(ColumnType.C);
+        } else if(setCategorialColumns.contains(new NSColumn(varName))) {
+            columnConfig.setColumnType(ColumnType.C);
         } else {
-            columnConfig.setColumnType(ColumnConfig.ColumnType.N);
+            // meta and other columns are set to numerical if user not set it in categorical column configuration file
+            columnConfig.setColumnType(ColumnType.N);
         }
     }
 

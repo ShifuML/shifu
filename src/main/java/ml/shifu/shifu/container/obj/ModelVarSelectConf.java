@@ -26,25 +26,45 @@ import java.util.HashMap;
 import java.util.Map;
 
 /**
- * ModelVarSelectConf class
+ * {@link ModelVarSelectConf} is 'varselect' part configuration in ModelConfig.json
  */
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class ModelVarSelectConf {
 
-    // for force select or force remove
+    /**
+     * If enable force select and force remove
+     */
     private Boolean forceEnable = Boolean.TRUE;
 
+    /**
+     * Force-selected column configuration file
+     */
     private String forceSelectColumnNameFile;
 
+    /**
+     * Force-remove column configuration file
+     */
     private String forceRemoveColumnNameFile;
 
-    // settings for variable selection
+    /**
+     * If enable variable selection
+     */
     private Boolean filterEnable = Boolean.TRUE;
 
+    /**
+     * How many columns will be selected. This number includes forceSelet columns.
+     */
     private Integer filterNum = Constants.SHIFU_DEFAULT_VARSELECT_FILTER_NUM;
 
+    /**
+     * Filter by 'KS', 'IV', 'SE', 'SR'
+     */
     private String filterBy = "KS";
 
+    /**
+     * Filter out ratio, filterNum has higher priority than {@link #filterOutRatio}, if {@link #filterNum} is less than
+     * 0. Then filterOutRatio will be effective.
+     */
     private Float filterOutRatio = Constants.SHIFU_DEFAULT_VARSELECT_FILTEROUT_RATIO;
 
     /**

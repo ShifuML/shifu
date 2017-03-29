@@ -17,7 +17,6 @@ package ml.shifu.shifu.container.obj;
 
 import java.io.IOException;
 
-import ml.shifu.shifu.container.obj.ModelNormalizeConf.Correlation;
 import ml.shifu.shifu.container.obj.ModelTrainConf.MultipleClassification;
 
 import com.fasterxml.jackson.core.JsonParser;
@@ -28,7 +27,7 @@ import com.fasterxml.jackson.databind.JsonDeserializer;
 import com.fasterxml.jackson.databind.JsonNode;
 
 /**
- * To deserialize {@link Correlation} instance.
+ * To de-serialize {@link MultipleClassification} instance.
  * 
  * @author Zhang David (pengzhang@paypal.com)
  */
