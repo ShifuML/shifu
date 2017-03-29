@@ -517,7 +517,7 @@ public class LogisticRegressionWorker
         double sampleRate = (modelConfig.getTrain().getSampleNegOnly() || this.isKFoldCV) ? 1d : modelConfig.getTrain()
                 .getBaggingSampleRate();
         int classValue = (int) (label + 0.01f);
-        if(modelConfig.isBaggingWithReplacement()) {
+        if(!modelConfig.isBaggingWithReplacement()) {
             Random random = null;
             if(this.isStratifiedSampling) {
                 random = baggingRandomMap.get(classValue);
