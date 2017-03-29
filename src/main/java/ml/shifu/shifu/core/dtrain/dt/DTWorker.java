@@ -370,7 +370,7 @@ public class DTWorker
         if(Double.compare(upSampleWeight, 1d) != 0
                 && (modelConfig.isRegression() || (modelConfig.isClassification() && modelConfig.getTrain()
                         .isOneVsAll()))) {
-            // set mean to upSampleWeight -1 and get sample + 1to make sure no zero sample value
+            // set mean to upSampleWeight -1 and get sample + 1 to make sure no zero sample value
             LOG.info("Enable up sampling with weight {}.", upSampleWeight);
             this.upSampleRng = new PoissonDistribution(upSampleWeight - 1);
         }
@@ -1188,8 +1188,14 @@ public class DTWorker
         float output = ideal;
         float predict = ideal;
 
+        // up sampling logic, just add more weights while bagging sampling rate is still not changed
+        if(modelConfig.isRegression() && isUpSampleEnabled() && Double.compare(ideal, 1d) == 0) {
+            // Double.compare(ideal, 1d) == 0 means positive tags; sample + 1 to avoid sample count to 0
+            significance = significance * (this.upSampleRng.sample() + 1);
+        }
+
         Data data = new Data(inputs, predict, output, output, significance);
-        
+
         boolean isValidation = false;
         if(context.getAttachment() != null && context.getAttachment() instanceof Boolean) {
             isValidation = (Boolean) context.getAttachment();
@@ -1356,9 +1362,14 @@ public class DTWorker
 
     private boolean isInRange(long hashcode, int startHashCode, int endHashCode) {
         // check if in [start, end] or if in [start, 100) and [0, end-100)
-        long hashCodeIn100 = hashcode % 100;
-        return hashCodeIn100 >= startHashCode
-                && ((endHashCode < 100 && hashCodeIn100 < endHashCode) || (endHashCode >= 100 && hashCodeIn100 < (endHashCode % 100)));
+        int hashCodeIn100 = (int) hashcode % 100;
+        if(endHashCode <= 100) {
+            // in range [start, end)
+            return hashCodeIn100 >= startHashCode && hashCodeIn100 < endHashCode;
+        } else {
+            // in range [start, 100) or [0, endHashCode-100)
+            return hashCodeIn100 >= startHashCode || hashCodeIn100 < (endHashCode % 100);
+        }
     }
 
     // isFailoverOrContinuous true failover task, isFailoverOrContinuous false continuous model training

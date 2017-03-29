@@ -716,9 +716,14 @@ public class LogisticRegressionWorker
 
     private boolean isInRange(long hashcode, int startHashCode, int endHashCode) {
         // check if in [start, end] or if in [start, 100) and [0, end-100)
-        long hashCodeIn100 = hashcode % 100;
-        return hashCodeIn100 >= startHashCode
-                && ((endHashCode < 100 && hashCodeIn100 < endHashCode) || (endHashCode >= 100 && hashCodeIn100 < (endHashCode % 100)));
+        int hashCodeIn100 = (int) hashcode % 100;
+        if(endHashCode <= 100) {
+            // in range [start, end)
+            return hashCodeIn100 >= startHashCode && hashCodeIn100 < endHashCode;
+        } else {
+            // in range [start, 100) or [0, endHashCode-100)
+            return hashCodeIn100 >= startHashCode || hashCodeIn100 < (endHashCode % 100);
+        }
     }
 
     private static class Data implements Bytable {
