@@ -645,8 +645,6 @@ public abstract class AbstractNNWorker<VALUE extends Writable> extends
                     }
                 }
 
-                // for fix initial input, if hashcode% 100 over validRate * 100, training
-                // not fixed initial input, if random value >= validRate, training.
                 if((this.modelConfig.isFixInitialInput() && hashcode % 100 >= Double.valueOf(
                         this.modelConfig.getValidSetRate() * 100).longValue())
                         || (!this.modelConfig.isFixInitialInput() && random.nextDouble() >= this.modelConfig

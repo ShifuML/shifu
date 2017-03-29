@@ -28,14 +28,18 @@ import org.slf4j.LoggerFactory;
  * these data by python, and found these training error data varies in loop by tree depth. On the other hand, we have a
  * tendency to get the minimal training error, So I divided these error data into different window by the size of tree
  * depth. And for each window picks the minimum value as the value represent value.
+ * 
  * <p>
  * Basic on the upper sample values, I adopt a further more filter algorithm: Recursive filtering. Use the average of
  * the last queue size value as the value for the new value and insert into the queue for further operation.
+ * 
  * <p>
  * 2, Iteration Gain Iteration gain is the reduce value of the error for each loop.
+ * 
  * <p>
  * {@link #canStop()} 1, Identify the training is over fit When the validation iteration gain is negative for continue 3
  * times, we consider this algorithm is over fitted.
+ * 
  * <p>
  * 3, Identify not worth more training iteration If the iteration gain is less than one tenth of the max gain value for
  * continue 3 times, we consider it worth no more iteration.

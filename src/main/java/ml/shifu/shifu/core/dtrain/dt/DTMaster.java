@@ -58,25 +58,31 @@ import org.slf4j.LoggerFactory;
 
 /**
  * Random forest and gradient boost decision tree {@link MasterComputable} implementation.
+ * 
  * <p>
  * {@link #isRF} and {@link #isGBDT} are for RF or GBDT checking, by default RF is trained.
+ * 
  * <p>
- * Each iteration, update node statistics and determine best split which is used for tree node split. Besides node
- * statistics, error and count info are also collected for client display.
+ * In each iteration, update node statistics and determine best split which is used for tree node split. Besides node
+ * statistics, error and count info are also collected for metrics display.
+ * 
  * <p>
  * Each iteration, new node group with nodes in limited estimated memory consumption are sent out to all workers for
  * feature statistics.
+ * 
  * <p>
- * For gradient boost decision tree, each time a tree is updated and if one tree is finalized, then start a new tree.
+ * For gradient boost decision tree, each time a tree is updated and after one tree is finalized, then start a new tree.
  * Both random forest and gradient boost decision trees are all stored in {@link #trees}.
+ * 
  * <p>
  * Terminal condition: for random forest, just to collect all nodes in all trees from all workers. Terminal condition is
  * all trees cannot be split. If one tree cannot be split with threshold count and meaningful impurity, one tree if
  * finalized and stopped update. For gradient boost decision tree, each time only one tree is trained, if last tree
- * cannot be split, training is stopped.
+ * cannot be split, training is stopped. Early stop feature is enabled by validationTolerance in train part.
+ * 
  * <p>
  * In current {@link DTMaster}, there are states like {@link #trees} and {@link #toDoQueue}. All stats can be recovered
- * once master is done. Such states are checkpointed to HDFS for fault tolerence.
+ * once master is done. Such states are being check-pointed to HDFS for fault tolerance.
  * 
  * @author Zhang David (pengzhang@paypal.com)
  */

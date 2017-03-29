@@ -18,13 +18,13 @@ public class TrainUpdater extends BasicUpdater {
     public void updateColumnConfig(ColumnConfig columnConfig) {
         String varName = columnConfig.getColumnName();
 
-        if (this.setMeta.contains(new NSColumn(varName))) {
+        if(this.setMeta.contains(new NSColumn(varName))) {
             columnConfig.setColumnFlag(ColumnConfig.ColumnFlag.Meta);
             columnConfig.setFinalSelect(false);
-        } else if (this.setForceRemove.contains(new NSColumn(varName))) {
+        } else if(this.setForceRemove.contains(new NSColumn(varName))) {
             columnConfig.setColumnFlag(ColumnConfig.ColumnFlag.ForceRemove);
             columnConfig.setFinalSelect(false);
-        } else if (this.setForceSelect.contains(new NSColumn(varName))) {
+        } else if(this.setForceSelect.contains(new NSColumn(varName))) {
             columnConfig.setColumnFlag(ColumnConfig.ColumnFlag.ForceSelect);
             columnConfig.setFinalSelect(true);
         }
