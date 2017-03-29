@@ -16,6 +16,10 @@
  
 Shifu Change Log
 
+Changes for Shifu-0.10.1
+    * Fix one big bug on 'baggingWithReplacement':
+        https://github.com/ShifuML/shifu/issues/335
+
 Changes for Shifu-0.10.0
     * Tree Ensemble Model Improvement
         a) Speed GBT Training
