@@ -118,19 +118,22 @@ public class ConfusionMatrix {
 
         // only works for multi classification
         multiClassScore1Index = targetColumnIndex + 2; // target, weight, score1, score2, this is hard code
-        multiClassModelCnt = CommonUtils
-                .getBasicModelsCnt(modelConfig, evalConfig, evalConfig.getDataSet().getSource());
 
-        /**
-         * Number of meta columns
-         */
+        try {
+            multiClassModelCnt = CommonUtils.getBasicModelsCnt(modelConfig, evalConfig, evalConfig.getDataSet()
+                    .getSource());
+        } catch (java.io.FileNotFoundException e) {
+            multiClassModelCnt = 0;
+        }
+
+        // Number of meta columns
         metaColumns = evalConfig.getAllMetaColumns(modelConfig).size();
     }
 
     public int getColumnIndex(String[] headerColumns, String column) {
         int columnIndex = -1;
-        for ( int i = 0; i < headerColumns.length; i ++ ) {
-            if (NSColumnUtils.isColumnEqual(headerColumns[i], column)) {
+        for(int i = 0; i < headerColumns.length; i++) {
+            if(NSColumnUtils.isColumnEqual(headerColumns[i], column)) {
                 columnIndex = i;
                 break;
             }
