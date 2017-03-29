@@ -167,7 +167,7 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
     }
 
     /**
-     * run training process
+     * Training process entry point.
      */
     @Override
     public int run() throws Exception {
@@ -379,7 +379,7 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
     }
 
     /**
-     * get the trainer list
+     * Get the trainer list
      * 
      * @return the trainer list
      */
@@ -388,7 +388,7 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
     }
 
     /**
-     * get the trainer
+     * Get the trainer
      * 
      * @param index
      *            the index of trainer

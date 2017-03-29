@@ -25,23 +25,18 @@ import ml.shifu.shifu.container.obj.ModelBasicConf.RunMode;
 
 import java.io.IOException;
 
-
 /**
- * RunModeDeserializer class
+ * RunModeDeserializer to ignore cases in {@link RunMode}.
  */
 public class RunModeDeserializer extends JsonDeserializer<RunMode> {
 
-    /* (non-Javadoc)
-     * @see com.fasterxml.jackson.databind.JsonDeserializer#deserialize(com.fasterxml.jackson.core.JsonParser, com.fasterxml.jackson.databind.DeserializationContext)
-     */
     @Override
-    public RunMode deserialize(JsonParser jp, DeserializationContext ctxt)
-            throws IOException, JsonProcessingException {
+    public RunMode deserialize(JsonParser jp, DeserializationContext ctxt) throws IOException, JsonProcessingException {
         ObjectCodec oc = jp.getCodec();
         JsonNode node = oc.readTree(jp);
 
-        for (RunMode value : RunMode.values()) {
-            if (value.name().equalsIgnoreCase(node.textValue())) {
+        for(RunMode value: RunMode.values()) {
+            if(value.name().equalsIgnoreCase(node.textValue())) {
                 return value;
             }
         }

@@ -50,16 +50,14 @@ public final class DTrainUtils {
     public static final String BACK_PROPAGATION = "B";
 
     /**
-     * The POSITIVE ETA value. This is specified by the resilient propagation
-     * algorithm. This is the percentage by which the deltas are increased by if
-     * the partial derivative is greater than zero.
+     * The POSITIVE ETA value. This is specified by the resilient propagation algorithm. This is the percentage by which
+     * the deltas are increased by if the partial derivative is greater than zero.
      */
     public static final double POSITIVE_ETA = 1.2;
 
     /**
-     * The NEGATIVE ETA value. This is specified by the resilient propagation
-     * algorithm. This is the percentage by which the deltas are increased by if
-     * the partial derivative is less than zero.
+     * The NEGATIVE ETA value. This is specified by the resilient propagation algorithm. This is the percentage by which
+     * the deltas are increased by if the partial derivative is less than zero.
      */
     public static final double NEGATIVE_ETA = 0.5;
 
@@ -72,10 +70,6 @@ public final class DTrainUtils {
      * The starting update for a delta.
      */
     public static final double DEFAULT_INITIAL_UPDATE = 0.1;
-
-    /**
-     * The maximum amount a delta can reach.
-     */
 
     private DTrainUtils() {
     }
