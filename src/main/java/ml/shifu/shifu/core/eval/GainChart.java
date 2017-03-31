@@ -496,8 +496,8 @@ public class GainChart {
                     "Unit-wise Operation Point", "lst2", "Weighted Recall", "lst3", "Unit-wise Recall"));
             writer.write(String.format(GainChartTemplate.HIGHCHART_BUTTON_PANEL_TEMPLATE_3, "Model Score", "lst4",
                     "Weighted Recall", "lst5", "Unit-wise Recall"));
-            writer.write(String.format(GainChartTemplate.HIGHCHART_BUTTON_PANEL_TEMPLATE_3, "Score Distibution",
-                    "lst6", "Score Count", "lst7", ""));
+            writer.write(String.format(GainChartTemplate.HIGHCHART_BUTTON_PANEL_TEMPLATE_4, "Score Distibution",
+                    "lst6", "Score Count"));
 
             writer.write("      </div>\n");
             writer.write("      <div class=\"col-sm-9 col-sm-offset-3 col-md-10 col-md-offset-2 main\">\n");
@@ -757,8 +757,8 @@ public class GainChart {
             writer.write("});");
             writer.write("\n");
 
-            writer.write(String.format(GainChartTemplate.HIGHCHART_CHART_TEMPLATE_PREFIX, "container6", "Score Count",
-                    modelConfig.getBasic().getName(), "Model Score", "", "false"));
+            writer.write(String.format(GainChartTemplate.SCORE_HIGHCHART_CHART_PREFIX, "container6",
+                    "Score Distribution", modelConfig.getBasic().getName(), "Model Score", "", "false"));
             writer.write("series: [");
 
             for(int i = 0; i < results.size(); i++) {
@@ -811,7 +811,7 @@ public class GainChart {
             }
         }
     }
-
+    
     public void generateHtml4PrAndRoc(EvalConfig evalConfig, ModelConfig modelConfig, String fileName,
             List<PerformanceResult> results, List<String> names) throws IOException {
         BufferedWriter writer = null;
