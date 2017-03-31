@@ -497,11 +497,13 @@ public final class CommonUtils {
         int index = 0;
         for(String str: Splitter.on(delimiter).split(pigHeaderStr)) {
             String columnName = StringUtils.trimToEmpty(str);
-            /*if(isFull) {
-                columnName = getFullPigHeaderColumnName(str);
-            } else {
-                columnName = getRelativePigHeaderColumnName(str);
-            }*/
+            /*
+             * if(isFull) {
+             * columnName = getFullPigHeaderColumnName(str);
+             * } else {
+             * columnName = getRelativePigHeaderColumnName(str);
+             * }
+             */
 
             if(headerSet.contains(columnName)) {
                 columnName = columnName + "_" + index;
@@ -834,8 +836,6 @@ public final class CommonUtils {
      * 
      * @param modelConfig
      *            model config
-     * @param columnConfigList
-     *            list of column config
      * @param modelPath
      *            the path to store model
      * @param fs
@@ -1415,8 +1415,8 @@ public final class CommonUtils {
             ModelConfig modelConfig, List<ColumnConfig> columnConfigList, Map<String, ? extends Object> rawDataMap,
             double cutoff, String alg) {
         Map<NSColumn, Object> nsDataMap = new HashMap<NSColumn, Object>();
-        for ( String key : rawDataMap.keySet() ) {
-            nsDataMap.put(new NSColumn(key), rawDataMap.get(key));
+        for(Entry<String, ? extends Object> entry: rawDataMap.entrySet()) {
+            nsDataMap.put(new NSColumn(entry.getKey()), entry.getValue());
         }
 
         double[] ideal = { Constants.DEFAULT_IDEAL_VALUE };
@@ -1499,6 +1499,14 @@ public final class CommonUtils {
         return CommonConstants.RF_ALG_NAME.equalsIgnoreCase(alg) || CommonConstants.GBT_ALG_NAME.equalsIgnoreCase(alg);
     }
 
+    public static boolean isRandomForestAlgorithm(String alg) {
+        return CommonConstants.RF_ALG_NAME.equalsIgnoreCase(alg);
+    }
+
+    public static boolean isGBDTAlgorithm(String alg) {
+        return CommonConstants.GBT_ALG_NAME.equalsIgnoreCase(alg);
+    }
+
     public static boolean isHadoopConfigurationInjected(String key) {
         return key.startsWith("nn") || key.startsWith("guagua") || key.startsWith("shifu") || key.startsWith("mapred")
                 || key.startsWith("io") || key.startsWith("hadoop") || key.startsWith("yarn") || key.startsWith("pig")
@@ -1522,8 +1530,8 @@ public final class CommonUtils {
     public static MLDataPair assembleDataPair(ModelConfig modelConfig, List<ColumnConfig> columnConfigList,
             Map<String, ? extends Object> rawDataMap, double cutoff) {
         Map<NSColumn, Object> nsDataMap = new HashMap<NSColumn, Object>();
-        for ( String key : rawDataMap.keySet() ) {
-            nsDataMap.put(new NSColumn(key), rawDataMap.get(key));
+        for(Entry<String, ? extends Object> entry: rawDataMap.entrySet()) {
+            nsDataMap.put(new NSColumn(entry.getKey()), entry.getValue());
         }
 
         // if the tag is provided, ideal will be updated; otherwise it defaults to -1

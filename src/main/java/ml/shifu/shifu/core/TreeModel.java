@@ -52,7 +52,7 @@ public class TreeModel extends BasicML implements MLRegression {
     /**
      * Tree model instance without dependency on encog.
      */
-    private IndependentTreeModel independentTreeModel;
+    private transient IndependentTreeModel independentTreeModel;
 
     /**
      * Constructor on current {@link IndependentTreeModel}

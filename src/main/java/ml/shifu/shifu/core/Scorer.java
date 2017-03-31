@@ -213,7 +213,8 @@ public class Scorer {
                 if(model instanceof BasicNetwork) {
                     if(modelConfig != null && modelConfig.isRegression()) {
                         scores.add(toScore(score.getData(0)));
-                    } else if(modelConfig.isClassification() && modelConfig.getTrain().isOneVsAll()) {
+                    } else if(modelConfig != null && modelConfig.isClassification()
+                            && modelConfig.getTrain().isOneVsAll()) {
                         // if one vs all classification
                         scores.add(toScore(score.getData(0)));
                     } else {
