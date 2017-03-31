@@ -372,8 +372,9 @@ public class LogisticRegressionWorker
     @Override
     protected void postLoad(WorkerContext<LogisticRegressionParams, LogisticRegressionParams> context) {
         this.trainingData.switchState();
-        this.validationData.switchState();
-
+        if(validationData != null) {
+            this.validationData.switchState();
+        }
         LOG.info("    - # Records of the Master Data Set: {}.", this.count);
         LOG.info("    - Bagging Sample Rate: {}.", this.modelConfig.getBaggingSampleRate());
         LOG.info("    - Bagging With Replacement: {}.", this.modelConfig.isBaggingWithReplacement());

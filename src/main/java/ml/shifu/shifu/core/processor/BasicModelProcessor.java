@@ -99,12 +99,10 @@ public class BasicModelProcessor {
         loadModelConfig();
         validateModelConfig(step);
 
-        pathFinder = new PathFinder(modelConfig, this.getOtherConfigs());
-
+        this.pathFinder = new PathFinder(modelConfig, this.getOtherConfigs());
         checkAlgorithmParam();
 
         log.info(String.format("Training Data Soure Location: %s", modelConfig.getDataSet().getSource()));
-
         switch(step) {
             case INIT:
                 break;
@@ -128,7 +126,7 @@ public class BasicModelProcessor {
             if(StringUtils.isEmpty(config.getColumnName())) {
                 throw new IllegalArgumentException("Empry column name, please check your header file.");
             }
-            if(names.contains(config.getColumnName())) {
+            if(names.contains(new NSColumn(config.getColumnName()))) {
                 log.warn("Duplicated {} in ColumnConfig.json file, later one will be append index to make it unique.",
                         config.getColumnName());
             }

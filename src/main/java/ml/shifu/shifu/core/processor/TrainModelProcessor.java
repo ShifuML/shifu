@@ -746,7 +746,11 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
                 BufferedReader reader = null;
                 try {
                     reader = ShifuFileUtils.getReader(valErrPath.toString(), sourceType);
-                    String valErrStr = reader.readLine().toString();
+                    String line = reader.readLine();
+                    if(line == null) {
+                        continue;
+                    }
+                    String valErrStr = line.toString();
                     LOG.debug("valErrStr is {}", valErrStr);
                     valErr = Double.valueOf(valErrStr);
                 } catch (NumberFormatException e) {
@@ -781,7 +785,11 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
                 BufferedReader reader = null;
                 try {
                     reader = ShifuFileUtils.getReader(valErrPath.toString(), sourceType);
-                    String valErrStr = reader.readLine().toString();
+                    String line = reader.readLine();
+                    if(line == null) {
+                        continue;
+                    }
+                    String valErrStr = line.toString();
                     LOG.debug("valErrStr is {}", valErrStr);
                     valErr = Double.valueOf(valErrStr);
                     valErrs.add(valErr);

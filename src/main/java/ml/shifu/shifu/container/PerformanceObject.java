@@ -79,6 +79,10 @@ public class PerformanceObject {
 
     public double weightLiftUnit;
 
+    public double scoreCount;
+
+    public double scoreWgtCount;
+
     public double tp;
     public double fp;
     public double tn;
@@ -100,8 +104,10 @@ public class PerformanceObject {
                 + actionRate + ", weightedActionRate=" + weightedActionRate + ", recall=" + recall
                 + ", weightedRecall=" + weightedRecall + ", precision=" + precision + ", weightedPrecision="
                 + weightedPrecision + ", fpr=" + fpr + ", weightedFpr=" + weightedFpr + ", liftUnit=" + liftUnit
-                + ", weightLiftUnit=" + weightLiftUnit + ", tp=" + tp + ", fp=" + fp + ", tn=" + tn + ", fn=" + fn
-                + ", weightedTp=" + weightedTp + ", weightedFp=" + weightedFp + ", weightedTn=" + weightedTn
-                + ", weightedFn=" + weightedFn + "]";
+                + ", weightLiftUnit=" + weightLiftUnit + ", scoreCount=" + scoreCount + ", scoreWgtCount="
+                + scoreWgtCount + ", tp=" + tp + ", fp=" + fp + ", tn=" + tn + ", fn=" + fn + ", weightedTp="
+                + weightedTp + ", weightedFp=" + weightedFp + ", weightedTn=" + weightedTn + ", weightedFn="
+                + weightedFn + "]";
     }
+
 }

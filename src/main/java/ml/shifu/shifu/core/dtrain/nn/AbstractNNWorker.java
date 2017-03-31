@@ -493,7 +493,9 @@ public abstract class AbstractNNWorker<VALUE extends Writable> extends
     protected void postLoad(WorkerContext<NNParams, NNParams> workerContext) {
         if(isOnDisk()) {
             ((BufferedFloatMLDataSet) this.trainingData).endLoad();
-            ((BufferedFloatMLDataSet) this.validationData).endLoad();
+            if(validationData != null) {
+                ((BufferedFloatMLDataSet) this.validationData).endLoad();
+            }
         } else {
             ((MemoryDiskFloatMLDataSet) this.trainingData).endLoad();
             ((MemoryDiskFloatMLDataSet) this.validationData).endLoad();
@@ -760,18 +762,6 @@ public abstract class AbstractNNWorker<VALUE extends Writable> extends
             this.validationData.add(dataPair);
         } else {
             this.trainingData.add(dataPair);
-        }
-    }
-
-    /**
-     * Add data pair to data set according to random number compare with crossValidationRate.
-     */
-    @SuppressWarnings("unused")
-    private void addDataPairToDataSet(FloatMLDataPair pair, double crossValidationRate, double random) {
-        if(Double.compare(random, crossValidationRate) < 0) {
-            this.validationData.add(pair);
-        } else {
-            this.trainingData.add(pair);
         }
     }
 
