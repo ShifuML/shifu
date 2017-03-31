@@ -628,7 +628,7 @@ public class ModelInspector {
                 Object maxLeavesObj = params.get("MaxLeaves");
                 if(maxLeavesObj != null) {
                     int maxLeaves = Integer.valueOf(maxLeavesObj.toString());
-                    if(maxLeaves <= 0 || maxLeaves > Integer.MAX_VALUE) {
+                    if(maxLeaves <= 0) {
                         ValidateResult tmpResult = new ValidateResult(true);
                         tmpResult.setStatus(false);
                         tmpResult.getCauses().add("MaxLeaves should in [1, Integer.MAX_VALUE].");
