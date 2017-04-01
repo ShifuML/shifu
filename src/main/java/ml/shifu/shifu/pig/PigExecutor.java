@@ -161,19 +161,19 @@ public class PigExecutor {
                         Class<?> tezClazz = Class
                                 .forName("org.apache.pig.backend.hadoop.executionengine.tez.TezExecType");
                         log.info("Pig ExecType: TEZ");
-                        pigServer = new PigServer((ExecType) tezClazz.newInstance());
+                        pigServer = new ShifuPigServer((ExecType) tezClazz.newInstance());
                     } catch (Throwable t) {
                         log.info("Pig ExecType: MAPREDUCE");
-                        pigServer = new PigServer(ExecType.MAPREDUCE);
+                        pigServer = new ShifuPigServer(ExecType.MAPREDUCE);
                     }
                 } else {
                     // fall back to mapreduce
                     log.info("Pig ExecType: MAPREDUCE");
-                    pigServer = new PigServer(ExecType.MAPREDUCE);
+                    pigServer = new ShifuPigServer(ExecType.MAPREDUCE);
                 }
             } else {
                 log.info("Pig ExecType: MAPREDUCE");
-                pigServer = new PigServer(ExecType.MAPREDUCE);
+                pigServer = new ShifuPigServer(ExecType.MAPREDUCE);
             }
             String hdpVersion = HDPUtils.getHdpVersionForHDP224();
             if(StringUtils.isNotBlank(hdpVersion)) {
@@ -186,7 +186,7 @@ public class PigExecutor {
             }
         } else {
             log.info("ExecType: LOCAL");
-            pigServer = new PigServer(ExecType.LOCAL);
+            pigServer = new ShifuPigServer(ExecType.LOCAL);
         }
 
         return pigServer;
