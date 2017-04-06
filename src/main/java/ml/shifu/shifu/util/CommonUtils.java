@@ -2114,7 +2114,7 @@ public final class CommonUtils {
     public static String[] genPigFieldName(String[] names) {
         String[] pigScoreNames = new String[names.length];
         for(int i = 0; i < names.length; i++) {
-            pigScoreNames[i] = genPigFieldName(names[i]);
+            pigScoreNames[i] = genPigFieldName(names[i]) + "::mean";
         }
         return pigScoreNames;
     }

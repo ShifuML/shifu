@@ -22,9 +22,11 @@ import ml.shifu.shifu.container.obj.EvalConfig;
 import ml.shifu.shifu.container.obj.ModelConfig;
 import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
 import ml.shifu.shifu.core.ModelRunner;
+import ml.shifu.shifu.core.model.ModelSpec;
 import ml.shifu.shifu.message.RunModelDataMessage;
 import ml.shifu.shifu.message.RunModelResultMessage;
 import ml.shifu.shifu.util.CommonUtils;
+import org.apache.commons.collections.CollectionUtils;
 import org.encog.ml.BasicML;
 
 import java.io.IOException;
@@ -58,6 +60,14 @@ public class RunModelWorker extends AbstractWorkerActor {
         }
 
         modelRunner = new ModelRunner(modelConfig, columnConfigList, header, delimiter, models);
+
+        List<ModelSpec> subModels = CommonUtils.loadSubModels(modelConfig, this.columnConfigList, evalConfig,
+                evalConfig.getDataSet().getSource(), evalConfig.getGbtConvertToProb());
+        if(CollectionUtils.isNotEmpty(subModels)) {
+            for(ModelSpec modelSpec: subModels) {
+                this.modelRunner.addSubModels(modelSpec);
+            }
+        }
     }
 
     /*

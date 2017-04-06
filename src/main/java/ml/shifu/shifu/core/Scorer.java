@@ -107,7 +107,7 @@ public class Scorer {
         }
 
         this.executorManager = new ExecutorManager<MLData>(Math.min(Runtime.getRuntime().availableProcessors(),
-                models.size()));
+                (models.size() == 0 ? 5 : models.size())));
 
         // add a shutdown hook as a safe guard if some one not call close
         Runtime.getRuntime().addShutdownHook(new Thread(new Runnable() {
@@ -250,8 +250,7 @@ public class Scorer {
         Integer tag = (int) pair.getIdeal().getData(0);
 
         if(scores.size() == 0) {
-            log.error("No Scores Calculated...");
-            return null;
+            log.warn("No Scores Calculated...");
         }
 
         return new ScoreObject(scores, tag, rfTreeSizeList);
