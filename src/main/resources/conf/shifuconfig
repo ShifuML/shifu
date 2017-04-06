@@ -69,6 +69,10 @@ guagua.min.workers.ratio=0.95
 # the precision of model scores
 # shifu.score.scale = 1000
 
+-## enable pig combination to save mappers
+ pig.splitCombination=true
+ pig.maxCombinedSplitSize=268435456
+
 ## specified reduce memory to avoid default memory too big or too small
 mapreduce.reduce.memory.mb=2400
 mapreduce.reduce.java.opts=-Xms2G -Xmx2G

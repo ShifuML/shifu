@@ -101,7 +101,10 @@ public class PersistBasicFloatNetwork implements EncogPersistor {
                 for(final String line: section.getLines()) {
                     ActivationFunction af = null;
                     final List<String> cols = EncogFileSection.splitColumns(line);
-                    final String name = "org.encog.engine.network.activation." + cols.get(0);
+                    String name = "org.encog.engine.network.activation." + cols.get(0);
+                    if(cols.get(0).equals("ActivationReLU")) {
+                        name = "ml.shifu.shifu.core.dtrain.nn.ActivationReLU";
+                    }
                     try {
                         final Class<?> clazz = Class.forName(name);
                         af = (ActivationFunction) clazz.newInstance();
