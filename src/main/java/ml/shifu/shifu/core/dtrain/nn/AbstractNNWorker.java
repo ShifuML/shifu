@@ -230,6 +230,11 @@ public abstract class AbstractNNWorker<VALUE extends Writable> extends
      */
     private boolean isKFoldCV;
 
+    /**
+     * If enabled by extreme learning machine: https://en.wikipedia.org/wiki/Extreme_learning_machine
+     */
+    private boolean isELM;
+
     protected boolean isUpSampleEnabled() {
         // only enabled in regression
         return this.upSampleRng != null
@@ -320,6 +325,10 @@ public abstract class AbstractNNWorker<VALUE extends Writable> extends
         Integer epochsPerIterationInteger = this.modelConfig.getTrain().getEpochsPerIteration();
         this.epochsPerIteration = epochsPerIterationInteger == null ? 1 : epochsPerIterationInteger.intValue();
         LOG.info("epochsPerIteration in worker is :{}", epochsPerIteration);
+
+        Object elmObject = validParams.get(DTrainUtils.IS_ELM);
+        isELM = elmObject == null ? false : "true".equalsIgnoreCase(elmObject.toString());
+        LOG.info("Check isELM: {}", isELM);
 
         int[] inputOutputIndex = DTrainUtils.getInputOutputCandidateCounts(this.columnConfigList);
         this.inputNodeCount = inputOutputIndex[0] == 0 ? inputOutputIndex[2] : inputOutputIndex[0];
@@ -472,12 +481,12 @@ public abstract class AbstractNNWorker<VALUE extends Writable> extends
         double[] flatSpot = new double[flat.getActivationFunctions().length];
         for(int i = 0; i < flat.getActivationFunctions().length; i++) {
             flatSpot[i] = flat.getActivationFunctions()[i] instanceof ActivationSigmoid ? 0.1 : 0.0;
-        }
 
+        }
         LOG.info("Gradient computing thread count is {}.", modelConfig.getTrain().getWorkerThreadCount());
 
         this.gradient = new ParallelGradient((FloatFlatNetwork) flat, training, testing, flatSpot,
-                new LinearErrorFunction(), isCrossOver, modelConfig.getTrain().getWorkerThreadCount());
+                new LinearErrorFunction(), isCrossOver, modelConfig.getTrain().getWorkerThreadCount(), this.isELM);
     }
 
     private NNParams buildEmptyNNParams(WorkerContext<NNParams, NNParams> workerContext) {

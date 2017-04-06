@@ -509,7 +509,9 @@
                                     {"label": "Sigmoid", "value":"Sigmoid"},
                                     {"label": "Tanh", "value":"Tanh"},
                                     {"label": "Log", "value":"Log"},
-                                    {"label": "Sin", "value":"Sin"}
+                                    {"label": "Sin", "value":"Sin"},
+                                    {"label": "Linear", "value":"Linear"},
+                                    {"label": "ReLU", "value":"ReLU"}
                                 ]
                             }                            
                          ]
@@ -632,6 +634,11 @@
                             {"label": "Resilient Propagation", "value":"R"},
                             {"label": "Scaled Conjugate Gradient", "value":"S"}
                         ]
+                    }, {
+                        "name" : "IsELM",
+                        "type": "boolean",
+                        "directive": "checkbox",
+                        "defval": false
                     }, {
                         "name": "GBTSampleWithReplacement",
                         "type": "boolean",
