@@ -179,6 +179,8 @@ public class NNMaster extends AbstractMasterComputable<NNParams, NNParams> {
             size++;
         }
 
+        LOG.info("ELM gradients debug for 0 gradient {}", this.globalNNParams.getGradients()[0]);
+
         LOG.debug("Total Count is {}. totalWorkerCount is {}", totalCount, totalWorkerCount);
 
         // worker result size is 0. throw exception because shouldn't happen

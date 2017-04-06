@@ -21,6 +21,7 @@ import java.util.List;
 import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.core.dtrain.dataset.BasicFloatNetwork;
 import ml.shifu.shifu.core.dtrain.dataset.FloatNeuralStructure;
+import ml.shifu.shifu.core.dtrain.nn.ActivationReLU;
 import ml.shifu.shifu.core.dtrain.nn.NNConstants;
 import ml.shifu.shifu.util.CommonUtils;
 import ml.shifu.shifu.util.Constants;
@@ -48,6 +49,8 @@ public final class DTrainUtils {
     public static final String MANHATTAN_PROPAGATION = "M";
     public static final String QUICK_PROPAGATION = "Q";
     public static final String BACK_PROPAGATION = "B";
+
+    public static final String IS_ELM = "IsELM";
 
     /**
      * The POSITIVE ETA value. This is specified by the resilient propagation algorithm. This is the percentage by which
@@ -241,6 +244,8 @@ public final class DTrainUtils {
                 network.addLayer(new BasicLayer(new ActivationLOG(), true, numHiddenNode));
             } else if(func.equalsIgnoreCase(NNConstants.NN_SIN)) {
                 network.addLayer(new BasicLayer(new ActivationSIN(), true, numHiddenNode));
+            } else if(func.equalsIgnoreCase(NNConstants.NN_RELU)) {
+                network.addLayer(new BasicLayer(new ActivationReLU(), true, numHiddenNode));
             } else {
                 network.addLayer(new BasicLayer(new ActivationSigmoid(), true, numHiddenNode));
             }
@@ -259,6 +264,10 @@ public final class DTrainUtils {
         }
 
         return network;
+    }
+
+    public static boolean isExremeLearningMachinePropagation(String propagation) {
+        return propagation != null && "E".equals(propagation);
     }
 
     public static BasicNetwork generateNetwork(int in, int out, int numLayers, List<String> actFunc,
