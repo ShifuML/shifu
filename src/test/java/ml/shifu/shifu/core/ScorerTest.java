@@ -166,7 +166,7 @@ public class ScorerTest {
         double[] ideal = { 1. };
         MLDataPair pair = new BasicMLDataPair(new BasicMLData(input), new BasicMLData(ideal));
 
-        Assert.assertNull(s.score(pair, null));
+        Assert.assertEquals(s.score(pair, null).getScores().size(), 0);
     }
 
     @AfterClass
