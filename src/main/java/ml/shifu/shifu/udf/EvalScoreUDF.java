@@ -472,7 +472,10 @@ public class EvalScoreUDF extends AbstractTrainerUDF<Tuple> {
      * @return - tuple name with namespace
      */
     private String addModelNameToField(String modelName, String field) {
-        return (StringUtils.isBlank(modelName) ? field : modelName + "::" + field);
+        return (StringUtils.isBlank(modelName) ? field : formatPigNS(modelName) + "::" + field);
     }
 
+    private String formatPigNS(String name) {
+        return name.replaceAll("-", "_");
+    }
 }
