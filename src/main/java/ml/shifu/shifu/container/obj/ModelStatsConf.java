@@ -44,7 +44,7 @@ public class ModelStatsConf {
 
     private Integer maxNumBin = Integer.valueOf(10);
     private BinningMethod binningMethod = BinningMethod.EqualPositive;
-    private Double sampleRate = Double.valueOf(0.8);
+    private Double sampleRate = Double.valueOf(1.0);
     private Boolean sampleNegOnly = Boolean.FALSE;
 
     // don't open those options to user
