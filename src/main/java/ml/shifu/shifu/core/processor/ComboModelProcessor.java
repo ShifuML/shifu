@@ -324,6 +324,7 @@ public class ComboModelProcessor extends BasicModelProcessor implements Processo
                 assembleModelName + File.separator + Constants.MODEL_CONFIG_JSON_FILE_NAME, SourceType.LOCAL);
         String forceSelectNames = createModelNamesFile(assembleModelName, assembleModelName + ".forceselect",
                 null, subModelScores.toArray(new String[0]));
+        assembleModelConfig.getVarSelect().setFilterNum(subModelScores.size());
         assembleModelConfig.getVarSelect().setForceSelectColumnNameFile(forceSelectNames);
         saveModelConfig(assembleModelName, assembleModelConfig);
 
