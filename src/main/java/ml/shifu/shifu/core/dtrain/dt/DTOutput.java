@@ -17,12 +17,8 @@ package ml.shifu.shifu.core.dtrain.dt;
 
 import java.io.DataOutputStream;
 import java.io.IOException;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.Map.Entry;
-import java.util.Properties;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.zip.GZIPOutputStream;
 
@@ -39,6 +35,7 @@ import ml.shifu.shifu.fs.ShifuFileUtils;
 import ml.shifu.shifu.util.CommonUtils;
 
 import org.apache.commons.collections.CollectionUtils;
+import org.apache.commons.collections.map.HashedMap;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
@@ -319,6 +316,7 @@ public class DTOutput extends BasicMasterInterceptor<DTMasterParams, DTWorkerPar
             Map<Integer, String> columnIndexNameMapping = new HashMap<Integer, String>();
             Map<Integer, List<String>> columnIndexCategoricalListMapping = new HashMap<Integer, List<String>>();
             Map<Integer, Double> numericalMeanMapping = new HashMap<Integer, Double>();
+            List<Integer> finalSelectedColumns = new ArrayList<Integer>();
             for(ColumnConfig columnConfig: this.columnConfigList) {
                 columnIndexNameMapping.put(columnConfig.getColumnNum(), columnConfig.getColumnName());
                 if(columnConfig.isCategorical() && CollectionUtils.isNotEmpty(columnConfig.getBinCategory())) {
@@ -327,6 +325,10 @@ public class DTOutput extends BasicMasterInterceptor<DTMasterParams, DTWorkerPar
 
                 if(columnConfig.isNumerical() && columnConfig.getMean() != null) {
                     numericalMeanMapping.put(columnConfig.getColumnNum(), columnConfig.getMean());
+                }
+
+                if (columnConfig.isFinalSelect()) {
+                    finalSelectedColumns.add(columnConfig.getColumnNum());
                 }
             }
 
@@ -368,6 +370,20 @@ public class DTOutput extends BasicMasterInterceptor<DTMasterParams, DTWorkerPar
             for(TreeNode treeNode: trees) {
                 treeNode.write(fos);
             }
+
+            //write the final selected columns or all columns
+            if (finalSelectedColumns.size() == 0) {
+                fos.writeInt(numericalMeanMapping.size());
+                for(Entry<Integer, String> entry: columnIndexNameMapping.entrySet()) {
+                    fos.writeInt(entry.getKey());
+                }
+            } else {
+                fos.write(finalSelectedColumns.size());
+                for(Integer id : finalSelectedColumns) {
+                   fos.writeInt(id);
+                }
+            }
+
         } catch (IOException e) {
             LOG.error("Error in writing output.", e);
         } finally {
