@@ -291,7 +291,7 @@ public class PathFinder {
      */
     public String getCorrelationPath(SourceType sourceType) {
         String preTrainingStatsPath = getPreferPath(modelConfig.getTrain().getCustomPaths(),
-                Constants.KEY_AUTO_TYPE_PATH);
+                Constants.KEY_CORRELATION_PATH);
 
         if(StringUtils.isBlank(preTrainingStatsPath)) {
             return getPathBySourceType(new Path(Constants.TMP, Constants.CORRELATION_PATH), sourceType);

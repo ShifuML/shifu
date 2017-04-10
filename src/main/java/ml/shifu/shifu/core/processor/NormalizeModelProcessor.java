@@ -15,22 +15,33 @@
  */
 package ml.shifu.shifu.core.processor;
 
+import java.io.BufferedWriter;
+import java.io.ByteArrayInputStream;
+import java.io.DataInputStream;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Scanner;
+import java.util.SortedMap;
+import java.util.TreeMap;
+import java.util.Map.Entry;
 
 import ml.shifu.guagua.hadoop.util.HDPUtils;
 import ml.shifu.guagua.mapreduce.GuaguaMapReduceConstants;
 import ml.shifu.guagua.util.NumberFormatUtils;
+import ml.shifu.guagua.util.ReflectionUtils;
 import ml.shifu.shifu.actor.AkkaSystemExecutor;
+import ml.shifu.shifu.container.obj.ColumnConfig;
+import ml.shifu.shifu.container.obj.ColumnConfig.ColumnFlag;
 import ml.shifu.shifu.container.obj.ModelNormalizeConf.Correlation;
 import ml.shifu.shifu.container.obj.ModelNormalizeConf.NormType;
 import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
 import ml.shifu.shifu.core.correlation.CorrelationMapper;
+import ml.shifu.shifu.core.correlation.CorrelationMultithreadedMapper;
 import ml.shifu.shifu.core.correlation.CorrelationReducer;
 import ml.shifu.shifu.core.correlation.CorrelationWritable;
 import ml.shifu.shifu.core.dtrain.nn.NNConstants;
@@ -48,6 +59,7 @@ import ml.shifu.shifu.util.Environment;
 import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.collections.Predicate;
 import org.apache.commons.compress.compressors.bzip2.BZip2CompressorInputStream;
+import org.apache.commons.io.IOUtils;
 import org.apache.commons.jexl2.JexlException;
 import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.conf.Configuration;
@@ -57,7 +69,6 @@ import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
-import org.apache.hadoop.mapreduce.lib.map.MultithreadedMapper;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.mapreduce.lib.output.TextOutputFormat;
 import org.apache.hadoop.util.GenericOptionsParser;
@@ -105,6 +116,13 @@ public class NormalizeModelProcessor extends BasicModelProcessor implements Proc
                 case DIST:
                 case MAPRED:
                     runPigNormalize();
+
+                    for(ColumnConfig config: columnConfigList) {
+                        config.setCorrArray(null);
+                    }
+
+                    saveColumnConfigList();
+                    syncDataToHdfs(modelConfig.getDataSet().getSource());
 
                     if(isCorrOn()) {
                         runCorrMapReduceJob();
@@ -186,8 +204,10 @@ public class NormalizeModelProcessor extends BasicModelProcessor implements Proc
                         .makeQualified(new Path(super.getPathFinder().getColumnConfigPath(source))).toString());
         conf.set(Constants.SHIFU_MODELSET_SOURCE_TYPE, source.toString());
 
+        // too many data needed to be transfered to reducer, set default completed maps to a smaller one 0.5 to start
+        // copy data in reducer earlier.
         conf.set("mapred.reduce.slowstart.completed.maps",
-                Environment.getProperty("mapred.reduce.slowstart.completed.maps", "0.9"));
+                Environment.getProperty("mapred.reduce.slowstart.completed.maps", "0.5"));
 
         String hdpVersion = HDPUtils.getHdpVersionForHDP224();
         if(StringUtils.isNotBlank(hdpVersion)) {
@@ -209,26 +229,32 @@ public class NormalizeModelProcessor extends BasicModelProcessor implements Proc
             }
         }
 
+        int memoryInContainer = this.columnConfigList.size() > 700 ? ((int) (this.columnConfigList.size() * 1d / 700)) * 2048 + 500
+                : 2048 + 500; // (MB, 500 is buffer)
+
+        conf.set("mapreduce.map.memory.mb", memoryInContainer + "");
+        conf.set(
+                "mapreduce.map.java.opts",
+                "-Xms"
+                        + (memoryInContainer - 500)
+                        + "m -Xmx"
+                        + (memoryInContainer - 500)
+                        + "m -server -XX:MaxPermSize=128M -XX:PermSize=64M -XX:+UseParallelGC -XX:+UseParallelOldGC -XX:ParallelGCThreads=8 -verbose:gc -XX:+PrintGCDetails -XX:+PrintGCTimeStamps");
+
         @SuppressWarnings("deprecation")
         Job job = new Job(conf, "Shifu: Correlation Computing Job : " + this.modelConfig.getModelSetName());
         job.setJarByClass(getClass());
 
-        boolean isMultipleThreading = Boolean.TRUE.toString().equalsIgnoreCase(
-                Environment.getProperty(Constants.SHIFU_CORRELATION_MULTI, "true"));
-        if(isMultipleThreading) {
-            job.setMapperClass(MultithreadedMapper.class);
-            MultithreadedMapper.setMapperClass(job, CorrelationMapper.class);
-            int threads;
-            try {
-                threads = Integer.parseInt(Environment.getProperty(Constants.SHIFU_CORRELATION_MULTI_THREADS, "6"));
-            } catch (Exception e) {
-                log.warn("'shifu.correlation.multi.threads' should be a int value, set default value: {}", 6);
-                threads = 6;
-            }
-            MultithreadedMapper.setNumberOfThreads(job, threads);
-        } else {
-            job.setMapperClass(CorrelationMapper.class);
+        job.setMapperClass(CorrelationMultithreadedMapper.class);
+        CorrelationMultithreadedMapper.setMapperClass(job, CorrelationMapper.class);
+        int threads;
+        try {
+            threads = Integer.parseInt(Environment.getProperty(Constants.SHIFU_CORRELATION_MULTI_THREADS, "6"));
+        } catch (Exception e) {
+            log.warn("'shifu.correlation.multi.threads' should be a int value, set default value: {}", 6);
+            threads = 6;
         }
+        CorrelationMultithreadedMapper.setNumberOfThreads(job, threads);
 
         job.setMapOutputKeyClass(IntWritable.class);
         job.setMapOutputValueClass(CorrelationWritable.class);
@@ -251,7 +277,11 @@ public class NormalizeModelProcessor extends BasicModelProcessor implements Proc
         }
 
         job.setReducerClass(CorrelationReducer.class);
-        job.setNumReduceTasks(1);
+
+        // 3000 features will be 30 reducers, 600 will be 6, much more reducer to avoid data all copied to one reducer
+        // especially when features over 3000, each mapper output is 700M, 400 mapper will be 280G size
+        job.setNumReduceTasks(this.columnConfigList.size() < 50 ? 2 : this.columnConfigList.size() / 50);
+
         job.setOutputKeyClass(IntWritable.class);
         job.setOutputValueClass(Text.class);
         job.setOutputFormatClass(TextOutputFormat.class);
@@ -264,56 +294,168 @@ public class NormalizeModelProcessor extends BasicModelProcessor implements Proc
 
         // submit job
         if(job.waitForCompletion(true)) {
-            setCorrelationResultToColumnConfigList(source, corrPath);
+            dumpCorrelationResult(source, corrPath);
         } else {
             throw new RuntimeException("MapReduce Correlation Computing Job failed.");
         }
     }
 
-    private void setCorrelationResultToColumnConfigList(SourceType source, String corrPath) throws IOException {
+    private void dumpCorrelationResult(SourceType source, String corrPath) throws IOException {
         String outputFilePattern = corrPath + Path.SEPARATOR + "part-*";
         if(!ShifuFileUtils.isFileExists(outputFilePattern, source)) {
             throw new RuntimeException("Correlation computing output file not exist.");
         }
 
-        List<Scanner> scanners = null;
-        try {
-            // here only works for 1 reducer
-            FileStatus[] globStatus = ShifuFileUtils.getFileSystemBySourceType(source).globStatus(
-                    new Path(outputFilePattern));
-            if(globStatus == null || globStatus.length == 0) {
-                throw new RuntimeException("Correlation computing output file not exist.");
-            }
-            scanners = ShifuFileUtils.getDataScanners(globStatus[0].getPath().toString(), source);
-            Scanner scanner = scanners.get(0);
-            String str = null;
-            while(scanner.hasNext()) {
-                str = scanner.nextLine().trim();
-                if(str.contains(Constants.TAB_STR)) {
-                    String[] splits = str.split(Constants.TAB_STR);
-                    String corrStr = splits[1];
-                    List<Double> dValues = getDoubleArray(CommonUtils.split(corrStr.substring(1, corrStr.length() - 1),
-                            ","));
-                    super.columnConfigList.get(Integer.valueOf(splits[0])).setCorrArray(dValues);
-                }
-            }
-        } finally {
-            if(scanners != null) {
-                for(Scanner scanner: scanners) {
-                    if(scanner != null) {
-                        scanner.close();
+        SortedMap<Integer, CorrelationWritable> corrMap = new TreeMap<Integer, CorrelationWritable>();
+        FileStatus[] globStatus = ShifuFileUtils.getFileSystemBySourceType(source).globStatus(
+                new Path(outputFilePattern));
+        if(globStatus == null || globStatus.length == 0) {
+            throw new RuntimeException("Correlation computing output file not exist.");
+        }
+        for(FileStatus fileStatus: globStatus) {
+            List<Scanner> scanners = ShifuFileUtils.getDataScanners(fileStatus.getPath().toString(), source);
+            for(Scanner scanner: scanners) {
+                while(scanner.hasNext()) {
+                    String str = scanner.nextLine().trim();
+                    if(str.contains(Constants.TAB_STR)) {
+                        String[] splits = str.split(Constants.TAB_STR);
+                        String corrStr = splits[1];
+                        int columnIndex = Integer.parseInt(splits[0].trim());
+                        corrMap.put(columnIndex, bytesToObject(Base64.decodeBase64(corrStr.getBytes("utf-8"))));
                     }
                 }
             }
+            closeScanners(scanners);
+        }
+
+        String localCorrelationCsv = super.pathFinder.getPathBySourceType("correlation.csv", SourceType.LOCAL);
+        ShifuFileUtils.createFileIfNotExists(localCorrelationCsv, SourceType.LOCAL);
+        BufferedWriter writer = null;
+        try {
+            writer = ShifuFileUtils.getWriter(localCorrelationCsv, SourceType.LOCAL);
+            writer.write(getColumnIndexes());
+            writer.newLine();
+            writer.write(getColumnNames());
+            writer.newLine();
+
+            for(Entry<Integer, CorrelationWritable> entry: corrMap.entrySet()) {
+                ColumnConfig xColumnConfig = this.columnConfigList.get(entry.getKey());
+                if(xColumnConfig.getColumnFlag() == ColumnFlag.Meta) {
+                    continue;
+                }
+                CorrelationWritable xCw = corrMap.get(entry.getKey());
+                double[] corrArray = new double[this.columnConfigList.size()];
+                for(int i = 0; i < corrArray.length; i++) {
+                    ColumnConfig yColumnConfig = this.columnConfigList.get(i);
+                    if(yColumnConfig.getColumnFlag() == ColumnFlag.Meta) {
+                        continue;
+                    }
+                    CorrelationWritable yCw = corrMap.get(i);
+                    if(entry.getKey() > i) {
+                        double[] reverseDoubleArray = this.columnConfigList.get(i).getCorrArray();
+                        if(reverseDoubleArray != null) {
+                            corrArray[i] = reverseDoubleArray[entry.getKey()];
+                        } else {
+                            corrArray[i] = 0d;
+                        }
+                        // not compute all, only up-right matrix are computed, such case, just get [i, j] from [j, i]
+                        continue;
+                    }
+
+                    if(this.modelConfig.getNormalize().getCorrelation() == Correlation.Pearson) {
+                        // Count*Sum(X*Y) - SUM(X)*SUM(Y)
+                        double numerator = xCw.getAdjustCount()[i] * xCw.getXySum()[i] - xCw.getAdjustSum()[i]
+                                * yCw.getAdjustSum()[i];
+                        // Math.sqrt ( COUNT * SUM(X2) - SUM(X) * SUM(X) ) * Math.sqrt ( COUNT * SUM(Y2) - SUM(Y) *
+                        // SUM(Y) )
+                        double denominator1 = Math.sqrt(xCw.getAdjustCount()[i] * xCw.getAdjustSumSquare()[i]
+                                - xCw.getAdjustSum()[i] * xCw.getAdjustSum()[i]);
+                        double denominator2 = Math.sqrt(yCw.getAdjustCount()[i] * yCw.getAdjustSumSquare()[i]
+                                - yCw.getAdjustSum()[i] * yCw.getAdjustSum()[i]);
+                        if(Double.compare(denominator1, Double.valueOf(0d)) == 0
+                                || Double.compare(denominator2, Double.valueOf(0d)) == 0) {
+                            corrArray[i] = 0d;
+                        } else {
+                            corrArray[i] = numerator / (denominator1 * denominator2);
+                        }
+                    } else if(this.modelConfig.getNormalize().getCorrelation() == Correlation.NormPearson) {
+                        // Count*Sum(X*Y) - SUM(X)*SUM(Y)
+                        double numerator = xCw.getCount() * xCw.getXySum()[i] - xCw.getSum() * yCw.getSum();
+                        // Math.sqrt ( COUNT * SUM(X2) - SUM(X) * SUM(X) ) * Math.sqrt ( COUNT * SUM(Y2) - SUM(Y) *
+                        // SUM(Y) )
+                        double denominator1 = Math.sqrt(xCw.getCount() * xCw.getSumSquare() - xCw.getSum()
+                                * xCw.getSum());
+                        double denominator2 = Math.sqrt(yCw.getCount() * yCw.getSumSquare() - yCw.getSum()
+                                * yCw.getSum());
+                        if(Double.compare(denominator1, Double.valueOf(0d)) == 0
+                                || Double.compare(denominator2, Double.valueOf(0d)) == 0) {
+                            corrArray[i] = 0d;
+                        } else {
+                            corrArray[i] = numerator / (denominator1 * denominator2);
+                        }
+                    }
+                }
+                this.columnConfigList.get(entry.getKey()).setCorrArray(corrArray);
+                String corrStr = Arrays.toString(corrArray);
+                String adjustCorrStr = corrStr.substring(1, corrStr.length() - 1);
+                writer.write(entry.getKey() + "," + this.columnConfigList.get(entry.getKey()).getColumnName() + ","
+                        + adjustCorrStr);
+                writer.newLine();
+            }
+            log.info("Please find corrlation csv file in local {}.", localCorrelationCsv);
+        } finally {
+            IOUtils.closeQuietly(writer);
         }
     }
 
-    private List<Double> getDoubleArray(String[] units) {
-        List<Double> dValues = new ArrayList<Double>(units.length);
-        for(int i = 0; i < units.length; i++) {
-            dValues.add(NumberFormatUtils.getDouble(units[i].trim(), 0d));
+    /**
+     * De-serialize from bytes to object. One should provide the class name before de-serializing the object.
+     * 
+     * @throws NullPointerException
+     *             if className or data is null.
+     * @throws RuntimeException
+     *             if any io exception or other reflection exception.
+     */
+    public CorrelationWritable bytesToObject(byte[] data) {
+        if(data == null) {
+            throw new NullPointerException(String.format(
+                    "data and className should not be null. data:%s, className:%s", Arrays.toString(data)));
         }
-        return dValues;
+        CorrelationWritable result = (CorrelationWritable) ReflectionUtils.newInstance(CorrelationWritable.class
+                .getName());
+        DataInputStream dataIn = null;
+        try {
+            ByteArrayInputStream in = new ByteArrayInputStream(data);
+            dataIn = new DataInputStream(in);
+            result.readFields(dataIn);
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        } finally {
+            if(dataIn != null) {
+                try {
+                    dataIn.close();
+                } catch (IOException e) {
+                    throw new RuntimeException(e);
+                }
+            }
+        }
+        return result;
+    }
+
+    private String getColumnIndexes() {
+        StringBuilder header = new StringBuilder("ColumnIndex,");
+        for(ColumnConfig config: columnConfigList) {
+            header.append(',').append(config.getColumnNum());
+        }
+        return header.toString();
+    }
+
+    private String getColumnNames() {
+        StringBuilder header = new StringBuilder(",ColumnName");
+        for(ColumnConfig config: columnConfigList) {
+            header.append(',').append(config.getColumnName());
+        }
+        return header.toString();
     }
 
     /**
@@ -361,16 +503,16 @@ public class NormalizeModelProcessor extends BasicModelProcessor implements Proc
     }
 
     /**
-     * running pig normalize process
+     * Running pig normalize process
      * 
      * @throws IOException
+     *             any IO exception.
      */
     @SuppressWarnings("deprecation")
     private void runPigNormalize() throws IOException {
         SourceType sourceType = modelConfig.getDataSet().getSource();
 
         ShifuFileUtils.deleteFile(pathFinder.getNormalizedDataPath(), sourceType);
-        ShifuFileUtils.deleteFile(pathFinder.getNormalizedValidationDataPath(), sourceType);
         ShifuFileUtils.deleteFile(pathFinder.getSelectedRawDataPath(), sourceType);
 
         Map<String, String> paramsMap = new HashMap<String, String>();
@@ -425,6 +567,7 @@ public class NormalizeModelProcessor extends BasicModelProcessor implements Proc
             }
 
             if(StringUtils.isNotBlank(modelConfig.getValidationDataSetRawPath())) {
+                ShifuFileUtils.deleteFile(pathFinder.getNormalizedValidationDataPath(), sourceType);
                 paramsMap.put(Constants.IS_COMPRESS, "false");
                 paramsMap.put(Constants.PATH_RAW_DATA, modelConfig.getValidationDataSetRawPath());
                 paramsMap.put(Constants.PATH_NORMALIZED_DATA, pathFinder.getNormalizedValidationDataPath());

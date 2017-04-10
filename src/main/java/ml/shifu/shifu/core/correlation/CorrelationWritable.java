@@ -289,24 +289,55 @@ public class CorrelationWritable implements Writable {
         for(int i = 0; i < length; i++) {
             this.yySum[i] = in.readDouble();
         }
-        
+
         length = in.readInt();
         this.adjustCount = new double[length];
         for(int i = 0; i < length; i++) {
             this.adjustCount[i] = in.readDouble();
         }
-        
+
         length = in.readInt();
         this.adjustSum = new double[length];
         for(int i = 0; i < length; i++) {
             this.adjustSum[i] = in.readDouble();
         }
-        
+
         length = in.readInt();
         this.adjustSumSquare = new double[length];
         for(int i = 0; i < length; i++) {
             this.adjustSumSquare[i] = in.readDouble();
         }
+    }
+
+    public CorrelationWritable combine(CorrelationWritable from) {
+        this.sum += from.sum;
+        this.sumSquare += from.sumSquare;
+        this.count += from.count;
+
+        for(int i = 0; i < xySum.length; i++) {
+            this.xySum[i] += from.xySum[i];
+        }
+
+        for(int i = 0; i < xxSum.length; i++) {
+            this.xxSum[i] += from.xxSum[i];
+        }
+
+        for(int i = 0; i < yySum.length; i++) {
+            this.yySum[i] += from.yySum[i];
+        }
+
+        for(int i = 0; i < adjustCount.length; i++) {
+            this.adjustCount[i] += from.adjustCount[i];
+        }
+
+        for(int i = 0; i < adjustSum.length; i++) {
+            this.adjustSum[i] += from.adjustSum[i];
+        }
+
+        for(int i = 0; i < adjustSumSquare.length; i++) {
+            this.adjustSumSquare[i] += from.adjustSumSquare[i];
+        }
+        return this;
     }
 
     /*
@@ -317,7 +348,10 @@ public class CorrelationWritable implements Writable {
     @Override
     public String toString() {
         return "CorrelationWritable [columnIndex=" + columnIndex + ", sum=" + sum + ", sumSquare=" + sumSquare
-                + ", count=" + count + ", xySum=" + Arrays.toString(xySum) + "]";
+                + ", count=" + count + ", xySum=" + Arrays.toString(xySum) + ", xxSum=" + Arrays.toString(xxSum)
+                + ", yySum=" + Arrays.toString(yySum) + ", adjustCount=" + Arrays.toString(adjustCount)
+                + ", adjustSum=" + Arrays.toString(adjustSum) + ", adjustSumSquare=" + Arrays.toString(adjustSumSquare)
+                + "]";
     }
 
 }
