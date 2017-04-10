@@ -41,8 +41,7 @@ public class FullScoreUDF extends AbstractTrainerUDF<Tuple> {
             String delimiter) throws Exception {
         super(source, pathModelConfig, pathColumnConfig);
 
-        List<BasicML> models = CommonUtils.loadBasicModels(modelConfig, this.columnConfigList, null,
-                SourceType.valueOf(source));
+        List<BasicML> models = CommonUtils.loadBasicModels(modelConfig, null, SourceType.valueOf(source));
         this.header = CommonUtils.getHeaders(pathHeader, delimiter, SourceType.valueOf(source));
         modelRunner = new ModelRunner(modelConfig, columnConfigList, this.header, modelConfig.getDataSetDelimiter(),
                 models);

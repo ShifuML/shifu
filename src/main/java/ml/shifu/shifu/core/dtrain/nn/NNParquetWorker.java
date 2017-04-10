@@ -182,22 +182,31 @@ public class NNParquetWorker extends AbstractNNWorker<Tuple> {
             index += 1;
         }
 
-        // if only sample negative, no matter bagging or replacement, do sampling here.
-        if(modelConfig.getTrain().getSampleNegOnly() // sample negative enabled
-                && (modelConfig.isRegression() || (modelConfig.isClassification() && modelConfig.getTrain()
+        // sample negative only logic here
+        if(modelConfig.getTrain().getSampleNegOnly()) {
+            if(this.modelConfig.isFixInitialInput()) {
+                // if fixInitialInput, sample hashcode in 1-sampleRate range out if negative records
+                int startHashCode = (100 / this.modelConfig.getBaggingNum()) * this.trainerId;
+                // here BaggingSampleRate means how many data will be used in training and validation, if it is 0.8, we
+                // should take 1-0.8 to check endHashCode
+                int endHashCode = startHashCode
+                        + Double.valueOf((1d - this.modelConfig.getBaggingSampleRate()) * 100).intValue();
+                if((modelConfig.isRegression() || (modelConfig.isClassification() && modelConfig.getTrain()
                         .isOneVsAll())) // regression or onevsall
-                && Double.compare(ideal[0] + 0.01d, 0d) == 0 // negative record
-                && (!this.modelConfig.isFixInitialInput() && Double.compare(Math.random(),
-                        this.modelConfig.getBaggingSampleRate()) >= 0)) {
-            return;
-        }
-        if(modelConfig.getTrain().getSampleNegOnly()// sample negative enabled
-                && (modelConfig.isRegression() || (modelConfig.isClassification() && modelConfig.getTrain()
-                        .isOneVsAll()))// regression or onevsall
-                && (Double.compare(ideal[0] + 0.01d, 0d) == 0 // negative record
-                        && this.modelConfig.isFixInitialInput() && hashcode % 100 >= Double.valueOf(
-                        this.modelConfig.getBaggingSampleRate() * 100).longValue())) {
-            return;
+                        && (int) (ideal[0] + 0.01d) == 0 // negative record
+                        && isInRange(hashcode, startHashCode, endHashCode)) {
+                    return;
+                }
+            } else {
+                // if not fixed initial input, and for regression or onevsall multiple classification (regression also).
+                // if negative record
+                if((modelConfig.isRegression() || (modelConfig.isClassification() && modelConfig.getTrain()
+                        .isOneVsAll())) // regression or onevsall
+                        && (int) (ideal[0] + 0.01d) == 0 // negative record
+                        && Double.compare(Math.random(), this.modelConfig.getBaggingSampleRate()) >= 0) {
+                    return;
+                }
+            }
         }
 
         FloatMLDataPair pair = new BasicFloatMLDataPair(new BasicFloatMLData(inputs), new BasicFloatMLData(ideal));

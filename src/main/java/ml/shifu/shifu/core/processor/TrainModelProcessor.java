@@ -167,7 +167,7 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
     }
 
     /**
-     * run training process
+     * Training process entry point.
      */
     @Override
     public int run() throws Exception {
@@ -301,7 +301,7 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
                 throw new RuntimeException(e);
             }
 
-            if ( this.isToShuffle ) {
+            if(this.isToShuffle) {
                 MapReduceShuffle shuffler = new MapReduceShuffle(this.modelConfig);
                 try {
                     shuffler.run(pathFinder.getCleanedDataPath());
@@ -379,7 +379,7 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
     }
 
     /**
-     * get the trainer list
+     * Get the trainer list
      * 
      * @return the trainer list
      */
@@ -388,7 +388,7 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
     }
 
     /**
-     * get the trainer
+     * Get the trainer
      * 
      * @param index
      *            the index of trainer
@@ -746,7 +746,11 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
                 BufferedReader reader = null;
                 try {
                     reader = ShifuFileUtils.getReader(valErrPath.toString(), sourceType);
-                    String valErrStr = reader.readLine().toString();
+                    String line = reader.readLine();
+                    if(line == null) {
+                        continue;
+                    }
+                    String valErrStr = line.toString();
                     LOG.debug("valErrStr is {}", valErrStr);
                     valErr = Double.valueOf(valErrStr);
                 } catch (NumberFormatException e) {
@@ -781,7 +785,11 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
                 BufferedReader reader = null;
                 try {
                     reader = ShifuFileUtils.getReader(valErrPath.toString(), sourceType);
-                    String valErrStr = reader.readLine().toString();
+                    String line = reader.readLine();
+                    if(line == null) {
+                        continue;
+                    }
+                    String valErrStr = line.toString();
                     LOG.debug("valErrStr is {}", valErrStr);
                     valErr = Double.valueOf(valErrStr);
                     valErrs.add(valErr);
@@ -827,8 +835,7 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
                 LOG.warn("Model input and output settings are not consistent with input and output columns settings, "
                         + "model training will start from scratch.");
             } else if(CommonConstants.GBT_ALG_NAME.equalsIgnoreCase(modelConfig.getAlgorithm())) {
-                TreeModel model = (TreeModel) CommonUtils.loadModel(this.modelConfig, this.columnConfigList, modelPath,
-                        fileSystem);
+                TreeModel model = (TreeModel) CommonUtils.loadModel(this.modelConfig, modelPath, fileSystem);
 
                 if(!model.getAlgorithm().equalsIgnoreCase(modelConfig.getAlgorithm())) {
                     finalContinuous = 0;
@@ -861,8 +868,7 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
     }
 
     private boolean inputOutputModelCheckSuccess(FileSystem fileSystem, Path modelPath) throws IOException {
-        MLInputOutput model = (MLInputOutput) CommonUtils.loadModel(this.modelConfig, this.columnConfigList, modelPath,
-                fileSystem);
+        MLInputOutput model = (MLInputOutput) CommonUtils.loadModel(this.modelConfig, modelPath, fileSystem);
         int[] outputCandidateCounts = DTrainUtils.getInputOutputCandidateCounts(getColumnConfigList());
         return model.getInputCount() == outputCandidateCounts[0] && model.getOutputCount() == outputCandidateCounts[1];
     }
@@ -996,7 +1002,7 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
         int numTrainEpoches = super.getModelConfig().getTrain().getNumTrainEpochs();
         // only for NN varselect, use half of epochs for sensitivity analysis
         // if for gs mode, half of iterations are used
-        LOG.info("this.isForVarSelect() - {}, isGsMode - {}", this.isForVarSelect(), isGsMode);
+        LOG.debug("this.isForVarSelect() - {}, isGsMode - {}", this.isForVarSelect(), isGsMode);
         if(NNConstants.NN_ALG_NAME.equalsIgnoreCase(alg) && (this.isForVarSelect() || isGsMode)
                 && numTrainEpoches >= VAR_SELECT_TRAINING_DECAY_EPOCHES_THRESHOLD) {
             numTrainEpoches = numTrainEpoches / 2;
@@ -1126,7 +1132,7 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
     private void copyModelToLocal(String modelName, Path modelPath, SourceType sourceType) throws IOException {
         if(!this.isDryTrain()) {
             ShifuFileUtils.getFileSystemBySourceType(sourceType).copyToLocalFile(modelPath,
-                    new Path(Constants.MODELS, modelName));
+                    new Path(super.getPathFinder().getModelsPath(SourceType.LOCAL), modelName));
         }
     }
 
@@ -1293,6 +1299,11 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
         }
 
         private long dumpFromOffset(Path item, long offset) throws IOException {
+            if(!HDFSUtils.getFS().exists(item)) {
+                // if file is not there, just return initial offset and wait for it is created
+                return 0L;
+            }
+
             FSDataInputStream in;
             try {
                 in = HDFSUtils.getFS().open(item);

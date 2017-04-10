@@ -138,7 +138,6 @@
                 <include>*:scala-library:*</include>
                 <include>*:shifu:*</include>
                 <include>*:slf4j-api:*</include>
-                <include>*:slf4j-log4j12:*</include>
                 <include>*:stringtemplate:*</include>
                 <include>*:xmlenc:*</include>
                 <include>*:xz:*</include>
@@ -159,6 +158,12 @@
                 <include>*:hadoop-common:*</include>
                 <include>*:commons-configuration:*</include>
                 <include>*:hadoop-auth:*</include>
+            </includes>
+        </dependencySet>
+        <dependencySet>
+            <outputDirectory>/slfloglib</outputDirectory>
+            <includes>
+                <include>*:slf4j-log4j12:*</include>
             </includes>
         </dependencySet>
     </dependencySets>

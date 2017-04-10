@@ -22,8 +22,9 @@ import java.io.IOException;
 import ml.shifu.guagua.io.Bytable;
 
 /**
- * Predict wrappers classification and regression result in {@link #predict}, for classification {@link #classValue} means the
- * probability, for regression no meaning for {@link #classValue}
+ * {@link Predict} wrappers classification and regression result in {@link #predict}, for classification
+ * {@link #classValue} denotes the classified category, for regression no meaning for {@link #classValue},
+ * {@link #predict} is the probability used.
  * 
  * @author Zhang David (pengzhang@paypal.com)
  */
@@ -35,7 +36,7 @@ public class Predict implements Bytable {
     private double predict;
 
     /**
-     * Classification result, only for classification. Byte is ok for index of classes. No more than 127 classes
+     * Classification result, only for classification. 'byte' is ok for index of classes. No more than 127 classes.
      */
     private byte classValue;
 

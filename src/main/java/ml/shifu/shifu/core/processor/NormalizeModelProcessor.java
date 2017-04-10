@@ -390,7 +390,7 @@ public class NormalizeModelProcessor extends BasicModelProcessor implements Proc
             } else {
                 if(modelConfig.getBasic().getPostTrainOn()) {
                     // this condition is for comment, no matter post train enabled or not, only norm results will be
-                    // stored since new post train solution
+                    // stored since new post train solution no need to prepare data
                 }
                 normPigPath = pathFinder.getScriptPath("scripts/Normalize.pig");
             }

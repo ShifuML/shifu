@@ -18,7 +18,7 @@ recordCntPerMessage=100000
 mapreduce.job.max.split.locations=5000
 
 # disable map output compress because some issue for snappy config in our clusters
-mapreduce.map.output.compress=false
+# mapreduce.map.output.compress=false
 
 # how to control how many mappers when training models
 # If there are too many small files after normalization, set it to true
@@ -68,3 +68,12 @@ guagua.min.workers.ratio=0.95
 
 # the precision of model scores
 # shifu.score.scale = 1000
+
+-## enable pig combination to save mappers
+ pig.splitCombination=true
+ pig.maxCombinedSplitSize=268435456
+
+## specified reduce memory to avoid default memory too big or too small
+mapreduce.reduce.memory.mb=2400
+mapreduce.reduce.java.opts=-Xms2G -Xmx2G
+

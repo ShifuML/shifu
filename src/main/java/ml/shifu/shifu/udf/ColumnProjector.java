@@ -15,12 +15,26 @@
  */
 package ml.shifu.shifu.udf;
 
+import java.io.BufferedWriter;
+import java.io.File;
 import java.io.IOException;
 import ml.shifu.shifu.container.obj.EvalConfig;
+import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
+import ml.shifu.shifu.fs.ShifuFileUtils;
 import ml.shifu.shifu.util.CommonUtils;
+import ml.shifu.shifu.util.Constants;
 
 import org.apache.commons.lang.StringUtils;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
+import org.apache.pig.data.DataType;
 import org.apache.pig.data.Tuple;
+import org.apache.pig.data.TupleFactory;
+import org.apache.pig.impl.logicalLayer.schema.Schema;
+import org.apache.pig.impl.logicalLayer.schema.Schema.FieldSchema;
+import org.apache.pig.impl.util.UDFContext;
+import org.apache.pig.tools.pigstats.PigStatusReporter;
 
 /**
  * TODO
@@ -29,19 +43,24 @@ public class ColumnProjector extends AbstractTrainerUDF<Tuple> {
 
     private EvalConfig evalConfig;
 
-    @SuppressWarnings("unused")
     private String scoreMetaColumn;
 
     private String[] headers;
-    
-    @SuppressWarnings("unused")
+
     private int targetColumnIndex = -1;
-    
-    @SuppressWarnings("unused")
+
     private int weightColumnIndex = -1;
-    
-    @SuppressWarnings("unused")
+
     private int scoreMetaColumnIndex = -1;
+
+    private double maxScore = Double.MIN_VALUE;
+
+    private double minScore = Double.MAX_VALUE;
+
+    /**
+     * A simple weight exception validation: if over 5000 throw exceptions
+     */
+    private int weightExceptions;
 
     public ColumnProjector(String source, String pathModelConfig, String pathColumnConfig) throws IOException {
         super(source, pathModelConfig, pathColumnConfig);
@@ -52,7 +71,7 @@ public class ColumnProjector extends AbstractTrainerUDF<Tuple> {
         super(source, pathModelConfig, pathColumnConfig);
         this.evalConfig = modelConfig.getEvalConfigByName(evalSetName);
         this.scoreMetaColumn = columnName;
-        
+
         // create model runner
         if(StringUtils.isNotBlank(evalConfig.getDataSet().getHeaderPath())) {
             this.headers = CommonUtils.getHeaders(evalConfig.getDataSet().getHeaderPath(), evalConfig.getDataSet()
@@ -79,17 +98,154 @@ public class ColumnProjector extends AbstractTrainerUDF<Tuple> {
                 }
             }
         }
-        
+
         for(int i = 0; i < this.headers.length; i++) {
-//            if()
-            
+            if(this.headers[i].equals(evalConfig.getDataSet().getTargetColumnName())) {
+                this.targetColumnIndex = i;
+            }
+            if(this.headers[i].equals(this.scoreMetaColumn)) {
+                this.scoreMetaColumnIndex = i;
+            }
+            if(StringUtils.isNotBlank(evalConfig.getDataSet().getWeightColumnName())
+                    && this.headers[i].equals(evalConfig.getDataSet().getWeightColumnName())) {
+                this.weightColumnIndex = i;
+            }
+        }
+    }
+
+    @SuppressWarnings("deprecation")
+    @Override
+    public Tuple exec(Tuple input) throws IOException {
+        Tuple tuple = TupleFactory.getInstance().newTuple(3);
+        String tag = input.get(targetColumnIndex).toString();
+        tuple.set(0, tag);
+        double score = 0;
+        try {
+            score = Double.parseDouble(input.get(scoreMetaColumnIndex).toString());
+        } catch (Exception e) {
+            if(isPigEnabled(Constants.SHIFU_GROUP_COUNTER, "BAD_META_SCORE")) {
+                PigStatusReporter.getInstance().getCounter(Constants.SHIFU_GROUP_COUNTER, "BAD_META_SCORE")
+                        .increment(1);
+            }
+        }
+        if(score > maxScore) {
+            maxScore = score;
+        }
+        if(score < minScore) {
+            minScore = score;
+        }
+
+        tuple.set(1, score);
+        String weight = "1";
+        if(weightColumnIndex != -1) {
+            weight = input.get(weightColumnIndex).toString();
+        }
+        tuple.set(2, weight);
+
+        incrementTagCounters(tag, weight);
+        return tuple;
+    }
+
+    @SuppressWarnings("deprecation")
+    private void incrementTagCounters(String tag, String weight) {
+        if(tag == null || weight == null) {
+            log.warn("tag is empty " + tag + " or weight is empty " + weight);
+            return;
+        }
+        double dWeight = 1.0;
+        if(StringUtils.isNotBlank(weight)) {
+            try {
+                dWeight = Double.parseDouble(weight);
+            } catch (Exception e) {
+                if(isPigEnabled(Constants.SHIFU_GROUP_COUNTER, "weight_exceptions")) {
+                    PigStatusReporter.getInstance().getCounter(Constants.SHIFU_GROUP_COUNTER, "weight_exceptions")
+                            .increment(1);
+                }
+                weightExceptions += 1;
+                if(weightExceptions > 5000) {
+                    throw new IllegalStateException(
+                            "Please check weight column in eval, exceptional weight count is over 5000");
+                }
+            }
+        }
+        long weightLong = (long) (dWeight * Constants.EVAL_COUNTER_WEIGHT_SCALE);
+
+        if(isPigEnabled(Constants.SHIFU_GROUP_COUNTER, Constants.COUNTER_RECORDS)) {
+            PigStatusReporter.getInstance().getCounter(Constants.SHIFU_GROUP_COUNTER, Constants.COUNTER_RECORDS)
+                    .increment(1);
+        }
+
+        if(posTagSet.contains(tag)) {
+            if(isPigEnabled(Constants.SHIFU_GROUP_COUNTER, Constants.COUNTER_POSTAGS)) {
+                PigStatusReporter.getInstance().getCounter(Constants.SHIFU_GROUP_COUNTER, Constants.COUNTER_POSTAGS)
+                        .increment(1);
+            }
+            if(isPigEnabled(Constants.SHIFU_GROUP_COUNTER, Constants.COUNTER_WPOSTAGS)) {
+                PigStatusReporter.getInstance().getCounter(Constants.SHIFU_GROUP_COUNTER, Constants.COUNTER_WPOSTAGS)
+                        .increment(weightLong);
+            }
+        }
+
+        if(negTagSet.contains(tag)) {
+            if(isPigEnabled(Constants.SHIFU_GROUP_COUNTER, Constants.COUNTER_NEGTAGS)) {
+                PigStatusReporter.getInstance().getCounter(Constants.SHIFU_GROUP_COUNTER, Constants.COUNTER_NEGTAGS)
+                        .increment(1);
+            }
+            if(isPigEnabled(Constants.SHIFU_GROUP_COUNTER, Constants.COUNTER_WNEGTAGS)) {
+                PigStatusReporter.getInstance().getCounter(Constants.SHIFU_GROUP_COUNTER, Constants.COUNTER_WNEGTAGS)
+                        .increment(weightLong);
+            }
         }
     }
 
     @Override
-    public Tuple exec(Tuple input) throws IOException {
-        //
-        return null;
+    public void finish() {
+        if(modelConfig.isClassification()) {
+            return;
+        }
+
+        // only for regression, in some cases like gbdt, it's regression score is not in [0,1], to do eval performance,
+        // max and min score should be collected to set bounds.
+        BufferedWriter writer = null;
+        Configuration jobConf = UDFContext.getUDFContext().getJobConf();
+        String scoreOutput = jobConf.get(Constants.SHIFU_EVAL_MAXMIN_SCORE_OUTPUT);
+
+        log.debug("shifu.eval.maxmin.score.output is {}, job id is {}, task id is {}, attempt id is {}" + scoreOutput
+                + " " + jobConf.get("mapreduce.job.id") + " " + jobConf.get("mapreduce.task.id") + " "
+                + jobConf.get("mapreduce.task.partition") + " " + jobConf.get("mapreduce.task.attempt.id"));
+
+        try {
+            FileSystem fileSystem = FileSystem.get(jobConf);
+            fileSystem.mkdirs(new Path(scoreOutput));
+            String taskMaxMinScoreFile = scoreOutput + File.separator + "part-"
+                    + jobConf.get("mapreduce.task.attempt.id");
+            writer = ShifuFileUtils.getWriter(taskMaxMinScoreFile, SourceType.HDFS);
+            writer.write(maxScore + "," + minScore);
+        } catch (IOException e) {
+            log.error("error in finish", e);
+        } finally {
+            if(writer != null) {
+                try {
+                    writer.close();
+                } catch (IOException ignore) {
+                }
+            }
+        }
+    }
+
+    @Override
+    public Schema outputSchema(Schema input) {
+        try {
+            Schema tupleSchema = new Schema();
+            tupleSchema.add(new FieldSchema("target", DataType.CHARARRAY));
+            tupleSchema.add(new FieldSchema(scoreMetaColumn, DataType.DOUBLE));
+            tupleSchema.add(new FieldSchema("weight", DataType.CHARARRAY));
+
+            return new Schema(new Schema.FieldSchema("score", tupleSchema, DataType.TUPLE));
+        } catch (IOException e) {
+            log.error("Error in outputSchema", e);
+            return null;
+        }
     }
 
 }

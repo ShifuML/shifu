@@ -44,7 +44,7 @@ public class CsvFile implements Iterable<Map<String, String>> {
         return new CvsFileIterator(filePath, delimiter);
     }
 
-    public class CvsFileIterator implements Iterator<Map<String, String>> {
+    public static class CvsFileIterator implements Iterator<Map<String, String>> {
         private String nextLine;
         private BufferedReader reader;
         private boolean isFinished = false;
