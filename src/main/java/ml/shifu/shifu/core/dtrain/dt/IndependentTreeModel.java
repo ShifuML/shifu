@@ -682,6 +682,10 @@ public class IndependentTreeModel {
             for (int i = 0; i < selectedNum; i++) {
                 selectedColumnIndex.add(dis.readInt());
             }
+        } else {
+            for (Map.Entry<Integer, String> entry: columnIndexNameMapping.entrySet()) {
+                selectedColumnIndex.add(entry.getKey());
+            }
         }
 
         // if one vs all, even multiple classification, treated as regression
