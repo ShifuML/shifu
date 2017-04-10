@@ -1,21 +1,4 @@
 /*
- * Copyright [2013-2017] PayPal Software Foundation
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *    http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-package ml.shifu.shifu.core.dtrain.nn;
-
-/*
  * Encog(tm) Core v3.4 - Java Version
  * http://www.heatonresearch.com/encog/
  * https://github.com/encog/encog-java-core
@@ -38,14 +21,16 @@ package ml.shifu.shifu.core.dtrain.nn;
  * and trademarks visit:
  * http://www.heatonresearch.com/copyright
  */
+package ml.shifu.shifu.core.dtrain.nn;
 
 import org.encog.engine.network.activation.ActivationFunction;
 
 /**
- * A ramp activation function. This function has a high and low threshold. If
- * the high threshold is exceeded a fixed value is returned. Likewise, if the
- * low value is exceeded another fixed value is returned.
+ * A ramp activation function. This function has a high and low threshold. If the high threshold is exceeded a fixed
+ * value is returned. Likewise, if the low value is exceeded another fixed value is returned.
  * 
+ * <p>
+ * Copied from Encog 3.4 to avoid upgrading our encog 3.0.
  */
 public class ActivationReLU implements ActivationFunction {
 
@@ -100,7 +85,6 @@ public class ActivationReLU implements ActivationFunction {
                 x[i] = this.params[ActivationReLU.PARAM_RELU_LOW];
             }
         }
-
     }
 
     /**

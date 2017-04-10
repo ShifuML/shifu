@@ -17,13 +17,16 @@ package ml.shifu.shifu.core.correlation;
 
 import java.io.IOException;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.Map.Entry;
 
 import ml.shifu.guagua.util.NumberFormatUtils;
 import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.container.obj.ModelConfig;
+import ml.shifu.shifu.container.obj.ColumnConfig.ColumnFlag;
 import ml.shifu.shifu.container.obj.ModelNormalizeConf.Correlation;
 import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
 import ml.shifu.shifu.core.DataPurifier;
@@ -65,16 +68,6 @@ public class CorrelationMapper extends Mapper<LongWritable, Text, IntWritable, C
     private DataPurifier dataPurifier;
 
     /**
-     * Weight column index.
-     */
-    private int weightedColumnNum = -1;
-
-    /**
-     * Tag column index
-     */
-    private int tagColumnNum = -1;
-
-    /**
      * Output key cache to avoid new operation.
      */
     private IntWritable outputKey;
@@ -84,12 +77,36 @@ public class CorrelationMapper extends Mapper<LongWritable, Text, IntWritable, C
      */
     private Map<Integer, CorrelationWritable> correlationMap;
 
+    /**
+     * Correlation type
+     */
     private Correlation correlation;
+
+    /**
+     * Count in current mapper
+     */
+    private long count;
 
     /**
      * Column Config list read from HDFS
      */
     private List<ColumnConfig> columnConfigList;
+
+    /**
+     * For categorical feature, a map is used to save query time in execution
+     */
+    private Map<Integer, Map<String, Integer>> categoricalIndexMap = new HashMap<Integer, Map<String, Integer>>();
+
+    /**
+     * If compute all pairs (i, j), if false, only computes pairs (i, j) when i >= j
+     */
+    private boolean isComputeAll = false;
+
+    // cache tags in set for search
+    protected Set<String> posTagSet;
+    protected Set<String> negTagSet;
+    protected Set<String> tagSet;
+    private List<Set<String>> tags;
 
     private void loadConfigFiles(final Context context) {
         try {
@@ -104,38 +121,6 @@ public class CorrelationMapper extends Mapper<LongWritable, Text, IntWritable, C
         }
     }
 
-    /**
-     * Load tag weight index field.
-     */
-    private void loadTagWeightNum() {
-        for(ColumnConfig config: this.columnConfigList) {
-            if(config.isTarget()) {
-                this.tagColumnNum = config.getColumnNum();
-                break;
-            }
-        }
-
-        if(this.tagColumnNum == -1) {
-            throw new RuntimeException("No valid target column.");
-        }
-    }
-
-    /**
-     * Load weight column index field.
-     */
-    private void loadWeightColumnNum() {
-        String weightColumnName = this.modelConfig.getDataSet().getWeightColumnName();
-        if(weightColumnName != null && weightColumnName.length() != 0) {
-            for(int i = 0; i < this.columnConfigList.size(); i++) {
-                ColumnConfig config = this.columnConfigList.get(i);
-                if(config.getColumnName().equals(weightColumnName)) {
-                    this.weightedColumnNum = i;
-                    break;
-                }
-            }
-        }
-    }
-
     @Override
     protected void setup(Context context) throws IOException, InterruptedException {
         loadConfigFiles(context);
@@ -144,13 +129,39 @@ public class CorrelationMapper extends Mapper<LongWritable, Text, IntWritable, C
 
         this.dataPurifier = new DataPurifier(this.modelConfig);
 
-        loadWeightColumnNum();
-
-        loadTagWeightNum();
+        this.isComputeAll = Boolean.valueOf(context.getConfiguration().get(Constants.SHIFU_CORRELATION_COMPUTE_ALL,
+                "false"));
 
         this.outputKey = new IntWritable();
         this.correlationMap = new HashMap<Integer, CorrelationWritable>();
         this.correlation = modelConfig.getNormalize().getCorrelation();
+
+        for(ColumnConfig config: columnConfigList) {
+            // set to null to avoid big memory consumption, correlation values are not used, GC will free the memory.
+            config.setCorrArray(null);
+
+            if(config.isCategorical()) {
+                Map<String, Integer> map = new HashMap<String, Integer>();
+                if(config.getBinCategory() != null) {
+                    for(int i = 0; i < config.getBinCategory().size(); i++) {
+                        map.put(config.getBinCategory().get(i), i);
+                    }
+                }
+                this.categoricalIndexMap.put(config.getColumnNum(), map);
+            }
+        }
+
+        if(modelConfig != null && modelConfig.getPosTags() != null) {
+            this.posTagSet = new HashSet<String>(modelConfig.getPosTags());
+        }
+        if(modelConfig != null && modelConfig.getNegTags() != null) {
+            this.negTagSet = new HashSet<String>(modelConfig.getNegTags());
+        }
+        if(modelConfig != null && modelConfig.getFlattenTags() != null) {
+            this.tagSet = new HashSet<String>(modelConfig.getFlattenTags());
+        }
+
+        this.tags = this.modelConfig.getSetTags();
     }
 
     @Override
@@ -169,9 +180,15 @@ public class CorrelationMapper extends Mapper<LongWritable, Text, IntWritable, C
         } else if(correlation == Correlation.NormPearson) {
             dValues = getDoubleArray(CommonUtils.split(valueStr, Constants.DEFAULT_DELIMITER));
         }
+
+        count += 1L;
+        if(count % 2000L == 0) {
+            LOG.info("Current records: {} in thread {}.", count, Thread.currentThread().getName());
+        }
+
         for(int i = 0; i < this.columnConfigList.size(); i++) {
             ColumnConfig columnConfig = this.columnConfigList.get(i);
-            if(columnConfig.isMeta() || columnConfig.isTarget()) {
+            if(columnConfig.getColumnFlag() == ColumnFlag.Meta) {
                 continue;
             }
             CorrelationWritable cw = this.correlationMap.get(i);
@@ -182,7 +199,8 @@ public class CorrelationMapper extends Mapper<LongWritable, Text, IntWritable, C
             cw.setColumnIndex(i);
             cw.setCount(cw.getCount() + 1d);
             cw.setSum(cw.getSum() + dValues[i]);
-            cw.setSumSquare(cw.getSumSquare() + dValues[i] * dValues[i]);
+            double squaredSum = dValues[i] * dValues[i];
+            cw.setSumSquare(cw.getSumSquare() + squaredSum);
             double[] xySum = cw.getXySum();
             if(xySum == null) {
                 xySum = new double[this.columnConfigList.size()];
@@ -217,17 +235,20 @@ public class CorrelationMapper extends Mapper<LongWritable, Text, IntWritable, C
 
             for(int j = 0; j < this.columnConfigList.size(); j++) {
                 ColumnConfig otherColumnConfig = this.columnConfigList.get(j);
-                if(otherColumnConfig.isMeta() || otherColumnConfig.isTarget()) {
+                if(otherColumnConfig.getColumnFlag() == ColumnFlag.Meta) {
                     continue;
                 }
-                if(Double.compare(dValues[i], Double.MIN_VALUE) != 0
-                        && Double.compare(dValues[j], Double.MIN_VALUE) != 0) {
+                if(i > j && !this.isComputeAll) {
+                    continue;
+                }
+                // only do stats on both valid value
+                if(dValues[i] != Double.MIN_VALUE && dValues[j] != Double.MIN_VALUE) {
                     xySum[j] += dValues[i] * dValues[j];
-                    xxSum[j] += dValues[i] * dValues[i];
+                    xxSum[j] += squaredSum;
                     yySum[j] += dValues[j] * dValues[j];
                     adjustCount[j] += 1d;
                     adjustSum[j] += dValues[i];
-                    adjustSumSquare[j] += dValues[i] * dValues[i];
+                    adjustSumSquare[j] += squaredSum;
                 }
             }
         }
@@ -237,30 +258,58 @@ public class CorrelationMapper extends Mapper<LongWritable, Text, IntWritable, C
         double[] dValues = new double[this.columnConfigList.size()];
         for(int i = 0; i < this.columnConfigList.size(); i++) {
             ColumnConfig columnConfig = this.columnConfigList.get(i);
-            if(columnConfig.isMeta() || columnConfig.isTarget()
-                    || columnConfig.getColumnNum() == this.weightedColumnNum) {
+            if(columnConfig.getColumnFlag() == ColumnFlag.Meta) {
+                // only meta columns not in correlation
                 dValues[i] = 0d;
+            } else if(columnConfig.getColumnFlag() == ColumnFlag.Target) {
+                if(this.tagSet.contains(units[i])) {
+                    if(modelConfig.isRegression()) {
+                        if(this.posTagSet.contains(units[i])) {
+                            dValues[i] = 1d;
+                        }
+                        if(this.negTagSet.contains(units[i])) {
+                            dValues[i] = 0d;
+                        }
+                    } else {
+                        int index = -1;
+                        for(int j = 0; j < tags.size(); j++) {
+                            Set<String> tagSet = tags.get(j);
+                            if(tagSet.contains(units[0])) {
+                                index = j;
+                                break;
+                            }
+                        }
+                        dValues[i] = index;
+                    }
+                } else {
+                    // Invalid target
+                    dValues[i] = Double.MIN_VALUE;
+                }
             } else {
                 if(columnConfig.isNumerical()) {
-                    // if missing it is set to MIN_VALUE, then try to skip rows between
-                    dValues[i] = NumberFormatUtils.getDouble(units[i], Double.MIN_VALUE);
+                    // if missing it is set to MIN_VALUE, then try to skip rows with invalid value
+                    if(units[i] == null || units[i].length() == 0) {
+                        // some null values, set it to min value to avoid parsing String to improve performance
+                        dValues[i] = Double.MIN_VALUE;
+                    } else {
+                        dValues[i] = NumberFormatUtils.getDouble(units[i], Double.MIN_VALUE);
+                    }
                 }
                 if(columnConfig.isCategorical()) {
                     if(columnConfig.getBinCategory() == null) {
                         if(System.currentTimeMillis() % 100L == 0) {
-                            LOG.warn("Column "
-                                    + columnConfig.getColumnName()
-                                    + " with null binCategory but is not meta or target column, set to 0d for correlation.");
+                            LOG.warn(
+                                    "Column {} with null binCategory but is not meta or target column, set to 0d for correlation.",
+                                    columnConfig.getColumnName());
                         }
                         dValues[i] = 0d;
                         continue;
                     }
-                    int index = -1;
+                    Integer index = null;
                     if(units[i] != null) {
-                        // TODO use set to replace indexOf
-                        index = columnConfig.getBinCategory().indexOf(units[i]);
+                        index = this.categoricalIndexMap.get(columnConfig.getColumnNum()).get(units[i]);
                     }
-                    if(index == -1) {
+                    if(index == null || index == -1) {
                         dValues[i] = columnConfig.getBinPosRate().get(columnConfig.getBinPosRate().size() - 1);
                     } else {
                         Double binPosRate = columnConfig.getBinPosRate().get(index);
@@ -280,10 +329,16 @@ public class CorrelationMapper extends Mapper<LongWritable, Text, IntWritable, C
         double[] dValues = new double[this.columnConfigList.size()];
         for(int i = 0; i < this.columnConfigList.size(); i++) {
             ColumnConfig columnConfig = this.columnConfigList.get(i);
-            if(columnConfig.isMeta() || columnConfig.isTarget()) {
+            if(columnConfig.getColumnFlag() == ColumnFlag.Meta) {
                 dValues[i] = 0d;
             } else {
-                dValues[i] = NumberFormatUtils.getDouble(units[i], 0d);
+                // if missing it is set to MIN_VALUE, then try to skip rows with invalid value
+                if(units[i] == null || units[i].length() == 0) {
+                    // some null values, set it to min value to avoid parsing String to improve performance
+                    dValues[i] = Double.MIN_VALUE;
+                } else {
+                    dValues[i] = NumberFormatUtils.getDouble(units[i], Double.MIN_VALUE);
+                }
             }
         }
         return dValues;
@@ -294,10 +349,10 @@ public class CorrelationMapper extends Mapper<LongWritable, Text, IntWritable, C
      */
     @Override
     protected void cleanup(Context context) throws IOException, InterruptedException {
+        LOG.info("Final records in such thread of mapper: {}.", count);
         for(Entry<Integer, CorrelationWritable> entry: this.correlationMap.entrySet()) {
             outputKey.set(entry.getKey());
             context.write(outputKey, entry.getValue());
         }
     }
-
 }

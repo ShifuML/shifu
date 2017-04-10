@@ -137,7 +137,6 @@ public class ModelNormalizeConf {
     /**
      * @return the corrlation
      */
-    @JsonIgnore
     public Correlation getCorrelation() {
         return correlation;
     }
@@ -146,7 +145,6 @@ public class ModelNormalizeConf {
      * @param correlation
      *            the correlation to set
      */
-    @JsonProperty
     public void setCorrelation(Correlation correlation) {
         this.correlation = correlation;
     }

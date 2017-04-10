@@ -946,7 +946,7 @@ public final class CommonUtils {
         try {
             FileStatus[] fsArr = fs.listStatus(new Path(modelsPath));
             for(FileStatus fileStatus: fsArr) {
-                if(fileStatus.isDirectory()) {
+                if(fileStatus.isDir()) {
                     ModelSpec modelSpec = loadSubModelSpec(modelConfig, columnConfigList, fileStatus, sourceType,
                             gbtConvertToProb);
                     if(modelSpec != null) {
@@ -987,6 +987,7 @@ public final class CommonUtils {
         return modelSpec;
     }
 
+    @SuppressWarnings("deprecation")
     public static ALGORITHM getModelsAlgAndSpecFiles(FileStatus fileStatus, SourceType sourceType,
             List<FileStatus> modelFileStats) throws IOException {
         assert modelFileStats != null;
@@ -997,7 +998,7 @@ public final class CommonUtils {
         FileStatus[] fileStatsArr = fs.listStatus(fileStatus.getPath());
         if(fileStatsArr != null) {
             for(FileStatus fls: fileStatsArr) {
-                if(!fls.isDirectory()) {
+                if(!fls.isDir()) {
                     String fileName = fls.getPath().getName();
 
                     if(algorithm == null) {
@@ -1020,6 +1021,7 @@ public final class CommonUtils {
         return algorithm;
     }
 
+    @SuppressWarnings("deprecation")
     public static Map<String, Integer> getSubModelsCnt(ModelConfig modelConfig, List<ColumnConfig> columnConfigList,
             EvalConfig evalConfig, SourceType sourceType) throws IOException {
         FileSystem fs = ShifuFileUtils.getFileSystemBySourceType(sourceType);
@@ -1038,7 +1040,7 @@ public final class CommonUtils {
         try {
             FileStatus[] fsArr = fs.listStatus(new Path(modelsPath));
             for(FileStatus fileStatus: fsArr) {
-                if(fileStatus.isDirectory()) {
+                if(fileStatus.isDir()) {
                     List<FileStatus> subModelSpecFiles = new ArrayList<FileStatus>();
                     getModelsAlgAndSpecFiles(fileStatus, sourceType, subModelSpecFiles);
                     if(CollectionUtils.isNotEmpty(subModelSpecFiles)) {

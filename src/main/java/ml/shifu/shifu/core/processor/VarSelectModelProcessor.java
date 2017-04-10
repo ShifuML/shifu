@@ -594,7 +594,7 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
         // Tmp set to false because of some cluster by default use gzip while CombineInputFormat will split gzip file (a
         // bug)
         conf.setBoolean(CombineInputFormat.SHIFU_VS_SPLIT_COMBINABLE, false);
-        conf.setBoolean(FileInputFormat.INPUT_DIR_RECURSIVE, true);
+        conf.setBoolean("mapreduce.input.fileinputformat.input.dir.recursive", true);
 
         conf.set("mapred.reduce.slowstart.completed.maps",
                 Environment.getProperty("mapred.reduce.slowstart.completed.maps", "0.9"));
@@ -760,12 +760,40 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
     private void autoVarSelCondition() {
         // here we do loop again as it is not bad for variables less than 100,000
         for(ColumnConfig config: columnConfigList) {
+            // 1. check missing rate
             if(!config.isTarget() && !config.isMeta() && !config.isForceSelect() && config.isFinalSelect()
                     && isHighMissingRateColumn(config)) {
                 log.warn(
                         "Column {} is with very high missing rate, set final select to false. If not, you can check it manually in ColumnConfig.json",
                         config.getColumnName());
                 config.setFinalSelect(false);
+            }
+
+            // 2. check correlation value
+            if(!config.isTarget() && !config.isMeta() && !config.isForceSelect() && config.isFinalSelect()) {
+                double[] corrArray = config.getCorrArray();
+                if(corrArray != null && corrArray.length == columnConfigList.size()) {
+                    for(int i = 0; i < corrArray.length; i++) {
+                        // only check column larger than current column index and already final selected
+                        if(config.getColumnNum() < i && columnConfigList.get(i).isFinalSelect()) {
+                            if(Math.abs(corrArray[i]) > modelConfig.getVarSelect().getCorrelationThreshold()) {
+                                if(config.getIv() > columnConfigList.get(i).getIv()) {
+                                    log.warn(
+                                            "Absolute corrlation value {} in ({}, {})) are larger than correlationThreshold value {} set in VarSelect#correlationThreshold, column {} with smaller IV value will not be selected, set finalSelect to false.",
+                                            corrArray[i], config.getColumnNum(), i, modelConfig.getVarSelect()
+                                                    .getCorrelationThreshold(), i);
+                                    columnConfigList.get(i).setFinalSelect(false);
+                                } else {
+                                    log.warn(
+                                            "Abslolute corrlation value {} in ({}, {})) are larger than correlationThreshold value {} set in VarSelect#correlationThreshold, column {} with smaller IV value will not be selected, set finalSelect to false.",
+                                            corrArray[i], config.getColumnNum(), i, modelConfig.getVarSelect()
+                                                    .getCorrelationThreshold(), config.getColumnNum());
+                                    config.setFinalSelect(false);
+                                }
+                            }
+                        }
+                    }
+                }
             }
         }
     }
