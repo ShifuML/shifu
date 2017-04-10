@@ -1,5 +1,5 @@
 /**
- * Copyright [2012-2014] PayPal Software Foundation
+ * Copyright [2013-2017] PayPal Software Foundation
  *  
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,7 +16,7 @@
 REGISTER $path_jar;
 
 SET pig.exec.reducers.max 999;
-SET pig.exec.reducers.bytes.per.reducer 536870912;
+SET pig.exec.reducers.bytes.per.reducer 134217728;
 SET mapred.job.queue.name $queue_name;
 SET job.name 'Shifu Evaluation Meta Score Sort: $data_set';
 SET mapred.child.java.opts -Xmx1G;
@@ -33,7 +33,7 @@ DEFINE Project                  ml.shifu.shifu.udf.ColumnProjector('$source_type
 raw = LOAD '$pathEvalRawData' USING PigStorage('$delimiter', '-noschema');
 raw = FILTER raw BY IsDataFilterOut(*);
 
-raw = FOREACH raw GENERATE Project(*); -- Target, Weight, Meta, Score_META => target, score
+raw = FOREACH raw GENERATE FLATTEN(Project(*)); -- Target, Weight, Score_META => target, weight, meta_score
 evalScore = ORDER raw BY $column_name DESC;
 
-STORE evalScore INTO '$pathScoreColumnFolder' USING PigStorage('|', '-schema');
+STORE evalScore INTO '$pathSortScoreData' USING PigStorage('|', '-schema');

@@ -98,9 +98,15 @@ public class ParallelGradient {
      */
     private ExecutorService threadPool;
 
+    /**
+     * If enabled by extreme learning machine: https://en.wikipedia.org/wiki/Extreme_learning_machine
+     */
+    private boolean isELM;
+
     public ParallelGradient(final FloatFlatNetwork theNetwork, final FloatMLDataSet theTraining,
             final FloatMLDataSet theTesting, final double[] flatSpot, ErrorFunction ef, boolean isCrossOver,
-            int threadCount) {
+            int threadCount, boolean isELM) {
+        this.isELM = isELM;
         assert threadCount > 0 && threadCount < 33;
         this.threadCount = threadCount;
         this.training = theTraining;
@@ -284,6 +290,13 @@ public class ParallelGradient {
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
         }
+    }
+
+    /**
+     * @return the isELM
+     */
+    public boolean isELM() {
+        return isELM;
     }
 
 }

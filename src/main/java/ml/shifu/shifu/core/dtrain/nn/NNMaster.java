@@ -179,6 +179,8 @@ public class NNMaster extends AbstractMasterComputable<NNParams, NNParams> {
             size++;
         }
 
+        LOG.info("ELM gradients debug for 0 gradient {}", this.globalNNParams.getGradients()[0]);
+
         LOG.debug("Total Count is {}. totalWorkerCount is {}", totalCount, totalWorkerCount);
 
         // worker result size is 0. throw exception because shouldn't happen
@@ -265,7 +267,7 @@ public class NNMaster extends AbstractMasterComputable<NNParams, NNParams> {
         NNParams params = null;
         try {
             Path modelPath = new Path(context.getProps().getProperty(CommonConstants.GUAGUA_OUTPUT));
-            BasicNetwork existingModel = (BasicNetwork) CommonUtils.loadModel(modelConfig, columnConfigList, modelPath,
+            BasicNetwork existingModel = (BasicNetwork) CommonUtils.loadModel(modelConfig, modelPath,
                     ShifuFileUtils.getFileSystemBySourceType(this.modelConfig.getDataSet().getSource()));
             if(existingModel == null) {
                 params = initWeights();

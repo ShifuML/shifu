@@ -249,7 +249,7 @@ public class LogisticRegressionWorker
         this.rng = new PoissonDistribution(1.0d);
         Double upSampleWeight = modelConfig.getTrain().getUpSampleWeight();
         if(Double.compare(upSampleWeight, 1d) != 0) {
-            // set mean to upSampleWeight -1 and get sample + 1to make sure no zero sample value
+            // set mean to upSampleWeight -1 and get sample + 1 to make sure no zero sample value
             LOG.info("Enable up sampling with weight {}.", upSampleWeight);
             this.upSampleRng = new PoissonDistribution(upSampleWeight - 1);
         }
@@ -372,8 +372,9 @@ public class LogisticRegressionWorker
     @Override
     protected void postLoad(WorkerContext<LogisticRegressionParams, LogisticRegressionParams> context) {
         this.trainingData.switchState();
-        this.validationData.switchState();
-
+        if(validationData != null) {
+            this.validationData.switchState();
+        }
         LOG.info("    - # Records of the Master Data Set: {}.", this.count);
         LOG.info("    - Bagging Sample Rate: {}.", this.modelConfig.getBaggingSampleRate());
         LOG.info("    - Bagging With Replacement: {}.", this.modelConfig.isBaggingWithReplacement());
@@ -462,22 +463,31 @@ public class LogisticRegressionWorker
             index += 1;
         }
 
-        // if only sample negative, no matter bagging or replacement, do sampling here.
-        if(modelConfig.getTrain().getSampleNegOnly() // sample negative enabled
-                && (modelConfig.isRegression() || (modelConfig.isClassification() && modelConfig.getTrain()
+        // sample negative only logic here
+        if(modelConfig.getTrain().getSampleNegOnly()) {
+            if(this.modelConfig.isFixInitialInput()) {
+                // if fixInitialInput, sample hashcode in 1-sampleRate range out if negative records
+                int startHashCode = (100 / this.modelConfig.getBaggingNum()) * this.trainerId;
+                // here BaggingSampleRate means how many data will be used in training and validation, if it is 0.8, we
+                // should take 1-0.8 to check endHashCode
+                int endHashCode = startHashCode
+                        + Double.valueOf((1d - this.modelConfig.getBaggingSampleRate()) * 100).intValue();
+                if((modelConfig.isRegression() || (modelConfig.isClassification() && modelConfig.getTrain()
                         .isOneVsAll())) // regression or onevsall
-                && Double.compare(outputData[0] + 0.01d, 0d) == 0 // negative record
-                && (!this.modelConfig.isFixInitialInput() && Double.compare(Math.random(),
-                        this.modelConfig.getBaggingSampleRate()) >= 0)) {
-            return;
-        }
-        if(modelConfig.getTrain().getSampleNegOnly()// sample negative enabled
-                && (modelConfig.isRegression() || (modelConfig.isClassification() && modelConfig.getTrain()
-                        .isOneVsAll()))// regression or onevsall
-                && (Double.compare(outputData[0] + 0.01d, 0d) == 0 // negative record
-                        && this.modelConfig.isFixInitialInput() && hashcode % 100 >= Double.valueOf(
-                        this.modelConfig.getBaggingSampleRate() * 100).longValue())) {
-            return;
+                        && (int) (outputData[0] + 0.01d) == 0 // negative record
+                        && isInRange(hashcode, startHashCode, endHashCode)) {
+                    return;
+                }
+            } else {
+                // if not fixed initial input, and for regression or onevsall multiple classification (regression also).
+                // if negative record
+                if((modelConfig.isRegression() || (modelConfig.isClassification() && modelConfig.getTrain()
+                        .isOneVsAll())) // regression or onevsall
+                        && (int) (outputData[0] + 0.01d) == 0 // negative record
+                        && Double.compare(Math.random(), this.modelConfig.getBaggingSampleRate()) >= 0) {
+                    return;
+                }
+            }
         }
 
         Data data = new Data(inputData, outputData, significance);
@@ -517,7 +527,8 @@ public class LogisticRegressionWorker
         double sampleRate = (modelConfig.getTrain().getSampleNegOnly() || this.isKFoldCV) ? 1d : modelConfig.getTrain()
                 .getBaggingSampleRate();
         int classValue = (int) (label + 0.01f);
-        if(modelConfig.isBaggingWithReplacement()) {
+        if(!modelConfig.isBaggingWithReplacement()) {
+            // bagging without replacement sampling in training data set, take Random for sampling without replacement
             Random random = null;
             if(this.isStratifiedSampling) {
                 random = baggingRandomMap.get(classValue);
@@ -538,6 +549,8 @@ public class LogisticRegressionWorker
                 sampleWeights = 0f;
             }
         } else {
+            // bagging with replacement sampling in training data set, take PoissonDistribution for sampling with
+            // replacement
             if(this.isStratifiedSampling) {
                 PoissonDistribution rng = this.baggingRngMap.get(classValue);
                 if(rng == null) {
@@ -645,27 +658,50 @@ public class LogisticRegressionWorker
                     }
                 }
 
-                // for fix initial input, if hashcode% 100 over validRate * 100, training
-                // not fixed initial input, if random value >= validRate, training.
-                if((this.modelConfig.isFixInitialInput() && hashcode % 100 >= Double.valueOf(
-                        this.modelConfig.getValidSetRate() * 100).longValue())
-                        || (!this.modelConfig.isFixInitialInput() && random.nextDouble() >= this.modelConfig
-                                .getValidSetRate())) {
-                    this.trainingData.append(data);
-                    if(isPositive(data.outputs[0])) {
-                        this.positiveTrainCount += 1L;
+                if(this.modelConfig.isFixInitialInput()) {
+                    // for fix initial input, if hashcode%100 is in [start-hashcode, end-hashcode), validation,
+                    // otherwise training. start hashcode in different job is different to make sure bagging jobs have
+                    // different data. if end-hashcode is over 100, then check if hashcode is in [start-hashcode, 100]
+                    // or [0, end-hashcode]
+                    int startHashCode = (100 / this.modelConfig.getBaggingNum()) * this.trainerId;
+                    int endHashCode = startHashCode
+                            + Double.valueOf(this.modelConfig.getValidSetRate() * 100).intValue();
+                    if(isInRange(hashcode, startHashCode, endHashCode)) {
+                        this.validationData.append(data);
+                        if(isPositive(data.outputs[0])) {
+                            this.positiveValidationCount += 1L;
+                        } else {
+                            this.negativeValidationCount += 1L;
+                        }
+                        return false;
                     } else {
-                        this.negativeTrainCount += 1L;
+                        this.trainingData.append(data);
+                        if(isPositive(data.outputs[0])) {
+                            this.positiveTrainCount += 1L;
+                        } else {
+                            this.negativeTrainCount += 1L;
+                        }
+                        return true;
                     }
-                    return true;
                 } else {
-                    this.validationData.append(data);
-                    if(isPositive(data.outputs[0])) {
-                        this.positiveValidationCount += 1L;
+                    // not fixed initial input, if random value >= validRate, training, otherwise validation.
+                    if(random.nextDouble() >= this.modelConfig.getValidSetRate()) {
+                        this.trainingData.append(data);
+                        if(isPositive(data.outputs[0])) {
+                            this.positiveTrainCount += 1L;
+                        } else {
+                            this.negativeTrainCount += 1L;
+                        }
+                        return true;
                     } else {
-                        this.negativeValidationCount += 1L;
+                        this.validationData.append(data);
+                        if(isPositive(data.outputs[0])) {
+                            this.positiveValidationCount += 1L;
+                        } else {
+                            this.negativeValidationCount += 1L;
+                        }
+                        return false;
                     }
-                    return false;
                 }
             } else {
                 this.trainingData.append(data);
@@ -676,6 +712,18 @@ public class LogisticRegressionWorker
                 }
                 return true;
             }
+        }
+    }
+
+    private boolean isInRange(long hashcode, int startHashCode, int endHashCode) {
+        // check if in [start, end] or if in [start, 100) and [0, end-100)
+        int hashCodeIn100 = (int) hashcode % 100;
+        if(endHashCode <= 100) {
+            // in range [start, end)
+            return hashCodeIn100 >= startHashCode && hashCodeIn100 < endHashCode;
+        } else {
+            // in range [start, 100) or [0, endHashCode-100)
+            return hashCodeIn100 >= startHashCode || hashCodeIn100 < (endHashCode % 100);
         }
     }
 

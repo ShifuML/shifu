@@ -50,7 +50,7 @@ public class DynamicBinningTest {
         List<NumBinInfo> binInfoList = NumBinInfo.constructNumBinfo(StringUtils.join(thresholds, ':'), ':');
         for ( NumBinInfo binInfo : binInfoList ) {
             if ( rd.nextDouble() > 0.45 ) {
-                int total = Math.abs(rd.nextInt()) % 1000;
+                int total = rd.nextInt() % 1000;
                 int positive = (int) (total * rd.nextDouble());
                 binInfo.setTotalInstCnt(total);
                 binInfo.setPositiveInstCnt(positive);

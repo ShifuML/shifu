@@ -88,8 +88,7 @@ public class EvalScoreUDF extends AbstractTrainerUDF<Tuple> {
         this.headers = CommonUtils.getFinalHeaders(evalConfig);
 
         // move model runner construction in exec to avoid OOM error in client side if model is too big like RF
-        this.modelCnt = CommonUtils.getBasicModelsCnt(modelConfig, this.columnConfigList, evalConfig, evalConfig
-                .getDataSet().getSource());
+        this.modelCnt = CommonUtils.getBasicModelsCnt(modelConfig, evalConfig, evalConfig.getDataSet().getSource());
         this.subModelsCnt = CommonUtils.getSubModelsCnt(modelConfig, this.columnConfigList, evalConfig, evalConfig
                 .getDataSet().getSource());
 
@@ -100,8 +99,8 @@ public class EvalScoreUDF extends AbstractTrainerUDF<Tuple> {
         if(this.modelRunner == null) {
             // here to initialize modelRunner, this is moved from constructor to here to avoid OOM in client side.
             // UDF in pig client will be initialized to get some metadata issues
-            List<BasicML> models = CommonUtils.loadBasicModels(modelConfig, this.columnConfigList, evalConfig,
-                    evalConfig.getDataSet().getSource(), evalConfig.getGbtConvertToProb());
+            List<BasicML> models = CommonUtils.loadBasicModels(modelConfig, evalConfig, evalConfig.getDataSet()
+                    .getSource(), evalConfig.getGbtConvertToProb());
             this.modelRunner = new ModelRunner(modelConfig, columnConfigList, this.headers, evalConfig.getDataSet()
                     .getDataDelimiter(), models);
 
@@ -447,10 +446,18 @@ public class EvalScoreUDF extends AbstractTrainerUDF<Tuple> {
      *            - model name
      */
     private void addModelTagSchema(Schema tupleSchema, Integer modelCount, String modelName) {
-        for(int i = 0; i < modelCount; i++) {
-            for(int j = 0; j < modelConfig.getTags().size(); j++) {
+        if(modelConfig.isClassification() && !modelConfig.getTrain().isOneVsAll()) {
+            for(int i = 0; i < modelCount; i++) {
+                for(int j = 0; j < modelConfig.getTags().size(); j++) {
+                    tupleSchema.add(new FieldSchema(SCHEMA_PREFIX
+                            + addModelNameToField(modelName, "model_" + i + "_tag_" + j), DataType.DOUBLE));
+                }
+            }
+        } else {
+            // one vs all
+            for(int i = 0; i < modelCount; i++) {
                 tupleSchema.add(new FieldSchema(SCHEMA_PREFIX
-                        + addModelNameToField(modelName, "model_" + i + "_tag_" + j), DataType.INTEGER));
+                        + addModelNameToField(modelName, "model_" + i + "_tag_" + i), DataType.DOUBLE));
             }
         }
     }

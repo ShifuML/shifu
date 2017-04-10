@@ -30,8 +30,8 @@ import ml.shifu.shifu.container.obj.ColumnConfig;
  * {@link Entropy} and {@link Gini} are mostly for classification while {@link Variance} is for regression.
  * 
  * <p>
- * TODO FOR categorical feature, do a shuffle in {@link #computeImpurity(double[], ColumnConfig)} firstly, sort by
- * centroid
+ * TODO For categorical feature, do a shuffle in {@link #computeImpurity(double[], ColumnConfig)} firstly, sort by
+ * centroid then.
  * 
  * @author Zhang David (pengzhang@paypal.com)
  */
@@ -74,7 +74,7 @@ public abstract class Impurity {
      * @param label
      *            the label
      * @param significance
-     *            the signifincance
+     *            the significance
      * @param weight
      *            the weight
      */
@@ -244,8 +244,7 @@ class Variance extends Impurity {
 }
 
 /**
- * 
- * Reference:
+ * Reference from:
  * 
  * https://github.com/scikit-learn/scikit-learn/blob/master/sklearn/tree/_criterion.pyx#L1264
  * J. Friedman, Greedy Function Approximation: A Gradient Boosting Machine, The Annals of Statistics, Vol. 29, No. 5,
