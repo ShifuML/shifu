@@ -58,7 +58,10 @@ public interface CommonConstants {
     public static final String SHIFU_DT_MASTER_CHECKPOINT_INTERVAL = "shifu.dt.master.checkpoint.interval";
     
     public static final String SHIFU_DT_MASTER_CHECKPOINT_FOLDER = "shifu.dt.master.checkpoint.folder";
-    
-    public static final int TREE_FORMAT_VERSION = 1;
+
+    /**
+     * Version 2: support final selected columns
+     */
+    public static final int TREE_FORMAT_VERSION = 2;
 
 }

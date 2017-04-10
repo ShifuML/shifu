@@ -26,28 +26,54 @@ import java.util.HashMap;
 import java.util.Map;
 
 /**
- * ModelVarSelectConf class
+ * {@link ModelVarSelectConf} is 'varselect' part configuration in ModelConfig.json
  */
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class ModelVarSelectConf {
 
-    // for force select or force remove
+    /**
+     * If enable force select and force remove
+     */
     private Boolean forceEnable = Boolean.TRUE;
+
+    /**
+     * Force-selected column configuration file
+     */
     private String forceSelectColumnNameFile;
+
+    /**
+     * Force-remove column configuration file
+     */
     private String forceRemoveColumnNameFile;
 
-    // settings for variable selection
+    /**
+     * If enable variable selection
+     */
     private Boolean filterEnable = Boolean.TRUE;
-    private Integer filterNum = Integer.valueOf(Constants.SHIFU_DEFAULT_VARSELECT_FILTER_NUM);
+
+    /**
+     * How many columns will be selected. This number includes forceSelet columns.
+     */
+    private Integer filterNum = Constants.SHIFU_DEFAULT_VARSELECT_FILTER_NUM;
+
+    /**
+     * Filter by 'KS', 'IV', 'SE', 'SR'
+     */
     private String filterBy = "KS";
-    private Float filterOutRatio = Float.valueOf(Constants.SHIFU_DEFAULT_VARSELECT_FILTEROUT_RATIO);
+
+    /**
+     * Filter out ratio, filterNum has higher priority than {@link #filterOutRatio}, if {@link #filterNum} is less than
+     * 0. Then filterOutRatio will be effective.
+     */
+    private Float filterOutRatio = Constants.SHIFU_DEFAULT_VARSELECT_FILTEROUT_RATIO;
+
     /**
      * For filterBy pareto mode, such epsilons are used in pareto sorting
      */
     private double[] epsilons;
 
     /**
-     * If column missing rate is lower than this column, no matter what, whis column will be removed.
+     * If column missing rate is larger than this value, this column will be removed even it is set as 'FinalSelect'.
      */
     private Float missingRateThreshold = 0.98f;
 
@@ -100,7 +126,7 @@ public class ModelVarSelectConf {
     public void setFilterBy(String filterBy) {
         this.filterBy = filterBy;
     }
-    
+
     /**
      * @return the filterOutRatio
      */
@@ -159,7 +185,7 @@ public class ModelVarSelectConf {
     @Override
     public ModelVarSelectConf clone() {
         ModelVarSelectConf other = new ModelVarSelectConf();
-        if ( epsilons != null ) {
+        if(epsilons != null) {
             other.setEpsilons(Arrays.copyOf(epsilons, epsilons.length));
         }
         other.setFilterBy(filterBy);
@@ -169,7 +195,7 @@ public class ModelVarSelectConf {
         other.setForceRemoveColumnNameFile(forceRemoveColumnNameFile);
         other.setForceSelectColumnNameFile(forceSelectColumnNameFile);
         other.setMissingRateThreshold(missingRateThreshold);
-        if ( params != null ) {
+        if(params != null) {
             other.setParams(new HashMap<String, Object>(params));
         }
         other.setFilerOutRatio(filterOutRatio);

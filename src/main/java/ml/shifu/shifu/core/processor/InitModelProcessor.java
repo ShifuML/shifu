@@ -469,7 +469,8 @@ public class InitModelProcessor extends BasicModelProcessor implements Processor
             ColumnConfig config = new ColumnConfig();
             config.setColumnNum(i);
             if(isSchemaProvided) {
-                config.setColumnName(CommonUtils.getRelativePigHeaderColumnName(fields[i]));
+                // config.setColumnName(CommonUtils.getRelativePigHeaderColumnName(fields[i]));
+                config.setColumnName(fields[i]);
             } else {
                 config.setColumnName(i + "");
             }

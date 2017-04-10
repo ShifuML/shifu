@@ -28,6 +28,7 @@ import java.util.Map;
 import java.util.Scanner;
 import java.util.Set;
 
+import ml.shifu.shifu.column.NSColumn;
 import ml.shifu.shifu.container.meta.ValidateResult;
 import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.container.obj.ModelConfig;
@@ -41,10 +42,11 @@ import ml.shifu.shifu.util.CommonUtils;
 import ml.shifu.shifu.util.Constants;
 import ml.shifu.shifu.util.Environment;
 import ml.shifu.shifu.util.JSONUtils;
-
 import ml.shifu.shifu.util.updater.ColumnConfigUpdater;
+
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang.StringUtils;
+import org.apache.hadoop.fs.Path;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -76,7 +78,7 @@ public class BasicModelProcessor {
             Map<String, Object> otherConfigs) {
         this.modelConfig = modelConfig;
         this.columnConfigList = columnConfigList;
-        this.setOtherConfigs(otherConfigs);
+        this.otherConfigs = otherConfigs;
         this.pathFinder = new PathFinder(modelConfig, otherConfigs);
     }
 
@@ -97,12 +99,10 @@ public class BasicModelProcessor {
         loadModelConfig();
         validateModelConfig(step);
 
-        pathFinder = new PathFinder(modelConfig, this.getOtherConfigs());
-
+        this.pathFinder = new PathFinder(modelConfig, this.getOtherConfigs());
         checkAlgorithmParam();
 
         log.info(String.format("Training Data Soure Location: %s", modelConfig.getDataSet().getSource()));
-
         switch(step) {
             case INIT:
                 break;
@@ -121,25 +121,25 @@ public class BasicModelProcessor {
         if(this.columnConfigList == null) {
             return;
         }
-        Set<String> names = new HashSet<String>();
+        Set<NSColumn> names = new HashSet<NSColumn>();
         for(ColumnConfig config: this.columnConfigList) {
             if(StringUtils.isEmpty(config.getColumnName())) {
                 throw new IllegalArgumentException("Empty column name, please check your header file.");
             }
-            if(names.contains(config.getColumnName())) {
+            if(names.contains(new NSColumn(config.getColumnName()))) {
                 log.warn("Duplicated {} in ColumnConfig.json file, later one will be append index to make it unique.",
                         config.getColumnName());
             }
-            names.add(config.getColumnName());
+            names.add(new NSColumn(config.getColumnName()));
         }
 
-        if(!names.contains(modelConfig.getTargetColumnName())) {
+        if(!names.contains(new NSColumn(modelConfig.getTargetColumnName()))) {
             throw new IllegalArgumentException("target column " + modelConfig.getTargetColumnName()
                     + " does not exist.");
         }
 
         if(StringUtils.isNotBlank(modelConfig.getWeightColumnName())
-                && !names.contains(modelConfig.getWeightColumnName())) {
+                && !names.contains(new NSColumn(modelConfig.getWeightColumnName()))) {
             throw new IllegalArgumentException("weight column " + modelConfig.getWeightColumnName()
                     + " does not exist.");
         }
@@ -172,8 +172,9 @@ public class BasicModelProcessor {
 
     /**
      * save the Column Config
+     * 
      * @throws IOException
-     *      an exception in saving column config
+     *             an exception in saving column config
      */
     public void saveColumnConfigList() throws IOException {
         log.info("Saving ColumnConfig...");
@@ -235,7 +236,7 @@ public class BasicModelProcessor {
      */
     public boolean syncDataToHdfs(SourceType sourceType) throws IOException {
         if(SourceType.HDFS.equals(sourceType)) {
-            CommonUtils.copyConfFromLocalToHDFS(modelConfig);
+            CommonUtils.copyConfFromLocalToHDFS(modelConfig, this.pathFinder);
             return true;
         }
 
@@ -376,7 +377,8 @@ public class BasicModelProcessor {
      *             in load model config
      */
     private void loadModelConfig() throws IOException {
-        modelConfig = CommonUtils.loadModelConfig();
+        modelConfig = CommonUtils.loadModelConfig(new Path(CommonUtils.getLocalModelSetPath(otherConfigs),
+                Constants.LOCAL_MODEL_CONFIG_JSON).toString(), SourceType.LOCAL);
     }
 
     /**
@@ -396,7 +398,8 @@ public class BasicModelProcessor {
      *             in load column config
      */
     private void loadColumnConfig() throws IOException {
-        columnConfigList = CommonUtils.loadColumnConfigList();
+        columnConfigList = CommonUtils.loadColumnConfigList(new Path(CommonUtils.getLocalModelSetPath(otherConfigs),
+                Constants.LOCAL_COLUMN_CONFIG_JSON).toString(), SourceType.LOCAL);
     }
 
     /**

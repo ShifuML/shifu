@@ -46,7 +46,7 @@ public class SimpleScoreUDF extends AbstractTrainerUDF<Double> {
 
         SourceType sourceType = SourceType.valueOf(source);
 
-        List<BasicML> models = CommonUtils.loadBasicModels(modelConfig, columnConfigList, null, sourceType);
+        List<BasicML> models = CommonUtils.loadBasicModels(modelConfig, null, sourceType);
         this.header = CommonUtils.getHeaders(pathHeader, delimiter, sourceType);
         modelRunner = new ModelRunner(modelConfig, columnConfigList, this.header, modelConfig.getDataSetDelimiter(),
                 models);

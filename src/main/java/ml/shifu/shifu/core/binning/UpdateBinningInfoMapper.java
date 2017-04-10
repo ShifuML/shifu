@@ -330,7 +330,7 @@ public class UpdateBinningInfoMapper extends Mapper<LongWritable, Text, IntWrita
                             "Please check weight column in eval, exceptional weight count is over 5000");
                 }
             }
-        } catch (Exception e) {
+        } catch (NumberFormatException e) {
             weightExceptions += 1;
             context.getCounter(Constants.SHIFU_GROUP_COUNTER, "WEIGHT_EXCEPTION").increment(1L);
             if(weightExceptions > 5000 && this.isThrowforWeightException) {
