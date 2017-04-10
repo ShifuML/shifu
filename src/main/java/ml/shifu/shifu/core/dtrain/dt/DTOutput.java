@@ -17,12 +17,8 @@ package ml.shifu.shifu.core.dtrain.dt;
 
 import java.io.DataOutputStream;
 import java.io.IOException;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.Map.Entry;
-import java.util.Properties;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.zip.GZIPOutputStream;
 
@@ -322,13 +318,23 @@ public class DTOutput extends BasicMasterInterceptor<DTMasterParams, DTWorkerPar
             Map<Integer, List<String>> columnIndexCategoricalListMapping = new HashMap<Integer, List<String>>();
             Map<Integer, Double> numericalMeanMapping = new HashMap<Integer, Double>();
             for(ColumnConfig columnConfig: this.columnConfigList) {
-                columnIndexNameMapping.put(columnConfig.getColumnNum(), columnConfig.getColumnName());
+                if (columnConfig.isFinalSelect()) {
+                    columnIndexNameMapping.put(columnConfig.getColumnNum(), columnConfig.getColumnName());
+                }
                 if(columnConfig.isCategorical() && CollectionUtils.isNotEmpty(columnConfig.getBinCategory())) {
                     columnIndexCategoricalListMapping.put(columnConfig.getColumnNum(), columnConfig.getBinCategory());
                 }
 
                 if(columnConfig.isNumerical() && columnConfig.getMean() != null) {
                     numericalMeanMapping.put(columnConfig.getColumnNum(), columnConfig.getMean());
+                }
+            }
+
+            if (columnIndexNameMapping.size() == 0) {
+                for (ColumnConfig columnConfig : this.columnConfigList) {
+                    if (CommonUtils.isGoodCandidate(columnConfig)) {
+                        columnIndexNameMapping.put(columnConfig.getColumnNum(), columnConfig.getColumnName());
+                    }
                 }
             }
 
@@ -370,6 +376,7 @@ public class DTOutput extends BasicMasterInterceptor<DTMasterParams, DTWorkerPar
             for(TreeNode treeNode: trees) {
                 treeNode.write(fos);
             }
+
         } catch (IOException e) {
             LOG.error("Error in writing output.", e);
         } finally {

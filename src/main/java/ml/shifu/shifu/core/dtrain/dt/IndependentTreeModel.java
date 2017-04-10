@@ -112,8 +112,9 @@ public class IndependentTreeModel {
      */
     private Map<Integer, Double> numericalMeanMapping;
 
-    public IndependentTreeModel(Map<Integer, Double> numericalMeanMapping, Map<Integer, String> numNameMapping,
-            Map<Integer, List<String>> categoricalColumnNameNames,
+    public IndependentTreeModel(Map<Integer, Double> numericalMeanMapping,
+                                Map<Integer, String> numNameMapping,
+                                Map<Integer, List<String>> categoricalColumnNameNames,
             Map<Integer, Map<String, Integer>> columnCategoryIndexMapping, Map<Integer, Integer> columnNumIndexMapping,
             List<TreeNode> trees, List<Double> weights, boolean isGBDT, boolean isClassification,
             boolean isConvertToProb, String lossStr, String algorithm, int inputNode, int version) {
@@ -131,6 +132,7 @@ public class IndependentTreeModel {
         this.algorithm = algorithm;
         this.inputNode = inputNode;
         this.version = version;
+
     }
 
     /**
@@ -413,7 +415,7 @@ public class IndependentTreeModel {
     public Map<Integer, Integer> getColumnNumIndexMapping() {
         return columnNumIndexMapping;
     }
-
+    
     /**
      * @return the trees
      */
@@ -653,8 +655,11 @@ public class IndependentTreeModel {
         }
 
         // if one vs all, even multiple classification, treated as regression
-        return new IndependentTreeModel(numericalMeanMapping, columnIndexNameMapping, categoricalColumnNameNames,
-                columnCategoryIndexMapping, columnMapping, trees, weights,
+        return new IndependentTreeModel(numericalMeanMapping,
+                                        columnIndexNameMapping,
+                                        categoricalColumnNameNames,
+                                        columnCategoryIndexMapping,
+                                        columnMapping, trees, weights,
                 CommonConstants.GBT_ALG_NAME.equalsIgnoreCase(algorithm), isClassification && !isOneVsAll,
                 isConvertToProb, lossStr, algorithm, inputNode, version);
     }
