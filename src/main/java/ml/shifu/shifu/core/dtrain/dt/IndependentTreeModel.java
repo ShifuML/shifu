@@ -47,13 +47,6 @@ public class IndependentTreeModel {
     private Map<Integer, String> numNameMapping;
 
     /**
-     * Mapping for Columns finalSelected
-     */
-    private List<Integer> selectedColumnIndex;
-
-    private List<String> selectedColumnNames;
-
-    /**
      * Mapping for (ColumnNum, Category List) for categorical feature
      */
     private Map<Integer, List<String>> categoricalColumnNameNames;
@@ -121,14 +114,12 @@ public class IndependentTreeModel {
 
     public IndependentTreeModel(Map<Integer, Double> numericalMeanMapping,
                                 Map<Integer, String> numNameMapping,
-                                List<Integer> selectedColumnIndex,
                                 Map<Integer, List<String>> categoricalColumnNameNames,
             Map<Integer, Map<String, Integer>> columnCategoryIndexMapping, Map<Integer, Integer> columnNumIndexMapping,
             List<TreeNode> trees, List<Double> weights, boolean isGBDT, boolean isClassification,
             boolean isConvertToProb, String lossStr, String algorithm, int inputNode, int version) {
         this.numericalMeanMapping = numericalMeanMapping;
         this.numNameMapping = numNameMapping;
-        this.selectedColumnIndex = selectedColumnIndex;
         this.categoricalColumnNameNames = categoricalColumnNameNames;
         this.columnCategoryIndexMapping = columnCategoryIndexMapping;
         this.columnNumIndexMapping = columnNumIndexMapping;
@@ -142,10 +133,6 @@ public class IndependentTreeModel {
         this.inputNode = inputNode;
         this.version = version;
 
-        this.selectedColumnNames = new ArrayList<String>();
-        for (Integer index : selectedColumnIndex) {
-            selectedColumnNames.add(numNameMapping.get(index));
-        }
     }
 
     /**
@@ -428,14 +415,7 @@ public class IndependentTreeModel {
     public Map<Integer, Integer> getColumnNumIndexMapping() {
         return columnNumIndexMapping;
     }
-
-    /**
-     * @return the final selected column names
-     */
-    public List<String> getSelectedColumnNames() {
-        return this.selectedColumnNames;
-    }
-
+    
     /**
      * @return the trees
      */
@@ -674,24 +654,9 @@ public class IndependentTreeModel {
             weights.add(treeNode.getLearningRate());
         }
 
-
-        List<Integer> selectedColumnIndex = new ArrayList<Integer>();
-        //version 2 support final select
-        if (version >= 2) {
-            int selectedNum = dis.readInt();
-            for (int i = 0; i < selectedNum; i++) {
-                selectedColumnIndex.add(dis.readInt());
-            }
-        } else {
-            for (Map.Entry<Integer, String> entry: columnIndexNameMapping.entrySet()) {
-                selectedColumnIndex.add(entry.getKey());
-            }
-        }
-
         // if one vs all, even multiple classification, treated as regression
         return new IndependentTreeModel(numericalMeanMapping,
                                         columnIndexNameMapping,
-                                        selectedColumnIndex,
                                         categoricalColumnNameNames,
                                         columnCategoryIndexMapping,
                                         columnMapping, trees, weights,
