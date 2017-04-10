@@ -317,9 +317,10 @@ public class DTOutput extends BasicMasterInterceptor<DTMasterParams, DTWorkerPar
             Map<Integer, String> columnIndexNameMapping = new HashMap<Integer, String>();
             Map<Integer, List<String>> columnIndexCategoricalListMapping = new HashMap<Integer, List<String>>();
             Map<Integer, Double> numericalMeanMapping = new HashMap<Integer, Double>();
-            List<Integer> finalSelectedColumns = new ArrayList<Integer>();
             for(ColumnConfig columnConfig: this.columnConfigList) {
-                columnIndexNameMapping.put(columnConfig.getColumnNum(), columnConfig.getColumnName());
+                if (columnConfig.isFinalSelect()) {
+                    columnIndexNameMapping.put(columnConfig.getColumnNum(), columnConfig.getColumnName());
+                }
                 if(columnConfig.isCategorical() && CollectionUtils.isNotEmpty(columnConfig.getBinCategory())) {
                     columnIndexCategoricalListMapping.put(columnConfig.getColumnNum(), columnConfig.getBinCategory());
                 }
@@ -327,9 +328,13 @@ public class DTOutput extends BasicMasterInterceptor<DTMasterParams, DTWorkerPar
                 if(columnConfig.isNumerical() && columnConfig.getMean() != null) {
                     numericalMeanMapping.put(columnConfig.getColumnNum(), columnConfig.getMean());
                 }
+            }
 
-                if (columnConfig.isFinalSelect()) {
-                    finalSelectedColumns.add(columnConfig.getColumnNum());
+            if (columnIndexNameMapping.size() == 0) {
+                for (ColumnConfig columnConfig : this.columnConfigList) {
+                    if (CommonUtils.isGoodCandidate(columnConfig)) {
+                        columnIndexNameMapping.put(columnConfig.getColumnNum(), columnConfig.getColumnName());
+                    }
                 }
             }
 
@@ -370,19 +375,6 @@ public class DTOutput extends BasicMasterInterceptor<DTMasterParams, DTWorkerPar
             fos.writeInt(treeLength);
             for(TreeNode treeNode: trees) {
                 treeNode.write(fos);
-            }
-
-            //write the final selected columns or all columns
-            if (finalSelectedColumns.size() == 0) {
-                fos.writeInt(numericalMeanMapping.size());
-                for(Entry<Integer, String> entry: columnIndexNameMapping.entrySet()) {
-                    fos.writeInt(entry.getKey());
-                }
-            } else {
-                fos.write(finalSelectedColumns.size());
-                for(Integer id : finalSelectedColumns) {
-                   fos.writeInt(id);
-                }
             }
 
         } catch (IOException e) {
