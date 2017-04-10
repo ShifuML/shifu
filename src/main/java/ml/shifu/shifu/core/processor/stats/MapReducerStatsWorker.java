@@ -499,7 +499,6 @@ public class MapReducerStatsWorker extends AbstractStatsExecutor {
         paramsMap.put("column_parallel", Integer.toString(columnConfigList.size() / 10));
         paramsMap.put("value_index", "2");
 
-        log.info("The pig params: {}", Arrays.toString(paramsMap.entrySet().toArray()));
         PigExecutor.getExecutor().submitJob(modelConfig, pathFinder.getScriptPath("scripts/PSI.pig"), paramsMap);
 
         List<Scanner> scanners = ShifuFileUtils.getDataScanners(pathFinder.getPSIInfoPath(), modelConfig.getDataSet()
