@@ -283,6 +283,11 @@
                 "directive": "input",
                 "defval" : 0.5
             }, {
+                "name": "correlationThreshold",
+                "type": "number",
+                "directive": "input",
+                "defval" : 1
+            }, {
                 "name": "params",
                 "type": "map",
                 "directive": "input",
