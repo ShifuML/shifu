@@ -30,21 +30,32 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 
 /**
- * ModelTrainConf class
+ * {@link ModelTrainConf} is train part in ModelConfig.json.
  */
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class ModelTrainConf {
 
+    /**
+     * Different training algorithms supported in Shifu. SVM actuall is not implemented well. DT is replaced by RF and
+     * GBT.
+     * 
+     * @author Zhang David (pengzhang@paypal.com)
+     */
     public static enum ALGORITHM {
         NN, LR, SVM, DT, RF, GBT
     }
 
+    /**
+     * Multiple classification algorithm. NATIVE is supported in NN/RF. ONEVSALL/ONEVSREST is by enabling multiple
+     * regerssion running.
+     * 
+     * @author Zhang David (pengzhang@paypal.com)
+     */
     @JsonDeserialize(using = MultipleClassificationDeserializer.class)
     public static enum MultipleClassification {
         NATIVE, // means using NN regression or RF classification, not one vs all or one vs one
         ONEVSALL, ONVVSREST, // the same as ONEVSALL
         ONVVSONE; // ONEVSONE is not impl yet.
-
         /*
          * Get {@link MultipleClassification} by string, case can be ignored.
          */
@@ -58,41 +69,108 @@ public class ModelTrainConf {
         }
     }
 
+    /**
+     * How many bagging jobs in training.
+     */
     private Integer baggingNum = Integer.valueOf(5);
     // this is set default as true as bagging often with replacement sampleing.
-    private Boolean baggingWithReplacement = Boolean.TRUE;
-    private Double baggingSampleRate = Double.valueOf(1.0);
-    private Double validSetRate = Double.valueOf(0.2);
-    private Double convergenceThreshold = Double.valueOf(0.0);
-    private Integer numTrainEpochs = Integer.valueOf(100);
-    private Integer epochsPerIteration = Integer.valueOf(1);
 
     /**
-     * Only sample negative records out
+     * Bagging sampling with replacement, this is only works well in NN. In RF, bagging sampling with replacement is
+     * enabled no matter true or false. In GBT, bagging sampling with replacement is disabled no matter true or false
+     */
+    private Boolean baggingWithReplacement = Boolean.TRUE;
+
+    /**
+     * In each bagging job to do sampling according to this sample rate.
+     */
+    private Double baggingSampleRate = Double.valueOf(1.0);
+
+    /**
+     * After bagging sampling, current rate of records is used to do validation.
+     */
+    private Double validSetRate = Double.valueOf(0.2);
+
+    /**
+     * Only sample negative records out, this works with {@link #baggingSampleRate}.
      */
     private Boolean sampleNegOnly = Boolean.FALSE;
 
+    /**
+     * If training is converged. 0 means not enabled early stop feature.
+     */
+    private Double convergenceThreshold = Double.valueOf(0.0);
+
+    /**
+     * Iterations used in training.
+     */
+    private Integer numTrainEpochs = Integer.valueOf(100);
+
+    /**
+     * For NN only, how many epochs training in one iteration.
+     */
+    private Integer epochsPerIteration = Integer.valueOf(1);
+
+    /**
+     * Train data located on disk or not, this parameter is deprecated because of in NN/LR MemoryDiskList is used if not
+     * enough memory, disk will be automatically used. In GBDT/RF, because of data with prediction is changed in each
+     * tree, only memory list is supported.
+     */
+    @Deprecated
     private Boolean trainOnDisk = Boolean.FALSE;
+
+    /**
+     * If enabled by true, training data and validation data will be fixed in training even another job is started.
+     */
     private Boolean fixInitInput = Boolean.FALSE;
+
+    /**
+     * Only works in regression, if enabled by true, both positive and negative records will be sampled independent.
+     */
     private Boolean stratifiedSample = Boolean.FALSE;
 
+    /**
+     * If continue model training based on existing model in model path, this is like warm-start in scikit-learn.
+     */
     private Boolean isContinuous = Boolean.FALSE;
 
+    /**
+     * Only works in NN and do swapping training, validation data in differnent epochs.
+     */
     private Boolean isCrossOver = Boolean.FALSE;
 
+    /**
+     * How many threads in each worker, this will enable multiple threading running in workers.
+     */
     private Integer workerThreadCount = 4;
 
+    /**
+     * If enabled by a value in (1 - 20], cross validation will be enabled. Jobs will be started to train according to
+     * k-fold training data. Final average validation error will be printed in console.
+     */
     private Integer numKFold = -1;
 
+    /**
+     * Up sampling for positive tags, this is to solve class imbalance.
+     */
     private Double upSampleWeight = Double.valueOf(1d);
 
+    /**
+     * Algorithm: LR, NN, RF, GBT
+     */
     private String algorithm = "NN";
 
+    /**
+     * Model params for training like learning rate, tree depth ...
+     */
     private Map<String, Object> params;
 
-    private Map<String, String> customPaths;
-
+    /**
+     * Multiple classification method: NATIVE or ONEVSALL(ONEVSREST)
+     */
     private MultipleClassification multiClassifyMethod = MultipleClassification.NATIVE;
+
+    private Map<String, String> customPaths;
 
     public ModelTrainConf() {
         customPaths = new HashMap<String, String>(1);
@@ -189,53 +267,6 @@ public class ModelTrainConf {
 
     public void setCustomPaths(Map<String, String> customPaths) {
         this.customPaths = customPaths;
-    }
-
-    public static Map<String, Object> createParamsByAlg(ALGORITHM alg, ModelTrainConf trainConf) {
-        Map<String, Object> params = new HashMap<String, Object>();
-
-        if(ALGORITHM.NN.equals(alg)) {
-            params.put(NNTrainer.PROPAGATION, "R");
-            params.put(NNTrainer.LEARNING_RATE, 0.1);
-            params.put(NNTrainer.NUM_HIDDEN_LAYERS, 1);
-
-            List<Integer> nodes = new ArrayList<Integer>();
-            nodes.add(50);
-            params.put(NNTrainer.NUM_HIDDEN_NODES, nodes);
-
-            List<String> func = new ArrayList<String>();
-            func.add("tanh");
-            params.put(NNTrainer.ACTIVATION_FUNC, func);
-            params.put("RegularizedConstant", 0.0);
-        } else if(ALGORITHM.SVM.equals(alg)) {
-            params.put(SVMTrainer.SVM_KERNEL, "linear");
-            params.put(SVMTrainer.SVM_GAMMA, 1.0);
-            params.put(SVMTrainer.SVM_CONST, 1.0);
-        } else if(ALGORITHM.RF.equals(alg)) {
-            params.put("TreeNum", "10");
-            params.put("FeatureSubsetStrategy", "TWOTHIRDS");
-            params.put("MaxDepth", 10);
-            params.put("MinInstancesPerNode", 1);
-            params.put("MinInfoGain", 0.0);
-            params.put("Impurity", "variance");
-            params.put("Loss", "squared");
-            trainConf.setNumTrainEpochs(1000);
-        } else if(ALGORITHM.GBT.equals(alg)) {
-            params.put("TreeNum", "100");
-            params.put("FeatureSubsetStrategy", "TWOTHIRDS");
-            params.put("MaxDepth", 7);
-            params.put("MinInstancesPerNode", 5);
-            params.put("MinInfoGain", 0.0);
-            params.put("Impurity", "variance");
-            params.put(NNTrainer.LEARNING_RATE, 0.05);
-            params.put("Loss", "squared");
-            trainConf.setNumTrainEpochs(1000);
-        } else if(ALGORITHM.LR.equals(alg)) {
-            params.put(LogisticRegressionTrainer.LEARNING_RATE, 0.1);
-            params.put("RegularizedConstant", 0.0);
-            params.put("L1orL2", "NONE");
-        }
-        return params;
     }
 
     /**
@@ -354,22 +385,6 @@ public class ModelTrainConf {
                 || this.multiClassifyMethod == MultipleClassification.ONVVSREST;
     }
 
-    @Override
-    public boolean equals(Object obj) {
-        if(obj == null || !(obj instanceof ModelTrainConf)) {
-            return false;
-        }
-
-        ModelTrainConf other = (ModelTrainConf) obj;
-        if(this == other) {
-            return true;
-        }
-
-        return this.algorithm.equals(other.getAlgorithm()) && this.baggingNum.equals(other.getBaggingNum())
-                && this.getNumTrainEpochs().equals(other.getNumTrainEpochs())
-                && this.validSetRate.equals(other.getValidSetRate());
-    }
-
     /**
      * @return the sampleNegOnly
      */
@@ -385,29 +400,6 @@ public class ModelTrainConf {
     @JsonProperty
     public void setSampleNegOnly(Boolean sampleNegOnly) {
         this.sampleNegOnly = sampleNegOnly;
-    }
-
-    @Override
-    public ModelTrainConf clone() {
-        ModelTrainConf other = new ModelTrainConf();
-        other.setAlgorithm(algorithm);
-        other.setBaggingNum(baggingNum);
-        other.setBaggingSampleRate(baggingSampleRate);
-        other.setConvergenceThreshold(convergenceThreshold);
-        if(customPaths != null) {
-            other.setCustomPaths(new HashMap<String, String>(customPaths));
-        }
-        other.setEpochsPerIteration(epochsPerIteration);
-        other.setFixInitInput(fixInitInput);
-        other.setIsContinuous(isContinuous);
-        other.setMultiClassifyMethod(multiClassifyMethod);
-        other.setNumTrainEpochs(numTrainEpochs);
-        other.setParams(new HashMap<String, Object>(params));
-        other.setTrainOnDisk(trainOnDisk);
-        other.setUpSampleWeight(upSampleWeight);
-        other.setValidSetRate(validSetRate);
-        other.setWorkerThreadCount(workerThreadCount);
-        return other;
     }
 
     /**
@@ -443,4 +435,91 @@ public class ModelTrainConf {
     public void setNumKFold(Integer numKFold) {
         this.numKFold = numKFold;
     }
+
+    @Override
+    public boolean equals(Object obj) {
+        if(obj == null || !(obj instanceof ModelTrainConf)) {
+            return false;
+        }
+
+        ModelTrainConf other = (ModelTrainConf) obj;
+        if(this == other) {
+            return true;
+        }
+
+        return this.algorithm.equals(other.getAlgorithm()) && this.baggingNum.equals(other.getBaggingNum())
+                && this.getNumTrainEpochs().equals(other.getNumTrainEpochs())
+                && this.validSetRate.equals(other.getValidSetRate());
+    }
+
+    @Override
+    public ModelTrainConf clone() {
+        ModelTrainConf other = new ModelTrainConf();
+        other.setAlgorithm(algorithm);
+        other.setBaggingNum(baggingNum);
+        other.setBaggingSampleRate(baggingSampleRate);
+        other.setConvergenceThreshold(convergenceThreshold);
+        if(customPaths != null) {
+            other.setCustomPaths(new HashMap<String, String>(customPaths));
+        }
+        other.setEpochsPerIteration(epochsPerIteration);
+        other.setFixInitInput(fixInitInput);
+        other.setIsContinuous(isContinuous);
+        other.setMultiClassifyMethod(multiClassifyMethod);
+        other.setNumTrainEpochs(numTrainEpochs);
+        other.setParams(new HashMap<String, Object>(params));
+        other.setTrainOnDisk(trainOnDisk);
+        other.setUpSampleWeight(upSampleWeight);
+        other.setValidSetRate(validSetRate);
+        other.setWorkerThreadCount(workerThreadCount);
+        return other;
+    }
+
+    public static Map<String, Object> createParamsByAlg(ALGORITHM alg, ModelTrainConf trainConf) {
+        Map<String, Object> params = new HashMap<String, Object>();
+
+        if(ALGORITHM.NN.equals(alg)) {
+            params.put(NNTrainer.PROPAGATION, "R");
+            params.put(NNTrainer.LEARNING_RATE, 0.1);
+            params.put(NNTrainer.NUM_HIDDEN_LAYERS, 1);
+
+            List<Integer> nodes = new ArrayList<Integer>();
+            nodes.add(50);
+            params.put(NNTrainer.NUM_HIDDEN_NODES, nodes);
+
+            List<String> func = new ArrayList<String>();
+            func.add("tanh");
+            params.put(NNTrainer.ACTIVATION_FUNC, func);
+            params.put("RegularizedConstant", 0.0);
+        } else if(ALGORITHM.SVM.equals(alg)) {
+            params.put(SVMTrainer.SVM_KERNEL, "linear");
+            params.put(SVMTrainer.SVM_GAMMA, 1.0);
+            params.put(SVMTrainer.SVM_CONST, 1.0);
+        } else if(ALGORITHM.RF.equals(alg)) {
+            params.put("TreeNum", "10");
+            params.put("FeatureSubsetStrategy", "TWOTHIRDS");
+            params.put("MaxDepth", 10);
+            params.put("MinInstancesPerNode", 1);
+            params.put("MinInfoGain", 0.0);
+            params.put("Impurity", "variance");
+            params.put("Loss", "squared");
+            trainConf.setNumTrainEpochs(1000);
+        } else if(ALGORITHM.GBT.equals(alg)) {
+            params.put("TreeNum", "100");
+            params.put("FeatureSubsetStrategy", "TWOTHIRDS");
+            params.put("MaxDepth", 7);
+            params.put("MinInstancesPerNode", 5);
+            params.put("MinInfoGain", 0.0);
+            params.put("Impurity", "variance");
+            params.put(NNTrainer.LEARNING_RATE, 0.05);
+            params.put("Loss", "squared");
+            trainConf.setNumTrainEpochs(1000);
+        } else if(ALGORITHM.LR.equals(alg)) {
+            params.put(LogisticRegressionTrainer.LEARNING_RATE, 0.1);
+            params.put("RegularizedConstant", 0.0);
+            params.put("L1orL2", "NONE");
+        }
+        return params;
+    }
+
 }

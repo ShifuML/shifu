@@ -16,6 +16,7 @@
 package ml.shifu.shifu.core;
 
 import java.io.BufferedWriter;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.Writer;
 import java.text.DecimalFormat;
@@ -23,11 +24,11 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Random;
 import java.util.Scanner;
 import java.util.Set;
 
 import ml.shifu.guagua.util.NumberFormatUtils;
+import ml.shifu.shifu.column.NSColumnUtils;
 import ml.shifu.shifu.container.ConfusionMatrixObject;
 import ml.shifu.shifu.container.ModelResultObject;
 import ml.shifu.shifu.container.PerformanceObject;
@@ -35,7 +36,6 @@ import ml.shifu.shifu.container.obj.EvalConfig;
 import ml.shifu.shifu.container.obj.ModelConfig;
 import ml.shifu.shifu.container.obj.PerformanceResult;
 import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
-import ml.shifu.shifu.core.dtrain.CommonConstants;
 import ml.shifu.shifu.core.dtrain.nn.NNConstants;
 import ml.shifu.shifu.core.eval.AreaUnderCurve;
 import ml.shifu.shifu.core.eval.GainChart;
@@ -57,36 +57,88 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Confusion matrix, hold the confusion matrix computing
- * TODO refactor to binary and multiple classification
+ * Confusion matrix, hold the confusion matrix computing.
  */
 public class ConfusionMatrix {
-    public static final Random rd = new Random(System.currentTimeMillis());
 
-    enum EvaluatorMethod {
+    private static Logger LOG = LoggerFactory.getLogger(ConfusionMatrix.class);
+
+    public static enum EvaluatorMethod {
         MEAN, MAX, MIN, DEFAULT, MEDIAN;
     }
 
-    private static Logger log = LoggerFactory.getLogger(ConfusionMatrix.class);
-
+    /**
+     * Model config instance.
+     */
     private ModelConfig modelConfig;
+
+    /**
+     * Current eval config instance.
+     */
     private EvalConfig evalConfig;
 
+    /**
+     * Index of target column which is used to read target from eval score output
+     */
     private int targetColumnIndex = -1;
+
+    /**
+     * Index of first score column which is used to read all eval scores
+     */
     private int scoreColumnIndex = -1;
+
+    /**
+     * Index of weight column which is used to read weight from eval score output
+     */
     private int weightColumnIndex = -1;
 
+    /**
+     * Index of first score column which is used to read all eval scores, this is for multiple classification
+     */
     private int multiClassScore1Index = -1;
 
+    /**
+     * Multiple classification, the number of models
+     */
     private int multiClassModelCnt;
+
+    /**
+     * Number of meta columns
+     */
+    private int metaColumns;
+
+    /**
+     * The path finder instance to find some specific folder in both local and HDFS
+     */
+    private PathFinder pathFinder;
+
+    /**
+     * Decimal format score output
+     */
+    private static DecimalFormat SCORE_FORMAT = new DecimalFormat("#.######");
+
+    /**
+     * Times to scale raw score
+     */
+    private double scoreScale;
+
+    /**
+     * Set including all positive tags.
+     */
+    private Set<String> posTags;
+
+    /**
+     * Set including all negative tags.
+     */
+    private Set<String> negTags;
 
     public ConfusionMatrix(ModelConfig modelConfig, EvalConfig evalConfig) throws IOException {
         this.modelConfig = modelConfig;
         this.evalConfig = evalConfig;
+        this.pathFinder = new PathFinder(modelConfig);
 
         String[] evalScoreHeader = getEvalScoreHeader();
         if(ArrayUtils.isEmpty(evalScoreHeader)) {
-            // no EvalScore header is detected
             throw new ShifuException(ShifuErrorCode.ERROR_EVAL_NO_EVALSCORE_HEADER);
         }
 
@@ -95,24 +147,52 @@ public class ConfusionMatrix {
         }
 
         if(modelConfig.isRegression()) {
-            scoreColumnIndex = ArrayUtils.indexOf(evalScoreHeader, evalConfig.getPerformanceScoreSelector().trim());
+            scoreColumnIndex = getColumnIndex(evalScoreHeader,
+                    StringUtils.trimToEmpty(evalConfig.getPerformanceScoreSelector()));
             if(scoreColumnIndex < 0) {
                 // the score column is not found in the header of EvalScore
                 throw new ShifuException(ShifuErrorCode.ERROR_EVAL_SELECTOR_EMPTY);
             }
         }
 
-        targetColumnIndex = ArrayUtils.indexOf(evalScoreHeader, modelConfig.getTargetColumnName(evalConfig));
+        targetColumnIndex = getColumnIndex(evalScoreHeader,
+                StringUtils.trimToEmpty(modelConfig.getTargetColumnName(evalConfig)));
         if(targetColumnIndex < 0) {
             // the target column is not found in the header of EvalScore
             throw new ShifuException(ShifuErrorCode.ERROR_EVAL_TARGET_NOT_FOUND);
         }
 
-        weightColumnIndex = ArrayUtils.indexOf(evalScoreHeader, evalConfig.getDataSet().getWeightColumnName());
+        weightColumnIndex = getColumnIndex(evalScoreHeader,
+                StringUtils.trimToEmpty(evalConfig.getDataSet().getWeightColumnName()));
 
-        // only works for multi classfication
-        multiClassScore1Index = targetColumnIndex + 2; // taget, weight, score1, score2
-        multiClassModelCnt = (evalScoreHeader.length - multiClassScore1Index) / modelConfig.getTags().size();
+        // only works for multi classification
+        multiClassScore1Index = targetColumnIndex + 2; // target, weight, score1, score2, this is hard code
+        try {
+            multiClassModelCnt = CommonUtils.getBasicModelsCnt(modelConfig, evalConfig, evalConfig.getDataSet()
+                    .getSource());
+        } catch (FileNotFoundException e) {
+            multiClassModelCnt = 0;
+        }
+
+        // Number of meta columns
+        metaColumns = evalConfig.getAllMetaColumns(modelConfig).size();
+
+        posTags = new HashSet<String>(modelConfig.getPosTags(evalConfig));
+        negTags = new HashSet<String>(modelConfig.getNegTags(evalConfig));
+
+        scoreScale = Double.parseDouble(Environment.getProperty(Constants.SHIFU_SCORE_SCALE,
+                Integer.toString(Scorer.DEFAULT_SCORE_SCALE)));
+    }
+
+    private int getColumnIndex(String[] headerColumns, String column) {
+        int columnIndex = -1;
+        for(int i = 0; i < headerColumns.length; i++) {
+            if(NSColumnUtils.isColumnEqual(headerColumns[i], column)) {
+                columnIndex = i;
+                break;
+            }
+        }
+        return columnIndex;
     }
 
     private String[] getEvalScoreHeader() throws IOException {
@@ -128,82 +208,57 @@ public class ConfusionMatrix {
             // evaluation data file
             pathHeader = pathFinder.getEvalScorePath(evalConfig, sourceType);
         }
-
         return CommonUtils.getHeaders(pathHeader, "|", sourceType, false);
     }
 
-    public void bufferedComputeConfusionMatrixAndPerformance(long pigPosTags, long pigNegTags, double pigPosWeightTags,
-            double pigNegWeightTags, long records, double maxScore, double minScore) throws IOException {
-        log.info("Max score is {}, min score is {}", maxScore, minScore);
+    public PerformanceResult bufferedComputeConfusionMatrixAndPerformance(long pigPosTags, long pigNegTags,
+            double pigPosWeightTags, double pigNegWeightTags, long records, double maxScore, double minScore,
+            String scoreDataPath, String evalPerformancePath, boolean isPrint, boolean isGenerateChart,
+            boolean isUseMaxMinScore) throws IOException {
+        return bufferedComputeConfusionMatrixAndPerformance(pigPosTags, pigNegTags, pigPosWeightTags, pigNegWeightTags,
+                records, maxScore, minScore, scoreDataPath, evalPerformancePath, isPrint, isGenerateChart,
+                this.targetColumnIndex, this.scoreColumnIndex, this.weightColumnIndex, isUseMaxMinScore);
+    }
 
-        PathFinder pathFinder = new PathFinder(modelConfig);
-
-        double scoreScale = Double.parseDouble(Environment.getProperty(Constants.SHIFU_SCORE_SCALE,
-                Double.toString(Scorer.DEFAULT_SCORE_SCALE)));
-        if(!CommonConstants.GBT_ALG_NAME.equalsIgnoreCase(modelConfig.getTrain().getAlgorithm())) {
-            // if not GBT model, NN/LR, are all 0-1000, only for GBT, maxScore and minScore may not be 1000 and 0
-            maxScore = 1d * scoreScale;
-            minScore = 0d;
-        }
-
-        DecimalFormat scoreFormat = new DecimalFormat("#.######");
-
-        boolean gbtConvertToProb = isGBTConvertToProb();
-        if(gbtConvertToProb) {
-            log.debug(" set max score to 1000,raw  max is {}, raw min is {}", maxScore, minScore);
-            maxScore = 1d * scoreScale;
-            minScore = 0d;
+    public PerformanceResult bufferedComputeConfusionMatrixAndPerformance(long pigPosTags, long pigNegTags,
+            double pigPosWeightTags, double pigNegWeightTags, long records, double maxPScore, double minPScore,
+            String scoreDataPath, String evalPerformancePath, boolean isPrint, boolean isGenerateChart,
+            int targetColumnIndex, int scoreColumnIndex, int weightColumnIndex, boolean isUseMaxMinScore)
+            throws IOException {
+        // 1. compute maxScore and minScore in case some cases score are not in [0, 1]
+        double maxScore = 1d * scoreScale, minScore = 0d;
+        if(isUseMaxMinScore) {
+            // TODO some cases maxPScore is already scaled, how to fix that issue
+            maxScore = maxPScore;
+            minScore = minPScore;
         }
 
         SourceType sourceType = evalConfig.getDataSet().getSource();
-
-        List<Scanner> scanners = ShifuFileUtils.getDataScanners(pathFinder.getEvalScorePath(evalConfig, sourceType),
-                sourceType);
+        List<Scanner> scanners = ShifuFileUtils.getDataScanners(scoreDataPath, sourceType);
+        LOG.info("Number of score files is {} in eval {}.", scanners.size(), evalConfig.getName());
 
         int numBucket = evalConfig.getPerformanceBucketNum();
-        boolean isWeight = evalConfig.getDataSet().getWeightColumnName() != null;
+        boolean hasWeight = StringUtils.isNotBlank(evalConfig.getDataSet().getWeightColumnName());
         boolean isDir = ShifuFileUtils.isDir(pathFinder.getEvalScorePath(evalConfig, sourceType), sourceType);
+
         List<PerformanceObject> FPRList = new ArrayList<PerformanceObject>(numBucket + 1);
         List<PerformanceObject> catchRateList = new ArrayList<PerformanceObject>(numBucket + 1);
         List<PerformanceObject> gainList = new ArrayList<PerformanceObject>(numBucket + 1);
-        // bucketing model score
         List<PerformanceObject> modelScoreList = new ArrayList<PerformanceObject>(numBucket + 1);
-
         List<PerformanceObject> FPRWeightList = new ArrayList<PerformanceObject>(numBucket + 1);
         List<PerformanceObject> catchRateWeightList = new ArrayList<PerformanceObject>(numBucket + 1);
         List<PerformanceObject> gainWeightList = new ArrayList<PerformanceObject>(numBucket + 1);
 
-        double binScore = (maxScore - minScore) * 1d / numBucket;
-
+        double binScore = (maxScore - minScore) * 1d / numBucket, binCapacity = 1.0 / numBucket, scoreBinCount = 0, scoreBinWeigthedCount = 0;
         int fpBin = 1, tpBin = 1, gainBin = 1, fpWeightBin = 1, tpWeightBin = 1, gainWeightBin = 1, modelScoreBin = 1;
-        double binCapacity = 1.0 / numBucket;
-        PerformanceObject po = null;
-        int i = 0;
-        log.info("The size of scanner is {}", scanners.size());
+        long index = 0, cnt = 0, invalidTargetCnt = 0, invalidWgtCnt = 0;
 
-        int cnt = 0;
-        Set<String> posTags = new HashSet<String>(modelConfig.getPosTags(evalConfig));
-        Set<String> negTags = new HashSet<String>(modelConfig.getNegTags(evalConfig));
+        // System.out.println("max score  is " + maxScore + " scoreBin is " + modelScoreBin + " bin score is " +
+        // binScore);
 
-        ConfusionMatrixObject prevCmo = new ConfusionMatrixObject();
-        prevCmo.setTp(0.0);
-        prevCmo.setFp(0.0);
-        prevCmo.setFn(pigPosTags);
-        prevCmo.setTn(pigNegTags);
-        prevCmo.setWeightedTp(0.0);
-        prevCmo.setWeightedFp(0.0);
-        prevCmo.setWeightedFn(pigPosWeightTags);
-        prevCmo.setWeightedTn(pigNegWeightTags);
-        prevCmo.setScore(maxScore);
-
-        po = PerformanceEvaluator.setPerformanceObject(prevCmo);
-        // hit rate == NaN
-        po.precision = 1.0;
-        po.weightedPrecision = 1.0;
-
-        // lift = NaN
-        po.liftUnit = 0.0;
-        po.weightLiftUnit = 0.0;
+        ConfusionMatrixObject prevCmo = buildInitalCmo(pigPosTags, pigNegTags, pigPosWeightTags, pigNegWeightTags,
+                maxScore);
+        PerformanceObject po = buildFirstPO(prevCmo);
 
         FPRList.add(po);
         catchRateList.add(po);
@@ -212,53 +267,57 @@ public class ConfusionMatrix {
         catchRateWeightList.add(po);
         gainWeightList.add(po);
         modelScoreList.add(po);
+
         for(Scanner scanner: scanners) {
             while(scanner.hasNext()) {
-                if((++cnt) % 100000 == 0) {
-                    log.info("Loaded " + cnt + " records.");
+                if((++cnt) % 100000L == 0L) {
+                    LOG.info("Loaded {} records.", cnt);
                 }
-
-                String[] raw = scanner.nextLine().split("\\|");
-
                 if((!isDir) && cnt == 1) {
                     // if the evaluation score file is the local file, skip the first line since we add
                     continue;
                 }
 
+                // score is separated by default delimiter in our pig output format
+                String[] raw = scanner.nextLine().split(Constants.DEFAULT_ESCAPE_DELIMITER);
+
+                // tag check
                 String tag = raw[targetColumnIndex];
                 if(StringUtils.isBlank(tag) || (!posTags.contains(tag) && !negTags.contains(tag))) {
-                    if(rd.nextDouble() < 0.01) {
-                        log.warn("Empty target value or invalid target value: {}!!", tag);
-                    }
+                    invalidTargetCnt += 1;
                     continue;
                 }
-                double weight = 1.0d;
-                if(this.weightColumnIndex > 0) {
+
+                double weight = 1d;
+                // if has weight
+                if(weightColumnIndex > 0) {
                     try {
-                        weight = Double.parseDouble(raw[1]);
+                        weight = Double.parseDouble(raw[weightColumnIndex]);
                     } catch (NumberFormatException e) {
-                        // Do nothing
+                        invalidWgtCnt += 1;
+                    }
+                    if(weight < 0d) {
+                        invalidWgtCnt += 1;
+                        weight = 1d;
                     }
                 }
+
                 double score = 0.0;
                 try {
                     score = Double.parseDouble(raw[scoreColumnIndex]);
                 } catch (NumberFormatException e) {
                     // user set the score column wrong ?
-                    if(rd.nextDouble() < 0.05) {
-                        log.warn("The score column - {} is not integer. Is score column set correctly?",
+                    if(Math.random() < 0.05) {
+                        LOG.warn("The score column - {} is not number. Is score column set correctly?",
                                 raw[scoreColumnIndex]);
                     }
                     continue;
                 }
-                if(cnt == 1 && CommonConstants.GBT_ALG_NAME.equalsIgnoreCase(modelConfig.getAlgorithm())
-                        && !gbtConvertToProb) {
-                    // for gbdt, the result maybe not in [0, 1], set first score to make the upper score bould clear
-                    po.binLowestScore = Double.parseDouble(scoreFormat.format(score));
-                }
+
+                scoreBinCount += 1;
+                scoreBinWeigthedCount += weight;
 
                 ConfusionMatrixObject cmo = new ConfusionMatrixObject(prevCmo);
-
                 if(posTags.contains(tag)) {
                     // Positive Instance
                     cmo.setTp(cmo.getTp() + 1);
@@ -272,8 +331,7 @@ public class ConfusionMatrix {
                     cmo.setWeightedFp(cmo.getWeightedFp() + weight * 1.0);
                     cmo.setWeightedTn(cmo.getWeightedTn() - weight * 1.0);
                 }
-
-                cmo.setScore(score);
+                cmo.setScore(Double.parseDouble(SCORE_FORMAT.format(score)));
 
                 ConfusionMatrixObject object = cmo;
                 po = PerformanceEvaluator.setPerformanceObject(object);
@@ -288,8 +346,7 @@ public class ConfusionMatrix {
                 }
 
                 // prevent 99%
-                // if((double) (i + 1) / records >= gainBin * binCapacity) {
-                double validRecordCnt = (double) (i + 1);
+                double validRecordCnt = (double) (index + 1);
                 if(validRecordCnt / (pigPosTags + pigNegTags) >= gainBin * binCapacity) {
                     po.binNum = gainBin++;
                     gainList.add(po);
@@ -305,41 +362,83 @@ public class ConfusionMatrix {
                     catchRateWeightList.add(po);
                 }
 
-                if((object.getWeightedTp() + object.getWeightedFp() + 1) / object.getWeightedTotal() >= gainWeightBin
+                if((object.getWeightedTp() + object.getWeightedFp()) / object.getWeightedTotal() >= gainWeightBin
                         * binCapacity) {
                     po.binNum = gainWeightBin++;
                     gainWeightList.add(po);
                 }
 
-                if((maxScore - (int) (modelScoreBin * binScore)) >= score) {
+                if((maxScore - (modelScoreBin * binScore)) >= score) {
                     po.binNum = modelScoreBin++;
+                    po.scoreCount = scoreBinCount;
+                    po.scoreWgtCount = scoreBinWeigthedCount;
+                    // System.out.println("score count is " + scoreBinCount);
+                    // reset to 0 for next bin score cnt stats
+                    scoreBinCount = scoreBinWeigthedCount = 0;
                     modelScoreList.add(po);
                 }
-                i++;
+                index += 1;
                 prevCmo = cmo;
             }
             scanner.close();
         }
-        log.info("Totally loaded " + cnt + " records.");
+        LOG.info("Totally loading {} records with invalid target records {} and invalid weight records {} in eval {}.",
+                cnt, invalidTargetCnt, invalidWgtCnt, evalConfig.getName());
 
-        PerformanceEvaluator.logResult(FPRList, "Bucketing False Positive Rate");
+        PerformanceResult result = buildPerfResult(FPRList, catchRateList, gainList, modelScoreList, FPRWeightList,
+                catchRateWeightList, gainWeightList);
+        // System.out.println(result.modelScoreList);
+        if(isPrint) {
+            PerformanceEvaluator.logResult(FPRList, "Bucketing False Positive Rate");
 
-        if(isWeight) {
-            PerformanceEvaluator.logResult(FPRWeightList, "Bucketing Weighted False Positive Rate");
+            if(hasWeight) {
+                PerformanceEvaluator.logResult(FPRWeightList, "Bucketing Weighted False Positive Rate");
+            }
+
+            PerformanceEvaluator.logResult(catchRateList, "Bucketing Catch Rate");
+
+            if(hasWeight) {
+                PerformanceEvaluator.logResult(catchRateWeightList, "Bucketing Weighted Catch Rate");
+            }
+
+            PerformanceEvaluator.logResult(gainList, "Bucketing Action rate");
+
+            if(hasWeight) {
+                PerformanceEvaluator.logResult(gainWeightList, "Bucketing Weighted action rate");
+            }
+
+            PerformanceEvaluator.logAucResult(result, hasWeight);
         }
 
-        PerformanceEvaluator.logResult(catchRateList, "Bucketing Catch Rate");
+        writePerResult2File(evalPerformancePath, result);
 
-        if(isWeight) {
-            PerformanceEvaluator.logResult(catchRateWeightList, "Bucketing Weighted Catch Rate");
+        if(isGenerateChart) {
+            generateChartAndJsonPerfFiles(hasWeight, result);
         }
 
-        PerformanceEvaluator.logResult(gainList, "Bucketing Action rate");
-
-        if(isWeight) {
-            PerformanceEvaluator.logResult(gainWeightList, "Bucketing Weighted action rate");
+        if(cnt == 0) {
+            LOG.error("No score read, the EvalScore did not genernate or is null file");
+            throw new ShifuException(ShifuErrorCode.ERROR_EVALSCORE);
         }
+        return result;
+    }
 
+    private void writePerResult2File(String evalPerformancePath, PerformanceResult result) {
+        Writer writer = null;
+        try {
+            writer = ShifuFileUtils.getWriter(evalPerformancePath, evalConfig.getDataSet().getSource());
+            JSONUtils.writeValue(writer, result);
+        } catch (IOException e) {
+            LOG.error("error", e);
+        } finally {
+            IOUtils.closeQuietly(writer);
+        }
+    }
+
+    private PerformanceResult buildPerfResult(List<PerformanceObject> FPRList, List<PerformanceObject> catchRateList,
+            List<PerformanceObject> gainList, List<PerformanceObject> modelScoreList,
+            List<PerformanceObject> FPRWeightList, List<PerformanceObject> catchRateWeightList,
+            List<PerformanceObject> gainWeightList) {
         PerformanceResult result = new PerformanceResult();
 
         result.version = Constants.version;
@@ -350,132 +449,128 @@ public class ConfusionMatrix {
         result.gains = gainList;
         result.weightedGains = gainWeightList;
         result.modelScoreList = modelScoreList;
-
         // Calculate area under curve
         result.areaUnderRoc = AreaUnderCurve.ofRoc(result.roc);
         result.weightedAreaUnderRoc = AreaUnderCurve.ofWeightedRoc(result.weightedRoc);
         result.areaUnderPr = AreaUnderCurve.ofPr(result.pr);
         result.weightedAreaUnderPr = AreaUnderCurve.ofWeightedPr(result.weightedPr);
-        PerformanceEvaluator.logAucResult(result, isWeight);
+        return result;
+    }
 
-        Writer writer = null;
-        try {
-            writer = ShifuFileUtils.getWriter(pathFinder.getEvalPerformancePath(evalConfig, evalConfig.getDataSet()
-                    .getSource()), evalConfig.getDataSet().getSource());
-            JSONUtils.writeValue(writer, result);
-        } catch (IOException e) {
-            log.error("error", e);
-        } finally {
-            IOUtils.closeQuietly(writer);
-        }
+    private void generateChartAndJsonPerfFiles(boolean hasWeight, PerformanceResult result) throws IOException {
+        GainChart gc = new GainChart();
 
         String htmlGainChart = pathFinder.getEvalFilePath(evalConfig.getName(), evalConfig.getName()
                 + "_gainchart.html", SourceType.LOCAL);
-        log.info("Gain chart is generated in {}.", htmlGainChart);
-        GainChart gc = new GainChart();
+        LOG.info("Gain chart is generated in {}.", htmlGainChart);
         gc.generateHtml(evalConfig, modelConfig, htmlGainChart, result);
+
+        String htmlPrRocChart = pathFinder.getEvalFilePath(evalConfig.getName(), evalConfig.getName() + "_prroc.html",
+                SourceType.LOCAL);
+        LOG.info("PR&ROC chart is generated in {}.", htmlPrRocChart);
+        gc.generateHtml4PrAndRoc(evalConfig, modelConfig, htmlPrRocChart, result);
 
         String unitGainChartCsv = pathFinder.getEvalFilePath(evalConfig.getName(), evalConfig.getName()
                 + "_unit_wise_gainchart.csv", SourceType.LOCAL);
-        log.info("Unit-wise gain chart data is generated in {}.", unitGainChartCsv);
+        LOG.info("Unit-wise gain chart data is generated in {}.", unitGainChartCsv);
         gc.generateCsv(evalConfig, modelConfig, unitGainChartCsv, result.gains);
 
-        if(isWeight) {
+        if(hasWeight) {
             String weightedGainChartCsv = pathFinder.getEvalFilePath(evalConfig.getName(), evalConfig.getName()
                     + "_weighted_gainchart.csv", SourceType.LOCAL);
-            log.info("Weighted gain chart data is generated in {}.", weightedGainChartCsv);
+            LOG.info("Weighted gain chart data is generated in {}.", weightedGainChartCsv);
             gc.generateCsv(evalConfig, modelConfig, weightedGainChartCsv, result.weightedGains);
         }
 
         String prCsvFile = pathFinder.getEvalFilePath(evalConfig.getName(), evalConfig.getName() + "_unit_wise_pr.csv",
                 SourceType.LOCAL);
-        log.info("Unit-wise pr data is generated in {}.", prCsvFile);
+        LOG.info("Unit-wise pr data is generated in {}.", prCsvFile);
         gc.generateCsv(evalConfig, modelConfig, prCsvFile, result.pr);
 
-        if(isWeight) {
+        if(hasWeight) {
             String weightedPrCsvFile = pathFinder.getEvalFilePath(evalConfig.getName(), evalConfig.getName()
                     + "_weighted_pr.csv", SourceType.LOCAL);
-            log.info("Weighted pr data is generated in {}.", weightedPrCsvFile);
+            LOG.info("Weighted pr data is generated in {}.", weightedPrCsvFile);
             gc.generateCsv(evalConfig, modelConfig, weightedPrCsvFile, result.weightedPr);
         }
 
         String rocCsvFile = pathFinder.getEvalFilePath(evalConfig.getName(), evalConfig.getName()
                 + "_unit_wise_roc.csv", SourceType.LOCAL);
-        log.info("Unit-wise roc data is generated in {}.", rocCsvFile);
+        LOG.info("Unit-wise roc data is generated in {}.", rocCsvFile);
         gc.generateCsv(evalConfig, modelConfig, rocCsvFile, result.roc);
 
-        if(isWeight) {
+        if(hasWeight) {
             String weightedRocCsvFile = pathFinder.getEvalFilePath(evalConfig.getName(), evalConfig.getName()
                     + "_weighted_roc.csv", SourceType.LOCAL);
-            log.info("Weighted roc data is generated in {}.", weightedRocCsvFile);
+            LOG.info("Weighted roc data is generated in {}.", weightedRocCsvFile);
             gc.generateCsv(evalConfig, modelConfig, weightedRocCsvFile, result.weightedRoc);
         }
 
         String modelScoreGainChartCsv = pathFinder.getEvalFilePath(evalConfig.getName(), evalConfig.getName()
                 + "_modelscore_gainchart.csv", SourceType.LOCAL);
-        log.info("Model score gain chart data is generated in {}.", modelScoreGainChartCsv);
+        LOG.info("Model score gain chart data is generated in {}.", modelScoreGainChartCsv);
         gc.generateCsv(evalConfig, modelConfig, modelScoreGainChartCsv, result.modelScoreList);
-
-        if(cnt == 0) {
-            log.error("No score read, the EvalScore did not genernate or is null file");
-            throw new ShifuException(ShifuErrorCode.ERROR_EVALSCORE);
-        }
     }
 
-    private boolean isGBTConvertToProb() {
-        return CommonConstants.GBT_ALG_NAME.equalsIgnoreCase(modelConfig.getTrain().getAlgorithm())
-                && evalConfig.getGbtConvertToProb();
+    private PerformanceObject buildFirstPO(ConfusionMatrixObject prevCmo) {
+        PerformanceObject po = PerformanceEvaluator.setPerformanceObject(prevCmo);
+        // hit rate == NaN
+        po.precision = 1.0;
+        po.weightedPrecision = 1.0;
+        // lift = NaN
+        po.liftUnit = 0.0;
+        po.weightLiftUnit = 0.0;
+        po.binLowestScore = prevCmo.getScore();
+        return po;
     }
 
-    @SuppressWarnings("deprecation")
+    private ConfusionMatrixObject buildInitalCmo(long pigPosTags, long pigNegTags, double pigPosWeightTags,
+            double pigNegWeightTags, double maxScore) {
+        ConfusionMatrixObject prevCmo = new ConfusionMatrixObject();
+        prevCmo.setTp(0.0);
+        prevCmo.setFp(0.0);
+        prevCmo.setFn(pigPosTags);
+        prevCmo.setTn(pigNegTags);
+        prevCmo.setWeightedTp(0.0);
+        prevCmo.setWeightedFp(0.0);
+        prevCmo.setWeightedFn(pigPosWeightTags);
+        prevCmo.setWeightedTn(pigNegWeightTags);
+        prevCmo.setScore(maxScore);
+        return prevCmo;
+    }
+
     public void computeConfusionMatixForMultipleClassification(long records) throws IOException {
-        PathFinder pathFinder = new PathFinder(modelConfig);
         SourceType sourceType = evalConfig.getDataSet().getSource();
 
         List<Scanner> scanners = ShifuFileUtils.getDataScanners(pathFinder.getEvalScorePath(evalConfig, sourceType),
                 sourceType);
         boolean isDir = ShifuFileUtils.isDir(pathFinder.getEvalScorePath(evalConfig, sourceType), sourceType);
-        int cnt = 0;
-        Set<String> posTags = new HashSet<String>(modelConfig.getPosTags(evalConfig));
-        Set<String> negTags = new HashSet<String>(modelConfig.getNegTags(evalConfig));
         Set<String> tagSet = new HashSet<String>(modelConfig.getFlattenTags(modelConfig.getPosTags(evalConfig),
                 modelConfig.getNegTags(evalConfig)));
-        // List<String> tags = modelConfig.getFlattenTags(modelConfig.getPosTags(evalConfig),
-        // modelConfig.getNegTags(evalConfig));
         List<Set<String>> tags = modelConfig.getSetTags(modelConfig.getPosTags(evalConfig),
                 modelConfig.getNegTags(evalConfig));
 
         int classes = tags.size();
+        long cnt = 0, invalidTargetCnt = 0;
 
         long[][] confusionMatrix = new long[classes][classes];
         for(Scanner scanner: scanners) {
             while(scanner.hasNext()) {
                 if((++cnt) % 100000 == 0) {
-                    log.info("Loaded " + cnt + " records.");
+                    LOG.info("Loaded " + cnt + " records.");
                 }
-
-                String[] raw = scanner.nextLine().split("\\|");
-
                 if(!isDir && cnt == 1) {
-                    // if the evaluation score file is the local file, skip the first line since we add
+                    // if the evaluation score file is the local file, skip the first line since we add header in
                     continue;
                 }
 
+                // score is separated by default delimiter in our pig output format
+                String[] raw = scanner.nextLine().split(Constants.DEFAULT_ESCAPE_DELIMITER);
+
                 String tag = raw[targetColumnIndex];
-                if(modelConfig.isRegression()) {
-                    if(StringUtils.isBlank(tag) || (!posTags.contains(tag) && !negTags.contains(tag))) {
-                        if(rd.nextDouble() < 0.01) {
-                            log.warn("Empty or invalid target value!!");
-                        }
-                        continue;
-                    }
-                } else {
-                    if(StringUtils.isBlank(tag) || !tagSet.contains(tag)) {
-                        if(rd.nextDouble() < 0.01) {
-                            log.warn("Empty or invalid target value!!");
-                        }
-                        continue;
-                    }
+                if(StringUtils.isBlank(tag) || !tagSet.contains(tag)) {
+                    invalidTargetCnt += 1;
+                    continue;
                 }
 
                 double[] scores = new double[classes];
@@ -485,9 +580,9 @@ public class ConfusionMatrix {
 
                 if(CommonUtils.isDesicionTreeAlgorithm(modelConfig.getAlgorithm())
                         && !modelConfig.getTrain().isOneVsAll()) {
-                    // for RF classification
+                    // for RF native classification
                     double[] tagCounts = new double[tags.size()];
-                    for(int i = this.multiClassScore1Index; i < raw.length; i++) {
+                    for(int i = this.multiClassScore1Index; i < (raw.length - this.metaColumns); i++) {
                         double dd = NumberFormatUtils.getDouble(raw[i], 0d);
                         tagCounts[(int) dd] += 1d;
                     }
@@ -500,8 +595,8 @@ public class ConfusionMatrix {
                     }
                 } else if((CommonUtils.isDesicionTreeAlgorithm(modelConfig.getAlgorithm()) || NNConstants.NN_ALG_NAME
                         .equalsIgnoreCase(modelConfig.getAlgorithm())) && modelConfig.getTrain().isOneVsAll()) {
-                    // for RF & NN OneVsAll classification
-                    for(int i = this.multiClassScore1Index; i < raw.length; i++) {
+                    // for RF, GBT & NN OneVsAll classification
+                    for(int i = this.multiClassScore1Index; i < (classes + this.multiClassScore1Index); i++) {
                         double dd = NumberFormatUtils.getDouble(raw[i], 0d);
                         if(dd > maxScore) {
                             maxScore = dd;
@@ -509,7 +604,7 @@ public class ConfusionMatrix {
                         }
                     }
                 } else {
-                    // only for NN
+                    // only for NN & Native Multiple classification
                     // 1,2,3 4,5,6: 1,2,3 is model 0, 4,5,6 is model 1
                     for(int i = 0; i < classes; i++) {
                         for(int j = 0; j < multiClassModelCnt; j++) {
@@ -536,8 +631,24 @@ public class ConfusionMatrix {
             scanner.close();
         }
 
+        LOG.info("Totally loading {} records with invalid target records {} in eval {}.", cnt, invalidTargetCnt,
+                evalConfig.getName());
+
+        writeToConfMatrixFile(tags, confusionMatrix);
+
+        // print conf matrix
+        LOG.info("Multiple classification confustion matrix:");
+        LOG.info(String.format("%15s: %20s", "     ", tags.toString()));
+        for(int i = 0; i < confusionMatrix.length; i++) {
+            LOG.info(String.format("%15s: %20s", tags.get(i), Arrays.toString(confusionMatrix[i])));
+        }
+    }
+
+    @SuppressWarnings("deprecation")
+    private void writeToConfMatrixFile(List<Set<String>> tags, long[][] confusionMatrix) throws IOException {
         Path localEvalMatrixFile = new Path(pathFinder.getEvalLocalMultiMatrixFile(evalConfig.getName()));
-        log.info("Saving matrix to local file system: {}.", localEvalMatrixFile);
+
+        LOG.info("Saving matrix to local file system: {}.", localEvalMatrixFile);
         if(HDFSUtils.getLocalFS().exists(localEvalMatrixFile)) {
             HDFSUtils.getLocalFS().delete(localEvalMatrixFile);
         }
@@ -545,7 +656,7 @@ public class ConfusionMatrix {
         BufferedWriter writer = null;
         try {
             writer = ShifuFileUtils.getWriter(localEvalMatrixFile.toString(), SourceType.LOCAL);
-            writer.write("," + StringUtils.join(tags, ",") + "\n");
+            writer.write("\t," + StringUtils.join(tags, ",") + "\n");
             for(int i = 0; i < confusionMatrix.length; i++) {
                 StringBuilder sb = new StringBuilder(300);
                 sb.append(tags.get(i));
@@ -553,134 +664,15 @@ public class ConfusionMatrix {
                     sb.append(",").append(confusionMatrix[i][j]);
                 }
                 sb.append("\n");
-                writer.write(tags.get(i) + "," + sb.toString());
+                writer.write(sb.toString());
             }
         } finally {
             writer.close();
         }
-
-        log.info("Multiple classification confustion matrix:");
-        log.info(String.format("%15s: %20s", "     ", tags.toString()));
-        for(int i = 0; i < confusionMatrix.length; i++) {
-            log.info(String.format("%15s: %20s", tags.get(i), Arrays.toString(confusionMatrix[i])));
-        }
-    }
-
-    public void bufferedComputeConfusionMatrix(long pigPosTags, long pigNegTags, double pigPosWeightTags,
-            double pigNegWeightTags) throws IOException {
-        PathFinder pathFinder = new PathFinder(modelConfig);
-
-        SourceType sourceType = evalConfig.getDataSet().getSource();
-
-        List<Scanner> scanners = ShifuFileUtils.getDataScanners(pathFinder.getEvalScorePath(evalConfig, sourceType),
-                sourceType);
-
-        boolean isDir = ShifuFileUtils.isDir(pathFinder.getEvalScorePath(evalConfig, sourceType), sourceType);
-
-        log.info("The size of scanner is {}", scanners.size());
-
-        int cnt = 0;
-
-        List<String> posTags = modelConfig.getPosTags(evalConfig);
-
-        BufferedWriter confMatWriter = ShifuFileUtils.getWriter(pathFinder.getEvalMatrixPath(evalConfig, evalConfig
-                .getDataSet().getSource()), evalConfig.getDataSet().getSource());
-
-        ConfusionMatrixObject prevCmo = new ConfusionMatrixObject();
-        prevCmo.setTp(0.0);
-        prevCmo.setFp(0.0);
-        prevCmo.setFn(pigPosTags);
-        prevCmo.setTn(pigNegTags);
-        prevCmo.setWeightedTp(0.0);
-        prevCmo.setWeightedFp(0.0);
-        prevCmo.setWeightedFn(pigPosWeightTags);
-        prevCmo.setWeightedTn(pigNegWeightTags);
-        prevCmo.setScore(1000);
-
-        ConfusionMatrixCalculator.saveConfusionMaxtrixWithWriter(confMatWriter, prevCmo);
-
-        for(Scanner scanner: scanners) {
-            while(scanner.hasNext()) {
-                if((++cnt) % 100000 == 0) {
-                    log.info("Loaded " + cnt + " records.");
-                }
-
-                String[] raw = scanner.nextLine().split("\\|");
-
-                if((!isDir) && cnt == 1) {
-                    // if the evaluation score file is the local file, skip the
-                    // first line since we add
-                    continue;
-                }
-
-                String tag = raw[targetColumnIndex];
-                if(StringUtils.isBlank(tag)) {
-                    if(rd.nextDouble() < 0.01) {
-                        log.warn("Empty target value!!");
-                    }
-
-                    continue;
-                }
-
-                double weight = 1.0d;
-                if(this.weightColumnIndex > 0) {
-                    try {
-                        weight = Double.parseDouble(raw[1]);
-                    } catch (NumberFormatException e) {
-                        // Do nothing
-                    }
-                }
-
-                double score = 0.0;
-                try {
-                    score = Double.parseDouble(raw[scoreColumnIndex]);
-                } catch (NumberFormatException e) {
-                    // user set the score column wrong ?
-                    if(rd.nextDouble() < 0.05) {
-                        log.warn("The score column - {} is not integer. Is score column set correctly?",
-                                raw[scoreColumnIndex]);
-                    }
-                    continue;
-                }
-
-                ConfusionMatrixObject cmo = new ConfusionMatrixObject(prevCmo);
-                // TODO enable scaling factor
-                if(posTags.contains(tag)) {
-                    // Positive Instance
-                    cmo.setTp(cmo.getTp() + 1);
-                    cmo.setFn(cmo.getFn() - 1);
-                    cmo.setWeightedTp(cmo.getWeightedTp() + weight * 1.0);
-                    cmo.setWeightedFn(cmo.getWeightedFn() - weight * 1.0);
-                } else {
-                    // Negative Instance
-                    cmo.setFp(cmo.getFp() + 1);
-                    cmo.setTn(cmo.getTn() - 1);
-                    cmo.setWeightedFp(cmo.getWeightedFp() + weight * 1.0);
-                    cmo.setWeightedTn(cmo.getWeightedTn() - weight * 1.0);
-                }
-
-                cmo.setScore(score);
-                ConfusionMatrixCalculator.saveConfusionMaxtrixWithWriter(confMatWriter, cmo);
-                prevCmo = cmo;
-            }
-            scanner.close();
-        }
-
-        log.info("Totally loaded " + cnt + " records.");
-
-        if(cnt == 0) {
-            log.error("No score read, the EvalScore did not genernate or is null file");
-            throw new ShifuException(ShifuErrorCode.ERROR_EVALSCORE);
-        }
-        confMatWriter.close();
     }
 
     public void computeConfusionMatrix() throws IOException {
-
-        PathFinder pathFinder = new PathFinder(modelConfig);
-
         SourceType sourceType = evalConfig.getDataSet().getSource();
-
         List<Scanner> scanners = ShifuFileUtils.getDataScanners(pathFinder.getEvalScorePath(evalConfig, sourceType),
                 sourceType);
 
@@ -688,13 +680,13 @@ public class ConfusionMatrix {
 
         boolean isDir = ShifuFileUtils.isDir(pathFinder.getEvalScorePath(evalConfig, sourceType), sourceType);
 
-        log.info("The size of scanner is {}", scanners.size());
+        LOG.info("The size of scanner is {}", scanners.size());
 
         int cnt = 0;
         for(Scanner scanner: scanners) {
             while(scanner.hasNext()) {
                 if((++cnt) % 10000 == 0) {
-                    log.info("Loaded " + cnt + " records.");
+                    LOG.info("Loaded " + cnt + " records.");
                 }
 
                 String[] raw = scanner.nextLine().split("\\|");
@@ -706,8 +698,8 @@ public class ConfusionMatrix {
 
                 String tag = CommonUtils.trimTag(raw[targetColumnIndex]);
                 if(StringUtils.isBlank(tag)) {
-                    if(rd.nextDouble() < 0.01) {
-                        log.warn("Empty target value!!");
+                    if(Math.random() < 0.01) {
+                        LOG.warn("Empty target value!!");
                     }
 
                     continue;
@@ -727,8 +719,8 @@ public class ConfusionMatrix {
                     score = Double.parseDouble(raw[scoreColumnIndex]);
                 } catch (NumberFormatException e) {
                     // user set the score column wrong ?
-                    if(rd.nextDouble() < 0.05) {
-                        log.warn("The score column - {} is not integer. Is score column set correctly?",
+                    if(Math.random() < 0.05) {
+                        LOG.warn("The score column - {} is not integer. Is score column set correctly?",
                                 raw[scoreColumnIndex]);
                     }
                     continue;
@@ -736,29 +728,23 @@ public class ConfusionMatrix {
 
                 moList.add(new ModelResultObject(score, tag, weight));
             }
-
             // release resource
             scanner.close();
         }
-
-        log.info("Totally loaded " + cnt + " records.");
+        LOG.info("Totally loaded " + cnt + " records.");
 
         if(cnt == 0 || moList.size() == 0) {
-            log.error("No score read, the EvalScore did not genernate or is null file");
+            LOG.error("No score read, the EvalScore did not genernate or is null file");
             throw new ShifuException(ShifuErrorCode.ERROR_EVALSCORE);
         }
 
         ConfusionMatrixCalculator calculator = new ConfusionMatrixCalculator(modelConfig.getPosTags(evalConfig),
                 modelConfig.getNegTags(evalConfig), moList);
 
-        PathFinder finder = new PathFinder(modelConfig);
-
-        BufferedWriter confMatWriter = ShifuFileUtils.getWriter(finder.getEvalMatrixPath(evalConfig, evalConfig
+        BufferedWriter confMatWriter = ShifuFileUtils.getWriter(pathFinder.getEvalMatrixPath(evalConfig, evalConfig
                 .getDataSet().getSource()), evalConfig.getDataSet().getSource());
-
         calculator.calculate(confMatWriter);
 
         confMatWriter.close();
-
     }
 }

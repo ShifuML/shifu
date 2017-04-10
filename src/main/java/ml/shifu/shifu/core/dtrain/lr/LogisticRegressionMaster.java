@@ -218,7 +218,7 @@ public class LogisticRegressionMaster extends
         // read existing model weights
         try {
             Path modelPath = new Path(context.getProps().getProperty(CommonConstants.GUAGUA_OUTPUT));
-            LR existingModel = (LR) CommonUtils.loadModel(modelConfig, columnConfigList, modelPath,
+            LR existingModel = (LR) CommonUtils.loadModel(modelConfig, modelPath,
                     ShifuFileUtils.getFileSystemBySourceType(this.modelConfig.getDataSet().getSource()));
             if(existingModel == null) {
                 params = initWeights();

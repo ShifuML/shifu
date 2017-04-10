@@ -37,7 +37,7 @@ import org.encog.util.csv.CSVFormat;
  * and only {@link #getPersistClassString()} is changed to 'BasicFloatNetwork'.
  * 
  * <p>
- * Because of all final methods in {@link PersistBasicNetwork}, we have to copy code while not take extention.
+ * Because of all final methods in {@link PersistBasicNetwork}, we have to copy code while not take extension.
  */
 public class PersistBasicFloatNetwork implements EncogPersistor {
 
@@ -101,7 +101,10 @@ public class PersistBasicFloatNetwork implements EncogPersistor {
                 for(final String line: section.getLines()) {
                     ActivationFunction af = null;
                     final List<String> cols = EncogFileSection.splitColumns(line);
-                    final String name = "org.encog.engine.network.activation." + cols.get(0);
+                    String name = "org.encog.engine.network.activation." + cols.get(0);
+                    if(cols.get(0).equals("ActivationReLU")) {
+                        name = "ml.shifu.shifu.core.dtrain.nn.ActivationReLU";
+                    }
                     try {
                         final Class<?> clazz = Class.forName(name);
                         af = (ActivationFunction) clazz.newInstance();

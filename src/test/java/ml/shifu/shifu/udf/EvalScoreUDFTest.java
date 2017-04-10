@@ -17,6 +17,8 @@ package ml.shifu.shifu.udf;
 
 import ml.shifu.shifu.util.Environment;
 import org.apache.commons.io.FileUtils;
+import org.apache.commons.lang.StringUtils;
+import org.apache.pig.backend.executionengine.ExecException;
 import org.apache.pig.data.Tuple;
 import org.apache.pig.data.TupleFactory;
 import org.testng.Assert;
@@ -64,8 +66,7 @@ public class EvalScoreUDFTest {
         }
         input.set(0, "M");
 
-        Assert.assertEquals(instance.exec(input).toString(),
-                "(M,1.0,42.43152922729472,74.2434774437648,5.347463765168124,35.99682659254982,35.99682659254982,30.754353636041152,74.2434774437648,65.81552469894967,5.347463765168124)");
+        check(instance.exec(input), StringUtils.split("M,1.0,42,74,5,35,35,30,74,65,5", ","));
     }
 
     @Test
@@ -78,14 +79,12 @@ public class EvalScoreUDFTest {
             input.set(i, fields[i]);
         }
 
-        Assert.assertEquals(instance.exec(input).toString(),
-                "(B,1.0,7.670329126102925,11.394989936236739,3.667692031550852,8.086543233772266,6.78739381450231,8.415026614452456,11.394989936236739,3.667692031550852,8.086543233772266)");
+        check(instance.exec(input), StringUtils.split("B,1.0,7,11,3,8,6,8,11,3,8", ","));
     }
 
     @Test
     public void testGetSchema() {
-        Assert.assertEquals(instance.outputSchema(null).toString(),
-                "{EvalScore: (shifu::diagnosis: chararray,shifu::weight: chararray,shifu::mean: double,shifu::max: double,shifu::min: double,shifu::median: double,shifu::model0: double,shifu::model1: double,shifu::model2: double,shifu::model3: double,shifu::model4: double)}");
+        Assert.assertEquals("{EvalScore: (shifu::diagnosis: chararray,shifu::weight: chararray,shifu::mean: double,shifu::max: double,shifu::min: double,shifu::median: double,shifu::model0: double,shifu::model1: double,shifu::model2: double,shifu::model3: double,shifu::model4: double)}", instance.outputSchema(null).toString());
     }
 
     @Test
@@ -101,10 +100,20 @@ public class EvalScoreUDFTest {
         }
         input.set(0, "M");
 
-        //Assert.assertEquals("(M,1.0,42431529,74243477,5347464,35996827,35996827,30754354,74243477,65815525,5347464)", scaleInst.exec(input).toString());
+        check(scaleInst.exec(input), StringUtils.split("M,1.0,42431529,74243477,5347463,35996826,35996826,30754353,74243477,65815524,5347463", ","));
+    }
 
-        Assert.assertEquals(scaleInst.exec(input).toString(),
-                            "(M,1.0,4.243152922729472E7,7.42434774437648E7,5347463.765168124,3.599682659254982E7,3.599682659254982E7,3.0754353636041153E7,7.42434774437648E7,6.581552469894968E7,5347463.765168124)");
+
+    private void check(Tuple result, Object[] expectVals) throws ExecException {
+        for ( int i = 0; i < expectVals.length; i ++ ) {
+            Object obj = result.get(i);
+            String value = obj.toString();
+            if ( obj instanceof Double ) {
+                Double actualVal = (Double) obj;
+                value = Integer.toString(actualVal.intValue());
+            }
+            Assert.assertEquals(value, expectVals[i]);
+        }
     }
 
     @AfterClass

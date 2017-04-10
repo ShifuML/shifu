@@ -20,7 +20,7 @@ package ml.shifu.shifu.util;
  */
 public interface Constants {
 
-    public static final String version = "0.2.0";
+    public static final String version = "0.11.0";
 
     public static final String MODELS = "models";
 
@@ -248,5 +248,7 @@ public interface Constants {
     public static final String SHIFU_CORRELATION_MULTI_THREADS = "shifu.correlation.multi.threads";
 
     public static final String SHIFU_CORRELATION_MULTI = "shifu.correlation.multi";
+    
+    public static final String SHIFU_CURRENT_WORKING_DIR = "shifu.current.working.dir";
 
 }

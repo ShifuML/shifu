@@ -213,7 +213,8 @@ public class Scorer {
                 if(model instanceof BasicNetwork) {
                     if(modelConfig != null && modelConfig.isRegression()) {
                         scores.add(toScore(score.getData(0)));
-                    } else if(modelConfig.isClassification() && modelConfig.getTrain().isOneVsAll()) {
+                    } else if(modelConfig != null && modelConfig.isClassification()
+                            && modelConfig.getTrain().isOneVsAll()) {
                         // if one vs all classification
                         scores.add(toScore(score.getData(0)));
                     } else {
@@ -233,7 +234,7 @@ public class Scorer {
                             scores.add(sc);
                         }
                     } else {
-                        // if one vs all consider
+                        // if one vs all multiple classification or regression
                         scores.add(toScore(score.getData(0)));
                     }
                     final TreeModel tm = (TreeModel) model;

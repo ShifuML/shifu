@@ -15,30 +15,28 @@
  */
 package ml.shifu.shifu.container.obj;
 
+import java.io.IOException;
+
+import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
+
 import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.core.ObjectCodec;
 import com.fasterxml.jackson.databind.DeserializationContext;
 import com.fasterxml.jackson.databind.JsonDeserializer;
 import com.fasterxml.jackson.databind.JsonNode;
-import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
-
-import java.io.IOException;
 
 /**
- * SouceTypeDeserialize class
+ * SouceTypeDeserializer to ignore cases in {@link SourceType}.
  */
 public class SouceTypeDeserializer extends JsonDeserializer<SourceType> {
 
-    /* (non-Javadoc)
-     * @see com.fasterxml.jackson.databind.JsonDeserializer#deserialize(com.fasterxml.jackson.core.JsonParser, com.fasterxml.jackson.databind.DeserializationContext)
-     */
     @Override
     public SourceType deserialize(JsonParser jp, DeserializationContext context) throws IOException {
         ObjectCodec oc = jp.getCodec();
         JsonNode node = oc.readTree(jp);
 
-        for (SourceType value : SourceType.values()) {
-            if (value.name().equalsIgnoreCase(node.textValue())) {
+        for(SourceType value: SourceType.values()) {
+            if(value.name().equalsIgnoreCase(node.textValue())) {
                 return value;
             }
         }

@@ -275,7 +275,9 @@ public class DTOutput extends BasicMasterInterceptor<DTMasterParams, DTWorkerPar
         if(this.isGBDT) {
             trees = context.getMasterResult().getTmpTrees();
         }
-        LOG.debug("final trees", trees.toString());
+        if(LOG.isDebugEnabled()){
+            LOG.debug("final trees", trees.toString());
+        }
         Path out = new Path(context.getProps().getProperty(CommonConstants.GUAGUA_OUTPUT));
         writeModelToFileSystem(trees, out);
         if(this.isGsMode || this.isKFoldCV) {
