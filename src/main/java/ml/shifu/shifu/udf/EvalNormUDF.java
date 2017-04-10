@@ -15,27 +15,31 @@
  */
 package ml.shifu.shifu.udf;
 
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+
 import ml.shifu.shifu.container.CaseScoreResult;
 import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.container.obj.EvalConfig;
 import ml.shifu.shifu.core.ModelRunner;
 import ml.shifu.shifu.core.Normalizer;
 import ml.shifu.shifu.core.dtrain.DTrainUtils;
-import ml.shifu.shifu.core.model.ModelSpec;
 import ml.shifu.shifu.core.pmml.builder.impl.ZscoreLocalTransformCreator;
 import ml.shifu.shifu.util.CommonUtils;
-import org.apache.commons.collections.CollectionUtils;
+
 import org.apache.commons.lang.StringUtils;
 import org.apache.pig.data.DataType;
 import org.apache.pig.data.Tuple;
 import org.apache.pig.data.TupleFactory;
 import org.apache.pig.impl.logicalLayer.schema.Schema;
 import org.apache.pig.impl.logicalLayer.schema.Schema.FieldSchema;
-import org.dmg.pmml.LocalTransformations;
 import org.encog.ml.BasicML;
-
-import java.io.IOException;
-import java.util.*;
 
 /**
  * Calculate the score for each evaluation data
@@ -110,10 +114,6 @@ public class EvalNormUDF extends AbstractTrainerUDF<Tuple> {
         // 4. do populate columnConfigMap at first
         for(ColumnConfig columnConfig: this.columnConfigList) {
             columnConfigMap.put(columnConfig.getColumnName(), columnConfig);
-            if ( columnConfig.isFinalSelect() && !outputNames.contains(columnConfig.getColumnName())) {
-                validMetaSize += 1;
-                outputNames.add(columnConfig.getColumnName());
-            }
         }
 
         // 5. append real valid features
@@ -123,7 +123,9 @@ public class EvalNormUDF extends AbstractTrainerUDF<Tuple> {
             if(isAfterVarSelect) {
                 if(columnConfig.isFinalSelect() && (!columnConfig.isMeta() && !columnConfig.isTarget())) {
                     if(evalNamesSet.contains(columnConfig.getColumnName())) {
-                        outputNames.add(columnConfig.getColumnName());
+                        if(!outputNames.contains(columnConfig.getColumnName())) {
+                            outputNames.add(columnConfig.getColumnName());
+                        }
                     } else {
                         throw new RuntimeException("FinalSelect variable - " + columnConfig.getColumnName()
                                 + " couldn't be found in eval dataset!");
@@ -132,10 +134,9 @@ public class EvalNormUDF extends AbstractTrainerUDF<Tuple> {
             } else {
                 if(!columnConfig.isMeta() && !columnConfig.isTarget()) {
                     if(evalNamesSet.contains(columnConfig.getColumnName())) {
-                        //if(!outputNames.contains(columnConfig.getColumnName())) {
-                            //outputNames.add(columnConfig.getColumnName());
-                        outputNames.add(columnConfig.getColumnName());
-                        //}
+                        if(!outputNames.contains(columnConfig.getColumnName())) {
+                            outputNames.add(columnConfig.getColumnName());
+                        }
                     } else {
                         throw new RuntimeException("Variable - " + columnConfig.getColumnName()
                                 + " couldn't be found in eval dataset!");
@@ -145,14 +146,15 @@ public class EvalNormUDF extends AbstractTrainerUDF<Tuple> {
         }
 
         this.scoreName = this.evalConfig.getPerformanceScoreSelector();
-        if ( StringUtils.isBlank(this.scoreName) || this.scoreName.equalsIgnoreCase("mean")) {
+        if(StringUtils.isBlank(this.scoreName) || this.scoreName.equalsIgnoreCase("mean")) {
             this.scIndex = -1;
         } else {
             try {
                 this.scIndex = Integer.parseInt(this.scoreName.toLowerCase().replaceAll("model", ""));
             } catch (Exception e) {
                 throw new RuntimeException("Invalid setting for performanceScoreSelector in EvalConfig - "
-                        + this.scoreName);            }
+                        + this.scoreName);
+            }
         }
         this.scale = scale;
     }
@@ -161,8 +163,8 @@ public class EvalNormUDF extends AbstractTrainerUDF<Tuple> {
         if(this.modelRunner == null) {
             // here to initialize modelRunner, this is moved from constructor to here to avoid OOM in client side.
             // UDF in pig client will be initialized to get some metadata issues
-            List<BasicML> models = CommonUtils.loadBasicModels(modelConfig, this.columnConfigList, evalConfig,
-                    evalConfig.getDataSet().getSource(), evalConfig.getGbtConvertToProb());
+            List<BasicML> models = CommonUtils.loadBasicModels(modelConfig, evalConfig, evalConfig.getDataSet()
+                    .getSource(), evalConfig.getGbtConvertToProb());
             this.modelRunner = new ModelRunner(modelConfig, columnConfigList, this.headers, evalConfig.getDataSet()
                     .getDataDelimiter(), models);
             this.modelRunner.setScoreScale(Integer.parseInt(this.scale));
@@ -190,9 +192,9 @@ public class EvalNormUDF extends AbstractTrainerUDF<Tuple> {
         }
 
         CaseScoreResult score = this.modelRunner.compute(rawDataMap);
-        if ( score == null ) {
+        if(this.modelRunner == null || this.modelRunner.getModelsCnt() == 0 || score == null) {
             tuple.set(this.outputNames.size(), -999.0);
-        } else if ( this.scIndex < 0 ) {
+        } else if(this.scIndex < 0) {
             tuple.set(this.outputNames.size(), score.getAvgScore());
         } else {
             tuple.set(this.outputNames.size(), score.getScores().get(this.scIndex));
@@ -213,12 +215,12 @@ public class EvalNormUDF extends AbstractTrainerUDF<Tuple> {
                     // set target, weight and meta columns to string
                     tupleSchema.add(new FieldSchema(name, DataType.CHARARRAY));
                 } else {
-                    tupleSchema.add(new FieldSchema(
-                            ZscoreLocalTransformCreator.genPmmlColumnName(name, this.modelConfig.getNormalizeType()),
-                            DataType.DOUBLE));
+                    tupleSchema.add(new FieldSchema(ZscoreLocalTransformCreator.genPmmlColumnName(name,
+                            this.modelConfig.getNormalizeType()), DataType.DOUBLE));
                 }
             }
-            tupleSchema.add(new FieldSchema(this.scoreName, DataType.DOUBLE));
+            tupleSchema.add(new FieldSchema(StringUtils.isBlank(this.scoreName) ? "default_score" : this.scoreName,
+                    DataType.DOUBLE));
             return new Schema(new FieldSchema("EvalNorm", tupleSchema, DataType.TUPLE));
         } catch (IOException e) {
             log.error("Error in outputSchema", e);

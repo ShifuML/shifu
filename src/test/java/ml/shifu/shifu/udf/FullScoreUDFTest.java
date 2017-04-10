@@ -16,6 +16,8 @@
 package ml.shifu.shifu.udf;
 
 import org.apache.commons.io.FileUtils;
+import org.apache.commons.lang.StringUtils;
+import org.apache.pig.backend.executionengine.ExecException;
 import org.apache.pig.data.Tuple;
 import org.apache.pig.data.TupleFactory;
 import org.testng.Assert;
@@ -59,8 +61,19 @@ public class FullScoreUDFTest {
             input.set(i, 1);
         }
 
-        Assert.assertEquals(instance.exec(input).toString(),
-                "(42.43152922729472,74.2434774437648,5.347463765168124,35.99682659254982,30.754353636041152,74.2434774437648,65.81552469894967,5.347463765168124)");
+        check(instance.exec(input), StringUtils.split("42,74,5,35,30,74,65,5", ","));
+    }
+
+    private void check(Tuple result, Object[] expectVals) throws ExecException {
+        for ( int i = 0; i < expectVals.length; i ++ ) {
+            Object obj = result.get(i);
+            String value = obj.toString();
+            if ( obj instanceof Double ) {
+                Double actualVal = (Double) obj;
+                value = Integer.toString(actualVal.intValue());
+            }
+            Assert.assertEquals(value, expectVals[i]);
+        }
     }
 
     @AfterClass

@@ -1,9 +1,11 @@
 package ml.shifu.shifu.util.updater;
 
+import ml.shifu.shifu.column.NSColumn;
+import ml.shifu.shifu.column.NSColumnUtils;
 import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.container.obj.ModelConfig;
+import ml.shifu.shifu.container.obj.ColumnConfig.ColumnType;
 import ml.shifu.shifu.core.validator.ModelInspector;
-import ml.shifu.shifu.util.CommonUtils;
 import org.apache.commons.collections.CollectionUtils;
 
 import java.io.IOException;
@@ -16,43 +18,45 @@ import java.util.Set;
 public class BasicUpdater {
 
     protected String targetColumnName;
-    protected Set<String> setCategorialColumns;
-    protected Set<String> setMeta;
-    protected Set<String> setForceRemove;
-    protected Set<String> setForceSelect;
+    protected Set<NSColumn> setCategorialColumns;
+    protected Set<NSColumn> setMeta;
+    protected Set<NSColumn> setForceRemove;
+    protected Set<NSColumn> setForceSelect;
+    protected String weightColumnName;
 
     public BasicUpdater(ModelConfig modelConfig) throws IOException {
-        this.targetColumnName = CommonUtils.getRelativePigHeaderColumnName(modelConfig.getTargetColumnName());
+        this.targetColumnName = modelConfig.getTargetColumnName();
+        this.weightColumnName = modelConfig.getWeightColumnName();
 
-        this.setCategorialColumns = new HashSet<String>();
+        this.setCategorialColumns = new HashSet<NSColumn>();
         if(CollectionUtils.isNotEmpty(modelConfig.getCategoricalColumnNames())) {
             for(String column: modelConfig.getCategoricalColumnNames()) {
-                setCategorialColumns.add(CommonUtils.getRelativePigHeaderColumnName(column));
+                setCategorialColumns.add(new NSColumn(column));
             }
         }
 
-        this.setMeta = new HashSet<String>();
+        this.setMeta = new HashSet<NSColumn>();
         if(CollectionUtils.isNotEmpty(modelConfig.getMetaColumnNames())) {
             for(String meta: modelConfig.getMetaColumnNames()) {
-                setMeta.add(CommonUtils.getRelativePigHeaderColumnName(meta));
+                setMeta.add(new NSColumn(meta));
             }
         }
 
-        this.setForceRemove = new HashSet<String>();
+        this.setForceRemove = new HashSet<NSColumn>();
         if(Boolean.TRUE.equals(modelConfig.getVarSelect().getForceEnable())
                 && CollectionUtils.isNotEmpty(modelConfig.getListForceRemove())) {
             // if we need to update force remove, only and if one the force is enabled
             for(String forceRemoveName: modelConfig.getListForceRemove()) {
-                setForceRemove.add(CommonUtils.getRelativePigHeaderColumnName(forceRemoveName));
+                setForceRemove.add(new NSColumn(forceRemoveName));
             }
         }
 
-        this.setForceSelect = new HashSet<String>(512);
+        this.setForceSelect = new HashSet<NSColumn>(512);
         if(Boolean.TRUE.equals(modelConfig.getVarSelect().getForceEnable())
                 && CollectionUtils.isNotEmpty(modelConfig.getListForceSelect())) {
             // if we need to update force select, only and if one the force is enabled
             for(String forceSelectName: modelConfig.getListForceSelect()) {
-                setForceSelect.add(CommonUtils.getRelativePigHeaderColumnName(forceSelectName));
+                setForceSelect.add(new NSColumn(forceSelectName));
             }
         }
     }
@@ -60,29 +64,41 @@ public class BasicUpdater {
     public void updateColumnConfig(ColumnConfig columnConfig) {
         String varName = columnConfig.getColumnName();
 
-        if(this.targetColumnName.equals(varName)) {
+        // reset flag at first
+        columnConfig.setColumnFlag(null);
+
+        if(NSColumnUtils.isColumnEqual(this.targetColumnName, varName)) {
             columnConfig.setColumnFlag(ColumnConfig.ColumnFlag.Target);
             columnConfig.setColumnType(null);
-        } else if(this.setMeta.contains(varName)) {
+        } else if(this.setMeta.contains(new NSColumn(varName))) {
             columnConfig.setColumnFlag(ColumnConfig.ColumnFlag.Meta);
             columnConfig.setColumnType(null);
-        } else if(this.setForceRemove.contains(varName)) {
+        } else if(this.setForceRemove.contains(new NSColumn(varName))) {
             columnConfig.setColumnFlag(ColumnConfig.ColumnFlag.ForceRemove);
-        } else if(this.setForceSelect.contains(varName)) {
+        } else if(this.setForceSelect.contains(new NSColumn(varName))) {
             columnConfig.setColumnFlag(ColumnConfig.ColumnFlag.ForceSelect);
+        } else if(NSColumnUtils.isColumnEqual(this.weightColumnName, varName)) {
+            columnConfig.setColumnFlag(ColumnConfig.ColumnFlag.Weight);
+            columnConfig.setColumnType(null);
         }
 
-        // variable type is not related with variable flag
-        if(this.setCategorialColumns.contains(varName)) {
-            columnConfig.setColumnType(ColumnConfig.ColumnType.C);
+        if(NSColumnUtils.isColumnEqual(weightColumnName, varName)) {
+            // weight column is numerical
+            columnConfig.setColumnType(ColumnType.N);
+        } else if(NSColumnUtils.isColumnEqual(targetColumnName, varName)) {
+            // target column is set to categorical column
+            columnConfig.setColumnType(ColumnType.C);
+        } else if(setCategorialColumns.contains(new NSColumn(varName))) {
+            columnConfig.setColumnType(ColumnType.C);
         } else {
-            columnConfig.setColumnType(ColumnConfig.ColumnType.N);
+            // meta and other columns are set to numerical if user not set it in categorical column configuration file
+            columnConfig.setColumnType(ColumnType.N);
         }
     }
 
     public static BasicUpdater getUpdater(ModelConfig modelConfig, ModelInspector.ModelStep step) throws IOException {
         BasicUpdater updater = null;
-        switch (step ) {
+        switch(step) {
             case INIT:
             case STATS:
                 updater = new BasicUpdater(modelConfig);

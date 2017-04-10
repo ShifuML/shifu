@@ -20,38 +20,112 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import java.util.List;
 
 /**
- * ColumnStats class is stats collection for Column
- * If the Column type is categorical, the max/min field will be null
+ * ColumnStats class is stats collection for Column; If the Column type is categorical, the max/min field will be null.
+ * 
  * <p>
- * ks/iv will be used for variable selection
+ * 'ks/iv' will be used for variable selection.
  */
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class ColumnStats {
 
-    private Double max;
-    private Double min;
-    private Double mean;
-    private Double median;
-    private Long totalCount;
     /**
-     * Missing count are not included
+     * Max value of such column
+     */
+    private Double max;
+
+    /**
+     * Min value of such column
+     */
+    private Double min;
+
+    /**
+     * Mean value of such column
+     */
+    private Double mean;
+
+    /**
+     * Median value of such column (now it is the same as mean)
+     */
+    private Double median;
+
+    /**
+     * Total count for such column
+     */
+    private Long totalCount;
+
+    /**
+     * Distinct count (for categorical feature it is cardity) Missing count are not included
      */
     private Long distinctCount;
+
+    /**
+     * Missing count, missing data are data in missingDataList
+     */
     private Long missingCount;
+
+    /**
+     * Number of valid numeric count
+     */
     private Long validNumCount;
+
+    /**
+     * Stand deviation
+     */
     private Double stdDev;
+
+    /**
+     * Missing percentage (missingCount/totalCount)
+     */
     private Double missingPercentage;
+
+    /**
+     * WOE value for such column
+     */
     private Double woe;
+
+    /**
+     * KS value
+     */
     private Double ks;
+
+    /**
+     * Information value
+     */
     private Double iv;
+
+    /**
+     * Weighted KS value
+     */
     private Double weightedKs;
+
+    /**
+     * Weighted IV value
+     */
     private Double weightedIv;
+
+    /**
+     * Weighted woe value
+     */
     private Double weightedWoe;
 
+    /**
+     * Skewness of such column
+     */
     private Double skewness;
+
+    /**
+     * Kurtosis of such column
+     */
     private Double kurtosis;
 
+    /**
+     * PSI value of such column
+     */
     private Double psi;
+
+    /**
+     * Unit stats information
+     */
     private List<String> unitStats;
 
     /**
@@ -217,7 +291,8 @@ public class ColumnStats {
     }
 
     /**
-     * @param skewness the skewness to set
+     * @param skewness
+     *            the skewness to set
      */
     public void setSkewness(Double skewness) {
         this.skewness = skewness;
@@ -231,7 +306,8 @@ public class ColumnStats {
     }
 
     /**
-     * @param kurtosis the kurtosis to set
+     * @param kurtosis
+     *            the kurtosis to set
      */
     public void setKurtosis(Double kurtosis) {
         this.kurtosis = kurtosis;
@@ -245,7 +321,8 @@ public class ColumnStats {
     }
 
     /**
-     * @param psi the PSI to set
+     * @param psi
+     *            the PSI to set
      */
     public void setPsi(Double psi) {
         this.psi = psi;
@@ -259,8 +336,9 @@ public class ColumnStats {
     }
 
     /**
-     *
-     * @param unitStats the unitStats
+     * 
+     * @param unitStats
+     *            the unitStats
      */
     public void setUnitStats(List<String> unitStats) {
         this.unitStats = unitStats;
@@ -274,7 +352,8 @@ public class ColumnStats {
     }
 
     /**
-     * @param validNumCount the validNumCount to set
+     * @param validNumCount
+     *            the validNumCount to set
      */
     public void setValidNumCount(Long validNumCount) {
         this.validNumCount = validNumCount;

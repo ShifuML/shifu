@@ -17,31 +17,29 @@
  */
 package ml.shifu.shifu.core.processor;
 
+import java.io.BufferedWriter;
+import java.io.File;
+import java.io.IOException;
+import java.util.List;
+
 import ml.shifu.shifu.container.obj.ColumnConfig;
-import ml.shifu.shifu.container.obj.ModelConfig;
 import ml.shifu.shifu.container.obj.ModelTrainConf.ALGORITHM;
 import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
 import ml.shifu.shifu.core.pmml.PMMLTranslator;
 import ml.shifu.shifu.core.pmml.PMMLUtils;
 import ml.shifu.shifu.core.pmml.builder.PMMLConstructorFactory;
 import ml.shifu.shifu.core.validator.ModelInspector.ModelStep;
-import ml.shifu.shifu.fs.PathFinder;
 import ml.shifu.shifu.fs.ShifuFileUtils;
 import ml.shifu.shifu.util.CommonUtils;
-
 import ml.shifu.shifu.util.HDFSUtils;
+
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.fs.Path;
+import org.dmg.pmml.PMML;
 import org.encog.ml.BasicML;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.dmg.pmml.PMML;
-
-import java.io.BufferedWriter;
-import java.io.File;
-import java.io.IOException;
-import java.util.List;
 
 /**
  * ExportModelProcessor class
@@ -86,10 +84,6 @@ public class ExportModelProcessor extends BasicModelProcessor implements Process
         if(type.equalsIgnoreCase(PMML)) {
             log.info("Convert models into {} format", type);
 
-            ModelConfig modelConfig = CommonUtils.loadModelConfig();
-            List<ColumnConfig> columnConfigList = CommonUtils.loadColumnConfigList();
-
-            PathFinder pathFinder = new PathFinder(modelConfig);
             List<BasicML> models = CommonUtils.loadBasicModels(pathFinder.getModelsPath(SourceType.LOCAL),
                     ALGORITHM.valueOf(modelConfig.getAlgorithm().toUpperCase()));
 
