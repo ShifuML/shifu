@@ -77,6 +77,12 @@ public class ModelVarSelectConf {
      */
     private Float missingRateThreshold = 0.98f;
 
+    /**
+     * If two features correlation value is larger than {@link #correlationThreshold}, one with larger IV value will be
+     * selected. Set it to default 1 or not computed correlation value in norm step, means such threshold has no effect.
+     */
+    private Float correlationThreshold = 1f;
+
     private Map<String, Object> params;
 
     public Boolean getForceEnable() {
@@ -180,6 +186,21 @@ public class ModelVarSelectConf {
     @JsonProperty
     public void setEpsilons(double[] epsilons) {
         this.epsilons = epsilons;
+    }
+
+    /**
+     * @return the correlationThreshold
+     */
+    public Float getCorrelationThreshold() {
+        return correlationThreshold;
+    }
+
+    /**
+     * @param correlationThreshold
+     *            the correlationThreshold to set
+     */
+    public void setCorrelationThreshold(Float correlationThreshold) {
+        this.correlationThreshold = correlationThreshold;
     }
 
     @Override

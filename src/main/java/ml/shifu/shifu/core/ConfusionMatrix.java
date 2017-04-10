@@ -401,10 +401,10 @@ public class ConfusionMatrix {
                 PerformanceEvaluator.logResult(catchRateWeightList, "Bucketing Weighted Catch Rate");
             }
 
-            PerformanceEvaluator.logResult(gainList, "Bucketing Action rate");
+            PerformanceEvaluator.logResult(gainList, "Bucketing Action Rate");
 
             if(hasWeight) {
-                PerformanceEvaluator.logResult(gainWeightList, "Bucketing Weighted action rate");
+                PerformanceEvaluator.logResult(gainWeightList, "Bucketing Weighted Action Rate");
             }
 
             PerformanceEvaluator.logAucResult(result, hasWeight);

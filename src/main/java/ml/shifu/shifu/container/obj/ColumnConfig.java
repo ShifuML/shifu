@@ -86,7 +86,7 @@ public class ColumnConfig {
     /**
      * Correlation array list
      */
-    private List<Double> corrArray;
+    private double[] corrArray;
 
     /**
      * Sample values of such column.
@@ -421,7 +421,7 @@ public class ColumnConfig {
     /**
      * @return the corrArray
      */
-    public List<Double> getCorrArray() {
+    public double[] getCorrArray() {
         return corrArray;
     }
 
@@ -429,7 +429,7 @@ public class ColumnConfig {
      * @param corrArray
      *            the corrArray to set
      */
-    public void setCorrArray(List<Double> corrArray) {
+    public void setCorrArray(double[] corrArray) {
         this.corrArray = corrArray;
     }
 
