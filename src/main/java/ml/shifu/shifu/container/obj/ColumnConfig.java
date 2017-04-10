@@ -24,9 +24,8 @@ import java.util.Comparator;
 import java.util.List;
 
 /**
- * ColumnConfig class record the basic information for column in data.
- * Almost all information in ColumnConfig is generated automatically, user should
- * avoid to change it manually, unless understanding the meaning of the changes.
+ * ColumnConfig class record the basic information for column in data. Almost all information in ColumnConfig is
+ * generated automatically, user should avoid to change it manually, unless understanding the meaning of the changes.
  */
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class ColumnConfig {
@@ -40,24 +39,58 @@ public class ColumnConfig {
         A, N, C
     }
 
-    // basic info
+    /**
+     * Column index, start from 0 to length-1
+     */
     private Integer columnNum;
+
+    /**
+     * Column name read from header file or first line of csv file.
+     */
     private String columnName;
 
-    // version
+    /**
+     * Version of current ColumnConfig.json
+     */
     private String version = Constants.version;
 
-    // column type
+    /**
+     * Numerical or Categorical feature.
+     */
     private ColumnType columnType = ColumnType.N;
+
+    /**
+     * Meta, target, weight, force-select or force-remove columns
+     */
     private ColumnFlag columnFlag = null;
+
+    /**
+     * If column is final selected, if set to finalSelect for {@link #columnFlag}, no matter what quality it is, such
+     * column will be final selected and {@link #finalSelect} is set to true.
+     * 
+     * <p>
+     * Only {@link #finalSelect} is determined as final training column.
+     */
     private Boolean finalSelect = Boolean.FALSE;
 
-    // column detail
+    /**
+     * Column stats info
+     */
     private ColumnStats columnStats = new ColumnStats();
+
+    /**
+     * Column binning info
+     */
     private ColumnBinning columnBinning = new ColumnBinning();
 
+    /**
+     * Correlation array list
+     */
     private List<Double> corrArray;
 
+    /**
+     * Sample values of such column.
+     */
     private List<String> sampleValues;
 
     /*

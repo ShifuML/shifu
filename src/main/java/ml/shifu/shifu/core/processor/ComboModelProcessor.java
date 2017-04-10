@@ -263,7 +263,9 @@ public class ComboModelProcessor extends BasicModelProcessor implements Processo
         }
 
         // create folder and save ModelConfig.json
-        new File(assembleModelName).mkdirs();
+        if(!new File(assembleModelName).mkdirs()) {
+            LOG.error("Create folder {} failed.", assembleModelName);
+        }
         saveModelConfig(assembleModelName, assembleModelConfig);
 
         return 0;

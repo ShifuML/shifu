@@ -138,13 +138,13 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
             setUp(ModelStep.VARSELECT);
             validateParameters();
             // reset all selections if user specify or select by absolute number
-            if (isToReset) {
+            if(isToReset) {
                 log.info("Reset all selections data including type final select etc!");
                 resetAllFinalSelect();
-            } else if (isToList) {
+            } else if(isToList) {
                 log.info("Below variables are selected - ");
-                for ( ColumnConfig columnConfig : this.columnConfigList ) {
-                    if ( columnConfig.isFinalSelect() ) {
+                for(ColumnConfig columnConfig: this.columnConfigList) {
+                    if(columnConfig.isFinalSelect()) {
                         log.info(columnConfig.getColumnName());
                     }
                 }
@@ -771,7 +771,7 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
     }
 
     /**
-     * Check is high rate is very high.
+     * Check is missing rate is over threshold.
      */
     private boolean isHighMissingRateColumn(ColumnConfig config) {
         Double missingPercentage = config.getMissingPercentage();

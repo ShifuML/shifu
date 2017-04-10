@@ -42,7 +42,7 @@ public class RunModelWorker extends AbstractWorkerActor {
             ActorRef parentActorRef, ActorRef nextActorRef) throws IOException {
         super(modelConfig, columnConfigList, parentActorRef, nextActorRef);
 
-        List<BasicML> models = CommonUtils.loadBasicModels(modelConfig, columnConfigList, evalConfig, SourceType.LOCAL);
+        List<BasicML> models = CommonUtils.loadBasicModels(modelConfig, evalConfig, SourceType.LOCAL);
 
         String[] header = null;
         String delimiter = null;

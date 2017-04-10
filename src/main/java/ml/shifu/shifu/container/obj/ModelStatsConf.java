@@ -20,17 +20,26 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 
 /**
- * ModelStatsConf class
+ * {@link ModelStatsConf} is 'stats' part configuration in ModelConfig.json
  */
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class ModelStatsConf {
 
+    /**
+     * Binning strategy used in stats step.
+     * 
+     * @author Zhang David (pengzhang@paypal.com)
+     */
     @JsonDeserialize(using = BinningMethodDeserializer.class)
     public static enum BinningMethod {
-        EqualNegtive, EqualInterval, EqualPositive, EqualTotal, WeightEqualNegative, WeightEqualInterval,
-        WeightEqualPositive, WeightEqualTotal
+        EqualNegtive, EqualInterval, EqualPositive, EqualTotal, WeightEqualNegative, WeightEqualInterval, WeightEqualPositive, WeightEqualTotal
     }
-    
+
+    /**
+     * Binning algorithm on how to scale binning in 10k features well.
+     * 
+     * @author Zhang David (pengzhang@paypal.com)
+     */
     public static enum BinningAlgorithm {
         Native, // sorting way
         SPDT, // paper reference: www.jmlr.org/papers/volume11/ben-haim10a/ben-haim10a.pdf
@@ -42,19 +51,42 @@ public class ModelStatsConf {
         DynamicBinning
     }
 
-    private Integer maxNumBin = Integer.valueOf(10);
+    /**
+     * Max num bin per each numerical column.
+     */
+    private Integer maxNumBin = 10;
+
+    /**
+     * Binning method used in stats. By default is EqualPositive.
+     */
     private BinningMethod binningMethod = BinningMethod.EqualPositive;
-    private Double sampleRate = Double.valueOf(0.8);
+
+    /**
+     * Sampling rate in stats step. Sometimes is binning algorithm cannot be scaled well or slow. Try using smaller
+     * sampleRate will accelerate stats.
+     */
+    private Double sampleRate = 0.8d;
+
+    /**
+     * If only sample negative records or not, positive records in most cases is less than negative. By only sampling
+     * negative can balance data.
+     */
     private Boolean sampleNegOnly = Boolean.FALSE;
 
-    // don't open those options to user
+    // don't open those options to user, this only works in some binning algorithm
     private Double numericalValueThreshold = Double.MAX_VALUE;
     private Boolean binningAutoTypeEnable = Boolean.FALSE;
-    private Integer binningAutoTypeThreshold = Integer.valueOf(5);
+    private Integer binningAutoTypeThreshold = 5;
     private Boolean binningMergeEnable = Boolean.TRUE;
 
+    /**
+     * Binning algorithm used to do binning. SPDTI is the best algorithm in terms of scalability.
+     */
     private BinningAlgorithm binningAlgorithm = BinningAlgorithm.SPDTI;
 
+    /**
+     * PSI feature enabled if not empty. In stats, PSI value will be computed.
+     */
     private String psiColumnName = "";
 
     public Integer getMaxNumBin() {
