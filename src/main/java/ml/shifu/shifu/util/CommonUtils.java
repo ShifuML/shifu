@@ -927,6 +927,7 @@ public final class CommonUtils {
         return fileList;
     }
 
+    @SuppressWarnings("deprecation")
     public static List<ModelSpec> loadSubModels(ModelConfig modelConfig, List<ColumnConfig> columnConfigList,
             EvalConfig evalConfig, SourceType sourceType, Boolean gbtConvertToProb) {
         List<ModelSpec> modelSpecs = new ArrayList<ModelSpec>();

@@ -274,7 +274,7 @@ public class DTOutput extends BasicMasterInterceptor<DTMasterParams, DTWorkerPar
         if(this.isGBDT) {
             trees = context.getMasterResult().getTmpTrees();
         }
-        if(LOG.isDebugEnabled()){
+        if(LOG.isDebugEnabled()) {
             LOG.debug("final trees", trees.toString());
         }
         Path out = new Path(context.getProps().getProperty(CommonConstants.GUAGUA_OUTPUT));
@@ -318,7 +318,7 @@ public class DTOutput extends BasicMasterInterceptor<DTMasterParams, DTWorkerPar
             Map<Integer, List<String>> columnIndexCategoricalListMapping = new HashMap<Integer, List<String>>();
             Map<Integer, Double> numericalMeanMapping = new HashMap<Integer, Double>();
             for(ColumnConfig columnConfig: this.columnConfigList) {
-                if (columnConfig.isFinalSelect()) {
+                if(columnConfig.isFinalSelect()) {
                     columnIndexNameMapping.put(columnConfig.getColumnNum(), columnConfig.getColumnName());
                 }
                 if(columnConfig.isCategorical() && CollectionUtils.isNotEmpty(columnConfig.getBinCategory())) {
@@ -330,9 +330,9 @@ public class DTOutput extends BasicMasterInterceptor<DTMasterParams, DTWorkerPar
                 }
             }
 
-            if (columnIndexNameMapping.size() == 0) {
-                for (ColumnConfig columnConfig : this.columnConfigList) {
-                    if (CommonUtils.isGoodCandidate(columnConfig)) {
+            if(columnIndexNameMapping.size() == 0) {
+                for(ColumnConfig columnConfig: this.columnConfigList) {
+                    if(CommonUtils.isGoodCandidate(columnConfig)) {
                         columnIndexNameMapping.put(columnConfig.getColumnNum(), columnConfig.getColumnName());
                     }
                 }
@@ -376,7 +376,6 @@ public class DTOutput extends BasicMasterInterceptor<DTMasterParams, DTWorkerPar
             for(TreeNode treeNode: trees) {
                 treeNode.write(fos);
             }
-
         } catch (IOException e) {
             LOG.error("Error in writing output.", e);
         } finally {
@@ -443,7 +442,7 @@ public class DTOutput extends BasicMasterInterceptor<DTMasterParams, DTWorkerPar
                 Path progressLog = new Path(context.getProps().getProperty(CommonConstants.SHIFU_DTRAIN_PROGRESS_FILE));
                 // if the progressLog already exists, that because the master failed, and fail-over
                 // we need to append the log, so that client console can get refreshed. Or console will appear stuck.
-                if (ShifuFileUtils.isFileExists(progressLog, SourceType.HDFS)) {
+                if(ShifuFileUtils.isFileExists(progressLog, SourceType.HDFS)) {
                     this.progressOutput = FileSystem.get(new Configuration()).append(progressLog);
                 } else {
                     this.progressOutput = FileSystem.get(new Configuration()).create(progressLog);
