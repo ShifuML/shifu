@@ -47,6 +47,13 @@ public class IndependentTreeModel {
     private Map<Integer, String> numNameMapping;
 
     /**
+     * Mapping for Columns finalSelected
+     */
+    private List<Integer> selectedColumnIndex;
+
+    private List<String> selectedColumnNames;
+
+    /**
      * Mapping for (ColumnNum, Category List) for categorical feature
      */
     private Map<Integer, List<String>> categoricalColumnNameNames;
@@ -111,13 +118,16 @@ public class IndependentTreeModel {
      */
     private Map<Integer, Double> numericalMeanMapping;
 
-    public IndependentTreeModel(Map<Integer, Double> numericalMeanMapping, Map<Integer, String> numNameMapping,
-            Map<Integer, List<String>> categoricalColumnNameNames,
+    public IndependentTreeModel(Map<Integer, Double> numericalMeanMapping,
+                                Map<Integer, String> numNameMapping,
+                                List<Integer> selectedColumnIndex,
+                                Map<Integer, List<String>> categoricalColumnNameNames,
             Map<Integer, Map<String, Integer>> columnCategoryIndexMapping, Map<Integer, Integer> columnNumIndexMapping,
             List<TreeNode> trees, List<Double> weights, boolean isGBDT, boolean isClassification,
             boolean isConvertToProb, String lossStr, String algorithm, int inputNode, int version) {
         this.numericalMeanMapping = numericalMeanMapping;
         this.numNameMapping = numNameMapping;
+        this.selectedColumnIndex = selectedColumnIndex;
         this.categoricalColumnNameNames = categoricalColumnNameNames;
         this.columnCategoryIndexMapping = columnCategoryIndexMapping;
         this.columnNumIndexMapping = columnNumIndexMapping;
@@ -130,6 +140,11 @@ public class IndependentTreeModel {
         this.algorithm = algorithm;
         this.inputNode = inputNode;
         this.version = version;
+
+        this.selectedColumnNames = new ArrayList<String>();
+        for (Integer index : selectedColumnIndex) {
+            selectedColumnNames.add(numNameMapping.get(index));
+        }
     }
 
     /**
@@ -415,6 +430,13 @@ public class IndependentTreeModel {
     }
 
     /**
+     * @return the final selected column names
+     */
+    public List<String> getSelectedColumnNames() {
+        return this.selectedColumnNames;
+    }
+
+    /**
      * @return the trees
      */
     public List<TreeNode> getTrees() {
@@ -651,9 +673,19 @@ public class IndependentTreeModel {
             weights.add(treeNode.getLearningRate());
         }
 
+        int selectedNum = dis.readInt();
+        List<Integer> selectedColumnIndex = new ArrayList<Integer>(selectedNum);
+        for (int i = 0 ; i < selectedNum; i++) {
+            selectedColumnIndex.add(dis.readInt());
+        }
+
         // if one vs all, even multiple classification, treated as regression
-        return new IndependentTreeModel(numericalMeanMapping, columnIndexNameMapping, categoricalColumnNameNames,
-                columnCategoryIndexMapping, columnMapping, trees, weights,
+        return new IndependentTreeModel(numericalMeanMapping,
+                                        columnIndexNameMapping,
+                                        selectedColumnIndex,
+                                        categoricalColumnNameNames,
+                                        columnCategoryIndexMapping,
+                                        columnMapping, trees, weights,
                 CommonConstants.GBT_ALG_NAME.equalsIgnoreCase(algorithm), isClassification && !isOneVsAll,
                 isConvertToProb, lossStr, algorithm, inputNode, version);
     }

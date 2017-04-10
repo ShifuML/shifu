@@ -59,7 +59,8 @@ public class FullScoreUDFTest {
             input.set(i, 1);
         }
 
-        Assert.assertEquals("(42,74,5,36,31,74,66,5)", instance.exec(input).toString());
+        Assert.assertEquals(instance.exec(input).toString(),
+                "(42.43152922729472,74.2434774437648,5.347463765168124,35.99682659254982,30.754353636041152,74.2434774437648,65.81552469894967,5.347463765168124)");
     }
 
     @AfterClass
