@@ -16,7 +16,6 @@
 package ml.shifu.shifu.pig;
 
 import java.io.IOException;
-import java.lang.reflect.Method;
 import java.util.Map;
 import java.util.Properties;
 
@@ -68,16 +67,6 @@ public class ShifuPigServer extends PigServer {
             }
         }
 
-        // call by reflection to avoid exception in old 0.20.0 api falure
-        try {
-            Method method = PigServer.class.getDeclaredMethod("launchPlan", new Class[] { LogicalPlan.class,
-                    String.class });
-            if(method != null) {
-                return (PigStats) (method.invoke(this, new Object[] { lp, jobName }));
-            }
-        } catch (Throwable e) {
-            return null;
-        }
-        return null;
+        return super.launchPlan(lp, jobName);
     }
 }

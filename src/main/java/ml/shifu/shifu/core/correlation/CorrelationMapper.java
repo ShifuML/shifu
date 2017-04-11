@@ -176,10 +176,18 @@ public class CorrelationMapper extends Mapper<LongWritable, Text, IntWritable, C
             if(!this.dataPurifier.isFilterOut(valueStr)) {
                 return;
             }
+            if(Math.random() >= this.modelConfig.getNormalizeSampleRate()) {
+                return;
+            }
             dValues = getDoubleArrayByRawArray(CommonUtils.split(valueStr, this.dataSetDelimiter));
         } else if(correlation == Correlation.NormPearson) {
+            if(Math.random() >= this.modelConfig.getNormalizeSampleRate()) {
+                return;
+            }
             dValues = getDoubleArray(CommonUtils.split(valueStr, Constants.DEFAULT_DELIMITER));
         }
+
+        context.getCounter(Constants.SHIFU_GROUP_COUNTER, "CORRELATION_CNT").increment(1L);
 
         count += 1L;
         if(count % 2000L == 0) {
@@ -214,7 +222,7 @@ public class CorrelationMapper extends Mapper<LongWritable, Text, IntWritable, C
             double[] yySum = cw.getYySum();
             if(yySum == null) {
                 yySum = new double[this.columnConfigList.size()];
-                cw.setYySum(xxSum);
+                cw.setYySum(yySum);
             }
 
             double[] adjustCount = cw.getAdjustCount();

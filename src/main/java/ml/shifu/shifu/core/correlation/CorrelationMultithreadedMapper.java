@@ -172,14 +172,13 @@ public class CorrelationMultithreadedMapper extends Mapper<LongWritable, Text, I
 
         outputKey = new IntWritable();
 
-        // LOG.info("finalCorrelationMap is {}", finalCorrelationMap.toString());
-
         // send to reducer with only one merged copy no matter how many threads
         for(Entry<Integer, CorrelationWritable> entry: this.finalCorrelationMap.entrySet()) {
             outputKey.set(entry.getKey());
             context.write(outputKey, entry.getValue());
         }
 
+        // LOG.info("finalCorrelationMap is {}", finalCorrelationMap.toString());
     }
 
     private class SubMapRecordReader extends RecordReader<LongWritable, Text> {
