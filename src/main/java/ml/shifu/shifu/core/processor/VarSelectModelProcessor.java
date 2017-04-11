@@ -776,7 +776,8 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
                     for(int i = 0; i < corrArray.length; i++) {
                         // only check column larger than current column index and already final selected
                         if(config.getColumnNum() < i && columnConfigList.get(i).isFinalSelect()) {
-                            if(Math.abs(corrArray[i]) > modelConfig.getVarSelect().getCorrelationThreshold()) {
+                            // * 1.005 is to avoid some value like 1.0000000002 in correlation value
+                            if(Math.abs(corrArray[i]) > (modelConfig.getVarSelect().getCorrelationThreshold() * 1.000005d)) {
                                 if(config.getIv() > columnConfigList.get(i).getIv()) {
                                     log.warn(
                                             "Absolute corrlation value {} in ({}, {})) are larger than correlationThreshold value {} set in VarSelect#correlationThreshold, column {} with smaller IV value will not be selected, set finalSelect to false.",

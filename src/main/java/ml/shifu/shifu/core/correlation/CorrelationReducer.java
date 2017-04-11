@@ -175,7 +175,6 @@ public class CorrelationReducer extends Reducer<IntWritable, CorrelationWritable
             }
         }
         this.outputKey.set(key.get());
-        Base64.encodeBase64(objectToBytes(finalCw));
         this.outputValue.set(new String(Base64.encodeBase64(objectToBytes(finalCw)), "utf-8"));
         context.write(outputKey, outputValue);
     }
@@ -200,81 +199,5 @@ public class CorrelationReducer extends Reducer<IntWritable, CorrelationWritable
         }
         return out.toByteArray();
     }
-
-    // /**
-    // * Write column info to output.
-    // */
-    // @Override
-    // protected void cleanup(Context context) throws IOException, InterruptedException {
-    // SortedMap<Integer, double[]> corrDoubleArrayMap = new TreeMap<Integer, double[]>();
-    // for(Entry<Integer, CorrelationWritable> entry: this.correlationMap.entrySet()) {
-    // outputKey.set(entry.getKey());
-    // ColumnConfig xColumnConfig = this.columnConfigList.get(entry.getKey());
-    // if(xColumnConfig.getColumnFlag() == ColumnFlag.Meta) {
-    // continue;
-    // }
-    // CorrelationWritable xCw = this.correlationMap.get(entry.getKey());
-    // double[] corrArray = new double[this.columnConfigList.size()];
-    // for(int i = 0; i < corrArray.length; i++) {
-    // ColumnConfig yColumnConfig = this.columnConfigList.get(i);
-    // if(yColumnConfig.getColumnFlag() == ColumnFlag.Meta) {
-    // continue;
-    // }
-    // CorrelationWritable yCw = this.correlationMap.get(i);
-    // if(entry.getKey() > i && !this.isComputeAll) {
-    // double[] reverseDoubleArray = corrDoubleArrayMap.get(i);
-    // if(reverseDoubleArray != null) {
-    // corrArray[i] = reverseDoubleArray[entry.getKey()];
-    // } else {
-    // corrArray[i] = 0d;
-    // }
-    // // not compute all, only up-right matrix are computed, such case, just get [i, j] from [j, i]
-    // continue;
-    // }
-    //
-    // if(correlation == Correlation.Pearson) {
-    // // Count*Sum(X*Y) - SUM(X)*SUM(Y)
-    // if(xCw == null) {
-    // LOG.info("xCw is null with index: {}", entry.getKey());
-    // continue;
-    // }
-    //
-    // if(yCw == null) {
-    // LOG.info("yCw is null with index: {}", i);
-    // continue;
-    // }
-    //
-    // double numerator = xCw.getAdjustCount()[i] * xCw.getXySum()[i] - xCw.getAdjustSum()[i]
-    // * yCw.getAdjustSum()[i];
-    // // Math.sqrt ( COUNT * SUM(X2) - SUM(X) * SUM(X) ) * Math.sqrt ( COUNT * SUM(Y2) - SUM(Y) * SUM(Y) )
-    // double denominator1 = Math.sqrt(xCw.getAdjustCount()[i] * xCw.getAdjustSumSquare()[i]
-    // - xCw.getAdjustSum()[i] * xCw.getAdjustSum()[i]);
-    // double denominator2 = Math.sqrt(yCw.getAdjustCount()[i] * yCw.getAdjustSumSquare()[i]
-    // - yCw.getAdjustSum()[i] * yCw.getAdjustSum()[i]);
-    // if(Double.compare(denominator1, Double.valueOf(0d)) == 0
-    // || Double.compare(denominator2, Double.valueOf(0d)) == 0) {
-    // corrArray[i] = 0d;
-    // } else {
-    // corrArray[i] = numerator / (denominator1 * denominator2);
-    // }
-    // } else if(correlation == Correlation.NormPearson) {
-    // // Count*Sum(X*Y) - SUM(X)*SUM(Y)
-    // double numerator = xCw.getCount() * xCw.getXySum()[i] - xCw.getSum() * yCw.getSum();
-    // // Math.sqrt ( COUNT * SUM(X2) - SUM(X) * SUM(X) ) * Math.sqrt ( COUNT * SUM(Y2) - SUM(Y) * SUM(Y) )
-    // double denominator1 = Math.sqrt(xCw.getCount() * xCw.getSumSquare() - xCw.getSum() * xCw.getSum());
-    // double denominator2 = Math.sqrt(yCw.getCount() * yCw.getSumSquare() - yCw.getSum() * yCw.getSum());
-    // if(Double.compare(denominator1, Double.valueOf(0d)) == 0
-    // || Double.compare(denominator2, Double.valueOf(0d)) == 0) {
-    // corrArray[i] = 0d;
-    // } else {
-    // corrArray[i] = numerator / (denominator1 * denominator2);
-    // }
-    // }
-    // }
-    // outputValue.set(Arrays.toString(corrArray));
-    // corrDoubleArrayMap.put(entry.getKey(), corrArray);
-    // context.write(outputKey, outputValue);
-    // }
-    // }
 
 }
