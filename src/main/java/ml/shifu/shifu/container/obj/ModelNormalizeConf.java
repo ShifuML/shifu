@@ -76,7 +76,7 @@ public class ModelNormalizeConf {
     /**
      * Correlation computing methods
      */
-    private Correlation correlation = Correlation.None;
+    // private Correlation correlation = Correlation.None;
 
     public Double getStdDevCutOff() {
         return stdDevCutOff;
@@ -134,20 +134,20 @@ public class ModelNormalizeConf {
         this.isParquet = isParquet;
     }
 
-    /**
-     * @return the corrlation
-     */
-    public Correlation getCorrelation() {
-        return correlation;
-    }
-
-    /**
-     * @param correlation
-     *            the correlation to set
-     */
-    public void setCorrelation(Correlation correlation) {
-        this.correlation = correlation;
-    }
+    // /**
+    // * @return the corrlation
+    // */
+    // public Correlation getCorrelation() {
+    // return correlation;
+    // }
+    //
+    // /**
+    // * @param correlation
+    // * the correlation to set
+    // */
+    // public void setCorrelation(Correlation correlation) {
+    // this.correlation = correlation;
+    // }
 
     @Override
     public ModelNormalizeConf clone() {
@@ -157,7 +157,7 @@ public class ModelNormalizeConf {
         other.setSampleNegOnly(sampleNegOnly);
         other.setStdDevCutOff(stdDevCutOff);
         other.setIsParquet(isParquet);
-        other.setCorrelation(correlation);
+        // other.setCorrelation(correlation);
         return other;
     }
 }

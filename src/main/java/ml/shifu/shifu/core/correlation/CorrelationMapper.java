@@ -20,14 +20,13 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.Map.Entry;
+import java.util.Set;
 
 import ml.shifu.guagua.util.NumberFormatUtils;
 import ml.shifu.shifu.container.obj.ColumnConfig;
-import ml.shifu.shifu.container.obj.ModelConfig;
 import ml.shifu.shifu.container.obj.ColumnConfig.ColumnFlag;
-import ml.shifu.shifu.container.obj.ModelNormalizeConf.Correlation;
+import ml.shifu.shifu.container.obj.ModelConfig;
 import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
 import ml.shifu.shifu.core.DataPurifier;
 import ml.shifu.shifu.util.CommonUtils;
@@ -80,7 +79,7 @@ public class CorrelationMapper extends Mapper<LongWritable, Text, IntWritable, C
     /**
      * Correlation type
      */
-    private Correlation correlation;
+    // private Correlation correlation;
 
     /**
      * Count in current mapper
@@ -134,7 +133,6 @@ public class CorrelationMapper extends Mapper<LongWritable, Text, IntWritable, C
 
         this.outputKey = new IntWritable();
         this.correlationMap = new HashMap<Integer, CorrelationWritable>();
-        this.correlation = modelConfig.getNormalize().getCorrelation();
 
         for(ColumnConfig config: columnConfigList) {
             // set to null to avoid big memory consumption, correlation values are not used, GC will free the memory.
@@ -172,22 +170,20 @@ public class CorrelationMapper extends Mapper<LongWritable, Text, IntWritable, C
             return;
         }
         double[] dValues = null;
-        if(correlation == Correlation.Pearson) {
-            if(!this.dataPurifier.isFilterOut(valueStr)) {
-                return;
-            }
-            if(Math.random() >= this.modelConfig.getNormalizeSampleRate()) {
-                return;
-            }
-            dValues = getDoubleArrayByRawArray(CommonUtils.split(valueStr, this.dataSetDelimiter));
-        } else if(correlation == Correlation.NormPearson) {
-            if(Math.random() >= this.modelConfig.getNormalizeSampleRate()) {
-                return;
-            }
-            dValues = getDoubleArray(CommonUtils.split(valueStr, Constants.DEFAULT_DELIMITER));
+        // if(correlation == Correlation.Pearson) {
+        if(!this.dataPurifier.isFilterOut(valueStr)) {
+            return;
+        }
+
+        context.getCounter(Constants.SHIFU_GROUP_COUNTER, "CNT_AFTER_FILTER").increment(1L);
+
+        if(Math.random() >= this.modelConfig.getNormalizeSampleRate()) {
+            return;
         }
 
         context.getCounter(Constants.SHIFU_GROUP_COUNTER, "CORRELATION_CNT").increment(1L);
+
+        dValues = getDoubleArrayByRawArray(CommonUtils.split(valueStr, this.dataSetDelimiter));
 
         count += 1L;
         if(count % 2000L == 0) {
@@ -230,15 +226,15 @@ public class CorrelationMapper extends Mapper<LongWritable, Text, IntWritable, C
                 adjustCount = new double[this.columnConfigList.size()];
                 cw.setAdjustCount(adjustCount);
             }
-            double[] adjustSum = cw.getAdjustSum();
-            if(adjustSum == null) {
-                adjustSum = new double[this.columnConfigList.size()];
-                cw.setAdjustSum(adjustSum);
+            double[] adjustSumX = cw.getAdjustSumX();
+            if(adjustSumX == null) {
+                adjustSumX = new double[this.columnConfigList.size()];
+                cw.setAdjustSumX(adjustSumX);
             }
-            double[] adjustSumSquare = cw.getAdjustSumSquare();
-            if(adjustSumSquare == null) {
-                adjustSumSquare = new double[this.columnConfigList.size()];
-                cw.setAdjustSumSquare(adjustSumSquare);
+            double[] adjustSumY = cw.getAdjustSumY();
+            if(adjustSumY == null) {
+                adjustSumY = new double[this.columnConfigList.size()];
+                cw.setAdjustSumY(adjustSumY);
             }
 
             for(int j = 0; j < this.columnConfigList.size(); j++) {
@@ -255,8 +251,8 @@ public class CorrelationMapper extends Mapper<LongWritable, Text, IntWritable, C
                     xxSum[j] += squaredSum;
                     yySum[j] += dValues[j] * dValues[j];
                     adjustCount[j] += 1d;
-                    adjustSum[j] += dValues[i];
-                    adjustSumSquare[j] += squaredSum;
+                    adjustSumX[j] += dValues[i];
+                    adjustSumY[j] += dValues[j];
                 }
             }
         }
@@ -327,25 +323,6 @@ public class CorrelationMapper extends Mapper<LongWritable, Text, IntWritable, C
                             dValues[i] = binPosRate;
                         }
                     }
-                }
-            }
-        }
-        return dValues;
-    }
-
-    private double[] getDoubleArray(String[] units) {
-        double[] dValues = new double[this.columnConfigList.size()];
-        for(int i = 0; i < this.columnConfigList.size(); i++) {
-            ColumnConfig columnConfig = this.columnConfigList.get(i);
-            if(columnConfig.getColumnFlag() == ColumnFlag.Meta) {
-                dValues[i] = 0d;
-            } else {
-                // if missing it is set to MIN_VALUE, then try to skip rows with invalid value
-                if(units[i] == null || units[i].length() == 0) {
-                    // some null values, set it to min value to avoid parsing String to improve performance
-                    dValues[i] = Double.MIN_VALUE;
-                } else {
-                    dValues[i] = NumberFormatUtils.getDouble(units[i], Double.MIN_VALUE);
                 }
             }
         }

@@ -64,6 +64,8 @@ public abstract class AbstractTrainerUDF<T> extends EvalFunc<T> {
 
         columnConfigList = CommonUtils.loadColumnConfigList(pathColumnConfig, sourceType);
         for(ColumnConfig config: columnConfigList) {
+            // set correlation array to null to avoid big memory consumption. 3000 columns will spend 700M memory.
+            config.setCorrArray(null);
             if(config.isTarget()) {
                 tagColumnNum = config.getColumnNum();
                 break;

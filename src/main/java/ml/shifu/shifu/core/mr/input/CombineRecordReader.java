@@ -37,15 +37,17 @@ import org.apache.hadoop.mapreduce.RecordReader;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.apache.hadoop.mapreduce.lib.input.CompressedSplitLineReader;
 import org.apache.hadoop.mapreduce.lib.input.FileSplit;
+import org.apache.hadoop.mapreduce.lib.input.LineRecordReader;
 import org.apache.hadoop.mapreduce.lib.input.SplitLineReader;
 
 /**
- * TODO
+ * Copy from Hadoop 2.0 {@link LineRecordReader} to replace old from 1.0 to avoid bad progress computing
  * 
  * @author Zhang David (pengzhang@paypal.com)
  */
 public class CombineRecordReader extends RecordReader<LongWritable, Text> {
-    private static final Log LOG = LogFactory.getLog(NewCombineRecordReader.class);
+
+    private static final Log LOG = LogFactory.getLog(CombineRecordReader.class);
     public static final String MAX_LINE_LENGTH = "mapreduce.input.linerecordreader.line.maxlength";
 
     private long start;
