@@ -113,11 +113,6 @@ public class UpdateBinningInfoReducer extends Reducer<IntWritable, BinningInfoWr
     protected void setup(Context context) throws IOException, InterruptedException {
         loadConfigFiles(context);
 
-        // save memory, corrArray is columns * column matrix which is a big memory consumption
-        for(ColumnConfig config: columnConfigList) {
-            config.setCorrArray(null);
-        }
-
         this.statsExcludeMissingValue = context.getConfiguration().getBoolean(Constants.SHIFU_STATS_EXLCUDE_MISSING,
                 true);
 

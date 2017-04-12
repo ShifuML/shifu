@@ -22,6 +22,7 @@ import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -129,8 +130,8 @@ public class StatsModelProcessor extends BasicModelProcessor implements Processo
                     return -1;
                 }
 
-                log.info("Start computing correlation value ...");
                 // 2. compute correlation
+                log.info("Start computing correlation value ...");
                 runCorrMapReduceJob();
                 // 3. save column config list
                 saveColumnConfigList();
@@ -298,14 +299,17 @@ public class StatsModelProcessor extends BasicModelProcessor implements Processo
      * column size to avoid OOM issue.
      */
     private void setMapperMemory(Configuration conf, int threads) {
+        int memoryUnit = 2048 / threads;
         int memoryBuffer = 500;
-        int memoryInContainer = this.columnConfigList.size() > 700 ? ((int) (this.columnConfigList.size() * 1d / 700))
-                * 341 * threads : 341 * threads;
+        int memoryInContainer = this.columnConfigList.size() > 1200 ? ((int) (this.columnConfigList.size() / 1200d))
+                * memoryUnit * threads : memoryUnit * threads;
         if(memoryInContainer < 2048) {
             memoryInContainer = 2048; // at least 2048M
         }
         memoryInContainer += memoryBuffer; // (MB, 500 is buffer)
-        
+
+        log.info("Corrrelation map memory is set to {}MB.", memoryInContainer);
+
         conf.set("mapreduce.map.memory.mb", memoryInContainer + "");
         conf.set(
                 "mapreduce.map.java.opts",
@@ -317,15 +321,15 @@ public class StatsModelProcessor extends BasicModelProcessor implements Processo
     }
 
     private int parseThreadNum() {
-        int threads = 0;
+        int threads = 4;
         try {
-            threads = Integer.parseInt(Environment.getProperty(Constants.SHIFU_CORRELATION_MULTI_THREADS, "6"));
+            threads = Integer
+                    .parseInt(Environment.getProperty(Constants.SHIFU_CORRELATION_MULTI_THREADS, threads + ""));
         } catch (Exception e) {
-            log.warn("'shifu.correlation.multi.threads' should be a int value, set default value: {}", 6);
-            threads = 6;
+            log.warn("'shifu.correlation.multi.threads' should be a int value, set default value: {}", threads);
         }
         if(threads <= 0) {
-            threads = 6;
+            threads = 4;
         }
         return threads;
     }
@@ -347,9 +351,10 @@ public class StatsModelProcessor extends BasicModelProcessor implements Processo
      *             any IOException to write correlation value to csv file.
      */
     private void computeCorrValue(SortedMap<Integer, CorrelationWritable> corrMap) throws IOException {
-        String localCorrelationCsv = super.pathFinder.getPathBySourceType("correlation.csv", SourceType.LOCAL);
+        String localCorrelationCsv = super.pathFinder.getLocalCorrelationCsvPath();
         ShifuFileUtils.createFileIfNotExists(localCorrelationCsv, SourceType.LOCAL);
         BufferedWriter writer = null;
+        Map<Integer, double[]> finalCorrMap = new HashMap<Integer, double[]>();
         try {
             writer = ShifuFileUtils.getWriter(localCorrelationCsv, SourceType.LOCAL);
             writer.write(getColumnIndexes());
@@ -370,7 +375,7 @@ public class StatsModelProcessor extends BasicModelProcessor implements Processo
                         continue;
                     }
                     if(entry.getKey() > i) {
-                        double[] reverseDoubleArray = this.columnConfigList.get(i).getCorrArray();
+                        double[] reverseDoubleArray = finalCorrMap.get(i);
                         if(reverseDoubleArray != null) {
                             corrArray[i] = reverseDoubleArray[entry.getKey()];
                         } else {
@@ -393,12 +398,18 @@ public class StatsModelProcessor extends BasicModelProcessor implements Processo
                         corrArray[i] = numerator / (denominator1 * denominator2);
                     }
                 }
-                this.columnConfigList.get(entry.getKey()).setCorrArray(corrArray);
+
+                // put to current map
+                finalCorrMap.put(entry.getKey(), corrArray);
+
+                // write to csv
                 String corrStr = Arrays.toString(corrArray);
                 String adjustCorrStr = corrStr.substring(1, corrStr.length() - 1);
                 writer.write(entry.getKey() + "," + this.columnConfigList.get(entry.getKey()).getColumnName() + ","
                         + adjustCorrStr);
                 writer.newLine();
+                // remove current cw to save memory
+                corrMap.remove(entry.getKey());
             }
             log.info("Please find corrlation csv file in local {}.", localCorrelationCsv);
         } finally {

@@ -135,9 +135,6 @@ public class CorrelationMapper extends Mapper<LongWritable, Text, IntWritable, C
         this.correlationMap = new HashMap<Integer, CorrelationWritable>();
 
         for(ColumnConfig config: columnConfigList) {
-            // set to null to avoid big memory consumption, correlation values are not used, GC will free the memory.
-            config.setCorrArray(null);
-
             if(config.isCategorical()) {
                 Map<String, Integer> map = new HashMap<String, Integer>();
                 if(config.getBinCategory() != null) {
