@@ -795,25 +795,40 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
                 if(columns != null && columns.length == columnConfigList.size() + 2) {
                     int columnIndex = Integer.parseInt(columns[0]);
                     ColumnConfig config = this.columnConfigList.get(columnIndex);
-                    if(!config.isTarget() && !config.isMeta() && !config.isForceSelect() && config.isFinalSelect()) {
+
+                    // only check final-selected non-meta columns
+                    if(config.isFinalSelect() || config.isTarget()) {
                         double[] corrArray = getCorrArray(columns);
                         for(int i = 0; i < corrArray.length; i++) {
                             // only check column larger than current column index and already final selected
                             if(config.getColumnNum() < i && columnConfigList.get(i).isFinalSelect()) {
-                                // * 1.005 is to avoid some value like 1.0000000002 in correlation value
+                                // * 1.000005d is to avoid some value like 1.0000000002 in correlation value
                                 if(Math.abs(corrArray[i]) > (modelConfig.getVarSelect().getCorrelationThreshold() * 1.000005d)) {
-                                    if(config.getIv() > columnConfigList.get(i).getIv()) {
+                                    if(config.isTarget() && columnConfigList.get(i).isFinalSelect()) {
                                         log.warn(
-                                                "Absolute corrlation value {} in ({}, {}) are larger than correlationThreshold value {} set in VarSelect#correlationThreshold, column {} with smaller IV value will not be selected, set finalSelect to false.",
-                                                corrArray[i], config.getColumnNum(), i, modelConfig.getVarSelect()
-                                                        .getCorrelationThreshold(), i);
+                                                "{} and {} has high correlated value while {} is target, {} is set to NOT final-selected no matter it is force-selected or not.",
+                                                columnIndex, i, i);
                                         columnConfigList.get(i).setFinalSelect(false);
-                                    } else {
+                                    } else if(config.isFinalSelect() && columnConfigList.get(i).isTarget()) {
                                         log.warn(
-                                                "Abslolute corrlation value {} in ({}, {}) are larger than correlationThreshold value {} set in VarSelect#correlationThreshold, column {} with smaller IV value will not be selected, set finalSelect to false.",
-                                                corrArray[i], config.getColumnNum(), i, modelConfig.getVarSelect()
-                                                        .getCorrelationThreshold(), config.getColumnNum());
+                                                "{} and {} has high correlated value while {} is target, {} is set to NOT final-selected no matter it is force-selected or not.",
+                                                columnIndex, i, columnIndex);
                                         config.setFinalSelect(false);
+                                    } else {
+                                        // both columns are not target and all final selected
+                                        if(config.getIv() > columnConfigList.get(i).getIv()) {
+                                            log.warn(
+                                                    "Absolute corrlation value {} in ({}, {}) are larger than correlationThreshold value {} set in VarSelect#correlationThreshold, column {} with smaller IV value will not be selected, set finalSelect to false.",
+                                                    corrArray[i], config.getColumnNum(), i, modelConfig.getVarSelect()
+                                                            .getCorrelationThreshold(), i);
+                                            columnConfigList.get(i).setFinalSelect(false);
+                                        } else {
+                                            log.warn(
+                                                    "Abslolute corrlation value {} in ({}, {}) are larger than correlationThreshold value {} set in VarSelect#correlationThreshold, column {} with smaller IV value will not be selected, set finalSelect to false.",
+                                                    corrArray[i], config.getColumnNum(), i, modelConfig.getVarSelect()
+                                                            .getCorrelationThreshold(), config.getColumnNum());
+                                            config.setFinalSelect(false);
+                                        }
                                     }
                                 }
                             }
