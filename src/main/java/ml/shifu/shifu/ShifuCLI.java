@@ -86,6 +86,7 @@ public class ShifuCLI {
 
     private static final String RESET = "reset";
 
+    private static final String CORRELATION = "correlation";
     // for evaluation
     private static final String LIST = "list";
     private static final String DELETE = "delete";
@@ -188,9 +189,13 @@ public class ShifuCLI {
                     }
                 } else if(cleanedArgs[0].equals(STATS_CMD)) {
                     // stats step
-                    status = calModelStats();
+                    status = calModelStats(cmd.hasOption(CORRELATION) || cmd.hasOption("c"));
                     if(status == 0) {
-                        log.info("Do model set statistics successfully. Please continue next step by using 'shifu normalize or shifu norm'. For tree ensemble model, no need do norm, please continue next step by using 'shifu varsel'");
+                        if(cmd.hasOption(CORRELATION) || cmd.hasOption("c")) {
+                            log.info("Do model set corrlation computing successfully. Please continue next step by using 'shifu normalize or shifu norm'. For tree ensemble model, no need do norm, please continue next step by using 'shifu varsel'");
+                        } else {
+                            log.info("Do model set statistic successfully. Please continue next step by using 'shifu normalize or shifu norm'. For tree ensemble model, no need do norm, please continue next step by using 'shifu varsel'");
+                        }
                     } else {
                         log.warn("Error in model set stats computation, please report issue on http:/github.com/shifuml/shifu/issues.");
                     }
@@ -380,8 +385,8 @@ public class ShifuCLI {
     /*
      * Calculate variables stats for model - ks/iv/mean/max/min
      */
-    public static int calModelStats() throws Exception {
-        StatsModelProcessor p = new StatsModelProcessor();
+    public static int calModelStats(boolean correlation) throws Exception {
+        StatsModelProcessor p = new StatsModelProcessor(correlation);
         return p.run();
     }
 
@@ -536,6 +541,10 @@ public class ShifuCLI {
         Option opt_concise = OptionBuilder.hasArg(false).withDescription("Export concise PMML").create(EXPORT_CONCISE);
         Option opt_reset = OptionBuilder.hasArg(false).withDescription("Reset all variables to finalSelect = false")
                 .create(RESET);
+        Option opt_correlation = OptionBuilder.hasArg(false)
+                .withDescription("Compute corrlation value for all column pairs.").create(CORRELATION);
+        Option opt_correlation_short = OptionBuilder.hasArg(false)
+                .withDescription("Compute corrlation value for all column pairs.").create("c");
         Option opt_shuffle = OptionBuilder.hasArg(false).withDescription("Shuffle data after normalization")
                 .create(SHUFFLE);
         Option opt_resume = OptionBuilder.hasArg(false).withDescription("Resume combo model training.").create(RESUME);
@@ -576,7 +585,8 @@ public class ShifuCLI {
         opts.addOption(opt_save);
         opts.addOption(opt_switch);
         opts.addOption(opt_eval_model);
-
+        opts.addOption(opt_correlation);
+        opts.addOption(opt_correlation_short);
         return opts;
     }
 
@@ -591,6 +601,8 @@ public class ShifuCLI {
                 .println("\tinit                                    Create initial ColumnConfig.json and upload to HDFS.");
         System.out
                 .println("\tstats                                   Calculate statistics on HDFS and update local ColumnConfig.json.");
+        System.out
+                .println("\tstats -correlation(c)                   Calculate correlation values between column pairs.");
         System.out
                 .println("\tvarselect/varsel [-reset] [-list]       Variable selection, will update finalSelect in ColumnConfig.json.");
         System.out.println("\tnormalize/norm [-shuffle]               Normalize the columns with finalSelect as true.");

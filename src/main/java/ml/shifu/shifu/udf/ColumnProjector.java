@@ -37,7 +37,7 @@ import org.apache.pig.impl.util.UDFContext;
 import org.apache.pig.tools.pigstats.PigStatusReporter;
 
 /**
- * TODO
+ * To project only useful columns used in eval sorting. Meta, target, weight and score columns should be included.
  */
 public class ColumnProjector extends AbstractTrainerUDF<Tuple> {
 

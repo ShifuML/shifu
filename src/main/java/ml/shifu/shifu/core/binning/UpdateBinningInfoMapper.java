@@ -156,6 +156,11 @@ public class UpdateBinningInfoMapper extends Mapper<LongWritable, Text, IntWrita
     protected void setup(Context context) throws IOException, InterruptedException {
         loadConfigFiles(context);
 
+        // save memory, corrArray is columns * column matrix which is a big memory consumption
+        for(ColumnConfig config: columnConfigList) {
+            config.setCorrArray(null);
+        }
+
         this.dataSetDelimiter = this.modelConfig.getDataSetDelimiter();
 
         this.dataPurifier = new DataPurifier(this.modelConfig);
