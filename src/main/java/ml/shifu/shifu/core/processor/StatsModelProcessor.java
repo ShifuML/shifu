@@ -321,7 +321,7 @@ public class StatsModelProcessor extends BasicModelProcessor implements Processo
     }
 
     private int parseThreadNum() {
-        int threads = 4;
+        int threads = 6;
         try {
             threads = Integer
                     .parseInt(Environment.getProperty(Constants.SHIFU_CORRELATION_MULTI_THREADS, threads + ""));
@@ -329,7 +329,7 @@ public class StatsModelProcessor extends BasicModelProcessor implements Processo
             log.warn("'shifu.correlation.multi.threads' should be a int value, set default value: {}", threads);
         }
         if(threads <= 0) {
-            threads = 4;
+            threads = 6;
         }
         return threads;
     }
@@ -408,8 +408,6 @@ public class StatsModelProcessor extends BasicModelProcessor implements Processo
                 writer.write(entry.getKey() + "," + this.columnConfigList.get(entry.getKey()).getColumnName() + ","
                         + adjustCorrStr);
                 writer.newLine();
-                // remove current cw to save memory
-                corrMap.remove(entry.getKey());
             }
             log.info("Please find corrlation csv file in local {}.", localCorrelationCsv);
         } finally {

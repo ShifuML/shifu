@@ -793,7 +793,7 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
 
                 String[] columns = CommonUtils.split(line, ",");
                 if(columns != null && columns.length == columnConfigList.size() + 2) {
-                    int columnIndex = Integer.parseInt(columns[0]);
+                    int columnIndex = Integer.parseInt(columns[0].trim());
                     ColumnConfig config = this.columnConfigList.get(columnIndex);
 
                     // only check final-selected non-meta columns
@@ -801,7 +801,8 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
                         double[] corrArray = getCorrArray(columns);
                         for(int i = 0; i < corrArray.length; i++) {
                             // only check column larger than current column index and already final selected
-                            if(config.getColumnNum() < i && columnConfigList.get(i).isFinalSelect()) {
+                            if(config.getColumnNum() < i
+                                    && (columnConfigList.get(i).isTarget() || columnConfigList.get(i).isFinalSelect())) {
                                 // * 1.000005d is to avoid some value like 1.0000000002 in correlation value
                                 if(Math.abs(corrArray[i]) > (modelConfig.getVarSelect().getCorrelationThreshold() * 1.000005d)) {
                                     if(config.isTarget() && columnConfigList.get(i).isFinalSelect()) {
