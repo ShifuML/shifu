@@ -83,10 +83,10 @@ public class ColumnConfig {
      */
     private ColumnBinning columnBinning = new ColumnBinning();
 
-    /**
-     * Correlation array list
-     */
-    private double[] corrArray;
+    // /**
+    // * Correlation array list
+    // */
+    // private double[] corrArray;
 
     /**
      * Sample values of such column.
@@ -418,20 +418,20 @@ public class ColumnConfig {
         this.columnStats.setUnitStats(unitStats);
     }
 
-    /**
-     * @return the corrArray
-     */
-    public double[] getCorrArray() {
-        return corrArray;
-    }
-
-    /**
-     * @param corrArray
-     *            the corrArray to set
-     */
-    public void setCorrArray(double[] corrArray) {
-        this.corrArray = corrArray;
-    }
+    // /**
+    // * @return the corrArray
+    // */
+    // public double[] getCorrArray() {
+    // return corrArray;
+    // }
+    //
+    // /**
+    // * @param corrArray
+    // * the corrArray to set
+    // */
+    // public void setCorrArray(double[] corrArray) {
+    // this.corrArray = corrArray;
+    // }
 
     /**
      * ColumnConfigComparator class
@@ -466,7 +466,7 @@ public class ColumnConfig {
         other.setFinalSelect(finalSelect);
         other.setColumnStats(columnStats);
         other.setColumnBinning(columnBinning);
-        other.setCorrArray(corrArray);
+        // other.setCorrArray(corrArray);
         return other;
     }
 

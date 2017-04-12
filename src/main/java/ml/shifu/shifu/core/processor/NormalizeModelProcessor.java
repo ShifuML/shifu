@@ -23,7 +23,6 @@ import java.util.Map;
 import java.util.Scanner;
 
 import ml.shifu.shifu.actor.AkkaSystemExecutor;
-import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
 import ml.shifu.shifu.core.shuffle.MapReduceShuffle;
 import ml.shifu.shifu.core.validator.ModelInspector.ModelStep;
@@ -72,13 +71,6 @@ public class NormalizeModelProcessor extends BasicModelProcessor implements Proc
                 case DIST:
                 case MAPRED:
                     runPigNormalize();
-
-                    for(ColumnConfig config: columnConfigList) {
-                        config.setCorrArray(null);
-                    }
-
-                    saveColumnConfigList();
-                    syncDataToHdfs(modelConfig.getDataSet().getSource());
 
                     if(this.isToShuffleData) {
                         // shuffling normalized data, to make data random

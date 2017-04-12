@@ -101,13 +101,6 @@ public class AutoTypeDistinctCountMapper extends Mapper<LongWritable, Text, IntW
     protected void setup(Context context) throws IOException, InterruptedException {
         loadConfigFiles(context);
 
-        // remove corr array to save memory, if 300 variables, corrArray in each mapper instance will be 700M, 6 threads
-        // will be 4.2G.
-        for(ColumnConfig config: columnConfigList) {
-            // set to null to avoid big memory consumption, correlation values are not used, GC will free the memory.
-            config.setCorrArray(null);
-        }
-
         this.dataPurifier = new DataPurifier(this.modelConfig);
 
         loadTagWeightNum();
