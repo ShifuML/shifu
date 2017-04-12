@@ -177,8 +177,6 @@ public class CorrelationMultithreadedMapper extends Mapper<LongWritable, Text, I
             outputKey.set(entry.getKey());
             context.write(outputKey, entry.getValue());
         }
-
-        // LOG.info("finalCorrelationMap is {}", finalCorrelationMap.toString());
     }
 
     private class SubMapRecordReader extends RecordReader<LongWritable, Text> {

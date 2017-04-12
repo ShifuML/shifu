@@ -114,6 +114,12 @@ case "`uname`" in
 esac
 
 JAVA_OPTIONS=${SHIFU_OPTS:=-server -Xms1G -Xmx2G}
+if [ "${1}" == "stats" ]; then
+    if [ "${2}" == "-correlation" -o "${2}" == "-c" ]; then
+        # set to 4G for correlation computing to avoid OOM
+        JAVA_OPTIONS=${SHIFU_OPTS:=-server -Xms1G -Xmx4G}
+    fi
+fi
 
 PIG_OPTIONS="${PIG_OPTIONS} -Dmapred.map.tasks.speculative.execution=true"
 PIG_OPTIONS="${PIG_OPTIONS} -Dmapred.reduce.tasks.speculative.execution=true"
@@ -157,7 +163,7 @@ CLASSPATH=`remove_duplicate_jars_func "${CLASSPATH}"`
 if [ "${HADOOP_CONF_DIR}" != "" -a -d "${HADOOP_CONF_DIR}" ]; then
     CLASSPATH="${HADOOP_CONF_DIR}:${CLASSPATH}"
 fi
-CLASSPATH=".:${SHIFU_HOME}/log4jconf:${CLASSPATH}:${SHIFU_HOME}/conf"
+CLASSPATH=".:${SHIFU_HOME}/conf:${SHIFU_HOME}/log4jconf:${CLASSPATH}"
 
 LD_LIBRARY_PATH=`find_ld_library_path ${HADOOP_ROOT}`
 
