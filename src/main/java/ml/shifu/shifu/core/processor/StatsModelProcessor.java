@@ -301,11 +301,11 @@ public class StatsModelProcessor extends BasicModelProcessor implements Processo
         int memoryBuffer = 500;
         int memoryInContainer = this.columnConfigList.size() > 700 ? ((int) (this.columnConfigList.size() * 1d / 700))
                 * 341 * threads : 341 * threads;
-        memoryInContainer = (int) (memoryInContainer * 1d / threads);
         if(memoryInContainer < 2048) {
             memoryInContainer = 2048; // at least 2048M
         }
         memoryInContainer += memoryBuffer; // (MB, 500 is buffer)
+        
         conf.set("mapreduce.map.memory.mb", memoryInContainer + "");
         conf.set(
                 "mapreduce.map.java.opts",
