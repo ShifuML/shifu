@@ -174,7 +174,7 @@ public class CorrelationMapper extends Mapper<LongWritable, Text, IntWritable, C
 
         context.getCounter(Constants.SHIFU_GROUP_COUNTER, "CNT_AFTER_FILTER").increment(1L);
 
-        if(Math.random() >= this.modelConfig.getNormalizeSampleRate()) {
+        if(Math.random() >= this.modelConfig.getStats().getSampleRate()) {
             return;
         }
 
