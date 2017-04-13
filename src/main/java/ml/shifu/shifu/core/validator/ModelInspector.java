@@ -148,7 +148,7 @@ public class ModelInspector {
             }
 
             if(modelConfig.isClassification() && modelConfig.getTrain().isOneVsAll()) {
-                if(!CommonUtils.isDesicionTreeAlgorithm(modelConfig.getAlgorithm())
+                if(!CommonUtils.isTreeModel(modelConfig.getAlgorithm())
                         && !modelConfig.getAlgorithm().equalsIgnoreCase("nn")) {
                     ValidateResult tmpResult = new ValidateResult(true);
                     tmpResult
@@ -512,7 +512,7 @@ public class ModelInspector {
         }
 
         if(modelConfig.isClassification() && train.isOneVsAll()
-                && !CommonUtils.isDesicionTreeAlgorithm(train.getAlgorithm())
+                && !CommonUtils.isTreeModel(train.getAlgorithm())
                 && !train.getAlgorithm().equalsIgnoreCase("nn")) {
             ValidateResult tmpResult = new ValidateResult(true);
             tmpResult.setStatus(false);
@@ -588,6 +588,17 @@ public class ModelInspector {
                     tmpResult.getCauses().add(
                             "If ELM(extreme learning machine), hidden layer should only be one layer.");
                     result = ValidateResult.mergeResult(result, tmpResult);
+                }
+
+                Object dropoutObj = params.get(NNTrainer.DROPOUT_RATE);
+                if(dropoutObj != null) {
+                    Double dropoutRate = Double.valueOf(dropoutObj.toString());
+                    if(dropoutRate != null && (dropoutRate < 0d || dropoutRate >= 1d)) {
+                        ValidateResult tmpResult = new ValidateResult(true);
+                        tmpResult.setStatus(false);
+                        tmpResult.getCauses().add("Dropout rate should be in [0, 1).");
+                        result = ValidateResult.mergeResult(result, tmpResult);
+                    }
                 }
             }
 

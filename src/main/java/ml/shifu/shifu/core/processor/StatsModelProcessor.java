@@ -301,7 +301,7 @@ public class StatsModelProcessor extends BasicModelProcessor implements Processo
     private void setMapperMemory(Configuration conf, int threads) {
         int memoryUnit = 2048 / threads;
         int memoryBuffer = 500;
-        int memoryInContainer = this.columnConfigList.size() > 1200 ? ((int) (this.columnConfigList.size() / 1200d))
+        int memoryInContainer = this.columnConfigList.size() > 800 ? ((int) (this.columnConfigList.size() / 800d))
                 * memoryUnit * threads : memoryUnit * threads;
         if(memoryInContainer < 2048) {
             memoryInContainer = 2048; // at least 2048M

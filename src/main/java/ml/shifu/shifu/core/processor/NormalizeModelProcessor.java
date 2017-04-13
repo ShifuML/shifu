@@ -77,6 +77,10 @@ public class NormalizeModelProcessor extends BasicModelProcessor implements Proc
                         MapReduceShuffle shuffler = new MapReduceShuffle(this.modelConfig);
                         shuffler.run(this.pathFinder.getNormalizedDataPath());
                     }
+
+                    if(CommonUtils.isTreeModel(modelConfig.getAlgorithm())) {
+                        runDataClean(this.isToShuffleData);
+                    }
                     break;
                 case LOCAL:
                     runAkkaNormalize();
