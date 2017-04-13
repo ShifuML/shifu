@@ -578,7 +578,7 @@ public class ConfusionMatrix {
                 int maxIndex = -1;
                 double maxScore = Double.NEGATIVE_INFINITY;
 
-                if(CommonUtils.isDesicionTreeAlgorithm(modelConfig.getAlgorithm())
+                if(CommonUtils.isTreeModel(modelConfig.getAlgorithm())
                         && !modelConfig.getTrain().isOneVsAll()) {
                     // for RF native classification
                     double[] tagCounts = new double[tags.size()];
@@ -593,7 +593,7 @@ public class ConfusionMatrix {
                             maxScore = maxVotes = tagCounts[i];
                         }
                     }
-                } else if((CommonUtils.isDesicionTreeAlgorithm(modelConfig.getAlgorithm()) || NNConstants.NN_ALG_NAME
+                } else if((CommonUtils.isTreeModel(modelConfig.getAlgorithm()) || NNConstants.NN_ALG_NAME
                         .equalsIgnoreCase(modelConfig.getAlgorithm())) && modelConfig.getTrain().isOneVsAll()) {
                     // for RF, GBT & NN OneVsAll classification
                     for(int i = this.multiClassScore1Index; i < (classes + this.multiClassScore1Index); i++) {

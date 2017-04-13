@@ -698,7 +698,7 @@ public final class CommonUtils {
                 || (!Constants.NN.equalsIgnoreCase(modelConfig.getAlgorithm())
                         && !Constants.SVM.equalsIgnoreCase(modelConfig.getAlgorithm())
                         && !Constants.LR.equalsIgnoreCase(modelConfig.getAlgorithm()) && !CommonUtils
-                            .isDesicionTreeAlgorithm(modelConfig.getAlgorithm()))) {
+                            .isTreeModel(modelConfig.getAlgorithm()))) {
             throw new IllegalArgumentException(modelConfig == null ? "modelConfig is null." : String.format(
                     " invalid model algorithm %s.", modelConfig.getAlgorithm()));
         }
@@ -1440,7 +1440,7 @@ public final class CommonUtils {
                 if(!noVarSel) {
                     if(config != null && !config.isMeta() && !config.isTarget() && config.isFinalSelect()) {
                         String val = nsDataMap.get(key) == null ? null : nsDataMap.get(key).toString();
-                        if(CommonUtils.isDesicionTreeAlgorithm(alg) && config.isCategorical()) {
+                        if(CommonUtils.isTreeModel(alg) && config.isCategorical()) {
                             Integer index = binCategoryMap.get(config.getColumnNum()).get(val == null ? "" : val);
                             if(index == null) {
                                 // not in binCategories, should be missing value
@@ -1456,7 +1456,7 @@ public final class CommonUtils {
                 } else {
                     if(!config.isMeta() && !config.isTarget() && CommonUtils.isGoodCandidate(config)) {
                         String val = nsDataMap.get(key) == null ? null : nsDataMap.get(key).toString();
-                        if(CommonUtils.isDesicionTreeAlgorithm(alg) && config.isCategorical()) {
+                        if(CommonUtils.isTreeModel(alg) && config.isCategorical()) {
                             Integer index = binCategoryMap.get(config.getColumnNum()).get(val == null ? "" : val);
                             if(index == null) {
                                 // not in binCategories, should be missing value
@@ -1486,7 +1486,7 @@ public final class CommonUtils {
     private static double computeNumericNormResult(ModelConfig modelConfig, double cutoff, ColumnConfig config,
             String val) {
         Double normalizeValue = null;
-        if(CommonUtils.isDesicionTreeAlgorithm(modelConfig.getAlgorithm())) {
+        if(CommonUtils.isTreeModel(modelConfig.getAlgorithm())) {
             try {
                 normalizeValue = Double.parseDouble(val);
             } catch (Exception e) {
@@ -1498,7 +1498,7 @@ public final class CommonUtils {
         return normalizeValue;
     }
 
-    public static boolean isDesicionTreeAlgorithm(String alg) {
+    public static boolean isTreeModel(String alg) {
         return CommonConstants.RF_ALG_NAME.equalsIgnoreCase(alg) || CommonConstants.GBT_ALG_NAME.equalsIgnoreCase(alg);
     }
 

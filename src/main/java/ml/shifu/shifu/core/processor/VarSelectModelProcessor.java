@@ -164,7 +164,7 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
                             || filterBy.equalsIgnoreCase(Constants.FILTER_BY_MIX)) {
                         this.columnConfigList = selector.selectByFilter();
                     } else if(filterBy.equalsIgnoreCase(Constants.FILTER_BY_FI)) {
-                        if(!CommonUtils.isDesicionTreeAlgorithm(modelConfig.getAlgorithm())) {
+                        if(!CommonUtils.isTreeModel(modelConfig.getAlgorithm())) {
                             throw new IllegalArgumentException(
                                     "Filter by FI only works well in GBT/RF. Please check your modelconfig::train.");
                         }
@@ -819,13 +819,13 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
                                         // both columns are not target and all final selected
                                         if(config.getIv() > columnConfigList.get(i).getIv()) {
                                             log.warn(
-                                                    "Absolute corrlation value {} in ({}, {}) are larger than correlationThreshold value {} set in VarSelect#correlationThreshold, column {} with smaller IV value will not be selected, set finalSelect to false.",
+                                                    "Absolute correlation value {} in ({}, {}) are larger than correlationThreshold value {} set in VarSelect#correlationThreshold, column {} with smaller IV value will not be selected, set finalSelect to false.",
                                                     corrArray[i], config.getColumnNum(), i, modelConfig.getVarSelect()
                                                             .getCorrelationThreshold(), i);
                                             columnConfigList.get(i).setFinalSelect(false);
                                         } else {
                                             log.warn(
-                                                    "Abslolute corrlation value {} in ({}, {}) are larger than correlationThreshold value {} set in VarSelect#correlationThreshold, column {} with smaller IV value will not be selected, set finalSelect to false.",
+                                                    "Absolute correlation value {} in ({}, {}) are larger than correlationThreshold value {} set in VarSelect#correlationThreshold, column {} with smaller IV value will not be selected, set finalSelect to false.",
                                                     corrArray[i], config.getColumnNum(), i, modelConfig.getVarSelect()
                                                             .getCorrelationThreshold(), config.getColumnNum());
                                             config.setFinalSelect(false);

@@ -66,6 +66,7 @@ public class NNTrainer extends AbstractTrainer {
     public static final String ACTIVATION_FUNC = "ActivationFunc";
     public static final String NUM_HIDDEN_NODES = "NumHiddenNodes";
     public static final String LEARNING_RATE = "LearningRate";
+    public static final String DROPOUT_RATE = "DropoutRate";
     public static final String PROPAGATION = "Propagation";
 
     private static final Logger LOG = LoggerFactory.getLogger(NNTrainer.class);

@@ -77,11 +77,6 @@ public class CorrelationMapper extends Mapper<LongWritable, Text, IntWritable, C
     private Map<Integer, CorrelationWritable> correlationMap;
 
     /**
-     * Correlation type
-     */
-    // private Correlation correlation;
-
-    /**
      * Count in current mapper
      */
     private long count;
@@ -167,7 +162,6 @@ public class CorrelationMapper extends Mapper<LongWritable, Text, IntWritable, C
             return;
         }
         double[] dValues = null;
-        // if(correlation == Correlation.Pearson) {
         if(!this.dataPurifier.isFilterOut(valueStr)) {
             return;
         }
