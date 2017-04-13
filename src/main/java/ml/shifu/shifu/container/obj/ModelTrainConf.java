@@ -220,6 +220,7 @@ public class ModelTrainConf {
         this.validSetRate = validSetRate;
     }
 
+    @JsonIgnore
     public Boolean getTrainOnDisk() {
         return trainOnDisk;
     }

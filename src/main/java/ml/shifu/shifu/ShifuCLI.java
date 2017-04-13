@@ -192,7 +192,7 @@ public class ShifuCLI {
                     status = calModelStats(cmd.hasOption(CORRELATION) || cmd.hasOption("c"));
                     if(status == 0) {
                         if(cmd.hasOption(CORRELATION) || cmd.hasOption("c")) {
-                            log.info("Do model set corrlation computing successfully. Please continue next step by using 'shifu normalize or shifu norm'. For tree ensemble model, no need do norm, please continue next step by using 'shifu varsel'");
+                            log.info("Do model set correlation computing successfully. Please continue next step by using 'shifu normalize or shifu norm'. For tree ensemble model, no need do norm, please continue next step by using 'shifu varsel'");
                         } else {
                             log.info("Do model set statistic successfully. Please continue next step by using 'shifu normalize or shifu norm'. For tree ensemble model, no need do norm, please continue next step by using 'shifu varsel'");
                         }
