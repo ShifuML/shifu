@@ -459,65 +459,6 @@ public class BasicModelProcessor {
         this.otherConfigs = otherConfigs;
     }
 
-    /**
-     * For RF/GBT model, no need do normalizing, but clean and filter data is needed. Before real training, we have to
-     * clean and filter data.
-     */
-    protected void checkAndCleanDataForTreeModels(boolean isToShuffle) throws IOException {
-        String alg = this.getModelConfig().getTrain().getAlgorithm();
-        // only for tree models
-        if(!CommonUtils.isTreeModel(alg)) {
-            return;
-        }
-
-        // check if binBoundaries and binCategories are good and log error
-        for(ColumnConfig columnConfig: columnConfigList) {
-            if(columnConfig.isFinalSelect() && !columnConfig.isTarget() && !columnConfig.isMeta()) {
-                if(columnConfig.isNumerical() && columnConfig.getBinBoundary() == null) {
-                    throw new IllegalArgumentException("Final select " + columnConfig.getColumnName()
-                            + "column but binBoundary in ColumnConfig.json is null.");
-                }
-
-                if(columnConfig.isNumerical() && columnConfig.getBinBoundary().size() <= 1) {
-                    LOG.warn(
-                            "Column {} {} with only one or zero element in binBounday, such column will be ignored in tree model training.",
-                            columnConfig.getColumnNum(), columnConfig.getColumnName());
-                }
-
-                if(columnConfig.isCategorical() && columnConfig.getBinCategory() == null) {
-                    throw new IllegalArgumentException("Final select " + columnConfig.getColumnName()
-                            + "column but binCategory in ColumnConfig.json is null.");
-                }
-
-                if(columnConfig.isCategorical() && columnConfig.getBinCategory().size() <= 0) {
-                    LOG.warn(
-                            "Column {} {} with only zero element in binCategory, such column will be ignored in tree model training.",
-                            columnConfig.getColumnNum(), columnConfig.getColumnName());
-                }
-            }
-        }
-
-        // run cleaning data logic for model input
-        SourceType sourceType = modelConfig.getDataSet().getSource();
-        String cleanedDataPath = this.pathFinder.getCleanedDataPath();
-        String needReGen = Environment.getProperty("shifu.tree.regeninput", Boolean.FALSE.toString());
-
-        // 1. shifu.tree.regeninput = true, no matter what, will regen;
-        // 2. if cleanedDataPath does not exist, generate clean data for tree ensemble model training
-        // 3. if validationDataPath is not blank and cleanedValidationDataPath does not exist, generate clean data for
-        // tree ensemble model training
-        if(Boolean.TRUE.toString().equalsIgnoreCase(needReGen)
-                || !ShifuFileUtils.isFileExists(cleanedDataPath, sourceType)
-                || (StringUtils.isNotBlank(modelConfig.getValidationDataSetRawPath()) && !ShifuFileUtils.isFileExists(
-                        pathFinder.getCleanedValidationDataPath(), sourceType))) {
-            runDataClean(isToShuffle);
-        } else {
-            // no need regen data
-            LOG.warn("For RF/GBT, training input in {} exists, no need to regenerate it.", cleanedDataPath);
-            LOG.warn("Need regen it, please set shifu.tree.regeninput in shifuconfig to true.");
-        }
-    }
-
     protected void runDataClean(boolean isToShuffle) throws IOException {
         SourceType sourceType = modelConfig.getDataSet().getSource();
         String cleanedDataPath = this.pathFinder.getCleanedDataPath();
