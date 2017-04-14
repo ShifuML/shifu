@@ -15,6 +15,7 @@
  */
 package ml.shifu.shifu.core;
 
+import ml.shifu.shifu.column.NSColumn;
 import ml.shifu.shifu.container.CaseScoreResult;
 import ml.shifu.shifu.container.ScoreObject;
 import ml.shifu.shifu.container.obj.ColumnConfig;
@@ -132,12 +133,12 @@ public class ModelRunner {
             throw new UnsupportedOperationException("The header are null, please use right constructor!");
         }
 
-        Map<String, String> rawDataMap = CommonUtils.convertDataIntoMap(tuple, header);
+        Map<NSColumn, String> rawDataNsMap = CommonUtils.convertDataIntoNsMap(tuple, header);
 
-        if (MapUtils.isEmpty(rawDataMap)) {
+        if (MapUtils.isEmpty(rawDataNsMap)) {
             return null;
         }
-        return compute(rawDataMap);
+        return computeNsData(rawDataNsMap);
     }
 
     /**
@@ -147,10 +148,23 @@ public class ModelRunner {
      * @return CaseScoreResult
      */
     public CaseScoreResult compute(Map<String, String> rawDataMap) {
+        return computeNsData(CommonUtils.convertRawMapToNsDataMap(rawDataMap));
+    }
+
+    /**
+     * Run model to compute score for input NS Data map
+     * @param rawDataNsMap - the original input, but key is wrapped by NSColumn
+     * @return CaseScoreResult - model score
+     */
+    public CaseScoreResult computeNsData(Map<NSColumn, String> rawDataNsMap) {
+        if ( MapUtils.isEmpty(rawDataNsMap) ) {
+            return null;
+        }
+
         CaseScoreResult scoreResult = new CaseScoreResult();
 
         if (this.scorer != null) {
-            ScoreObject so = scorer.score(rawDataMap);
+            ScoreObject so = scorer.scoreNsData(rawDataNsMap);
             if (so == null) {
                 return null;
             }
@@ -168,7 +182,7 @@ public class ModelRunner {
                 Map.Entry<String, Scorer> entry = iterator.next();
                 String modelName = entry.getKey();
                 Scorer subScorer = entry.getValue();
-                ScoreObject so = subScorer.score(rawDataMap);
+                ScoreObject so = subScorer.scoreNsData(rawDataNsMap);
                 if (so != null) {
                     scoreResult.addSubModelScore(modelName, so);
                 }

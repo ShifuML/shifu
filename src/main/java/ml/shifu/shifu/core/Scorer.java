@@ -15,6 +15,7 @@
  */
 package ml.shifu.shifu.core;
 
+import ml.shifu.shifu.column.NSColumn;
 import ml.shifu.shifu.container.ScoreObject;
 import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.container.obj.ModelConfig;
@@ -126,12 +127,25 @@ public class Scorer {
     }
 
     public ScoreObject score(Map<String, String> rawDataMap) {
-        MLDataPair pair = CommonUtils.assembleDataPair(binCategoryMap, noVarSelect, modelConfig, columnConfigList,
-                rawDataMap, cutoff, alg);
-        return score(pair, rawDataMap);
+        return scoreNsData(CommonUtils.convertRawMapToNsDataMap(rawDataMap));
+    }
+
+    /**
+     * Run model against raw NSColumn Data map to get score
+     * @param rawDataNsMap - raw NSColumn Data map
+     * @return ScoreObject - model score
+     */
+    public ScoreObject scoreNsData(Map<NSColumn, String> rawDataNsMap) {
+        MLDataPair pair = CommonUtils.assembleNsDataPair(binCategoryMap, noVarSelect,
+                modelConfig, columnConfigList, rawDataNsMap, cutoff, alg);
+        return scoreNsData(pair, rawDataNsMap);
     }
 
     public ScoreObject score(final MLDataPair pair, Map<String, String> rawDataMap) {
+        return scoreNsData(pair, CommonUtils.convertRawMapToNsDataMap(rawDataMap));
+    }
+
+    public ScoreObject scoreNsData(final MLDataPair pair, Map<NSColumn, String> rawNsDataMap) {
         if(pair == null) {
             return null;
         }
