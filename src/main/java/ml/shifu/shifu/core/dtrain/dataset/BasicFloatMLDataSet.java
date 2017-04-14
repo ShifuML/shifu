@@ -30,8 +30,6 @@ public class BasicFloatMLDataSet implements Serializable, FloatMLDataSet, Clonea
     /**
      * An iterator to be used with the BasicFloatMLDataSet. This iterator does not
      * support removes.
-     * 
-     * @author jheaton
      */
     public class BasicMLIterator implements Iterator<FloatMLDataPair> {
 

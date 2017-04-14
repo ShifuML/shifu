@@ -50,6 +50,7 @@ public class NNConstants {
     public static final String NN_TANH = "tanh";
     public static final String NN_SIGMOID = "sigmoid";
     public static final String NN_LINEAR = "linear";
+    public static final String NN_RELU = "relu";
 
     public static final String LIB_JAR_SEPARATOR = ",";
 

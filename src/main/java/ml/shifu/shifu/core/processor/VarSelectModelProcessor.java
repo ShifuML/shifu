@@ -15,6 +15,7 @@
  */
 package ml.shifu.shifu.core.processor;
 
+import java.io.BufferedReader;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
@@ -50,10 +51,11 @@ import ml.shifu.shifu.fs.ShifuFileUtils;
 import ml.shifu.shifu.util.CommonUtils;
 import ml.shifu.shifu.util.Constants;
 import ml.shifu.shifu.util.Environment;
-
 import ml.shifu.shifu.util.updater.ColumnConfigUpdater;
+
 import org.apache.commons.collections.ListUtils;
 import org.apache.commons.compress.compressors.bzip2.BZip2CompressorInputStream;
+import org.apache.commons.io.IOUtils;
 import org.apache.commons.jexl2.JexlException;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.lang3.tuple.MutablePair;
@@ -162,7 +164,7 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
                             || filterBy.equalsIgnoreCase(Constants.FILTER_BY_MIX)) {
                         this.columnConfigList = selector.selectByFilter();
                     } else if(filterBy.equalsIgnoreCase(Constants.FILTER_BY_FI)) {
-                        if(!CommonUtils.isDesicionTreeAlgorithm(modelConfig.getAlgorithm())) {
+                        if(!CommonUtils.isTreeModel(modelConfig.getAlgorithm())) {
                             throw new IllegalArgumentException(
                                     "Filter by FI only works well in GBT/RF. Please check your modelconfig::train.");
                         }
@@ -540,6 +542,7 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
                         Constants.SHIFU_DEFAULT_VARSEL_SE_MULTI_THREAD);
                 threads = Constants.SHIFU_DEFAULT_VARSEL_SE_MULTI_THREAD;
             }
+            conf.setInt("mapreduce.map.cpu.vcores", threads);
             MultithreadedMapper.setNumberOfThreads(job, threads);
         } else {
             job.setMapperClass(VarSelectMapper.class);
@@ -589,7 +592,7 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
         // Tmp set to false because of some cluster by default use gzip while CombineInputFormat will split gzip file (a
         // bug)
         conf.setBoolean(CombineInputFormat.SHIFU_VS_SPLIT_COMBINABLE, false);
-        conf.setBoolean(FileInputFormat.INPUT_DIR_RECURSIVE, true);
+        conf.setBoolean("mapreduce.input.fileinputformat.input.dir.recursive", true);
 
         conf.set("mapred.reduce.slowstart.completed.maps",
                 Environment.getProperty("mapred.reduce.slowstart.completed.maps", "0.9"));
@@ -751,9 +754,13 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
 
     /**
      * To do some auto variable selection like remove ID-like variables, remove variable with high missing rate.
+     * 
+     * @throws IOException
+     *             any IO exception
      */
-    private void autoVarSelCondition() {
+    private void autoVarSelCondition() throws IOException {
         // here we do loop again as it is not bad for variables less than 100,000
+        // 1. check missing rate
         for(ColumnConfig config: columnConfigList) {
             if(!config.isTarget() && !config.isMeta() && !config.isForceSelect() && config.isFinalSelect()
                     && isHighMissingRateColumn(config)) {
@@ -763,6 +770,80 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
                 config.setFinalSelect(false);
             }
         }
+
+        // 2. check correlation value:
+        if(!ShifuFileUtils.isFileExists(pathFinder.getLocalCorrelationCsvPath(), SourceType.LOCAL)) {
+            return;
+        }
+
+        BufferedReader reader = ShifuFileUtils.getReader(pathFinder.getLocalCorrelationCsvPath(), SourceType.LOCAL);
+        int lineNum = 0;
+        try {
+            String line = null;
+            while((line = reader.readLine()) != null) {
+                lineNum += 1;
+                if(lineNum <= 2) {
+                    // skip first 2 lines which are indexes and names
+                    continue;
+                }
+
+                String[] columns = CommonUtils.split(line, ",");
+                if(columns != null && columns.length == columnConfigList.size() + 2) {
+                    int columnIndex = Integer.parseInt(columns[0].trim());
+                    ColumnConfig config = this.columnConfigList.get(columnIndex);
+
+                    // only check final-selected non-meta columns
+                    if(config.isFinalSelect() || config.isTarget()) {
+                        double[] corrArray = getCorrArray(columns);
+                        for(int i = 0; i < corrArray.length; i++) {
+                            // only check column larger than current column index and already final selected
+                            if(config.getColumnNum() < i
+                                    && (columnConfigList.get(i).isTarget() || columnConfigList.get(i).isFinalSelect())) {
+                                // * 1.000005d is to avoid some value like 1.0000000002 in correlation value
+                                if(Math.abs(corrArray[i]) > (modelConfig.getVarSelect().getCorrelationThreshold() * 1.000005d)) {
+                                    if(config.isTarget() && columnConfigList.get(i).isFinalSelect()) {
+                                        log.warn(
+                                                "{} and {} has high correlated value while {} is target, {} is set to NOT final-selected no matter it is force-selected or not.",
+                                                columnIndex, i, i);
+                                        columnConfigList.get(i).setFinalSelect(false);
+                                    } else if(config.isFinalSelect() && columnConfigList.get(i).isTarget()) {
+                                        log.warn(
+                                                "{} and {} has high correlated value while {} is target, {} is set to NOT final-selected no matter it is force-selected or not.",
+                                                columnIndex, i, columnIndex);
+                                        config.setFinalSelect(false);
+                                    } else {
+                                        // both columns are not target and all final selected
+                                        if(config.getIv() > columnConfigList.get(i).getIv()) {
+                                            log.warn(
+                                                    "Absolute correlation value {} in ({}, {}) are larger than correlationThreshold value {} set in VarSelect#correlationThreshold, column {} with smaller IV value will not be selected, set finalSelect to false.",
+                                                    corrArray[i], config.getColumnNum(), i, modelConfig.getVarSelect()
+                                                            .getCorrelationThreshold(), i);
+                                            columnConfigList.get(i).setFinalSelect(false);
+                                        } else {
+                                            log.warn(
+                                                    "Absolute correlation value {} in ({}, {}) are larger than correlationThreshold value {} set in VarSelect#correlationThreshold, column {} with smaller IV value will not be selected, set finalSelect to false.",
+                                                    corrArray[i], config.getColumnNum(), i, modelConfig.getVarSelect()
+                                                            .getCorrelationThreshold(), config.getColumnNum());
+                                            config.setFinalSelect(false);
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        } finally {
+            IOUtils.closeQuietly(reader);
+        }
+    }
+
+    private double[] getCorrArray(String[] columns) {
+        double[] corr = new double[columns.length - 2];
+        for(int i = 2; i < corr.length; i++) {
+            corr[i - 2] = Double.parseDouble(columns[i].trim());
+        }
+        return corr;
     }
 
     /**

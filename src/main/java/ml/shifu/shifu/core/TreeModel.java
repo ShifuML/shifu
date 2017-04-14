@@ -36,13 +36,12 @@ import org.encog.ml.data.MLData;
 import org.encog.ml.data.basic.BasicMLData;
 
 /**
- * {@link TreeModel} is to load Random Forest or Gradient Boosted Decision Tree models.
+ * {@link TreeModel} is to load Random Forest or Gradient Boosted Decision Tree models from Encog interfaces. If user
+ * wouldn't like to depend on encog, {@link IndependentTreeModel} can be used to execute tree model from Shifu.
  * 
  * <p>
- * {@link #loadFromStream(InputStream, boolean)} can be used to read serialized models.
- * 
- * <p>
- * TODO, make trees computing in parallel
+ * {@link #loadFromStream(InputStream, boolean)} can be used to read serialized models. Which is delegated to
+ * {@link IndependentTreeModel}.
  * 
  * @author Zhang David (pengzhang@paypal.com)
  */
@@ -50,26 +49,36 @@ public class TreeModel extends BasicML implements MLRegression {
 
     private static final long serialVersionUID = 479043597958785224L;
 
-    private IndependentTreeModel independentTreeModel;
+    /**
+     * Tree model instance without dependency on encog.
+     */
+    private transient IndependentTreeModel independentTreeModel;
 
+    /**
+     * Constructor on current {@link IndependentTreeModel}
+     * 
+     * @param independentTreeModel
+     *            the independent tree model
+     */
     public TreeModel(IndependentTreeModel independentTreeModel) {
         this.independentTreeModel = independentTreeModel;
     }
 
+    /**
+     * Compute model score based on given input double array.
+     */
     @Override
     public final MLData compute(final MLData input) {
         double[] data = input.getData();
         return new BasicMLData(this.getIndependentTreeModel().compute(data));
     }
 
+    /**
+     * How many input columns.
+     */
     @Override
     public int getInputCount() {
         return this.getIndependentTreeModel().getInputNode();
-    }
-
-    @Override
-    public String toString() {
-        return this.getIndependentTreeModel().getTrees().toString();
     }
 
     @Override
@@ -85,11 +94,6 @@ public class TreeModel extends BasicML implements MLRegression {
         return new TreeModel(IndependentTreeModel.loadFromStream(input, isConvertToProb));
     }
 
-    /*
-     * (non-Javadoc)
-     * 
-     * @see org.encog.ml.MLOutput#getOutputCount()
-     */
     @Override
     public int getOutputCount() {
         // mock as output is only 1 dimension
@@ -120,6 +124,11 @@ public class TreeModel extends BasicML implements MLRegression {
         return independentTreeModel;
     }
 
+    /**
+     * Get feature importance of current model.
+     * 
+     * @return map of feature importance, key is column index.
+     */
     public Map<Integer, MutablePair<String, Double>> getFeatureImportances() {
         Map<Integer, MutablePair<String, Double>> importancesSum = new HashMap<Integer, MutablePair<String, Double>>();
         Map<Integer, String> nameMapping = this.getIndependentTreeModel().getNumNameMapping();
@@ -142,6 +151,11 @@ public class TreeModel extends BasicML implements MLRegression {
         return importancesSum;
     }
 
+    /**
+     * Sort by feature impotance
+     * 
+     * @return map of feature importance, key is column index.
+     */
     public static Map<Integer, MutablePair<String, Double>> sortByValue(
             Map<Integer, MutablePair<String, Double>> unsortMap, final boolean order) {
         List<Entry<Integer, MutablePair<String, Double>>> list = new LinkedList<Entry<Integer, MutablePair<String, Double>>>(
@@ -162,5 +176,10 @@ public class TreeModel extends BasicML implements MLRegression {
             sortedMap.put(entry.getKey(), entry.getValue());
         }
         return sortedMap;
+    }
+
+    @Override
+    public String toString() {
+        return this.getIndependentTreeModel().getTrees().toString();
     }
 }

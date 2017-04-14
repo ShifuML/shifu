@@ -48,7 +48,7 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.google.common.collect.Lists;
 
 /**
- * ModelConfig class
+ * ModelConfig is for ModelConfig.json configurations.
  */
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class ModelConfig {
@@ -56,18 +56,39 @@ public class ModelConfig {
     @JsonIgnore
     private final static Logger LOG = LoggerFactory.getLogger(ModelConfig.class);
 
+    /**
+     * Basic information like name, version, author ...
+     */
     private ModelBasicConf basic = new ModelBasicConf();
 
+    /**
+     * Data configuration like data location, data schema, ...
+     */
     private ModelSourceDataConf dataSet = new ModelSourceDataConf();
 
+    /**
+     * Stats configuration like sample rate, stats method ...
+     */
     private ModelStatsConf stats = new ModelStatsConf();
 
+    /**
+     * Var select configuration parameters like filterNum, filterBy ...
+     */
     private ModelVarSelectConf varSelect = new ModelVarSelectConf();
 
+    /**
+     * Normalizing configurations like norm type, sampleRate ...
+     */
     private ModelNormalizeConf normalize = new ModelNormalizeConf();
 
+    /**
+     * Model training configurations like baggingNum, algorithm (LR/NN/GBT/RF), training parameters ...
+     */
     private ModelTrainConf train = new ModelTrainConf();
 
+    /**
+     * Eval configurations listed to evaluated trained models.
+     */
     private List<EvalConfig> evals = new ArrayList<EvalConfig>();
 
     public ModelBasicConf getBasic() {
@@ -126,6 +147,19 @@ public class ModelConfig {
         this.evals = evals;
     }
 
+    /**
+     * Create init ModelConfig.json
+     * 
+     * @param modelName
+     *            name of model dataset
+     * @param alg
+     *            , algorithm used, for LR/NN/RF/GBT, diferent init parameters will be set
+     * @param description
+     *            data set description
+     * @return ModelConfig instance
+     * @throws IOException
+     *             if any exception in column configuration file creation
+     */
     public static ModelConfig createInitModelConfig(String modelName, ALGORITHM alg, String description)
             throws IOException {
         ModelConfig modelConfig = new ModelConfig();

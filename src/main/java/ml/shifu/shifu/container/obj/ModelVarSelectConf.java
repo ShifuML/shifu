@@ -26,25 +26,45 @@ import java.util.HashMap;
 import java.util.Map;
 
 /**
- * ModelVarSelectConf class
+ * {@link ModelVarSelectConf} is 'varselect' part configuration in ModelConfig.json
  */
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class ModelVarSelectConf {
 
-    // for force select or force remove
+    /**
+     * If enable force select and force remove
+     */
     private Boolean forceEnable = Boolean.TRUE;
 
+    /**
+     * Force-selected column configuration file
+     */
     private String forceSelectColumnNameFile;
 
+    /**
+     * Force-remove column configuration file
+     */
     private String forceRemoveColumnNameFile;
 
-    // settings for variable selection
+    /**
+     * If enable variable selection
+     */
     private Boolean filterEnable = Boolean.TRUE;
 
+    /**
+     * How many columns will be selected. This number includes forceSelet columns.
+     */
     private Integer filterNum = Constants.SHIFU_DEFAULT_VARSELECT_FILTER_NUM;
 
+    /**
+     * Filter by 'KS', 'IV', 'SE', 'SR'
+     */
     private String filterBy = "KS";
 
+    /**
+     * Filter out ratio, filterNum has higher priority than {@link #filterOutRatio}, if {@link #filterNum} is less than
+     * 0. Then filterOutRatio will be effective.
+     */
     private Float filterOutRatio = Constants.SHIFU_DEFAULT_VARSELECT_FILTEROUT_RATIO;
 
     /**
@@ -56,6 +76,12 @@ public class ModelVarSelectConf {
      * If column missing rate is larger than this value, this column will be removed even it is set as 'FinalSelect'.
      */
     private Float missingRateThreshold = 0.98f;
+
+    /**
+     * If two features correlation value is larger than {@link #correlationThreshold}, one with larger IV value will be
+     * selected. Set it to default 1 or not computed correlation value in norm step, means such threshold has no effect.
+     */
+    private Float correlationThreshold = 1f;
 
     private Map<String, Object> params;
 
@@ -160,6 +186,21 @@ public class ModelVarSelectConf {
     @JsonProperty
     public void setEpsilons(double[] epsilons) {
         this.epsilons = epsilons;
+    }
+
+    /**
+     * @return the correlationThreshold
+     */
+    public Float getCorrelationThreshold() {
+        return correlationThreshold;
+    }
+
+    /**
+     * @param correlationThreshold
+     *            the correlationThreshold to set
+     */
+    public void setCorrelationThreshold(Float correlationThreshold) {
+        this.correlationThreshold = correlationThreshold;
     }
 
     @Override

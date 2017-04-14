@@ -112,8 +112,9 @@ public class IndependentTreeModel {
      */
     private Map<Integer, Double> numericalMeanMapping;
 
-    public IndependentTreeModel(Map<Integer, Double> numericalMeanMapping, Map<Integer, String> numNameMapping,
-            Map<Integer, List<String>> categoricalColumnNameNames,
+    public IndependentTreeModel(Map<Integer, Double> numericalMeanMapping,
+                                Map<Integer, String> numNameMapping,
+                                Map<Integer, List<String>> categoricalColumnNameNames,
             Map<Integer, Map<String, Integer>> columnCategoryIndexMapping, Map<Integer, Integer> columnNumIndexMapping,
             List<TreeNode> trees, List<Double> weights, boolean isGBDT, boolean isClassification,
             boolean isConvertToProb, String lossStr, String algorithm, int inputNode, int version) {
@@ -131,6 +132,7 @@ public class IndependentTreeModel {
         this.algorithm = algorithm;
         this.inputNode = inputNode;
         this.version = version;
+
     }
 
     /**
@@ -188,8 +190,7 @@ public class IndependentTreeModel {
      * 
      * @param dataMap
      *            {@code dataMap} for (columnName, value), numeric value can be double/String, categorical feature can
-     *            be
-     *            int(index) or category value. if not set or set to null, such feature will be treated as missing
+     *            be int(index) or category value. if not set or set to null, such feature will be treated as missing
      *            value. For numerical value, if it cannot be parsed successfully, it will also be treated as missing.
      * @return if classification mode, return array of all scores of trees
      *         if regression of RF, return array with only one element which is average score of all tree model scores
@@ -226,12 +227,12 @@ public class IndependentTreeModel {
     }
 
     /**
-     * Covert score to probability value which are in [0, 1], for GBT regression, scores can not be [0, 1]. Round scoure
+     * Covert score to probability value which are in [0, 1], for GBT regression, scores can not be [0, 1]. Round score
      * to 1.0E19 to avoid NaN in final return result.
      * 
      * @param score
      *            the raw score
-     * @return score after change
+     * @return score after sigmoid transform.
      */
     public double convertToProb(double score) {
         // sigmoid function to covert to [0, 1], TODO, how to make it configuable for users
@@ -414,7 +415,7 @@ public class IndependentTreeModel {
     public Map<Integer, Integer> getColumnNumIndexMapping() {
         return columnNumIndexMapping;
     }
-
+    
     /**
      * @return the trees
      */
@@ -566,12 +567,13 @@ public class IndependentTreeModel {
     }
 
     /**
-     * Load model instance from stream like model0.gbt or model0.rf, by default not to convert gbt score to [0, 1]
+     * Load model instance from stream like model0.gbt or model0.rf. User can specify to use raw score or score after
+     * sigmoid transfrom by isConvertToProb.
      * 
      * @param input
      *            the input stream
      * @param isConvertToProb
-     *            if convert to prob
+     *            if convert score to probability (if to transfrom raw score by sigmoid)
      * @return the tree model instance
      * @throws IOException
      *             any exception in load input stream
@@ -653,8 +655,11 @@ public class IndependentTreeModel {
         }
 
         // if one vs all, even multiple classification, treated as regression
-        return new IndependentTreeModel(numericalMeanMapping, columnIndexNameMapping, categoricalColumnNameNames,
-                columnCategoryIndexMapping, columnMapping, trees, weights,
+        return new IndependentTreeModel(numericalMeanMapping,
+                                        columnIndexNameMapping,
+                                        categoricalColumnNameNames,
+                                        columnCategoryIndexMapping,
+                                        columnMapping, trees, weights,
                 CommonConstants.GBT_ALG_NAME.equalsIgnoreCase(algorithm), isClassification && !isOneVsAll,
                 isConvertToProb, lossStr, algorithm, inputNode, version);
     }

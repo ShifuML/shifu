@@ -1,11 +1,11 @@
 package ml.shifu.shifu.util.updater;
 
+import java.io.IOException;
+
 import ml.shifu.shifu.column.NSColumn;
 import ml.shifu.shifu.column.NSColumnUtils;
 import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.container.obj.ModelConfig;
-
-import java.io.IOException;
 
 /**
  * Created by zhanhu on 2/23/17.
@@ -19,17 +19,23 @@ public class VarSelUpdater extends BasicUpdater {
     public void updateColumnConfig(ColumnConfig columnConfig) {
         String varName = columnConfig.getColumnName();
 
+        // TODO check me: Before varselect, user can still change forceselect and force remove files while can user
+        // change meta and target columns???
+
         // set column flag to null, before reset it
         columnConfig.setColumnFlag(null);
-        if (NSColumnUtils.isColumnEqual(this.targetColumnName, varName)) {
+
+        // No need reset ColumnType since column type should be set well in stats and later cannot be changed
+        if(NSColumnUtils.isColumnEqual(this.targetColumnName, varName)) {
             columnConfig.setColumnFlag(ColumnConfig.ColumnFlag.Target);
-        } if (this.setMeta.contains(new NSColumn(varName))) {
+        } else if(this.setMeta.contains(new NSColumn(varName))) {
             columnConfig.setColumnFlag(ColumnConfig.ColumnFlag.Meta);
-        } else if (this.setForceRemove.contains(new NSColumn(varName))) {
+        } else if(this.setForceRemove.contains(new NSColumn(varName))) {
             columnConfig.setColumnFlag(ColumnConfig.ColumnFlag.ForceRemove);
-        } else if (this.setForceSelect.contains(new NSColumn(varName))) {
+        } else if(this.setForceSelect.contains(new NSColumn(varName))) {
             columnConfig.setColumnFlag(ColumnConfig.ColumnFlag.ForceSelect);
+        } else if(NSColumnUtils.isColumnEqual(this.weightColumnName, varName)) {
+            columnConfig.setColumnFlag(ColumnConfig.ColumnFlag.Weight);
         }
     }
-
 }
