@@ -57,7 +57,7 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
     private DecimalFormat df = new DecimalFormat("#.######");
 
     /**
-     * For categorical feature, a map is used to save query time in execuion
+     * For categorical feature, a map is used to save query time in execution
      */
     private Map<Integer, Map<String, Integer>> categoricalIndexMap = new HashMap<Integer, Map<String, Integer>>();
 

@@ -138,14 +138,12 @@
                 <include>*:scala-library:*</include>
                 <include>*:shifu:*</include>
                 <include>*:slf4j-api:*</include>
-                <include>*:slf4j-log4j12:*</include>
                 <include>*:stringtemplate:*</include>
                 <include>*:xmlenc:*</include>
                 <include>*:xz:*</include>
                 <include>*:zookeeper:*</include>
                 <include>*:joda-time:*</include>
                 <include>*:automaton:*</include>
-                <include>*:jpmml:*</include>
                 <include>*:stream:*</include>
                 <include>*:parquet-pig:*</include>
                 <include>*:parquet-column:*</include>
@@ -159,6 +157,12 @@
                 <include>*:hadoop-common:*</include>
                 <include>*:commons-configuration:*</include>
                 <include>*:hadoop-auth:*</include>
+            </includes>
+        </dependencySet>
+        <dependencySet>
+            <outputDirectory>/slfloglib</outputDirectory>
+            <includes>
+                <include>*:slf4j-log4j12:*</include>
             </includes>
         </dependencySet>
     </dependencySets>

@@ -135,6 +135,11 @@ public class NNMaster extends AbstractMasterComputable<NNParams, NNParams> {
      */
     private double bestValidationError = Double.MAX_VALUE;
 
+    /**
+     * Dropout rate which is in [0, 1], default it is 0
+     */
+    private double dropoutRate = 0d;
+
     @Override
     public NNParams doCompute(MasterContext<NNParams, NNParams> context) {
         if(context.isFirstIteration()) {
@@ -179,6 +184,7 @@ public class NNMaster extends AbstractMasterComputable<NNParams, NNParams> {
             size++;
         }
 
+        LOG.debug("ELM gradients debug for 0 gradient {}", this.globalNNParams.getGradients()[0]);
         LOG.debug("Total Count is {}. totalWorkerCount is {}", totalCount, totalWorkerCount);
 
         // worker result size is 0. throw exception because shouldn't happen
@@ -191,7 +197,7 @@ public class NNMaster extends AbstractMasterComputable<NNParams, NNParams> {
             this.learningRate = this.rawLearningRate;
             this.weightCalculator = new Weight(this.globalNNParams.getGradients().length,
                     this.globalNNParams.getTrainSize(), learningRate, propagation, this.regularizedConstant,
-                    RegulationLevel.to(this.validParams.get(CommonConstants.REG_LEVEL_KEY)));
+                    RegulationLevel.to(this.validParams.get(CommonConstants.REG_LEVEL_KEY)), this.dropoutRate);
         } else {
             this.learningRate = this.learningRate * (1.0d - this.learningDecay);
             // without learningDecay Parameter using sqrt(iteration number) to decrease learning rate
@@ -356,6 +362,12 @@ public class NNMaster extends AbstractMasterComputable<NNParams, NNParams> {
         Object pObject = validParams.get(NNTrainer.PROPAGATION);
         this.propagation = pObject == null ? "Q" : (String) pObject;
         this.rawLearningRate = Double.valueOf(validParams.get(NNTrainer.LEARNING_RATE).toString());
+        Object dropoutRateObj = validParams.get(NNTrainer.DROPOUT_RATE);
+        if(dropoutRateObj != null) {
+            this.dropoutRate = Double.valueOf(dropoutRateObj.toString());
+        }
+        LOG.info("dropoutRate in master is :{}", this.dropoutRate);
+
         Object learningDecayO = validParams.get("LearningDecay");
         if(learningDecayO != null) {
             this.learningDecay = Double.valueOf(learningDecayO.toString());

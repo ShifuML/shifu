@@ -471,11 +471,13 @@ public final class CommonUtils {
         int index = 0;
         for(String str: Splitter.on(delimiter).split(pigHeaderStr)) {
             String columnName = StringUtils.trimToEmpty(str);
-            /*if(isFull) {
-                columnName = getFullPigHeaderColumnName(str);
-            } else {
-                columnName = getRelativePigHeaderColumnName(str);
-            }*/
+            /*
+             * if(isFull) {
+             * columnName = getFullPigHeaderColumnName(str);
+             * } else {
+             * columnName = getRelativePigHeaderColumnName(str);
+             * }
+             */
 
             if(headerSet.contains(columnName)) {
                 columnName = columnName + "_" + index;
@@ -670,7 +672,7 @@ public final class CommonUtils {
                 || (!Constants.NN.equalsIgnoreCase(modelConfig.getAlgorithm())
                         && !Constants.SVM.equalsIgnoreCase(modelConfig.getAlgorithm())
                         && !Constants.LR.equalsIgnoreCase(modelConfig.getAlgorithm()) && !CommonUtils
-                            .isDesicionTreeAlgorithm(modelConfig.getAlgorithm()))) {
+                            .isTreeModel(modelConfig.getAlgorithm()))) {
             throw new IllegalArgumentException(modelConfig == null ? "modelConfig is null." : String.format(
                     " invalid model algorithm %s.", modelConfig.getAlgorithm()));
         }
@@ -899,6 +901,7 @@ public final class CommonUtils {
         return fileList;
     }
 
+    @SuppressWarnings("deprecation")
     public static List<ModelSpec> loadSubModels(ModelConfig modelConfig, List<ColumnConfig> columnConfigList,
             EvalConfig evalConfig, SourceType sourceType, Boolean gbtConvertToProb) {
         List<ModelSpec> modelSpecs = new ArrayList<ModelSpec>();
@@ -918,7 +921,7 @@ public final class CommonUtils {
         try {
             FileStatus[] fsArr = fs.listStatus(new Path(modelsPath));
             for(FileStatus fileStatus: fsArr) {
-                if(fileStatus.isDirectory()) {
+                if(fileStatus.isDir()) {
                     ModelSpec modelSpec = loadSubModelSpec(modelConfig, columnConfigList, fileStatus, sourceType,
                             gbtConvertToProb);
                     if(modelSpec != null) {
@@ -970,6 +973,7 @@ public final class CommonUtils {
         return modelSpec;
     }
 
+    @SuppressWarnings("deprecation")
     public static ALGORITHM getModelsAlgAndSpecFiles(FileStatus fileStatus, SourceType sourceType,
             List<FileStatus> modelFileStats, FileStatus[] subConfigs) throws IOException {
         assert modelFileStats != null;
@@ -980,7 +984,7 @@ public final class CommonUtils {
         FileStatus[] fileStatsArr = fs.listStatus(fileStatus.getPath());
         if(fileStatsArr != null) {
             for(FileStatus fls: fileStatsArr) {
-                if(!fls.isDirectory()) {
+                if(!fls.isDir()) {
                     String fileName = fls.getPath().getName();
 
                     if(algorithm == null) {
@@ -1009,6 +1013,7 @@ public final class CommonUtils {
         return algorithm;
     }
 
+    @SuppressWarnings("deprecation")
     public static Map<String, Integer> getSubModelsCnt(ModelConfig modelConfig, List<ColumnConfig> columnConfigList,
             EvalConfig evalConfig, SourceType sourceType) throws IOException {
         FileSystem fs = ShifuFileUtils.getFileSystemBySourceType(sourceType);
@@ -1027,7 +1032,7 @@ public final class CommonUtils {
         try {
             FileStatus[] fsArr = fs.listStatus(new Path(modelsPath));
             for(FileStatus fileStatus: fsArr) {
-                if(fileStatus.isDirectory()) {
+                if(fileStatus.isDir()) {
                     List<FileStatus> subModelSpecFiles = new ArrayList<FileStatus>();
                     getModelsAlgAndSpecFiles(fileStatus, sourceType, subModelSpecFiles, new FileStatus[2]);
                     if(CollectionUtils.isNotEmpty(subModelSpecFiles)) {
@@ -1452,7 +1457,7 @@ public final class CommonUtils {
                 if(!noVarSel) {
                     if(config != null && !config.isMeta() && !config.isTarget() && config.isFinalSelect()) {
                         String val = rawNsDataMap.get(key) == null ? null : rawNsDataMap.get(key).toString();
-                        if(CommonUtils.isDesicionTreeAlgorithm(alg) && config.isCategorical()) {
+                        if(CommonUtils.isTreeModel(alg) && config.isCategorical()) {
                             Integer index = binCategoryMap.get(config.getColumnNum()).get(val == null ? "" : val);
                             if(index == null) {
                                 // not in binCategories, should be missing value
@@ -1468,7 +1473,7 @@ public final class CommonUtils {
                 } else {
                     if(!config.isMeta() && !config.isTarget() && CommonUtils.isGoodCandidate(config)) {
                         String val = rawNsDataMap.get(key) == null ? null : rawNsDataMap.get(key).toString();
-                        if(CommonUtils.isDesicionTreeAlgorithm(alg) && config.isCategorical()) {
+                        if(CommonUtils.isTreeModel(alg) && config.isCategorical()) {
                             Integer index = binCategoryMap.get(config.getColumnNum()).get(val == null ? "" : val);
                             if(index == null) {
                                 // not in binCategories, should be missing value
@@ -1498,7 +1503,7 @@ public final class CommonUtils {
     private static double computeNumericNormResult(ModelConfig modelConfig, double cutoff, ColumnConfig config,
             String val) {
         Double normalizeValue = null;
-        if(CommonUtils.isDesicionTreeAlgorithm(modelConfig.getAlgorithm())) {
+        if(CommonUtils.isTreeModel(modelConfig.getAlgorithm())) {
             try {
                 normalizeValue = Double.parseDouble(val);
             } catch (Exception e) {
@@ -1510,8 +1515,16 @@ public final class CommonUtils {
         return normalizeValue;
     }
 
-    public static boolean isDesicionTreeAlgorithm(String alg) {
+    public static boolean isTreeModel(String alg) {
         return CommonConstants.RF_ALG_NAME.equalsIgnoreCase(alg) || CommonConstants.GBT_ALG_NAME.equalsIgnoreCase(alg);
+    }
+
+    public static boolean isRandomForestAlgorithm(String alg) {
+        return CommonConstants.RF_ALG_NAME.equalsIgnoreCase(alg);
+    }
+
+    public static boolean isGBDTAlgorithm(String alg) {
+        return CommonConstants.GBT_ALG_NAME.equalsIgnoreCase(alg);
     }
 
     public static boolean isHadoopConfigurationInjected(String key) {
@@ -1537,8 +1550,8 @@ public final class CommonUtils {
     public static MLDataPair assembleDataPair(ModelConfig modelConfig, List<ColumnConfig> columnConfigList,
             Map<String, ? extends Object> rawDataMap, double cutoff) {
         Map<NSColumn, Object> nsDataMap = new HashMap<NSColumn, Object>();
-        for ( String key : rawDataMap.keySet() ) {
-            nsDataMap.put(new NSColumn(key), rawDataMap.get(key));
+        for(Entry<String, ? extends Object> entry: rawDataMap.entrySet()) {
+            nsDataMap.put(new NSColumn(entry.getKey()), entry.getValue());
         }
 
         // if the tag is provided, ideal will be updated; otherwise it defaults to -1

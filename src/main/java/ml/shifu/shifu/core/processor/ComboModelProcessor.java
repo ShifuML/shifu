@@ -249,7 +249,11 @@ public class ComboModelProcessor extends BasicModelProcessor implements Processo
         assembleModelConfig.setEvals(assembleEvalConfigs);
 
         //  2.4) create folder and save assemble ModelConfig.json
-        new File(assembleModelName).mkdirs();
+        // create folder and save ModelConfig.json
+        if(!new File(assembleModelName).mkdirs()) {
+            LOG.error("Create folder {} failed.", assembleModelName);
+            return 1;
+        }
         saveModelConfig(assembleModelName, assembleModelConfig);
 
         // 3. save parent model config

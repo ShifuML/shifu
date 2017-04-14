@@ -37,6 +37,7 @@ import java.util.Map;
  */
 public class PathFinder {
 
+    private static final String CORRELATION_CSV = "correlation.csv";
     private static final String REASON_CODE_PATH = "common/ReasonCodeMapV3.json";
     private static final String SHIFU_JAR_PATH = "lib/*.jar";
 
@@ -200,6 +201,7 @@ public class PathFinder {
     }
 
     public String getLocalColumnStatsPath() {
+
         return getPathBySourceType(Constants.COLUMN_META_FOLDER_NAME + File.separator
                 + Constants.COLUMN_STATS_CSV_FILE_NAME, SourceType.LOCAL);
     }
@@ -291,7 +293,7 @@ public class PathFinder {
      */
     public String getCorrelationPath(SourceType sourceType) {
         String preTrainingStatsPath = getPreferPath(modelConfig.getTrain().getCustomPaths(),
-                Constants.KEY_AUTO_TYPE_PATH);
+                Constants.KEY_CORRELATION_PATH);
 
         if(StringUtils.isBlank(preTrainingStatsPath)) {
             return getPathBySourceType(new Path(Constants.TMP, Constants.CORRELATION_PATH), sourceType);
@@ -864,6 +866,13 @@ public class PathFinder {
      */
     public String getPathBySourceType(String path, SourceType sourceType) {
         return getPathBySourceType(new Path(path), sourceType);
+    }
+
+    /**
+     * Return local correlation csv path
+     */
+    public String getLocalCorrelationCsvPath() {
+        return getPathBySourceType(CORRELATION_CSV, SourceType.LOCAL);
     }
 
     /**

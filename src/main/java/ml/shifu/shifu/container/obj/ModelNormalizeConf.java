@@ -21,7 +21,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 
 /**
- * ModelNormalizeConf class
+ * {@link ModelNormalizeConf} is 'nomalize' part configuration in ModelConfig.json
  */
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class ModelNormalizeConf {
@@ -36,22 +36,47 @@ public class ModelNormalizeConf {
         WOE, WEIGHT_WOE, HYBRID, WEIGHT_HYBRID, WOE_ZSCORE, WEIGHT_WOE_ZSCORE;
     }
 
+    /**
+     * Different correlation computing methods. TODO move to stats?
+     * 
+     * @author Zhang David (pengzhang@paypal.com)
+     */
     @JsonDeserialize(using = CorrelationDeserializer.class)
     public static enum Correlation {
         None, Pearson, NormPearson // Spearman mode isn't implemented as need sort all variables
     }
 
+    /**
+     * STDDev cutoff threshold, if over this value after zscore, such value will be cutoff to current value or negative
+     * of this value.
+     */
     private Double stdDevCutOff = Double.valueOf(4.0);
+
+    /**
+     * If do sampling in norm step, training will be impacted by sampling because norm output is train input
+     */
     private Double sampleRate = Double.valueOf(1.0);
+
+    /**
+     * If only sample negative with sampleRate enabled
+     */
     private Boolean sampleNegOnly = Boolean.FALSE;
+
+    /**
+     * Different norm type
+     */
     private NormType normType = NormType.ZSCALE;
+
+    /**
+     * If norm output is parquet format, if parquet format and only part of features are selected, in training, only
+     * selected columns are read. So far Parquet format only supports NN algorithm.
+     */
     private Boolean isParquet = Boolean.FALSE;
 
-    private Correlation correlation = Correlation.None;
-
-    // move to RawSourceData
-    // private String weightAmplifier;
-    // private List<WeightAmplifier> weightAmplifier;
+    /**
+     * Correlation computing methods
+     */
+    // private Correlation correlation = Correlation.None;
 
     public Double getStdDevCutOff() {
         return stdDevCutOff;
@@ -109,22 +134,20 @@ public class ModelNormalizeConf {
         this.isParquet = isParquet;
     }
 
-    /**
-     * @return the corrlation
-     */
-    @JsonIgnore
-    public Correlation getCorrelation() {
-        return correlation;
-    }
-
-    /**
-     * @param correlation
-     *            the correlation to set
-     */
-    @JsonProperty
-    public void setCorrelation(Correlation correlation) {
-        this.correlation = correlation;
-    }
+    // /**
+    // * @return the corrlation
+    // */
+    // public Correlation getCorrelation() {
+    // return correlation;
+    // }
+    //
+    // /**
+    // * @param correlation
+    // * the correlation to set
+    // */
+    // public void setCorrelation(Correlation correlation) {
+    // this.correlation = correlation;
+    // }
 
     @Override
     public ModelNormalizeConf clone() {
@@ -134,7 +157,7 @@ public class ModelNormalizeConf {
         other.setSampleNegOnly(sampleNegOnly);
         other.setStdDevCutOff(stdDevCutOff);
         other.setIsParquet(isParquet);
-        other.setCorrelation(correlation);
+        // other.setCorrelation(correlation);
         return other;
     }
 }

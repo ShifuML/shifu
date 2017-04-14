@@ -24,9 +24,8 @@ import java.util.Comparator;
 import java.util.List;
 
 /**
- * ColumnConfig class record the basic information for column in data.
- * Almost all information in ColumnConfig is generated automatically, user should
- * avoid to change it manually, unless understanding the meaning of the changes.
+ * ColumnConfig class record the basic information for column in data. Almost all information in ColumnConfig is
+ * generated automatically, user should avoid to change it manually, unless understanding the meaning of the changes.
  */
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class ColumnConfig {
@@ -40,24 +39,58 @@ public class ColumnConfig {
         A, N, C
     }
 
-    // basic info
+    /**
+     * Column index, start from 0 to length-1
+     */
     private Integer columnNum;
+
+    /**
+     * Column name read from header file or first line of csv file.
+     */
     private String columnName;
 
-    // version
+    /**
+     * Version of current ColumnConfig.json
+     */
     private String version = Constants.version;
 
-    // column type
+    /**
+     * Numerical or Categorical feature.
+     */
     private ColumnType columnType = ColumnType.N;
+
+    /**
+     * Meta, target, weight, force-select or force-remove columns
+     */
     private ColumnFlag columnFlag = null;
+
+    /**
+     * If column is final selected, if set to finalSelect for {@link #columnFlag}, no matter what quality it is, such
+     * column will be final selected and {@link #finalSelect} is set to true.
+     * 
+     * <p>
+     * Only {@link #finalSelect} is determined as final training column.
+     */
     private Boolean finalSelect = Boolean.FALSE;
 
-    // column detail
+    /**
+     * Column stats info
+     */
     private ColumnStats columnStats = new ColumnStats();
+
+    /**
+     * Column binning info
+     */
     private ColumnBinning columnBinning = new ColumnBinning();
 
-    private List<Double> corrArray;
+    // /**
+    // * Correlation array list
+    // */
+    // private double[] corrArray;
 
+    /**
+     * Sample values of such column.
+     */
     private List<String> sampleValues;
 
     /*
@@ -385,20 +418,20 @@ public class ColumnConfig {
         this.columnStats.setUnitStats(unitStats);
     }
 
-    /**
-     * @return the corrArray
-     */
-    public List<Double> getCorrArray() {
-        return corrArray;
-    }
-
-    /**
-     * @param corrArray
-     *            the corrArray to set
-     */
-    public void setCorrArray(List<Double> corrArray) {
-        this.corrArray = corrArray;
-    }
+    // /**
+    // * @return the corrArray
+    // */
+    // public double[] getCorrArray() {
+    // return corrArray;
+    // }
+    //
+    // /**
+    // * @param corrArray
+    // * the corrArray to set
+    // */
+    // public void setCorrArray(double[] corrArray) {
+    // this.corrArray = corrArray;
+    // }
 
     /**
      * ColumnConfigComparator class
@@ -433,7 +466,7 @@ public class ColumnConfig {
         other.setFinalSelect(finalSelect);
         other.setColumnStats(columnStats);
         other.setColumnBinning(columnBinning);
-        other.setCorrArray(corrArray);
+        // other.setCorrArray(corrArray);
         return other;
     }
 

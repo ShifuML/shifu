@@ -27,7 +27,7 @@ import com.fasterxml.jackson.databind.JsonDeserializer;
 import com.fasterxml.jackson.databind.JsonNode;
 
 /**
- * To deserialize {@link Correlation} instance.
+ * To de-serialize {@link Correlation} instance.
  * 
  * @author Zhang David (pengzhang@paypal.com)
  */

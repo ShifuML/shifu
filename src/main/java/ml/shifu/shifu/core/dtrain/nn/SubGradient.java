@@ -210,7 +210,9 @@ public class SubGradient implements Callable<double[]> {
                     this.layerSums[i], this.layerOutput[i]) + this.flatSpot[0])) * (this.getLayerDelta()[i] * s);
         }
 
-        for(int i = this.getNetwork().getBeginTraining(); i < this.getNetwork().getEndTraining(); i++) {
+        int beginTraining = this.getNetwork().getBeginTraining();
+
+        for(int i = beginTraining; i < this.getNetwork().getEndTraining(); i++) {
             processLevel(i);
         }
     }
@@ -239,7 +241,11 @@ public class SubGradient implements Callable<double[]> {
             int xi = toLayerIndex;
             int wi = index + y;
             for(int x = 0; x < toLayerSize; x++) {
-                this.gradients[wi] += output * this.getLayerDelta()[xi];
+                if(this.owner.isELM() && currentLevel == 0) {
+                    this.gradients[wi] = 0d;
+                } else {
+                    this.gradients[wi] += output * this.getLayerDelta()[xi];
+                }
                 sum += this.weights[wi] * this.getLayerDelta()[xi];
                 wi += fromLayerSize;
                 xi++;
@@ -249,6 +255,13 @@ public class SubGradient implements Callable<double[]> {
                     * (activation.derivativeFunction(this.layerSums[yi], this.layerOutput[yi]) + currentFlatSpot);
             yi++;
         }
+
+        // if(this.owner.isELM() && currentLevel == 0) {
+        // for(int y = 0; y < fromLayerSize; y++) {
+        // int wi = index + y;
+        // this.gradients[wi] = 0d;
+        // }
+        // }
     }
 
     /**
@@ -264,8 +277,7 @@ public class SubGradient implements Callable<double[]> {
                 synchronized(this.owner) {
                     if(this.isCrossOver) {
                         // 3:1 to select testing data set, tmp hard code, TODO fix hard code issue,extract such logic to
-                        // a
-                        // method
+                        // a method
                         if((i + seed) % 4 < 3) {
                             this.training.getRecord(i, this.pair);
                         } else {
