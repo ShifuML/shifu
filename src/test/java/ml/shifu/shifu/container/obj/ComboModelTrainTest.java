@@ -25,36 +25,70 @@ import ml.shifu.shifu.util.JSONUtils;
 import org.apache.commons.io.FileUtils;
 import org.testng.Assert;
 import org.testng.annotations.AfterClass;
+import org.testng.annotations.Test;
 
 /**
  * Created by zhanhu on 11/18/16.
  */
 public class ComboModelTrainTest {
 
-    // @Test
+    @Test
     public void testSerDeser() throws IOException {
         ComboModelTrain inst = new ComboModelTrain();
 
-        inst.setUidColumnName("txnId");
-        List<VarTrainConf> varTrainConfList = new ArrayList<VarTrainConf>();
-        varTrainConfList.add(createVarTrainConf(ModelTrainConf.ALGORITHM.NN));
-        varTrainConfList.add(createVarTrainConf(ModelTrainConf.ALGORITHM.GBT));
+        List<SubTrainConf> varTrainConfList = new ArrayList<SubTrainConf>();
+        varTrainConfList.add(createSubTrainConf(ModelTrainConf.ALGORITHM.NN));
+        varTrainConfList.add(createSubTrainConf(ModelTrainConf.ALGORITHM.GBT));
 
-        inst.setVarTrainConfList(varTrainConfList);
-        inst.setFusionModelTrainConf(createModelTrainConf(ModelTrainConf.ALGORITHM.LR));
+        inst.setSubTrainConfList(varTrainConfList);
 
         JSONUtils.writeValue(new File("src/test/resources/example/combotrain/ComboTrain.json"), inst);
 
         ComboModelTrain anotherInst = JSONUtils.readValue(new File(
                 "src/test/resources/example/combotrain/ComboTrain.json"), ComboModelTrain.class);
-        Assert.assertEquals(inst, anotherInst);
+        Assert.assertEquals(inst.getSubTrainConfList().size(), anotherInst.getSubTrainConfList().size());
     }
 
-    private VarTrainConf createVarTrainConf(ModelTrainConf.ALGORITHM alg) {
-        VarTrainConf varTrainConf = new VarTrainConf();
-        varTrainConf.setVariables(new ArrayList<String>());
-        varTrainConf.setModelTrainConf(createModelTrainConf(alg));
-        return varTrainConf;
+    private SubTrainConf createSubTrainConf(ModelTrainConf.ALGORITHM alg) {
+        SubTrainConf subTrainConf = new SubTrainConf();
+        subTrainConf.setModelStatsConf(createModelStatsConf(alg));
+        subTrainConf.setModelNormalizeConf(createModelNormalizeConf(alg));
+        subTrainConf.setModelVarSelectConf(createModelVarSelectConf(alg));
+        subTrainConf.setModelTrainConf(createModelTrainConf(alg));
+        return subTrainConf;
+    }
+
+    private ModelStatsConf createModelStatsConf(ModelTrainConf.ALGORITHM alg) {
+        ModelStatsConf statsConf = new ModelStatsConf();
+        if(ModelTrainConf.ALGORITHM.NN.equals(alg) || ModelTrainConf.ALGORITHM.LR.equals(alg )) {
+            statsConf.setBinningAlgorithm(ModelStatsConf.BinningAlgorithm.DynamicBinning);
+            statsConf.setBinningMethod(ModelStatsConf.BinningMethod.EqualTotal);
+            statsConf.setMaxNumBin(20);
+        } else if(ModelTrainConf.ALGORITHM.RF.equals(alg) || ModelTrainConf.ALGORITHM.GBT.equals(alg)) {
+            statsConf.setBinningAlgorithm(ModelStatsConf.BinningAlgorithm.SPDTI);
+            statsConf.setBinningMethod(ModelStatsConf.BinningMethod.EqualPositive);
+            statsConf.setMaxNumBin(20);
+        }
+        return statsConf;
+    }
+
+    private ModelNormalizeConf createModelNormalizeConf(ModelTrainConf.ALGORITHM alg) {
+        ModelNormalizeConf normalizeConf = new ModelNormalizeConf();
+        normalizeConf.setNormType(ModelNormalizeConf.NormType.WOE);
+        normalizeConf.setSampleNegOnly(false);
+        normalizeConf.setSampleRate(1.0);
+        return normalizeConf;
+    }
+
+    private ModelVarSelectConf createModelVarSelectConf(ModelTrainConf.ALGORITHM alg) {
+        ModelVarSelectConf varSelectConf = new ModelVarSelectConf();
+        varSelectConf.setFilterNum(20);
+        if(ModelTrainConf.ALGORITHM.NN.equals(alg) || ModelTrainConf.ALGORITHM.LR.equals(alg )) {
+            varSelectConf.setFilterBy("SE");
+        } else if(ModelTrainConf.ALGORITHM.RF.equals(alg) || ModelTrainConf.ALGORITHM.GBT.equals(alg)) {
+            varSelectConf.setFilterBy("FI");
+        }
+        return varSelectConf;
     }
 
     private ModelTrainConf createModelTrainConf(ModelTrainConf.ALGORITHM alg) {

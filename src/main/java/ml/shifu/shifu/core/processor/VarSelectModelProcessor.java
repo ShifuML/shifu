@@ -220,18 +220,13 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
         }
     }
 
-    public void resetAllFinalSelect() {
+    public void resetAllFinalSelect() throws IOException {
         log.info("!!! Reset all variables finalSelect = false");
         for(ColumnConfig columnConfig: this.columnConfigList) {
             columnConfig.setFinalSelect(false);
             columnConfig.setColumnFlag(null);
         }
-
-        try {
-            ColumnConfigUpdater.updateColumnConfigFlags(this.modelConfig, this.columnConfigList, ModelStep.VARSELECT);
-        } catch (IOException e) {
-            log.error("Fail to update ColumnConfig.json flags.", e);
-        }
+        saveColumnConfigList();
     }
 
     private void validateNormalize() throws IOException {
