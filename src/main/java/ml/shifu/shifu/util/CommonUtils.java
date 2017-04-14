@@ -15,30 +15,10 @@
  */
 package ml.shifu.shifu.util;
 
-import java.io.BufferedReader;
-import java.io.BufferedWriter;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FilenameFilter;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.io.Reader;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Map;
-import java.util.Map.Entry;
-import java.util.Set;
-import java.util.TreeMap;
-
+import com.google.common.base.Function;
+import com.google.common.base.Splitter;
+import com.google.common.collect.Collections2;
+import com.google.common.collect.Lists;
 import ml.shifu.shifu.column.NSColumn;
 import ml.shifu.shifu.column.NSColumnUtils;
 import ml.shifu.shifu.container.obj.ColumnConfig;
@@ -59,7 +39,6 @@ import ml.shifu.shifu.exception.ShifuErrorCode;
 import ml.shifu.shifu.exception.ShifuException;
 import ml.shifu.shifu.fs.PathFinder;
 import ml.shifu.shifu.fs.ShifuFileUtils;
-
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.collections.Predicate;
 import org.apache.commons.io.IOUtils;
@@ -67,13 +46,8 @@ import org.apache.commons.lang.ArrayUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.lang.math.NumberUtils;
 import org.apache.commons.lang3.tuple.MutablePair;
-import org.apache.hadoop.fs.FSDataInputStream;
-import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.fs.*;
 import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.LocatedFileStatus;
-import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.PathFilter;
-import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.pig.backend.executionengine.ExecException;
 import org.apache.pig.data.Tuple;
 import org.encog.ml.BasicML;
@@ -85,10 +59,9 @@ import org.encog.persist.PersistorRegistry;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.google.common.base.Function;
-import com.google.common.base.Splitter;
-import com.google.common.collect.Collections2;
-import com.google.common.collect.Lists;
+import java.io.*;
+import java.util.*;
+import java.util.Map.Entry;
 
 /**
  * {@link CommonUtils} is used to for almost all kinds of utility function in this framework.
@@ -1430,11 +1403,37 @@ public final class CommonUtils {
     public static MLDataPair assembleDataPair(Map<Integer, Map<String, Integer>> binCategoryMap, boolean noVarSel,
             ModelConfig modelConfig, List<ColumnConfig> columnConfigList, Map<String, ? extends Object> rawDataMap,
             double cutoff, String alg) {
-        Map<NSColumn, Object> nsDataMap = new HashMap<NSColumn, Object>();
-        for ( String key : rawDataMap.keySet() ) {
-            nsDataMap.put(new NSColumn(key), rawDataMap.get(key));
-        }
+        return assembleNsDataPair(binCategoryMap, noVarSel, modelConfig, columnConfigList,
+                convertRawObjectMapToNsDataMap(rawDataMap), cutoff, alg);
+    }
 
+    /**
+     * Assemble map data to Encog standard input format. If no variable selected(noVarSel = true), all candidate
+     * variables will be selected.
+     *
+     * @param binCategoryMap
+     *            categorical map
+     * @param noVarSel
+     *            if after var select
+     * @param modelConfig
+     *            model config instance
+     * @param columnConfigList
+     *            column config list
+     * @param rawNsDataMap
+     *            raw NSColumn data
+     * @param cutoff
+     *            cut off value
+     * @param alg
+     *            algorithm used in model
+     * @return data pair instance
+     * @throws NullPointerException
+     *             if input is null
+     * @throws NumberFormatException
+     *             if column value is not number format.
+     */
+    public static MLDataPair assembleNsDataPair(Map<Integer, Map<String, Integer>> binCategoryMap,boolean noVarSel,
+            ModelConfig modelConfig, List<ColumnConfig> columnConfigList, Map<NSColumn, String> rawNsDataMap,
+            double cutoff, String alg) {
         double[] ideal = { Constants.DEFAULT_IDEAL_VALUE };
 
         List<Double> inputList = new ArrayList<Double>();
@@ -1443,7 +1442,7 @@ public final class CommonUtils {
                 continue;
             }
             NSColumn key = new NSColumn(config.getColumnName());
-            if(config.isFinalSelect() && !nsDataMap.containsKey(key)) {
+            if(config.isFinalSelect() && !rawNsDataMap.containsKey(key)) {
                 throw new IllegalStateException(String.format("Variable Missing in Test Data: %s", key));
             }
 
@@ -1452,7 +1451,7 @@ public final class CommonUtils {
             } else {
                 if(!noVarSel) {
                     if(config != null && !config.isMeta() && !config.isTarget() && config.isFinalSelect()) {
-                        String val = nsDataMap.get(key) == null ? null : nsDataMap.get(key).toString();
+                        String val = rawNsDataMap.get(key) == null ? null : rawNsDataMap.get(key).toString();
                         if(CommonUtils.isDesicionTreeAlgorithm(alg) && config.isCategorical()) {
                             Integer index = binCategoryMap.get(config.getColumnNum()).get(val == null ? "" : val);
                             if(index == null) {
@@ -1468,7 +1467,7 @@ public final class CommonUtils {
                     }
                 } else {
                     if(!config.isMeta() && !config.isTarget() && CommonUtils.isGoodCandidate(config)) {
-                        String val = nsDataMap.get(key) == null ? null : nsDataMap.get(key).toString();
+                        String val = rawNsDataMap.get(key) == null ? null : rawNsDataMap.get(key).toString();
                         if(CommonUtils.isDesicionTreeAlgorithm(alg) && config.isCategorical()) {
                             Integer index = binCategoryMap.get(config.getColumnNum()).get(val == null ? "" : val);
                             if(index == null) {
@@ -1805,9 +1804,9 @@ public final class CommonUtils {
                 }
 
                 for(String str: Splitter.on(delimiter).split(line)) {
-                    String column = CommonUtils.getRelativePigHeaderColumnName(str);
-                    if(StringUtils.isNotBlank(column)) {
-                        columnNameList.add(column.trim());
+                    // String column = CommonUtils.getRelativePigHeaderColumnName(str);
+                    if(StringUtils.isNotBlank(str)) {
+                        columnNameList.add(str.trim());
                     }
                 }
             }
@@ -1917,6 +1916,37 @@ public final class CommonUtils {
         }
 
         return rawDataMap;
+    }
+
+    /**
+     * Convert tuple record into (NSColumn, value) map. The @tuple is Tuple for a record
+     * If @tuple size is not equal @header size, return null
+     *
+     * @param tuple
+     *            - Tuple of a record
+     * @param header
+     *            - the column names for all the input data
+     * @return (NSColumn, value) map for the record
+     * @throws ExecException
+     *             - throw exception when operating tuple
+     */
+    public static Map<NSColumn, String> convertDataIntoNsMap(Tuple tuple, String[] header) throws ExecException {
+        if(tuple == null || tuple.size() == 0 || tuple.size() != header.length) {
+            log.error("Invalid input, the tuple.size is = " + (tuple == null ? null : tuple.size())
+                    + ", header.length = " + header.length);
+            return null;
+        }
+
+        Map<NSColumn, String> rawDataNsMap = new HashMap<NSColumn, String>(tuple.size());
+        for(int i = 0; i < header.length; i++) {
+            if(tuple.get(i) == null) {
+                rawDataNsMap.put(new NSColumn(header[i]), "");
+            } else {
+                rawDataNsMap.put(new NSColumn(header[i]), tuple.get(i).toString());
+            }
+        }
+
+        return rawDataNsMap;
     }
 
     public static boolean isGoodCandidate(boolean isBinaryClassification, ColumnConfig columnConfig) {
@@ -2203,4 +2233,39 @@ public final class CommonUtils {
         }
     }
 
+    /**
+     * Convert (String, String) raw data map to (NSColumn, String) data map
+     * @param rawDataMap - (String, String) raw data map
+     * @return (NSColumn, String) data map
+     */
+    public static Map<NSColumn, String> convertRawMapToNsDataMap(Map<String, String> rawDataMap) {
+        if ( rawDataMap == null ) {
+            return null;
+        }
+
+        Map<NSColumn, String> nsDataMap = new HashMap<NSColumn, String>();
+        for ( String key : rawDataMap.keySet() ) {
+            nsDataMap.put(new NSColumn(key), rawDataMap.get(key));
+        }
+        return nsDataMap;
+    }
+
+    /**
+     * Convert (String, ? extends Object) raw data map to (NSColumn, String) data map
+     * @param rawDataMap - (String, ? extends Object) raw data map
+     * @return (NSColumn, String) data map
+     */
+    public static Map<NSColumn, String> convertRawObjectMapToNsDataMap(Map<String, ? extends Object> rawDataMap) {
+        if ( rawDataMap == null ) {
+            return null;
+        }
+
+        Map<NSColumn, String> nsDataMap = new HashMap<NSColumn, String>();
+        for ( String key : rawDataMap.keySet() ) {
+            Object value = rawDataMap.get(key);
+            nsDataMap.put(new NSColumn(key), ((value == null) ? null : value.toString()));
+        }
+
+        return nsDataMap;
+    }
 }
