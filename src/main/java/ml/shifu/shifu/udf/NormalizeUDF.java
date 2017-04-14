@@ -22,6 +22,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import ml.shifu.shifu.column.NSColumn;
 import ml.shifu.shifu.container.WeightAmplifier;
 import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.container.obj.ModelNormalizeConf.NormType;
@@ -146,7 +147,7 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
             String val = (input.get(i) == null) ? "" : input.get(i).toString().trim();
             // load variables for weight calculating.
             if(weightExpr != null) {
-                weightContext.set(config.getColumnName(), val);
+                weightContext.set(new NSColumn(config.getColumnName()).getSimpleName(), val);
             }
 
             // check tag type.
