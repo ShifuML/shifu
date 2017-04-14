@@ -547,6 +547,7 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
                         Constants.SHIFU_DEFAULT_VARSEL_SE_MULTI_THREAD);
                 threads = Constants.SHIFU_DEFAULT_VARSEL_SE_MULTI_THREAD;
             }
+            conf.setInt("mapreduce.map.cpu.vcores", threads);
             MultithreadedMapper.setNumberOfThreads(job, threads);
         } else {
             job.setMapperClass(VarSelectMapper.class);

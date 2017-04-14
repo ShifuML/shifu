@@ -225,10 +225,10 @@ public class StatsModelProcessor extends BasicModelProcessor implements Processo
                         .makeQualified(new Path(super.getPathFinder().getColumnConfigPath(source))).toString());
         conf.set(Constants.SHIFU_MODELSET_SOURCE_TYPE, source.toString());
 
-        // too many data needed to be transfered to reducer, set default completed maps to a smaller one 0.5 to start
+        // too many data needed to be transfered to reducer, set default completed maps to a smaller one 0.7 to start
         // copy data in reducer earlier.
         conf.set("mapred.reduce.slowstart.completed.maps",
-                Environment.getProperty("mapred.reduce.slowstart.completed.maps", "0.5"));
+                Environment.getProperty("mapred.reduce.slowstart.completed.maps", "0.7"));
 
         String hdpVersion = HDPUtils.getHdpVersionForHDP224();
         if(StringUtils.isNotBlank(hdpVersion)) {
@@ -251,6 +251,7 @@ public class StatsModelProcessor extends BasicModelProcessor implements Processo
         }
 
         int threads = parseThreadNum();
+        conf.setInt("mapreduce.map.cpu.vcores", threads);
         setMapperMemory(conf, threads);
 
         @SuppressWarnings("deprecation")
@@ -308,6 +309,7 @@ public class StatsModelProcessor extends BasicModelProcessor implements Processo
         }
         memoryInContainer += memoryBuffer; // (MB, 500 is buffer)
 
+        memoryInContainer = 3072;
         log.info("Corrrelation map memory is set to {}MB.", memoryInContainer);
 
         conf.set("mapreduce.map.memory.mb", memoryInContainer + "");
