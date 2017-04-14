@@ -671,6 +671,8 @@ public class PathFinder {
      * 
      * @param evalConfig
      *            - EvalConfig to find
+     * @param metaColumn
+     *            - score column
      * @return path of evaluation score
      */
     public String getEvalScorePath(EvalConfig evalConfig, String metaColumn) {

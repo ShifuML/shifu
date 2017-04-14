@@ -15,15 +15,7 @@
  */
 package ml.shifu.shifu.udf;
 
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-
+import ml.shifu.shifu.column.NSColumn;
 import ml.shifu.shifu.container.CaseScoreResult;
 import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.container.obj.EvalConfig;
@@ -32,7 +24,7 @@ import ml.shifu.shifu.core.Normalizer;
 import ml.shifu.shifu.core.dtrain.DTrainUtils;
 import ml.shifu.shifu.core.pmml.builder.impl.ZscoreLocalTransformCreator;
 import ml.shifu.shifu.util.CommonUtils;
-
+import org.apache.commons.collections.MapUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.pig.data.DataType;
 import org.apache.pig.data.Tuple;
@@ -40,6 +32,9 @@ import org.apache.pig.data.TupleFactory;
 import org.apache.pig.impl.logicalLayer.schema.Schema;
 import org.apache.pig.impl.logicalLayer.schema.Schema.FieldSchema;
 import org.encog.ml.BasicML;
+
+import java.io.IOException;
+import java.util.*;
 
 /**
  * Calculate the score for each evaluation data
@@ -170,12 +165,15 @@ public class EvalNormUDF extends AbstractTrainerUDF<Tuple> {
             this.modelRunner.setScoreScale(Integer.parseInt(this.scale));
         }
 
-        Map<String, String> rawDataMap = CommonUtils.convertDataIntoMap(input, this.headers);
+        Map<NSColumn, String> rawDataNsMap = CommonUtils.convertDataIntoNsMap(input, this.headers);
+        if ( MapUtils.isEmpty(rawDataNsMap) ) {
+            return null;
+        }
 
         Tuple tuple = TupleFactory.getInstance().newTuple(this.outputNames.size() + 1);
         for(int i = 0; i < this.outputNames.size(); i++) {
             String name = this.outputNames.get(i);
-            String raw = rawDataMap.get(name);
+            String raw = rawDataNsMap.get(new NSColumn(name));
             if(i == 0) {
                 tuple.set(i, raw);
             } else if(i == 1) {
@@ -191,7 +189,7 @@ public class EvalNormUDF extends AbstractTrainerUDF<Tuple> {
             }
         }
 
-        CaseScoreResult score = this.modelRunner.compute(rawDataMap);
+        CaseScoreResult score = this.modelRunner.computeNsData(rawDataNsMap);
         if(this.modelRunner == null || this.modelRunner.getModelsCnt() == 0 || score == null) {
             tuple.set(this.outputNames.size(), -999.0);
         } else if(this.scIndex < 0) {

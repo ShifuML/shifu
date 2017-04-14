@@ -65,7 +65,7 @@ public class ModelStatsConf {
      * Sampling rate in stats step. Sometimes is binning algorithm cannot be scaled well or slow. Try using smaller
      * sampleRate will accelerate stats.
      */
-    private Double sampleRate = 0.8d;
+    private Double sampleRate = Double.valueOf(1.0);
 
     /**
      * If only sample negative records or not, positive records in most cases is less than negative. By only sampling
