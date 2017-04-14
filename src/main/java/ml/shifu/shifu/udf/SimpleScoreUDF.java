@@ -15,6 +15,7 @@
  */
 package ml.shifu.shifu.udf;
 
+import ml.shifu.shifu.column.NSColumn;
 import ml.shifu.shifu.container.CaseScoreResult;
 import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
 import ml.shifu.shifu.core.ModelRunner;
@@ -59,18 +60,15 @@ public class SimpleScoreUDF extends AbstractTrainerUDF<Double> {
     }
 
     public Double exec(Tuple input) throws IOException {
-        CaseScoreResult cs = modelRunner.compute(input);
+        Map<NSColumn, String> rawDataNsMap = CommonUtils.convertDataIntoNsMap(input, this.header);
+
+        CaseScoreResult cs = modelRunner.computeNsData(rawDataNsMap);
         if(cs == null) {
             log.error("Get null result.");
             return null;
         }
 
-        Map<String, String> rawDataMap = CommonUtils.convertDataIntoMap(input, this.header);
-        if(MapUtils.isEmpty(rawDataMap)) {
-            return null;
-        }
-
-        String tag = CommonUtils.trimTag(rawDataMap.get(targetColumnName));
+        String tag = CommonUtils.trimTag(rawDataNsMap.get(new NSColumn(targetColumnName)));
         if(!(negTags.contains(tag) || posTags.contains(tag))) {
             // invalid record
             log.error("Detected invalid record. Its tag is - " + tag);

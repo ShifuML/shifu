@@ -44,6 +44,7 @@ public class ConfusionMatrixTest {
     public void setUp() throws IOException {
         modelConfig = ModelConfig.createInitModelConfig("test", ALGORITHM.NN, null);
         evalConfig = modelConfig.getEvalConfigByName("Eval1");
+        new File("./models").mkdir();
     }
 
     @Test(expectedExceptions = ShifuException.class)
@@ -112,5 +113,6 @@ public class ConfusionMatrixTest {
     public void tearDown() throws IOException {
         File dir = new File("test");
         FileUtils.deleteDirectory(dir);
+        FileUtils.deleteDirectory(new File("./models"));
     }
 }
