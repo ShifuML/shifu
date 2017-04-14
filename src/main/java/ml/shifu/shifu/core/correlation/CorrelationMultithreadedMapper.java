@@ -25,6 +25,11 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 
+import ml.shifu.shifu.container.obj.ColumnConfig;
+import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
+import ml.shifu.shifu.util.CommonUtils;
+import ml.shifu.shifu.util.Constants;
+
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
@@ -62,12 +67,23 @@ public class CorrelationMultithreadedMapper extends Mapper<LongWritable, Text, I
     private Class<? extends Mapper<LongWritable, Text, IntWritable, CorrelationWritable>> mapClass;
     private Context outer;
     private List<MapRunner> runners;
-    private Map<Integer, CorrelationWritable> finalCorrelationMap;
+
+    /**
+     * Only correlation map to save memory, if set it into CorrelationMapper, then threads * memory will be used. it is
+     * a very big memory consider > 3000 variables. Use static to make it be easy to be accessed in CorrelationMapper.
+     * This is ugly and should be changed in the future.
+     */
+    static Map<Integer, CorrelationWritable> finalCorrelationMap = new HashMap<Integer, CorrelationWritable>();;
 
     /**
      * Output key cache to avoid new operation.
      */
     private IntWritable outputKey;
+
+    /**
+     * Column config list to initialize {@link #finalCorrelationMap}
+     */
+    private List<ColumnConfig> columnConfigList;
 
     /**
      * The number of threads in the thread pool that will run the map function.
@@ -135,13 +151,30 @@ public class CorrelationMultithreadedMapper extends Mapper<LongWritable, Text, I
         job.getConfiguration().setClass(MAP_CLASS, cls, Mapper.class);
     }
 
+    private void loadConfigFiles(final Context context) {
+        try {
+            SourceType sourceType = SourceType.valueOf(context.getConfiguration().get(
+                    Constants.SHIFU_MODELSET_SOURCE_TYPE, SourceType.HDFS.toString()));
+            this.columnConfigList = CommonUtils.loadColumnConfigList(
+                    context.getConfiguration().get(Constants.SHIFU_COLUMN_CONFIG), sourceType);
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
     /**
      * Run the application's maps using a thread pool.
      */
     @Override
     public void run(Context context) throws IOException, InterruptedException {
         outer = context;
-        this.finalCorrelationMap = new HashMap<Integer, CorrelationWritable>();
+        loadConfigFiles(context);
+
+        // initialize each cw instance to make it easy to be synchronized in CorrelationMapper
+        for(int i = 0; i < this.columnConfigList.size(); i++) {
+            CorrelationMultithreadedMapper.finalCorrelationMap.put(this.columnConfigList.get(i).getColumnNum(),
+                    new CorrelationWritable());
+        }
 
         int numberOfThreads = getNumberOfThreads(context);
         mapClass = getMapperClass(context);
@@ -172,8 +205,9 @@ public class CorrelationMultithreadedMapper extends Mapper<LongWritable, Text, I
 
         outputKey = new IntWritable();
 
+        // after all sub mapper completed, finalCorrelationMap includes global results and send them to reducer.
         // send to reducer with only one merged copy no matter how many threads
-        for(Entry<Integer, CorrelationWritable> entry: this.finalCorrelationMap.entrySet()) {
+        for(Entry<Integer, CorrelationWritable> entry: finalCorrelationMap.entrySet()) {
             outputKey.set(entry.getKey());
             context.write(outputKey, entry.getValue());
         }
@@ -228,16 +262,6 @@ public class CorrelationMultithreadedMapper extends Mapper<LongWritable, Text, I
 
         @Override
         public void write(IntWritable key, CorrelationWritable value) throws IOException, InterruptedException {
-            synchronized(outer) {
-                // replace outer.write by merge to one global corrMap
-                CorrelationWritable cw = CorrelationMultithreadedMapper.this.finalCorrelationMap.get(key.get());
-                if(cw == null) {
-                    cw = value;
-                } else {
-                    cw.combine(value);
-                }
-                CorrelationMultithreadedMapper.this.finalCorrelationMap.put(key.get(), cw);
-            }
         }
     }
 
