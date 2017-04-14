@@ -75,6 +75,7 @@ import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.mapreduce.lib.output.TextOutputFormat;
 import org.apache.hadoop.util.GenericOptionsParser;
 import org.apache.pig.impl.util.JarManager;
+import org.eclipse.jdt.internal.core.util.MementoTokenizer;
 import org.encog.ml.data.MLDataSet;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -243,6 +244,9 @@ public class StatsModelProcessor extends BasicModelProcessor implements Processo
         conf.setBoolean(CombineInputFormat.SHIFU_VS_SPLIT_COMBINABLE, true);
         conf.setBoolean("mapreduce.input.fileinputformat.input.dir.recursive", true);
 
+        int threads = parseThreadNum();
+        conf.setInt("mapreduce.map.cpu.vcores", threads);
+
         // one can set guagua conf in shifuconfig
         for(Map.Entry<Object, Object> entry: Environment.getProperties().entrySet()) {
             if(CommonUtils.isHadoopConfigurationInjected(entry.getKey().toString())) {
@@ -250,8 +254,6 @@ public class StatsModelProcessor extends BasicModelProcessor implements Processo
             }
         }
 
-        int threads = parseThreadNum();
-        conf.setInt("mapreduce.map.cpu.vcores", threads);
         setMapperMemory(conf, threads);
 
         @SuppressWarnings("deprecation")
@@ -300,16 +302,19 @@ public class StatsModelProcessor extends BasicModelProcessor implements Processo
      * column size to avoid OOM issue.
      */
     private void setMapperMemory(Configuration conf, int threads) {
-        int memoryUnit = 2048 / threads;
         int memoryBuffer = 500;
-        int memoryInContainer = this.columnConfigList.size() > 800 ? ((int) (this.columnConfigList.size() / 800d))
-                * memoryUnit * threads : memoryUnit * threads;
+        // <1000 -> 2G; <=2000 2.5G; <=3000 3G; <=4000 4G; <=5000; 5G
+        int memoryInContainer = this.columnConfigList.size();
+        if(memoryInContainer > 4000 && memoryInContainer <= 5000) {
+            memoryInContainer = (int) (memoryInContainer * 1.1d);
+        } else if(memoryInContainer > 5000) {
+            memoryInContainer = (int) (memoryInContainer * 1.2d);
+        }
         if(memoryInContainer < 2048) {
             memoryInContainer = 2048; // at least 2048M
         }
-        memoryInContainer += memoryBuffer; // (MB, 500 is buffer)
 
-        memoryInContainer = 3072;
+        memoryInContainer += memoryBuffer; // (MB, 500 is buffer)
         log.info("Corrrelation map memory is set to {}MB.", memoryInContainer);
 
         conf.set("mapreduce.map.memory.mb", memoryInContainer + "");
