@@ -24,7 +24,6 @@ import java.io.IOException;
 import java.lang.Thread.UncaughtExceptionHandler;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -63,14 +62,12 @@ import ml.shifu.shifu.core.dtrain.nn.NNOutput;
 import ml.shifu.shifu.core.dtrain.nn.NNParams;
 import ml.shifu.shifu.core.dtrain.nn.NNParquetWorker;
 import ml.shifu.shifu.core.dtrain.nn.NNWorker;
-import ml.shifu.shifu.core.shuffle.MapReduceShuffle;
 import ml.shifu.shifu.core.validator.ModelInspector.ModelStep;
 import ml.shifu.shifu.exception.ShifuErrorCode;
 import ml.shifu.shifu.exception.ShifuException;
 import ml.shifu.shifu.fs.ShifuFileUtils;
 import ml.shifu.shifu.guagua.GuaguaParquetMapReduceClient;
 import ml.shifu.shifu.guagua.ShifuInputFormat;
-import ml.shifu.shifu.pig.PigExecutor;
 import ml.shifu.shifu.util.CommonUtils;
 import ml.shifu.shifu.util.Constants;
 import ml.shifu.shifu.util.Environment;
@@ -167,7 +164,7 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
     }
 
     /**
-     * run training process
+     * Training process entry point.
      */
     @Override
     public int run() throws Exception {
@@ -193,7 +190,7 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
                 case MAPRED:
                     validateDistributedTrain();
                     syncDataToHdfs(super.modelConfig.getDataSet().getSource());
-                    checkAndCleanDataForTreeModels();
+                    checkAndCleanDataForTreeModels(this.isToShuffle);
                     status = runDistributedTrain();
                     break;
                 case LOCAL:
@@ -214,109 +211,6 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
         }
 
         return status;
-    }
-
-    /**
-     * For RF/GBT model, no need do normalizing, but clean and filter data is needed. Before real training, we have to
-     * clean and filter data.
-     */
-    private void checkAndCleanDataForTreeModels() throws IOException {
-        String alg = super.getModelConfig().getTrain().getAlgorithm();
-        // only for tree models
-        if(!CommonUtils.isDesicionTreeAlgorithm(alg)) {
-            return;
-        }
-
-        // check if binBoundaries and binCategories are good and log error
-        for(ColumnConfig columnConfig: columnConfigList) {
-            if(columnConfig.isFinalSelect() && !columnConfig.isTarget() && !columnConfig.isMeta()) {
-                if(columnConfig.isNumerical() && columnConfig.getBinBoundary() == null) {
-                    throw new IllegalArgumentException("Final select " + columnConfig.getColumnName()
-                            + "column but binBoundary in ColumnConfig.json is null.");
-                }
-
-                if(columnConfig.isNumerical() && columnConfig.getBinBoundary().size() <= 1) {
-                    LOG.warn(
-                            "Column {} {} with only one or zero element in binBounday, such column will be ignored in tree model training.",
-                            columnConfig.getColumnNum(), columnConfig.getColumnName());
-                }
-
-                if(columnConfig.isCategorical() && columnConfig.getBinCategory() == null) {
-                    throw new IllegalArgumentException("Final select " + columnConfig.getColumnName()
-                            + "column but binCategory in ColumnConfig.json is null.");
-                }
-
-                if(columnConfig.isCategorical() && columnConfig.getBinCategory().size() <= 0) {
-                    LOG.warn(
-                            "Column {} {} with only zero element in binCategory, such column will be ignored in tree model training.",
-                            columnConfig.getColumnNum(), columnConfig.getColumnName());
-                }
-            }
-        }
-
-        // run cleaning data logic for model input
-        SourceType sourceType = modelConfig.getDataSet().getSource();
-        String cleanedDataPath = super.pathFinder.getCleanedDataPath();
-        String needReGen = Environment.getProperty("shifu.tree.regeninput", Boolean.FALSE.toString());
-
-        // 1. shifu.tree.regeninput = true, no matter what, will regen;
-        // 2. if cleanedDataPath does not exist, generate clean data for tree ensemble model training
-        // 3. if validationDataPath is not blank and cleanedValidationDataPath does not exist, generate clean data for
-        // tree ensemble model training
-        if(Boolean.TRUE.toString().equalsIgnoreCase(needReGen)
-                || !ShifuFileUtils.isFileExists(cleanedDataPath, sourceType)
-                || (StringUtils.isNotBlank(modelConfig.getValidationDataSetRawPath()) && !ShifuFileUtils.isFileExists(
-                        pathFinder.getCleanedValidationDataPath(), sourceType))) {
-            LOG.info("Start to generate clean data for tree model ... ");
-            if(ShifuFileUtils.isFileExists(cleanedDataPath, sourceType)) {
-                ShifuFileUtils.deleteFile(cleanedDataPath, sourceType);
-            }
-            String cleandedValidationDataPath = pathFinder.getCleanedValidationDataPath();
-            if(ShifuFileUtils.isFileExists(cleandedValidationDataPath, sourceType)) {
-                ShifuFileUtils.deleteFile(cleandedValidationDataPath, sourceType);
-            }
-
-            Map<String, String> paramsMap = new HashMap<String, String>();
-            paramsMap.put("sampleRate", modelConfig.getNormalizeSampleRate().toString());
-            paramsMap.put("sampleNegOnly", ((Boolean) modelConfig.isNormalizeSampleNegOnly()).toString());
-            paramsMap.put("delimiter", CommonUtils.escapePigString(modelConfig.getDataSetDelimiter()));
-
-            try {
-                String normPigPath = pathFinder.getScriptPath("scripts/Normalize.pig");
-
-                paramsMap.put(Constants.IS_COMPRESS, "true");
-                paramsMap.put(Constants.IS_NORM_FOR_CLEAN, "true");
-                paramsMap.put(Constants.PATH_NORMALIZED_DATA, pathFinder.getCleanedDataPath());
-                PigExecutor.getExecutor().submitJob(modelConfig, normPigPath, paramsMap, sourceType, super.pathFinder);
-                if(StringUtils.isNotBlank(modelConfig.getValidationDataSetRawPath())) {
-                    paramsMap.put(Constants.IS_COMPRESS, "false");
-                    paramsMap.put(Constants.PATH_RAW_DATA, modelConfig.getValidationDataSetRawPath());
-                    paramsMap.put(Constants.PATH_NORMALIZED_DATA, pathFinder.getCleanedValidationDataPath());
-                    PigExecutor.getExecutor().submitJob(modelConfig, normPigPath, paramsMap, sourceType,
-                            super.pathFinder);
-                }
-            } catch (IOException e) {
-                throw new ShifuException(ShifuErrorCode.ERROR_RUNNING_PIG_JOB, e);
-            } catch (Throwable e) {
-                throw new RuntimeException(e);
-            }
-
-            if(this.isToShuffle) {
-                MapReduceShuffle shuffler = new MapReduceShuffle(this.modelConfig);
-                try {
-                    shuffler.run(pathFinder.getCleanedDataPath());
-                } catch (ClassNotFoundException e) {
-                    throw new RuntimeException("Fail to shuffle the cleaned data.", e);
-                } catch (InterruptedException e) {
-                    throw new RuntimeException("Fail to shuffle the cleaned data.", e);
-                }
-            }
-            LOG.info("Generate clean data for tree model successful.");
-        } else {
-            // no need regen data
-            LOG.warn("For RF/GBT, training input in {} exists, no need to regenerate it.", cleanedDataPath);
-            LOG.warn("Need regen it, please set shifu.tree.regeninput in shifuconfig to true.");
-        }
     }
 
     /**
@@ -379,7 +273,7 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
     }
 
     /**
-     * get the trainer list
+     * Get the trainer list
      * 
      * @return the trainer list
      */
@@ -388,7 +282,7 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
     }
 
     /**
-     * get the trainer
+     * Get the trainer
      * 
      * @param index
      *            the index of trainer
@@ -404,7 +298,7 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
         String alg = super.getModelConfig().getTrain().getAlgorithm();
         if(!(NNConstants.NN_ALG_NAME.equalsIgnoreCase(alg) // NN algorithm
                 || LogisticRegressionContants.LR_ALG_NAME.equalsIgnoreCase(alg) // LR algorithm
-        || CommonUtils.isDesicionTreeAlgorithm(alg))) { // RF or GBT algortihm
+        || CommonUtils.isTreeModel(alg))) { // RF or GBT algortihm
             throw new IllegalArgumentException(
                     "Currently we only support NN, LR, RF(RandomForest) and GBDT(Gradient Boost Desicion Tree) distributed training.");
         }
@@ -417,8 +311,8 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
                     "Distributed LR, GBDT(Gradient Boost Desicion Tree) only support binary classification, native multiple classification is not supported.");
         }
 
-        if(modelConfig.isClassification() && modelConfig.getTrain().isOneVsAll()
-                && !CommonUtils.isDesicionTreeAlgorithm(alg) && !NNConstants.NN_ALG_NAME.equalsIgnoreCase(alg)) {
+        if(modelConfig.isClassification() && modelConfig.getTrain().isOneVsAll() && !CommonUtils.isTreeModel(alg)
+                && !NNConstants.NN_ALG_NAME.equalsIgnoreCase(alg)) {
             throw new IllegalArgumentException("Only GBT and RF and NN support OneVsAll multiple classification.");
         }
 
@@ -448,7 +342,7 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
 
         GridSearch gridSearch = new GridSearch(modelConfig.getTrain().getParams());
         if(!LogisticRegressionContants.LR_ALG_NAME.equalsIgnoreCase(alg)
-                && !NNConstants.NN_ALG_NAME.equalsIgnoreCase(alg) && !CommonUtils.isDesicionTreeAlgorithm(alg)
+                && !NNConstants.NN_ALG_NAME.equalsIgnoreCase(alg) && !CommonUtils.isTreeModel(alg)
                 && gridSearch.hasHyperParam()) {
             // if grid search but not NN, not RF, not GBT, not LR
             throw new IllegalArgumentException("Grid search only supports NN, GBT and RF algorithms");
@@ -707,7 +601,7 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
                 // by default copy tmp models to local
                 boolean copyTmpModelsToLocal = Boolean.TRUE.toString().equalsIgnoreCase(
                         Environment.getProperty(Constants.SHIFU_TMPMODEL_COPYTOLOCAL, "true"));
-                if(CommonUtils.isDesicionTreeAlgorithm(modelConfig.getAlgorithm())) {
+                if(CommonUtils.isTreeModel(modelConfig.getAlgorithm())) {
                     copyTmpModelsToLocal = Boolean.TRUE.toString().equalsIgnoreCase(
                             Environment.getProperty(Constants.SHIFU_TMPMODEL_COPYTOLOCAL, "false"));
                     List<BasicML> models = CommonUtils.loadBasicModels(this.modelConfig, this.columnConfigList, null);
@@ -746,7 +640,11 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
                 BufferedReader reader = null;
                 try {
                     reader = ShifuFileUtils.getReader(valErrPath.toString(), sourceType);
-                    String valErrStr = reader.readLine().toString();
+                    String line = reader.readLine();
+                    if(line == null) {
+                        continue;
+                    }
+                    String valErrStr = line.toString();
                     LOG.debug("valErrStr is {}", valErrStr);
                     valErr = Double.valueOf(valErrStr);
                 } catch (NumberFormatException e) {
@@ -781,7 +679,11 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
                 BufferedReader reader = null;
                 try {
                     reader = ShifuFileUtils.getReader(valErrPath.toString(), sourceType);
-                    String valErrStr = reader.readLine().toString();
+                    String line = reader.readLine();
+                    if(line == null) {
+                        continue;
+                    }
+                    String valErrStr = line.toString();
                     LOG.debug("valErrStr is {}", valErrStr);
                     valErr = Double.valueOf(valErrStr);
                     valErrs.add(valErr);
@@ -961,7 +863,7 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
         addRuntimeJars(args);
 
         args.add("-i");
-        if(CommonUtils.isDesicionTreeAlgorithm(alg)) {
+        if(CommonUtils.isTreeModel(alg)) {
             args.add(ShifuFileUtils.getFileSystemBySourceType(sourceType)
                     .makeQualified(new Path(super.getPathFinder().getCleanedDataPath())).toString());
         } else {
@@ -986,7 +888,7 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
             this.prepareLRParams(args, sourceType);
         } else if(NNConstants.NN_ALG_NAME.equalsIgnoreCase(alg)) {
             this.prepareNNParams(args, sourceType);
-        } else if(CommonUtils.isDesicionTreeAlgorithm(alg)) {
+        } else if(CommonUtils.isTreeModel(alg)) {
             this.prepareDTParams(args, sourceType);
         }
 
@@ -1002,7 +904,7 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
 
         // if GBDT or RF, such iteration should be extended to make sure all trees will be executed successfully without
         // maxIteration limitation
-        if(CommonUtils.isDesicionTreeAlgorithm(alg) && numTrainEpoches <= 20000) {
+        if(CommonUtils.isTreeModel(alg) && numTrainEpoches <= 20000) {
             numTrainEpoches = 20000;
         }
         // the reason to add 1 is that the first iteration in implementation is used for training preparation.
@@ -1012,7 +914,7 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
 
         args.add(String.valueOf(numTrainEpoches));
 
-        if(CommonUtils.isDesicionTreeAlgorithm(alg)) {
+        if(CommonUtils.isTreeModel(alg)) {
             // for tree models, using cleaned validation data path
             args.add(String.format(
                     CommonConstants.MAPREDUCE_PARAM_FORMAT,
@@ -1107,7 +1009,7 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
         int[] inputOutputIndex = DTrainUtils.getInputOutputCandidateCounts(this.columnConfigList);
         int candidateCount = inputOutputIndex[2];
         // 1. set benchmark
-        long maxCombineSize = CommonUtils.isDesicionTreeAlgorithm(modelConfig.getAlgorithm()) ? 209715200L : 168435456L;
+        long maxCombineSize = CommonUtils.isTreeModel(modelConfig.getAlgorithm()) ? 209715200L : 168435456L;
         // default 200M for gbt/RF, 150M for NN
         // why nn default is 150M, because of all categorical data is normalized to numeric, which is to save disk
         // for RF/gbt, categorical is still string and so default disk size is 200M
@@ -1196,6 +1098,65 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
         }
 
         args.add(StringUtils.join(jars, NNConstants.LIB_JAR_SEPARATOR));
+    }
+
+    /**
+     * For RF/GBT model, no need do normalizing, but clean and filter data is needed. Before real training, we have to
+     * clean and filter data.
+     */
+    protected void checkAndCleanDataForTreeModels(boolean isToShuffle) throws IOException {
+        String alg = this.getModelConfig().getTrain().getAlgorithm();
+        // only for tree models
+        if(!CommonUtils.isTreeModel(alg)) {
+            return;
+        }
+
+        // check if binBoundaries and binCategories are good and log error
+        for(ColumnConfig columnConfig: columnConfigList) {
+            if(columnConfig.isFinalSelect() && !columnConfig.isTarget() && !columnConfig.isMeta()) {
+                if(columnConfig.isNumerical() && columnConfig.getBinBoundary() == null) {
+                    throw new IllegalArgumentException("Final select " + columnConfig.getColumnName()
+                            + "column but binBoundary in ColumnConfig.json is null.");
+                }
+
+                if(columnConfig.isNumerical() && columnConfig.getBinBoundary().size() <= 1) {
+                    LOG.warn(
+                            "Column {} {} with only one or zero element in binBounday, such column will be ignored in tree model training.",
+                            columnConfig.getColumnNum(), columnConfig.getColumnName());
+                }
+
+                if(columnConfig.isCategorical() && columnConfig.getBinCategory() == null) {
+                    throw new IllegalArgumentException("Final select " + columnConfig.getColumnName()
+                            + "column but binCategory in ColumnConfig.json is null.");
+                }
+
+                if(columnConfig.isCategorical() && columnConfig.getBinCategory().size() <= 0) {
+                    LOG.warn(
+                            "Column {} {} with only zero element in binCategory, such column will be ignored in tree model training.",
+                            columnConfig.getColumnNum(), columnConfig.getColumnName());
+                }
+            }
+        }
+
+        // run cleaning data logic for model input
+        SourceType sourceType = modelConfig.getDataSet().getSource();
+        String cleanedDataPath = this.pathFinder.getCleanedDataPath();
+        String needReGen = Environment.getProperty("shifu.tree.regeninput", Boolean.FALSE.toString());
+
+        // 1. shifu.tree.regeninput = true, no matter what, will regen;
+        // 2. if cleanedDataPath does not exist, generate clean data for tree ensemble model training
+        // 3. if validationDataPath is not blank and cleanedValidationDataPath does not exist, generate clean data for
+        // tree ensemble model training
+        if(Boolean.TRUE.toString().equalsIgnoreCase(needReGen)
+                || !ShifuFileUtils.isFileExists(cleanedDataPath, sourceType)
+                || (StringUtils.isNotBlank(modelConfig.getValidationDataSetRawPath()) && !ShifuFileUtils.isFileExists(
+                        pathFinder.getCleanedValidationDataPath(), sourceType))) {
+            runDataClean(isToShuffle);
+        } else {
+            // no need regen data
+            LOG.warn("For RF/GBT, training input in {} exists, no need to regenerate it.", cleanedDataPath);
+            LOG.warn("Need regen it, please set shifu.tree.regeninput in shifuconfig to true.");
+        }
     }
 
     /**

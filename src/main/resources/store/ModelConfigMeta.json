@@ -283,6 +283,11 @@
                 "directive": "input",
                 "defval" : 0.5
             }, {
+                "name": "correlationThreshold",
+                "type": "number",
+                "directive": "input",
+                "defval" : 1
+            }, {
                 "name": "params",
                 "type": "map",
                 "directive": "input",
@@ -360,16 +365,6 @@
                 "type": "boolean",
                 "directive": "checkbox",
                 "defval" : false
-            }, {
-                "name": "correlation",
-                "type": "text",
-                "directive": "select",
-                "defval" : "NONE",
-                "options": [
-                    {"label":"not compute correlation", "value":"NONE"},
-                    {"label":"pearson mode", "value":"PEARSON"},
-                    {"label":"norm pearson mode", "value":"NORMPEARSON"}
-                ]
             }
         ]
     }, {
@@ -509,7 +504,9 @@
                                     {"label": "Sigmoid", "value":"Sigmoid"},
                                     {"label": "Tanh", "value":"Tanh"},
                                     {"label": "Log", "value":"Log"},
-                                    {"label": "Sin", "value":"Sin"}
+                                    {"label": "Sin", "value":"Sin"},
+                                    {"label": "Linear", "value":"Linear"},
+                                    {"label": "ReLU", "value":"ReLU"}
                                 ]
                             }                            
                          ]
@@ -616,6 +613,11 @@
                         "directive": "input",
                         "defval" : 0.01
                     }, {
+                        "name" : "DropoutRate",
+                        "type" : "number",
+                        "directive": "input",
+                        "defval" : 0
+                    }, {
                         "name" : "ValidationTolerance",
                         "type" : "number",
                         "directive": "input",
@@ -632,6 +634,11 @@
                             {"label": "Resilient Propagation", "value":"R"},
                             {"label": "Scaled Conjugate Gradient", "value":"S"}
                         ]
+                    }, {
+                        "name" : "IsELM",
+                        "type": "boolean",
+                        "directive": "checkbox",
+                        "defval": false
                     }, {
                         "name": "GBTSampleWithReplacement",
                         "type": "boolean",

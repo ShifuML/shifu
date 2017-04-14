@@ -4,8 +4,8 @@ import ml.shifu.shifu.column.NSColumn;
 import ml.shifu.shifu.column.NSColumnUtils;
 import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.container.obj.ModelConfig;
+import ml.shifu.shifu.container.obj.ColumnConfig.ColumnType;
 import ml.shifu.shifu.core.validator.ModelInspector;
-import ml.shifu.shifu.util.CommonUtils;
 import org.apache.commons.collections.CollectionUtils;
 
 import java.io.IOException;
@@ -22,9 +22,11 @@ public class BasicUpdater {
     protected Set<NSColumn> setMeta;
     protected Set<NSColumn> setForceRemove;
     protected Set<NSColumn> setForceSelect;
+    protected String weightColumnName;
 
     public BasicUpdater(ModelConfig modelConfig) throws IOException {
         this.targetColumnName = modelConfig.getTargetColumnName();
+        this.weightColumnName = modelConfig.getWeightColumnName();
 
         this.setCategorialColumns = new HashSet<NSColumn>();
         if(CollectionUtils.isNotEmpty(modelConfig.getCategoricalColumnNames())) {
@@ -62,7 +64,10 @@ public class BasicUpdater {
     public void updateColumnConfig(ColumnConfig columnConfig) {
         String varName = columnConfig.getColumnName();
 
-        if ( NSColumnUtils.isColumnEqual(this.targetColumnName, varName) ) {
+        // reset flag at first
+        columnConfig.setColumnFlag(null);
+
+        if(NSColumnUtils.isColumnEqual(this.targetColumnName, varName)) {
             columnConfig.setColumnFlag(ColumnConfig.ColumnFlag.Target);
             columnConfig.setColumnType(null);
         } else if(this.setMeta.contains(new NSColumn(varName))) {
@@ -72,19 +77,28 @@ public class BasicUpdater {
             columnConfig.setColumnFlag(ColumnConfig.ColumnFlag.ForceRemove);
         } else if(this.setForceSelect.contains(new NSColumn(varName))) {
             columnConfig.setColumnFlag(ColumnConfig.ColumnFlag.ForceSelect);
+        } else if(NSColumnUtils.isColumnEqual(this.weightColumnName, varName)) {
+            columnConfig.setColumnFlag(ColumnConfig.ColumnFlag.Weight);
+            columnConfig.setColumnType(null);
         }
 
-        // variable type is not related with variable flag
-        if(this.setCategorialColumns.contains(new NSColumn(varName))) {
-            columnConfig.setColumnType(ColumnConfig.ColumnType.C);
+        if(NSColumnUtils.isColumnEqual(weightColumnName, varName)) {
+            // weight column is numerical
+            columnConfig.setColumnType(ColumnType.N);
+        } else if(NSColumnUtils.isColumnEqual(targetColumnName, varName)) {
+            // target column is set to categorical column
+            columnConfig.setColumnType(ColumnType.C);
+        } else if(setCategorialColumns.contains(new NSColumn(varName))) {
+            columnConfig.setColumnType(ColumnType.C);
         } else {
-            columnConfig.setColumnType(ColumnConfig.ColumnType.N);
+            // meta and other columns are set to numerical if user not set it in categorical column configuration file
+            columnConfig.setColumnType(ColumnType.N);
         }
     }
 
     public static BasicUpdater getUpdater(ModelConfig modelConfig, ModelInspector.ModelStep step) throws IOException {
         BasicUpdater updater = null;
-        switch (step ) {
+        switch(step) {
             case INIT:
             case STATS:
                 updater = new BasicUpdater(modelConfig);

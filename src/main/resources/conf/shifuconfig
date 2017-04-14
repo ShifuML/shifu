@@ -18,7 +18,7 @@ recordCntPerMessage=100000
 mapreduce.job.max.split.locations=5000
 
 # disable map output compress because some issue for snappy config in our clusters
-mapreduce.map.output.compress=false
+# mapreduce.map.output.compress=false
 
 # how to control how many mappers when training models
 # If there are too many small files after normalization, set it to true

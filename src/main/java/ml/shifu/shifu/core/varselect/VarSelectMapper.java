@@ -162,6 +162,7 @@ public class VarSelectMapper extends Mapper<LongWritable, Text, LongWritable, Co
     @Override
     protected void setup(Context context) throws IOException, InterruptedException {
         loadConfigFiles(context);
+
         loadModel();
         this.filterBy = context.getConfiguration()
                 .get(Constants.SHIFU_VARSELECT_FILTEROUT_TYPE, Constants.FILTER_BY_SE);

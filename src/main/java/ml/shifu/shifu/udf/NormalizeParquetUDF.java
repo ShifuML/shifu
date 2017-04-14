@@ -124,7 +124,7 @@ public class NormalizeParquetUDF extends AbstractTrainerUDF<Tuple> {
             if(!CommonUtils.isGoodCandidate(config)) {
                 tuple.append((Double) null);
             } else {
-                if(CommonUtils.isDesicionTreeAlgorithm(this.alg)) {
+                if(CommonUtils.isTreeModel(this.alg)) {
                     Double normVal = 0d;
                     if(config.isCategorical()) {
                         tuple.append(val);
@@ -215,7 +215,7 @@ public class NormalizeParquetUDF extends AbstractTrainerUDF<Tuple> {
                 if(tagColumnNum == i) {
                     schemaStr.append(config.getColumnName() + ":float" + ",");
                 } else {
-                    if(config.isCategorical() && CommonUtils.isDesicionTreeAlgorithm(this.alg)) {
+                    if(config.isCategorical() && CommonUtils.isTreeModel(this.alg)) {
                         schemaStr.append(config.getColumnName() + ":chararray" + ",");
                     } else {
                         schemaStr.append(config.getColumnName() + ":float" + ",");

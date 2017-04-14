@@ -37,6 +37,7 @@ import ml.shifu.shifu.container.obj.RawSourceData;
 import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
 import ml.shifu.shifu.core.alg.NNTrainer;
 import ml.shifu.shifu.core.dtrain.CommonConstants;
+import ml.shifu.shifu.core.dtrain.DTrainUtils;
 import ml.shifu.shifu.core.dtrain.dt.FeatureSubsetStrategy;
 import ml.shifu.shifu.core.dtrain.gs.GridSearch;
 import ml.shifu.shifu.fs.ShifuFileUtils;
@@ -147,7 +148,7 @@ public class ModelInspector {
             }
 
             if(modelConfig.isClassification() && modelConfig.getTrain().isOneVsAll()) {
-                if(!CommonUtils.isDesicionTreeAlgorithm(modelConfig.getAlgorithm())
+                if(!CommonUtils.isTreeModel(modelConfig.getAlgorithm())
                         && !modelConfig.getAlgorithm().equalsIgnoreCase("nn")) {
                     ValidateResult tmpResult = new ValidateResult(true);
                     tmpResult
@@ -511,7 +512,7 @@ public class ModelInspector {
         }
 
         if(modelConfig.isClassification() && train.isOneVsAll()
-                && !CommonUtils.isDesicionTreeAlgorithm(train.getAlgorithm())
+                && !CommonUtils.isTreeModel(train.getAlgorithm())
                 && !train.getAlgorithm().equalsIgnoreCase("nn")) {
             ValidateResult tmpResult = new ValidateResult(true);
             tmpResult.setStatus(false);
@@ -578,6 +579,27 @@ public class ModelInspector {
                         result = ValidateResult.mergeResult(result, tmpResult);
                     }
                 }
+
+                Object elmObject = params.get(DTrainUtils.IS_ELM);
+                boolean isELM = elmObject == null ? false : "true".equalsIgnoreCase(elmObject.toString());
+                if(isELM && layerCnt != 1) {
+                    ValidateResult tmpResult = new ValidateResult(true);
+                    tmpResult.setStatus(false);
+                    tmpResult.getCauses().add(
+                            "If ELM(extreme learning machine), hidden layer should only be one layer.");
+                    result = ValidateResult.mergeResult(result, tmpResult);
+                }
+
+                Object dropoutObj = params.get(NNTrainer.DROPOUT_RATE);
+                if(dropoutObj != null) {
+                    Double dropoutRate = Double.valueOf(dropoutObj.toString());
+                    if(dropoutRate != null && (dropoutRate < 0d || dropoutRate >= 1d)) {
+                        ValidateResult tmpResult = new ValidateResult(true);
+                        tmpResult.setStatus(false);
+                        tmpResult.getCauses().add("Dropout rate should be in [0, 1).");
+                        result = ValidateResult.mergeResult(result, tmpResult);
+                    }
+                }
             }
 
             if(train.getAlgorithm().equalsIgnoreCase(CommonConstants.GBT_ALG_NAME)
@@ -628,7 +650,7 @@ public class ModelInspector {
                 Object maxLeavesObj = params.get("MaxLeaves");
                 if(maxLeavesObj != null) {
                     int maxLeaves = Integer.valueOf(maxLeavesObj.toString());
-                    if(maxLeaves <= 0 || maxLeaves > Integer.MAX_VALUE) {
+                    if(maxLeaves <= 0) {
                         ValidateResult tmpResult = new ValidateResult(true);
                         tmpResult.setStatus(false);
                         tmpResult.getCauses().add("MaxLeaves should in [1, Integer.MAX_VALUE].");
