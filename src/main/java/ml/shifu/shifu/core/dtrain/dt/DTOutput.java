@@ -210,7 +210,7 @@ public class DTOutput extends BasicMasterInterceptor<DTMasterParams, DTWorkerPar
                         .append((Double.isNaN(trainError) || trainError == 0d) ? "N/A" : String.format("%.10f",
                                 trainError)).append(" Validation Error: ")
                         .append(validationError == 0d ? "N/A" : String.format("%.10f", validationError))
-                        .append("; will work on depth ").append(nextDepth).append(" \n").toString();
+                        .append("; will work on depth ").append(nextDepth).append(". \n").toString();
             }
         }
 
@@ -230,7 +230,7 @@ public class DTOutput extends BasicMasterInterceptor<DTMasterParams, DTWorkerPar
                             .append(trainError == 0d ? "N/A" : String.format("%.10f", trainError))
                             .append(" Validation Error: ")
                             .append(validationError == 0d ? "N/A" : String.format("%.10f", validationError))
-                            .append("; will work on depth ").append(toListString(treeDepth)).append("\n").toString();
+                            .append("; will work on depth ").append(toListString(treeDepth)).append(". \n").toString();
                 }
             }
         }
