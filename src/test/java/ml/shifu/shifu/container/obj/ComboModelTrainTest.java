@@ -42,10 +42,10 @@ public class ComboModelTrainTest {
 
         inst.setSubTrainConfList(varTrainConfList);
 
-        JSONUtils.writeValue(new File("src/test/resources/example/combotrain/ComboTrain.json"), inst);
+        JSONUtils.writeValue(new File("src/test/resources/example/ComboTrain.json"), inst);
 
         ComboModelTrain anotherInst = JSONUtils.readValue(new File(
-                "src/test/resources/example/combotrain/ComboTrain.json"), ComboModelTrain.class);
+                "src/test/resources/example/ComboTrain.json"), ComboModelTrain.class);
         Assert.assertEquals(inst.getSubTrainConfList().size(), anotherInst.getSubTrainConfList().size());
     }
 
@@ -116,7 +116,7 @@ public class ComboModelTrainTest {
 
     @AfterClass
     public void cleanup() {
-        FileUtils.deleteQuietly(new File("src/test/resources/example/combotrain/ComboTrain.json"));
+        FileUtils.deleteQuietly(new File("src/test/resources/example/ComboTrain.json"));
     }
 
 }
