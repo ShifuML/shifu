@@ -56,7 +56,7 @@ public interface CommonConstants {
     public static final String CONTINUOUS_TRAINING = "shifu.continuous.training";
 
     public static final String SHIFU_DT_MASTER_CHECKPOINT_INTERVAL = "shifu.dt.master.checkpoint.interval";
-    
+
     public static final String SHIFU_DT_MASTER_CHECKPOINT_FOLDER = "shifu.dt.master.checkpoint.folder";
 
     /**
