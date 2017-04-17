@@ -33,6 +33,7 @@ import ml.shifu.shifu.container.obj.ModelStatsConf.BinningMethod;
 import ml.shifu.shifu.container.obj.ModelTrainConf;
 import ml.shifu.shifu.container.obj.ModelTrainConf.MultipleClassification;
 import ml.shifu.shifu.container.obj.ModelVarSelectConf;
+import ml.shifu.shifu.container.obj.ModelVarSelectConf.PostCorrelationMetric;
 import ml.shifu.shifu.container.obj.RawSourceData;
 import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
 import ml.shifu.shifu.core.alg.NNTrainer;
@@ -314,6 +315,15 @@ public class ModelInspector {
             }
         }
 
+        PostCorrelationMetric corrMetric = varSelect.getPostCorrelationMetric();
+        if(!varSelect.getFilterBy().equals("SE") && corrMetric != null && corrMetric == PostCorrelationMetric.SE) {
+            ValidateResult tmpResult = new ValidateResult(true);
+            tmpResult.setStatus(false);
+            tmpResult.getCauses().add(
+                    "VarSelect#filterBy and VarSelect#postCorrelationMetric should be both set to SE.");
+            result = ValidateResult.mergeResult(result, tmpResult);
+        }
+
         return result;
     }
 
@@ -511,8 +521,7 @@ public class ModelInspector {
             result = ValidateResult.mergeResult(result, tmpResult);
         }
 
-        if(modelConfig.isClassification() && train.isOneVsAll()
-                && !CommonUtils.isTreeModel(train.getAlgorithm())
+        if(modelConfig.isClassification() && train.isOneVsAll() && !CommonUtils.isTreeModel(train.getAlgorithm())
                 && !train.getAlgorithm().equalsIgnoreCase("nn")) {
             ValidateResult tmpResult = new ValidateResult(true);
             tmpResult.setStatus(false);

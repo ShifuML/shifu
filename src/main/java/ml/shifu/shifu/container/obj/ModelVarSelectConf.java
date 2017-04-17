@@ -18,6 +18,7 @@ package ml.shifu.shifu.container.obj;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 
 import ml.shifu.shifu.util.Constants;
 
@@ -30,6 +31,11 @@ import java.util.Map;
  */
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class ModelVarSelectConf {
+
+    @JsonDeserialize(using = PostCorrelationMetricDeserializer.class)
+    public static enum PostCorrelationMetric {
+        IV, KS, SE
+    }
 
     /**
      * If enable force select and force remove
@@ -82,6 +88,14 @@ public class ModelVarSelectConf {
      * selected. Set it to default 1 or not computed correlation value in norm step, means such threshold has no effect.
      */
     private Float correlationThreshold = 1f;
+
+    /**
+     * Enable variable selection for correlation value, this is the metric to keep the better feature. If column i and j
+     * has higher correlation value than {@link #correlationThreshold}. According to {@link #postCorrelationMetric} to
+     * choose a better one to keep, the other one would be dropped. For example, if set it KS, drop column with smaller
+     * KS value.
+     */
+    private PostCorrelationMetric postCorrelationMetric = PostCorrelationMetric.IV;
 
     private Map<String, Object> params;
 
@@ -201,6 +215,21 @@ public class ModelVarSelectConf {
      */
     public void setCorrelationThreshold(Float correlationThreshold) {
         this.correlationThreshold = correlationThreshold;
+    }
+
+    /**
+     * @return the postCorrelationMetric
+     */
+    public PostCorrelationMetric getPostCorrelationMetric() {
+        return postCorrelationMetric;
+    }
+
+    /**
+     * @param postCorrelationMetric
+     *            the postCorrelationMetric to set
+     */
+    public void setPostCorrelationMetric(PostCorrelationMetric postCorrelationMetric) {
+        this.postCorrelationMetric = postCorrelationMetric;
     }
 
     @Override

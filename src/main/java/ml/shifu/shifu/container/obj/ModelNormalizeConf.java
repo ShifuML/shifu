@@ -73,11 +73,6 @@ public class ModelNormalizeConf {
      */
     private Boolean isParquet = Boolean.FALSE;
 
-    /**
-     * Correlation computing methods
-     */
-    // private Correlation correlation = Correlation.None;
-
     public Double getStdDevCutOff() {
         return stdDevCutOff;
     }
@@ -133,21 +128,6 @@ public class ModelNormalizeConf {
     public void setIsParquet(Boolean isParquet) {
         this.isParquet = isParquet;
     }
-
-    // /**
-    // * @return the corrlation
-    // */
-    // public Correlation getCorrelation() {
-    // return correlation;
-    // }
-    //
-    // /**
-    // * @param correlation
-    // * the correlation to set
-    // */
-    // public void setCorrelation(Correlation correlation) {
-    // this.correlation = correlation;
-    // }
 
     @Override
     public ModelNormalizeConf clone() {

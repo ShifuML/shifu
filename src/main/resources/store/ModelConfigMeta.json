@@ -288,6 +288,15 @@
                 "directive": "input",
                 "defval" : 1
             }, {
+                "name": "postCorrelationMetric",
+                "type": "text",
+                "directive": "select",
+                "options": [
+                    {"label": "SE", "value":"KS"},
+                    {"label": "IV", "value":"IV"},
+                    {"label": "Sensitivity Analysis", "value":"SE"},
+                ]
+            }, {
                 "name": "params",
                 "type": "map",
                 "directive": "input",

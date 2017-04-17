@@ -18,6 +18,7 @@ package ml.shifu.shifu.core.processor;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Scanner;
@@ -27,6 +28,7 @@ import ml.shifu.guagua.hadoop.util.HDPUtils;
 import ml.shifu.guagua.mapreduce.GuaguaMapReduceClient;
 import ml.shifu.guagua.mapreduce.GuaguaMapReduceConstants;
 import ml.shifu.shifu.container.obj.ColumnConfig;
+import ml.shifu.shifu.container.obj.ModelVarSelectConf.PostCorrelationMetric;
 import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
 import ml.shifu.shifu.core.VariableSelector;
 import ml.shifu.shifu.core.dtrain.CommonConstants;
@@ -42,6 +44,7 @@ import ml.shifu.shifu.core.dvarsel.wrapper.WrapperWorkerConductor;
 import ml.shifu.shifu.core.mr.input.CombineInputFormat;
 import ml.shifu.shifu.core.validator.ModelInspector.ModelStep;
 import ml.shifu.shifu.core.varselect.ColumnInfo;
+import ml.shifu.shifu.core.varselect.ColumnStatistics;
 import ml.shifu.shifu.core.varselect.VarSelectMapper;
 import ml.shifu.shifu.core.varselect.VarSelectReducer;
 import ml.shifu.shifu.exception.ShifuErrorCode;
@@ -115,6 +118,11 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
 
     @SuppressWarnings("unused")
     private static final double BAD_IV_THRESHOLD = 0.02d;
+
+    /**
+     * SE stats mao for correlation variable selection,if not se, this field will be null.
+     */
+    private Map<Integer, ColumnStatistics> seStatsMap;
 
     private void validateParameters() throws Exception {
         // String alg = super.getModelConfig().getTrain().getAlgorithm();
@@ -733,6 +741,8 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
             log.info(
                     "Sensitivity analysis report is in {}/{}-* file(s) with format 'column_index\tcolumn_name\tmean\trms\tvariance'.",
                     varSelectMSEOutputPath, Constants.SHIFU_VARSELECT_SE_OUTPUT_NAME);
+            this.seStatsMap = readSEValuesToMap(varSelectMSEOutputPath + Path.SEPARATOR
+                    + Constants.SHIFU_VARSELECT_SE_OUTPUT_NAME + "-*", source);
         } finally {
             if(scanners != null) {
                 for(Scanner scanner: scanners) {
@@ -742,6 +752,40 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
                 }
             }
         }
+    }
+
+    private Map<Integer, ColumnStatistics> readSEValuesToMap(String seOutputFiles, SourceType source)
+            throws IOException {
+        // here only works for 1 reducer
+        FileStatus[] globStatus = ShifuFileUtils.getFileSystemBySourceType(source).globStatus(new Path(seOutputFiles));
+        if(globStatus == null || globStatus.length == 0) {
+            throw new RuntimeException("Var select MSE stats output file not exist.");
+        }
+        Map<Integer, ColumnStatistics> map = new HashMap<Integer, ColumnStatistics>();
+        List<Scanner> scanners = null;
+        try {
+            scanners = ShifuFileUtils.getDataScanners(globStatus[0].getPath().toString(), source);
+            for(Scanner scanner: scanners) {
+                String str = null;
+                while(scanner.hasNext()) {
+                    str = scanner.nextLine().trim();
+                    String[] splits = CommonUtils.split(str, "\t");
+                    if(splits.length == 5) {
+                        map.put(Integer.parseInt(splits[0].trim()), new ColumnStatistics(Double.parseDouble(splits[2]),
+                                Double.parseDouble(splits[3]), Double.parseDouble(splits[4])));
+                    }
+                }
+            }
+        } finally {
+            if(scanners != null) {
+                for(Scanner scanner: scanners) {
+                    if(scanner != null) {
+                        scanner.close();
+                    }
+                }
+            }
+        }
+        return null;
     }
 
     @Override
@@ -818,19 +862,34 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
                                         config.setFinalSelect(false);
                                     } else {
                                         // both columns are not target and all final selected
-                                        if(config.getIv() > columnConfigList.get(i).getIv()) {
+                                        ColumnConfig dropConfig = null;
+                                        PostCorrelationMetric corrMetric = modelConfig.getVarSelect()
+                                                .getPostCorrelationMetric();
+                                        if(checkCorrelationMetric(config, columnConfigList.get(i), corrMetric)) {
+                                            dropConfig = columnConfigList.get(i);
+                                        } else {
+                                            dropConfig = config;
+                                        }
+
+                                        // if SE filterBy and SE postcorrelationMetric, seStatsMap has stats, do
+                                        // correlation comparison by SE RMS value
+                                        if(this.modelConfig.getVarSelectFilterBy().equals("SE")
+                                                && corrMetric == PostCorrelationMetric.SE && this.seStatsMap != null
+                                                && this.seStatsMap.get(config.getColumnNum()) != null
+                                                && this.seStatsMap.get(columnConfigList.get(i).getColumnNum()) != null) {
                                             log.warn(
-                                                    "Absolute correlation value {} in ({}, {}) are larger than correlationThreshold value {} set in VarSelect#correlationThreshold, column {} with smaller IV value will not be selected, set finalSelect to false.",
+                                                    "Absolute correlation value {} in ({}, {}) are larger than correlationThreshold value {} set in VarSelect#correlationThreshold, column {} with smaller SE RMS value will not be selected, set finalSelect to false.",
                                                     corrArray[i], config.getColumnNum(), i, modelConfig.getVarSelect()
-                                                            .getCorrelationThreshold(), i);
-                                            columnConfigList.get(i).setFinalSelect(false);
+                                                            .getCorrelationThreshold(), dropConfig.getColumnNum());
                                         } else {
                                             log.warn(
-                                                    "Absolute correlation value {} in ({}, {}) are larger than correlationThreshold value {} set in VarSelect#correlationThreshold, column {} with smaller IV value will not be selected, set finalSelect to false.",
+                                                    "Absolute correlation value {} in ({}, {}) are larger than correlationThreshold value {} set in VarSelect#correlationThreshold, column {} with smaller {} value will not be selected, set finalSelect to false.",
                                                     corrArray[i], config.getColumnNum(), i, modelConfig.getVarSelect()
-                                                            .getCorrelationThreshold(), config.getColumnNum());
-                                            config.setFinalSelect(false);
+                                                            .getCorrelationThreshold(), dropConfig.getColumnNum(),
+                                                    corrMetric);
                                         }
+                                        // de-select column which is dropped in current logic
+                                        dropConfig.setFinalSelect(false);
                                     }
                                 }
                             }
@@ -840,6 +899,30 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
             }
         } finally {
             IOUtils.closeQuietly(reader);
+        }
+    }
+
+    private boolean checkCorrelationMetric(ColumnConfig config1, ColumnConfig config2, PostCorrelationMetric metric) {
+        if(metric == null) {
+            return config1.getIv() > config2.getIv();
+        }
+        switch(metric) {
+            case KS:
+                return config1.getKs() > config2.getKs();
+            case SE:
+                if(this.modelConfig.getVarSelectFilterBy().equals("SE") && this.seStatsMap != null
+                        && this.seStatsMap.get(config1.getColumnNum()) != null
+                        && this.seStatsMap.get(config2.getColumnNum()) != null) {
+                    // if bigger SE rms, means it is much important column, smaller will be dropped
+                    return this.seStatsMap.get(config1.getColumnNum()).getRms() > this.seStatsMap.get(
+                            config2.getColumnNum()).getRms();
+                } else {
+                    // not valid se, take iv
+                    return config1.getIv() > config2.getIv();
+                }
+            case IV:
+            default:
+                return config1.getIv() > config2.getIv();
         }
     }
 
