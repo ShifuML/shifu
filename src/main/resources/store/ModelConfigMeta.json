@@ -528,6 +528,11 @@
                         "type" : "number",
                         "directive": "input",
                         "defval" : 0.1
+                    },{
+                        "name" : "DropRate",
+                        "type" : "number",
+                        "directive": "input",
+                        "defval" : 0.0
                     }, {
                         "name" : "RegularizedConstant",
                         "type" : "number",
