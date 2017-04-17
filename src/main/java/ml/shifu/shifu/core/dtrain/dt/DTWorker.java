@@ -321,6 +321,8 @@ public class DTWorker
      * If k-fold cross validation
      */
     private boolean isKFoldCV;
+    
+    private double dropRate = 0.0;
 
     @Override
     public void initRecordReader(GuaguaFileSplit fileSplit) throws IOException {
@@ -477,6 +479,7 @@ public class DTWorker
             if(swrObj != null) {
                 this.gbdtSampleWithReplacement = Boolean.TRUE.toString().equalsIgnoreCase(swrObj.toString());
             }
+            this.dropRate = Double.valueOf(validParams.get(CommonConstants.DROP_RATE).toString());
         }
 
         this.isStratifiedSampling = this.modelConfig.getTrain().getStratifiedSample();
@@ -485,10 +488,10 @@ public class DTWorker
                 CommonConstants.SHIFU_DT_MASTER_CHECKPOINT_FOLDER, "tmp/cp_" + context.getAppId()));
 
         LOG.info(
-                "Worker init params:isAfterVarSel={}, treeNum={}, impurity={}, loss={}, learningRate={}, gbdtSampleWithReplacement={}, isRF={}, isGBDT={}, isStratifiedSampling={}, isKFoldCV={}, kCrossValidation={}",
+                "Worker init params:isAfterVarSel={}, treeNum={}, impurity={}, loss={}, learningRate={}, gbdtSampleWithReplacement={}, isRF={}, isGBDT={}, isStratifiedSampling={}, isKFoldCV={}, kCrossValidation={}, dropRate={}",
                 isAfterVarSelect, treeNum, impurity.getClass().getName(), loss.getClass().getName(), this.learningRate,
                 this.gbdtSampleWithReplacement, this.isRF, this.isGBDT, this.isStratifiedSampling, this.isKFoldCV,
-                kCrossValidation);
+                kCrossValidation,this.dropRate);
 
         // for fail over, load existing trees
         if(!context.isFirstIteration()) {
@@ -600,7 +603,11 @@ public class DTWorker
                                 if(context.getLastMasterResult().isFirstTree()) {
                                     data.predict = (float) predict;
                                 } else {
-                                    data.predict += (float) (this.learningRate * predict);
+                                    //random drop
+                                    boolean drop = (this.dropRate>0.0&&Math.random()<this.dropRate);
+                                    if(!drop){
+                                        data.predict += (float) (this.learningRate * predict);
+                                    }
                                 }
                                 data.output = -1f * loss.computeGradient(data.predict, data.label);
                             }
@@ -1397,6 +1404,10 @@ public class DTWorker
                     predict = (float) oldPredict;
                     output = -1f * loss.computeGradient(predict, data.label);
                 } else {
+                    //random drop
+                    if(this.dropRate>0.0&&Math.random()<this.dropRate){
+                        continue;
+                    }
                     double oldPredict = predictNodeIndex(currTree.getNode(), data, false).getPredict().getPredict();
                     predict += (float) (this.learningRate * oldPredict);
                     output = -1f * loss.computeGradient(predict, data.label);
