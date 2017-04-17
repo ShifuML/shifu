@@ -294,7 +294,7 @@
                 "options": [
                     {"label": "SE", "value":"KS"},
                     {"label": "IV", "value":"IV"},
-                    {"label": "Sensitivity Analysis", "value":"SE"},
+                    {"label": "Sensitivity Analysis", "value":"SE"}
                 ]
             }, {
                 "name": "params",
