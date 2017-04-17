@@ -28,6 +28,15 @@ public class ColumnStatistics {
 
     private double variance;
 
+    public ColumnStatistics() {
+    }
+
+    public ColumnStatistics(double mean, double rms, double variance) {
+        this.mean = mean;
+        this.rms = rms;
+        this.variance = variance;
+    }
+
     /**
      * @return the mean
      */
@@ -73,7 +82,9 @@ public class ColumnStatistics {
         this.variance = variance;
     }
 
-    /* (non-Javadoc)
+    /*
+     * (non-Javadoc)
+     * 
      * @see java.lang.Object#toString()
      */
     @Override

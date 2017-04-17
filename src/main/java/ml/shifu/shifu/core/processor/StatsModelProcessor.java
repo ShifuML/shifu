@@ -75,7 +75,6 @@ import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.mapreduce.lib.output.TextOutputFormat;
 import org.apache.hadoop.util.GenericOptionsParser;
 import org.apache.pig.impl.util.JarManager;
-import org.eclipse.jdt.internal.core.util.MementoTokenizer;
 import org.encog.ml.data.MLDataSet;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
