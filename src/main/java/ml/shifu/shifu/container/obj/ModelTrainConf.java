@@ -511,6 +511,7 @@ public class ModelTrainConf {
             params.put("MaxDepth", 7);
             params.put("MinInstancesPerNode", 5);
             params.put("MinInfoGain", 0.0);
+            params.put("DropRate", 0.0);
             params.put("Impurity", "variance");
             params.put(NNTrainer.LEARNING_RATE, 0.05);
             params.put("Loss", "squared");
