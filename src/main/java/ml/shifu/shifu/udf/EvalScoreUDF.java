@@ -15,6 +15,7 @@
  */
 package ml.shifu.shifu.udf;
 
+import ml.shifu.shifu.column.NSColumn;
 import ml.shifu.shifu.container.CaseScoreResult;
 import ml.shifu.shifu.container.obj.EvalConfig;
 import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
@@ -117,12 +118,13 @@ public class EvalScoreUDF extends AbstractTrainerUDF<Tuple> {
             this.modelRunner.setScoreScale(Integer.parseInt(this.scale));
         }
 
-        Map<String, String> rawDataMap = CommonUtils.convertDataIntoMap(input, this.headers);
-        if(MapUtils.isEmpty(rawDataMap)) {
+        Map<NSColumn, String> rawDataNsMap = CommonUtils.convertDataIntoNsMap(input, this.headers);
+        if ( MapUtils.isEmpty(rawDataNsMap) ) {
             return null;
         }
 
-        String tag = CommonUtils.trimTag(rawDataMap.get(modelConfig.getTargetColumnName(evalConfig)));
+        String tag = CommonUtils.trimTag(rawDataNsMap.get(
+                new NSColumn(modelConfig.getTargetColumnName(evalConfig))));
 
         // filter invalid tag record out
         // disable the tag check, since there is no bad tag in eval data set
@@ -141,7 +143,7 @@ public class EvalScoreUDF extends AbstractTrainerUDF<Tuple> {
          */
 
         long startTime = System.nanoTime();
-        CaseScoreResult cs = modelRunner.compute(rawDataMap);
+        CaseScoreResult cs = modelRunner.computeNsData(rawDataNsMap);
         long runInterval = (System.nanoTime() - startTime) / 1000L;
 
         if(cs == null) {
@@ -156,7 +158,7 @@ public class EvalScoreUDF extends AbstractTrainerUDF<Tuple> {
 
         String weight = null;
         if(StringUtils.isNotBlank(evalConfig.getDataSet().getWeightColumnName())) {
-            weight = rawDataMap.get(evalConfig.getDataSet().getWeightColumnName());
+            weight = rawDataNsMap.get(new NSColumn(evalConfig.getDataSet().getWeightColumnName()));
         } else {
             weight = "1.0";
         }
@@ -199,7 +201,7 @@ public class EvalScoreUDF extends AbstractTrainerUDF<Tuple> {
         List<String> metaColumns = evalConfig.getAllMetaColumns(modelConfig);
         if(CollectionUtils.isNotEmpty(metaColumns)) {
             for(String meta: metaColumns) {
-                tuple.append(rawDataMap.get(meta));
+                tuple.append(rawDataNsMap.get(new NSColumn(meta)));
             }
         }
 
@@ -472,7 +474,10 @@ public class EvalScoreUDF extends AbstractTrainerUDF<Tuple> {
      * @return - tuple name with namespace
      */
     private String addModelNameToField(String modelName, String field) {
-        return (StringUtils.isBlank(modelName) ? field : modelName + "::" + field);
+        return (StringUtils.isBlank(modelName) ? field : formatPigNS(modelName) + "::" + field);
     }
 
+    private String formatPigNS(String name) {
+        return name.replaceAll("-", "_");
+    }
 }
