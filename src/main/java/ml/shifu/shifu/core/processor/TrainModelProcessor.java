@@ -56,6 +56,7 @@ import ml.shifu.shifu.core.dtrain.lr.LogisticRegressionMaster;
 import ml.shifu.shifu.core.dtrain.lr.LogisticRegressionOutput;
 import ml.shifu.shifu.core.dtrain.lr.LogisticRegressionParams;
 import ml.shifu.shifu.core.dtrain.lr.LogisticRegressionWorker;
+import ml.shifu.shifu.core.dtrain.nn.ActivationReLU;
 import ml.shifu.shifu.core.dtrain.nn.NNConstants;
 import ml.shifu.shifu.core.dtrain.nn.NNMaster;
 import ml.shifu.shifu.core.dtrain.nn.NNOutput;
@@ -93,9 +94,15 @@ import org.apache.pig.impl.PigContext;
 import org.apache.pig.impl.util.JarManager;
 import org.apache.pig.impl.util.ObjectSerializer;
 import org.apache.zookeeper.ZooKeeper;
+import org.encog.engine.network.activation.ActivationFunction;
+import org.encog.engine.network.activation.ActivationLOG;
+import org.encog.engine.network.activation.ActivationLinear;
+import org.encog.engine.network.activation.ActivationSIN;
+import org.encog.engine.network.activation.ActivationSigmoid;
+import org.encog.engine.network.activation.ActivationTANH;
 import org.encog.ml.BasicML;
-import org.encog.ml.MLInputOutput;
 import org.encog.ml.data.MLDataSet;
+import org.encog.neural.networks.BasicNetwork;
 import org.jboss.netty.bootstrap.ServerBootstrap;
 import org.joda.time.ReadableInstant;
 import org.slf4j.Logger;
@@ -492,7 +499,8 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
                 if(gs.hasHyperParam()) {
                     isContinous = false;
                 } else {
-                    int intContinuous = checkContinuousTraining(fileSystem, localArgs, modelPath);
+                    int intContinuous = checkContinuousTraining(fileSystem, localArgs, modelPath, modelConfig
+                            .getTrain().getParams());
                     if(intContinuous == -1) {
                         LOG.warn(
                                 "Model with index {} with size of trees is over treeNum, such training will not be started.",
@@ -711,8 +719,8 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
     /*
      * Return 1, continuous training, 0, not continuous training, -1 GBT existing trees is over treeNum
      */
-    private int checkContinuousTraining(FileSystem fileSystem, List<String> localArgs, Path modelPath)
-            throws IOException {
+    private int checkContinuousTraining(FileSystem fileSystem, List<String> localArgs, Path modelPath,
+            Map<String, Object> modelParams) throws IOException {
         int finalContinuous = 0;
         if(Boolean.TRUE.toString().equals(this.modelConfig.getTrain().getIsContinuous().toString())) {
             // if varselect d-training or no such existing models, directly to disable continuous training.
@@ -723,11 +731,10 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
                 finalContinuous = 0;
                 LOG.info("No existing model, model training will start from scratch.");
             } else if(NNConstants.NN_ALG_NAME.equalsIgnoreCase(modelConfig.getAlgorithm())
-                    && !inputOutputModelCheckSuccess(fileSystem, modelPath)) {
+                    && !inputOutputModelCheckSuccess(fileSystem, modelPath, modelParams)) {
                 // TODO hidden layer size and activation functions should also be validated
                 finalContinuous = 0;
-                LOG.warn("Model input and output settings are not consistent with input and output columns settings, "
-                        + "model training will start from scratch.");
+                LOG.warn("Model training parameters like hidden nodes, activiation and others  are not consistent with settings, model training will start from scratch.");
             } else if(CommonConstants.GBT_ALG_NAME.equalsIgnoreCase(modelConfig.getAlgorithm())) {
                 TreeModel model = (TreeModel) CommonUtils.loadModel(this.modelConfig, modelPath, fileSystem);
 
@@ -761,10 +768,70 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
         return finalContinuous;
     }
 
-    private boolean inputOutputModelCheckSuccess(FileSystem fileSystem, Path modelPath) throws IOException {
-        MLInputOutput model = (MLInputOutput) CommonUtils.loadModel(this.modelConfig, modelPath, fileSystem);
+    @SuppressWarnings("unchecked")
+    private boolean inputOutputModelCheckSuccess(FileSystem fileSystem, Path modelPath, Map<String, Object> modelParams)
+            throws IOException {
+        BasicNetwork model = (BasicNetwork) CommonUtils.loadModel(this.modelConfig, modelPath, fileSystem);
         int[] outputCandidateCounts = DTrainUtils.getInputOutputCandidateCounts(getColumnConfigList());
-        return model.getInputCount() == outputCandidateCounts[0] && model.getOutputCount() == outputCandidateCounts[1];
+        int inputs = outputCandidateCounts[0] == 0 ? outputCandidateCounts[2] : outputCandidateCounts[0];
+        boolean isInputOutConsistent = model.getInputCount() == inputs
+                && model.getOutputCount() == outputCandidateCounts[1];
+
+        if(!isInputOutConsistent) {
+            return false;
+        }
+
+        // same hidden layer ?
+        boolean isHasSameHidderLayer = (model.getLayerCount() - 2) == (Integer) modelParams
+                .get(NNTrainer.NUM_HIDDEN_LAYERS);
+        if(!isHasSameHidderLayer) {
+            return false;
+        }
+
+        // same hidden nodes ?
+        boolean isHasSameHiddenNodes = true;
+        List<Integer> hiddenNodeList = (List<Integer>) modelParams.get(NNTrainer.NUM_HIDDEN_NODES);
+        for(int i = 0; i < hiddenNodeList.size(); i++) {
+            if(model.getLayerNeuronCount(i + 1) != hiddenNodeList.get(i)) {
+                isHasSameHiddenNodes = false;
+                break;
+            }
+        }
+
+        if(!isHasSameHiddenNodes) {
+            return false;
+        }
+
+        // same activiations ?
+        boolean isHasSameHiddenActiviation = true;
+        List<String> actFunc = (List<String>) modelParams.get(NNTrainer.ACTIVATION_FUNC);
+        for(int i = 0; i < actFunc.size(); i++) {
+            ActivationFunction activation = model.getActivation(i + 1);
+            if(actFunc.get(i).equalsIgnoreCase(NNConstants.NN_LINEAR)) {
+                isHasSameHiddenActiviation = ActivationLinear.class == activation.getClass();
+            } else if(actFunc.get(i).equalsIgnoreCase(NNConstants.NN_SIGMOID)) {
+                isHasSameHiddenActiviation = ActivationSigmoid.class == activation.getClass();
+            } else if(actFunc.get(i).equalsIgnoreCase(NNConstants.NN_TANH)) {
+                isHasSameHiddenActiviation = ActivationTANH.class == activation.getClass();
+            } else if(actFunc.get(i).equalsIgnoreCase(NNConstants.NN_LOG)) {
+                isHasSameHiddenActiviation = ActivationLOG.class == activation.getClass();
+            } else if(actFunc.get(i).equalsIgnoreCase(NNConstants.NN_SIN)) {
+                isHasSameHiddenActiviation = ActivationSIN.class == activation.getClass();
+            } else if(actFunc.get(i).equalsIgnoreCase(NNConstants.NN_RELU)) {
+                isHasSameHiddenActiviation = ActivationReLU.class == activation.getClass();
+            } else {
+                isHasSameHiddenActiviation = ActivationSigmoid.class == activation.getClass();
+            }
+            if(!isHasSameHiddenActiviation) {
+                break;
+            }
+        }
+
+        if(!isHasSameHiddenActiviation) {
+            return false;
+        }
+
+        return true;
     }
 
     private String getProgressLogFile(int i) {
