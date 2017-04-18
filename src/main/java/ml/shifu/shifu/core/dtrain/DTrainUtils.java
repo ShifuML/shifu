@@ -266,7 +266,7 @@ public final class DTrainUtils {
         return network;
     }
 
-    public static boolean isExremeLearningMachinePropagation(String propagation) {
+    public static boolean isExtremeLearningMachinePropagation(String propagation) {
         return propagation != null && "E".equals(propagation);
     }
 
