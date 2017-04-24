@@ -24,7 +24,7 @@ public interface CommonConstants {
     public static final String LR_REGULARIZED_CONSTANT = "RegularizedConstant";
 
     public static final String LR_LEARNING_RATE = "LearningRate";
-    
+
     public static final String REG_LEVEL_KEY = "L1orL2";
 
     public static final String MODELSET_SOURCE_TYPE = "shifu.source.type";
@@ -64,4 +64,15 @@ public interface CommonConstants {
      */
     public static final int TREE_FORMAT_VERSION = 2;
 
+    public static final String NUM_HIDDEN_LAYERS = "NumHiddenLayers";
+
+    public static final String ACTIVATION_FUNC = "ActivationFunc";
+
+    public static final String NUM_HIDDEN_NODES = "NumHiddenNodes";
+
+    public static final String LEARNING_RATE = "LearningRate";
+
+    public static final String DROPOUT_RATE = "DropoutRate";
+
+    public static final String PROPAGATION = "Propagation";
 }

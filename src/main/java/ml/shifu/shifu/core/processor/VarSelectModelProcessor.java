@@ -146,6 +146,7 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
         try {
             setUp(ModelStep.VARSELECT);
             validateParameters();
+
             // reset all selections if user specify or select by absolute number
             if(isToReset) {
                 log.info("Reset all selections data including type final select etc!");
@@ -872,14 +873,16 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
                                                 && this.seStatsMap.get(config.getColumnNum()) != null
                                                 && this.seStatsMap.get(columnConfigList.get(i).getColumnNum()) != null) {
                                             log.warn(
-                                                    "Absolute correlation value {} in column pair ({}, {}) are larger than correlationThreshold value {} set in VarSelect#correlationThreshold, column {} name {} with smaller SE RMS value will not be selected, set finalSelect to false.",
-                                                    corrArray[i], config.getColumnNum(), i, modelConfig.getVarSelect()
+                                                    "Absolute correlation value {} in column pair ({}, {}) ({}, {}) are larger than correlationThreshold value {} set in VarSelect#correlationThreshold, column {} name {} with smaller SE RMS value will not be selected, set finalSelect to false.",
+                                                    corrArray[i], config.getColumnNum(), i, config.getColumnName(),
+                                                    columnConfigList.get(i).getColumnName(), modelConfig.getVarSelect()
                                                             .getCorrelationThreshold(), dropConfig.getColumnNum(),
                                                     dropConfig.getColumnName());
                                         } else {
                                             log.warn(
-                                                    "Absolute correlation value {} in column pair ({}, {}) are larger than correlationThreshold value {} set in VarSelect#correlationThreshold, column {} name {} with smaller {} value will not be selected, set finalSelect to false.",
-                                                    corrArray[i], config.getColumnNum(), i, modelConfig.getVarSelect()
+                                                    "Absolute correlation value {} in column pair ({}, {}) ({}, {}) are larger than correlationThreshold value {} set in VarSelect#correlationThreshold, column {} name {} with smaller {} value will not be selected, set finalSelect to false.",
+                                                    corrArray[i], config.getColumnNum(), i, config.getColumnName(),
+                                                    columnConfigList.get(i).getColumnName(), modelConfig.getVarSelect()
                                                             .getCorrelationThreshold(), dropConfig.getColumnNum(),
                                                     dropConfig.getColumnName(), corrMetric);
                                         }
