@@ -537,7 +537,7 @@
                         "type" : "number",
                         "directive": "input",
                         "defval" : 0.1
-                    }, {
+                    },{
                         "name" : "RegularizedConstant",
                         "type" : "number",
                         "directive": "input",
