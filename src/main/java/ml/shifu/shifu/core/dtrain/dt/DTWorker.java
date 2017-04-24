@@ -321,9 +321,15 @@ public class DTWorker
      */
     private boolean isKFoldCV;
 
+    /**
+     * Drop out rate for gbdt to drop trees in training. http://xgboost.readthedocs.io/en/latest/tutorials/dart.html
+     */
     private double dropOutRate = 0.0;
 
-    private Random rand = new Random();
+    /**
+     * Random object to drop out trees, work with {@link #dropOutRate}
+     */
+    private Random dropOutRandom = new Random();
 
     @Override
     public void initRecordReader(GuaguaFileSplit fileSplit) throws IOException {
@@ -480,7 +486,11 @@ public class DTWorker
             if(swrObj != null) {
                 this.gbdtSampleWithReplacement = Boolean.TRUE.toString().equalsIgnoreCase(swrObj.toString());
             }
-            this.dropOutRate = Double.valueOf(validParams.get(CommonConstants.DROPOUT_RATE).toString());
+
+            Object dropoutObj = validParams.get(CommonConstants.DROPOUT_RATE);
+            if(dropoutObj != null) {
+                this.dropOutRate = Double.valueOf(dropoutObj.toString());
+            }
         }
 
         this.isStratifiedSampling = this.modelConfig.getTrain().getStratifiedSample();
@@ -605,7 +615,7 @@ public class DTWorker
                                     data.predict = (float) predict;
                                 } else {
                                     // random drop
-                                    boolean drop = (this.dropOutRate > 0.0 && rand.nextDouble() < this.dropOutRate);
+                                    boolean drop = (this.dropOutRate > 0.0 && dropOutRandom.nextDouble() < this.dropOutRate);
                                     if(!drop) {
                                         data.predict += (float) (this.learningRate * predict);
                                     }
@@ -1406,7 +1416,7 @@ public class DTWorker
                     output = -1f * loss.computeGradient(predict, data.label);
                 } else {
                     // random drop
-                    if(this.dropOutRate > 0.0 && rand.nextDouble() < this.dropOutRate) {
+                    if(this.dropOutRate > 0.0 && dropOutRandom.nextDouble() < this.dropOutRate) {
                         continue;
                     }
                     double oldPredict = predictNodeIndex(currTree.getNode(), data, false).getPredict().getPredict();
