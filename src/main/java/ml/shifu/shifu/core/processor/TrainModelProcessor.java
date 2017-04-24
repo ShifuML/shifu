@@ -783,14 +783,14 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
 
         // same hidden layer ?
         boolean isHasSameHidderLayer = (model.getLayerCount() - 2) == (Integer) modelParams
-                .get(NNTrainer.NUM_HIDDEN_LAYERS);
+                .get(CommonConstants.NUM_HIDDEN_LAYERS);
         if(!isHasSameHidderLayer) {
             return false;
         }
 
         // same hidden nodes ?
         boolean isHasSameHiddenNodes = true;
-        List<Integer> hiddenNodeList = (List<Integer>) modelParams.get(NNTrainer.NUM_HIDDEN_NODES);
+        List<Integer> hiddenNodeList = (List<Integer>) modelParams.get(CommonConstants.NUM_HIDDEN_NODES);
         for(int i = 0; i < hiddenNodeList.size(); i++) {
             if(model.getLayerNeuronCount(i + 1) != hiddenNodeList.get(i)) {
                 isHasSameHiddenNodes = false;
@@ -804,7 +804,7 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
 
         // same activiations ?
         boolean isHasSameHiddenActiviation = true;
-        List<String> actFunc = (List<String>) modelParams.get(NNTrainer.ACTIVATION_FUNC);
+        List<String> actFunc = (List<String>) modelParams.get(CommonConstants.ACTIVATION_FUNC);
         for(int i = 0; i < actFunc.size(); i++) {
             ActivationFunction activation = model.getActivation(i + 1);
             if(actFunc.get(i).equalsIgnoreCase(NNConstants.NN_LINEAR)) {

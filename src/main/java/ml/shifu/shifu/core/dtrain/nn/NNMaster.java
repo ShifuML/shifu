@@ -29,7 +29,6 @@ import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.container.obj.ModelConfig;
 import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
 import ml.shifu.shifu.core.ConvergeJudger;
-import ml.shifu.shifu.core.alg.NNTrainer;
 import ml.shifu.shifu.core.dtrain.CommonConstants;
 import ml.shifu.shifu.core.dtrain.DTrainUtils;
 import ml.shifu.shifu.core.dtrain.RegulationLevel;
@@ -305,9 +304,9 @@ public class NNMaster extends AbstractMasterComputable<NNParams, NNParams> {
         // if is one vs all classification, outputNodeCount is set to 1
         int outputNodeCount = modelConfig.isRegression() ? inputAndOutput[1]
                 : (modelConfig.getTrain().isOneVsAll() ? inputAndOutput[1] : modelConfig.getTags().size());
-        int numLayers = (Integer) validParams.get(NNTrainer.NUM_HIDDEN_LAYERS);
-        List<String> actFunc = (List<String>) validParams.get(NNTrainer.ACTIVATION_FUNC);
-        List<Integer> hiddenNodeList = (List<Integer>) validParams.get(NNTrainer.NUM_HIDDEN_NODES);
+        int numLayers = (Integer) validParams.get(CommonConstants.NUM_HIDDEN_LAYERS);
+        List<String> actFunc = (List<String>) validParams.get(CommonConstants.ACTIVATION_FUNC);
+        List<Integer> hiddenNodeList = (List<Integer>) validParams.get(CommonConstants.NUM_HIDDEN_NODES);
 
         BasicNetwork network = DTrainUtils.generateNetwork(inputNodeCount, outputNodeCount, numLayers, actFunc,
                 hiddenNodeList);
@@ -359,10 +358,10 @@ public class NNMaster extends AbstractMasterComputable<NNParams, NNParams> {
             LOG.info("Validation by tolerance isn't enabled.");
         }
 
-        Object pObject = validParams.get(NNTrainer.PROPAGATION);
+        Object pObject = validParams.get(CommonConstants.PROPAGATION);
         this.propagation = pObject == null ? "Q" : (String) pObject;
-        this.rawLearningRate = Double.valueOf(validParams.get(NNTrainer.LEARNING_RATE).toString());
-        Object dropoutRateObj = validParams.get(NNTrainer.DROPOUT_RATE);
+        this.rawLearningRate = Double.valueOf(validParams.get(CommonConstants.LEARNING_RATE).toString());
+        Object dropoutRateObj = validParams.get(CommonConstants.DROPOUT_RATE);
         if(dropoutRateObj != null) {
             this.dropoutRate = Double.valueOf(dropoutRateObj.toString());
         }

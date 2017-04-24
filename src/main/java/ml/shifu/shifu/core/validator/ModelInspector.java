@@ -26,8 +26,8 @@ import ml.shifu.shifu.container.obj.EvalConfig;
 import ml.shifu.shifu.container.obj.ModelBasicConf.RunMode;
 import ml.shifu.shifu.container.obj.ModelConfig;
 import ml.shifu.shifu.container.obj.ModelNormalizeConf;
-import ml.shifu.shifu.container.obj.ModelSourceDataConf;
 import ml.shifu.shifu.container.obj.ModelNormalizeConf.NormType;
+import ml.shifu.shifu.container.obj.ModelSourceDataConf;
 import ml.shifu.shifu.container.obj.ModelStatsConf.BinningAlgorithm;
 import ml.shifu.shifu.container.obj.ModelStatsConf.BinningMethod;
 import ml.shifu.shifu.container.obj.ModelTrainConf;
@@ -36,7 +36,6 @@ import ml.shifu.shifu.container.obj.ModelVarSelectConf;
 import ml.shifu.shifu.container.obj.ModelVarSelectConf.PostCorrelationMetric;
 import ml.shifu.shifu.container.obj.RawSourceData;
 import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
-import ml.shifu.shifu.core.alg.NNTrainer;
 import ml.shifu.shifu.core.dtrain.CommonConstants;
 import ml.shifu.shifu.core.dtrain.DTrainUtils;
 import ml.shifu.shifu.core.dtrain.dt.FeatureSubsetStrategy;
@@ -548,7 +547,7 @@ public class ModelInspector {
         if(modelConfig.isRegression() && !gs.hasHyperParam()) {
             if(train.getAlgorithm().equalsIgnoreCase("nn")) {
                 Map<String, Object> params = train.getParams();
-                int layerCnt = (Integer) params.get(NNTrainer.NUM_HIDDEN_LAYERS);
+                int layerCnt = (Integer) params.get(CommonConstants.NUM_HIDDEN_LAYERS);
                 if(layerCnt < 0) {
                     ValidateResult tmpResult = new ValidateResult(true);
                     tmpResult.setStatus(false);
@@ -556,19 +555,20 @@ public class ModelInspector {
                     result = ValidateResult.mergeResult(result, tmpResult);
                 }
 
-                List<Integer> hiddenNode = (List<Integer>) params.get(NNTrainer.NUM_HIDDEN_NODES);
-                List<String> activateFucs = (List<String>) params.get(NNTrainer.ACTIVATION_FUNC);
+                List<Integer> hiddenNode = (List<Integer>) params.get(CommonConstants.NUM_HIDDEN_NODES);
+                List<String> activateFucs = (List<String>) params.get(CommonConstants.ACTIVATION_FUNC);
 
                 if(hiddenNode.size() != activateFucs.size() || layerCnt != activateFucs.size()) {
                     ValidateResult tmpResult = new ValidateResult(true);
                     tmpResult.setStatus(false);
                     tmpResult.getCauses().add(
-                            NNTrainer.NUM_HIDDEN_LAYERS + "/SIZE(" + NNTrainer.NUM_HIDDEN_NODES + ")" + "/SIZE("
-                                    + NNTrainer.ACTIVATION_FUNC + ")" + " should be equal in train configuration");
+                            CommonConstants.NUM_HIDDEN_LAYERS + "/SIZE(" + CommonConstants.NUM_HIDDEN_NODES + ")"
+                                    + "/SIZE(" + CommonConstants.ACTIVATION_FUNC + ")"
+                                    + " should be equal in train configuration");
                     result = ValidateResult.mergeResult(result, tmpResult);
                 }
 
-                Double learningRate = Double.valueOf(params.get(NNTrainer.LEARNING_RATE).toString());
+                Double learningRate = Double.valueOf(params.get(CommonConstants.LEARNING_RATE).toString());
                 if(learningRate != null && (learningRate.compareTo(Double.valueOf(0)) <= 0)) {
                     ValidateResult tmpResult = new ValidateResult(true);
                     tmpResult.setStatus(false);
@@ -599,7 +599,7 @@ public class ModelInspector {
                     result = ValidateResult.mergeResult(result, tmpResult);
                 }
 
-                Object dropoutObj = params.get(NNTrainer.DROPOUT_RATE);
+                Object dropoutObj = params.get(CommonConstants.DROPOUT_RATE);
                 if(dropoutObj != null) {
                     Double dropoutRate = Double.valueOf(dropoutObj.toString());
                     if(dropoutRate != null && (dropoutRate < 0d || dropoutRate >= 1d)) {
@@ -687,8 +687,19 @@ public class ModelInspector {
                     }
                 }
 
+                Object dropoutObj = params.get(CommonConstants.DROPOUT_RATE);
+                if(dropoutObj != null) {
+                    Double dropoutRate = Double.valueOf(dropoutObj.toString());
+                    if(dropoutRate != null && (dropoutRate < 0d || dropoutRate >= 1d)) {
+                        ValidateResult tmpResult = new ValidateResult(true);
+                        tmpResult.setStatus(false);
+                        tmpResult.getCauses().add("Dropout rate should be in [0, 1).");
+                        result = ValidateResult.mergeResult(result, tmpResult);
+                    }
+                }
+
                 if(train.getAlgorithm().equalsIgnoreCase(CommonConstants.GBT_ALG_NAME)) {
-                    Object learningRateObj = params.get(NNTrainer.LEARNING_RATE);
+                    Object learningRateObj = params.get(CommonConstants.LEARNING_RATE);
                     if(learningRateObj != null) {
                         Double learningRate = Double.valueOf(learningRateObj.toString());
                         if(learningRate != null && (learningRate.compareTo(Double.valueOf(0)) <= 0)) {
@@ -826,6 +837,7 @@ public class ModelInspector {
                     }
                 }
             }
+
         }
         return result;
     }

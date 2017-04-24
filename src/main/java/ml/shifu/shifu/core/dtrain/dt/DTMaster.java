@@ -39,7 +39,6 @@ import ml.shifu.shifu.container.obj.ModelConfig;
 import ml.shifu.shifu.container.obj.ModelTrainConf.ALGORITHM;
 import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
 import ml.shifu.shifu.core.TreeModel;
-import ml.shifu.shifu.core.alg.NNTrainer;
 import ml.shifu.shifu.core.dtrain.CommonConstants;
 import ml.shifu.shifu.core.dtrain.DTrainUtils;
 import ml.shifu.shifu.core.dtrain.dt.DTWorkerParams.NodeStats;
@@ -962,7 +961,7 @@ public class DTMaster extends AbstractMasterComputable<DTMasterParams, DTWorkerP
         this.isGBDT = ALGORITHM.GBT.toString().equalsIgnoreCase(modelConfig.getAlgorithm());
         if(this.isGBDT) {
             // learning rate only effective in gbdt
-            this.learningRate = Double.valueOf(validParams.get(NNTrainer.LEARNING_RATE).toString());
+            this.learningRate = Double.valueOf(validParams.get(CommonConstants.LEARNING_RATE).toString());
         }
 
         // initialize impurity type according to regression or classfication
