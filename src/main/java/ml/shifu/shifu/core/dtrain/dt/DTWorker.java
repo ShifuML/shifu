@@ -55,7 +55,6 @@ import ml.shifu.shifu.container.obj.ModelConfig;
 import ml.shifu.shifu.container.obj.ModelTrainConf.ALGORITHM;
 import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
 import ml.shifu.shifu.core.TreeModel;
-import ml.shifu.shifu.core.alg.NNTrainer;
 import ml.shifu.shifu.core.dtrain.CommonConstants;
 import ml.shifu.shifu.core.dtrain.DTrainUtils;
 import ml.shifu.shifu.core.dtrain.dt.DTWorkerParams.NodeStats;
@@ -321,9 +320,9 @@ public class DTWorker
      * If k-fold cross validation
      */
     private boolean isKFoldCV;
-    
+
     private double dropOutRate = 0.0;
-    
+
     private Random rand = new Random();
 
     @Override
@@ -476,12 +475,12 @@ public class DTWorker
         }
 
         if(this.isGBDT) {
-            this.learningRate = Double.valueOf(validParams.get(NNTrainer.LEARNING_RATE).toString());
+            this.learningRate = Double.valueOf(validParams.get(CommonConstants.LEARNING_RATE).toString());
             Object swrObj = validParams.get("GBTSampleWithReplacement");
             if(swrObj != null) {
                 this.gbdtSampleWithReplacement = Boolean.TRUE.toString().equalsIgnoreCase(swrObj.toString());
             }
-            this.dropOutRate = Double.valueOf(validParams.get(NNTrainer.DROPOUT_RATE).toString());
+            this.dropOutRate = Double.valueOf(validParams.get(CommonConstants.DROPOUT_RATE).toString());
         }
 
         this.isStratifiedSampling = this.modelConfig.getTrain().getStratifiedSample();
@@ -605,7 +604,7 @@ public class DTWorker
                                 if(context.getLastMasterResult().isFirstTree()) {
                                     data.predict = (float) predict;
                                 } else {
-                                    //random drop
+                                    // random drop
                                     boolean drop = (this.dropOutRate > 0.0 && rand.nextDouble() < this.dropOutRate);
                                     if(!drop) {
                                         data.predict += (float) (this.learningRate * predict);
@@ -1406,7 +1405,7 @@ public class DTWorker
                     predict = (float) oldPredict;
                     output = -1f * loss.computeGradient(predict, data.label);
                 } else {
-                    //random drop
+                    // random drop
                     if(this.dropOutRate > 0.0 && rand.nextDouble() < this.dropOutRate) {
                         continue;
                     }
