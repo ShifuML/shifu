@@ -33,7 +33,7 @@ public class ModelNormalizeConf {
     public static enum NormType {
         OLD_ZSCORE, OLD_ZSCALE, // the same one for user friendly
         ZSCORE, ZSCALE, // the same one for user friendly
-        WOE, WEIGHT_WOE, HYBRID, WEIGHT_HYBRID, WOE_ZSCORE, WEIGHT_WOE_ZSCORE;
+        WOE, WEIGHT_WOE, HYBRID, WEIGHT_HYBRID, WOE_ZSCORE, WOE_ZSCALE, WEIGHT_WOE_ZSCORE, WEIGHT_WOE_ZSCALE;
     }
 
     /**

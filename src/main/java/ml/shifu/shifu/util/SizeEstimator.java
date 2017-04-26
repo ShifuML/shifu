@@ -198,7 +198,7 @@ public final class SizeEstimator {
         }
     }
 
-    // Estimat the size of arrays larger than ARRAY_SIZE_FOR_SAMPLING by sampling.
+    // Estimate the size of arrays larger than ARRAY_SIZE_FOR_SAMPLING by sampling.
     private static final long ARRAY_SIZE_FOR_SAMPLING = 200;
     private static final long ARRAY_SAMPLE_SIZE = 100; // should be lower than ARRAY_SIZE_FOR_SAMPLING
 
@@ -241,7 +241,7 @@ public final class SizeEstimator {
     }
 
     private static long primitiveSize(Class<?> cls) {
-        if(cls == Byte.class) {
+        if(cls == byte.class) {
             return BYTE_SIZE;
         } else if(cls == boolean.class) {
             return BOOLEAN_SIZE;
@@ -260,6 +260,10 @@ public final class SizeEstimator {
         } else {
             throw new IllegalArgumentException("Non-primitive class " + cls + " passed to primitiveSize()");
         }
+    }
+
+    public static void main(String[] args) {
+
     }
 
     /*

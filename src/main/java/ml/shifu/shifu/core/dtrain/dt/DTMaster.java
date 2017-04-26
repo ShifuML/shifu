@@ -302,6 +302,8 @@ public class DTMaster extends AbstractMasterComputable<DTMasterParams, DTWorkerP
                     NodeStats resultNodeStats = entry.getValue();
                     mergeNodeStats(resultNodeStats, currNodeStatsmap.get(entry.getKey()));
                 }
+                // set to null after merging, release memory at the earliest stage
+                params.setNodeStatsMap(null);
             }
             trainError += params.getTrainError();
             validationError += params.getValidationError();
@@ -370,7 +372,7 @@ public class DTMaster extends AbstractMasterComputable<DTMasterParams, DTWorkerP
         if(validationTolerance > 0d
                 && Math.abs(this.bestValidationError - averageValidationError) < this.validationTolerance
                         * averageValidationError) {
-            LOG.info("Debug: bestValidationError {}, averageValidationError {}, validationTolerance {}",
+            LOG.debug("Debug: bestValidationError {}, averageValidationError {}, validationTolerance {}",
                     bestValidationError, averageValidationError, validationTolerance);
             vtTriggered = true;
         }
@@ -507,14 +509,29 @@ public class DTMaster extends AbstractMasterComputable<DTMasterParams, DTWorkerP
             // set tmp trees to DTOutput
             masterParams.setTmpTrees(this.trees);
         }
+
+        if(context.getCurrentIteration() % 100 == 0) {
+            // every 100 iterations do gc explicitly to avoid one case:
+            // mapper memory is 2048M and final in our cluster, if -Xmx is 2G, then occasionally oom issue.
+            // to fix this issue: 1. set -Xmx to 1800m; 2. call gc to drop unused memory at early stage.
+            // this is ugly and if it is stable with 1800m, this line should be removed
+            Thread gcThread = new Thread(new Runnable() {
+                @Override
+                public void run() {
+                    System.gc();
+                }
+            });
+            gcThread.setDaemon(true);
+            gcThread.start();
+        }
+
         // before master result, do checkpoint according to n iteration set by user
         doCheckPoint(context, masterParams);
 
-        LOG.info("weightedTrainCount {}, weightedValidationCount {}, trainError {}, validationError {}",
+        LOG.debug("weightedTrainCount {}, weightedValidationCount {}, trainError {}, validationError {}",
                 weightedTrainCount, weightedValidationCount, trainError, validationError);
         return masterParams;
     }
-    
 
     /**
      * Split node into left and right for leaf-wised tree growth, doneNode should be populated by
@@ -616,7 +633,7 @@ public class DTMaster extends AbstractMasterComputable<DTMasterParams, DTWorkerP
      */
     private void doCheckPoint(final MasterContext<DTMasterParams, DTWorkerParams> context,
             final DTMasterParams masterParams) {
-        LOG.info("Do checkpoint at hdfs file {}", this.checkpointOutput);
+        LOG.debug("Do checkpoint at hdfs file {}", this.checkpointOutput);
         final Queue<TreeNode> finalTodoQueue = this.toDoQueue;
         final Queue<TreeNode> finalToSplitQueue = this.toSplitQueue;
         final boolean finalIsLeaf = this.isLeafWise;
@@ -627,7 +644,7 @@ public class DTMaster extends AbstractMasterComputable<DTMasterParams, DTWorkerP
                 long start = System.currentTimeMillis();
                 writeStatesToHdfs(DTMaster.this.checkpointOutput, masterParams, finalTrees, finalIsLeaf,
                         finalTodoQueue, finalToSplitQueue);
-                LOG.info("Do checkpoint at iteration {} with run time {}", context.getCurrentIteration(),
+                LOG.debug("Do checkpoint at iteration {} with run time {}", context.getCurrentIteration(),
                         (System.currentTimeMillis() - start));
             }
         }, "Master checkpoint thread");
@@ -666,10 +683,11 @@ public class DTMaster extends AbstractMasterComputable<DTMasterParams, DTWorkerP
 
             // master result
             masterParams.write(fos);
-        } catch (IOException e) {
+        } catch (Throwable e) {
             LOG.error("Error in writing output.", e);
         } finally {
             IOUtils.closeStream(fos);
+            fos = null;
         }
     }
 
@@ -1102,5 +1120,5 @@ public class DTMaster extends AbstractMasterComputable<DTMasterParams, DTWorkerP
             org.apache.commons.io.IOUtils.closeQuietly(stream);
         }
     }
-    
+
 }
