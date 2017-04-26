@@ -21,8 +21,8 @@ import java.util.List;
 import java.util.Map;
 
 import ml.shifu.shifu.core.alg.LogisticRegressionTrainer;
-import ml.shifu.shifu.core.alg.NNTrainer;
 import ml.shifu.shifu.core.alg.SVMTrainer;
+import ml.shifu.shifu.core.dtrain.CommonConstants;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
@@ -480,17 +480,17 @@ public class ModelTrainConf {
         Map<String, Object> params = new HashMap<String, Object>();
 
         if(ALGORITHM.NN.equals(alg)) {
-            params.put(NNTrainer.PROPAGATION, "R");
-            params.put(NNTrainer.LEARNING_RATE, 0.1);
-            params.put(NNTrainer.NUM_HIDDEN_LAYERS, 1);
+            params.put(CommonConstants.PROPAGATION, "R");
+            params.put(CommonConstants.LEARNING_RATE, 0.1);
+            params.put(CommonConstants.NUM_HIDDEN_LAYERS, 1);
 
             List<Integer> nodes = new ArrayList<Integer>();
             nodes.add(50);
-            params.put(NNTrainer.NUM_HIDDEN_NODES, nodes);
+            params.put(CommonConstants.NUM_HIDDEN_NODES, nodes);
 
             List<String> func = new ArrayList<String>();
             func.add("tanh");
-            params.put(NNTrainer.ACTIVATION_FUNC, func);
+            params.put(CommonConstants.ACTIVATION_FUNC, func);
             params.put("RegularizedConstant", 0.0);
         } else if(ALGORITHM.SVM.equals(alg)) {
             params.put(SVMTrainer.SVM_KERNEL, "linear");
@@ -511,8 +511,9 @@ public class ModelTrainConf {
             params.put("MaxDepth", 7);
             params.put("MinInstancesPerNode", 5);
             params.put("MinInfoGain", 0.0);
+            params.put("DropoutRate", 0.0);
             params.put("Impurity", "variance");
-            params.put(NNTrainer.LEARNING_RATE, 0.05);
+            params.put(CommonConstants.LEARNING_RATE, 0.05);
             params.put("Loss", "squared");
             trainConf.setNumTrainEpochs(1000);
         } else if(ALGORITHM.LR.equals(alg)) {

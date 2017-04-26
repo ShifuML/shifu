@@ -15,10 +15,6 @@
  */
 package ml.shifu.shifu.core.dtrain.lr;
 
-import org.apache.hadoop.fs.Path;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
@@ -35,7 +31,6 @@ import ml.shifu.shifu.container.obj.ModelConfig;
 import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
 import ml.shifu.shifu.core.ConvergeJudger;
 import ml.shifu.shifu.core.LR;
-import ml.shifu.shifu.core.alg.NNTrainer;
 import ml.shifu.shifu.core.dtrain.CommonConstants;
 import ml.shifu.shifu.core.dtrain.DTrainUtils;
 import ml.shifu.shifu.core.dtrain.RegulationLevel;
@@ -43,6 +38,10 @@ import ml.shifu.shifu.core.dtrain.Weight;
 import ml.shifu.shifu.core.dtrain.gs.GridSearch;
 import ml.shifu.shifu.fs.ShifuFileUtils;
 import ml.shifu.shifu.util.CommonUtils;
+
+import org.apache.hadoop.fs.Path;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * {@link LogisticRegressionMaster} defines logic to update global <a
@@ -178,7 +177,7 @@ public class LogisticRegressionMaster extends
         this.convergenceThreshold = threshold == null ? 0d : threshold.doubleValue();
         LOG.info("Convergence threshold in master is :{}", this.convergenceThreshold);
 
-        Object pObject = validParams.get(NNTrainer.PROPAGATION);
+        Object pObject = validParams.get(CommonConstants.PROPAGATION);
         this.propagation = pObject == null ? "Q" : (String) pObject;
 
         Object rconstant = validParams.get(CommonConstants.LR_REGULARIZED_CONSTANT);

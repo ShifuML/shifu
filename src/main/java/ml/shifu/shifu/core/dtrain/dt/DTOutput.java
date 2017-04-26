@@ -170,7 +170,7 @@ public class DTOutput extends BasicMasterInterceptor<DTMasterParams, DTWorkerPar
         }
 
         updateProgressLog(context);
-        LOG.info("DT output post iteration time is {}ms", (System.currentTimeMillis() - start));
+        LOG.debug("DT output post iteration time is {}ms", (System.currentTimeMillis() - start));
     }
 
     @SuppressWarnings("deprecation")

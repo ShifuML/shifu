@@ -157,6 +157,7 @@ public class CorrelationMapper extends Mapper<LongWritable, Text, IntWritable, C
 
         context.getCounter(Constants.SHIFU_GROUP_COUNTER, "CNT_AFTER_FILTER").increment(1L);
 
+        // make sampling work in correlation
         if(Math.random() >= this.modelConfig.getStats().getSampleRate()) {
             return;
         }
@@ -305,6 +306,14 @@ public class CorrelationMapper extends Mapper<LongWritable, Text, IntWritable, C
             }
         }
         return dValues;
+    }
+
+    /**
+     * Write column info to reducer for merging.
+     */
+    @Override
+    protected void cleanup(Context context) throws IOException, InterruptedException {
+        LOG.info("Final records in such thread of mapper: {}.", count);
     }
 
 }
