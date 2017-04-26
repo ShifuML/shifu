@@ -161,6 +161,11 @@
                 "directive": "input",
                 "defval" : 10
             }, {
+                "name": "cateMaxNumBin",
+                "type": "number",
+                "directive": "input",
+                "defval" : -1
+            }, {
                 "name": "binningMethod",
                 "type": "text",
                 "directive": "select",

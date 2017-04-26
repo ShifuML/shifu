@@ -322,7 +322,11 @@ public class DTOutput extends BasicMasterInterceptor<DTMasterParams, DTWorkerPar
                     columnIndexNameMapping.put(columnConfig.getColumnNum(), columnConfig.getColumnName());
                 }
                 if(columnConfig.isCategorical() && CollectionUtils.isNotEmpty(columnConfig.getBinCategory())) {
-                    columnIndexCategoricalListMapping.put(columnConfig.getColumnNum(), columnConfig.getBinCategory());
+                    List<String> binCatVals = new ArrayList<String>();
+                    for ( String catGrp : columnConfig.getBinCategory() ) {
+                        binCatVals.addAll(CommonUtils.flattenCatValGrp(catGrp));
+                    }
+                    columnIndexCategoricalListMapping.put(columnConfig.getColumnNum(), binCatVals);
                 }
 
                 if(columnConfig.isNumerical() && columnConfig.getMean() != null) {
