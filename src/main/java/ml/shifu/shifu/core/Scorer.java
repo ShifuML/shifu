@@ -99,6 +99,15 @@ public class Scorer {
                     List<String> categories = columnConfig.getBinCategory();
                     if(categories != null) {
                         for(int i = 0; i < categories.size(); i++) {
+                            String categoricalVal = categories.get(i);
+                            if ( categoricalVal ==  null ) {
+                                map.put("", i);
+                            } else {
+                                List<String> cvals = CommonUtils.flattenCatValGrp(categoricalVal);
+                                for ( String cval : cvals ) {
+                                    map.put(cval, i);
+                                }
+                            }
                             map.put(categories.get(i) == null ? "" : categories.get(i), i);
                         }
                     }

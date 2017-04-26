@@ -277,7 +277,7 @@ public class Normalizer {
     private static double parseRawValue(ColumnConfig config, String raw) {
         double value = 0.0;
         if(config.isCategorical()) {
-            int index = config.getBinCategory().indexOf(raw);
+            int index = CommonUtils.getBinNum(config, raw);
             if(index == -1) {
                 value = defaultMissingValue(config);
             } else {

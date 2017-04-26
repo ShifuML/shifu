@@ -15,9 +15,9 @@
  */
 package ml.shifu.shifu.container.obj;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+import org.codehaus.jackson.annotate.JsonIgnore;
 
 /**
  * {@link ModelStatsConf} is 'stats' part configuration in ModelConfig.json
@@ -55,6 +55,11 @@ public class ModelStatsConf {
      * Max num bin per each numerical column.
      */
     private Integer maxNumBin = 10;
+
+    /**
+     * Max num bin for each categorical column
+     */
+    private Integer cateMaxNumBin = -1;
 
     /**
      * Binning method used in stats. By default is EqualPositive.
@@ -95,6 +100,15 @@ public class ModelStatsConf {
 
     public void setMaxNumBin(Integer maxNumBin) {
         this.maxNumBin = maxNumBin;
+    }
+
+    @JsonIgnore
+    public Integer getCateMaxNumBin() {
+        return cateMaxNumBin;
+    }
+
+    public void setCateMaxNumBin(Integer cateMaxNumBin) {
+        this.cateMaxNumBin = cateMaxNumBin;
     }
 
     @JsonIgnore

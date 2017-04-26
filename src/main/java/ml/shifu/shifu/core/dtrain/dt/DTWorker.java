@@ -354,7 +354,10 @@ public class DTWorker
                 if(config.getBinCategory() != null) {
                     Map<String, Integer> tmpMap = new HashMap<String, Integer>();
                     for(int i = 0; i < config.getBinCategory().size(); i++) {
-                        tmpMap.put(config.getBinCategory().get(i), i);
+                        List<String> catVals = CommonUtils.flattenCatValGrp(config.getBinCategory().get(i));
+                        for ( String cval: catVals ) {
+                            tmpMap.put(config.getBinCategory().get(i), i);
+                        }
                     }
                     this.columnCategoryIndexMapping.put(config.getColumnNum(), tmpMap);
                 }
