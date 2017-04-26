@@ -120,7 +120,10 @@ public class CorrelationMapper extends Mapper<LongWritable, Text, IntWritable, C
                 Map<String, Integer> map = new HashMap<String, Integer>();
                 if(config.getBinCategory() != null) {
                     for(int i = 0; i < config.getBinCategory().size(); i++) {
-                        map.put(config.getBinCategory().get(i), i);
+                        List<String> cvals = CommonUtils.flattenCatValGrp(config.getBinCategory().get(i));
+                        for ( String cval : cvals ) {
+                            map.put(cval, i);
+                        }
                     }
                 }
                 this.categoricalIndexMap.put(config.getColumnNum(), map);

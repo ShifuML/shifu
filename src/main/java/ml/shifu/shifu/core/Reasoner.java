@@ -25,6 +25,7 @@ import java.util.Map;
 
 import ml.shifu.shifu.container.obj.ColumnConfig;
 
+import ml.shifu.shifu.util.CommonUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -99,7 +100,8 @@ public class Reasoner {
                 sd.varCategory = rawDataMap.get(key);
 
                 while ((--binNum) >= 0) {
-                    if (sd.varCategory.equals(binCategory.get(binNum))) {
+                    if (CommonUtils.isCategoricalBinValue(binCategory.get(binNum), sd.varCategory)) {
+                    // if (sd.varCategory.equals(binCategory.get(binNum))) {
                         break;
                     }
                 }

@@ -17,10 +17,7 @@
  */
 package ml.shifu.shifu.udf.stats;
 
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.Map;
+import java.util.*;
 
 import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.container.obj.ModelConfig;
@@ -61,7 +58,10 @@ public class CategoricalVarStats extends AbstractVarStats {
         columnConfig.setBinCategory(Arrays.asList(binningDataArr));
         categoricalBinMap = new HashMap<String, Integer>(columnConfig.getBinCategory().size());
         for(int i = 0; i < columnConfig.getBinCategory().size(); i++) {
-            categoricalBinMap.put(columnConfig.getBinCategory().get(i), Integer.valueOf(i));
+            List<String> catValues = CommonUtils.flattenCatValGrp(columnConfig.getBinCategory().get(i));
+            for ( String cval : catValues ) {
+                categoricalBinMap.put(cval, Integer.valueOf(i));
+            }
         }
 
         statsCategoricalColumnInfo(databag, columnConfig);

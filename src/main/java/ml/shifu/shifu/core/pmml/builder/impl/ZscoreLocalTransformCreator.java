@@ -27,6 +27,7 @@ import ml.shifu.shifu.container.obj.ModelNormalizeConf;
 import ml.shifu.shifu.core.Normalizer;
 import ml.shifu.shifu.core.pmml.builder.creator.AbstractPmmlElementCreator;
 
+import ml.shifu.shifu.util.CommonUtils;
 import org.dmg.pmml.DataType;
 import org.dmg.pmml.DerivedField;
 import org.dmg.pmml.FieldColumnPair;
@@ -104,16 +105,18 @@ public class ZscoreLocalTransformCreator extends AbstractPmmlElementCreator<Loca
 
         InlineTable inlineTable = new InlineTable();
         for(int i = 0; i < config.getBinCategory().size(); i++) {
-            String cval = config.getBinCategory().get(i);
-            String dval = Normalizer.normalize(config, cval, cutoff, normType).toString();
+            List<String> catVals = CommonUtils.flattenCatValGrp(config.getBinCategory().get(i));
+            for ( String cval : catVals ) {
+                String dval = Normalizer.normalize(config, cval, cutoff, normType).toString();
 
-            Element out = document.createElementNS(NAME_SPACE_URI, ELEMENT_OUT);
-            out.setTextContent(dval);
+                Element out = document.createElementNS(NAME_SPACE_URI, ELEMENT_OUT);
+                out.setTextContent(dval);
 
-            Element origin = document.createElementNS(NAME_SPACE_URI, ELEMENT_ORIGIN);
-            origin.setTextContent(cval);
+                Element origin = document.createElementNS(NAME_SPACE_URI, ELEMENT_ORIGIN);
+                origin.setTextContent(cval);
 
-            inlineTable.withRows(new Row().withContent(origin).withContent(out));
+                inlineTable.withRows(new Row().withContent(origin).withContent(out));
+            }
         }
 
         MapValues mapValues = new MapValues("out").withDataType(DataType.DOUBLE).withDefaultValue(defaultValue)
