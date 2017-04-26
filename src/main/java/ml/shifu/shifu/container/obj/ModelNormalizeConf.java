@@ -33,7 +33,7 @@ public class ModelNormalizeConf {
     public static enum NormType {
         OLD_ZSCORE, OLD_ZSCALE, // the same one for user friendly
         ZSCORE, ZSCALE, // the same one for user friendly
-        WOE, WEIGHT_WOE, HYBRID, WEIGHT_HYBRID, WOE_ZSCORE, WEIGHT_WOE_ZSCORE;
+        WOE, WEIGHT_WOE, HYBRID, WEIGHT_HYBRID, WOE_ZSCORE, WOE_ZSCALE, WEIGHT_WOE_ZSCORE, WEIGHT_WOE_ZSCALE;
     }
 
     /**
@@ -72,11 +72,6 @@ public class ModelNormalizeConf {
      * selected columns are read. So far Parquet format only supports NN algorithm.
      */
     private Boolean isParquet = Boolean.FALSE;
-
-    /**
-     * Correlation computing methods
-     */
-    // private Correlation correlation = Correlation.None;
 
     public Double getStdDevCutOff() {
         return stdDevCutOff;
@@ -133,21 +128,6 @@ public class ModelNormalizeConf {
     public void setIsParquet(Boolean isParquet) {
         this.isParquet = isParquet;
     }
-
-    // /**
-    // * @return the corrlation
-    // */
-    // public Correlation getCorrelation() {
-    // return correlation;
-    // }
-    //
-    // /**
-    // * @param correlation
-    // * the correlation to set
-    // */
-    // public void setCorrelation(Correlation correlation) {
-    // this.correlation = correlation;
-    // }
 
     @Override
     public ModelNormalizeConf clone() {

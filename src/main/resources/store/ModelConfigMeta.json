@@ -293,6 +293,15 @@
                 "directive": "input",
                 "defval" : 1
             }, {
+                "name": "postCorrelationMetric",
+                "type": "text",
+                "directive": "select",
+                "options": [
+                    {"label": "SE", "value":"KS"},
+                    {"label": "IV", "value":"IV"},
+                    {"label": "Sensitivity Analysis", "value":"SE"}
+                ]
+            }, {
                 "name": "params",
                 "type": "map",
                 "directive": "input",
@@ -533,7 +542,7 @@
                         "type" : "number",
                         "directive": "input",
                         "defval" : 0.1
-                    }, {
+                    },{
                         "name" : "RegularizedConstant",
                         "type" : "number",
                         "directive": "input",
