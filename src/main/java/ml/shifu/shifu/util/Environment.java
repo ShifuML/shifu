@@ -93,6 +93,11 @@ public class Environment {
         loadProperties(properties, getProperty(Environment.SHIFU_HOME) + File.separator + "conf" + File.separator
                 + "shifuconfig");
 
+        loadProperties(properties, getProperty(Environment.SHIFU_HOME) + File.separator + "conf" + File.separator
+                + "shifu.config");
+
+        loadProperties(properties, getProperty(Environment.SHIFU_HOME) + File.separator + "shifu.config");
+
         // check /etc/shifuconfig, if exists, load it
         loadProperties(properties, File.separator + "etc" + File.separator + "shifuconfig");
 

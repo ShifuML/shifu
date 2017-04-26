@@ -210,6 +210,9 @@ public class ModelConfig {
         modelConfig.setStats(new ModelStatsConf());
         modelConfig.setBinningAlgorithm(BinningAlgorithm.SPDTI);
 
+        // build normalize info
+        modelConfig.setNormalize(new ModelNormalizeConf());
+
         // build varselect info
         ModelVarSelectConf varselect = new ModelVarSelectConf();
         // create empty <ModelName>/forceselect.column.names
@@ -226,9 +229,6 @@ public class ModelConfig {
         varselect.setFilterEnable(Boolean.TRUE);
         varselect.setFilterNum(200);
         modelConfig.setVarSelect(varselect);
-
-        // build normalize info
-        modelConfig.setNormalize(new ModelNormalizeConf());
 
         // build train info
         ModelTrainConf trainConf = new ModelTrainConf();
@@ -276,7 +276,6 @@ public class ModelConfig {
         evalConfig.setScoreMetaColumnNameFile(namesFilePath);
 
         modelConfig.getEvals().add(evalConfig);
-
         return modelConfig;
     }
 

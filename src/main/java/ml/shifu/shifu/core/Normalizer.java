@@ -234,8 +234,10 @@ public class Normalizer {
             case WEIGHT_HYBRID:
                 return hybridNormalize(config, raw, cutoff, true);
             case WOE_ZSCORE:
+            case WOE_ZSCALE:
                 return woeZScoreNormalize(config, raw, cutoff, false);
             case WEIGHT_WOE_ZSCORE:
+            case WEIGHT_WOE_ZSCALE:
                 return woeZScoreNormalize(config, raw, cutoff, true);
             case OLD_ZSCALE:
             case OLD_ZSCORE:

@@ -15,19 +15,19 @@
  */
 package ml.shifu.shifu.udf;
 
+import java.io.IOException;
+import java.util.List;
+import java.util.Map;
+
 import ml.shifu.shifu.column.NSColumn;
 import ml.shifu.shifu.container.CaseScoreResult;
 import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
 import ml.shifu.shifu.core.ModelRunner;
 import ml.shifu.shifu.util.CommonUtils;
-import org.apache.commons.collections.MapUtils;
+
 import org.apache.pig.data.Tuple;
 import org.apache.pig.impl.logicalLayer.schema.Schema;
 import org.encog.ml.BasicML;
-
-import java.io.IOException;
-import java.util.List;
-import java.util.Map;
 
 /**
  * SimpleScoreUDF class calculate the average score for evaluation data

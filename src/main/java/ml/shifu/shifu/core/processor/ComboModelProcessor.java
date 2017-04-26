@@ -55,6 +55,7 @@ public class ComboModelProcessor extends BasicModelProcessor implements Processo
     private ComboStep comboStep;
     private String algorithms;
     private boolean isToShuffleData;
+    @SuppressWarnings("unused")
     private boolean isToResume;
     private int comboMaxRetryTimes = 3;
 

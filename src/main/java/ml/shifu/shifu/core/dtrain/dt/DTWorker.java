@@ -22,7 +22,6 @@ import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -55,7 +54,6 @@ import ml.shifu.shifu.container.obj.ModelConfig;
 import ml.shifu.shifu.container.obj.ModelTrainConf.ALGORITHM;
 import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
 import ml.shifu.shifu.core.TreeModel;
-import ml.shifu.shifu.core.alg.NNTrainer;
 import ml.shifu.shifu.core.dtrain.CommonConstants;
 import ml.shifu.shifu.core.dtrain.DTrainUtils;
 import ml.shifu.shifu.core.dtrain.dt.DTWorkerParams.NodeStats;
@@ -322,6 +320,16 @@ public class DTWorker
      */
     private boolean isKFoldCV;
 
+    /**
+     * Drop out rate for gbdt to drop trees in training. http://xgboost.readthedocs.io/en/latest/tutorials/dart.html
+     */
+    private double dropOutRate = 0.0;
+
+    /**
+     * Random object to drop out trees, work with {@link #dropOutRate}
+     */
+    private Random dropOutRandom = new Random();
+
     @Override
     public void initRecordReader(GuaguaFileSplit fileSplit) throws IOException {
         super.setRecordReader(new GuaguaLineRecordReader(fileSplit));
@@ -475,10 +483,15 @@ public class DTWorker
         }
 
         if(this.isGBDT) {
-            this.learningRate = Double.valueOf(validParams.get(NNTrainer.LEARNING_RATE).toString());
+            this.learningRate = Double.valueOf(validParams.get(CommonConstants.LEARNING_RATE).toString());
             Object swrObj = validParams.get("GBTSampleWithReplacement");
             if(swrObj != null) {
                 this.gbdtSampleWithReplacement = Boolean.TRUE.toString().equalsIgnoreCase(swrObj.toString());
+            }
+
+            Object dropoutObj = validParams.get(CommonConstants.DROPOUT_RATE);
+            if(dropoutObj != null) {
+                this.dropOutRate = Double.valueOf(dropoutObj.toString());
             }
         }
 
@@ -488,10 +501,10 @@ public class DTWorker
                 CommonConstants.SHIFU_DT_MASTER_CHECKPOINT_FOLDER, "tmp/cp_" + context.getAppId()));
 
         LOG.info(
-                "Worker init params:isAfterVarSel={}, treeNum={}, impurity={}, loss={}, learningRate={}, gbdtSampleWithReplacement={}, isRF={}, isGBDT={}, isStratifiedSampling={}, isKFoldCV={}, kCrossValidation={}",
+                "Worker init params:isAfterVarSel={}, treeNum={}, impurity={}, loss={}, learningRate={}, gbdtSampleWithReplacement={}, isRF={}, isGBDT={}, isStratifiedSampling={}, isKFoldCV={}, kCrossValidation={}, dropOutRate={}",
                 isAfterVarSelect, treeNum, impurity.getClass().getName(), loss.getClass().getName(), this.learningRate,
                 this.gbdtSampleWithReplacement, this.isRF, this.isGBDT, this.isStratifiedSampling, this.isKFoldCV,
-                kCrossValidation);
+                kCrossValidation, this.dropOutRate);
 
         // for fail over, load existing trees
         if(!context.isFirstIteration()) {
@@ -603,7 +616,11 @@ public class DTWorker
                                 if(context.getLastMasterResult().isFirstTree()) {
                                     data.predict = (float) predict;
                                 } else {
-                                    data.predict += (float) (this.learningRate * predict);
+                                    // random drop
+                                    boolean drop = (this.dropOutRate > 0.0 && dropOutRandom.nextDouble() < this.dropOutRate);
+                                    if(!drop) {
+                                        data.predict += (float) (this.learningRate * predict);
+                                    }
                                 }
                                 data.output = -1f * loss.computeGradient(data.predict, data.label);
                             }
@@ -732,27 +749,37 @@ public class DTWorker
         CompletionService<Map<Integer, NodeStats>> completionService = new ExecutorCompletionService<Map<Integer, NodeStats>>(
                 this.threadPool);
 
-        Set<Entry<Integer, TreeNode>> treeNodeEntrySet = todoNodes.entrySet();
-        Iterator<Entry<Integer, TreeNode>> treeNodeIterator = treeNodeEntrySet.iterator();
-        int roundNodeNumer = treeNodeEntrySet.size() / this.workerThreadCount;
-        int modeNodeNumber = treeNodeEntrySet.size() % this.workerThreadCount;
         int realThreadCount = 0;
         LOG.debug("while todo size {}", todoNodes.size());
-        for(int i = 0; i < this.workerThreadCount; i++) {
-            final Map<Integer, TreeNode> localTodoNodes = new HashMap<Integer, TreeNode>();
-            final Map<Integer, NodeStats> localStatistics = new HashMap<Integer, DTWorkerParams.NodeStats>();
-            for(int j = 0; j < roundNodeNumer; j++) {
-                Entry<Integer, TreeNode> tmpTreeNode = treeNodeIterator.next();
-                localTodoNodes.put(tmpTreeNode.getKey(), tmpTreeNode.getValue());
-                localStatistics.put(tmpTreeNode.getKey(), statistics.get(tmpTreeNode.getKey()));
+
+        int realRecords = this.trainingData.size();
+        int realThreads = this.workerThreadCount > realRecords ? realRecords : this.workerThreadCount;
+
+        int[] trainLows = new int[realThreads];
+        int[] trainHighs = new int[realThreads];
+
+        int stepCount = realRecords / realThreads;
+        if(realRecords % realThreads != 0) {
+            // move step count to append last gap to avoid last thread worse 2*stepCount-1
+            stepCount += (realRecords % realThreads) / stepCount;
+        }
+        for(int i = 0; i < realThreads; i++) {
+            trainLows[i] = i * stepCount;
+            if(i != realThreads - 1) {
+                trainHighs[i] = trainLows[i] + stepCount - 1;
+            } else {
+                trainHighs[i] = realRecords - 1;
             }
-            if(modeNodeNumber > 0) {
-                Entry<Integer, TreeNode> tmpTreeNode = treeNodeIterator.next();
-                localTodoNodes.put(tmpTreeNode.getKey(), tmpTreeNode.getValue());
-                localStatistics.put(tmpTreeNode.getKey(), statistics.get(tmpTreeNode.getKey()));
-                modeNodeNumber -= 1;
-            }
-            LOG.info("Thread {} todo size {} stats size {} ", i, localTodoNodes.size(), localStatistics.size());
+        }
+
+        for(int i = 0; i < realThreads; i++) {
+            final Map<Integer, TreeNode> localTodoNodes = new HashMap<Integer, TreeNode>(todoNodes);
+            final Map<Integer, NodeStats> localStatistics = initTodoNodeStats(todoNodes);
+
+            final int startIndex = trainLows[i];
+            final int endIndex = trainHighs[i];
+            LOG.info("Thread {} todo size {} stats size {} start index {} end index {}", i, localTodoNodes.size(),
+                    localStatistics.size(), startIndex, endIndex);
 
             if(localTodoNodes.size() == 0) {
                 continue;
@@ -761,8 +788,10 @@ public class DTWorker
             completionService.submit(new Callable<Map<Integer, NodeStats>>() {
                 @Override
                 public Map<Integer, NodeStats> call() throws Exception {
+                    long start = System.nanoTime();
                     List<Integer> nodeIndexes = new ArrayList<Integer>(trees.size());
-                    for(Data data: DTWorker.this.trainingData) {
+                    for(int j = startIndex; j <= endIndex; j++) {
+                        Data data = DTWorker.this.trainingData.get(j);
                         nodeIndexes.clear();
                         if(DTWorker.this.isRF) {
                             for(TreeNode treeNode: trees) {
@@ -781,7 +810,6 @@ public class DTWorker
                             // update node index
                             nodeIndexes.add(predictNode.getId());
                         }
-
                         for(Map.Entry<Integer, TreeNode> entry: localTodoNodes.entrySet()) {
                             // only do statistics on effective data
                             Node todoNode = entry.getValue().getNode();
@@ -813,6 +841,8 @@ public class DTWorker
                             }
                         }
                     }
+                    LOG.debug("Thread computing stats time is {}ms in thread {}",
+                            TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - start), Thread.currentThread().getName());
                     return localStatistics;
                 }
             });
@@ -821,7 +851,15 @@ public class DTWorker
         int rCnt = 0;
         while(rCnt < realThreadCount) {
             try {
-                statistics.putAll(completionService.take().get());
+                Map<Integer, NodeStats> currNodeStatsmap = completionService.take().get();
+                if(rCnt == 0) {
+                    statistics = currNodeStatsmap;
+                } else {
+                    for(Entry<Integer, NodeStats> entry: statistics.entrySet()) {
+                        NodeStats resultNodeStats = entry.getValue();
+                        mergeNodeStats(resultNodeStats, currNodeStatsmap.get(entry.getKey()));
+                    }
+                }
             } catch (ExecutionException e) {
                 throw new RuntimeException(e);
             } catch (InterruptedException e) {
@@ -836,6 +874,16 @@ public class DTWorker
                 count, trainError, statistics.size(), weightedTrainCount, weightedValidationCount, trainError,
                 validationError);
         return new DTWorkerParams(weightedTrainCount, weightedValidationCount, trainError, validationError, statistics);
+    }
+
+    private void mergeNodeStats(NodeStats resultNodeStats, NodeStats nodeStats) {
+        Map<Integer, double[]> featureStatistics = resultNodeStats.getFeatureStatistics();
+        for(Entry<Integer, double[]> entry: nodeStats.getFeatureStatistics().entrySet()) {
+            double[] statistics = featureStatistics.get(entry.getKey());
+            for(int i = 0; i < statistics.length; i++) {
+                statistics[i] += entry.getValue()[i];
+            }
+        }
     }
 
     private Map<Integer, NodeStats> initTodoNodeStats(Map<Integer, TreeNode> todoNodes) {
@@ -1400,6 +1448,10 @@ public class DTWorker
                     predict = (float) oldPredict;
                     output = -1f * loss.computeGradient(predict, data.label);
                 } else {
+                    // random drop
+                    if(this.dropOutRate > 0.0 && dropOutRandom.nextDouble() < this.dropOutRate) {
+                        continue;
+                    }
                     double oldPredict = predictNodeIndex(currTree.getNode(), data, false).getPredict().getPredict();
                     predict += (float) (this.learningRate * oldPredict);
                     output = -1f * loss.computeGradient(predict, data.label);
