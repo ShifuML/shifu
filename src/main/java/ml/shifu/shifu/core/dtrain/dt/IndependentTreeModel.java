@@ -326,6 +326,9 @@ public class IndependentTreeModel {
                 value = this.numericalMeanMapping.get(split.getColumnNum());
             }
 
+            if ( obj == null || !(obj instanceof Double) ) {
+                dataMap.put(numNameMapping.get(split.getColumnNum()), value);
+            }
             // value is real numeric value and no need to transform to binLowestValue
             if(value < split.getThreshold()) {
                 nextNode = currNode.getLeft();
@@ -366,6 +369,9 @@ public class IndependentTreeModel {
                 } else {
                     nextNode = currNode.getLeft();
                 }
+            }
+            if ( obj == null || !(obj instanceof Double) ) {
+                dataMap.put(numNameMapping.get(split.getColumnNum()), indexValue);
             }
         }
 
