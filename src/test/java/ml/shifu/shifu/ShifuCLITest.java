@@ -304,7 +304,7 @@ public class ShifuCLITest {
         FileUtils.copyDirectory(modelsDir, tmpModelsDir);
 
         // run evaluation set
-        ShifuCLI.exportModel(null, false);
+        ShifuCLI.exportModel(null, null);
 
         File pmml = new File("./pmmls/cancer-judgement0.pmml");
         Assert.assertTrue(pmml.exists());
