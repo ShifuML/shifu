@@ -533,7 +533,7 @@ public final class CommonUtils {
         if(columnConfig.isCategorical()) {
             List<String> binCategories = columnConfig.getBinCategory();
             for(int i = 0; i < binCategories.size(); i++) {
-                if(binCategories.get(i).equals(columnVal)) {
+                if ( isCategoricalBinValue(binCategories.get(i), columnVal) ) {
                     return i;
                 }
             }
@@ -550,6 +550,16 @@ public final class CommonUtils {
             }
             return getBinIndex(columnConfig.getBinBoundary(), dval);
         }
+    }
+
+    /**
+     * Check some categorical value is in the categorical value group or not
+     * @param binVal - categorical value group, the format is lik cn^us^uk^jp
+     * @param cval - categorical value to look up
+     * @return  true if the categorical value exists in group, else false
+     */
+    public static boolean isCategoricalBinValue(String binVal, String cval) {
+        return binVal.equals(cval) ? true : CommonUtils.flattenCatValGrp(binVal).contains(cval);
     }
 
     /**
@@ -2280,5 +2290,20 @@ public final class CommonUtils {
         }
 
         return nsDataMap;
+    }
+
+    /**
+     * flatten categorical value group into values list
+     * @param categoricalValGrp - categorical val group, it some values like zn^us^ck^
+     * @return value list of categorical val
+     */
+    public static List<String> flattenCatValGrp(String categoricalValGrp) {
+        List<String> catVals = new ArrayList<String>();
+        if ( StringUtils.isNotBlank(categoricalValGrp) ) {
+            for(String cval : Splitter.on('^').split(categoricalValGrp) ) {
+                catVals.add(cval);
+            }
+        }
+        return catVals;
     }
 }
