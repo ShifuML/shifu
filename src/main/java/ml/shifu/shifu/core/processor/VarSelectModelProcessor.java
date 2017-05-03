@@ -874,17 +874,17 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
                                                 && this.seStatsMap.get(columnConfigList.get(i).getColumnNum()) != null) {
                                             log.warn(
                                                     "Absolute correlation value {} in column pair ({}, {}) ({}, {}) are larger than correlationThreshold value {} set in VarSelect#correlationThreshold, column {} name {} with smaller SE RMS value will not be selected, set finalSelect to false.",
-                                                    corrArray[i], config.getColumnNum(), i, config.getColumnName(),
-                                                    columnConfigList.get(i).getColumnName(), modelConfig.getVarSelect()
-                                                            .getCorrelationThreshold(), dropConfig.getColumnNum(),
-                                                    dropConfig.getColumnName());
+                                                    Math.abs(corrArray[i]), config.getColumnNum(), i,
+                                                    config.getColumnName(), columnConfigList.get(i).getColumnName(),
+                                                    modelConfig.getVarSelect().getCorrelationThreshold(),
+                                                    dropConfig.getColumnNum(), dropConfig.getColumnName());
                                         } else {
                                             log.warn(
                                                     "Absolute correlation value {} in column pair ({}, {}) ({}, {}) are larger than correlationThreshold value {} set in VarSelect#correlationThreshold, column {} name {} with smaller {} value will not be selected, set finalSelect to false.",
-                                                    corrArray[i], config.getColumnNum(), i, config.getColumnName(),
-                                                    columnConfigList.get(i).getColumnName(), modelConfig.getVarSelect()
-                                                            .getCorrelationThreshold(), dropConfig.getColumnNum(),
-                                                    dropConfig.getColumnName(), corrMetric);
+                                                    Math.abs(corrArray[i]), config.getColumnNum(), i,
+                                                    config.getColumnName(), columnConfigList.get(i).getColumnName(),
+                                                    modelConfig.getVarSelect().getCorrelationThreshold(),
+                                                    dropConfig.getColumnNum(), dropConfig.getColumnName(), corrMetric);
                                         }
                                         // de-select column which is dropped in current logic
                                         dropConfig.setFinalSelect(false);
