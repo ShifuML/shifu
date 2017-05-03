@@ -170,7 +170,9 @@ public class ExportModelProcessor extends BasicModelProcessor implements Process
                         + " | posRate:" + binInfo.getPositiveRate()
                         + " | woe:" + columnMetrics.getBinningWoe().get(i));
             }
-            System.out.println("Value-Woe Mapping:");
+            System.out.println("\t" + columnConfig.getColumnName() + " IV:" + columnMetrics.getIv());
+            System.out.println("\t" + columnConfig.getColumnName() + " KS:" + columnMetrics.getKs());
+            System.out.println("\t" + columnConfig.getColumnName() + " WOE:" + columnMetrics.getWoe());
             woeMappingText = generateWoeMapping(columnConfig.getColumnName(), categoricalBinInfos,
                     columnMetrics, expectBinNum);
         } else {
@@ -182,7 +184,9 @@ public class ExportModelProcessor extends BasicModelProcessor implements Process
                         + " | posRate:" + columnConfig.getBinPosRate().get(i)
                         + " | woe:" + columnConfig.getBinCountWoe().get(i));
             }
-            System.out.println("Value-Woe Mapping:");
+            System.out.println("\t" + columnConfig.getColumnName() + " IV:" + columnConfig.getIv());
+            System.out.println("\t" + columnConfig.getColumnName() + " KS:" + columnConfig.getKs());
+            System.out.println("\t" + columnConfig.getColumnName() + " WOE:" + columnConfig.getColumnStats().getWoe());
             woeMappingText = generateWoeMapping(columnConfig, expectBinNum);
         }
 
