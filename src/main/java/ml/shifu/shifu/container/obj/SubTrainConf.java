@@ -20,10 +20,28 @@ package ml.shifu.shifu.container.obj;
  */
 public class SubTrainConf {
 
+    private String modelName;
+    private String dataFilterExpr;
     private ModelStatsConf modelStatsConf;
     private ModelNormalizeConf modelNormalizeConf;
     private ModelVarSelectConf modelVarSelectConf;
     private ModelTrainConf modelTrainConf;
+
+    public String getModelName() {
+        return modelName;
+    }
+
+    public void setModelName(String modelName) {
+        this.modelName = modelName;
+    }
+
+    public String getDataFilterExpr() {
+        return dataFilterExpr;
+    }
+
+    public void setDataFilterExpr(String dataFilterExpr) {
+        this.dataFilterExpr = dataFilterExpr;
+    }
 
     public ModelStatsConf getModelStatsConf() {
         return modelStatsConf;
