@@ -100,11 +100,11 @@ public class Scorer {
                     if(categories != null) {
                         for(int i = 0; i < categories.size(); i++) {
                             String categoricalVal = categories.get(i);
-                            if ( categoricalVal ==  null ) {
+                            if(categoricalVal == null) {
                                 map.put("", i);
                             } else {
                                 List<String> cvals = CommonUtils.flattenCatValGrp(categoricalVal);
-                                for ( String cval : cvals ) {
+                                for(String cval: cvals) {
                                     map.put(cval, i);
                                 }
                             }
@@ -141,12 +141,14 @@ public class Scorer {
 
     /**
      * Run model against raw NSColumn Data map to get score
-     * @param rawDataNsMap - raw NSColumn Data map
+     * 
+     * @param rawDataNsMap
+     *            - raw NSColumn Data map
      * @return ScoreObject - model score
      */
     public ScoreObject scoreNsData(Map<NSColumn, String> rawDataNsMap) {
-        MLDataPair pair = CommonUtils.assembleNsDataPair(binCategoryMap, noVarSelect,
-                modelConfig, columnConfigList, rawDataNsMap, cutoff, alg);
+        MLDataPair pair = CommonUtils.assembleNsDataPair(binCategoryMap, noVarSelect, modelConfig, columnConfigList,
+                rawDataNsMap, cutoff, alg);
         return scoreNsData(pair, rawDataNsMap);
     }
 
