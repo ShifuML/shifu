@@ -533,7 +533,7 @@ public final class CommonUtils {
         if(columnConfig.isCategorical()) {
             List<String> binCategories = columnConfig.getBinCategory();
             for(int i = 0; i < binCategories.size(); i++) {
-                if ( isCategoricalBinValue(binCategories.get(i), columnVal) ) {
+                if(isCategoricalBinValue(binCategories.get(i), columnVal)) {
                     return i;
                 }
             }
@@ -554,9 +554,12 @@ public final class CommonUtils {
 
     /**
      * Check some categorical value is in the categorical value group or not
-     * @param binVal - categorical value group, the format is lik cn^us^uk^jp
-     * @param cval - categorical value to look up
-     * @return  true if the categorical value exists in group, else false
+     * 
+     * @param binVal
+     *            - categorical value group, the format is lik cn^us^uk^jp
+     * @param cval
+     *            - categorical value to look up
+     * @return true if the categorical value exists in group, else false
      */
     public static boolean isCategoricalBinValue(String binVal, String cval) {
         return binVal.equals(cval) ? true : CommonUtils.flattenCatValGrp(binVal).contains(cval);
@@ -969,11 +972,11 @@ public final class CommonUtils {
             }
 
             ModelConfig subModelConfig = modelConfig;
-            if ( subConfigs[0] != null ) {
+            if(subConfigs[0] != null) {
                 subModelConfig = CommonUtils.loadModelConfig(subConfigs[0].getPath().toString(), sourceType);
             }
             List<ColumnConfig> subColumnConfigList = columnConfigList;
-            if ( subConfigs[1] != null ) {
+            if(subConfigs[1] != null) {
                 subColumnConfigList = CommonUtils.loadColumnConfigList(subConfigs[1].getPath().toString(), sourceType);
             }
 
@@ -1011,9 +1014,9 @@ public final class CommonUtils {
                         modelFileStats.add(fls);
                     }
 
-                    if ( fileName.equalsIgnoreCase(Constants.MODEL_CONFIG_JSON_FILE_NAME) ) {
+                    if(fileName.equalsIgnoreCase(Constants.MODEL_CONFIG_JSON_FILE_NAME)) {
                         subConfigs[0] = fls;
-                    } else if ( fileName.equalsIgnoreCase(Constants.COLUMN_CONFIG_JSON_FILE_NAME) ) {
+                    } else if(fileName.equalsIgnoreCase(Constants.COLUMN_CONFIG_JSON_FILE_NAME)) {
                         subConfigs[1] = fls;
                     }
                 }
@@ -1425,7 +1428,7 @@ public final class CommonUtils {
     /**
      * Assemble map data to Encog standard input format. If no variable selected(noVarSel = true), all candidate
      * variables will be selected.
-     *
+     * 
      * @param binCategoryMap
      *            categorical map
      * @param noVarSel
@@ -1446,7 +1449,7 @@ public final class CommonUtils {
      * @throws NumberFormatException
      *             if column value is not number format.
      */
-    public static MLDataPair assembleNsDataPair(Map<Integer, Map<String, Integer>> binCategoryMap,boolean noVarSel,
+    public static MLDataPair assembleNsDataPair(Map<Integer, Map<String, Integer>> binCategoryMap, boolean noVarSel,
             ModelConfig modelConfig, List<ColumnConfig> columnConfigList, Map<NSColumn, String> rawNsDataMap,
             double cutoff, String alg) {
         double[] ideal = { Constants.DEFAULT_IDEAL_VALUE };
@@ -1944,7 +1947,7 @@ public final class CommonUtils {
     /**
      * Convert tuple record into (NSColumn, value) map. The @tuple is Tuple for a record
      * If @tuple size is not equal @header size, return null
-     *
+     * 
      * @param tuple
      *            - Tuple of a record
      * @param header
@@ -2258,16 +2261,18 @@ public final class CommonUtils {
 
     /**
      * Convert (String, String) raw data map to (NSColumn, String) data map
-     * @param rawDataMap - (String, String) raw data map
+     * 
+     * @param rawDataMap
+     *            - (String, String) raw data map
      * @return (NSColumn, String) data map
      */
     public static Map<NSColumn, String> convertRawMapToNsDataMap(Map<String, String> rawDataMap) {
-        if ( rawDataMap == null ) {
+        if(rawDataMap == null) {
             return null;
         }
 
         Map<NSColumn, String> nsDataMap = new HashMap<NSColumn, String>();
-        for ( String key : rawDataMap.keySet() ) {
+        for(String key: rawDataMap.keySet()) {
             nsDataMap.put(new NSColumn(key), rawDataMap.get(key));
         }
         return nsDataMap;
@@ -2275,16 +2280,18 @@ public final class CommonUtils {
 
     /**
      * Convert (String, ? extends Object) raw data map to (NSColumn, String) data map
-     * @param rawDataMap - (String, ? extends Object) raw data map
+     * 
+     * @param rawDataMap
+     *            - (String, ? extends Object) raw data map
      * @return (NSColumn, String) data map
      */
     public static Map<NSColumn, String> convertRawObjectMapToNsDataMap(Map<String, ? extends Object> rawDataMap) {
-        if ( rawDataMap == null ) {
+        if(rawDataMap == null) {
             return null;
         }
 
         Map<NSColumn, String> nsDataMap = new HashMap<NSColumn, String>();
-        for ( String key : rawDataMap.keySet() ) {
+        for(String key: rawDataMap.keySet()) {
             Object value = rawDataMap.get(key);
             nsDataMap.put(new NSColumn(key), ((value == null) ? null : value.toString()));
         }
@@ -2294,13 +2301,15 @@ public final class CommonUtils {
 
     /**
      * flatten categorical value group into values list
-     * @param categoricalValGrp - categorical val group, it some values like zn^us^ck^
+     * 
+     * @param categoricalValGrp
+     *            - categorical val group, it some values like zn^us^ck^
      * @return value list of categorical val
      */
     public static List<String> flattenCatValGrp(String categoricalValGrp) {
         List<String> catVals = new ArrayList<String>();
-        if ( StringUtils.isNotBlank(categoricalValGrp) ) {
-            for(String cval : Splitter.on('^').split(categoricalValGrp) ) {
+        if(StringUtils.isNotBlank(categoricalValGrp)) {
+            for(String cval: Splitter.on('^').split(categoricalValGrp)) {
                 catVals.add(cval);
             }
         }
