@@ -291,92 +291,93 @@ public class IndependentTreeModel {
 
     private double predictNode(Node topNode, Map<String, Object> dataMap) {
         Node currNode = topNode;
-        Split split = currNode.getSplit();
-        if(split == null || currNode.isRealLeaf()) {
-            if(this.isClassification) {
-                return currNode.getPredict().getClassValue();
-            } else {
-                return currNode.getPredict().getPredict();
-            }
-        }
+        while ( !currNode.isRealLeaf() && currNode.getSplit() != null ) {
+            Split split = currNode.getSplit();
 
-        Node nextNode = null;
-        Object obj = dataMap.get(numNameMapping.get(split.getColumnNum()));
+            Node nextNode = null;
+            Object obj = dataMap.get(numNameMapping.get(split.getColumnNum()));
 
-        if(split.getFeatureType().isNumerical()) {
-            double value = 0d;
-            if(obj == null) {
-                // no matter set it to null or not set it in dataMap, it will be treated as missing value
-                value = this.numericalMeanMapping.get(split.getColumnNum());
-            } else {
-                if(obj instanceof Double) {
-                    value = ((Double) obj).doubleValue();
+            if (split.getFeatureType().isNumerical()) {
+                double value = 0d;
+                if (obj == null) {
+                    // no matter set it to null or not set it in dataMap, it will be treated as missing value
+                    value = this.numericalMeanMapping.get(split.getColumnNum());
                 } else {
-                    try {
-                        value = Double.parseDouble(obj.toString());
-                    } catch (NumberFormatException e) {
-                        // not valid double value for numerical feature, using default value
-                        value = this.numericalMeanMapping.get(split.getColumnNum());
+                    if (obj instanceof Double) {
+                        value = ((Double) obj).doubleValue();
+                    } else {
+                        try {
+                            value = Double.parseDouble(obj.toString());
+                        } catch (NumberFormatException e) {
+                            // not valid double value for numerical feature, using default value
+                            value = this.numericalMeanMapping.get(split.getColumnNum());
+                        }
                     }
                 }
-            }
 
-            // replace NaN by default mean value
-            if(Double.isNaN(value)) {
-                value = this.numericalMeanMapping.get(split.getColumnNum());
-            }
-
-            if ( obj == null || !(obj instanceof Double) ) {
-                dataMap.put(numNameMapping.get(split.getColumnNum()), value);
-            }
-            // value is real numeric value and no need to transform to binLowestValue
-            if(value < split.getThreshold()) {
-                nextNode = currNode.getLeft();
-            } else {
-                nextNode = currNode.getRight();
-            }
-        } else if(split.getFeatureType().isCategorical()) {
-            double indexValue = -1d;
-            if(obj == null) {
-                // no matter set it to null or not set it in dataMap, it will be treated as missing value, last one is
-                // missing value category
-                indexValue = categoricalColumnNameNames.get(split.getColumnNum()).size();
-            } else {
-                if(obj instanceof Number) {
-                    indexValue = ((Number) obj).doubleValue();
-                } else {
-                    Integer intIndex = columnCategoryIndexMapping.get(split.getColumnNum()).get(obj.toString());
-                    if(intIndex == null || intIndex < 0
-                            || intIndex >= categoricalColumnNameNames.get(split.getColumnNum()).size()) {
-                        // last one is for invalid category
-                        intIndex = categoricalColumnNameNames.get(split.getColumnNum()).size();
-                    }
-                    indexValue = intIndex * 1d;
+                // replace NaN by default mean value
+                if (Double.isNaN(value)) {
+                    value = this.numericalMeanMapping.get(split.getColumnNum());
                 }
-            }
-            // for some cases in 0.99999999d, do a round check
-            short roundIndexValue = (short) (indexValue + 0.1d);
-            Set<Short> childCategories = split.getLeftOrRightCategories();
-            if(split.isLeft()) {
-                if(childCategories.contains(roundIndexValue)) {
+
+                if (obj == null || !(obj instanceof Double)) {
+                    dataMap.put(numNameMapping.get(split.getColumnNum()), value);
+                }
+                // value is real numeric value and no need to transform to binLowestValue
+                if (value < split.getThreshold()) {
                     nextNode = currNode.getLeft();
                 } else {
                     nextNode = currNode.getRight();
                 }
-            } else {
-                if(childCategories.contains(roundIndexValue)) {
-                    nextNode = currNode.getRight();
+            } else if (split.getFeatureType().isCategorical()) {
+                double indexValue = -1d;
+                if (obj == null) {
+                    // no matter set it to null or not set it in dataMap, it will be treated as missing value, last one is
+                    // missing value category
+                    indexValue = categoricalColumnNameNames.get(split.getColumnNum()).size();
                 } else {
-                    nextNode = currNode.getLeft();
+                    if (obj instanceof Number) {
+                        indexValue = ((Number) obj).doubleValue();
+                    } else {
+                        Integer intIndex = columnCategoryIndexMapping.get(split.getColumnNum()).get(obj.toString());
+                        if (intIndex == null || intIndex < 0
+                                || intIndex >= categoricalColumnNameNames.get(split.getColumnNum()).size()) {
+                            // last one is for invalid category
+                            intIndex = categoricalColumnNameNames.get(split.getColumnNum()).size();
+                        }
+                        indexValue = intIndex * 1d;
+                    }
+                }
+                // for some cases in 0.99999999d, do a round check
+                short roundIndexValue = (short) (indexValue + 0.1d);
+                Set<Short> childCategories = split.getLeftOrRightCategories();
+                if (split.isLeft()) {
+                    if (childCategories.contains(roundIndexValue)) {
+                        nextNode = currNode.getLeft();
+                    } else {
+                        nextNode = currNode.getRight();
+                    }
+                } else {
+                    if (childCategories.contains(roundIndexValue)) {
+                        nextNode = currNode.getRight();
+                    } else {
+                        nextNode = currNode.getLeft();
+                    }
+                }
+                if (obj == null || !(obj instanceof Double)) {
+                    dataMap.put(numNameMapping.get(split.getColumnNum()), indexValue);
                 }
             }
-            if ( obj == null || !(obj instanceof Double) ) {
-                dataMap.put(numNameMapping.get(split.getColumnNum()), indexValue);
-            }
+
+            assert nextNode != null;
+            currNode = nextNode;
         }
 
-        assert nextNode != null;
-        return predictNode(nextNode, dataMap);
+        if (this.isClassification) {
+            return currNode.getPredict().getClassValue();
+        } else {
+            return currNode.getPredict().getPredict();
+        }
     }
 
     /**
