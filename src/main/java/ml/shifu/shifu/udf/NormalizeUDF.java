@@ -98,7 +98,7 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
                 if(config.getBinCategory() != null) {
                     for(int i = 0; i < config.getBinCategory().size(); i++) {
                         List<String> catValues = CommonUtils.flattenCatValGrp(config.getBinCategory().get(i));
-                        for ( String cval : catValues ) {
+                        for(String cval: catValues) {
                             map.put(cval, i);
                         }
                     }
