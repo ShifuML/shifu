@@ -110,6 +110,7 @@ public class StatsModelProcessor extends BasicModelProcessor implements Processo
         long start = System.currentTimeMillis();
         try {
             setUp(ModelStep.STATS);
+            log.info("catMaxBinNum - {}", this.modelConfig.getStats().getCateMaxNumBin());
             // resync ModelConfig.json/ColumnConfig.json to HDFS
             syncDataToHdfs(modelConfig.getDataSet().getSource());
 
