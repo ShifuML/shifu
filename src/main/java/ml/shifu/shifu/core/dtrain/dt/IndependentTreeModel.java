@@ -313,16 +313,12 @@ public class IndependentTreeModel {
                     // is missing value category
                     indexValue = categoricalSize;
                 } else {
-                    if(obj instanceof Number) {
-                        indexValue = ((Number) obj).doubleValue();
-                    } else {
-                        Integer intIndex = columnCategoryIndexMapping.get(columnNum).get(obj.toString());
-                        if(intIndex == null || intIndex < 0 || intIndex >= categoricalSize) {
-                            // last one is for invalid category
-                            intIndex = categoricalSize;
-                        }
-                        indexValue = intIndex;
+                    Integer intIndex = columnCategoryIndexMapping.get(columnNum).get(obj.toString());
+                    if (intIndex == null || intIndex < 0 || intIndex >= categoricalSize) {
+                        // last one is for invalid category
+                        intIndex = categoricalSize;
                     }
+                    indexValue = intIndex;
                 }
                 value = indexValue;
             } else {

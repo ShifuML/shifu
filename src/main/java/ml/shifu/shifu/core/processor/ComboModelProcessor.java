@@ -32,6 +32,7 @@ import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.io.FileWriter;
+import java.io.FilenameFilter;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
@@ -132,7 +133,7 @@ public class ComboModelProcessor extends BasicModelProcessor implements Processo
         ComboModelTrain comboModelTrain = new ComboModelTrain();
         List<SubTrainConf> subTrainConfList = new ArrayList<SubTrainConf>(this.comboAlgs.size());
         for (int i = 0; i < this.comboAlgs.size(); i++) {
-            subTrainConfList.add(createSubTrainConf(this.comboAlgs.get(i)));
+            subTrainConfList.add(createSubTrainConf(i, this.comboAlgs.size(), this.comboAlgs.get(i)));
         }
         comboModelTrain.setSubTrainConfList(subTrainConfList);
         return saveComboTrain(comboModelTrain);
@@ -164,7 +165,7 @@ public class ComboModelProcessor extends BasicModelProcessor implements Processo
         String[] subModelNames = new String[this.comboModelTrain.getSubTrainConfList().size() - 1];
         for (int i = 0; i < this.comboModelTrain.getSubTrainConfList().size() - 1; i++) {
             SubTrainConf subTrainConf = this.comboModelTrain.getSubTrainConfList().get(i);
-            String subModelName = genSubModelName(i, subTrainConf);
+            String subModelName = subTrainConf.getModelName();
 
             // 1.0) save all sub model names, it will used as variables for assemble model
             subModelNames[i] = subModelName;
@@ -174,6 +175,9 @@ public class ComboModelProcessor extends BasicModelProcessor implements Processo
 
             // 1.2) create ModelConfig
             ModelConfig subModelConfig = this.modelConfig.clone();
+            if ( StringUtils.isNotBlank(subTrainConf.getDataFilterExpr()) ) {
+                subModelConfig.getDataSet().setFilterExpressions(subTrainConf.getDataFilterExpr());
+            }
             subModelConfig.getBasic().setName(subModelName);
             subModelConfig.setStats(subTrainConf.getModelStatsConf());
             subModelConfig.setNormalize(subTrainConf.getModelNormalizeConf());
@@ -200,7 +204,8 @@ public class ComboModelProcessor extends BasicModelProcessor implements Processo
         // 2. create assemble model folder and do setting for it
         //  2.0) clone from parent model config to generate assemble model config
         ModelConfig assembleModelConfig = this.modelConfig.clone();
-        String assembleModelName = genAssembleModelName(this.modelConfig.getModelSetName());
+        String assembleModelName = this.comboModelTrain.getAssembleTrainConf().getModelName();
+        new File(assembleModelName).mkdirs();
         assembleModelConfig.setModelSetName(assembleModelName);
 
         //  2.1) set the training data source to "EvalTrain" score of parent model
@@ -249,12 +254,7 @@ public class ComboModelProcessor extends BasicModelProcessor implements Processo
         }
         assembleModelConfig.setEvals(assembleEvalConfigs);
 
-        //  2.4) create folder and save assemble ModelConfig.json
-        // create folder and save ModelConfig.json
-        if(!new File(assembleModelName).mkdirs()) {
-            LOG.error("Create folder {} failed.", assembleModelName);
-            return 1;
-        }
+        //  2.4) save assemble ModelConfig.json
         saveModelConfig(assembleModelName, assembleModelConfig);
 
         // 3. save parent model config
@@ -281,7 +281,7 @@ public class ComboModelProcessor extends BasicModelProcessor implements Processo
         List<Callable<Integer>> tasks = new ArrayList<Callable<Integer>>();
         for (int i = 0; i < this.comboModelTrain.getSubTrainConfList().size() - 1; i++) {
             SubTrainConf subTrainConf = this.comboModelTrain.getSubTrainConfList().get(i);
-            String subModelName = genSubModelName(i, subTrainConf);
+            String subModelName = subTrainConf.getModelName();
             Callable<Integer> task = createSubModelTrainTasks(subModelName, genEvalTrainName());
             if (task != null) {
                 tasks.add(task);
@@ -298,7 +298,7 @@ public class ComboModelProcessor extends BasicModelProcessor implements Processo
         modelsDir.mkdirs(); // create if not exist
         for (int i = 0; i < this.comboModelTrain.getSubTrainConfList().size() - 1; i++) {
             SubTrainConf subTrainConf = this.comboModelTrain.getSubTrainConfList().get(i);
-            String subModelName = genSubModelName(i, subTrainConf);
+            String subModelName = subTrainConf.getModelName();
             // create sub directory under models/
             File subModelsDir = new File(modelsDir, subModelName);
             subModelsDir.mkdirs();
@@ -308,7 +308,12 @@ public class ComboModelProcessor extends BasicModelProcessor implements Processo
                     new File(subModelsDir, Constants.MODEL_CONFIG_JSON_FILE_NAME));
             FileUtils.copyFile(new File(subModelName, Constants.COLUMN_CONFIG_JSON_FILE_NAME),
                     new File(subModelsDir, Constants.COLUMN_CONFIG_JSON_FILE_NAME));
-            File[] modelFiles = (new File(subModelName, Constants.MODELS)).listFiles();
+            File[] modelFiles = (new File(subModelName, Constants.MODELS)).listFiles(new FilenameFilter() {
+                @Override
+                public boolean accept(File dir, String name) {
+                    return !name.startsWith(".");
+                }
+            });
             for (int k = 0; k < modelFiles.length; k++) {
                 File modelFile = modelFiles[k];
                 FileUtils.copyFile(modelFile, new File(new File(Constants.MODELS, subModelName), modelFile.getName()));
@@ -324,7 +329,7 @@ public class ComboModelProcessor extends BasicModelProcessor implements Processo
         }
 
         // 3. update the forceselect file for assemble model
-        String assembleModelName = genAssembleModelName(this.modelConfig.getModelSetName());
+        String assembleModelName = this.comboModelTrain.getAssembleTrainConf().getModelName();
         ModelConfig assembleModelConfig = CommonUtils.loadModelConfig(
                 assembleModelName + File.separator + Constants.MODEL_CONFIG_JSON_FILE_NAME, SourceType.LOCAL);
         String forceSelectNames = createModelNamesFile(assembleModelName, assembleModelName + ".forceselect",
@@ -424,9 +429,9 @@ public class ComboModelProcessor extends BasicModelProcessor implements Processo
             SubTrainConf subTrainConf = this.comboModelTrain.getSubTrainConfList().get(i);
             String evalModelName = null;
             if (i == this.comboModelTrain.getSubTrainConfList().size() - 1) {
-                evalModelName = genAssembleModelName(modelConfig.getModelSetName());
+                evalModelName = subTrainConf.getModelName();
             } else {
-                evalModelName = genSubModelName(i, subTrainConf);
+                evalModelName = subTrainConf.getModelName();
             }
 
             final String subModelName = evalModelName;
@@ -509,12 +514,18 @@ public class ComboModelProcessor extends BasicModelProcessor implements Processo
      * @param alg - the algorithm, see @ModelTrainConf.ALGORITHM
      * @return sub train config instance
      */
-    private SubTrainConf createSubTrainConf(ModelTrainConf.ALGORITHM alg) {
+    private SubTrainConf createSubTrainConf(int seq, int total, ModelTrainConf.ALGORITHM alg) {
         SubTrainConf subTrainConf = new SubTrainConf();
         subTrainConf.setModelStatsConf(createModelStatsConf(alg));
         subTrainConf.setModelNormalizeConf(createModelNormalizeConf(alg));
         subTrainConf.setModelVarSelectConf(createModelVarSelectConf(alg));
         subTrainConf.setModelTrainConf(createModelTrainConf(alg));
+        if ( seq < total -  1) {
+            subTrainConf.setModelName(genSubModelName(seq, subTrainConf));
+        } else {
+            subTrainConf.setModelName(genAssembleModelName(modelConfig.getModelSetName()));
+        }
+
         return subTrainConf;
     }
 
