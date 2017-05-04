@@ -395,7 +395,7 @@ public class UpdateBinningInfoReducer extends Reducer<IntWritable, BinningInfoWr
             binInfo.setWeightNeg(cateBinStats.binWeightNeg[i]);
             categoricalBinInfos.add(binInfo);
         }
-
+        Collections.sort(categoricalBinInfos);
         CateDynamicBinning binInst = new CateDynamicBinning(modelConfig.getStats().getCateMaxNumBin());
         List<CategoricalBinInfo> mergedBinInfos = binInst.merge(categoricalBinInfos);
 

@@ -17,7 +17,9 @@ package ml.shifu.shifu;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.jar.JarFile;
 import java.util.jar.Manifest;
 
@@ -102,6 +104,10 @@ public class ShifuCLI {
 
     private static final String SHUFFLE = "shuffle";
     private static final String RESUME = "resume";
+
+    private static final String VARS = "vars";
+    private static final String N = "n";
+
 
     static private final Logger log = LoggerFactory.getLogger(ShifuCLI.class);
 
@@ -306,8 +312,11 @@ public class ShifuCLI {
                         printUsage();
                     }
                 } else if(cleanedArgs[0].equals(CMD_EXPORT)) {
-                    boolean isConcise = cmd.hasOption(EXPORT_CONCISE);
-                    status = exportModel(cmd.getOptionValue(MODELSET_CMD_TYPE), isConcise);
+                    Map<String, Object> params = new HashMap<String, Object>();
+                    params.put(ExportModelProcessor.IS_CONCISE, cmd.hasOption(EXPORT_CONCISE));
+                    params.put(ExportModelProcessor.REQUEST_VARS, cmd.getOptionValue(VARS));
+                    params.put(ExportModelProcessor.EXPECTED_BIN_NUM, cmd.getOptionValue(N));
+                    status = exportModel(cmd.getOptionValue(MODELSET_CMD_TYPE), params);
                     if(status == 0) {
                         log.info("Export models/columnstats to PMML/csv format successfully in current folder.");
                     } else {
@@ -477,8 +486,8 @@ public class ShifuCLI {
         p.copyModelFiles(cmdArgs[0], cmdArgs[1]);
     }
 
-    public static int exportModel(String type, boolean isConcise) throws Exception {
-        ExportModelProcessor p = new ExportModelProcessor(type, isConcise);
+    public static int exportModel(String type, Map<String, Object> params) throws Exception {
+        ExportModelProcessor p = new ExportModelProcessor(type, params);
         return p.run();
     }
 
@@ -558,6 +567,9 @@ public class ShifuCLI {
         Option opt_eval = OptionBuilder.hasArg(false).create(EVAL_CMD);
         Option opt_init = OptionBuilder.hasArg(false).create(INIT_CMD);
 
+        Option opt_vars = OptionBuilder.hasArg().create(VARS);
+        Option opt_n = OptionBuilder.hasArg().create(N);
+
         Option opt_save = OptionBuilder.hasArg(false).withDescription("save model").create(SAVE);
         Option opt_switch = OptionBuilder.hasArg(false).withDescription("switch model").create(SWITCH);
         Option opt_eval_model = OptionBuilder.hasArg().withDescription("").create(EVAL_MODEL);
@@ -587,6 +599,10 @@ public class ShifuCLI {
         opts.addOption(opt_eval_model);
         opts.addOption(opt_correlation);
         opts.addOption(opt_correlation_short);
+
+        opts.addOption(opt_vars);
+        opts.addOption(opt_n);
+
         return opts;
     }
 

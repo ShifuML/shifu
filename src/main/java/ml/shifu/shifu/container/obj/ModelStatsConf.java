@@ -15,9 +15,9 @@
  */
 package ml.shifu.shifu.container.obj;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
-import org.codehaus.jackson.annotate.JsonIgnore;
 
 /**
  * {@link ModelStatsConf} is 'stats' part configuration in ModelConfig.json
@@ -102,7 +102,6 @@ public class ModelStatsConf {
         this.maxNumBin = maxNumBin;
     }
 
-    @JsonIgnore
     public Integer getCateMaxNumBin() {
         return cateMaxNumBin;
     }
