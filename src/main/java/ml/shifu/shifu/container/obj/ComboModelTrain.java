@@ -15,6 +15,7 @@
  */
 package ml.shifu.shifu.container.obj;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import org.apache.commons.collections.ListUtils;
 
 import java.util.List;
@@ -47,6 +48,11 @@ public class ComboModelTrain {
         }
 
         return ListUtils.isEqualList(subTrainConfList, other.getSubTrainConfList());
+    }
+
+    @JsonIgnore
+    public SubTrainConf getAssembleTrainConf() {
+        return subTrainConfList.get(subTrainConfList.size() - 1);
     }
 
 }
