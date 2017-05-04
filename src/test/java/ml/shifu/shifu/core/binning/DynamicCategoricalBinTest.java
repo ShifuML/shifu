@@ -63,6 +63,7 @@ public class DynamicCategoricalBinTest {
                 .replaceAll("].*$", "")
                 .replaceAll("\"", "").trim().split(",");
 
+        @SuppressWarnings("unused")
         String[] positiveRates = lines.get(3)
                 .replaceAll("^.* \\[", "")
                 .replaceAll("].*$", "")

@@ -42,6 +42,8 @@ import ml.shifu.shifu.core.dtrain.CommonConstants;
  */
 public class IndependentTreeModel {
 
+    private static final char MERGE_CATEGORY_DELIMITER = '^';
+
     /**
      * Mapping for (ColumnNum, ColumnName)
      */
@@ -319,7 +321,7 @@ public class IndependentTreeModel {
                             // last one is for invalid category
                             intIndex = categoricalSize;
                         }
-                        indexValue = intIndex * 1d;
+                        indexValue = intIndex;
                     }
                 }
                 value = indexValue;
@@ -354,7 +356,7 @@ public class IndependentTreeModel {
         }
         return data;
     }
-
+    
     @SuppressWarnings("unused")
     private double predictNode(Node topNode, Map<String, Object> dataMap) {
         Node currNode = topNode;
@@ -700,8 +702,17 @@ public class IndependentTreeModel {
             List<String> categories = new ArrayList<String>();
             for(int j = 0; j < categoryListSize; j++) {
                 String category = dis.readUTF();
-                categoryIndexMapping.put(category, j);
+                // categories is merged category list
                 categories.add(category);
+                if(category.contains("" + MERGE_CATEGORY_DELIMITER)) {
+                    // merged category should be flatten, use split function this class to avoid depending on guava jar
+                    String[] splits = split(category, MERGE_CATEGORY_DELIMITER);
+                    for(String str: splits) {
+                        categoryIndexMapping.put(str, j);
+                    }
+                } else {
+                    categoryIndexMapping.put(category, j);
+                }
             }
             categoricalColumnNameNames.put(columnIndex, categories);
             columnCategoryIndexMapping.put(columnIndex, categoryIndexMapping);
@@ -728,6 +739,38 @@ public class IndependentTreeModel {
                 columnCategoryIndexMapping, columnMapping, trees, weights,
                 CommonConstants.GBT_ALG_NAME.equalsIgnoreCase(algorithm), isClassification && !isOneVsAll,
                 isConvertToProb, lossStr, algorithm, inputNode, version);
+    }
+
+    /**
+     * Manual split function to avoid depending on guava.
+     * 
+     * <p>
+     * Some examples: "^"=>[, ]; ""=>[]; "a"=>[a]; "abc"=>[abc]; "a^"=>[a, ]; "^b"=>[, b]; "^^b"=>[, , b]
+     * 
+     * @param str
+     *            the string to be split
+     * @param delimiter
+     *            the delimiter
+     * @return split string array
+     */
+    private static String[] split(String str, char delimiter) {
+        if(str == null || str.length() == 0) {
+            return new String[] { "" };
+        }
+
+        List<String> categories = new ArrayList<String>();
+        int begin = 0;
+        for(int i = 0; i < str.length(); i++) {
+            if(str.charAt(i) == delimiter) {
+                categories.add(str.substring(begin, i));
+                begin = i + 1;
+            }
+            if(i == str.length() - 1) {
+                categories.add(str.substring(begin, str.length()));
+            }
+        }
+
+        return categories.toArray(new String[0]);
     }
 
     /**
