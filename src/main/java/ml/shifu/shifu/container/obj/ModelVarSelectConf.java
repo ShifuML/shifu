@@ -90,6 +90,16 @@ public class ModelVarSelectConf {
     private Float correlationThreshold = 1f;
 
     /**
+     * If IV value of feature is less than this threshold, such feature will be dropped and not selected.
+     */
+    private Float minIvThreshold = 0f;
+
+    /**
+     * If KS value of feature is less than this threshold, such feature will be dropped and not selected.
+     */
+    private Float minKsThreshold = 0f;
+
+    /**
      * Enable variable selection for correlation value, this is the metric to keep the better feature. If column i and j
      * has higher correlation value than {@link #correlationThreshold}. According to {@link #postCorrelationMetric} to
      * choose a better one to keep, the other one would be dropped. For example, if set it KS, drop column with smaller
@@ -230,6 +240,36 @@ public class ModelVarSelectConf {
      */
     public void setPostCorrelationMetric(PostCorrelationMetric postCorrelationMetric) {
         this.postCorrelationMetric = postCorrelationMetric;
+    }
+
+    /**
+     * @return the minIvThreshold
+     */
+    public Float getMinIvThreshold() {
+        return minIvThreshold;
+    }
+
+    /**
+     * @return the minKsThreshold
+     */
+    public Float getMinKsThreshold() {
+        return minKsThreshold;
+    }
+
+    /**
+     * @param minIvThreshold
+     *            the minIvThreshold to set
+     */
+    public void setMinIvThreshold(Float minIvThreshold) {
+        this.minIvThreshold = minIvThreshold;
+    }
+
+    /**
+     * @param minKsThreshold
+     *            the minKsThreshold to set
+     */
+    public void setMinKsThreshold(Float minKsThreshold) {
+        this.minKsThreshold = minKsThreshold;
     }
 
     @Override

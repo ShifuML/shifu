@@ -977,7 +977,13 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
         // the reason to add 1 is that the first iteration in implementation is used for training preparation.
         numTrainEpoches = numTrainEpoches + 1;
 
-        LOG.info("Number of train epoches is set to {}.", numTrainEpoches);
+        if(LogisticRegressionContants.LR_ALG_NAME.equalsIgnoreCase(alg)) {
+            LOG.info("Number of train iterations is set to {}.", numTrainEpoches - 1);
+        } else if(NNConstants.NN_ALG_NAME.equalsIgnoreCase(alg)) {
+            LOG.info("Number of train epochs is set to {}.", numTrainEpoches - 1);
+        } else if(CommonUtils.isTreeModel(alg)) {
+            LOG.info("Number of train iterations is set to {}.", numTrainEpoches - 1);
+        }
 
         args.add(String.valueOf(numTrainEpoches));
 
