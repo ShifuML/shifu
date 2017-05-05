@@ -819,7 +819,33 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
         if(!ShifuFileUtils.isFileExists(pathFinder.getLocalCorrelationCsvPath(), SourceType.LOCAL)) {
             return;
         }
+        varSelectByCorrelation();
 
+        // 3. check KS and IV min threshold value
+        for(ColumnConfig config: columnConfigList) {
+            if(!config.isTarget() && !config.isMeta() && !config.isForceSelect() && config.isFinalSelect()) {
+                float minIvThreshold = super.modelConfig.getVarSelect().getMinIvThreshold() == null ? 0f
+                        : super.modelConfig.getVarSelect().getMinIvThreshold();
+                if(config.getIv() != null && config.getIv() < minIvThreshold) {
+                    log.warn(
+                            "IV of column {} is less than minimal IV threshold, set final select to false. If not, you can check it manually in ColumnConfig.json",
+                            config.getColumnName());
+                    config.setFinalSelect(false);
+                }
+
+                float minKsThreshold = super.modelConfig.getVarSelect().getMinKsThreshold() == null ? 0f
+                        : super.modelConfig.getVarSelect().getMinKsThreshold();
+                if(config.getKs() != null && config.getKs() < minKsThreshold) {
+                    log.warn(
+                            "KS of column {} is less than minimal KS threshold, set final select to false. If not, you can check it manually in ColumnConfig.json",
+                            config.getColumnName());
+                    config.setFinalSelect(false);
+                }
+            }
+        }
+    }
+
+    private void varSelectByCorrelation() throws IOException {
         BufferedReader reader = ShifuFileUtils.getReader(pathFinder.getLocalCorrelationCsvPath(), SourceType.LOCAL);
         int lineNum = 0;
         try {
@@ -879,7 +905,7 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
                                                     modelConfig.getVarSelect().getCorrelationThreshold(),
                                                     dropConfig.getColumnNum(), dropConfig.getColumnName());
                                         } else {
-                                            log.warn(
+                                            log.info(
                                                     "Absolute correlation value {} in column pair ({}, {}) ({}, {}) are larger than correlationThreshold value {} set in VarSelect#correlationThreshold, column {} name {} with smaller {} value will not be selected, set finalSelect to false.",
                                                     Math.abs(corrArray[i]), config.getColumnNum(), i,
                                                     config.getColumnName(), columnConfigList.get(i).getColumnName(),
