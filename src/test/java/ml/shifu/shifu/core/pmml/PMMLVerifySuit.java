@@ -25,9 +25,8 @@ import ml.shifu.shifu.ShifuCLI;
 import ml.shifu.shifu.container.obj.ModelTrainConf;
 import ml.shifu.shifu.core.pmml.builder.creator.AbstractSpecifCreator;
 import ml.shifu.shifu.core.pmml.builder.impl.NNSpecifCreator;
-
 import ml.shifu.shifu.core.processor.ExportModelProcessor;
-import org.apache.commons.collections.map.HashedMap;
+
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
 import org.dmg.pmml.FieldName;

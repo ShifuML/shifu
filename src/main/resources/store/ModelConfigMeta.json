@@ -293,6 +293,16 @@
                 "directive": "input",
                 "defval" : 1
             }, {
+                "name": "minIvThreshold",
+                "type": "number",
+                "directive": "input",
+                "defval" : 0
+            }, {
+                "name": "minKsThreshold",
+                "type": "number",
+                "directive": "input",
+                "defval" : 0
+            }, {
                 "name": "postCorrelationMetric",
                 "type": "text",
                 "directive": "select",
