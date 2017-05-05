@@ -369,11 +369,7 @@ public class StatsModelProcessor extends BasicModelProcessor implements Processo
             writer.write(getColumnNames());
             writer.newLine();
 
-            long start1 = System.currentTimeMillis();
-
             for(Entry<Integer, CorrelationWritable> entry: corrMap.entrySet()) {
-                long start2 = System.currentTimeMillis();
-
                 ColumnConfig xColumnConfig = this.columnConfigList.get(entry.getKey());
                 if(xColumnConfig.getColumnFlag() == ColumnFlag.Meta) {
                     continue;
@@ -419,10 +415,7 @@ public class StatsModelProcessor extends BasicModelProcessor implements Processo
                 writer.write(entry.getKey() + "," + this.columnConfigList.get(entry.getKey()).getColumnName() + ","
                         + adjustCorrStr);
                 writer.newLine();
-                log.info("time in compute {} corr values {}ms", entry.getKey(), (System.currentTimeMillis() - start2));
             }
-            log.info("time in compute {}  total corr values {}ms", (System.currentTimeMillis() - start1));
-            log.info("Please find corrlation csv file in local {}.", localCorrelationCsv);
         } finally {
             IOUtils.closeQuietly(writer);
         }
@@ -444,7 +437,6 @@ public class StatsModelProcessor extends BasicModelProcessor implements Processo
      */
     private SortedMap<Integer, CorrelationWritable> dumpCorrInfo(SourceType source, String outputFilePattern)
             throws IOException, UnsupportedEncodingException {
-        long start = System.currentTimeMillis();
         SortedMap<Integer, CorrelationWritable> corrMap = new TreeMap<Integer, CorrelationWritable>();
         FileStatus[] globStatus = ShifuFileUtils.getFileSystemBySourceType(source).globStatus(
                 new Path(outputFilePattern));
@@ -466,7 +458,6 @@ public class StatsModelProcessor extends BasicModelProcessor implements Processo
             }
             closeScanners(scanners);
         }
-        log.info("time in dump MR results {}ms", (System.currentTimeMillis() - start));
         return corrMap;
     }
 
