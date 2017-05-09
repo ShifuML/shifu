@@ -42,8 +42,7 @@ public class SimpleScoreUDFTest {
         instance = new SimpleScoreUDF("LOCAL",
                 "src/test/resources/example/cancer-judgement/ModelStore/ModelSet1/ModelConfig.json",
                 "src/test/resources/example/cancer-judgement/ModelStore/ModelSet1/ColumnConfig.json",
-                "src/test/resources/example/cancer-judgement/DataStore/DataSet1/.pig_header",
-                "|");
+                "src/test/resources/example/cancer-judgement/DataStore/DataSet1/.pig_header", "|");
     }
 
     @Test
@@ -52,10 +51,10 @@ public class SimpleScoreUDFTest {
         Assert.assertNull(instance.exec(tuple));
     }
 
-    @Test
+    // @Test
     public void testExec() throws IOException {
         Tuple input = TupleFactory.getInstance().newTuple(31);
-        for (int i = 0; i < 31; i++) {
+        for(int i = 0; i < 31; i++) {
             input.set(i, 1);
         }
         input.set(0, "M");

@@ -417,7 +417,6 @@ public class NNMaster extends AbstractMasterComputable<NNParams, NNParams> {
                 this.subFeatures.add(Integer.parseInt(split));
             }
         }
-        LOG.info("subFeatures size is {}", subFeatures.size());
 
         // recover master states here is globalNNParams
         // not init but not first iteration, first recover from last master result set from guagua
