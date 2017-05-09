@@ -585,7 +585,7 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
                     } else {
                         localArgs.add(String.format(CommonConstants.MAPREDUCE_PARAM_FORMAT,
                                 CommonConstants.SHIFU_NN_FEATURE_SUBSET, StringUtils.join(subFeatures, ',')));
-                        LOG.info("Size: {}, list: {}.", subFeatures.size(), StringUtils.join(subFeatures, ','));
+                        LOG.debug("Size: {}, list: {}.", subFeatures.size(), StringUtils.join(subFeatures, ','));
                     }
                 }
 
