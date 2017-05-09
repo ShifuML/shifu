@@ -208,7 +208,7 @@ public class ShifuCLITest {
 
     }
 
-    @Test
+    // @Test
     public void testPostTrainModel() throws Exception {
         File originModel = new File("src/test/resources/example/cancer-judgement/ModelStore/ModelSet1/ModelConfig.json");
         File tmpModel = new File("ModelConfig.json");

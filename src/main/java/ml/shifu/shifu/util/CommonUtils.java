@@ -1513,10 +1513,36 @@ public final class CommonUtils {
         return new BasicMLDataPair(new BasicMLData(input), new BasicMLData(ideal));
     }
 
+    /**
+     * Assemble map data to Encog standard input format. If no variable selected(noVarSel = true), all candidate
+     * variables will be selected.
+     * 
+     * @param binCategoryMap
+     *            categorical map
+     * @param noVarSel
+     *            if after var select
+     * @param modelConfig
+     *            model config instance
+     * @param columnConfigList
+     *            column config list
+     * @param rawNsDataMap
+     *            raw NSColumn data
+     * @param cutoff
+     *            cut off value
+     * @param alg
+     *            algorithm used in model
+     * @param featureSet
+     *            feature set used in NN model
+     * @return data pair instance
+     * @throws NullPointerException
+     *             if input is null
+     * @throws NumberFormatException
+     *             if column value is not number format.
+     */
     public static MLDataPair assembleNsDataPair(Map<Integer, Map<String, Integer>> binCategoryMap, boolean noVarSel,
             ModelConfig modelConfig, List<ColumnConfig> columnConfigList, Map<NSColumn, String> rawNsDataMap,
-            double cutoff, String alg, Set<Integer> featureList) {
-        if(featureList == null || featureList.size() == 0) {
+            double cutoff, String alg, Set<Integer> featureSet) {
+        if(featureSet == null || featureSet.size() == 0) {
             return assembleNsDataPair(binCategoryMap, noVarSel, modelConfig, columnConfigList, rawNsDataMap, cutoff,
                     alg);
         }
@@ -1535,7 +1561,7 @@ public final class CommonUtils {
             if(config.isTarget()) {
                 continue;
             } else {
-                if(featureList.contains(config.getColumnNum())) {
+                if(featureSet.contains(config.getColumnNum())) {
                     String val = rawNsDataMap.get(key) == null ? null : rawNsDataMap.get(key).toString();
                     if(CommonUtils.isTreeModel(alg) && config.isCategorical()) {
                         Integer index = binCategoryMap.get(config.getColumnNum()).get(val == null ? "" : val);
@@ -1561,7 +1587,7 @@ public final class CommonUtils {
 
         return new BasicMLDataPair(new BasicMLData(input), new BasicMLData(ideal));
     }
-    
+
     public static List<Integer> getAllFeatureList(List<ColumnConfig> columnConfigList, boolean isAfterVarSelect) {
         List<Integer> features = new ArrayList<Integer>();
         for(ColumnConfig config: columnConfigList) {
