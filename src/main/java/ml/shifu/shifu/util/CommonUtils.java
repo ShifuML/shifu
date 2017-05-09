@@ -1513,6 +1513,81 @@ public final class CommonUtils {
         return new BasicMLDataPair(new BasicMLData(input), new BasicMLData(ideal));
     }
 
+    public static MLDataPair assembleNsDataPair(Map<Integer, Map<String, Integer>> binCategoryMap, boolean noVarSel,
+            ModelConfig modelConfig, List<ColumnConfig> columnConfigList, Map<NSColumn, String> rawNsDataMap,
+            double cutoff, String alg, Set<Integer> featureList) {
+        if(featureList == null || featureList.size() == 0) {
+            return assembleNsDataPair(binCategoryMap, noVarSel, modelConfig, columnConfigList, rawNsDataMap, cutoff,
+                    alg);
+        }
+        double[] ideal = { Constants.DEFAULT_IDEAL_VALUE };
+
+        List<Double> inputList = new ArrayList<Double>();
+        for(ColumnConfig config: columnConfigList) {
+            if(config == null) {
+                continue;
+            }
+            NSColumn key = new NSColumn(config.getColumnName());
+            if(config.isFinalSelect() && !rawNsDataMap.containsKey(key)) {
+                throw new IllegalStateException(String.format("Variable Missing in Test Data: %s", key));
+            }
+
+            if(config.isTarget()) {
+                continue;
+            } else {
+                if(featureList.contains(config.getColumnNum())) {
+                    String val = rawNsDataMap.get(key) == null ? null : rawNsDataMap.get(key).toString();
+                    if(CommonUtils.isTreeModel(alg) && config.isCategorical()) {
+                        Integer index = binCategoryMap.get(config.getColumnNum()).get(val == null ? "" : val);
+                        if(index == null) {
+                            // not in binCategories, should be missing value -1 as missing value
+                            inputList.add(-1d);
+                        } else {
+                            inputList.add(index * 1d);
+                        }
+                    } else {
+                        inputList.add(computeNumericNormResult(modelConfig, cutoff, config, val));
+                    }
+                }
+            }
+        }
+
+        // god, Double [] cannot be casted to double[], toArray doesn't work
+        int size = inputList.size();
+        double[] input = new double[size];
+        for(int i = 0; i < size; i++) {
+            input[i] = inputList.get(i);
+        }
+
+        return new BasicMLDataPair(new BasicMLData(input), new BasicMLData(ideal));
+    }
+    
+    public static List<Integer> getAllFeatureList(List<ColumnConfig> columnConfigList, boolean isAfterVarSelect) {
+        List<Integer> features = new ArrayList<Integer>();
+        for(ColumnConfig config: columnConfigList) {
+            if(isAfterVarSelect) {
+                if(config.isFinalSelect() && !config.isTarget() && !config.isMeta()) {
+                    // only select numerical feature with getBinBoundary().size() larger than 1
+                    // or categorical feature with getBinCategory().size() larger than 0
+                    if((config.isNumerical() && config.getBinBoundary().size() > 1)
+                            || (config.isCategorical() && config.getBinCategory().size() > 0)) {
+                        features.add(config.getColumnNum());
+                    }
+                }
+            } else {
+                if(!config.isMeta() && !config.isTarget() && CommonUtils.isGoodCandidate(config)) {
+                    // only select numerical feature with getBinBoundary().size() larger than 1
+                    // or categorical feature with getBinCategory().size() larger than 0
+                    if((config.isNumerical() && config.getBinBoundary().size() > 1)
+                            || (config.isCategorical() && config.getBinCategory().size() > 0)) {
+                        features.add(config.getColumnNum());
+                    }
+                }
+            }
+        }
+        return features;
+    }
+
     private static double computeNumericNormResult(ModelConfig modelConfig, double cutoff, ColumnConfig config,
             String val) {
         Double normalizeValue = null;

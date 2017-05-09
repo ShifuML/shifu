@@ -30,6 +30,7 @@ import java.util.Random;
 
 import ml.shifu.guagua.GuaguaConstants;
 import ml.shifu.guagua.GuaguaRuntimeException;
+import ml.shifu.guagua.io.BytableSerializer;
 import ml.shifu.guagua.master.AbstractMasterComputable;
 import ml.shifu.guagua.master.MasterComputable;
 import ml.shifu.guagua.master.MasterContext;
@@ -41,6 +42,7 @@ import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
 import ml.shifu.shifu.core.TreeModel;
 import ml.shifu.shifu.core.dtrain.CommonConstants;
 import ml.shifu.shifu.core.dtrain.DTrainUtils;
+import ml.shifu.shifu.core.dtrain.FeatureSubsetStrategy;
 import ml.shifu.shifu.core.dtrain.dt.DTWorkerParams.NodeStats;
 import ml.shifu.shifu.core.dtrain.gs.GridSearch;
 import ml.shifu.shifu.fs.ShifuFileUtils;
@@ -526,7 +528,7 @@ public class DTMaster extends AbstractMasterComputable<DTMasterParams, DTWorkerP
         }
 
         // before master result, do checkpoint according to n iteration set by user
-        doCheckPoint(context, masterParams);
+        doCheckPoint(context, masterParams, context.getCurrentIteration());
 
         LOG.debug("weightedTrainCount {}, weightedValidationCount {}, trainError {}, validationError {}",
                 weightedTrainCount, weightedValidationCount, trainError, validationError);
@@ -632,20 +634,29 @@ public class DTMaster extends AbstractMasterComputable<DTMasterParams, DTWorkerP
      * Do checkpoint for master states, this is for master fail over
      */
     private void doCheckPoint(final MasterContext<DTMasterParams, DTWorkerParams> context,
-            final DTMasterParams masterParams) {
-        LOG.debug("Do checkpoint at hdfs file {}", this.checkpointOutput);
+            final DTMasterParams masterParams, int iteration) {
+        LOG.info("Do checkpoint at hdfs file {} at iteration {}.", this.checkpointOutput, iteration);
         final Queue<TreeNode> finalTodoQueue = this.toDoQueue;
         final Queue<TreeNode> finalToSplitQueue = this.toSplitQueue;
         final boolean finalIsLeaf = this.isLeafWise;
-        final List<TreeNode> finalTrees = this.trees;
+        
+        long start = System.currentTimeMillis();
+        final List<TreeNode> finalTrees = new ArrayList<TreeNode>();
+        for(TreeNode treeNode: this.trees) {
+            BytableSerializer<TreeNode> bs = new BytableSerializer<TreeNode>();
+            // clone by serialization
+            byte[] bytes = bs.objectToBytes(treeNode);
+            TreeNode newTreeNode = bs.bytesToObject(bytes, TreeNode.class.getName());
+            finalTrees.add(newTreeNode);
+        }
+        LOG.info("Do checkpoint at clone trees in iteration {} with run time {}", context.getCurrentIteration(),
+                (System.currentTimeMillis() - start));
+
         Thread cpPersistThread = new Thread(new Runnable() {
             @Override
             public void run() {
-                long start = System.currentTimeMillis();
                 writeStatesToHdfs(DTMaster.this.checkpointOutput, masterParams, finalTrees, finalIsLeaf,
                         finalTodoQueue, finalToSplitQueue);
-                LOG.debug("Do checkpoint at iteration {} with run time {}", context.getCurrentIteration(),
-                        (System.currentTimeMillis() - start));
             }
         }, "Master checkpoint thread");
         cpPersistThread.setDaemon(true);

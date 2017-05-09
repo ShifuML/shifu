@@ -75,4 +75,6 @@ public interface CommonConstants {
     public static final String DROPOUT_RATE = "DropoutRate";
 
     public static final String PROPAGATION = "Propagation";
+    
+    public static final String SHIFU_NN_FEATURE_SUBSET = "shifu.nn.feature.subset";
 }
