@@ -19,6 +19,7 @@ import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.container.obj.ModelConfig;
 import org.dmg.pmml.Model;
 import org.dmg.pmml.RegressionModel;
+import org.encog.ml.BasicML;
 
 import java.util.List;
 
@@ -36,7 +37,7 @@ public class RegressionPmmlModelCreator extends NNPmmlModelCreator {
     }
 
     @Override
-    public Model build() {
+    public Model build(BasicML basicML) {
         Model model = new RegressionModel();
         model.setTargets(createTargets(modelConfig));
         return model;

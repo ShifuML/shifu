@@ -24,10 +24,13 @@ import java.io.IOException;
 import java.lang.Thread.UncaughtExceptionHandler;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Random;
 import java.util.Scanner;
+import java.util.Set;
 
 import ml.shifu.guagua.GuaguaConstants;
 import ml.shifu.guagua.hadoop.util.HDPUtils;
@@ -45,6 +48,8 @@ import ml.shifu.shifu.core.alg.NNTrainer;
 import ml.shifu.shifu.core.alg.SVMTrainer;
 import ml.shifu.shifu.core.dtrain.CommonConstants;
 import ml.shifu.shifu.core.dtrain.DTrainUtils;
+import ml.shifu.shifu.core.dtrain.FeatureSubsetStrategy;
+import ml.shifu.shifu.core.dtrain.dataset.BasicFloatNetwork;
 import ml.shifu.shifu.core.dtrain.dt.DTMaster;
 import ml.shifu.shifu.core.dtrain.dt.DTMasterParams;
 import ml.shifu.shifu.core.dtrain.dt.DTOutput;
@@ -144,6 +149,11 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
     private boolean isForVarSelect;
 
     private boolean isToShuffle = false;
+
+    /**
+     * Random generator for get sampling features per each iteration.
+     */
+    private Random featureSamplingRandom = new Random();
 
     public TrainModelProcessor() {
     }
@@ -410,15 +420,20 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
         boolean isParallel = Boolean.valueOf(
                 Environment.getProperty(Constants.SHIFU_DTRAIN_PARALLEL, SHIFU_DEFAULT_DTRAIN_PARALLEL)).booleanValue();
         GuaguaMapReduceClient guaguaClient;
+
+        int[] inputOutputIndex = DTrainUtils.getInputOutputCandidateCounts(this.columnConfigList);
+        int inputNodeCount = inputOutputIndex[0] == 0 ? inputOutputIndex[2] : inputOutputIndex[0];
+        int candidateCount = inputOutputIndex[2];
+
+        boolean isAfterVarSelect = (inputOutputIndex[0] != 0);
+        // cache all feature list for sampling features
+        List<Integer> allFeatures = CommonUtils.getAllFeatureList(this.columnConfigList, isAfterVarSelect);
+
         if(modelConfig.getNormalize().getIsParquet()) {
             guaguaClient = new GuaguaParquetMapReduceClient();
 
             // set required field list to make sure we only load selected columns.
             RequiredFieldList requiredFieldList = new RequiredFieldList();
-
-            int[] inputOutputIndex = DTrainUtils.getInputOutputCandidateCounts(this.columnConfigList);
-            int inputNodeCount = inputOutputIndex[0] == 0 ? inputOutputIndex[2] : inputOutputIndex[0];
-            int candidateCount = inputOutputIndex[2];
 
             for(ColumnConfig columnConfig: super.columnConfigList) {
                 if(columnConfig.isTarget()) {
@@ -527,6 +542,53 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
                     FileSystem.getLocal(conf).delete(new Path(super.getPathFinder().getModelsPath(SourceType.LOCAL)),
                             true);
                 }
+
+                if(NNConstants.NN_ALG_NAME.equalsIgnoreCase(alg)) {
+                    // tree related parameters initialization
+                    Map<String, Object> params = gs.hasHyperParam() ? gs.getParams(i) : this.modelConfig.getTrain()
+                            .getParams();
+                    Object fssObj = params.get("FeatureSubsetStrategy");
+                    FeatureSubsetStrategy featureSubsetStrategy = null;
+                    double featureSubsetRate = 0d;
+                    if(fssObj != null) {
+                        try {
+                            featureSubsetRate = Double.parseDouble(fssObj.toString());
+                            // no need validate featureSubsetRate is in (0,1], as already validated in ModelInspector
+                            featureSubsetStrategy = null;
+                        } catch (NumberFormatException ee) {
+                            featureSubsetStrategy = FeatureSubsetStrategy.of(fssObj.toString());
+                        }
+                    } else {
+                        LOG.warn("FeatureSubsetStrategy is not set, set to ALL by default.");
+                        featureSubsetStrategy = FeatureSubsetStrategy.ALL;
+                        featureSubsetRate = 0;
+                    }
+
+                    Set<Integer> subFeatures = null;
+                    if(isContinous) {
+                        BasicFloatNetwork existingModel = (BasicFloatNetwork) CommonUtils.loadModel(modelConfig,
+                                modelPath,
+                                ShifuFileUtils.getFileSystemBySourceType(this.modelConfig.getDataSet().getSource()));
+                        if(existingModel == null) {
+                            subFeatures = new HashSet<Integer>(getSubsamplingFeatures(allFeatures,
+                                    featureSubsetStrategy, featureSubsetRate, inputNodeCount));
+                        } else {
+                            subFeatures = existingModel.getFeatureSet();
+                        }
+                    } else {
+                        subFeatures = new HashSet<Integer>(getSubsamplingFeatures(allFeatures, featureSubsetStrategy,
+                                featureSubsetRate, inputNodeCount));
+                    }
+                    if(subFeatures == null || subFeatures.size() == 0) {
+                        localArgs.add(String.format(CommonConstants.MAPREDUCE_PARAM_FORMAT,
+                                CommonConstants.SHIFU_NN_FEATURE_SUBSET, ""));
+                    } else {
+                        localArgs.add(String.format(CommonConstants.MAPREDUCE_PARAM_FORMAT,
+                                CommonConstants.SHIFU_NN_FEATURE_SUBSET, StringUtils.join(subFeatures, ',')));
+                        LOG.info("Size: {}, list: {}.", subFeatures.size(), StringUtils.join(subFeatures, ','));
+                    }
+                }
+
                 localArgs.add(String.format(CommonConstants.MAPREDUCE_PARAM_FORMAT, CommonConstants.GUAGUA_OUTPUT,
                         modelPath.toString()));
                 if(gs.hasHyperParam() || isKFoldCV) {
@@ -1040,6 +1102,51 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
                         .getValue().toString()));
             }
         }
+    }
+
+    private List<Integer> getSubsamplingFeatures(List<Integer> allFeatures,
+            FeatureSubsetStrategy featureSubsetStrategy, double featureSubsetRate, int inputNum) {
+        if(featureSubsetStrategy == null) {
+            if(Double.compare(1d, featureSubsetRate) == 0) {
+                return new ArrayList<Integer>();
+            } else {
+                return sampleFeaturesForNodeStats(allFeatures, (int) (allFeatures.size() * featureSubsetRate));
+            }
+        } else {
+            switch(featureSubsetStrategy) {
+                case HALF:
+                    return sampleFeaturesForNodeStats(allFeatures, allFeatures.size() / 2);
+                case ONETHIRD:
+                    return sampleFeaturesForNodeStats(allFeatures, allFeatures.size() / 3);
+                case TWOTHIRDS:
+                    return sampleFeaturesForNodeStats(allFeatures, allFeatures.size() * 2 / 3);
+                case SQRT:
+                    return sampleFeaturesForNodeStats(allFeatures,
+                            (int) (allFeatures.size() * Math.sqrt(inputNum) / inputNum));
+                case LOG2:
+                    return sampleFeaturesForNodeStats(allFeatures, (int) (allFeatures.size() * Math.log(inputNum)
+                            / Math.log(2) / inputNum));
+                case AUTO:
+                case ALL:
+                default:
+                    return new ArrayList<Integer>();
+            }
+        }
+    }
+
+    private List<Integer> sampleFeaturesForNodeStats(List<Integer> allFeatures, int sample) {
+        List<Integer> features = new ArrayList<Integer>(sample);
+        for(int i = 0; i < sample; i++) {
+            features.add(allFeatures.get(i));
+        }
+
+        for(int i = sample; i < allFeatures.size(); i++) {
+            int replacementIndex = (int) (featureSamplingRandom.nextDouble() * i);
+            if(replacementIndex >= 0 && replacementIndex < sample) {
+                features.set(replacementIndex, allFeatures.get(i));
+            }
+        }
+        return features;
     }
 
     private void setHeapSizeAndSplitSize(final List<String> args) {

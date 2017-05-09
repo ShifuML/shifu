@@ -328,7 +328,12 @@ public class DTWorker
     /**
      * Random object to drop out trees, work with {@link #dropOutRate}
      */
-    private Random dropOutRandom = new Random();
+    private Random dropOutRandom = new Random(System.currentTimeMillis() + 5000L);
+
+    /**
+     * Random object to sample negative records
+     */
+    private Random sampelNegOnlyRandom = new Random(System.currentTimeMillis() + 1000L);
 
     @Override
     public void initRecordReader(GuaguaFileSplit fileSplit) throws IOException {
@@ -513,7 +518,7 @@ public class DTWorker
                 // can load latest trees in #doCompute
                 isNeedRecoverGBDTPredict = true;
             } else {
-                // RF , trees are recovered from last mastre results
+                // RF , trees are recovered from last master results
                 recoverTrees = context.getLastMasterResult().getTrees();
             }
         }
@@ -738,11 +743,6 @@ public class DTWorker
                 // no need recover again
                 this.isNeedRecoverGBDTPredict = false;
             }
-        }
-
-        if(this.isGBDT && this.isNeedRecoverGBDTPredict) {
-            // no need recover again
-            this.isNeedRecoverGBDTPredict = false;
         }
 
         start = System.nanoTime();
@@ -1227,10 +1227,11 @@ public class DTWorker
                 }
             } else {
                 // if not fixed initial input, and for regression or onevsall multiple classification (regression also).
-                // if negative record
+                // and if negative record do sampling out
                 if((modelConfig.isRegression() || this.isOneVsAll) // regression or onevsall
                         && (int) (ideal + 0.01d) == 0 // negative record
-                        && Double.compare(Math.random(), this.modelConfig.getBaggingSampleRate()) >= 0) {
+                        && Double.compare(this.sampelNegOnlyRandom.nextDouble(),
+                                this.modelConfig.getBaggingSampleRate()) >= 0) {
                     return;
                 }
             }

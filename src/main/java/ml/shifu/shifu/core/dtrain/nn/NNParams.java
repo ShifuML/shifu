@@ -185,6 +185,7 @@ public class NNParams extends HaltBytable implements Combinable<NNParams> {
             gradients[i] = in.readDouble();
         }
         this.gradients = gradients;
+
         this.count = in.readLong();
         this.wrCount = in.readInt();
     }
