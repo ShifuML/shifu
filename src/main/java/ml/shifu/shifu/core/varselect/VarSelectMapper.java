@@ -15,7 +15,23 @@
  */
 package ml.shifu.shifu.core.varselect;
 
-import com.google.common.base.Splitter;
+import java.io.IOException;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
+import java.util.Set;
+
+import ml.shifu.guagua.util.NumberFormatUtils;
+import ml.shifu.shifu.container.obj.ColumnConfig;
+import ml.shifu.shifu.container.obj.ModelConfig;
+import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
+import ml.shifu.shifu.core.dtrain.CommonConstants;
+import ml.shifu.shifu.core.dtrain.DTrainUtils;
+import ml.shifu.shifu.core.dtrain.dataset.BasicFloatNetwork;
+import ml.shifu.shifu.util.CommonUtils;
+import ml.shifu.shifu.util.Constants;
 
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Text;
@@ -25,20 +41,7 @@ import org.encog.ml.data.basic.BasicMLData;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.IOException;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Map.Entry;
-
-import ml.shifu.guagua.util.NumberFormatUtils;
-import ml.shifu.shifu.container.obj.ColumnConfig;
-import ml.shifu.shifu.container.obj.ModelConfig;
-import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
-import ml.shifu.shifu.core.dtrain.CommonConstants;
-import ml.shifu.shifu.core.dtrain.DTrainUtils;
-import ml.shifu.shifu.util.CommonUtils;
-import ml.shifu.shifu.util.Constants;
+import com.google.common.base.Splitter;
 
 /**
  * Mapper implementation to accumulate MSE value when remove one column.
@@ -84,12 +87,6 @@ public class VarSelectMapper extends Mapper<LongWritable, Text, LongWritable, Co
     private int inputNodeCount;
 
     /**
-     * {@link #candidateCount} is used to check if no variable is selected. If {@link #inputNodeCount} equals
-     * {@link #candidateCount}, which means no column is selected or all columns are selected.
-     */
-    private int candidateCount;
-
-    /**
      * Final results map, this map is loaded in memory for sum, and will be written by context in cleanup.
      */
     private Map<Long, ColumnInfo> results = new HashMap<Long, ColumnInfo>();
@@ -132,6 +129,8 @@ public class VarSelectMapper extends Mapper<LongWritable, Text, LongWritable, Co
      */
     private long recordCount;
 
+    private Set<Integer> featureSet;
+
     /**
      * Load all configurations for modelConfig and columnConfigList from source type.
      */
@@ -168,11 +167,22 @@ public class VarSelectMapper extends Mapper<LongWritable, Text, LongWritable, Co
                 .get(Constants.SHIFU_VARSELECT_FILTEROUT_TYPE, Constants.FILTER_BY_SE);
         int[] inputOutputIndex = DTrainUtils.getInputOutputCandidateCounts(this.columnConfigList);
         this.inputNodeCount = inputOutputIndex[0] == 0 ? inputOutputIndex[2] : inputOutputIndex[0];
-        this.candidateCount = inputOutputIndex[2];
-        this.inputs = new double[this.inputNodeCount];
+        if(this.model instanceof BasicFloatNetwork) {
+            this.inputs = new double[((BasicFloatNetwork) this.model).getFeatureSet().size()];
+            this.featureSet = ((BasicFloatNetwork) this.model).getFeatureSet();
+        } else {
+            this.inputs = new double[this.inputNodeCount];
+        }
+
+        boolean isAfterVarSelect = (inputOutputIndex[0] != 0);
+        // cache all feature list for sampling features
+        if(this.featureSet == null || this.featureSet.size() == 0) {
+            this.featureSet = new HashSet<Integer>(CommonUtils.getAllFeatureList(columnConfigList, isAfterVarSelect));
+            this.inputs = new double[this.featureSet.size()];
+        }
         this.outputs = new double[inputOutputIndex[1]];
-        this.columnIndexes = new long[this.inputNodeCount];
-        this.inputsMLData = new BasicMLData(this.inputNodeCount);
+        this.columnIndexes = new long[this.inputs.length];
+        this.inputsMLData = new BasicMLData(this.inputs.length);
         this.outputKey = new LongWritable();
         LOG.info("Filter by is {}", filterBy);
     }
@@ -190,20 +200,9 @@ public class VarSelectMapper extends Mapper<LongWritable, Text, LongWritable, Co
                 if(columnConfig != null && columnConfig.isTarget()) {
                     this.outputs[outputsIndex++] = doubleValue;
                 } else {
-                    if(this.inputNodeCount == this.candidateCount) {
-                        // all variables are not set final-select
-                        if(!columnConfig.isMeta() && !columnConfig.isTarget()
-                                && CommonUtils.isGoodCandidate(columnConfig)) {
-                            inputs[inputsIndex] = doubleValue;
-                            columnIndexes[inputsIndex++] = columnConfig.getColumnNum();
-                        }
-                    } else {
-                        // final select some variables
-                        if(columnConfig != null && !columnConfig.isMeta() && !columnConfig.isTarget()
-                                && columnConfig.isFinalSelect()) {
-                            inputs[inputsIndex] = doubleValue;
-                            columnIndexes[inputsIndex++] = columnConfig.getColumnNum();
-                        }
+                    if(this.featureSet.contains(columnConfig.getColumnNum())) {
+                        inputs[inputsIndex] = doubleValue;
+                        columnIndexes[inputsIndex++] = columnConfig.getColumnNum();
                     }
                 }
             }

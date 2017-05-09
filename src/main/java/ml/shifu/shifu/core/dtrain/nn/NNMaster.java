@@ -16,6 +16,7 @@
 package ml.shifu.shifu.core.dtrain.nn;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
@@ -33,10 +34,12 @@ import ml.shifu.shifu.core.dtrain.CommonConstants;
 import ml.shifu.shifu.core.dtrain.DTrainUtils;
 import ml.shifu.shifu.core.dtrain.RegulationLevel;
 import ml.shifu.shifu.core.dtrain.Weight;
+import ml.shifu.shifu.core.dtrain.dataset.BasicFloatNetwork;
 import ml.shifu.shifu.core.dtrain.gs.GridSearch;
 import ml.shifu.shifu.fs.ShifuFileUtils;
 import ml.shifu.shifu.util.CommonUtils;
 
+import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.fs.Path;
 import org.encog.neural.networks.BasicNetwork;
 import org.slf4j.Logger;
@@ -139,6 +142,21 @@ public class NNMaster extends AbstractMasterComputable<NNParams, NNParams> {
      */
     private double dropoutRate = 0d;
 
+    /**
+     * Cache all features with feature index for searching
+     */
+    private List<Integer> allFeatures;
+
+    /**
+     * Cache subset features with feature index for searching
+     */
+    private List<Integer> subFeatures;
+
+    /**
+     * If variables are selected, if not, select variables with good candidate.
+     */
+    private boolean isAfterVarSelect;
+
     @Override
     public NNParams doCompute(MasterContext<NNParams, NNParams> context) {
         if(context.isFirstIteration()) {
@@ -152,6 +170,7 @@ public class NNMaster extends AbstractMasterComputable<NNParams, NNParams> {
                 params = initWeights();
                 LOG.info("Starting to train model from scratch.");
             }
+
             // should be set here to make sure master and workers use the same weights
             this.globalNNParams.setWeights(params.getWeights());
             // for continuous model training, here can be optimized by return null and load model weights in worker by
@@ -270,7 +289,7 @@ public class NNMaster extends AbstractMasterComputable<NNParams, NNParams> {
         NNParams params = null;
         try {
             Path modelPath = new Path(context.getProps().getProperty(CommonConstants.GUAGUA_OUTPUT));
-            BasicNetwork existingModel = (BasicNetwork) CommonUtils.loadModel(modelConfig, modelPath,
+            BasicFloatNetwork existingModel = (BasicFloatNetwork) CommonUtils.loadModel(modelConfig, modelPath,
                     ShifuFileUtils.getFileSystemBySourceType(this.modelConfig.getDataSet().getSource()));
             if(existingModel == null) {
                 params = initWeights();
@@ -300,6 +319,7 @@ public class NNMaster extends AbstractMasterComputable<NNParams, NNParams> {
         NNParams params = new NNParams();
 
         int[] inputAndOutput = DTrainUtils.getInputOutputCandidateCounts(this.columnConfigList);
+        @SuppressWarnings("unused")
         int inputNodeCount = inputAndOutput[0] == 0 ? inputAndOutput[2] : inputAndOutput[0];
         // if is one vs all classification, outputNodeCount is set to 1
         int outputNodeCount = modelConfig.isRegression() ? inputAndOutput[1]
@@ -308,8 +328,8 @@ public class NNMaster extends AbstractMasterComputable<NNParams, NNParams> {
         List<String> actFunc = (List<String>) validParams.get(CommonConstants.ACTIVATION_FUNC);
         List<Integer> hiddenNodeList = (List<Integer>) validParams.get(CommonConstants.NUM_HIDDEN_NODES);
 
-        BasicNetwork network = DTrainUtils.generateNetwork(inputNodeCount, outputNodeCount, numLayers, actFunc,
-                hiddenNodeList);
+        BasicNetwork network = DTrainUtils.generateNetwork(this.subFeatures.size(), outputNodeCount, numLayers,
+                actFunc, hiddenNodeList);
 
         params.setTrainError(0);
         params.setTestError(0);
@@ -381,6 +401,23 @@ public class NNMaster extends AbstractMasterComputable<NNParams, NNParams> {
                 context.getProps().getProperty(CommonConstants.CONTINUOUS_TRAINING));
         Object rconstant = validParams.get(CommonConstants.LR_REGULARIZED_CONSTANT);
         this.regularizedConstant = NumberFormatUtils.getDouble(rconstant == null ? "" : rconstant.toString(), 0d);
+
+        // check if variables are set final selected
+        int[] inputOutputIndex = DTrainUtils.getNumericAndCategoricalInputAndOutputCounts(this.columnConfigList);
+        this.isAfterVarSelect = (inputOutputIndex[3] == 1);
+        // cache all feature list for sampling features
+        this.allFeatures = CommonUtils.getAllFeatureList(columnConfigList, isAfterVarSelect);
+        String subsetStr = context.getProps().getProperty(CommonConstants.SHIFU_NN_FEATURE_SUBSET);
+        if(StringUtils.isBlank(subsetStr)) {
+            this.subFeatures = this.allFeatures;
+        } else {
+            String[] splits = subsetStr.split(",");
+            this.subFeatures = new ArrayList<Integer>(splits.length);
+            for(String split: splits) {
+                this.subFeatures.add(Integer.parseInt(split));
+            }
+        }
+        LOG.info("subFeatures size is {}", subFeatures.size());
 
         // recover master states here is globalNNParams
         // not init but not first iteration, first recover from last master result set from guagua

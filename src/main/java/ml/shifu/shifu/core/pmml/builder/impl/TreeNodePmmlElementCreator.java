@@ -31,6 +31,7 @@ import org.dmg.pmml.Predicate;
 import org.dmg.pmml.SimplePredicate;
 import org.dmg.pmml.SimpleSetPredicate;
 import org.dmg.pmml.True;
+import org.encog.ml.BasicML;
 
 public class TreeNodePmmlElementCreator extends AbstractPmmlElementCreator<org.dmg.pmml.Node> {
 
@@ -50,7 +51,7 @@ public class TreeNodePmmlElementCreator extends AbstractPmmlElementCreator<org.d
         this.treeModel = treeModel;
     }
 
-    public org.dmg.pmml.Node build() {
+    public org.dmg.pmml.Node build(BasicML basicML) {
         return null;
     }
 

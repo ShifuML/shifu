@@ -15,15 +15,19 @@
  */
 package ml.shifu.shifu.core.pmml.builder.impl;
 
+import java.util.List;
+import java.util.Set;
+
 import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.container.obj.ModelConfig;
+import ml.shifu.shifu.core.dtrain.dataset.BasicFloatNetwork;
 import ml.shifu.shifu.core.pmml.builder.creator.AbstractPmmlElementCreator;
+
 import org.dmg.pmml.FieldName;
 import org.dmg.pmml.FieldUsageType;
 import org.dmg.pmml.MiningField;
 import org.dmg.pmml.MiningSchema;
-
-import java.util.List;
+import org.encog.ml.BasicML;
 
 /**
  * Created by zhanhu on 3/29/16.
@@ -39,23 +43,43 @@ public class MiningSchemaCreator extends AbstractPmmlElementCreator<MiningSchema
     }
 
     @Override
-    public MiningSchema build() {
+    public MiningSchema build(BasicML basicML) {
         MiningSchema miningSchema = new MiningSchema();
+        if(basicML instanceof BasicFloatNetwork) {
+            BasicFloatNetwork bfn = (BasicFloatNetwork) basicML;
+            Set<Integer> featureSet = bfn.getFeatureSet();
+            for(ColumnConfig columnConfig: columnConfigList) {
+                if(columnConfig.isFinalSelect() || columnConfig.isTarget()) {
+                    MiningField miningField = new MiningField();
 
-        for(ColumnConfig columnConfig: columnConfigList) {
-            if(columnConfig.isFinalSelect() || columnConfig.isTarget()) {
-                MiningField miningField = new MiningField();
+                    miningField.setName(FieldName.create(columnConfig.getColumnName()));
+                    miningField.setOptype(getOptype(columnConfig));
 
-                miningField.setName(FieldName.create(columnConfig.getColumnName()));
-                miningField.setOptype(getOptype(columnConfig));
+                    if(columnConfig.isFinalSelect() && featureSet.contains(columnConfig.getColumnNum())) {
+                        miningField.setUsageType(FieldUsageType.ACTIVE);
+                    } else if(columnConfig.isTarget()) {
+                        miningField.setUsageType(FieldUsageType.TARGET);
+                    }
 
-                if(columnConfig.isFinalSelect()) {
-                    miningField.setUsageType(FieldUsageType.ACTIVE);
-                } else if(columnConfig.isTarget()) {
-                    miningField.setUsageType(FieldUsageType.TARGET);
+                    miningSchema.withMiningFields(miningField);
                 }
+            }
+        } else {
+            for(ColumnConfig columnConfig: columnConfigList) {
+                if(columnConfig.isFinalSelect() || columnConfig.isTarget()) {
+                    MiningField miningField = new MiningField();
 
-                miningSchema.withMiningFields(miningField);
+                    miningField.setName(FieldName.create(columnConfig.getColumnName()));
+                    miningField.setOptype(getOptype(columnConfig));
+
+                    if(columnConfig.isFinalSelect()) {
+                        miningField.setUsageType(FieldUsageType.ACTIVE);
+                    } else if(columnConfig.isTarget()) {
+                        miningField.setUsageType(FieldUsageType.TARGET);
+                    }
+
+                    miningSchema.withMiningFields(miningField);
+                }
             }
         }
         return miningSchema;

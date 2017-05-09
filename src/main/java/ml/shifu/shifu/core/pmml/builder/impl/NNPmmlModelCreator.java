@@ -19,6 +19,7 @@ import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.container.obj.ModelConfig;
 import ml.shifu.shifu.core.pmml.builder.creator.AbstractPmmlElementCreator;
 import org.dmg.pmml.*;
+import org.encog.ml.BasicML;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -37,7 +38,7 @@ public class NNPmmlModelCreator extends AbstractPmmlElementCreator<Model> {
     }
 
     @Override
-    public Model build() {
+    public Model build(BasicML basicML) {
         Model model = new NeuralNetwork();
         model.setTargets(createTargets(modelConfig));
         return model;
