@@ -27,7 +27,6 @@ import ml.shifu.shifu.core.dtrain.dataset.BasicFloatMLData;
 import ml.shifu.shifu.core.dtrain.dataset.BasicFloatMLDataPair;
 import ml.shifu.shifu.core.dtrain.dataset.FloatMLDataPair;
 import ml.shifu.shifu.guagua.GuaguaParquetRecordReader;
-import ml.shifu.shifu.util.CommonUtils;
 
 import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.conf.Configuration;
@@ -65,7 +64,7 @@ public class NNParquetWorker extends AbstractNNWorker<Tuple> {
             LOG.info("Read {} records.", super.count);
         }
 
-        float[] inputs = new float[super.inputNodeCount];
+        float[] inputs = new float[super.subFeatures.size()];
         float[] ideal = new float[super.outputNodeCount];
 
         if(super.isDry) {
@@ -160,22 +159,10 @@ public class NNParquetWorker extends AbstractNNWorker<Tuple> {
                             }
                         }
                     } else {
-                        if(super.inputNodeCount == super.candidateCount) {
-                            // no variable selected, good candidate but not meta and not target choosed
-                            if(columnConfig != null && !columnConfig.isMeta() && !columnConfig.isTarget()
-                                    && CommonUtils.isGoodCandidate(columnConfig)) {
-                                inputs[inputsIndex++] = floatValue;
-                                hashcode = hashcode * 31 + Double.valueOf(floatValue).hashCode();
-                            }
-                        } else {
-                            // only choose variable final select and not meta, not target
-                            if(columnConfig != null && !columnConfig.isMeta() && !columnConfig.isTarget()
-                                    && columnConfig.isFinalSelect()) {
-                                inputs[inputsIndex++] = floatValue;
-                                hashcode = hashcode * 31 + Double.valueOf(floatValue).hashCode();
-                            }
+                        if(subFeatureSet.contains(index)) {
+                            inputs[inputsIndex++] = floatValue;
+                            hashcode = hashcode * 31 + Double.valueOf(floatValue).hashCode();
                         }
-
                     }
                 }
             }
@@ -203,7 +190,8 @@ public class NNParquetWorker extends AbstractNNWorker<Tuple> {
                 if((modelConfig.isRegression() || (modelConfig.isClassification() && modelConfig.getTrain()
                         .isOneVsAll())) // regression or onevsall
                         && (int) (ideal[0] + 0.01d) == 0 // negative record
-                        && Double.compare(Math.random(), this.modelConfig.getBaggingSampleRate()) >= 0) {
+                        && Double.compare(super.sampelNegOnlyRandom.nextDouble(),
+                                this.modelConfig.getBaggingSampleRate()) >= 0) {
                     return;
                 }
             }

@@ -15,13 +15,23 @@
  */
 package ml.shifu.shifu.core;
 
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.Callable;
+
 import ml.shifu.shifu.column.NSColumn;
 import ml.shifu.shifu.container.ScoreObject;
 import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.container.obj.ModelConfig;
 import ml.shifu.shifu.core.dtrain.DTrainUtils;
+import ml.shifu.shifu.core.dtrain.dataset.BasicFloatNetwork;
+import ml.shifu.shifu.core.dtrain.nn.NNConstants;
 import ml.shifu.shifu.executor.ExecutorManager;
 import ml.shifu.shifu.util.CommonUtils;
+import ml.shifu.shifu.util.Constants;
+
 import org.apache.commons.collections.CollectionUtils;
 import org.encog.ml.BasicML;
 import org.encog.ml.data.MLData;
@@ -30,12 +40,6 @@ import org.encog.ml.svm.SVM;
 import org.encog.neural.networks.BasicNetwork;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.concurrent.Callable;
 
 /**
  * Scorer, calculate the score for a specify input
@@ -79,6 +83,7 @@ public class Scorer {
         }
 
         this.models = models;
+
         this.columnConfigList = columnConfigList;
         this.cutoff = cutoff;
         this.alg = algorithm;
@@ -147,34 +152,37 @@ public class Scorer {
      * @return ScoreObject - model score
      */
     public ScoreObject scoreNsData(Map<NSColumn, String> rawDataNsMap) {
-        MLDataPair pair = CommonUtils.assembleNsDataPair(binCategoryMap, noVarSelect, modelConfig, columnConfigList,
-                rawDataNsMap, cutoff, alg);
-        return scoreNsData(pair, rawDataNsMap);
+        return scoreNsData(null, rawDataNsMap);
     }
 
     public ScoreObject score(final MLDataPair pair, Map<String, String> rawDataMap) {
         return scoreNsData(pair, CommonUtils.convertRawMapToNsDataMap(rawDataMap));
     }
 
-    public ScoreObject scoreNsData(final MLDataPair pair, Map<NSColumn, String> rawNsDataMap) {
-        if(pair == null) {
-            return null;
+    public ScoreObject scoreNsData(MLDataPair inputPair, Map<NSColumn, String> rawNsDataMap) {
+        if(inputPair == null && !this.alg.equalsIgnoreCase(NNConstants.NN_ALG_NAME)) {
+            inputPair = CommonUtils.assembleNsDataPair(binCategoryMap, noVarSelect, modelConfig, columnConfigList,
+                    rawNsDataMap, cutoff, alg);
         }
 
+        final MLDataPair pair = inputPair;
         List<Callable<MLData>> tasks = new ArrayList<Callable<MLData>>();
         for(final BasicML model: models) {
             // TODO, check if no need 'if' condition and refactor two if for loops please
-            if(model instanceof BasicNetwork) {
-                final BasicNetwork network = (BasicNetwork) model;
-                if(network.getInputCount() != pair.getInput().size()) {
-                    log.error("Network and input size mismatch: Network Size = " + network.getInputCount()
-                            + "; Input Size = " + pair.getInput().size());
+            if(model instanceof BasicFloatNetwork) {
+                final BasicFloatNetwork network = (BasicFloatNetwork) model;
+
+                final MLDataPair networkPair = CommonUtils.assembleNsDataPair(binCategoryMap, noVarSelect, modelConfig,
+                        columnConfigList, rawNsDataMap, cutoff, alg, network.getFeatureSet());
+                if(network.getFeatureSet().size() != networkPair.getInput().size()) {
+                    log.error("Network and input size mismatch: Network Size = " + network.getFeatureSet().size()
+                            + "; Input Size = " + networkPair.getInput().size());
                     continue;
                 }
                 tasks.add(new Callable<MLData>() {
                     @Override
                     public MLData call() throws Exception {
-                        return network.compute(pair.getInput());
+                        return network.compute(networkPair.getInput());
                     }
                 });
             } else if(model instanceof SVM) {
@@ -273,7 +281,7 @@ public class Scorer {
             }
         }
 
-        Integer tag = (int) pair.getIdeal().getData(0);
+        Integer tag = Constants.DEFAULT_IDEAL_VALUE;
 
         if(scores.size() == 0) {
             log.warn("No Scores Calculated...");
