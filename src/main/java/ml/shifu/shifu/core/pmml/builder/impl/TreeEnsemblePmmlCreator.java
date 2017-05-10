@@ -36,6 +36,7 @@ import org.dmg.pmml.Target;
 import org.dmg.pmml.TargetValue;
 import org.dmg.pmml.Targets;
 import org.dmg.pmml.True;
+import org.encog.ml.BasicML;
 
 public class TreeEnsemblePmmlCreator extends AbstractPmmlElementCreator<MiningModel> {
 
@@ -43,13 +44,13 @@ public class TreeEnsemblePmmlCreator extends AbstractPmmlElementCreator<MiningMo
         super(modelConfig, columnConfigList);
     }
 
-    public MiningModel build() {
+    public MiningModel build(BasicML basicML) {
         return null;
     }
 
     public MiningModel convert(IndependentTreeModel treeModel) {
         MiningModel gbt = new MiningModel();
-        MiningSchema miningSchema = new TreeModelMiningSchemaCreator(this.modelConfig, this.columnConfigList).build();
+        MiningSchema miningSchema = new TreeModelMiningSchemaCreator(this.modelConfig, this.columnConfigList).build(null);
         gbt.setMiningSchema(miningSchema);
         if(treeModel.isClassification()) {
             gbt.setFunctionName(MiningFunctionType.fromValue("classification"));

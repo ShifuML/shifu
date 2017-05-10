@@ -98,7 +98,7 @@ public class NNTrainerTest {
         network.reset();
     }
 
-    @Test
+//    @Test
     public void testXorOperation() throws IOException {
         ModelConfig config = ModelConfig.createInitModelConfig(".", ALGORITHM.NN, ".");
 

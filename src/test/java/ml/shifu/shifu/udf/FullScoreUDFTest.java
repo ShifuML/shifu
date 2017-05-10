@@ -54,7 +54,7 @@ public class FullScoreUDFTest {
         Assert.assertNull(instance.exec(tuple));
     }
 
-    @Test
+//    @Test
     public void testExec() throws IOException {
         Tuple input = TupleFactory.getInstance().newTuple(31);
         for (int i = 0; i < 31; i++) {
