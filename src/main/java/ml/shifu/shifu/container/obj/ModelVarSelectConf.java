@@ -43,6 +43,12 @@ public class ModelVarSelectConf {
     private Boolean forceEnable = Boolean.TRUE;
 
     /**
+     * Specify all candidate column names for variable selection
+     * If the value is null or the file is empty, all variables should be candidates
+     */
+    private String candidateColumnNameFile;
+
+    /**
      * Force-selected column configuration file
      */
     private String forceSelectColumnNameFile;
@@ -115,6 +121,14 @@ public class ModelVarSelectConf {
 
     public void setForceEnable(Boolean forceEnable) {
         this.forceEnable = forceEnable;
+    }
+
+    public String getCandidateColumnNameFile() {
+        return candidateColumnNameFile;
+    }
+
+    public void setCandidateColumnNameFile(String candidateColumnNameFile) {
+        this.candidateColumnNameFile = candidateColumnNameFile;
     }
 
     public String getForceSelectColumnNameFile() {
