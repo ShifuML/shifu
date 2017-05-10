@@ -93,7 +93,7 @@ public class TreeEnsemblePMMLTranslator extends PMMLTranslator {
                 }
             }
         }
-        pmml.setDataDictionary(dataDictionaryCreator.build());
+        pmml.setDataDictionary(dataDictionaryCreator.build(basicML));
         List<Model> models = pmml.getModels();
         Model miningModel = modelCreator.convert(((TreeModel) basicML).getIndependentTreeModel());
         models.add(miningModel);

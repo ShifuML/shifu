@@ -32,6 +32,7 @@ import org.dmg.pmml.OpType;
 import org.dmg.pmml.Target;
 import org.dmg.pmml.TargetValue;
 import org.dmg.pmml.Targets;
+import org.encog.ml.BasicML;
 
 public class TreeModelPmmlElementCreator extends AbstractPmmlElementCreator<Model> {
     
@@ -40,13 +41,13 @@ public class TreeModelPmmlElementCreator extends AbstractPmmlElementCreator<Mode
     }
 
 
-    public Model build() {
+    public Model build(BasicML basicML) {
         return null;
     }
 
     public org.dmg.pmml.TreeModel convert(IndependentTreeModel model, Node root) {
         org.dmg.pmml.TreeModel pmmlTreeModel = new org.dmg.pmml.TreeModel();
-        pmmlTreeModel.setMiningSchema(new TreeModelMiningSchemaCreator(this.modelConfig, this.columnConfigList).build());
+        pmmlTreeModel.setMiningSchema(new TreeModelMiningSchemaCreator(this.modelConfig, this.columnConfigList).build(null));
         //pmmlTreeModel.setModelStats(new ModelStatsCreator(this.modelConfig, this.columnConfigList).build());
         pmmlTreeModel.setTargets(createTargets(this.modelConfig));
         pmmlTreeModel.setMissingValueStrategy(MissingValueStrategyType.fromValue("none"));
