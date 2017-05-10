@@ -7,9 +7,11 @@ import ml.shifu.shifu.container.obj.ModelConfig;
 import ml.shifu.shifu.container.obj.ColumnConfig.ColumnType;
 import ml.shifu.shifu.core.validator.ModelInspector;
 import org.apache.commons.collections.CollectionUtils;
+import org.apache.commons.lang.StringUtils;
 
 import java.io.IOException;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 
 /**
@@ -22,6 +24,7 @@ public class BasicUpdater {
     protected Set<NSColumn> setMeta;
     protected Set<NSColumn> setForceRemove;
     protected Set<NSColumn> setForceSelect;
+    protected Set<NSColumn> setCandidates;
     protected String weightColumnName;
 
     public BasicUpdater(ModelConfig modelConfig) throws IOException {
@@ -59,6 +62,14 @@ public class BasicUpdater {
                 setForceSelect.add(new NSColumn(forceSelectName));
             }
         }
+
+        this.setCandidates = new HashSet<NSColumn>();
+        List<String> candidates = modelConfig.getListCandidates();
+        if (CollectionUtils.isNotEmpty(candidates)) {
+            for ( String candidate : candidates ) {
+                this.setCandidates.add(new NSColumn(candidate));
+            }
+        }
     }
 
     public void updateColumnConfig(ColumnConfig columnConfig) {
@@ -76,7 +87,10 @@ public class BasicUpdater {
         } else if(this.setForceRemove.contains(new NSColumn(varName))) {
             columnConfig.setColumnFlag(ColumnConfig.ColumnFlag.ForceRemove);
         } else if(this.setForceSelect.contains(new NSColumn(varName))) {
-            columnConfig.setColumnFlag(ColumnConfig.ColumnFlag.ForceSelect);
+            if ( CollectionUtils.isEmpty(this.setCandidates)
+                    || (CollectionUtils.isNotEmpty(this.setCandidates) && this.setCandidates.contains(new NSColumn(varName))) ) {
+                columnConfig.setColumnFlag(ColumnConfig.ColumnFlag.ForceSelect);
+            }
         } else if(NSColumnUtils.isColumnEqual(this.weightColumnName, varName)) {
             columnConfig.setColumnFlag(ColumnConfig.ColumnFlag.Weight);
             columnConfig.setColumnType(null);
