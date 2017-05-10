@@ -6,6 +6,7 @@ import ml.shifu.shifu.column.NSColumn;
 import ml.shifu.shifu.column.NSColumnUtils;
 import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.container.obj.ModelConfig;
+import org.apache.commons.collections.CollectionUtils;
 
 /**
  * Created by zhanhu on 2/23/17.
@@ -33,7 +34,10 @@ public class VarSelUpdater extends BasicUpdater {
         } else if(this.setForceRemove.contains(new NSColumn(varName))) {
             columnConfig.setColumnFlag(ColumnConfig.ColumnFlag.ForceRemove);
         } else if(this.setForceSelect.contains(new NSColumn(varName))) {
-            columnConfig.setColumnFlag(ColumnConfig.ColumnFlag.ForceSelect);
+            if ( CollectionUtils.isEmpty(this.setCandidates)
+                    || (CollectionUtils.isNotEmpty(this.setCandidates) && this.setCandidates.contains(new NSColumn(varName))) ) {
+                columnConfig.setColumnFlag(ColumnConfig.ColumnFlag.ForceSelect);
+            }
         } else if(NSColumnUtils.isColumnEqual(this.weightColumnName, varName)) {
             columnConfig.setColumnFlag(ColumnConfig.ColumnFlag.Weight);
         }
