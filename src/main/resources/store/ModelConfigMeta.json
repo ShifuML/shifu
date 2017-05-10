@@ -242,6 +242,10 @@
                 "type" : "text",
                 "directive": "input"
             }, {
+                "name": "candidateColumnNameFile",
+                "type" : "text",
+                "directive": "input"
+            }, {
                 "name": "forceRemoveColumnNameFile",
                 "type" : "text",
                 "directive": "input"

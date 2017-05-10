@@ -24,6 +24,7 @@ import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
 import ml.shifu.shifu.core.ColumnStatsCalculator;
 import ml.shifu.shifu.core.binning.CateDynamicBinning;
 import ml.shifu.shifu.core.binning.CategoricalBinInfo;
+import ml.shifu.shifu.core.binning.ColumnConfigDynamicBinning;
 import ml.shifu.shifu.core.pmml.PMMLTranslator;
 import ml.shifu.shifu.core.pmml.PMMLUtils;
 import ml.shifu.shifu.core.pmml.builder.PMMLConstructorFactory;
@@ -60,6 +61,10 @@ public class ExportModelProcessor extends BasicModelProcessor implements Process
     public static final String IS_CONCISE = "IS_CONCISE";
     public static final String REQUEST_VARS = "REQUEST_VARS";
     public static final String EXPECTED_BIN_NUM = "EXPECTED_BIN_NUM";
+    public static final String IV_KEEP_RATIO = "IV_KEEP_RATIO";
+    public static final String MINIMUM_BIN_INST_CNT = "MINIMUM_BIN_INST_CNT";
+
+
     /**
      * log object
      */
@@ -139,58 +144,42 @@ public class ExportModelProcessor extends BasicModelProcessor implements Process
     }
 
     private String rebinAndExportWoeMapping(ColumnConfig columnConfig) throws IOException {
-        String woeMappingText;
         int expectBinNum = getExpectBinNum();
-        if ( expectBinNum > 0 && columnConfig.getBinCategory().size() > expectBinNum ) { // needs to do rebin
-            List<CategoricalBinInfo> categoricalBinInfos = genCategoricalBinInfos(columnConfig);
-            Collections.sort(categoricalBinInfos);
-            CateDynamicBinning inst = new CateDynamicBinning(expectBinNum);
-            categoricalBinInfos = inst.merge(categoricalBinInfos);
+        double ivKeepRatio = getIvKeepRatio();
+        long minimumInstCnt = getMinimumInstCnt();
 
-            long[] binCountNeg = new long[categoricalBinInfos.size() + 1];
-            long[] binCountPos = new long[categoricalBinInfos.size() + 1];
-            for ( int i = 0; i < categoricalBinInfos.size(); i ++ ) {
-                CategoricalBinInfo binInfo = categoricalBinInfos.get(i);
-                binCountNeg[i] = binInfo.getNegativeCnt();
-                binCountPos[i] = binInfo.getPositiveCnt();
-            }
-            binCountNeg[binCountNeg.length - 1] =
-                    columnConfig.getBinCountNeg().get(columnConfig.getBinCountNeg().size() - 1);
-            binCountPos[binCountPos.length - 1] =
-                    columnConfig.getBinCountPos().get(columnConfig.getBinCountPos().size() - 1);
-            ColumnStatsCalculator.ColumnMetrics columnMetrics =
-                    ColumnStatsCalculator.calculateColumnMetrics(binCountNeg, binCountPos);
+        ColumnConfigDynamicBinning columnConfigDynamicBinning =
+                new ColumnConfigDynamicBinning(columnConfig, expectBinNum, ivKeepRatio, minimumInstCnt);
 
-            System.out.println(columnConfig.getColumnName() + ":");
-            for ( int i = 0; i < categoricalBinInfos.size(); i ++ ) {
-                CategoricalBinInfo binInfo = categoricalBinInfos.get(i);
-                System.out.println("\t" + binInfo.getValues()
-                        + " | posCount:" + binInfo.getPositiveCnt()
-                        + " | negCount:" + binInfo.getNegativeCnt()
-                        + " | posRate:" + binInfo.getPositiveRate()
-                        + " | woe:" + columnMetrics.getBinningWoe().get(i));
-            }
-            System.out.println("\t" + columnConfig.getColumnName() + " IV:" + columnMetrics.getIv());
-            System.out.println("\t" + columnConfig.getColumnName() + " KS:" + columnMetrics.getKs());
-            System.out.println("\t" + columnConfig.getColumnName() + " WOE:" + columnMetrics.getWoe());
-            woeMappingText = generateWoeMapping(columnConfig.getColumnName(), categoricalBinInfos,
-                    columnMetrics, expectBinNum);
-        } else {
-            System.out.println(columnConfig.getColumnName() + ":");
-            for ( int i = 0; i < columnConfig.getBinCategory().size(); i ++  ) {
-                System.out.println("\t[" + columnConfig.getBinCategory().get(i)
-                        + "] | posCount:" + columnConfig.getBinCountPos().get(i)
-                        + " | negCount:" + columnConfig.getBinCountNeg().get(i)
-                        + " | posRate:" + columnConfig.getBinPosRate().get(i)
-                        + " | woe:" + columnConfig.getBinCountWoe().get(i));
-            }
-            System.out.println("\t" + columnConfig.getColumnName() + " IV:" + columnConfig.getIv());
-            System.out.println("\t" + columnConfig.getColumnName() + " KS:" + columnConfig.getKs());
-            System.out.println("\t" + columnConfig.getColumnName() + " WOE:" + columnConfig.getColumnStats().getWoe());
-            woeMappingText = generateWoeMapping(columnConfig, expectBinNum);
+        List<CategoricalBinInfo> categoricalBinInfos = columnConfigDynamicBinning.run();
+
+        long[] binCountNeg = new long[categoricalBinInfos.size() + 1];
+        long[] binCountPos = new long[categoricalBinInfos.size() + 1];
+        for (int i = 0; i < categoricalBinInfos.size(); i++) {
+            CategoricalBinInfo binInfo = categoricalBinInfos.get(i);
+            binCountNeg[i] = binInfo.getNegativeCnt();
+            binCountPos[i] = binInfo.getPositiveCnt();
         }
+        binCountNeg[binCountNeg.length - 1] =
+                columnConfig.getBinCountNeg().get(columnConfig.getBinCountNeg().size() - 1);
+        binCountPos[binCountPos.length - 1] =
+                columnConfig.getBinCountPos().get(columnConfig.getBinCountPos().size() - 1);
+        ColumnStatsCalculator.ColumnMetrics columnMetrics =
+                ColumnStatsCalculator.calculateColumnMetrics(binCountNeg, binCountPos);
 
-        return woeMappingText;
+        System.out.println(columnConfig.getColumnName() + ":");
+        for (int i = 0; i < categoricalBinInfos.size(); i++) {
+            CategoricalBinInfo binInfo = categoricalBinInfos.get(i);
+            System.out.println("\t" + binInfo.getValues()
+                    + " | posCount:" + binInfo.getPositiveCnt()
+                    + " | negCount:" + binInfo.getNegativeCnt()
+                    + " | posRate:" + binInfo.getPositiveRate()
+                    + " | woe:" + columnMetrics.getBinningWoe().get(i));
+        }
+        System.out.println("\t" + columnConfig.getColumnName() + " IV:" + columnMetrics.getIv());
+        System.out.println("\t" + columnConfig.getColumnName() + " KS:" + columnMetrics.getKs());
+        System.out.println("\t" + columnConfig.getColumnName() + " WOE:" + columnMetrics.getWoe());
+        return generateWoeMapping(columnConfig.getColumnName(), categoricalBinInfos, columnMetrics, expectBinNum);
     }
 
     private String generateWoeMapping(String varName, List<CategoricalBinInfo> categoricalBinInfos,
@@ -210,7 +199,7 @@ public class ExportModelProcessor extends BasicModelProcessor implements Process
                     + ") then " + columnMetrics.getBinningWoe().get(i) + "\n");
         }
         buffer.append("\telse " + columnMetrics.getBinningWoe().get(columnMetrics.getBinningWoe().size() - 1) + "\n");
-        buffer.append("  end ) as " + varName + "_" + expectBinNum);
+        buffer.append("  end ) as " + varName + "_" + categoricalBinInfos.size());
         return buffer.toString();
     }
 
@@ -247,6 +236,15 @@ public class ExportModelProcessor extends BasicModelProcessor implements Process
 
             categoricalBinInfos.add(binInfo);
         }
+
+        // add missing binning
+        CategoricalBinInfo binInfo = new CategoricalBinInfo();
+        binInfo.setPositiveCnt(columnConfig.getBinCountPos().get(columnConfig.getBinCountPos().size() - 1));
+        binInfo.setNegativeCnt(columnConfig.getBinCountNeg().get(columnConfig.getBinCountNeg().size() - 1));
+        binInfo.setWeightPos(columnConfig.getBinWeightedPos().get(columnConfig.getBinWeightedPos().size() - 1));
+        binInfo.setWeightNeg(columnConfig.getBinWeightedNeg().get(columnConfig.getBinWeightedNeg().size() - 1));
+        categoricalBinInfos.add(binInfo);
+
         return categoricalBinInfos;
     }
 
@@ -334,6 +332,30 @@ public class ExportModelProcessor extends BasicModelProcessor implements Process
                 return Integer.parseInt(expectBinNum);
             } catch (Exception e) {
                 log.warn("Invalid expect bin num {}. Ignore it...", expectBinNum);
+            }
+        }
+        return 0;
+    }
+
+    public double getIvKeepRatio() {
+        if ( MapUtils.isNotEmpty(this.params) && this.params.get(IV_KEEP_RATIO) instanceof String) {
+            String ivKeepRatio = (String) this.params.get(IV_KEEP_RATIO);
+            try {
+                return Double.parseDouble(ivKeepRatio);
+            } catch (Exception e) {
+                log.warn("Invalid IV Keep ratio {}. Ignore it...", ivKeepRatio);
+            }
+        }
+        return 1.0;
+    }
+
+    public long getMinimumInstCnt() {
+        if ( MapUtils.isNotEmpty(this.params) && this.params.get(MINIMUM_BIN_INST_CNT) instanceof String) {
+            String minimumBinInstCnt = (String) this.params.get(MINIMUM_BIN_INST_CNT);
+            try {
+                return Long.parseLong(minimumBinInstCnt);
+            } catch (Exception e) {
+                log.warn("Invalid minimum bin instance count {}. Ignore it...", minimumBinInstCnt);
             }
         }
         return 0;
