@@ -107,7 +107,8 @@ public class ShifuCLI {
 
     private static final String VARS = "vars";
     private static final String N = "n";
-
+    private static final String IVR = "ivr";
+    private static final String BIC = "bic";
 
     static private final Logger log = LoggerFactory.getLogger(ShifuCLI.class);
 
@@ -316,6 +317,8 @@ public class ShifuCLI {
                     params.put(ExportModelProcessor.IS_CONCISE, cmd.hasOption(EXPORT_CONCISE));
                     params.put(ExportModelProcessor.REQUEST_VARS, cmd.getOptionValue(VARS));
                     params.put(ExportModelProcessor.EXPECTED_BIN_NUM, cmd.getOptionValue(N));
+                    params.put(ExportModelProcessor.IV_KEEP_RATIO, cmd.getOptionValue(IVR));
+                    params.put(ExportModelProcessor.MINIMUM_BIN_INST_CNT, cmd.getOptionValue(BIC));
                     status = exportModel(cmd.getOptionValue(MODELSET_CMD_TYPE), params);
                     if(status == 0) {
                         log.info("Export models/columnstats to PMML/csv format successfully in current folder.");
@@ -569,6 +572,8 @@ public class ShifuCLI {
 
         Option opt_vars = OptionBuilder.hasArg().create(VARS);
         Option opt_n = OptionBuilder.hasArg().create(N);
+        Option opt_ivr = OptionBuilder.hasArg().create(IVR);
+        Option opt_bic = OptionBuilder.hasArg().create(BIC);
 
         Option opt_save = OptionBuilder.hasArg(false).withDescription("save model").create(SAVE);
         Option opt_switch = OptionBuilder.hasArg(false).withDescription("switch model").create(SWITCH);
@@ -602,6 +607,8 @@ public class ShifuCLI {
 
         opts.addOption(opt_vars);
         opts.addOption(opt_n);
+        opts.addOption(opt_ivr);
+        opts.addOption(opt_bic);
 
         return opts;
     }

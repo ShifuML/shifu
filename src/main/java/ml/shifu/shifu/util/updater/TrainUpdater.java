@@ -3,6 +3,7 @@ package ml.shifu.shifu.util.updater;
 import ml.shifu.shifu.column.NSColumn;
 import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.container.obj.ModelConfig;
+import org.apache.commons.collections.CollectionUtils;
 
 import java.io.IOException;
 
@@ -25,8 +26,11 @@ public class TrainUpdater extends BasicUpdater {
             columnConfig.setColumnFlag(ColumnConfig.ColumnFlag.ForceRemove);
             columnConfig.setFinalSelect(false);
         } else if(this.setForceSelect.contains(new NSColumn(varName))) {
-            columnConfig.setColumnFlag(ColumnConfig.ColumnFlag.ForceSelect);
-            columnConfig.setFinalSelect(true);
+            if ( CollectionUtils.isEmpty(this.setCandidates)
+                    || (CollectionUtils.isNotEmpty(this.setCandidates) && this.setCandidates.contains(new NSColumn(varName))) ) {
+                columnConfig.setColumnFlag(ColumnConfig.ColumnFlag.ForceSelect);
+                columnConfig.setFinalSelect(true);
+            }
         }
     }
 }

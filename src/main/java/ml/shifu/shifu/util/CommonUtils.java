@@ -373,6 +373,7 @@ public final class CommonUtils {
             fields = CommonUtils.takeFirstLine(evalConfig.getDataSet().getDataPath(), StringUtils.isBlank(evalConfig
                     .getDataSet().getHeaderDelimiter()) ? evalConfig.getDataSet().getDataDelimiter() : evalConfig
                     .getDataSet().getHeaderDelimiter(), evalConfig.getDataSet().getSource());
+            // TODO - if there is no target column in eval, it may fail to check it is schema or not
             if(StringUtils.join(fields, "").contains(evalConfig.getDataSet().getTargetColumnName())) {
                 // if first line contains target column name, we guess it is csv format and first line is header.
                 isSchemaProvided = true;
@@ -389,9 +390,9 @@ public final class CommonUtils {
         for(int i = 0; i < fields.length; i++) {
             if(!isSchemaProvided) {
                 fields[i] = i + "";
-            } else {
+            } /*else { // namespace support
                 fields[i] = getRelativePigHeaderColumnName(fields[i]);
-            }
+            }*/
         }
         return fields;
     }
@@ -1060,6 +1061,15 @@ public final class CommonUtils {
         return subModelsCnt;
     }
 
+    public static Set<NSColumn> loadCandidateColumns(ModelConfig modelConfig) throws IOException {
+        Set<NSColumn> candidateColumns = new HashSet<NSColumn>();
+        List<String> candidates = modelConfig.getListCandidates();
+        for ( String candidate : candidates ) {
+            candidateColumns.add(new NSColumn(candidate));
+        }
+        return candidateColumns;
+    }
+
     public static class FileSuffixPathFilter implements PathFilter {
         private String fileSuffix;
 
@@ -1460,7 +1470,9 @@ public final class CommonUtils {
                 continue;
             }
             NSColumn key = new NSColumn(config.getColumnName());
-            if(config.isFinalSelect() && !rawNsDataMap.containsKey(key)) {
+            if(config.isFinalSelect() // check whole name
+                    && !rawNsDataMap.containsKey(key) // and then check simple name, in case user use wrong namespace
+                    && !rawNsDataMap.containsKey(new NSColumn(key.getSimpleName()))) {
                 throw new IllegalStateException(String.format("Variable Missing in Test Data: %s", key));
             }
 
@@ -1469,7 +1481,7 @@ public final class CommonUtils {
             } else {
                 if(!noVarSel) {
                     if(config != null && !config.isMeta() && !config.isTarget() && config.isFinalSelect()) {
-                        String val = rawNsDataMap.get(key) == null ? null : rawNsDataMap.get(key).toString();
+                        String val = getNSVariableVal(rawNsDataMap, key);
                         if(CommonUtils.isTreeModel(alg) && config.isCategorical()) {
                             Integer index = binCategoryMap.get(config.getColumnNum()).get(val == null ? "" : val);
                             if(index == null) {
@@ -1485,7 +1497,7 @@ public final class CommonUtils {
                     }
                 } else {
                     if(!config.isMeta() && !config.isTarget() && CommonUtils.isGoodCandidate(config)) {
-                        String val = rawNsDataMap.get(key) == null ? null : rawNsDataMap.get(key).toString();
+                        String val = getNSVariableVal(rawNsDataMap, key);
                         if(CommonUtils.isTreeModel(alg) && config.isCategorical()) {
                             Integer index = binCategoryMap.get(config.getColumnNum()).get(val == null ? "" : val);
                             if(index == null) {
@@ -1511,6 +1523,11 @@ public final class CommonUtils {
         }
 
         return new BasicMLDataPair(new BasicMLData(input), new BasicMLData(ideal));
+    }
+
+    public static String getNSVariableVal(Map<NSColumn, String> rawNsDataMap, NSColumn key) {
+        String val = rawNsDataMap.get(key);
+        return (val == null ? rawNsDataMap.get(new NSColumn(key.getSimpleName())) : val);
     }
 
     /**
@@ -1542,7 +1559,7 @@ public final class CommonUtils {
     public static MLDataPair assembleNsDataPair(Map<Integer, Map<String, Integer>> binCategoryMap, boolean noVarSel,
             ModelConfig modelConfig, List<ColumnConfig> columnConfigList, Map<NSColumn, String> rawNsDataMap,
             double cutoff, String alg, Set<Integer> featureSet) {
-        if(featureSet == null || featureSet.size() == 0) {
+        if(CollectionUtils.isEmpty(featureSet)) {
             return assembleNsDataPair(binCategoryMap, noVarSel, modelConfig, columnConfigList, rawNsDataMap, cutoff,
                     alg);
         }

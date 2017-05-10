@@ -36,7 +36,7 @@ import java.util.Iterator;
  */
 public class GenSmallBinningInfoUDF extends AbstractTrainerUDF<Tuple> {
 
-    private  int scaleFactor = 1000;
+    private  int scaleFactor = 1024;
 
     public GenSmallBinningInfoUDF(String source, String pathModelConfig, String pathColumnConfig, String histoScaleFactor) throws IOException {
         super(source, pathModelConfig, pathColumnConfig);
