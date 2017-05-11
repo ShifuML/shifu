@@ -25,6 +25,8 @@ import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
 import ml.shifu.shifu.core.ColumnStatsCalculator;
 import ml.shifu.shifu.core.ColumnStatsCalculator.ColumnMetrics;
 import ml.shifu.shifu.core.autotype.CountAndFrequentItemsWritable;
+import ml.shifu.shifu.core.binning.obj.AbstractBinInfo;
+import ml.shifu.shifu.core.binning.obj.CategoricalBinInfo;
 import ml.shifu.shifu.udf.CalculateStatsUDF;
 import ml.shifu.shifu.util.Base64Utils;
 import ml.shifu.shifu.util.CommonUtils;
@@ -382,7 +384,7 @@ public class UpdateBinningInfoReducer extends Reducer<IntWritable, BinningInfoWr
     }
 
     public CateBinningStats rebinCategoricalValues(CateBinningStats cateBinStats) {
-        List<CategoricalBinInfo> categoricalBinInfos = new ArrayList<CategoricalBinInfo>();
+        List<AbstractBinInfo> categoricalBinInfos = new ArrayList<AbstractBinInfo>();
         for ( int i = 0; i < cateBinStats.binCategories.size(); i ++ ) {
             String cval = cateBinStats.binCategories.get(i);
             CategoricalBinInfo binInfo = new CategoricalBinInfo();
@@ -396,8 +398,8 @@ public class UpdateBinningInfoReducer extends Reducer<IntWritable, BinningInfoWr
             categoricalBinInfos.add(binInfo);
         }
         Collections.sort(categoricalBinInfos);
-        CateDynamicBinning binInst = new CateDynamicBinning(modelConfig.getStats().getCateMaxNumBin());
-        List<CategoricalBinInfo> mergedBinInfos = binInst.merge(categoricalBinInfos);
+        AutoDynamicBinning binInst = new AutoDynamicBinning(modelConfig.getStats().getCateMaxNumBin());
+        List<AbstractBinInfo> mergedBinInfos = binInst.merge(categoricalBinInfos);
 
         List<String> binCategories = new ArrayList<String>();
         long[] binCountPos = new long[mergedBinInfos.size() + 1];
@@ -405,7 +407,7 @@ public class UpdateBinningInfoReducer extends Reducer<IntWritable, BinningInfoWr
         double[] binWeightPos = new double[mergedBinInfos.size() + 1];
         double[] binWeightNeg = new double[mergedBinInfos.size() + 1];
         for ( int i = 0; i < mergedBinInfos.size(); i ++ ) {
-            CategoricalBinInfo binInfo = mergedBinInfos.get(i);
+            CategoricalBinInfo binInfo = (CategoricalBinInfo) mergedBinInfos.get(i);
             binCategories.add(StringUtils.join(binInfo.getValues(), '^'));
             binCountPos[i] = binInfo.getPositiveCnt();
             binCountNeg[i] = binInfo.getNegativeCnt();
