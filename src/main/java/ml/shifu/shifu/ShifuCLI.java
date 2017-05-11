@@ -639,12 +639,10 @@ public class ShifuCLI {
         System.out.println("\teval -score   <EvalSetName>             Scoring evaluation dataset.");
         System.out.println("\teval -norm    <EvalSetName>             Normalize evaluation dataset.");
         System.out.println("\teval -confmat <EvalSetName>             Compute the TP/FP/TN/FN based on scoring");
-        System.out
-                .println("\teval -perf <EvalSetName>                Calculate the model performance based on confmat");
-        System.out
-                .println("\texport [-t pmml|columnstats] [-c]       Export model to PMML format or export ColumnConfig.");
-        System.out
-                .println("\tcombo -new    <Algorithm List>          Create a combo model train. Algorithm lis should be NN,LR,RF,GBT,LR");
+        System.out.println("\teval -perf <EvalSetName>                Calculate the model performance based on confmat");
+        System.out.println("\texport [-t pmml|columnstats|woemapping] [-c] [-vars var1,var1] [-ivr <ratio>] [-bic <bic>]");
+        System.out.println("\t                                        Export model to PMML format or export ColumnConfig.");
+        System.out.println("\tcombo -new    <Algorithm List>          Create a combo model train. Algorithm lis should be NN,LR,RF,GBT,LR");
         System.out.println("\tcombo -init                             Generate sub-models.");
         System.out.println("\tcombo -run [-shuffle] [-resume]         Run Combo-Model train.");
         System.out.println("\tcombo -eval [-resume]                   Evaluate Combo-Model performance.");
