@@ -1993,7 +1993,7 @@ public final class CommonUtils {
      */
     public static ColumnConfig findColumnConfigByName(List<ColumnConfig> columnConfigList, String columnName) {
         for(ColumnConfig columnConfig: columnConfigList) {
-            if(columnConfig.getColumnName().equalsIgnoreCase(columnName)) {
+            if ( NSColumnUtils.isColumnEqual(columnConfig.getColumnName(), columnName) ) {
                 return columnConfig;
             }
         }
