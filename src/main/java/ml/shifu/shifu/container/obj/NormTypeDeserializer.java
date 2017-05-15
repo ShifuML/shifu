@@ -27,7 +27,7 @@ import com.fasterxml.jackson.databind.JsonDeserializer;
 import com.fasterxml.jackson.databind.JsonNode;
 
 /**
- * To deserialize {@link NormType} instance.
+ * To de-serialize {@link NormType} instance and ignore cases.
  * 
  * @author Zhang David (pengzhang@paypal.com)
  */

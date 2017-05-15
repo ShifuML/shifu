@@ -1,21 +1,23 @@
 package ml.shifu.shifu.core.pmml;
 
+import java.util.List;
+import java.util.Map;
+
 import ml.shifu.shifu.core.pmml.builder.creator.AbstractSpecifCreator;
+
 import org.dmg.pmml.FieldName;
 import org.dmg.pmml.PMML;
 import org.jpmml.evaluator.ClassificationMap;
 import org.jpmml.evaluator.FieldValue;
 import org.jpmml.evaluator.NeuralNetworkEvaluator;
-
-import java.util.List;
-import java.util.Map;
+import org.testng.annotations.Test;
 
 /**
  * Created by zhanhu on 2/8/17.
  */
 public class PMMLScoreGenTest {
 
-    //@Test
+    @Test
     public void verifyPmml() throws Exception {
         String dataPath = "src/test/resources/example/pmml-test/test-data.line100";
         String delimiter = ",";

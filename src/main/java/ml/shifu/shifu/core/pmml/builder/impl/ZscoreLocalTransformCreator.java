@@ -17,6 +17,7 @@ package ml.shifu.shifu.core.pmml.builder.impl;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
@@ -25,7 +26,9 @@ import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.container.obj.ModelConfig;
 import ml.shifu.shifu.container.obj.ModelNormalizeConf;
 import ml.shifu.shifu.core.Normalizer;
+import ml.shifu.shifu.core.dtrain.dataset.BasicFloatNetwork;
 import ml.shifu.shifu.core.pmml.builder.creator.AbstractPmmlElementCreator;
+import ml.shifu.shifu.util.CommonUtils;
 
 import org.dmg.pmml.DataType;
 import org.dmg.pmml.DerivedField;
@@ -39,6 +42,7 @@ import org.dmg.pmml.NormContinuous;
 import org.dmg.pmml.OpType;
 import org.dmg.pmml.OutlierTreatmentMethodType;
 import org.dmg.pmml.Row;
+import org.encog.ml.BasicML;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.w3c.dom.Document;
@@ -64,14 +68,28 @@ public class ZscoreLocalTransformCreator extends AbstractPmmlElementCreator<Loca
     }
 
     @Override
-    public LocalTransformations build() {
+    public LocalTransformations build(BasicML basicML) {
         LocalTransformations localTransformations = new LocalTransformations();
-        for(ColumnConfig config: columnConfigList) {
-            if(config.isFinalSelect()) {
-                double cutoff = modelConfig.getNormalizeStdDevCutOff();
-                localTransformations.withDerivedFields(config.isCategorical() ? createCategoricalDerivedField(config,
-                        cutoff, modelConfig.getNormalizeType()) : createNumericalDerivedField(config, cutoff,
-                        modelConfig.getNormalizeType()));
+
+        if(basicML instanceof BasicFloatNetwork) {
+            BasicFloatNetwork bfn = (BasicFloatNetwork) basicML;
+            Set<Integer> featureSet = bfn.getFeatureSet();
+            for(ColumnConfig config: columnConfigList) {
+                if(config.isFinalSelect() && featureSet.contains(config.getColumnName())) {
+                    double cutoff = modelConfig.getNormalizeStdDevCutOff();
+                    localTransformations.withDerivedFields(config.isCategorical() ? createCategoricalDerivedField(
+                            config, cutoff, modelConfig.getNormalizeType()) : createNumericalDerivedField(config,
+                            cutoff, modelConfig.getNormalizeType()));
+                }
+            }
+        } else {
+            for(ColumnConfig config: columnConfigList) {
+                if(config.isFinalSelect()) {
+                    double cutoff = modelConfig.getNormalizeStdDevCutOff();
+                    localTransformations.withDerivedFields(config.isCategorical() ? createCategoricalDerivedField(
+                            config, cutoff, modelConfig.getNormalizeType()) : createNumericalDerivedField(config,
+                            cutoff, modelConfig.getNormalizeType()));
+                }
             }
         }
         return localTransformations;
@@ -104,16 +122,18 @@ public class ZscoreLocalTransformCreator extends AbstractPmmlElementCreator<Loca
 
         InlineTable inlineTable = new InlineTable();
         for(int i = 0; i < config.getBinCategory().size(); i++) {
-            String cval = config.getBinCategory().get(i);
-            String dval = Normalizer.normalize(config, cval, cutoff, normType).toString();
+            List<String> catVals = CommonUtils.flattenCatValGrp(config.getBinCategory().get(i));
+            for(String cval: catVals) {
+                String dval = Normalizer.normalize(config, cval, cutoff, normType).toString();
 
-            Element out = document.createElementNS(NAME_SPACE_URI, ELEMENT_OUT);
-            out.setTextContent(dval);
+                Element out = document.createElementNS(NAME_SPACE_URI, ELEMENT_OUT);
+                out.setTextContent(dval);
 
-            Element origin = document.createElementNS(NAME_SPACE_URI, ELEMENT_ORIGIN);
-            origin.setTextContent(cval);
+                Element origin = document.createElementNS(NAME_SPACE_URI, ELEMENT_ORIGIN);
+                origin.setTextContent(cval);
 
-            inlineTable.withRows(new Row().withContent(origin).withContent(out));
+                inlineTable.withRows(new Row().withContent(origin).withContent(out));
+            }
         }
 
         MapValues mapValues = new MapValues("out").withDataType(DataType.DOUBLE).withDefaultValue(defaultValue)
@@ -162,7 +182,7 @@ public class ZscoreLocalTransformCreator extends AbstractPmmlElementCreator<Loca
      *            the norm type
      * @return - PMML standard column name
      */
-    protected String genPmmlColumnName(String columnName, ModelNormalizeConf.NormType normType) {
+    public static String genPmmlColumnName(String columnName, ModelNormalizeConf.NormType normType) {
         return columnName + "_" + normType.name().toLowerCase();
     }
 

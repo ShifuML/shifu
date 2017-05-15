@@ -20,7 +20,7 @@ package ml.shifu.shifu.util;
  */
 public interface Constants {
 
-    public static final String version = "0.2.0";
+    public static final String version = "0.11.0";
 
     public static final String MODELS = "models";
 
@@ -132,7 +132,7 @@ public interface Constants {
     public static final String CLEANED_DATA = "CleanedData";
     public static final String NORMALIZED_VALIDATION_DATA = "NormalizedValidationData";
     public static final String CLEANED_VALIDATION_DATA = "CleanedValidationData";
-    public static final String SHUFFLED_NORM_DATA = "ShuffledNormData";
+    public static final String SHUFFLED_DATA_PATH = "ShuffledData";
 
     public static final String TRAIN_SCORES = "TrainScores";
     public static final String BIN_AVG_SCORE = "BinAvgScore";
@@ -152,6 +152,8 @@ public interface Constants {
     public static final String KEY_TRAIN_SCORES_PATH = "trainScoresPath";
     public static final String KEY_BIN_AVG_SCORE_PATH = "binAvgScorePath";
     public static final String KEY_AUTO_TYPE_PATH = "autoTypePath";
+    public static final String KEY_CORRELATION_PATH = "correlationPath";
+
 
     public static final String DEFAULT_META_COLUMN_FILE = "meta.column.names";
     public static final String DEFAULT_CATEGORICAL_COLUMN_FILE = "categorical.column.names";
@@ -248,5 +250,9 @@ public interface Constants {
     public static final String SHIFU_CORRELATION_MULTI_THREADS = "shifu.correlation.multi.threads";
 
     public static final String SHIFU_CORRELATION_MULTI = "shifu.correlation.multi";
+    
+    public static final String SHIFU_CURRENT_WORKING_DIR = "shifu.current.working.dir";
+    
+    public static final String SHIFU_CORRELATION_COMPUTE_ALL = "shifu.correlation.computeAll";
 
 }

@@ -20,7 +20,7 @@ import ml.shifu.shifu.container.PerformanceObject;
 import java.util.List;
 
 /**
- * Performance object to persist the result
+ * Performance object to persist the eval performance result.
  */
 public class PerformanceResult {
 
