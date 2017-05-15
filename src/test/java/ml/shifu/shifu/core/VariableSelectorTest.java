@@ -45,7 +45,7 @@ public class VariableSelectorTest {
     }
 
     @Test
-    public void testFilter() {
+    public void testFilter() throws IOException {
         modelConfig.getVarSelect().setFilterBy("ks");
         VariableSelector selector = new VariableSelector(modelConfig, columnConfigList);
         List<ColumnConfig> selected = selector.selectByFilter();
