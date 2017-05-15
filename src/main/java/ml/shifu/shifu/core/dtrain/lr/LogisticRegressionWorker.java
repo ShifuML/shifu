@@ -505,7 +505,7 @@ public class LogisticRegressionWorker
 
         boolean isInTraining = addDataPairToDataSet(hashcode, data, isValidation);
 
-        // do bagging sampling only for training dataï¼?
+        // do bagging sampling only for training data
         if(isInTraining) {
             float subsampleWeights = sampleWeights(outputData[0]);
             if(isPositive(outputData[0])) {
