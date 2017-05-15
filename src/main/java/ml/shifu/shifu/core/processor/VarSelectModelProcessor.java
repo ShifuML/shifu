@@ -17,16 +17,13 @@ package ml.shifu.shifu.core.processor;
 
 import java.io.BufferedReader;
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Scanner;
+import java.util.*;
 
 import ml.shifu.guagua.GuaguaConstants;
 import ml.shifu.guagua.hadoop.util.HDPUtils;
 import ml.shifu.guagua.mapreduce.GuaguaMapReduceClient;
 import ml.shifu.guagua.mapreduce.GuaguaMapReduceConstants;
+import ml.shifu.shifu.column.NSColumn;
 import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.container.obj.ModelVarSelectConf.PostCorrelationMetric;
 import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
@@ -55,6 +52,7 @@ import ml.shifu.shifu.util.CommonUtils;
 import ml.shifu.shifu.util.Constants;
 import ml.shifu.shifu.util.Environment;
 
+import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.collections.ListUtils;
 import org.apache.commons.compress.compressors.bzip2.BZip2CompressorInputStream;
 import org.apache.commons.io.IOUtils;
@@ -634,7 +632,7 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
         }
     }
 
-    private void postProcessFIVarSelect(Map<Integer, MutablePair<String, Double>> importances) {
+    private void postProcessFIVarSelect(Map<Integer, MutablePair<String, Double>> importances) throws IOException {
         int selectCnt = 0;
         for(ColumnConfig config: super.columnConfigList) {
             // enable ForceSelect
@@ -657,6 +655,9 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
                 columnConfig.setFinalSelect(false);
             }
         }
+
+        Set<NSColumn> userCandidateColumns = CommonUtils.loadCandidateColumns(modelConfig);
+
         while(selectCnt < targetCnt && i < targetCnt) {
             if(i >= candidateCount) {
                 log.warn("Var select finish due to feature importance count {} is less than target var count {}",
@@ -665,7 +666,10 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
             }
             Integer columnId = candidateColumnIdList.get(i++);
             ColumnConfig columnConfig = this.columnConfigList.get(columnId);
-            if(!columnConfig.isForceSelect() && !columnConfig.isForceRemove()) {
+            if (CollectionUtils.isNotEmpty(userCandidateColumns)
+                    && !userCandidateColumns.contains(new NSColumn(columnConfig.getColumnName()))) {
+                log.info("Variable {} is not in user's candidate list. Skip it.", columnConfig.getColumnName());
+            } else if(!columnConfig.isForceSelect() && !columnConfig.isForceRemove()) {
                 columnConfig.setFinalSelect(true);
                 selectCnt++;
                 log.info("Variable {} is selected.", columnConfig.getColumnName());
@@ -693,6 +697,8 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
                 log.info("Variable {} is selected, since it is in ForceSelect list.", config.getColumnName());
             }
         }
+
+        Set<NSColumn> userCandidateColumns = CommonUtils.loadCandidateColumns(modelConfig);
 
         List<Scanner> scanners = null;
         try {
@@ -725,7 +731,10 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
                 }
                 Integer columnId = candidateColumnIdList.get(i++);
                 ColumnConfig columnConfig = this.columnConfigList.get(columnId);
-                if(!columnConfig.isForceSelect() && !columnConfig.isForceRemove()) {
+                if ( CollectionUtils.isNotEmpty(userCandidateColumns)
+                        && !userCandidateColumns.contains(new NSColumn(columnConfig.getColumnName())) ) {
+                    log.info("Variable {} is not in user's candidate list. Skip it.", columnConfig.getColumnName());
+                } if(!columnConfig.isForceSelect() && !columnConfig.isForceRemove()) {
                     columnConfig.setFinalSelect(true);
                     selectCnt++;
                     log.info("Variable {} is selected.", columnConfig.getColumnName());

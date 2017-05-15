@@ -103,7 +103,11 @@ public class DynamicBinningUDF extends AbstractTrainerUDF<Tuple> {
         }
 
         if (binsData == null && CollectionUtils.isNotEmpty(binInfoList)) {
-            DynamicBinning dynamicBinning = new DynamicBinning(binInfoList, modelConfig.getStats().getMaxNumBin());
+            int maxNumBin = modelConfig.getStats().getMaxNumBin();
+            if ( maxNumBin <= 0 ) {
+                maxNumBin = 1024;
+            }
+            DynamicBinning dynamicBinning = new DynamicBinning(binInfoList, maxNumBin);
             List<Double> binFields = dynamicBinning.getDataBin();
             binsData = StringUtils.join(binFields, CalculateStatsUDF.CATEGORY_VAL_SEPARATOR);
         }
