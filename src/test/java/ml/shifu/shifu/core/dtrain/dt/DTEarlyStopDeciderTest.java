@@ -39,12 +39,10 @@ public class DTEarlyStopDeciderTest {
     private List<Double> validationErrorList = new ArrayList<Double>();
     private final static String DATA_FILE_NAME = "dttest/data/trainError.dat";
 
-    @SuppressWarnings("unused")
     @BeforeMethod
     public void setUp() throws Exception {
         BasicConfigurator.configure();
         LogManager.getRootLogger().setLevel(Level.DEBUG);
-        ClassLoader classLoader = getClass().getClassLoader();
         URL resource = this.getClass().getClassLoader().getResource(DATA_FILE_NAME);
         if(resource != null){
             File file = new File(resource.getFile());

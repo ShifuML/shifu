@@ -15,6 +15,7 @@
  */
 package ml.shifu.shifu.udf;
 
+import ml.shifu.shifu.column.NSColumn;
 import ml.shifu.shifu.container.CaseScoreResult;
 import ml.shifu.shifu.container.obj.EvalConfig;
 import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
@@ -57,8 +58,8 @@ public class EvalScoreUDF extends AbstractTrainerUDF<Tuple> {
     private ModelRunner modelRunner;
     private String[] headers;
 
-    private int maxScore = Integer.MIN_VALUE;
-    private int minScore = Integer.MAX_VALUE;
+    private double maxScore = Double.MIN_VALUE;
+    private double minScore = Double.MAX_VALUE;
 
     private Map<String, Integer> subModelsCnt;
     private int modelCnt;
@@ -85,38 +86,10 @@ public class EvalScoreUDF extends AbstractTrainerUDF<Tuple> {
             this.columnConfigList = ShifuFileUtils.searchColumnConfig(evalConfig, columnConfigList);
         }
 
-        // get headers
-        if(StringUtils.isNotBlank(evalConfig.getDataSet().getHeaderPath())) {
-            String delimiter = StringUtils.isBlank(evalConfig.getDataSet().getHeaderDelimiter()) ? evalConfig
-                    .getDataSet().getDataDelimiter() : evalConfig.getDataSet().getHeaderDelimiter();
-            this.headers = CommonUtils.getHeaders(evalConfig.getDataSet().getHeaderPath(), delimiter, evalConfig
-                    .getDataSet().getSource());
-        } else {
-            String delimiter = StringUtils.isBlank(evalConfig.getDataSet().getHeaderDelimiter()) ? evalConfig
-                    .getDataSet().getDataDelimiter() : evalConfig.getDataSet().getHeaderDelimiter();
-            String[] fields = CommonUtils.takeFirstLine(evalConfig.getDataSet().getDataPath(), delimiter, evalConfig
-                    .getDataSet().getSource());
-            if(StringUtils.join(fields, "").contains(modelConfig.getTargetColumnName())) {
-                this.headers = new String[fields.length];
-                for(int i = 0; i < fields.length; i++) {
-                    this.headers[i] = CommonUtils.getRelativePigHeaderColumnName(fields[i]);
-                }
-                log.warn("No header path is provided, we will try to read first line and detect schema.");
-                log.warn("Schema in ColumnConfig.json are named as first line of data set path.");
-            } else {
-                log.warn("No header path is provided, we will try to read first line and detect schema.");
-                log.warn("Schema in ColumnConfig.json are named as  index 0, 1, 2, 3 ...");
-                log.warn("Please make sure weight column and tag column are also taking index as name.");
-                this.headers = new String[fields.length];
-                for(int i = 0; i < fields.length; i++) {
-                    this.headers[i] = i + "";
-                }
-            }
-        }
+        this.headers = CommonUtils.getFinalHeaders(evalConfig);
 
         // move model runner construction in exec to avoid OOM error in client side if model is too big like RF
-        this.modelCnt = CommonUtils.getBasicModelsCnt(modelConfig, this.columnConfigList, evalConfig, evalConfig
-                .getDataSet().getSource());
+        this.modelCnt = CommonUtils.getBasicModelsCnt(modelConfig, evalConfig, evalConfig.getDataSet().getSource());
         this.subModelsCnt = CommonUtils.getSubModelsCnt(modelConfig, this.columnConfigList, evalConfig, evalConfig
                 .getDataSet().getSource());
 
@@ -127,8 +100,8 @@ public class EvalScoreUDF extends AbstractTrainerUDF<Tuple> {
         if(this.modelRunner == null) {
             // here to initialize modelRunner, this is moved from constructor to here to avoid OOM in client side.
             // UDF in pig client will be initialized to get some metadata issues
-            List<BasicML> models = CommonUtils.loadBasicModels(modelConfig, this.columnConfigList, evalConfig,
-                    evalConfig.getDataSet().getSource(), evalConfig.getGbtConvertToProb());
+            List<BasicML> models = CommonUtils.loadBasicModels(modelConfig, evalConfig, evalConfig.getDataSet()
+                    .getSource(), evalConfig.getGbtConvertToProb());
             this.modelRunner = new ModelRunner(modelConfig, columnConfigList, this.headers, evalConfig.getDataSet()
                     .getDataDelimiter(), models);
 
@@ -145,12 +118,13 @@ public class EvalScoreUDF extends AbstractTrainerUDF<Tuple> {
             this.modelRunner.setScoreScale(Integer.parseInt(this.scale));
         }
 
-        Map<String, String> rawDataMap = CommonUtils.convertDataIntoMap(input, this.headers);
-        if(MapUtils.isEmpty(rawDataMap)) {
+        Map<NSColumn, String> rawDataNsMap = CommonUtils.convertDataIntoNsMap(input, this.headers);
+        if ( MapUtils.isEmpty(rawDataNsMap) ) {
             return null;
         }
 
-        String tag = CommonUtils.trimTag(rawDataMap.get(modelConfig.getTargetColumnName(evalConfig)));
+        String tag = CommonUtils.trimTag(rawDataNsMap.get(
+                new NSColumn(modelConfig.getTargetColumnName(evalConfig))));
 
         // filter invalid tag record out
         // disable the tag check, since there is no bad tag in eval data set
@@ -169,7 +143,7 @@ public class EvalScoreUDF extends AbstractTrainerUDF<Tuple> {
          */
 
         long startTime = System.nanoTime();
-        CaseScoreResult cs = modelRunner.compute(rawDataMap);
+        CaseScoreResult cs = modelRunner.computeNsData(rawDataNsMap);
         long runInterval = (System.nanoTime() - startTime) / 1000L;
 
         if(cs == null) {
@@ -184,7 +158,7 @@ public class EvalScoreUDF extends AbstractTrainerUDF<Tuple> {
 
         String weight = null;
         if(StringUtils.isNotBlank(evalConfig.getDataSet().getWeightColumnName())) {
-            weight = rawDataMap.get(evalConfig.getDataSet().getWeightColumnName());
+            weight = rawDataNsMap.get(new NSColumn(evalConfig.getDataSet().getWeightColumnName()));
         } else {
             weight = "1.0";
         }
@@ -227,7 +201,7 @@ public class EvalScoreUDF extends AbstractTrainerUDF<Tuple> {
         List<String> metaColumns = evalConfig.getAllMetaColumns(modelConfig);
         if(CollectionUtils.isNotEmpty(metaColumns)) {
             for(String meta: metaColumns) {
-                tuple.append(rawDataMap.get(meta));
+                tuple.append(rawDataNsMap.get(new NSColumn(meta)));
             }
         }
 
@@ -250,7 +224,7 @@ public class EvalScoreUDF extends AbstractTrainerUDF<Tuple> {
         tuple.append(cs.getMinScore());
         tuple.append(cs.getMedianScore());
 
-        for(Integer score: cs.getScores()) {
+        for(double score: cs.getScores()) {
             tuple.append(score);
         }
 
@@ -452,14 +426,13 @@ public class EvalScoreUDF extends AbstractTrainerUDF<Tuple> {
      */
     private void addModelSchema(Schema tupleSchema, Integer modelCount, String modelName) {
         if(modelCount > 0) {
-            tupleSchema.add(new FieldSchema(SCHEMA_PREFIX + addModelNameToField(modelName, "mean"), DataType.INTEGER));
-            tupleSchema.add(new FieldSchema(SCHEMA_PREFIX + addModelNameToField(modelName, "max"), DataType.INTEGER));
-            tupleSchema.add(new FieldSchema(SCHEMA_PREFIX + addModelNameToField(modelName, "min"), DataType.INTEGER));
-            tupleSchema
-                    .add(new FieldSchema(SCHEMA_PREFIX + addModelNameToField(modelName, "median"), DataType.INTEGER));
+            tupleSchema.add(new FieldSchema(SCHEMA_PREFIX + addModelNameToField(modelName, "mean"), DataType.DOUBLE));
+            tupleSchema.add(new FieldSchema(SCHEMA_PREFIX + addModelNameToField(modelName, "max"), DataType.DOUBLE));
+            tupleSchema.add(new FieldSchema(SCHEMA_PREFIX + addModelNameToField(modelName, "min"), DataType.DOUBLE));
+            tupleSchema.add(new FieldSchema(SCHEMA_PREFIX + addModelNameToField(modelName, "median"), DataType.DOUBLE));
             for(int i = 0; i < modelCount; i++) {
                 tupleSchema.add(new FieldSchema(SCHEMA_PREFIX + addModelNameToField(modelName, "model" + i),
-                        DataType.INTEGER));
+                        DataType.DOUBLE));
             }
         }
     }
@@ -475,10 +448,18 @@ public class EvalScoreUDF extends AbstractTrainerUDF<Tuple> {
      *            - model name
      */
     private void addModelTagSchema(Schema tupleSchema, Integer modelCount, String modelName) {
-        for(int i = 0; i < modelCount; i++) {
-            for(int j = 0; j < modelConfig.getTags().size(); j++) {
+        if(modelConfig.isClassification() && !modelConfig.getTrain().isOneVsAll()) {
+            for(int i = 0; i < modelCount; i++) {
+                for(int j = 0; j < modelConfig.getTags().size(); j++) {
+                    tupleSchema.add(new FieldSchema(SCHEMA_PREFIX
+                            + addModelNameToField(modelName, "model_" + i + "_tag_" + j), DataType.DOUBLE));
+                }
+            }
+        } else {
+            // one vs all
+            for(int i = 0; i < modelCount; i++) {
                 tupleSchema.add(new FieldSchema(SCHEMA_PREFIX
-                        + addModelNameToField(modelName, "model_" + i + "_tag_" + j), DataType.INTEGER));
+                        + addModelNameToField(modelName, "model_" + i + "_tag_" + i), DataType.DOUBLE));
             }
         }
     }
@@ -493,7 +474,10 @@ public class EvalScoreUDF extends AbstractTrainerUDF<Tuple> {
      * @return - tuple name with namespace
      */
     private String addModelNameToField(String modelName, String field) {
-        return (StringUtils.isBlank(modelName) ? field : modelName + "::" + field);
+        return (StringUtils.isBlank(modelName) ? field : formatPigNS(modelName) + "::" + field);
     }
 
+    private String formatPigNS(String name) {
+        return name.replaceAll("-", "_");
+    }
 }

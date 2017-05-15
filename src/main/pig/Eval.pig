@@ -16,7 +16,7 @@
 REGISTER $path_jar;
 
 SET pig.exec.reducers.max 999;
-SET pig.exec.reducers.bytes.per.reducer 536870912;
+SET pig.exec.reducers.bytes.per.reducer 134217728;
 SET mapred.job.queue.name $queue_name;
 SET job.name 'Shifu Evaluation: $data_set';
 SET mapred.child.java.opts -Xmx1G;

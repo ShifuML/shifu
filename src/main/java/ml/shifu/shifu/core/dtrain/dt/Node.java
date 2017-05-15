@@ -147,22 +147,6 @@ public class Node implements Bytable {
         this.impurity = impurity;
     }
 
-    // public Node(int id, Split split, Node left, Node right, Predict predict, double gain, double impurity,
-    // Predict leftPredict, double leftImpurity, Predict rightPredict, double rightImpurity, boolean isLeaf) {
-    // this.id = id;
-    // this.split = split;
-    // this.left = left;
-    // this.right = right;
-    // this.predict = predict;
-    // this.gain = gain;
-    // this.impurity = impurity;
-    // this.leftPredict = leftPredict;
-    // this.leftImpurity = leftImpurity;
-    // this.rightPredict = rightPredict;
-    // this.rightImpurity = rightImpurity;
-    // this.isLeaf = isLeaf;
-    // }
-
     /**
      * @return the id
      */
@@ -393,6 +377,13 @@ public class Node implements Bytable {
         return null;
     }
 
+    /**
+     * Left index according to current id.
+     * 
+     * @param id
+     *            current id
+     * @return left index
+     */
     public static int leftIndex(int id) {
         return id << 1;
     }
@@ -412,14 +403,35 @@ public class Node implements Bytable {
         this.wgtCntRatio = wgtCntRatio;
     }
 
+    /**
+     * Right index according to current id.
+     * 
+     * @param id
+     *            current id
+     * @return right index
+     */
     public static int rightIndex(int id) {
         return (id << 1) + 1;
     }
 
+    /**
+     * Parent index according to current id.
+     * 
+     * @param id
+     *            current id
+     * @return parent index
+     */
     public static int parentIndex(int id) {
         return id >>> 1;
     }
 
+    /**
+     * If current node is ROOT or not
+     * 
+     * @param node
+     *            node to be checked
+     * @return true if ROOT, false if not ROOT or null
+     */
     public static boolean isRootNode(Node node) {
         return node != null && node.getId() == ROOT_INDEX;
     }

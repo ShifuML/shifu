@@ -161,6 +161,11 @@
                 "directive": "input",
                 "defval" : 10
             }, {
+                "name": "cateMaxNumBin",
+                "type": "number",
+                "directive": "input",
+                "defval" : -1
+            }, {
                 "name": "binningMethod",
                 "type": "text",
                 "directive": "select",
@@ -283,6 +288,30 @@
                 "directive": "input",
                 "defval" : 0.5
             }, {
+                "name": "correlationThreshold",
+                "type": "number",
+                "directive": "input",
+                "defval" : 1
+            }, {
+                "name": "minIvThreshold",
+                "type": "number",
+                "directive": "input",
+                "defval" : 0
+            }, {
+                "name": "minKsThreshold",
+                "type": "number",
+                "directive": "input",
+                "defval" : 0
+            }, {
+                "name": "postCorrelationMetric",
+                "type": "text",
+                "directive": "select",
+                "options": [
+                    {"label": "SE", "value":"KS"},
+                    {"label": "IV", "value":"IV"},
+                    {"label": "Sensitivity Analysis", "value":"SE"}
+                ]
+            }, {
                 "name": "params",
                 "type": "map",
                 "directive": "input",
@@ -360,16 +389,6 @@
                 "type": "boolean",
                 "directive": "checkbox",
                 "defval" : false
-            }, {
-                "name": "correlation",
-                "type": "text",
-                "directive": "select",
-                "defval" : "NONE",
-                "options": [
-                    {"label":"not compute correlation", "value":"NONE"},
-                    {"label":"pearson mode", "value":"PEARSON"},
-                    {"label":"norm pearson mode", "value":"NORMPEARSON"}
-                ]
             }
         ]
     }, {
@@ -509,7 +528,9 @@
                                     {"label": "Sigmoid", "value":"Sigmoid"},
                                     {"label": "Tanh", "value":"Tanh"},
                                     {"label": "Log", "value":"Log"},
-                                    {"label": "Sin", "value":"Sin"}
+                                    {"label": "Sin", "value":"Sin"},
+                                    {"label": "Linear", "value":"Linear"},
+                                    {"label": "ReLU", "value":"ReLU"}
                                 ]
                             }                            
                          ]
@@ -531,7 +552,7 @@
                         "type" : "number",
                         "directive": "input",
                         "defval" : 0.1
-                    }, {
+                    },{
                         "name" : "RegularizedConstant",
                         "type" : "number",
                         "directive": "input",
@@ -616,6 +637,16 @@
                         "directive": "input",
                         "defval" : 0.01
                     }, {
+                        "name" : "DropoutRate",
+                        "type" : "number",
+                        "directive": "input",
+                        "defval" : 0
+                    }, {
+                        "name" : "ValidationTolerance",
+                        "type" : "number",
+                        "directive": "input",
+                        "defval" : 0
+                    }, {
                         "name" : "Propagation",
                         "type" : "text",
                         "directive": "select",
@@ -627,6 +658,11 @@
                             {"label": "Resilient Propagation", "value":"R"},
                             {"label": "Scaled Conjugate Gradient", "value":"S"}
                         ]
+                    }, {
+                        "name" : "IsELM",
+                        "type": "boolean",
+                        "directive": "checkbox",
+                        "defval": false
                     }, {
                         "name": "GBTSampleWithReplacement",
                         "type": "boolean",

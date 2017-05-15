@@ -56,9 +56,25 @@ public interface CommonConstants {
     public static final String CONTINUOUS_TRAINING = "shifu.continuous.training";
 
     public static final String SHIFU_DT_MASTER_CHECKPOINT_INTERVAL = "shifu.dt.master.checkpoint.interval";
-    
-    public static final String SHIFU_DT_MASTER_CHECKPOINT_FOLDER = "shifu.dt.master.checkpoint.folder";
-    
-    public static final int TREE_FORMAT_VERSION = 1;
 
+    public static final String SHIFU_DT_MASTER_CHECKPOINT_FOLDER = "shifu.dt.master.checkpoint.folder";
+
+    /**
+     * Version 2: support final selected columns
+     */
+    public static final int TREE_FORMAT_VERSION = 2;
+
+    public static final String NUM_HIDDEN_LAYERS = "NumHiddenLayers";
+
+    public static final String ACTIVATION_FUNC = "ActivationFunc";
+
+    public static final String NUM_HIDDEN_NODES = "NumHiddenNodes";
+
+    public static final String LEARNING_RATE = "LearningRate";
+
+    public static final String DROPOUT_RATE = "DropoutRate";
+
+    public static final String PROPAGATION = "Propagation";
+    
+    public static final String SHIFU_NN_FEATURE_SUBSET = "shifu.nn.feature.subset";
 }

@@ -17,11 +17,14 @@ package ml.shifu.shifu.core.dtrain.nn;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import java.util.Random;
+import java.util.Set;
 
 import ml.shifu.guagua.GuaguaRuntimeException;
 import ml.shifu.guagua.hadoop.io.GuaguaWritableAdapter;
@@ -31,7 +34,6 @@ import ml.shifu.guagua.worker.WorkerContext.WorkerCompletionCallBack;
 import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.container.obj.ModelConfig;
 import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
-import ml.shifu.shifu.core.alg.NNTrainer;
 import ml.shifu.shifu.core.dtrain.CommonConstants;
 import ml.shifu.shifu.core.dtrain.DTrainUtils;
 import ml.shifu.shifu.core.dtrain.dataset.BasicFloatMLData;
@@ -226,12 +228,40 @@ public abstract class AbstractNNWorker<VALUE extends Writable> extends
     protected Map<Integer, Random> validationRandomMap = new HashMap<Integer, Random>();
 
     /**
+     * Random object to sample negative records
+     */
+    protected Random sampelNegOnlyRandom = new Random(System.currentTimeMillis() + 1000L);
+
+    /**
      * If k-fold cross validation
      */
     private boolean isKFoldCV;
 
+    /**
+     * If enabled by extreme learning machine: https://en.wikipedia.org/wiki/Extreme_learning_machine
+     */
+    private boolean isELM;
+
+    /**
+     * Cache all features with feature index for searching
+     */
+    protected List<Integer> allFeatures;
+
+    /**
+     * Cache subset features with feature index for searching
+     */
+    protected List<Integer> subFeatures;
+
+    /**
+     * Set for sub features to quick check if column is in sub feature list
+     */
+    protected Set<Integer> subFeatureSet;
+
     protected boolean isUpSampleEnabled() {
-        return this.upSampleRng != null;
+        // only enabled in regression
+        return this.upSampleRng != null
+                && (modelConfig.isRegression() || (modelConfig.isClassification() && modelConfig.getTrain()
+                        .isOneVsAll()));
     }
 
     /**
@@ -277,10 +307,10 @@ public abstract class AbstractNNWorker<VALUE extends Writable> extends
                 trainingFile.toString(), testingFile.toString());
 
         this.trainingData = new BufferedFloatMLDataSet(new File(trainingFile.toString()));
-        ((BufferedFloatMLDataSet) this.trainingData).beginLoad(getInputNodeCount(), getOutputNodeCount());
+        ((BufferedFloatMLDataSet) this.trainingData).beginLoad(this.subFeatures.size(), getOutputNodeCount());
 
         this.validationData = new BufferedFloatMLDataSet(new File(testingFile.toString()));
-        ((BufferedFloatMLDataSet) this.validationData).beginLoad(getInputNodeCount(), getOutputNodeCount());
+        ((BufferedFloatMLDataSet) this.validationData).beginLoad(this.subFeatures.size(), getOutputNodeCount());
     }
 
     @Override
@@ -307,7 +337,9 @@ public abstract class AbstractNNWorker<VALUE extends Writable> extends
                 context.getProps().getProperty(NNConstants.NN_POISON_SAMPLER));
         this.rng = new PoissonDistribution(1.0d);
         Double upSampleWeight = modelConfig.getTrain().getUpSampleWeight();
-        if(Double.compare(upSampleWeight, 1d) != 0) {
+        if(Double.compare(upSampleWeight, 1d) != 0
+                && (modelConfig.isRegression() || (modelConfig.isClassification() && modelConfig.getTrain()
+                        .isOneVsAll()))) {
             // set mean to upSampleWeight -1 and get sample + 1to make sure no zero sample value
             LOG.info("Enable up sampling with weight {}.", upSampleWeight);
             this.upSampleRng = new PoissonDistribution(upSampleWeight - 1);
@@ -316,13 +348,33 @@ public abstract class AbstractNNWorker<VALUE extends Writable> extends
         this.epochsPerIteration = epochsPerIterationInteger == null ? 1 : epochsPerIterationInteger.intValue();
         LOG.info("epochsPerIteration in worker is :{}", epochsPerIteration);
 
+        Object elmObject = validParams.get(DTrainUtils.IS_ELM);
+        isELM = elmObject == null ? false : "true".equalsIgnoreCase(elmObject.toString());
+        LOG.info("Check isELM: {}", isELM);
+
         int[] inputOutputIndex = DTrainUtils.getInputOutputCandidateCounts(this.columnConfigList);
         this.inputNodeCount = inputOutputIndex[0] == 0 ? inputOutputIndex[2] : inputOutputIndex[0];
         // if is one vs all classification, outputNodeCount is set to 1
         this.outputNodeCount = modelConfig.isRegression() ? inputOutputIndex[1]
                 : (modelConfig.getTrain().isOneVsAll() ? inputOutputIndex[1] : modelConfig.getTags().size());
         this.candidateCount = inputOutputIndex[2];
+        boolean isAfterVarSelect = inputOutputIndex[0] != 0;
         LOG.info("Input count {}, output count {}, candidate count {}", inputNodeCount, outputNodeCount, candidateCount);
+        // cache all feature list for sampling features
+        this.allFeatures = CommonUtils.getAllFeatureList(columnConfigList, isAfterVarSelect);
+        String subsetStr = context.getProps().getProperty(CommonConstants.SHIFU_NN_FEATURE_SUBSET);
+        if(StringUtils.isBlank(subsetStr)) {
+            this.subFeatures = this.allFeatures;
+        } else {
+            String[] splits = subsetStr.split(",");
+            this.subFeatures = new ArrayList<Integer>(splits.length);
+            for(String split: splits) {
+                int featureIndex = Integer.parseInt(split);
+                this.subFeatures.add(featureIndex);
+            }
+        }
+        this.subFeatureSet = new HashSet<Integer>(this.subFeatures);
+        LOG.info("subFeatures size is {}", subFeatures.size());
 
         this.isDry = Boolean.TRUE.toString().equalsIgnoreCase(
                 context.getProps().getProperty(CommonConstants.SHIFU_DRY_DTRAIN));
@@ -354,15 +406,15 @@ public abstract class AbstractNNWorker<VALUE extends Writable> extends
                 if(StringUtils.isNotBlank(modelConfig.getValidationDataSetRawPath())) {
                     // fixed 0.6 and 0.4 of max memory for trainingData and validationData
                     this.trainingData = new MemoryDiskFloatMLDataSet((long) (memoryStoreSize * 0.6), DTrainUtils
-                            .getTrainingFile().toString(), this.inputNodeCount, this.outputNodeCount);
+                            .getTrainingFile().toString(), this.subFeatures.size(), this.outputNodeCount);
                     this.validationData = new MemoryDiskFloatMLDataSet((long) (memoryStoreSize * 0.4), DTrainUtils
-                            .getTestingFile().toString(), this.inputNodeCount, this.outputNodeCount);
+                            .getTestingFile().toString(), this.subFeatures.size(), this.outputNodeCount);
                 } else {
                     this.trainingData = new MemoryDiskFloatMLDataSet(
                             (long) (memoryStoreSize * (1 - crossValidationRate)), DTrainUtils.getTrainingFile()
-                                    .toString(), this.inputNodeCount, this.outputNodeCount);
+                                    .toString(), this.subFeatures.size(), this.outputNodeCount);
                     this.validationData = new MemoryDiskFloatMLDataSet((long) (memoryStoreSize * crossValidationRate),
-                            DTrainUtils.getTestingFile().toString(), this.inputNodeCount, this.outputNodeCount);
+                            DTrainUtils.getTestingFile().toString(), this.subFeatures.size(), this.outputNodeCount);
                 }
                 // cannot find a good place to close these two data set, using Shutdown hook
                 Runtime.getRuntime().addShutdownHook(new Thread(new Runnable() {
@@ -453,11 +505,11 @@ public abstract class AbstractNNWorker<VALUE extends Writable> extends
 
     @SuppressWarnings("unchecked")
     private void initGradient(FloatMLDataSet training, FloatMLDataSet testing, double[] weights, boolean isCrossOver) {
-        int numLayers = (Integer) this.validParams.get(NNTrainer.NUM_HIDDEN_LAYERS);
-        List<String> actFunc = (List<String>) this.validParams.get(NNTrainer.ACTIVATION_FUNC);
-        List<Integer> hiddenNodeList = (List<Integer>) this.validParams.get(NNTrainer.NUM_HIDDEN_NODES);
+        int numLayers = (Integer) this.validParams.get(CommonConstants.NUM_HIDDEN_LAYERS);
+        List<String> actFunc = (List<String>) this.validParams.get(CommonConstants.ACTIVATION_FUNC);
+        List<Integer> hiddenNodeList = (List<Integer>) this.validParams.get(CommonConstants.NUM_HIDDEN_NODES);
 
-        BasicNetwork network = DTrainUtils.generateNetwork(this.inputNodeCount, this.outputNodeCount, numLayers,
+        BasicNetwork network = DTrainUtils.generateNetwork(this.subFeatures.size(), this.outputNodeCount, numLayers,
                 actFunc, hiddenNodeList, false);
         // use the weights from master
         network.getFlat().setWeights(weights);
@@ -467,12 +519,12 @@ public abstract class AbstractNNWorker<VALUE extends Writable> extends
         double[] flatSpot = new double[flat.getActivationFunctions().length];
         for(int i = 0; i < flat.getActivationFunctions().length; i++) {
             flatSpot[i] = flat.getActivationFunctions()[i] instanceof ActivationSigmoid ? 0.1 : 0.0;
-        }
 
+        }
         LOG.info("Gradient computing thread count is {}.", modelConfig.getTrain().getWorkerThreadCount());
 
         this.gradient = new ParallelGradient((FloatFlatNetwork) flat, training, testing, flatSpot,
-                new LinearErrorFunction(), isCrossOver, modelConfig.getTrain().getWorkerThreadCount());
+                new LinearErrorFunction(), isCrossOver, modelConfig.getTrain().getWorkerThreadCount(), this.isELM);
     }
 
     private NNParams buildEmptyNNParams(WorkerContext<NNParams, NNParams> workerContext) {
@@ -488,7 +540,9 @@ public abstract class AbstractNNWorker<VALUE extends Writable> extends
     protected void postLoad(WorkerContext<NNParams, NNParams> workerContext) {
         if(isOnDisk()) {
             ((BufferedFloatMLDataSet) this.trainingData).endLoad();
-            ((BufferedFloatMLDataSet) this.validationData).endLoad();
+            if(validationData != null) {
+                ((BufferedFloatMLDataSet) this.validationData).endLoad();
+            }
         } else {
             ((MemoryDiskFloatMLDataSet) this.trainingData).endLoad();
             ((MemoryDiskFloatMLDataSet) this.validationData).endLoad();
@@ -547,6 +601,8 @@ public abstract class AbstractNNWorker<VALUE extends Writable> extends
                 sampleWeights = 0f;
             }
         } else {
+            // bagging with replacement sampling in training data set, take PoissonDistribution for sampling with
+            // replacement
             if(this.isStratifiedSampling) {
                 PoissonDistribution rng = this.baggingRngMap.get(classValue);
                 if(rng == null) {
@@ -645,27 +701,50 @@ public abstract class AbstractNNWorker<VALUE extends Writable> extends
                     }
                 }
 
-                // for fix initial input, if hashcode% 100 over validRate * 100, training
-                // not fixed initial input, if random value >= validRate, training.
-                if((this.modelConfig.isFixInitialInput() && hashcode % 100 >= Double.valueOf(
-                        this.modelConfig.getValidSetRate() * 100).longValue())
-                        || (!this.modelConfig.isFixInitialInput() && random.nextDouble() >= this.modelConfig
-                                .getValidSetRate())) {
-                    this.trainingData.add(pair);
-                    if(isPositive(pair.getIdealArray()[0])) {
-                        this.positiveTrainCount += 1L;
+                if(this.modelConfig.isFixInitialInput()) {
+                    // for fix initial input, if hashcode%100 is in [start-hashcode, end-hashcode), validation,
+                    // otherwise training. start hashcode in different job is different to make sure bagging jobs have
+                    // different data. if end-hashcode is over 100, then check if hashcode is in [start-hashcode, 100]
+                    // or [0, end-hashcode]
+                    int startHashCode = (100 / this.modelConfig.getBaggingNum()) * this.trainerId;
+                    int endHashCode = startHashCode
+                            + Double.valueOf(this.modelConfig.getValidSetRate() * 100).intValue();
+                    if(isInRange(hashcode, startHashCode, endHashCode)) {
+                        this.validationData.add(pair);
+                        if(isPositive(pair.getIdealArray()[0])) {
+                            this.positiveValidationCount += 1L;
+                        } else {
+                            this.negativeValidationCount += 1L;
+                        }
+                        return false;
                     } else {
-                        this.negativeTrainCount += 1L;
+                        this.trainingData.add(pair);
+                        if(isPositive(pair.getIdealArray()[0])) {
+                            this.positiveTrainCount += 1L;
+                        } else {
+                            this.negativeTrainCount += 1L;
+                        }
+                        return true;
                     }
-                    return true;
                 } else {
-                    this.validationData.add(pair);
-                    if(isPositive(pair.getIdealArray()[0])) {
-                        this.positiveValidationCount += 1L;
+                    // not fixed initial input, if random value >= validRate, training, otherwise validation.
+                    if(random.nextDouble() >= this.modelConfig.getValidSetRate()) {
+                        this.trainingData.add(pair);
+                        if(isPositive(pair.getIdealArray()[0])) {
+                            this.positiveTrainCount += 1L;
+                        } else {
+                            this.negativeTrainCount += 1L;
+                        }
+                        return true;
                     } else {
-                        this.negativeValidationCount += 1L;
+                        this.validationData.add(pair);
+                        if(isPositive(pair.getIdealArray()[0])) {
+                            this.positiveValidationCount += 1L;
+                        } else {
+                            this.negativeValidationCount += 1L;
+                        }
+                        return false;
                     }
-                    return false;
                 }
             } else {
                 this.trainingData.add(pair);
@@ -676,6 +755,18 @@ public abstract class AbstractNNWorker<VALUE extends Writable> extends
                 }
                 return true;
             }
+        }
+    }
+
+    protected boolean isInRange(long hashcode, int startHashCode, int endHashCode) {
+        // check if in [start, end] or if in [start, 100) and [0, end-100)
+        int hashCodeIn100 = (int) hashcode % 100;
+        if(endHashCode <= 100) {
+            // in range [start, end)
+            return hashCodeIn100 >= startHashCode && hashCodeIn100 < endHashCode;
+        } else {
+            // in range [start, 100) or [0, endHashCode-100)
+            return hashCodeIn100 >= startHashCode || hashCodeIn100 < (endHashCode % 100);
         }
     }
 
@@ -705,7 +796,7 @@ public abstract class AbstractNNWorker<VALUE extends Writable> extends
         long size = trainingSize + testingSize;
         // here we used a strong cast from long to int since it's just a random choosing algorithm
         int next = RandomUtils.nextInt((int) size);
-        FloatMLDataPair dataPair = new BasicFloatMLDataPair(new BasicFloatMLData(new float[this.inputNodeCount]),
+        FloatMLDataPair dataPair = new BasicFloatMLDataPair(new BasicFloatMLData(new float[this.subFeatures.size()]),
                 new BasicFloatMLData(new float[this.outputNodeCount]));
         if(next >= trainingSize) {
             this.validationData.getRecord(next - trainingSize, dataPair);
@@ -717,18 +808,6 @@ public abstract class AbstractNNWorker<VALUE extends Writable> extends
             this.validationData.add(dataPair);
         } else {
             this.trainingData.add(dataPair);
-        }
-    }
-
-    /**
-     * Add data pair to data set according to random number compare with crossValidationRate.
-     */
-    @SuppressWarnings("unused")
-    private void addDataPairToDataSet(FloatMLDataPair pair, double crossValidationRate, double random) {
-        if(Double.compare(random, crossValidationRate) < 0) {
-            this.validationData.add(pair);
-        } else {
-            this.trainingData.add(pair);
         }
     }
 

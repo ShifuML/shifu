@@ -127,6 +127,10 @@ public class EvalConfig {
                                 ? dataSet.getDataDelimiter() : dataSet.getHeaderDelimiter();
                         scoreMetaColumns = CommonUtils.readConfFileIntoList(path, dataSet.getSource(), delimiter);
                     }
+
+                    if ( this.scoreMetaColumns == null ) {
+                        this.scoreMetaColumns = new ArrayList<String>();
+                    }
                 }
             }
         }
@@ -164,6 +168,10 @@ public class EvalConfig {
                         } else {
                             metaColumns = rawMetaColumns;
                         }
+                    }
+
+                    if ( this.metaColumns == null ) {
+                        this.metaColumns = new ArrayList<String>();
                     }
                 }
             }

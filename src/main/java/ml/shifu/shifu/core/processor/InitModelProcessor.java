@@ -39,6 +39,7 @@ import ml.shifu.shifu.util.CommonUtils;
 import ml.shifu.shifu.util.Constants;
 import ml.shifu.shifu.util.Environment;
 
+import ml.shifu.shifu.util.updater.ColumnConfigUpdater;
 import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.collections.Predicate;
 import org.apache.commons.compress.compressors.bzip2.BZip2CompressorInputStream;
@@ -75,7 +76,7 @@ public class InitModelProcessor extends BasicModelProcessor implements Processor
      * log object
      */
     private final static Logger log = LoggerFactory.getLogger(InitModelProcessor.class);
-
+    
     /**
      * runner for init the model
      * 
@@ -95,8 +96,7 @@ public class InitModelProcessor extends BasicModelProcessor implements Processor
                 return status;
             }
 
-            saveColumnConfigListAndColumnStats(false);
-
+            saveColumnConfigList();
             syncDataToHdfs(modelConfig.getDataSet().getSource());
 
             Map<Integer, Data> countInfoMap = null;
@@ -115,9 +115,9 @@ public class InitModelProcessor extends BasicModelProcessor implements Processor
                     log.info("Automatically check {} variables to categorical type.", cateCount);
                 }
             }
-            // save ColumnConfig list into file
-            saveColumnConfigListAndColumnStats(false);
 
+            // save ColumnConfig list into file
+            saveColumnConfigList();
             syncDataToHdfs(modelConfig.getDataSet().getSource());
 
             clearUp(ModelStep.INIT);
@@ -318,7 +318,7 @@ public class InitModelProcessor extends BasicModelProcessor implements Processor
         }
 
         conf.setBoolean(CombineInputFormat.SHIFU_VS_SPLIT_COMBINABLE, true);
-        conf.setBoolean(FileInputFormat.INPUT_DIR_RECURSIVE, true);
+        conf.setBoolean("mapreduce.input.fileinputformat.input.dir.recursive", true);
 
         // one can set guagua conf in shifuconfig
         for(Map.Entry<Object, Object> entry: Environment.getProperties().entrySet()) {
@@ -469,14 +469,15 @@ public class InitModelProcessor extends BasicModelProcessor implements Processor
             ColumnConfig config = new ColumnConfig();
             config.setColumnNum(i);
             if(isSchemaProvided) {
-                config.setColumnName(CommonUtils.getRelativePigHeaderColumnName(fields[i]));
+                // config.setColumnName(CommonUtils.getRelativePigHeaderColumnName(fields[i]));
+                config.setColumnName(fields[i]);
             } else {
                 config.setColumnName(i + "");
             }
             columnConfigList.add(config);
         }
 
-        CommonUtils.updateColumnConfigFlags(modelConfig, columnConfigList);
+        ColumnConfigUpdater.updateColumnConfigFlags(modelConfig, columnConfigList, ModelStep.INIT);
 
         boolean hasTarget = false;
         for(ColumnConfig config: columnConfigList) {

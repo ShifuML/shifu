@@ -16,6 +16,7 @@
 package ml.shifu.shifu.core.dtrain.dataset;
 
 import java.lang.reflect.Field;
+import java.util.Set;
 
 import ml.shifu.shifu.util.ClassUtils;
 
@@ -28,6 +29,8 @@ public class BasicFloatNetwork extends BasicNetwork {
 
     private static final long serialVersionUID = -3706149180110298454L;
 
+    private Set<Integer> featureSet;
+
     public BasicFloatNetwork() {
         Field field = ClassUtils.getDeclaredFieldIncludeSuper("structure", getClass());
         field.setAccessible(true);
@@ -36,5 +39,20 @@ public class BasicFloatNetwork extends BasicNetwork {
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
+    }
+
+    /**
+     * @return the featureSet
+     */
+    public Set<Integer> getFeatureSet() {
+        return featureSet;
+    }
+
+    /**
+     * @param featureSet
+     *            the featureSet to set
+     */
+    public void setFeatureSet(Set<Integer> featureSet) {
+        this.featureSet = featureSet;
     }
 }

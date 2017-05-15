@@ -155,14 +155,14 @@ public class PostTrainModelProcessor extends BasicModelProcessor implements Proc
 
         ShifuFileUtils.deleteFile(new Path(postTrainOutputPath, "part-r-00000*").toString(), source);
 
-        saveColumnConfigListAndColumnStats(false);
+        saveColumnConfigList();
 
         if(super.modelConfig.getBasic().getPostTrainOn() != null && super.modelConfig.getBasic().getPostTrainOn()) {
             syncDataToHdfs(modelConfig.getDataSet().getSource());
             String output = super.getPathFinder().getPostTrainOutputPath(source);
             runMRFeatureImportanceJob(source, output);
             List<Integer> fss = getFeatureImportance(source, output);
-            log.info("Feature importance: {}", fss);
+            log.info("Feature importance list is: {}", fss);
         }
     }
 
@@ -230,7 +230,7 @@ public class PostTrainModelProcessor extends BasicModelProcessor implements Proc
         new GenericOptionsParser(conf, new String[] { "-libjars", addRuntimeJars() });
 
         conf.setBoolean(CombineInputFormat.SHIFU_VS_SPLIT_COMBINABLE, true);
-        conf.setBoolean(FileInputFormat.INPUT_DIR_RECURSIVE, true);
+        conf.setBoolean("mapreduce.input.fileinputformat.input.dir.recursive", true);
 
         conf.set(Constants.SHIFU_STATS_EXLCUDE_MISSING,
                 Environment.getProperty(Constants.SHIFU_STATS_EXLCUDE_MISSING, "true"));
@@ -309,7 +309,7 @@ public class PostTrainModelProcessor extends BasicModelProcessor implements Proc
         new GenericOptionsParser(conf, new String[] { "-libjars", addRuntimeJars() });
 
         conf.setBoolean(CombineInputFormat.SHIFU_VS_SPLIT_COMBINABLE, true);
-        conf.setBoolean(FileInputFormat.INPUT_DIR_RECURSIVE, true);
+        conf.setBoolean("mapreduce.input.fileinputformat.input.dir.recursive", true);
 
         conf.set(Constants.SHIFU_STATS_EXLCUDE_MISSING,
                 Environment.getProperty(Constants.SHIFU_STATS_EXLCUDE_MISSING, "true"));
@@ -408,7 +408,7 @@ public class PostTrainModelProcessor extends BasicModelProcessor implements Proc
 
         // Sync Down
         columnConfigList = updateColumnConfigWithBinAvgScore(columnConfigList);
-        saveColumnConfigListAndColumnStats(false);
+        saveColumnConfigList();
     }
 
     /**
