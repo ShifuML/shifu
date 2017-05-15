@@ -21,12 +21,14 @@ import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.container.obj.EvalConfig;
 import ml.shifu.shifu.container.obj.ModelConfig;
 import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
+import ml.shifu.shifu.core.model.ModelSpec;
 import ml.shifu.shifu.fs.PathFinder;
 import ml.shifu.shifu.fs.ShifuFileUtils;
 import ml.shifu.shifu.message.EvalResultMessage;
 import ml.shifu.shifu.message.RunModelResultMessage;
 import ml.shifu.shifu.util.CommonUtils;
 import org.apache.commons.collections.CollectionUtils;
+import org.apache.commons.collections.MapUtils;
 import org.apache.commons.lang.StringUtils;
 import org.encog.ml.BasicML;
 import org.slf4j.Logger;
@@ -34,10 +36,7 @@ import org.slf4j.LoggerFactory;
 
 import java.io.BufferedWriter;
 import java.io.IOException;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.Map.Entry;
 
 /**
@@ -55,6 +54,7 @@ public class ScoreModelWorker extends AbstractWorkerActor {
     // private Reasoner reasoner;
     private int receivedStreamCnt;
     private Map<Integer, StreamBulletin> resultMap;
+    private Map<String, Integer> subModelsCnt;
 
     public ScoreModelWorker(ModelConfig modelConfig, List<ColumnConfig> columnConfigList, ActorRef parentActorRef,
             ActorRef nextActorRef, EvalConfig evalConfig) throws IOException {
@@ -77,10 +77,20 @@ public class ScoreModelWorker extends AbstractWorkerActor {
         // load the header for evaluation data
         header = CommonUtils.getFinalHeaders(evalConfig);
 
-        writeScoreHeader();
-
         receivedStreamCnt = 0;
         resultMap = new HashMap<Integer, StreamBulletin>();
+
+        subModelsCnt = new TreeMap<String, Integer>();
+        List<ModelSpec> subModels = CommonUtils.loadSubModels(modelConfig, this.columnConfigList, evalConfig,
+                evalConfig.getDataSet().getSource(), evalConfig.getGbtConvertToProb());
+        if(CollectionUtils.isNotEmpty(subModels)) {
+            for(ModelSpec modelSpec: subModels) {
+                System.out.println("get sub model " + modelSpec.getModelName() + "|" + modelSpec.getModels().size());
+                subModelsCnt.put(modelSpec.getModelName(), modelSpec.getModels().size());
+            }
+        }
+
+        writeScoreHeader();
     }
 
     /*
@@ -120,14 +130,18 @@ public class ScoreModelWorker extends AbstractWorkerActor {
                     buf.append("|" + "1.0");
                 }
 
-                buf.append("|" + csResult.getAvgScore());
-                buf.append("|" + csResult.getMaxScore());
-                buf.append("|" + csResult.getMinScore());
-                buf.append("|" + csResult.getMedianScore());
+                if ( CollectionUtils.isNotEmpty(csResult.getScores()) ) {
+                    addModelScoreData(buf, csResult);
+                }
 
-                // score
-                for(Integer score: csResult.getScores()) {
-                    buf.append("|" + score);
+                Map<String, CaseScoreResult> subModelScores = csResult.getSubModelScores();
+                if ( MapUtils.isNotEmpty(subModelScores) ) {
+                    Iterator<Map.Entry<String, CaseScoreResult>> iterator = subModelScores.entrySet().iterator();
+                    while(iterator.hasNext()) {
+                        Map.Entry<String, CaseScoreResult> entry = iterator.next();
+                        CaseScoreResult subCs = entry.getValue();
+                        addModelScoreData(buf, subCs);
+                    }
                 }
 
                 // append meta data
@@ -166,6 +180,18 @@ public class ScoreModelWorker extends AbstractWorkerActor {
         return true;
     }
 
+    private void addModelScoreData(StringBuilder buf, CaseScoreResult cs) {
+        buf.append("|" + cs.getAvgScore());
+        buf.append("|" + cs.getMaxScore());
+        buf.append("|" + cs.getMinScore());
+        buf.append("|" + cs.getMedianScore());
+
+        // score
+        for (Double score : cs.getScores()) {
+            buf.append("|" + score);
+        }
+    }
+
     /**
      * Write the file header for score file
      * 
@@ -177,15 +203,24 @@ public class ScoreModelWorker extends AbstractWorkerActor {
         buf.append(modelConfig.getTargetColumnName(evalConfig) == null ? "tag" : modelConfig
                 .getTargetColumnName(evalConfig));
 
-        buf.append("|"
-                + (StringUtils.isBlank(evalConfig.getDataSet().getWeightColumnName()) ? "weight" : evalConfig
-                        .getDataSet().getWeightColumnName()));
+        buf.append("|" + (StringUtils.isBlank(evalConfig.getDataSet().getWeightColumnName())
+                ? "weight" : evalConfig.getDataSet().getWeightColumnName()));
 
-        buf.append("|mean|max|min|median");
+        List<BasicML> models = CommonUtils.loadBasicModels(modelConfig, evalConfig, SourceType.LOCAL);
+        if ( CollectionUtils.isNotEmpty(models) ) {
+            addModelScoreHeader(buf, models.size(), "");
+        }
 
-        List<BasicML> models = CommonUtils.loadBasicModels(modelConfig, columnConfigList, evalConfig, SourceType.LOCAL);
-        for(int i = 0; i < models.size(); i++) {
-            buf.append("|model" + i);
+        if(MapUtils.isNotEmpty(this.subModelsCnt)) {
+            Iterator<Map.Entry<String, Integer>> iterator = this.subModelsCnt.entrySet().iterator();
+            while(iterator.hasNext()) {
+                Map.Entry<String, Integer> entry = iterator.next();
+                String modelName = entry.getKey();
+                Integer smCnt = entry.getValue();
+                if(smCnt > 0) {
+                    addModelScoreHeader(buf, smCnt, modelName);
+                }
+            }
         }
 
         // append meta data
@@ -197,6 +232,20 @@ public class ScoreModelWorker extends AbstractWorkerActor {
         }
 
         scoreWriter.write(buf.toString() + "\n");
+    }
+
+    private void addModelScoreHeader(StringBuilder buf, Integer modelCnt, String modelName) {
+        buf.append("|" + addModelNameAsNS(modelName, "mean"));
+        buf.append("|" + addModelNameAsNS(modelName, "max"));
+        buf.append("|" + addModelNameAsNS(modelName, "min"));
+        buf.append("|" + addModelNameAsNS(modelName, "median"));
+        for (int i = 0; i < modelCnt; i++) {
+            buf.append("|" + addModelNameAsNS(modelName, "model" + i));
+        }
+    }
+
+    private String addModelNameAsNS(String modelName, String scoreName) {
+        return (StringUtils.isBlank(modelName) ? scoreName : modelName + "::" + scoreName);
     }
 
     public static class StreamBulletin {

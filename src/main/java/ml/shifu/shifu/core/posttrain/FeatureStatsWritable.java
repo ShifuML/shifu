@@ -31,10 +31,10 @@ import org.apache.hadoop.io.Writable;
 public class FeatureStatsWritable implements Writable {
 
     public static class BinStats {
-        private long binSum;
+        private double binSum;
         private long binCnt;
 
-        public BinStats(long binSum, long binCnt) {
+        public BinStats(double binSum, long binCnt) {
             this.setBinSum(binSum);
             this.setBinCnt(binCnt);
         }
@@ -42,7 +42,7 @@ public class FeatureStatsWritable implements Writable {
         /**
          * @return the binSum
          */
-        public long getBinSum() {
+        public double getBinSum() {
             return binSum;
         }
 
@@ -50,7 +50,7 @@ public class FeatureStatsWritable implements Writable {
          * @param binSum
          *            the binSum to set
          */
-        public void setBinSum(long binSum) {
+        public void setBinSum(double binSum) {
             this.binSum = binSum;
         }
 
@@ -101,7 +101,7 @@ public class FeatureStatsWritable implements Writable {
         } else {
             out.writeInt(binStats.size());
             for(BinStats bin: binStats) {
-                out.writeLong(bin.getBinSum());
+                out.writeDouble(bin.getBinSum());
                 out.writeLong(bin.getBinCnt());
             }
         }
@@ -112,7 +112,7 @@ public class FeatureStatsWritable implements Writable {
         int len = in.readInt();
         this.binStats = new ArrayList<FeatureStatsWritable.BinStats>(len);
         for(int i = 0; i < len; i++) {
-            this.binStats.add(new BinStats(in.readLong(), in.readLong()));
+            this.binStats.add(new BinStats(in.readDouble(), in.readLong()));
         }
     }
 

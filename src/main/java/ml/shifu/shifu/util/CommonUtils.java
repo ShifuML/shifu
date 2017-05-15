@@ -19,6 +19,8 @@ import com.google.common.base.Function;
 import com.google.common.base.Splitter;
 import com.google.common.collect.Collections2;
 import com.google.common.collect.Lists;
+import ml.shifu.shifu.column.NSColumn;
+import ml.shifu.shifu.column.NSColumnUtils;
 import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.container.obj.ColumnConfig.ColumnFlag;
 import ml.shifu.shifu.container.obj.ColumnConfig.ColumnType;
@@ -79,7 +81,8 @@ public final class CommonUtils {
      * 
      * @param modelConfig
      *            the model config
-     * 
+     * @param pathFinder
+     *            the path finder to locate file
      * @return if copy successful
      * 
      * @throws IOException
@@ -88,11 +91,9 @@ public final class CommonUtils {
      * @throws NullPointerException
      *             If parameter {@code modelConfig} is null
      */
-    public static boolean copyConfFromLocalToHDFS(ModelConfig modelConfig) throws IOException {
+    public static boolean copyConfFromLocalToHDFS(ModelConfig modelConfig, PathFinder pathFinder) throws IOException {
         FileSystem hdfs = HDFSUtils.getFS();
         FileSystem localFs = HDFSUtils.getLocalFS();
-
-        PathFinder pathFinder = new PathFinder(modelConfig);
 
         Path pathModelSet = new Path(pathFinder.getModelSetPath(SourceType.HDFS));
         // don't check whether pathModelSet is exists, should be remove by user.
@@ -142,9 +143,13 @@ public final class CommonUtils {
 
     /**
      * Sync-up the evalulation data into HDFS
-     * @param modelConfig - ModelConfig
-     * @param evalName eval name in ModelConfig
-     * @throws IOException - error occur when copying data
+     * 
+     * @param modelConfig
+     *            - ModelConfig
+     * @param evalName
+     *            eval name in ModelConfig
+     * @throws IOException
+     *             - error occur when copying data
      */
     @SuppressWarnings("deprecation")
     public static void copyEvalDataFromLocalToHDFS(ModelConfig modelConfig, String evalName) throws IOException {
@@ -168,10 +173,18 @@ public final class CommonUtils {
             }
 
             // sync evaluation meta.column.file to hdfs
-            if( StringUtils.isNotBlank(evalConfig.getDataSet().getMetaColumnNameFile()) ) {
+            if(StringUtils.isNotBlank(evalConfig.getDataSet().getMetaColumnNameFile())) {
                 hdfs.copyFromLocalFile(new Path(evalConfig.getDataSet().getMetaColumnNameFile()),
                         new Path(pathFinder.getEvalSetPath(evalConfig)));
             }
+        }
+    }
+
+    public static String getLocalModelSetPath(Map<String, Object> otherConfigs) {
+        if(otherConfigs != null && otherConfigs.get(Constants.SHIFU_CURRENT_WORKING_DIR) != null) {
+            return new Path(otherConfigs.get(Constants.SHIFU_CURRENT_WORKING_DIR).toString()).toString();
+        } else {
+            return ".";
         }
     }
 
@@ -457,12 +470,14 @@ public final class CommonUtils {
         Set<String> headerSet = new HashSet<String>();
         int index = 0;
         for(String str: Splitter.on(delimiter).split(pigHeaderStr)) {
-            String columnName;
-            if(isFull) {
-                columnName = getFullPigHeaderColumnName(str);
-            } else {
-                columnName = getRelativePigHeaderColumnName(str);
-            }
+            String columnName = StringUtils.trimToEmpty(str);
+            /*
+             * if(isFull) {
+             * columnName = getFullPigHeaderColumnName(str);
+             * } else {
+             * columnName = getRelativePigHeaderColumnName(str);
+             * }
+             */
 
             if(headerSet.contains(columnName)) {
                 columnName = columnName + "_" + index;
@@ -518,7 +533,7 @@ public final class CommonUtils {
         if(columnConfig.isCategorical()) {
             List<String> binCategories = columnConfig.getBinCategory();
             for(int i = 0; i < binCategories.size(); i++) {
-                if(binCategories.get(i).equals(columnVal)) {
+                if(isCategoricalBinValue(binCategories.get(i), columnVal)) {
                     return i;
                 }
             }
@@ -535,6 +550,19 @@ public final class CommonUtils {
             }
             return getBinIndex(columnConfig.getBinBoundary(), dval);
         }
+    }
+
+    /**
+     * Check some categorical value is in the categorical value group or not
+     * 
+     * @param binVal
+     *            - categorical value group, the format is lik cn^us^uk^jp
+     * @param cval
+     *            - categorical value to look up
+     * @return true if the categorical value exists in group, else false
+     */
+    public static boolean isCategoricalBinValue(String binVal, String cval) {
+        return binVal.equals(cval) ? true : CommonUtils.flattenCatValGrp(binVal).contains(cval);
     }
 
     /**
@@ -657,12 +685,12 @@ public final class CommonUtils {
                 || (!Constants.NN.equalsIgnoreCase(modelConfig.getAlgorithm())
                         && !Constants.SVM.equalsIgnoreCase(modelConfig.getAlgorithm())
                         && !Constants.LR.equalsIgnoreCase(modelConfig.getAlgorithm()) && !CommonUtils
-                            .isDesicionTreeAlgorithm(modelConfig.getAlgorithm()))) {
+                            .isTreeModel(modelConfig.getAlgorithm()))) {
             throw new IllegalArgumentException(modelConfig == null ? "modelConfig is null." : String.format(
                     " invalid model algorithm %s.", modelConfig.getAlgorithm()));
         }
 
-        return loadBasicModels(modelConfig, columnConfigList, evalConfig, modelConfig.getDataSet().getSource());
+        return loadBasicModels(modelConfig, evalConfig, modelConfig.getDataSet().getSource());
     }
 
     /**
@@ -699,15 +727,15 @@ public final class CommonUtils {
         return low == 0 ? 0 : low - 1;
     }
 
-    public static List<BasicML> loadBasicModels(ModelConfig modelConfig, List<ColumnConfig> columnConfigList,
-            EvalConfig evalConfig, SourceType sourceType) throws IOException {
+    public static List<BasicML> loadBasicModels(ModelConfig modelConfig, EvalConfig evalConfig, SourceType sourceType)
+            throws IOException {
         List<BasicML> models = new ArrayList<BasicML>();
         FileSystem fs = ShifuFileUtils.getFileSystemBySourceType(sourceType);
 
-        List<FileStatus> modelFileStats = locateBasicModels(modelConfig, columnConfigList, evalConfig, sourceType);
+        List<FileStatus> modelFileStats = locateBasicModels(modelConfig, evalConfig, sourceType);
         if(CollectionUtils.isNotEmpty(modelFileStats)) {
             for(FileStatus f: modelFileStats) {
-                models.add(loadModel(modelConfig, columnConfigList, f.getPath(), fs));
+                models.add(loadModel(modelConfig, f.getPath(), fs));
             }
         }
 
@@ -719,8 +747,6 @@ public final class CommonUtils {
      * 
      * @param modelConfig
      *            model config
-     * @param columnConfigList
-     *            list of column config
      * @param evalConfig
      *            eval confg
      * @param sourceType
@@ -737,29 +763,29 @@ public final class CommonUtils {
      * @throws IllegalStateException
      *             if not HDFS or LOCAL source type or algorithm not supported.
      */
-    public static List<BasicML> loadBasicModels(ModelConfig modelConfig, List<ColumnConfig> columnConfigList,
-            EvalConfig evalConfig, SourceType sourceType, boolean gbtConvertToProb) throws IOException {
+    public static List<BasicML> loadBasicModels(ModelConfig modelConfig, EvalConfig evalConfig, SourceType sourceType,
+            boolean gbtConvertToProb) throws IOException {
         List<BasicML> models = new ArrayList<BasicML>();
         FileSystem fs = ShifuFileUtils.getFileSystemBySourceType(sourceType);
 
-        List<FileStatus> modelFileStats = locateBasicModels(modelConfig, columnConfigList, evalConfig, sourceType);
+        List<FileStatus> modelFileStats = locateBasicModels(modelConfig, evalConfig, sourceType);
         if(CollectionUtils.isNotEmpty(modelFileStats)) {
             for(FileStatus f: modelFileStats) {
-                models.add(loadModel(modelConfig, columnConfigList, f.getPath(), fs, gbtConvertToProb));
+                models.add(loadModel(modelConfig, f.getPath(), fs, gbtConvertToProb));
             }
         }
 
         return models;
     }
 
-    public static int getBasicModelsCnt(ModelConfig modelConfig, List<ColumnConfig> columnConfigList,
-            EvalConfig evalConfig, SourceType sourceType) throws IOException {
-        List<FileStatus> modelFileStats = locateBasicModels(modelConfig, columnConfigList, evalConfig, sourceType);
+    public static int getBasicModelsCnt(ModelConfig modelConfig, EvalConfig evalConfig, SourceType sourceType)
+            throws IOException {
+        List<FileStatus> modelFileStats = locateBasicModels(modelConfig, evalConfig, sourceType);
         return (CollectionUtils.isEmpty(modelFileStats) ? 0 : modelFileStats.size());
     }
 
-    public static List<FileStatus> locateBasicModels(ModelConfig modelConfig, List<ColumnConfig> columnConfigList,
-            EvalConfig evalConfig, SourceType sourceType) throws IOException {
+    public static List<FileStatus> locateBasicModels(ModelConfig modelConfig, EvalConfig evalConfig,
+            SourceType sourceType) throws IOException {
         // we have to register PersistBasicFloatNetwork for loading such models
         PersistorRegistry.getInstance().add(new PersistBasicFloatNetwork());
 
@@ -788,9 +814,8 @@ public final class CommonUtils {
         return listStatus;
     }
 
-    public static BasicML loadModel(ModelConfig modelConfig, List<ColumnConfig> columnConfigList, Path modelPath,
-            FileSystem fs) throws IOException {
-        return loadModel(modelConfig, columnConfigList, modelPath, fs, false);
+    public static BasicML loadModel(ModelConfig modelConfig, Path modelPath, FileSystem fs) throws IOException {
+        return loadModel(modelConfig, modelPath, fs, false);
     }
 
     /**
@@ -798,8 +823,6 @@ public final class CommonUtils {
      * 
      * @param modelConfig
      *            model config
-     * @param columnConfigList
-     *            list of column config
      * @param modelPath
      *            the path to store model
      * @param fs
@@ -811,8 +834,8 @@ public final class CommonUtils {
      * @throws IOException
      *             if loading file for any IOException
      */
-    public static BasicML loadModel(ModelConfig modelConfig, List<ColumnConfig> columnConfigList, Path modelPath,
-            FileSystem fs, boolean gbtConvertToProb) throws IOException {
+    public static BasicML loadModel(ModelConfig modelConfig, Path modelPath, FileSystem fs, boolean gbtConvertToProb)
+            throws IOException {
         if(!fs.exists(modelPath)) {
             // no such existing model, return null.
             return null;
@@ -891,6 +914,7 @@ public final class CommonUtils {
         return fileList;
     }
 
+    @SuppressWarnings("deprecation")
     public static List<ModelSpec> loadSubModels(ModelConfig modelConfig, List<ColumnConfig> columnConfigList,
             EvalConfig evalConfig, SourceType sourceType, Boolean gbtConvertToProb) {
         List<ModelSpec> modelSpecs = new ArrayList<ModelSpec>();
@@ -910,7 +934,7 @@ public final class CommonUtils {
         try {
             FileStatus[] fsArr = fs.listStatus(new Path(modelsPath));
             for(FileStatus fileStatus: fsArr) {
-                if(fileStatus.isDirectory()) {
+                if(fileStatus.isDir()) {
                     ModelSpec modelSpec = loadSubModelSpec(modelConfig, columnConfigList, fileStatus, sourceType,
                             gbtConvertToProb);
                     if(modelSpec != null) {
@@ -931,7 +955,8 @@ public final class CommonUtils {
 
         String subModelName = fileStatus.getPath().getName();
         List<FileStatus> modelFileStats = new ArrayList<FileStatus>();
-        ALGORITHM algorithm = getModelsAlgAndSpecFiles(fileStatus, sourceType, modelFileStats);
+        FileStatus[] subConfigs = new FileStatus[2];
+        ALGORITHM algorithm = getModelsAlgAndSpecFiles(fileStatus, sourceType, modelFileStats, subConfigs);
 
         ModelSpec modelSpec = null;
         if(CollectionUtils.isNotEmpty(modelFileStats)) {
@@ -943,16 +968,27 @@ public final class CommonUtils {
             });
             List<BasicML> models = new ArrayList<BasicML>();
             for(FileStatus f: modelFileStats) {
-                models.add(loadModel(modelConfig, columnConfigList, f.getPath(), fs, gbtConvertToProb));
+                models.add(loadModel(modelConfig, f.getPath(), fs, gbtConvertToProb));
             }
-            modelSpec = new ModelSpec(subModelName, algorithm, models);
+
+            ModelConfig subModelConfig = modelConfig;
+            if(subConfigs[0] != null) {
+                subModelConfig = CommonUtils.loadModelConfig(subConfigs[0].getPath().toString(), sourceType);
+            }
+            List<ColumnConfig> subColumnConfigList = columnConfigList;
+            if(subConfigs[1] != null) {
+                subColumnConfigList = CommonUtils.loadColumnConfigList(subConfigs[1].getPath().toString(), sourceType);
+            }
+
+            modelSpec = new ModelSpec(subModelName, subModelConfig, subColumnConfigList, algorithm, models);
         }
 
         return modelSpec;
     }
 
+    @SuppressWarnings("deprecation")
     public static ALGORITHM getModelsAlgAndSpecFiles(FileStatus fileStatus, SourceType sourceType,
-            List<FileStatus> modelFileStats) throws IOException {
+            List<FileStatus> modelFileStats, FileStatus[] subConfigs) throws IOException {
         assert modelFileStats != null;
 
         FileSystem fs = ShifuFileUtils.getFileSystemBySourceType(sourceType);
@@ -961,7 +997,7 @@ public final class CommonUtils {
         FileStatus[] fileStatsArr = fs.listStatus(fileStatus.getPath());
         if(fileStatsArr != null) {
             for(FileStatus fls: fileStatsArr) {
-                if(!fls.isDirectory()) {
+                if(!fls.isDir()) {
                     String fileName = fls.getPath().getName();
 
                     if(algorithm == null) {
@@ -977,6 +1013,12 @@ public final class CommonUtils {
                     if(algorithm != null && fileName.endsWith("." + algorithm.name().toLowerCase())) {
                         modelFileStats.add(fls);
                     }
+
+                    if(fileName.equalsIgnoreCase(Constants.MODEL_CONFIG_JSON_FILE_NAME)) {
+                        subConfigs[0] = fls;
+                    } else if(fileName.equalsIgnoreCase(Constants.COLUMN_CONFIG_JSON_FILE_NAME)) {
+                        subConfigs[1] = fls;
+                    }
                 }
             }
         }
@@ -984,6 +1026,7 @@ public final class CommonUtils {
         return algorithm;
     }
 
+    @SuppressWarnings("deprecation")
     public static Map<String, Integer> getSubModelsCnt(ModelConfig modelConfig, List<ColumnConfig> columnConfigList,
             EvalConfig evalConfig, SourceType sourceType) throws IOException {
         FileSystem fs = ShifuFileUtils.getFileSystemBySourceType(sourceType);
@@ -1002,9 +1045,9 @@ public final class CommonUtils {
         try {
             FileStatus[] fsArr = fs.listStatus(new Path(modelsPath));
             for(FileStatus fileStatus: fsArr) {
-                if(fileStatus.isDirectory()) {
+                if(fileStatus.isDir()) {
                     List<FileStatus> subModelSpecFiles = new ArrayList<FileStatus>();
-                    getModelsAlgAndSpecFiles(fileStatus, sourceType, subModelSpecFiles);
+                    getModelsAlgAndSpecFiles(fileStatus, sourceType, subModelSpecFiles, new FileStatus[2]);
                     if(CollectionUtils.isNotEmpty(subModelSpecFiles)) {
                         subModelsCnt.put(fileStatus.getPath().getName(), subModelSpecFiles.size());
                     }
@@ -1102,9 +1145,11 @@ public final class CommonUtils {
     /**
      * Return one HashMap Object contains keys in the first parameter, values in the second parameter. Before calling
      * this method, you should be aware that headers should be unique.
-     *
-     * @param header - header that contains column name
-     * @param data - raw data
+     * 
+     * @param header
+     *            - header that contains column name
+     * @param data
+     *            - raw data
      * @return key-value map for variable
      */
     public static Map<String, String> getRawDataMap(String[] header, String[] data) {
@@ -1365,6 +1410,8 @@ public final class CommonUtils {
      *            raw data
      * @param cutoff
      *            cut off value
+     * @param alg
+     *            algorithm used in model
      * @return data pair instance
      * @throws NullPointerException
      *             if input is null
@@ -1373,7 +1420,38 @@ public final class CommonUtils {
      */
     public static MLDataPair assembleDataPair(Map<Integer, Map<String, Integer>> binCategoryMap, boolean noVarSel,
             ModelConfig modelConfig, List<ColumnConfig> columnConfigList, Map<String, ? extends Object> rawDataMap,
-            double cutoff) {
+            double cutoff, String alg) {
+        return assembleNsDataPair(binCategoryMap, noVarSel, modelConfig, columnConfigList,
+                convertRawObjectMapToNsDataMap(rawDataMap), cutoff, alg);
+    }
+
+    /**
+     * Assemble map data to Encog standard input format. If no variable selected(noVarSel = true), all candidate
+     * variables will be selected.
+     * 
+     * @param binCategoryMap
+     *            categorical map
+     * @param noVarSel
+     *            if after var select
+     * @param modelConfig
+     *            model config instance
+     * @param columnConfigList
+     *            column config list
+     * @param rawNsDataMap
+     *            raw NSColumn data
+     * @param cutoff
+     *            cut off value
+     * @param alg
+     *            algorithm used in model
+     * @return data pair instance
+     * @throws NullPointerException
+     *             if input is null
+     * @throws NumberFormatException
+     *             if column value is not number format.
+     */
+    public static MLDataPair assembleNsDataPair(Map<Integer, Map<String, Integer>> binCategoryMap, boolean noVarSel,
+            ModelConfig modelConfig, List<ColumnConfig> columnConfigList, Map<NSColumn, String> rawNsDataMap,
+            double cutoff, String alg) {
         double[] ideal = { Constants.DEFAULT_IDEAL_VALUE };
 
         List<Double> inputList = new ArrayList<Double>();
@@ -1381,8 +1459,8 @@ public final class CommonUtils {
             if(config == null) {
                 continue;
             }
-            String key = config.getColumnName();
-            if(config.isFinalSelect() && !rawDataMap.containsKey(key)) {
+            NSColumn key = new NSColumn(config.getColumnName());
+            if(config.isFinalSelect() && !rawNsDataMap.containsKey(key)) {
                 throw new IllegalStateException(String.format("Variable Missing in Test Data: %s", key));
             }
 
@@ -1391,8 +1469,8 @@ public final class CommonUtils {
             } else {
                 if(!noVarSel) {
                     if(config != null && !config.isMeta() && !config.isTarget() && config.isFinalSelect()) {
-                        String val = rawDataMap.get(key) == null ? null : rawDataMap.get(key).toString();
-                        if(CommonUtils.isDesicionTreeAlgorithm(modelConfig.getAlgorithm()) && config.isCategorical()) {
+                        String val = rawNsDataMap.get(key) == null ? null : rawNsDataMap.get(key).toString();
+                        if(CommonUtils.isTreeModel(alg) && config.isCategorical()) {
                             Integer index = binCategoryMap.get(config.getColumnNum()).get(val == null ? "" : val);
                             if(index == null) {
                                 // not in binCategories, should be missing value
@@ -1407,8 +1485,8 @@ public final class CommonUtils {
                     }
                 } else {
                     if(!config.isMeta() && !config.isTarget() && CommonUtils.isGoodCandidate(config)) {
-                        String val = rawDataMap.get(key) == null ? null : rawDataMap.get(key).toString();
-                        if(CommonUtils.isDesicionTreeAlgorithm(modelConfig.getAlgorithm()) && config.isCategorical()) {
+                        String val = rawNsDataMap.get(key) == null ? null : rawNsDataMap.get(key).toString();
+                        if(CommonUtils.isTreeModel(alg) && config.isCategorical()) {
                             Integer index = binCategoryMap.get(config.getColumnNum()).get(val == null ? "" : val);
                             if(index == null) {
                                 // not in binCategories, should be missing value
@@ -1435,10 +1513,111 @@ public final class CommonUtils {
         return new BasicMLDataPair(new BasicMLData(input), new BasicMLData(ideal));
     }
 
+    /**
+     * Assemble map data to Encog standard input format. If no variable selected(noVarSel = true), all candidate
+     * variables will be selected.
+     * 
+     * @param binCategoryMap
+     *            categorical map
+     * @param noVarSel
+     *            if after var select
+     * @param modelConfig
+     *            model config instance
+     * @param columnConfigList
+     *            column config list
+     * @param rawNsDataMap
+     *            raw NSColumn data
+     * @param cutoff
+     *            cut off value
+     * @param alg
+     *            algorithm used in model
+     * @param featureSet
+     *            feature set used in NN model
+     * @return data pair instance
+     * @throws NullPointerException
+     *             if input is null
+     * @throws NumberFormatException
+     *             if column value is not number format.
+     */
+    public static MLDataPair assembleNsDataPair(Map<Integer, Map<String, Integer>> binCategoryMap, boolean noVarSel,
+            ModelConfig modelConfig, List<ColumnConfig> columnConfigList, Map<NSColumn, String> rawNsDataMap,
+            double cutoff, String alg, Set<Integer> featureSet) {
+        if(featureSet == null || featureSet.size() == 0) {
+            return assembleNsDataPair(binCategoryMap, noVarSel, modelConfig, columnConfigList, rawNsDataMap, cutoff,
+                    alg);
+        }
+        double[] ideal = { Constants.DEFAULT_IDEAL_VALUE };
+
+        List<Double> inputList = new ArrayList<Double>();
+        for(ColumnConfig config: columnConfigList) {
+            if(config == null) {
+                continue;
+            }
+            NSColumn key = new NSColumn(config.getColumnName());
+            if(config.isFinalSelect() && !rawNsDataMap.containsKey(key)) {
+                throw new IllegalStateException(String.format("Variable Missing in Test Data: %s", key));
+            }
+
+            if(config.isTarget()) {
+                continue;
+            } else {
+                if(featureSet.contains(config.getColumnNum())) {
+                    String val = rawNsDataMap.get(key) == null ? null : rawNsDataMap.get(key).toString();
+                    if(CommonUtils.isTreeModel(alg) && config.isCategorical()) {
+                        Integer index = binCategoryMap.get(config.getColumnNum()).get(val == null ? "" : val);
+                        if(index == null) {
+                            // not in binCategories, should be missing value -1 as missing value
+                            inputList.add(-1d);
+                        } else {
+                            inputList.add(index * 1d);
+                        }
+                    } else {
+                        inputList.add(computeNumericNormResult(modelConfig, cutoff, config, val));
+                    }
+                }
+            }
+        }
+
+        // god, Double [] cannot be casted to double[], toArray doesn't work
+        int size = inputList.size();
+        double[] input = new double[size];
+        for(int i = 0; i < size; i++) {
+            input[i] = inputList.get(i);
+        }
+
+        return new BasicMLDataPair(new BasicMLData(input), new BasicMLData(ideal));
+    }
+
+    public static List<Integer> getAllFeatureList(List<ColumnConfig> columnConfigList, boolean isAfterVarSelect) {
+        List<Integer> features = new ArrayList<Integer>();
+        for(ColumnConfig config: columnConfigList) {
+            if(isAfterVarSelect) {
+                if(config.isFinalSelect() && !config.isTarget() && !config.isMeta()) {
+                    // only select numerical feature with getBinBoundary().size() larger than 1
+                    // or categorical feature with getBinCategory().size() larger than 0
+                    if((config.isNumerical() && config.getBinBoundary().size() > 1)
+                            || (config.isCategorical() && config.getBinCategory().size() > 0)) {
+                        features.add(config.getColumnNum());
+                    }
+                }
+            } else {
+                if(!config.isMeta() && !config.isTarget() && CommonUtils.isGoodCandidate(config)) {
+                    // only select numerical feature with getBinBoundary().size() larger than 1
+                    // or categorical feature with getBinCategory().size() larger than 0
+                    if((config.isNumerical() && config.getBinBoundary().size() > 1)
+                            || (config.isCategorical() && config.getBinCategory().size() > 0)) {
+                        features.add(config.getColumnNum());
+                    }
+                }
+            }
+        }
+        return features;
+    }
+
     private static double computeNumericNormResult(ModelConfig modelConfig, double cutoff, ColumnConfig config,
             String val) {
         Double normalizeValue = null;
-        if(CommonUtils.isDesicionTreeAlgorithm(modelConfig.getAlgorithm())) {
+        if(CommonUtils.isTreeModel(modelConfig.getAlgorithm())) {
             try {
                 normalizeValue = Double.parseDouble(val);
             } catch (Exception e) {
@@ -1450,8 +1629,16 @@ public final class CommonUtils {
         return normalizeValue;
     }
 
-    public static boolean isDesicionTreeAlgorithm(String alg) {
+    public static boolean isTreeModel(String alg) {
         return CommonConstants.RF_ALG_NAME.equalsIgnoreCase(alg) || CommonConstants.GBT_ALG_NAME.equalsIgnoreCase(alg);
+    }
+
+    public static boolean isRandomForestAlgorithm(String alg) {
+        return CommonConstants.RF_ALG_NAME.equalsIgnoreCase(alg);
+    }
+
+    public static boolean isGBDTAlgorithm(String alg) {
+        return CommonConstants.GBT_ALG_NAME.equalsIgnoreCase(alg);
     }
 
     public static boolean isHadoopConfigurationInjected(String key) {
@@ -1462,27 +1649,32 @@ public final class CommonUtils {
 
     /**
      * Assemble map data to Encog standard input format.
-     *
+     * 
      * @param modelConfig
-     *          - ModelConfig
+     *            - ModelConfig
      * @param columnConfigList
-     *          - ColumnConfig list
+     *            - ColumnConfig list
      * @param rawDataMap
-     *          - raw input key-value map
+     *            - raw input key-value map
      * @param cutoff
-     *          - cutoff value when normalization
+     *            - cutoff value when normalization
      * @return
-     *          - input data pair for neural network
+     *         - input data pair for neural network
      */
     public static MLDataPair assembleDataPair(ModelConfig modelConfig, List<ColumnConfig> columnConfigList,
             Map<String, ? extends Object> rawDataMap, double cutoff) {
+        Map<NSColumn, Object> nsDataMap = new HashMap<NSColumn, Object>();
+        for(Entry<String, ? extends Object> entry: rawDataMap.entrySet()) {
+            nsDataMap.put(new NSColumn(entry.getKey()), entry.getValue());
+        }
+
         // if the tag is provided, ideal will be updated; otherwise it defaults to -1
         double[] ideal = { Constants.DEFAULT_IDEAL_VALUE };
 
         List<Double> inputList = new ArrayList<Double>();
         for(ColumnConfig config: columnConfigList) {
-            String key = config.getColumnName();
-            if(config.isFinalSelect() && !rawDataMap.containsKey(key)) {
+            NSColumn key = new NSColumn(config.getColumnName());
+            if(config.isFinalSelect() && !nsDataMap.containsKey(key)) {
                 throw new IllegalStateException(String.format("Variable Missing in Test Data: %s", key));
             }
 
@@ -1493,7 +1685,7 @@ public final class CommonUtils {
             } else if(config.isFinalSelect()) {
                 // add log for debug purpose
                 // log.info("key: " + key + ", raw_value " + rawDataMap.get(key).toString() + ", zscl_value: " +
-                String val = rawDataMap.get(key) == null ? null : rawDataMap.get(key).toString();
+                String val = nsDataMap.get(key) == null ? null : nsDataMap.get(key).toString();
                 Double normalizeValue = Normalizer.normalize(config, val, cutoff, modelConfig.getNormalizeType());
                 inputList.add(normalizeValue);
             }
@@ -1565,58 +1757,70 @@ public final class CommonUtils {
      */
     public static void updateColumnConfigFlags(ModelConfig modelConfig, List<ColumnConfig> columnConfigList)
             throws IOException {
-        String targetColumnName = CommonUtils.getRelativePigHeaderColumnName(modelConfig.getTargetColumnName());
+        String targetColumnName = modelConfig.getTargetColumnName();
+        String weightColumnName = modelConfig.getWeightColumnName();
 
-        Set<String> setCategorialColumns = new HashSet<String>();
+        Set<NSColumn> setCategorialColumns = new HashSet<NSColumn>();
         if(CollectionUtils.isNotEmpty(modelConfig.getCategoricalColumnNames())) {
             for(String column: modelConfig.getCategoricalColumnNames()) {
-                setCategorialColumns.add(CommonUtils.getRelativePigHeaderColumnName(column));
+                setCategorialColumns.add(new NSColumn(column));
             }
         }
 
-        Set<String> setMeta = new HashSet<String>();
+        Set<NSColumn> setMeta = new HashSet<NSColumn>();
         if(CollectionUtils.isNotEmpty(modelConfig.getMetaColumnNames())) {
             for(String meta: modelConfig.getMetaColumnNames()) {
-                setMeta.add(CommonUtils.getRelativePigHeaderColumnName(meta));
+                setMeta.add(new NSColumn(meta));
             }
         }
 
-        Set<String> setForceRemove = new HashSet<String>();
+        Set<NSColumn> setForceRemove = new HashSet<NSColumn>();
         if(Boolean.TRUE.equals(modelConfig.getVarSelect().getForceEnable())
                 && CollectionUtils.isNotEmpty(modelConfig.getListForceRemove())) {
             // if we need to update force remove, only and if one the force is enabled
             for(String forceRemoveName: modelConfig.getListForceRemove()) {
-                setForceRemove.add(CommonUtils.getRelativePigHeaderColumnName(forceRemoveName));
+                setForceRemove.add(new NSColumn(forceRemoveName));
             }
         }
 
-        Set<String> setForceSelect = new HashSet<String>(512);
+        Set<NSColumn> setForceSelect = new HashSet<NSColumn>(512);
         if(Boolean.TRUE.equals(modelConfig.getVarSelect().getForceEnable())
                 && CollectionUtils.isNotEmpty(modelConfig.getListForceSelect())) {
             // if we need to update force select, only and if one the force is enabled
             for(String forceSelectName: modelConfig.getListForceSelect()) {
-                setForceSelect.add(CommonUtils.getRelativePigHeaderColumnName(forceSelectName));
+                setForceSelect.add(new NSColumn(forceSelectName));
             }
         }
 
         for(ColumnConfig config: columnConfigList) {
             String varName = config.getColumnName();
 
-            if(targetColumnName.equals(varName)) {
+            // reset it
+            config.setColumnFlag(null);
+
+            if(NSColumnUtils.isColumnEqual(weightColumnName, varName)) {
+                config.setColumnFlag(ColumnFlag.Weight);
+                config.setFinalSelect(false); // reset final select
+            } else if(NSColumnUtils.isColumnEqual(targetColumnName, varName)) {
                 config.setColumnFlag(ColumnFlag.Target);
-            } else if(setMeta.contains(varName)) {
+                config.setFinalSelect(false); // reset final select
+            } else if(setMeta.contains(new NSColumn(varName))) {
                 config.setColumnFlag(ColumnFlag.Meta);
-                config.setColumnType(null);
-            } else if(setForceRemove.contains(varName)) {
+                config.setFinalSelect(false); // reset final select
+            } else if(setForceRemove.contains(new NSColumn(varName))) {
                 config.setColumnFlag(ColumnFlag.ForceRemove);
-            } else if(setForceSelect.contains(varName)) {
+                config.setFinalSelect(false); // reset final select
+            } else if(setForceSelect.contains(new NSColumn(varName))) {
                 config.setColumnFlag(ColumnFlag.ForceSelect);
             }
 
-            if(targetColumnName.equals(varName)) {
+            if(NSColumnUtils.isColumnEqual(weightColumnName, varName)) {
+                // weight column is numerical
+                config.setColumnType(ColumnType.N);
+            } else if(NSColumnUtils.isColumnEqual(targetColumnName, varName)) {
                 // target column is set to categorical column
                 config.setColumnType(ColumnType.C);
-            } else if(setCategorialColumns.contains(varName)) {
+            } else if(setCategorialColumns.contains(new NSColumn(varName))) {
                 config.setColumnType(ColumnType.C);
             } else {
                 config.setColumnType(ColumnType.N);
@@ -1727,9 +1931,9 @@ public final class CommonUtils {
                 }
 
                 for(String str: Splitter.on(delimiter).split(line)) {
-                    String column = CommonUtils.getRelativePigHeaderColumnName(str);
-                    if(StringUtils.isNotBlank(column)) {
-                        columnNameList.add(column.trim());
+                    // String column = CommonUtils.getRelativePigHeaderColumnName(str);
+                    if(StringUtils.isNotBlank(str)) {
+                        columnNameList.add(str.trim());
                     }
                 }
             }
@@ -1839,6 +2043,37 @@ public final class CommonUtils {
         }
 
         return rawDataMap;
+    }
+
+    /**
+     * Convert tuple record into (NSColumn, value) map. The @tuple is Tuple for a record
+     * If @tuple size is not equal @header size, return null
+     * 
+     * @param tuple
+     *            - Tuple of a record
+     * @param header
+     *            - the column names for all the input data
+     * @return (NSColumn, value) map for the record
+     * @throws ExecException
+     *             - throw exception when operating tuple
+     */
+    public static Map<NSColumn, String> convertDataIntoNsMap(Tuple tuple, String[] header) throws ExecException {
+        if(tuple == null || tuple.size() == 0 || tuple.size() != header.length) {
+            log.error("Invalid input, the tuple.size is = " + (tuple == null ? null : tuple.size())
+                    + ", header.length = " + header.length);
+            return null;
+        }
+
+        Map<NSColumn, String> rawDataNsMap = new HashMap<NSColumn, String>(tuple.size());
+        for(int i = 0; i < header.length; i++) {
+            if(tuple.get(i) == null) {
+                rawDataNsMap.put(new NSColumn(header[i]), "");
+            } else {
+                rawDataNsMap.put(new NSColumn(header[i]), tuple.get(i).toString());
+            }
+        }
+
+        return rawDataNsMap;
     }
 
     public static boolean isGoodCandidate(boolean isBinaryClassification, ColumnConfig columnConfig) {
@@ -2036,7 +2271,7 @@ public final class CommonUtils {
     public static String[] genPigFieldName(String[] names) {
         String[] pigScoreNames = new String[names.length];
         for(int i = 0; i < names.length; i++) {
-            pigScoreNames[i] = genPigFieldName(names[i]);
+            pigScoreNames[i] = genPigFieldName(names[i]) + "::mean";
         }
         return pigScoreNames;
     }
@@ -2125,4 +2360,60 @@ public final class CommonUtils {
         }
     }
 
+    /**
+     * Convert (String, String) raw data map to (NSColumn, String) data map
+     * 
+     * @param rawDataMap
+     *            - (String, String) raw data map
+     * @return (NSColumn, String) data map
+     */
+    public static Map<NSColumn, String> convertRawMapToNsDataMap(Map<String, String> rawDataMap) {
+        if(rawDataMap == null) {
+            return null;
+        }
+
+        Map<NSColumn, String> nsDataMap = new HashMap<NSColumn, String>();
+        for(String key: rawDataMap.keySet()) {
+            nsDataMap.put(new NSColumn(key), rawDataMap.get(key));
+        }
+        return nsDataMap;
+    }
+
+    /**
+     * Convert (String, ? extends Object) raw data map to (NSColumn, String) data map
+     * 
+     * @param rawDataMap
+     *            - (String, ? extends Object) raw data map
+     * @return (NSColumn, String) data map
+     */
+    public static Map<NSColumn, String> convertRawObjectMapToNsDataMap(Map<String, ? extends Object> rawDataMap) {
+        if(rawDataMap == null) {
+            return null;
+        }
+
+        Map<NSColumn, String> nsDataMap = new HashMap<NSColumn, String>();
+        for(String key: rawDataMap.keySet()) {
+            Object value = rawDataMap.get(key);
+            nsDataMap.put(new NSColumn(key), ((value == null) ? null : value.toString()));
+        }
+
+        return nsDataMap;
+    }
+
+    /**
+     * flatten categorical value group into values list
+     * 
+     * @param categoricalValGrp
+     *            - categorical val group, it some values like zn^us^ck^
+     * @return value list of categorical val
+     */
+    public static List<String> flattenCatValGrp(String categoricalValGrp) {
+        List<String> catVals = new ArrayList<String>();
+        if(StringUtils.isNotBlank(categoricalValGrp)) {
+            for(String cval: Splitter.on('^').split(categoricalValGrp)) {
+                catVals.add(cval);
+            }
+        }
+        return catVals;
+    }
 }

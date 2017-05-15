@@ -15,7 +15,11 @@
  */
 package ml.shifu.shifu.actor;
 
-import akka.actor.*;
+import java.io.File;
+import java.io.IOException;
+import java.util.List;
+import java.util.Scanner;
+
 import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.container.obj.EvalConfig;
 import ml.shifu.shifu.container.obj.ModelConfig;
@@ -24,15 +28,16 @@ import ml.shifu.shifu.fs.ShifuFileUtils;
 import ml.shifu.shifu.message.AkkaActorInputMessage;
 import ml.shifu.shifu.util.CommonUtils;
 import ml.shifu.shifu.util.Environment;
+
 import org.apache.commons.io.FileUtils;
 import org.testng.Assert;
 import org.testng.annotations.BeforeClass;
-import org.testng.annotations.Test;
 
-import java.io.File;
-import java.io.IOException;
-import java.util.List;
-import java.util.Scanner;
+import akka.actor.ActorRef;
+import akka.actor.ActorSystem;
+import akka.actor.Props;
+import akka.actor.UntypedActor;
+import akka.actor.UntypedActorFactory;
 
 
 /**
@@ -54,7 +59,7 @@ public class EvalModelActorTest {
         actorSystem = ActorSystem.create("shifuActorSystem");
     }
 
-    @Test
+//    @Test
     public void testActor() throws IOException, InterruptedException {
         Environment.setProperty(Environment.SHIFU_HOME, ".");
 

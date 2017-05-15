@@ -17,9 +17,12 @@ package ml.shifu.shifu.core.dtrain.dataset;
 
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
+import org.apache.commons.lang.StringUtils;
 import org.encog.engine.network.activation.ActivationFunction;
 import org.encog.neural.flat.FlatNetwork;
 import org.encog.neural.networks.BasicNetwork;
@@ -37,7 +40,7 @@ import org.encog.util.csv.CSVFormat;
  * and only {@link #getPersistClassString()} is changed to 'BasicFloatNetwork'.
  * 
  * <p>
- * Because of all final methods in {@link PersistBasicNetwork}, we have to copy code while not take extention.
+ * Because of all final methods in {@link PersistBasicNetwork}, we have to copy code while not take extension.
  */
 public class PersistBasicFloatNetwork implements EncogPersistor {
 
@@ -62,7 +65,7 @@ public class PersistBasicFloatNetwork implements EncogPersistor {
      */
     @Override
     public final Object read(final InputStream is) {
-        final BasicNetwork result = new BasicNetwork();
+        final BasicFloatNetwork result = new BasicFloatNetwork();
         final FlatNetwork flat = new FlatNetwork();
         final EncogReadHelper in = new EncogReadHelper(is);
         EncogFileSection section;
@@ -101,7 +104,10 @@ public class PersistBasicFloatNetwork implements EncogPersistor {
                 for(final String line: section.getLines()) {
                     ActivationFunction af = null;
                     final List<String> cols = EncogFileSection.splitColumns(line);
-                    final String name = "org.encog.engine.network.activation." + cols.get(0);
+                    String name = "org.encog.engine.network.activation." + cols.get(0);
+                    if(cols.get(0).equals("ActivationReLU")) {
+                        name = "ml.shifu.shifu.core.dtrain.nn.ActivationReLU";
+                    }
                     try {
                         final Class<?> clazz = Class.forName(name);
                         af = (ActivationFunction) clazz.newInstance();
@@ -119,6 +125,20 @@ public class PersistBasicFloatNetwork implements EncogPersistor {
 
                     flat.getActivationFunctions()[index++] = af;
                 }
+            } else if(section.getSectionName().equals("BASIC") && section.getSubSectionName().equals("SUBSET")) {
+                final Map<String, String> params = section.parseParams();
+                String subsetStr = params.get("SUBSETFEATURES");
+                if(StringUtils.isBlank(subsetStr)) {
+                    result.setFeatureSet(null);
+                } else {
+                    String[] splits = subsetStr.split(",");
+                    Set<Integer> subFeatures = new HashSet<Integer>();
+                    for(String split: splits) {
+                        int featureIndex = Integer.parseInt(split);
+                        subFeatures.add(featureIndex);
+                    }
+                    result.setFeatureSet(subFeatures);
+                }
             }
         }
 
@@ -133,7 +153,7 @@ public class PersistBasicFloatNetwork implements EncogPersistor {
     @Override
     public final void save(final OutputStream os, final Object obj) {
         final EncogWriteHelper out = new EncogWriteHelper(os);
-        final BasicNetwork net = (BasicNetwork) obj;
+        final BasicFloatNetwork net = (BasicFloatNetwork) obj;
         final FlatNetwork flat = net.getStructure().getFlat();
         out.addSection("BASIC");
         out.addSubSection("PARAMS");
@@ -164,7 +184,14 @@ public class PersistBasicFloatNetwork implements EncogPersistor {
             }
             out.writeLine();
         }
-
+        out.addSubSection("SUBSET");
+        Set<Integer> featureList = net.getFeatureSet();
+        if(featureList == null || featureList.size() == 0) {
+            out.writeProperty("SUBSETFEATURES", "");
+        } else {
+            String subFeaturesStr = StringUtils.join(featureList, ",");
+            out.writeProperty("SUBSETFEATURES", subFeaturesStr);
+        }
         out.flush();
     }
 

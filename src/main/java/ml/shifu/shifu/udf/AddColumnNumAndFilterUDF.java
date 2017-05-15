@@ -73,7 +73,13 @@ public class AddColumnNumAndFilterUDF extends AddColumnNumUDF {
         }
 
         if(input.get(tagColumnNum) == null) {
-            throw new ShifuException(ShifuErrorCode.ERROR_NO_TARGET_COLUMN);
+            log.info("tagColumnNum is " + tagColumnNum + "; input size is " + input.size()
+                    + "; columnConfigList.size() is " + columnConfigList.size() + "; tuple is"
+                    + input.toDelimitedString("|") + "; tag is " + input.get(tagColumnNum));
+            if(isPigEnabled(Constants.SHIFU_GROUP_COUNTER, "INVALID_TAG")) {
+                PigStatusReporter.getInstance().getCounter(Constants.SHIFU_GROUP_COUNTER, "INVALID_TAG").increment(1);
+            }
+            return null;
         }
 
         String tag = CommonUtils.trimTag(input.get(tagColumnNum).toString());

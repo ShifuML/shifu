@@ -50,9 +50,9 @@ public class CorrelationWritable implements Writable {
 
     private double[] adjustCount;
 
-    private double[] adjustSum;
+    private double[] adjustSumX;
 
-    private double[] adjustSumSquare;
+    private double[] adjustSumY;
 
     /**
      * @return the columnIndex
@@ -87,6 +87,41 @@ public class CorrelationWritable implements Writable {
      */
     public double[] getXySum() {
         return xySum;
+    }
+
+    /**
+     * @return the xxSum
+     */
+    public double[] getXxSum() {
+        return xxSum;
+    }
+
+    /**
+     * @return the yySum
+     */
+    public double[] getYySum() {
+        return yySum;
+    }
+
+    /**
+     * @return the adjustCount
+     */
+    public double[] getAdjustCount() {
+        return adjustCount;
+    }
+
+    /**
+     * @return the adjustSumX
+     */
+    public double[] getAdjustSumX() {
+        return adjustSumX;
+    }
+
+    /**
+     * @return the adjustSumY
+     */
+    public double[] getAdjustSumY() {
+        return adjustSumY;
     }
 
     /**
@@ -130,20 +165,6 @@ public class CorrelationWritable implements Writable {
     }
 
     /**
-     * @return the xxSum
-     */
-    public double[] getXxSum() {
-        return xxSum;
-    }
-
-    /**
-     * @return the yySum
-     */
-    public double[] getYySum() {
-        return yySum;
-    }
-
-    /**
      * @param xxSum
      *            the xxSum to set
      */
@@ -160,27 +181,6 @@ public class CorrelationWritable implements Writable {
     }
 
     /**
-     * @return the adjustCount
-     */
-    public double[] getAdjustCount() {
-        return adjustCount;
-    }
-
-    /**
-     * @return the adjustSum
-     */
-    public double[] getAdjustSum() {
-        return adjustSum;
-    }
-
-    /**
-     * @return the adjustSumSquare
-     */
-    public double[] getAdjustSumSquare() {
-        return adjustSumSquare;
-    }
-
-    /**
      * @param adjustCount
      *            the adjustCount to set
      */
@@ -189,19 +189,19 @@ public class CorrelationWritable implements Writable {
     }
 
     /**
-     * @param adjustSum
-     *            the adjustSum to set
+     * @param adjustSumX
+     *            the adjustSumX to set
      */
-    public void setAdjustSum(double[] adjustSum) {
-        this.adjustSum = adjustSum;
+    public void setAdjustSumX(double[] adjustSumX) {
+        this.adjustSumX = adjustSumX;
     }
 
     /**
-     * @param adjustSumSquare
-     *            the adjustSumSquare to set
+     * @param adjustSumY
+     *            the adjustSumY to set
      */
-    public void setAdjustSumSquare(double[] adjustSumSquare) {
-        this.adjustSumSquare = adjustSumSquare;
+    public void setAdjustSumY(double[] adjustSumY) {
+        this.adjustSumY = adjustSumY;
     }
 
     @Override
@@ -246,20 +246,20 @@ public class CorrelationWritable implements Writable {
             }
         }
 
-        if(this.adjustSum == null) {
+        if(this.adjustSumX == null) {
             out.writeInt(0);
         } else {
-            out.writeInt(this.adjustSum.length);
-            for(double doub: this.adjustSum) {
+            out.writeInt(this.adjustSumX.length);
+            for(double doub: this.adjustSumX) {
                 out.writeDouble(doub);
             }
         }
 
-        if(this.adjustSumSquare == null) {
+        if(this.adjustSumY == null) {
             out.writeInt(0);
         } else {
-            out.writeInt(this.adjustSumSquare.length);
-            for(double doub: this.adjustSumSquare) {
+            out.writeInt(this.adjustSumY.length);
+            for(double doub: this.adjustSumY) {
                 out.writeDouble(doub);
             }
         }
@@ -289,24 +289,55 @@ public class CorrelationWritable implements Writable {
         for(int i = 0; i < length; i++) {
             this.yySum[i] = in.readDouble();
         }
-        
+
         length = in.readInt();
         this.adjustCount = new double[length];
         for(int i = 0; i < length; i++) {
             this.adjustCount[i] = in.readDouble();
         }
-        
+
         length = in.readInt();
-        this.adjustSum = new double[length];
+        this.adjustSumX = new double[length];
         for(int i = 0; i < length; i++) {
-            this.adjustSum[i] = in.readDouble();
+            this.adjustSumX[i] = in.readDouble();
         }
-        
+
         length = in.readInt();
-        this.adjustSumSquare = new double[length];
+        this.adjustSumY = new double[length];
         for(int i = 0; i < length; i++) {
-            this.adjustSumSquare[i] = in.readDouble();
+            this.adjustSumY[i] = in.readDouble();
         }
+    }
+
+    public CorrelationWritable combine(CorrelationWritable from) {
+        this.sum += from.sum;
+        this.sumSquare += from.sumSquare;
+        this.count += from.count;
+
+        for(int i = 0; i < xySum.length; i++) {
+            this.xySum[i] += from.xySum[i];
+        }
+
+        for(int i = 0; i < xxSum.length; i++) {
+            this.xxSum[i] += from.xxSum[i];
+        }
+
+        for(int i = 0; i < yySum.length; i++) {
+            this.yySum[i] += from.yySum[i];
+        }
+
+        for(int i = 0; i < adjustCount.length; i++) {
+            this.adjustCount[i] += from.adjustCount[i];
+        }
+
+        for(int i = 0; i < adjustSumX.length; i++) {
+            this.adjustSumX[i] += from.adjustSumX[i];
+        }
+
+        for(int i = 0; i < adjustSumY.length; i++) {
+            this.adjustSumY[i] += from.adjustSumY[i];
+        }
+        return this;
     }
 
     /*
@@ -317,7 +348,9 @@ public class CorrelationWritable implements Writable {
     @Override
     public String toString() {
         return "CorrelationWritable [columnIndex=" + columnIndex + ", sum=" + sum + ", sumSquare=" + sumSquare
-                + ", count=" + count + ", xySum=" + Arrays.toString(xySum) + "]";
+                + ", count=" + count + ", xySum=" + Arrays.toString(xySum) + ", xxSum=" + Arrays.toString(xxSum)
+                + ", yySum=" + Arrays.toString(yySum) + ", adjustCount=" + Arrays.toString(adjustCount)
+                + ", adjustSumX=" + Arrays.toString(adjustSumX) + ", adjustSumY=" + Arrays.toString(adjustSumY) + "]";
     }
 
 }

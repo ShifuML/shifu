@@ -75,7 +75,9 @@ public class DataMerger {
 
         String header = StringUtils.join(outputHeaders, "|");
         File outputDir = new File(this.outputDataPath);
-        outputDir.mkdirs();
+        if(!outputDir.mkdirs()){
+            LOG.error("Create folder {} failed.", outputDir);
+        }
 
         FileUtils.write(new File(this.outputDataPath + File.separator + ".pig_header"), header);
     }

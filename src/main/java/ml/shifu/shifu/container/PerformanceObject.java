@@ -53,6 +53,9 @@ public class PerformanceObject {
      */
     public double recall;
 
+    /**
+     * weighted recall rate
+     */
     public double weightedRecall;
 
     /**
@@ -76,6 +79,10 @@ public class PerformanceObject {
 
     public double weightLiftUnit;
 
+    public double scoreCount;
+
+    public double scoreWgtCount;
+
     public double tp;
     public double fp;
     public double tn;
@@ -85,4 +92,22 @@ public class PerformanceObject {
     public double weightedFp;
     public double weightedTn;
     public double weightedFn;
+
+    /*
+     * (non-Javadoc)
+     * 
+     * @see java.lang.Object#toString()
+     */
+    @Override
+    public String toString() {
+        return "PerformanceObject [binNum=" + binNum + ", binLowestScore=" + binLowestScore + ", actionRate="
+                + actionRate + ", weightedActionRate=" + weightedActionRate + ", recall=" + recall
+                + ", weightedRecall=" + weightedRecall + ", precision=" + precision + ", weightedPrecision="
+                + weightedPrecision + ", fpr=" + fpr + ", weightedFpr=" + weightedFpr + ", liftUnit=" + liftUnit
+                + ", weightLiftUnit=" + weightLiftUnit + ", scoreCount=" + scoreCount + ", scoreWgtCount="
+                + scoreWgtCount + ", tp=" + tp + ", fp=" + fp + ", tn=" + tn + ", fn=" + fn + ", weightedTp="
+                + weightedTp + ", weightedFp=" + weightedFp + ", weightedTn=" + weightedTn + ", weightedFn="
+                + weightedFn + "]";
+    }
+
 }

@@ -22,6 +22,7 @@ import org.dmg.pmml.FieldName;
 import org.dmg.pmml.FieldUsageType;
 import org.dmg.pmml.MiningField;
 import org.dmg.pmml.MiningSchema;
+import org.encog.ml.BasicML;
 
 import java.util.List;
 
@@ -36,7 +37,7 @@ public class TreeModelMiningSchemaCreator extends AbstractPmmlElementCreator<Min
     }
 
     @Override
-    public MiningSchema build() {
+    public MiningSchema build(BasicML basicML) {
         MiningSchema miningSchema = new MiningSchema();
 
         for(ColumnConfig columnConfig: columnConfigList) {

@@ -26,51 +26,102 @@ import com.google.common.collect.Lists;
 import ml.shifu.shifu.util.CommonUtils;
 
 /**
- * SourceData class
+ * SourceData part for ModelConfig.json
  */
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class RawSourceData implements Cloneable {
 
+    /**
+     * If data is from local or hdfs, S3 is not supported so far.
+     * 
+     * @author Zhang David (pengzhang@paypal.com)
+     */
     @JsonDeserialize(using = SouceTypeDeserializer.class)
     public static enum SourceType {
         LOCAL, HDFS, S3
     }
 
+    /**
+     * If source from local or hdfs
+     */
     private SourceType source = SourceType.LOCAL;
 
+    /**
+     * Data path, from local or hdfs. Folder and file are all supported. Recursive folder is also supported. CSV format
+     * file is supported and if csv, header no need to set.
+     */
     private String dataPath;
 
+    /**
+     * Validation data path which is used in train step for validation data. Such data should have the same schema like
+     * {@link #dataPath}. If {@link #validationDataPath} is not empty, specified validation data is enabled and all
+     * other sampling parameters have no effect. If empty (by default), such feature is not enabled.
+     */
     private String validationDataPath;
 
+    /**
+     * How to split data and validation data.
+     */
     private String dataDelimiter = "|";
 
+    /**
+     * Header path for schema, if null, first line of data will be checked and read to get schema. That's why csv format
+     * file works well in Shifu.
+     */
     private String headerPath;
 
+    /**
+     * How to split header content.
+     * 
+     */
     private String headerDelimiter = "|";
 
+    /**
+     * Filter expression on data path and validation data path, this is helpful to filter some data not in original
+     * data. Example like 'columna > 10'
+     */
     private String filterExpressions = "";
 
+    /**
+     * Weight column, should be one of columns
+     */
     private String weightColumnName = "";
 
+    /**
+     * Target column, should be one of columns
+     */
     private String targetColumnName;
 
+    /**
+     * Positive tag list: Example like ["0", "1"];
+     */
     private List<String> posTags;
-
+    
+    /**
+     * Negative tag list: Example like ["2", "3"]
+     */
     private List<String> negTags;
 
+    /**
+     * Missing or invalid values.
+     */
     private List<String> missingOrInvalidValues = Lists.asList("", new String[] { "?" });
     // private List<String> missingOrInvalidValues = Lists.asList("", new String[] { "*", "#", "?", "null", "none" });
 
     /**
-     * Change it to true by default to compute distinct value for later variable selection.
+     * Auto type column feature, if eanabled by tree, shifu will set categorical or numerical feature automatically.
+     * Since severl false-positive setting categorical features, such feature is disabled
      */
     private Boolean autoType = Boolean.FALSE;
 
     /**
-     * To change it to 0 instead of 250 because 0-1 columns shouldn't be set to categorical.
+     * If number ratio over autoTypeThreshold/100, column will be set to numeric when {@link #autoType} is true.
      */
     private Integer autoTypeThreshold = 0;
 
+    /**
+     * Meta column configuration file
+     */
     private String metaColumnNameFile;
 
     /**
@@ -179,9 +230,9 @@ public class RawSourceData implements Cloneable {
     }
 
     private List<String> trimTags(List<String> tags) {
-        if ( tags != null ) {
+        if(tags != null) {
             List<String> trimmedTags = new ArrayList<String>();
-            for (String tag : tags) {
+            for(String tag: tags) {
                 trimmedTags.add(CommonUtils.trimTag(tag));
             }
             return trimmedTags;
@@ -197,7 +248,6 @@ public class RawSourceData implements Cloneable {
     public void setMetaColumnNameFile(String metaColumnNameFile) {
         this.metaColumnNameFile = metaColumnNameFile;
     }
-
 
     @Override
     public RawSourceData clone() {

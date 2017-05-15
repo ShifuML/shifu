@@ -106,19 +106,19 @@ public class PMMLTranslator {
             }
         }
         // create and set data dictionary
-        pmml.setDataDictionary(this.dataDictionaryCreator.build());
+        pmml.setDataDictionary(this.dataDictionaryCreator.build(basicML));
 
         // create model element
-        Model model = this.modelCreator.build();
+        Model model = this.modelCreator.build(basicML);
 
         // create mining schema
-        model.setMiningSchema(this.miningSchemaCreator.build());
+        model.setMiningSchema(this.miningSchemaCreator.build(basicML));
 
         // create variable statistical info
-        model.setModelStats(this.modelStatsCreator.build());
+        model.setModelStats(this.modelStatsCreator.build(basicML));
 
         // create variable transform
-        model.setLocalTransformations(this.localTransformationsCreator.build());
+        model.setLocalTransformations(this.localTransformationsCreator.build(basicML));
 
         this.specifCreator.build(basicML, model);
 
