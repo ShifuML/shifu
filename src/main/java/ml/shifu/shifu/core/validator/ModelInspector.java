@@ -277,9 +277,9 @@ public class ModelInspector {
         }
 
         // maxNumBin should be less than Short.MAX_VALUE, larger maxNumBin need more computing and no meaningful.
-        if(modelConfig.getStats().getMaxNumBin() > Short.MAX_VALUE || modelConfig.getStats().getMaxNumBin() <= 0) {
+        if(modelConfig.getStats().getMaxNumBin() > Short.MAX_VALUE || modelConfig.getStats().getMaxNumBin() < 0) {
             result = ValidateResult.mergeResult(result,
-                    new ValidateResult(false, Arrays.asList("stats#maxNumBin should be in (0, 32767].")));
+                    new ValidateResult(false, Arrays.asList("stats#maxNumBin should be in [0, 32767].")));
 
         }
         return result;
@@ -300,6 +300,12 @@ public class ModelInspector {
         ValidateResult result = new ValidateResult(true);
 
         if(Boolean.TRUE.equals(varSelect.getForceEnable())) {
+            if ( StringUtils.isNotBlank(varSelect.getCandidateColumnNameFile()) ) {
+                result = ValidateResult.mergeResult(
+                        result,
+                        checkFile(varSelect.getCandidateColumnNameFile(), SourceType.LOCAL,
+                                "candidate columns configuration " ));
+            }
             if(StringUtils.isNotBlank(varSelect.getForceRemoveColumnNameFile())) {
                 result = ValidateResult.mergeResult(
                         result,
@@ -311,7 +317,7 @@ public class ModelInspector {
                 result = ValidateResult.mergeResult(
                         result,
                         checkFile(varSelect.getForceSelectColumnNameFile(), SourceType.LOCAL,
-                                "forceSelect columns configuration"));
+                                "forceSelect columns configuration "));
             }
         }
 

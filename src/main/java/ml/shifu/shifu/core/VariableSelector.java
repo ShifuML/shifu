@@ -15,11 +15,11 @@
  */
 package ml.shifu.shifu.core;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.List;
+import java.io.IOException;
+import java.util.*;
 
+import ml.shifu.shifu.column.NSColumn;
+import org.apache.commons.collections.CollectionUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -106,7 +106,7 @@ public class VariableSelector {
     }
 
     // return the list of selected column nums
-    public List<ColumnConfig> selectByFilter() {
+    public List<ColumnConfig> selectByFilter() throws IOException {
         log.info("    - Method: Filter");
 
         int ptrKs = 0, ptrIv = 0, ptrPareto = 0, cntByForce = 0;
@@ -121,6 +121,8 @@ public class VariableSelector {
         List<ColumnConfig> ksList = new ArrayList<ColumnConfig>();
         List<ColumnConfig> ivList = new ArrayList<ColumnConfig>();
         List<Tuple> paretoList = new ArrayList<Tuple>();
+
+        Set<NSColumn> candidateColumns = CommonUtils.loadCandidateColumns(modelConfig);
 
         int cntSelected = 0;
 
@@ -141,6 +143,9 @@ public class VariableSelector {
                 }
             } else if(!CommonUtils.isGoodCandidate(config)) {
                 log.info("\t Incomplete info(please check KS, IV, Mean, or StdDev fields): " + config.getColumnName());
+            } else if (CollectionUtils.isNotEmpty(candidateColumns)
+                    && !candidateColumns.contains(new NSColumn(config.getColumnName()))) {
+                log.info("\t Not in candidate list, Skip: " + config.getColumnName());
             } else if((config.isCategorical() && !modelConfig.isCategoricalDisabled()) || config.isNumerical()) {
                 ksList.add(config);
                 ivList.add(config);
@@ -175,7 +180,7 @@ public class VariableSelector {
 
         List<Tuple> newParetoList = sortByPareto(paretoList);
 
-        int expectedVarNum = Math.min(ksList.size(), modelConfig.getVarSelectFilterNum());
+        int expectedVarNum = Math.min(cntSelected + ksList.size(), modelConfig.getVarSelectFilterNum());
         log.info("Expected selected columns:" + expectedVarNum);
 
         // reset to false at first.
