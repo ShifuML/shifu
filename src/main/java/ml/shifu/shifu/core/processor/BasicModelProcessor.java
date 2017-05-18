@@ -298,7 +298,6 @@ public class BasicModelProcessor {
 
         String alg = modelConfig.getAlgorithm();
         Map<String, Object> param = modelConfig.getParams();
-        LOG.info("Check algorithm parameter");
 
         if(alg.equalsIgnoreCase("LR")) {
             if(!param.containsKey("LearningRate")) {

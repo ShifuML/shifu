@@ -1,18 +1,18 @@
 package ml.shifu.shifu.util.updater;
 
-import ml.shifu.shifu.column.NSColumn;
-import ml.shifu.shifu.column.NSColumnUtils;
-import ml.shifu.shifu.container.obj.ColumnConfig;
-import ml.shifu.shifu.container.obj.ModelConfig;
-import ml.shifu.shifu.container.obj.ColumnConfig.ColumnType;
-import ml.shifu.shifu.core.validator.ModelInspector;
-import org.apache.commons.collections.CollectionUtils;
-import org.apache.commons.lang.StringUtils;
-
 import java.io.IOException;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+
+import ml.shifu.shifu.column.NSColumn;
+import ml.shifu.shifu.column.NSColumnUtils;
+import ml.shifu.shifu.container.obj.ColumnConfig;
+import ml.shifu.shifu.container.obj.ColumnConfig.ColumnType;
+import ml.shifu.shifu.container.obj.ModelConfig;
+import ml.shifu.shifu.core.validator.ModelInspector;
+
+import org.apache.commons.collections.CollectionUtils;
 
 /**
  * Created by zhanhu on 2/22/17.

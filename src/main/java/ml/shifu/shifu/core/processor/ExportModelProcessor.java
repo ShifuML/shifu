@@ -17,12 +17,19 @@
  */
 package ml.shifu.shifu.core.processor;
 
+import java.io.BufferedWriter;
+import java.io.File;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Map;
+
 import ml.shifu.shifu.column.NSColumnUtils;
 import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.container.obj.ModelTrainConf.ALGORITHM;
 import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
 import ml.shifu.shifu.core.ColumnStatsCalculator;
-import ml.shifu.shifu.core.binning.CateDynamicBinning;
 import ml.shifu.shifu.core.binning.CategoricalBinInfo;
 import ml.shifu.shifu.core.binning.ColumnConfigDynamicBinning;
 import ml.shifu.shifu.core.pmml.PMMLTranslator;
@@ -32,6 +39,7 @@ import ml.shifu.shifu.core.validator.ModelInspector.ModelStep;
 import ml.shifu.shifu.fs.ShifuFileUtils;
 import ml.shifu.shifu.util.CommonUtils;
 import ml.shifu.shifu.util.HDFSUtils;
+
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.collections.MapUtils;
 import org.apache.commons.io.FileUtils;
@@ -41,11 +49,6 @@ import org.dmg.pmml.PMML;
 import org.encog.ml.BasicML;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import java.io.BufferedWriter;
-import java.io.File;
-import java.io.IOException;
-import java.util.*;
 
 /**
  * ExportModelProcessor class
@@ -203,6 +206,7 @@ public class ExportModelProcessor extends BasicModelProcessor implements Process
         return buffer.toString();
     }
 
+    @SuppressWarnings("unused")
     private String generateWoeMapping(ColumnConfig columnConfig, int expectBinNum) {
         StringBuffer buffer = new StringBuffer();
         buffer.append("( case \n");
@@ -222,6 +226,7 @@ public class ExportModelProcessor extends BasicModelProcessor implements Process
         return buffer.toString();
     }
 
+    @SuppressWarnings("unused")
     private List<CategoricalBinInfo> genCategoricalBinInfos(ColumnConfig columnConfig) {
         List<CategoricalBinInfo> categoricalBinInfos = new ArrayList<CategoricalBinInfo>();
         for ( int i = 0; i < columnConfig.getBinCategory().size(); i ++ ) {
