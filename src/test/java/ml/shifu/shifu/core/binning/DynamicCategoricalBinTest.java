@@ -1,5 +1,7 @@
 package ml.shifu.shifu.core.binning;
 
+import ml.shifu.shifu.core.binning.obj.AbstractBinInfo;
+import ml.shifu.shifu.core.binning.obj.CategoricalBinInfo;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang.StringUtils;
 import org.junit.Test;
@@ -17,11 +19,11 @@ public class DynamicCategoricalBinTest {
 
     @Test
     public void testDynamicCategoricalBin() throws IOException {
-        List<CategoricalBinInfo> categoricalBinInfoList = loadTestData();
+        List<AbstractBinInfo> categoricalBinInfoList = loadTestData();
         Collections.sort(categoricalBinInfoList);
 
-        CateDynamicBinning binning = new CateDynamicBinning(2);
-        List<CategoricalBinInfo> finalBins = binning.merge(categoricalBinInfoList);
+        AutoDynamicBinning binning = new AutoDynamicBinning(2);
+        List<AbstractBinInfo> finalBins = binning.merge(categoricalBinInfoList);
 
         Assert.assertEquals(finalBins.size(), 2);
 
@@ -31,7 +33,7 @@ public class DynamicCategoricalBinTest {
         List<Double> positiveRates = new ArrayList<Double>();
 
         for ( int i = 0; i < finalBins.size(); i ++ ) {
-            CategoricalBinInfo binInfo = finalBins.get(i);
+            CategoricalBinInfo binInfo = (CategoricalBinInfo)finalBins.get(i);
             categoricalVals.add("\"" + StringUtils.join(binInfo.getValues(), '^') + "\"");
             negativeCnts.add(binInfo.getNegativeCnt());
             positiveCnts.add(binInfo.getPositiveCnt());
@@ -44,7 +46,7 @@ public class DynamicCategoricalBinTest {
         System.out.println(StringUtils.join(positiveRates, ','));
     }
 
-    private List<CategoricalBinInfo> loadTestData() throws IOException {
+    private List<AbstractBinInfo> loadTestData() throws IOException {
         List<String> lines = IOUtils.readLines(DynamicCategoricalBinTest.class
                 .getResourceAsStream("/example/binning-data/categorical-binning"));
 
@@ -69,7 +71,7 @@ public class DynamicCategoricalBinTest {
                 .replaceAll("].*$", "")
                 .replaceAll("\"", "").trim().split(",");
 
-        List<CategoricalBinInfo> categoricalBinInfos = new ArrayList<CategoricalBinInfo>();
+        List<AbstractBinInfo> categoricalBinInfos = new ArrayList<AbstractBinInfo>();
         for ( int i = 0; i < categories.length; i ++ ) {
             CategoricalBinInfo binInfo = new CategoricalBinInfo();
             List<String> values = new ArrayList<String>();
