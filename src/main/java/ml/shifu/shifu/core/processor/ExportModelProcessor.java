@@ -244,17 +244,6 @@ public class ExportModelProcessor extends BasicModelProcessor implements Process
         return buffer.toString();
     }
 
-    private boolean isRequestColumn(List<String> catVariables, ColumnConfig columnConfig) {
-        boolean status = false;
-        for ( String varName : catVariables ) {
-            if (NSColumnUtils.isColumnEqual(varName, columnConfig.getColumnName()) ) {
-                status = true;
-                break;
-            }
-        }
-        return status;
-    }
-
     private void saveColumnStatus() throws IOException {
         Path localColumnStatsPath = new Path(pathFinder.getLocalColumnStatsPath());
         log.info("Saving ColumnStatus to local file system: {}.", localColumnStatsPath);
