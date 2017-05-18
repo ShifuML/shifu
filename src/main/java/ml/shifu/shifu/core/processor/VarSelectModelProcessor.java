@@ -220,7 +220,6 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
         // compute feature importance and write to local file
         Map<Integer, MutablePair<String, Double>> featureImportances = CommonUtils
                 .computeTreeModelFeatureImportance(models);
-        CommonUtils.writeFeatureImportance(this.pathFinder.getLocalFeatureImportancePath(), featureImportances);
         if(super.modelConfig.getVarSelect().getFilterEnable()) {
             this.postProcessFIVarSelect(featureImportances);
         }
