@@ -51,7 +51,7 @@ public class DIBStatsExecutor extends MapReducerStatsWorker {
         ShifuFileUtils.deleteFile(pathFinder.getUpdatedBinningInfoPath(modelConfig.getDataSet().getSource()),
                 modelConfig.getDataSet().getSource());
 
-        paramsMap.put("histo_scale_factor", Integer.toString(1000));
+        paramsMap.put("histo_scale_factor", Integer.toString(10000));
         paramsMap.put("path_stats_small_bins", pathFinder.getStatsSmallBins());
 
         PigExecutor.getExecutor().submitJob(modelConfig, pathFinder.getScriptPath("scripts/StatsDynamicBinning.pig"),
