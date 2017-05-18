@@ -84,6 +84,7 @@ public class EqualPopulationBinning extends AbstractBinning<Double> {
     public EqualPopulationBinning(int binningNum, int histogramScale) {
         this(binningNum, null);
         this.maxHistogramUnitCnt = super.expectedBinningNum * histogramScale;
+        this.maxHistogramUnitCnt = (this.maxHistogramUnitCnt > 10000) ? 10000 : this.maxHistogramUnitCnt;
     }
 
     /**
@@ -98,7 +99,7 @@ public class EqualPopulationBinning extends AbstractBinning<Double> {
     public EqualPopulationBinning(int binningNum, List<String> missingValList) {
         super(binningNum);
         this.maxHistogramUnitCnt = super.expectedBinningNum * HIST_SCALE;
-
+        this.maxHistogramUnitCnt = (this.maxHistogramUnitCnt > 10000) ? 10000 : this.maxHistogramUnitCnt;
         this.currentHistogramUnitCnt = 0;
         this.header = null;
         this.tail = null;
