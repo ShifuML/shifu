@@ -105,6 +105,7 @@ public class ShifuCLI {
     private static final String SHUFFLE = "shuffle";
     private static final String RESUME = "resume";
 
+    private static final String REBIN = "rebin";
     private static final String VARS = "vars";
     private static final String N = "n";
     private static final String IVR = "ivr";
@@ -195,8 +196,16 @@ public class ShifuCLI {
                         printUsage();
                     }
                 } else if(cleanedArgs[0].equals(STATS_CMD)) {
+                    Map<String, Object> params = new HashMap<String, Object>();
+                    params.put(StatsModelProcessor.IS_COMPUTE_CORR, cmd.hasOption(CORRELATION) || cmd.hasOption("c"));
+                    params.put(StatsModelProcessor.IS_REBIN, cmd.hasOption(REBIN));
+                    params.put(StatsModelProcessor.REQUEST_VARS, cmd.getOptionValue(VARS));
+                    params.put(StatsModelProcessor.EXPECTED_BIN_NUM, cmd.getOptionValue(N));
+                    params.put(StatsModelProcessor.IV_KEEP_RATIO, cmd.getOptionValue(IVR));
+                    params.put(StatsModelProcessor.MINIMUM_BIN_INST_CNT, cmd.getOptionValue(BIC));
+
                     // stats step
-                    status = calModelStats(cmd.hasOption(CORRELATION) || cmd.hasOption("c"));
+                    status = calModelStats(params);
                     if(status == 0) {
                         if(cmd.hasOption(CORRELATION) || cmd.hasOption("c")) {
                             log.info("Do model set correlation computing successfully. Please continue next step by using 'shifu normalize or shifu norm'. For tree ensemble model, no need do norm, please continue next step by using 'shifu varsel'");
@@ -397,8 +406,8 @@ public class ShifuCLI {
     /*
      * Calculate variables stats for model - ks/iv/mean/max/min
      */
-    public static int calModelStats(boolean correlation) throws Exception {
-        StatsModelProcessor p = new StatsModelProcessor(correlation);
+    public static int calModelStats(Map<String, Object> params) throws Exception {
+        StatsModelProcessor p = new StatsModelProcessor(params);
         return p.run();
     }
 
@@ -570,6 +579,7 @@ public class ShifuCLI {
         Option opt_eval = OptionBuilder.hasArg(false).create(EVAL_CMD);
         Option opt_init = OptionBuilder.hasArg(false).create(INIT_CMD);
 
+        Option opt_rebin = OptionBuilder.hasArg(false).create(REBIN);
         Option opt_vars = OptionBuilder.hasArg().create(VARS);
         Option opt_n = OptionBuilder.hasArg().create(N);
         Option opt_ivr = OptionBuilder.hasArg().create(IVR);
@@ -605,6 +615,7 @@ public class ShifuCLI {
         opts.addOption(opt_correlation);
         opts.addOption(opt_correlation_short);
 
+        opts.addOption(opt_rebin);
         opts.addOption(opt_vars);
         opts.addOption(opt_n);
         opts.addOption(opt_ivr);
@@ -620,14 +631,12 @@ public class ShifuCLI {
         System.out.println("Usage: shifu [-Dkey=value] COMMAND");
         System.out.println("where COMMAND is one of:");
         System.out.println("\tnew <ModelSetName> [-t <NN|LR|RF|GBT>]  Create a new model set.");
-        System.out
-                .println("\tinit                                    Create initial ColumnConfig.json and upload to HDFS.");
-        System.out
-                .println("\tstats                                   Calculate statistics on HDFS and update local ColumnConfig.json.");
-        System.out
-                .println("\tstats -correlation(c)                   Calculate correlation values between column pairs.");
-        System.out
-                .println("\tvarselect/varsel [-reset] [-list]       Variable selection, will update finalSelect in ColumnConfig.json.");
+        System.out.println("\tinit                                    Create initial ColumnConfig.json and upload to HDFS.");
+        System.out.println("\tstats                                   Calculate statistics on HDFS and update local ColumnConfig.json.");
+        System.out.println("\tstats -correlation(c)                   Calculate correlation values between column pairs.");
+        System.out.println("\tstats -rebin [-vars var1,var1] [-ivr <ratio>] [-bic <bic>]");
+        System.out.println("\t                                        Do the variable Re-bin.");
+        System.out.println("\tvarselect/varsel [-reset] [-list]       Variable selection, will update finalSelect in ColumnConfig.json.");
         System.out.println("\tnormalize/norm [-shuffle]               Normalize the columns with finalSelect as true.");
         System.out.println("\ttrain [-dry] [-shuffle]                 Train the model with the normalized data.");
         System.out.println("\tposttrain                               Post-process data after training models.");
@@ -639,12 +648,10 @@ public class ShifuCLI {
         System.out.println("\teval -score   <EvalSetName>             Scoring evaluation dataset.");
         System.out.println("\teval -norm    <EvalSetName>             Normalize evaluation dataset.");
         System.out.println("\teval -confmat <EvalSetName>             Compute the TP/FP/TN/FN based on scoring");
-        System.out
-                .println("\teval -perf <EvalSetName>                Calculate the model performance based on confmat");
-        System.out
-                .println("\texport [-t pmml|columnstats] [-c]       Export model to PMML format or export ColumnConfig.");
-        System.out
-                .println("\tcombo -new    <Algorithm List>          Create a combo model train. Algorithm lis should be NN,LR,RF,GBT,LR");
+        System.out.println("\teval -perf <EvalSetName>                Calculate the model performance based on confmat");
+        System.out.println("\texport [-t pmml|columnstats|woemapping] [-c] [-vars var1,var1] [-ivr <ratio>] [-bic <bic>]");
+        System.out.println("\t                                        Export model to PMML format or export ColumnConfig.");
+        System.out.println("\tcombo -new    <Algorithm List>          Create a combo model train. Algorithm lis should be NN,LR,RF,GBT,LR");
         System.out.println("\tcombo -init                             Generate sub-models.");
         System.out.println("\tcombo -run [-shuffle] [-resume]         Run Combo-Model train.");
         System.out.println("\tcombo -eval [-resume]                   Evaluate Combo-Model performance.");

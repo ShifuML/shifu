@@ -2,6 +2,9 @@ package ml.shifu.shifu.core.binning;
 
 import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.core.ColumnStatsCalculator;
+import ml.shifu.shifu.core.binning.obj.AbstractBinInfo;
+import ml.shifu.shifu.core.binning.obj.CategoricalBinInfo;
+import ml.shifu.shifu.core.binning.obj.NumericalBinInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -29,14 +32,14 @@ public class ColumnConfigDynamicBinning {
         this.minimumInstCnt = minimumInstCnt;
     }
 
-    public List<CategoricalBinInfo> run() {
-        List<CategoricalBinInfo> binInfos = genCategoricalBinInfos(this.columnConfig);
+    public List<AbstractBinInfo> run() {
+        List<AbstractBinInfo> binInfos = genBinInfos(this.columnConfig);
         Collections.sort(binInfos);
 
         // reduce bin number to not exceed expectMaxBinNum
         if (this.expectMaxBinNum > 0) {
-            CateDynamicBinning cateDynamicBinning = new CateDynamicBinning(this.expectMaxBinNum);
-            binInfos = cateDynamicBinning.merge(binInfos);
+            AutoDynamicBinning autoDynamicBinning = new AutoDynamicBinning(this.expectMaxBinNum);
+            binInfos = autoDynamicBinning.merge(binInfos);
         }
 
         // filter and merge bi
@@ -44,41 +47,42 @@ public class ColumnConfigDynamicBinning {
             binInfos = mergeSmallBinInfos(binInfos);
         }
 
-        CategoricalBinInfo missingBinInfo = genMissingBinInfo();
+        AbstractBinInfo missingBinInfo = genMissingBinInfo();
         double maxVarIv = calculateIv(binInfos, missingBinInfo);
         boolean isToContinue = true;
 
         while (isToContinue) {
             int nextBinNum = binInfos.size() - 1;
-            CateDynamicBinning cateDynamicBinning = new CateDynamicBinning(nextBinNum);
-            List<CategoricalBinInfo> newBinInfos = cateDynamicBinning.merge(cloneBinInfoList(binInfos));
+            AutoDynamicBinning autoDynamicBinning = new AutoDynamicBinning(nextBinNum);
+            List<AbstractBinInfo> newBinInfos = autoDynamicBinning.merge(cloneBinInfoList(binInfos));
 
             double currentVarIv = calculateIv(newBinInfos, missingBinInfo);
-            LOG.info("New bin number is : {} with IV : {}, while maxVarIv is {}",
+            LOG.debug("New bin number is : {} with IV : {}, while maxVarIv is {}",
                     newBinInfos.size(), currentVarIv, maxVarIv);
-            if (currentVarIv > maxVarIv * this.ivKeepRatio) {
-                binInfos = newBinInfos;
-            } else {
+            if ( newBinInfos.size() == binInfos.size() // bin number is not decreased
+                    || currentVarIv < maxVarIv * this.ivKeepRatio ) { // current is less than (keepRatio * maxIv)
                 isToContinue = false;
+            } else {
+                binInfos = newBinInfos;
             }
         }
 
         return binInfos;
     }
 
-    private List<CategoricalBinInfo> cloneBinInfoList(List<CategoricalBinInfo> binInfos) {
-        List<CategoricalBinInfo> copyBinInfos = new ArrayList<CategoricalBinInfo>();
-        for (CategoricalBinInfo binInfo : binInfos) {
+    private List<AbstractBinInfo> cloneBinInfoList(List<AbstractBinInfo> binInfos) {
+        List<AbstractBinInfo> copyBinInfos = new ArrayList<AbstractBinInfo>();
+        for (AbstractBinInfo binInfo : binInfos) {
             copyBinInfos.add(binInfo.clone());
         }
         return copyBinInfos;
     }
 
-    private double calculateIv(List<CategoricalBinInfo> binInfos, CategoricalBinInfo missingBinInfo) {
+    private double calculateIv(List<AbstractBinInfo> binInfos, AbstractBinInfo missingBinInfo) {
         long[] binCountNeg = new long[binInfos.size() + 1];
         long[] binCountPos = new long[binInfos.size() + 1];
         for (int i = 0; i < binInfos.size(); i++) {
-            CategoricalBinInfo binInfo = binInfos.get(i);
+            AbstractBinInfo binInfo = binInfos.get(i);
             binCountNeg[i] = binInfo.getNegativeCnt();
             binCountPos[i] = binInfo.getPositiveCnt();
         }
@@ -90,22 +94,22 @@ public class ColumnConfigDynamicBinning {
         return columnMetrics.getIv();
     }
 
-    private List<CategoricalBinInfo> mergeSmallBinInfos(List<CategoricalBinInfo> binInfos) {
+    private List<AbstractBinInfo> mergeSmallBinInfos(List<AbstractBinInfo> binInfos) {
         int i = 0;
         while (i < binInfos.size()) {
-            CategoricalBinInfo binInfo = binInfos.get(i);
+            AbstractBinInfo binInfo = binInfos.get(i);
             if (this.minimumInstCnt > 0 && binInfo.getTotalInstCnt() < this.minimumInstCnt && binInfos.size() > 1) {
                 if (i == 0) {
-                    CategoricalBinInfo nextBinInfo = binInfos.get(i + 1);
+                    AbstractBinInfo nextBinInfo = binInfos.get(i + 1);
                     binInfo.mergeRight(nextBinInfo);
                     binInfos.remove(i + 1);
                 } else if (i == binInfos.size() - 1) {
-                    CategoricalBinInfo prevBinInfo = binInfos.get(i - 1);
+                    AbstractBinInfo prevBinInfo = binInfos.get(i - 1);
                     prevBinInfo.mergeRight(binInfo);
                     binInfos.remove(i);
                 } else {
-                    CategoricalBinInfo prevBinInfo = binInfos.get(i - 1);
-                    CategoricalBinInfo nextBinInfo = binInfos.get(i + 1);
+                    AbstractBinInfo prevBinInfo = binInfos.get(i - 1);
+                    AbstractBinInfo nextBinInfo = binInfos.get(i + 1);
                     double prDeltaLeft = Math.abs(prevBinInfo.getPositiveRate() - binInfo.getPositiveRate());
                     double prDeltaRight = Math.abs(binInfo.getPositiveRate() - nextBinInfo.getPositiveRate());
                     if (prDeltaLeft < prDeltaRight) {
@@ -123,8 +127,16 @@ public class ColumnConfigDynamicBinning {
         return binInfos;
     }
 
-    private List<CategoricalBinInfo> genCategoricalBinInfos(ColumnConfig columnConfig) {
-        List<CategoricalBinInfo> categoricalBinInfos = new ArrayList<CategoricalBinInfo>();
+    private List<AbstractBinInfo> genBinInfos(ColumnConfig columnConfig) {
+        if ( columnConfig.isCategorical() ) {
+            return genCategoricalBinInfos(columnConfig);
+        } else {
+            return genNumericalBinInfos(columnConfig);
+        }
+    }
+
+    private List<AbstractBinInfo> genCategoricalBinInfos(ColumnConfig columnConfig) {
+        List<AbstractBinInfo> categoricalBinInfos = new ArrayList<AbstractBinInfo>();
         for (int i = 0; i < columnConfig.getBinCategory().size(); i++) {
             CategoricalBinInfo binInfo = new CategoricalBinInfo();
             List<String> values = new ArrayList<String>();
@@ -141,9 +153,36 @@ public class ColumnConfigDynamicBinning {
         return categoricalBinInfos;
     }
 
-    private CategoricalBinInfo genMissingBinInfo() {
+    private List<AbstractBinInfo> genNumericalBinInfos(ColumnConfig columnConfig) {
+        List<AbstractBinInfo> numericalBinInfos = new ArrayList<AbstractBinInfo>();
+        for (int i = 0; i < columnConfig.getBinBoundary().size(); i++) {
+            NumericalBinInfo binInfo = new NumericalBinInfo();
+            binInfo.setLeftThreshold(columnConfig.getBinBoundary().get(i));
+            if ( i == columnConfig.getBinBoundary().size() - 1 ) {
+                binInfo.setRightThreshold(Double.POSITIVE_INFINITY);
+            } else {
+                binInfo.setRightThreshold(columnConfig.getBinBoundary().get(i + 1));
+            }
+
+            binInfo.setPositiveCnt(columnConfig.getBinCountPos().get(i));
+            binInfo.setNegativeCnt(columnConfig.getBinCountNeg().get(i));
+            binInfo.setWeightPos(columnConfig.getBinWeightedPos().get(i));
+            binInfo.setWeightNeg(columnConfig.getBinWeightedNeg().get(i));
+
+            numericalBinInfos.add(binInfo);
+        }
+
+        return numericalBinInfos;
+    }
+
+    private AbstractBinInfo genMissingBinInfo() {
+        AbstractBinInfo binInfo = null;
         // add missing binning
-        CategoricalBinInfo binInfo = new CategoricalBinInfo();
+        if ( this.columnConfig.isCategorical() ) {
+            binInfo = new CategoricalBinInfo();
+        } else {
+            binInfo = new NumericalBinInfo();
+        }
         binInfo.setPositiveCnt(columnConfig.getBinCountPos().get(columnConfig.getBinCountPos().size() - 1));
         binInfo.setNegativeCnt(columnConfig.getBinCountNeg().get(columnConfig.getBinCountNeg().size() - 1));
         binInfo.setWeightPos(columnConfig.getBinWeightedPos().get(columnConfig.getBinWeightedPos().size() - 1));
