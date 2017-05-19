@@ -635,11 +635,23 @@ public class DTMaster extends AbstractMasterComputable<DTMasterParams, DTWorkerP
      */
     private void doCheckPoint(final MasterContext<DTMasterParams, DTWorkerParams> context,
             final DTMasterParams masterParams, int iteration) {
+        String intervalStr = context.getProps().getProperty(CommonConstants.SHIFU_TREE_CHECKPOINT_INTERVAL);
+        int interval = 50;
+        try {
+            interval = Integer.parseInt(intervalStr);
+        } catch (Exception ignore) {
+        }
+
+        // only do checkpoint in interval configured.
+        if(iteration != 0 && iteration % interval != 0) {
+            return;
+        }
+
         LOG.info("Do checkpoint at hdfs file {} at iteration {}.", this.checkpointOutput, iteration);
         final Queue<TreeNode> finalTodoQueue = this.toDoQueue;
         final Queue<TreeNode> finalToSplitQueue = this.toSplitQueue;
         final boolean finalIsLeaf = this.isLeafWise;
-        
+
         long start = System.currentTimeMillis();
         final List<TreeNode> finalTrees = new ArrayList<TreeNode>();
         for(TreeNode treeNode: this.trees) {
