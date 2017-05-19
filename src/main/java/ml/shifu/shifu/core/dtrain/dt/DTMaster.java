@@ -27,10 +27,10 @@ import java.util.PriorityQueue;
 import java.util.Properties;
 import java.util.Queue;
 import java.util.Random;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 import ml.shifu.guagua.GuaguaConstants;
 import ml.shifu.guagua.GuaguaRuntimeException;
-import ml.shifu.guagua.io.BytableSerializer;
 import ml.shifu.guagua.master.AbstractMasterComputable;
 import ml.shifu.guagua.master.MasterComputable;
 import ml.shifu.guagua.master.MasterContext;
@@ -636,7 +636,7 @@ public class DTMaster extends AbstractMasterComputable<DTMasterParams, DTWorkerP
     private void doCheckPoint(final MasterContext<DTMasterParams, DTWorkerParams> context,
             final DTMasterParams masterParams, int iteration) {
         String intervalStr = context.getProps().getProperty(CommonConstants.SHIFU_TREE_CHECKPOINT_INTERVAL);
-        int interval = 50;
+        int interval = 100;
         try {
             interval = Integer.parseInt(intervalStr);
         } catch (Exception ignore) {
@@ -651,24 +651,16 @@ public class DTMaster extends AbstractMasterComputable<DTMasterParams, DTWorkerP
         final Queue<TreeNode> finalTodoQueue = this.toDoQueue;
         final Queue<TreeNode> finalToSplitQueue = this.toSplitQueue;
         final boolean finalIsLeaf = this.isLeafWise;
-
-        long start = System.currentTimeMillis();
-        final List<TreeNode> finalTrees = new ArrayList<TreeNode>();
-        for(TreeNode treeNode: this.trees) {
-            BytableSerializer<TreeNode> bs = new BytableSerializer<TreeNode>();
-            // clone by serialization
-            byte[] bytes = bs.objectToBytes(treeNode);
-            TreeNode newTreeNode = bs.bytesToObject(bytes, TreeNode.class.getName());
-            finalTrees.add(newTreeNode);
-        }
-        LOG.info("Do checkpoint at clone trees in iteration {} with run time {}", context.getCurrentIteration(),
-                (System.currentTimeMillis() - start));
+        final List<TreeNode> finalTrees = this.trees;
 
         Thread cpPersistThread = new Thread(new Runnable() {
             @Override
             public void run() {
+                long start = System.currentTimeMillis();
                 writeStatesToHdfs(DTMaster.this.checkpointOutput, masterParams, finalTrees, finalIsLeaf,
                         finalTodoQueue, finalToSplitQueue);
+                LOG.info("Do checkpoint in iteration {} with run time {}", context.getCurrentIteration(),
+                        (System.currentTimeMillis() - start));
             }
         }, "Master checkpoint thread");
         cpPersistThread.setDaemon(true);
@@ -1064,7 +1056,7 @@ public class DTMaster extends AbstractMasterComputable<DTMasterParams, DTWorkerP
         if(context.isFirstIteration()) {
             if(this.isRF) {
                 // for random forest, trees are trained in parallel
-                this.trees = new ArrayList<TreeNode>(treeNum);
+                this.trees = new CopyOnWriteArrayList<TreeNode>();
                 for(int i = 0; i < treeNum; i++) {
                     this.trees.add(new TreeNode(i, new Node(Node.ROOT_INDEX), 1d));
                 }
@@ -1078,7 +1070,7 @@ public class DTMaster extends AbstractMasterComputable<DTMasterParams, DTWorkerP
                                 ShifuFileUtils.getFileSystemBySourceType(this.modelConfig.getDataSet().getSource()));
                         if(existingModel == null) {
                             // null means no existing model file or model file is in wrong format
-                            this.trees = new ArrayList<TreeNode>(treeNum);
+                            this.trees = new CopyOnWriteArrayList<TreeNode>();
                             this.trees.add(new TreeNode(0, new Node(Node.ROOT_INDEX), 1d));// learning rate is 1 for 1st
                             LOG.info("Starting to train model from scratch and existing model is empty.");
                         } else {
@@ -1094,7 +1086,7 @@ public class DTMaster extends AbstractMasterComputable<DTMasterParams, DTWorkerP
                         throw new GuaguaRuntimeException(e);
                     }
                 } else {
-                    this.trees = new ArrayList<TreeNode>(treeNum);
+                    this.trees = new CopyOnWriteArrayList<TreeNode>();
                     // for GBDT, initialize the first tree. trees are trained sequentially,first tree learning rate is 1
                     this.trees.add(new TreeNode(0, new Node(Node.ROOT_INDEX), 1.0d));
                 }
@@ -1112,7 +1104,7 @@ public class DTMaster extends AbstractMasterComputable<DTMasterParams, DTWorkerP
         try {
             stream = fs.open(this.checkpointOutput);
             int treeSize = stream.readInt();
-            this.trees = new ArrayList<TreeNode>(treeSize);
+            this.trees = new CopyOnWriteArrayList<TreeNode>();
             for(int i = 0; i < treeSize; i++) {
                 TreeNode treeNode = new TreeNode();
                 treeNode.readFields(stream);
