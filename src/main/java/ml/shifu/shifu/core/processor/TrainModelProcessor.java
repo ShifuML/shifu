@@ -24,6 +24,8 @@ import java.io.IOException;
 import java.lang.Thread.UncaughtExceptionHandler;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -681,8 +683,9 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
                     Map<Integer, MutablePair<String, Double>> featureImportances = CommonUtils
                             .computeTreeModelFeatureImportance(models);
                     String localFsFolder = pathFinder.getLocalFeatureImportanceFolder();
-                    processRollupForFIFiles(localFsFolder);
-                    CommonUtils.writeFeatureImportance(pathFinder.getLocalFeatureImportancePath(), featureImportances);
+                    String localFIPath = pathFinder.getLocalFeatureImportancePath();
+                    processRollupForFIFiles(localFsFolder, localFIPath);
+                    CommonUtils.writeFeatureImportance(localFIPath, featureImportances);
                 }
 
                 if(copyTmpModelsToLocal) {
@@ -703,13 +706,19 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
     /**
      * Rollup feature importance file to keep latest one and old ones.
      */
-    private void processRollupForFIFiles(String localFsFolder) {
+    private void processRollupForFIFiles(String localFsFolder, String fiFile) {
         try {
             FileSystem fs = ShifuFileUtils.getFileSystemBySourceType(SourceType.LOCAL);
             if(!fs.isDirectory(new Path(localFsFolder))) {
                 return;
             }
             FileStatus[] fss = fs.listStatus(new Path(localFsFolder));
+            Arrays.sort(fss, new Comparator<FileStatus>() {
+                @Override
+                public int compare(FileStatus o1, FileStatus o2) {
+                    return o2.getPath().toString().compareTo(o1.getPath().toString());
+                }
+            });
             if(fss != null && fss.length > 0) {
                 for(FileStatus fileStatus: fss) {
                     String strPath = fileStatus.getPath().getName();
@@ -719,7 +728,7 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
                         int lastDotIndex = strPath.lastIndexOf(".");
                         String lastIndexStr = strPath.substring(lastDotIndex + 1, strPath.length());
                         int index = Integer.parseInt(lastIndexStr);
-                        fs.rename(fileStatus.getPath(), new Path(fileStatus.getPath() + "." + (index + 1)));
+                        fs.rename(fileStatus.getPath(), new Path(fiFile + "." + (index + 1)));
                     }
                 }
             }
