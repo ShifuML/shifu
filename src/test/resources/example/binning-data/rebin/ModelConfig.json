@@ -1,0 +1,98 @@
+{
+  "basic" : {
+    "name" : "cam2015-t3-after-rebin",
+    "author" : "pengzhang",
+    "description" : "Created at 2016-08-14 21:01:17",
+    "version" : "0.2.0",
+    "runMode" : "local",
+    "postTrainOn" : false,
+    "customPaths" : { "hdfsModelSetPath" : "/apps/risk/dev/zhanhu" }
+  },
+  "dataSet" : {
+    "source" : "local",
+    "dataPath" : "/user/pengzhang/cam2015/rawtrain",
+    "validationDataPath" : null,
+    "dataDelimiter" : "|",
+    "headerPath" : "/user/pengzhang/cam2015/header",
+    "headerDelimiter" : "|",
+    "filterExpressions" : "",
+    "weightColumnName" : "",
+    "targetColumnName" : "is_cc_bad",
+    "posTags" : [ "1" ],
+    "negTags" : [ "0" ],
+    "missingOrInvalidValues" : [ "", "*", "#", "?", "null", "~" ],
+    "metaColumnNameFile" : "columns/meta.column.names",
+    "categoricalColumnNameFile" : "columns/categorical.column.names"
+  },
+  "stats" : {
+    "maxNumBin" : 0,
+    "cateMaxNumBin" : 0,
+    "binningMethod" : "EqualTotal",
+    "sampleRate" : 1.0,
+    "sampleNegOnly" : false,
+    "binningAlgorithm" : "DynamicBinning",
+    "psiColumnName" : ""
+  },
+  "varSelect" : {
+    "forceEnable" : true,
+    "forceSelectColumnNameFile" : "columns/forceselect.column.names",
+    "forceRemoveColumnNameFile" : "columns/forceremove.column.names",
+    "filterEnable" : true,
+    "filterNum" : 700,
+    "filterBy" : "IV",
+    "wrapperEnabled" : false,
+    "wrapperNum" : 50,
+    "wrapperRatio" : 0.05,
+    "wrapperBy" : "S",
+    "missingRateThreshold" : 0.98,
+    "filterBySE" : true,
+    "params" : null
+  },
+  "normalize" : {
+    "stdDevCutOff" : 4.0,
+    "sampleRate" : 1.0,
+    "sampleNegOnly" : false,
+    "normType" : "WOE"
+  },
+  "train" : {
+    "baggingNum" : 5,
+    "baggingWithReplacement" : false,
+    "baggingSampleRate" : 1.0,
+    "validSetRate" : 0.2,
+    "numTrainEpochs" : 2000,
+    "epochsPerIteration" : 1,
+    "trainOnDisk" : false,
+    "isContinuous" : false,
+    "workerThreadCount" : 4,
+    "algorithm" : "NN",
+    "params" : {
+      "Propagation" : "R",
+      "LearningRate" : 0.1,
+      "NumHiddenLayers" : 1,
+      "NumHiddenNodes" : [ 60 ],
+      "ActivationFunc" : [ "tanh" ]
+    },
+    "customPaths" : { }
+  },
+  "evals" : [ {
+    "name" : "Eval1",
+    "dataSet" : {
+      "source" : "HDFS",
+      "dataPath" : "/user/pengzhang/cam2015/newtest-marnew",
+      "validationDataPath" : null,
+      "dataDelimiter" : "|",
+      "headerPath" : "/user/pengzhang/cam2015/header",
+      "headerDelimiter" : "|",
+      "filterExpressions" : "",
+      "weightColumnName" : "cg_dol_wgt",
+      "targetColumnName" : "is_cc_bad",
+      "posTags" : [ "1" ],
+      "negTags" : [ "0", "2" ],
+      "missingOrInvalidValues" : [ "", "*", "#", "?", "null", "~" ]
+    },
+    "performanceBucketNum" : 100,
+    "performanceScoreSelector" : "mean",
+    "scoreMetaColumnNameFile" : "columns/Eval1score.meta.column.names",
+    "customPaths" : { }
+  } ]
+}
