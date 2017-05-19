@@ -940,4 +940,8 @@ public class PathFinder {
     private String getShuffleDataPath(SourceType sourceType) {
         return getPathBySourceType(new Path(Constants.TMP, Constants.SHUFFLED_DATA_PATH), sourceType);
     }
+
+    public String getBackupColumnConfig() {
+        return getPathBySourceType(new Path(Constants.TMP, Constants.COLUMN_CONFIG_JSON_FILE_NAME), SourceType.LOCAL);
+    }
 }
