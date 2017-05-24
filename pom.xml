@@ -65,7 +65,7 @@
         <developerConnection>scm:git:https://github.com/shifuml/shifu.git</developerConnection>
         <connection>scm:git:https://github.com/shifuml/shifu.git</connection>
         <url>https://github.com/shifuml/shifu.git</url>
-        <tag>shifu-0.11.0-SNAPSHOT</tag>
+        <tag>shifu-0.10.2</tag>
     </scm>
     <dependencies>
         <dependency>
