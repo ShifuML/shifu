@@ -59,7 +59,7 @@ public class ModelStatsConf {
     /**
      * Max num bin for each categorical column
      */
-    private Integer cateMaxNumBin = -1;
+    private Integer cateMaxNumBin = 0;
 
     /**
      * Binning method used in stats. By default is EqualPositive.

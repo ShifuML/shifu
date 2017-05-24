@@ -82,9 +82,11 @@ public class BinningPartialDataUDF extends AbstractTrainerUDF<String> {
                     binning = new CategoricalBinning(-1);
                 } else {
                     if(super.modelConfig.getBinningMethod().equals(BinningMethod.EqualInterval)) {
-                        binning = new EqualIntervalBinning(modelConfig.getStats().getMaxNumBin());
+                        binning = new EqualIntervalBinning(modelConfig.getStats().getMaxNumBin() > 0
+                                ? modelConfig.getStats().getMaxNumBin() : 1024);
                     } else {
-                        binning = new EqualPopulationBinning(modelConfig.getStats().getMaxNumBin());
+                        binning = new EqualPopulationBinning(modelConfig.getStats().getMaxNumBin() > 0
+                                ? modelConfig.getStats().getMaxNumBin() : 1024);
                     }
                 }
             }

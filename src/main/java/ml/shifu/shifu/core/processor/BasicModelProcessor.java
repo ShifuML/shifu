@@ -20,16 +20,10 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStreamWriter;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Scanner;
-import java.util.Set;
+import java.util.*;
 
 import ml.shifu.shifu.column.NSColumn;
+import ml.shifu.shifu.column.NSColumnUtils;
 import ml.shifu.shifu.container.meta.ValidateResult;
 import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.container.obj.ModelConfig;
@@ -49,6 +43,7 @@ import ml.shifu.shifu.util.JSONUtils;
 import ml.shifu.shifu.util.updater.ColumnConfigUpdater;
 
 import org.apache.commons.collections.CollectionUtils;
+import org.apache.commons.collections.MapUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.fs.Path;
 import org.slf4j.Logger;
@@ -298,7 +293,6 @@ public class BasicModelProcessor {
 
         String alg = modelConfig.getAlgorithm();
         Map<String, Object> param = modelConfig.getParams();
-        LOG.info("Check algorithm parameter");
 
         if(alg.equalsIgnoreCase("LR")) {
             if(!param.containsKey("LearningRate")) {
@@ -507,6 +501,92 @@ public class BasicModelProcessor {
             }
         }
         LOG.info("Generate clean data for tree model successful.");
+    }
+
+    /**
+     * Save ModelConfig into some folder
+     *
+     * @param folder      - folder to host ModelConfig.json
+     * @param modelConfig model config instance
+     * @throws IOException any io exception
+     */
+    protected void saveModelConfig(String folder, ModelConfig modelConfig) throws IOException {
+        JSONUtils.writeValue(new File(folder + File.separator + Constants.MODEL_CONFIG_JSON_FILE_NAME), modelConfig);
+    }
+
+    /**
+     * save the Column Config
+     *
+     * @throws IOException
+     *             an exception in saving column config
+     */
+    protected void saveColumnConfigList(String path, List<ColumnConfig> columnConfigs) throws IOException {
+        LOG.info("Saving ColumnConfig into {} ... ", path);
+        JSONUtils.writeValue(new File(path), columnConfigs);
+    }
+
+    protected boolean isRequestColumn(List<String> catVariables, ColumnConfig columnConfig) {
+        boolean status = false;
+        for ( String varName : catVariables ) {
+            if (NSColumnUtils.isColumnEqual(varName, columnConfig.getColumnName()) ) {
+                status = true;
+                break;
+            }
+        }
+        return status;
+    }
+
+    protected boolean getBooleanParam(Map<String, Object> params, String propKey) {
+        if ( MapUtils.isNotEmpty(params) && params.get(propKey) instanceof Boolean ) {
+            return (Boolean) params.get(propKey);
+        }
+        return false;
+    }
+
+    protected List<String> getStringList(Map<String, Object> params, String propKey, String delimiter) {
+        if ( MapUtils.isNotEmpty(params) && params.get(propKey) instanceof String ) {
+            String propVal = (String) params.get(propKey);
+            if ( StringUtils.isNotBlank(propVal) ) {
+                return Arrays.asList(propVal.split(","));
+            }
+        }
+        return null;
+    }
+
+    protected int getIntParam(Map<String, Object> params, String propKey) {
+        if ( MapUtils.isNotEmpty(params) && params.get(propKey) instanceof String) {
+            String propVal = (String) params.get(propKey);
+            try {
+                return Integer.parseInt(propVal);
+            } catch (Exception e) {
+                LOG.warn("Invalid int value for {}. Ignore it...", propKey);
+            }
+        }
+        return 0;
+    }
+
+    protected double getDoubleParam(Map<String, Object> params, String propKey, double defval) {
+        if ( MapUtils.isNotEmpty(params) && params.get(propKey) instanceof String) {
+            String propVal = (String) params.get(propKey);
+            try {
+                return Double.parseDouble(propVal);
+            } catch (Exception e) {
+                LOG.warn("Invalid double value for {}. Ignore it...", propKey);
+            }
+        }
+        return defval;
+    }
+
+    protected long getLongParam(Map<String, Object> params, String propKey) {
+        if ( MapUtils.isNotEmpty(params) && params.get(propKey) instanceof String) {
+            String propVal = (String) params.get(propKey);
+            try {
+                return Long.parseLong(propVal);
+            } catch (Exception e) {
+                LOG.warn("Invalid long value for {}. Ignore it...", propKey);
+            }
+        }
+        return 0;
     }
 
 }

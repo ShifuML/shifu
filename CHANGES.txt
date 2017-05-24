@@ -16,6 +16,9 @@
  
 Shifu Change Log
 
+Changes for Shifu-0.10.2
+    * Fix GBT SLA issue: pre-parse double types for only once.
+
 Changes for Shifu-0.10.1
     * Fix one big bug on 'baggingWithReplacement':
         https://github.com/ShifuML/shifu/issues/335
