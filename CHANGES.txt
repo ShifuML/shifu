@@ -16,6 +16,10 @@
  
 Shifu Change Log
 
+Changes for Shifu-0.10.2
+    * Fix GBT SLA issue: pre-parse double types for only once.
+Changes for Shifu-0.10.1
+    * Fix a bug on baggingWithReplacement: false enabled by true.
 Changes for Shifu-0.10.0
     * Tree Ensemble Model Improvement
         a) Speed GBT Training
