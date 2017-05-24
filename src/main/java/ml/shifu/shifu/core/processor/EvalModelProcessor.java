@@ -214,7 +214,7 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
     /**
      * run score only
      * 
-     * @param evalConfigList
+     * @param evalSetList
      *            eval config list
      * @throws IOException
      *             any io exception
@@ -228,7 +228,7 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
     /**
      * Run score only
      * 
-     * @param evalConfig
+     * @param config
      *            the eval config instance
      * @throws IOException
      *             any io exception
@@ -509,6 +509,12 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
         ShifuFileUtils.createFileIfNotExists(new Path(evalConfig.getName()
                 + Constants.DEFAULT_EVALSCORE_META_COLUMN_FILE).toString(), SourceType.LOCAL);
 
+        // create empty <EvalSetName>.meta.column.names
+        String namesFilePath = Constants.COLUMN_META_FOLDER_NAME + File.separator
+                + evalConfig.getName() + "." + Constants.DEFAULT_META_COLUMN_FILE;
+        ShifuFileUtils.createFileIfNotExists(new Path(namesFilePath).toString(), SourceType.LOCAL);
+        evalConfig.getDataSet().setMetaColumnNameFile(namesFilePath);
+
         modelConfig.getEvals().add(evalConfig);
 
         try {
@@ -542,17 +548,19 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
         String[] evalColumnNames = null;
 
         if(StringUtils.isNotBlank(evalConfig.getDataSet().getHeaderPath())) {
-            String delimiter = StringUtils.isBlank(evalConfig.getDataSet().getHeaderDelimiter()) ? evalConfig
-                    .getDataSet().getDataDelimiter() : evalConfig.getDataSet().getHeaderDelimiter();
+            String delimiter = StringUtils.isBlank(evalConfig.getDataSet().getHeaderDelimiter()) // get header delimiter
+                    ? evalConfig.getDataSet().getDataDelimiter() : evalConfig.getDataSet().getHeaderDelimiter();
             evalColumnNames = CommonUtils.getHeaders(evalConfig.getDataSet().getHeaderPath(), delimiter, evalConfig
                     .getDataSet().getSource());
         } else {
-            String delimiter = StringUtils.isBlank(evalConfig.getDataSet().getHeaderDelimiter()) ? evalConfig
-                    .getDataSet().getDataDelimiter() : evalConfig.getDataSet().getHeaderDelimiter();
+            String delimiter = StringUtils.isBlank(evalConfig.getDataSet().getHeaderDelimiter()) // get header delimiter
+                    ? evalConfig.getDataSet().getDataDelimiter() : evalConfig.getDataSet().getHeaderDelimiter();
             String[] fields = CommonUtils.takeFirstLine(evalConfig.getDataSet().getDataPath(), delimiter, evalConfig
                     .getDataSet().getSource());
             // if first line contains target column name, we guess it is csv format and first line is header.
-            if(StringUtils.join(fields, "").contains(modelConfig.getTargetColumnName())) {
+            String evalTargetColumnName = ( (StringUtils.isBlank(evalConfig.getDataSet().getTargetColumnName()))
+                    ? modelConfig.getTargetColumnName() : evalConfig.getDataSet().getTargetColumnName());
+            if(StringUtils.join(fields, "").contains(evalTargetColumnName)) {
                 // first line of data meaning second line in data files excluding first header line
                 String[] dataInFirstLine = CommonUtils.takeFirstTwoLines(evalConfig.getDataSet().getDataPath(),
                         delimiter, evalConfig.getDataSet().getSource())[1];
@@ -561,10 +569,10 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
                             "Eval header length and eval data length are not consistent, please check you header setting and data set setting in eval.");
                 }
 
-                evalColumnNames = new String[fields.length];
-                for(int i = 0; i < fields.length; i++) {
-                    evalColumnNames[i] = CommonUtils.getRelativePigHeaderColumnName(fields[i]);
-                }
+                evalColumnNames = fields;
+                // for(int i = 0; i < fields.length; i++) {
+                //     evalColumnNames[i] = CommonUtils.getRelativePigHeaderColumnName(fields[i]);
+                // }
                 LOG.warn("No header path is provided, we will try to read first line and detect schema.");
                 LOG.warn("Schema in ColumnConfig.json are named as first line of data set path.");
             } else {
@@ -584,20 +592,25 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
         }
 
         for(ColumnConfig config: this.columnConfigList) {
-            if(config.isFinalSelect() && !names.contains(new NSColumn(config.getColumnName()))) {
+            NSColumn nsColumn = new NSColumn(config.getColumnName());
+            if(config.isFinalSelect() && !names.contains(nsColumn) && !names.contains(new NSColumn(nsColumn.getSimpleName()))) {
                 throw new IllegalArgumentException("Final selected column " + config.getColumnName()
                         + " does not exist in - " + evalConfig.getDataSet().getHeaderPath());
             }
         }
 
+        NSColumn targetColumn = new NSColumn(evalConfig.getDataSet().getTargetColumnName());
         if(StringUtils.isNotBlank(evalConfig.getDataSet().getTargetColumnName())
-                && !names.contains(new NSColumn(evalConfig.getDataSet().getTargetColumnName()))) {
+                && !names.contains(targetColumn)
+                && !names.contains(new NSColumn(targetColumn.getSimpleName())) ) {
             throw new IllegalArgumentException("Target column " + evalConfig.getDataSet().getTargetColumnName()
                     + " does not exist in - " + evalConfig.getDataSet().getHeaderPath());
         }
 
+        NSColumn weightColumn = new NSColumn(evalConfig.getDataSet().getTargetColumnName());
         if(StringUtils.isNotBlank(evalConfig.getDataSet().getWeightColumnName())
-                && !names.contains(new NSColumn(evalConfig.getDataSet().getWeightColumnName()))) {
+                && !names.contains(weightColumn)
+                && !names.contains(new NSColumn(weightColumn.getSimpleName()))) {
             throw new IllegalArgumentException("Weight column " + evalConfig.getDataSet().getWeightColumnName()
                     + " does not exist in - " + evalConfig.getDataSet().getHeaderPath());
         }

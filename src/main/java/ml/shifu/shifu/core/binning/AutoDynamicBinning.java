@@ -4,20 +4,22 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 
+import ml.shifu.shifu.core.binning.obj.AbstractBinInfo;
+
 /**
  * Created by zhanhu on 4/18/17.
  */
-public class CateDynamicBinning {
+public class AutoDynamicBinning {
 
     private final static double EPS = 1e-6;
 
     private int expectedBinningNum;
-    public CateDynamicBinning(int expectedBinNum) {
+    public AutoDynamicBinning(int expectedBinNum) {
         this.expectedBinningNum = expectedBinNum;
     }
 
-    public List<CategoricalBinInfo> merge(List<CategoricalBinInfo> categoricalBinInfos) {
-        List<CategoricalBinInfo> mergedBinInfos = new ArrayList<CategoricalBinInfo>(categoricalBinInfos);
+    public List<AbstractBinInfo> merge(List<AbstractBinInfo> binInfos) {
+        List<AbstractBinInfo> mergedBinInfos = new ArrayList<AbstractBinInfo>(binInfos);
         if (mergedBinInfos.size() > this.expectedBinningNum) {
             double totalInstCnt = getTotalInstCount(mergedBinInfos);
             mergedBinInfos = adjustBinInfos(mergedBinInfos, this.expectedBinningNum, totalInstCnt);
@@ -26,15 +28,15 @@ public class CateDynamicBinning {
         return mergedBinInfos;
     }
 
-    private double getTotalInstCount(List<CategoricalBinInfo> categoricalBinInfos) {
+    private double getTotalInstCount(List<AbstractBinInfo> binInfos) {
         double total = 0.0;
-        for (CategoricalBinInfo binInfo : categoricalBinInfos) {
+        for (AbstractBinInfo binInfo : binInfos) {
             total += (binInfo.getNegativeCnt() + binInfo.getPositiveCnt());
         }
         return total;
     }
 
-    private List<CategoricalBinInfo> adjustBinInfos(List<CategoricalBinInfo> mergedBinInfos,
+    private List<AbstractBinInfo> adjustBinInfos(List<AbstractBinInfo> mergedBinInfos,
                                                     int expectedBinningNum, double totalInstCnt) {
         while (mergedBinInfos.size() > expectedBinningNum) {
             int pos = getBestMergeNode(mergedBinInfos, totalInstCnt);
@@ -49,15 +51,15 @@ public class CateDynamicBinning {
         return mergedBinInfos;
     }
 
-    private int getBestMergeNode(List<CategoricalBinInfo> mergedBinInfos, double totalInstCnt) {
+    private int getBestMergeNode(List<AbstractBinInfo> mergedBinInfos, double totalInstCnt) {
         double entropy = calculateEntropy(mergedBinInfos, totalInstCnt);
         double entryReduction = Double.MAX_VALUE;
         int nodeIndexToMerge = 0;
         int pos = -1;
 
-        CategoricalBinInfo current = null;
+        AbstractBinInfo current = null;
 
-        Iterator<CategoricalBinInfo> iterator = mergedBinInfos.iterator();
+        Iterator<AbstractBinInfo> iterator = mergedBinInfos.iterator();
         if (iterator.hasNext()) {
             pos = 0;
             current = iterator.next();
@@ -66,9 +68,9 @@ public class CateDynamicBinning {
 
         while (iterator.hasNext()) {
             pos++;
-            CategoricalBinInfo next = iterator.next();
+            AbstractBinInfo next = iterator.next();
 
-            CategoricalBinInfo temp = current.clone();
+            AbstractBinInfo temp = current.clone();
             temp.mergeRight(next);
 
             double entropyMerging = entropy
@@ -88,17 +90,17 @@ public class CateDynamicBinning {
         return nodeIndexToMerge;
     }
 
-    private double calculateEntropy(List<CategoricalBinInfo> mergedBinInfos, double totalInstCnt) {
+    private double calculateEntropy(List<AbstractBinInfo> mergedBinInfos, double totalInstCnt) {
         double entropy = 0.0;
 
-        for (CategoricalBinInfo binInfo : mergedBinInfos) {
+        for (AbstractBinInfo binInfo : mergedBinInfos) {
             entropy += getInfoValue(binInfo, totalInstCnt);
         }
 
         return entropy;
     }
 
-    private double getInfoValue(CategoricalBinInfo cateBinInfo, double totalInstCnt) {
+    private double getInfoValue(AbstractBinInfo cateBinInfo, double totalInstCnt) {
         double percent = cateBinInfo.getTotalInstCnt() / totalInstCnt;
         double positiveRate = (cateBinInfo.getPositiveCnt() + EPS) / cateBinInfo.getTotalInstCnt();
         double negativeRate = (cateBinInfo.getNegativeCnt() + EPS) / cateBinInfo.getTotalInstCnt();
