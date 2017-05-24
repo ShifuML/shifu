@@ -34,10 +34,16 @@ import ml.shifu.guagua.hadoop.util.HDPUtils;
 import ml.shifu.guagua.mapreduce.GuaguaMapReduceConstants;
 import ml.shifu.guagua.util.NumberFormatUtils;
 import ml.shifu.guagua.util.ReflectionUtils;
+import ml.shifu.shifu.column.NSColumnUtils;
 import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.container.obj.ColumnConfig.ColumnFlag;
 import ml.shifu.shifu.container.obj.ModelStatsConf;
 import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
+import ml.shifu.shifu.core.ColumnStatsCalculator;
+import ml.shifu.shifu.core.binning.ColumnConfigDynamicBinning;
+import ml.shifu.shifu.core.binning.obj.AbstractBinInfo;
+import ml.shifu.shifu.core.binning.obj.CategoricalBinInfo;
+import ml.shifu.shifu.core.binning.obj.NumericalBinInfo;
 import ml.shifu.shifu.core.correlation.CorrelationMapper;
 import ml.shifu.shifu.core.correlation.CorrelationMultithreadedMapper;
 import ml.shifu.shifu.core.correlation.CorrelationReducer;
@@ -55,11 +61,13 @@ import ml.shifu.shifu.core.validator.ModelInspector.ModelStep;
 import ml.shifu.shifu.exception.ShifuErrorCode;
 import ml.shifu.shifu.exception.ShifuException;
 import ml.shifu.shifu.fs.ShifuFileUtils;
+import ml.shifu.shifu.fs.SourceFile;
 import ml.shifu.shifu.util.CommonUtils;
 import ml.shifu.shifu.util.Constants;
 import ml.shifu.shifu.util.Environment;
 
 import org.apache.commons.codec.binary.Base64;
+import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.compress.compressors.bzip2.BZip2CompressorInputStream;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.jexl2.JexlException;
@@ -92,10 +100,18 @@ public class StatsModelProcessor extends BasicModelProcessor implements Processo
 
     private final static Logger log = LoggerFactory.getLogger(StatsModelProcessor.class);
 
-    private boolean isComputeCorr = false;
+    public static final String IS_COMPUTE_CORR = "IS_COMPUTE_CORR";
+    public static final String IS_REBIN = "IS_RE_BIN";
 
-    public StatsModelProcessor(boolean isComputeCorr) {
-        this.isComputeCorr = isComputeCorr;
+    public static final String REQUEST_VARS = "REQUEST_VARS";
+    public static final String EXPECTED_BIN_NUM = "EXPECTED_BIN_NUM";
+    public static final String IV_KEEP_RATIO = "IV_KEEP_RATIO";
+    public static final String MINIMUM_BIN_INST_CNT = "MINIMUM_BIN_INST_CNT";
+
+    private Map<String, Object> params;
+
+    public StatsModelProcessor(Map<String, Object> params) {
+        this.params = params;
     }
 
     public StatsModelProcessor() {
@@ -114,7 +130,7 @@ public class StatsModelProcessor extends BasicModelProcessor implements Processo
             // resync ModelConfig.json/ColumnConfig.json to HDFS
             syncDataToHdfs(modelConfig.getDataSet().getSource());
 
-            if(isComputeCorr) {
+            if(getBooleanParam(this.params, IS_COMPUTE_CORR)) {
                 // 1. validate if run stats before run stats -correlation
                 boolean foundValidMeanValueColumn = false;
                 for(ColumnConfig config: this.columnConfigList) {
@@ -135,6 +151,41 @@ public class StatsModelProcessor extends BasicModelProcessor implements Processo
                 log.info("Start computing correlation value ...");
                 runCorrMapReduceJob();
                 // 3. save column config list
+                saveColumnConfigList();
+            } else if (getBooleanParam(this.params, IS_REBIN)) {
+                // run the re-binning
+                String backupColumnConfigPath = this.pathFinder.getBackupColumnConfig();
+                if ( !ShifuFileUtils.isFileExists(new Path(backupColumnConfigPath), SourceType.LOCAL)) {
+                    ShifuFileUtils.createDirIfNotExists(new SourceFile(Constants.TMP, SourceType.LOCAL));
+                    saveColumnConfigList(backupColumnConfigPath, this.columnConfigList);
+                } else { // existing backup ColumnConfig.json, use binning info in it to do rebin
+                    List<ColumnConfig> backColumnConfigList =
+                            CommonUtils.loadColumnConfigList(backupColumnConfigPath, SourceType.LOCAL);
+                    for ( ColumnConfig backupColumnConfig : backColumnConfigList ) {
+                        for ( ColumnConfig columnConfig: this.columnConfigList ) {
+                            if (NSColumnUtils.isColumnEqual(backupColumnConfig.getColumnName()
+                                    , columnConfig.getColumnName())) {
+                                columnConfig.setColumnBinning(backupColumnConfig.getColumnBinning());
+                            }
+                        }
+                    }
+                }
+
+                List<ColumnConfig> rebinColumns = new ArrayList<ColumnConfig>();
+                List<String> catVariables = getStringList(this.params, REQUEST_VARS, ",");
+                for ( ColumnConfig columnConfig : this.columnConfigList ) {
+                    if (CollectionUtils.isEmpty(catVariables) || isRequestColumn(catVariables, columnConfig)) {
+                        rebinColumns.add(columnConfig);
+                    }
+                }
+
+                if ( CollectionUtils.isNotEmpty(rebinColumns) ) {
+                    for ( ColumnConfig columnConfig : rebinColumns ) {
+                        doReBin(columnConfig);
+                    }
+                }
+
+                // use the merge ColumnConfig.json to replace current one
                 saveColumnConfigList();
             } else {
                 AbstractStatsExecutor statsExecutor = null;
@@ -159,12 +210,18 @@ public class StatsModelProcessor extends BasicModelProcessor implements Processo
                     throw new ShifuException(ShifuErrorCode.ERROR_UNSUPPORT_MODE);
                 }
                 statsExecutor.doStats();
+
+                // update the backup ColumnConfig.json after running stats
+                String backupColumnConfigPath = this.pathFinder.getBackupColumnConfig();
+                ShifuFileUtils.createDirIfNotExists(new SourceFile(Constants.TMP, SourceType.LOCAL));
+                saveColumnConfigList(backupColumnConfigPath, this.columnConfigList);
             }
 
             syncDataToHdfs(modelConfig.getDataSet().getSource());
             clearUp(ModelStep.STATS);
         } catch (Exception e) {
             log.error("Error:", e);
+            e.printStackTrace();
             return -1;
         }
 
@@ -509,6 +566,101 @@ public class StatsModelProcessor extends BasicModelProcessor implements Processo
             header.append(',').append(config.getColumnName());
         }
         return header.toString();
+    }
+
+    private void doReBin(ColumnConfig columnConfig) throws IOException {
+        int expectBinNum = getIntParam(this.params, EXPECTED_BIN_NUM);
+        double ivKeepRatio = getDoubleParam(this.params, IV_KEEP_RATIO, 1.0d);
+        long minimumInstCnt = getLongParam(this.params, MINIMUM_BIN_INST_CNT);
+
+        ColumnConfigDynamicBinning columnConfigDynamicBinning =
+                new ColumnConfigDynamicBinning(columnConfig, expectBinNum, ivKeepRatio, minimumInstCnt);
+
+        List<AbstractBinInfo> binInfos = columnConfigDynamicBinning.run();
+
+        long[] binCountNeg = new long[binInfos.size() + 1];
+        long[] binCountPos = new long[binInfos.size() + 1];
+        for (int i = 0; i < binInfos.size(); i++) {
+            AbstractBinInfo binInfo = binInfos.get(i);
+            binCountNeg[i] = binInfo.getNegativeCnt();
+            binCountPos[i] = binInfo.getPositiveCnt();
+        }
+        binCountNeg[binCountNeg.length - 1] =
+                columnConfig.getBinCountNeg().get(columnConfig.getBinCountNeg().size() - 1);
+        binCountPos[binCountPos.length - 1] =
+                columnConfig.getBinCountPos().get(columnConfig.getBinCountPos().size() - 1);
+
+        double[] binWeightNeg = new double[binInfos.size() + 1];
+        double[] binWeightPos = new double[binInfos.size() + 1];
+        for (int i = 0; i < binInfos.size(); i++) {
+            AbstractBinInfo binInfo = binInfos.get(i);
+            binWeightNeg[i] = binInfo.getWeightNeg();
+            binWeightPos[i] = binInfo.getWeightPos();
+        }
+
+        binWeightNeg[binWeightNeg.length - 1] =
+                columnConfig.getBinWeightedNeg().get(columnConfig.getBinWeightedNeg().size() - 1);
+        binWeightPos[binWeightPos.length - 1] =
+                columnConfig.getBinWeightedPos().get(columnConfig.getBinWeightedPos().size() - 1);
+
+        ColumnStatsCalculator.ColumnMetrics columnCountMetrics =
+                ColumnStatsCalculator.calculateColumnMetrics(binCountNeg, binCountPos);
+        ColumnStatsCalculator.ColumnMetrics columnWeightMetrics =
+                ColumnStatsCalculator.calculateColumnMetrics(binWeightNeg, binWeightPos);
+
+        columnConfig.setBinLength(binInfos.size() + 1);
+        if ( columnConfig.isCategorical() ) {
+            List<String> values = new ArrayList<String>();
+            for (AbstractBinInfo binInfo: binInfos) {
+                CategoricalBinInfo categoricalBinInfo = (CategoricalBinInfo) binInfo;
+                values.add(StringUtils.join(categoricalBinInfo.getValues(), "^"));
+            }
+            columnConfig.setBinCategory(values);
+        } else {
+            List<Double> values = new ArrayList<Double>();
+            for (AbstractBinInfo binInfo: binInfos) {
+                NumericalBinInfo numericalBinInfo = (NumericalBinInfo) binInfo;
+                values.add(numericalBinInfo.getLeftThreshold());
+            }
+            columnConfig.setBinBoundary(values);
+        }
+        columnConfig.setBinCountNeg(convertToIntList(binCountNeg));
+        columnConfig.setBinCountPos(convertToIntList(binCountPos));
+
+        List<Double> binPosRates = new ArrayList<Double>();
+        for (AbstractBinInfo binInfo: binInfos) {
+            binPosRates.add(binInfo.getPositiveRate());
+        }
+        columnConfig.setBinPosCaseRate(binPosRates);
+
+        columnConfig.setBinWeightedNeg(convertIntoDoubleList(binWeightNeg));
+        columnConfig.setBinWeightedPos(convertIntoDoubleList(binWeightPos));
+
+        columnConfig.setIv(columnCountMetrics.getIv());
+        columnConfig.setKs(columnCountMetrics.getKs());
+        columnConfig.getColumnStats().setWoe(columnCountMetrics.getWoe());
+        columnConfig.getColumnBinning().setBinCountWoe(columnCountMetrics.getBinningWoe());
+
+        columnConfig.getColumnStats().setWeightedIv(columnWeightMetrics.getIv());
+        columnConfig.getColumnStats().setWeightedKs(columnWeightMetrics.getWoe());
+        columnConfig.getColumnStats().setWeightedWoe(columnWeightMetrics.getWoe());
+        columnConfig.getColumnBinning().setBinWeightedWoe(columnWeightMetrics.getBinningWoe());
+    }
+
+    private List<Double> convertIntoDoubleList(double[] binWeights) {
+        List<Double> doubleList = new ArrayList<Double>(binWeights.length);
+        for ( double weight : binWeights ) {
+            doubleList.add(weight);
+        }
+        return doubleList;
+    }
+
+    private List<Integer> convertToIntList(long[] binCounts) {
+        List<Integer> binCountList = new ArrayList<Integer>(binCounts.length);
+        for ( long count : binCounts ) {
+            binCountList.add((int)count);
+        }
+        return binCountList;
     }
 
 }
