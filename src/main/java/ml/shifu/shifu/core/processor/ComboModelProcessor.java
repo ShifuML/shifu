@@ -670,17 +670,6 @@ public class ComboModelProcessor extends BasicModelProcessor implements Processo
     }
 
     /**
-     * Save ModelConfig into some folder
-     *
-     * @param folder      - folder to host ModelConfig.json
-     * @param modelConfig model config instance
-     * @throws IOException any io exception
-     */
-    private void saveModelConfig(String folder, ModelConfig modelConfig) throws IOException {
-        JSONUtils.writeValue(new File(folder + File.separator + Constants.MODEL_CONFIG_JSON_FILE_NAME), modelConfig);
-    }
-
-    /**
      * Check whether there is any fail results in the list
      *
      * @param taskResults
