@@ -24,6 +24,8 @@ import java.io.IOException;
 import java.lang.Thread.UncaughtExceptionHandler;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -71,6 +73,7 @@ import ml.shifu.shifu.core.dtrain.nn.NNWorker;
 import ml.shifu.shifu.core.validator.ModelInspector.ModelStep;
 import ml.shifu.shifu.exception.ShifuErrorCode;
 import ml.shifu.shifu.exception.ShifuException;
+import ml.shifu.shifu.fs.PathFinder;
 import ml.shifu.shifu.fs.ShifuFileUtils;
 import ml.shifu.shifu.guagua.GuaguaParquetMapReduceClient;
 import ml.shifu.shifu.guagua.ShifuInputFormat;
@@ -89,6 +92,7 @@ import org.apache.commons.lang.StringUtils;
 import org.apache.commons.lang3.tuple.MutablePair;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.IOUtils;
@@ -678,8 +682,10 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
                     // compute feature importance and write to local file after models are trained
                     Map<Integer, MutablePair<String, Double>> featureImportances = CommonUtils
                             .computeTreeModelFeatureImportance(models);
-                    CommonUtils.writeFeatureImportance(this.pathFinder.getLocalFeatureImportancePath(),
-                            featureImportances);
+                    String localFsFolder = pathFinder.getLocalFeatureImportanceFolder();
+                    String localFIPath = pathFinder.getLocalFeatureImportancePath();
+                    processRollupForFIFiles(localFsFolder, localFIPath);
+                    CommonUtils.writeFeatureImportance(localFIPath, featureImportances);
                 }
 
                 if(copyTmpModelsToLocal) {
@@ -695,6 +701,40 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
             LOG.error("Error may occurred. There is no model generated. Please check!");
         }
         return status;
+    }
+
+    /**
+     * Rollup feature importance file to keep latest one and old ones.
+     */
+    private void processRollupForFIFiles(String localFsFolder, String fiFile) {
+        try {
+            FileSystem fs = ShifuFileUtils.getFileSystemBySourceType(SourceType.LOCAL);
+            if(!fs.isDirectory(new Path(localFsFolder))) {
+                return;
+            }
+            FileStatus[] fss = fs.listStatus(new Path(localFsFolder));
+            Arrays.sort(fss, new Comparator<FileStatus>() {
+                @Override
+                public int compare(FileStatus o1, FileStatus o2) {
+                    return o2.getPath().toString().compareTo(o1.getPath().toString());
+                }
+            });
+            if(fss != null && fss.length > 0) {
+                for(FileStatus fileStatus: fss) {
+                    String strPath = fileStatus.getPath().getName();
+                    if(strPath.endsWith(PathFinder.FEATURE_IMPORTANCE_FILE)) {
+                        fs.rename(fileStatus.getPath(), new Path(fileStatus.getPath() + ".1"));
+                    } else if(strPath.contains(PathFinder.FEATURE_IMPORTANCE_FILE)) {
+                        int lastDotIndex = strPath.lastIndexOf(".");
+                        String lastIndexStr = strPath.substring(lastDotIndex + 1, strPath.length());
+                        int index = Integer.parseInt(lastIndexStr);
+                        fs.rename(fileStatus.getPath(), new Path(fiFile + "." + (index + 1)));
+                    }
+                }
+            }
+        } catch (Exception ignore) {
+            // any exception we can ignore, just override old all.fi files
+        }
     }
 
     private Map<String, Object> findBestParams(SourceType sourceType, FileSystem fileSystem, GridSearch gs)
@@ -1033,8 +1073,8 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
 
         // if GBDT or RF, such iteration should be extended to make sure all trees will be executed successfully without
         // maxIteration limitation
-        if(CommonUtils.isTreeModel(alg) && numTrainEpoches <= 30000) {
-            numTrainEpoches = 30000;
+        if(CommonUtils.isTreeModel(alg) && numTrainEpoches <= 50000) {
+            numTrainEpoches = 50000;
         }
         // the reason to add 1 is that the first iteration in implementation is used for training preparation.
         numTrainEpoches = numTrainEpoches + 1;
