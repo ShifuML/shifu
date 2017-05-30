@@ -2427,7 +2427,7 @@ public final class CommonUtils {
     public static List<String> flattenCatValGrp(String categoricalValGrp) {
         List<String> catVals = new ArrayList<String>();
         if(StringUtils.isNotBlank(categoricalValGrp)) {
-            for(String cval: Splitter.on('^').split(categoricalValGrp)) {
+            for(String cval: Splitter.on(Constants.CATEGORICAL_GROUP_VAL_DELIMITER).split(categoricalValGrp)) {
                 catVals.add(cval);
             }
         }
