@@ -278,62 +278,69 @@ public class UpdateBinningInfoReducer extends Reducer<IntWritable, BinningInfoWr
         double kurtosis = ColumnStatsCalculator.computeKurtosis(realCount, mean, aStdDev, sum, squaredSum, tripleSum,
                 quarticSum);
 
-        sb.append(key.get())
+        sb.append(key.get())                                        // column id
                 .append(Constants.DEFAULT_DELIMITER)
-                .append(binBounString)
+                .append(binBounString)                              // column bins
                 .append(Constants.DEFAULT_DELIMITER)
-                .append(Arrays.toString(binCountNeg))
+                .append(Arrays.toString(binCountNeg))               // bin count negative
                 .append(Constants.DEFAULT_DELIMITER)
-                .append(Arrays.toString(binCountPos))
+                .append(Arrays.toString(binCountPos))               // bin count positive
                 .append(Constants.DEFAULT_DELIMITER)
-                .append(Arrays.toString(new double[0]))
+                .append(Arrays.toString(new double[0]))             // deprecated
                 .append(Constants.DEFAULT_DELIMITER)
-                .append(Arrays.toString(binPosRate))
+                .append(Arrays.toString(binPosRate))                // bin positive rate
                 .append(Constants.DEFAULT_DELIMITER)
-                .append(columnCountMetrics == null ? "" : df.format(columnCountMetrics.getKs()))
+                .append(columnCountMetrics == null ? "" : df.format(columnCountMetrics.getKs()))   // KS
                 .append(Constants.DEFAULT_DELIMITER)
-                .append(columnWeightMetrics == null ? "" : df.format(columnWeightMetrics.getIv()))
+                .append(columnCountMetrics == null ? "" : df.format(columnCountMetrics.getIv()))  // IV
                 .append(Constants.DEFAULT_DELIMITER)
-                .append(df.format(max))
+                .append(df.format(max))                             // max
                 .append(Constants.DEFAULT_DELIMITER)
-                .append(df.format(min))
+                .append(df.format(min))                             // min
                 .append(Constants.DEFAULT_DELIMITER)
-                .append(df.format(mean))
+                .append(df.format(mean))                            // mean
                 .append(Constants.DEFAULT_DELIMITER)
-                .append(df.format(stdDev))
+                .append(df.format(stdDev))                          // standard deviation
                 .append(Constants.DEFAULT_DELIMITER)
-                .append(columnConfig.isCategorical() ? "C" : "N")
+                .append(columnConfig.isCategorical() ? "C" : "N")   // column type
                 .append(Constants.DEFAULT_DELIMITER)
-                .append(df.format(mean))
+                .append(df.format(mean))                            // median value ?
                 .append(Constants.DEFAULT_DELIMITER)
-                .append(missingCount)
+                .append(missingCount)                               // missing count
                 .append(Constants.DEFAULT_DELIMITER)
-                .append(count)
+                .append(count)                                      // count
                 .append(Constants.DEFAULT_DELIMITER)
-                .append(missingCount * 1.0d / count)
+                .append(missingCount * 1.0d / count)                // missing ratio
                 .append(Constants.DEFAULT_DELIMITER)
-                .append(Arrays.toString(binWeightNeg))
+                .append(Arrays.toString(binWeightNeg))              // bin weighted negative
                 .append(Constants.DEFAULT_DELIMITER)
-                .append(Arrays.toString(binWeightPos))
+                .append(Arrays.toString(binWeightPos))              // bin weighted positive
                 .append(Constants.DEFAULT_DELIMITER)
-                .append(columnCountMetrics == null ? "" : columnCountMetrics.getWoe())
+                .append(columnCountMetrics == null ? "" : columnCountMetrics.getWoe())  // WOE
                 .append(Constants.DEFAULT_DELIMITER)
-                .append(columnWeightMetrics == null ? "" : columnWeightMetrics.getWoe())
+                .append(columnWeightMetrics == null ? "" : columnWeightMetrics.getWoe()) // weighted WOE
                 .append(Constants.DEFAULT_DELIMITER)
-                .append(columnWeightMetrics == null ? "" : columnWeightMetrics.getKs())
+                .append(columnWeightMetrics == null ? "" : columnWeightMetrics.getKs())  // weighted KS
                 .append(Constants.DEFAULT_DELIMITER)
-                .append(columnCountMetrics == null ? "" : columnCountMetrics.getIv())
+                .append(columnWeightMetrics == null ? "" : columnWeightMetrics.getIv())  // weighted IV
                 .append(Constants.DEFAULT_DELIMITER)
-                .append(columnCountMetrics == null ? Arrays.toString(new double[binSize + 1]) : columnCountMetrics
-                        .getBinningWoe().toString())
+                .append(columnCountMetrics == null ? Arrays.toString(new double[binSize + 1]) : columnCountMetrics.getBinningWoe().toString()) // bin WOE
                 .append(Constants.DEFAULT_DELIMITER)
-                .append(columnWeightMetrics == null ? Arrays.toString(new double[binSize + 1]) : columnWeightMetrics
-                        .getBinningWoe().toString()).append(Constants.DEFAULT_DELIMITER).append(skewness)
-                .append(Constants.DEFAULT_DELIMITER).append(kurtosis).append(Constants.DEFAULT_DELIMITER)
-                .append(totalCount).append(Constants.DEFAULT_DELIMITER).append(invalidCount)
-                .append(Constants.DEFAULT_DELIMITER).append(validNumCount).append(Constants.DEFAULT_DELIMITER)
-                .append(hyperLogLogPlus.cardinality()).append(Constants.DEFAULT_DELIMITER)
-                .append(limitedFrequentItems(fis));
+                .append(columnWeightMetrics == null ? Arrays.toString(new double[binSize + 1]) : columnWeightMetrics.getBinningWoe().toString()) // bin weighted WOE
+                .append(Constants.DEFAULT_DELIMITER)
+                .append(skewness)                                   // skewness
+                .append(Constants.DEFAULT_DELIMITER)
+                .append(kurtosis)                                   // kurtosis
+                .append(Constants.DEFAULT_DELIMITER)
+                .append(totalCount)                                 // total count
+                .append(Constants.DEFAULT_DELIMITER)
+                .append(invalidCount)                               // invalid count
+                .append(Constants.DEFAULT_DELIMITER)
+                .append(validNumCount)                              // valid num count
+                .append(Constants.DEFAULT_DELIMITER)
+                .append(hyperLogLogPlus.cardinality())              // cardinality
+                .append(Constants.DEFAULT_DELIMITER)
+                .append(limitedFrequentItems(fis));                 // frequent items
 
         outputValue.set(sb.toString());
         context.write(NullWritable.get(), outputValue);

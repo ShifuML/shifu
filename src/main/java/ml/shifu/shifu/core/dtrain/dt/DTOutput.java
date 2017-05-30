@@ -322,7 +322,13 @@ public class DTOutput extends BasicMasterInterceptor<DTMasterParams, DTWorkerPar
                     columnIndexNameMapping.put(columnConfig.getColumnNum(), columnConfig.getColumnName());
                 }
                 if(columnConfig.isCategorical() && CollectionUtils.isNotEmpty(columnConfig.getBinCategory())) {
-                    columnIndexCategoricalListMapping.put(columnConfig.getColumnNum(), columnConfig.getBinCategory());
+                    // There is 16k limitation when using writeUTF() function.
+                    // Flatten the binCategories to avoid too long categories
+                    List<String> binCategories = new ArrayList<String>();
+                    for ( String category : columnConfig.getBinCategory() ) {
+                        binCategories.addAll(CommonUtils.flattenCatValGrp(category));
+                    }
+                    columnIndexCategoricalListMapping.put(columnConfig.getColumnNum(), binCategories);
                 }
 
                 if(columnConfig.isNumerical() && columnConfig.getMean() != null) {
