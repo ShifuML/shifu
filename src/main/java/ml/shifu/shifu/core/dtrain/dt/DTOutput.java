@@ -34,6 +34,7 @@ import ml.shifu.shifu.core.dtrain.gs.GridSearch;
 import ml.shifu.shifu.fs.ShifuFileUtils;
 import ml.shifu.shifu.util.CommonUtils;
 
+import ml.shifu.shifu.util.Constants;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -49,6 +50,11 @@ import org.slf4j.LoggerFactory;
 public class DTOutput extends BasicMasterInterceptor<DTMasterParams, DTWorkerParams> {
 
     private static final Logger LOG = LoggerFactory.getLogger(DTOutput.class);
+
+    /**
+     * The limitation of max categorical value length
+     */
+    private static final int MAX_CATEGORICAL_VAL_LEN = 10 * 1024;
 
     /**
      * Model Config read from HDFS
@@ -322,13 +328,7 @@ public class DTOutput extends BasicMasterInterceptor<DTMasterParams, DTWorkerPar
                     columnIndexNameMapping.put(columnConfig.getColumnNum(), columnConfig.getColumnName());
                 }
                 if(columnConfig.isCategorical() && CollectionUtils.isNotEmpty(columnConfig.getBinCategory())) {
-                    // There is 16k limitation when using writeUTF() function.
-                    // Flatten the binCategories to avoid too long categories
-                    List<String> binCategories = new ArrayList<String>();
-                    for ( String category : columnConfig.getBinCategory() ) {
-                        binCategories.addAll(CommonUtils.flattenCatValGrp(category));
-                    }
-                    columnIndexCategoricalListMapping.put(columnConfig.getColumnNum(), binCategories);
+                    columnIndexCategoricalListMapping.put(columnConfig.getColumnNum(), columnConfig.getBinCategory());
                 }
 
                 if(columnConfig.isNumerical() && columnConfig.getMean() != null) {
@@ -365,6 +365,16 @@ public class DTOutput extends BasicMasterInterceptor<DTMasterParams, DTWorkerPar
                     fos.writeInt(entry.getKey());
                     fos.writeInt(categories.size());
                     for(String category: categories) {
+                        // There is 16k limitation when using writeUTF() function.
+                        // if the category value is larger than 10k, then treat it as missing value
+                        if ( category.length() > MAX_CATEGORICAL_VAL_LEN ) {
+                            int pos = category.lastIndexOf(Constants.CATEGORICAL_GROUP_VAL_DELIMITER, MAX_CATEGORICAL_VAL_LEN);
+                            if ( pos >= 0 ) {
+                                category = category.substring(0, pos);
+                            } else {
+                                category = category.substring(0, MAX_CATEGORICAL_VAL_LEN);
+                            }
+                        }
                         fos.writeUTF(category);
                     }
                 }
