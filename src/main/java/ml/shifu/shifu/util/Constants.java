@@ -256,4 +256,6 @@ public interface Constants {
     
     public static final String SHIFU_CORRELATION_COMPUTE_ALL = "shifu.correlation.computeAll";
 
+    public static final char CATEGORICAL_GROUP_VAL_DELIMITER = '^';
+
 }
