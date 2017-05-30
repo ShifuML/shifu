@@ -1,11 +1,10 @@
 package ml.shifu.shifu.core.binning;
 
-import ml.shifu.shifu.core.binning.obj.AbstractBinInfo;
-import ml.shifu.shifu.core.binning.obj.CategoricalBinInfo;
-
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
+
+import ml.shifu.shifu.core.binning.obj.AbstractBinInfo;
 
 /**
  * Created by zhanhu on 4/18/17.

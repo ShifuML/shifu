@@ -25,6 +25,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.zip.GZIPInputStream;
 
 import ml.shifu.shifu.core.dtrain.CommonConstants;
@@ -633,7 +634,7 @@ public class IndependentTreeModel {
         }
 
         int treeNum = dis.readInt();
-        List<TreeNode> trees = new ArrayList<TreeNode>(treeNum);
+        List<TreeNode> trees = new CopyOnWriteArrayList<TreeNode>();
         List<Double> weights = new ArrayList<Double>(treeNum);
         for(int i = 0; i < treeNum; i++) {
             TreeNode treeNode = new TreeNode();
