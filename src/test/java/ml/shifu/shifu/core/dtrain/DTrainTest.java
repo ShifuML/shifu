@@ -139,7 +139,7 @@ public class DTrainTest {
 
             if(weightCalculator == null) {
                 weightCalculator = new Weight(globalParams.getGradients().length, globalParams.getTrainSize(),
-                        this.rate, DTrainUtils.QUICK_PROPAGATION, 0, RegulationLevel.NONE);
+                        this.rate, DTrainUtils.QUICK_PROPAGATION, 0, RegulationLevel.NONE, 0d);
             }
 
             double[] interWeight = weightCalculator.calculateWeights(globalParams.getWeights(),
@@ -243,7 +243,7 @@ public class DTrainTest {
 
             if(weightCalculator == null) {
                 weightCalculator = new Weight(globalParams.getGradients().length, globalParams.getTrainSize(),
-                        this.rate, DTrainUtils.MANHATTAN_PROPAGATION, 0, RegulationLevel.NONE);
+                        this.rate, DTrainUtils.MANHATTAN_PROPAGATION, 0, RegulationLevel.NONE, 0d);
             }
 
             double[] interWeight = weightCalculator.calculateWeights(globalParams.getWeights(),
@@ -327,7 +327,7 @@ public class DTrainTest {
 
             if(weightCalculator == null) {
                 weightCalculator = new Weight(globalParams.getGradients().length, globalParams.getTrainSize(),
-                        this.rate, DTrainUtils.BACK_PROPAGATION, 0, RegulationLevel.NONE);
+                        this.rate, DTrainUtils.BACK_PROPAGATION, 0, RegulationLevel.NONE, 0d);
             }
 
             double[] interWeight = weightCalculator.calculateWeights(globalParams.getWeights(),
@@ -411,7 +411,7 @@ public class DTrainTest {
 
             if(weightCalculator == null) {
                 weightCalculator = new Weight(globalParams.getGradients().length, globalParams.getTrainSize(),
-                        this.rate, DTrainUtils.RESILIENTPROPAGATION, 0, RegulationLevel.NONE);
+                        this.rate, DTrainUtils.RESILIENTPROPAGATION, 0, RegulationLevel.NONE, 0d);
             }
 
             double[] interWeight = weightCalculator.calculateWeights(globalParams.getWeights(),

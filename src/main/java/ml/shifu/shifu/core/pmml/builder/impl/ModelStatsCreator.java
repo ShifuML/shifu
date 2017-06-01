@@ -17,14 +17,14 @@ package ml.shifu.shifu.core.pmml.builder.impl;
 
 import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.container.obj.ModelConfig;
+import ml.shifu.shifu.core.dtrain.dataset.BasicFloatNetwork;
 import ml.shifu.shifu.core.pmml.builder.creator.AbstractPmmlElementCreator;
+import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang.StringUtils;
 import org.dmg.pmml.*;
+import org.encog.ml.BasicML;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 /**
  * Created by zhanhu on 3/29/16.
@@ -42,35 +42,69 @@ public class ModelStatsCreator extends AbstractPmmlElementCreator<ModelStats> {
     }
 
     @Override
-    public ModelStats build() {
+    public ModelStats build(BasicML basicML) {
         ModelStats modelStats = new ModelStats();
 
-        for(ColumnConfig columnConfig: columnConfigList) {
-            if(columnConfig.isFinalSelect()) {
-                UnivariateStats univariateStats = new UnivariateStats();
-                univariateStats.setField(FieldName.create(columnConfig.getColumnName()));
+        if(basicML instanceof BasicFloatNetwork) {
+            BasicFloatNetwork bfn = (BasicFloatNetwork) basicML;
+            Set<Integer> featureSet = bfn.getFeatureSet();
+            for(ColumnConfig columnConfig: columnConfigList) {
+                if(columnConfig.isFinalSelect()
+                        && (CollectionUtils.isEmpty(featureSet) || featureSet.contains(columnConfig.getColumnNum()))) {
+                    UnivariateStats univariateStats = new UnivariateStats();
+                    univariateStats.setField(FieldName.create(columnConfig.getColumnName()));
 
-                if(columnConfig.isCategorical()) {
-                    DiscrStats discrStats = new DiscrStats();
+                    if(columnConfig.isCategorical()) {
+                        DiscrStats discrStats = new DiscrStats();
 
-                    Array countArray = createCountArray(columnConfig);
-                    discrStats.withArrays(countArray);
+                        Array countArray = createCountArray(columnConfig);
+                        discrStats.withArrays(countArray);
 
-                    if ( !isConcise ) {
-                        List<Extension> extensions = createExtensions(columnConfig);
-                        discrStats.withExtensions(extensions);
+                        if(!isConcise) {
+                            List<Extension> extensions = createExtensions(columnConfig);
+                            discrStats.withExtensions(extensions);
+                        }
+
+                        univariateStats.setDiscrStats(discrStats);
+                    } else { // numerical column
+                        univariateStats.setNumericInfo(createNumericInfo(columnConfig));
+
+                        if(!isConcise) {
+                            univariateStats.setContStats(createConStats(columnConfig));
+                        }
                     }
 
-                    univariateStats.setDiscrStats(discrStats);
-                } else { // numerical column
-                    univariateStats.setNumericInfo(createNumericInfo(columnConfig));
-
-                    if ( !isConcise ) {
-                        univariateStats.setContStats(createConStats(columnConfig));
-                    }
+                    modelStats.withUnivariateStats(univariateStats);
                 }
+            }
+        } else {
+            for(ColumnConfig columnConfig: columnConfigList) {
+                if(columnConfig.isFinalSelect()) {
+                    UnivariateStats univariateStats = new UnivariateStats();
+                    univariateStats.setField(FieldName.create(columnConfig.getColumnName()));
 
-                modelStats.withUnivariateStats(univariateStats);
+                    if(columnConfig.isCategorical()) {
+                        DiscrStats discrStats = new DiscrStats();
+
+                        Array countArray = createCountArray(columnConfig);
+                        discrStats.withArrays(countArray);
+
+                        if(!isConcise) {
+                            List<Extension> extensions = createExtensions(columnConfig);
+                            discrStats.withExtensions(extensions);
+                        }
+
+                        univariateStats.setDiscrStats(discrStats);
+                    } else { // numerical column
+                        univariateStats.setNumericInfo(createNumericInfo(columnConfig));
+
+                        if(!isConcise) {
+                            univariateStats.setContStats(createConStats(columnConfig));
+                        }
+                    }
+
+                    modelStats.withUnivariateStats(univariateStats);
+                }
             }
         }
 
@@ -79,7 +113,7 @@ public class ModelStatsCreator extends AbstractPmmlElementCreator<ModelStats> {
 
     /**
      * Create @Array for numerical variable
-     *
+     * 
      * @param columnConfig
      *            - ColumnConfig for numerical variable
      * @return Array for numerical variable ( positive count + negative count )
@@ -101,7 +135,7 @@ public class ModelStatsCreator extends AbstractPmmlElementCreator<ModelStats> {
 
     /**
      * Create common extension list from ColumnConfig
-     *
+     * 
      * @param columnConfig
      *            - ColumnConfig to create extension
      * @return extension list
@@ -120,7 +154,7 @@ public class ModelStatsCreator extends AbstractPmmlElementCreator<ModelStats> {
 
     /**
      * Create extension list from HashMap
-     *
+     * 
      * @param extensionMap
      *            the <String,String> map to create extension list
      * @return extension list
@@ -141,7 +175,7 @@ public class ModelStatsCreator extends AbstractPmmlElementCreator<ModelStats> {
 
     /**
      * Create @NumericInfo for numerical variable
-     *
+     * 
      * @param columnConfig
      *            - ColumnConfig for numerical variable
      * @return NumericInfo for variable
@@ -160,7 +194,7 @@ public class ModelStatsCreator extends AbstractPmmlElementCreator<ModelStats> {
 
     /**
      * Create @ConStats for numerical variable
-     *
+     * 
      * @param columnConfig
      *            - ColumnConfig to generate ConStats
      * @return ConStats for variable
@@ -202,7 +236,7 @@ public class ModelStatsCreator extends AbstractPmmlElementCreator<ModelStats> {
 
     /**
      * Generate Woe data from positive and negative counts
-     *
+     * 
      * @param binCountPos
      *            - positive count list
      * @param binCountNeg

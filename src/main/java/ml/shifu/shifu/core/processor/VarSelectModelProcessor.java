@@ -15,17 +15,17 @@
  */
 package ml.shifu.shifu.core.processor;
 
+import java.io.BufferedReader;
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.Scanner;
+import java.util.*;
 
 import ml.shifu.guagua.GuaguaConstants;
 import ml.shifu.guagua.hadoop.util.HDPUtils;
 import ml.shifu.guagua.mapreduce.GuaguaMapReduceClient;
 import ml.shifu.guagua.mapreduce.GuaguaMapReduceConstants;
+import ml.shifu.shifu.column.NSColumn;
 import ml.shifu.shifu.container.obj.ColumnConfig;
+import ml.shifu.shifu.container.obj.ModelVarSelectConf.PostCorrelationMetric;
 import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
 import ml.shifu.shifu.core.VariableSelector;
 import ml.shifu.shifu.core.dtrain.CommonConstants;
@@ -41,6 +41,7 @@ import ml.shifu.shifu.core.dvarsel.wrapper.WrapperWorkerConductor;
 import ml.shifu.shifu.core.mr.input.CombineInputFormat;
 import ml.shifu.shifu.core.validator.ModelInspector.ModelStep;
 import ml.shifu.shifu.core.varselect.ColumnInfo;
+import ml.shifu.shifu.core.varselect.ColumnStatistics;
 import ml.shifu.shifu.core.varselect.VarSelectMapper;
 import ml.shifu.shifu.core.varselect.VarSelectReducer;
 import ml.shifu.shifu.exception.ShifuErrorCode;
@@ -51,9 +52,10 @@ import ml.shifu.shifu.util.CommonUtils;
 import ml.shifu.shifu.util.Constants;
 import ml.shifu.shifu.util.Environment;
 
-import ml.shifu.shifu.util.updater.ColumnConfigUpdater;
+import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.collections.ListUtils;
 import org.apache.commons.compress.compressors.bzip2.BZip2CompressorInputStream;
+import org.apache.commons.io.IOUtils;
 import org.apache.commons.jexl2.JexlException;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.lang3.tuple.MutablePair;
@@ -114,6 +116,11 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
     @SuppressWarnings("unused")
     private static final double BAD_IV_THRESHOLD = 0.02d;
 
+    /**
+     * SE stats mao for correlation variable selection,if not se, this field will be null.
+     */
+    private Map<Integer, ColumnStatistics> seStatsMap;
+
     private void validateParameters() throws Exception {
         // String alg = super.getModelConfig().getTrain().getAlgorithm();
         String filterBy = this.modelConfig.getVarSelectFilterBy();
@@ -137,6 +144,7 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
         try {
             setUp(ModelStep.VARSELECT);
             validateParameters();
+
             // reset all selections if user specify or select by absolute number
             if(isToReset) {
                 log.info("Reset all selections data including type final select etc!");
@@ -162,7 +170,7 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
                             || filterBy.equalsIgnoreCase(Constants.FILTER_BY_MIX)) {
                         this.columnConfigList = selector.selectByFilter();
                     } else if(filterBy.equalsIgnoreCase(Constants.FILTER_BY_FI)) {
-                        if(!CommonUtils.isDesicionTreeAlgorithm(modelConfig.getAlgorithm())) {
+                        if(!CommonUtils.isTreeModel(modelConfig.getAlgorithm())) {
                             throw new IllegalArgumentException(
                                     "Filter by FI only works well in GBT/RF. Please check your modelconfig::train.");
                         }
@@ -212,24 +220,18 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
         // compute feature importance and write to local file
         Map<Integer, MutablePair<String, Double>> featureImportances = CommonUtils
                 .computeTreeModelFeatureImportance(models);
-        CommonUtils.writeFeatureImportance(this.pathFinder.getLocalFeatureImportancePath(), featureImportances);
         if(super.modelConfig.getVarSelect().getFilterEnable()) {
             this.postProcessFIVarSelect(featureImportances);
         }
     }
 
-    public void resetAllFinalSelect() {
+    public void resetAllFinalSelect() throws IOException {
         log.info("!!! Reset all variables finalSelect = false");
         for(ColumnConfig columnConfig: this.columnConfigList) {
             columnConfig.setFinalSelect(false);
             columnConfig.setColumnFlag(null);
         }
-
-        try {
-            ColumnConfigUpdater.updateColumnConfigFlags(this.modelConfig, this.columnConfigList, ModelStep.VARSELECT);
-        } catch (IOException e) {
-            log.error("Fail to update ColumnConfig.json flags.", e);
-        }
+        saveColumnConfigList();
     }
 
     private void validateNormalize() throws IOException {
@@ -545,6 +547,7 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
                         Constants.SHIFU_DEFAULT_VARSEL_SE_MULTI_THREAD);
                 threads = Constants.SHIFU_DEFAULT_VARSEL_SE_MULTI_THREAD;
             }
+            conf.setInt("mapreduce.map.cpu.vcores", threads);
             MultithreadedMapper.setNumberOfThreads(job, threads);
         } else {
             job.setMapperClass(VarSelectMapper.class);
@@ -594,7 +597,7 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
         // Tmp set to false because of some cluster by default use gzip while CombineInputFormat will split gzip file (a
         // bug)
         conf.setBoolean(CombineInputFormat.SHIFU_VS_SPLIT_COMBINABLE, false);
-        conf.setBoolean(FileInputFormat.INPUT_DIR_RECURSIVE, true);
+        conf.setBoolean("mapreduce.input.fileinputformat.input.dir.recursive", true);
 
         conf.set("mapred.reduce.slowstart.completed.maps",
                 Environment.getProperty("mapred.reduce.slowstart.completed.maps", "0.9"));
@@ -628,7 +631,7 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
         }
     }
 
-    private void postProcessFIVarSelect(Map<Integer, MutablePair<String, Double>> importances) {
+    private void postProcessFIVarSelect(Map<Integer, MutablePair<String, Double>> importances) throws IOException {
         int selectCnt = 0;
         for(ColumnConfig config: super.columnConfigList) {
             // enable ForceSelect
@@ -651,6 +654,9 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
                 columnConfig.setFinalSelect(false);
             }
         }
+
+        Set<NSColumn> userCandidateColumns = CommonUtils.loadCandidateColumns(modelConfig);
+
         while(selectCnt < targetCnt && i < targetCnt) {
             if(i >= candidateCount) {
                 log.warn("Var select finish due to feature importance count {} is less than target var count {}",
@@ -659,7 +665,10 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
             }
             Integer columnId = candidateColumnIdList.get(i++);
             ColumnConfig columnConfig = this.columnConfigList.get(columnId);
-            if(!columnConfig.isForceSelect() && !columnConfig.isForceRemove()) {
+            if (CollectionUtils.isNotEmpty(userCandidateColumns)
+                    && !userCandidateColumns.contains(new NSColumn(columnConfig.getColumnName()))) {
+                log.info("Variable {} is not in user's candidate list. Skip it.", columnConfig.getColumnName());
+            } else if(!columnConfig.isForceSelect() && !columnConfig.isForceRemove()) {
                 columnConfig.setFinalSelect(true);
                 selectCnt++;
                 log.info("Variable {} is selected.", columnConfig.getColumnName());
@@ -687,6 +696,8 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
                 log.info("Variable {} is selected, since it is in ForceSelect list.", config.getColumnName());
             }
         }
+
+        Set<NSColumn> userCandidateColumns = CommonUtils.loadCandidateColumns(modelConfig);
 
         List<Scanner> scanners = null;
         try {
@@ -719,7 +730,10 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
                 }
                 Integer columnId = candidateColumnIdList.get(i++);
                 ColumnConfig columnConfig = this.columnConfigList.get(columnId);
-                if(!columnConfig.isForceSelect() && !columnConfig.isForceRemove()) {
+                if ( CollectionUtils.isNotEmpty(userCandidateColumns)
+                        && !userCandidateColumns.contains(new NSColumn(columnConfig.getColumnName())) ) {
+                    log.info("Variable {} is not in user's candidate list. Skip it.", columnConfig.getColumnName());
+                } if(!columnConfig.isForceSelect() && !columnConfig.isForceRemove()) {
                     columnConfig.setFinalSelect(true);
                     selectCnt++;
                     log.info("Variable {} is selected.", columnConfig.getColumnName());
@@ -730,6 +744,8 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
             log.info(
                     "Sensitivity analysis report is in {}/{}-* file(s) with format 'column_index\tcolumn_name\tmean\trms\tvariance'.",
                     varSelectMSEOutputPath, Constants.SHIFU_VARSELECT_SE_OUTPUT_NAME);
+            this.seStatsMap = readSEValuesToMap(varSelectMSEOutputPath + Path.SEPARATOR
+                    + Constants.SHIFU_VARSELECT_SE_OUTPUT_NAME + "-*", source);
         } finally {
             if(scanners != null) {
                 for(Scanner scanner: scanners) {
@@ -739,6 +755,40 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
                 }
             }
         }
+    }
+
+    private Map<Integer, ColumnStatistics> readSEValuesToMap(String seOutputFiles, SourceType source)
+            throws IOException {
+        // here only works for 1 reducer
+        FileStatus[] globStatus = ShifuFileUtils.getFileSystemBySourceType(source).globStatus(new Path(seOutputFiles));
+        if(globStatus == null || globStatus.length == 0) {
+            throw new RuntimeException("Var select MSE stats output file not exist.");
+        }
+        Map<Integer, ColumnStatistics> map = new HashMap<Integer, ColumnStatistics>();
+        List<Scanner> scanners = null;
+        try {
+            scanners = ShifuFileUtils.getDataScanners(globStatus[0].getPath().toString(), source);
+            for(Scanner scanner: scanners) {
+                String str = null;
+                while(scanner.hasNext()) {
+                    str = scanner.nextLine().trim();
+                    String[] splits = CommonUtils.split(str, "\t");
+                    if(splits.length == 5) {
+                        map.put(Integer.parseInt(splits[0].trim()), new ColumnStatistics(Double.parseDouble(splits[2]),
+                                Double.parseDouble(splits[3]), Double.parseDouble(splits[4])));
+                    }
+                }
+            }
+        } finally {
+            if(scanners != null) {
+                for(Scanner scanner: scanners) {
+                    if(scanner != null) {
+                        scanner.close();
+                    }
+                }
+            }
+        }
+        return null;
     }
 
     @Override
@@ -756,9 +806,13 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
 
     /**
      * To do some auto variable selection like remove ID-like variables, remove variable with high missing rate.
+     * 
+     * @throws IOException
+     *             any IO exception
      */
-    private void autoVarSelCondition() {
+    private void autoVarSelCondition() throws IOException {
         // here we do loop again as it is not bad for variables less than 100,000
+        // 1. check missing rate
         for(ColumnConfig config: columnConfigList) {
             if(!config.isTarget() && !config.isMeta() && !config.isForceSelect() && config.isFinalSelect()
                     && isHighMissingRateColumn(config)) {
@@ -768,6 +822,148 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
                 config.setFinalSelect(false);
             }
         }
+
+        // 2. check correlation value:
+        if(!ShifuFileUtils.isFileExists(pathFinder.getLocalCorrelationCsvPath(), SourceType.LOCAL)) {
+            return;
+        }
+        varSelectByCorrelation();
+
+        // 3. check KS and IV min threshold value
+        for(ColumnConfig config: columnConfigList) {
+            if(!config.isTarget() && !config.isMeta() && !config.isForceSelect() && config.isFinalSelect()) {
+                float minIvThreshold = super.modelConfig.getVarSelect().getMinIvThreshold() == null ? 0f
+                        : super.modelConfig.getVarSelect().getMinIvThreshold();
+                if(config.getIv() != null && config.getIv() < minIvThreshold) {
+                    log.warn(
+                            "IV of column {} is less than minimal IV threshold, set final select to false. If not, you can check it manually in ColumnConfig.json",
+                            config.getColumnName());
+                    config.setFinalSelect(false);
+                }
+
+                float minKsThreshold = super.modelConfig.getVarSelect().getMinKsThreshold() == null ? 0f
+                        : super.modelConfig.getVarSelect().getMinKsThreshold();
+                if(config.getKs() != null && config.getKs() < minKsThreshold) {
+                    log.warn(
+                            "KS of column {} is less than minimal KS threshold, set final select to false. If not, you can check it manually in ColumnConfig.json",
+                            config.getColumnName());
+                    config.setFinalSelect(false);
+                }
+            }
+        }
+    }
+
+    private void varSelectByCorrelation() throws IOException {
+        BufferedReader reader = ShifuFileUtils.getReader(pathFinder.getLocalCorrelationCsvPath(), SourceType.LOCAL);
+        int lineNum = 0;
+        try {
+            String line = null;
+            while((line = reader.readLine()) != null) {
+                lineNum += 1;
+                if(lineNum <= 2) {
+                    // skip first 2 lines which are indexes and names
+                    continue;
+                }
+
+                String[] columns = CommonUtils.split(line, ",");
+                if(columns != null && columns.length == columnConfigList.size() + 2) {
+                    int columnIndex = Integer.parseInt(columns[0].trim());
+                    ColumnConfig config = this.columnConfigList.get(columnIndex);
+
+                    // only check final-selected non-meta columns
+                    if(config.isFinalSelect() || config.isTarget()) {
+                        double[] corrArray = getCorrArray(columns);
+                        for(int i = 0; i < corrArray.length; i++) {
+                            // only check column larger than current column index and already final selected
+                            if(config.getColumnNum() < i
+                                    && (columnConfigList.get(i).isTarget() || columnConfigList.get(i).isFinalSelect())) {
+                                // * 1.000005d is to avoid some value like 1.0000000002 in correlation value
+                                if(Math.abs(corrArray[i]) > (modelConfig.getVarSelect().getCorrelationThreshold() * 1.000005d)) {
+                                    if(config.isTarget() && columnConfigList.get(i).isFinalSelect()) {
+                                        log.warn(
+                                                "{} and {} has high correlated value while {} is target, {} is set to NOT final-selected no matter it is force-selected or not.",
+                                                columnIndex, i, i);
+                                        columnConfigList.get(i).setFinalSelect(false);
+                                    } else if(config.isFinalSelect() && columnConfigList.get(i).isTarget()) {
+                                        log.warn(
+                                                "{} and {} has high correlated value while {} is target, {} is set to NOT final-selected no matter it is force-selected or not.",
+                                                columnIndex, i, columnIndex);
+                                        config.setFinalSelect(false);
+                                    } else {
+                                        // both columns are not target and all final selected
+                                        ColumnConfig dropConfig = null;
+                                        PostCorrelationMetric corrMetric = modelConfig.getVarSelect()
+                                                .getPostCorrelationMetric();
+                                        if(checkCorrelationMetric(config, columnConfigList.get(i), corrMetric)) {
+                                            dropConfig = columnConfigList.get(i);
+                                        } else {
+                                            dropConfig = config;
+                                        }
+
+                                        // if SE filterBy and SE postcorrelationMetric, seStatsMap has stats, do
+                                        // correlation comparison by SE RMS value
+                                        if(this.modelConfig.getVarSelectFilterBy().equals("SE")
+                                                && corrMetric == PostCorrelationMetric.SE && this.seStatsMap != null
+                                                && this.seStatsMap.get(config.getColumnNum()) != null
+                                                && this.seStatsMap.get(columnConfigList.get(i).getColumnNum()) != null) {
+                                            log.warn(
+                                                    "Absolute correlation value {} in column pair ({}, {}) ({}, {}) are larger than correlationThreshold value {} set in VarSelect#correlationThreshold, column {} name {} with smaller SE RMS value will not be selected, set finalSelect to false.",
+                                                    Math.abs(corrArray[i]), config.getColumnNum(), i,
+                                                    config.getColumnName(), columnConfigList.get(i).getColumnName(),
+                                                    modelConfig.getVarSelect().getCorrelationThreshold(),
+                                                    dropConfig.getColumnNum(), dropConfig.getColumnName());
+                                        } else {
+                                            log.info(
+                                                    "Absolute correlation value {} in column pair ({}, {}) ({}, {}) are larger than correlationThreshold value {} set in VarSelect#correlationThreshold, column {} name {} with smaller {} value will not be selected, set finalSelect to false.",
+                                                    Math.abs(corrArray[i]), config.getColumnNum(), i,
+                                                    config.getColumnName(), columnConfigList.get(i).getColumnName(),
+                                                    modelConfig.getVarSelect().getCorrelationThreshold(),
+                                                    dropConfig.getColumnNum(), dropConfig.getColumnName(), corrMetric);
+                                        }
+                                        // de-select column which is dropped in current logic
+                                        dropConfig.setFinalSelect(false);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        } finally {
+            IOUtils.closeQuietly(reader);
+        }
+    }
+
+    private boolean checkCorrelationMetric(ColumnConfig config1, ColumnConfig config2, PostCorrelationMetric metric) {
+        if(metric == null) {
+            return config1.getIv() > config2.getIv();
+        }
+        switch(metric) {
+            case KS:
+                return config1.getKs() > config2.getKs();
+            case SE:
+                if(this.modelConfig.getVarSelectFilterBy().equals("SE") && this.seStatsMap != null
+                        && this.seStatsMap.get(config1.getColumnNum()) != null
+                        && this.seStatsMap.get(config2.getColumnNum()) != null) {
+                    // if bigger SE rms, means it is much important column, smaller will be dropped
+                    return this.seStatsMap.get(config1.getColumnNum()).getRms() > this.seStatsMap.get(
+                            config2.getColumnNum()).getRms();
+                } else {
+                    // not valid se, take iv
+                    return config1.getIv() > config2.getIv();
+                }
+            case IV:
+            default:
+                return config1.getIv() > config2.getIv();
+        }
+    }
+
+    private double[] getCorrArray(String[] columns) {
+        double[] corr = new double[columns.length - 2];
+        for(int i = 2; i < corr.length; i++) {
+            corr[i - 2] = Double.parseDouble(columns[i].trim());
+        }
+        return corr;
     }
 
     /**

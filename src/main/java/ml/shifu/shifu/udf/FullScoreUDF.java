@@ -15,6 +15,7 @@
  */
 package ml.shifu.shifu.udf;
 
+import ml.shifu.shifu.column.NSColumn;
 import ml.shifu.shifu.container.CaseScoreResult;
 import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
 import ml.shifu.shifu.core.ModelRunner;
@@ -48,7 +49,9 @@ public class FullScoreUDF extends AbstractTrainerUDF<Tuple> {
     }
 
     public Tuple exec(Tuple input) throws IOException {
-        CaseScoreResult cs = modelRunner.compute(input);
+        Map<NSColumn, String> rawDataNsMap = CommonUtils.convertDataIntoNsMap(input, this.header);
+
+        CaseScoreResult cs = modelRunner.computeNsData(rawDataNsMap);
         if(cs == null) {
             log.error("Get null result.");
             return null;
@@ -64,10 +67,9 @@ public class FullScoreUDF extends AbstractTrainerUDF<Tuple> {
             tuple.append(score);
         }
 
-        Map<String, String> rawDataMap = CommonUtils.convertDataIntoMap(input, this.header);
         List<String> metaList = modelConfig.getMetaColumnNames();
         for(String meta: metaList) {
-            tuple.append(rawDataMap.get(meta));
+            tuple.append(rawDataNsMap.get(new NSColumn(meta)));
         }
 
         return tuple;

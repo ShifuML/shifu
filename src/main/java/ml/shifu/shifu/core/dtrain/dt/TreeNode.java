@@ -24,6 +24,7 @@ import java.util.List;
 import java.util.Map;
 
 import ml.shifu.guagua.io.Bytable;
+import ml.shifu.shifu.core.dtrain.FeatureSubsetStrategy;
 
 /**
  * {@link TreeNode} is used to wrapper node and tree index. With tree id and node in {@link TreeNode}.

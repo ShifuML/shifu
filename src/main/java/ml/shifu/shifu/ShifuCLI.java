@@ -17,7 +17,9 @@ package ml.shifu.shifu;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.jar.JarFile;
 import java.util.jar.Manifest;
 
@@ -86,6 +88,7 @@ public class ShifuCLI {
 
     private static final String RESET = "reset";
 
+    private static final String CORRELATION = "correlation";
     // for evaluation
     private static final String LIST = "list";
     private static final String DELETE = "delete";
@@ -101,6 +104,12 @@ public class ShifuCLI {
 
     private static final String SHUFFLE = "shuffle";
     private static final String RESUME = "resume";
+
+    private static final String REBIN = "rebin";
+    private static final String VARS = "vars";
+    private static final String N = "n";
+    private static final String IVR = "ivr";
+    private static final String BIC = "bic";
 
     static private final Logger log = LoggerFactory.getLogger(ShifuCLI.class);
 
@@ -119,7 +128,8 @@ public class ShifuCLI {
                 }
                 // set to Environment for others to read
                 Environment.setProperty(key.trim(), value.trim());
-            } else {
+                // such parameter will also be set in system properties for later reference in correlation and others
+                System.setProperty(key.trim(), value.trim());
                 cleanedArgsList.add(args[i]);
             }
         }
@@ -187,10 +197,22 @@ public class ShifuCLI {
                         printUsage();
                     }
                 } else if(cleanedArgs[0].equals(STATS_CMD)) {
+                    Map<String, Object> params = new HashMap<String, Object>();
+                    params.put(StatsModelProcessor.IS_COMPUTE_CORR, cmd.hasOption(CORRELATION) || cmd.hasOption("c"));
+                    params.put(StatsModelProcessor.IS_REBIN, cmd.hasOption(REBIN));
+                    params.put(StatsModelProcessor.REQUEST_VARS, cmd.getOptionValue(VARS));
+                    params.put(StatsModelProcessor.EXPECTED_BIN_NUM, cmd.getOptionValue(N));
+                    params.put(StatsModelProcessor.IV_KEEP_RATIO, cmd.getOptionValue(IVR));
+                    params.put(StatsModelProcessor.MINIMUM_BIN_INST_CNT, cmd.getOptionValue(BIC));
+
                     // stats step
-                    status = calModelStats();
+                    status = calModelStats(params);
                     if(status == 0) {
-                        log.info("Do model set statistics successfully. Please continue next step by using 'shifu normalize or shifu norm'. For tree ensemble model, no need do norm, please continue next step by using 'shifu varsel'");
+                        if(cmd.hasOption(CORRELATION) || cmd.hasOption("c")) {
+                            log.info("Do model set correlation computing successfully. Please continue next step by using 'shifu normalize or shifu norm'. For tree ensemble model, no need do norm, please continue next step by using 'shifu varsel'");
+                        } else {
+                            log.info("Do model set statistic successfully. Please continue next step by using 'shifu normalize or shifu norm'. For tree ensemble model, no need do norm, please continue next step by using 'shifu varsel'");
+                        }
                     } else {
                         log.warn("Error in model set stats computation, please report issue on http:/github.com/shifuml/shifu/issues.");
                     }
@@ -301,8 +323,13 @@ public class ShifuCLI {
                         printUsage();
                     }
                 } else if(cleanedArgs[0].equals(CMD_EXPORT)) {
-                    boolean isConcise = cmd.hasOption(EXPORT_CONCISE);
-                    status = exportModel(cmd.getOptionValue(MODELSET_CMD_TYPE), isConcise);
+                    Map<String, Object> params = new HashMap<String, Object>();
+                    params.put(ExportModelProcessor.IS_CONCISE, cmd.hasOption(EXPORT_CONCISE));
+                    params.put(ExportModelProcessor.REQUEST_VARS, cmd.getOptionValue(VARS));
+                    params.put(ExportModelProcessor.EXPECTED_BIN_NUM, cmd.getOptionValue(N));
+                    params.put(ExportModelProcessor.IV_KEEP_RATIO, cmd.getOptionValue(IVR));
+                    params.put(ExportModelProcessor.MINIMUM_BIN_INST_CNT, cmd.getOptionValue(BIC));
+                    status = exportModel(cmd.getOptionValue(MODELSET_CMD_TYPE), params);
                     if(status == 0) {
                         log.info("Export models/columnstats to PMML/csv format successfully in current folder.");
                     } else {
@@ -380,8 +407,8 @@ public class ShifuCLI {
     /*
      * Calculate variables stats for model - ks/iv/mean/max/min
      */
-    public static int calModelStats() throws Exception {
-        StatsModelProcessor p = new StatsModelProcessor();
+    public static int calModelStats(Map<String, Object> params) throws Exception {
+        StatsModelProcessor p = new StatsModelProcessor(params);
         return p.run();
     }
 
@@ -472,8 +499,8 @@ public class ShifuCLI {
         p.copyModelFiles(cmdArgs[0], cmdArgs[1]);
     }
 
-    public static int exportModel(String type, boolean isConcise) throws Exception {
-        ExportModelProcessor p = new ExportModelProcessor(type, isConcise);
+    public static int exportModel(String type, Map<String, Object> params) throws Exception {
+        ExportModelProcessor p = new ExportModelProcessor(type, params);
         return p.run();
     }
 
@@ -536,6 +563,10 @@ public class ShifuCLI {
         Option opt_concise = OptionBuilder.hasArg(false).withDescription("Export concise PMML").create(EXPORT_CONCISE);
         Option opt_reset = OptionBuilder.hasArg(false).withDescription("Reset all variables to finalSelect = false")
                 .create(RESET);
+        Option opt_correlation = OptionBuilder.hasArg(false)
+                .withDescription("Compute corrlation value for all column pairs.").create(CORRELATION);
+        Option opt_correlation_short = OptionBuilder.hasArg(false)
+                .withDescription("Compute corrlation value for all column pairs.").create("c");
         Option opt_shuffle = OptionBuilder.hasArg(false).withDescription("Shuffle data after normalization")
                 .create(SHUFFLE);
         Option opt_resume = OptionBuilder.hasArg(false).withDescription("Resume combo model training.").create(RESUME);
@@ -548,6 +579,12 @@ public class ShifuCLI {
         Option opt_norm = OptionBuilder.hasArg().create(NORM);
         Option opt_eval = OptionBuilder.hasArg(false).create(EVAL_CMD);
         Option opt_init = OptionBuilder.hasArg(false).create(INIT_CMD);
+
+        Option opt_rebin = OptionBuilder.hasArg(false).create(REBIN);
+        Option opt_vars = OptionBuilder.hasArg().create(VARS);
+        Option opt_n = OptionBuilder.hasArg().create(N);
+        Option opt_ivr = OptionBuilder.hasArg().create(IVR);
+        Option opt_bic = OptionBuilder.hasArg().create(BIC);
 
         Option opt_save = OptionBuilder.hasArg(false).withDescription("save model").create(SAVE);
         Option opt_switch = OptionBuilder.hasArg(false).withDescription("switch model").create(SWITCH);
@@ -576,6 +613,14 @@ public class ShifuCLI {
         opts.addOption(opt_save);
         opts.addOption(opt_switch);
         opts.addOption(opt_eval_model);
+        opts.addOption(opt_correlation);
+        opts.addOption(opt_correlation_short);
+
+        opts.addOption(opt_rebin);
+        opts.addOption(opt_vars);
+        opts.addOption(opt_n);
+        opts.addOption(opt_ivr);
+        opts.addOption(opt_bic);
 
         return opts;
     }
@@ -592,6 +637,10 @@ public class ShifuCLI {
         System.out
                 .println("\tstats                                   Calculate statistics on HDFS and update local ColumnConfig.json.");
         System.out
+                .println("\tstats -correlation(c)                   Calculate correlation values between column pairs.");
+        System.out.println("\tstats -rebin [-vars var1,var1] [-ivr <ratio>] [-bic <bic>]");
+        System.out.println("\t                                        Do the variable Re-bin.");
+        System.out
                 .println("\tvarselect/varsel [-reset] [-list]       Variable selection, will update finalSelect in ColumnConfig.json.");
         System.out.println("\tnormalize/norm [-shuffle]               Normalize the columns with finalSelect as true.");
         System.out.println("\ttrain [-dry] [-shuffle]                 Train the model with the normalized data.");
@@ -607,7 +656,9 @@ public class ShifuCLI {
         System.out
                 .println("\teval -perf <EvalSetName>                Calculate the model performance based on confmat");
         System.out
-                .println("\texport [-t pmml|columnstats] [-c]       Export model to PMML format or export ColumnConfig.");
+                .println("\texport [-t pmml|columnstats|woemapping] [-c] [-vars var1,var1] [-ivr <ratio>] [-bic <bic>]");
+        System.out
+                .println("\t                                        Export model to PMML format or export ColumnConfig.");
         System.out
                 .println("\tcombo -new    <Algorithm List>          Create a combo model train. Algorithm lis should be NN,LR,RF,GBT,LR");
         System.out.println("\tcombo -init                             Generate sub-models.");

@@ -36,7 +36,9 @@ import java.util.Map;
  * {@link #modelConfig} should be passed as parameter in constructor
  */
 public class PathFinder {
-
+    
+    public static final String FEATURE_IMPORTANCE_FILE = "all.fi";
+    private static final String CORRELATION_CSV = "correlation.csv";
     private static final String REASON_CODE_PATH = "common/ReasonCodeMapV3.json";
     private static final String SHIFU_JAR_PATH = "lib/*.jar";
 
@@ -200,6 +202,7 @@ public class PathFinder {
     }
 
     public String getLocalColumnStatsPath() {
+
         return getPathBySourceType(Constants.COLUMN_META_FOLDER_NAME + File.separator
                 + Constants.COLUMN_STATS_CSV_FILE_NAME, SourceType.LOCAL);
     }
@@ -291,7 +294,7 @@ public class PathFinder {
      */
     public String getCorrelationPath(SourceType sourceType) {
         String preTrainingStatsPath = getPreferPath(modelConfig.getTrain().getCustomPaths(),
-                Constants.KEY_AUTO_TYPE_PATH);
+                Constants.KEY_CORRELATION_PATH);
 
         if(StringUtils.isBlank(preTrainingStatsPath)) {
             return getPathBySourceType(new Path(Constants.TMP, Constants.CORRELATION_PATH), sourceType);
@@ -669,6 +672,8 @@ public class PathFinder {
      * 
      * @param evalConfig
      *            - EvalConfig to find
+     * @param metaColumn
+     *            - score column
      * @return path of evaluation score
      */
     public String getEvalScorePath(EvalConfig evalConfig, String metaColumn) {
@@ -865,6 +870,13 @@ public class PathFinder {
     }
 
     /**
+     * Return local correlation csv path
+     */
+    public String getLocalCorrelationCsvPath() {
+        return getPathBySourceType(CORRELATION_CSV, SourceType.LOCAL);
+    }
+
+    /**
      * Get the prefer path for files. Prefer path means:
      * - if the user set the path in customPaths, try to use it
      * - or return null
@@ -884,7 +896,11 @@ public class PathFinder {
     }
 
     public String getLocalFeatureImportancePath() {
-        return getPathBySourceType(new Path("featureImportance/all.fi"), SourceType.LOCAL);
+        return new Path(getLocalFeatureImportanceFolder(), FEATURE_IMPORTANCE_FILE).toString();
+    }
+
+    public String getLocalFeatureImportanceFolder() {
+        return getPathBySourceType(new Path("featureImportance"), SourceType.LOCAL);
     }
 
     /**
@@ -923,5 +939,9 @@ public class PathFinder {
 
     private String getShuffleDataPath(SourceType sourceType) {
         return getPathBySourceType(new Path(Constants.TMP, Constants.SHUFFLED_DATA_PATH), sourceType);
+    }
+
+    public String getBackupColumnConfig() {
+        return getPathBySourceType(new Path(Constants.TMP, Constants.COLUMN_CONFIG_JSON_FILE_NAME), SourceType.LOCAL);
     }
 }

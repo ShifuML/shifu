@@ -17,11 +17,14 @@ package ml.shifu.shifu.core.dtrain.nn;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import java.util.Random;
+import java.util.Set;
 
 import ml.shifu.guagua.GuaguaRuntimeException;
 import ml.shifu.guagua.hadoop.io.GuaguaWritableAdapter;
@@ -31,7 +34,6 @@ import ml.shifu.guagua.worker.WorkerContext.WorkerCompletionCallBack;
 import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.container.obj.ModelConfig;
 import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
-import ml.shifu.shifu.core.alg.NNTrainer;
 import ml.shifu.shifu.core.dtrain.CommonConstants;
 import ml.shifu.shifu.core.dtrain.DTrainUtils;
 import ml.shifu.shifu.core.dtrain.dataset.BasicFloatMLData;
@@ -226,6 +228,11 @@ public abstract class AbstractNNWorker<VALUE extends Writable> extends
     protected Map<Integer, Random> validationRandomMap = new HashMap<Integer, Random>();
 
     /**
+     * Random object to sample negative records
+     */
+    protected Random sampelNegOnlyRandom = new Random(System.currentTimeMillis() + 1000L);
+
+    /**
      * If k-fold cross validation
      */
     private boolean isKFoldCV;
@@ -234,6 +241,21 @@ public abstract class AbstractNNWorker<VALUE extends Writable> extends
      * If enabled by extreme learning machine: https://en.wikipedia.org/wiki/Extreme_learning_machine
      */
     private boolean isELM;
+
+    /**
+     * Cache all features with feature index for searching
+     */
+    protected List<Integer> allFeatures;
+
+    /**
+     * Cache subset features with feature index for searching
+     */
+    protected List<Integer> subFeatures;
+
+    /**
+     * Set for sub features to quick check if column is in sub feature list
+     */
+    protected Set<Integer> subFeatureSet;
 
     protected boolean isUpSampleEnabled() {
         // only enabled in regression
@@ -285,10 +307,10 @@ public abstract class AbstractNNWorker<VALUE extends Writable> extends
                 trainingFile.toString(), testingFile.toString());
 
         this.trainingData = new BufferedFloatMLDataSet(new File(trainingFile.toString()));
-        ((BufferedFloatMLDataSet) this.trainingData).beginLoad(getInputNodeCount(), getOutputNodeCount());
+        ((BufferedFloatMLDataSet) this.trainingData).beginLoad(this.subFeatures.size(), getOutputNodeCount());
 
         this.validationData = new BufferedFloatMLDataSet(new File(testingFile.toString()));
-        ((BufferedFloatMLDataSet) this.validationData).beginLoad(getInputNodeCount(), getOutputNodeCount());
+        ((BufferedFloatMLDataSet) this.validationData).beginLoad(this.subFeatures.size(), getOutputNodeCount());
     }
 
     @Override
@@ -336,7 +358,23 @@ public abstract class AbstractNNWorker<VALUE extends Writable> extends
         this.outputNodeCount = modelConfig.isRegression() ? inputOutputIndex[1]
                 : (modelConfig.getTrain().isOneVsAll() ? inputOutputIndex[1] : modelConfig.getTags().size());
         this.candidateCount = inputOutputIndex[2];
+        boolean isAfterVarSelect = inputOutputIndex[0] != 0;
         LOG.info("Input count {}, output count {}, candidate count {}", inputNodeCount, outputNodeCount, candidateCount);
+        // cache all feature list for sampling features
+        this.allFeatures = CommonUtils.getAllFeatureList(columnConfigList, isAfterVarSelect);
+        String subsetStr = context.getProps().getProperty(CommonConstants.SHIFU_NN_FEATURE_SUBSET);
+        if(StringUtils.isBlank(subsetStr)) {
+            this.subFeatures = this.allFeatures;
+        } else {
+            String[] splits = subsetStr.split(",");
+            this.subFeatures = new ArrayList<Integer>(splits.length);
+            for(String split: splits) {
+                int featureIndex = Integer.parseInt(split);
+                this.subFeatures.add(featureIndex);
+            }
+        }
+        this.subFeatureSet = new HashSet<Integer>(this.subFeatures);
+        LOG.info("subFeatures size is {}", subFeatures.size());
 
         this.isDry = Boolean.TRUE.toString().equalsIgnoreCase(
                 context.getProps().getProperty(CommonConstants.SHIFU_DRY_DTRAIN));
@@ -368,15 +406,15 @@ public abstract class AbstractNNWorker<VALUE extends Writable> extends
                 if(StringUtils.isNotBlank(modelConfig.getValidationDataSetRawPath())) {
                     // fixed 0.6 and 0.4 of max memory for trainingData and validationData
                     this.trainingData = new MemoryDiskFloatMLDataSet((long) (memoryStoreSize * 0.6), DTrainUtils
-                            .getTrainingFile().toString(), this.inputNodeCount, this.outputNodeCount);
+                            .getTrainingFile().toString(), this.subFeatures.size(), this.outputNodeCount);
                     this.validationData = new MemoryDiskFloatMLDataSet((long) (memoryStoreSize * 0.4), DTrainUtils
-                            .getTestingFile().toString(), this.inputNodeCount, this.outputNodeCount);
+                            .getTestingFile().toString(), this.subFeatures.size(), this.outputNodeCount);
                 } else {
                     this.trainingData = new MemoryDiskFloatMLDataSet(
                             (long) (memoryStoreSize * (1 - crossValidationRate)), DTrainUtils.getTrainingFile()
-                                    .toString(), this.inputNodeCount, this.outputNodeCount);
+                                    .toString(), this.subFeatures.size(), this.outputNodeCount);
                     this.validationData = new MemoryDiskFloatMLDataSet((long) (memoryStoreSize * crossValidationRate),
-                            DTrainUtils.getTestingFile().toString(), this.inputNodeCount, this.outputNodeCount);
+                            DTrainUtils.getTestingFile().toString(), this.subFeatures.size(), this.outputNodeCount);
                 }
                 // cannot find a good place to close these two data set, using Shutdown hook
                 Runtime.getRuntime().addShutdownHook(new Thread(new Runnable() {
@@ -467,11 +505,11 @@ public abstract class AbstractNNWorker<VALUE extends Writable> extends
 
     @SuppressWarnings("unchecked")
     private void initGradient(FloatMLDataSet training, FloatMLDataSet testing, double[] weights, boolean isCrossOver) {
-        int numLayers = (Integer) this.validParams.get(NNTrainer.NUM_HIDDEN_LAYERS);
-        List<String> actFunc = (List<String>) this.validParams.get(NNTrainer.ACTIVATION_FUNC);
-        List<Integer> hiddenNodeList = (List<Integer>) this.validParams.get(NNTrainer.NUM_HIDDEN_NODES);
+        int numLayers = (Integer) this.validParams.get(CommonConstants.NUM_HIDDEN_LAYERS);
+        List<String> actFunc = (List<String>) this.validParams.get(CommonConstants.ACTIVATION_FUNC);
+        List<Integer> hiddenNodeList = (List<Integer>) this.validParams.get(CommonConstants.NUM_HIDDEN_NODES);
 
-        BasicNetwork network = DTrainUtils.generateNetwork(this.inputNodeCount, this.outputNodeCount, numLayers,
+        BasicNetwork network = DTrainUtils.generateNetwork(this.subFeatures.size(), this.outputNodeCount, numLayers,
                 actFunc, hiddenNodeList, false);
         // use the weights from master
         network.getFlat().setWeights(weights);
@@ -759,7 +797,7 @@ public abstract class AbstractNNWorker<VALUE extends Writable> extends
         long size = trainingSize + testingSize;
         // here we used a strong cast from long to int since it's just a random choosing algorithm
         int next = RandomUtils.nextInt((int) size);
-        FloatMLDataPair dataPair = new BasicFloatMLDataPair(new BasicFloatMLData(new float[this.inputNodeCount]),
+        FloatMLDataPair dataPair = new BasicFloatMLDataPair(new BasicFloatMLData(new float[this.subFeatures.size()]),
                 new BasicFloatMLData(new float[this.outputNodeCount]));
         if(next >= trainingSize) {
             this.validationData.getRecord(next - trainingSize, dataPair);

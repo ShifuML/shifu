@@ -469,6 +469,9 @@ public class CommonUtilsTest {
         List<Double> binBoundary = Arrays.asList(array);
 
         Assert.assertEquals(CommonUtils.getBinIndex(binBoundary, 0.00350), 1);
+        Assert.assertEquals(CommonUtils.getBinIndex(binBoundary, 0.00351), 2);
+        Assert.assertEquals(CommonUtils.getBinIndex(binBoundary, 0.00353), 2);
+        Assert.assertEquals(CommonUtils.getBinIndex(binBoundary, 0.0642), 5);
         Assert.assertEquals(CommonUtils.getBinIndex(binBoundary, 0.00010), 0);
         Assert.assertEquals(CommonUtils.getBinIndex(binBoundary, 5D), 8);
 

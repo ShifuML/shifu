@@ -106,6 +106,7 @@ public class FeatureImportanceMapper extends Mapper<LongWritable, Text, IntWrita
     @Override
     protected void setup(Context context) throws IOException, InterruptedException {
         loadConfigFiles(context);
+
         loadTagWeightNum();
 
         this.dataPurifier = new DataPurifier(this.modelConfig);
