@@ -128,7 +128,8 @@ public class ShifuCLI {
                 }
                 // set to Environment for others to read
                 Environment.setProperty(key.trim(), value.trim());
-            } else {
+                // such parameter will also be set in system properties for later reference in correlation and others
+                System.setProperty(key.trim(), value.trim());
                 cleanedArgsList.add(args[i]);
             }
         }
@@ -631,12 +632,16 @@ public class ShifuCLI {
         System.out.println("Usage: shifu [-Dkey=value] COMMAND");
         System.out.println("where COMMAND is one of:");
         System.out.println("\tnew <ModelSetName> [-t <NN|LR|RF|GBT>]  Create a new model set.");
-        System.out.println("\tinit                                    Create initial ColumnConfig.json and upload to HDFS.");
-        System.out.println("\tstats                                   Calculate statistics on HDFS and update local ColumnConfig.json.");
-        System.out.println("\tstats -correlation(c)                   Calculate correlation values between column pairs.");
+        System.out
+                .println("\tinit                                    Create initial ColumnConfig.json and upload to HDFS.");
+        System.out
+                .println("\tstats                                   Calculate statistics on HDFS and update local ColumnConfig.json.");
+        System.out
+                .println("\tstats -correlation(c)                   Calculate correlation values between column pairs.");
         System.out.println("\tstats -rebin [-vars var1,var1] [-ivr <ratio>] [-bic <bic>]");
         System.out.println("\t                                        Do the variable Re-bin.");
-        System.out.println("\tvarselect/varsel [-reset] [-list]       Variable selection, will update finalSelect in ColumnConfig.json.");
+        System.out
+                .println("\tvarselect/varsel [-reset] [-list]       Variable selection, will update finalSelect in ColumnConfig.json.");
         System.out.println("\tnormalize/norm [-shuffle]               Normalize the columns with finalSelect as true.");
         System.out.println("\ttrain [-dry] [-shuffle]                 Train the model with the normalized data.");
         System.out.println("\tposttrain                               Post-process data after training models.");
@@ -648,10 +653,14 @@ public class ShifuCLI {
         System.out.println("\teval -score   <EvalSetName>             Scoring evaluation dataset.");
         System.out.println("\teval -norm    <EvalSetName>             Normalize evaluation dataset.");
         System.out.println("\teval -confmat <EvalSetName>             Compute the TP/FP/TN/FN based on scoring");
-        System.out.println("\teval -perf <EvalSetName>                Calculate the model performance based on confmat");
-        System.out.println("\texport [-t pmml|columnstats|woemapping] [-c] [-vars var1,var1] [-ivr <ratio>] [-bic <bic>]");
-        System.out.println("\t                                        Export model to PMML format or export ColumnConfig.");
-        System.out.println("\tcombo -new    <Algorithm List>          Create a combo model train. Algorithm lis should be NN,LR,RF,GBT,LR");
+        System.out
+                .println("\teval -perf <EvalSetName>                Calculate the model performance based on confmat");
+        System.out
+                .println("\texport [-t pmml|columnstats|woemapping] [-c] [-vars var1,var1] [-ivr <ratio>] [-bic <bic>]");
+        System.out
+                .println("\t                                        Export model to PMML format or export ColumnConfig.");
+        System.out
+                .println("\tcombo -new    <Algorithm List>          Create a combo model train. Algorithm lis should be NN,LR,RF,GBT,LR");
         System.out.println("\tcombo -init                             Generate sub-models.");
         System.out.println("\tcombo -run [-shuffle] [-resume]         Run Combo-Model train.");
         System.out.println("\tcombo -eval [-resume]                   Evaluate Combo-Model performance.");
