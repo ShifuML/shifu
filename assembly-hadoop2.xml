@@ -144,7 +144,6 @@
                 <include>*:zookeeper:*</include>
                 <include>*:joda-time:*</include>
                 <include>*:automaton:*</include>
-                <include>*:jpmml:*</include>
                 <include>*:stream:*</include>
                 <include>*:parquet-pig:*</include>
                 <include>*:parquet-column:*</include>

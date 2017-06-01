@@ -152,9 +152,12 @@ public interface Constants {
     public static final String KEY_TRAIN_SCORES_PATH = "trainScoresPath";
     public static final String KEY_BIN_AVG_SCORE_PATH = "binAvgScorePath";
     public static final String KEY_AUTO_TYPE_PATH = "autoTypePath";
+    public static final String KEY_CORRELATION_PATH = "correlationPath";
+
 
     public static final String DEFAULT_META_COLUMN_FILE = "meta.column.names";
     public static final String DEFAULT_CATEGORICAL_COLUMN_FILE = "categorical.column.names";
+    public static final String DEFAULT_CANDIDATE_COLUMN_FILE = "candidate.column.names";
     public static final String DEFAULT_FORCESELECT_COLUMN_FILE = "forceselect.column.names";
     public static final String DEFAULT_FORCEREMOVE_COLUMN_FILE = "forceremove.column.names";
     public static final String DEFAULT_EVALSCORE_META_COLUMN_FILE = "score.meta.column.names";
@@ -250,5 +253,9 @@ public interface Constants {
     public static final String SHIFU_CORRELATION_MULTI = "shifu.correlation.multi";
     
     public static final String SHIFU_CURRENT_WORKING_DIR = "shifu.current.working.dir";
+    
+    public static final String SHIFU_CORRELATION_COMPUTE_ALL = "shifu.correlation.computeAll";
+
+    public static final String CATEGORICAL_GROUP_VAL_DELIMITER = "@^";
 
 }

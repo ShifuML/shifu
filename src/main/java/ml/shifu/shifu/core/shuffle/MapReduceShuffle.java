@@ -111,6 +111,7 @@ public class MapReduceShuffle {
 
         // submit job
         if(job.waitForCompletion(true)) {
+            // TODO copy or move ??
             ShifuFileUtils.copy(this.pathFinder.getShuffleDataPath(), srcDataPath, source);
         } else {
             throw new RuntimeException("MapReduce Correlation Computing Job failed.");

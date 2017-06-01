@@ -34,7 +34,7 @@ public class DynamicBinningTest {
     public void testDIB() {
         List<NumBinInfo> binInfoList = createNumBinInfos(30);
         DynamicBinning dynamicBinning = new DynamicBinning(binInfoList, 10);
-        Assert.assertEquals(dynamicBinning.getDataBin().size(), 10);
+        Assert.assertTrue(dynamicBinning.getDataBin().size() <= 10);
     }
 
     public static List<NumBinInfo> createNumBinInfos(int binCnt) {

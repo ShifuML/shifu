@@ -210,6 +210,9 @@ public class ModelConfig {
         modelConfig.setStats(new ModelStatsConf());
         modelConfig.setBinningAlgorithm(BinningAlgorithm.SPDTI);
 
+        // build normalize info
+        modelConfig.setNormalize(new ModelNormalizeConf());
+
         // build varselect info
         ModelVarSelectConf varselect = new ModelVarSelectConf();
         // create empty <ModelName>/forceselect.column.names
@@ -226,9 +229,6 @@ public class ModelConfig {
         varselect.setFilterEnable(Boolean.TRUE);
         varselect.setFilterNum(200);
         modelConfig.setVarSelect(varselect);
-
-        // build normalize info
-        modelConfig.setNormalize(new ModelNormalizeConf());
 
         // build train info
         ModelTrainConf trainConf = new ModelTrainConf();
@@ -276,7 +276,6 @@ public class ModelConfig {
         evalConfig.setScoreMetaColumnNameFile(namesFilePath);
 
         modelConfig.getEvals().add(evalConfig);
-
         return modelConfig;
     }
 
@@ -663,6 +662,30 @@ public class ModelConfig {
     @JsonIgnore
     public String getMode() {
         return dataSet.getSource().name();
+    }
+
+    @JsonIgnore
+    public List<String> getListCandidates() throws IOException {
+        String delimiter = StringUtils.isBlank(this.getHeaderDelimiter())  // header delimiter has higher priority
+                ? this.getDataSetDelimiter() : this.getHeaderDelimiter();
+
+        String candidateColumnNameFile = varSelect.getCandidateColumnNameFile();
+        if(StringUtils.isBlank(candidateColumnNameFile)) {
+            String defaultCandidateColumnNameFile = Constants.COLUMN_META_FOLDER_NAME + File.separator
+                    + Constants.DEFAULT_CANDIDATE_COLUMN_FILE;
+            if(ShifuFileUtils.isFileExists(defaultCandidateColumnNameFile, SourceType.LOCAL)) {
+                candidateColumnNameFile = defaultCandidateColumnNameFile;
+                LOG.warn(
+                        "'varSelect::candidateColumnNameFile' is not set while default candidateColumnNameFile: {} is found, default candidate file will be used.",
+                        defaultCandidateColumnNameFile);
+            } else {
+                LOG.warn(
+                        "'varSelect::candidateColumnNameFile' is not set and default candidateColumnNameFile: {} is not found, no candidate config files, please check and set force-select config file in 'varSelect::candidateColumnNameFile'.",
+                        defaultCandidateColumnNameFile);
+                return new ArrayList<String>();
+            }
+        }
+        return CommonUtils.readConfFileIntoList(candidateColumnNameFile, SourceType.LOCAL, delimiter);
     }
 
     @JsonIgnore

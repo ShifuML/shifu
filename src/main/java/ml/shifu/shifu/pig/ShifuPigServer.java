@@ -22,7 +22,6 @@ import java.util.Properties;
 import ml.shifu.shifu.util.CommonUtils;
 import ml.shifu.shifu.util.Environment;
 
-import org.apache.hadoop.conf.Configuration;
 import org.apache.pig.ExecType;
 import org.apache.pig.PigServer;
 import org.apache.pig.backend.executionengine.ExecException;
@@ -43,10 +42,6 @@ public class ShifuPigServer extends PigServer {
         super(execType);
     }
 
-    public ShifuPigServer(ExecType execType, Configuration conf) throws ExecException {
-        super(execType, conf);
-    }
-
     public ShifuPigServer(ExecType execType, Properties properties) throws ExecException {
         super(execType, properties);
     }
@@ -59,19 +54,10 @@ public class ShifuPigServer extends PigServer {
         super(context);
     }
 
-    public ShifuPigServer(Properties properties) throws ExecException, IOException {
-        super(properties);
-    }
-
-    public ShifuPigServer(String execTypeString, Properties properties) throws ExecException, IOException {
-        super(execTypeString, properties);
-    }
-
     public ShifuPigServer(String execTypeString) throws ExecException, IOException {
         super(execTypeString);
     }
 
-    @Override
     protected PigStats launchPlan(LogicalPlan lp, String jobName) throws ExecException, FrontendException {
         // add logic to update properties and make config in Environment.getProperties() override properties in pig
         // script
@@ -80,7 +66,7 @@ public class ShifuPigServer extends PigServer {
                 super.pigContext.getProperties().put(entry.getKey(), entry.getValue());
             }
         }
+
         return super.launchPlan(lp, jobName);
     }
-
 }

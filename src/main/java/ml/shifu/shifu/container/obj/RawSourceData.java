@@ -96,7 +96,7 @@ public class RawSourceData implements Cloneable {
      * Positive tag list: Example like ["0", "1"];
      */
     private List<String> posTags;
-
+    
     /**
      * Negative tag list: Example like ["2", "3"]
      */

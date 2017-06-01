@@ -161,6 +161,11 @@
                 "directive": "input",
                 "defval" : 10
             }, {
+                "name": "cateMaxNumBin",
+                "type": "number",
+                "directive": "input",
+                "defval" : -1
+            }, {
                 "name": "binningMethod",
                 "type": "text",
                 "directive": "select",
@@ -237,6 +242,10 @@
                 "type" : "text",
                 "directive": "input"
             }, {
+                "name": "candidateColumnNameFile",
+                "type" : "text",
+                "directive": "input"
+            }, {
                 "name": "forceRemoveColumnNameFile",
                 "type" : "text",
                 "directive": "input"
@@ -282,6 +291,30 @@
                 "type": "number",
                 "directive": "input",
                 "defval" : 0.5
+            }, {
+                "name": "correlationThreshold",
+                "type": "number",
+                "directive": "input",
+                "defval" : 1
+            }, {
+                "name": "minIvThreshold",
+                "type": "number",
+                "directive": "input",
+                "defval" : 0
+            }, {
+                "name": "minKsThreshold",
+                "type": "number",
+                "directive": "input",
+                "defval" : 0
+            }, {
+                "name": "postCorrelationMetric",
+                "type": "text",
+                "directive": "select",
+                "options": [
+                    {"label": "SE", "value":"KS"},
+                    {"label": "IV", "value":"IV"},
+                    {"label": "Sensitivity Analysis", "value":"SE"}
+                ]
             }, {
                 "name": "params",
                 "type": "map",
@@ -360,16 +393,6 @@
                 "type": "boolean",
                 "directive": "checkbox",
                 "defval" : false
-            }, {
-                "name": "correlation",
-                "type": "text",
-                "directive": "select",
-                "defval" : "NONE",
-                "options": [
-                    {"label":"not compute correlation", "value":"NONE"},
-                    {"label":"pearson mode", "value":"PEARSON"},
-                    {"label":"norm pearson mode", "value":"NORMPEARSON"}
-                ]
             }
         ]
     }, {
@@ -533,7 +556,7 @@
                         "type" : "number",
                         "directive": "input",
                         "defval" : 0.1
-                    }, {
+                    },{
                         "name" : "RegularizedConstant",
                         "type" : "number",
                         "directive": "input",
@@ -617,6 +640,11 @@
                         "type" : "number",
                         "directive": "input",
                         "defval" : 0.01
+                    }, {
+                        "name" : "DropoutRate",
+                        "type" : "number",
+                        "directive": "input",
+                        "defval" : 0
                     }, {
                         "name" : "ValidationTolerance",
                         "type" : "number",

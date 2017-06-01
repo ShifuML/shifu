@@ -76,7 +76,7 @@ public class InitModelProcessor extends BasicModelProcessor implements Processor
      * log object
      */
     private final static Logger log = LoggerFactory.getLogger(InitModelProcessor.class);
-
+    
     /**
      * runner for init the model
      * 

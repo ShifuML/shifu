@@ -22,6 +22,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import ml.shifu.shifu.column.NSColumn;
 import ml.shifu.shifu.container.WeightAmplifier;
 import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.container.obj.ModelNormalizeConf.NormType;
@@ -56,7 +57,7 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
     private DecimalFormat df = new DecimalFormat("#.######");
 
     /**
-     * For categorical feature, a map is used to save query time in execuion
+     * For categorical feature, a map is used to save query time in execution
      */
     private Map<Integer, Map<String, Integer>> categoricalIndexMap = new HashMap<Integer, Map<String, Integer>>();
 
@@ -96,7 +97,10 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
                 Map<String, Integer> map = new HashMap<String, Integer>();
                 if(config.getBinCategory() != null) {
                     for(int i = 0; i < config.getBinCategory().size(); i++) {
-                        map.put(config.getBinCategory().get(i), i);
+                        List<String> catValues = CommonUtils.flattenCatValGrp(config.getBinCategory().get(i));
+                        for(String cval: catValues) {
+                            map.put(cval, i);
+                        }
                     }
                 }
                 this.categoricalIndexMap.put(config.getColumnNum(), map);
@@ -146,7 +150,7 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
             String val = (input.get(i) == null) ? "" : input.get(i).toString().trim();
             // load variables for weight calculating.
             if(weightExpr != null) {
-                weightContext.set(config.getColumnName(), val);
+                weightContext.set(new NSColumn(config.getColumnName()).getSimpleName(), val);
             }
 
             // check tag type.

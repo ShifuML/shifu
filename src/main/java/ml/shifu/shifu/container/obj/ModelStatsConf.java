@@ -57,6 +57,11 @@ public class ModelStatsConf {
     private Integer maxNumBin = 10;
 
     /**
+     * Max num bin for each categorical column
+     */
+    private Integer cateMaxNumBin = 0;
+
+    /**
      * Binning method used in stats. By default is EqualPositive.
      */
     private BinningMethod binningMethod = BinningMethod.EqualPositive;
@@ -65,7 +70,7 @@ public class ModelStatsConf {
      * Sampling rate in stats step. Sometimes is binning algorithm cannot be scaled well or slow. Try using smaller
      * sampleRate will accelerate stats.
      */
-    private Double sampleRate = 0.8d;
+    private Double sampleRate = Double.valueOf(1.0);
 
     /**
      * If only sample negative records or not, positive records in most cases is less than negative. By only sampling
@@ -95,6 +100,14 @@ public class ModelStatsConf {
 
     public void setMaxNumBin(Integer maxNumBin) {
         this.maxNumBin = maxNumBin;
+    }
+
+    public Integer getCateMaxNumBin() {
+        return cateMaxNumBin;
+    }
+
+    public void setCateMaxNumBin(Integer cateMaxNumBin) {
+        this.cateMaxNumBin = cateMaxNumBin;
     }
 
     @JsonIgnore

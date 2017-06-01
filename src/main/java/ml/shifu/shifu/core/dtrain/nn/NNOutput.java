@@ -16,9 +16,11 @@
 package ml.shifu.shifu.core.dtrain.nn;
 
 import java.io.IOException;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import ml.shifu.guagua.master.BasicMasterInterceptor;
@@ -26,14 +28,15 @@ import ml.shifu.guagua.master.MasterContext;
 import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.container.obj.ModelConfig;
 import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
-import ml.shifu.shifu.core.alg.NNTrainer;
 import ml.shifu.shifu.core.dtrain.CommonConstants;
 import ml.shifu.shifu.core.dtrain.DTrainUtils;
+import ml.shifu.shifu.core.dtrain.dataset.BasicFloatNetwork;
 import ml.shifu.shifu.core.dtrain.dataset.PersistBasicFloatNetwork;
 import ml.shifu.shifu.core.dtrain.gs.GridSearch;
 import ml.shifu.shifu.fs.ShifuFileUtils;
 import ml.shifu.shifu.util.CommonUtils;
 
+import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
@@ -116,6 +119,11 @@ public class NNOutput extends BasicMasterInterceptor<NNParams, NNParams> {
     private Map<String, Object> validParams;
 
     private boolean isKFoldCV;
+
+    /**
+     * Cache subset features with feature index for searching
+     */
+    protected Set<Integer> subFeatures;
 
     @Override
     public void preApplication(MasterContext<NNParams, NNParams> context) {
@@ -242,14 +250,14 @@ public class NNOutput extends BasicMasterInterceptor<NNParams, NNParams> {
             if(kCrossValidation != null && kCrossValidation > 0) {
                 isKFoldCV = true;
             }
-            initNetwork();
+            initNetwork(context);
         }
 
         try {
             Path progressLog = new Path(context.getProps().getProperty(CommonConstants.SHIFU_DTRAIN_PROGRESS_FILE));
             // if the progressLog already exists, that because the master failed, and fail-over
             // we need to append the log, so that client console can get refreshed. Or console will appear stuck.
-            if (ShifuFileUtils.isFileExists(progressLog, SourceType.HDFS)) {
+            if(ShifuFileUtils.isFileExists(progressLog, SourceType.HDFS)) {
                 this.progressOutput = FileSystem.get(new Configuration()).append(progressLog);
             } else {
                 this.progressOutput = FileSystem.get(new Configuration()).create(progressLog);
@@ -277,18 +285,35 @@ public class NNOutput extends BasicMasterInterceptor<NNParams, NNParams> {
     }
 
     @SuppressWarnings("unchecked")
-    private void initNetwork() {
+    private void initNetwork(MasterContext<NNParams, NNParams> context) {
         int[] inputOutputIndex = DTrainUtils.getInputOutputCandidateCounts(this.columnConfigList);
+        @SuppressWarnings("unused")
         int inputNodeCount = inputOutputIndex[0] == 0 ? inputOutputIndex[2] : inputOutputIndex[0];
         // if is one vs all classification, outputNodeCount is set to 1
         int outputNodeCount = modelConfig.isRegression() ? inputOutputIndex[1]
                 : (modelConfig.getTrain().isOneVsAll() ? inputOutputIndex[1] : modelConfig.getTags().size());
-        int numLayers = (Integer) validParams.get(NNTrainer.NUM_HIDDEN_LAYERS);
-        List<String> actFunc = (List<String>) validParams.get(NNTrainer.ACTIVATION_FUNC);
-        List<Integer> hiddenNodeList = (List<Integer>) validParams.get(NNTrainer.NUM_HIDDEN_NODES);
+        int numLayers = (Integer) validParams.get(CommonConstants.NUM_HIDDEN_LAYERS);
+        List<String> actFunc = (List<String>) validParams.get(CommonConstants.ACTIVATION_FUNC);
+        List<Integer> hiddenNodeList = (List<Integer>) validParams.get(CommonConstants.NUM_HIDDEN_NODES);
 
-        this.network = DTrainUtils.generateNetwork(inputNodeCount, outputNodeCount, numLayers, actFunc, hiddenNodeList,
-                false);
+        boolean isAfterVarSelect = inputOutputIndex[0] != 0;
+        // cache all feature list for sampling features
+        List<Integer> allFeatures = CommonUtils.getAllFeatureList(columnConfigList, isAfterVarSelect);
+        String subsetStr = context.getProps().getProperty(CommonConstants.SHIFU_NN_FEATURE_SUBSET);
+        if(StringUtils.isBlank(subsetStr)) {
+            this.subFeatures = new HashSet<Integer>(allFeatures);
+        } else {
+            String[] splits = subsetStr.split(",");
+            this.subFeatures = new HashSet<Integer>();
+            for(String split: splits) {
+                this.subFeatures.add(Integer.parseInt(split));
+            }
+        }
+
+        this.network = DTrainUtils.generateNetwork(this.subFeatures.size(), outputNodeCount, numLayers, actFunc,
+                hiddenNodeList, false);
+        ((BasicFloatNetwork) this.network).setFeatureSet(this.subFeatures);
+
         PersistorRegistry.getInstance().add(new PersistBasicFloatNetwork());
     }
 
@@ -299,7 +324,7 @@ public class NNOutput extends BasicMasterInterceptor<NNParams, NNParams> {
             LOG.info("Writing results to {}", out);
             this.network.getFlat().setWeights(weights);
             if(out != null) {
-                EncogDirectoryPersistence.saveObject(fos, (BasicNetwork) this.network);
+                EncogDirectoryPersistence.saveObject(fos, this.network);
             }
         } catch (IOException e) {
             LOG.error("Error in writing output.", e);
