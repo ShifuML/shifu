@@ -415,7 +415,7 @@ public class UpdateBinningInfoReducer extends Reducer<IntWritable, BinningInfoWr
         double[] binWeightNeg = new double[mergedBinInfos.size() + 1];
         for ( int i = 0; i < mergedBinInfos.size(); i ++ ) {
             CategoricalBinInfo binInfo = (CategoricalBinInfo) mergedBinInfos.get(i);
-            binCategories.add(StringUtils.join(binInfo.getValues(), '^'));
+            binCategories.add(StringUtils.join(binInfo.getValues(), Constants.CATEGORICAL_GROUP_VAL_DELIMITER));
             binCountPos[i] = binInfo.getPositiveCnt();
             binCountNeg[i] = binInfo.getNegativeCnt();
             binWeightPos[i] = binInfo.getWeightPos();

@@ -29,6 +29,7 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.zip.GZIPInputStream;
 
 import ml.shifu.shifu.core.dtrain.CommonConstants;
+import ml.shifu.shifu.util.Constants;
 
 /**
  * {@link IndependentTreeModel} depends no other classes which is easy to deploy model in production.
@@ -42,8 +43,6 @@ import ml.shifu.shifu.core.dtrain.CommonConstants;
  * @author Zhang David (pengzhang@paypal.com)
  */
 public class IndependentTreeModel {
-
-    private static final char MERGE_CATEGORY_DELIMITER = '^';
 
     /**
      * Mapping for (ColumnNum, ColumnName)
@@ -613,9 +612,9 @@ public class IndependentTreeModel {
                 String category = dis.readUTF();
                 // categories is merged category list
                 categories.add(category);
-                if(category.contains("" + MERGE_CATEGORY_DELIMITER)) {
+                if(category.contains(Constants.CATEGORICAL_GROUP_VAL_DELIMITER)) {
                     // merged category should be flatten, use split function this class to avoid depending on guava jar
-                    String[] splits = split(category, MERGE_CATEGORY_DELIMITER);
+                    String[] splits = split(category, Constants.CATEGORICAL_GROUP_VAL_DELIMITER);
                     for(String str: splits) {
                         categoryIndexMapping.put(str, j);
                     }
@@ -654,7 +653,7 @@ public class IndependentTreeModel {
      * Manual split function to avoid depending on guava.
      * 
      * <p>
-     * Some examples: "^"=>[, ]; ""=>[]; "a"=>[a]; "abc"=>[abc]; "a^"=>[a, ]; "^b"=>[, b]; "^^b"=>[, , b]
+     * Some examples: "^"=&gt;[, ]; ""=&gt;[]; "a"=&gt;[a]; "abc"=&gt;[abc]; "a^"=&gt;[a, ]; "^b"=&gt;[, b]; "^^b"=&gt;[, , b]
      * 
      * @param str
      *            the string to be split
@@ -662,17 +661,18 @@ public class IndependentTreeModel {
      *            the delimiter
      * @return split string array
      */
-    private static String[] split(String str, char delimiter) {
+    public static String[] split(String str, String delimiter) {
         if(str == null || str.length() == 0) {
             return new String[] { "" };
         }
 
         List<String> categories = new ArrayList<String>();
+        int dLen = delimiter.length();
         int begin = 0;
         for(int i = 0; i < str.length(); i++) {
-            if(str.charAt(i) == delimiter) {
+            if(str.substring(i, Math.min(i + dLen, str.length())).equals(delimiter)) {
                 categories.add(str.substring(begin, i));
-                begin = i + 1;
+                begin = i + dLen;
             }
             if(i == str.length() - 1) {
                 categories.add(str.substring(begin, str.length()));

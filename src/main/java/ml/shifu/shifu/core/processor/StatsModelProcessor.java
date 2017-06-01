@@ -613,7 +613,7 @@ public class StatsModelProcessor extends BasicModelProcessor implements Processo
             List<String> values = new ArrayList<String>();
             for (AbstractBinInfo binInfo: binInfos) {
                 CategoricalBinInfo categoricalBinInfo = (CategoricalBinInfo) binInfo;
-                values.add(StringUtils.join(categoricalBinInfo.getValues(), "^"));
+                values.add(StringUtils.join(categoricalBinInfo.getValues(), Constants.CATEGORICAL_GROUP_VAL_DELIMITER));
             }
             columnConfig.setBinCategory(values);
         } else {

@@ -19,6 +19,7 @@ import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.container.obj.ModelConfig;
 import ml.shifu.shifu.core.dtrain.dataset.BasicFloatNetwork;
 import ml.shifu.shifu.core.pmml.builder.creator.AbstractPmmlElementCreator;
+import org.apache.commons.collections.CollectionUtils;
 import org.dmg.pmml.DataDictionary;
 import org.dmg.pmml.DataField;
 import org.dmg.pmml.FieldName;
@@ -50,7 +51,8 @@ public class DataDictionaryCreator extends AbstractPmmlElementCreator<DataDictio
             Set<Integer> featureSet = bfn.getFeatureSet();
             for(ColumnConfig columnConfig: columnConfigList) {
                 if(isConcise) {
-                    if(columnConfig.isFinalSelect() && featureSet.contains(columnConfig.getColumnNum())
+                    if(columnConfig.isFinalSelect()
+                            && (CollectionUtils.isEmpty(featureSet) || featureSet.contains(columnConfig.getColumnNum()))
                             || columnConfig.isTarget()) {
                         fields.add(convertColumnToDataField(columnConfig));
                     } // else ignore
