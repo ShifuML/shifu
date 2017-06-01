@@ -88,11 +88,27 @@ public class MapReducerStatsWorker extends AbstractStatsExecutor {
         ShifuFileUtils.deleteFile(pathFinder.getPreTrainingStatsPath(), modelConfig.getDataSet().getSource());
         Map<String, String> paramsMap = new HashMap<String, String>();
         paramsMap.put("delimiter", CommonUtils.escapePigString(modelConfig.getDataSetDelimiter()));
+        int columnParallel = 0;
         if(columnConfigList.size() <= 1000) {
-            paramsMap.put("column_parallel", Integer.toString(columnConfigList.size() / 5));
+            // 1000 => 200 reducers
+            columnParallel = columnConfigList.size() / 5;
+        } else if(columnConfigList.size() > 1000 && columnConfigList.size() <= 2000) {
+            // 2000 => 320 reducers
+            columnParallel = columnConfigList.size() / 6;
+        } else if(columnConfigList.size() > 2000 && columnConfigList.size() <= 3000) {
+            // 3000 => 420 reducers
+            columnParallel = columnConfigList.size() / 7;
+        } else if(columnConfigList.size() > 3000 && columnConfigList.size() <= 4000) {
+            // 4000 => 500
+            columnParallel = columnConfigList.size() / 8;
         } else {
-            paramsMap.put("column_parallel", Integer.toString(columnConfigList.size() / 4));
+            // 5000 => 500
+            columnParallel = columnConfigList.size() / 10;
         }
+        // limit max reducer to 999
+        columnParallel = columnParallel > 999 ? 999 : columnParallel;
+        paramsMap.put("column_parallel", Integer.toString(columnParallel));
+
         paramsMap.put("histo_scale_factor", Environment.getProperty("shifu.stats.histo.scale.factor", "100"));
 
         // FIXME how to estimate mapper size then to estimate reducer size, in stats,
@@ -263,7 +279,7 @@ public class MapReducerStatsWorker extends AbstractStatsExecutor {
         new GenericOptionsParser(conf, new String[] { "-libjars", addRuntimeJars(), "-files", filePath });
 
         conf.setBoolean(CombineInputFormat.SHIFU_VS_SPLIT_COMBINABLE, true);
-        conf.setBoolean(FileInputFormat.INPUT_DIR_RECURSIVE, true);
+        conf.setBoolean("mapreduce.input.fileinputformat.input.dir.recursive", true);
 
         conf.set(Constants.SHIFU_STATS_EXLCUDE_MISSING,
                 Environment.getProperty(Constants.SHIFU_STATS_EXLCUDE_MISSING, "true"));

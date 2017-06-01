@@ -34,6 +34,7 @@ import ml.shifu.shifu.core.dtrain.gs.GridSearch;
 import ml.shifu.shifu.fs.ShifuFileUtils;
 import ml.shifu.shifu.util.CommonUtils;
 
+import ml.shifu.shifu.util.Constants;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -49,6 +50,11 @@ import org.slf4j.LoggerFactory;
 public class DTOutput extends BasicMasterInterceptor<DTMasterParams, DTWorkerParams> {
 
     private static final Logger LOG = LoggerFactory.getLogger(DTOutput.class);
+
+    /**
+     * The limitation of max categorical value length
+     */
+    private static final int MAX_CATEGORICAL_VAL_LEN = 10 * 1024;
 
     /**
      * Model Config read from HDFS
@@ -170,7 +176,7 @@ public class DTOutput extends BasicMasterInterceptor<DTMasterParams, DTWorkerPar
         }
 
         updateProgressLog(context);
-        LOG.info("DT output post iteration time is {}ms", (System.currentTimeMillis() - start));
+        LOG.debug("DT output post iteration time is {}ms", (System.currentTimeMillis() - start));
     }
 
     @SuppressWarnings("deprecation")
@@ -210,7 +216,7 @@ public class DTOutput extends BasicMasterInterceptor<DTMasterParams, DTWorkerPar
                         .append((Double.isNaN(trainError) || trainError == 0d) ? "N/A" : String.format("%.10f",
                                 trainError)).append(" Validation Error: ")
                         .append(validationError == 0d ? "N/A" : String.format("%.10f", validationError))
-                        .append("; will work on depth ").append(nextDepth).append(" \n").toString();
+                        .append("; will work on depth ").append(nextDepth).append(". \n").toString();
             }
         }
 
@@ -230,7 +236,7 @@ public class DTOutput extends BasicMasterInterceptor<DTMasterParams, DTWorkerPar
                             .append(trainError == 0d ? "N/A" : String.format("%.10f", trainError))
                             .append(" Validation Error: ")
                             .append(validationError == 0d ? "N/A" : String.format("%.10f", validationError))
-                            .append("; will work on depth ").append(toListString(treeDepth)).append("\n").toString();
+                            .append("; will work on depth ").append(toListString(treeDepth)).append(". \n").toString();
                 }
             }
         }
@@ -274,7 +280,7 @@ public class DTOutput extends BasicMasterInterceptor<DTMasterParams, DTWorkerPar
         if(this.isGBDT) {
             trees = context.getMasterResult().getTmpTrees();
         }
-        if(LOG.isDebugEnabled()){
+        if(LOG.isDebugEnabled()) {
             LOG.debug("final trees", trees.toString());
         }
         Path out = new Path(context.getProps().getProperty(CommonConstants.GUAGUA_OUTPUT));
@@ -318,7 +324,7 @@ public class DTOutput extends BasicMasterInterceptor<DTMasterParams, DTWorkerPar
             Map<Integer, List<String>> columnIndexCategoricalListMapping = new HashMap<Integer, List<String>>();
             Map<Integer, Double> numericalMeanMapping = new HashMap<Integer, Double>();
             for(ColumnConfig columnConfig: this.columnConfigList) {
-                if (columnConfig.isFinalSelect()) {
+                if(columnConfig.isFinalSelect()) {
                     columnIndexNameMapping.put(columnConfig.getColumnNum(), columnConfig.getColumnName());
                 }
                 if(columnConfig.isCategorical() && CollectionUtils.isNotEmpty(columnConfig.getBinCategory())) {
@@ -330,9 +336,9 @@ public class DTOutput extends BasicMasterInterceptor<DTMasterParams, DTWorkerPar
                 }
             }
 
-            if (columnIndexNameMapping.size() == 0) {
-                for (ColumnConfig columnConfig : this.columnConfigList) {
-                    if (CommonUtils.isGoodCandidate(columnConfig)) {
+            if(columnIndexNameMapping.size() == 0) {
+                for(ColumnConfig columnConfig: this.columnConfigList) {
+                    if(CommonUtils.isGoodCandidate(columnConfig)) {
                         columnIndexNameMapping.put(columnConfig.getColumnNum(), columnConfig.getColumnName());
                     }
                 }
@@ -359,6 +365,17 @@ public class DTOutput extends BasicMasterInterceptor<DTMasterParams, DTWorkerPar
                     fos.writeInt(entry.getKey());
                     fos.writeInt(categories.size());
                     for(String category: categories) {
+                        // There is 16k limitation when using writeUTF() function.
+                        // if the category value is larger than 10k, then treat it as missing value
+                        if(category.length() > MAX_CATEGORICAL_VAL_LEN) {
+                            int pos = category.lastIndexOf(Constants.CATEGORICAL_GROUP_VAL_DELIMITER,
+                                    MAX_CATEGORICAL_VAL_LEN);
+                            if(pos >= 0) {
+                                category = category.substring(0, pos);
+                            } else {
+                                category = category.substring(0, MAX_CATEGORICAL_VAL_LEN);
+                            }
+                        }
                         fos.writeUTF(category);
                     }
                 }
@@ -376,7 +393,6 @@ public class DTOutput extends BasicMasterInterceptor<DTMasterParams, DTWorkerPar
             for(TreeNode treeNode: trees) {
                 treeNode.write(fos);
             }
-
         } catch (IOException e) {
             LOG.error("Error in writing output.", e);
         } finally {
@@ -443,7 +459,7 @@ public class DTOutput extends BasicMasterInterceptor<DTMasterParams, DTWorkerPar
                 Path progressLog = new Path(context.getProps().getProperty(CommonConstants.SHIFU_DTRAIN_PROGRESS_FILE));
                 // if the progressLog already exists, that because the master failed, and fail-over
                 // we need to append the log, so that client console can get refreshed. Or console will appear stuck.
-                if (ShifuFileUtils.isFileExists(progressLog, SourceType.HDFS)) {
+                if(ShifuFileUtils.isFileExists(progressLog, SourceType.HDFS)) {
                     this.progressOutput = FileSystem.get(new Configuration()).append(progressLog);
                 } else {
                     this.progressOutput = FileSystem.get(new Configuration()).create(progressLog);

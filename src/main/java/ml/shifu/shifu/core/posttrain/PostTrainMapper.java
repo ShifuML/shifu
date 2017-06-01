@@ -118,6 +118,7 @@ public class PostTrainMapper extends Mapper<LongWritable, Text, IntWritable, Fea
     @Override
     protected void setup(Context context) throws IOException, InterruptedException {
         loadConfigFiles(context);
+
         loadTagWeightNum();
 
         this.dataPurifier = new DataPurifier(this.modelConfig);

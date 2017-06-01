@@ -27,6 +27,7 @@ import java.util.PriorityQueue;
 import java.util.Properties;
 import java.util.Queue;
 import java.util.Random;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 import ml.shifu.guagua.GuaguaConstants;
 import ml.shifu.guagua.GuaguaRuntimeException;
@@ -39,9 +40,9 @@ import ml.shifu.shifu.container.obj.ModelConfig;
 import ml.shifu.shifu.container.obj.ModelTrainConf.ALGORITHM;
 import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
 import ml.shifu.shifu.core.TreeModel;
-import ml.shifu.shifu.core.alg.NNTrainer;
 import ml.shifu.shifu.core.dtrain.CommonConstants;
 import ml.shifu.shifu.core.dtrain.DTrainUtils;
+import ml.shifu.shifu.core.dtrain.FeatureSubsetStrategy;
 import ml.shifu.shifu.core.dtrain.dt.DTWorkerParams.NodeStats;
 import ml.shifu.shifu.core.dtrain.gs.GridSearch;
 import ml.shifu.shifu.fs.ShifuFileUtils;
@@ -303,6 +304,8 @@ public class DTMaster extends AbstractMasterComputable<DTMasterParams, DTWorkerP
                     NodeStats resultNodeStats = entry.getValue();
                     mergeNodeStats(resultNodeStats, currNodeStatsmap.get(entry.getKey()));
                 }
+                // set to null after merging, release memory at the earliest stage
+                params.setNodeStatsMap(null);
             }
             trainError += params.getTrainError();
             validationError += params.getValidationError();
@@ -371,7 +374,7 @@ public class DTMaster extends AbstractMasterComputable<DTMasterParams, DTWorkerP
         if(validationTolerance > 0d
                 && Math.abs(this.bestValidationError - averageValidationError) < this.validationTolerance
                         * averageValidationError) {
-            LOG.info("Debug: bestValidationError {}, averageValidationError {}, validationTolerance {}",
+            LOG.debug("Debug: bestValidationError {}, averageValidationError {}, validationTolerance {}",
                     bestValidationError, averageValidationError, validationTolerance);
             vtTriggered = true;
         }
@@ -508,10 +511,26 @@ public class DTMaster extends AbstractMasterComputable<DTMasterParams, DTWorkerP
             // set tmp trees to DTOutput
             masterParams.setTmpTrees(this.trees);
         }
-        // before master result, do checkpoint according to n iteration set by user
-        doCheckPoint(context, masterParams);
 
-        LOG.info("weightedTrainCount {}, weightedValidationCount {}, trainError {}, validationError {}",
+        if(context.getCurrentIteration() % 100 == 0) {
+            // every 100 iterations do gc explicitly to avoid one case:
+            // mapper memory is 2048M and final in our cluster, if -Xmx is 2G, then occasionally oom issue.
+            // to fix this issue: 1. set -Xmx to 1800m; 2. call gc to drop unused memory at early stage.
+            // this is ugly and if it is stable with 1800m, this line should be removed
+            Thread gcThread = new Thread(new Runnable() {
+                @Override
+                public void run() {
+                    System.gc();
+                }
+            });
+            gcThread.setDaemon(true);
+            gcThread.start();
+        }
+
+        // before master result, do checkpoint according to n iteration set by user
+        doCheckPoint(context, masterParams, context.getCurrentIteration());
+
+        LOG.debug("weightedTrainCount {}, weightedValidationCount {}, trainError {}, validationError {}",
                 weightedTrainCount, weightedValidationCount, trainError, validationError);
         return masterParams;
     }
@@ -615,19 +634,32 @@ public class DTMaster extends AbstractMasterComputable<DTMasterParams, DTWorkerP
      * Do checkpoint for master states, this is for master fail over
      */
     private void doCheckPoint(final MasterContext<DTMasterParams, DTWorkerParams> context,
-            final DTMasterParams masterParams) {
-        LOG.info("Do checkpoint at hdfs file {}", this.checkpointOutput);
+            final DTMasterParams masterParams, int iteration) {
+        String intervalStr = context.getProps().getProperty(CommonConstants.SHIFU_TREE_CHECKPOINT_INTERVAL);
+        int interval = 100;
+        try {
+            interval = Integer.parseInt(intervalStr);
+        } catch (Exception ignore) {
+        }
+
+        // only do checkpoint in interval configured.
+        if(iteration != 0 && iteration % interval != 0) {
+            return;
+        }
+
+        LOG.info("Do checkpoint at hdfs file {} at iteration {}.", this.checkpointOutput, iteration);
         final Queue<TreeNode> finalTodoQueue = this.toDoQueue;
         final Queue<TreeNode> finalToSplitQueue = this.toSplitQueue;
         final boolean finalIsLeaf = this.isLeafWise;
         final List<TreeNode> finalTrees = this.trees;
+
         Thread cpPersistThread = new Thread(new Runnable() {
             @Override
             public void run() {
                 long start = System.currentTimeMillis();
                 writeStatesToHdfs(DTMaster.this.checkpointOutput, masterParams, finalTrees, finalIsLeaf,
                         finalTodoQueue, finalToSplitQueue);
-                LOG.info("Do checkpoint at iteration {} with run time {}", context.getCurrentIteration(),
+                LOG.info("Do checkpoint in iteration {} with run time {}", context.getCurrentIteration(),
                         (System.currentTimeMillis() - start));
             }
         }, "Master checkpoint thread");
@@ -666,10 +698,11 @@ public class DTMaster extends AbstractMasterComputable<DTMasterParams, DTWorkerP
 
             // master result
             masterParams.write(fos);
-        } catch (IOException e) {
+        } catch (Throwable e) {
             LOG.error("Error in writing output.", e);
         } finally {
             IOUtils.closeStream(fos);
+            fos = null;
         }
     }
 
@@ -961,7 +994,7 @@ public class DTMaster extends AbstractMasterComputable<DTMasterParams, DTWorkerP
         this.isGBDT = ALGORITHM.GBT.toString().equalsIgnoreCase(modelConfig.getAlgorithm());
         if(this.isGBDT) {
             // learning rate only effective in gbdt
-            this.learningRate = Double.valueOf(validParams.get(NNTrainer.LEARNING_RATE).toString());
+            this.learningRate = Double.valueOf(validParams.get(CommonConstants.LEARNING_RATE).toString());
         }
 
         // initialize impurity type according to regression or classfication
@@ -1023,7 +1056,7 @@ public class DTMaster extends AbstractMasterComputable<DTMasterParams, DTWorkerP
         if(context.isFirstIteration()) {
             if(this.isRF) {
                 // for random forest, trees are trained in parallel
-                this.trees = new ArrayList<TreeNode>(treeNum);
+                this.trees = new CopyOnWriteArrayList<TreeNode>();
                 for(int i = 0; i < treeNum; i++) {
                     this.trees.add(new TreeNode(i, new Node(Node.ROOT_INDEX), 1d));
                 }
@@ -1037,7 +1070,7 @@ public class DTMaster extends AbstractMasterComputable<DTMasterParams, DTWorkerP
                                 ShifuFileUtils.getFileSystemBySourceType(this.modelConfig.getDataSet().getSource()));
                         if(existingModel == null) {
                             // null means no existing model file or model file is in wrong format
-                            this.trees = new ArrayList<TreeNode>(treeNum);
+                            this.trees = new CopyOnWriteArrayList<TreeNode>();
                             this.trees.add(new TreeNode(0, new Node(Node.ROOT_INDEX), 1d));// learning rate is 1 for 1st
                             LOG.info("Starting to train model from scratch and existing model is empty.");
                         } else {
@@ -1053,7 +1086,7 @@ public class DTMaster extends AbstractMasterComputable<DTMasterParams, DTWorkerP
                         throw new GuaguaRuntimeException(e);
                     }
                 } else {
-                    this.trees = new ArrayList<TreeNode>(treeNum);
+                    this.trees = new CopyOnWriteArrayList<TreeNode>();
                     // for GBDT, initialize the first tree. trees are trained sequentially,first tree learning rate is 1
                     this.trees.add(new TreeNode(0, new Node(Node.ROOT_INDEX), 1.0d));
                 }
@@ -1071,7 +1104,7 @@ public class DTMaster extends AbstractMasterComputable<DTMasterParams, DTWorkerP
         try {
             stream = fs.open(this.checkpointOutput);
             int treeSize = stream.readInt();
-            this.trees = new ArrayList<TreeNode>(treeSize);
+            this.trees = new CopyOnWriteArrayList<TreeNode>();
             for(int i = 0; i < treeSize; i++) {
                 TreeNode treeNode = new TreeNode();
                 treeNode.readFields(stream);
@@ -1102,4 +1135,5 @@ public class DTMaster extends AbstractMasterComputable<DTMasterParams, DTWorkerP
             org.apache.commons.io.IOUtils.closeQuietly(stream);
         }
     }
+
 }

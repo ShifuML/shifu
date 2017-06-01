@@ -17,13 +17,17 @@ package ml.shifu.shifu.core.pmml.builder.impl;
 
 import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.container.obj.ModelConfig;
+import ml.shifu.shifu.core.dtrain.dataset.BasicFloatNetwork;
 import ml.shifu.shifu.core.pmml.builder.creator.AbstractPmmlElementCreator;
+import org.apache.commons.collections.CollectionUtils;
 import org.dmg.pmml.DataDictionary;
 import org.dmg.pmml.DataField;
 import org.dmg.pmml.FieldName;
+import org.encog.ml.BasicML;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 
 /**
  * Created by zhanhu on 3/29/16.
@@ -39,17 +43,32 @@ public class DataDictionaryCreator extends AbstractPmmlElementCreator<DataDictio
     }
 
     @Override
-    public DataDictionary build() {
+    public DataDictionary build(BasicML basicML) {
         DataDictionary dict = new DataDictionary();
         List<DataField> fields = new ArrayList<DataField>();
-
-        for(ColumnConfig columnConfig: columnConfigList) {
-            if ( isConcise ) {
-                if ( columnConfig.isFinalSelect() || columnConfig.isTarget() ) {
+        if(basicML instanceof BasicFloatNetwork) {
+            BasicFloatNetwork bfn = (BasicFloatNetwork) basicML;
+            Set<Integer> featureSet = bfn.getFeatureSet();
+            for(ColumnConfig columnConfig: columnConfigList) {
+                if(isConcise) {
+                    if(columnConfig.isFinalSelect()
+                            && (CollectionUtils.isEmpty(featureSet) || featureSet.contains(columnConfig.getColumnNum()))
+                            || columnConfig.isTarget()) {
+                        fields.add(convertColumnToDataField(columnConfig));
+                    } // else ignore
+                } else {
                     fields.add(convertColumnToDataField(columnConfig));
-                } // else ignore
-            } else {
-                fields.add(convertColumnToDataField(columnConfig));
+                }
+            }
+        } else {
+            for(ColumnConfig columnConfig: columnConfigList) {
+                if(isConcise) {
+                    if(columnConfig.isFinalSelect() || columnConfig.isTarget()) {
+                        fields.add(convertColumnToDataField(columnConfig));
+                    } // else ignore
+                } else {
+                    fields.add(convertColumnToDataField(columnConfig));
+                }
             }
         }
 

@@ -15,12 +15,6 @@
  */
 package ml.shifu.shifu.meta;
 
-import org.apache.commons.io.FileUtils;
-import org.testng.Assert;
-import org.testng.annotations.AfterClass;
-import org.testng.annotations.BeforeClass;
-import org.testng.annotations.Test;
-
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -33,7 +27,13 @@ import ml.shifu.shifu.container.meta.ValidateResult;
 import ml.shifu.shifu.container.obj.ModelConfig;
 import ml.shifu.shifu.container.obj.ModelTrainConf;
 import ml.shifu.shifu.container.obj.ModelTrainConf.ALGORITHM;
-import ml.shifu.shifu.core.alg.NNTrainer;
+import ml.shifu.shifu.core.dtrain.CommonConstants;
+
+import org.apache.commons.io.FileUtils;
+import org.testng.Assert;
+import org.testng.annotations.AfterClass;
+import org.testng.annotations.BeforeClass;
+import org.testng.annotations.Test;
 
 /**
  * MetaFactoryTest class
@@ -102,7 +102,7 @@ public class MetaFactoryTest {
         nodesList.add("a");
         nodesList.add(45);
 
-        params.put(NNTrainer.NUM_HIDDEN_NODES, nodesList);
+        params.put(CommonConstants.NUM_HIDDEN_NODES, nodesList);
         modelConfig.getTrain().setParams(params);
         result = MetaFactory.validate(modelConfig.getTrain());
         Assert.assertFalse(result.getStatus());

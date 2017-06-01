@@ -25,6 +25,7 @@ import ml.shifu.shifu.ShifuCLI;
 import ml.shifu.shifu.container.obj.ModelTrainConf;
 import ml.shifu.shifu.core.pmml.builder.creator.AbstractSpecifCreator;
 import ml.shifu.shifu.core.pmml.builder.impl.NNSpecifCreator;
+import ml.shifu.shifu.core.processor.ExportModelProcessor;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
@@ -115,7 +116,9 @@ public class PMMLVerifySuit {
         ShifuCLI.runEvalScore(this.evalSetName);
         File evalScore = new File("evals" + File.separator + this.evalSetName + File.separator + "EvalScore");
 
-        ShifuCLI.exportModel(null, this.isConcisePmml);
+        Map<String, Object> params = new HashMap<String, Object>();
+        params.put(ExportModelProcessor.IS_CONCISE, this.isConcisePmml);
+        ShifuCLI.exportModel(null, params);
 
         // Step 2. Eval the scores using PMML and compare it with SHIFU output
 

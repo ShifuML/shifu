@@ -18,6 +18,7 @@ package ml.shifu.shifu.container.obj;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 
 import ml.shifu.shifu.util.Constants;
 
@@ -31,10 +32,21 @@ import java.util.Map;
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class ModelVarSelectConf {
 
+    @JsonDeserialize(using = PostCorrelationMetricDeserializer.class)
+    public static enum PostCorrelationMetric {
+        IV, KS, SE
+    }
+
     /**
      * If enable force select and force remove
      */
     private Boolean forceEnable = Boolean.TRUE;
+
+    /**
+     * Specify all candidate column names for variable selection
+     * If the value is null or the file is empty, all variables should be candidates
+     */
+    private String candidateColumnNameFile;
 
     /**
      * Force-selected column configuration file
@@ -77,6 +89,30 @@ public class ModelVarSelectConf {
      */
     private Float missingRateThreshold = 0.98f;
 
+    /**
+     * If two features correlation value is larger than {@link #correlationThreshold}, one with larger IV value will be
+     * selected. Set it to default 1 or not computed correlation value in norm step, means such threshold has no effect.
+     */
+    private Float correlationThreshold = 1f;
+
+    /**
+     * If IV value of feature is less than this threshold, such feature will be dropped and not selected.
+     */
+    private Float minIvThreshold = 0f;
+
+    /**
+     * If KS value of feature is less than this threshold, such feature will be dropped and not selected.
+     */
+    private Float minKsThreshold = 0f;
+
+    /**
+     * Enable variable selection for correlation value, this is the metric to keep the better feature. If column i and j
+     * has higher correlation value than {@link #correlationThreshold}. According to {@link #postCorrelationMetric} to
+     * choose a better one to keep, the other one would be dropped. For example, if set it KS, drop column with smaller
+     * KS value.
+     */
+    private PostCorrelationMetric postCorrelationMetric = PostCorrelationMetric.IV;
+
     private Map<String, Object> params;
 
     public Boolean getForceEnable() {
@@ -85,6 +121,14 @@ public class ModelVarSelectConf {
 
     public void setForceEnable(Boolean forceEnable) {
         this.forceEnable = forceEnable;
+    }
+
+    public String getCandidateColumnNameFile() {
+        return candidateColumnNameFile;
+    }
+
+    public void setCandidateColumnNameFile(String candidateColumnNameFile) {
+        this.candidateColumnNameFile = candidateColumnNameFile;
     }
 
     public String getForceSelectColumnNameFile() {
@@ -180,6 +224,66 @@ public class ModelVarSelectConf {
     @JsonProperty
     public void setEpsilons(double[] epsilons) {
         this.epsilons = epsilons;
+    }
+
+    /**
+     * @return the correlationThreshold
+     */
+    public Float getCorrelationThreshold() {
+        return correlationThreshold;
+    }
+
+    /**
+     * @param correlationThreshold
+     *            the correlationThreshold to set
+     */
+    public void setCorrelationThreshold(Float correlationThreshold) {
+        this.correlationThreshold = correlationThreshold;
+    }
+
+    /**
+     * @return the postCorrelationMetric
+     */
+    public PostCorrelationMetric getPostCorrelationMetric() {
+        return postCorrelationMetric;
+    }
+
+    /**
+     * @param postCorrelationMetric
+     *            the postCorrelationMetric to set
+     */
+    public void setPostCorrelationMetric(PostCorrelationMetric postCorrelationMetric) {
+        this.postCorrelationMetric = postCorrelationMetric;
+    }
+
+    /**
+     * @return the minIvThreshold
+     */
+    public Float getMinIvThreshold() {
+        return minIvThreshold;
+    }
+
+    /**
+     * @return the minKsThreshold
+     */
+    public Float getMinKsThreshold() {
+        return minKsThreshold;
+    }
+
+    /**
+     * @param minIvThreshold
+     *            the minIvThreshold to set
+     */
+    public void setMinIvThreshold(Float minIvThreshold) {
+        this.minIvThreshold = minIvThreshold;
+    }
+
+    /**
+     * @param minKsThreshold
+     *            the minKsThreshold to set
+     */
+    public void setMinKsThreshold(Float minKsThreshold) {
+        this.minKsThreshold = minKsThreshold;
     }
 
     @Override

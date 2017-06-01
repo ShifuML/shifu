@@ -23,10 +23,13 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Set;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.zip.GZIPInputStream;
 
 import ml.shifu.shifu.core.dtrain.CommonConstants;
+import ml.shifu.shifu.util.Constants;
 
 /**
  * {@link IndependentTreeModel} depends no other classes which is easy to deploy model in production.
@@ -45,6 +48,11 @@ public class IndependentTreeModel {
      * Mapping for (ColumnNum, ColumnName)
      */
     private Map<Integer, String> numNameMapping;
+
+    /**
+     * Mapping for (ColumnName, ColumnNum)
+     */
+    private Map<String, Integer> nameNumMapping;
 
     /**
      * Mapping for (ColumnNum, Category List) for categorical feature
@@ -112,14 +120,18 @@ public class IndependentTreeModel {
      */
     private Map<Integer, Double> numericalMeanMapping;
 
-    public IndependentTreeModel(Map<Integer, Double> numericalMeanMapping,
-                                Map<Integer, String> numNameMapping,
-                                Map<Integer, List<String>> categoricalColumnNameNames,
+    public IndependentTreeModel(Map<Integer, Double> numericalMeanMapping, Map<Integer, String> numNameMapping,
+            Map<Integer, List<String>> categoricalColumnNameNames,
             Map<Integer, Map<String, Integer>> columnCategoryIndexMapping, Map<Integer, Integer> columnNumIndexMapping,
             List<TreeNode> trees, List<Double> weights, boolean isGBDT, boolean isClassification,
             boolean isConvertToProb, String lossStr, String algorithm, int inputNode, int version) {
         this.numericalMeanMapping = numericalMeanMapping;
         this.numNameMapping = numNameMapping;
+        this.nameNumMapping = new HashMap<String, Integer>();
+        for(Entry<Integer, String> entry: this.numNameMapping.entrySet()) {
+            this.nameNumMapping.put(entry.getValue(), entry.getKey());
+        }
+
         this.categoricalColumnNameNames = categoricalColumnNameNames;
         this.columnCategoryIndexMapping = columnCategoryIndexMapping;
         this.columnNumIndexMapping = columnNumIndexMapping;
@@ -132,7 +144,6 @@ public class IndependentTreeModel {
         this.algorithm = algorithm;
         this.inputNode = inputNode;
         this.version = version;
-
     }
 
     /**
@@ -200,11 +211,12 @@ public class IndependentTreeModel {
         double predictSum = 0d;
         double weightSum = 0d;
         double[] scores = new double[this.trees.size()];
+        double[] data = convertDataMapToDoubleArray(dataMap);
         for(int i = 0; i < this.trees.size(); i++) {
             TreeNode treeNode = this.trees.get(i);
             Double weight = this.weights.get(i);
             weightSum += weight;
-            double score = predictNode(treeNode.getNode(), dataMap);
+            double score = predictNode(treeNode.getNode(), data);
             scores[i] = score;
             predictSum += score * weight;
         }
@@ -241,136 +253,105 @@ public class IndependentTreeModel {
 
     private double predictNode(Node topNode, double[] data) {
         Node currNode = topNode;
-        Split split = currNode.getSplit();
-        if(split == null || currNode.isRealLeaf()) {
-            if(this.isClassification) {
-                return currNode.getPredict().getClassValue();
-            } else {
-                return currNode.getPredict().getPredict();
-            }
-        }
-
-        Node nextNode = null;
-        double value = data[this.columnNumIndexMapping.get(split.getColumnNum())];
-
-        if(split.getFeatureType().isNumerical()) {
-            // value is real numeric value and no need to transform to binLowestValue
-            if(value < split.getThreshold()) {
-                nextNode = currNode.getLeft();
-            } else {
-                nextNode = currNode.getRight();
-            }
-        } else if(split.getFeatureType().isCategorical()) {
-            short indexValue = -1;
-            if(Double.compare(value, 0d) < 0
-                    || Double.compare(value, categoricalColumnNameNames.get(split.getColumnNum()).size()) >= 0) {
-                indexValue = (short) (categoricalColumnNameNames.get(split.getColumnNum()).size());
-            } else {
-                // value is category index + 0.1d is to avoid 0.9999999 converted to 0, is there?
-                indexValue = (short) (value + 0.1d);
-            }
-            Set<Short> childCategories = split.getLeftOrRightCategories();
-            if(split.isLeft()) {
-                if(childCategories.contains(indexValue)) {
-                    nextNode = currNode.getLeft();
+        // go until leaf
+        while(currNode.getSplit() != null && !currNode.isRealLeaf()) {
+            Split split = currNode.getSplit();
+            double value = data[this.columnNumIndexMapping.get(split.getColumnNum())];
+            if(split.getFeatureType().isNumerical()) {
+                // value is real numeric value and no need to transform to binLowestValue
+                if(value < split.getThreshold()) {
+                    currNode = currNode.getLeft();
                 } else {
-                    nextNode = currNode.getRight();
+                    currNode = currNode.getRight();
                 }
-            } else {
-                if(childCategories.contains(indexValue)) {
-                    nextNode = currNode.getRight();
+            } else if(split.getFeatureType().isCategorical()) {
+                short indexValue = -1;
+                int categoricalSize = categoricalColumnNameNames.get(split.getColumnNum()).size();
+                if(Double.compare(value, 0d) < 0 || Double.compare(value, categoricalSize) >= 0) {
+                    indexValue = (short) categoricalSize;
                 } else {
-                    nextNode = currNode.getLeft();
+                    // value is category index + 0.1d is to avoid 0.9999999 converted to 0, is there?
+                    indexValue = (short) (value + 0.1d);
+                }
+                Set<Short> childCategories = split.getLeftOrRightCategories();
+                if(split.isLeft()) {
+                    if(childCategories.contains(indexValue)) {
+                        currNode = currNode.getLeft();
+                    } else {
+                        currNode = currNode.getRight();
+                    }
+                } else {
+                    if(childCategories.contains(indexValue)) {
+                        currNode = currNode.getRight();
+                    } else {
+                        currNode = currNode.getLeft();
+                    }
                 }
             }
         }
 
-        assert nextNode != null;
-        return predictNode(nextNode, data);
+        if(this.isClassification) {
+            return currNode.getPredict().getClassValue();
+        } else {
+            return currNode.getPredict().getPredict();
+        }
     }
 
-    private double predictNode(Node topNode, Map<String, Object> dataMap) {
-        Node currNode = topNode;
-        Split split = currNode.getSplit();
-        if(split == null || currNode.isRealLeaf()) {
-            if(this.isClassification) {
-                return currNode.getPredict().getClassValue();
-            } else {
-                return currNode.getPredict().getPredict();
-            }
-        }
-
-        Node nextNode = null;
-        Object obj = dataMap.get(numNameMapping.get(split.getColumnNum()));
-
-        if(split.getFeatureType().isNumerical()) {
+    private double[] convertDataMapToDoubleArray(Map<String, Object> dataMap) {
+        double[] data = new double[this.columnNumIndexMapping.size()];
+        for(Entry<Integer, Integer> entry: this.columnNumIndexMapping.entrySet()) {
             double value = 0d;
-            if(obj == null) {
-                // no matter set it to null or not set it in dataMap, it will be treated as missing value
-                value = this.numericalMeanMapping.get(split.getColumnNum());
-            } else {
-                if(obj instanceof Double) {
-                    value = ((Double) obj).doubleValue();
+            Integer columnNum = entry.getKey();
+            String columnName = this.numNameMapping.get(columnNum);
+            Object obj = dataMap.get(columnName);
+            if(this.categoricalColumnNameNames.containsKey(columnNum)) {
+                // categorical column
+                double indexValue = -1d;
+                int categoricalSize = categoricalColumnNameNames.get(columnNum).size();
+                if(obj == null) {
+                    // no matter set it to null or not set it in dataMap, it will be treated as missing value, last one
+                    // is missing value category
+                    indexValue = categoricalSize;
                 } else {
-                    try {
-                        value = Double.parseDouble(obj.toString());
-                    } catch (NumberFormatException e) {
-                        // not valid double value for numerical feature, using default value
-                        value = this.numericalMeanMapping.get(split.getColumnNum());
-                    }
-                }
-            }
-
-            // replace NaN by default mean value
-            if(Double.isNaN(value)) {
-                value = this.numericalMeanMapping.get(split.getColumnNum());
-            }
-
-            // value is real numeric value and no need to transform to binLowestValue
-            if(value < split.getThreshold()) {
-                nextNode = currNode.getLeft();
-            } else {
-                nextNode = currNode.getRight();
-            }
-        } else if(split.getFeatureType().isCategorical()) {
-            double indexValue = -1d;
-            if(obj == null) {
-                // no matter set it to null or not set it in dataMap, it will be treated as missing value, last one is
-                // missing value category
-                indexValue = categoricalColumnNameNames.get(split.getColumnNum()).size();
-            } else {
-                if(obj instanceof Number) {
-                    indexValue = ((Number) obj).doubleValue();
-                } else {
-                    Integer intIndex = columnCategoryIndexMapping.get(split.getColumnNum()).get(obj.toString());
-                    if(intIndex == null || intIndex < 0
-                            || intIndex >= categoricalColumnNameNames.get(split.getColumnNum()).size()) {
+                    Integer intIndex = columnCategoryIndexMapping.get(columnNum).get(obj.toString());
+                    if(intIndex == null || intIndex < 0 || intIndex >= categoricalSize) {
                         // last one is for invalid category
-                        intIndex = categoricalColumnNameNames.get(split.getColumnNum()).size();
+                        intIndex = categoricalSize;
                     }
-                    indexValue = intIndex * 1d;
+                    indexValue = intIndex;
+                }
+                value = indexValue;
+            } else {
+                // numerical column
+                if(obj == null || ((obj instanceof String) && ((String) obj).length() == 0)) {
+                    // no matter set it to null or not set it in dataMap, it will be treated as missing value, last one
+                    // is missing value category
+                    value = this.numericalMeanMapping.get(columnNum) == null ? 0d : this.numericalMeanMapping
+                            .get(columnNum);
+                } else {
+                    if(obj instanceof Number) {
+                        value = ((Number) obj).doubleValue();
+                    } else {
+                        try {
+                            value = Double.parseDouble(obj.toString());
+                        } catch (NumberFormatException e) {
+                            // not valid double value for numerical feature, using default value
+                            value = this.numericalMeanMapping.get(columnNum) == null ? 0d : this.numericalMeanMapping
+                                    .get(columnNum);
+                        }
+                    }
+                }
+                if(Double.isNaN(value)) {
+                    value = this.numericalMeanMapping.get(columnNum) == null ? 0d : this.numericalMeanMapping
+                            .get(columnNum);
                 }
             }
-            // for some cases in 0.99999999d, do a round check
-            short roundIndexValue = (short) (indexValue + 0.1d);
-            Set<Short> childCategories = split.getLeftOrRightCategories();
-            if(split.isLeft()) {
-                if(childCategories.contains(roundIndexValue)) {
-                    nextNode = currNode.getLeft();
-                } else {
-                    nextNode = currNode.getRight();
-                }
-            } else {
-                if(childCategories.contains(roundIndexValue)) {
-                    nextNode = currNode.getRight();
-                } else {
-                    nextNode = currNode.getLeft();
-                }
+            Integer index = entry.getValue();
+            if(index != null && index < data.length) {
+                data[index] = value;
             }
         }
-
-        assert nextNode != null;
-        return predictNode(nextNode, dataMap);
+        return data;
     }
 
     /**
@@ -415,7 +396,7 @@ public class IndependentTreeModel {
     public Map<Integer, Integer> getColumnNumIndexMapping() {
         return columnNumIndexMapping;
     }
-    
+
     /**
      * @return the trees
      */
@@ -606,7 +587,6 @@ public class IndependentTreeModel {
 
         Map<Integer, Double> numericalMeanMapping = new HashMap<Integer, Double>();
         Map<Integer, String> columnIndexNameMapping = new HashMap<Integer, String>();
-        Map<String, Integer> columnNameIndexMapping = new HashMap<String, Integer>();
         int size = dis.readInt();
         for(int i = 0; i < size; i++) {
             int columnIndex = dis.readInt();
@@ -618,7 +598,6 @@ public class IndependentTreeModel {
             int columnIndex = dis.readInt();
             String columnName = dis.readUTF();
             columnIndexNameMapping.put(columnIndex, columnName);
-            columnNameIndexMapping.put(columnName, columnIndex);
         }
 
         Map<Integer, List<String>> categoricalColumnNameNames = new HashMap<Integer, List<String>>();
@@ -631,8 +610,17 @@ public class IndependentTreeModel {
             List<String> categories = new ArrayList<String>();
             for(int j = 0; j < categoryListSize; j++) {
                 String category = dis.readUTF();
-                categoryIndexMapping.put(category, j);
+                // categories is merged category list
                 categories.add(category);
+                if(category.contains(Constants.CATEGORICAL_GROUP_VAL_DELIMITER)) {
+                    // merged category should be flatten, use split function this class to avoid depending on guava jar
+                    String[] splits = split(category, Constants.CATEGORICAL_GROUP_VAL_DELIMITER);
+                    for(String str: splits) {
+                        categoryIndexMapping.put(str, j);
+                    }
+                } else {
+                    categoryIndexMapping.put(category, j);
+                }
             }
             categoricalColumnNameNames.put(columnIndex, categories);
             columnCategoryIndexMapping.put(columnIndex, categoryIndexMapping);
@@ -645,7 +633,7 @@ public class IndependentTreeModel {
         }
 
         int treeNum = dis.readInt();
-        List<TreeNode> trees = new ArrayList<TreeNode>(treeNum);
+        List<TreeNode> trees = new CopyOnWriteArrayList<TreeNode>();
         List<Double> weights = new ArrayList<Double>(treeNum);
         for(int i = 0; i < treeNum; i++) {
             TreeNode treeNode = new TreeNode();
@@ -655,13 +643,43 @@ public class IndependentTreeModel {
         }
 
         // if one vs all, even multiple classification, treated as regression
-        return new IndependentTreeModel(numericalMeanMapping,
-                                        columnIndexNameMapping,
-                                        categoricalColumnNameNames,
-                                        columnCategoryIndexMapping,
-                                        columnMapping, trees, weights,
+        return new IndependentTreeModel(numericalMeanMapping, columnIndexNameMapping, categoricalColumnNameNames,
+                columnCategoryIndexMapping, columnMapping, trees, weights,
                 CommonConstants.GBT_ALG_NAME.equalsIgnoreCase(algorithm), isClassification && !isOneVsAll,
                 isConvertToProb, lossStr, algorithm, inputNode, version);
+    }
+
+    /**
+     * Manual split function to avoid depending on guava.
+     * 
+     * <p>
+     * Some examples: "^"=&gt;[, ]; ""=&gt;[]; "a"=&gt;[a]; "abc"=&gt;[abc]; "a^"=&gt;[a, ]; "^b"=&gt;[, b]; "^^b"=&gt;[, , b]
+     * 
+     * @param str
+     *            the string to be split
+     * @param delimiter
+     *            the delimiter
+     * @return split string array
+     */
+    public static String[] split(String str, String delimiter) {
+        if(str == null || str.length() == 0) {
+            return new String[] { "" };
+        }
+
+        List<String> categories = new ArrayList<String>();
+        int dLen = delimiter.length();
+        int begin = 0;
+        for(int i = 0; i < str.length(); i++) {
+            if(str.substring(i, Math.min(i + dLen, str.length())).equals(delimiter)) {
+                categories.add(str.substring(begin, i));
+                begin = i + dLen;
+            }
+            if(i == str.length() - 1) {
+                categories.add(str.substring(begin, str.length()));
+            }
+        }
+
+        return categories.toArray(new String[0]);
     }
 
     /**

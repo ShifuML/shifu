@@ -255,13 +255,6 @@ public class SubGradient implements Callable<double[]> {
                     * (activation.derivativeFunction(this.layerSums[yi], this.layerOutput[yi]) + currentFlatSpot);
             yi++;
         }
-
-        // if(this.owner.isELM() && currentLevel == 0) {
-        // for(int y = 0; y < fromLayerSize; y++) {
-        // int wi = index + y;
-        // this.gradients[wi] = 0d;
-        // }
-        // }
     }
 
     /**
