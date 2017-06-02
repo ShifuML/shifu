@@ -208,34 +208,7 @@ public class IndependentTreeModel {
      *         if regression of GBT, return array with only one element which is score of the GBT model
      */
     public final double[] compute(Map<String, Object> dataMap) {
-        double predictSum = 0d;
-        double weightSum = 0d;
-        double[] scores = new double[this.trees.size()];
-        double[] data = convertDataMapToDoubleArray(dataMap);
-        for(int i = 0; i < this.trees.size(); i++) {
-            TreeNode treeNode = this.trees.get(i);
-            Double weight = this.weights.get(i);
-            weightSum += weight;
-            double score = predictNode(treeNode.getNode(), data);
-            scores[i] = score;
-            predictSum += score * weight;
-        }
-
-        if(this.isClassification) {
-            return scores;
-        } else {
-            double finalPredict;
-            if(this.isGBDT) {
-                if(this.isConvertToProb) {
-                    finalPredict = convertToProb(predictSum);
-                } else {
-                    finalPredict = predictSum;
-                }
-            } else {
-                finalPredict = predictSum / weightSum;
-            }
-            return new double[] { finalPredict };
-        }
+        return compute(convertDataMapToDoubleArray(dataMap));
     }
 
     /**
