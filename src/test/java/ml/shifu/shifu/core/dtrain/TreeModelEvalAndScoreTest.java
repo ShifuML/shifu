@@ -45,7 +45,7 @@ public class TreeModelEvalAndScoreTest {
 
     @BeforeClass
     public void setUp() throws IOException {
-        String modelPath = "src/test/resources/dttest/model/cam3.gbt";
+        String modelPath = "src/test/resources/dttest/model/cam4.gbt";
         FileInputStream fi = null;
         try {
             fi = new FileInputStream(modelPath);
@@ -82,7 +82,7 @@ public class TreeModelEvalAndScoreTest {
         }
         String[] headers = CommonUtils.split(lines.get(0), "|");
         // score with format <String, String>
-        for(int i = 1; i < 100; i++) {
+        for(int i = 1; i < lines.size(); i++) {
             Map<String, String> map = new HashMap<String, String>();
             Map<String, Object> mapObj = new HashMap<String, Object>();
 
