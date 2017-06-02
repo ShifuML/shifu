@@ -152,19 +152,19 @@ public class StatsModelProcessor extends BasicModelProcessor implements Processo
                 runCorrMapReduceJob();
                 // 3. save column config list
                 saveColumnConfigList();
-            } else if (getBooleanParam(this.params, IS_REBIN)) {
+            } else if(getBooleanParam(this.params, IS_REBIN)) {
                 // run the re-binning
                 String backupColumnConfigPath = this.pathFinder.getBackupColumnConfig();
-                if ( !ShifuFileUtils.isFileExists(new Path(backupColumnConfigPath), SourceType.LOCAL)) {
+                if(!ShifuFileUtils.isFileExists(new Path(backupColumnConfigPath), SourceType.LOCAL)) {
                     ShifuFileUtils.createDirIfNotExists(new SourceFile(Constants.TMP, SourceType.LOCAL));
                     saveColumnConfigList(backupColumnConfigPath, this.columnConfigList);
                 } else { // existing backup ColumnConfig.json, use binning info in it to do rebin
-                    List<ColumnConfig> backColumnConfigList =
-                            CommonUtils.loadColumnConfigList(backupColumnConfigPath, SourceType.LOCAL);
-                    for ( ColumnConfig backupColumnConfig : backColumnConfigList ) {
-                        for ( ColumnConfig columnConfig: this.columnConfigList ) {
-                            if (NSColumnUtils.isColumnEqual(backupColumnConfig.getColumnName()
-                                    , columnConfig.getColumnName())) {
+                    List<ColumnConfig> backColumnConfigList = CommonUtils.loadColumnConfigList(backupColumnConfigPath,
+                            SourceType.LOCAL);
+                    for(ColumnConfig backupColumnConfig: backColumnConfigList) {
+                        for(ColumnConfig columnConfig: this.columnConfigList) {
+                            if(NSColumnUtils.isColumnEqual(backupColumnConfig.getColumnName(),
+                                    columnConfig.getColumnName())) {
                                 columnConfig.setColumnBinning(backupColumnConfig.getColumnBinning());
                             }
                         }
@@ -173,14 +173,14 @@ public class StatsModelProcessor extends BasicModelProcessor implements Processo
 
                 List<ColumnConfig> rebinColumns = new ArrayList<ColumnConfig>();
                 List<String> catVariables = getStringList(this.params, REQUEST_VARS, ",");
-                for ( ColumnConfig columnConfig : this.columnConfigList ) {
-                    if (CollectionUtils.isEmpty(catVariables) || isRequestColumn(catVariables, columnConfig)) {
+                for(ColumnConfig columnConfig: this.columnConfigList) {
+                    if(CollectionUtils.isEmpty(catVariables) || isRequestColumn(catVariables, columnConfig)) {
                         rebinColumns.add(columnConfig);
                     }
                 }
 
-                if ( CollectionUtils.isNotEmpty(rebinColumns) ) {
-                    for ( ColumnConfig columnConfig : rebinColumns ) {
+                if(CollectionUtils.isNotEmpty(rebinColumns)) {
+                    for(ColumnConfig columnConfig: rebinColumns) {
                         doReBin(columnConfig);
                     }
                 }
@@ -311,7 +311,18 @@ public class StatsModelProcessor extends BasicModelProcessor implements Processo
             }
         }
 
-        setMapperMemory(conf, threads);
+        // if one of two memory settings is null, automatically set mapper memory by column size, if not set it from
+        // system properties which is set from command line like 'shifu stats -c -Dmapreduce.map.memory.mb=3072
+        // -Dmapreduce.map.java.opts=-Xmx3000M'
+        if(System.getProperty("mapreduce.map.memory.mb") == null
+                || System.getProperty("mapreduce.map.java.opts") == null) {
+            setMapperMemory(conf, threads);
+        } else {
+            conf.set("mapreduce.map.memory.mb", System.getProperty("mapreduce.map.memory.mb"));
+            conf.set("mapreduce.map.java.opts", System.getProperty("mapreduce.map.java.opts"));
+            log.info("Corrrelation map memory is set to {}MB from command line parameters.",
+                    System.getProperty("mapreduce.map.memory.mb"));
+        }
 
         @SuppressWarnings("deprecation")
         Job job = new Job(conf, "Shifu: Correlation Computing Job : " + this.modelConfig.getModelSetName());
@@ -359,19 +370,21 @@ public class StatsModelProcessor extends BasicModelProcessor implements Processo
      * column size to avoid OOM issue.
      */
     private void setMapperMemory(Configuration conf, int threads) {
-        int memoryBuffer = 500;
+        int memoryBuffer = 1024;
         // <1000 -> 2G; <=2000 2.5G; <=3000 3G; <=4000 4G; <=5000; 5G
         int memoryInContainer = this.columnConfigList.size();
-        if(memoryInContainer > 4000 && memoryInContainer <= 5000) {
-            memoryInContainer = (int) (memoryInContainer * 1.1d);
+        if(memoryInContainer > 3000 && memoryInContainer <= 4000) {
+            memoryInContainer = (int) (memoryInContainer * 1.4d);
+        } else if(memoryInContainer > 4000 && memoryInContainer <= 5000) {
+            memoryInContainer = (int) (memoryInContainer * 1.5d);
         } else if(memoryInContainer > 5000) {
-            memoryInContainer = (int) (memoryInContainer * 1.2d);
+            memoryInContainer = (int) (memoryInContainer * 1.6d);
         }
         if(memoryInContainer < 2048) {
             memoryInContainer = 2048; // at least 2048M
         }
 
-        memoryInContainer += memoryBuffer; // (MB, 500 is buffer)
+        memoryInContainer += memoryBuffer; // (MB, 1024 is buffer)
         log.info("Corrrelation map memory is set to {}MB.", memoryInContainer);
 
         conf.set("mapreduce.map.memory.mb", memoryInContainer + "");
@@ -573,52 +586,52 @@ public class StatsModelProcessor extends BasicModelProcessor implements Processo
         double ivKeepRatio = getDoubleParam(this.params, IV_KEEP_RATIO, 1.0d);
         long minimumInstCnt = getLongParam(this.params, MINIMUM_BIN_INST_CNT);
 
-        ColumnConfigDynamicBinning columnConfigDynamicBinning =
-                new ColumnConfigDynamicBinning(columnConfig, expectBinNum, ivKeepRatio, minimumInstCnt);
+        ColumnConfigDynamicBinning columnConfigDynamicBinning = new ColumnConfigDynamicBinning(columnConfig,
+                expectBinNum, ivKeepRatio, minimumInstCnt);
 
         List<AbstractBinInfo> binInfos = columnConfigDynamicBinning.run();
 
         long[] binCountNeg = new long[binInfos.size() + 1];
         long[] binCountPos = new long[binInfos.size() + 1];
-        for (int i = 0; i < binInfos.size(); i++) {
+        for(int i = 0; i < binInfos.size(); i++) {
             AbstractBinInfo binInfo = binInfos.get(i);
             binCountNeg[i] = binInfo.getNegativeCnt();
             binCountPos[i] = binInfo.getPositiveCnt();
         }
-        binCountNeg[binCountNeg.length - 1] =
-                columnConfig.getBinCountNeg().get(columnConfig.getBinCountNeg().size() - 1);
-        binCountPos[binCountPos.length - 1] =
-                columnConfig.getBinCountPos().get(columnConfig.getBinCountPos().size() - 1);
+        binCountNeg[binCountNeg.length - 1] = columnConfig.getBinCountNeg().get(
+                columnConfig.getBinCountNeg().size() - 1);
+        binCountPos[binCountPos.length - 1] = columnConfig.getBinCountPos().get(
+                columnConfig.getBinCountPos().size() - 1);
 
         double[] binWeightNeg = new double[binInfos.size() + 1];
         double[] binWeightPos = new double[binInfos.size() + 1];
-        for (int i = 0; i < binInfos.size(); i++) {
+        for(int i = 0; i < binInfos.size(); i++) {
             AbstractBinInfo binInfo = binInfos.get(i);
             binWeightNeg[i] = binInfo.getWeightNeg();
             binWeightPos[i] = binInfo.getWeightPos();
         }
 
-        binWeightNeg[binWeightNeg.length - 1] =
-                columnConfig.getBinWeightedNeg().get(columnConfig.getBinWeightedNeg().size() - 1);
-        binWeightPos[binWeightPos.length - 1] =
-                columnConfig.getBinWeightedPos().get(columnConfig.getBinWeightedPos().size() - 1);
+        binWeightNeg[binWeightNeg.length - 1] = columnConfig.getBinWeightedNeg().get(
+                columnConfig.getBinWeightedNeg().size() - 1);
+        binWeightPos[binWeightPos.length - 1] = columnConfig.getBinWeightedPos().get(
+                columnConfig.getBinWeightedPos().size() - 1);
 
-        ColumnStatsCalculator.ColumnMetrics columnCountMetrics =
-                ColumnStatsCalculator.calculateColumnMetrics(binCountNeg, binCountPos);
-        ColumnStatsCalculator.ColumnMetrics columnWeightMetrics =
-                ColumnStatsCalculator.calculateColumnMetrics(binWeightNeg, binWeightPos);
+        ColumnStatsCalculator.ColumnMetrics columnCountMetrics = ColumnStatsCalculator.calculateColumnMetrics(
+                binCountNeg, binCountPos);
+        ColumnStatsCalculator.ColumnMetrics columnWeightMetrics = ColumnStatsCalculator.calculateColumnMetrics(
+                binWeightNeg, binWeightPos);
 
         columnConfig.setBinLength(binInfos.size() + 1);
-        if ( columnConfig.isCategorical() ) {
+        if(columnConfig.isCategorical()) {
             List<String> values = new ArrayList<String>();
-            for (AbstractBinInfo binInfo: binInfos) {
+            for(AbstractBinInfo binInfo: binInfos) {
                 CategoricalBinInfo categoricalBinInfo = (CategoricalBinInfo) binInfo;
-                values.add(StringUtils.join(categoricalBinInfo.getValues(), "^"));
+                values.add(StringUtils.join(categoricalBinInfo.getValues(), Constants.CATEGORICAL_GROUP_VAL_DELIMITER));
             }
             columnConfig.setBinCategory(values);
         } else {
             List<Double> values = new ArrayList<Double>();
-            for (AbstractBinInfo binInfo: binInfos) {
+            for(AbstractBinInfo binInfo: binInfos) {
                 NumericalBinInfo numericalBinInfo = (NumericalBinInfo) binInfo;
                 values.add(numericalBinInfo.getLeftThreshold());
             }
@@ -628,7 +641,7 @@ public class StatsModelProcessor extends BasicModelProcessor implements Processo
         columnConfig.setBinCountPos(convertToIntList(binCountPos));
 
         List<Double> binPosRates = new ArrayList<Double>();
-        for (AbstractBinInfo binInfo: binInfos) {
+        for(AbstractBinInfo binInfo: binInfos) {
             binPosRates.add(binInfo.getPositiveRate());
         }
         columnConfig.setBinPosCaseRate(binPosRates);
@@ -649,7 +662,7 @@ public class StatsModelProcessor extends BasicModelProcessor implements Processo
 
     private List<Double> convertIntoDoubleList(double[] binWeights) {
         List<Double> doubleList = new ArrayList<Double>(binWeights.length);
-        for ( double weight : binWeights ) {
+        for(double weight: binWeights) {
             doubleList.add(weight);
         }
         return doubleList;
@@ -657,8 +670,8 @@ public class StatsModelProcessor extends BasicModelProcessor implements Processo
 
     private List<Integer> convertToIntList(long[] binCounts) {
         List<Integer> binCountList = new ArrayList<Integer>(binCounts.length);
-        for ( long count : binCounts ) {
-            binCountList.add((int)count);
+        for(long count: binCounts) {
+            binCountList.add((int) count);
         }
         return binCountList;
     }

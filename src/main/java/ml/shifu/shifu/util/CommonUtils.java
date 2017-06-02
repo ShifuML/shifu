@@ -1571,7 +1571,9 @@ public final class CommonUtils {
                 continue;
             }
             NSColumn key = new NSColumn(config.getColumnName());
-            if(config.isFinalSelect() && !rawNsDataMap.containsKey(key)) {
+            if(config.isFinalSelect() // check whole name
+                    && !rawNsDataMap.containsKey(key) // and then check simple name, in case user use wrong namespace
+                    && !rawNsDataMap.containsKey(new NSColumn(key.getSimpleName()))) {
                 throw new IllegalStateException(String.format("Variable Missing in Test Data: %s", key));
             }
 
@@ -1579,7 +1581,7 @@ public final class CommonUtils {
                 continue;
             } else {
                 if(featureSet.contains(config.getColumnNum())) {
-                    String val = rawNsDataMap.get(key) == null ? null : rawNsDataMap.get(key).toString();
+                    String val = getNSVariableVal(rawNsDataMap, key);
                     if(CommonUtils.isTreeModel(alg) && config.isCategorical()) {
                         Integer index = binCategoryMap.get(config.getColumnNum()).get(val == null ? "" : val);
                         if(index == null) {
@@ -2427,7 +2429,7 @@ public final class CommonUtils {
     public static List<String> flattenCatValGrp(String categoricalValGrp) {
         List<String> catVals = new ArrayList<String>();
         if(StringUtils.isNotBlank(categoricalValGrp)) {
-            for(String cval: Splitter.on('^').split(categoricalValGrp)) {
+            for(String cval: Splitter.on(Constants.CATEGORICAL_GROUP_VAL_DELIMITER).split(categoricalValGrp)) {
                 catVals.add(cval);
             }
         }
