@@ -30,6 +30,7 @@ import ml.shifu.shifu.core.dtrain.dataset.BasicFloatNetwork;
 import ml.shifu.shifu.core.pmml.builder.creator.AbstractPmmlElementCreator;
 import ml.shifu.shifu.util.CommonUtils;
 
+import org.apache.commons.collections.CollectionUtils;
 import org.dmg.pmml.DataType;
 import org.dmg.pmml.DerivedField;
 import org.dmg.pmml.FieldColumnPair;
@@ -75,7 +76,8 @@ public class ZscoreLocalTransformCreator extends AbstractPmmlElementCreator<Loca
             BasicFloatNetwork bfn = (BasicFloatNetwork) basicML;
             Set<Integer> featureSet = bfn.getFeatureSet();
             for(ColumnConfig config: columnConfigList) {
-                if(config.isFinalSelect() && featureSet.contains(config.getColumnName())) {
+                if(config.isFinalSelect()
+                        && (CollectionUtils.isEmpty(featureSet) || featureSet.contains(config.getColumnNum())) ) {
                     double cutoff = modelConfig.getNormalizeStdDevCutOff();
                     localTransformations.withDerivedFields(config.isCategorical() ? createCategoricalDerivedField(
                             config, cutoff, modelConfig.getNormalizeType()) : createNumericalDerivedField(config,
