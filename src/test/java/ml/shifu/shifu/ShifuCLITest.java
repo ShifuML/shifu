@@ -354,4 +354,11 @@ public class ShifuCLITest {
         FileUtils.deleteDirectory(tmpConfDir);
         FileUtils.deleteDirectory(new File("tmp"));
     }
+
+    @Test
+    public void testLastIndexOf() {
+        String text = "aa^bb^cc";
+        Assert.assertEquals(2, text.lastIndexOf("^", 4));
+        Assert.assertEquals(-1, text.lastIndexOf("~", 4));
+    }
 }

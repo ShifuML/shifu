@@ -1,0 +1,118 @@
+{
+  "basic" : {
+    "name" : "20170520_GBT_Rob_Overall_242",
+    "author" : "wzhao3",
+    "description" : "Created at 2016-12-15", 
+    "version" : "0.2.8",
+    "runMode" : "mapred",
+    "customPaths" : {"hdfsModelSetPath" : "hdfs://horton/apps/risk/det/wzhao3/CAM17/SHIFU_Training" }
+  },
+  "dataSet" : {
+    "source" : "hdfs",
+    "dataPath" : "hdfs://horton/apps/risk/det/wzhao3/CAM17/Dataset_20170516/DEV_1602_1702_dedupe_w_spear",
+    "dataDelimiter" : "\u0007",
+    "headerPath" : "hdfs://horton/apps/risk/det/wzhao3/CAM17/Dataset_20170516/DEV_1602_1702_dedupe_w_spear/.pig_header",
+    "headerDelimiter" : "\u0007",
+    "filterExpressions" : "auth_capture_flag.matches('auth|sale|attempt') and robust_dev_flag==1",
+		"weightColumnName" : "",
+    "targetColumnName" : "is_cc_bad",
+    "autoType" : false, 
+    "posTags" : [ "1"],
+    "negTags" : [ "0" ],
+    "metaColumnNameFile" : "meta.column.names",
+    "categoricalColumnNameFile" : "categorical.column.names"
+  },
+  "stats" : {
+    "maxNumBin" : 10,
+    "cateMaxNumBin" : 50, 
+    "psiColumnName" : "",
+		"binningMethod" : "EqualPositive",
+    "sampleRate": 1.0,
+    "sampleNegOnly" : false,
+    "binningAlgorithm" : "SPDTI"
+  },
+  "varSelect" : {
+    "forceEnable" : true,
+    "forceSelectColumnNameFile" : "forceselect.column.names",
+    "forceRemoveColumnNameFile" : "forceremove.column.names",
+    "filterEnable" : false,
+    "filterNum" : 0,
+    "filterOutRatio" : 0.1,
+    "filterBy" : "FI",
+    "missingRateThreshold" : 0.98,
+    "params" : null
+  },
+  "normalize" : {
+    "stdDevCutOff" : 4.0,
+    "sampleRate" : 1.0,
+    "sampleNegOnly" : false,
+    "normType" : "WOE",
+	"isWeightNorm" : false
+  },
+  "train" : {
+    "baggingNum" : 1,
+    "baggingWithReplacement" : true,
+    "baggingSampleRate" : 0.8,
+    "validSetRate" : 0.3,
+    "numTrainEpochs" : 40000,
+    "epochsPerIteration" : 1,
+    "trainOnDisk" : true,
+    "isContinuous" : true,
+    "workerThreadCount" : 4,
+    "algorithm" : "GBT",
+    "params" : {
+      "TreeNum" : 2400,
+      "FeatureSubsetStrategy" : "TWOTHIRDS",
+      "MaxDepth" : 6,
+      "MaxStatsMemoryMB" : 3200,
+      "Impurity" : "variance",
+      "LearningRate" : 0.05,
+      "MinInstancesPerNode" : 5,
+      "MinInfoGain" : 0.0,
+      "Loss" : "squared"
+    },
+    "customPaths" : { }
+  }, 
+  "evals" : [ {
+    "name" : "OOT",
+    "dataSet" : {
+      "source" : "HDFS",
+      "dataPath" : "hdfs://horton/apps/risk/det/wzhao3/CAM17/Dataset_20170516/OOT_1608_1704_dedupe_w_spear",
+      "dataDelimiter" : "\u0007",
+      "headerPath" : "hdfs://horton/apps/risk/det/wzhao3/CAM17/Dataset_20170516/OOT_1608_1704_dedupe_w_spear/.pig_header",
+      "headerDelimiter" : "\u0007",
+      "filterExpressions" : "",
+      "weightColumnName" : "",
+      "targetColumnName" : "is_cc_bad",
+      "posTags" : [ "1" ],
+      "negTags" : [ "0", "2" ],
+      "missingOrInvalidValues" : [ "", "?" ]
+    },
+    "performanceBucketNum" : 100,
+    "performanceScoreSelector" : "mean",
+    "scoreMetaColumnNameFile" : "Evalscore.meta.column.names",
+    "customPaths" : { }
+  },
+  {
+    "name" : "DEV",
+    "dataSet" : {
+      "source" : "HDFS",
+      "dataPath" : "hdfs://horton/apps/risk/det/wzhao3/CAM17/Dataset_20170516/DEV_1602_1702_dedupe_w_spear",
+      "dataDelimiter" : "\u0007",
+      "headerPath" : "hdfs://horton/apps/risk/det/wzhao3/CAM17/Dataset_20170516/DEV_1602_1702_dedupe_w_spear/.pig_header",
+      "headerDelimiter" : "\u0007",
+      "filterExpressions" : "",
+      "weightColumnName" : "",
+      "targetColumnName" : "is_cc_bad",
+      "posTags" : [ "1" ],
+      "negTags" : [ "0", "2" ],
+      "missingOrInvalidValues" : [ "", "?" ]
+    },
+    "performanceBucketNum" : 100,
+    "performanceScoreSelector" : "mean",
+    "scoreMetaColumnNameFile" : "Evalscore.meta.column.names",
+    "customPaths" : { }
+  } ]
+  
+  
+}
