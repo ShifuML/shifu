@@ -653,7 +653,8 @@ public class IndependentTreeModel {
      * Manual split function to avoid depending on guava.
      * 
      * <p>
-     * Some examples: "^"=&gt;[, ]; ""=&gt;[]; "a"=&gt;[a]; "abc"=&gt;[abc]; "a^"=&gt;[a, ]; "^b"=&gt;[, b]; "^^b"=&gt;[, , b]
+     * Some examples: "^"=&gt;[, ]; ""=&gt;[]; "a"=&gt;[a]; "abc"=&gt;[abc]; "a^"=&gt;[a, ]; "^b"=&gt;[, b];
+     * "^^b"=&gt;[, , b]
      * 
      * @param str
      *            the string to be split

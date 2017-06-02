@@ -320,6 +320,8 @@ public class StatsModelProcessor extends BasicModelProcessor implements Processo
         } else {
             conf.set("mapreduce.map.memory.mb", System.getProperty("mapreduce.map.memory.mb"));
             conf.set("mapreduce.map.java.opts", System.getProperty("mapreduce.map.java.opts"));
+            log.info("Corrrelation map memory is set to {}MB from command line parameters.",
+                    System.getProperty("mapreduce.map.memory.mb"));
         }
 
         @SuppressWarnings("deprecation")
