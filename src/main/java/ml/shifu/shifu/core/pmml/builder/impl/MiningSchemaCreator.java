@@ -23,6 +23,7 @@ import ml.shifu.shifu.container.obj.ModelConfig;
 import ml.shifu.shifu.core.dtrain.dataset.BasicFloatNetwork;
 import ml.shifu.shifu.core.pmml.builder.creator.AbstractPmmlElementCreator;
 
+import org.apache.commons.collections.CollectionUtils;
 import org.dmg.pmml.FieldName;
 import org.dmg.pmml.FieldUsageType;
 import org.dmg.pmml.MiningField;
@@ -55,7 +56,8 @@ public class MiningSchemaCreator extends AbstractPmmlElementCreator<MiningSchema
                     miningField.setName(FieldName.create(columnConfig.getColumnName()));
                     miningField.setOptype(getOptype(columnConfig));
 
-                    if(columnConfig.isFinalSelect() && featureSet.contains(columnConfig.getColumnNum())) {
+                    if(columnConfig.isFinalSelect() &&
+                            (CollectionUtils.isEmpty(featureSet) || featureSet.contains(columnConfig.getColumnNum()))) {
                         miningField.setUsageType(FieldUsageType.ACTIVE);
                     } else if(columnConfig.isTarget()) {
                         miningField.setUsageType(FieldUsageType.TARGET);

@@ -19,15 +19,12 @@ import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.container.obj.ModelConfig;
 import ml.shifu.shifu.core.dtrain.dataset.BasicFloatNetwork;
 import ml.shifu.shifu.core.pmml.builder.creator.AbstractPmmlElementCreator;
+import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang.StringUtils;
 import org.dmg.pmml.*;
 import org.encog.ml.BasicML;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 
 /**
  * Created by zhanhu on 3/29/16.
@@ -52,7 +49,8 @@ public class ModelStatsCreator extends AbstractPmmlElementCreator<ModelStats> {
             BasicFloatNetwork bfn = (BasicFloatNetwork) basicML;
             Set<Integer> featureSet = bfn.getFeatureSet();
             for(ColumnConfig columnConfig: columnConfigList) {
-                if(columnConfig.isFinalSelect() && featureSet.contains(columnConfig.getColumnNum())) {
+                if(columnConfig.isFinalSelect()
+                        && (CollectionUtils.isEmpty(featureSet) || featureSet.contains(columnConfig.getColumnNum()))) {
                     UnivariateStats univariateStats = new UnivariateStats();
                     univariateStats.setField(FieldName.create(columnConfig.getColumnName()));
 
