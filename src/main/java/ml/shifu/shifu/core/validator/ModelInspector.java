@@ -831,13 +831,10 @@ public class ModelInspector {
                 } else {
                     if(train.getAlgorithm().equalsIgnoreCase(CommonConstants.GBT_ALG_NAME)) {
                         if(impurityObj != null && !"variance".equalsIgnoreCase(impurityObj.toString())
-                                && !"friedmanmse".equalsIgnoreCase(impurityObj.toString())
-                                && !"entropy".equalsIgnoreCase(impurityObj.toString())
-                                && !"gini".equalsIgnoreCase(impurityObj.toString())) {
+                                && !"friedmanmse".equalsIgnoreCase(impurityObj.toString())) {
                             ValidateResult tmpResult = new ValidateResult(true);
                             tmpResult.setStatus(false);
-                            tmpResult.getCauses().add(
-                                    "GBDT only supports 'variance|entropy|gini|friedmanmse' impurity type.");
+                            tmpResult.getCauses().add("GBDT only supports 'variance|friedmanmse' impurity type.");
                             result = ValidateResult.mergeResult(result, tmpResult);
                         }
                     }
