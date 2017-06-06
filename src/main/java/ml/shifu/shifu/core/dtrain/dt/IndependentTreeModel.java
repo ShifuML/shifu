@@ -157,63 +157,7 @@ public class IndependentTreeModel {
      *         if regression of GBT, return array with only one element which is score of the GBT model
      */
     public double[] compute(double[] data) {
-        double predictSum = 0d;
-        double weightSum = 0d;
-        double[] scores = new double[this.trees.size()];
-        for(int i = 0; i < this.trees.size(); i++) {
-            TreeNode treeNode = this.trees.get(i);
-            Double weight = this.weights.get(i);
-            weightSum += weight;
-            double score = predictNode(treeNode.getNode(), data);
-            scores[i] = score;
-            predictSum += score * weight;
-        }
-
-        if(this.isClassification) {
-            return scores;
-        } else {
-            double finalPredict;
-            if(this.isGBDT) {
-                if(this.isConvertToProb) {
-                    finalPredict = convertToProb(predictSum);
-                } else {
-                    finalPredict = predictSum;
-                }
-            } else {
-                finalPredict = predictSum / weightSum;
-            }
-            return new double[] { finalPredict };
-        }
-    }
-
-    /**
-     * Given {@code dataMap} with format (columnName, value), compute score values of tree model.
-     * 
-     * <p>
-     * No any alert or exception if your {@code dataMap} doesn't contain features included in the model, such case will
-     * be treated as missing value case. Please make sure feature names in keys of {@code dataMap} are consistent with
-     * names in model.
-     * 
-     * <p>
-     * In {@code dataMap}, numerical value can be (String, Double) format or (String, String) format, they will all be
-     * parsed to Double; categorical value are all converted to (String, String). If value not in our categorical list,
-     * it will also be treated missing value.
-     * 
-     * @param dataMap
-     *            {@code dataMap} for (columnName, value), numeric value can be double/String, categorical feature can
-     *            be int(index) or category value. if not set or set to null, such feature will be treated as missing
-     *            value. For numerical value, if it cannot be parsed successfully, it will also be treated as missing.
-     * @return if classification mode, return array of all scores of trees
-     *         if regression of RF, return array with only one element which is average score of all tree model scores
-     *         if regression of GBT, return array with only one element which is score of the GBT model
-     */
-    public final double[] compute(Map<String, Object> dataMap) {
-        double[] data = convertDataMapToDoubleArray(dataMap);
-        if(this.isClassification) {
-            return computeClassificationScore(data);
-        } else {
-            return computeRegressionScore(data);
-        }
+        return (this.isClassification ? computeClassificationScore(data): computeRegressionScore(data));
     }
 
     /**
@@ -258,6 +202,31 @@ public class IndependentTreeModel {
             finalPredict = predictSum / weightSum;
         }
         return new double[]{finalPredict};
+    }
+
+    /**
+     * Given {@code dataMap} with format (columnName, value), compute score values of tree model.
+     * 
+     * <p>
+     * No any alert or exception if your {@code dataMap} doesn't contain features included in the model, such case will
+     * be treated as missing value case. Please make sure feature names in keys of {@code dataMap} are consistent with
+     * names in model.
+     * 
+     * <p>
+     * In {@code dataMap}, numerical value can be (String, Double) format or (String, String) format, they will all be
+     * parsed to Double; categorical value are all converted to (String, String). If value not in our categorical list,
+     * it will also be treated missing value.
+     * 
+     * @param dataMap
+     *            {@code dataMap} for (columnName, value), numeric value can be double/String, categorical feature can
+     *            be int(index) or category value. if not set or set to null, such feature will be treated as missing
+     *            value. For numerical value, if it cannot be parsed successfully, it will also be treated as missing.
+     * @return if classification mode, return array of all scores of trees
+     *         if regression of RF, return array with only one element which is average score of all tree model scores
+     *         if regression of GBT, return array with only one element which is score of the GBT model
+     */
+    public final double[] compute(Map<String, Object> dataMap) {
+        return compute(convertDataMapToDoubleArray(dataMap));
     }
 
     /**
@@ -675,7 +644,8 @@ public class IndependentTreeModel {
      * Manual split function to avoid depending on guava.
      * 
      * <p>
-     * Some examples: "^"=&gt;[, ]; ""=&gt;[]; "a"=&gt;[a]; "abc"=&gt;[abc]; "a^"=&gt;[a, ]; "^b"=&gt;[, b]; "^^b"=&gt;[, , b]
+     * Some examples: "^"=&gt;[, ]; ""=&gt;[]; "a"=&gt;[a]; "abc"=&gt;[abc]; "a^"=&gt;[a, ]; "^b"=&gt;[, b];
+     * "^^b"=&gt;[, , b]
      * 
      * @param str
      *            the string to be split

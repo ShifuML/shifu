@@ -130,6 +130,7 @@ public class ShifuCLI {
                 Environment.setProperty(key.trim(), value.trim());
                 // such parameter will also be set in system properties for later reference in correlation and others
                 System.setProperty(key.trim(), value.trim());
+            } else {
                 cleanedArgsList.add(args[i]);
             }
         }
