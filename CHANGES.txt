@@ -16,6 +16,9 @@
  
 Shifu Change Log
 
+Changes for Shifu-0.10.3
+    * Fix GBT SLA Categorical Feature Rebin Delimiter Issue: change delimiter to '@^'
+
 Changes for Shifu-0.10.2
     * Fix GBT SLA issue: pre-parse double types for only once.
 
