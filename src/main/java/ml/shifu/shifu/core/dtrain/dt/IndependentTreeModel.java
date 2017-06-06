@@ -157,33 +157,51 @@ public class IndependentTreeModel {
      *         if regression of GBT, return array with only one element which is score of the GBT model
      */
     public double[] compute(double[] data) {
-        double predictSum = 0d;
-        double weightSum = 0d;
+        return (this.isClassification ? computeClassificationScore(data): computeRegressionScore(data));
+    }
+
+    /**
+     * Run gbt model as classification
+     * @param data - double data map (for numerical variable, it is double value, for categorical variable it is index)
+     * @return classification result
+     */
+    private double[] computeClassificationScore(double[] data) {
         double[] scores = new double[this.trees.size()];
         for(int i = 0; i < this.trees.size(); i++) {
+            TreeNode treeNode = this.trees.get(i);
+            double score = predictNode(treeNode.getNode(), data);
+            scores[i] = score;
+        }
+        return scores;
+    }
+
+    /**
+     * Run gbt model as regression
+     * @param data - double data map (for numerical variable, it is double value, for categorical variable it is index)
+     * @return regression result
+     */
+    private double[] computeRegressionScore(double[] data) {
+        double predictSum = 0d;
+        double weightSum = 0d;
+        for (int i = 0; i < this.trees.size(); i++) {
             TreeNode treeNode = this.trees.get(i);
             Double weight = this.weights.get(i);
             weightSum += weight;
             double score = predictNode(treeNode.getNode(), data);
-            scores[i] = score;
             predictSum += score * weight;
         }
 
-        if(this.isClassification) {
-            return scores;
-        } else {
-            double finalPredict;
-            if(this.isGBDT) {
-                if(this.isConvertToProb) {
-                    finalPredict = convertToProb(predictSum);
-                } else {
-                    finalPredict = predictSum;
-                }
+        double finalPredict;
+        if (this.isGBDT) {
+            if (this.isConvertToProb) {
+                finalPredict = convertToProb(predictSum);
             } else {
-                finalPredict = predictSum / weightSum;
+                finalPredict = predictSum;
             }
-            return new double[] { finalPredict };
+        } else {
+            finalPredict = predictSum / weightSum;
         }
+        return new double[]{finalPredict};
     }
 
     /**
