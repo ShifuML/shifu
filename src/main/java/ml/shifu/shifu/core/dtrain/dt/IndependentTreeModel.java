@@ -157,12 +157,14 @@ public class IndependentTreeModel {
      *         if regression of GBT, return array with only one element which is score of the GBT model
      */
     public double[] compute(double[] data) {
-        return (this.isClassification ? computeClassificationScore(data): computeRegressionScore(data));
+        return (this.isClassification ? computeClassificationScore(data) : computeRegressionScore(data));
     }
 
     /**
      * Run gbt model as classification
-     * @param data - double data map (for numerical variable, it is double value, for categorical variable it is index)
+     * 
+     * @param data
+     *            - double data map (for numerical variable, it is double value, for categorical variable it is index)
      * @return classification result
      */
     private double[] computeClassificationScore(double[] data) {
@@ -177,13 +179,15 @@ public class IndependentTreeModel {
 
     /**
      * Run gbt model as regression
-     * @param data - double data map (for numerical variable, it is double value, for categorical variable it is index)
+     * 
+     * @param data
+     *            - double data map (for numerical variable, it is double value, for categorical variable it is index)
      * @return regression result
      */
     private double[] computeRegressionScore(double[] data) {
         double predictSum = 0d;
         double weightSum = 0d;
-        for (int i = 0; i < this.trees.size(); i++) {
+        for(int i = 0; i < this.trees.size(); i++) {
             TreeNode treeNode = this.trees.get(i);
             Double weight = this.weights.get(i);
             weightSum += weight;
@@ -192,8 +196,8 @@ public class IndependentTreeModel {
         }
 
         double finalPredict;
-        if (this.isGBDT) {
-            if (this.isConvertToProb) {
+        if(this.isGBDT) {
+            if(this.isConvertToProb) {
                 finalPredict = convertToProb(predictSum);
             } else {
                 finalPredict = predictSum;
@@ -201,7 +205,7 @@ public class IndependentTreeModel {
         } else {
             finalPredict = predictSum / weightSum;
         }
-        return new double[]{finalPredict};
+        return new double[] { finalPredict };
     }
 
     /**
