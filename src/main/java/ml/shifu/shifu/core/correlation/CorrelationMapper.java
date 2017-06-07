@@ -121,7 +121,7 @@ public class CorrelationMapper extends Mapper<LongWritable, Text, IntWritable, C
                 if(config.getBinCategory() != null) {
                     for(int i = 0; i < config.getBinCategory().size(); i++) {
                         List<String> cvals = CommonUtils.flattenCatValGrp(config.getBinCategory().get(i));
-                        for ( String cval : cvals ) {
+                        for(String cval: cvals) {
                             map.put(cval, i);
                         }
                     }

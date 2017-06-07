@@ -126,7 +126,7 @@ public class StatsModelProcessor extends BasicModelProcessor implements Processo
         long start = System.currentTimeMillis();
         try {
             setUp(ModelStep.STATS);
-            log.info("catMaxBinNum - {}", this.modelConfig.getStats().getCateMaxNumBin());
+            log.debug("catMaxBinNum - {}", this.modelConfig.getStats().getCateMaxNumBin());
             // resync ModelConfig.json/ColumnConfig.json to HDFS
             syncDataToHdfs(modelConfig.getDataSet().getSource());
 
@@ -644,6 +644,16 @@ public class StatsModelProcessor extends BasicModelProcessor implements Processo
         for(AbstractBinInfo binInfo: binInfos) {
             binPosRates.add(binInfo.getPositiveRate());
         }
+        // fix a bug here to not add missing bin pos rate at last one of binPosRate
+        if(binPosRates.size() + 1 == binCountPos.length) {
+            long missingSumCnt = binCountPos[binCountPos.length - 1] + binCountNeg[binCountNeg.length - 1];
+            if(missingSumCnt > 0) {
+                binPosRates.add(binCountPos[binCountPos.length - 1] * 1d / missingSumCnt);
+            } else {
+                binPosRates.add(Double.NaN);
+            }
+        }
+
         columnConfig.setBinPosCaseRate(binPosRates);
 
         columnConfig.setBinWeightedNeg(convertIntoDoubleList(binWeightNeg));
