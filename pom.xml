@@ -3,7 +3,7 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>ml.shifu</groupId>
     <artifactId>shifu</artifactId>
-    <version>0.10.3</version>
+    <version>0.10.4</version>
     <name>Shifu</name>
     <description>An open-source, end-to-end and distributed machine learning and data mining framework built on top of Hadoop.</description>
     <properties>
@@ -65,7 +65,7 @@
         <developerConnection>scm:git:https://github.com/shifuml/shifu.git</developerConnection>
         <connection>scm:git:https://github.com/shifuml/shifu.git</connection>
         <url>https://github.com/shifuml/shifu.git</url>
-        <tag>shifu-0.10.3</tag>
+        <tag>shifu-0.10.4</tag>
     </scm>
     <dependencies>
         <dependency>
