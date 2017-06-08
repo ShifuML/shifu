@@ -164,8 +164,8 @@ public class UpdateBinningInfoMapper extends Mapper<LongWritable, Text, IntWrita
 
         loadTagWeightNum();
 
-        this.columnBinningInfo = new HashMap<Integer, BinningInfoWritable>(this.columnConfigList.size() * 4 / 3);
-        this.categoricalBinMap = new HashMap<Integer, Map<String, Integer>>(this.columnConfigList.size() * 4 / 3);
+        this.columnBinningInfo = new HashMap<Integer, BinningInfoWritable>(this.columnConfigList.size(), 1f);
+        this.categoricalBinMap = new HashMap<Integer, Map<String, Integer>>(this.columnConfigList.size(), 1f);
 
         loadColumnBinningInfo();
 
