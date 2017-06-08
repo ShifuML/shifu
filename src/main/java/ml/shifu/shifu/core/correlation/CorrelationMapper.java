@@ -235,6 +235,7 @@ public class CorrelationMapper extends Mapper<LongWritable, Text, IntWritable, C
                 }
             }
         }
+    }
 
     private double[] getDoubleArrayByRawArray(String[] units) {
         double[] dValues = new double[this.columnConfigList.size()];
