@@ -390,9 +390,11 @@ public final class CommonUtils {
         for(int i = 0; i < fields.length; i++) {
             if(!isSchemaProvided) {
                 fields[i] = i + "";
-            } /*else { // namespace support
-                fields[i] = getRelativePigHeaderColumnName(fields[i]);
-            }*/
+            } /*
+               * else { // namespace support
+               * fields[i] = getRelativePigHeaderColumnName(fields[i]);
+               * }
+               */
         }
         return fields;
     }
@@ -1064,7 +1066,7 @@ public final class CommonUtils {
     public static Set<NSColumn> loadCandidateColumns(ModelConfig modelConfig) throws IOException {
         Set<NSColumn> candidateColumns = new HashSet<NSColumn>();
         List<String> candidates = modelConfig.getListCandidates();
-        for ( String candidate : candidates ) {
+        for(String candidate: candidates) {
             candidateColumns.add(new NSColumn(candidate));
         }
         return candidateColumns;
@@ -1995,7 +1997,7 @@ public final class CommonUtils {
      */
     public static ColumnConfig findColumnConfigByName(List<ColumnConfig> columnConfigList, String columnName) {
         for(ColumnConfig columnConfig: columnConfigList) {
-            if ( NSColumnUtils.isColumnEqual(columnConfig.getColumnName(), columnName) ) {
+            if(NSColumnUtils.isColumnEqual(columnConfig.getColumnName(), columnName)) {
                 return columnConfig;
             }
         }
