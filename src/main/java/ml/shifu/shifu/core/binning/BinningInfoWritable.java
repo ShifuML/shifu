@@ -32,6 +32,11 @@ import java.util.List;
  */
 public class BinningInfoWritable implements Writable {
 
+    /**
+     * A flag to not if no records in that mapper task, then in reducer, it will be ignored
+     */
+    private boolean isEmpty = false;
+
     private boolean isNumeric = true;
 
     private int columnNum;
@@ -341,6 +346,7 @@ public class BinningInfoWritable implements Writable {
         }
 
         this.cfiw.write(out);
+        out.writeBoolean(this.isEmpty);
     }
 
     @Override
@@ -409,6 +415,7 @@ public class BinningInfoWritable implements Writable {
 
         this.cfiw = new CountAndFrequentItemsWritable();
         this.cfiw.readFields(in);
+        this.isEmpty = in.readBoolean();
     }
 
     /**
@@ -469,6 +476,21 @@ public class BinningInfoWritable implements Writable {
      */
     public void setCfiw(CountAndFrequentItemsWritable cfiw) {
         this.cfiw = cfiw;
+    }
+
+    /**
+     * @return the isEmpty
+     */
+    public boolean isEmpty() {
+        return isEmpty;
+    }
+
+    /**
+     * @param isEmpty
+     *            the isEmpty to set
+     */
+    public void setEmpty(boolean isEmpty) {
+        this.isEmpty = isEmpty;
     }
 
     /*
