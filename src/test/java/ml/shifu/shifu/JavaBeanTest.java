@@ -128,7 +128,7 @@ public class JavaBeanTest {
         voc.compare(valueObject, valueObject2);
         voc.compare(valueObject, valueObject);
 
-        ModelConfig.createInitModelConfig("c", ALGORITHM.NN, "aaa");
+        ModelConfig.createInitModelConfig("c", ALGORITHM.NN, "aaa", false);
 
         BinningObject bo = new BinningObject(DataType.Numerical);
         bo.getNumericalData();

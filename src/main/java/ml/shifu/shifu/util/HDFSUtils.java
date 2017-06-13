@@ -51,6 +51,15 @@ public final class HDFSUtils {
         // prevent new HDFSUtils();
     }
 
+    public static Configuration getConf() {
+        return conf;
+    }
+    
+    public static boolean isDistributedMode(){
+        String defaultFsName = conf.get("fs.defaultFS");
+        return defaultFsName != null && defaultFsName.startsWith("hdfs:");
+    }
+
     /*
      * Get HDFS FileSystem
      */

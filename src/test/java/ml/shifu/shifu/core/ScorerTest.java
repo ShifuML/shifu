@@ -48,7 +48,7 @@ public class ScorerTest {
 
     @BeforeClass
     public void setup() throws IOException {
-        modelConfig = ModelConfig.createInitModelConfig(".", ALGORITHM.NN, ".");
+        modelConfig = ModelConfig.createInitModelConfig(".", ALGORITHM.NN, ".", false);
 
         modelConfig.getTrain().getParams().put("Propagation", "B");
         modelConfig.getTrain().getParams().put("NumHiddenLayers", 2);
