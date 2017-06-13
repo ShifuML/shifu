@@ -113,7 +113,7 @@ public class UpdateBinningInfoMapper extends Mapper<LongWritable, Text, IntWrita
      */
     private IntWritable outputKey;
 
-    /**
+    /*
      * TODO At risk to be a big memory cost OOM.
      */
     private Map<Integer, Map<String, Integer>> categoricalBinMap;

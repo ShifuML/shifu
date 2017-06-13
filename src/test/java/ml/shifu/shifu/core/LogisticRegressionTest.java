@@ -48,7 +48,7 @@ public class LogisticRegressionTest {
     public void setUp() throws IOException {
         random = new Random();
 
-        config = ModelConfig.createInitModelConfig("test", ALGORITHM.LR, "test");
+        config = ModelConfig.createInitModelConfig("test", ALGORITHM.LR, "test", false);
 
         config.getVarSelect().setFilterNum(5);
         config.getTrain().setAlgorithm("LR");
