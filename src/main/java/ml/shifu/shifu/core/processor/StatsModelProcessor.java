@@ -136,7 +136,7 @@ public class StatsModelProcessor extends BasicModelProcessor implements Processo
                 // 1. validate if run stats before run stats -correlation
                 boolean foundValidMeanValueColumn = false;
                 for(ColumnConfig config: this.columnConfigList) {
-                    if(!config.isMeta() && !config.isTarget() && config.isNumerical()) {
+                    if(!config.isMeta() && !config.isTarget()) {
                         if(config.getMean() != null) {
                             foundValidMeanValueColumn = true;
                             break;
