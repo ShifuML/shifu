@@ -185,7 +185,9 @@ public class FastCorrelationMapper extends Mapper<LongWritable, Text, IntWritabl
             LOG.info("Current records: {} in thread {}.", count, Thread.currentThread().getName());
         }
 
+        long startO = System.currentTimeMillis();
         for(int i = 0; i < this.columnConfigList.size(); i++) {
+            long start = System.currentTimeMillis();
             ColumnConfig columnConfig = this.columnConfigList.get(i);
             if(columnConfig.getColumnFlag() == ColumnFlag.Meta) {
                 continue;
@@ -231,7 +233,11 @@ public class FastCorrelationMapper extends Mapper<LongWritable, Text, IntWritabl
                 adjustSumY = new double[this.columnConfigList.size()];
                 cw.setAdjustSumY(adjustSumY);
             }
-
+            if(i % 1000 == 0) {
+                LOG.debug("running time 1 is {}ms in thread {}", (System.currentTimeMillis() - start), Thread
+                        .currentThread().getName());
+            }
+            start = System.currentTimeMillis();
             for(int j = 0; j < this.columnConfigList.size(); j++) {
                 ColumnConfig otherColumnConfig = this.columnConfigList.get(j);
                 if(otherColumnConfig.getColumnFlag() == ColumnFlag.Meta) {
@@ -250,7 +256,32 @@ public class FastCorrelationMapper extends Mapper<LongWritable, Text, IntWritabl
                     adjustSumY[j] += dValues[j];
                 }
             }
+            if(i % 1000 == 0) {
+                LOG.debug("running time 2 is {}ms in thread {}", (System.currentTimeMillis() - start), Thread
+                        .currentThread().getName());
+            }
         }
+        LOG.debug("running time is {}ms in thread {}", (System.currentTimeMillis() - startO), Thread.currentThread()
+                .getName());
+    }
+
+    public static void main(String[] args) {
+        long start = System.currentTimeMillis();
+        double sum = 0;
+        for(int i = 0; i < 4270; i++) {
+            sum += 657d * 657;
+            sum += 657d;
+            sum += 1d;
+            for(int j = 0; j < 4270; j++) {
+                sum += 657d * 657;
+                sum += 657d;
+                sum += 1d;
+                sum += 657d * 657;
+                sum += 657d;
+                sum += 1d;
+            }
+        }
+        System.out.println(sum + " " + (System.currentTimeMillis() - start));
     }
 
     private double[] getDoubleArrayByRawArray(String[] units) {
