@@ -169,18 +169,7 @@ public class Scorer {
         List<Callable<MLData>> tasks = new ArrayList<Callable<MLData>>();
         for(final BasicML model: models) {
             // TODO, check if no need 'if' condition and refactor two if for loops please
-            if(model instanceof BasicNetwork) {
-                final BasicNetwork network = (BasicNetwork) model;
-
-                final MLDataPair networkPair = CommonUtils.assembleNsDataPair(binCategoryMap, noVarSelect, modelConfig,
-                        columnConfigList, rawNsDataMap, cutoff, alg, null);
-                tasks.add(new Callable<MLData>() {
-                    @Override
-                    public MLData call() throws Exception {
-                        return network.compute(networkPair.getInput());
-                    }
-                });
-            } else if(model instanceof BasicFloatNetwork) {
+            if(model instanceof BasicFloatNetwork) {
                 final BasicFloatNetwork network = (BasicFloatNetwork) model;
 
                 final MLDataPair networkPair = CommonUtils.assembleNsDataPair(binCategoryMap, noVarSelect, modelConfig,
@@ -190,6 +179,17 @@ public class Scorer {
                             + "; Input Size = " + networkPair.getInput().size());
                     continue;
                 }
+                tasks.add(new Callable<MLData>() {
+                    @Override
+                    public MLData call() throws Exception {
+                        return network.compute(networkPair.getInput());
+                    }
+                });
+            } else if(model instanceof BasicNetwork) {
+                final BasicNetwork network = (BasicNetwork) model;
+
+                final MLDataPair networkPair = CommonUtils.assembleNsDataPair(binCategoryMap, noVarSelect, modelConfig,
+                        columnConfigList, rawNsDataMap, cutoff, alg, null);
                 tasks.add(new Callable<MLData>() {
                     @Override
                     public MLData call() throws Exception {
