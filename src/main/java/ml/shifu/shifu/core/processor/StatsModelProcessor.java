@@ -413,6 +413,10 @@ public class StatsModelProcessor extends BasicModelProcessor implements Processo
 
         log.info("Corrrelation map memory is set to {}MB.", memoryInContainer);
 
+        if(youngMemory >= (memoryInContainer - memoryBuffer) / 2) {
+            youngMemory = (memoryInContainer - memoryBuffer) / 3;
+        }
+
         conf.set("mapreduce.map.memory.mb", memoryInContainer + "");
         conf.set(
                 "mapreduce.map.java.opts",
