@@ -265,25 +265,6 @@ public class FastCorrelationMapper extends Mapper<LongWritable, Text, IntWritabl
                 .getName());
     }
 
-    public static void main(String[] args) {
-        long start = System.currentTimeMillis();
-        double sum = 0;
-        for(int i = 0; i < 4270; i++) {
-            sum += 657d * 657;
-            sum += 657d;
-            sum += 1d;
-            for(int j = 0; j < 4270; j++) {
-                sum += 657d * 657;
-                sum += 657d;
-                sum += 1d;
-                sum += 657d * 657;
-                sum += 657d;
-                sum += 1d;
-            }
-        }
-        System.out.println(sum + " " + (System.currentTimeMillis() - start));
-    }
-
     private double[] getDoubleArrayByRawArray(String[] units) {
         double[] dValues = new double[this.columnConfigList.size()];
         for(int i = 0; i < this.columnConfigList.size(); i++) {
