@@ -77,7 +77,7 @@ public class Scorer {
     }
 
     public Scorer(List<BasicML> models, List<ColumnConfig> columnConfigList, String algorithm, ModelConfig modelConfig,
-            Double cutoff) {
+                  Double cutoff) {
         if(modelConfig == null) {
             throw new IllegalArgumentException("modelConfig should not be null");
         }
@@ -146,7 +146,7 @@ public class Scorer {
 
     /**
      * Run model against raw NSColumn Data map to get score
-     * 
+     *
      * @param rawDataNsMap
      *            - raw NSColumn Data map
      * @return ScoreObject - model score
@@ -174,32 +174,9 @@ public class Scorer {
 
                 final MLDataPair networkPair = CommonUtils.assembleNsDataPair(binCategoryMap, noVarSelect, modelConfig,
                         columnConfigList, rawNsDataMap, cutoff, alg, network.getFeatureSet());
-                if ( CollectionUtils.isNotEmpty(network.getFeatureSet()) ) {
-                    if (network.getFeatureSet().size() != networkPair.getInput().size()) {
-                        log.error("Network and input size mismatch: Network Size = " + network.getFeatureSet().size()
-                                + "; Input Size = " + networkPair.getInput().size());
-                        continue;
-                    }
-                } else {
-                    if(network.getInputCount() != networkPair.getInput().size()) {
-                        log.error("Network and input size mismatch: Network Size = " + network.getInputCount()
-                                + "; Input Size = " + pair.getInput().size());
-                        continue;
-                    }
-                }
-                tasks.add(new Callable<MLData>() {
-                    @Override
-                    public MLData call() throws Exception {
-                        return network.compute(networkPair.getInput());
-                    }
-                });
-            } else if (model instanceof BasicNetwork) {
-                final BasicNetwork network = (BasicNetwork) model;
-                final MLDataPair networkPair = CommonUtils.assembleNsDataPair(binCategoryMap, noVarSelect, modelConfig,
-                        columnConfigList, rawNsDataMap, cutoff, alg, null);
-                if(network.getInputCount() != networkPair.getInput().size()) {
-                    log.error("Network and input size mismatch: Network Size = " + network.getInputCount()
-                            + "; Input Size = " + pair.getInput().size());
+                if(network.getFeatureSet().size() != networkPair.getInput().size()) {
+                    log.error("Network and input size mismatch: Network Size = " + network.getFeatureSet().size()
+                            + "; Input Size = " + networkPair.getInput().size());
                     continue;
                 }
                 tasks.add(new Callable<MLData>() {
