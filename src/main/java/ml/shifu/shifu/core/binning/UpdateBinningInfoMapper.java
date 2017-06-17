@@ -113,7 +113,7 @@ public class UpdateBinningInfoMapper extends Mapper<LongWritable, Text, IntWrita
      */
     private IntWritable outputKey;
 
-    /**
+    /*
      * TODO At risk to be a big memory cost OOM.
      */
     private Map<Integer, Map<String, Integer>> categoricalBinMap;
@@ -164,8 +164,8 @@ public class UpdateBinningInfoMapper extends Mapper<LongWritable, Text, IntWrita
 
         loadTagWeightNum();
 
-        this.columnBinningInfo = new HashMap<Integer, BinningInfoWritable>(this.columnConfigList.size() * 4 / 3);
-        this.categoricalBinMap = new HashMap<Integer, Map<String, Integer>>(this.columnConfigList.size() * 4 / 3);
+        this.columnBinningInfo = new HashMap<Integer, BinningInfoWritable>(this.columnConfigList.size(), 1f);
+        this.categoricalBinMap = new HashMap<Integer, Map<String, Integer>>(this.columnConfigList.size(), 1f);
 
         loadColumnBinningInfo();
 
@@ -241,7 +241,7 @@ public class UpdateBinningInfoMapper extends Mapper<LongWritable, Text, IntWrita
 
                     double[] binWeightNeg = new double[binSize + 1];
                     binningInfo.setBinWeightNeg(binWeightNeg);
-                    LOG.info("column num {}  and info {}", columnNum, binningInfo);
+                    LOG.debug("column num {}  and info {}", columnNum, binningInfo);
                     this.columnBinningInfo.put(columnNum, binningInfo);
                 }
                 line = reader.readLine();
@@ -492,7 +492,8 @@ public class UpdateBinningInfoMapper extends Mapper<LongWritable, Text, IntWrita
                         new CountAndFrequentItemsWritable(cfi.getCount(), cfi.getInvalidCount(),
                                 cfi.getValidNumCount(), cfi.getHyper().getBytes(), cfi.getFrequentItems()));
             } else {
-                LOG.info("cci is null for column {}", entry.getKey());
+                entry.getValue().setEmpty(true);
+                LOG.warn("cci is null for column {}", entry.getKey());
             }
 
             this.outputKey.set(entry.getKey());

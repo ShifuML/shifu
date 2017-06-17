@@ -48,6 +48,8 @@ import ml.shifu.shifu.core.correlation.CorrelationMapper;
 import ml.shifu.shifu.core.correlation.CorrelationMultithreadedMapper;
 import ml.shifu.shifu.core.correlation.CorrelationReducer;
 import ml.shifu.shifu.core.correlation.CorrelationWritable;
+import ml.shifu.shifu.core.correlation.FastCorrelationMapper;
+import ml.shifu.shifu.core.correlation.FastCorrelationMultithreadedMapper;
 import ml.shifu.shifu.core.dtrain.nn.NNConstants;
 import ml.shifu.shifu.core.mr.input.CombineInputFormat;
 import ml.shifu.shifu.core.processor.stats.AbstractStatsExecutor;
@@ -126,7 +128,7 @@ public class StatsModelProcessor extends BasicModelProcessor implements Processo
         long start = System.currentTimeMillis();
         try {
             setUp(ModelStep.STATS);
-            log.info("catMaxBinNum - {}", this.modelConfig.getStats().getCateMaxNumBin());
+            log.debug("catMaxBinNum - {}", this.modelConfig.getStats().getCateMaxNumBin());
             // resync ModelConfig.json/ColumnConfig.json to HDFS
             syncDataToHdfs(modelConfig.getDataSet().getSource());
 
@@ -134,7 +136,7 @@ public class StatsModelProcessor extends BasicModelProcessor implements Processo
                 // 1. validate if run stats before run stats -correlation
                 boolean foundValidMeanValueColumn = false;
                 for(ColumnConfig config: this.columnConfigList) {
-                    if(!config.isMeta() && !config.isTarget() && config.isNumerical()) {
+                    if(!config.isMeta() && !config.isTarget()) {
                         if(config.getMean() != null) {
                             foundValidMeanValueColumn = true;
                             break;
@@ -301,6 +303,9 @@ public class StatsModelProcessor extends BasicModelProcessor implements Processo
         conf.setBoolean(CombineInputFormat.SHIFU_VS_SPLIT_COMBINABLE, true);
         conf.setBoolean("mapreduce.input.fileinputformat.input.dir.recursive", true);
 
+        boolean isFastCorrelation = Environment.getProperty("shifu.correlation.fast", "false").equalsIgnoreCase(
+                Boolean.TRUE.toString());
+
         int threads = parseThreadNum();
         conf.setInt("mapreduce.map.cpu.vcores", threads);
 
@@ -316,7 +321,7 @@ public class StatsModelProcessor extends BasicModelProcessor implements Processo
         // -Dmapreduce.map.java.opts=-Xmx3000M'
         if(System.getProperty("mapreduce.map.memory.mb") == null
                 || System.getProperty("mapreduce.map.java.opts") == null) {
-            setMapperMemory(conf, threads);
+            setMapperMemory(conf, threads, isFastCorrelation);
         } else {
             conf.set("mapreduce.map.memory.mb", System.getProperty("mapreduce.map.memory.mb"));
             conf.set("mapreduce.map.java.opts", System.getProperty("mapreduce.map.java.opts"));
@@ -327,10 +332,16 @@ public class StatsModelProcessor extends BasicModelProcessor implements Processo
         @SuppressWarnings("deprecation")
         Job job = new Job(conf, "Shifu: Correlation Computing Job : " + this.modelConfig.getModelSetName());
         job.setJarByClass(getClass());
-        job.setMapperClass(CorrelationMultithreadedMapper.class);
-        CorrelationMultithreadedMapper.setMapperClass(job, CorrelationMapper.class);
 
-        CorrelationMultithreadedMapper.setNumberOfThreads(job, threads);
+        if(isFastCorrelation) {
+            job.setMapperClass(FastCorrelationMultithreadedMapper.class);
+            FastCorrelationMultithreadedMapper.setMapperClass(job, FastCorrelationMapper.class);
+            FastCorrelationMultithreadedMapper.setNumberOfThreads(job, threads);
+        } else {
+            job.setMapperClass(CorrelationMultithreadedMapper.class);
+            CorrelationMultithreadedMapper.setMapperClass(job, CorrelationMapper.class);
+            CorrelationMultithreadedMapper.setNumberOfThreads(job, threads);
+        }
 
         job.setMapOutputKeyClass(IntWritable.class);
         job.setMapOutputValueClass(CorrelationWritable.class);
@@ -369,23 +380,42 @@ public class StatsModelProcessor extends BasicModelProcessor implements Processo
      * If 3000 * 3000 correlation computing, per default threads number setting, memory should be set according to
      * column size to avoid OOM issue.
      */
-    private void setMapperMemory(Configuration conf, int threads) {
+    private void setMapperMemory(Configuration conf, int threads, boolean isFastCorrelation) {
         int memoryBuffer = 1024;
-        // <1000 -> 2G; <=2000 2.5G; <=3000 3G; <=4000 4G; <=5000; 5G
-        int memoryInContainer = this.columnConfigList.size();
-        if(memoryInContainer > 3000 && memoryInContainer <= 4000) {
-            memoryInContainer = (int) (memoryInContainer * 1.4d);
-        } else if(memoryInContainer > 4000 && memoryInContainer <= 5000) {
-            memoryInContainer = (int) (memoryInContainer * 1.5d);
-        } else if(memoryInContainer > 5000) {
-            memoryInContainer = (int) (memoryInContainer * 1.6d);
-        }
-        if(memoryInContainer < 2048) {
-            memoryInContainer = 2048; // at least 2048M
+        int memoryInContainer = 0;
+        int youngMemory = 1024;
+        int columnSize = this.columnConfigList.size();
+        if(isFastCorrelation) {
+            memoryInContainer += (1L * columnSize * columnSize * 8 * 6 * threads) / (1024 * 1024);
+            if(columnSize > 4000) {
+                memoryInContainer += 3072;
+                youngMemory = 2500;
+            }
+        } else {
+            // <1000 -> 2G; <=2000 2.5G; <=3000 3G; <=4000 4G; <=5000; 5G
+            memoryInContainer = columnSize;
+            if(memoryInContainer > 3000 && memoryInContainer <= 4000) {
+                memoryInContainer = (int) (memoryInContainer * 1.4d);
+                youngMemory = 2000;
+            } else if(memoryInContainer > 4000 && memoryInContainer <= 5000) {
+                memoryInContainer = (int) (memoryInContainer * 1.5d);
+                youngMemory = 2500;
+            } else if(memoryInContainer > 5000) {
+                memoryInContainer = (int) (memoryInContainer * 1.6d);
+                youngMemory = 3000;
+            }
+            if(memoryInContainer < 2048) {
+                memoryInContainer = 2048; // at least 2048M
+            }
         }
 
         memoryInContainer += memoryBuffer; // (MB, 1024 is buffer)
+
         log.info("Corrrelation map memory is set to {}MB.", memoryInContainer);
+
+        if(youngMemory >= (memoryInContainer - memoryBuffer) / 2) {
+            youngMemory = (memoryInContainer - memoryBuffer) / 3;
+        }
 
         conf.set("mapreduce.map.memory.mb", memoryInContainer + "");
         conf.set(
@@ -394,7 +424,9 @@ public class StatsModelProcessor extends BasicModelProcessor implements Processo
                         + (memoryInContainer - memoryBuffer)
                         + "m -Xmx"
                         + (memoryInContainer - memoryBuffer)
-                        + "m -server -XX:MaxPermSize=128M -XX:PermSize=64M -XX:+UseParallelGC -XX:+UseParallelOldGC -XX:ParallelGCThreads=8 -verbose:gc -XX:+PrintGCDetails -XX:+PrintGCTimeStamps");
+                        + "m -Xmn"
+                        + youngMemory
+                        + "m -server -XX:MaxPermSize=128M -XX:PermSize=64M -XX:+UseParallelGC -XX:+UseParallelOldGC -XX:ParallelGCThreads=8 -verbose:gc -XX:+PrintGCDetails -XX:+PrintGCTimeStamps ");
     }
 
     private int parseThreadNum() {
@@ -644,6 +676,16 @@ public class StatsModelProcessor extends BasicModelProcessor implements Processo
         for(AbstractBinInfo binInfo: binInfos) {
             binPosRates.add(binInfo.getPositiveRate());
         }
+        // fix a bug here to not add missing bin pos rate at last one of binPosRate
+        if(binPosRates.size() + 1 == binCountPos.length) {
+            long missingSumCnt = binCountPos[binCountPos.length - 1] + binCountNeg[binCountNeg.length - 1];
+            if(missingSumCnt > 0) {
+                binPosRates.add(binCountPos[binCountPos.length - 1] * 1d / missingSumCnt);
+            } else {
+                binPosRates.add(Double.NaN);
+            }
+        }
+
         columnConfig.setBinPosCaseRate(binPosRates);
 
         columnConfig.setBinWeightedNeg(convertIntoDoubleList(binWeightNeg));

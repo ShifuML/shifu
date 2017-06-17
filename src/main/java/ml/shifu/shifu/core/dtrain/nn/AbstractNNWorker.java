@@ -581,7 +581,6 @@ public abstract class AbstractNNWorker<VALUE extends Writable> extends
                 .getBaggingSampleRate();
         int classValue = (int) (label + 0.01f);
         if(!modelConfig.isBaggingWithReplacement()) {
-            // bagging without replacement sampling in training data set, take Random for sampling without replacement
             Random random = null;
             if(this.isStratifiedSampling) {
                 random = baggingRandomMap.get(classValue);
