@@ -39,16 +39,16 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * {@link CorrelationMapper} is used to compute {@link CorrelationWritable} per column per mapper.
+ * {@link FastCorrelationMapper} is used to compute {@link CorrelationWritable} per column per mapper.
  * 
  * <p>
  * Such {@link CorrelationWritable} is sent to reducer (only one) to merge and compute real pearson value.
  * 
  * @author Zhang David (pengzhang@paypal.com)
  */
-public class CorrelationMapper extends Mapper<LongWritable, Text, IntWritable, CorrelationWritable> {
+public class FastCorrelationMapper extends Mapper<LongWritable, Text, IntWritable, CorrelationWritable> {
 
-    private final static Logger LOG = LoggerFactory.getLogger(CorrelationMapper.class);
+    private final static Logger LOG = LoggerFactory.getLogger(FastCorrelationMapper.class);
 
     /**
      * Default splitter used to split input record. Use one instance to prevent more news in Splitter.on.
@@ -85,6 +85,16 @@ public class CorrelationMapper extends Mapper<LongWritable, Text, IntWritable, C
      */
     private boolean isComputeAll = false;
 
+    /**
+     * Output key cache to avoid new operation.
+     */
+    private IntWritable outputKey;
+
+    /**
+     * Correlation map with <column_idm columnInfo>
+     */
+    private Map<Integer, CorrelationWritable> correlationMap;
+
     // cache tags in set for search
     protected Set<String> posTagSet;
     protected Set<String> negTagSet;
@@ -114,6 +124,9 @@ public class CorrelationMapper extends Mapper<LongWritable, Text, IntWritable, C
 
         this.isComputeAll = Boolean.valueOf(context.getConfiguration().get(Constants.SHIFU_CORRELATION_COMPUTE_ALL,
                 "false"));
+
+        this.outputKey = new IntWritable();
+        this.correlationMap = new HashMap<Integer, CorrelationWritable>();
 
         for(ColumnConfig config: columnConfigList) {
             if(config.isCategorical()) {
@@ -151,11 +164,10 @@ public class CorrelationMapper extends Mapper<LongWritable, Text, IntWritable, C
             return;
         }
         double[] dValues = null;
+
         if(!this.dataPurifier.isFilterOut(valueStr)) {
             return;
         }
-
-        long startO = System.currentTimeMillis();
 
         context.getCounter(Constants.SHIFU_GROUP_COUNTER, "CNT_AFTER_FILTER").increment(1L);
 
@@ -173,72 +185,84 @@ public class CorrelationMapper extends Mapper<LongWritable, Text, IntWritable, C
             LOG.info("Current records: {} in thread {}.", count, Thread.currentThread().getName());
         }
 
+        long startO = System.currentTimeMillis();
         for(int i = 0; i < this.columnConfigList.size(); i++) {
+            long start = System.currentTimeMillis();
             ColumnConfig columnConfig = this.columnConfigList.get(i);
             if(columnConfig.getColumnFlag() == ColumnFlag.Meta) {
                 continue;
             }
-            CorrelationWritable cw = CorrelationMultithreadedMapper.finalCorrelationMap.get(i);
-            synchronized(cw) {
-                cw.setColumnIndex(i);
-                cw.setCount(cw.getCount() + 1d);
-                cw.setSum(cw.getSum() + dValues[i]);
-                double squaredSum = dValues[i] * dValues[i];
-                cw.setSumSquare(cw.getSumSquare() + squaredSum);
-                double[] xySum = cw.getXySum();
-                if(xySum == null) {
-                    xySum = new double[this.columnConfigList.size()];
-                    cw.setXySum(xySum);
-                }
-                double[] xxSum = cw.getXxSum();
-                if(xxSum == null) {
-                    xxSum = new double[this.columnConfigList.size()];
-                    cw.setXxSum(xxSum);
-                }
-                double[] yySum = cw.getYySum();
-                if(yySum == null) {
-                    yySum = new double[this.columnConfigList.size()];
-                    cw.setYySum(yySum);
-                }
+            CorrelationWritable cw = this.correlationMap.get(i);
+            if(cw == null) {
+                cw = new CorrelationWritable();
+                this.correlationMap.put(i, cw);
+            }
+            cw.setColumnIndex(i);
+            cw.setCount(cw.getCount() + 1d);
+            cw.setSum(cw.getSum() + dValues[i]);
+            double squaredSum = dValues[i] * dValues[i];
+            cw.setSumSquare(cw.getSumSquare() + squaredSum);
+            double[] xySum = cw.getXySum();
+            if(xySum == null) {
+                xySum = new double[this.columnConfigList.size()];
+                cw.setXySum(xySum);
+            }
+            double[] xxSum = cw.getXxSum();
+            if(xxSum == null) {
+                xxSum = new double[this.columnConfigList.size()];
+                cw.setXxSum(xxSum);
+            }
+            double[] yySum = cw.getYySum();
+            if(yySum == null) {
+                yySum = new double[this.columnConfigList.size()];
+                cw.setYySum(yySum);
+            }
 
-                double[] adjustCount = cw.getAdjustCount();
-                if(adjustCount == null) {
-                    adjustCount = new double[this.columnConfigList.size()];
-                    cw.setAdjustCount(adjustCount);
+            double[] adjustCount = cw.getAdjustCount();
+            if(adjustCount == null) {
+                adjustCount = new double[this.columnConfigList.size()];
+                cw.setAdjustCount(adjustCount);
+            }
+            double[] adjustSumX = cw.getAdjustSumX();
+            if(adjustSumX == null) {
+                adjustSumX = new double[this.columnConfigList.size()];
+                cw.setAdjustSumX(adjustSumX);
+            }
+            double[] adjustSumY = cw.getAdjustSumY();
+            if(adjustSumY == null) {
+                adjustSumY = new double[this.columnConfigList.size()];
+                cw.setAdjustSumY(adjustSumY);
+            }
+            if(i % 1000 == 0) {
+                LOG.debug("running time 1 is {}ms in thread {}", (System.currentTimeMillis() - start), Thread
+                        .currentThread().getName());
+            }
+            start = System.currentTimeMillis();
+            for(int j = 0; j < this.columnConfigList.size(); j++) {
+                ColumnConfig otherColumnConfig = this.columnConfigList.get(j);
+                if(otherColumnConfig.getColumnFlag() == ColumnFlag.Meta) {
+                    continue;
                 }
-                double[] adjustSumX = cw.getAdjustSumX();
-                if(adjustSumX == null) {
-                    adjustSumX = new double[this.columnConfigList.size()];
-                    cw.setAdjustSumX(adjustSumX);
+                if(i > j && !this.isComputeAll) {
+                    continue;
                 }
-                double[] adjustSumY = cw.getAdjustSumY();
-                if(adjustSumY == null) {
-                    adjustSumY = new double[this.columnConfigList.size()];
-                    cw.setAdjustSumY(adjustSumY);
-                }
-
-                for(int j = 0; j < this.columnConfigList.size(); j++) {
-                    ColumnConfig otherColumnConfig = this.columnConfigList.get(j);
-                    if(otherColumnConfig.getColumnFlag() == ColumnFlag.Meta) {
-                        continue;
-                    }
-                    if(i > j && !this.isComputeAll) {
-                        continue;
-                    }
-                    // only do stats on both valid values
-                    if(dValues[i] != Double.MIN_VALUE && dValues[j] != Double.MIN_VALUE) {
-                        xySum[j] += dValues[i] * dValues[j];
-                        xxSum[j] += squaredSum;
-                        yySum[j] += dValues[j] * dValues[j];
-                        adjustCount[j] += 1d;
-                        adjustSumX[j] += dValues[i];
-                        adjustSumY[j] += dValues[j];
-                    }
+                // only do stats on both valid values
+                if(dValues[i] != Double.MIN_VALUE && dValues[j] != Double.MIN_VALUE) {
+                    xySum[j] += dValues[i] * dValues[j];
+                    xxSum[j] += squaredSum;
+                    yySum[j] += dValues[j] * dValues[j];
+                    adjustCount[j] += 1d;
+                    adjustSumX[j] += dValues[i];
+                    adjustSumY[j] += dValues[j];
                 }
             }
-            LOG.debug("running time is {}ms in thread {}", (System.currentTimeMillis() - startO), Thread
-                    .currentThread().getName());
+            if(i % 1000 == 0) {
+                LOG.debug("running time 2 is {}ms in thread {}", (System.currentTimeMillis() - start), Thread
+                        .currentThread().getName());
+            }
         }
+        LOG.debug("running time is {}ms in thread {}", (System.currentTimeMillis() - startO), Thread.currentThread()
+                .getName());
     }
 
     private double[] getDoubleArrayByRawArray(String[] units) {
@@ -318,6 +342,10 @@ public class CorrelationMapper extends Mapper<LongWritable, Text, IntWritable, C
     @Override
     protected void cleanup(Context context) throws IOException, InterruptedException {
         LOG.info("Final records in such thread of mapper: {}.", count);
+        for(Map.Entry<Integer, CorrelationWritable> entry: this.correlationMap.entrySet()) {
+            outputKey.set(entry.getKey());
+            context.write(outputKey, entry.getValue());
+        }
     }
 
 }

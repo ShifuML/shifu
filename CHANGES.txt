@@ -16,6 +16,10 @@
  
 Shifu Change Log
 
+Changes for Shifu-0.10.4
+    * Optimize IndependetTreeModel by split regression and classification;
+    * Add new version of fast correlation computing.
+
 Changes for Shifu-0.10.3
     * Fix GBT SLA Categorical Feature Rebin Delimiter Issue: change delimiter to '@^'
 
