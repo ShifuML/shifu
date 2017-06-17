@@ -208,6 +208,17 @@ public class Scorer {
                         return network.compute(networkPair.getInput());
                     }
                 });
+            } else if(model instanceof BasicNetwork) {
+                final BasicNetwork network = (BasicNetwork) model;
+
+                final MLDataPair networkPair = CommonUtils.assembleNsDataPair(binCategoryMap, noVarSelect, modelConfig,
+                        columnConfigList, rawNsDataMap, cutoff, alg, null);
+                tasks.add(new Callable<MLData>() {
+                    @Override
+                    public MLData call() throws Exception {
+                        return network.compute(networkPair.getInput());
+                    }
+                });
             } else if(model instanceof SVM) {
                 final SVM svm = (SVM) model;
                 if(svm.getInputCount() != pair.getInput().size()) {
