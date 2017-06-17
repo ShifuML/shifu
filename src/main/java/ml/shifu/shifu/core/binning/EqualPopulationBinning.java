@@ -352,9 +352,10 @@ public class EqualPopulationBinning extends AbstractBinning<Double> {
         if(posHistogramUnit != null) {
             HistogramUnit chu = posHistogramUnit.data();
             HistogramUnit nhu = posHistogramUnit.next().data();
-            double mb = chu.getHcnt() + (nhu.getHcnt() - nhu.getHcnt()) * (hval - chu.getHval())
-                    / (nhu.getHval() - chu.getHval());
-            double s = (chu.getHcnt() + mb) * (hval - chu.getHval()) / (nhu.getHval() - chu.getHval());
+            double mb = chu.getHcnt() + (nhu.getHcnt() - chu.getHcnt())
+                    * (hval - chu.getHval()) / (nhu.getHval() - chu.getHval());
+            double s = (chu.getHcnt() + mb)
+                    * (hval - chu.getHval()) / (nhu.getHval() - chu.getHval());
             s = s / 2;
 
             tmp = this.header;
