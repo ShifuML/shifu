@@ -26,8 +26,8 @@ if [ "${SHIFU_HOME}" == "" ]; then
 fi
 
 _curr_dir=`pwd`
-cd ${SHIFU_HOME}/bin/
 
+cd ${SHIFU_HOME}/bin/
 ${SHIFU_HOME}/bin/shifu new regressiontest-nn
 cd regressiontest-nn
 ${SHIFU_HOME}/bin/shifu init
@@ -38,7 +38,18 @@ ${SHIFU_HOME}/bin/shifu train
 ${SHIFU_HOME}/bin/shifu eval
 
 cd ${SHIFU_HOME}/bin/
+${SHIFU_HOME}/bin/shifu new regressiontest-lr -t lr
+cd regressiontest-lr
+${SHIFU_HOME}/bin/shifu init
+${SHIFU_HOME}/bin/shifu stats
+${SHIFU_HOME}/bin/shifu norm
+${SHIFU_HOME}/bin/shifu varsel
+${SHIFU_HOME}/bin/shifu train
+${SHIFU_HOME}/bin/shifu eval
+
+cd ${SHIFU_HOME}/bin/
 ${SHIFU_HOME}/bin/shifu new regressiontest-gbt -t gbt
+cd regressiontest-gbt
 ${SHIFU_HOME}/bin/shifu init
 ${SHIFU_HOME}/bin/shifu stats
 ${SHIFU_HOME}/bin/shifu norm
