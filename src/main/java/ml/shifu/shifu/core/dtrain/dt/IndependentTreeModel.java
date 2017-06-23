@@ -19,12 +19,8 @@ import java.io.BufferedInputStream;
 import java.io.DataInputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.Map.Entry;
-import java.util.Set;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.zip.GZIPInputStream;
 
@@ -63,6 +59,11 @@ public class IndependentTreeModel {
      * Mapping for (ColumnNum, Map(Category, CategoryIndex) for categorical feature
      */
     private Map<Integer, Map<String, Integer>> columnCategoryIndexMapping;
+
+    /**
+     * Caching the value size for categorical variables to avoid map query
+     */
+    private int[] categoricalValueSize;
 
     /**
      * Mapping for (ColumnNum, index in double[] array)
@@ -144,6 +145,19 @@ public class IndependentTreeModel {
         this.algorithm = algorithm;
         this.inputNode = inputNode;
         this.version = version;
+
+        // caching value size of categorical variable
+        // but just only cache those used categorical variables
+        this.categoricalValueSize = new int[this.columnNumIndexMapping.size()];
+        Iterator<Entry<Integer, List<String>>> iterator = this.categoricalColumnNameNames.entrySet().iterator();
+        while ( iterator.hasNext() ) {
+            Entry<Integer, List<String>> entry = iterator.next();
+            Integer columnNum = entry.getKey();
+            if ( this.columnNumIndexMapping.containsKey(columnNum) ) {
+                this.categoricalValueSize[this.columnNumIndexMapping.get(columnNum)]
+                        = entry.getValue().size();
+            }
+        }
     }
 
     /**
@@ -251,7 +265,7 @@ public class IndependentTreeModel {
         // go until leaf
         while(currNode.getSplit() != null && !currNode.isRealLeaf()) {
             Split split = currNode.getSplit();
-            double value = data[this.columnNumIndexMapping.get(split.getColumnNum())];
+            double value = data[split.getColumnNum()];
             if(split.getFeatureType().isNumerical()) {
                 // value is real numeric value and no need to transform to binLowestValue
                 if(value < split.getThreshold()) {
@@ -261,7 +275,7 @@ public class IndependentTreeModel {
                 }
             } else if(split.getFeatureType().isCategorical()) {
                 short indexValue = -1;
-                int categoricalSize = categoricalColumnNameNames.get(split.getColumnNum()).size();
+                int categoricalSize = this.categoricalValueSize[split.getColumnNum()];
                 if(Double.compare(value, 0d) < 0 || Double.compare(value, categoricalSize) >= 0) {
                     indexValue = (short) categoricalSize;
                 } else {
@@ -635,6 +649,9 @@ public class IndependentTreeModel {
             treeNode.readFields(dis);
             trees.add(treeNode);
             weights.add(treeNode.getLearningRate());
+
+            // remap the column number into array index for each node
+            treeNode.remapColumnNum(columnMapping);
         }
 
         // if one vs all, even multiple classification, treated as regression
