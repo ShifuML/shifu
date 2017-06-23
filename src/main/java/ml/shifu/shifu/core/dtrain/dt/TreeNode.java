@@ -56,7 +56,7 @@ public class TreeNode implements Bytable {
     private int nodeNum;
 
     /**
-     * Store weighted cnt of root node (id = 1) for further computing, it is no meaning full it current node is not ROOT
+     * Store weighted cnt of root node (id = 1) for further computing, it is meaningless if current node is not ROOT
      * node
      */
     private double rootWgtCnt = -1;
