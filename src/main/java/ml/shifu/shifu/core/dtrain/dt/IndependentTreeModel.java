@@ -50,11 +50,6 @@ public class IndependentTreeModel {
     private Map<Integer, String> numNameMapping;
 
     /**
-     * Mapping for (ColumnName, ColumnNum)
-     */
-    private Map<String, Integer> nameNumMapping;
-
-    /**
      * Mapping for (ColumnNum, Category List) for categorical feature
      */
     private Map<Integer, List<String>> categoricalColumnNameNames;
@@ -127,11 +122,6 @@ public class IndependentTreeModel {
             boolean isConvertToProb, String lossStr, String algorithm, int inputNode, int version) {
         this.numericalMeanMapping = numericalMeanMapping;
         this.numNameMapping = numNameMapping;
-        this.nameNumMapping = new HashMap<String, Integer>();
-        for(Entry<Integer, String> entry: this.numNameMapping.entrySet()) {
-            this.nameNumMapping.put(entry.getValue(), entry.getKey());
-        }
-
         this.categoricalColumnNameNames = categoricalColumnNameNames;
         this.columnCategoryIndexMapping = columnCategoryIndexMapping;
         this.columnNumIndexMapping = columnNumIndexMapping;
@@ -580,9 +570,9 @@ public class IndependentTreeModel {
         boolean isOneVsAll = dis.readBoolean();
         int inputNode = dis.readInt();
 
-        Map<Integer, Double> numericalMeanMapping = new HashMap<Integer, Double>();
-        Map<Integer, String> columnIndexNameMapping = new HashMap<Integer, String>();
         int size = dis.readInt();
+        Map<Integer, Double> numericalMeanMapping = new HashMap<Integer, Double>(size, 1f);
+        Map<Integer, String> columnIndexNameMapping = new HashMap<Integer, String>(size, 1f);
         for(int i = 0; i < size; i++) {
             int columnIndex = dis.readInt();
             double mean = dis.readDouble();
@@ -595,14 +585,15 @@ public class IndependentTreeModel {
             columnIndexNameMapping.put(columnIndex, columnName);
         }
 
-        Map<Integer, List<String>> categoricalColumnNameNames = new HashMap<Integer, List<String>>();
-        Map<Integer, Map<String, Integer>> columnCategoryIndexMapping = new HashMap<Integer, Map<String, Integer>>();
         size = dis.readInt();
+        Map<Integer, List<String>> categoricalColumnNameNames = new HashMap<Integer, List<String>>(size, 1f);
+        Map<Integer, Map<String, Integer>> columnCategoryIndexMapping = new HashMap<Integer, Map<String, Integer>>(
+                size, 1f);
         for(int i = 0; i < size; i++) {
             int columnIndex = dis.readInt();
             int categoryListSize = dis.readInt();
-            Map<String, Integer> categoryIndexMapping = new HashMap<String, Integer>();
-            List<String> categories = new ArrayList<String>();
+            Map<String, Integer> categoryIndexMapping = new HashMap<String, Integer>(categoryListSize, 1f);
+            List<String> categories = new ArrayList<String>(categoryListSize);
             for(int j = 0; j < categoryListSize; j++) {
                 String category = dis.readUTF();
                 // categories is merged category list
@@ -621,8 +612,8 @@ public class IndependentTreeModel {
             columnCategoryIndexMapping.put(columnIndex, categoryIndexMapping);
         }
 
-        Map<Integer, Integer> columnMapping = new HashMap<Integer, Integer>();
         int columnMappingSize = dis.readInt();
+        Map<Integer, Integer> columnMapping = new HashMap<Integer, Integer>(columnMappingSize, 1f);
         for(int i = 0; i < columnMappingSize; i++) {
             columnMapping.put(dis.readInt(), dis.readInt());
         }
