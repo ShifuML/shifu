@@ -270,7 +270,7 @@ public class ModelConfig {
         } else if(ALGORITHM.LR.equals(alg)) {
             trainConf.setNumTrainEpochs(100);
         }
-        trainConf.setBaggingWithReplacement(true);
+        trainConf.setBaggingWithReplacement(false);
         modelConfig.setTrain(trainConf);
 
         EvalConfig evalConfig = new EvalConfig();
