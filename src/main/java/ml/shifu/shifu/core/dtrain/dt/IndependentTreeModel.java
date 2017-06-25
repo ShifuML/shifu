@@ -273,7 +273,7 @@ public class IndependentTreeModel {
         // go until leaf
         while(currNode.getSplit() != null && !currNode.isRealLeaf()) {
             Split split = currNode.getSplit();
-            double value = data[getColumnIndex(split.getColumnNum())];
+            double value = data[this.getColumnIndex(split.getColumnNum())];
             if(split.getFeatureType().isNumerical()) {
                 // value is real numeric value and no need to transform to binLowestValue
                 if(value < split.getThreshold()) {
