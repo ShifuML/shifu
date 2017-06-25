@@ -19,12 +19,8 @@ import java.io.BufferedInputStream;
 import java.io.DataInputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.Map.Entry;
-import java.util.Set;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.zip.GZIPInputStream;
 
@@ -58,6 +54,16 @@ public class IndependentTreeModel {
      * Mapping for (ColumnNum, Map(Category, CategoryIndex) for categorical feature
      */
     private Map<Integer, Map<String, Integer>> columnCategoryIndexMapping;
+
+    /**
+     * indicator for the model is loaded as optimize mode
+     */
+    private boolean isOptimizeMode = false;
+
+    /**
+     * Caching the value size for categorical variables to avoid map query
+     */
+    private int[] categoricalValueSize;
 
     /**
      * Mapping for (ColumnNum, index in double[] array)
@@ -118,13 +124,14 @@ public class IndependentTreeModel {
     public IndependentTreeModel(Map<Integer, Double> numericalMeanMapping, Map<Integer, String> numNameMapping,
             Map<Integer, List<String>> categoricalColumnNameNames,
             Map<Integer, Map<String, Integer>> columnCategoryIndexMapping, Map<Integer, Integer> columnNumIndexMapping,
-            List<TreeNode> trees, List<Double> weights, boolean isGBDT, boolean isClassification,
+            boolean isOptimizeMode, List<TreeNode> trees, List<Double> weights, boolean isGBDT, boolean isClassification,
             boolean isConvertToProb, String lossStr, String algorithm, int inputNode, int version) {
         this.numericalMeanMapping = numericalMeanMapping;
         this.numNameMapping = numNameMapping;
         this.categoricalColumnNameNames = categoricalColumnNameNames;
         this.columnCategoryIndexMapping = columnCategoryIndexMapping;
         this.columnNumIndexMapping = columnNumIndexMapping;
+        this.isOptimizeMode = isOptimizeMode;
         this.trees = trees;
         this.weights = weights;
         this.isGBDT = isGBDT;
@@ -134,6 +141,21 @@ public class IndependentTreeModel {
         this.algorithm = algorithm;
         this.inputNode = inputNode;
         this.version = version;
+
+        if ( this.isOptimizeMode ) {
+            // caching value size of categorical variable
+            // but just only cache those used categorical variables
+            this.categoricalValueSize = new int[this.columnNumIndexMapping.size()];
+            Iterator<Entry<Integer, List<String>>> iterator = this.categoricalColumnNameNames.entrySet().iterator();
+            while (iterator.hasNext()) {
+                Entry<Integer, List<String>> entry = iterator.next();
+                Integer columnNum = entry.getKey();
+                if (this.columnNumIndexMapping.containsKey(columnNum)) {
+                    this.categoricalValueSize[this.columnNumIndexMapping.get(columnNum)]
+                            = entry.getValue().size();
+                }
+            }
+        }
     }
 
     /**
@@ -241,7 +263,7 @@ public class IndependentTreeModel {
         // go until leaf
         while(currNode.getSplit() != null && !currNode.isRealLeaf()) {
             Split split = currNode.getSplit();
-            double value = data[this.columnNumIndexMapping.get(split.getColumnNum())];
+            double value = data[this.getColumnIndex(split.getColumnNum())];
             if(split.getFeatureType().isNumerical()) {
                 // value is real numeric value and no need to transform to binLowestValue
                 if(value < split.getThreshold()) {
@@ -251,7 +273,7 @@ public class IndependentTreeModel {
                 }
             } else if(split.getFeatureType().isCategorical()) {
                 short indexValue = -1;
-                int categoricalSize = categoricalColumnNameNames.get(split.getColumnNum()).size();
+                int categoricalSize = this.getCategoricalSize(split.getColumnNum());
                 if(Double.compare(value, 0d) < 0 || Double.compare(value, categoricalSize) >= 0) {
                     indexValue = (short) categoricalSize;
                 } else {
@@ -280,6 +302,16 @@ public class IndependentTreeModel {
         } else {
             return currNode.getPredict().getPredict();
         }
+    }
+
+    private int getColumnIndex(int columnNum) {
+        return (this.isOptimizeMode ? columnNum : this.columnNumIndexMapping.get(columnNum));
+    }
+
+    private int getCategoricalSize(int columnNum) {
+        return (this.isOptimizeMode ? this.categoricalValueSize[columnNum] :
+                categoricalColumnNameNames.get(columnNum).size()
+            );
     }
 
     private double[] convertDataMapToDoubleArray(Map<String, Object> dataMap) {
@@ -535,7 +567,7 @@ public class IndependentTreeModel {
     /**
      * Load model instance from stream like model0.gbt or model0.rf. User can specify to use raw score or score after
      * sigmoid transfrom by isConvertToProb.
-     * 
+     *
      * @param input
      *            the input stream
      * @param isConvertToProb
@@ -545,6 +577,22 @@ public class IndependentTreeModel {
      *             any exception in load input stream
      */
     public static IndependentTreeModel loadFromStream(InputStream input, boolean isConvertToProb) throws IOException {
+        return loadFromStream(input, isConvertToProb, false);
+    }
+
+    /**
+     * Load model instance from stream like model0.gbt or model0.rf. User can specify to use raw score or score after
+     * sigmoid transfrom by isConvertToProb.
+     * 
+     * @param input
+     *            the input stream
+     * @param isConvertToProb
+     *            if convert score to probability (if to transfrom raw score by sigmoid)
+     * @return the tree model instance
+     * @throws IOException
+     *             any exception in load input stream
+     */
+    public static IndependentTreeModel loadFromStream(InputStream input, boolean isConvertToProb, boolean isOptimizeMode) throws IOException {
         DataInputStream dis = null;
         // check if gzip or not
         try {
@@ -626,11 +674,16 @@ public class IndependentTreeModel {
             treeNode.readFields(dis);
             trees.add(treeNode);
             weights.add(treeNode.getLearningRate());
+
+            if ( isOptimizeMode ) {
+                // remap the column number into array index for each node
+                treeNode.remapColumnNum(columnMapping);
+            }
         }
 
         // if one vs all, even multiple classification, treated as regression
         return new IndependentTreeModel(numericalMeanMapping, columnIndexNameMapping, categoricalColumnNameNames,
-                columnCategoryIndexMapping, columnMapping, trees, weights,
+                columnCategoryIndexMapping, columnMapping, isOptimizeMode, trees, weights,
                 CommonConstants.GBT_ALG_NAME.equalsIgnoreCase(algorithm), isClassification && !isOneVsAll,
                 isConvertToProb, lossStr, algorithm, inputNode, version);
     }

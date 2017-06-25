@@ -20,6 +20,7 @@ import java.io.DataOutput;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 import ml.shifu.guagua.io.Bytable;
 
@@ -683,5 +684,19 @@ public class Node implements Bytable {
             str += this.right.toTree();
         }
         return str;
+    }
+
+    public void remapColumnNum(Map<Integer, Integer> columnMapping) {
+        if ( this.split != null && columnMapping.containsKey(this.split.getColumnNum()) ) {
+            this.split.setColumnNum(columnMapping.get(this.split.getColumnNum()));
+        }
+
+        if ( this.left != null ) {
+            this.left.remapColumnNum(columnMapping);
+        }
+
+        if ( this.right != null ) {
+            this.right.remapColumnNum(columnMapping);
+        }
     }
 }
