@@ -193,12 +193,12 @@ class Variance extends Impurity {
                 }
 
                 // new hash set to copy a new one avoid share object issue
-                split = new Split(config.getColumnNum(), FeatureType.CATEGORICAL, 0d, isLeft, new SimpleBitSet<Short>(
-                        config.getBinCategory().size() + 1, (SimpleBitSet<Short>) (isLeft ? leftCategories
-                                : rightCategories)));
+                split = new Split(config.getColumnNum(), Split.CATEGORICAL, 0d, isLeft,
+                        new SimpleBitSet<Short>(config.getBinCategory().size() + 1,
+                                (SimpleBitSet<Short>) (isLeft ? leftCategories : rightCategories)));
             } else {
-                split = new Split(config.getColumnNum(), FeatureType.CONTINUOUS,
-                        config.getBinBoundary().get(index + 1), false, null);
+                split = new Split(config.getColumnNum(), Split.CONTINUOUS, config.getBinBoundary().get(index + 1),
+                        false, null);
             }
 
             Predict leftPredict = new Predict(leftCount == 0d ? 0d : leftSum / leftCount);
@@ -342,12 +342,12 @@ class FriedmanMSE extends Variance {
                 }
 
                 // new hash set to copy a new one avoid share object issue
-                split = new Split(config.getColumnNum(), FeatureType.CATEGORICAL, 0d, isLeft, new SimpleBitSet<Short>(
-                        config.getBinCategory().size() + 1, (SimpleBitSet<Short>) (isLeft ? leftCategories
-                                : rightCategories)));
+                split = new Split(config.getColumnNum(), Split.CATEGORICAL, 0d, isLeft,
+                        new SimpleBitSet<Short>(config.getBinCategory().size() + 1,
+                                (SimpleBitSet<Short>) (isLeft ? leftCategories : rightCategories)));
             } else {
-                split = new Split(config.getColumnNum(), FeatureType.CONTINUOUS,
-                        config.getBinBoundary().get(index + 1), false, null);
+                split = new Split(config.getColumnNum(), Split.CONTINUOUS, config.getBinBoundary().get(index + 1),
+                        false, null);
             }
 
             Predict leftPredict = new Predict(leftCount == 0d ? 0d : leftSum / leftCount);
@@ -462,12 +462,12 @@ class Entropy extends Impurity {
                 }
 
                 // new hash set to copy a new one avoid share object issue
-                split = new Split(config.getColumnNum(), FeatureType.CATEGORICAL, 0d, isLeft, new SimpleBitSet<Short>(
-                        config.getBinCategory().size() + 1, (SimpleBitSet<Short>) (isLeft ? leftCategories
-                                : rightCategories)));
+                split = new Split(config.getColumnNum(), Split.CATEGORICAL, 0d, isLeft,
+                        new SimpleBitSet<Short>(config.getBinCategory().size() + 1,
+                                (SimpleBitSet<Short>) (isLeft ? leftCategories : rightCategories)));
             } else {
-                split = new Split(config.getColumnNum(), FeatureType.CONTINUOUS,
-                        config.getBinBoundary().get(index + 1), false, null);
+                split = new Split(config.getColumnNum(), Split.CONTINUOUS, config.getBinBoundary().get(index + 1),
+                        false, null);
             }
 
             internalGainList.add(new GainInfo(gain, info.impurity, predict, leftInfo.impurity, rightInfo.impurity,
@@ -646,12 +646,12 @@ class Gini extends Impurity {
                 }
 
                 // new hash set to copy a new one avoid share object issue
-                split = new Split(config.getColumnNum(), FeatureType.CATEGORICAL, 0d, isLeft, new SimpleBitSet<Short>(
-                        config.getBinCategory().size() + 1, (SimpleBitSet<Short>) (isLeft ? leftCategories
-                                : rightCategories)));
+                split = new Split(config.getColumnNum(), Split.CATEGORICAL, 0d, isLeft,
+                        new SimpleBitSet<Short>(config.getBinCategory().size() + 1,
+                                (SimpleBitSet<Short>) (isLeft ? leftCategories : rightCategories)));
             } else {
-                split = new Split(config.getColumnNum(), FeatureType.CONTINUOUS,
-                        config.getBinBoundary().get(index + 1), false, null);
+                split = new Split(config.getColumnNum(), Split.CONTINUOUS, config.getBinBoundary().get(index + 1),
+                        false, null);
             }
 
             internalGainList.add(new GainInfo(gain, info.impurity, predict, leftInfo.impurity, rightInfo.impurity,
