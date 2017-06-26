@@ -230,8 +230,12 @@ public class Node implements Bytable {
     /**
      * Gain for such node, such value can be computed from different {@link Impurity} like {@link Entropy},
      * {@link Variance}. Gain = impurity - leftWeight * leftImpurity - rightWeight * rightImpurity.
+     * 
+     * <p>
+     * Set gain to float and in fact in disk it is set to float to save disk, here set to float type to save memory
+     * also.
      */
-    private double gain;
+    private float gain;
 
     /**
      * Default root index is 1. Others are 2, 3, 4, 5 ...
@@ -372,7 +376,8 @@ public class Node implements Bytable {
      *            the gain to set
      */
     public void setGain(double gain) {
-        this.gain = gain;
+        // cast to float is ok to save memory
+        this.gain = (float) gain;
     }
 
     /**
@@ -687,15 +692,15 @@ public class Node implements Bytable {
     }
 
     public void remapColumnNum(Map<Integer, Integer> columnMapping) {
-        if ( this.split != null && columnMapping.containsKey(this.split.getColumnNum()) ) {
+        if(this.split != null && columnMapping.containsKey(this.split.getColumnNum())) {
             this.split.setColumnNum(columnMapping.get(this.split.getColumnNum()));
         }
 
-        if ( this.left != null ) {
+        if(this.left != null) {
             this.left.remapColumnNum(columnMapping);
         }
 
-        if ( this.right != null ) {
+        if(this.right != null) {
             this.right.remapColumnNum(columnMapping);
         }
     }
