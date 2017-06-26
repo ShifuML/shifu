@@ -242,14 +242,14 @@ public class IndependentTreeModel {
         while(currNode.getSplit() != null && !currNode.isRealLeaf()) {
             Split split = currNode.getSplit();
             double value = data[this.columnNumIndexMapping.get(split.getColumnNum())];
-            if(split.getFeatureType().isNumerical()) {
+            if(split.getFeatureType() == Split.CONTINUOUS) {
                 // value is real numeric value and no need to transform to binLowestValue
                 if(value < split.getThreshold()) {
                     currNode = currNode.getLeft();
                 } else {
                     currNode = currNode.getRight();
                 }
-            } else if(split.getFeatureType().isCategorical()) {
+            } else if(split.getFeatureType() == Split.CATEGORICAL) {
                 short indexValue = -1;
                 int categoricalSize = categoricalColumnNameNames.get(split.getColumnNum()).size();
                 if(Double.compare(value, 0d) < 0 || Double.compare(value, categoricalSize) >= 0) {
