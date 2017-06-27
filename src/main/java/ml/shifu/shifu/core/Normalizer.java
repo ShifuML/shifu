@@ -344,7 +344,20 @@ public class Normalizer {
                 }
             } else {
                 Double binPosRate = config.getBinPosRate().get(index);
-                value = binPosRate == null ? defaultMissingValue(config) : binPosRate.doubleValue();
+                if(binPosRate != null) {
+                    value = binPosRate.doubleValue();;
+                } else {
+                    switch(categoryMissingNormType) {
+                        case POSRATE:
+                            // last one is missing bin, if it is missing, using pos rate for default value.
+                            value = config.getBinPosRate().get(config.getBinPosRate().size() - 1);
+                            break;
+                        case MEAN:
+                        default:
+                            value = defaultMissingValue(config);
+                            break;
+                    }
+                }
             }
         } else {
             try {
