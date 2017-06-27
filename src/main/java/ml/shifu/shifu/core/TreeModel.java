@@ -94,6 +94,11 @@ public class TreeModel extends BasicML implements MLRegression {
         return new TreeModel(IndependentTreeModel.loadFromStream(input, isConvertToProb));
     }
 
+    public static TreeModel loadFromStream(InputStream input, boolean isConvertToProb, boolean isOptimizeMode)
+            throws IOException {
+        return new TreeModel(IndependentTreeModel.loadFromStream(input, isConvertToProb, isOptimizeMode));
+    }
+
     @Override
     public int getOutputCount() {
         // mock as output is only 1 dimension

@@ -66,6 +66,9 @@ public class TreeModelEvalAndScoreTest {
             fi.close();
         }
 
+        System.gc();
+        System.out.println(MemoryUtils.getRuntimeMemoryStats());
+
         fi = null;
         try {
             fi = new FileInputStream(modelPath);
@@ -74,6 +77,7 @@ public class TreeModelEvalAndScoreTest {
             fi.close();
         }
 
+        System.gc();
         System.out.println(MemoryUtils.getRuntimeMemoryStats());
     }
 
