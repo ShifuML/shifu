@@ -30,8 +30,6 @@ import ml.shifu.guagua.io.Bytable;
  * categorical features, we only store left node category list, check if in left category list to determine which split.
  * 
  * @author Zhang David (pengzhang@paypal.com)
- * 
- * @see FeatureType
  */
 public class Split implements Bytable {
 

@@ -19,6 +19,7 @@ import java.util.List;
 
 import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.container.obj.ModelNormalizeConf;
+import ml.shifu.shifu.udf.NormalizeUDF.CategoryMissingNormType;
 import ml.shifu.shifu.util.CommonUtils;
 
 import org.slf4j.Logger;
@@ -206,7 +207,7 @@ public class Normalizer {
     }
 
     /**
-     * Normalize the raw data, according the ColumnConfig infomation and normalization type.
+     * Normalize the raw data, according the ColumnConfig information and normalization type.
      * Currently, the cutoff value doesn't affect the computation of WOE or WEIGHT_WOE type.
      * 
      * <p>
@@ -221,9 +222,12 @@ public class Normalizer {
      *            standard deviation cut off
      * @param type
      *            normalization type of ModelNormalizeConf.NormType
+     * @param categoryMissingNormType
+     *            missing categorical value norm type
      * @return normalized value. If normType parameter is invalid, then the ZSCALE will be used as default.
      */
-    public static Double normalize(ColumnConfig config, String raw, Double cutoff, ModelNormalizeConf.NormType type) {
+    public static Double normalize(ColumnConfig config, String raw, Double cutoff, ModelNormalizeConf.NormType type,
+            CategoryMissingNormType categoryMissingNormType) {
         switch(type) {
             case WOE:
                 return woeNormalize(config, raw, false);
@@ -244,8 +248,50 @@ public class Normalizer {
             case ZSCALE:
             case ZSCORE:
             default:
-                return zScoreNormalize(config, raw, cutoff);
+                return zScoreNormalize(config, raw, cutoff, categoryMissingNormType);
         }
+    }
+
+    /**
+     * Normalize the raw data, according the ColumnConfig information and normalization type.
+     * Currently, the cutoff value doesn't affect the computation of WOE or WEIGHT_WOE type.
+     * 
+     * <p>
+     * Noticed: currently OLD_ZSCALE and ZSCALE is implemented with the same process method.
+     * </p>
+     * 
+     * @param config
+     *            ColumnConfig to normalize data
+     * @param raw
+     *            raw input data
+     * @param cutoff
+     *            standard deviation cut off
+     * @param type
+     *            normalization type of ModelNormalizeConf.NormType
+     * @return normalized value. If normType parameter is invalid, then the ZSCALE will be used as default.
+     */
+    public static Double normalize(ColumnConfig config, String raw, Double cutoff, ModelNormalizeConf.NormType type) {
+        return normalize(config, raw, cutoff, type, CategoryMissingNormType.MEAN);
+    }
+
+    /**
+     * Compute the normalized data for @NormalizeMethod.Zscore
+     * 
+     * @param config
+     *            ColumnConfig info
+     * @param raw
+     *            input column value
+     * @param cutoff
+     *            standard deviation cut off
+     * @param categoryMissingNormType
+     *            missing categorical value norm type
+     * @return normalized value for ZScore method.
+     */
+    private static Double zScoreNormalize(ColumnConfig config, String raw, Double cutoff,
+            CategoryMissingNormType categoryMissingNormType) {
+        double stdDevCutOff = checkCutOff(cutoff);
+        double value = parseRawValue(config, raw, categoryMissingNormType);
+        return computeZScore(value, config.getMean(), config.getStdDev(), stdDevCutOff);
     }
 
     /**
@@ -261,7 +307,7 @@ public class Normalizer {
      */
     private static Double zScoreNormalize(ColumnConfig config, String raw, Double cutoff) {
         double stdDevCutOff = checkCutOff(cutoff);
-        double value = parseRawValue(config, raw);
+        double value = parseRawValue(config, raw, CategoryMissingNormType.MEAN);
         return computeZScore(value, config.getMean(), config.getStdDev(), stdDevCutOff);
     }
 
@@ -272,16 +318,30 @@ public class Normalizer {
      *            ColumnConfig info
      * @param raw
      *            input column value
+     * @param categoryMissingNormType
+     *            missing categorical value norm type
      * @return parsed raw value. For categorical type, return BinPosRate. For numerical type, return
      *         corresponding double value. For missing data, return default value using
      *         {@link Normalizer#defaultMissingValue}.
      */
-    private static double parseRawValue(ColumnConfig config, String raw) {
+    private static double parseRawValue(ColumnConfig config, String raw, CategoryMissingNormType categoryMissingNormType) {
+        if(categoryMissingNormType == null) {
+            categoryMissingNormType = CategoryMissingNormType.MEAN;
+        }
         double value = 0.0;
         if(config.isCategorical()) {
             int index = CommonUtils.getBinNum(config, raw);
             if(index == -1) {
-                value = defaultMissingValue(config);
+                switch(categoryMissingNormType) {
+                    case POSRATE:
+                        // last one is missing bin, if it is missing, using pos rate for default value.
+                        value = config.getBinPosRate().get(config.getBinPosRate().size() - 1);
+                        break;
+                    case MEAN:
+                    default:
+                        value = defaultMissingValue(config);
+                        break;
+                }
             } else {
                 Double binPosRate = config.getBinPosRate().get(index);
                 value = binPosRate == null ? defaultMissingValue(config) : binPosRate.doubleValue();

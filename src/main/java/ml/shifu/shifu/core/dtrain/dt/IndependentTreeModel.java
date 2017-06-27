@@ -587,6 +587,8 @@ public class IndependentTreeModel {
      *            the input stream
      * @param isConvertToProb
      *            if convert score to probability (if to transfrom raw score by sigmoid)
+     * @param isOptimizeMode
+     *            if column index query is optimized
      * @return the tree model instance
      * @throws IOException
      *             any exception in load input stream
