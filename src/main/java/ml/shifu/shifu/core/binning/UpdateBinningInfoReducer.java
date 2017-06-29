@@ -142,6 +142,10 @@ public class UpdateBinningInfoReducer extends Reducer<IntWritable, BinningInfoWr
         long totalCount = 0, invalidCount = 0, validNumCount = 0;
         int binSize = 0;
         for(BinningInfoWritable info: values) {
+            if(info.isEmpty()){
+                // mapper has no stats, skip it
+                continue;
+            }
             CountAndFrequentItemsWritable cfiw = info.getCfiw();
             totalCount += cfiw.getCount();
             invalidCount += cfiw.getInvalidCount();

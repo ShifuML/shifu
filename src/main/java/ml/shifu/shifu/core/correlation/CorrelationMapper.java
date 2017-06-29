@@ -155,6 +155,8 @@ public class CorrelationMapper extends Mapper<LongWritable, Text, IntWritable, C
             return;
         }
 
+        long startO = System.currentTimeMillis();
+
         context.getCounter(Constants.SHIFU_GROUP_COUNTER, "CNT_AFTER_FILTER").increment(1L);
 
         // make sampling work in correlation
@@ -234,6 +236,8 @@ public class CorrelationMapper extends Mapper<LongWritable, Text, IntWritable, C
                     }
                 }
             }
+            LOG.debug("running time is {}ms in thread {}", (System.currentTimeMillis() - startO), Thread
+                    .currentThread().getName());
         }
     }
 

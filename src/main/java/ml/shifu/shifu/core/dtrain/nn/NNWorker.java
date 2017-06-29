@@ -166,7 +166,7 @@ public class NNWorker extends AbstractNNWorker<Text> {
 
         boolean isInTraining = addDataPairToDataSet(hashcode, pair, isValidation);
 
-        // do bagging sampling only for training data，
+        // do bagging sampling only for training data
         if(isInTraining) {
             float subsampleWeights = sampleWeights(pair.getIdealArray()[0]);
             if(isPositive(pair.getIdealArray()[0])) {

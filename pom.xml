@@ -3,7 +3,7 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>ml.shifu</groupId>
     <artifactId>shifu</artifactId>
-    <version>0.10.4</version>
+    <version>0.10.5</version>
     <name>Shifu</name>
     <description>An open-source, end-to-end and distributed machine learning and data mining framework built on top of Hadoop.</description>
     <properties>
@@ -14,7 +14,7 @@
         <rpmDisabled>true</rpmDisabled>
         <maven.build.timestamp.format>yyyy-MM-dd HH:mm:ss</maven.build.timestamp.format>
         <powermock.version>1.5.1</powermock.version>
-        <guagua.version>0.7.6</guagua.version>
+        <guagua.version>0.7.7</guagua.version>
     </properties>
     <url>https://github.com/ShifuML/shifu/</url>
     <licenses>
@@ -65,7 +65,7 @@
         <developerConnection>scm:git:https://github.com/shifuml/shifu.git</developerConnection>
         <connection>scm:git:https://github.com/shifuml/shifu.git</connection>
         <url>https://github.com/shifuml/shifu.git</url>
-        <tag>shifu-0.10.4</tag>
+        <tag>shifu-0.10.5</tag>
     </scm>
     <dependencies>
         <dependency>
