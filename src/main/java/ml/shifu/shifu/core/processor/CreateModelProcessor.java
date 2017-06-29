@@ -20,6 +20,7 @@ import java.io.IOException;
 
 import ml.shifu.shifu.container.obj.ModelConfig;
 import ml.shifu.shifu.container.obj.ModelTrainConf.ALGORITHM;
+import ml.shifu.shifu.util.HDFSUtils;
 import ml.shifu.shifu.util.JSONUtils;
 
 import org.apache.commons.io.FileUtils;
@@ -78,7 +79,16 @@ public class CreateModelProcessor extends BasicModelProcessor implements Process
             FileUtils.forceMkdir(modelSetFolder);
 
             log.info("Creating Initial ModelConfig.json ...");
-            modelConfig = ModelConfig.createInitModelConfig(name, alg, description);
+
+            // how to check hdfs
+            boolean enableHadoop = HDFSUtils.isDistributedMode();
+            if(enableHadoop) {
+                log.info("Enable DIST/MAPRED mode because Hadoop cluster is detected.");
+            } else {
+                log.info("Enable LOCAL mode because Hadoop cluster is not detected.");
+            }
+
+            modelConfig = ModelConfig.createInitModelConfig(name, alg, description, enableHadoop);
 
             JSONUtils.writeValue(new File(modelSetFolder.getCanonicalPath() + File.separator + "ModelConfig.json"),
                     modelConfig);

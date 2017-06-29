@@ -1256,7 +1256,7 @@ public class DTWorker
         // split into validation and training data set according to validation rate
         boolean isInTraining = this.addDataPairToDataSet(hashcode, data, isValidation);
 
-        // do bagging sampling only for training data，
+        // do bagging sampling only for training data
         if(isInTraining) {
             data.subsampleWeights = sampleWeights(data.label);
             // for training data, compute real selected training data according to baggingSampleRate

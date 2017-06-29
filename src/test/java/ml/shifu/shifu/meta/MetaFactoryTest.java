@@ -44,7 +44,7 @@ public class MetaFactoryTest {
 
     @BeforeClass
     public void setUp() throws IOException {
-        modelConfig = ModelConfig.createInitModelConfig("unittest", ALGORITHM.NN, "a model config for unit-test");
+        modelConfig = ModelConfig.createInitModelConfig("unittest", ALGORITHM.NN, "a model config for unit-test", false);
         modelConfig.getBasic().setName("TestMode");
         modelConfig.getBasic().setAuthor("Author");
     }

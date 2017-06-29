@@ -30,8 +30,6 @@ import ml.shifu.guagua.io.Bytable;
  * categorical features, we only store left node category list, check if in left category list to determine which split.
  * 
  * @author Zhang David (pengzhang@paypal.com)
- * 
- * @see FeatureType
  */
 public class Split implements Bytable {
 
@@ -43,7 +41,7 @@ public class Split implements Bytable {
     /**
      * CONTINUOUS or CATEGORICAL, should not be null
      */
-    private FeatureType featureType;
+    private byte featureType;
 
     /**
      * For CONTINUOUS feature, this should be valid value to split feature
@@ -62,11 +60,13 @@ public class Split implements Bytable {
      */
     private Set<Short> leftOrRightCategories;
 
+    public final static byte CONTINUOUS = 1;
+    public final static byte CATEGORICAL = 2;
+
     public Split() {
     }
 
-    public Split(int columnNum, FeatureType featureType, double threshold, boolean isLeft,
-            Set<Short> leftOrRightCategories) {
+    public Split(int columnNum, byte featureType, double threshold, boolean isLeft, Set<Short> leftOrRightCategories) {
         this.columnNum = columnNum;
         this.featureType = featureType;
         this.threshold = threshold;
@@ -84,7 +84,7 @@ public class Split implements Bytable {
     /**
      * @return the featureType
      */
-    public FeatureType getFeatureType() {
+    public byte getFeatureType() {
         return featureType;
     }
 
@@ -114,7 +114,7 @@ public class Split implements Bytable {
      * @param featureType
      *            the featureType to set
      */
-    public void setFeatureType(FeatureType featureType) {
+    public void setFeatureType(byte featureType) {
         this.featureType = featureType;
     }
 
@@ -153,7 +153,7 @@ public class Split implements Bytable {
     public void write(DataOutput out) throws IOException {
         out.writeInt(this.columnNum);
         // use byte type to save space, should not be null
-        out.writeByte(this.featureType.getByteType());
+        out.writeByte(this.featureType);
 
         switch(this.featureType) {
             case CATEGORICAL:
@@ -176,7 +176,7 @@ public class Split implements Bytable {
     @Override
     public void readFields(DataInput in) throws IOException {
         this.columnNum = in.readInt();
-        this.featureType = FeatureType.of(in.readByte());
+        this.featureType = in.readByte();
 
         switch(this.featureType) {
             case CATEGORICAL:

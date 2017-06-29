@@ -29,12 +29,11 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 
-
 public class PerformanceEvaluatorTest {
 
     @Test(expectedExceptions = FileNotFoundException.class)
     public void reviewTest() throws IOException {
-        ModelConfig model = ModelConfig.createInitModelConfig("test", ALGORITHM.NN, ".");
+        ModelConfig model = ModelConfig.createInitModelConfig("test", ALGORITHM.NN, ".", false);
         EvalConfig eval = new EvalConfig();
         eval.setName("test");
         eval.setDataSet(new RawSourceData());

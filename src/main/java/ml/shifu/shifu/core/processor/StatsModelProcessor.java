@@ -136,7 +136,7 @@ public class StatsModelProcessor extends BasicModelProcessor implements Processo
                 // 1. validate if run stats before run stats -correlation
                 boolean foundValidMeanValueColumn = false;
                 for(ColumnConfig config: this.columnConfigList) {
-                    if(!config.isMeta() && !config.isTarget() && config.isNumerical()) {
+                    if(!config.isMeta() && !config.isTarget()) {
                         if(config.getMean() != null) {
                             foundValidMeanValueColumn = true;
                             break;
@@ -303,7 +303,7 @@ public class StatsModelProcessor extends BasicModelProcessor implements Processo
         conf.setBoolean(CombineInputFormat.SHIFU_VS_SPLIT_COMBINABLE, true);
         conf.setBoolean("mapreduce.input.fileinputformat.input.dir.recursive", true);
 
-        boolean isFastCorrelation = Environment.getProperty("shifu.correlation.fast", "true").equalsIgnoreCase(
+        boolean isFastCorrelation = Environment.getProperty("shifu.correlation.fast", "false").equalsIgnoreCase(
                 Boolean.TRUE.toString());
 
         int threads = parseThreadNum();
@@ -383,20 +383,26 @@ public class StatsModelProcessor extends BasicModelProcessor implements Processo
     private void setMapperMemory(Configuration conf, int threads, boolean isFastCorrelation) {
         int memoryBuffer = 1024;
         int memoryInContainer = 0;
-
+        int youngMemory = 1024;
         int columnSize = this.columnConfigList.size();
         if(isFastCorrelation) {
             memoryInContainer += (1L * columnSize * columnSize * 8 * 6 * threads) / (1024 * 1024);
-            memoryInContainer += 2048;
+            if(columnSize > 4000) {
+                memoryInContainer += 3072;
+                youngMemory = 2500;
+            }
         } else {
             // <1000 -> 2G; <=2000 2.5G; <=3000 3G; <=4000 4G; <=5000; 5G
             memoryInContainer = columnSize;
             if(memoryInContainer > 3000 && memoryInContainer <= 4000) {
                 memoryInContainer = (int) (memoryInContainer * 1.4d);
+                youngMemory = 2000;
             } else if(memoryInContainer > 4000 && memoryInContainer <= 5000) {
                 memoryInContainer = (int) (memoryInContainer * 1.5d);
+                youngMemory = 2500;
             } else if(memoryInContainer > 5000) {
                 memoryInContainer = (int) (memoryInContainer * 1.6d);
+                youngMemory = 3000;
             }
             if(memoryInContainer < 2048) {
                 memoryInContainer = 2048; // at least 2048M
@@ -407,6 +413,10 @@ public class StatsModelProcessor extends BasicModelProcessor implements Processo
 
         log.info("Corrrelation map memory is set to {}MB.", memoryInContainer);
 
+        if(youngMemory >= (memoryInContainer - memoryBuffer) / 2) {
+            youngMemory = (memoryInContainer - memoryBuffer) / 3;
+        }
+
         conf.set("mapreduce.map.memory.mb", memoryInContainer + "");
         conf.set(
                 "mapreduce.map.java.opts",
@@ -414,7 +424,9 @@ public class StatsModelProcessor extends BasicModelProcessor implements Processo
                         + (memoryInContainer - memoryBuffer)
                         + "m -Xmx"
                         + (memoryInContainer - memoryBuffer)
-                        + "m -server -XX:MaxPermSize=128M -XX:PermSize=64M -XX:+UseParallelGC -XX:+UseParallelOldGC -XX:ParallelGCThreads=8 -verbose:gc -XX:+PrintGCDetails -XX:+PrintGCTimeStamps");
+                        + "m -Xmn"
+                        + youngMemory
+                        + "m -server -XX:MaxPermSize=128M -XX:PermSize=64M -XX:+UseParallelGC -XX:+UseParallelOldGC -XX:ParallelGCThreads=8 -verbose:gc -XX:+PrintGCDetails -XX:+PrintGCTimeStamps ");
     }
 
     private int parseThreadNum() {
