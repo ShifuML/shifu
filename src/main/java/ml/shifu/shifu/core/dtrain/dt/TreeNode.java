@@ -56,7 +56,7 @@ public class TreeNode implements Bytable {
     private int nodeNum;
 
     /**
-     * Store weighted cnt of root node (id = 1) for further computing, it is no meaning full it current node is not ROOT
+     * Store weighted cnt of root node (id = 1) for further computing, it is meaningless if current node is not ROOT
      * node
      */
     private double rootWgtCnt = -1;
@@ -300,4 +300,11 @@ public class TreeNode implements Bytable {
         return "TreeNode [treeId=" + treeId + ", node=" + node.getId() + ", features=" + features + "]";
     }
 
+    public void remapColumnNum(Map<Integer, Integer> columnMapping) {
+        if ( columnMapping == null || columnMapping.size() == 0 ) {
+            return;
+        }
+
+        this.node.remapColumnNum(columnMapping);
+    }
 }

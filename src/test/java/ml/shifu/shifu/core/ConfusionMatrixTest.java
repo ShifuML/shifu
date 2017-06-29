@@ -31,7 +31,6 @@ import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 
-
 /**
  * ConfusionMatrixTest class
  */
@@ -42,7 +41,7 @@ public class ConfusionMatrixTest {
 
     @BeforeClass
     public void setUp() throws IOException {
-        modelConfig = ModelConfig.createInitModelConfig("test", ALGORITHM.NN, null);
+        modelConfig = ModelConfig.createInitModelConfig("test", ALGORITHM.NN, null, false);
         evalConfig = modelConfig.getEvalConfigByName("Eval1");
         new File("./models").mkdir();
     }
@@ -77,7 +76,7 @@ public class ConfusionMatrixTest {
         new ConfusionMatrix(modelConfig, evalConfig);
     }
 
-    @Test(expectedExceptions = {ShifuException.class, FileNotFoundException.class})
+    @Test(expectedExceptions = { ShifuException.class, FileNotFoundException.class })
     public void testEvalScoreHeaderNotExists() throws IOException {
         Map<String, String> customPaths = new HashMap<String, String>();
         customPaths.put(Constants.KEY_SCORE_PATH, "src/test/resources/data/dt/models");

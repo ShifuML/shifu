@@ -665,7 +665,7 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
             }
             Integer columnId = candidateColumnIdList.get(i++);
             ColumnConfig columnConfig = this.columnConfigList.get(columnId);
-            if (CollectionUtils.isNotEmpty(userCandidateColumns)
+            if(CollectionUtils.isNotEmpty(userCandidateColumns)
                     && !userCandidateColumns.contains(new NSColumn(columnConfig.getColumnName()))) {
                 log.info("Variable {} is not in user's candidate list. Skip it.", columnConfig.getColumnName());
             } else if(!columnConfig.isForceSelect() && !columnConfig.isForceRemove()) {
@@ -730,10 +730,11 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
                 }
                 Integer columnId = candidateColumnIdList.get(i++);
                 ColumnConfig columnConfig = this.columnConfigList.get(columnId);
-                if ( CollectionUtils.isNotEmpty(userCandidateColumns)
-                        && !userCandidateColumns.contains(new NSColumn(columnConfig.getColumnName())) ) {
+                if(CollectionUtils.isNotEmpty(userCandidateColumns)
+                        && !userCandidateColumns.contains(new NSColumn(columnConfig.getColumnName()))) {
                     log.info("Variable {} is not in user's candidate list. Skip it.", columnConfig.getColumnName());
-                } if(!columnConfig.isForceSelect() && !columnConfig.isForceRemove()) {
+                }
+                if(!columnConfig.isForceSelect() && !columnConfig.isForceRemove()) {
                     columnConfig.setFinalSelect(true);
                     selectCnt++;
                     log.info("Variable {} is selected.", columnConfig.getColumnName());
@@ -823,13 +824,7 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
             }
         }
 
-        // 2. check correlation value:
-        if(!ShifuFileUtils.isFileExists(pathFinder.getLocalCorrelationCsvPath(), SourceType.LOCAL)) {
-            return;
-        }
-        varSelectByCorrelation();
-
-        // 3. check KS and IV min threshold value
+        // 2. check KS and IV min threshold value
         for(ColumnConfig config: columnConfigList) {
             if(!config.isTarget() && !config.isMeta() && !config.isForceSelect() && config.isFinalSelect()) {
                 float minIvThreshold = super.modelConfig.getVarSelect().getMinIvThreshold() == null ? 0f
@@ -851,8 +846,15 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
                 }
             }
         }
+
+        // 3. check correlation value:
+        if(!ShifuFileUtils.isFileExists(pathFinder.getLocalCorrelationCsvPath(), SourceType.LOCAL)) {
+            return;
+        }
+        varSelectByCorrelation();
     }
 
+    // TODO refactor me please, bad function
     private void varSelectByCorrelation() throws IOException {
         BufferedReader reader = ShifuFileUtils.getReader(pathFinder.getLocalCorrelationCsvPath(), SourceType.LOCAL);
         int lineNum = 0;
@@ -879,7 +881,25 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
                                     && (columnConfigList.get(i).isTarget() || columnConfigList.get(i).isFinalSelect())) {
                                 // * 1.000005d is to avoid some value like 1.0000000002 in correlation value
                                 if(Math.abs(corrArray[i]) > (modelConfig.getVarSelect().getCorrelationThreshold() * 1.000005d)) {
-                                    if(config.isTarget() && columnConfigList.get(i).isFinalSelect()) {
+                                    if(config.isForceSelect() && columnConfigList.get(i).isForceSelect()) {
+                                        log.warn(
+                                                "{} and {} has high correlated value but both not to be removed because both are force-selected",
+                                                columnIndex, i);
+                                    } else if(config.isForceSelect() && !columnConfigList.get(i).isForceSelect()) {
+                                        log.warn(
+                                                "Absolute correlation value {} in column pair ({}, {}) ({}, {}) are larger than correlationThreshold value {} set in VarSelect#correlationThreshold, column {} name {} is not force-selected will not be selected, set finalSelect to false.",
+                                                config.getColumnName(), columnConfigList.get(i).getColumnName(),
+                                                modelConfig.getVarSelect().getCorrelationThreshold(), columnConfigList
+                                                        .get(i).getColumnNum(), columnConfigList.get(i).getColumnName());
+                                        columnConfigList.get(i).setFinalSelect(false);
+                                    } else if(!config.isForceSelect() && columnConfigList.get(i).isForceSelect()) {
+                                        log.warn(
+                                                "Absolute correlation value {} in column pair ({}, {}) ({}, {}) are larger than correlationThreshold value {} set in VarSelect#correlationThreshold, column {} name {} is not force-selected will not be selected, set finalSelect to false.",
+                                                config.getColumnName(), columnConfigList.get(i).getColumnName(),
+                                                modelConfig.getVarSelect().getCorrelationThreshold(),
+                                                config.getColumnNum(), config.getColumnName());
+                                        config.setFinalSelect(false);
+                                    } else if(config.isTarget() && columnConfigList.get(i).isFinalSelect()) {
                                         log.warn(
                                                 "{} and {} has high correlated value while {} is target, {} is set to NOT final-selected no matter it is force-selected or not.",
                                                 columnIndex, i, i);

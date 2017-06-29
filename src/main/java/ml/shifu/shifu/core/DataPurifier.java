@@ -15,6 +15,7 @@
  */
 package ml.shifu.shifu.core;
 
+import ml.shifu.shifu.column.NSColumn;
 import ml.shifu.shifu.container.obj.EvalConfig;
 import ml.shifu.shifu.container.obj.ModelConfig;
 import ml.shifu.shifu.util.CommonUtils;
@@ -87,7 +88,9 @@ public class DataPurifier {
         jc.clear();
 
         for(int i = 0; i < fields.length; i++) {
+            NSColumn nsColumn = new NSColumn(headers[i]);
             jc.set(headers[i], ((fields[i] == null) ? "" : fields[i].toString()));
+            jc.set(nsColumn.getSimpleName(), ((fields[i] == null) ? "" : fields[i].toString()));
         }
 
         Boolean result = Boolean.FALSE;
