@@ -40,7 +40,7 @@ class SimpleBitSet<T> implements Set<T>, Bytable {
     }
 
     public SimpleBitSet(int bitLen, SimpleBitSet<? extends T> sbs) {
-        words = Arrays.copyOf(sbs.words, sbs.words.length);;
+        words = Arrays.copyOf(sbs.words, sbs.words.length);
     }
 
     @Override

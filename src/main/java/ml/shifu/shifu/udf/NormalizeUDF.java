@@ -40,6 +40,7 @@ import org.apache.commons.lang.StringUtils;
 import org.apache.pig.data.Tuple;
 import org.apache.pig.data.TupleFactory;
 import org.apache.pig.impl.logicalLayer.schema.Schema;
+import org.apache.pig.impl.util.UDFContext;
 import org.apache.pig.impl.util.Utils;
 import org.apache.pig.tools.pigstats.PigStatusReporter;
 
@@ -56,6 +57,20 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
     private JexlContext weightContext;
     private DecimalFormat df = new DecimalFormat("#.######");
 
+    public static enum CategoryMissingNormType {
+        MEAN, POSRATE;
+
+        public static CategoryMissingNormType of(String normType) {
+            for(CategoryMissingNormType norm: CategoryMissingNormType.values()) {
+                if(norm.toString().equalsIgnoreCase(normType)) {
+                    return norm;
+                }
+            }
+            return MEAN;
+        }
+
+    }
+
     /**
      * For categorical feature, a map is used to save query time in execution
      */
@@ -68,8 +83,19 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
     // if current norm for only clean and not transform categorical and numeric value
     private boolean isForClean = false;
 
+    /**
+     * In Zscore norm type, how to process category default missing value norm, by default use mean, another option is
+     * POSRATE.
+     */
+    private CategoryMissingNormType categoryMissingNormType;
+
     public NormalizeUDF(String source, String pathModelConfig, String pathColumnConfig) throws Exception {
         this(source, pathModelConfig, pathColumnConfig, "false");
+        this.categoryMissingNormType = CategoryMissingNormType.of(UDFContext.getUDFContext().getJobConf()
+                .get("shifu.norm.category.missing.norm", "mean"));
+        if(this.categoryMissingNormType == null) {
+            this.categoryMissingNormType = CategoryMissingNormType.MEAN;
+        }
     }
 
     public NormalizeUDF(String source, String pathModelConfig, String pathColumnConfig, String isForClean)
@@ -187,34 +213,30 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
 
             if(this.isForClean) {
                 // for RF/GBT model, only clean data, not real do norm data
-                if(!config.isFinalSelect()) {
-                    tuple.append(0);
-                } else {
-                    if(config.isCategorical()) {
-                        Map<String, Integer> map = this.categoricalIndexMap.get(config.getColumnNum());
-                        // map should not be null, no need check if map is null, if val not in binCategory, set it to ""
-                        if((map.get(val) == null || map.get(val) == -1)) {
-                            tuple.append(config.getBinCategory().size());
-                        } else {
-                            tuple.append(map.get(val));
-                        }
+                if(config.isCategorical()) {
+                    Map<String, Integer> map = this.categoricalIndexMap.get(config.getColumnNum());
+                    // map should not be null, no need check if map is null, if val not in binCategory, set it to ""
+                    if((map.get(val) == null || map.get(val) == -1)) {
+                        tuple.append(config.getBinCategory().size());
                     } else {
-                        Double normVal = 0d;
-                        try {
-                            normVal = Double.parseDouble(val);
-                        } catch (Exception e) {
-                            log.debug("Not decimal format " + val + ", using default!");
-                            normVal = Normalizer.defaultMissingValue(config);
-                        }
-                        tuple.append(df.format(normVal));
+                        tuple.append(map.get(val));
                     }
+                } else {
+                    Double normVal = 0d;
+                    try {
+                        normVal = Double.parseDouble(val);
+                    } catch (Exception e) {
+                        log.debug("Not decimal format " + val + ", using default!");
+                        normVal = Normalizer.defaultMissingValue(config);
+                    }
+                    tuple.append(df.format(normVal));
                 }
             } else {
                 // append normalize data. exclude data clean, for data cleaning, no need check good or bad candidate
                 if(CommonUtils.isGoodCandidate(modelConfig.isRegression(), config)) {
                     // for multiple classification, binPosRate means rate of such category over all counts, reuse
                     // binPosRate for normalize
-                    Double normVal = Normalizer.normalize(config, val, cutoff, normType);
+                    Double normVal = Normalizer.normalize(config, val, cutoff, normType, this.categoryMissingNormType);
                     tuple.append(df.format(normVal));
                 } else {
                     tuple.append(config.isMeta() ? val : null);
