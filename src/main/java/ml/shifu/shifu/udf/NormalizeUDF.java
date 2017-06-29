@@ -213,27 +213,23 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
 
             if(this.isForClean) {
                 // for RF/GBT model, only clean data, not real do norm data
-                if(!config.isFinalSelect()) {
-                    tuple.append(0);
-                } else {
-                    if(config.isCategorical()) {
-                        Map<String, Integer> map = this.categoricalIndexMap.get(config.getColumnNum());
-                        // map should not be null, no need check if map is null, if val not in binCategory, set it to ""
-                        if((map.get(val) == null || map.get(val) == -1)) {
-                            tuple.append(config.getBinCategory().size());
-                        } else {
-                            tuple.append(map.get(val));
-                        }
+                if(config.isCategorical()) {
+                    Map<String, Integer> map = this.categoricalIndexMap.get(config.getColumnNum());
+                    // map should not be null, no need check if map is null, if val not in binCategory, set it to ""
+                    if((map.get(val) == null || map.get(val) == -1)) {
+                        tuple.append(config.getBinCategory().size());
                     } else {
-                        Double normVal = 0d;
-                        try {
-                            normVal = Double.parseDouble(val);
-                        } catch (Exception e) {
-                            log.debug("Not decimal format " + val + ", using default!");
-                            normVal = Normalizer.defaultMissingValue(config);
-                        }
-                        tuple.append(df.format(normVal));
+                        tuple.append(map.get(val));
                     }
+                } else {
+                    Double normVal = 0d;
+                    try {
+                        normVal = Double.parseDouble(val);
+                    } catch (Exception e) {
+                        log.debug("Not decimal format " + val + ", using default!");
+                        normVal = Normalizer.defaultMissingValue(config);
+                    }
+                    tuple.append(df.format(normVal));
                 }
             } else {
                 // append normalize data. exclude data clean, for data cleaning, no need check good or bad candidate
