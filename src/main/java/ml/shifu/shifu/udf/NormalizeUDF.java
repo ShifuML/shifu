@@ -66,9 +66,8 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
                     return norm;
                 }
             }
-            return MEAN;
+            return POSRATE;
         }
-
     }
 
     /**
@@ -92,9 +91,9 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
     public NormalizeUDF(String source, String pathModelConfig, String pathColumnConfig) throws Exception {
         this(source, pathModelConfig, pathColumnConfig, "false");
         this.categoryMissingNormType = CategoryMissingNormType.of(UDFContext.getUDFContext().getJobConf()
-                .get("shifu.norm.category.missing.norm", "mean"));
+                .get("shifu.norm.category.missing.norm", "posrate"));
         if(this.categoryMissingNormType == null) {
-            this.categoryMissingNormType = CategoryMissingNormType.MEAN;
+            this.categoryMissingNormType = CategoryMissingNormType.POSRATE;
         }
     }
 
