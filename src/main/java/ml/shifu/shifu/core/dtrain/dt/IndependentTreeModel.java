@@ -19,8 +19,13 @@ import java.io.BufferedInputStream;
 import java.io.DataInputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Set;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.zip.GZIPInputStream;
 
@@ -579,6 +584,25 @@ public class IndependentTreeModel {
      */
     public static IndependentTreeModel loadFromStream(InputStream input, boolean isConvertToProb) throws IOException {
         return loadFromStream(input, isConvertToProb, false, true);
+    }
+
+    /**
+     * Load model instance from stream like model0.gbt or model0.rf. User can specify to use raw score or score after
+     * sigmoid transform by isConvertToProb.
+     * 
+     * @param input
+     *            the input stream
+     * @param isConvertToProb
+     *            if convert score to probability (if to transform raw score by sigmoid)
+     * @param isOptimizeMode
+     *            if column index query is optimized
+     * @return the tree model instance
+     * @throws IOException
+     *             any exception in load input stream
+     */
+    public static IndependentTreeModel loadFromStream(InputStream input, boolean isConvertToProb, boolean isOptimizeMode)
+            throws IOException {
+        return loadFromStream(input, isConvertToProb, isOptimizeMode, true);
     }
 
     /**
