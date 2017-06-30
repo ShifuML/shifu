@@ -16,6 +16,10 @@
  
 Shifu Change Log
 
+Changes for Shifu-0.10.5
+    * Optimize IndependetTreeModel by decreaseing model memory to 70% and CPU time to 90%
+    * Upgrade guagua to 0.7.0 t fix a bug on empty gzip files in one worker
+
 Changes for Shifu-0.10.4
     * Optimize IndependetTreeModel by split regression and classification;
     * Add new version of fast correlation computing.
