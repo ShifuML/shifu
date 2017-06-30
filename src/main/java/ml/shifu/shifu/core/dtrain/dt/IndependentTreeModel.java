@@ -40,6 +40,8 @@ import ml.shifu.shifu.util.Constants;
  */
 public class IndependentTreeModel {
 
+    private static final String NAMESPACE_DELIMITER = "::";
+
     /**
      * Mapping for (ColumnNum, ColumnName)
      */
@@ -565,18 +567,18 @@ public class IndependentTreeModel {
 
     /**
      * Load model instance from stream like model0.gbt or model0.rf. User can specify to use raw score or score after
-     * sigmoid transfrom by isConvertToProb.
+     * sigmoid transform by isConvertToProb.
      * 
      * @param input
      *            the input stream
      * @param isConvertToProb
-     *            if convert score to probability (if to transfrom raw score by sigmoid)
+     *            if convert score to probability (if to transform raw score by sigmoid)
      * @return the tree model instance
      * @throws IOException
      *             any exception in load input stream
      */
     public static IndependentTreeModel loadFromStream(InputStream input, boolean isConvertToProb) throws IOException {
-        return loadFromStream(input, isConvertToProb, false);
+        return loadFromStream(input, isConvertToProb, false, true);
     }
 
     /**
@@ -586,15 +588,18 @@ public class IndependentTreeModel {
      * @param input
      *            the input stream
      * @param isConvertToProb
-     *            if convert score to probability (if to transfrom raw score by sigmoid)
+     *            if convert score to probability (if to transform raw score by sigmoid)
      * @param isOptimizeMode
      *            if column index query is optimized
+     * @param isRemoveNameSpace
+     *            new column name including namespace like "a::b", if true, remove "a::" and set column name to simple
+     *            name
      * @return the tree model instance
      * @throws IOException
      *             any exception in load input stream
      */
-    public static IndependentTreeModel loadFromStream(InputStream input, boolean isConvertToProb, boolean isOptimizeMode)
-            throws IOException {
+    public static IndependentTreeModel loadFromStream(InputStream input, boolean isConvertToProb,
+            boolean isOptimizeMode, boolean isRemoveNameSpace) throws IOException {
         DataInputStream dis = null;
         // check if gzip or not
         try {
@@ -632,6 +637,14 @@ public class IndependentTreeModel {
         for(int i = 0; i < size; i++) {
             int columnIndex = dis.readInt();
             String columnName = dis.readUTF();
+            if(isRemoveNameSpace) {
+                // remove name-space in column name to make it be called by simple name
+                if(columnName.contains(NAMESPACE_DELIMITER)) {
+                    columnName = columnName
+                            .substring(columnName.indexOf(NAMESPACE_DELIMITER) + NAMESPACE_DELIMITER.length(),
+                                    columnName.length());
+                }
+            }
             columnIndexNameMapping.put(columnIndex, columnName);
         }
 
