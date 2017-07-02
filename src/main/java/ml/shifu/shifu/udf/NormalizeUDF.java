@@ -215,11 +215,7 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
                 if(config.isCategorical()) {
                     Map<String, Integer> map = this.categoricalIndexMap.get(config.getColumnNum());
                     // map should not be null, no need check if map is null, if val not in binCategory, set it to ""
-                    if((map.get(val) == null || map.get(val) == -1)) {
-                        tuple.append(config.getBinCategory().size());
-                    } else {
-                        tuple.append(map.get(val));
-                    }
+                    tuple.append(((map.get(val) == null || map.get(val) == -1)) ? "" : val);
                 } else {
                     Double normVal = 0d;
                     try {
