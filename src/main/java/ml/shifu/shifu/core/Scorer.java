@@ -16,9 +16,12 @@
 package ml.shifu.shifu.core;
 
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.SortedMap;
+import java.util.TreeMap;
 import java.util.concurrent.Callable;
 
 import ml.shifu.shifu.column.NSColumn;
@@ -36,6 +39,7 @@ import org.apache.commons.collections.CollectionUtils;
 import org.encog.ml.BasicML;
 import org.encog.ml.data.MLData;
 import org.encog.ml.data.MLDataPair;
+import org.encog.ml.data.basic.BasicMLData;
 import org.encog.ml.svm.SVM;
 import org.encog.neural.networks.BasicNetwork;
 import org.slf4j.Logger;
@@ -72,12 +76,22 @@ public class Scorer {
      */
     private ExecutorManager<MLData> executorManager;
 
+    /**
+     * For neural network, if output the first
+     */
+    private boolean outputFirstHiddenLayer = false;
+
     public Scorer(List<BasicML> models, List<ColumnConfig> columnConfigList, String algorithm, ModelConfig modelConfig) {
         this(models, columnConfigList, algorithm, modelConfig, 4.0d);
     }
 
     public Scorer(List<BasicML> models, List<ColumnConfig> columnConfigList, String algorithm, ModelConfig modelConfig,
-                  Double cutoff) {
+            Double cutoff) {
+        this(models, columnConfigList, algorithm, modelConfig, cutoff, false);
+    }
+
+    public Scorer(List<BasicML> models, List<ColumnConfig> columnConfigList, String algorithm, ModelConfig modelConfig,
+            Double cutoff, boolean outputFirstHiddenLayer) {
         if(modelConfig == null) {
             throw new IllegalArgumentException("modelConfig should not be null");
         }
@@ -131,6 +145,8 @@ public class Scorer {
                 Scorer.this.executorManager.forceShutDown();
             }
         }));
+
+        this.outputFirstHiddenLayer = outputFirstHiddenLayer;
     }
 
     /**
@@ -146,7 +162,7 @@ public class Scorer {
 
     /**
      * Run model against raw NSColumn Data map to get score
-     *
+     * 
      * @param rawDataNsMap
      *            - raw NSColumn Data map
      * @return ScoreObject - model score
@@ -179,10 +195,24 @@ public class Scorer {
                             + "; Input Size = " + networkPair.getInput().size());
                     continue;
                 }
+
+                final boolean isOutputFirstHiddenLayer = outputFirstHiddenLayer;
                 tasks.add(new Callable<MLData>() {
                     @Override
                     public MLData call() throws Exception {
-                        return network.compute(networkPair.getInput());
+                        MLData finalOutput = network.compute(networkPair.getInput());
+                        if(!isOutputFirstHiddenLayer) {
+                            return finalOutput;
+                        }
+
+                        // append output values in first hidden layer
+                        double[] firstHiddenOutputs = network.getLayerOutput(1);
+                        double[] outputs = new double[finalOutput.getData().length + firstHiddenOutputs.length];
+
+                        System.arraycopy(finalOutput.getData(), 0, outputs, 0, finalOutput.getData().length);
+                        System.arraycopy(firstHiddenOutputs, 0, outputs, finalOutput.getData().length,
+                                firstHiddenOutputs.length);
+                        return new BasicMLData(outputs);
                     }
                 });
             } else if(model instanceof BasicNetwork) {
@@ -242,6 +272,7 @@ public class Scorer {
 
         List<Double> scores = new ArrayList<Double>();
         List<Integer> rfTreeSizeList = new ArrayList<Integer>();
+        SortedMap<String, Double> hiddenOutputs = null;
 
         if(CollectionUtils.isNotEmpty(tasks)) {
             List<MLData> modelResults = this.executorManager.submitTasksAndWaitResults(tasks);
@@ -250,6 +281,28 @@ public class Scorer {
                 return null;
             }
 
+            if(this.outputFirstHiddenLayer) {
+
+                hiddenOutputs = new TreeMap<String, Double>(new Comparator<String>() {
+
+                    @Override
+                    public int compare(String o1, String o2) {
+                        String[] split1 = o1.split("_");
+                        String[] split2 = o2.split("_");
+                        int model1Index = Integer.parseInt(split1[1]);
+                        int model2Index = Integer.parseInt(split2[1]);
+                        if(model1Index > model2Index) {
+                            return 1;
+                        } else if(model1Index < model2Index) {
+                            return -1;
+                        } else {
+                            int hidden1Index = Integer.parseInt(split1[2]);
+                            int hidden2Index = Integer.parseInt(split2[2]);
+                            return Integer.valueOf(hidden1Index).compareTo(Integer.valueOf(hidden2Index));
+                        }
+                    }
+                });
+            }
             for(int i = 0; i < this.models.size(); i++) {
                 BasicML model = this.models.get(i);
                 MLData score = modelResults.get(i);
@@ -257,6 +310,11 @@ public class Scorer {
                 if(model instanceof BasicNetwork) {
                     if(modelConfig != null && modelConfig.isRegression()) {
                         scores.add(toScore(score.getData(0)));
+                        if(this.outputFirstHiddenLayer) {
+                            for(int j = 1; j < score.getData().length; j++) {
+                                hiddenOutputs.put("model_" + i + "_" + (j - 1), score.getData()[j]);
+                            }
+                        }
                     } else if(modelConfig != null && modelConfig.isClassification()
                             && modelConfig.getTrain().isOneVsAll()) {
                         // if one vs all classification
@@ -298,7 +356,7 @@ public class Scorer {
             log.warn("No Scores Calculated...");
         }
 
-        return new ScoreObject(scores, tag, rfTreeSizeList);
+        return new ScoreObject(scores, tag, rfTreeSizeList, hiddenOutputs);
     }
 
     private double toScore(Double d) {
