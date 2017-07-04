@@ -33,6 +33,7 @@ import ml.shifu.shifu.util.CommonUtils;
 import ml.shifu.shifu.util.Constants;
 
 import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang.ArrayUtils;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.NullWritable;
 import org.apache.hadoop.io.Text;
@@ -125,6 +126,9 @@ public class UpdateBinningInfoReducer extends Reducer<IntWritable, BinningInfoWr
         double squaredSum = 0d;
         double tripleSum = 0d;
         double quarticSum = 0d;
+        double p25th = 0d;
+        double median = 0d;
+        double p75th = 0d;
 
         long count = 0L, missingCount = 0L;
         double min = Double.MAX_VALUE, max = Double.MIN_VALUE;
@@ -134,6 +138,7 @@ public class UpdateBinningInfoReducer extends Reducer<IntWritable, BinningInfoWr
         long[] binCountNeg = null;
         double[] binWeightPos = null;
         double[] binWeightNeg = null;
+        long[] binCountTotal = null;
 
         ColumnConfig columnConfig = this.columnConfigList.get(key.get());
 
@@ -169,6 +174,8 @@ public class UpdateBinningInfoReducer extends Reducer<IntWritable, BinningInfoWr
                 binCountNeg = new long[binSize + 1];
                 binWeightPos = new double[binSize + 1];
                 binWeightNeg = new double[binSize + 1];
+                binCountTotal = new long[binSize + 1];
+
             }
             if(!info.isNumeric() && binCategories == null) {
                 binCategories = info.getBinCategories();
@@ -177,7 +184,9 @@ public class UpdateBinningInfoReducer extends Reducer<IntWritable, BinningInfoWr
                 binCountNeg = new long[binSize + 1];
                 binWeightPos = new double[binSize + 1];
                 binWeightNeg = new double[binSize + 1];
+                binCountTotal = new long[binSize + 1];
             }
+
             count += info.getTotalCount();
             missingCount += info.getMissingCount();
             // for numeric, such sums are OK, for categorical, such values are all 0, should be updated by using
@@ -199,7 +208,52 @@ public class UpdateBinningInfoReducer extends Reducer<IntWritable, BinningInfoWr
                 binCountNeg[i] += info.getBinCountNeg()[i];
                 binWeightPos[i] += info.getBinWeightPos()[i];
                 binWeightNeg[i] += info.getBinWeightNeg()[i];
+
+                binCountTotal[i] += info.getBinCountPos()[i];
+                binCountTotal[i] += info.getBinCountNeg()[i];
             }
+        }
+        if(columnConfig.isNumerical()) {
+            
+            long p25Count = count / 4;
+            long medianCount = p25Count * 2;
+            long p75Count = p25Count * 3;
+            p25th = min;
+            median = min;
+            p75th = min;
+            int currentCount = 0;
+            for(int i = 0; i < binBoundaryList.size(); i++) {
+                if(p25th == min && p25Count >= currentCount && p25Count < currentCount + binCountTotal[i]) {
+                    if(i == binBoundaryList.size() - 1) {
+                        p25th = binBoundaryList.get(i);
+                    } else {
+                        p25th = ((p25Count - currentCount) / (double)binCountTotal[i]) * (binBoundaryList.get(i + 1) -
+                            binBoundaryList.get(i)) + binBoundaryList.get(i);
+                    }
+                }
+                if(median == min && medianCount >= currentCount && medianCount < currentCount + binCountTotal[i]) {
+                    if(i == binBoundaryList.size() - 1) { 
+                        median = binBoundaryList.get(i);
+                    } else {
+                        median = ((medianCount - currentCount) / (double)binCountTotal[i]) * (binBoundaryList.get(i + 1) -
+                            binBoundaryList.get(i)) + binBoundaryList.get(i);
+                    }
+                }
+                if(p75th == min && p75Count >= currentCount && p75Count < currentCount + binCountTotal[i]) {
+                    if(i == binBoundaryList.size() - 1) { 
+                        p75th = binBoundaryList.get(i);
+                    } else {
+                        p75th = ((p75Count - currentCount) / (double)binCountTotal[i]) * (binBoundaryList.get(i + 1) -
+                            binBoundaryList.get(i)) + binBoundaryList.get(i);
+                    }
+                    //when get 75 percentile stop it
+                    break;
+                }
+                currentCount += binCountTotal[i];
+            }
+            LOG.info("Coloumn num is {}, p25 value is {}, median value is {}, p75 value is {}",
+                columnConfig.getColumnNum(),p25th, median, p75th);
+            
         }
 
         // To merge categorical binning
@@ -308,7 +362,7 @@ public class UpdateBinningInfoReducer extends Reducer<IntWritable, BinningInfoWr
                 .append(Constants.DEFAULT_DELIMITER)
                 .append(columnConfig.isCategorical() ? "C" : "N")   // column type
                 .append(Constants.DEFAULT_DELIMITER)
-                .append(df.format(mean))                            // median value ?
+                .append(median)                            // median value ?
                 .append(Constants.DEFAULT_DELIMITER)
                 .append(missingCount)                               // missing count
                 .append(Constants.DEFAULT_DELIMITER)
@@ -344,7 +398,12 @@ public class UpdateBinningInfoReducer extends Reducer<IntWritable, BinningInfoWr
                 .append(Constants.DEFAULT_DELIMITER)
                 .append(hyperLogLogPlus.cardinality())              // cardinality
                 .append(Constants.DEFAULT_DELIMITER)
-                .append(limitedFrequentItems(fis));                 // frequent items
+                .append(limitedFrequentItems(fis))                // frequent items
+                .append(Constants.DEFAULT_DELIMITER)
+                .append(p25th)                                      // the 25 percentile value
+                .append(Constants.DEFAULT_DELIMITER)
+                .append(p75th);                                     
+
 
         outputValue.set(sb.toString());
         context.write(NullWritable.get(), outputValue);
