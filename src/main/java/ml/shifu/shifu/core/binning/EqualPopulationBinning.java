@@ -19,6 +19,8 @@ package ml.shifu.shifu.core.binning;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.HashMap;
 
 import ml.shifu.shifu.core.binning.obj.LinkNode;
 
@@ -61,7 +63,7 @@ public class EqualPopulationBinning extends AbstractBinning<Double> {
      * Use to cache frequecey sum of HistogramUnit, to improve getDataBin time performance, otherwise there maybe
      * timeout in reducer
      */
-    private HashMap<LinkNode<HistogramUnit>, Double> sumCache = new HashMap<LinkNode<HistogramUnit>, Double>();
+    private Map<LinkNode<HistogramUnit>, Double> sumCache = new HashMap<LinkNode<HistogramUnit>, Double>();
     /**
      * Empty constructor : it is just for bin merging
      */
