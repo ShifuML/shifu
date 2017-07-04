@@ -48,7 +48,6 @@ public class ColumnStats {
      */
     private Double median;
 
-
     /**
      * the 25 percentile value of the column
      */
@@ -230,7 +229,7 @@ public class ColumnStats {
     }
 
     public void set25th(Double p25th) {
-        this.p25th = p25th; 
+        this.p25th = p25th;
     }
 
     public Double get75th() {
@@ -238,7 +237,7 @@ public class ColumnStats {
     }
 
     public void set75th(Double p75th) {
-        this.p75th = p75th; 
+        this.p75th = p75th;
     }
 
     public Long getTotalCount() {
