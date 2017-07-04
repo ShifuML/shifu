@@ -15,16 +15,29 @@
  */
 package ml.shifu.shifu.udf;
 
+import java.io.BufferedWriter;
+import java.io.File;
+import java.io.IOException;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
+import java.util.SortedMap;
+
 import ml.shifu.shifu.column.NSColumn;
 import ml.shifu.shifu.container.CaseScoreResult;
 import ml.shifu.shifu.container.obj.EvalConfig;
 import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
 import ml.shifu.shifu.core.ModelRunner;
 import ml.shifu.shifu.core.Scorer;
+import ml.shifu.shifu.core.dtrain.CommonConstants;
+import ml.shifu.shifu.core.dtrain.gs.GridSearch;
 import ml.shifu.shifu.core.model.ModelSpec;
 import ml.shifu.shifu.fs.ShifuFileUtils;
 import ml.shifu.shifu.util.CommonUtils;
 import ml.shifu.shifu.util.Constants;
+import ml.shifu.shifu.util.Environment;
+
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.collections.MapUtils;
 import org.apache.commons.lang.StringUtils;
@@ -39,13 +52,6 @@ import org.apache.pig.impl.logicalLayer.schema.Schema.FieldSchema;
 import org.apache.pig.impl.util.UDFContext;
 import org.apache.pig.tools.pigstats.PigStatusReporter;
 import org.encog.ml.BasicML;
-
-import java.io.BufferedWriter;
-import java.io.File;
-import java.io.IOException;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
 
 /**
  * Calculate the score for each evaluation data
@@ -70,11 +76,22 @@ public class EvalScoreUDF extends AbstractTrainerUDF<Tuple> {
      */
     private int weightExceptions;
 
+    /**
+     * For neural network, if output the first
+     */
+    private boolean outputFirstHiddenLayer = false;
+
+    /**
+     * Helper fields for #outputFirstHiddenLayer
+     */
+    private List<Integer> hiddenNodeList;
+
     public EvalScoreUDF(String source, String pathModelConfig, String pathColumnConfig, String evalSetName)
             throws IOException {
         this(source, pathModelConfig, pathColumnConfig, evalSetName, Integer.toString(Scorer.DEFAULT_SCORE_SCALE));
     }
 
+    @SuppressWarnings("unchecked")
     public EvalScoreUDF(String source, String pathModelConfig, String pathColumnConfig, String evalSetName, String scale)
             throws IOException {
         super(source, pathModelConfig, pathColumnConfig);
@@ -94,6 +111,28 @@ public class EvalScoreUDF extends AbstractTrainerUDF<Tuple> {
                 .getDataSet().getSource());
 
         this.scale = scale;
+
+        // only check if output first hidden layer in regression and NN
+        if(modelConfig.isRegression() && Constants.NN.equalsIgnoreCase(modelConfig.getAlgorithm())) {
+            GridSearch gs = new GridSearch(modelConfig.getTrain().getParams());
+            Map<String, Object> validParams = this.modelConfig.getTrain().getParams();
+            if(gs.hasHyperParam()) {
+                validParams = gs.getParams(0);
+            }
+            hiddenNodeList = (List<Integer>) validParams.get(CommonConstants.NUM_HIDDEN_NODES);
+
+            // only check when hidden layer > 0
+            if(this.hiddenNodeList.size() > 0) {
+                if(UDFContext.getUDFContext() != null && UDFContext.getUDFContext().getJobConf() != null) {
+                    this.outputFirstHiddenLayer = Boolean.TRUE.toString().equalsIgnoreCase(
+                            UDFContext.getUDFContext().getJobConf().get("shifu.nn.output.first.hiddenlayer", "false"));
+                } else {
+                    this.outputFirstHiddenLayer = Boolean.TRUE.toString().equalsIgnoreCase(
+                            Environment.getProperty("shifu.nn.output.first.hiddenlayer", "false"));
+                }
+            }
+            log.info("Is output first hidden layer value:" + this.outputFirstHiddenLayer);
+        }
     }
 
     public Tuple exec(Tuple input) throws IOException {
@@ -103,7 +142,7 @@ public class EvalScoreUDF extends AbstractTrainerUDF<Tuple> {
             List<BasicML> models = CommonUtils.loadBasicModels(modelConfig, evalConfig, evalConfig.getDataSet()
                     .getSource(), evalConfig.getGbtConvertToProb());
             this.modelRunner = new ModelRunner(modelConfig, columnConfigList, this.headers, evalConfig.getDataSet()
-                    .getDataDelimiter(), models);
+                    .getDataDelimiter(), models, this.outputFirstHiddenLayer);
 
             List<ModelSpec> subModels = CommonUtils.loadSubModels(modelConfig, this.columnConfigList, evalConfig,
                     evalConfig.getDataSet().getSource(), evalConfig.getGbtConvertToProb());
@@ -119,12 +158,11 @@ public class EvalScoreUDF extends AbstractTrainerUDF<Tuple> {
         }
 
         Map<NSColumn, String> rawDataNsMap = CommonUtils.convertDataIntoNsMap(input, this.headers);
-        if ( MapUtils.isEmpty(rawDataNsMap) ) {
+        if(MapUtils.isEmpty(rawDataNsMap)) {
             return null;
         }
 
-        String tag = CommonUtils.trimTag(rawDataNsMap.get(
-                new NSColumn(modelConfig.getTargetColumnName(evalConfig))));
+        String tag = CommonUtils.trimTag(rawDataNsMap.get(new NSColumn(modelConfig.getTargetColumnName(evalConfig))));
 
         // filter invalid tag record out
         // disable the tag check, since there is no bad tag in eval data set
@@ -172,6 +210,9 @@ public class EvalScoreUDF extends AbstractTrainerUDF<Tuple> {
         if(modelConfig.isRegression()) {
             if(CollectionUtils.isNotEmpty(cs.getScores())) {
                 appendModelScore(tuple, cs, true);
+                if(this.outputFirstHiddenLayer) {
+                    appendFirstHiddenOutputScore(tuple, cs.getHiddenLayerScores(), true);
+                }
             }
 
             if(MapUtils.isNotEmpty(subModelScores)) {
@@ -206,6 +247,12 @@ public class EvalScoreUDF extends AbstractTrainerUDF<Tuple> {
         }
 
         return tuple;
+    }
+
+    private void appendFirstHiddenOutputScore(Tuple tuple, SortedMap<String, Double> hiddenLayerScores, boolean b) {
+        for(Entry<String, Double> entry: hiddenLayerScores.entrySet()) {
+            tuple.append(entry.getValue());
+        }
     }
 
     /**
@@ -369,6 +416,15 @@ public class EvalScoreUDF extends AbstractTrainerUDF<Tuple> {
             if(modelConfig.isRegression()) {
                 if(this.modelCnt > 0) {
                     addModelSchema(tupleSchema, this.modelCnt, "");
+                }
+
+                if(this.outputFirstHiddenLayer) {
+                    for(int i = 0; i < this.modelCnt; i++) {
+                        // +1 to add bias neuron
+                        for(int j = 0; j < (hiddenNodeList.get(0) + 1); j++) {
+                            tupleSchema.add(new FieldSchema(SCHEMA_PREFIX + "model_" + i + "_" + j, DataType.DOUBLE));
+                        }
+                    }
                 }
 
                 if(MapUtils.isNotEmpty(this.subModelsCnt)) {
