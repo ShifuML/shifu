@@ -441,7 +441,7 @@ public class UpdateBinningInfoReducer extends Reducer<IntWritable, BinningInfoWr
         double[] binWeightNeg = null;
 
         public CateBinningStats(List<String> binCategories,
-                long[] binCountPos,long[] binCountNeg,double[] binWeightPos, double[] binWeightNeg) {
+                long[] binCountPos,long[] binCountNeg, double[] binWeightPos, double[] binWeightNeg) {
             this.binCategories = binCategories;
             this.binCountPos = binCountPos;
             this.binCountNeg = binCountNeg;

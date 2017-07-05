@@ -22,6 +22,7 @@ import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.core.dtrain.dataset.BasicFloatNetwork;
 import ml.shifu.shifu.core.dtrain.dataset.FloatNeuralStructure;
 import ml.shifu.shifu.core.dtrain.nn.ActivationReLU;
+import ml.shifu.shifu.core.dtrain.nn.BasicDropoutLayer;
 import ml.shifu.shifu.core.dtrain.nn.NNConstants;
 import ml.shifu.shifu.util.CommonUtils;
 import ml.shifu.shifu.util.Constants;
@@ -38,18 +39,23 @@ import org.encog.mathutil.randomize.NguyenWidrowRandomizer;
 import org.encog.neural.networks.BasicNetwork;
 import org.encog.neural.networks.layers.BasicLayer;
 import org.encog.neural.networks.structure.NeuralStructure;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Helper class for NN distributed training.
  */
 public final class DTrainUtils {
+    
+    private static final Logger LOG = LoggerFactory.getLogger(DTrainUtils.class);
+
 
     public static final String RESILIENTPROPAGATION = "R";
     public static final String SCALEDCONJUGATEGRADIENT = "S";
     public static final String MANHATTAN_PROPAGATION = "M";
     public static final String QUICK_PROPAGATION = "Q";
     public static final String BACK_PROPAGATION = "B";
-
+    
     public static final String IS_ELM = "IsELM";
 
     /**
@@ -266,8 +272,58 @@ public final class DTrainUtils {
         return network;
     }
 
+    public static BasicNetwork generateNetwork(int in, int out, int numLayers, List<String> actFunc,
+            List<Integer> hiddenNodeList, boolean isRandomizeWeights, double dropoutRate) {
+        final BasicFloatNetwork network = new BasicFloatNetwork();
+
+        network.addLayer(new BasicLayer(new ActivationLinear(), true, in));
+
+        LOG.info("DropoutRate in DTrainUtils is " + dropoutRate);
+
+        // int hiddenNodes = 0;
+        for(int i = 0; i < numLayers; i++) {
+            String func = actFunc.get(i);
+            Integer numHiddenNode = hiddenNodeList.get(i);
+            // hiddenNodes += numHiddenNode;
+            if(func.equalsIgnoreCase(NNConstants.NN_LINEAR)) {
+                network.addLayer(new BasicDropoutLayer(new ActivationLinear(), true, numHiddenNode, dropoutRate));
+            } else if(func.equalsIgnoreCase(NNConstants.NN_SIGMOID)) {
+                network.addLayer(new BasicDropoutLayer(new ActivationSigmoid(), true, numHiddenNode, dropoutRate));
+            } else if(func.equalsIgnoreCase(NNConstants.NN_TANH)) {
+                network.addLayer(new BasicDropoutLayer(new ActivationTANH(), true, numHiddenNode, dropoutRate));
+            } else if(func.equalsIgnoreCase(NNConstants.NN_LOG)) {
+                network.addLayer(new BasicDropoutLayer(new ActivationLOG(), true, numHiddenNode, dropoutRate));
+            } else if(func.equalsIgnoreCase(NNConstants.NN_SIN)) {
+                network.addLayer(new BasicDropoutLayer(new ActivationSIN(), true, numHiddenNode, dropoutRate));
+            } else if(func.equalsIgnoreCase(NNConstants.NN_RELU)) {
+                network.addLayer(new BasicDropoutLayer(new ActivationReLU(), true, numHiddenNode, dropoutRate));
+            } else {
+                network.addLayer(new BasicDropoutLayer(new ActivationSigmoid(), true, numHiddenNode, dropoutRate));
+            }
+        }
+
+        network.addLayer(new BasicLayer(new ActivationSigmoid(), false, out));
+
+        NeuralStructure structure = network.getStructure();
+        if(network.getStructure() instanceof FloatNeuralStructure) {
+            ((FloatNeuralStructure) structure).finalizeStruct();
+        } else {
+            structure.finalizeStructure();
+        }
+        if(isRandomizeWeights) {
+            network.reset();
+        }
+
+        return network;
+    }
+
     public static boolean isExtremeLearningMachinePropagation(String propagation) {
         return propagation != null && "E".equals(propagation);
+    }
+
+    public static BasicNetwork generateNetwork(int in, int out, int numLayers, List<String> actFunc,
+            List<Integer> hiddenNodeList, double dropoutRate) {
+        return generateNetwork(in, out, numLayers, actFunc, hiddenNodeList, true, dropoutRate);
     }
 
     public static BasicNetwork generateNetwork(int in, int out, int numLayers, List<String> actFunc,
