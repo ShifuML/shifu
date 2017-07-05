@@ -99,7 +99,7 @@ public class Weight {
 
     public double[] calculateWeights(double[] weights, double[] gradients) {
         for(int i = 0; i < gradients.length; i++) {
-            if(this.random.nextDouble() < this.dropoutRate) {
+            if(this.dropoutRate > 0 && this.random.nextDouble() < this.dropoutRate) {
                 // drop out, no need to update weight, just continue next weight
                 continue;
             }
