@@ -30,6 +30,7 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.zip.GZIPInputStream;
 
 import ml.shifu.shifu.core.dtrain.CommonConstants;
+import ml.shifu.shifu.util.CommonUtils;
 import ml.shifu.shifu.util.Constants;
 
 /**
@@ -44,8 +45,6 @@ import ml.shifu.shifu.util.Constants;
  * @author Zhang David (pengzhang@paypal.com)
  */
 public class IndependentTreeModel {
-
-    private static final String NAMESPACE_DELIMITER = "::";
 
     /**
      * Mapping for (ColumnNum, ColumnName)
@@ -663,11 +662,7 @@ public class IndependentTreeModel {
             String columnName = dis.readUTF();
             if(isRemoveNameSpace) {
                 // remove name-space in column name to make it be called by simple name
-                if(columnName.contains(NAMESPACE_DELIMITER)) {
-                    columnName = columnName
-                            .substring(columnName.indexOf(NAMESPACE_DELIMITER) + NAMESPACE_DELIMITER.length(),
-                                    columnName.length());
-                }
+                columnName = CommonUtils.getSimpleColumnName(columnName);
             }
             columnIndexNameMapping.put(columnIndex, columnName);
         }

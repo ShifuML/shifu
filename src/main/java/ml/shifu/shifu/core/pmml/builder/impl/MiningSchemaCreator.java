@@ -22,6 +22,7 @@ import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.container.obj.ModelConfig;
 import ml.shifu.shifu.core.dtrain.dataset.BasicFloatNetwork;
 import ml.shifu.shifu.core.pmml.builder.creator.AbstractPmmlElementCreator;
+import ml.shifu.shifu.util.CommonUtils;
 
 import org.apache.commons.collections.CollectionUtils;
 import org.dmg.pmml.FieldName;
@@ -53,7 +54,7 @@ public class MiningSchemaCreator extends AbstractPmmlElementCreator<MiningSchema
                 if(columnConfig.isFinalSelect() || columnConfig.isTarget()) {
                     MiningField miningField = new MiningField();
 
-                    miningField.setName(FieldName.create(columnConfig.getColumnName()));
+                    miningField.setName(FieldName.create(CommonUtils.getSimpleColumnName(columnConfig)));
                     miningField.setOptype(getOptype(columnConfig));
 
                     if(columnConfig.isFinalSelect() &&
@@ -71,7 +72,7 @@ public class MiningSchemaCreator extends AbstractPmmlElementCreator<MiningSchema
                 if(columnConfig.isFinalSelect() || columnConfig.isTarget()) {
                     MiningField miningField = new MiningField();
 
-                    miningField.setName(FieldName.create(columnConfig.getColumnName()));
+                    miningField.setName(FieldName.create(CommonUtils.getSimpleColumnName(columnConfig)));
                     miningField.setOptype(getOptype(columnConfig));
 
                     if(columnConfig.isFinalSelect()) {
