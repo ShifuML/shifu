@@ -142,7 +142,7 @@ public final class CommonUtils {
     }
 
     /**
-     * Sync-up the evalulation data into HDFS
+     * Sync-up the evaluation data into HDFS
      * 
      * @param modelConfig
      *            - ModelConfig
@@ -1530,6 +1530,40 @@ public final class CommonUtils {
     public static String getNSVariableVal(Map<NSColumn, String> rawNsDataMap, NSColumn key) {
         String val = rawNsDataMap.get(key);
         return (val == null ? rawNsDataMap.get(new NSColumn(key.getSimpleName())) : val);
+    }
+
+    /**
+     * Simple name without name space part.
+     * 
+     * @param columnConfig
+     *            the column configuration
+     * @return the simple name not including name space part
+     */
+    public static String getSimpleColumnName(ColumnConfig columnConfig) {
+        String columnName = columnConfig.getColumnName();
+        // remove name-space in column name to make it be called by simple name
+        if(columnName.contains(CommonConstants.NAMESPACE_DELIMITER)) {
+            columnName = columnName.substring(columnName.lastIndexOf(CommonConstants.NAMESPACE_DELIMITER)
+                    + CommonConstants.NAMESPACE_DELIMITER.length(), columnName.length());
+        }
+        return columnName;
+    }
+
+    /**
+     * Simple name without name space part.
+     * 
+     * @param columnName
+     *            the column name
+     * @return the simple name not including name space part
+     */
+    public static String getSimpleColumnName(String columnName) {
+        String result = columnName;
+        // remove name-space in column name to make it be called by simple name
+        if(columnName.contains(CommonConstants.NAMESPACE_DELIMITER)) {
+            result = columnName.substring(columnName.lastIndexOf(CommonConstants.NAMESPACE_DELIMITER)
+                    + CommonConstants.NAMESPACE_DELIMITER.length(), columnName.length());
+        }
+        return result;
     }
 
     /**
