@@ -319,8 +319,6 @@ public class EqualPopulationBinning extends AbstractBinning<Double> {
             if(startPos == null) {
                 startPos = this.header;
             }
-            HistogramUnit chu = startPos.data();
-            HistogramUnit nhu = startPos.next().data();
 
             double sc = sumCache.get(startPos);
             double sn = sumCache.get(startPos.next());
