@@ -22,6 +22,7 @@ import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.container.obj.ModelConfig;
 import ml.shifu.shifu.container.obj.ModelNormalizeConf;
 import ml.shifu.shifu.core.Normalizer;
+import ml.shifu.shifu.util.CommonUtils;
 
 import org.dmg.pmml.DataType;
 import org.dmg.pmml.DerivedField;
@@ -78,7 +79,7 @@ public class WoeZscoreLocalTransformCreator extends WoeLocalTransformCreator {
 
         // derived field name is consisted of FieldName and "_zscl"
         derivedFields.add(new DerivedField(OpType.CONTINUOUS, DataType.DOUBLE)
-                .withName(FieldName.create(genPmmlColumnName(config.getColumnName(), normType)))
+                .withName(FieldName.create(genPmmlColumnName(CommonUtils.getSimpleColumnName(config), normType)))
                 .withExpression(normContinuous));
 
         return derivedFields;
@@ -108,7 +109,7 @@ public class WoeZscoreLocalTransformCreator extends WoeLocalTransformCreator {
 
         // derived field name is consisted of FieldName and "_zscl"
         derivedFields.add(new DerivedField(OpType.CONTINUOUS, DataType.DOUBLE)
-                .withName(FieldName.create(genPmmlColumnName(config.getColumnName(), normType)))
+                .withName(FieldName.create(genPmmlColumnName(CommonUtils.getSimpleColumnName(config), normType)))
                 .withExpression(normContinuous));
 
         return derivedFields;
