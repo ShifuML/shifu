@@ -456,6 +456,12 @@ public class MapReducerStatsWorker extends AbstractStatsExecutor {
                         config.setSampleValues(sampleValues);
                     }
                 }
+                if(raw.length >= 33) {
+                   config.getColumnStats().set25th(parseDouble(raw[32]));
+                }
+                if(raw.length >= 34) {
+                    config.getColumnStats().set75th(parseDouble(raw[33]));
+                }
             } catch (Exception e) {
                 log.error(String.format("Fail to process following column : %s name: %s error: %s", columnNum,
                         this.columnConfigList.get(columnNum).getColumnName(), e.getMessage()), e);

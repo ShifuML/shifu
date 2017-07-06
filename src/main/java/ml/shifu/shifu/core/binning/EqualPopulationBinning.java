@@ -19,6 +19,8 @@ package ml.shifu.shifu.core.binning;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.HashMap;
 
 import ml.shifu.shifu.core.binning.obj.LinkNode;
 
@@ -57,6 +59,11 @@ public class EqualPopulationBinning extends AbstractBinning<Double> {
      */
     private LinkNode<HistogramUnit> header, tail;
 
+    /**
+     * Use to cache frequecey sum of HistogramUnit, to improve getDataBin time performance, otherwise there maybe
+     * timeout in reducer
+     */
+    private Map<LinkNode<HistogramUnit>, Double> sumCache = new HashMap<LinkNode<HistogramUnit>, Double>();
     /**
      * Empty constructor : it is just for bin merging
      */
@@ -229,16 +236,19 @@ public class EqualPopulationBinning extends AbstractBinning<Double> {
 
         double totalCnt = getTotalInHistogram();
         LinkNode<HistogramUnit> currStartPos = null;
+        //To imporve time performance
+        sumCacheGen();
         for(int j = 1; j < toBinningNum; j++) {
-            double s = (j * totalCnt) / toBinningNum;
+            double s = (j * totalCnt) / toBinningNum; 
             LinkNode<HistogramUnit> pos = locateHistogram(s, currStartPos);
-            if(pos == null || pos == currStartPos) {
+            if(pos == null) {
                 continue;
             } else {
                 HistogramUnit chu = pos.data();
                 HistogramUnit nhu = pos.next().data();
 
-                double d = s - sum(chu.getHval());
+                //double d = s - sum(chu.getHval());
+                double d = s - sumCache.get(pos);
                 if(d < 0) {
                     double u = (chu.getHval() + nhu.getHval()) / 2;
                     binBorders.add(u);
@@ -309,12 +319,11 @@ public class EqualPopulationBinning extends AbstractBinning<Double> {
             if(startPos == null) {
                 startPos = this.header;
             }
-
             HistogramUnit chu = startPos.data();
             HistogramUnit nhu = startPos.next().data();
 
-            double sc = sum(chu.getHval());
-            double sn = sum(nhu.getHval());
+            double sc = sumCache.get(startPos);
+            double sn = sumCache.get(startPos.next());
 
             if(sc >= s || (sc < s && s <= sn)) {
                 return startPos;
@@ -324,6 +333,21 @@ public class EqualPopulationBinning extends AbstractBinning<Double> {
         }
 
         return null;
+    }
+
+    /**
+     * Generate sum the histogram's frequency at exact histogram pos
+     * To imporve time performance
+     */
+    private void sumCacheGen() {
+       LinkNode<HistogramUnit> cur = this.header;
+       double sum = 0;
+       sumCache.clear();
+       while(cur != null) {
+           sumCache.put(cur, sum + cur.data().getHcnt() / 2d);
+           sum += cur.data().getHcnt();
+           cur = cur.next();
+       }
     }
 
     /**
@@ -352,10 +376,9 @@ public class EqualPopulationBinning extends AbstractBinning<Double> {
         if(posHistogramUnit != null) {
             HistogramUnit chu = posHistogramUnit.data();
             HistogramUnit nhu = posHistogramUnit.next().data();
-            double mb = chu.getHcnt() + (nhu.getHcnt() - chu.getHcnt())
-                    * (hval - chu.getHval()) / (nhu.getHval() - chu.getHval());
-            double s = (chu.getHcnt() + mb)
-                    * (hval - chu.getHval()) / (nhu.getHval() - chu.getHval());
+            double mb = chu.getHcnt() + (nhu.getHcnt() - chu.getHcnt()) * (hval - chu.getHval())
+                    / (nhu.getHval() - chu.getHval());
+            double s = (chu.getHcnt() + mb) * (hval - chu.getHval()) / (nhu.getHval() - chu.getHval());
             s = s / 2;
 
             tmp = this.header;
