@@ -241,7 +241,7 @@ public class EqualPopulationBinning extends AbstractBinning<Double> {
         for(int j = 1; j < toBinningNum; j++) {
             double s = (j * totalCnt) / toBinningNum; 
             LinkNode<HistogramUnit> pos = locateHistogram(s, currStartPos);
-            if(pos == null) {
+            if(pos == null || pos == currStartPos) {
                 continue;
             } else {
                 HistogramUnit chu = pos.data();
