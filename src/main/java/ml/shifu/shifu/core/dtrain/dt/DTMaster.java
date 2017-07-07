@@ -715,6 +715,7 @@ public class DTMaster extends AbstractMasterComputable<DTMasterParams, DTWorkerP
         doneNode.setRightImpurity(maxGainInfo.getRightImpurity());
         doneNode.setLeftPredict(maxGainInfo.getLeftPredict());
         doneNode.setRightPredict(maxGainInfo.getRightPredict());
+        doneNode.setWgtCnt(maxGainInfo.getWgtCnt());
 
         if(Node.isRootNode(doneNode)) {
             this.trees.get(treeId).setRootWgtCnt(maxGainInfo.getWgtCnt());
