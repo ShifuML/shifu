@@ -19,8 +19,8 @@ package ml.shifu.shifu.core.binning;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import java.util.HashMap;
+import java.util.Map;
 
 import ml.shifu.shifu.core.binning.obj.LinkNode;
 
@@ -241,7 +241,7 @@ public class EqualPopulationBinning extends AbstractBinning<Double> {
         for(int j = 1; j < toBinningNum; j++) {
             double s = (j * totalCnt) / toBinningNum; 
             LinkNode<HistogramUnit> pos = locateHistogram(s, currStartPos);
-            if(pos == null) {
+            if(pos == null || pos == currStartPos) {
                 continue;
             } else {
                 HistogramUnit chu = pos.data();
@@ -319,6 +319,7 @@ public class EqualPopulationBinning extends AbstractBinning<Double> {
             if(startPos == null) {
                 startPos = this.header;
             }
+
             double sc = sumCache.get(startPos);
             double sn = sumCache.get(startPos.next());
 
