@@ -174,6 +174,8 @@ public class UpdateBinningInfoReducer extends Reducer<IntWritable, BinningInfoWr
                 binWeightPos = new double[binSize + 1];
                 binWeightNeg = new double[binSize + 1];
                 binCountTotal = new long[binSize + 1];
+                LOG.info("Coloumn num is {}, binBoundaryList is {}",
+                    columnConfig.getColumnNum(), binBoundaryList.toString());
 
             }
             if(!info.isNumeric() && binCategories == null) {
