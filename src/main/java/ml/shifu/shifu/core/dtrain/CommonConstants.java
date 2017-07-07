@@ -61,8 +61,9 @@ public interface CommonConstants {
 
     /**
      * Version 2: support final selected columns
+     * Version 3: in Node to change wgtCnt float to double
      */
-    public static final int TREE_FORMAT_VERSION = 2;
+    public static final int TREE_FORMAT_VERSION = 3;
 
     public static final String NUM_HIDDEN_LAYERS = "NumHiddenLayers";
 
@@ -75,9 +76,11 @@ public interface CommonConstants {
     public static final String DROPOUT_RATE = "DropoutRate";
 
     public static final String PROPAGATION = "Propagation";
-    
+
     public static final String SHIFU_NN_FEATURE_SUBSET = "shifu.nn.feature.subset";
-    
+
     public static final String SHIFU_TREE_CHECKPOINT_INTERVAL = "shifu.tree.checkpoint.interval";
+
+    public static final String NAMESPACE_DELIMITER = "::";
 
 }

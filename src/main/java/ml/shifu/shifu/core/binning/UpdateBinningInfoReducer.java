@@ -33,7 +33,6 @@ import ml.shifu.shifu.util.CommonUtils;
 import ml.shifu.shifu.util.Constants;
 
 import org.apache.commons.lang.StringUtils;
-import org.apache.commons.lang.ArrayUtils;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.NullWritable;
 import org.apache.hadoop.io.Text;
@@ -175,6 +174,8 @@ public class UpdateBinningInfoReducer extends Reducer<IntWritable, BinningInfoWr
                 binWeightPos = new double[binSize + 1];
                 binWeightNeg = new double[binSize + 1];
                 binCountTotal = new long[binSize + 1];
+                LOG.info("Coloumn num is {}, binBoundaryList is {}",
+                    columnConfig.getColumnNum(), binBoundaryList.toString());
 
             }
             if(!info.isNumeric() && binCategories == null) {

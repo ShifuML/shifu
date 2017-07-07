@@ -16,6 +16,7 @@
 package ml.shifu.shifu.core.dtrain.nn;
 
 import java.util.Arrays;
+import java.util.Random;
 import java.util.concurrent.Callable;
 
 import ml.shifu.shifu.core.dtrain.dataset.BasicFloatMLDataPair;
@@ -147,9 +148,19 @@ public class SubGradient implements Callable<double[]> {
 
     private double[] doubleIdeal;
 
+    /**
+     * The dropout rate for each layer.
+     */
+    private double[] layerDropoutRates;
+
+    /**
+     * Used to generate randomness for dropout
+     */
+    protected Random dropoutRandomSource;
+
     public SubGradient(final FloatFlatNetwork theNetwork, final FloatMLDataSet theTraining, long trainLow,
             long trainHigh, final FloatMLDataSet theTesting, long testLow, long testHigh, final double[] flatSpot,
-            ErrorFunction ef, boolean isCrossOver, ParallelGradient owner) {
+            ErrorFunction ef, boolean isCrossOver, ParallelGradient owner, Random dropoutRandomSource) {
         this.network = theNetwork;
         this.training = theTraining;
         this.trainLow = trainLow;
@@ -161,7 +172,8 @@ public class SubGradient implements Callable<double[]> {
         this.flatSpot = flatSpot;
         this.errorFunction = ef;
         this.owner = owner;
-
+        this.layerDropoutRates = theNetwork.getLayerDropoutRates();
+        this.dropoutRandomSource = dropoutRandomSource;
         this.initNetworkParams();
     }
 
@@ -221,13 +233,17 @@ public class SubGradient implements Callable<double[]> {
      * Process one level.
      * 
      * @param currentLevel
-     *            The level.
+     *            The current level.
      */
     private void processLevel(final int currentLevel) {
         final int fromLayerIndex = this.layerIndex[currentLevel + 1];
         final int toLayerIndex = this.layerIndex[currentLevel];
         final int fromLayerSize = this.layerCounts[currentLevel + 1];
         final int toLayerSize = this.layerFeedCounts[currentLevel];
+        double dropoutRate = 0;
+        if(this.layerDropoutRates.length > currentLevel && this.layerDropoutRates[currentLevel] != 0) {
+            dropoutRate = this.layerDropoutRates[currentLevel];
+        }
 
         final int index = this.weightIndex[currentLevel];
         final ActivationFunction activation = this.getNetwork().getActivationFunctions()[currentLevel + 1];
@@ -238,21 +254,26 @@ public class SubGradient implements Callable<double[]> {
         for(int y = 0; y < fromLayerSize; y++) {
             final double output = this.layerOutput[yi];
             double sum = 0;
-            int xi = toLayerIndex;
             int wi = index + y;
-            for(int x = 0; x < toLayerSize; x++) {
-                if(this.owner.isELM() && currentLevel == 0) {
-                    this.gradients[wi] = 0d;
-                } else {
-                    this.gradients[wi] += output * this.getLayerDelta()[xi];
+            if(this.owner.isELM() || dropoutRate == 0d || dropoutRandomSource.nextDouble() > dropoutRate) {
+                int xi = toLayerIndex;
+                for(int x = 0; x < toLayerSize; x++) {
+                    // if ELM and current Level is endTrainingIndex-1, from firstHidden to input, gradients set to 0 to
+                    // skip update weights on input to first layer
+                    if(this.owner.isELM() && currentLevel == (this.getNetwork().getEndTraining() - 1)) {
+                        this.gradients[wi] = 0d;
+                    } else {
+                        this.gradients[wi] += output * this.getLayerDelta()[xi];
+                    }
+                    sum += this.weights[wi] * this.getLayerDelta()[xi];
+                    wi += fromLayerSize;
+                    xi++;
                 }
-                sum += this.weights[wi] * this.getLayerDelta()[xi];
-                wi += fromLayerSize;
-                xi++;
+                this.getLayerDelta()[yi] = sum
+                        * (activation.derivativeFunction(this.layerSums[yi], this.layerOutput[yi]) + currentFlatSpot);
+            } else {
+                this.getLayerDelta()[yi] = 0;
             }
-
-            this.getLayerDelta()[yi] = sum
-                    * (activation.derivativeFunction(this.layerSums[yi], this.layerOutput[yi]) + currentFlatSpot);
             yi++;
         }
     }
