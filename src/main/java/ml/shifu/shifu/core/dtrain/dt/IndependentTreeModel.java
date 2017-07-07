@@ -120,7 +120,15 @@ public class IndependentTreeModel {
     /**
      * Model version
      */
-    private int version;
+    private static int version = CommonConstants.TREE_FORMAT_VERSION;
+
+    public static int getVersion() {
+        return version;
+    }
+
+    public static void setVersion(int from) {
+        version = from;
+    }
 
     /**
      * For numerical columns, mean value is used for null replacement
@@ -147,7 +155,7 @@ public class IndependentTreeModel {
         this.lossStr = lossStr;
         this.algorithm = algorithm;
         this.inputNode = inputNode;
-        this.version = version;
+        IndependentTreeModel.version = version;
 
         if(this.isOptimizeMode) {
             // caching value size of categorical variable
@@ -642,6 +650,7 @@ public class IndependentTreeModel {
         }
 
         int version = dis.readInt();
+        IndependentTreeModel.setVersion(version);
         String algorithm = dis.readUTF();
         String lossStr = dis.readUTF();
         boolean isClassification = dis.readBoolean();
@@ -769,21 +778,6 @@ public class IndependentTreeModel {
      */
     public void setNumericalMeanMapping(Map<Integer, Double> numericalMeanMapping) {
         this.numericalMeanMapping = numericalMeanMapping;
-    }
-
-    /**
-     * @return the version
-     */
-    public int getVersion() {
-        return version;
-    }
-
-    /**
-     * @param version
-     *            the version to set
-     */
-    public void setVersion(int version) {
-        this.version = version;
     }
 
 }
