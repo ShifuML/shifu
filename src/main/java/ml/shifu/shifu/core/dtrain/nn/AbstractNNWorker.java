@@ -257,6 +257,11 @@ public abstract class AbstractNNWorker<VALUE extends Writable> extends
      */
     protected Set<Integer> subFeatureSet;
 
+    /**
+     * Dropout rate which is in [0, 1], default it is 0
+     */
+    private double dropoutRate = 0d;
+
     protected boolean isUpSampleEnabled() {
         // only enabled in regression
         return this.upSampleRng != null
@@ -351,6 +356,12 @@ public abstract class AbstractNNWorker<VALUE extends Writable> extends
         Object elmObject = validParams.get(DTrainUtils.IS_ELM);
         isELM = elmObject == null ? false : "true".equalsIgnoreCase(elmObject.toString());
         LOG.info("Check isELM: {}", isELM);
+
+        Object dropoutRateObj = validParams.get(CommonConstants.DROPOUT_RATE);
+        if(dropoutRateObj != null) {
+            this.dropoutRate = Double.valueOf(dropoutRateObj.toString());
+        }
+        LOG.info("'dropoutRate' in worker is :{}", this.dropoutRate);
 
         int[] inputOutputIndex = DTrainUtils.getInputOutputCandidateCounts(this.columnConfigList);
         this.inputNodeCount = inputOutputIndex[0] == 0 ? inputOutputIndex[2] : inputOutputIndex[0];
@@ -510,7 +521,7 @@ public abstract class AbstractNNWorker<VALUE extends Writable> extends
         List<Integer> hiddenNodeList = (List<Integer>) this.validParams.get(CommonConstants.NUM_HIDDEN_NODES);
 
         BasicNetwork network = DTrainUtils.generateNetwork(this.subFeatures.size(), this.outputNodeCount, numLayers,
-                actFunc, hiddenNodeList, false);
+                actFunc, hiddenNodeList, false, this.dropoutRate);
         // use the weights from master
         network.getFlat().setWeights(weights);
 

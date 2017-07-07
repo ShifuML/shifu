@@ -30,6 +30,7 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.zip.GZIPInputStream;
 
 import ml.shifu.shifu.core.dtrain.CommonConstants;
+import ml.shifu.shifu.util.CommonUtils;
 import ml.shifu.shifu.util.Constants;
 
 /**
@@ -44,8 +45,6 @@ import ml.shifu.shifu.util.Constants;
  * @author Zhang David (pengzhang@paypal.com)
  */
 public class IndependentTreeModel {
-
-    private static final String NAMESPACE_DELIMITER = "::";
 
     /**
      * Mapping for (ColumnNum, ColumnName)
@@ -121,7 +120,15 @@ public class IndependentTreeModel {
     /**
      * Model version
      */
-    private int version;
+    private static int version = CommonConstants.TREE_FORMAT_VERSION;
+
+    public static int getVersion() {
+        return version;
+    }
+
+    public static void setVersion(int from) {
+        version = from;
+    }
 
     /**
      * For numerical columns, mean value is used for null replacement
@@ -148,7 +155,7 @@ public class IndependentTreeModel {
         this.lossStr = lossStr;
         this.algorithm = algorithm;
         this.inputNode = inputNode;
-        this.version = version;
+        IndependentTreeModel.version = version;
 
         if(this.isOptimizeMode) {
             // caching value size of categorical variable
@@ -643,6 +650,7 @@ public class IndependentTreeModel {
         }
 
         int version = dis.readInt();
+        IndependentTreeModel.setVersion(version);
         String algorithm = dis.readUTF();
         String lossStr = dis.readUTF();
         boolean isClassification = dis.readBoolean();
@@ -663,11 +671,7 @@ public class IndependentTreeModel {
             String columnName = dis.readUTF();
             if(isRemoveNameSpace) {
                 // remove name-space in column name to make it be called by simple name
-                if(columnName.contains(NAMESPACE_DELIMITER)) {
-                    columnName = columnName
-                            .substring(columnName.indexOf(NAMESPACE_DELIMITER) + NAMESPACE_DELIMITER.length(),
-                                    columnName.length());
-                }
+                columnName = CommonUtils.getSimpleColumnName(columnName);
             }
             columnIndexNameMapping.put(columnIndex, columnName);
         }
@@ -774,21 +778,6 @@ public class IndependentTreeModel {
      */
     public void setNumericalMeanMapping(Map<Integer, Double> numericalMeanMapping) {
         this.numericalMeanMapping = numericalMeanMapping;
-    }
-
-    /**
-     * @return the version
-     */
-    public int getVersion() {
-        return version;
-    }
-
-    /**
-     * @param version
-     *            the version to set
-     */
-    public void setVersion(int version) {
-        this.version = version;
     }
 
 }

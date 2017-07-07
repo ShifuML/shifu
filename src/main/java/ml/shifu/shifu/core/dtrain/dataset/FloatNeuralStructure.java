@@ -57,7 +57,7 @@ public class FloatNeuralStructure extends NeuralStructure {
             flatLayers[i] = layer;
         }
 
-        this.setFlat(new FloatFlatNetwork(flatLayers));
+        this.setFlat(new FloatFlatNetwork(flatLayers, true));
 
         finalizeLimit();
         this.getLayers().clear();
