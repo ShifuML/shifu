@@ -336,6 +336,9 @@ public class NNOutput extends BasicMasterInterceptor<NNParams, NNParams> {
         } else {
             finalWeights = new double[weights.length];
             for(int i = 0; i < finalWeights.length; i++) {
+                // do we need to norm all weights or leave last hidden layer to output layer not normed???
+                // it is ok to add or not added in last iteration as such parameters only impact last final output score
+                // but not change the order of scores
                 finalWeights[i] = weights[i] * (1 - this.dropoutRate);
             }
         }

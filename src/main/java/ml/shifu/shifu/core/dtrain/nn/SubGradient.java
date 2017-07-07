@@ -254,19 +254,19 @@ public class SubGradient implements Callable<double[]> {
         for(int y = 0; y < fromLayerSize; y++) {
             final double output = this.layerOutput[yi];
             double sum = 0;
-            int xi = toLayerIndex;
             int wi = index + y;
-            for(int x = 0; x < toLayerSize; x++) {
-                if(this.owner.isELM() && currentLevel == 0) {
-                    this.gradients[wi] = 0d;
-                } else {
-                    this.gradients[wi] += output * this.getLayerDelta()[xi];
+            if(this.owner.isELM() || dropoutRate == 0d || dropoutRandomSource.nextDouble() > dropoutRate) {
+                int xi = toLayerIndex;
+                for(int x = 0; x < toLayerSize; x++) {
+                    if(this.owner.isELM() && currentLevel == 0) {
+                        this.gradients[wi] = 0d;
+                    } else {
+                        this.gradients[wi] += output * this.getLayerDelta()[xi];
+                    }
+                    sum += this.weights[wi] * this.getLayerDelta()[xi];
+                    wi += fromLayerSize;
+                    xi++;
                 }
-                sum += this.weights[wi] * this.getLayerDelta()[xi];
-                wi += fromLayerSize;
-                xi++;
-            }
-            if(dropoutRate == 0d || dropoutRandomSource.nextDouble() > dropoutRate) {
                 this.getLayerDelta()[yi] = sum
                         * (activation.derivativeFunction(this.layerSums[yi], this.layerOutput[yi]) + currentFlatSpot);
             } else {
