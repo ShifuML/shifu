@@ -258,7 +258,9 @@ public class SubGradient implements Callable<double[]> {
             if(this.owner.isELM() || dropoutRate == 0d || dropoutRandomSource.nextDouble() > dropoutRate) {
                 int xi = toLayerIndex;
                 for(int x = 0; x < toLayerSize; x++) {
-                    if(this.owner.isELM() && currentLevel == 0) {
+                    // if ELM and current Level is endTrainingIndex-1, from firstHidden to input, gradients set to 0 to
+                    // skip update weights on input to first layer
+                    if(this.owner.isELM() && currentLevel == (this.getNetwork().getEndTraining() - 1)) {
                         this.gradients[wi] = 0d;
                     } else {
                         this.gradients[wi] += output * this.getLayerDelta()[xi];
