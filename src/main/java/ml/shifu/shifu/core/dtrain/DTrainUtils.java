@@ -39,17 +39,12 @@ import org.encog.mathutil.randomize.NguyenWidrowRandomizer;
 import org.encog.neural.networks.BasicNetwork;
 import org.encog.neural.networks.layers.BasicLayer;
 import org.encog.neural.networks.structure.NeuralStructure;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * Helper class for NN distributed training.
  */
 public final class DTrainUtils {
     
-    private static final Logger LOG = LoggerFactory.getLogger(DTrainUtils.class);
-
-
     public static final String RESILIENTPROPAGATION = "R";
     public static final String SCALEDCONJUGATEGRADIENT = "S";
     public static final String MANHATTAN_PROPAGATION = "M";
@@ -277,8 +272,6 @@ public final class DTrainUtils {
         final BasicFloatNetwork network = new BasicFloatNetwork();
 
         network.addLayer(new BasicLayer(new ActivationLinear(), true, in));
-
-        LOG.info("DropoutRate in DTrainUtils is " + dropoutRate);
 
         // int hiddenNodes = 0;
         for(int i = 0; i < numLayers; i++) {
