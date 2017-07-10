@@ -113,7 +113,7 @@ public class Weight {
                     } else {
                         double shrinkValue = this.reg / getNumTrainSize();
                         double delta = updateWeight(i, weights, gradients);
-                        weights[i] += Math.signum(delta) * Math.max(0.0, Math.abs(delta) - shrinkValue);
+                        weights[i] = Math.signum(delta) * Math.max(0.0, Math.abs(delta) - shrinkValue);
                     }
                     break;
                 case L2:
