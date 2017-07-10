@@ -1560,7 +1560,9 @@ public class DTWorker
         private static final long serialVersionUID = 903201066309036170L;
 
         /**
-         * Inputs for bin index, short is using to compress
+         * Inputs for bin index, short is using to compress data, for numerical, it can be byte type for less than 256
+         * bins, while it is hard to control byte and short together, as so far memory consumption is OK, just use short
+         * for both numerical and categorical columns
          */
         short[] inputs;
 
