@@ -58,6 +58,8 @@ import org.encog.ml.BasicML;
  */
 public class EvalScoreUDF extends AbstractTrainerUDF<Tuple> {
 
+    private static final String SHIFU_NN_OUTPUT_FIRST_HIDDENLAYER = "shifu.nn.output.first.hiddenlayer";
+
     private static final String SCHEMA_PREFIX = "shifu::";
 
     private EvalConfig evalConfig;
@@ -125,10 +127,11 @@ public class EvalScoreUDF extends AbstractTrainerUDF<Tuple> {
             if(this.hiddenNodeList.size() > 0) {
                 if(UDFContext.getUDFContext() != null && UDFContext.getUDFContext().getJobConf() != null) {
                     this.outputFirstHiddenLayer = Boolean.TRUE.toString().equalsIgnoreCase(
-                            UDFContext.getUDFContext().getJobConf().get("shifu.nn.output.first.hiddenlayer", "false"));
+                            UDFContext.getUDFContext().getJobConf()
+                                    .get(SHIFU_NN_OUTPUT_FIRST_HIDDENLAYER, Boolean.FALSE.toString()));
                 } else {
                     this.outputFirstHiddenLayer = Boolean.TRUE.toString().equalsIgnoreCase(
-                            Environment.getProperty("shifu.nn.output.first.hiddenlayer", "false"));
+                            Environment.getProperty(SHIFU_NN_OUTPUT_FIRST_HIDDENLAYER, Boolean.FALSE.toString()));
                 }
             }
             log.info("Is output first hidden layer value:" + this.outputFirstHiddenLayer);

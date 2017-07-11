@@ -30,6 +30,7 @@ import ml.shifu.shifu.core.DataSampler;
 import ml.shifu.shifu.core.Normalizer;
 import ml.shifu.shifu.util.CommonUtils;
 import ml.shifu.shifu.util.Constants;
+import ml.shifu.shifu.util.Environment;
 
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.jexl2.Expression;
@@ -48,6 +49,10 @@ import org.apache.pig.tools.pigstats.PigStatusReporter;
  * NormalizeUDF class normalize the training data for parquet format.
  */
 public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
+
+    private static final String POSRATE = "posrate";
+
+    private static final String SHIFU_NORM_CATEGORY_MISSING_NORM = "shifu.norm.category.missing.norm";
 
     private List<Set<String>> tags;
 
@@ -86,20 +91,33 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
      * In Zscore norm type, how to process category default missing value norm, by default use mean, another option is
      * POSRATE.
      */
-    private CategoryMissingNormType categoryMissingNormType;
+    private CategoryMissingNormType categoryMissingNormType = CategoryMissingNormType.POSRATE;
 
     public NormalizeUDF(String source, String pathModelConfig, String pathColumnConfig) throws Exception {
         this(source, pathModelConfig, pathColumnConfig, "false");
-        this.categoryMissingNormType = CategoryMissingNormType.of(UDFContext.getUDFContext().getJobConf()
-                .get("shifu.norm.category.missing.norm", "posrate"));
+        setCategoryMissingNormType();
+    }
+
+    private void setCategoryMissingNormType() {
+        if(UDFContext.getUDFContext() != null && UDFContext.getUDFContext().getJobConf() != null) {
+            this.categoryMissingNormType = CategoryMissingNormType.of(UDFContext.getUDFContext().getJobConf()
+                    .get(SHIFU_NORM_CATEGORY_MISSING_NORM, POSRATE));
+        } else {
+            this.categoryMissingNormType = CategoryMissingNormType.of(Environment.getProperty(
+                    SHIFU_NORM_CATEGORY_MISSING_NORM, POSRATE));
+        }
         if(this.categoryMissingNormType == null) {
             this.categoryMissingNormType = CategoryMissingNormType.POSRATE;
         }
+        log.info("'categoryMissingNormType' is set to: " + this.categoryMissingNormType);
     }
 
     public NormalizeUDF(String source, String pathModelConfig, String pathColumnConfig, String isForClean)
             throws Exception {
         super(source, pathModelConfig, pathColumnConfig);
+
+        setCategoryMissingNormType();
+
         this.isForClean = "true".equalsIgnoreCase(isForClean);
 
         log.debug("Initializing NormalizeUDF ... ");
