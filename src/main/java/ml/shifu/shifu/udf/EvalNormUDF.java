@@ -15,6 +15,15 @@
  */
 package ml.shifu.shifu.udf;
 
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+
 import ml.shifu.shifu.column.NSColumn;
 import ml.shifu.shifu.container.CaseScoreResult;
 import ml.shifu.shifu.container.obj.ColumnConfig;
@@ -35,9 +44,6 @@ import org.apache.pig.impl.logicalLayer.schema.Schema;
 import org.apache.pig.impl.logicalLayer.schema.Schema.FieldSchema;
 import org.apache.pig.impl.util.UDFContext;
 import org.encog.ml.BasicML;
-
-import java.io.IOException;
-import java.util.*;
 
 /**
  * Calculate the score for each evaluation data
@@ -81,7 +87,7 @@ public class EvalNormUDF extends AbstractTrainerUDF<Tuple> {
         evalConfig = modelConfig.getEvalConfigByName(evalSetName);
 
         if(StringUtils.isBlank(evalConfig.getDataSet().getHeaderPath())) {
-            throw new RuntimeException("The evaluation data set header couldn't be empty!");
+            log.warn("eval header path is empty, take the first line as schema (for csv format)");
         }
 
         this.headers = CommonUtils.getFinalHeaders(evalConfig);
