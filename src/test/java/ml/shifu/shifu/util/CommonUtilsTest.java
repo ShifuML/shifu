@@ -481,6 +481,8 @@ public class CommonUtilsTest {
     public void trimNumber() {
         Assert.assertEquals(CommonUtils.trimTag("1000"), "1000");
         Assert.assertEquals(CommonUtils.trimTag("1.000"), "1");
+        Assert.assertEquals(CommonUtils.trimTag("1.0"), "1");
+        Assert.assertEquals(CommonUtils.trimTag("0.0"), "0");
         Assert.assertEquals(CommonUtils.trimTag("1."), "1");
         Assert.assertEquals(CommonUtils.trimTag("0.0000"), "0");
         Assert.assertEquals(CommonUtils.trimTag("1.03400"), "1.034");
