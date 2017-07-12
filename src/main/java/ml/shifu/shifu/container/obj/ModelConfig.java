@@ -716,7 +716,7 @@ public class ModelConfig {
                         defaultCandidateColumnNameFile);
             } else {
                 LOG.warn(
-                        "'varSelect::candidateColumnNameFile' is not set and default candidateColumnNameFile: {} is not found, no candidate config files, please check and set force-select config file in 'varSelect::candidateColumnNameFile'.",
+                        "'varSelect::candidateColumnNameFile' is not set and default candidateColumnNameFile: {} is not found, no candidate config files, please check and set candidate columns in 'varSelect::candidateColumnNameFile'.",
                         defaultCandidateColumnNameFile);
                 return new ArrayList<String>();
             }
