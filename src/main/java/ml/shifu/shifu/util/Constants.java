@@ -258,4 +258,6 @@ public interface Constants {
 
     public static final String CATEGORICAL_GROUP_VAL_DELIMITER = "@^";
 
+    public static final String SHIFU_NAMESPACE_STRICT_MODE = "shifu.namespace.strict.mode";
+
 }
