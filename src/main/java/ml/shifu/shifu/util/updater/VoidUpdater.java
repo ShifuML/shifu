@@ -14,6 +14,7 @@ public class VoidUpdater extends BasicUpdater {
         super(modelConfig);
     }
 
+    @Override
     public void updateColumnConfig(ColumnConfig columnConfig) {
         // do nothing
     }
