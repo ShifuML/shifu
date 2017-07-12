@@ -1,11 +1,12 @@
 package ml.shifu.shifu.util.updater;
 
+import java.io.IOException;
+
 import ml.shifu.shifu.column.NSColumn;
 import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.container.obj.ModelConfig;
-import org.apache.commons.collections.CollectionUtils;
 
-import java.io.IOException;
+import org.apache.commons.collections.CollectionUtils;
 
 /**
  * Created by zhanhu on 2/23/17.
@@ -16,6 +17,7 @@ public class TrainUpdater extends BasicUpdater {
         super(modelConfig);
     }
 
+    @Override
     public void updateColumnConfig(ColumnConfig columnConfig) {
         String varName = columnConfig.getColumnName();
 
