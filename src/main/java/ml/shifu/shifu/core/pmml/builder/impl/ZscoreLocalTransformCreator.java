@@ -135,6 +135,17 @@ public class ZscoreLocalTransformCreator extends AbstractPmmlElementCreator<Loca
                 origin.setTextContent(cval);
 
                 inlineTable.withRows(new Row().withContent(origin).withContent(out));
+
+                String tmCval = CommonUtils.trimTag(cval);
+                if ( !cval.equals(tmCval) ) {
+                    Element tmOut = document.createElementNS(NAME_SPACE_URI, ELEMENT_OUT);
+                    tmOut.setTextContent(dval);
+
+                    Element tmOrigin = document.createElementNS(NAME_SPACE_URI, ELEMENT_ORIGIN);
+                    tmOrigin.setTextContent(tmCval);
+
+                    inlineTable.withRows(new Row().withContent(origin).withContent(tmOut));
+                }
             }
         }
 
