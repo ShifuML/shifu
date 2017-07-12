@@ -343,10 +343,16 @@ public class IndependentTreeModel {
                     // is missing value category
                     indexValue = categoricalSize;
                 } else {
-                    Integer intIndex = columnCategoryIndexMapping.get(columnNum).get(obj.toString());
+                    Map<String, Integer> categoryIndexMap = columnCategoryIndexMapping.get(columnNum);
+                    Integer intIndex = categoryIndexMap.get(obj.toString());
                     if(intIndex == null || intIndex < 0 || intIndex >= categoricalSize) {
-                        // last one is for invalid category
-                        intIndex = categoricalSize;
+                        // if current value isn't found, may be it is 1.0 but category is 1, just to trim 1.0 to 1 and
+                        // then search again
+                        intIndex = categoryIndexMap.get(CommonUtils.trimTag(obj.toString()));
+                        if(intIndex == null || intIndex < 0 || intIndex >= categoricalSize) {
+                            // cannot find trimmed category, set it to missing bin (last one)
+                            intIndex = categoricalSize;
+                        }
                     }
                     indexValue = intIndex;
                 }
@@ -695,14 +701,14 @@ public class IndependentTreeModel {
                     for(String str: splits) {
                         categoryIndexMapping.put(str, j);
                         String tmStr = CommonUtils.trimTag(str);
-                        if ( !str.equals(tmStr) ) {
+                        if(!str.equals(tmStr)) {
                             categoryIndexMapping.put(tmStr, j);
                         }
                     }
                 } else {
                     categoryIndexMapping.put(category, j);
                     String tmCategory = CommonUtils.trimTag(category);
-                    if ( !category.equals(tmCategory) ) {
+                    if(!category.equals(tmCategory)) {
                         categoryIndexMapping.put(tmCategory, j);
                     }
                 }
