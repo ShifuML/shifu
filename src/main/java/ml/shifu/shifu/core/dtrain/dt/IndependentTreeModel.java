@@ -694,9 +694,17 @@ public class IndependentTreeModel {
                     String[] splits = split(category, Constants.CATEGORICAL_GROUP_VAL_DELIMITER);
                     for(String str: splits) {
                         categoryIndexMapping.put(str, j);
+                        String tmStr = CommonUtils.trimTag(str);
+                        if ( !str.equals(tmStr) ) {
+                            categoryIndexMapping.put(tmStr, j);
+                        }
                     }
                 } else {
                     categoryIndexMapping.put(category, j);
+                    String tmCategory = CommonUtils.trimTag(category);
+                    if ( !category.equals(tmCategory) ) {
+                        categoryIndexMapping.put(tmCategory, j);
+                    }
                 }
             }
             categoricalColumnNameNames.put(columnIndex, categories);
