@@ -163,7 +163,12 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
             PigStatusReporter.getInstance().getCounter(Constants.SHIFU_GROUP_COUNTER, "TOTAL_VALID_COUNT").increment(1);
         }
 
-        final String rawTag = CommonUtils.trimTag(input.get(tagColumnNum).toString());
+        Object tag = input.get(tagColumnNum);
+        if ( tag == null ) {
+            log.warn("The tag is NULL, just skip it!!");
+            return null;
+        }
+        final String rawTag = CommonUtils.trimTag(tag.toString());
 
         // make sure all invalid tag record are filter out
         if(!super.tagSet.contains(rawTag)) {
