@@ -164,8 +164,11 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
         }
 
         Object tag = input.get(tagColumnNum);
-        if ( tag == null ) {
+        if(tag == null) {
             log.warn("The tag is NULL, just skip it!!");
+            if(isPigEnabled(Constants.SHIFU_GROUP_COUNTER, "INVALID_TAG")) {
+                PigStatusReporter.getInstance().getCounter(Constants.SHIFU_GROUP_COUNTER, "INVALID_TAG").increment(1);
+            }
             return null;
         }
         final String rawTag = CommonUtils.trimTag(tag.toString());
