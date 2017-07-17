@@ -19,6 +19,7 @@ import ml.shifu.shifu.exception.ShifuErrorCode;
 import ml.shifu.shifu.exception.ShifuException;
 
 import org.apache.commons.io.IOUtils;
+import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -139,6 +140,14 @@ public class Environment {
     public static Integer getInt(String propertyName, Integer defValue) {
         String propertyValue = getProperty(propertyName);
         return (propertyValue == null) ? defValue : Integer.valueOf(propertyValue);
+    }
+
+    /*
+     * Get property as Boolean value, if null return default value
+    */
+    public static Boolean getBoolean(String propertyName, Boolean defValue) {
+        String propertyValue = getProperty(propertyName);
+        return StringUtils.isBlank(propertyValue) ? defValue : Boolean.valueOf(propertyValue);
     }
 
     /*

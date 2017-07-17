@@ -142,7 +142,7 @@ public final class CommonUtils {
     }
 
     /**
-     * Sync-up the evalulation data into HDFS
+     * Sync-up the evaluation data into HDFS
      * 
      * @param modelConfig
      *            - ModelConfig
@@ -390,9 +390,11 @@ public final class CommonUtils {
         for(int i = 0; i < fields.length; i++) {
             if(!isSchemaProvided) {
                 fields[i] = i + "";
-            } /*else { // namespace support
-                fields[i] = getRelativePigHeaderColumnName(fields[i]);
-            }*/
+            } /*
+               * else { // namespace support
+               * fields[i] = getRelativePigHeaderColumnName(fields[i]);
+               * }
+               */
         }
         return fields;
     }
@@ -472,6 +474,9 @@ public final class CommonUtils {
         int index = 0;
         for(String str: Splitter.on(delimiter).split(pigHeaderStr)) {
             String columnName = StringUtils.trimToEmpty(str);
+            if(!Environment.getBoolean(Constants.SHIFU_NAMESPACE_STRICT_MODE, false)) {
+                columnName = getRelativePigHeaderColumnName(str);
+            }
             /*
              * if(isFull) {
              * columnName = getFullPigHeaderColumnName(str);
@@ -479,7 +484,6 @@ public final class CommonUtils {
              * columnName = getRelativePigHeaderColumnName(str);
              * }
              */
-
             if(headerSet.contains(columnName)) {
                 columnName = columnName + "_" + index;
             }
@@ -1064,7 +1068,7 @@ public final class CommonUtils {
     public static Set<NSColumn> loadCandidateColumns(ModelConfig modelConfig) throws IOException {
         Set<NSColumn> candidateColumns = new HashSet<NSColumn>();
         List<String> candidates = modelConfig.getListCandidates();
-        for ( String candidate : candidates ) {
+        for(String candidate: candidates) {
             candidateColumns.add(new NSColumn(candidate));
         }
         return candidateColumns;
@@ -1528,6 +1532,40 @@ public final class CommonUtils {
     public static String getNSVariableVal(Map<NSColumn, String> rawNsDataMap, NSColumn key) {
         String val = rawNsDataMap.get(key);
         return (val == null ? rawNsDataMap.get(new NSColumn(key.getSimpleName())) : val);
+    }
+
+    /**
+     * Simple name without name space part.
+     * 
+     * @param columnConfig
+     *            the column configuration
+     * @return the simple name not including name space part
+     */
+    public static String getSimpleColumnName(ColumnConfig columnConfig) {
+        String columnName = columnConfig.getColumnName();
+        // remove name-space in column name to make it be called by simple name
+        if(columnName.contains(CommonConstants.NAMESPACE_DELIMITER)) {
+            columnName = columnName.substring(columnName.lastIndexOf(CommonConstants.NAMESPACE_DELIMITER)
+                    + CommonConstants.NAMESPACE_DELIMITER.length(), columnName.length());
+        }
+        return columnName;
+    }
+
+    /**
+     * Simple name without name space part.
+     * 
+     * @param columnName
+     *            the column name
+     * @return the simple name not including name space part
+     */
+    public static String getSimpleColumnName(String columnName) {
+        String result = columnName;
+        // remove name-space in column name to make it be called by simple name
+        if(columnName.contains(CommonConstants.NAMESPACE_DELIMITER)) {
+            result = columnName.substring(columnName.lastIndexOf(CommonConstants.NAMESPACE_DELIMITER)
+                    + CommonConstants.NAMESPACE_DELIMITER.length(), columnName.length());
+        }
+        return result;
     }
 
     /**
@@ -1995,7 +2033,7 @@ public final class CommonUtils {
      */
     public static ColumnConfig findColumnConfigByName(List<ColumnConfig> columnConfigList, String columnName) {
         for(ColumnConfig columnConfig: columnConfigList) {
-            if ( NSColumnUtils.isColumnEqual(columnConfig.getColumnName(), columnName) ) {
+            if(NSColumnUtils.isColumnEqual(columnConfig.getColumnName(), columnName)) {
                 return columnConfig;
             }
         }
@@ -2295,6 +2333,15 @@ public final class CommonUtils {
         return pigScoreNames;
     }
 
+    /**
+     * Compute feature importance for all bagging tree models.
+     * 
+     * @param models
+     *            the tree models, should be instance of TreeModel
+     * @return feature importance per each column id
+     * @throws IllegalStateException
+     *             if no any feature importance from models
+     */
     public static Map<Integer, MutablePair<String, Double>> computeTreeModelFeatureImportance(List<BasicML> models) {
         List<Map<Integer, MutablePair<String, Double>>> importanceList = new ArrayList<Map<Integer, MutablePair<String, Double>>>();
         for(BasicML basicModel: models) {
@@ -2305,7 +2352,7 @@ public final class CommonUtils {
             }
         }
         if(importanceList.size() < 1) {
-            throw new IllegalArgumentException("Feature importance calculation abort due to no tree model found!!");
+            throw new IllegalStateException("Feature importance calculation abort due to no tree model found!!");
         }
         return mergeImportanceList(importanceList);
     }
@@ -2313,17 +2360,18 @@ public final class CommonUtils {
     private static Map<Integer, MutablePair<String, Double>> mergeImportanceList(
             List<Map<Integer, MutablePair<String, Double>>> list) {
         Map<Integer, MutablePair<String, Double>> finalResult = new HashMap<Integer, MutablePair<String, Double>>();
-        int size = list.size();
+        int modelSize = list.size();
         for(Map<Integer, MutablePair<String, Double>> item: list) {
             for(Entry<Integer, MutablePair<String, Double>> entry: item.entrySet()) {
                 if(!finalResult.containsKey(entry.getKey())) {
+                    // do average on models by dividing modelSize
                     MutablePair<String, Double> value = MutablePair.of(entry.getValue().getKey(), entry.getValue()
-                            .getValue() / size);
+                            .getValue() / modelSize);
                     finalResult.put(entry.getKey(), value);
                 } else {
                     MutablePair<String, Double> current = finalResult.get(entry.getKey());
                     double entryValue = entry.getValue().getValue();
-                    current.setValue(current.getValue() + entryValue / size);
+                    current.setValue(current.getValue() + (entryValue / modelSize));
                     finalResult.put(entry.getKey(), current);
                 }
             }

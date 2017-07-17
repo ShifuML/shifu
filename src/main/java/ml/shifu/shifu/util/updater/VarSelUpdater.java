@@ -17,6 +17,7 @@ public class VarSelUpdater extends BasicUpdater {
         super(modelConfig);
     }
 
+    @Override
     public void updateColumnConfig(ColumnConfig columnConfig) {
         String varName = columnConfig.getColumnName();
 
@@ -34,8 +35,9 @@ public class VarSelUpdater extends BasicUpdater {
         } else if(this.setForceRemove.contains(new NSColumn(varName))) {
             columnConfig.setColumnFlag(ColumnConfig.ColumnFlag.ForceRemove);
         } else if(this.setForceSelect.contains(new NSColumn(varName))) {
-            if ( CollectionUtils.isEmpty(this.setCandidates)
-                    || (CollectionUtils.isNotEmpty(this.setCandidates) && this.setCandidates.contains(new NSColumn(varName))) ) {
+            if(CollectionUtils.isEmpty(this.setCandidates)
+                    || (CollectionUtils.isNotEmpty(this.setCandidates) && this.setCandidates.contains(new NSColumn(
+                            varName)))) {
                 columnConfig.setColumnFlag(ColumnConfig.ColumnFlag.ForceSelect);
             }
         } else if(NSColumnUtils.isColumnEqual(this.weightColumnName, varName)) {

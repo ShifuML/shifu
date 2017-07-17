@@ -30,6 +30,7 @@ import ml.shifu.shifu.core.DataSampler;
 import ml.shifu.shifu.core.Normalizer;
 import ml.shifu.shifu.util.CommonUtils;
 import ml.shifu.shifu.util.Constants;
+import ml.shifu.shifu.util.Environment;
 
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.jexl2.Expression;
@@ -40,6 +41,7 @@ import org.apache.commons.lang.StringUtils;
 import org.apache.pig.data.Tuple;
 import org.apache.pig.data.TupleFactory;
 import org.apache.pig.impl.logicalLayer.schema.Schema;
+import org.apache.pig.impl.util.UDFContext;
 import org.apache.pig.impl.util.Utils;
 import org.apache.pig.tools.pigstats.PigStatusReporter;
 
@@ -48,6 +50,10 @@ import org.apache.pig.tools.pigstats.PigStatusReporter;
  */
 public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
 
+    private static final String POSRATE = "posrate";
+
+    private static final String SHIFU_NORM_CATEGORY_MISSING_NORM = "shifu.norm.category.missing.norm";
+
     private List<Set<String>> tags;
 
     private Double cutoff;
@@ -55,6 +61,19 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
     private Expression weightExpr;
     private JexlContext weightContext;
     private DecimalFormat df = new DecimalFormat("#.######");
+
+    public static enum CategoryMissingNormType {
+        MEAN, POSRATE;
+
+        public static CategoryMissingNormType of(String normType) {
+            for(CategoryMissingNormType norm: CategoryMissingNormType.values()) {
+                if(norm.toString().equalsIgnoreCase(normType)) {
+                    return norm;
+                }
+            }
+            return POSRATE;
+        }
+    }
 
     /**
      * For categorical feature, a map is used to save query time in execution
@@ -68,13 +87,37 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
     // if current norm for only clean and not transform categorical and numeric value
     private boolean isForClean = false;
 
+    /**
+     * In Zscore norm type, how to process category default missing value norm, by default use mean, another option is
+     * POSRATE.
+     */
+    private CategoryMissingNormType categoryMissingNormType = CategoryMissingNormType.POSRATE;
+
     public NormalizeUDF(String source, String pathModelConfig, String pathColumnConfig) throws Exception {
         this(source, pathModelConfig, pathColumnConfig, "false");
+        setCategoryMissingNormType();
+    }
+
+    private void setCategoryMissingNormType() {
+        if(UDFContext.getUDFContext() != null && UDFContext.getUDFContext().getJobConf() != null) {
+            this.categoryMissingNormType = CategoryMissingNormType.of(UDFContext.getUDFContext().getJobConf()
+                    .get(SHIFU_NORM_CATEGORY_MISSING_NORM, POSRATE));
+        } else {
+            this.categoryMissingNormType = CategoryMissingNormType.of(Environment.getProperty(
+                    SHIFU_NORM_CATEGORY_MISSING_NORM, POSRATE));
+        }
+        if(this.categoryMissingNormType == null) {
+            this.categoryMissingNormType = CategoryMissingNormType.POSRATE;
+        }
+        log.info("'categoryMissingNormType' is set to: " + this.categoryMissingNormType);
     }
 
     public NormalizeUDF(String source, String pathModelConfig, String pathColumnConfig, String isForClean)
             throws Exception {
         super(source, pathModelConfig, pathColumnConfig);
+
+        setCategoryMissingNormType();
+
         this.isForClean = "true".equalsIgnoreCase(isForClean);
 
         log.debug("Initializing NormalizeUDF ... ");
@@ -120,7 +163,15 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
             PigStatusReporter.getInstance().getCounter(Constants.SHIFU_GROUP_COUNTER, "TOTAL_VALID_COUNT").increment(1);
         }
 
-        final String rawTag = CommonUtils.trimTag(input.get(tagColumnNum).toString());
+        Object tag = input.get(tagColumnNum);
+        if(tag == null) {
+            log.warn("The tag is NULL, just skip it!!");
+            if(isPigEnabled(Constants.SHIFU_GROUP_COUNTER, "INVALID_TAG")) {
+                PigStatusReporter.getInstance().getCounter(Constants.SHIFU_GROUP_COUNTER, "INVALID_TAG").increment(1);
+            }
+            return null;
+        }
+        final String rawTag = CommonUtils.trimTag(tag.toString());
 
         // make sure all invalid tag record are filter out
         if(!super.tagSet.contains(rawTag)) {
@@ -206,7 +257,7 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
                 if(CommonUtils.isGoodCandidate(modelConfig.isRegression(), config)) {
                     // for multiple classification, binPosRate means rate of such category over all counts, reuse
                     // binPosRate for normalize
-                    Double normVal = Normalizer.normalize(config, val, cutoff, normType);
+                    Double normVal = Normalizer.normalize(config, val, cutoff, normType, this.categoryMissingNormType);
                     tuple.append(df.format(normVal));
                 } else {
                     tuple.append(config.isMeta() ? val : null);

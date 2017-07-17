@@ -16,6 +16,7 @@
 package ml.shifu.shifu.core.dtrain.nn;
 
 import java.util.Arrays;
+import java.util.Random;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CompletionService;
 import java.util.concurrent.ExecutionException;
@@ -167,11 +168,12 @@ public class ParallelGradient {
     public double[] computeGradients() {
         CompletionService<double[]> completionService = new ExecutorCompletionService<double[]>(this.threadPool);
         this.subGradients = new SubGradient[this.threadCount];
+        Random dropoutRandom = new Random();
         for(int i = 0; i < this.threadCount; i++) {
             if(this.subGradients[i] == null) {
                 this.subGradients[i] = new SubGradient(this.network.clone(), this.training, this.trainLows[i],
                         this.trainHighs[i], this.testing, this.testLows[i], this.testHighs[i], this.flatSpot,
-                        this.errorFunction, this.isCrossOver, this);
+                        this.errorFunction, this.isCrossOver, this, dropoutRandom);
             } else {
                 this.subGradients[i].setNetwork(this.network.clone());
             }

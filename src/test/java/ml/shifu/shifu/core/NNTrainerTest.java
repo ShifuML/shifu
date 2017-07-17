@@ -100,7 +100,7 @@ public class NNTrainerTest {
 
 //    @Test
     public void testXorOperation() throws IOException {
-        ModelConfig config = ModelConfig.createInitModelConfig(".", ALGORITHM.NN, ".");
+        ModelConfig config = ModelConfig.createInitModelConfig(".", ALGORITHM.NN, ".", false);
 
         config.getTrain().setBaggingSampleRate(1.0);
         config.getTrain().setValidSetRate(0.1);
@@ -135,7 +135,7 @@ public class NNTrainerTest {
 
     @Test(expectedExceptions = RuntimeException.class)
     public void testExceptionWhileSetupModel() throws IOException {
-        ModelConfig config = ModelConfig.createInitModelConfig(".", ALGORITHM.NN, ".");
+        ModelConfig config = ModelConfig.createInitModelConfig(".", ALGORITHM.NN, ".", false);
 
         config.getTrain().getParams().put("Propagation", "Q");
         config.getTrain().getParams().put("NumHiddenLayers", 2);

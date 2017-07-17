@@ -15,8 +15,10 @@
  */
 package ml.shifu.shifu.udf;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.pig.data.Tuple;
 import org.apache.pig.data.TupleFactory;
+import org.apache.pig.impl.util.UDFContext;
 import org.testng.Assert;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.Test;
@@ -32,6 +34,7 @@ public class NormalizeUDFTest {
 
     @BeforeClass
     public void setUp() throws Exception {
+        UDFContext.getUDFContext().addJobConf(new Configuration());
         instance = new NormalizeUDF("LOCAL",
                 "src/test/resources/example/cancer-judgement/ModelStore/ModelSet1/ModelConfig.json",
                 "src/test/resources/example/cancer-judgement/ModelStore/ModelSet1/ColumnConfig.json");
