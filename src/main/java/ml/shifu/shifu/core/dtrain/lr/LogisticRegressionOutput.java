@@ -126,7 +126,15 @@ public class LogisticRegressionOutput extends
                     // we can start from this point to save time.
                     // another case for master recovery, if master is failed, read such checkpoint model
                     Path out = new Path(context.getProps().getProperty(CommonConstants.GUAGUA_OUTPUT));
-                    writeModelWeightsToFileSystem(optimizedWeights, out);
+
+                    // if current iteration is the last iteration, or it is halted by early stop condition, no
+                    // need to save checkpoint model here as it is replicated with postApplicaiton.
+                    // There is issue here if saving the same model in this thread and another thread in
+                    // postApplication, sometimes this conflict will cause model writing failed.
+                    if(!context.getMasterResult().isHalt()
+                            && context.getCurrentIteration() != context.getTotalIteration()) {
+                        writeModelWeightsToFileSystem(optimizedWeights, out);
+                    }
                 }
             }, "saveTmpModelToHDFS thread");
             tmpNNThread.setDaemon(true);
