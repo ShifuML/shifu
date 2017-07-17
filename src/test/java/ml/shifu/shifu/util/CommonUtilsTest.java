@@ -487,6 +487,8 @@ public class CommonUtilsTest {
         Assert.assertEquals(CommonUtils.trimTag("0.0000"), "0");
         Assert.assertEquals(CommonUtils.trimTag("1.03400"), "1.034");
         Assert.assertEquals(CommonUtils.trimTag("1.034001"), "1.034001");
+        Assert.assertEquals(CommonUtils.trimTag("192.168.0.1"), "192.168.0.1");
+        Assert.assertEquals(CommonUtils.trimTag("192.168.0.0"), "192.168.0.0");
         Assert.assertEquals(CommonUtils.trimTag(".0000"), "0");
         Assert.assertEquals(CommonUtils.trimTag(".00001"), "0.00001");
         Assert.assertEquals(CommonUtils.trimTag(".M0001"), ".M0001");

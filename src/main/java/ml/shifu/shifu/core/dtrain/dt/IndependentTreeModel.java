@@ -346,13 +346,8 @@ public class IndependentTreeModel {
                     Map<String, Integer> categoryIndexMap = columnCategoryIndexMapping.get(columnNum);
                     Integer intIndex = categoryIndexMap.get(obj.toString());
                     if(intIndex == null || intIndex < 0 || intIndex >= categoricalSize) {
-                        // if current value isn't found, may be it is 1.0 but category is 1, just to trim 1.0 to 1 and
-                        // then search again
-                        intIndex = categoryIndexMap.get(CommonUtils.trimTag(obj.toString()));
-                        if(intIndex == null || intIndex < 0 || intIndex >= categoricalSize) {
-                            // cannot find trimmed category, set it to missing bin (last one)
-                            intIndex = categoricalSize;
-                        }
+                        // cannot find category, set it to missing bin (last one)
+                        intIndex = categoricalSize;
                     }
                     indexValue = intIndex;
                 }
@@ -700,17 +695,9 @@ public class IndependentTreeModel {
                     String[] splits = split(category, Constants.CATEGORICAL_GROUP_VAL_DELIMITER);
                     for(String str: splits) {
                         categoryIndexMapping.put(str, j);
-                        String tmStr = CommonUtils.trimTag(str);
-                        if(!str.equals(tmStr)) {
-                            categoryIndexMapping.put(tmStr, j);
-                        }
                     }
                 } else {
                     categoryIndexMapping.put(category, j);
-                    String tmCategory = CommonUtils.trimTag(category);
-                    if(!category.equals(tmCategory)) {
-                        categoryIndexMapping.put(tmCategory, j);
-                    }
                 }
             }
             categoricalColumnNameNames.put(columnIndex, categories);
