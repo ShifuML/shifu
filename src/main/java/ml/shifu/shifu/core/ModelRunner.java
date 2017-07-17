@@ -60,13 +60,18 @@ public class ModelRunner {
     private Map<String, Scorer> subScorers;
 
     public ModelRunner(ModelConfig modelConfig, List<ColumnConfig> columnConfigList, String[] header,
-                       String dataDelimiter, List<BasicML> models) {
+            String dataDelimiter, List<BasicML> models) {
+        this(modelConfig, columnConfigList, header, dataDelimiter, models, false);
+    }
+
+    public ModelRunner(ModelConfig modelConfig, List<ColumnConfig> columnConfigList, String[] header,
+            String dataDelimiter, List<BasicML> models, boolean outputFirstHiddenLayer) {
         this.modelConfig = modelConfig;
         this.columnConfigList = columnConfigList;
         this.header = header;
         this.dataDelimiter = dataDelimiter;
         this.scorer = new Scorer(models, columnConfigList, modelConfig.getAlgorithm(), modelConfig,
-                modelConfig.getNormalizeStdDevCutOff());
+                modelConfig.getNormalizeStdDevCutOff(), outputFirstHiddenLayer);
     }
 
     /**
@@ -75,10 +80,13 @@ public class ModelRunner {
      * That means client is responsible for preparing the input data map.
      * <p>
      * Notice, the Standard deviation Cutoff will be default - Normalizer.STD_DEV_CUTOFF
-     *
-     * @param modelConfig      model config
-     * @param columnConfigList - @ColumnConfig list for Model
-     * @param models           - models
+     * 
+     * @param modelConfig
+     *            model config
+     * @param columnConfigList
+     *            - @ColumnConfig list for Model
+     * @param models
+     *            - models
      */
     public ModelRunner(ModelConfig modelConfig, List<ColumnConfig> columnConfigList, List<BasicML> models) {
         this(modelConfig, columnConfigList, models, Normalizer.STD_DEV_CUTOFF);
@@ -88,14 +96,18 @@ public class ModelRunner {
      * Constructor for Integration API, if user use this constructor to construct @ModelRunner,
      * only compute(Map(String, String) rawDataMap) is supported to call.
      * That means client is responsible for preparing the input data map.
-     *
-     * @param modelConfig      the modelconfig
-     * @param columnConfigList - @ColumnConfig list for Model
-     * @param models           - models
-     * @param stdDevCutoff     - the standard deviation cutoff to normalize data
+     * 
+     * @param modelConfig
+     *            the modelconfig
+     * @param columnConfigList
+     *            - @ColumnConfig list for Model
+     * @param models
+     *            - models
+     * @param stdDevCutoff
+     *            - the standard deviation cutoff to normalize data
      */
     public ModelRunner(ModelConfig modelConfig, List<ColumnConfig> columnConfigList, List<BasicML> models,
-                       double stdDevCutoff) {
+            double stdDevCutoff) {
         this.columnConfigList = columnConfigList;
         this.modelConfig = modelConfig;
         this.scorer = new Scorer(models, columnConfigList, ALGORITHM.NN.name(), modelConfig, stdDevCutoff);
@@ -103,19 +115,20 @@ public class ModelRunner {
 
     /**
      * Run model to compute score for inputData
-     *
-     * @param inputData - the whole original input data as String
+     * 
+     * @param inputData
+     *            - the whole original input data as String
      * @return CaseScoreResult
      */
     public CaseScoreResult compute(String inputData) {
-        if (dataDelimiter == null || header == null) {
+        if(dataDelimiter == null || header == null) {
             throw new UnsupportedOperationException(
                     "The dataDelimiter and header are null, please use right constructor!");
         }
 
         Map<String, String> rawDataMap = CommonUtils.convertDataIntoMap(inputData, dataDelimiter, header);
 
-        if (MapUtils.isEmpty(rawDataMap)) {
+        if(MapUtils.isEmpty(rawDataMap)) {
             return null;
         }
         return compute(rawDataMap);
@@ -123,19 +136,21 @@ public class ModelRunner {
 
     /**
      * Run model to compute score for input tuple
-     *
-     * @param tuple - the whole original input data as @Tuple
+     * 
+     * @param tuple
+     *            - the whole original input data as @Tuple
      * @return CaseScoreResult
-     * @throws ExecException exec exception in computing model score
+     * @throws ExecException
+     *             exec exception in computing model score
      */
     public CaseScoreResult compute(Tuple tuple) throws ExecException {
-        if (header == null) {
+        if(header == null) {
             throw new UnsupportedOperationException("The header are null, please use right constructor!");
         }
 
         Map<NSColumn, String> rawDataNsMap = CommonUtils.convertDataIntoNsMap(tuple, header);
 
-        if (MapUtils.isEmpty(rawDataNsMap)) {
+        if(MapUtils.isEmpty(rawDataNsMap)) {
             return null;
         }
         return computeNsData(rawDataNsMap);
@@ -143,8 +158,9 @@ public class ModelRunner {
 
     /**
      * Run model to compute score for input data map
-     *
-     * @param rawDataMap - the whole original input data as map
+     * 
+     * @param rawDataMap
+     *            - the whole original input data as map
      * @return CaseScoreResult
      */
     public CaseScoreResult compute(Map<String, String> rawDataMap) {
@@ -153,19 +169,21 @@ public class ModelRunner {
 
     /**
      * Run model to compute score for input NS Data map
-     * @param rawDataNsMap - the original input, but key is wrapped by NSColumn
+     * 
+     * @param rawDataNsMap
+     *            - the original input, but key is wrapped by NSColumn
      * @return CaseScoreResult - model score
      */
     public CaseScoreResult computeNsData(Map<NSColumn, String> rawDataNsMap) {
-        if ( MapUtils.isEmpty(rawDataNsMap) ) {
+        if(MapUtils.isEmpty(rawDataNsMap)) {
             return null;
         }
 
         CaseScoreResult scoreResult = new CaseScoreResult();
 
-        if (this.scorer != null) {
+        if(this.scorer != null) {
             ScoreObject so = scorer.scoreNsData(rawDataNsMap);
-            if (so == null) {
+            if(so == null) {
                 return null;
             }
 
@@ -174,16 +192,17 @@ public class ModelRunner {
             scoreResult.setMinScore(so.getMinScore());
             scoreResult.setAvgScore(so.getMeanScore());
             scoreResult.setMedianScore(so.getMedianScore());
+            scoreResult.setHiddenLayerScores(so.getHiddenLayerScores());
         }
 
-        if (MapUtils.isNotEmpty(this.subScorers)) {
+        if(MapUtils.isNotEmpty(this.subScorers)) {
             Iterator<Map.Entry<String, Scorer>> iterator = this.subScorers.entrySet().iterator();
-            while (iterator.hasNext()) {
+            while(iterator.hasNext()) {
                 Map.Entry<String, Scorer> entry = iterator.next();
                 String modelName = entry.getKey();
                 Scorer subScorer = entry.getValue();
                 ScoreObject so = subScorer.scoreNsData(rawDataNsMap);
-                if (so != null) {
+                if(so != null) {
                     scoreResult.addSubModelScore(modelName, so);
                 }
             }
@@ -194,25 +213,23 @@ public class ModelRunner {
 
     /**
      * add @ModelSpec as sub-model. Create scorer for sub-model
-     *
-     * @param modelSpec - model spec for sub model
+     * 
+     * @param modelSpec
+     *            - model spec for sub model
      */
     public void addSubModels(ModelSpec modelSpec) {
-        if (this.subScorers == null) {
+        if(this.subScorers == null) {
             this.subScorers = new TreeMap<String, Scorer>();
         }
 
-        this.subScorers.put(modelSpec.getModelName(), new Scorer(
-                modelSpec.getModels(),
-                modelSpec.getColumnConfigList(),
-                modelSpec.getAlgorithm().name(),
-                modelSpec.getModelConfig(),
-                modelSpec.getModelConfig().getNormalizeStdDevCutOff()));
+        this.subScorers.put(modelSpec.getModelName(), new Scorer(modelSpec.getModels(),
+                modelSpec.getColumnConfigList(), modelSpec.getAlgorithm().name(), modelSpec.getModelConfig(), modelSpec
+                        .getModelConfig().getNormalizeStdDevCutOff()));
     }
 
     /**
      * Get the models count of current model
-     *
+     * 
      * @return - model count
      */
     public int getModelsCnt() {
@@ -221,14 +238,14 @@ public class ModelRunner {
 
     /**
      * Get the models count of sub-models
-     *
+     * 
      * @return - model count of sub-models
      */
     public Map<String, Integer> getSubModelsCnt() {
-        if (MapUtils.isNotEmpty(this.subScorers)) {
+        if(MapUtils.isNotEmpty(this.subScorers)) {
             Map<String, Integer> subModelsCnt = new TreeMap<String, Integer>();
             Iterator<Map.Entry<String, Scorer>> iterator = this.subScorers.entrySet().iterator();
-            while (iterator.hasNext()) {
+            while(iterator.hasNext()) {
                 Map.Entry<String, Scorer> entry = iterator.next();
                 subModelsCnt.put(entry.getKey(), entry.getValue().getModelCnt());
             }

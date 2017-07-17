@@ -329,7 +329,7 @@ public class NNMaster extends AbstractMasterComputable<NNParams, NNParams> {
         List<Integer> hiddenNodeList = (List<Integer>) validParams.get(CommonConstants.NUM_HIDDEN_NODES);
 
         BasicNetwork network = DTrainUtils.generateNetwork(this.subFeatures.size(), outputNodeCount, numLayers,
-                actFunc, hiddenNodeList);
+                actFunc, hiddenNodeList, this.dropoutRate);
 
         params.setTrainError(0);
         params.setTestError(0);
@@ -385,13 +385,13 @@ public class NNMaster extends AbstractMasterComputable<NNParams, NNParams> {
         if(dropoutRateObj != null) {
             this.dropoutRate = Double.valueOf(dropoutRateObj.toString());
         }
-        LOG.info("dropoutRate in master is :{}", this.dropoutRate);
+        LOG.info("'dropoutRate' in master is : {}", this.dropoutRate);
 
         Object learningDecayO = validParams.get("LearningDecay");
         if(learningDecayO != null) {
             this.learningDecay = Double.valueOf(learningDecayO.toString());
         }
-        LOG.info("learningDecay in master is :{}", learningDecay);
+        LOG.info("'learningDecay' in master is :{}", learningDecay);
 
         Double threshold = this.modelConfig.getTrain().getConvergenceThreshold();
         this.convergenceThreshold = threshold == null ? 0d : threshold.doubleValue();

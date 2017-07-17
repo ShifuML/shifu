@@ -1256,7 +1256,7 @@ public class DTWorker
         // split into validation and training data set according to validation rate
         boolean isInTraining = this.addDataPairToDataSet(hashcode, data, isValidation);
 
-        // do bagging sampling only for training data，
+        // do bagging sampling only for training data
         if(isInTraining) {
             data.subsampleWeights = sampleWeights(data.label);
             // for training data, compute real selected training data according to baggingSampleRate
@@ -1560,7 +1560,9 @@ public class DTWorker
         private static final long serialVersionUID = 903201066309036170L;
 
         /**
-         * Inputs for bin index, short is using to compress
+         * Inputs for bin index, short is using to compress data, for numerical, it can be byte type for less than 256
+         * bins, while it is hard to control byte and short together, as so far memory consumption is OK, just use short
+         * for both numerical and categorical columns
          */
         short[] inputs;
 

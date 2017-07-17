@@ -1,0 +1,61 @@
+#!/usr/bin/env bash
+
+# Copyright [2012-2017] PayPal Software Foundation
+#  
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+# 
+#    http://www.apache.org/licenses/LICENSE-2.0
+#  
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+if [ "${SHIFU_HOME}" == "" ]; then
+    COMMAND=`which $0`
+    if [ -L ${COMMAND} ]; then
+        COMMAND=`readlink ${COMMAND}`
+    fi
+    
+    BIN_DIR=`dirname ${COMMAND}`
+    export SHIFU_HOME="${BIN_DIR}/.."
+    echo "SHIFU_HOME is not set. Using ${BIN_DIR}/.. as SHIFU_HOME"
+fi
+
+_curr_dir=`pwd`
+
+cd ${SHIFU_HOME}/bin/
+${SHIFU_HOME}/bin/shifu new regressiontest-nn
+cd regressiontest-nn
+${SHIFU_HOME}/bin/shifu init
+${SHIFU_HOME}/bin/shifu stats
+${SHIFU_HOME}/bin/shifu norm
+${SHIFU_HOME}/bin/shifu varsel
+${SHIFU_HOME}/bin/shifu train
+${SHIFU_HOME}/bin/shifu eval
+
+cd ${SHIFU_HOME}/bin/
+${SHIFU_HOME}/bin/shifu new regressiontest-lr -t lr
+cd regressiontest-lr
+${SHIFU_HOME}/bin/shifu init
+${SHIFU_HOME}/bin/shifu stats
+${SHIFU_HOME}/bin/shifu norm
+${SHIFU_HOME}/bin/shifu varsel
+${SHIFU_HOME}/bin/shifu train
+${SHIFU_HOME}/bin/shifu eval
+
+cd ${SHIFU_HOME}/bin/
+${SHIFU_HOME}/bin/shifu new regressiontest-gbt -t gbt
+cd regressiontest-gbt
+${SHIFU_HOME}/bin/shifu init
+${SHIFU_HOME}/bin/shifu stats
+${SHIFU_HOME}/bin/shifu norm
+${SHIFU_HOME}/bin/shifu varsel
+${SHIFU_HOME}/bin/shifu train
+${SHIFU_HOME}/bin/shifu eval
+
+cd ${_curr_dir}
+

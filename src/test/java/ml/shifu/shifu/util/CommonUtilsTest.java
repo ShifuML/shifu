@@ -63,7 +63,7 @@ public class CommonUtilsTest {
 
     // @Test
     public void syncTest() throws IOException {
-        ModelConfig config = ModelConfig.createInitModelConfig(".", ALGORITHM.NN, "test");
+        ModelConfig config = ModelConfig.createInitModelConfig(".", ALGORITHM.NN, "test", false);
         config.setModelSetName("testModel");
 
         jsonMapper.writerWithDefaultPrettyPrinter().writeValue(new File("ModelConfig.json"), config);
@@ -148,7 +148,7 @@ public class CommonUtilsTest {
 
     // @Test
     public void syncUpEvalTest() throws IOException {
-        ModelConfig config = ModelConfig.createInitModelConfig(".", ALGORITHM.NN, "test");
+        ModelConfig config = ModelConfig.createInitModelConfig(".", ALGORITHM.NN, "test", false);
         config.setModelSetName("shifu");
 
         File file = new File("evals/EvalA");
@@ -169,7 +169,7 @@ public class CommonUtilsTest {
 
     @Test
     public void loadModelConfigTest() throws JsonGenerationException, JsonMappingException, IOException {
-        ModelConfig config = ModelConfig.createInitModelConfig(".", ALGORITHM.NN, "test");
+        ModelConfig config = ModelConfig.createInitModelConfig(".", ALGORITHM.NN, "test", false);
         config.setModelSetName("shifu");
 
         jsonMapper.writerWithDefaultPrettyPrinter().writeValue(new File("ModelConfig.json"), config);
@@ -297,7 +297,7 @@ public class CommonUtilsTest {
 
     // @Test
     public void updateColumnConfigFlagsTest() throws IOException {
-        ModelConfig config = ModelConfig.createInitModelConfig("test", ALGORITHM.NN, "test");
+        ModelConfig config = ModelConfig.createInitModelConfig("test", ALGORITHM.NN, "test", false);
 
         config.getDataSet().setMetaColumnNameFile("./conf/meta_column_conf.txt");
         config.getVarSelect().setForceRemoveColumnNameFile("./conf/remove_column_list.txt");
@@ -481,10 +481,14 @@ public class CommonUtilsTest {
     public void trimNumber() {
         Assert.assertEquals(CommonUtils.trimTag("1000"), "1000");
         Assert.assertEquals(CommonUtils.trimTag("1.000"), "1");
+        Assert.assertEquals(CommonUtils.trimTag("1.0"), "1");
+        Assert.assertEquals(CommonUtils.trimTag("0.0"), "0");
         Assert.assertEquals(CommonUtils.trimTag("1."), "1");
         Assert.assertEquals(CommonUtils.trimTag("0.0000"), "0");
         Assert.assertEquals(CommonUtils.trimTag("1.03400"), "1.034");
         Assert.assertEquals(CommonUtils.trimTag("1.034001"), "1.034001");
+        Assert.assertEquals(CommonUtils.trimTag("192.168.0.1"), "192.168.0.1");
+        Assert.assertEquals(CommonUtils.trimTag("192.168.0.0"), "192.168.0.0");
         Assert.assertEquals(CommonUtils.trimTag(".0000"), "0");
         Assert.assertEquals(CommonUtils.trimTag(".00001"), "0.00001");
         Assert.assertEquals(CommonUtils.trimTag(".M0001"), ".M0001");

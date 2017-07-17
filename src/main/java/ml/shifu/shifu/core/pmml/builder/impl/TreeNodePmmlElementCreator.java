@@ -24,6 +24,7 @@ import ml.shifu.shifu.core.dtrain.dt.IndependentTreeModel;
 import ml.shifu.shifu.core.dtrain.dt.Node;
 import ml.shifu.shifu.core.dtrain.dt.Split;
 import ml.shifu.shifu.core.pmml.builder.creator.AbstractPmmlElementCreator;
+import ml.shifu.shifu.util.CommonUtils;
 
 import org.dmg.pmml.Array;
 import org.dmg.pmml.FieldName;
@@ -85,7 +86,7 @@ public class TreeNodePmmlElementCreator extends AbstractPmmlElementCreator<org.d
         if(columnConfig.isNumerical()) {
             SimplePredicate p = new SimplePredicate();
             p.setValue(String.valueOf(split.getThreshold()));
-            p.setField(new FieldName(columnConfig.getColumnName()));
+            p.setField(new FieldName(CommonUtils.getSimpleColumnName(columnConfig)));
             if(isLeft) {
                 p.setOperator(SimplePredicate.Operator.fromValue("lessThan"));
             } else {
@@ -96,7 +97,7 @@ public class TreeNodePmmlElementCreator extends AbstractPmmlElementCreator<org.d
             SimpleSetPredicate p = new SimpleSetPredicate();
             Set<Short> childCategories = split.getLeftOrRightCategories();
 
-            p.setField(new FieldName(columnConfig.getColumnName()));
+            p.setField(new FieldName(CommonUtils.getSimpleColumnName(columnConfig)));
             StringBuilder arrayStr = new StringBuilder();
             List<String> valueList = treeModel.getCategoricalColumnNameNames().get(columnConfig.getColumnNum());
             for(Short sh: childCategories) {

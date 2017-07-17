@@ -300,11 +300,11 @@ public class ModelInspector {
         ValidateResult result = new ValidateResult(true);
 
         if(Boolean.TRUE.equals(varSelect.getForceEnable())) {
-            if ( StringUtils.isNotBlank(varSelect.getCandidateColumnNameFile()) ) {
+            if(StringUtils.isNotBlank(varSelect.getCandidateColumnNameFile())) {
                 result = ValidateResult.mergeResult(
                         result,
                         checkFile(varSelect.getCandidateColumnNameFile(), SourceType.LOCAL,
-                                "candidate columns configuration " ));
+                                "candidate columns configuration "));
             }
             if(StringUtils.isNotBlank(varSelect.getForceRemoveColumnNameFile())) {
                 result = ValidateResult.mergeResult(
@@ -682,7 +682,8 @@ public class ModelInspector {
                     if(loss == null) {
                         ValidateResult tmpResult = new ValidateResult(true);
                         tmpResult.setStatus(false);
-                        tmpResult.getCauses().add("'Loss' parameter isn't be set in train#parameters in GBT training.");
+                        tmpResult.getCauses().add(
+                                "'Loss' parameter isn't being set in train#parameters in GBT training.");
                         result = ValidateResult.mergeResult(result, tmpResult);
                     }
                 }
@@ -765,7 +766,7 @@ public class ModelInspector {
                         ValidateResult tmpResult = new ValidateResult(true);
                         tmpResult.setStatus(false);
                         tmpResult.getCauses().add(
-                                "'LearningRate' parameter isn't be set in train#parameters in GBT training.");
+                                "'LearningRate' parameter isn't being set in train#parameters in GBT training.");
                         result = ValidateResult.mergeResult(result, tmpResult);
                     }
                 }
@@ -800,7 +801,7 @@ public class ModelInspector {
                     ValidateResult tmpResult = new ValidateResult(true);
                     tmpResult.setStatus(false);
                     tmpResult.getCauses().add(
-                            "'TreeNum' parameter isn't be set in train#parameters in GBT/RF training.");
+                            "'TreeNum' parameter isn't being set in train#parameters in GBT/RF training.");
                     result = ValidateResult.mergeResult(result, tmpResult);
                 }
 
@@ -833,7 +834,7 @@ public class ModelInspector {
                                 && !"friedmanmse".equalsIgnoreCase(impurityObj.toString())) {
                             ValidateResult tmpResult = new ValidateResult(true);
                             tmpResult.setStatus(false);
-                            tmpResult.getCauses().add("GBDT only supports 'variance' impurity type.");
+                            tmpResult.getCauses().add("GBDT only supports 'variance|friedmanmse' impurity type.");
                             result = ValidateResult.mergeResult(result, tmpResult);
                         }
                     }
@@ -845,7 +846,8 @@ public class ModelInspector {
                                 && !"gini".equalsIgnoreCase(impurityObj.toString())) {
                             ValidateResult tmpResult = new ValidateResult(true);
                             tmpResult.setStatus(false);
-                            tmpResult.getCauses().add("RF supports 'variance|entropy|gini' impurity types.");
+                            tmpResult.getCauses()
+                                    .add("RF supports 'variance|entropy|gini|friedmanmse' impurity types.");
                             result = ValidateResult.mergeResult(result, tmpResult);
                         }
                     }

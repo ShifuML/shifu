@@ -505,7 +505,7 @@ public class LogisticRegressionWorker
 
         boolean isInTraining = addDataPairToDataSet(hashcode, data, isValidation);
 
-        // do bagging sampling only for training data，
+        // do bagging sampling only for training data
         if(isInTraining) {
             float subsampleWeights = sampleWeights(outputData[0]);
             if(isPositive(outputData[0])) {
@@ -528,7 +528,6 @@ public class LogisticRegressionWorker
                 .getBaggingSampleRate();
         int classValue = (int) (label + 0.01f);
         if(!modelConfig.isBaggingWithReplacement()) {
-            // bagging without replacement sampling in training data set, take Random for sampling without replacement
             Random random = null;
             if(this.isStratifiedSampling) {
                 random = baggingRandomMap.get(classValue);

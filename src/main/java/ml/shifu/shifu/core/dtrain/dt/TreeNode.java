@@ -56,7 +56,7 @@ public class TreeNode implements Bytable {
     private int nodeNum;
 
     /**
-     * Store weighted cnt of root node (id = 1) for further computing, it is no meaning full it current node is not ROOT
+     * Store weighted cnt of root node (id = 1) for further computing, it is meaningless if current node is not ROOT
      * node
      */
     private double rootWgtCnt = -1;
@@ -265,32 +265,38 @@ public class TreeNode implements Bytable {
     }
 
     /**
-     * Compute tree model feature importance.
+     * Compute tree model feature importance by accumulating gain. Check scikit-learn for details:
+     * https://github.com/scikit-learn/scikit-learn/blob/master/sklearn/tree/_tree.pyx#L1056
      * 
      * @return a map with (column_id, feature_importance.)
      */
     public Map<Integer, Double> computeFeatureImportance() {
         Map<Integer, Double> importances = new HashMap<Integer, Double>();
-        preOrder(importances, node);
+        double rootWgtCnt = node.getWgtCnt();
+        preOrder(importances, node, rootWgtCnt);
         return importances;
     }
 
-    private void preOrder(Map<Integer, Double> importances, Node node) {
+    private void preOrder(Map<Integer, Double> importances, Node node, double rootWgtCnt) {
         if(node == null) {
             return;
         }
-        computeImportance(importances, node);
-        preOrder(importances, node.getLeft());
-        preOrder(importances, node.getRight());
+        computeImportance(importances, node, rootWgtCnt);
+        preOrder(importances, node.getLeft(), rootWgtCnt);
+        preOrder(importances, node.getRight(), rootWgtCnt);
     }
 
-    private void computeImportance(Map<Integer, Double> importances, Node node) {
+    private void computeImportance(Map<Integer, Double> importances, Node node, double rootWgtCnt) {
         if(!node.isRealLeaf()) {
             int featureId = node.getSplit().getColumnNum();
+            // gain * wgtcount is count* impurity - leftCount * leftImpurity - rightCount * rightImpurity in
+            // scikit-learn:
+            // https://github.com/scikit-learn/scikit-learn/blob/master/sklearn/tree/_tree.pyx#L1056
+            double contribution = (node.getGain() * node.getWgtCnt()) / rootWgtCnt;
             if(!importances.containsKey(featureId)) {
-                importances.put(featureId, node.getGain());
+                importances.put(featureId, contribution);
             } else {
-                importances.put(featureId, importances.get(featureId) + node.getGain());
+                importances.put(featureId, importances.get(featureId) + contribution);
             }
         }
     }
@@ -300,4 +306,11 @@ public class TreeNode implements Bytable {
         return "TreeNode [treeId=" + treeId + ", node=" + node.getId() + ", features=" + features + "]";
     }
 
+    public void remapColumnNum(Map<Integer, Integer> columnMapping) {
+        if(columnMapping == null || columnMapping.size() == 0) {
+            return;
+        }
+
+        this.node.remapColumnNum(columnMapping);
+    }
 }

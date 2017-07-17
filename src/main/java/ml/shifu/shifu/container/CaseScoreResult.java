@@ -17,6 +17,7 @@ package ml.shifu.shifu.container;
 
 import java.util.List;
 import java.util.Map;
+import java.util.SortedMap;
 import java.util.TreeMap;
 
 /**
@@ -32,6 +33,8 @@ public class CaseScoreResult {
     private double medianScore;
 
     private Map<String, CaseScoreResult> subModelScores;
+
+    private SortedMap<String, Double> hiddenLayerScores;
 
     public CaseScoreResult() {
         super();
@@ -77,7 +80,8 @@ public class CaseScoreResult {
     }
 
     /**
-     * @param medianScore the medianScore to set
+     * @param medianScore
+     *            the medianScore to set
      */
     public void setMedianScore(double medianScore) {
         this.medianScore = medianScore;
@@ -92,7 +96,7 @@ public class CaseScoreResult {
     }
 
     public void addSubModelScore(String modelName, ScoreObject so) {
-        if ( this.subModelScores == null ) {
+        if(this.subModelScores == null) {
             this.subModelScores = new TreeMap<String, CaseScoreResult>();
         }
 
@@ -108,5 +112,20 @@ public class CaseScoreResult {
 
     public Map<String, CaseScoreResult> getSubModelScores() {
         return subModelScores;
+    }
+
+    /**
+     * @return the hiddenLayerScores
+     */
+    public SortedMap<String, Double> getHiddenLayerScores() {
+        return hiddenLayerScores;
+    }
+
+    /**
+     * @param hiddenLayerScores
+     *            the hiddenLayerScores to set
+     */
+    public void setHiddenLayerScores(SortedMap<String, Double> hiddenLayerScores) {
+        this.hiddenLayerScores = hiddenLayerScores;
     }
 }
