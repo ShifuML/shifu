@@ -142,7 +142,15 @@ public class DTOutput extends BasicMasterInterceptor<DTMasterParams, DTWorkerPar
                         // we can start from this point to save time.
                         // another case for master recovery, if master is failed, read such checkpoint model
                         Path out = new Path(context.getProps().getProperty(CommonConstants.GUAGUA_OUTPUT));
-                        writeModelToFileSystem(context.getMasterResult().getTrees(), out);
+
+                        // if current iteration is the last iteration, or it is halted by early stop condition, no
+                        // need to save checkpoint model here as it is replicated with postApplicaiton.
+                        // There is issue here if saving the same model in this thread and another thread in
+                        // postApplication, sometimes this conflict will cause model writing failed.
+                        if(!context.getMasterResult().isHalt()
+                                && context.getCurrentIteration() != context.getTotalIteration()) {
+                            writeModelToFileSystem(context.getMasterResult().getTrees(), out);
+                        }
 
                         saveTmpModelToHDFS(context.getCurrentIteration(), context.getMasterResult().getTrees());
                     }
@@ -164,7 +172,15 @@ public class DTOutput extends BasicMasterInterceptor<DTMasterParams, DTWorkerPar
                             // running we can start from this point to save time.
                             // another case for master recovery, if master is failed, read such checkpoint model
                             Path out = new Path(context.getProps().getProperty(CommonConstants.GUAGUA_OUTPUT));
-                            writeModelToFileSystem(subTrees, out);
+
+                            // if current iteration is the last iteration, or it is halted by early stop condition, no
+                            // need to save checkpoint model here as it is replicated with postApplicaiton.
+                            // There is issue here if saving the same model in this thread and another thread in
+                            // postApplication, sometimes this conflict will cause model writing failed.
+                            if(!context.getMasterResult().isHalt()
+                                    && context.getCurrentIteration() != context.getTotalIteration()) {
+                                writeModelToFileSystem(subTrees, out);
+                            }
                             // last one is newest one with only ROOT node, should be excluded
                             saveTmpModelToHDFS(subTrees.size(), subTrees);
                         }

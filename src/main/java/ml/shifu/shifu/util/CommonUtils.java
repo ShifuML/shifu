@@ -474,7 +474,7 @@ public final class CommonUtils {
         int index = 0;
         for(String str: Splitter.on(delimiter).split(pigHeaderStr)) {
             String columnName = StringUtils.trimToEmpty(str);
-            if ( !Environment.getBoolean(Constants.SHIFU_NAMESPACE_STRICT_MODE, false) ) {
+            if(!Environment.getBoolean(Constants.SHIFU_NAMESPACE_STRICT_MODE, false)) {
                 columnName = getRelativePigHeaderColumnName(str);
             }
             /*
