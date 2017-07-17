@@ -72,14 +72,13 @@ public class ModelTrainConf {
     /**
      * How many bagging jobs in training.
      */
-    private Integer baggingNum = Integer.valueOf(5);
-    // this is set default as true as bagging often with replacement sampleing.
+    private Integer baggingNum = Integer.valueOf(1);
 
     /**
      * Bagging sampling with replacement, this is only works well in NN. In RF, bagging sampling with replacement is
      * enabled no matter true or false. In GBT, bagging sampling with replacement is disabled no matter true or false
      */
-    private Boolean baggingWithReplacement = Boolean.TRUE;
+    private Boolean baggingWithReplacement = Boolean.FALSE;
 
     /**
      * In each bagging job to do sampling according to this sample rate.

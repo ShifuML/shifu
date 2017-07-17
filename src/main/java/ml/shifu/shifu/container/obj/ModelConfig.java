@@ -36,6 +36,7 @@ import ml.shifu.shifu.fs.ShifuFileUtils;
 import ml.shifu.shifu.util.CommonUtils;
 import ml.shifu.shifu.util.Constants;
 import ml.shifu.shifu.util.Environment;
+import ml.shifu.shifu.util.HDFSUtils;
 
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang.StringUtils;
@@ -156,12 +157,14 @@ public class ModelConfig {
      *            , algorithm used, for LR/NN/RF/GBT, diferent init parameters will be set
      * @param description
      *            data set description
+     * @param enableHadoop
+     *            if it is distributed Hadoop cluster mode
      * @return ModelConfig instance
      * @throws IOException
      *             if any exception in column configuration file creation
      */
-    public static ModelConfig createInitModelConfig(String modelName, ALGORITHM alg, String description)
-            throws IOException {
+    public static ModelConfig createInitModelConfig(String modelName, ALGORITHM alg, String description,
+            boolean enableHadoop) throws IOException {
         ModelConfig modelConfig = new ModelConfig();
 
         DateFormat df = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
@@ -169,20 +172,39 @@ public class ModelConfig {
         // build meta info
         ModelBasicConf basic = new ModelBasicConf();
         basic.setName(modelName);
+
         basic.setAuthor(Environment.getProperty(Environment.SYSTEM_USER));
+        basic.setRunMode(enableHadoop ? RunMode.DIST : RunMode.LOCAL);
         basic.setDescription("Created at " + df.format(new Date()));
         modelConfig.setBasic(basic);
 
         // build data set info
         ModelSourceDataConf dataSet = new ModelSourceDataConf();
-        dataSet.setSource(SourceType.LOCAL);
         dataSet.setDataDelimiter("|");
-        dataSet.setDataPath(new File(Environment.getProperty(Environment.SHIFU_HOME), File.separator + "example"
-                + File.separator + "cancer-judgement" + File.separator + "DataStore" + File.separator + "DataSet1")
-                .toString());
-        dataSet.setHeaderPath(new File(Environment.getProperty(Environment.SHIFU_HOME), File.separator + "example"
-                + File.separator + "cancer-judgement" + File.separator + "DataStore" + File.separator + "DataSet1"
-                + File.separator + ".pig_header").toString());
+
+        String exampleLocalDSPath = new File(Environment.getProperty(Environment.SHIFU_HOME), File.separator
+                + "example" + File.separator + "cancer-judgement" + File.separator + "DataStore" + File.separator
+                + "DataSet1").toString();
+        if(enableHadoop) {
+            Path dst = new Path(File.separator + "user" + File.separator
+                    + Environment.getProperty(Environment.SYSTEM_USER) + File.separator + "cancer-judgement");
+            HDFSUtils.getFS().delete(dst, true);
+            HDFSUtils.getFS().mkdirs(dst);
+
+            HDFSUtils.getFS().copyFromLocalFile(new Path(exampleLocalDSPath), dst);
+            dataSet.setSource(SourceType.HDFS);
+            dataSet.setDataPath(new File(File.separator + "user" + File.separator
+                    + Environment.getProperty(Environment.SYSTEM_USER) + File.separator + "cancer-judgement"
+                    + File.separator + "DataSet1").toString());
+            dataSet.setHeaderPath(new File(File.separator + "user" + File.separator
+                    + Environment.getProperty(Environment.SYSTEM_USER) + File.separator + "cancer-judgement"
+                    + File.separator + "DataSet1" + File.separator + ".pig_header").toString());
+        } else {
+            dataSet.setSource(SourceType.LOCAL);
+            dataSet.setDataPath(exampleLocalDSPath);
+            dataSet.setHeaderPath(exampleLocalDSPath + File.separator + ".pig_header");
+        }
+
         dataSet.setTargetColumnName("diagnosis");
 
         List<String> posTags = new ArrayList<String>();
@@ -248,20 +270,33 @@ public class ModelConfig {
         } else if(ALGORITHM.LR.equals(alg)) {
             trainConf.setNumTrainEpochs(100);
         }
-        trainConf.setBaggingWithReplacement(true);
+        trainConf.setBaggingWithReplacement(false);
         modelConfig.setTrain(trainConf);
 
         EvalConfig evalConfig = new EvalConfig();
         evalConfig.setName("Eval1");
         RawSourceData evalSet = modelConfig.getDataSet().cloneRawSourceData();
-        evalSet.setSource(SourceType.LOCAL);
         evalSet.setDataDelimiter("|");
-        evalSet.setDataPath(new File(Environment.getProperty(Environment.SHIFU_HOME), File.separator + "example"
-                + File.separator + "cancer-judgement" + File.separator + "DataStore" + File.separator + "EvalSet1")
-                .toString());
-        evalSet.setHeaderPath(new File(Environment.getProperty(Environment.SHIFU_HOME), File.separator + "example"
-                + File.separator + "cancer-judgement" + File.separator + "DataStore" + File.separator + "EvalSet1"
-                + File.separator + ".pig_header").toString());
+        String exampleLocalESFolder = new File(Environment.getProperty(Environment.SHIFU_HOME), File.separator
+                + "example" + File.separator + "cancer-judgement" + File.separator + "DataStore" + File.separator
+                + "EvalSet1").toString();
+        if(enableHadoop) {
+            evalSet.setSource(SourceType.HDFS);
+            Path dst = new Path(File.separator + "user" + File.separator
+                    + Environment.getProperty(Environment.SYSTEM_USER) + File.separator + "cancer-judgement");
+            HDFSUtils.getFS().copyFromLocalFile(new Path(exampleLocalESFolder), dst);
+
+            evalSet.setDataPath(new File(File.separator + "user" + File.separator
+                    + Environment.getProperty(Environment.SYSTEM_USER) + File.separator + "cancer-judgement"
+                    + File.separator + "EvalSet1").toString());
+            evalSet.setHeaderPath(new File(File.separator + "user" + File.separator
+                    + Environment.getProperty(Environment.SYSTEM_USER) + File.separator + "cancer-judgement"
+                    + File.separator + "EvalSet1" + File.separator + ".pig_header").toString());
+        } else {
+            evalSet.setSource(SourceType.LOCAL);
+            evalSet.setDataPath(exampleLocalESFolder);
+            evalSet.setHeaderPath(exampleLocalESFolder + File.separator + ".pig_header");
+        }
         // create empty <ModelName>/<EvalSetName>.meta.column.names
         String namesFilePath = Constants.COLUMN_META_FOLDER_NAME + File.separator + evalConfig.getName() + "."
                 + Constants.DEFAULT_META_COLUMN_FILE;
@@ -666,8 +701,9 @@ public class ModelConfig {
 
     @JsonIgnore
     public List<String> getListCandidates() throws IOException {
-        String delimiter = StringUtils.isBlank(this.getHeaderDelimiter())  // header delimiter has higher priority
-                ? this.getDataSetDelimiter() : this.getHeaderDelimiter();
+        String delimiter = StringUtils.isBlank(this.getHeaderDelimiter()) // header delimiter has higher priority
+        ? this.getDataSetDelimiter()
+                : this.getHeaderDelimiter();
 
         String candidateColumnNameFile = varSelect.getCandidateColumnNameFile();
         if(StringUtils.isBlank(candidateColumnNameFile)) {
@@ -680,7 +716,7 @@ public class ModelConfig {
                         defaultCandidateColumnNameFile);
             } else {
                 LOG.warn(
-                        "'varSelect::candidateColumnNameFile' is not set and default candidateColumnNameFile: {} is not found, no candidate config files, please check and set force-select config file in 'varSelect::candidateColumnNameFile'.",
+                        "'varSelect::candidateColumnNameFile' is not set and default candidateColumnNameFile: {} is not found, no candidate config files, please check and set candidate columns in 'varSelect::candidateColumnNameFile'.",
                         defaultCandidateColumnNameFile);
                 return new ArrayList<String>();
             }

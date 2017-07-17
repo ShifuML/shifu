@@ -94,6 +94,17 @@ public class TreeModel extends BasicML implements MLRegression {
         return new TreeModel(IndependentTreeModel.loadFromStream(input, isConvertToProb));
     }
 
+    public static TreeModel loadFromStream(InputStream input, boolean isConvertToProb, boolean isOptimizeMode)
+            throws IOException {
+        return new TreeModel(IndependentTreeModel.loadFromStream(input, isConvertToProb, isOptimizeMode));
+    }
+
+    public static TreeModel loadFromStream(InputStream input, boolean isConvertToProb, boolean isOptimizeMode,
+            boolean isRemoveNameSpace) throws IOException {
+        return new TreeModel(IndependentTreeModel.loadFromStream(input, isConvertToProb, isOptimizeMode,
+                isRemoveNameSpace));
+    }
+
     @Override
     public int getOutputCount() {
         // mock as output is only 1 dimension
@@ -132,18 +143,20 @@ public class TreeModel extends BasicML implements MLRegression {
     public Map<Integer, MutablePair<String, Double>> getFeatureImportances() {
         Map<Integer, MutablePair<String, Double>> importancesSum = new HashMap<Integer, MutablePair<String, Double>>();
         Map<Integer, String> nameMapping = this.getIndependentTreeModel().getNumNameMapping();
-        int size = this.getIndependentTreeModel().getTrees().size();
+        int treeSize = this.getIndependentTreeModel().getTrees().size();
         for(TreeNode tree: this.getIndependentTreeModel().getTrees()) {
+            // get current tree importance at first
             Map<Integer, Double> subImportances = tree.computeFeatureImportance();
+            // merge feature importance from different trees
             for(Entry<Integer, Double> entry: subImportances.entrySet()) {
                 String featureName = nameMapping.get(entry.getKey());
                 MutablePair<String, Double> importance = MutablePair.of(featureName, entry.getValue());
                 if(!importancesSum.containsKey(entry.getKey())) {
-                    importance.setValue(importance.getValue() / size);
+                    importance.setValue(importance.getValue() / treeSize);
                     importancesSum.put(entry.getKey(), importance);
                 } else {
                     MutablePair<String, Double> current = importancesSum.get(entry.getKey());
-                    current.setValue(current.getValue() + importance.getValue() / size);
+                    current.setValue(current.getValue() + importance.getValue() / treeSize);
                     importancesSum.put(entry.getKey(), current);
                 }
             }

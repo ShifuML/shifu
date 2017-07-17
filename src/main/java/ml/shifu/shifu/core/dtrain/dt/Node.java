@@ -20,6 +20,7 @@ import java.io.DataOutput;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 import ml.shifu.guagua.io.Bytable;
 
@@ -37,6 +38,163 @@ import ml.shifu.guagua.io.Bytable;
  * @author Zhang David (pengzhang@paypal.com)
  */
 public class Node implements Bytable {
+
+    public static class NodeStats {
+
+        /**
+         * Impurity value for such node, such value can be computed from different {@link Impurity} like {@link Entropy}
+         * , {@link Variance}.
+         */
+        private double impurity;
+
+        /**
+         * Predict value for left child, null if leaf.
+         */
+        private Predict leftPredict;
+
+        /**
+         * Left impurity value, 0 if leaf.
+         */
+        private double leftImpurity;
+
+        /**
+         * Predict value for right child, null if leaf.
+         */
+        private Predict rightPredict;
+
+        /**
+         * Impurity for right node.
+         */
+        private double rightImpurity;
+
+        /**
+         * 'isLeaf' is used to set a flag not to extend this tree.
+         */
+        private boolean isLeaf;
+
+        /**
+         * Ratio of # of weighted instances in such node over # of all weighted instances
+         */
+        private double wgtCntRatio;
+
+        /**
+         * @return the impurity
+         */
+        public double getImpurity() {
+            return impurity;
+        }
+
+        /**
+         * @return the leftPredict
+         */
+        public Predict getLeftPredict() {
+            return leftPredict;
+        }
+
+        /**
+         * @return the leftImpurity
+         */
+        public double getLeftImpurity() {
+            return leftImpurity;
+        }
+
+        /**
+         * @return the rightPredict
+         */
+        public Predict getRightPredict() {
+            return rightPredict;
+        }
+
+        /**
+         * @return the rightImpurity
+         */
+        public double getRightImpurity() {
+            return rightImpurity;
+        }
+
+        /**
+         * @param impurity
+         *            the impurity to set
+         */
+        public void setImpurity(double impurity) {
+            this.impurity = impurity;
+        }
+
+        /**
+         * @param leftPredict
+         *            the leftPredict to set
+         */
+        public void setLeftPredict(Predict leftPredict) {
+            this.leftPredict = leftPredict;
+        }
+
+        /**
+         * @param leftImpurity
+         *            the leftImpurity to set
+         */
+        public void setLeftImpurity(double leftImpurity) {
+            this.leftImpurity = leftImpurity;
+        }
+
+        /**
+         * @param rightPredict
+         *            the rightPredict to set
+         */
+        public void setRightPredict(Predict rightPredict) {
+            this.rightPredict = rightPredict;
+        }
+
+        /**
+         * @param rightImpurity
+         *            the rightImpurity to set
+         */
+        public void setRightImpurity(double rightImpurity) {
+            this.rightImpurity = rightImpurity;
+        }
+
+        /**
+         * @return the isLeaf
+         */
+        public boolean isLeaf() {
+            return isLeaf;
+        }
+
+        /**
+         * @param isLeaf
+         *            the isLeaf to set
+         */
+        public void setLeaf(boolean isLeaf) {
+            this.isLeaf = isLeaf;
+        }
+
+        /**
+         * @return the wgtCntRatio
+         */
+        public double getWgtCntRatio() {
+            return wgtCntRatio;
+        }
+
+        /**
+         * @param wgtCntRatio
+         *            the wgtCntRatio to set
+         */
+        public void setWgtCntRatio(double wgtCntRatio) {
+            this.wgtCntRatio = wgtCntRatio;
+        }
+
+        /*
+         * (non-Javadoc)
+         * 
+         * @see java.lang.Object#toString()
+         */
+        @Override
+        public String toString() {
+            return "NodeStats [impurity=" + impurity + ", leftPredict=" + leftPredict + ", leftImpurity="
+                    + leftImpurity + ", rightPredict=" + rightPredict + ", rightImpurity=" + rightImpurity
+                    + ", isLeaf=" + isLeaf + ", wgtCntRatio=" + wgtCntRatio + "]";
+        }
+
+    }
 
     /**
      * Node id, start from 1, 2, 3 ...
@@ -65,46 +223,25 @@ public class Node implements Bytable {
     private Predict predict;
 
     /**
-     * Ratio of # of weighted instances in such node over # of all weighted instances
+     * Node stats like gain and impurity used for split, no need in execution
      */
-    private double wgtCntRatio;
+    private NodeStats nodeStats;
 
     /**
      * Gain for such node, such value can be computed from different {@link Impurity} like {@link Entropy},
      * {@link Variance}. Gain = impurity - leftWeight * leftImpurity - rightWeight * rightImpurity.
+     * 
+     * <p>
+     * Set gain to float and in fact in disk it is set to float to save disk, here set to float type to save memory
+     * also.
      */
-    private double gain;
+    private float gain;
 
     /**
-     * Impurity value for such node, such value can be computed from different {@link Impurity} like {@link Entropy},
-     * {@link Variance}.
+     * Current weighted node count is mostly used for feature importance, by gain * wgtCount to compute contribution per
+     * each node.
      */
-    private double impurity;
-
-    /**
-     * Predict value for left child, null if leaf.
-     */
-    private Predict leftPredict;
-
-    /**
-     * Left impurity value, 0 if leaf.
-     */
-    private double leftImpurity;
-
-    /**
-     * Predict value for right child, null if leaf.
-     */
-    private Predict rightPredict;
-
-    /**
-     * Impurity for right node.
-     */
-    private double rightImpurity;
-
-    /**
-     * 'isLeaf' is used to set a flag not to extend this tree.
-     */
-    private boolean isLeaf;
+    private double wgtCnt;
 
     /**
      * Default root index is 1. Others are 2, 3, 4, 5 ...
@@ -133,18 +270,9 @@ public class Node implements Bytable {
     public Node(int id, Predict predict, double impurity, boolean isLeaf) {
         this.id = id;
         this.predict = predict;
-        this.impurity = impurity;
-        this.isLeaf = isLeaf;
-    }
-
-    public Node(int id, Split split, Node left, Node right, Predict predict, double gain, double impurity) {
-        this.id = id;
-        this.split = split;
-        this.left = left;
-        this.right = right;
-        this.predict = predict;
-        this.gain = gain;
-        this.impurity = impurity;
+        this.nodeStats = new NodeStats();
+        this.nodeStats.setImpurity(impurity);
+        this.nodeStats.setLeaf(isLeaf);
     }
 
     /**
@@ -179,42 +307,42 @@ public class Node implements Bytable {
      * @return the gain
      */
     public double getGain() {
-        return gain;
+        return this.gain;
     }
 
     /**
      * @return the impurity
      */
     public double getImpurity() {
-        return impurity;
+        return nodeStats.getImpurity();
     }
 
     /**
      * @return the leftPredict
      */
     public Predict getLeftPredict() {
-        return leftPredict;
+        return nodeStats.getLeftPredict();
     }
 
     /**
      * @return the leftImpurity
      */
     public double getLeftImpurity() {
-        return leftImpurity;
+        return nodeStats.getLeftImpurity();
     }
 
     /**
      * @return the rightPredict
      */
     public Predict getRightPredict() {
-        return rightPredict;
+        return nodeStats.getRightPredict();
     }
 
     /**
      * @return the rightImpurity
      */
     public double getRightImpurity() {
-        return rightImpurity;
+        return nodeStats.getRightImpurity();
     }
 
     /**
@@ -254,7 +382,8 @@ public class Node implements Bytable {
      *            the gain to set
      */
     public void setGain(double gain) {
-        this.gain = gain;
+        // cast to float is ok to save memory
+        this.gain = (float) gain;
     }
 
     /**
@@ -262,7 +391,10 @@ public class Node implements Bytable {
      *            the impurity to set
      */
     public void setImpurity(double impurity) {
-        this.impurity = impurity;
+        if(this.nodeStats == null) {
+            this.nodeStats = new NodeStats();
+        }
+        this.nodeStats.setImpurity(impurity);
     }
 
     /**
@@ -270,7 +402,10 @@ public class Node implements Bytable {
      *            the leftPredict to set
      */
     public void setLeftPredict(Predict leftPredict) {
-        this.leftPredict = leftPredict;
+        if(this.nodeStats == null) {
+            this.nodeStats = new NodeStats();
+        }
+        this.nodeStats.setLeftPredict(leftPredict);
     }
 
     /**
@@ -278,7 +413,10 @@ public class Node implements Bytable {
      *            the leftImpurity to set
      */
     public void setLeftImpurity(double leftImpurity) {
-        this.leftImpurity = leftImpurity;
+        if(this.nodeStats == null) {
+            this.nodeStats = new NodeStats();
+        }
+        this.nodeStats.setLeftImpurity(leftImpurity);
     }
 
     /**
@@ -286,7 +424,10 @@ public class Node implements Bytable {
      *            the rightPredict to set
      */
     public void setRightPredict(Predict rightPredict) {
-        this.rightPredict = rightPredict;
+        if(this.nodeStats == null) {
+            this.nodeStats = new NodeStats();
+        }
+        this.nodeStats.setRightPredict(rightPredict);
     }
 
     /**
@@ -294,7 +435,10 @@ public class Node implements Bytable {
      *            the rightImpurity to set
      */
     public void setRightImpurity(double rightImpurity) {
-        this.rightImpurity = rightImpurity;
+        if(this.nodeStats == null) {
+            this.nodeStats = new NodeStats();
+        }
+        this.nodeStats.setRightImpurity(rightImpurity);
     }
 
     /**
@@ -321,11 +465,14 @@ public class Node implements Bytable {
      *            the isLeaf to set
      */
     public void setLeaf(boolean isLeaf) {
-        this.isLeaf = isLeaf;
+        if(this.nodeStats == null) {
+            this.nodeStats = new NodeStats();
+        }
+        this.nodeStats.setLeaf(isLeaf);
     }
 
     boolean isLeaf() {
-        return this.isLeaf;
+        return this.nodeStats.isLeaf();
     }
 
     /**
@@ -388,19 +535,15 @@ public class Node implements Bytable {
         return id << 1;
     }
 
-    /**
-     * @return the wgtCnt
-     */
     public double getWgtCntRatio() {
-        return wgtCntRatio;
+        return this.nodeStats.getWgtCntRatio();
     }
 
-    /**
-     * @param wgtCntRatio
-     *            the wgtCntRatio to set
-     */
     public void setWgtCntRatio(double wgtCntRatio) {
-        this.wgtCntRatio = wgtCntRatio;
+        if(this.nodeStats == null) {
+            this.nodeStats = new NodeStats();
+        }
+        this.nodeStats.setWgtCntRatio(wgtCntRatio);
     }
 
     /**
@@ -442,7 +585,9 @@ public class Node implements Bytable {
 
         // cast to float to save space
         out.writeFloat((float) gain);
-        out.writeFloat((float) wgtCntRatio);
+
+        // change current float to double to get a better accuracy, start from tree model version 3 to use it as double
+        out.writeDouble(this.wgtCnt);
 
         if(split == null) {
             out.writeBoolean(false);
@@ -481,8 +626,14 @@ public class Node implements Bytable {
     @Override
     public void readFields(DataInput in) throws IOException {
         this.id = in.readInt();
+
         this.gain = in.readFloat();
-        this.wgtCntRatio = in.readFloat();
+        // for back-forward compatibility, still need to read two floats here for wgtCntRatio
+        if(IndependentTreeModel.getVersion() <= 2) {
+            this.wgtCnt = in.readFloat();
+        } else {
+            this.wgtCnt = in.readDouble();
+        }
 
         if(in.readBoolean()) {
             this.split = new Split();
@@ -508,11 +659,43 @@ public class Node implements Bytable {
         }
     }
 
+    /**
+     * @return the nodeStats
+     */
+    public NodeStats getNodeStats() {
+        return nodeStats;
+    }
+
+    /**
+     * @param nodeStats
+     *            the nodeStats to set
+     */
+    public void setNodeStats(NodeStats nodeStats) {
+        this.nodeStats = nodeStats;
+    }
+
+    /**
+     * @return the wgtCount
+     */
+    public double getWgtCnt() {
+        return wgtCnt;
+    }
+
+    /**
+     * @param wgtCount
+     *            the wgtCount to set
+     */
+    public void setWgtCnt(double wgtCount) {
+        this.wgtCnt = wgtCount;
+    }
+
     @Override
     public String toString() {
         return "Node [id=" + id + ", split=" + split + ", left=" + left + ", right=" + right + ", predict=" + predict
-                + ", gain=" + gain + ", impurity=" + impurity + ", leftPredict=" + leftPredict + ", leftImpurity="
-                + leftImpurity + ", rightPredict=" + rightPredict + ", rightImpurity=" + rightImpurity + "]";
+                + ", gain=" + gain + ", impurity=" + nodeStats == null ? null : nodeStats.impurity + ", leftPredict="
+                + nodeStats == null ? null : nodeStats.leftPredict + ", leftImpurity=" + nodeStats == null ? null
+                : nodeStats.leftImpurity + ", rightPredict=" + nodeStats == null ? null : nodeStats.rightPredict
+                        + ", rightImpurity=" + nodeStats == null ? null : nodeStats.rightImpurity + "]";
     }
 
     public String toTree() {
@@ -524,5 +707,19 @@ public class Node implements Bytable {
             str += this.right.toTree();
         }
         return str;
+    }
+
+    public void remapColumnNum(Map<Integer, Integer> columnMapping) {
+        if(this.split != null && columnMapping.containsKey(this.split.getColumnNum())) {
+            this.split.setColumnNum(columnMapping.get(this.split.getColumnNum()));
+        }
+
+        if(this.left != null) {
+            this.left.remapColumnNum(columnMapping);
+        }
+
+        if(this.right != null) {
+            this.right.remapColumnNum(columnMapping);
+        }
     }
 }

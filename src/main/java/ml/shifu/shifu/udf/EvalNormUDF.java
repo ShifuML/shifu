@@ -15,6 +15,15 @@
  */
 package ml.shifu.shifu.udf;
 
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+
 import ml.shifu.shifu.column.NSColumn;
 import ml.shifu.shifu.container.CaseScoreResult;
 import ml.shifu.shifu.container.obj.ColumnConfig;
@@ -24,6 +33,8 @@ import ml.shifu.shifu.core.Normalizer;
 import ml.shifu.shifu.core.dtrain.DTrainUtils;
 import ml.shifu.shifu.core.pmml.builder.impl.ZscoreLocalTransformCreator;
 import ml.shifu.shifu.util.CommonUtils;
+import ml.shifu.shifu.util.Environment;
+
 import org.apache.commons.collections.MapUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.pig.data.DataType;
@@ -31,15 +42,15 @@ import org.apache.pig.data.Tuple;
 import org.apache.pig.data.TupleFactory;
 import org.apache.pig.impl.logicalLayer.schema.Schema;
 import org.apache.pig.impl.logicalLayer.schema.Schema.FieldSchema;
+import org.apache.pig.impl.util.UDFContext;
 import org.encog.ml.BasicML;
-
-import java.io.IOException;
-import java.util.*;
 
 /**
  * Calculate the score for each evaluation data
  */
 public class EvalNormUDF extends AbstractTrainerUDF<Tuple> {
+
+    private static final String SHIFU_EVAL_NORM_OUTPUTRAW = "shifu.eval.norm.outputraw";
 
     @SuppressWarnings("unused")
     private static final String SCHEMA_PREFIX = "eval::";
@@ -64,6 +75,11 @@ public class EvalNormUDF extends AbstractTrainerUDF<Tuple> {
      */
     private int validMetaSize = 0;
 
+    /**
+     * If output raw variables together with norm variables
+     */
+    private boolean isOutputRaw = true;
+
     public EvalNormUDF(String source, String pathModelConfig, String pathColumnConfig, String evalSetName, String scale)
             throws IOException {
         super(source, pathModelConfig, pathColumnConfig);
@@ -71,7 +87,7 @@ public class EvalNormUDF extends AbstractTrainerUDF<Tuple> {
         evalConfig = modelConfig.getEvalConfigByName(evalSetName);
 
         if(StringUtils.isBlank(evalConfig.getDataSet().getHeaderPath())) {
-            throw new RuntimeException("The evaluation data set header couldn't be empty!");
+            log.warn("eval header path is empty, take the first line as schema (for csv format)");
         }
 
         this.headers = CommonUtils.getFinalHeaders(evalConfig);
@@ -152,6 +168,14 @@ public class EvalNormUDF extends AbstractTrainerUDF<Tuple> {
             }
         }
         this.scale = scale;
+
+        if(UDFContext.getUDFContext() != null && UDFContext.getUDFContext().getJobConf() != null) {
+            this.isOutputRaw = Boolean.TRUE.toString().equalsIgnoreCase(
+                    UDFContext.getUDFContext().getJobConf().get(SHIFU_EVAL_NORM_OUTPUTRAW, Boolean.TRUE.toString()));
+        } else {
+            this.isOutputRaw = Boolean.TRUE.toString().equalsIgnoreCase(
+                    Environment.getProperty(SHIFU_EVAL_NORM_OUTPUTRAW, Boolean.TRUE.toString()));
+        }
     }
 
     public Tuple exec(Tuple input) throws IOException {
@@ -166,36 +190,39 @@ public class EvalNormUDF extends AbstractTrainerUDF<Tuple> {
         }
 
         Map<NSColumn, String> rawDataNsMap = CommonUtils.convertDataIntoNsMap(input, this.headers);
-        if ( MapUtils.isEmpty(rawDataNsMap) ) {
+        if(MapUtils.isEmpty(rawDataNsMap)) {
             return null;
         }
 
-        Tuple tuple = TupleFactory.getInstance().newTuple(this.outputNames.size() + 1);
+        Tuple tuple = TupleFactory.getInstance().newTuple();
         for(int i = 0; i < this.outputNames.size(); i++) {
             String name = this.outputNames.get(i);
             String raw = rawDataNsMap.get(new NSColumn(name));
             if(i == 0) {
-                tuple.set(i, raw);
+                tuple.append(raw);
             } else if(i == 1) {
-                tuple.set(i, (StringUtils.isEmpty(raw) ? "1" : raw));
+                tuple.append(StringUtils.isEmpty(raw) ? "1" : raw);
             } else if(i > 1 && i < 2 + validMetaSize) {
                 // [2, 2 + validMetaSize) are meta columns
-                tuple.set(i, raw);
+                tuple.append(raw);
             } else {
                 ColumnConfig columnConfig = this.columnConfigMap.get(name);
                 Double value = Normalizer.normalize(columnConfig, raw, this.modelConfig.getNormalizeStdDevCutOff(),
                         this.modelConfig.getNormalizeType());
-                tuple.set(i, value);
+                if(this.isOutputRaw) {
+                    tuple.append(raw);
+                }
+                tuple.append(value);
             }
         }
 
         CaseScoreResult score = this.modelRunner.computeNsData(rawDataNsMap);
         if(this.modelRunner == null || this.modelRunner.getModelsCnt() == 0 || score == null) {
-            tuple.set(this.outputNames.size(), -999.0);
+            tuple.append(-999.0);
         } else if(this.scIndex < 0) {
-            tuple.set(this.outputNames.size(), score.getAvgScore());
+            tuple.append(score.getAvgScore());
         } else {
-            tuple.set(this.outputNames.size(), score.getScores().get(this.scIndex));
+            tuple.append(score.getScores().get(this.scIndex));
         }
 
         return tuple;
@@ -213,6 +240,14 @@ public class EvalNormUDF extends AbstractTrainerUDF<Tuple> {
                     // set target, weight and meta columns to string
                     tupleSchema.add(new FieldSchema(name, DataType.CHARARRAY));
                 } else {
+                    if(this.isOutputRaw) {
+                        ColumnConfig columnConfig = this.columnConfigMap.get(name);
+                        if(columnConfig.isNumerical()) {
+                            tupleSchema.add(new FieldSchema(name, DataType.DOUBLE));
+                        } else {
+                            tupleSchema.add(new FieldSchema(name, DataType.CHARARRAY));
+                        }
+                    }
                     tupleSchema.add(new FieldSchema(ZscoreLocalTransformCreator.genPmmlColumnName(name,
                             this.modelConfig.getNormalizeType()), DataType.DOUBLE));
                 }

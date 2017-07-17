@@ -121,7 +121,7 @@ public class CorrelationMapper extends Mapper<LongWritable, Text, IntWritable, C
                 if(config.getBinCategory() != null) {
                     for(int i = 0; i < config.getBinCategory().size(); i++) {
                         List<String> cvals = CommonUtils.flattenCatValGrp(config.getBinCategory().get(i));
-                        for ( String cval : cvals ) {
+                        for(String cval: cvals) {
                             map.put(cval, i);
                         }
                     }
@@ -154,6 +154,8 @@ public class CorrelationMapper extends Mapper<LongWritable, Text, IntWritable, C
         if(!this.dataPurifier.isFilterOut(valueStr)) {
             return;
         }
+
+        long startO = System.currentTimeMillis();
 
         context.getCounter(Constants.SHIFU_GROUP_COUNTER, "CNT_AFTER_FILTER").increment(1L);
 
@@ -234,6 +236,8 @@ public class CorrelationMapper extends Mapper<LongWritable, Text, IntWritable, C
                     }
                 }
             }
+            LOG.debug("running time is {}ms in thread {}", (System.currentTimeMillis() - startO), Thread
+                    .currentThread().getName());
         }
     }
 

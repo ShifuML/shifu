@@ -125,6 +125,11 @@ public class NNOutput extends BasicMasterInterceptor<NNParams, NNParams> {
      */
     protected Set<Integer> subFeatures;
 
+    /**
+     * Dropout rate which is in [0, 1], default it is 0
+     */
+    private double dropoutRate = 0d;
+
     @Override
     public void preApplication(MasterContext<NNParams, NNParams> context) {
         init(context);
@@ -157,7 +162,15 @@ public class NNOutput extends BasicMasterInterceptor<NNParams, NNParams> {
                     // we can start from this point to save time.
                     // another case for master recovery, if master is failed, read such checkpoint model
                     Path out = new Path(context.getProps().getProperty(CommonConstants.GUAGUA_OUTPUT));
-                    writeModelWeightsToFileSystem(optimizedWeights, out);
+
+                    // if current iteration is the last iteration, or it is halted by early stop condition, no need to
+                    // save checkpoint model here as it is replicated with postApplicaiton.
+                    // There is issue here if saving the same model in this thread and another thread in
+                    // postApplication, sometimes this conflict will cause model writing failed.
+                    if(!context.getMasterResult().isHalt()
+                            && context.getCurrentIteration() != context.getTotalIteration()) {
+                        writeModelWeightsToFileSystem(optimizedWeights, out);
+                    }
                 }
             }, "saveTmpNNToHDFS thread");
             tmpNNThread.setDaemon(true);
@@ -199,6 +212,8 @@ public class NNOutput extends BasicMasterInterceptor<NNParams, NNParams> {
 
         if(optimizedWeights != null) {
             Path out = new Path(context.getProps().getProperty(CommonConstants.GUAGUA_OUTPUT));
+            // TODO do we need to check IOException and retry again to make sure such important model is saved
+            // successfully.
             writeModelWeightsToFileSystem(optimizedWeights, out);
         }
 
@@ -250,6 +265,13 @@ public class NNOutput extends BasicMasterInterceptor<NNParams, NNParams> {
             if(kCrossValidation != null && kCrossValidation > 0) {
                 isKFoldCV = true;
             }
+
+            Object dropoutRateObj = validParams.get(CommonConstants.DROPOUT_RATE);
+            if(dropoutRateObj != null) {
+                this.dropoutRate = Double.valueOf(dropoutRateObj.toString());
+            }
+            LOG.info("'dropoutRate' in master output is :{}", this.dropoutRate);
+
             initNetwork(context);
         }
 
@@ -311,18 +333,30 @@ public class NNOutput extends BasicMasterInterceptor<NNParams, NNParams> {
         }
 
         this.network = DTrainUtils.generateNetwork(this.subFeatures.size(), outputNodeCount, numLayers, actFunc,
-                hiddenNodeList, false);
+                hiddenNodeList, false, this.dropoutRate);
         ((BasicFloatNetwork) this.network).setFeatureSet(this.subFeatures);
 
         PersistorRegistry.getInstance().add(new PersistBasicFloatNetwork());
     }
 
     private void writeModelWeightsToFileSystem(double[] weights, Path out) {
+        double[] finalWeights = null;
+        if(this.dropoutRate == 0d) {
+            finalWeights = weights;
+        } else {
+            finalWeights = new double[weights.length];
+            for(int i = 0; i < finalWeights.length; i++) {
+                // do we need to norm all weights or leave last hidden layer to output layer not normed???
+                // it is ok to add or not added in last iteration as such parameters only impact last final output score
+                // but not change the order of scores
+                finalWeights[i] = weights[i] * (1 - this.dropoutRate);
+            }
+        }
         FSDataOutputStream fos = null;
         try {
             fos = FileSystem.get(new Configuration()).create(out);
             LOG.info("Writing results to {}", out);
-            this.network.getFlat().setWeights(weights);
+            this.network.getFlat().setWeights(finalWeights);
             if(out != null) {
                 EncogDirectoryPersistence.saveObject(fos, this.network);
             }
