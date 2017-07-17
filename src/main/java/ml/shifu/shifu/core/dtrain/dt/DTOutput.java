@@ -133,8 +133,12 @@ public class DTOutput extends BasicMasterInterceptor<DTMasterParams, DTWorkerPar
         long start = System.currentTimeMillis();
         // save tmp to hdfs according to raw trainer logic
         final int tmpModelFactor = DTrainUtils.tmpModelFactor(context.getTotalIteration());
+        final int currentIteration = context.getCurrentIteration();
+        final int totalIteration = context.getTotalIteration();
+        final boolean isHalt = context.getMasterResult().isHalt();
+
         if(isRF) {
-            if(context.getCurrentIteration() % (tmpModelFactor * 2) == 0) {
+            if(currentIteration % (tmpModelFactor * 2) == 0) {
                 Thread tmpModelPersistThread = new Thread(new Runnable() {
                     @Override
                     public void run() {
@@ -147,8 +151,7 @@ public class DTOutput extends BasicMasterInterceptor<DTMasterParams, DTWorkerPar
                         // need to save checkpoint model here as it is replicated with postApplicaiton.
                         // There is issue here if saving the same model in this thread and another thread in
                         // postApplication, sometimes this conflict will cause model writing failed.
-                        if(!context.getMasterResult().isHalt()
-                                && context.getCurrentIteration() != context.getTotalIteration()) {
+                        if(!isHalt && currentIteration != totalIteration) {
                             writeModelToFileSystem(context.getMasterResult().getTrees(), out);
                         }
 
@@ -177,8 +180,7 @@ public class DTOutput extends BasicMasterInterceptor<DTMasterParams, DTWorkerPar
                             // need to save checkpoint model here as it is replicated with postApplicaiton.
                             // There is issue here if saving the same model in this thread and another thread in
                             // postApplication, sometimes this conflict will cause model writing failed.
-                            if(!context.getMasterResult().isHalt()
-                                    && context.getCurrentIteration() != context.getTotalIteration()) {
+                            if(!isHalt && currentIteration != totalIteration) {
                                 writeModelToFileSystem(subTrees, out);
                             }
                             // last one is newest one with only ROOT node, should be excluded
