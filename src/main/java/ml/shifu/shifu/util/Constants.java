@@ -259,5 +259,19 @@ public interface Constants {
     public static final String CATEGORICAL_GROUP_VAL_DELIMITER = "@^";
 
     public static final String SHIFU_NAMESPACE_STRICT_MODE = "shifu.namespace.strict.mode";
+    
+    public static final String EMPTY_CATEGORY = "";
+    
+    /**
+     * The limitation of max categorical value length
+     */
+    public static final int MAX_CATEGORICAL_VAL_LEN = 10 * 1024;
+    
+    /**
+     * Experience value from modeler
+     */
+    public static final int MAX_CATEGORICAL_BINC_COUNT = 10000;
+    
+    public static final String SHIFU_MAX_CATEGORY_SIZE = "shifu.max.category.size";
 
 }

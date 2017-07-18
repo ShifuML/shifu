@@ -87,9 +87,9 @@ public class BinningDataMergeUDF extends AbstractTrainerUDF<Tuple> {
 
         // Do check here. It's because if there are too many value for categorical variable,
         // it will consume too much memory when join them together, that will cause OOM exception
-        if(binFields.size() > CalculateNewStatsUDF.MAX_CATEGORICAL_BINC_COUNT) {
+        if(binFields.size() > this.maxCategorySize) {
             log.warn(columnId + " " + columnConfig.getColumnName() + " is over maximal categorical size: "
-                    + CalculateNewStatsUDF.MAX_CATEGORICAL_BINC_COUNT);
+                    + this.maxCategorySize);
             output.set(1, "");
         } else {
             output.set(1, StringUtils.join(binFields, CalculateStatsUDF.CATEGORY_VAL_SEPARATOR));
