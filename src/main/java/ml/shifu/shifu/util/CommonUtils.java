@@ -332,11 +332,12 @@ public final class CommonUtils {
         String[] fields = null;
         boolean isSchemaProvided = true;
         if(StringUtils.isNotBlank(modelConfig.getHeaderPath())) {
-            fields = CommonUtils.getHeaders(modelConfig.getHeaderPath(), modelConfig.getHeaderDelimiter(), modelConfig
-                    .getDataSet().getSource());
+            fields = CommonUtils.getHeaders(modelConfig.getHeaderPath(), modelConfig.getHeaderDelimiter(),
+                    modelConfig.getDataSet().getSource());
         } else {
-            fields = CommonUtils.takeFirstLine(modelConfig.getDataSetRawPath(), StringUtils.isBlank(modelConfig
-                    .getHeaderDelimiter()) ? modelConfig.getDataSetDelimiter() : modelConfig.getHeaderDelimiter(),
+            fields = CommonUtils.takeFirstLine(modelConfig.getDataSetRawPath(),
+                    StringUtils.isBlank(modelConfig.getHeaderDelimiter()) ? modelConfig.getDataSetDelimiter()
+                            : modelConfig.getHeaderDelimiter(),
                     modelConfig.getDataSet().getSource());
             if(StringUtils.join(fields, "").contains(modelConfig.getTargetColumnName())) {
                 // if first line contains target column name, we guess it is csv format and first line is header.
@@ -365,14 +366,17 @@ public final class CommonUtils {
         String[] fields = null;
         boolean isSchemaProvided = true;
         if(StringUtils.isNotBlank(evalConfig.getDataSet().getHeaderPath())) {
-            String delimiter = StringUtils.isBlank(evalConfig.getDataSet().getHeaderDelimiter()) ? evalConfig
-                    .getDataSet().getDataDelimiter() : evalConfig.getDataSet().getHeaderDelimiter();
-            fields = CommonUtils.getHeaders(evalConfig.getDataSet().getHeaderPath(), delimiter, evalConfig.getDataSet()
-                    .getSource());
+            String delimiter = StringUtils.isBlank(evalConfig.getDataSet().getHeaderDelimiter())
+                    ? evalConfig.getDataSet().getDataDelimiter()
+                    : evalConfig.getDataSet().getHeaderDelimiter();
+            fields = CommonUtils.getHeaders(evalConfig.getDataSet().getHeaderPath(), delimiter,
+                    evalConfig.getDataSet().getSource());
         } else {
-            fields = CommonUtils.takeFirstLine(evalConfig.getDataSet().getDataPath(), StringUtils.isBlank(evalConfig
-                    .getDataSet().getHeaderDelimiter()) ? evalConfig.getDataSet().getDataDelimiter() : evalConfig
-                    .getDataSet().getHeaderDelimiter(), evalConfig.getDataSet().getSource());
+            fields = CommonUtils.takeFirstLine(evalConfig.getDataSet().getDataPath(),
+                    StringUtils.isBlank(evalConfig.getDataSet().getHeaderDelimiter())
+                            ? evalConfig.getDataSet().getDataDelimiter()
+                            : evalConfig.getDataSet().getHeaderDelimiter(),
+                    evalConfig.getDataSet().getSource());
             // TODO - if there is no target column in eval, it may fail to check it is schema or not
             if(StringUtils.join(fields, "").contains(evalConfig.getDataSet().getTargetColumnName())) {
                 // if first line contains target column name, we guess it is csv format and first line is header.
@@ -446,9 +450,9 @@ public final class CommonUtils {
     public static String[] getHeaders(String pathHeader, String delimiter, SourceType sourceType, boolean isFull)
             throws IOException {
         if(StringUtils.isEmpty(pathHeader) || StringUtils.isEmpty(delimiter) || sourceType == null) {
-            throw new IllegalArgumentException(String.format(
-                    "Null or empty parameters srcDataPath:%s, dstDataPath:%s, sourceType:%s", pathHeader, delimiter,
-                    sourceType));
+            throw new IllegalArgumentException(
+                    String.format("Null or empty parameters srcDataPath:%s, dstDataPath:%s, sourceType:%s", pathHeader,
+                            delimiter, sourceType));
         }
         BufferedReader reader = null;
         String pigHeaderStr = null;
@@ -457,8 +461,8 @@ public final class CommonUtils {
             reader = ShifuFileUtils.getReader(pathHeader, sourceType);
             pigHeaderStr = reader.readLine();
             if(StringUtils.isEmpty(pigHeaderStr)) {
-                throw new RuntimeException(String.format("Cannot reade header info from the first line of file: %s",
-                        pathHeader));
+                throw new RuntimeException(
+                        String.format("Cannot reade header info from the first line of file: %s", pathHeader));
             }
         } catch (Exception e) {
             log.error(
@@ -654,8 +658,8 @@ public final class CommonUtils {
      */
     public static List<String> splitAndReturnList(String raw, String delimiter) {
         if(StringUtils.isEmpty(raw) || StringUtils.isEmpty(delimiter)) {
-            throw new IllegalArgumentException(String.format(
-                    "raw and delimeter should not be null or empty, raw:%s, delimeter:%s", raw, delimiter));
+            throw new IllegalArgumentException(String
+                    .format("raw and delimeter should not be null or empty, raw:%s, delimeter:%s", raw, delimiter));
         }
         List<String> headerList = new ArrayList<String>();
         for(String str: Splitter.on(delimiter).split(raw)) {
@@ -714,13 +718,12 @@ public final class CommonUtils {
      */
     public static List<BasicML> loadBasicModels(ModelConfig modelConfig, List<ColumnConfig> columnConfigList,
             EvalConfig evalConfig) throws IOException {
-        if(modelConfig == null
-                || (!Constants.NN.equalsIgnoreCase(modelConfig.getAlgorithm())
-                        && !Constants.SVM.equalsIgnoreCase(modelConfig.getAlgorithm())
-                        && !Constants.LR.equalsIgnoreCase(modelConfig.getAlgorithm()) && !CommonUtils
-                            .isTreeModel(modelConfig.getAlgorithm()))) {
-            throw new IllegalArgumentException(modelConfig == null ? "modelConfig is null." : String.format(
-                    " invalid model algorithm %s.", modelConfig.getAlgorithm()));
+        if(modelConfig == null || (!Constants.NN.equalsIgnoreCase(modelConfig.getAlgorithm())
+                && !Constants.SVM.equalsIgnoreCase(modelConfig.getAlgorithm())
+                && !Constants.LR.equalsIgnoreCase(modelConfig.getAlgorithm())
+                && !CommonUtils.isTreeModel(modelConfig.getAlgorithm()))) {
+            throw new IllegalArgumentException(modelConfig == null ? "modelConfig is null."
+                    : String.format(" invalid model algorithm %s.", modelConfig.getAlgorithm()));
         }
 
         return loadBasicModels(modelConfig, evalConfig, modelConfig.getDataSet().getSource());
@@ -939,7 +942,8 @@ public final class CommonUtils {
             FileStatus[] expandedPaths = fs.globStatus(new Path(modelsPath));
             if(ArrayUtils.isNotEmpty(expandedPaths)) {
                 for(FileStatus epath: expandedPaths) {
-                    fileList.addAll(Arrays.asList(fs.listStatus(epath.getPath(), new FileSuffixPathFilter(modelSuffix))));
+                    fileList.addAll(
+                            Arrays.asList(fs.listStatus(epath.getPath(), new FileSuffixPathFilter(modelSuffix))));
                 }
             }
         }
@@ -1220,7 +1224,8 @@ public final class CommonUtils {
      * @throws IllegalArgumentException
      *             if modelConfig is null.
      */
-    public static Map<String, String> getPigParamMap(ModelConfig modelConfig, SourceType sourceType) throws IOException {
+    public static Map<String, String> getPigParamMap(ModelConfig modelConfig, SourceType sourceType)
+            throws IOException {
         if(modelConfig == null) {
             throw new IllegalArgumentException("modelConfig should not be null.");
         }
@@ -2167,20 +2172,20 @@ public final class CommonUtils {
         }
 
         if(isBinaryClassification) {
-            return columnConfig.isCandidate()
-                    && (columnConfig.getKs() != null && columnConfig.getKs() > 0 && columnConfig.getIv() != null
-                            && columnConfig.getIv() > 0 && columnConfig.getMean() != null
-                            && columnConfig.getStdDev() != null && ((columnConfig.isCategorical()
-                            && columnConfig.getBinCategory() != null && columnConfig.getBinCategory().size() > 1) || (columnConfig
-                            .isNumerical() && columnConfig.getBinBoundary() != null && columnConfig.getBinBoundary()
-                            .size() > 1)));
+            return columnConfig.isCandidate() && (columnConfig.getKs() != null && columnConfig.getKs() > 0
+                    && columnConfig.getIv() != null && columnConfig.getIv() > 0 && columnConfig.getMean() != null
+                    && columnConfig.getStdDev() != null
+                    && ((columnConfig.isCategorical() && columnConfig.getBinCategory() != null
+                            && columnConfig.getBinCategory().size() > 1)
+                            || (columnConfig.isNumerical() && columnConfig.getBinBoundary() != null
+                                    && columnConfig.getBinBoundary().size() > 1)));
         } else {
             // multiple classification
-            return columnConfig.isCandidate()
-                    && (columnConfig.getMean() != null && columnConfig.getStdDev() != null && ((columnConfig
-                            .isCategorical() && columnConfig.getBinCategory() != null && columnConfig.getBinCategory()
-                            .size() > 1) || (columnConfig.isNumerical() && columnConfig.getBinBoundary() != null && columnConfig
-                            .getBinBoundary().size() > 1)));
+            return columnConfig.isCandidate() && (columnConfig.getMean() != null && columnConfig.getStdDev() != null
+                    && ((columnConfig.isCategorical() && columnConfig.getBinCategory() != null
+                            && columnConfig.getBinCategory().size() > 1)
+                            || (columnConfig.isNumerical() && columnConfig.getBinBoundary() != null
+                                    && columnConfig.getBinBoundary().size() > 1)));
         }
     }
 
@@ -2189,12 +2194,13 @@ public final class CommonUtils {
             return false;
         }
 
-        return columnConfig.isCandidate()
-                && (columnConfig.getKs() != null && columnConfig.getKs() > 0 && columnConfig.getIv() != null
-                        && columnConfig.getIv() > 0 && columnConfig.getMean() != null
-                        && columnConfig.getStdDev() != null && ((columnConfig.isCategorical()
-                        && columnConfig.getBinCategory() != null && columnConfig.getBinCategory().size() > 1) || (columnConfig
-                        .isNumerical() && columnConfig.getBinBoundary() != null && columnConfig.getBinBoundary().size() > 1)));
+        return columnConfig.isCandidate() && (columnConfig.getKs() != null && columnConfig.getKs() > 0
+                && columnConfig.getIv() != null && columnConfig.getIv() > 0 && columnConfig.getMean() != null
+                && columnConfig.getStdDev() != null
+                && ((columnConfig.isCategorical() && columnConfig.getBinCategory() != null
+                        && columnConfig.getBinCategory().size() > 1)
+                        || (columnConfig.isNumerical() && columnConfig.getBinBoundary() != null
+                                && columnConfig.getBinBoundary().size() > 1)));
     }
 
     /**
@@ -2210,7 +2216,8 @@ public final class CommonUtils {
      * @throws IOException
      *             any io exception
      */
-    public static String[] takeFirstLine(String dataSetRawPath, String delimeter, SourceType source) throws IOException {
+    public static String[] takeFirstLine(String dataSetRawPath, String delimeter, SourceType source)
+            throws IOException {
         if(dataSetRawPath == null || delimeter == null || source == null) {
             throw new IllegalArgumentException("Input parameters should not be null.");
         }
@@ -2393,8 +2400,8 @@ public final class CommonUtils {
             for(Entry<Integer, MutablePair<String, Double>> entry: item.entrySet()) {
                 if(!finalResult.containsKey(entry.getKey())) {
                     // do average on models by dividing modelSize
-                    MutablePair<String, Double> value = MutablePair.of(entry.getValue().getKey(), entry.getValue()
-                            .getValue() / modelSize);
+                    MutablePair<String, Double> value = MutablePair.of(entry.getValue().getKey(),
+                            entry.getValue().getValue() / modelSize);
                     finalResult.put(entry.getKey(), value);
                 } else {
                     MutablePair<String, Double> current = finalResult.get(entry.getKey());
@@ -2511,4 +2518,39 @@ public final class CommonUtils {
         }
         return catVals;
     }
+
+    /**
+     * Manual split function to avoid depending on guava.
+     * 
+     * <p>
+     * Some examples: "^"=&gt;[, ]; ""=&gt;[]; "a"=&gt;[a]; "abc"=&gt;[abc]; "a^"=&gt;[a, ]; "^b"=&gt;[, b];
+     * "^^b"=&gt;[, , b]
+     * 
+     * @param str
+     *            the string to be split
+     * @param delimiter
+     *            the delimiter
+     * @return split string array
+     */
+    public static String[] splitString(String str, String delimiter) {
+        if(str == null || str.length() == 0) {
+            return new String[] { "" };
+        }
+
+        List<String> categories = new ArrayList<String>();
+        int dLen = delimiter.length();
+        int begin = 0;
+        for(int i = 0; i < str.length(); i++) {
+            if(str.substring(i, Math.min(i + dLen, str.length())).equals(delimiter)) {
+                categories.add(str.substring(begin, i));
+                begin = i + dLen;
+            }
+            if(i == str.length() - 1) {
+                categories.add(str.substring(begin, str.length()));
+            }
+        }
+
+        return categories.toArray(new String[0]);
+    }
+
 }
