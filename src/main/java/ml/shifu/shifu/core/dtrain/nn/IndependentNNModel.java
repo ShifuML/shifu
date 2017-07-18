@@ -71,6 +71,11 @@ public class IndependentNNModel {
     private Map<Integer, Map<String, Double>> weightedCategoricalWoeMappings;
 
     /**
+     * Mapping for (columnNum, (category, posRate)) for categorical columns
+     */
+    private Map<Integer, Map<String, Double>> binPosRateMappings;
+
+    /**
      * Mapping for (columnNum, binBoundaries) for numerical columns
      */
     private Map<Integer, List<Double>> numericalBinBoundaries;
@@ -85,11 +90,6 @@ public class IndependentNNModel {
      * Mapping for (columnNum, weightedWoes) for numerical columns, last one in weightedWoes is for missing value bin
      */
     private Map<Integer, List<Double>> numericalWoes;
-
-    /**
-     * Mapping for (columnNum, (category, posRate)) for categorical columns
-     */
-    private Map<Integer, Map<String, Double>> binPosRateMappings;
 
     /**
      * ZScore stddev cutoff value
@@ -296,4 +296,5 @@ public class IndependentNNModel {
     public static double defaultMissingValue(Double mean) {
         return mean == null ? 0 : mean.doubleValue();
     }
+
 }
