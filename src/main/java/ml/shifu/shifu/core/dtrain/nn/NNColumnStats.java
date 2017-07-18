@@ -1,0 +1,375 @@
+/*
+ * Copyright [2013-2017] PayPal Software Foundation
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package ml.shifu.shifu.core.dtrain.nn;
+
+import java.io.DataInput;
+import java.io.DataOutput;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
+
+import ml.shifu.guagua.io.Bytable;
+import ml.shifu.shifu.core.dtrain.dt.FeatureType;
+
+/**
+ * TODO
+ * 
+ * @author pengzhang
+ */
+public class NNColumnStats implements Bytable {
+
+    public NNColumnStats() {
+    }
+
+    public NNColumnStats(int columnNum, String columnName, FeatureType featureType, double mean, double stddev,
+            double woeMean, double woeStddev, double woeWgtMean, double woeWgtStddev, List<Double> binBoundaries,
+            List<String> binCategories, List<Double> binPosRates, List<Double> binCountWoes,
+            List<Double> binWeightWoes) {
+        this.columnNum = columnNum;
+        this.columnName = columnName;
+        this.featureType = featureType;
+        this.mean = mean;
+        this.stddev = stddev;
+        this.woeMean = woeMean;
+        this.woeStddev = woeStddev;
+        this.woeWgtMean = woeWgtMean;
+        this.woeWgtStddev = woeWgtStddev;
+        this.binBoundaries = binBoundaries;
+        this.binCategories = binCategories;
+        this.binPosRates = binPosRates;
+        this.binCountWoes = binCountWoes;
+        this.binWeightWoes = binWeightWoes;
+    }
+
+    private int columnNum;
+    
+    private String columnName;
+    
+    private FeatureType featureType;
+
+    private double mean;
+
+    private double stddev;
+
+    private double woeMean;
+
+    private double woeStddev;
+
+    private double woeWgtMean;
+
+    private double woeWgtStddev;
+
+    private List<Double> binBoundaries;
+
+    private List<String> binCategories;
+
+    private List<Double> binPosRates;
+
+    private List<Double> binCountWoes;
+
+    private List<Double> binWeightWoes;
+    
+    public boolean isCategorical() {
+        return this.featureType == FeatureType.CATEGORICAL;
+    }
+
+    @Override
+    public void write(DataOutput out) throws IOException {
+        out.writeInt(this.columnNum);
+        out.writeUTF(this.columnName);
+        out.writeByte(this.featureType.getByteType());
+        out.writeDouble(this.mean);
+        out.writeDouble(this.stddev);
+        out.writeDouble(this.woeMean);
+        out.writeDouble(this.woeStddev);
+        out.writeDouble(this.woeWgtMean);
+        out.writeDouble(this.woeWgtStddev);
+        
+        switch(this.featureType) {
+            case CONTINUOUS:
+                writeDoubleArray(out, this.binBoundaries);
+                break;
+            case CATEGORICAL:
+                int cateSize = this.binCategories.size();
+                out.writeInt(cateSize);
+                for(int i = 0; i < cateSize; i++) {
+                    out.writeUTF(this.binCategories.get(i));
+                }
+                break;
+        }
+        writeDoubleArray(out, this.binPosRates);
+        writeDoubleArray(out, this.binCountWoes);
+        writeDoubleArray(out, this.binWeightWoes);
+    }
+
+    @Override
+    public void readFields(DataInput in) throws IOException {
+        this.columnNum = in.readInt();
+        this.columnName = in.readUTF();
+        this.featureType = FeatureType.of(in.readByte());
+        this.mean = in.readDouble();
+        this.stddev = in.readDouble();
+        this.woeMean = in.readDouble();
+        this.woeStddev = in.readDouble();
+        this.woeWgtMean = in.readDouble();
+        this.woeWgtStddev = in.readDouble();
+        switch(this.featureType) {
+            case CONTINUOUS:
+                this.binBoundaries = readDoubleList(in);
+                break;
+            case CATEGORICAL:
+                int cateSize = in.readInt();
+                List<String> categories =  new ArrayList<String>(cateSize);
+                for(int i = 0; i < cateSize; i++) {
+                    categories.add(in.readUTF());
+                }
+                this.binCategories = categories;
+                break;
+        }
+        this.binPosRates = readDoubleList(in);
+        this.binCountWoes = readDoubleList(in);
+        this.binWeightWoes = readDoubleList(in);
+    }
+    
+    private List<Double> readDoubleList(DataInput in) throws IOException {
+        int size = in.readInt();
+        List<Double> list = new ArrayList<Double>();
+        for(int i = 0; i < size; i++) {
+            list.add(in.readDouble());
+        }
+        return list;
+    }
+    
+    private void writeDoubleArray(DataOutput out, List<Double> list) throws IOException {
+        if(list == null) {
+            out.writeInt(0);
+        } else {
+            out.writeInt(list.size());
+            for(double d: list) {
+                out.writeDouble(d);
+            }
+        }
+    }
+
+    /**
+     * @return the featureType
+     */
+    public FeatureType getFeatureType() {
+        return featureType;
+    }
+
+    /**
+     * @param featureType
+     *            the featureType to set
+     */
+    public void setFeatureType(FeatureType featureType) {
+        this.featureType = featureType;
+    }
+
+    /**
+     * @return the mean
+     */
+    public double getMean() {
+        return mean;
+    }
+
+    /**
+     * @param mean
+     *            the mean to set
+     */
+    public void setMean(double mean) {
+        this.mean = mean;
+    }
+
+    /**
+     * @return the stddev
+     */
+    public double getStddev() {
+        return stddev;
+    }
+
+    /**
+     * @param stddev
+     *            the stddev to set
+     */
+    public void setStddev(double stddev) {
+        this.stddev = stddev;
+    }
+
+    /**
+     * @return the woeMean
+     */
+    public double getWoeMean() {
+        return woeMean;
+    }
+
+    /**
+     * @param woeMean
+     *            the woeMean to set
+     */
+    public void setWoeMean(double woeMean) {
+        this.woeMean = woeMean;
+    }
+
+    /**
+     * @return the woeStddev
+     */
+    public double getWoeStddev() {
+        return woeStddev;
+    }
+
+    /**
+     * @param woeStddev
+     *            the woeStddev to set
+     */
+    public void setWoeStddev(double woeStddev) {
+        this.woeStddev = woeStddev;
+    }
+
+    /**
+     * @return the woeWgtMean
+     */
+    public double getWoeWgtMean() {
+        return woeWgtMean;
+    }
+
+    /**
+     * @param woeWgtMean
+     *            the woeWgtMean to set
+     */
+    public void setWoeWgtMean(double woeWgtMean) {
+        this.woeWgtMean = woeWgtMean;
+    }
+
+    /**
+     * @return the woeWgtStddev
+     */
+    public double getWoeWgtStddev() {
+        return woeWgtStddev;
+    }
+
+    /**
+     * @param woeWgtStddev
+     *            the woeWgtStddev to set
+     */
+    public void setWoeWgtStddev(double woeWgtStddev) {
+        this.woeWgtStddev = woeWgtStddev;
+    }
+
+    /**
+     * @return the binBoundaries
+     */
+    public List<Double> getBinBoundaries() {
+        return binBoundaries;
+    }
+
+    /**
+     * @param binBoundaries
+     *            the binBoundaries to set
+     */
+    public void setBinBoundaries(List<Double> binBoundaries) {
+        this.binBoundaries = binBoundaries;
+    }
+
+    /**
+     * @return the binCategories
+     */
+    public List<String> getBinCategories() {
+        return binCategories;
+    }
+
+    /**
+     * @param binCategories
+     *            the binCategories to set
+     */
+    public void setBinCategories(List<String> binCategories) {
+        this.binCategories = binCategories;
+    }
+
+    /**
+     * @return the binPosRates
+     */
+    public List<Double> getBinPosRates() {
+        return binPosRates;
+    }
+
+    /**
+     * @param binPosRates
+     *            the binPosRates to set
+     */
+    public void setBinPosRates(List<Double> binPosRates) {
+        this.binPosRates = binPosRates;
+    }
+
+    /**
+     * @return the binCountWoes
+     */
+    public List<Double> getBinCountWoes() {
+        return binCountWoes;
+    }
+
+    /**
+     * @param binCountWoes
+     *            the binCountWoes to set
+     */
+    public void setBinCountWoes(List<Double> binCountWoes) {
+        this.binCountWoes = binCountWoes;
+    }
+
+    /**
+     * @return the binWeightWoes
+     */
+    public List<Double> getBinWeightWoes() {
+        return binWeightWoes;
+    }
+
+    /**
+     * @param binWeightWoes
+     *            the binWeightWoes to set
+     */
+    public void setBinWeightWoes(List<Double> binWeightWoes) {
+        this.binWeightWoes = binWeightWoes;
+    }
+
+    /**
+     * @return the columnName
+     */
+    public String getColumnName() {
+        return columnName;
+    }
+
+    /**
+     * @param columnName the columnName to set
+     */
+    public void setColumnName(String columnName) {
+        this.columnName = columnName;
+    }
+
+    /**
+     * @return the columnNum
+     */
+    public int getColumnNum() {
+        return columnNum;
+    }
+
+    /**
+     * @param columnNum the columnNum to set
+     */
+    public void setColumnNum(int columnNum) {
+        this.columnNum = columnNum;
+    }
+
+}
