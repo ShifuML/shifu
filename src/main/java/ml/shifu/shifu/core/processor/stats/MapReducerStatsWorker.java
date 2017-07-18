@@ -529,6 +529,7 @@ public class MapReducerStatsWorker extends AbstractStatsExecutor {
 
         if (scanners == null || scanners.size() == 0) {
             log.info("The PSI got failure during the computation");
+            return;
         }
 
         for(Scanner scanner: scanners) {
