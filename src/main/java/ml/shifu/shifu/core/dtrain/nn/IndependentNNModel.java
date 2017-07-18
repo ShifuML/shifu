@@ -15,14 +15,24 @@
  */
 package ml.shifu.shifu.core.dtrain.nn;
 
+import java.io.BufferedInputStream;
+import java.io.DataInputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.zip.GZIPInputStream;
 
 import ml.shifu.shifu.container.obj.ModelNormalizeConf.NormType;
 import ml.shifu.shifu.core.Normalizer;
 import ml.shifu.shifu.core.dtrain.CommonConstants;
 import ml.shifu.shifu.core.dtrain.dataset.BasicFloatNetwork;
+import ml.shifu.shifu.core.dtrain.dataset.PersistBasicFloatNetwork;
+import ml.shifu.shifu.core.dtrain.dt.IndependentTreeModel;
 import ml.shifu.shifu.util.CommonUtils;
 import ml.shifu.shifu.util.Constants;
 
@@ -295,6 +305,70 @@ public class IndependentNNModel {
 
     public static double defaultMissingValue(Double mean) {
         return mean == null ? 0 : mean.doubleValue();
+    }
+    
+    public static IndependentNNModel loadFromStream(InputStream input, boolean isRemoveNameSpace) throws IOException {
+        DataInputStream dis = null;
+        // check if gzip or not
+        try {
+            byte[] header = new byte[2];
+            BufferedInputStream bis = new BufferedInputStream(input);
+            bis.mark(2);
+            int result = bis.read(header);
+            bis.reset();
+            int ss = (header[0] & 0xff) | ((header[1] & 0xff) << 8);
+            if(result != -1 && ss == GZIPInputStream.GZIP_MAGIC) {
+                dis = new DataInputStream(new GZIPInputStream(bis));
+            } else {
+                dis = new DataInputStream(bis);
+            }
+        } catch (java.io.IOException e) {
+            dis = new DataInputStream(input);
+        }
+
+        int version = dis.readInt();
+        int inputCnt = dis.readInt();
+        NormType normType = NormType.valueOf(dis.readUTF().toUpperCase());
+        
+        Map<Integer, String> numNameMap = new HashMap<Integer, String>();
+        Map<Integer, List<String>> cateColumnNameNames  = new HashMap<Integer, List<String>>();
+        
+        Map<Integer, Map<String, Double>> cateWoeMap = new HashMap<Integer, Map<String,Double>>();
+        Map<Integer, Map<String, Double>> cateWgtWoeMap = new HashMap<Integer, Map<String,Double>>();
+        
+        List<NNColumnStats> columnStatsList = new ArrayList<NNColumnStats>();
+        int size = dis.readInt();
+        for(int i = 0; i < size; i++) {
+            NNColumnStats cs = new NNColumnStats();
+            cs.readFields(dis);
+            
+            numNameMap.put(cs.getColumnNum(), cs.getColumnName());
+            if(cs.isCategorical()) {
+                List<String> binCategories = cs.getBinCategories();
+                cateColumnNameNames.put(cs.getColumnNum(), binCategories);
+                
+                Map<String, Double> woeMap = new HashMap<String, Double>();
+                for(int j = 0; j < binCategories.size(); j++) {
+                    String currCate = binCategories.get(j);
+                    /*if(currCate.contains(Constants.CATEGORICAL_GROUP_VAL_DELIMITER)) {
+                        // merged category should be flatten, use split function this class to avoid depending on guava jar
+                        String[] splits = split(currCate, Constants.CATEGORICAL_GROUP_VAL_DELIMITER);
+                        for(String str: splits) {
+                            categoryIndexMapping.put(str, j);
+                        }
+                    } else {
+                        categoryIndexMapping.put(category, j);
+                    }*/
+                }
+            } else {
+                
+            }
+            
+            columnStatsList.add(cs);
+        }
+        
+        BasicFloatNetwork network = new PersistBasicFloatNetwork().readNetwork(dis);
+        return new IndependentNNModel();
     }
 
 }
