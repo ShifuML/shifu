@@ -134,12 +134,13 @@ public class MapReducerStatsWorker extends AbstractStatsExecutor {
         // save it to local/hdfs
         processor.saveColumnConfigList();
 
+        processor.syncDataToHdfs(modelConfig.getDataSet().getSource());
+
         if(StringUtils.isNotEmpty(modelConfig.getPsiColumnName())) {
             runPSI();
             processor.saveColumnConfigList();
+            processor.syncDataToHdfs(modelConfig.getDataSet().getSource());
         }
-
-        processor.syncDataToHdfs(modelConfig.getDataSet().getSource());
 
         return true;
     }
@@ -525,6 +526,10 @@ public class MapReducerStatsWorker extends AbstractStatsExecutor {
 
         List<Scanner> scanners = ShifuFileUtils.getDataScanners(pathFinder.getPSIInfoPath(), modelConfig.getDataSet()
                 .getSource());
+
+        if (scanners == null || scanners.size() == 0) {
+            log.info("The PSI got failure during the computation");
+        }
 
         for(Scanner scanner: scanners) {
             while(scanner.hasNext()) {
