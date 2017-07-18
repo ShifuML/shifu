@@ -202,7 +202,7 @@ public class PersistBasicFloatNetwork implements EncogPersistor {
         out.flush();
     }
 
-    public BasicFloatNetwork read(final DataInput in) throws IOException {
+    public BasicFloatNetwork readNetwork(final DataInput in) throws IOException {
         final BasicFloatNetwork result = new BasicFloatNetwork();
         final FlatNetwork flat = new FlatNetwork();
 
