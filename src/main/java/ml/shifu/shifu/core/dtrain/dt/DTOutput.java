@@ -52,11 +52,6 @@ public class DTOutput extends BasicMasterInterceptor<DTMasterParams, DTWorkerPar
     private static final Logger LOG = LoggerFactory.getLogger(DTOutput.class);
 
     /**
-     * The limitation of max categorical value length
-     */
-    private static final int MAX_CATEGORICAL_VAL_LEN = 10 * 1024;
-
-    /**
      * Model Config read from HDFS
      */
     private ModelConfig modelConfig;
@@ -385,13 +380,13 @@ public class DTOutput extends BasicMasterInterceptor<DTMasterParams, DTWorkerPar
                     for(String category: categories) {
                         // There is 16k limitation when using writeUTF() function.
                         // if the category value is larger than 10k, then treat it as missing value
-                        if(category.length() > MAX_CATEGORICAL_VAL_LEN) {
+                        if(category.length() > Constants.MAX_CATEGORICAL_VAL_LEN) {
                             int pos = category.lastIndexOf(Constants.CATEGORICAL_GROUP_VAL_DELIMITER,
-                                    MAX_CATEGORICAL_VAL_LEN);
+                                    Constants.MAX_CATEGORICAL_VAL_LEN);
                             if(pos >= 0) {
                                 category = category.substring(0, pos);
                             } else {
-                                category = category.substring(0, MAX_CATEGORICAL_VAL_LEN);
+                                category = category.substring(0, Constants.MAX_CATEGORICAL_VAL_LEN);
                             }
                         }
                         fos.writeUTF(category);

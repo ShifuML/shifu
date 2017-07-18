@@ -79,21 +79,21 @@ public class BinningPartialDataUDF extends AbstractTrainerUDF<String> {
                 columnId = (Integer) element.get(0);
                 ColumnConfig columnConfig = super.columnConfigList.get(columnId);
                 if(columnConfig.isCategorical()) {
-                    binning = new CategoricalBinning(-1);
+                    binning = new CategoricalBinning(-1, this.maxCategorySize);
                 } else {
                     if(super.modelConfig.getBinningMethod().equals(BinningMethod.EqualInterval)) {
-                        binning = new EqualIntervalBinning(modelConfig.getStats().getMaxNumBin() > 0
-                                ? modelConfig.getStats().getMaxNumBin() : 1024);
+                        binning = new EqualIntervalBinning(modelConfig.getStats().getMaxNumBin() > 0 ? modelConfig
+                                .getStats().getMaxNumBin() : 1024);
                     } else {
-                        binning = new EqualPopulationBinning(modelConfig.getStats().getMaxNumBin() > 0
-                                ? modelConfig.getStats().getMaxNumBin() : 1024);
+                        binning = new EqualPopulationBinning(modelConfig.getStats().getMaxNumBin() > 0 ? modelConfig
+                                .getStats().getMaxNumBin() : 1024);
                     }
                 }
             }
 
             Object value = element.get(1);
-            if (value != null) {
-                if (isWeightBinningMethod() && binning instanceof EqualPopulationBinning) {
+            if(value != null) {
+                if(isWeightBinningMethod() && binning instanceof EqualPopulationBinning) {
                     ((EqualPopulationBinning) binning).addData(value.toString(),
                             (Double) element.get(AddColumnNumUDF.COLUMN_WEIGHT_INDX));
                 } else {
@@ -109,7 +109,7 @@ public class BinningPartialDataUDF extends AbstractTrainerUDF<String> {
         return binningObjStr;
     }
 
-    private boolean isWeightBinningMethod(){
+    private boolean isWeightBinningMethod() {
         return modelConfig.getBinningMethod().equals(BinningMethod.WeightEqualTotal)
                 || modelConfig.getBinningMethod().equals(BinningMethod.WeightEqualInterval)
                 || modelConfig.getBinningMethod().equals(BinningMethod.WeightEqualPositive)

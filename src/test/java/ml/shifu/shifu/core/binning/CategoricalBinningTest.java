@@ -25,16 +25,16 @@ import org.testng.annotations.Test;
  * CategoricalBinningTest class
  * 
  * @Nov 14, 2014
- *
+ * 
  */
 public class CategoricalBinningTest {
 
     @Test
     public void testSerialObject() {
-        CategoricalBinning binning = new CategoricalBinning(10);
+        CategoricalBinning binning = new CategoricalBinning(10, 5000);
         String binStr = binning.objToString();
         String[] fieldArr = binStr.split(Character.toString(AbstractBinning.FIELD_SEPARATOR), -1);
         Assert.assertTrue(fieldArr.length == 6);
     }
-    
+
 }

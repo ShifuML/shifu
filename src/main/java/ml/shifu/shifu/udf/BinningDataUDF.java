@@ -66,7 +66,7 @@ public class BinningDataUDF extends AbstractTrainerUDF<Tuple> {
         ColumnConfig columnConfig = super.columnConfigList.get(columnId);
         AbstractBinning<?> binning = null;
         if(columnConfig.isCategorical()) {
-            binning = new CategoricalBinning(-1);
+            binning = new CategoricalBinning(-1, this.maxCategorySize);
         } else {
             if(super.modelConfig.getBinningMethod().equals(BinningMethod.EqualInterval)) {
                 binning = new EqualIntervalBinning(modelConfig.getStats().getMaxNumBin());
@@ -113,7 +113,7 @@ public class BinningDataUDF extends AbstractTrainerUDF<Tuple> {
         // Do check here. It's because if there are too many value for categorical variable,
         // it will consume too much memory when join them together, that will cause OOM exception
         List<?> dataBin = binning.getDataBin();
-        if(dataBin.size() > CalculateNewStatsUDF.MAX_CATEGORICAL_BINC_COUNT) {
+        if(dataBin.size() > this.maxCategorySize) {
             output.set(1, "");
         } else {
             output.set(1, StringUtils.join(dataBin, CalculateStatsUDF.CATEGORY_VAL_SEPARATOR));
