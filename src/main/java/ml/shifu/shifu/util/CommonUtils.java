@@ -536,25 +536,53 @@ public final class CommonUtils {
      */
     public static int getBinNum(ColumnConfig columnConfig, String columnVal) {
         if(columnConfig.isCategorical()) {
-            List<String> binCategories = columnConfig.getBinCategory();
-            for(int i = 0; i < binCategories.size(); i++) {
-                if(isCategoricalBinValue(binCategories.get(i), columnVal)) {
-                    return i;
-                }
-            }
-            return -1;
+            return getCategoicalBinIndex(columnConfig.getBinCategory(), columnVal);
         } else {
-            if(StringUtils.isBlank(columnVal)) {
-                return -1;
-            }
-            double dval = 0.0;
-            try {
-                dval = Double.parseDouble(columnVal);
-            } catch (Exception e) {
-                return -1;
-            }
-            return getBinIndex(columnConfig.getBinBoundary(), dval);
+            return getNumericalBinIndex(columnConfig.getBinBoundary(), columnVal);
         }
+    }
+
+    /**
+     * Get numerical bin index according to string column value.
+     * 
+     * @param binBoundaries
+     *            the bin boundaries
+     * @param columnVal
+     *            the column value
+     * @return bin index, -1 if invalid values
+     */
+    public static int getNumericalBinIndex(List<Double> binBoundaries, String columnVal) {
+        if(StringUtils.isBlank(columnVal)) {
+            return -1;
+        }
+        double dval = 0.0;
+        try {
+            dval = Double.parseDouble(columnVal);
+        } catch (Exception e) {
+            return -1;
+        }
+        return getBinIndex(binBoundaries, dval);
+    }
+
+    /**
+     * Get categorical bin index according to string column value.
+     * 
+     * @param binCategories
+     *            the bin categories
+     * @param columnVal
+     *            the column value
+     * @return bin index, -1 if invalid values
+     */
+    public static int getCategoicalBinIndex(List<String> binCategories, String columnVal) {
+        if(StringUtils.isBlank(columnVal)) {
+            return -1;
+        }
+        for(int i = 0; i < binCategories.size(); i++) {
+            if(isCategoricalBinValue(binCategories.get(i), columnVal)) {
+                return i;
+            }
+        }
+        return -1;
     }
 
     /**

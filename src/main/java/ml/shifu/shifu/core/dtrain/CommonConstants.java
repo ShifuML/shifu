@@ -64,6 +64,8 @@ public interface CommonConstants {
      * Version 3: in Node to change wgtCnt float to double
      */
     public static final int TREE_FORMAT_VERSION = 3;
+    
+    public static final int NN_FORMAT_VERSION = 1;
 
     public static final String NUM_HIDDEN_LAYERS = "NumHiddenLayers";
 

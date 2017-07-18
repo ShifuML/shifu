@@ -15,23 +15,28 @@
  */
 package ml.shifu.shifu.udf;
 
-import ml.shifu.shifu.container.obj.ColumnConfig;
-import ml.shifu.shifu.container.obj.ModelConfig;
-import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
-import ml.shifu.shifu.util.CommonUtils;
-import org.apache.pig.EvalFunc;
-import org.apache.pig.tools.pigstats.PigStatusReporter;
-
 import java.io.IOException;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+
+import ml.shifu.shifu.container.obj.ColumnConfig;
+import ml.shifu.shifu.container.obj.ModelConfig;
+import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
+import ml.shifu.shifu.util.CommonUtils;
+import ml.shifu.shifu.util.Constants;
+import ml.shifu.shifu.util.Environment;
+
+import org.apache.pig.EvalFunc;
+import org.apache.pig.impl.util.UDFContext;
+import org.apache.pig.tools.pigstats.PigStatusReporter;
 
 /**
  * AbstractTrainerUDF class is the abstract class for most UDF
  * It will load and host @ModelConfig and @ColumnConfig, and find target column id
  */
 public abstract class AbstractTrainerUDF<T> extends EvalFunc<T> {
+
     protected ModelConfig modelConfig;
     protected List<ColumnConfig> columnConfigList;
 
@@ -42,6 +47,8 @@ public abstract class AbstractTrainerUDF<T> extends EvalFunc<T> {
     protected Set<String> posTagSet;
     protected Set<String> negTagSet;
     protected Set<String> tagSet;
+
+    protected int maxCategorySize = Constants.MAX_CATEGORICAL_BINC_COUNT;
 
     /**
      * Constructor with SourceType, ModelConfig path and ColumnConfig path
@@ -83,6 +90,15 @@ public abstract class AbstractTrainerUDF<T> extends EvalFunc<T> {
         if(modelConfig != null && modelConfig.getFlattenTags() != null) {
             this.tagSet = new HashSet<String>(modelConfig.getFlattenTags());
         }
+
+        if(UDFContext.getUDFContext() != null && UDFContext.getUDFContext().getJobConf() != null) {
+            this.maxCategorySize = UDFContext.getUDFContext().getJobConf()
+                    .getInt(Constants.SHIFU_MAX_CATEGORY_SIZE, Constants.MAX_CATEGORICAL_BINC_COUNT);
+        } else {
+            this.maxCategorySize = Environment.getInt(Constants.SHIFU_MAX_CATEGORY_SIZE,
+                    Constants.MAX_CATEGORICAL_BINC_COUNT);
+        }
+        log.debug("Max category size is : " + this.maxCategorySize);
     }
 
     /**

@@ -345,7 +345,7 @@ public class Normalizer {
             } else {
                 Double binPosRate = config.getBinPosRate().get(index);
                 if(binPosRate != null) {
-                    value = binPosRate.doubleValue();;
+                    value = binPosRate.doubleValue();
                 } else {
                     switch(categoryMissingNormType) {
                         case POSRATE:
@@ -423,6 +423,7 @@ public class Normalizer {
     private static Double woeZScoreNormalize(ColumnConfig config, String raw, Double cutoff, boolean isWeightedNorm) {
         double stdDevCutOff = checkCutOff(cutoff);
         double woe = woeNormalize(config, raw, isWeightedNorm);
+        // TODO cache such computing to avoid computing each time
         double[] meanAndStdDev = calculateWoeMeanAndStdDev(config, isWeightedNorm);
         return computeZScore(woe, meanAndStdDev[0], meanAndStdDev[1], stdDevCutOff);
     }

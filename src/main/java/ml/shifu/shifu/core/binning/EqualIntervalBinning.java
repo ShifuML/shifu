@@ -20,6 +20,8 @@ package ml.shifu.shifu.core.binning;
 import java.util.ArrayList;
 import java.util.List;
 
+import ml.shifu.shifu.util.Constants;
+
 import org.apache.commons.lang.StringUtils;
 
 /**
@@ -52,7 +54,7 @@ public class EqualIntervalBinning extends AbstractBinning<Double> {
      *            the missing value list
      */
     public EqualIntervalBinning(int binningNum, List<String> missingValList) {
-        super(binningNum, missingValList);
+        super(binningNum, missingValList, Constants.MAX_CATEGORICAL_BINC_COUNT);
     }
 
     /*

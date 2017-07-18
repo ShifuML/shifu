@@ -122,19 +122,11 @@ public class IndependentTreeModel {
      */
     private static int version = CommonConstants.TREE_FORMAT_VERSION;
 
-    public static int getVersion() {
-        return version;
-    }
-
-    public static void setVersion(int from) {
-        version = from;
-    }
-
     /**
      * For numerical columns, mean value is used for null replacement
      */
     private Map<Integer, Double> numericalMeanMapping;
-
+    
     public IndependentTreeModel(Map<Integer, Double> numericalMeanMapping, Map<Integer, String> numNameMapping,
             Map<Integer, List<String>> categoricalColumnNameNames,
             Map<Integer, Map<String, Integer>> columnCategoryIndexMapping, Map<Integer, Integer> columnNumIndexMapping,
@@ -779,6 +771,14 @@ public class IndependentTreeModel {
      */
     public void setNumericalMeanMapping(Map<Integer, Double> numericalMeanMapping) {
         this.numericalMeanMapping = numericalMeanMapping;
+    }
+    
+    public static int getVersion() {
+        return version;
+    }
+
+    public static void setVersion(int from) {
+        version = from;
     }
 
 }
