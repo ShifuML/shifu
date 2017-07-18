@@ -15,13 +15,17 @@
  */
 package ml.shifu.shifu.core.dtrain.nn;
 
+import java.io.DataOutputStream;
 import java.io.IOException;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
+import java.util.Map.Entry;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.zip.GZIPOutputStream;
 
 import ml.shifu.guagua.master.BasicMasterInterceptor;
 import ml.shifu.guagua.master.MasterContext;
@@ -32,10 +36,13 @@ import ml.shifu.shifu.core.dtrain.CommonConstants;
 import ml.shifu.shifu.core.dtrain.DTrainUtils;
 import ml.shifu.shifu.core.dtrain.dataset.BasicFloatNetwork;
 import ml.shifu.shifu.core.dtrain.dataset.PersistBasicFloatNetwork;
+import ml.shifu.shifu.core.dtrain.dt.TreeNode;
 import ml.shifu.shifu.core.dtrain.gs.GridSearch;
 import ml.shifu.shifu.fs.ShifuFileUtils;
 import ml.shifu.shifu.util.CommonUtils;
+import ml.shifu.shifu.util.Constants;
 
+import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -369,6 +376,175 @@ public class NNOutput extends BasicMasterInterceptor<NNParams, NNParams> {
         } finally {
             IOUtils.closeStream(fos);
         }
+    }
+
+    private void writeModelToFileSystem(double[] weights, Path out) {
+        double[] finalWeights = null;
+        if(this.dropoutRate == 0d) {
+            finalWeights = weights;
+        } else {
+            finalWeights = new double[weights.length];
+            for(int i = 0; i < finalWeights.length; i++) {
+                // do we need to norm all weights or leave last hidden layer to output layer not normed???
+                // it is ok to add or not added in last iteration as such parameters only impact last final output score
+                // but not change the order of scores
+                finalWeights[i] = weights[i] * (1 - this.dropoutRate);
+            }
+        }
+
+        DataOutputStream fos = null;
+        try {
+            fos = new DataOutputStream(new GZIPOutputStream(FileSystem.get(new Configuration()).create(out)));
+            LOG.info("Writing NN models to {}.", out);
+            this.network.getFlat().setWeights(finalWeights);
+            // version
+            fos.writeInt(CommonConstants.NN_FORMAT_VERSION);
+            fos.writeInt(this.network.getInputCount());
+
+            Map<Integer, String> columnIndexNameMapping = new HashMap<Integer, String>();
+            Map<Integer, List<String>> columnIndexCategoricalListMapping = new HashMap<Integer, List<String>>();
+            Map<Integer, Double> numericalMeanMapping = new HashMap<Integer, Double>();
+            for(ColumnConfig columnConfig: this.columnConfigList) {
+                if(columnConfig.isFinalSelect()) {
+                    columnIndexNameMapping.put(columnConfig.getColumnNum(), columnConfig.getColumnName());
+                }
+                if(columnConfig.isCategorical() && CollectionUtils.isNotEmpty(columnConfig.getBinCategory())) {
+                    columnIndexCategoricalListMapping.put(columnConfig.getColumnNum(), columnConfig.getBinCategory());
+                }
+
+                if(columnConfig.isNumerical() && columnConfig.getMean() != null) {
+                    numericalMeanMapping.put(columnConfig.getColumnNum(), columnConfig.getMean());
+                }
+            }
+
+            if(columnIndexNameMapping.size() == 0) {
+                for(ColumnConfig columnConfig: this.columnConfigList) {
+                    if(CommonUtils.isGoodCandidate(columnConfig)) {
+                        columnIndexNameMapping.put(columnConfig.getColumnNum(), columnConfig.getColumnName());
+                    }
+                }
+            }
+
+            // serialize numericalMeanMapping
+            fos.writeInt(numericalMeanMapping.size());
+            for(Entry<Integer, Double> entry: numericalMeanMapping.entrySet()) {
+                fos.writeInt(entry.getKey());
+                // for some feature, it is null mean value, it is not selected, just set to 0d to avoid NPE
+                fos.writeDouble(entry.getValue() == null ? 0d : entry.getValue());
+            }
+            // serialize columnIndexNameMapping
+            fos.writeInt(columnIndexNameMapping.size());
+            for(Entry<Integer, String> entry: columnIndexNameMapping.entrySet()) {
+                fos.writeInt(entry.getKey());
+                fos.writeUTF(entry.getValue());
+            }
+            // serialize columnIndexCategoricalListMapping
+            fos.writeInt(columnIndexCategoricalListMapping.size());
+            for(Entry<Integer, List<String>> entry: columnIndexCategoricalListMapping.entrySet()) {
+                List<String> categories = entry.getValue();
+                if(categories != null) {
+                    fos.writeInt(entry.getKey());
+                    fos.writeInt(categories.size());
+                    for(String category: categories) {
+                        // There is 16k limitation when using writeUTF() function.
+                        // if the category value is larger than 10k, then treat it as missing value
+                        if(category.length() > Constants.MAX_CATEGORICAL_VAL_LEN) {
+                            int pos = category.lastIndexOf(Constants.CATEGORICAL_GROUP_VAL_DELIMITER,
+                                    Constants.MAX_CATEGORICAL_VAL_LEN);
+                            if(pos >= 0) {
+                                category = category.substring(0, pos);
+                            } else {
+                                category = category.substring(0, Constants.MAX_CATEGORICAL_VAL_LEN);
+                            }
+                        }
+                        fos.writeUTF(category);
+                    }
+                }
+            }
+
+            Map<Integer, Map<String, Double>> categoricalWoeMappings = new HashMap<Integer, Map<String, Double>>();
+            Map<Integer, Map<String, Double>> weightedCategoricalWoeMappings = new HashMap<Integer, Map<String, Double>>();
+            Map<Integer, Map<String, Double>> binPosRateMappings = new HashMap<Integer, Map<String, Double>>();
+
+            Map<Integer, List<Double>> numericalBinBoundaries = new HashMap<Integer, List<Double>>();
+            Map<Integer, List<Double>> numericalWeightedWoes = new HashMap<Integer, List<Double>>();
+            Map<Integer, List<Double>> numericalWoes = new HashMap<Integer, List<Double>>();
+
+            Map<Integer, Double> numericalMeanMappings = new HashMap<Integer, Double>();
+            Map<Integer, Double> numericalStddevMappings = new HashMap<Integer, Double>();
+            Map<Integer, Double> woeMeanMappings = new HashMap<Integer, Double>();
+            Map<Integer, Double> woeStddevMappings = new HashMap<Integer, Double>();
+            Map<Integer, Double> weightedWoeMeanMappings = new HashMap<Integer, Double>();
+            Map<Integer, Double> weightedWoeStddevMappings = new HashMap<Integer, Double>();
+
+            for(ColumnConfig config: this.columnConfigList) {
+                if(columnIndexNameMapping.containsKey(config.getColumnNum())) {
+                    if(config.isCategorical()) {
+                        Map<String, Double> woeMap = new HashMap<String, Double>();
+                        Map<String, Double> weightedWoeMap = new HashMap<String, Double>();
+                        Map<String, Double> posRateMap = new HashMap<String, Double>();
+
+                        List<String> binCategory = config.getBinCategory();
+                        List<Double> binCountWoe = config.getBinCountWoe();
+                        List<Double> binWeightWoe = config.getBinWeightedWoe();
+                        List<Double> binPosRate = config.getBinPosRate();
+                        for(int i = 0; i < binCategory.size(); i++) {
+                            woeMap.put(binCategory.get(i), binCountWoe.get(i));
+                            weightedWoeMap.put(binCategory.get(i), binWeightWoe.get(i));
+                            posRateMap.put(binCategory.get(i), binPosRate.get(i));
+                        }
+
+                        // size of binCountWoe = size of binCategory + 1, no issue for put missing woe here
+                        woeMap.put(Constants.EMPTY_CATEGORY, binCountWoe.get(binCategory.size()));
+                        weightedWoeMap.put(Constants.EMPTY_CATEGORY, binWeightWoe.get(binCategory.size()));
+                        posRateMap.put(Constants.EMPTY_CATEGORY, binPosRate.get(binCategory.size()));
+
+                        categoricalWoeMappings.put(config.getColumnNum(), woeMap);
+                        weightedCategoricalWoeMappings.put(config.getColumnNum(), weightedWoeMap);
+                        binPosRateMappings.put(config.getColumnNum(), posRateMap);
+                    } else {
+
+                    }
+                }
+            }
+
+            Map<Integer, Integer> columnMapping = getColumnMapping();
+            fos.writeInt(columnMapping.size());
+            for(Entry<Integer, Integer> entry: columnMapping.entrySet()) {
+                fos.writeInt(entry.getKey());
+                fos.writeInt(entry.getValue());
+            }
+
+            // persist network
+            new PersistBasicFloatNetwork().save(fos, this.network);
+        } catch (IOException e) {
+            LOG.error("Error in writing output.", e);
+        } finally {
+            IOUtils.closeStream(fos);
+        }
+    }
+
+    private Map<Integer, Integer> getColumnMapping() {
+        Map<Integer, Integer> columnMapping = new HashMap<Integer, Integer>(columnConfigList.size(), 1f);
+        int[] inputOutputIndex = DTrainUtils.getNumericAndCategoricalInputAndOutputCounts(columnConfigList);
+        boolean isAfterVarSelect = inputOutputIndex[3] == 1 ? true : false;
+        int index = 0;
+        for(int i = 0; i < columnConfigList.size(); i++) {
+            ColumnConfig columnConfig = columnConfigList.get(i);
+            if(!isAfterVarSelect) {
+                if(!columnConfig.isMeta() && !columnConfig.isTarget() && CommonUtils.isGoodCandidate(columnConfig)) {
+                    columnMapping.put(columnConfig.getColumnNum(), index);
+                    index += 1;
+                }
+            } else {
+                if(columnConfig != null && !columnConfig.isMeta() && !columnConfig.isTarget()
+                        && columnConfig.isFinalSelect()) {
+                    columnMapping.put(columnConfig.getColumnNum(), index);
+                    index += 1;
+                }
+            }
+        }
+        return columnMapping;
     }
 
     public ModelConfig getModelConfig() {
