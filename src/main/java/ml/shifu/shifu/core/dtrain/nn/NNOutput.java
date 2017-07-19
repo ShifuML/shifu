@@ -407,7 +407,6 @@ public class NNOutput extends BasicMasterInterceptor<NNParams, NNParams> {
 
     private void writeBinaryModelWeightsToFileSystem(double[] weights, Path out) {
         double[] finalWeights = refineWeights(weights);
-        out = new Path("hdfs://horton/user/pengzhang/ModelSets/cam2015-BNN/models/model1.nn");
         LOG.info("Writing NN models to {}.", out);
         this.network.getFlat().setWeights(finalWeights);
 
