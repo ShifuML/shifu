@@ -154,7 +154,6 @@ public interface Constants {
     public static final String KEY_AUTO_TYPE_PATH = "autoTypePath";
     public static final String KEY_CORRELATION_PATH = "correlationPath";
 
-
     public static final String DEFAULT_META_COLUMN_FILE = "meta.column.names";
     public static final String DEFAULT_CATEGORICAL_COLUMN_FILE = "categorical.column.names";
     public static final String DEFAULT_CANDIDATE_COLUMN_FILE = "candidate.column.names";
@@ -251,27 +250,32 @@ public interface Constants {
     public static final String SHIFU_CORRELATION_MULTI_THREADS = "shifu.correlation.multi.threads";
 
     public static final String SHIFU_CORRELATION_MULTI = "shifu.correlation.multi";
-    
+
     public static final String SHIFU_CURRENT_WORKING_DIR = "shifu.current.working.dir";
-    
+
     public static final String SHIFU_CORRELATION_COMPUTE_ALL = "shifu.correlation.computeAll";
 
     public static final String CATEGORICAL_GROUP_VAL_DELIMITER = "@^";
 
     public static final String SHIFU_NAMESPACE_STRICT_MODE = "shifu.namespace.strict.mode";
-    
+
     public static final String EMPTY_CATEGORY = "";
-    
+
     /**
      * The limitation of max categorical value length
      */
     public static final int MAX_CATEGORICAL_VAL_LEN = 10 * 1024;
-    
+
     /**
      * Experience value from modeler
      */
     public static final int MAX_CATEGORICAL_BINC_COUNT = 10000;
-    
+
     public static final String SHIFU_MAX_CATEGORY_SIZE = "shifu.max.category.size";
+
+    public static final String SHIFU_NN_INDEPENDENT_MODEL = "shifu.nn.independent.model";
+    
+    public static final String SHIFU_NN_BINARY_MODEL_PATH = "shifu.nn.binary.model.path";
+
 
 }

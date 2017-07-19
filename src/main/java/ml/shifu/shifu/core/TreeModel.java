@@ -42,8 +42,6 @@ import org.encog.ml.data.basic.BasicMLData;
  * <p>
  * {@link #loadFromStream(InputStream, boolean)} can be used to read serialized models. Which is delegated to
  * {@link IndependentTreeModel}.
- * 
- * @author Zhang David (pengzhang@paypal.com)
  */
 public class TreeModel extends BasicML implements MLRegression {
 

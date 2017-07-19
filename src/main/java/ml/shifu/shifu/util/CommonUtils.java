@@ -15,10 +15,33 @@
  */
 package ml.shifu.shifu.util;
 
-import com.google.common.base.Function;
-import com.google.common.base.Splitter;
-import com.google.common.collect.Collections2;
-import com.google.common.collect.Lists;
+import java.io.BufferedInputStream;
+import java.io.BufferedReader;
+import java.io.BufferedWriter;
+import java.io.DataInputStream;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FilenameFilter;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.io.Reader;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
+import java.util.Set;
+import java.util.TreeMap;
+import java.util.zip.GZIPInputStream;
+
 import ml.shifu.shifu.column.NSColumn;
 import ml.shifu.shifu.column.NSColumnUtils;
 import ml.shifu.shifu.container.obj.ColumnConfig;
@@ -29,9 +52,11 @@ import ml.shifu.shifu.container.obj.ModelConfig;
 import ml.shifu.shifu.container.obj.ModelTrainConf.ALGORITHM;
 import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
 import ml.shifu.shifu.core.LR;
+import ml.shifu.shifu.core.NNModel;
 import ml.shifu.shifu.core.Normalizer;
 import ml.shifu.shifu.core.TreeModel;
 import ml.shifu.shifu.core.dtrain.CommonConstants;
+import ml.shifu.shifu.core.dtrain.dataset.BasicFloatNetwork;
 import ml.shifu.shifu.core.dtrain.dataset.PersistBasicFloatNetwork;
 import ml.shifu.shifu.core.dtrain.lr.LogisticRegressionContants;
 import ml.shifu.shifu.core.model.ModelSpec;
@@ -39,6 +64,7 @@ import ml.shifu.shifu.exception.ShifuErrorCode;
 import ml.shifu.shifu.exception.ShifuException;
 import ml.shifu.shifu.fs.PathFinder;
 import ml.shifu.shifu.fs.ShifuFileUtils;
+
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.collections.Predicate;
 import org.apache.commons.io.IOUtils;
@@ -46,22 +72,29 @@ import org.apache.commons.lang.ArrayUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.lang.math.NumberUtils;
 import org.apache.commons.lang3.tuple.MutablePair;
-import org.apache.hadoop.fs.*;
+import org.apache.hadoop.fs.FSDataInputStream;
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.LocatedFileStatus;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.PathFilter;
+import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.pig.backend.executionengine.ExecException;
 import org.apache.pig.data.Tuple;
 import org.encog.ml.BasicML;
 import org.encog.ml.data.MLDataPair;
 import org.encog.ml.data.basic.BasicMLData;
 import org.encog.ml.data.basic.BasicMLDataPair;
+import org.encog.neural.networks.BasicNetwork;
 import org.encog.persist.EncogDirectoryPersistence;
 import org.encog.persist.PersistorRegistry;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.*;
-import java.util.*;
-import java.util.Map.Entry;
+import com.google.common.base.Function;
+import com.google.common.base.Splitter;
+import com.google.common.collect.Collections2;
+import com.google.common.collect.Lists;
 
 /**
  * {@link CommonUtils} is used to for almost all kinds of utility function in this framework.
@@ -332,12 +365,11 @@ public final class CommonUtils {
         String[] fields = null;
         boolean isSchemaProvided = true;
         if(StringUtils.isNotBlank(modelConfig.getHeaderPath())) {
-            fields = CommonUtils.getHeaders(modelConfig.getHeaderPath(), modelConfig.getHeaderDelimiter(),
-                    modelConfig.getDataSet().getSource());
+            fields = CommonUtils.getHeaders(modelConfig.getHeaderPath(), modelConfig.getHeaderDelimiter(), modelConfig
+                    .getDataSet().getSource());
         } else {
-            fields = CommonUtils.takeFirstLine(modelConfig.getDataSetRawPath(),
-                    StringUtils.isBlank(modelConfig.getHeaderDelimiter()) ? modelConfig.getDataSetDelimiter()
-                            : modelConfig.getHeaderDelimiter(),
+            fields = CommonUtils.takeFirstLine(modelConfig.getDataSetRawPath(), StringUtils.isBlank(modelConfig
+                    .getHeaderDelimiter()) ? modelConfig.getDataSetDelimiter() : modelConfig.getHeaderDelimiter(),
                     modelConfig.getDataSet().getSource());
             if(StringUtils.join(fields, "").contains(modelConfig.getTargetColumnName())) {
                 // if first line contains target column name, we guess it is csv format and first line is header.
@@ -366,17 +398,14 @@ public final class CommonUtils {
         String[] fields = null;
         boolean isSchemaProvided = true;
         if(StringUtils.isNotBlank(evalConfig.getDataSet().getHeaderPath())) {
-            String delimiter = StringUtils.isBlank(evalConfig.getDataSet().getHeaderDelimiter())
-                    ? evalConfig.getDataSet().getDataDelimiter()
-                    : evalConfig.getDataSet().getHeaderDelimiter();
-            fields = CommonUtils.getHeaders(evalConfig.getDataSet().getHeaderPath(), delimiter,
-                    evalConfig.getDataSet().getSource());
+            String delimiter = StringUtils.isBlank(evalConfig.getDataSet().getHeaderDelimiter()) ? evalConfig
+                    .getDataSet().getDataDelimiter() : evalConfig.getDataSet().getHeaderDelimiter();
+            fields = CommonUtils.getHeaders(evalConfig.getDataSet().getHeaderPath(), delimiter, evalConfig.getDataSet()
+                    .getSource());
         } else {
-            fields = CommonUtils.takeFirstLine(evalConfig.getDataSet().getDataPath(),
-                    StringUtils.isBlank(evalConfig.getDataSet().getHeaderDelimiter())
-                            ? evalConfig.getDataSet().getDataDelimiter()
-                            : evalConfig.getDataSet().getHeaderDelimiter(),
-                    evalConfig.getDataSet().getSource());
+            fields = CommonUtils.takeFirstLine(evalConfig.getDataSet().getDataPath(), StringUtils.isBlank(evalConfig
+                    .getDataSet().getHeaderDelimiter()) ? evalConfig.getDataSet().getDataDelimiter() : evalConfig
+                    .getDataSet().getHeaderDelimiter(), evalConfig.getDataSet().getSource());
             // TODO - if there is no target column in eval, it may fail to check it is schema or not
             if(StringUtils.join(fields, "").contains(evalConfig.getDataSet().getTargetColumnName())) {
                 // if first line contains target column name, we guess it is csv format and first line is header.
@@ -450,9 +479,9 @@ public final class CommonUtils {
     public static String[] getHeaders(String pathHeader, String delimiter, SourceType sourceType, boolean isFull)
             throws IOException {
         if(StringUtils.isEmpty(pathHeader) || StringUtils.isEmpty(delimiter) || sourceType == null) {
-            throw new IllegalArgumentException(
-                    String.format("Null or empty parameters srcDataPath:%s, dstDataPath:%s, sourceType:%s", pathHeader,
-                            delimiter, sourceType));
+            throw new IllegalArgumentException(String.format(
+                    "Null or empty parameters srcDataPath:%s, dstDataPath:%s, sourceType:%s", pathHeader, delimiter,
+                    sourceType));
         }
         BufferedReader reader = null;
         String pigHeaderStr = null;
@@ -461,8 +490,8 @@ public final class CommonUtils {
             reader = ShifuFileUtils.getReader(pathHeader, sourceType);
             pigHeaderStr = reader.readLine();
             if(StringUtils.isEmpty(pigHeaderStr)) {
-                throw new RuntimeException(
-                        String.format("Cannot reade header info from the first line of file: %s", pathHeader));
+                throw new RuntimeException(String.format("Cannot reade header info from the first line of file: %s",
+                        pathHeader));
             }
         } catch (Exception e) {
             log.error(
@@ -658,8 +687,8 @@ public final class CommonUtils {
      */
     public static List<String> splitAndReturnList(String raw, String delimiter) {
         if(StringUtils.isEmpty(raw) || StringUtils.isEmpty(delimiter)) {
-            throw new IllegalArgumentException(String
-                    .format("raw and delimeter should not be null or empty, raw:%s, delimeter:%s", raw, delimiter));
+            throw new IllegalArgumentException(String.format(
+                    "raw and delimeter should not be null or empty, raw:%s, delimeter:%s", raw, delimiter));
         }
         List<String> headerList = new ArrayList<String>();
         for(String str: Splitter.on(delimiter).split(raw)) {
@@ -718,12 +747,13 @@ public final class CommonUtils {
      */
     public static List<BasicML> loadBasicModels(ModelConfig modelConfig, List<ColumnConfig> columnConfigList,
             EvalConfig evalConfig) throws IOException {
-        if(modelConfig == null || (!Constants.NN.equalsIgnoreCase(modelConfig.getAlgorithm())
-                && !Constants.SVM.equalsIgnoreCase(modelConfig.getAlgorithm())
-                && !Constants.LR.equalsIgnoreCase(modelConfig.getAlgorithm())
-                && !CommonUtils.isTreeModel(modelConfig.getAlgorithm()))) {
-            throw new IllegalArgumentException(modelConfig == null ? "modelConfig is null."
-                    : String.format(" invalid model algorithm %s.", modelConfig.getAlgorithm()));
+        if(modelConfig == null
+                || (!Constants.NN.equalsIgnoreCase(modelConfig.getAlgorithm())
+                        && !Constants.SVM.equalsIgnoreCase(modelConfig.getAlgorithm())
+                        && !Constants.LR.equalsIgnoreCase(modelConfig.getAlgorithm()) && !CommonUtils
+                            .isTreeModel(modelConfig.getAlgorithm()))) {
+            throw new IllegalArgumentException(modelConfig == null ? "modelConfig is null." : String.format(
+                    " invalid model algorithm %s.", modelConfig.getAlgorithm()));
         }
 
         return loadBasicModels(modelConfig, evalConfig, modelConfig.getDataSet().getSource());
@@ -776,6 +806,15 @@ public final class CommonUtils {
         }
 
         return models;
+    }
+
+    public static BasicNetwork getBasicNetwork(BasicML model) {
+        if(model instanceof BasicFloatNetwork) {
+            return (BasicFloatNetwork) model;
+        } else if(model instanceof NNModel) {
+            return ((NNModel) model).getIndependentNNModel().getBasicNetwork();
+        }
+        throw new IllegalArgumentException("Only nn model is supported");
     }
 
     /**
@@ -889,7 +928,12 @@ public final class CommonUtils {
                     || modelPath.getName().endsWith(CommonConstants.GBT_ALG_NAME.toLowerCase())) {
                 return TreeModel.loadFromStream(stream, gbtConvertToProb);
             } else {
-                return BasicML.class.cast(EncogDirectoryPersistence.loadObject(stream));
+                GzipStreamPair pair = isGZipFormat(stream);
+                if(pair.isGzip()) {
+                    return BasicML.class.cast(NNModel.loadFromStream(pair.getInput()));
+                } else {
+                    return BasicML.class.cast(EncogDirectoryPersistence.loadObject(pair.getInput()));
+                }
             }
         } catch (Exception e) {
             String msg = "the expecting model file is: " + modelPath;
@@ -902,6 +946,74 @@ public final class CommonUtils {
                 IOUtils.closeQuietly(stream);
             }
         }
+    }
+
+    public static class GzipStreamPair {
+
+        private DataInputStream input;
+
+        private boolean isGzip;
+
+        public GzipStreamPair(DataInputStream input, boolean isGzip) {
+            this.input = input;
+            this.isGzip = isGzip;
+        }
+
+        /**
+         * @return the input
+         */
+        public DataInputStream getInput() {
+            return input;
+        }
+
+        /**
+         * @param input
+         *            the input to set
+         */
+        public void setInput(DataInputStream input) {
+            this.input = input;
+        }
+
+        /**
+         * @return the isGzip
+         */
+        public boolean isGzip() {
+            return isGzip;
+        }
+
+        /**
+         * @param isGzip
+         *            the isGzip to set
+         */
+        public void setGzip(boolean isGzip) {
+            this.isGzip = isGzip;
+        }
+
+    }
+
+    private static GzipStreamPair isGZipFormat(InputStream input) {
+        DataInputStream dis = null;
+        // check if gzip or not
+        boolean isGZip = false;
+        try {
+            byte[] header = new byte[2];
+            BufferedInputStream bis = new BufferedInputStream(input);
+            bis.mark(2);
+            int result = bis.read(header);
+            bis.reset();
+            int ss = (header[0] & 0xff) | ((header[1] & 0xff) << 8);
+            if(result != -1 && ss == GZIPInputStream.GZIP_MAGIC) {
+                dis = new DataInputStream(new GZIPInputStream(bis));
+                isGZip = true;
+            } else {
+                dis = new DataInputStream(bis);
+                isGZip = false;
+            }
+        } catch (java.io.IOException e) {
+            dis = new DataInputStream(input);
+            isGZip = false;
+        }
+        return new GzipStreamPair(dis, isGZip);
     }
 
     /**
@@ -942,8 +1054,7 @@ public final class CommonUtils {
             FileStatus[] expandedPaths = fs.globStatus(new Path(modelsPath));
             if(ArrayUtils.isNotEmpty(expandedPaths)) {
                 for(FileStatus epath: expandedPaths) {
-                    fileList.addAll(
-                            Arrays.asList(fs.listStatus(epath.getPath(), new FileSuffixPathFilter(modelSuffix))));
+                    fileList.addAll(Arrays.asList(fs.listStatus(epath.getPath(), new FileSuffixPathFilter(modelSuffix))));
                 }
             }
         }
@@ -1171,7 +1282,12 @@ public final class CommonUtils {
                 try {
                     is = new FileInputStream(nnf);
                     if(ALGORITHM.NN.equals(alg)) {
-                        models.add(BasicML.class.cast(EncogDirectoryPersistence.loadObject(is)));
+                        GzipStreamPair pair = isGZipFormat(is);
+                        if(pair.isGzip()) {
+                            models.add(BasicML.class.cast(NNModel.loadFromStream(pair.getInput())));
+                        } else {
+                            models.add(BasicML.class.cast(EncogDirectoryPersistence.loadObject(pair.getInput())));
+                        }
                     } else if(ALGORITHM.LR.equals(alg)) {
                         models.add(LR.loadFromStream(is));
                     } else if(ALGORITHM.GBT.equals(alg) || ALGORITHM.RF.equals(alg)) {
@@ -1224,8 +1340,7 @@ public final class CommonUtils {
      * @throws IllegalArgumentException
      *             if modelConfig is null.
      */
-    public static Map<String, String> getPigParamMap(ModelConfig modelConfig, SourceType sourceType)
-            throws IOException {
+    public static Map<String, String> getPigParamMap(ModelConfig modelConfig, SourceType sourceType) throws IOException {
         if(modelConfig == null) {
             throw new IllegalArgumentException("modelConfig should not be null.");
         }
@@ -1582,23 +1697,6 @@ public final class CommonUtils {
                     + CommonConstants.NAMESPACE_DELIMITER.length(), columnName.length());
         }
         return columnName;
-    }
-
-    /**
-     * Simple name without name space part.
-     * 
-     * @param columnName
-     *            the column name
-     * @return the simple name not including name space part
-     */
-    public static String getSimpleColumnName(String columnName) {
-        String result = columnName;
-        // remove name-space in column name to make it be called by simple name
-        if(columnName.contains(CommonConstants.NAMESPACE_DELIMITER)) {
-            result = columnName.substring(columnName.lastIndexOf(CommonConstants.NAMESPACE_DELIMITER)
-                    + CommonConstants.NAMESPACE_DELIMITER.length(), columnName.length());
-        }
-        return result;
     }
 
     /**
@@ -2172,20 +2270,20 @@ public final class CommonUtils {
         }
 
         if(isBinaryClassification) {
-            return columnConfig.isCandidate() && (columnConfig.getKs() != null && columnConfig.getKs() > 0
-                    && columnConfig.getIv() != null && columnConfig.getIv() > 0 && columnConfig.getMean() != null
-                    && columnConfig.getStdDev() != null
-                    && ((columnConfig.isCategorical() && columnConfig.getBinCategory() != null
-                            && columnConfig.getBinCategory().size() > 1)
-                            || (columnConfig.isNumerical() && columnConfig.getBinBoundary() != null
-                                    && columnConfig.getBinBoundary().size() > 1)));
+            return columnConfig.isCandidate()
+                    && (columnConfig.getKs() != null && columnConfig.getKs() > 0 && columnConfig.getIv() != null
+                            && columnConfig.getIv() > 0 && columnConfig.getMean() != null
+                            && columnConfig.getStdDev() != null && ((columnConfig.isCategorical()
+                            && columnConfig.getBinCategory() != null && columnConfig.getBinCategory().size() > 1) || (columnConfig
+                            .isNumerical() && columnConfig.getBinBoundary() != null && columnConfig.getBinBoundary()
+                            .size() > 1)));
         } else {
             // multiple classification
-            return columnConfig.isCandidate() && (columnConfig.getMean() != null && columnConfig.getStdDev() != null
-                    && ((columnConfig.isCategorical() && columnConfig.getBinCategory() != null
-                            && columnConfig.getBinCategory().size() > 1)
-                            || (columnConfig.isNumerical() && columnConfig.getBinBoundary() != null
-                                    && columnConfig.getBinBoundary().size() > 1)));
+            return columnConfig.isCandidate()
+                    && (columnConfig.getMean() != null && columnConfig.getStdDev() != null && ((columnConfig
+                            .isCategorical() && columnConfig.getBinCategory() != null && columnConfig.getBinCategory()
+                            .size() > 1) || (columnConfig.isNumerical() && columnConfig.getBinBoundary() != null && columnConfig
+                            .getBinBoundary().size() > 1)));
         }
     }
 
@@ -2194,13 +2292,12 @@ public final class CommonUtils {
             return false;
         }
 
-        return columnConfig.isCandidate() && (columnConfig.getKs() != null && columnConfig.getKs() > 0
-                && columnConfig.getIv() != null && columnConfig.getIv() > 0 && columnConfig.getMean() != null
-                && columnConfig.getStdDev() != null
-                && ((columnConfig.isCategorical() && columnConfig.getBinCategory() != null
-                        && columnConfig.getBinCategory().size() > 1)
-                        || (columnConfig.isNumerical() && columnConfig.getBinBoundary() != null
-                                && columnConfig.getBinBoundary().size() > 1)));
+        return columnConfig.isCandidate()
+                && (columnConfig.getKs() != null && columnConfig.getKs() > 0 && columnConfig.getIv() != null
+                        && columnConfig.getIv() > 0 && columnConfig.getMean() != null
+                        && columnConfig.getStdDev() != null && ((columnConfig.isCategorical()
+                        && columnConfig.getBinCategory() != null && columnConfig.getBinCategory().size() > 1) || (columnConfig
+                        .isNumerical() && columnConfig.getBinBoundary() != null && columnConfig.getBinBoundary().size() > 1)));
     }
 
     /**
@@ -2216,8 +2313,7 @@ public final class CommonUtils {
      * @throws IOException
      *             any io exception
      */
-    public static String[] takeFirstLine(String dataSetRawPath, String delimeter, SourceType source)
-            throws IOException {
+    public static String[] takeFirstLine(String dataSetRawPath, String delimeter, SourceType source) throws IOException {
         if(dataSetRawPath == null || delimeter == null || source == null) {
             throw new IllegalArgumentException("Input parameters should not be null.");
         }
@@ -2400,8 +2496,8 @@ public final class CommonUtils {
             for(Entry<Integer, MutablePair<String, Double>> entry: item.entrySet()) {
                 if(!finalResult.containsKey(entry.getKey())) {
                     // do average on models by dividing modelSize
-                    MutablePair<String, Double> value = MutablePair.of(entry.getValue().getKey(),
-                            entry.getValue().getValue() / modelSize);
+                    MutablePair<String, Double> value = MutablePair.of(entry.getValue().getKey(), entry.getValue()
+                            .getValue() / modelSize);
                     finalResult.put(entry.getKey(), value);
                 } else {
                     MutablePair<String, Double> current = finalResult.get(entry.getKey());
