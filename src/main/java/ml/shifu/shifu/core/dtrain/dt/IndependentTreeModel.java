@@ -30,7 +30,7 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.zip.GZIPInputStream;
 
 import ml.shifu.shifu.core.dtrain.CommonConstants;
-import ml.shifu.shifu.util.CommonUtils;
+import ml.shifu.shifu.core.dtrain.StringUtils;
 import ml.shifu.shifu.util.Constants;
 
 /**
@@ -41,8 +41,6 @@ import ml.shifu.shifu.util.Constants;
  * 
  * <p>
  * To predict data for tree model, call {@link #compute(Map)} or {@link #compute(double[])}
- * 
- * @author Zhang David (pengzhang@paypal.com)
  */
 public class IndependentTreeModel {
 
@@ -126,7 +124,7 @@ public class IndependentTreeModel {
      * For numerical columns, mean value is used for null replacement
      */
     private Map<Integer, Double> numericalMeanMapping;
-    
+
     public IndependentTreeModel(Map<Integer, Double> numericalMeanMapping, Map<Integer, String> numNameMapping,
             Map<Integer, List<String>> categoricalColumnNameNames,
             Map<Integer, Map<String, Integer>> columnCategoryIndexMapping, Map<Integer, Integer> columnNumIndexMapping,
@@ -664,7 +662,7 @@ public class IndependentTreeModel {
             String columnName = dis.readUTF();
             if(isRemoveNameSpace) {
                 // remove name-space in column name to make it be called by simple name
-                columnName = CommonUtils.getSimpleColumnName(columnName);
+                columnName = StringUtils.getSimpleColumnName(columnName);
             }
             columnIndexNameMapping.put(columnIndex, columnName);
         }
@@ -684,7 +682,7 @@ public class IndependentTreeModel {
                 categories.add(category);
                 if(category.contains(Constants.CATEGORICAL_GROUP_VAL_DELIMITER)) {
                     // merged category should be flatten, use split function this class to avoid depending on guava jar
-                    String[] splits = split(category, Constants.CATEGORICAL_GROUP_VAL_DELIMITER);
+                    String[] splits = StringUtils.split(category, Constants.CATEGORICAL_GROUP_VAL_DELIMITER);
                     for(String str: splits) {
                         categoryIndexMapping.put(str, j);
                     }
@@ -725,40 +723,6 @@ public class IndependentTreeModel {
     }
 
     /**
-     * Manual split function to avoid depending on guava.
-     * 
-     * <p>
-     * Some examples: "^"=&gt;[, ]; ""=&gt;[]; "a"=&gt;[a]; "abc"=&gt;[abc]; "a^"=&gt;[a, ]; "^b"=&gt;[, b];
-     * "^^b"=&gt;[, , b]
-     * 
-     * @param str
-     *            the string to be split
-     * @param delimiter
-     *            the delimiter
-     * @return split string array
-     */
-    public static String[] split(String str, String delimiter) {
-        if(str == null || str.length() == 0) {
-            return new String[] { "" };
-        }
-
-        List<String> categories = new ArrayList<String>();
-        int dLen = delimiter.length();
-        int begin = 0;
-        for(int i = 0; i < str.length(); i++) {
-            if(str.substring(i, Math.min(i + dLen, str.length())).equals(delimiter)) {
-                categories.add(str.substring(begin, i));
-                begin = i + dLen;
-            }
-            if(i == str.length() - 1) {
-                categories.add(str.substring(begin, str.length()));
-            }
-        }
-
-        return categories.toArray(new String[0]);
-    }
-
-    /**
      * @return the numericalMeanMapping
      */
     public Map<Integer, Double> getNumericalMeanMapping() {
@@ -772,7 +736,7 @@ public class IndependentTreeModel {
     public void setNumericalMeanMapping(Map<Integer, Double> numericalMeanMapping) {
         this.numericalMeanMapping = numericalMeanMapping;
     }
-    
+
     public static int getVersion() {
         return version;
     }

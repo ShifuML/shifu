@@ -210,7 +210,8 @@ public class PersistBasicFloatNetwork implements EncogPersistor {
         Map<String, String> properties = new HashMap<String, String>();
         int size = in.readInt();
         for(int i = 0; i < size; i++) {
-            properties.put(in.readUTF(), in.readUTF());
+            properties.put(ml.shifu.shifu.core.dtrain.StringUtils.readString(in),
+                    ml.shifu.shifu.core.dtrain.StringUtils.readString(in));
         }
         result.getProperties().putAll(properties);
 
@@ -231,6 +232,7 @@ public class PersistBasicFloatNetwork implements EncogPersistor {
         flat.setLayerIndex(readIntArray(in));
         flat.setLayerOutput(readDoubleArray(in));
         flat.setOutputCount(in.readInt());
+        flat.setLayerSums(new double[flat.getLayerOutput().length]);
         flat.setWeightIndex(readIntArray(in));
         flat.setWeights(readDoubleArray(in));
         flat.setBiasActivation(readDoubleArray(in));
@@ -239,7 +241,7 @@ public class PersistBasicFloatNetwork implements EncogPersistor {
         flat.setActivationFunctions(new ActivationFunction[flat.getLayerCounts().length]);
         int acSize = in.readInt();
         for(int i = 0; i < acSize; i++) {
-            String name = in.readUTF();
+            String name = ml.shifu.shifu.core.dtrain.StringUtils.readString(in);
             if(name.equals("ActivationReLU")) {
                 name = ActivationReLU.class.getName();
             } else {
@@ -275,7 +277,7 @@ public class PersistBasicFloatNetwork implements EncogPersistor {
         return result;
     }
 
-    public void save(DataOutput out, final BasicFloatNetwork network) throws IOException {
+    public void saveNetwork(DataOutput out, final BasicFloatNetwork network) throws IOException {
         final FlatNetwork flat = network.getStructure().getFlat();
         // write general properties
         Map<String, String> properties = network.getProperties();
@@ -284,8 +286,8 @@ public class PersistBasicFloatNetwork implements EncogPersistor {
         } else {
             out.writeInt(properties.size());
             for(Entry<String, String> entry: properties.entrySet()) {
-                out.writeUTF(entry.getKey());
-                out.writeUTF(entry.getValue());
+                ml.shifu.shifu.core.dtrain.StringUtils.writeString(out, entry.getKey());
+                ml.shifu.shifu.core.dtrain.StringUtils.writeString(out, entry.getValue());
             }
         }
 
@@ -311,8 +313,9 @@ public class PersistBasicFloatNetwork implements EncogPersistor {
         writeDoubleArray(out, flat.getBiasActivation());
 
         // write activation list
+        out.writeInt(flat.getActivationFunctions().length);
         for(final ActivationFunction af: flat.getActivationFunctions()) {
-            out.writeUTF(af.getClass().getSimpleName());
+            ml.shifu.shifu.core.dtrain.StringUtils.writeString(out, af.getClass().getSimpleName());
             writeDoubleArray(out, af.getParams());
         }
         // write sub sets

@@ -19,9 +19,7 @@ import java.io.BufferedInputStream;
 import java.io.DataInputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -30,20 +28,36 @@ import java.util.zip.GZIPInputStream;
 import ml.shifu.shifu.container.obj.ModelNormalizeConf.NormType;
 import ml.shifu.shifu.core.Normalizer;
 import ml.shifu.shifu.core.dtrain.CommonConstants;
+import ml.shifu.shifu.core.dtrain.StringUtils;
 import ml.shifu.shifu.core.dtrain.dataset.BasicFloatNetwork;
 import ml.shifu.shifu.core.dtrain.dataset.PersistBasicFloatNetwork;
-import ml.shifu.shifu.core.dtrain.dt.IndependentTreeModel;
 import ml.shifu.shifu.util.CommonUtils;
 import ml.shifu.shifu.util.Constants;
 
 import org.encog.ml.data.basic.BasicMLData;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
- * TODO
+ * {@link IndependentNNModel} is a light NN engine to predict NN model, the only dependency is shifu, guagua and
+ * encog-core jars.
  * 
- * @author pengzhang
+ * <p>
+ * Model format for IndependentNNModel is binary format and can only be read by this engine. With this engine, better
+ * execution SLA is expected while model is not good to be read and modified.
+ * 
+ * {@link #loadFromStream(InputStream, boolean)} and {@link #loadFromStream(InputStream)} are the only two entry points
+ * to instance a {@link IndependentNNModel}.
+ * 
+ * <p>
+ * {@link #compute(Map)} are the two APIs called for prediction.
+ * 
+ * <p>
+ * SLA is expected and tested better compared with PMML NN model.
  */
 public class IndependentNNModel {
+
+    private static final Logger LOG = LoggerFactory.getLogger(IndependentNNModel.class);
 
     /**
      * Encog based neural network instance which is used to compute nn score
@@ -58,106 +72,169 @@ public class IndependentNNModel {
     /**
      * Mapping for (ColumnNum, ColumnName)
      */
-    private Map<Integer, String> numNameMappings;
+    private Map<Integer, String> numNameMap;
 
     /**
      * Mapping for (ColumnNum, Category List) for categorical feature
      */
-    private Map<Integer, List<String>> categoricalColumnNameNames;
+    private Map<Integer, List<String>> cateCateMap;
 
     /**
-     * Mapping for (ColumnNum, index in double[] array)
+     * Mapping for (ColumnNum, index in double[] array), this is important to make input map with the input array be
+     * consistent
      */
-    private Map<Integer, Integer> columnNumIndexMappings;
+    private Map<Integer, Integer> columnNumIndexMap;
 
     /**
-     * Mapping for (columnNum, (category, woeValue))
+     * Mapping for (columnNum, (category, woeValue)) for categorical columns
      */
-    private Map<Integer, Map<String, Double>> categoricalWoeMappings;
+    private Map<Integer, Map<String, Double>> cateWoeMap;
 
     /**
-     * Mapping for (columnNum, (category, weightedWoeValue))
+     * Mapping for (columnNum, (category, weightedWoeValue)) for categorical columns
      */
-    private Map<Integer, Map<String, Double>> weightedCategoricalWoeMappings;
+    private Map<Integer, Map<String, Double>> cateWgtWoeMap;
 
     /**
      * Mapping for (columnNum, (category, posRate)) for categorical columns
      */
-    private Map<Integer, Map<String, Double>> binPosRateMappings;
+    private Map<Integer, Map<String, Double>> binPosRateMap;
 
     /**
      * Mapping for (columnNum, binBoundaries) for numerical columns
      */
-    private Map<Integer, List<Double>> numericalBinBoundaries;
+    private Map<Integer, List<Double>> numerBinBoundaries;
 
     /**
-     * Mapping for (columnNum, weightedBinWoes) for numerical columns, last one in weightedBinWoes is for missing value
-     * bin
+     * Mapping for (columnNum, woes) for numerical columns, last one in weightedWoes is for missing value bin
      */
-    private Map<Integer, List<Double>> numericalWeightedWoes;
+    private Map<Integer, List<Double>> numerWoes;
 
     /**
-     * Mapping for (columnNum, weightedWoes) for numerical columns, last one in weightedWoes is for missing value bin
+     * Mapping for (columnNum, wgtWoes) for numerical columns, last one in weightedBinWoes is for missing value bin
      */
-    private Map<Integer, List<Double>> numericalWoes;
+    private Map<Integer, List<Double>> numerWgtWoes;
 
     /**
-     * ZScore stddev cutoff value
+     * ZScore stddev cutoff value per each column
      */
-    private double cutOff;
+    private Map<Integer, Double> cutOffMap;
 
     /**
      * Mapping for (columnNum, mean) for all columns
      */
-    private Map<Integer, Double> numericalMeanMappings;
+    private Map<Integer, Double> numerMeanMap;
 
     /**
      * Mapping for (columnNum, stddev) for all columns
      */
-    private Map<Integer, Double> numericalStddevMappings;
+    private Map<Integer, Double> numerStddevMap;
 
     /**
      * Mapping for (columnNum, woeMean) for all columns
      */
-    private Map<Integer, Double> woeMeanMappings;
+    private Map<Integer, Double> woeMeanMap;
 
     /**
      * Mapping for (columnNum, woeStddev) for all columns
      */
-    private Map<Integer, Double> woeStddevMappings;
+    private Map<Integer, Double> woeStddevMap;
 
     /**
      * Mapping for (columnNum, weightedWoeMean) for all columns
      */
-    private Map<Integer, Double> weightedWoeMeanMappings;
+    private Map<Integer, Double> wgtWoeMeanMap;
 
     /**
      * Mapping for (columnNum, weightedWoeStddev) for all columns
      */
-    private Map<Integer, Double> weightedWoeStddevMappings;
+    private Map<Integer, Double> wgtWoeStddevMap;
 
     /**
      * Model version
      */
-    @SuppressWarnings("unused")
     private static int version = CommonConstants.NN_FORMAT_VERSION;
 
+    /**
+     * Set it to private, {@link IndependentNNModel} can only be loaded by {@link #loadFromStream(InputStream)} and
+     * {@link #loadFromStream(InputStream, boolean)}.
+     */
+    private IndependentNNModel(BasicFloatNetwork basicNetwork, NormType normType, Map<Integer, String> numNameMappings,
+            Map<Integer, List<String>> cateColumnNameNames, Map<Integer, Integer> columnNumIndexMap,
+            Map<Integer, Map<String, Double>> cateWoeMap, Map<Integer, Map<String, Double>> wgtCateWoeMap,
+            Map<Integer, Map<String, Double>> binPosRateMap, Map<Integer, List<Double>> numerBinBoundaries,
+            Map<Integer, List<Double>> numerWgtWoes, Map<Integer, List<Double>> numerWoes,
+            Map<Integer, Double> cutOffMap, Map<Integer, Double> numerMeanMap, Map<Integer, Double> numerStddevMap,
+            Map<Integer, Double> woeMeanMap, Map<Integer, Double> woeStddevMap, Map<Integer, Double> wgtWoeMeanMap,
+            Map<Integer, Double> wgtWoeStddevMap) {
+        this.basicNetwork = basicNetwork;
+        this.normType = normType;
+        this.numNameMap = numNameMappings;
+        this.cateCateMap = cateColumnNameNames;
+        this.columnNumIndexMap = columnNumIndexMap;
+        this.cateWoeMap = cateWoeMap;
+        this.cateWgtWoeMap = wgtCateWoeMap;
+        this.binPosRateMap = binPosRateMap;
+        this.numerBinBoundaries = numerBinBoundaries;
+        this.numerWgtWoes = numerWgtWoes;
+        this.numerWoes = numerWoes;
+        this.cutOffMap = cutOffMap;
+        this.numerMeanMap = numerMeanMap;
+        this.numerStddevMap = numerStddevMap;
+        this.woeMeanMap = woeMeanMap;
+        this.woeStddevMap = woeStddevMap;
+        this.wgtWoeMeanMap = wgtWoeMeanMap;
+        this.wgtWoeStddevMap = wgtWoeStddevMap;
+    }
+
+    /**
+     * Given double array data, compute score values of neural network
+     * 
+     * @param data
+     *            data array includes only effective column data, numeric value is real value after normalization,
+     *            categorical feature value is pos rates or woe .
+     * @return neural network model output
+     */
     public double[] compute(double[] data) {
         return this.basicNetwork.compute(new BasicMLData(data)).getData();
     }
 
+    /**
+     * Given {@code dataMap} with format (columnName, value), compute score values of neural network model.
+     * 
+     * <p>
+     * No any alert or exception if your {@code dataMap} doesn't contain features included in the model, such case will
+     * be treated as missing value case. Please make sure feature names in keys of {@code dataMap} are consistent with
+     * names in model.
+     * 
+     * <p>
+     * In {@code dataMap}, numerical value can be (String, Double) format or (String, String) format, they will all be
+     * parsed to Double; categorical value are all converted to (String, String). If value not in our categorical list,
+     * it will also be treated as missing value.
+     * 
+     * <p>
+     * In {@code dataMap}, data should be raw value and normalization is computed inside according to {@link #normType}
+     * and stats information in such model.
+     * 
+     * @param dataMap
+     *            {@code dataMap} for (columnName, value), numeric value can be double/String, categorical feature can
+     *            be int(index) or category value. if not set or set to null, such feature will be treated as missing
+     *            value. For numerical value, if it cannot be parsed successfully, it will also be treated as missing.
+     * @return score output for neural network
+     */
     public double[] compute(Map<String, Object> dataMap) {
         return compute(convertDataMapToDoubleArray(dataMap));
     }
 
     private double[] convertDataMapToDoubleArray(Map<String, Object> dataMap) {
-        double[] data = new double[this.columnNumIndexMappings.size()];
-        for(Entry<Integer, Integer> entry: this.columnNumIndexMappings.entrySet()) {
+        double[] data = new double[this.columnNumIndexMap.size()];
+        for(Entry<Integer, Integer> entry: this.columnNumIndexMap.entrySet()) {
             double value = 0d;
             Integer columnNum = entry.getKey();
-            String columnName = this.numNameMappings.get(columnNum);
+            String columnName = this.numNameMap.get(columnNum);
             Object obj = dataMap.get(columnName);
-            if(this.categoricalColumnNameNames.containsKey(columnNum)) {
+            if(this.cateCateMap.containsKey(columnNum)) {
+                // categorical column
                 switch(this.normType) {
                     case WOE:
                     case HYBRID:
@@ -224,10 +301,9 @@ public class IndependentNNModel {
         double value;
         int binIndex = -1;
         if(obj != null) {
-            binIndex = CommonUtils.getNumericalBinIndex(this.numericalBinBoundaries.get(columnNum), obj.toString());
+            binIndex = CommonUtils.getNumericalBinIndex(this.numerBinBoundaries.get(columnNum), obj.toString());
         }
-        List<Double> binWoes = isWeighted ? this.numericalWeightedWoes.get(columnNum) : this.numericalWoes
-                .get(columnNum);
+        List<Double> binWoes = isWeighted ? this.numerWgtWoes.get(columnNum) : this.numerWoes.get(columnNum);
         if(binIndex == -1) {
             // The last bin in woeBins is the miss value bin.
             value = binWoes.get(binWoes.size() - 1);
@@ -239,7 +315,7 @@ public class IndependentNNModel {
 
     private double getNumericalZScoreValue(Integer columnNum, Object obj) {
         double rawValue = 0d;
-        double mean = this.numericalMeanMappings.get(columnNum);
+        double mean = this.numerMeanMap.get(columnNum);
         if(obj == null || obj.toString().length() == 0) {
             rawValue = defaultMissingValue(mean);
         } else {
@@ -249,13 +325,14 @@ public class IndependentNNModel {
                 rawValue = defaultMissingValue(mean);
             }
         }
-        double stddev = this.numericalStddevMappings.get(columnNum);
-        return Normalizer.computeZScore(rawValue, mean, stddev, this.cutOff);
+        double stddev = this.numerStddevMap.get(columnNum);
+        double cutoff = Normalizer.checkCutOff(this.cutOffMap.get(columnNum));
+        return Normalizer.computeZScore(rawValue, mean, stddev, cutoff);
     }
 
     private double getCategoricalPosRateValue(Integer columnNum, Object obj) {
         double value = 0d;
-        Map<String, Double> posRateMapping = this.binPosRateMappings.get(columnNum);
+        Map<String, Double> posRateMapping = this.binPosRateMap.get(columnNum);
         if(obj == null) {
             value = posRateMapping.get(Constants.EMPTY_CATEGORY);
         } else {
@@ -271,24 +348,25 @@ public class IndependentNNModel {
 
     private double getNumericalWoeZScoreValue(Integer columnNum, Object obj, boolean isWeighted) {
         double woe = getNumericalWoeValue(columnNum, obj, isWeighted);
-        Map<Integer, Double> woeMeans = isWeighted ? this.weightedWoeMeanMappings : this.woeMeanMappings;
-        Map<Integer, Double> woeStddevs = isWeighted ? this.weightedWoeStddevMappings : this.woeStddevMappings;
+        Map<Integer, Double> woeMeans = isWeighted ? this.wgtWoeMeanMap : this.woeMeanMap;
+        Map<Integer, Double> woeStddevs = isWeighted ? this.wgtWoeStddevMap : this.woeStddevMap;
         double mean = woeMeans.get(columnNum), stddev = woeStddevs.get(columnNum);
-        return Normalizer.computeZScore(woe, mean, stddev, this.cutOff);
+        double cutoff = Normalizer.checkCutOff(this.cutOffMap.get(columnNum));
+        return Normalizer.computeZScore(woe, mean, stddev, cutoff);
     }
 
     private double getCategoricalWoeZScoreValue(Integer columnNum, Object obj, boolean isWeighted) {
         double woe = getCategoricalWoeValue(columnNum, obj, isWeighted);
-        Map<Integer, Double> woeMeans = isWeighted ? this.weightedWoeMeanMappings : this.woeMeanMappings;
-        Map<Integer, Double> woeStddevs = isWeighted ? this.weightedWoeStddevMappings : this.woeStddevMappings;
+        Map<Integer, Double> woeMeans = isWeighted ? this.wgtWoeMeanMap : this.woeMeanMap;
+        Map<Integer, Double> woeStddevs = isWeighted ? this.wgtWoeStddevMap : this.woeStddevMap;
         double mean = woeMeans.get(columnNum), stddev = woeStddevs.get(columnNum);
-        return Normalizer.computeZScore(woe, mean, stddev, this.cutOff);
+        double cutoff = Normalizer.checkCutOff(cutOffMap.get(columnNum));
+        return Normalizer.computeZScore(woe, mean, stddev, cutoff);
     }
 
     private double getCategoricalWoeValue(Integer columnNum, Object obj, boolean isWeighted) {
         double value = 0d;
-        Map<Integer, Map<String, Double>> mappings = isWeighted ? this.weightedCategoricalWoeMappings
-                : categoricalWoeMappings;
+        Map<Integer, Map<String, Double>> mappings = isWeighted ? this.cateWgtWoeMap : cateWoeMap;
         Map<String, Double> woeMap = mappings.get(columnNum);
         if(obj == null) {
             value = woeMap.get(Constants.EMPTY_CATEGORY);
@@ -306,7 +384,31 @@ public class IndependentNNModel {
     public static double defaultMissingValue(Double mean) {
         return mean == null ? 0 : mean.doubleValue();
     }
-    
+
+    /**
+     * Load model instance from input stream which is saved in NNOutput for specified binary format.
+     * 
+     * @param input
+     *            the input stream, flat input stream or gzip input stream both OK
+     * @return the nn model instance
+     * @throws IOException
+     *             any IOException in de-serialization.
+     */
+    public static IndependentNNModel loadFromStream(InputStream input) throws IOException {
+        return loadFromStream(input, true);
+    }
+
+    /**
+     * Load model instance from input stream which is saved in NNOutput for specified binary format.
+     * 
+     * @param input
+     *            the input stream, flat input stream or gzip input stream both OK
+     * @param isRemoveNameSpace
+     *            is remove name space or not
+     * @return the nn model instance
+     * @throws IOException
+     *             any IOException in de-serialization.
+     */
     public static IndependentNNModel loadFromStream(InputStream input, boolean isRemoveNameSpace) throws IOException {
         DataInputStream dis = null;
         // check if gzip or not
@@ -327,48 +429,416 @@ public class IndependentNNModel {
         }
 
         int version = dis.readInt();
-        int inputCnt = dis.readInt();
-        NormType normType = NormType.valueOf(dis.readUTF().toUpperCase());
-        
+        LOG.info("version is:" + version);
+        IndependentNNModel.setVersion(version);
+        String normStr = ml.shifu.shifu.core.dtrain.StringUtils.readString(dis);
+        LOG.info("normStr is:" + normStr);
+        NormType normType = NormType.valueOf(normStr.toUpperCase());
+
+        // for all features
         Map<Integer, String> numNameMap = new HashMap<Integer, String>();
-        Map<Integer, List<String>> cateColumnNameNames  = new HashMap<Integer, List<String>>();
-        
-        Map<Integer, Map<String, Double>> cateWoeMap = new HashMap<Integer, Map<String,Double>>();
-        Map<Integer, Map<String, Double>> cateWgtWoeMap = new HashMap<Integer, Map<String,Double>>();
-        
-        List<NNColumnStats> columnStatsList = new ArrayList<NNColumnStats>();
-        int size = dis.readInt();
-        for(int i = 0; i < size; i++) {
+        Map<Integer, List<String>> cateColumnNameNames = new HashMap<Integer, List<String>>();
+        // for categorical features
+        Map<Integer, Map<String, Double>> cateWoeMap = new HashMap<Integer, Map<String, Double>>();
+        Map<Integer, Map<String, Double>> cateWgtWoeMap = new HashMap<Integer, Map<String, Double>>();
+        Map<Integer, Map<String, Double>> binPosRateMap = new HashMap<Integer, Map<String, Double>>();
+        // for numerical features
+        Map<Integer, List<Double>> numerBinBoundaries = new HashMap<Integer, List<Double>>();
+        Map<Integer, List<Double>> numerWoes = new HashMap<Integer, List<Double>>();
+        Map<Integer, List<Double>> numerWgtWoes = new HashMap<Integer, List<Double>>();
+        // for all features
+        Map<Integer, Double> numerMeanMap = new HashMap<Integer, Double>();
+        Map<Integer, Double> numerStddevMap = new HashMap<Integer, Double>();
+        Map<Integer, Double> woeMeanMap = new HashMap<Integer, Double>();
+        Map<Integer, Double> woeStddevMap = new HashMap<Integer, Double>();
+        Map<Integer, Double> wgtWoeMeanMap = new HashMap<Integer, Double>();
+        Map<Integer, Double> wgtWoeStddevMap = new HashMap<Integer, Double>();
+        Map<Integer, Double> cutoffMap = new HashMap<Integer, Double>();
+
+        int columnSize = dis.readInt();
+        for(int i = 0; i < columnSize; i++) {
             NNColumnStats cs = new NNColumnStats();
             cs.readFields(dis);
-            
-            numNameMap.put(cs.getColumnNum(), cs.getColumnName());
+
+            List<Double> binWoes = cs.getBinCountWoes();
+            List<Double> binWgtWoes = cs.getBinWeightWoes();
+            List<Double> binPosRates = cs.getBinPosRates();
+
+            int columnNum = cs.getColumnNum();
+
+            if(isRemoveNameSpace) {
+                // remove name-space in column name to make it be called by simple name
+                numNameMap.put(columnNum, StringUtils.getSimpleColumnName(cs.getColumnName()));
+            } else {
+                numNameMap.put(columnNum, cs.getColumnName());
+            }
+
+            // for categorical features
+            Map<String, Double> woeMap = new HashMap<String, Double>();
+            Map<String, Double> woeWgtMap = new HashMap<String, Double>();
+            Map<String, Double> posRateMap = new HashMap<String, Double>();
+
             if(cs.isCategorical()) {
                 List<String> binCategories = cs.getBinCategories();
-                cateColumnNameNames.put(cs.getColumnNum(), binCategories);
-                
-                Map<String, Double> woeMap = new HashMap<String, Double>();
+
+                cateColumnNameNames.put(columnNum, binCategories);
                 for(int j = 0; j < binCategories.size(); j++) {
                     String currCate = binCategories.get(j);
-                    /*if(currCate.contains(Constants.CATEGORICAL_GROUP_VAL_DELIMITER)) {
-                        // merged category should be flatten, use split function this class to avoid depending on guava jar
-                        String[] splits = split(currCate, Constants.CATEGORICAL_GROUP_VAL_DELIMITER);
+                    if(currCate.contains(Constants.CATEGORICAL_GROUP_VAL_DELIMITER)) {
+                        // merged category should be flatten, use own split function to avoid depending on guava jar in
+                        // prediction
+                        String[] splits = StringUtils.split(currCate, Constants.CATEGORICAL_GROUP_VAL_DELIMITER);
                         for(String str: splits) {
-                            categoryIndexMapping.put(str, j);
+                            woeMap.put(str, binWoes.get(j));
+                            woeWgtMap.put(str, binWgtWoes.get(j));
+                            posRateMap.put(str, binPosRates.get(j));
                         }
                     } else {
-                        categoryIndexMapping.put(category, j);
-                    }*/
+                        woeMap.put(currCate, binWoes.get(j));
+                        woeWgtMap.put(currCate, binWgtWoes.get(j));
+                        posRateMap.put(currCate, binPosRates.get(j));
+                    }
                 }
+                // append last missing bin
+                woeMap.put(Constants.EMPTY_CATEGORY, binWoes.get(binCategories.size()));
+                woeWgtMap.put(Constants.EMPTY_CATEGORY, binWgtWoes.get(binCategories.size()));
+                posRateMap.put(Constants.EMPTY_CATEGORY, binPosRates.get(binCategories.size()));
             } else {
-                
+                numerBinBoundaries.put(columnNum, cs.getBinBoundaries());
+                numerWoes.put(columnNum, binWoes);
+                numerWgtWoes.put(columnNum, binWgtWoes);
             }
-            
-            columnStatsList.add(cs);
+
+            cateWoeMap.put(columnNum, woeMap);
+            cateWgtWoeMap.put(columnNum, woeWgtMap);
+            binPosRateMap.put(columnNum, posRateMap);
+
+            numerMeanMap.put(columnNum, cs.getMean());
+            numerStddevMap.put(columnNum, cs.getStddev());
+            woeMeanMap.put(columnNum, cs.getWoeMean());
+            woeStddevMap.put(columnNum, cs.getWoeStddev());
+            wgtWoeMeanMap.put(columnNum, cs.getWoeWgtMean());
+            wgtWoeStddevMap.put(columnNum, cs.getWoeWgtStddev());
+            cutoffMap.put(columnNum, cs.getCutoff());
         }
-        
+
+        Map<Integer, Integer> columnMap = new HashMap<Integer, Integer>();
+        int columnMapSize = dis.readInt();
+        for(int i = 0; i < columnMapSize; i++) {
+            columnMap.put(dis.readInt(), dis.readInt());
+        }
+
         BasicFloatNetwork network = new PersistBasicFloatNetwork().readNetwork(dis);
-        return new IndependentNNModel();
+
+        return new IndependentNNModel(network, normType, numNameMap, cateColumnNameNames, columnMap, cateWoeMap,
+                cateWgtWoeMap, binPosRateMap, numerBinBoundaries, numerWgtWoes, numerWoes, cutoffMap, numerMeanMap,
+                numerStddevMap, woeMeanMap, woeStddevMap, wgtWoeMeanMap, wgtWoeStddevMap);
     }
 
+    @SuppressWarnings("unused")
+    private static DataInputStream ensureGzipIfExists(InputStream input) {
+        // check if gzip or not
+        DataInputStream dis = null;
+        try {
+            byte[] header = new byte[2];
+            BufferedInputStream bis = new BufferedInputStream(input);
+            bis.mark(2);
+            int result = bis.read(header);
+            bis.reset();
+            int ss = (header[0] & 0xff) | ((header[1] & 0xff) << 8);
+            if(result != -1 && ss == GZIPInputStream.GZIP_MAGIC) {
+                dis = new DataInputStream(new GZIPInputStream(bis));
+            } else {
+                dis = new DataInputStream(bis);
+            }
+        } catch (java.io.IOException e) {
+            dis = new DataInputStream(input);
+        }
+        return dis;
+    }
+
+    /**
+     * @return the version
+     */
+    public static int getVersion() {
+        return version;
+    }
+
+    /**
+     * @param version
+     *            the version to set
+     */
+    public static void setVersion(int version) {
+        IndependentNNModel.version = version;
+    }
+
+    /**
+     * @return the basicNetwork
+     */
+    public BasicFloatNetwork getBasicNetwork() {
+        return basicNetwork;
+    }
+
+    /**
+     * @param basicNetwork
+     *            the basicNetwork to set
+     */
+    public void setBasicNetwork(BasicFloatNetwork basicNetwork) {
+        this.basicNetwork = basicNetwork;
+    }
+
+    /**
+     * @return the normType
+     */
+    public NormType getNormType() {
+        return normType;
+    }
+
+    /**
+     * @param normType
+     *            the normType to set
+     */
+    public void setNormType(NormType normType) {
+        this.normType = normType;
+    }
+
+    /**
+     * @return the numNameMappings
+     */
+    public Map<Integer, String> getNumNameMappings() {
+        return numNameMap;
+    }
+
+    /**
+     * @param numNameMappings
+     *            the numNameMappings to set
+     */
+    public void setNumNameMappings(Map<Integer, String> numNameMappings) {
+        this.numNameMap = numNameMappings;
+    }
+
+    /**
+     * @return the cateColumnNameNames
+     */
+    public Map<Integer, List<String>> getCateColumnNameNames() {
+        return cateCateMap;
+    }
+
+    /**
+     * @param cateColumnNameNames
+     *            the cateColumnNameNames to set
+     */
+    public void setCateColumnNameNames(Map<Integer, List<String>> cateColumnNameNames) {
+        this.cateCateMap = cateColumnNameNames;
+    }
+
+    /**
+     * @return the columnNumIndexMap
+     */
+    public Map<Integer, Integer> getColumnNumIndexMap() {
+        return columnNumIndexMap;
+    }
+
+    /**
+     * @param columnNumIndexMap
+     *            the columnNumIndexMap to set
+     */
+    public void setColumnNumIndexMap(Map<Integer, Integer> columnNumIndexMap) {
+        this.columnNumIndexMap = columnNumIndexMap;
+    }
+
+    /**
+     * @return the cateWoeMap
+     */
+    public Map<Integer, Map<String, Double>> getCateWoeMap() {
+        return cateWoeMap;
+    }
+
+    /**
+     * @param cateWoeMap
+     *            the cateWoeMap to set
+     */
+    public void setCateWoeMap(Map<Integer, Map<String, Double>> cateWoeMap) {
+        this.cateWoeMap = cateWoeMap;
+    }
+
+    /**
+     * @return the wgtCateWoeMap
+     */
+    public Map<Integer, Map<String, Double>> getWgtCateWoeMap() {
+        return cateWgtWoeMap;
+    }
+
+    /**
+     * @param wgtCateWoeMap
+     *            the wgtCateWoeMap to set
+     */
+    public void setWgtCateWoeMap(Map<Integer, Map<String, Double>> wgtCateWoeMap) {
+        this.cateWgtWoeMap = wgtCateWoeMap;
+    }
+
+    /**
+     * @return the binPosRateMap
+     */
+    public Map<Integer, Map<String, Double>> getBinPosRateMap() {
+        return binPosRateMap;
+    }
+
+    /**
+     * @param binPosRateMap
+     *            the binPosRateMap to set
+     */
+    public void setBinPosRateMap(Map<Integer, Map<String, Double>> binPosRateMap) {
+        this.binPosRateMap = binPosRateMap;
+    }
+
+    /**
+     * @return the numerBinBoundaries
+     */
+    public Map<Integer, List<Double>> getNumerBinBoundaries() {
+        return numerBinBoundaries;
+    }
+
+    /**
+     * @param numerBinBoundaries
+     *            the numerBinBoundaries to set
+     */
+    public void setNumerBinBoundaries(Map<Integer, List<Double>> numerBinBoundaries) {
+        this.numerBinBoundaries = numerBinBoundaries;
+    }
+
+    /**
+     * @return the numerWgtWoes
+     */
+    public Map<Integer, List<Double>> getNumerWgtWoes() {
+        return numerWgtWoes;
+    }
+
+    /**
+     * @param numerWgtWoes
+     *            the numerWgtWoes to set
+     */
+    public void setNumerWgtWoes(Map<Integer, List<Double>> numerWgtWoes) {
+        this.numerWgtWoes = numerWgtWoes;
+    }
+
+    /**
+     * @return the numerWoes
+     */
+    public Map<Integer, List<Double>> getNumerWoes() {
+        return numerWoes;
+    }
+
+    /**
+     * @param numerWoes
+     *            the numerWoes to set
+     */
+    public void setNumerWoes(Map<Integer, List<Double>> numerWoes) {
+        this.numerWoes = numerWoes;
+    }
+
+    /**
+     * @return the numerMeanMap
+     */
+    public Map<Integer, Double> getNumerMeanMap() {
+        return numerMeanMap;
+    }
+
+    /**
+     * @param numerMeanMap
+     *            the numerMeanMap to set
+     */
+    public void setNumerMeanMap(Map<Integer, Double> numerMeanMap) {
+        this.numerMeanMap = numerMeanMap;
+    }
+
+    /**
+     * @return the numerStddevMap
+     */
+    public Map<Integer, Double> getNumerStddevMap() {
+        return numerStddevMap;
+    }
+
+    /**
+     * @param numerStddevMap
+     *            the numerStddevMap to set
+     */
+    public void setNumerStddevMap(Map<Integer, Double> numerStddevMap) {
+        this.numerStddevMap = numerStddevMap;
+    }
+
+    /**
+     * @return the woeMeanMap
+     */
+    public Map<Integer, Double> getWoeMeanMap() {
+        return woeMeanMap;
+    }
+
+    /**
+     * @param woeMeanMap
+     *            the woeMeanMap to set
+     */
+    public void setWoeMeanMap(Map<Integer, Double> woeMeanMap) {
+        this.woeMeanMap = woeMeanMap;
+    }
+
+    /**
+     * @return the woeStddevMap
+     */
+    public Map<Integer, Double> getWoeStddevMap() {
+        return woeStddevMap;
+    }
+
+    /**
+     * @param woeStddevMap
+     *            the woeStddevMap to set
+     */
+    public void setWoeStddevMap(Map<Integer, Double> woeStddevMap) {
+        this.woeStddevMap = woeStddevMap;
+    }
+
+    /**
+     * @return the wgtWoeMeanMap
+     */
+    public Map<Integer, Double> getWgtWoeMeanMap() {
+        return wgtWoeMeanMap;
+    }
+
+    /**
+     * @param wgtWoeMeanMap
+     *            the wgtWoeMeanMap to set
+     */
+    public void setWgtWoeMeanMap(Map<Integer, Double> wgtWoeMeanMap) {
+        this.wgtWoeMeanMap = wgtWoeMeanMap;
+    }
+
+    /**
+     * @return the wgtWoeStddevMap
+     */
+    public Map<Integer, Double> getWgtWoeStddevMap() {
+        return wgtWoeStddevMap;
+    }
+
+    /**
+     * @param wgtWoeStddevMap
+     *            the wgtWoeStddevMap to set
+     */
+    public void setWgtWoeStddevMap(Map<Integer, Double> wgtWoeStddevMap) {
+        this.wgtWoeStddevMap = wgtWoeStddevMap;
+    }
+
+    /**
+     * @return the cutOffMap
+     */
+    public Map<Integer, Double> getCutOffMap() {
+        return cutOffMap;
+    }
+
+    /**
+     * @param cutOffMap
+     *            the cutOffMap to set
+     */
+    public void setCutOffMap(Map<Integer, Double> cutOffMap) {
+        this.cutOffMap = cutOffMap;
+    }
 }

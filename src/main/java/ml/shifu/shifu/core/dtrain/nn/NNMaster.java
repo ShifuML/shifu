@@ -41,6 +41,7 @@ import ml.shifu.shifu.util.CommonUtils;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.fs.Path;
+import org.encog.ml.BasicML;
 import org.encog.neural.networks.BasicNetwork;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -289,8 +290,9 @@ public class NNMaster extends AbstractMasterComputable<NNParams, NNParams> {
         NNParams params = null;
         try {
             Path modelPath = new Path(context.getProps().getProperty(CommonConstants.GUAGUA_OUTPUT));
-            BasicFloatNetwork existingModel = (BasicFloatNetwork) CommonUtils.loadModel(modelConfig, modelPath,
+            BasicML basicML = CommonUtils.loadModel(modelConfig, modelPath,
                     ShifuFileUtils.getFileSystemBySourceType(this.modelConfig.getDataSet().getSource()));
+            BasicFloatNetwork existingModel = (BasicFloatNetwork) CommonUtils.getBasicNetwork(basicML);
             if(existingModel == null) {
                 params = initWeights();
                 LOG.info("Starting to train model from scratch.");
