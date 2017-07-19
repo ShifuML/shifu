@@ -25,19 +25,16 @@ import ml.shifu.guagua.io.Bytable;
 import ml.shifu.shifu.core.dtrain.dt.FeatureType;
 
 /**
- * TODO
- * 
- * @author pengzhang
+ * {@link NNColumnStats} is to wrapper valued info for neural network model serialization.
  */
-public class NNColumnStats implements Bytable {
+class NNColumnStats implements Bytable {
 
     public NNColumnStats() {
     }
 
     public NNColumnStats(int columnNum, String columnName, FeatureType featureType, double mean, double stddev,
             double woeMean, double woeStddev, double woeWgtMean, double woeWgtStddev, List<Double> binBoundaries,
-            List<String> binCategories, List<Double> binPosRates, List<Double> binCountWoes,
-            List<Double> binWeightWoes) {
+            List<String> binCategories, List<Double> binPosRates, List<Double> binCountWoes, List<Double> binWeightWoes) {
         this.columnNum = columnNum;
         this.columnName = columnName;
         this.featureType = featureType;
@@ -55,10 +52,12 @@ public class NNColumnStats implements Bytable {
     }
 
     private int columnNum;
-    
+
     private String columnName;
-    
+
     private FeatureType featureType;
+
+    private double cutoff;
 
     private double mean;
 
@@ -81,7 +80,7 @@ public class NNColumnStats implements Bytable {
     private List<Double> binCountWoes;
 
     private List<Double> binWeightWoes;
-    
+
     public boolean isCategorical() {
         return this.featureType == FeatureType.CATEGORICAL;
     }
@@ -89,37 +88,39 @@ public class NNColumnStats implements Bytable {
     @Override
     public void write(DataOutput out) throws IOException {
         out.writeInt(this.columnNum);
-        out.writeUTF(this.columnName);
+        ml.shifu.shifu.core.dtrain.StringUtils.writeString(out, this.columnName);
         out.writeByte(this.featureType.getByteType());
+        out.writeDouble(this.cutoff);
         out.writeDouble(this.mean);
         out.writeDouble(this.stddev);
         out.writeDouble(this.woeMean);
         out.writeDouble(this.woeStddev);
         out.writeDouble(this.woeWgtMean);
         out.writeDouble(this.woeWgtStddev);
-        
+
         switch(this.featureType) {
             case CONTINUOUS:
-                writeDoubleArray(out, this.binBoundaries);
+                writeDoubleList(out, this.binBoundaries);
                 break;
             case CATEGORICAL:
                 int cateSize = this.binCategories.size();
                 out.writeInt(cateSize);
                 for(int i = 0; i < cateSize; i++) {
-                    out.writeUTF(this.binCategories.get(i));
+                    ml.shifu.shifu.core.dtrain.StringUtils.writeString(out, this.binCategories.get(i));
                 }
                 break;
         }
-        writeDoubleArray(out, this.binPosRates);
-        writeDoubleArray(out, this.binCountWoes);
-        writeDoubleArray(out, this.binWeightWoes);
+        writeDoubleList(out, this.binPosRates);
+        writeDoubleList(out, this.binCountWoes);
+        writeDoubleList(out, this.binWeightWoes);
     }
 
     @Override
     public void readFields(DataInput in) throws IOException {
         this.columnNum = in.readInt();
-        this.columnName = in.readUTF();
+        this.columnName = ml.shifu.shifu.core.dtrain.StringUtils.readString(in);
         this.featureType = FeatureType.of(in.readByte());
+        this.cutoff = in.readDouble();
         this.mean = in.readDouble();
         this.stddev = in.readDouble();
         this.woeMean = in.readDouble();
@@ -132,9 +133,9 @@ public class NNColumnStats implements Bytable {
                 break;
             case CATEGORICAL:
                 int cateSize = in.readInt();
-                List<String> categories =  new ArrayList<String>(cateSize);
+                List<String> categories = new ArrayList<String>(cateSize);
                 for(int i = 0; i < cateSize; i++) {
-                    categories.add(in.readUTF());
+                    categories.add(ml.shifu.shifu.core.dtrain.StringUtils.readString(in));
                 }
                 this.binCategories = categories;
                 break;
@@ -143,7 +144,7 @@ public class NNColumnStats implements Bytable {
         this.binCountWoes = readDoubleList(in);
         this.binWeightWoes = readDoubleList(in);
     }
-    
+
     private List<Double> readDoubleList(DataInput in) throws IOException {
         int size = in.readInt();
         List<Double> list = new ArrayList<Double>();
@@ -152,8 +153,8 @@ public class NNColumnStats implements Bytable {
         }
         return list;
     }
-    
-    private void writeDoubleArray(DataOutput out, List<Double> list) throws IOException {
+
+    private void writeDoubleList(DataOutput out, List<Double> list) throws IOException {
         if(list == null) {
             out.writeInt(0);
         } else {
@@ -352,7 +353,8 @@ public class NNColumnStats implements Bytable {
     }
 
     /**
-     * @param columnName the columnName to set
+     * @param columnName
+     *            the columnName to set
      */
     public void setColumnName(String columnName) {
         this.columnName = columnName;
@@ -366,10 +368,26 @@ public class NNColumnStats implements Bytable {
     }
 
     /**
-     * @param columnNum the columnNum to set
+     * @param columnNum
+     *            the columnNum to set
      */
     public void setColumnNum(int columnNum) {
         this.columnNum = columnNum;
+    }
+
+    /**
+     * @return the cutoff
+     */
+    public double getCutoff() {
+        return cutoff;
+    }
+
+    /**
+     * @param cutoff
+     *            the cutoff to set
+     */
+    public void setCutoff(double cutoff) {
+        this.cutoff = cutoff;
     }
 
 }

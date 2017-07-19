@@ -462,7 +462,7 @@ public class Normalizer {
      *            specified standard deviation cutoff
      * @return If cutoff is valid then return it, else return {@link Normalizer#STD_DEV_CUTOFF}
      */
-    private static double checkCutOff(Double cutoff) {
+    public static double checkCutOff(Double cutoff) {
         double stdDevCutOff;
         if(cutoff != null && !cutoff.isInfinite() && !cutoff.isNaN()) {
             stdDevCutOff = cutoff;

@@ -497,6 +497,17 @@ public class PathFinder {
     public String getModelsPath(SourceType sourceType) {
         return getPathBySourceType(new Path(Constants.MODELS), sourceType);
     }
+    
+    /**
+     * Get the path ofnn binary models
+     * 
+     * @param sourceType
+     *            - Local/HDFS
+     * @return path of models
+     */
+    public String getNNBinaryModelsPath(SourceType sourceType) {
+        return getPathBySourceType(new Path("bmodels"), sourceType);
+    }
 
     public String getValErrorPath(SourceType sourceType) {
         return getPathBySourceType(new Path(Constants.TMP, "valerr"), sourceType);
