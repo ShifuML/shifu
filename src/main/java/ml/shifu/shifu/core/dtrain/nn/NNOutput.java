@@ -138,12 +138,6 @@ public class NNOutput extends BasicMasterInterceptor<NNParams, NNParams> {
      */
     private double dropoutRate = 0d;
 
-    /**
-     * If is binary model for self-runnable
-     */
-    @SuppressWarnings("unused")
-    private boolean isBinaryNNModel;
-
     private Path bModel;
 
     @Override
@@ -267,9 +261,6 @@ public class NNOutput extends BasicMasterInterceptor<NNParams, NNParams> {
 
     private void init(MasterContext<NNParams, NNParams> context) {
         this.isDry = Boolean.TRUE.toString().equals(context.getProps().getProperty(CommonConstants.SHIFU_DRY_DTRAIN));
-
-        this.isBinaryNNModel = Boolean.TRUE.toString().equals(
-                context.getProps().getProperty(Constants.SHIFU_NN_INDEPENDENT_MODEL, "false"));
 
         if(this.isDry) {
             return;

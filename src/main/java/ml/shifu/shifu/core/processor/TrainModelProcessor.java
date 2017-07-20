@@ -512,9 +512,9 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
                 String modelName = getModelName(i);
                 Path modelPath = fileSystem.makeQualified(new Path(super.getPathFinder().getModelsPath(sourceType),
                         modelName));
-                
-                Path bModelPath = fileSystem.makeQualified(new Path(super.getPathFinder().getNNBinaryModelsPath(sourceType),
-                        modelName));
+
+                Path bModelPath = fileSystem.makeQualified(new Path(super.getPathFinder().getNNBinaryModelsPath(
+                        sourceType), modelName));
 
                 // check if job is continunous training, this can be set multiple times and we only get last one
                 boolean isContinous = false;
@@ -573,9 +573,9 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
 
                     Set<Integer> subFeatures = null;
                     if(isContinous) {
-                        BasicFloatNetwork existingModel = (BasicFloatNetwork) CommonUtils.loadModel(modelConfig,
-                                modelPath,
-                                ShifuFileUtils.getFileSystemBySourceType(this.modelConfig.getDataSet().getSource()));
+                        BasicFloatNetwork existingModel = (BasicFloatNetwork) CommonUtils.getBasicNetwork(CommonUtils
+                                .loadModel(modelConfig, modelPath, ShifuFileUtils
+                                        .getFileSystemBySourceType(this.modelConfig.getDataSet().getSource())));
                         if(existingModel == null) {
                             subFeatures = new HashSet<Integer>(getSubsamplingFeatures(allFeatures,
                                     featureSubsetStrategy, featureSubsetRate, inputNodeCount));
@@ -598,10 +598,10 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
 
                 localArgs.add(String.format(CommonConstants.MAPREDUCE_PARAM_FORMAT, CommonConstants.GUAGUA_OUTPUT,
                         modelPath.toString()));
-                
-                localArgs.add(String.format(CommonConstants.MAPREDUCE_PARAM_FORMAT, Constants.SHIFU_NN_BINARY_MODEL_PATH,
-                       bModelPath.toString()));
-                
+
+                localArgs.add(String.format(CommonConstants.MAPREDUCE_PARAM_FORMAT,
+                        Constants.SHIFU_NN_BINARY_MODEL_PATH, bModelPath.toString()));
+
                 if(gs.hasHyperParam() || isKFoldCV) {
                     // k-fold cv need val error
                     Path valErrPath = fileSystem.makeQualified(new Path(super.getPathFinder().getValErrorPath(
@@ -882,7 +882,7 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
             throws IOException {
         BasicML basicML = CommonUtils.loadModel(this.modelConfig, modelPath, fileSystem);
         BasicFloatNetwork model = (BasicFloatNetwork) CommonUtils.getBasicNetwork(basicML);
-        
+
         int[] outputCandidateCounts = DTrainUtils.getInputOutputCandidateCounts(getColumnConfigList());
         int inputs = outputCandidateCounts[0] == 0 ? outputCandidateCounts[2] : outputCandidateCounts[0];
         boolean isInputOutConsistent = model.getInputCount() == inputs
