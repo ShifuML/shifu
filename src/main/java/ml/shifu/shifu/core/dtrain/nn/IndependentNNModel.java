@@ -35,8 +35,6 @@ import ml.shifu.shifu.util.CommonUtils;
 import ml.shifu.shifu.util.Constants;
 
 import org.encog.ml.data.basic.BasicMLData;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * {@link IndependentNNModel} is a light NN engine to predict NN model, the only dependency is shifu, guagua and
@@ -56,8 +54,6 @@ import org.slf4j.LoggerFactory;
  * SLA is expected and tested better compared with PMML NN model.
  */
 public class IndependentNNModel {
-
-    private static final Logger LOG = LoggerFactory.getLogger(IndependentNNModel.class);
 
     /**
      * Encog based neural network instance which is used to compute nn score
@@ -257,7 +253,7 @@ public class IndependentNNModel {
                     case ZSCALE:
                     case ZSCORE:
                     default:
-                        value = getCategoricalPosRateValue(columnNum, obj);
+                        value = getCategoricalPosRateZScoreValue(columnNum, obj);
                         break;
                 }
             } else {
@@ -314,8 +310,9 @@ public class IndependentNNModel {
     }
 
     private double getNumericalZScoreValue(Integer columnNum, Object obj) {
-        double rawValue = 0d;
         double mean = this.numerMeanMap.get(columnNum);
+        double stddev = this.numerStddevMap.get(columnNum);
+        double rawValue = 0d;
         if(obj == null || obj.toString().length() == 0) {
             rawValue = defaultMissingValue(mean);
         } else {
@@ -325,12 +322,11 @@ public class IndependentNNModel {
                 rawValue = defaultMissingValue(mean);
             }
         }
-        double stddev = this.numerStddevMap.get(columnNum);
         double cutoff = Normalizer.checkCutOff(this.cutOffMap.get(columnNum));
         return Normalizer.computeZScore(rawValue, mean, stddev, cutoff);
     }
 
-    private double getCategoricalPosRateValue(Integer columnNum, Object obj) {
+    private double getCategoricalPosRateZScoreValue(Integer columnNum, Object obj) {
         double value = 0d;
         Map<String, Double> posRateMapping = this.binPosRateMap.get(columnNum);
         if(obj == null) {
@@ -343,7 +339,10 @@ public class IndependentNNModel {
                 value = posRate;
             }
         }
-        return value;
+        double mean = this.numerMeanMap.get(columnNum);
+        double stddev = this.numerStddevMap.get(columnNum);
+        double cutoff = Normalizer.checkCutOff(this.cutOffMap.get(columnNum));
+        return Normalizer.computeZScore(value, mean, stddev, cutoff);
     }
 
     private double getNumericalWoeZScoreValue(Integer columnNum, Object obj, boolean isWeighted) {
@@ -429,10 +428,8 @@ public class IndependentNNModel {
         }
 
         int version = dis.readInt();
-        LOG.info("version is:" + version);
         IndependentNNModel.setVersion(version);
         String normStr = ml.shifu.shifu.core.dtrain.StringUtils.readString(dis);
-        LOG.info("normStr is:" + normStr);
         NormType normType = NormType.valueOf(normStr.toUpperCase());
 
         // for all features

@@ -271,7 +271,7 @@ public class Normalizer {
      * @return normalized value. If normType parameter is invalid, then the ZSCALE will be used as default.
      */
     public static Double normalize(ColumnConfig config, String raw, Double cutoff, ModelNormalizeConf.NormType type) {
-        return normalize(config, raw, cutoff, type, CategoryMissingNormType.MEAN);
+        return normalize(config, raw, cutoff, type, CategoryMissingNormType.POSRATE);
     }
 
     /**
@@ -307,7 +307,7 @@ public class Normalizer {
      */
     private static Double zScoreNormalize(ColumnConfig config, String raw, Double cutoff) {
         double stdDevCutOff = checkCutOff(cutoff);
-        double value = parseRawValue(config, raw, CategoryMissingNormType.MEAN);
+        double value = parseRawValue(config, raw, CategoryMissingNormType.POSRATE);
         return computeZScore(value, config.getMean(), config.getStdDev(), stdDevCutOff);
     }
 
@@ -326,7 +326,7 @@ public class Normalizer {
      */
     private static double parseRawValue(ColumnConfig config, String raw, CategoryMissingNormType categoryMissingNormType) {
         if(categoryMissingNormType == null) {
-            categoryMissingNormType = CategoryMissingNormType.MEAN;
+            categoryMissingNormType = CategoryMissingNormType.POSRATE;
         }
         double value = 0.0;
         if(config.isCategorical()) {
