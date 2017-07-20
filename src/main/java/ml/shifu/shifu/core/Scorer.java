@@ -20,6 +20,7 @@ import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.SortedMap;
 import java.util.TreeMap;
 import java.util.concurrent.Callable;
@@ -181,11 +182,6 @@ public class Scorer {
                     rawNsDataMap, cutoff, alg);
         }
 
-        // final Map<String, Object > map = new HashMap<String, Object>();
-        // for(Entry<NSColumn, String> entry: rawNsDataMap.entrySet()) {
-        // map.put(entry.getKey().getSimpleName(), entry.getValue());
-        // }
-
         final MLDataPair pair = inputPair;
         List<Callable<MLData>> tasks = new ArrayList<Callable<MLData>>();
         for(final BasicML model: models) {
@@ -207,14 +203,6 @@ public class Scorer {
                     @Override
                     public MLData call() throws Exception {
                         MLData finalOutput = network.compute(networkPair.getInput());
-
-                        // MLData finalOutput = null;
-                        // if(model instanceof NNModel){
-                        // double[] output = ((NNModel)model).getIndependentNNModel().compute(map);
-                        // finalOutput = new BasicMLData(output);
-                        // } else {
-                        // finalOutput = network.compute(networkPair.getInput());
-                        // }
 
                         if(!isOutputFirstHiddenLayer) {
                             return finalOutput;
