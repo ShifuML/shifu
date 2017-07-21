@@ -287,7 +287,7 @@ public class NNOutput extends BasicMasterInterceptor<NNParams, NNParams> {
             LOG.info("'dropoutRate' in master output is :{}", this.dropoutRate);
 
             this.bModel = new Path(context.getProps().getProperty(Constants.SHIFU_NN_BINARY_MODEL_PATH));
-            
+
             initNetwork(context);
         }
 
@@ -457,7 +457,8 @@ public class NNOutput extends BasicMasterInterceptor<NNParams, NNParams> {
                 fos.writeInt(entry.getValue());
             }
 
-            // persist network
+            // persist network, set it as list
+            fos.writeInt(1);
             new PersistBasicFloatNetwork().saveNetwork(fos, ((BasicFloatNetwork) this.network));
         } catch (IOException e) {
             LOG.error("Error in writing output.", e);

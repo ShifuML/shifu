@@ -29,7 +29,6 @@ import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
 import java.util.Random;
 import java.util.Scanner;
 import java.util.Set;
@@ -81,7 +80,6 @@ import ml.shifu.shifu.util.CommonUtils;
 import ml.shifu.shifu.util.Constants;
 import ml.shifu.shifu.util.Environment;
 import ml.shifu.shifu.util.HDFSUtils;
-import ml.shifu.shifu.util.JSONUtils;
 
 import org.antlr.runtime.RecognitionException;
 import org.apache.commons.collections.CollectionUtils;
@@ -686,11 +684,7 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
                     status = 1;
                 }
             }
-            for(Entry<String, Object> entry: params.entrySet()) {
-                modelConfig.getParams().put(entry.getKey(), entry.getValue());
-            }
-            // update ModelConfig.json
-            JSONUtils.writeValue(new File(super.pathFinder.getModelConfigPath(SourceType.LOCAL)), modelConfig);
+            LOG.info("The best parameters in grid search is {}", params);
             LOG.info("Grid search on distributed training finished in {}ms.", System.currentTimeMillis() - start);
         } else {
             // copy all models to local after all jobs are finished
