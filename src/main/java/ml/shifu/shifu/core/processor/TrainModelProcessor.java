@@ -411,7 +411,8 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
         if(kCrossValidation != null && kCrossValidation > 0) {
             isKFoldCV = true;
             baggingNum = modelConfig.getTrain().getNumKFold();
-            if(baggingNum != super.getModelConfig().getBaggingNum()) {
+            if(baggingNum != super.getModelConfig().getBaggingNum() && gs.hasHyperParam()) {
+                // if it is grid search mode, then kfold mode is disabled
                 LOG.warn(
                         "'train:baggingNum' is set to {} because of k-fold cross validation is enabled by 'numKFold' not -1.",
                         baggingNum);
@@ -419,7 +420,6 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
         }
 
         long start = System.currentTimeMillis();
-        LOG.info("Distributed trainning with baggingNum: {}", baggingNum);
         boolean isParallel = Boolean.valueOf(
                 Environment.getProperty(Constants.SHIFU_DTRAIN_PARALLEL, SHIFU_DEFAULT_DTRAIN_PARALLEL)).booleanValue();
         GuaguaMapReduceClient guaguaClient;
@@ -475,9 +475,15 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
         if(gs.hasHyperParam()) {
             parallelGroups = (gs.getFlattenParams().size() % parallelNum == 0 ? gs.getFlattenParams().size()
                     / parallelNum : gs.getFlattenParams().size() / parallelNum + 1);
+            baggingNum = gs.getFlattenParams().size();
+            LOG.warn("'train:baggingNum' is set to {} because of grid search enabled by settings in 'train#params'.",
+                    gs.getFlattenParams().size());
+
         } else {
             parallelGroups = baggingNum % parallelNum == 0 ? baggingNum / parallelNum : baggingNum / parallelNum + 1;
         }
+
+        LOG.info("Distributed trainning with baggingNum: {}", baggingNum);
         List<String> progressLogList = new ArrayList<String>(baggingNum);
         boolean isOneJobNotContinuous = false;
         for(int j = 0; j < parallelGroups; j++) {
@@ -641,6 +647,20 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
         }
 
         if(isKFoldCV) {
+            // k-fold we also copy model files at last, such models can be used for evaluation
+            for(int i = 0; i < baggingNum; i++) {
+                String modelName = getModelName(i);
+                Path modelPath = fileSystem.makeQualified(new Path(super.getPathFinder().getModelsPath(sourceType),
+                        modelName));
+                if(ShifuFileUtils.getFileSystemBySourceType(sourceType).exists(modelPath)) {
+                    copyModelToLocal(modelName, modelPath, sourceType);
+                } else {
+                    LOG.warn("Model {} isn't there, maybe job is failed, for bagging it can be ignored.",
+                            modelPath.toString());
+                    status = 1;
+                }
+            }
+
             List<Double> valErrs = readAllValidationErrors(sourceType, fileSystem, kCrossValidation);
             double sum = 0d;
             for(Double err: valErrs) {
@@ -653,11 +673,22 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
             // select the best parameter composite in grid search
             LOG.info("Original grid search params: {}", modelConfig.getParams());
             Map<String, Object> params = findBestParams(sourceType, fileSystem, gs);
-            // TODO, copy top 5 models for evaluation? (no need further train)
+            // temp copy all models for evaluation
+            for(int i = 0; i < baggingNum; i++) {
+                String modelName = getModelName(i);
+                Path modelPath = fileSystem.makeQualified(new Path(super.getPathFinder().getModelsPath(sourceType),
+                        modelName));
+                if(ShifuFileUtils.getFileSystemBySourceType(sourceType).exists(modelPath)) {
+                    copyModelToLocal(modelName, modelPath, sourceType);
+                } else {
+                    LOG.warn("Model {} isn't there, maybe job is failed, for bagging it can be ignored.",
+                            modelPath.toString());
+                    status = 1;
+                }
+            }
             for(Entry<String, Object> entry: params.entrySet()) {
                 modelConfig.getParams().put(entry.getKey(), entry.getValue());
             }
-            super.pathFinder.getModelConfigPath(SourceType.LOCAL);
             // update ModelConfig.json
             JSONUtils.writeValue(new File(super.pathFinder.getModelConfigPath(SourceType.LOCAL)), modelConfig);
             LOG.info("Grid search on distributed training finished in {}ms.", System.currentTimeMillis() - start);
