@@ -19,6 +19,7 @@ import java.io.BufferedInputStream;
 import java.io.DataInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -58,7 +59,7 @@ public class IndependentNNModel {
     /**
      * Encog based neural network instance which is used to compute nn score
      */
-    private BasicFloatNetwork basicNetwork;
+    private List<BasicFloatNetwork> basicNetworks;
 
     /**
      * Normalization type
@@ -155,15 +156,15 @@ public class IndependentNNModel {
      * Set it to private, {@link IndependentNNModel} can only be loaded by {@link #loadFromStream(InputStream)} and
      * {@link #loadFromStream(InputStream, boolean)}.
      */
-    private IndependentNNModel(BasicFloatNetwork basicNetwork, NormType normType, Map<Integer, String> numNameMappings,
-            Map<Integer, List<String>> cateColumnNameNames, Map<Integer, Integer> columnNumIndexMap,
-            Map<Integer, Map<String, Double>> cateWoeMap, Map<Integer, Map<String, Double>> wgtCateWoeMap,
-            Map<Integer, Map<String, Double>> binPosRateMap, Map<Integer, List<Double>> numerBinBoundaries,
-            Map<Integer, List<Double>> numerWgtWoes, Map<Integer, List<Double>> numerWoes,
-            Map<Integer, Double> cutOffMap, Map<Integer, Double> numerMeanMap, Map<Integer, Double> numerStddevMap,
-            Map<Integer, Double> woeMeanMap, Map<Integer, Double> woeStddevMap, Map<Integer, Double> wgtWoeMeanMap,
-            Map<Integer, Double> wgtWoeStddevMap) {
-        this.basicNetwork = basicNetwork;
+    private IndependentNNModel(List<BasicFloatNetwork> basicNetworks, NormType normType,
+            Map<Integer, String> numNameMappings, Map<Integer, List<String>> cateColumnNameNames,
+            Map<Integer, Integer> columnNumIndexMap, Map<Integer, Map<String, Double>> cateWoeMap,
+            Map<Integer, Map<String, Double>> wgtCateWoeMap, Map<Integer, Map<String, Double>> binPosRateMap,
+            Map<Integer, List<Double>> numerBinBoundaries, Map<Integer, List<Double>> numerWgtWoes,
+            Map<Integer, List<Double>> numerWoes, Map<Integer, Double> cutOffMap, Map<Integer, Double> numerMeanMap,
+            Map<Integer, Double> numerStddevMap, Map<Integer, Double> woeMeanMap, Map<Integer, Double> woeStddevMap,
+            Map<Integer, Double> wgtWoeMeanMap, Map<Integer, Double> wgtWoeStddevMap) {
+        this.basicNetworks = basicNetworks;
         this.normType = normType;
         this.numNameMap = numNameMappings;
         this.cateCateMap = cateColumnNameNames;
@@ -189,10 +190,29 @@ public class IndependentNNModel {
      * @param data
      *            data array includes only effective column data, numeric value is real value after normalization,
      *            categorical feature value is pos rates or woe .
-     * @return neural network model output
+     * @return neural network model output, if multiple models, do averaging on all models outputs
      */
     public double[] compute(double[] data) {
-        return this.basicNetwork.compute(new BasicMLData(data)).getData();
+        if(this.basicNetworks == null || this.basicNetworks.size() == 0) {
+            throw new IllegalStateException("no models inside");
+        }
+
+        if(this.basicNetworks.size() == 1) {
+            return this.basicNetworks.get(0).compute(new BasicMLData(data)).getData();
+        } else {
+            int outputSize = this.basicNetworks.get(0).getOutputCount();
+            int modelSize = this.basicNetworks.size();
+            double[] results = new double[outputSize];
+            for(BasicFloatNetwork network: this.basicNetworks) {
+                double[] currResults = network.compute(new BasicMLData(data)).getData();
+                assert currResults.length == results.length;
+                for(int i = 0; i < currResults.length; i++) {
+                    // directly do averaging on each model output element
+                    results[i] += currResults[i] / modelSize;
+                }
+            }
+            return results;
+        }
     }
 
     /**
@@ -525,9 +545,13 @@ public class IndependentNNModel {
             columnMap.put(dis.readInt(), dis.readInt());
         }
 
-        BasicFloatNetwork network = new PersistBasicFloatNetwork().readNetwork(dis);
+        int size = dis.readInt();
+        List<BasicFloatNetwork> networks = new ArrayList<BasicFloatNetwork>();
+        for(int i = 0; i < size; i++) {
+            networks.add(new PersistBasicFloatNetwork().readNetwork(dis));
+        }
 
-        return new IndependentNNModel(network, normType, numNameMap, cateColumnNameNames, columnMap, cateWoeMap,
+        return new IndependentNNModel(networks, normType, numNameMap, cateColumnNameNames, columnMap, cateWoeMap,
                 cateWgtWoeMap, binPosRateMap, numerBinBoundaries, numerWgtWoes, numerWoes, cutoffMap, numerMeanMap,
                 numerStddevMap, woeMeanMap, woeStddevMap, wgtWoeMeanMap, wgtWoeStddevMap);
     }
@@ -572,16 +596,16 @@ public class IndependentNNModel {
     /**
      * @return the basicNetwork
      */
-    public BasicFloatNetwork getBasicNetwork() {
-        return basicNetwork;
+    public List<BasicFloatNetwork> getBasicNetworks() {
+        return basicNetworks;
     }
 
     /**
      * @param basicNetwork
      *            the basicNetwork to set
      */
-    public void setBasicNetwork(BasicFloatNetwork basicNetwork) {
-        this.basicNetwork = basicNetwork;
+    public void setBasicNetwork(List<BasicFloatNetwork> basicNetworks) {
+        this.basicNetworks = basicNetworks;
     }
 
     /**

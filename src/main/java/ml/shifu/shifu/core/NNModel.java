@@ -65,7 +65,7 @@ public class NNModel extends BasicML implements MLRegression {
      */
     @Override
     public int getInputCount() {
-        return this.getIndependentNNModel().getBasicNetwork().getInputCount();
+        return this.getIndependentNNModel().getBasicNetworks().get(0).getInputCount();
     }
 
     @Override
@@ -84,7 +84,7 @@ public class NNModel extends BasicML implements MLRegression {
     @Override
     public int getOutputCount() {
         // mock as output is only 1 dimension
-        return this.getIndependentNNModel().getBasicNetwork().getOutputCount();
+        return this.getIndependentNNModel().getBasicNetworks().get(0).getOutputCount();
     }
 
     /**

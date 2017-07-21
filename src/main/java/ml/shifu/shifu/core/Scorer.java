@@ -187,7 +187,7 @@ public class Scorer {
             // TODO, check if no need 'if' condition and refactor two if for loops please
             if(model instanceof BasicFloatNetwork || model instanceof NNModel) {
                 final BasicFloatNetwork network = (model instanceof BasicFloatNetwork) ? (BasicFloatNetwork) model
-                        : ((NNModel) model).getIndependentNNModel().getBasicNetwork();
+                        : ((NNModel) model).getIndependentNNModel().getBasicNetworks().get(0);
 
                 final MLDataPair networkPair = CommonUtils.assembleNsDataPair(binCategoryMap, noVarSelect, modelConfig,
                         columnConfigList, rawNsDataMap, cutoff, alg, network.getFeatureSet());

@@ -813,7 +813,7 @@ public final class CommonUtils {
         if(model instanceof BasicFloatNetwork) {
             return (BasicFloatNetwork) model;
         } else if(model instanceof NNModel) {
-            return ((NNModel) model).getIndependentNNModel().getBasicNetwork();
+            return ((NNModel) model).getIndependentNNModel().getBasicNetworks().get(0);
         }
         throw new IllegalArgumentException("Only nn model is supported");
     }
