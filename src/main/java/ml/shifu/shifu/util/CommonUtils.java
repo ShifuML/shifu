@@ -58,6 +58,7 @@ import ml.shifu.shifu.core.TreeModel;
 import ml.shifu.shifu.core.dtrain.CommonConstants;
 import ml.shifu.shifu.core.dtrain.dataset.BasicFloatNetwork;
 import ml.shifu.shifu.core.dtrain.dataset.PersistBasicFloatNetwork;
+import ml.shifu.shifu.core.dtrain.gs.GridSearch;
 import ml.shifu.shifu.core.dtrain.lr.LogisticRegressionContants;
 import ml.shifu.shifu.core.model.ModelSpec;
 import ml.shifu.shifu.exception.ShifuErrorCode;
@@ -877,7 +878,6 @@ public final class CommonUtils {
             public int compare(FileStatus f1, FileStatus f2) {
                 return f1.getPath().getName().compareToIgnoreCase(f2.getPath().getName());
             }
-
         });
 
         // added in shifu 0.2.5 to slice models not belonging to last training
@@ -885,6 +885,19 @@ public final class CommonUtils {
         if(modelConfig.isClassification() && modelConfig.getTrain().isOneVsAll()) {
             baggingModelSize = modelConfig.getTags().size();
         }
+
+        Integer kCrossValidation = modelConfig.getTrain().getNumKFold();
+        if(kCrossValidation != null && kCrossValidation > 0) {
+            // if kfold is enabled , bagging set it to bagging model size
+            baggingModelSize = kCrossValidation;
+        }
+
+        GridSearch gs = new GridSearch(modelConfig.getTrain().getParams());
+        if(gs.hasHyperParam()) {
+            // if it is grid search, set model size to all flatten params
+            baggingModelSize = gs.getFlattenParams().size();
+        }
+
         listStatus = listStatus.size() <= baggingModelSize ? listStatus : listStatus.subList(0, baggingModelSize);
         return listStatus;
     }
