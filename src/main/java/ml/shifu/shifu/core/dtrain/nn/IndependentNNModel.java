@@ -601,7 +601,7 @@ public class IndependentNNModel {
     }
 
     /**
-     * @param basicNetwork
+     * @param basicNetworks
      *            the basicNetwork to set
      */
     public void setBasicNetwork(List<BasicFloatNetwork> basicNetworks) {

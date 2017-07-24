@@ -3,6 +3,8 @@ package ml.shifu.shifu.util.updater;
 import java.io.IOException;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Set;
 
 import ml.shifu.shifu.column.NSColumn;
@@ -11,6 +13,8 @@ import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.container.obj.ColumnConfig.ColumnType;
 import ml.shifu.shifu.container.obj.ModelConfig;
 import ml.shifu.shifu.core.validator.ModelInspector;
+import ml.shifu.shifu.util.Constants;
+import ml.shifu.shifu.util.Environment;
 
 import org.apache.commons.collections.CollectionUtils;
 
@@ -27,6 +31,7 @@ public class BasicUpdater {
     protected Set<NSColumn> setCandidates;
     protected String weightColumnName;
     private Set<NSColumn> setHybridColumns;
+    private Map<String, Double> hybridColumnNames;
 
     public BasicUpdater(ModelConfig modelConfig) throws IOException {
         this.targetColumnName = modelConfig.getTargetColumnName();
@@ -56,10 +61,10 @@ public class BasicUpdater {
         }
 
         setHybridColumns = new HashSet<NSColumn>();
-        List<String> hybridColumnNames = modelConfig.getHybridColumnNames();
-        if(CollectionUtils.isNotEmpty(hybridColumnNames)) {
-            for(String column: hybridColumnNames) {
-                setHybridColumns.add(new NSColumn(column));
+        hybridColumnNames = modelConfig.getHybridColumnNames();
+        if(hybridColumnNames != null && hybridColumnNames.size() > 0) {
+            for(Entry<String, Double> entry: hybridColumnNames.entrySet()) {
+                setHybridColumns.add(new NSColumn(entry.getKey()));
             }
         }
 
@@ -114,6 +119,13 @@ public class BasicUpdater {
             columnConfig.setColumnType(ColumnType.C);
         } else if(setHybridColumns.contains(new NSColumn(varName))) {
             columnConfig.setColumnType(ColumnType.H);
+            String newVarName = null;
+            if(Environment.getBoolean(Constants.SHIFU_NAMESPACE_STRICT_MODE, false)) {
+                newVarName = new NSColumn(varName).getFullColumnName();
+            } else {
+                newVarName = new NSColumn(varName).getSimpleName();
+            }
+            columnConfig.setHybridThreshold(hybridColumnNames.get(newVarName));
         } else if(setCategorialColumns.contains(new NSColumn(varName))) {
             columnConfig.setColumnType(ColumnType.C);
         } else {

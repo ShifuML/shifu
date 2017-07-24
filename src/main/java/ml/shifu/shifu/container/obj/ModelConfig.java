@@ -21,6 +21,7 @@ import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -654,7 +655,7 @@ public class ModelConfig {
     }
 
     @JsonIgnore
-    public List<String> getHybridColumnNames() throws IOException {
+    public Map<String, Double> getHybridColumnNames() throws IOException {
         String delimiter = StringUtils.isBlank(this.getHeaderDelimiter()) ? this.getDataSetDelimiter() : this
                 .getHeaderDelimiter();
 
@@ -671,10 +672,25 @@ public class ModelConfig {
                 LOG.warn(
                         "'dataSet::hybridColumnNameFile' is not set and default hybridColumnNameFile: {} is not found, no hybrid configs.",
                         defaultHybridColumnNameFile);
-                return new ArrayList<String>();
+                return new HashMap<String, Double>();
             }
         }
-        return CommonUtils.readConfFileIntoList(hybridColumnNameFile, SourceType.LOCAL, delimiter);
+        List<String> list = CommonUtils.readConfFileIntoList(hybridColumnNameFile, SourceType.LOCAL, delimiter);
+        Map<String, Double> map = new HashMap<String, Double>();
+        for(String string: list) {
+            if(string.contains(Constants.DEFAULT_DELIMITER)) {
+                String[] splits = CommonUtils.split(string, Constants.DEFAULT_DELIMITER);
+                double parNum = CommonUtils.parseNumber(splits[1]);
+                if(Double.isNaN(parNum)) {
+                    map.put(string, Double.MIN_VALUE);
+                } else {
+                    map.put(string, parNum);
+                }
+            } else {
+                map.put(string, Double.MIN_VALUE);
+            }
+        }
+        return map;
     }
 
     @JsonIgnore

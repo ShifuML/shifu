@@ -399,21 +399,25 @@ public class UpdateBinningInfoMapper extends Mapper<LongWritable, Text, IntWrita
                 String str = StringUtils.trim(units[i]);
                 double douVal = CommonUtils.parseNumber(str);
 
-                // TODO, if < threshold, should go to categorical check also append < threshold to be category
-                boolean isCategory = Double.isNaN(douVal);
+                Double hybridThreshould = columnConfig.getHybridThreshold();
+                if(hybridThreshould == null) {
+                    hybridThreshould = Double.MIN_VALUE;
+                }
+                // douVal < hybridThreshould which will also be set to category
+                boolean isCategory = Double.isNaN(douVal) || douVal < hybridThreshould;
                 boolean isNumber = !Double.isNaN(douVal);
 
                 if(isMissingValue) {
                     binningInfoWritable.setMissingCount(binningInfoWritable.getMissingCount() + 1L);
                     binNum = binningInfoWritable.getBinCategories().size()
                             + binningInfoWritable.getBinBoundaries().size();
-                } else if (isCategory){
+                } else if(isCategory) {
                     // get categorical bin number in category list
                     binNum = quickLocateCategoricalBin(this.categoricalBinMap.get(i), str);
                     if(binNum < 0) {
                         isInvalidValue = true;
                     }
-                    if(isInvalidValue){
+                    if(isInvalidValue) {
                         // the same as missing count
                         binningInfoWritable.setMissingCount(binningInfoWritable.getMissingCount() + 1L);
                         binNum = binningInfoWritable.getBinCategories().size()
@@ -422,7 +426,7 @@ public class UpdateBinningInfoMapper extends Mapper<LongWritable, Text, IntWrita
                         // if real category value, binNum should + binBoundaries.size
                         binNum += binningInfoWritable.getBinBoundaries().size();;
                     }
-                } else if(isNumber){
+                } else if(isNumber) {
                     binNum = getBinNum(binningInfoWritable.getBinBoundaries(), douVal);
                     if(binNum == -1) {
                         throw new RuntimeException("binNum should not be -1 to this step.");
