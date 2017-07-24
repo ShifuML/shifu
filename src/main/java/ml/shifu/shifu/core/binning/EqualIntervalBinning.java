@@ -145,7 +145,7 @@ public class EqualIntervalBinning extends AbstractBinning<Double> {
         process(binning.maxVal);
     }
 
-    protected void stringToObj(String objValStr) {
+    public void stringToObj(String objValStr) {
         super.stringToObj(objValStr);
 
         String[] objStrArr = objValStr.split(Character.toString(FIELD_SEPARATOR), -1);

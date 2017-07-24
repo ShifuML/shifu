@@ -396,7 +396,14 @@ public class MapReducerStatsWorker extends AbstractStatsExecutor {
             try {
                 ColumnConfig config = this.columnConfigList.get(columnNum);
 
-                if(config.isCategorical()) {
+                if(config.isHybrid()) {
+                    String[] splits = CommonUtils.split(raw[1], Constants.HYBRID_BIN_STR_DILIMETER);
+                    config.setBinBoundary(CommonUtils.stringToDoubleList(splits[0]));
+
+                    String binCategory = Base64Utils.base64Decode(splits[1]);
+                    config.setBinCategory(CommonUtils.stringToStringList(binCategory,
+                            CalculateStatsUDF.CATEGORY_VAL_SEPARATOR));
+                } else if(config.isCategorical()) {
                     String binCategory = Base64Utils.base64Decode(raw[1]);
                     config.setBinCategory(CommonUtils.stringToStringList(binCategory,
                             CalculateStatsUDF.CATEGORY_VAL_SEPARATOR));
@@ -418,11 +425,7 @@ public class MapReducerStatsWorker extends AbstractStatsExecutor {
                 config.setStdDev(parseDouble(raw[11], Double.NaN));
 
                 // magic?
-                if(raw[12].equals("N")) {
-                    config.setColumnType(ColumnConfig.ColumnType.N);
-                } else {
-                    config.setColumnType(ColumnConfig.ColumnType.C);
-                }
+                config.setColumnType(ColumnConfig.ColumnType.valueOf(raw[12]));
 
                 config.setMedian(parseDouble(raw[13]));
 
@@ -458,7 +461,7 @@ public class MapReducerStatsWorker extends AbstractStatsExecutor {
                     }
                 }
                 if(raw.length >= 33) {
-                   config.getColumnStats().set25th(parseDouble(raw[32]));
+                    config.getColumnStats().set25th(parseDouble(raw[32]));
                 }
                 if(raw.length >= 34) {
                     config.getColumnStats().set75th(parseDouble(raw[33]));
@@ -527,7 +530,7 @@ public class MapReducerStatsWorker extends AbstractStatsExecutor {
         List<Scanner> scanners = ShifuFileUtils.getDataScanners(pathFinder.getPSIInfoPath(), modelConfig.getDataSet()
                 .getSource());
 
-        if (scanners == null || scanners.size() == 0) {
+        if(scanners == null || scanners.size() == 0) {
             log.info("The PSI got failure during the computation");
             return;
         }

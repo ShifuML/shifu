@@ -26,6 +26,7 @@ public class BasicUpdater {
     protected Set<NSColumn> setForceSelect;
     protected Set<NSColumn> setCandidates;
     protected String weightColumnName;
+    private Set<NSColumn> setHybridColumns;
 
     public BasicUpdater(ModelConfig modelConfig) throws IOException {
         this.targetColumnName = modelConfig.getTargetColumnName();
@@ -54,6 +55,14 @@ public class BasicUpdater {
             }
         }
 
+        setHybridColumns = new HashSet<NSColumn>();
+        List<String> hybridColumnNames = modelConfig.getHybridColumnNames();
+        if(CollectionUtils.isNotEmpty(hybridColumnNames)) {
+            for(String column: hybridColumnNames) {
+                setHybridColumns.add(new NSColumn(column));
+            }
+        }
+
         this.setForceSelect = new HashSet<NSColumn>(512);
         if(Boolean.TRUE.equals(modelConfig.getVarSelect().getForceEnable())
                 && CollectionUtils.isNotEmpty(modelConfig.getListForceSelect())) {
@@ -65,8 +74,8 @@ public class BasicUpdater {
 
         this.setCandidates = new HashSet<NSColumn>();
         List<String> candidates = modelConfig.getListCandidates();
-        if (CollectionUtils.isNotEmpty(candidates)) {
-            for ( String candidate : candidates ) {
+        if(CollectionUtils.isNotEmpty(candidates)) {
+            for(String candidate: candidates) {
                 this.setCandidates.add(new NSColumn(candidate));
             }
         }
@@ -87,8 +96,9 @@ public class BasicUpdater {
         } else if(this.setForceRemove.contains(new NSColumn(varName))) {
             columnConfig.setColumnFlag(ColumnConfig.ColumnFlag.ForceRemove);
         } else if(this.setForceSelect.contains(new NSColumn(varName))) {
-            if ( CollectionUtils.isEmpty(this.setCandidates)
-                    || (CollectionUtils.isNotEmpty(this.setCandidates) && this.setCandidates.contains(new NSColumn(varName))) ) {
+            if(CollectionUtils.isEmpty(this.setCandidates)
+                    || (CollectionUtils.isNotEmpty(this.setCandidates) && this.setCandidates.contains(new NSColumn(
+                            varName)))) {
                 columnConfig.setColumnFlag(ColumnConfig.ColumnFlag.ForceSelect);
             }
         } else if(NSColumnUtils.isColumnEqual(this.weightColumnName, varName)) {
@@ -102,6 +112,8 @@ public class BasicUpdater {
         } else if(NSColumnUtils.isColumnEqual(targetColumnName, varName)) {
             // target column is set to categorical column
             columnConfig.setColumnType(ColumnType.C);
+        } else if(setHybridColumns.contains(new NSColumn(varName))) {
+            columnConfig.setColumnType(ColumnType.H);
         } else if(setCategorialColumns.contains(new NSColumn(varName))) {
             columnConfig.setColumnType(ColumnType.C);
         } else {

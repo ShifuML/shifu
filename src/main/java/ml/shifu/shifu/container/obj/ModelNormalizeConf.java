@@ -34,6 +34,11 @@ public class ModelNormalizeConf {
         OLD_ZSCORE, OLD_ZSCALE, // the same one for user friendly
         ZSCORE, ZSCALE, // the same one for user friendly
         WOE, WEIGHT_WOE, HYBRID, WEIGHT_HYBRID, WOE_ZSCORE, WOE_ZSCALE, WEIGHT_WOE_ZSCORE, WEIGHT_WOE_ZSCALE;
+
+        public boolean isWoe() {
+            return this == WOE || this == WEIGHT_WOE || this == WOE_ZSCORE || this == WOE_ZSCALE
+                    || this == WEIGHT_WOE_ZSCORE || this == WEIGHT_WOE_ZSCORE;
+        }
     }
 
     /**

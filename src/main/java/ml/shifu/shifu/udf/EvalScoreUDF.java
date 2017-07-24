@@ -108,9 +108,6 @@ public class EvalScoreUDF extends AbstractTrainerUDF<Tuple> {
         this.headers = CommonUtils.getFinalHeaders(evalConfig);
 
         // move model runner construction in exec to avoid OOM error in client side if model is too big like RF
-        this.modelCnt = CommonUtils.getBasicModelsCnt(modelConfig, evalConfig, evalConfig.getDataSet().getSource());
-        this.subModelsCnt = CommonUtils.getSubModelsCnt(modelConfig, this.columnConfigList, evalConfig, evalConfig
-                .getDataSet().getSource());
 
         this.scale = scale;
 
@@ -158,6 +155,9 @@ public class EvalScoreUDF extends AbstractTrainerUDF<Tuple> {
 
             this.modelCnt = models.size();
             this.modelRunner.setScoreScale(Integer.parseInt(this.scale));
+
+            this.subModelsCnt = CommonUtils.getSubModelsCnt(modelConfig, this.columnConfigList, evalConfig, evalConfig
+                    .getDataSet().getSource());
         }
 
         Map<NSColumn, String> rawDataNsMap = CommonUtils.convertDataIntoNsMap(input, this.headers);
