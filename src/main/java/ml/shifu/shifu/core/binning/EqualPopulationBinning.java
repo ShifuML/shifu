@@ -535,7 +535,7 @@ public class EqualPopulationBinning extends AbstractBinning<Double> {
         }
     }
 
-    protected void stringToObj(String objValStr) {
+    public void stringToObj(String objValStr) {
         super.stringToObj(objValStr);
 
         String[] objStrArr = objValStr.split(Character.toString(FIELD_SEPARATOR), -1);

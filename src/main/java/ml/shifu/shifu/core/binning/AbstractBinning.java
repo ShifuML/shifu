@@ -147,7 +147,7 @@ public abstract class AbstractBinning<T> {
      *            the value to be checked
      * @return if it is missing value
      */
-    protected boolean isMissingVal(String val) {
+    public boolean isMissingVal(String val) {
         return missingValSet.contains(val);
     }
 
@@ -191,7 +191,7 @@ public abstract class AbstractBinning<T> {
      * @param objValStr
      *            value string
      */
-    protected void stringToObj(String objValStr) {
+    public void stringToObj(String objValStr) {
         String[] objStrArr = objValStr.split(Character.toString(FIELD_SEPARATOR), -1);
         if(objStrArr.length < 4) {
             throw new IllegalArgumentException("The size of argument is incorrect");

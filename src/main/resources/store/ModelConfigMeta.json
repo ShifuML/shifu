@@ -146,6 +146,10 @@
                 "type" : "number",
                 "directive": "input"
             }, {
+                "name": "hybridColumnNameFile",
+                "type" : "text",
+                "directive": "input"
+            }, {
                 "name": "categoricalColumnNameFile",
                 "type" : "text",
                 "directive": "input"
