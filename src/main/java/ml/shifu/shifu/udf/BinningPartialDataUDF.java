@@ -119,9 +119,12 @@ public class BinningPartialDataUDF extends AbstractTrainerUDF<String> {
                 if(this.columnConfig.isHybrid()) {
                     // missing value and not number value go to categorical binning
                     double douVal = CommonUtils.parseNumber(valStr);
-
-                    // TODO add filter expression to condition
-                    boolean isCategory = Double.isNaN(douVal);
+                    Double hybridThreshould = this.columnConfig.getHybridThreshold();
+                    if(hybridThreshould == null) {
+                        hybridThreshould = Double.MIN_VALUE;
+                    }
+                    // douVal < hybridThreshould which will also be set to category
+                    boolean isCategory = Double.isNaN(douVal) || douVal < hybridThreshould;
                     if(binning.isMissingVal(valStr) || isCategory) {
                         this.backUpbinning.addData(valStr);
                     }

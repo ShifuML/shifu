@@ -1970,10 +1970,10 @@ public final class CommonUtils {
         }
 
         Set<NSColumn> setHybridColumns = new HashSet<NSColumn>();
-        List<String> hybridColumnNames = modelConfig.getHybridColumnNames();
-        if(CollectionUtils.isNotEmpty(hybridColumnNames)) {
-            for(String column: hybridColumnNames) {
-                setHybridColumns.add(new NSColumn(column));
+        Map<String, Double> hybridColumnNames = modelConfig.getHybridColumnNames();
+        if(hybridColumnNames != null && hybridColumnNames.size() > 0) {
+            for(Entry<String, Double> entry: hybridColumnNames.entrySet()) {
+                setHybridColumns.add(new NSColumn(entry.getKey()));
             }
         }
 
@@ -2032,6 +2032,13 @@ public final class CommonUtils {
                 config.setColumnType(ColumnType.C);
             } else if(setHybridColumns.contains(new NSColumn(varName))) {
                 config.setColumnType(ColumnType.H);
+                String newVarName = null;
+                if(Environment.getBoolean(Constants.SHIFU_NAMESPACE_STRICT_MODE, false)) {
+                    newVarName = new NSColumn(varName).getFullColumnName();
+                } else {
+                    newVarName = new NSColumn(varName).getSimpleName();
+                }
+                config.setHybridThreshold(hybridColumnNames.get(newVarName));
             } else if(setCategorialColumns.contains(new NSColumn(varName))) {
                 config.setColumnType(ColumnType.C);
             } else {
