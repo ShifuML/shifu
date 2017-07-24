@@ -156,6 +156,7 @@ public interface Constants {
 
     public static final String DEFAULT_META_COLUMN_FILE = "meta.column.names";
     public static final String DEFAULT_CATEGORICAL_COLUMN_FILE = "categorical.column.names";
+    public static final String DEFAULT_HYBRID_COLUMN_FILE = "hybrid.column.names";
     public static final String DEFAULT_CANDIDATE_COLUMN_FILE = "candidate.column.names";
     public static final String DEFAULT_FORCESELECT_COLUMN_FILE = "forceselect.column.names";
     public static final String DEFAULT_FORCEREMOVE_COLUMN_FILE = "forceremove.column.names";
@@ -276,6 +277,7 @@ public interface Constants {
     public static final String SHIFU_NN_INDEPENDENT_MODEL = "shifu.nn.independent.model";
     
     public static final String SHIFU_NN_BINARY_MODEL_PATH = "shifu.nn.binary.model.path";
-
+    
+    public static final String HYBRID_BIN_STR_DILIMETER = ";;;";
 
 }

@@ -204,7 +204,32 @@ public class UpdateBinningInfoMapper extends Mapper<LongWritable, Text, IntWrita
                     binningInfo.setColumnNum(columnNum);
                     ColumnConfig columnConfig = this.columnConfigList.get(columnNum);
                     int binSize = 0;
-                    if(columnConfig.isNumerical()) {
+                    if(columnConfig.isHybrid()) {
+                        binningInfo.setNumeric(true);
+                        String[] splits = CommonUtils.split(cols[1], Constants.HYBRID_BIN_STR_DILIMETER);
+
+                        List<Double> list = new ArrayList<Double>();
+                        for(String startElement: BIN_BOUNDARY_SPLITTER.split(splits[0])) {
+                            list.add(Double.valueOf(startElement));
+                        }
+                        binningInfo.setBinBoundaries(list);
+
+                        List<String> cateList = new ArrayList<String>();
+                        Map<String, Integer> map = this.categoricalBinMap.get(columnNum);
+                        if(map == null) {
+                            map = new HashMap<String, Integer>();
+                            this.categoricalBinMap.put(columnNum, map);
+                        }
+                        int index = 0;
+                        if(!StringUtils.isBlank(splits[1])) {
+                            for(String startElement: BIN_BOUNDARY_SPLITTER.split(splits[1])) {
+                                cateList.add(startElement);
+                                map.put(startElement, index++);
+                            }
+                        }
+                        binningInfo.setBinCategories(cateList);
+                        binSize = list.size() + cateList.size();
+                    } else if(columnConfig.isNumerical()) {
                         binningInfo.setNumeric(true);
                         List<Double> list = new ArrayList<Double>();
                         for(String startElement: BIN_BOUNDARY_SPLITTER.split(cols[1])) {
@@ -353,7 +378,7 @@ public class UpdateBinningInfoMapper extends Mapper<LongWritable, Text, IntWrita
             }
             countAndFrequentItems.offer(this.missingOrInvalidValues, units[i]);
 
-            // meta and target is not skipped, commeted out
+            // meta and target is not skipped, commented out
             // if(columnConfig.isMeta() || columnConfig.isTarget()) {
             // continue;
             // }
@@ -366,7 +391,65 @@ public class UpdateBinningInfoMapper extends Mapper<LongWritable, Text, IntWrita
                 continue; // doesn't exist
             }
             binningInfoWritable.setTotalCount(binningInfoWritable.getTotalCount() + 1L);
-            if(columnConfig.isCategorical()) {
+            if(columnConfig.isHybrid()) {
+                int binNum = 0;
+                if(units[i] == null || missingOrInvalidValues.contains(units[i].toLowerCase())) {
+                    isMissingValue = true;
+                }
+                String str = StringUtils.trim(units[i]);
+                double douVal = CommonUtils.parseNumber(str);
+
+                // TODO, if < threshold, should go to categorical check also append < threshold to be category
+                boolean isCategory = Double.isNaN(douVal);
+                boolean isNumber = !Double.isNaN(douVal);
+
+                if(isMissingValue) {
+                    binningInfoWritable.setMissingCount(binningInfoWritable.getMissingCount() + 1L);
+                    binNum = binningInfoWritable.getBinCategories().size()
+                            + binningInfoWritable.getBinBoundaries().size();
+                } else if (isCategory){
+                    // get categorical bin number in category list
+                    binNum = quickLocateCategoricalBin(this.categoricalBinMap.get(i), str);
+                    if(binNum < 0) {
+                        isInvalidValue = true;
+                    }
+                    if(isInvalidValue){
+                        // the same as missing count
+                        binningInfoWritable.setMissingCount(binningInfoWritable.getMissingCount() + 1L);
+                        binNum = binningInfoWritable.getBinCategories().size()
+                                + binningInfoWritable.getBinBoundaries().size();
+                    } else {
+                        // if real category value, binNum should + binBoundaries.size
+                        binNum += binningInfoWritable.getBinBoundaries().size();;
+                    }
+                } else if(isNumber){
+                    binNum = getBinNum(binningInfoWritable.getBinBoundaries(), douVal);
+                    if(binNum == -1) {
+                        throw new RuntimeException("binNum should not be -1 to this step.");
+                    }
+
+                    // other stats are treated as numerical features
+                    binningInfoWritable.setSum(binningInfoWritable.getSum() + douVal);
+                    double squaredVal = douVal * douVal;
+                    binningInfoWritable.setSquaredSum(binningInfoWritable.getSquaredSum() + squaredVal);
+                    binningInfoWritable.setTripleSum(binningInfoWritable.getTripleSum() + squaredVal * douVal);
+                    binningInfoWritable.setQuarticSum(binningInfoWritable.getQuarticSum() + squaredVal * squaredVal);
+
+                    if(Double.compare(binningInfoWritable.getMax(), douVal) < 0) {
+                        binningInfoWritable.setMax(douVal);
+                    }
+                    if(Double.compare(binningInfoWritable.getMin(), douVal) > 0) {
+                        binningInfoWritable.setMin(douVal);
+                    }
+                }
+                if(posTags.contains(tag)) {
+                    binningInfoWritable.getBinCountPos()[binNum] += 1L;
+                    binningInfoWritable.getBinWeightPos()[binNum] += weight;
+                } else if(negTags.contains(tag)) {
+                    binningInfoWritable.getBinCountNeg()[binNum] += 1L;
+                    binningInfoWritable.getBinWeightNeg()[binNum] += weight;
+                }
+            } else if(columnConfig.isCategorical()) {
                 int lastBinIndex = binningInfoWritable.getBinCategories().size();
 
                 int binNum = 0;
@@ -470,6 +553,10 @@ public class UpdateBinningInfoMapper extends Mapper<LongWritable, Text, IntWrita
             return -1;
         }
         return CommonUtils.getBinIndex(binBoundaryList, dval);
+    }
+
+    public static int getBinNum(List<Double> binBoundaryList, double dVal) {
+        return CommonUtils.getBinIndex(binBoundaryList, dVal);
     }
 
     private int quickLocateCategoricalBin(Map<String, Integer> map, String val) {

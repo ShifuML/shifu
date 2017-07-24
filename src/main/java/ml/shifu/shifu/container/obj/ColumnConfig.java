@@ -36,7 +36,8 @@ public class ColumnConfig {
     }
 
     public static enum ColumnType {
-        A, N, C
+        A, N, C, H // H means hybrid, which is numerical type for major values, while for missing values, it is splited
+                   // into different categories
     }
 
     /**
@@ -180,12 +181,18 @@ public class ColumnConfig {
 
     @JsonIgnore
     public boolean isNumerical() {
-        return columnType == ColumnType.N;
+        // hybrid major is a numerical column but missing value is not target
+        return columnType == ColumnType.N || columnType == ColumnType.H;
     }
 
     @JsonIgnore
     public boolean isCategorical() {
         return columnType == ColumnType.C;
+    }
+
+    @JsonIgnore
+    public boolean isHybrid() {
+        return columnType == ColumnType.H;
     }
 
     // weigt column is also treated as meta column

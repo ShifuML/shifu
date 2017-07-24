@@ -1962,9 +1962,18 @@ public final class CommonUtils {
         String weightColumnName = modelConfig.getWeightColumnName();
 
         Set<NSColumn> setCategorialColumns = new HashSet<NSColumn>();
-        if(CollectionUtils.isNotEmpty(modelConfig.getCategoricalColumnNames())) {
-            for(String column: modelConfig.getCategoricalColumnNames()) {
+        List<String> categoricalColumnNames = modelConfig.getCategoricalColumnNames();
+        if(CollectionUtils.isNotEmpty(categoricalColumnNames)) {
+            for(String column: categoricalColumnNames) {
                 setCategorialColumns.add(new NSColumn(column));
+            }
+        }
+
+        Set<NSColumn> setHybridColumns = new HashSet<NSColumn>();
+        List<String> hybridColumnNames = modelConfig.getHybridColumnNames();
+        if(CollectionUtils.isNotEmpty(hybridColumnNames)) {
+            for(String column: hybridColumnNames) {
+                setHybridColumns.add(new NSColumn(column));
             }
         }
 
@@ -2021,11 +2030,39 @@ public final class CommonUtils {
             } else if(NSColumnUtils.isColumnEqual(targetColumnName, varName)) {
                 // target column is set to categorical column
                 config.setColumnType(ColumnType.C);
+            } else if(setHybridColumns.contains(new NSColumn(varName))) {
+                config.setColumnType(ColumnType.H);
             } else if(setCategorialColumns.contains(new NSColumn(varName))) {
                 config.setColumnType(ColumnType.C);
             } else {
                 config.setColumnType(ColumnType.N);
             }
+        }
+    }
+
+    public static boolean isNumber(String valStr) {
+        if(StringUtils.isBlank(valStr)) {
+            return false;
+        }
+        try {
+            Double.parseDouble(valStr);
+            return true;
+        } catch (NumberFormatException e) {
+            return false;
+        }
+    }
+
+    /**
+     * Avoid parsing times, failed parsing is set to NaN
+     */
+    public static double parseNumber(String valStr) {
+        if(StringUtils.isBlank(valStr)) {
+            return Double.NaN;
+        }
+        try {
+            return Double.parseDouble(valStr);
+        } catch (NumberFormatException e) {
+            return Double.NaN;
         }
     }
 

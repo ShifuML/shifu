@@ -654,6 +654,30 @@ public class ModelConfig {
     }
 
     @JsonIgnore
+    public List<String> getHybridColumnNames() throws IOException {
+        String delimiter = StringUtils.isBlank(this.getHeaderDelimiter()) ? this.getDataSetDelimiter() : this
+                .getHeaderDelimiter();
+
+        String hybridColumnNameFile = dataSet.getHybridColumnNameFile();
+        if(StringUtils.isBlank(hybridColumnNameFile)) {
+            String defaultHybridColumnNameFile = Constants.COLUMN_META_FOLDER_NAME + File.separator
+                    + Constants.DEFAULT_HYBRID_COLUMN_FILE;
+            if(ShifuFileUtils.isFileExists(defaultHybridColumnNameFile, SourceType.LOCAL)) {
+                hybridColumnNameFile = defaultHybridColumnNameFile;
+                LOG.warn(
+                        "'dataSet::hybridColumnNameFile' is not set while default hybridColumnNameFile: {} is found, default hybrid file will be used.",
+                        defaultHybridColumnNameFile);
+            } else {
+                LOG.warn(
+                        "'dataSet::hybridColumnNameFile' is not set and default hybridColumnNameFile: {} is not found, no hybrid configs.",
+                        defaultHybridColumnNameFile);
+                return new ArrayList<String>();
+            }
+        }
+        return CommonUtils.readConfFileIntoList(hybridColumnNameFile, SourceType.LOCAL, delimiter);
+    }
+
+    @JsonIgnore
     public Map<String, Object> getParams() {
         return train.getParams();
     }

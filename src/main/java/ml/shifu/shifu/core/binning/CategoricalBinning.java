@@ -39,7 +39,7 @@ public class CategoricalBinning extends AbstractBinning<String> {
     /**
      * Empty constructor : it is just for bin merging
      */
-    protected CategoricalBinning() {
+    public CategoricalBinning() {
     }
 
     /*
@@ -117,7 +117,7 @@ public class CategoricalBinning extends AbstractBinning<String> {
     /**
      * convert @CategoricalBinning to String
      */
-    protected void stringToObj(String objValStr) {
+    public void stringToObj(String objValStr) {
         super.stringToObj(objValStr);
 
         if(categoricalVals == null) {
