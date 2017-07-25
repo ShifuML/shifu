@@ -75,6 +75,8 @@ public class ExportModelProcessor extends BasicModelProcessor implements Process
     private String type;
     private Map<String, Object> params;
 
+    private boolean isOutBaggingToOne = false;
+
     public ExportModelProcessor(String type, Map<String, Object> params) {
         this.type = type;
         this.params = params;
@@ -103,14 +105,23 @@ public class ExportModelProcessor extends BasicModelProcessor implements Process
             List<BasicML> models = CommonUtils.loadBasicModels(pathFinder.getModelsPath(SourceType.LOCAL),
                     ALGORITHM.valueOf(modelConfig.getAlgorithm().toUpperCase()));
 
-            PMMLTranslator translator = PMMLConstructorFactory.produce(modelConfig, columnConfigList, isConcise());
+            PMMLTranslator translator = PMMLConstructorFactory.produce(modelConfig, columnConfigList, isConcise(),
+                    isOutBaggingToOne);
 
-            for(int index = 0; index < models.size(); index++) {
-                log.info("\t start to generate " + "pmmls" + File.separator + modelConfig.getModelSetName()
-                        + Integer.toString(index) + ".pmml");
-                PMML pmml = translator.build(models.get(index));
-                PMMLUtils.savePMML(pmml,
-                        "pmmls" + File.separator + modelConfig.getModelSetName() + Integer.toString(index) + ".pmml");
+            PMML pmml;
+            if(isOutBaggingToOne) {
+                String path = "pmmls" + File.separator + modelConfig.getModelSetName() + ".pmml";
+                log.info("\t Start to generate one unified model to: " + path);
+                pmml = translator.build(models);
+                PMMLUtils.savePMML(pmml, path);
+            } else {
+                for(int index = 0; index < models.size(); index++) {
+                    String path = "pmmls" + File.separator + modelConfig.getModelSetName() + Integer.toString(index)
+                            + ".pmml";
+                    log.info("\t Start to generate " + path);
+                    pmml = translator.build(Arrays.asList(new BasicML[] { models.get(index) }));
+                    PMMLUtils.savePMML(pmml, path);
+                }
             }
         } else if(type.equalsIgnoreCase(COLUMN_STATS)) {
             saveColumnStatus();

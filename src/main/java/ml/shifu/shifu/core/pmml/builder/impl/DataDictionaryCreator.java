@@ -48,7 +48,7 @@ public class DataDictionaryCreator extends AbstractPmmlElementCreator<DataDictio
     public DataDictionary build(BasicML basicML) {
         DataDictionary dict = new DataDictionary();
         List<DataField> fields = new ArrayList<DataField>();
-        if(basicML instanceof BasicFloatNetwork) {
+        if(basicML != null && basicML instanceof BasicFloatNetwork) {
             BasicFloatNetwork bfn = (BasicFloatNetwork) basicML;
             Set<Integer> featureSet = bfn.getFeatureSet();
             for(ColumnConfig columnConfig: columnConfigList) {
