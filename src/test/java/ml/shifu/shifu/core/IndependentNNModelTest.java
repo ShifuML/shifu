@@ -27,14 +27,11 @@ import ml.shifu.guagua.util.FileUtils;
 import ml.shifu.shifu.core.dtrain.nn.IndependentNNModel;
 import ml.shifu.shifu.util.CommonUtils;
 
-import org.testng.annotations.BeforeClass;
-import org.testng.annotations.Test;
-
 public class IndependentNNModelTest {
 
     private IndependentNNModel nnModel;
 
-    @BeforeClass
+//    @BeforeClass
     public void setUp() throws IOException {
         String modelPath = "src/test/resources/dttest/model/inde.nn";
         FileInputStream fi = null;
@@ -46,7 +43,7 @@ public class IndependentNNModelTest {
         }
     }
 
-    @Test
+//    @Test
     public void testEvalScore() throws IOException {
         List<String> headerList = FileUtils.readLines(new File(
                 "src/test/resources/example/cancer-judgement/DataStore/EvalSet1/.pig_header"));
