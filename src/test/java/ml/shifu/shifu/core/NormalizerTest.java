@@ -15,15 +15,15 @@
  */
 package ml.shifu.shifu.core;
 
+import java.util.Arrays;
+
 import ml.shifu.shifu.container.obj.ColumnBinning;
 import ml.shifu.shifu.container.obj.ColumnConfig;
-import ml.shifu.shifu.container.obj.ColumnConfig.ColumnType;
+import ml.shifu.shifu.container.obj.ColumnType;
 import ml.shifu.shifu.container.obj.ModelNormalizeConf.NormType;
 
 import org.testng.Assert;
 import org.testng.annotations.Test;
-
-import java.util.Arrays;
 
 public class NormalizerTest {
 

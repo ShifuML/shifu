@@ -26,6 +26,7 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.zip.GZIPInputStream;
 
+import ml.shifu.shifu.container.obj.ColumnType;
 import ml.shifu.shifu.container.obj.ModelNormalizeConf.NormType;
 import ml.shifu.shifu.core.Normalizer;
 import ml.shifu.shifu.core.dtrain.CommonConstants;
@@ -77,6 +78,11 @@ public class IndependentNNModel {
     private Map<Integer, List<String>> cateCateMap;
 
     /**
+     * Mapping for (ColumnNum, Category List) for categorical feature
+     */
+    private Map<Integer, ColumnType> columnTypeMap;
+
+    /**
      * Mapping for (ColumnNum, index in double[] array), this is important to make input map with the input array be
      * consistent
      */
@@ -103,12 +109,14 @@ public class IndependentNNModel {
     private Map<Integer, List<Double>> numerBinBoundaries;
 
     /**
-     * Mapping for (columnNum, woes) for numerical columns, last one in weightedWoes is for missing value bin
+     * Mapping for (columnNum, woes) for numerical columns; for hybrid, woe bins for both numerical and categorical
+     * bins; last one in weightedWoes is for missing value bin
      */
     private Map<Integer, List<Double>> numerWoes;
 
     /**
-     * Mapping for (columnNum, wgtWoes) for numerical columns, last one in weightedBinWoes is for missing value bin
+     * Mapping for (columnNum, wgtWoes) for numerical columns; for hybrid, woe bins for both numerical and categorical
+     * bins; last one in weightedBinWoes is for missing value bin
      */
     private Map<Integer, List<Double>> numerWgtWoes;
 
@@ -163,7 +171,8 @@ public class IndependentNNModel {
             Map<Integer, List<Double>> numerBinBoundaries, Map<Integer, List<Double>> numerWgtWoes,
             Map<Integer, List<Double>> numerWoes, Map<Integer, Double> cutOffMap, Map<Integer, Double> numerMeanMap,
             Map<Integer, Double> numerStddevMap, Map<Integer, Double> woeMeanMap, Map<Integer, Double> woeStddevMap,
-            Map<Integer, Double> wgtWoeMeanMap, Map<Integer, Double> wgtWoeStddevMap) {
+            Map<Integer, Double> wgtWoeMeanMap, Map<Integer, Double> wgtWoeStddevMap,
+            Map<Integer, ColumnType> columnTypeMap) {
         this.basicNetworks = basicNetworks;
         this.normType = normType;
         this.numNameMap = numNameMappings;
@@ -182,6 +191,7 @@ public class IndependentNNModel {
         this.woeStddevMap = woeStddevMap;
         this.wgtWoeMeanMap = wgtWoeMeanMap;
         this.wgtWoeStddevMap = wgtWoeStddevMap;
+        this.columnTypeMap = columnTypeMap;
     }
 
     /**
@@ -249,7 +259,8 @@ public class IndependentNNModel {
             Integer columnNum = entry.getKey();
             String columnName = this.numNameMap.get(columnNum);
             Object obj = dataMap.get(columnName);
-            if(this.cateCateMap.containsKey(columnNum)) {
+            ColumnType columnType = this.columnTypeMap.get(columnNum);
+            if(columnType == ColumnType.C) {
                 // categorical column
                 switch(this.normType) {
                     case WOE:
@@ -276,14 +287,14 @@ public class IndependentNNModel {
                         value = getCategoricalPosRateZScoreValue(columnNum, obj);
                         break;
                 }
-            } else {
+            } else if(columnType == ColumnType.N) {
                 // numerical column
                 switch(this.normType) {
                     case WOE:
                         value = getNumericalWoeValue(columnNum, obj, false);
                         break;
                     case WEIGHT_WOE:
-                        value = getNumericalWoeValue(columnNum, obj, false);
+                        value = getNumericalWoeValue(columnNum, obj, true);
                         break;
                     case WOE_ZSCORE:
                     case WOE_ZSCALE:
@@ -303,6 +314,33 @@ public class IndependentNNModel {
                         value = getNumericalZScoreValue(columnNum, obj);
                         break;
                 }
+            } else if(columnType == ColumnType.H) {
+                // hybrid column
+                switch(this.normType) {
+                    case WOE:
+                        value = getHybridWoeValue(columnNum, obj, false);
+                        break;
+                    case WEIGHT_WOE:
+                        value = getHybridWoeValue(columnNum, obj, true);
+                        break;
+                    case WOE_ZSCORE:
+                    case WOE_ZSCALE:
+                        value = getHybridWoeZScoreValue(columnNum, obj, false);
+                        break;
+                    case WEIGHT_WOE_ZSCORE:
+                    case WEIGHT_WOE_ZSCALE:
+                        value = getHybridWoeZScoreValue(columnNum, obj, true);
+                        break;
+                    case OLD_ZSCALE:
+                    case OLD_ZSCORE:
+                    case ZSCALE:
+                    case ZSCORE:
+                    case HYBRID:
+                    case WEIGHT_HYBRID:
+                    default:
+                        throw new IllegalStateException("Column type of " + columnName
+                                + " is hybrid, but normType is not woe related.");
+                }
             }
 
             Integer index = entry.getValue();
@@ -313,13 +351,41 @@ public class IndependentNNModel {
         return data;
     }
 
+    private double getHybridWoeValue(Integer columnNum, Object obj, boolean isWeighted) {
+        // for hybrid categories, category bin merge is not supported, so we can use
+        List<String> binCategories = this.cateCateMap.get(columnNum);
+        int binIndex = CommonUtils.getCategoicalBinIndex(binCategories, obj == null ? null : obj.toString());
+        List<Double> binBoundaries = this.numerBinBoundaries.get(columnNum);
+        if(binIndex != -1) {
+            binIndex = binIndex + binBoundaries.size(); // append the first numerical bins
+        } else {
+            double douVal = CommonUtils.parseNumber(obj == null ? null : obj.toString());
+            if(Double.isNaN(douVal)) {
+                binIndex = binBoundaries.size() + binCategories.size();
+            } else {
+                binIndex = CommonUtils.getBinIndex(binBoundaries, douVal);
+            }
+        }
+
+        List<Double> binWoes = isWeighted ? this.numerWgtWoes.get(columnNum) : this.numerWoes.get(columnNum);
+        double value = 0d;
+        if(binIndex == -1) {
+            // The last bin in woeBins is the miss value bin.
+            value = binWoes.get(binWoes.size() - 1);
+        } else {
+            value = binWoes.get(binIndex);
+        }
+        return value;
+    }
+
     private double getNumericalWoeValue(Integer columnNum, Object obj, boolean isWeighted) {
-        double value;
         int binIndex = -1;
         if(obj != null) {
             binIndex = CommonUtils.getNumericalBinIndex(this.numerBinBoundaries.get(columnNum), obj.toString());
         }
         List<Double> binWoes = isWeighted ? this.numerWgtWoes.get(columnNum) : this.numerWoes.get(columnNum);
+
+        double value = 0d;
         if(binIndex == -1) {
             // The last bin in woeBins is the miss value bin.
             value = binWoes.get(binWoes.size() - 1);
@@ -363,6 +429,15 @@ public class IndependentNNModel {
         double stddev = this.numerStddevMap.get(columnNum);
         double cutoff = Normalizer.checkCutOff(this.cutOffMap.get(columnNum));
         return Normalizer.computeZScore(value, mean, stddev, cutoff);
+    }
+
+    private double getHybridWoeZScoreValue(Integer columnNum, Object obj, boolean isWeighted) {
+        double woe = getHybridWoeValue(columnNum, obj, isWeighted);
+        Map<Integer, Double> woeMeans = isWeighted ? this.wgtWoeMeanMap : this.woeMeanMap;
+        Map<Integer, Double> woeStddevs = isWeighted ? this.wgtWoeStddevMap : this.woeStddevMap;
+        double mean = woeMeans.get(columnNum), stddev = woeStddevs.get(columnNum);
+        double cutoff = Normalizer.checkCutOff(this.cutOffMap.get(columnNum));
+        return Normalizer.computeZScore(woe, mean, stddev, cutoff);
     }
 
     private double getNumericalWoeZScoreValue(Integer columnNum, Object obj, boolean isWeighted) {
@@ -471,6 +546,7 @@ public class IndependentNNModel {
         Map<Integer, Double> wgtWoeMeanMap = new HashMap<Integer, Double>();
         Map<Integer, Double> wgtWoeStddevMap = new HashMap<Integer, Double>();
         Map<Integer, Double> cutoffMap = new HashMap<Integer, Double>();
+        Map<Integer, ColumnType> columnTypeMap = new HashMap<Integer, ColumnType>();
 
         int columnSize = dis.readInt();
         for(int i = 0; i < columnSize; i++) {
@@ -482,6 +558,8 @@ public class IndependentNNModel {
             List<Double> binPosRates = cs.getBinPosRates();
 
             int columnNum = cs.getColumnNum();
+
+            columnTypeMap.put(columnNum, cs.getColumnType());
 
             if(isRemoveNameSpace) {
                 // remove name-space in column name to make it be called by simple name
@@ -495,7 +573,7 @@ public class IndependentNNModel {
             Map<String, Double> woeWgtMap = new HashMap<String, Double>();
             Map<String, Double> posRateMap = new HashMap<String, Double>();
 
-            if(cs.isCategorical()) {
+            if(cs.isCategorical() || cs.isHybrid()) {
                 List<String> binCategories = cs.getBinCategories();
 
                 cateColumnNameNames.put(columnNum, binCategories);
@@ -520,7 +598,9 @@ public class IndependentNNModel {
                 woeMap.put(Constants.EMPTY_CATEGORY, binWoes.get(binCategories.size()));
                 woeWgtMap.put(Constants.EMPTY_CATEGORY, binWgtWoes.get(binCategories.size()));
                 posRateMap.put(Constants.EMPTY_CATEGORY, binPosRates.get(binCategories.size()));
-            } else {
+            }
+
+            if(cs.isNumerical() || cs.isHybrid()) {
                 numerBinBoundaries.put(columnNum, cs.getBinBoundaries());
                 numerWoes.put(columnNum, binWoes);
                 numerWgtWoes.put(columnNum, binWgtWoes);
@@ -553,7 +633,7 @@ public class IndependentNNModel {
 
         return new IndependentNNModel(networks, normType, numNameMap, cateColumnNameNames, columnMap, cateWoeMap,
                 cateWgtWoeMap, binPosRateMap, numerBinBoundaries, numerWgtWoes, numerWoes, cutoffMap, numerMeanMap,
-                numerStddevMap, woeMeanMap, woeStddevMap, wgtWoeMeanMap, wgtWoeStddevMap);
+                numerStddevMap, woeMeanMap, woeStddevMap, wgtWoeMeanMap, wgtWoeStddevMap, columnTypeMap);
     }
 
     @SuppressWarnings("unused")

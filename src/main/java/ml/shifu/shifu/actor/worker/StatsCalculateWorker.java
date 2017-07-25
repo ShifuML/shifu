@@ -15,10 +15,12 @@
  */
 package ml.shifu.shifu.actor.worker;
 
-import akka.actor.ActorRef;
+import java.util.ArrayList;
+import java.util.List;
+
 import ml.shifu.shifu.container.ValueObject;
 import ml.shifu.shifu.container.obj.ColumnConfig;
-import ml.shifu.shifu.container.obj.ColumnConfig.ColumnType;
+import ml.shifu.shifu.container.obj.ColumnType;
 import ml.shifu.shifu.container.obj.ModelConfig;
 import ml.shifu.shifu.core.BasicStatsCalculator;
 import ml.shifu.shifu.core.Binning;
@@ -27,12 +29,12 @@ import ml.shifu.shifu.core.ColumnStatsCalculator;
 import ml.shifu.shifu.core.ColumnStatsCalculator.ColumnMetrics;
 import ml.shifu.shifu.message.StatsResultMessage;
 import ml.shifu.shifu.message.StatsValueObjectMessage;
+
 import org.apache.commons.collections.CollectionUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.ArrayList;
-import java.util.List;
+import akka.actor.ActorRef;
 
 /**
  * StatsCalculateWorker class calculates the stats for each column

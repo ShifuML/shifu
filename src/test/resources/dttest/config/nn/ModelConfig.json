@@ -1,6 +1,6 @@
 {
   "basic" : {
-    "name" : "cam2015-BNN",
+    "name" : "camcsv55",
     "author" : "pengzhang",
     "description" : "Created at 2016-08-14 21:01:17",
     "version" : "0.2.0",
@@ -10,24 +10,25 @@
   },
   "dataSet" : {
     "source" : "HDFS",
-    "dataPath" : "/user/pengzhang/cam2015/rawtrain",
+    "dataPath" : "c_d2015_ub_wh.csv",
     "dataDelimiter" : "|",
-    "headerPath" : "/user/pengzhang/cam2015/header",
-    "headerDelimiter" : "|",
+    "validationDataPath" : "",
+    "headerPath" : "",
+    "headerDelimiter" : "",
     "filterExpressions" : "",
     "weightColumnName" : "cg_dol_wgt",
     "targetColumnName" : "is_cc_bad",
     "posTags" : [ "1" ],
     "negTags" : [ "0" ],
-    "autoTypeThreshold" : 100,
     "missingOrInvalidValues" : [ "", "*", "#", "?", "null", "~" ],
     "metaColumnNameFile" : "columns/meta.column.names",
+    "hybridColumnNameFile" : "columns/hybrid.column.names",
     "categoricalColumnNameFile" : "columns/categorical.column.names"
   },
   "stats" : {
     "maxNumBin" : 20,
     "binningMethod" : "EqualPositive",
-    "sampleRate" : 1.0,
+    "sampleRate" : 1,
     "sampleNegOnly" : false,
     "binningAlgorithm" : "SPDTI",
     "psiColumnName" : ""
@@ -37,58 +38,55 @@
     "forceSelectColumnNameFile" : "columns/forceselect.column.names",
     "forceRemoveColumnNameFile" : "columns/forceremove.column.names",
     "filterEnable" : true,
-    "filterOutRatio" : 0.05,
-    "filterNum" : -1,
-    "filterBy" : "SE",
-    "missingRateThreshold" : 0.98,
+    "filterNum" : 600,
     "correlationThreshold" : 0.96,
-    "postCorrelationMetric" : "SE",
-    "params" : null
+    "filterBy" : "IV"
   },
   "normalize" : {
     "stdDevCutOff" : 4.0,
-    "sampleRate" : 1,
+    "sampleRate" : 1.0,
     "sampleNegOnly" : false,
-    "normType" : "ZSCALE"
+    "normType" : "WOE_ZSCORE"
   },
   "train" : {
-    "baggingNum" : 2,
+   "baggingNum" : 1,
     "baggingWithReplacement" : false,
     "baggingSampleRate" : 1.0,
-    "validSetRate" : 0.2,
-    "numTrainEpochs" : 100,
-    "isContinuous" : true,
+    "validSetRate" : 0.1,
+    "numTrainEpochs" : 10,
+    "isContinuous" : false,
     "workerThreadCount" : 4,
     "algorithm" : "NN",
     "params" : {
       "Propagation" : "R",
       "LearningRate" : 0.1,
       "NumHiddenLayers" : 1,
-      "NumHiddenNodes" : [ 30 ],
+      "NumHiddenNodes" : [ 50 ],
       "ActivationFunc" : [ "tanh" ]
     },
-    "customPaths" : {}
+    "customPaths" : { }
   },
   "evals" : [ {
     "name" : "Eval2",
     "dataSet" : {
       "source" : "HDFS",
-      "dataPath" : "test1.csv",
+      "dataPath" : "cam16v1_mar2016_control_wh.csv",
       "dataDelimiter" : "|",
       "headerPath" : "",
-      "headerDelimiter" : "|",
+      "headerDelimiter" : "",
       "filterExpressions" : "",
       "weightColumnName" : "cg_dol_wgt",
       "targetColumnName" : "is_cc_bad",
       "posTags" : [ "1" ],
       "negTags" : [ "0" ],
       "missingOrInvalidValues" : [ "", "*", "#", "?", "null", "~" ],
-      "metaColumnNameFile" : "columns/eval.meta.column.names",
+      "metaColumnNameFile" : "columns/meta.column.names",
       "categoricalColumnNameFile" : "columns/categorical.column.names"
     },
     "performanceBucketNum" : 100,
     "performanceScoreSelector" : "mean",
     "scoreMetaColumnNameFile" : "columns/Eval1score.meta.column.names",
     "customPaths" : { }
-   } ]
+   }
+  ]
 }

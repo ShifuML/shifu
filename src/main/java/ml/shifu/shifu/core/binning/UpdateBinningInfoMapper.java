@@ -401,7 +401,7 @@ public class UpdateBinningInfoMapper extends Mapper<LongWritable, Text, IntWrita
 
                 Double hybridThreshould = columnConfig.getHybridThreshold();
                 if(hybridThreshould == null) {
-                    hybridThreshould = Double.MIN_VALUE;
+                    hybridThreshould = Double.NEGATIVE_INFINITY;
                 }
                 // douVal < hybridThreshould which will also be set to category
                 boolean isCategory = Double.isNaN(douVal) || douVal < hybridThreshould;

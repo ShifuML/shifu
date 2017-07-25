@@ -682,12 +682,12 @@ public class ModelConfig {
                 String[] splits = CommonUtils.split(string, Constants.DEFAULT_DELIMITER);
                 double parNum = CommonUtils.parseNumber(splits[1]);
                 if(Double.isNaN(parNum)) {
-                    map.put(string, Double.MIN_VALUE);
+                    map.put(string, Double.NEGATIVE_INFINITY);
                 } else {
                     map.put(string, parNum);
                 }
             } else {
-                map.put(string, Double.MIN_VALUE);
+                map.put(string, Double.NEGATIVE_INFINITY);
             }
         }
         return map;
