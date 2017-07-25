@@ -15,13 +15,14 @@
  */
 package ml.shifu.shifu.container.obj;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
-import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
-import ml.shifu.shifu.util.Constants;
-
 import java.io.Serializable;
 import java.util.Comparator;
 import java.util.List;
+
+import ml.shifu.shifu.util.Constants;
+
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
 /**
  * ColumnConfig class record the basic information for column in data. Almost all information in ColumnConfig is
@@ -33,11 +34,6 @@ public class ColumnConfig {
     // add weight column and weight column is treated the same as meta
     public static enum ColumnFlag {
         ForceSelect, ForceRemove, Meta, Target, Weight
-    }
-
-    public static enum ColumnType {
-        A, N, C, H // H means hybrid, which is numerical type for major values, while for missing values, it is splited
-                   // into different categories
     }
 
     /**

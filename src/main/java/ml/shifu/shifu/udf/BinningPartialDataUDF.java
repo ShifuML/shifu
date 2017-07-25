@@ -121,10 +121,14 @@ public class BinningPartialDataUDF extends AbstractTrainerUDF<String> {
                     double douVal = CommonUtils.parseNumber(valStr);
                     Double hybridThreshould = this.columnConfig.getHybridThreshold();
                     if(hybridThreshould == null) {
-                        hybridThreshould = Double.MIN_VALUE;
+                        hybridThreshould = Double.NEGATIVE_INFINITY;
                     }
                     // douVal < hybridThreshould which will also be set to category
                     boolean isCategory = Double.isNaN(douVal) || douVal < hybridThreshould;
+                    if(douVal < hybridThreshould) {
+                        log.warn("douVal " + douVal + ", threshold " + hybridThreshould + ", column {}"
+                                + columnConfig.getColumnName());
+                    }
                     if(binning.isMissingVal(valStr) || isCategory) {
                         this.backUpbinning.addData(valStr);
                     }

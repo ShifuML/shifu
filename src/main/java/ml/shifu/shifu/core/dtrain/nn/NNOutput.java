@@ -38,7 +38,6 @@ import ml.shifu.shifu.core.dtrain.CommonConstants;
 import ml.shifu.shifu.core.dtrain.DTrainUtils;
 import ml.shifu.shifu.core.dtrain.dataset.BasicFloatNetwork;
 import ml.shifu.shifu.core.dtrain.dataset.PersistBasicFloatNetwork;
-import ml.shifu.shifu.core.dtrain.dt.FeatureType;
 import ml.shifu.shifu.core.dtrain.gs.GridSearch;
 import ml.shifu.shifu.fs.ShifuFileUtils;
 import ml.shifu.shifu.util.CommonUtils;
@@ -421,7 +420,7 @@ public class NNOutput extends BasicMasterInterceptor<NNParams, NNParams> {
                 if(columnIndexNameMapping.containsKey(cc.getColumnNum())) {
                     NNColumnStats cs = new NNColumnStats();
                     cs.setCutoff(this.modelConfig.getNormalizeStdDevCutOff());
-                    cs.setFeatureType(cc.isCategorical() ? FeatureType.CATEGORICAL : FeatureType.CONTINUOUS);
+                    cs.setColumnType(cc.getColumnType());
                     cs.setMean(cc.getMean());
                     cs.setStddev(cc.getStdDev());
                     cs.setColumnNum(cc.getColumnNum());

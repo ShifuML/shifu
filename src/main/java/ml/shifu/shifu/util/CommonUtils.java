@@ -46,7 +46,7 @@ import ml.shifu.shifu.column.NSColumn;
 import ml.shifu.shifu.column.NSColumnUtils;
 import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.container.obj.ColumnConfig.ColumnFlag;
-import ml.shifu.shifu.container.obj.ColumnConfig.ColumnType;
+import ml.shifu.shifu.container.obj.ColumnType;
 import ml.shifu.shifu.container.obj.EvalConfig;
 import ml.shifu.shifu.container.obj.ModelConfig;
 import ml.shifu.shifu.container.obj.ModelTrainConf.ALGORITHM;
@@ -629,6 +629,7 @@ public final class CommonUtils {
      * @return true if the categorical value exists in group, else false
      */
     public static boolean isCategoricalBinValue(String binVal, String cval) {
+        // TODO cache CommonUtils.flattenCatValGrp(binVal)??
         return binVal.equals(cval) ? true : CommonUtils.flattenCatValGrp(binVal).contains(cval);
     }
 
