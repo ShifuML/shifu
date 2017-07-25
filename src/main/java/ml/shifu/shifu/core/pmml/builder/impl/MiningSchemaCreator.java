@@ -46,7 +46,7 @@ public class MiningSchemaCreator extends AbstractPmmlElementCreator<MiningSchema
     @Override
     public MiningSchema build(BasicML basicML) {
         MiningSchema miningSchema = new MiningSchema();
-        if(basicML instanceof BasicFloatNetwork) {
+        if(basicML != null && basicML instanceof BasicFloatNetwork) {
             BasicFloatNetwork bfn = (BasicFloatNetwork) basicML;
             Set<Integer> featureSet = bfn.getFeatureSet();
             for(ColumnConfig columnConfig: columnConfigList) {
@@ -77,6 +77,7 @@ public class MiningSchemaCreator extends AbstractPmmlElementCreator<MiningSchema
                     } else {
                         miningField.setUsageType(FieldUsageType.ACTIVE);
                     }
+                    miningSchema.withMiningFields(miningField);
                 }
             }
         }

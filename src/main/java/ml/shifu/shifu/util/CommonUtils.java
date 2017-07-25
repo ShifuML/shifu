@@ -1712,6 +1712,15 @@ public final class CommonUtils {
         }
         return columnName;
     }
+    
+    public static String getSimpleColumnName(String columnName) {
+        // remove name-space in column name to make it be called by simple name
+        if(columnName.contains(CommonConstants.NAMESPACE_DELIMITER)) {
+            columnName = columnName.substring(columnName.lastIndexOf(CommonConstants.NAMESPACE_DELIMITER)
+                    + CommonConstants.NAMESPACE_DELIMITER.length(), columnName.length());
+        }
+        return columnName;
+    }
 
     /**
      * Assemble map data to Encog standard input format. If no variable selected(noVarSel = true), all candidate

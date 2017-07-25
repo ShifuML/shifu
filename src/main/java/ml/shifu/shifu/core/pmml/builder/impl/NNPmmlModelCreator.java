@@ -40,11 +40,11 @@ public class NNPmmlModelCreator extends AbstractPmmlElementCreator<Model> {
     @Override
     public Model build(BasicML basicML) {
         Model model = new NeuralNetwork();
-        model.setTargets(createTargets(modelConfig));
+        model.setTargets(createTargets());
         return model;
     }
 
-    protected Targets createTargets(ModelConfig modelConfig) {
+    public Targets createTargets() {
         Targets targets = new Targets();
 
         Target target = new Target();
