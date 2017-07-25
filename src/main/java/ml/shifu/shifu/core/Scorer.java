@@ -191,6 +191,7 @@ public class Scorer {
 
                 final MLDataPair networkPair = CommonUtils.assembleNsDataPair(binCategoryMap, noVarSelect, modelConfig,
                         columnConfigList, rawNsDataMap, cutoff, alg, network.getFeatureSet());
+
                 if(network.getFeatureSet().size() != networkPair.getInput().size()) {
                     log.error("Network and input size mismatch: Network Size = " + network.getFeatureSet().size()
                             + "; Input Size = " + networkPair.getInput().size());

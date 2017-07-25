@@ -15,15 +15,24 @@
  */
 package ml.shifu.shifu.core.processor.stats;
 
-import com.clearspring.analytics.stream.cardinality.HyperLogLogPlus;
-import com.fasterxml.jackson.annotation.JsonIgnore;
-import com.fasterxml.jackson.core.JsonParser;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.base.Splitter;
+import java.io.BufferedWriter;
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.OutputStreamWriter;
+import java.nio.charset.Charset;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Scanner;
+
 import ml.shifu.guagua.hadoop.util.HDPUtils;
 import ml.shifu.guagua.mapreduce.GuaguaMapReduceConstants;
 import ml.shifu.guagua.util.FileUtils;
 import ml.shifu.shifu.container.obj.ColumnConfig;
+import ml.shifu.shifu.container.obj.ColumnType;
 import ml.shifu.shifu.container.obj.ModelConfig;
 import ml.shifu.shifu.container.obj.RawSourceData;
 import ml.shifu.shifu.core.binning.BinningInfoWritable;
@@ -42,6 +51,7 @@ import ml.shifu.shifu.util.Base64Utils;
 import ml.shifu.shifu.util.CommonUtils;
 import ml.shifu.shifu.util.Constants;
 import ml.shifu.shifu.util.Environment;
+
 import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.collections.Predicate;
 import org.apache.commons.compress.compressors.bzip2.BZip2CompressorInputStream;
@@ -63,9 +73,11 @@ import org.encog.ml.data.MLDataSet;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.*;
-import java.nio.charset.Charset;
-import java.util.*;
+import com.clearspring.analytics.stream.cardinality.HyperLogLogPlus;
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.core.JsonParser;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.base.Splitter;
 
 /**
  * Created by zhanhu on 6/30/16.
@@ -425,7 +437,7 @@ public class MapReducerStatsWorker extends AbstractStatsExecutor {
                 config.setStdDev(parseDouble(raw[11], Double.NaN));
 
                 // magic?
-                config.setColumnType(ColumnConfig.ColumnType.valueOf(raw[12]));
+                config.setColumnType(ColumnType.of(raw[12]));
 
                 config.setMedian(parseDouble(raw[13]));
 

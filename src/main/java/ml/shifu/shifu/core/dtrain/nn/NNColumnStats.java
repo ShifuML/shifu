@@ -22,7 +22,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import ml.shifu.guagua.io.Bytable;
-import ml.shifu.shifu.core.dtrain.dt.FeatureType;
+import ml.shifu.shifu.container.obj.ColumnType;
 
 /**
  * {@link NNColumnStats} is to wrapper valued info for neural network model serialization.
@@ -32,12 +32,12 @@ class NNColumnStats implements Bytable {
     public NNColumnStats() {
     }
 
-    public NNColumnStats(int columnNum, String columnName, FeatureType featureType, double mean, double stddev,
+    public NNColumnStats(int columnNum, String columnName, ColumnType columnType, double mean, double stddev,
             double woeMean, double woeStddev, double woeWgtMean, double woeWgtStddev, List<Double> binBoundaries,
             List<String> binCategories, List<Double> binPosRates, List<Double> binCountWoes, List<Double> binWeightWoes) {
         this.columnNum = columnNum;
         this.columnName = columnName;
-        this.featureType = featureType;
+        this.columnType = columnType;
         this.mean = mean;
         this.stddev = stddev;
         this.woeMean = woeMean;
@@ -55,7 +55,7 @@ class NNColumnStats implements Bytable {
 
     private String columnName;
 
-    private FeatureType featureType;
+    private ColumnType columnType;
 
     private double cutoff;
 
@@ -82,14 +82,22 @@ class NNColumnStats implements Bytable {
     private List<Double> binWeightWoes;
 
     public boolean isCategorical() {
-        return this.featureType == FeatureType.CATEGORICAL;
+        return this.columnType == ColumnType.C;
+    }
+    
+    public boolean isHybrid() {
+        return this.columnType == ColumnType.H;
+    }
+
+    public boolean isNumerical() {
+        return this.columnType == ColumnType.N || this.columnType == ColumnType.H;
     }
 
     @Override
     public void write(DataOutput out) throws IOException {
         out.writeInt(this.columnNum);
         ml.shifu.shifu.core.dtrain.StringUtils.writeString(out, this.columnName);
-        out.writeByte(this.featureType.getByteType());
+        out.writeByte(this.columnType.getByteType());
         out.writeDouble(this.cutoff);
         out.writeDouble(this.mean);
         out.writeDouble(this.stddev);
@@ -98,18 +106,18 @@ class NNColumnStats implements Bytable {
         out.writeDouble(this.woeWgtMean);
         out.writeDouble(this.woeWgtStddev);
 
-        switch(this.featureType) {
-            case CONTINUOUS:
-                writeDoubleList(out, this.binBoundaries);
-                break;
-            case CATEGORICAL:
-                int cateSize = this.binCategories.size();
-                out.writeInt(cateSize);
-                for(int i = 0; i < cateSize; i++) {
-                    ml.shifu.shifu.core.dtrain.StringUtils.writeString(out, this.binCategories.get(i));
-                }
-                break;
+        writeDoubleList(out, this.binBoundaries);
+
+        if(this.binCategories == null) {
+            out.writeInt(0);
+        } else {
+            int cateSize = this.binCategories.size();
+            out.writeInt(cateSize);
+            for(int i = 0; i < cateSize; i++) {
+                ml.shifu.shifu.core.dtrain.StringUtils.writeString(out, this.binCategories.get(i));
+            }
         }
+
         writeDoubleList(out, this.binPosRates);
         writeDoubleList(out, this.binCountWoes);
         writeDoubleList(out, this.binWeightWoes);
@@ -119,7 +127,7 @@ class NNColumnStats implements Bytable {
     public void readFields(DataInput in) throws IOException {
         this.columnNum = in.readInt();
         this.columnName = ml.shifu.shifu.core.dtrain.StringUtils.readString(in);
-        this.featureType = FeatureType.of(in.readByte());
+        this.columnType = ColumnType.of(in.readByte());
         this.cutoff = in.readDouble();
         this.mean = in.readDouble();
         this.stddev = in.readDouble();
@@ -127,19 +135,16 @@ class NNColumnStats implements Bytable {
         this.woeStddev = in.readDouble();
         this.woeWgtMean = in.readDouble();
         this.woeWgtStddev = in.readDouble();
-        switch(this.featureType) {
-            case CONTINUOUS:
-                this.binBoundaries = readDoubleList(in);
-                break;
-            case CATEGORICAL:
-                int cateSize = in.readInt();
-                List<String> categories = new ArrayList<String>(cateSize);
-                for(int i = 0; i < cateSize; i++) {
-                    categories.add(ml.shifu.shifu.core.dtrain.StringUtils.readString(in));
-                }
-                this.binCategories = categories;
-                break;
+
+        this.binBoundaries = readDoubleList(in);
+
+        int cateSize = in.readInt();
+        List<String> categories = new ArrayList<String>(cateSize);
+        for(int i = 0; i < cateSize; i++) {
+            categories.add(ml.shifu.shifu.core.dtrain.StringUtils.readString(in));
         }
+
+        this.binCategories = categories;
         this.binPosRates = readDoubleList(in);
         this.binCountWoes = readDoubleList(in);
         this.binWeightWoes = readDoubleList(in);
@@ -166,18 +171,18 @@ class NNColumnStats implements Bytable {
     }
 
     /**
-     * @return the featureType
+     * @return the columnType
      */
-    public FeatureType getFeatureType() {
-        return featureType;
+    public ColumnType getColumnType() {
+        return columnType;
     }
 
     /**
-     * @param featureType
-     *            the featureType to set
+     * @param columnType
+     *            the columnType to set
      */
-    public void setFeatureType(FeatureType featureType) {
-        this.featureType = featureType;
+    public void setColumnType(ColumnType columnType) {
+        this.columnType = columnType;
     }
 
     /**

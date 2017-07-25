@@ -158,10 +158,10 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
         if(input == null || input.size() == 0) {
             return null;
         }
-        // update total valid count
-        if(isPigEnabled(Constants.SHIFU_GROUP_COUNTER, "TOTAL_VALID_COUNT")) {
-            PigStatusReporter.getInstance().getCounter(Constants.SHIFU_GROUP_COUNTER, "TOTAL_VALID_COUNT").increment(1);
-        }
+        // update total valid count, remove such counter as it is in PurifyDataUDF
+        // if(isPigEnabled(Constants.SHIFU_GROUP_COUNTER, "TOTAL_VALID_COUNT")) {
+        // PigStatusReporter.getInstance().getCounter(Constants.SHIFU_GROUP_COUNTER, "TOTAL_VALID_COUNT").increment(1);
+        // }
 
         Object tag = input.get(tagColumnNum);
         if(tag == null) {
@@ -243,7 +243,8 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
                     // map should not be null, no need check if map is null, if val not in binCategory, set it to ""
                     tuple.append(((map.get(val) == null || map.get(val) == -1)) ? "" : val);
                 } else {
-                    // TODO hybrid column is not supported here so far, should be set to default number or categorical values
+                    // TODO hybrid column is not supported here so far, should be set to default number or categorical
+                    // values
                     Double normVal = 0d;
                     try {
                         normVal = Double.parseDouble(val);
