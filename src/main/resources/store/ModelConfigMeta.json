@@ -414,6 +414,11 @@
                 "directive": "input",
                 "defval": 0.8
             }, {
+                "name": "baggingSampleSeed",
+                "type": "number",
+                "directive": "input",
+                "defval": 1500890350
+            }, {
                 "name": "validSetRate",
                 "type": "number",
                 "directive": "input",
