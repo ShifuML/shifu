@@ -18,10 +18,14 @@ package ml.shifu.shifu.core.dtrain;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+
+import javax.xml.transform.sax.SAXSource;
 
 import ml.shifu.guagua.util.FileUtils;
 import ml.shifu.shifu.container.ScoreObject;
@@ -35,15 +39,25 @@ import ml.shifu.shifu.util.CommonUtils;
 import ml.shifu.shifu.util.HDFSUtils;
 
 import org.apache.hadoop.fs.Path;
+import org.dmg.pmml.DataType;
+import org.dmg.pmml.FieldName;
+import org.dmg.pmml.PMML;
 import org.encog.ml.BasicML;
+import org.jpmml.evaluator.EvaluatorUtil;
+import org.jpmml.evaluator.FieldValue;
+import org.jpmml.evaluator.MiningModelEvaluator;
+import org.jpmml.model.ImportFilter;
+import org.jpmml.model.JAXBUtil;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.Test;
+import org.xml.sax.InputSource;
 
 public class NNModelEvalAndScoreTest {
 
     private IndependentNNModel iNNModel;
     private BasicFloatNetwork nnModel;
     private Scorer scorer;
+    private MiningModelEvaluator evaluator;
 
     @BeforeClass
     public void setUp() throws IOException {
@@ -67,6 +81,83 @@ public class NNModelEvalAndScoreTest {
         List<BasicML> models = new ArrayList<BasicML>();
         models.add(nnModel);
         scorer = new Scorer(models, columnConfigList, "NN", modelConfig);
+
+        evaluator = new MiningModelEvaluator(loadPMML(new File("src/test/resources/dttest/model/example.pmml")));
+    }
+
+    private static PMML loadPMML(File file) {
+        InputStream is = null;
+        try {
+            is = new FileInputStream(file);
+            InputSource source = new InputSource(is);
+            SAXSource transformedSource = ImportFilter.apply(source);
+            return JAXBUtil.unmarshalPMML(transformedSource);
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        } finally {
+            if(is != null) {
+                try {
+                    is.close();
+                } catch (IOException ignore) {
+                }
+            }
+        }
+    }
+
+    @SuppressWarnings("unchecked")
+    @Test
+    public void testPMML() throws IOException {
+        List<FieldName> activeFields = this.evaluator.getActiveFields();
+        HashSet<String> activeNames = new HashSet<String>();
+        for(FieldName fn: activeFields) {
+            activeNames.add(fn.getValue());
+        }
+
+        List<String> lines = FileUtils.readLines(new File("src/test/resources/dttest/data/nnbinary.csv"));
+
+        if(lines.size() <= 1) {
+            return;
+        }
+        String[] headers = CommonUtils.split(lines.get(0), "|");
+        // score with format <String, String>
+        for(int i = 1; i < lines.size(); i++) {
+            Map<FieldName, FieldValue> dataMap = new HashMap<FieldName, FieldValue>();
+
+            Map<String, String> map = new HashMap<String, String>();
+
+            String[] data = CommonUtils.split(lines.get(i), "|");;
+            // System.out.println("data len is " + data.length);
+            if(data.length != headers.length) {
+                System.out.println("One invalid input data");
+                break;
+            }
+
+            for(int j = 0; j < headers.length; j++) {
+                map.put(headers[j], data[j]);
+            }
+
+            for(FieldName fn: activeFields) {
+                String valueStr = map.get(fn.getValue());
+                if(("").equals(valueStr) || ("NA").equals(valueStr) || ("N/A").equals(valueStr)) {
+                    valueStr = null;
+                } else {
+                    if(this.evaluator.getDataField(fn).getDataType() == DataType.DOUBLE) {
+                        try {
+                            Double.parseDouble(valueStr);
+                        } catch (Exception e) {
+                            valueStr = null;
+                        }
+                    }
+                }
+                FieldValue value = EvaluatorUtil.prepare(this.evaluator, fn, (Object) valueStr);
+                dataMap.put(fn, value);
+            }
+
+            Map<FieldName, Double> regressionTerm = (Map<FieldName, Double>) evaluator.evaluate(dataMap);
+            for(Map.Entry<FieldName, Double> entry: regressionTerm.entrySet()) {
+                System.out.println(entry.getValue() + " " + map.get("diagnosis"));
+            }
+        }
     }
 
     @Test

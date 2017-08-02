@@ -36,7 +36,7 @@ import java.util.Map;
  * {@link #modelConfig} should be passed as parameter in constructor
  */
 public class PathFinder {
-    
+
     public static final String FEATURE_IMPORTANCE_FILE = "all.fi";
     private static final String CORRELATION_CSV = "correlation.csv";
     private static final String REASON_CODE_PATH = "common/ReasonCodeMapV3.json";
@@ -497,7 +497,18 @@ public class PathFinder {
     public String getModelsPath(SourceType sourceType) {
         return getPathBySourceType(new Path(Constants.MODELS), sourceType);
     }
-    
+
+    /**
+     * Get the path of one bagging model
+     * 
+     * @param sourceType
+     *            - Local/HDFS
+     * @return path of models
+     */
+    public String getBaggingModelPath(SourceType sourceType) {
+        return getPathBySourceType(new Path("onebaggingmodel"), sourceType);
+    }
+
     /**
      * Get the path ofnn binary models
      * 

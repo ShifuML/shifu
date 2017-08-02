@@ -140,7 +140,7 @@ public class PMMLTranslator {
                 tmpmodel.setModelStats(this.modelStatsCreator.build(basicML));
                 // create variable transform
                 tmpmodel.setLocalTransformations(this.localTransformationsCreator.build(basicML));
-                this.specifCreator.build(basicML, tmpmodel);
+                this.specifCreator.build(basicML, tmpmodel, idCount);
 
                 tmpmodel.setModelName(String.valueOf(idCount));
                 Segment segment = new Segment();

@@ -1278,8 +1278,7 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
             // 0.85 is a factor if selected ratio is 0.5 and only be effective if selected ratio over 2
             ratio = 0.85 * ratio;
         }
-        maxCombineSize = Double.valueOf((maxCombineSize * 1d * (ratio))).longValue();
-        return maxCombineSize;
+        return Double.valueOf((maxCombineSize * 1d * (ratio))).longValue();
     }
 
     private void copyModelToLocal(String modelName, Path modelPath, SourceType sourceType) throws IOException {
