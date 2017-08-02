@@ -66,6 +66,7 @@ public class MiningSchemaCreator extends AbstractPmmlElementCreator<MiningSchema
             }
         } else {
             for(ColumnConfig columnConfig: columnConfigList) {
+                // FIXME, if no variable is selected
                 if(columnConfig.isFinalSelect() || columnConfig.isTarget()) {
                     MiningField miningField = new MiningField();
 

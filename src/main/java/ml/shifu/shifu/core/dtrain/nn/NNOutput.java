@@ -15,25 +15,20 @@
  */
 package ml.shifu.shifu.core.dtrain.nn;
 
-import java.io.DataOutputStream;
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.HashMap;
+import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
 import java.util.Properties;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.zip.GZIPOutputStream;
 
 import ml.shifu.guagua.master.BasicMasterInterceptor;
 import ml.shifu.guagua.master.MasterContext;
 import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.container.obj.ModelConfig;
 import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
-import ml.shifu.shifu.core.Normalizer;
 import ml.shifu.shifu.core.dtrain.CommonConstants;
 import ml.shifu.shifu.core.dtrain.DTrainUtils;
 import ml.shifu.shifu.core.dtrain.dataset.BasicFloatNetwork;
@@ -49,6 +44,7 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.IOUtils;
+import org.encog.ml.BasicML;
 import org.encog.neural.networks.BasicNetwork;
 import org.encog.persist.EncogDirectoryPersistence;
 import org.encog.persist.PersistorRegistry;
@@ -400,111 +396,13 @@ public class NNOutput extends BasicMasterInterceptor<NNParams, NNParams> {
         LOG.info("Writing NN models to {}.", out);
         this.network.getFlat().setWeights(finalWeights);
 
-        DataOutputStream fos = null;
+        BasicML basicML = this.network;
         try {
-            fos = new DataOutputStream(new GZIPOutputStream(FileSystem.get(new Configuration()).create(out)));
-
-            // version
-            fos.writeInt(CommonConstants.NN_FORMAT_VERSION);
-
-            // write normStr
-            String normStr = this.modelConfig.getNormalize().getNormType().toString();
-            ml.shifu.shifu.core.dtrain.StringUtils.writeString(fos, normStr);
-
-            // compute columns needed
-            Map<Integer, String> columnIndexNameMapping = getIndexNameMapping();
-
-            // write column stats to output
-            List<NNColumnStats> csList = new ArrayList<NNColumnStats>();
-            for(ColumnConfig cc: this.columnConfigList) {
-                if(columnIndexNameMapping.containsKey(cc.getColumnNum())) {
-                    NNColumnStats cs = new NNColumnStats();
-                    cs.setCutoff(this.modelConfig.getNormalizeStdDevCutOff());
-                    cs.setColumnType(cc.getColumnType());
-                    cs.setMean(cc.getMean());
-                    cs.setStddev(cc.getStdDev());
-                    cs.setColumnNum(cc.getColumnNum());
-                    cs.setColumnName(cc.getColumnName());
-                    cs.setBinCategories(cc.getBinCategory());
-                    cs.setBinBoundaries(cc.getBinBoundary());
-                    cs.setBinPosRates(cc.getBinPosRate());
-                    cs.setBinCountWoes(cc.getBinCountWoe());
-                    cs.setBinWeightWoes(cc.getBinWeightedWoe());
-
-                    // TODO cache such computation
-                    double[] meanAndStdDev = Normalizer.calculateWoeMeanAndStdDev(cc, false);
-                    cs.setWoeMean(meanAndStdDev[0]);
-                    cs.setWoeStddev(meanAndStdDev[1]);
-                    double[] WgtMeanAndStdDev = Normalizer.calculateWoeMeanAndStdDev(cc, true);
-                    cs.setWoeWgtMean(WgtMeanAndStdDev[0]);
-                    cs.setWoeWgtStddev(WgtMeanAndStdDev[1]);
-
-                    csList.add(cs);
-                }
-            }
-
-            fos.writeInt(csList.size());
-            for(NNColumnStats cs: csList) {
-                cs.write(fos);
-            }
-
-            // write column index mapping
-            Map<Integer, Integer> columnMapping = getColumnMapping();
-            fos.writeInt(columnMapping.size());
-            for(Entry<Integer, Integer> entry: columnMapping.entrySet()) {
-                fos.writeInt(entry.getKey());
-                fos.writeInt(entry.getValue());
-            }
-
-            // persist network, set it as list
-            fos.writeInt(1);
-            new PersistBasicFloatNetwork().saveNetwork(fos, ((BasicFloatNetwork) this.network));
+            BinaryNNSerializer.save(modelConfig, columnConfigList, Arrays.asList(basicML),
+                    FileSystem.get(new Configuration()), out);
         } catch (IOException e) {
-            LOG.error("Error in writing output.", e);
-        } finally {
-            IOUtils.closeStream(fos);
+            LOG.error("Error in writing model", e);
         }
-    }
-
-    private Map<Integer, String> getIndexNameMapping() {
-        Map<Integer, String> columnIndexNameMapping = new HashMap<Integer, String>();
-        for(ColumnConfig columnConfig: this.columnConfigList) {
-            if(columnConfig.isFinalSelect()) {
-                columnIndexNameMapping.put(columnConfig.getColumnNum(), columnConfig.getColumnName());
-            }
-        }
-
-        if(columnIndexNameMapping.size() == 0) {
-            for(ColumnConfig columnConfig: this.columnConfigList) {
-                if(CommonUtils.isGoodCandidate(columnConfig)) {
-                    columnIndexNameMapping.put(columnConfig.getColumnNum(), columnConfig.getColumnName());
-                }
-            }
-        }
-        return columnIndexNameMapping;
-    }
-
-    private Map<Integer, Integer> getColumnMapping() {
-        Map<Integer, Integer> columnMapping = new HashMap<Integer, Integer>(columnConfigList.size(), 1f);
-        int[] inputOutputIndex = DTrainUtils.getNumericAndCategoricalInputAndOutputCounts(columnConfigList);
-        boolean isAfterVarSelect = inputOutputIndex[3] == 1 ? true : false;
-        int index = 0;
-        for(int i = 0; i < columnConfigList.size(); i++) {
-            ColumnConfig columnConfig = columnConfigList.get(i);
-            if(!isAfterVarSelect) {
-                if(!columnConfig.isMeta() && !columnConfig.isTarget() && CommonUtils.isGoodCandidate(columnConfig)) {
-                    columnMapping.put(columnConfig.getColumnNum(), index);
-                    index += 1;
-                }
-            } else {
-                if(columnConfig != null && !columnConfig.isMeta() && !columnConfig.isTarget()
-                        && columnConfig.isFinalSelect()) {
-                    columnMapping.put(columnConfig.getColumnNum(), index);
-                    index += 1;
-                }
-            }
-        }
-        return columnMapping;
     }
 
     public ModelConfig getModelConfig() {

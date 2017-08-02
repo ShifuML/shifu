@@ -33,6 +33,7 @@ import ml.shifu.shifu.core.binning.ColumnConfigDynamicBinning;
 import ml.shifu.shifu.core.binning.obj.AbstractBinInfo;
 import ml.shifu.shifu.core.binning.obj.CategoricalBinInfo;
 import ml.shifu.shifu.core.binning.obj.NumericalBinInfo;
+import ml.shifu.shifu.core.dtrain.nn.BinaryNNSerializer;
 import ml.shifu.shifu.core.pmml.PMMLTranslator;
 import ml.shifu.shifu.core.pmml.PMMLUtils;
 import ml.shifu.shifu.core.pmml.builder.PMMLConstructorFactory;
@@ -45,6 +46,8 @@ import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.collections.MapUtils;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang.StringUtils;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.dmg.pmml.PMML;
 import org.encog.ml.BasicML;
@@ -64,6 +67,7 @@ public class ExportModelProcessor extends BasicModelProcessor implements Process
 
     public static final String PMML = "pmml";
     public static final String COLUMN_STATS = "columnstats";
+    public static final String ONE_BAGGING_MODEL = "bagging";
     public static final String WOE_MAPPING = "woemapping";
 
     public static final String IS_CONCISE = "IS_CONCISE";
@@ -75,7 +79,7 @@ public class ExportModelProcessor extends BasicModelProcessor implements Process
     private String type;
     private Map<String, Object> params;
 
-    private boolean isOutBaggingToOne = false;
+    private boolean isOutBaggingToOne = true;
 
     public ExportModelProcessor(String type, Map<String, Object> params) {
         this.type = type;
@@ -99,10 +103,27 @@ public class ExportModelProcessor extends BasicModelProcessor implements Process
             type = PMML;
         }
 
-        if(type.equalsIgnoreCase(PMML)) {
+        String modelsPath = pathFinder.getModelsPath(SourceType.LOCAL);
+        if(type.equalsIgnoreCase(ONE_BAGGING_MODEL)) {
+            if(!"nn".equalsIgnoreCase(modelConfig.getAlgorithm())) {
+                log.warn("Currently one bagging model is only supported in NN algorithm.");
+            } else {
+                List<BasicML> models = CommonUtils.loadBasicModels(modelsPath,
+                        ALGORITHM.valueOf(modelConfig.getAlgorithm().toUpperCase()));
+                if(models.size() < 1) {
+                    log.warn("No model is found in {}.", modelsPath);
+                } else {
+                    log.info("Convert nn models into one binary bagging model.");
+                    Configuration conf = new Configuration();
+                    Path output = new Path(pathFinder.getBaggingModelPath(SourceType.LOCAL), "model.bnn");
+                    BinaryNNSerializer.save(modelConfig, columnConfigList, models, FileSystem.getLocal(conf), output);
+                    log.info("Please find one unified bagging model in local {}.", output);
+                }
+            }
+        } else if(type.equalsIgnoreCase(PMML)) {
             log.info("Convert models into {} format", type);
 
-            List<BasicML> models = CommonUtils.loadBasicModels(pathFinder.getModelsPath(SourceType.LOCAL),
+            List<BasicML> models = CommonUtils.loadBasicModels(modelsPath,
                     ALGORITHM.valueOf(modelConfig.getAlgorithm().toUpperCase()));
 
             PMMLTranslator translator = PMMLConstructorFactory.produce(modelConfig, columnConfigList, isConcise(),
