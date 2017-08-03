@@ -68,6 +68,7 @@ public class ExportModelProcessor extends BasicModelProcessor implements Process
     public static final String PMML = "pmml";
     public static final String COLUMN_STATS = "columnstats";
     public static final String ONE_BAGGING_MODEL = "bagging";
+    public static final String ONE_BAGGING_PMML_MODEL = "baggingpmml";
     public static final String WOE_MAPPING = "woemapping";
 
     public static final String IS_CONCISE = "IS_CONCISE";
@@ -78,8 +79,6 @@ public class ExportModelProcessor extends BasicModelProcessor implements Process
 
     private String type;
     private Map<String, Object> params;
-
-    private boolean isOutBaggingToOne = true;
 
     public ExportModelProcessor(String type, Map<String, Object> params) {
         this.type = type;
@@ -121,28 +120,34 @@ public class ExportModelProcessor extends BasicModelProcessor implements Process
                 }
             }
         } else if(type.equalsIgnoreCase(PMML)) {
-            log.info("Convert models into {} format", type);
-
+            // typical pmml generation
             List<BasicML> models = CommonUtils.loadBasicModels(modelsPath,
                     ALGORITHM.valueOf(modelConfig.getAlgorithm().toUpperCase()));
 
             PMMLTranslator translator = PMMLConstructorFactory.produce(modelConfig, columnConfigList, isConcise(),
-                    isOutBaggingToOne);
+                    false);
 
-            PMML pmml;
-            if(isOutBaggingToOne) {
+            for(int index = 0; index < models.size(); index++) {
+                String path = "pmmls" + File.separator + modelConfig.getModelSetName() + Integer.toString(index)
+                        + ".pmml";
+                log.info("\t Start to generate " + path);
+                PMML pmml = translator.build(Arrays.asList(new BasicML[] { models.get(index) }));
+                PMMLUtils.savePMML(pmml, path);
+            }
+        } else if(type.equalsIgnoreCase(ONE_BAGGING_PMML_MODEL)) {
+            // one unified bagging pmml generation
+            log.info("Convert models into one bagging pmml model {} format", type);
+            if(!"nn".equalsIgnoreCase(modelConfig.getAlgorithm())) {
+                log.warn("Currently one bagging pmml model is only supported in NN algorithm.");
+            } else {
+                List<BasicML> models = CommonUtils.loadBasicModels(modelsPath,
+                        ALGORITHM.valueOf(modelConfig.getAlgorithm().toUpperCase()));
+                PMMLTranslator translator = PMMLConstructorFactory.produce(modelConfig, columnConfigList, isConcise(),
+                        true);
                 String path = "pmmls" + File.separator + modelConfig.getModelSetName() + ".pmml";
                 log.info("\t Start to generate one unified model to: " + path);
-                pmml = translator.build(models);
+                PMML pmml = translator.build(models);
                 PMMLUtils.savePMML(pmml, path);
-            } else {
-                for(int index = 0; index < models.size(); index++) {
-                    String path = "pmmls" + File.separator + modelConfig.getModelSetName() + Integer.toString(index)
-                            + ".pmml";
-                    log.info("\t Start to generate " + path);
-                    pmml = translator.build(Arrays.asList(new BasicML[] { models.get(index) }));
-                    PMMLUtils.savePMML(pmml, path);
-                }
             }
         } else if(type.equalsIgnoreCase(COLUMN_STATS)) {
             saveColumnStatus();
