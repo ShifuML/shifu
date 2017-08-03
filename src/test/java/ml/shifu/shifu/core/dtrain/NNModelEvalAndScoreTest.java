@@ -113,7 +113,7 @@ public class NNModelEvalAndScoreTest {
             activeNames.add(fn.getValue());
         }
 
-        List<String> lines = FileUtils.readLines(new File("src/test/resources/dttest/data/nnbinary.csv"));
+        List<String> lines = FileUtils.readLines(new File("src/test/resources/dttest/data/example.csv"));
 
         if(lines.size() <= 1) {
             return;
