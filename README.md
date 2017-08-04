@@ -22,7 +22,7 @@ Shifu provides a simple command-line interface for each step of the model buildi
 * [Distributed tree ensemble model training](https://github.com/ShifuML/shifu/wiki/Distributed%20Tree%20Ensemble%20Model%20Training%20in%20Shifu)
 * Post training analysis & model evaluation
 
-Shifu’s fast Hadoop-based, distributed neural network training can reduce model training time from days to hours on TB data sets. Shifu integrates with Pig workflows on Hadoop, and Shifu-trained models can be integrated into production code with a simple Java API. Shifu leverages Pig, Akka, Encog and other open source projects.
+Shifu’s fast Hadoop-based, distributed neural network / logistic regression / gradient boosted trees training can reduce model training time from days to hours on TB data sets. Shifu integrates with Pig workflows on Hadoop, and Shifu-trained models can be integrated into production code with a simple Java API. Shifu leverages Pig, Akka, Encog and other open source projects.
 
 Model details about shifu can be found in our [wiki pages](https://github.com/ShifuML/shifu/wiki)
 
