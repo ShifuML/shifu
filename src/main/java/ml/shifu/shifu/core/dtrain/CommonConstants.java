@@ -85,4 +85,6 @@ public interface CommonConstants {
 
     public static final String NAMESPACE_DELIMITER = "::";
 
+    public static final long NOT_CONFIGURED_BAGGING_SEED = -1L;
+
 }
