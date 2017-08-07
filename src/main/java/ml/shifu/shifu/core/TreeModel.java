@@ -118,7 +118,7 @@ public class TreeModel extends BasicML implements MLRegression {
     }
 
     public List<TreeNode> getTrees() {
-        return this.getIndependentTreeModel().getTrees();
+        return this.getIndependentTreeModel().getTrees().get(0);
     }
 
     public boolean isGBDT() {
@@ -142,7 +142,14 @@ public class TreeModel extends BasicML implements MLRegression {
         Map<Integer, MutablePair<String, Double>> importancesSum = new HashMap<Integer, MutablePair<String, Double>>();
         Map<Integer, String> nameMapping = this.getIndependentTreeModel().getNumNameMapping();
         int treeSize = this.getIndependentTreeModel().getTrees().size();
-        for(TreeNode tree: this.getIndependentTreeModel().getTrees()) {
+
+        // such case we only support treeModel is one element list
+        if(this.getIndependentTreeModel().getTrees().size() != 1) {
+            throw new RuntimeException(
+                    "Bagging model cannot be supported in Tree Model one element feature importance computing.");
+        }
+
+        for(TreeNode tree: this.getIndependentTreeModel().getTrees().get(0)) {
             // get current tree importance at first
             Map<Integer, Double> subImportances = tree.computeFeatureImportance();
             // merge feature importance from different trees

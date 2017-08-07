@@ -77,7 +77,7 @@
             </Target>
         </Targets>
         <Segmentation multipleModelMethod="weightedAverage">
-            <Segment id="Segement0" weight="1.0">
+            <Segment id="Segement0" weight="1000.0">
                 <True/>
                 <NeuralNetwork modelName="0" functionName="regression">
                     <MiningSchema>
@@ -115,14 +115,6 @@
                     </MiningSchema>
                     <Output>
                         <OutputField name="RawResult_0" optype="continuous" dataType="double" feature="predictedValue"/>
-                        <OutputField name="FinalResult_0" optype="continuous" dataType="double" feature="transformedValue">
-                            <Apply function="round">
-<NormContinuous field="RawResult_0">
-    <LinearNorm orig="0.0" norm="0.0"/>
-    <LinearNorm orig="1.0" norm="1000.0"/>
-</NormContinuous>
-                            </Apply>
-                        </OutputField>
                     </Output>
                     <ModelStats>
                         <UnivariateStats field="column_3">
@@ -2829,7 +2821,7 @@
                     </NeuralOutputs>
                 </NeuralNetwork>
             </Segment>
-            <Segment id="Segement1" weight="1.0">
+            <Segment id="Segement1" weight="1000.0">
                 <True/>
                 <NeuralNetwork modelName="1" functionName="regression">
                     <MiningSchema>
@@ -2867,14 +2859,6 @@
                     </MiningSchema>
                     <Output>
                         <OutputField name="RawResult_1" optype="continuous" dataType="double" feature="predictedValue"/>
-                        <OutputField name="FinalResult_1" optype="continuous" dataType="double" feature="transformedValue">
-                            <Apply function="round">
-<NormContinuous field="RawResult_1">
-    <LinearNorm orig="0.0" norm="0.0"/>
-    <LinearNorm orig="1.0" norm="1000.0"/>
-</NormContinuous>
-                            </Apply>
-                        </OutputField>
                     </Output>
                     <ModelStats>
                         <UnivariateStats field="column_3">
@@ -5581,7 +5565,7 @@
                     </NeuralOutputs>
                 </NeuralNetwork>
             </Segment>
-            <Segment id="Segement2" weight="1.0">
+            <Segment id="Segement2" weight="1000.0">
                 <True/>
                 <NeuralNetwork modelName="2" functionName="regression">
                     <MiningSchema>
@@ -5619,14 +5603,6 @@
                     </MiningSchema>
                     <Output>
                         <OutputField name="RawResult_2" optype="continuous" dataType="double" feature="predictedValue"/>
-                        <OutputField name="FinalResult_2" optype="continuous" dataType="double" feature="transformedValue">
-                            <Apply function="round">
-<NormContinuous field="RawResult_2">
-    <LinearNorm orig="0.0" norm="0.0"/>
-    <LinearNorm orig="1.0" norm="1000.0"/>
-</NormContinuous>
-                            </Apply>
-                        </OutputField>
                     </Output>
                     <ModelStats>
                         <UnivariateStats field="column_3">
@@ -8333,7 +8309,7 @@
                     </NeuralOutputs>
                 </NeuralNetwork>
             </Segment>
-            <Segment id="Segement3" weight="1.0">
+            <Segment id="Segement3" weight="1000.0">
                 <True/>
                 <NeuralNetwork modelName="3" functionName="regression">
                     <MiningSchema>
@@ -8371,14 +8347,6 @@
                     </MiningSchema>
                     <Output>
                         <OutputField name="RawResult_3" optype="continuous" dataType="double" feature="predictedValue"/>
-                        <OutputField name="FinalResult_3" optype="continuous" dataType="double" feature="transformedValue">
-                            <Apply function="round">
-<NormContinuous field="RawResult_3">
-    <LinearNorm orig="0.0" norm="0.0"/>
-    <LinearNorm orig="1.0" norm="1000.0"/>
-</NormContinuous>
-                            </Apply>
-                        </OutputField>
                     </Output>
                     <ModelStats>
                         <UnivariateStats field="column_3">
@@ -11085,7 +11053,7 @@
                     </NeuralOutputs>
                 </NeuralNetwork>
             </Segment>
-            <Segment id="Segement4" weight="1.0">
+            <Segment id="Segement4" weight="1000.0">
                 <True/>
                 <NeuralNetwork modelName="4" functionName="regression">
                     <MiningSchema>
@@ -11123,14 +11091,6 @@
                     </MiningSchema>
                     <Output>
                         <OutputField name="RawResult_4" optype="continuous" dataType="double" feature="predictedValue"/>
-                        <OutputField name="FinalResult_4" optype="continuous" dataType="double" feature="transformedValue">
-                            <Apply function="round">
-<NormContinuous field="RawResult_4">
-    <LinearNorm orig="0.0" norm="0.0"/>
-    <LinearNorm orig="1.0" norm="1000.0"/>
-</NormContinuous>
-                            </Apply>
-                        </OutputField>
                     </Output>
                     <ModelStats>
                         <UnivariateStats field="column_3">
