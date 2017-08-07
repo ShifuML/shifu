@@ -279,5 +279,8 @@ public interface Constants {
     public static final String SHIFU_NN_BINARY_MODEL_PATH = "shifu.nn.binary.model.path";
     
     public static final String HYBRID_BIN_STR_DILIMETER = ";;;";
+    
+    public static final String SHIFU_EVAL_PARALLEL_NUM = "shifu.eval.parallel.num";
+
 
 }

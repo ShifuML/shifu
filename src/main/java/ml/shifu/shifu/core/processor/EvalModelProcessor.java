@@ -26,6 +26,7 @@ import java.util.Map;
 import java.util.Random;
 import java.util.Scanner;
 import java.util.Set;
+import java.util.concurrent.CountDownLatch;
 
 import ml.shifu.shifu.actor.AkkaSystemExecutor;
 import ml.shifu.shifu.column.NSColumn;
@@ -220,8 +221,62 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
      *             any io exception
      */
     private void runScore(List<EvalConfig> evalSetList) throws IOException {
-        for(EvalConfig config: evalSetList) {
-            runScore(config);
+        if(Environment.getBoolean("shifu.eval.parallel", false) && modelConfig.isMapReduceRunMode()
+                && evalSetList.size() > 1) {
+            // run in parallel
+            int parallelNum = Environment.getInt(Constants.SHIFU_EVAL_PARALLEL_NUM, 5);
+            if(parallelNum <= 0 || parallelNum > 100) {
+                throw new IllegalArgumentException(Constants.SHIFU_EVAL_PARALLEL_NUM
+                        + " in shifuconfig should be in (0, 100], by default it is 5.");
+            }
+
+            int evalSize = evalSetList.size();
+            int mod = evalSize % parallelNum;
+            int batch = evalSize / parallelNum;
+            batch = (mod == 0 ? batch : (batch + 1));
+
+            for(int i = 0; i < batch; i++) {
+                int batchSize = (mod != 0 && i == (batch - 1)) ? mod : parallelNum;
+                // lunch current batch size
+                LOG.info("Starting to run eval score in {}/{} round", (i + 1), batch);
+                final CountDownLatch cdl = new CountDownLatch(batchSize);
+                for(int j = 0; j < batchSize; j++) {
+                    int currentIndex = i * parallelNum + j;
+                    final EvalConfig config = evalSetList.get(currentIndex);
+                    // save tmp models
+                    Thread evalRunThread = new Thread(new Runnable() {
+                        @Override
+                        public void run() {
+                            try {
+                                runScore(config);
+                            } catch (IOException e) {
+                                LOG.error("Exception in eval score", e);
+                            } catch (Exception e) {
+                                LOG.error("Exception in eval score", e);
+                            }
+                            cdl.countDown();
+                        }
+                    }, config.getName());
+                    // print eval name to log4j console to make each one is easy to be get from logs
+                    evalRunThread.start();
+                }
+
+                LOG.info("Starting to wait eval score in {}/{} round", (i + 1), batch);
+                // await all threads done
+                try {
+                    // TODO await
+                    cdl.await();
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                }
+                LOG.info("Finish eval score in {}/{} round", (i + 1), batch);
+            }
+            LOG.info("Finish all eval score parallel running with eval size {}.", evalSize);
+        } else {
+            // for old sequential runs
+            for(final EvalConfig config: evalSetList) {
+                runScore(config);
+            }
         }
     }
 
