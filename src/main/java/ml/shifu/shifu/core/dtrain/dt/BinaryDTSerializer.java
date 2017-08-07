@@ -51,7 +51,7 @@ public class BinaryDTSerializer {
 
         try {
             fos = new DataOutputStream(new GZIPOutputStream(fs.create(output)));
-            LOG.info("Writing {} trees to {}.", baggingTrees.get(0).size(), output);
+            LOG.info("Writing trees to {}.", output);
             // version
             fos.writeInt(CommonConstants.TREE_FORMAT_VERSION);
             fos.writeUTF(modelConfig.getAlgorithm());

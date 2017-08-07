@@ -988,7 +988,7 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
 
     private TailThread startTailThread(final String[] progressLog) {
         TailThread thread = new TailThread(progressLog);
-        thread.setName("Tail Progress Thread");
+        thread.setName("Training Progress");
         thread.setDaemon(true);
         thread.setUncaughtExceptionHandler(new UncaughtExceptionHandler() {
             @Override

@@ -54,7 +54,7 @@ public class TreeModelEvalAndScoreTest {
             fi = new FileInputStream(modelPath);
             long start = System.nanoTime();
             iTreeModel = IndependentTreeModel.loadFromStream(fi, true);
-            System.out.println(iTreeModel.getTrees().size() + " " + SizeEstimator.estimate(iTreeModel) + " "
+            System.out.println(iTreeModel.getTrees().get(0).size() + " " + SizeEstimator.estimate(iTreeModel) + " "
                     + TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - start) + "ms");
             System.out.println(SizeEstimator.estimate(iTreeModel));
             System.out.println(SizeEstimator.estimate(iTreeModel.getTrees()));
