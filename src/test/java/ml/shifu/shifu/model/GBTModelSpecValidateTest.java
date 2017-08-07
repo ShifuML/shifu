@@ -20,22 +20,20 @@ public class GBTModelSpecValidateTest {
         Assert.assertTrue(validate("src/test/resources/dttest/model/model_cam.gbt"));
     }
 
-    //@Test
+    // @Test
     public void validateShifuGBTModel() throws IOException {
         Assert.assertTrue(validate("~/Downloads/model0.gbt"));
     }
 
-    //@Test
+    // @Test
     public void validateShifuGBT2Model() throws IOException {
         Assert.assertTrue(validate("src/test/resources/dttest/model0.gbt"));
     }
 
-
     private boolean validate(String modelLoc) throws IOException {
-        IndependentTreeModel treeModel = IndependentTreeModel.loadFromStream(
-                new FileInputStream(modelLoc));
+        IndependentTreeModel treeModel = IndependentTreeModel.loadFromStream(new FileInputStream(modelLoc));
         boolean status = true;
-        for (TreeNode tree : treeModel.getTrees()) {
+        for(TreeNode tree: treeModel.getTrees().get(0)) {
             Node node = tree.getNode();
             status = status && validate(node, treeModel.getNumNameMapping());
         }
@@ -43,9 +41,9 @@ public class GBTModelSpecValidateTest {
     }
 
     private boolean validate(Node node, Map<Integer, String> numNameMapping) {
-        if ( node != null && !node.isRealLeaf()) {
+        if(node != null && !node.isRealLeaf()) {
             Integer splitColumnNum = node.getSplit().getColumnNum();
-            if ( !numNameMapping.containsKey(splitColumnNum) ) {
+            if(!numNameMapping.containsKey(splitColumnNum)) {
                 return false;
             } else {
                 return validate(node.getLeft(), numNameMapping) && validate(node.getRight(), numNameMapping);

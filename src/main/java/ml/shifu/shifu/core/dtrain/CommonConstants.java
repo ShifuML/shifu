@@ -62,8 +62,9 @@ public interface CommonConstants {
     /**
      * Version 2: support final selected columns
      * Version 3: in Node to change wgtCnt float to double
+     * Version 4: chang trees in IndependentTreeModel to support bagging of RF and GBDT
      */
-    public static final int TREE_FORMAT_VERSION = 3;
+    public static final int TREE_FORMAT_VERSION = 4;
     
     public static final int NN_FORMAT_VERSION = 1;
 
