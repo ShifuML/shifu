@@ -15,6 +15,8 @@
  */
 package ml.shifu.shifu.core.dtrain.dt;
 
+import java.io.DataInputStream;
+import java.io.DataOutputStream;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Iterator;
@@ -22,6 +24,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.zip.GZIPInputStream;
+import java.util.zip.GZIPOutputStream;
 
 import ml.shifu.guagua.master.BasicMasterInterceptor;
 import ml.shifu.guagua.master.MasterContext;
@@ -36,6 +40,7 @@ import ml.shifu.shifu.fs.ShifuFileUtils;
 import ml.shifu.shifu.util.CommonUtils;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -117,6 +122,11 @@ public class DTOutput extends BasicMasterInterceptor<DTMasterParams, DTWorkerPar
      */
     private boolean isKFoldCV;
 
+    /**
+     * Use the same one conf instance
+     */
+    private Configuration conf;
+
     @Override
     public void preApplication(MasterContext<DTMasterParams, DTWorkerParams> context) {
         init(context);
@@ -133,10 +143,12 @@ public class DTOutput extends BasicMasterInterceptor<DTMasterParams, DTWorkerPar
 
         if(isRF) {
             if(currentIteration % (tmpModelFactor * 2) == 0) {
+                // save tmp models
                 Thread tmpModelPersistThread = new Thread(new Runnable() {
                     @Override
                     public void run() {
-                        // save model results for continue model training, if current job is failed, then next running
+                        // save model results for continue model training, if current job is failed, then next
+                        // running
                         // we can start from this point to save time.
                         // another case for master recovery, if master is failed, read such checkpoint model
                         Path out = new Path(context.getProps().getProperty(CommonConstants.GUAGUA_OUTPUT));
@@ -146,12 +158,26 @@ public class DTOutput extends BasicMasterInterceptor<DTMasterParams, DTWorkerPar
                         // There is issue here if saving the same model in this thread and another thread in
                         // postApplication, sometimes this conflict will cause model writing failed.
                         if(!isHalt && currentIteration != totalIteration) {
+                            Path tmpModelPath = getTmpModelPath(currentIteration);
                             writeModelToFileSystem(context.getMasterResult().getTrees(), out);
-                        }
 
-                        saveTmpModelToHDFS(context.getCurrentIteration(), context.getMasterResult().getTrees());
+                            // in such case tmp model is final model, just copy to tmp models
+                            LOG.info("Copy checkpointed model to tmp folder: {}", tmpModelPath.toString());
+                            try {
+                                DataOutputStream outputStream = new DataOutputStream(new GZIPOutputStream(FileSystem
+                                        .get(DTOutput.this.conf).create(tmpModelPath)));
+                                FSDataInputStream inputStream = FileSystem.get(DTOutput.this.conf).open(out);
+                                DataInputStream dis = new DataInputStream(new GZIPInputStream(inputStream));
+                                IOUtils.copyBytes(dis, outputStream, DTOutput.this.conf);
+                            } catch (IOException e) {
+                                LOG.warn("Error in copy models to tmp", e);
+                            }
+                        } else {
+                            // last one only save tmp models
+                            saveTmpModelToHDFS(currentIteration, context.getMasterResult().getTrees());
+                        }
                     }
-                }, "saveTmpNNToHDFS thread");
+                }, "saveTmpModelToHDFS thread");
                 tmpModelPersistThread.setDaemon(true);
                 tmpModelPersistThread.start();
             }
@@ -174,13 +200,28 @@ public class DTOutput extends BasicMasterInterceptor<DTMasterParams, DTWorkerPar
                             // need to save checkpoint model here as it is replicated with postApplicaiton.
                             // There is issue here if saving the same model in this thread and another thread in
                             // postApplication, sometimes this conflict will cause model writing failed.
+                            int subTreesSize = subTrees.size();
                             if(!isHalt && currentIteration != totalIteration) {
+                                Path tmpModelPath = getTmpModelPath(subTreesSize);
                                 writeModelToFileSystem(subTrees, out);
+
+                                // in such case tmp model is final model, just copy to tmp models
+                                LOG.info("Copy checkpointed model to tmp folder: {}", tmpModelPath.toString());
+                                try {
+                                    DataOutputStream outputStream = new DataOutputStream(new GZIPOutputStream(
+                                            FileSystem.get(DTOutput.this.conf).create(tmpModelPath)));
+                                    FSDataInputStream inputStream = FileSystem.get(DTOutput.this.conf).open(out);
+                                    DataInputStream dis = new DataInputStream(new GZIPInputStream(inputStream));
+                                    IOUtils.copyBytes(dis, outputStream, DTOutput.this.conf);
+                                } catch (IOException e) {
+                                    LOG.warn("Error in copy models to tmp", e);
+                                }
+                            } else {
+                                // last one is newest one with only ROOT node, should be excluded
+                                saveTmpModelToHDFS(subTreesSize, subTrees);
                             }
-                            // last one is newest one with only ROOT node, should be excluded
-                            saveTmpModelToHDFS(subTrees.size(), subTrees);
                         }
-                    }, "saveTmpNNToHDFS thread");
+                    }, "saveTmpModelToHDFS thread");
                     tmpModelPersistThread.setDaemon(true);
                     tmpModelPersistThread.start();
                 }
@@ -323,7 +364,7 @@ public class DTOutput extends BasicMasterInterceptor<DTMasterParams, DTWorkerPar
         baggingTrees.add(trees);
         try {
             BinaryDTSerializer.save(modelConfig, columnConfigList, baggingTrees, this.validParams.get("Loss")
-                    .toString(), inputCount, FileSystem.get(new Configuration()), out);
+                    .toString(), inputCount, FileSystem.get(this.conf), out);
         } catch (IOException e) {
             LOG.error("Error in writing model", e);
         }
@@ -333,13 +374,18 @@ public class DTOutput extends BasicMasterInterceptor<DTMasterParams, DTWorkerPar
      * Save tmp model to HDFS.
      */
     private void saveTmpModelToHDFS(int iteration, List<TreeNode> trees) {
-        Path out = new Path(DTrainUtils.getTmpModelName(this.tmpModelsFolder, this.trainerId, iteration, modelConfig
-                .getTrain().getAlgorithm().toLowerCase()));
+        Path out = getTmpModelPath(iteration);
         writeModelToFileSystem(trees, out);
+    }
+
+    private Path getTmpModelPath(int iteration) {
+        return new Path(DTrainUtils.getTmpModelName(this.tmpModelsFolder, this.trainerId, iteration, modelConfig
+                .getTrain().getAlgorithm().toLowerCase()));
     }
 
     private void init(MasterContext<DTMasterParams, DTWorkerParams> context) {
         if(isInit.compareAndSet(false, true)) {
+            this.conf = new Configuration();
             loadConfigFiles(context.getProps());
             this.trainerId = context.getProps().getProperty(CommonConstants.SHIFU_TRAINER_ID);
             GridSearch gs = new GridSearch(modelConfig.getTrain().getParams());
