@@ -144,7 +144,9 @@ public class PMMLTranslator {
 
                 tmpmodel.setModelName(String.valueOf(idCount));
                 Segment segment = new Segment();
-                segment.setWeight(1d);
+
+                // TODO, using scale here or 1d???
+                segment.setWeight(1000d);
 
                 segment.setId("Segement" + String.valueOf(idCount));
                 segment.setPredicate(new True());

@@ -15,12 +15,13 @@
  */
 package ml.shifu.shifu.core.dtrain.dt;
 
-import java.io.DataOutputStream;
 import java.io.IOException;
-import java.util.*;
-import java.util.Map.Entry;
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.Properties;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.zip.GZIPOutputStream;
 
 import ml.shifu.guagua.master.BasicMasterInterceptor;
 import ml.shifu.guagua.master.MasterContext;
@@ -34,8 +35,6 @@ import ml.shifu.shifu.core.dtrain.gs.GridSearch;
 import ml.shifu.shifu.fs.ShifuFileUtils;
 import ml.shifu.shifu.util.CommonUtils;
 
-import ml.shifu.shifu.util.Constants;
-import org.apache.commons.collections.CollectionUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
@@ -320,120 +319,14 @@ public class DTOutput extends BasicMasterInterceptor<DTMasterParams, DTWorkerPar
     }
 
     private void writeModelToFileSystem(List<TreeNode> trees, Path out) {
-        DataOutputStream fos = null;
-
+        List<List<TreeNode>> baggingTrees = new ArrayList<List<TreeNode>>();
+        baggingTrees.add(trees);
         try {
-            fos = new DataOutputStream(new GZIPOutputStream(FileSystem.get(new Configuration()).create(out)));
-            LOG.info("Writing {} trees to {}.", trees.size(), out);
-            // version
-            fos.writeInt(CommonConstants.TREE_FORMAT_VERSION);
-            fos.writeUTF(modelConfig.getAlgorithm());
-            fos.writeUTF(this.validParams.get("Loss").toString());
-            fos.writeBoolean(this.modelConfig.isClassification());
-            fos.writeBoolean(this.modelConfig.getTrain().isOneVsAll());
-            fos.writeInt(this.inputCount);
-
-            Map<Integer, String> columnIndexNameMapping = new HashMap<Integer, String>();
-            Map<Integer, List<String>> columnIndexCategoricalListMapping = new HashMap<Integer, List<String>>();
-            Map<Integer, Double> numericalMeanMapping = new HashMap<Integer, Double>();
-            for(ColumnConfig columnConfig: this.columnConfigList) {
-                if(columnConfig.isFinalSelect()) {
-                    columnIndexNameMapping.put(columnConfig.getColumnNum(), columnConfig.getColumnName());
-                }
-                if(columnConfig.isCategorical() && CollectionUtils.isNotEmpty(columnConfig.getBinCategory())) {
-                    columnIndexCategoricalListMapping.put(columnConfig.getColumnNum(), columnConfig.getBinCategory());
-                }
-
-                if(columnConfig.isNumerical() && columnConfig.getMean() != null) {
-                    numericalMeanMapping.put(columnConfig.getColumnNum(), columnConfig.getMean());
-                }
-            }
-
-            if(columnIndexNameMapping.size() == 0) {
-                for(ColumnConfig columnConfig: this.columnConfigList) {
-                    if(CommonUtils.isGoodCandidate(columnConfig)) {
-                        columnIndexNameMapping.put(columnConfig.getColumnNum(), columnConfig.getColumnName());
-                    }
-                }
-            }
-
-            // serialize numericalMeanMapping
-            fos.writeInt(numericalMeanMapping.size());
-            for(Entry<Integer, Double> entry: numericalMeanMapping.entrySet()) {
-                fos.writeInt(entry.getKey());
-                // for some feature, it is null mean value, it is not selected, just set to 0d to avoid NPE
-                fos.writeDouble(entry.getValue() == null ? 0d : entry.getValue());
-            }
-            // serialize columnIndexNameMapping
-            fos.writeInt(columnIndexNameMapping.size());
-            for(Entry<Integer, String> entry: columnIndexNameMapping.entrySet()) {
-                fos.writeInt(entry.getKey());
-                fos.writeUTF(entry.getValue());
-            }
-            // serialize columnIndexCategoricalListMapping
-            fos.writeInt(columnIndexCategoricalListMapping.size());
-            for(Entry<Integer, List<String>> entry: columnIndexCategoricalListMapping.entrySet()) {
-                List<String> categories = entry.getValue();
-                if(categories != null) {
-                    fos.writeInt(entry.getKey());
-                    fos.writeInt(categories.size());
-                    for(String category: categories) {
-                        // There is 16k limitation when using writeUTF() function.
-                        // if the category value is larger than 10k, then treat it as missing value
-                        if(category.length() > Constants.MAX_CATEGORICAL_VAL_LEN) {
-                            int pos = category.lastIndexOf(Constants.CATEGORICAL_GROUP_VAL_DELIMITER,
-                                    Constants.MAX_CATEGORICAL_VAL_LEN);
-                            if(pos >= 0) {
-                                category = category.substring(0, pos);
-                            } else {
-                                category = category.substring(0, Constants.MAX_CATEGORICAL_VAL_LEN);
-                            }
-                        }
-                        fos.writeUTF(category);
-                    }
-                }
-            }
-
-            Map<Integer, Integer> columnMapping = getColumnMapping();
-            fos.writeInt(columnMapping.size());
-            for(Entry<Integer, Integer> entry: columnMapping.entrySet()) {
-                fos.writeInt(entry.getKey());
-                fos.writeInt(entry.getValue());
-            }
-
-            int treeLength = trees.size();
-            fos.writeInt(treeLength);
-            for(TreeNode treeNode: trees) {
-                treeNode.write(fos);
-            }
+            BinaryDTSerializer.save(modelConfig, columnConfigList, baggingTrees, this.validParams.get("Loss")
+                    .toString(), inputCount, FileSystem.get(new Configuration()), out);
         } catch (IOException e) {
-            LOG.error("Error in writing output.", e);
-        } finally {
-            IOUtils.closeStream(fos);
+            LOG.error("Error in writing model", e);
         }
-    }
-
-    private Map<Integer, Integer> getColumnMapping() {
-        Map<Integer, Integer> columnMapping = new HashMap<Integer, Integer>(columnConfigList.size(), 1f);
-        int[] inputOutputIndex = DTrainUtils.getNumericAndCategoricalInputAndOutputCounts(columnConfigList);
-        boolean isAfterVarSelect = inputOutputIndex[3] == 1 ? true : false;
-        int index = 0;
-        for(int i = 0; i < columnConfigList.size(); i++) {
-            ColumnConfig columnConfig = columnConfigList.get(i);
-            if(!isAfterVarSelect) {
-                if(!columnConfig.isMeta() && !columnConfig.isTarget() && CommonUtils.isGoodCandidate(columnConfig)) {
-                    columnMapping.put(columnConfig.getColumnNum(), index);
-                    index += 1;
-                }
-            } else {
-                if(columnConfig != null && !columnConfig.isMeta() && !columnConfig.isTarget()
-                        && columnConfig.isFinalSelect()) {
-                    columnMapping.put(columnConfig.getColumnNum(), index);
-                    index += 1;
-                }
-            }
-        }
-        return columnMapping;
     }
 
     /**

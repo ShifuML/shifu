@@ -29,10 +29,14 @@ import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.container.obj.ModelTrainConf.ALGORITHM;
 import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
 import ml.shifu.shifu.core.ColumnStatsCalculator;
+import ml.shifu.shifu.core.TreeModel;
 import ml.shifu.shifu.core.binning.ColumnConfigDynamicBinning;
 import ml.shifu.shifu.core.binning.obj.AbstractBinInfo;
 import ml.shifu.shifu.core.binning.obj.CategoricalBinInfo;
 import ml.shifu.shifu.core.binning.obj.NumericalBinInfo;
+import ml.shifu.shifu.core.dtrain.DTrainUtils;
+import ml.shifu.shifu.core.dtrain.dt.BinaryDTSerializer;
+import ml.shifu.shifu.core.dtrain.dt.TreeNode;
 import ml.shifu.shifu.core.dtrain.nn.BinaryNNSerializer;
 import ml.shifu.shifu.core.pmml.PMMLTranslator;
 import ml.shifu.shifu.core.pmml.PMMLUtils;
@@ -104,8 +108,9 @@ public class ExportModelProcessor extends BasicModelProcessor implements Process
 
         String modelsPath = pathFinder.getModelsPath(SourceType.LOCAL);
         if(type.equalsIgnoreCase(ONE_BAGGING_MODEL)) {
-            if(!"nn".equalsIgnoreCase(modelConfig.getAlgorithm())) {
-                log.warn("Currently one bagging model is only supported in NN algorithm.");
+            if(!"nn".equalsIgnoreCase(modelConfig.getAlgorithm())
+                    && !CommonUtils.isTreeModel(modelConfig.getAlgorithm())) {
+                log.warn("Currently one bagging model is only supported in NN/GBT/RF algorithm.");
             } else {
                 List<BasicML> models = CommonUtils.loadBasicModels(modelsPath,
                         ALGORITHM.valueOf(modelConfig.getAlgorithm().toUpperCase()));
@@ -115,7 +120,25 @@ public class ExportModelProcessor extends BasicModelProcessor implements Process
                     log.info("Convert nn models into one binary bagging model.");
                     Configuration conf = new Configuration();
                     Path output = new Path(pathFinder.getBaggingModelPath(SourceType.LOCAL), "model.bnn");
-                    BinaryNNSerializer.save(modelConfig, columnConfigList, models, FileSystem.getLocal(conf), output);
+                    if("nn".equalsIgnoreCase(modelConfig.getAlgorithm())) {
+                        BinaryNNSerializer.save(modelConfig, columnConfigList, models, FileSystem.getLocal(conf),
+                                output);
+                    } else if(CommonUtils.isTreeModel(modelConfig.getAlgorithm())) {
+                        List<List<TreeNode>> baggingTrees = new ArrayList<List<TreeNode>>();
+                        for(int i = 0; i < models.size(); i++) {
+                            TreeModel tm = (TreeModel) models.get(i);
+                            // TreeModel only has one TreeNode instance although it is list inside
+                            baggingTrees.add(tm.getIndependentTreeModel().getTrees().get(0));
+                        }
+
+                        int[] inputOutputIndex = DTrainUtils
+                                .getNumericAndCategoricalInputAndOutputCounts(this.columnConfigList);
+                        // numerical + categorical = # of all input
+                        int inputCount = inputOutputIndex[0] + inputOutputIndex[1];
+
+                        BinaryDTSerializer.save(modelConfig, columnConfigList, baggingTrees, modelConfig.getParams()
+                                .get("Loss").toString(), inputCount, FileSystem.getLocal(conf), output);
+                    }
                     log.info("Please find one unified bagging model in local {}.", output);
                 }
             }

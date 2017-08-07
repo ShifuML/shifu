@@ -75,14 +75,15 @@ public class IndependentTreeModel {
     private Map<Integer, Integer> columnNumIndexMapping;
 
     /**
-     * A list of tree models, can be RF or GBT
+     * A list of tree ensemble models, can be RF or GBT, starting from 0.11.0, change it to ist<List<TreeNode>> to
+     * support bagging models.
      */
-    private List<TreeNode> trees;
+    private List<List<TreeNode>> trees;
 
     /**
      * Weights per each tree in {@link #trees}
      */
-    private List<Double> weights;
+    private List<List<Double>> weights;
 
     /**
      * If it is for GBT
@@ -128,7 +129,7 @@ public class IndependentTreeModel {
     public IndependentTreeModel(Map<Integer, Double> numericalMeanMapping, Map<Integer, String> numNameMapping,
             Map<Integer, List<String>> categoricalColumnNameNames,
             Map<Integer, Map<String, Integer>> columnCategoryIndexMapping, Map<Integer, Integer> columnNumIndexMapping,
-            boolean isOptimizeMode, List<TreeNode> trees, List<Double> weights, boolean isGBDT,
+            boolean isOptimizeMode, List<List<TreeNode>> trees, List<List<Double>> weights, boolean isGBDT,
             boolean isClassification, boolean isConvertToProb, String lossStr, String algorithm, int inputNode,
             int version) {
         this.numericalMeanMapping = numericalMeanMapping;
@@ -177,18 +178,25 @@ public class IndependentTreeModel {
     }
 
     /**
-     * Run gbt model as classification
+     * Run as classification mode, since no idea of average or vote, classification will return all tree values.
      * 
      * @param data
      *            - double data map (for numerical variable, it is double value, for categorical variable it is index)
      * @return classification result
      */
     private double[] computeClassificationScore(double[] data) {
-        double[] scores = new double[this.trees.size()];
+        List<Double> scoreList = new ArrayList<Double>();
         for(int i = 0; i < this.trees.size(); i++) {
-            TreeNode treeNode = this.trees.get(i);
-            double score = predictNode(treeNode.getNode(), data);
-            scores[i] = score;
+            List<TreeNode> list = this.trees.get(i);
+            for(int j = 0; j < list.size(); j++) {
+                TreeNode treeNode = list.get(j);
+                scoreList.add(predictNode(treeNode.getNode(), data));
+            }
+        }
+
+        double[] scores = new double[scoreList.size()];
+        for(int i = 0; i < scores.length; i++) {
+            scores[i] = scoreList.get(i);
         }
         return scores;
     }
@@ -201,27 +209,54 @@ public class IndependentTreeModel {
      * @return regression result
      */
     private double[] computeRegressionScore(double[] data) {
-        double predictSum = 0d;
-        double weightSum = 0d;
-        for(int i = 0; i < this.trees.size(); i++) {
-            TreeNode treeNode = this.trees.get(i);
-            Double weight = this.weights.get(i);
-            weightSum += weight;
-            double score = predictNode(treeNode.getNode(), data);
-            predictSum += score * weight;
+        if(this.isGBDT) {
+            // GBDT prediction
+            int bags = this.trees.size();
+            double finalPredict = 0d;
+            for(int i = 0; i < bags; i++) {
+                // compute one gbt model score
+                List<TreeNode> list = this.trees.get(i);
+                List<Double> wgtList = this.weights.get(i);
+                double predict = 0d;
+                for(int j = 0; j < list.size(); j++) {
+                    TreeNode treeNode = list.get(j);
+                    double score = predictNode(treeNode.getNode(), data);
+                    predict += score * wgtList.get(j);
+                }
+
+                if(this.isConvertToProb) {
+                    predict = convertToProb(predict);
+                }
+
+                // sum all computing scores
+                finalPredict += predict;
+            }
+            // return average bagging score in
+            return new double[] { finalPredict / bags };
+        } else {
+            // RF prediction
+            int bags = this.trees.size();
+            double finalPredict = 0d;
+            for(int i = 0; i < bags; i++) {
+                // compute one RF model score
+                List<TreeNode> list = this.trees.get(i);
+                List<Double> wgtList = this.weights.get(i);
+                double predictSum = 0d, weightSum = 0d;
+                for(int j = 0; j < list.size(); j++) {
+                    TreeNode treeNode = list.get(j);
+                    double score = predictNode(treeNode.getNode(), data);
+                    double weight = wgtList.get(j);
+                    weightSum += weight;
+                    predictSum += score * weight;
+                }
+
+                // sum all computing scores (score is current RF score)
+                finalPredict += (predictSum / weightSum);
+            }
+            // return average bagging score in all RFs
+            return new double[] { finalPredict / bags };
         }
 
-        double finalPredict;
-        if(this.isGBDT) {
-            if(this.isConvertToProb) {
-                finalPredict = convertToProb(predictSum);
-            } else {
-                finalPredict = predictSum;
-            }
-        } else {
-            finalPredict = predictSum / weightSum;
-        }
-        return new double[] { finalPredict };
     }
 
     /**
@@ -421,14 +456,14 @@ public class IndependentTreeModel {
     /**
      * @return the trees
      */
-    public List<TreeNode> getTrees() {
+    public List<List<TreeNode>> getTrees() {
         return trees;
     }
 
     /**
      * @return the weights
      */
-    public List<Double> getWeights() {
+    public List<List<Double>> getWeights() {
         return weights;
     }
 
@@ -489,7 +524,7 @@ public class IndependentTreeModel {
      * @param trees
      *            the trees to set
      */
-    public void setTrees(List<TreeNode> trees) {
+    public void setTrees(List<List<TreeNode>> trees) {
         this.trees = trees;
     }
 
@@ -497,7 +532,7 @@ public class IndependentTreeModel {
      * @param weights
      *            the weights to set
      */
-    public void setWeights(List<Double> weights) {
+    public void setWeights(List<List<Double>> weights) {
         this.weights = weights;
     }
 
@@ -700,24 +735,38 @@ public class IndependentTreeModel {
             columnMapping.put(dis.readInt(), dis.readInt());
         }
 
-        int treeNum = dis.readInt();
-        List<TreeNode> trees = new CopyOnWriteArrayList<TreeNode>();
-        List<Double> weights = new ArrayList<Double>(treeNum);
-        for(int i = 0; i < treeNum; i++) {
-            TreeNode treeNode = new TreeNode();
-            treeNode.readFields(dis);
-            trees.add(treeNode);
-            weights.add(treeNode.getLearningRate());
+        // for back-forward compatibility, still need to read two floats here for wgtCntRatio
+        List<List<TreeNode>> bagTrees = new ArrayList<List<TreeNode>>(1);
+        List<List<Double>> bagWgts = new ArrayList<List<Double>>();
+        int bags = 0;
+        if(IndependentTreeModel.getVersion() < 4) {
+            bags = 1;
+        } else {
+            // if version >=4, model saving first is size
+            bags = dis.readInt();
+        }
+        for(int j = 0; j < bags; j++) {
+            int treeNum = dis.readInt();
+            List<TreeNode> trees = new CopyOnWriteArrayList<TreeNode>();
+            List<Double> weights = new ArrayList<Double>(treeNum);
+            for(int i = 0; i < treeNum; i++) {
+                TreeNode treeNode = new TreeNode();
+                treeNode.readFields(dis);
+                trees.add(treeNode);
+                weights.add(treeNode.getLearningRate());
 
-            if(isOptimizeMode) {
-                // remap the column number into array index for each node
-                treeNode.remapColumnNum(columnMapping);
+                if(isOptimizeMode) {
+                    // remap the column number into array index for each node
+                    treeNode.remapColumnNum(columnMapping);
+                }
             }
+            bagTrees.add(trees);
+            bagWgts.add(weights);
         }
 
         // if one vs all, even multiple classification, treated as regression
         return new IndependentTreeModel(numericalMeanMapping, columnIndexNameMapping, categoricalColumnNameNames,
-                columnCategoryIndexMapping, columnMapping, isOptimizeMode, trees, weights,
+                columnCategoryIndexMapping, columnMapping, isOptimizeMode, bagTrees, bagWgts,
                 CommonConstants.GBT_ALG_NAME.equalsIgnoreCase(algorithm), isClassification && !isOneVsAll,
                 isConvertToProb, lossStr, algorithm, inputNode, version);
     }
