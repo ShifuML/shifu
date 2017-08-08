@@ -119,7 +119,8 @@ public class ExportModelProcessor extends BasicModelProcessor implements Process
                 } else {
                     log.info("Convert nn models into one binary bagging model.");
                     Configuration conf = new Configuration();
-                    Path output = new Path(pathFinder.getBaggingModelPath(SourceType.LOCAL), "model.bnn");
+                    Path output = new Path(pathFinder.getBaggingModelPath(SourceType.LOCAL), "model.b"
+                            + modelConfig.getAlgorithm());
                     if("nn".equalsIgnoreCase(modelConfig.getAlgorithm())) {
                         BinaryNNSerializer.save(modelConfig, columnConfigList, models, FileSystem.getLocal(conf),
                                 output);
