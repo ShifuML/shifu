@@ -733,8 +733,7 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
                 if(CollectionUtils.isNotEmpty(userCandidateColumns)
                         && !userCandidateColumns.contains(new NSColumn(columnConfig.getColumnName()))) {
                     log.info("Variable {} is not in user's candidate list. Skip it.", columnConfig.getColumnName());
-                }
-                if(!columnConfig.isForceSelect() && !columnConfig.isForceRemove()) {
+                } else if(!columnConfig.isForceSelect() && !columnConfig.isForceRemove()) {
                     columnConfig.setFinalSelect(true);
                     selectCnt++;
                     log.info("Variable {} is selected.", columnConfig.getColumnName());
