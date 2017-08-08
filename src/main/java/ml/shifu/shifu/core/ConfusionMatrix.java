@@ -46,7 +46,6 @@ import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
 import ml.shifu.shifu.core.dtrain.nn.NNConstants;
 import ml.shifu.shifu.core.eval.AreaUnderCurve;
 import ml.shifu.shifu.core.eval.GainChart;
-import ml.shifu.shifu.core.processor.EvalModelProcessor;
 import ml.shifu.shifu.exception.ShifuErrorCode;
 import ml.shifu.shifu.exception.ShifuException;
 import ml.shifu.shifu.fs.PathFinder;
