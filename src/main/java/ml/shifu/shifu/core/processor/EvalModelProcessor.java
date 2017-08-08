@@ -381,7 +381,7 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
         paramsMap.put("pathEvalScore", pathFinder.getEvalScorePath(evalConfig));
         paramsMap.put("pathEvalPerformance", pathFinder.getEvalPerformancePath(evalConfig));
         paramsMap.put("eval_set_name", evalConfig.getName());
-        paramsMap.put("delimiter", evalConfig.getDataSet().getDataDelimiter());
+        paramsMap.put("delimiter", CommonUtils.escapePigString(evalConfig.getDataSet().getDataDelimiter()));
         paramsMap.put("columnIndex", evalConfig.getPerformanceScoreSelector().trim());
         paramsMap.put("scale",
                 Environment.getProperty(Constants.SHIFU_SCORE_SCALE, Integer.toString(Scorer.DEFAULT_SCORE_SCALE)));
