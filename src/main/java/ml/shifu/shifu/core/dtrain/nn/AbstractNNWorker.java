@@ -601,13 +601,13 @@ public abstract class AbstractNNWorker<VALUE extends Writable> extends
             if(this.isStratifiedSampling) {
                 random = baggingRandomMap.get(classValue);
                 if(random == null) {
-                    random = new Random();
+                    random = new Random(modelConfig.getTrain().getBaggingSampleSeed());
                     baggingRandomMap.put(classValue, random);
                 }
             } else {
                 random = baggingRandomMap.get(0);
                 if(random == null) {
-                    random = new Random();
+                    random = new Random(modelConfig.getTrain().getBaggingSampleSeed());
                     baggingRandomMap.put(0, random);
                 }
             }
