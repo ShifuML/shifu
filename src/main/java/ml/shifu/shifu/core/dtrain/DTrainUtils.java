@@ -17,6 +17,7 @@ package ml.shifu.shifu.core.dtrain;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.Random;
 
 import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.core.dtrain.dataset.BasicFloatNetwork;
@@ -345,6 +346,24 @@ public final class DTrainUtils {
         // ConsistentRandomizer randomizer = new ConsistentRandomizer(-1, 1, seed);
         NguyenWidrowRandomizer randomizer = new NguyenWidrowRandomizer(-1, 1);
         randomizer.randomize(weights);
+    }
+
+    /**
+     * Generate random instance according to sample seed.
+     *
+     * @param sampleSeed
+     *          sample seed to generate Random instance
+     * @param fallbackValue
+     *          sample seed fall back value
+     * @return Random instance according to the sample seed value
+     *          If the sample seed value not equal to fallbackValue, then will use it to generate Random instance.
+     *          Else take fallback measure: generate Random instance without given seed.
+     */
+    public static Random generateRandomBySampleSeed(long sampleSeed, long fallbackValue){
+        if(sampleSeed != fallbackValue){
+            return new Random(sampleSeed);
+        }
+        return new Random();
     }
 
 }
