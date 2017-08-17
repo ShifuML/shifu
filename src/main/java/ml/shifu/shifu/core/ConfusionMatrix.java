@@ -261,9 +261,6 @@ public class ConfusionMatrix {
         int fpBin = 1, tpBin = 1, gainBin = 1, fpWeightBin = 1, tpWeightBin = 1, gainWeightBin = 1, modelScoreBin = 1;
         long index = 0, cnt = 0, invalidTargetCnt = 0, invalidWgtCnt = 0;
 
-        // System.out.println("max score is " + maxScore + " scoreBin is " + modelScoreBin + " bin score is " +
-        // binScore);
-
         ConfusionMatrixObject prevCmo = buildInitalCmo(pigPosTags, pigNegTags, pigPosWeightTags, pigNegWeightTags,
                 maxScore);
         PerformanceObject po = buildFirstPO(prevCmo);
@@ -640,7 +637,7 @@ public class ConfusionMatrix {
             }
             scanner.close();
         }
-
+        
         LOG.info("Totally loading {} records with invalid target records {} in eval {}.", cnt, invalidTargetCnt,
                 evalConfig.getName());
 
