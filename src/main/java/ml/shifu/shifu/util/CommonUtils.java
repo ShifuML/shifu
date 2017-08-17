@@ -326,7 +326,11 @@ public final class CommonUtils {
      *             if any IO exception in parsing json.
      */
     public static List<ColumnConfig> loadColumnConfigList() throws IOException {
-        return loadColumnConfigList(Constants.LOCAL_COLUMN_CONFIG_JSON, SourceType.LOCAL);
+        List<ColumnConfig> columnConfigList = loadColumnConfigList(Constants.LOCAL_COLUMN_CONFIG_JSON, SourceType.LOCAL);
+        for(ColumnConfig columnConfig: columnConfigList) {
+            columnConfig.setSampleValues(null);
+        }
+        return columnConfigList;
     }
 
     /**
@@ -343,7 +347,11 @@ public final class CommonUtils {
      *             if {@code path} is null or empty, if sourceType is null.
      */
     public static List<ColumnConfig> loadColumnConfigList(String path, SourceType sourceType) throws IOException {
-        return Arrays.asList(loadJSON(path, sourceType, ColumnConfig[].class));
+        List<ColumnConfig> columnConfigList = Arrays.asList(loadJSON(path, sourceType, ColumnConfig[].class));
+        for(ColumnConfig columnConfig: columnConfigList) {
+            columnConfig.setSampleValues(null);
+        }
+        return columnConfigList;
     }
 
     /**
@@ -1712,7 +1720,7 @@ public final class CommonUtils {
         }
         return columnName;
     }
-    
+
     public static String getSimpleColumnName(String columnName) {
         // remove name-space in column name to make it be called by simple name
         if(columnName.contains(CommonConstants.NAMESPACE_DELIMITER)) {

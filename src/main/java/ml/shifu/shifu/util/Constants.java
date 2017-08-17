@@ -275,12 +275,13 @@ public interface Constants {
     public static final String SHIFU_MAX_CATEGORY_SIZE = "shifu.max.category.size";
 
     public static final String SHIFU_NN_INDEPENDENT_MODEL = "shifu.nn.independent.model";
-    
+
     public static final String SHIFU_NN_BINARY_MODEL_PATH = "shifu.nn.binary.model.path";
-    
+
     public static final String HYBRID_BIN_STR_DILIMETER = ";;;";
-    
+
     public static final String SHIFU_EVAL_PARALLEL_NUM = "shifu.eval.parallel.num";
 
+    public static final String SHIFU_EVAL_PARALLEL = "shifu.eval.parallel";
 
 }
