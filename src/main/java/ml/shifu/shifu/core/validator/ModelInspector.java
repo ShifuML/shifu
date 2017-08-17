@@ -670,6 +670,8 @@ public class ModelInspector {
                 if(train.getAlgorithm().equalsIgnoreCase(CommonConstants.GBT_ALG_NAME)) {
                     Object loss = params.get("Loss");
                     if(loss != null && !"log".equalsIgnoreCase(loss.toString())
+                            && !"log2".equalsIgnoreCase(loss.toString())
+                            && !"negb".equalsIgnoreCase(loss.toString())
                             && !"squared".equalsIgnoreCase(loss.toString())
                             && !"halfgradsquared".equalsIgnoreCase(loss.toString())
                             && !"absolute".equalsIgnoreCase(loss.toString())) {
