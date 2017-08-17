@@ -473,6 +473,10 @@ public class DTWorker
         String lossStr = validParams.get("Loss").toString();
         if(lossStr.equalsIgnoreCase("log")) {
             this.loss = new LogLoss();
+        } else if(lossStr.equalsIgnoreCase("log2")) {
+            this.loss = new LogLoss2();
+        } else if(lossStr.equalsIgnoreCase("negb")) {
+            this.loss = new NegativeBinomial();
         } else if(lossStr.equalsIgnoreCase("absolute")) {
             this.loss = new AbsoluteLoss();
         } else if(lossStr.equalsIgnoreCase("halfgradsquared")) {

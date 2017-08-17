@@ -637,7 +637,9 @@
                             {"label": "Squared", "value":"squared"},
                             {"label": "HalfGradSquared", "value":"halfgradsquared"},
                             {"label": "Absolute", "value":"absolute"},
-                            {"label": "Log", "value":"log"}
+                            {"label": "Log", "value":"log"},
+                            {"label": "Log2", "value":"log2"},
+                            {"label": "NegativeBinomial", "value":"negb"}
                         ]
                     }, {
                         "name" : "LearningDecay",
