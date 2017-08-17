@@ -33,7 +33,7 @@ public class ColumnConfig {
 
     // add weight column and weight column is treated the same as meta
     public static enum ColumnFlag {
-        ForceSelect, ForceRemove, Meta, Target, Weight
+        ForceSelect, ForceRemove, Candidate, Meta, Target, Weight
     }
 
     /**
@@ -177,7 +177,8 @@ public class ColumnConfig {
 
     @JsonIgnore
     public boolean isCandidate() {
-        return !isForceRemove() && !isMeta() && !isTarget();
+        return ColumnFlag.Candidate.equals(columnFlag)
+                || (!isForceRemove() && !isMeta() && !isTarget());
     }
 
     @JsonIgnore
