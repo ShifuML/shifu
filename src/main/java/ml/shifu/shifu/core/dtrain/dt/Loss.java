@@ -17,7 +17,7 @@ package ml.shifu.shifu.core.dtrain.dt;
 
 /**
  * Loss computation for gradient boost decision tree.
- * 
+ *
  * @author Zhang David (pengzhang@paypal.com)
  */
 public interface Loss {
@@ -30,7 +30,7 @@ public interface Loss {
 
 /**
  * Using Math.abs to compute error.
- * 
+ *
  * @author Zhang David (pengzhang@paypal.com)
  */
 class AbsoluteLoss implements Loss {
@@ -49,7 +49,7 @@ class AbsoluteLoss implements Loss {
 
 /**
  * Squared error is used to compute error.
- * 
+ *
  * @author Zhang David (pengzhang@paypal.com)
  */
 class SquaredLoss implements Loss {
@@ -69,7 +69,7 @@ class SquaredLoss implements Loss {
 
 /**
  * Squared error is used to compute error. For gradient, half of gradient is using instead of 2 * (y-p).
- * 
+ *
  * @author Zhang David (pengzhang@paypal.com)
  */
 class HalfGradSquaredLoss extends SquaredLoss {
@@ -83,7 +83,7 @@ class HalfGradSquaredLoss extends SquaredLoss {
 
 /**
  * Log function is used for {@link LogLoss}.
- * 
+ *
  * @author Zhang David (pengzhang@paypal.com)
  */
 class LogLoss implements Loss {
@@ -100,3 +100,48 @@ class LogLoss implements Loss {
     }
 
 }
+
+class LogLoss2 implements Loss {
+
+    @Override
+    public float computeGradient(float predict, float label) {
+        float logistic = (float)(1f / (1f + Math.exp(-predict)));
+        return -(label - logistic);
+
+    }
+
+    @Override
+    public float computeError(float predict, float label) {
+        return (float) (label * predict - Math.log1p(1f + Math.exp(predict)));
+    }
+}
+
+class NegativeBinomial implements Loss {
+    //reference: https://statweb.stanford.edu/~jhf/ftp/trebst.pdf
+
+    @Override
+    public float computeGradient(float predict, float label) {
+        return (2 - 4 * label) / (float) Math.exp(4 * label * predict - 2 * predict);
+    }
+
+    @Override
+    public float computeError(float predict, float label) {
+        return (float) Math.log1p(1+ Math.exp(2 * predict - 4 * predict * label));
+    }
+}
+//    public static void main(String[] args) {
+//        Loss inst = new LogLoss2();
+//        for ( float predict = 0.0f; predict < 1.05f; predict += 0.1f ) {
+//            System.out.println(predict + "\t" + 0.0f + "\t" + inst.computeError(predict, 0.0f));
+//        }
+//
+//        System.out.println();
+//
+//        for ( float predict = 0.0f; predict < 1.05f; predict += 0.1f ) {
+//            System.out.println(predict + "\t" + 1.0f + "\t" + inst.computeError(predict, 1.0f));
+//        }
+//
+//        System.out.println(inst.computeError(10.0f, 1.0f));
+//        System.out.println(inst.computeError(-10.0f, 0.0f));
+//    }
+//}
