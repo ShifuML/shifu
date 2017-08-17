@@ -36,12 +36,14 @@ public class VarSelUpdater extends BasicUpdater {
             columnConfig.setColumnFlag(ColumnConfig.ColumnFlag.ForceRemove);
         } else if(this.setForceSelect.contains(new NSColumn(varName))) {
             if(CollectionUtils.isEmpty(this.setCandidates)
-                    || (CollectionUtils.isNotEmpty(this.setCandidates) && this.setCandidates.contains(new NSColumn(
-                            varName)))) {
+                    || (CollectionUtils.isNotEmpty(this.setCandidates) // candidates is not empty
+                        && this.setCandidates.contains(new NSColumn(varName)))) {
                 columnConfig.setColumnFlag(ColumnConfig.ColumnFlag.ForceSelect);
             }
         } else if(NSColumnUtils.isColumnEqual(this.weightColumnName, varName)) {
             columnConfig.setColumnFlag(ColumnConfig.ColumnFlag.Weight);
+        } else if ( this.setCandidates.contains(new NSColumn(varName)) ) {
+            columnConfig.setColumnFlag(ColumnConfig.ColumnFlag.Candidate);
         }
     }
 }

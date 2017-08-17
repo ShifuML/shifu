@@ -24,12 +24,14 @@ import org.apache.commons.collections.CollectionUtils;
 public class BasicUpdater {
 
     protected String targetColumnName;
+    protected String weightColumnName;
+
     protected Set<NSColumn> setCategorialColumns;
     protected Set<NSColumn> setMeta;
     protected Set<NSColumn> setForceRemove;
     protected Set<NSColumn> setForceSelect;
     protected Set<NSColumn> setCandidates;
-    protected String weightColumnName;
+
     private Set<NSColumn> setHybridColumns;
     private Map<String, Double> hybridColumnNames;
 
@@ -102,13 +104,15 @@ public class BasicUpdater {
             columnConfig.setColumnFlag(ColumnConfig.ColumnFlag.ForceRemove);
         } else if(this.setForceSelect.contains(new NSColumn(varName))) {
             if(CollectionUtils.isEmpty(this.setCandidates)
-                    || (CollectionUtils.isNotEmpty(this.setCandidates) && this.setCandidates.contains(new NSColumn(
-                            varName)))) {
+                    || (CollectionUtils.isNotEmpty(this.setCandidates) // candidates is not empty
+                        && this.setCandidates.contains(new NSColumn(varName)))) {
                 columnConfig.setColumnFlag(ColumnConfig.ColumnFlag.ForceSelect);
             }
         } else if(NSColumnUtils.isColumnEqual(this.weightColumnName, varName)) {
             columnConfig.setColumnFlag(ColumnConfig.ColumnFlag.Weight);
             columnConfig.setColumnType(null);
+        } else if(this.setCandidates.contains(new NSColumn(varName))) {
+            columnConfig.setColumnFlag(ColumnConfig.ColumnFlag.Candidate);
         }
 
         if(NSColumnUtils.isColumnEqual(weightColumnName, varName)) {
