@@ -641,13 +641,17 @@ public class DTWorker
                                 if(this.isStratifiedSampling) {
                                     random = baggingRandomMap.get(classValue);
                                     if(random == null) {
-                                        random = new Random();
+                                        random = DTrainUtils.generateRandomBySampleSeed(
+                                                modelConfig.getTrain().getBaggingSampleSeed(),
+                                                CommonConstants.NOT_CONFIGURED_BAGGING_SEED);
                                         baggingRandomMap.put(classValue, random);
                                     }
                                 } else {
                                     random = baggingRandomMap.get(0);
                                     if(random == null) {
-                                        random = new Random();
+                                        random = DTrainUtils.generateRandomBySampleSeed(
+                                                modelConfig.getTrain().getBaggingSampleSeed(),
+                                                CommonConstants.NOT_CONFIGURED_BAGGING_SEED);
                                         baggingRandomMap.put(0, random);
                                     }
                                 }
@@ -1510,13 +1514,15 @@ public class DTWorker
             if(this.isStratifiedSampling) {
                 random = baggingRandomMap.get(classValue);
                 if(random == null) {
-                    random = new Random();
+                    random = DTrainUtils.generateRandomBySampleSeed(modelConfig.getTrain().getBaggingSampleSeed(),
+                            CommonConstants.NOT_CONFIGURED_BAGGING_SEED);
                     baggingRandomMap.put(classValue, random);
                 }
             } else {
                 random = baggingRandomMap.get(0);
                 if(random == null) {
-                    random = new Random();
+                    random = DTrainUtils.generateRandomBySampleSeed(modelConfig.getTrain().getBaggingSampleSeed(),
+                            CommonConstants.NOT_CONFIGURED_BAGGING_SEED);
                     baggingRandomMap.put(0, random);
                 }
             }

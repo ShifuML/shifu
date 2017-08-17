@@ -150,6 +150,12 @@ public class ModelTrainConf {
     private Integer numKFold = -1;
 
     /**
+     * Random seed is used to split training set and test set, default value is -1L.
+     * That means a value not configured by user, then it will fallback to generate random for bagging each time.
+     */
+    private Long baggingSampleSeed = CommonConstants.NOT_CONFIGURED_BAGGING_SEED;
+
+    /**
      * Up sampling for positive tags, this is to solve class imbalance.
      */
     private Double upSampleWeight = Double.valueOf(1d);
@@ -347,6 +353,21 @@ public class ModelTrainConf {
     }
 
     /**
+     * @return the baggingSampleSeed
+     */
+    public Long getBaggingSampleSeed() {
+        return baggingSampleSeed;
+    }
+
+    /**
+     * @param baggingSampleSeed
+     *              the baggingSampleSeed to set
+     */
+    public void setBaggingSampleSeed(Long baggingSampleSeed) {
+        this.baggingSampleSeed = baggingSampleSeed;
+    }
+
+    /**
      * @return the upSampleWeight
      */
     @JsonIgnore
@@ -458,6 +479,7 @@ public class ModelTrainConf {
         other.setAlgorithm(algorithm);
         other.setBaggingNum(baggingNum);
         other.setBaggingSampleRate(baggingSampleRate);
+        other.setBaggingSampleSeed(baggingSampleSeed);
         other.setConvergenceThreshold(convergenceThreshold);
         if(customPaths != null) {
             other.setCustomPaths(new HashMap<String, String>(customPaths));
