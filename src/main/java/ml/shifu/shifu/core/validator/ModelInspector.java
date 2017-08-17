@@ -27,7 +27,6 @@ import ml.shifu.shifu.container.obj.ModelBasicConf.RunMode;
 import ml.shifu.shifu.container.obj.ModelConfig;
 import ml.shifu.shifu.container.obj.ModelNormalizeConf;
 import ml.shifu.shifu.container.obj.ModelNormalizeConf.NormType;
-import ml.shifu.shifu.container.obj.ModelSourceDataConf;
 import ml.shifu.shifu.container.obj.ModelStatsConf.BinningAlgorithm;
 import ml.shifu.shifu.container.obj.ModelStatsConf.BinningMethod;
 import ml.shifu.shifu.container.obj.ModelTrainConf;
@@ -110,22 +109,35 @@ public class ModelInspector {
 
         if(modelConfig.getDataSet().getSource() == SourceType.LOCAL && modelConfig.isMapReduceRunMode()) {
             ValidateResult tmpResult = new ValidateResult(true);
-            // tmpResult.setStatus(false);
-            // tmpResult.getCauses().add(
-            // "'LOCAL' data set (dataSet.source) cannot be run with 'mapred' run mode(basic.runMode)");
             result = ValidateResult.mergeResult(result, tmpResult);
         }
 
         if(ModelStep.INIT.equals(modelStep)) {
-            result = ValidateResult.mergeResult(result, checkTrainData(modelConfig.getDataSet()));
-            result = ValidateResult.mergeResult(result, checkVarSelect(modelConfig, modelConfig.getVarSelect()));
-            if(result.getStatus()) {
-                result = ValidateResult.mergeResult(result, checkColumnConf(modelConfig));
-            }
+            // in INIT, only check if data or header are there or not
+            result = ValidateResult.mergeResult(result, checkRawData(modelConfig.getDataSet(), "Train Set:"));
         } else if(ModelStep.STATS.equals(modelStep)) {
             result = ValidateResult.mergeResult(result,
                     checkFile("ColumnConfig.json", SourceType.LOCAL, "ColumnConfig.json : "));
             result = ValidateResult.mergeResult(result, checkStatsConf(modelConfig));
+            // verify categorical name file
+            if(StringUtils.isNotBlank(modelConfig.getDataSet().getCategoricalColumnNameFile())) {
+                result = ValidateResult.mergeResult(
+                        result,
+                        checkFile(modelConfig.getDataSet().getCategoricalColumnNameFile(), SourceType.LOCAL,
+                                "categorical columns configuration "));
+            }
+
+            // verify meta name file
+            if(StringUtils.isNotBlank(modelConfig.getDataSet().getMetaColumnNameFile())) {
+                result = ValidateResult.mergeResult(
+                        result,
+                        checkFile(modelConfig.getDataSet().getMetaColumnNameFile(), SourceType.LOCAL,
+                                "meta columns configuration "));
+            }
+            // check column stats
+            if(result.getStatus()) {
+                result = ValidateResult.mergeResult(result, checkColumnConf(modelConfig));
+            }
         } else if(ModelStep.VARSELECT.equals(modelStep)) {
             result = ValidateResult.mergeResult(result, checkVarSelect(modelConfig, modelConfig.getVarSelect()));
             if(result.getStatus()) {
@@ -357,36 +369,6 @@ public class ModelInspector {
             LOG.warn("Header file is set to empty, shifu will try to detect schema by first line of input and header "
                     + "delimiter.");
         }
-        return result;
-    }
-
-    /**
-     * Check the training data for model
-     * Fist of all, it checks the @RawSourceData
-     * Then, it checks conf file for categorical column exists or not, if the setting is not empty
-     * Then, it checks conf file for meta column exists or not, if the setting is not empty
-     * 
-     * @param dataSet
-     *            - @ModelSourceDataConf to check
-     * @return @ValidateResult
-     * @throws IOException
-     *             IOException may be thrown when checking file
-     */
-    private ValidateResult checkTrainData(ModelSourceDataConf dataSet) throws IOException {
-        ValidateResult result = checkRawData(dataSet, "Train Set:");
-
-        if(StringUtils.isNotBlank(dataSet.getCategoricalColumnNameFile())) {
-            result = ValidateResult.mergeResult(
-                    result,
-                    checkFile(dataSet.getCategoricalColumnNameFile(), SourceType.LOCAL,
-                            "categorical columns configuration "));
-        }
-
-        if(StringUtils.isNotBlank(dataSet.getMetaColumnNameFile())) {
-            result = ValidateResult.mergeResult(result,
-                    checkFile(dataSet.getMetaColumnNameFile(), SourceType.LOCAL, "meta columns configuration "));
-        }
-
         return result;
     }
 

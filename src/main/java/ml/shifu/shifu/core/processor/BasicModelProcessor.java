@@ -367,7 +367,7 @@ public class BasicModelProcessor {
         } else if(alg.equalsIgnoreCase("DT")) {
             // do nothing
         } else if(alg.equalsIgnoreCase("RF")) {
-            if(!param.containsKey("FeatureSubsetStrategy")) {
+            if(!param.containsKey("MaxDepth")) {
                 param = new LinkedHashMap<String, Object>();
 
                 param.put("FeatureSubsetStrategy", "all");
@@ -379,7 +379,7 @@ public class BasicModelProcessor {
                 saveModelConfig();
             }
         } else if(alg.equalsIgnoreCase("GBT")) {
-            if(!param.containsKey("FeatureSubsetStrategy")) {
+            if(!param.containsKey("MaxDepth")) {
                 param = new LinkedHashMap<String, Object>();
 
                 param.put("FeatureSubsetStrategy", "all");
