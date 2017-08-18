@@ -87,7 +87,7 @@ class HalfGradSquaredLoss extends SquaredLoss {
  * @author Zhang David (pengzhang@paypal.com)
  */
 class LogLoss implements Loss {
-
+//  reference https://statweb.stanford.edu/~jhf/ftp/trebst.pdf
     @Override
     public float computeGradient(float predict, float label) {
         return (2 - 4 * label) / (float) Math.exp(4 * label * predict - 2 * predict);
@@ -97,22 +97,4 @@ class LogLoss implements Loss {
     public float computeError(float predict, float label) {
         return (float) Math.log1p(1+ Math.exp(2 * predict - 4 * predict * label));
     }
-
 }
-
-//    public static void main(String[] args) {
-//        Loss inst = new LogLoss2();
-//        for ( float predict = 0.0f; predict < 1.05f; predict += 0.1f ) {
-//            System.out.println(predict + "\t" + 0.0f + "\t" + inst.computeError(predict, 0.0f));
-//        }
-//
-//        System.out.println();
-//
-//        for ( float predict = 0.0f; predict < 1.05f; predict += 0.1f ) {
-//            System.out.println(predict + "\t" + 1.0f + "\t" + inst.computeError(predict, 1.0f));
-//        }
-//
-//        System.out.println(inst.computeError(10.0f, 1.0f));
-//        System.out.println(inst.computeError(-10.0f, 0.0f));
-//    }
-//}
