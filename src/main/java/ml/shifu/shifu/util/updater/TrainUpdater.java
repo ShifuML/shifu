@@ -31,13 +31,19 @@ public class TrainUpdater extends BasicUpdater {
             columnConfig.setFinalSelect(false);
         } else if(this.setForceSelect.contains(new NSColumn(varName))) {
             if(CollectionUtils.isEmpty(this.setCandidates)
-                    || (CollectionUtils.isNotEmpty(this.setCandidates) && this.setCandidates.contains(new NSColumn(
-                            varName)))) {
+                    || (CollectionUtils.isNotEmpty(this.setCandidates) // candidates is not empty
+                        && this.setCandidates.contains(new NSColumn(varName)))) {
                 columnConfig.setColumnFlag(ColumnConfig.ColumnFlag.ForceSelect);
                 // WARN: should not set final select here, imagine user take varsel by SE, the first time is to call
                 // training a model, then forceselected columns will be set to final selected, then all varaibles
                 // selected are only in current final selected columns which is not correct.
+
+                // There is a situation like this - after variable selection, user may want to update forselect list
+                // and train the model again, if we don't set finalSelect = true, those new added variables won't be
+                // used. Or user need to run variable selection again. Let's figure out a solution to fix this.
             }
+        } else if ( this.setCandidates.contains(new NSColumn(varName)) ) {
+            columnConfig.setColumnFlag(ColumnConfig.ColumnFlag.Candidate);
         }
     }
 }
