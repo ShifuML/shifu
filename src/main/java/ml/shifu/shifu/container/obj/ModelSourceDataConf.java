@@ -31,6 +31,8 @@ public class ModelSourceDataConf extends RawSourceData {
 
     private String hybridColumnNameFile;
 
+    private String segExpressionFile;
+
     public String getCategoricalColumnNameFile() {
         return categoricalColumnNameFile;
     }
@@ -80,9 +82,27 @@ public class ModelSourceDataConf extends RawSourceData {
 
         other.setCategoricalColumnNameFile(categoricalColumnNameFile);
         other.setHybridColumnNameFile(this.hybridColumnNameFile);
-
+        other.setSegExpressionFile(this.segExpressionFile);
         other.setMetaColumnNameFile(this.getMetaColumnNameFile());
 
         return other;
     }
+
+    /**
+     * @return the segExpressionFile
+     */
+    @JsonIgnore
+    public String getSegExpressionFile() {
+        return segExpressionFile;
+    }
+
+    /**
+     * @param segExpressionFile
+     *            the segExpressionFile to set
+     */
+    @JsonProperty
+    public void setSegExpressionFile(String segExpressionFile) {
+        this.segExpressionFile = segExpressionFile;
+    }
+
 }

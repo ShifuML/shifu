@@ -17,6 +17,7 @@ package ml.shifu.shifu.udf;
 
 import java.io.IOException;
 import java.text.DecimalFormat;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -26,6 +27,7 @@ import ml.shifu.shifu.column.NSColumn;
 import ml.shifu.shifu.container.WeightAmplifier;
 import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.container.obj.ModelNormalizeConf.NormType;
+import ml.shifu.shifu.core.DataPurifier;
 import ml.shifu.shifu.core.DataSampler;
 import ml.shifu.shifu.core.Normalizer;
 import ml.shifu.shifu.util.CommonUtils;
@@ -61,6 +63,10 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
     private Expression weightExpr;
     private JexlContext weightContext;
     private DecimalFormat df = new DecimalFormat("#.######");
+
+    private List<DataPurifier> dataPurifiers;
+
+    private boolean isForExpressions = false;
 
     public static enum CategoryMissingNormType {
         MEAN, POSRATE;
@@ -150,6 +156,23 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
             }
         }
 
+        String filterExpressions = "";
+
+        if(UDFContext.getUDFContext() != null && UDFContext.getUDFContext().getJobConf() != null) {
+            filterExpressions = UDFContext.getUDFContext().getJobConf().get("shifu.segment.expressions");
+        } else {
+            filterExpressions = Environment.getProperty("shifu.segment.expressions");
+        }
+
+        if(StringUtils.isNotBlank(filterExpressions)) {
+            this.isForExpressions = true;
+            String[] splits = CommonUtils.split(filterExpressions, Constants.SHIFU_STATS_FILTER_EXPRESSIONS_DELIMETER);
+            this.dataPurifiers = new ArrayList<DataPurifier>(splits.length);
+            for(String split: splits) {
+                this.dataPurifiers.add(new DataPurifier(modelConfig, split));
+            }
+        }
+
         log.debug("NormalizeUDF Initialized");
     }
 
@@ -196,17 +219,94 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
         Tuple tuple = TupleFactory.getInstance().newTuple();
         final NormType normType = modelConfig.getNormalizeType();
 
-        for(int i = 0; i < input.size(); i++) {
-            ColumnConfig config = columnConfigList.get(i);
-            String val = (input.get(i) == null) ? "" : input.get(i).toString().trim();
-            // load variables for weight calculating.
-            if(weightExpr != null) {
-                weightContext.set(new NSColumn(config.getColumnName()).getSimpleName(), val);
-            }
+        if(!this.isForExpressions) {
+            for(int i = 0; i < input.size(); i++) {
+                ColumnConfig config = columnConfigList.get(i);
+                String val = (input.get(i) == null) ? "" : input.get(i).toString().trim();
+                // load variables for weight calculating.
+                if(weightExpr != null) {
+                    weightContext.set(new NSColumn(config.getColumnName()).getSimpleName(), val);
+                }
 
-            // check tag type.
-            if(tagColumnNum == i) {
-                if(modelConfig.isRegression()) {
+                // check tag type.
+                if(tagColumnNum == i) {
+                    if(modelConfig.isRegression()) {
+                        int type = 0;
+                        if(super.posTagSet.contains(rawTag)) {
+                            type = 1;
+                        } else if(super.negTagSet.contains(rawTag)) {
+                            type = 0;
+                        } else {
+                            log.error("Invalid data! The target value is not listed - " + rawTag);
+                            warn("Invalid data! The target value is not listed - " + rawTag,
+                                    WarnInNormalizeUDF.INVALID_TAG);
+                            return null;
+                        }
+                        tuple.append(type);
+                    } else {
+                        int index = -1;
+                        for(int j = 0; j < tags.size(); j++) {
+                            Set<String> tagSet = tags.get(j);
+                            if(tagSet.contains(rawTag)) {
+                                index = j;
+                                break;
+                            }
+                        }
+                        if(index == -1) {
+                            log.error("Invalid data! The target value is not listed - " + rawTag);
+                            return null;
+                        }
+                        tuple.append(index);
+                    }
+                    continue;
+                }
+
+                if(this.isForClean) {
+                    // for RF/GBT model, only clean data, not real do norm data
+                    if(config.isCategorical()) {
+                        Map<String, Integer> map = this.categoricalIndexMap.get(config.getColumnNum());
+                        // map should not be null, no need check if map is null, if val not in binCategory, set it to ""
+                        tuple.append(((map.get(val) == null || map.get(val) == -1)) ? "" : val);
+                    } else {
+                        // TODO hybrid column is not supported so far, should be set to default number or categorical
+                        // values
+                        Double normVal = 0d;
+                        try {
+                            normVal = Double.parseDouble(val);
+                        } catch (Exception e) {
+                            log.debug("Not decimal format " + val + ", using default!");
+                            normVal = Normalizer.defaultMissingValue(config);
+                        }
+                        tuple.append(df.format(normVal));
+                    }
+                } else {
+                    // append normalize data. exclude data clean, for data cleaning, no need check good or bad candidate
+                    if(CommonUtils.isGoodCandidate(modelConfig.isRegression(), config)) {
+                        // for multiple classification, binPosRate means rate of such category over all counts, reuse
+                        // binPosRate for normalize
+                        Double normVal = Normalizer.normalize(config, val, cutoff, normType,
+                                this.categoryMissingNormType);
+                        tuple.append(df.format(normVal));
+                        // if(this.isForExpressions) {
+                        // for(int j = 0; j < dataPurifiers.size(); j++) {
+                        // ColumnConfig extConfig = columnConfigList.get(input.size() * j + i);
+                        // Double extNormVal = Normalizer.normalize(extConfig, val, cutoff, normType,
+                        // this.categoryMissingNormType);
+                        // tuple.append(df.format(extNormVal));
+                        // }
+                        // }
+                    } else {
+                        tuple.append(config.isMeta() ? val : null);
+                    }
+                }
+            }
+        } else {
+            int rawSize = input.size();
+            for(int i = 0; i < this.columnConfigList.size(); i++) {
+                ColumnConfig config = this.columnConfigList.get(i);
+                int newIndex = i >= rawSize ? i % rawSize : i;
+                String val = (input.get(newIndex) == null) ? "" : input.get(newIndex).toString().trim();
+                if(config.isTarget()) {
                     int type = 0;
                     if(super.posTagSet.contains(rawTag)) {
                         type = 1;
@@ -218,47 +318,7 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
                         return null;
                     }
                     tuple.append(type);
-                } else {
-                    int index = -1;
-                    for(int j = 0; j < tags.size(); j++) {
-                        Set<String> tagSet = tags.get(j);
-                        if(tagSet.contains(rawTag)) {
-                            index = j;
-                            break;
-                        }
-                    }
-                    if(index == -1) {
-                        log.error("Invalid data! The target value is not listed - " + rawTag);
-                        return null;
-                    }
-                    tuple.append(index);
-                }
-                continue;
-            }
-
-            if(this.isForClean) {
-                // for RF/GBT model, only clean data, not real do norm data
-                if(config.isCategorical()) {
-                    Map<String, Integer> map = this.categoricalIndexMap.get(config.getColumnNum());
-                    // map should not be null, no need check if map is null, if val not in binCategory, set it to ""
-                    tuple.append(((map.get(val) == null || map.get(val) == -1)) ? "" : val);
-                } else {
-                    // TODO hybrid column is not supported here so far, should be set to default number or categorical
-                    // values
-                    Double normVal = 0d;
-                    try {
-                        normVal = Double.parseDouble(val);
-                    } catch (Exception e) {
-                        log.debug("Not decimal format " + val + ", using default!");
-                        normVal = Normalizer.defaultMissingValue(config);
-                    }
-                    tuple.append(df.format(normVal));
-                }
-            } else {
-                // append normalize data. exclude data clean, for data cleaning, no need check good or bad candidate
-                if(CommonUtils.isGoodCandidate(modelConfig.isRegression(), config)) {
-                    // for multiple classification, binPosRate means rate of such category over all counts, reuse
-                    // binPosRate for normalize
+                } else if(CommonUtils.isGoodCandidate(modelConfig.isRegression(), config)) {
                     Double normVal = Normalizer.normalize(config, val, cutoff, normType, this.categoryMissingNormType);
                     tuple.append(df.format(normVal));
                 } else {

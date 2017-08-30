@@ -130,8 +130,13 @@ public class UpdateBinningInfoMapper extends Mapper<LongWritable, Text, IntWrita
     private Set<String> missingOrInvalidValues;
 
     private int weightExceptions = 0;
-
     private boolean isThrowforWeightException;
+
+    /**
+     * Data purifiers for column expansion
+     */
+    private List<DataPurifier> expressionDataPurifiers;
+    private boolean isForExpressions = false;
 
     /**
      * Load model config and column config files.
@@ -159,6 +164,16 @@ public class UpdateBinningInfoMapper extends Mapper<LongWritable, Text, IntWrita
         this.dataSetDelimiter = this.modelConfig.getDataSetDelimiter();
 
         this.dataPurifier = new DataPurifier(this.modelConfig);
+
+        String filterExpressions = context.getConfiguration().get(Constants.SHIFU_STATS_FILTER_EXPRESSIONS);
+        if(StringUtils.isNotBlank(filterExpressions)) {
+            this.isForExpressions = true;
+            String[] splits = CommonUtils.split(filterExpressions, Constants.SHIFU_STATS_FILTER_EXPRESSIONS_DELIMETER);
+            this.expressionDataPurifiers = new ArrayList<DataPurifier>(splits.length);
+            for(String split: splits) {
+                this.expressionDataPurifiers.add(new DataPurifier(modelConfig, split));
+            }
+        }
 
         loadWeightColumnNum();
 
@@ -199,10 +214,14 @@ public class UpdateBinningInfoMapper extends Mapper<LongWritable, Text, IntWrita
                 // here just use String.split for just two columns
                 String[] cols = CommonUtils.split(line.trim(), Constants.DEFAULT_DELIMITER);
                 if(cols != null && cols.length >= 2) {
-                    Integer columnNum = Integer.parseInt(cols[0]);
+                    Integer rawColumnNum = Integer.parseInt(cols[0]);
                     BinningInfoWritable binningInfo = new BinningInfoWritable();
-                    binningInfo.setColumnNum(columnNum);
-                    ColumnConfig columnConfig = this.columnConfigList.get(columnNum);
+                    int corrColumnNum = rawColumnNum;
+                    if(rawColumnNum >= this.columnConfigList.size()) {
+                        corrColumnNum = rawColumnNum % this.columnConfigList.size();
+                    }
+                    binningInfo.setColumnNum(rawColumnNum);
+                    ColumnConfig columnConfig = this.columnConfigList.get(corrColumnNum);
                     int binSize = 0;
                     if(columnConfig.isHybrid()) {
                         binningInfo.setNumeric(true);
@@ -215,10 +234,10 @@ public class UpdateBinningInfoMapper extends Mapper<LongWritable, Text, IntWrita
                         binningInfo.setBinBoundaries(list);
 
                         List<String> cateList = new ArrayList<String>();
-                        Map<String, Integer> map = this.categoricalBinMap.get(columnNum);
+                        Map<String, Integer> map = this.categoricalBinMap.get(rawColumnNum);
                         if(map == null) {
                             map = new HashMap<String, Integer>();
-                            this.categoricalBinMap.put(columnNum, map);
+                            this.categoricalBinMap.put(rawColumnNum, map);
                         }
                         int index = 0;
                         if(!StringUtils.isBlank(splits[1])) {
@@ -240,10 +259,10 @@ public class UpdateBinningInfoMapper extends Mapper<LongWritable, Text, IntWrita
                     } else {
                         binningInfo.setNumeric(false);
                         List<String> list = new ArrayList<String>();
-                        Map<String, Integer> map = this.categoricalBinMap.get(columnNum);
+                        Map<String, Integer> map = this.categoricalBinMap.get(rawColumnNum);
                         if(map == null) {
                             map = new HashMap<String, Integer>();
-                            this.categoricalBinMap.put(columnNum, map);
+                            this.categoricalBinMap.put(rawColumnNum, map);
                         }
                         int index = 0;
                         if(!StringUtils.isBlank(cols[1])) {
@@ -266,8 +285,8 @@ public class UpdateBinningInfoMapper extends Mapper<LongWritable, Text, IntWrita
 
                     double[] binWeightNeg = new double[binSize + 1];
                     binningInfo.setBinWeightNeg(binWeightNeg);
-                    LOG.debug("column num {}  and info {}", columnNum, binningInfo);
-                    this.columnBinningInfo.put(columnNum, binningInfo);
+                    LOG.debug("column num {}  and info {}", rawColumnNum, binningInfo);
+                    this.columnBinningInfo.put(rawColumnNum, binningInfo);
                 }
                 line = reader.readLine();
             }
@@ -323,7 +342,7 @@ public class UpdateBinningInfoMapper extends Mapper<LongWritable, Text, IntWrita
 
         context.getCounter(Constants.SHIFU_GROUP_COUNTER, "TOTAL_VALID_COUNT").increment(1L);
 
-        if(!this.dataPurifier.isFilterOut(valueStr)) {
+        if(!this.dataPurifier.isFilter(valueStr)) {
             context.getCounter(Constants.SHIFU_GROUP_COUNTER, "FILTER_OUT_COUNT").increment(1L);
             return;
         }
@@ -365,87 +384,118 @@ public class UpdateBinningInfoMapper extends Mapper<LongWritable, Text, IntWrita
         }
 
         // valid data process
+        for(int i = 0; i < units.length; i++) {
+            populateStats(units, tag, weight, i, i);
+            if(this.isForExpressions) {
+                for(int j = 0; j < this.expressionDataPurifiers.size(); j++) {
+                    DataPurifier dp = this.expressionDataPurifiers.get(j);
+                    if(dp.isFilter(valueStr)) {
+                        populateStats(units, tag, weight, i, (j + 1) * units.length + i);
+                    }
+                }
+            }
+        }
+    }
+
+    private void populateStats(String[] units, String tag, Double weight, int columnIndex, int newCCIndex) {
+        ColumnConfig columnConfig = this.columnConfigList.get(columnIndex);
+
+        CountAndFrequentItems countAndFrequentItems = this.variableCountMap.get(newCCIndex);
+        if(countAndFrequentItems == null) {
+            countAndFrequentItems = new CountAndFrequentItems();
+            this.variableCountMap.put(newCCIndex, countAndFrequentItems);
+        }
+        countAndFrequentItems.offer(this.missingOrInvalidValues, units[columnIndex]);
+
         boolean isMissingValue = false;
         boolean isInvalidValue = false;
 
-        for(int i = 0; i < units.length; i++) {
-            ColumnConfig columnConfig = this.columnConfigList.get(i);
-
-            CountAndFrequentItems countAndFrequentItems = this.variableCountMap.get(i);
-            if(countAndFrequentItems == null) {
-                countAndFrequentItems = new CountAndFrequentItems();
-                this.variableCountMap.put(i, countAndFrequentItems);
+        BinningInfoWritable binningInfoWritable = this.columnBinningInfo.get(newCCIndex);
+        if(binningInfoWritable == null) {
+            return;
+        }
+        binningInfoWritable.setTotalCount(binningInfoWritable.getTotalCount() + 1L);
+        if(columnConfig.isHybrid()) {
+            int binNum = 0;
+            if(units[columnIndex] == null || missingOrInvalidValues.contains(units[columnIndex].toLowerCase())) {
+                isMissingValue = true;
             }
-            countAndFrequentItems.offer(this.missingOrInvalidValues, units[i]);
+            String str = StringUtils.trim(units[columnIndex]);
+            double douVal = CommonUtils.parseNumber(str);
 
-            // meta and target is not skipped, commented out
-            // if(columnConfig.isMeta() || columnConfig.isTarget()) {
-            // continue;
-            // }
-
-            isMissingValue = false;
-            isInvalidValue = false;
-
-            BinningInfoWritable binningInfoWritable = this.columnBinningInfo.get(i);
-            if(binningInfoWritable == null) {
-                continue; // doesn't exist
+            Double hybridThreshould = columnConfig.getHybridThreshold();
+            if(hybridThreshould == null) {
+                hybridThreshould = Double.NEGATIVE_INFINITY;
             }
-            binningInfoWritable.setTotalCount(binningInfoWritable.getTotalCount() + 1L);
-            if(columnConfig.isHybrid()) {
-                int binNum = 0;
-                if(units[i] == null || missingOrInvalidValues.contains(units[i].toLowerCase())) {
-                    isMissingValue = true;
-                }
-                String str = StringUtils.trim(units[i]);
-                double douVal = CommonUtils.parseNumber(str);
+            // douVal < hybridThreshould which will also be set to category
+            boolean isCategory = Double.isNaN(douVal) || douVal < hybridThreshould;
+            boolean isNumber = !Double.isNaN(douVal);
 
-                Double hybridThreshould = columnConfig.getHybridThreshold();
-                if(hybridThreshould == null) {
-                    hybridThreshould = Double.NEGATIVE_INFINITY;
+            if(isMissingValue) {
+                binningInfoWritable.setMissingCount(binningInfoWritable.getMissingCount() + 1L);
+                binNum = binningInfoWritable.getBinCategories().size() + binningInfoWritable.getBinBoundaries().size();
+            } else if(isCategory) {
+                // get categorical bin number in category list
+                binNum = quickLocateCategoricalBin(this.categoricalBinMap.get(newCCIndex), str);
+                if(binNum < 0) {
+                    isInvalidValue = true;
                 }
-                // douVal < hybridThreshould which will also be set to category
-                boolean isCategory = Double.isNaN(douVal) || douVal < hybridThreshould;
-                boolean isNumber = !Double.isNaN(douVal);
-
-                if(isMissingValue) {
+                if(isInvalidValue) {
+                    // the same as missing count
                     binningInfoWritable.setMissingCount(binningInfoWritable.getMissingCount() + 1L);
                     binNum = binningInfoWritable.getBinCategories().size()
                             + binningInfoWritable.getBinBoundaries().size();
-                } else if(isCategory) {
-                    // get categorical bin number in category list
-                    binNum = quickLocateCategoricalBin(this.categoricalBinMap.get(i), str);
-                    if(binNum < 0) {
-                        isInvalidValue = true;
-                    }
-                    if(isInvalidValue) {
-                        // the same as missing count
-                        binningInfoWritable.setMissingCount(binningInfoWritable.getMissingCount() + 1L);
-                        binNum = binningInfoWritable.getBinCategories().size()
-                                + binningInfoWritable.getBinBoundaries().size();
-                    } else {
-                        // if real category value, binNum should + binBoundaries.size
-                        binNum += binningInfoWritable.getBinBoundaries().size();;
-                    }
-                } else if(isNumber) {
-                    binNum = getBinNum(binningInfoWritable.getBinBoundaries(), douVal);
-                    if(binNum == -1) {
-                        throw new RuntimeException("binNum should not be -1 to this step.");
-                    }
-
-                    // other stats are treated as numerical features
-                    binningInfoWritable.setSum(binningInfoWritable.getSum() + douVal);
-                    double squaredVal = douVal * douVal;
-                    binningInfoWritable.setSquaredSum(binningInfoWritable.getSquaredSum() + squaredVal);
-                    binningInfoWritable.setTripleSum(binningInfoWritable.getTripleSum() + squaredVal * douVal);
-                    binningInfoWritable.setQuarticSum(binningInfoWritable.getQuarticSum() + squaredVal * squaredVal);
-
-                    if(Double.compare(binningInfoWritable.getMax(), douVal) < 0) {
-                        binningInfoWritable.setMax(douVal);
-                    }
-                    if(Double.compare(binningInfoWritable.getMin(), douVal) > 0) {
-                        binningInfoWritable.setMin(douVal);
-                    }
+                } else {
+                    // if real category value, binNum should + binBoundaries.size
+                    binNum += binningInfoWritable.getBinBoundaries().size();;
                 }
+            } else if(isNumber) {
+                binNum = getBinNum(binningInfoWritable.getBinBoundaries(), douVal);
+                if(binNum == -1) {
+                    throw new RuntimeException("binNum should not be -1 to this step.");
+                }
+
+                // other stats are treated as numerical features
+                binningInfoWritable.setSum(binningInfoWritable.getSum() + douVal);
+                double squaredVal = douVal * douVal;
+                binningInfoWritable.setSquaredSum(binningInfoWritable.getSquaredSum() + squaredVal);
+                binningInfoWritable.setTripleSum(binningInfoWritable.getTripleSum() + squaredVal * douVal);
+                binningInfoWritable.setQuarticSum(binningInfoWritable.getQuarticSum() + squaredVal * squaredVal);
+
+                if(Double.compare(binningInfoWritable.getMax(), douVal) < 0) {
+                    binningInfoWritable.setMax(douVal);
+                }
+                if(Double.compare(binningInfoWritable.getMin(), douVal) > 0) {
+                    binningInfoWritable.setMin(douVal);
+                }
+            }
+            if(posTags.contains(tag)) {
+                binningInfoWritable.getBinCountPos()[binNum] += 1L;
+                binningInfoWritable.getBinWeightPos()[binNum] += weight;
+            } else if(negTags.contains(tag)) {
+                binningInfoWritable.getBinCountNeg()[binNum] += 1L;
+                binningInfoWritable.getBinWeightNeg()[binNum] += weight;
+            }
+        } else if(columnConfig.isCategorical()) {
+            int lastBinIndex = binningInfoWritable.getBinCategories().size();
+
+            int binNum = 0;
+            if(units[columnIndex] == null || missingOrInvalidValues.contains(units[columnIndex].toLowerCase())) {
+                isMissingValue = true;
+            } else {
+                String str = StringUtils.trim(units[columnIndex]);
+                binNum = quickLocateCategoricalBin(this.categoricalBinMap.get(columnIndex), str);
+                if(binNum < 0) {
+                    isInvalidValue = true;
+                }
+            }
+
+            if(isInvalidValue || isMissingValue) {
+                binningInfoWritable.setMissingCount(binningInfoWritable.getMissingCount() + 1L);
+                binNum = lastBinIndex;
+            }
+
+            if(modelConfig.isRegression()) {
                 if(posTags.contains(tag)) {
                     binningInfoWritable.getBinCountPos()[binNum] += 1L;
                     binningInfoWritable.getBinWeightPos()[binNum] += weight;
@@ -453,25 +503,46 @@ public class UpdateBinningInfoMapper extends Mapper<LongWritable, Text, IntWrita
                     binningInfoWritable.getBinCountNeg()[binNum] += 1L;
                     binningInfoWritable.getBinWeightNeg()[binNum] += weight;
                 }
-            } else if(columnConfig.isCategorical()) {
-                int lastBinIndex = binningInfoWritable.getBinCategories().size();
+            } else {
+                // for multiple classification, set bin count to BinCountPos and leave BinCountNeg empty
+                binningInfoWritable.getBinCountPos()[binNum] += 1L;
+                binningInfoWritable.getBinWeightPos()[binNum] += weight;
+            }
+        } else if(columnConfig.isNumerical()) {
+            int lastBinIndex = binningInfoWritable.getBinBoundaries().size();
+            double douVal = 0.0;
+            if(units[columnIndex] == null || units[columnIndex].length() == 0) {
+                isMissingValue = true;
+            } else {
+                try {
+                    douVal = Double.parseDouble(units[columnIndex].trim());
+                } catch (Exception e) {
+                    isInvalidValue = true;
+                }
+            }
 
-                int binNum = 0;
-                if(units[i] == null || missingOrInvalidValues.contains(units[i].toLowerCase())) {
-                    isMissingValue = true;
-                } else {
-                    String str = StringUtils.trim(units[i]);
-                    binNum = quickLocateCategoricalBin(this.categoricalBinMap.get(i), str);
-                    if(binNum < 0) {
-                        isInvalidValue = true;
+            // add logic the same as CalculateNewStatsUDF
+            if(Double.compare(douVal, modelConfig.getNumericalValueThreshold()) > 0) {
+                isInvalidValue = true;
+            }
+
+            if(isInvalidValue || isMissingValue) {
+                binningInfoWritable.setMissingCount(binningInfoWritable.getMissingCount() + 1L);
+                if(modelConfig.isRegression()) {
+                    if(posTags.contains(tag)) {
+                        binningInfoWritable.getBinCountPos()[lastBinIndex] += 1L;
+                        binningInfoWritable.getBinWeightPos()[lastBinIndex] += weight;
+                    } else if(negTags.contains(tag)) {
+                        binningInfoWritable.getBinCountNeg()[lastBinIndex] += 1L;
+                        binningInfoWritable.getBinWeightNeg()[lastBinIndex] += weight;
                     }
                 }
-
-                if(isInvalidValue || isMissingValue) {
-                    binningInfoWritable.setMissingCount(binningInfoWritable.getMissingCount() + 1L);
-                    binNum = lastBinIndex;
+            } else {
+                // For invalid or missing values, no need update sum, squaredSum, max, min ...
+                int binNum = getBinNum(binningInfoWritable.getBinBoundaries(), units[columnIndex]);
+                if(binNum == -1) {
+                    throw new RuntimeException("binNum should not be -1 to this step.");
                 }
-
                 if(modelConfig.isRegression()) {
                     if(posTags.contains(tag)) {
                         binningInfoWritable.getBinCountPos()[binNum] += 1L;
@@ -480,67 +551,18 @@ public class UpdateBinningInfoMapper extends Mapper<LongWritable, Text, IntWrita
                         binningInfoWritable.getBinCountNeg()[binNum] += 1L;
                         binningInfoWritable.getBinWeightNeg()[binNum] += weight;
                     }
-                } else {
-                    // for multiple classification, set bin count to BinCountPos and leave BinCountNeg empty
-                    binningInfoWritable.getBinCountPos()[binNum] += 1L;
-                    binningInfoWritable.getBinWeightPos()[binNum] += weight;
                 }
-            } else if(columnConfig.isNumerical()) {
-                int lastBinIndex = binningInfoWritable.getBinBoundaries().size();
-                double douVal = 0.0;
-                if(units[i] == null || units[i].length() == 0) {
-                    isMissingValue = true;
-                } else {
-                    try {
-                        douVal = Double.parseDouble(units[i].trim());
-                    } catch (Exception e) {
-                        isInvalidValue = true;
-                    }
+                binningInfoWritable.setSum(binningInfoWritable.getSum() + douVal);
+                double squaredVal = douVal * douVal;
+                binningInfoWritable.setSquaredSum(binningInfoWritable.getSquaredSum() + squaredVal);
+                binningInfoWritable.setTripleSum(binningInfoWritable.getTripleSum() + squaredVal * douVal);
+                binningInfoWritable.setQuarticSum(binningInfoWritable.getQuarticSum() + squaredVal * squaredVal);
+
+                if(Double.compare(binningInfoWritable.getMax(), douVal) < 0) {
+                    binningInfoWritable.setMax(douVal);
                 }
-
-                // add logic the same as CalculateNewStatsUDF
-                if(Double.compare(douVal, modelConfig.getNumericalValueThreshold()) > 0) {
-                    isInvalidValue = true;
-                }
-
-                if(isInvalidValue || isMissingValue) {
-                    binningInfoWritable.setMissingCount(binningInfoWritable.getMissingCount() + 1L);
-                    if(modelConfig.isRegression()) {
-                        if(posTags.contains(tag)) {
-                            binningInfoWritable.getBinCountPos()[lastBinIndex] += 1L;
-                            binningInfoWritable.getBinWeightPos()[lastBinIndex] += weight;
-                        } else if(negTags.contains(tag)) {
-                            binningInfoWritable.getBinCountNeg()[lastBinIndex] += 1L;
-                            binningInfoWritable.getBinWeightNeg()[lastBinIndex] += weight;
-                        }
-                    }
-                } else {
-                    // For invalid or missing values, no need update sum, squaredSum, max, min ...
-                    int binNum = getBinNum(binningInfoWritable.getBinBoundaries(), units[i]);
-                    if(binNum == -1) {
-                        throw new RuntimeException("binNum should not be -1 to this step.");
-                    }
-                    if(modelConfig.isRegression()) {
-                        if(posTags.contains(tag)) {
-                            binningInfoWritable.getBinCountPos()[binNum] += 1L;
-                            binningInfoWritable.getBinWeightPos()[binNum] += weight;
-                        } else if(negTags.contains(tag)) {
-                            binningInfoWritable.getBinCountNeg()[binNum] += 1L;
-                            binningInfoWritable.getBinWeightNeg()[binNum] += weight;
-                        }
-                    }
-                    binningInfoWritable.setSum(binningInfoWritable.getSum() + douVal);
-                    double squaredVal = douVal * douVal;
-                    binningInfoWritable.setSquaredSum(binningInfoWritable.getSquaredSum() + squaredVal);
-                    binningInfoWritable.setTripleSum(binningInfoWritable.getTripleSum() + squaredVal * douVal);
-                    binningInfoWritable.setQuarticSum(binningInfoWritable.getQuarticSum() + squaredVal * squaredVal);
-
-                    if(Double.compare(binningInfoWritable.getMax(), douVal) < 0) {
-                        binningInfoWritable.setMax(douVal);
-                    }
-                    if(Double.compare(binningInfoWritable.getMin(), douVal) > 0) {
-                        binningInfoWritable.setMin(douVal);
-                    }
+                if(Double.compare(binningInfoWritable.getMin(), douVal) > 0) {
+                    binningInfoWritable.setMin(douVal);
                 }
             }
         }
