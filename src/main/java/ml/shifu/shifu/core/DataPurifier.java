@@ -57,6 +57,21 @@ public class DataPurifier {
             dataDelimiter = modelConfig.getDataSetDelimiter();
         }
     }
+    
+    public DataPurifier(ModelConfig modelConfig, String filterExpressions) throws IOException {
+        if(StringUtils.isNotBlank(filterExpressions)) {
+            JexlEngine jexl = new JexlEngine();
+            try {
+                dataFilterExpr = jexl.createExpression(filterExpressions);
+            } catch (JexlException e) {
+                log.error("The expression is {} is invalid, please use correct expression.",
+                        modelConfig.getFilterExpressions());
+                dataFilterExpr = null;
+            }
+            this.headers = CommonUtils.getFinalHeaders(modelConfig);
+            dataDelimiter = modelConfig.getDataSetDelimiter();
+        }
+    }
 
     public DataPurifier(EvalConfig evalConfig) throws IOException {
         if(StringUtils.isNotBlank(evalConfig.getDataSet().getFilterExpressions())) {
@@ -74,7 +89,7 @@ public class DataPurifier {
         }
     }
 
-    public Boolean isFilterOut(String record) {
+    public Boolean isFilter(String record) {
         if(dataFilterExpr == null) {
             return true;
         }
@@ -109,7 +124,7 @@ public class DataPurifier {
         return result;
     }
 
-    public Boolean isFilterOut(Tuple input) throws ExecException {
+    public Boolean isFilter(Tuple input) throws ExecException {
         if(dataFilterExpr == null) {
             return true;
         }

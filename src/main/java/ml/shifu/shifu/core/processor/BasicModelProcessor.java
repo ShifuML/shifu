@@ -126,6 +126,21 @@ public class BasicModelProcessor {
                 saveColumnConfigList();
                 break;
         }
+
+        // validate
+        switch(step) {
+            case NORMALIZE:
+            case VARSELECT:
+            case TRAIN:
+            case EVAL:
+                List<String> segs = this.modelConfig.getSegmentFilterExpressions();
+                String alg = this.modelConfig.getAlgorithm();
+                if(segs.size() > 0 && !(CommonUtils.isNNModel(alg) || CommonUtils.isLRModel(alg))) {
+                    throw new IllegalArgumentException(
+                            "Segment expression is only supported in NN or LR model, please check train:algrithm setting in ModelConfig.json.");
+                }
+                break;
+        }
     }
 
     private void validateColumnConfigAfterSet() {

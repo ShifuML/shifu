@@ -83,6 +83,9 @@ public class BinningPartialDataUDF extends AbstractTrainerUDF<String> {
 
             if(columnId < 0) {
                 columnId = (Integer) element.get(0);
+                if(columnId >= super.columnConfigList.size()){
+                    columnId = columnId % super.columnConfigList.size();
+                }
                 columnConfig = super.columnConfigList.get(columnId);
                 if(columnConfig.isHybrid()) {
                     if(super.modelConfig.getBinningMethod().equals(BinningMethod.EqualInterval)) {
