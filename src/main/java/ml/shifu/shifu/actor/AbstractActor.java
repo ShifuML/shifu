@@ -15,13 +15,11 @@
  */
 package ml.shifu.shifu.actor;
 
-import akka.actor.UntypedActor;
+import java.util.List;
+
 import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.container.obj.ModelConfig;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import java.util.List;
+import akka.actor.UntypedActor;
 
 /**
  * AbstractActor class

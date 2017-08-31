@@ -126,10 +126,7 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
 
         this.isForClean = "true".equalsIgnoreCase(isForClean);
 
-        log.debug("Initializing NormalizeUDF ... ");
-
         cutoff = modelConfig.getNormalizeStdDevCutOff();
-        log.debug("\t stdDevCutOff: " + cutoff);
 
         normType = modelConfig.getNormalizeType();
         log.debug("\t normType: " + normType.name());
@@ -173,7 +170,6 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
             }
         }
 
-        log.debug("NormalizeUDF Initialized");
     }
 
     @SuppressWarnings("deprecation")
