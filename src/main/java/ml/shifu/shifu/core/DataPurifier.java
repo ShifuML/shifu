@@ -49,23 +49,23 @@ public class DataPurifier {
             try {
                 dataFilterExpr = jexl.createExpression(modelConfig.getFilterExpressions());
             } catch (JexlException e) {
-                log.error("The expression is {} is invalid, please use correct expression.",
-                        modelConfig.getFilterExpressions());
+                log.error("The expression is " + modelConfig.getFilterExpressions()
+                        + "is invalid, please use correct expression.", e);
                 dataFilterExpr = null;
             }
             this.headers = CommonUtils.getFinalHeaders(modelConfig);
             dataDelimiter = modelConfig.getDataSetDelimiter();
         }
     }
-    
+
     public DataPurifier(ModelConfig modelConfig, String filterExpressions) throws IOException {
         if(StringUtils.isNotBlank(filterExpressions)) {
             JexlEngine jexl = new JexlEngine();
             try {
                 dataFilterExpr = jexl.createExpression(filterExpressions);
             } catch (JexlException e) {
-                log.error("The expression is {} is invalid, please use correct expression.",
-                        modelConfig.getFilterExpressions());
+                log.error("The expression is " + modelConfig.getFilterExpressions()
+                        + "is invalid, please use correct expression.", e);
                 dataFilterExpr = null;
             }
             this.headers = CommonUtils.getFinalHeaders(modelConfig);
