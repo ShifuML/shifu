@@ -1808,6 +1808,8 @@ public final class CommonUtils {
     }
 
     public static List<Integer> getAllFeatureList(List<ColumnConfig> columnConfigList, boolean isAfterVarSelect) {
+        boolean hasCandidate = hasCandidateColumns(columnConfigList);
+
         List<Integer> features = new ArrayList<Integer>();
         for(ColumnConfig config: columnConfigList) {
             if(isAfterVarSelect) {
@@ -1820,7 +1822,7 @@ public final class CommonUtils {
                     }
                 }
             } else {
-                if(!config.isMeta() && !config.isTarget() && CommonUtils.isGoodCandidate(config)) {
+                if(!config.isMeta() && !config.isTarget() && CommonUtils.isGoodCandidate(config, hasCandidate)) {
                     // only select numerical feature with getBinBoundary().size() larger than 1
                     // or categorical feature with getBinCategory().size() larger than 0
                     if((config.isNumerical() && config.getBinBoundary().size() > 1)
@@ -1831,6 +1833,17 @@ public final class CommonUtils {
             }
         }
         return features;
+    }
+
+    public static boolean hasCandidateColumns(List<ColumnConfig> columnConfigList) {
+        int candidateCnt = 0;
+        for(ColumnConfig config: columnConfigList) {
+            if (ColumnConfig.ColumnFlag.Candidate.equals(config.getColumnFlag())) {
+                candidateCnt++;
+            }
+        }
+
+        return (candidateCnt > 0);
     }
 
     private static double computeNumericNormResult(ModelConfig modelConfig, double cutoff, ColumnConfig config,
@@ -2373,6 +2386,19 @@ public final class CommonUtils {
                         && columnConfig.getStdDev() != null && ((columnConfig.isCategorical()
                         && columnConfig.getBinCategory() != null && columnConfig.getBinCategory().size() > 1) || (columnConfig
                         .isNumerical() && columnConfig.getBinBoundary() != null && columnConfig.getBinBoundary().size() > 1)));
+    }
+
+    public static boolean isGoodCandidate(ColumnConfig columnConfig, boolean hasCandidate) {
+        if(columnConfig == null) {
+            return false;
+        }
+
+        return columnConfig.isCandidate(hasCandidate)
+                && (columnConfig.getKs() != null && columnConfig.getKs() > 0 && columnConfig.getIv() != null
+                && columnConfig.getIv() > 0 && columnConfig.getMean() != null
+                && columnConfig.getStdDev() != null && ((columnConfig.isCategorical()
+                && columnConfig.getBinCategory() != null && columnConfig.getBinCategory().size() > 1) || (columnConfig
+                .isNumerical() && columnConfig.getBinBoundary() != null && columnConfig.getBinBoundary().size() > 1)));
     }
 
     /**

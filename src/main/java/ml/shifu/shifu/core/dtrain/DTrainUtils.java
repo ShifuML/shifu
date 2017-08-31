@@ -149,10 +149,11 @@ public final class DTrainUtils {
     public static int[] getInputOutputCandidateCounts(List<ColumnConfig> columnConfigList) {
         @SuppressWarnings("unused")
         int input = 0, output = 0, totalCandidate = 0, goodCandidate = 0;
+        boolean hasCandidate = CommonUtils.hasCandidateColumns(columnConfigList);
         for(ColumnConfig config: columnConfigList) {
             if(!config.isTarget() && !config.isMeta()) {
                 totalCandidate += 1;
-                if(CommonUtils.isGoodCandidate(config)) {
+                if(CommonUtils.isGoodCandidate(config, hasCandidate)) {
                     goodCandidate += 1;
                 }
             }
@@ -165,7 +166,6 @@ public final class DTrainUtils {
         }
         return new int[] { input, output, goodCandidate };
     }
-
     /**
      * Get numeric and categorical input nodes number (final select) and output nodes number from column config, and
      * candidate input node number.
