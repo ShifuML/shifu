@@ -176,12 +176,10 @@ class DTEarlyStopDecider {
                 return false;
             }
             double minValue = this.minQueue.getQueueMin();
-            LOG.debug("MinQueue is full, get min value: {}", minValue);
             if(!this.averageQueue.add(minValue)) {
                 return false;
             }
             this.gain = this.averageQueue.getGain();
-            LOG.debug("Average Queue is full, get gain value: {}", this.gain);
             return true;
         }
 
