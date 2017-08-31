@@ -31,7 +31,6 @@ import java.util.List;
  * ColumnConfig list for its sub-class, it also try to find the column number of the target column
  */
 public abstract class AbstractActor extends UntypedActor {
-    private static Logger log = LoggerFactory.getLogger(AbstractActor.class);
 
     protected ModelConfig modelConfig;
     protected List<ColumnConfig> columnConfigList;
