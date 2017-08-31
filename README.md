@@ -9,7 +9,9 @@ Please download latest shifu [here](https://github.com/ShifuML/shifu/wiki/shifu-
 ## Conference
 
 [QCON Shanghai 2015](http://2015.qconshanghai.com/presentation/2827) [Slides](http://www.slideshare.net/pengshanzhang/large-scale-machine-learning-at-pay-pal-risk)
+
 [BDTC Beijing 2016](http://bdtc2016.hadooper.cn/dct/page/70107)
+
 [Strata Beijing 2017](https://strata.oreilly.com.cn/strata-cn/public/schedule/detail/59593?locale=en)
 
 ## What is Shifu?
