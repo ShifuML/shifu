@@ -24,6 +24,10 @@ Shifu provides a simple command-line interface for each step of the model buildi
 
 Shifu’s fast Hadoop-based, distributed neural network / logistic regression / gradient boosted trees training can reduce model training time from days to hours on TB data sets. Shifu integrates with Pig workflows on Hadoop, and Shifu-trained models can be integrated into production code with a simple Java API. Shifu leverages Pig, Akka, Encog and other open source projects.
 
+One of Shifu's pros is an end-to-end modeling pipeline in machine learning. With only configurations settings, a whole machine pipeline can be built and model can be much more easy to develop and push to production. The pipeline defined in Shifu is in below:
+
+![Shifu Pipeline](https://github.com/ShifuML/shifu/blob/develop/images/wiki/pipline.png)
+
 Model details about shifu can be found in our [wiki pages](https://github.com/ShifuML/shifu/wiki)
 
 ## Contributors
