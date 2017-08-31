@@ -152,7 +152,6 @@ public class EvalScoreUDF extends AbstractTrainerUDF<Tuple> {
                             Environment.getProperty(SHIFU_NN_OUTPUT_FIRST_HIDDENLAYER, Boolean.FALSE.toString()));
                 }
             }
-            log.debug("Is output first hidden layer value:" + this.outputFirstHiddenLayer);
         }
     }
 
