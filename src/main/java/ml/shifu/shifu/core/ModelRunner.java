@@ -15,6 +15,11 @@
  */
 package ml.shifu.shifu.core;
 
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.TreeMap;
+
 import ml.shifu.shifu.column.NSColumn;
 import ml.shifu.shifu.container.CaseScoreResult;
 import ml.shifu.shifu.container.ScoreObject;
@@ -23,17 +28,11 @@ import ml.shifu.shifu.container.obj.ModelConfig;
 import ml.shifu.shifu.container.obj.ModelTrainConf.ALGORITHM;
 import ml.shifu.shifu.core.model.ModelSpec;
 import ml.shifu.shifu.util.CommonUtils;
+
 import org.apache.commons.collections.MapUtils;
-import org.apache.pig.backend.executionengine.ExecException;
-import org.apache.pig.data.Tuple;
 import org.encog.ml.BasicML;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.TreeMap;
 
 /**
  * ModelRunner class is to load the model and run the model for input data
@@ -132,28 +131,6 @@ public class ModelRunner {
             return null;
         }
         return compute(rawDataMap);
-    }
-
-    /**
-     * Run model to compute score for input tuple
-     * 
-     * @param tuple
-     *            - the whole original input data as @Tuple
-     * @return CaseScoreResult
-     * @throws ExecException
-     *             exec exception in computing model score
-     */
-    public CaseScoreResult compute(Tuple tuple) throws ExecException {
-        if(header == null) {
-            throw new UnsupportedOperationException("The header are null, please use right constructor!");
-        }
-
-        Map<NSColumn, String> rawDataNsMap = CommonUtils.convertDataIntoNsMap(tuple, header);
-
-        if(MapUtils.isEmpty(rawDataNsMap)) {
-            return null;
-        }
-        return computeNsData(rawDataNsMap);
     }
 
     /**

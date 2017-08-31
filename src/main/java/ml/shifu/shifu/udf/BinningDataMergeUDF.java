@@ -57,7 +57,11 @@ public class BinningDataMergeUDF extends AbstractTrainerUDF<Tuple> {
 
         Integer columnId = (Integer) input.get(0);
         DataBag databag = (DataBag) input.get(1);
-        ColumnConfig columnConfig = super.columnConfigList.get(columnId);
+        int corrColumnId = columnId;
+        if(corrColumnId >= super.columnConfigList.size()){
+            corrColumnId = corrColumnId % super.columnConfigList.size();
+        }
+        ColumnConfig columnConfig = super.columnConfigList.get(corrColumnId);
 
         AbstractBinning<?> binning = null;
         AbstractBinning<?> backupBinning = null;

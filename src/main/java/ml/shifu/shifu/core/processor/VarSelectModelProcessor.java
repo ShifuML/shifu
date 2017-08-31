@@ -25,6 +25,7 @@ import ml.shifu.guagua.mapreduce.GuaguaMapReduceClient;
 import ml.shifu.guagua.mapreduce.GuaguaMapReduceConstants;
 import ml.shifu.shifu.column.NSColumn;
 import ml.shifu.shifu.container.obj.ColumnConfig;
+import ml.shifu.shifu.container.obj.ColumnConfig.ColumnFlag;
 import ml.shifu.shifu.container.obj.ModelVarSelectConf.PostCorrelationMetric;
 import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
 import ml.shifu.shifu.core.VariableSelector;
@@ -158,6 +159,29 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
                 }
                 log.info("-----  Done -----");
             } else {
+                // sync to make sure load from hdfs config is consistent with local configuration
+                syncDataToHdfs(super.modelConfig.getDataSet().getSource());
+
+                String filterExpressions = super.modelConfig.getSegmentFilterExpressionsAsString();
+                Environment.getProperties().put("shifu.segment.expressions", filterExpressions);
+                if(StringUtils.isNotBlank(filterExpressions)) {
+                    String[] splits = CommonUtils.split(filterExpressions,
+                            Constants.SHIFU_STATS_FILTER_EXPRESSIONS_DELIMETER);
+                    for(int i = 0; i < super.columnConfigList.size(); i++) {
+                        ColumnConfig config = super.columnConfigList.get(i);
+                        int rawSize = super.columnConfigList.size() / (1 + splits.length);
+                        if(config.isTarget()) {
+                            for(int j = 0; j < splits.length; j++) {
+                                ColumnConfig otherConfig = super.columnConfigList.get((j + 1) * rawSize + i);
+                                otherConfig.setColumnFlag(ColumnFlag.ForceRemove);
+                                otherConfig.setFinalSelect(false);
+                            }
+                            break;
+                        }
+                    }
+                }
+
+                this.saveColumnConfigList();
                 // sync to make sure load from hdfs config is consistent with local configuration
                 syncDataToHdfs(super.modelConfig.getDataSet().getSource());
 
@@ -796,6 +820,25 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
         if(!isToReset) {
             autoVarSelCondition();
         }
+
+        String filterExpressions = super.modelConfig.getSegmentFilterExpressionsAsString();
+        Environment.getProperties().put("shifu.segment.expressions", filterExpressions);
+        if(StringUtils.isNotBlank(filterExpressions)) {
+            String[] splits = CommonUtils.split(filterExpressions, Constants.SHIFU_STATS_FILTER_EXPRESSIONS_DELIMETER);
+            for(int i = 0; i < super.columnConfigList.size(); i++) {
+                ColumnConfig config = super.columnConfigList.get(i);
+                int rawSize = super.columnConfigList.size() / (1 + splits.length);
+                if(config.isTarget()) {
+                    for(int j = 0; j < splits.length; j++) {
+                        ColumnConfig otherConfig = super.columnConfigList.get((j + 1) * rawSize + i);
+                        otherConfig.setColumnFlag(ColumnFlag.ForceRemove);
+                        otherConfig.setFinalSelect(false);
+                    }
+                    break;
+                }
+            }
+        }
+
         try {
             this.saveColumnConfigList();
         } catch (Exception e) {

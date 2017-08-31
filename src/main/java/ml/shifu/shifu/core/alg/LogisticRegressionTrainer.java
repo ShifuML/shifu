@@ -72,11 +72,6 @@ public class LogisticRegressionTrainer extends AbstractTrainer {
      */
     @Override
     public double train() throws IOException {
-        LOG.info("Using logistic regression algorithm...");
-
-        LOG.info("Input Size: " + trainSet.getInputSize());
-        LOG.info("Ideal Size: " + trainSet.getIdealSize());
-
         classifier = new BasicNetwork();
 
         classifier.addLayer(new BasicLayer(new ActivationLinear(), true, trainSet.getInputSize()));
@@ -99,7 +94,6 @@ public class LogisticRegressionTrainer extends AbstractTrainer {
         LOG.info("Using " + (Double) modelConfig.getParams().get("LearningRate") + " training rate");
 
         for(int i = 0; i < epochs; i++) {
-
             propagation.iteration();
             double trainError = propagation.getError();
             double validError = classifier.calculateError(this.validSet);
@@ -114,9 +108,6 @@ public class LogisticRegressionTrainer extends AbstractTrainer {
                 LOG.info("Trainer-{}> Epoch #{} converged! Average Error: {}, Threshold: {}", trainerID, (i + 1),
                         df.format(avgErr), formatedThreshold);
                 break;
-            } else {
-                LOG.info("Trainer-{}> Epoch #{} Average Error: {}, Threshold: {}", trainerID, (i + 1),
-                        df.format(avgErr), formatedThreshold);
             }
         }
         propagation.finishTraining();
