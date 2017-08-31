@@ -6,7 +6,7 @@
 Please [download](https://github.com/ShifuML/shifu/wiki/shifu-0.10.5-hdp-yarn.tar.gz) latest shifu [here](https://github.com/ShifuML/shifu/wiki/shifu-0.10.5-hdp-yarn.tar.gz).
 
 ## Getting Started
-After shifu downloading, build your first model with Shifu [tutorial](https://github.com/ShifuML/shifu/wiki/Tutorial---Build-Your-First-ML-Model). Model details about shifu can be found in our [wiki pages](https://github.com/ShifuML/shifu/wiki).
+After shifu downloading, build your first model with Shifu [tutorial](https://github.com/ShifuML/shifu/wiki/Tutorial---Build-Your-First-ML-Model). More details about shifu can be found in our [wiki pages](https://github.com/ShifuML/shifu/wiki).
 
 ## What is Shifu?
 Shifu is an open-source, end-to-end machine learning and data mining framework built on top of Hadoop. Shifu is designed for data scientists, simplifying the life-cycle of building machine learning models. While originally built for fraud modeling, Shifu is generalized for many other modeling domains.
@@ -26,7 +26,7 @@ Shifu provides a simple command-line interface for each step of the model buildi
 
 Shifu’s fast Hadoop-based, distributed neural network / logistic regression / gradient boosted trees training can reduce model training time from days to hours on TB data sets. Shifu integrates with Pig workflows on Hadoop, and Shifu-trained models can be integrated into production code with a simple Java API. Shifu leverages Pig, Akka, Encog and other open source projects.
 
-Model details about shifu can be found in our [wiki pages](https://github.com/ShifuML/shifu/wiki)
+More details about shifu can be found in our [wiki pages](https://github.com/ShifuML/shifu/wiki)
 
 ## Conference
 
