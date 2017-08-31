@@ -33,6 +33,7 @@ import ml.shifu.shifu.core.Normalizer;
 import ml.shifu.shifu.core.dtrain.DTrainUtils;
 import ml.shifu.shifu.core.pmml.builder.impl.ZscoreLocalTransformCreator;
 import ml.shifu.shifu.util.CommonUtils;
+import ml.shifu.shifu.util.Constants;
 import ml.shifu.shifu.util.Environment;
 
 import org.apache.commons.collections.MapUtils;
@@ -80,6 +81,11 @@ public class EvalNormUDF extends AbstractTrainerUDF<Tuple> {
      */
     private boolean isOutputRaw = true;
 
+    /**
+     * Splits for filter expressions
+     */
+    private int segFilterSize = 0;
+
     public EvalNormUDF(String source, String pathModelConfig, String pathColumnConfig, String evalSetName, String scale)
             throws IOException {
         super(source, pathModelConfig, pathColumnConfig);
@@ -91,6 +97,18 @@ public class EvalNormUDF extends AbstractTrainerUDF<Tuple> {
         }
 
         this.headers = CommonUtils.getFinalHeaders(evalConfig);
+
+        String filterExpressions = "";
+        if(UDFContext.getUDFContext() != null && UDFContext.getUDFContext().getJobConf() != null) {
+            filterExpressions = UDFContext.getUDFContext().getJobConf().get("shifu.segment.expressions");
+        } else {
+            filterExpressions = Environment.getProperty("shifu.segment.expressions");
+        }
+
+        if(StringUtils.isNotBlank(filterExpressions)) {
+            this.segFilterSize = CommonUtils.split(filterExpressions,
+                    Constants.SHIFU_STATS_FILTER_EXPRESSIONS_DELIMETER).length;
+        }
 
         Set<String> evalNamesSet = new HashSet<String>(Arrays.asList(this.headers));
         this.outputNames = new ArrayList<String>();
@@ -189,7 +207,7 @@ public class EvalNormUDF extends AbstractTrainerUDF<Tuple> {
             this.modelRunner.setScoreScale(Integer.parseInt(this.scale));
         }
 
-        Map<NSColumn, String> rawDataNsMap = CommonUtils.convertDataIntoNsMap(input, this.headers);
+        Map<NSColumn, String> rawDataNsMap = CommonUtils.convertDataIntoNsMap(input, this.headers, this.segFilterSize);
         if(MapUtils.isEmpty(rawDataNsMap)) {
             return null;
         }
