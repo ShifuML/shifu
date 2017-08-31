@@ -4,7 +4,7 @@
 
 ## Getting Started
 
-Please visit [shifu.ml](http://shifu.ml) for download infomation, installation instructions, and our wiki page for current [tutorial](https://github.com/ShifuML/shifu/wiki/Tutorial---Build-Your-First-ML-Model).
+Please download latest shifu [here](https://github.com/ShifuML/shifu/wiki/shifu-0.10.5-hdp-yarn.tar.gz ), and build your first model with Shifu [tutorial](https://github.com/ShifuML/shifu/wiki/Tutorial---Build-Your-First-ML-Model).
 
 ## Conference
 
