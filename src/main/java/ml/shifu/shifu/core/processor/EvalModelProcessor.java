@@ -387,6 +387,9 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
         paramsMap.put("scale",
                 Environment.getProperty(Constants.SHIFU_SCORE_SCALE, Integer.toString(Scorer.DEFAULT_SCORE_SCALE)));
 
+        String expressionsAsString = super.modelConfig.getSegmentFilterExpressionsAsString();
+        Environment.getProperties().put("shifu.segment.expressions", expressionsAsString);
+
         String pigScript = "scripts/Eval.pig";
         Map<String, String> confMap = new HashMap<String, String>();
 
@@ -723,6 +726,17 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
         Set<NSColumn> names = new HashSet<NSColumn>();
         for(String evalColumnName: evalColumnNames) {
             names.add(new NSColumn(evalColumnName));
+        }
+
+        String filterExpressions = super.modelConfig.getSegmentFilterExpressionsAsString();
+        if(StringUtils.isNotBlank(filterExpressions)) {
+            int segFilterSize = CommonUtils
+                    .split(filterExpressions, Constants.SHIFU_STATS_FILTER_EXPRESSIONS_DELIMETER).length;
+            for(int i = 0; i < segFilterSize; i++) {
+                for(int j = 0; j < evalColumnNames.length; j++) {
+                    names.add(new NSColumn(evalColumnNames[j] + "_" + (i + 1)));
+                }
+            }
         }
 
         for(ColumnConfig config: this.columnConfigList) {

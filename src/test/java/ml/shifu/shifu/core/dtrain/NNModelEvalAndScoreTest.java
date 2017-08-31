@@ -160,6 +160,7 @@ public class NNModelEvalAndScoreTest {
         }
     }
 
+    @SuppressWarnings("unused")
     @Test
     public void testEvalScore() throws IOException {
         List<String> lines = FileUtils.readLines(new File("src/test/resources/dttest/data/nnbinary.csv"));
@@ -184,9 +185,8 @@ public class NNModelEvalAndScoreTest {
                 mapObj.put(headers[j], data[j]);
             }
             double[] scores = iNNModel.compute(mapObj);
-
             ScoreObject scoreObject = scorer.score(map);
-            System.out.println("Eval score is: " + scoreObject.getMeanScore() / 1000 + "; bi score: " + scores[0]);
+//            System.out.println("Eval score is: " + scoreObject.getMeanScore() / 1000 + "; bi score: " + scores[0]);
         }
 
     }
