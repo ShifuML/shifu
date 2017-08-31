@@ -48,8 +48,6 @@ public abstract class AbstractActor extends UntypedActor {
         for(ColumnConfig config: columnConfigList) {
             if(config.isTarget()) {
                 targetColumnNum = config.getColumnNum();
-                log.debug("Target Column Name: " + config.getColumnName());
-                log.debug("Target Column Num: " + targetColumnNum);
                 break;
             }
         }

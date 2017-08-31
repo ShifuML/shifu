@@ -308,7 +308,6 @@ public final class CommonUtils {
      */
     public static <T> T loadJSON(String path, SourceType sourceType, Class<T> clazz) throws IOException {
         checkPathAndMode(path, sourceType);
-        log.debug("loading {} with sourceType {}", path, sourceType);
         BufferedReader reader = null;
         try {
             reader = ShifuFileUtils.getReader(path, sourceType);
@@ -2445,7 +2444,6 @@ public final class CommonUtils {
         try {
             reader = ShifuFileUtils.getReader(firstValidFile, source);
             String firstLine = reader.readLine();
-            log.debug("The first line is - {}", firstLine);
             if(firstLine != null && firstLine.length() > 0) {
                 List<String> list = new ArrayList<String>();
                 for(String unit: Splitter.on(delimeter).split(firstLine)) {
