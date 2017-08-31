@@ -8,11 +8,11 @@ Please download latest shifu [here](https://github.com/ShifuML/shifu/wiki/shifu-
 
 ## Conference
 
-[QCON Shanghai 2015](http://2015.qconshanghai.com/presentation/2827) [Slides](http://www.slideshare.net/pengshanzhang/large-scale-machine-learning-at-pay-pal-risk)
+* [QCON Shanghai 2015](http://2015.qconshanghai.com/presentation/2827) [Slides](http://www.slideshare.net/pengshanzhang/large-scale-machine-learning-at-pay-pal-risk)
 
-[BDTC Beijing 2016](http://bdtc2016.hadooper.cn/dct/page/70107)
+* [BDTC Beijing 2016](http://bdtc2016.hadooper.cn/dct/page/70107)
 
-[Strata Beijing 2017](https://strata.oreilly.com.cn/strata-cn/public/schedule/detail/59593?locale=en)
+* [Strata Beijing 2017](https://strata.oreilly.com.cn/strata-cn/public/schedule/detail/59593?locale=en)
 
 ## What is Shifu?
 Shifu is an open-source, end-to-end machine learning and data mining framework built on top of Hadoop. Shifu is designed for data scientists, simplifying the life-cycle of building machine learning models. While originally built for fraud modeling, Shifu is generalized for many other modeling domains.
