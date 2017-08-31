@@ -2,20 +2,18 @@
 
 #
 
+## Download
+Please [download](https://github.com/ShifuML/shifu/wiki/shifu-0.10.5-hdp-yarn.tar.gz) latest shifu [here](https://github.com/ShifuML/shifu/wiki/shifu-0.10.5-hdp-yarn.tar.gz).
+
 ## Getting Started
-
-Please download latest shifu [here](https://github.com/ShifuML/shifu/wiki/shifu-0.10.5-hdp-yarn.tar.gz ), and build your first model with Shifu [tutorial](https://github.com/ShifuML/shifu/wiki/Tutorial---Build-Your-First-ML-Model). Model details about shifu can be found in our [wiki pages](https://github.com/ShifuML/shifu/wiki).
-
-## Conference
-
-* [QCON Shanghai 2015](http://2015.qconshanghai.com/presentation/2827) [Slides](http://www.slideshare.net/pengshanzhang/large-scale-machine-learning-at-pay-pal-risk)
-
-* [BDTC Beijing 2016](http://bdtc2016.hadooper.cn/dct/page/70107)
-
-* [Strata Beijing 2017](https://strata.oreilly.com.cn/strata-cn/public/schedule/detail/59593?locale=en)
+After shifu downloading, build your first model with Shifu [tutorial](https://github.com/ShifuML/shifu/wiki/Tutorial---Build-Your-First-ML-Model). More details about shifu can be found in our [wiki pages](https://github.com/ShifuML/shifu/wiki).
 
 ## What is Shifu?
 Shifu is an open-source, end-to-end machine learning and data mining framework built on top of Hadoop. Shifu is designed for data scientists, simplifying the life-cycle of building machine learning models. While originally built for fraud modeling, Shifu is generalized for many other modeling domains.
+
+One of Shifu's pros is an end-to-end modeling pipeline in machine learning. With only configurations settings, a whole machine pipeline can be built and model can be much more easy to develop and push to production. The pipeline defined in Shifu is in below:
+
+![Shifu Pipeline](https://github.com/ShifuML/shifu/blob/develop/images/wiki/pipline.png)
 
 Shifu provides a simple command-line interface for each step of the model building process, including
 
@@ -28,11 +26,15 @@ Shifu provides a simple command-line interface for each step of the model buildi
 
 Shifu’s fast Hadoop-based, distributed neural network / logistic regression / gradient boosted trees training can reduce model training time from days to hours on TB data sets. Shifu integrates with Pig workflows on Hadoop, and Shifu-trained models can be integrated into production code with a simple Java API. Shifu leverages Pig, Akka, Encog and other open source projects.
 
-One of Shifu's pros is an end-to-end modeling pipeline in machine learning. With only configurations settings, a whole machine pipeline can be built and model can be much more easy to develop and push to production. The pipeline defined in Shifu is in below:
+More details about shifu can be found in our [wiki pages](https://github.com/ShifuML/shifu/wiki)
 
-![Shifu Pipeline](https://github.com/ShifuML/shifu/blob/develop/images/wiki/pipline.png)
+## Conference
 
-Model details about shifu can be found in our [wiki pages](https://github.com/ShifuML/shifu/wiki)
+* [QCON Shanghai 2015](http://2015.qconshanghai.com/presentation/2827) [Slides](http://www.slideshare.net/pengshanzhang/large-scale-machine-learning-at-pay-pal-risk)
+
+* [BDTC Beijing 2016](http://bdtc2016.hadooper.cn/dct/page/70107)
+
+* [Strata Beijing 2017](https://strata.oreilly.com.cn/strata-cn/public/schedule/detail/59593?locale=en)
 
 ## Contributors
 
