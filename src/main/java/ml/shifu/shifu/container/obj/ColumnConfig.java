@@ -182,6 +182,12 @@ public class ColumnConfig {
     }
 
     @JsonIgnore
+    public boolean isCandidate(boolean hasCandidate) {
+        return ( hasCandidate
+                ? ColumnFlag.Candidate.equals(columnFlag) : (!isForceRemove() && !isMeta() && !isTarget()));
+    }
+
+    @JsonIgnore
     public boolean isNumerical() {
         // hybrid major is a numerical column but missing value is not target
         return columnType == ColumnType.N || columnType == ColumnType.H;
