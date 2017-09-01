@@ -64,8 +64,7 @@ public class DataPurifier {
             try {
                 dataFilterExpr = jexl.createExpression(filterExpressions);
             } catch (JexlException e) {
-                log.error("The expression is " + modelConfig.getFilterExpressions()
-                        + "is invalid, please use correct expression.", e);
+                log.error("The expression is " + filterExpressions + "is invalid, please use correct expression.", e);
                 dataFilterExpr = null;
             }
             this.headers = CommonUtils.getFinalHeaders(modelConfig);
