@@ -380,6 +380,7 @@ public class DTWorker
         Integer kCrossValidation = this.modelConfig.getTrain().getNumKFold();
         if(kCrossValidation != null && kCrossValidation > 0) {
             isKFoldCV = true;
+            LOG.info("Cross validation is enabled by kCrossValidation: {}.", kCrossValidation);
         }
 
         Double upSampleWeight = modelConfig.getTrain().getUpSampleWeight();
@@ -636,13 +637,17 @@ public class DTWorker
                                 if(this.isStratifiedSampling) {
                                     random = baggingRandomMap.get(classValue);
                                     if(random == null) {
-                                        random = new Random();
+                                        random = DTrainUtils.generateRandomBySampleSeed(
+                                                modelConfig.getTrain().getBaggingSampleSeed(),
+                                                CommonConstants.NOT_CONFIGURED_BAGGING_SEED);
                                         baggingRandomMap.put(classValue, random);
                                     }
                                 } else {
                                     random = baggingRandomMap.get(0);
                                     if(random == null) {
-                                        random = new Random();
+                                        random = DTrainUtils.generateRandomBySampleSeed(
+                                                modelConfig.getTrain().getBaggingSampleSeed(),
+                                                CommonConstants.NOT_CONFIGURED_BAGGING_SEED);
                                         baggingRandomMap.put(0, random);
                                     }
                                 }
@@ -921,10 +926,14 @@ public class DTWorker
         if(validationData != null) {
             this.validationData.switchState();
         }
-        LOG.info("    - # Records of the Master Data Set: {}.", this.count);
+        LOG.info("    - # Records of the Total Data Set: {}.", this.count);
         LOG.info("    - Bagging Sample Rate: {}.", this.modelConfig.getBaggingSampleRate());
         LOG.info("    - Bagging With Replacement: {}.", this.modelConfig.isBaggingWithReplacement());
-        LOG.info("        - Cross Validation Rate: {}.", this.modelConfig.getValidSetRate());
+        if(this.isKFoldCV) {
+            LOG.info("        - Validation Rate(kFold): {}.", 1d / this.modelConfig.getTrain().getNumKFold());
+        } else {
+            LOG.info("        - Validation Rate: {}.", this.modelConfig.getValidSetRate());
+        }
         LOG.info("        - # Records of the Training Set: {}.", this.trainingData.size());
         if(modelConfig.isRegression() || modelConfig.getTrain().isOneVsAll()) {
             LOG.info("        - # Positive Bagging Selected Records of the Training Set: {}.",
@@ -1501,13 +1510,15 @@ public class DTWorker
             if(this.isStratifiedSampling) {
                 random = baggingRandomMap.get(classValue);
                 if(random == null) {
-                    random = new Random();
+                    random = DTrainUtils.generateRandomBySampleSeed(modelConfig.getTrain().getBaggingSampleSeed(),
+                            CommonConstants.NOT_CONFIGURED_BAGGING_SEED);
                     baggingRandomMap.put(classValue, random);
                 }
             } else {
                 random = baggingRandomMap.get(0);
                 if(random == null) {
-                    random = new Random();
+                    random = DTrainUtils.generateRandomBySampleSeed(modelConfig.getTrain().getBaggingSampleSeed(),
+                            CommonConstants.NOT_CONFIGURED_BAGGING_SEED);
                     baggingRandomMap.put(0, random);
                 }
             }

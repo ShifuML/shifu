@@ -146,6 +146,14 @@
                 "type" : "number",
                 "directive": "input"
             }, {
+                "name": "hybridColumnNameFile",
+                "type" : "text",
+                "directive": "input"
+            }, {
+                "name": "segExpressionFile",
+                "type" : "text",
+                "directive": "input"
+            }, {
                 "name": "categoricalColumnNameFile",
                 "type" : "text",
                 "directive": "input"
@@ -413,6 +421,11 @@
                 "type": "number",
                 "directive": "input",
                 "defval": 0.8
+            }, {
+                "name": "baggingSampleSeed",
+                "type": "number",
+                "directive": "input",
+                "defval": -1
             }, {
                 "name": "validSetRate",
                 "type": "number",

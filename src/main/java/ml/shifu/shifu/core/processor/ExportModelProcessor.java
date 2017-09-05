@@ -29,10 +29,15 @@ import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.container.obj.ModelTrainConf.ALGORITHM;
 import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
 import ml.shifu.shifu.core.ColumnStatsCalculator;
+import ml.shifu.shifu.core.TreeModel;
 import ml.shifu.shifu.core.binning.ColumnConfigDynamicBinning;
 import ml.shifu.shifu.core.binning.obj.AbstractBinInfo;
 import ml.shifu.shifu.core.binning.obj.CategoricalBinInfo;
 import ml.shifu.shifu.core.binning.obj.NumericalBinInfo;
+import ml.shifu.shifu.core.dtrain.DTrainUtils;
+import ml.shifu.shifu.core.dtrain.dt.BinaryDTSerializer;
+import ml.shifu.shifu.core.dtrain.dt.TreeNode;
+import ml.shifu.shifu.core.dtrain.nn.BinaryNNSerializer;
 import ml.shifu.shifu.core.pmml.PMMLTranslator;
 import ml.shifu.shifu.core.pmml.PMMLUtils;
 import ml.shifu.shifu.core.pmml.builder.PMMLConstructorFactory;
@@ -45,6 +50,8 @@ import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.collections.MapUtils;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang.StringUtils;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.dmg.pmml.PMML;
 import org.encog.ml.BasicML;
@@ -64,6 +71,8 @@ public class ExportModelProcessor extends BasicModelProcessor implements Process
 
     public static final String PMML = "pmml";
     public static final String COLUMN_STATS = "columnstats";
+    public static final String ONE_BAGGING_MODEL = "bagging";
+    public static final String ONE_BAGGING_PMML_MODEL = "baggingpmml";
     public static final String WOE_MAPPING = "woemapping";
 
     public static final String IS_CONCISE = "IS_CONCISE";
@@ -97,20 +106,72 @@ public class ExportModelProcessor extends BasicModelProcessor implements Process
             type = PMML;
         }
 
-        if(type.equalsIgnoreCase(PMML)) {
-            log.info("Convert models into {} format", type);
+        String modelsPath = pathFinder.getModelsPath(SourceType.LOCAL);
+        if(type.equalsIgnoreCase(ONE_BAGGING_MODEL)) {
+            if(!"nn".equalsIgnoreCase(modelConfig.getAlgorithm())
+                    && !CommonUtils.isTreeModel(modelConfig.getAlgorithm())) {
+                log.warn("Currently one bagging model is only supported in NN/GBT/RF algorithm.");
+            } else {
+                List<BasicML> models = CommonUtils.loadBasicModels(modelsPath,
+                        ALGORITHM.valueOf(modelConfig.getAlgorithm().toUpperCase()));
+                if(models.size() < 1) {
+                    log.warn("No model is found in {}.", modelsPath);
+                } else {
+                    log.info("Convert nn models into one binary bagging model.");
+                    Configuration conf = new Configuration();
+                    Path output = new Path(pathFinder.getBaggingModelPath(SourceType.LOCAL), "model.b"
+                            + modelConfig.getAlgorithm());
+                    if("nn".equalsIgnoreCase(modelConfig.getAlgorithm())) {
+                        BinaryNNSerializer.save(modelConfig, columnConfigList, models, FileSystem.getLocal(conf),
+                                output);
+                    } else if(CommonUtils.isTreeModel(modelConfig.getAlgorithm())) {
+                        List<List<TreeNode>> baggingTrees = new ArrayList<List<TreeNode>>();
+                        for(int i = 0; i < models.size(); i++) {
+                            TreeModel tm = (TreeModel) models.get(i);
+                            // TreeModel only has one TreeNode instance although it is list inside
+                            baggingTrees.add(tm.getIndependentTreeModel().getTrees().get(0));
+                        }
 
-            List<BasicML> models = CommonUtils.loadBasicModels(pathFinder.getModelsPath(SourceType.LOCAL),
+                        int[] inputOutputIndex = DTrainUtils
+                                .getNumericAndCategoricalInputAndOutputCounts(this.columnConfigList);
+                        // numerical + categorical = # of all input
+                        int inputCount = inputOutputIndex[0] + inputOutputIndex[1];
+
+                        BinaryDTSerializer.save(modelConfig, columnConfigList, baggingTrees, modelConfig.getParams()
+                                .get("Loss").toString(), inputCount, FileSystem.getLocal(conf), output);
+                    }
+                    log.info("Please find one unified bagging model in local {}.", output);
+                }
+            }
+        } else if(type.equalsIgnoreCase(PMML)) {
+            // typical pmml generation
+            List<BasicML> models = CommonUtils.loadBasicModels(modelsPath,
                     ALGORITHM.valueOf(modelConfig.getAlgorithm().toUpperCase()));
 
-            PMMLTranslator translator = PMMLConstructorFactory.produce(modelConfig, columnConfigList, isConcise());
+            PMMLTranslator translator = PMMLConstructorFactory.produce(modelConfig, columnConfigList, isConcise(),
+                    false);
 
             for(int index = 0; index < models.size(); index++) {
-                log.info("\t start to generate " + "pmmls" + File.separator + modelConfig.getModelSetName()
-                        + Integer.toString(index) + ".pmml");
-                PMML pmml = translator.build(models.get(index));
-                PMMLUtils.savePMML(pmml,
-                        "pmmls" + File.separator + modelConfig.getModelSetName() + Integer.toString(index) + ".pmml");
+                String path = "pmmls" + File.separator + modelConfig.getModelSetName() + Integer.toString(index)
+                        + ".pmml";
+                log.info("\t Start to generate " + path);
+                PMML pmml = translator.build(Arrays.asList(new BasicML[] { models.get(index) }));
+                PMMLUtils.savePMML(pmml, path);
+            }
+        } else if(type.equalsIgnoreCase(ONE_BAGGING_PMML_MODEL)) {
+            // one unified bagging pmml generation
+            log.info("Convert models into one bagging pmml model {} format", type);
+            if(!"nn".equalsIgnoreCase(modelConfig.getAlgorithm())) {
+                log.warn("Currently one bagging pmml model is only supported in NN algorithm.");
+            } else {
+                List<BasicML> models = CommonUtils.loadBasicModels(modelsPath,
+                        ALGORITHM.valueOf(modelConfig.getAlgorithm().toUpperCase()));
+                PMMLTranslator translator = PMMLConstructorFactory.produce(modelConfig, columnConfigList, isConcise(),
+                        true);
+                String path = "pmmls" + File.separator + modelConfig.getModelSetName() + ".pmml";
+                log.info("\t Start to generate one unified model to: " + path);
+                PMML pmml = translator.build(models);
+                PMMLUtils.savePMML(pmml, path);
             }
         } else if(type.equalsIgnoreCase(COLUMN_STATS)) {
             saveColumnStatus();
