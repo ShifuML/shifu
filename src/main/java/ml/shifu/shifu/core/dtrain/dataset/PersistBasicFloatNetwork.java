@@ -15,12 +15,19 @@
  */
 package ml.shifu.shifu.core.dtrain.dataset;
 
+import java.io.DataInput;
+import java.io.DataOutput;
+import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Set;
+
+import ml.shifu.shifu.core.dtrain.nn.ActivationReLU;
 
 import org.apache.commons.lang.StringUtils;
 import org.encog.engine.network.activation.ActivationFunction;
@@ -193,6 +200,174 @@ public class PersistBasicFloatNetwork implements EncogPersistor {
             out.writeProperty("SUBSETFEATURES", subFeaturesStr);
         }
         out.flush();
+    }
+
+    public BasicFloatNetwork readNetwork(final DataInput in) throws IOException {
+        final BasicFloatNetwork result = new BasicFloatNetwork();
+        final FlatNetwork flat = new FlatNetwork();
+
+        // read properties
+        Map<String, String> properties = new HashMap<String, String>();
+        int size = in.readInt();
+        for(int i = 0; i < size; i++) {
+            properties.put(ml.shifu.shifu.core.dtrain.StringUtils.readString(in),
+                    ml.shifu.shifu.core.dtrain.StringUtils.readString(in));
+        }
+        result.getProperties().putAll(properties);
+
+        // read fields
+        flat.setBeginTraining(in.readInt());
+        flat.setConnectionLimit(in.readDouble());
+
+        flat.setContextTargetOffset(readIntArray(in));
+        flat.setContextTargetSize(readIntArray(in));
+
+        flat.setEndTraining(in.readInt());
+        flat.setHasContext(in.readBoolean());
+        flat.setInputCount(in.readInt());
+
+        flat.setLayerCounts(readIntArray(in));
+        flat.setLayerFeedCounts(readIntArray(in));
+        flat.setLayerContextCount(readIntArray(in));
+        flat.setLayerIndex(readIntArray(in));
+        flat.setLayerOutput(readDoubleArray(in));
+        flat.setOutputCount(in.readInt());
+        flat.setLayerSums(new double[flat.getLayerOutput().length]);
+        flat.setWeightIndex(readIntArray(in));
+        flat.setWeights(readDoubleArray(in));
+        flat.setBiasActivation(readDoubleArray(in));
+
+        // read activations
+        flat.setActivationFunctions(new ActivationFunction[flat.getLayerCounts().length]);
+        int acSize = in.readInt();
+        for(int i = 0; i < acSize; i++) {
+            String name = ml.shifu.shifu.core.dtrain.StringUtils.readString(in);
+            if(name.equals("ActivationReLU")) {
+                name = ActivationReLU.class.getName();
+            } else {
+                name = "org.encog.engine.network.activation." + name;
+            }
+            ActivationFunction af = null;
+            try {
+                final Class<?> clazz = Class.forName(name);
+                af = (ActivationFunction) clazz.newInstance();
+            } catch (final ClassNotFoundException e) {
+                throw new PersistError(e);
+            } catch (final InstantiationException e) {
+                throw new PersistError(e);
+            } catch (final IllegalAccessException e) {
+                throw new PersistError(e);
+            }
+            double[] params = readDoubleArray(in);
+            for(int j = 0; j < params.length; j++) {
+                af.setParam(j, params[j]);
+            }
+            flat.getActivationFunctions()[i] = af;
+        }
+
+        // read subset
+        int subsetSize = in.readInt();
+        Set<Integer> featureList = new HashSet<Integer>();
+        for(int i = 0; i < subsetSize; i++) {
+            featureList.add(in.readInt());
+        }
+        result.setFeatureSet(featureList);
+
+        result.getStructure().setFlat(flat);
+        return result;
+    }
+
+    public void saveNetwork(DataOutput out, final BasicFloatNetwork network) throws IOException {
+        final FlatNetwork flat = network.getStructure().getFlat();
+        // write general properties
+        Map<String, String> properties = network.getProperties();
+        if(properties == null) {
+            out.writeInt(0);
+        } else {
+            out.writeInt(properties.size());
+            for(Entry<String, String> entry: properties.entrySet()) {
+                ml.shifu.shifu.core.dtrain.StringUtils.writeString(out, entry.getKey());
+                ml.shifu.shifu.core.dtrain.StringUtils.writeString(out, entry.getValue());
+            }
+        }
+
+        // write fields values in BasicFloatNetwork
+        out.writeInt(flat.getBeginTraining());
+        out.writeDouble(flat.getConnectionLimit());
+
+        writeIntArray(out, flat.getContextTargetOffset());
+        writeIntArray(out, flat.getContextTargetSize());
+
+        out.writeInt(flat.getEndTraining());
+        out.writeBoolean(flat.getHasContext());
+        out.writeInt(flat.getInputCount());
+
+        writeIntArray(out, flat.getLayerCounts());
+        writeIntArray(out, flat.getLayerFeedCounts());
+        writeIntArray(out, flat.getLayerContextCount());
+        writeIntArray(out, flat.getLayerIndex());
+        writeDoubleArray(out, flat.getLayerOutput());
+        out.writeInt(flat.getOutputCount());
+        writeIntArray(out, flat.getWeightIndex());
+        writeDoubleArray(out, flat.getWeights());
+        writeDoubleArray(out, flat.getBiasActivation());
+
+        // write activation list
+        out.writeInt(flat.getActivationFunctions().length);
+        for(final ActivationFunction af: flat.getActivationFunctions()) {
+            ml.shifu.shifu.core.dtrain.StringUtils.writeString(out, af.getClass().getSimpleName());
+            writeDoubleArray(out, af.getParams());
+        }
+        // write sub sets
+        Set<Integer> featureList = network.getFeatureSet();
+        if(featureList == null || featureList.size() == 0) {
+            out.writeInt(0);
+        } else {
+            out.writeInt(featureList.size());
+            for(Integer integer: featureList) {
+                out.writeInt(integer);
+            }
+        }
+    }
+
+    private int[] readIntArray(DataInput in) throws IOException {
+        int size = in.readInt();
+        int[] array = new int[size];
+        for(int i = 0; i < size; i++) {
+            array[i] = in.readInt();
+        }
+        return array;
+    }
+
+    private double[] readDoubleArray(DataInput in) throws IOException {
+        int size = in.readInt();
+        double[] array = new double[size];
+        for(int i = 0; i < size; i++) {
+            array[i] = in.readDouble();
+        }
+        return array;
+    }
+
+    private void writeIntArray(DataOutput out, int[] array) throws IOException {
+        if(array == null) {
+            out.writeInt(0);
+        } else {
+            out.writeInt(array.length);
+            for(int i: array) {
+                out.writeInt(i);
+            }
+        }
+    }
+
+    private void writeDoubleArray(DataOutput out, double[] array) throws IOException {
+        if(array == null) {
+            out.writeInt(0);
+        } else {
+            out.writeInt(array.length);
+            for(double d: array) {
+                out.writeDouble(d);
+            }
+        }
     }
 
 }

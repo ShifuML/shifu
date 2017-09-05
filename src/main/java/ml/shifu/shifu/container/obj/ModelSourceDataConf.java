@@ -15,7 +15,9 @@
  */
 package ml.shifu.shifu.container.obj;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
 import java.util.ArrayList;
 
@@ -26,6 +28,10 @@ import java.util.ArrayList;
 public class ModelSourceDataConf extends RawSourceData {
 
     private String categoricalColumnNameFile;
+
+    private String hybridColumnNameFile;
+
+    private String segExpressionFile;
 
     public String getCategoricalColumnNameFile() {
         return categoricalColumnNameFile;
@@ -38,6 +44,23 @@ public class ModelSourceDataConf extends RawSourceData {
     @JsonIgnoreProperties(ignoreUnknown = true)
     public RawSourceData cloneRawSourceData() {
         return super.clone();
+    }
+
+    /**
+     * @return the hybridColumnNameFile
+     */
+    @JsonIgnore
+    public String getHybridColumnNameFile() {
+        return hybridColumnNameFile;
+    }
+
+    /**
+     * @param hybridColumnNameFile
+     *            the hybridColumnNameFile to set
+     */
+    @JsonProperty
+    public void setHybridColumnNameFile(String hybridColumnNameFile) {
+        this.hybridColumnNameFile = hybridColumnNameFile;
     }
 
     @Override
@@ -58,8 +81,28 @@ public class ModelSourceDataConf extends RawSourceData {
         other.setMissingOrInvalidValues(this.getMissingOrInvalidValues());
 
         other.setCategoricalColumnNameFile(categoricalColumnNameFile);
+        other.setHybridColumnNameFile(this.hybridColumnNameFile);
+        other.setSegExpressionFile(this.segExpressionFile);
         other.setMetaColumnNameFile(this.getMetaColumnNameFile());
 
         return other;
     }
+
+    /**
+     * @return the segExpressionFile
+     */
+    @JsonIgnore
+    public String getSegExpressionFile() {
+        return segExpressionFile;
+    }
+
+    /**
+     * @param segExpressionFile
+     *            the segExpressionFile to set
+     */
+    @JsonProperty
+    public void setSegExpressionFile(String segExpressionFile) {
+        this.segExpressionFile = segExpressionFile;
+    }
+
 }

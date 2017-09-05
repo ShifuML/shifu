@@ -29,7 +29,6 @@ import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
 import java.util.Random;
 import java.util.Scanner;
 import java.util.Set;
@@ -81,7 +80,6 @@ import ml.shifu.shifu.util.CommonUtils;
 import ml.shifu.shifu.util.Constants;
 import ml.shifu.shifu.util.Environment;
 import ml.shifu.shifu.util.HDFSUtils;
-import ml.shifu.shifu.util.JSONUtils;
 
 import org.antlr.runtime.RecognitionException;
 import org.apache.commons.collections.CollectionUtils;
@@ -111,7 +109,6 @@ import org.encog.engine.network.activation.ActivationSigmoid;
 import org.encog.engine.network.activation.ActivationTANH;
 import org.encog.ml.BasicML;
 import org.encog.ml.data.MLDataSet;
-import org.encog.neural.networks.BasicNetwork;
 import org.jboss.netty.bootstrap.ServerBootstrap;
 import org.joda.time.ReadableInstant;
 import org.slf4j.Logger;
@@ -412,7 +409,8 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
         if(kCrossValidation != null && kCrossValidation > 0) {
             isKFoldCV = true;
             baggingNum = modelConfig.getTrain().getNumKFold();
-            if(baggingNum != super.getModelConfig().getBaggingNum()) {
+            if(baggingNum != super.getModelConfig().getBaggingNum() && gs.hasHyperParam()) {
+                // if it is grid search mode, then kfold mode is disabled
                 LOG.warn(
                         "'train:baggingNum' is set to {} because of k-fold cross validation is enabled by 'numKFold' not -1.",
                         baggingNum);
@@ -420,7 +418,6 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
         }
 
         long start = System.currentTimeMillis();
-        LOG.info("Distributed trainning with baggingNum: {}", baggingNum);
         boolean isParallel = Boolean.valueOf(
                 Environment.getProperty(Constants.SHIFU_DTRAIN_PARALLEL, SHIFU_DEFAULT_DTRAIN_PARALLEL)).booleanValue();
         GuaguaMapReduceClient guaguaClient;
@@ -476,9 +473,15 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
         if(gs.hasHyperParam()) {
             parallelGroups = (gs.getFlattenParams().size() % parallelNum == 0 ? gs.getFlattenParams().size()
                     / parallelNum : gs.getFlattenParams().size() / parallelNum + 1);
+            baggingNum = gs.getFlattenParams().size();
+            LOG.warn("'train:baggingNum' is set to {} because of grid search enabled by settings in 'train#params'.",
+                    gs.getFlattenParams().size());
+
         } else {
             parallelGroups = baggingNum % parallelNum == 0 ? baggingNum / parallelNum : baggingNum / parallelNum + 1;
         }
+
+        LOG.info("Distributed trainning with baggingNum: {}", baggingNum);
         List<String> progressLogList = new ArrayList<String>(baggingNum);
         boolean isOneJobNotContinuous = false;
         for(int j = 0; j < parallelGroups; j++) {
@@ -513,6 +516,10 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
                 String modelName = getModelName(i);
                 Path modelPath = fileSystem.makeQualified(new Path(super.getPathFinder().getModelsPath(sourceType),
                         modelName));
+
+                Path bModelPath = fileSystem.makeQualified(new Path(super.getPathFinder().getNNBinaryModelsPath(
+                        sourceType), modelName));
+
                 // check if job is continunous training, this can be set multiple times and we only get last one
                 boolean isContinous = false;
                 if(gs.hasHyperParam()) {
@@ -570,9 +577,9 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
 
                     Set<Integer> subFeatures = null;
                     if(isContinous) {
-                        BasicFloatNetwork existingModel = (BasicFloatNetwork) CommonUtils.loadModel(modelConfig,
-                                modelPath,
-                                ShifuFileUtils.getFileSystemBySourceType(this.modelConfig.getDataSet().getSource()));
+                        BasicFloatNetwork existingModel = (BasicFloatNetwork) CommonUtils.getBasicNetwork(CommonUtils
+                                .loadModel(modelConfig, modelPath, ShifuFileUtils
+                                        .getFileSystemBySourceType(this.modelConfig.getDataSet().getSource())));
                         if(existingModel == null) {
                             subFeatures = new HashSet<Integer>(getSubsamplingFeatures(allFeatures,
                                     featureSubsetStrategy, featureSubsetRate, inputNodeCount));
@@ -595,6 +602,10 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
 
                 localArgs.add(String.format(CommonConstants.MAPREDUCE_PARAM_FORMAT, CommonConstants.GUAGUA_OUTPUT,
                         modelPath.toString()));
+
+                localArgs.add(String.format(CommonConstants.MAPREDUCE_PARAM_FORMAT,
+                        Constants.SHIFU_NN_BINARY_MODEL_PATH, bModelPath.toString()));
+
                 if(gs.hasHyperParam() || isKFoldCV) {
                     // k-fold cv need val error
                     Path valErrPath = fileSystem.makeQualified(new Path(super.getPathFinder().getValErrorPath(
@@ -634,6 +645,20 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
         }
 
         if(isKFoldCV) {
+            // k-fold we also copy model files at last, such models can be used for evaluation
+            for(int i = 0; i < baggingNum; i++) {
+                String modelName = getModelName(i);
+                Path modelPath = fileSystem.makeQualified(new Path(super.getPathFinder().getModelsPath(sourceType),
+                        modelName));
+                if(ShifuFileUtils.getFileSystemBySourceType(sourceType).exists(modelPath)) {
+                    copyModelToLocal(modelName, modelPath, sourceType);
+                } else {
+                    LOG.warn("Model {} isn't there, maybe job is failed, for bagging it can be ignored.",
+                            modelPath.toString());
+                    status = 1;
+                }
+            }
+
             List<Double> valErrs = readAllValidationErrors(sourceType, fileSystem, kCrossValidation);
             double sum = 0d;
             for(Double err: valErrs) {
@@ -646,13 +671,20 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
             // select the best parameter composite in grid search
             LOG.info("Original grid search params: {}", modelConfig.getParams());
             Map<String, Object> params = findBestParams(sourceType, fileSystem, gs);
-            // TODO, copy top 5 models for evaluation? (no need further train)
-            for(Entry<String, Object> entry: params.entrySet()) {
-                modelConfig.getParams().put(entry.getKey(), entry.getValue());
+            // temp copy all models for evaluation
+            for(int i = 0; i < baggingNum; i++) {
+                String modelName = getModelName(i);
+                Path modelPath = fileSystem.makeQualified(new Path(super.getPathFinder().getModelsPath(sourceType),
+                        modelName));
+                if(ShifuFileUtils.getFileSystemBySourceType(sourceType).exists(modelPath)) {
+                    copyModelToLocal(modelName, modelPath, sourceType);
+                } else {
+                    LOG.warn("Model {} isn't there, maybe job is failed, for bagging it can be ignored.",
+                            modelPath.toString());
+                    status = 1;
+                }
             }
-            super.pathFinder.getModelConfigPath(SourceType.LOCAL);
-            // update ModelConfig.json
-            JSONUtils.writeValue(new File(super.pathFinder.getModelConfigPath(SourceType.LOCAL)), modelConfig);
+            LOG.info("The best parameters in grid search is {}", params);
             LOG.info("Grid search on distributed training finished in {}ms.", System.currentTimeMillis() - start);
         } else {
             // copy all models to local after all jobs are finished
@@ -873,7 +905,9 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
     @SuppressWarnings("unchecked")
     private boolean inputOutputModelCheckSuccess(FileSystem fileSystem, Path modelPath, Map<String, Object> modelParams)
             throws IOException {
-        BasicNetwork model = (BasicNetwork) CommonUtils.loadModel(this.modelConfig, modelPath, fileSystem);
+        BasicML basicML = CommonUtils.loadModel(this.modelConfig, modelPath, fileSystem);
+        BasicFloatNetwork model = (BasicFloatNetwork) CommonUtils.getBasicNetwork(basicML);
+
         int[] outputCandidateCounts = DTrainUtils.getInputOutputCandidateCounts(getColumnConfigList());
         int inputs = outputCandidateCounts[0] == 0 ? outputCandidateCounts[2] : outputCandidateCounts[0];
         boolean isInputOutConsistent = model.getInputCount() == inputs
@@ -954,7 +988,7 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
 
     private TailThread startTailThread(final String[] progressLog) {
         TailThread thread = new TailThread(progressLog);
-        thread.setName("Tail Progress Thread");
+        thread.setName("Training Progress");
         thread.setDaemon(true);
         thread.setUncaughtExceptionHandler(new UncaughtExceptionHandler() {
             @Override
@@ -1244,8 +1278,7 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
             // 0.85 is a factor if selected ratio is 0.5 and only be effective if selected ratio over 2
             ratio = 0.85 * ratio;
         }
-        maxCombineSize = Double.valueOf((maxCombineSize * 1d * (ratio))).longValue();
-        return maxCombineSize;
+        return Double.valueOf((maxCombineSize * 1d * (ratio))).longValue();
     }
 
     private void copyModelToLocal(String modelName, Path modelPath, SourceType sourceType) throws IOException {

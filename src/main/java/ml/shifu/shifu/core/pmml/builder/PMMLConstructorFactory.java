@@ -38,7 +38,8 @@ import org.dmg.pmml.ModelStats;
  */
 public class PMMLConstructorFactory {
 
-    public static PMMLTranslator produce(ModelConfig modelConfig, List<ColumnConfig> columnConfigList, boolean isConcise) {
+    public static PMMLTranslator produce(ModelConfig modelConfig, List<ColumnConfig> columnConfigList,
+            boolean isConcise, boolean isOutBaggingToOne) {
 
         AbstractPmmlElementCreator<Model> modelCreator = null;
         AbstractSpecifCreator specifCreator = null;
@@ -81,6 +82,6 @@ public class PMMLConstructorFactory {
         }
 
         return new PMMLTranslator(modelCreator, dataDictionaryCreator, miningSchemaCreator, modelStatsCreator,
-                localTransformationsCreator, specifCreator);
+                localTransformationsCreator, specifCreator, isOutBaggingToOne);
     }
 }

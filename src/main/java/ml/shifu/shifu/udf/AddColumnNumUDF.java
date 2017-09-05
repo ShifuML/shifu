@@ -122,7 +122,6 @@ public class AddColumnNumUDF extends AbstractTrainerUDF<DataBag> {
         }
 
         for(int i = 0; i < size; i++) {
-            // if(config.isCandidate()) {
             Tuple tuple = tupleFactory.newTuple(TOTAL_COLUMN_CNT);
             tuple.set(COLUMN_ID_INDX, i);
 
@@ -149,7 +148,6 @@ public class AddColumnNumUDF extends AbstractTrainerUDF<DataBag> {
             // get weight value
             tuple.set(COLUMN_WEIGHT_INDX, getWeightColumnVal(input));
             bag.add(tuple);
-            // }
         }
 
         return bag;

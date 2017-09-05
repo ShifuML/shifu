@@ -15,30 +15,57 @@
  */
 package ml.shifu.shifu.util;
 
-import com.google.common.base.Function;
-import com.google.common.base.Splitter;
-import com.google.common.collect.Collections2;
-import com.google.common.collect.Lists;
+import java.io.BufferedInputStream;
+import java.io.BufferedReader;
+import java.io.BufferedWriter;
+import java.io.DataInputStream;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FilenameFilter;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.io.Reader;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
+import java.util.Set;
+import java.util.TreeMap;
+import java.util.zip.GZIPInputStream;
+
 import ml.shifu.shifu.column.NSColumn;
 import ml.shifu.shifu.column.NSColumnUtils;
 import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.container.obj.ColumnConfig.ColumnFlag;
-import ml.shifu.shifu.container.obj.ColumnConfig.ColumnType;
+import ml.shifu.shifu.container.obj.ColumnType;
 import ml.shifu.shifu.container.obj.EvalConfig;
 import ml.shifu.shifu.container.obj.ModelConfig;
 import ml.shifu.shifu.container.obj.ModelTrainConf.ALGORITHM;
 import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
 import ml.shifu.shifu.core.LR;
+import ml.shifu.shifu.core.NNModel;
 import ml.shifu.shifu.core.Normalizer;
 import ml.shifu.shifu.core.TreeModel;
 import ml.shifu.shifu.core.dtrain.CommonConstants;
+import ml.shifu.shifu.core.dtrain.dataset.BasicFloatNetwork;
 import ml.shifu.shifu.core.dtrain.dataset.PersistBasicFloatNetwork;
+import ml.shifu.shifu.core.dtrain.gs.GridSearch;
 import ml.shifu.shifu.core.dtrain.lr.LogisticRegressionContants;
 import ml.shifu.shifu.core.model.ModelSpec;
 import ml.shifu.shifu.exception.ShifuErrorCode;
 import ml.shifu.shifu.exception.ShifuException;
 import ml.shifu.shifu.fs.PathFinder;
 import ml.shifu.shifu.fs.ShifuFileUtils;
+
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.collections.Predicate;
 import org.apache.commons.io.IOUtils;
@@ -46,22 +73,29 @@ import org.apache.commons.lang.ArrayUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.lang.math.NumberUtils;
 import org.apache.commons.lang3.tuple.MutablePair;
-import org.apache.hadoop.fs.*;
+import org.apache.hadoop.fs.FSDataInputStream;
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.LocatedFileStatus;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.PathFilter;
+import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.pig.backend.executionengine.ExecException;
 import org.apache.pig.data.Tuple;
 import org.encog.ml.BasicML;
 import org.encog.ml.data.MLDataPair;
 import org.encog.ml.data.basic.BasicMLData;
 import org.encog.ml.data.basic.BasicMLDataPair;
+import org.encog.neural.networks.BasicNetwork;
 import org.encog.persist.EncogDirectoryPersistence;
 import org.encog.persist.PersistorRegistry;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.*;
-import java.util.*;
-import java.util.Map.Entry;
+import com.google.common.base.Function;
+import com.google.common.base.Splitter;
+import com.google.common.collect.Collections2;
+import com.google.common.collect.Lists;
 
 /**
  * {@link CommonUtils} is used to for almost all kinds of utility function in this framework.
@@ -274,7 +308,6 @@ public final class CommonUtils {
      */
     public static <T> T loadJSON(String path, SourceType sourceType, Class<T> clazz) throws IOException {
         checkPathAndMode(path, sourceType);
-        log.debug("loading {} with sourceType {}", path, sourceType);
         BufferedReader reader = null;
         try {
             reader = ShifuFileUtils.getReader(path, sourceType);
@@ -292,7 +325,11 @@ public final class CommonUtils {
      *             if any IO exception in parsing json.
      */
     public static List<ColumnConfig> loadColumnConfigList() throws IOException {
-        return loadColumnConfigList(Constants.LOCAL_COLUMN_CONFIG_JSON, SourceType.LOCAL);
+        List<ColumnConfig> columnConfigList = loadColumnConfigList(Constants.LOCAL_COLUMN_CONFIG_JSON, SourceType.LOCAL);
+        for(ColumnConfig columnConfig: columnConfigList) {
+            columnConfig.setSampleValues(null);
+        }
+        return columnConfigList;
     }
 
     /**
@@ -309,7 +346,13 @@ public final class CommonUtils {
      *             if {@code path} is null or empty, if sourceType is null.
      */
     public static List<ColumnConfig> loadColumnConfigList(String path, SourceType sourceType) throws IOException {
-        return Arrays.asList(loadJSON(path, sourceType, ColumnConfig[].class));
+        ColumnConfig[] configList = loadJSON(path, sourceType, ColumnConfig[].class);
+        List<ColumnConfig> columnConfigList = new ArrayList<ColumnConfig>();
+        for(ColumnConfig columnConfig: configList) {
+            columnConfig.setSampleValues(null);
+            columnConfigList.add(columnConfig);
+        }
+        return columnConfigList;
     }
 
     /**
@@ -536,25 +579,53 @@ public final class CommonUtils {
      */
     public static int getBinNum(ColumnConfig columnConfig, String columnVal) {
         if(columnConfig.isCategorical()) {
-            List<String> binCategories = columnConfig.getBinCategory();
-            for(int i = 0; i < binCategories.size(); i++) {
-                if(isCategoricalBinValue(binCategories.get(i), columnVal)) {
-                    return i;
-                }
-            }
-            return -1;
+            return getCategoicalBinIndex(columnConfig.getBinCategory(), columnVal);
         } else {
-            if(StringUtils.isBlank(columnVal)) {
-                return -1;
-            }
-            double dval = 0.0;
-            try {
-                dval = Double.parseDouble(columnVal);
-            } catch (Exception e) {
-                return -1;
-            }
-            return getBinIndex(columnConfig.getBinBoundary(), dval);
+            return getNumericalBinIndex(columnConfig.getBinBoundary(), columnVal);
         }
+    }
+
+    /**
+     * Get numerical bin index according to string column value.
+     * 
+     * @param binBoundaries
+     *            the bin boundaries
+     * @param columnVal
+     *            the column value
+     * @return bin index, -1 if invalid values
+     */
+    public static int getNumericalBinIndex(List<Double> binBoundaries, String columnVal) {
+        if(StringUtils.isBlank(columnVal)) {
+            return -1;
+        }
+        double dval = 0.0;
+        try {
+            dval = Double.parseDouble(columnVal);
+        } catch (Exception e) {
+            return -1;
+        }
+        return getBinIndex(binBoundaries, dval);
+    }
+
+    /**
+     * Get categorical bin index according to string column value.
+     * 
+     * @param binCategories
+     *            the bin categories
+     * @param columnVal
+     *            the column value
+     * @return bin index, -1 if invalid values
+     */
+    public static int getCategoicalBinIndex(List<String> binCategories, String columnVal) {
+        if(StringUtils.isBlank(columnVal)) {
+            return -1;
+        }
+        for(int i = 0; i < binCategories.size(); i++) {
+            if(isCategoricalBinValue(binCategories.get(i), columnVal)) {
+                return i;
+            }
+        }
+        return -1;
     }
 
     /**
@@ -567,6 +638,7 @@ public final class CommonUtils {
      * @return true if the categorical value exists in group, else false
      */
     public static boolean isCategoricalBinValue(String binVal, String cval) {
+        // TODO cache CommonUtils.flattenCatValGrp(binVal)??
         return binVal.equals(cval) ? true : CommonUtils.flattenCatValGrp(binVal).contains(cval);
     }
 
@@ -747,6 +819,15 @@ public final class CommonUtils {
         return models;
     }
 
+    public static BasicNetwork getBasicNetwork(BasicML model) {
+        if(model instanceof BasicFloatNetwork) {
+            return (BasicFloatNetwork) model;
+        } else if(model instanceof NNModel) {
+            return ((NNModel) model).getIndependentNNModel().getBasicNetworks().get(0);
+        }
+        throw new IllegalArgumentException("Only nn model is supported");
+    }
+
     /**
      * Load basic models from files.
      * 
@@ -807,7 +888,6 @@ public final class CommonUtils {
             public int compare(FileStatus f1, FileStatus f2) {
                 return f1.getPath().getName().compareToIgnoreCase(f2.getPath().getName());
             }
-
         });
 
         // added in shifu 0.2.5 to slice models not belonging to last training
@@ -815,6 +895,19 @@ public final class CommonUtils {
         if(modelConfig.isClassification() && modelConfig.getTrain().isOneVsAll()) {
             baggingModelSize = modelConfig.getTags().size();
         }
+
+        Integer kCrossValidation = modelConfig.getTrain().getNumKFold();
+        if(kCrossValidation != null && kCrossValidation > 0) {
+            // if kfold is enabled , bagging set it to bagging model size
+            baggingModelSize = kCrossValidation;
+        }
+
+        GridSearch gs = new GridSearch(modelConfig.getTrain().getParams());
+        if(gs.hasHyperParam()) {
+            // if it is grid search, set model size to all flatten params
+            baggingModelSize = gs.getFlattenParams().size();
+        }
+
         listStatus = listStatus.size() <= baggingModelSize ? listStatus : listStatus.subList(0, baggingModelSize);
         return listStatus;
     }
@@ -858,7 +951,12 @@ public final class CommonUtils {
                     || modelPath.getName().endsWith(CommonConstants.GBT_ALG_NAME.toLowerCase())) {
                 return TreeModel.loadFromStream(stream, gbtConvertToProb);
             } else {
-                return BasicML.class.cast(EncogDirectoryPersistence.loadObject(stream));
+                GzipStreamPair pair = isGZipFormat(stream);
+                if(pair.isGzip()) {
+                    return BasicML.class.cast(NNModel.loadFromStream(pair.getInput()));
+                } else {
+                    return BasicML.class.cast(EncogDirectoryPersistence.loadObject(pair.getInput()));
+                }
             }
         } catch (Exception e) {
             String msg = "the expecting model file is: " + modelPath;
@@ -871,6 +969,74 @@ public final class CommonUtils {
                 IOUtils.closeQuietly(stream);
             }
         }
+    }
+
+    public static class GzipStreamPair {
+
+        private DataInputStream input;
+
+        private boolean isGzip;
+
+        public GzipStreamPair(DataInputStream input, boolean isGzip) {
+            this.input = input;
+            this.isGzip = isGzip;
+        }
+
+        /**
+         * @return the input
+         */
+        public DataInputStream getInput() {
+            return input;
+        }
+
+        /**
+         * @param input
+         *            the input to set
+         */
+        public void setInput(DataInputStream input) {
+            this.input = input;
+        }
+
+        /**
+         * @return the isGzip
+         */
+        public boolean isGzip() {
+            return isGzip;
+        }
+
+        /**
+         * @param isGzip
+         *            the isGzip to set
+         */
+        public void setGzip(boolean isGzip) {
+            this.isGzip = isGzip;
+        }
+
+    }
+
+    private static GzipStreamPair isGZipFormat(InputStream input) {
+        DataInputStream dis = null;
+        // check if gzip or not
+        boolean isGZip = false;
+        try {
+            byte[] header = new byte[2];
+            BufferedInputStream bis = new BufferedInputStream(input);
+            bis.mark(2);
+            int result = bis.read(header);
+            bis.reset();
+            int ss = (header[0] & 0xff) | ((header[1] & 0xff) << 8);
+            if(result != -1 && ss == GZIPInputStream.GZIP_MAGIC) {
+                dis = new DataInputStream(new GZIPInputStream(bis));
+                isGZip = true;
+            } else {
+                dis = new DataInputStream(bis);
+                isGZip = false;
+            }
+        } catch (java.io.IOException e) {
+            dis = new DataInputStream(input);
+            isGZip = false;
+        }
+        return new GzipStreamPair(dis, isGZip);
     }
 
     /**
@@ -1139,7 +1305,12 @@ public final class CommonUtils {
                 try {
                     is = new FileInputStream(nnf);
                     if(ALGORITHM.NN.equals(alg)) {
-                        models.add(BasicML.class.cast(EncogDirectoryPersistence.loadObject(is)));
+                        GzipStreamPair pair = isGZipFormat(is);
+                        if(pair.isGzip()) {
+                            models.add(BasicML.class.cast(NNModel.loadFromStream(pair.getInput())));
+                        } else {
+                            models.add(BasicML.class.cast(EncogDirectoryPersistence.loadObject(pair.getInput())));
+                        }
                     } else if(ALGORITHM.LR.equals(alg)) {
                         models.add(LR.loadFromStream(is));
                     } else if(ALGORITHM.GBT.equals(alg) || ALGORITHM.RF.equals(alg)) {
@@ -1551,21 +1722,13 @@ public final class CommonUtils {
         return columnName;
     }
 
-    /**
-     * Simple name without name space part.
-     * 
-     * @param columnName
-     *            the column name
-     * @return the simple name not including name space part
-     */
     public static String getSimpleColumnName(String columnName) {
-        String result = columnName;
         // remove name-space in column name to make it be called by simple name
         if(columnName.contains(CommonConstants.NAMESPACE_DELIMITER)) {
-            result = columnName.substring(columnName.lastIndexOf(CommonConstants.NAMESPACE_DELIMITER)
+            columnName = columnName.substring(columnName.lastIndexOf(CommonConstants.NAMESPACE_DELIMITER)
                     + CommonConstants.NAMESPACE_DELIMITER.length(), columnName.length());
         }
-        return result;
+        return columnName;
     }
 
     /**
@@ -1688,6 +1851,14 @@ public final class CommonUtils {
 
     public static boolean isTreeModel(String alg) {
         return CommonConstants.RF_ALG_NAME.equalsIgnoreCase(alg) || CommonConstants.GBT_ALG_NAME.equalsIgnoreCase(alg);
+    }
+
+    public static boolean isNNModel(String alg) {
+        return "nn".equalsIgnoreCase(alg);
+    }
+
+    public static boolean isLRModel(String alg) {
+        return "lr".equalsIgnoreCase(alg);
     }
 
     public static boolean isRandomForestAlgorithm(String alg) {
@@ -1818,9 +1989,18 @@ public final class CommonUtils {
         String weightColumnName = modelConfig.getWeightColumnName();
 
         Set<NSColumn> setCategorialColumns = new HashSet<NSColumn>();
-        if(CollectionUtils.isNotEmpty(modelConfig.getCategoricalColumnNames())) {
-            for(String column: modelConfig.getCategoricalColumnNames()) {
+        List<String> categoricalColumnNames = modelConfig.getCategoricalColumnNames();
+        if(CollectionUtils.isNotEmpty(categoricalColumnNames)) {
+            for(String column: categoricalColumnNames) {
                 setCategorialColumns.add(new NSColumn(column));
+            }
+        }
+
+        Set<NSColumn> setHybridColumns = new HashSet<NSColumn>();
+        Map<String, Double> hybridColumnNames = modelConfig.getHybridColumnNames();
+        if(hybridColumnNames != null && hybridColumnNames.size() > 0) {
+            for(Entry<String, Double> entry: hybridColumnNames.entrySet()) {
+                setHybridColumns.add(new NSColumn(entry.getKey()));
             }
         }
 
@@ -1877,11 +2057,46 @@ public final class CommonUtils {
             } else if(NSColumnUtils.isColumnEqual(targetColumnName, varName)) {
                 // target column is set to categorical column
                 config.setColumnType(ColumnType.C);
+            } else if(setHybridColumns.contains(new NSColumn(varName))) {
+                config.setColumnType(ColumnType.H);
+                String newVarName = null;
+                if(Environment.getBoolean(Constants.SHIFU_NAMESPACE_STRICT_MODE, false)) {
+                    newVarName = new NSColumn(varName).getFullColumnName();
+                } else {
+                    newVarName = new NSColumn(varName).getSimpleName();
+                }
+                config.setHybridThreshold(hybridColumnNames.get(newVarName));
             } else if(setCategorialColumns.contains(new NSColumn(varName))) {
                 config.setColumnType(ColumnType.C);
             } else {
                 config.setColumnType(ColumnType.N);
             }
+        }
+    }
+
+    public static boolean isNumber(String valStr) {
+        if(StringUtils.isBlank(valStr)) {
+            return false;
+        }
+        try {
+            Double.parseDouble(valStr);
+            return true;
+        } catch (NumberFormatException e) {
+            return false;
+        }
+    }
+
+    /**
+     * Avoid parsing times, failed parsing is set to NaN
+     */
+    public static double parseNumber(String valStr) {
+        if(StringUtils.isBlank(valStr)) {
+            return Double.NaN;
+        }
+        try {
+            return Double.parseDouble(valStr);
+        } catch (NumberFormatException e) {
+            return Double.NaN;
         }
     }
 
@@ -2114,7 +2329,8 @@ public final class CommonUtils {
      * @throws ExecException
      *             - throw exception when operating tuple
      */
-    public static Map<NSColumn, String> convertDataIntoNsMap(Tuple tuple, String[] header) throws ExecException {
+    public static Map<NSColumn, String> convertDataIntoNsMap(Tuple tuple, String[] header, int segFilterSize)
+            throws ExecException {
         if(tuple == null || tuple.size() == 0 || tuple.size() != header.length) {
             log.error("Invalid input, the tuple.size is = " + (tuple == null ? null : tuple.size())
                     + ", header.length = " + header.length);
@@ -2127,6 +2343,16 @@ public final class CommonUtils {
                 rawDataNsMap.put(new NSColumn(header[i]), "");
             } else {
                 rawDataNsMap.put(new NSColumn(header[i]), tuple.get(i).toString());
+            }
+        }
+
+        for(int i = 0; i < segFilterSize; i++) {
+            for(int j = 0; j < header.length; j++) {
+                if(tuple.get(j) == null) {
+                    rawDataNsMap.put(new NSColumn(header[j] + "_" + (i + 1)), "");
+                } else {
+                    rawDataNsMap.put(new NSColumn(header[j] + "_" + (i + 1)), tuple.get(j).toString());
+                }
             }
         }
 
@@ -2218,7 +2444,6 @@ public final class CommonUtils {
         try {
             reader = ShifuFileUtils.getReader(firstValidFile, source);
             String firstLine = reader.readLine();
-            log.debug("The first line is - {}", firstLine);
             if(firstLine != null && firstLine.length() > 0) {
                 List<String> list = new ArrayList<String>();
                 for(String unit: Splitter.on(delimeter).split(firstLine)) {
@@ -2483,4 +2708,39 @@ public final class CommonUtils {
         }
         return catVals;
     }
+
+    /**
+     * Manual split function to avoid depending on guava.
+     * 
+     * <p>
+     * Some examples: "^"=&gt;[, ]; ""=&gt;[]; "a"=&gt;[a]; "abc"=&gt;[abc]; "a^"=&gt;[a, ]; "^b"=&gt;[, b];
+     * "^^b"=&gt;[, , b]
+     * 
+     * @param str
+     *            the string to be split
+     * @param delimiter
+     *            the delimiter
+     * @return split string array
+     */
+    public static String[] splitString(String str, String delimiter) {
+        if(str == null || str.length() == 0) {
+            return new String[] { "" };
+        }
+
+        List<String> categories = new ArrayList<String>();
+        int dLen = delimiter.length();
+        int begin = 0;
+        for(int i = 0; i < str.length(); i++) {
+            if(str.substring(i, Math.min(i + dLen, str.length())).equals(delimiter)) {
+                categories.add(str.substring(begin, i));
+                begin = i + dLen;
+            }
+            if(i == str.length() - 1) {
+                categories.add(str.substring(begin, str.length()));
+            }
+        }
+
+        return categories.toArray(new String[0]);
+    }
+
 }

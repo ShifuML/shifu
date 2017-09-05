@@ -23,6 +23,9 @@ import java.util.List;
 
 import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.core.binning.AbstractBinning;
+import ml.shifu.shifu.core.binning.CategoricalBinning;
+import ml.shifu.shifu.util.CommonUtils;
+import ml.shifu.shifu.util.Constants;
 
 import org.apache.commons.lang.StringUtils;
 import org.apache.pig.data.DataBag;
@@ -54,9 +57,14 @@ public class BinningDataMergeUDF extends AbstractTrainerUDF<Tuple> {
 
         Integer columnId = (Integer) input.get(0);
         DataBag databag = (DataBag) input.get(1);
-        ColumnConfig columnConfig = super.columnConfigList.get(columnId);
+        int corrColumnId = columnId;
+        if(corrColumnId >= super.columnConfigList.size()){
+            corrColumnId = corrColumnId % super.columnConfigList.size();
+        }
+        ColumnConfig columnConfig = super.columnConfigList.get(corrColumnId);
 
         AbstractBinning<?> binning = null;
+        AbstractBinning<?> backupBinning = null;
         log.info("Start merging bin info for columnId - " + columnId + ", the bag size is - " + databag.size());
 
         Iterator<Tuple> iterator = databag.iterator();
@@ -67,16 +75,36 @@ public class BinningDataMergeUDF extends AbstractTrainerUDF<Tuple> {
             }
 
             String objValStr = (String) element.get(1);
+            String hybridCateValStr = null;
+
             long start = System.currentTimeMillis();
+
+            // for hybrid, split
+            if(columnConfig.isHybrid()) {
+                String[] splits = CommonUtils.split(objValStr, Constants.HYBRID_BIN_STR_DILIMETER);
+                objValStr = splits[0];
+                hybridCateValStr = splits[1];
+            }
             AbstractBinning<?> partialBinning = AbstractBinning.constructBinningFromStr(modelConfig, columnConfig,
                     objValStr);
+            AbstractBinning<?> partialBackupBinning = null;
+            if(columnConfig.isHybrid()) {
+                partialBackupBinning = new CategoricalBinning();
+                partialBackupBinning.stringToObj(hybridCateValStr);
+            }
             log.info("constructBinningFromStr: " + (System.currentTimeMillis() - start) + "ms");
             start = System.currentTimeMillis();
 
             if(binning == null) {
                 binning = partialBinning;
+                if(columnConfig.isHybrid()) {
+                    backupBinning = partialBackupBinning;
+                }
             } else {
                 binning.mergeBin(partialBinning);
+                if(columnConfig.isHybrid()) {
+                    backupBinning.mergeBin(partialBackupBinning);
+                }
             }
             log.info("mergeBin: " + (System.currentTimeMillis() - start) + "ms");
         }
@@ -87,12 +115,19 @@ public class BinningDataMergeUDF extends AbstractTrainerUDF<Tuple> {
 
         // Do check here. It's because if there are too many value for categorical variable,
         // it will consume too much memory when join them together, that will cause OOM exception
-        if(binFields.size() > CalculateNewStatsUDF.MAX_CATEGORICAL_BINC_COUNT) {
+        if(columnConfig.isCategorical() && binFields.size() > this.maxCategorySize) {
             log.warn(columnId + " " + columnConfig.getColumnName() + " is over maximal categorical size: "
-                    + CalculateNewStatsUDF.MAX_CATEGORICAL_BINC_COUNT);
+                    + this.maxCategorySize);
             output.set(1, "");
         } else {
-            output.set(1, StringUtils.join(binFields, CalculateStatsUDF.CATEGORY_VAL_SEPARATOR));
+            if(columnConfig.isHybrid()) {
+                String finalBinStr = StringUtils.join(binFields, CalculateStatsUDF.CATEGORY_VAL_SEPARATOR);
+                finalBinStr += Constants.HYBRID_BIN_STR_DILIMETER
+                        + StringUtils.join(backupBinning.getDataBin(), CalculateStatsUDF.CATEGORY_VAL_SEPARATOR);
+                output.set(1, finalBinStr);
+            } else {
+                output.set(1, StringUtils.join(binFields, CalculateStatsUDF.CATEGORY_VAL_SEPARATOR));
+            }
         }
 
         log.info("Finish merging bin info for columnId - " + columnId);
