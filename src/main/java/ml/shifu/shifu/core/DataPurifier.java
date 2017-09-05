@@ -89,14 +89,14 @@ public class DataPurifier {
     }
 
     public Boolean isFilter(String record) {
+        if(dataFilterExpr == null) {
+            return true;
+        }
+
         String[] fields = CommonUtils.split(record, dataDelimiter);
         if(fields == null || fields.length != headers.length) {
             // illegal format data, just skip
             return false;
-        }
-
-        if(dataFilterExpr == null) {
-            return true;
         }
 
         jc.clear();
@@ -127,13 +127,13 @@ public class DataPurifier {
     }
 
     public Boolean isFilter(Tuple input) throws ExecException {
+        if(dataFilterExpr == null) {
+            return true;
+        }
+
         if(input == null || input.size() != headers.length) {
             // illegal format data, just skip
             return false;
-        }
-
-        if(dataFilterExpr == null) {
-            return true;
         }
 
         jc.clear();
@@ -160,6 +160,7 @@ public class DataPurifier {
         return result;
     }
 
+    // reuse context
     public static class InvalidFilterResultExcetion extends RuntimeException {
 
         private static final long serialVersionUID = 279485512893373010L;
