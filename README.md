@@ -1,4 +1,6 @@
-[<img src="images/logo/shifu.png" alt="Shifu" align="left">](http://shifu.ml)<div align="right"><div>[![Build Status](https://travis-ci.org/ShifuML/shifu.svg?branch=develop)](https://travis-ci.org/ShifuML/shifu)</div><div>[![Maven Central](https://maven-badges.herokuapp.com/maven-central/ml.shifu/shifu/badge.svg)](https://maven-badges.herokuapp.com/maven-central/ml.shifu/shifu)</div></div>
+[<img src="images/logo/shifu.png" alt="Shifu" align="left">](http://shifu.ml)<div align="right"><table><tr><td><div>[![Build Status](https://travis-ci.org/ShifuML/shifu.svg?branch=develop)](https://travis-ci.org/ShifuML/shifu)</div></td><td><div>[![Maven Central](https://maven-badges.herokuapp.com/maven-central/ml.shifu/shifu/badge.svg)](https://maven-badges.herokuapp.com/maven-central/ml.shifu/shifu)</div></td></tr></table></div>
+
+
 
 
 #
