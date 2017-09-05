@@ -56,8 +56,8 @@ public class PurifyDataUDF extends AbstractTrainerUDF<Boolean> {
         if(isPigEnabled(Constants.SHIFU_GROUP_COUNTER, "TOTAL_VALID_COUNT")) {
             PigStatusReporter.getInstance().getCounter(Constants.SHIFU_GROUP_COUNTER, "TOTAL_VALID_COUNT").increment(1);
         }
-        Boolean filterOut = dataPurifier.isFilterOut(input);
-        if(filterOut != null && filterOut) {
+        Boolean filterOut = dataPurifier.isFilter(input);
+        if(filterOut != null && !filterOut) {
             // update model run time for stats
             if(isPigEnabled(Constants.SHIFU_GROUP_COUNTER, "FILTER_OUT_COUNT")) {
                 PigStatusReporter.getInstance().getCounter(Constants.SHIFU_GROUP_COUNTER, "FILTER_OUT_COUNT")

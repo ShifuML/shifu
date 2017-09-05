@@ -21,6 +21,7 @@ import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -651,6 +652,78 @@ public class ModelConfig {
             }
         }
         return CommonUtils.readConfFileIntoList(categoricalColumnNameFile, SourceType.LOCAL, delimiter);
+    }
+
+    @JsonIgnore
+    public List<String> getSegmentFilterExpressions() throws IOException {
+        String expressionFile = dataSet.getSegExpressionFile();
+        if(StringUtils.isBlank(expressionFile)) {
+            String defaultExpressionFile = Constants.COLUMN_META_FOLDER_NAME + File.separator
+                    + Constants.DEFAULT_EXPRESSION_COLUMN_FILE;
+            if(ShifuFileUtils.isFileExists(defaultExpressionFile, SourceType.LOCAL)) {
+                expressionFile = defaultExpressionFile;
+                LOG.warn(
+                        "'dataSet::segExpressionFile' is not set while default segExpressionFile: {} is found, default expression file will be used.",
+                        defaultExpressionFile);
+            } else {
+                return new ArrayList<String>();
+            }
+        }
+        return CommonUtils.readConfFileIntoList(expressionFile, SourceType.LOCAL,
+                Constants.SHIFU_STATS_FILTER_EXPRESSIONS_DELIMETER);
+    }
+
+    @JsonIgnore
+    public String getSegmentFilterExpressionsAsString() throws IOException {
+        List<String> expressions = getSegmentFilterExpressions();
+        StringBuilder sb = new StringBuilder(1000);
+        for(int i = 0; i < expressions.size(); i++) {
+            if(i == expressions.size() - 1) {
+                sb.append(expressions.get(i));
+            } else {
+                sb.append(expressions.get(i)).append(Constants.SHIFU_STATS_FILTER_EXPRESSIONS_DELIMETER);
+            }
+        }
+        return sb.toString();
+    }
+
+    @JsonIgnore
+    public Map<String, Double> getHybridColumnNames() throws IOException {
+        String delimiter = StringUtils.isBlank(this.getHeaderDelimiter()) ? this.getDataSetDelimiter() : this
+                .getHeaderDelimiter();
+
+        String hybridColumnNameFile = dataSet.getHybridColumnNameFile();
+        if(StringUtils.isBlank(hybridColumnNameFile)) {
+            String defaultHybridColumnNameFile = Constants.COLUMN_META_FOLDER_NAME + File.separator
+                    + Constants.DEFAULT_HYBRID_COLUMN_FILE;
+            if(ShifuFileUtils.isFileExists(defaultHybridColumnNameFile, SourceType.LOCAL)) {
+                hybridColumnNameFile = defaultHybridColumnNameFile;
+                LOG.warn(
+                        "'dataSet::hybridColumnNameFile' is not set while default hybridColumnNameFile: {} is found, default hybrid file will be used.",
+                        defaultHybridColumnNameFile);
+            } else {
+                LOG.warn(
+                        "'dataSet::hybridColumnNameFile' is not set and default hybridColumnNameFile: {} is not found, no hybrid configs.",
+                        defaultHybridColumnNameFile);
+                return new HashMap<String, Double>();
+            }
+        }
+        List<String> list = CommonUtils.readConfFileIntoList(hybridColumnNameFile, SourceType.LOCAL, delimiter);
+        Map<String, Double> map = new HashMap<String, Double>();
+        for(String string: list) {
+            if(string.contains(Constants.DEFAULT_DELIMITER)) {
+                String[] splits = CommonUtils.split(string, Constants.DEFAULT_DELIMITER);
+                double parNum = CommonUtils.parseNumber(splits[1]);
+                if(Double.isNaN(parNum)) {
+                    map.put(string, Double.NEGATIVE_INFINITY);
+                } else {
+                    map.put(string, parNum);
+                }
+            } else {
+                map.put(string, Double.NEGATIVE_INFINITY);
+            }
+        }
+        return map;
     }
 
     @JsonIgnore

@@ -57,8 +57,6 @@ public class ColumnConfigDynamicBinning {
             List<AbstractBinInfo> newBinInfos = autoDynamicBinning.merge(cloneBinInfoList(binInfos));
 
             double currentVarIv = calculateIv(newBinInfos, missingBinInfo);
-            LOG.debug("New bin number is : {} with IV : {}, while maxVarIv is {}",
-                    newBinInfos.size(), currentVarIv, maxVarIv);
             if ( newBinInfos.size() == binInfos.size() // bin number is not decreased
                     || currentVarIv < maxVarIv * this.ivKeepRatio ) { // current is less than (keepRatio * maxIv)
                 isToContinue = false;

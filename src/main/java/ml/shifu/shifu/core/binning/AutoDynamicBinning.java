@@ -65,7 +65,6 @@ public class AutoDynamicBinning {
             current = iterator.next();
         }
 
-
         while (iterator.hasNext()) {
             pos++;
             AbstractBinInfo next = iterator.next();

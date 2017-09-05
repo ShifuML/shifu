@@ -165,7 +165,7 @@ public class FastCorrelationMapper extends Mapper<LongWritable, Text, IntWritabl
         }
         double[] dValues = null;
 
-        if(!this.dataPurifier.isFilterOut(valueStr)) {
+        if(!this.dataPurifier.isFilter(valueStr)) {
             return;
         }
 

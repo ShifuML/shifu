@@ -185,11 +185,13 @@ public class Scorer {
         List<Callable<MLData>> tasks = new ArrayList<Callable<MLData>>();
         for(final BasicML model: models) {
             // TODO, check if no need 'if' condition and refactor two if for loops please
-            if(model instanceof BasicFloatNetwork) {
-                final BasicFloatNetwork network = (BasicFloatNetwork) model;
+            if(model instanceof BasicFloatNetwork || model instanceof NNModel) {
+                final BasicFloatNetwork network = (model instanceof BasicFloatNetwork) ? (BasicFloatNetwork) model
+                        : ((NNModel) model).getIndependentNNModel().getBasicNetworks().get(0);
 
                 final MLDataPair networkPair = CommonUtils.assembleNsDataPair(binCategoryMap, noVarSelect, modelConfig,
                         columnConfigList, rawNsDataMap, cutoff, alg, network.getFeatureSet());
+
                 if(network.getFeatureSet().size() != networkPair.getInput().size()) {
                     log.error("Network and input size mismatch: Network Size = " + network.getFeatureSet().size()
                             + "; Input Size = " + networkPair.getInput().size());
@@ -201,6 +203,7 @@ public class Scorer {
                     @Override
                     public MLData call() throws Exception {
                         MLData finalOutput = network.compute(networkPair.getInput());
+
                         if(!isOutputFirstHiddenLayer) {
                             return finalOutput;
                         }
@@ -307,7 +310,7 @@ public class Scorer {
                 BasicML model = this.models.get(i);
                 MLData score = modelResults.get(i);
 
-                if(model instanceof BasicNetwork) {
+                if(model instanceof BasicNetwork || model instanceof NNModel) {
                     if(modelConfig != null && modelConfig.isRegression()) {
                         scores.add(toScore(score.getData(0)));
                         if(this.outputFirstHiddenLayer) {

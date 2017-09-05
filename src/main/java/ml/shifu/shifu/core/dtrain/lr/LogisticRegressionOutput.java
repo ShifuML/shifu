@@ -117,11 +117,17 @@ public class LogisticRegressionOutput extends
         }
 
         // save tmp to hdfs according to raw trainer logic
-        if(context.getCurrentIteration() % DTrainUtils.tmpModelFactor(context.getTotalIteration()) == 0) {
+        final int tmpModelFactor = DTrainUtils.tmpModelFactor(context.getTotalIteration());
+        final int currentIteration = context.getCurrentIteration();
+        final double[] parameters = context.getMasterResult().getParameters();
+        final int totalIteration = context.getTotalIteration();
+        final boolean isHalt = context.getMasterResult().isHalt();
+        // currentIteration - 1 because the first iteration is used for sync master models to workers
+        if((currentIteration - 1) % tmpModelFactor == 0) {
             Thread tmpNNThread = new Thread(new Runnable() {
                 @Override
                 public void run() {
-                    saveTmpModelToHDFS(context.getCurrentIteration(), context.getMasterResult().getParameters());
+                    saveTmpModelToHDFS(currentIteration - 1, parameters);
                     // save model results for continue model training, if current job is failed, then next running
                     // we can start from this point to save time.
                     // another case for master recovery, if master is failed, read such checkpoint model
@@ -131,8 +137,7 @@ public class LogisticRegressionOutput extends
                     // need to save checkpoint model here as it is replicated with postApplicaiton.
                     // There is issue here if saving the same model in this thread and another thread in
                     // postApplication, sometimes this conflict will cause model writing failed.
-                    if(!context.getMasterResult().isHalt()
-                            && context.getCurrentIteration() != context.getTotalIteration()) {
+                    if(!isHalt && currentIteration != totalIteration) {
                         writeModelWeightsToFileSystem(optimizedWeights, out);
                     }
                 }
