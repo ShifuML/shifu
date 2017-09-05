@@ -6,6 +6,8 @@
 
 [![Build Status](https://travis-ci.org/ShifuML/shifu.svg?branch=develop)](https://travis-ci.org/ShifuML/shifu)
 
+<table><tr><td><div align="right">[![Build Status](https://travis-ci.org/ShifuML/shifu.svg?branch=develop)](https://travis-ci.org/ShifuML/shifu)</div></td><td><div align="right">[![Maven Central](https://maven-badges.herokuapp.com/maven-central/ml.shifu/shifu/badge.svg)](https://maven-badges.herokuapp.com/maven-central/ml.shifu/shifu)</div></td></tr></table>
+
 
 #
 
