@@ -2,6 +2,9 @@
 </td></tr></table>
 
 
+<table><tr><td><div>[![Build Status](https://travis-ci.org/ShifuML/shifu.svg?branch=develop)](https://travis-ci.org/ShifuML/shifu)</div></td><td><div>[![Maven Central](https://maven-badges.herokuapp.com/maven-central/ml.shifu/shifu/badge.svg)](https://maven-badges.herokuapp.com/maven-central/ml.shifu/shifu)</div></td></tr></table>
+
+
 #
 
 ## Download
