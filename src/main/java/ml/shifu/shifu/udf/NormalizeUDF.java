@@ -264,8 +264,6 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
                         // map should not be null, no need check if map is null, if val not in binCategory, set it to ""
                         tuple.append(((map.get(val) == null || map.get(val) == -1)) ? "" : val);
                     } else {
-                        // TODO hybrid column is not supported so far, should be set to default number or categorical
-                        // values
                         Double normVal = 0d;
                         try {
                             normVal = Double.parseDouble(val);
@@ -283,14 +281,6 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
                         Double normVal = Normalizer.normalize(config, val, cutoff, normType,
                                 this.categoryMissingNormType);
                         tuple.append(df.format(normVal));
-                        // if(this.isForExpressions) {
-                        // for(int j = 0; j < dataPurifiers.size(); j++) {
-                        // ColumnConfig extConfig = columnConfigList.get(input.size() * j + i);
-                        // Double extNormVal = Normalizer.normalize(extConfig, val, cutoff, normType,
-                        // this.categoryMissingNormType);
-                        // tuple.append(df.format(extNormVal));
-                        // }
-                        // }
                     } else {
                         tuple.append(config.isMeta() ? val : null);
                     }
