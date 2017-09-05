@@ -9,6 +9,9 @@
 <table><tr><td><div align="right">[![Build Status](https://travis-ci.org/ShifuML/shifu.svg?branch=develop)](https://travis-ci.org/ShifuML/shifu)</div></td><td><div align="right">[![Maven Central](https://maven-badges.herokuapp.com/maven-central/ml.shifu/shifu/badge.svg)](https://maven-badges.herokuapp.com/maven-central/ml.shifu/shifu)</div></td></tr></table>
 
 
+<table cellspacing="0" cellpadding="0"><tr><td align="left">[<img src="images/logo/shifu.png" alt="Shifu" align="left">]</td><td align="right"><table><tr><td>[![Build Status](https://travis-ci.org/ShifuML/shifu.svg?branch=develop)](https://travis-ci.org/ShifuML/shifu)</td><td>[![Maven Central](https://maven-badges.herokuapp.com/maven-central/ml.shifu/shifu/badge.svg)](https://maven-badges.herokuapp.com/maven-central/ml.shifu/shifu)</td></tr></table>
+</td></tr></table>
+
 #
 
 ## Download
