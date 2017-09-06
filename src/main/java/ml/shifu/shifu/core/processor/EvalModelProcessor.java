@@ -773,11 +773,12 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
      */
     private void runEval(EvalConfig evalConfig) throws IOException {
         // create evalset home directory firstly in local file system
-        validateEvalColumnConfig(evalConfig);
-        String evalSetPath = pathFinder.getEvalSetPath(evalConfig, SourceType.LOCAL);
-        FileUtils.forceMkdir(new File(evalSetPath));
-        syncDataToHdfs(evalConfig.getDataSet().getSource());
-
+        synchronized(this) {
+            validateEvalColumnConfig(evalConfig);
+            String evalSetPath = pathFinder.getEvalSetPath(evalConfig, SourceType.LOCAL);
+            FileUtils.forceMkdir(new File(evalSetPath));
+            syncDataToHdfs(evalConfig.getDataSet().getSource());
+        }
         switch(modelConfig.getBasic().getRunMode()) {
             case DIST:
             case MAPRED:
