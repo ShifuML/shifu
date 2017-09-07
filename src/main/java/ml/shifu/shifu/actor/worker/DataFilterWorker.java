@@ -95,7 +95,7 @@ public class DataFilterWorker extends AbstractWorkerActor {
             @Override
             public boolean evaluate(Object object) {
                 String inputData = (String) object;
-                return dataPurifier.isFilterOut(inputData);
+                return dataPurifier.isFilter(inputData);
             }
         });
 
