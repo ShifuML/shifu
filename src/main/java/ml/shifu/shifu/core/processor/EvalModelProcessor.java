@@ -387,6 +387,9 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
         paramsMap.put("scale",
                 Environment.getProperty(Constants.SHIFU_SCORE_SCALE, Integer.toString(Scorer.DEFAULT_SCORE_SCALE)));
 
+        String expressionsAsString = super.modelConfig.getSegmentFilterExpressionsAsString();
+        Environment.getProperties().put("shifu.segment.expressions", expressionsAsString);
+
         String pigScript = "scripts/Eval.pig";
         Map<String, String> confMap = new HashMap<String, String>();
 
@@ -646,9 +649,9 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
                     // print eval name to log4j console to make each one is easy to be get from logs
                     evalRunThread.start();
 
-                    // each one sleep 5s to avoid conflict in initialization
+                    // each one sleep 3s to avoid conflict in initialization
                     try {
-                        Thread.sleep(5000);
+                        Thread.sleep(3000);
                     } catch (InterruptedException e) {
                         Thread.currentThread().interrupt();
                     }
@@ -725,6 +728,17 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
             names.add(new NSColumn(evalColumnName));
         }
 
+        String filterExpressions = super.modelConfig.getSegmentFilterExpressionsAsString();
+        if(StringUtils.isNotBlank(filterExpressions)) {
+            int segFilterSize = CommonUtils
+                    .split(filterExpressions, Constants.SHIFU_STATS_FILTER_EXPRESSIONS_DELIMETER).length;
+            for(int i = 0; i < segFilterSize; i++) {
+                for(int j = 0; j < evalColumnNames.length; j++) {
+                    names.add(new NSColumn(evalColumnNames[j] + "_" + (i + 1)));
+                }
+            }
+        }
+
         for(ColumnConfig config: this.columnConfigList) {
             NSColumn nsColumn = new NSColumn(config.getColumnName());
             if(config.isFinalSelect() && !names.contains(nsColumn)
@@ -759,10 +773,19 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
      */
     private void runEval(EvalConfig evalConfig) throws IOException {
         // create evalset home directory firstly in local file system
-        validateEvalColumnConfig(evalConfig);
-        String evalSetPath = pathFinder.getEvalSetPath(evalConfig, SourceType.LOCAL);
-        FileUtils.forceMkdir(new File(evalSetPath));
-        syncDataToHdfs(evalConfig.getDataSet().getSource());
+        synchronized(this) {
+            validateEvalColumnConfig(evalConfig);
+            String evalSetPath = pathFinder.getEvalSetPath(evalConfig, SourceType.LOCAL);
+            FileUtils.forceMkdir(new File(evalSetPath));
+            syncDataToHdfs(evalConfig.getDataSet().getSource());
+        }
+
+        // each one sleep 8s to avoid conflict in initialization
+        try {
+            Thread.sleep(8000);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
 
         switch(modelConfig.getBasic().getRunMode()) {
             case DIST:

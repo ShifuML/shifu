@@ -88,6 +88,11 @@ public class EvalScoreUDF extends AbstractTrainerUDF<Tuple> {
      */
     private List<Integer> hiddenNodeList;
 
+    /**
+     * Splits for filter expressions
+     */
+    private int segFilterSize = 0;
+
     public EvalScoreUDF(String source, String pathModelConfig, String pathColumnConfig, String evalSetName)
             throws IOException {
         this(source, pathModelConfig, pathColumnConfig, evalSetName, Integer.toString(Scorer.DEFAULT_SCORE_SCALE));
@@ -106,6 +111,18 @@ public class EvalScoreUDF extends AbstractTrainerUDF<Tuple> {
         }
 
         this.headers = CommonUtils.getFinalHeaders(evalConfig);
+
+        String filterExpressions = "";
+        if(UDFContext.getUDFContext() != null && UDFContext.getUDFContext().getJobConf() != null) {
+            filterExpressions = UDFContext.getUDFContext().getJobConf().get("shifu.segment.expressions");
+        } else {
+            filterExpressions = Environment.getProperty("shifu.segment.expressions");
+        }
+
+        if(StringUtils.isNotBlank(filterExpressions)) {
+            this.segFilterSize = CommonUtils.split(filterExpressions,
+                    Constants.SHIFU_STATS_FILTER_EXPRESSIONS_DELIMETER).length;
+        }
 
         // move model runner construction in exec to avoid OOM error in client side if model is too big like RF
         // TODO not to load model but only to check model file cnt
@@ -135,7 +152,6 @@ public class EvalScoreUDF extends AbstractTrainerUDF<Tuple> {
                             Environment.getProperty(SHIFU_NN_OUTPUT_FIRST_HIDDENLAYER, Boolean.FALSE.toString()));
                 }
             }
-            log.info("Is output first hidden layer value:" + this.outputFirstHiddenLayer);
         }
     }
 
@@ -161,7 +177,7 @@ public class EvalScoreUDF extends AbstractTrainerUDF<Tuple> {
             this.modelRunner.setScoreScale(Integer.parseInt(this.scale));
         }
 
-        Map<NSColumn, String> rawDataNsMap = CommonUtils.convertDataIntoNsMap(input, this.headers);
+        Map<NSColumn, String> rawDataNsMap = CommonUtils.convertDataIntoNsMap(input, this.headers, this.segFilterSize);
         if(MapUtils.isEmpty(rawDataNsMap)) {
             return null;
         }

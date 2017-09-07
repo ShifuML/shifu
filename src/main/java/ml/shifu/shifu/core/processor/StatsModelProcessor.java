@@ -151,7 +151,18 @@ public class StatsModelProcessor extends BasicModelProcessor implements Processo
 
                 // 2. compute correlation
                 log.info("Start computing correlation value ...");
-                runCorrMapReduceJob();
+
+                SourceType source = this.modelConfig.getDataSet().getSource();
+                String corrPath = super.getPathFinder().getCorrelationPath(source);
+
+                // check if can start from existing output
+                boolean reuseCorrResult = Environment.getBoolean("shifu.stats.corr.reuse", Boolean.FALSE);
+                if(reuseCorrResult && ShifuFileUtils.isFileExists(corrPath, SourceType.HDFS)) {
+                    dumpCorrelationResult(source, corrPath);
+                } else {
+                    runCorrMapReduceJob();
+                }
+
                 // 3. save column config list
                 saveColumnConfigList();
             } else if(getBooleanParam(this.params, IS_REBIN)) {

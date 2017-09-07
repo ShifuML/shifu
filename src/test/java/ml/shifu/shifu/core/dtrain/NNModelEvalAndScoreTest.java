@@ -153,13 +153,15 @@ public class NNModelEvalAndScoreTest {
                 dataMap.put(fn, value);
             }
 
+            @SuppressWarnings("unused")
             Map<FieldName, Double> regressionTerm = (Map<FieldName, Double>) evaluator.evaluate(dataMap);
-            for(Map.Entry<FieldName, Double> entry: regressionTerm.entrySet()) {
-                System.out.println(entry.getValue() + " " + map.get("diagnosis"));
-            }
+            // for(Map.Entry<FieldName, Double> entry: regressionTerm.entrySet()) {
+            // System.out.println(entry.getValue() + " " + map.get("diagnosis"));
+            // }
         }
     }
 
+    @SuppressWarnings("unused")
     @Test
     public void testEvalScore() throws IOException {
         List<String> lines = FileUtils.readLines(new File("src/test/resources/dttest/data/nnbinary.csv"));
@@ -184,9 +186,8 @@ public class NNModelEvalAndScoreTest {
                 mapObj.put(headers[j], data[j]);
             }
             double[] scores = iNNModel.compute(mapObj);
-
             ScoreObject scoreObject = scorer.score(map);
-            System.out.println("Eval score is: " + scoreObject.getMeanScore() / 1000 + "; bi score: " + scores[0]);
+//            System.out.println("Eval score is: " + scoreObject.getMeanScore() / 1000 + "; bi score: " + scores[0]);
         }
 
     }
