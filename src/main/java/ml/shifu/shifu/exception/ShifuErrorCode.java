@@ -23,7 +23,8 @@ public enum ShifuErrorCode {
     /**
      * Configuration Error 400 ~ 500
      */
-    ERROR_SHIFU_CONFIG(400, "Errors happen when loading shifuconfig"),
+    ERROR_SHIFU_CONFIG(400, "Errors happen when loading shifuconfig"),ERROR_GRID_SEARCH_FILE_CONFIG(501,
+            "Errors happen when loading grid search file config"),
 
     /**
      * Configuration Error 500 ~ 600
