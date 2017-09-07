@@ -135,7 +135,7 @@ public class MetaFactory {
     public static ValidateResult validate(ModelConfig modelConfig) throws Exception {
         ValidateResult result = new ValidateResult(true);
 
-        GridSearch gs = new GridSearch(modelConfig.getTrain().getParams());
+        GridSearch gs = new GridSearch(modelConfig.getTrain().getParams(), modelConfig.getTrain().getGridConfigFileContent());
 
         Class<?> cls = modelConfig.getClass();
         Field[] fields = cls.getDeclaredFields();

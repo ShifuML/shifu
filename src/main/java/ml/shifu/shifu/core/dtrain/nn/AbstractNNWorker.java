@@ -326,7 +326,7 @@ public abstract class AbstractNNWorker<VALUE extends Writable> extends
         loadConfigFiles(context.getProps());
 
         this.trainerId = Integer.valueOf(context.getProps().getProperty(CommonConstants.SHIFU_TRAINER_ID, "0"));
-        GridSearch gs = new GridSearch(modelConfig.getTrain().getParams());
+        GridSearch gs = new GridSearch(modelConfig.getTrain().getParams(), modelConfig.getTrain().getGridConfigFileContent());
         this.validParams = this.modelConfig.getTrain().getParams();
         if(gs.hasHyperParam()) {
             this.validParams = gs.getParams(trainerId);
