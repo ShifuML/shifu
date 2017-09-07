@@ -60,7 +60,6 @@ public class StatsCalculateWorker extends AbstractWorkerActor {
     @Override
     public void handleMsg(Object message) {
         if(message instanceof StatsValueObjectMessage) {
-            log.debug("Received value object list for stats");
             StatsValueObjectMessage statsVoMessage = (StatsValueObjectMessage) message;
             voList.addAll(statsVoMessage.getVoList());
             this.missing += statsVoMessage.getMissing();
@@ -68,7 +67,6 @@ public class StatsCalculateWorker extends AbstractWorkerActor {
             receivedMsgCnt++;
 
             if(receivedMsgCnt == statsVoMessage.getTotalMsgCnt()) {
-                log.debug("received " + receivedMsgCnt + ", start to work");
                 ColumnConfig columnConfig = columnConfigList.get(statsVoMessage.getColumnNum());
                 calculateColumnStats(columnConfig, voList);
                 columnConfig.setMissingCnt(this.missing);

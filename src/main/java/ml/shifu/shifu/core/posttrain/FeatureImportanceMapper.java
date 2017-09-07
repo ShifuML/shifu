@@ -167,7 +167,7 @@ public class FeatureImportanceMapper extends Mapper<LongWritable, Text, IntWrita
             return;
         }
 
-        if(!this.dataPurifier.isFilterOut(valueStr)) {
+        if(!this.dataPurifier.isFilter(valueStr)) {
             return;
         }
 

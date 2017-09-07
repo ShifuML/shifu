@@ -139,7 +139,10 @@ public class UpdateBinningInfoReducer extends Reducer<IntWritable, BinningInfoWr
         double[] binWeightNeg = null;
         long[] binCountTotal = null;
 
-        ColumnConfig columnConfig = this.columnConfigList.get(key.get());
+        int columnConfigIndex = key.get() >= this.columnConfigList.size() ? key.get() % this.columnConfigList.size()
+                : key.get();
+
+        ColumnConfig columnConfig = this.columnConfigList.get(columnConfigIndex);
 
         HyperLogLogPlus hyperLogLogPlus = null;
         Set<String> fis = new HashSet<String>();
