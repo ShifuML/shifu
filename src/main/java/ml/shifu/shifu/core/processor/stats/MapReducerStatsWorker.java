@@ -23,6 +23,8 @@ import java.io.OutputStreamWriter;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -35,6 +37,7 @@ import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.container.obj.ColumnType;
 import ml.shifu.shifu.container.obj.ModelConfig;
 import ml.shifu.shifu.container.obj.RawSourceData;
+import ml.shifu.shifu.container.obj.ColumnConfig.ColumnFlag;
 import ml.shifu.shifu.core.binning.BinningInfoWritable;
 import ml.shifu.shifu.core.binning.UpdateBinningInfoMapper;
 import ml.shifu.shifu.core.binning.UpdateBinningInfoReducer;
@@ -204,7 +207,7 @@ public class MapReducerStatsWorker extends AbstractStatsExecutor {
         ShifuFileUtils.deleteFile(pathFinder.getUpdatedBinningInfoPath(modelConfig.getDataSet().getSource()),
                 modelConfig.getDataSet().getSource());
 
-        log.info("this.pathFinder.getOtherConfigs() => " + this.pathFinder.getOtherConfigs());
+        log.debug("this.pathFinder.getOtherConfigs() => " + this.pathFinder.getOtherConfigs());
         PigExecutor.getExecutor().submitJob(modelConfig, pathFinder.getScriptPath("scripts/StatsSpdtI.pig"), paramsMap,
                 modelConfig.getDataSet().getSource(), this.pathFinder);
         // update
@@ -317,6 +320,9 @@ public class MapReducerStatsWorker extends AbstractStatsExecutor {
         conf.set("mapred.reduce.slowstart.completed.maps",
                 Environment.getProperty("mapred.reduce.slowstart.completed.maps", "0.8"));
 
+        conf.set(Constants.SHIFU_STATS_FILTER_EXPRESSIONS, super.modelConfig.getSegmentFilterExpressionsAsString());
+        log.info("segment expressions is {}", super.modelConfig.getSegmentFilterExpressionsAsString());
+
         String hdpVersion = HDPUtils.getHdpVersionForHDP224();
         if(StringUtils.isNotBlank(hdpVersion)) {
             // for hdp 2.2.4, hdp.version should be set and configuration files should be add to container class path
@@ -377,12 +383,19 @@ public class MapReducerStatsWorker extends AbstractStatsExecutor {
     public void updateColumnConfigWithPreTrainingStats() throws IOException {
         List<Scanner> scanners = ShifuFileUtils.getDataScanners(pathFinder.getPreTrainingStatsPath(), modelConfig
                 .getDataSet().getSource());
+        int initSize = columnConfigList.size();
         for(Scanner scanner: scanners) {
-            scanStatsResult(scanner);
+            scanStatsResult(scanner, initSize);
         }
-
         // release
         processor.closeScanners(scanners);
+
+        Collections.sort(this.columnConfigList, new Comparator<ColumnConfig>() {
+            @Override
+            public int compare(ColumnConfig o1, ColumnConfig o2) {
+                return o1.getColumnNum().compareTo(o2.getColumnNum());
+            }
+        });
     }
 
     /**
@@ -391,7 +404,7 @@ public class MapReducerStatsWorker extends AbstractStatsExecutor {
      * @param scanner
      *            the scanners to be read
      */
-    private void scanStatsResult(Scanner scanner) {
+    private void scanStatsResult(Scanner scanner, int ccInitSize) {
         while(scanner.hasNextLine()) {
             String[] raw = scanner.nextLine().trim().split("\\|");
 
@@ -405,13 +418,33 @@ public class MapReducerStatsWorker extends AbstractStatsExecutor {
             }
 
             int columnNum = Integer.parseInt(raw[0]);
+
+            int corrColumnNum = columnNum;
+            if(columnNum >= ccInitSize) {
+                corrColumnNum = columnNum % ccInitSize;
+            }
+
             try {
-                ColumnConfig config = this.columnConfigList.get(columnNum);
+                ColumnConfig basicConfig = this.columnConfigList.get(corrColumnNum);
+                log.debug("basicConfig is - " + basicConfig.getColumnName() + " corrColumnNum:" + corrColumnNum);
+
+                ColumnConfig config = null;
+                if(columnNum >= ccInitSize) {
+                    config = new ColumnConfig();
+                    config.setColumnNum(columnNum);
+                    config.setColumnName(basicConfig.getColumnName() + "_" + (columnNum / ccInitSize));
+                    config.setVersion(basicConfig.getVersion());
+                    config.setColumnType(basicConfig.getColumnType());
+                    config.setColumnFlag(basicConfig.getColumnFlag() == ColumnFlag.Target ? ColumnFlag.Meta
+                            : basicConfig.getColumnFlag());
+                    this.columnConfigList.add(config);
+                } else {
+                    config = basicConfig;
+                }
 
                 if(config.isHybrid()) {
                     String[] splits = CommonUtils.split(raw[1], Constants.HYBRID_BIN_STR_DILIMETER);
                     config.setBinBoundary(CommonUtils.stringToDoubleList(splits[0]));
-
                     String binCategory = Base64Utils.base64Decode(splits[1]);
                     config.setBinCategory(CommonUtils.stringToStringList(binCategory,
                             CalculateStatsUDF.CATEGORY_VAL_SEPARATOR));
@@ -480,7 +513,7 @@ public class MapReducerStatsWorker extends AbstractStatsExecutor {
                 }
             } catch (Exception e) {
                 log.error(String.format("Fail to process following column : %s name: %s error: %s", columnNum,
-                        this.columnConfigList.get(columnNum).getColumnName(), e.getMessage()), e);
+                        this.columnConfigList.get(corrColumnNum).getColumnName(), e.getMessage()), e);
                 continue;
             }
         }

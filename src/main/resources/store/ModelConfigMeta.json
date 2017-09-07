@@ -150,6 +150,10 @@
                 "type" : "text",
                 "directive": "input"
             }, {
+                "name": "segExpressionFile",
+                "type" : "text",
+                "directive": "input"
+            }, {
                 "name": "categoricalColumnNameFile",
                 "type" : "text",
                 "directive": "input"
