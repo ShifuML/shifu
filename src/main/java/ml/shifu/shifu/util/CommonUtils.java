@@ -308,7 +308,6 @@ public final class CommonUtils {
      */
     public static <T> T loadJSON(String path, SourceType sourceType, Class<T> clazz) throws IOException {
         checkPathAndMode(path, sourceType);
-        log.debug("loading {} with sourceType {}", path, sourceType);
         BufferedReader reader = null;
         try {
             reader = ShifuFileUtils.getReader(path, sourceType);
@@ -347,9 +346,11 @@ public final class CommonUtils {
      *             if {@code path} is null or empty, if sourceType is null.
      */
     public static List<ColumnConfig> loadColumnConfigList(String path, SourceType sourceType) throws IOException {
-        List<ColumnConfig> columnConfigList = Arrays.asList(loadJSON(path, sourceType, ColumnConfig[].class));
-        for(ColumnConfig columnConfig: columnConfigList) {
+        ColumnConfig[] configList = loadJSON(path, sourceType, ColumnConfig[].class);
+        List<ColumnConfig> columnConfigList = new ArrayList<ColumnConfig>();
+        for(ColumnConfig columnConfig: configList) {
             columnConfig.setSampleValues(null);
+            columnConfigList.add(columnConfig);
         }
         return columnConfigList;
     }
@@ -1852,6 +1853,14 @@ public final class CommonUtils {
         return CommonConstants.RF_ALG_NAME.equalsIgnoreCase(alg) || CommonConstants.GBT_ALG_NAME.equalsIgnoreCase(alg);
     }
 
+    public static boolean isNNModel(String alg) {
+        return "nn".equalsIgnoreCase(alg);
+    }
+
+    public static boolean isLRModel(String alg) {
+        return "lr".equalsIgnoreCase(alg);
+    }
+
     public static boolean isRandomForestAlgorithm(String alg) {
         return CommonConstants.RF_ALG_NAME.equalsIgnoreCase(alg);
     }
@@ -2320,7 +2329,8 @@ public final class CommonUtils {
      * @throws ExecException
      *             - throw exception when operating tuple
      */
-    public static Map<NSColumn, String> convertDataIntoNsMap(Tuple tuple, String[] header) throws ExecException {
+    public static Map<NSColumn, String> convertDataIntoNsMap(Tuple tuple, String[] header, int segFilterSize)
+            throws ExecException {
         if(tuple == null || tuple.size() == 0 || tuple.size() != header.length) {
             log.error("Invalid input, the tuple.size is = " + (tuple == null ? null : tuple.size())
                     + ", header.length = " + header.length);
@@ -2333,6 +2343,16 @@ public final class CommonUtils {
                 rawDataNsMap.put(new NSColumn(header[i]), "");
             } else {
                 rawDataNsMap.put(new NSColumn(header[i]), tuple.get(i).toString());
+            }
+        }
+
+        for(int i = 0; i < segFilterSize; i++) {
+            for(int j = 0; j < header.length; j++) {
+                if(tuple.get(j) == null) {
+                    rawDataNsMap.put(new NSColumn(header[j] + "_" + (i + 1)), "");
+                } else {
+                    rawDataNsMap.put(new NSColumn(header[j] + "_" + (i + 1)), tuple.get(j).toString());
+                }
             }
         }
 
@@ -2424,7 +2444,6 @@ public final class CommonUtils {
         try {
             reader = ShifuFileUtils.getReader(firstValidFile, source);
             String firstLine = reader.readLine();
-            log.debug("The first line is - {}", firstLine);
             if(firstLine != null && firstLine.length() > 0) {
                 List<String> list = new ArrayList<String>();
                 for(String unit: Splitter.on(delimeter).split(firstLine)) {

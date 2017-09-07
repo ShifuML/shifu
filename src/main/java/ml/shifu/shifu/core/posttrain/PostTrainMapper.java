@@ -186,7 +186,7 @@ public class PostTrainMapper extends Mapper<LongWritable, Text, IntWritable, Fea
             return;
         }
 
-        if(!this.dataPurifier.isFilterOut(valueStr)) {
+        if(!this.dataPurifier.isFilter(valueStr)) {
             return;
         }
 
