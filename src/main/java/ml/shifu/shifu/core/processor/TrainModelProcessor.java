@@ -358,7 +358,7 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
                             + " is parquet format. Please keep isParquet and re-run norm again or change isParquet directly to true.");
         }
 
-        GridSearch gridSearch = new GridSearch(modelConfig.getTrain().getParams());
+        GridSearch gridSearch = new GridSearch(modelConfig.getTrain().getParams(), modelConfig.getTrain().getGridConfigFileContent());
         if(!LogisticRegressionContants.LR_ALG_NAME.equalsIgnoreCase(alg)
                 && !NNConstants.NN_ALG_NAME.equalsIgnoreCase(alg) && !CommonUtils.isTreeModel(alg)
                 && gridSearch.hasHyperParam()) {
@@ -383,7 +383,7 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
 
         final List<String> args = new ArrayList<String>();
 
-        GridSearch gs = new GridSearch(modelConfig.getTrain().getParams());
+        GridSearch gs = new GridSearch(modelConfig.getTrain().getParams(), modelConfig.getTrain().getGridConfigFileContent());
 
         prepareCommonParams(gs.hasHyperParam(), args, sourceType);
 
