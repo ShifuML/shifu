@@ -163,7 +163,7 @@ public class VarSelWorker
         String[] fields = CommonUtils.split(record, this.modelConfig.getDataSetDelimiter());
         String tag = CommonUtils.trimTag(fields[this.targetColumnId]);
 
-        if(this.dataPurifier.isFilterOut(record) && isPosOrNegTag(this.modelConfig, tag)) {
+        if(this.dataPurifier.isFilter(record) && isPosOrNegTag(this.modelConfig, tag)) {
             this.totalRecordCount++;
             if(this.modelConfig.getPosTags().contains(tag)) {
                 this.posRecordCount++;
