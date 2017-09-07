@@ -150,9 +150,11 @@ public class ModelTrainConf {
     private Integer numKFold = -1;
 
     /**
-     * Random seed is used to split training set and test set, default value is -1L.
-     * That means a value not configured by user, then it will fallback to generate random for bagging each time.
+     * Random sample seed is used to generate Random instance when sampling.
+     * It's a hidden feature support in shifu. If user not configure this value, shifu will will fallback to generate
+     * random for bagging each time.
      */
+    @JsonIgnore
     private Long baggingSampleSeed = CommonConstants.NOT_CONFIGURED_BAGGING_SEED;
 
     /**

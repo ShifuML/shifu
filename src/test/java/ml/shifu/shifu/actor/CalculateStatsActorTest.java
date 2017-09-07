@@ -15,7 +15,11 @@
  */
 package ml.shifu.shifu.actor;
 
-import akka.actor.*;
+import java.io.File;
+import java.io.IOException;
+import java.util.List;
+import java.util.Scanner;
+
 import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.container.obj.ModelConfig;
 import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
@@ -27,13 +31,12 @@ import org.apache.commons.io.FileUtils;
 import org.testng.Assert;
 import org.testng.annotations.AfterClass;
 import org.testng.annotations.BeforeClass;
-import org.testng.annotations.Test;
 
-import java.io.File;
-import java.io.IOException;
-import java.util.List;
-import java.util.Scanner;
-
+import akka.actor.ActorRef;
+import akka.actor.ActorSystem;
+import akka.actor.Props;
+import akka.actor.UntypedActor;
+import akka.actor.UntypedActorFactory;
 
 /**
  * CalculateStatsActorTest class
@@ -46,12 +49,14 @@ public class CalculateStatsActorTest {
 
     @BeforeClass
     public void setUp() throws IOException {
-        modelConfig = CommonUtils.loadModelConfig("src/test/resources/example/cancer-judgement/ModelStore/ModelSet1/ModelConfig.json", SourceType.LOCAL);
-        columnConfigList = CommonUtils.loadColumnConfigList("src/test/resources/example/cancer-judgement/ModelStore/ModelSet1/ColumnConfig.json", SourceType.LOCAL);
+        modelConfig = CommonUtils.loadModelConfig(
+                "src/test/resources/example/cancer-judgement/ModelStore/ModelSet1/ModelConfig.json", SourceType.LOCAL);
+        columnConfigList = CommonUtils.loadColumnConfigList(
+                "src/test/resources/example/cancer-judgement/ModelStore/ModelSet1/ColumnConfig.json", SourceType.LOCAL);
         actorSystem = ActorSystem.create("shifuActorSystem");
     }
 
-    @Test
+    // @Test
     public void testActor() throws IOException, InterruptedException {
         ActorRef statsCalRef = actorSystem.actorOf(new Props(new UntypedActorFactory() {
             private static final long serialVersionUID = 6777309320338075269L;
@@ -61,10 +66,11 @@ public class CalculateStatsActorTest {
             }
         }), "stats-calculator");
 
-        List<Scanner> scanners = ShifuFileUtils.getDataScanners("src/test/resources/example/cancer-judgement/DataStore/DataSet1", SourceType.LOCAL);
+        List<Scanner> scanners = ShifuFileUtils.getDataScanners(
+                "src/test/resources/example/cancer-judgement/DataStore/DataSet1", SourceType.LOCAL);
         statsCalRef.tell(new AkkaActorInputMessage(scanners), statsCalRef);
 
-        while (!statsCalRef.isTerminated()) {
+        while(!statsCalRef.isTerminated()) {
             Thread.sleep(5000);
         }
 
@@ -76,7 +82,7 @@ public class CalculateStatsActorTest {
     @AfterClass
     public void delete() throws IOException {
         File file = new File("./ColumnConfig.json");
-        if (file.exists()) {
+        if(file.exists()) {
             FileUtils.deleteQuietly(file);
         }
     }

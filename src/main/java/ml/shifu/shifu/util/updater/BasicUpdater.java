@@ -32,8 +32,8 @@ public class BasicUpdater {
     protected Set<NSColumn> setForceSelect;
     protected Set<NSColumn> setCandidates;
 
-    private Set<NSColumn> setHybridColumns;
-    private Map<String, Double> hybridColumnNames;
+    protected Set<NSColumn> setHybridColumns;
+    protected Map<String, Double> hybridColumnNames;
 
     public BasicUpdater(ModelConfig modelConfig) throws IOException {
         this.targetColumnName = modelConfig.getTargetColumnName();

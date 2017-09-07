@@ -32,6 +32,7 @@ import ml.shifu.shifu.fs.ShifuFileUtils;
 import ml.shifu.shifu.pig.PigExecutor;
 import ml.shifu.shifu.util.CommonUtils;
 import ml.shifu.shifu.util.Constants;
+import ml.shifu.shifu.util.Environment;
 
 import org.apache.commons.lang.StringUtils;
 import org.apache.pig.tools.pigstats.JobStats;
@@ -145,7 +146,10 @@ public class NormalizeModelProcessor extends BasicModelProcessor implements Proc
         paramsMap.put("sampleRate", modelConfig.getNormalizeSampleRate().toString());
         paramsMap.put("sampleNegOnly", ((Boolean) modelConfig.isNormalizeSampleNegOnly()).toString());
         paramsMap.put("delimiter", CommonUtils.escapePigString(modelConfig.getDataSetDelimiter()));
-
+        
+        String expressionsAsString = super.modelConfig.getSegmentFilterExpressionsAsString();
+        Environment.getProperties().put("shifu.segment.expressions", expressionsAsString);
+        
         try {
             String normPigPath = null;
             if(modelConfig.getNormalize().getIsParquet()) {

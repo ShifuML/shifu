@@ -655,6 +655,39 @@ public class ModelConfig {
     }
 
     @JsonIgnore
+    public List<String> getSegmentFilterExpressions() throws IOException {
+        String expressionFile = dataSet.getSegExpressionFile();
+        if(StringUtils.isBlank(expressionFile)) {
+            String defaultExpressionFile = Constants.COLUMN_META_FOLDER_NAME + File.separator
+                    + Constants.DEFAULT_EXPRESSION_COLUMN_FILE;
+            if(ShifuFileUtils.isFileExists(defaultExpressionFile, SourceType.LOCAL)) {
+                expressionFile = defaultExpressionFile;
+                LOG.warn(
+                        "'dataSet::segExpressionFile' is not set while default segExpressionFile: {} is found, default expression file will be used.",
+                        defaultExpressionFile);
+            } else {
+                return new ArrayList<String>();
+            }
+        }
+        return CommonUtils.readConfFileIntoList(expressionFile, SourceType.LOCAL,
+                Constants.SHIFU_STATS_FILTER_EXPRESSIONS_DELIMETER);
+    }
+
+    @JsonIgnore
+    public String getSegmentFilterExpressionsAsString() throws IOException {
+        List<String> expressions = getSegmentFilterExpressions();
+        StringBuilder sb = new StringBuilder(1000);
+        for(int i = 0; i < expressions.size(); i++) {
+            if(i == expressions.size() - 1) {
+                sb.append(expressions.get(i));
+            } else {
+                sb.append(expressions.get(i)).append(Constants.SHIFU_STATS_FILTER_EXPRESSIONS_DELIMETER);
+            }
+        }
+        return sb.toString();
+    }
+
+    @JsonIgnore
     public Map<String, Double> getHybridColumnNames() throws IOException {
         String delimiter = StringUtils.isBlank(this.getHeaderDelimiter()) ? this.getDataSetDelimiter() : this
                 .getHeaderDelimiter();
