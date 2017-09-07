@@ -252,7 +252,7 @@ public final class CommonUtils {
         ModelConfig modelConfig = loadJSON(path, sourceType, ModelConfig.class);
         if(modelConfig.getTrain().getGridConfigFile() != null) {
             // Only load file content. Grid search params parsing is done in {@link GridSearch} initialization.
-            modelConfig.getTrain().setGridConfigFileContent(loadFileContent(path, sourceType));
+            modelConfig.getTrain().setGridConfigFileContent(loadFileContent(modelConfig.getTrain().getGridConfigFile(), sourceType));
         }
         return modelConfig;
     }
