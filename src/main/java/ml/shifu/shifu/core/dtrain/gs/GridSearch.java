@@ -78,7 +78,6 @@ public class GridSearch {
     private void parseParams(Map<String, Object> params) {
         // use sorted map to sort all parameters by natural order, this makes all flatten parameters sorted and fixed
         SortedMap<String, Object> sortedMap = new TreeMap<String, Object>(params);
-        LOG.debug(sortedMap.toString());
         List<Integer> hyperParamCntList = new ArrayList<Integer>();
         Map<String, Object> normalParams = new HashMap<String, Object>();
         List<Tuple> hyperParams = new ArrayList<GridSearch.Tuple>();

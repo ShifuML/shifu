@@ -98,7 +98,6 @@ public abstract class AbstractTrainerUDF<T> extends EvalFunc<T> {
             this.maxCategorySize = Environment.getInt(Constants.SHIFU_MAX_CATEGORY_SIZE,
                     Constants.MAX_CATEGORICAL_BINC_COUNT);
         }
-        log.debug("Max category size is : " + this.maxCategorySize);
     }
 
     /**
