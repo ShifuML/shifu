@@ -80,12 +80,6 @@ public class GridSearch {
      */
     private int flattenParamsCount;
 
-//    public GridSearch(Map<String, Object> rawParams) {
-//        assert rawParams != null;
-//        this.rawParams = rawParams;
-//        parseParams(this.rawParams);
-//    }
-
     public GridSearch(Map<String, Object> rawParams, List<String> configFileContent) {
         this.rawParams = rawParams;
         List<Map<String, Object>> gridParams = parseParams(configFileContent);
@@ -268,7 +262,7 @@ public class GridSearch {
 
     private Object convertItemValue(Map<String, MetaItem> metaWarehouse, String itemKey, String itemValueStr)
             throws ShifuException {
-        MetaItem itemMeta = metaWarehouse.get(itemKey);
+        MetaItem itemMeta = metaWarehouse.get(getItemKeyInMeta(itemKey));
         if(itemMeta == null) {
             return null;
         }
@@ -306,6 +300,16 @@ public class GridSearch {
             }
         }
         throw new ShifuException(ShifuErrorCode.ERROR_GRID_SEARCH_FILE_CONFIG);
+    }
+
+    /**
+     * Hard Coded!
+     * 
+     * @param key
+     * @return
+     */
+    private String getItemKeyInMeta(String key) {
+        return "train#params#" + key;
     }
 
     private static class Tuple {
