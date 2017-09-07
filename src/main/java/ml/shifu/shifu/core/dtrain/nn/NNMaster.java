@@ -358,7 +358,7 @@ public class NNMaster extends AbstractMasterComputable<NNParams, NNParams> {
         }
 
         int trainerId = Integer.valueOf(context.getProps().getProperty(CommonConstants.SHIFU_TRAINER_ID, "0"));
-        GridSearch gs = new GridSearch(modelConfig.getTrain().getParams());
+        GridSearch gs = new GridSearch(modelConfig.getTrain().getParams(), modelConfig.getTrain().getGridConfigFileContent());
         validParams = this.modelConfig.getTrain().getParams();
         if(gs.hasHyperParam()) {
             validParams = gs.getParams(trainerId);
