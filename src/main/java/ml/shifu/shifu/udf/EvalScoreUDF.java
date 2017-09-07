@@ -117,7 +117,7 @@ public class EvalScoreUDF extends AbstractTrainerUDF<Tuple> {
 
         // only check if output first hidden layer in regression and NN
         if(modelConfig.isRegression() && Constants.NN.equalsIgnoreCase(modelConfig.getAlgorithm())) {
-            GridSearch gs = new GridSearch(modelConfig.getTrain().getParams());
+            GridSearch gs = new GridSearch(modelConfig.getTrain().getParams(), modelConfig.getTrain().getGridConfigFileContent());
             Map<String, Object> validParams = this.modelConfig.getTrain().getParams();
             if(gs.hasHyperParam()) {
                 validParams = gs.getParams(0);
