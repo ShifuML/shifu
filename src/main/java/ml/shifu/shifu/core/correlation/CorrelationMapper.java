@@ -151,7 +151,7 @@ public class CorrelationMapper extends Mapper<LongWritable, Text, IntWritable, C
             return;
         }
         double[] dValues = null;
-        if(!this.dataPurifier.isFilterOut(valueStr)) {
+        if(!this.dataPurifier.isFilter(valueStr)) {
             return;
         }
 
