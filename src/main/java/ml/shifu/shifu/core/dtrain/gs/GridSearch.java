@@ -113,6 +113,8 @@ public class GridSearch {
             this.hyperParamCount = 0;
             parseParams(this.rawParams);
         }
+
+        checkParamsThreshold();
     }
 
     private List<Map<String, Object>> parseParams(List<String> configFileContent) {
@@ -211,26 +213,31 @@ public class GridSearch {
                 }
                 this.flattenParams.add(map);
             }
+        }
+    }
 
-            // random search if over threshold
-            int threshold = Environment.getInt("shifu.gridsearch.threshold", 30);
+    /**
+     * Make sure the total number of gridsearch flatternParams does not exceed the configured threshold
+     */
+    private void checkParamsThreshold() {
+        // random search if over threshold
+        int threshold = Environment.getInt("shifu.gridsearch.threshold", 30);
 
-            if(this.flattenParamsCount > threshold) {
-                // set random search size is threshold
-                LOG.info("Grid search numer is over threshold {}, leverage randomize search.", threshold);
-                this.flattenParamsCount = threshold;
-                List<Map<String, Object>> oldFlattenParams = this.flattenParams;
-                this.flattenParams = new ArrayList<Map<String, Object>>(threshold);
-                // just to select fixed number of elements, not random to make it can be called twice and return the
-                // same result;
-                int mod = oldFlattenParams.size() % threshold;
-                int factor = oldFlattenParams.size() / threshold;
-                for(int i = 0; i < threshold; i++) {
-                    if(i > (threshold - 1 - mod)) {
-                        this.flattenParams.add(oldFlattenParams.get((factor + 1) * i - (threshold - mod)));
-                    } else {
-                        this.flattenParams.add(oldFlattenParams.get(factor * i));
-                    }
+        if(this.flattenParamsCount > threshold) {
+            // set random search size is threshold
+            LOG.info("Grid search numer is over threshold {}, leverage randomize search.", threshold);
+            this.flattenParamsCount = threshold;
+            List<Map<String, Object>> oldFlattenParams = this.flattenParams;
+            this.flattenParams = new ArrayList<Map<String, Object>>(threshold);
+            // just to select fixed number of elements, not random to make it can be called twice and return the
+            // same result;
+            int mod = oldFlattenParams.size() % threshold;
+            int factor = oldFlattenParams.size() / threshold;
+            for(int i = 0; i < threshold; i++) {
+                if(i > (threshold - 1 - mod)) {
+                    this.flattenParams.add(oldFlattenParams.get((factor + 1) * i - (threshold - mod)));
+                } else {
+                    this.flattenParams.add(oldFlattenParams.get(factor * i));
                 }
             }
         }
