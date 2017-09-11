@@ -138,6 +138,11 @@ public final class CommonUtils {
         Path dstModelConfig = new Path(pathFinder.getModelSetPath(SourceType.HDFS));
         hdfs.copyFromLocalFile(srcModelConfig, dstModelConfig);
 
+        // Copy GridSearch config file if exists
+        Path srcGridConfig = new Path(modelConfig.getTrain().getGridConfigFile());
+        Path dstGridConfig = new Path(pathFinder.getModelSetPath(SourceType.HDFS));
+        hdfs.copyFromLocalFile(srcGridConfig, dstGridConfig);
+
         // Copy ColumnConfig
         Path srcColumnConfig = new Path(pathFinder.getColumnConfigPath(SourceType.LOCAL));
         Path dstColumnConfig = new Path(pathFinder.getColumnConfigPath(SourceType.HDFS));
@@ -250,9 +255,14 @@ public final class CommonUtils {
     public static ModelConfig loadModelConfig(String path, SourceType sourceType) throws IOException {
         ModelConfig modelConfig = loadJSON(path, sourceType, ModelConfig.class);
         if(modelConfig.getTrain().getGridConfigFile() != null) {
+            String gridConfigPath = modelConfig.getTrain().getGridConfigFile();
+            if(sourceType.equals(SourceType.HDFS)) {
+                // gridsearch config file is uploaded to modelset path
+                gridConfigPath = new PathFinder(modelConfig).getPathBySourceType(
+                        gridConfigPath.substring(gridConfigPath.lastIndexOf(File.separator) + 1), SourceType.HDFS);
+            }
             // Only load file content. Grid search params parsing is done in {@link GridSearch} initialization.
-            modelConfig.getTrain()
-                    .setGridConfigFileContent(loadFileContent(modelConfig.getTrain().getGridConfigFile(), sourceType));
+            modelConfig.getTrain().setGridConfigFileContent(loadFileContent(gridConfigPath, sourceType));
         }
         return modelConfig;
     }
