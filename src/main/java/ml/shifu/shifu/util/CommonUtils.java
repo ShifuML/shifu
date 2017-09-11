@@ -80,7 +80,6 @@ import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathFilter;
 import org.apache.hadoop.fs.RemoteIterator;
-import org.apache.hadoop.yarn.webapp.hamlet.Hamlet.P;
 import org.apache.pig.backend.executionengine.ExecException;
 import org.apache.pig.data.Tuple;
 import org.encog.ml.BasicML;
@@ -252,7 +251,8 @@ public final class CommonUtils {
         ModelConfig modelConfig = loadJSON(path, sourceType, ModelConfig.class);
         if(modelConfig.getTrain().getGridConfigFile() != null) {
             // Only load file content. Grid search params parsing is done in {@link GridSearch} initialization.
-            modelConfig.getTrain().setGridConfigFileContent(loadFileContent(modelConfig.getTrain().getGridConfigFile(), sourceType));
+            modelConfig.getTrain()
+                    .setGridConfigFileContent(loadFileContent(modelConfig.getTrain().getGridConfigFile(), sourceType));
         }
         return modelConfig;
     }
@@ -274,12 +274,12 @@ public final class CommonUtils {
         BufferedReader reader = null;
         try {
             reader = ShifuFileUtils.getReader(path, sourceType);
-            List<String> content = new ArrayList<String>();
+            List<String> contents = new ArrayList<String>();
             String line = null;
             while((line = reader.readLine()) != null) {
-                content.add(line);
+                contents.add(line);
             }
-            return content;
+            return contents;
         } finally {
             IOUtils.closeQuietly(reader);
         }
@@ -940,7 +940,8 @@ public final class CommonUtils {
             baggingModelSize = kCrossValidation;
         }
 
-        GridSearch gs = new GridSearch(modelConfig.getTrain().getParams(), modelConfig.getTrain().getGridConfigFileContent());
+        GridSearch gs = new GridSearch(modelConfig.getTrain().getParams(),
+                modelConfig.getTrain().getGridConfigFileContent());
         if(gs.hasHyperParam()) {
             // if it is grid search, set model size to all flatten params
             baggingModelSize = gs.getFlattenParams().size();
