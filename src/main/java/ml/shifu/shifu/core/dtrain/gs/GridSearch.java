@@ -31,6 +31,7 @@ import java.util.Set;
 import java.util.SortedMap;
 import java.util.TreeMap;
 
+import ml.shifu.common.Meta;
 import ml.shifu.shifu.container.meta.MetaFactory;
 import ml.shifu.shifu.container.meta.MetaItem;
 import ml.shifu.shifu.core.processor.TrainModelProcessor;
@@ -80,6 +81,13 @@ public class GridSearch {
      */
     private int flattenParamsCount;
 
+    /**
+     * @param rawParams
+     *            train params read from ModelConfig.json
+     * @param configFileContent
+     *            grid search params read from config file, raw file contents with each line as a String
+     *            each line may contain one or more <param name>:<param value> group concated with ';'
+     */
     public GridSearch(Map<String, Object> rawParams, List<String> configFileContent) {
         this.rawParams = rawParams;
         List<Map<String, Object>> gridParams = parseParams(configFileContent);
@@ -91,7 +99,9 @@ public class GridSearch {
                     hyperParams.add(gridEntry.getKey());
                 }
                 for(Map.Entry<String, Object> kvEntry: this.rawParams.entrySet()) {
-                    map.put(kvEntry.getKey(), kvEntry.getValue());
+                    if(!map.containsKey(kvEntry.getKey())) {
+                        map.put(kvEntry.getKey(), kvEntry.getValue());
+                    }
                 }
             }
             this.flattenParams = gridParams;
@@ -129,7 +139,9 @@ public class GridSearch {
         for(int i = 0; i < eles.length; i++) {
             int splitpos = eles[i].indexOf(':');
             if(splitpos == -1) {
-                LOG.error("Error exist in train params confi file. Line content: {}", configLine);
+                LOG.error(
+                        "Error exist in train params confi file. Line content: {}. Params should be in <param name>:<param value> format, concated with ';'",
+                        configLine);
                 return null;
             }
             String itemKey = eles[i].substring(0, splitpos).trim();
@@ -306,10 +318,12 @@ public class GridSearch {
      * Hard Coded!
      * 
      * @param key
+     *            param name/key
      * @return
+     *         the complete json path joined by '#', which aligns with {@link MetaFactory}
      */
     private String getItemKeyInMeta(String key) {
-        return "train#params#" + key;
+        return "train" + MetaFactory.ITEM_KEY_SEPERATOR + "params" + MetaFactory.ITEM_KEY_SEPERATOR + key;
     }
 
     private static class Tuple {
