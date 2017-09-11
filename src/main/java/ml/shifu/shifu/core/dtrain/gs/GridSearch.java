@@ -86,7 +86,7 @@ public class GridSearch {
      *            train params read from ModelConfig.json
      * @param configFileContent
      *            grid search params read from config file, raw file contents with each line as a String
-     *            each line may contain one or more <param name>:<param value> group concated with ';'
+     *            each line may contain one or more {param name}:{param value} group concated with ';'
      */
     public GridSearch(Map<String, Object> rawParams, List<String> configFileContent) {
         this.rawParams = rawParams;
