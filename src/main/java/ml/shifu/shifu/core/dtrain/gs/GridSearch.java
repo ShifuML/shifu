@@ -283,7 +283,8 @@ public class GridSearch {
             throws ShifuException {
         MetaItem itemMeta = metaWarehouse.get(getItemKeyInMeta(itemKey));
         if(itemMeta == null) {
-            return null;
+            throw new ShifuException(ShifuErrorCode.ERROR_GRID_SEARCH_FILE_CONFIG,
+                    "Train param name not recognized: " + itemKey);
         }
         itemValueStr = itemValueStr.trim();
         if(itemMeta.getType().equals("text")) {
@@ -292,25 +293,34 @@ public class GridSearch {
             try {
                 return Double.parseDouble(itemValueStr);
             } catch (NumberFormatException e) {
-                LOG.error("Train param {} should be number type, actual value got is {}", itemKey, itemValueStr);
-                throw new ShifuException(ShifuErrorCode.ERROR_GRID_SEARCH_FILE_CONFIG);
+                String message = String.format("Train param %s should be number type, actual value got is %s", itemKey,
+                        itemValueStr);
+                LOG.error(message);
+                throw new ShifuException(ShifuErrorCode.ERROR_GRID_SEARCH_FILE_CONFIG, e, message);
             }
         } else if(itemMeta.getType().equals("boolean")) {
             return itemValueStr.equalsIgnoreCase("true");
         } else if(itemMeta.getType().equals("list")) {
             if(itemKey.equals("NumHiddenNodes") && itemMeta.getElementType().equals("number")
-                    && itemValueStr.matches("\\[[0-9\\. ,]+\\]")) {
+                    && itemValueStr.matches("\\[[0-9\\+ ,]+\\]") && itemValueStr.length() > 2) {
                 List<Integer> itemValue = new ArrayList<Integer>();
-                itemValueStr = itemValueStr.substring(1, itemValueStr.length() - 1);
+                itemValueStr = itemValueStr.substring(1, itemValueStr.length() - 1).trim();
                 String[] splits = itemValueStr.split(",");
-                for(String valueSplit: splits) {
-                    itemValue.add(Integer.parseInt(valueSplit));
+                try {
+                    for(String valueSplit: splits) {
+                        itemValue.add(Integer.parseInt(valueSplit.trim()));
+                    }
+                } catch (NumberFormatException e) {
+                    String message = String.format("Train param %s should be integer type, actual value got is %s",
+                            itemKey, itemValueStr);
+                    LOG.error(message);
+                    throw new ShifuException(ShifuErrorCode.ERROR_GRID_SEARCH_FILE_CONFIG, e, message);
                 }
                 return itemValue;
             } else if(itemKey.equals("ActivationFunc") && itemMeta.getElementType().equals("text")
-                    && itemValueStr.matches("\\[[a-zA-Z0-9 ,]+\\]")) {
+                    && itemValueStr.matches("\\[[a-zA-Z0-9 ,]+\\]") && itemValueStr.length() > 2) {
                 List<String> itemValue = new ArrayList<String>();
-                itemValueStr = itemValueStr.substring(1, itemValueStr.length() - 1);
+                itemValueStr = itemValueStr.substring(1, itemValueStr.length() - 1).trim();
                 String[] splits = itemValueStr.split(",");
                 for(String valueSplit: splits) {
                     itemValue.add(valueSplit.trim());
@@ -318,7 +328,8 @@ public class GridSearch {
                 return itemValue;
             }
         }
-        throw new ShifuException(ShifuErrorCode.ERROR_GRID_SEARCH_FILE_CONFIG);
+        throw new ShifuException(ShifuErrorCode.ERROR_GRID_SEARCH_FILE_CONFIG,
+                "Train param and value not recognized: " + itemKey + ":" + itemValueStr);
     }
 
     /**

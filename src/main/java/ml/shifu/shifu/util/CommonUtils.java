@@ -139,9 +139,12 @@ public final class CommonUtils {
         hdfs.copyFromLocalFile(srcModelConfig, dstModelConfig);
 
         // Copy GridSearch config file if exists
-        Path srcGridConfig = new Path(modelConfig.getTrain().getGridConfigFile());
-        Path dstGridConfig = new Path(pathFinder.getModelSetPath(SourceType.HDFS));
-        hdfs.copyFromLocalFile(srcGridConfig, dstGridConfig);
+        String gridConfigFile = modelConfig.getTrain().getGridConfigFile();
+        if(gridConfigFile != null && !gridConfigFile.trim().equals("")) {
+            Path srcGridConfig = new Path(modelConfig.getTrain().getGridConfigFile());
+            Path dstGridConfig = new Path(pathFinder.getModelSetPath(SourceType.HDFS));
+            hdfs.copyFromLocalFile(srcGridConfig, dstGridConfig);
+        }
 
         // Copy ColumnConfig
         Path srcColumnConfig = new Path(pathFinder.getColumnConfigPath(SourceType.LOCAL));
