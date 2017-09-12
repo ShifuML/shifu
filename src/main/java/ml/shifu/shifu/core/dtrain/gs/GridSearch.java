@@ -15,32 +15,25 @@
  */
 package ml.shifu.shifu.core.dtrain.gs;
 
-import java.io.BufferedReader;
-import java.io.File;
-import java.io.FileNotFoundException;
-import java.io.FileReader;
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
-import java.util.Properties;
 import java.util.Set;
 import java.util.SortedMap;
 import java.util.TreeMap;
 
-import ml.shifu.common.Meta;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import ml.shifu.shifu.container.meta.MetaFactory;
 import ml.shifu.shifu.container.meta.MetaItem;
 import ml.shifu.shifu.core.processor.TrainModelProcessor;
 import ml.shifu.shifu.exception.ShifuErrorCode;
 import ml.shifu.shifu.exception.ShifuException;
 import ml.shifu.shifu.util.Environment;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * Grid search supports for kinds of parameters set by List: [..., ..., ...].
