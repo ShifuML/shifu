@@ -234,7 +234,6 @@ public class StatsModelProcessor extends BasicModelProcessor implements Processo
             clearUp(ModelStep.STATS);
         } catch (Exception e) {
             log.error("Error:", e);
-            e.printStackTrace();
             return -1;
         }
 
