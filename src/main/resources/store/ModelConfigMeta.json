@@ -499,8 +499,8 @@
                 "options": [
                     {"label":"NATIVE", "value":"NATIVE"},
                     {"label":"ONEVSALL", "value":"ONEVSALL"},
-                    {"label":"ONVVSREST", "value":"ONVVSREST"},
-                    {"label":"ONVVSONE", "value":"ONVVSONE"}
+                    {"label":"ONEVSREST", "value":"ONEVSREST"},
+                    {"label":"ONEVSONE", "value":"ONEVSONE"}
                 ]
             }, {
                 "name": "upSampleWeight",
