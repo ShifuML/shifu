@@ -282,6 +282,15 @@ public class GridSearch {
         itemValueStr = itemValueStr.trim();
         if(itemMeta.getType().equals("text")) {
             return itemValueStr;
+        } else if(itemMeta.getType().equals("integer")) {
+            try {
+                return Integer.parseInt(itemValueStr);
+            } catch (NumberFormatException e) {
+                String message = String.format("Train param %s should be integer type, actual value got is %s", itemKey,
+                        itemValueStr);
+                LOG.error(message);
+                throw new ShifuException(ShifuErrorCode.ERROR_GRID_SEARCH_FILE_CONFIG, e, message);
+            }
         } else if(itemMeta.getType().equals("number")) {
             try {
                 return Double.parseDouble(itemValueStr);
