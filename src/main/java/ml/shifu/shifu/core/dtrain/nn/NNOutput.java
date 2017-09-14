@@ -264,7 +264,7 @@ public class NNOutput extends BasicMasterInterceptor<NNParams, NNParams> {
             loadConfigFiles(context.getProps());
             this.trainerId = context.getProps().getProperty(CommonConstants.SHIFU_TRAINER_ID);
             this.tmpModelsFolder = context.getProps().getProperty(CommonConstants.SHIFU_TMP_MODELS_FOLDER);
-            gridSearch = new GridSearch(modelConfig.getTrain().getParams());
+            gridSearch = new GridSearch(modelConfig.getTrain().getParams(), modelConfig.getTrain().getGridConfigFileContent());
             validParams = this.modelConfig.getTrain().getParams();
             if(gridSearch.hasHyperParam()) {
                 validParams = gridSearch.getParams(Integer.parseInt(trainerId));
