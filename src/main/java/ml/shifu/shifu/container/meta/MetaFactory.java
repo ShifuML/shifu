@@ -26,6 +26,15 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 
+import org.apache.commons.collections.CollectionUtils;
+import org.apache.commons.lang.ArrayUtils;
+import org.apache.commons.lang.StringUtils;
+
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.collect.Sets;
+import com.google.common.math.DoubleMath;
+
 import ml.shifu.shifu.container.obj.EvalConfig;
 import ml.shifu.shifu.container.obj.ModelBasicConf;
 import ml.shifu.shifu.container.obj.ModelConfig;
@@ -36,15 +45,6 @@ import ml.shifu.shifu.container.obj.ModelTrainConf;
 import ml.shifu.shifu.container.obj.ModelVarSelectConf;
 import ml.shifu.shifu.core.dtrain.gs.GridSearch;
 import ml.shifu.shifu.util.Constants;
-
-import org.apache.commons.collections.CollectionUtils;
-import org.apache.commons.lang.ArrayUtils;
-import org.apache.commons.lang.StringUtils;
-
-import com.fasterxml.jackson.annotation.JsonIgnore;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.collect.Sets;
-import com.google.common.math.DoubleMath;
 
 /**
  * MetaFactory class
@@ -135,7 +135,8 @@ public class MetaFactory {
     public static ValidateResult validate(ModelConfig modelConfig) throws Exception {
         ValidateResult result = new ValidateResult(true);
 
-        GridSearch gs = new GridSearch(modelConfig.getTrain().getParams(), modelConfig.getTrain().getGridConfigFileContent());
+        GridSearch gs = new GridSearch(modelConfig.getTrain().getParams(),
+                modelConfig.getTrain().getGridConfigFileContent());
 
         Class<?> cls = modelConfig.getClass();
         Field[] fields = cls.getDeclaredFields();
@@ -341,11 +342,11 @@ public class MetaFactory {
         return false;
     }
 
-    static Set<String> filterSet = Sets.newHashSet(new String[] { "NumHiddenLayers", "ActivationFunc",
-            "NumHiddenNodes", "LearningRate", "DropoutRate", "RegularizedConstant", "L1orL2", "MaxDepth",
-            "MinInstancesPerNode", "MinInfoGain", "MaxStatsMemoryMB", "TreeNum", "Impurity", "FeatureSubsetStrategy",
-            "Loss", "LearningDecay", "Propagation", "GBTSampleWithReplacement", "Kernel", "Const", "Gamma",
-            "EnableEarlyStop", "ValidationTolerance", "MaxLeaves", "MaxBatchSplitSize" });
+    static Set<String> filterSet = Sets.newHashSet(new String[] { "NumHiddenLayers", "ActivationFunc", "NumHiddenNodes",
+            "LearningRate", "DropoutRate", "RegularizedConstant", "L1orL2", "MaxDepth", "MinInstancesPerNode",
+            "MinInfoGain", "MaxStatsMemoryMB", "TreeNum", "Impurity", "FeatureSubsetStrategy", "Loss", "LearningDecay",
+            "Propagation", "GBTSampleWithReplacement", "Kernel", "Const", "Gamma", "EnableEarlyStop",
+            "ValidationTolerance", "MaxLeaves", "MaxBatchSplitSize" });
 
     // ugly code for grid search
     private static boolean filterOut(String itemKey) {
@@ -410,6 +411,35 @@ public class MetaFactory {
                 if(!isOptionValue) {
                     return itemKey + " - the value couldn't be found in the option value list - "
                             + convertOptionIntoString(itemMeta.getOptions());
+                }
+            }
+        } else if(itemMeta.getType().equals("integer")) {
+            if(itemValue == null) {
+                if(CollectionUtils.isNotEmpty(itemMeta.getOptions())) {
+                    return itemKey + " - the value couldn't be null.";
+                }
+            } else {
+                Integer value = null;
+                try {
+                    value = Integer.valueOf(itemValue.toString());
+                } catch (NumberFormatException e) {
+                    return itemKey + " - the value is not integer format.";
+                }
+
+                if(value != null && CollectionUtils.isNotEmpty(itemMeta.getOptions())) {
+                    boolean isOptionValue = false;
+                    for(ValueOption itemOption: itemMeta.getOptions()) {
+                        Integer optValue = Integer.valueOf(itemOption.getValue().toString());
+                        if(value.equals(optValue)) {
+                            isOptionValue = true;
+                            break;
+                        }
+                    }
+
+                    if(!isOptionValue) {
+                        return itemKey + " - the value couldn't be found in the option value list - "
+                                + convertOptionIntoString(itemMeta.getOptions());
+                    }
                 }
             }
         } else if(itemMeta.getType().equals("number")) {
