@@ -388,7 +388,7 @@ public class DTOutput extends BasicMasterInterceptor<DTMasterParams, DTWorkerPar
             this.conf = new Configuration();
             loadConfigFiles(context.getProps());
             this.trainerId = context.getProps().getProperty(CommonConstants.SHIFU_TRAINER_ID);
-            GridSearch gs = new GridSearch(modelConfig.getTrain().getParams());
+            GridSearch gs = new GridSearch(modelConfig.getTrain().getParams(), modelConfig.getTrain().getGridConfigFileContent());
             this.isGsMode = gs.hasHyperParam();
 
             this.validParams = modelConfig.getParams();
