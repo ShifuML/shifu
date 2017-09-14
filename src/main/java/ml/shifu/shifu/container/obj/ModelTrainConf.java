@@ -435,7 +435,7 @@ public class ModelTrainConf {
     @JsonIgnore
     public boolean isOneVsAll() {
         return this.multiClassifyMethod == MultipleClassification.ONEVSALL
-                || this.multiClassifyMethod == MultipleClassification.ONVVSREST;
+                || this.multiClassifyMethod == MultipleClassification.ONEVSREST;
     }
 
     /**
