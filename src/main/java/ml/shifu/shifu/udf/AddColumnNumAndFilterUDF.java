@@ -75,8 +75,6 @@ public class AddColumnNumAndFilterUDF extends AddColumnNumUDF {
         super(source, pathModelConfig, pathColumnConfig, withScoreStr);
         this.isAppendRandom = Boolean.TRUE.toString().equalsIgnoreCase(isAppendRandom);
 
-        log.info("pathColumnConfig is " + pathColumnConfig + "filter expressions 1 is " + filterExpressions);
-
         if(UDFContext.getUDFContext() != null && UDFContext.getUDFContext().getJobConf() != null) {
             filterExpressions = UDFContext.getUDFContext().getJobConf().get("shifu.segment.expressions");
         } else {
@@ -90,7 +88,6 @@ public class AddColumnNumAndFilterUDF extends AddColumnNumUDF {
             for(String split: splits) {
                 this.dataPurifiers.add(new DataPurifier(modelConfig, split));
             }
-            log.info("filter expressions is " + filterExpressions + "; dataPurifier  size is:" + dataPurifiers.size());
         }
     }
 

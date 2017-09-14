@@ -54,8 +54,8 @@ public class ModelTrainConf {
     @JsonDeserialize(using = MultipleClassificationDeserializer.class)
     public static enum MultipleClassification {
         NATIVE, // means using NN regression or RF classification, not one vs all or one vs one
-        ONEVSALL, ONVVSREST, // the same as ONEVSALL
-        ONVVSONE; // ONEVSONE is not impl yet.
+        ONEVSALL, ONEVSREST, // the same as ONEVSALL
+        ONEVSONE; // ONEVSONE is not impl yet.
         /*
          * Get {@link MultipleClassification} by string, case can be ignored.
          */
