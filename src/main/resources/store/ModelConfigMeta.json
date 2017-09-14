@@ -521,6 +521,11 @@
                     {"label": "Gradient Boost Decision Tree", "value":"GBT"}
                 ]
             }, {
+                "name": "gridConfigFile",
+                "type": "text",
+                "directive": "input",
+                "defval": ""
+            }, {
                 "name": "params",
                 "type": "map",
                 "directive": "input",
