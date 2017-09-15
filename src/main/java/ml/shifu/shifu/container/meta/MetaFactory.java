@@ -408,7 +408,7 @@ public class MetaFactory {
                             + convertOptionIntoString(itemMeta.getOptions());
                 }
             }
-        } else if(itemMeta.getType().equals("integer")) {
+        } else if(itemMeta.getType().equals("integer") || itemMeta.getType().equals("int")) {
             if(itemValue == null) {
                 if(CollectionUtils.isNotEmpty(itemMeta.getOptions())) {
                     return itemKey + " - the value couldn't be null.";
